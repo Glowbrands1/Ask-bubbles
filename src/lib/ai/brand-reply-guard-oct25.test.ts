@@ -1,0 +1,263 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { NOTHING_LEFT, withoutOtherBrands } from "./brand-reply-guard";
+
+/**
+ * ============================================================================
+ * A REPLY SPEAKS FOR BUFF CITY SOAP ONLY (BRAND_REPLY_GUARD_ENABLED)
+ * ============================================================================
+ *
+ * QA, 25 Oct 2026, production replies from testers G21, U1 and U6 (questions
+ * in the managers' own register): "can i bring my dog to work", "pets at
+ * work?", "what does our policy say about attendance?", "whats policy say
+ * about store opening late", "late opening policy", "whats policy say about
+ * changing availabilty". The replies below carry the leaked wording exactly as
+ * reported; the rest of each reply is kept, with its [p.N] citations.
+ */
+
+afterEach(() => vi.unstubAllEnvs());
+// Flag-off pins hold whatever the environment has on; flag-on tests set it.
+beforeEach(() => vi.stubEnv("BRAND_REPLY_GUARD_ENABLED", ""));
+const on = () => vi.stubEnv("BRAND_REPLY_GUARD_ENABLED", "true");
+const LEAK = /sun\s+tan\s+city|\bSTC\b|crunch|jb\s*&\s*associates|tanning\s+room|\bsalons?\b/i;
+
+const REPLIES = {
+  pets: "Pets are not allowed in the workplace; only a trained service animal is permitted [p.30]. For Sun Tan City and Crunch tanning rooms specifically, service animals are allowed in the tanning room only with a manager's approval [p.50].",
+  attendance:
+    "The attendance policy applies across all brands (Buff City Soap, Crunch, Sun Tan City, JB & Associates office) [p.14]. A no call no show for a scheduled shift may result in immediate termination [p.14].",
+  availability:
+    "Submit availability changes two weeks ahead in MyGlow for Buff City Soap, MyGlow for Sun Tan City, or Woven for Crunch Fitness [p.37].",
+  lateOpeningUpper: "IF YOU CAN'T OPEN THE SALON/STORE ON TIME, NOTIFY YOUR MANAGER [p.15]. The employee reimburses $25.00 via payroll deduction [p.15].",
+  lateOpeningTerse: "The Late Opening policy applies for any brand under JB & Associates: the employee who failed to open reimburses $25.00 [p.15].",
+};
+
+describe("flag off: the reply as written (the leak)", () => {
+  it.each(Object.entries(REPLIES))("%s", (_name, reply) => {
+    expect(withoutOtherBrands(reply)).toBe(reply);
+    expect(reply).toMatch(LEAK);
+  });
+});
+
+describe("flag on: Buff City Soap only, citations kept", () => {
+  it("pets: the tanning-room sentence goes, the policy stays", () => {
+    on();
+    expect(withoutOtherBrands(REPLIES.pets)).toBe(
+      "Pets are not allowed in the workplace; only a trained service animal is permitted [p.30].",
+    );
+  });
+
+  it("attendance: the brand list goes, the rule stays", () => {
+    on();
+    const out = withoutOtherBrands(REPLIES.attendance);
+    expect(out).not.toMatch(LEAK);
+    expect(out).toContain("The attendance policy applies across all brands [p.14].");
+    expect(out).toContain("A no call no show for a scheduled shift may result in immediate termination [p.14].");
+  });
+
+  it("availability: Buff City Soap's own system is kept", () => {
+    on();
+    const out = withoutOtherBrands(REPLIES.availability);
+    expect(out).not.toMatch(LEAK);
+    expect(out).toContain("MyGlow for Buff City Soap");
+    expect(out).toBe("Submit availability changes two weeks ahead in MyGlow for Buff City Soap [p.37].");
+  });
+
+  it('late opening: "salon/store" is "store"', () => {
+    on();
+    const out = withoutOtherBrands(REPLIES.lateOpeningUpper);
+    expect(out).not.toMatch(LEAK);
+    // Changed on purpose (QA-7, 26 Oct 2026): the location word keeps the case
+    // the reply wrote it in; this pinned the old lowercase "THE store".
+    expect(out).toContain("OPEN THE STORE ON TIME");
+    expect(out).toContain("[p.15]");
+  });
+
+  it('late opening: "for any brand under JB & Associates" is "at Buff City Soap"', () => {
+    on();
+    const out = withoutOtherBrands(REPLIES.lateOpeningTerse);
+    expect(out).not.toMatch(LEAK);
+    expect(out).toContain("at Buff City Soap");
+    expect(out).toContain("$25.00 [p.15]");
+  });
+});
+
+describe("flag on: what must stay", () => {
+  it.each([
+    "The JBA Policy Manual covers this on page 22 [p.22].",
+    "Cite the JBA Policy Manual, Late Opening, p.15.",
+    "Buff City Soap's dress code requires closed-toe shoes [p.15].",
+    "Ask your store manager to approve the change.",
+  ])("%s", (reply) => {
+    on();
+    expect(withoutOtherBrands(reply)).toBe(reply);
+  });
+});
+
+/*
+ * QA-2 review, 26 Oct 2026, and the Bubbles KB sweep (71 questions x 2 casings):
+ * never an empty reply, never a renamed manual title, and the sibling
+ * company's role titles and holiday lists come out.
+ */
+describe("flag on: QA-2 review", () => {
+  it("never empties a reply", () => {
+    on();
+    expect(withoutOtherBrands("Sun Tan City applies to tanning rooms.")).toBe(NOTHING_LEFT);
+    expect(NOTHING_LEFT).not.toMatch(LEAK);
+  });
+
+  it.each([
+    'See "Salon Opening Policy" [p.15].',
+    "Cite it as Late Opening, JB & Associates Policy Manual [p.14].",
+    "The JB & Associates Policy Manual says to notify your manager [p.15].",
+  ])("keeps quoted text and manual titles: %s", (reply) => {
+    on();
+    expect(withoutOtherBrands(reply)).toBe(reply);
+  });
+
+  it.each([
+    ["Full-time is AMM/ASD/AGM – 30–35 hours per week [p.33].", "Full-time is AMM/AGM – 30–35 hours per week [p.33]."],
+    [
+      "PTO accrues for full-time Assistant Salon Directors/Assistant Makery Managers [p.41].",
+      "PTO accrues for full-time Assistant Makery Managers [p.41].",
+    ],
+  ])("takes the sibling title out of a slash list: %s", (reply, expected) => {
+    on();
+    expect(withoutOtherBrands(reply)).toBe(expected);
+  });
+
+  it.each([
+    "This applies across the brands covered by the manual — Buff City Soap, Crunch Fitness and Sun Tan City.",
+    "Holidays: Buff City Soap stores close on Thanksgiving [p.42]. Sun Tan City: salons stay open on Memorial Day [p.42].",
+    "These sources cover Sun Tan City performance coaching, discount, and dress code policy.",
+  ])("KB sweep wording: %s", (reply) => {
+    on();
+    const out = withoutOtherBrands(reply);
+    expect(out).not.toMatch(LEAK);
+    expect(out.trim().length).toBeGreaterThan(0);
+  });
+});
+
+/*
+ * HOW REPLIES ARE TYPED (QA-5, 26 Oct 2026): the same replies all lowercase
+ * and in sentence case, brand names included. The other brands are taken out
+ * in each, and the reply keeps its policy and its citations.
+ */
+describe("flag on: the same result in lowercase and sentence case", () => {
+  const lower = (text: string) => text.toLowerCase();
+  const sentence = (text: string) => text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+
+  it.each([
+    ["attendance", REPLIES.attendance, /no call no show/i],
+    ["availability", REPLIES.availability, /myglow for buff city soap/i],
+    ["pets", REPLIES.pets, /service animal is permitted/i],
+    ["lateOpeningTerse", REPLIES.lateOpeningTerse, /reimburses \$25\.00/i],
+  ] as const)("%s", (_name, reply, kept) => {
+    on();
+    for (const typed of [lower(reply), sentence(reply)]) {
+      const out = withoutOtherBrands(typed);
+      expect(out).not.toMatch(LEAK);
+      expect(out).toMatch(kept);
+      expect(out).toMatch(/\[p\.\d+\]/);
+    }
+  });
+});
+
+/*
+ * QA-5, 26 Oct 2026: a title before a comma is
+ * not a list item, and ";" ends a clause, so this company's half is kept.
+ */
+describe("flag on: QA-5 wording defects", () => {
+  const lower = (text: string) => text.toLowerCase();
+  const sentence = (text: string) => text.charAt(0) + text.slice(1).toLowerCase();
+  it.each([
+    ["Per the JBA Policy Manual, Sun Tan City staff and store staff both clock in on time.", /^per the jba policy manual, store staff clock in on time\.$/i],
+    ["Do not use the Sun Tan City process; use MyGlow for Buff City Soap, or Woven for Crunch Fitness.", /^use myglow for buff city soap\.$/i],
+  ] as const)("%s", (reply, expected) => {
+    on();
+    for (const typed of [reply, lower(reply), sentence(reply)]) {
+      const out = withoutOtherBrands(typed);
+      expect(out).toMatch(expected);
+      expect(out).not.toBe(NOTHING_LEFT);
+    }
+  });
+});
+
+/* QA-5, 26 Oct 2026, second probe: a true rule that ends "including <another brand>…" keeps its rule. */
+describe("flag on: a trailing clause about another brand goes, the rule stays", () => {
+  const registers = (text: string) => [text, text.toLowerCase(), text.toUpperCase()];
+  it.each(
+    [
+      ["Standards of Conduct (p.12) applies to every employee, including Sun Tan City employees.", /^standards of conduct \(p\.12\) applies to every employee\.$/i],
+      ["Standards of Conduct applies to every employee, including Sun Tan City employees.", /^standards of conduct applies to every employee\.$/i],
+      ["Late opening is a verbal warning, including at Sun Tan City.", /^late opening is a verbal warning\.$/i],
+      ["Buff City Soap uses Revel; Sun Tan City uses Square. Late opening is verbal.", /^buff city soap uses revel\. late opening is verbal\.$/i],
+    ].flatMap(([text, expected]) => registers(text as string).map((typed) => [typed, expected] as const)),
+  )("%s", (reply, expected) => {
+    on();
+    const out = withoutOtherBrands(reply);
+    expect(out).toMatch(expected);
+    expect(out).not.toBe(NOTHING_LEFT);
+  });
+});
+
+/*
+ * QA-5 and QA-7, 26 Oct 2026, ported from the sibling app: a contrast clause
+ * about another brand goes and the true main clause stays; a prohibition that
+ * only set up the other brand's instruction goes with it; "SALON/STORE" keeps
+ * its capitals; an ordinary answer is untouched. Original, lowercase,
+ * sentence case and CAPS.
+ */
+describe("flag on: QA-5 and QA-7, second review", () => {
+  const registers = (text: string) => [...new Set([text, text.toLowerCase(), text.charAt(0).toUpperCase() + text.slice(1).toLowerCase(), text.toUpperCase()])];
+
+  it.each(
+    [
+      ["Late opening is verbal at Buff City Soap, but at Sun Tan City it is a written warning.", /^late opening is verbal at buff city soap\.$/i],
+      ["Standards of Conduct applies to everyone except Sun Tan City employees.", /^standards of conduct applies to everyone\.$/i],
+      ["Late opening is a verbal warning, whereas at Sun Tan City it is written.", /^late opening is a verbal warning\.$/i],
+      ["Do not use MyGlow; use Revel for Sun Tan City. Late opening is verbal.", /^late opening is verbal\.$/i],
+    ].flatMap(([text, expected]) => registers(text as string).map((typed) => [typed, expected] as const)),
+  )("%s", (reply, expected) => {
+    on();
+    const out = withoutOtherBrands(reply);
+    expect(out).toMatch(expected);
+    expect(out).not.toBe(NOTHING_LEFT);
+  });
+
+  it.each(registers("Do not use MyGlow; use Revel for Sun Tan City."))("QA-7's negation flip: the prohibition is not left as this company's rule: %s", (reply) => {
+    on();
+    expect(withoutOtherBrands(reply)).toBe(NOTHING_LEFT);
+  });
+
+  it("a prohibition before a kept clause stays", () => {
+    on();
+    expect(withoutOtherBrands("Do not open late; call your manager first.")).toBe("Do not open late; call your manager first.");
+  });
+
+  it.each([
+    ["IF YOU CAN'T OPEN THE SALON/STORE ON TIME, CALL YOUR MANAGER.", "IF YOU CAN'T OPEN THE STORE ON TIME, CALL YOUR MANAGER."],
+    ["If you can't open the salon/store on time, call your manager.", "If you can't open the store on time, call your manager."],
+  ])("the location word keeps the case it was written in: %s", (reply, expected) => {
+    on();
+    expect(withoutOtherBrands(reply)).toBe(expected);
+  });
+
+  it.each(
+    registers(
+      "Per the JBA Policy Manual [p.12], every Buff City Soap store opens on time. Wipe down the soap counter after each batch, and log it in Woven.",
+    ),
+  )("an ordinary answer is untouched: %s", (reply) => {
+    on();
+    expect(withoutOtherBrands(reply)).toBe(reply);
+  });
+
+  it.each(["An answer.", "Yes.", "See p.12."])("a short reply that names no other brand is kept: %s", (reply) => {
+    on();
+    expect(withoutOtherBrands(reply)).toBe(reply);
+  });
+
+  it("flag off: the contrast reply as written", () => {
+    const reply = "Late opening is verbal at Buff City Soap, but at Sun Tan City it is a written warning.";
+    expect(withoutOtherBrands(reply)).toBe(reply);
+  });
+});

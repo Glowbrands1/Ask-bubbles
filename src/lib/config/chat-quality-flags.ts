@@ -850,6 +850,17 @@ export function nameBeforeTitleEnabled(): boolean {
   return envFlag("NAME_BEFORE_TITLE_ENABLED");
 }
 
+/**
+ * A reply speaks for this company only (Code 3; QA testers G21/U1/U6, 25 Oct
+ * 2026; same flag in both apps): another brand named in the model's prose
+ * (its parenthetical, its list item, or a sentence only about it) is taken
+ * out, and the location word is this company's. The manual's title and page
+ * citations are untouched. Off, the reply as written.
+ */
+export function brandReplyGuardEnabled(): boolean {
+  return envFlag("BRAND_REPLY_GUARD_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -930,6 +941,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "GOOGLE_REVIEWS_IN_CHAT_ENABLED",
   "DRAFT_NEVER_BLANK_ENABLED",
   "NAME_BEFORE_TITLE_ENABLED",
+  "BRAND_REPLY_GUARD_ENABLED",
 ] as const;
 
 /**
