@@ -954,6 +954,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "PRIOR_ROW_NOT_ON_INCIDENT_DATE_ENABLED",
   "NOT_DEDUCTIBLE_READ_ENABLED",
   "PRIOR_STEP_SENTENCE_ENABLED",
+  "EXIT_FULFILLED_IS_LAST_DAY_ENABLED",
 ] as const;
 
 /**
@@ -1093,6 +1094,14 @@ export function notDeductibleReadEnabled(): boolean {
  */
 export function priorStepSentenceEnabled(): boolean {
   return envFlag("PRIOR_STEP_SENTENCE_ENABLED");
+ * A notice worked to the last day was fulfilled on it (a manager in the
+ * sibling app, 26 Oct 2026; same flag in both apps): "her last day worked was
+ * 9-28-26" with "gave and worked 2 week notice" left "Date that notice was
+ * fulfilled" blank. See `readExitFacts` in `forms/exit-facts.ts`. Off, as
+ * before.
+ */
+export function exitFulfilledIsLastDayEnabled(): boolean {
+  return envFlag("EXIT_FULFILLED_IS_LAST_DAY_ENABLED");
 }
 
 /**
