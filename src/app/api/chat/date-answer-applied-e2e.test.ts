@@ -493,6 +493,24 @@ describe(`${DA_FLAG} on`, () => {
 });
 
 /*
+ * QA's negatives (26 Oct 2026): a reply that names a person is no date
+ * answer, and a reply with two dates ("10/5 and 10/15") picks neither — on
+ * main, straight after the question, it dated the form with the last one.
+ */
+describe(`${DA_FLAG} on: not an answer`, () => {
+  beforeEach(() => useProduction(true));
+
+  for (const between of [false, true]) {
+    it.each(["payton rolls", "10/5 and 10/15"])(`${between ? "after a turn, " : ""}"%s" leaves the form undated`, async (reply) => {
+      const { proposal } = await answered([T1, ...(between ? [T2] : []), reply], false);
+      expect(proposal?.formDate ?? null).toBeNull();
+      // "payton rolls" is read as a person here (the app asks about her); never a date.
+      if (proposal) expect(proposal.employeeName).toBe("Quinn Marlowe");
+    });
+  }
+});
+
+/*
  * NEVER-BREAK: with the flag off, main today (this app's production env).
  * Straight after the question "10/15", "10/15/26" and "oct 15" already date
  * it; "10-15", "the 15th" and "most recent" leave the card. After a turn in
@@ -527,6 +545,11 @@ describe(`${DA_FLAG} off: as main`, () => {
       expect({ card: proposal !== null, formDate: proposal?.formDate ?? null }).toEqual(expected[reply]);
     });
   }
+
+  it('"10/5 and 10/15" straight after the question dates the form with the last one', async () => {
+    const { proposal } = await answered([T1, "10/5 and 10/15"], false);
+    expect(proposal?.formDate).toBe("2026-10-15");
+  });
 
   it('after a turn, "most recent" is read as the employee and Create on the earlier card is refused', async () => {
     await expect(answered([T1, T2, "most recent"])).rejects.toThrow(
