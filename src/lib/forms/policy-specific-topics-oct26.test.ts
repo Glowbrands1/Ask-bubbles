@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import rows from "@/test/fixtures/jba-manual-production-151.json";
 import { accountManualSections } from "@/lib/ai/account-manual-sections";
@@ -8,8 +8,9 @@ import { manualChunkFromRow, type ManualChunkRow as ChunkRow } from "@/lib/knowl
 
 import { describedManualSection } from "./named-policy-section";
 import type { ManualChunk } from "./official-policy-manual";
+import { manualGroundedPolicies, policyFieldValue } from "./policy-citation";
 import { manualSectionsFor, officialManualReference } from "./official-policy-manual";
-import { OTHER_WRITE_IN_INSTRUCTION, specificTopic, withConductLinePage, withoutPrimedTopic } from "./specific-policy-topics";
+import { OTHER_WRITE_IN_INSTRUCTION, specificTopic, withConductLinePage, withConductLineWording, withoutPrimedTopic } from "./specific-policy-topics";
 
 /**
  * ============================================================================
@@ -28,6 +29,8 @@ import { OTHER_WRITE_IN_INSTRUCTION, specificTopic, withConductLinePage, without
 
 const CHUNKS = (rows.chunks as ChunkRow[]).map(manualChunkFromRow) as unknown as readonly ManualChunk[];
 
+/* The flag is off unless a case turns it on, even when the whole suite runs with it on. */
+beforeEach(() => vi.stubEnv("POLICY_SPECIFIC_TOPICS_ENABLED", ""));
 afterEach(() => vi.unstubAllEnvs());
 const on = () => vi.stubEnv("POLICY_SPECIFIC_TOPICS_ENABLED", "true");
 const cited = (text: string) => accountManualSections(text, CHUNKS).map((section) => `${section.heading} p.${section.page}`);
@@ -266,5 +269,37 @@ describe("flag on: a conduct incident the reading points at cites the Standards 
     expect(before).not.toContain(cite);
     on();
     expect(cited(ask(incident))).toEqual([cite]);
+  });
+});
+
+describe("flag on: the policy quotes the infraction the page is cited for", () => {
+  const quoted = (incident: string) => {
+    const notes = ask(incident);
+    const policies = withConductLineWording(
+      manualGroundedPolicies(
+        { documentId: "manual", documentTitle: "JBA Policy Manual", chunks: CHUNKS },
+        accountManualSections(notes, CHUNKS),
+      ),
+      notes,
+      CHUNKS,
+    );
+    return policyFieldValue(policies);
+  };
+
+  it.each([
+    ["refused to follow direction", "Insubordination -the refusal to follow the directions of the manager.", "p. 13"],
+    ["drawer short", "Register / Bank shortages", "p. 13"],
+    ["took product without paying", "Theft, inappropriate removal", "p. 13"],
+    ["talking bad about coworkers", "Behavior that demonstrates disrespect for a manager or other Employees", "p. 13"],
+  ])("%s", (incident, line, page) => {
+    on();
+    const value = quoted(incident)!;
+    expect(value).toContain(line);
+    expect(value).toContain(`Source: JBA Policy Manual — Standards of Conduct, ${page}`);
+    expect(value).not.toContain("Lack of sales performance");
+  });
+
+  it("off, the chunk's own opening is quoted as before", () => {
+    expect(withConductLineWording([{ sectionTitle: "Standards of Conduct", pageLabel: "13", policyText: "x" }], ask("drawer short"), CHUNKS)[0]!.policyText).toBe("x");
   });
 });

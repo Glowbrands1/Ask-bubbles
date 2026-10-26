@@ -120,7 +120,7 @@ import {
   describedManualSection,
   namedManualSection,
 } from "@/lib/forms/named-policy-section";
-import { OTHER_WRITE_IN_INSTRUCTION, withConductLinePage, withoutPrimedTopic } from "@/lib/forms/specific-policy-topics";
+import { OTHER_WRITE_IN_INSTRUCTION, withConductLinePage, withConductLineWording, withoutPrimedTopic } from "@/lib/forms/specific-policy-topics";
 import {
   PAYROLL_DEDUCT_KEY,
   isPayrollDeductAnswer,
@@ -1712,7 +1712,9 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
        */
       manualReference:
         manual.ok && manualSections.length > 0
-          ? policyFieldValue(manualGroundedPolicies(manual, manualSections))
+          ? policyFieldValue(
+              withConductLineWording(manualGroundedPolicies(manual, manualSections), `${body.topic ?? ""} ${notes}`, manual.chunks),
+            )
           : null,
       manualAmbiguous: !manual.ok && manual.problem === "ambiguous",
       /*
