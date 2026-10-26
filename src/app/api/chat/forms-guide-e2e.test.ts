@@ -20,7 +20,7 @@ vi.mock("@/config/company/locations", async () =>
  * forms can i create here?" (the starter chip) is the role's exact list from
  * `config/company/access.ts`. Edit the template row and the answer changes.
  * "ca for <name>" still starts the form. With the flag off the same turns are
- * answered exactly as before. Ported from Ask Sunny.
+ * answered exactly as before. Ported from the sibling app.
  *
  * Faked: identity (role per test), the database (in memory, seeded by
  * `ensureTemplateLibrary`), the models, analytics. Synthetic names.
@@ -320,7 +320,7 @@ describe("NEVER-BREAK with the flag on", () => {
   );
 });
 
-describe("Sunny tester replay S27: a generic form request", () => {
+describe("tester replay S27: a generic form request", () => {
   it.each([
     "can you make a generic policy review form that works for any employee",
     "Can you make a generic policy review form that works for any employee",

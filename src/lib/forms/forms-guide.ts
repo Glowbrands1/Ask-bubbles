@@ -204,7 +204,7 @@ const LIST_PATTERNS: readonly RegExp[] = [
 
 /*
  * A REQUEST FOR A FORM THAT IS NOT ABOUT ANYONE — "can you make a generic
- * policy review form that works for any employee" (Sunny tester replay S27,
+ * policy review form that works for any employee" (tester replay S27,
  * 26 Oct 2026). Read only with a make/create lead AND a generic cue, and only
  * when what is left names a form; "create a policy review for Avery Holt"
  * leaves a person's name behind and is never read here.
@@ -225,6 +225,8 @@ function readGeneric(text: string): { kind: "generic"; phrase: string } | null {
   rest = rest.replace(GENERIC_WORDS, " ").replace(/\s+/g, " ").trim();
   const phrase = trimPhrase(rest);
   if (!phrase) return null;
+  // Anything still said about someone ("for Avery Holt", "about her") is a real request.
+  if (/\b(?:for|about|regarding|re|to|with|on)\b/.test(phrase)) return null;
   if (phrase === "form" || phrase === "forms") return { kind: "generic", phrase };
   return plausibleFormPhrase(rest, phrase) ? { kind: "generic", phrase } : null;
 }

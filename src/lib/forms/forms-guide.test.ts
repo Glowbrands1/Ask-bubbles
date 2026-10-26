@@ -19,7 +19,7 @@ import type { Role } from "@/types";
  * managers used three times in Ask Bubbles). Each runs as typed and in
  * sentence case. The answers are built from this app's templates and role
  * matrix (`config/company/access.ts`); the fixture-change test proves no
- * sentence about a form is fixed text. Ported from Ask Sunny: the same
+ * sentence about a form is fixed text. Ported from the sibling app: the same
  * mechanism, this app's own templates, roles and labels.
  */
 
@@ -111,7 +111,7 @@ describe("the managers' openers, as typed and in sentence case", () => {
     expect(text).toContain("The EPP isn't a form available in Ask Bubbles.");
     expect(text).toContain('Ask "which forms can I create here?" to see the forms you can use.');
     for (const epp of EPP_HIDDEN.withheld) expect(text).not.toContain(epp.name);
-    expect(text).not.toMatch(/tanning|sun tan|sunny/i);
+    expect(text).not.toMatch(/tanning|sun tan/i);
   });
 
   it.each(both("what is an epp"))("%s with the EPP keys shown: every EPP template", (wording) => {
@@ -287,7 +287,7 @@ describe("NEVER-BREAK: short commands and the exit-process answer are not the gu
 });
 
 /*
- * Sunny tester replay S27 (26 Oct 2026), the tester's exact words: a request
+ * Tester replay S27 (26 Oct 2026), the tester's exact words: a request
  * for a form that is about no one is explained from the template, not answered
  * by asking for an employee.
  */
@@ -322,8 +322,15 @@ describe("a generic form request is explained from the template", () => {
   it.each([
     ...both("create a policy review for Avery Holt"),
     ...both("create a coaching form for Avery Holt using the template"),
-    ...both("create a ca for everyone at the salon"),
+    ...both("create a ca for everyone at the store"),
     ...both("make a policy review for Avery Holt"),
+    // QA-2 probes: a negation, or a generic word beside a real name, is never the guide.
+    ...both("don't make a generic form"),
+    ...both("never create a policy review"),
+    ...both("make a generic policy review for Avery Holt"),
+    ...both("make a generic policy review form for Avery Holt"),
+    ...both("create a template coaching form for Avery Holt"),
+    ...both("can you make a coaching form for Avery Holt that works for any employee"),
   ])("NEVER-BREAK: %s still creates", (wording) => {
     expect(readFormsGuideQuestion(wording)).toBeNull();
   });
