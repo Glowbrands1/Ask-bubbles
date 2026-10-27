@@ -785,7 +785,7 @@ it("variation report", async () => {
     sections.push(`AI reader replies: ${READER_MODE}${READER_MODE === "oracle" ? " (a perfect reader from the seeds; not the gate)" : ""}.`, "");
     if (transport) {
       const t = transport.stats;
-      sections.push(`Reader calls: ${t.calls}; recorded now ${t.recorded}; no recording (ran as flag off) ${t.missing}; slower than 2 s ${t.slow}; tokens in/out ${t.inputTokens}/${t.outputTokens}; latency median ${percentile(t.latencies, 0.5)} ms, p90 ${percentile(t.latencies, 0.9)} ms; new spend this run $${liveSpendUsd().toFixed(3)}${process.env.VARIATION_BUDGET_USD ? ` (cap $${process.env.VARIATION_BUDGET_USD})` : ""}.`, "");
+      sections.push(`Reader calls: ${t.calls}; recorded now ${t.recorded}; no recording (ran as flag off) ${t.missing}; slower than the limit ${t.slow}; tokens in/out ${t.inputTokens}/${t.outputTokens}; latency median ${percentile(t.latencies, 0.5)} ms, p90 ${percentile(t.latencies, 0.9)} ms; new spend this run $${liveSpendUsd().toFixed(3)}${process.env.VARIATION_BUDGET_USD ? ` (cap $${process.env.VARIATION_BUDGET_USD})` : ""}.`, "");
     }
     const disputed = readerTags.filter((row) => row.tags.some((tag) => tag.startsWith("disputed:")));
     const fallbacks = readerTags.flatMap((row) => row.tags.filter((tag) => tag.startsWith("fallback:")));

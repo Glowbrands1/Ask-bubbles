@@ -466,7 +466,7 @@ function setLive(reader: boolean) {
 const field = (value: string | null, evidence: string | null) => ({ value, evidence });
 /** What a faithful reader returns for the first turn (the manager's own words, copied). */
 const reading = (extra: Record<string, unknown> = {}) => ({
-  employee: field("quinn marlowe", "quinn marlowe"),
+  employee: field("dale ferris", "dale ferris"),
   location: field("dodge", "dodge"),
   incident: field("late", "she was late"),
   ...extra,
@@ -491,7 +491,7 @@ async function chat(turns: string[], written: string | null, readerOn: boolean, 
   const thread = new Thread();
   const answers: string[] = [];
   for (const turn of turns) answers.push((await thread.say(turn)).content);
-  state.draft = { values: { observation: `Observed:\nQuinn arrived late for the scheduled shift on ${written ?? "the scheduled day"}.\n\nExpectation:\nQuinn is expected to arrive on time.` } };
+  state.draft = { values: { observation: `Observed:\nDale arrived late for the scheduled shift on ${written ?? "the scheduled day"}.\n\nExpectation:\nDale is expected to arrive on time.` } };
   // The card as the manager sees it; `checkedReading` is the reader's quotes for the routes, not shown.
   const card = JSON.stringify(thread.proposal ? { ...thread.proposal, proposalId: undefined, checkedReading: undefined } : null);
   let id: string | null = null;
@@ -529,7 +529,8 @@ function expectIdentical(off: Outcome, on: Outcome) {
   expect(on.createError).toBe(off.createError);
 }
 
-const NAME = "create a CA form for quinn marlowe at dodge";
+// The owner's script for this app (QA, 27 Oct 2026): "create a CA form for dale ferris at dodge. she was late on the 2nd".
+const NAME = "create a CA form for dale ferris at dodge";
 
 describe("live flags on, reader off and on: the owner's and testers' chats", () => {
   it("(a) 'she was late on the 2nd', 'yes payroll deduct', '$25' then Create", async () => {
