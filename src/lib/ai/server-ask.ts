@@ -84,6 +84,7 @@ import {
   manualNegatedListNoteEnabled,
   questionNotFormEnabled,
   googleReviewsInChatEnabled,
+  typoReadingCopyEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { gateTexts, searchWithPlan } from "./continuation";
 import { fieldsFromManagerText, mergeConfirmed, retainFieldsInReply } from "./form-field-state";
@@ -138,6 +139,8 @@ import { appPasswordHelpFor } from "./app-password-help";
 import { redactSensitiveDefaults, withoutSensitiveDefaults } from "./sensitive-defaults";
 import { withoutSharedSourceClaims } from "./sources-not-shared";
 import { withNameBeforeTitle } from "./name-before-title";
+import { withTypoReadingCopy } from "./typo-reading-copy";
+import { protectedNameWords } from "./typo-name-words";
 import type { AskRequest, AskResponse } from "./types";
 import { keepManagerActionPlan } from "./manager-action-plan-reply";
 import { withJobTitleFromWords } from "./job-title-from-words";
@@ -221,7 +224,9 @@ async function answerQuestionTraced(
 ): Promise<AskResponse> {
   // TERSE_SLOT_READ_ENABLED: a terse "ca …" line is read as the long form.
   // NAME_BEFORE_TITLE_ENABLED: a two-word name right before a job title is the name.
-  const read = withTerseSlots(withNameBeforeTitle(request));
+  // TYPO_READING_COPY_ENABLED: "coahed", "amont", "Manger" are read as the words they can only be; names never.
+  const names = typoReadingCopyEnabled() ? await protectedNameWords() : new Set<string>();
+  const read = withTerseSlots(withNameBeforeTitle(withTypoReadingCopy(request, names)));
   if (!chatTraceEnabled()) return answerQuestionBody(read, actor, memory);
   const draft = openChatTrace({
     conversationId: request.conversationId,
