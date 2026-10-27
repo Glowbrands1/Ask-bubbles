@@ -615,3 +615,38 @@ describe(`${RB}`, () => {
     });
   }
 });
+
+/*
+ * QA S12 / S1 (ported from the sibling app), this app's shape: the Corrective
+ * Action card's Issue read "this should be a written and note a verbal ca was
+ * given on 9-1-26". LEVEL_STEP_NOT_ACCOUNT_ENABLED: that sentence is no Issue.
+ */
+const LSN = "LEVEL_STEP_NOT_ACCOUNT_ENABLED";
+const S1 = [
+  "create a CA form for dale ferris, makery associate at dodge, for opening store late on 9-28-26",
+  "this should be a written and note a verbal ca was given on 9-1-26",
+  "Create a form from this conversation.",
+];
+
+describe(LSN, () => {
+  for (const on of [true, false]) {
+    it(on ? "on: the Issue is what happened" : "off: as main, the level and step are the Issue", async () => {
+      setProduction(true);
+      if (!saved.has(LSN)) saved.set(LSN, process.env[LSN]);
+      delete process.env[LSN];
+      if (on) process.env[LSN] = "true";
+      // As live with the S12 bundle: STEP_DATE_NOT_INCIDENT on, so 9/1 is no correction of the incident's date.
+      if (!saved.has("STEP_DATE_NOT_INCIDENT_ENABLED")) saved.set("STEP_DATE_NOT_INCIDENT_ENABLED", process.env.STEP_DATE_NOT_INCIDENT_ENABLED);
+      process.env.STEP_DATE_NOT_INCIDENT_ENABLED = "true";
+      const { replies } = await chat(S1);
+      const issue = replies[2]!.match(/\*\*Issue:\*\* [^·\n]*/)?.[0] ?? "";
+      if (on) {
+        expect(issue).not.toContain("should be a written");
+        expect(issue).not.toContain("was given on 9-1-26");
+        expect(issue.toLowerCase()).toContain("opening store late on 9-28-26");
+      } else {
+        expect(issue).toContain("this should be a written and note a verbal ca was given on 9-1-26");
+      }
+    });
+  }
+});
