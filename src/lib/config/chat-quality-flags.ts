@@ -1356,6 +1356,17 @@ export function firstNameAskEnabled(): boolean {
 }
 
 /**
+ * Create takes "Calder", "remy" or "remy calder remy" in the conversation as
+ * part of the card's "Remy Calder" instead of refusing the card as out of date
+ * (ported from the sibling app, QA S5, 27 Oct 2026; same flag in both apps). A
+ * second name that is not the card's still refuses. See
+ * `forms/proposal-currency.ts`. Off, as before.
+ */
+export function createAcceptsPartOfNameEnabled(): boolean {
+  return envFlag("CREATE_ACCEPTS_PART_OF_NAME_ENABLED");
+}
+
+/**
  * A typed name that is not on the directory is named back once, and the name
  * question is never shown twice in a row (QA BF7 live, 27 Oct 2026): the same
  * "Who is this Corrective Action Form for?" came back five times while the

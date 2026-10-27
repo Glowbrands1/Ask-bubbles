@@ -894,3 +894,7 @@ Not needed in the sibling app: QA ran "i dont know the amount" and "$25" live th
 ## 27 Oct 2026: "yes payrol ldeduct" is the payroll answer — this app only (PAYROLL_TYPO_ANSWER_ENABLED)
 
 QA BF7b live. The sibling app already reads the typo as the payroll answer on that turn (checked through its chat with its production flags), so the flag is not needed there.
+
+## 27 Oct 2026: Create takes part of a name as the card's person — both apps (CREATE_ACCEPTS_PART_OF_NAME_ENABLED)
+
+Ported from Ask Sunny (QA S5): a request that said "remy calder remy" made a card for Remy Calder, and Create refused it as "out of date: the conversation now says the form is for remy calder remy". With the flag on, a name the conversation says whose every word is one of the card's words ("Calder", "remy", "remy calder remy") is the card's person; "Remy Voss" against the card for Remy Calder is still refused. Same check in `forms/proposal-currency.ts` in Ask Sunny.
