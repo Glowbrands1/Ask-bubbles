@@ -878,3 +878,11 @@ FOLLOW_UP_CITATION_FIELD_ENABLED is in both apps. GRAMMAR_ASK_NOT_ACCOUNT_ENABLE
 ## 27 Oct 2026: S1 follow-ups — level/step clause (both apps); title case (sibling-only)
 
 LEVEL_STEP_NOT_ACCOUNT_ENABLED is in both apps (here the Issue, there the Observation). JOB_TITLE_CASE_ENABLED is not needed here: QA's S1 turns through this app's chat give "Makery Associate" from the title list. (The sibling app dropped its APP_SENTENCES_NOT_ACCOUNT flag before shipping; this app's card shows no state sentences either.) WARNING_LEVEL_AND_CLAUSE's saved-draft fix (QA B1) is this app's: the sibling app's live draft already ticked Written.
+
+## 27 Oct 2026: S1 residuals — read-back title case and the step date in the date question (sibling-only)
+
+JOB_TITLE_READBACK_CASE_ENABLED and STEP_DATE_NO_QUESTION_ENABLED are not needed here: QA's S1 turns through this app's chat, with STEP_DATE_NOT_INCIDENT on, ask no date question (this app's incidentDates already leaves out a step's date under STEP_DATE_NOT_INCIDENT) and read back the title the card has.
+
+## 27 Oct 2026: S1 residuals — read-back title case and the step date in the date question (sibling-only)
+
+JOB_TITLE_READBACK_CASE_ENABLED and STEP_DATE_NO_QUESTION_ENABLED are not needed here: QA's S1 turns through this app's chat, with STEP_DATE_NOT_INCIDENT on, ask no date question (this app's incidentDates already leaves out a step's date under STEP_DATE_NOT_INCIDENT) and read back the title the card has.

@@ -964,6 +964,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "PLAN_PAYROLL_SENTENCE_ENABLED",
   "NAME_QUESTION_ONLY_ENABLED",
   "ANIMAL_ANYWHERE_ENABLED",
+  "ANSWER_NOT_A_NAME_ENABLED",
+  "STORE_WORD_NOT_A_NAME_ENABLED",
   "STEP_DATE_NOT_INCIDENT_ENABLED",
   "JOB_TITLE_FROM_WORDS_ENABLED",
   "DATE_REASK_FRESH_ENABLED",
@@ -1260,6 +1262,24 @@ export function jobTitleFromWordsEnabled(): boolean {
  */
 export function dateReaskFreshEnabled(): boolean {
   return envFlag("DATE_REASK_FRESH_ENABLED");
+}
+
+/**
+ * An answer to the app's question names nobody (ported from the sibling app,
+ * QA BF7, 27 Oct 2026; same flag in both apps): "yes payrol ldeduct" became
+ * the employee. See `forms/answer-not-a-name.ts`. Off, as before.
+ */
+export function answerNotANameEnabled(): boolean {
+  return envFlag("ANSWER_NOT_A_NAME_ENABLED");
+}
+
+/**
+ * A reply that is only a store's name is the store, not the employee (QA BF7,
+ * 27 Oct 2026): "dodge" became the employee. See `forms/answer-not-a-name.ts`.
+ * Off, as before.
+ */
+export function storeWordNotANameEnabled(): boolean {
+  return envFlag("STORE_WORD_NOT_A_NAME_ENABLED");
 }
 
 /**
