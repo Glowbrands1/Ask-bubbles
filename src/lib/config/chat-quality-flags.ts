@@ -974,6 +974,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FIRST_NAME_ASK_ENABLED",
   "UNKNOWN_NAME_ASK_ENABLED",
   "DECIMAL_NOT_SENTENCE_END_ENABLED",
+  "ORDINAL_DATE_IN_DRAFT_ENABLED",
   "PAYROLL_TYPO_ANSWER_ENABLED",
   "WIDER_DATE_READER_ENABLED",
   "JOB_TITLE_APPOSITION_ENABLED",
@@ -1384,4 +1385,14 @@ export function widerDateReaderEnabled(): boolean {
  */
 export function decimalNotSentenceEndEnabled(): boolean {
   return envFlag("DECIMAL_NOT_SENTENCE_END_ENABLED");
+}
+
+/**
+ * A bare "the 2nd" in the manager's notes is read against today when a draft's
+ * dates are checked (QA, 27 Oct 2026; same flag in both apps): the drafted
+ * "December 2, 2025" was kept beside a form dated 10/02/2026. See
+ * `forms/form-date-grounding.ts`. Off, as before.
+ */
+export function ordinalDateInDraftEnabled(): boolean {
+  return envFlag("ORDINAL_DATE_IN_DRAFT_ENABLED");
 }
