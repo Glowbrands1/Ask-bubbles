@@ -1,4 +1,4 @@
-import { levelStepNotAccountEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { decimalNotSentenceEndEnabled, levelStepNotAccountEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { COMPANY_JOB_TITLES } from "@/config/company/job-titles";
 import { businessToday } from "@/lib/business-date";
 
@@ -38,6 +38,16 @@ const NOT_THE_ACCOUNT =
   /\b(?:payroll\s+deduct|previous\s+coaching|prior\s+(?:coaching|actions?)|jba\s+(?:policy\s+)?manual)\b/i;
 const PLACE = /\bat\s+[A-Za-z0-9][\w'.-]*(?:\s+[A-Za-z0-9][\w'.-]*){0,3}/gi;
 const LEFTOVER_FILLER = /^(?:location|store|the|a|an|for|and)$/i;
+/*
+ * DECIMAL_NOT_SENTENCE_END_ENABLED (QA, 27 Oct 2026): a point between two
+ * digits ends no sentence. "she was 10 minutes late on 10.2" read back as
+ * "… late on 10", and "3.5 hours late and owes $10.25" as "3. 5 hours late
+ * and owes $10".
+ */
+const REQUEST_KEEPING_DECIMALS =
+  /\b(?:warning|write[- ]?up|corrective\s+action(?:\s+form)?|ca|c\/a|dpoa)\s+(?:for|about|over|regarding|re:?)\s+((?:[^.;!?\n]|(?<=\d)\.(?=\d))+)/gi;
+const SENTENCE = /[^.!?\n]+[.!?]*/g;
+const SENTENCE_KEEPING_DECIMALS = /(?:[^.!?\n]|(?<=\d)\.(?=\d))+[.!?]*/g;
 
 function turnsOf(text: string): string[] {
   return (text ?? "")
@@ -52,7 +62,7 @@ function issueFromRequest(text: string, employeeName: string | null): string | n
   const personWords = new Set(person.split(/\s+/).filter(Boolean));
   for (const turn of [...turnsOf(text)].reverse()) {
     let found: string | null = null;
-    for (const match of turn.matchAll(REQUEST)) {
+    for (const match of turn.matchAll(decimalNotSentenceEndEnabled() ? REQUEST_KEEPING_DECIMALS : REQUEST)) {
       let raw = match[1]!;
       // "a CA for Jordan Testperson for cash handling", "… for jordan testperson - cash handling",
       // "CA for jordan testperson, cash handling": the person, then the issue.
@@ -123,7 +133,7 @@ function accountIssue(text: string): string | null {
       const issue = clipAccount(violation[1]!);
       if (issue) return issue;
     }
-    const sentences = [...turn.matchAll(/[^.!?\n]+[.!?]*/g)]
+    const sentences = [...turn.matchAll(decimalNotSentenceEndEnabled() ? SENTENCE_KEEPING_DECIMALS : SENTENCE)]
       .map((match) => match[0].trim())
       .filter((sentence) => sentence.length >= 3 && sentence.length <= 180);
     const hits = sentences
