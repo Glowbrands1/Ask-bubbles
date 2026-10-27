@@ -740,7 +740,9 @@ it("variation report", async () => {
       ? null
       : READER_MODE === "oracle"
         ? (async (input: { messages: { content: string }[] }) => ({ input: oracleReading(input.messages.map((m) => m.content).join("\n")), usage: NO_USAGE })) as never
-        : (transport!.call as never);
+        : // VARIATION_READER_TIMEOUT_MS (replay only, a what-if): the limit a replayed reply is held to instead of the app's 2 s.
+          (((input: { timeoutMs: number }) =>
+            transport!.call({ ...input, timeoutMs: Number(process.env.VARIATION_READER_TIMEOUT_MS) || input.timeoutMs } as never)) as never);
     for (const seed of SEEDS.filter((entry) => seeds.length === 0 || seeds.includes(entry.id))) {
       current = seed;
       // VARIATION_KINDS=name,typo runs only those kinds of variant (a targeted sample).

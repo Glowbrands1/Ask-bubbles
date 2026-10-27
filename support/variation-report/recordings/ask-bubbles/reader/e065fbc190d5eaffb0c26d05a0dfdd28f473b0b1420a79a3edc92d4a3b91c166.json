@@ -1,0 +1,57 @@
+{
+  "key": "e065fbc190d5eaffb0c26d05a0dfdd28f473b0b1420a79a3edc92d4a3b91c166",
+  "model": "claude-haiku-4-5",
+  "reply": {
+    "employee": {
+      "value": "Marlowe, Quinn",
+      "evidence": "Marlowe, Quinn"
+    },
+    "location": {
+      "value": "grand island",
+      "evidence": "grand island"
+    },
+    "jobTitle": {
+      "value": "team member",
+      "evidence": "team member"
+    },
+    "incident": {
+      "value": "opening store late",
+      "evidence": "opening store late"
+    },
+    "incidentDate": {
+      "value": "2026-09-28",
+      "evidence": "9-28-26"
+    },
+    "warningLevel": {
+      "value": "written",
+      "evidence": "this should be a written"
+    },
+    "policyHeading": {
+      "value": "Late Opening",
+      "evidence": "opening store late"
+    },
+    "payroll": {
+      "value": null,
+      "evidence": null
+    },
+    "payrollAmount": {
+      "value": null,
+      "evidence": null
+    },
+    "priorSteps": [
+      {
+        "kind": "verbal",
+        "date": "2026-09-01",
+        "evidence": "verbal ca was given on 9-1-26"
+      }
+    ],
+    "otherDates": []
+  },
+  "usage": {
+    "inputTokens": 3525,
+    "outputTokens": 379,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0
+  },
+  "ms": 3341
+}
