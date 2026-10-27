@@ -894,3 +894,7 @@ Not needed in the sibling app: QA ran "i dont know the amount" and "$25" live th
 ## 27 Oct 2026: "yes payrol ldeduct" is the payroll answer — this app only (PAYROLL_TYPO_ANSWER_ENABLED)
 
 QA BF7b live. The sibling app already reads the typo as the payroll answer on that turn (checked through its chat with its production flags), so the flag is not needed there.
+
+## 27 Oct 2026: known gap — no amount row on the card (left as is)
+
+After "$25", the Payroll deduction amount shows in the reply and on the saved draft but the card has no amount row: this app's proposal carries no amount field and the card renders only "Payroll deduct". The sibling app's card has no amount row either. QA: skip for now (UI work, low value).
