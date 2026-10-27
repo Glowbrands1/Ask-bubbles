@@ -963,6 +963,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "MEETING_NOT_LATENESS_PLAN_ENABLED",
   "PLAN_PAYROLL_SENTENCE_ENABLED",
   "NAME_QUESTION_ONLY_ENABLED",
+  "ANIMAL_ANYWHERE_ENABLED",
 ] as const;
 
 /**
@@ -1209,4 +1210,14 @@ export function priorRowNotOnIncidentDateEnabled(): boolean {
  */
 export function dateAnswerKeepsOpenEnabled(): boolean {
   return envFlag("DATE_ANSWER_KEEPS_OPEN_ENABLED");
+}
+
+/**
+ * An animal anywhere in a sentence about being at work is the Animals in the
+ * Workplace incident (QA LS-B11 / SX5, Pau 27 Oct 2026; same flag in both
+ * apps): "came into the store to show her team her new puppy" cited Standards
+ * of Conduct. See `specific-policy-topics.ts`. Off, as before.
+ */
+export function animalAnywhereEnabled(): boolean {
+  return envFlag("ANIMAL_ANYWHERE_ENABLED");
 }
