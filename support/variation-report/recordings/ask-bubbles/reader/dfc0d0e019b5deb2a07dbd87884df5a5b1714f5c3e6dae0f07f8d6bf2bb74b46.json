@@ -1,0 +1,57 @@
+{
+  "key": "dfc0d0e019b5deb2a07dbd87884df5a5b1714f5c3e6dae0f07f8d6bf2bb74b46",
+  "model": "claude-haiku-4-5",
+  "reply": {
+    "employee": {
+      "value": "QUINN MARLOWE",
+      "evidence": "CA FOR QUINN MARLOWE AT DODGE"
+    },
+    "location": {
+      "value": "DODGE",
+      "evidence": "CA FOR QUINN MARLOWE AT DODGE"
+    },
+    "jobTitle": {
+      "value": null,
+      "evidence": null
+    },
+    "incident": {
+      "value": "was late",
+      "evidence": "SHE WAS LATE ON 10-5 AND 10-15"
+    },
+    "incidentDate": {
+      "value": "2026-10-15",
+      "evidence": "SHE WAS LATE ON 10-5 AND 10-15"
+    },
+    "warningLevel": {
+      "value": "verbal",
+      "evidence": "VERBAL"
+    },
+    "payroll": {
+      "value": "no",
+      "evidence": "NO PAYROLL DEDUCT"
+    },
+    "payrollAmount": {
+      "value": null,
+      "evidence": null
+    },
+    "policyHeading": {
+      "value": "Attendance",
+      "evidence": "SHE WAS LATE ON 10-5 AND 10-15"
+    },
+    "priorSteps": [
+      {
+        "kind": "coaching",
+        "date": "2026-10-16",
+        "evidence": "I COACHED HER ON 10-16 ABOUT BEING LATE"
+      }
+    ],
+    "otherDates": []
+  },
+  "usage": {
+    "inputTokens": 3539,
+    "outputTokens": 441,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0
+  },
+  "ms": 0
+}
