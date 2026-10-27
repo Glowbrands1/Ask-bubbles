@@ -455,12 +455,15 @@ function setProduction(on: boolean) {
 
 const AO = "ACCOUNT_ONLY_POLICY_QUERY_ENABLED";
 const TURNS = ["create a CA form for dale ferris at dodge. she was late on the 2nd", "yes payroll deduct", "$25"];
+/** With the flag on: every live sentence said "open", so only the Observed is left, from the manager's words and the form's date. */
+const EXPECTED = "Observed:\nDale was late on October 2, 2026.";
+const LAST_TUESDAY = "Dale was late on October 20, 2026.";
 /** What the live model wrote for this draft. */
 const LIVE_OBSERVATION = "Observed:\nDale was late to open the location on October 2, 2026.\n\nExpectation:\nAn employee assigned to open the location is expected to arrive on time and ready to work at the start of the scheduled shift, and to notify the manager as soon as possible if unable to do so.\n\nGoing Forward:\nDale is expected to arrive on time for all scheduled opening shifts and to contact the manager immediately if running late or unable to open.";
 
 function accountProduction(on: boolean) {
   setProduction(true);
-  for (const name of [AO, "WIDER_DATE_READER_ENABLED", "ORDINAL_DATE_IN_DRAFT_ENABLED"]) {
+  for (const name of [AO, "WIDER_DATE_READER_ENABLED", "ORDINAL_DATE_IN_DRAFT_ENABLED", "RELATIVE_DATE_READER_ENABLED"]) {
     if (!saved.has(name)) saved.set(name, process.env[name]);
     delete process.env[name];
   }
@@ -491,14 +494,33 @@ describe(`${AO} on`, () => {
       expect(query).not.toMatch(/payroll|\$25/i);
     }
     expect(search.prompt).not.toContain("assigned to open");
-    expect(search.prompt).toContain("Never add a role, a shift, an opening or closing duty");
+    expect(search.prompt).toContain("add NO fact about what happened that the manager did not write");
   });
 
-  it("the drafted Observed says no opening nobody wrote", async () => {
+  it("the drafted Observed says no opening nobody wrote, dated with the form's date", async () => {
     const observation = await drafted();
-    expect(observation).not.toMatch(/\bopen/i);
-    expect(observation).toContain("Observed:");
-    expect(observation).toMatch(/late on/i);
+    expect(observation).toBe(EXPECTED);
+  });
+
+  it("\"last tuesday\" is the form's resolved date too", async () => {
+    process.env.RELATIVE_DATE_READER_ENABLED = "true";
+    TURNS[0] = TURNS[0].replace("on the 2nd", "last tuesday");
+    try {
+      const observation = await drafted();
+      expect(observation.split("\n")[1]).toBe(LAST_TUESDAY);
+    } finally {
+      TURNS[0] = "create a CA form for dale ferris at dodge. she was late on the 2nd";
+      delete process.env.RELATIVE_DATE_READER_ENABLED;
+    }
+  });
+
+  it("a draft with no invented detail is kept as written", async () => {
+    const clean = "Observed:\nThe employee was late to work on October 2, 2026.\n\nGoing Forward:\nThe employee is expected to arrive on time for all scheduled shifts.";
+    const thread = new Thread();
+    for (const turn of TURNS) await thread.say(turn);
+    state.draft = { values: { observation: clean } };
+    const id = await thread.create();
+    expect(store.form_instance_values.find((row) => row.instance_id === id && row.field_key === "observation")?.value).toBe(clean);
   });
 
   it("notes that say open keep it", async () => {
