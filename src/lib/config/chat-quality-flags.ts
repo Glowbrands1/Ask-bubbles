@@ -974,6 +974,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FIRST_NAME_ASK_ENABLED",
   "UNKNOWN_NAME_ASK_ENABLED",
   "AMOUNT_TURN_STAYS_ENABLED",
+  "WIDER_DATE_READER_ENABLED",
   "JOB_TITLE_APPOSITION_ENABLED",
   "EXIT_READBACK_JOB_TITLE_ENABLED",
   "FOLLOW_UP_CITATION_FIELD_ENABLED",
@@ -1364,4 +1365,13 @@ export function unknownNameAskEnabled(): boolean {
  */
 export function amountTurnStaysEnabled(): boolean {
   return envFlag("AMOUNT_TURN_STAYS_ENABLED");
+}
+
+/**
+ * The date reader also reads "2 october", "the 2nd of october", "on 10.2" and
+ * "on the 2nd" (ported from the sibling app, 27 Oct 2026; same flag in both
+ * apps). See `forms/wider-dates.ts`. Off, as before.
+ */
+export function widerDateReaderEnabled(): boolean {
+  return envFlag("WIDER_DATE_READER_ENABLED");
 }

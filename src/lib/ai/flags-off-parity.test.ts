@@ -66,6 +66,13 @@ const PROTECTED = [
  * ANSWER_NOT_A_NAME_ENABLED and STORE_WORD_NOT_A_NAME_ENABLED, both default
  * off; off, namesSomebody keeps every candidate. It stays on the PROTECTED
  * list; only the diff check leaves it out.
+ *
+ * The user (Pau) approved, in the Code session on 27 Oct 2026, editing
+ * src/lib/forms/form-date-answer.ts in both apps, only two lines: the import
+ * of `withWiderDates` from "./wider-dates", and datesInText's last line
+ * `return withWiderDates(text ?? "", today, found);`. Behind
+ * WIDER_DATE_READER_ENABLED, default off; off, the dates found are returned
+ * as they were. form-date-answer.ts is already excluded from the diff check.
  */
 const APPROVED_PROTECTED_EDITS = [
   ":(exclude)src/lib/forms/form-date-answer.ts",
