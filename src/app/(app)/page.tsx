@@ -15,6 +15,7 @@ import { pageFormsAccess } from "@/lib/forms/page-scope";
 import { listOutstandingFollowUps } from "@/lib/forms/instances";
 import { configuredExcludedNames, isProductionRecord } from "@/lib/forms/production-records";
 import { areaLabel } from "@/lib/locations";
+import { privateAwareLimit } from "@/lib/forms/private-creators";
 
 export const metadata: Metadata = {
   title: "Home",
@@ -50,8 +51,9 @@ export default async function HomePage() {
         ? []
         : visibleInstances(
             access.actor,
-            await listOutstandingFollowUps(50, locationIds, access.ownCreatedBy),
-          );
+            // PRIVATE_CREATOR_FORMS: over-read, then trim to the page of 50; off, 50 itself.
+            await listOutstandingFollowUps(privateAwareLimit(50), locationIds, access.ownCreatedBy),
+          ).slice(0, 50);
 
       const excludedNames = configuredExcludedNames();
       const production = outstanding.filter((instance) =>

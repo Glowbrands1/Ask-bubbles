@@ -70,7 +70,24 @@ const UI_PATHS = ["src/app/**/*.tsx", "src/components/**", "src/features/**/*.ts
  * character-count line under the field and send disabled over the limit.
  * Off, it renders as before.
  */
-const ALLOWED_UI = ["src/features/chat/message-bubble.tsx", "src/features/chat/composer.tsx"];
+/*
+ * And the Forms Register links an Assistant Manager would meet (chat card
+ * button, search and its hook): QA approved on 27 Oct 2026, behind
+ * NEXT_PUBLIC_ASD_NO_FORM_MONITORING_ENABLED. Each gate reads the flag first;
+ * off, it renders as before for every role.
+ */
+const ALLOWED_UI = [
+  "src/features/chat/message-bubble.tsx",
+  "src/features/chat/composer.tsx",
+  "src/features/chat/inline-form.tsx",
+  "src/components/shell/global-search.tsx",
+  "src/components/shell/hides-form-monitoring.ts",
+  // PRIVATE_CREATOR_FORMS_ENABLED (QA approved 27 Oct 2026): the follow-up and list reads over-read and trim to
+  // their page while the rule is active; off, each asks for its page exactly as before.
+  "src/app/(app)/page.tsx",
+  "src/app/(app)/layout.tsx",
+  "src/app/(app)/forms/monitoring/page.tsx",
+];
 
 /*
  * The user (Pau) approved, via QA on 25 Oct 2026, the forms list's Edit and

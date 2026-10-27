@@ -70,6 +70,7 @@ import {
 } from "@/lib/forms/conversation-draft";
 import { historySaysDifferentIncident } from "@/lib/forms/draft-actions";
 import type { Permission } from "@/types";
+import { privateAwareLimit, privateCreatorsActive } from "@/lib/forms/private-creators";
 
 /**
  * GET    /api/forms/instances   Form Monitoring's history, and what a demo
@@ -124,10 +125,11 @@ export async function GET(request: Request) {
      * predicate re-checks what is returned, and the predicate is the one that
      * fails closed if they ever drift.
      */
+    // PRIVATE_CREATOR_FORMS: over-read, then trim to the default page of 200; off, as before.
     const instances = visibleInstances(
       actor,
-      await listInstances(view, undefined, instanceListFilterFor(actor)),
-    );
+      await listInstances(view, privateCreatorsActive() ? privateAwareLimit(200) : undefined, instanceListFilterFor(actor)),
+    ).slice(0, 200);
 
     // The sweep's shape is returned alongside so the screen can say "Delete 5
     // demo forms" with a real number rather than counting what it happens to

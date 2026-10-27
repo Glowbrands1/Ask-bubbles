@@ -8,6 +8,7 @@ import { pageIdentity } from "@/lib/auth/page";
 import { visibleInstances } from "@/lib/forms/instance-scope";
 import { pageFormsAccess } from "@/lib/forms/page-scope";
 import { listOutstandingFollowUps } from "@/lib/forms/instances";
+import { privateAwareLimit } from "@/lib/forms/private-creators";
 
 /**
  * COUNTS, NOT HUES — the rail's overdue badge.
@@ -36,8 +37,9 @@ async function overdueCount(): Promise<number> {
     if (access.noStore) return 0;
     const outstanding = visibleInstances(
       access.actor,
-      await listOutstandingFollowUps(50, access.locationIds, access.ownCreatedBy),
-    );
+      // PRIVATE_CREATOR_FORMS: over-read, then trim to the page of 50; off, 50 itself.
+      await listOutstandingFollowUps(privateAwareLimit(50), access.locationIds, access.ownCreatedBy),
+    ).slice(0, 50);
     return attentionSummary(outstanding, today).overdue;
   } catch {
     return 0;

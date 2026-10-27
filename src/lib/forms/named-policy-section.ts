@@ -1,3 +1,5 @@
+import { animalAnywhereEnabled } from "@/lib/config/chat-quality-flags";
+
 import { readCaPolicy } from "./ca-policy";
 import {
   OFFENSE_MANUAL_SECTIONS,
@@ -147,6 +149,18 @@ const NOT_A_NAME =
   /\b(?:she|he|they|i|we|you|her|his|their|him|them|it|was|were|is|are|has|had|have|knows?|knew|signed|read|reviewed|reminded|told|understands?|acknowledged|got|received|explained|about|of|with|by|to)\b/i;
 
 /** Every policy the manager named, in the order they named them. Questions name none. */
+/*
+ * ANIMAL_ANYWHERE_ENABLED (QA LS-B11, 27 Oct 2026): the manager typed "cite
+ * animals in the workplace policy", and the line was read as a policy called
+ * "cite animals in the workplace", which no heading answers, so the form kept
+ * Standards of Conduct. With the flag on the instruction word is not part of
+ * the name. Off, as before.
+ */
+function citedName(phrase: string): string {
+  if (!animalAnywhereEnabled()) return phrase;
+  return phrase.replace(/^(?:please\s+)?(?:cite|use|quote|reference|apply|put)\s+(?:the\s+|our\s+)?/i, "").trim() || phrase;
+}
+
 export function namedPolicies(text: string): NamedPolicy[] {
   const found: NamedPolicy[] = [];
   for (const sentence of (text ?? "").matchAll(/[^.!?\n]+[.!?]*/g)) {
@@ -154,7 +168,7 @@ export function namedPolicies(text: string): NamedPolicy[] {
     // A line that is only the name — not "violation of company policy", which names none.
     const line = /\b(?:violat|breach|broke|against|follow)/i.test(sentence[0]) ? null : POLICY_LINE.exec(sentence[0]);
     if (line && words(line[1]!).length > 0 && !NOT_A_NAME.test(line[1]!)) {
-      found.push({ phrase: line[1]!.trim(), index: sentence.index });
+      found.push({ phrase: citedName(line[1]!.trim()), index: sentence.index });
     }
     const verbs = [...sentence[0].matchAll(NAMED_POLICY)];
     for (const match of verbs.length > 0 ? verbs : sentence[0].matchAll(FOR_POLICY)) {

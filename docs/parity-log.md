@@ -841,9 +841,18 @@ turn and the observation with the flag off; the live blank draft
   (`employee-position.ts` does not exist there). Test:
   `src/app/api/chat/position-answer-guard-e2e.test.ts`.
 
-## 26 Oct 2026: Animals in the Workplace widening — declined by Pau, 26 Oct 2026
+## 27 Oct 2026: the Assistant Manager has no Forms Register — ported from Ask Sunny (NEXT_PUBLIC_ASD_NO_FORM_MONITORING_ENABLED)
 
-The live animals rule (POLICY_SPECIFIC_TOPICS_ENABLED) misses "came into the store … her new puppy." (LS-B11). Widening it and reading "cite <policy>" onto the form were scoped and declined by Pau, 26 Oct 2026. Not built in either app.
+Pau asked that the sibling app's Assistant Salon Director rule apply here to the equivalent role, the Assistant Manager. Same flag (build time, default off): with it on, `assistant_manager` loses `view_form_monitoring` (sidebar, page, Overview follow-ups, chat card link, search hits) but still opens and downloads the forms it created; the location manager and every role above keep it. This replaces the sibling app's earlier "Bubbles: not requested" note. Bubbles prod had no active Assistant Managers on 27 Oct 2026.
+
+## 27 Oct 2026: forms some accounts create are private to them and to admin — ported from Ask Sunny (PRIVATE_CREATOR_FORMS_ENABLED)
+
+Same mechanism as the sibling app's #321: `PRIVATE_FORM_CREATOR_IDS` (user ids, set per app in Vercel, never in the repository) plus the default-off flag; `actorMaySeeInstance` hides those forms from every reader but the creator and admin/owner/developer, on every read path; bounded reads over-read 4x while active and trim back to the page.
 ## 26 Oct 2026: the reply is not sent on with a date line the conversation already gives — Bubbles-only (DATE_LINE_NO_ECHO_ENABLED)
 
 QA LS-B5: "create ca form for <name> for violating attendance policy on 10-20-26 … jba manual 1-1-26 for previous coaching" / "verbal" dated the form today here. The same two turns in Ask Sunny's production env keep 10/20 on the card and the form (checked 26 Oct 2026: its intent path reads the slots, not the augmented reply). Not ported.
+
+## 27 Oct 2026: a pet at work cites Animals in the Workplace — both apps (ANIMAL_ANYWHERE_ENABLED)
+
+Pau reversed the earlier "no" on 27 Oct 2026. With the flag on, an animal word (puppy, kitten, dog, cat, pet, …) anywhere in a sentence about being at work is the Animals in the Workplace incident (service animal, hot dog and guinea pig stay excluded), and a "cite <policy>" line names that policy without the word "cite". Same flag and mechanism in the sibling app.
+
