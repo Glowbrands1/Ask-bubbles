@@ -840,3 +840,10 @@ turn and the observation with the flag off; the live blank draft
   as the Job Title. Not ported: the sibling app has no position question
   (`employee-position.ts` does not exist there). Test:
   `src/app/api/chat/position-answer-guard-e2e.test.ts`.
+
+## 26 Oct 2026: Animals in the Workplace widening — declined by Pau, 26 Oct 2026
+
+The live animals rule (POLICY_SPECIFIC_TOPICS_ENABLED) misses "came into the store … her new puppy." (LS-B11). Widening it and reading "cite <policy>" onto the form were scoped and declined by Pau, 26 Oct 2026. Not built in either app.
+## 26 Oct 2026: the reply is not sent on with a date line the conversation already gives — Bubbles-only (DATE_LINE_NO_ECHO_ENABLED)
+
+QA LS-B5: "create ca form for <name> for violating attendance policy on 10-20-26 … jba manual 1-1-26 for previous coaching" / "verbal" dated the form today here. The same two turns in Ask Sunny's production env keep 10/20 on the card and the form (checked 26 Oct 2026: its intent path reads the slots, not the augmented reply). Not ported.
