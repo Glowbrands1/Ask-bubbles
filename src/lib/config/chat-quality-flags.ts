@@ -959,6 +959,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FUTURE_PRIOR_ROW_DROP_ENABLED",
   "MEETING_NOT_LATENESS_PLAN_ENABLED",
   "PLAN_PAYROLL_SENTENCE_ENABLED",
+  "NAME_QUESTION_ONLY_ENABLED",
 ] as const;
 
 /**
@@ -1151,6 +1152,17 @@ export function meetingNotLatenessPlanEnabled(): boolean {
  */
 export function planPayrollSentenceEnabled(): boolean {
   return envFlag("PLAN_PAYROLL_SENTENCE_ENABLED");
+}
+
+/**
+ * With no employee named, the chat asks one plain question — "Who is this
+ * form for? Tell me the employee's full name." — never a list of details
+ * (Pau, 26 Oct 2026; QA LS-B3). This PR covers the Corrective Action intake
+ * ("ca", "blank corrective action form"); the coaching card's list in the
+ * protected `ai/form-proposal.ts` follows on Pau's approval. Off, as before.
+ */
+export function nameQuestionOnlyEnabled(): boolean {
+  return envFlag("NAME_QUESTION_ONLY_ENABLED");
 }
 
 /**
