@@ -988,6 +988,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "JOB_TITLE_APPOSITION_ENABLED",
   "EXIT_READBACK_JOB_TITLE_ENABLED",
   "FOLLOW_UP_CITATION_FIELD_ENABLED",
+  "LAST_FIRST_NAME_READ_ENABLED",
 ] as const;
 
 /**
@@ -1356,6 +1357,17 @@ export function levelStepNotAccountEnabled(): boolean {
  */
 export function firstNameAskEnabled(): boolean {
   return envFlag("FIRST_NAME_ASK_ENABLED");
+}
+
+/**
+ * "Calder, Remy" is read as Remy Calder, without a model (ported from the
+ * sibling app, QA 27 Oct 2026; same flag in both apps). A "Last, First" pair in
+ * the manager's turns that fits exactly one person on the scoped roster fills an
+ * employee today's readers left open, and the Create check takes the
+ * part-of-name card. See `ai/reader/last-first.ts`. Off, as before.
+ */
+export function lastFirstNameReadEnabled(): boolean {
+  return envFlag("LAST_FIRST_NAME_READ_ENABLED");
 }
 
 /**

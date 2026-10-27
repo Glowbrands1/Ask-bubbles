@@ -898,3 +898,7 @@ QA BF7b live. The sibling app already reads the typo as the payroll answer on th
 ## 27 Oct 2026: known gap — no amount row on the card (left as is)
 
 After "$25", the Payroll deduction amount shows in the reply and on the saved draft but the card has no amount row: this app's proposal carries no amount field and the card renders only "Payroll deduct". The sibling app's card has no amount row either. QA: skip for now (UI work, low value).
+
+## 27 Oct 2026: "Calder, Remy" is read as Remy Calder, without a model — both apps (LAST_FIRST_NAME_READ_ENABLED)
+
+Ported from Ask Sunny (QA's five "Last, First" variants). Today's name reader stops at the comma: "My employee Calder, Remy" was the employee "Calder", and Create refused the card as out of date. With the flag on, a capitalised "Word, Word" pair in the manager's own turns goes through `ai/reader/check.ts`: it must fit exactly one person on the scoped roster, in either order; `ai/reader/merge.ts` fills only an employee today's readers left open and never replaces a settled one; the Create check takes the part-of-name card. No model, no cost, no protected file. Same change in Ask Sunny.
