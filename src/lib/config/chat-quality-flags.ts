@@ -974,6 +974,9 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FIRST_NAME_ASK_ENABLED",
   "UNKNOWN_NAME_ASK_ENABLED",
   "DECIMAL_NOT_SENTENCE_END_ENABLED",
+  "AMOUNT_TURN_STAYS_ENABLED",
+  "MODEL_CALL_DAILY_CAP_ENABLED",
+  "MONTHLY_BUDGET_GUARD_ENABLED",
   "ORDINAL_DATE_IN_DRAFT_ENABLED",
   "PAYROLL_TYPO_ANSWER_ENABLED",
   "WIDER_DATE_READER_ENABLED",
@@ -1361,6 +1364,15 @@ export function unknownNameAskEnabled(): boolean {
 }
 
 /**
+ * With a form card open, a turn that only answers the payroll amount stays
+ * with the form (QA BF7b live, 27 Oct 2026): "i dont know the amount" was
+ * answered as a policy question. See `ai/amount-turn.ts`. Off, as before.
+ */
+export function amountTurnStaysEnabled(): boolean {
+  return envFlag("AMOUNT_TURN_STAYS_ENABLED");
+}
+
+/**
  * A payroll answer with a typo is the payroll answer (QA BF7b live, 27 Oct
  * 2026): "yes payrol ldeduct" set no Payroll deduct on the card. See
  * `ai/payroll-typo-answer.ts`. Off, as before.
@@ -1385,6 +1397,24 @@ export function widerDateReaderEnabled(): boolean {
  */
 export function decimalNotSentenceEndEnabled(): boolean {
   return envFlag("DECIMAL_NOT_SENTENCE_END_ENABLED");
+}
+
+/**
+ * One user's traced model calls per UTC day are capped at MODEL_CALL_DAILY_CAP
+ * (default 40); over it, the chat answers without calling the model (Pau,
+ * 27 Oct 2026; same flag in both apps). See `ai/spend-guard.ts`. Off, as before.
+ */
+export function modelCallDailyCapEnabled(): boolean {
+  return envFlag("MODEL_CALL_DAILY_CAP_ENABLED");
+}
+
+/**
+ * This month's traced model spend, at list prices, is held under
+ * MONTHLY_BUDGET_USD (default 10); at it, no question reaches the model (Pau,
+ * 27 Oct 2026; same flag in both apps). See `ai/spend-guard.ts`. Off, as before.
+ */
+export function monthlyBudgetGuardEnabled(): boolean {
+  return envFlag("MONTHLY_BUDGET_GUARD_ENABLED");
 }
 
 /**

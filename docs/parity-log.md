@@ -887,6 +887,10 @@ JOB_TITLE_READBACK_CASE_ENABLED and STEP_DATE_NO_QUESTION_ENABLED are not needed
 
 Not needed in the sibling app: its card has no Issue / What happened line. The same sentences through its harness ("she was 10 minutes late on 10.2", "… 3.5 hours late and owes $10.25") give an Observation of Offense with both whole.
 
+## 27 Oct 2026: the amount turn stays with the card (AMOUNT_TURN_STAYS_ENABLED, Bubbles-only)
+
+Not needed in the sibling app: QA ran "i dont know the amount" and "$25" live there after a Corrective Action card with payroll yes (conv_mvqon26f2a5kvdh, conv_mvqon20g24chpan), and both turns stayed on the card with no policy answer.
+
 ## 27 Oct 2026: "yes payrol ldeduct" is the payroll answer — this app only (PAYROLL_TYPO_ANSWER_ENABLED)
 
 QA BF7b live. The sibling app already reads the typo as the payroll answer on that turn (checked through its chat with its production flags), so the flag is not needed there.
