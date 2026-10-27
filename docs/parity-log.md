@@ -856,3 +856,7 @@ QA LS-B5: "create ca form for <name> for violating attendance policy on 10-20-26
 
 Pau reversed the earlier "no" on 27 Oct 2026. With the flag on, an animal word (puppy, kitten, dog, cat, pet, …) anywhere in a sentence about being at work is the Animals in the Workplace incident (service animal, hot dog and guinea pig stay excluded), and a "cite <policy>" line names that policy without the word "cite". Same flag and mechanism in the sibling app.
 
+
+## 27 Oct 2026: a typed job title, and the date question asked again in fresh words
+
+JOB_TITLE_FROM_WORDS_ENABLED: both apps (the fill); asking the position once on an exit form stays Bubbles-only, as Ask Sunny has no position question. DATE_REASK_FRESH_ENABLED: Bubbles-only for now. QA D3 showed this app's re-ask came back byte for byte the same as the reply before (stored messages, conv_mvpyha5v22c52vd), while Ask Sunny's live reply on the same turn showed the question; port it if Sunny is seen repeating a reply.
