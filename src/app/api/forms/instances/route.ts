@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { typoReadingText } from "@/lib/ai/typo-reading-copy";
+import { protectedNameWords } from "@/lib/ai/typo-name-words";
 import { isHiddenTemplate } from "@/config/company/forms/hidden";
 import { locationById as salonById } from "@/lib/locations";
 
@@ -51,6 +53,7 @@ import {
   draftActionsEnabled,
   draftDedupeEnabled,
   payrollDeductAmountFieldEnabled,
+  typoReadingRoutesEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { incidentFingerprint } from "@/lib/forms/incident-key";
 import {
@@ -343,7 +346,8 @@ export async function POST(request: Request) {
             return row.role === "user" && typeof row.content === "string" ? [row.content] : [];
           })
           .join("\n");
-        const amount = payrollDeductAmount(said);
+        // TYPO_READING_ROUTES_ENABLED: the reader sees "dedcut" as deduct; the stored conversation stays as typed.
+        const amount = payrollDeductAmount(await readingText(said));
         if (amount) {
           await applyStatedFacts(
             instanceId,
@@ -368,7 +372,7 @@ export async function POST(request: Request) {
         isWarningLevel(card.warningLevel) &&
         card.source === "assistant" &&
         Array.isArray(card.conversation) &&
-        warningLevelFromConversation(parseHistory(card.conversation), businessToday()) === card.warningLevel
+        warningLevelFromConversation(await readingTurns(parseHistory(card.conversation)), businessToday()) === card.warningLevel
           ? card.warningLevel
           : null;
       if (warningLevel) {
@@ -649,4 +653,22 @@ function resolveLocationName(
   const rostered = salonById(locationId)?.name ?? null;
   if (!isDemoMode()) return rostered;
   return requested ?? rostered;
+}
+
+/**
+ * TYPO_READING_ROUTES_ENABLED: the manager's words as the payroll-amount and
+ * warning-level readers above see them, each typo read as the one known word
+ * it can only be (`ai/typo-reading-copy.ts`). Only those readers get it; the
+ * conversation stored and compared elsewhere in this route is the raw one.
+ * Off, as given.
+ */
+async function readingText(text: string): Promise<string> {
+  if (!typoReadingRoutesEnabled()) return text;
+  return typoReadingText(text, await protectedNameWords());
+}
+
+async function readingTurns<T extends { role: string; content: string }>(turns: T[]): Promise<T[]> {
+  if (!typoReadingRoutesEnabled()) return turns;
+  const names = await protectedNameWords();
+  return turns.map((turn) => (turn.role === "user" ? { ...turn, content: typoReadingText(turn.content, names) } : turn));
 }

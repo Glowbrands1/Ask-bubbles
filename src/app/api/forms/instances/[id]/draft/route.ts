@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { typoReadingText } from "@/lib/ai/typo-reading-copy";
+import { protectedNameWords } from "@/lib/ai/typo-name-words";
 import { getAnthropicClient } from "@/lib/ai/anthropic";
 import { AiError } from "@/lib/ai/errors";
 import { withTruncationRetry } from "@/lib/ai/truncation";
@@ -172,6 +174,7 @@ import {
   frameworkUnpinEnabled,
   policyCitationEnabled,
   policySpecificTopicsEnabled,
+  typoReadingRoutesEnabled,
 } from "@/lib/config/chat-quality-flags";
 import {
   STANDARDS_OF_CONDUCT,
@@ -338,7 +341,9 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     }
 
     const body = ((await request.json().catch(() => null)) ?? {}) as DraftBody;
-    const notes = String(body.notes ?? "").trim().slice(0, 4000);
+    const asTyped = String(body.notes ?? "").trim().slice(0, 4000);
+    // TYPO_READING_ROUTES_ENABLED: the readers below see "coahed", "notcie", "amont" as the words they can only be.
+    const notes = typoReadingRoutesEnabled() ? typoReadingText(asTyped, await protectedNameWords()) : asTyped;
     if (notes.length < 10) {
       throw new AiError(
         "bad_request",

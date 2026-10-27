@@ -973,6 +973,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "LEVEL_STEP_NOT_ACCOUNT_ENABLED",
   "FIRST_NAME_ASK_ENABLED",
   "UNKNOWN_NAME_ASK_ENABLED",
+  "TYPO_READING_ROUTES_ENABLED",
   "TYPO_READING_COPY_ENABLED",
   "DAY_WORD_TYPOS_ENABLED",
   "ACCOUNT_ONLY_POLICY_QUERY_ENABLED",
@@ -1476,4 +1477,14 @@ export function dayWordTyposEnabled(): boolean {
  */
 export function typoReadingCopyEnabled(): boolean {
   return envFlag("TYPO_READING_COPY_ENABLED");
+}
+
+/**
+ * The form routes' readers (the draft's notes; the create route's payroll
+ * amount and warning level) see the manager's words with each typo read as the
+ * one known word it can only be; stored text stays as typed (QA, 27 Oct 2026;
+ * same flag in both apps). See `ai/typo-reading-copy.ts`. Off, as before.
+ */
+export function typoReadingRoutesEnabled(): boolean {
+  return envFlag("TYPO_READING_ROUTES_ENABLED");
 }
