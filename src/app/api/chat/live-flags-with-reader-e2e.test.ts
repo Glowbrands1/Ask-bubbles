@@ -626,4 +626,31 @@ describe("live flags on, reader off and on: the owner's and testers' chats", () 
     expect(off.answers[0]).toContain("I couldn't find **Marlowe** in the Woven roster");
     expect(on.answers[0]).not.toContain("couldn't find");
   });
+
+  it("first name only ('quinn'): the card shows the full roster name, and nothing is filed until Create is pressed", async () => {
+    setLive(true);
+    state.reading = reading({ employee: field("quinn", "My employee quinn"), incidentDate: field("2026-10-02", "the 2nd") });
+    const thread = new Thread();
+    await thread.say("My employee quinn was late on the 2nd at Dodge. Please create a CA form");
+    // The card names the one roster person, for the manager to check before Create.
+    expect(thread.proposal?.employeeName).toBe("Quinn Marlowe");
+    expect(store.form_instances).toHaveLength(0);
+    await thread.create();
+    expect(store.form_instances).toHaveLength(1);
+  });
+
+  it("first name only with two Quinns in scope: the reader fills nobody (off = on)", async () => {
+    const twoQuinns = [...ROSTER, { id: "e-5", firstName: "Quinn", lastName: "Ferris", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-264"], positionName: "Team Member" }];
+    const turns = ["My employee quinn was late on the 2nd at Dodge. Please create a CA form"];
+    const read = reading({ employee: field("quinn", "My employee quinn"), incidentDate: field("2026-10-02", "the 2nd") });
+    state.directory = twoQuinns;
+    const off = await chat(turns, "October 2, 2026", false, read);
+    await fresh();
+    state.directory = twoQuinns;
+    const on = await chat(turns, "October 2, 2026", true, read);
+    expect(on.readerCalls).toBeGreaterThan(0);
+    expect(JSON.parse(on.card)?.employeeName ?? null).not.toBe("Quinn Marlowe");
+    expect(JSON.parse(on.card)?.employeeName ?? null).not.toBe("Quinn Ferris");
+    expectIdentical(off, on);
+  });
 });
