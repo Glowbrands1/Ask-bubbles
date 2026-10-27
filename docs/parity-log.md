@@ -874,3 +874,7 @@ WARNING_LEVEL_AND_CLAUSE_ENABLED, JOB_TITLE_APPOSITION_ENABLED and EXIT_READBACK
 ## 27 Oct 2026: P5 — the Follow-Up Coaching citation field (both apps); a grammar request on the card (sibling-only)
 
 FOLLOW_UP_CITATION_FIELD_ENABLED is in both apps. GRAMMAR_ASK_NOT_ACCOUNT_ENABLED is not needed here: QA's replay turns through this app's chat do not add "can you clean up my grammar…" to the card (that turn is answered as a question), so there is nothing on the card to take out.
+
+## 27 Oct 2026: S1 follow-ups — level/step clause (both apps); title case and app sentences (sibling-only)
+
+LEVEL_STEP_NOT_ACCOUNT_ENABLED is in both apps (here the Issue, there the Observation). JOB_TITLE_CASE_ENABLED and APP_SENTENCES_NOT_ACCOUNT_ENABLED are not needed here: QA's S1 turns through this app's chat give "Makery Associate" from the title list and no state sentences on the card. WARNING_LEVEL_AND_CLAUSE's saved-draft fix (QA B1) is this app's: the sibling app's live draft already ticked Written.
