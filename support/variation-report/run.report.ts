@@ -40,7 +40,8 @@ import type { AccessScope, ChatFormProposal, ChatMessage } from "@/types";
  *                                                       seed's expected form: what the hook
  *                                                       can reach, never the gate
  *
- * VARIATION_MODES=2,3 and VARIATION_SEEDS=S1,S12 run part of it.
+ * VARIATION_MODES=2,3, VARIATION_SEEDS=S1,S12 and VARIATION_LIMIT=20 (the first
+ * 20 variants of each mode, the smoke run) run part of it.
  */
 
 /**
@@ -730,6 +731,8 @@ it("variation report", async () => {
   const rows: Row[] = [];
   const only = (process.env.VARIATION_MODES ?? "").split(",").map(Number).filter(Boolean);
   const seeds = (process.env.VARIATION_SEEDS ?? "").split(",").filter(Boolean);
+  // VARIATION_LIMIT=20: the smoke run, the first N variants of each mode (the same in the sibling app).
+  const limit = Number(process.env.VARIATION_LIMIT ?? "") || Number.POSITIVE_INFINITY;
   for (const mode of MODES.filter((_, index) => only.length === 0 || only.includes(index + 1))) {
     reader.call = !mode.reader
       ? null
@@ -739,6 +742,7 @@ it("variation report", async () => {
     for (const seed of SEEDS.filter((entry) => seeds.length === 0 || seeds.includes(entry.id))) {
       current = seed;
       for (const variant of variantsOf(seed)) {
+        if (rows.filter((row) => row.mode === mode.name).length >= limit) break;
         setFlags([...mode.flags, ...(mode.flags.length > 0 ? (seed.flags ?? []) : [])]);
         await reset();
         const out = await replay(variant.turns, seed.chatOnly === true, seed.openingQuestion === true);
