@@ -964,6 +964,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "PLAN_PAYROLL_SENTENCE_ENABLED",
   "NAME_QUESTION_ONLY_ENABLED",
   "ANIMAL_ANYWHERE_ENABLED",
+  "JOB_TITLE_FROM_WORDS_ENABLED",
 ] as const;
 
 /**
@@ -1220,4 +1221,16 @@ export function dateAnswerKeepsOpenEnabled(): boolean {
  */
 export function animalAnywhereEnabled(): boolean {
   return envFlag("ANIMAL_ANYWHERE_ENABLED");
+}
+
+/**
+ * The job title the manager typed is the card's Job Title, as typed; with none
+ * typed and none on record it is asked once (QA item 3 / LS-B2, 27 Oct 2026;
+ * same flag in both apps): "she is a makery associate", "<name> was a makery
+ * associate at dodge location" left Job Title empty on Corrective Action and
+ * exit forms, and the position was never asked. See `ai/job-title-from-words.ts`.
+ * Off, as before.
+ */
+export function jobTitleFromWordsEnabled(): boolean {
+  return envFlag("JOB_TITLE_FROM_WORDS_ENABLED");
 }
