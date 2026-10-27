@@ -975,6 +975,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "UNKNOWN_NAME_ASK_ENABLED",
   "RELATIVE_DATE_READER_ENABLED",
   "UNREAD_DATE_ASK_ENABLED",
+  "DECIMAL_NOT_SENTENCE_END_ENABLED",
+  "AMOUNT_TURN_STAYS_ENABLED",
   "MODEL_CALL_DAILY_CAP_ENABLED",
   "MONTHLY_BUDGET_GUARD_ENABLED",
   "ORDINAL_DATE_IN_DRAFT_ENABLED",
@@ -1364,6 +1366,15 @@ export function unknownNameAskEnabled(): boolean {
 }
 
 /**
+ * With a form card open, a turn that only answers the payroll amount stays
+ * with the form (QA BF7b live, 27 Oct 2026): "i dont know the amount" was
+ * answered as a policy question. See `ai/amount-turn.ts`. Off, as before.
+ */
+export function amountTurnStaysEnabled(): boolean {
+  return envFlag("AMOUNT_TURN_STAYS_ENABLED");
+}
+
+/**
  * A payroll answer with a typo is the payroll answer (QA BF7b live, 27 Oct
  * 2026): "yes payrol ldeduct" set no Payroll deduct on the card. See
  * `ai/payroll-typo-answer.ts`. Off, as before.
@@ -1379,6 +1390,15 @@ export function payrollTypoAnswerEnabled(): boolean {
  */
 export function widerDateReaderEnabled(): boolean {
   return envFlag("WIDER_DATE_READER_ENABLED");
+}
+
+/**
+ * A point between two digits ends no sentence in the Issue read-back (QA,
+ * 27 Oct 2026; same flag in both apps): "late on 10.2" read "late on 10",
+ * "$10.25" read "$10". See `forms/incident-issue.ts`. Off, as before.
+ */
+export function decimalNotSentenceEndEnabled(): boolean {
+  return envFlag("DECIMAL_NOT_SENTENCE_END_ENABLED");
 }
 
 /**
