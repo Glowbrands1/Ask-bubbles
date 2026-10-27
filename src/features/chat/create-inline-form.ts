@@ -237,7 +237,7 @@ export async function createInlineForm({
       body: JSON.stringify({
         notes: notes.text,
         // AI_READS_CODE_CHECKS_ENABLED: checked again against `notes` by the draft route. Absent with the flag off.
-        ...(proposal.checkedReading ? { checkedReading: proposal.checkedReading } : {}),
+        ...(proposal.checkedReading ? { readerQuotes: proposal.checkedReading } : {}),
       }),
     });
     const notice = typeof drafted?.notice === "string" && drafted.notice.trim() !== "" ? drafted.notice : null;

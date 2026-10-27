@@ -261,8 +261,8 @@ export const maxDuration = 120;
 interface DraftBody {
   /** What the manager described, in their own words. */
   notes?: string;
-  /** AI_READS_CODE_CHECKS_ENABLED: the card's checked reading, checked again against `notes`. */
-  checkedReading?: unknown;
+  /** AI_READS_CODE_CHECKS_ENABLED: the reader's quotes from the card, never values: each is checked again against `notes`. */
+  readerQuotes?: unknown;
   topic?: string;
   /**
    * A REDRAFT FROM CHAT, of a form the manager may already have filled in by
@@ -1620,10 +1620,10 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
          * (`ai/reader/recheck.ts`). Off, as before.
          */
         // Never over the manager's own values: not on a redraft that keeps them, and only beside the rows already there.
-        if (aiReadsCodeChecksEnabled() && body.checkedReading && !body.keepManagerValues) {
+        if (aiReadsCodeChecksEnabled() && body.readerQuotes && !body.keepManagerValues) {
           priorActions.value = withReaderPriorLines(
             priorActions.value,
-            readerPriorLines(body.checkedReading, notes, businessToday(), loaded.instance.formDate),
+            readerPriorLines(body.readerQuotes, notes, businessToday(), loaded.instance.formDate),
           );
         }
         if (priorActions.value.trim() !== "") base[PRIOR_ACTIONS_KEY] = priorActions.value;
