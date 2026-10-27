@@ -883,6 +883,6 @@ LEVEL_STEP_NOT_ACCOUNT_ENABLED is in both apps (here the Issue, there the Observ
 
 JOB_TITLE_READBACK_CASE_ENABLED and STEP_DATE_NO_QUESTION_ENABLED are not needed here: QA's S1 turns through this app's chat, with STEP_DATE_NOT_INCIDENT on, ask no date question (this app's incidentDates already leaves out a step's date under STEP_DATE_NOT_INCIDENT) and read back the title the card has.
 
-## 27 Oct 2026: the amount turn stays with the card (AMOUNT_TURN_STAYS_ENABLED, port pending QA)
+## 27 Oct 2026: the amount turn stays with the card (AMOUNT_TURN_STAYS_ENABLED, Bubbles-only)
 
-The sibling app has the same fall-through (a null proposal on a forms turn goes on to retrieval), but its live chat runs intent extraction first, which this app's harness cannot reproduce. Asked QA whether the sibling's live chat shows the same "i dont know the amount" reply before porting.
+Not needed in the sibling app: QA ran "i dont know the amount" and "$25" live there after a Corrective Action card with payroll yes (conv_mvqon26f2a5kvdh, conv_mvqon20g24chpan), and both turns stayed on the card with no policy answer.
