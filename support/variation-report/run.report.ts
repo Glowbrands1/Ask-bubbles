@@ -499,6 +499,31 @@ const MODES: readonly { name: string; flags: readonly string[]; reader?: boolean
 ];
 const recordings = fileURLToPath(new URL(`./recordings/${process.env.VARIATION_APP ?? "app"}/reader/`, import.meta.url));
 const transport = READER_MODE === "replay" || READER_MODE === "record" ? replayTransport(recordings, READER_MODE) : null;
+/**
+ * VARIATION_BUDGET_USD (record only): no new model call once this run's new
+ * calls cost that much at Haiku 4.5 list price ($1 / $5 per million tokens in
+ * / out). A call over the budget fails, so its turn runs as flag off.
+ */
+const BUDGET_USD = Number(process.env.VARIATION_BUDGET_USD ?? "") || Number.POSITIVE_INFINITY;
+const spent = { usd: 0 };
+const budgeted =
+  transport && READER_MODE === "record"
+    ? async (input: Parameters<typeof transport.call>[0]) => {
+        const before = { recorded: transport.stats.recorded, inputTokens: transport.stats.inputTokens, outputTokens: transport.stats.outputTokens };
+        if (spent.usd >= BUDGET_USD) {
+          // Replay what is already recorded; record nothing new.
+          return replayTransport(recordings, "replay").call(input);
+        }
+        try {
+          return await transport.call(input);
+        } finally {
+          if (transport.stats.recorded > before.recorded) {
+            spent.usd +=
+              ((transport.stats.inputTokens - before.inputTokens) * 1 + (transport.stats.outputTokens - before.outputTokens) * 5) / 1_000_000;
+          }
+        }
+      }
+    : null;
 let current: Seed | null = null;
 
 /* ------------------------------------------------- the oracle (not a gate) -- */
@@ -738,7 +763,7 @@ it("variation report", async () => {
       ? null
       : READER_MODE === "oracle"
         ? (async (input: { messages: { content: string }[] }) => ({ input: oracleReading(input.messages.map((m) => m.content).join("\n")), usage: NO_USAGE })) as never
-        : (transport!.call as never);
+        : ((budgeted ?? transport!.call) as never);
     for (const seed of SEEDS.filter((entry) => seeds.length === 0 || seeds.includes(entry.id))) {
       current = seed;
       for (const variant of variantsOf(seed)) {
@@ -767,7 +792,7 @@ it("variation report", async () => {
     sections.push(`AI reader replies: ${READER_MODE}${READER_MODE === "oracle" ? " (a perfect reader from the seeds; not the gate)" : ""}.`, "");
     if (transport) {
       const t = transport.stats;
-      sections.push(`Reader calls: ${t.calls}; recorded now ${t.recorded}; no recording (ran as flag off) ${t.missing}; slower than 2 s ${t.slow}; tokens in/out ${t.inputTokens}/${t.outputTokens}.`, "");
+      sections.push(`Reader calls: ${t.calls}; recorded now ${t.recorded}; no recording (ran as flag off) ${t.missing}; slower than 2 s ${t.slow}; tokens in/out ${t.inputTokens}/${t.outputTokens}; new spend this run $${spent.usd.toFixed(3)}${Number.isFinite(BUDGET_USD) ? ` of $${BUDGET_USD}` : ""}.`, "");
     }
     sections.push(`Variants right with this week's fixes and wrong with the reader: ${lost.length}${lost.length ? ` (${lost.map((row) => `${row.seed} · ${row.variant.label}`).join(", ")})` : ""}.`, "");
   }
