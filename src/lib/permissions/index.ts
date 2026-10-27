@@ -166,3 +166,5 @@ export function defaultLandingForRole(role: Role): string {
    */
   return "/login";
 }
+
+export { asdNoFormMonitoringEnabled } from "./asd-no-form-monitoring";

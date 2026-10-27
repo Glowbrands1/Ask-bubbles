@@ -3,7 +3,7 @@ import "server-only";
 import { FORM_FAMILY_READ_PERMISSIONS } from "@/config/company/forms/categories";
 
 import { AuthError } from "@/lib/auth/types";
-import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
+import { DEFAULT_PERMISSION_MATRIX, asdNoFormMonitoringEnabled, hasPermission } from "@/lib/permissions";
 
 import { authorizeForms, type FormsActor } from "./access";
 import {
@@ -301,7 +301,7 @@ export async function authorizeInstance(
   if (!loaded) throw new InstanceNotVisibleError();
 
   const permission = await permissionFor(loaded.instance, action);
-  const actor = await authorizeForms(request, permission);
+  const actor = await authorizeViewer(request, permission, action, loaded.instance);
 
   /*
    * A RESTRICTED FORM IS NOT THERE FOR SOMEBODY WHO MAY NOT CREATE IT — for
@@ -322,6 +322,29 @@ export async function authorizeInstance(
   if (!actorMaySeeInstance(actor, loaded.instance)) throw new InstanceNotVisibleError();
 
   return { actor, loaded };
+}
+
+/*
+ * ASD_NO_FORM_MONITORING (see `asdNoFormMonitoringEnabled`): a role without
+ * the Forms Register may still VIEW a form it created — the coaching form an
+ * Assistant Manager just made in chat, its history and its PDF — and nothing
+ * else. Off, viewing needs `view_form_monitoring` as before.
+ */
+async function authorizeViewer(
+  request: Request,
+  permission: Permission,
+  action: InstanceAction,
+  instance: InstanceRow,
+): Promise<FormsActor> {
+  if (action !== "view" || !asdNoFormMonitoringEnabled()) return authorizeForms(request, permission);
+  try {
+    return await authorizeForms(request, permission);
+  } catch (error) {
+    if (!(error instanceof AuthError) || error.code !== "forbidden") throw error;
+    const actor = await authorizeForms(request, "ask_questions");
+    if (instance.createdBy !== actor.id) throw new InstanceNotVisibleError();
+    return actor;
+  }
 }
 
 /**

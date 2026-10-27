@@ -840,3 +840,7 @@ turn and the observation with the flag off; the live blank draft
   as the Job Title. Not ported: the sibling app has no position question
   (`employee-position.ts` does not exist there). Test:
   `src/app/api/chat/position-answer-guard-e2e.test.ts`.
+
+## 27 Oct 2026: the Assistant Manager has no Forms Register — ported from Ask Sunny (NEXT_PUBLIC_ASD_NO_FORM_MONITORING_ENABLED)
+
+Pau asked that the sibling app's Assistant Salon Director rule apply here to the equivalent role, the Assistant Manager. Same flag (build time, default off): with it on, `assistant_manager` loses `view_form_monitoring` (sidebar, page, Overview follow-ups, chat card link, search hits) but still opens and downloads the forms it created; the location manager and every role above keep it. This replaces the sibling app's earlier "Bubbles: not requested" note. Bubbles prod had no active Assistant Managers on 27 Oct 2026.
