@@ -456,7 +456,12 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { checkDate } from "@/lib/ai/reader/check";
-import { replayTransport } from "@/lib/ai/reader/replay";
+import { liveSpendUsd, replayTransport } from "@/lib/ai/reader/replay";
+
+function percentile(values: readonly number[], at: number): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted.length === 0 ? 0 : Math.round(sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * at))]!);
+}
 
 import { SEEDS, type Seed } from "./seeds";
 import { variantsOf, type Variant } from "./variants";
@@ -753,7 +758,11 @@ it("variation report", async () => {
         await reset();
         const out = await replay(variant.turns, seed.chatOnly === true, seed.openingQuestion === true);
         // AI_READS_CODE_CHECKS_ENABLED: the reader's outcome tags on this variant's chat traces.
-        const tags = ((store as unknown as { chat_traces?: { intent?: string | null }[] }).chat_traces ?? []).flatMap((row) => (row.intent ?? "").split("|")).filter((tag) => tag.startsWith("ai_reader_"));
+        // The reader's entry on each of this variant's chat traces (`slots.reader`): disputed fields and fallbacks.
+        const readers = ((store as unknown as { chat_traces?: { slots?: { reader?: { disputed?: string[]; fallback?: string } } | null }[] }).chat_traces ?? [])
+          .map((row) => row.slots?.reader)
+          .filter((entry): entry is { disputed?: string[]; fallback?: string } => Boolean(entry));
+        const tags = readers.flatMap((entry) => [...(entry.disputed ?? []).map((field) => `disputed:${field}`), ...(entry.fallback ? [`fallback:${entry.fallback}`] : [])]);
         if (mode.reader) readerTags.push({ seed: seed.id, label: variant.label, tags });
         rows.push({ mode: mode.name, seed: seed.id, variant, checks: score(seed, out) });
       }
@@ -776,12 +785,12 @@ it("variation report", async () => {
     sections.push(`AI reader replies: ${READER_MODE}${READER_MODE === "oracle" ? " (a perfect reader from the seeds; not the gate)" : ""}.`, "");
     if (transport) {
       const t = transport.stats;
-      sections.push(`Reader calls: ${t.calls}; recorded now ${t.recorded}; no recording (ran as flag off) ${t.missing}; slower than 2 s ${t.slow}; tokens in/out ${t.inputTokens}/${t.outputTokens}; new spend this run $${t.spentUsd.toFixed(3)}${process.env.VARIATION_BUDGET_USD ? ` (cap $${process.env.VARIATION_BUDGET_USD})` : ""}.`, "");
+      sections.push(`Reader calls: ${t.calls}; recorded now ${t.recorded}; no recording (ran as flag off) ${t.missing}; slower than 2 s ${t.slow}; tokens in/out ${t.inputTokens}/${t.outputTokens}; latency median ${percentile(t.latencies, 0.5)} ms, p90 ${percentile(t.latencies, 0.9)} ms; new spend this run $${liveSpendUsd().toFixed(3)}${process.env.VARIATION_BUDGET_USD ? ` (cap $${process.env.VARIATION_BUDGET_USD})` : ""}.`, "");
     }
-    const disputed = readerTags.filter((row) => row.tags.some((tag) => tag.startsWith("ai_reader_disputed")));
-    const fallbacks = readerTags.flatMap((row) => row.tags.filter((tag) => tag.startsWith("ai_reader_fallback")));
+    const disputed = readerTags.filter((row) => row.tags.some((tag) => tag.startsWith("disputed:")));
+    const fallbacks = readerTags.flatMap((row) => row.tags.filter((tag) => tag.startsWith("fallback:")));
     sections.push(
-      `Reader disputes (today's value kept): ${disputed.length} variant(s)${disputed.length ? ` (${disputed.map((row) => `${row.seed} · ${row.label}: ${[...new Set(row.tags.filter((tag) => tag.startsWith("ai_reader_disputed")))].join(", ")}`).join("; ")})` : ""}. Fallbacks: ${fallbacks.length}.`,
+      `Reader disputes (today's value kept): ${disputed.length} variant(s)${disputed.length ? ` (${disputed.map((row) => `${row.seed} · ${row.label}: ${[...new Set(row.tags.filter((tag) => tag.startsWith("disputed:")))].join(", ")}`).join("; ")})` : ""}. Fallbacks: ${fallbacks.length}.`,
       "",
     );
     sections.push(`Variants right with this week's fixes and wrong with the reader: ${lost.length}${lost.length ? ` (${lost.map((row) => `${row.seed} · ${row.variant.label}`).join(", ")})` : ""}.`, "");

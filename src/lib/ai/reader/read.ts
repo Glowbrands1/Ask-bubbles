@@ -1,7 +1,7 @@
 import "server-only";
 
 import { withoutAppLines } from "@/lib/ai/app-sentences";
-import { CLAUDE_HAIKU_MODEL } from "@/lib/config/models";
+import { CLAUDE_READER_MODEL } from "@/lib/config/models";
 
 import { callClaudeToolTimed } from "../call-claude";
 import { checkReading, type CheckContext, type CheckedReading } from "./check";
@@ -19,10 +19,13 @@ import { parseFormReading, READER_TOOL_DESCRIPTION, READER_TOOL_INPUT_SCHEMA, RE
  * the turn runs on today's readers exactly as with the flag off.
  *
  * No roster is sent: the model copies the name as typed and the code finds
- * the one person in the manager's scope it fits.
+ * the one person in the manager's scope it fits. The prompt and the user block
+ * are the same text in the sibling app.
  */
 
-export const READER_TIMEOUT_MS = 2_000;
+/** The reader's limit; AI_READER_TIMEOUT_MS sets it for a trial (milliseconds, 500 to 10,000). */
+const CONFIGURED_TIMEOUT = Number(process.env.AI_READER_TIMEOUT_MS);
+export const READER_TIMEOUT_MS = Number.isFinite(CONFIGURED_TIMEOUT) && CONFIGURED_TIMEOUT >= 500 && CONFIGURED_TIMEOUT <= 10_000 ? CONFIGURED_TIMEOUT : 3_500;
 
 const SYSTEM = `You read a manager's request for an HR form and call record_form_reading once.
 
@@ -43,7 +46,7 @@ export interface ReaderTurn {
 
 export interface ReaderResult {
   readonly checked: CheckedReading;
-  /** What the model returned, for the quotes the card carries to the create and draft routes. */
+  /** What the model returned, for the quotes the card carries to the create and draft routes (this app only). */
   readonly reading: FormReading;
   readonly usage: { readonly inputTokens: number; readonly outputTokens: number; readonly cacheReadTokens: number; readonly cacheWriteTokens: number };
   readonly ms: number;
@@ -57,7 +60,7 @@ export async function readFormRequest(input: {
   const started = performance.now();
   try {
     const reply = await callClaudeToolTimed({
-      model: CLAUDE_HAIKU_MODEL,
+      model: CLAUDE_READER_MODEL,
       system: SYSTEM,
       maxTokens: 600,
       timeoutMs: READER_TIMEOUT_MS,
@@ -65,7 +68,10 @@ export async function readFormRequest(input: {
       messages: [{ role: "user", content: userBlock(input.turns, input.context) }],
     });
     const reading = parseFormReading(reply.input);
-    if (!reading) return { fallback: "unusable" };
+    if (!reading) {
+      console.warn("ai.reader: the model returned something unusable; the turn runs on today's readers");
+      return { fallback: "unusable" };
+    }
     return { checked: checkReading(reading, input.context), reading, usage: reply.usage, ms: performance.now() - started };
   } catch {
     return { fallback: performance.now() - started >= READER_TIMEOUT_MS ? "timeout" : "error" };

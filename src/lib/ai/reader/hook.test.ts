@@ -97,3 +97,23 @@ describe("the reading fills only what today's card left open", () => {
     expect(plan.disputed).toEqual(["employee", "incidentDate"]);
   });
 });
+
+describe("the stale roster line", () => {
+  const response = (content: string, reader: boolean) =>
+    ({
+      content,
+      citations: [],
+      coverage: "not_applicable",
+      formProposal: card({ employeeName: "Quinn Marlowe", ...(reader ? { checkedReading: { employee: { value: "Quinn Marlowe", quote: "Marlowe, Quinn" } } } : {}) }),
+    }) as never;
+
+  it("goes when the reader put that person on the card; any other name, or no reader, stays", async () => {
+    const { withoutStaleRosterNote } = await import("./hook");
+    const stale = "I couldn't find **Marlowe** in the Woven roster, so that name is not on the form.\n\nI'll draft it.";
+    expect(withoutStaleRosterNote(response(stale, true))!.content).toBe("I'll draft it.");
+    expect(withoutStaleRosterNote(response(stale, false))!.content).toBe(stale);
+    const other = "I couldn't find **Dale Ferris** in the Woven roster, so that name is not on the form.\n\nI'll draft it.";
+    expect(withoutStaleRosterNote(response(other, true))!.content).toBe(other);
+    expect(withoutStaleRosterNote(null)).toBeNull();
+  });
+});

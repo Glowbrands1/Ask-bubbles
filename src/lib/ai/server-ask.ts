@@ -152,7 +152,7 @@ import { withUnknownNameAsk } from "./unknown-name-ask";
 import { amountTurnReply } from "./amount-turn";
 import { withPayrollTypoAnswer } from "./payroll-typo-answer";
 import { withWarningLevelFromClause } from "./warning-level-clause";
-import { readerPropose, startFormReading } from "./reader/hook";
+import { readerPropose, startFormReading, withoutStaleRosterNote } from "./reader/hook";
 
 /** SENSITIVE_DEFAULTS_REDACT_ENABLED: a default password format or SSN digits are never shown to the model. */
 function withoutSensitiveChunks<T extends { content: string }>(chunks: T[]): T[] {
@@ -451,7 +451,8 @@ async function answerQuestionCore(
      */
     const reading = askedQuestion ? null : startFormReading(request, actor);
     const proposalQuestion = await questionForProposal(request, actor);
-    const proposal = askedQuestion ? null : await deliverFormProposal({
+    // AI_READS_CODE_CHECKS_ENABLED: no "couldn't find" line about the name the reader put on the card.
+    const proposal = askedQuestion ? null : withoutStaleRosterNote(await deliverFormProposal({
       request,
       actor,
       question: proposalQuestion,
@@ -504,7 +505,7 @@ async function answerQuestionCore(
        */
       priorFormsOnFile: (employeeName, locationId) => priorFormsReadingForChat(actor, employeeName, locationId),
     })),
-    });
+    }));
     // Flags off: decoration returns the same proposal, and the forms-library
     // answer returns here, before retrieval.
     if (proposal) return proposal;

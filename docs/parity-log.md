@@ -902,3 +902,7 @@ QA BF7b live. The sibling app already reads the typo as the payroll answer on th
 ## 27 Oct 2026: known gap — no amount row on the card (left as is)
 
 After "$25", the Payroll deduction amount shows in the reply and on the saved draft but the card has no amount row: this app's proposal carries no amount field and the card renders only "Payroll deduct". The sibling app's card has no amount row either. QA: skip for now (UI work, low value).
+
+## 27 Oct 2026: AI reader — the sibling app's final design (both apps)
+
+Brought to the sibling app's PR #341 design (head 07caf11): the reader defaults to claude-haiku-5-5 (`ANTHROPIC_READER_MODEL` overrides), with a 3.5 s limit (`AI_READER_TIMEOUT_MS`, 500 to 10,000 ms); the same merge invariant, check rules, fail-soft log line and trace shape (`slots.reader`, which the spend guard counts). This app's own parts stay: the reader runs beside the form proposal (no live slot call here), the card carries the passed quotes and the routes check them again, and a "couldn't find" line about the name the reader put on the card is dropped. Tests: `live-flags-with-reader-e2e.test.ts` (every flag live here, reader off and on) and `reader/merge.test.ts` (the invariant).

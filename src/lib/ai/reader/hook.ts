@@ -2,6 +2,7 @@ import "server-only";
 
 import { withoutAppLines } from "@/lib/ai/app-sentences";
 import { aiReadsCodeChecksEnabled } from "@/lib/config/chat-quality-flags";
+import { CLAUDE_READER_MODEL } from "@/lib/config/models";
 import { ACTIVE_BRAND } from "@/lib/brand";
 import { displayName } from "@/lib/forms/employee-match";
 import { loadScopedRoster, readDirectoryFacts } from "@/lib/forms/employee-roster";
@@ -11,7 +12,7 @@ import { SupabaseKnowledgeProvider } from "@/lib/knowledge/providers/supabase";
 import { COMPANY_LOCATIONS } from "@/lib/locations";
 import type { ChatFormProposal } from "@/types";
 
-import { chatTraceDraft, updateChatTrace } from "../chat-trace-store";
+import { updateChatTrace } from "../chat-trace-store";
 import { slotClause } from "../form-full-remap";
 import type { ChatActor } from "../form-proposal";
 import type { GroundedPerson } from "../grounded-entities";
@@ -116,9 +117,19 @@ async function loadHeadings(): Promise<string[]> {
   }
 }
 
-/** Tags on the trace's intent column: the outcome and field names, never the manager's words. */
-function noteReader(tag: string): void {
-  updateChatTrace({ intent: [chatTraceDraft()?.intent, tag].filter(Boolean).join("|") });
+/**
+ * The reader's call in the chat trace's `slots.reader`, the same shape as the
+ * sibling app: `{ model, ms, usage, rejected, filled, disputed }`, or
+ * `{ fallback }`. Field names only, never the manager's words. The spend
+ * guard counts the reader's usage from here.
+ */
+function traceReader(read: ReaderResult | { readonly fallback: string }, filled: readonly string[] = [], disputed: readonly string[] = []): void {
+  updateChatTrace({
+    reader:
+      "fallback" in read
+        ? { fallback: read.fallback }
+        : { model: CLAUDE_READER_MODEL, ms: read.ms, usage: read.usage, rejected: read.checked.rejected, filled: [...filled], disputed: [...disputed] },
+  });
 }
 
 /* ------------------------------------------------------------------ merge -- */
@@ -210,8 +221,9 @@ export function mergePlan(card: ChatFormProposal, checked: CheckedReading, peopl
   } else if (checked.payroll && card.payrollDeduct !== checked.payroll) {
     disputed.push("payroll");
   }
-  const amount = merge.payrollAmount(null);
-  if (amount && (card.payrollDeduct ?? expect.payrollDeduct) === "yes") lines.push(`Payroll deduction of ${amount}.`);
+  // The amount goes with a Yes only; the card has no amount of its own, so it is open there.
+  const amount = (card.payrollDeduct ?? expect.payrollDeduct) === "yes" ? merge.payrollAmount(null) : null;
+  if (amount) lines.push(`Payroll deduction of ${amount}.`);
   return { lines, expect, filled: [...merge.filled, ...filled], disputed: [...merge.disputed, ...disputed] };
 }
 
@@ -246,7 +258,6 @@ function withRosterSpelling(response: AskResponse, checked: CheckedReading, peop
     .flatMap((name) => plainWords(name).split(" "))
     .filter(Boolean);
   if (!typed.every((word) => names.includes(word))) return response;
-  noteReader("ai_reader_roster_spelling");
   return { ...response, formProposal: { ...card, employeeName: displayName(person) } };
 }
 
@@ -320,7 +331,6 @@ function withReading(
   const sources = card.sourceExcerpts ? card.sourceMessageIds : sourcesWithQuotedTurns(card, passedQuotes(read.checked, read.reading), request);
   const moreSources = sources.length !== card.sourceMessageIds.length;
   if (Object.keys(reading).length === 0 && !moreSources) return response;
-  if (moreSources) noteReader("ai_reader_sources");
   return {
     ...response,
     formProposal: {
@@ -345,26 +355,53 @@ export function readerPropose(
     const first = await base(question);
     const read = await started.result;
     if ("fallback" in read) {
-      noteReader(`ai_reader_fallback_${read.fallback}`);
+      traceReader(read);
       return first;
     }
     const card = first?.formProposal;
-    if (!first || !card) return first;
+    if (!first || !card) {
+      traceReader(read);
+      return first;
+    }
     const people = (await started.context).people;
     const plan = mergePlan(card, read.checked, people);
-    if (read.checked.rejected.length > 0) noteReader(`ai_reader_rejected_${read.checked.rejected.join("_")}`);
-    if (plan.disputed.length > 0) noteReader(`ai_reader_disputed_${plan.disputed.join("_")}`);
     let response = first;
+    let filled: readonly string[] = [];
     if (plan.lines.length > 0) {
       const again = await base(`${plan.lines.join(" ")}\n${question}`);
       // A value the code readers would not take is not forced onto the card.
       if (again && improves(card, again.formProposal, plan.expect)) {
         response = again;
-        noteReader(`ai_reader_filled_${plan.filled.join("_")}`);
-      } else {
-        noteReader("ai_reader_not_taken");
+        filled = plan.filled;
       }
     }
-    return withReading(withRosterSpelling(response, read.checked, people), read, request);
+    const spelled = withRosterSpelling(response, read.checked, people);
+    if (spelled !== response && !filled.includes("employee")) filled = [...filled, "employee"];
+    traceReader(read, filled, plan.disputed);
+    return withReading(spelled, read, request);
   };
+}
+
+const ROSTER_NOTE = /^I couldn't find ((?:\*\*[^*]+\*\*(?: or )?)+) in the Woven roster, so that name is not on the form\.$/;
+
+/**
+ * The reply's "I couldn't find **Marlowe** in the Woven roster" line, written
+ * from the manager's words before the reader filled the employee, is dropped
+ * when the card now names the roster person the reader quoted and every name
+ * in the line is part of theirs ("Marlowe" of Quinn Marlowe). Any other line,
+ * and every reply without the reader's employee, is left as it is.
+ */
+export function withoutStaleRosterNote(response: AskResponse | null): AskResponse | null {
+  const card = response?.formProposal;
+  const filled = card?.checkedReading?.employee?.value;
+  if (!response || !card?.employeeName || !filled || plainWords(filled) !== plainWords(card.employeeName)) return response;
+  const named = plainWords(card.employeeName).split(" ");
+  const blocks = response.content.split("\n\n");
+  const kept = blocks.filter((block) => {
+    const match = ROSTER_NOTE.exec(block.trim());
+    if (!match) return true;
+    const names = [...match[1]!.matchAll(/\*\*([^*]+)\*\*/g)].map((hit) => plainWords(hit[1]!));
+    return !names.every((name) => name.split(" ").every((word) => named.includes(word)));
+  });
+  return kept.length === blocks.length ? response : { ...response, content: kept.join("\n\n").trim() };
 }

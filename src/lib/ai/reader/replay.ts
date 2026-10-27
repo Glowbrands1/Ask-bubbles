@@ -5,7 +5,6 @@ import { join } from "node:path";
 import Anthropic from "@anthropic-ai/sdk";
 
 import type { callClaudeToolTimed } from "../call-claude";
-import { priceFor } from "../model-prices";
 
 /**
  * ============================================================================
@@ -51,16 +50,25 @@ export interface ReplayStats {
   /** Characters of system and user text the missing calls would send, to size a recording run. */
   missingChars: number;
   recorded: number;
+  /** Milliseconds of each call that was recorded or replayed, to report median and p90 latency. */
+  latencies: number[];
   inputTokens: number;
   outputTokens: number;
   cacheReadTokens: number;
   cacheWriteTokens: number;
-  /** New spend this run, at list price; VARIATION_BUDGET_USD stops new calls at it. */
-  spentUsd: number;
 }
 
-export function replayTransport(dir: string, mode: "replay" | "record") {
-  const stats: ReplayStats = { calls: 0, missing: 0, slow: 0, missingChars: 0, recorded: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, spentUsd: 0 };
+/** Haiku 4.5 list price per million tokens; the record budget below counts live calls at this price. */
+const LIVE_PRICE = { input: 1, output: 5, cacheRead: 0.1, cacheWrite: 1.25 };
+/** Claude Haiku 5.5 (the pricing page, 27 Oct 2026), prompts up to 100K tokens. */
+const HAIKU_5_5_PRICE = { input: 0.1, output: 0.5, cacheRead: 0.01, cacheWrite: 0.125 };
+/** Dollars spent on live calls by every transport in this process, against VARIATION_BUDGET_USD. */
+let liveSpend = 0;
+export const liveSpendUsd = () => liveSpend;
+export const budgetExceeded = { value: false };
+
+export function replayTransport(dir: string, mode: "replay" | "record", options: { readonly limitMs?: number; readonly model?: string } = {}) {
+  const stats: ReplayStats = { calls: 0, missing: 0, slow: 0, missingChars: 0, recorded: 0, latencies: [], inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 };
   let client: Anthropic | null = null;
   const count = (usage: Reply["usage"]) => {
     stats.inputTokens += usage.inputTokens;
@@ -70,12 +78,14 @@ export function replayTransport(dir: string, mode: "replay" | "record") {
   };
   const call = async (input: Call): Promise<Reply> => {
     stats.calls += 1;
-    const key = recordingKey(input);
+    // A reader recorded with another model (VARIATION_READER_MODEL) has its own recordings.
+    const key = recordingKey(options.model ? { ...input, model: options.model } : input);
     const file = join(dir, `${key}.json`);
     if (existsSync(file)) {
       const saved = JSON.parse(readFileSync(file, "utf8")) as Recording;
       count(saved.usage);
-      if (saved.ms > input.timeoutMs) {
+      stats.latencies.push(saved.ms);
+      if (saved.ms > (options.limitMs ?? input.timeoutMs)) {
         stats.slow += 1;
         throw new Error("slower than the limit");
       }
@@ -86,14 +96,17 @@ export function replayTransport(dir: string, mode: "replay" | "record") {
       stats.missingChars += input.system.length + input.messages.reduce((sum, message) => sum + message.content.length, 0);
       throw new Error("no recording");
     }
-    // Hard cap on a recording run (VARIATION_BUDGET_USD): once spent, no further live calls.
-    const budget = Number(process.env.VARIATION_BUDGET_USD);
-    if (Number.isFinite(budget) && budget > 0 && stats.spentUsd >= budget) throw new Error("recording budget spent");
+    const budget = Number(process.env.VARIATION_BUDGET_USD ?? "");
+    if (Number.isFinite(budget) && budget > 0 && liveSpend >= budget) {
+      budgetExceeded.value = true;
+      throw new Error("record budget reached");
+    }
     client ??= new Anthropic();
+    // performance.now, not Date.now: the report freezes Date, so every recording said 0 ms.
     const started = performance.now();
     const response = await client.messages.create(
       {
-        model: input.model,
+        model: options.model ?? input.model,
         max_tokens: input.maxTokens,
         system: input.system,
         tools: [
@@ -120,16 +133,16 @@ export function replayTransport(dir: string, mode: "replay" | "record") {
       cacheReadTokens: response.usage.cache_read_input_tokens ?? 0,
       cacheWriteTokens: response.usage.cache_creation_input_tokens ?? 0,
     };
-    // performance.now: the report freezes Date for its fixed "today", which made every recording 0 ms.
     const ms = Math.round(performance.now() - started);
     const recording: Recording = { key, model: input.model, reply: block && block.type === "tool_use" ? block.input : null, usage, ms };
     mkdirSync(dir, { recursive: true });
     writeFileSync(file, `${JSON.stringify(recording, null, 2)}\n`);
     stats.recorded += 1;
+    stats.latencies.push(ms);
     count(usage);
-    const price = priceFor(input.model);
-    stats.spentUsd += (usage.inputTokens * price.input + usage.outputTokens * price.output + usage.cacheReadTokens * price.cacheRead + usage.cacheWriteTokens * price.cacheWrite) / 1e6;
-    if (ms > input.timeoutMs) {
+    const price = (options.model ?? input.model).startsWith("claude-haiku-5-5") ? HAIKU_5_5_PRICE : LIVE_PRICE;
+    liveSpend += (usage.inputTokens * price.input + usage.outputTokens * price.output + usage.cacheReadTokens * price.cacheRead + usage.cacheWriteTokens * price.cacheWrite) / 1e6;
+    if (ms > (options.limitMs ?? input.timeoutMs)) {
       stats.slow += 1;
       throw new Error("slower than the limit");
     }
