@@ -964,6 +964,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "PLAN_PAYROLL_SENTENCE_ENABLED",
   "NAME_QUESTION_ONLY_ENABLED",
   "ANIMAL_ANYWHERE_ENABLED",
+  "STEP_DATE_NOT_INCIDENT_ENABLED",
   "JOB_TITLE_FROM_WORDS_ENABLED",
   "DATE_REASK_FRESH_ENABLED",
   "WARNING_LEVEL_AND_CLAUSE_ENABLED",
@@ -1226,6 +1227,16 @@ export function dateAnswerKeepsOpenEnabled(): boolean {
  */
 export function animalAnywhereEnabled(): boolean {
   return envFlag("ANIMAL_ANYWHERE_ENABLED");
+}
+
+/**
+ * A step's date is not the incident date (ported from the sibling app, QA
+ * SF4, 27 Oct 2026; same flag in both apps): "for opening late on 9-28-26" /
+ * "note a verbal ca was given on 9-1-26" dated the card and the form 9/1.
+ * See `forms/step-sentence-dates.ts`. Off, as before.
+ */
+export function stepDateNotIncidentEnabled(): boolean {
+  return envFlag("STEP_DATE_NOT_INCIDENT_ENABLED");
 }
 
 /**
