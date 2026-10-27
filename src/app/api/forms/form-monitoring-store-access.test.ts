@@ -549,7 +549,9 @@ describe("the server pages (Form Monitoring, Overview, rail badge) apply the sam
       expect(source, file).not.toMatch(/listOutstandingFollowUps\(\)/);
       if (source.includes("listOutstandingFollowUps(")) {
         // The queue reads the reader's own forms at other stores too.
-        expect(source, file).toMatch(/listOutstandingFollowUps\(50, [\w.]+, access\.ownCreatedBy\)/);
+        // Changed on purpose (27 Oct 2026): PRIVATE_CREATOR_FORMS_ENABLED reads the page of 50 as
+        // privateAwareLimit(50), which is 50 itself with the flag off; the scope arguments are unchanged.
+        expect(source, file).toMatch(/listOutstandingFollowUps\((?:50|privateAwareLimit\(50\)), [\w.]+, access\.ownCreatedBy\)/);
       }
       expect(source, file).not.toMatch(/listInstances\(view satisfies InstanceView\)/);
     }
