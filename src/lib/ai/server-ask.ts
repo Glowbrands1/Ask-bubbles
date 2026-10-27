@@ -143,6 +143,7 @@ import { keepManagerActionPlan } from "./manager-action-plan-reply";
 import { withJobTitleFromWords } from "./job-title-from-words";
 import { withFreshDateReask } from "./date-reask-fresh";
 import { withFirstNameAsk } from "./first-name-ask";
+import { withUnreadDateAsk } from "./unread-date-ask";
 import { withUnknownNameAsk } from "./unknown-name-ask";
 import { withPayrollTypoAnswer } from "./payroll-typo-answer";
 import { withWarningLevelFromClause } from "./warning-level-clause";
@@ -236,11 +237,15 @@ async function answerQuestionBody(
   actor: ChatActor,
   memory: { memoryOwnerId?: string } = {},
 ): Promise<AskResponse> {
+  // UNREAD_DATE_ASK_ENABLED: "last tuesday" the reader could not read is asked about, never dated today in silence.
   return keepManagerActionPlan(
-    withPayrollTypoAnswer(
-      withUnknownNameAsk(
-        withFirstNameAsk(
-          withWarningLevelFromClause(withFreshDateReask(withJobTitleFromWords(await answerQuestionCore(request, actor, memory), request), request), request),
+    withUnreadDateAsk(
+      withPayrollTypoAnswer(
+        withUnknownNameAsk(
+          withFirstNameAsk(
+            withWarningLevelFromClause(withFreshDateReask(withJobTitleFromWords(await answerQuestionCore(request, actor, memory), request), request), request),
+            request,
+          ),
           request,
         ),
         request,
