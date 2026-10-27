@@ -526,26 +526,29 @@ describe(`${JT} off: as main`, () => {
 });
 
 /*
- * QA S12 / SF4 (ported from Ask Sunny), with this app's store, the name
- * invented: "create a CA form for <name>, tan consultant at kearney, for
- * opening late on 9-28-26" / "this should be a written and note a verbal ca
- * was given on 9-1-26" / "Create a form from this conversation." The warning
- * level stayed blank and the card asked "Verbal Warning or Written Warning?";
- * the Job Title stayed blank. WARNING_LEVEL_AND_CLAUSE_ENABLED reads the level
- * in a clause of its own; JOB_TITLE_FROM_WORDS reads "<name>, <title> at".
+ * QA S12 / SF4 (ported from the sibling app), with this app's store and title,
+ * the name invented: "create a CA form for <name>, makery associate at
+ * kearney, for opening late on 9-28-26" / "this should be a written and note
+ * a verbal ca was given on 9-1-26" / "Create a form from this conversation."
+ * The warning level stayed blank and the card asked "Verbal Warning or Written
+ * Warning?". WARNING_LEVEL_AND_CLAUSE_ENABLED reads the level in a clause of
+ * its own; JOB_TITLE_APPOSITION_ENABLED reads "<name>, <title> at <store>".
  */
 const WL = "WARNING_LEVEL_AND_CLAUSE_ENABLED";
+const AP = "JOB_TITLE_APPOSITION_ENABLED";
 const S12 = [
-  "create a CA form for quinn marlowe, tan consultant at kearney, for opening late on 9-28-26",
+  "create a CA form for quinn marlowe, makery associate at kearney, for opening late on 9-28-26",
   "this should be a written and note a verbal ca was given on 9-1-26",
   "Create a form from this conversation.",
 ];
 
 function s12Production(on: boolean) {
   setProduction(on);
-  if (!saved.has(WL)) saved.set(WL, process.env[WL]);
-  delete process.env[WL];
-  if (on) process.env[WL] = "true";
+  for (const name of [WL, AP]) {
+    if (!saved.has(name)) saved.set(name, process.env[name]);
+    delete process.env[name];
+    if (on) process.env[name] = "true";
+  }
 }
 
 describe(`${WL} on`, () => {
@@ -560,8 +563,9 @@ describe(`${WL} on`, () => {
     expect(thread.proposal?.warningLevel).toBe("written");
     expect(replies[2]).toContain("**Type of warning:** Written Warning, as you said");
     expect(replies[2]).not.toContain("Is this new corrective action a **Verbal Warning** or a **Written Warning**?");
-    expect(title).toBe("Tan Consultant");
+    expect(title).toBe("Makery Associate");
   });
+
 
   it("a level only in the step's history states nothing", async () => {
     const { thread } = await chat([S12[0]!, "note a verbal ca was given on 9-1-26 and she was late again", S12[2]!]);
@@ -569,13 +573,41 @@ describe(`${WL} on`, () => {
   });
 });
 
-describe(`${WL} off: as main`, () => {
+describe(`${WL} and ${AP} off: as main`, () => {
   beforeEach(() => s12Production(false));
 
-  it("S12: the level and the title stay blank, and the level is asked", async () => {
+  it("S12: the level stays blank and is asked", async () => {
     const { thread, replies, title } = await chat(S12);
     expect(thread.proposal?.warningLevel ?? null).toBeNull();
     expect(replies[2]).toContain("Is this new corrective action a **Verbal Warning** or a **Written Warning**?");
-    expect(title).toBeNull();
+    // This company's own title is read from its list on main; the apposition flag matters for one off the list.
+    expect(title).toBe("Makery Associate");
   });
+});
+
+/*
+ * QA, 27 Oct 2026 (live, BF8 shape): the exit form's read-back said "Left
+ * blank for you to review: Job Title" while the card and the draft had the
+ * typed title. EXIT_READBACK_JOB_TITLE_ENABLED: the read-back matches.
+ */
+const RB = "EXIT_READBACK_JOB_TITLE_ENABLED";
+
+describe(`${RB}`, () => {
+  for (const on of [true, false]) {
+    it(`${on ? "on: the read-back lists the Job Title" : "off: as main, listed as blank"}`, async () => {
+      setProduction(true);
+      if (!saved.has(RB)) saved.set(RB, process.env[RB]);
+      delete process.env[RB];
+      if (on) process.env[RB] = "true";
+      const { replies, title } = await chat(BF8);
+      expect(title).toBe("Tanning Consultant");
+      const first = replies[0]!;
+      if (on) {
+        expect(first).toContain("- **Job Title:** Tanning Consultant");
+        expect(first).not.toMatch(/Left blank for you to review:\*\*[^\n]*Job Title/);
+      } else {
+        expect(first).toMatch(/Left blank for you to review:\*\* Job Title/);
+      }
+    });
+  }
 });

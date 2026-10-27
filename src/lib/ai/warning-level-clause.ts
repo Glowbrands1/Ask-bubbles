@@ -5,7 +5,7 @@ import { statedWarningLevel, type WarningLevel } from "@/lib/forms/warning-level
 import type { AskRequest, AskResponse } from "./types";
 
 /**
- * WARNING_LEVEL_AND_CLAUSE_ENABLED (ported from Ask Sunny, QA S12 / SF4, 27
+ * WARNING_LEVEL_AND_CLAUSE_ENABLED (ported from the sibling app, QA S12 / SF4, 27
  * Oct 2026): "this should be a written and note a verbal ca was given on
  * 9-1-26" left the warning level blank and the card asked "Verbal Warning or
  * Written Warning?" — the sentence's earlier step was read as history and the

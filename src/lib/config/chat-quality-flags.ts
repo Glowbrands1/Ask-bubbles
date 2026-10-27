@@ -967,6 +967,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "JOB_TITLE_FROM_WORDS_ENABLED",
   "DATE_REASK_FRESH_ENABLED",
   "WARNING_LEVEL_AND_CLAUSE_ENABLED",
+  "JOB_TITLE_APPOSITION_ENABLED",
+  "EXIT_READBACK_JOB_TITLE_ENABLED",
 ] as const;
 
 /**
@@ -1249,10 +1251,30 @@ export function dateReaskFreshEnabled(): boolean {
 
 /**
  * A warning level stated in an "and"-clause of its own is the card's level
- * (ported from Ask Sunny, QA S12 / SF4, 27 Oct 2026; same flag in both apps):
+ * (ported from the sibling app, QA S12 / SF4, 27 Oct 2026; same flag in both apps):
  * "this should be a written and note a verbal ca was given on 9-1-26" left the
  * level blank. See `ai/warning-level-clause.ts`. Off, as before.
  */
 export function warningLevelAndClauseEnabled(): boolean {
   return envFlag("WARNING_LEVEL_AND_CLAUSE_ENABLED");
+}
+
+/**
+ * The title set off by a comma right after the name is the typed title (QA
+ * S12, 27 Oct 2026; same flag in both apps): "<name>, <title> at <store>". On
+ * top of JOB_TITLE_FROM_WORDS_ENABLED, which fills an empty Job Title only.
+ * See `ai/job-title-from-words.ts`. Off, as before.
+ */
+export function jobTitleAppositionEnabled(): boolean {
+  return envFlag("JOB_TITLE_APPOSITION_ENABLED");
+}
+
+/**
+ * The exit form's read-back shows the Job Title the card and the draft have
+ * (QA, 27 Oct 2026): with JOB_TITLE_FROM_WORDS it said "Left blank for you to
+ * review: Job Title" while the draft had "Tanning Consultant". See
+ * `ai/job-title-from-words.ts`. Off, as before.
+ */
+export function exitReadbackJobTitleEnabled(): boolean {
+  return envFlag("EXIT_READBACK_JOB_TITLE_ENABLED");
 }
