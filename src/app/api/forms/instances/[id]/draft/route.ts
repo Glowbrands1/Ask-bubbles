@@ -52,6 +52,7 @@ import {
   draftableNumberedLists,
   enforceResponsibilities,
 } from "@/lib/forms/responsibility";
+import { accountOnlyRules, policyQueryNotes, withoutInventedDetail } from "@/lib/forms/account-only-policy-query";
 import { stripPlaceholdersFromDraft } from "@/lib/forms/drafted-text";
 import {
   FOLLOW_UP_TIMEFRAME_RULES,
@@ -186,7 +187,7 @@ import {
   withConductOffense,
   withStatedOffense,
 } from "@/lib/forms/ca-policy";
-import { priorStepDate } from "@/lib/forms/form-date-answer";
+import { datesInText, priorStepDate } from "@/lib/forms/form-date-answer";
 import {
   COACHING_CONTEXT_RULES,
   LANGUAGE_CLEANUP_RULES,
@@ -656,7 +657,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       (field) => field.policyGrounded && field.key !== EPP_POLICY_REFERENCE_KEY,
     );
     const grounding = needsPolicy
-      ? await groundPolicy(`${body.topic ?? ""} ${notes}`.trim())
+      ? // ACCOUNT_ONLY_POLICY_QUERY_ENABLED: "yes payroll deduct" and "$25" do not choose the policy.
+        await groundPolicy(`${body.topic ?? ""} ${policyQueryNotes(notes)}`.trim())
       : { passages: [], sources: [], unverified: false, reason: null };
 
     /*
@@ -899,6 +901,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
        * text being written in the first place.
        */
       ...(needsPolicy ? POLICY_SEPARATION_RULES : []),
+      // ACCOUNT_ONLY_POLICY_QUERY_ENABLED: no role, shift or opening the manager did not write.
+      ...accountOnlyRules(),
       /*
        * THE CHEAPEST OF THE THREE DATE FIXES, and the only one that prevents
        * rather than repairs: a model told the date does not invent one.
@@ -1193,6 +1197,16 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
      */
     // The Corrective Action Form's Action Plan is built below, never taken from the model.
     if (fixedPlan && drafted.values) delete drafted.values[fixedPlan.key];
+    // ACCOUNT_ONLY_POLICY_QUERY_ENABLED: "scheduled to open" nobody wrote is the manager's words, dated.
+    if (drafted.values) {
+      drafted.values = withoutInventedDetail(drafted.values, narrativeKeys, {
+        notes,
+        managerWords: () => managerWordsObservation(notes, loaded.instance.employeeName),
+        formDate: resolvedFormDate?.long ?? null,
+        employeeName: loaded.instance.employeeName,
+        datesIn: (text) => datesInText(text, businessToday()),
+      });
+    }
     const cleaned = stripPlaceholdersFromDraft(drafted.values ?? {});
 
     /*

@@ -84,6 +84,7 @@ import {
   manualNegatedListNoteEnabled,
   questionNotFormEnabled,
   googleReviewsInChatEnabled,
+  typoReadingCopyEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { gateTexts, searchWithPlan } from "./continuation";
 import { fieldsFromManagerText, mergeConfirmed, retainFieldsInReply } from "./form-field-state";
@@ -138,11 +139,14 @@ import { appPasswordHelpFor } from "./app-password-help";
 import { redactSensitiveDefaults, withoutSensitiveDefaults } from "./sensitive-defaults";
 import { withoutSharedSourceClaims } from "./sources-not-shared";
 import { withNameBeforeTitle } from "./name-before-title";
+import { withTypoReadingCopy } from "./typo-reading-copy";
+import { protectedNameWords } from "./typo-name-words";
 import type { AskRequest, AskResponse } from "./types";
 import { keepManagerActionPlan } from "./manager-action-plan-reply";
 import { withJobTitleFromWords } from "./job-title-from-words";
 import { withFreshDateReask } from "./date-reask-fresh";
 import { withFirstNameAsk } from "./first-name-ask";
+import { withAmountUnknownAck } from "./amount-unknown-ack";
 import { withUnreadDateAsk } from "./unread-date-ask";
 import { withUnknownNameAsk } from "./unknown-name-ask";
 import { amountTurnReply } from "./amount-turn";
@@ -221,7 +225,9 @@ async function answerQuestionTraced(
 ): Promise<AskResponse> {
   // TERSE_SLOT_READ_ENABLED: a terse "ca …" line is read as the long form.
   // NAME_BEFORE_TITLE_ENABLED: a two-word name right before a job title is the name.
-  const read = withTerseSlots(withNameBeforeTitle(request));
+  // TYPO_READING_COPY_ENABLED: "coahed", "amont", "Manger" are read as the words they can only be; names never.
+  const names = typoReadingCopyEnabled() ? await protectedNameWords() : new Set<string>();
+  const read = withTerseSlots(withNameBeforeTitle(withTypoReadingCopy(request, names)));
   if (!chatTraceEnabled()) return answerQuestionBody(read, actor, memory);
   const draft = openChatTrace({
     conversationId: request.conversationId,
@@ -240,12 +246,16 @@ async function answerQuestionBody(
   memory: { memoryOwnerId?: string } = {},
 ): Promise<AskResponse> {
   // UNREAD_DATE_ASK_ENABLED: "last tuesday" the reader could not read is asked about, never dated today in silence.
+  // AMOUNT_UNKNOWN_ACK_ENABLED: "i dont know the amount" is answered, not met with the card alone.
   return keepManagerActionPlan(
-    withUnreadDateAsk(
-      withPayrollTypoAnswer(
-        withUnknownNameAsk(
-          withFirstNameAsk(
-            withWarningLevelFromClause(withFreshDateReask(withJobTitleFromWords(await answerQuestionCore(request, actor, memory), request), request), request),
+    withAmountUnknownAck(
+      withUnreadDateAsk(
+        withPayrollTypoAnswer(
+          withUnknownNameAsk(
+            withFirstNameAsk(
+              withWarningLevelFromClause(withFreshDateReask(withJobTitleFromWords(await answerQuestionCore(request, actor, memory), request), request), request),
+              request,
+            ),
             request,
           ),
           request,
