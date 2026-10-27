@@ -1,4 +1,5 @@
 import { antiLoopEnabled, priorActionsParseEnabled, priorSentenceFixEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { withWiderDates } from "./wider-dates";
 
 import { JOIN } from "./bounded-context";
 
@@ -1068,7 +1069,7 @@ export function datesInText(text: string, today: string): DateInText[] {
       found.push({ iso, index, end: index + match[0].length });
     }
   }
-  return found;
+  return withWiderDates(text ?? "", today, found);
 }
 
 /**
