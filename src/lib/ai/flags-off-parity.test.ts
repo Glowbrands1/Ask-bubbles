@@ -57,10 +57,20 @@ const PROTECTED = [
  * question form-proposal.ts both apps"), two lines in src/lib/ai/form-proposal.ts
  * openingQuestions behind NAME_QUESTION_ONLY_ENABLED: with no employee named,
  * one plain question instead of the list. Off, the list as before.
+ *
+ * The user (Pau) approved, in the Code session on 27 Oct 2026, editing
+ * src/lib/forms/proposal.ts, only two lines, for the Madeline chain (QA BF7):
+ * the import of `namesSomebody` from "./answer-not-a-name", and in
+ * readEmployeeMentions `settle(strong.filter(namesSomebody),
+ * found.filter(namesSomebody), text, subjects)`. Behind
+ * ANSWER_NOT_A_NAME_ENABLED and STORE_WORD_NOT_A_NAME_ENABLED, both default
+ * off; off, namesSomebody keeps every candidate. It stays on the PROTECTED
+ * list; only the diff check leaves it out.
  */
 const APPROVED_PROTECTED_EDITS = [
   ":(exclude)src/lib/forms/form-date-answer.ts",
   ":(exclude)src/lib/ai/form-proposal.ts",
+  ":(exclude)src/lib/forms/proposal.ts",
 ];
 
 const UI_PATHS = ["src/app/**/*.tsx", "src/components/**", "src/features/**/*.tsx", "**/*.css"];
