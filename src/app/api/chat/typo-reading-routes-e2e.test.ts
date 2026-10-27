@@ -455,6 +455,8 @@ function routesProduction(on: boolean) {
   if (on) process.env[ROUTES] = "true";
   state.directory = [
     { id: "e-7", firstName: "Quinn", lastName: "Marlowe", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-264"], positionName: null },
+    // Invented: "Notise" is one letter from "notice".
+    { id: "e-8", firstName: "Notise", lastName: "Varnell", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-264"], positionName: null },
   ];
 }
 
@@ -473,6 +475,16 @@ describe(`${ROUTES} on`, () => {
     const { value, messages } = await created(S2);
     expect(String(value("prior_actions"))).toContain("10/16/2026");
     expect(messages.some((message) => message.content.includes("i coahed her on 10-16"))).toBe(true);
+  });
+});
+
+describe(`${ROUTES} on: names`, () => {
+  beforeEach(() => routesProduction(true));
+
+  it("a roster name near a list word is not corrected at Create", async () => {
+    const { value } = await created(["create a ca for notise varnell at dodge, she was late on 10-15. i coahed notise on 10-16"]);
+    expect(value("employee_name")).toBe("Notise Varnell");
+    expect(String(value("prior_actions") ?? "")).not.toMatch(/notice/i);
   });
 });
 
