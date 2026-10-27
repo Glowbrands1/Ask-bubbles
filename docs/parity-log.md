@@ -860,3 +860,7 @@ Pau reversed the earlier "no" on 27 Oct 2026. With the flag on, an animal word (
 ## 27 Oct 2026: a typed job title, and the date question asked again in fresh words
 
 JOB_TITLE_FROM_WORDS_ENABLED: both apps (the fill); asking the position once on an exit form stays Bubbles-only, as Ask Sunny has no position question. DATE_REASK_FRESH_ENABLED: Bubbles-only for now. QA D3 showed this app's re-ask came back byte for byte the same as the reply before (stored messages, conv_mvpyha5v22c52vd), while Ask Sunny's live reply on the same turn showed the question; port it if Sunny is seen repeating a reply.
+
+## 27 Oct 2026: S12 bundle — warning level per clause, title by apposition, exit read-back; the Follow-up read-back is Sunny-only
+
+WARNING_LEVEL_AND_CLAUSE_ENABLED, JOB_TITLE_APPOSITION_ENABLED and EXIT_READBACK_JOB_TITLE_ENABLED are in both apps. FOLLOW_UP_READBACK_CUE_ENABLED (QA item 5, "jba manual 11-1-25" read back as "Follow-up: 11/1/2025") is not needed here: the same turns through this app's chat show no Follow-up line (the sibling app's code-slot read-back writes it; this app's path does not).
