@@ -426,7 +426,7 @@ afterEach(() => {
 const JT = "JOB_TITLE_FROM_WORDS_ENABLED";
 const ASKED = "position (job title)?";
 
-function useProduction(on: boolean) {
+function setProduction(on: boolean) {
   for (const name of [...ALL_FLAGS, JT]) {
     if (!saved.has(name)) saved.set(name, process.env[name]);
     delete process.env[name];
@@ -464,7 +464,7 @@ const B_H1 = [
 ];
 
 describe(`${JT} on`, () => {
-  beforeEach(() => useProduction(true));
+  beforeEach(() => setProduction(true));
 
   it.each([
     ["as typed", BF8],
@@ -510,7 +510,7 @@ describe(`${JT} on`, () => {
 });
 
 describe(`${JT} off: as main`, () => {
-  beforeEach(() => useProduction(false));
+  beforeEach(() => setProduction(false));
 
   it("BF8: the typed title is lost and the position is never asked", async () => {
     const typed = await chat(BF8);
@@ -523,4 +523,130 @@ describe(`${JT} off: as main`, () => {
     const { jobTitleFromWordsEnabled } = await import("@/lib/config/chat-quality-flags");
     expect(jobTitleFromWordsEnabled()).toBe(false);
   });
+});
+
+/*
+ * QA S12 / SF4 (ported from the sibling app), with this app's store and title,
+ * the name invented: "create a CA form for <name>, makery associate at
+ * kearney, for opening late on 9-28-26" / "this should be a written and note
+ * a verbal ca was given on 9-1-26" / "Create a form from this conversation."
+ * The warning level stayed blank and the card asked "Verbal Warning or Written
+ * Warning?". WARNING_LEVEL_AND_CLAUSE_ENABLED reads the level in a clause of
+ * its own; JOB_TITLE_APPOSITION_ENABLED reads "<name>, <title> at <store>".
+ */
+const WL = "WARNING_LEVEL_AND_CLAUSE_ENABLED";
+const AP = "JOB_TITLE_APPOSITION_ENABLED";
+const S12 = [
+  "create a CA form for quinn marlowe, makery associate at kearney, for opening late on 9-28-26",
+  "this should be a written and note a verbal ca was given on 9-1-26",
+  "Create a form from this conversation.",
+];
+
+function s12Production(on: boolean) {
+  setProduction(on);
+  for (const name of [WL, AP]) {
+    if (!saved.has(name)) saved.set(name, process.env[name]);
+    delete process.env[name];
+    if (on) process.env[name] = "true";
+  }
+}
+
+describe(`${WL} on`, () => {
+  beforeEach(() => s12Production(true));
+
+  it.each([
+    ["as written", S12],
+    ["lowercase", S12.map((turn) => turn.toLowerCase())],
+    ["Sentence case", S12.map((turn) => turn.replace(/quinn marlowe/g, "Quinn Marlowe").replace(/^([a-z])/, (letter) => letter.toUpperCase()))],
+  ])("S12 %s: Written, as said, and the typed title", async (_casing, turns) => {
+    const { thread, replies, title } = await chat(turns);
+    expect(thread.proposal?.warningLevel).toBe("written");
+    expect(replies[2]).toContain("**Type of warning:** Written Warning, as you said");
+    expect(replies[2]).not.toContain("Is this new corrective action a **Verbal Warning** or a **Written Warning**?");
+    expect(title).toBe("Makery Associate");
+    // QA B1 live: the card said Written and the saved draft had no warning_type row.
+    state.draft = { values: {} };
+    const id = await thread.create();
+    const row = store.form_instance_values.find((value) => value.instance_id === id && value.field_key === "warning_type");
+    expect(JSON.stringify(row ?? null)).toMatch(/written/i);
+  });
+
+  it("a level only in the step's history states nothing", async () => {
+    const { thread } = await chat([S12[0]!, "note a verbal ca was given on 9-1-26 and she was late again", S12[2]!]);
+    expect(thread.proposal?.warningLevel ?? null).toBeNull();
+  });
+});
+
+describe(`${WL} and ${AP} off: as main`, () => {
+  beforeEach(() => s12Production(false));
+
+  it("S12: the level stays blank and is asked", async () => {
+    const { thread, replies, title } = await chat(S12);
+    expect(thread.proposal?.warningLevel ?? null).toBeNull();
+    expect(replies[2]).toContain("Is this new corrective action a **Verbal Warning** or a **Written Warning**?");
+    // This company's own title is read from its list on main; the apposition flag matters for one off the list.
+    expect(title).toBe("Makery Associate");
+  });
+});
+
+/*
+ * QA, 27 Oct 2026 (live, BF8 shape): the exit form's read-back said "Left
+ * blank for you to review: Job Title" while the card and the draft had the
+ * typed title. EXIT_READBACK_JOB_TITLE_ENABLED: the read-back matches.
+ */
+const RB = "EXIT_READBACK_JOB_TITLE_ENABLED";
+
+describe(`${RB}`, () => {
+  for (const on of [true, false]) {
+    it(`${on ? "on: the read-back lists the Job Title" : "off: as main, listed as blank"}`, async () => {
+      setProduction(true);
+      if (!saved.has(RB)) saved.set(RB, process.env[RB]);
+      delete process.env[RB];
+      if (on) process.env[RB] = "true";
+      const { replies, title } = await chat(BF8);
+      expect(title).toBe("Tanning Consultant");
+      const first = replies[0]!;
+      if (on) {
+        expect(first).toContain("- **Job Title:** Tanning Consultant");
+        expect(first).not.toMatch(/Left blank for you to review:\*\*[^\n]*Job Title/);
+      } else {
+        expect(first).toMatch(/Left blank for you to review:\*\* Job Title/);
+      }
+    });
+  }
+});
+
+/*
+ * QA S12 / S1 (ported from the sibling app), this app's shape: the Corrective
+ * Action card's Issue read "this should be a written and note a verbal ca was
+ * given on 9-1-26". LEVEL_STEP_NOT_ACCOUNT_ENABLED: that sentence is no Issue.
+ */
+const LSN = "LEVEL_STEP_NOT_ACCOUNT_ENABLED";
+const S1 = [
+  "create a CA form for dale ferris, makery associate at dodge, for opening store late on 9-28-26",
+  "this should be a written and note a verbal ca was given on 9-1-26",
+  "Create a form from this conversation.",
+];
+
+describe(LSN, () => {
+  for (const on of [true, false]) {
+    it(on ? "on: the Issue is what happened" : "off: as main, the level and step are the Issue", async () => {
+      setProduction(true);
+      if (!saved.has(LSN)) saved.set(LSN, process.env[LSN]);
+      delete process.env[LSN];
+      if (on) process.env[LSN] = "true";
+      // As live with the S12 bundle: STEP_DATE_NOT_INCIDENT on, so 9/1 is no correction of the incident's date.
+      if (!saved.has("STEP_DATE_NOT_INCIDENT_ENABLED")) saved.set("STEP_DATE_NOT_INCIDENT_ENABLED", process.env.STEP_DATE_NOT_INCIDENT_ENABLED);
+      process.env.STEP_DATE_NOT_INCIDENT_ENABLED = "true";
+      const { replies } = await chat(S1);
+      const issue = replies[2]!.match(/\*\*Issue:\*\* [^·\n]*/)?.[0] ?? "";
+      if (on) {
+        expect(issue).not.toContain("should be a written");
+        expect(issue).not.toContain("was given on 9-1-26");
+        expect(issue.toLowerCase()).toContain("opening store late on 9-28-26");
+      } else {
+        expect(issue).toContain("this should be a written and note a verbal ca was given on 9-1-26");
+      }
+    });
+  }
 });

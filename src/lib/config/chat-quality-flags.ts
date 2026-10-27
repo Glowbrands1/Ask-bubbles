@@ -969,6 +969,11 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "STEP_DATE_NOT_INCIDENT_ENABLED",
   "JOB_TITLE_FROM_WORDS_ENABLED",
   "DATE_REASK_FRESH_ENABLED",
+  "WARNING_LEVEL_AND_CLAUSE_ENABLED",
+  "LEVEL_STEP_NOT_ACCOUNT_ENABLED",
+  "JOB_TITLE_APPOSITION_ENABLED",
+  "EXIT_READBACK_JOB_TITLE_ENABLED",
+  "FOLLOW_UP_CITATION_FIELD_ENABLED",
 ] as const;
 
 /**
@@ -1275,4 +1280,55 @@ export function answerNotANameEnabled(): boolean {
  */
 export function storeWordNotANameEnabled(): boolean {
   return envFlag("STORE_WORD_NOT_A_NAME_ENABLED");
+}
+
+/**
+ * A warning level stated in an "and"-clause of its own is the card's level
+ * (ported from the sibling app, QA S12 / SF4, 27 Oct 2026; same flag in both apps):
+ * "this should be a written and note a verbal ca was given on 9-1-26" left the
+ * level blank. See `ai/warning-level-clause.ts`. Off, as before.
+ */
+export function warningLevelAndClauseEnabled(): boolean {
+  return envFlag("WARNING_LEVEL_AND_CLAUSE_ENABLED");
+}
+
+/**
+ * The title set off by a comma right after the name is the typed title (QA
+ * S12, 27 Oct 2026; same flag in both apps): "<name>, <title> at <store>". On
+ * top of JOB_TITLE_FROM_WORDS_ENABLED, which fills an empty Job Title only.
+ * See `ai/job-title-from-words.ts`. Off, as before.
+ */
+export function jobTitleAppositionEnabled(): boolean {
+  return envFlag("JOB_TITLE_APPOSITION_ENABLED");
+}
+
+/**
+ * The exit form's read-back shows the Job Title the card and the draft have
+ * (QA, 27 Oct 2026): with JOB_TITLE_FROM_WORDS it said "Left blank for you to
+ * review: Job Title" while the draft had "Tanning Consultant". See
+ * `ai/job-title-from-words.ts`. Off, as before.
+ */
+export function exitReadbackJobTitleEnabled(): boolean {
+  return envFlag("EXIT_READBACK_JOB_TITLE_ENABLED");
+}
+
+/**
+ * The Follow-Up Coaching Form's policy citation goes with the Original
+ * Expectation (ported from the sibling app, QA P5, 27 Oct 2026; same flag in
+ * both apps): it went into Follow-Up Observation, which stays blank until the
+ * follow-up has happened, so that field read "Policy reference: …". See
+ * `ai/policy-citation-fields.ts`. Off, as before.
+ */
+export function followUpCitationFieldEnabled(): boolean {
+  return envFlag("FOLLOW_UP_CITATION_FIELD_ENABLED");
+}
+
+/**
+ * A clause that only sets the warning level or only lists a prior step is not
+ * the account (ported from the sibling app, QA S12, 27 Oct 2026; same flag in
+ * both apps): "this should be a written and note a verbal ca was given on
+ * 9-1-26" was the card's Issue. See `forms/account-clauses.ts`. Off, as before.
+ */
+export function levelStepNotAccountEnabled(): boolean {
+  return envFlag("LEVEL_STEP_NOT_ACCOUNT_ENABLED");
 }

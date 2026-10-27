@@ -1,5 +1,8 @@
 import { priorSteps } from "./form-date-answer";
 import { detectTemplateIntent } from "./template-intent";
+import { warningLevelAndClauseEnabled } from "@/lib/config/chat-quality-flags";
+
+import { levelInOwnClause } from "./warning-level-clause";
 import { warningLevelFromTurns, type WarningLevel } from "./warning-level";
 
 /*
@@ -56,11 +59,28 @@ export function warningLevelFromConversation(
     )
     .map(({ index }) => index);
   const start = !options.fromThisForm && requests.length >= 2 ? requests[requests.length - 2]! + 1 : 0;
-  return warningLevelFromTurns(
-    usable
-      .slice(start)
-      .filter((turn) => turn.role === "user")
-      .map((turn) => turn.content),
-    today,
-  );
+  const said = usable
+    .slice(start)
+    .filter((turn) => turn.role === "user")
+    .map((turn) => turn.content);
+  const level = warningLevelFromTurns(said, today);
+  if (level || !warningLevelAndClauseEnabled()) return level;
+  /*
+   * WARNING_LEVEL_AND_CLAUSE_ENABLED (QA B1 live, 27 Oct 2026): the card read
+   * "this should be a written and note a verbal ca …" as Written, and this
+   * check of the stated level — at Create and at drafting — did not, so the
+   * saved draft had no Type of Warning. The same clause reading, latest turn
+   * first, from the turn that opened the window: "this should be a written and
+   * note a verbal ca …" names "ca", so it counts as a request itself.
+   */
+  const from = !options.fromThisForm && requests.length >= 2 ? requests[requests.length - 2]! : 0;
+  const window = usable
+    .slice(from)
+    .filter((turn) => turn.role === "user")
+    .map((turn) => turn.content);
+  for (const turn of [...window].reverse()) {
+    const clause = levelInOwnClause(turn, today);
+    if (clause) return clause;
+  }
+  return null;
 }
