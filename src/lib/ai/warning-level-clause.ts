@@ -1,6 +1,6 @@
-import { businessToday } from "@/lib/business-date";
 import { warningLevelAndClauseEnabled } from "@/lib/config/chat-quality-flags";
-import { statedWarningLevel, type WarningLevel } from "@/lib/forms/warning-level";
+import { type WarningLevel } from "@/lib/forms/warning-level";
+import { levelInOwnClause } from "@/lib/forms/warning-level-clause";
 
 import type { AskRequest, AskResponse } from "./types";
 
@@ -20,20 +20,6 @@ const ASKED =
 
 function label(level: WarningLevel): string {
   return level === "verbal" ? "Verbal Warning" : level === "written" ? "Written Warning" : "Final Warning";
-}
-
-/** The one level a turn states in an "and"-clause of its own, or null. */
-export function levelInOwnClause(turn: string, today: string = businessToday()): WarningLevel | null {
-  const levels = new Set<WarningLevel>();
-  for (const sentence of turn.split(/[.;!?\n]+/)) {
-    const clauses = sentence.split(/\s+and\s+/i);
-    if (clauses.length < 2) continue;
-    for (const clause of clauses) {
-      const level = statedWarningLevel(clause.trim(), today);
-      if (level) levels.add(level);
-    }
-  }
-  return levels.size === 1 ? [...levels][0]! : null;
 }
 
 export function withWarningLevelFromClause(response: AskResponse, request: AskRequest): AskResponse {

@@ -564,8 +564,12 @@ describe(`${WL} on`, () => {
     expect(replies[2]).toContain("**Type of warning:** Written Warning, as you said");
     expect(replies[2]).not.toContain("Is this new corrective action a **Verbal Warning** or a **Written Warning**?");
     expect(title).toBe("Makery Associate");
+    // QA B1 live: the card said Written and the saved draft had no warning_type row.
+    state.draft = { values: {} };
+    const id = await thread.create();
+    const row = store.form_instance_values.find((value) => value.instance_id === id && value.field_key === "warning_type");
+    expect(JSON.stringify(row ?? null)).toMatch(/written/i);
   });
-
 
   it("a level only in the step's history states nothing", async () => {
     const { thread } = await chat([S12[0]!, "note a verbal ca was given on 9-1-26 and she was late again", S12[2]!]);
