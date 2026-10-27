@@ -886,3 +886,7 @@ JOB_TITLE_READBACK_CASE_ENABLED and STEP_DATE_NO_QUESTION_ENABLED are not needed
 ## 27 Oct 2026: a decimal point ends no sentence in the Issue (DECIMAL_NOT_SENTENCE_END_ENABLED, Bubbles-only)
 
 Not needed in the sibling app: its card has no Issue / What happened line. The same sentences through its harness ("she was 10 minutes late on 10.2", "… 3.5 hours late and owes $10.25") give an Observation of Offense with both whole.
+
+## 27 Oct 2026: "yes payrol ldeduct" is the payroll answer — this app only (PAYROLL_TYPO_ANSWER_ENABLED)
+
+QA BF7b live. The sibling app already reads the typo as the payroll answer on that turn (checked through its chat with its production flags), so the flag is not needed there.
