@@ -964,11 +964,17 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "PLAN_PAYROLL_SENTENCE_ENABLED",
   "NAME_QUESTION_ONLY_ENABLED",
   "ANIMAL_ANYWHERE_ENABLED",
+  "ANSWER_NOT_A_NAME_ENABLED",
+  "STORE_WORD_NOT_A_NAME_ENABLED",
   "STEP_DATE_NOT_INCIDENT_ENABLED",
   "JOB_TITLE_FROM_WORDS_ENABLED",
   "DATE_REASK_FRESH_ENABLED",
   "WARNING_LEVEL_AND_CLAUSE_ENABLED",
   "LEVEL_STEP_NOT_ACCOUNT_ENABLED",
+  "FIRST_NAME_ASK_ENABLED",
+  "UNKNOWN_NAME_ASK_ENABLED",
+  "PAYROLL_TYPO_ANSWER_ENABLED",
+  "WIDER_DATE_READER_ENABLED",
   "JOB_TITLE_APPOSITION_ENABLED",
   "EXIT_READBACK_JOB_TITLE_ENABLED",
   "FOLLOW_UP_CITATION_FIELD_ENABLED",
@@ -1264,6 +1270,24 @@ export function dateReaskFreshEnabled(): boolean {
 }
 
 /**
+ * An answer to the app's question names nobody (ported from the sibling app,
+ * QA BF7, 27 Oct 2026; same flag in both apps): "yes payrol ldeduct" became
+ * the employee. See `forms/answer-not-a-name.ts`. Off, as before.
+ */
+export function answerNotANameEnabled(): boolean {
+  return envFlag("ANSWER_NOT_A_NAME_ENABLED");
+}
+
+/**
+ * A reply that is only a store's name is the store, not the employee (QA BF7,
+ * 27 Oct 2026): "dodge" became the employee. See `forms/answer-not-a-name.ts`.
+ * Off, as before.
+ */
+export function storeWordNotANameEnabled(): boolean {
+  return envFlag("STORE_WORD_NOT_A_NAME_ENABLED");
+}
+
+/**
  * A warning level stated in an "and"-clause of its own is the card's level
  * (ported from the sibling app, QA S12 / SF4, 27 Oct 2026; same flag in both apps):
  * "this should be a written and note a verbal ca was given on 9-1-26" left the
@@ -1323,4 +1347,43 @@ export function levelStepNotAccountEnabled(): boolean {
  */
 export function aiReadsCodeChecksEnabled(): boolean {
   return envFlag("AI_READS_CODE_CHECKS_ENABLED");
+}
+
+/**
+ * The name question uses the first name the manager gave, and is never asked
+ * twice in the same words (ported from the sibling app, QA S15, 27 Oct 2026;
+ * same flag in both apps): "I have an employee ivy …" then "Yes" got "Who is
+ * this form for? Tell me the employee's full name." twice. See
+ * `ai/first-name-ask.ts`. Off, as before.
+ */
+export function firstNameAskEnabled(): boolean {
+  return envFlag("FIRST_NAME_ASK_ENABLED");
+}
+
+/**
+ * A typed name that is not on the directory is named back once, and the name
+ * question is never shown twice in a row (QA BF7 live, 27 Oct 2026): the same
+ * "Who is this Corrective Action Form for?" came back five times while the
+ * typed name was never read. See `ai/unknown-name-ask.ts`. Off, as before.
+ */
+export function unknownNameAskEnabled(): boolean {
+  return envFlag("UNKNOWN_NAME_ASK_ENABLED");
+}
+
+/**
+ * A payroll answer with a typo is the payroll answer (QA BF7b live, 27 Oct
+ * 2026): "yes payrol ldeduct" set no Payroll deduct on the card. See
+ * `ai/payroll-typo-answer.ts`. Off, as before.
+ */
+export function payrollTypoAnswerEnabled(): boolean {
+  return envFlag("PAYROLL_TYPO_ANSWER_ENABLED");
+}
+
+/**
+ * The date reader also reads "2 october", "the 2nd of october", "on 10.2" and
+ * "on the 2nd" (ported from the sibling app, 27 Oct 2026; same flag in both
+ * apps). See `forms/wider-dates.ts`. Off, as before.
+ */
+export function widerDateReaderEnabled(): boolean {
+  return envFlag("WIDER_DATE_READER_ENABLED");
 }

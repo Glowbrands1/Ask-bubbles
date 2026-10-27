@@ -142,6 +142,9 @@ import type { AskRequest, AskResponse } from "./types";
 import { keepManagerActionPlan } from "./manager-action-plan-reply";
 import { withJobTitleFromWords } from "./job-title-from-words";
 import { withFreshDateReask } from "./date-reask-fresh";
+import { withFirstNameAsk } from "./first-name-ask";
+import { withUnknownNameAsk } from "./unknown-name-ask";
+import { withPayrollTypoAnswer } from "./payroll-typo-answer";
 import { withWarningLevelFromClause } from "./warning-level-clause";
 import { readerPropose, startFormReading } from "./reader/hook";
 
@@ -235,7 +238,16 @@ async function answerQuestionBody(
   memory: { memoryOwnerId?: string } = {},
 ): Promise<AskResponse> {
   return keepManagerActionPlan(
-    withWarningLevelFromClause(withFreshDateReask(withJobTitleFromWords(await answerQuestionCore(request, actor, memory), request), request), request),
+    withPayrollTypoAnswer(
+      withUnknownNameAsk(
+        withFirstNameAsk(
+          withWarningLevelFromClause(withFreshDateReask(withJobTitleFromWords(await answerQuestionCore(request, actor, memory), request), request), request),
+          request,
+        ),
+        request,
+      ),
+      request,
+    ),
     request,
   );
 }

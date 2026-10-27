@@ -882,3 +882,11 @@ LEVEL_STEP_NOT_ACCOUNT_ENABLED is in both apps (here the Issue, there the Observ
 ## 27 Oct 2026: AI reads, code checks (both apps; this app's hook is its own)
 
 AI_READS_CODE_CHECKS_ENABLED (default off, same name in both apps). Ported from the sibling app's branch `claude/code2-ai-reads-code-checks` (c23bdad, not yet on its main): the tool `record_form_reading`, its schema, instructions and timed call, the code checks, the merge rule ("a field today's readers settled stays; one they left open is filled"; a disagreement is traced), and the record/replay format, with this app's stores, roster and wording. The hook is this app's: it has no live slot call, so the reader runs beside the form proposal and hands each filled value to the code readers as the app's own line ("The employee is …"), the card carries the passed quotes, and the create and draft routes check them again (`src/lib/ai/reader/hook.ts`, `recheck.ts`).
+
+## 27 Oct 2026: S1 residuals — read-back title case and the step date in the date question (sibling-only)
+
+JOB_TITLE_READBACK_CASE_ENABLED and STEP_DATE_NO_QUESTION_ENABLED are not needed here: QA's S1 turns through this app's chat, with STEP_DATE_NOT_INCIDENT on, ask no date question (this app's incidentDates already leaves out a step's date under STEP_DATE_NOT_INCIDENT) and read back the title the card has.
+
+## 27 Oct 2026: "yes payrol ldeduct" is the payroll answer — this app only (PAYROLL_TYPO_ANSWER_ENABLED)
+
+QA BF7b live. The sibling app already reads the typo as the payroll answer on that turn (checked through its chat with its production flags), so the flag is not needed there.

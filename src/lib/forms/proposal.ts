@@ -19,6 +19,7 @@ import {
 } from "./team-subject";
 import { proposeLocationWithSource, type LocationProposal } from "./location-scope";
 import { ROSTER_STORE_INDEX, rosterLocationName } from "./location-mention";
+import { namesSomebody } from "./answer-not-a-name";
 import { isStoreName, type StoreIndex } from "@/lib/stores/resolver";
 import type { AccessScope, ChatFormProposal, ChatMessage, EmployeeVerification } from "@/types";
 
@@ -1046,7 +1047,7 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
    */
   if (typedNameEnabled()) strong.push(...nameBeforeTitle(text));
 
-  return settle(strong, found, text, subjects);
+  return settle(strong.filter(namesSomebody), found.filter(namesSomebody), text, subjects);
 }
 
 /** "<name>, <job title> …" — the person, when this company's titles say so. */
