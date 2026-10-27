@@ -431,6 +431,10 @@ function useProduction(on: boolean) {
   if (on) process.env[NQO] = "true";
 }
 
+async function first(opener: string) {
+  return (await new Thread().say(opener)).content;
+}
+
 async function replies(turns: readonly string[]) {
   const thread = new Thread();
   const out: string[] = [];
@@ -462,5 +466,47 @@ describe(`${NQO} off: as main`, () => {
   it("the flag reads off by default", async () => {
     const { nameQuestionOnlyEnabled } = await import("@/lib/config/chat-quality-flags");
     expect(nameQuestionOnlyEnabled()).toBe(false);
+  });
+});
+
+const COACHING = ["Create a coaching form.", "create a coaching form."];
+const LS_B3 = [
+  "I have an employee ivy at our Grand Island location who has been out of dress code three shifts. I verbally coached her on the second offense and she still is out of dress code",
+  "Create a Coaching Form from this conversation.",
+  "Yes",
+];
+const LIST = /I'll need a few details first|please provide me with these details/;
+
+describe(`${NQO} on: the coaching card (form-proposal.ts, approved by Pau 27 Oct 2026)`, () => {
+  beforeEach(() => useProduction(true));
+
+  it.each(COACHING)("%s: one plain question", async (opener) => {
+    const reply = await first(opener);
+    expect(reply).toContain(ONE);
+    expect(reply).not.toMatch(LIST);
+  });
+
+  it.each([
+    ["Sentence case", LS_B3],
+    ["lowercase", LS_B3.map((turn) => turn.toLowerCase())],
+  ])("%s: LS-B3 never gets the list", async (_casing, turns) => {
+    const thread = new Thread();
+    const out: string[] = [];
+    for (const turn of turns) out.push((await thread.say(turn)).content);
+    expect(out[1]).toContain(ONE);
+    expect(out[1]).not.toMatch(LIST);
+    expect(out[2]).not.toMatch(LIST);
+  });
+});
+
+describe(`${NQO} off: the coaching card as main`, () => {
+  beforeEach(() => useProduction(false));
+
+  it("LS-B3 gets the list twice", async () => {
+    const thread = new Thread();
+    const out: string[] = [];
+    for (const turn of LS_B3) out.push((await thread.say(turn)).content);
+    expect(out[1]).toMatch(LIST);
+    expect(out[2]).toMatch(LIST);
   });
 });

@@ -52,6 +52,11 @@ const PROTECTED = [
  * (a prior step's date is never the form's Date). It stays
  * on the PROTECTED list; only the diff check leaves it out. No other
  * protected file is excepted.
+ *
+ * The user (Pau) approved, in the Code session on 27 Oct 2026 ("yes, name
+ * question form-proposal.ts both apps"), two lines in src/lib/ai/form-proposal.ts
+ * openingQuestions behind NAME_QUESTION_ONLY_ENABLED: with no employee named,
+ * one plain question instead of the list. Off, the list as before.
  */
 const APPROVED_PROTECTED_EDITS = [
   ":(exclude)src/lib/forms/form-date-answer.ts",
