@@ -1,7 +1,8 @@
-import { typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { levelStepNotAccountEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { COMPANY_JOB_TITLES } from "@/config/company/job-titles";
 import { businessToday } from "@/lib/business-date";
 
+import { withoutLevelAndStepClauses } from "./account-clauses";
 import { JOIN } from "./bounded-context";
 import { describesIncident } from "./corrective-action-intake";
 import { withoutPriorStepClauses } from "./form-date-answer";
@@ -150,7 +151,14 @@ export function correctiveActionIssue(said: string, employeeName: string | null)
    * 10-16", "i coached her on 10-16 about being late") is a Prior actions row,
    * never the Issue; the incident clause beside it is kept.
    */
-  const text = priorSentenceFixFor(said) ? withoutPriorStepClauses(said, businessToday(), said).text : said;
+  const read = priorSentenceFixFor(said) ? withoutPriorStepClauses(said, businessToday(), said).text : said;
+  // LEVEL_STEP_NOT_ACCOUNT_ENABLED: "this should be a written and note a verbal ca was given on 9-1-26" is no Issue.
+  const text = levelStepNotAccountEnabled()
+    ? read
+        .split("\n")
+        .map((line) => line.split(/(?<=[.!?])\s+/).map(withoutLevelAndStepClauses).filter(Boolean).join(" "))
+        .join("\n")
+    : read;
   const fromRequest = issueFromRequest(text, employeeName);
   if (!typedNameEnabled()) return fromRequest;
   if (fromRequest && !titleAndPlaceOnly(fromRequest, employeeName)) return fromRequest;

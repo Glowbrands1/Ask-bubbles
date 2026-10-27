@@ -564,8 +564,12 @@ describe(`${WL} on`, () => {
     expect(replies[2]).toContain("**Type of warning:** Written Warning, as you said");
     expect(replies[2]).not.toContain("Is this new corrective action a **Verbal Warning** or a **Written Warning**?");
     expect(title).toBe("Makery Associate");
+    // QA B1 live: the card said Written and the saved draft had no warning_type row.
+    state.draft = { values: {} };
+    const id = await thread.create();
+    const row = store.form_instance_values.find((value) => value.instance_id === id && value.field_key === "warning_type");
+    expect(JSON.stringify(row ?? null)).toMatch(/written/i);
   });
-
 
   it("a level only in the step's history states nothing", async () => {
     const { thread } = await chat([S12[0]!, "note a verbal ca was given on 9-1-26 and she was late again", S12[2]!]);
@@ -607,6 +611,41 @@ describe(`${RB}`, () => {
         expect(first).not.toMatch(/Left blank for you to review:\*\*[^\n]*Job Title/);
       } else {
         expect(first).toMatch(/Left blank for you to review:\*\* Job Title/);
+      }
+    });
+  }
+});
+
+/*
+ * QA S12 / S1 (ported from the sibling app), this app's shape: the Corrective
+ * Action card's Issue read "this should be a written and note a verbal ca was
+ * given on 9-1-26". LEVEL_STEP_NOT_ACCOUNT_ENABLED: that sentence is no Issue.
+ */
+const LSN = "LEVEL_STEP_NOT_ACCOUNT_ENABLED";
+const S1 = [
+  "create a CA form for dale ferris, makery associate at dodge, for opening store late on 9-28-26",
+  "this should be a written and note a verbal ca was given on 9-1-26",
+  "Create a form from this conversation.",
+];
+
+describe(LSN, () => {
+  for (const on of [true, false]) {
+    it(on ? "on: the Issue is what happened" : "off: as main, the level and step are the Issue", async () => {
+      setProduction(true);
+      if (!saved.has(LSN)) saved.set(LSN, process.env[LSN]);
+      delete process.env[LSN];
+      if (on) process.env[LSN] = "true";
+      // As live with the S12 bundle: STEP_DATE_NOT_INCIDENT on, so 9/1 is no correction of the incident's date.
+      if (!saved.has("STEP_DATE_NOT_INCIDENT_ENABLED")) saved.set("STEP_DATE_NOT_INCIDENT_ENABLED", process.env.STEP_DATE_NOT_INCIDENT_ENABLED);
+      process.env.STEP_DATE_NOT_INCIDENT_ENABLED = "true";
+      const { replies } = await chat(S1);
+      const issue = replies[2]!.match(/\*\*Issue:\*\* [^·\n]*/)?.[0] ?? "";
+      if (on) {
+        expect(issue).not.toContain("should be a written");
+        expect(issue).not.toContain("was given on 9-1-26");
+        expect(issue.toLowerCase()).toContain("opening store late on 9-28-26");
+      } else {
+        expect(issue).toContain("this should be a written and note a verbal ca was given on 9-1-26");
       }
     });
   }

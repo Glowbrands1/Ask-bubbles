@@ -968,6 +968,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "JOB_TITLE_FROM_WORDS_ENABLED",
   "DATE_REASK_FRESH_ENABLED",
   "WARNING_LEVEL_AND_CLAUSE_ENABLED",
+  "LEVEL_STEP_NOT_ACCOUNT_ENABLED",
   "JOB_TITLE_APPOSITION_ENABLED",
   "EXIT_READBACK_JOB_TITLE_ENABLED",
   "FOLLOW_UP_CITATION_FIELD_ENABLED",
@@ -1300,4 +1301,14 @@ export function exitReadbackJobTitleEnabled(): boolean {
  */
 export function followUpCitationFieldEnabled(): boolean {
   return envFlag("FOLLOW_UP_CITATION_FIELD_ENABLED");
+}
+
+/**
+ * A clause that only sets the warning level or only lists a prior step is not
+ * the account (ported from the sibling app, QA S12, 27 Oct 2026; same flag in
+ * both apps): "this should be a written and note a verbal ca was given on
+ * 9-1-26" was the card's Issue. See `forms/account-clauses.ts`. Off, as before.
+ */
+export function levelStepNotAccountEnabled(): boolean {
+  return envFlag("LEVEL_STEP_NOT_ACCOUNT_ENABLED");
 }
