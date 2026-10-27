@@ -973,6 +973,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "LEVEL_STEP_NOT_ACCOUNT_ENABLED",
   "FIRST_NAME_ASK_ENABLED",
   "UNKNOWN_NAME_ASK_ENABLED",
+  "DECIMAL_NOT_SENTENCE_END_ENABLED",
   "WIDER_DATE_READER_ENABLED",
   "JOB_TITLE_APPOSITION_ENABLED",
   "EXIT_READBACK_JOB_TITLE_ENABLED",
@@ -1364,4 +1365,13 @@ export function unknownNameAskEnabled(): boolean {
  */
 export function widerDateReaderEnabled(): boolean {
   return envFlag("WIDER_DATE_READER_ENABLED");
+}
+
+/**
+ * A point between two digits ends no sentence in the Issue read-back (QA,
+ * 27 Oct 2026; same flag in both apps): "late on 10.2" read "late on 10",
+ * "$10.25" read "$10". See `forms/incident-issue.ts`. Off, as before.
+ */
+export function decimalNotSentenceEndEnabled(): boolean {
+  return envFlag("DECIMAL_NOT_SENTENCE_END_ENABLED");
 }
