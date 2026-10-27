@@ -882,7 +882,3 @@ LEVEL_STEP_NOT_ACCOUNT_ENABLED is in both apps (here the Issue, there the Observ
 ## 27 Oct 2026: S1 residuals — read-back title case and the step date in the date question (sibling-only)
 
 JOB_TITLE_READBACK_CASE_ENABLED and STEP_DATE_NO_QUESTION_ENABLED are not needed here: QA's S1 turns through this app's chat, with STEP_DATE_NOT_INCIDENT on, ask no date question (this app's incidentDates already leaves out a step's date under STEP_DATE_NOT_INCIDENT) and read back the title the card has.
-
-## 27 Oct 2026: S1 residuals — read-back title case and the step date in the date question (sibling-only)
-
-JOB_TITLE_READBACK_CASE_ENABLED and STEP_DATE_NO_QUESTION_ENABLED are not needed here: QA's S1 turns through this app's chat, with STEP_DATE_NOT_INCIDENT on, ask no date question (this app's incidentDates already leaves out a step's date under STEP_DATE_NOT_INCIDENT) and read back the title the card has.
