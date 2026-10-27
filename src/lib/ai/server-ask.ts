@@ -146,6 +146,7 @@ import { keepManagerActionPlan } from "./manager-action-plan-reply";
 import { withJobTitleFromWords } from "./job-title-from-words";
 import { withFreshDateReask } from "./date-reask-fresh";
 import { withFirstNameAsk } from "./first-name-ask";
+import { withAmountUnknownAck } from "./amount-unknown-ack";
 import { withUnreadDateAsk } from "./unread-date-ask";
 import { withUnknownNameAsk } from "./unknown-name-ask";
 import { amountTurnReply } from "./amount-turn";
@@ -244,12 +245,16 @@ async function answerQuestionBody(
   memory: { memoryOwnerId?: string } = {},
 ): Promise<AskResponse> {
   // UNREAD_DATE_ASK_ENABLED: "last tuesday" the reader could not read is asked about, never dated today in silence.
+  // AMOUNT_UNKNOWN_ACK_ENABLED: "i dont know the amount" is answered, not met with the card alone.
   return keepManagerActionPlan(
-    withUnreadDateAsk(
-      withPayrollTypoAnswer(
-        withUnknownNameAsk(
-          withFirstNameAsk(
-            withWarningLevelFromClause(withFreshDateReask(withJobTitleFromWords(await answerQuestionCore(request, actor, memory), request), request), request),
+    withAmountUnknownAck(
+      withUnreadDateAsk(
+        withPayrollTypoAnswer(
+          withUnknownNameAsk(
+            withFirstNameAsk(
+              withWarningLevelFromClause(withFreshDateReask(withJobTitleFromWords(await answerQuestionCore(request, actor, memory), request), request), request),
+              request,
+            ),
             request,
           ),
           request,
