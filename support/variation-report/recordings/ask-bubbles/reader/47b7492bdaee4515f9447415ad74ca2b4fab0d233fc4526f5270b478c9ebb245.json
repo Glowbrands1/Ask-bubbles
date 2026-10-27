@@ -1,0 +1,51 @@
+{
+  "key": "47b7492bdaee4515f9447415ad74ca2b4fab0d233fc4526f5270b478c9ebb245",
+  "model": "claude-haiku-4-5",
+  "reply": {
+    "employee": {
+      "value": "mara",
+      "evidence": "mara, Store Manager"
+    },
+    "location": {
+      "value": null,
+      "evidence": null
+    },
+    "jobTitle": {
+      "value": "Store Manager",
+      "evidence": "mara, Store Manager"
+    },
+    "incident": {
+      "value": null,
+      "evidence": null
+    },
+    "incidentDate": {
+      "value": null,
+      "evidence": null
+    },
+    "warningLevel": {
+      "value": null,
+      "evidence": null
+    },
+    "payroll": {
+      "value": null,
+      "evidence": null
+    },
+    "payrollAmount": {
+      "value": null,
+      "evidence": null
+    },
+    "policyHeading": {
+      "value": null,
+      "evidence": null
+    },
+    "priorSteps": [],
+    "otherDates": []
+  },
+  "usage": {
+    "inputTokens": 3494,
+    "outputTokens": 308,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0
+  },
+  "ms": 2696
+}
