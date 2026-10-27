@@ -966,6 +966,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ANIMAL_ANYWHERE_ENABLED",
   "JOB_TITLE_FROM_WORDS_ENABLED",
   "DATE_REASK_FRESH_ENABLED",
+  "WARNING_LEVEL_AND_CLAUSE_ENABLED",
 ] as const;
 
 /**
@@ -1244,4 +1245,14 @@ export function jobTitleFromWordsEnabled(): boolean {
  */
 export function dateReaskFreshEnabled(): boolean {
   return envFlag("DATE_REASK_FRESH_ENABLED");
+}
+
+/**
+ * A warning level stated in an "and"-clause of its own is the card's level
+ * (ported from Ask Sunny, QA S12 / SF4, 27 Oct 2026; same flag in both apps):
+ * "this should be a written and note a verbal ca was given on 9-1-26" left the
+ * level blank. See `ai/warning-level-clause.ts`. Off, as before.
+ */
+export function warningLevelAndClauseEnabled(): boolean {
+  return envFlag("WARNING_LEVEL_AND_CLAUSE_ENABLED");
 }

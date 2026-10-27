@@ -426,7 +426,7 @@ afterEach(() => {
 const JT = "JOB_TITLE_FROM_WORDS_ENABLED";
 const ASKED = "position (job title)?";
 
-function useProduction(on: boolean) {
+function setProduction(on: boolean) {
   for (const name of [...ALL_FLAGS, JT]) {
     if (!saved.has(name)) saved.set(name, process.env[name]);
     delete process.env[name];
@@ -464,7 +464,7 @@ const B_H1 = [
 ];
 
 describe(`${JT} on`, () => {
-  beforeEach(() => useProduction(true));
+  beforeEach(() => setProduction(true));
 
   it.each([
     ["as typed", BF8],
@@ -510,7 +510,7 @@ describe(`${JT} on`, () => {
 });
 
 describe(`${JT} off: as main`, () => {
-  beforeEach(() => useProduction(false));
+  beforeEach(() => setProduction(false));
 
   it("BF8: the typed title is lost and the position is never asked", async () => {
     const typed = await chat(BF8);
@@ -522,5 +522,60 @@ describe(`${JT} off: as main`, () => {
   it("the flag reads off by default", async () => {
     const { jobTitleFromWordsEnabled } = await import("@/lib/config/chat-quality-flags");
     expect(jobTitleFromWordsEnabled()).toBe(false);
+  });
+});
+
+/*
+ * QA S12 / SF4 (ported from Ask Sunny), with this app's store, the name
+ * invented: "create a CA form for <name>, tan consultant at kearney, for
+ * opening late on 9-28-26" / "this should be a written and note a verbal ca
+ * was given on 9-1-26" / "Create a form from this conversation." The warning
+ * level stayed blank and the card asked "Verbal Warning or Written Warning?";
+ * the Job Title stayed blank. WARNING_LEVEL_AND_CLAUSE_ENABLED reads the level
+ * in a clause of its own; JOB_TITLE_FROM_WORDS reads "<name>, <title> at".
+ */
+const WL = "WARNING_LEVEL_AND_CLAUSE_ENABLED";
+const S12 = [
+  "create a CA form for quinn marlowe, tan consultant at kearney, for opening late on 9-28-26",
+  "this should be a written and note a verbal ca was given on 9-1-26",
+  "Create a form from this conversation.",
+];
+
+function s12Production(on: boolean) {
+  setProduction(on);
+  if (!saved.has(WL)) saved.set(WL, process.env[WL]);
+  delete process.env[WL];
+  if (on) process.env[WL] = "true";
+}
+
+describe(`${WL} on`, () => {
+  beforeEach(() => s12Production(true));
+
+  it.each([
+    ["as written", S12],
+    ["lowercase", S12.map((turn) => turn.toLowerCase())],
+    ["Sentence case", S12.map((turn) => turn.replace(/quinn marlowe/g, "Quinn Marlowe").replace(/^([a-z])/, (letter) => letter.toUpperCase()))],
+  ])("S12 %s: Written, as said, and the typed title", async (_casing, turns) => {
+    const { thread, replies, title } = await chat(turns);
+    expect(thread.proposal?.warningLevel).toBe("written");
+    expect(replies[2]).toContain("**Type of warning:** Written Warning, as you said");
+    expect(replies[2]).not.toContain("Is this new corrective action a **Verbal Warning** or a **Written Warning**?");
+    expect(title).toBe("Tan Consultant");
+  });
+
+  it("a level only in the step's history states nothing", async () => {
+    const { thread } = await chat([S12[0]!, "note a verbal ca was given on 9-1-26 and she was late again", S12[2]!]);
+    expect(thread.proposal?.warningLevel ?? null).toBeNull();
+  });
+});
+
+describe(`${WL} off: as main`, () => {
+  beforeEach(() => s12Production(false));
+
+  it("S12: the level and the title stay blank, and the level is asked", async () => {
+    const { thread, replies, title } = await chat(S12);
+    expect(thread.proposal?.warningLevel ?? null).toBeNull();
+    expect(replies[2]).toContain("Is this new corrective action a **Verbal Warning** or a **Written Warning**?");
+    expect(title).toBeNull();
   });
 });
