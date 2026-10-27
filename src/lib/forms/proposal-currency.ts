@@ -36,7 +36,10 @@ import type { ChatMessage } from "@/types";
  * and where the conversation cannot say (the turns that named the person have
  * scrolled out of the window), it does not refuse on a guess.
  */
-export type ProposalCurrency = { current: true } | { current: false; reason: string };
+export type ProposalCurrency =
+  | { current: true }
+  /** `resolvedName`: who the conversation names instead, when it names one person. */
+  | { current: false; reason: string; resolvedName?: string };
 
 export function checkProposalIsCurrent(input: {
   conversation: readonly { id?: string; role: ChatMessage["role"]; content: string }[];
@@ -112,6 +115,7 @@ export function checkProposalIsCurrent(input: {
     return {
       current: false,
       reason: `This proposal is out of date: the conversation now says the form is for ${resolution.employeeName}, not ${input.employeeName}. Use the newest proposal.`,
+      resolvedName: resolution.employeeName,
     };
   }
   if (resolution.kind === "missing" && excluded.some((not) => samePerson(not, input.employeeName))) {

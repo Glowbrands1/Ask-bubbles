@@ -989,6 +989,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "JOB_TITLE_APPOSITION_ENABLED",
   "EXIT_READBACK_JOB_TITLE_ENABLED",
   "FOLLOW_UP_CITATION_FIELD_ENABLED",
+  "AI_READS_CODE_CHECKS_ENABLED",
 ] as const;
 
 /**
@@ -1346,6 +1347,17 @@ export function followUpCitationFieldEnabled(): boolean {
  */
 export function levelStepNotAccountEnabled(): boolean {
   return envFlag("LEVEL_STEP_NOT_ACCOUNT_ENABLED");
+}
+
+/**
+ * The AI reads the fields of a form request, each with the manager's words it
+ * took it from, and the code checks every one before it is used (QA, 27 Oct
+ * 2026; same flag in both apps). A field both read differently is asked once.
+ * A model error, a reply over two seconds or an unusable reply leaves the turn
+ * to today's readers. See `ai/reader/`. Off, as before.
+ */
+export function aiReadsCodeChecksEnabled(): boolean {
+  return envFlag("AI_READS_CODE_CHECKS_ENABLED");
 }
 
 /**
