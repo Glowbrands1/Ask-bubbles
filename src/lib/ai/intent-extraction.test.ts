@@ -46,10 +46,10 @@ function person(input: {
   };
 }
 
-const MARISSA = person({
-  id: "emp-marissa",
-  first: "Marissa",
-  last: "Lempka",
+const LARISSA = person({
+  id: "emp-larissa",
+  first: "Larissa",
+  last: "Venko",
   locationIds: ["loc-66"],
   title: "Store Manager",
 });
@@ -77,7 +77,7 @@ function turn(overrides: Partial<IntentTurnInput> = {}): IntentTurnInput {
     today: "2026-10-23",
     saved: null,
     raw: null,
-    people: [MARISSA],
+    people: [LARISSA],
     stores: STORES,
     headings: HEADINGS,
     templates: TEMPLATES,
@@ -112,9 +112,9 @@ describe("slots are grounded and only the missing ones are asked", () => {
   it("a lowercase name is the roster spelling, and a known date is not asked again", () => {
     const decision = decideIntentTurn(
       turn({
-        question: "verbal corrective action for marissa lempka at kearney. she showed up late on october 1, 2026. payroll $25.",
+        question: "verbal corrective action for larissa venko at kearney. she showed up late on october 1, 2026. payroll $25.",
         raw: {
-          employee: "marissa lempka",
+          employee: "larissa venko",
           store: "kearney",
           title: null,
           incidentType: "showed up late",
@@ -127,8 +127,8 @@ describe("slots are grounded and only the missing ones are asked", () => {
       }),
     );
     expect(decision.clarification).toBeNull();
-    expect(decision.state.employeeName).toBe("Marissa Lempka");
-    expect(decision.state.employeeId).toBe("emp-marissa");
+    expect(decision.state.employeeName).toBe("Larissa Venko");
+    expect(decision.state.employeeId).toBe("emp-larissa");
     expect(decision.state.locationId).toBe("loc-66");
     expect(decision.state.title).toBe("Store Manager");
     expect(decision.state.incidentType).toBe("Attendance");
@@ -136,16 +136,16 @@ describe("slots are grounded and only the missing ones are asked", () => {
     expect(decision.state.payrollAmount).toBe("25");
     expect(decision.state.warningLevel).toBe("verbal");
     expect(decision.state.templateKey).toBe("dpoa");
-    expect(decision.question).toContain("The employee is Marissa Lempka.");
+    expect(decision.question).toContain("The employee is Larissa Venko.");
     expect(decision.question.toLowerCase()).not.toContain("i still need");
   });
 
   it("a typo of one person is that person", () => {
     const decision = decideIntentTurn(
       turn({
-        question: "corrective action for marisa lempka, showed up late on 10/1/2026, verbal",
+        question: "corrective action for larisa venko, showed up late on 10/1/2026, verbal",
         raw: {
-          employee: "marisa lempka",
+          employee: "larisa venko",
           store: null,
           title: null,
           incidentType: "showed up late",
@@ -157,7 +157,7 @@ describe("slots are grounded and only the missing ones are asked", () => {
         },
       }),
     );
-    expect(decision.state.employeeName).toBe("Marissa Lempka");
+    expect(decision.state.employeeName).toBe("Larissa Venko");
     expect(decision.state.incidentType).toBe("Attendance");
     expect(decision.clarification).toBeNull();
   });
@@ -238,18 +238,18 @@ describe("slots are grounded and only the missing ones are asked", () => {
 
   it("two stores are a choice, and naming one settles it", () => {
     const both = person({
-      id: "emp-marissa",
-      first: "Marissa",
-      last: "Lempka",
+      id: "emp-larissa",
+      first: "Larissa",
+      last: "Venko",
       locationIds: ["loc-66", "loc-219"],
       title: "Store Manager",
     });
     const asked = decideIntentTurn(
       turn({
-        question: "verbal corrective action for marissa lempka at kearney and lee's summit. she showed up late on october 1, 2026.",
+        question: "verbal corrective action for larissa venko at kearney and lee's summit. she showed up late on october 1, 2026.",
         people: [both],
         raw: {
-          employee: "marissa lempka",
+          employee: "larissa venko",
           store: "kearney and lee's summit",
           incidentType: "showed up late",
           incidentDate: "october 1, 2026",
@@ -288,16 +288,16 @@ describe("slots are grounded and only the missing ones are asked", () => {
   it("asks only for the slots the conversation has not settled", () => {
     const decision = decideIntentTurn(
       turn({
-        question: "corrective action for marissa lempka, she showed up late",
+        question: "corrective action for larissa venko, she showed up late",
         saved: {
           ...EMPTY_CONVERSATION_FORM_STATE,
-          employeeName: "Marissa Lempka",
-          employeeId: "emp-marissa",
+          employeeName: "Larissa Venko",
+          employeeId: "emp-larissa",
           locationId: "loc-66",
           title: "Store Manager",
         },
         raw: {
-          employee: "marissa lempka",
+          employee: "larissa venko",
           incidentType: "showed up late",
           formType: "corrective action",
           formTurn: true,
@@ -312,8 +312,8 @@ describe("slots are grounded and only the missing ones are asked", () => {
   it("two dates are a choice, and a date the text never stated is dropped", () => {
     const choice = decideIntentTurn(
       turn({
-        question: "corrective action for marissa lempka on 10/1/2026 and also 10/15/2026, verbal, showed up late",
-        raw: { employee: "Marissa Lempka", formType: "corrective action", formTurn: true, warningLevel: "verbal", incidentType: "showed up late" },
+        question: "corrective action for larissa venko on 10/1/2026 and also 10/15/2026, verbal, showed up late",
+        raw: { employee: "Larissa Venko", formType: "corrective action", formTurn: true, warningLevel: "verbal", incidentType: "showed up late" },
       }),
     );
     expect(choice.clarification).toContain("Which date");
@@ -323,8 +323,8 @@ describe("slots are grounded and only the missing ones are asked", () => {
 
     const invented = decideIntentTurn(
       turn({
-        question: "corrective action for marissa lempka, showed up late, verbal",
-        raw: { employee: "Marissa Lempka", incidentDate: "1999-01-01", formType: "corrective action", formTurn: true, warningLevel: "verbal", incidentType: "late" },
+        question: "corrective action for larissa venko, showed up late, verbal",
+        raw: { employee: "Larissa Venko", incidentDate: "1999-01-01", formType: "corrective action", formTurn: true, warningLevel: "verbal", incidentType: "late" },
       }),
     );
     expect(invented.state.formDate).toBeNull();
@@ -335,9 +335,9 @@ describe("slots are grounded and only the missing ones are asked", () => {
     expect(payrollAmounts("deduct 25 dollars and also $12.50").sort()).toEqual(["12.50", "25"]);
     const decision = decideIntentTurn(
       turn({
-        question: "verbal corrective action for marissa lempka at kearney on 1 October 2026, showed up late, payroll of 25.00 dollars",
+        question: "verbal corrective action for larissa venko at kearney on 1 October 2026, showed up late, payroll of 25.00 dollars",
         raw: {
-          employee: "Marissa Lempka",
+          employee: "Larissa Venko",
           store: "Kearney",
           incidentType: "showed up late",
           incidentDate: "1 October 2026",
@@ -391,8 +391,8 @@ describe("slots are grounded and only the missing ones are asked", () => {
         question: "verbal",
         saved: {
           ...EMPTY_CONVERSATION_FORM_STATE,
-          employeeName: "Marissa Lempka",
-          employeeId: "emp-marissa",
+          employeeName: "Larissa Venko",
+          employeeId: "emp-larissa",
           locationId: "loc-66",
           title: "Store Manager",
           formDate: "2026-10-01",
@@ -404,7 +404,7 @@ describe("slots are grounded and only the missing ones are asked", () => {
       }),
     );
     expect(decision.clarification).toBeNull();
-    expect(decision.state.employeeName).toBe("Marissa Lempka");
+    expect(decision.state.employeeName).toBe("Larissa Venko");
     expect(decision.state.warningLevel).toBe("verbal");
     expect(decision.state.formDate).toBe("2026-10-01");
   });
@@ -412,12 +412,12 @@ describe("slots are grounded and only the missing ones are asked", () => {
   it("a failed tool call still reads a date and a roster name out of the words", () => {
     const decision = decideIntentTurn(
       turn({
-        question: "Marissa Lempka showed up late on 10/01/2026",
+        question: "Larissa Venko showed up late on 10/01/2026",
         raw: null,
         formInProgress: true,
       }),
     );
-    expect(decision.state.employeeName).toBe("Marissa Lempka");
+    expect(decision.state.employeeName).toBe("Larissa Venko");
     expect(decision.state.formDate).toBe("2026-10-01");
     expect(decision.state.incidentType).toBe("Attendance");
   });

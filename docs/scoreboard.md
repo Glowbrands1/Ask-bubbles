@@ -31,7 +31,7 @@ case failure. This run had no harness events.
 | b9 Test Employee, written CA | FAIL. No employee on the card. Turns 1 and 3 ask who. | PASS. Slowest run 156ms. |
 | b10 Testy Testerson, Dodge, measuring | FAIL. Turn 1 has no employee. "show draft" has no card. The incident is treated as missing. | PASS. Slowest run 79ms. |
 | b11 Testy Testerson, late, Attendance | FAIL. Asks which of NE, Testy Testerson, or JBA Manual. | PASS. Slowest run 10ms. |
-| b12 Sadie Hoffart, Empire SD | FAIL. No employee. Turn 5 reads Store Director and asks who. | PASS. Slowest run 55ms. Store blank. Animals in the Workplace p.30. Visitors not required. |
+| b12 Odette Brannock, Empire SD | FAIL. No employee. Turn 5 reads Store Director and asks who. | PASS. Slowest run 55ms. Store blank. Animals in the Workplace p.30. Visitors not required. |
 
 The five-flag replay without `ANTI_LOOP_ENABLED` is unchanged: b9–b11 pass,
 and b12 still asks once with the two Sioux Falls stores and still misses
@@ -66,7 +66,7 @@ better on any case, so those sections stay.
 | b9 Test Employee, written CA | PASS. Slowest run 25ms. | PASS. Slowest run 153ms. |
 | b10 Testy Testerson, Dodge, measuring | PASS. Slowest run 58ms. | PASS. Slowest run 78ms. |
 | b11 Testy Testerson, late, Attendance | PASS. Slowest run 7ms. | PASS. Slowest run 10ms. |
-| b12 Sadie Hoffart, Empire SD | PASS. Slowest run 48ms. | PASS. Slowest run 55ms. |
+| b12 Odette Brannock, Empire SD | PASS. Slowest run 48ms. | PASS. Slowest run 55ms. |
 
 No prompt section was reverted. The fixes stay in code.
 
@@ -95,7 +95,7 @@ and the case under 8000ms.
 | b9 Test Employee | FAIL. No name. Asks who. No plan. Standards of Conduct page missing. | FAIL. Name, date, blank store, and the two-sentence plan are kept. The printed page is not in the reply. | better |
 | b10 Testy Testerson, Dodge | FAIL. Name and Dodge are kept. No plan. Page missing. | FAIL. Plan is two sentences. Page missing. | better |
 | b11 Testy Testerson, Attendance | FAIL. No name. No plan. Page missing. | FAIL. Name, Dodge, 2026-10-20, and the plan are kept. Page missing. | better |
-| b12 Sadie Hoffart | FAIL. No name. Role read as Store Director. Date 2025-11-01. Asks who. | FAIL. Typed name, 2026-10-22, blank store, and the plan are kept. Page missing. | better |
+| b12 Odette Brannock | FAIL. No name. Role read as Store Director. Date 2025-11-01. Asks who. | FAIL. Typed name, 2026-10-22, blank store, and the plan are kept. Page missing. | better |
 | s4 Test Testy, Kearney, $25 | FAIL. No plan. No payroll amount. Page missing. | FAIL. Plan is two sentences and does not contain the amount. $25 is in the reply and not on the payroll amount line. Page missing. | better |
 | s9 Ima Employee | FAIL. Name shortened to ima. Date is the prior coaching. No plan. | FAIL. Full name kept. Date is still 2026-09-01. Page missing. | better |
 | s11 Casey Quinn, Bellevue | FAIL. Employee read as bellevue. No store. | FAIL. casey quinn stays. The store is still blank. Cell Phone page missing. | better |
@@ -191,7 +191,7 @@ the Job Title slot. The earlier round 1 cases in
 and store as label words. A trailing "Job" or "Title" is removed only
 after a full name, so "Store Director" stays. The value after "Name:"
 is the employee. s8 (Morgan Blake), s17 (Riley Quinn), and
-"Name: Christiana Headley, job title tanning consultant" keep that name.
+"Name: Evangeline Pembury, job title tanning consultant" keep that name.
 "Tanning consultant" is the typed title on that line. It is not a Buff
 City job title. A label rejects a candidate only when the candidate is
 the label itself. "Job title" is not an employee. "Jane Store" is, and
@@ -252,7 +252,7 @@ Local harness only. In-memory recorder for `chat_form_state` and
 `chat_traces`. No production query, no migration applied, model not called.
 `SELF_CHECK_ENABLED` unset. Each other flag below is off in OLD and on in
 NEW. The policy matcher is not behind a flag, so both columns agree. The
-Colene location mapping file is removed. Grand Forks, Fargo, Raymore, and
+Corena location mapping file is removed. Grand Forks, Fargo, Raymore, and
 Empire, SD are not mapped. No location row is written.
 
 One run of `src/lib/ai/round1-scoreboard.test.ts`. It measures this table
@@ -260,7 +260,7 @@ once.
 
 | Case | OLD | NEW |
 | --- | --- | --- |
-| Name: Christiana Headley, job title tanning consultant | christiana headley. Job title slot empty. | christiana headley. Job title Tanning Consultant. |
+| Name: Evangeline Pembury, job title tanning consultant | evangeline pembury. Job title slot empty. | evangeline pembury. Job title Tanning Consultant. |
 | Jane Store | Jane | Jane Store |
 | Job title, as a candidate | Job title | not a name |
 | SoC, insubordination | outside the top 14 (rank 15) | Standards of Conduct first |
@@ -334,7 +334,7 @@ Card cases use `proposeFormForTurn`. OLD is every flag off. NEW is
 | b9 Test Employee, written CA | FAIL | PASS |
 | b10 Testy Testerson, Dodge, measuring | FAIL | PASS |
 | b11 Testy Testerson, late, Attendance | FAIL | PASS |
-| b12 Sadie Hoffart, Empire SD | FAIL | PASS |
+| b12 Odette Brannock, Empire SD | FAIL | PASS |
 
 Same six flags on. OLD is the last-known-good prompt text (`655a61d`).
 NEW is the current prompt, with the listener line after `---DYNAMIC---`.
@@ -346,14 +346,14 @@ change these results.
 | b9 Test Employee, written CA | PASS | PASS |
 | b10 Testy Testerson, Dodge, measuring | PASS | PASS |
 | b11 Testy Testerson, late, Attendance | PASS | PASS |
-| b12 Sadie Hoffart, Empire SD | PASS | PASS |
+| b12 Odette Brannock, Empire SD | PASS | PASS |
 
 Round 1 scope, one measurement of the table above. PASS means that run
 matched the expected cell. Each row matched.
 
 | Case | OLD | NEW |
 | --- | --- | --- |
-| Name: Christiana Headley, job title tanning consultant | PASS | PASS |
+| Name: Evangeline Pembury, job title tanning consultant | PASS | PASS |
 | Jane Store | PASS | PASS |
 | Job title, as a candidate | PASS | PASS |
 | SoC, insubordination | PASS | PASS |

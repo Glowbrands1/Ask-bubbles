@@ -80,14 +80,14 @@ function post(body: Record<string, unknown>): Request {
 
 const BODY = {
   templateKey: "dpoa",
-  employeeName: "Paisley Example",
+  employeeName: "Daisley Example",
   variantKey: null,
   employeeRole: null,
   locationId: null,
   source: "assistant",
   formDate: "2026-10-20",
   proposalId: "proposal-2222",
-  conversation: [{ id: "m1", role: "user", content: "CA for Paisley Example on 10-20-26" }],
+  conversation: [{ id: "m1", role: "user", content: "CA for Daisley Example on 10-20-26" }],
 };
 
 beforeEach(() => vi.resetModules());
@@ -111,7 +111,7 @@ describe("cross-chat open draft on create", () => {
     expect(body.reused).toBe(true);
     expect(created).toEqual([]);
     expect(crossChatCalls).toEqual([
-      { templateKey: "dpoa", employeeName: "Paisley Example", formDate: "2026-10-20" },
+      { templateKey: "dpoa", employeeName: "Daisley Example", formDate: "2026-10-20" },
     ]);
   });
 
@@ -143,7 +143,7 @@ describe("cross-chat open draft on create", () => {
     const response = await route.POST(
       post({
         ...BODY,
-        conversation: [{ id: "m1", role: "user", content: "I need another form for Paisley Example" }],
+        conversation: [{ id: "m1", role: "user", content: "I need another form for Daisley Example" }],
       }),
     );
     expect(response.status).toBe(200);

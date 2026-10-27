@@ -8,7 +8,7 @@ function row(overrides: Partial<CrossChatDraftRow> = {}): CrossChatDraftRow {
   return {
     id: "draft-sarah",
     templateKey: "dpoa",
-    employeeName: "Paisley Example",
+    employeeName: "Daisley Example",
     formDate: DATE,
     status: "draft",
     createdAt: "2026-10-20T15:00:00Z",
@@ -19,17 +19,17 @@ function row(overrides: Partial<CrossChatDraftRow> = {}): CrossChatDraftRow {
 
 const wanted = {
   templateKey: "dpoa",
-  employeeName: "paisley example",
+  employeeName: "daisley example",
   formDate: DATE,
 };
 
 describe("cross-chat open draft", () => {
   it("reopens another manager's open draft for the same employee, template, and incident date", () => {
     const id = pickCrossChatOpenDraft(
-      [row(), row({ id: "draft-colene", createdBy: "colene", createdAt: "2026-10-21T12:00:00Z" })],
+      [row(), row({ id: "draft-corena", createdBy: "corena", createdAt: "2026-10-21T12:00:00Z" })],
       wanted,
     );
-    expect(id).toBe("draft-colene");
+    expect(id).toBe("draft-corena");
   });
 
   it("does not match a different incident date, template, employee, or a finalized form", () => {

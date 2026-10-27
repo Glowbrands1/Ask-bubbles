@@ -99,9 +99,9 @@
     },
     {
       "id": "b12",
-      "title": "Sadie Hoffart, Empire SD",
+      "title": "Odette Brannock, Empire SD",
       "criteria": [
-        "The employee is sadie hoffart. Warning is verbal, payroll is no, and the form date is 2026-10-22.",
+        "The employee is odette brannock. Warning is verbal, payroll is no, and the form date is 2026-10-22.",
         "The role is not Store Director. The store is not workplace policy. 45 minutes stays on the card.",
         "The store is blank: no location id, Empire is not invented, and the reply does not ask which store.",
         "Turn 2 prior coaching matches 2025-11-01, 11/01/2025, or 11-1-25.",
@@ -110,13 +110,13 @@
         "The case finishes in under 8000ms."
       ],
       "turns": [
-        "do verbal for team member sadie hoffart at empire, sd. payroll deduct does not apply. previous coaching jba manual 11-1-26. on 10-22-26 sadie was not scheduled to work and came into the store to show her team her new puppy. Sadie was in the store 45 min",
+        "do verbal for team member odette brannock at empire, sd. payroll deduct does not apply. previous coaching jba manual 11-1-26. on 10-22-26 odette was not scheduled to work and came into the store to show her team her new puppy. Odette was in the store 45 min",
         "jba manual 11-1-25",
         "cite pets in workplace",
         "cite animals in the workplace policy",
         "store location is empire, sd. create corrective action"
       ],
-      "employee": { "pattern": "sadie hoffart", "byTurn": 1, "heldOnTurn": 5 },
+      "employee": { "pattern": "odette brannock", "byTurn": 1, "heldOnTurn": 5 },
       "templateKey": "dpoa",
       "warningLevel": "verbal",
       "payrollDeduct": "no",

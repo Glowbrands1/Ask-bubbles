@@ -529,10 +529,10 @@ describe("based, state codes, and policy phrases are not a person or a store", (
     // "do verbal for" has no form noun before "for". The person is still the subject.
     expect(
       extractEmployeeNames(
-        "do verbal for team member sadie hoffart at empire, sd. payroll deduct does not apply",
+        "do verbal for team member odette brannock at empire, sd. payroll deduct does not apply",
       ).join(" "),
-    ).toMatch(/sadie hoffart/i);
-    expect(extractJobTitle("do verbal for team member sadie hoffart at empire, sd")).toBe("Team Member");
+    ).toMatch(/odette brannock/i);
+    expect(extractJobTitle("do verbal for team member odette brannock at empire, sd")).toBe("Team Member");
     // The store word is not the employee. The name after the title is.
     expect(
       extractEmployeeNames(

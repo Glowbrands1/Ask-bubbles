@@ -27,16 +27,16 @@ import { applyOptionalPriorCoaching } from "./prior-coaching-optional";
 import { citedSections, withMappedPolicy } from "./violation-policy";
 
 /**
- * Anonymized replay of chat-quality failures. The employee is Marissa Lempka.
+ * Anonymized replay of chat-quality failures. The employee is Larissa Venko.
  * Add a case by copying her wording, including lowercase and a typo, and
  * asserting the field the manager already gave. See docs/chat-quality-replay.md.
  */
 
 const TODAY = "2026-10-21";
-const MARISSA: RosterEmployee = {
-  id: "emp-marissa",
-  firstName: "Marissa",
-  lastName: "Lempka",
+const LARISSA: RosterEmployee = {
+  id: "emp-larissa",
+  firstName: "Larissa",
+  lastName: "Venko",
   locationIds: ["loc-0001"],
   positionName: "Sales Associate",
 };
@@ -68,7 +68,7 @@ const MANUAL: ManualChunk[] = [
   chunk("Cell Phone/Smart Watch Policy", 19),
 ];
 
-const REVIEW = "Management will review the Standards of Conduct policy with Marissa.";
+const REVIEW = "Management will review the Standards of Conduct policy with Larissa.";
 const PLAN = `${REVIEW} ${CA_ACTION_PLAN_CLOSING}`;
 
 describe("chat quality flags stay off unless set", () => {
@@ -101,34 +101,34 @@ describe("chat quality flags stay off unless set", () => {
   });
 
   it("leaves a question unchanged when both intake flags are off", () => {
-    const question = "ca for marisa lempka";
+    const question = "ca for larisa venko";
     expect(augmentIntakeQuestion({ slots: false, fields: false, question, history: [], today: TODAY })).toBe(question);
   });
 });
 
 describe("a Standards of Conduct corrective action keeps the employee and cites the manual", () => {
   const wordings = [
-    "Create a corrective action for Marissa Lempka for a Standards of Conduct violation. She refused to follow directions.",
-    "ca for marisa lempka for a standards of conduct violation. she refused to follow directions.",
+    "Create a corrective action for Larissa Venko for a Standards of Conduct violation. She refused to follow directions.",
+    "ca for larisa venko for a standards of conduct violation. she refused to follow directions.",
   ];
 
   it.each(wordings)("does not ask for the name again: %s", (text) => {
     const decision = groundEmployeeResolution({
       candidates: ["NE", "Testy Testerson", "JBA Manual", "Standards of Conduct"],
       text,
-      roster: [MARISSA],
+      roster: [LARISSA],
       headings: SOURCES,
     });
-    expect(decision).toEqual({ kind: "resolved", name: "Marissa Lempka" });
+    expect(decision).toEqual({ kind: "resolved", name: "Larissa Venko" });
 
-    const fields = fieldsFromManagerText(text, TODAY, [MARISSA]);
-    expect(fields.employeeName).toBe("Marissa Lempka");
+    const fields = fieldsFromManagerText(text, TODAY, [LARISSA]);
+    expect(fields.employeeName).toBe("Larissa Venko");
     const reply = retainFieldsInReply(
       "Nothing has been created yet.\nEmployee's full name\nStore",
       fields,
     );
     expect(reply.toLowerCase()).not.toContain("employee's full name");
-    expect(reply).toContain("Marissa Lempka");
+    expect(reply).toContain("Larissa Venko");
 
     const continued = applyOptionalPriorCoaching(
       "I won't create this corrective action because the Forms Register has no prior coaching.\nYou'll set any prior coaching or corrective action on the form — I won't guess at it.",
@@ -141,7 +141,7 @@ describe("a Standards of Conduct corrective action keeps the employee and cites 
   it("cites Standards of Conduct by name and page from the JBA Policy Manual", () => {
     // Pau, 23 Oct 2026: the citation is the policy name and the chunk's page.
     // The form writes "Standards of Conduct Policy, JBA Policy Manual p.12".
-    const turns = ["Create a CA for Marissa Lempka for a Standards of Conduct violation."];
+    const turns = ["Create a CA for Larissa Venko for a Standards of Conduct violation."];
     const cited = citedSections(turns, MANUAL);
     expect(cited).toEqual([{ section: "Standards of Conduct", page: 12 }]);
     const answer = withMappedPolicy("I can draft that corrective action.", turns, MANUAL, true);
@@ -193,30 +193,30 @@ describe("a policy source and a fragment are not employee candidates", () => {
   it("treats JBA Manual as the policy manual, and drops NE and Testy Testerson from a confused list", () => {
     expect(isPolicySourceSpan("JBA Manual", ["JBA Policy Manual"])).toBe(true);
     expect(isPolicySourceSpan("JBA Manual", ["2025 JBA Policy Manual - Edited 5-2025"])).toBe(true);
-    expect(isPolicySourceSpan("Marissa Lempka", SOURCES)).toBe(false);
+    expect(isPolicySourceSpan("Larissa Venko", SOURCES)).toBe(false);
 
     expect(
       filterEmployeeCandidates({
         candidates: ["NE", "Testy Testerson", "JBA Manual"],
-        roster: [MARISSA],
+        roster: [LARISSA],
         headings: SOURCES,
       }),
     ).toEqual([]);
 
     const decision = groundEmployeeResolution({
       candidates: ["NE", "Testy Testerson", "JBA Manual"],
-      text: "The employee is Marissa Lempka. Cite the JBA Manual.",
-      roster: [MARISSA],
+      text: "The employee is Larissa Venko. Cite the JBA Manual.",
+      roster: [LARISSA],
       headings: SOURCES,
     });
-    expect(decision).toEqual({ kind: "resolved", name: "Marissa Lempka" });
+    expect(decision).toEqual({ kind: "resolved", name: "Larissa Venko" });
   });
 
   it("keeps a single full name the roster does not know", () => {
     expect(
       filterEmployeeCandidates({
         candidates: ["Casey Newhire"],
-        roster: [MARISSA],
+        roster: [LARISSA],
         headings: SOURCES,
       }),
     ).toEqual(["Casey Newhire"]);
@@ -227,14 +227,14 @@ describe("the action plan is exactly two sentences when that check is asked for"
   it("leaves the existing builder's payroll sentence in place", () => {
     const built = correctiveActionPlan({
       citedPolicies: ["Standards of Conduct"],
-      employeeName: "Marissa Lempka",
+      employeeName: "Larissa Venko",
       payroll: { answer: "yes", amount: "$3.25" },
     });
     expect(actionPlanSentenceCount(built)).toBe(3);
     const enforced = enforceTwoSentenceActionPlan(built);
     expect(enforced.valid).toBe(true);
     expect(actionPlanSentenceCount(enforced.value)).toBe(2);
-    expect(enforced.value.startsWith("Management will review the Standards of Conduct policy with Marissa.")).toBe(true);
+    expect(enforced.value.startsWith("Management will review the Standards of Conduct policy with Larissa.")).toBe(true);
     expect(enforced.value.endsWith(CA_ACTION_PLAN_CLOSING)).toBe(true);
   });
 
@@ -253,12 +253,12 @@ describe("a missed month-day and a different incident", () => {
 
   it("does not treat a different day as the same incident", () => {
     const first = incidentFingerprint({
-      employeeName: "Marissa Lempka",
+      employeeName: "Larissa Venko",
       formDate: "2026-10-01",
       text: "refused to follow directions",
     });
     const second = incidentFingerprint({
-      employeeName: "Marissa Lempka",
+      employeeName: "Larissa Venko",
       formDate: "2026-10-21",
       text: "refused to follow directions",
     });

@@ -5,10 +5,10 @@ import type { RosterEmployee } from "@/lib/forms/employee-match";
 
 import { chooseCheckedAnswer, repairMayReplace, selfCheck } from "./self-check";
 
-const MARISSA: RosterEmployee = {
-  id: "emp-marissa",
-  firstName: "Marissa",
-  lastName: "Lempka",
+const LARISSA: RosterEmployee = {
+  id: "emp-larissa",
+  firstName: "Larissa",
+  lastName: "Venko",
   locationIds: ["loc-66"],
 };
 
@@ -42,21 +42,21 @@ describe("SELF_CHECK_ENABLED", () => {
     const grounded = selfCheck({
       answer: "See Attendance Policy, JBA Policy Manual p.14.",
       chunks: [ATTENDANCE],
-      roster: [MARISSA],
+      roster: [LARISSA],
     });
     expect(grounded).toEqual([]);
 
     const inventedPage = selfCheck({
       answer: "See Attendance Policy, JBA Policy Manual p.99.",
       chunks: [ATTENDANCE],
-      roster: [MARISSA],
+      roster: [LARISSA],
     });
     expect(inventedPage.map((failure) => failure.kind)).toEqual(["citation"]);
 
     const inventedHeading = selfCheck({
       answer: "See Dress Code Policy, JBA Policy Manual p.14.",
       chunks: [ATTENDANCE],
-      roster: [MARISSA],
+      roster: [LARISSA],
     });
     expect(inventedHeading.map((failure) => failure.kind)).toEqual(["citation"]);
 
@@ -105,16 +105,16 @@ describe("SELF_CHECK_ENABLED", () => {
     // 8f7cf6d failed "Casey Quinn" and the repair then removed the name.
     // The name stays. An empty roster is the same: not proof the person is absent.
     const known = selfCheck({
-      answer: "I will file this for Marissa Lempka.",
+      answer: "I will file this for Larissa Venko.",
       chunks: [],
-      roster: [MARISSA],
+      roster: [LARISSA],
     });
     expect(known).toEqual([]);
 
     const unknown = selfCheck({
       answer: "I will file this for Casey Quinn.",
       chunks: [],
-      roster: [MARISSA],
+      roster: [LARISSA],
     });
     expect(unknown).toEqual([]);
 

@@ -266,9 +266,9 @@ describe("s8, s17, and a Name: line", () => {
   });
 
   it("keeps the value after Name: and leaves the job title off the employee", () => {
-    const text = "Name: Christiana Headley, job title tanning consultant";
+    const text = "Name: Evangeline Pembury, job title tanning consultant";
     const names = readEmployeeMentions(text).names.map((name) => name.toLowerCase());
-    expect(names).toEqual(["christiana headley"]);
+    expect(names).toEqual(["evangeline pembury"]);
     expect(statedJobTitle(text)).toBe("Tanning Consultant");
   });
 });

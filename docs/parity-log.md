@@ -697,7 +697,7 @@ string, and the store question still does not block the draft. Ask Sunny
 is not updated for that reader, for the non-blocking ask, or for that
 typed-name check.
 
-Pau dropped the Colene location mapping prep. Grand Forks, Fargo, Raymore,
+Pau dropped the Corena location mapping prep. Grand Forks, Fargo, Raymore,
 and Empire, SD are probably test data. The review migration is not in this
 tree. No location row is written. No production data is written.
 

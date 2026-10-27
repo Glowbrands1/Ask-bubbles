@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -77,7 +77,7 @@ const FLAGS = [
   "SELF_CHECK_ENABLED",
 ] as const;
 
-const NAME_LINE = "Name: Christiana Headley, job title tanning consultant";
+const NAME_LINE = "Name: Evangeline Pembury, job title tanning consultant";
 const JANE = "create a coaching form for Jane Store";
 const LATE = "create verbal ca for Test Employee for opening store late on 10-1-26";
 const TARDY = "employee was tardy, showed up late for shift again";
@@ -273,7 +273,7 @@ async function measure(): Promise<Record<string, { old: string; neu: string }>> 
   const draftRow = {
     id: "draft-other-chat",
     templateKey: "coaching",
-    employeeName: "Paisley",
+    employeeName: "Daisley",
     formDate: "2026-10-01",
     status: "draft",
     createdAt: "2026-10-21T12:00:00Z",
@@ -281,12 +281,12 @@ async function measure(): Promise<Record<string, { old: string; neu: string }>> 
   };
   const picked = pickCrossChatOpenDraft([draftRow], {
     templateKey: "coaching",
-    employeeName: "Paisley",
+    employeeName: "Daisley",
     formDate: "2026-10-01",
   });
   const otherDate = pickCrossChatOpenDraft([draftRow], {
     templateKey: "coaching",
-    employeeName: "Paisley",
+    employeeName: "Daisley",
     formDate: "2026-10-02",
   });
 
@@ -366,7 +366,7 @@ async function measure(): Promise<Record<string, { old: string; neu: string }>> 
 }
 
 const EXPECTED: Record<string, { old: string; neu: string }> = {
-  "Name: value": { old: "christiana headley", neu: "christiana headley" },
+  "Name: value": { old: "evangeline pembury", neu: "evangeline pembury" },
   "Name: job title": { old: "(none)", neu: "Tanning Consultant" },
   "Jane Store": { old: "Jane", neu: "Jane Store" },
   "Job title alone": { old: "Job title", neu: "(none)" },
@@ -411,7 +411,13 @@ describe("round 1 scoreboard, one run", () => {
     );
     const engine = readFileSync("src/lib/knowledge-sync/engine.ts", "utf8");
     expect(engine.indexOf('if (options.mode === "preview")')).toBeLessThan(engine.lastIndexOf("holdOlderEditions("));
-    expect(existsSync("supabase/migrations/20261024180000_colene_unmapped_woven_locations_review.sql")).toBe(false);
+    // The removed location-mapping migration stays removed. It is matched by its
+    // timestamp and suffix: the file name carried a real person's name.
+    expect(
+      readdirSync("supabase/migrations").filter(
+        (file) => file.startsWith("20261024180000_") || file.endsWith("_unmapped_woven_locations_review.sql"),
+      ),
+    ).toEqual([]);
 
     const run = await measure();
     expect(run).toEqual(EXPECTED);
