@@ -90,6 +90,7 @@ no amount, and a figure the manager typed is still kept.
 **Sibling app: ported in the same session.** Ask Sunny's `intent-slots.ts`
 has the same `mergeSlots` rule; the mechanism is ported there under the same
 flag name. No store names or policy wording were copied.
+
 ## 24 Oct 2026: a manual citation only marks a page the sentence restates
 
 `FULL_MANUAL_CONTEXT_ENABLED` stays off. On, `citePolicyAnswer` reads the
@@ -848,6 +849,7 @@ Pau asked that the sibling app's Assistant Salon Director rule apply here to the
 ## 27 Oct 2026: forms some accounts create are private to them and to admin — ported from Ask Sunny (PRIVATE_CREATOR_FORMS_ENABLED)
 
 Same mechanism as the sibling app's #321: `PRIVATE_FORM_CREATOR_IDS` (user ids, set per app in Vercel, never in the repository) plus the default-off flag; `actorMaySeeInstance` hides those forms from every reader but the creator and admin/owner/developer, on every read path; bounded reads over-read 4x while active and trim back to the page.
+
 ## 26 Oct 2026: the reply is not sent on with a date line the conversation already gives — Bubbles-only (DATE_LINE_NO_ECHO_ENABLED)
 
 QA LS-B5: "create ca form for <name> for violating attendance policy on 10-20-26 … jba manual 1-1-26 for previous coaching" / "verbal" dated the form today here. The same two turns in Ask Sunny's production env keep 10/20 on the card and the form (checked 26 Oct 2026: its intent path reads the slots, not the augmented reply). Not ported.
@@ -860,6 +862,7 @@ Pau reversed the earlier "no" on 27 Oct 2026. With the flag on, an animal word (
 ## 27 Oct 2026: a step's date is not the incident date — both apps (STEP_DATE_NOT_INCIDENT_ENABLED)
 
 Ported from Ask Sunny (QA SF4). Here "note a verbal ca was given on 9-1-26" dated the card and the form 9/1; with the flag on the step's date is not an incident date and the incident's 9/28 stays. Ask Sunny's sibling fix CA_ASKS_WHAT_HAPPENED is not needed here: this app already asks "You haven't told me what happened yet" on "create corrective action form for <name>, <job title>".
+
 ## 27 Oct 2026: a typed job title, and the date question asked again in fresh words
 
 JOB_TITLE_FROM_WORDS_ENABLED: both apps (the fill); asking the position once on an exit form stays Bubbles-only, as Ask Sunny has no position question. DATE_REASK_FRESH_ENABLED: Bubbles-only for now. QA D3 showed this app's re-ask came back byte for byte the same as the reply before (stored messages, conv_mvpyha5v22c52vd), while Ask Sunny's live reply on the same turn showed the question; port it if Sunny is seen repeating a reply.
