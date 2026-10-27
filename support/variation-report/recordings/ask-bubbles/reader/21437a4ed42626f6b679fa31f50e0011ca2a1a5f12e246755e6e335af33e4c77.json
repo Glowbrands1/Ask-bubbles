@@ -4,7 +4,7 @@
   "reply": {
     "employee": {
       "value": "quinn marlowe",
-      "evidence": "My employee quinn marlowe"
+      "evidence": "My employee quinn marlowe has was 10 minutes late on her last two shifts"
     },
     "location": {
       "value": "Dodge",
@@ -15,8 +15,8 @@
       "evidence": null
     },
     "incident": {
-      "value": "10 minutes late on shift",
-      "evidence": "was 10 minutes late on her last two shifts"
+      "value": "10 minutes late on shifts",
+      "evidence": "My employee quinn marlowe has was 10 minutes late on her last two shifts"
     },
     "incidentDate": {
       "value": "2026-10-15",
@@ -24,7 +24,7 @@
     },
     "warningLevel": {
       "value": "written",
-      "evidence": "Please create a CA form"
+      "evidence": "Please create a CA form so I can document"
     },
     "payroll": {
       "value": null,
@@ -36,11 +36,11 @@
     },
     "policyHeading": {
       "value": "Attendance",
-      "evidence": "was 10 minutes late on her last two shifts"
+      "evidence": "10 minutes late on her last two shifts"
     },
     "priorSteps": [
       {
-        "kind": "coaching",
+        "kind": "verbal",
         "date": "2026-10-05",
         "evidence": "On the first shift I verbally coached her on our policy and expectations"
       }
@@ -49,7 +49,7 @@
   },
   "usage": {
     "inputTokens": 3549,
-    "outputTokens": 473,
+    "outputTokens": 489,
     "cacheReadTokens": 0,
     "cacheWriteTokens": 0
   },

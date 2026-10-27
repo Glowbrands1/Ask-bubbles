@@ -55,12 +55,13 @@ export interface ReplayStats {
   outputTokens: number;
   cacheReadTokens: number;
   cacheWriteTokens: number;
+  /** New spend this run, at list price; VARIATION_BUDGET_USD stops new calls at it. */
+  spentUsd: number;
 }
 
 export function replayTransport(dir: string, mode: "replay" | "record") {
-  const stats: ReplayStats = { calls: 0, missing: 0, slow: 0, missingChars: 0, recorded: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 };
+  const stats: ReplayStats = { calls: 0, missing: 0, slow: 0, missingChars: 0, recorded: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, spentUsd: 0 };
   let client: Anthropic | null = null;
-  let spentUsd = 0;
   const count = (usage: Reply["usage"]) => {
     stats.inputTokens += usage.inputTokens;
     stats.outputTokens += usage.outputTokens;
@@ -87,7 +88,7 @@ export function replayTransport(dir: string, mode: "replay" | "record") {
     }
     // Hard cap on a recording run (VARIATION_BUDGET_USD): once spent, no further live calls.
     const budget = Number(process.env.VARIATION_BUDGET_USD);
-    if (Number.isFinite(budget) && budget > 0 && spentUsd >= budget) throw new Error("recording budget spent");
+    if (Number.isFinite(budget) && budget > 0 && stats.spentUsd >= budget) throw new Error("recording budget spent");
     client ??= new Anthropic();
     const started = performance.now();
     const response = await client.messages.create(
@@ -127,7 +128,7 @@ export function replayTransport(dir: string, mode: "replay" | "record") {
     stats.recorded += 1;
     count(usage);
     const price = priceFor(input.model);
-    spentUsd += (usage.inputTokens * price.input + usage.outputTokens * price.output + usage.cacheReadTokens * price.cacheRead + usage.cacheWriteTokens * price.cacheWrite) / 1e6;
+    stats.spentUsd += (usage.inputTokens * price.input + usage.outputTokens * price.output + usage.cacheReadTokens * price.cacheRead + usage.cacheWriteTokens * price.cacheWrite) / 1e6;
     if (ms > input.timeoutMs) {
       stats.slow += 1;
       throw new Error("slower than the limit");

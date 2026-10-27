@@ -15,7 +15,7 @@
       "evidence": null
     },
     "incident": {
-      "value": "10 minutes late on shifts",
+      "value": "10 minutes late on shift",
       "evidence": "HAS WAS 10 MINUTES LATE ON HER LAST TWO SHIFTS"
     },
     "incidentDate": {
@@ -24,7 +24,7 @@
     },
     "warningLevel": {
       "value": "written",
-      "evidence": "PLEASE CREATE A CA FORM"
+      "evidence": null
     },
     "payroll": {
       "value": null,
@@ -36,7 +36,7 @@
     },
     "policyHeading": {
       "value": "Attendance",
-      "evidence": "HAS WAS 10 MINUTES LATE ON HER LAST TWO SHIFTS"
+      "evidence": null
     },
     "priorSteps": [
       {
@@ -49,7 +49,7 @@
   },
   "usage": {
     "inputTokens": 3599,
-    "outputTokens": 430,
+    "outputTokens": 401,
     "cacheReadTokens": 0,
     "cacheWriteTokens": 0
   },

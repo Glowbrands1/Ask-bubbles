@@ -15,7 +15,7 @@
       "evidence": null
     },
     "incident": {
-      "value": "being late",
+      "value": "Was late",
       "evidence": "SHE WAS LATE ON 10-5 AND 10-15"
     },
     "incidentDate": {
@@ -49,7 +49,7 @@
   },
   "usage": {
     "inputTokens": 3529,
-    "outputTokens": 436,
+    "outputTokens": 503,
     "cacheReadTokens": 0,
     "cacheWriteTokens": 0
   },

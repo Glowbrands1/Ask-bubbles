@@ -23,7 +23,7 @@
       "evidence": "SHE WAS LATE ON 10/5 AND 10/15"
     },
     "warningLevel": {
-      "value": "written",
+      "value": "verbal",
       "evidence": "PLEASE CREATE A CA FORM"
     },
     "payroll": {
@@ -36,13 +36,13 @@
     },
     "policyHeading": {
       "value": "Attendance",
-      "evidence": "ON OUR POLICY"
+      "evidence": "LATE"
     },
     "priorSteps": [
       {
         "kind": "coaching",
         "date": "2026-10-05",
-        "evidence": "ON THE FIRST SHIFT I VERBALLY COACHED HER ON OUR POLICY"
+        "evidence": "ON THE FIRST SHIFT I VERBALLY COACHED HER ON OUR POLICY AND EXPECTATIONS"
       }
     ],
     "otherDates": []

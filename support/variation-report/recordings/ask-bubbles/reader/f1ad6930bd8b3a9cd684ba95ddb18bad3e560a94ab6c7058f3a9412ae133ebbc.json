@@ -15,7 +15,7 @@
       "evidence": null
     },
     "incident": {
-      "value": "10 minutes late",
+      "value": "10 minutes late on shifts",
       "evidence": "was 10 minutes late on her last two shifts"
     },
     "incidentDate": {
@@ -36,11 +36,11 @@
     },
     "policyHeading": {
       "value": "Attendance",
-      "evidence": "our policy and expectations"
+      "evidence": null
     },
     "priorSteps": [
       {
-        "kind": "coaching",
+        "kind": "verbal",
         "date": "2026-10-05",
         "evidence": "On the first shift I verbally coached her on our policy and expectations"
       }
@@ -49,7 +49,7 @@
   },
   "usage": {
     "inputTokens": 3540,
-    "outputTokens": 451,
+    "outputTokens": 381,
     "cacheReadTokens": 0,
     "cacheWriteTokens": 0
   },

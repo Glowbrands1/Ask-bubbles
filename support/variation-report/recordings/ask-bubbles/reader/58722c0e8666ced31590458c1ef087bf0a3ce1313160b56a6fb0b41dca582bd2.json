@@ -8,7 +8,7 @@
     },
     "location": {
       "value": "Dodge",
-      "evidence": "She is at Dodge"
+      "evidence": "She  is  at  Dodge"
     },
     "jobTitle": {
       "value": null,
@@ -36,11 +36,11 @@
     },
     "policyHeading": {
       "value": "Attendance",
-      "evidence": "Late"
+      "evidence": "on  our  policy"
     },
     "priorSteps": [
       {
-        "kind": "verbal",
+        "kind": "coaching",
         "date": "2026-10-05",
         "evidence": "On  the  first  shift  I  verbally  coached  her  on  our  policy  and  expectations"
       }
@@ -49,7 +49,7 @@
   },
   "usage": {
     "inputTokens": 3613,
-    "outputTokens": 401,
+    "outputTokens": 475,
     "cacheReadTokens": 0,
     "cacheWriteTokens": 0
   },

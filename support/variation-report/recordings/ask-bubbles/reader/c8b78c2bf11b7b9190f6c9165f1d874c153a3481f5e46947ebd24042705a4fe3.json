@@ -23,8 +23,8 @@
       "evidence": "10/15"
     },
     "warningLevel": {
-      "value": null,
-      "evidence": null
+      "value": "written",
+      "evidence": "please create a ca form"
     },
     "payroll": {
       "value": null,
@@ -36,7 +36,7 @@
     },
     "policyHeading": {
       "value": "Attendance",
-      "evidence": "our policy and expectations"
+      "evidence": "i verbally coached her on our policy and expectations"
     },
     "priorSteps": [
       {
@@ -49,7 +49,7 @@
   },
   "usage": {
     "inputTokens": 3560,
-    "outputTokens": 380,
+    "outputTokens": 456,
     "cacheReadTokens": 0,
     "cacheWriteTokens": 0
   },

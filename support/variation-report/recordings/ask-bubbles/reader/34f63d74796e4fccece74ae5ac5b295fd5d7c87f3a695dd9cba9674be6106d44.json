@@ -15,7 +15,7 @@
       "evidence": null
     },
     "incident": {
-      "value": "10 minutes late on shifts",
+      "value": "10 minutes late on shift",
       "evidence": "was 10 minutes late on her last two shifts"
     },
     "incidentDate": {
@@ -36,7 +36,7 @@
     },
     "policyHeading": {
       "value": "Attendance",
-      "evidence": "was 10 minutes late on her last two shifts"
+      "evidence": "our policy and expectations"
     },
     "priorSteps": [
       {
@@ -49,7 +49,7 @@
   },
   "usage": {
     "inputTokens": 3538,
-    "outputTokens": 391,
+    "outputTokens": 384,
     "cacheReadTokens": 0,
     "cacheWriteTokens": 0
   },

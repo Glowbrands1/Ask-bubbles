@@ -15,8 +15,8 @@
       "evidence": null
     },
     "incident": {
-      "value": "was 10 minutes late on her last two shifts",
-      "evidence": "My emplyoee quinn marlowe has was 10 mintues late on her last two shifts"
+      "value": "10 minutes late on shift",
+      "evidence": "has was 10 mintues late on her last two shifts"
     },
     "incidentDate": {
       "value": "2026-10-15",
@@ -36,20 +36,20 @@
     },
     "policyHeading": {
       "value": "Attendance",
-      "evidence": "Our policy and expectations"
+      "evidence": "verbally coached her on our policy"
     },
     "priorSteps": [
       {
         "kind": "verbal",
         "date": "2026-10-05",
-        "evidence": "On the first shift I verbally coached her on our policy and expectations"
+        "evidence": "On the first shift I verbally coached her on our policy"
       }
     ],
     "otherDates": []
   },
   "usage": {
     "inputTokens": 3542,
-    "outputTokens": 413,
+    "outputTokens": 401,
     "cacheReadTokens": 0,
     "cacheWriteTokens": 0
   },

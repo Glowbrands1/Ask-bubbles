@@ -23,8 +23,8 @@
       "evidence": "She was late on 10/5 and 10.15"
     },
     "warningLevel": {
-      "value": "verbal",
-      "evidence": "On the first shift I verbally coached her"
+      "value": null,
+      "evidence": null
     },
     "payroll": {
       "value": null,
@@ -49,7 +49,7 @@
   },
   "usage": {
     "inputTokens": 3561,
-    "outputTokens": 410,
+    "outputTokens": 399,
     "cacheReadTokens": 0,
     "cacheWriteTokens": 0
   },

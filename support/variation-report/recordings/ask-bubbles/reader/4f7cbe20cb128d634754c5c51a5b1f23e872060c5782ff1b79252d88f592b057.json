@@ -15,7 +15,7 @@
       "evidence": null
     },
     "incident": {
-      "value": "10 minutes late on shift",
+      "value": "10 minutes late",
       "evidence": "My employee Marlowe, Quinn has was 10 minutes late on her last two shifts"
     },
     "incidentDate": {
@@ -23,8 +23,8 @@
       "evidence": "10/15"
     },
     "warningLevel": {
-      "value": "written",
-      "evidence": "Please create a CA form"
+      "value": null,
+      "evidence": null
     },
     "payroll": {
       "value": null,
@@ -36,7 +36,7 @@
     },
     "policyHeading": {
       "value": "Attendance",
-      "evidence": "she was late on her last two shifts"
+      "evidence": "Attendance"
     },
     "priorSteps": [
       {
@@ -49,7 +49,7 @@
   },
   "usage": {
     "inputTokens": 3563,
-    "outputTokens": 467,
+    "outputTokens": 389,
     "cacheReadTokens": 0,
     "cacheWriteTokens": 0
   },

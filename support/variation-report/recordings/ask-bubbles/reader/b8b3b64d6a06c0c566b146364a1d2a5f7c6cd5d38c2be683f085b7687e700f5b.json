@@ -36,7 +36,7 @@
     },
     "policyHeading": {
       "value": "Attendance",
-      "evidence": "she was late on 10-5 and 10-15"
+      "evidence": "she was late"
     },
     "priorSteps": [
       {
@@ -55,7 +55,7 @@
   },
   "usage": {
     "inputTokens": 3531,
-    "outputTokens": 433,
+    "outputTokens": 422,
     "cacheReadTokens": 0,
     "cacheWriteTokens": 0
   },
