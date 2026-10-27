@@ -856,3 +856,7 @@ QA LS-B5: "create ca form for <name> for violating attendance policy on 10-20-26
 
 Pau reversed the earlier "no" on 27 Oct 2026. With the flag on, an animal word (puppy, kitten, dog, cat, pet, …) anywhere in a sentence about being at work is the Animals in the Workplace incident (service animal, hot dog and guinea pig stay excluded), and a "cite <policy>" line names that policy without the word "cite". Same flag and mechanism in the sibling app.
 
+
+## 27 Oct 2026: a step's date is not the incident date — both apps (STEP_DATE_NOT_INCIDENT_ENABLED)
+
+Ported from Ask Sunny (QA SF4). Here "note a verbal ca was given on 9-1-26" dated the card and the form 9/1; with the flag on the step's date is not an incident date and the incident's 9/28 stays. Ask Sunny's sibling fix CA_ASKS_WHAT_HAPPENED is not needed here: this app already asks "You haven't told me what happened yet" on "create corrective action form for <name>, <job title>".
