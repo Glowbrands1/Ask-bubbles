@@ -90,6 +90,7 @@ no amount, and a figure the manager typed is still kept.
 **Sibling app: ported in the same session.** Ask Sunny's `intent-slots.ts`
 has the same `mergeSlots` rule; the mechanism is ported there under the same
 flag name. No store names or policy wording were copied.
+
 ## 24 Oct 2026: a manual citation only marks a page the sentence restates
 
 `FULL_MANUAL_CONTEXT_ENABLED` stays off. On, `citePolicyAnswer` reads the
@@ -848,6 +849,7 @@ Pau asked that the sibling app's Assistant Salon Director rule apply here to the
 ## 27 Oct 2026: forms some accounts create are private to them and to admin — ported from Ask Sunny (PRIVATE_CREATOR_FORMS_ENABLED)
 
 Same mechanism as the sibling app's #321: `PRIVATE_FORM_CREATOR_IDS` (user ids, set per app in Vercel, never in the repository) plus the default-off flag; `actorMaySeeInstance` hides those forms from every reader but the creator and admin/owner/developer, on every read path; bounded reads over-read 4x while active and trim back to the page.
+
 ## 26 Oct 2026: the reply is not sent on with a date line the conversation already gives — Bubbles-only (DATE_LINE_NO_ECHO_ENABLED)
 
 QA LS-B5: "create ca form for <name> for violating attendance policy on 10-20-26 … jba manual 1-1-26 for previous coaching" / "verbal" dated the form today here. The same two turns in Ask Sunny's production env keep 10/20 on the card and the form (checked 26 Oct 2026: its intent path reads the slots, not the augmented reply). Not ported.
@@ -857,12 +859,18 @@ QA LS-B5: "create ca form for <name> for violating attendance policy on 10-20-26
 Pau reversed the earlier "no" on 27 Oct 2026. With the flag on, an animal word (puppy, kitten, dog, cat, pet, …) anywhere in a sentence about being at work is the Animals in the Workplace incident (service animal, hot dog and guinea pig stay excluded), and a "cite <policy>" line names that policy without the word "cite". Same flag and mechanism in the sibling app.
 
 
-<<<<<<< HEAD
 ## 27 Oct 2026: a step's date is not the incident date — both apps (STEP_DATE_NOT_INCIDENT_ENABLED)
 
 Ported from Ask Sunny (QA SF4). Here "note a verbal ca was given on 9-1-26" dated the card and the form 9/1; with the flag on the step's date is not an incident date and the incident's 9/28 stays. Ask Sunny's sibling fix CA_ASKS_WHAT_HAPPENED is not needed here: this app already asks "You haven't told me what happened yet" on "create corrective action form for <name>, <job title>".
-=======
+
 ## 27 Oct 2026: a typed job title, and the date question asked again in fresh words
 
 JOB_TITLE_FROM_WORDS_ENABLED: both apps (the fill); asking the position once on an exit form stays Bubbles-only, as Ask Sunny has no position question. DATE_REASK_FRESH_ENABLED: Bubbles-only for now. QA D3 showed this app's re-ask came back byte for byte the same as the reply before (stored messages, conv_mvpyha5v22c52vd), while Ask Sunny's live reply on the same turn showed the question; port it if Sunny is seen repeating a reply.
->>>>>>> origin/main
+
+## 27 Oct 2026: S12 bundle — warning level per clause, title by apposition, exit read-back; the Follow-up read-back is Sunny-only
+
+WARNING_LEVEL_AND_CLAUSE_ENABLED, JOB_TITLE_APPOSITION_ENABLED and EXIT_READBACK_JOB_TITLE_ENABLED are in both apps. FOLLOW_UP_READBACK_CUE_ENABLED (QA item 5, "jba manual 11-1-25" read back as "Follow-up: 11/1/2025") is not needed here: the same turns through this app's chat show no Follow-up line (the sibling app's code-slot read-back writes it; this app's path does not).
+
+## 27 Oct 2026: P5 — the Follow-Up Coaching citation field (both apps); a grammar request on the card (sibling-only)
+
+FOLLOW_UP_CITATION_FIELD_ENABLED is in both apps. GRAMMAR_ASK_NOT_ACCOUNT_ENABLED is not needed here: QA's replay turns through this app's chat do not add "can you clean up my grammar…" to the card (that turn is answered as a question), so there is nothing on the card to take out.
