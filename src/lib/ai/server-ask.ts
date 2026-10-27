@@ -142,6 +142,7 @@ import type { AskRequest, AskResponse } from "./types";
 import { keepManagerActionPlan } from "./manager-action-plan-reply";
 import { withJobTitleFromWords } from "./job-title-from-words";
 import { withFreshDateReask } from "./date-reask-fresh";
+import { withFirstNameAsk } from "./first-name-ask";
 import { withWarningLevelFromClause } from "./warning-level-clause";
 
 /** SENSITIVE_DEFAULTS_REDACT_ENABLED: a default password format or SSN digits are never shown to the model. */
@@ -234,7 +235,10 @@ async function answerQuestionBody(
   memory: { memoryOwnerId?: string } = {},
 ): Promise<AskResponse> {
   return keepManagerActionPlan(
-    withWarningLevelFromClause(withFreshDateReask(withJobTitleFromWords(await answerQuestionCore(request, actor, memory), request), request), request),
+    withFirstNameAsk(
+      withWarningLevelFromClause(withFreshDateReask(withJobTitleFromWords(await answerQuestionCore(request, actor, memory), request), request), request),
+      request,
+    ),
     request,
   );
 }

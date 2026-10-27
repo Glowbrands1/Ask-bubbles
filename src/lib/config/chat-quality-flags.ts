@@ -971,6 +971,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "DATE_REASK_FRESH_ENABLED",
   "WARNING_LEVEL_AND_CLAUSE_ENABLED",
   "LEVEL_STEP_NOT_ACCOUNT_ENABLED",
+  "FIRST_NAME_ASK_ENABLED",
   "JOB_TITLE_APPOSITION_ENABLED",
   "EXIT_READBACK_JOB_TITLE_ENABLED",
   "FOLLOW_UP_CITATION_FIELD_ENABLED",
@@ -1331,4 +1332,15 @@ export function followUpCitationFieldEnabled(): boolean {
  */
 export function levelStepNotAccountEnabled(): boolean {
   return envFlag("LEVEL_STEP_NOT_ACCOUNT_ENABLED");
+}
+
+/**
+ * The name question uses the first name the manager gave, and is never asked
+ * twice in the same words (ported from the sibling app, QA S15, 27 Oct 2026;
+ * same flag in both apps): "I have an employee ivy …" then "Yes" got "Who is
+ * this form for? Tell me the employee's full name." twice. See
+ * `ai/first-name-ask.ts`. Off, as before.
+ */
+export function firstNameAskEnabled(): boolean {
+  return envFlag("FIRST_NAME_ASK_ENABLED");
 }
