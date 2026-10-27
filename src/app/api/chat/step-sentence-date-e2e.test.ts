@@ -11,7 +11,7 @@ import type { AccessScope, ChatFormProposal, ChatMessage } from "@/types";
 
 /**
  * ============================================================================
- * PORTED FROM ASK SUNNY (QA SF4, 27 OCT 2026) — A STEP TOLD IN A SENTENCE
+ * PORTED FROM THE SIBLING APP (QA SF4, 27 OCT 2026) — A STEP TOLD IN A SENTENCE
  * DOES NOT TAKE THE FORM'S DATE
  * ============================================================================
  *
@@ -466,7 +466,7 @@ describe(`${SD} on`, () => {
 describe(`${SD} off: as main`, () => {
   beforeEach(() => useProduction(false, SD));
 
-  // In this app the step's 9/1 is taken as the answer to the date question (Ask Sunny blanks the date instead).
+  // In this app the step's 9/1 is taken as the answer to the date question (the sibling app blanks the date instead).
   it("the card and the form take the step's date", async () => {
     const { card, saved: date } = await dated(SF4);
     expect(card).toBe("2026-09-01");

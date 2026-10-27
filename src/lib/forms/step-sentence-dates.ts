@@ -3,7 +3,7 @@ import { stepDateNotIncidentEnabled } from "@/lib/config/chat-quality-flags";
 import { datesInText } from "./form-date-answer";
 
 /**
- * STEP_DATE_NOT_INCIDENT_ENABLED (ported from Ask Sunny, QA SF4, 27 Oct
+ * STEP_DATE_NOT_INCIDENT_ENABLED (ported from the sibling app, QA SF4, 27 Oct
  * 2026): "create a CA form for <name>, <job title> at <store>, for opening
  * late on 9-28-26" / "this should be a written and note a verbal ca was given on
  * 9-1-26" — the step's 9/1 was read as a second incident date, the card's

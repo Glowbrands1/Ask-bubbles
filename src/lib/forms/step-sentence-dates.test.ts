@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { statedFormDate } from "./incident-dates";
 import { stepSentenceDates } from "./step-sentence-dates";
 
-/** STEP_DATE_NOT_INCIDENT_ENABLED (ported from Ask Sunny, QA SF4, 27 Oct 2026). The chat path: `step-sentence-date-e2e.test.ts`. */
+/** STEP_DATE_NOT_INCIDENT_ENABLED (ported from the sibling app, QA SF4, 27 Oct 2026). The chat path: `step-sentence-date-e2e.test.ts`. */
 const FLAG = "STEP_DATE_NOT_INCIDENT_ENABLED";
 const LIVE = "PRIOR_SENTENCE_FIX_ENABLED";
 const TODAY = "2026-10-27";

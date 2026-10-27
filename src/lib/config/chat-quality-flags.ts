@@ -965,6 +965,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "NAME_QUESTION_ONLY_ENABLED",
   "ANIMAL_ANYWHERE_ENABLED",
   "STEP_DATE_NOT_INCIDENT_ENABLED",
+  "JOB_TITLE_FROM_WORDS_ENABLED",
+  "DATE_REASK_FRESH_ENABLED",
 ] as const;
 
 /**
@@ -1224,11 +1226,33 @@ export function animalAnywhereEnabled(): boolean {
 }
 
 /**
- * A step's date is not the incident date (ported from Ask Sunny, QA SF4, 27
- * Oct 2026; same flag in both apps): "for opening late on 9-28-26" / "note a
- * verbal ca was given on 9-1-26" asked which date and dated the form today.
+ * A step's date is not the incident date (ported from the sibling app, QA
+ * SF4, 27 Oct 2026; same flag in both apps): "for opening late on 9-28-26" /
+ * "note a verbal ca was given on 9-1-26" dated the card and the form 9/1.
  * See `forms/step-sentence-dates.ts`. Off, as before.
  */
 export function stepDateNotIncidentEnabled(): boolean {
   return envFlag("STEP_DATE_NOT_INCIDENT_ENABLED");
+}
+
+/**
+ * The job title the manager typed is the card's Job Title, as typed; with none
+ * typed and none on record it is asked once (QA item 3 / LS-B2, 27 Oct 2026;
+ * same flag in both apps): "<name> was a tanning consultant at dodge location",
+ * a title not on this company's list, left the exit form's Job Title empty,
+ * and an exit form never asked the position. See `ai/job-title-from-words.ts`.
+ * Off, as before.
+ */
+export function jobTitleFromWordsEnabled(): boolean {
+  return envFlag("JOB_TITLE_FROM_WORDS_ENABLED");
+}
+
+/**
+ * The date question asked again leads the reply with fresh words (QA D3, 27
+ * Oct 2026): after "10/5 and 10/15" the re-asked reply was the same text as
+ * the one before, so the screen did not change. See `ai/date-reask-fresh.ts`.
+ * Off, as before.
+ */
+export function dateReaskFreshEnabled(): boolean {
+  return envFlag("DATE_REASK_FRESH_ENABLED");
 }
