@@ -220,3 +220,14 @@ describe("this app's wording (QA S3, S12)", () => {
     expect(checkDate("2026-10-01", "she was issued a verbal ca on 10.1", "2026-10-26")).toBe("2026-10-01");
   });
 });
+
+describe("the create route's check of the reader's employee quote (Haiku, smoke run 27 Oct 2026)", () => {
+  it("\"My employee Marlowe, Quinn\" read by the code as \"Marlowe\" is the card's Quinn Marlowe; another person is not", async () => {
+    const { readerNamesCardEmployee } = await import("./recheck");
+    const conversation = [{ role: "user", content: "My employee Marlowe, Quinn has was 10 minutes late on her last two shifts." }];
+    const reading = { employee: { value: "Quinn Marlowe", quote: "My employee Marlowe, Quinn" } };
+    expect(readerNamesCardEmployee(reading, conversation, "Quinn Marlowe", "Marlowe")).toBe(true);
+    expect(readerNamesCardEmployee(reading, conversation, "Quinn Marlowe", "Dale Ferris")).toBe(false);
+    expect(readerNamesCardEmployee(reading, conversation, "Dale Ferris", "Marlowe")).toBe(false);
+  });
+});

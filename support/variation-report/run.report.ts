@@ -40,8 +40,9 @@ import type { AccessScope, ChatFormProposal, ChatMessage } from "@/types";
  *                                                       seed's expected form: what the hook
  *                                                       can reach, never the gate
  *
- * VARIATION_MODES=2,3, VARIATION_SEEDS=S1,S12 and VARIATION_LIMIT=20 (the first
- * 20 variants of each mode, the smoke run) run part of it.
+ * VARIATION_MODES=2,3, VARIATION_SEEDS=S1,S12, VARIATION_KINDS=name,typo and
+ * VARIATION_LIMIT=20 (the first 20 variants of each mode, the smoke run) run
+ * part of it.
  */
 
 /**
@@ -525,6 +526,7 @@ const budgeted =
       }
     : null;
 let current: Seed | null = null;
+const readerTags: { seed: string; label: string; tags: string[] }[] = [];
 
 /* ------------------------------------------------- the oracle (not a gate) -- */
 
@@ -766,11 +768,16 @@ it("variation report", async () => {
         : ((budgeted ?? transport!.call) as never);
     for (const seed of SEEDS.filter((entry) => seeds.length === 0 || seeds.includes(entry.id))) {
       current = seed;
-      for (const variant of variantsOf(seed)) {
+      // VARIATION_KINDS=name,typo runs only those kinds of variant (a targeted sample).
+      const kinds = (process.env.VARIATION_KINDS ?? "").split(",").filter(Boolean);
+      for (const variant of variantsOf(seed).filter((entry) => kinds.length === 0 || kinds.includes(entry.kind))) {
         if (rows.filter((row) => row.mode === mode.name).length >= limit) break;
         setFlags([...mode.flags, ...(mode.flags.length > 0 ? (seed.flags ?? []) : [])]);
         await reset();
         const out = await replay(variant.turns, seed.chatOnly === true, seed.openingQuestion === true);
+        // AI_READS_CODE_CHECKS_ENABLED: the reader's outcome tags on this variant's chat traces.
+        const tags = ((store as unknown as { chat_traces?: { intent?: string | null }[] }).chat_traces ?? []).flatMap((row) => (row.intent ?? "").split("|")).filter((tag) => tag.startsWith("ai_reader_"));
+        if (mode.reader) readerTags.push({ seed: seed.id, label: variant.label, tags });
         rows.push({ mode: mode.name, seed: seed.id, variant, checks: score(seed, out) });
       }
     }
@@ -794,6 +801,12 @@ it("variation report", async () => {
       const t = transport.stats;
       sections.push(`Reader calls: ${t.calls}; recorded now ${t.recorded}; no recording (ran as flag off) ${t.missing}; slower than 2 s ${t.slow}; tokens in/out ${t.inputTokens}/${t.outputTokens}; new spend this run $${spent.usd.toFixed(3)}${Number.isFinite(BUDGET_USD) ? ` of $${BUDGET_USD}` : ""}.`, "");
     }
+    const disputed = readerTags.filter((row) => row.tags.some((tag) => tag.startsWith("ai_reader_disputed")));
+    const fallbacks = readerTags.flatMap((row) => row.tags.filter((tag) => tag.startsWith("ai_reader_fallback")));
+    sections.push(
+      `Reader disputes (today's value kept): ${disputed.length} variant(s)${disputed.length ? ` (${disputed.map((row) => `${row.seed} · ${row.label}: ${[...new Set(row.tags.filter((tag) => tag.startsWith("ai_reader_disputed")))].join(", ")}`).join("; ")})` : ""}. Fallbacks: ${fallbacks.length}.`,
+      "",
+    );
     sections.push(`Variants right with this week's fixes and wrong with the reader: ${lost.length}${lost.length ? ` (${lost.map((row) => `${row.seed} · ${row.variant.label}`).join(", ")})` : ""}.`, "");
   }
   for (const mode of MODES) {

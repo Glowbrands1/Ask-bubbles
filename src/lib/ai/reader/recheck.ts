@@ -134,12 +134,12 @@ export function readerNamesCardEmployee(raw: unknown, conversation: readonly Tur
   const card = plainWords(cardName).split(" ").filter(Boolean);
   const said = plainWords(quote).split(" ").filter(Boolean);
   const close = (word: string, name: string) => word === name || (name.length >= 4 && word.length >= 4 && editDistance(word, name) <= 1);
-  // Every word of the quote's name is a word of the card's name: "Marlowe, Quinn", "quinn".
-  const nameWords = said.filter((word) => /^[a-z]+$/.test(word));
-  if (nameWords.length === 0 || !nameWords.every((word) => card.some((name) => close(word, name)))) return false;
+  // The quote names the card's employee ("My employee Marlowe, Quinn", "quinn"): a word of the card's name is in it.
+  if (!card.some((name) => said.some((word) => close(word, name)))) return false;
   if (readLocationMentions(`at ${codeName}`).some((mention) => !mention.confirm && mention.locationIds.length > 0)) return true;
+  // And the name the code read ("Marlowe") is part of the card's name and inside the same quote: one person.
   return plainWords(codeName)
     .split(" ")
     .filter(Boolean)
-    .every((word) => said.some((quotedWord) => close(word, quotedWord)));
+    .every((word) => card.some((name) => close(word, name)) && said.some((quotedWord) => close(word, quotedWord)));
 }
