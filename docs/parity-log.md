@@ -898,3 +898,7 @@ QA BF7b live. The sibling app already reads the typo as the payroll answer on th
 ## 27 Oct 2026: known gap — no amount row on the card (left as is)
 
 After "$25", the Payroll deduction amount shows in the reply and on the saved draft but the card has no amount row: this app's proposal carries no amount field and the card renders only "Payroll deduct". The sibling app's card has no amount row either. QA: skip for now (UI work, low value).
+
+## 27 Oct 2026: the monthly budget counts the AI reader's call, and prices Claude Haiku 5.5 — both apps
+
+Ported from Ask Sunny. The spend guard read only each `chat_traces` row's own model and token columns; the AI reader (`AI_READS_CODE_CHECKS_ENABLED`) records its call in `slots.reader`, so its spend was invisible to the monthly budget. `modelUsageSince` now adds a row for `slots.reader.usage` (priced at `slots.reader.model`, or as Haiku 4.5 when the trace has none), counts form turns that had a reader call but no answering model call, and `model-prices.ts` lists Claude Haiku 5.5 ($0.10 in / $0.50 out per MTok, cache read $0.01, cache write $0.125, prompts up to 100K) instead of pricing it as Opus. It only makes the guard count more, and the guard flags stay default off, so there is no flag of its own. Same change in Ask Sunny.
