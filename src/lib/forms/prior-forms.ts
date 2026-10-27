@@ -13,6 +13,7 @@ import {
   type PriorFormOnFile,
   type PriorFormsReading,
 } from "./prior-forms-lines";
+import { privateAwareLimit } from "./private-creators";
 
 export type { PriorFormOnFile, PriorFormsReading } from "./prior-forms-lines";
 
@@ -84,11 +85,12 @@ async function readOnFile(input: {
   if (words.length === 0) return null;
 
   try {
-    const read = await listInstances("all", READ_LIMIT, {
+    // PRIVATE_CREATOR_FORMS: over-read, then trim to the page; off, READ_LIMIT itself.
+    const read = await listInstances("all", privateAwareLimit(READ_LIMIT), {
       ...instanceListFilterFor(input.actor),
       employeeNameWords: words,
     });
-    const rows = visibleInstances(input.actor, read);
+    const rows = visibleInstances(input.actor, read).slice(0, READ_LIMIT);
 
     const correctiveIds = rows
       .filter((row) => row.templateKey === "dpoa" && row.status === "finalized")
@@ -121,7 +123,7 @@ async function readOnFile(input: {
       sameNameLocations: rows
         .filter((row) => row.id !== input.excludeInstanceId && sameName(row.employeeName, input.employeeName))
         .map((row) => row.locationId ?? null),
-      complete: read.length < READ_LIMIT,
+      complete: read.length < privateAwareLimit(READ_LIMIT),
     };
   } catch {
     return null;

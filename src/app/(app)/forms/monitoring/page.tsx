@@ -25,6 +25,7 @@ import {
 } from "@/lib/forms/instance-scope";
 import { pageFormsAccess } from "@/lib/forms/page-scope";
 import { supabaseSecretKeyConfigured } from "@/lib/config/server-env";
+import { privateAwareLimit, privateCreatorsActive } from "@/lib/forms/private-creators";
 
 export const metadata: Metadata = { title: "Forms Register" };
 export const dynamic = "force-dynamic";
@@ -85,8 +86,9 @@ export default async function FormMonitoringPage({
        */
       const instances = visibleInstances(
         access.actor,
-        await listInstances(view satisfies InstanceView, undefined, instanceListFilterFor(access.actor)),
-      );
+        // PRIVATE_CREATOR_FORMS: over-read, then trim to the default page of 200; off, as before.
+        await listInstances(view satisfies InstanceView, privateCreatorsActive() ? privateAwareLimit(200) : undefined, instanceListFilterFor(access.actor)),
+      ).slice(0, 200);
       forms = instances.map((instance) => ({
         id: instance.id,
         templateName: instance.templateName,
@@ -122,7 +124,7 @@ export default async function FormMonitoringPage({
        * manager looking at Followed up still needs to be told what is overdue.
        */
       attention = attentionSummary(
-        visibleInstances(access.actor, await listOutstandingFollowUps(50, access.locationIds, access.ownCreatedBy)),
+        visibleInstances(access.actor, await listOutstandingFollowUps(privateAwareLimit(50), access.locationIds, access.ownCreatedBy)).slice(0, 50),
         today,
       );
 

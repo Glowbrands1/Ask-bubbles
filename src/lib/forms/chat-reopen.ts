@@ -15,6 +15,7 @@ import { extractEmployeeNames, samePerson } from "./proposal";
 import { readReopenRequest } from "./reopen-request";
 import { getTemplateByKey } from "./repository";
 import { formEditDateRulesEnabled } from "@/lib/config/chat-quality-flags";
+import { privateAwareLimit } from "./private-creators";
 
 /**
  * ============================================================================
@@ -114,8 +115,9 @@ export async function reopenRequestedForm(input: {
       const filter = instanceListFilterFor(actor);
       visible = visibleInstances(
         actor,
-        await listInstances("active", 200, words.length > 0 ? { ...filter, employeeNameWords: words } : filter),
-      );
+        // PRIVATE_CREATOR_FORMS: over-read, then trim to the page; off, 200 itself.
+        await listInstances("active", privateAwareLimit(200), words.length > 0 ? { ...filter, employeeNameWords: words } : filter),
+      ).slice(0, 200);
     } catch {
       return null;
     }

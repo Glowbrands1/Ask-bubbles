@@ -77,6 +77,11 @@ const ALLOWED_UI = [
   "src/features/chat/inline-form.tsx",
   "src/components/shell/global-search.tsx",
   "src/components/shell/hides-form-monitoring.ts",
+  // PRIVATE_CREATOR_FORMS_ENABLED (QA approved 27 Oct 2026): the follow-up and list reads over-read and trim to
+  // their page while the rule is active; off, each asks for its page exactly as before.
+  "src/app/(app)/page.tsx",
+  "src/app/(app)/layout.tsx",
+  "src/app/(app)/forms/monitoring/page.tsx",
 ];
 
 /*

@@ -844,3 +844,7 @@ turn and the observation with the flag off; the live blank draft
 ## 27 Oct 2026: the Assistant Manager has no Forms Register — ported from Ask Sunny (NEXT_PUBLIC_ASD_NO_FORM_MONITORING_ENABLED)
 
 Pau asked that the sibling app's Assistant Salon Director rule apply here to the equivalent role, the Assistant Manager. Same flag (build time, default off): with it on, `assistant_manager` loses `view_form_monitoring` (sidebar, page, Overview follow-ups, chat card link, search hits) but still opens and downloads the forms it created; the location manager and every role above keep it. This replaces the sibling app's earlier "Bubbles: not requested" note. Bubbles prod had no active Assistant Managers on 27 Oct 2026.
+
+## 27 Oct 2026: forms some accounts create are private to them and to admin — ported from Ask Sunny (PRIVATE_CREATOR_FORMS_ENABLED)
+
+Same mechanism as the sibling app's #321: `PRIVATE_FORM_CREATOR_IDS` (user ids, set per app in Vercel, never in the repository) plus the default-off flag; `actorMaySeeInstance` hides those forms from every reader but the creator and admin/owner/developer, on every read path; bounded reads over-read 4x while active and trim back to the page.

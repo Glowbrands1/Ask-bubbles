@@ -14,6 +14,7 @@ import { resolveFormsVisibility } from "./forms-visibility";
 import { instanceListFilterFor, visibleInstances } from "./instance-scope";
 import { listInstances, type InstanceRow } from "./instances";
 import { authorizedLocationIds } from "./location-scope";
+import { privateAwareLimit } from "./private-creators";
 
 /**
  * ============================================================================
@@ -418,8 +419,9 @@ export async function loadFormRecords(input: {
         input.question,
         visibleInstances(
           formsActor,
-          await listInstances("all", MATCH_LIMIT, { ...filter, employeeNameWords: words }),
-        ),
+          // PRIVATE_CREATOR_FORMS: over-read, then trim to the page; off, the page itself.
+          await listInstances("all", privateAwareLimit(MATCH_LIMIT), { ...filter, employeeNameWords: words }),
+        ).slice(0, MATCH_LIMIT),
       );
       const matches = matchRowsToQuestion(split.onFile, words);
       const drafts = matchRowsToQuestion(split.notOnFile, words);
@@ -431,7 +433,7 @@ export async function loadFormRecords(input: {
 
     const recentSplit = splitRecordDrafts(
       input.question,
-      visibleInstances(formsActor, await listInstances("active", RECENT_LIMIT, filter)),
+      visibleInstances(formsActor, await listInstances("active", privateAwareLimit(RECENT_LIMIT), filter)).slice(0, RECENT_LIMIT),
     );
     const recent = recentSplit.onFile;
     /*
