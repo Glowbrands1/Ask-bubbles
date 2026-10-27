@@ -955,6 +955,14 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "PRIOR_ROW_NOT_ON_INCIDENT_DATE_ENABLED",
   "NEXT_PUBLIC_ASD_NO_FORM_MONITORING_ENABLED",
   "PRIVATE_CREATOR_FORMS_ENABLED",
+  "NOT_DEDUCTIBLE_READ_ENABLED",
+  "PRIOR_STEP_SENTENCE_ENABLED",
+  "EXIT_FULFILLED_IS_LAST_DAY_ENABLED",
+  "DATE_LINE_NO_ECHO_ENABLED",
+  "FUTURE_PRIOR_ROW_DROP_ENABLED",
+  "MEETING_NOT_LATENESS_PLAN_ENABLED",
+  "PLAN_PAYROLL_SENTENCE_ENABLED",
+  "NAME_QUESTION_ONLY_ENABLED",
 ] as const;
 
 /**
@@ -1075,6 +1083,89 @@ export function dateAnswerAppliedEnabled(): boolean {
  */
 export function requestLineAccountEnabled(): boolean {
   return envFlag("REQUEST_LINE_ACCOUNT_ENABLED");
+}
+
+/**
+ * "not payroll deductible" is a No (a manager in the sibling app, 26 Oct 2026;
+ * same flag in both apps): it was not read, and "Is payroll deduct
+ * applicable?" was asked on every turn. The reader
+ * (`forms/payroll-deduct-answer.ts`, which imports nothing) reads the same
+ * variable itself. Off, as before.
+ */
+export function notDeductibleReadEnabled(): boolean {
+  return envFlag("NOT_DEDUCTIBLE_READ_ENABLED");
+}
+
+/**
+ * An earlier step told in a sentence is a Prior actions row (managers in the
+ * sibling app, 26 Oct 2026; same flag in both apps): "note a verbal ca was
+ * given on 9-1-26" and "she was issued a verbal ca on 10.1 for this same
+ * thing" listed none. See `sentenceSteps` in `forms/prior-actions.ts`. Off, as
+ * before.
+ */
+export function priorStepSentenceEnabled(): boolean {
+  return envFlag("PRIOR_STEP_SENTENCE_ENABLED");
+}
+
+/**
+ * A notice worked to the last day was fulfilled on it (a manager in the
+ * sibling app, 26 Oct 2026; same flag in both apps): "her last day worked was
+ * 9-28-26" with "gave and worked 2 week notice" left "Date that notice was
+ * fulfilled" blank. See `readExitFacts` in `forms/exit-facts.ts`. Off, as
+ * before.
+ */
+export function exitFulfilledIsLastDayEnabled(): boolean {
+  return envFlag("EXIT_FULFILLED_IS_LAST_DAY_ENABLED");
+}
+
+/**
+ * The reply is not sent on with an "It happened on …" line the conversation
+ * already dates (QA LS-B5, 26 Oct 2026; same flag in both apps): after "… for
+ * previous coaching" that line read as a second earlier step and the form was
+ * dated today. See `fieldLines` in `ai/intake-augment.ts`. Off, as before.
+ */
+export function dateLineNoEchoEnabled(): boolean {
+  return envFlag("DATE_LINE_NO_ECHO_ENABLED");
+}
+
+/**
+ * A Prior actions row dated after today is never kept (QA LS-B11, 26 Oct 2026;
+ * same flag in both apps): a typo "11-1-26" the manager corrected to "11-1-25"
+ * left "Coaching — signed 11/01/2026" on the draft. See `groundPriorActions`
+ * in `forms/prior-actions.ts`. Off, as before.
+ */
+export function futurePriorRowDropEnabled(): boolean {
+  return envFlag("FUTURE_PRIOR_ROW_DROP_ENABLED");
+}
+
+/**
+ * A missed meeting with no lateness keeps the general Action Plan, not the
+ * attendance (lateness) wording (QA LS-B8, 26 Oct 2026). The policy pick is
+ * unchanged. See `missedMeetingNotLateness` in `forms/attendance-action-plan.ts`.
+ * Off, as before.
+ */
+export function meetingNotLatenessPlanEnabled(): boolean {
+  return envFlag("MEETING_NOT_LATENESS_PLAN_ENABLED");
+}
+
+/**
+ * The Action Plan says the deduction: "<name> will be payroll deducted $3.25."
+ * when payroll deduct is Yes and the manager stated an amount (QA LS-B6 /
+ * LS-B9, 26 Oct 2026). See `forms/plan-payroll-sentence.ts`. Off, as before.
+ */
+export function planPayrollSentenceEnabled(): boolean {
+  return envFlag("PLAN_PAYROLL_SENTENCE_ENABLED");
+}
+
+/**
+ * With no employee named, the chat asks one plain question — "Who is this
+ * form for? Tell me the employee's full name." — never a list of details
+ * (Pau, 26 Oct 2026; QA LS-B3). This PR covers the Corrective Action intake
+ * ("ca", "blank corrective action form"); the coaching card's list in the
+ * protected `ai/form-proposal.ts` follows on Pau's approval. Off, as before.
+ */
+export function nameQuestionOnlyEnabled(): boolean {
+  return envFlag("NAME_QUESTION_ONLY_ENABLED");
 }
 
 /**

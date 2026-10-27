@@ -169,6 +169,7 @@ import { manualDisplayTitle, manualSheetHeadings, type ManualChunk } from "@/lib
 import {
   actionPlanSentencesEnabled,
   antiLoopEnabled,
+  nameQuestionOnlyEnabled,
   slotRetentionEnabled,
   storedSlotsNotARequestEnabled,
   typedNameEnabled,
@@ -3336,6 +3337,8 @@ function openingQuestions(proposal: ChatFormProposal, context: ManagerContext): 
     const names = employee.candidates.map((name) => `**${name}**`);
     return `Which of them is this **${proposal.templateName}** for — ${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}?`;
   }
+  // NAME_QUESTION_ONLY_ENABLED (Pau, 26 Oct 2026): one plain question for the name, never a list.
+  if (nameQuestionOnlyEnabled()) return "Who is this form for? Tell me the employee's full name.";
   const coaching = COACHING_TEMPLATES.has(proposal.templateKey);
   /*
    * A COACHING FORM MAY BE FOR THE WHOLE TEAM, and the question says so, so a
