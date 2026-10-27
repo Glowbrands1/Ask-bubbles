@@ -883,6 +883,10 @@ LEVEL_STEP_NOT_ACCOUNT_ENABLED is in both apps (here the Issue, there the Observ
 
 JOB_TITLE_READBACK_CASE_ENABLED and STEP_DATE_NO_QUESTION_ENABLED are not needed here: QA's S1 turns through this app's chat, with STEP_DATE_NOT_INCIDENT on, ask no date question (this app's incidentDates already leaves out a step's date under STEP_DATE_NOT_INCIDENT) and read back the title the card has.
 
+## 27 Oct 2026: the amount turn stays with the card (AMOUNT_TURN_STAYS_ENABLED, Bubbles-only)
+
+Not needed in the sibling app: QA ran "i dont know the amount" and "$25" live there after a Corrective Action card with payroll yes (conv_mvqon26f2a5kvdh, conv_mvqon20g24chpan), and both turns stayed on the card with no policy answer.
+
 ## 27 Oct 2026: "yes payrol ldeduct" is the payroll answer — this app only (PAYROLL_TYPO_ANSWER_ENABLED)
 
 QA BF7b live. The sibling app already reads the typo as the payroll answer on that turn (checked through its chat with its production flags), so the flag is not needed there.

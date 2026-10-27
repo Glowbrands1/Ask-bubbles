@@ -973,6 +973,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "LEVEL_STEP_NOT_ACCOUNT_ENABLED",
   "FIRST_NAME_ASK_ENABLED",
   "UNKNOWN_NAME_ASK_ENABLED",
+  "AMOUNT_TURN_STAYS_ENABLED",
   "MODEL_CALL_DAILY_CAP_ENABLED",
   "MONTHLY_BUDGET_GUARD_ENABLED",
   "ORDINAL_DATE_IN_DRAFT_ENABLED",
@@ -1359,6 +1360,15 @@ export function firstNameAskEnabled(): boolean {
  */
 export function unknownNameAskEnabled(): boolean {
   return envFlag("UNKNOWN_NAME_ASK_ENABLED");
+}
+
+/**
+ * With a form card open, a turn that only answers the payroll amount stays
+ * with the form (QA BF7b live, 27 Oct 2026): "i dont know the amount" was
+ * answered as a policy question. See `ai/amount-turn.ts`. Off, as before.
+ */
+export function amountTurnStaysEnabled(): boolean {
+  return envFlag("AMOUNT_TURN_STAYS_ENABLED");
 }
 
 /**

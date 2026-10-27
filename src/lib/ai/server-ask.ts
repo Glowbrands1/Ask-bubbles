@@ -144,6 +144,7 @@ import { withJobTitleFromWords } from "./job-title-from-words";
 import { withFreshDateReask } from "./date-reask-fresh";
 import { withFirstNameAsk } from "./first-name-ask";
 import { withUnknownNameAsk } from "./unknown-name-ask";
+import { amountTurnReply } from "./amount-turn";
 import { withPayrollTypoAnswer } from "./payroll-typo-answer";
 import { withWarningLevelFromClause } from "./warning-level-clause";
 
@@ -485,6 +486,9 @@ async function answerQuestionCore(
     // Flags off: decoration returns the same proposal, and the forms-library
     // answer returns here, before retrieval.
     if (proposal) return proposal;
+    // AMOUNT_TURN_STAYS_ENABLED: "i dont know the amount" with a card open is the form's, not a policy question.
+    const amountReply = amountTurnReply(request);
+    if (amountReply) return amountReply;
   }
 
   /*
