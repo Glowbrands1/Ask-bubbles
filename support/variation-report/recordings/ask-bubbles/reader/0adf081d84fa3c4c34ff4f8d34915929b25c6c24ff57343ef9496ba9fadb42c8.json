@@ -4,7 +4,7 @@
   "reply": {
     "employee": {
       "value": "quinn marlowe",
-      "evidence": "My emplyee quinn marlowe has"
+      "evidence": "My emplyee quinn marlowe"
     },
     "location": {
       "value": null,
@@ -23,8 +23,8 @@
       "evidence": "She was late on 10/5 and 10/15"
     },
     "warningLevel": {
-      "value": "verbal",
-      "evidence": "Please create a CA form so I can document"
+      "value": null,
+      "evidence": null
     },
     "payroll": {
       "value": null,
@@ -36,7 +36,7 @@
     },
     "policyHeading": {
       "value": "Attendance",
-      "evidence": "10 minutes late on her last two shifts"
+      "evidence": null
     },
     "priorSteps": [
       {
@@ -49,7 +49,7 @@
   },
   "usage": {
     "inputTokens": 3540,
-    "outputTokens": 404,
+    "outputTokens": 382,
     "cacheReadTokens": 0,
     "cacheWriteTokens": 0
   },

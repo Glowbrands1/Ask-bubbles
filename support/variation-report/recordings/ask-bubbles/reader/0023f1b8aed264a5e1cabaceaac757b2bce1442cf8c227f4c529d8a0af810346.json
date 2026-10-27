@@ -23,8 +23,8 @@
       "evidence": "She was late on 10/5 and 10/15"
     },
     "warningLevel": {
-      "value": "written",
-      "evidence": "Please create a CA form so I can document"
+      "value": null,
+      "evidence": null
     },
     "payroll": {
       "value": null,
@@ -36,7 +36,7 @@
     },
     "policyHeading": {
       "value": "Attendance",
-      "evidence": "My employee quinn has was 10 minutes late on her last two shifts"
+      "evidence": "10 minutes late on her last two shifts"
     },
     "priorSteps": [
       {
@@ -49,7 +49,7 @@
   },
   "usage": {
     "inputTokens": 3536,
-    "outputTokens": 406,
+    "outputTokens": 389,
     "cacheReadTokens": 0,
     "cacheWriteTokens": 0
   },

@@ -4,18 +4,18 @@
   "reply": {
     "employee": {
       "value": "QUINN MARLOWE",
-      "evidence": "CA FOR QUINN MARLOWE"
+      "evidence": "CREATE A CA FOR QUINN MARLOWE AT DODGE"
     },
     "location": {
       "value": "DODGE",
-      "evidence": "AT DODGE"
+      "evidence": "CREATE A CA FOR QUINN MARLOWE AT DODGE"
     },
     "jobTitle": {
       "value": null,
       "evidence": null
     },
     "incident": {
-      "value": "was late",
+      "value": "late",
       "evidence": "SHE WAS LATE ON 10-5 AND 10-15"
     },
     "incidentDate": {
@@ -49,7 +49,7 @@
   },
   "usage": {
     "inputTokens": 3546,
-    "outputTokens": 416,
+    "outputTokens": 492,
     "cacheReadTokens": 0,
     "cacheWriteTokens": 0
   },

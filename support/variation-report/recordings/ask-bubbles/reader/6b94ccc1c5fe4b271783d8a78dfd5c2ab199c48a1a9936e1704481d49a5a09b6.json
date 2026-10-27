@@ -4,7 +4,7 @@
   "reply": {
     "employee": {
       "value": "QUINN MARLOWE",
-      "evidence": "MY EMPLOYEE QUINN MARLOWE HAS WAS 10 MINUTES LATE ON HER LAST TWO SHIFTS"
+      "evidence": "MY EMPLOYEE QUINN MARLOWE"
     },
     "location": {
       "value": "DODGE",
@@ -16,7 +16,7 @@
     },
     "incident": {
       "value": "10 minutes late on shift",
-      "evidence": "10 MINUTES LATE ON HER LAST TWO SHIFTS"
+      "evidence": "HAS WAS 10 MINUTES LATE ON HER LAST TWO SHIFTS"
     },
     "incidentDate": {
       "value": "2026-10-15",
@@ -24,7 +24,7 @@
     },
     "warningLevel": {
       "value": "written",
-      "evidence": "PLEASE CREATE A CA FORM SO I CAN DOCUMENT"
+      "evidence": "PLEASE CREATE A CA FORM"
     },
     "payroll": {
       "value": null,
@@ -36,20 +36,20 @@
     },
     "policyHeading": {
       "value": "Attendance",
-      "evidence": "10 MINUTES LATE ON HER LAST TWO SHIFTS"
+      "evidence": "HAS WAS 10 MINUTES LATE ON HER LAST TWO SHIFTS"
     },
     "priorSteps": [
       {
         "kind": "verbal",
         "date": "2026-10-05",
-        "evidence": "ON THE FIRST SHIFT I VERBALLY COACHED HER ON OUR POLICY AND EXPECTATIONS"
+        "evidence": "ON THE FIRST SHIFT I VERBALLY COACHED HER"
       }
     ],
     "otherDates": []
   },
   "usage": {
     "inputTokens": 3592,
-    "outputTokens": 461,
+    "outputTokens": 437,
     "cacheReadTokens": 0,
     "cacheWriteTokens": 0
   },

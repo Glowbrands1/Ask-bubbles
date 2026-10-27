@@ -49,7 +49,7 @@
   },
   "usage": {
     "inputTokens": 3524,
-    "outputTokens": 483,
+    "outputTokens": 420,
     "cacheReadTokens": 0,
     "cacheWriteTokens": 0
   },

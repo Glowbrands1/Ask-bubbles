@@ -15,16 +15,16 @@
       "evidence": null
     },
     "incident": {
-      "value": "10 minutes late on shift",
-      "evidence": "was 10 minutes late on her last two shifts"
+      "value": "Was 10 minutes late on shift",
+      "evidence": "My employee quinn marlowe has was 10 minutes late on her last two shifts"
     },
     "incidentDate": {
       "value": "2026-10-15",
       "evidence": "oct 15"
     },
     "warningLevel": {
-      "value": "written",
-      "evidence": "<UNKNOWN>"
+      "value": null,
+      "evidence": null
     },
     "payroll": {
       "value": null,
@@ -36,20 +36,20 @@
     },
     "policyHeading": {
       "value": "Attendance",
-      "evidence": "the manager's reference to tardiness policy"
+      "evidence": "Late Opening"
     },
     "priorSteps": [
       {
-        "kind": "verbal",
+        "kind": "coaching",
         "date": "2026-10-05",
-        "evidence": "On the first shift I verbally coached her on our policy and expectations"
+        "evidence": "On the first shift I verbally coached her on our policy"
       }
     ],
     "otherDates": []
   },
   "usage": {
     "inputTokens": 3559,
-    "outputTokens": 389,
+    "outputTokens": 385,
     "cacheReadTokens": 0,
     "cacheWriteTokens": 0
   },

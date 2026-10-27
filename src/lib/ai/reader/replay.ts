@@ -5,6 +5,7 @@ import { join } from "node:path";
 import Anthropic from "@anthropic-ai/sdk";
 
 import type { callClaudeToolTimed } from "../call-claude";
+import { priceFor } from "../model-prices";
 
 /**
  * ============================================================================
@@ -59,6 +60,7 @@ export interface ReplayStats {
 export function replayTransport(dir: string, mode: "replay" | "record") {
   const stats: ReplayStats = { calls: 0, missing: 0, slow: 0, missingChars: 0, recorded: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 };
   let client: Anthropic | null = null;
+  let spentUsd = 0;
   const count = (usage: Reply["usage"]) => {
     stats.inputTokens += usage.inputTokens;
     stats.outputTokens += usage.outputTokens;
@@ -83,6 +85,9 @@ export function replayTransport(dir: string, mode: "replay" | "record") {
       stats.missingChars += input.system.length + input.messages.reduce((sum, message) => sum + message.content.length, 0);
       throw new Error("no recording");
     }
+    // Hard cap on a recording run (VARIATION_BUDGET_USD): once spent, no further live calls.
+    const budget = Number(process.env.VARIATION_BUDGET_USD);
+    if (Number.isFinite(budget) && budget > 0 && spentUsd >= budget) throw new Error("recording budget spent");
     client ??= new Anthropic();
     const started = performance.now();
     const response = await client.messages.create(
@@ -121,6 +126,8 @@ export function replayTransport(dir: string, mode: "replay" | "record") {
     writeFileSync(file, `${JSON.stringify(recording, null, 2)}\n`);
     stats.recorded += 1;
     count(usage);
+    const price = priceFor(input.model);
+    spentUsd += (usage.inputTokens * price.input + usage.outputTokens * price.output + usage.cacheReadTokens * price.cacheRead + usage.cacheWriteTokens * price.cacheWrite) / 1e6;
     if (ms > input.timeoutMs) {
       stats.slow += 1;
       throw new Error("slower than the limit");

@@ -8,7 +8,7 @@
     },
     "location": {
       "value": "dodge",
-      "evidence": "dodge"
+      "evidence": "at dodge"
     },
     "jobTitle": {
       "value": null,
@@ -36,7 +36,7 @@
     },
     "policyHeading": {
       "value": "Attendance",
-      "evidence": "she was late"
+      "evidence": "she was late on 10-5 and 10-15"
     },
     "priorSteps": [
       {
@@ -45,11 +45,17 @@
         "evidence": "i coached her on 10-16 about being late"
       }
     ],
-    "otherDates": []
+    "otherDates": [
+      {
+        "kind": "other",
+        "date": "2026-10-05",
+        "evidence": "she was late on 10-5 and 10-15"
+      }
+    ]
   },
   "usage": {
     "inputTokens": 3512,
-    "outputTokens": 381,
+    "outputTokens": 430,
     "cacheReadTokens": 0,
     "cacheWriteTokens": 0
   },

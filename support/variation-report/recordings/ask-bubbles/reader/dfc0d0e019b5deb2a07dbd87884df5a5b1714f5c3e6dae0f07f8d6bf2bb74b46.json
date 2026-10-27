@@ -4,11 +4,11 @@
   "reply": {
     "employee": {
       "value": "QUINN MARLOWE",
-      "evidence": "CREATE A CA FOR QUINN MARLOWE AT DODGE"
+      "evidence": "CA FOR QUINN MARLOWE AT DODGE"
     },
     "location": {
       "value": "DODGE",
-      "evidence": "CREATE A CA FOR QUINN MARLOWE AT DODGE"
+      "evidence": "CA FOR QUINN MARLOWE AT DODGE"
     },
     "jobTitle": {
       "value": null,
@@ -49,7 +49,7 @@
   },
   "usage": {
     "inputTokens": 3539,
-    "outputTokens": 445,
+    "outputTokens": 441,
     "cacheReadTokens": 0,
     "cacheWriteTokens": 0
   },

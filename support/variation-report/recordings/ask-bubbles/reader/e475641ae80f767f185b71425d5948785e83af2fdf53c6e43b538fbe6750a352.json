@@ -15,7 +15,7 @@
       "evidence": null
     },
     "incident": {
-      "value": "10 minutes late on shift",
+      "value": "10 minutes late",
       "evidence": "was 10 minutes late on her last two shifts"
     },
     "incidentDate": {
@@ -24,7 +24,7 @@
     },
     "warningLevel": {
       "value": "written",
-      "evidence": "<UNKNOWN>"
+      "evidence": "please create a ca form so i can document"
     },
     "payroll": {
       "value": null,
@@ -36,20 +36,20 @@
     },
     "policyHeading": {
       "value": "Attendance",
-      "evidence": "<UNKNOWN>"
+      "evidence": "verbally coached her on our policy and expectations"
     },
     "priorSteps": [
       {
         "kind": "verbal",
         "date": "2026-10-05",
-        "evidence": "on the first shift i verbally coached her on our policy"
+        "evidence": "on the first shift i verbally coached her on our policy and expectations"
       }
     ],
     "otherDates": []
   },
   "usage": {
     "inputTokens": 3553,
-    "outputTokens": 390,
+    "outputTokens": 404,
     "cacheReadTokens": 0,
     "cacheWriteTokens": 0
   },

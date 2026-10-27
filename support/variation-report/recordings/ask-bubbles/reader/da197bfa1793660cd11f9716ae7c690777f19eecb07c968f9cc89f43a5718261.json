@@ -16,14 +16,14 @@
     },
     "incident": {
       "value": "10 minutes late on shift",
-      "evidence": "was 10 minutes late on her last two shifts"
+      "evidence": "has was 10 minutes late on her last two shifts"
     },
     "incidentDate": {
       "value": "2026-10-15",
       "evidence": "10/15"
     },
     "warningLevel": {
-      "value": "written",
+      "value": null,
       "evidence": null
     },
     "payroll": {
@@ -36,7 +36,7 @@
     },
     "policyHeading": {
       "value": "Attendance",
-      "evidence": "our policy and expectations"
+      "evidence": null
     },
     "priorSteps": [
       {
@@ -49,7 +49,7 @@
   },
   "usage": {
     "inputTokens": 3565,
-    "outputTokens": 447,
+    "outputTokens": 379,
     "cacheReadTokens": 0,
     "cacheWriteTokens": 0
   },

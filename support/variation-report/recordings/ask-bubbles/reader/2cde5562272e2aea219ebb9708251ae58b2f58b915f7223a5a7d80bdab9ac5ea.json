@@ -15,7 +15,7 @@
       "evidence": null
     },
     "incident": {
-      "value": "was 10 minutes late",
+      "value": "10 minutes late on shift",
       "evidence": "My employee quinn marlowe has was 10 minutes late on her last two shifts"
     },
     "incidentDate": {
@@ -23,8 +23,8 @@
       "evidence": "10/15"
     },
     "warningLevel": {
-      "value": null,
-      "evidence": null
+      "value": "written",
+      "evidence": "Please create a CA form so I can document"
     },
     "payroll": {
       "value": null,
@@ -49,7 +49,7 @@
   },
   "usage": {
     "inputTokens": 3556,
-    "outputTokens": 400,
+    "outputTokens": 474,
     "cacheReadTokens": 0,
     "cacheWriteTokens": 0
   },
