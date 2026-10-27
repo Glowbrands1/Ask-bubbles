@@ -590,3 +590,19 @@ describe("QA S3: \"she was issued a verbal ca on 10.1\" ... \"yes payrol ldeduct
     expect((on.fields.payroll_deduct?.checked ?? []).join(",")).toContain("yes");
   });
 });
+
+describe("QA condition 1: the reader never overrides what the manager set (flag on)", () => {
+  it("\"make it verbal\" after S12: the card and the saved form stay Verbal though the reader quotes \"written\"", async () => {
+    const turns = [...S12.slice(0, 2), "make it verbal", S12[2]!];
+    state.reading = S12_READING;
+    const on = await run(turns, true);
+    expect(on.fields.warning_type?.checked).toContain("verbal");
+    expect(on.fields.warning_type?.checked ?? []).not.toContain("written");
+  });
+
+  it("a prior row the draft already dates is not added again, and a redraft that keeps the manager's values adds nothing", async () => {
+    const { withReaderPriorLines } = await import("@/lib/ai/reader/recheck");
+    const manager = "Verbal warning for being late — signed 09/01/2026";
+    expect(withReaderPriorLines(manager, ["Verbal corrective action — signed 09/01/2026"])).toBe(manager);
+  });
+});

@@ -1619,7 +1619,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
          * notes and it is before the form's date, is listed too
          * (`ai/reader/recheck.ts`). Off, as before.
          */
-        if (aiReadsCodeChecksEnabled() && body.checkedReading) {
+        // Never over the manager's own values: not on a redraft that keeps them, and only beside the rows already there.
+        if (aiReadsCodeChecksEnabled() && body.checkedReading && !body.keepManagerValues) {
           priorActions.value = withReaderPriorLines(
             priorActions.value,
             readerPriorLines(body.checkedReading, notes, businessToday(), loaded.instance.formDate),
