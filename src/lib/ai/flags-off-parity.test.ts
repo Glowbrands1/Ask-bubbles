@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import { CHAT_QUALITY_FLAG_NAMES, antiLoopEnabled, envFlag } from "@/lib/config/chat-quality-flags";
+import { cardChangeEnabled } from "@/lib/forms/card-change-flag";
 
 /**
  * Flags off must match the path the suites already expect.
@@ -104,6 +105,9 @@ const ALLOWED_UI = [
   "src/app/(app)/page.tsx",
   "src/app/(app)/layout.tsx",
   "src/app/(app)/forms/monitoring/page.tsx",
+  // QA-approved 2026-10-27 (owner asked for the Change something button), behind
+  // NEXT_PUBLIC_CARD_CHANGE_ENABLED; off, it renders nothing.
+  "src/features/chat/card-change-panel.tsx",
 ];
 
 /*
@@ -152,6 +156,7 @@ describe("new flags default off", () => {
     for (const name of CHAT_QUALITY_FLAG_NAMES) delete process.env[name];
     for (const name of CHAT_QUALITY_FLAG_NAMES) expect(envFlag(name)).toBe(false);
     expect(antiLoopEnabled()).toBe(false);
+    expect(cardChangeEnabled()).toBe(false);
     for (const name of CHAT_QUALITY_FLAG_NAMES) {
       const saved = previous[name];
       if (saved === undefined) delete process.env[name];
