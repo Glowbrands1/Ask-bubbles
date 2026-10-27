@@ -974,6 +974,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FIRST_NAME_ASK_ENABLED",
   "UNKNOWN_NAME_ASK_ENABLED",
   "AMOUNT_TURN_STAYS_ENABLED",
+  "PAYROLL_TYPO_ANSWER_ENABLED",
   "WIDER_DATE_READER_ENABLED",
   "JOB_TITLE_APPOSITION_ENABLED",
   "EXIT_READBACK_JOB_TITLE_ENABLED",
@@ -1365,6 +1366,15 @@ export function unknownNameAskEnabled(): boolean {
  */
 export function amountTurnStaysEnabled(): boolean {
   return envFlag("AMOUNT_TURN_STAYS_ENABLED");
+}
+
+/**
+ * A payroll answer with a typo is the payroll answer (QA BF7b live, 27 Oct
+ * 2026): "yes payrol ldeduct" set no Payroll deduct on the card. See
+ * `ai/payroll-typo-answer.ts`. Off, as before.
+ */
+export function payrollTypoAnswerEnabled(): boolean {
+  return envFlag("PAYROLL_TYPO_ANSWER_ENABLED");
 }
 
 /**
