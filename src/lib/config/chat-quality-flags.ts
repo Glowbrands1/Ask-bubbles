@@ -969,6 +969,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "WARNING_LEVEL_AND_CLAUSE_ENABLED",
   "JOB_TITLE_APPOSITION_ENABLED",
   "EXIT_READBACK_JOB_TITLE_ENABLED",
+  "FOLLOW_UP_CITATION_FIELD_ENABLED",
 ] as const;
 
 /**
@@ -1277,4 +1278,15 @@ export function jobTitleAppositionEnabled(): boolean {
  */
 export function exitReadbackJobTitleEnabled(): boolean {
   return envFlag("EXIT_READBACK_JOB_TITLE_ENABLED");
+}
+
+/**
+ * The Follow-Up Coaching Form's policy citation goes with the Original
+ * Expectation (ported from the sibling app, QA P5, 27 Oct 2026; same flag in
+ * both apps): it went into Follow-Up Observation, which stays blank until the
+ * follow-up has happened, so that field read "Policy reference: …". See
+ * `ai/policy-citation-fields.ts`. Off, as before.
+ */
+export function followUpCitationFieldEnabled(): boolean {
+  return envFlag("FOLLOW_UP_CITATION_FIELD_ENABLED");
 }

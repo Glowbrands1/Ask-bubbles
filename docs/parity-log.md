@@ -864,3 +864,7 @@ JOB_TITLE_FROM_WORDS_ENABLED: both apps (the fill); asking the position once on 
 ## 27 Oct 2026: S12 bundle — warning level per clause, title by apposition, exit read-back; the Follow-up read-back is Sunny-only
 
 WARNING_LEVEL_AND_CLAUSE_ENABLED, JOB_TITLE_APPOSITION_ENABLED and EXIT_READBACK_JOB_TITLE_ENABLED are in both apps. FOLLOW_UP_READBACK_CUE_ENABLED (QA item 5, "jba manual 11-1-25" read back as "Follow-up: 11/1/2025") is not needed here: the same turns through this app's chat show no Follow-up line (the sibling app's code-slot read-back writes it; this app's path does not).
+
+## 27 Oct 2026: P5 — the Follow-Up Coaching citation field (both apps); a grammar request on the card (sibling-only)
+
+FOLLOW_UP_CITATION_FIELD_ENABLED is in both apps. GRAMMAR_ASK_NOT_ACCOUNT_ENABLED is not needed here: QA's replay turns through this app's chat do not add "can you clean up my grammar…" to the card (that turn is answered as a question), so there is nothing on the card to take out.
