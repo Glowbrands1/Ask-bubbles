@@ -162,6 +162,7 @@ import { flaggedCitationWrite } from "@/lib/ai/policy-citation-fields";
 import { fieldLines } from "@/lib/ai/intake-augment";
 import {
   actionPlanManagerOnlyEnabled,
+  aiReadsCodeChecksEnabled,
   actionPlanSentencesEnabled,
   attendanceActionPlanEnabled,
   hideNoPolicyMatchNoticeEnabled,
@@ -220,6 +221,7 @@ import {
   withoutModelWarningLevel,
 } from "@/lib/forms/warning-level";
 import { warningLevelFromConversation } from "@/lib/forms/warning-level-conversation";
+import { readerPriorLines, withReaderPriorLines } from "@/lib/ai/reader/recheck";
 import { JOIN } from "@/lib/forms/bounded-context";
 import { businessToday } from "@/lib/business-date";
 import {
@@ -259,6 +261,8 @@ export const maxDuration = 120;
 interface DraftBody {
   /** What the manager described, in their own words. */
   notes?: string;
+  /** AI_READS_CODE_CHECKS_ENABLED: the card's checked reading, checked again against `notes`. */
+  checkedReading?: unknown;
   topic?: string;
   /**
    * A REDRAFT FROM CHAT, of a form the manager may already have filled in by
@@ -1609,6 +1613,18 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const draftedValues = (() => {
       const base = { ...(exit?.values ?? attributions.values) };
       if (priorActions) {
+        /*
+         * AI_READS_CODE_CHECKS_ENABLED: a prior step the chat's reader quoted
+         * ("a verbal ca on 10.1"), when its quote and date are still in these
+         * notes and it is before the form's date, is listed too
+         * (`ai/reader/recheck.ts`). Off, as before.
+         */
+        if (aiReadsCodeChecksEnabled() && body.checkedReading) {
+          priorActions.value = withReaderPriorLines(
+            priorActions.value,
+            readerPriorLines(body.checkedReading, notes, businessToday(), loaded.instance.formDate),
+          );
+        }
         if (priorActions.value.trim() !== "") base[PRIOR_ACTIONS_KEY] = priorActions.value;
         else delete base[PRIOR_ACTIONS_KEY];
       }

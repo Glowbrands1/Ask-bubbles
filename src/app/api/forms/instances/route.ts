@@ -51,7 +51,9 @@ import {
   draftActionsEnabled,
   draftDedupeEnabled,
   payrollDeductAmountFieldEnabled,
+  aiReadsCodeChecksEnabled,
 } from "@/lib/config/chat-quality-flags";
+import { readerNamesCardEmployee, recheckCardReading, turnsOf } from "@/lib/ai/reader/recheck";
 import { incidentFingerprint } from "@/lib/forms/incident-key";
 import {
   findAccountResentDraft,
@@ -171,6 +173,8 @@ export async function POST(request: Request) {
       conversationId?: unknown;
       /** The card's id: a repeated press of the same card returns its draft. */
       proposalId?: unknown;
+      /** AI_READS_CODE_CHECKS_ENABLED: the card's checked reading, checked again here. */
+      checkedReading?: unknown;
     } | null;
 
     if (!body?.templateKey || !body.employeeName?.trim()) {
@@ -229,7 +233,8 @@ export async function POST(request: Request) {
         templateKey: body.templateKey,
         employeeName: body.employeeName,
       });
-      if (!currency.current) {
+      // AI_READS_CODE_CHECKS_ENABLED: "Marlowe, Quinn" read as "Marlowe" is the card's Quinn Marlowe when the reader's quote says so.
+      if (!currency.current && !readerSamePerson(body, currency.resolvedName)) {
         return NextResponse.json({ error: currency.reason, code: "proposal_superseded" }, { status: 409 });
       }
     }
@@ -343,7 +348,8 @@ export async function POST(request: Request) {
             return row.role === "user" && typeof row.content === "string" ? [row.content] : [];
           })
           .join("\n");
-        const amount = payrollDeductAmount(said);
+        // AI_READS_CODE_CHECKS_ENABLED: an amount the reader quoted, checked again against these turns.
+        const amount = payrollDeductAmount(said) ?? readerAmount(card);
         if (amount) {
           await applyStatedFacts(
             instanceId,
@@ -368,7 +374,8 @@ export async function POST(request: Request) {
         isWarningLevel(card.warningLevel) &&
         card.source === "assistant" &&
         Array.isArray(card.conversation) &&
-        warningLevelFromConversation(parseHistory(card.conversation), businessToday()) === card.warningLevel
+        (warningLevelFromConversation(parseHistory(card.conversation), businessToday()) === card.warningLevel ||
+          readerWarningLevel(card) === card.warningLevel)
           ? card.warningLevel
           : null;
       if (warningLevel) {
@@ -649,4 +656,30 @@ function resolveLocationName(
   const rostered = salonById(locationId)?.name ?? null;
   if (!isDemoMode()) return rostered;
   return requested ?? rostered;
+}
+
+/*
+ * AI_READS_CODE_CHECKS_ENABLED: a value the chat's reader took from the
+ * manager's words, accepted here only when its quote is still in the manager
+ * turns this request carries (`ai/reader/recheck.ts`). Off, nothing.
+ */
+function readerChecks(card: { checkedReading?: unknown; conversation?: unknown }) {
+  if (!aiReadsCodeChecksEnabled() || !card.checkedReading) return null;
+  return recheckCardReading(card.checkedReading, turnsOf(card.conversation), businessToday());
+}
+
+function readerWarningLevel(card: { checkedReading?: unknown; conversation?: unknown }): string | null {
+  return readerChecks(card)?.warningLevel ?? null;
+}
+
+function readerAmount(card: { checkedReading?: unknown; conversation?: unknown }): string | null {
+  return readerChecks(card)?.payrollAmount ?? null;
+}
+
+function readerSamePerson(
+  card: { checkedReading?: unknown; conversation?: unknown; employeeName?: string },
+  resolvedName: string | undefined,
+): boolean {
+  if (!aiReadsCodeChecksEnabled() || !card.checkedReading || !resolvedName || !card.employeeName) return false;
+  return readerNamesCardEmployee(card.checkedReading, turnsOf(card.conversation), card.employeeName, resolvedName);
 }

@@ -143,6 +143,7 @@ import { keepManagerActionPlan } from "./manager-action-plan-reply";
 import { withJobTitleFromWords } from "./job-title-from-words";
 import { withFreshDateReask } from "./date-reask-fresh";
 import { withWarningLevelFromClause } from "./warning-level-clause";
+import { readerPropose, startFormReading } from "./reader/hook";
 
 /** SENSITIVE_DEFAULTS_REDACT_ENABLED: a default password format or SSN digits are never shown to the model. */
 function withoutSensitiveChunks<T extends { content: string }>(chunks: T[]): T[] {
@@ -415,13 +416,19 @@ async function answerQuestionCore(
     let manualRead: ReturnType<SupabaseKnowledgeProvider["fetchOfficialPolicyManual"]> | null = null;
     const readManual = () =>
       (manualRead ??= new SupabaseKnowledgeProvider().fetchOfficialPolicyManual(ACTIVE_BRAND.knowledgeScopeId));
+    /*
+     * AI_READS_CODE_CHECKS_ENABLED: the reader starts here, beside the
+     * proposal, and is merged into it once today's code reading is known
+     * (`reader/hook.ts`). Off, `readerPropose` is the proposal call itself.
+     */
+    const reading = askedQuestion ? null : startFormReading(request, actor);
     const proposalQuestion = await questionForProposal(request, actor);
     const proposal = askedQuestion ? null : await deliverFormProposal({
       request,
       actor,
       question: proposalQuestion,
       decorate: (response) => decorateFormAnswer(request, actor, response),
-      propose: (question) => proposeFormForTurn({
+      propose: readerPropose(reading, request, (question) => proposeFormForTurn({
       history: request.history,
       question,
       questionMessageId: request.questionMessageId,
@@ -468,7 +475,7 @@ async function answerQuestionCore(
        * `prior-forms.ts`.
        */
       priorFormsOnFile: (employeeName, locationId) => priorFormsReadingForChat(actor, employeeName, locationId),
-    }),
+    })),
     });
     // Flags off: decoration returns the same proposal, and the forms-library
     // answer returns here, before retrieval.

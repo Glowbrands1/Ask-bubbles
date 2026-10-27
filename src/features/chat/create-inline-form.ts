@@ -157,6 +157,12 @@ export async function createInlineForm({
        * already given is never this. Revalidated by the route.
        */
       ...(proposal.warningLevel ? { warningLevel: proposal.warningLevel } : {}),
+      /*
+       * AI_READS_CODE_CHECKS_ENABLED: what the reader took from the manager's
+       * words, each with its quote. Absent with the flag off. The route checks
+       * every quote again against `conversation` below.
+       */
+      ...(proposal.checkedReading ? { checkedReading: proposal.checkedReading } : {}),
       locationId: proposal.locationId,
       source: "assistant",
       /*
@@ -228,7 +234,11 @@ export async function createInlineForm({
     const drafted = await call<{ notice?: unknown }>(`/api/forms/instances/${reference.instanceId}/draft`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ notes: notes.text }),
+      body: JSON.stringify({
+        notes: notes.text,
+        // AI_READS_CODE_CHECKS_ENABLED: checked again against `notes` by the draft route. Absent with the flag off.
+        ...(proposal.checkedReading ? { checkedReading: proposal.checkedReading } : {}),
+      }),
     });
     const notice = typeof drafted?.notice === "string" && drafted.notice.trim() !== "" ? drafted.notice : null;
     return { reference, draftWarning: null, draftNotice: notice };

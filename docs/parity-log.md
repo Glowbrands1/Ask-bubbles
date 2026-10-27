@@ -878,3 +878,7 @@ FOLLOW_UP_CITATION_FIELD_ENABLED is in both apps. GRAMMAR_ASK_NOT_ACCOUNT_ENABLE
 ## 27 Oct 2026: S1 follow-ups — level/step clause (both apps); title case (sibling-only)
 
 LEVEL_STEP_NOT_ACCOUNT_ENABLED is in both apps (here the Issue, there the Observation). JOB_TITLE_CASE_ENABLED is not needed here: QA's S1 turns through this app's chat give "Makery Associate" from the title list. (The sibling app dropped its APP_SENTENCES_NOT_ACCOUNT flag before shipping; this app's card shows no state sentences either.) WARNING_LEVEL_AND_CLAUSE's saved-draft fix (QA B1) is this app's: the sibling app's live draft already ticked Written.
+
+## 27 Oct 2026: AI reads, code checks (both apps; this app's hook is its own)
+
+AI_READS_CODE_CHECKS_ENABLED (default off, same name in both apps). Ported from the sibling app's branch `claude/code2-ai-reads-code-checks` (c23bdad, not yet on its main): the tool `record_form_reading`, its schema, instructions and timed call, the code checks, the merge rule ("a field today's readers settled stays; one they left open is filled"; a disagreement is traced), and the record/replay format, with this app's stores, roster and wording. The hook is this app's: it has no live slot call, so the reader runs beside the form proposal and hands each filled value to the code readers as the app's own line ("The employee is …"), the card carries the passed quotes, and the create and draft routes check them again (`src/lib/ai/reader/hook.ts`, `recheck.ts`).
