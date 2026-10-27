@@ -972,6 +972,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "WARNING_LEVEL_AND_CLAUSE_ENABLED",
   "LEVEL_STEP_NOT_ACCOUNT_ENABLED",
   "FIRST_NAME_ASK_ENABLED",
+  "UNKNOWN_NAME_ASK_ENABLED",
   "JOB_TITLE_APPOSITION_ENABLED",
   "EXIT_READBACK_JOB_TITLE_ENABLED",
   "FOLLOW_UP_CITATION_FIELD_ENABLED",
@@ -1343,4 +1344,14 @@ export function levelStepNotAccountEnabled(): boolean {
  */
 export function firstNameAskEnabled(): boolean {
   return envFlag("FIRST_NAME_ASK_ENABLED");
+}
+
+/**
+ * A typed name that is not on the directory is named back once, and the name
+ * question is never shown twice in a row (QA BF7 live, 27 Oct 2026): the same
+ * "Who is this Corrective Action Form for?" came back five times while the
+ * typed name was never read. See `ai/unknown-name-ask.ts`. Off, as before.
+ */
+export function unknownNameAskEnabled(): boolean {
+  return envFlag("UNKNOWN_NAME_ASK_ENABLED");
 }
