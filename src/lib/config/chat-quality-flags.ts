@@ -979,6 +979,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "AMOUNT_UNKNOWN_ACK_ENABLED",
   "ADDITIONAL_LOCATION_TAKEN_ENABLED",
   "OUT_OF_SCOPE_PLACE_SAID_ENABLED",
+  "FORM_TYPE_SWITCH_ENABLED",
   "NEXT_PUBLIC_CARD_CHANGE_ENABLED",
   "ACCOUNT_ONLY_POLICY_QUERY_ENABLED",
   "RELATIVE_DATE_READER_ENABLED",
@@ -1547,4 +1548,13 @@ export function additionalLocationTakenEnabled(): boolean {
  */
 export function outOfScopePlaceSaidEnabled(): boolean {
   return envFlag("OUT_OF_SCOPE_PLACE_SAID_ENABLED");
+}
+
+/**
+ * While the card is open, "change to coaching" / "change to ca" switch it to
+ * the other form (Pau, 28 Oct 2026; same flag in both apps). See
+ * `ai/form-type-switch.ts`. Off, as before.
+ */
+export function formTypeSwitchEnabled(): boolean {
+  return envFlag("FORM_TYPE_SWITCH_ENABLED");
 }
