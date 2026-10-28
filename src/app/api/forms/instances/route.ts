@@ -54,7 +54,7 @@ import {
   draftDedupeEnabled,
   payrollDeductAmountFieldEnabled,
   typoReadingRoutesEnabled,
-  aiReadsCodeChecksEnabled,
+  checkedReadingEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { readerNamesCardEmployee, recheckCardReading, turnsOf } from "@/lib/ai/reader/recheck";
 import { incidentFingerprint } from "@/lib/forms/incident-key";
@@ -685,7 +685,7 @@ async function readingTurns<T extends { role: string; content: string }>(turns: 
  * turns this request carries (`ai/reader/recheck.ts`). Off, nothing.
  */
 function readerChecks(card: { checkedReading?: unknown; conversation?: unknown }) {
-  if (!aiReadsCodeChecksEnabled() || !card.checkedReading) return null;
+  if (!checkedReadingEnabled() || !card.checkedReading) return null;
   return recheckCardReading(card.checkedReading, turnsOf(card.conversation), businessToday());
 }
 
@@ -701,6 +701,6 @@ function readerSamePerson(
   card: { checkedReading?: unknown; conversation?: unknown; employeeName?: string },
   resolvedName: string | undefined,
 ): boolean {
-  if (!aiReadsCodeChecksEnabled() || !card.checkedReading || !resolvedName || !card.employeeName) return false;
+  if (!checkedReadingEnabled() || !card.checkedReading || !resolvedName || !card.employeeName) return false;
   return readerNamesCardEmployee(card.checkedReading, turnsOf(card.conversation), card.employeeName, resolvedName);
 }

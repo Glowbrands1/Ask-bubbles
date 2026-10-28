@@ -992,6 +992,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "EXIT_READBACK_JOB_TITLE_ENABLED",
   "FOLLOW_UP_CITATION_FIELD_ENABLED",
   "AI_READS_CODE_CHECKS_ENABLED",
+  "LAST_FIRST_NAME_READ_ENABLED",
 ] as const;
 
 /**
@@ -1360,6 +1361,22 @@ export function levelStepNotAccountEnabled(): boolean {
  */
 export function aiReadsCodeChecksEnabled(): boolean {
   return envFlag("AI_READS_CODE_CHECKS_ENABLED");
+}
+
+/**
+ * "Calder, Remy" is read as Remy Calder without a model (ported from the sibling
+ * app, QA 27 Oct 2026; same flag in both apps): the AI reader's one measured win,
+ * by the reader's own checks alone. A "Last, First" pair in the manager's turns
+ * that fits exactly one person on the scoped roster fills an employee today's
+ * readers left open. See `ai/reader/last-first.ts`. Off, as before.
+ */
+export function lastFirstNameReadEnabled(): boolean {
+  return envFlag("LAST_FIRST_NAME_READ_ENABLED");
+}
+
+/** A checked reading reaches the card: the AI reader's, or the Last, First one. */
+export function checkedReadingEnabled(): boolean {
+  return aiReadsCodeChecksEnabled() || lastFirstNameReadEnabled();
 }
 
 /**

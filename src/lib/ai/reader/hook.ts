@@ -1,7 +1,7 @@
 import "server-only";
 
 import { withoutAppLines } from "@/lib/ai/app-sentences";
-import { aiReadsCodeChecksEnabled } from "@/lib/config/chat-quality-flags";
+import { aiReadsCodeChecksEnabled, checkedReadingEnabled } from "@/lib/config/chat-quality-flags";
 import { CLAUDE_READER_MODEL } from "@/lib/config/models";
 import { ACTIVE_BRAND } from "@/lib/brand";
 import { displayName } from "@/lib/forms/employee-match";
@@ -19,6 +19,7 @@ import type { GroundedPerson } from "../grounded-entities";
 import { currentRequestStart } from "../remap-incident";
 import type { AskRequest, AskResponse } from "../types";
 import { plainWords, type CheckContext, type CheckedReading } from "./check";
+import { lastFirstResult } from "./last-first";
 import { mergeCheckedReading } from "./merge";
 import { readFormRequest, type ReaderResult } from "./read";
 import type { FormReading } from "./schema";
@@ -51,6 +52,9 @@ import type { FormReading } from "./schema";
  * Off, or with no usable reply, nothing here runs or changes.
  */
 
+/** The Last, First reading found no pair: nothing to trace, nothing to merge. */
+const NO_PAIR = "no_pair";
+
 export interface StartedReading {
   readonly context: Promise<CheckContext>;
   readonly result: Promise<ReaderResult | { readonly fallback: string }>;
@@ -73,7 +77,7 @@ function scopedHistory<T extends Turn>(history: readonly T[], question: string):
 
 /** Starts the reader for a form turn. Null when the flag is off. Never throws. */
 export function startFormReading(request: AskRequest, actor: ChatActor): StartedReading | null {
-  if (!aiReadsCodeChecksEnabled()) return null;
+  if (!checkedReadingEnabled()) return null;
   const history = scopedHistory(request.history, request.question);
   const turns: Turn[] = [...history, { role: "user", content: request.question }];
   const context = (async (): Promise<CheckContext> => {
@@ -90,8 +94,12 @@ export function startFormReading(request: AskRequest, actor: ChatActor): Started
       today: request.context.todayIso,
     };
   })();
+  // LAST_FIRST_NAME_READ_ENABLED, with no AI reader: "Calder, Remy" is read by the reader's own checks, no model.
   const result = context.then(
-    (ready) => readFormRequest({ turns, context: ready }),
+    (ready) =>
+      aiReadsCodeChecksEnabled()
+        ? readFormRequest({ turns, context: ready })
+        : (lastFirstResult(ready) ?? { fallback: NO_PAIR }),
     () => ({ fallback: "error" }),
   );
   return { context, result };
@@ -124,11 +132,12 @@ async function loadHeadings(): Promise<string[]> {
  * guard counts the reader's usage from here.
  */
 function traceReader(read: ReaderResult | { readonly fallback: string }, filled: readonly string[] = [], disputed: readonly string[] = []): void {
+  if ("fallback" in read && read.fallback === NO_PAIR) return;
   updateChatTrace({
     reader:
       "fallback" in read
         ? { fallback: read.fallback }
-        : { model: CLAUDE_READER_MODEL, ms: read.ms, usage: read.usage, rejected: read.checked.rejected, filled: [...filled], disputed: [...disputed] },
+        : { ...(read.ms > 0 ? { model: CLAUDE_READER_MODEL } : { source: "last_first" }), ms: read.ms, usage: read.usage, rejected: read.checked.rejected, filled: [...filled], disputed: [...disputed] },
   });
 }
 
