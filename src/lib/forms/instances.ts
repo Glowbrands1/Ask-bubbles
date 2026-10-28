@@ -1251,7 +1251,6 @@ export async function findOpenRevision(instanceId: string): Promise<InstanceRow 
     .select("*")
     .eq("revises_instance_id", instanceId)
     .eq("status", "draft")
-    .is("archived_at", null)
     .order("created_at", { ascending: false })
     .limit(1);
   if (error) throw new Error(`Could not read the form's revisions: ${error.message}`);
