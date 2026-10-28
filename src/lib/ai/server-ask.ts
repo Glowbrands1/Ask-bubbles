@@ -146,6 +146,7 @@ import { keepManagerActionPlan } from "./manager-action-plan-reply";
 import { withJobTitleFromWords } from "./job-title-from-words";
 import { withFreshDateReask } from "./date-reask-fresh";
 import { withFirstNameAsk } from "./first-name-ask";
+import { withOutOfScopePlace } from "./out-of-scope-place";
 import { withAmountUnknownAck } from "./amount-unknown-ack";
 import { withUnreadDateAsk } from "./unread-date-ask";
 import { withUnknownNameAsk } from "./unknown-name-ask";
@@ -247,8 +248,9 @@ async function answerQuestionBody(
 ): Promise<AskResponse> {
   // UNREAD_DATE_ASK_ENABLED: "last tuesday" the reader could not read is asked about, never dated today in silence.
   // AMOUNT_UNKNOWN_ACK_ENABLED: "i dont know the amount" is answered, not met with the card alone.
+  // OUT_OF_SCOPE_PLACE_SAID_ENABLED: "Store: Kearney." from a manager not assigned there is told so.
   return keepManagerActionPlan(
-    withAmountUnknownAck(
+    withOutOfScopePlace(withAmountUnknownAck(
       withUnreadDateAsk(
         withPayrollTypoAnswer(
           withUnknownNameAsk(
@@ -263,7 +265,7 @@ async function answerQuestionBody(
         request,
       ),
       request,
-    ),
+    ), request, actor),
     request,
   );
 }
