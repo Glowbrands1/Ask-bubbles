@@ -146,6 +146,7 @@ import { keepManagerActionPlan } from "./manager-action-plan-reply";
 import { withJobTitleFromWords } from "./job-title-from-words";
 import { withFreshDateReask } from "./date-reask-fresh";
 import { withFirstNameAsk } from "./first-name-ask";
+import { withFirstNameAnswer, withFirstNameSuggestFor } from "./first-name-suggest";
 import { withFormTypeSwitch, withSwitchNote, withSwitchSources } from "./form-type-switch";
 import { withAdditionalStore } from "./additional-store";
 import { withOutOfScopePlace } from "./out-of-scope-place";
@@ -234,7 +235,8 @@ async function answerQuestionTraced(
   const names = typoReadingCopyEnabled() ? await protectedNameWords() : new Set<string>();
   // FORM_TYPE_SWITCH_ENABLED: "change to coaching" with the card open switches it to the other form.
   // ADDITIONAL_LOCATION_TAKEN_ENABLED: "Store: Kearney." from a manager who covers Kearney is read as the change it is.
-  const read = withFormTypeSwitch(withAdditionalStore(withTerseSlots(withNameBeforeTitle(withTypoReadingCopy(request, names))), actor));
+  // FIRST_NAME_SUGGEST_ENABLED: "yes" to "Is this for **Quinn Marlowe**?" is read as that name.
+  const read = withFormTypeSwitch(withAdditionalStore(withTerseSlots(withNameBeforeTitle(withTypoReadingCopy(withFirstNameAnswer(request), names))), actor));
   if (!chatTraceEnabled()) return answerQuestionBody(read, actor, memory);
   const draft = openChatTrace({
     conversationId: request.conversationId,
@@ -256,7 +258,8 @@ async function answerQuestionBody(
   // AMOUNT_UNKNOWN_ACK_ENABLED: "i dont know the amount" is answered, not met with the card alone.
   // OUT_OF_SCOPE_PLACE_SAID_ENABLED: "Store: Kearney." from a manager not assigned there is told so.
   // FORM_TYPE_SWITCH_AFTER_CREATE_NOTE_ENABLED: the form already created is said to stay as it is.
-  return keepManagerActionPlan(
+  // FIRST_NAME_SUGGEST_ENABLED: a first name alone is asked about from the manager's own roster.
+  return keepManagerActionPlan(await withFirstNameSuggestFor(
     // OUT_OF_SCOPE_PLACE_KEEPS_OWN_ENABLED: the card goes back to the manager's own store, or asks which.
     withSwitchNote(withOutOfScopePlace(withOwnPlace(withAmountUnknownAck(
       withUnreadDateAsk(
@@ -275,7 +278,8 @@ async function answerQuestionBody(
       request,
     ), request, actor), request, actor), request, "the Forms Register"),
     request,
-  );
+    actor,
+  ), request);
 }
 
 async function answerQuestionCore(
