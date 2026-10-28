@@ -17,9 +17,10 @@ import type { AccessScope, ChatFormProposal, ChatMessage } from "@/types";
  * "Sometimes a manager asks for a CA, then wants to change to coaching." With
  * the card open, the manager's next turn asks for the other form. The card
  * must switch to it and keep the employee, the date and the store. QA's
- * wordings, exactly. Today some switch and some keep the old form (or answer
- * with no card): these are the failing regression tests for the fix, which
- * is not built yet. Names are invented.
+ * wordings and Pau's own, exactly. Off (main), most kept the old form or
+ * answered with no card; FORM_TYPE_SWITCH_ENABLED switches them, keeping the
+ * account. After Create nothing changes (a separate decision). Names are
+ * invented.
  */
 
 const store: FakeStore = {
@@ -436,21 +437,26 @@ function setProduction(on: boolean) {
 const CA = "create a ca for dale ferris at dodge. she was late on 10/20";
 const COACHING = "create a coaching form for dale ferris at dodge. she was late on 10/20";
 
-function production() {
+const FLAG_SWITCH = "FORM_TYPE_SWITCH_ENABLED";
+
+function production(on = true) {
+  if (!saved.has(FLAG_SWITCH)) saved.set(FLAG_SWITCH, process.env[FLAG_SWITCH]);
   setProduction(true);
+  if (on) process.env[FLAG_SWITCH] = "true";
+  else delete process.env[FLAG_SWITCH];
   (state as { scope?: unknown }).scope = undefined;
   state.directory = [
     { id: "e-9", firstName: "Dale", lastName: "Ferris", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-264"], positionName: null },
   ];
 }
 
-type Card = { templateKey?: string; employeeName?: string | null; formDate?: string | null; locationId?: string | null };
+type Card = { templateKey?: string; employeeName?: string | null; formDate?: string | null; locationId?: string | null; issue?: string | null };
 
 async function switched(open: string, wording: string) {
   const thread = new Thread();
   const before = ((await thread.say(open)) as { formProposal?: Card }).formProposal!;
-  const after = ((await thread.say(wording)) as { formProposal?: Card }).formProposal;
-  return { before, after };
+  const answer = (await thread.say(wording)) as { formProposal?: Card; content: string };
+  return { before, after: answer.formProposal, content: answer.content };
 }
 
 const CASES: readonly (readonly [string, string, string, string])[] = [
@@ -480,10 +486,48 @@ describe("the open card switches form and keeps the employee, the date and the s
   beforeEach(() => production());
   for (const [open, from, wording, to] of CASES) {
     it(`${from} -> ${to}: "${wording}"`, async () => {
-      const { before, after } = await switched(open, wording);
+      const { before, after, content } = await switched(open, wording);
       expect(before.templateKey).toBe(from);
+      // The open card is never dropped, and the account is kept: never asked again what happened.
+      expect(content).not.toMatch(/haven't told me what happened/i);
       expect(after?.templateKey).toBe(to);
       expect([after?.employeeName, after?.formDate, after?.locationId]).toEqual([before.employeeName, before.formDate, before.locationId]);
+      if (to === "dpoa") expect(after?.issue).toBeTruthy();
     });
   }
+
+  it("a later turn keeps the new form", async () => {
+    const thread = new Thread();
+    await thread.say(CA);
+    await thread.say("change to coaching");
+    expect(((await thread.say("she was also on her phone")) as { formProposal?: Card }).formProposal?.templateKey).toBe("coaching");
+  });
+
+  it("asking for the form that is already open changes nothing", async () => {
+    const { after } = await switched(CA, "change to ca");
+    expect(after?.templateKey).toBe("dpoa");
+  });
+});
+
+describe("flag off, as main", () => {
+  it("Pau's wording keeps the old form or drops the card", async () => {
+    production(false);
+    expect((await switched(CA, "change to coaching")).after?.templateKey).toBe("dpoa");
+    expect((await switched(COACHING, "change to ca")).after).toBeUndefined();
+  });
+});
+
+describe("after Create, unchanged for now (a separate decision)", () => {
+  it("\"change to coaching\" on a created CA is answered as on main", async () => {
+    production(true);
+    const on = new Thread();
+    await on.say(CA);
+    await on.create();
+    const withFlag = ((await on.say("change to coaching")) as { formProposal?: Card }).formProposal?.templateKey ?? null;
+    production(false);
+    const off = new Thread();
+    await off.say(CA);
+    await off.create();
+    expect(withFlag).toBe(((await off.say("change to coaching")) as { formProposal?: Card }).formProposal?.templateKey ?? null);
+  });
 });
