@@ -1,4 +1,4 @@
-import { outOfScopePlaceSaidEnabled } from "@/lib/config/chat-quality-flags";
+import { outOfScopePlaceKeepsOwnEnabled, outOfScopePlaceSaidEnabled } from "@/lib/config/chat-quality-flags";
 import { ROSTER_STORE_INDEX, rosterLocationName } from "@/lib/forms/location-mention";
 import { authorizedLocationIds, namedStoreIds } from "@/lib/forms/location-scope";
 import { bareStoreReply, storeCorrection } from "@/lib/forms/store-confirmation";
@@ -22,6 +22,11 @@ import type { AskRequest, AskResponse } from "./types";
  */
 export function outOfScopeStoreLine(named: string, own: string): string {
   return `**${named}** isn't a store on your assignment, so the form stays at **${own}**.`;
+}
+
+/** With OUT_OF_SCOPE_PLACE_KEEPS_OWN_ENABLED and no store left on the card: which of the manager's. */
+export function outOfScopeStoreQuestion(named: string): string {
+  return `**${named}** isn't a store on your assignment, so I can't file a form against it. Which of your stores is this about?`;
 }
 
 const ALREADY_SAID = /isn['’]t a store on your assignment/;
@@ -48,9 +53,14 @@ export function withOutOfScopePlace(response: AskResponse, request: AskRequest, 
   if (ALREADY_SAID.test(response.content)) return response;
   const allowed = authorizedLocationIds(actor.scope);
   const own = response.formProposal.locationId;
-  if (allowed.length === 0 || !own || !allowed.includes(own)) return response;
   const named = storesNamed(request.question ?? "");
-  if (named.length !== 1 || allowed.includes(named[0]!)) return response;
+  if (allowed.length === 0 || named.length !== 1 || allowed.includes(named[0]!)) return response;
+  // OUT_OF_SCOPE_PLACE_KEEPS_OWN_ENABLED: a card left with no store asks which of the manager's stores.
+  if (!own && outOfScopePlaceKeepsOwnEnabled() && response.formProposal.locationResolution === "needs_selection") {
+    const namedOnly = rosterLocationName(named[0]!);
+    return namedOnly ? { ...response, content: `${response.content}\n\n${outOfScopeStoreQuestion(namedOnly)}` } : response;
+  }
+  if (!own || !allowed.includes(own)) return response;
   const namedName = rosterLocationName(named[0]!);
   const ownName = rosterLocationName(own);
   if (!namedName || !ownName) return response;

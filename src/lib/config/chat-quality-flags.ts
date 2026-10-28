@@ -979,6 +979,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "AMOUNT_UNKNOWN_ACK_ENABLED",
   "ADDITIONAL_LOCATION_TAKEN_ENABLED",
   "OUT_OF_SCOPE_PLACE_SAID_ENABLED",
+  "OUT_OF_SCOPE_PLACE_KEEPS_OWN_ENABLED",
   "NEXT_PUBLIC_CARD_CHANGE_ENABLED",
   "ACCOUNT_ONLY_POLICY_QUERY_ENABLED",
   "RELATIVE_DATE_READER_ENABLED",
@@ -1547,4 +1548,13 @@ export function additionalLocationTakenEnabled(): boolean {
  */
 export function outOfScopePlaceSaidEnabled(): boolean {
   return envFlag("OUT_OF_SCOPE_PLACE_SAID_ENABLED");
+}
+
+/**
+ * A card never holds a store the manager is not assigned to: it goes back to
+ * the manager's own, or asks which (Pau, 28 Oct 2026; same flag in both
+ * apps). See `ai/keeps-own-place.ts`. Off, as before.
+ */
+export function outOfScopePlaceKeepsOwnEnabled(): boolean {
+  return envFlag("OUT_OF_SCOPE_PLACE_KEEPS_OWN_ENABLED");
 }

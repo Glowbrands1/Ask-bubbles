@@ -930,3 +930,7 @@ QA asked whether "dale ferris", typed in lower case and not on the roster, shoul
 ## 28 Oct 2026: `guardEvidenceBasis` has no Ask Sunny twin (no change)
 
 This app's draft route runs `guardEvidenceBasis` (forms/evidence-basis.ts) on every drafted field, with no flag; Ask Sunny has no equivalent. When the model adds an unsaid "acknowledged …" to a sentence about a prior step ("… coached on October 16, 2026 regarding attendance and acknowledged the expectation."), the whole sentence is dropped, so the Observation can lose the prior-coaching sentence Ask Sunny keeps. QA saw this once (a test draft, since deleted) and closed it as not confirmed, likely model variance; the guard is a safety feature and stays. Reopen only on a manager's report, with their wording as the regression test.
+
+## 28 Oct 2026: a card never holds a store the manager is not assigned to — both apps (OUT_OF_SCOPE_PLACE_KEEPS_OWN_ENABLED)
+
+Ported from Ask Sunny, where the card took an unassigned salon from a later "Salon: …" turn and only Create refused it. Here the readers already keep a store-scoped manager's own store, so `ai/keeps-own-place.ts` is the same last check after them: a store outside the full scope (primary and every store also covered) on the card goes back to (1) the store the earlier turns gave it, else (2) the manager's only store, else (3) no store and "Which of your stores is this about?" — never a guess. An additional store is still taken. With OUT_OF_SCOPE_PLACE_SAID_ENABLED the reply says where the form stays, once. No protected file is edited.

@@ -148,6 +148,7 @@ import { withFreshDateReask } from "./date-reask-fresh";
 import { withFirstNameAsk } from "./first-name-ask";
 import { withAdditionalStore } from "./additional-store";
 import { withOutOfScopePlace } from "./out-of-scope-place";
+import { withOwnPlace } from "./keeps-own-place";
 import { withAmountUnknownAck } from "./amount-unknown-ack";
 import { withUnreadDateAsk } from "./unread-date-ask";
 import { withUnknownNameAsk } from "./unknown-name-ask";
@@ -252,7 +253,8 @@ async function answerQuestionBody(
   // AMOUNT_UNKNOWN_ACK_ENABLED: "i dont know the amount" is answered, not met with the card alone.
   // OUT_OF_SCOPE_PLACE_SAID_ENABLED: "Store: Kearney." from a manager not assigned there is told so.
   return keepManagerActionPlan(
-    withOutOfScopePlace(withAmountUnknownAck(
+    // OUT_OF_SCOPE_PLACE_KEEPS_OWN_ENABLED: the card goes back to the manager's own store, or asks which.
+    withOutOfScopePlace(withOwnPlace(withAmountUnknownAck(
       withUnreadDateAsk(
         withPayrollTypoAnswer(
           withUnknownNameAsk(
@@ -267,7 +269,7 @@ async function answerQuestionBody(
         request,
       ),
       request,
-    ), request, actor),
+    ), request, actor), request, actor),
     request,
   );
 }
