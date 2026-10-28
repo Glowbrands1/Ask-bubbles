@@ -146,7 +146,7 @@ import { keepManagerActionPlan } from "./manager-action-plan-reply";
 import { withJobTitleFromWords } from "./job-title-from-words";
 import { withFreshDateReask } from "./date-reask-fresh";
 import { withFirstNameAsk } from "./first-name-ask";
-import { withFormTypeSwitch, withSwitchNote } from "./form-type-switch";
+import { withFormTypeSwitch, withSwitchNote, withSwitchSources } from "./form-type-switch";
 import { withAdditionalStore } from "./additional-store";
 import { withOutOfScopePlace } from "./out-of-scope-place";
 import { withOwnPlace } from "./keeps-own-place";
@@ -219,7 +219,8 @@ export async function answerQuestion(
   if (passwordHelp) {
     return { content: passwordHelp, citations: [], coverage: "grounded" };
   }
-  return withoutSensitiveDefaults(await answerQuestionTraced(request, actor, memory), request.question);
+  // FORM_TYPE_SWITCH: the switched card is drafted from the account, never from the switch turn (read on the turns as sent).
+  return withSwitchSources(withoutSensitiveDefaults(await answerQuestionTraced(request, actor, memory), request.question), request);
 }
 
 async function answerQuestionTraced(
