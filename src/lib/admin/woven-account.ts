@@ -6,7 +6,7 @@ import { assertCanGrant, createAccountWithoutEmail } from "@/lib/admin/create-ac
 import { loadAccessPlan } from "@/lib/employees/woven/access/load";
 import { AUTO_PROVISION_ROLES } from "@/lib/employees/woven/access/plan";
 import type { PlannedRow } from "@/lib/employees/woven/access/types";
-import { DirectoryError, isRole, normalizeScope, type DirectoryActor } from "@/lib/admin/user-directory";
+import { DirectoryError, inviteUser, isRole, normalizeScope, type DirectoryActor } from "@/lib/admin/user-directory";
 import { isKnownAreaId } from "@/lib/locations";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { escapeLike } from "@/lib/supabase/like";
@@ -46,6 +46,13 @@ const squash = (v: string | null) => (v ?? "").toLowerCase().replace(/[^a-z0-9]/
 export async function createLinkedAccount(
   input: { externalEmployeeId: string; role: unknown; scope: unknown; confirmAdmin?: unknown },
   actor: DirectoryActor,
+  /**
+   * NEW_HIRE_INVITES_ENABLED only (`new-hire-invites.ts`): the account is made
+   * by the invitation itself — active, `invited`, and Supabase emails the
+   * person their link — instead of disabled with nothing sent. A repair is
+   * never made this way.
+   */
+  options: { invite?: { redirectTo: string } } = {},
 ): Promise<{ outcome: CreateOutcome; userId: string; linked: boolean }> {
   /* Role and scope are validated by the same function the account creation uses; checked here first so a repair is held to it too. */
   if (!isRole(input.role)) throw new DirectoryError("invalid_input", "Choose a role for this person.");
@@ -94,7 +101,12 @@ export async function createLinkedAccount(
       managed_location: false,
       managed_role: false,
       ...(method === "provisioned" ? { provisioned_by_source: "woven", first_provisioned_at: new Date().toISOString() } : {}),
-      reason: method === "provisioned" ? "Account created for a Woven employee by an administrator" : "Link repaired by an administrator (exact email match)",
+      reason:
+        method !== "provisioned"
+          ? "Link repaired by an administrator (exact email match)"
+          : options.invite
+            ? "Account created and invited for a Woven new hire (NEW_HIRE_INVITES_ENABLED)"
+            : "Account created for a Woven employee by an administrator",
       set_by: setBy,
     });
     return !error;
@@ -104,6 +116,8 @@ export async function createLinkedAccount(
   const { data: existing } = await db.from("app_users").select("id, role").ilike("email", escapeLike(email)).maybeSingle();
   const { data: linkedToEmployee } = await db.from("employee_account_links").select("app_user_id").eq("external_employee_id", input.externalEmployeeId).maybeSingle();
   if (existing) {
+    // The new-hire invitation only ever creates; an existing account is left to an administrator.
+    if (options.invite) throw new DirectoryError("duplicate_email", "Somebody already has an Ask Bubbles account with that email address.", 409);
     const id = String(existing.id);
     if (linkedToEmployee) {
       throw new DirectoryError("duplicate_email", "This employee already has a linked Ask Bubbles account.", 409);
@@ -124,10 +138,9 @@ export async function createLinkedAccount(
     throw new DirectoryError("duplicate_email", "This employee is already linked to an account with a different email.", 409);
   }
 
-  const user = await createAccountWithoutEmail(
-    { email, displayName: name, role, scope, confirmAdmin: input.confirmAdmin },
-    actor,
-  );
+  const user = options.invite
+    ? await inviteUser({ email, displayName: name, role, scope, redirectTo: options.invite.redirectTo }, actor)
+    : await createAccountWithoutEmail({ email, displayName: name, role, scope, confirmAdmin: input.confirmAdmin }, actor);
   const linked = await link(user.id, "provisioned", true);
   return { outcome: "created", userId: user.id, linked };
 }
