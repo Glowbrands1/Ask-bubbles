@@ -147,6 +147,7 @@ import { withJobTitleFromWords } from "./job-title-from-words";
 import { withFreshDateReask } from "./date-reask-fresh";
 import { withFirstNameAsk } from "./first-name-ask";
 import { withFormTypeSwitch } from "./form-type-switch";
+import { withAdditionalStore } from "./additional-store";
 import { withOutOfScopePlace } from "./out-of-scope-place";
 import { withAmountUnknownAck } from "./amount-unknown-ack";
 import { withUnreadDateAsk } from "./unread-date-ask";
@@ -230,7 +231,8 @@ async function answerQuestionTraced(
   // TYPO_READING_COPY_ENABLED: "coahed", "amont", "Manger" are read as the words they can only be; names never.
   const names = typoReadingCopyEnabled() ? await protectedNameWords() : new Set<string>();
   // FORM_TYPE_SWITCH_ENABLED: "change to coaching" with the card open switches it to the other form.
-  const read = withFormTypeSwitch(withTerseSlots(withNameBeforeTitle(withTypoReadingCopy(request, names))));
+  // ADDITIONAL_LOCATION_TAKEN_ENABLED: "Store: Kearney." from a manager who covers Kearney is read as the change it is.
+  const read = withFormTypeSwitch(withAdditionalStore(withTerseSlots(withNameBeforeTitle(withTypoReadingCopy(request, names))), actor));
   if (!chatTraceEnabled()) return answerQuestionBody(read, actor, memory);
   const draft = openChatTrace({
     conversationId: request.conversationId,
