@@ -977,6 +977,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "TYPO_READING_COPY_ENABLED",
   "DAY_WORD_TYPOS_ENABLED",
   "AMOUNT_UNKNOWN_ACK_ENABLED",
+  "ADDITIONAL_LOCATION_TAKEN_ENABLED",
   "OUT_OF_SCOPE_PLACE_SAID_ENABLED",
   "NEXT_PUBLIC_CARD_CHANGE_ENABLED",
   "ACCOUNT_ONLY_POLICY_QUERY_ENABLED",
@@ -1528,6 +1529,15 @@ export function typoReadingRoutesEnabled(): boolean {
  */
 export function amountUnknownAckEnabled(): boolean {
   return envFlag("AMOUNT_UNKNOWN_ACK_ENABLED");
+}
+
+/**
+ * A short turn naming one of the manager's own stores, primary or additional,
+ * is read as the change of store it is (Pau, 28 Oct 2026; this app only).
+ * See `ai/additional-store.ts`. Off, as before.
+ */
+export function additionalLocationTakenEnabled(): boolean {
+  return envFlag("ADDITIONAL_LOCATION_TAKEN_ENABLED");
 }
 
 /**
