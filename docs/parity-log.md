@@ -942,3 +942,19 @@ Ported from Ask Sunny (same panel file). Beside "Edit as new draft" on a finaliz
 ## 28 Oct 2026: after Create, "change to coaching" starts the other form and leaves the draft — both apps (FORM_TYPE_SWITCH_AFTER_CREATE_NOTE_ENABLED)
 
 Ported from Ask Sunny. Pau's decision A: once this conversation's form exists, a request for the other form leaves the existing form untouched (never changed, archived or deleted) and says so, then starts the other form's card. On main here, Pau's wordings after Create kept the CA or answered with no card. With the flag on the chat route reads the switch turn as the request that asked for the first form with the other form named and drops the open form from the turn, so the new card keeps the employee, the date, the store and the account; the reply opens with "You already have a Corrective Action draft for <name>. I'll start a Coaching Form too, and the Corrective Action draft stays in the Forms Register until you delete it."
+
+## 28 Oct 2026: a switched form is drafted from the account, never from the switch turn — both apps (FORM_TYPE_SWITCH_ENABLED / FORM_TYPE_SWITCH_AFTER_CREATE_NOTE_ENABLED)
+
+QA live here (after-Create note on): the new Coaching draft read "Observed:\nA change to coaching was noted for <name>." — drafted from the switch turn alone. `withSwitchSources` (`ai/form-type-switch.ts`) leaves out every turn that asked for the other form and, after Create, takes the turns from the one that asked for the first form. Here it reads the turns as the manager sent them (this app's answer chain sees the switch reading's rewritten turns), so it runs on the answer from `answerQuestionBody`. Same change in Ask Sunny.
+
+## 28 Oct 2026: payroll deduct changed from the finalized form's panel rebuilds the draft's Action Plan — both apps (CARD_CHANGE_PLAN_REBUILD_ENABLED)
+
+Ported from Ask Sunny. When payroll deduct goes No → Yes through the Change something panel, the new revision draft's Action Plan is rebuilt with the existing `syncCorrectiveActionPlan` (only a plan the app built; never the signed form). With production's plan wording a Yes without an amount rebuilds nothing, and the panel keeps its notice.
+
+## 28 Oct 2026: an archived revision draft and "Edit as new draft" — open finding, waiting on Pau
+
+This app's `findOpenRevision` skips archived revision drafts (Ask Sunny's does not), but the unique index `form_instances_one_open_revision` still counts them: "Edit as new draft" on a form whose only open revision draft is archived fails here ("duplicate key … form_instances_one_open_revision"), while Ask Sunny reopens that draft. `instances.ts` is protected; the fix is Pau's decision.
+
+## 28 Oct 2026: a card never holds a store the manager is not assigned to — both apps (OUT_OF_SCOPE_PLACE_KEEPS_OWN_ENABLED)
+
+Ported from Ask Sunny, where the card took an unassigned salon from a later "Salon: …" turn and only Create refused it. Here the readers already keep a store-scoped manager's own store, so `ai/keeps-own-place.ts` is the same last check after them: a store outside the full scope (primary and every store also covered) on the card goes back to (1) the store the earlier turns gave it, else (2) the manager's only store, else (3) no store and "Which of your stores is this about?" — never a guess. An additional store is still taken. With OUT_OF_SCOPE_PLACE_SAID_ENABLED the reply says where the form stays, once. No protected file is edited.

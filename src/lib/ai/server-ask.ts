@@ -146,9 +146,10 @@ import { keepManagerActionPlan } from "./manager-action-plan-reply";
 import { withJobTitleFromWords } from "./job-title-from-words";
 import { withFreshDateReask } from "./date-reask-fresh";
 import { withFirstNameAsk } from "./first-name-ask";
-import { withFormTypeSwitch, withSwitchNote } from "./form-type-switch";
+import { withFormTypeSwitch, withSwitchNote, withSwitchSources } from "./form-type-switch";
 import { withAdditionalStore } from "./additional-store";
 import { withOutOfScopePlace } from "./out-of-scope-place";
+import { withOwnPlace } from "./keeps-own-place";
 import { withAmountUnknownAck } from "./amount-unknown-ack";
 import { withUnreadDateAsk } from "./unread-date-ask";
 import { withUnknownNameAsk } from "./unknown-name-ask";
@@ -218,7 +219,8 @@ export async function answerQuestion(
   if (passwordHelp) {
     return { content: passwordHelp, citations: [], coverage: "grounded" };
   }
-  return withoutSensitiveDefaults(await answerQuestionTraced(request, actor, memory), request.question);
+  // FORM_TYPE_SWITCH: the switched card is drafted from the account, never from the switch turn (read on the turns as sent).
+  return withSwitchSources(withoutSensitiveDefaults(await answerQuestionTraced(request, actor, memory), request.question), request);
 }
 
 async function answerQuestionTraced(
@@ -255,7 +257,8 @@ async function answerQuestionBody(
   // OUT_OF_SCOPE_PLACE_SAID_ENABLED: "Store: Kearney." from a manager not assigned there is told so.
   // FORM_TYPE_SWITCH_AFTER_CREATE_NOTE_ENABLED: the form already created is said to stay as it is.
   return keepManagerActionPlan(
-    withSwitchNote(withOutOfScopePlace(withAmountUnknownAck(
+    // OUT_OF_SCOPE_PLACE_KEEPS_OWN_ENABLED: the card goes back to the manager's own store, or asks which.
+    withSwitchNote(withOutOfScopePlace(withOwnPlace(withAmountUnknownAck(
       withUnreadDateAsk(
         withPayrollTypoAnswer(
           withUnknownNameAsk(
@@ -270,7 +273,7 @@ async function answerQuestionBody(
         request,
       ),
       request,
-    ), request, actor), request, "the Forms Register"),
+    ), request, actor), request, actor), request, "the Forms Register"),
     request,
   );
 }
