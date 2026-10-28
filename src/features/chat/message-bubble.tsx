@@ -24,6 +24,7 @@ import { instanceRefFor, isProposalSuperseded, proposalsOf } from "@/lib/forms/p
 import type { ChatFormInstanceRef, ChatFormProposal, ChatMessage } from "@/types";
 import { chatErrorTitle } from "./chat-error";
 import { FormPicker } from "./form-picker";
+import { CardChangePanel } from "./card-change-panel";
 import { logTurnEvent } from "@/lib/analytics/telemetry";
 import { reusedDraftNotice } from "@/lib/forms/reused-draft-notice";
 
@@ -204,6 +205,7 @@ export function MessageBubble({
               ) : null}
             </React.Fragment>
           ))}
+          <CardChangePanel proposal={proposalsOf(message).length === 1 ? proposalsOf(message)[0] : null} created={proposalsOf(message).some((proposal) => instanceRefFor(message, proposal.proposalId))} conversation={conversation ?? []} placeLabel={LOCATION_LABEL} onSend={onSuggestion} />
           {proposalsOf(message).length === 0 && message.formInstanceRef ? (
             /*
               A FORM ALREADY ON FILE, OPENED BY THIS TURN — "edit the exit
