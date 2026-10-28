@@ -958,3 +958,8 @@ This app's `findOpenRevision` skips archived revision drafts (Ask Sunny's does n
 ## 28 Oct 2026: a card never holds a store the manager is not assigned to — both apps (OUT_OF_SCOPE_PLACE_KEEPS_OWN_ENABLED)
 
 Ported from Ask Sunny, where the card took an unassigned salon from a later "Salon: …" turn and only Create refused it. Here the readers already keep a store-scoped manager's own store, so `ai/keeps-own-place.ts` is the same last check after them: a store outside the full scope (primary and every store also covered) on the card goes back to (1) the store the earlier turns gave it, else (2) the manager's only store, else (3) no store and "Which of your stores is this about?" — never a guess. An additional store is still taken. With OUT_OF_SCOPE_PLACE_SAID_ENABLED the reply says where the form stays, once. No protected file is edited.
+
+## 28 Oct 2026: an archived revision draft is reopened by "Edit as new draft" — Ask Bubbles now matches Ask Sunny (Pau's option C)
+
+Pau approved (28 Oct 2026, "2. C, yes") removing exactly one line from this app's protected `src/lib/forms/instances.ts`: `findOpenRevision`'s `.is("archived_at", null)`. With it, a finalized form whose only open revision draft was archived could not be edited: the new revision hit the unique index `form_instances_one_open_revision` (which counts archived drafts) and failed with "duplicate key …". Now the archived draft is found and reopened, as Ask Sunny always did. Regression test: `src/lib/forms/archived-open-revision.test.ts` (red before, green after). Ask Sunny unchanged.
+
