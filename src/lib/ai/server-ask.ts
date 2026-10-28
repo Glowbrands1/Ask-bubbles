@@ -146,7 +146,7 @@ import { keepManagerActionPlan } from "./manager-action-plan-reply";
 import { withJobTitleFromWords } from "./job-title-from-words";
 import { withFreshDateReask } from "./date-reask-fresh";
 import { withFirstNameAsk } from "./first-name-ask";
-import { withFormTypeSwitch, withSwitchNote } from "./form-type-switch";
+import { withFormTypeSwitch, withSwitchNote, withSwitchSources } from "./form-type-switch";
 import { withAdditionalStore } from "./additional-store";
 import { withOutOfScopePlace } from "./out-of-scope-place";
 import { withAmountUnknownAck } from "./amount-unknown-ack";
@@ -233,7 +233,8 @@ async function answerQuestionTraced(
   // FORM_TYPE_SWITCH_ENABLED: "change to coaching" with the card open switches it to the other form.
   // ADDITIONAL_LOCATION_TAKEN_ENABLED: "Store: Kearney." from a manager who covers Kearney is read as the change it is.
   const read = withFormTypeSwitch(withAdditionalStore(withTerseSlots(withNameBeforeTitle(withTypoReadingCopy(request, names))), actor));
-  if (!chatTraceEnabled()) return answerQuestionBody(read, actor, memory);
+  // FORM_TYPE_SWITCH: the switched card is drafted from the account, never from the switch turn (read on the turns as sent).
+  if (!chatTraceEnabled()) return withSwitchSources(await answerQuestionBody(read, actor, memory), request);
   const draft = openChatTrace({
     conversationId: request.conversationId,
     messageId: request.questionMessageId,
@@ -241,7 +242,7 @@ async function answerQuestionTraced(
     originalQuery: request.question,
     formInProgress: Boolean(request.continueProposalTemplateKey || request.openForm || request.activeFormInstanceId),
   });
-  return finishChatTrace(draft, () => answerQuestionBody(read, actor, memory));
+  return withSwitchSources(await finishChatTrace(draft, () => answerQuestionBody(read, actor, memory)), request);
 }
 
 /** Last on every path: the Corrective Action card's Action Plan is the manager's or none. */
