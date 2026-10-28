@@ -1532,8 +1532,8 @@ export function amountUnknownAckEnabled(): boolean {
 
 /**
  * A short turn naming one of the manager's own stores, primary or additional,
- * is read as the change of store it is (Pau, 28 Oct 2026; this app only, Ask
- * Sunny already does). See `ai/additional-store.ts`. Off, as before.
+ * is read as the change of store it is (Pau, 28 Oct 2026; this app only).
+ * See `ai/additional-store.ts`. Off, as before.
  */
 export function additionalLocationTakenEnabled(): boolean {
   return envFlag("ADDITIONAL_LOCATION_TAKEN_ENABLED");

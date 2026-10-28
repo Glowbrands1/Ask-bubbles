@@ -7,8 +7,8 @@ import type { ChatActor } from "./form-proposal";
 import type { AskRequest } from "./types";
 
 /**
- * ADDITIONAL_LOCATION_TAKEN_ENABLED (Pau, 28 Oct 2026; this app only — Ask Sunny
- * already takes an additional salon from these turns):
+ * ADDITIONAL_LOCATION_TAKEN_ENABLED (Pau, 28 Oct 2026; this app only, see
+ * docs/parity-log.md):
  * a manager covering West Dodge Rd and Kearney opened a form at Dodge, then
  * said "Store: Kearney.", "kearney" or "the store is Kearney". The short turn
  * was not read as a change, so both stores were read together: the reply asked
