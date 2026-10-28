@@ -165,7 +165,7 @@ import { flaggedCitationWrite } from "@/lib/ai/policy-citation-fields";
 import { fieldLines } from "@/lib/ai/intake-augment";
 import {
   actionPlanManagerOnlyEnabled,
-  aiReadsCodeChecksEnabled,
+  checkedReadingEnabled,
   actionPlanSentencesEnabled,
   attendanceActionPlanEnabled,
   hideNoPolicyMatchNoticeEnabled,
@@ -1639,7 +1639,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
          * (`ai/reader/recheck.ts`). Off, as before.
          */
         // Never over the manager's own values: not on a redraft that keeps them, and only beside the rows already there.
-        if (aiReadsCodeChecksEnabled() && body.readerQuotes && !body.keepManagerValues) {
+        if (checkedReadingEnabled() && body.readerQuotes && !body.keepManagerValues) {
           priorActions.value = withReaderPriorLines(
             priorActions.value,
             readerPriorLines(body.readerQuotes, notes, businessToday(), loaded.instance.formDate),
