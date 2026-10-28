@@ -947,6 +947,14 @@ Ported from Ask Sunny. Pau's decision A: once this conversation's form exists, a
 
 QA live here (after-Create note on): the new Coaching draft read "Observed:\nA change to coaching was noted for <name>." — drafted from the switch turn alone. `withSwitchSources` (`ai/form-type-switch.ts`) leaves out every turn that asked for the other form and, after Create, takes the turns from the one that asked for the first form. Here it reads the turns as the manager sent them (this app's answer chain sees the switch reading's rewritten turns), so it runs on the answer from `answerQuestionBody`. Same change in Ask Sunny.
 
+## 28 Oct 2026: payroll deduct changed from the finalized form's panel rebuilds the draft's Action Plan — both apps (CARD_CHANGE_PLAN_REBUILD_ENABLED)
+
+Ported from Ask Sunny. When payroll deduct goes No → Yes through the Change something panel, the new revision draft's Action Plan is rebuilt with the existing `syncCorrectiveActionPlan` (only a plan the app built; never the signed form). With production's plan wording a Yes without an amount rebuilds nothing, and the panel keeps its notice.
+
+## 28 Oct 2026: an archived revision draft and "Edit as new draft" — open finding, waiting on Pau
+
+This app's `findOpenRevision` skips archived revision drafts (Ask Sunny's does not), but the unique index `form_instances_one_open_revision` still counts them: "Edit as new draft" on a form whose only open revision draft is archived fails here ("duplicate key … form_instances_one_open_revision"), while Ask Sunny reopens that draft. `instances.ts` is protected; the fix is Pau's decision.
+
 ## 28 Oct 2026: a card never holds a store the manager is not assigned to — both apps (OUT_OF_SCOPE_PLACE_KEEPS_OWN_ENABLED)
 
 Ported from Ask Sunny, where the card took an unassigned salon from a later "Salon: …" turn and only Create refused it. Here the readers already keep a store-scoped manager's own store, so `ai/keeps-own-place.ts` is the same last check after them: a store outside the full scope (primary and every store also covered) on the card goes back to (1) the store the earlier turns gave it, else (2) the manager's only store, else (3) no store and "Which of your stores is this about?" — never a guess. An additional store is still taken. With OUT_OF_SCOPE_PLACE_SAID_ENABLED the reply says where the form stays, once. No protected file is edited.
