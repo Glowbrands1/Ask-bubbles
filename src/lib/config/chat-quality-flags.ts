@@ -983,6 +983,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FORM_TYPE_SWITCH_ENABLED",
   "FORM_TYPE_SWITCH_AFTER_CREATE_NOTE_ENABLED",
   "CARD_CHANGE_PLAN_REBUILD_ENABLED",
+  "FIRST_NAME_SUGGEST_ENABLED",
   "NEXT_PUBLIC_CARD_CHANGE_ENABLED",
   "NEXT_PUBLIC_CARD_CHANGE_FINALIZED_ENABLED",
   "ACCOUNT_ONLY_POLICY_QUERY_ENABLED",
@@ -1590,3 +1591,15 @@ export function formTypeSwitchAfterCreateNoteEnabled(): boolean {
 export function cardChangePlanRebuildEnabled(): boolean {
   return envFlag("CARD_CHANGE_PLAN_REBUILD_ENABLED");
 }
+
+/**
+ * A first name alone ("quinn") is asked about from the manager's own roster —
+ * "Did you mean **Quinn Marlowe** or **Quinn Ashby**?" or "Is this for
+ * **Quinn Marlowe**?" — instead of a card for the bare name or a plain "who is
+ * this for" (QA and Pau, 28 Oct 2026; same flag in both apps). See
+ * `ai/first-name-suggest.ts`. Off, as before.
+ */
+export function firstNameSuggestEnabled(): boolean {
+  return envFlag("FIRST_NAME_SUGGEST_ENABLED");
+}
+
