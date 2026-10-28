@@ -102,7 +102,7 @@ const config = (over: Record<string, string> = {}) => readNewHireConfig({ ...ON,
 describe("the hourly run", () => {
   it("one invitation an hour, the oldest hire first; the rest wait", async () => {
     const f = fakes([ready("E1"), ready("E2"), ready("E3")], { E1: "2026-10-30", E2: "2026-10-28", E3: "2026-10-29" });
-    expect(await sendNewHireInvites({ config: config(), now: NOW }, f.deps)).toEqual({ status: "completed", sent: 1, failed: 0, waiting: 2, stoppedBy: null });
+    expect(await sendNewHireInvites({ config: config(), now: NOW }, f.deps)).toEqual({ status: "completed", sent: 1, failed: 0, skipped: 0, waiting: 2, stoppedBy: null });
     expect(f.made).toEqual(["E2"]);
   });
 
@@ -119,6 +119,47 @@ describe("the hourly run", () => {
     });
     expect(await sendNewHireInvites({ config: config({ NEW_HIRE_INVITES_PER_HOUR: "2" }), now: NOW }, f.deps)).toMatchObject({ sent: 0, failed: 1, stoppedBy: "email_rate_limited" });
     expect(f.deps.createAndInvite).toHaveBeenCalledTimes(1);
+  });
+
+  /*
+   * QA, 28 Oct 2026: "If the oldest new hire cannot be created (e.g.
+   * createLinkedAccount throws duplicate_email because an unlinked account
+   * with that email already exists …) that person fills the slot every hour
+   * and nobody behind them ever gets a link."
+   */
+  it("a duplicate-email oldest hire is skipped and the next one gets the hour's link", async () => {
+    const f = fakes([ready("E1"), ready("E2")], { E1: "2026-10-28", E2: "2026-10-29" });
+    f.deps.createAndInvite.mockImplementation(async (row: PlannedRow) => {
+      if (row.externalEmployeeId === "E1") throw new DirectoryError("duplicate_email", "taken", 409);
+      f.made.push(row.externalEmployeeId!);
+    });
+    expect(await sendNewHireInvites({ config: config(), now: NOW }, f.deps)).toEqual({
+      status: "completed",
+      sent: 1,
+      failed: 0,
+      skipped: 1,
+      waiting: 1,
+      stoppedBy: null,
+    });
+    expect(f.made).toEqual(["E2"]);
+  });
+
+  it("any refusal before sending is skipped the same way; a failure that may have reached the mailer uses the hour", async () => {
+    for (const code of ["invalid_input", "not_found", "protected_account", "forbidden_grant"] as const) {
+      const f = fakes([ready("E1"), ready("E2")], { E1: "2026-10-28", E2: "2026-10-29" });
+      f.deps.createAndInvite.mockImplementation(async (row: PlannedRow) => {
+        if (row.externalEmployeeId === "E1") throw new DirectoryError(code, "no", 409);
+        f.made.push(row.externalEmployeeId!);
+      });
+      await sendNewHireInvites({ config: config(), now: NOW }, f.deps);
+      expect(f.made, code).toEqual(["E2"]);
+    }
+    const provider = fakes([ready("E1"), ready("E2")], { E1: "2026-10-28", E2: "2026-10-29" });
+    provider.deps.createAndInvite.mockImplementation(async () => {
+      throw new DirectoryError("provider_failed", "no", 502);
+    });
+    expect(await sendNewHireInvites({ config: config(), now: NOW }, provider.deps)).toMatchObject({ sent: 0, failed: 1, skipped: 0 });
+    expect(provider.deps.createAndInvite).toHaveBeenCalledTimes(1);
   });
 
   it("only new hires, and only the roles named: everybody already on the team is left to an administrator", async () => {
