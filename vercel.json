@@ -11,6 +11,10 @@
       "schedule": "17 11 * * *"
     },
     {
+      "path": "/api/employees/woven/invites/cron",
+      "schedule": "29 * * * *"
+    },
+    {
       "path": "/api/google-reviews/cron",
       "schedule": "23 */6 * * *"
     }
