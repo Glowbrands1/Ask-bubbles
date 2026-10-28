@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { switchReadConversation } from "@/lib/ai/form-type-switch";
 import { typoReadingText, typoReadingTurns } from "@/lib/ai/typo-reading-copy";
 import { protectedNameWords } from "@/lib/ai/typo-name-words";
 import { isHiddenTemplate } from "@/config/company/forms/hidden";
@@ -232,7 +233,8 @@ export async function POST(request: Request) {
      */
     if (body.source === "assistant" && Array.isArray(body.conversation)) {
       const currency = checkProposalIsCurrent({
-        conversation: parseHistory(body.conversation),
+        // FORM_TYPE_SWITCH_ENABLED: "change to coaching" is read as the chat read it, so the switched card is current.
+        conversation: switchReadConversation(parseHistory(body.conversation)),
         templateKey: body.templateKey,
         employeeName: body.employeeName,
       });
