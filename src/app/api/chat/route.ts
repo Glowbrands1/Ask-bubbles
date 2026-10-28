@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { withSwitchAfterCreate } from "@/lib/ai/form-type-switch";
 import { answerQuestion } from "@/lib/ai/server-ask";
 import { modelSpendGuard } from "@/lib/ai/spend-guard";
 import { isQuestionNotForm } from "@/lib/ai/question-not-form";
@@ -180,14 +181,17 @@ export async function POST(request: Request) {
        * Either way the open form is not corrected or revised by this turn: it
        * was answered above, or a new incident is a new form.
        */
-      const parsed = draftAction
-        ? {
-            ...asked,
-            ...("question" in draftAction ? { question: draftAction.question } : {}),
-            activeFormInstanceId: undefined,
-            activeFormCandidateIds: undefined,
-          }
-        : asked;
+      // FORM_TYPE_SWITCH_AFTER_CREATE_NOTE_ENABLED: "change to coaching" after the form was created starts the other form; the created one is left as it is.
+      const parsed = withSwitchAfterCreate(
+        draftAction
+          ? {
+              ...asked,
+              ...("question" in draftAction ? { question: draftAction.question } : {}),
+              activeFormInstanceId: undefined,
+              activeFormCandidateIds: undefined,
+            }
+          : asked,
+      );
       /*
        * A CORRECTION TO A FORM THIS CONVERSATION ALREADY CREATED — "change the
        * date to yesterday". Tried first, and only where the browser named such
