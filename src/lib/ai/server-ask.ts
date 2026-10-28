@@ -218,7 +218,8 @@ export async function answerQuestion(
   if (passwordHelp) {
     return { content: passwordHelp, citations: [], coverage: "grounded" };
   }
-  return withoutSensitiveDefaults(await answerQuestionTraced(request, actor, memory), request.question);
+  // FORM_TYPE_SWITCH: the switched card is drafted from the account, never from the switch turn (read on the turns as sent).
+  return withSwitchSources(withoutSensitiveDefaults(await answerQuestionTraced(request, actor, memory), request.question), request);
 }
 
 async function answerQuestionTraced(
@@ -233,8 +234,7 @@ async function answerQuestionTraced(
   // FORM_TYPE_SWITCH_ENABLED: "change to coaching" with the card open switches it to the other form.
   // ADDITIONAL_LOCATION_TAKEN_ENABLED: "Store: Kearney." from a manager who covers Kearney is read as the change it is.
   const read = withFormTypeSwitch(withAdditionalStore(withTerseSlots(withNameBeforeTitle(withTypoReadingCopy(request, names))), actor));
-  // FORM_TYPE_SWITCH: the switched card is drafted from the account, never from the switch turn (read on the turns as sent).
-  if (!chatTraceEnabled()) return withSwitchSources(await answerQuestionBody(read, actor, memory), request);
+  if (!chatTraceEnabled()) return answerQuestionBody(read, actor, memory);
   const draft = openChatTrace({
     conversationId: request.conversationId,
     messageId: request.questionMessageId,
@@ -242,7 +242,7 @@ async function answerQuestionTraced(
     originalQuery: request.question,
     formInProgress: Boolean(request.continueProposalTemplateKey || request.openForm || request.activeFormInstanceId),
   });
-  return withSwitchSources(await finishChatTrace(draft, () => answerQuestionBody(read, actor, memory)), request);
+  return finishChatTrace(draft, () => answerQuestionBody(read, actor, memory));
 }
 
 /** Last on every path: the Corrective Action card's Action Plan is the manager's or none. */
