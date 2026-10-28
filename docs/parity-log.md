@@ -930,3 +930,7 @@ QA asked whether "dale ferris", typed in lower case and not on the roster, shoul
 ## 28 Oct 2026: `guardEvidenceBasis` has no Ask Sunny twin (no change)
 
 This app's draft route runs `guardEvidenceBasis` (forms/evidence-basis.ts) on every drafted field, with no flag; Ask Sunny has no equivalent. When the model adds an unsaid "acknowledged …" to a sentence about a prior step ("… coached on October 16, 2026 regarding attendance and acknowledged the expectation."), the whole sentence is dropped, so the Observation can lose the prior-coaching sentence Ask Sunny keeps. QA saw this once (a test draft, since deleted) and closed it as not confirmed, likely model variance; the guard is a safety feature and stays. Reopen only on a manager's report, with their wording as the regression test.
+
+## 28 Oct 2026: "Change something" on a finalized form — both apps (NEXT_PUBLIC_CARD_CHANGE_FINALIZED_ENABLED)
+
+Ported from Ask Sunny (same panel file). Beside "Edit as new draft" on a finalized form, for a role that may edit that template: the date and, on a Corrective Action Form, the type of warning and payroll deduct, prefilled. Send opens the revision exactly as Edit does (same reason dialog when revisions are on, or when the server asks for a reason) and saves only the changed values onto the new draft with the form's own save. No chat turn, no model; the signed form is never written; a refused value is said; a payroll change asks the manager to check the Action Plan.
