@@ -494,6 +494,32 @@ describe("never", () => {
     expect((await reply("Store: Kearney.")).second).not.toMatch(SAID);
   });
 
+  // Pau, 28 Oct 2026: "assigned" is the manager's FULL scope, never just the primary store.
+  for (const wording of ALREADY_SAID_ON_MAIN) {
+    it(`an additional store of the manager's: "${wording}" — no line, the card takes it`, async () => {
+      production({ level: "location", primaryAreaId: "loc-264", alsoCoversAreaIds: ["loc-66"] }, true);
+      const { second, locationId } = await reply(wording);
+      expect(second).not.toMatch(SAID);
+      expect(locationId).toBe("loc-66");
+    });
+  }
+
+  // Main today: a short correction does not move the card even to one of the manager's own stores
+  // (reported to QA 28 Oct 2026, its own fix). This flag only must not add a line there.
+  for (const wording of SILENT_ON_MAIN) {
+    it(`an additional store of the manager's: "${wording}" — no line`, async () => {
+      production({ level: "location", primaryAreaId: "loc-264", alsoCoversAreaIds: ["loc-66"] }, true);
+      expect((await reply(wording)).second).not.toMatch(SAID);
+    });
+  }
+
+  it("a district or region manager: this app cannot map the area to its stores, so no line", async () => {
+    for (const level of ["district", "region"]) {
+      production({ level, primaryAreaId: `${level}-1`, alsoCoversAreaIds: [] }, true);
+      expect((await reply("Store: Kearney.")).second).not.toContain(LINE);
+    }
+  });
+
   it("no store named", async () => {
     production(OWN, true);
     expect((await reply("she was also on her phone")).second).not.toMatch(SAID);
