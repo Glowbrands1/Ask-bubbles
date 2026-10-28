@@ -978,6 +978,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "DAY_WORD_TYPOS_ENABLED",
   "AMOUNT_UNKNOWN_ACK_ENABLED",
   "ADDITIONAL_LOCATION_TAKEN_ENABLED",
+  "OUT_OF_SCOPE_PLACE_SAID_ENABLED",
   "NEXT_PUBLIC_CARD_CHANGE_ENABLED",
   "ACCOUNT_ONLY_POLICY_QUERY_ENABLED",
   "RELATIVE_DATE_READER_ENABLED",
@@ -1537,4 +1538,13 @@ export function amountUnknownAckEnabled(): boolean {
  */
 export function additionalLocationTakenEnabled(): boolean {
   return envFlag("ADDITIONAL_LOCATION_TAKEN_ENABLED");
+}
+
+/**
+ * A store-scoped manager who names a store they are not assigned to is told
+ * so in the reply (QA, 28 Oct 2026; same flag in both apps). See
+ * `ai/out-of-scope-place.ts`. Off, as before.
+ */
+export function outOfScopePlaceSaidEnabled(): boolean {
+  return envFlag("OUT_OF_SCOPE_PLACE_SAID_ENABLED");
 }
