@@ -509,3 +509,19 @@ describe("never", () => {
     expect((await card("she was also on her phone")).second).toBe("loc-264");
   });
 });
+
+describe("Create after the change files the form at the additional store", () => {
+  for (const wording of PAU) {
+    it(`"${wording}" -> Create files at Kearney`, async () => {
+      production(BOTH, true);
+      const thread = new Thread();
+      await thread.say(OPEN);
+      await thread.say(wording);
+      const forms = store.form_instances.length;
+      const id = await thread.create();
+      const row = (store.form_instances as unknown as { id: string; location_id: string }[]).find((r) => r.id === id)!;
+      expect(store.form_instances).toHaveLength(forms + 1);
+      expect(row.location_id).toBe("loc-66");
+    });
+  }
+});
