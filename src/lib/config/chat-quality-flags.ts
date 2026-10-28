@@ -981,6 +981,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "OUT_OF_SCOPE_PLACE_SAID_ENABLED",
   "OUT_OF_SCOPE_PLACE_KEEPS_OWN_ENABLED",
   "FORM_TYPE_SWITCH_ENABLED",
+  "FORM_TYPE_SWITCH_AFTER_CREATE_NOTE_ENABLED",
   "NEXT_PUBLIC_CARD_CHANGE_ENABLED",
   "NEXT_PUBLIC_CARD_CHANGE_FINALIZED_ENABLED",
   "ACCOUNT_ONLY_POLICY_QUERY_ENABLED",
@@ -1568,4 +1569,13 @@ export function outOfScopePlaceKeepsOwnEnabled(): boolean {
  */
 export function formTypeSwitchEnabled(): boolean {
   return envFlag("FORM_TYPE_SWITCH_ENABLED");
+}
+
+/**
+ * After the form was created, "change to coaching" starts the other form and
+ * the reply says the existing one is left as it is (Pau, 28 Oct 2026; same
+ * flag in both apps). See `ai/form-type-switch.ts`. Off, as before.
+ */
+export function formTypeSwitchAfterCreateNoteEnabled(): boolean {
+  return envFlag("FORM_TYPE_SWITCH_AFTER_CREATE_NOTE_ENABLED");
 }
