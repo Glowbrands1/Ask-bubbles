@@ -983,6 +983,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FORM_TYPE_SWITCH_ENABLED",
   "FORM_TYPE_SWITCH_AFTER_CREATE_NOTE_ENABLED",
   "CARD_CHANGE_PLAN_REBUILD_ENABLED",
+  "SPEND_GUARD_ALL_CALLS_ENABLED",
   "NEXT_PUBLIC_CARD_CHANGE_ENABLED",
   "NEXT_PUBLIC_CARD_CHANGE_FINALIZED_ENABLED",
   "ACCOUNT_ONLY_POLICY_QUERY_ENABLED",
@@ -1589,4 +1590,15 @@ export function formTypeSwitchAfterCreateNoteEnabled(): boolean {
  */
 export function cardChangePlanRebuildEnabled(): boolean {
   return envFlag("CARD_CHANGE_PLAN_REBUILD_ENABLED");
+}
+
+/**
+ * Every Claude call is counted toward the monthly budget, not only the chat
+ * answer and the reader: retries, helpers, form revision, the Create card's
+ * draft and template ingest (Pau and QA, 28 Oct 2026; same flag in both
+ * apps). See `ai/spend-meter.ts`. Counting only — nothing is blocked that was
+ * not before. Off, the guard counts as before.
+ */
+export function spendGuardAllCallsEnabled(): boolean {
+  return envFlag("SPEND_GUARD_ALL_CALLS_ENABLED");
 }
