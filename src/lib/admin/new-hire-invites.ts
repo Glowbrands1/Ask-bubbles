@@ -119,7 +119,13 @@ export interface NewHireInviteDeps {
 export type NewHireInviteOutcome =
   | { status: "off"; code: string }
   | { status: "blocked"; code: "guards" }
-  | { status: "completed"; sent: number; failed: number; waiting: number; stoppedBy: string | null };
+  | { status: "completed"; sent: number; failed: number; skipped: number; waiting: number; stoppedBy: string | null };
+
+/** People looked at in one run, however many are refused before sending. */
+const MAX_TRIED = 25;
+
+/** `createLinkedAccount` refusals raised before any invitation was asked for: they cost no send. */
+const REFUSED_BEFORE_SENDING: ReadonlySet<string> = new Set(["duplicate_email", "invalid_input", "not_found", "protected_account", "forbidden_grant"]);
 
 export async function sendNewHireInvites(input: { config: NewHireConfig; now: Date }, deps: NewHireInviteDeps): Promise<NewHireInviteOutcome> {
   const { config, now } = input;
@@ -136,23 +142,41 @@ export async function sendNewHireInvites(input: { config: NewHireConfig; now: Da
     .filter((row) => isNewHire(hired.get(row.externalEmployeeId!), config))
     .sort((a, b) => (hired.get(a.externalEmployeeId!) ?? "").localeCompare(hired.get(b.externalEmployeeId!) ?? "") || a.key.localeCompare(b.key));
 
+  /*
+   * ONE PERSON NEVER HOLDS UP THE REST (QA, 28 Oct 2026). A new hire refused
+   * before any email could go — an account already has the address, the
+   * record is not usable, the role or location is not grantable — is skipped
+   * and the next one is tried; that costs nothing from the hour's sends. A
+   * failure that may have reached the mailer uses a send. The mailer's limit
+   * stops the hour. At most MAX_TRIED people are looked at per run.
+   */
   let sent = 0;
   let failed = 0;
+  let skipped = 0;
+  let used = 0;
   let stoppedBy: string | null = null;
-  for (const row of waiting.slice(0, config.perHour)) {
+  for (const row of waiting.slice(0, MAX_TRIED)) {
+    if (used >= config.perHour) break;
     try {
       await deps.createAndInvite(row, actor);
       sent += 1;
+      used += 1;
     } catch (error) {
-      failed += 1;
-      // The mailer's limit: nobody else is tried this hour, and nothing was created for this person.
-      if (error instanceof DirectoryError && error.code === "email_rate_limited") {
+      const code = error instanceof DirectoryError ? error.code : null;
+      if (code === "email_rate_limited") {
+        failed += 1;
         stoppedBy = "email_rate_limited";
         break;
       }
+      if (code !== null && REFUSED_BEFORE_SENDING.has(code)) {
+        skipped += 1;
+        continue;
+      }
+      failed += 1;
+      used += 1;
     }
   }
-  return { status: "completed", sent, failed, waiting: waiting.length - sent, stoppedBy };
+  return { status: "completed", sent, failed, skipped, waiting: waiting.length - sent, stoppedBy };
 }
 
 /* ------------------------------------------------------- the real services -- */
