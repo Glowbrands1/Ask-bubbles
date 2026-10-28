@@ -149,6 +149,7 @@ import { withFirstNameAsk } from "./first-name-ask";
 import { withFormTypeSwitch, withSwitchNote, withSwitchSources } from "./form-type-switch";
 import { withAdditionalStore } from "./additional-store";
 import { withOutOfScopePlace } from "./out-of-scope-place";
+import { withOwnPlace } from "./keeps-own-place";
 import { withAmountUnknownAck } from "./amount-unknown-ack";
 import { withUnreadDateAsk } from "./unread-date-ask";
 import { withUnknownNameAsk } from "./unknown-name-ask";
@@ -256,7 +257,8 @@ async function answerQuestionBody(
   // OUT_OF_SCOPE_PLACE_SAID_ENABLED: "Store: Kearney." from a manager not assigned there is told so.
   // FORM_TYPE_SWITCH_AFTER_CREATE_NOTE_ENABLED: the form already created is said to stay as it is.
   return keepManagerActionPlan(
-    withSwitchNote(withOutOfScopePlace(withAmountUnknownAck(
+    // OUT_OF_SCOPE_PLACE_KEEPS_OWN_ENABLED: the card goes back to the manager's own store, or asks which.
+    withSwitchNote(withOutOfScopePlace(withOwnPlace(withAmountUnknownAck(
       withUnreadDateAsk(
         withPayrollTypoAnswer(
           withUnknownNameAsk(
@@ -271,7 +273,7 @@ async function answerQuestionBody(
         request,
       ),
       request,
-    ), request, actor), request, "the Forms Register"),
+    ), request, actor), request, actor), request, "the Forms Register"),
     request,
   );
 }
