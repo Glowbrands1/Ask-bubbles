@@ -914,3 +914,15 @@ Ported from Ask Sunny. The spend guard read only each `chat_traces` row's own mo
 ## 27 Oct 2026: "Calder, Remy" is read as Remy Calder, without a model — both apps (LAST_FIRST_NAME_READ_ENABLED)
 
 Ported from Ask Sunny (QA's five "Last, First" variants). Today's name reader stops at the comma: "My employee Calder, Remy" was the employee "Calder", and Create refused the card as out of date. With the flag on and the AI reader off, a capitalised "Word, Word" pair in the manager's own turns goes through `ai/reader/check.ts`: it must fit exactly one person on the scoped roster, in either order. It joins this app's form proposal the way the AI reader does (`ai/reader/hook.ts`): the card is made again with "The employee is …", the reader's `merge.ts` fills only an employee today's readers left open, and the create route checks the quote again (`ai/reader/recheck.ts`). No model, no cost, no protected file. Same change in Ask Sunny.
+
+## 28 Oct 2026: a store the manager is not assigned to is said so in the reply — both apps (OUT_OF_SCOPE_PLACE_SAID_ENABLED)
+
+Ported from Ask Sunny. Here the card already keeps a store-scoped manager's own store when they name one outside their scope, and the Change something panel's sentences and "actually it was at kearney" already get "isn't a store on your assignment". Short corrections ("Store: Kearney.", "store: kearney", "the store is Kearney", "kearney", "it was at the kearney store") got the card alone. With the flag on, `ai/out-of-scope-place.ts` adds "**<Store>** isn't a store on your assignment, so the form stays at **<own store>**." Once, never beside the existing line, never for a store in scope, no store named, or a company-wide manager. In Ask Sunny the same flag also covers the panel's sentences: there the card took the unassigned salon and only Create refused it.
+
+## 28 Oct 2026: an off-roster typed name keeps the manager's spelling — both apps (no change)
+
+QA asked whether "dale ferris", typed in lower case and not on the roster, should be title-cased as in Ask Sunny. Ask Sunny does not title-case it either: `tidyTypedName` only tidies spacing, by the 22 Oct 2026 decision that the manager's own spelling is kept unless the directory has an exact match. Closed as parity. The stale "capitalised" comment in Ask Sunny's ai/form-proposal.ts is noted, not changed (protected file).
+
+## 28 Oct 2026: `guardEvidenceBasis` has no Ask Sunny twin (no change)
+
+This app's draft route runs `guardEvidenceBasis` (forms/evidence-basis.ts) on every drafted field, with no flag; Ask Sunny has no equivalent. When the model adds an unsaid "acknowledged …" to a sentence about a prior step ("… coached on October 16, 2026 regarding attendance and acknowledged the expectation."), the whole sentence is dropped, so the Observation can lose the prior-coaching sentence Ask Sunny keeps. QA saw this once (a test draft, since deleted) and closed it as not confirmed, likely model variance; the guard is a safety feature and stays. Reopen only on a manager's report, with their wording as the regression test.
