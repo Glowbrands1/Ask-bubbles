@@ -8,7 +8,6 @@ import { answersToOpenQuestions } from "./question-answers";
 import { readFormRequests } from "./form-requests";
 import { stateCodePlaceContext } from "./state-code-place";
 import { detectTemplateIntent } from "./template-intent";
-import { lastFirstNameReadEnabled } from "@/lib/config/chat-quality-flags";
 import type { ChatMessage } from "@/types";
 
 /**
@@ -37,7 +36,10 @@ import type { ChatMessage } from "@/types";
  * and where the conversation cannot say (the turns that named the person have
  * scrolled out of the window), it does not refuse on a guess.
  */
-export type ProposalCurrency = { current: true } | { current: false; reason: string };
+export type ProposalCurrency =
+  | { current: true }
+  /** `resolvedName`: who the conversation names instead, when it names one person. */
+  | { current: false; reason: string; resolvedName?: string };
 
 export function checkProposalIsCurrent(input: {
   conversation: readonly { id?: string; role: ChatMessage["role"]; content: string }[];
@@ -108,12 +110,12 @@ export function checkProposalIsCurrent(input: {
   if (
     resolution.kind === "resolved" &&
     !samePerson(resolution.employeeName, input.employeeName) &&
-    !accepted &&
-    !(lastFirstNameReadEnabled() && partOfName(resolution.employeeName, input.employeeName))
+    !accepted
   ) {
     return {
       current: false,
       reason: `This proposal is out of date: the conversation now says the form is for ${resolution.employeeName}, not ${input.employeeName}. Use the newest proposal.`,
+      resolvedName: resolution.employeeName,
     };
   }
   if (resolution.kind === "missing" && excluded.some((not) => samePerson(not, input.employeeName))) {
@@ -143,18 +145,4 @@ export function checkProposalIsCurrent(input: {
   }
 
   return { current: true };
-}
-
-/**
- * LAST_FIRST_NAME_READ_ENABLED: the conversation's "Calder" (from "Calder,
- * Remy") or "Varga Tess" is part of the card's "Remy Calder" / "Tess Varga", not
- * another person. The card's full name came from the one roster person those
- * words fit (`ai/reader/check.ts`); the conversation reader only stops sooner.
- * Every word the conversation says must be one of the card's words.
- */
-function partOfName(said: string, card: string): boolean {
-  const words = (text: string) => text.toLowerCase().split(/[^a-z']+/).filter(Boolean);
-  const full = words(card);
-  const part = words(said);
-  return part.length > 0 && part.every((word) => full.includes(word));
 }

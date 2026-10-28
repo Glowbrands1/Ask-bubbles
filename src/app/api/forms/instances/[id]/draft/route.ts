@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { typoReadingText } from "@/lib/ai/typo-reading-copy";
+import { protectedNameWords } from "@/lib/ai/typo-name-words";
 import { getAnthropicClient } from "@/lib/ai/anthropic";
 import { AiError } from "@/lib/ai/errors";
 import { withTruncationRetry } from "@/lib/ai/truncation";
@@ -163,6 +165,7 @@ import { flaggedCitationWrite } from "@/lib/ai/policy-citation-fields";
 import { fieldLines } from "@/lib/ai/intake-augment";
 import {
   actionPlanManagerOnlyEnabled,
+  checkedReadingEnabled,
   actionPlanSentencesEnabled,
   attendanceActionPlanEnabled,
   hideNoPolicyMatchNoticeEnabled,
@@ -172,6 +175,7 @@ import {
   frameworkUnpinEnabled,
   policyCitationEnabled,
   policySpecificTopicsEnabled,
+  typoReadingRoutesEnabled,
 } from "@/lib/config/chat-quality-flags";
 import {
   STANDARDS_OF_CONDUCT,
@@ -221,6 +225,7 @@ import {
   withoutModelWarningLevel,
 } from "@/lib/forms/warning-level";
 import { warningLevelFromConversation } from "@/lib/forms/warning-level-conversation";
+import { readerPriorLines, withReaderPriorLines } from "@/lib/ai/reader/recheck";
 import { JOIN } from "@/lib/forms/bounded-context";
 import { businessToday } from "@/lib/business-date";
 import {
@@ -260,6 +265,8 @@ export const maxDuration = 120;
 interface DraftBody {
   /** What the manager described, in their own words. */
   notes?: string;
+  /** AI_READS_CODE_CHECKS_ENABLED: the reader's quotes from the card, never values: each is checked again against `notes`. */
+  readerQuotes?: unknown;
   topic?: string;
   /**
    * A REDRAFT FROM CHAT, of a form the manager may already have filled in by
@@ -338,7 +345,9 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     }
 
     const body = ((await request.json().catch(() => null)) ?? {}) as DraftBody;
-    const notes = String(body.notes ?? "").trim().slice(0, 4000);
+    const asTyped = String(body.notes ?? "").trim().slice(0, 4000);
+    // TYPO_READING_ROUTES_ENABLED: the readers below see "coahed", "notcie", "amont" as the words they can only be.
+    const notes = typoReadingRoutesEnabled() ? typoReadingText(asTyped, await protectedNameWords()) : asTyped;
     if (notes.length < 10) {
       throw new AiError(
         "bad_request",
@@ -1623,6 +1632,19 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const draftedValues = (() => {
       const base = { ...(exit?.values ?? attributions.values) };
       if (priorActions) {
+        /*
+         * AI_READS_CODE_CHECKS_ENABLED: a prior step the chat's reader quoted
+         * ("a verbal ca on 10.1"), when its quote and date are still in these
+         * notes and it is before the form's date, is listed too
+         * (`ai/reader/recheck.ts`). Off, as before.
+         */
+        // Never over the manager's own values: not on a redraft that keeps them, and only beside the rows already there.
+        if (checkedReadingEnabled() && body.readerQuotes && !body.keepManagerValues) {
+          priorActions.value = withReaderPriorLines(
+            priorActions.value,
+            readerPriorLines(body.readerQuotes, notes, businessToday(), loaded.instance.formDate),
+          );
+        }
         if (priorActions.value.trim() !== "") base[PRIOR_ACTIONS_KEY] = priorActions.value;
         else delete base[PRIOR_ACTIONS_KEY];
       }

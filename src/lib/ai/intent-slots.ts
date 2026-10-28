@@ -18,7 +18,6 @@ import {
   priorActionsParseEnabled,
   titleWholeWordEnabled,
   formEditDateRulesEnabled,
-  lastFirstNameReadEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { typedEmployeeName } from "@/lib/forms/typed-employee-name";
 import { isNotAName, maskNotANameText, saidInReply } from "@/lib/forms/not-a-name";
@@ -36,8 +35,6 @@ import {
 } from "./form-state";
 import { priorActionDates } from "./edit-date-rules";
 import type { GroundedPerson } from "./grounded-entities";
-import type { CheckedReading } from "./reader/check";
-import { mergeCheckedReading } from "./reader/merge";
 import { titleTextFromTurns } from "./title-words";
 import { titleInWords } from "./title-in-words";
 
@@ -120,16 +117,12 @@ export interface IntentTurnInput {
   readonly headings: readonly string[];
   readonly templates: readonly TemplateRow[];
   readonly formInProgress: boolean;
-  /** LAST_FIRST_NAME_READ_ENABLED: the "Last, First" reading that passed the roster checks, or null. */
-  readonly checked?: CheckedReading | null;
 }
 
 export interface IntentTurnDecision {
   readonly question: string;
   readonly state: ConversationFormState;
   readonly clarification: string | null;
-  /** LAST_FIRST_NAME_READ_ENABLED: what the checked reading filled, and where it disagreed. */
-  readonly reader?: { readonly filled: readonly string[]; readonly disputed: readonly string[] };
 }
 
 interface ChoiceOption {
@@ -168,8 +161,6 @@ export function normalizeIncidentDate(raw: string, today: string): string | null
 
 export function decideIntentTurn(rawInput: IntentTurnInput): IntentTurnDecision {
   const input = withoutUntypedSavedName(rawInput);
-  // LAST_FIRST_NAME_READ_ENABLED: off, or with no checked reading, the employee below is today's.
-  const merge = mergeCheckedReading(lastFirstNameReadEnabled() ? rawInput.checked : null);
   const choiceStated = formChoiceStatedEnabled();
   const saved = choiceStated
     ? withoutDisciplineProcedure(input.saved ?? EMPTY_CONVERSATION_FORM_STATE)
@@ -187,7 +178,7 @@ export function decideIntentTurn(rawInput: IntentTurnInput): IntentTurnDecision 
    * replaced by the name as typed.
    */
   const typedEmployee = keepFormEmployeeEnabled() && !choice?.person ? typedEmployeeName(input.question) : null;
-  const employee = merge.employee(typedEmployee ? withTypedEmployee(grounded, typedEmployee) : grounded);
+  const employee = typedEmployee ? withTypedEmployee(grounded, typedEmployee) : grounded;
   const store =
     newestTurnStore(input.question, input.stores) ??
     groundStore(choice?.store ?? reading?.store ?? null, blob, input.stores, employee.person);
@@ -327,10 +318,9 @@ export function decideIntentTurn(rawInput: IntentTurnInput): IntentTurnDecision 
     templates: input.templates,
   });
 
-  const reader = lastFirstNameReadEnabled() && rawInput.checked ? { reader: { filled: merge.filled, disputed: merge.disputed } } : {};
-  if (clarification) return { question: input.question, state, clarification, ...reader };
-  if (!formTurn) return { question: input.question, state, clarification: null, ...reader };
-  return { question: prependFormState(input.question, state), state, clarification: null, ...reader };
+  if (clarification) return { question: input.question, state, clarification };
+  if (!formTurn) return { question: input.question, state, clarification: null };
+  return { question: prependFormState(input.question, state), state, clarification: null };
 }
 
 /**

@@ -11,6 +11,9 @@ import type { FormReading, ReadField } from "./schema";
  * AI_READS_CODE_CHECKS_ENABLED — THE CODE CHECKS WHAT THE MODEL READ
  * ============================================================================
  *
+ * Ported from the sibling app (same checks, this app's roster, stores, job
+ * titles and manual headings).
+ *
  * Each field passes or fails. Nothing is guessed here:
  *
  *   quote     the evidence is in one of the manager's own turns (case,
@@ -193,14 +196,14 @@ function nameFits(person: GroundedPerson, words: readonly string[]): boolean {
 /* --------------------------------------------------------- the other ones --- */
 
 /**
- * The location the manager wrote, inside its quote: its words ("<store>",
- * "wornall", "lincoln o street") are all in one location's name, and in only
- * that one. "salon" and "store" are not a name.
+ * The store the manager wrote, inside its quote: its words ("dodge",
+ * "grand island", "west dodge") are all in one store's name, and in only
+ * that one. "store", "location" and "makery" are not a name.
  */
 function checkLocation(value: string, evidence: string, locations: readonly LocationRow[]): LocationRow | null {
   const typed = plainWords(value);
   if (typed === "" || !` ${plainWords(evidence)} `.includes(` ${typed} `)) return null;
-  const words = typed.split(" ").filter((word) => word !== "salon" && word !== "store" && word !== "location");
+  const words = typed.split(" ").filter((word) => word !== "store" && word !== "location" && word !== "makery");
   if (words.length === 0) return null;
   const fits = locations.filter((row) => {
     const name = plainWords(row.name).split(" ");

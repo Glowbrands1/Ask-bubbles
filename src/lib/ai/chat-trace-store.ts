@@ -29,6 +29,13 @@ export interface ChatTraceDraft {
     outputTokens: number | null;
     slots: Record<string, unknown>;
   } | null;
+  /**
+   * AI_READS_CODE_CHECKS_ENABLED: the reader's call, written to the trace's
+   * `slots.reader` as in the sibling app — `{ model, ms, usage, rejected,
+   * filled, disputed }`, or `{ fallback }`. The spend guard counts it from
+   * there. Absent when the reader did not run.
+   */
+  reader?: Record<string, unknown>;
   errorSubtype: ErrorSubtype | null;
   errorClass: string | null;
   errorStatus: number | null;

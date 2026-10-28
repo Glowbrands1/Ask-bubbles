@@ -6,6 +6,8 @@ import type { CheckedReading, LocationRow } from "./check";
  * AI_READS_CODE_CHECKS_ENABLED — WHERE THE CHECKED READING MAY FILL A FIELD
  * ============================================================================
  *
+ * Ported from the sibling app (same rules, in this app's store wording).
+ *
  * Today's readers keep every field they settle. The checked reading fills a
  * field only where they did not: no value, a numbered list of people, stores
  * or dates, a typed name that is nobody on the roster, or a date the manager

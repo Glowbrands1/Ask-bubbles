@@ -1,4 +1,5 @@
 import { checkReading, type CheckContext, type CheckedReading } from "./check";
+import type { ReaderResult } from "./read";
 import { parseFormReading } from "./schema";
 
 /**
@@ -23,12 +24,19 @@ import { parseFormReading } from "./schema";
 const PAIR = /\b([A-Z][A-Za-z'’-]+),\s+([A-Z][A-Za-z'’-]+)\b/g;
 
 export function lastFirstReading(context: CheckContext): CheckedReading | null {
+  return lastFirstResult(context)?.checked ?? null;
+}
+
+/** The same reading shaped like the AI reader's result (with its quote for the create and draft routes), at no cost. */
+export function lastFirstResult(context: CheckContext): ReaderResult | null {
   for (let index = context.managerTurns.length - 1; index >= 0; index -= 1) {
     const turn = context.managerTurns[index]!;
     for (const pair of turn.matchAll(PAIR)) {
       const reading = parseFormReading({ employee: { value: pair[0], evidence: pair[0] } });
       const checked = reading ? checkReading(reading, context) : null;
-      if (checked?.employee?.person) return checked;
+      if (reading && checked?.employee?.person) {
+        return { checked, reading, usage: { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 }, ms: 0 };
+      }
     }
   }
   return null;

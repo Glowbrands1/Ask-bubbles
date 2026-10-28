@@ -1,0 +1,40 @@
+{
+  "key": "8fc966e63d6b5db60736660cfcebaddcc711a6f8a1b8b0762b9469de66579b25",
+  "model": "claude-haiku-5-5",
+  "reply": {
+    "employee": {
+      "value": "Quinn Marlowe",
+      "evidence": "do verbal for Quinn Marlowe at dodge"
+    },
+    "location": {
+      "value": "dodge",
+      "evidence": "do verbal for Quinn Marlowe at dodge"
+    },
+    "jobTitle": null,
+    "incident": {
+      "value": "Came into the store while not scheduled to work to show her team her new puppy; was in the store 45 min",
+      "evidence": "on 10-22-26 quinn was not scheduled to work and came into the store to show her team her new puppy. quinn was in the store 45 min"
+    },
+    "incidentDate": {
+      "value": "2026-10-22",
+      "evidence": "on 10-22-26 quinn was not scheduled to work"
+    },
+    "warningLevel": {
+      "value": "verbal",
+      "evidence": "do verbal for Quinn Marlowe at dodge"
+    },
+    "payroll": {
+      "value": "no",
+      "evidence": "payroll deduct does not apply"
+    },
+    "payrollAmount": null,
+    "policyHeading": null
+  },
+  "usage": {
+    "inputTokens": 4688,
+    "outputTokens": 600,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0
+  },
+  "ms": 2274
+}

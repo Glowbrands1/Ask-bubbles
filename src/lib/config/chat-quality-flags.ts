@@ -973,6 +973,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "LEVEL_STEP_NOT_ACCOUNT_ENABLED",
   "FIRST_NAME_ASK_ENABLED",
   "UNKNOWN_NAME_ASK_ENABLED",
+  "TYPO_READING_ROUTES_ENABLED",
+  "TYPO_READING_COPY_ENABLED",
   "DAY_WORD_TYPOS_ENABLED",
   "AMOUNT_UNKNOWN_ACK_ENABLED",
   "ACCOUNT_ONLY_POLICY_QUERY_ENABLED",
@@ -988,6 +990,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "JOB_TITLE_APPOSITION_ENABLED",
   "EXIT_READBACK_JOB_TITLE_ENABLED",
   "FOLLOW_UP_CITATION_FIELD_ENABLED",
+  "AI_READS_CODE_CHECKS_ENABLED",
   "LAST_FIRST_NAME_READ_ENABLED",
 ] as const;
 
@@ -1349,6 +1352,33 @@ export function levelStepNotAccountEnabled(): boolean {
 }
 
 /**
+ * The AI reads the fields of a form request, each with the manager's words it
+ * took it from, and the code checks every one before it is used (QA, 27 Oct
+ * 2026; same flag in both apps). A field both read differently is asked once.
+ * A model error, a reply over two seconds or an unusable reply leaves the turn
+ * to today's readers. See `ai/reader/`. Off, as before.
+ */
+export function aiReadsCodeChecksEnabled(): boolean {
+  return envFlag("AI_READS_CODE_CHECKS_ENABLED");
+}
+
+/**
+ * "Calder, Remy" is read as Remy Calder without a model (ported from the sibling
+ * app, QA 27 Oct 2026; same flag in both apps): the AI reader's one measured win,
+ * by the reader's own checks alone. A "Last, First" pair in the manager's turns
+ * that fits exactly one person on the scoped roster fills an employee today's
+ * readers left open. See `ai/reader/last-first.ts`. Off, as before.
+ */
+export function lastFirstNameReadEnabled(): boolean {
+  return envFlag("LAST_FIRST_NAME_READ_ENABLED");
+}
+
+/** A checked reading reaches the card: the AI reader's, or the Last, First one. */
+export function checkedReadingEnabled(): boolean {
+  return aiReadsCodeChecksEnabled() || lastFirstNameReadEnabled();
+}
+
+/**
  * The name question uses the first name the manager gave, and is never asked
  * twice in the same words (ported from the sibling app, QA S15, 27 Oct 2026;
  * same flag in both apps): "I have an employee ivy …" then "Yes" got "Who is
@@ -1357,17 +1387,6 @@ export function levelStepNotAccountEnabled(): boolean {
  */
 export function firstNameAskEnabled(): boolean {
   return envFlag("FIRST_NAME_ASK_ENABLED");
-}
-
-/**
- * "Calder, Remy" is read as Remy Calder, without a model (ported from the
- * sibling app, QA 27 Oct 2026; same flag in both apps). A "Last, First" pair in
- * the manager's turns that fits exactly one person on the scoped roster fills an
- * employee today's readers left open, and the Create check takes the
- * part-of-name card. See `ai/reader/last-first.ts`. Off, as before.
- */
-export function lastFirstNameReadEnabled(): boolean {
-  return envFlag("LAST_FIRST_NAME_READ_ENABLED");
 }
 
 /**
@@ -1479,6 +1498,25 @@ export function unreadDateAskEnabled(): boolean {
  */
 export function dayWordTyposEnabled(): boolean {
   return envFlag("DAY_WORD_TYPOS_ENABLED");
+}
+
+/**
+ * The chat's readers see the manager's turns with each typo read as the one
+ * known word it can only be; employee names never (QA, 27 Oct 2026; same flag
+ * in both apps). See `ai/typo-reading-copy.ts`. Off, as before.
+ */
+export function typoReadingCopyEnabled(): boolean {
+  return envFlag("TYPO_READING_COPY_ENABLED");
+}
+
+/**
+ * The form routes' readers (the draft's notes; the create route's payroll
+ * amount and warning level) see the manager's words with each typo read as the
+ * one known word it can only be; stored text stays as typed (QA, 27 Oct 2026;
+ * same flag in both apps). See `ai/typo-reading-copy.ts`. Off, as before.
+ */
+export function typoReadingRoutesEnabled(): boolean {
+  return envFlag("TYPO_READING_ROUTES_ENABLED");
 }
 
 /**

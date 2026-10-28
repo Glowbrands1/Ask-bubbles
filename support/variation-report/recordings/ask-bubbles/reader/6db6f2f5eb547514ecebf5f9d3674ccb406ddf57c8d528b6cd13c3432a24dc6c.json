@@ -1,0 +1,30 @@
+{
+  "key": "6db6f2f5eb547514ecebf5f9d3674ccb406ddf57c8d528b6cd13c3432a24dc6c",
+  "model": "claude-haiku-5-5",
+  "reply": {
+    "employee": {
+      "value": "mara",
+      "evidence": "create corrective action form for mara, Store Manager"
+    },
+    "location": null,
+    "jobTitle": {
+      "value": "Store Manager",
+      "evidence": "mara, Store Manager"
+    },
+    "incident": null,
+    "incidentDate": null,
+    "warningLevel": null,
+    "payroll": null,
+    "payrollAmount": null,
+    "policyHeading": null,
+    "priorSteps": [],
+    "otherDates": []
+  },
+  "usage": {
+    "inputTokens": 4600,
+    "outputTokens": 332,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0
+  },
+  "ms": 1535
+}

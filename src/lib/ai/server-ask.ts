@@ -84,6 +84,7 @@ import {
   manualNegatedListNoteEnabled,
   questionNotFormEnabled,
   googleReviewsInChatEnabled,
+  typoReadingCopyEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { gateTexts, searchWithPlan } from "./continuation";
 import { fieldsFromManagerText, mergeConfirmed, retainFieldsInReply } from "./form-field-state";
@@ -138,6 +139,8 @@ import { appPasswordHelpFor } from "./app-password-help";
 import { redactSensitiveDefaults, withoutSensitiveDefaults } from "./sensitive-defaults";
 import { withoutSharedSourceClaims } from "./sources-not-shared";
 import { withNameBeforeTitle } from "./name-before-title";
+import { withTypoReadingCopy } from "./typo-reading-copy";
+import { protectedNameWords } from "./typo-name-words";
 import type { AskRequest, AskResponse } from "./types";
 import { keepManagerActionPlan } from "./manager-action-plan-reply";
 import { withJobTitleFromWords } from "./job-title-from-words";
@@ -149,6 +152,7 @@ import { withUnknownNameAsk } from "./unknown-name-ask";
 import { amountTurnReply } from "./amount-turn";
 import { withPayrollTypoAnswer } from "./payroll-typo-answer";
 import { withWarningLevelFromClause } from "./warning-level-clause";
+import { readerPropose, startFormReading, withoutStaleRosterNote } from "./reader/hook";
 
 /** SENSITIVE_DEFAULTS_REDACT_ENABLED: a default password format or SSN digits are never shown to the model. */
 function withoutSensitiveChunks<T extends { content: string }>(chunks: T[]): T[] {
@@ -221,7 +225,9 @@ async function answerQuestionTraced(
 ): Promise<AskResponse> {
   // TERSE_SLOT_READ_ENABLED: a terse "ca …" line is read as the long form.
   // NAME_BEFORE_TITLE_ENABLED: a two-word name right before a job title is the name.
-  const read = withTerseSlots(withNameBeforeTitle(request));
+  // TYPO_READING_COPY_ENABLED: "coahed", "amont", "Manger" are read as the words they can only be; names never.
+  const names = typoReadingCopyEnabled() ? await protectedNameWords() : new Set<string>();
+  const read = withTerseSlots(withNameBeforeTitle(withTypoReadingCopy(request, names)));
   if (!chatTraceEnabled()) return answerQuestionBody(read, actor, memory);
   const draft = openChatTrace({
     conversationId: request.conversationId,
@@ -438,13 +444,20 @@ async function answerQuestionCore(
     let manualRead: ReturnType<SupabaseKnowledgeProvider["fetchOfficialPolicyManual"]> | null = null;
     const readManual = () =>
       (manualRead ??= new SupabaseKnowledgeProvider().fetchOfficialPolicyManual(ACTIVE_BRAND.knowledgeScopeId));
+    /*
+     * AI_READS_CODE_CHECKS_ENABLED: the reader starts here, beside the
+     * proposal, and is merged into it once today's code reading is known
+     * (`reader/hook.ts`). Off, `readerPropose` is the proposal call itself.
+     */
+    const reading = askedQuestion ? null : startFormReading(request, actor);
     const proposalQuestion = await questionForProposal(request, actor);
-    const proposal = askedQuestion ? null : await deliverFormProposal({
+    // AI_READS_CODE_CHECKS_ENABLED: no "couldn't find" line about the name the reader put on the card.
+    const proposal = askedQuestion ? null : withoutStaleRosterNote(await deliverFormProposal({
       request,
       actor,
       question: proposalQuestion,
       decorate: (response) => decorateFormAnswer(request, actor, response),
-      propose: (question) => proposeFormForTurn({
+      propose: readerPropose(reading, request, (question) => proposeFormForTurn({
       history: request.history,
       question,
       questionMessageId: request.questionMessageId,
@@ -491,8 +504,8 @@ async function answerQuestionCore(
        * `prior-forms.ts`.
        */
       priorFormsOnFile: (employeeName, locationId) => priorFormsReadingForChat(actor, employeeName, locationId),
-    }),
-    });
+    })),
+    }));
     // Flags off: decoration returns the same proposal, and the forms-library
     // answer returns here, before retrieval.
     if (proposal) return proposal;

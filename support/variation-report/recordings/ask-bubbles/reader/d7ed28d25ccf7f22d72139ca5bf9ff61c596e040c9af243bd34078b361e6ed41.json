@@ -1,0 +1,55 @@
+{
+  "key": "d7ed28d25ccf7f22d72139ca5bf9ff61c596e040c9af243bd34078b361e6ed41",
+  "model": "claude-haiku-5-5",
+  "reply": {
+    "employee": {
+      "value": "Quinn Marlowe",
+      "evidence": "Quinn Marlowe"
+    },
+    "location": null,
+    "jobTitle": {
+      "value": "Team Member",
+      "evidence": "Team Member"
+    },
+    "incident": {
+      "value": "Below goal on sales per guest and add-on sales for September",
+      "evidence": "today under performance for September below goal on sales per guest and add-on sales"
+    },
+    "incidentDate": null,
+    "warningLevel": {
+      "value": "verbal",
+      "evidence": "verbal warning received"
+    },
+    "payroll": {
+      "value": "no",
+      "evidence": "not payroll deductible"
+    },
+    "payrollAmount": null,
+    "policyHeading": null,
+    "priorSteps": [
+      {
+        "kind": "coaching",
+        "date": "2026-09-08",
+        "evidence": "Open Ended Questions Coaching 9/8/2026"
+      },
+      {
+        "kind": "coaching",
+        "date": "2026-09-15",
+        "evidence": "Focus Item Coaching 9/15/2026"
+      },
+      {
+        "kind": "coaching",
+        "date": "2026-09-25",
+        "evidence": "New Product Coaching 9/25/2026"
+      }
+    ],
+    "otherDates": []
+  },
+  "usage": {
+    "inputTokens": 4687,
+    "outputTokens": 561,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0
+  },
+  "ms": 2210
+}

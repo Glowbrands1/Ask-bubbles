@@ -2,7 +2,7 @@ import "server-only";
 
 import { ACTIVE_BRAND } from "@/lib/brand";
 import { CLAUDE_HAIKU_MODEL } from "@/lib/config/models";
-import { intentExtractionEnabled, lastFirstNameReadEnabled } from "@/lib/config/chat-quality-flags";
+import { intentExtractionEnabled } from "@/lib/config/chat-quality-flags";
 import { readDirectoryFacts, loadScopedRoster, type DirectoryFact } from "@/lib/forms/employee-roster";
 import { listTemplateSummaries } from "@/lib/forms/repository";
 import { manualSectionHeadings } from "@/lib/forms/official-policy-manual";
@@ -20,7 +20,6 @@ import {
   INTENT_TOOL_INPUT_SCHEMA,
   INTENT_TOOL_NAME,
 } from "./intent-slots";
-import { lastFirstReading } from "./reader/last-first";
 import type { AskRequest, AskResponse } from "./types";
 
 /**
@@ -69,17 +68,6 @@ export async function applyIntentExtraction(input: {
       ],
     }).catch(() => null);
 
-    // LAST_FIRST_NAME_READ_ENABLED: "Calder, Remy" is read by the roster checks alone, no model.
-    const checked = lastFirstNameReadEnabled()
-      ? lastFirstReading({
-          managerTurns: [...input.request.history.filter((turn) => turn.role === "user").map((turn) => turn.content), input.request.question],
-          people,
-          locations: stores,
-          headings,
-          today: input.request.context.todayIso,
-        })
-      : null;
-
     const decision = decideIntentTurn({
       question: input.request.question,
       history: input.request.history,
@@ -96,7 +84,6 @@ export async function applyIntentExtraction(input: {
           input.request.openForm ||
           input.request.activeFormInstanceId,
       ),
-      checked,
     });
     await writeSaved(input.actor.subject, input.request.conversationId, decision.state);
     if (decision.clarification) {
