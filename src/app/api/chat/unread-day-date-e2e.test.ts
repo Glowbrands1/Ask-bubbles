@@ -544,6 +544,7 @@ describe('"she was late last week", Create without answering the date question',
     expect(on.prompt).not.toContain("NOT the date of the incident");
     expect(formDateLine(on.prompt)).toBe(formDateLine(off.prompt));
     expect(on.value("observation")).toBe(off.value("observation"));
+    expect(on.value("observation")).toContain("Tessa Ormond was late");
     expect(on.notices).toBe(off.notices);
   });
 
