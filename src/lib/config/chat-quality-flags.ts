@@ -861,6 +861,7 @@ export function nameBeforeTitleEnabled(): boolean {
 }
 
 export const CHAT_QUALITY_FLAG_NAMES = [
+  "CA_SHORTCUT_WORDS_ENABLED",
   "EXIT_TERMS_NOT_NAMES_ENABLED",
   "SUGGEST_ANSWER_REPLACES_TYPED_ENABLED",
   "UNREAD_DATE_PLAIN_ASK_ENABLED",
@@ -1753,4 +1754,15 @@ export function staleNeedsRosterPersonEnabled(): boolean {
  */
 export function exitTermsNotNamesEnabled(): boolean {
   return envFlag("EXIT_TERMS_NOT_NAMES_ENABLED");
+}
+
+/**
+ * The Corrective Action form's shortcuts fill their fields: "no PD", "PD
+ * applies", "deduct 25" the payroll deduction (Pau, 29 Oct 2026: "recognize
+ * all form wording … so when manager type shortcuts, it can understand it";
+ * same flag in both apps). Read inline by `forms/payroll-deduct-answer.ts`,
+ * which imports nothing. Off, as before.
+ */
+export function caShortcutWordsEnabled(): boolean {
+  return envFlag("CA_SHORTCUT_WORDS_ENABLED");
 }
