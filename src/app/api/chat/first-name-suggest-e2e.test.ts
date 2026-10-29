@@ -1039,6 +1039,48 @@ describe("a first name and a surname prefix are asked about from the roster, wit
     expect(asked.content).toContain("**Marisol Corvane**");
   });
 
+  /*
+   * QA live, 29 Oct 2026 (Pau's wording; names invented here): "pls create a
+   * coaching form for paulyne co" → "Is this for …?" → "no, jordan testperson"
+   * gave a card for "jordan testperson co" — the answer replaced the first
+   * name only and the typed surname piece stayed glued on.
+   * SUGGEST_ANSWER_REPLACES_TYPED_ENABLED: the whole typed name is replaced.
+   */
+  const REPLACES = "SUGGEST_ANSWER_REPLACES_TYPED_ENABLED";
+  const answered = async (on: boolean, answer: string) => {
+    withAsk(true, MARISOL);
+    if (!saved.has(REPLACES)) saved.set(REPLACES, process.env[REPLACES]);
+    delete process.env[REPLACES];
+    if (on) process.env[REPLACES] = "true";
+    const thread = new Thread();
+    const asked = (await thread.say("pls create a coaching form for marisol co")) as { content: string };
+    expect(asked.content).toBe("Is this for **Marisol Corvane**? Tell me if that should change.");
+    // The slots read what the turns now say, not the first raw name.
+    state.typedName = null;
+    return (await thread.say(answer)) as { content: string; formProposal?: Card };
+  };
+
+  it('"no, jordan testperson" → the card is jordan testperson, nothing glued on', async () => {
+    const card = await answered(true, "no, jordan testperson");
+    expect(card.formProposal?.employeeName?.toLowerCase()).toBe("jordan testperson");
+    expect(card.content).not.toMatch(/testperson co\b/i);
+  });
+
+  it('"no, Rowan Kestrel" (on the roster) → the card is Rowan Kestrel', async () => {
+    const card = await answered(true, "no, Rowan Kestrel");
+    expect(card.formProposal?.employeeName).toBe("Rowan Kestrel");
+  });
+
+  it('"yes" still gives Marisol Corvane', async () => {
+    const card = await answered(true, "yes");
+    expect(card.formProposal?.employeeName).toBe("Marisol Corvane");
+  });
+
+  it("off: the typed surname piece stays glued on, as live", async () => {
+    const card = await answered(false, "no, jordan testperson");
+    expect(card.formProposal?.employeeName?.toLowerCase()).toBe("jordan testperson co");
+  });
+
   it('nobody fits ("marisol zz"): as before, no question', async () => {
     withAsk(true, MARISOL, "marisol zz");
     const answer = (await new Thread().say("pls create a coaching form for marisol zz")) as { content: string; formProposal?: Card };

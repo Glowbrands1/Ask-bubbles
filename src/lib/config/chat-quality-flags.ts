@@ -861,6 +861,7 @@ export function nameBeforeTitleEnabled(): boolean {
 }
 
 export const CHAT_QUALITY_FLAG_NAMES = [
+  "SUGGEST_ANSWER_REPLACES_TYPED_ENABLED",
   "UNREAD_DATE_PLAIN_ASK_ENABLED",
   "PARTIAL_SURNAME_ASK_ENABLED",
   "PARTIAL_NAME_LOOSE_MATCH_ENABLED",
@@ -1674,6 +1675,16 @@ export function partialNameCardCurrentEnabled(): boolean {
  */
 export function partialSurnameAskEnabled(): boolean {
   return envFlag("PARTIAL_SURNAME_ASK_ENABLED");
+}
+
+/**
+ * An answer to the first-name question ("no, jordan testperson") replaces
+ * the whole name the manager typed ("marisol co"), not the first name alone
+ * (QA live, 29 Oct 2026; same flag in both apps). See
+ * `ai/first-name-suggest.ts`. Off, as before.
+ */
+export function suggestAnswerReplacesTypedEnabled(): boolean {
+  return envFlag("SUGGEST_ANSWER_REPLACES_TYPED_ENABLED");
 }
 
 /**
