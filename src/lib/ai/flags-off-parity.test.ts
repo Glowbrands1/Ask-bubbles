@@ -68,6 +68,14 @@ const PROTECTED = [
  * off; off, namesSomebody keeps every candidate. It stays on the PROTECTED
  * list; only the diff check leaves it out.
  *
+ * The user (Pau) approved, via QA on 29 Oct 2026 ("yes do that please"),
+ * two more lines in src/lib/forms/proposal.ts, both apps: the import
+ * `import { isExitTerms, namesSomebody } from "./answer-not-a-name";` and in
+ * employeeState `reading.names.filter((name) => !excluded.some((not) =>
+ * samePerson(not, name)) && !isExitTerms(name))`. Behind
+ * EXIT_TERMS_NOT_NAMES_ENABLED, default off; off, isExitTerms is false and
+ * every name is kept.
+ *
  * The user (Pau) approved, in the Code session on 27 Oct 2026, editing
  * src/lib/forms/form-date-answer.ts in both apps, only two lines: the import
  * of `withWiderDates` from "./wider-dates", and datesInText's last line

@@ -130,7 +130,8 @@ vi.mock("@/lib/ai/call-claude", () => ({
     if (input.tool?.name === "extract_form_fields") {
       const text = JSON.stringify(input.messages ?? []);
       return {
-        templateKey: /\b(?:ca|corrective action)\b/i.test(text) ? "dpoa" : null,
+        // As the live model reads "create an exit for …".
+        templateKey: /\bexit\b/i.test(text) ? "resignation-exit" : /\b(?:ca|corrective action)\b/i.test(text) ? "dpoa" : null,
         employeeName: null,
         observation: state.remapObservation,
         actionPlan: null,
@@ -588,4 +589,55 @@ describe("real staleness is still refused", () => {
       await expect(thread.create()).rejects.toThrow(/out of date/);
     });
   }
+});
+
+/*
+ * Bubbles live, 29 Oct 2026 (QA; her words, the person invented and not on the
+ * roster, as a new hire not yet in Woven): the chat asked "Which of them is
+ * this Resignation/Exit Form for — Marnie Holloway, drop wage or forfeit
+ * bonus?". EXIT_TERMS_NOT_NAMES_ENABLED: the exit form's own words are never
+ * offered as people, so that question is not asked.
+ */
+describe("her exit wording, the person not on the roster (EXIT_TERMS_NOT_NAMES_ENABLED)", () => {
+  const TERMS = "EXIT_TERMS_NOT_NAMES_ENABLED";
+  const unrostered = (on: boolean) => {
+    // No roster person for her: the live question came from a roster that does not have her.
+    live(true, [], "marnie holloway");
+    if (!saved.has(TERMS)) saved.set(TERMS, process.env[TERMS]);
+    delete process.env[TERMS];
+    if (on) process.env[TERMS] = "true";
+  };
+
+  it("on: no \"Which of them\" question; drop wage and forfeit bonus are not offered as people", async () => {
+    unrostered(true);
+    const answer = (await new Thread().say(HER_WORDS)) as { content: string; formProposal?: Card };
+    expect(answer.content).not.toMatch(/which of them/i);
+    expect(answer.content).not.toMatch(/\*\*(?:drop wage|forfeit bonus)\*\*/i);
+    expect(answer.formProposal?.templateKey).toBe("resignation-exit");
+    expect(answer.formProposal?.employeeName?.toLowerCase()).toBe("marnie holloway");
+  });
+
+  it("off: as live, the question lists the form's words as people", async () => {
+    unrostered(false);
+    const answer = (await new Thread().say(HER_WORDS)) as { content: string };
+    expect(answer.content).toMatch(/which of them[\s\S]*drop wage[\s\S]*forfeit bonus/i);
+  });
+
+  it("two real people: the reply is the same with the flag on as off", async () => {
+    const words = "create an exit for marnie holloway and rowan kestrel";
+    unrostered(false);
+    const off = ((await new Thread().say(words)) as { content: string }).content;
+    unrostered(true);
+    const on = ((await new Thread().say(words)) as { content: string }).content;
+    expect(on).toBe(off);
+  });
+
+  it("on, her on the roster and no reader name: the card names no \"drop wage\" or \"forfeit bonus\" as missing people", async () => {
+    unrostered(true);
+    state.directory = [...MARNIE];
+    state.readerName = null;
+    const answer = (await new Thread().say(HER_WORDS)) as { content: string; formProposal?: Card };
+    expect(answer.formProposal?.employeeName?.toLowerCase()).toBe("marnie holloway");
+    expect(answer.content).not.toMatch(/couldn't find[^\n]*(?:drop wage|forfeit bonus)/i);
+  });
 });

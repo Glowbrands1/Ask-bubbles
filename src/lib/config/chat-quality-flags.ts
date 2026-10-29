@@ -861,6 +861,7 @@ export function nameBeforeTitleEnabled(): boolean {
 }
 
 export const CHAT_QUALITY_FLAG_NAMES = [
+  "EXIT_TERMS_NOT_NAMES_ENABLED",
   "SUGGEST_ANSWER_REPLACES_TYPED_ENABLED",
   "PARTIAL_SURNAME_ASK_ENABLED",
   "PARTIAL_NAME_LOOSE_MATCH_ENABLED",
@@ -1695,4 +1696,15 @@ export function partialNameLooseMatchEnabled(): boolean {
  */
 export function staleNeedsRosterPersonEnabled(): boolean {
   return envFlag("STALE_NEEDS_ROSTER_PERSON_ENABLED");
+}
+
+/**
+ * The exit form's own shortcut words ("drop wage", "forfeit bonus", "store
+ * key", "not eligible for rehire") are never read as a person: not by the
+ * chat's "Which of them is this … for" question, not by Create (a Buff City
+ * manager, 29 Oct 2026; same flag in both apps). See
+ * `forms/answer-not-a-name.ts`. Off, as before.
+ */
+export function exitTermsNotNamesEnabled(): boolean {
+  return envFlag("EXIT_TERMS_NOT_NAMES_ENABLED");
 }

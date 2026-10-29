@@ -12,6 +12,7 @@ import { isDateAnswerWords } from "@/lib/forms/incident-dates";
 import { withKeptTypedNames } from "@/lib/forms/kept-typed-names";
 import { supportsInlineDraft } from "@/lib/forms/inline-draft";
 import { readLocationMentions, rosterLocationName } from "@/lib/forms/location-mention";
+import { isExitTerms } from "@/lib/forms/answer-not-a-name";
 import { extractJobTitle, readEmployeeMentions } from "@/lib/forms/proposal";
 import type { ChatFormProposal } from "@/types";
 
@@ -186,8 +187,10 @@ export function applyGroundedProposal(
   } else if (input.prep.ambiguous.length > 1 || content.startsWith("Did you mean **")) {
     content = labelDuplicateQuestion(content, input.people, input.prep.ambiguousTyped);
   }
-  if (!antiLoopEnabled() && !input.rosterEmpty && input.prep.unmatched.length > 0) {
-    const names = input.prep.unmatched.map((name) => `**${name}**`).join(" or ");
+  // EXIT_TERMS_NOT_NAMES_ENABLED: "drop wage" or "forfeit bonus" is never a name missing from the roster.
+  const unmatched = input.prep.unmatched.filter((name) => !isExitTerms(name));
+  if (!antiLoopEnabled() && !input.rosterEmpty && unmatched.length > 0) {
+    const names = unmatched.map((name) => `**${name}**`).join(" or ");
     const sentence = `I couldn't find ${names} in the Woven roster, so that name is not on the form.`;
     if (!content.includes("couldn't find")) content = `${sentence}\n\n${content}`;
   }
