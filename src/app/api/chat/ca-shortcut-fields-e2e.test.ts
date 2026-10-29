@@ -596,3 +596,36 @@ describe("the Corrective Action form's payroll shortcuts (CA_SHORTCUT_WORDS_ENAB
     });
   }
 });
+
+/*
+ * A prior step's date in shorthand ("verbal on 10/1") is not an incident
+ * date: it took the card's Date away (10/20 → blank). "a verbal was given on
+ * 10/1" was already a step with STEP_DATE_NOT_INCIDENT_ENABLED; the shorthand
+ * is CA_SHORTCUT_WORDS_ENABLED.
+ */
+describe("a prior step's date in shorthand keeps the card's Date (CA_SHORTCUT_WORDS_ENABLED)", () => {
+  const STEP_FLAGS = ["STEP_DATE_NOT_INCIDENT_ENABLED", "STEP_DATE_NO_QUESTION_ENABLED"];
+  const dated = async (words: string, on: boolean) => {
+    for (const name of [SHORTCUTS, ...STEP_FLAGS]) if (!saved.has(name)) saved.set(name, process.env[name]);
+    delete process.env[SHORTCUTS];
+    configure({ ...A, extra: on ? [SHORTCUTS, ...STEP_FLAGS] : STEP_FLAGS }, CAST);
+    const thread = new Thread();
+    await talk(thread, [words]);
+    return thread.proposal?.formDate ?? null;
+  };
+
+  for (const step of ["verbal on 10/1", "verbal 10/1", "written: 10/5", "Verbal on 10/1"]) {
+    it(`"${step}" → the Date stays 10/20`, async () => {
+      expect(await dated(`${BASE} ${step}.`, true)).toBe("2026-10-20");
+    });
+    it(`off: "${step}" takes the Date away`, async () => {
+      expect(await dated(`${BASE} ${step}.`, false)).toBeNull();
+    });
+  }
+
+  // Main leaves this Date blank too (reported to QA separately); the shorthand rule changes nothing here.
+  it('a sentence that asks for the form: "create a written on 10/20 …" is unchanged by the flag', async () => {
+    const words = "create a written on 10/20 for katrin dovetail, she was late again";
+    expect(await dated(words, true)).toBe(await dated(words, false));
+  });
+});
