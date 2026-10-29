@@ -67,3 +67,16 @@ item; this review does not edit that older document.
 - `resolver.ts:134` accepts salon|store|location|studio|shop|makery as place nouns, which is tolerant input handling, not copy.
 
 Question: which single word should each surface use (form field labels, admin screens), and does Buff want "Makery" anywhere in copy?
+
+## C. Form option lists identical to the sibling app (QA, 29 Oct 2026 — recorded, not changed)
+
+Every checkbox group in this app's template library was compared with Ask Sunny's `main` (labels, in order). No behaviour change here; each needs Buff City Soap's own answer before a template revision.
+
+| # | Template.group | Same as Ask Sunny? | Why it may be residue | Question for approval |
+|---|---|---|---|---|
+| C1 | `coaching.coaching_topics` (`library.ts` ~L187) | Identical, same keys and order | "Store Tours", "Engaging Conversation", "Engaging Questions", "Relevant Recommendations", "Overcoming Objections", "Completing the Engagement", "New Client Documents" are the sibling company's client-engagement steps; a tester's live Buff draft (29 Oct) read them as salon content. | Buff City Soap's real Topic of Coaching list (QA is asking Pau/HR). Do not copy or invent one. |
+| C2 | `coaching.coaching_type`, `policy-review.review_types` ("TPOA"), `follow-up-coaching.*` | Identical | Generic coaching wording; "TPOA" is the sibling's abbreviation for Training Plan of Action. | Confirm Buff uses the same types and abbreviation. |
+| C3 | `dpoa.offense_type`, `dpoa.warning_type`, `demotion.*`, `position-transfer.*`, `prescreen-phone-interview.at_least_18` | Identical | The offense categories follow the JBA Policy Manual both apps cite; status and transfer types are generic. | Likely fine; confirm. |
+| C4 | `tanning-consultant-interview.*`, `management-interview-round-2.*` | Identical | Already hidden in code (B8). | Covered by B8. |
+| C5 | `resignation-exit.*` | Bubbles only | Labels read "Store key was returned"; the stored key `salon_key_returned` is kept on purpose (keys never change). | None. |
+| C6 | `management-interview-round-1.*` observed-qualities lists | Differ from the sibling (Bubbles' own wording) | — | None. |
