@@ -861,6 +861,7 @@ export function nameBeforeTitleEnabled(): boolean {
 }
 
 export const CHAT_QUALITY_FLAG_NAMES = [
+  "OTHER_WRITE_IN_GUARD_ENABLED",
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
   "DRAFT_DEDUPE_ENABLED",
@@ -1615,3 +1616,12 @@ export function firstNameSuggestEnabled(): boolean {
   return envFlag("FIRST_NAME_SUGGEST_ENABLED");
 }
 
+/**
+ * A ticked "Other" box is never left with its write-in empty: the write-in
+ * gets what happened in the manager's words, else "Other" is unticked (QA,
+ * 29 Oct 2026; same flag in both apps). See `forms/other-write-in.ts`. Off,
+ * the draft as the model returned it.
+ */
+export function otherWriteInGuardEnabled(): boolean {
+  return envFlag("OTHER_WRITE_IN_GUARD_ENABLED");
+}

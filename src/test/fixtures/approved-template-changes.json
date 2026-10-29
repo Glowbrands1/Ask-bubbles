@@ -18,6 +18,12 @@
    "to": "Buff City Soap"
   },
   {
+   "sourceKey": "coaching",
+   "path": ".document.blocks[10].field.help",
+   "from": "Written as \"Observed:\" — what happened — then \"Expectation:\" — what the manager told the employee to do differently. One field, two labelled sections.",
+   "to": "Written as \"Observed:\" — what happened — then \"Expectation:\" — what the manager told the employee to do differently — then \"Going Forward:\" — what the employee will do from now on. One field, three labelled sections."
+  },
+  {
    "sourceKey": "dpoa",
    "path": ".revisionNote",
    "from": "Renamed to Corrective Action Form, and Observation of Offense drafts as Observed/Expectation/Going Forward with the Action Plan as the plan-of-action paragraph. Revision 3 sets the two policy fields to the business's own reading of them: Policy Violated is the offense category ticked on the form, and Direct policy names the approved manual with its section and page. Revision 4 adds \"Is payroll deduct applicable?\" as a Yes / No the manager answers (one answer, unanswered until they give it). Revision 5 (HR feedback, 3 Oct 2026) replaces \"Previous corrective action for this policy or issue\" and \"Date of previous corrective action\" with one multi-line field, \"List previously received coaching and/or corrective action with date signed\", and ends every Action Plan with \"Future policy violations may be subject to additional corrective action up to and including termination of employment.\" Forms filed against earlier versions keep the document they were signed on; the template key and every stored value are unchanged.",

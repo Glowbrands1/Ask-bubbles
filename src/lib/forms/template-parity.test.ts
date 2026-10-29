@@ -130,6 +130,13 @@ const APPROVED_CONTENT_CHANGES: { decision: string; from: string; to: string }[]
    * See `seed-sibling-brand.test.ts`.
    */
   { decision: "QA-4 — Tanning Consultant Interview core-values heading", from: "Sun Tan City Core Values", to: "Core Values" },
+  /*
+   * QA, 29 Oct 2026: the drafting prompt has written this field as Observed /
+   * Expectation / Going Forward since the Corrective Action change; the help
+   * still said two sections. Wording only (no revision: the published version
+   * keeps its help until a revision is approved).
+   */
+  { decision: "QA-5 — Coaching details help, three sections", from: "Written as \"Observed:\" — what happened — then \"Expectation:\" — what the manager told the employee to do differently. One field, two labelled sections.", to: "Written as \"Observed:\" — what happened — then \"Expectation:\" — what the manager told the employee to do differently — then \"Going Forward:\" — what the employee will do from now on. One field, three labelled sections." },
 ];
 
 function comparable(seed: Record<string, unknown>) {
@@ -223,12 +230,13 @@ describe("the migrated templates are the reference platform's published template
     );
     // D3 x2 (SDIT, both lists), D4 x10 (six EPPs; SDIT, TSD and both DMIT print it twice), D12 x1, D18 x1, DM-1..3 x1 each,
     // QA-2..4 x1 each (QA, 25 Oct 2026: no sibling-company wording; QA-1 dropped, MyGlow confirmed by Pau).
-    expect(matching).toHaveLength(20);
+    // QA-5 x1 (QA, 29 Oct 2026: the Coaching details help names the three sections the prompt asks for).
+    expect(matching).toHaveLength(21);
     for (const entry of APPROVED_CONTENT_CHANGES) {
       expect(matching.some((change) => change.from === entry.from), entry.decision).toBe(true);
     }
     expect(new Set(matching.map((change) => change.sourceKey))).toEqual(
-      new Set(["sdit-epp", "tsd-epp", "asd-sdit-epp", "fttc-epp", "dmit-epp-tsd", "dmit-epp-dmit", "demotion", "management-interview-round-1", "dpoa", "stc-exit", "tanning-consultant-interview"]),
+      new Set(["coaching", "sdit-epp", "tsd-epp", "asd-sdit-epp", "fttc-epp", "dmit-epp-tsd", "dmit-epp-dmit", "demotion", "management-interview-round-1", "dpoa", "stc-exit", "tanning-consultant-interview"]),
     );
   });
 
