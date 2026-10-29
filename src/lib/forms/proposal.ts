@@ -19,7 +19,7 @@ import {
 } from "./team-subject";
 import { proposeLocationWithSource, type LocationProposal } from "./location-scope";
 import { ROSTER_STORE_INDEX, rosterLocationName } from "./location-mention";
-import { isExitTerms, namesSomebody } from "./answer-not-a-name";
+import { isExitTerms, namesSomebody, notInStreetAddress } from "./answer-not-a-name";
 import { isStoreName, type StoreIndex } from "@/lib/stores/resolver";
 import type { AccessScope, ChatFormProposal, ChatMessage, EmployeeVerification } from "@/types";
 
@@ -1738,7 +1738,7 @@ export function employeeState(context: ManagerContext): EmployeeState {
         else if (pending.length === 0) pending = null;
       }
     }
-    const names = reading.names.filter((name) => !excluded.some((not) => samePerson(not, name)) && !isExitTerms(name));
+    const names = reading.names.filter((name) => !excluded.some((not) => samePerson(not, name)) && !isExitTerms(name) && notInStreetAddress(message.content)(name));
     if (names.length === 0) continue;
 
     if (names.length === 1) {
