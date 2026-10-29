@@ -861,6 +861,7 @@ export function nameBeforeTitleEnabled(): boolean {
 }
 
 export const CHAT_QUALITY_FLAG_NAMES = [
+  "EXIT_SHORTCUT_WORDS_ENABLED",
   "EXIT_TERMS_NOT_NAMES_ENABLED",
   "SUGGEST_ANSWER_REPLACES_TYPED_ENABLED",
   "UNREAD_DATE_PLAIN_ASK_ENABLED",
@@ -1753,4 +1754,17 @@ export function staleNeedsRosterPersonEnabled(): boolean {
  */
 export function exitTermsNotNamesEnabled(): boolean {
   return envFlag("EXIT_TERMS_NOT_NAMES_ENABLED");
+}
+
+/**
+ * The exit form's shortcuts fill their fields: "drop wage" the minimum-wage
+ * line, "deducted for store key" the key line, "called to quit" How Employee
+ * Resigned, "immediate voluntary term" / "quit, no notice given" the
+ * Immediate Voluntary box, "abandoned job" / "job abandonment" No Call No
+ * Show (Pau, 29 Oct 2026: "recognize all form wording … prioritize the exit form";
+ * same flag in both apps). See `forms/exit-details.ts`, `forms/exit-facts.ts`.
+ * Off, as before.
+ */
+export function exitShortcutWordsEnabled(): boolean {
+  return envFlag("EXIT_SHORTCUT_WORDS_ENABLED");
 }
