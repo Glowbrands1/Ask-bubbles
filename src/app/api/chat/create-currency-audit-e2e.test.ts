@@ -643,6 +643,14 @@ describe("refused before the audit's fixes, created with them", () => {
   audit([
     { ...PREFERRED_CASE, configs: PERSON.map((c) => ON(c, PREFERRED)) },
     { ...FOLLOW_UP_CASE, configs: MOST.map((c) => ON(SW(c, true), NAMED_FORM)) },
+    /* From the Ask Sunny port: on a CA card the chat itself must read it as typed too, or Create refuses the plain Coaching card it switched to. */
+    {
+      id: "F2d CA card -> 'make it a follow up coaching'",
+      steps: [`create a ca for katrin dovetail. ${LATE}`, "make it a follow up coaching"],
+      configs: MOST.map((c) => ON(SW(c, true), NAMED_FORM)),
+      employee: "Katrin Dovetail",
+      template: "follow-up-coaching",
+    },
     { ...SEVERAL_CASE, configs: MOST.map((c) => ON(c, SEVERAL)) },
   ]);
 });
@@ -702,6 +710,9 @@ describe("real staleness is still refused (409)", () => {
     stale("X2 'make it a coaching form instead' on the old CA card", [`create a ca for katrin dovetail. ${LATE}`], "make it a coaching form instead", config);
     stale("X3 'not for Katrin'", [`create a ca for katrin dovetail. ${LATE}`], "not for Katrin", config);
     stale("X3b 'this isn't for katrin dovetail' after an accepted name", [`create a ca for katrin dov. ${LATE}`, { ifAsked: "yes" }], "this isn't for katrin dovetail", config);
+    // From the Ask Sunny port: the preferred name is the card's person for every check, not only the name check.
+    stale("X3c 'this isn't for kit dovetail'", [`create a ca for kit dovetail. ${LATE}`], "this isn't for kit dovetail", config);
+    stale("X2c 'kit dovetail', then 'make it a coaching form instead' on the old CA card", [`create a ca for kit dovetail. ${LATE}`], "make it a coaching form instead", config);
     const coaching = (cards: ChatFormProposal[]) => cards.find((c) => c.templateKey === "coaching");
     stale("X4 two forms, then 'the coaching form is for Tessaly Brone'", ["create a coaching form for katrin dovetail and a CA for rowan kestrel"], "actually the coaching form is for Tessaly Brone", config, coaching);
     stale("X5 two forms, then 'not for katrin'", ["create a coaching form for katrin dovetail and a CA for rowan kestrel"], "not for katrin", config, coaching);

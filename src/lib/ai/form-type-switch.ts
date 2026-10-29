@@ -84,10 +84,11 @@ export function withFormTypeSwitch(request: AskRequest): AskRequest {
   if (!formTypeSwitchEnabled() || request.activeFormInstanceId) return request;
   const current = familyOf(request.continueProposalTemplateKey);
   if (!current) return request;
-  const question = readAs(request.question, current);
+  // SWITCH_KEEPS_NAMED_FORM_ENABLED: "make it a follow up coaching" is read as typed here too, so the card and Create agree.
+  const question = namesAnotherForm(request.question) ? null : readAs(request.question, current);
   // The newest switch decides the form; the turns before it are read as asking for that form.
   const users = request.history.map((turn, index) => ({ turn, index })).filter(({ turn }) => turn.role === "user" && typeof turn.content === "string");
-  const switches = users.slice(1).filter(({ turn }) => requestedForm(turn.content as string) !== null);
+  const switches = users.slice(1).filter(({ turn }) => requestedForm(turn.content as string) !== null && !namesAnotherForm(turn.content as string));
   const last = question ? null : switches.at(-1);
   const target = question ? requestedForm(request.question)! : last ? requestedForm(last.turn.content as string)! : null;
   if (!target) return request;
@@ -136,7 +137,11 @@ export function switchReadConversation<T extends { readonly role: string; readon
  * SWITCH_KEEPS_NAMED_FORM_ENABLED (audit, 29 Oct 2026; same flag in both
  * apps): "make it a follow up coaching" names a form of its own, so it is not
  * read as "change this to a coaching form" — the Follow-Up Coaching card it
- * made was refused at Create as asking for a different form. Off: as before.
+ * made was refused at Create as asking for a different form. Read as typed by
+ * the chat (`withFormTypeSwitch`, `withSwitchSources`) and by Create
+ * (`switchReadConversation`) alike: on a CA card, the route alone reading it
+ * as typed refused the Coaching card the chat still switched to. Off: as
+ * before.
  */
 function namesAnotherForm(turn: string): boolean {
   if (!switchKeepsNamedFormEnabled()) return false;
@@ -216,7 +221,7 @@ export function withSwitchSources(response: AskResponse, request: AskRequest): A
   const dropped = new Set<string>();
   let current: Family | null = null;
   const read = (content: string, id: string | undefined, first: boolean) => {
-    const wanted = first ? null : requestedForm(content);
+    const wanted = first || namesAnotherForm(content) ? null : requestedForm(content);
     if (wanted && current && wanted !== current) {
       if (id) dropped.add(id);
       current = wanted;

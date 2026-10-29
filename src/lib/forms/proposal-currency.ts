@@ -48,6 +48,14 @@ export function checkProposalIsCurrent(input: {
   conversation: readonly { id?: string; role: ChatMessage["role"]; content: string }[];
   templateKey: string;
   employeeName: string;
+  /**
+   * PREFERRED_NAME_CARD_CURRENT_ENABLED: other names the card's person goes
+   * by on the manager's roster ("Kit Dovetail" for Katrin Dovetail), from
+   * `preferredNamesOf`. What the conversation typed for one of them is the
+   * card's person, and "this isn't for kit dovetail" excludes the card's
+   * person; every other check still runs. Empty: as before.
+   */
+  alsoCalled?: readonly string[];
 }): ProposalCurrency {
   // An answer to the position / date / store question is not a name: see `question-answers.ts`.
   const answers = answersToOpenQuestions(input.conversation);
@@ -139,6 +147,13 @@ export function checkProposalIsCurrent(input: {
       reason: `This proposal is out of date: you said the form is not for ${input.employeeName}. Tell Bubbles who it is for.`,
     };
   }
+  const alsoCalled = input.alsoCalled ?? [];
+  if (excluded.some((not) => alsoCalled.some((name) => samePerson(not, name) || typedFor(not, name)))) {
+    return {
+      current: false,
+      reason: `This proposal is out of date: you said the form is not for ${input.employeeName}. Tell Bubbles who it is for.`,
+    };
+  }
   const suggested = firstNameSuggestAccepted(input.conversation).some(
     ({ name, answeredAt }) =>
       name.trim().toLowerCase() === input.employeeName.trim().toLowerCase() &&
@@ -152,7 +167,8 @@ export function checkProposalIsCurrent(input: {
    */
   const partial =
     partialNameCardCurrentEnabled() && resolution.kind === "resolved" && typedFor(resolution.employeeName, input.employeeName);
-  const accepted = suggested || partial || acceptedNameSuggestions(input.conversation).some(
+  const preferred = resolution.kind === "resolved" && alsoCalled.some((name) => typedFor(resolution.employeeName, name));
+  const accepted = suggested || partial || preferred || acceptedNameSuggestions(input.conversation).some(
     (name) => name.trim().toLowerCase() === input.employeeName.trim().toLowerCase(),
   );
   if (
@@ -197,14 +213,16 @@ export function checkProposalIsCurrent(input: {
 
 function severalStillStand(
   turns: readonly { id?: string; content: string }[],
-  input: { templateKey: string; employeeName: string },
+  input: { templateKey: string; employeeName: string; alsoCalled?: readonly string[] },
 ): boolean {
+  const cardPerson = (name: string) =>
+    samePerson(name, input.employeeName) || (input.alsoCalled ?? []).some((other) => samePerson(name, other));
   for (let at = turns.length - 2; at >= 0; at -= 1) {
     const several = readFormRequests(turns[at]!.content);
     if (!several || several.requests.length < 2) continue;
     const named = several.requests.flatMap((request) => (request.employeeName ? [request.employeeName] : []));
     const mine = several.requests.some(
-      (request) => request.templateKey === input.templateKey && request.employeeName !== null && samePerson(request.employeeName, input.employeeName),
+      (request) => request.templateKey === input.templateKey && request.employeeName !== null && cardPerson(request.employeeName),
     );
     if (!mine) return false;
     const later = turns.slice(at + 1);
@@ -217,7 +235,7 @@ function severalStillStand(
         { id: latest.id, content: latest.content },
       ),
     );
-    if (excluded.some((not) => samePerson(not, input.employeeName) || typedFor(not, input.employeeName))) return false;
+    if (excluded.some((not) => cardPerson(not) || typedFor(not, input.employeeName))) return false;
     if (resolution.kind === "resolved") return onTheRequest(resolution.employeeName);
     if (resolution.kind === "ambiguous") return resolution.candidates.every(onTheRequest);
     return true;

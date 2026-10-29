@@ -10,29 +10,18 @@ import type { AccessScope } from "@/types";
  * kit dovetail" (Kit is Katrin Dovetail's preferred name) made a card for
  * Katrin Dovetail, and Create refused it as "out of date: the conversation
  * now says the form is for kit dovetail" — the creation check reads names,
- * not the roster. The card is current when its person, on the manager's own
- * roster, has a preferred name that, with the last name, is what was typed:
- * every typed word begins a word of "<preferred> <last>". Off: never.
+ * not the roster. The other names the card's person goes by, from the
+ * manager's own roster: "<preferred> <last>" for a roster person whose full
+ * name is the card's and who has a preferred first name. The creation check
+ * reads them as the card's person (`checkProposalIsCurrent`'s `alsoCalled`),
+ * so every other check — the form, an exclusion, a later person — still runs.
+ * Off: none.
  */
-export async function preferredNameSamePerson(
-  scope: AccessScope | null,
-  cardName: string,
-  typed: string | undefined,
-): Promise<boolean> {
-  if (!preferredNameCardCurrentEnabled() || !typed) return false;
+export async function preferredNamesOf(scope: AccessScope | null, cardName: string): Promise<string[]> {
+  if (!preferredNameCardCurrentEnabled()) return [];
   const card = cardName.trim().toLowerCase();
   const roster = await loadScopedRoster(scope);
-  return roster.some(
-    (person) =>
-      Boolean(person.preferredFirstName?.trim()) &&
-      displayName(person).toLowerCase() === card &&
-      typedFor(typed, `${person.preferredFirstName} ${person.lastName}`),
-  );
-}
-
-function typedFor(typed: string, name: string): boolean {
-  const words = (text: string) => text.toLowerCase().match(/[a-z][a-z'’-]*/g) ?? [];
-  const full = words(name);
-  const said = words(typed);
-  return said.length > 0 && said.every((word) => word.length >= 2 && full.some((part) => part.startsWith(word)));
+  return roster
+    .filter((person) => Boolean(person.preferredFirstName?.trim()) && displayName(person).toLowerCase() === card)
+    .map((person) => `${person.preferredFirstName!.trim()} ${person.lastName}`);
 }
