@@ -864,6 +864,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "SEVERAL_FORMS_STAY_CURRENT_ENABLED",
   "SWITCH_KEEPS_NAMED_FORM_ENABLED",
   "PREFERRED_NAME_CARD_CURRENT_ENABLED",
+  "PARTIAL_NAME_LOOSE_MATCH_ENABLED",
   "STALE_NEEDS_ROSTER_PERSON_ENABLED",
   "PARTIAL_NAME_CARD_CURRENT_ENABLED",
   "UNREAD_DAY_NOT_INCIDENT_DATE_ENABLED",
@@ -1683,6 +1684,17 @@ export function switchKeepsNamedFormEnabled(): boolean {
  */
 export function severalFormsStayCurrentEnabled(): boolean {
   return envFlag("SEVERAL_FORMS_STAY_CURRENT_ENABLED");
+}
+
+/**
+ * At Create, a typed surname piece that does not begin the card's surname
+ * but has its letters in order ("marisol co" for Marisol Camarillo,
+ * "dovtail" for Dovetail) is the card's person when nobody else on the
+ * manager's roster fits (QA and Pau, 29 Oct 2026; same flag in both apps).
+ * See `forms/loose-name.ts`. Off, as before.
+ */
+export function partialNameLooseMatchEnabled(): boolean {
+  return envFlag("PARTIAL_NAME_LOOSE_MATCH_ENABLED");
 }
 
 /**
