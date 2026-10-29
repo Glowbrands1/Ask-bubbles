@@ -25,6 +25,7 @@ import { instanceListFilterFor, visibleInstances } from "@/lib/forms/instance-sc
 import { authorizeLocation } from "@/lib/forms/location-scope";
 import { isProposalId } from "@/lib/forms/proposal-id";
 import { checkProposalIsCurrent } from "@/lib/forms/proposal-currency";
+import { looseRosterFor } from "@/lib/forms/loose-name";
 import { allowsTeamSubject, isTeamSubject } from "@/lib/forms/team-subject";
 import { isDemoMode } from "@/lib/config/runtime";
 import { getTemplateByKey } from "@/lib/forms/repository";
@@ -237,6 +238,8 @@ export async function POST(request: Request) {
         conversation: switchReadConversation(parseHistory(body.conversation)),
         templateKey: body.templateKey,
         employeeName: body.employeeName,
+        // PARTIAL_NAME_LOOSE_MATCH_ENABLED: "marisol co" is the card's Marisol Camarillo when nobody else on the roster fits. Off: undefined, no roster read.
+        looseRoster: await looseRosterFor(actor.scope),
       });
       // AI_READS_CODE_CHECKS_ENABLED: "Marlowe, Quinn" read as "Marlowe" is the card's Quinn Marlowe when the reader's quote says so.
       if (!currency.current && !readerSamePerson(body, currency.resolvedName)) {

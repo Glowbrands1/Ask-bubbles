@@ -1,6 +1,8 @@
 import "server-only";
 
 import { firstNameSuggestAccepted } from "@/lib/ai/first-name-suggest";
+import { partialNameLooseMatchEnabled } from "@/lib/config/chat-quality-flags";
+import { looseFitsOnly, type LoosePerson } from "./loose-name";
 import { firstNameSuggestEnabled, partialNameCardCurrentEnabled } from "@/lib/config/chat-quality-flags";
 
 import { acceptedNameSuggestions } from "./employee-match";
@@ -48,6 +50,11 @@ export function checkProposalIsCurrent(input: {
   conversation: readonly { id?: string; role: ChatMessage["role"]; content: string }[];
   templateKey: string;
   employeeName: string;
+  /**
+   * PARTIAL_NAME_LOOSE_MATCH_ENABLED: the manager's roster, from
+   * `looseRosterFor`. Undefined: the typed name must begin the card's name.
+   */
+  looseRoster?: readonly LoosePerson[];
 }): ProposalCurrency {
   // An answer to the position / date / store question is not a name: see `question-answers.ts`.
   const answers = answersToOpenQuestions(input.conversation);
@@ -133,7 +140,9 @@ export function checkProposalIsCurrent(input: {
     ({ name, answeredAt }) =>
       name.trim().toLowerCase() === input.employeeName.trim().toLowerCase() &&
       resolution.kind === "resolved" &&
-      (typedFor(resolution.employeeName, name) || typedBy(input.conversation.slice(0, answeredAt + 1), resolution.employeeName)),
+      (typedFor(resolution.employeeName, name) ||
+        typedBy(input.conversation.slice(0, answeredAt + 1), resolution.employeeName) ||
+        looselyTyped(resolution.employeeName, name, input.looseRoster)),
   );
   /*
    * PARTIAL_NAME_CARD_CURRENT_ENABLED: the AI reader filled "katrin dov" as
@@ -141,7 +150,9 @@ export function checkProposalIsCurrent(input: {
    * the person the manager typed.
    */
   const partial =
-    partialNameCardCurrentEnabled() && resolution.kind === "resolved" && typedFor(resolution.employeeName, input.employeeName);
+    partialNameCardCurrentEnabled() &&
+    resolution.kind === "resolved" &&
+    (typedFor(resolution.employeeName, input.employeeName) || looselyTyped(resolution.employeeName, input.employeeName, input.looseRoster));
   const accepted = suggested || partial || acceptedNameSuggestions(input.conversation).some(
     (name) => name.trim().toLowerCase() === input.employeeName.trim().toLowerCase(),
   );
@@ -183,6 +194,15 @@ export function checkProposalIsCurrent(input: {
   }
 
   return { current: true };
+}
+
+/**
+ * PARTIAL_NAME_LOOSE_MATCH_ENABLED: "marisol co" was typed for Marisol
+ * Camarillo — a partial of her name ("co" has camarillo's letters in order),
+ * and of nobody else's on the manager's roster. See `forms/loose-name.ts`.
+ */
+function looselyTyped(typed: string, name: string, roster: readonly LoosePerson[] | undefined): boolean {
+  return Boolean(roster && roster.length > 0 && partialNameLooseMatchEnabled() && looseFitsOnly(typed, name, roster));
 }
 
 /** A manager turn up to the answer already said `typed`. */
