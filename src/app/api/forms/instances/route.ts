@@ -25,6 +25,7 @@ import { instanceListFilterFor, visibleInstances } from "@/lib/forms/instance-sc
 import { authorizeLocation } from "@/lib/forms/location-scope";
 import { isProposalId } from "@/lib/forms/proposal-id";
 import { checkProposalIsCurrent } from "@/lib/forms/proposal-currency";
+import { preferredNameSamePerson } from "@/lib/forms/preferred-name-current";
 import { allowsTeamSubject, isTeamSubject } from "@/lib/forms/team-subject";
 import { isDemoMode } from "@/lib/config/runtime";
 import { getTemplateByKey } from "@/lib/forms/repository";
@@ -239,7 +240,12 @@ export async function POST(request: Request) {
         employeeName: body.employeeName,
       });
       // AI_READS_CODE_CHECKS_ENABLED: "Marlowe, Quinn" read as "Marlowe" is the card's Quinn Marlowe when the reader's quote says so.
-      if (!currency.current && !readerSamePerson(body, currency.resolvedName)) {
+      // PREFERRED_NAME_CARD_CURRENT_ENABLED: "kit dovetail" is the card's Katrin Dovetail when the roster says Kit is her preferred name.
+      if (
+        !currency.current &&
+        !readerSamePerson(body, currency.resolvedName) &&
+        !(await preferredNameSamePerson(actor.scope, body.employeeName, currency.resolvedName))
+      ) {
         return NextResponse.json({ error: currency.reason, code: "proposal_superseded" }, { status: 409 });
       }
     }

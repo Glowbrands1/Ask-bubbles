@@ -1,4 +1,5 @@
-import { formTypeSwitchAfterCreateNoteEnabled, formTypeSwitchEnabled } from "@/lib/config/chat-quality-flags";
+import { formTypeSwitchAfterCreateNoteEnabled, formTypeSwitchEnabled, switchKeepsNamedFormEnabled } from "@/lib/config/chat-quality-flags";
+import { detectTemplateIntent } from "@/lib/forms/template-intent";
 
 import type { AskRequest, AskResponse } from "./types";
 
@@ -116,7 +117,7 @@ export function switchReadConversation<T extends { readonly role: string; readon
   // Either flag: the after-Create switch's new card is checked against the same conversation.
   if (!formTypeSwitchEnabled() && !formTypeSwitchAfterCreateNoteEnabled()) return turns;
   const users = turns.map((turn, index) => ({ turn, index })).filter(({ turn }) => turn.role === "user" && typeof turn.content === "string");
-  const switches = users.slice(1).filter(({ turn }) => requestedForm(turn.content) !== null);
+  const switches = users.slice(1).filter(({ turn }) => requestedForm(turn.content) !== null && !namesAnotherForm(turn.content));
   const last = switches.at(-1);
   if (!last) return turns;
   const target = requestedForm(last.turn.content)!;
@@ -129,6 +130,18 @@ export function switchReadConversation<T extends { readonly role: string; readon
     const content = askedFor(turn.content, from, target);
     return content === turn.content ? turn : { ...turn, content };
   });
+}
+
+/**
+ * SWITCH_KEEPS_NAMED_FORM_ENABLED (audit, 29 Oct 2026; same flag in both
+ * apps): "make it a follow up coaching" names a form of its own, so it is not
+ * read as "change this to a coaching form" — the Follow-Up Coaching card it
+ * made was refused at Create as asking for a different form. Off: as before.
+ */
+function namesAnotherForm(turn: string): boolean {
+  if (!switchKeepsNamedFormEnabled()) return false;
+  const intent = detectTemplateIntent(turn);
+  return intent.kind === "explicit" && familyOf(intent.templateKey) !== null && intent.templateKey !== "coaching" && intent.templateKey !== "dpoa";
 }
 
 /**
