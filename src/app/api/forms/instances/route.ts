@@ -25,6 +25,7 @@ import { instanceListFilterFor, visibleInstances } from "@/lib/forms/instance-sc
 import { authorizeLocation } from "@/lib/forms/location-scope";
 import { isProposalId } from "@/lib/forms/proposal-id";
 import { checkProposalIsCurrent } from "@/lib/forms/proposal-currency";
+import { looseRosterFor } from "@/lib/forms/loose-name";
 import { rosterNamesFor } from "@/lib/forms/roster-names";
 import { allowsTeamSubject, isTeamSubject } from "@/lib/forms/team-subject";
 import { isDemoMode } from "@/lib/config/runtime";
@@ -238,6 +239,8 @@ export async function POST(request: Request) {
         conversation: switchReadConversation(parseHistory(body.conversation)),
         templateKey: body.templateKey,
         employeeName: body.employeeName,
+        // PARTIAL_NAME_LOOSE_MATCH_ENABLED: "marisol co" is the card's Marisol Camarillo when nobody else on the roster fits. Off: undefined, no roster read.
+        looseRoster: await looseRosterFor(actor.scope),
         // STALE_NEEDS_ROSTER_PERSON_ENABLED: "drop wage" and "forfeit bonus" are not more people. Off: undefined, and no roster read.
         rosterNames: await rosterNamesFor(actor.scope),
       });
