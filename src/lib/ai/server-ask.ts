@@ -147,6 +147,7 @@ import { withJobTitleFromWords } from "./job-title-from-words";
 import { withFreshDateReask } from "./date-reask-fresh";
 import { withFirstNameAsk } from "./first-name-ask";
 import { withFirstNameAnswer, withFirstNameSuggestFor } from "./first-name-suggest";
+import { withProposalEditRules } from "./proposal-edit-rules";
 import { withFormTypeSwitch, withSwitchNote, withSwitchSources } from "./form-type-switch";
 import { withAdditionalStore } from "./additional-store";
 import { withOutOfScopePlace } from "./out-of-scope-place";
@@ -259,7 +260,8 @@ async function answerQuestionBody(
   // OUT_OF_SCOPE_PLACE_SAID_ENABLED: "Store: Kearney." from a manager not assigned there is told so.
   // FORM_TYPE_SWITCH_AFTER_CREATE_NOTE_ENABLED: the form already created is said to stay as it is.
   // FIRST_NAME_SUGGEST_ENABLED: a first name alone is asked about from the manager's own roster.
-  return keepManagerActionPlan(await withFirstNameSuggestFor(
+  // FORM_EDIT_DATE_RULES_ENABLED: "add that …" / "change observation of offense to: …" edit the card's Issue.
+  return keepManagerActionPlan(withProposalEditRules(await withFirstNameSuggestFor(
     // OUT_OF_SCOPE_PLACE_KEEPS_OWN_ENABLED: the card goes back to the manager's own store, or asks which.
     withSwitchNote(withOutOfScopePlace(withOwnPlace(withAmountUnknownAck(
       withUnreadDateAsk(
@@ -279,7 +281,7 @@ async function answerQuestionBody(
     ), request, actor), request, actor), request, "the Forms Register"),
     request,
     actor,
-  ), request);
+  ), request), request);
 }
 
 async function answerQuestionCore(
