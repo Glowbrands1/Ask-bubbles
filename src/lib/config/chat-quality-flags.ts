@@ -862,6 +862,7 @@ export function nameBeforeTitleEnabled(): boolean {
 
 export const CHAT_QUALITY_FLAG_NAMES = [
   "UNREAD_DATE_PLAIN_ASK_ENABLED",
+  "STALE_NEEDS_ROSTER_PERSON_ENABLED",
   "PARTIAL_NAME_CARD_CURRENT_ENABLED",
   "UNREAD_DAY_NOT_INCIDENT_DATE_ENABLED",
   "OTHER_WRITE_IN_GUARD_ENABLED",
@@ -1660,4 +1661,15 @@ export function unreadDatePlainAskEnabled(): boolean {
  */
 export function partialNameCardCurrentEnabled(): boolean {
   return envFlag("PARTIAL_NAME_CARD_CURRENT_ENABLED");
+}
+
+/**
+ * At Create, a name in the conversation that is neither the card's person nor
+ * anybody on the manager's roster ("drop wage", "forfeit bonus" in an exit
+ * request) does not make the card name "more than one person" (a Buff City
+ * manager, 29 Oct 2026; same flag in both apps). See
+ * `forms/proposal-currency.ts`. Off, as before.
+ */
+export function staleNeedsRosterPersonEnabled(): boolean {
+  return envFlag("STALE_NEEDS_ROSTER_PERSON_ENABLED");
 }
