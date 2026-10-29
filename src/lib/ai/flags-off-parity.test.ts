@@ -111,6 +111,10 @@ const ALLOWED_UI = [
   // QA-approved 2026-10-28 (Pau: structured changes on a finalized form), behind
   // NEXT_PUBLIC_CARD_CHANGE_FINALIZED_ENABLED; off, it renders nothing.
   "src/features/chat/finalized-change-panel.tsx",
+  // INVITE_LINK_HOLD_ENABLED (QA approved 28 Oct 2026, both apps): the new invitation
+  // Continue page and its form. Off, the page never shows Continue.
+  "src/app/auth/invite-continue/page.tsx",
+  "src/features/auth/invite-continue-form.tsx",
 ];
 
 /*
