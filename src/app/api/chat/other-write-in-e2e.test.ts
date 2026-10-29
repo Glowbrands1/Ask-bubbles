@@ -279,7 +279,6 @@ const { createInlineForm } = await import("@/features/chat/create-inline-form");
 const chatRoute = await import("./route");
 const instancesRoute = await import("../forms/instances/route");
 const draftRoute = await import("../forms/instances/[id]/draft/route");
-const instanceRoute = await import("../forms/instances/[id]/route");
 
 async function call<T>(url: string, init?: RequestInit): Promise<T> {
   const request = new Request(`https://app.test${url}`, init);
