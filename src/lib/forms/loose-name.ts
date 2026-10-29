@@ -31,7 +31,7 @@ function inOrder(part: string, word: string): boolean {
 }
 
 /**
- * QA live, 29 Oct 2026 (Ask Sunny, Pau's own name; invented here): "pls
+ * QA live, 29 Oct 2026 (the sibling app, Pau's own name; invented here): "pls
  * create a coaching form for marisol co" — the card was Marisol Camarillo
  * and Create refused it, because "co" does not begin "camarillo". The typed
  * words fit the person when the first is their first or preferred name (or

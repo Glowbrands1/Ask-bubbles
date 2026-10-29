@@ -916,7 +916,7 @@ describe("a name accepted from the question is the card's person at Create", () 
 });
 
 /*
- * QA live, 29 Oct 2026 (Ask Sunny, Pau's own name; invented here): "pls create
+ * QA live, 29 Oct 2026 (the sibling app, Pau's own name; invented here): "pls create
  * a coaching form for marisol co" — no question, the card came back for
  * Marisol Camarillo (the reader read "marisol"), and Create refused it as "out
  * of date: the conversation now says the form is for marisol co", because
