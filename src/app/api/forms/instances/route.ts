@@ -25,6 +25,7 @@ import { instanceListFilterFor, visibleInstances } from "@/lib/forms/instance-sc
 import { authorizeLocation } from "@/lib/forms/location-scope";
 import { isProposalId } from "@/lib/forms/proposal-id";
 import { checkProposalIsCurrent } from "@/lib/forms/proposal-currency";
+import { rosterNamesFor } from "@/lib/forms/roster-names";
 import { allowsTeamSubject, isTeamSubject } from "@/lib/forms/team-subject";
 import { isDemoMode } from "@/lib/config/runtime";
 import { getTemplateByKey } from "@/lib/forms/repository";
@@ -237,6 +238,8 @@ export async function POST(request: Request) {
         conversation: switchReadConversation(parseHistory(body.conversation)),
         templateKey: body.templateKey,
         employeeName: body.employeeName,
+        // STALE_NEEDS_ROSTER_PERSON_ENABLED: "drop wage" and "forfeit bonus" are not more people. Off: undefined, and no roster read.
+        rosterNames: await rosterNamesFor(actor.scope),
       });
       // AI_READS_CODE_CHECKS_ENABLED: "Marlowe, Quinn" read as "Marlowe" is the card's Quinn Marlowe when the reader's quote says so.
       if (!currency.current && !readerSamePerson(body, currency.resolvedName)) {
