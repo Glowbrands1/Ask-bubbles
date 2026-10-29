@@ -861,6 +861,7 @@ export function nameBeforeTitleEnabled(): boolean {
 }
 
 export const CHAT_QUALITY_FLAG_NAMES = [
+  "UNREAD_DAY_NOT_INCIDENT_DATE_ENABLED",
   "OTHER_WRITE_IN_GUARD_ENABLED",
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -1624,4 +1625,15 @@ export function firstNameSuggestEnabled(): boolean {
  */
 export function otherWriteInGuardEnabled(): boolean {
   return envFlag("OTHER_WRITE_IN_GUARD_ENABLED");
+}
+
+/**
+ * "She was late last week" with no date read and the form left at today: the
+ * Corrective Action draft is told today is not the incident's date, today is
+ * not treated as a date the manager gave, and the manager is told to set the
+ * date (QA, 29 Oct 2026; same flag in both apps). See
+ * `forms/unread-day-date.ts`. Off, as before.
+ */
+export function unreadDayNotIncidentDateEnabled(): boolean {
+  return envFlag("UNREAD_DAY_NOT_INCIDENT_DATE_ENABLED");
 }
