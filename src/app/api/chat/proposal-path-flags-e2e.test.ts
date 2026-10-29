@@ -117,6 +117,7 @@ vi.mock("@/lib/ai/call-claude", () => ({
       input: {
         employee: name ? { value: name, evidence: manager } : null,
         incident: /late/.test(manager) ? { value: "late", evidence: manager } : null,
+        ...(state.reading.readerTitle && /ass't store manager/i.test(manager) ? { jobTitle: { value: state.reading.readerTitle, evidence: "ass't store manager" } } : {}),
         incidentDate: /10\/20/.test(manager) ? { value: "2026-10-20", evidence: "10/20" } : null,
       },
       usage: { inputTokens: 10, outputTokens: 5, cacheReadTokens: 0, cacheWriteTokens: 0 },
@@ -680,5 +681,35 @@ describe("MANAGER_WORDS_ONLY on the live path (no code change needed; QA round 4
     await pasted.say("create a CA form for tessa ormond, soap maker at kearney, for opening store late on 9-28-26", EMPLOYEE);
     await pasted.say("this should be a written and note a verbal ca was given on 9-1-26", EMPLOYEE);
     expect((await pasted.say(PASTE, EMPLOYEE)).formProposal?.employeeRole ?? "").not.toMatch(/District Manager/);
+  });
+});
+
+/*
+ * QA, 29 Oct 2026, live with MANAGER_WORDS_ONLY on: the name is not on the
+ * roster (invented), the form is the Coaching Form, and the tester's next turn
+ * was "kearney". Live gave Position "Store Manager" on both turns; this
+ * harness gave it on the second. Every reading the AI reader could return for
+ * the title is tried.
+ */
+describe("MANAGER_WORDS_ONLY, a name not on the roster, and the next turn (QA live, 29 Oct 2026)", () => {
+  for (const readerTitle of ["", "ass't store manager", "Store Manager"]) {
+    it(`"ass't store manager" stays Assistant Manager after "kearney"${readerTitle ? ` (reader: ${readerTitle})` : ""}`, async () => {
+      live(WORDS_ONLY);
+      state.directory = [{ id: "e-3", firstName: "Rowan", lastName: "Kestrel", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-66"], positionName: null }];
+      const thread = new Thread();
+      const first = await thread.say(ASST, { ...EMPLOYEE, readerTitle });
+      const next = await thread.say("kearney", { ...EMPLOYEE, readerTitle });
+      expect(first.formProposal?.employeeRole).toBe("Assistant Manager");
+      expect(next.formProposal?.employeeRole).toBe("Assistant Manager");
+      expect(next.content).not.toMatch(/\bStore Manager\b/);
+    });
+  }
+
+  it("off (production): Store Manager, as before", async () => {
+    live();
+    state.directory = [{ id: "e-3", firstName: "Rowan", lastName: "Kestrel", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-66"], positionName: null }];
+    const thread = new Thread();
+    await thread.say(ASST, EMPLOYEE);
+    expect((await thread.say("kearney", EMPLOYEE)).formProposal?.employeeRole).toBe("Store Manager");
   });
 });
