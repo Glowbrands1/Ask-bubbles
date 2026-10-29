@@ -146,7 +146,7 @@ import { keepManagerActionPlan } from "./manager-action-plan-reply";
 import { withJobTitleFromWords } from "./job-title-from-words";
 import { withFreshDateReask } from "./date-reask-fresh";
 import { withFirstNameAsk } from "./first-name-ask";
-import { withFirstNameAnswer, withFirstNameSuggestFor } from "./first-name-suggest";
+import { withFirstNameAnswerFor, withFirstNameSuggestFor } from "./first-name-suggest";
 import { withManagerStatedTitle } from "./manager-title";
 import { withProposalEditRules } from "./proposal-edit-rules";
 import { withFormTypeSwitch, withSwitchNote, withSwitchSources } from "./form-type-switch";
@@ -238,7 +238,7 @@ async function answerQuestionTraced(
   // FORM_TYPE_SWITCH_ENABLED: "change to coaching" with the card open switches it to the other form.
   // ADDITIONAL_LOCATION_TAKEN_ENABLED: "Store: Kearney." from a manager who covers Kearney is read as the change it is.
   // FIRST_NAME_SUGGEST_ENABLED: "yes" to "Is this for **Quinn Marlowe**?" is read as that name.
-  const read = withFormTypeSwitch(withAdditionalStore(withTerseSlots(withNameBeforeTitle(withTypoReadingCopy(withFirstNameAnswer(request), names))), actor));
+  const read = withFormTypeSwitch(withAdditionalStore(withTerseSlots(withNameBeforeTitle(withTypoReadingCopy(await withFirstNameAnswerFor(request, actor), names))), actor));
   if (!chatTraceEnabled()) return answerQuestionBody(read, actor, memory);
   const draft = openChatTrace({
     conversationId: request.conversationId,
