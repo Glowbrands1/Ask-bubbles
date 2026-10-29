@@ -863,6 +863,9 @@ export function nameBeforeTitleEnabled(): boolean {
 export const CHAT_QUALITY_FLAG_NAMES = [
   "SUGGEST_ANSWER_REPLACES_TYPED_ENABLED",
   "UNREAD_DATE_PLAIN_ASK_ENABLED",
+  "SEVERAL_FORMS_STAY_CURRENT_ENABLED",
+  "SWITCH_KEEPS_NAMED_FORM_ENABLED",
+  "PREFERRED_NAME_CARD_CURRENT_ENABLED",
   "PARTIAL_SURNAME_ASK_ENABLED",
   "PARTIAL_NAME_LOOSE_MATCH_ENABLED",
   "STALE_NEEDS_ROSTER_PERSON_ENABLED",
@@ -1664,6 +1667,37 @@ export function unreadDatePlainAskEnabled(): boolean {
  */
 export function partialNameCardCurrentEnabled(): boolean {
   return envFlag("PARTIAL_NAME_CARD_CURRENT_ENABLED");
+}
+
+/**
+ * Create accepts a card whose roster person was typed by preferred name and
+ * last name ("kit dovetail" for Katrin Dovetail, preferred name Kit) — the
+ * creation check otherwise reads the typed name as somebody else (audit, 29
+ * Oct 2026; same flag in both apps). See `forms/preferred-name-current.ts`.
+ * Off, as before.
+ */
+export function preferredNameCardCurrentEnabled(): boolean {
+  return envFlag("PREFERRED_NAME_CARD_CURRENT_ENABLED");
+}
+
+/**
+ * A switch turn that names a form of its own ("make it a follow up coaching")
+ * is read as typed, not as "change this to a coaching form" (audit, 29 Oct
+ * 2026; same flag in both apps). See `ai/form-type-switch.ts`. Off, as
+ * before.
+ */
+export function switchKeepsNamedFormEnabled(): boolean {
+  return envFlag("SWITCH_KEEPS_NAMED_FORM_ENABLED");
+}
+
+/**
+ * Each card from a message that asked for several forms ("a coaching form for
+ * A and a CA for B") stays current at Create after later turns that name
+ * nobody else and ask for no form (audit, 29 Oct 2026; same flag in both
+ * apps). See `forms/proposal-currency.ts`. Off, as before.
+ */
+export function severalFormsStayCurrentEnabled(): boolean {
+  return envFlag("SEVERAL_FORMS_STAY_CURRENT_ENABLED");
 }
 
 /**

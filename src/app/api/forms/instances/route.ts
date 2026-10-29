@@ -25,6 +25,7 @@ import { instanceListFilterFor, visibleInstances } from "@/lib/forms/instance-sc
 import { authorizeLocation } from "@/lib/forms/location-scope";
 import { isProposalId } from "@/lib/forms/proposal-id";
 import { checkProposalIsCurrent } from "@/lib/forms/proposal-currency";
+import { preferredNamesOf } from "@/lib/forms/preferred-name-current";
 import { looseRosterFor } from "@/lib/forms/loose-name";
 import { rosterNamesFor } from "@/lib/forms/roster-names";
 import { allowsTeamSubject, isTeamSubject } from "@/lib/forms/team-subject";
@@ -234,11 +235,14 @@ export async function POST(request: Request) {
      * `lib/forms/proposal-currency.ts`.
      */
     if (body.source === "assistant" && Array.isArray(body.conversation)) {
+      // PREFERRED_NAME_CARD_CURRENT_ENABLED: "kit dovetail" is the card's Katrin Dovetail when the manager's roster says Kit is her preferred name. Off: none, and no roster read.
+      const alsoCalled = await preferredNamesOf(actor.scope, body.employeeName);
       const currency = checkProposalIsCurrent({
         // FORM_TYPE_SWITCH_ENABLED: "change to coaching" is read as the chat read it, so the switched card is current.
         conversation: switchReadConversation(parseHistory(body.conversation)),
         templateKey: body.templateKey,
         employeeName: body.employeeName,
+        alsoCalled,
         // PARTIAL_NAME_LOOSE_MATCH_ENABLED: "marisol co" is the card's Marisol Camarillo when nobody else on the roster fits. Off: undefined, no roster read.
         looseRoster: await looseRosterFor(actor.scope),
         // STALE_NEEDS_ROSTER_PERSON_ENABLED: "drop wage" and "forfeit bonus" are not more people. Off: undefined, and no roster read.
