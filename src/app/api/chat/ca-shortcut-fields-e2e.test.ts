@@ -623,11 +623,6 @@ describe("a prior step's date in shorthand keeps the card's Date (CA_SHORTCUT_WO
     });
   }
 
-  // Main leaves this Date blank too (reported to QA separately); the shorthand rule changes nothing here.
-  it('a sentence that asks for the form: "create a written on 10/20 …" is unchanged by the flag', async () => {
-    const words = "create a written on 10/20 for katrin dovetail, she was late again";
-    expect(await dated(words, true)).toBe(await dated(words, false));
-  });
 });
 
 
@@ -661,5 +656,38 @@ describe("the warning level's shorthand (CA_SHORTCUT_WORDS_ENABLED)", () => {
     expect(level).toBeNull();
     // The app's own level question, in either of its wordings.
     expect(content).toMatch(/warning level on the form — I won't guess at it|\*\*Verbal Warning\*\* or a \*\*Written Warning\*\*/);
+  });
+});
+
+
+/*
+ * "create a written on 10/20 for katrin dovetail, she was late again" (QA, 29
+ * Oct 2026): the level named the form, but nothing read it as a request for
+ * the Corrective Action form, so there was no card at all and no Date.
+ */
+describe("asking to create the level asks for the Corrective Action form (CA_SHORTCUT_WORDS_ENABLED)", () => {
+  const ask = async (words: string, on: boolean) => {
+    if (!saved.has(SHORTCUTS)) saved.set(SHORTCUTS, process.env[SHORTCUTS]);
+    delete process.env[SHORTCUTS];
+    configure({ ...A, extra: on ? [SHORTCUTS] : [] }, CAST);
+    const thread = new Thread();
+    await thread.say(words);
+    return thread.proposal;
+  };
+
+  for (const words of ["create a written on 10/20 for katrin dovetail, she was late again", "create a written for katrin dovetail, she was late again on 10/20", "make a verbal for katrin dovetail. she was late on 10/20"]) {
+    it(`"${words}" → the Corrective Action card, dated 10/20`, async () => {
+      const card = await ask(words, true);
+      expect(card?.templateKey).toBe("dpoa");
+      expect(card?.employeeName).toBe("Katrin Dovetail");
+      expect(card?.formDate).toBe("2026-10-20");
+    });
+    it(`off: "${words}" → no card`, async () => {
+      expect((await ask(words, false))?.templateKey ?? null).toBeNull();
+    });
+  }
+
+  it("a question about a written is not a request", async () => {
+    expect((await ask("how do i create a written for someone?", true))?.templateKey ?? null).toBeNull();
   });
 });
