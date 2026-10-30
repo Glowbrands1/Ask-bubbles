@@ -1,4 +1,4 @@
-import { antiLoopEnabled, managerWordsOnlyEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { antiLoopEnabled, caShortcutWordsEnabled, managerWordsOnlyEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { COMPANY_LOCATIONS } from "@/lib/locations";
 import { readCaPolicy } from "@/lib/forms/ca-policy";
 import {
@@ -288,6 +288,8 @@ function gateMentions(
     if (isDocumentOrPolicyName(name)) continue;
     // DATE_ANSWER_APPLIED_ENABLED: "most recent" answers the date question; it is not an unknown person to strip.
     if (isDateAnswerWords(name)) continue;
+    // CA_SHORTCUT_WORDS_ENABLED: "No PD." answers the payroll question; "PD" is not an unknown person to strip.
+    if (caShortcutWordsEnabled() && /^p\.?\s?d\.?$/i.test(name.trim())) continue;
     // EXIT_TERMS_NOT_NAMES_ENABLED: "drop wage and forfeit bonus" is the exit form's answer, not an unknown person to strip.
     if (isExitTerms(name)) continue;
     const match = matchEmployeeName(name, roster);
