@@ -877,6 +877,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "PARTIAL_NAME_CARD_CURRENT_ENABLED",
   "UNREAD_DAY_NOT_INCIDENT_DATE_ENABLED",
   "OTHER_WRITE_IN_GUARD_ENABLED",
+  "OTHER_WRITE_IN_NOT_A_QUESTION_ENABLED",
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
   "DRAFT_DEDUPE_ENABLED",
@@ -1640,6 +1641,16 @@ export function firstNameSuggestEnabled(): boolean {
  */
 export function otherWriteInGuardEnabled(): boolean {
   return envFlag("OTHER_WRITE_IN_GUARD_ENABLED");
+}
+
+/**
+ * The Other write-in is never a question the manager asked: "Which forms can I
+ * create here?" a turn before the coaching request came back as the topic in
+ * the sibling app (QA, 30 Oct 2026; same flag in both apps). See
+ * `forms/other-write-in.ts`. Off, as before.
+ */
+export function otherWriteInNotAQuestionEnabled(): boolean {
+  return envFlag("OTHER_WRITE_IN_NOT_A_QUESTION_ENABLED");
 }
 
 /**
