@@ -1,4 +1,4 @@
-import { decimalNotSentenceEndEnabled, levelStepNotAccountEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { decimalNotSentenceEndEnabled, levelRequestDateEnabled, levelStepNotAccountEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { COMPANY_JOB_TITLES } from "@/config/company/job-titles";
 import { businessToday } from "@/lib/business-date";
 
@@ -126,6 +126,20 @@ function clipAccount(raw: string): string | null {
 }
 
 /** The latest account of what happened, when the for-clause was only the person and the store. */
+/*
+ * LEVEL_REQUEST_DATE_ENABLED (QA, the sibling app's live chat, 30 Oct 2026):
+ * "create a written on 10/20 for <name> at <store>, she was late again" was
+ * the card's Issue word for word. The clause that asks for the level, dated
+ * or not, is the request; what follows its comma is the account.
+ */
+const LEVEL_REQUEST_LEAD =
+  /^\s*(?:please\s+)?(?:create|make|start|open|do|file|write|draft)\s+(?:a\s+|an\s+)?(?:verbal|written|final)(?:\s+warning)?(?:\s+(?:on\s+)?(?<![\d/-])\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?(?![\d/-]))?\s+for\b[^,]*,\s*/i;
+
+function withoutLevelRequestLead(sentence: string): string {
+  if (!levelRequestDateEnabled()) return sentence;
+  return sentence.replace(LEVEL_REQUEST_LEAD, "");
+}
+
 function accountIssue(text: string): string | null {
   for (const turn of [...turnsOf(text)].reverse()) {
     const violation = VIOLATION.exec(turn);
@@ -134,7 +148,7 @@ function accountIssue(text: string): string | null {
       if (issue) return issue;
     }
     const sentences = [...turn.matchAll(decimalNotSentenceEndEnabled() ? SENTENCE_KEEPING_DECIMALS : SENTENCE)]
-      .map((match) => match[0].trim())
+      .map((match) => withoutLevelRequestLead(match[0].trim()))
       .filter((sentence) => sentence.length >= 3 && sentence.length <= 180);
     const hits = sentences
       .map((sentence, index) => ({ sentence, index }))
