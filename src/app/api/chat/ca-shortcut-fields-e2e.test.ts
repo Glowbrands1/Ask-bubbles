@@ -630,7 +630,7 @@ describe("a prior step's date in shorthand keeps the card's Date (CA_SHORTCUT_WO
  * The warning level's shorthand (QA, 29 Oct 2026): "1st written" / "first
  * written" is Written. "final warning" is no level the form prints (Verbal or
  * Written only); the level is asked, never left silent. Whether "final
- * written" is Written waits on Pau.
+ * written" is Written: Pau, 30 Oct 2026, "Tick written".
  */
 describe("the warning level's shorthand (CA_SHORTCUT_WORDS_ENABLED)", () => {
   const reply = async (words: string, on: boolean) => {
@@ -642,7 +642,8 @@ describe("the warning level's shorthand (CA_SHORTCUT_WORDS_ENABLED)", () => {
     return { content: answer.content, level: thread.proposal?.warningLevel ?? null };
   };
 
-  for (const words of ["1st written", "first written", "First written"]) {
+  // "final written" too (Pau, 30 Oct 2026: "Tick written").
+  for (const words of ["1st written", "first written", "First written", "final written", "Final written"]) {
     it(`"${words}" → Written`, async () => {
       expect((await reply(`${BASE} ${words}.`, true)).level).toBe("written");
     });
@@ -690,4 +691,25 @@ describe("asking to create the level asks for the Corrective Action form (CA_SHO
   it("a question about a written is not a request", async () => {
     expect((await ask("how do i create a written for someone?", true))?.templateKey ?? null).toBeNull();
   });
+});
+
+/*
+ * "asm" (Pau, 30 Oct 2026, via QA: "Assistant atore manager"): the store's
+ * Assistant Manager, the title this app's list gives "assistant store
+ * manager". The list (`config/company/job-titles.ts`) already read it, with
+ * the flag on or off; pinned here through the chat to the card.
+ */
+describe('"asm" is the Assistant Manager', () => {
+  for (const words of [
+    "create a ca for katrin dovetail, asm. she was late on 10/20.",
+    "create a ca for katrin dovetail. pos: asm. she was late on 10/20.",
+    "create a ca for katrin dovetail. she is an asm. she was late on 10/20.",
+    "create a ca for katrin dovetail, ASM at lees summit. she was late on 10/20.",
+  ]) {
+    for (const on of [true, false]) {
+      it(`${on ? "" : "off: "}"${words}" → Assistant Manager`, async () => {
+        expect((await card(words, on))?.employeeRole).toBe("Assistant Manager");
+      });
+    }
+  }
 });
