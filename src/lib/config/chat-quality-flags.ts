@@ -862,6 +862,7 @@ export function nameBeforeTitleEnabled(): boolean {
 
 export const CHAT_QUALITY_FLAG_NAMES = [
   "EXIT_SHORTCUT_WORDS_ENABLED",
+  "STREET_ADDRESS_NOT_A_NAME_ENABLED",
   "EXIT_TERMS_NOT_NAMES_ENABLED",
   "SUGGEST_ANSWER_REPLACES_TYPED_ENABLED",
   "UNREAD_DATE_PLAIN_ASK_ENABLED",
@@ -1767,4 +1768,14 @@ export function exitTermsNotNamesEnabled(): boolean {
  */
 export function exitShortcutWordsEnabled(): boolean {
   return envFlag("EXIT_SHORTCUT_WORDS_ENABLED");
+}
+
+/**
+ * A name candidate inside a street address ("Ne Oakfield Lane", "lees
+ * summit", "mo" in "125 Ne Oakfield Lane, lees summit, MO. 64064") is not a
+ * person (QA, 29 Oct 2026; same flag in both apps). See
+ * `forms/answer-not-a-name.ts`. Off, as before.
+ */
+export function streetAddressNotANameEnabled(): boolean {
+  return envFlag("STREET_ADDRESS_NOT_A_NAME_ENABLED");
 }
