@@ -290,6 +290,8 @@ function gateMentions(
     if (isDateAnswerWords(name)) continue;
     // CA_SHORTCUT_WORDS_ENABLED: "No PD." answers the payroll question; "PD" is not an unknown person to strip.
     if (caShortcutWordsEnabled() && /^p\.?\s?d\.?$/i.test(name.trim())) continue;
+    // EXIT_TERMS_NOT_NAMES_ENABLED: "drop wage and forfeit bonus" is the exit form's answer, not an unknown person to strip.
+    if (isExitTerms(name)) continue;
     const match = matchEmployeeName(name, roster);
     if (match.kind === "unchecked") continue;
     if (match.kind === "exact") {
