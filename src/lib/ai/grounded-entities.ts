@@ -288,6 +288,8 @@ function gateMentions(
     if (isDocumentOrPolicyName(name)) continue;
     // DATE_ANSWER_APPLIED_ENABLED: "most recent" answers the date question; it is not an unknown person to strip.
     if (isDateAnswerWords(name)) continue;
+    // EXIT_TERMS_NOT_NAMES_ENABLED: "drop wage and forfeit bonus" is the exit form's answer, not an unknown person to strip.
+    if (isExitTerms(name)) continue;
     const match = matchEmployeeName(name, roster);
     if (match.kind === "unchecked") continue;
     if (match.kind === "exact") {
