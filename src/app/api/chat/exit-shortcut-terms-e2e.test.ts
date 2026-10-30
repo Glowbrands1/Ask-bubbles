@@ -641,3 +641,48 @@ describe("her exit wording, the person not on the roster (EXIT_TERMS_NOT_NAMES_E
     expect(answer.content).not.toMatch(/couldn't find[^\n]*(?:drop wage|forfeit bonus)/i);
   });
 });
+
+/*
+ * QA, 29 Oct 2026: the street address in her exit ("125 Ne Oakfield Lane,
+ * lees summit, MO. 64064") was read as more people — "Ne Oakfield Lane",
+ * "lees summit", "mo". STREET_ADDRESS_NOT_A_NAME_ENABLED: a name inside a
+ * street address is not a person. Her wording shape, lowercase, the person
+ * invented and not on the roster.
+ */
+describe("a street address in an exit is not a person (STREET_ADDRESS_NOT_A_NAME_ENABLED)", () => {
+  const ADDRESS = "STREET_ADDRESS_NOT_A_NAME_ENABLED";
+  const LOWER =
+    "create an exit for marnie holloway, assistant store manager at lees summit, mo. last day worked 10-26-26. not eligible for rehire. marnie's address is 125 ne oakfield lane, lees summit, mo. 64064";
+  const flags = (on: boolean) => {
+    live(true, [], "marnie holloway");
+    for (const name of ["EXIT_TERMS_NOT_NAMES_ENABLED", ADDRESS]) if (!saved.has(name)) saved.set(name, process.env[name]);
+    process.env.EXIT_TERMS_NOT_NAMES_ENABLED = "true";
+    delete process.env[ADDRESS];
+    if (on) process.env[ADDRESS] = "true";
+  };
+
+  for (const words of [HER_WORDS, LOWER]) {
+    it(`on: a card for her, no "Which of them", and Create makes the form — ${words === LOWER ? "lowercase" : "her words"}`, async () => {
+      flags(true);
+      const { thread, card } = await exitCard(words);
+      expect(card.employeeName?.toLowerCase()).toBe("marnie holloway");
+      await thread.create();
+      expect(store.form_instances).toHaveLength(1);
+    });
+  }
+
+  it('"jordan lane" with no house number is still a person', async () => {
+    flags(true);
+    const answer = (await new Thread().say("create an exit for jordan lane. last day worked 10-26-26.")) as { content: string; formProposal?: Card };
+    expect(answer.formProposal?.employeeName?.toLowerCase()).toBe("jordan lane");
+  });
+
+  it("two real people beside an address: the reply is the same with the flag on as off", async () => {
+    const words = "create an exit for marnie holloway and rowan kestrel. address 125 ne oakfield lane, lees summit, mo. 64064";
+    flags(false);
+    const off = ((await new Thread().say(words)) as { content: string }).content;
+    flags(true);
+    const on = ((await new Thread().say(words)) as { content: string }).content;
+    expect(on).toBe(off);
+  });
+});
