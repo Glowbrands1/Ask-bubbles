@@ -90,8 +90,16 @@ const PROTECTED = [
  * `return withWiderDates(text ?? "", today, found);`. Behind
  * WIDER_DATE_READER_ENABLED, default off; off, the dates found are returned
  * as they were. form-date-answer.ts is already excluded from the diff check.
+ *
+ * The user (Pau) approved in writing, via QA on 31 Oct 2026 ("Approve both"),
+ * in src/lib/forms/chat-revision.ts, both apps: the import
+ * `import { revisionSameValueEnabled } from "@/lib/config/chat-quality-flags";`
+ * and, before `const changed`, a value equal to the field's current text is
+ * dropped from `byName.values`. Behind REVISION_SAME_VALUE_ENABLED, default
+ * off; off, nothing is dropped.
  */
 const APPROVED_PROTECTED_EDITS = [
+  ":(exclude)src/lib/forms/chat-revision.ts",
   ":(exclude)src/lib/forms/form-date-answer.ts",
   ":(exclude)src/lib/ai/form-proposal.ts",
   ":(exclude)src/lib/forms/proposal.ts",
