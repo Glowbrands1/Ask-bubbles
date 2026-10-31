@@ -689,8 +689,6 @@ describe("the same account, two browsers", () => {
 
 describe("CHAT_HISTORY_STATE_CHUNKED_ENABLED: an account with many chats (QA, 31 Oct 2026)", () => {
   const FLAG = "CHAT_HISTORY_STATE_CHUNKED_ENABLED";
-describe("NEXT_PUBLIC_CHAT_LOCAL_OWNER_ENABLED: the history state's owner key", () => {
-  const FLAG = "NEXT_PUBLIC_CHAT_LOCAL_OWNER_ENABLED";
   afterEach(() => {
     delete process.env[FLAG];
   });
@@ -741,6 +739,15 @@ describe("NEXT_PUBLIC_CHAT_LOCAL_OWNER_ENABLED: the history state's owner key", 
     expect(idLists(route.db).map((ids) => ids.length)).toEqual([100, 100, 50]);
     expect(body.stored).toHaveLength(250);
     expect(body.stored.every((entry) => entry.messages === 1)).toBe(true);
+  });
+});
+
+describe("NEXT_PUBLIC_CHAT_LOCAL_OWNER_ENABLED: the history state's owner key", () => {
+  const FLAG = "NEXT_PUBLIC_CHAT_LOCAL_OWNER_ENABLED";
+  afterEach(() => {
+    delete process.env[FLAG];
+  });
+
   async function keyOf(subject: string): Promise<unknown> {
     const route = await load(subject);
     const response = await route.importRoute.GET(get("https://app.test/api/chat/conversations/import"));
