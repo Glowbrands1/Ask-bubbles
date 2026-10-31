@@ -879,6 +879,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "OTHER_WRITE_IN_GUARD_ENABLED",
   "OTHER_WRITE_IN_NOT_A_QUESTION_ENABLED",
   "STAFF_PICKER_ENABLED",
+  "CHAT_IMPORT_OWN_ONLY_ENABLED",
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
   "DRAFT_DEDUPE_ENABLED",
@@ -1662,6 +1663,16 @@ export function otherWriteInNotAQuestionEnabled(): boolean {
  */
 export function staffPickerEnabled(): boolean {
   return envFlag("STAFF_PICKER_ENABLED");
+}
+
+/**
+ * A chat another account wrote is never saved to this one: an Assistant
+ * Manager's Import on a Location Manager's browser copied the manager's chats
+ * into their account (QA, 30 Oct 2026; same flag in both apps). See
+ * `chat/store.ts` `saveOwnConversation`. Off, as before.
+ */
+export function chatImportOwnOnlyEnabled(): boolean {
+  return envFlag("CHAT_IMPORT_OWN_ONLY_ENABLED");
 }
 
 /**
