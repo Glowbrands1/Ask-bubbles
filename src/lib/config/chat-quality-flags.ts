@@ -887,6 +887,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ANGLE_PLACEHOLDER_GUARD_ENABLED",
   "SAME_FORM_COPY_ENABLED",
   "STAFF_PICKER_ENABLED",
+  "STAFF_PICKER_STORE_TITLES_ENABLED",
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
   "DRAFT_DEDUPE_ENABLED",
@@ -1751,6 +1752,15 @@ export function sameFormCopyEnabled(): boolean {
  */
 export function staffPickerEnabled(): boolean {
   return envFlag("STAFF_PICKER_ENABLED");
+}
+
+/**
+ * The whole-staff list shows the store's staff only — store titles, not the
+ * office accounts the directory also affiliates with a store (QA, 31 Oct 2026;
+ * same flag in both apps). See `forms/staff-picker.ts`. Off, as before.
+ */
+export function staffPickerStoreTitlesEnabled(): boolean {
+  return envFlag("STAFF_PICKER_STORE_TITLES_ENABLED");
 }
 
 /**
