@@ -606,6 +606,54 @@ describe('"can you create the same draft that we did with marnie holloway by cha
   });
 });
 
+/*
+ * SUNNY LIVE CHECK B2, 31 Oct 2026 (same code here): in one chat, "Do the
+ * same coaching form for remy calder" (card, not created), then "create a
+ * coaching form for remy calder" -> Create. That second card cites the earlier
+ * turn too, so its notes held "the same" and Marnie's content was copied.
+ */
+describe('"create a coaching form for remy calder" after an earlier "Do the same coaching form for remy calder"', () => {
+  it("SAME_FORM_COPY: a plain request copies nothing — only the card's own request can ask for a copy", async () => {
+    flags(true);
+    directory();
+    const thread = new Thread();
+    await marnieForm(thread);
+    thread.instanceId = null;
+    await thread.say("Do the same coaching form for remy calder", { templateKey: "coaching", employeeName: "Remy Calder" });
+    state.draft = { values: { coaching_details: "Observed:\nCoaching for Remy Calder." } };
+    const card = await thread.say("create a coaching form for remy calder", { templateKey: "coaching", employeeName: "Remy Calder" });
+    expect(card.formProposal?.employeeName ?? "").toMatch(/remy calder/i);
+    const remy = await thread.create();
+    expect(detailsOf(remy)).not.toContain("rolling rack");
+  });
+});
+
+/*
+ * INDEPENDENT REVIEW, 31 Oct 2026: the copy read "same thing", "same one",
+ * "same details" anywhere, so the manager's own account of what happened
+ * skipped the drafting model and filled the form from another person's.
+ */
+describe('Create notes ending "She was late again today, same thing as last week"', () => {
+  it("SAME_FORM_COPY: drafted from the manager's account, never copied", async () => {
+    flags(false);
+    directory();
+    const thread = new Thread();
+    await marnieForm(thread);
+    const remy = await remyForm(thread);
+    flags(true);
+    state.draft = { values: { coaching_details: "Observed:\nRemy was late again today." } };
+    state.draftCalls = 0;
+    await call(`/api/forms/instances/${remy}/draft`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ notes: "create a coaching form for remy calder\n\nShe was late again today, same thing as last week" }),
+    });
+    expect(detailsOf(remy)).not.toContain("rolling rack");
+    expect(detailsOf(remy)).toContain("Remy was late again today.");
+    expect(state.draftCalls).toBeGreaterThan(0);
+  });
+});
+
 afterEach(() => {
   said.answer = null;
 });
