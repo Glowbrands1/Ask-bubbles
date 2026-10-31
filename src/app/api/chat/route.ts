@@ -39,6 +39,7 @@ import {
   draftActionsEnabled,
   payrollDeductAmountFieldEnabled,
   questionNotFormEnabled,
+  sameFormCopyEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { LONG_MESSAGE_LIMIT } from "@/lib/chat/message-limit";
 import { isClientConversationId } from "@/lib/chat/client-ids";
@@ -270,12 +271,27 @@ async function postChat(request: Request) {
        * no open form does not pay to load the forms write path. See
        * `lib/forms/chat-revision.ts`.
        */
+      /*
+       * SAME_FORM_COPY_ENABLED: "the same draft that we did with <her>", with
+       * another employee's draft open — that form's content, copied into this
+       * one. Null unless the turn asks for the same form and names whose. See
+       * `lib/forms/same-form-copy.ts`.
+       */
+      const sameFormCopy =
+        sameFormCopyEnabled() && !correction && !policyChange && !redraft && parsed.activeFormInstanceId
+          ? await (await import("@/lib/forms/same-form-copy")).copyIntoOpenForm({
+              request,
+              instanceId: parsed.activeFormInstanceId,
+              question: parsed.question,
+            })
+          : null;
       const separateDocument =
-        !correction && !askedQuestion && !policyChange && !redraft && parsed.activeFormInstanceId
+        !correction && !askedQuestion && !policyChange && !redraft && !sameFormCopy && parsed.activeFormInstanceId
           ? await separateFormRequested(parsed.question)
           : false;
       const revision =
-        !correction && !askedQuestion && !policyChange && !redraft && !separateDocument && parsed.activeFormInstanceId
+        sameFormCopy ??
+        (!correction && !askedQuestion && !policyChange && !redraft && !separateDocument && parsed.activeFormInstanceId
           ? await (await import("@/lib/forms/chat-revision")).reviseActiveForm({
               request,
               instanceId: parsed.activeFormInstanceId,
@@ -283,7 +299,7 @@ async function postChat(request: Request) {
               history: parsed.history,
               today: parsed.context.todayIso,
             })
-          : null;
+          : null);
       /*
        * Two forms from one message, and a correction that names neither: ask
        * which, change nothing. See `askWhichFormToCorrect`.

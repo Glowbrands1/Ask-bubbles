@@ -878,6 +878,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "UNREAD_DAY_NOT_INCIDENT_DATE_ENABLED",
   "OTHER_WRITE_IN_GUARD_ENABLED",
   "OTHER_WRITE_IN_NOT_A_QUESTION_ENABLED",
+  "SAME_FORM_COPY_ENABLED",
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
   "DRAFT_DEDUPE_ENABLED",
@@ -1651,6 +1652,17 @@ export function otherWriteInGuardEnabled(): boolean {
  */
 export function otherWriteInNotAQuestionEnabled(): boolean {
   return envFlag("OTHER_WRITE_IN_NOT_A_QUESTION_ENABLED");
+}
+
+/**
+ * "Do the same coaching form for <another employee>": the new draft carries
+ * the content of the manager's own earlier form of that template, name
+ * changed; and "the same draft that we did with <her>" copies it into the open
+ * draft (QA, 30 Oct 2026; same flag in both apps). See
+ * `forms/same-form-copy.ts`. Off, as before.
+ */
+export function sameFormCopyEnabled(): boolean {
+  return envFlag("SAME_FORM_COPY_ENABLED");
 }
 
 /**

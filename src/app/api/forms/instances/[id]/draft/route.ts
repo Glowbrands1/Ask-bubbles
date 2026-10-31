@@ -178,6 +178,7 @@ import {
   policyCitationEnabled,
   policySpecificTopicsEnabled,
   typoReadingRoutesEnabled,
+  sameFormCopyEnabled,
 } from "@/lib/config/chat-quality-flags";
 import {
   STANDARDS_OF_CONDUCT,
@@ -364,6 +365,27 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
         "Tell Ask Bubbles what happened before asking for a draft.",
         400,
       );
+    }
+
+    /*
+     * SAME_FORM_COPY_ENABLED: "do the same coaching form for <another
+     * employee>" — the card's notes are that one sentence, so a draft from them
+     * is blank. The manager's own earlier form of this template is copied in
+     * instead, the name changed. See `lib/forms/same-form-copy.ts`.
+     */
+    if (sameFormCopyEnabled()) {
+      const sameForm = await import("@/lib/forms/same-form-copy");
+      if (sameForm.asksForSameForm(notes)) {
+        const copied = await sameForm.copyFormContent({ actorId: actor.id, target: loaded, named: sameForm.namedSource(notes) });
+        if (copied) {
+          return NextResponse.json({
+            values: copied.written.values,
+            checked: copied.written.checked,
+            withheld: [],
+            notice: `Copied from ${copied.source.instance.employeeName}'s ${loaded.instance.templateName}, with the name changed. Check it before you finalize.`,
+          });
+        }
+      }
     }
 
     /*
