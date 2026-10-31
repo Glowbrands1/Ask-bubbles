@@ -879,6 +879,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "OTHER_WRITE_IN_GUARD_ENABLED",
   "OTHER_WRITE_IN_NOT_A_QUESTION_ENABLED",
   "CHAT_IMPORT_OWN_ONLY_ENABLED",
+  "CHAT_HISTORY_STATE_CHUNKED_ENABLED",
+  "NEXT_PUBLIC_CHAT_HISTORY_TOLERANT_ENABLED",
   "FORM_EDIT_PLAIN_WORDS_ENABLED",
   "FORM_EDIT_HONEST_REPLY_ENABLED",
   "ANGLE_PLACEHOLDER_GUARD_ENABLED",
@@ -1667,6 +1669,28 @@ export function otherWriteInNotAQuestionEnabled(): boolean {
  */
 export function chatImportOwnOnlyEnabled(): boolean {
   return envFlag("CHAT_IMPORT_OWN_ONLY_ENABLED");
+}
+
+/**
+ * The history-state read counts turns in batches of conversation ids, so an
+ * account with thousands of chats no longer gets a 503 from
+ * GET /api/chat/conversations/import (QA, 31 Oct 2026; same flag in both
+ * apps). See `chat/store.ts` `ownHistoryState`. Off, as before.
+ */
+export function chatHistoryStateChunkedEnabled(): boolean {
+  return envFlag("CHAT_HISTORY_STATE_CHUNKED_ENABLED");
+}
+
+/**
+ * A freshly signed-in browser shows the account's chats even when the
+ * history-state read fails: the list the server returned is merged on its own
+ * (QA, 31 Oct 2026; same flag in both apps). Read in the browser, so only a
+ * statically written `process.env.NEXT_PUBLIC_…` is inlined, at build time.
+ * See `store/app-store.tsx`. Off, as before.
+ */
+export function chatHistoryTolerantEnabled(): boolean {
+  const inlined = process.env.NEXT_PUBLIC_CHAT_HISTORY_TOLERANT_ENABLED;
+  return typeof inlined === "string" && ON.has(inlined.trim().toLowerCase());
 }
 
 /**
