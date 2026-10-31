@@ -623,6 +623,93 @@ describe("a stated behaviour of the employee with her coaching draft open", () =
   });
 });
 
+/*
+ * BUBBLES LIVE CHECK, 31 Oct 2026 (QA's tester, A6): after a how-to answer,
+ * "can you upate the draft with these details of coaching?" wrote nothing — the
+ * answer's "Packing Slip", "Help Desk", "Use Split Ship" and "that's a separate
+ * process — partial fulfillment" read as other people to the open-form
+ * revision, which dropped the request, and the ordinary answer ran instead.
+ * The answer below keeps those phrases (shortened from the live one).
+ */
+const LIVE_GUIDE = [
+  "Here's the process for handling a BOPIS (Buy Online, Pick Up In-Store) order, pulled from the company knowledge base:",
+  "",
+  "**Picking the order**",
+  "- Print the Packing Slip and use it as your shopping list.",
+  "",
+  "**When the guest arrives / follow-up**",
+  "- Mark the order \"Shipped\" while the guest is still in the store.",
+  "",
+  "**If you don't have enough inventory to fulfill it**",
+  "That's a separate process — partial fulfillment. Use Split Ship to move unavailable items into a second shipment. Note this only applies to BOPIS — for Ship From Store orders lacking inventory, you submit a Help Desk request to reallocate instead.",
+].join("\n");
+const THESE = "can you upate the draft with these details of coaching?";
+const UNRELATED = "Those sources are about how coaching forms should generally be structured";
+
+describe('live check A6: "can you upate the draft with these details of coaching?" after an answer full of capitalised terms', () => {
+  async function ask(revision: typeof state.revision, flags: { plain?: boolean; honest?: boolean } = { plain: true, honest: true }) {
+    const draft = await openDraft(flags);
+    state.revision = revision;
+    said.answer = LIVE_GUIDE;
+    await draft.thread.say("how do i handle a bopis order?");
+    said.answer = `${UNRELATED} — not specific facts about the rolling rack. There's nothing in them to add.`;
+    const reply = await draft.thread.say(THESE);
+    return { ...draft, reply };
+  }
+
+  it("FORM_EDIT_PLAIN_WORDS: the answer is written into Details, and the card is told", async () => {
+    const { reply, id, details } = await ask({ values: { coaching_details: WRITTEN } });
+    expect(reply.formUpdate?.instanceId).toBe(id);
+    expect(reply.formUpdate?.updated).toContain("coaching_details");
+    expect(details()).toContain("Ship-from-store orders follow the packing-slip");
+    expect(reply.content).not.toContain(UNRELATED);
+    // The revision drafted from the answer itself.
+    expect(revisionAsked.at(-1)).toContain("Use Split Ship to move unavailable items");
+  });
+
+  it("the revision model makes no change: nothing written, and never the unrelated answer", async () => {
+    const { reply, details } = await ask({ values: {} });
+    expect(reply.formUpdate).toBeUndefined();
+    expect(details()).not.toContain("Ship-from-store orders follow the packing-slip");
+    expect(reply.content).not.toContain(UNRELATED);
+    expect(state.revisionCalls).toBe(1);
+  });
+
+  it("both flags off (as before): nothing written", async () => {
+    const { reply, details } = await ask({ values: { coaching_details: WRITTEN } }, {});
+    expect(reply.formUpdate).toBeUndefined();
+    expect(details()).not.toContain("Ship-from-store orders follow the packing-slip");
+  });
+});
+
+describe('live check A5: "make that update" after a reply that offered no update', () => {
+  it("FORM_EDIT_PLAIN_WORDS: that reply is not written into Details", async () => {
+    const { thread, details } = await openDraft({ plain: true, honest: true });
+    said.answer = "It should update automatically — no copy-and-paste needed, since changes here go straight to the draft card. If you're not seeing the rolling rack detail reflected there, try refreshing the card view.";
+    await thread.say("i don't see the details updated in the draft card. Do i need to copy and paste it? or should it be automatically updating?");
+    said.answer = "Tell me what to add.";
+    const reply = await thread.say("make that update");
+    expect(reply.formUpdate).toBeUndefined();
+    expect(state.revisionCalls).toBe(0);
+    expect(details()).not.toContain("Ship-from-store orders follow the packing-slip");
+  });
+});
+
+describe("a turn read as content for the form that the revision still refuses", () => {
+  // The manager's own words naming somebody else keep the revision's own rule: not written to Marnie's form.
+  const SAID = "this is what i am wanting to coach on: Jordan Blake showed the team how to pack orders";
+
+  it("FORM_EDIT_HONEST_REPLY: said plainly, never the ordinary answer", async () => {
+    const { thread, details } = await openDraft({ plain: true, honest: true });
+    said.answer = "Here's the updated **Coaching Form** for Marnie Holloway.";
+    const reply = await thread.say(SAID);
+    expect(reply.formUpdate).toBeUndefined();
+    expect(details()).not.toContain("Ship-from-store orders follow the packing-slip");
+    expect(reply.content).toMatch(/^\*\*Nothing on the form has changed yet\.\*\* I couldn't add that to the Details of Coaching/);
+    expect(state.revisionCalls).toBe(0);
+  });
+});
+
 afterEach(() => {
   said.answer = null;
 });
