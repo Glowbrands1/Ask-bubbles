@@ -5,11 +5,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AccessScope } from "@/types";
 
 /*
- * NEXT_PUBLIC_ASSISTANT_MANAGER_CREATE_ENABLED (Pau, 30 Oct 2026: "Chrisanna is
+ * NEXT_PUBLIC_ASSISTANT_MANAGER_CREATE_ENABLED (Pau, 30 Oct 2026: "An assistant general manager is
  * logged into Ask Bubbles, but unable to create coaching forms. Is this a
- * restricted function for AGM's? I believe Ella had the same issue. can u fix
+ * restricted function for AGM's? I believe another one had the same issue. can u fix
  * this pls have Assistant general manager ability to create forms but not see
- * form from madeline, curt, paulyne, marissa coleen and other admin").
+ * form from the admins").
  * Then: "also they should only be able to see their OWN forms", "yes all forms
  * but they can only see their own forms in the form register or form
  * monitoring", and of the Forms Register she had turned off for them: "lift
