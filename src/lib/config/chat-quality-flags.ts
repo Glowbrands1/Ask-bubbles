@@ -881,6 +881,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "CHAT_IMPORT_OWN_ONLY_ENABLED",
   "FORM_EDIT_PLAIN_WORDS_ENABLED",
   "FORM_EDIT_HONEST_REPLY_ENABLED",
+  "ANGLE_PLACEHOLDER_GUARD_ENABLED",
   "SAME_FORM_COPY_ENABLED",
   "STAFF_PICKER_ENABLED",
   "SLOT_RETENTION_ENABLED",
@@ -1685,6 +1686,15 @@ export function formEditPlainWordsEnabled(): boolean {
  */
 export function formEditHonestReplyEnabled(): boolean {
   return envFlag("FORM_EDIT_HONEST_REPLY_ENABLED");
+}
+
+/**
+ * A revised or drafted field never keeps an all-caps angle-bracket token such
+ * as "<UNKNOWN>" (the sibling app's live check, 31 Oct 2026; same flag in both apps). See
+ * `forms/drafted-text.ts`. Off, as before.
+ */
+export function anglePlaceholderGuardEnabled(): boolean {
+  return envFlag("ANGLE_PLACEHOLDER_GUARD_ENABLED");
 }
 
 /**

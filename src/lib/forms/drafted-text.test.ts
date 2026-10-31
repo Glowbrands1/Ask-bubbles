@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import {
   containsPlaceholder,
@@ -173,5 +173,25 @@ describe("P4-1. no policy can reach a Coaching Form through the form path", () =
     );
 
     expect(grounded).toEqual([]);
+  });
+});
+
+describe("ANGLE_PLACEHOLDER_GUARD_ENABLED (ported from the sibling app's live check, 31 Oct 2026)", () => {
+  const FLAG = "ANGLE_PLACEHOLDER_GUARD_ENABLED";
+  afterEach(() => {
+    delete process.env[FLAG];
+  });
+
+  it("off: <UNKNOWN> is not a placeholder, as before", () => {
+    expect(containsPlaceholder("Pin the slip on the rack. <UNKNOWN>")).toBe(false);
+  });
+
+  it("on: an all-caps angle token is, and its sentence is dropped", () => {
+    process.env[FLAG] = "true";
+    expect(containsPlaceholder("<UNKNOWN>")).toBe(true);
+    expect(containsPlaceholder("Check in with <EMPLOYEE NAME> on Friday.")).toBe(true);
+    expect(stripPlaceholdersFromDraft({ coaching_details: "Pin the slip on the rack.\n<UNKNOWN>" }).values.coaching_details).toBe("Pin the slip on the rack.");
+    // Ordinary text with angle brackets is not a token.
+    expect(containsPlaceholder("Pack in <5 minutes, then > 2 checks.")).toBe(false);
   });
 });
