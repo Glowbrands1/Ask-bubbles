@@ -85,6 +85,7 @@ import {
   questionNotFormEnabled,
   googleReviewsInChatEnabled,
   typoReadingCopyEnabled,
+  staffPickerEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { gateTexts, searchWithPlan } from "./continuation";
 import { fieldsFromManagerText, mergeConfirmed, retainFieldsInReply } from "./form-field-state";
@@ -374,6 +375,21 @@ async function answerQuestionCore(
         inventoryQuestion = { kind: "location" };
       }
     }
+  }
+
+  /*
+   * STAFF_PICKER_ENABLED: "for whole staff", on a form turn — the store asked
+   * if the account covers several, its staff listed, the manager picks who.
+   * Never a blanket form. A database read, no model call. See
+   * `lib/forms/staff-picker.ts`.
+   */
+  if (staffPickerEnabled()) {
+    const staff = await (await import("@/lib/forms/staff-picker")).staffPickerTurn({
+      question: request.question,
+      history: request.history,
+      scope: actor.scope,
+    });
+    if (staff) return staff;
   }
 
   const formsTurn =

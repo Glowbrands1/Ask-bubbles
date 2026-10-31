@@ -878,6 +878,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "UNREAD_DAY_NOT_INCIDENT_DATE_ENABLED",
   "OTHER_WRITE_IN_GUARD_ENABLED",
   "OTHER_WRITE_IN_NOT_A_QUESTION_ENABLED",
+  "STAFF_PICKER_ENABLED",
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
   "DRAFT_DEDUPE_ENABLED",
@@ -1651,6 +1652,16 @@ export function otherWriteInGuardEnabled(): boolean {
  */
 export function otherWriteInNotAQuestionEnabled(): boolean {
   return envFlag("OTHER_WRITE_IN_NOT_A_QUESTION_ENABLED");
+}
+
+/**
+ * A form "for whole staff" is never a blanket form and never a flat refusal:
+ * the store is asked when the account covers several, its active staff are
+ * listed (name and position), and the manager picks who (QA and Pau, 30 Oct
+ * 2026; same flag in both apps). See `forms/staff-picker.ts`. Off, as before.
+ */
+export function staffPickerEnabled(): boolean {
+  return envFlag("STAFF_PICKER_ENABLED");
 }
 
 /**
