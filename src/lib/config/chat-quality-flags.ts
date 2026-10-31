@@ -879,6 +879,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "OTHER_WRITE_IN_GUARD_ENABLED",
   "OTHER_WRITE_IN_NOT_A_QUESTION_ENABLED",
   "CHAT_IMPORT_OWN_ONLY_ENABLED",
+  "FORM_EDIT_PLAIN_WORDS_ENABLED",
+  "FORM_EDIT_HONEST_REPLY_ENABLED",
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
   "DRAFT_DEDUPE_ENABLED",
@@ -1662,6 +1664,25 @@ export function otherWriteInNotAQuestionEnabled(): boolean {
  */
 export function chatImportOwnOnlyEnabled(): boolean {
   return envFlag("CHAT_IMPORT_OWN_ONLY_ENABLED");
+}
+
+/**
+ * With a Coaching Form draft open, details given in plain words, "make that
+ * update", and "update the draft with these details" (the previous answer's)
+ * are written into the draft by the open-form revision (QA, 30 Oct 2026; same
+ * flag in both apps). See `forms/form-content-turn.ts`. Off, as before.
+ */
+export function formEditPlainWordsEnabled(): boolean {
+  return envFlag("FORM_EDIT_PLAIN_WORDS_ENABLED");
+}
+
+/**
+ * With a form open, an answer that changed nothing never says it updated the
+ * form (QA, 30 Oct 2026; same flag in both apps). See
+ * `forms/form-content-turn.ts` `honestFormReply`. Off, as before.
+ */
+export function formEditHonestReplyEnabled(): boolean {
+  return envFlag("FORM_EDIT_HONEST_REPLY_ENABLED");
 }
 
 /**
