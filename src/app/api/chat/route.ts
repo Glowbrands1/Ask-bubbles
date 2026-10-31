@@ -201,6 +201,7 @@ async function postChat(request: Request) {
               history: asked.history,
               continuing: Boolean(asked.continueProposalTemplateKey),
               scope: context.identity.scope,
+              role: context.identity.role,
             })
           : null;
       const draftAnswer = (draftAction && "answer" in draftAction ? draftAction.answer : null) ?? staffPick;
