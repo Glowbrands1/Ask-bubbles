@@ -888,6 +888,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "SAME_FORM_COPY_ENABLED",
   "STAFF_PICKER_ENABLED",
   "STAFF_PICKER_STORE_TITLES_ENABLED",
+  "STAFF_PICKER_BARE_ANSWER_ENABLED",
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
   "DRAFT_DEDUPE_ENABLED",
@@ -1762,6 +1763,15 @@ export function staffPickerEnabled(): boolean {
  */
 export function staffPickerStoreTitlesEnabled(): boolean {
   return envFlag("STAFF_PICKER_STORE_TITLES_ENABLED");
+}
+
+/**
+ * With a draft open, a turn that is only "for whole staff" is the staff list,
+ * not another answer about the open draft (QA, the sibling app's live retest,
+ * 31 Oct 2026; same flag in both apps). See `forms/staff-picker.ts`. Off, as before.
+ */
+export function staffPickerBareAnswerEnabled(): boolean {
+  return envFlag("STAFF_PICKER_BARE_ANSWER_ENABLED");
 }
 
 /**
