@@ -1,4 +1,5 @@
 import type { AskResponse } from "@/lib/ai/types";
+import { staffPickerStoreTitlesEnabled } from "@/lib/config/chat-quality-flags";
 import type { RosterEmployee } from "@/lib/forms/employee-match";
 import type { AccessScope, ChatMessage, Permission, Role } from "@/types";
 
@@ -75,9 +76,28 @@ function formName(text: string): string {
 
 const MAX_LISTED = 40;
 
+/**
+ * STAFF_PICKER_STORE_TITLES_ENABLED (QA, 31 Oct 2026; same flag in both apps):
+ * a store's staff, not the office. The directory affiliates Corporate,
+ * Accounting, Payroll, HR, Maintenance, Owner and District Manager accounts
+ * with stores too; with the flag only these Woven titles are listed. A person
+ * with no title on file is kept — nothing says they are not store staff.
+ */
+const STORE_TITLES = new Set(
+  ["Team Member Full Time", "Team Member Part Time", "Seasonal Team Member Part Time", "General Manager", "Assistant General Manager"].map(
+    (title) => title.toLowerCase(),
+  ),
+);
+
+function storeStaff(person: RosterEmployee): boolean {
+  const title = person.positionName?.trim();
+  return !title || STORE_TITLES.has(title.toLowerCase());
+}
+
 function listStaff(location: StaffLocation, roster: readonly RosterEmployee[], form: string): string {
   const people = roster
     .filter((person) => person.locationIds.includes(location.id))
+    .filter((person) => !staffPickerStoreTitlesEnabled() || storeStaff(person))
     .map((person) => ({
       name: `${person.preferredFirstName?.trim() || person.firstName} ${person.lastName}`.trim(),
       position: person.positionName?.trim() || "Position not on file",

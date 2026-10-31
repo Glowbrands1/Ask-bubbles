@@ -654,6 +654,55 @@ describe("only a role that may create the form is shown the staff", () => {
   });
 });
 
+/*
+ * QA, 31 Oct 2026: the directory affiliates office accounts with a store too
+ * (Kearney, NE, live: Corporate 6, Maintenance Team 3, Accounting 2, District
+ * Manager 2, Owner, Operator, Payroll Administrator, HR Generalist beside its
+ * Team Members and managers). STAFF_PICKER_STORE_TITLES_ENABLED lists the
+ * store's staff only. Names invented; the titles are Woven's.
+ */
+describe("STAFF_PICKER_STORE_TITLES: the store's staff, not the office", () => {
+  const TITLES = "STAFF_PICKER_STORE_TITLES_ENABLED";
+  function officeToo() {
+    directory();
+    state.directory = [
+      { id: "s-1", firstName: "Marnie", lastName: "Holloway", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-66"], positionName: "Team Member Part Time" },
+      { id: "s-2", firstName: "Remy", lastName: "Calder", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-66"], positionName: "Team Member Full Time" },
+      { id: "s-3", firstName: "Juno", lastName: "Paxton", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-66"], positionName: "General Manager" },
+      { id: "s-4", firstName: "Ilsa", lastName: "Varden", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-66"], positionName: "Assistant General Manager" },
+      { id: "s-5", firstName: "Corin", lastName: "Ashby", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-66"], positionName: "Corporate" },
+      { id: "s-6", firstName: "Delia", lastName: "Strand", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-66"], positionName: "Accounting" },
+      { id: "s-7", firstName: "Oren", lastName: "Fitch", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-66"], positionName: "District Manager" },
+      { id: "s-8", firstName: "Pell", lastName: "Mercer", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-66"], positionName: "Owner" },
+      { id: "s-9", firstName: "Tamsin", lastName: "Reed", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-66"], positionName: null },
+    ];
+  }
+  async function ask(on: boolean) {
+    flags(true);
+    if (!saved.has(TITLES)) saved.set(TITLES, process.env[TITLES]);
+    delete process.env[TITLES];
+    if (on) process.env[TITLES] = "true";
+    officeToo();
+    setScope(LOCATION_SCOPE);
+    const thread = new Thread();
+    await thread.say("Create a coaching form.", { templateKey: "coaching" });
+    return thread.say("for whole staff - associates", { templateKey: "coaching" });
+  }
+
+  it("off: every person the directory affiliates with the store, office titles included", async () => {
+    const reply = await ask(false);
+    expect(reply.content).toContain("**Corporate**");
+    expect(reply.content).toContain("Pell Mercer");
+  });
+
+  it("on: Team Members and the store's managers only; no title on file is kept", async () => {
+    const reply = await ask(true);
+    for (const name of ["Marnie Holloway", "Remy Calder", "Juno Paxton", "Ilsa Varden", "Tamsin Reed"]) expect(reply.content).toContain(name);
+    for (const name of ["Corin Ashby", "Delia Strand", "Oren Fitch", "Pell Mercer"]) expect(reply.content).not.toContain(name);
+    expect(reply.content).not.toMatch(/\*\*(?:Corporate|Accounting|District Manager|Owner)\*\*/);
+  });
+});
+
 afterEach(() => {
   said.answer = null;
 });
