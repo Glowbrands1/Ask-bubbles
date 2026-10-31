@@ -5,11 +5,11 @@ import type { Permission, Role } from "@/types";
  * NEXT_PUBLIC_ASSISTANT_MANAGER_CREATE_ENABLED — ONE FLAG, BOTH HALVES
  * ============================================================================
  *
- * Pau, 30 Oct 2026: "Chrisanna is logged into Ask Bubbles, but unable to
- * create coaching forms. Is this a restricted function for AGM's? I believe
- * Ella had the same issue. can u fix this pls have Assistant general manager
- * ability to create forms but not see form from madeline, curt, paulyne,
- * marissa coleen and other admin".
+ * Pau, 30 Oct 2026: "An assistant general manager is logged into Ask Bubbles,
+ * but unable to create coaching forms. Is this a restricted function for
+ * AGM's? I believe another one had the same issue. can u fix this pls have
+ * Assistant general manager ability to create forms but not see form from the
+ * admins".
  *
  * Pau then: "also they should only be able to see their OWN forms", "yes all
  * forms but they can only see their own forms in the form register or form
