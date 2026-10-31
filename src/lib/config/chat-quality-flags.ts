@@ -882,6 +882,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FORM_EDIT_PLAIN_WORDS_ENABLED",
   "FORM_EDIT_HONEST_REPLY_ENABLED",
   "SAME_FORM_COPY_ENABLED",
+  "STAFF_PICKER_ENABLED",
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
   "DRAFT_DEDUPE_ENABLED",
@@ -1694,6 +1695,17 @@ export function formEditHonestReplyEnabled(): boolean {
  */
 export function sameFormCopyEnabled(): boolean {
   return envFlag("SAME_FORM_COPY_ENABLED");
+}
+
+/**
+ * "A coaching form for my whole staff": no card for everyone. Several
+ * locations in scope and none named → asks which; one → lists its staff from
+ * the scoped Woven directory (name and position) and asks who the form is for
+ * (Pau, 30 Oct 2026; same flag in both apps). See `forms/staff-picker.ts`.
+ * Off, as before.
+ */
+export function staffPickerEnabled(): boolean {
+  return envFlag("STAFF_PICKER_ENABLED");
 }
 
 /**
