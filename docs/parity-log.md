@@ -897,6 +897,8 @@ Not needed in the sibling app: its card has no Issue / What happened line. The s
 
 Not needed in the sibling app: QA ran "i dont know the amount" and "$25" live there after a Corrective Action card with payroll yes (conv_mvqon26f2a5kvdh, conv_mvqon20g24chpan), and both turns stayed on the card with no policy answer.
 
+- 31 Oct 2026: prior forms "complete" under the private-creator over-read (both apps; only changes anything while that over-read is on, i.e. NEXT_PUBLIC_ASSISTANT_MANAGER_CREATE_ENABLED or the private-creator list). Independent review item 15b: with the 4× read, an employee with 201–799 matching forms read "complete" though only the newest 200 were used, so prior forms were attached as the whole history. Now complete only when every visible row was used. With the over-read off the test is the same as before.
+
 ## 27 Oct 2026: "yes payrol ldeduct" is the payroll answer — this app only (PAYROLL_TYPO_ANSWER_ENABLED)
 
 QA BF7b live. The sibling app already reads the typo as the payroll answer on that turn (checked through its chat with its production flags), so the flag is not needed there.
