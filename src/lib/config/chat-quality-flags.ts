@@ -881,6 +881,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "CHAT_IMPORT_OWN_ONLY_ENABLED",
   "CHAT_HISTORY_STATE_CHUNKED_ENABLED",
   "NEXT_PUBLIC_CHAT_HISTORY_TOLERANT_ENABLED",
+  "CHAT_IMPORT_PROVEN_OWN_ENABLED",
   "FORM_EDIT_PLAIN_WORDS_ENABLED",
   "FORM_EDIT_HONEST_REPLY_ENABLED",
   "ANGLE_PLACEHOLDER_GUARD_ENABLED",
@@ -1691,6 +1692,16 @@ export function chatHistoryStateChunkedEnabled(): boolean {
 export function chatHistoryTolerantEnabled(): boolean {
   const inlined = process.env.NEXT_PUBLIC_CHAT_HISTORY_TOLERANT_ENABLED;
   return typeof inlined === "string" && ON.has(inlined.trim().toLowerCase());
+}
+
+/**
+ * An import of a chat this account does not hold yet must prove it is its
+ * own: every answered turn recorded for this account; a chat with no turn on
+ * record is declined (independent review, 31 Oct 2026; same flag in both
+ * apps). The activity read is batched. See `chat/store.ts`. Off, as before.
+ */
+export function chatImportProvenOwnEnabled(): boolean {
+  return envFlag("CHAT_IMPORT_PROVEN_OWN_ENABLED");
 }
 
 /**
