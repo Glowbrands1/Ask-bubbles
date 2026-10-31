@@ -881,6 +881,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "CHAT_IMPORT_OWN_ONLY_ENABLED",
   "FORM_EDIT_PLAIN_WORDS_ENABLED",
   "FORM_EDIT_HONEST_REPLY_ENABLED",
+  "SAME_FORM_COPY_ENABLED",
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
   "DRAFT_DEDUPE_ENABLED",
@@ -1683,6 +1684,16 @@ export function formEditPlainWordsEnabled(): boolean {
  */
 export function formEditHonestReplyEnabled(): boolean {
   return envFlag("FORM_EDIT_HONEST_REPLY_ENABLED");
+}
+
+/**
+ * "Do the same coaching form for <another>": the new person's draft gets the
+ * content of the manager's own earlier form of that template, name swapped
+ * (QA, 30 Oct 2026; same flag in both apps). See `forms/same-form-copy.ts`.
+ * Off, as before.
+ */
+export function sameFormCopyEnabled(): boolean {
+  return envFlag("SAME_FORM_COPY_ENABLED");
 }
 
 /**
