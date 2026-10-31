@@ -885,6 +885,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FORM_EDIT_PLAIN_WORDS_ENABLED",
   "FORM_EDIT_HONEST_REPLY_ENABLED",
   "ANGLE_PLACEHOLDER_GUARD_ENABLED",
+  "REVISION_SAME_VALUE_ENABLED",
   "SAME_FORM_COPY_ENABLED",
   "STAFF_PICKER_ENABLED",
   "STAFF_PICKER_STORE_TITLES_ENABLED",
@@ -1733,6 +1734,16 @@ export function formEditHonestReplyEnabled(): boolean {
  */
 export function anglePlaceholderGuardEnabled(): boolean {
   return envFlag("ANGLE_PLACEHOLDER_GUARD_ENABLED");
+}
+
+/**
+ * A chat revision whose value for a field is the text already there is not a
+ * change, so the reply never says "Updated" for it (the sibling app's live
+ * check A3, 31 Oct 2026; same flag in both apps; protected-file edit approved
+ * by Pau in writing). See `forms/chat-revision.ts`. Off, as before.
+ */
+export function revisionSameValueEnabled(): boolean {
+  return envFlag("REVISION_SAME_VALUE_ENABLED");
 }
 
 /**
