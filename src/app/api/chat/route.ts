@@ -41,6 +41,7 @@ import {
   formEditPlainWordsEnabled,
   payrollDeductAmountFieldEnabled,
   questionNotFormEnabled,
+  sameFormCopyEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { LONG_MESSAGE_LIMIT } from "@/lib/chat/message-limit";
 import { isClientConversationId } from "@/lib/chat/client-ids";
@@ -272,12 +273,26 @@ async function postChat(request: Request) {
        * no open form does not pay to load the forms write path. See
        * `lib/forms/chat-revision.ts`.
        */
+      /*
+       * SAME_FORM_COPY_ENABLED: "create the same draft that we did with <name>"
+       * with the other person's draft open — that named form's content, copied
+       * onto the open one. Null unless a form of this manager's is named. See
+       * `lib/forms/same-form-copy.ts`.
+       */
+      const sameCopy =
+        sameFormCopyEnabled() && !correction && !askedQuestion && !policyChange && !redraft && parsed.activeFormInstanceId
+          ? await (await import("@/lib/forms/same-form-copy")).copyIntoOpenForm({
+              request,
+              instanceId: parsed.activeFormInstanceId,
+              question: parsed.question,
+            })
+          : null;
       const separateDocument =
-        !correction && !askedQuestion && !policyChange && !redraft && parsed.activeFormInstanceId
+        !sameCopy && !correction && !askedQuestion && !policyChange && !redraft && parsed.activeFormInstanceId
           ? await separateFormRequested(parsed.question)
           : false;
       const askedRevision =
-        !correction && !askedQuestion && !policyChange && !redraft && !separateDocument && parsed.activeFormInstanceId
+        !sameCopy && !correction && !askedQuestion && !policyChange && !redraft && !separateDocument && parsed.activeFormInstanceId
           ? await (await import("@/lib/forms/chat-revision")).reviseActiveForm({
               request,
               instanceId: parsed.activeFormInstanceId,
@@ -295,7 +310,7 @@ async function postChat(request: Request) {
        */
       const revision =
         askedRevision ??
-        (formEditPlainWordsEnabled() && !correction && !policyChange && !redraft && !separateDocument && parsed.activeFormInstanceId
+        (formEditPlainWordsEnabled() && !sameCopy && !correction && !policyChange && !redraft && !separateDocument && parsed.activeFormInstanceId
           ? await (async () => {
               const open = await (await import("@/lib/forms/open-form-summary")).describeOpenForm(request, parsed.activeFormInstanceId!);
               if (!open || open.status !== "draft") return null;
@@ -338,7 +353,7 @@ async function postChat(request: Request) {
        * See `lib/forms/chat-reopen.ts`.
        */
       const reopened =
-        !draftAnswer && !correction && !policyChange && !redraft && !revision && !which && mayAskToReopen(parsed.question)
+        !sameCopy && !draftAnswer && !correction && !policyChange && !redraft && !revision && !which && mayAskToReopen(parsed.question)
           ? await (await import("@/lib/forms/chat-reopen")).reopenRequestedForm({
               request,
               question: parsed.question,
@@ -356,7 +371,7 @@ async function postChat(request: Request) {
        * `lib/forms/open-form-summary.ts`.
        */
       const openForm =
-        !correction && !policyChange && !redraft && !revision && !reopened && parsed.activeFormInstanceId
+        !sameCopy && !correction && !policyChange && !redraft && !revision && !reopened && parsed.activeFormInstanceId
           ? await (await import("@/lib/forms/open-form-summary")).describeOpenForm(request, parsed.activeFormInstanceId)
           : null;
       answer =
@@ -364,6 +379,7 @@ async function postChat(request: Request) {
         correction ??
         policyChange ??
         redraft ??
+        sameCopy ??
         revision ??
         which ??
         reopened ??
