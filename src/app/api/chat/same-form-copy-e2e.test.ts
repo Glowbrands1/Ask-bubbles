@@ -825,3 +825,29 @@ describe('"can you create the same draft that we did with marnie holloway by cha
     expect(reply.formUpdate).toBeUndefined();
   });
 });
+
+/*
+ * The sibling app's LIVE CHECK B2, 31 Oct 2026, the card itself: "create a
+ * coaching form for Marnie Holloway", Marnie's coaching details, then "create
+ * a coaching form for remy calder" — there Remy's card cited every one of
+ * those turns, so Create drafted Remy's form from Marnie's notes (fixed there
+ * behind THIS_PERSONS_TURNS_ENABLED). Here the card already cites only Remy's
+ * own request; pinned so it stays that way.
+ */
+describe('"create a coaching form for remy calder" after Marnie\'s request and details', () => {
+  it("Remy's card cites only Remy's own request, never Marnie's request or details", async () => {
+    flags(true);
+    directory();
+    const thread = new Thread();
+    await marnieForm(thread);
+    state.revision = { values: { coaching_details: DETAILS } };
+    await thread.say("this is what i am wanting to coach on: packing ship-from-store orders, Marnie packs them out of order");
+    const marnieTurns = thread.messages.filter((message) => message.role === "user").map((message) => message.id);
+    thread.instanceId = null;
+    const reply = await thread.say("create a coaching form for remy calder", { templateKey: "coaching", employeeName: "Remy Calder" });
+    const remyTurn = thread.messages.filter((message) => message.role === "user").at(-1)!.id;
+    expect(reply.formProposal?.employeeName ?? "").toMatch(/remy calder/i);
+    expect(reply.formProposal?.sourceMessageIds).toEqual([remyTurn]);
+    for (const id of marnieTurns) expect(reply.formProposal?.sourceMessageIds).not.toContain(id);
+  });
+});
