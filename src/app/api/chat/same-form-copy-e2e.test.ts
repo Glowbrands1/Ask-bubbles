@@ -769,3 +769,59 @@ describe('"create a coaching form for Marnie Holloway" (no details) → "Do the 
     expect(reply.formProposal?.employeeName ?? "").toMatch(/remy calder/i);
   });
 });
+
+/*
+ * QA, live retest, 31 Oct 2026 (both apps): Marnie's draft had NO details, then
+ * Remy's blank draft; "can you create the same draft that we did with marnie
+ * holloway by changing the name and position?" found nothing to copy and said
+ * nothing — here the answering model then said "No draft was actually created
+ * for Marnie Holloway"; the sibling app made another Remy card. Said plainly
+ * now, and Remy's draft is left as it is.
+ */
+describe('"can you create the same draft that we did with marnie holloway by changing the name and position?" when Marnie\'s draft has no details', () => {
+  const ASK = "can you create the same draft that we did with marnie holloway by changing the name and position?";
+  const valuesOf = (id: string) => JSON.stringify(store.form_instance_values.filter((row) => row.instance_id === id));
+
+  async function emptyMarnieThenRemy() {
+    flags(true);
+    directory();
+    const thread = new Thread();
+    state.draft = { values: {} };
+    await thread.say("create a coaching form for Marnie Holloway", { templateKey: "coaching", employeeName: "Marnie Holloway" });
+    const marnie = await thread.create();
+    // As live: nothing was said about what happened, so Marnie's draft has no details.
+    for (const row of store.form_instance_values) if (row.instance_id === marnie) row.value = "";
+    const remy = await remyForm(thread);
+    return { thread, marnie, remy };
+  }
+
+  it("SAME_FORM_COPY: says Marnie's draft has no details yet — no copy, no card, never 'no draft was created', both drafts as they were", async () => {
+    const { thread, marnie, remy } = await emptyMarnieThenRemy();
+    const before = { marnie: valuesOf(marnie), remy: valuesOf(remy) };
+    const forms = store.form_instances.length;
+    state.reading = {};
+    // What the answering model said live.
+    said.answer = "No draft was actually created for Marnie Holloway — I asked for her job title and didn't get one, so nothing was saved for her to copy from.";
+    const reply = await thread.say(ASK);
+    expect(reply.content).toBe(
+      "**Marnie Holloway**'s Coaching Form has no details yet, so there is nothing to copy. **Remy Calder**'s draft is as it was. Tell me what happened and I'll fill it in, or add Marnie's details first and ask again.",
+    );
+    expect(reply.formProposal).toBeUndefined();
+    expect(reply.formUpdate).toBeUndefined();
+    expect({ marnie: valuesOf(marnie), remy: valuesOf(remy) }).toEqual(before);
+    expect(store.form_instances.length).toBe(forms);
+  });
+
+  it("SAME_FORM_COPY: with no form for Marnie at all, the turn is answered as before", async () => {
+    flags(true);
+    directory();
+    const thread = new Thread();
+    state.draft = { values: { coaching_details: "Observed:\nCoaching for Remy Calder." } };
+    await thread.say("create a coaching form for remy calder", { templateKey: "coaching", employeeName: "Remy Calder" });
+    await thread.create();
+    state.reading = {};
+    const reply = await thread.say(ASK);
+    expect(reply.content).not.toContain("has no details yet, so there is nothing to copy");
+    expect(reply.formUpdate).toBeUndefined();
+  });
+});
