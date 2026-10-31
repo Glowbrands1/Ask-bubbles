@@ -890,6 +890,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "STAFF_PICKER_ENABLED",
   "STAFF_PICKER_STORE_TITLES_ENABLED",
   "STAFF_PICKER_BARE_ANSWER_ENABLED",
+  "AM_PRIOR_WARNINGS_ENABLED",
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
   "DRAFT_DEDUPE_ENABLED",
@@ -1774,6 +1775,16 @@ export function staffPickerEnabled(): boolean {
  */
 export function staffPickerStoreTitlesEnabled(): boolean {
   return envFlag("STAFF_PICKER_STORE_TITLES_ENABLED");
+}
+
+/**
+ * An Assistant Manager's Corrective Action counts the employee's earlier
+ * warnings filed by anyone at their locations, shown by level and date only
+ * (Pau, 31 Oct 2026, "Yes option A"; same flag in both apps). See
+ * `forms/prior-forms.ts`. Off, only their own forms, as before.
+ */
+export function amPriorWarningsEnabled(): boolean {
+  return envFlag("AM_PRIOR_WARNINGS_ENABLED");
 }
 
 /**
