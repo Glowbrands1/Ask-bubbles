@@ -16,7 +16,8 @@ export const APP_SWITCHER_USER_IDS: readonly string[] = [
 ];
 
 /**
- * WHETHER THIS RENDER OFFERS THE APP SWITCHER — administrators, plus two named users.
+ * WHETHER THIS RENDER OFFERS THE APP SWITCHER — administrators, two named users, and anyone on
+ * the server-side LEADERSHIP_HUB_TAB_EMAILS list (see `pageShowsLeadershipHubTab`).
  *
  * Decided here, on the server, from the VERIFIED identity: the role comes from
  * the auth provider and this app's own profile record, never from the browser.
@@ -44,7 +45,48 @@ export async function pageShowsAppSwitcher(): Promise<boolean> {
     if (!pageAuthorizationEnforced()) return false;
     const identity = await pageIdentity();
     if (!identity?.verified) return false;
-    return canAccessAdminConsole(identity.role) || APP_SWITCHER_USER_IDS.includes(identity.subject);
+    return (
+      canAccessAdminConsole(identity.role) ||
+      APP_SWITCHER_USER_IDS.includes(identity.subject) ||
+      emailOnLeadershipHubList(process.env.LEADERSHIP_HUB_TAB_EMAILS, identity.email)
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Whether `email` is on the comma-separated list in `raw` (the server-only
+ * LEADERSHIP_HUB_TAB_EMAILS variable). Trimmed and case-insensitive; a missing,
+ * empty or blank list matches nobody.
+ */
+export function emailOnLeadershipHubList(raw: string | undefined, email: string | undefined): boolean {
+  const wanted = email?.trim().toLowerCase();
+  if (!wanted || !raw) return false;
+  return raw
+    .split(",")
+    .map((entry) => entry.trim().toLowerCase())
+    .some((entry) => entry !== "" && entry === wanted);
+}
+
+/**
+ * WHETHER THIS RENDER SHOWS THE "LEADERSHIP HUB" TAB IN THE SWITCHER.
+ *
+ * The list lives only in the server-side LEADERSHIP_HUB_TAB_EMAILS variable
+ * (never NEXT_PUBLIC_, never in the repository) and is compared here with the
+ * VERIFIED signed-in email; the browser receives a yes/no and nothing else.
+ * Fails closed: variable unset or empty, signed out, unverified, demo mode or
+ * any error all answer false. It shows a link only; the Leadership Hub's own
+ * sign-in decides what happens on arrival.
+ */
+export async function pageShowsLeadershipHubTab(): Promise<boolean> {
+  try {
+    const raw = process.env.LEADERSHIP_HUB_TAB_EMAILS;
+    if (!raw?.trim()) return false;
+    if (!pageAuthorizationEnforced()) return false;
+    const identity = await pageIdentity();
+    if (!identity?.verified) return false;
+    return emailOnLeadershipHubList(raw, identity.email);
   } catch {
     return false;
   }

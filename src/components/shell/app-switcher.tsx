@@ -9,10 +9,11 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/overlays";
+import { ASK_SUNNY_URL, LEADERSHIP_HUB_URL } from "@/config/company/app-links";
 import { cn } from "@/lib/utils/cn";
 
 /**
- * THE TWO-WAY SWITCHER BETWEEN ASK SUNNY AND ASK BUBBLES.
+ * THE SWITCHER BETWEEN ASK SUNNY, ASK BUBBLES AND THE LEADERSHIP HUB.
  *
  * The two are separate applications — separate deployments, Supabase projects,
  * employee records, permissions and branding — and this does not change that.
@@ -36,7 +37,7 @@ export const SWITCHABLE_APPS = [
     emoji: "☀️",
     name: "Ask Sunny",
     company: "Sun Tan City",
-    url: "https://ask-sunny.vercel.app",
+    url: ASK_SUNNY_URL,
   },
   {
     id: "ask-bubbles",
@@ -45,6 +46,13 @@ export const SWITCHABLE_APPS = [
     company: "Buff City Soap",
     url: "https://askbubbles.vercel.app",
   },
+  {
+    id: "leadership-hub",
+    emoji: "🧭",
+    name: "Leadership Hub",
+    company: "Glo Brands",
+    url: LEADERSHIP_HUB_URL,
+  },
 ] as const;
 
 const CURRENT_APP = "ask-bubbles";
@@ -52,9 +60,12 @@ const CURRENT_APP = "ask-bubbles";
 export function AppSwitcher({
   collapsed,
   className,
+  showLeadershipHub = false,
 }: {
   collapsed?: boolean;
   className?: string;
+  /** A yes/no decided on the server (`pageShowsLeadershipHubTab`). Off unless told. */
+  showLeadershipHub?: boolean;
 }) {
   const current = SWITCHABLE_APPS.find((app) => app.id === CURRENT_APP)!;
 
@@ -102,7 +113,7 @@ export function AppSwitcher({
         className="w-[14.5rem] max-w-[calc(100vw-2rem)]"
       >
         <DropdownMenuLabel>Switch app</DropdownMenuLabel>
-        {SWITCHABLE_APPS.map((app) => {
+        {SWITCHABLE_APPS.filter((app) => app.id !== "leadership-hub" || showLeadershipHub).map((app) => {
           const active = app.id === CURRENT_APP;
           const body = (
             <>
