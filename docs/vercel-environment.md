@@ -32,6 +32,7 @@ the deployed site cannot sign anyone in.
 | `ANTHROPIC_API_KEY` | The assistant. Without it the assistant says it is unavailable | **secret** (Sensitive) | Production, Preview | Anthropic Console → API Keys (a key for Ask Bubbles) |
 | `CRON_SECRET` | Authenticates Vercel cron calls; cron routes refuse without it | **secret** (Sensitive) | Production | Generate: at least 24 random characters (e.g. `openssl rand -hex 32`) |
 | `NEXT_PUBLIC_SITE_URL` | Origin for invitation and password-reset links. Falls back to the request origin when unset | public | Production (recommended) | The production URL, e.g. `https://askbubbles.vercel.app` or a custom domain |
+| `LEADERSHIP_HUB_TAB_EMAILS` | Who sees the "Leadership Hub" tab in the app switcher. Comma-separated emails, matched case-insensitively against the signed-in person's verified email, on the server only. Unset or empty = nobody sees the tab. Never `NEXT_PUBLIC_`; keep the list out of the repository | server only (Sensitive) | Production | The leaders' sign-in emails, e.g. `a@example.test,b@example.test` |
 
 Legacy alternative: `SUPABASE_SERVICE_ROLE_KEY` is read only when
 `SUPABASE_SECRET_KEY` is unset. Prefer the secret key.

@@ -23,6 +23,7 @@ export function SidebarNav({
   variant = "desktop",
   overdueFollowUps = 0,
   showAppSwitcher = false,
+  showLeadershipHub = false,
 }: {
   collapsed?: boolean;
   onToggleCollapse?: () => void;
@@ -32,6 +33,8 @@ export function SidebarNav({
   overdueFollowUps?: number;
   /** Decided on the server by the (app) layout: administrators and two named users. */
   showAppSwitcher?: boolean;
+  /** Decided on the server: the signed-in email is on LEADERSHIP_HUB_TAB_EMAILS. */
+  showLeadershipHub?: boolean;
 }) {
   const pathname = usePathname();
   const { can, isAdmin, role } = useSession();
@@ -236,7 +239,7 @@ export function SidebarNav({
         ) : null}
         <UserMenu collapsed={isCollapsed} onNavigate={onNavigate} />
         {/* Below the profile, the last thing on the rail: administrators and two named users. */}
-        {showAppSwitcher ? <AppSwitcher collapsed={isCollapsed} /> : null}
+        {showAppSwitcher ? <AppSwitcher collapsed={isCollapsed} showLeadershipHub={showLeadershipHub} /> : null}
       </div>
     </div>
   );

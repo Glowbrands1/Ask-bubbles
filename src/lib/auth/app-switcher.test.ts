@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Role } from "@/types";
 import type { AuthenticatedIdentity } from "./types";
@@ -16,7 +16,12 @@ vi.mock("./page", () => ({
   },
 }));
 
-import { APP_SWITCHER_USER_IDS, pageShowsAppSwitcher } from "./app-switcher";
+import {
+  APP_SWITCHER_USER_IDS,
+  emailOnLeadershipHubList,
+  pageShowsAppSwitcher,
+  pageShowsLeadershipHubTab,
+} from "./app-switcher";
 
 function signedInAs(role: Role, verified = true, subject = "someone-else") {
   page.identity = { role, verified, subject };
@@ -105,5 +110,66 @@ describe("who is offered the app switcher", () => {
       expect(canAccessAdminConsole("regional_manager")).toBe(false);
       expect(APP_SWITCHER_USER_IDS).toHaveLength(2);
     });
+  });
+});
+
+describe("who sees the Leadership Hub tab", () => {
+  const LIST = "leader@example.test, Second.Leader@Example.test ,";
+
+  beforeEach(() => {
+    process.env.LEADERSHIP_HUB_TAB_EMAILS = LIST;
+  });
+  afterEach(() => {
+    delete process.env.LEADERSHIP_HUB_TAB_EMAILS;
+  });
+
+  function signedInWithEmail(email: string, verified = true) {
+    page.identity = { role: "admin", verified, subject: "x", email };
+  }
+
+  it("shows for a listed email", async () => {
+    signedInWithEmail("leader@example.test");
+    expect(await pageShowsLeadershipHubTab()).toBe(true);
+  });
+
+  it("matches case-insensitively and ignores spaces", async () => {
+    signedInWithEmail("  LEADER@Example.TEST ");
+    expect(await pageShowsLeadershipHubTab()).toBe(true);
+    signedInWithEmail("second.leader@example.test");
+    expect(await pageShowsLeadershipHubTab()).toBe(true);
+  });
+
+  it("hides for any other email, even an administrator", async () => {
+    signedInWithEmail("someone@example.test");
+    expect(await pageShowsLeadershipHubTab()).toBe(false);
+  });
+
+  it("hides when signed out or unverified", async () => {
+    page.identity = null;
+    expect(await pageShowsLeadershipHubTab()).toBe(false);
+    signedInWithEmail("leader@example.test", false);
+    expect(await pageShowsLeadershipHubTab()).toBe(false);
+  });
+
+  it("hides when the variable is unset or empty", async () => {
+    signedInWithEmail("leader@example.test");
+    delete process.env.LEADERSHIP_HUB_TAB_EMAILS;
+    expect(await pageShowsLeadershipHubTab()).toBe(false);
+    process.env.LEADERSHIP_HUB_TAB_EMAILS = " , ";
+    expect(await pageShowsLeadershipHubTab()).toBe(false);
+  });
+
+  it("hides when authorization is not enforced or the lookup throws", async () => {
+    signedInWithEmail("leader@example.test");
+    page.enforced = false;
+    expect(await pageShowsLeadershipHubTab()).toBe(false);
+    page.enforced = true;
+    page.identity = new Error("boom");
+    expect(await pageShowsLeadershipHubTab()).toBe(false);
+  });
+
+  it("an empty email never matches", () => {
+    expect(emailOnLeadershipHubList("leader@example.test", "")).toBe(false);
+    expect(emailOnLeadershipHubList("leader@example.test", undefined)).toBe(false);
   });
 });

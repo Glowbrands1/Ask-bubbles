@@ -124,6 +124,12 @@ const ALLOWED_UI = [
   "src/features/chat/inline-form.tsx",
   "src/components/shell/global-search.tsx",
   "src/components/shell/hides-form-monitoring.ts",
+  // App switcher gains a Leadership Hub link, shown only when the server says the signed-in
+  // email is on LEADERSHIP_HUB_TAB_EMAILS (requested via the QA session, Nov 2026 — QA to confirm).
+  // Unset, the switcher renders exactly as before.
+  "src/components/shell/app-switcher.tsx",
+  "src/components/shell/sidebar.tsx",
+  "src/components/shell/app-shell.tsx",
   // PRIVATE_CREATOR_FORMS_ENABLED (QA approved 27 Oct 2026): the follow-up and list reads over-read and trim to
   // their page while the rule is active; off, each asks for its page exactly as before.
   "src/app/(app)/page.tsx",
