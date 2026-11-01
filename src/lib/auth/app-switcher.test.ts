@@ -159,6 +159,16 @@ describe("who sees the Leadership Hub tab", () => {
     expect(await pageShowsLeadershipHubTab()).toBe(false);
   });
 
+  it("also offers the whole switcher to a listed non-administrator, and not to an unlisted one", async () => {
+    page.identity = { role: "employee", verified: true, subject: "x", email: "LEADER@example.test" };
+    expect(await pageShowsAppSwitcher()).toBe(true);
+    page.identity = { role: "employee", verified: true, subject: "x", email: "other@example.test" };
+    expect(await pageShowsAppSwitcher()).toBe(false);
+    delete process.env.LEADERSHIP_HUB_TAB_EMAILS;
+    page.identity = { role: "employee", verified: true, subject: "x", email: "leader@example.test" };
+    expect(await pageShowsAppSwitcher()).toBe(false);
+  });
+
   it("hides when authorization is not enforced or the lookup throws", async () => {
     signedInWithEmail("leader@example.test");
     page.enforced = false;

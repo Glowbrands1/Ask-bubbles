@@ -16,7 +16,8 @@ export const APP_SWITCHER_USER_IDS: readonly string[] = [
 ];
 
 /**
- * WHETHER THIS RENDER OFFERS THE APP SWITCHER — administrators, plus two named users.
+ * WHETHER THIS RENDER OFFERS THE APP SWITCHER — administrators, two named users, and anyone on
+ * the server-side LEADERSHIP_HUB_TAB_EMAILS list (see `pageShowsLeadershipHubTab`).
  *
  * Decided here, on the server, from the VERIFIED identity: the role comes from
  * the auth provider and this app's own profile record, never from the browser.
@@ -44,7 +45,11 @@ export async function pageShowsAppSwitcher(): Promise<boolean> {
     if (!pageAuthorizationEnforced()) return false;
     const identity = await pageIdentity();
     if (!identity?.verified) return false;
-    return canAccessAdminConsole(identity.role) || APP_SWITCHER_USER_IDS.includes(identity.subject);
+    return (
+      canAccessAdminConsole(identity.role) ||
+      APP_SWITCHER_USER_IDS.includes(identity.subject) ||
+      emailOnLeadershipHubList(process.env.LEADERSHIP_HUB_TAB_EMAILS, identity.email)
+    );
   } catch {
     return false;
   }
