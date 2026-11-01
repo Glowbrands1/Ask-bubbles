@@ -44,7 +44,9 @@ import {
   sameFormCopyEnabled,
   staffPickerBareAnswerEnabled,
   staffPickerEnabled,
+  chatResponseStreamEnabled,
 } from "@/lib/config/chat-quality-flags";
+import { streamWhenSlow } from "@/lib/api/streamed-response";
 import { LONG_MESSAGE_LIMIT } from "@/lib/chat/message-limit";
 import { isClientConversationId } from "@/lib/chat/client-ids";
 import type { AskRequest } from "@/lib/ai/types";
@@ -82,6 +84,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** SPEND_GUARD_ALL_CALLS_ENABLED: this route's Claude calls are counted (`ai/spend-meter.ts`). Off, as before. */
 export async function POST(request: Request) {
+  // CHAT_RESPONSE_STREAM_ENABLED: a slow answer is streamed so nothing cuts it off at 30 s. See `api/streamed-response.ts`.
+  if (chatResponseStreamEnabled()) return streamWhenSlow(() => withSpendMeter("chat", () => postChat(request)));
   return withSpendMeter("chat", () => postChat(request));
 }
 
