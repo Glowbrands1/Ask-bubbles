@@ -18,7 +18,9 @@ import {
   priorActionsParseEnabled,
   titleWholeWordEnabled,
   formEditDateRulesEnabled,
+  reportNameNotAPersonEnabled,
 } from "@/lib/config/chat-quality-flags";
+import { isReportName } from "./report-name";
 import { typedEmployeeName } from "@/lib/forms/typed-employee-name";
 import { isNotAName, maskNotANameText, saidInReply } from "@/lib/forms/not-a-name";
 import { extractJobTitle } from "@/lib/forms/proposal";
@@ -603,6 +605,8 @@ function conversationBlob(input: IntentTurnInput): string {
  * nobody yet. Off, the model's slot is read as before.
  */
 function guardedTyped(typed: string | null, input: IntentTurnInput): string | null {
+  // REPORT_NAME_NOT_A_PERSON_ENABLED: one of this app's own reports names nobody. See `report-name.ts`.
+  if (typed?.trim() && reportNameNotAPersonEnabled() && isReportName(typed)) return null;
   if (!typed?.trim() || !notANameGuardEnabled()) return typed;
   if (isNotAName(typed)) return null;
   const turns = [
