@@ -139,9 +139,10 @@ const ALLOWED_UI = [
   // Continue page and its form. Off, the page never shows Continue.
   "src/app/auth/invite-continue/page.tsx",
   "src/features/auth/invite-continue-form.tsx",
-  // Public /about and /privacy for Google's OAuth consent screen (Pau asked, QA privacy
-  // review 1 Nov 2026, both apps, no flag): two new public pages, their shared frame, and
-  // the About / Privacy links under the sign-in form. No chat or form screen changes.
+  // Public /about and /privacy for Google's OAuth consent screen; no chat or form
+  // behavior; requested by Pau (1 Nov 2026). Two new pages, their shared frame, and the
+  // About / Privacy links under the sign-in form. login-screen.tsx is listed as a whole
+  // file, so later edits to it are not checked by this guard.
   "src/app/about/page.tsx",
   "src/app/privacy/page.tsx",
   "src/features/public/public-page.tsx",
