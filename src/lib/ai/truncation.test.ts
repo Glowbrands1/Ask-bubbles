@@ -103,3 +103,53 @@ describe("a chat answer", () => {
     expect(error.message).not.toContain("Per the manual");
   });
 });
+
+/*
+ * The sibling app's live QA, 1 Nov 2026: a cut-off briefing took about 31 s and
+ * its retry 36 s. TRUNCATION_RETRY_BUDGET_ENABLED: a first attempt that already
+ * took over 50 s starts no retry.
+ */
+describe("TRUNCATION_RETRY_BUDGET: a slow first attempt starts no retry", () => {
+  afterEach(() => {
+    delete process.env.TRUNCATION_RETRY_BUDGET_ENABLED;
+    vi.useRealTimers();
+  });
+
+  function calls(firstTakesMs: number) {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-01T10:16:02Z"));
+    const budgets: number[] = [];
+    const call = async (maxTokens: number) => {
+      budgets.push(maxTokens);
+      if (budgets.length === 1) {
+        vi.setSystemTime(Date.now() + firstTakesMs);
+        return { stop_reason: "max_tokens", text: "cut" };
+      }
+      return { stop_reason: "end_turn", text: "whole" };
+    };
+    return { call, budgets };
+  }
+
+  it("off: a first attempt of 55 s is still retried", async () => {
+    quiet();
+    const { call, budgets } = calls(55_000);
+    await expect(withTruncationRetry(2048, call, "m")).resolves.toMatchObject({ text: "whole" });
+    expect(budgets).toEqual([2048, 4096]);
+  });
+
+  it("on: a first attempt of 55 s is not retried, and the caller's message says so", async () => {
+    quiet();
+    process.env.TRUNCATION_RETRY_BUDGET_ENABLED = "true";
+    const { call, budgets } = calls(55_000);
+    await expect(withTruncationRetry(2048, call, "Nothing was shown.")).rejects.toMatchObject({ code: "truncated", message: "Nothing was shown." });
+    expect(budgets).toEqual([2048]);
+  });
+
+  it("on: a 31 s first attempt is still retried", async () => {
+    quiet();
+    process.env.TRUNCATION_RETRY_BUDGET_ENABLED = "true";
+    const { call, budgets } = calls(31_000);
+    await expect(withTruncationRetry(2048, call, "m")).resolves.toMatchObject({ text: "whole" });
+    expect(budgets).toEqual([2048, 4096]);
+  });
+});

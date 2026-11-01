@@ -891,6 +891,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "STAFF_PICKER_STORE_TITLES_ENABLED",
   "STAFF_PICKER_BARE_ANSWER_ENABLED",
   "CHAT_RESPONSE_STREAM_ENABLED",
+  "TRUNCATION_RETRY_BUDGET_ENABLED",
   "REPORT_NAME_NOT_A_PERSON_ENABLED",
   "MANAGER_NAME_NOT_EMPLOYEE_ENABLED",
   "AM_PRIOR_WARNINGS_ENABLED",
@@ -1816,6 +1817,15 @@ export function managerNameNotEmployeeEnabled(): boolean {
  */
 export function chatResponseStreamEnabled(): boolean {
   return envFlag("CHAT_RESPONSE_STREAM_ENABLED");
+}
+
+/**
+ * A cut-off answer whose first attempt took over 50 s starts no retry, so a
+ * call never stacks past its route's 120 s ceiling (the sibling app's live QA,
+ * 1 Nov 2026; same flag in both apps). See `ai/truncation.ts`. Off, as before.
+ */
+export function truncationRetryBudgetEnabled(): boolean {
+  return envFlag("TRUNCATION_RETRY_BUDGET_ENABLED");
 }
 
 /**
