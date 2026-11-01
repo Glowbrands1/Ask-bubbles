@@ -14,6 +14,7 @@ import { supabasePublicConfigured } from "@/lib/config/runtime";
 import { ROLE_DESCRIPTION, ROLE_LABEL, defaultLandingForRole } from "@/lib/permissions";
 import { useSession } from "@/lib/session/session-context";
 import type { Role } from "@/types";
+import { PublicLinks } from "@/features/public/public-page";
 import { AuthFrame } from "./auth-panel";
 import { SignInForm } from "./sign-in-form";
 
@@ -80,12 +81,16 @@ export function LoginScreen({
       }
       shape={realAuth || demoMode ? "circle" : "card"}
       footer={
-        realAuth ? null : (
-          <>
-            Preview build. Content shown throughout the app is seeded demo data — it is not
-            real company policy or real location performance.
-          </>
-        )
+        <>
+          {realAuth ? null : (
+            <p>
+              Preview build. Content shown throughout the app is seeded demo data — it is not
+              real company policy or real location performance.
+            </p>
+          )}
+          {/* Public links Google's OAuth review needs reachable from sign-in. */}
+          <PublicLinks className={realAuth ? undefined : "mt-2"} />
+        </>
       }
     >
       {realAuth ? (
