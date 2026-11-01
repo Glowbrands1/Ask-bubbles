@@ -143,6 +143,7 @@ import { withTypoReadingCopy } from "./typo-reading-copy";
 import { protectedNameWords } from "./typo-name-words";
 import type { AskRequest, AskResponse } from "./types";
 import { keepManagerActionPlan } from "./manager-action-plan-reply";
+import { withManagerNameGuard } from "./manager-name-guard";
 import { withJobTitleFromWords } from "./job-title-from-words";
 import { withFreshDateReask } from "./date-reask-fresh";
 import { withFirstNameAsk } from "./first-name-ask";
@@ -223,7 +224,8 @@ export async function answerQuestion(
     return { content: passwordHelp, citations: [], coverage: "grounded" };
   }
   // FORM_TYPE_SWITCH: the switched card is drafted from the account, never from the switch turn (read on the turns as sent).
-  return withSwitchSources(withoutSensitiveDefaults(await answerQuestionTraced(request, actor, memory), request.question), request);
+  // MANAGER_NAME_NOT_EMPLOYEE_ENABLED: last — the manager's own name is never the employee.
+  return withManagerNameGuard(withSwitchSources(withoutSensitiveDefaults(await answerQuestionTraced(request, actor, memory), request.question), request), request);
 }
 
 async function answerQuestionTraced(
