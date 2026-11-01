@@ -890,6 +890,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "STAFF_PICKER_ENABLED",
   "STAFF_PICKER_STORE_TITLES_ENABLED",
   "STAFF_PICKER_BARE_ANSWER_ENABLED",
+  "CHAT_RESPONSE_STREAM_ENABLED",
   "REPORT_NAME_NOT_A_PERSON_ENABLED",
   "MANAGER_NAME_NOT_EMPLOYEE_ENABLED",
   "AM_PRIOR_WARNINGS_ENABLED",
@@ -1805,6 +1806,16 @@ export function reportNameNotAPersonEnabled(): boolean {
  */
 export function managerNameNotEmployeeEnabled(): boolean {
   return envFlag("MANAGER_NAME_NOT_EMPLOYEE_ENABLED");
+}
+
+/**
+ * /api/chat streams a slow answer (a 200 with keep-alive bytes, then the
+ * answer), so nothing between the browser and the function cuts it off at 30 s
+ * (the sibling app's live QA, 1 Nov 2026; same flag in both apps). See
+ * `api/streamed-response.ts`. Off, as before.
+ */
+export function chatResponseStreamEnabled(): boolean {
+  return envFlag("CHAT_RESPONSE_STREAM_ENABLED");
 }
 
 /**
