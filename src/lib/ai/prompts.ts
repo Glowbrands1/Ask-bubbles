@@ -10,7 +10,8 @@ import {
   type ReportDefinition,
 } from "@/lib/reporting/registry";
 import type { AnswerMode } from "@/types";
-import { promptCacheEnabled } from "@/lib/config/chat-quality-flags";
+import { managerNameNotEmployeeEnabled, promptCacheEnabled } from "@/lib/config/chat-quality-flags";
+import { MANAGER_NAME_RULE } from "./manager-name-guard";
 import { CROSS_CHAT_REPLY_RULE } from "@/lib/chat/cross-chat-guard";
 import { CHAT_STYLE_RULES } from "./chat-style-rules";
 import { PRIOR_COACHING_OPTIONAL_RULES } from "./prior-coaching-optional";
@@ -488,7 +489,8 @@ ${input.styleRules ? `${FORM_LIBRARY_DETAIL_RULES}\n` : ""}- Knowledge base docu
 
   const userName = promptLabel(context.userName) || "a team member";
   const locationName = promptLabel(context.locationName);
-  const listener = `You are talking to ${userName}${locationName ? `, who works at ${locationName}` : ""}. ${todayLine(context.todayIso)}`;
+  // MANAGER_NAME_NOT_EMPLOYEE_ENABLED: the name is only for addressing them. See `manager-name-guard.ts`.
+  const listener = `You are talking to ${userName}${locationName ? `, who works at ${locationName}` : ""}.${managerNameNotEmployeeEnabled() ? ` ${MANAGER_NAME_RULE}` : ""} ${todayLine(context.todayIso)}`;
   const reportFigureRule = hasReportData
     ? "- Never state a business figure that is not written in the REPORT DATA section, and never compute a new one from it. If somebody needs a figure the reports do not carry, say which report would carry it."
     : "- You have NO report figures for this question. Do not state a sales figure, a count, a rate or a comparison from memory. If somebody asks for one, say the reports available to you do not cover it.";

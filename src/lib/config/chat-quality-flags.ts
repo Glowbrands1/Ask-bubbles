@@ -891,6 +891,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "STAFF_PICKER_STORE_TITLES_ENABLED",
   "STAFF_PICKER_BARE_ANSWER_ENABLED",
   "REPORT_NAME_NOT_A_PERSON_ENABLED",
+  "MANAGER_NAME_NOT_EMPLOYEE_ENABLED",
   "AM_PRIOR_WARNINGS_ENABLED",
   "SLOT_RETENTION_ENABLED",
   "FIELD_ACCURACY_ENABLED",
@@ -1795,6 +1796,15 @@ export function amPriorWarningsEnabled(): boolean {
  */
 export function reportNameNotAPersonEnabled(): boolean {
   return envFlag("REPORT_NAME_NOT_A_PERSON_ENABLED");
+}
+
+/**
+ * The manager's own name is only for addressing them, never an employee's in an
+ * answer (QA, the sibling app's live chat, 1 Nov 2026; same flag in both apps).
+ * See `ai/manager-name-guard.ts`. Off, as before.
+ */
+export function managerNameNotEmployeeEnabled(): boolean {
+  return envFlag("MANAGER_NAME_NOT_EMPLOYEE_ENABLED");
 }
 
 /**
