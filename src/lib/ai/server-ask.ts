@@ -143,6 +143,7 @@ import { withTypoReadingCopy } from "./typo-reading-copy";
 import { protectedNameWords } from "./typo-name-words";
 import type { AskRequest, AskResponse } from "./types";
 import { keepManagerActionPlan } from "./manager-action-plan-reply";
+import { withoutReportTurnsForForm } from "./report-turns";
 import { withManagerNameGuard } from "./manager-name-guard";
 import { withJobTitleFromWords } from "./job-title-from-words";
 import { withFreshDateReask } from "./date-reask-fresh";
@@ -208,10 +209,12 @@ function withoutSensitiveChunks<T extends { content: string }>(chunks: T[]): T[]
  *   session's subject, from the route. Omitted, nothing is recalled.
  */
 export async function answerQuestion(
-  request: AskRequest,
+  asked: AskRequest,
   actor: ChatActor,
   memory: { memoryOwnerId?: string } = {},
 ): Promise<AskResponse> {
+  // REPORT_NAME_NOT_A_PERSON_ENABLED: a form is never built from a question about a report. See `report-turns.ts`.
+  const request = withoutReportTurnsForForm(asked);
   /*
    * APP_PASSWORD_HELP_ENABLED: "I forgot my password" is answered about this
    * app's own sign-in, the "Forgot your password?" link (QA and Pau, 25 Oct

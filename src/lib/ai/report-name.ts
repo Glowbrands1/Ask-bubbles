@@ -24,3 +24,15 @@ export function isReportName(name: string): boolean {
   if (key === "") return false;
   return REPORT_REGISTRY.some((report) => reportKey(report.label) === key);
 }
+
+/** The text names one of the app's reports somewhere ("the most recent <Report>"). */
+export function mentionsReportName(text: string): boolean {
+  const words = ` ${text.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean).join(" ")} `;
+  return REPORT_REGISTRY.some((report) => {
+    const name = reportKey(report.label);
+    if (name === "") return false;
+    // A one-word key counts only as "<key> report".
+    const phrase = name.includes(" ") ? name : `${name} report`;
+    return words.includes(` ${phrase} `) || words.includes(` ${phrase}s `);
+  });
+}
