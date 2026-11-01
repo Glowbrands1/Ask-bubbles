@@ -17,15 +17,33 @@ export const metadata: Metadata = {
 };
 
 const EFFECTIVE_DATE = "November 1, 2026";
-const PRIVACY_CONTACT = "paulyne.camacho@glowbrands.com";
+/**
+ * The contact address comes from the deployment, not the repository:
+ * `no-real-people.test.ts` keeps real people's addresses out of tracked files.
+ * Set PRIVACY_CONTACT_EMAIL in Vercel before publishing the Google app.
+ */
+function privacyContact(): string | null {
+  const value = process.env.PRIVACY_CONTACT_EMAIL?.trim();
+  return value && /^[^\s@]+@[^\s@]+$/.test(value) ? value : null;
+}
+
+function ContactLink() {
+  const contact = privacyContact();
+  if (!contact) return <>your Glowbrands administrator</>;
+  return (
+    <a href={`mailto:${contact}`} className="text-primary underline">
+      {contact}
+    </a>
+  );
+}
 
 export default function PrivacyPage() {
   return (
     <PublicPage eyebrow={`Effective ${EFFECTIVE_DATE}`} title="Privacy Policy">
       <PublicSection title="Who we are">
         <p>
-          Ask Bubbles is an internal team app operated by Glowbrands, the company behind Sun Tan City
-          and Buff City Soap. It is used only by Glowbrands staff and is not offered to the public.
+          Ask Bubbles is an internal team app for Buff City Soap, operated by Glowbrands. It is used only
+          by Glowbrands staff and is not offered to the public.
         </p>
       </PublicSection>
 
@@ -36,20 +54,30 @@ export default function PrivacyPage() {
           the Google Business Profile APIs. We use it only to <b>read</b>:
         </p>
         <ul className="list-disc space-y-1 pl-6">
-          <li>Google Business Profile reviews (rating, review text, reviewer display name, date and any owner reply), and</li>
+          <li>
+            Google Business Profile reviews: star rating, review comment, dates, the reviewer&apos;s display
+            name (never their photo or profile link; nothing for anonymous reviewers) and any owner reply, and
+          </li>
           <li>location information (business name, address and store code),</li>
         </ul>
         <p>
-          and only for locations managed by Glowbrands. Ask Bubbles does not post, edit or delete reviews or
-          replies, and does not read any other Google data such as Gmail, Drive or Contacts.
+          and only for Buff City Soap stores managed by Glowbrands. Google offers no read-only scope for these
+          APIs, but Ask Bubbles never posts, edits or deletes reviews or replies, and does not read any other
+          Google data such as Gmail, Drive or Contacts.
         </p>
       </PublicSection>
 
       <PublicSection title="How we use it">
         <p>
           The data is used solely to display and analyze reviews in the internal Ask Bubbles dashboard, so
-          store and district managers can see how their locations are doing. We do not sell this data, share
-          it with third parties, or use it for advertising.
+          store and district managers can see how their stores are doing. We do not sell it, use it for
+          advertising, or use it to train AI models.
+        </p>
+        <p>
+          It is shared only with the service providers that host or process it for us, under their terms:
+          Supabase (database), Vercel (hosting) and, when a staff member asks the Ask Bubbles chat about
+          Google reviews, Anthropic, whose Claude model receives that store&apos;s review counts and goal
+          progress to write the answer. Review text and reviewer names are not sent to the chat.
         </p>
       </PublicSection>
 
@@ -57,19 +85,17 @@ export default function PrivacyPage() {
         <p>
           Review and location data is stored in our Supabase database, which is encrypted at rest. OAuth
           tokens are stored server-side only: the long-lived refresh token is additionally encrypted by the
-          app before it is saved, short-lived access tokens are held in memory for a single sync, and no
+          app (AES-256-GCM) before it is saved, short-lived access tokens are held in memory for a single sync, and no
           token is ever sent to a browser. Access to the dashboard requires a Glowbrands staff sign-in.
         </p>
       </PublicSection>
 
       <PublicSection title="Retention and deletion">
         <p>
-          We keep review data only while it is needed for the dashboard. When an administrator disconnects
-          Google in Ask Bubbles, we ask Google to revoke our access and all syncing stops. To have
-          previously imported review and location data deleted, email{" "}
-          <a href={`mailto:${PRIVACY_CONTACT}`} className="text-primary underline">
-            {PRIVACY_CONTACT}
-          </a>{" "}
+          Imported review and location data is kept until it is deleted on request. When an administrator
+          disconnects Google in Ask Bubbles, we ask Google to revoke our access and all syncing stops;
+          disconnecting does not by itself delete reviews already stored. To have that data deleted, email{" "}
+          <ContactLink />{" "}
           and we will delete it.
         </p>
         <p>
@@ -104,9 +130,7 @@ export default function PrivacyPage() {
       <PublicSection title="Contact">
         <p>
           Questions or requests about this policy:{" "}
-          <a href={`mailto:${PRIVACY_CONTACT}`} className="text-primary underline">
-            {PRIVACY_CONTACT}
-          </a>
+          <ContactLink />
           . See also <Link href="/about" className="text-primary underline">About Ask Bubbles</Link>.
         </p>
       </PublicSection>
