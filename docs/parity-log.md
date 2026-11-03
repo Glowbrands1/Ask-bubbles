@@ -1258,3 +1258,12 @@ before is a new incident, and Create makes a new draft; a request that
 repeats the account still reuses. QA: "yes", 3 Nov 2026. Ported to the
 sibling app with the same flag (there CONVERSATION_DRAFT_REUSE is off, so it
 changes nothing until both are on).
+
+## 3 Nov 2026: the policy on each Corrective Action history line — both apps (PRIOR_ACTIONS_POLICY_ENABLED, default off)
+
+Pau, 3 Nov 2026 (through QA): a Corrective Action's history read from the
+Forms Register said only the step and the date. On: each earlier Corrective
+Action's "Policy violated" is named on its line — "Verbal corrective action
+(Attendance) — signed 11/02/2026" — in the chat read-back and on the drafted
+form alike. Coaching lines are unchanged. Ported from the sibling app
+(8754989), same flag.
