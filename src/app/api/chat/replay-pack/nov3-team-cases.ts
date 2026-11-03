@@ -8,7 +8,8 @@ export const NOV3_TEAM_CASES: readonly ReplayCase[] = [
     id: "nov3-team-expectation",
     title: "a team expectation with no \"coaching\" in it is the team card, not a policy answer",
     report: '"store wide everyone needs the reminder to call a manager for cash drawer shortages, overages, and returns" → a policy answer, no team card (QA live check)',
-    status: { open: "TEAM_CARD_WORDING_ENABLED is off in production" },
+    // Fixed in production: NEW_REQUEST_OPEN_DRAFT, DRAFT_REUSE_NEW_REQUEST and TEAM_CARD_WORDING on (QA, 3 Nov 2026; live-checked 07:20 UTC).
+    status: "fixed",
     fixFlags: ["TEAM_CARD_WORDING_ENABLED"],
     async run(t) {
       t.directory(STAFF);
@@ -22,7 +23,8 @@ export const NOV3_TEAM_CASES: readonly ReplayCase[] = [
     id: "nov3-team-observation-echo",
     title: "words that only name the audience are not written into the team card",
     report: 'the team card\'s Observation read "the whole team: for the whole store" (QA live check)',
-    status: { open: "TEAM_CARD_WORDING_ENABLED is off in production" },
+    // Fixed in production: NEW_REQUEST_OPEN_DRAFT, DRAFT_REUSE_NEW_REQUEST and TEAM_CARD_WORDING on (QA, 3 Nov 2026; live-checked 07:20 UTC).
+    status: "fixed",
     fixFlags: ["TEAM_CARD_WORDING_ENABLED"],
     async run(t) {
       t.directory(STAFF);

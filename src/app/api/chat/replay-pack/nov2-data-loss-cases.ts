@@ -54,7 +54,8 @@ export const NOV2_DATA_LOSS_CASES: readonly ReplayCase[] = [
     title: "a new request for the same person is drafted from its own turns, not the earlier incident's",
     report:
       "\"The card showed 'Late Opening' as the policy, but the saved draft says Standards of Conduct. In the same chat, a new late-opening request reused an older trash-and-rugs incident\"",
-    status: { open: "a card's turns run back over an earlier request; Create reuses the earlier draft" },
+    // Fixed in production: NEW_REQUEST_OPEN_DRAFT, DRAFT_REUSE_NEW_REQUEST and TEAM_CARD_WORDING on (QA, 3 Nov 2026; live-checked 07:20 UTC).
+    status: "fixed",
     // Here NEW_REQUEST_OWN_TURNS_ENABLED trims the card to the new request, but Create then reuses the
     // earlier draft for the same person in the same chat (CONVERSATION_DRAFT_REUSE), so no late-opening
     // draft is written. DRAFT_REUSE_NEW_REQUEST_ENABLED gives the new request its own draft.
