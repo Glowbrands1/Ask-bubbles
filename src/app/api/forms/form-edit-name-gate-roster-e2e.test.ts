@@ -262,7 +262,7 @@ async function revise(id: string, history: ChatMessage[], question: string, toda
 }
 
 
-const SALON_SCOPE = { level: "location", primaryAreaId: "loc-0310", alsoCoversAreaIds: ["loc-0311"] };
+const STORE_SCOPE = { level: "location", primaryAreaId: "loc-0310", alsoCoversAreaIds: ["loc-0311"] };
 
 const DIRECTORY = [
   { id: "e-1", firstName: "Kaitlyn", lastName: "Brook", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-0310"] },
@@ -276,7 +276,7 @@ const DIRECTORY = [
 beforeEach(async () => {
   for (const key of Object.keys(store) as (keyof FakeStore)[]) store[key] = [];
   state.role = "location_manager";
-  state.scope = SALON_SCOPE;
+  state.scope = STORE_SCOPE;
   state.draft = { values: {}, checked: {} };
   state.revise = { values: {} };
   state.calls = [];
