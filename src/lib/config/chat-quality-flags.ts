@@ -885,6 +885,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FORM_EDIT_PLAIN_WORDS_ENABLED",
   "FORM_EDIT_HONEST_REPLY_ENABLED",
   "PERSON_GUARD_ENABLED",
+  "NEW_REQUEST_OWN_TURNS_ENABLED",
   "OPEN_DRAFT_KEEPS_TURNS_ENABLED",
   "FORM_EDIT_REFERS_BACK_ENABLED",
   "ANGLE_PLACEHOLDER_GUARD_ENABLED",
@@ -1743,6 +1744,16 @@ export function formEditHonestReplyEnabled(): boolean {
  */
 export function personGuardEnabled(): boolean {
   return envFlag("PERSON_GUARD_ENABLED");
+}
+
+/**
+ * A new form request for a person already in the chat draws its card from its
+ * own turns, not an earlier request's (the sibling app's 2 Nov 2026 scan: "a
+ * new late-opening request reused an older trash-and-rugs incident"; same flag
+ * in both apps). See `forms/new-request-turns.ts`. Off, as before.
+ */
+export function newRequestOwnTurnsEnabled(): boolean {
+  return envFlag("NEW_REQUEST_OWN_TURNS_ENABLED");
 }
 
 /**

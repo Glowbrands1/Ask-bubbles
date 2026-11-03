@@ -497,6 +497,7 @@ afterEach(() => {
   setScope(undefined);
   setRole(undefined);
   said.answer = null;
+  draftAsked.length = 0;
 });
 
 function context(): ReplayContext {

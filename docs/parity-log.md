@@ -52,6 +52,16 @@ report name or the not-a-name lists never are), read by namesSomebody and once
 more on every card the route returns. With the flag forced on, the chat and
 forms suites pass.
 
+## 3 Nov 2026: a new request for the same person is drafted from its own turns — ported from the sibling app (NEW_REQUEST_OWN_TURNS_ENABLED, default off)
+
+Found in the sibling app (the 2 Nov scan): a second Corrective Action request
+for the same person, "… for being late to opening this morning", was drafted
+from the earlier trash-and-rugs incident too. Replayed here it reproduces;
+the ported check trims the card to the new request, but Create then reuses
+the earlier draft for the same person in the same chat, so the new incident
+still never gets its own draft — a separate fix (replay-pack case nov2-p2,
+open).
+
 ## 25 Oct 2026: the framework's sections are not pinned into governed drafts — Bubbles-only
 
 `FRAMEWORK_UNPIN_ENABLED` defaults off. The uploaded Performance Management
