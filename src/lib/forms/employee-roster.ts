@@ -5,8 +5,11 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import type { AccessScope } from "@/types";
 
+import { rosterStoreScopedEnabled } from "@/lib/config/chat-quality-flags";
+
 import { isServiceAccountName, type RosterEmployee } from "./employee-match";
 import { authorizedLocationIds } from "./location-scope";
+import { isNonPersonWovenId } from "./roster-non-person";
 
 /**
  * Directory ids the grounded path already chose. Unset, the scoped roster
@@ -177,6 +180,13 @@ export async function loadScopedRosterResult(scope: AccessScope | null): Promise
   if (scope.level !== "global" && authorizedLocationIds(scope).length === 0) {
     return { status: "not_checked", reason: "area_scope" };
   }
+  if (rosterStoreScopedEnabled()) {
+    try {
+      return { status: "ok", roster: (await readStoreRoster(scope)).map(rosterEmployeeOf) };
+    } catch {
+      return { status: "unavailable" };
+    }
+  }
   try {
     return { status: "ok", roster: scopeRoster(await readDirectoryRoster(), scope) };
   } catch {
@@ -211,6 +221,13 @@ export interface DirectoryFact extends RosterEmployee {
 export async function readDirectoryFacts(scope: AccessScope | null): Promise<DirectoryFact[]> {
   if (!scope) return [];
   if (scope.level !== "global" && authorizedLocationIds(scope).length === 0) return [];
+  if (rosterStoreScopedEnabled()) {
+    try {
+      return await readStoreRoster(scope);
+    } catch {
+      return [];
+    }
+  }
   try {
     const supabase = getSupabaseAdmin();
     const [people, affiliations, map] = await Promise.all([
@@ -273,4 +290,163 @@ export async function readDirectoryFacts(scope: AccessScope | null): Promise<Dir
   } catch {
     return [];
   }
+}
+
+/**
+ * ============================================================================
+ * ROSTER_STORE_SCOPED_ENABLED — ONLY THE MANAGER'S OWN STORES, NEVER THE WHOLE
+ * DIRECTORY (master plan step 1, 3 Nov 2026; same mechanism in both apps)
+ * ============================================================================
+ *
+ * The flag-off reads above load the whole directory (`.limit(5000)`,
+ * `.limit(20000)`) and scope it in memory. The database answers at most 1,000
+ * rows per request whatever the limit says, so a directory past that would be
+ * cut short without an error — and every store's shared login ("Dodge
+ * Account", an active "Team Member Full Time" to Woven) was a candidate name.
+ *
+ * READ FROM THE WOVEN-SYNCED TABLES, NEVER FROM WOVEN. The daily sync
+ * (vercel.json, 11:17 UTC) keeps `employee_access_directory` and
+ * `employee_location_affiliations` current; nothing here calls the Woven API.
+ *
+ *   1. the actor's stores (`authorizedLocationIds`; a global scope is every
+ *      configured store) → their mapped Woven locations
+ *   2. → the ACTIVE affiliations at those locations
+ *   3. → those people, `employment_status = 'active'` only
+ *   4. minus shared or service accounts by name (`isServiceAccountName`, as
+ *      before) and the reviewed store logins by Woven id
+ *      (`roster-non-person.ts`)
+ *
+ * Every read is paged with `.range()` and ordered, so no response can be cut
+ * at the 1,000-row cap; one store is tens of rows. Throws on a read error: the
+ * callers turn that into "unavailable" (never "nobody", never "everyone").
+ */
+export const ROSTER_PAGE_ROWS = 1000;
+/** Ids per `.in()` filter, so a request URL stays short. */
+const IN_CHUNK = 200;
+
+type Page<T> = PromiseLike<{ data: T[] | null; error: unknown }>;
+
+/** Every row of one read, a page of `ROSTER_PAGE_ROWS` at a time. */
+async function readAllPages<T>(page: (from: number, to: number) => Page<T>): Promise<T[]> {
+  const rows: T[] = [];
+  for (let from = 0; ; from += ROSTER_PAGE_ROWS) {
+    const { data, error } = await page(from, from + ROSTER_PAGE_ROWS - 1);
+    if (error) throw new Error("The employee directory could not be read.");
+    rows.push(...(data ?? []));
+    if ((data ?? []).length < ROSTER_PAGE_ROWS) return rows;
+  }
+}
+
+function chunks<T>(items: readonly T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let index = 0; index < items.length; index += size) out.push(items.slice(index, index + size));
+  return out;
+}
+
+type Row = Record<string, unknown>;
+const text = (value: unknown): string => (typeof value === "string" ? value.trim() : value == null ? "" : String(value).trim());
+
+/** The active people at the actor's own stores, with title and primary store. */
+export async function readStoreRoster(scope: AccessScope | null): Promise<DirectoryFact[]> {
+  if (!scope) return [];
+  const stores = authorizedLocationIds(scope);
+  if (stores.length === 0) return [];
+  const supabase = getSupabaseAdmin();
+
+  const map = await readAllPages<Row>((from, to) =>
+    supabase
+      .from("woven_location_map")
+      .select("woven_location_id, location_id")
+      .eq("status", "mapped")
+      .in("location_id", stores)
+      .order("woven_location_id", { ascending: true })
+      .range(from, to),
+  );
+  const storeByWoven = new Map<string, string>();
+  for (const row of map) {
+    const location = text(row.location_id);
+    if (location.startsWith("loc-") && stores.includes(location)) storeByWoven.set(text(row.woven_location_id), location);
+  }
+  if (storeByWoven.size === 0) return [];
+
+  const affiliations: Row[] = [];
+  for (const wovenIds of chunks([...storeByWoven.keys()], IN_CHUNK)) {
+    affiliations.push(
+      ...(await readAllPages<Row>((from, to) =>
+        supabase
+          .from("employee_location_affiliations")
+          .select("employee_id, woven_location_id")
+          .eq("active", true)
+          .in("woven_location_id", wovenIds)
+          // A unique order (employee, location), so no row is skipped or repeated between pages.
+          .order("employee_id", { ascending: true })
+          .order("woven_location_id", { ascending: true })
+          .range(from, to),
+      )),
+    );
+  }
+  const storesByEmployee = new Map<string, Set<string>>();
+  for (const row of affiliations) {
+    const store = storeByWoven.get(text(row.woven_location_id));
+    if (!store) continue;
+    const key = text(row.employee_id);
+    if (!storesByEmployee.has(key)) storesByEmployee.set(key, new Set());
+    storesByEmployee.get(key)!.add(store);
+  }
+  if (storesByEmployee.size === 0) return [];
+
+  const people: Row[] = [];
+  for (const ids of chunks([...storesByEmployee.keys()], IN_CHUNK)) {
+    people.push(
+      ...(await readAllPages<Row>((from, to) =>
+        supabase
+          .from("employee_access_directory")
+          .select(
+            "id, external_employee_id, first_name, last_name, preferred_first_name, employment_status, position_name, last_synced_at, primary_location_name",
+          )
+          .in("id", ids)
+          .eq("employment_status", "active")
+          .order("id", { ascending: true })
+          .range(from, to),
+      )),
+    );
+  }
+
+  const facts: DirectoryFact[] = [];
+  for (const row of people) {
+    const first = text(row.first_name);
+    const last = text(row.last_name);
+    if (!first || !last) continue;
+    if (row.employment_status !== "active") continue;
+    if (isServiceAccountName(first, last)) continue;
+    if (isNonPersonWovenId(text(row.external_employee_id))) continue;
+    const position = text(row.position_name) || null;
+    facts.push({
+      id: text(row.id),
+      firstName: first,
+      lastName: last,
+      preferredFirstName: text(row.preferred_first_name) || null,
+      locationIds: [...(storesByEmployee.get(text(row.id)) ?? [])].sort(),
+      positionName: position,
+      employmentStatus: "active",
+      lastSyncedAt: text(row.last_synced_at) || null,
+      title: position,
+      primaryLocationName: text(row.primary_location_name) || null,
+    });
+  }
+  return facts.sort((a, b) => a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName) || a.id.localeCompare(b.id));
+}
+
+/** A store-roster row as the name checks read it. */
+function rosterEmployeeOf(fact: DirectoryFact): RosterEmployee {
+  return {
+    id: fact.id,
+    firstName: fact.firstName,
+    lastName: fact.lastName,
+    preferredFirstName: fact.preferredFirstName,
+    locationIds: fact.locationIds,
+    positionName: fact.positionName ?? null,
+    employmentStatus: fact.employmentStatus ?? "active",
+    lastSyncedAt: fact.lastSyncedAt ?? null,
+  };
 }
