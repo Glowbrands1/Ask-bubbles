@@ -163,7 +163,7 @@ export function judgeCase(input: {
   const { item, proposal, lastReply, error, ms } = input;
   const criteria = item.criteria;
   const misses: string[] = [];
-  if (error) misses.push(`error: ${error}`);
+  if (error) misses.push(`error: ${error.split("\n")[0]!.trim()}`);
   if (criteria.employee !== null && (proposal?.employeeName ?? "").trim().toLowerCase() !== criteria.employee.toLowerCase()) {
     misses.push("employee");
   }

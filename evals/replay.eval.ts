@@ -73,7 +73,10 @@ const actor = vi.hoisted(() => ({
   scope: { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] } as Record<string, unknown>,
 }));
 
-vi.mock("@/lib/supabase/server", () => ({ getSupabaseAdmin: () => fakeSupabase(store) }));
+/* The knowledge search is a database function; in memory it finds nothing. */
+vi.mock("@/lib/supabase/server", () => ({
+  getSupabaseAdmin: () => Object.assign(fakeSupabase(store), { rpc: async () => ({ data: [], error: null }) }),
+}));
 vi.mock("@/lib/api/respond", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api/respond")>();
   return { ...actual, assertLiveMode: () => {}, assertNoConfigurationProblems: () => {}, assertWithinRateLimit: () => {} };
