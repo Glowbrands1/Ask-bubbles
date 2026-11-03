@@ -7,7 +7,14 @@
       "name is Test Employee",
       "this is a violation under Standards of Conduct"
     ],
-    "criteria": { "employee": "Test Employee", "salon": null, "date": null, "policy": "Standards of Conduct p.12", "noBlockingQuestion": true, "noLeakedInternalText": true }
+    "criteria": {
+      "employee": "Test Employee",
+      "salon": null,
+      "date": null,
+      "policy": "Standards of Conduct p.12",
+      "noBlockingQuestion": true,
+      "noLeakedInternalText": true
+    }
   },
   {
     "id": "b10",
@@ -20,7 +27,14 @@
       "violation is that on 10-16-26 Testy was not measuring and weighing product",
       "show draft with edits"
     ],
-    "criteria": { "employee": "Testy Testerson", "salon": "loc-264", "date": "2026-10-16", "policy": "Standards of Conduct p.12", "noBlockingQuestion": true, "noLeakedInternalText": true }
+    "criteria": {
+      "employee": "Testy Testerson",
+      "salon": "loc-264",
+      "date": "2026-10-16",
+      "policy": "Standards of Conduct p.12",
+      "noBlockingQuestion": true,
+      "noLeakedInternalText": true
+    }
   },
   {
     "id": "b11",
@@ -28,7 +42,14 @@
     "turns": [
       "write a verbal CA for Team Member, Testy Testerson at Dodge, NE. On 10-20-26 Testy was late for shift and did not call supervisor as outlined in attendance policy. payroll deduct is not applicable. previous coaching is JBA Manual 1-1-25"
     ],
-    "criteria": { "employee": "Testy Testerson", "salon": "loc-264", "date": "2026-10-20", "policy": "Attendance p.14", "noBlockingQuestion": true, "noLeakedInternalText": true }
+    "criteria": {
+      "employee": "Testy Testerson",
+      "salon": "loc-264",
+      "date": "2026-10-20",
+      "policy": "Attendance p.14",
+      "noBlockingQuestion": true,
+      "noLeakedInternalText": true
+    }
   },
   {
     "id": "b12",
@@ -40,18 +61,127 @@
       "cite animals in the workplace policy",
       "store location is empire, sd. create corrective action"
     ],
-    "criteria": { "employee": "Maisie Quillfeather", "salon": null, "date": "2026-10-22", "policy": "Animals in the Workplace p.30", "noBlockingQuestion": false, "noLeakedInternalText": true }
+    "criteria": {
+      "employee": "Maisie Quillfeather",
+      "salon": null,
+      "date": "2026-10-22",
+      "policy": "Animals in the Workplace p.30",
+      "noBlockingQuestion": false,
+      "noLeakedInternalText": true
+    }
   },
   {
     "id": "b18a",
     "source": "25 Oct 2026, conv_mvnuktv82h8v0yo (src/app/api/chat/b18-new-chat-new-draft-e2e.test.ts)",
-    "turns": ["create a CA for Test Employee at Kearney for being late to open on 10-20-26, verbal, no payroll"],
-    "criteria": { "employee": "Test Employee", "salon": "loc-66", "date": "2026-10-20", "policy": null, "noBlockingQuestion": true, "noLeakedInternalText": true }
+    "turns": [
+      "create a CA for Test Employee at Kearney for being late to open on 10-20-26, verbal, no payroll"
+    ],
+    "criteria": {
+      "employee": "Test Employee",
+      "salon": "loc-66",
+      "date": "2026-10-20",
+      "policy": null,
+      "noBlockingQuestion": true,
+      "noLeakedInternalText": true
+    }
   },
   {
     "id": "b18b",
     "source": "25 Oct 2026, conv_mvnurfc02cj2y7l (src/app/api/chat/b18-new-chat-new-draft-e2e.test.ts)",
-    "turns": ["create a written CA for Test Employee at Kearney for missing the 10-15-26 woven deadline"],
-    "criteria": { "employee": "Test Employee", "salon": "loc-66", "date": null, "policy": null, "noBlockingQuestion": true, "noLeakedInternalText": true }
+    "turns": [
+      "create a written CA for Test Employee at Kearney for missing the 10-15-26 woven deadline"
+    ],
+    "criteria": {
+      "employee": "Test Employee",
+      "salon": "loc-66",
+      "date": null,
+      "policy": null,
+      "noBlockingQuestion": true,
+      "noLeakedInternalText": true
+    }
+  },
+  {
+    "id": "r1",
+    "source": "Master plan step 1 (3 Nov 2026): the whole-staff list at one store; QA 30 Oct 2026 wording \"can you create a coaching form for my whole staff?\". Invented people; the Dodge Account row carries the store login's real Woven id.",
+    "turns": [
+      "can you create a coaching form for my whole staff?"
+    ],
+    "criteria": {
+      "employee": null,
+      "salon": null,
+      "date": null,
+      "policy": null,
+      "noBlockingQuestion": false,
+      "noLeakedInternalText": true,
+      "replyIncludes": [
+        "Dana Hollisworth",
+        "Eli Brackwater"
+      ],
+      "replyExcludes": [
+        "Dodge Account",
+        "Fern Ostrander",
+        "Gus Penhallow"
+      ]
+    },
+    "actor": {
+      "role": "location_manager",
+      "scope": {
+        "level": "location",
+        "primaryAreaId": "loc-264",
+        "alsoCoversAreaIds": []
+      }
+    },
+    "flags": [
+      "STAFF_PICKER_ENABLED"
+    ],
+    "roster": [
+      {
+        "id": "r-dana",
+        "firstName": "Dana",
+        "lastName": "Hollisworth",
+        "positionName": "Team Member Part Time",
+        "locationIds": [
+          "loc-264"
+        ]
+      },
+      {
+        "id": "r-eli",
+        "firstName": "Eli",
+        "lastName": "Brackwater",
+        "positionName": "General Manager",
+        "locationIds": [
+          "loc-264"
+        ]
+      },
+      {
+        "id": "r-fern",
+        "firstName": "Fern",
+        "lastName": "Ostrander",
+        "positionName": "Team Member Full Time",
+        "employmentStatus": "terminated",
+        "locationIds": [
+          "loc-264"
+        ]
+      },
+      {
+        "id": "r-login",
+        "firstName": "Dodge",
+        "lastName": "Account",
+        "positionName": "Team Member Full Time",
+        "locationIds": [
+          "loc-264"
+        ],
+        "wovenEmployeeId": "25edf0b1-bb48-4b95-a7d5-f76d8be1dd13"
+      },
+      {
+        "id": "r-gus",
+        "firstName": "Gus",
+        "lastName": "Penhallow",
+        "positionName": "Team Member Part Time",
+        "locationIds": [
+          "loc-66"
+        ]
+      }
+    ]
   }
 ]

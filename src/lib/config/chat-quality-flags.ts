@@ -890,6 +890,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "SAME_FORM_COPY_ENABLED",
   "STAFF_PICKER_ENABLED",
   "STAFF_PICKER_STORE_TITLES_ENABLED",
+  "ROSTER_STORE_SCOPED_ENABLED",
   "STAFF_PICKER_BARE_ANSWER_ENABLED",
   "WHOLE_TEAM_COACHING_ENABLED",
   "STAFF_PICKER_REMEMBER_LOCATION_ENABLED",
@@ -2057,3 +2058,14 @@ export function levelRequestDateEnabled(): boolean {
   return envFlag("LEVEL_REQUEST_DATE_ENABLED");
 }
 
+/**
+ * Name checks and the staff list read only the manager's own stores' active
+ * people from the Woven-synced directory, paged under the database's 1,000-row
+ * cap, minus the reviewed store logins ("Dodge Account") in
+ * `forms/roster-non-person.ts` (master plan step 1, 3 Nov 2026; same flag in
+ * both apps). See `readStoreRoster` in `forms/employee-roster.ts`. Off, as
+ * before: the whole directory is read and scoped in memory.
+ */
+export function rosterStoreScopedEnabled(): boolean {
+  return envFlag("ROSTER_STORE_SCOPED_ENABLED");
+}

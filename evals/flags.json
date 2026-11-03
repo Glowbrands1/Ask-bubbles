@@ -84,5 +84,7 @@
     "EXIT_READBACK_JOB_TITLE_ENABLED",
     "FOLLOW_UP_CITATION_FIELD_ENABLED"
   ],
-  "on": []
+  "on": [
+    "ROSTER_STORE_SCOPED_ENABLED"
+  ]
 }
