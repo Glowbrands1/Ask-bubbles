@@ -13,6 +13,7 @@ export const NOV2_CASES: readonly ReplayCase[] = [
     // is gone. Asked twice before naming a store, the team card asks "Which store is this
     // about?" twice, word for word; every other turn now differs.
     status: { open: "the team card's store question is repeated word for word when the request is" },
+    fixFlags: ["SAME_ASK_NO_REPEAT_ENABLED"],
     async run(t) {
       t.directory(STAFF);
       t.as("location_manager", TWO_STORES);

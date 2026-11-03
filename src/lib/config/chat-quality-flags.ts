@@ -910,6 +910,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FORM_EDIT_NAME_GATE_ROSTER_ENABLED",
   "STAFF_PICKER_BARE_ANSWER_ENABLED",
   "WHOLE_TEAM_COACHING_ENABLED",
+  "SAME_ASK_NO_REPEAT_ENABLED",
   "CA_NAME_FROM_CHAT_ENABLED",
   "NEXT_PUBLIC_CARD_POLICY_TO_DRAFT_ENABLED",
   "NEW_REQUEST_OPEN_DRAFT_ENABLED",
@@ -1726,6 +1727,17 @@ export function chatImportOwnOnlyEnabled(): boolean {
  */
 export function caNameFromChatEnabled(): boolean {
   return envFlag("CA_NAME_FROM_CHAT_ENABLED");
+}
+
+/**
+ * A card that still needs something never repeats the last reply word for
+ * word: it says first that it is still waiting on the same answer (the team
+ * card's store question, asked twice; the replay pack, 3 Nov 2026). Same flag
+ * in both apps. See `forms/reply-guards.ts` `withoutRepeatedAsk`. Off, as
+ * before.
+ */
+export function sameAskNoRepeatEnabled(): boolean {
+  return envFlag("SAME_ASK_NO_REPEAT_ENABLED");
 }
 
 export function chatHistoryStateChunkedEnabled(): boolean {
