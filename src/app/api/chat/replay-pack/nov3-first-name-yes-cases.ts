@@ -16,7 +16,7 @@ export const NOV3_FIRST_NAME_YES_CASES: readonly ReplayCase[] = [
     title: "\"Yes\" to \"Is this for <name>?\" keeps the form the manager asked for in a later turn",
     report:
       "Replay set b2: \"I have an employee <first name> at our Grand Island location who has been out of dress code three shifts …\" → \"Create a Coaching Form from this conversation.\" → \"Is this for <name>?\" → \"Yes\" → no card",
-    status: { open: "the answer becomes the account alone and the form request is lost" },
+    status: "fixed",
     fixFlags: ["FIRST_NAME_YES_KEEPS_REQUEST_ENABLED"],
     async run(t) {
       t.directory([
