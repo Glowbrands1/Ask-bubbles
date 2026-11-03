@@ -20,6 +20,8 @@ import { isExitDocumentKeys } from "./exit-draft";
 import { formDateChange, formDateChangeUnclear, formDateReply } from "./form-date-answer";
 import { resolveFormDate, withDateMoved } from "./form-date-grounding";
 import { authorizeInstance } from "./instance-scope";
+import { caNameFromChat } from "./ca-name-from-chat";
+import { getSupabaseAdmin } from "@/lib/supabase/server";
 import {
   PAYROLL_DEDUCT_KEY,
   payrollDeductChecked,
@@ -42,6 +44,9 @@ import { singleSpokenDate } from "./relative-date";
 import { detectTemplateIntent } from "./template-intent";
 import { applyAssistantDraft, saveInstanceValues } from "./instances";
 import { correctCaFromChat } from "./ca-chat-corrections";
+
+/** The header line a Corrective Action may take from chat under CA_NAME_FROM_CHAT_ENABLED. */
+const EMPLOYEE_NAME_KEY = "employee_name";
 import { enforcePersonEdit } from "./responsibility";
 import { namesIncidentTopic } from "./corrective-action-intake";
 import { NO_PRIOR_ACTION, statedPriorActions } from "./prior-actions";
@@ -237,6 +242,8 @@ async function correctFromFormReaders(
     registered?.formDateIsIncidentDate === true &&
     registered.chatCorrectableFields.includes(FORM_DATE_KEY);
   const whichDate = asksWhichDate ? whichDateQuestion(loaded.instance, dateUnclear!.offered) : null;
+  // CA_NAME_FROM_CHAT_ENABLED (Pau, 3 Nov 2026): "change her name to …" on a Corrective Action, roster-confirmed.
+  const caNewName = !kind && !isExit && asksPayroll ? caNameFromChat(input.question, loaded.instance.employeeName) : null;
   const correctsOtherwise =
     kind ||
     isExit ||
@@ -244,7 +251,8 @@ async function correctFromFormReaders(
     correctsWarning ||
     correctsDate ||
     Boolean(amountToStore) ||
-    clearsAmount;
+    clearsAmount ||
+    caNewName !== null;
   if (!correctsOtherwise && !whichDate) return null;
   /*
    * ==========================================================================
@@ -308,6 +316,7 @@ async function correctFromFormReaders(
       : {
           values: {
             ...(correctsDate ? { [FORM_DATE_KEY]: newFormDate! } : {}),
+            ...(caNewName ? { [EMPLOYEE_NAME_KEY]: caNewName } : {}),
             ...(amountToStore ? { [PAYROLL_DEDUCT_AMOUNT_KEY]: amountToStore } : {}),
             ...(payrollDeductAmountFieldEnabled() && asksPayroll && payroll === "no"
               ? { [PAYROLL_DEDUCT_AMOUNT_KEY]: "" }
@@ -339,6 +348,7 @@ async function correctFromFormReaders(
           PAYROLL_DEDUCT_KEY,
           WARNING_TYPE_KEY,
           FORM_DATE_KEY,
+          ...(caNewName ? [EMPLOYEE_NAME_KEY] : []),
           ...(payrollDeductAmountFieldEnabled() ? [PAYROLL_DEDUCT_AMOUNT_KEY] : []),
         ]);
   const restrict = <T,>(entries: Record<string, T>) =>
@@ -460,6 +470,15 @@ async function correctFromFormReaders(
   const refusedOnSave = new Set(saved.rejected.map((entry) => entry.key));
   const written = updated.filter((key) => !refusedOnSave.has(key));
   if (written.length === 0) return null;
+  /*
+   * CA_NAME_FROM_CHAT_ENABLED: the form's subject line moves with its Employee
+   * Name line — the card, the Forms Register and the printed form read
+   * `form_instances.employee_name`. Only after the line itself was saved.
+   */
+  if (caNewName && written.includes(EMPLOYEE_NAME_KEY)) {
+    const { error } = await getSupabaseAdmin().from("form_instances").update({ employee_name: caNewName }).eq("id", input.instanceId);
+    if (error) throw new Error(`Could not save the form's employee name: ${error.message}`);
+  }
   const rewritten = syncedKey && !refusedOnSave.has(syncedKey) ? syncedKey : null;
   /*
    * THE ACTION PLAN STATES THE DEDUCTION ONLY ON YES, so a corrected payroll

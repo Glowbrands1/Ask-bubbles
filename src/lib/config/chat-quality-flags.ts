@@ -904,6 +904,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FORM_EDIT_NAME_GATE_ROSTER_ENABLED",
   "STAFF_PICKER_BARE_ANSWER_ENABLED",
   "WHOLE_TEAM_COACHING_ENABLED",
+  "CA_NAME_FROM_CHAT_ENABLED",
   "NEXT_PUBLIC_CARD_POLICY_TO_DRAFT_ENABLED",
   "NEW_REQUEST_OPEN_DRAFT_ENABLED",
   "NEXT_PUBLIC_TEAM_CARD_NO_POSITION_ENABLED",
@@ -1711,6 +1712,16 @@ export function chatImportOwnOnlyEnabled(): boolean {
  * GET /api/chat/conversations/import (QA, 31 Oct 2026; same flag in both
  * apps). See `chat/store.ts` `ownHistoryState`. Off, as before.
  */
+/**
+ * "fix her last name …" on a Corrective Action changes the Employee Name on
+ * the card and the draft, and says so (Pau, 3 Nov 2026) — only to a name that
+ * shares a first or last name with the form's and that exactly one person on
+ * the roster has. See `forms/ca-name-from-chat.ts`. Off, as before.
+ */
+export function caNameFromChatEnabled(): boolean {
+  return envFlag("CA_NAME_FROM_CHAT_ENABLED");
+}
+
 export function chatHistoryStateChunkedEnabled(): boolean {
   return envFlag("CHAT_HISTORY_STATE_CHUNKED_ENABLED");
 }
