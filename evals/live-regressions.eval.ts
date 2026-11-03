@@ -383,6 +383,8 @@ type Routes = {
   continuationFor: typeof import("@/lib/forms/proposal-continuation").continuationFor;
   ensureTemplateLibrary: typeof import("@/lib/forms/repository").ensureTemplateLibrary;
   createId: typeof import("@/lib/utils/id").createId;
+  streamHeader: string;
+  unwrapStreamed: typeof import("@/lib/api/streamed-response").unwrapStreamed;
 };
 let routes: Routes;
 
@@ -505,8 +507,11 @@ async function runScenario(scenario: LiveScenario, extraFlags: readonly string[]
           }),
         }),
       );
-      const payload = (await response.json()) as Answer & { error?: string };
-      if (response.status !== 200) throw new Error(`"${step.say}": HTTP ${response.status} ${payload.error ?? ""}`.trim());
+      /* A slow turn is streamed (CHAT_RESPONSE_STREAM_ENABLED): its body is { status, body }; unwrap it as the client does. */
+      const { status, body } =
+        response.headers.get(routes.streamHeader) === "1" ? routes.unwrapStreamed(await response.text()) : { status: response.status, body: await response.json() };
+      const payload = body as Answer & { error?: string };
+      if (status !== 200) throw new Error(`"${step.say}": HTTP ${status} ${payload.error ?? ""}`.trim());
       if (payload.formProposal) proposal = payload.formProposal;
       if (payload.formOpened) instanceId = toUuid(payload.formOpened.instanceId);
       messages.push(
@@ -612,6 +617,8 @@ describe.skipIf(!LIVE && !DRY)("live regressions (LIVE=1, or LIVE_DRY=1 with sta
       continuationFor: (await import("@/lib/forms/proposal-continuation")).continuationFor,
       ensureTemplateLibrary: (await import("@/lib/forms/repository")).ensureTemplateLibrary,
       createId: (await import("@/lib/utils/id")).createId,
+      streamHeader: (await import("@/lib/api/streamed-response")).STREAM_HEADER,
+      unwrapStreamed: (await import("@/lib/api/streamed-response")).unwrapStreamed,
     };
   });
 
