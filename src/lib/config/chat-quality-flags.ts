@@ -891,6 +891,10 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "STAFF_PICKER_ENABLED",
   "STAFF_PICKER_STORE_TITLES_ENABLED",
   "STAFF_PICKER_BARE_ANSWER_ENABLED",
+  "WHOLE_TEAM_COACHING_ENABLED",
+  "STAFF_PICKER_REMEMBER_LOCATION_ENABLED",
+  "SHARED_LOGIN_NOT_STAFF_ENABLED",
+  "STAFF_PICKER_NO_REPEAT_ENABLED",
   "CHAT_RESPONSE_STREAM_ENABLED",
   "TRUNCATION_RETRY_BUDGET_ENABLED",
   "REPORT_NAME_NOT_A_PERSON_ENABLED",
@@ -1848,6 +1852,45 @@ export function truncationRetryBudgetEnabled(): boolean {
  */
 export function staffPickerBareAnswerEnabled(): boolean {
   return envFlag("STAFF_PICKER_BARE_ANSWER_ENABLED");
+}
+
+/**
+ * "coaching form for all team members" makes the team Coaching card ("All
+ * team members", one store) for every role that may create a coaching form,
+ * in every chat — the staff picker no longer refuses it (a Location Manager,
+ * 2 Nov 2026, rated 1 star; Pau, 3 Nov: "I need all managers to have it").
+ * Same flag in both apps. See `forms/whole-team-coaching.ts`. Off, as before.
+ */
+export function wholeTeamCoachingEnabled(): boolean {
+  return envFlag("WHOLE_TEAM_COACHING_ENABLED");
+}
+
+/**
+ * The staff picker reuses the store this conversation already settled
+ * ("dodge"), instead of asking "Which location's staff…" again (same report;
+ * same flag in both apps). See `forms/staff-picker.ts`. Off, as before.
+ */
+export function staffPickerRememberLocationEnabled(): boolean {
+  return envFlag("STAFF_PICKER_REMEMBER_LOCATION_ENABLED");
+}
+
+/**
+ * A directory row that is a shared or store login ("<Store> Account") is
+ * never a team member: not listed, suggested or matched (same report; same
+ * flag in both apps). See `forms/employee-match.ts`. Off, as before.
+ */
+export function sharedLoginNotStaffEnabled(): boolean {
+  return envFlag("SHARED_LOGIN_NOT_STAFF_ENABLED");
+}
+
+/**
+ * Once the staff picker has listed a store's staff in this conversation,
+ * another whole-staff turn is told what to do next in one line, never the
+ * same refusal and list again (same report; same flag in both apps). See
+ * `forms/staff-picker.ts`. Off, as before.
+ */
+export function staffPickerNoRepeatEnabled(): boolean {
+  return envFlag("STAFF_PICKER_NO_REPEAT_ENABLED");
 }
 
 /**

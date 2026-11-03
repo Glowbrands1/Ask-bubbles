@@ -19,6 +19,7 @@ import { loadFormState, saveFormState } from "./form-state-store";
 import { applyGroundedProposal, prepareGroundedQuestion, type GroundedPerson, type GroundedPrep } from "./grounded-entities";
 import type { ChatActor } from "./form-proposal";
 import type { AskRequest } from "./types";
+import { isTeamCardTurn } from "@/lib/forms/whole-team-coaching";
 import { withTypedEmployeeOnCard } from "./typed-employee-card";
 
 /**
@@ -57,7 +58,15 @@ export async function deliverFormProposal(input: {
     return proposed ? typedName(await input.decorate(proposed)) : null;
   }
 
-  const saved = await readSaved(stateOn, input.actor.subject, input.request.conversationId);
+  /*
+   * WHOLE_TEAM_COACHING_ENABLED (3 Nov 2026; found in the sibling app, where the
+   * saved form state put the person this conversation was about back in front
+   * of "Coaching Form for the whole team"): while the team card is being made
+   * or is the card on screen, the saved state is neither read nor written.
+   */
+  const team = isTeamCardTurn(input.request) || isTeamCardTurn({ ...input.request, question: input.question });
+  const keepState = stateOn && !team;
+  const saved = await readSaved(keepState, input.actor.subject, input.request.conversationId);
   const people = entities ? await loadPeople(input.actor) : [];
   const prep = entities
     ? prepareGroundedQuestion({
@@ -83,10 +92,10 @@ export async function deliverFormProposal(input: {
 
   const reopened = await reopenSameIncident(dedupe, input, applied);
   if (reopened) {
-    await writeSaved(stateOn, input, saved, applied, prep);
+    await writeSaved(keepState, input, saved, applied, prep);
     return reopened;
   }
-  await writeSaved(stateOn, input, saved, applied, prep);
+  await writeSaved(keepState, input, saved, applied, prep);
   return applied;
 }
 

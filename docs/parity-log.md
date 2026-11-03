@@ -32,6 +32,26 @@ case ("The I-9 and W-4 forms, direct deposit agreements"; the rewrite stubbed
 with this manual's Employment Verification heading): none of the sibling's
 documents or wording were copied.
 
+## 3 Nov 2026: "coaching form for all team members" is the team card in every chat — both apps (WHOLE_TEAM_COACHING_ENABLED, STAFF_PICKER_REMEMBER_LOCATION_ENABLED, SHARED_LOGIN_NOT_STAFF_ENABLED, STAFF_PICKER_NO_REPEAT_ENABLED, all default off)
+
+Found here (a Location Manager covering two stores, 2 Nov 2026, rated 1
+star): six turns asking for a coaching form for all team members got the
+same staff-picker refusal, "dodge" was asked for again, and the store's
+shared "<Store> Account" login was listed as a team member, while in two
+other chats that evening other wordings made the team card. Pau, 3 Nov: "I
+need all managers to have it". On: a whole-staff Coaching Form is the team
+card ("All team members", one store) for every role that may create one, the
+picker steps aside for it and a bare "whole staff" said to an open Coaching
+card is that card; the picker (still one person at a time for other forms)
+reuses the store already named and, once it has listed the staff, says what
+to do next instead of repeating itself; a directory row whose last name is
+only Account/Login/Shared is never a team member. Ported to Ask Sunny with
+the same flags; the test there uses its own salons and invented people. Two
+Sunny-side gaps found there: a bare salon name was not read (the picker's
+short-name reader, ported back here under STAFF_PICKER_REMEMBER_LOCATION),
+and keep-filled-slots dropped the team label — Sunny-only, this app has no
+keep-filled-slots.
+
 ## 25 Oct 2026: the framework's sections are not pinned into governed drafts — Bubbles-only
 
 `FRAMEWORK_UNPIN_ENABLED` defaults off. The uploaded Performance Management
