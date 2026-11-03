@@ -167,15 +167,30 @@ A payroll answer restated with the same Yes or No still rebuilds the Action
 Plan Ask Bubbles built from what was said with it ("change the payroll
 deduction to $5.00"), and the reply claims the plan only if it changed.
 
-**Known limits of the rules as approved** (found by running the chat and form
-suites with the three flags on; each one is a value a code reader normalised,
-which the reducer's half-the-words rule refuses because the manager did not say
-those words — not written, not claimed):
+**Reader values count as said (QA, 4 Nov 2026, #410).** A correction value
+that the correction path's own deterministic readers (no model) produced from
+the manager's words counts as an accepted offer for the reducer's "the value's
+words were said" check: "$15" → `$15.00`, "SD" → `Store Director`, "she texted
+me she quit" → `Text message`, "she told me verbally" → `Verbal`. They are
+passed as `sources.readerValues`, which only that check reads, and only by
+`saveCorrectionPatched`:
 
-- an amount the reader formats: "$15" read as `$15.00`;
-- an abbreviation the reader expands: "SD" read as `Store Director`;
-- a canonical answer: "she texted me she quit" read as `Text message`,
-  "she told me verbally" as `Verbal`.
+- the evidence rule is unchanged: evidence must still be the manager's words,
+  and a reader value never counts as evidence;
+- the 3-word rule, the half-the-words floor and "dates and payroll must be
+  stated" are unchanged;
+- a normalised value from anywhere else stays refused, and a model's patch
+  (`patchActiveForm`, the draft route) never carries reader values.
+
+Before this rule those four corrections were refused with the flag on (not
+written, not claimed). Tests: `src/lib/forms/form-reducer-paths-reader-values.test.ts`
+(the six chat and form tests that changed with the flag on, run again with the
+three flags on; the rule on its own; two negatives).
+
+**A reading bug this flag does not fix:** "fix her last name its Pike" is read
+by NAME_CORRECTION_WORDS as "change her name to Wrenna its Pike", and the name
+"Wrenna its Pike" is written (every word was said). It gets its own pull
+request.
 
 A same-value restatement ("written" when the warning is already Written, a
 repeated answer after a reload) now answers `I didn't change anything on the

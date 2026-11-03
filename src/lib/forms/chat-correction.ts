@@ -498,6 +498,8 @@ async function correctFromFormReaders(
         actorId: actor.id,
         said: input.message ?? input.question,
         today: input.today,
+        // The form readers' own reading of her words (QA, #410).
+        readerValues: Object.values(correction.values),
       })
     : await saveInstanceValues(input.instanceId, toSave, actor.id);
   // The reply reports only what the save itself accepted.
@@ -925,6 +927,8 @@ async function correctHeaderLines(
         actorId: actor.id,
         said: input.question,
         today: input.today,
+        // The header reader's own reading of her words (QA, #410).
+        readerValues: Object.values(correction.values).filter((value): value is string => typeof value === "string"),
       })
     : await saveInstanceValues(input.instanceId, { values: accepted.values, checked: {} }, actor.id);
   const refused = new Set(saved.rejected.map((entry) => entry.key));
@@ -1161,6 +1165,8 @@ async function correctCorrectiveActionFacts(
         actorId: actor.id,
         said: text,
         today: input.today,
+        // The prior-action reader's own lines (QA, #410).
+        readerValues: priorLines,
       })
     : await saveInstanceValues(input.instanceId, { values: accepted.values, checked: {} }, actor.id);
   const refusedOnSave = new Set(saved.rejected.map((entry) => entry.key));

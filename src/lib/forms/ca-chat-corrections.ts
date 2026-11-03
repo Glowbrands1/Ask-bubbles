@@ -155,6 +155,8 @@ export async function correctCaFromChat(input: {
         actorId: actor.id,
         said: question,
         today: input.today,
+        // The date reader's own reading of her words (QA, #410).
+        readerValues: Object.values(values),
       })
     : await saveInstanceValues(input.instanceId, { values: accepted.values, checked: {} }, actor.id);
   const refused = new Set(saved.rejected.map((entry) => entry.key));

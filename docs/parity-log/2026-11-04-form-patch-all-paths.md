@@ -21,12 +21,13 @@ Known gaps, logged as QA asked:
 - **Revision (`chat-revision.ts`) is pending the owner.** It is a protected
   file; its edit (proposal path 3) waits for the owner's yes on the exact diff.
   Until then a revision is checked only by `checkedClaim`.
-- **Reader-normalised values are refused with the flag on.** The correction's
-  reducer rules (the name on the form as the only accepted offer) refuse a
-  value whose words the manager did not say: "$15" read as `$15.00`, "SD" as
-  `Store Director`, "she texted me she quit" as `Text message`. Nothing false
-  is written or claimed, but the correction is not made. Needs QA's decision
-  before the flag is turned on.
-- **"fix her last name its Pike"** is read (NAME_CORRECTION_WORDS, unchanged)
-  as "change her name to … its Pike"; the reducer passes it (every word was
-  said). A reading gap, not this flag's.
+- **Reader values count as said (QA's rule, #410).** A correction value the
+  correction path's own deterministic readers produced from the manager's
+  words ("$15" → `$15.00`, "SD" → `Store Director`, "she texted me she quit" →
+  `Text message`, "she told me verbally" → `Verbal`) counts as an accepted
+  offer for the value's-words check only (`sources.readerValues`, passed only
+  by `saveCorrectionPatched`). Evidence must still be her words; a model's
+  value never benefits. Port this with the rest.
+- **Pre-existing bug, not fixed here (its own PR later):** "fix her last name
+  its Pike" is read as "Wrenna its Pike" — NAME_CORRECTION_WORDS keeps "its" as
+  part of the last name, and the name is written.

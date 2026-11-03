@@ -125,6 +125,24 @@ describe("saveCorrectionPatched — a correction's save through the reducer", ()
     expect(result.rejected).toEqual([{ key: "employee_name", reason: "not_in_manager_words" }]);
   });
 
+  it("QA #410: a value the correction's reader produced from her words (\"SD\" → \"Store Director\") counts as said; the same value from nowhere does not", async () => {
+    const loaded = ca([]);
+    const stated = { values: { job_title: "Store Director" } };
+    const refused = await save(loaded, stated, "change her current title to SD");
+    expect(refused.rejected).toEqual([{ key: "job_title", reason: "not_in_manager_words" }]);
+    const written = await paths.saveCorrectionPatched({
+      instanceId: loaded.instance.id,
+      loaded,
+      stated: { values: stated.values, checked: {} },
+      actorId: "manager-1",
+      said: "change her current title to SD",
+      today: TODAY,
+      readerValues: ["Store Director"],
+    });
+    expect(written.rejected).toEqual([]);
+    expect(writes.saved).toEqual([{ values: { job_title: "Store Director" }, checked: {} }]);
+  });
+
   it("the header line is compared too: the name already on the form is not a change", async () => {
     const loaded = ca([]);
     const result = await save(loaded, { values: { employee_name: "Rosa Mae Ashgrove" } }, "change her name to Rosa Mae Ashgrove");

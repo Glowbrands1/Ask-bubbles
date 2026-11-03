@@ -110,6 +110,15 @@ export interface PatchRules {
     readonly accepted?: boolean;
     /** The manager's turns one by one: a turn shorter than MIN_EVIDENCE_WORDS is evidence on its own when quoted whole. */
     readonly managerTurns?: readonly string[];
+    /**
+     * Values the app's own deterministic correction readers (no model) produced
+     * from the manager's words: "$15" → "$15.00", "SD" → "Store Director",
+     * "she texted me she quit" → "Text message" (QA, 4 Nov 2026, #410). They
+     * count as an accepted offer for the half-the-words check on a value's
+     * words, and for nothing else: never as evidence. Passed only by the chat
+     * correction's save (`form-reducer-paths.ts`), never for a model's patch.
+     */
+    readonly readerValues?: readonly string[];
   };
 }
 
@@ -177,6 +186,7 @@ function valueWasSaid(value: string, rules: PatchRules): boolean {
   if (!sources) return false;
   const said = new Set(wordsOf(sources.manager));
   if (sources.accepted && sources.offered) for (const word of wordsOf(sources.offered)) said.add(word);
+  for (const read of sources.readerValues ?? []) for (const word of wordsOf(read)) said.add(word);
   const hits = words.filter((word) => said.has(word)).length;
   return hits / words.length >= MIN_SAID_SHARE;
 }

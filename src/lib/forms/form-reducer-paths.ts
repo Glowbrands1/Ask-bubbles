@@ -37,7 +37,9 @@ import { copiedContent } from "./same-form-copy";
  *               evidence; no manager-stated keys (a correction replaces a
  *               value on purpose); the current employee name is an accepted
  *               offer, so "…Ashgrove" → "…Pike" keeps the first name she did
- *               not repeat. Only `diff.changed` is written; refusals, and keys
+ *               not repeat; a value the correction's own readers produced
+ *               from her words ("$15" → "$15.00") counts as said, never as
+ *               evidence (QA, #410). Only `diff.changed` is written; refusals, and keys
  *               that already held the value, are reported as rejected so the
  *               reply never names them. All the same as before → the reply is
  *               "I didn't change anything on the form." with no `formUpdate`.
@@ -72,7 +74,14 @@ function isClear(value: FieldValue): boolean {
 }
 
 /** The correction's reducer rules for this form: edit mode, nothing manager-stated, the name on the form an accepted offer. */
-export function correctionRules(loaded: LoadedInstance, stated: ReadonlySet<string>, said: string, today: string, listKeys: ReadonlySet<string>): PatchRules {
+export function correctionRules(
+  loaded: LoadedInstance,
+  stated: ReadonlySet<string>,
+  said: string,
+  today: string,
+  listKeys: ReadonlySet<string>,
+  readerValues: readonly string[] = [],
+): PatchRules {
   const document = parseFormDocument(loaded.version.document);
   const variantKey = loaded.instance.variantKey;
   const checkboxGroups: Record<string, CheckboxGroup> = {};
@@ -94,6 +103,8 @@ export function correctionRules(loaded: LoadedInstance, stated: ReadonlySet<stri
       managerTurns: [said],
       offered: loaded.instance.employeeName ?? "",
       accepted: true,
+      // QA, #410: what the correction's own readers produced from her words counts for the value's words, never as evidence.
+      readerValues,
     },
   };
 }
@@ -132,6 +143,13 @@ export async function saveCorrectionPatched(input: {
   readonly today: string;
   /** List keys united line by line (default: Prior Actions). */
   readonly listKeys?: ReadonlySet<string>;
+  /**
+   * What the correction path's deterministic readers (no model) produced from
+   * the manager's words ("$15" → "$15.00", "SD" → "Store Director"): counted
+   * as said for the half-the-words check only (QA, #410). Never a model's
+   * value; never evidence.
+   */
+  readonly readerValues?: readonly string[];
 }): Promise<PatchedSave> {
   const before = snapshotOf(input.loaded).draft;
   const reduced: { values: Record<string, string>; checked: Record<string, string[]> } = { values: {}, checked: {} };
@@ -148,7 +166,7 @@ export async function saveCorrectionPatched(input: {
   for (const [key, options] of Object.entries(input.passThrough?.checked ?? {})) passed.checked[key] = [...options];
 
   const statedKeys = new Set([...Object.keys(reduced.values), ...Object.keys(reduced.checked)]);
-  const rules = correctionRules(input.loaded, statedKeys, input.said, input.today, input.listKeys ?? new Set([PRIOR_ACTIONS_KEY]));
+  const rules = correctionRules(input.loaded, statedKeys, input.said, input.today, input.listKeys ?? new Set([PRIOR_ACTIONS_KEY]), input.readerValues ?? []);
   const { diff } = applyPatch(before, correctionPatch(reduced, input.said), rules);
 
   const write: DraftValues = { values: {}, checked: {} };
