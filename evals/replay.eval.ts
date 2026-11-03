@@ -133,6 +133,12 @@ vi.mock("@/lib/ai/anthropic", () => ({
     },
   }),
 }));
+/* Step B's form-patch model (FORM_PATCH_REDUCER_ENABLED): always the fallback, so a flagged turn runs the old path. */
+vi.mock("@/lib/forms/form-patch-call", () => ({
+  FORM_PATCH_DEFAULT_TIMEOUT_MS: 5_000,
+  formPatchTimeoutMs: () => 5_000,
+  callFormPatchModel: async () => ({ fallback: "error" }),
+}));
 vi.mock("@/lib/knowledge/providers/supabase", async () => {
   const { manualChunkFromRow } = await import("@/lib/knowledge/full-manual-load");
   const rows = (await import("@/test/fixtures/jba-manual-production-151.json")).default;

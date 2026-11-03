@@ -57,6 +57,8 @@ import {
   coachingForEveryoneEnabled,
   staffPickerEnabled,
   chatResponseStreamEnabled,
+  formPatchReducerEnabled,
+  formReplyFromDiffEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { streamWhenSlow } from "@/lib/api/streamed-response";
 import { LONG_MESSAGE_LIMIT } from "@/lib/chat/message-limit";
@@ -354,6 +356,15 @@ async function postChat(request: Request) {
        * QUESTION_NOT_FORM_ENABLED.
        */
       const askedQuestion = questionNotFormEnabled() && isQuestionNotForm(parsed.question, parsed.history);
+      /*
+       * STEP B (FORM_PATCH_REDUCER_ENABLED + FORM_REPLY_FROM_DIFF_ENABLED): the
+       * open form as saved before this turn, so the reply about it can come
+       * from what really changed. See `lib/forms/form-snapshot.ts`.
+       */
+      const formBefore =
+        formPatchReducerEnabled() && formReplyFromDiffEnabled() && parsed.activeFormInstanceId
+          ? await (await import("@/lib/forms/form-snapshot")).snapshotForm(parsed.activeFormInstanceId, request)
+          : null;
       // NAME_CORRECTION_WORDS_ENABLED: the open draft, for "fix her last name …". See `lib/forms/name-correction-words.ts`.
       const nameFix =
         nameCorrectionWordsEnabled() && parsed.activeFormInstanceId
@@ -409,7 +420,23 @@ async function postChat(request: Request) {
        * there a whole draft from the account — citation and all — is what the
        * manager needs, not one field revised.
        */
-      const redraft =
+      /*
+       * FORM_PATCH_REDUCER_ENABLED: the turn on the open draft, read once as a
+       * patch and merged by code; the reply is the realized diff. Null — the
+       * paths below run as before — for a turn not about this form, a blank
+       * Corrective Action Form, or any fallback. See `lib/forms/form-patch-turn.ts`.
+       */
+      const patchTurn =
+        formPatchReducerEnabled() && !correction && !askedQuestion && !policyChange && parsed.activeFormInstanceId
+          ? await (await import("@/lib/forms/form-patch-turn")).patchActiveForm({
+              request,
+              instanceId: parsed.activeFormInstanceId,
+              question: parsed.question,
+              history: parsed.history,
+              today: parsed.context.todayIso,
+            })
+          : null;
+      const redraft = patchTurn ?? (
         !correction && !askedQuestion && !policyChange && parsed.activeFormInstanceId
           ? await (await import("@/lib/forms/chat-redraft")).redraftActiveForm({
               request,
@@ -418,7 +445,7 @@ async function postChat(request: Request) {
               history: parsed.history,
               savedPayrollAmount: await savedPayrollAmountFor(context.identity.subject, body.conversationId),
             })
-          : null;
+          : null);
       /*
        * "CHANGE THE SUMMARY TO …", "CHANGE IT TO A WRITTEN WARNING" on a form
        * this conversation created — the open record, revised in place, rather
@@ -584,6 +611,27 @@ async function postChat(request: Request) {
            */
           { memoryOwnerId: context.identity.subject },
         ));
+      /*
+       * FORM_REPLY_FROM_DIFF_ENABLED: a correction, policy, redraft, copy or
+       * revision reply that claims a change (`formUpdate`) is checked against
+       * the saved form, read again. A true claim keeps the path's reply, word
+       * for word; a false one is replaced by what really changed. No claim, no
+       * change to the reply. A patch turn's reply already is the diff. See
+       * `checkedClaim` in `lib/forms/form-snapshot.ts` and
+       * `docs/step-b-reply-rewrites.md`.
+       */
+      if (
+        formBefore &&
+        formReplyFromDiffEnabled() &&
+        !draftAnswer &&
+        !patchTurn &&
+        [correction, policyChange, redraft, sameCopy, revision].includes(answer) &&
+        answer.formUpdate?.instanceId === formBefore.instanceId
+      ) {
+        const snapshot = await import("@/lib/forms/form-snapshot");
+        const formAfter = await snapshot.snapshotForm(formBefore.instanceId, request);
+        if (formAfter) answer = snapshot.checkedClaim(answer, formBefore, formAfter);
+      }
       // NEW_REQUEST_OWN_TURNS_ENABLED: a new request for the same person is drafted from its own turns. See `lib/forms/new-request-turns.ts`.
       if (newRequestOwnTurnsEnabled() && answer.formProposal) {
         answer = (await import("@/lib/forms/new-request-turns")).withOwnRequestTurns(answer, [
@@ -614,6 +662,8 @@ async function postChat(request: Request) {
         parsed.activeFormInstanceId &&
         !draftAnswer && !correction && !policyChange && !redraft && !revision && !which && !reopened &&
         !answer.formUpdate
+        // FORM_PATCH_REDUCER_ENABLED: a patch turn's reply is already the realized diff.
+        && !patchTurn
       ) {
         const honest = (await import("@/lib/forms/form-content-turn")).honestFormReply(answer.content, formEditPlainWordsEnabled());
         if (honest) answer = { ...answer, content: honest };
