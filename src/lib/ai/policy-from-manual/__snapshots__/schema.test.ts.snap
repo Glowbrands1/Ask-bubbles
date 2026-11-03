@@ -1,0 +1,61 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`PolicyPick > matches the approved JSON schema 1`] = `
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "alternatives": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "chunk_id": {
+            "type": "string",
+          },
+          "page": {
+            "type": "number",
+          },
+          "section_title": {
+            "type": "string",
+          },
+        },
+        "required": [
+          "section_title",
+          "page",
+          "chunk_id",
+        ],
+        "type": "object",
+      },
+      "type": "array",
+    },
+    "asks_about_policy": {
+      "type": "boolean",
+    },
+    "chunk_id": {
+      "type": "string",
+    },
+    "confidence": {
+      "type": "number",
+    },
+    "page": {
+      "type": "number",
+    },
+    "quote": {
+      "type": "string",
+    },
+    "section_title": {
+      "type": "string",
+    },
+  },
+  "required": [
+    "section_title",
+    "page",
+    "chunk_id",
+    "quote",
+    "confidence",
+    "alternatives",
+    "asks_about_policy",
+  ],
+  "type": "object",
+}
+`;
