@@ -1,6 +1,7 @@
 import { answerNotANameEnabled, dateAnswerAppliedEnabled, exitTermsNotNamesEnabled, storeWordNotANameEnabled, streetAddressNotANameEnabled } from "@/lib/config/chat-quality-flags";
 
 import { readLocationMentions } from "./location-mention";
+import { notAPerson } from "./person-guard";
 import { isPayrollWords } from "./payroll-words";
 
 /*
@@ -55,6 +56,8 @@ export function isExitTerms(name: string): boolean {
  * only a store's name is not either. Off, every candidate is kept: main.
  */
 export function namesSomebody(name: string): boolean {
+  // PERSON_GUARD_ENABLED: one answer for every reader — see `person-guard.ts`.
+  if (notAPerson(name)) return false;
   if (answerNotANameEnabled() && (isPayrollWords(name) || isDateAnswer(name))) return false;
   if (isExitTerms(name)) return false;
   return !isStoreReply(name);

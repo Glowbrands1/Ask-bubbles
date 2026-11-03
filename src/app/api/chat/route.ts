@@ -38,6 +38,7 @@ import {
   chatLongMessageEnabled,
   draftActionsEnabled,
   formEditHonestReplyEnabled,
+  personGuardEnabled,
   formEditPlainWordsEnabled,
   payrollDeductAmountFieldEnabled,
   questionNotFormEnabled,
@@ -183,6 +184,23 @@ async function postChat(request: Request) {
     let answer;
     try {
       const asked = parseAskRequest(body);
+      /*
+       * PERSON_GUARD_ENABLED: the actor's roster, for the rule that somebody on
+       * it is always a person. One directory read per turn, only with the flag
+       * on. See `lib/forms/person-guard.ts`.
+       */
+      if (personGuardEnabled()) {
+        const [{ loadScopedRoster }, { enterPersonRoster }] = await Promise.all([
+          import("@/lib/forms/employee-roster"),
+          import("@/lib/forms/person-roster-store"),
+        ]);
+        // Never holds the turn up: no roster in 1.5 s and the guard runs without it.
+        const roster = await Promise.race([
+          loadScopedRoster(context.identity.scope).catch(() => []),
+          new Promise<[]>((resolve) => setTimeout(() => resolve([]), 1_500)),
+        ]);
+        enterPersonRoster(roster.map((person) => `${person.preferredFirstName?.trim() || person.firstName} ${person.lastName}`));
+      }
       /*
        * "DELETE THAT DRAFT", "SAME INCIDENT" (ported from the sibling app, QA F8).
        * Ahead of every open-form path: the revision path read "delete that
@@ -502,6 +520,8 @@ async function postChat(request: Request) {
            */
           { memoryOwnerId: context.identity.subject },
         ));
+      // PERSON_GUARD_ENABLED: whichever reader named the card's employee, a name that is not a person never stays on it.
+      if (personGuardEnabled()) answer = (await import("@/lib/forms/person-guard")).withPersonOnCard(answer);
       /*
        * FORM_EDIT_HONEST_REPLY_ENABLED: the ordinary answer, with a form open,
        * changed nothing — so it never says it updated the form. See
