@@ -78,8 +78,204 @@
       "id": "r1",
       "pass": false,
       "misses": [
-        "reply has \"Dodge Account\""
+        "reply lacks \"Dana Hollisworth\"",
+        "reply lacks \"Eli Brackwater\""
       ],
+      "card": {
+        "employee": "All team members",
+        "salon": "loc-264",
+        "date": null,
+        "status": "ready"
+      }
+    },
+    {
+      "id": "b0",
+      "pass": false,
+      "misses": [
+        "employee",
+        "reply has \"Coaching Form\""
+      ],
+      "card": {
+        "employee": "wren tazelaal",
+        "salon": "loc-264",
+        "date": null,
+        "status": "ready"
+      }
+    },
+    {
+      "id": "b1",
+      "pass": true,
+      "misses": [],
+      "card": {
+        "employee": "RJ Vantassel",
+        "salon": "loc-66",
+        "date": "2026-10-11",
+        "status": "ready"
+      }
+    },
+    {
+      "id": "b2",
+      "pass": false,
+      "misses": [
+        "employee",
+        "salon"
+      ],
+      "card": {
+        "employee": null,
+        "salon": null,
+        "date": null,
+        "status": null
+      }
+    },
+    {
+      "id": "b3",
+      "pass": true,
+      "misses": [],
+      "card": {
+        "employee": "juniper halvorsrud",
+        "salon": null,
+        "date": "2026-10-20",
+        "status": "ready"
+      }
+    },
+    {
+      "id": "b4",
+      "pass": true,
+      "misses": [],
+      "card": {
+        "employee": "juniper halvorsrud",
+        "salon": null,
+        "date": "2026-10-20",
+        "status": "ready"
+      }
+    },
+    {
+      "id": "b5",
+      "pass": true,
+      "misses": [],
+      "card": {
+        "employee": "juniper halvorsrud",
+        "salon": null,
+        "date": "2026-10-20",
+        "status": "ready"
+      }
+    },
+    {
+      "id": "b6",
+      "pass": true,
+      "misses": [],
+      "card": {
+        "employee": "juniper halvorsrud",
+        "salon": null,
+        "date": "2026-10-20",
+        "status": "ready"
+      }
+    },
+    {
+      "id": "b7",
+      "pass": true,
+      "misses": [],
+      "card": {
+        "employee": "juniper halvorsrud",
+        "salon": null,
+        "date": "2026-10-20",
+        "status": "ready"
+      }
+    },
+    {
+      "id": "b8",
+      "pass": false,
+      "misses": [
+        "policy"
+      ],
+      "card": {
+        "employee": "juniper halvorsrud",
+        "salon": null,
+        "date": "2026-10-01",
+        "status": "ready"
+      }
+    },
+    {
+      "id": "b13",
+      "pass": true,
+      "misses": [],
+      "card": {
+        "employee": "Tamsin Rookwood",
+        "salon": "loc-264",
+        "date": null,
+        "status": "ready"
+      }
+    },
+    {
+      "id": "b14",
+      "pass": true,
+      "misses": [],
+      "card": {
+        "employee": null,
+        "salon": "loc-264",
+        "date": null,
+        "status": "needs_employee"
+      }
+    },
+    {
+      "id": "b15",
+      "pass": true,
+      "misses": [],
+      "card": {
+        "employee": null,
+        "salon": null,
+        "date": null,
+        "status": "needs_employee"
+      }
+    },
+    {
+      "id": "b16",
+      "pass": true,
+      "misses": [],
+      "card": {
+        "employee": null,
+        "salon": "loc-264",
+        "date": null,
+        "status": "needs_employee"
+      }
+    },
+    {
+      "id": "b17",
+      "pass": true,
+      "misses": [],
+      "card": {
+        "employee": "Rosalind Ashgrove",
+        "salon": "loc-264",
+        "date": null,
+        "status": "ready"
+      }
+    },
+    {
+      "id": "sf-b1",
+      "pass": true,
+      "misses": [],
+      "card": {
+        "employee": "Anouk Varela Quintero",
+        "salon": null,
+        "date": null,
+        "status": "ready"
+      }
+    },
+    {
+      "id": "sf-b3",
+      "pass": true,
+      "misses": [],
+      "card": {
+        "employee": "All team members",
+        "salon": "loc-264",
+        "date": null,
+        "status": "ready"
+      }
+    },
+    {
+      "id": "sf-b4",
+      "pass": true,
+      "misses": [],
       "card": {
         "employee": null,
         "salon": null,
