@@ -14,7 +14,7 @@ import { listInstances, type InstanceRow } from "./instances";
 import { extractEmployeeNames, samePerson } from "./proposal";
 import { readReopenRequest } from "./reopen-request";
 import { getTemplateByKey } from "./repository";
-import { formEditDateRulesEnabled } from "@/lib/config/chat-quality-flags";
+import { formEditDateRulesEnabled, formEditSingleWriterEnabled } from "@/lib/config/chat-quality-flags";
 import { privateAwareLimit } from "./private-creators";
 
 /**
@@ -164,6 +164,16 @@ export async function reopenRequestedForm(input: {
    * simply open.
    */
   let applied: AskResponse | null = null;
+  /*
+   * FORM_EDIT_SINGLE_WRITER_ENABLED (STEP_B_POLICY_REOPEN_DESIGN): the draft as
+   * it opened, so the change's claim is checked against what was saved. The
+   * change itself is written by the one writer, through the correction and
+   * policy paths. See `lib/forms/form-write.ts`.
+   */
+  const opened =
+    formEditSingleWriterEnabled() && reading.mode === "edit" && draft.status === "draft"
+      ? await (await import("./form-write")).editSnapshot(draft.instanceId, "reopen")
+      : null;
   if (reading.mode === "edit" && draft.status === "draft") {
     applied =
       (await correctActiveForm({
@@ -191,6 +201,9 @@ export async function reopenRequestedForm(input: {
         : null);
   }
 
+  if (formEditSingleWriterEnabled() && applied && opened) {
+    applied = await (await import("./form-write")).realizedClaim(applied, draft.instanceId, opened);
+  }
   const closing =
     draft.status === "draft"
       ? "Edit anything that needs changing below, save, and finalize it when it's ready."

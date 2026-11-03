@@ -182,6 +182,7 @@ import {
   typoReadingRoutesEnabled,
   teamCardWordingEnabled,
   cardPolicyToDraftEnabled,
+  formEditSingleWriterEnabled,
   formPatchReducerEnabled,
 } from "@/lib/config/chat-quality-flags";
 import {
@@ -391,12 +392,21 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
      * change to forms nobody asked about.
      */
     const changeKind = employmentChangeKind(loaded.instance.templateKey);
+    // FORM_EDIT_SINGLE_WRITER_ENABLED: each stated-facts write through the one writer (`lib/forms/form-write.ts`).
     const statedFacts = changeKind
-      ? await applyStatedFacts(
-          id,
-          statedFactValues(readEmploymentChange([notes], businessToday())),
-          actor.id,
-        )
+      ? formEditSingleWriterEnabled()
+        ? await (await import("@/lib/forms/form-write")).statedWrite(
+            id,
+            statedFactValues(readEmploymentChange([notes], businessToday())),
+            actor.id,
+            undefined,
+            { notes },
+          )
+        : await applyStatedFacts(
+            id,
+            statedFactValues(readEmploymentChange([notes], businessToday())),
+            actor.id,
+          )
       : [];
 
     /*
@@ -418,12 +428,22 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
         })
       : null;
     if (statedAmount) {
-      await applyStatedFacts(
-        id,
-        { values: { [PAYROLL_DEDUCT_AMOUNT_KEY]: statedAmount }, checked: {} },
-        actor.id,
-        PAYROLL_DEDUCT_AMOUNT_STATED_KEYS,
-      );
+      if (formEditSingleWriterEnabled()) {
+        await (await import("@/lib/forms/form-write")).statedWrite(
+          id,
+          { values: { [PAYROLL_DEDUCT_AMOUNT_KEY]: statedAmount }, checked: {} },
+          actor.id,
+          PAYROLL_DEDUCT_AMOUNT_STATED_KEYS,
+          { notes },
+        );
+      } else {
+        await applyStatedFacts(
+          id,
+          { values: { [PAYROLL_DEDUCT_AMOUNT_KEY]: statedAmount }, checked: {} },
+          actor.id,
+          PAYROLL_DEDUCT_AMOUNT_STATED_KEYS,
+        );
+      }
     }
 
     const document = loaded.version.document;
@@ -469,7 +489,7 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
           text: notes,
         });
         if (source) {
-          const copied = await copy.copyFormContent({ source, target: loaded, actorId: actor.id });
+          const copied = await copy.copyFormContent({ source, target: loaded, actorId: actor.id, notes });
           if (Object.keys(copied.values).length > 0 || Object.keys(copied.checked).length > 0) {
             return NextResponse.json({
               values: copied.values,
@@ -545,7 +565,9 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
       : {};
     const warningStatedFacts =
       Object.keys(statedWarning).length > 0
-        ? await applyStatedFacts(id, { values: {}, checked: statedWarning }, actor.id, WARNING_LEVEL_STATED_KEYS)
+        ? formEditSingleWriterEnabled()
+          ? await (await import("@/lib/forms/form-write")).statedWrite(id, { values: {}, checked: statedWarning }, actor.id, WARNING_LEVEL_STATED_KEYS, { notes })
+          : await applyStatedFacts(id, { values: {}, checked: statedWarning }, actor.id, WARNING_LEVEL_STATED_KEYS)
         : [];
 
     /*
@@ -573,13 +595,21 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
      * lines. Anything the manager did not say stays blank.
      */
     const exitStatedFacts = isExitForm
-      ? await applyStatedFacts(
-          id,
-          exitDetailValues(readExitDetails(notes, businessToday())),
-          actor.id,
-          // EXIT_INTAKE_FIX_ENABLED adds the Permanent Address the manager typed.
-          exitStatedKeys(),
-        )
+      ? formEditSingleWriterEnabled()
+        ? await (await import("@/lib/forms/form-write")).statedWrite(
+            id,
+            exitDetailValues(readExitDetails(notes, businessToday())),
+            actor.id,
+            exitStatedKeys(),
+            { notes },
+          )
+        : await applyStatedFacts(
+            id,
+            exitDetailValues(readExitDetails(notes, businessToday())),
+            actor.id,
+            // EXIT_INTAKE_FIX_ENABLED adds the Permanent Address the manager typed.
+            exitStatedKeys(),
+          )
       : [];
 
     /*
@@ -2253,7 +2283,9 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
     const managerOnlyPlan = fixedPlan !== null && actionPlanManagerOnlyEnabled();
     if (managerOnlyPlan && !keeps(fixedPlan.key)) {
       const typed = managerTypedActionPlan(notes);
-      if (typed) {
+      if (typed && formEditSingleWriterEnabled()) {
+        await (await import("@/lib/forms/form-write")).statedWrite(id, { values: { [fixedPlan.key]: typed }, checked: {} }, actor.id, new Set([fixedPlan.key]), { notes });
+      } else if (typed) {
         await applyStatedFacts(id, { values: { [fixedPlan.key]: typed }, checked: {} }, actor.id, new Set([fixedPlan.key]));
       }
     }
@@ -2295,7 +2327,8 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
      * what changes is written, a typed line is kept, Prior Actions are united.
      * See `lib/forms/form-reducer-draft.ts`.
      */
-    const reduced = formPatchReducerEnabled()
+    // FORM_EDIT_SINGLE_WRITER_ENABLED reduces the same draft (the one writer's redraft preset).
+    const reduced = formPatchReducerEnabled() || formEditSingleWriterEnabled()
       ? await (await import("@/lib/forms/form-reducer-draft")).reduceDraftWrite({
           id,
           values: Object.fromEntries(Object.entries(merged.values).filter(([key]) => !keeps(key))),
@@ -2305,20 +2338,32 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
           actorId: actor.id,
         })
       : null;
-    const guarded = await applyAssistantDraft(
-      id,
-      reduced ? reduced.write : {
-        values: Object.fromEntries(Object.entries(merged.values).filter(([key]) => !keeps(key))),
-        checked: Object.fromEntries(Object.entries(merged.checked).filter(([key]) => !keeps(key))),
-      },
-      actor.id,
-      fallback
-        ? {
-            ...planned.provenance,
-            [narrativeTargets[0]!]: { ...(planned.provenance[narrativeTargets[0]!] ?? {}), fallback },
-          }
-        : planned.provenance,
-    );
+    const draftProvenanceWritten = fallback
+      ? {
+          ...planned.provenance,
+          [narrativeTargets[0]!]: { ...(planned.provenance[narrativeTargets[0]!] ?? {}), fallback },
+        }
+      : planned.provenance;
+    /*
+     * FORM_EDIT_SINGLE_WRITER_ENABLED: the reduced draft through the one writer
+     * (`lib/forms/form-write.ts`, path "redraft") — all or nothing, a whole-text
+     * rewrite keeps the form's protected values.
+     */
+    const guarded = formEditSingleWriterEnabled() && reduced
+      ? await (await import("@/lib/forms/form-write")).draftWrite(id, reduced.write, actor.id, draftProvenanceWritten, {
+          path: "redraft",
+          notes,
+          typedExempt: new Set(derivedPolicy.derived.filter((key) => DERIVED_POLICY_FIELD_KEYS.has(key))),
+        })
+      : await applyAssistantDraft(
+          id,
+          reduced ? reduced.write : {
+            values: Object.fromEntries(Object.entries(merged.values).filter(([key]) => !keeps(key))),
+            checked: Object.fromEntries(Object.entries(merged.checked).filter(([key]) => !keeps(key))),
+          },
+          actor.id,
+          draftProvenanceWritten,
+        );
     /*
      * NEVER A SILENT BLANK (DRAFT_NEVER_BLANK_ENABLED). Whenever an attempt
      * failed or wrote nothing, or the write itself holds no field, the reason
