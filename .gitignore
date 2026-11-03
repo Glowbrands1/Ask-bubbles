@@ -68,3 +68,6 @@ next-env.d.ts
 
 # npm run variation-report output (measuring only)
 support/variation-report/out/
+
+# npm run eval output (results of the last local run)
+evals/results/

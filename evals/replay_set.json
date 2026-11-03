@@ -1,0 +1,57 @@
+[
+  {
+    "id": "b9",
+    "source": "24 Oct 2026 low-rated chat (src/lib/ai/priority-replay.test.ts)",
+    "turns": [
+      "create a written corrective action for Team Member, Test Employee. Test was assigned to complete policy acknowledgements in woven by 10-15-26 and failed to meet the deadline. Previous coaching was a Verbal CA 10-1-26. Payroll deduct is not applicable.",
+      "name is Test Employee",
+      "this is a violation under Standards of Conduct"
+    ],
+    "criteria": { "employee": "Test Employee", "salon": null, "date": null, "policy": "Standards of Conduct p.12", "noBlockingQuestion": true, "noLeakedInternalText": true }
+  },
+  {
+    "id": "b10",
+    "source": "24 Oct 2026 low-rated chat (src/lib/ai/priority-replay.test.ts)",
+    "turns": [
+      "create a verbal CA for team member Testy Testerson at Dodge, NE. location. On 10-16-26 Testy was not properly measuring and weighing product. payroll deduct is not applicable",
+      "employee name is Testy Testerson",
+      "cite standards of conduct as policy violated",
+      "show draft",
+      "violation is that on 10-16-26 Testy was not measuring and weighing product",
+      "show draft with edits"
+    ],
+    "criteria": { "employee": "Testy Testerson", "salon": "loc-264", "date": "2026-10-16", "policy": "Standards of Conduct p.12", "noBlockingQuestion": true, "noLeakedInternalText": true }
+  },
+  {
+    "id": "b11",
+    "source": "24 Oct 2026 low-rated chat (src/lib/ai/priority-replay.test.ts)",
+    "turns": [
+      "write a verbal CA for Team Member, Testy Testerson at Dodge, NE. On 10-20-26 Testy was late for shift and did not call supervisor as outlined in attendance policy. payroll deduct is not applicable. previous coaching is JBA Manual 1-1-25"
+    ],
+    "criteria": { "employee": "Testy Testerson", "salon": "loc-264", "date": "2026-10-20", "policy": "Attendance p.14", "noBlockingQuestion": true, "noLeakedInternalText": true }
+  },
+  {
+    "id": "b12",
+    "source": "24 Oct 2026 low-rated chat (src/lib/ai/priority-replay.test.ts); the employee's name is replaced with an invented one",
+    "turns": [
+      "do verbal for team member maisie quillfeather at empire, sd. payroll deduct does not apply. previous coaching jba manual 11-1-26. on 10-22-26 maisie was not scheduled to work and came into the store to show her team her new puppy. Maisie was in the store 45 min",
+      "jba manual 11-1-25",
+      "cite pets in workplace",
+      "cite animals in the workplace policy",
+      "store location is empire, sd. create corrective action"
+    ],
+    "criteria": { "employee": "Maisie Quillfeather", "salon": null, "date": "2026-10-22", "policy": "Animals in the Workplace p.30", "noBlockingQuestion": false, "noLeakedInternalText": true }
+  },
+  {
+    "id": "b18a",
+    "source": "25 Oct 2026, conv_mvnuktv82h8v0yo (src/app/api/chat/b18-new-chat-new-draft-e2e.test.ts)",
+    "turns": ["create a CA for Test Employee at Kearney for being late to open on 10-20-26, verbal, no payroll"],
+    "criteria": { "employee": "Test Employee", "salon": "loc-66", "date": "2026-10-20", "policy": null, "noBlockingQuestion": true, "noLeakedInternalText": true }
+  },
+  {
+    "id": "b18b",
+    "source": "25 Oct 2026, conv_mvnurfc02cj2y7l (src/app/api/chat/b18-new-chat-new-draft-e2e.test.ts)",
+    "turns": ["create a written CA for Test Employee at Kearney for missing the 10-15-26 woven deadline"],
+    "criteria": { "employee": "Test Employee", "salon": "loc-66", "date": null, "policy": null, "noBlockingQuestion": true, "noLeakedInternalText": true }
+  }
+]
