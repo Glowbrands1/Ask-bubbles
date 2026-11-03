@@ -1210,3 +1210,16 @@ The sibling app carded "assistant … manager" as a title cut short at a word th
 - 31 Oct 2026: FORM_EDIT_PLAIN_WORDS review item 12 (both apps): "these details" needs a real verb (the old "u?p?d?ate" matched "date": "What's the date on the form for these details?" became an edit); a coaching topic followed by a question stays a question ("I want to coach on the new dress code, what does the manual say?"); a sentence naming the employee is written only when it reads as conduct or the manager says to add/note it ("Marnie asked me to move her shift on Saturday" is not).
 
 - 31 Oct 2026: Import says when a chat belongs to another account (both apps; shown only when the server declines one, i.e. with CHAT_IMPORT_OWN_ONLY_ENABLED). Independent review item 14: Import on such a chat showed nothing and the count stayed. Now "1 chat on this device belongs to another account and was not imported. It stays on this device." Open until NEXT_PUBLIC_CHAT_LOCAL_OWNER (4b): the chat is still listed on the device and still counted; and a chat with no turn evidence is declined only with CHAT_IMPORT_PROVEN_OWN_ENABLED.
+
+## 3 Nov 2026: two more team-card wordings — both apps (TEAM_CARD_WORDING_ENABLED, default off)
+
+Found in QA's live check of WHOLE_TEAM_COACHING (both apps): "store wide
+everyone needs the reminder to call a manager for cash drawer shortages,
+overages, and returns" got no team card when said on its own — it never says
+"coaching"; and the team card's Details echoed the audience ("the whole team:
+for the whole …"). On: a turn that opens with the team and says what it needs,
+or asks to remind the team, is the team Coaching card when no draft is open
+and no other form's intake is asking; and on a team card, lines that only
+name the audience are not handed to the drafting model (with nothing else, it
+is told nothing is described yet). Ported from the sibling app (8f66ee1),
+same flag.

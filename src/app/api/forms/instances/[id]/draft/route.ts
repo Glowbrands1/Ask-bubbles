@@ -179,6 +179,7 @@ import {
   policySpecificTopicsEnabled,
   sameFormCopyEnabled,
   typoReadingRoutesEnabled,
+  teamCardWordingEnabled,
 } from "@/lib/config/chat-quality-flags";
 import {
   STANDARDS_OF_CONDUCT,
@@ -206,6 +207,7 @@ import {
   hasManagerFollowUpKeys,
 } from "@/lib/forms/follow-up-observation";
 import { TEAM_SUBJECT_RULES, isTeamSubject } from "@/lib/forms/team-subject";
+import { teamCardNotes } from "@/lib/forms/whole-team-coaching";
 import { applyEmployeeName, employeeNameRules } from "@/lib/forms/employee-reference";
 import {
   LEGACY_PREVIOUS_ACTION_DATE_KEY,
@@ -1111,7 +1113,8 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
       loaded.instance.locationName ? `LOCATION: ${loaded.instance.locationName}` : "",
       "",
       "WHAT THE MANAGER DESCRIBED:",
-      notes,
+      // TEAM_CARD_WORDING_ENABLED: on a team card, "for the whole store" is who it is for, not what happened (QA, 3 Nov 2026).
+      teamSubject && teamCardWordingEnabled() ? teamCardNotes(notes) : notes,
       progressionBlock,
       policyBlock,
       /*

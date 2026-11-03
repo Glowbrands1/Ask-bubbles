@@ -281,6 +281,7 @@ async function postChat(request: Request) {
                 history: asked.history,
                 continuingTemplateKey: asked.continueProposalTemplateKey,
                 openTemplateName: open?.templateName ?? null,
+                draftOpen: Boolean(asked.activeFormInstanceId),
               });
             })()
           : null;
