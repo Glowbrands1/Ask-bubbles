@@ -1246,3 +1246,15 @@ was correct, but the same race reproduces in the replay pack
 (nov3-open-draft-new-request, `draftNotYetSaved`); the same flag and
 mechanism. Create for the new card still reuses the open draft here until
 DRAFT_REUSE_NEW_REQUEST is on (nov2-p2).
+
+## 3 Nov 2026: a new incident for the same person gets its own draft — both apps (DRAFT_REUSE_NEW_REQUEST_ENABLED, default off)
+
+Found here (the 2 Nov scan, replay case nov2-p2): with CONVERSATION_DRAFT_REUSE
+on, "make me a CA for <name> for being late to opening this morning", said
+after the same chat's trash-and-rugs Corrective Action, reused that draft, so
+the late opening never got its own. On: a turn since the earlier draft that
+asks for this form for this person and is mostly about something not said
+before is a new incident, and Create makes a new draft; a request that
+repeats the account still reuses. QA: "yes", 3 Nov 2026. Ported to the
+sibling app with the same flag (there CONVERSATION_DRAFT_REUSE is off, so it
+changes nothing until both are on).

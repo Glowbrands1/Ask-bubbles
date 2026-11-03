@@ -904,6 +904,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "WHOLE_TEAM_COACHING_ENABLED",
   "NEW_REQUEST_OPEN_DRAFT_ENABLED",
   "TEAM_CARD_WORDING_ENABLED",
+  "DRAFT_REUSE_NEW_REQUEST_ENABLED",
   "STAFF_PICKER_REMEMBER_LOCATION_ENABLED",
   "SHARED_LOGIN_NOT_STAFF_ENABLED",
   "STAFF_PICKER_NO_REPEAT_ENABLED",
@@ -1993,6 +1994,18 @@ export function newRequestOpenDraftEnabled(): boolean {
  */
 export function teamCardWordingEnabled(): boolean {
   return envFlag("TEAM_CARD_WORDING_ENABLED");
+}
+
+/**
+ * With CONVERSATION_DRAFT_REUSE on, Create reuses this chat's earlier draft of
+ * the same form for the same person. A manager turn since that draft that asks
+ * for the form for that person and says what it is about ("make me a CA for
+ * <name> for being late to opening this morning") is a new incident: it gets
+ * its own draft (the 2 Nov scan, replay case nov2-p2; QA, 3 Nov 2026). See
+ * `forms/new-request-turns.ts`. Off, as before.
+ */
+export function draftReuseNewRequestEnabled(): boolean {
+  return envFlag("DRAFT_REUSE_NEW_REQUEST_ENABLED");
 }
 
 /**
