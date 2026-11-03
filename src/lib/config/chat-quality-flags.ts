@@ -888,6 +888,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "NEW_REQUEST_OWN_TURNS_ENABLED",
   "OPEN_DRAFT_KEEPS_TURNS_ENABLED",
   "FORM_EDIT_REFERS_BACK_ENABLED",
+  "CLAIM_GUARD_ENABLED",
+  "OPEN_FORM_NO_SELECTION_ENABLED",
   "ANGLE_PLACEHOLDER_GUARD_ENABLED",
   "REVISION_SAME_VALUE_ENABLED",
   "SAME_FORM_COPY_ENABLED",
@@ -1777,6 +1779,26 @@ export function openDraftKeepsTurnsEnabled(): boolean {
  */
 export function formEditRefersBackEnabled(): boolean {
   return envFlag("FORM_EDIT_REFERS_BACK_ENABLED");
+}
+
+/**
+ * No reply says the form changed, or that something was checked against the
+ * records, unless this turn changed the form: "now reads …", "Confirmed
+ * against records … matching Woven" are caught on every line about the form,
+ * the name or the record (the 2 Nov 2026 scan; same flag in both apps). See
+ * `forms/form-content-turn.ts`. Off, as before.
+ */
+export function claimGuardEnabled(): boolean {
+  return envFlag("CLAIM_GUARD_ENABLED");
+}
+
+/**
+ * With a draft open, a reply never offers a form selection ("Based on what
+ * you've described, I can prepare:") — that heading was all the manager saw
+ * (the 2 Nov 2026 scan; same flag in both apps). Off, as before.
+ */
+export function openFormNoSelectionEnabled(): boolean {
+  return envFlag("OPEN_FORM_NO_SELECTION_ENABLED");
 }
 
 /**
