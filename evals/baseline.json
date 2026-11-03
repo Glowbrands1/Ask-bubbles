@@ -112,16 +112,13 @@
     },
     {
       "id": "b2",
-      "pass": false,
-      "misses": [
-        "employee",
-        "salon"
-      ],
+      "pass": true,
+      "misses": [],
       "card": {
-        "employee": null,
-        "salon": null,
+        "employee": "Odessa Ferncliff",
+        "salon": "loc-236",
         "date": null,
-        "status": null
+        "status": "ready"
       }
     },
     {
