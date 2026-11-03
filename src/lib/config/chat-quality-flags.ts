@@ -1072,6 +1072,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FOLLOW_UP_CITATION_FIELD_ENABLED",
   "AI_READS_CODE_CHECKS_ENABLED",
   "LAST_FIRST_NAME_READ_ENABLED",
+  "POLICY_CITATION_CHECK_ENABLED",
 ] as const;
 
 /**
@@ -2348,4 +2349,15 @@ export function formPatchReducerEnabled(): boolean {
  */
 export function formReplyFromDiffEnabled(): boolean {
   return envFlag("FORM_REPLY_FROM_DIFF_ENABLED");
+}
+
+/**
+ * Every manual quote and "<Heading>, JBA Policy Manual p.N" label is checked
+ * by code against the retrieved manual chunks: a quote must be a verbatim
+ * part of one, the heading one of theirs, the page the manual's (Step A,
+ * 3 Nov 2026). See `ai/policy-from-manual/`. Nothing reads it yet. Off, as
+ * before.
+ */
+export function policyCitationCheckEnabled(): boolean {
+  return envFlag("POLICY_CITATION_CHECK_ENABLED");
 }

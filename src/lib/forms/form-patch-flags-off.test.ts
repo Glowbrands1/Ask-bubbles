@@ -214,6 +214,8 @@ afterAll(() => {
 });
 
 const ONLY = "src/lib/forms/form-patch-call.ts";
+/** Step A (POLICY_CITATION_CHECK_ENABLED) adds the second, and last, module allowed to load it; see `policy-from-manual/no-import.test.ts`. */
+const ALSO = "src/lib/ai/policy-from-manual/call.ts";
 
 function sources(dir: string): string[] {
   const out: string[] = [];
@@ -225,10 +227,10 @@ function sources(dir: string): string[] {
   return out;
 }
 
-describe("the AI SDK is imported only by the form-patch call module", () => {
+describe("the AI SDK is imported only by the form-patch call module (and Step A's policy-pick call)", () => {
   it("no other production source imports it", () => {
     const needles = ['from "ai"', "from 'ai'", 'import("ai")', "import('ai')", "@ai-sdk/anthropic"];
-    const offenders = sources("src").filter((path) => path !== ONLY && needles.some((needle) => readFileSync(path, "utf8").includes(needle)));
+    const offenders = sources("src").filter((path) => path !== ONLY && path !== ALSO && needles.some((needle) => readFileSync(path, "utf8").includes(needle)));
     expect(offenders).toEqual([]);
   });
 
