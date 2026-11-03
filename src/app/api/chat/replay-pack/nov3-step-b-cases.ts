@@ -1,5 +1,7 @@
 import { expect, vi } from "vitest";
 
+import { PAYROLL_DEDUCT_AMOUNT_QUESTION } from "@/lib/forms/payroll-deduct-amount";
+
 import { STAFF, WEST_DODGE, replyMatchesDiff, savedForm, type DirectoryRow, type ReplayAnswer, type ReplayCase, type ReplayThread } from "./cases";
 
 /*
@@ -305,7 +307,9 @@ export const NOV3_STEP_B_CASES: readonly ReplayCase[] = [
      * Step B's draft write (`reduceDraftWrite`) leaves out a drafted text that
      * only restates the form's header — the position with the store or the
      * name, read from the form's own Job Title and Location (the roster's),
-     * not from a word list.
+     * not from a word list — and unticks the box that line is the write-in
+     * of (the template's own layout: the line after the group, labelled like
+     * one of its options).
      */
     status: { open: "the drafting model's \"Team Member at Omaha\" is saved as the Other topic" },
     fixFlags: STEP_B_FLAGS,
@@ -321,10 +325,62 @@ export const NOV3_STEP_B_CASES: readonly ReplayCase[] = [
       const values = t.values(id);
       // Her position is on the roster ("Team Member Part Time") and on the form's Job Title line; her store on its Location line.
       expect(values.job_title).toBe("Team Member Part Time");
+      expect(t.checked(id).coaching_topics ?? [], "Other is ticked with nothing beside it").not.toContain("other");
       for (const key of ["other_topic", "coaching_details"]) {
         expect(values[key] ?? "", `${key} holds her position`).not.toMatch(/team member/i);
         expect(values[key] ?? "", `${key} holds her store`).not.toMatch(/omaha/i);
       }
+    },
+  },
+  {
+    id: "nov3-stepb-typed-add-stays-the-managers",
+    title: "an \"add\" to a line the manager typed stays hers: a later redraft keeps both what she typed and what she added",
+    report:
+      "QA's ruling on Step B, 3 Nov 2026 (option A): text added in chat to a field the manager typed is written as hers, so a redraft cannot replace her words",
+    status: { open: "in production the chat \"add\" is not written at all, so the redrafted form lacks it" },
+    fixFlags: STEP_B_FLAGS,
+    async run(t) {
+      t.directory(PEOPLE);
+      t.as("location_manager", WEST_DODGE);
+      const typed = "Rosalind was coached on ship from store: ready for pick up versus mark as shipped.";
+      const what = "rosalind marked an order as shipped but the customer hadn't picked up yet";
+      t.patchWrites([patchOutput("this_form", [{ field: "coaching_details", value: what }])]);
+      const thread = t.thread();
+      for (const turn of ["Create a coaching form.", "Rosalind", "yes"]) await thread.say(turn);
+      expect(thread.proposal).toMatchObject({ templateKey: "coaching", employeeName: "Rosalind Ashgrove" });
+      const id = await thread.create();
+      t.typeOnForm(id, { coaching_details: typed });
+      await turnOnDraft(t, thread, id, `add that ${what}`);
+      const added = t.values(id).coaching_details ?? "";
+      expect(added, "her typed line was lost").toContain(typed);
+      expect(added, "the add was not written").toContain(what);
+      // A later redraft, whose drafting model rewrites the Details.
+      t.draftWrites({ coaching_details: "Observed:\nRosalind needs to learn the ship from store screens." });
+      await t.redraft(id, `Create a coaching form for Rosalind Ashgrove.\nadd that ${what}`);
+      const after = t.values(id).coaching_details ?? "";
+      expect(after, "the redraft replaced what she typed").toContain(typed);
+      expect(after, "the redraft replaced what she added").toContain(what);
+      expect(after, "the redraft's text replaced hers").not.toContain("needs to learn the ship from store screens");
+    },
+  },
+  {
+    id: "nov3-stepb-true-claim-keeps-guidance",
+    title: "a correction that really changed the form keeps its own reply, the payroll amount question included, word for word",
+    report:
+      "QA's ruling on Step B, 3 Nov 2026: a path's guidance is never dropped when its claim is true — \"payroll deduct applies\" on an open Corrective Action asks for the amount",
+    status: "fixed",
+    fixFlags: STEP_B_FLAGS,
+    async run(t) {
+      t.directory(PEOPLE);
+      t.as("location_manager", WEST_DODGE);
+      const thread = t.thread();
+      await thread.say("create ca form for pat rivera for a register shortage on 10-20-26.");
+      expect(thread.proposal).toMatchObject({ templateKey: "dpoa", employeeName: "Pat Rivera" });
+      const id = await thread.create();
+      const reply = await turnOnDraft(t, thread, id, "payroll deduct applies");
+      expect(t.checked(id).payroll_deduct, "payroll deduct is not saved as Yes").toEqual(["yes"]);
+      expect(reply.formUpdate?.updated ?? [], "the reply does not claim the payroll answer").toContain("payroll_deduct");
+      expect(reply.content, "the amount question was dropped").toContain(PAYROLL_DEDUCT_AMOUNT_QUESTION);
     },
   },
   {

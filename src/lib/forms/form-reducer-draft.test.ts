@@ -33,3 +33,21 @@ describe("restatesHeader (Step B draft write: the position and store are not a t
     expect(restatesHeader("Team Member at Omaha", form("", "Omaha, NE (West Dodge Rd)"))).toBe(false);
   });
 });
+
+describe("writeInsOf (the Other box and its write-in, from the template's layout)", () => {
+  async function versionOf(document: unknown): Promise<LoadedInstance> {
+    return { instance: { variantKey: null }, version: { document }, values: [] } as unknown as LoadedInstance;
+  }
+
+  it("the Coaching Form's Other topic is the write-in of the Topic group's Other box", async () => {
+    const { coachingDocument } = await import("./library");
+    const { writeInsOf } = await import("./form-reducer-draft");
+    expect(Object.fromEntries(writeInsOf(await versionOf(coachingDocument())))).toEqual({ other_topic: { group: "coaching_topics", option: "other" } });
+  });
+
+  it("no box labelled like the line, no write-in: the Corrective Action Form's Type of Offense has no Other box", async () => {
+    const { correctiveActionDocument } = await import("./library");
+    const { writeInsOf } = await import("./form-reducer-draft");
+    expect(writeInsOf(await versionOf(correctiveActionDocument())).size).toBe(0);
+  });
+});

@@ -552,6 +552,12 @@ function context(): ReplayContext {
     calls: () => ({ chat: state.chatModelCalls, draft: state.draftCalls, revision: state.revisionCalls, tool: state.toolCalls, patch: patchScript.calls }),
     forms: () => store.form_instances as never,
     draftPrompts: () => [...draftAsked],
+    redraft: (instanceId, notes) =>
+      call<Record<string, unknown>>(`/api/forms/instances/${instanceId}/draft`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ notes, keepManagerValues: true }),
+      }),
     typeOnForm: (instanceId, values) => {
       for (const [key, value] of Object.entries(values)) {
         const row = store.form_instance_values.find((entry) => entry.instance_id === instanceId && entry.field_key === key);

@@ -10,7 +10,7 @@ import { MANAGER_STATED_KEYS, statedDates, templateRules } from "./form-reducer-
 import { applyPatch, draftFromRows, fold, type FieldValue, type PatchRules } from "./form-reducer";
 import { formLabels, snapshotDiff, snapshotOf } from "./form-snapshot";
 import { authorizeInstance } from "./instance-scope";
-import { applyAssistantRevision, applyStatedFacts, loadInstance } from "./instances";
+import { applyAssistantRevision, applyStatedFacts, loadInstance, saveInstanceValues } from "./instances";
 import { NO_PRIOR_ACTION, PRIOR_ACTIONS_KEY } from "./prior-actions";
 import { draftableCheckboxGroups, draftableFields } from "./responsibility";
 import type { ChatMessage } from "@/types";
@@ -29,7 +29,8 @@ import type { ChatMessage } from "@/types";
  * only one the manager gave.
  *
  * The write goes through the existing writers: the assistant's keys through
- * `applyAssistantRevision`, the payroll answer and amount through
+ * `applyAssistantRevision`, a field the manager typed through
+ * `saveInstanceValues` (it stays theirs), the payroll answer and amount through
  * `applyStatedFacts` (manager's statement, empty fields only), and the Action
  * Plan through `syncCorrectiveActionPlan` when payroll changed. The form is
  * read again and the reply is the realized diff: "Changed X to …", or "I
@@ -180,9 +181,17 @@ export async function patchActiveForm(input: {
     const groupKeys = new Set(allGroups.map((group) => group.key));
     const assistant = { values: {} as Record<string, string>, checked: {} as Record<string, string[]> };
     const statement = { values: {} as Record<string, string>, checked: {} as Record<string, string[]> };
+    /*
+     * QA, 3 Nov 2026 (option A): an "add" to a field the manager typed stays
+     * the manager's. The merged text is saved as their own edit
+     * (`saveInstanceValues`, filled by the manager), so a later redraft keeps
+     * it like any typed line. Only a field the saved row already says is the
+     * manager's (`draftFromRows`), nothing wider.
+     */
+    const typed = { values: {} as Record<string, string>, checked: {} as Record<string, string[]> };
     const cleared: string[] = [];
     for (const change of diff.changed) {
-      const target = stated.has(change.key) ? statement : assistant;
+      const target = stated.has(change.key) ? statement : before[change.key]?.owner === "manager" ? typed : assistant;
       const after = change.after;
       const empty = typeof after === "string" ? after.trim() === "" : after.length === 0;
       if (empty) {
@@ -195,6 +204,9 @@ export async function patchActiveForm(input: {
 
     if (Object.keys(assistant.values).length + Object.keys(assistant.checked).length + cleared.length > 0) {
       await applyAssistantRevision(input.instanceId, assistant, cleared, actor.id);
+    }
+    if (Object.keys(typed.values).length + Object.keys(typed.checked).length > 0) {
+      await saveInstanceValues(input.instanceId, typed, actor.id);
     }
     const statedWritten =
       Object.keys(statement.values).length + Object.keys(statement.checked).length > 0

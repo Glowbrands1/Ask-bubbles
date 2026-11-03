@@ -1,6 +1,9 @@
 import "server-only";
 
+import type { AskResponse } from "@/lib/ai/types";
+
 import { blocksForVariant, checkboxGroupsForVariant, fieldsForVariant, interpolate, parseFormDocument } from "./document";
+import { NOTHING_CHANGED, replyFromDiff } from "./form-diff-reply";
 import { diffDrafts, draftFromRows, type DraftField, type FieldChange, type FormDraft } from "./form-reducer";
 import { authorizeInstance } from "./instance-scope";
 import type { LoadedInstance } from "./instances";
@@ -85,4 +88,35 @@ export async function snapshotForm(instanceId: string, request: Request): Promis
 export function snapshotDiff(before: FormSnapshot, after: FormSnapshot): FieldChange[] {
   if (before.instanceId !== after.instanceId) return [];
   return diffDrafts(before.draft, after.draft);
+}
+
+/**
+ * ============================================================================
+ * A PATH'S CLAIM, CHECKED AGAINST THE SAVED FORM (FORM_REPLY_FROM_DIFF_ENABLED)
+ * ============================================================================
+ *
+ * QA, 3 Nov 2026: the reply a path wrote is kept, guidance and questions
+ * included, whenever what it claims is true. Nothing is read from its words:
+ * the claim is its `formUpdate`, the truth is the form read again.
+ *
+ *   - A claim (`formUpdate`) on this form, and every claimed key changed in
+ *     the saved form: the answer, exactly as the path wrote it.
+ *   - A claim that is not borne out: nothing changed → "I didn't change
+ *     anything on the form."; other keys changed → a line for each of those.
+ *     `formUpdate` becomes the keys that really changed, or is removed.
+ *   - No claim: the answer as it is, even when the form changed.
+ */
+export function checkedClaim(answer: AskResponse, before: FormSnapshot, after: FormSnapshot): AskResponse {
+  const claim = answer.formUpdate;
+  if (!claim || claim.instanceId !== before.instanceId || after.instanceId !== before.instanceId) return answer;
+  const changed = snapshotDiff(before, after);
+  const real = new Set(changed.map((change) => change.key));
+  if (claim.updated.length > 0 && claim.updated.every((key) => real.has(key))) return answer;
+  const { formUpdate: _false, ...rest } = answer;
+  void _false;
+  return {
+    ...rest,
+    content: changed.length === 0 ? NOTHING_CHANGED : replyFromDiff({ changed }, after.labels),
+    ...(changed.length > 0 ? { formUpdate: { instanceId: before.instanceId, updated: changed.map((change) => change.key) } } : {}),
+  };
 }

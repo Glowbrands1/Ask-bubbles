@@ -50,6 +50,8 @@ export interface ReplayContext {
   checked(instanceId: string): Record<string, string[]>;
   /** What the drafting model was given, one entry per draft written. */
   draftPrompts(): string[];
+  /** The draft route's POST for this form, as a redraft sends it (`keepManagerValues`); the route's response. */
+  redraft(instanceId: string, notes: string): Promise<Record<string, unknown>>;
   /** The manager types on the form and saves (filled by the manager). */
   typeOnForm(instanceId: string, values: Record<string, string>): void;
   /** Production's race: the next message arrives before the drafting model's values are saved. */

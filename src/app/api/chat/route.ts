@@ -612,11 +612,13 @@ async function postChat(request: Request) {
           { memoryOwnerId: context.identity.subject },
         ));
       /*
-       * FORM_REPLY_FROM_DIFF_ENABLED: a reply from the correction, policy,
-       * redraft, copy or revision path says what the saved form now differs
-       * by — read again, before against after — and names only those fields.
-       * A patch turn's reply already is the diff. See `lib/forms/form-snapshot.ts`
-       * and `docs/step-b-reply-rewrites.md`.
+       * FORM_REPLY_FROM_DIFF_ENABLED: a correction, policy, redraft, copy or
+       * revision reply that claims a change (`formUpdate`) is checked against
+       * the saved form, read again. A true claim keeps the path's reply, word
+       * for word; a false one is replaced by what really changed. No claim, no
+       * change to the reply. A patch turn's reply already is the diff. See
+       * `checkedClaim` in `lib/forms/form-snapshot.ts` and
+       * `docs/step-b-reply-rewrites.md`.
        */
       if (
         formBefore &&
@@ -624,20 +626,11 @@ async function postChat(request: Request) {
         !draftAnswer &&
         !patchTurn &&
         [correction, policyChange, redraft, sameCopy, revision].includes(answer) &&
-        (!answer.formUpdate || answer.formUpdate.instanceId === formBefore.instanceId)
+        answer.formUpdate?.instanceId === formBefore.instanceId
       ) {
         const snapshot = await import("@/lib/forms/form-snapshot");
         const formAfter = await snapshot.snapshotForm(formBefore.instanceId, request);
-        const changed = formAfter ? snapshot.snapshotDiff(formBefore, formAfter) : [];
-        if (formAfter && (answer.formUpdate || changed.length > 0)) {
-          const { formUpdate: _claimed, ...rest } = answer;
-          void _claimed;
-          answer = {
-            ...rest,
-            content: (await import("@/lib/forms/form-diff-reply")).replyFromDiff({ changed }, formAfter.labels),
-            ...(changed.length > 0 ? { formUpdate: { instanceId: formBefore.instanceId, updated: changed.map((change) => change.key) } } : {}),
-          };
-        }
+        if (formAfter) answer = snapshot.checkedClaim(answer, formBefore, formAfter);
       }
       // NEW_REQUEST_OWN_TURNS_ENABLED: a new request for the same person is drafted from its own turns. See `lib/forms/new-request-turns.ts`.
       if (newRequestOwnTurnsEnabled() && answer.formProposal) {

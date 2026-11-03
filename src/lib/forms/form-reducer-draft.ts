@@ -4,7 +4,7 @@ import { businessToday } from "@/lib/business-date";
 
 import { fixedActionPlanKey } from "./ca-action-plan";
 import { syncCorrectiveActionPlan } from "./ca-action-plan-sync";
-import { checkboxGroupsForVariant, parseFormDocument } from "./document";
+import { blocksForVariant, checkboxGroupsForVariant, parseFormDocument, type FormField } from "./document";
 import { datesInText } from "./form-date-answer";
 import {
   applyPatch,
@@ -122,6 +122,27 @@ export function restatesHeader(value: string, loaded: LoadedInstance): boolean {
   return wholeRole || (other.length <= 1 && namesRole && namesPlace);
 }
 
+/**
+ * The write-in line of a checkbox option, from the template's own layout: a
+ * field placed directly after a checkbox group, whose label is the label of
+ * one of that group's options ("Other" beside the "Other" box). Field key →
+ * the group and the option. No key or word is named here.
+ */
+export function writeInsOf(loaded: LoadedInstance): Map<string, { group: string; option: string }> {
+  const blocks = blocksForVariant(parseFormDocument(loaded.version.document), loaded.instance.variantKey);
+  const found = new Map<string, { group: string; option: string }>();
+  blocks.forEach((block, index) => {
+    if (block.kind !== "checkbox_group") return;
+    const next = blocks[index + 1];
+    const fields: FormField[] = next?.kind === "field" ? [next.field] : next?.kind === "field_row" ? next.fields : [];
+    for (const field of fields) {
+      const option = block.options.find((entry) => fold(entry.label) === fold(field.label));
+      if (option) found.set(field.key, { group: block.key, option: option.key });
+    }
+  });
+  return found;
+}
+
 export interface ReducedDraftWrite {
   /** What `applyAssistantDraft` writes: the changed reducer keys, and the route's own keys as it made them. */
   readonly write: DraftValues;
@@ -152,15 +173,26 @@ export async function reduceDraftWrite(input: {
   const set: Record<string, FieldValue> = {};
   const passValues: Record<string, string> = {};
   const passChecked: Record<string, string[]> = {};
+  const dropped: string[] = [];
   for (const [key, value] of Object.entries(input.values)) {
     // The employee's position and store are the header's, never a drafted field's text.
-    if (template.writable.has(key) && restatesHeader(value, loaded)) continue;
+    if (template.writable.has(key) && restatesHeader(value, loaded)) {
+      dropped.push(key);
+      continue;
+    }
     if (template.writable.has(key)) set[key] = value;
     else passValues[key] = value;
   }
   for (const [key, options] of Object.entries(input.checked)) {
     if (template.writable.has(key)) set[key] = options;
     else passChecked[key] = options;
+  }
+  /* A write-in left out takes its box with it: "Other" is not ticked with nothing beside it. */
+  const writeIns = writeInsOf(loaded);
+  for (const key of dropped) {
+    const box = writeIns.get(key);
+    const ticked = box ? set[box.group] : undefined;
+    if (box && ticked !== undefined && typeof ticked !== "string") set[box.group] = ticked.filter((option) => option !== box.option);
   }
 
   const rules: PatchRules = {
