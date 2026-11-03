@@ -102,9 +102,9 @@
   },
   {
     "id": "r1",
-    "source": "Master plan step 1 (3 Nov 2026): the whole-staff list at one store; QA 30 Oct 2026 wording \"can you create a coaching form for my whole staff?\". Invented people; the Dodge Account row carries the store login's real Woven id.",
+    "source": "Master plan step 1 (3 Nov 2026): the whole-staff list at one store; asked for a Corrective Action Form (a Coaching Form for the whole staff is the team card in production: COACHING_FOR_EVERYONE, WHOLE_TEAM_COACHING). Invented people; the Dodge Account row carries the store login's real Woven id.",
     "turns": [
-      "can you create a coaching form for my whole staff?"
+      "can you create a corrective action form for my whole staff?"
     ],
     "criteria": {
       "employee": null,

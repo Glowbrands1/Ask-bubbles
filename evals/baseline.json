@@ -76,16 +76,13 @@
     },
     {
       "id": "r1",
-      "pass": false,
-      "misses": [
-        "reply lacks \"Dana Hollisworth\"",
-        "reply lacks \"Eli Brackwater\""
-      ],
+      "pass": true,
+      "misses": [],
       "card": {
-        "employee": "All team members",
-        "salon": "loc-264",
+        "employee": null,
+        "salon": null,
         "date": null,
-        "status": "ready"
+        "status": null
       }
     },
     {

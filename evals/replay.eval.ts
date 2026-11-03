@@ -108,7 +108,9 @@ vi.mock("@/lib/auth/server", async () => {
     },
   };
 });
-vi.mock("@/lib/analytics/record", () => ({
+/* The real module's other exports (TurnUnavailableError, which some flags read) stay; only the writes are stubbed. */
+vi.mock("@/lib/analytics/record", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/analytics/record")>()),
   openTurn: async () => "turn-eval",
   closeTurn: async () => {},
   recordActivity: async () => {},
