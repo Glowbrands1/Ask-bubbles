@@ -913,6 +913,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "SAME_ASK_NO_REPEAT_ENABLED",
   "FORM_PATCH_REDUCER_ENABLED",
   "FORM_REPLY_FROM_DIFF_ENABLED",
+  "FORM_EDIT_SINGLE_WRITER_ENABLED",
   "CA_NAME_FROM_CHAT_ENABLED",
   "NEXT_PUBLIC_CARD_POLICY_TO_DRAFT_ENABLED",
   "NEW_REQUEST_OPEN_DRAFT_ENABLED",
@@ -2360,4 +2361,17 @@ export function formReplyFromDiffEnabled(): boolean {
  */
 export function policyCitationCheckEnabled(): boolean {
   return envFlag("POLICY_CITATION_CHECK_ENABLED");
+}
+
+/**
+ * One writer for every form edit (Step 2a, 4 Nov 2026): a chat correction, a
+ * redraft, a same-form copy, a policy change, a reopen, the stated facts and
+ * the Action Plan's sync hand their values to `writeFormEdits`
+ * (`forms/form-write.ts`), which runs them through the form reducer — all or
+ * nothing, protected values and dropped words refused — and saves through the
+ * existing writers. Independent of the Step B flags. Off, every path calls its
+ * old writer and `form-write` is never loaded.
+ */
+export function formEditSingleWriterEnabled(): boolean {
+  return envFlag("FORM_EDIT_SINGLE_WRITER_ENABLED");
 }
