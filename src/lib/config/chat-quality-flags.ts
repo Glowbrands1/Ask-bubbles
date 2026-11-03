@@ -903,6 +903,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "STAFF_PICKER_BARE_ANSWER_ENABLED",
   "WHOLE_TEAM_COACHING_ENABLED",
   "NEW_REQUEST_OPEN_DRAFT_ENABLED",
+  "NEXT_PUBLIC_TEAM_CARD_NO_POSITION_ENABLED",
   "TEAM_CARD_WORDING_ENABLED",
   "DRAFT_REUSE_NEW_REQUEST_ENABLED",
   "PRIOR_ACTIONS_POLICY_ENABLED",
@@ -1981,6 +1982,18 @@ export function wholeTeamCoachingEnabled(): boolean {
  */
 export function newRequestOpenDraftEnabled(): boolean {
   return envFlag("NEW_REQUEST_OPEN_DRAFT_ENABLED");
+}
+
+/**
+ * The team Coaching card ("All team members") shows no Position row: the team
+ * has no one position, and the row read "Not set — tell Bubbles their
+ * position" (QA live check, 3 Nov 2026). Read in the browser, so only a
+ * statically written `process.env.NEXT_PUBLIC_…` is inlined, at build time.
+ * See `features/chat/message-bubble.tsx`. Off, as before.
+ */
+export function teamCardNoPositionEnabled(): boolean {
+  const inlined = process.env.NEXT_PUBLIC_TEAM_CARD_NO_POSITION_ENABLED;
+  return typeof inlined === "string" && ON.has(inlined.trim().toLowerCase());
 }
 
 /**

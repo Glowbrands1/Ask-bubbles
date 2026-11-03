@@ -31,6 +31,7 @@ import { reusedDraftNotice } from "@/lib/forms/reused-draft-notice";
 import { DRAFT_FAILED_WARNING, createInlineForm } from "./create-inline-form";
 import { InlineForm, type PrefillState } from "./inline-form";
 import { FormRevisionsMount } from "@/form-revisions/form-revisions-mount";
+import { teamCardNoPositionEnabled } from "@/lib/config/chat-quality-flags";
 
 export function MessageBubble({
   message,
@@ -632,7 +633,9 @@ function FormProposalCard({
             <Missing>Not yet — tell Bubbles who this form is about</Missing>
           )}
         </ProposalRow>
-        {proposal.employeeRole || POSITION_FORMS.has(proposal.templateKey) ? (
+        {/* NEXT_PUBLIC_TEAM_CARD_NO_POSITION_ENABLED: the team card is for "All team members", who have no one position (QA, 3 Nov 2026). */}
+        {!(teamCardNoPositionEnabled() && proposal.subject === "team") &&
+        (proposal.employeeRole || POSITION_FORMS.has(proposal.templateKey)) ? (
           <ProposalRow label="Position">
             {proposal.employeeRole ? (
               <>
