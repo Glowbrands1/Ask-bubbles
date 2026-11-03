@@ -17,7 +17,8 @@ const NAME = "Katrin Dovetail";
 const FLAG = "LEVEL_REQUEST_DATE_ENABLED";
 
 function flag(on: boolean) {
-  vi.stubEnv(FLAG, on ? "true" : "");
+  // On by default since 3 Nov 2026 ("(E) batch 1"): "off" is "false", not unset.
+  vi.stubEnv(FLAG, on ? "true" : "false");
   vi.stubEnv("REQUEST_LINE_ACCOUNT_ENABLED", "true");
   vi.stubEnv("TYPED_NAME_ENABLED", "true");
 }

@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
+import { DEFAULT_ON } from "@/lib/config/default-on";
+
 import { CHAT_QUALITY_FLAG_NAMES, antiLoopEnabled, envFlag } from "@/lib/config/chat-quality-flags";
 import { cardChangeEnabled, cardChangeFinalizedEnabled } from "@/lib/forms/card-change-flag";
 
@@ -230,7 +232,14 @@ describe("new flags default off", () => {
   it("treats unset flags as off, including the anti-loop flag", () => {
     const previous = Object.fromEntries(CHAT_QUALITY_FLAG_NAMES.map((name) => [name, process.env[name]]));
     for (const name of CHAT_QUALITY_FLAG_NAMES) delete process.env[name];
-    for (const name of CHAT_QUALITY_FLAG_NAMES) expect(envFlag(name)).toBe(false);
+    // Since 3 Nov 2026 ("(E) batch 1", config/default-on.ts) the flags in DEFAULT_ON read as on when unset; every other flag, off.
+    for (const name of CHAT_QUALITY_FLAG_NAMES) expect(envFlag(name), name).toBe(DEFAULT_ON.has(name));
+    // ...and "off" still turns each of them off (the emergency off switch).
+    for (const name of DEFAULT_ON) {
+      process.env[name] = "off";
+      expect(envFlag(name), name).toBe(false);
+      delete process.env[name];
+    }
     expect(antiLoopEnabled()).toBe(false);
     expect(cardChangeEnabled()).toBe(false);
     expect(cardChangeFinalizedEnabled()).toBe(false);

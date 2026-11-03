@@ -183,6 +183,8 @@ describe("ANGLE_PLACEHOLDER_GUARD_ENABLED (ported from the sibling app's live ch
   });
 
   it("off: <UNKNOWN> is not a placeholder, as before", () => {
+    // On by default since 3 Nov 2026 ("(E) batch 1"): "off" is "false", not unset.
+    process.env[FLAG] = "false";
     expect(containsPlaceholder("Pin the slip on the rack. <UNKNOWN>")).toBe(false);
   });
 
