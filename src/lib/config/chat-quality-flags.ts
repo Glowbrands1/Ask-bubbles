@@ -884,6 +884,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "CHAT_IMPORT_PROVEN_OWN_ENABLED",
   "FORM_EDIT_PLAIN_WORDS_ENABLED",
   "FORM_EDIT_HONEST_REPLY_ENABLED",
+  "FORM_EDIT_REFERS_BACK_ENABLED",
   "ANGLE_PLACEHOLDER_GUARD_ENABLED",
   "REVISION_SAME_VALUE_ENABLED",
   "SAME_FORM_COPY_ENABLED",
@@ -1730,6 +1731,18 @@ export function formEditPlainWordsEnabled(): boolean {
  */
 export function formEditHonestReplyEnabled(): boolean {
   return envFlag("FORM_EDIT_HONEST_REPLY_ENABLED");
+}
+
+/**
+ * With a Coaching draft open, "yes, do that", "the details we just
+ * discussed!!!" and "include the details of rolling rack" are written into the
+ * draft's Details, and the answer's "Updating the draft now" / "That's on the
+ * card" claims are caught too (a Location Manager, 30 Oct 2026, 2 stars;
+ * replayed 3 Nov; same flag in both apps). See `forms/form-content-turn.ts`.
+ * Off, as before.
+ */
+export function formEditRefersBackEnabled(): boolean {
+  return envFlag("FORM_EDIT_REFERS_BACK_ENABLED");
 }
 
 /**
