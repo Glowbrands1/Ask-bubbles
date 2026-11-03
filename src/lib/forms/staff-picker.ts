@@ -183,6 +183,24 @@ export function staffPickerReply(input: {
   return `${one} is for one person at a time, so I won't make one card for the whole staff. ${ASKED_LOCATION} Your account covers ${names.length} locations.${choices}`;
 }
 
+/** Words that say where without naming which: "the dodge store" is "dodge". */
+const PLACE_FILLER = new Set(["the", "at", "in", "for", "its", "it's", "it", "is", "store", "stores", "location", "shop", "one", "please", "ne", "ia", "ks", "mo", "sd", "co"]);
+
+/**
+ * A short name of ONE of the account's own stores (ported from Ask Sunny,
+ * where a bare salon name was not read at all) — every word the manager typed
+ * (fillers aside) is a word of that store's name and of no other in scope.
+ */
+function shortLocationName(text: string, locations: readonly StaffLocation[]): string[] {
+  const words = text.toLowerCase().split(/[^a-z0-9']+/).filter((word) => word && !PLACE_FILLER.has(word));
+  if (words.length === 0 || words.length > 4) return [];
+  const matches = locations.filter((location) => {
+    const name = new Set(location.name.toLowerCase().split(/[^a-z0-9']+/).filter(Boolean));
+    return words.every((word) => name.has(word));
+  });
+  return matches.length === 1 ? [matches[0]!.id] : [];
+}
+
 /** The latest store, in scope, that the manager named in this conversation. */
 function rememberedLocation(
   history: readonly Pick<ChatMessage, "role" | "content">[],
@@ -278,10 +296,13 @@ export async function staffPickerTurn(input: {
         .filter((location): location is NonNullable<typeof location> => Boolean(location))
         .map((location) => ({ id: location.id, name: location.name }))
     : [];
-  const inTurn = (text: string) =>
-    readLocationMentions(text)
+  const inTurn = (text: string) => {
+    const read = readLocationMentions(text)
       .filter((mention) => !mention.confirm && !mention.collision)
       .flatMap((mention) => [...mention.locationIds]);
+    // STAFF_PICKER_REMEMBER_LOCATION_ENABLED: a short name of one of the account's own stores, as Ask Sunny reads "kearney".
+    return read.length > 0 || !staffPickerRememberLocationEnabled() ? read : shortLocationName(text, locations);
+  };
   const allowed = new Set(locations.map((location) => location.id));
   const said = inTurn(input.question);
   /*

@@ -46,7 +46,11 @@ card is that card; the picker (still one person at a time for other forms)
 reuses the store already named and, once it has listed the staff, says what
 to do next instead of repeating itself; a directory row whose last name is
 only Account/Login/Shared is never a team member. Ported to Ask Sunny with
-the same flags; the test there uses its own salons and invented people.
+the same flags; the test there uses its own salons and invented people. Two
+Sunny-side gaps found there: a bare salon name was not read (the picker's
+short-name reader, ported back here under STAFF_PICKER_REMEMBER_LOCATION),
+and keep-filled-slots dropped the team label — Sunny-only, this app has no
+keep-filled-slots.
 
 ## 25 Oct 2026: the framework's sections are not pinned into governed drafts — Bubbles-only
 

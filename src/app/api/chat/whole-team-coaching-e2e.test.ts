@@ -796,3 +796,15 @@ describe("a form not named, for the whole staff", () => {
     expect(thread.proposal).toMatchObject(TEAM);
   });
 });
+
+describe("STAFF_PICKER_REMEMBER_LOCATION_ENABLED: a short name of one of the account's own stores (ported from Ask Sunny)", () => {
+  it("\"bellevue\" answers which store", async () => {
+    production(["STAFF_PICKER_REMEMBER_LOCATION_ENABLED"]);
+    westDodge();
+    setRole("location_manager");
+    setScope(HER_SCOPE);
+    const thread = new Thread();
+    await thread.say("make a corrective action form for all team members");
+    expect((await thread.say("bellevue")).content).toContain("Tobin Areli");
+  });
+});
