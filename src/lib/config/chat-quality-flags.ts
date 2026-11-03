@@ -884,6 +884,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "CHAT_IMPORT_PROVEN_OWN_ENABLED",
   "FORM_EDIT_PLAIN_WORDS_ENABLED",
   "FORM_EDIT_HONEST_REPLY_ENABLED",
+  "PERSON_GUARD_ENABLED",
   "OPEN_DRAFT_KEEPS_TURNS_ENABLED",
   "FORM_EDIT_REFERS_BACK_ENABLED",
   "ANGLE_PLACEHOLDER_GUARD_ENABLED",
@@ -1732,6 +1733,16 @@ export function formEditPlainWordsEnabled(): boolean {
  */
 export function formEditHonestReplyEnabled(): boolean {
   return envFlag("FORM_EDIT_HONEST_REPLY_ENABLED");
+}
+
+/**
+ * One answer to "is this a person?" for every reader of who a form is for:
+ * somebody on the roster always is; a policy, a practice run ("Practice") or a
+ * metric never is (QA, 3 Nov 2026; same flag in both apps). See
+ * `forms/person-guard.ts`. Off, as before.
+ */
+export function personGuardEnabled(): boolean {
+  return envFlag("PERSON_GUARD_ENABLED");
 }
 
 /**

@@ -41,6 +41,17 @@ app's production flags it already holds (and so does the case where a metric
 was read as another person), so the flag is ported for the same mechanism in
 both apps; replay-pack cases nov2-p1a and nov2-p1b hold here.
 
+## 3 Nov 2026: one answer to "is this a person?" for every reader — ported from the sibling app (PERSON_GUARD_ENABLED, default off)
+
+Found in the sibling app (the 2 Nov scan): a policy name, "Practice" and a
+metric became people on cards. Replayed here with this app's production flags
+those wordings already hold; the mechanism is ported behind the same flag
+(forms/person-guard.ts: a roster person is always a person; otherwise a
+policy, a practice run, a metric with this app's own business vocabulary, a
+report name or the not-a-name lists never are), read by namesSomebody and once
+more on every card the route returns. With the flag forced on, the chat and
+forms suites pass.
+
 ## 25 Oct 2026: the framework's sections are not pinned into governed drafts — Bubbles-only
 
 `FRAMEWORK_UNPIN_ENABLED` defaults off. The uploaded Performance Management
