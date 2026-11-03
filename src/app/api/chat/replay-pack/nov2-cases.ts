@@ -12,8 +12,8 @@ export const NOV2_CASES: readonly ReplayCase[] = [
     // WHOLE_TEAM_COACHING_ENABLED (#357) is on in production (QA, 3 Nov 2026) and the refusal
     // is gone. Asked twice before naming a store, the team card asks "Which store is this
     // about?" twice, word for word; every other turn now differs.
-    // SAME_ASK_NO_REPEAT was switched off again (QA, 3 Nov 2026, 13:10 UTC) until its note is said only beside a real question.
-    status: { open: "the team card's store question is repeated word for word when the request is" },
+    // Fixed in production: SAME_ASK_NO_REPEAT on again with its note said only beside a real question (QA, 3 Nov 2026, 13:55 UTC).
+    status: "fixed",
     fixFlags: ["SAME_ASK_NO_REPEAT_ENABLED"],
     async run(t) {
       t.directory(STAFF);
