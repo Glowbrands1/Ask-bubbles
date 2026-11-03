@@ -18,15 +18,28 @@ row). After the cascade it checks the answer if all of these hold:
 For such an answer, the form is read again and the claim is checked. Nothing
 is read from the reply's words.
 
+Rule as ruled by QA on H1–H5 (3 Nov 2026). A key "changed" when its value
+changed, or when its stamp (`filledBy` and `provenance.source`) changed. So a
+policy line re-verified against the manual with the same words counts (H2).
+
 | What happened | Reply | `formUpdate` |
 |---|---|---|
-| Every claimed key changed in the saved form | **the path's reply, byte for byte**, with all its guidance and questions | as the path wrote it |
-| The claim is not borne out, and nothing changed | `I didn't change anything on the form.` | removed |
-| The claim is not borne out, and other keys changed | one `Changed <Label> to "<value>".` / `Cleared <Label>.` line per key that really changed | the keys that really changed |
-| No claim (no `formUpdate`), whether or not the form changed | untouched, nothing appended | none |
+| **At least one** claimed key changed in the saved form | **the path's reply, byte for byte**, with all its guidance and questions | as the path wrote it |
+| **None** of the claimed keys changed, and nothing changed at all | `I didn't change anything on the form.` | removed |
+| **None** of the claimed keys changed, and other keys did | one `Changed <Label> to "<value>".` / `Cleared <Label>.` line per key that really changed | the keys that really changed |
+| No claim, or an empty one (`updated: []`), whether or not the form changed | untouched, nothing appended (H5) | as it was |
+| A claim naming a key the form does not have (neither snapshot holds it) | untouched (H3, a known limit: such a claim can never be checked) | as it was |
 
-A claim is borne out only when **every** claimed key changed. An empty
-`updated` list is not a claim that holds.
+**What this rule can no longer catch:**
+
+- A reply that claims several fields, of which only some changed, keeps its
+  text, including its sentences about the fields that did not change. For
+  example, a redraft that re-writes the same policy line while changing
+  Observation keeps "Updated … policy …" wording.
+- The rule catches a false "Updated" only when nothing claimed changed:
+  - re-writing a value the field already had, such as "change the date to"
+    the same date, or re-ticking the same options (H1, H4), is caught;
+  - a mix of true and false claims is not.
 
 **Not checked:**
 
@@ -41,8 +54,8 @@ A claim is borne out only when **every** claimed key changed. An empty
 
 ## When a path's reply can be replaced
 
-A path's reply is replaced only when its `formUpdate` names a key whose saved
-value did not change. When that happens, none of that path's guidance is
+A path's reply is replaced only when NONE of the keys its `formUpdate` names
+changed (in value or in who wrote it and from what). When that happens, none of that path's guidance is
 shown on that turn.
 
 | Path | When its claim can be false | What the manager sees instead |
@@ -58,7 +71,7 @@ and the replay case `nov3-stepb-true-claim-keeps-guidance`. In that case,
 "payroll deduct applies" on an open Corrective Action keeps the correction's
 reply with `PAYROLL_DEDUCT_AMOUNT_QUESTION`, word for word.
 
-## Known holes (reported to QA, not guessed at)
+## Known holes (reported to QA; ruled on 3 Nov 2026: H1, H2, H4 and H5 are fixed by the rule above, H3 stays a documented limit)
 
 1. **Same-value writes count as false claims.** A path that "updates" a key to
    the value it already had is judged false for the whole reply, even when its

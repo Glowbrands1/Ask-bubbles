@@ -53,12 +53,15 @@ describe("checkedClaim", () => {
     expect(replaced.formUpdate).toEqual({ instanceId: ID, updated: ["action_plan"] });
   });
 
-  it("a claim is confirmed only when every claimed key changed", () => {
+  // Expectation changed on purpose (QA ruling on H1–H5, 3 Nov 2026): a claim is kept when ANY claimed key
+  // changed, not only when every one did — a redraft claims every key it returns, so the old rule dropped
+  // the guidance of a real change.
+  it("a claim where any claimed key changed keeps the path's reply byte for byte, the payroll amount question included", () => {
     const partly: AskResponse = { ...PAYROLL_REPLY, formUpdate: { instanceId: ID, updated: ["payroll_deduct", "action_plan"] } };
     const after = snapshot({ payroll_deduct: ["yes"], observation: "Observed:\nShort $3.25.", action_plan: "Plan." });
-    const replaced = checkedClaim(partly, BEFORE, after);
-    expect(replaced.content).toBe('Changed Is payroll deduct applicable? to "yes".');
-    expect(replaced.formUpdate).toEqual({ instanceId: ID, updated: ["payroll_deduct"] });
+    const kept = checkedClaim(partly, BEFORE, after);
+    expect(kept).toBe(partly);
+    expect(kept.content).toContain(PAYROLL_DEDUCT_AMOUNT_QUESTION);
   });
 
   it("no claim: the reply is untouched, even though the saved form changed", () => {
@@ -70,5 +73,64 @@ describe("checkedClaim", () => {
   it("a claim about another form is not judged against this one", () => {
     const other: AskResponse = { ...PAYROLL_REPLY, formUpdate: { instanceId: "22222222-2222-4222-8222-222222222222", updated: ["payroll_deduct"] } };
     expect(checkedClaim(other, BEFORE, BEFORE)).toBe(other);
+  });
+});
+
+/* QA ruling on H1–H5 (3 Nov 2026): each required case, separately. */
+function stamped(values: Record<string, string | string[]>, stamps: Record<string, string>): FormSnapshot {
+  return { ...snapshot(values), stamps };
+}
+
+describe("checkedClaim, QA's H1–H5 cases", () => {
+  const POLICY = "Standards of Conduct — JBA Policy Manual p.12";
+  const GUIDANCE = "The policy line is still yours to confirm before you sign.";
+
+  it("H1: a redraft that changes Observation but re-writes the same policy line keeps its guidance", () => {
+    const before = stamped({ observation: "Old.", policy_language: POLICY }, { observation: "ai|draft", policy_language: "ai|manual" });
+    const after = stamped({ observation: "New account.", policy_language: POLICY }, { observation: "ai|draft", policy_language: "ai|manual" });
+    const redraft: AskResponse = {
+      content: `Redrafted the form.\n\n${GUIDANCE}`,
+      citations: [],
+      coverage: "not_applicable",
+      formUpdate: { instanceId: ID, updated: ["observation", "policy_language"] },
+    };
+    expect(checkedClaim(redraft, before, after)).toBe(redraft);
+  });
+
+  it('H1: "change the date to <the date it already has>" with nothing else changed is replaced', () => {
+    const same = stamped({ form_date: "2026-10-20", observation: "Old." }, { form_date: "manager|", observation: "ai|draft" });
+    const correction: AskResponse = { content: "Updated the Date to 10/20/2026.", citations: [], coverage: "not_applicable", formUpdate: { instanceId: ID, updated: ["form_date"] } };
+    const replaced = checkedClaim(correction, same, same);
+    expect(replaced.content).toBe(NOTHING_CHANGED);
+    expect(replaced.formUpdate).toBeUndefined();
+  });
+
+  it("H2: a policy re-verification that only changes provenance keeps its reply", () => {
+    const before = stamped({ policy_language: POLICY }, { policy_language: "ai|assistant" });
+    const after = stamped({ policy_language: POLICY }, { policy_language: "ai|manual_verified" });
+    const policyChange: AskResponse = { content: "The policy line is now checked against the manual.", citations: [], coverage: "not_applicable", formUpdate: { instanceId: ID, updated: ["policy_language"] } };
+    expect(checkedClaim(policyChange, before, after)).toBe(policyChange);
+  });
+
+  it("H4: re-ticking the same options with nothing else changed is replaced", () => {
+    const same = stamped({ payroll_deduct: ["yes"], observation: "Old." }, { payroll_deduct: "ai|draft", observation: "ai|draft" });
+    const reticked: AskResponse = { content: "Updated Is payroll deduct applicable? → Yes.", citations: [], coverage: "not_applicable", formUpdate: { instanceId: ID, updated: ["payroll_deduct"] } };
+    expect(checkedClaim(reticked, same, same).content).toBe(NOTHING_CHANGED);
+  });
+
+  it('a false "Updated" with nothing saved is still caught', () => {
+    const replaced = checkedClaim(PAYROLL_REPLY, BEFORE, BEFORE);
+    expect(replaced.content).toBe(NOTHING_CHANGED);
+    expect(replaced.formUpdate).toBeUndefined();
+  });
+
+  it("H5: an empty claim counts as no claim — the reply is untouched", () => {
+    const empty: AskResponse = { ...PAYROLL_REPLY, formUpdate: { instanceId: ID, updated: [] } };
+    expect(checkedClaim(empty, BEFORE, BEFORE)).toBe(empty);
+  });
+
+  it("H3 (known limit): a claim on a key the form does not have is left untouched, never rewritten", () => {
+    const odd: AskResponse = { ...PAYROLL_REPLY, formUpdate: { instanceId: ID, updated: ["not_a_form_row"] } };
+    expect(checkedClaim(odd, BEFORE, BEFORE)).toBe(odd);
   });
 });

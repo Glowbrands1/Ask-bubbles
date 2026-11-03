@@ -33,6 +33,13 @@ export interface FormSnapshot {
   readonly draft: FormDraft;
   /** What each key is called on the form, for the reply. */
   readonly labels: Readonly<Record<string, string>>;
+  /**
+   * Who wrote each value row and from what: `filledBy|provenance.source`
+   * (QA, 3 Nov 2026, H2). A policy line re-verified against the manual with
+   * the same words is a change here though its value is not. Optional: a
+   * snapshot without it compares values only.
+   */
+  readonly stamps?: Readonly<Record<string, string>>;
 }
 
 /** The instance's own columns, under the keys the matching rows use. */
@@ -71,7 +78,9 @@ export function snapshotOf(loaded: LoadedInstance): FormSnapshot {
     draft[entry.key] = { key: entry.key, value, owner: value === "" ? "empty" : "assistant" };
   }
   Object.assign(draft, draftFromRows(loaded.values));
-  return { instanceId: loaded.instance.id, status: loaded.instance.status, draft, labels: formLabels(loaded) };
+  const stamps: Record<string, string> = {};
+  for (const row of loaded.values) stamps[row.fieldKey] = `${row.filledBy}|${String(row.provenance?.source ?? "")}`;
+  return { instanceId: loaded.instance.id, status: loaded.instance.status, draft, labels: formLabels(loaded), stamps };
 }
 
 /** The open form as saved now, read under "view" authorization. Null when it cannot be read. */
@@ -90,28 +99,48 @@ export function snapshotDiff(before: FormSnapshot, after: FormSnapshot): FieldCh
   return diffDrafts(before.draft, after.draft);
 }
 
+/** Keys whose value OR whose stamp (who wrote it, from what) differs between two snapshots. */
+export function touchedKeys(before: FormSnapshot, after: FormSnapshot): Set<string> {
+  const touched = new Set(snapshotDiff(before, after).map((change) => change.key));
+  if (before.instanceId !== after.instanceId) return touched;
+  const keys = new Set([...Object.keys(before.stamps ?? {}), ...Object.keys(after.stamps ?? {})]);
+  for (const key of keys) if ((before.stamps ?? {})[key] !== (after.stamps ?? {})[key]) touched.add(key);
+  return touched;
+}
+
 /**
  * ============================================================================
  * A PATH'S CLAIM, CHECKED AGAINST THE SAVED FORM (FORM_REPLY_FROM_DIFF_ENABLED)
  * ============================================================================
  *
- * QA, 3 Nov 2026: the reply a path wrote is kept, guidance and questions
- * included, whenever what it claims is true. Nothing is read from its words:
- * the claim is its `formUpdate`, the truth is the form read again.
+ * QA, 3 Nov 2026 (ruling on H1–H5): the reply a path wrote is kept, guidance
+ * and questions included, unless its claim is wholly false. Nothing is read
+ * from its words: the claim is its `formUpdate`, the truth is the form read
+ * again.
  *
- *   - A claim (`formUpdate`) on this form, and every claimed key changed in
- *     the saved form: the answer, exactly as the path wrote it.
- *   - A claim that is not borne out: nothing changed → "I didn't change
- *     anything on the form."; other keys changed → a line for each of those.
- *     `formUpdate` becomes the keys that really changed, or is removed.
- *   - No claim: the answer as it is, even when the form changed.
+ *   - No claim, or an empty one (`updated: []`): the answer as it is.
+ *   - A claim naming a key the form does not have (neither snapshot holds
+ *     it): the answer as it is — it can never be checked (H3, a known limit).
+ *   - At least one claimed key changed — in value, or in who wrote it and
+ *     from what (H2): the answer, exactly as the path wrote it (H1, H4).
+ *   - NONE of the claimed keys changed: the claim is false. Nothing changed
+ *     at all → "I didn't change anything on the form."; other keys changed →
+ *     a line for each of those. `formUpdate` becomes the keys that really
+ *     changed, or is removed.
+ *
+ * What this rule no longer catches: a reply claiming several fields of which
+ * only some changed keeps its text, including its sentences about the fields
+ * that did not change.
  */
 export function checkedClaim(answer: AskResponse, before: FormSnapshot, after: FormSnapshot): AskResponse {
   const claim = answer.formUpdate;
   if (!claim || claim.instanceId !== before.instanceId || after.instanceId !== before.instanceId) return answer;
+  if (claim.updated.length === 0) return answer;
+  const known = (key: string) => key in before.draft || key in after.draft || key in (before.stamps ?? {}) || key in (after.stamps ?? {});
+  if (claim.updated.some((key) => !known(key))) return answer;
+  const touched = touchedKeys(before, after);
+  if (claim.updated.some((key) => touched.has(key))) return answer;
   const changed = snapshotDiff(before, after);
-  const real = new Set(changed.map((change) => change.key));
-  if (claim.updated.length > 0 && claim.updated.every((key) => real.has(key))) return answer;
   const { formUpdate: _false, ...rest } = answer;
   void _false;
   return {
