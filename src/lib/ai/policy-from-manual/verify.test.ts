@@ -128,6 +128,35 @@ describe("checkCitations", () => {
     expect(result.text).toBe("");
   });
 
+  /*
+   * QA's decision on #413: a double-quoted span is checked only when it is in
+   * the same sentence as a manual label, or has 8 or more words. A short,
+   * unattributed quote (a manager's own words) is left exactly as written.
+   */
+  it("keeps a short manager quote unchanged", () => {
+    const answer = 'She said "I\'m on my way" and arrived at 10:40.';
+    expect(checkCitations(answer, chunks, { vocabulary: MANUAL_VOCABULARY })).toEqual({ text: answer, dropped: [], moved: [] });
+  });
+
+  it("drops a short quote attributed to the manual by a label in the same sentence", () => {
+    const answer = 'Attendance, JBA Policy Manual p.14 says "Three lates means a write-up." Please review it.';
+    const result = checkCitations(answer, chunks, { vocabulary: MANUAL_VOCABULARY });
+    expect(result.dropped).toEqual([{ kind: "quote", reason: "too_short", text: '"Three lates means a write-up."' }]);
+    expect(result.text).toBe("Please review it.");
+  });
+
+  it("drops an unattributed quote of 8 or more words that is in no retrieved chunk", () => {
+    const answer = 'Remember: "Employees who are late three times in a month will receive a written warning." Thanks.';
+    const result = checkCitations(answer, chunks, { vocabulary: MANUAL_VOCABULARY });
+    expect(result.dropped.map((entry) => entry.reason)).toEqual(["quote_not_in_manual"]);
+    expect(result.text).toBe("Thanks.");
+  });
+
+  it("keeps an unattributed quote of 8 or more words that is verbatim in a retrieved chunk", () => {
+    const answer = 'Remember: "Employees are not allowed to park directly in front of the location." Thanks.';
+    expect(checkCitations(answer, chunks, { vocabulary: MANUAL_VOCABULARY })).toEqual({ text: answer, dropped: [], moved: [] });
+  });
+
   it("leaves a reply with nothing to check exactly as it was", () => {
     const answer = "Please speak with your district manager.  Thanks!";
     expect(checkCitations(answer, chunks)).toEqual({ text: answer, dropped: [], moved: [] });

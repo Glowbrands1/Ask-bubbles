@@ -23,7 +23,10 @@ import type { RetrievedChunk } from "./chunks";
  *   checkCitations
  *                 finds the "<Heading>, JBA Policy Manual p.N" labels and the
  *                 quoted passages in a reply, applies both checks, and takes
- *                 out what fails. An unverified quote is never shown.
+ *                 out what fails. A quoted passage counts as a manual quote
+ *                 when a manual label is in its sentence or it has 8 or more
+ *                 words; a short, unattributed one (a manager's own words) is
+ *                 left as written. An unverified manual quote is never shown.
  *
  * Normalisation is a character loop, like `fold` in `forms/form-reducer.ts`.
  * Nothing imports this module yet.
@@ -337,6 +340,8 @@ export function checkCitations(
 
   const removals: Span[] = [];
   const replacements: Replacement[] = [];
+  /** Every manual label found, kept, moved or dropped: what attributes a quote to the manual. */
+  const labels: Span[] = [];
   const dropped: DroppedCitation[] = [];
   const moved: MovedCitation[] = [];
 
@@ -354,6 +359,7 @@ export function checkCitations(
 
     const found = labelHeadingBefore(answerText, markAt, vocabulary);
     if (!found) continue;
+    labels.push({ start: found.start, end: digitsEnd });
     const page = Number(answerText.slice(digitsAt, digitsEnd));
     const check = verifyLabel({ heading: found.heading, page }, chunks);
     if (check.action === "drop") {
@@ -368,7 +374,17 @@ export function checkCitations(
 
   for (const { open, close } of quotedSpans(answerText)) {
     const inner = answerText.slice(open + 1, close);
-    if (normaliseCitationText(inner) === "") continue;
+    const normalised = normaliseCitationText(inner);
+    if (normalised === "") continue;
+    /*
+     * QA's decision on #413: a quoted span is checked only when a manual label
+     * is in the same sentence, or when it has 8 or more words. A short,
+     * unattributed quote (a manager's own words, a heading in quotes) is left
+     * exactly as written.
+     */
+    const sentence = sentenceAround(answerText, open, close, endsSentence(normalised));
+    const attributed = labels.some((label) => overlaps(label, sentence));
+    if (!attributed && wordCount(normalised) < MIN_QUOTE_WORDS) continue;
     let reason: QuoteRefusal = "chunk_not_retrieved";
     let ok = false;
     for (const chunk of chunks) {
@@ -380,8 +396,7 @@ export function checkCitations(
       if (check.reason === "too_short" || reason === "chunk_not_retrieved") reason = check.reason;
     }
     if (ok) continue;
-    const span = sentenceAround(answerText, open, close, endsSentence(normaliseCitationText(inner)));
-    removals.push(span);
+    removals.push(sentence);
     dropped.push({ kind: "quote", reason, text: answerText.slice(open, close + 1) });
   }
 
