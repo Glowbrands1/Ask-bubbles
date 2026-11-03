@@ -1,0 +1,78 @@
+{
+  "cases": [
+    {
+      "id": "b9",
+      "pass": false,
+      "misses": [
+        "policy"
+      ],
+      "card": {
+        "employee": "Test Employee",
+        "salon": null,
+        "date": "2026-10-15",
+        "status": "ready"
+      }
+    },
+    {
+      "id": "b10",
+      "pass": false,
+      "misses": [
+        "policy"
+      ],
+      "card": {
+        "employee": "Testy Testerson",
+        "salon": "loc-264",
+        "date": "2026-10-16",
+        "status": "ready"
+      }
+    },
+    {
+      "id": "b11",
+      "pass": false,
+      "misses": [
+        "policy"
+      ],
+      "card": {
+        "employee": "Testy Testerson",
+        "salon": "loc-264",
+        "date": "2026-10-20",
+        "status": "ready"
+      }
+    },
+    {
+      "id": "b12",
+      "pass": false,
+      "misses": [
+        "policy"
+      ],
+      "card": {
+        "employee": "maisie quillfeather",
+        "salon": null,
+        "date": "2026-10-22",
+        "status": "needs_location"
+      }
+    },
+    {
+      "id": "b18a",
+      "pass": true,
+      "misses": [],
+      "card": {
+        "employee": "Test Employee",
+        "salon": "loc-66",
+        "date": "2026-10-20",
+        "status": "ready"
+      }
+    },
+    {
+      "id": "b18b",
+      "pass": true,
+      "misses": [],
+      "card": {
+        "employee": "Test Employee",
+        "salon": "loc-66",
+        "date": "2026-10-15",
+        "status": "ready"
+      }
+    }
+  ]
+}
