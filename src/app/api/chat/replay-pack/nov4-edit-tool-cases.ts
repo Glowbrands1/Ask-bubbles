@@ -1,7 +1,7 @@
 import { expect } from "vitest";
 
 import { WEST_DODGE, noClaimWithoutUpdate, replyMatchesDiff, savedForm, type ReplayCase, type ReplayContext } from "./cases";
-import { CA_CHAIN, LIVE_ROSTER, OBSERVATION_AFTER } from "./nov4-live-regressions-scenarios";
+import { CA_CHAIN, GATE_EDIT_WORDINGS, GATE_QUESTION_WORDINGS, LIVE_ROSTER, OBSERVATION_AFTER } from "./nov4-live-regressions-scenarios";
 
 /**
  * ============================================================================
@@ -111,4 +111,49 @@ export const NOV4_EDIT_TOOL_CASES: readonly ReplayCase[] = [
       });
     },
   },
+];
+
+/*
+ * THE QUESTION GATE (QA and Pau, 4 Nov 2026): with Marnie's draft open, a real
+ * edit asked as a question reaches edit_form; a question is not offered it and
+ * writes nothing. Decided by code (`readQuestion`), no phrase list. The model
+ * does not call the tool here, so an edit is handed to the old chain, whose
+ * revision writes nothing.
+ */
+export const NOV4_EDIT_TOOL_GATE_CASES: readonly ReplayCase[] = [
+  ...GATE_EDIT_WORDINGS.map((said, index): ReplayCase => ({
+    id: `nov4-edit-tool-gate-edit-${index + 1}`,
+    title: `with Marnie's Corrective Action open, "${said}" is an edit request: the main call is offered edit_form`,
+    report: "QA and Pau, 4 Nov 2026: the non-question gate must not skip real edits phrased as questions",
+    status: "fixed",
+    fixFlags: [],
+    async run(t) {
+      await withEditTool(async () => {
+        const { thread, id } = await marnieDraft(t);
+        const before = savedForm(t, id);
+        t.revisionWrites({});
+        const reply = await thread.say(said);
+        replyMatchesDiff(t, id, before, reply, said);
+        noClaimWithoutUpdate(reply);
+        expect(t.editToolOffers!().offered, `"${said}" was not offered edit_form`).toBe(1);
+      });
+    },
+  })),
+  ...GATE_QUESTION_WORDINGS.map((said, index): ReplayCase => ({
+    id: `nov4-edit-tool-gate-question-${index + 1}`,
+    title: `with Marnie's Corrective Action open, "${said}" is a question: no edit_form, nothing written`,
+    report: "QA and Pau, 4 Nov 2026: negative control for the edit tool's question gate",
+    status: "fixed",
+    fixFlags: [],
+    async run(t) {
+      await withEditTool(async () => {
+        const { thread, id } = await marnieDraft(t);
+        const before = savedForm(t, id);
+        const reply = await thread.say(said);
+        expect(t.editToolOffers!().offered, `"${said}" was offered edit_form`).toBe(0);
+        expect(savedForm(t, id), `"${said}" wrote to the form`).toBe(before);
+        expect(reply.formUpdate).toBeUndefined();
+      });
+    },
+  })),
 ];
