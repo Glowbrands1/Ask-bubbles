@@ -76,6 +76,52 @@ export const CA_CHAIN = [
 export const COACHING_OPENING = "Create a coaching form for Tessaly Lane, she was late to open today";
 export const COACHING_CHAIN = ["fix her last name, it is Laine", "make it sound more professional", "can you make it more professional"] as const;
 
+/*
+ * THE SCRIPTED MODEL OUTPUTS that reproduce QA's BASELINE texts (flags off,
+ * live): the replay pack's `t.draftWrites` / `t.revisionWrites`, and the
+ * stand-in models of the live script's LIVE_DRY=1 mode.
+ */
+/** The CA chat: [0] is the drafting model's Observation at Create; [k] the revision's after turn k+1 (null: it writes nothing). */
+const T1_LATE = "Marnie Quill was late to open on October 20, 2026.";
+export const EXPECTATION = "\nExpectation:\nAn employee scheduled to open is expected to arrive on time and have the store ready to open.";
+export const OBSERVATION_AFTER: readonly (string | null)[] = [
+  `Observed:\n${T1_LATE}${EXPECTATION}`,
+  `Observed:\nMarnie Quill-Hart was late to open on October 20, 2026.${EXPECTATION}`,
+  `Observed:\nMarnie Quill-Hart was late to open on October 20, 2026, and was also late on Tuesday.${EXPECTATION}`,
+  `Observed:\nMarnie Quill-Hart was late to open on October 20, 2026, and was also late on Tuesday. Daily stats show 3 of 4 shifts on time.${EXPECTATION}`,
+  // T5: the revision writes nothing.
+  null,
+  `Observed:\nMarnie Quill-Hart was late to open on October 20, 2026, and was also late on Tuesday. Daily stats show 3 of 4 shifts on time. Marnie must also practice the sanitizing checklist every shift.${EXPECTATION}`,
+];
+
+/** The coaching chat: the drafting model's Details at Create, then the revision's after each turn. */
+export const DETAILS_LANE = "Observed:\nTessaly Lane was late to open the store today.\nExpectation:\nTessaly is expected to arrive on time and be ready to open.";
+export const DETAILS_AFTER = [
+  DETAILS_LANE.replace("Tessaly Lane", "Tessaly Laine"),
+  "Observed:\nTessaly Laine did not arrive in time to open the store today.\nExpectation:\nTessaly will arrive on time and be prepared to open.",
+  "Observed:\nTessaly Laine arrived after the scheduled opening time today.\nExpectation:\nTessaly is expected to arrive on time, prepared to open the store.",
+];
+
+
+/** What the stand-in models write in LIVE_DRY=1: the draft at Create, and the revision before each edit turn (in order). */
+export interface DryScript {
+  readonly draft: Record<string, string>;
+  readonly revisions: readonly Record<string, string>[];
+}
+
+export const DRY_SCRIPTS: Readonly<Record<string, DryScript>> = {
+  "ca-chain": {
+    draft: { observation: OBSERVATION_AFTER[0]! },
+    revisions: OBSERVATION_AFTER.slice(1).map((observation): Record<string, string> => (observation ? { observation } : {})),
+  },
+  /** The live script's create repeat: T1 → Create, the same draft as the CA chat. */
+  "create-repeat": { draft: { observation: OBSERVATION_AFTER[0]! }, revisions: [] },
+  "coaching-chain": {
+    draft: { coaching_details: DETAILS_LANE },
+    revisions: DETAILS_AFTER.map((coaching_details) => ({ coaching_details })),
+  },
+};
+
 export const LIVE_FAILURE_SCENARIOS: readonly LiveScenario[] = [
   { id: "ca-chain", roster: LIVE_ROSTER, field: "observation", steps: [{ say: CA_CHAIN[0] }, { create: true }, ...CA_CHAIN.slice(1).map((say) => ({ say }))] },
   { id: "coaching-chain", roster: LIVE_ROSTER, field: "coaching_details", steps: [{ say: COACHING_OPENING }, { create: true }, ...COACHING_CHAIN.map((say) => ({ say }))] },

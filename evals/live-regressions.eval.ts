@@ -3,7 +3,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { CA_CHAIN, LIVE_FAILURE_SCENARIOS, LIVE_ROSTER, NAME_SCENARIOS, type LiveScenario } from "@/app/api/chat/replay-pack/nov4-live-regressions-scenarios";
+import { CA_CHAIN, DRY_SCRIPTS, LIVE_FAILURE_SCENARIOS, LIVE_ROSTER, NAME_SCENARIOS, type LiveScenario } from "@/app/api/chat/replay-pack/nov4-live-regressions-scenarios";
 import { rosterResultFor } from "@/test/roster-result";
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 import type { AccessScope, ChatFormProposal, ChatMessage } from "@/types";
@@ -22,8 +22,21 @@ import type { AccessScope, ChatFormProposal, ChatMessage } from "@/types";
  *
  *   LIVE=1 npx vitest run --config vitest.eval.config.mts evals/live-regressions.eval.ts
  *
- * Without LIVE=1 every test is skipped and `vitest.eval.config.mts` leaves the
- * file out, so `npm run eval` and CI never load it.
+ * Without LIVE=1 or LIVE_DRY=1 every test is skipped and `vitest.eval.config.mts`
+ * leaves the file out, so `npm run eval` and CI never load it.
+ *
+ * LIVE_DRY=1 — THE SAME SCRIPT WITH NO NETWORK AND NO KEY:
+ *
+ *   LIVE_DRY=1 npx vitest run --config vitest.eval.config.mts evals/live-regressions.eval.ts
+ *
+ * The Anthropic client and the AI SDK call are replaced by stand-ins: the
+ * drafting and revision calls write the replay pack's scripted baseline
+ * texts (`DRY_SCRIPTS`), the answering call says "A grounded answer.", any
+ * other tool call returns no tool use (the caller's fallback). Every stand-in
+ * call goes through the same counter and cap. It proves the plumbing: each
+ * chain creates a draft, its edit turns reach the drafting and revision paths,
+ * the saved values are recorded, and the counter counts. Results go to
+ * evals/results/live-regressions.dry.{json,md}. LIVE=1 wins if both are set.
  *
  * MODES (env, read only with LIVE=1):
  *   LIVE_SCENARIOS=all|failures|names|none  which scenarios (default all: the
@@ -54,11 +67,13 @@ import type { AccessScope, ChatFormProposal, ChatMessage } from "@/types";
  */
 
 const LIVE = process.env.LIVE === "1";
+/** No network, no key: the stand-in models (see above). */
+const DRY = !LIVE && process.env.LIVE_DRY === "1";
 
 const live = vi.hoisted(() => {
   /** CLAUDE_READER_MODEL's default (src/lib/config/models.ts); checked against the module below. */
   const HAIKU = process.env.ANTHROPIC_READER_MODEL || "claude-haiku-5-5";
-  if (process.env.LIVE === "1") {
+  if (process.env.LIVE === "1" || process.env.LIVE_DRY === "1") {
     // This process only, before the app's model config is first imported.
     process.env.ANTHROPIC_MODEL = HAIKU;
     process.env.ANTHROPIC_HAIKU_MODEL = HAIKU;
@@ -69,19 +84,24 @@ const live = vi.hoisted(() => {
     CAP: 100,
     BASE_URL: "https://api.anthropic.com",
     calls: 0,
+    /** The calls by kind: draft (write_form_fields), revision (revise_form_fields), answer (text), tool (any other tool), patch (AI SDK). */
+    kinds: { draft: 0, revision: 0, answer: 0, tool: 0, patch: 0 } as Record<"draft" | "revision" | "answer" | "tool" | "patch", number>,
+    /** LIVE_DRY=1: what the stand-in drafting and revision models write next. */
+    dry: { draft: {} as Record<string, string>, revision: {} as Record<string, string> },
     capped: false,
     inputTokens: 0,
     outputTokens: 0,
     cacheReadTokens: 0,
     cacheWriteTokens: 0,
     /** One model call, counted before it is sent; past the cap nothing is sent. */
-    take(): void {
-      if (process.env.LIVE !== "1") throw new Error("live-regressions: a model call without LIVE=1");
+    take(kind: "draft" | "revision" | "answer" | "tool" | "patch"): void {
+      if (process.env.LIVE !== "1" && process.env.LIVE_DRY !== "1") throw new Error("live-regressions: a model call without LIVE=1 or LIVE_DRY=1");
       if (meter.calls >= meter.CAP) {
         meter.capped = true;
         throw new Error(`live-regressions: spend cap reached (${meter.CAP} model calls)`);
       }
       meter.calls += 1;
+      meter.kinds[kind] += 1;
     },
     add(usage: { input_tokens?: number | null; output_tokens?: number | null; cache_read_input_tokens?: number | null; cache_creation_input_tokens?: number | null } | null | undefined): void {
       if (!usage) return;
@@ -102,22 +122,42 @@ vi.mock("@/lib/ai/anthropic", async () => {
   const { default: Anthropic } = await import("@anthropic-ai/sdk");
   let client: InstanceType<typeof Anthropic> | null = null;
   const real = () => {
-    if (process.env.LIVE !== "1") throw new Error("live-regressions: a model call without LIVE=1");
+    if (process.env.LIVE !== "1") throw new Error("live-regressions: a real model call without LIVE=1");
     // The key from this process's environment, never logged; the base URL explicit; no retries.
     client ??= new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, baseURL: live.BASE_URL, maxRetries: 0 });
     return client;
   };
   type Body = Parameters<InstanceType<typeof Anthropic>["messages"]["create"]>[0];
   type Options = Parameters<InstanceType<typeof Anthropic>["messages"]["create"]>[1];
+  const kindOf = (body: unknown) => {
+    const tool = (body as { tool_choice?: { name?: string } }).tool_choice?.name;
+    return tool === "write_form_fields" ? "draft" : tool === "revise_form_fields" ? "revision" : tool ? "tool" : "answer";
+  };
+  /** LIVE_DRY=1: the stand-in's reply, as the SDK shapes it. */
+  const standIn = (body: unknown) => {
+    const kind = kindOf(body);
+    const usage = { input_tokens: 1, output_tokens: 1 };
+    if (kind === "draft") return { role: "assistant", model: live.HAIKU, stop_reason: "tool_use", content: [{ type: "tool_use", id: "dry-draft", name: "write_form_fields", input: { values: live.dry.draft } }], usage };
+    if (kind === "revision") return { role: "assistant", model: live.HAIKU, stop_reason: "tool_use", content: [{ type: "tool_use", id: "dry-revision", name: "revise_form_fields", input: { values: live.dry.revision } }], usage };
+    // The answer, and no tool use for any other tool: its caller's fallback, as when the model declines.
+    return { role: "assistant", model: live.HAIKU, stop_reason: "end_turn", content: [{ type: "text", text: kind === "answer" ? "A grounded answer." : "" }], usage };
+  };
+  const dry = () => process.env.LIVE !== "1" && process.env.LIVE_DRY === "1";
   const messages = {
     create: async (body: Body, options?: Options) => {
-      live.take();
-      const response = await real().messages.create({ ...body, model: live.HAIKU } as Body, { ...options, maxRetries: 0 });
+      live.take(kindOf(body));
+      const response = dry() ? standIn(body) : await real().messages.create({ ...body, model: live.HAIKU } as Body, { ...options, maxRetries: 0 });
       live.add((response as { usage?: Parameters<typeof live.add>[0] }).usage);
       return response;
     },
     stream: (body: Parameters<InstanceType<typeof Anthropic>["messages"]["stream"]>[0], options?: Options) => {
-      live.take();
+      live.take(kindOf(body));
+      if (dry()) {
+        const message = standIn(body);
+        live.add(message.usage);
+        const fake = { on: () => fake, finalMessage: async () => message };
+        return fake;
+      }
       const stream = real().messages.stream({ ...body, model: live.HAIKU }, { ...options, maxRetries: 0 });
       stream.finalMessage().then(
         (message) => live.add(message.usage),
@@ -136,10 +176,12 @@ vi.mock("@/lib/forms/form-patch-call", async (importOriginal) => {
     ...actual,
     callFormPatchModel: async (input: { system: string; prompt: string; schema: Record<string, unknown> }) => {
       try {
-        live.take();
+        live.take("patch");
       } catch {
         return { fallback: "error" as const };
       }
+      // LIVE_DRY=1: the stand-in falls back, so the turn runs the old path.
+      if (process.env.LIVE !== "1") return { fallback: "error" as const };
       try {
         const { generateObject, jsonSchema } = await import("ai");
         const { createAnthropic } = await import("@ai-sdk/anthropic");
@@ -308,6 +350,29 @@ function setFlags(extra: readonly string[]): () => void {
 
 /* ----------------------------------------------------------------- replay -- */
 
+/*
+ * THE OVERVIEW JOIN, as the replay pack's harness does it: the chat and the
+ * draft route read a form with its template's key and name
+ * (form_instance_overview); the in-memory store has no view, so each
+ * instance row is given them when it is written. Without it the open form
+ * has no name ("the open  for Marnie Quill") and the draft route finds no
+ * template, so Create saved nothing (the first LIVE=1 run, 4 Nov 2026).
+ */
+function joinOverview(): void {
+  for (const row of store.form_instances ?? []) {
+    const template = store.form_templates!.find((entry) => entry.id === row.template_id);
+    const version = store.form_template_versions.find((entry) => entry.id === row.template_version_id);
+    Object.assign(row, { template_key: template?.key, template_name: template?.name, layout_family: template?.layout_family, template_version: version?.version });
+  }
+}
+class JoiningRows extends Array<Record<string, unknown>> {
+  override push(...rows: Record<string, unknown>[]) {
+    const count = super.push(...rows);
+    joinOverview();
+    return count;
+  }
+}
+
 const TODAY = "2026-10-26";
 
 type Routes = {
@@ -376,17 +441,29 @@ interface PathRun {
   readonly fieldValue: string | null;
   readonly ms: number;
   readonly calls: number;
+  /** The calls by kind during this scenario. */
+  readonly kinds: Record<string, number>;
+  /** The form Create made (null: none). */
+  readonly instanceId: string | null;
+  /** Every saved value at the end. */
+  readonly saved: Record<string, string>;
   readonly error: string | null;
 }
 
 /** One scenario, every step through the real routes, with `flags` on top of production's. */
 async function runScenario(scenario: LiveScenario, extraFlags: readonly string[]): Promise<PathRun> {
   for (const key of Object.keys(store) as (keyof FakeStore)[]) store[key] = [];
+  store.form_instances = new JoiningRows() as never;
   actor.directory = [...scenario.roster];
   const restore = setFlags(extraFlags);
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date(`${TODAY}T15:30:00Z`));
   const callsBefore = live.calls;
+  const kindsBefore = { ...live.kinds };
+  const script = DRY_SCRIPTS[scenario.id];
+  live.dry.draft = script?.draft ?? {};
+  live.dry.revision = {};
+  let edits = 0;
   const started = performance.now();
   const messages: ChatMessage[] = [];
   const conversationId = routes.createId("conv");
@@ -401,7 +478,14 @@ async function runScenario(scenario: LiveScenario, extraFlags: readonly string[]
         if (!proposal) throw new Error("no card to create from");
         const result = await routes.createInlineForm({ proposal, messages, call, onCreated: () => {} });
         instanceId = toUuid(result.reference.instanceId);
+        const warnings = (result as { warnings?: unknown }).warnings;
+        if (Array.isArray(warnings) && warnings.length) turns.push({ said: "(Create)", reply: warnings.map(String).join(" "), updated: [], diff: {} });
         continue;
+      }
+      if (instanceId) {
+        // LIVE_DRY=1: the stand-in revision writes the next scripted text (the replay pack's `t.revisionWrites`).
+        live.dry.revision = script?.revisions[edits] ?? {};
+        edits += 1;
       }
       const before = values(instanceId);
       const id = `m${index}`;
@@ -446,6 +530,9 @@ async function runScenario(scenario: LiveScenario, extraFlags: readonly string[]
     fieldValue: scenario.field ? (saved[scenario.field] ?? null) : null,
     ms: Math.round(performance.now() - started),
     calls: live.calls - callsBefore,
+    kinds: Object.fromEntries(Object.entries(live.kinds).map(([kind, count]) => [kind, count - kindsBefore[kind as keyof typeof kindsBefore]])),
+    instanceId,
+    saved,
     error,
   };
 }
@@ -453,6 +540,8 @@ async function runScenario(scenario: LiveScenario, extraFlags: readonly string[]
 /* ---------------------------------------------------------------- results -- */
 
 const results: { id: string; oldPath: PathRun; newPath: PathRun | null }[] = [];
+/** The calls the create repeat made (counted in the same cap). */
+const repeatCalls = { value: 0 };
 const repeat: { off: { saved: string | null; losesQuill: boolean }[]; on: { saved: string | null; losesQuill: boolean }[] } = { off: [], on: [] };
 
 function scenarios(): readonly LiveScenario[] {
@@ -469,7 +558,9 @@ function writeResults(): void {
   mkdirSync("evals/results", { recursive: true });
   const spend = {
     model: live.HAIKU,
+    mode: DRY ? "dry (stand-in models, no network)" : "live",
     calls: live.calls,
+    kinds: live.kinds,
     cap: live.CAP,
     capped: live.capped,
     inputTokens: live.inputTokens,
@@ -478,30 +569,36 @@ function writeResults(): void {
     cacheWriteTokens: live.cacheWriteTokens,
   };
   const lostQuill = { off: repeat.off.filter((run) => run.losesQuill).length, on: repeat.on.filter((run) => run.losesQuill).length };
-  writeFileSync("evals/results/live-regressions.json", `${JSON.stringify({ ranAt: new Date().toISOString(), spend, createRepeat: { ...repeat, lostQuill }, scenarios: results }, null, 2)}\n`);
+  const base = DRY ? "evals/results/live-regressions.dry" : "evals/results/live-regressions";
+  writeFileSync(`${base}.json`, `${JSON.stringify({ ranAt: new Date().toISOString(), spend, createRepeat: { ...repeat, lostQuill }, scenarios: results }, null, 2)}\n`);
   const lines = [
-    "# Live regressions (regression set #1)",
+    `# Live regressions (regression set #1)${DRY ? " — DRY RUN, stand-in models" : ""}`,
     "",
-    `Model ${spend.model}; ${spend.calls}/${spend.cap} calls${spend.capped ? " (CAP REACHED: later calls were not sent)" : ""}; tokens in ${spend.inputTokens}, out ${spend.outputTokens} (cache read ${spend.cacheReadTokens}, write ${spend.cacheWriteTokens}).`,
+    `Model ${spend.model}; ${spend.calls}/${spend.cap} calls (draft ${spend.kinds.draft}, revision ${spend.kinds.revision}, answer ${spend.kinds.answer}, other tools ${spend.kinds.tool}, patch ${spend.kinds.patch})${spend.capped ? " (CAP REACHED: later calls were not sent)" : ""}; tokens in ${spend.inputTokens}, out ${spend.outputTokens} (cache read ${spend.cacheReadTokens}, write ${spend.cacheWriteTokens}).`,
     "",
   ];
   if (repeat.off.length || repeat.on.length) {
     lines.push(`Create repeat ("${CA_CHAIN[0]}" → Create): Observation loses "Quill" in ${lostQuill.off}/${repeat.off.length} with Step B OFF, ${lostQuill.on}/${repeat.on.length} with Step B ON.`, "");
   }
-  lines.push("| Case | Old path reply | Saved diff (last turn) | Card | ms | calls | New path |", "|---|---|---|---|---|---|---|");
+  lines.push("| Case | Draft created | Edit turns that changed the form | Old path reply | Saved diff (last turn) | Card | ms | calls (draft/revision) | New path |", "|---|---|---|---|---|---|---|---|---|");
   for (const { id, oldPath, newPath } of results) {
     const last = oldPath.turns.at(-1);
     const changed = last ? Object.entries(last.diff).map(([key, value]) => `${key}: ${value.after}`).join("; ") : "";
     const card = oldPath.card ? `${oldPath.card.templateKey ?? "?"} / ${oldPath.card.employeeName ?? "—"}` : "—";
     const fresh = newPath ? cell(newPath.error ?? newPath.reply) : "not available yet";
-    lines.push(`| ${id} | ${cell(oldPath.error ? `ERROR ${oldPath.error}` : oldPath.reply)} | ${cell(changed || "—")} | ${cell(card)} | ${oldPath.ms} | ${oldPath.calls} | ${fresh} |`);
+    const created = oldPath.instanceId ? "yes" : "no";
+    const editTurns = oldPath.turns.filter((turn) => turn.said !== "(Create)").slice(1);
+    const edited = oldPath.instanceId ? `${editTurns.filter((turn) => Object.keys(turn.diff).length > 0).length}/${editTurns.length}` : "—";
+    lines.push(
+      `| ${id} | ${created} | ${edited} | ${cell(oldPath.error ? `ERROR ${oldPath.error}` : oldPath.reply)} | ${cell(changed || "—")} | ${cell(card)} | ${oldPath.ms} | ${oldPath.calls} (${oldPath.kinds.draft}/${oldPath.kinds.revision}) | ${fresh} |`,
+    );
   }
-  writeFileSync("evals/results/live-regressions.md", `${lines.join("\n")}\n`);
+  writeFileSync(`${base}.md`, `${lines.join("\n")}\n`);
 }
 
 /* ------------------------------------------------------------------ tests -- */
 
-describe.skipIf(!LIVE)("live regressions (LIVE=1 only)", () => {
+describe.skipIf(!LIVE && !DRY)("live regressions (LIVE=1, or LIVE_DRY=1 with stand-ins)", () => {
   beforeAll(async () => {
     // Production's flags before the first import: some are read once, when a module loads.
     for (const flag of PRODUCTION) process.env[flag] = "true";
@@ -522,8 +619,9 @@ describe.skipIf(!LIVE)("live regressions (LIVE=1 only)", () => {
     writeResults();
   });
 
-  it.runIf(process.env.LIVE_CREATE_REPEAT === "1")("the same Corrective Action, created 5 times with Step B off and 5 times on: does the Observation keep \"Marnie Quill\"?", async () => {
+  it.runIf(process.env.LIVE_CREATE_REPEAT === "1" || DRY)("the same Corrective Action, created 5 times with Step B off and 5 times on: does the Observation keep \"Marnie Quill\"?", async () => {
     const create: LiveScenario = { id: "create-repeat", roster: LIVE_ROSTER, field: "observation", steps: [{ say: CA_CHAIN[0] }, { create: true }] };
+    const before = live.calls;
     for (const group of ["off", "on"] as const) {
       for (let run = 0; run < 5 && !live.capped; run += 1) {
         const result = await runScenario(create, group === "on" ? STEP_B_FLAGS : []);
@@ -531,6 +629,9 @@ describe.skipIf(!LIVE)("live regressions (LIVE=1 only)", () => {
         repeat[group].push({ saved, losesQuill: !(saved ?? "").includes("Marnie Quill") });
       }
     }
+    repeatCalls.value = live.calls - before;
+    // Every create saved an Observation: a null is the harness failing, not the model dropping "Quill".
+    expect(repeat.off.concat(repeat.on).filter((run) => run.saved === null).length, "a create saved no Observation").toBe(0);
   });
 
   it("every scenario through the real chat route, old path (and the new path with LIVE_NEW_PATH=1)", async () => {
@@ -540,6 +641,25 @@ describe.skipIf(!LIVE)("live regressions (LIVE=1 only)", () => {
       const newPath = process.env.LIVE_NEW_PATH === "1" && !live.capped ? await runScenario(scenario, NEW_PATH_FLAGS) : null;
       results.push({ id: scenario.id, oldPath, newPath });
     }
+    if (!DRY) return;
+    /*
+     * LIVE_DRY=1 PROVES THE PLUMBING: each chain creates a draft from the
+     * stand-in drafting call, its edit turns reach the revision path and save
+     * what the stand-in wrote, and the counter counts the stand-in calls.
+     */
+    for (const { id, oldPath } of results) {
+      expect(oldPath.error, `${id}: ${oldPath.error}`).toBeNull();
+      // A turn the app answers in code (the street address, the Jane Doe card) makes no model call.
+      if (!(id in DRY_SCRIPTS)) continue;
+      expect(oldPath.calls, `${id}: the counter counted no stand-in call`).toBeGreaterThan(0);
+      expect(oldPath.instanceId, `${id}: Create made no form`).not.toBeNull();
+      expect(oldPath.kinds.draft, `${id}: Create never reached the drafting call`).toBeGreaterThan(0);
+      expect(oldPath.kinds.revision, `${id}: no edit turn reached the revision call`).toBeGreaterThan(0);
+      expect(oldPath.fieldValue ?? "", `${id}: no saved ${oldPath.field}`).not.toBe("");
+      const editTurns = oldPath.turns.filter((turn) => turn.said !== "(Create)").slice(1);
+      expect(editTurns.some((turn) => Object.keys(turn.diff).length > 0), `${id}: no edit turn changed the saved form`).toBe(true);
+    }
+    expect(live.calls, "the counter is the sum of the scenarios' calls").toBe(results.reduce((sum, run) => sum + run.oldPath.calls, 0) + repeatCalls.value);
   });
 });
 

@@ -7,7 +7,8 @@ import { configDefaults, defineConfig } from "vitest/config";
  * route.
  *
  * `evals/live-regressions.eval.ts` calls the real model: it is left out unless
- * LIVE=1 is set, so `npm run eval` (and CI) never loads it.
+ * LIVE=1 (or its no-network LIVE_DRY=1) is set, so `npm run eval` (and CI)
+ * never loads it.
  */
 export default defineConfig({
   resolve: {
@@ -20,7 +21,7 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["evals/**/*.eval.ts"],
-    exclude: [...configDefaults.exclude, ...(process.env.LIVE === "1" ? [] : ["evals/live-regressions.eval.ts"])],
+    exclude: [...configDefaults.exclude, ...(process.env.LIVE === "1" || process.env.LIVE_DRY === "1" ? [] : ["evals/live-regressions.eval.ts"])],
     restoreMocks: true,
     fileParallelism: false,
   },

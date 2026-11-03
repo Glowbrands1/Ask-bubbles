@@ -1,7 +1,21 @@
 import { expect } from "vitest";
 
 import { WEST_DODGE, claimsFormChange, noClaimWithoutUpdate, replyMatchesDiff, savedForm, type ReplayAnswer, type ReplayCase, type ReplayContext, type ReplayThread } from "./cases";
-import { CA_CHAIN, COACHING_CHAIN, COACHING_OPENING, JANE_DOE, LIVE_ROSTER, NAME, NAME_WORDINGS, at, nameRoster, type NameWording } from "./nov4-live-regressions-scenarios";
+import {
+  CA_CHAIN,
+  COACHING_CHAIN,
+  COACHING_OPENING,
+  DETAILS_AFTER,
+  DETAILS_LANE,
+  JANE_DOE,
+  LIVE_ROSTER,
+  NAME,
+  NAME_WORDINGS,
+  OBSERVATION_AFTER,
+  at,
+  nameRoster,
+  type NameWording,
+} from "./nov4-live-regressions-scenarios";
 
 /**
  * ============================================================================
@@ -76,7 +90,8 @@ const REPORT = "QA's Step B flip test, 3–4 Nov 2026 (Step B live, then rolled 
 /* ---------------------------------------------------- the CA chat, T1–T6 -- */
 
 /*
- * THE BASELINE TEXTS (flags off, live), which the scripted models reproduce:
+ * THE BASELINE TEXTS (flags off, live), which the scripted models reproduce
+ * (`OBSERVATION_AFTER` in the scenarios file, shared with LIVE_DRY=1):
  *   T1 Create   "Observed: Marnie Quill was late to open on October 20, 2026. Expectation: An em…"
  *   T2          "Marnie Quill-Hart was late to open on October 20, 2026…" (employee_name stays "Marnie Quill": she is not on the directory)
  *   T3          "… on October 20, 2026, and was also late on Tuesday."
@@ -84,18 +99,6 @@ const REPORT = "QA's Step B flip test, 3–4 Nov 2026 (Step B live, then rolled 
  *   T5          no change
  *   T6          "Marnie must also practice the sanitizing checklist every shift." (lower case, as live in both runs)
  */
-const T1_LATE = "Marnie Quill was late to open on October 20, 2026.";
-const EXPECTATION = "\nExpectation:\nAn employee scheduled to open is expected to arrive on time and have the store ready to open.";
-const OBSERVATION_AFTER: readonly (string | null)[] = [
-  `Observed:\n${T1_LATE}${EXPECTATION}`,
-  `Observed:\nMarnie Quill-Hart was late to open on October 20, 2026.${EXPECTATION}`,
-  `Observed:\nMarnie Quill-Hart was late to open on October 20, 2026, and was also late on Tuesday.${EXPECTATION}`,
-  `Observed:\nMarnie Quill-Hart was late to open on October 20, 2026, and was also late on Tuesday. Daily stats show 3 of 4 shifts on time.${EXPECTATION}`,
-  // T5: the revision writes nothing.
-  null,
-  `Observed:\nMarnie Quill-Hart was late to open on October 20, 2026, and was also late on Tuesday. Daily stats show 3 of 4 shifts on time. Marnie must also practice the sanitizing checklist every shift.${EXPECTATION}`,
-];
-
 /** Turn k's own outcome (1-based), on the saved values and the reply. */
 const CA_TURN_CHECK: Readonly<Record<number, (values: Record<string, string>, reply: ReplayAnswer, changed: boolean) => void>> = {
   1: (values) => {
@@ -232,13 +235,6 @@ const STEP_B_CASES: readonly ReplayCase[] = [
 ];
 
 /* ------------------------------------------------- the coaching chat, C1–C3 -- */
-
-const DETAILS_LANE = "Observed:\nTessaly Lane was late to open the store today.\nExpectation:\nTessaly is expected to arrive on time and be ready to open.";
-const DETAILS_AFTER = [
-  DETAILS_LANE.replace("Tessaly Lane", "Tessaly Laine"),
-  "Observed:\nTessaly Laine did not arrive in time to open the store today.\nExpectation:\nTessaly will arrive on time and be prepared to open.",
-  "Observed:\nTessaly Laine arrived after the scheduled opening time today.\nExpectation:\nTessaly is expected to arrive on time, prepared to open the store.",
-];
 
 async function coachingChat(t: T, upTo: number): Promise<void> {
   t.directory(LIVE_ROSTER);
