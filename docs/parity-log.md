@@ -52,6 +52,15 @@ short-name reader, ported back here under STAFF_PICKER_REMEMBER_LOCATION),
 and keep-filled-slots dropped the team label — Sunny-only, this app has no
 keep-filled-slots.
 
+## 3 Nov 2026: with a draft open, a turn about it goes to it — ported from the sibling app (e8e3ee1) (OPEN_DRAFT_KEEPS_TURNS_ENABLED, default off)
+
+Found in the sibling app (the 2 Nov scan): a draft typed on by hand, then
+"underperformance for the month of october" offered a new card whose Create
+made a second draft, and that one was finalized. Replayed here with this
+app's production flags it already holds (and so does the case where a metric
+was read as another person), so the flag is ported for the same mechanism in
+both apps; replay-pack cases nov2-p1a and nov2-p1b hold here.
+
 ## 25 Oct 2026: the framework's sections are not pinned into governed drafts — Bubbles-only
 
 `FRAMEWORK_UNPIN_ENABLED` defaults off. The uploaded Performance Management

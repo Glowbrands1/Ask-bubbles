@@ -384,7 +384,7 @@ async function postChat(request: Request) {
        * edit. Rewritten into one it does, and revised by the same path. See
        * `lib/forms/form-content-turn.ts`.
        */
-      const revision =
+      const plainRevision =
         askedRevision ??
         (formEditPlainWordsEnabled() && !sameCopy && !correction && !policyChange && !redraft && !separateDocument && parsed.activeFormInstanceId
           ? await (async () => {
@@ -419,6 +419,22 @@ async function postChat(request: Request) {
               }
               return revised;
             })()
+          : null);
+      /*
+       * OPEN_DRAFT_KEEPS_TURNS_ENABLED: with a draft open, a turn about it that
+       * no path above read is content for that draft — never a new card. See
+       * `lib/forms/open-draft-turn.ts`.
+       */
+      const revision =
+        plainRevision ??
+        (!sameCopy && !correction && !askedQuestion && !policyChange && !redraft && !separateDocument && parsed.activeFormInstanceId
+          ? await (await import("@/lib/forms/open-draft-turn")).openDraftTurn({
+              request,
+              instanceId: parsed.activeFormInstanceId,
+              question: parsed.question,
+              history: parsed.history,
+              today: parsed.context.todayIso,
+            })
           : null);
       /*
        * Two forms from one message, and a correction that names neither: ask

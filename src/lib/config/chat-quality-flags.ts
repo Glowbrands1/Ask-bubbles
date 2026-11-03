@@ -884,6 +884,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "CHAT_IMPORT_PROVEN_OWN_ENABLED",
   "FORM_EDIT_PLAIN_WORDS_ENABLED",
   "FORM_EDIT_HONEST_REPLY_ENABLED",
+  "OPEN_DRAFT_KEEPS_TURNS_ENABLED",
   "FORM_EDIT_REFERS_BACK_ENABLED",
   "ANGLE_PLACEHOLDER_GUARD_ENABLED",
   "REVISION_SAME_VALUE_ENABLED",
@@ -1735,6 +1736,17 @@ export function formEditPlainWordsEnabled(): boolean {
  */
 export function formEditHonestReplyEnabled(): boolean {
   return envFlag("FORM_EDIT_HONEST_REPLY_ENABLED");
+}
+
+/**
+ * With a draft open, a turn that names no form, no other person and is not a
+ * question is content for that draft — never a new card (the sibling app's
+ * 2 Nov 2026 scan: a Corrective Action's next message started a new draft
+ * without what the manager had typed, and that one was finalized; same flag in
+ * both apps). See `forms/open-draft-turn.ts`. Off, as before.
+ */
+export function openDraftKeepsTurnsEnabled(): boolean {
+  return envFlag("OPEN_DRAFT_KEEPS_TURNS_ENABLED");
 }
 
 /**
