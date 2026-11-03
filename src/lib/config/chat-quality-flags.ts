@@ -895,6 +895,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "POLICY_CHANGE_REST_OF_TURN_ENABLED",
   "OPEN_FORM_NO_SELECTION_ENABLED",
   "ANGLE_PLACEHOLDER_GUARD_ENABLED",
+  "FORM_PLACEHOLDER_WORDS_ENABLED",
   "REVISION_SAME_VALUE_ENABLED",
   "SAME_FORM_COPY_ENABLED",
   "STAFF_PICKER_ENABLED",
@@ -2273,4 +2274,16 @@ export function rosterStoreScopedEnabled(): boolean {
  */
 export function formEditNameGateRosterEnabled(): boolean {
   return envFlag("FORM_EDIT_NAME_GATE_ROSTER_ENABLED");
+}
+
+/**
+ * "TBD", "TBA", "TBC", "to be determined", "to be confirmed" in a drafted field
+ * are placeholders like `[Follow-Up Date]`: the sentence carrying one is left
+ * out, and a field that was only that is left empty for the manager (master
+ * plan step 5, 3 Nov 2026; same flag in both apps). "N/A" is one only as the
+ * whole value of a field the model wrote, never on a payroll or prior-actions
+ * field. See `forms/drafted-text.ts`. Off, as before.
+ */
+export function formPlaceholderWordsEnabled(): boolean {
+  return envFlag("FORM_PLACEHOLDER_WORDS_ENABLED");
 }
