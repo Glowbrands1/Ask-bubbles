@@ -1236,3 +1236,13 @@ and no other form's intake is asking; and on a team card, lines that only
 name the audience are not handed to the drafting model (with nothing else, it
 is told nothing is described yet). Ported from the sibling app (8f66ee1),
 same flag.
+
+## 3 Nov 2026: with her draft open, a new request for her is a new card — ported from the sibling app (NEW_REQUEST_OPEN_DRAFT_ENABLED, default off)
+
+Found in the sibling app (QA live check, 3 Nov 2026): "make me a CA for
+<name> for being late to opening this morning", sent before the open draft's
+first values were saved, was redrafted into that draft. Here QA's live run
+was correct, but the same race reproduces in the replay pack
+(nov3-open-draft-new-request, `draftNotYetSaved`); the same flag and
+mechanism. Create for the new card still reuses the open draft here until
+DRAFT_REUSE_NEW_REQUEST is on (nov2-p2).

@@ -902,6 +902,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ROSTER_STORE_SCOPED_ENABLED",
   "STAFF_PICKER_BARE_ANSWER_ENABLED",
   "WHOLE_TEAM_COACHING_ENABLED",
+  "NEW_REQUEST_OPEN_DRAFT_ENABLED",
   "TEAM_CARD_WORDING_ENABLED",
   "STAFF_PICKER_REMEMBER_LOCATION_ENABLED",
   "SHARED_LOGIN_NOT_STAFF_ENABLED",
@@ -1966,6 +1967,18 @@ export function staffPickerBareAnswerEnabled(): boolean {
  */
 export function wholeTeamCoachingEnabled(): boolean {
   return envFlag("WHOLE_TEAM_COACHING_ENABLED");
+}
+
+/**
+ * With a draft open, "make me a CA for <the same person> for being late to
+ * opening this morning" — a request for a form, for that person, mostly about
+ * something not said before — is a new card, and the open draft is not
+ * touched (QA live check in the sibling app, 3 Nov 2026: the open draft was
+ * redrafted from both incidents; the same race reproduces here). See
+ * `forms/new-request-open-draft.ts`. Off, as before.
+ */
+export function newRequestOpenDraftEnabled(): boolean {
+  return envFlag("NEW_REQUEST_OPEN_DRAFT_ENABLED");
 }
 
 /**
