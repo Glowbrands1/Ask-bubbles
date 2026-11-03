@@ -901,6 +901,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "OPEN_FORM_NO_SELECTION_ENABLED",
   "ANGLE_PLACEHOLDER_GUARD_ENABLED",
   "FORM_PLACEHOLDER_WORDS_ENABLED",
+  "FIRST_NAME_YES_KEEPS_REQUEST_ENABLED",
   "REVISION_SAME_VALUE_ENABLED",
   "SAME_FORM_COPY_ENABLED",
   "STAFF_PICKER_ENABLED",
@@ -2302,4 +2303,13 @@ export function formEditNameGateRosterEnabled(): boolean {
  */
 export function formPlaceholderWordsEnabled(): boolean {
   return envFlag("FORM_PLACEHOLDER_WORDS_ENABLED");
+}
+
+/**
+ * "Yes" to "Is this for <name>?" keeps the form request the manager made in a
+ * later turn than the one that gave the first name (replay set b2, 3 Nov 2026;
+ * same flag in both apps). See `ai/first-name-suggest.ts`. Off, as before.
+ */
+export function firstNameYesKeepsRequestEnabled(): boolean {
+  return envFlag("FIRST_NAME_YES_KEEPS_REQUEST_ENABLED");
 }
