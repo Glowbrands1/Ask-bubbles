@@ -34,6 +34,12 @@ that uses **their exact wording** (see `src/app/api/forms/hr-feedback-oct21-foll
 and `src/lib/ai/form-intake-qa-*.test.ts`). Prove it fails before the fix and
 passes after.
 
+Also add the report as a case in the replay pack
+(`src/app/api/chat/replay-pack/`): it runs the real chat route with
+production's flags (`src/config/production-flags.json`) and asserts
+invariants, so a fix that misses the path production takes fails CI. When QA
+flips a production flag, update that file in the same pull request.
+
 ## 3. Before pushing
 
 ```bash
