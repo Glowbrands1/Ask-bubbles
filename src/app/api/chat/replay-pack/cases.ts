@@ -42,6 +42,14 @@ export interface ReplayContext {
   revisionWrites(values: Record<string, string>): void;
   /** What the answering model says on its next turns (null: the default answer). */
   modelSays(text: string | null): void;
+  /**
+   * FORM_EDIT_TOOL_IN_STREAM_ENABLED: on its next turn that is offered
+   * `edit_form`, the answering model calls it with this input (null: it does
+   * not). Its text that turn is `modelSays`'s.
+   */
+  modelCallsEditTool?(input: unknown | null): void;
+  /** FORM_EDIT_TOOL_IN_STREAM_ENABLED: how many answering calls were offered `edit_form`, and its DATA block on the last. */
+  editToolOffers?(): { offered: number; lastData: string | null };
   /** Step B's form-patch model: its raw outputs, one per call in order (null: the call falls back). Unscripted calls fall back. */
   patchWrites(outputs: readonly unknown[]): void;
   calls(): { chat: number; draft: number; revision: number; tool: number; patch: number };

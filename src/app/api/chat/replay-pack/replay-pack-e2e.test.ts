@@ -148,6 +148,8 @@ vi.mock("@/lib/analytics/record", async (importOriginal) => ({
 const ANSWER = "A grounded answer from the policy manual.";
 /** What the answering model says this turn, when a case sets it. */
 const said = { answer: null as string | null };
+/** FORM_EDIT_TOOL_IN_STREAM_ENABLED: the edit_form call the answering model makes next, and the offers it saw. */
+const editTool = { input: null as unknown, offered: 0, lastData: null as string | null };
 
 vi.mock("@/lib/ai/call-claude", () => ({
   /*
@@ -169,8 +171,17 @@ vi.mock("@/lib/ai/call-claude", () => ({
       usage: { inputTokens: 10, outputTokens: 5, cacheReadTokens: 0, cacheWriteTokens: 0 },
     };
   },
-  callClaude: async () => {
+  callClaude: async (input?: { formEditTool?: { data: string; onToolUse: (call: unknown) => void } | null }) => {
     state.chatModelCalls += 1;
+    if (input?.formEditTool) {
+      editTool.offered += 1;
+      editTool.lastData = input.formEditTool.data;
+      if (editTool.input !== null) {
+        const call = editTool.input;
+        editTool.input = null;
+        input.formEditTool.onToolUse(call);
+      }
+    }
     return said.answer ?? ANSWER;
   },
   callClaudeTool: async (input: { tool?: { name?: string }; messages?: { content?: unknown }[] }) => {
@@ -550,6 +561,9 @@ afterEach(() => {
   setScope(undefined);
   setRole(undefined);
   said.answer = null;
+  editTool.input = null;
+  editTool.offered = 0;
+  editTool.lastData = null;
   draftAsked.length = 0;
 });
 
@@ -572,6 +586,10 @@ function context(): ReplayContext {
     modelSays: (text) => {
       said.answer = text;
     },
+    modelCallsEditTool: (input) => {
+      editTool.input = input;
+    },
+    editToolOffers: () => ({ offered: editTool.offered, lastData: editTool.lastData }),
     patchWrites: (outputs) => {
       patchScript.outputs = [...outputs];
       patchScript.calls = 0;
