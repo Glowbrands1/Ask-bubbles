@@ -3,9 +3,9 @@ import { expect } from "vitest";
 import { STAFF, type ReplayCase } from "./cases";
 
 /**
- * Ask Sunny's replay set s21, in this app's words (3 Nov 2026; invented
+ * The sibling app's replay set s21, in this app's words (3 Nov 2026; invented
  * people): the manager names the employee's PRIMARY store, then the store the
- * incident happened at. Ask Sunny's card took the primary store and is fixed
+ * incident happened at. The sibling app's card took the primary store and is fixed
  * there behind PRIMARY_SALON_NOT_EDIT_ENABLED. This app has no reading of
  * "store is X" as a store edit, so no flag is ported (Pau, 3 Nov 2026, master
  * plan v4, option b); this case pins that the card never takes the primary
@@ -19,7 +19,7 @@ export const NOV3_PRIMARY_STORE_CASES: readonly ReplayCase[] = [
     id: "nov3-s21-primary-store-not-card-store",
     title: "\"primary store is X … working a shift at Y\": the card never takes X",
     report:
-      "Ask Sunny replay set s21, this app's words: \"Put together a written CA for <name>, primary store is <store X>. But on Monday 10/05/2026 <name> was working a shift at <store Y> and did not complete …\"",
+      "The sibling app's replay set s21, this app's words: \"Put together a written CA for <name>, primary store is <store X>. But on Monday 10/05/2026 <name> was working a shift at <store Y> and did not complete …\"",
     status: "fixed",
     async run(t) {
       t.directory([
