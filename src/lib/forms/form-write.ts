@@ -221,6 +221,7 @@ export function protectedValuesFor(loaded: LoadedInstance, latest: string, today
     amountsIn: (text) => payrollAmounts(text).map(Number),
     latest,
     named,
+    formDate: loaded.instance.formDate ?? null,
     // A line whose whole value is the one fact being corrected: a date, the header lines, an amount, a box, a list.
     skip: new Set([...dateKeysOf(loaded), ...HEADER_KEYS, ...MANAGER_STATED_KEYS, ...Object.keys(groups), PRIOR_ACTIONS_KEY]),
   };
@@ -230,7 +231,9 @@ export function protectedValuesFor(loaded: LoadedInstance, latest: string, today
 export function presetRules(loaded: LoadedInstance, ops: readonly FormEditOp[], rules: FormEditRules): { patchRules: PatchRules; writable: ReadonlySet<string> } {
   const today = rules.today ?? businessToday();
   const latest = rules.latest ?? "";
-  const guard = protectedValuesFor(loaded, latest, today, rules.named);
+  // A draft is written from all of the manager's notes: on a draft path they are what names a value that may change.
+  const drafts = !["correction", "reopen", "patch", "tool", "revision"].includes(rules.path);
+  const guard = protectedValuesFor(loaded, drafts ? [latest, rules.notes ?? ""].join("\n") : latest, today, rules.named);
   const writeIns = writeInsOf(loaded);
   const groups = groupsOf(loaded);
   const lists = new Set([PRIOR_ACTIONS_KEY]);
@@ -414,10 +417,15 @@ export async function writeFormEdits(instanceId: string, ops: readonly FormEditO
   for (const op of derivedOps) {
     const field = before[op.field];
     const value: FieldValue = op.op === "clear" ? (typeof field?.value === "string" || field === undefined ? "" : []) : (op.value ?? "");
-    if (sameValue(field?.value, value)) continue;
+    // The same words with new provenance (a policy line re-verified against the manual) is still a write, as before.
+    const stamp = loaded.values.find((row) => row.fieldKey === op.field)?.provenance ?? {};
+    const restamped = op.provenance !== undefined && JSON.stringify(op.provenance) !== JSON.stringify(stamp);
+    if (sameValue(field?.value, value) && !restamped) continue;
     const typed = field?.owner === "manager";
     const writer = writerOf(op);
-    if (typed && writer !== "manager" && writer !== "statement") {
+    // The draft route's own decision for a key outside the reducer (a derived policy line, the plan it builds) stands, as before.
+    const routeDecides = rules.path === "redraft" && !op.derived;
+    if (typed && writer !== "manager" && writer !== "statement" && !routeDecides) {
       if (isClearValue(value)) {
         refused.push({ key: op.field, reason: "would_blank" });
         continue;
@@ -475,7 +483,8 @@ export async function writeFormEdits(instanceId: string, ops: readonly FormEditO
     const saved = await saveInstanceValues(instanceId, buckets.manager, rules.actorId);
     rejected.push(...saved.rejected);
     const refusedKeys = new Set(saved.rejected.map((entry) => entry.key));
-    for (const [key, value] of Object.entries(saved.values)) if (key in buckets.manager.values && !refusedKeys.has(key)) accepted.values[key] = value;
+    // What the save stored (its required closing re-attached), else what was sent.
+    for (const [key, value] of Object.entries(buckets.manager.values)) if (!refusedKeys.has(key)) accepted.values[key] = saved.values?.[key] ?? value;
     for (const [key, value] of Object.entries(buckets.manager.checked)) if (!refusedKeys.has(key)) accepted.checked[key] = value;
   }
   if (count(buckets.assistant_revision) + cleared.length > 0) {

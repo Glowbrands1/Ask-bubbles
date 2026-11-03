@@ -170,6 +170,11 @@ export interface ProtectedValues {
   readonly named?: readonly string[];
   /** Keys whose whole value is one such fact being corrected (a date line, the name line, an amount line): not checked. */
   readonly skip?: ReadonlySet<string>;
+  /**
+   * The form's own Date line as it stands (ISO). A text rewritten to this date
+   * may drop another one: the form's date moved, and the text follows it.
+   */
+  readonly formDate?: string | null;
 }
 
 /* ------------------------------------------------------------- text ---- */
@@ -316,7 +321,13 @@ function keepsProtected(key: string, old: string, next: string, rules: PatchRule
   }
   const nextDates = new Set(guard.datesIn(next));
   const latestDates = new Set(guard.datesIn(guard.latest));
-  for (const date of guard.datesIn(old)) if (!nextDates.has(date) && !latestDates.has(date)) return false;
+  const followsFormDate = Boolean(guard.formDate) && nextDates.has(guard.formDate!);
+  for (const date of guard.datesIn(old)) {
+    if (nextDates.has(date) || latestDates.has(date)) continue;
+    // The text moved to the form's current Date line (the form's date changed): the old day may go.
+    if (followsFormDate && date !== guard.formDate) continue;
+    return false;
+  }
   const nextAmounts = new Set(guard.amountsIn(next));
   const latestAmounts = new Set(guard.amountsIn(guard.latest));
   for (const amount of guard.amountsIn(old)) if (!nextAmounts.has(amount) && !latestAmounts.has(amount)) return false;

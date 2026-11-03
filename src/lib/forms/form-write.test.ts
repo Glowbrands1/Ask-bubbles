@@ -203,6 +203,35 @@ describe("writeFormEdits: split by owner into the existing writers, then the sav
   });
 });
 
+describe("classification fixes (flag on): what the old writer did that the one writer must keep", () => {
+  it("the redraft's own decision for a key outside the reducer stands over a typed line (revision-5: the Action Plan the route builds)", async () => {
+    put("job_title", "Typed by her", "manager");
+    const { draftWrite } = await import("./form-write");
+    const out = await draftWrite("inst-1", { values: { job_title: "Built by the route" } }, "qa", {}, { path: "redraft", notes: "x" });
+    expect(out.result.handoff).toBeNull();
+    expect(rows.calls).toEqual(["applyAssistantDraft:job_title"]);
+  });
+
+  it("the same words with new provenance are still written (Q18: a policy line re-verified against the manual)", async () => {
+    put("job_title", "Same words", "ai", { ownerConfirmed: null });
+    const { draftWrite } = await import("./form-write");
+    const out = await draftWrite("inst-1", { values: { job_title: "Same words" } }, "qa", { job_title: { ownerConfirmed: true } }, { path: "redraft", notes: "x" });
+    expect(out.result.handoff).toBeNull();
+    expect(rows.list.find((row) => row.fieldKey === "job_title")?.provenance).toEqual({ ownerConfirmed: true });
+  });
+
+  it("on a draft path the manager's notes name what may change (same-form-copy: \"Coaching for Remy Calder.\" → her own account)", async () => {
+    put("employee_name", "Remy Calder", "system");
+    put("coaching_details", "Observed:\nCoaching for Remy Calder.", "ai");
+    const { draftWrite } = await import("./form-write");
+    const notes = "create a coaching form for remy calder\n\nShe was late again today, same thing as last week";
+    const instance = form();
+    (instance.instance as { employeeName: string }).employeeName = "Remy Calder";
+    const out = await draftWrite("inst-1", { values: { coaching_details: "Observed:\nRemy was late again today." } }, "qa", {}, { path: "redraft", notes, loaded: instance });
+    expect(out.result.refused).toEqual([]);
+  });
+});
+
 describe("writeRevisionEdits (2b; built, not wired)", () => {
   it("keeps applyAssistantRevision's return shape and accepts a rewrite that keeps the protected values", async () => {
     const { writeRevisionEdits } = await import("./form-write");

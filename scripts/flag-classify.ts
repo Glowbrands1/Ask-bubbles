@@ -194,6 +194,13 @@ function main(): void {
     });
   }
 
+  /* A REGRESSION classified earlier and fixed since: listed, so the table keeps its record. */
+  const listed = new Set(rows.map((row) => row.test));
+  for (const [test, known] of Object.entries(classes)) {
+    if (known.category !== "REGRESSION" || listed.has(test)) continue;
+    rows.push({ test, off: "passed", on: "passed (fixed)", category: "REGRESSION", twin: known.twin ?? "", reason: known.reason });
+  }
+
   const counts = new Map<Category, number>();
   for (const row of rows) counts.set(row.category, (counts.get(row.category) ?? 0) + 1);
   const cell = (text: string) => text.split("|").join("\\|").split("\n").join(" ");

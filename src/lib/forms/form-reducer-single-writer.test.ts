@@ -232,4 +232,12 @@ describe("protectedValues: a whole-text rewrite keeps the header's name, every d
   it("absent: unchanged", () => {
     expect(rewrite("The employee was short.", "make it sound more professional", false).refused).toEqual([]);
   });
+
+  it("a text rewritten to the form's current Date line may drop the old day (classification, qa-oct21: the manager moved the Date on the card)", () => {
+    const moved: PatchRules = { ...rules("marlo opened the store late"), protectedValues: { ...rules("marlo opened the store late").protectedValues!, formDate: "2026-10-03" } };
+    const to = (value: string) => applyPatch(DRAFT, { set: { details: value }, clear: [] }, moved).diff.refused;
+    expect(to("Marnie was short at the register by $25 at close on October 3, 2026.")).toEqual([]);
+    // Dropped for no reason, the date is still protected.
+    expect(to("Marnie was short at the register by $25 at close.")).toEqual([{ key: "details", reason: "drops_protected_value" }]);
+  });
 });
