@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import * as savedFormsModule from "@/test/forms/saved-form-instances";
+
 import { parseFormDocument } from "@/lib/forms/document";
 import { TEMPLATE_SEEDS } from "@/lib/forms/library";
 
@@ -103,25 +105,37 @@ vi.mock("@/lib/knowledge", () => ({
   },
 }));
 
-vi.mock("@/lib/forms/instances", () => ({
-  applyAssistantDraft: async (
-    _id: string,
-    draft: { values: Record<string, string>; checked: Record<string, string[]> },
-    _actor: string,
-    provenance: Record<string, Record<string, unknown>> = {},
-  ) => {
-    state.persisted.push({
-      values: draft.values ?? {},
-      checked: draft.checked ?? {},
-      provenance,
-    });
-    return {
-      accepted: { values: draft.values ?? {}, checked: draft.checked ?? {} },
-      rejected: [],
-      policyRefused: [],
-    };
-  },
-}));
+/*
+ * FORM_EDIT_SINGLE_WRITER_ENABLED: the one writer (`form-write.ts`) reads the form
+ * before and after it writes, so this mock also has a `loadInstance` that returns
+ * the form as the writers below saved it (`src/test/forms/saved-form-instances.ts`).
+ */
+vi.mock("@/lib/forms/instances", async () =>
+  (await import("@/test/forms/saved-form-instances")).savedFormInstances(
+    {
+      applyAssistantDraft: async (
+        _id: string,
+        draft: { values: Record<string, string>; checked: Record<string, string[]> },
+        _actor: string,
+        provenance: Record<string, Record<string, unknown>> = {},
+      ) => {
+        state.persisted.push({
+          values: draft.values ?? {},
+          checked: draft.checked ?? {},
+          provenance,
+        });
+        return {
+          accepted: { values: draft.values ?? {}, checked: draft.checked ?? {} },
+          rejected: [],
+          policyRefused: [],
+        };
+      },
+    },
+    async (id) =>
+      (await (await import("@/lib/forms/instance-scope")).authorizeInstance(new Request("http://localhost/api/forms"), id, "view")).loaded,
+  ),
+);
+beforeEach(async () => (await import("@/test/forms/saved-form-instances")).resetSavedForms());
 
 vi.mock("@/lib/ai/anthropic", () => ({
   getAnthropicClient: () => ({
@@ -241,7 +255,22 @@ async function post(notes: string) {
 const prompt = () =>
   ((state.modelInput?.messages as { content: string }[] | undefined)?.[0]?.content ?? "");
 const systemPrompt = () => String(state.modelInput?.system ?? "");
-const written = () => state.persisted.at(-1)!;
+/*
+ * FORM_EDIT_SINGLE_WRITER_ENABLED: a draft with nothing left to write after the
+ * guards is not written at all (handoff "noop"), so there is no call to read —
+ * the saved form, as `savedRows` holds it, is what is asserted instead. With
+ * the flag off the last call is read, as before.
+ */
+const written = () =>
+  state.persisted.at(-1) ?? (process.env.FORM_EDIT_SINGLE_WRITER_ENABLED === "true" ? savedWrite() : state.persisted.at(-1)!);
+function savedWrite(): { values: Record<string, string>; checked: Record<string, string[]>; provenance: Record<string, Record<string, unknown>> } {
+  const rows = Object.values(savedFormsModule.savedRows("form-1"));
+  return {
+    values: Object.fromEntries(rows.filter((row) => row.value !== null).map((row) => [row.fieldKey, row.value!])),
+    checked: Object.fromEntries(rows.filter((row) => row.value === null).map((row) => [row.fieldKey, row.checked])),
+    provenance: Object.fromEntries(rows.map((row) => [row.fieldKey, row.provenance])),
+  };
+}
 
 const PUNCTUALITY =
   "Marlowe is doing well with customers but needs to improve punctuality. She has been late several times this month.";
