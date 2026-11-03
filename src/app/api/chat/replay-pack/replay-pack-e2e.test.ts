@@ -421,7 +421,9 @@ class Thread {
         }),
       }),
     );
-    const payload = (await response.json()) as Answer & { error?: string };
+    const raw = (await response.json()) as Answer & { error?: string };
+    // CHAT_RESPONSE_STREAM_ENABLED: a turn slower than 2 s (a redraft runs the whole draft route) arrives as {status, body}.
+    const payload = (response.headers.get("x-chat-stream") ? (raw as unknown as { body: Answer & { error?: string } }).body : raw);
     expect(response.status, JSON.stringify(payload)).toBe(200);
     // EVERY REPLY (QA, 3 Nov 2026): "I still need …" is never said unless the reply asks who, which location or which date.
     if (/^I still need\b/m.test(payload.content ?? "")) {

@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { AskResponse } from "@/lib/ai/types";
+import { formPatchAllPathsEnabled } from "@/lib/config/chat-quality-flags";
 
 import { caDateQuestion, readCaDateEdit, rewriteDate, type CaDateEdit } from "./ca-chat-dates";
 import { checkboxGroupsForVariant, displayDate, fieldsForVariant, parseFormDocument } from "./document";
@@ -136,10 +137,32 @@ export async function correctCaFromChat(input: {
   const accepted = enforcePersonEdit(document, instance.variantKey, { values, checked: {} });
   const keys = Object.keys(accepted.values);
   if (keys.length === 0) return null;
-  const saved = await saveInstanceValues(input.instanceId, { values: accepted.values, checked: {} }, actor.id);
+  /*
+   * FORM_PATCH_ALL_PATHS_ENABLED: through the form reducer (`lib/forms/form-reducer-paths.ts`).
+   * The date and added prior lines are what she stated; the account's date and
+   * a prior line whose date moved are this reader's rewrite of what is there,
+   * and pass through as rewritten.
+   */
+  const rewritesPrior = edit.kind === "prior" && edit.changes.some((change) => change.from);
+  const derived = new Set(["observation", ...(rewritesPrior ? ["prior_actions"] : [])]);
+  const pick = (keep: boolean) => Object.fromEntries(Object.entries(accepted.values).filter(([key]) => derived.has(key) === keep));
+  const saved = formPatchAllPathsEnabled()
+    ? await (await import("./form-reducer-paths")).saveCorrectionPatched({
+        instanceId: input.instanceId,
+        loaded,
+        stated: { values: pick(false), checked: {} },
+        passThrough: { values: pick(true), checked: {} },
+        actorId: actor.id,
+        said: question,
+        today: input.today,
+      })
+    : await saveInstanceValues(input.instanceId, { values: accepted.values, checked: {} }, actor.id);
   const refused = new Set(saved.rejected.map((entry) => entry.key));
   const written = keys.filter((key) => !refused.has(key));
-  if (written.length === 0) return null;
+  if (written.length === 0) {
+    const unchanged = "nothingChanged" in saved ? saved.nothingChanged : undefined;
+    return unchanged ? reply(unchanged) : null;
+  }
   await recordChatCorrection(input.instanceId, actor.id, changes.filter((change) => written.includes(change.field)));
 
   const label = (key: string) => fields.find((field) => field.key === key)?.label ?? key;

@@ -128,3 +128,61 @@ belongs to Topic of Coaching's "Other" box. This needs no key or word list.
 **Limit:** a write-in with no box labelled like it is left out alone. The
 Corrective Action Form's "Other" line under Type of Offense is one: that group
 has no "Other" option, so there is nothing to untick.
+
+---
+
+## All paths through the reducer (FORM_PATCH_ALL_PATHS_ENABLED, QA 4 Nov 2026)
+
+`formPatchAllPathsEnabled()` = `FORM_PATCH_ALL_PATHS_ENABLED` **and**
+`FORM_PATCH_REDUCER_ENABLED`; on its own it is inert. It does not need
+`FORM_REPLY_FROM_DIFF_ENABLED`: when that flag is on, `checkedClaim` (above)
+still runs after the paths. The code is `src/lib/forms/form-reducer-paths.ts`,
+loaded only by `await import()` inside an expression guarded by
+`formPatchAllPathsEnabled() ?`. It has no regular expression and no phrase
+list, and it writes only through the existing writers.
+
+| Path | Where | With the flag on |
+|---|---|---|
+| correction | `chat-correction.ts` (the form readers, the header lines, the Corrective Action's facts) and `ca-chat-corrections.ts` (the date reader) | The save goes through `saveCorrectionPatched`: the reducer in edit mode on the header-aware draft (`snapshotOf(loaded).draft`), each stated key a `replace` with the manager's statement as its evidence, no manager-stated keys, the name on the form an accepted offer. Only `diff.changed` is written; refused keys, and keys that already held the value, come back as rejected, so the reply never names them. Every value the same → `I didn't change anything on the form.` with no `formUpdate` (plus the which-date question or the payroll amount question when they apply, and the leftover note). |
+| redraft | `chat-redraft.ts` | The claim is the draft route's realized `formDiff` keys. Nothing changed → `I didn't change anything on the form.` (plus the "couldn't match … policy" line when it applies). No extra model call. |
+| sameCopy | `same-form-copy.ts` | The copied values are a draft write: `reduceDraftWrite` (notes = the manager's turns), `applyAssistantDraft` with the copy's provenance, then `settle()`. The claim is the realized keys; nothing changed → `I didn't change anything on the form.` Otherwise the existing reply, pronoun warning included. |
+| revision | `chat-revision.ts` | **Not built.** The file is protected; the edit waits for the owner. `checkedClaim` remains its check. |
+| honestFormReply | `route.ts` | **Nothing built.** QA ruled (Q2) that a question never writes a form field, so the patch call is not made on an asked-question turn. On every other turn that reaches the honest-reply net, `patchTurn` has already been called (its guard is the same: an open form, no correction, no policy change, not a question), so there is no turn left for a second call. `honestFormReply` stays the net. |
+
+**QA's rulings, 4 Nov 2026:**
+
+- **Q1.** A payroll withdrawal's clears (`""`, `[]`) pass through untouched
+  (the reducer would refuse them as blanking). A clear of a field that is
+  already empty is not written and not claimed.
+- **Q2.** No write on an asked-question turn (above). Case H2 stays open.
+- **Q3.** The non-Corrective-Action name correction does **not** move the
+  `employee_name` column; only its Employee Name line. Known gap.
+- **Q4.** No leftover clause goes through `patchTurn`.
+
+**Derived values pass through.** What the caller computes from a stated value
+— the reason paragraph that follows a corrected field, the drafted account
+whose date moved, a Prior Actions line whose date the Corrective Action reader
+rewrote — is written as computed, and only when it differs from what is saved.
+A payroll answer restated with the same Yes or No still rebuilds the Action
+Plan Ask Bubbles built from what was said with it ("change the payroll
+deduction to $5.00"), and the reply claims the plan only if it changed.
+
+**Known limits of the rules as approved** (found by running the chat and form
+suites with the three flags on; each one is a value a code reader normalised,
+which the reducer's half-the-words rule refuses because the manager did not say
+those words — not written, not claimed):
+
+- an amount the reader formats: "$15" read as `$15.00`;
+- an abbreviation the reader expands: "SD" read as `Store Director`;
+- a canonical answer: "she texted me she quit" read as `Text message`,
+  "she told me verbally" as `Verbal`.
+
+A same-value restatement ("written" when the warning is already Written, a
+repeated answer after a reload) now answers `I didn't change anything on the
+form.` where it used to say "Updated …". That is the intended change.
+
+Tests: `src/lib/forms/form-reducer-paths.test.ts` (the rules),
+`src/lib/forms/form-patch-all-paths-flags-off.test.ts` (flags off or inert: the
+same chats byte for byte, against a run recorded on main; the module never
+loaded; a static scan of the guarded imports) and the replay cases in
+`src/app/api/chat/replay-pack/nov3-all-paths-cases.ts`.

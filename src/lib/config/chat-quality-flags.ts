@@ -913,6 +913,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "SAME_ASK_NO_REPEAT_ENABLED",
   "FORM_PATCH_REDUCER_ENABLED",
   "FORM_REPLY_FROM_DIFF_ENABLED",
+  "FORM_PATCH_ALL_PATHS_ENABLED",
   "CA_NAME_FROM_CHAT_ENABLED",
   "NEXT_PUBLIC_CARD_POLICY_TO_DRAFT_ENABLED",
   "NEW_REQUEST_OPEN_DRAFT_ENABLED",
@@ -2348,4 +2349,17 @@ export function formPatchReducerEnabled(): boolean {
  */
 export function formReplyFromDiffEnabled(): boolean {
   return envFlag("FORM_REPLY_FROM_DIFF_ENABLED");
+}
+
+/**
+ * The other form-update paths go through the form reducer too (Step B, all
+ * paths, 4 Nov 2026): a chat correction's save, a redraft's reply and a
+ * same-form copy write only what changes, and their reply claims only what was
+ * saved — "I didn't change anything on the form." when nothing did. See
+ * `forms/form-reducer-paths.ts` and `docs/step-b-reply-rewrites.md`. Nothing
+ * without FORM_PATCH_REDUCER_ENABLED: on its own this flag is inert. The
+ * revision path (`chat-revision.ts`) is not covered yet. Off, as before.
+ */
+export function formPatchAllPathsEnabled(): boolean {
+  return envFlag("FORM_PATCH_ALL_PATHS_ENABLED") && formPatchReducerEnabled();
 }

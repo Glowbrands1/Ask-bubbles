@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { AskResponse } from "@/lib/ai/types";
+import { formPatchAllPathsEnabled } from "@/lib/config/chat-quality-flags";
 import { loadStoreIndex } from "@/lib/stores/woven-aliases";
 import type { ChatMessage } from "@/types";
 
@@ -119,6 +120,7 @@ export async function redraftActiveForm(input: {
     values?: Record<string, string>;
     checked?: Record<string, string[]>;
     policyDerived?: string[];
+    formDiff?: { changed: { key: string; before: string | string[]; after: string | string[] }[] } | null;
   };
 
   const who = `**${instance.templateName}** for **${instance.employeeName}**`;
@@ -128,14 +130,25 @@ export async function redraftActiveForm(input: {
     );
   }
 
-  const updated = [...Object.keys(result.values ?? {}), ...Object.keys(result.checked ?? {})];
   const cited = (result.policyDerived ?? []).includes("policy_language");
+  const uncited =
+    "I couldn't match what you described to a section of the policy manual, so the policy line is still yours to confirm against the official manual.";
+  /*
+   * FORM_PATCH_ALL_PATHS_ENABLED: the claim is what the draft route really
+   * changed (its realized `formDiff`); nothing changed, and the reply says so.
+   * See `lib/forms/form-reducer-paths.ts`.
+   */
+  const realized = formPatchAllPathsEnabled()
+    ? (await import("./form-reducer-paths")).redraftOutcome(result, cited ? null : uncited)
+    : null;
+  if (realized?.reply) return realized.reply;
+  const updated = realized?.updated ?? [...Object.keys(result.values ?? {}), ...Object.keys(result.checked ?? {})];
   const lines = [
     `Redrafted the ${who} from what you described.`,
     "",
     cited
       ? "**Direct policy from official manual** now quotes the manual and cites its section and page."
-      : "I couldn't match what you described to a section of the policy manual, so the policy line is still yours to confirm against the official manual.",
+      : uncited,
     ...(loaded.values.some((row) => row.filledBy === "manager" && (row.value ?? "").trim() !== "")
       ? [
           "",
