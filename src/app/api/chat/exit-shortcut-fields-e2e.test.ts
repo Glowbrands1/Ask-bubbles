@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 
+import { DEFAULT_ON } from "@/lib/config/default-on";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { continuationFor } from "@/lib/forms/proposal-continuation";
@@ -455,6 +456,11 @@ function setProduction(on: boolean) {
     if (!saved.has(name)) saved.set(name, process.env[name]);
     delete process.env[name];
   }
+  // Since 3 Nov 2026 ("(E) batch 1", config/default-on.ts) an unset flag in DEFAULT_ON reads as on; "false" keeps the old "unset is off" here.
+  for (const name of DEFAULT_ON) {
+    if (!saved.has(name)) saved.set(name, process.env[name]);
+    process.env[name] = "false";
+  }
   for (const name of PRODUCTION) process.env[name] = "true";
   // Live in this app.
   for (const name of [FLAG, "POSITION_ANSWER_GUARD_ENABLED", "PRIOR_STEP_SENTENCE_ENABLED", "DATE_ANSWER_APPLIED_ENABLED", "DATE_ANSWER_KEEPS_OPEN_ENABLED", "NAME_QUESTION_ONLY_ENABLED"]) process.env[name] = "true";
@@ -538,7 +544,8 @@ async function readback(words: string, on: boolean): Promise<string> {
   for (const name of [SHORTCUTS, TERMS]) if (!saved.has(name)) saved.set(name, process.env[name]);
   // With EXIT_TERMS_NOT_NAMES_ENABLED (#312): off, "drop wage and forfeit bonus" is stripped from the text as unknown people before it is read.
   process.env[TERMS] = "true";
-  delete process.env[SHORTCUTS];
+  // On by default since 3 Nov 2026 ("(E) batch 1"): "off" is "false", not unset.
+  process.env[SHORTCUTS] = "false";
   if (on) process.env[SHORTCUTS] = "true";
   const answer = (await new Thread().say(words)) as { content: string };
   return answer.content;
@@ -618,7 +625,8 @@ describe("the exit form's own words are not stripped as unknown people (EXIT_TER
   const terms = async (on: boolean) => {
     live(true, MARNIE, "marnie holloway");
     for (const name of [SHORTCUTS, TERMS]) if (!saved.has(name)) saved.set(name, process.env[name]);
-    delete process.env[SHORTCUTS];
+    // On by default since 3 Nov 2026 ("(E) batch 1"): "off" is "false", not unset.
+  process.env[SHORTCUTS] = "false";
     delete process.env[TERMS];
     if (on) process.env[TERMS] = "true";
     return ((await new Thread().say(HER_WORDS)) as { content: string }).content;
