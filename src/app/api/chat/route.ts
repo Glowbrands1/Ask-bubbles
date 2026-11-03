@@ -445,8 +445,13 @@ async function postChat(request: Request) {
               question: parsed.question,
               history: parsed.history,
               today: parsed.context.todayIso,
-              // The existing question reading; with QUESTION_NOT_FORM off it is still never offered on a question.
-              askedQuestion: askedQuestion || isQuestionNotForm(parsed.question, parsed.history),
+              /*
+               * The existing question reading, decided by code: an ask to act on
+               * the form ("can you change …?", "is it possible to change …?") is
+               * an edit request, never a question. With QUESTION_NOT_FORM off it
+               * is still never offered on a question.
+               */
+              gate: (await import("@/lib/ai/question-not-form")).readQuestion(parsed.question, parsed.history, { asksToActAnyAction: true }),
               scope: context.identity.scope,
             })
           : null;

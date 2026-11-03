@@ -39,7 +39,8 @@ import { draftableCheckboxGroups, draftableFields } from "./responsibility";
  *
  * Loaded only by the chat route's guarded `await import()`; `form-write` only
  * by the guarded import below. No regular expression and no phrase list here:
- * whether the turn is a question is the existing `askedQuestion` reading.
+ * whether the turn is a question is the existing reading (`readQuestion` in
+ * `question-not-form.ts`): an ask to act ("can you change …?") is an edit.
  */
 
 const DATA_HEADING = "OPEN FORM DATA";
@@ -62,6 +63,8 @@ export type FormEditHandoff = null | "not_called" | "invalid_input" | "refused" 
 export interface FormEditTrace {
   offered: boolean;
   offer_reason: FormEditOfferReason | "no_main_call";
+  /** Which branch of the question gate decided the turn (`readQuestion`). */
+  gate: string | null;
   called: boolean;
   op_kinds: string[];
   fields: string[];
@@ -86,13 +89,13 @@ export interface FormEditToolSession {
   readonly calledWithoutEdit: () => boolean;
 }
 
-function emptyTrace(reason: FormEditOfferReason): FormEditTrace {
-  return { offered: false, offer_reason: reason, called: false, op_kinds: [], fields: [], applied: [], refused: [], handoff: null, ms: null };
+function emptyTrace(reason: FormEditOfferReason, gate: string | null): FormEditTrace {
+  return { offered: false, offer_reason: reason, gate, called: false, op_kinds: [], fields: [], applied: [], refused: [], handoff: null, ms: null };
 }
 
 /** A session with no offer: the trace says why. */
-function notOffered(reason: FormEditOfferReason): FormEditToolSession {
-  const trace = emptyTrace(reason);
+function notOffered(reason: FormEditOfferReason, gate: string | null = null): FormEditToolSession {
+  const trace = emptyTrace(reason, gate);
   return {
     turn: { offer: null, trace: trace as unknown as Record<string, unknown>, sent: () => {}, apply: async () => {} },
     edited: () => null,
@@ -143,20 +146,20 @@ export async function prepareFormEditTool(input: {
   readonly history: Pick<ChatMessage, "id" | "role" | "content" | "error">[];
   /** The business day, YYYY-MM-DD. */
   readonly today: string;
-  /** The existing question reading (`askedQuestion`, QUESTION_NOT_FORM). */
-  readonly askedQuestion: boolean;
+  /** The existing question reading (`readQuestion`, QUESTION_NOT_FORM's) and the branch that decided it. */
+  readonly gate: { readonly question: boolean; readonly branch: string };
   readonly scope: AccessScope | null;
 }): Promise<FormEditToolSession> {
-  if (input.askedQuestion) return notOffered("question");
+  if (input.gate.question) return notOffered("question", input.gate.branch);
   try {
     let authorized: Awaited<ReturnType<typeof authorizeInstance>>;
     try {
       authorized = await authorizeInstance(input.request, input.instanceId, "edit");
     } catch {
-      return notOffered("not_visible");
+      return notOffered("not_visible", input.gate.branch);
     }
     const { actor, loaded } = authorized;
-    if (loaded.instance.status !== "draft") return notOffered("not_draft");
+    if (loaded.instance.status !== "draft") return notOffered("not_draft", input.gate.branch);
 
     const document = parseFormDocument(loaded.version.document);
     const variantKey = loaded.instance.variantKey;
@@ -164,7 +167,7 @@ export async function prepareFormEditTool(input: {
     const aiGroups = draftableCheckboxGroups(document, variantKey);
     const corrective = aiFields.some((field) => field.key === "policy_language") && aiGroups.some((group) => group.key === "offense_type");
     const assistantWrote = loaded.values.some((row) => row.filledBy === "ai" && ((row.value ?? "").trim() !== "" || row.checked.length > 0));
-    if (corrective && !assistantWrote) return notOffered("blank_corrective_action");
+    if (corrective && !assistantWrote) return notOffered("blank_corrective_action", input.gate.branch);
 
     const template = templateRules(loaded);
     const allFields = fieldsForVariant(document, variantKey);
@@ -190,7 +193,7 @@ export async function prepareFormEditTool(input: {
       });
     }
     const keys = fields.map((field) => field.key);
-    if (keys.length === 0) return notOffered("no_writable_fields");
+    if (keys.length === 0) return notOffered("no_writable_fields", input.gate.branch);
 
     const staff = await scopedStaff(input.scope);
     const data = `${DATA_HEADING}\n\n${JSON.stringify({
@@ -200,7 +203,7 @@ export async function prepareFormEditTool(input: {
     const tool = editFormTool(keys as [string, ...string[]]);
     const schema = editFormSchema(keys as [string, ...string[]]);
 
-    const trace = emptyTrace("draft_open");
+    const trace = emptyTrace("draft_open", input.gate.branch);
     trace.offer_reason = "no_main_call";
     let edited: AskResponse | null = null;
     let calledWithoutEdit = false;

@@ -516,3 +516,80 @@ describe("FORM_EDIT_TOOL_IN_STREAM_ENABLED needs FORM_EDIT_SINGLE_WRITER_ENABLED
     expect((await import("@/lib/config/chat-quality-flags")).formEditToolInStreamEnabled()).toBe(true);
   });
 });
+
+/*
+ * QA and Pau, 4 Nov 2026: the non-question gate must not skip a real edit
+ * phrased as a question. The gate is code's (`readQuestion`), no phrase list:
+ * an ask to act is an edit request. Their wordings, on Marnie Quill's open
+ * Corrective Action; the model does not call the tool, so nothing is written
+ * by it either way.
+ */
+export const GATE_EDITS = [
+  "can you change her last name to Laine?",
+  "could you add that she was also late on Tuesday?",
+  "would you make it sound more professional?",
+  "is it possible to change the date to 10/20?",
+  "can you set the daily stats to 3 of 4 shifts on time?",
+] as const;
+export const GATE_QUESTIONS = ["what policy does that fall under?", "what is the policy on being late?", "can you tell me what the expectation is?"] as const;
+
+describe("the non-question gate: an edit asked as a question reaches edit_form; a question does not", () => {
+  for (const said of GATE_EDITS) {
+    it(`"${said}" — offered edit_form`, async () => {
+      const thread = await marnieDraft();
+      await thread.say(said);
+      const trace = await lastTrace();
+      process.stdout.write(`[gate] ${JSON.stringify(said)} ${JSON.stringify({ offered: trace?.offered, reason: trace?.offer_reason, gate: trace?.gate, main: model.main.length })}\n`);
+      expect(model.main.length, "no main call").toBeGreaterThan(0);
+      expect(lastMain().tools?.map((tool) => tool.name)).toEqual(["edit_form"]);
+      expect(trace).toMatchObject({ offered: true, offer_reason: "draft_open" });
+    });
+  }
+  for (const said of GATE_QUESTIONS) {
+    it(`"${said}" — no tool, nothing written`, async () => {
+      const thread = await marnieDraft();
+      const before = JSON.stringify(values(thread.id));
+      model.next = { text: "That is in the attendance section of the policy manual.", tool: null };
+      const reply = await thread.say(said);
+      const trace = await lastTrace();
+      process.stdout.write(`[gate] ${JSON.stringify(said)} ${JSON.stringify({ offered: trace?.offered, reason: trace?.offer_reason, gate: trace?.gate })}\n`);
+      for (const request of model.main as MainRequest[]) expect(request.tools).toBeUndefined();
+      expect(JSON.stringify(values(thread.id))).toBe(before);
+      expect(reply.formUpdate).toBeUndefined();
+      expect(trace).toMatchObject({ offered: false, offer_reason: "question" });
+    });
+  }
+});
+
+/*
+ * Names (coordinator, 4 Nov 2026): the employee's name is written only through
+ * edit_form ops and the single writer, never from the model's text. In Step 3
+ * the header name is not one of the tool's keys (Step 5 adds it with the
+ * roster check), so an op on it is a bad input and nothing is written, and the
+ * model's text naming someone writes nothing either.
+ */
+describe("the employee's name is never written from the model's text", () => {
+  it('"can you change her last name to Laine?": employee_name is not a tool key; an op on it writes nothing; the text is not shown', async () => {
+    const thread = await marnieDraft();
+    const before = JSON.stringify(values(thread.id));
+    model.next = { text: "I've changed her name to Marnie Laine.", tool: { ops: [{ op: "set", field: "employee_name", value: "Marnie Laine" }] } };
+    model.revision = { values: {} };
+    const reply = await thread.say("can you change her last name to Laine?");
+    const enumKeys = JSON.stringify(lastMain().tools![0]!.input_schema);
+    expect(enumKeys).not.toContain('"employee_name"');
+    expect(JSON.stringify(values(thread.id))).toBe(before);
+    expect(values(thread.id).employee_name).toBe("Marnie Quill");
+    expect(reply.content).not.toContain("Marnie Laine");
+    expect(await lastTrace()).toMatchObject({ called: true, handoff: "invalid_input", applied: [] });
+  });
+
+  it("the model's text alone (no tool call) naming someone writes nothing", async () => {
+    const thread = await marnieDraft();
+    const before = JSON.stringify(values(thread.id));
+    model.next = { text: "Her name on the form is now Marnie Laine.", tool: null };
+    model.revision = { values: {} };
+    await thread.say("can you change her last name to Laine?");
+    expect(JSON.stringify(values(thread.id))).toBe(before);
+    expect(store.form_instances.map((row) => row.employee_name)).toEqual(["Marnie Quill"]);
+  });
+});
