@@ -605,11 +605,15 @@ export function redraftOutcome(
 }
 
 /**
- * Reopen (STEP_B_POLICY_REOPEN_DESIGN): the opened draft as it was before the
- * change the sentence asked for, then the claim checked against the form read
- * again — a reply never claims a field the write did not change.
+ * Reopen (STEP_B_POLICY_REOPEN_DESIGN) and openDraftTurn: the open draft as it
+ * was before the change the turn asked for, then the claim checked against the
+ * form read again — a reply never claims a field the write did not change.
+ * (`path` names the caller, "reopen" or "open_draft".) openDraftTurn's write
+ * itself is the revision's, in the protected `chat-revision.ts`, until 2b
+ * swaps it for `writeRevisionEdits`.
  */
-export async function reopenSnapshot(instanceId: string): Promise<FormSnapshot | null> {
+export async function editSnapshot(instanceId: string, path: FormEditPath): Promise<FormSnapshot | null> {
+  void path;
   const loaded = await loadInstance(instanceId);
   return loaded ? snapshotOf(loaded) : null;
 }

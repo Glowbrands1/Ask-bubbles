@@ -172,7 +172,7 @@ export async function reopenRequestedForm(input: {
    */
   const opened =
     formEditSingleWriterEnabled() && reading.mode === "edit" && draft.status === "draft"
-      ? await (await import("./form-write")).reopenSnapshot(draft.instanceId)
+      ? await (await import("./form-write")).editSnapshot(draft.instanceId, "reopen")
       : null;
   if (reading.mode === "edit" && draft.status === "draft") {
     applied =

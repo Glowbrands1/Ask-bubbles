@@ -38,7 +38,9 @@ import type { AccessScope, ChatFormProposal, ChatMessage } from "@/types";
  *
  * With the flag on, each path's turn reaches the one writer: the entry points
  * of `form-write` are wrapped to record the path each call names (the
- * correction, redraft, copy, policy and reopen turns). Each entry point calls
+ * correction, redraft, copy, policy, reopen and openDraftTurn turns;
+ * openDraftTurn's write itself stays in the protected chat-revision.ts until
+ * 2b, so it reaches the one writer for its snapshot and checked claim). Each entry point calls
  * `writeFormEdits` itself (`form-write.test.ts` pins that). No model is called:
  * every model module is stubbed, and the stubs count calls.
  */
@@ -62,7 +64,8 @@ vi.mock("@/lib/forms/form-write", async (importOriginal) => {
     correctionWrite: record("correctionWrite", () => "correction"),
     copyThroughWriter: record("copyThroughWriter", () => "copy"),
     syncPlan: record("syncPlan", () => "plan"),
-    reopenSnapshot: record("reopenSnapshot", () => "reopen"),
+    editSnapshot: record("editSnapshot", (args) => String(args[1])),
+    realizedClaim: record("realizedClaim", () => "claim"),
   };
 });
 
@@ -397,6 +400,9 @@ async function script(): Promise<string> {
     });
   }
 
+  // 5b. openDraftTurn: with Pat's draft open, a turn no other path reads is content for it (the manager's words, sibling app, 2 Nov).
+  await turn("open_draft", () => correction.say("underperformance for the month of october"));
+
   // 6. A finalized Corrective Action reopened, with the change in the same sentence.
   const finalized = chat();
   await finalized.say("create ca form for bryony castellane for a register shortage on 10-21-26.");
@@ -532,7 +538,9 @@ describe("FORM_EDIT_SINGLE_WRITER_ENABLED off: the same chats, byte for byte", (
       expect(reached.policy).toEqual(expect.arrayContaining(["draftWrite:policy"]));
       expect(reached.redraft).toEqual(expect.arrayContaining(["draftWrite:redraft"]));
       expect(reached.copy).toEqual(expect.arrayContaining(["copyThroughWriter:copy"]));
-      expect(reached.reopen).toEqual(expect.arrayContaining(["reopenSnapshot:reopen", "correctionWrite:correction"]));
+      // openDraftTurn reaches the one writer for its snapshot and checked claim; its write is the protected revision's until 2b.
+      expect(reached.open_draft).toEqual(expect.arrayContaining(["editSnapshot:open_draft"]));
+      expect(reached.reopen).toEqual(expect.arrayContaining(["editSnapshot:reopen", "correctionWrite:correction"]));
       // QA condition 5: the time of the script with the flag on, against off (stubs only).
       process.stdout.write(`[single-writer] script ms: off ${ms.a?.toFixed(0)}, on ${ms.c.toFixed(0)}\n`);
     },
