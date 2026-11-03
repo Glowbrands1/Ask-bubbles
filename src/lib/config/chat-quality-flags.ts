@@ -902,6 +902,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ROSTER_STORE_SCOPED_ENABLED",
   "STAFF_PICKER_BARE_ANSWER_ENABLED",
   "WHOLE_TEAM_COACHING_ENABLED",
+  "NEXT_PUBLIC_CARD_POLICY_TO_DRAFT_ENABLED",
   "NEW_REQUEST_OPEN_DRAFT_ENABLED",
   "TEAM_CARD_WORDING_ENABLED",
   "DRAFT_REUSE_NEW_REQUEST_ENABLED",
@@ -1718,6 +1719,19 @@ export function chatHistoryStateChunkedEnabled(): boolean {
  * statically written `process.env.NEXT_PUBLIC_…` is inlined, at build time.
  * See `store/app-store.tsx`. Off, as before.
  */
+/**
+ * The draft cites the policy the card cited (QA live check in the sibling
+ * app, 3 Nov 2026: the card read "Late Opening p.15", the draft made from it
+ * "Attendance p.14"). The browser sends the card's heading with the draft
+ * request; the draft route uses it where the pinned manual has it. Read on
+ * both sides, so a statically written `process.env.NEXT_PUBLIC_…`, inlined at
+ * build time. See `forms/card-policy.ts`. Off, as before.
+ */
+export function cardPolicyToDraftEnabled(): boolean {
+  const inlined = process.env.NEXT_PUBLIC_CARD_POLICY_TO_DRAFT_ENABLED;
+  return typeof inlined === "string" && ON.has(inlined.trim().toLowerCase());
+}
+
 export function chatHistoryTolerantEnabled(): boolean {
   const inlined = process.env.NEXT_PUBLIC_CHAT_HISTORY_TOLERANT_ENABLED;
   return typeof inlined === "string" && ON.has(inlined.trim().toLowerCase());
