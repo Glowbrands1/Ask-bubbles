@@ -363,6 +363,32 @@ export const NOV3_STEP_B_CASES: readonly ReplayCase[] = [
       expect(after, "the redraft's text replaced hers").not.toContain("needs to learn the ship from store screens");
     },
   },
+  ...(["make it sound more professional", "can you make it more professional"] as const).map(
+    (wording): ReplayCase => ({
+      id: `nov3-stepb-wording-only-revision-${wording.startsWith("can") ? "can-you" : "make-it"}`,
+      title: `"${wording}" rewrites the open draft: a patch that sets nothing hands the turn to the revision`,
+      report: `QA, 3 Nov 2026 (blocker before the Step B flip): "${wording}" — the patch model reads it as about this form but sets nothing, and the reply was "I didn't change anything on the form." while the revision never ran`,
+      status: "fixed",
+      fixFlags: STEP_B_FLAGS,
+      async run(t) {
+        t.directory(PEOPLE);
+        t.as("location_manager", WEST_DODGE);
+        const plain = "Bryony was out of dress code three shifts in a row.";
+        const polished = "Bryony did not follow the dress code on three consecutive shifts.";
+        t.draftWrites({ coaching_details: plain });
+        // A wording-only request: about this form, nothing to set from the manager's words.
+        t.patchWrites([patchOutput("this_form")]);
+        t.revisionWrites({ coaching_details: polished });
+        const thread = t.thread();
+        await thread.say("Create a coaching form for Bryony Castellane, she was out of dress code three shifts in a row");
+        expect(thread.proposal).toMatchObject({ templateKey: "coaching", employeeName: "Bryony Castellane" });
+        const id = await thread.create();
+        const reply = await turnOnDraft(t, thread, id, wording);
+        expect(t.values(id).coaching_details ?? "", "the revision never ran: the Details were not rewritten").toBe(polished);
+        expect(reply.content, "the reply says nothing changed though the Details were rewritten").not.toMatch(/didn't change anything/i);
+      },
+    }),
+  ),
   {
     id: "nov3-stepb-true-claim-keeps-guidance",
     title: "a correction that really changed the form keeps its own reply, the payroll amount question included, word for word",
