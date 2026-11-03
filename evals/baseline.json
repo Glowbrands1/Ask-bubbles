@@ -73,6 +73,19 @@
         "date": "2026-10-15",
         "status": "ready"
       }
+    },
+    {
+      "id": "r1",
+      "pass": false,
+      "misses": [
+        "reply has \"Dodge Account\""
+      ],
+      "card": {
+        "employee": null,
+        "salon": null,
+        "date": null,
+        "status": null
+      }
     }
   ]
 }
