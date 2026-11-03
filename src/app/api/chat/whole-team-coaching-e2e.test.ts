@@ -638,7 +638,6 @@ describe("WHOLE_TEAM_COACHING_ENABLED: the team card for every wording, in every
     ["her first turn", ["coaching form for all team members"]],
     ["her second", ["make a coaching form for all team members"]],
     ["with the store in it", ["make a coaching form for all team members at dodge"]],
-    ["her complaint, after the first", ["coaching form for all team members", "earlier you made a caoching form for all team members for me"]],
     ["the 30 Oct wording", ["Create a coaching form.", "for whole staff - associates"]],
     ["another manager's", ["can you create a coaching form for my whole staff?"]],
     ["an answer to who", ["Create a coaching form.", "whole staff"]],
@@ -806,5 +805,73 @@ describe("STAFF_PICKER_REMEMBER_LOCATION_ENABLED: a short name of one of the acc
     const thread = new Thread();
     await thread.say("make a corrective action form for all team members");
     expect((await thread.say("bellevue")).content).toContain("Tobin Areli");
+  });
+});
+
+describe("QA's brief, 3 Nov: the same with a draft open, her complaint answered, \"store\" words", () => {
+  async function remysDraft(): Promise<Thread> {
+    westDodge();
+    setRole("location_manager");
+    setScope({ level: "location", primaryAreaId: "loc-264", alsoCoversAreaIds: [] });
+    const thread = new Thread();
+    await thread.say("Create a coaching form for Remy Calder");
+    state.draft = { values: { coaching_details: "Coaching on the register." } };
+    await thread.create();
+    return thread;
+  }
+
+  for (const turn of ["coaching form for all team members", "whole staff", "create a coaching form for the whole store"]) {
+    it(`with another person's draft open, ${JSON.stringify(turn)} is the team card`, async () => {
+      production([...FIXES]);
+      const thread = await remysDraft();
+      const reply = await thread.say(turn);
+      expect(reply.content).not.toMatch(REFUSAL);
+      expect(reply.formUpdate).toBeUndefined();
+      expect(reply.formProposal).toMatchObject({ ...TEAM, locationId: "loc-264" });
+    });
+  }
+
+  it("her complaint is a statement about the past, answered with what to do — never the refusal, never a new card", async () => {
+    production([...FIXES]);
+    westDodge();
+    setRole("location_manager");
+    setScope(HER_SCOPE);
+    const thread = new Thread();
+    await thread.say("coaching form for all team members");
+    const reply = await thread.say("earlier you made a caoching form for all team members for me");
+    expect(reply.content).not.toMatch(REFUSAL);
+    expect(reply.content).toMatch(/team card/);
+    expect(state.chatModelCalls).toBe(0);
+  });
+
+  it("off: her complaint is read as another whole-staff request (what she got)", async () => {
+    production();
+    westDodge();
+    setRole("location_manager");
+    setScope(HER_SCOPE);
+    const reply = await new Thread().say("earlier you made a caoching form for all team members for me");
+    expect(reply.content).toMatch(REFUSAL);
+  });
+
+  for (const turn of ["a corrective action form for the whole store", "corrective action for all staff", "a corrective action form for everybody"]) {
+    it(`the picker reads ${JSON.stringify(turn)} as the whole staff (one person at a time)`, async () => {
+      production([...FIXES]);
+      westDodge();
+      setRole("location_manager");
+      setScope({ level: "location", primaryAreaId: "loc-264", alsoCoversAreaIds: [] });
+      const reply = await new Thread().say(turn);
+      expect(reply.content).toContain("Marnie Holloway");
+    });
+  }
+
+  it("SHARED_LOGIN_NOT_STAFF_ENABLED: a \"<Store> Store\" row is a login too", async () => {
+    production(["SHARED_LOGIN_NOT_STAFF_ENABLED"]);
+    westDodge();
+    state.directory.push({ id: "e-9", firstName: "Dodge", lastName: "Store", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-264"], positionName: "Team Member Full Time" });
+    setRole("location_manager");
+    setScope({ level: "location", primaryAreaId: "loc-264", alsoCoversAreaIds: [] });
+    const reply = await new Thread().say("make a corrective action form for all team members");
+    expect(reply.content).not.toContain("Dodge Store");
+    expect(reply.content).not.toContain("Dodge Account");
   });
 });
