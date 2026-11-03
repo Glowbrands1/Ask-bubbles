@@ -889,6 +889,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "OPEN_DRAFT_KEEPS_TURNS_ENABLED",
   "FORM_EDIT_REFERS_BACK_ENABLED",
   "CLAIM_GUARD_ENABLED",
+  "POLICY_CHANGE_REST_OF_TURN_ENABLED",
   "OPEN_FORM_NO_SELECTION_ENABLED",
   "ANGLE_PLACEHOLDER_GUARD_ENABLED",
   "REVISION_SAME_VALUE_ENABLED",
@@ -1783,6 +1784,17 @@ export function openDraftKeepsTurnsEnabled(): boolean {
  */
 export function formEditRefersBackEnabled(): boolean {
   return envFlag("FORM_EDIT_REFERS_BACK_ENABLED");
+}
+
+/**
+ * A policy named with more in the same message: the rest goes to the revision
+ * of the same draft, and the reply never says "everything else is as it was"
+ * over a sentence it dropped (the 2 Nov 2026 scan: "Previous Coaching is when
+ * she signed the Policy manual May 2025" left Prior Actions empty; same flag
+ * in both apps). See `forms/policy-rest-of-turn.ts`. Off, as before.
+ */
+export function policyChangeRestOfTurnEnabled(): boolean {
+  return envFlag("POLICY_CHANGE_REST_OF_TURN_ENABLED");
 }
 
 /**

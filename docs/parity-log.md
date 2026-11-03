@@ -94,6 +94,14 @@ against", "matching Woven", …) is replaced by the honest reply unless this
 turn changed the form; with a draft open no form selection is offered.
 Ported to Ask Sunny with the same flags.
 
+## 3 Nov 2026: a policy named with more in the same message — the rest is not dropped — ported from the sibling app (POLICY_CHANGE_REST_OF_TURN_ENABLED, default off)
+
+Found in the sibling app (the 2 Nov scan): a policy cited and "Previous
+Coaching is when she signed the Policy manual May 2025" in one message — the
+reply said "Everything else on the form is as it was" and Prior Actions
+stayed empty. Replayed here it reproduces; the same fix behind the same flag
+(replay-pack case nov2-p3).
+
 ## 25 Oct 2026: the framework's sections are not pinned into governed drafts — Bubbles-only
 
 `FRAMEWORK_UNPIN_ENABLED` defaults off. The uploaded Performance Management
