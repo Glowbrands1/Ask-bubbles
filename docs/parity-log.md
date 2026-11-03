@@ -6,6 +6,19 @@ citation, access or sync is either ported to the sibling or listed here as
 staying one-sided, with the reason.
 See `CLAUDE.md`.
 
+## 3 Nov 2026: "yes, do that" and "the details we just discussed!!!" are written into the open Coaching draft — both apps (FORM_EDIT_REFERS_BACK_ENABLED, default off)
+
+Found here (a Location Manager, 30 Oct 2026, two chats rated 2 stars: "it
+would never automatically put it in the coaching form, I had to copy and
+paste it myself"). Replayed 3 Nov with this app's production flags: same-form
+copy and the Assistant Manager's create now work, but with a draft open "yes,
+do that", "the details we just discussed!!!" and "ok, create the draft, but
+include the details of rolling rack." still went to the answering model,
+whose "Updating the draft now." / "That's on the card." the honest-reply
+guard did not catch. On, those turns are revisions of the draft (the previous
+answer's content, or the details named from the conversation), and those
+claims are caught. Ported to Ask Sunny with the same flag.
+
 ## 25 Oct 2026: a follow-up that names its own documents is searched on them — ported from Ask Sunny (a47bf19)
 
 `FOLLOWUP_NEW_TOPIC_RETRIEVAL_ENABLED` defaults off, same name in both apps.
