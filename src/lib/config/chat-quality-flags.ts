@@ -911,6 +911,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "STAFF_PICKER_BARE_ANSWER_ENABLED",
   "WHOLE_TEAM_COACHING_ENABLED",
   "SAME_ASK_NO_REPEAT_ENABLED",
+  "FORM_PATCH_REDUCER_ENABLED",
+  "FORM_REPLY_FROM_DIFF_ENABLED",
   "CA_NAME_FROM_CHAT_ENABLED",
   "NEXT_PUBLIC_CARD_POLICY_TO_DRAFT_ENABLED",
   "NEW_REQUEST_OPEN_DRAFT_ENABLED",
@@ -2324,4 +2326,26 @@ export function formPlaceholderWordsEnabled(): boolean {
  */
 export function firstNameYesKeepsRequestEnabled(): boolean {
   return envFlag("FIRST_NAME_YES_KEEPS_REQUEST_ENABLED");
+}
+
+/**
+ * A chat edit or a redraft of an open form is read as a patch (field, value,
+ * how, the manager's words it came from) and merged by code: typed fields are
+ * never blanked, a "replace" on one needs the manager's own words, dates and
+ * amounts must be ones the manager stated, prior actions are de-duplicated
+ * (Step B, 3 Nov 2026). See `forms/form-reducer.ts` and
+ * `forms/form-patch-model.ts`. Nothing reads it yet. Off, as before.
+ */
+export function formPatchReducerEnabled(): boolean {
+  return envFlag("FORM_PATCH_REDUCER_ENABLED");
+}
+
+/**
+ * The reply to a form edit says what the saved form now holds: "Changed
+ * <Label> to <value>" per changed field, or that nothing changed — never
+ * "Updated" without a change (Step B, 3 Nov 2026). See
+ * `forms/form-diff-reply.ts`. Nothing reads it yet. Off, as before.
+ */
+export function formReplyFromDiffEnabled(): boolean {
+  return envFlag("FORM_REPLY_FROM_DIFF_ENABLED");
 }
