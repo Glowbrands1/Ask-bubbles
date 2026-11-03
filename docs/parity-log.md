@@ -52,6 +52,73 @@ short-name reader, ported back here under STAFF_PICKER_REMEMBER_LOCATION),
 and keep-filled-slots dropped the team label — Sunny-only, this app has no
 keep-filled-slots.
 
+## 3 Nov 2026: with a draft open, a turn about it goes to it — ported from the sibling app (e8e3ee1) (OPEN_DRAFT_KEEPS_TURNS_ENABLED, default off)
+
+Found in the sibling app (the 2 Nov scan): a draft typed on by hand, then
+"underperformance for the month of october" offered a new card whose Create
+made a second draft, and that one was finalized. Replayed here with this
+app's production flags it already holds (and so does the case where a metric
+was read as another person), so the flag is ported for the same mechanism in
+both apps; replay-pack cases nov2-p1a and nov2-p1b hold here.
+
+## 3 Nov 2026: one answer to "is this a person?" for every reader — ported from the sibling app (PERSON_GUARD_ENABLED, default off)
+
+Found in the sibling app (the 2 Nov scan): a policy name, "Practice" and a
+metric became people on cards. Replayed here with this app's production flags
+those wordings already hold; the mechanism is ported behind the same flag
+(forms/person-guard.ts: a roster person is always a person; otherwise a
+policy, a practice run, a metric with this app's own business vocabulary, a
+report name or the not-a-name lists never are), read by namesSomebody and once
+more on every card the route returns. With the flag forced on, the chat and
+forms suites pass.
+
+## 3 Nov 2026: a new request for the same person is drafted from its own turns — ported from the sibling app (NEW_REQUEST_OWN_TURNS_ENABLED, default off)
+
+Found in the sibling app (the 2 Nov scan): a second Corrective Action request
+for the same person, "… for being late to opening this morning", was drafted
+from the earlier trash-and-rugs incident too. Replayed here it reproduces;
+the ported check trims the card to the new request, but Create then reuses
+the earlier draft for the same person in the same chat, so the new incident
+still never gets its own draft — a separate fix (replay-pack case nov2-p2,
+open).
+
+## 3 Nov 2026: no reply claims a change or a check it did not make — both apps (CLAIM_GUARD_ENABLED, OPEN_FORM_NO_SELECTION_ENABLED, default off)
+
+Found here (the 2 Nov scan): with the draft open, the answer said "the
+employee name on the draft now reads …" and later "Confirmed against records
+— … matching Woven" while nothing changed and nothing was read; several
+replies ended with the form selection's "Based on what you've described, I can
+prepare:" and nothing under it. On, every line about the form, the name or the
+record that says it changed or was checked ("now reads", "is now", "confirmed
+against", "matching Woven", …) is replaced by the honest reply unless this
+turn changed the form; with a draft open no form selection is offered.
+Ported to Ask Sunny with the same flags.
+
+## 3 Nov 2026: a policy named with more in the same message — the rest is not dropped — ported from the sibling app (POLICY_CHANGE_REST_OF_TURN_ENABLED, default off)
+
+Found in the sibling app (the 2 Nov scan): a policy cited and "Previous
+Coaching is when she signed the Policy manual May 2025" in one message — the
+reply said "Everything else on the form is as it was" and Prior Actions
+stayed empty. Replayed here it reproduces; the same fix behind the same flag
+(replay-pack case nov2-p3).
+
+## 3 Nov 2026: a refusal is never repeated word for word; "my DM" is not the employee's title — ported from the sibling app (REFUSAL_NO_REPEAT_ENABLED, TITLE_NOT_SPEAKERS_MANAGER_ENABLED, default off)
+
+Found in the sibling app (the 2 Nov scan): the same refusal three times, and
+"my DM told me …" put District Manager on a team member's card. Replayed
+here, the title case already holds; the guards are ported behind the same
+flags (forms/reply-guards.ts).
+
+## 3 Nov 2026: "fix her last name …" corrects the name on the open draft, or says how — both apps (NAME_CORRECTION_WORDS_ENABLED, default off)
+
+Found here (the 2 Nov scan): "fix her last name …", "the name is supposed to
+be …", "make that change to …", "okay the correct way is …" went to the
+answering model, which said the name was updated. On, each is read as "change
+her name to …" (a last name keeps the first; a whole name only when it shares
+a first or last name with the person on the draft). A Corrective Action's name
+is not chat-correctable (the form registry); there the reply says to edit the
+Employee Name line on the card — never "updated". Ported to Ask Sunny.
+
 ## 25 Oct 2026: the framework's sections are not pinned into governed drafts — Bubbles-only
 
 `FRAMEWORK_UNPIN_ENABLED` defaults off. The uploaded Performance Management
