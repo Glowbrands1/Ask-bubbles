@@ -109,6 +109,16 @@ Found in the sibling app (the 2 Nov scan): the same refusal three times, and
 here, the title case already holds; the guards are ported behind the same
 flags (forms/reply-guards.ts).
 
+## 3 Nov 2026: "fix her last name …" corrects the name on the open draft, or says how — both apps (NAME_CORRECTION_WORDS_ENABLED, default off)
+
+Found here (the 2 Nov scan): "fix her last name …", "the name is supposed to
+be …", "make that change to …", "okay the correct way is …" went to the
+answering model, which said the name was updated. On, each is read as "change
+her name to …" (a last name keeps the first; a whole name only when it shares
+a first or last name with the person on the draft). A Corrective Action's name
+is not chat-correctable (the form registry); there the reply says to edit the
+Employee Name line on the card — never "updated". Ported to Ask Sunny.
+
 ## 25 Oct 2026: the framework's sections are not pinned into governed drafts — Bubbles-only
 
 `FRAMEWORK_UNPIN_ENABLED` defaults off. The uploaded Performance Management

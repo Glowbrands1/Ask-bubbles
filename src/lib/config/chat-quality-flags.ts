@@ -891,6 +891,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "OPEN_DRAFT_KEEPS_TURNS_ENABLED",
   "FORM_EDIT_REFERS_BACK_ENABLED",
   "CLAIM_GUARD_ENABLED",
+  "NAME_CORRECTION_WORDS_ENABLED",
   "POLICY_CHANGE_REST_OF_TURN_ENABLED",
   "OPEN_FORM_NO_SELECTION_ENABLED",
   "ANGLE_PLACEHOLDER_GUARD_ENABLED",
@@ -1827,6 +1828,16 @@ export function policyChangeRestOfTurnEnabled(): boolean {
  */
 export function claimGuardEnabled(): boolean {
   return envFlag("CLAIM_GUARD_ENABLED");
+}
+
+/**
+ * "fix her last name …", "the name is supposed to be …", "the correct way is
+ * …" correct the name on the open draft, as "change her name to …" does (the
+ * 2 Nov 2026 scan; same flag in both apps). See `forms/name-correction-words.ts`.
+ * Off, as before.
+ */
+export function nameCorrectionWordsEnabled(): boolean {
+  return envFlag("NAME_CORRECTION_WORDS_ENABLED");
 }
 
 /**
