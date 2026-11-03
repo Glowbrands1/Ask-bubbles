@@ -12,6 +12,7 @@ import { SupabaseKnowledgeProvider } from "@/lib/knowledge/providers/supabase";
 import { callClaudeTool } from "./call-claude";
 import type { ChatActor } from "./form-proposal";
 import { loadFormState, saveFormState } from "./form-state-store";
+import { isTeamCardTurn } from "@/lib/forms/whole-team-coaching";
 import { stateSentences } from "./form-state";
 import type { GroundedPerson } from "./grounded-entities";
 import {
@@ -43,6 +44,8 @@ export async function applyIntentExtraction(input: {
   readonly actor: ChatActor;
 }): Promise<{ request: AskRequest; clarification: AskResponse | null }> {
   if (!intentExtractionEnabled()) return { request: input.request, clarification: null };
+  // WHOLE_TEAM_COACHING_ENABLED: the team card is the intake's; the stored slots of a person are not its subject.
+  if (isTeamCardTurn(input.request)) return { request: input.request, clarification: null };
   try {
     const saved = await readSaved(input.actor.subject, input.request.conversationId);
     const [people, headings, templates] = await Promise.all([

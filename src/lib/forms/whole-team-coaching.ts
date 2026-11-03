@@ -89,3 +89,23 @@ export function pastTeamReply(): string {
     "Tell me what the coaching is about (for example \"call a manager for cash register shortages, overages and returns\"), or say **coaching form for all team members**, and I'll make the team card.",
   ].join("\n\n");
 }
+
+/** The marker `wholeTeamRequest` writes. */
+const TEAM_MARKER = /^Coaching Form for the whole team\b/;
+
+/**
+ * The team card is being made this turn, or is the card on screen. The saved
+ * form state (a person this conversation was about) is then neither read nor
+ * written, and the intent reader is not run: the team card's subject is the
+ * team (ported to Ask Sunny, where both put the earlier person back).
+ */
+export function isTeamCardTurn(request: { question: string; history: readonly Pick<ChatMessage, "role" | "formProposal">[] }): boolean {
+  if (!wholeTeamCoachingEnabled()) return false;
+  if (TEAM_MARKER.test(request.question.trim())) return true;
+  for (let index = request.history.length - 1; index >= 0; index -= 1) {
+    const turn = request.history[index]!;
+    if (turn.role !== "assistant") continue;
+    if (turn.formProposal) return turn.formProposal.subject === "team";
+  }
+  return false;
+}

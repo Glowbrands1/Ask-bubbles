@@ -875,3 +875,19 @@ describe("QA's brief, 3 Nov: the same with a draft open, her complaint answered,
     expect(reply.content).not.toContain("Dodge Account");
   });
 });
+
+describe("with the saved form state on (found in Ask Sunny)", () => {
+  it("another person's open draft does not take the team card", async () => {
+    production([...FIXES]);
+    process.env.FORM_STATE_ENABLED = "true";
+    westDodge();
+    setRole("location_manager");
+    setScope({ level: "location", primaryAreaId: "loc-264", alsoCoversAreaIds: [] });
+    const thread = new Thread();
+    await thread.say("Create a coaching form for Remy Calder");
+    state.draft = { values: { coaching_details: "Coaching on the register." } };
+    await thread.create();
+    const reply = await thread.say("coaching form for all team members");
+    expect(reply.formProposal).toMatchObject({ ...TEAM, locationId: "loc-264" });
+  });
+});
