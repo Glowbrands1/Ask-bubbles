@@ -95,10 +95,3 @@ export const STAFF: DirectoryRow[] = [
   { id: "e-4", firstName: "Rowan", lastName: "Kestrel", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-264"], positionName: "Team Member Part Time" },
   { id: "e-5", firstName: "Dodge", lastName: "Account", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-264"], positionName: "Team Member Full Time" },
 ];
-
-/* ----------------------------------------------------------------- cases -- */
-
-import { NOV2_CASES } from "./nov2-cases";
-import { OCT30_CASES } from "./oct30-cases";
-
-export const CASES: readonly ReplayCase[] = [...OCT30_CASES, ...NOV2_CASES];
