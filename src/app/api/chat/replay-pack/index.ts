@@ -6,6 +6,7 @@ import { NOV2_CASES } from "./nov2-cases";
 import { NOV3_OPEN_DRAFT_NEW_REQUEST_CASES } from "./nov3-open-draft-new-request-cases";
 import { NOV3_TEAM_CASES } from "./nov3-team-cases";
 import { OCT30_CASES } from "./oct30-cases";
+import { NOV3_DRAFT_CASES } from "./nov3-draft-cases";
 
 /** Every case in the pack, in report order. */
-export const CASES: readonly ReplayCase[] = [...OCT30_CASES, ...NOV2_CASES, ...NOV2_DATA_LOSS_CASES, ...NOV2_PERSON_CASES, ...NOV2_CLAIM_CASES, ...NOV2_POLICY_REST_CASES, ...NOV2_METRIC_LOOP_CASES, ...NOV2_NAME_CORRECTION_CASES, ...NOV3_TEAM_CASES, ...NOV3_OPEN_DRAFT_NEW_REQUEST_CASES];
+export const CASES: readonly ReplayCase[] = [...OCT30_CASES, ...NOV2_CASES, ...NOV2_DATA_LOSS_CASES, ...NOV2_PERSON_CASES, ...NOV2_CLAIM_CASES, ...NOV2_POLICY_REST_CASES, ...NOV2_METRIC_LOOP_CASES, ...NOV2_NAME_CORRECTION_CASES, ...NOV3_TEAM_CASES, ...NOV3_OPEN_DRAFT_NEW_REQUEST_CASES, ...NOV3_DRAFT_CASES];
