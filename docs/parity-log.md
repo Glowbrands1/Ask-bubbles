@@ -82,6 +82,18 @@ the earlier draft for the same person in the same chat, so the new incident
 still never gets its own draft — a separate fix (replay-pack case nov2-p2,
 open).
 
+## 3 Nov 2026: no reply claims a change or a check it did not make — both apps (CLAIM_GUARD_ENABLED, OPEN_FORM_NO_SELECTION_ENABLED, default off)
+
+Found here (the 2 Nov scan): with the draft open, the answer said "the
+employee name on the draft now reads …" and later "Confirmed against records
+— … matching Woven" while nothing changed and nothing was read; several
+replies ended with the form selection's "Based on what you've described, I can
+prepare:" and nothing under it. On, every line about the form, the name or the
+record that says it changed or was checked ("now reads", "is now", "confirmed
+against", "matching Woven", …) is replaced by the honest reply unless this
+turn changed the form; with a draft open no form selection is offered.
+Ported to Ask Sunny with the same flags.
+
 ## 25 Oct 2026: the framework's sections are not pinned into governed drafts — Bubbles-only
 
 `FRAMEWORK_UNPIN_ENABLED` defaults off. The uploaded Performance Management
