@@ -115,7 +115,8 @@ const STORE_TITLES = new Set(
   ),
 );
 
-function storeStaff(person: RosterEmployee): boolean {
+/** A store's staff, not the office: the titles above, or no title on file. Also read by `coaching-for-everyone.ts`. */
+export function storeStaff(person: RosterEmployee): boolean {
   const title = person.positionName?.trim();
   return !title || STORE_TITLES.has(title.toLowerCase());
 }

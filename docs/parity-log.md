@@ -119,6 +119,19 @@ a first or last name with the person on the draft). A Corrective Action's name
 is not chat-correctable (the form registry); there the reply says to edit the
 Employee Name line on the card — never "updated". Ported to Ask Sunny.
 
+## 3 Nov 2026: "create this coaching form for everyone on my team" makes one draft each — both apps (COACHING_FOR_EVERYONE_ENABLED, default off)
+
+Pau, 3 Nov 2026, for a Location Manager who wrote one store-wide coaching:
+"also having to replicate that coaching verbiage to all coaching forms so she
+doesn't have to copy paste". With a Coaching draft open, the request gets one
+confirmation listing the people at the draft's store (the staff picker's
+roster: active, store titles) and the count; "create all" (or "create all
+except …") makes one draft each through the unchanged create path, with the
+draft's content copied and the name swapped. No model call, nothing
+finalized, at most 40; each draft's id comes from the source and the person,
+so a second "create all" makes nothing new. Ported to Ask Sunny with the same
+flag.
+
 ## 25 Oct 2026: the framework's sections are not pinned into governed drafts — Bubbles-only
 
 `FRAMEWORK_UNPIN_ENABLED` defaults off. The uploaded Performance Management

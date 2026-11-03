@@ -905,6 +905,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "STAFF_PICKER_REMEMBER_LOCATION_ENABLED",
   "SHARED_LOGIN_NOT_STAFF_ENABLED",
   "STAFF_PICKER_NO_REPEAT_ENABLED",
+  "COACHING_FOR_EVERYONE_ENABLED",
   "CHAT_RESPONSE_STREAM_ENABLED",
   "TRUNCATION_RETRY_BUDGET_ENABLED",
   "REPORT_NAME_NOT_A_PERSON_ENABLED",
@@ -1992,6 +1993,18 @@ export function sharedLoginNotStaffEnabled(): boolean {
  */
 export function staffPickerNoRepeatEnabled(): boolean {
   return envFlag("STAFF_PICKER_NO_REPEAT_ENABLED");
+}
+
+/**
+ * "Create this coaching form for everyone on my team": one DRAFT Coaching Form
+ * per person at the open draft's store, each with the open draft's Details,
+ * after one confirmation listing who (Pau, 3 Nov 2026: "also having to
+ * replicate that coaching verbiage to all coaching forms so she doesn't have
+ * to copy paste"; same flag in both apps). See
+ * `forms/coaching-for-everyone.ts`. Off, as before.
+ */
+export function coachingForEveryoneEnabled(): boolean {
+  return envFlag("COACHING_FOR_EVERYONE_ENABLED");
 }
 
 /**
