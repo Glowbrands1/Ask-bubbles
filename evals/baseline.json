@@ -78,13 +78,14 @@
       "id": "r1",
       "pass": false,
       "misses": [
-        "reply has \"Dodge Account\""
+        "reply lacks \"Dana Hollisworth\"",
+        "reply lacks \"Eli Brackwater\""
       ],
       "card": {
-        "employee": null,
-        "salon": null,
+        "employee": "All team members",
+        "salon": "loc-264",
         "date": null,
-        "status": null
+        "status": "ready"
       }
     },
     {
@@ -116,13 +117,14 @@
       "id": "b2",
       "pass": false,
       "misses": [
-        "employee"
+        "employee",
+        "salon"
       ],
       "card": {
-        "employee": "Odessa",
-        "salon": "loc-236",
+        "employee": null,
+        "salon": null,
         "date": null,
-        "status": "ready"
+        "status": null
       }
     },
     {
@@ -206,15 +208,13 @@
     },
     {
       "id": "b14",
-      "pass": false,
-      "misses": [
-        "reply has \"Your role cannot create\""
-      ],
+      "pass": true,
+      "misses": [],
       "card": {
         "employee": null,
-        "salon": null,
+        "salon": "loc-264",
         "date": null,
-        "status": null
+        "status": "needs_employee"
       }
     },
     {
@@ -230,26 +230,22 @@
     },
     {
       "id": "b16",
-      "pass": false,
-      "misses": [
-        "reply has \"Your role cannot create\""
-      ],
+      "pass": true,
+      "misses": [],
       "card": {
         "employee": null,
-        "salon": null,
+        "salon": "loc-264",
         "date": null,
-        "status": null
+        "status": "needs_employee"
       }
     },
     {
       "id": "b17",
-      "pass": false,
-      "misses": [
-        "employee"
-      ],
+      "pass": true,
+      "misses": [],
       "card": {
-        "employee": "Rosalind",
-        "salon": null,
+        "employee": "Rosalind Ashgrove",
+        "salon": "loc-264",
         "date": null,
         "status": "ready"
       }
