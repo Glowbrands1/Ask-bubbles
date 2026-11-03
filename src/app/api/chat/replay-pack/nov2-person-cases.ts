@@ -78,7 +78,8 @@ export const NOV2_METRIC_LOOP_CASES: readonly ReplayCase[] = [
     id: "nov2-p6-refusal-no-repeat",
     title: "the same refusal is never said twice in a row; the second time says what moves it on",
     report: "\"It also gave the same refusal 3 times\" (\"A low number on its own isn't what our progression escalates on …\")",
-    status: { open: "a refusal is repeated word for word" },
+    // Fixed in production: the scan-fix flags on (QA, 3 Nov 2026, 04:20 UTC).
+    status: "fixed",
     fixFlags: ["REFUSAL_NO_REPEAT_ENABLED"],
     async run(t) {
       t.directory(STAFF);

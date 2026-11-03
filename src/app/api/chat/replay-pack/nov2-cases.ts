@@ -9,8 +9,9 @@ export const NOV2_CASES: readonly ReplayCase[] = [
     title: "a coaching form for all team members, six turns: never the same refusal again",
     report:
       '"earlier bubbles made a coaching form for all team members. Now it is struggling to do that, it says it cannot make a coaching form for all team members, but it just did it for me earlier" (1 star)',
-    // Fixed by WHOLE_TEAM_COACHING_ENABLED (#357): add it to fixFlags when that is merged.
-    status: { open: "the staff picker refuses a whole-team coaching form; #357 not merged" },
+    // WHOLE_TEAM_COACHING_ENABLED (#357) is on in production (QA, 3 Nov 2026) and the refusal
+    // is gone, but the second identical request repeats the team card word for word.
+    status: { open: "the same team card is offered again, word for word, for the same request" },
     async run(t) {
       t.directory(STAFF);
       t.as("location_manager", TWO_STORES);
