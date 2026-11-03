@@ -1,5 +1,10 @@
 import type { AskResponse } from "@/lib/ai/types";
-import { staffPickerStoreTitlesEnabled } from "@/lib/config/chat-quality-flags";
+import {
+  staffPickerNoRepeatEnabled,
+  staffPickerRememberLocationEnabled,
+  staffPickerStoreTitlesEnabled,
+  wholeTeamCoachingEnabled,
+} from "@/lib/config/chat-quality-flags";
 import type { RosterEmployee } from "@/lib/forms/employee-match";
 import type { AccessScope, ChatMessage, Permission, Role } from "@/types";
 
@@ -164,14 +169,56 @@ export function staffPickerReply(input: {
 
   const form = formName(`${input.question} ${previous}`);
   const one = form === "form" ? "A form" : `A ${form}`;
-  if (named.length === 1) return listStaff(inScope.get(named[0]!)!, input.roster, form);
-  if (inScope.size === 1) return listStaff([...inScope.values()][0]!, input.roster, form);
+  const chosen = named.length === 1 ? inScope.get(named[0]!)! : inScope.size === 1 ? [...inScope.values()][0]! : null;
+  if (chosen && staffPickerNoRepeatEnabled()) {
+    const onward = alreadyListed(input.history, chosen, form);
+    if (onward) return onward;
+  }
+  if (chosen) return listStaff(chosen, input.roster, form);
   if (inScope.size === 0) {
     return `${one} is for one person at a time, and I can't list a staff for your account. Tell me the name of the person it is for.`;
   }
   const names = [...inScope.values()].map((location) => location.name).sort((a, b) => a.localeCompare(b));
   const choices = names.length <= 15 ? `\n\n${names.map((name) => `- ${name}`).join("\n")}` : "";
   return `${one} is for one person at a time, so I won't make one card for the whole staff. ${ASKED_LOCATION} Your account covers ${names.length} locations.${choices}`;
+}
+
+/** The latest store, in scope, that the manager named in this conversation. */
+function rememberedLocation(
+  history: readonly Pick<ChatMessage, "role" | "content">[],
+  read: (text: string) => string[],
+  allowed: ReadonlySet<string>,
+): string[] {
+  for (let index = history.length - 1; index >= 0; index -= 1) {
+    const turn = history[index]!;
+    if (turn.role !== "user" || typeof turn.content !== "string") continue;
+    const ids = [...new Set(read(turn.content).filter((id) => allowed.has(id)))];
+    if (ids.length === 1) return ids;
+  }
+  return [];
+}
+
+/** "Here is the staff at **<store>** on the directory": the list already given in this conversation. */
+const LISTED_AT = /Here is the staff at \*\*([^*]+)\*\* on the directory/;
+
+/**
+ * STAFF_PICKER_NO_REPEAT_ENABLED (same report: six turns, the same refusal and
+ * the same list each time). Once this conversation listed a store's staff,
+ * another whole-staff turn for that store is told what to do next in one
+ * line — never the refusal and the list again.
+ */
+function alreadyListed(
+  history: readonly Pick<ChatMessage, "role" | "content">[],
+  location: StaffLocation,
+  form: string,
+): string | null {
+  const listed = history.some(
+    (turn) => turn.role === "assistant" && typeof turn.content === "string" && LISTED_AT.exec(turn.content)?.[1] === location.name,
+  );
+  if (!listed) return null;
+  const one = form === "form" ? "a form" : `a **${form}**`;
+  const next = form === "form" ? "the same form" : `the same ${form}`;
+  return `The staff at **${location.name}** is listed above. To go on, name one person from that list and I'll start ${one} for them; once it's created, say **do ${next} for <next name>** and I'll copy it onto the next person's card.`;
 }
 
 export function staffPickerAnswer(content: string): AskResponse {
@@ -186,6 +233,8 @@ export async function staffPickerTurn(input: {
   question: string;
   history: readonly Pick<ChatMessage, "role" | "content">[];
   continuing: boolean;
+  /** The form the intake is still asking about, if any ("coaching", "dpoa", …). */
+  templateKey?: string | null;
   scope: AccessScope | null;
   /** The asker's role: the list is only for somebody who may create the form. */
   role: Role;
@@ -205,6 +254,18 @@ export async function staffPickerTurn(input: {
   const needs: Permission[] =
     form === "Coaching Form" ? ["create_coaching_form"] : form === "Corrective Action Form" ? ["create_corrective_action"] : ["create_coaching_form", "create_corrective_action"];
   if (!needs.some((permission) => hasPermission(DEFAULT_PERMISSION_MATRIX, input.role, permission))) return null;
+  /*
+   * WHOLE_TEAM_COACHING_ENABLED (a Location Manager, 2 Nov 2026, 1 star: "it
+   * says it cannot make a coaching form for all team members, but it just did
+   * it for me earlier"; Pau, 3 Nov: "I need all managers to have it"). A
+   * COACHING form for the whole staff is the team card ("All team members",
+   * one store) the form intake already makes — so the picker steps aside and
+   * the intake answers, the same in every chat. A Corrective Action Form, or a
+   * form not named, is still one person at a time.
+   */
+  if (wholeTeamCoachingEnabled() && (form === "Coaching Form" || input.templateKey === "coaching")) return null;
+  // A form not named, for the whole staff: the intake asks which form, and the Coaching Form is the team card.
+  if (wholeTeamCoachingEnabled() && form === "form" && !input.templateKey) return null;
   const [{ authorizedLocationIds }, { locationById }, { readLocationMentions }, { loadScopedRoster }] = await Promise.all([
     import("@/lib/forms/location-scope"),
     import("@/lib/locations"),
@@ -217,9 +278,24 @@ export async function staffPickerTurn(input: {
         .filter((location): location is NonNullable<typeof location> => Boolean(location))
         .map((location) => ({ id: location.id, name: location.name }))
     : [];
-  const namedLocationIds = readLocationMentions(input.question)
-    .filter((mention) => !mention.confirm && !mention.collision)
-    .flatMap((mention) => [...mention.locationIds]);
+  const inTurn = (text: string) =>
+    readLocationMentions(text)
+      .filter((mention) => !mention.confirm && !mention.collision)
+      .flatMap((mention) => [...mention.locationIds]);
+  const allowed = new Set(locations.map((location) => location.id));
+  const said = inTurn(input.question);
+  /*
+   * STAFF_PICKER_REMEMBER_LOCATION_ENABLED (a Location Manager covering two
+   * stores, 2 Nov 2026): she answered "dodge", then asked again for "a coaching
+   * form for all team members" and was asked "Which location's staff should I
+   * list?" a second time. A store this conversation's manager already named —
+   * the latest one that is in scope — answers it; a turn naming a store still
+   * wins, and a conversation naming none is still asked.
+   */
+  const namedLocationIds =
+    said.some((id) => allowed.has(id)) || !staffPickerRememberLocationEnabled()
+      ? said
+      : rememberedLocation(input.history, inTurn, allowed);
   // Asked first without the roster: the location question needs no directory read.
   const draft = staffPickerReply({ ...input, locations, namedLocationIds, roster: [] });
   if (draft === null) return null;

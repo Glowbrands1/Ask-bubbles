@@ -1,4 +1,4 @@
-import { typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { sharedLoginNotStaffEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 
 /**
  * ============================================================================
@@ -84,7 +84,22 @@ const SERVICE_NAME_WORDS = new Set([
 /** Whether a directory row's name is a department, role or system rather than a person. */
 export function isServiceAccountName(firstName: string, lastName: string): boolean {
   const words = `${firstName} ${lastName}`.toLowerCase().split(/[^a-z]+/).filter(Boolean);
-  return words.length > 0 && words.every((word) => SERVICE_NAME_WORDS.has(word));
+  if (words.length > 0 && words.every((word) => SERVICE_NAME_WORDS.has(word))) return true;
+  return sharedLoginNotStaffEnabled() && isSharedLogin(lastName);
+}
+
+/*
+ * SHARED_LOGIN_NOT_STAFF_ENABLED (a Location Manager, 2 Nov 2026): a store's
+ * shared login, kept on the directory as "<Store> Account" with a team member
+ * title, was listed as a team member — the rule above keeps it because the
+ * store's name is not a department word. A row whose LAST name is only a word
+ * for a login — Account, Accounts, Login, Logins, Shared, Generic — is a
+ * login, whatever its first name. Nothing is written to the directory.
+ */
+const LOGIN_SURNAMES = new Set(["account", "accounts", "login", "logins", "shared", "generic"]);
+
+function isSharedLogin(lastName: string): boolean {
+  return LOGIN_SURNAMES.has(lastName.trim().toLowerCase());
 }
 
 /**
