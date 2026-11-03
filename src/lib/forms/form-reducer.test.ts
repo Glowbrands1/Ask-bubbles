@@ -135,8 +135,23 @@ describe("rule 3: draft and redraft", () => {
     for (const key of Object.keys(DRAFT)) if (key !== "action_plan_notes") expect(draft[key]).toEqual(DRAFT[key]);
   });
 
-  it("needs no evidence in draft mode", () => {
-    expect(drafted({ set: { incident_date: "2026-10-20" } }).diff.changed).toHaveLength(1);
+  it("needs no per-field evidence in draft mode, but a date must be one the manager stated", () => {
+    expect(drafted({ set: { incident_date: "2026-10-20" } }, { sources: { manager: MANAGER } }).diff.changed).toHaveLength(1);
+  });
+
+  it("refuses a date the manager never gave, in draft mode too (nothing is invented)", () => {
+    expect(drafted({ set: { incident_date: "2026-10-21" } }, { sources: { manager: MANAGER } }).diff.refused).toEqual([
+      { key: "incident_date", reason: "date_not_stated" },
+    ]);
+    // With no manager words to check against, a draft writes no date at all.
+    expect(drafted({ set: { incident_date: "2026-10-20" } }).diff.refused).toEqual([{ key: "incident_date", reason: "date_not_stated" }]);
+  });
+
+  it("refuses an amount the manager never gave, in draft mode too", () => {
+    expect(drafted({ set: { payroll_amount: "$25.00" } }, { sources: { manager: MANAGER } }).diff.refused).toEqual([
+      { key: "payroll_amount", reason: "not_in_manager_words" },
+    ]);
+    expect(drafted({ set: { payroll_amount: "$3.25" } }, { sources: { manager: MANAGER } }).draft.payroll_amount!.value).toBe("$3.25");
   });
 });
 
@@ -156,7 +171,7 @@ describe("rule 4: chat edit", () => {
     const { diff } = edit({
       set: { observation: "drawer was  SHORT at close" },
       how: { observation: "add" },
-      evidence: { observation: "register shortage" },
+      evidence: { observation: "a register shortage on 10-20-26" },
     });
     expect(diff).toEqual({ changed: [], refused: [] });
   });
@@ -243,8 +258,47 @@ describe("rule 4: chat edit", () => {
   });
 
   it("a date whose evidence states no date is refused", () => {
-    const { diff } = edit({ set: { incident_date: "2026-10-20" }, evidence: { incident_date: "register shortage" } });
+    const { diff } = edit({ set: { incident_date: "2026-10-20" }, evidence: { incident_date: "payroll deduct applies" } });
     expect(diff.refused).toEqual([{ key: "incident_date", reason: "date_not_stated" }]);
+  });
+});
+
+describe("evidence strength (QA, 3 Nov 2026)", () => {
+  it('refuses one-word evidence such as "a" or "the", even though it is a substring of what was said', () => {
+    for (const evidence of ["a", "the", "shipping label"]) {
+      const { diff } = edit({ set: { action_plan_notes: "Count the drawer twice." }, how: { action_plan_notes: "add" }, evidence: { action_plan_notes: evidence } });
+      expect(diff.refused, evidence).toEqual([{ key: "action_plan_notes", reason: "not_in_manager_words" }]);
+    }
+  });
+
+  it("accepts a whole manager turn shorter than three words as evidence", () => {
+    const rules = { sources: { manager: `${MANAGER}\nlabel reprinted`, managerTurns: ["label reprinted"] } };
+    const { diff } = edit({ set: { action_plan_notes: "Label reprinted." }, how: { action_plan_notes: "add" }, evidence: { action_plan_notes: "label reprinted" } }, rules);
+    expect(diff.refused).toEqual([]);
+    expect(diff.changed).toHaveLength(1);
+  });
+
+  it("refuses an invented sentence even with real evidence: the value's words must have been said", () => {
+    const { diff } = edit({
+      set: { observation: "Rowan was rude to a customer and left the store early without permission." },
+      how: { observation: "add" },
+      evidence: { observation: "the shipping label was printed twice" },
+    });
+    expect(diff.refused).toEqual([{ key: "observation", reason: "not_in_manager_words" }]);
+  });
+
+  it("accepts a value built from the accepted offer's words", () => {
+    const { diff } = edit(
+      { set: { action_plan_notes: "Rowan was reminded to count the drawer at the start of every shift." }, how: { action_plan_notes: "replace" }, evidence: { action_plan_notes: "count the drawer at the start of every shift" } },
+      { sources: { manager: MANAGER, offered: OFFERED, accepted: true } },
+    );
+    expect(diff.refused).toEqual([]);
+  });
+});
+
+describe("evidence strength for a clear", () => {
+  it('refuses a clear whose evidence is one word such as "the"', () => {
+    expect(edit({ clear: ["action_plan_notes"], evidence: { action_plan_notes: "the" } }).diff.changed).toEqual([]);
   });
 });
 
@@ -261,21 +315,21 @@ describe("rule 5: checkbox groups", () => {
     expect(edit({ set: { level: ["termination"] }, evidence: { level: "create ca form" } }).diff.refused).toEqual([
       { key: "level", reason: "unknown_option" },
     ]);
-    expect(edit({ set: { topics: ["cash", "theft"] }, evidence: { topics: "register shortage" } }).diff.refused).toEqual([
+    expect(edit({ set: { topics: ["cash", "theft"] }, evidence: { topics: "a register shortage on 10-20-26" } }).diff.refused).toEqual([
       { key: "topics", reason: "unknown_option" },
     ]);
   });
 
   it("a multi-choice group adds or replaces", () => {
-    const added = edit({ set: { topics: ["conduct"] }, how: { topics: "add" }, evidence: { topics: "register shortage" } });
+    const added = edit({ set: { topics: ["conduct"] }, how: { topics: "add" }, evidence: { topics: "a register shortage on 10-20-26" } });
     expect(added.draft.topics!.value).toEqual(["cash", "conduct"]);
-    const replaced = edit({ set: { topics: ["conduct", "attendance"] }, how: { topics: "replace" }, evidence: { topics: "register shortage" } });
+    const replaced = edit({ set: { topics: ["conduct", "attendance"] }, how: { topics: "replace" }, evidence: { topics: "a register shortage on 10-20-26" } });
     expect(replaced.draft.topics!.value).toEqual(["conduct", "attendance"]);
   });
 
   it("the same options in another order are no change", () => {
     const draft = { ...DRAFT, topics: field("topics", ["cash", "conduct"], "assistant") };
-    const { diff } = applyPatch(draft, { set: { topics: ["conduct", "cash"] }, clear: [], evidence: { topics: "register shortage" } }, BASE);
+    const { diff } = applyPatch(draft, { set: { topics: ["conduct", "cash"] }, clear: [], evidence: { topics: "a register shortage on 10-20-26" } }, BASE);
     expect(diff).toEqual({ changed: [], refused: [] });
   });
 });
@@ -322,7 +376,7 @@ describe("rule 7: the same value is not a change", () => {
     const { diff } = edit({
       set: { action_plan_notes: "  Review the cash handling steps. " },
       how: { action_plan_notes: "replace" },
-      evidence: { action_plan_notes: "register shortage" },
+      evidence: { action_plan_notes: "a register shortage on 10-20-26" },
     });
     expect(diff).toEqual({ changed: [], refused: [] });
   });

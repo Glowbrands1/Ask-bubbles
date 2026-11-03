@@ -108,6 +108,8 @@ export interface PatchRules {
     readonly offered?: string;
     /** The latest message accepts `offered`. */
     readonly accepted?: boolean;
+    /** The manager's turns one by one: a turn shorter than MIN_EVIDENCE_WORDS is evidence on its own when quoted whole. */
+    readonly managerTurns?: readonly string[];
   };
 }
 
@@ -136,6 +138,47 @@ export function fold(text: string): string {
 function contains(haystack: string, needle: string): boolean {
   const want = fold(needle);
   return want !== "" && fold(haystack).includes(want);
+}
+
+/** Evidence must be at least this many words, or a whole manager turn that is shorter. */
+export const MIN_EVIDENCE_WORDS = 3;
+/** At least this share of a written text value's words must have been said by the manager (or be in an accepted offer). */
+export const MIN_SAID_SHARE = 0.5;
+
+function isWordChar(char: string): boolean {
+  return char.toLowerCase() !== char.toUpperCase() || (char >= "0" && char <= "9");
+}
+
+/** The words of a text, folded, with punctuation trimmed from each end. No pattern matching. */
+export function wordsOf(text: string): string[] {
+  const out: string[] = [];
+  for (const raw of fold(text).split(" ")) {
+    let start = 0;
+    let end = raw.length;
+    while (start < end && !isWordChar(raw[start]!)) start += 1;
+    while (end > start && !isWordChar(raw[end - 1]!)) end -= 1;
+    if (end > start) out.push(raw.slice(start, end));
+  }
+  return out;
+}
+
+/** Strong enough evidence: MIN_EVIDENCE_WORDS words, or one whole manager turn that is shorter. */
+function strongEvidence(evidence: string, rules: PatchRules): boolean {
+  if (wordsOf(evidence).length >= MIN_EVIDENCE_WORDS) return true;
+  const want = fold(evidence);
+  return (rules.sources?.managerTurns ?? []).some((turn) => want !== "" && fold(turn) === want);
+}
+
+/** At least MIN_SAID_SHARE of the value's words appear among the words said (manager, or the accepted offer). */
+function valueWasSaid(value: string, rules: PatchRules): boolean {
+  const words = wordsOf(value);
+  if (words.length === 0) return false;
+  const sources = rules.sources;
+  if (!sources) return false;
+  const said = new Set(wordsOf(sources.manager));
+  if (sources.accepted && sources.offered) for (const word of wordsOf(sources.offered)) said.add(word);
+  const hits = words.filter((word) => said.has(word)).length;
+  return hits / words.length >= MIN_SAID_SHARE;
 }
 
 /* ------------------------------------------------------------ values ---- */
@@ -210,6 +253,7 @@ function evidenceFrom(evidence: string | undefined, rules: PatchRules): "manager
   if (!evidence || evidence.trim() === "") return null;
   const sources = rules.sources;
   if (!sources) return null;
+  if (!strongEvidence(evidence, rules)) return null;
   if (contains(sources.manager, evidence)) return "manager";
   if (sources.accepted && sources.offered !== undefined && contains(sources.offered, evidence)) return "offered";
   return null;
@@ -238,6 +282,13 @@ function setOne(draft: FormDraft, key: string, value: FieldValue, patch: FormPat
 
   if (rules.mode === "draft") {
     if (typed && !(rules.typedExempt?.has(key) ?? false)) return sameValue(field.value, value) ? null : refuse(key, "typed_by_manager");
+    // Nothing invented in a draft either: a date, payroll answer or amount must be what the manager said.
+    const said = typeof value === "string" ? value.trim() : asList(value).join("\n");
+    if (rules.dateKeys?.has(key)) {
+      const stated = rules.datesIn ? rules.datesIn(rules.sources?.manager ?? "") : [];
+      if (!stated.includes(said)) return refuse(key, "date_not_stated");
+    }
+    if (rules.managerStated?.has(key) && !group && !contains(rules.sources?.manager ?? "", said)) return refuse(key, "not_in_manager_words");
     if (group) return checkboxValue(key, field, value, "replace", group);
     if (isList) return { value: uniteLines(field.value, value, rules.listNone), owner: field.owner === "empty" ? "assistant" : field.owner };
     return { value: typeof value === "string" ? value.trim() : asList(value).join("\n"), owner: "assistant" };
@@ -268,11 +319,14 @@ function setOne(draft: FormDraft, key: string, value: FieldValue, patch: FormPat
     const written = checkboxValue(key, field, value, how, group);
     return isRefusal(written) || written === null ? written : { value: written.value, owner };
   }
+  // A list line is the app's own format (priorActionLine); its evidence is checked above.
   if (isList) return { value: uniteLines(field.value, value, rules.listNone), owner: typed ? "manager" : owner };
+  const have = typeof field.value === "string" ? field.value.trim() : asList(field.value).join("\n");
+  if (how === "add" ? have !== "" && contains(have, text) : sameValue(field.value, text)) return null;
+  // The value itself, not only its evidence, must be words the manager said (or an accepted offer).
+  if (!valueWasSaid(text, rules)) return refuse(key, "not_in_manager_words");
   if (how === "add") {
-    const have = typeof field.value === "string" ? field.value.trim() : asList(field.value).join("\n");
     if (have === "") return { value: text, owner };
-    if (contains(have, text)) return null;
     return { value: `${have}\n${text}`, owner: typed ? "manager" : owner };
   }
   // "replace": text the assistant offered never replaces what the manager typed.
@@ -285,7 +339,8 @@ function clearOne(draft: FormDraft, key: string, patch: FormPatch, rules: PatchR
   const field = current(draft, key);
   if (field.owner === "manager") return refuse(key, "would_blank");
   if (isEmpty(field.value)) return null;
-  if (rules.mode === "edit" && !contains(rules.sources?.manager ?? "", patch.evidence?.[key] ?? "")) {
+  const clearEvidence = patch.evidence?.[key] ?? "";
+  if (rules.mode === "edit" && !(contains(rules.sources?.manager ?? "", clearEvidence) && strongEvidence(clearEvidence, rules))) {
     return refuse(key, "not_in_manager_words");
   }
   return { value: typeof field.value === "string" ? "" : [], owner: "empty" };
