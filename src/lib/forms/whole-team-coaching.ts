@@ -97,7 +97,7 @@ const TEAM_MARKER = /^Coaching Form for the whole team\b/;
  * The team card is being made this turn, or is the card on screen. The saved
  * form state (a person this conversation was about) is then neither read nor
  * written, and the intent reader is not run: the team card's subject is the
- * team (ported to Ask Sunny, where both put the earlier person back).
+ * team (found in the sibling app, where both put the earlier person back).
  */
 export function isTeamCardTurn(request: { question: string; history: readonly Pick<ChatMessage, "role" | "formProposal">[] }): boolean {
   if (!wholeTeamCoachingEnabled()) return false;

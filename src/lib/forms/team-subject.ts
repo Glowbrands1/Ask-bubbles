@@ -64,8 +64,8 @@ const TEAM_PHRASES: readonly RegExp[] = [
  * ("she yelled in front of the whole team") is still not this.
  */
 const WHOLE_TEAM_EXTRA: readonly RegExp[] = [
-  /\bfor\s+(?:the\s+|my\s+|our\s+)?(?:whole|entire)\s+(?:store|salon|location|shop)\b/i,
-  /^\s*(?:it'?s\s+)?(?:for\s+)?(?:the\s+|my\s+|our\s+)?(?:(?:whole|entire|all(?:\s+(?:of\s+)?(?:my|our|the))?|every)\s+(?:staff|team(?:\s+members)?|crew|associates|employees|store|salon)|everyone|everybody|all\s+of\s+them)\b[\s\w-]{0,24}[.!]?\s*$/i,
+  /\bfor\s+(?:the\s+|my\s+|our\s+)?(?:whole|entire)\s+(?:store|location|shop)\b/i,
+  /^\s*(?:it'?s\s+)?(?:for\s+)?(?:the\s+|my\s+|our\s+)?(?:(?:whole|entire|all(?:\s+(?:of\s+)?(?:my|our|the))?|every)\s+(?:staff|team(?:\s+members)?|crew|associates|employees|store)|everyone|everybody|all\s+of\s+them)\b[\s\w-]{0,24}[.!]?\s*$/i,
 ];
 
 /** Whether the manager's words make this coaching about the team. */

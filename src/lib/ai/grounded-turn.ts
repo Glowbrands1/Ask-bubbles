@@ -59,7 +59,7 @@ export async function deliverFormProposal(input: {
   }
 
   /*
-   * WHOLE_TEAM_COACHING_ENABLED (3 Nov 2026; found in Ask Sunny, where the
+   * WHOLE_TEAM_COACHING_ENABLED (3 Nov 2026; found in the sibling app, where the
    * saved form state put the person this conversation was about back in front
    * of "Coaching Form for the whole team"): while the team card is being made
    * or is the card on screen, the saved state is neither read nor written.

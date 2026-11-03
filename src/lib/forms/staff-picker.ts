@@ -195,8 +195,8 @@ export function staffPickerReply(input: {
 const PLACE_FILLER = new Set(["the", "at", "in", "for", "its", "it's", "it", "is", "store", "stores", "location", "shop", "one", "please", "ne", "ia", "ks", "mo", "sd", "co"]);
 
 /**
- * A short name of ONE of the account's own stores (ported from Ask Sunny,
- * where a bare salon name was not read at all) — every word the manager typed
+ * A short name of ONE of the account's own stores (ported from the sibling
+ * app, where a bare location name was not read at all) — every word the manager typed
  * (fillers aside) is a word of that store's name and of no other in scope.
  */
 function shortLocationName(text: string, locations: readonly StaffLocation[]): string[] {
@@ -308,7 +308,7 @@ export async function staffPickerTurn(input: {
     const read = readLocationMentions(text)
       .filter((mention) => !mention.confirm && !mention.collision)
       .flatMap((mention) => [...mention.locationIds]);
-    // STAFF_PICKER_REMEMBER_LOCATION_ENABLED: a short name of one of the account's own stores, as Ask Sunny reads "kearney".
+    // STAFF_PICKER_REMEMBER_LOCATION_ENABLED: a short name of one of the account's own stores ("dodge").
     return read.length > 0 || !staffPickerRememberLocationEnabled() ? read : shortLocationName(text, locations);
   };
   const allowed = new Set(locations.map((location) => location.id));
