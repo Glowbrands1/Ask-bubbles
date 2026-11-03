@@ -902,6 +902,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ROSTER_STORE_SCOPED_ENABLED",
   "STAFF_PICKER_BARE_ANSWER_ENABLED",
   "WHOLE_TEAM_COACHING_ENABLED",
+  "TEAM_CARD_WORDING_ENABLED",
   "STAFF_PICKER_REMEMBER_LOCATION_ENABLED",
   "SHARED_LOGIN_NOT_STAFF_ENABLED",
   "STAFF_PICKER_NO_REPEAT_ENABLED",
@@ -1965,6 +1966,20 @@ export function staffPickerBareAnswerEnabled(): boolean {
  */
 export function wholeTeamCoachingEnabled(): boolean {
   return envFlag("WHOLE_TEAM_COACHING_ENABLED");
+}
+
+/**
+ * Two more team-card wordings (QA live check, 3 Nov 2026), read only with
+ * WHOLE_TEAM_COACHING on: "store wide everyone needs the reminder to call a
+ * manager for cash drawer shortages, overages, and returns" — the team, then
+ * what it needs, with no "coaching" in it — is the team Coaching card when no
+ * draft is open; and words that only name the audience ("for the whole
+ * store") are not handed on as the card's content, so Details does not echo
+ * them. Same flag in both apps. See `forms/whole-team-coaching.ts`. Off, as
+ * before.
+ */
+export function teamCardWordingEnabled(): boolean {
+  return envFlag("TEAM_CARD_WORDING_ENABLED");
 }
 
 /**

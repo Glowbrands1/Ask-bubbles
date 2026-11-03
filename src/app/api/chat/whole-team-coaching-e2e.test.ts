@@ -553,7 +553,7 @@ const FIXES = ["WHOLE_TEAM_COACHING_ENABLED", "STAFF_PICKER_REMEMBER_LOCATION_EN
 
 /** Production as of 3 Nov 2026, plus the named fixes. */
 function production(fixes: readonly (typeof FIXES)[number][] = []) {
-  for (const name of [...ALL_FLAGS, ...FIXES]) {
+  for (const name of [...ALL_FLAGS, ...FIXES, "TEAM_CARD_WORDING_ENABLED"]) {
     if (!saved.has(name)) saved.set(name, process.env[name]);
     delete process.env[name];
   }
@@ -889,5 +889,44 @@ describe("with the saved form state on (found in Ask Sunny)", () => {
     await thread.create();
     const reply = await thread.say("coaching form for all team members");
     expect(reply.formProposal).toMatchObject({ ...TEAM, locationId: "loc-264" });
+  });
+});
+
+describe("TEAM_CARD_WORDING_ENABLED: QA's live check, 3 Nov 2026", () => {
+  // QA's wording, verbatim: no "coaching" in it, and it got a policy answer instead of the team card.
+  const QA_TURN = "store wide everyone needs the reminder to call a manager for cash drawer shortages, overages, and returns";
+  const ONE_STORE = { level: "location", primaryAreaId: "loc-264", alsoCoversAreaIds: [] };
+
+  it("off (production today): no team card", async () => {
+    production([...FIXES]);
+    westDodge();
+    setRole("location_manager");
+    setScope(ONE_STORE);
+    const thread = new Thread();
+    await thread.say(QA_TURN);
+    expect(thread.proposal?.subject).not.toBe("team");
+  });
+
+  it("on: the team Coaching card, at her one store", async () => {
+    production([...FIXES]);
+    process.env.TEAM_CARD_WORDING_ENABLED = "true";
+    westDodge();
+    setRole("location_manager");
+    setScope(ONE_STORE);
+    const thread = new Thread();
+    const reply = await thread.say(QA_TURN);
+    expect(reply.content).not.toMatch(REFUSAL);
+    expect(thread.proposal).toMatchObject({ ...TEAM, locationId: "loc-264", status: "ready" });
+  });
+
+  it("on: an employee still gets no card", async () => {
+    production([...FIXES]);
+    process.env.TEAM_CARD_WORDING_ENABLED = "true";
+    westDodge();
+    setRole("employee");
+    setScope(ONE_STORE);
+    const thread = new Thread();
+    await thread.say(QA_TURN);
+    expect(thread.proposal).toBeFalsy();
   });
 });
