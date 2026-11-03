@@ -25,7 +25,8 @@ export interface ReplayAnswer {
 }
 
 export interface ReplayThread {
-  say(text: string): Promise<ReplayAnswer>;
+  /** `reading`: what the stand-in reading models return this turn (e.g. `{ employeeName }`, the name as typed); none by default. */
+  say(text: string, reading?: Record<string, unknown>): Promise<ReplayAnswer>;
   create(): Promise<string>;
   readonly proposal: ReplayAnswer["formProposal"] | null;
   readonly instanceId: string | null;
