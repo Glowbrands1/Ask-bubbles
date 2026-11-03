@@ -21,7 +21,7 @@ import {
   type ProtectedValues,
   type Refusal,
 } from "./form-reducer";
-import { MANAGER_STATED_KEYS, statedDates, templateRules, writeInsOf } from "./form-reducer-draft";
+import { MANAGER_STATED_KEYS, draftDates, statedDates, templateRules, writeInsOf } from "./form-reducer-draft";
 import { HEADER_KEYS, checkedClaim, snapshotDiff, snapshotOf, type FormSnapshot } from "./form-snapshot";
 import {
   applyAssistantDraft,
@@ -324,7 +324,7 @@ export function presetRules(loaded: LoadedInstance, ops: readonly FormEditOp[], 
           writable: template.writable,
           typedExempt: rules.typedExempt ?? new Set<string>(),
           dateKeys: template.dateKeys,
-          datesIn: statedDates(today),
+          datesIn: draftDates(today),
           checkboxGroups: template.checkboxGroups,
           listKeys: lists,
           listNone: NO_PRIOR_ACTION,
@@ -694,9 +694,18 @@ export async function statedWrite(
   const filled = new Set(
     loaded.values.filter((row) => (row.value ?? "").trim() !== "" || row.checked.length > 0).map((row) => row.fieldKey),
   );
+  /*
+   * And only the lines this form has, as `selectStatedFacts` keeps them: the
+   * employment change reader states a Demotion's facts and a Transfer's alike
+   * (`transfer_type` on a Demotion Form), and a key the form lacks would refuse
+   * the whole write as `unknown_field` — every stated fact lost (step 2b: found
+   * once the harness tests read the saved form with the flag on).
+   */
+  const has = keysOf(loaded);
+  const keep = (key: string) => !filled.has(key) && has.has(key);
   const empty: DraftValues = {
-    values: Object.fromEntries(Object.entries(stated.values).filter(([key]) => !filled.has(key))),
-    checked: Object.fromEntries(Object.entries(stated.checked).filter(([key]) => !filled.has(key))),
+    values: Object.fromEntries(Object.entries(stated.values).filter(([key]) => keep(key))),
+    checked: Object.fromEntries(Object.entries(stated.checked).filter(([key]) => keep(key))),
   };
   if (Object.keys(empty.values).length + Object.keys(empty.checked).length === 0) return [];
   const result = await writeFormEdits(instanceId, opsFrom(empty, { derived: true, by: "statement" }), {
