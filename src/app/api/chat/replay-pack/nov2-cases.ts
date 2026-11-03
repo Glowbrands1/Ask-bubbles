@@ -10,8 +10,9 @@ export const NOV2_CASES: readonly ReplayCase[] = [
     report:
       '"earlier bubbles made a coaching form for all team members. Now it is struggling to do that, it says it cannot make a coaching form for all team members, but it just did it for me earlier" (1 star)',
     // WHOLE_TEAM_COACHING_ENABLED (#357) is on in production (QA, 3 Nov 2026) and the refusal
-    // is gone, but the second identical request repeats the team card word for word.
-    status: { open: "the same team card is offered again, word for word, for the same request" },
+    // is gone. Asked twice before naming a store, the team card asks "Which store is this
+    // about?" twice, word for word; every other turn now differs.
+    status: { open: "the team card's store question is repeated word for word when the request is" },
     async run(t) {
       t.directory(STAFF);
       t.as("location_manager", TWO_STORES);
