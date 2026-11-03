@@ -307,3 +307,29 @@ describe("a close Woven name is a note under the card", () => {
     expect(container.textContent).not.toMatch(/Woven has /);
   });
 });
+
+describe("NEXT_PUBLIC_TEAM_CARD_NO_POSITION_ENABLED: the team card has no Position row (QA live check, 3 Nov 2026)", () => {
+  const team = () => proposal({ employeeName: "All team members", subject: "team" } as Partial<ChatFormProposal>);
+
+  afterEach(() => {
+    delete process.env.NEXT_PUBLIC_TEAM_CARD_NO_POSITION_ENABLED;
+  });
+
+  it("off (production today): \"Not set — tell Bubbles their position\" on the team card", () => {
+    const { container } = bubble({ formProposal: team() });
+    expect(container.textContent).toContain("tell Bubbles their position");
+  });
+
+  it("on: no Position row on the team card", () => {
+    process.env.NEXT_PUBLIC_TEAM_CARD_NO_POSITION_ENABLED = "true";
+    const { container } = bubble({ formProposal: team() });
+    expect(container.textContent).not.toMatch(/Position/);
+    expect(container.textContent).toContain("All team members");
+  });
+
+  it("on: one person's coaching card still asks for the position", () => {
+    process.env.NEXT_PUBLIC_TEAM_CARD_NO_POSITION_ENABLED = "true";
+    const { container } = bubble({ formProposal: proposal() });
+    expect(container.textContent).toContain("tell Bubbles their position");
+  });
+});
