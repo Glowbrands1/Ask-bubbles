@@ -8,7 +8,7 @@ import {
   statedPayrollDeduct,
   type PayrollDeductAnswer,
 } from "./payroll-deduct";
-import { readCaPolicy } from "./ca-policy";
+import { isSalesPolicyReading, readCaPolicy } from "./ca-policy";
 import { statesMetricShortfall } from "./metric-shortfall";
 import { INCIDENT_TOPIC_PATTERNS } from "./incident-topic";
 import { statedWarningLevel, type WarningLevel } from "./warning-level";
@@ -499,7 +499,8 @@ export function describesIncident(text: string): boolean {
    * readings can never disagree about whether something happened.
    */
   const policy = readCaPolicy(text);
-  return policy.topics.length > 0 || policy.missedEvent !== null;
+  // CA_SALES_POLICY_ENABLED: a stated sales shortfall or MSB (the glossary) is the reason given (Pau, 4 Nov 2026). Off, never a sales reading.
+  return policy.topics.length > 0 || policy.missedEvent !== null || isSalesPolicyReading(policy);
 }
 
 /**

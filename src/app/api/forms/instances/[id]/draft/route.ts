@@ -2069,10 +2069,12 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
      * Standards of Conduct's own section beside it (District Manager feedback,
      * 21 Oct 2026). A form whose version offers the old box is untouched.
      */
+    // Only a section moved under the catch-all Standards of Conduct; Late Opening under Attendance Policy keeps its box's section (QA, 4 Nov 2026).
     const namedUnderReplacement =
       namedManual !== null &&
       policySection !== null &&
-      (offeredOffenseKey(policySection.offenseKey, offenseOffered) ?? policySection.offenseKey) !== policySection.offenseKey;
+      offeredOffenseKey(policySection.offenseKey, offenseOffered) === STANDARDS_OF_CONDUCT &&
+      policySection.offenseKey !== STANDARDS_OF_CONDUCT;
     const replacedBoxSections = namedUnderReplacement
       ? sectionHeadingsFor({ offenseKeys: [offeredOffenseKey(policySection!.offenseKey, offenseOffered)!] }).flat()
       : [];
