@@ -784,6 +784,19 @@ describe("a Corrective Action filed on revision 6, revised after revision 7 (Typ
     expect(ticks(revision)).toEqual(["tardiness"]);
   });
 
+  /*
+   * THE DEPLOYMENT'S OWN FLAGS, not set here: what production does today
+   * (CA_SALES_POLICY_ENABLED off) — the old tick is carried as is. With the
+   * flag on (flag classification's "on" run) this changes to Attendance
+   * Policy, which is the INTENDED row in
+   * docs/flag-classification/CA_SALES_POLICY_ENABLED.md.
+   */
+  it("with the deployment's flags (production: CA_SALES_POLICY_ENABLED off), an old Tardiness tick is carried as is", async () => {
+    const id = await filed(["tardiness"]);
+    const revision = await revise(id);
+    expect(ticks(revision)).toEqual(["tardiness"]);
+  });
+
   it("negative control: a form already on the new template is copied exactly, flag on", async () => {
     process.env[FLAG] = "true";
     const id = await filed(["attendance_policy", "other"], { onCurrent: true });
