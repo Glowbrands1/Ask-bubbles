@@ -65,7 +65,9 @@ import { copiedContent } from "./same-form-copy";
  *               the manager's statement as its evidence; the name on the form
  *               an accepted offer; the correction readers' own values count as
  *               said (#410); every added word named in the latest message
- *               (owner's Q2 ruling); written as the manager's.
+ *               (owner's Q2 ruling); no word of the old text dropped unless
+ *               the latest message names it (`keepsUnnamedWords`, 2b);
+ *               written as the manager's.
  *   patch/tool  the patch turn's rules, plus `keepsUnnamedWords`, the strict
  *               naming turn and the write-in rule; split by who wrote the field.
  *   redraft,    draft mode on the template's writable keys (a typed line kept,
@@ -212,6 +214,12 @@ function keysOf(loaded: LoadedInstance): Set<string> {
   ]);
 }
 
+/** The one-fact lines: the header and the template's short text lines (`input: "text"`). */
+function wholeValueKeysOf(loaded: LoadedInstance): Set<string> {
+  const document = parseFormDocument(loaded.version.document);
+  return new Set([...HEADER_KEYS, ...fieldsForVariant(document, loaded.instance.variantKey).filter((field) => field.input === "text").map((field) => field.key)]);
+}
+
 /** QA condition 2: the form's protected facts, read from the header and the app's own readers. */
 export function protectedValuesFor(loaded: LoadedInstance, latest: string, today: string, named: readonly string[] = []): ProtectedValues {
   const groups = groupsOf(loaded);
@@ -253,6 +261,17 @@ export function presetRules(loaded: LoadedInstance, ops: readonly FormEditOp[], 
           checkboxGroups: groups,
           listKeys: lists,
           listNone: NO_PRIOR_ACTION,
+          /*
+           * Step 2b (QA condition): a correction replaces only the words the
+           * manager named — "fix her last name, it is Quill-Hart" may turn
+           * "Quill" into "Quill-Hart", never drop "Marnie" or the rest of the
+           * line, even when her message says "Marnie" as part of the new
+           * name (`droppedWordsReplaced`). Refused as `drops_words`, all or
+           * nothing: the turn goes on.
+           */
+          keepsUnnamedWords: true,
+          droppedWordsReplaced: true,
+          wholeValueKeys: wholeValueKeysOf(loaded),
           writeIns,
           protectedValues: guard,
           sources: {
