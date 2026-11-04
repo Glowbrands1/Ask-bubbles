@@ -117,6 +117,8 @@ describe("writeFormEdits: all or nothing", () => {
   it("CHAT_GLOSSARY_ENABLED: \"Msb\" is never saved as the employee (sf-s12, \"I need to make a corrective action for msb\"); off, written as before", async () => {
     const saved = process.env.CHAT_GLOSSARY_ENABLED;
     const { writeFormEdits } = await import("./form-write");
+    // A blank name line, so the flag-off write drops no words (step 2b's correction rule refuses a replaced name it was not told).
+    put("employee_name", "", "system");
     try {
       process.env.CHAT_GLOSSARY_ENABLED = "true";
       const refused = await writeFormEdits("inst-1", [{ op: "set", field: "employee_name", value: "Msb" }], { path: "correction", actorId: "qa", latest: "I need to make a corrective action for msb" });
