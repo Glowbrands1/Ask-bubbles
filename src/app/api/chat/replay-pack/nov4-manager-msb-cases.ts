@@ -72,9 +72,10 @@ export const NOV4_MANAGER_MSB_CASES: ReplayCase[] = [
     id: "nov4-mgr-2-msb-no-name",
     title: `"${byId("mgr-2-msb-no-name").text}" — asks once which employee; MSB is never a name`,
     report: `${REPORT}, #2`,
-    // Run 4 Nov 2026 (production flags): fails as below.
-    status: { open: "\"msb\" is looked up as a person (\"I couldn't find **msb** in the Woven roster\") and the reply lists the intake questions, \"What happened\" among them, instead of asking once which employee" },
-    fixFlags: ["CHAT_GLOSSARY_ENABLED"],
+    // Run 4 Nov 2026 (production flags): failed as below.
+    // Before CHAT_GLOSSARY_ENABLED was on in production (4 Nov 2026): OPEN, "msb" is looked up as a person ("I couldn't find **msb** in the Woven roster") and the reply lists the intake questions, "What happened" among them, instead of asking once which employee
+    // Fixed by CHAT_GLOSSARY_ENABLED, on in production from 4 Nov 2026 (QA's flip; MSB meaning confirmed by Pau).
+    status: "fixed",
     run: (t) => runMessage(t, byId("mgr-2-msb-no-name")),
   },
   {
