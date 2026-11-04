@@ -261,7 +261,7 @@ describe("the Coaching Form matches 01. Coaching Form.docx", () => {
      * Revision 6 (District Manager feedback, 21 Oct 2026) makes the Action
      * Plan two sentences and its closing "may result in".
      */
-    expect(TEMPLATE_SEEDS.find((seed) => seed.key === "dpoa")?.revision).toBe(6);
+    expect(TEMPLATE_SEEDS.find((seed) => seed.key === "dpoa")?.revision).toBe(7); // Revision 7 (4 Nov 2026, client request, template approved): Type of Offense is four boxes.
   });
 });
 

@@ -332,7 +332,7 @@ describe("the exact production sentence, through POST /api/chat", () => {
     // Previous corrective action: Verbal Warning — 09/21/2026.
     expect(form.prior_actions?.value).toBe("Verbal warning — signed 09/21/2026");
     // Current offense: tardiness, 30 minutes late.
-    expect(form.offense_type?.checked).toEqual(["tardiness"]);
+    expect(form.offense_type?.checked).toEqual(["attendance_policy"]); // CHANGED ON PURPOSE, Corrective Action revision 7 (template approved 4 Nov 2026): Tardiness is Attendance Policy.
     expect(form.observation?.value).toMatch(/30 minutes late/);
     // Verbal only — the model's Written tick never landed.
     expect(state.modelCalls).toBe(1);

@@ -79,7 +79,7 @@ function revision4(): FormDocument {
 
 describe("the template", () => {
   it("is revision 6, published as a new version rather than over revision 5 or 4", () => {
-    expect(seed.revision).toBe(6);
+    expect(seed.revision).toBe(7); // Revision 7 (4 Nov 2026, client request, template approved): Type of Offense is four boxes.
     expect(seed.revisionNote).toMatch(/Revision 5/);
     expect(seed.revisionNote).toMatch(/Revision 6/);
     expect(seed.key).toBe("dpoa");
