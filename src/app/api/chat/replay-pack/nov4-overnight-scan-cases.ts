@@ -131,6 +131,8 @@ export const NOV4_OVERNIGHT_SCAN_CASES: readonly ReplayCase[] = [
     report: `${REPORT}, sf-s12: "I need to make a corrective action for msb"`,
     // Run 4 Nov 2026 (production flags): fails as below.
     status: { open: "\"msb\" is looked up as a person — \"I couldn't find **msb** in the Woven roster, so that name is not on the form\" — instead of being read as Must See Behaviors; the card waits for an employee without asking which one" },
+    // CHAT_GLOSSARY_ENABLED (default off): the approved abbreviation table; "msb" is never the employee, and the reply is the one existing question "Who is this form for? …".
+    fixFlags: ["CHAT_GLOSSARY_ENABLED"],
     async run(t) {
       const thread = start(t);
       const reply = await thread.say("I need to make a corrective action for msb");
