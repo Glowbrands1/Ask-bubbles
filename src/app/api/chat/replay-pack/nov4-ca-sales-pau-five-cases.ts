@@ -137,21 +137,40 @@ export const NOV4_PAU_FIVE_CASES: ReplayCase[] = [
   },
   {
     id: "nov4-pau5-5-must-see-behaviors-violates-soc",
-    title: "5. \"… did not follow must see behaviors which violates standards of conduct policy\"",
+    title: "5. \"… did not follow must see behaviors which violates standards of conduct policy\": a policy answer that ends with one offer; the card opens only on \"yes\"",
     report: `${REPORT}, #5`,
     /*
-     * NO fixFlags YET. There is no request in the message — no form, no
-     * "write up", no "CA" — so it is answered as a policy question and no card
-     * is made. Making a card from an account alone is a routing decision for
-     * Pau (asked via QA, 4 Nov 2026). The policy reading is right: Standards of
-     * Conduct, as the manager said (ca-sales-policy.test.ts).
+     * Pau, 4 Nov 2026: NO routing change — a message with no request stays a
+     * policy answer. With CA_SALES_POLICY_ENABLED the answer ends with one
+     * offer to start a Corrective Action for the employee the roster knows,
+     * citing the policy; no card until the manager says yes (`ca-offer.ts`).
      */
-    status: { open: "no request in the message, so no card is made (answered as a policy question)" },
+    status: { open: "no offer: the policy answer ends without offering a Corrective Action" },
+    fixFlags: FLAGS,
     async run(t) {
       const thread = start(t);
       const reply = await thread.say("Ysolde Marrowick did not follow must see behaviors which violates standards of conduct policy");
-      citesConduct(thread, reply, "Ysolde Marrowick");
+      expect(thread.proposal ?? null, `a card was made with no request:\n${reply.content}`).toBeNull();
+      expect(reply.content, `the answer does not offer the Corrective Action citing the Standards of Conduct:\n${reply.content}`).toMatch(
+        /\*\*Start a Corrective Action\?\*\*[^\n]*\*\*Ysolde Marrowick\*\*[^\n]*\*\*Standards of Conduct\*\*/,
+      );
+      expect(reply.content.match(/Start a Corrective Action\?/g) ?? [], "more than one offer").toHaveLength(1);
+      const yes = await thread.say("yes");
+      citesConduct(thread, yes, "Ysolde Marrowick");
       await draftCitesConduct(t, thread, "Ysolde Marrowick did not follow the Must See Behaviors.");
+    },
+  },
+  {
+    id: "nov4-pau5-5b-negative-general-policy-question",
+    title: "negative control for #5: a general policy question with no employee named gets no offer",
+    report: `${REPORT}, #5 negative control`,
+    status: "fixed",
+    fixFlags: FLAGS,
+    async run(t) {
+      const thread = start(t);
+      const reply = await thread.say("what does the standards of conduct policy say about must see behaviors?");
+      expect(reply.content, `an offer with no employee named:\n${reply.content}`).not.toMatch(/Start a Corrective Action\?/);
+      expect(thread.proposal ?? null, "a card was made").toBeNull();
     },
   },
 ];
