@@ -1,0 +1,72 @@
+{
+  "src/app/api/chat/exit-shortcut-fields-e2e.test.ts :: the exit form's own words are not stripped as unknown people (EXIT_TERMS_NOT_NAMES_ENABLED) off: the words are stripped, and the line is blank": {
+    "category": "INTENDED",
+    "twin": "itself, FORM_NAME_FROM_ROSTER_ENABLED unset (CI default): pins EXIT_TERMS_NOT_NAMES off",
+    "reason": "With the flag on, the message names a roster person (Marnie), so words shaped like nobody on the roster are not stripped as unknown people (the flag's rule): the exit form keeps \"drop wage and forfeit bonus\" even with EXIT_TERMS_NOT_NAMES off. Same mechanism, wider effect; the words kept is the intended outcome."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-pau-metrics-not-people-lowercase-first-name: Pau's message with the first name typed in lowercase (\"for perpetua\"): Perpetua Thornquist, never a \"Club Close\" card; Standards of Conduct cited — OPEN in production (production answers the message as metric-only (CA_SALES_POLICY_ENABLED off))": {
+    "category": "INTENDED",
+    "twin": "the same case with production's flags (flag unset): OPEN, expected to fail",
+    "reason": "An OPEN-in-production case that holds with the flag on (vitest reports the expected failure as failed when the case passes): metric words are never read as people or stripped, and the card is for the roster person, citing the Standards of Conduct."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-pau-metrics-not-people-lowercase-roster-name: negative control: a roster first name typed alone in lowercase (\"perpetua\"), answering who the form is for, is still matched — OPEN in production (production answers turn 1 as metric-only (CA_SALES_POLICY_ENABLED off), so there is no form for \"perpetua\" to answer)": {
+    "category": "INTENDED",
+    "twin": "the same case with production's flags (flag unset): OPEN, expected to fail",
+    "reason": "An OPEN-in-production case that holds with the flag on (vitest reports the expected failure as failed when the case passes): metric words are never read as people or stripped, and the card is for the roster person, citing the Standards of Conduct."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-pau-metrics-not-people: sf-s19: Pau's Under Performance CA on PPTA, LPSVA, Club Average, Club Close %, Spa %: no roster note, the card cites Standards of Conduct — OPEN in production (the reply says \"I couldn't find Club Close or Under in the Woven roster\" and the card cites no policy)": {
+    "category": "INTENDED",
+    "twin": "the same case with production's flags (flag unset)",
+    "reason": "Still OPEN (turn 2 repeats turn 1, step 6), but turn 1 improves: the metrics (\"Average Ticket\", \"Units Per Transaction\", \"Under\") are no longer announced as missing people, and the card's Issue keeps the manager's words."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-pau5-1-verbal-under-performance-metrics: 1. \"I need a corrective action verbal for … This is for Under Performance on PPTA, LPSVA, Club Average, Club Close %, and Spa %.\" — OPEN in production (the metrics \"Club Close\" and \"Under\" are read as names and dropped, so the card cites no policy)": {
+    "category": "INTENDED",
+    "twin": "the same case with production's flags (flag unset): OPEN, expected to fail",
+    "reason": "An OPEN-in-production case that holds with the flag on (vitest reports the expected failure as failed when the case passes): metric words are never read as people or stripped, and the card is for the roster person, citing the Standards of Conduct."
+  },
+  "replay: nov4-mgr-1-verbal-metrics [fix:CA_SALES_POLICY_ENABLED]": {
+    "category": "INTENDED",
+    "twin": "the same case with production's flags (flag unset)",
+    "reason": "Holds both ways; the reply drops \"I couldn't find **Club Close** or **Under** in the Woven roster\" and the card's Issue keeps the manager's words (metrics are never read as people)."
+  },
+  "replay: nov4-mgr-1-verbal-metrics [production]": {
+    "category": "INTENDED",
+    "twin": "the same case with production's flags (flag unset)",
+    "reason": "Holds both ways; the reply drops \"I couldn't find **Club Close** or **Under** in the Woven roster\" and the card's Issue keeps the manager's words (metrics are never read as people)."
+  },
+  "replay: nov4-pau-metrics-not-people [open]": {
+    "category": "INTENDED",
+    "twin": "the same case with production's flags (flag unset): OPEN, expected to fail",
+    "reason": "An OPEN-in-production case that holds with the flag on (vitest reports the expected failure as failed when the case passes): metric words are never read as people or stripped, and the card is for the roster person, citing the Standards of Conduct."
+  },
+  "replay: nov4-pau-metrics-not-people-lowercase-first-name [open]": {
+    "category": "INTENDED",
+    "twin": "the same case with production's flags (flag unset): OPEN, expected to fail",
+    "reason": "An OPEN-in-production case that holds with the flag on (vitest reports the expected failure as failed when the case passes): metric words are never read as people or stripped, and the card is for the roster person, citing the Standards of Conduct."
+  },
+  "replay: nov4-pau-metrics-not-people-lowercase-roster-name [open]": {
+    "category": "INTENDED",
+    "twin": "the same case with production's flags (flag unset): OPEN, expected to fail",
+    "reason": "An OPEN-in-production case that holds with the flag on (vitest reports the expected failure as failed when the case passes): metric words are never read as people or stripped, and the card is for the roster person, citing the Standards of Conduct."
+  },
+  "replay: nov4-pau-metrics-not-people-metrics-only [production]": {
+    "category": "INTENDED",
+    "twin": "the same case with production's flags (flag unset)",
+    "reason": "Holds both ways; with the flag on, \"CA for under performance on Club Close % and Spa %\" gets the Corrective Action intake asking for the employee's full name (one lowercase word that is nobody on the roster is never the employee) instead of the answering model's reply."
+  },
+  "replay: nov4-pau5-1-verbal-under-performance-metrics [open]": {
+    "category": "INTENDED",
+    "twin": "the same case with production's flags (flag unset): OPEN, expected to fail",
+    "reason": "An OPEN-in-production case that holds with the flag on (vitest reports the expected failure as failed when the case passes): metric words are never read as people or stripped, and the card is for the roster person, citing the Standards of Conduct."
+  },
+  "replay: nov4-scan-sf-b5-typo-name-rude-to-customer [open]": {
+    "category": "INTENDED",
+    "twin": "the same case with production's flags (flag unset)",
+    "reason": "Still OPEN (other parts of sf-b5), but turn 1 improves: the typo \"Delphine Marlwoe Ostrander\" now gets \"Is this for **Delphine Marlowe Ostrander**?\" instead of \"I couldn't find … in the Woven roster\" and the intake list."
+  },
+  "replay: nov4-scan-sf-s19-corrective-action-answer [open]": {
+    "category": "INTENDED",
+    "twin": "the same case with production's flags (flag unset)",
+    "reason": "Still OPEN (turn 2 repeats turn 1, step 6), but turn 1 improves: the metrics (\"Average Ticket\", \"Units Per Transaction\", \"Under\") are no longer announced as missing people, and the card's Issue keeps the manager's words."
+  }
+}
