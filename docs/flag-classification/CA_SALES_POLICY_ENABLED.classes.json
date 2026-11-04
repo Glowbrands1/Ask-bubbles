@@ -268,5 +268,50 @@
   "category": "INTENDED",
   "twin": "itself with the flag off (CI default); nov4-pau5-5b (negative control: no employee, no offer)",
   "reason": "Pau, 4 Nov 2026, #5: the answer ends with \"Do you want a Corrective Action for <name>?\" citing the Standards of Conduct; the card opens only on yes."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-cleaning-basis-upkeep-duties: \"did not complete daily cleaning duties\" with the model's upkeep basis: Other — OPEN in production (with production's flags the task reading ticks and cites the Standards of Conduct)": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default); nov4-cleaning-negative-no-basis; src/lib/forms/ca-conduct-reason.test.ts",
+  "reason": "Pau, 4 Nov 2026: a cleaning CA does not cite the Standards of Conduct by default. With the flag on, the model's Standards of Conduct tick moves to Other when its offense_basis is upkeep_or_task and no reader gives a reason (ca-conduct-reason.ts); off, the tick stands, as in production today."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-cleaning-bathrooms-not-conduct: \"the bathrooms were left dirty at close\": the model's Standards of Conduct tick moves to Other, no Standards of Conduct citation — OPEN in production (with production's flags the model's Standards of Conduct tick stands and is cited (p.12))": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default); nov4-cleaning-negative-no-basis; src/lib/forms/ca-conduct-reason.test.ts",
+  "reason": "Pau, 4 Nov 2026: a cleaning CA does not cite the Standards of Conduct by default. With the flag on, the model's Standards of Conduct tick moves to Other when its offense_basis is upkeep_or_task and no reader gives a reason (ca-conduct-reason.ts); off, the tick stands, as in production today."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-cleaning-negative-msb: negative control: an MSB CA keeps the Standards of Conduct — OPEN in production (with production's flags an MSB CA gets no card (nov4-mgr-4))": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default); nov4-mgr-4",
+  "reason": "Negative control for the cleaning guard: an MSB CA (offense_basis msb) keeps the Standards of Conduct. Open with production's flags only because this app makes no card for an MSB CA there (nov4-mgr-4); holds with the flag."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-mgr-5-msb-soc: \"Quintessa Harrowmere did not follow must see behaviors which violates standards of conduct policy\" — asks once \"Do you want a Corrective Action for …?\" (Standards of Conduct); \"yes\" makes the card, citing the Standards of Conduct — OPEN in production (turn 1 is answered as a policy question (the pack's stand-in answer): no offer \"Do you want a Corrective Action for …?\", so \"yes\" makes no card)": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default); nov4-pau5-5b (no employee, no offer)",
+  "reason": "Pau, 4 Nov 2026, #5: no routing change; the policy answer ends with one offer, \"Do you want a Corrective Action for <name>?\", and \"yes\" makes the card (ca-offer.ts). The case's expectation is Success's #433 (title changed since the last table)."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-pau5-2-ca-for-msb: 2. \"I need to make a corrective action for msb\": MSB is never the employee; the one question is who it is for — OPEN in production (\"msb\" is looked up as a person with production's flags)": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default); nov4-mgr-2",
+  "reason": "\"I need to make a corrective action for msb\": with the flag on MSB is never the employee and the reason is never asked again; open with production's flags, where msb is looked up as a person."
+ },
+ "replay: nov4-cleaning-basis-upkeep-duties [open]": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default); nov4-cleaning-negative-no-basis; src/lib/forms/ca-conduct-reason.test.ts",
+  "reason": "Pau, 4 Nov 2026: a cleaning CA does not cite the Standards of Conduct by default. With the flag on, the model's Standards of Conduct tick moves to Other when its offense_basis is upkeep_or_task and no reader gives a reason (ca-conduct-reason.ts); off, the tick stands, as in production today."
+ },
+ "replay: nov4-cleaning-bathrooms-not-conduct [open]": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default); nov4-cleaning-negative-no-basis; src/lib/forms/ca-conduct-reason.test.ts",
+  "reason": "Pau, 4 Nov 2026: a cleaning CA does not cite the Standards of Conduct by default. With the flag on, the model's Standards of Conduct tick moves to Other when its offense_basis is upkeep_or_task and no reader gives a reason (ca-conduct-reason.ts); off, the tick stands, as in production today."
+ },
+ "replay: nov4-cleaning-negative-msb [open]": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default); nov4-mgr-4",
+  "reason": "Negative control for the cleaning guard: an MSB CA (offense_basis msb) keeps the Standards of Conduct. Open with production's flags only because this app makes no card for an MSB CA there (nov4-mgr-4); holds with the flag."
+ },
+ "replay: nov4-pau5-2-ca-for-msb [open]": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default); nov4-mgr-2",
+  "reason": "\"I need to make a corrective action for msb\": with the flag on MSB is never the employee and the reason is never asked again; open with production's flags, where msb is looked up as a person."
  }
 }
