@@ -28,7 +28,7 @@ describe("the offer", () => {
   it("on: #5 ends with one offer, for the rostered employee, citing the Standards of Conduct", () => {
     process.env[FLAG] = "true";
     expect(offer(P5)).toBe(
-      "**Start a Corrective Action?** Say **yes** and I'll start a Corrective Action Form for **Ysolde Marrowick** citing the **Standards of Conduct**.",
+      "**Do you want a Corrective Action for Ysolde Marrowick?** Say **yes** and I'll start it, citing the **Standards of Conduct**.",
     );
   });
 
@@ -51,7 +51,7 @@ describe("the offer", () => {
 describe("the yes", () => {
   const offered = [
     { role: "user", content: P5 },
-    { role: "assistant", content: `A grounded answer.\n\n${"**Start a Corrective Action?** Say **yes** and I'll start a Corrective Action Form for **Ysolde Marrowick** citing the **Standards of Conduct**."}` },
+    { role: "assistant", content: `A grounded answer.\n\n${"**Do you want a Corrective Action for Ysolde Marrowick?** Say **yes** and I'll start it, citing the **Standards of Conduct**."}` },
   ];
 
   it("on: \"yes\" to the offer is the request it offered", () => {

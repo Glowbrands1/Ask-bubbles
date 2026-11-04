@@ -15,7 +15,8 @@ import { managerContext, resolveEmployee } from "@/lib/forms/proposal";
  * existing reader, `readCaPolicy`: named, or one clear suggestion) and name an
  * employee the roster recognises (`resolveEmployee`, matched against the
  * manager's scoped roster), the answer ends with ONE offer to start a
- * Corrective Action for that employee, citing that policy. Nothing is made:
+ * Corrective Action for that employee, citing that policy — asked ONCE, in
+ * Pau's words: "Do you want a Corrective Action for <name>?". Nothing is made:
  * the card opens only when the manager answers yes (`acceptedCaOffer`), and
  * the yes is read as the request the manager would have typed.
  *
@@ -24,9 +25,9 @@ import { managerContext, resolveEmployee } from "@/lib/forms/proposal";
  */
 
 /** The offer's opening, which also marks it for the next turn. */
-export const CA_OFFER_LEAD = "**Start a Corrective Action?**";
+export const CA_OFFER_LEAD = "**Do you want a Corrective Action for";
 
-const OFFER = /\*\*Start a Corrective Action\?\*\* Say \*\*yes\*\* and I'll start a Corrective Action Form for \*\*([^*]+)\*\* citing the \*\*([^*]+)\*\*\./;
+const OFFER = /\*\*Do you want a Corrective Action for ([^*?]+)\?\*\* Say \*\*yes\*\* and I'll start it, citing the \*\*([^*]+)\*\*\./;
 
 function fold(text: string): string {
   return text.toLowerCase().replace(/\s+/g, " ").trim();
@@ -64,7 +65,7 @@ export function caOfferLine(input: {
   const employee = onRoster(resolution.employeeName, input.roster);
   if (!employee) return null;
   const name = `${employee.preferredFirstName || employee.firstName} ${employee.lastName}`;
-  return `${CA_OFFER_LEAD} Say **yes** and I'll start a Corrective Action Form for **${name}** citing the **${CA_POLICY_LABEL[policyKey]}**.`;
+  return `**Do you want a Corrective Action for ${name}?** Say **yes** and I'll start it, citing the **${CA_POLICY_LABEL[policyKey]}**.`;
 }
 
 /**

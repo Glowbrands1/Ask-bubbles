@@ -137,7 +137,7 @@ export const NOV4_PAU_FIVE_CASES: ReplayCase[] = [
   },
   {
     id: "nov4-pau5-5-must-see-behaviors-violates-soc",
-    title: "5. \"… did not follow must see behaviors which violates standards of conduct policy\": a policy answer that ends with one offer; the card opens only on \"yes\"",
+    title: "5. \"… did not follow must see behaviors which violates standards of conduct policy\": asks once \"Do you want a Corrective Action for <name>?\"; the card opens only on \"yes\"",
     report: `${REPORT}, #5`,
     /*
      * Pau, 4 Nov 2026: NO routing change — a message with no request stays a
@@ -152,9 +152,9 @@ export const NOV4_PAU_FIVE_CASES: ReplayCase[] = [
       const reply = await thread.say("Ysolde Marrowick did not follow must see behaviors which violates standards of conduct policy");
       expect(thread.proposal ?? null, `a card was made with no request:\n${reply.content}`).toBeNull();
       expect(reply.content, `the answer does not offer the Corrective Action citing the Standards of Conduct:\n${reply.content}`).toMatch(
-        /\*\*Start a Corrective Action\?\*\*[^\n]*\*\*Ysolde Marrowick\*\*[^\n]*\*\*Standards of Conduct\*\*/,
+        /\*\*Do you want a Corrective Action for Ysolde Marrowick\?\*\*[^\n]*\*\*Standards of Conduct\*\*/,
       );
-      expect(reply.content.match(/Start a Corrective Action\?/g) ?? [], "more than one offer").toHaveLength(1);
+      expect(reply.content.match(/Do you want a Corrective Action for/g) ?? [], "asked more than once").toHaveLength(1);
       const yes = await thread.say("yes");
       citesConduct(thread, yes, "Ysolde Marrowick");
       await draftCitesConduct(t, thread, "Ysolde Marrowick did not follow the Must See Behaviors.");
@@ -169,7 +169,7 @@ export const NOV4_PAU_FIVE_CASES: ReplayCase[] = [
     async run(t) {
       const thread = start(t);
       const reply = await thread.say("what does the standards of conduct policy say about must see behaviors?");
-      expect(reply.content, `an offer with no employee named:\n${reply.content}`).not.toMatch(/Start a Corrective Action\?/);
+      expect(reply.content, `an offer with no employee named:\n${reply.content}`).not.toMatch(/Do you want a Corrective Action for/);
       expect(thread.proposal ?? null, "a card was made").toBeNull();
     },
   },
