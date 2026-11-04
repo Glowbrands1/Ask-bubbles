@@ -11,7 +11,7 @@ import {
   type ManualChunk,
   type ManualSection,
 } from "./official-policy-manual";
-import { statesMetricShortfall } from "./corrective-action-intake";
+import { statesMetricShortfall } from "./metric-shortfall";
 
 /**
  * ============================================================================
