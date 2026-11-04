@@ -135,6 +135,12 @@ export interface CallClaudeInput {
     readonly data: string;
     readonly onToolUse: (input: unknown) => void;
   } | null;
+  /**
+   * CHAT_GLOSSARY_ENABLED: the approved abbreviation table (`ai/glossary.ts`),
+   * one more context block just before the question. Absent, the request is
+   * exactly as before.
+   */
+  readonly glossary?: string | null;
 }
 
 /**
@@ -245,6 +251,7 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
                 ...(input.verifiedRecords ? [input.verifiedRecords] : []),
                 ...(input.formRecords ? [input.formRecords] : []),
                 ...(input.formEditTool ? [input.formEditTool.data] : []),
+                ...(input.glossary ? [input.glossary] : []),
                 `QUESTION\n\n${input.question}`,
               ].join("\n\n"),
             },

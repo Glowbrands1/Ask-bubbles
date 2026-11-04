@@ -10,6 +10,7 @@ import { COMPANY_LOCATIONS } from "@/lib/locations";
 import { SupabaseKnowledgeProvider } from "@/lib/knowledge/providers/supabase";
 
 import { callClaudeTool } from "./call-claude";
+import { glossaryBlock } from "./glossary";
 import type { ChatActor } from "./form-proposal";
 import { loadFormState, saveFormState } from "./form-state-store";
 import { isTeamCardTurn } from "@/lib/forms/whole-team-coaching";
@@ -112,7 +113,9 @@ function userBlock(request: AskRequest, saved: string): string {
     .slice(-12)
     .map((turn) => `${turn.role === "assistant" ? "Assistant" : "Manager"}: ${turn.content.trim().slice(0, 1500)}`);
   const state = saved ? `Stored form state:\n${saved}\n\n` : "";
-  return `${state}Today is ${request.context.todayIso}.\n\n${turns.join("\n\n")}`;
+  // CHAT_GLOSSARY_ENABLED: the abbreviation table first, as one more context block. Off, nothing is added.
+  const glossary = glossaryBlock();
+  return `${glossary ? `${glossary}\n\n` : ""}${state}Today is ${request.context.todayIso}.\n\n${turns.join("\n\n")}`;
 }
 
 async function readSaved(userId: string | undefined, conversationId: string | undefined) {
