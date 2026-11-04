@@ -180,6 +180,25 @@ vi.mock("@/lib/ai/call-claude", () => ({
         const call = editTool.input;
         editTool.input = null;
         input.formEditTool.onToolUse(call);
+      } else if (patchScript.calls < patchScript.outputs.length) {
+        /*
+         * FORM_EDIT_TOOL_IN_STREAM_ENABLED skips Step B's patch turn: the main
+         * model reads the turn instead. A case's scripted patch reading is the
+         * same decision made as an edit_form call — "this_form" with its sets
+         * (add → append, replace → set) and clears, anything else no call — so
+         * the Step B cases run on the tool path with the model's same choices.
+         * The ops carry no evidence: the tool's words are the latest message's.
+         */
+        const output = patchScript.outputs[patchScript.calls] as
+          | { turn?: string; set?: { field: string; value?: string; options?: string[]; how?: string }[]; clear?: { field: string }[] }
+          | null
+          | undefined;
+        patchScript.calls += 1;
+        const ops = [
+          ...(output?.set ?? []).map((entry) => ({ op: entry.how === "replace" ? "set" : "append", field: entry.field, value: entry.options ?? entry.value ?? "" })),
+          ...(output?.clear ?? []).map((entry) => ({ op: "clear", field: entry.field })),
+        ];
+        if (output?.turn === "this_form" && ops.length > 0) input.formEditTool.onToolUse({ ops });
       }
     }
     return said.answer ?? ANSWER;
