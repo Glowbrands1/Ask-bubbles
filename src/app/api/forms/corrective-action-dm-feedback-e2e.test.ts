@@ -604,9 +604,11 @@ describe('"violating visitors at work policy" is the manual\'s Visitors in the W
   it("is named in the reply, ticked, and quoted with its section and page", async () => {
     const { last, create } = await conversation([A1, A2]);
 
+    // CHANGED ON PURPOSE, Corrective Action revision 7: the section is named alone in chat, never "under Standards of Conduct" (eval b6).
     expect(last.content).toMatch(
-      /\*\*Policy:\*\* Visitors in the Workplace, as you said — the policy manual's section on page 30\. I'll quote it on the draft under \*\*Standards of Conduct\*\*/,
+      /\*\*Policy:\*\* Visitors in the Workplace, as you said — the policy manual's section on page 30\. I'll quote it on the draft\./,
     );
+    expect(last.content).not.toMatch(/standards of conduct/i);
 
     /* The model would tick another box and write its own "Other". */
     state.draft = {
@@ -820,9 +822,11 @@ describe("E: an account of the conduct cites the manual section it describes", (
     expect(proposal.warningLevel).toBe("verbal");
     expect(last.content).toMatch(/\*\*Type of warning:\*\* Verbal Warning, as you said/);
     expect(last.content).not.toMatch(WARNING_QUESTION);
+    // CHANGED ON PURPOSE, Corrective Action revision 7: the section is named alone in chat, never "under Standards of Conduct" (eval b6).
     expect(last.content).toMatch(
-      /\*\*Policy:\*\* Cell Phone\/Smart Watch Policy, from what you described \("cell phone"\) — the policy manual's section on page 19\. I'll quote it on the draft under \*\*Standards of Conduct\*\*/,
+      /\*\*Policy:\*\* Cell Phone\/Smart Watch Policy, from what you described \("cell phone"\) — the policy manual's section on page 19\. I'll quote it on the draft;/,
     );
+    expect(last.content).not.toMatch(/standards of conduct/i);
 
     state.draft = {
       values: { observation: "Observed:\nOn October 20, 2026, Remy Calder was talking on her cell phone for over 30 minutes." },
