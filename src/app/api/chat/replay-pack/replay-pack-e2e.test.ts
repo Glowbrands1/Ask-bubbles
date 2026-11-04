@@ -58,12 +58,14 @@ vi.hoisted(() => {
 const revisionAsked = vi.hoisted(() => [] as string[]);
 /** What the drafting model was given, per Create. */
 const draftAsked = vi.hoisted(() => [] as string[]);
+/** The draft call's tools, as sent (CA_SALES_POLICY_ENABLED adds an optional property). */
+const draftToolsAsked = vi.hoisted(() => [] as string[]);
 const state = vi.hoisted(() => ({
   slotReading: "none" as "none" | "ca" | "copy",
   remapObservation: null as string | null,
   /** What the form-reading model returns for this turn (extract_form_fields). */
   reading: {} as Record<string, unknown>,
-  draft: {} as { values?: Record<string, unknown>; checked?: Record<string, unknown> },
+  draft: {} as { values?: Record<string, unknown>; checked?: Record<string, unknown>; [extra: string]: unknown },
   revision: {} as { values?: Record<string, unknown>; checked?: Record<string, unknown>; clear?: string[] },
   revisionCalls: 0,
   draftCalls: 0,
@@ -258,6 +260,7 @@ vi.mock("@/lib/ai/anthropic", () => ({
         if (!revising) {
           state.draftCalls += 1;
           draftAsked.push(JSON.stringify((request as { messages?: unknown; system?: unknown }).messages ?? []));
+          draftToolsAsked.push(JSON.stringify((request as { tools?: unknown }).tools ?? []));
         }
         if (revising) {
           state.revisionCalls += 1;
@@ -584,6 +587,7 @@ afterEach(() => {
   editTool.offered = 0;
   editTool.lastData = null;
   draftAsked.length = 0;
+  draftToolsAsked.length = 0;
 });
 
 function context(): ReplayContext {
@@ -596,8 +600,8 @@ function context(): ReplayContext {
     directory: (rows) => {
       state.directory = rows as never;
     },
-    draftWrites: (values, checked) => {
-      state.draft = { values, ...(checked ? { checked } : {}) };
+    draftWrites: (values, checked, extra) => {
+      state.draft = { values, ...(checked ? { checked } : {}), ...(extra ?? {}) };
     },
     revisionWrites: (values) => {
       state.revision = { values };
@@ -616,6 +620,7 @@ function context(): ReplayContext {
     calls: () => ({ chat: state.chatModelCalls, draft: state.draftCalls, revision: state.revisionCalls, tool: state.toolCalls, patch: patchScript.calls }),
     forms: () => store.form_instances as never,
     draftPrompts: () => [...draftAsked],
+    draftTools: () => [...draftToolsAsked],
     redraft: (instanceId, notes) =>
       call<Record<string, unknown>>(`/api/forms/instances/${instanceId}/draft`, {
         method: "POST",
