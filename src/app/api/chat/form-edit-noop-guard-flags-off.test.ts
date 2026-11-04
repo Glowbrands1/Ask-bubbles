@@ -34,9 +34,17 @@ import { CA_CHAIN, LIVE_ROSTER, OBSERVATION_AFTER } from "./replay-pack/nov4-liv
  *   (c) production's flags with FORM_EDIT_NOOP_GUARD_ENABLED on alone (it
  *       needs the single writer, so it is off).
  *
- * (a) and (b) equal main before this flag (417bc4ef; the same bytes on 44856eb0 and 59d2ab7c), recorded in
+ * (a) and (b) equal main before this flag, recorded in
  * `form-edit-noop-guard-flags-off.main.json` (`RECORD_MAIN_FIXTURE=1` on that
- * commit rewrites it); (c) equals (b). Replies, rows and events; ids numbered
+ * commit rewrites it); (c) equals (b).
+ *
+ * Re-recorded on purpose (fix main, 4 Nov 2026) on f58cf4fa: main with
+ * Corrective Action revision 7 (#424) and before this flag (#427). First
+ * recorded on 417bc4ef (revision 6). The ONLY difference is (a)'s scripted
+ * Type of Offense tick "tardiness", a box revision 7 removed: on main it now
+ * saves nothing (the reply is the existing "I haven't changed …" line; one
+ * row, one drafted event fewer; one more revision call). (b), production's
+ * flags, is byte-identical to the first recording. Replies, rows and events; ids numbered
  * in order of first appearance.
  */
 
