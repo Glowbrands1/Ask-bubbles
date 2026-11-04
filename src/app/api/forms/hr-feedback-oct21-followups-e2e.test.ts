@@ -403,7 +403,8 @@ describe("the section the account names wins over the model's guess", () => {
     const policy = field(form, "policy_language")!.value!;
     expect(policy).toContain("Source: JBA Policy Manual — Cell Phone/Smart Watch Policy, p. 19");
     expect(policy).not.toContain("Standards of Conduct");
-    expect(field(form, "offense_type")!.checked).not.toContain("standards_of_conduct");
+    // CHANGED ON PURPOSE, Corrective Action revision 7 (client request, template approved 4 Nov 2026): the Cell Phone section is cited under the Standards of Conduct box (Violation of Company Policies is gone); Direct policy still cites it alone (above).
+    expect(field(form, "offense_type")!.checked).toEqual(["standards_of_conduct"]);
   });
 });
 

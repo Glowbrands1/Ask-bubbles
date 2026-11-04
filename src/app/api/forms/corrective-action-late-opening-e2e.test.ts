@@ -4,6 +4,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 import type { AccessScope, ChatMessage } from "@/types";
 
+/*
+ * CHANGED ON PURPOSE, Corrective Action revision 7 (client request, template
+ * approved 4 Nov 2026): expectations on the current form read its four boxes.
+ * Tardiness/Leaving Early and Absenteeism are Attendance Policy; Under
+ * Performance and Violation of Company Policies are Standards of Conduct.
+ * Forms filed on revision 6 keep their boxes: see
+ * `src/lib/forms/offense-revision-7.test.ts`.
+ */
+
 /**
  * ============================================================================
  * A CORRECTIVE ACTION ASKED FOR BY NAME ALONE, AND A LATE OPENING — END TO END
@@ -372,7 +381,7 @@ describe("Direct policy from official manual, for a late opener", () => {
     const form = await review(reference.instanceId);
     const policy = field(form, "policy_language")!.value!;
 
-    expect(field(form, "offense_type")!.checked).toEqual(["tardiness"]);
+    expect(field(form, "offense_type")!.checked).toEqual(["attendance_policy"]);
     expect(policy).toContain("When an employee assigned to open a location is unable to open the location");
     expect(policy).toContain("Source: JBA Policy Manual — Late Opening, p. 15");
     expect(policy).toContain("Source: JBA Policy Manual — Attendance, p. 14");
@@ -476,7 +485,7 @@ describe("a form created from a name alone is redrafted, with the citation, once
     const form = await review(instanceId);
     const policy = field(form, "policy_language")!.value!;
     expect(field(form, "observation")!.value).toContain("scheduled to open the store");
-    expect(field(form, "offense_type")!.checked).toEqual(["tardiness"]);
+    expect(field(form, "offense_type")!.checked).toEqual(["attendance_policy"]);
     expect(policy).toContain("When an employee assigned to open a location is unable to open the location");
     expect(policy).toContain("Source: JBA Policy Manual — Late Opening, p. 15");
     expect(policy).toContain("Source: JBA Policy Manual — Attendance, p. 14");
@@ -498,7 +507,7 @@ describe("a form created from a name alone is redrafted, with the citation, once
           policy_language: "Openers have to be on time.",
           action_plan: "Pat and I agreed she will set two alarms.",
         },
-        checked: { offense_type: ["tardiness"] },
+        checked: { offense_type: ["attendance_policy"] }, // revision 7: the manager ticks the box the form has
       },
       "admin-1",
     );
@@ -518,7 +527,7 @@ describe("a form created from a name alone is redrafted, with the citation, once
 
     const form = await review(instanceId);
     expect(field(form, "observation")!.value).toBe("Observed:\nWhat the manager wrote.");
-    expect(field(form, "offense_type")!.checked).toEqual(["tardiness"]);
+    expect(field(form, "offense_type")!.checked).toEqual(["attendance_policy"]);
     const policy = field(form, "policy_language")!.value!;
     expect(policy).not.toMatch(/Openers have to be on time/);
     expect(policy).toContain("Source: JBA Policy Manual — Late Opening, p. 15");
@@ -552,7 +561,8 @@ describe("a form created from a name alone is redrafted, with the citation, once
     expect(field(form, "observation")!.value).toBe("Observed:\nWhat the manager wrote.");
     /* No section could be cited: the plan names what Policy Violated names. */
     expect(field(form, "action_plan")!.value).toBe(
-      "Management will review the Tardiness/Leaving Early policy with Pat. Future policy violations may result in additional corrective action up to and including termination of employment.",
+      // CHANGED ON PURPOSE, Corrective Action revision 7 (client request, template approved 4 Nov 2026): the plan names the Attendance policy.
+      "Management will review the Attendance policy with Pat. Future policy violations may result in additional corrective action up to and including termination of employment.",
     );
   });
 

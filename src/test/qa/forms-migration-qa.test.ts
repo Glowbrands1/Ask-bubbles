@@ -7,7 +7,7 @@ import approved from "@/test/fixtures/approved-template-changes.json";
 import rendered from "@/test/fixtures/ask-sunny-rendered-forms.json";
 import jbaChunks from "@/test/fixtures/jba-manual-brand-chunks.json";
 import snapshot from "@/test/fixtures/ask-sunny-published-templates.json";
-import { removedFieldReferenceText, withApprovedRemovals } from "@/test/approved-removals";
+import { removedFieldReferenceText, withApprovedOptionText, withApprovedRemovals } from "@/test/approved-removals";
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 import type { AccessScope, ChatMessage } from "@/types";
 
@@ -202,7 +202,7 @@ interface QaForm {
 const FORMS: readonly QaForm[] = [
   { key: "coaching", phrase: "Create a coaching form for Jordan Testperson. She was late today.", creator: "location_manager", edits: ["other_topic", "coaching_details"], edit: "revision" },
   { key: "follow-up-coaching", phrase: "Create a follow-up coaching form for Jordan Testperson on punctuality. I followed up today and she has improved.", creator: "location_manager", edits: ["original_topic", "original_expectation"], edit: "revision" },
-  { key: "dpoa", phrase: "Create a corrective action for Jordan Testperson. She was 20 minutes late today.", creator: "location_manager", edits: ["other_offense", "observation"], edit: "payroll" },
+  { key: "dpoa", phrase: "Create a corrective action for Jordan Testperson. She was 20 minutes late today.", creator: "location_manager", edits: ["observation", "action_plan"], edit: "payroll" }, // revision 7: no Other write-in line
   { key: "policy-review", phrase: "Create a policy review for Jordan Testperson about the dress code.", creator: "location_manager", edits: ["topic", "observation"], edit: "editor" },
   { key: "sdit-epp", phrase: "Create an SDIT EPP for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor" },
   { key: "tsd-epp", phrase: "Create a TSD EPP for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor" },
@@ -758,10 +758,14 @@ describe.each(FORMS)("$key", (form) => {
       const ours = await pdfText(bytes);
       expect(ours.pages, name).toBe(reference[name]!.pages);
       // An approved removal also removes the question, and the sample answer printed under it, from the reference text.
-      const referenceText = removedFieldReferenceText(form.key, neutral).reduce(
-        (text, removed) => text.split(removed).join(""),
-        neutral(reference[name]!.text),
-      ).replace(/\s+/g, " ").trim();
+      // An approved option change (Corrective Action revision 7) prints the new labels in place of the old.
+      const referenceText = withApprovedOptionText(
+        form.key,
+        removedFieldReferenceText(form.key, neutral).reduce(
+          (text, removed) => text.split(removed).join(""),
+          neutral(reference[name]!.text),
+        ).replace(/\s+/g, " ").trim(),
+      );
       expect(neutral(ours.text), name).toBe(referenceText);
       if (form.key === "dpoa") {
         const full = parseFormDocument(seed.document);

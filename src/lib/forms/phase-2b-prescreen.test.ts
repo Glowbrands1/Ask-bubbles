@@ -115,7 +115,7 @@ describe("the prescreen without the uniform question", () => {
     expect(Object.fromEntries(TEMPLATE_SEEDS.filter((entry) => entry.key !== KEY).map((entry) => [entry.key, entry.revision]))).toMatchObject({
       coaching: 2,
       // Revision 6: the Action Plan as two sentences (District Manager feedback, 21 Oct 2026).
-      dpoa: 6,
+      dpoa: 7, // Revision 7 (4 Nov 2026, client request, template approved): Type of Offense is four boxes.
       "policy-review": 2,
       "follow-up-coaching": 2,
       // 4: the core-values heading names no company (QA, 25 Oct 2026; seed-sibling-brand.test.ts).

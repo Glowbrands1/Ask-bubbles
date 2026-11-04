@@ -11,6 +11,7 @@ import { formEditSingleWriterEnabled } from "@/lib/config/chat-quality-flags";
 
 import { syncCorrectiveActionPlan } from "./ca-action-plan-sync";
 import { CA_POLICY_QUESTION, readCaPolicy, statedOffenseKeys } from "./ca-policy";
+import { offeredOffenseKeys } from "./offense-keys";
 import { checkboxGroupsForVariant, fieldsForVariant, parseFormDocument } from "./document";
 import { changeOnEditableDraft } from "./editable-draft";
 import { authorizeInstance } from "./instance-scope";
@@ -451,9 +452,8 @@ async function followReplacedBox(
   ].join("\n\n");
   const stated = statedOffenseKeys(readCaPolicy(question), account);
   const offered = group.options.map((option) => option.key);
-  const keys = [...new Set(stated ?? cited.map((section) => offenseKeyForManualHeading(section.heading)))].filter((key) =>
-    offered.includes(key),
-  );
+  // Revision 7: a removed box is the box that replaced it, where this version offers only that (`offense-keys.ts`).
+  const keys = offeredOffenseKeys([...new Set(stated ?? cited.map((section) => offenseKeyForManualHeading(section.heading)))], offered);
   if (keys.length === 0 || (keys.length === current.length && keys.every((key) => current.includes(key)))) return null;
 
   // FORM_EDIT_SINGLE_WRITER_ENABLED: the box through the one writer (path "policy").
