@@ -917,6 +917,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FORM_EDIT_TOOL_IN_STREAM_ENABLED",
   "CHAT_GLOSSARY_ENABLED",
   "CA_SALES_POLICY_ENABLED",
+  "FORM_NAME_FROM_ROSTER_ENABLED",
   "FORM_EDIT_NOOP_GUARD_ENABLED",
   "CA_NAME_FROM_CHAT_ENABLED",
   "NEXT_PUBLIC_CARD_POLICY_TO_DRAFT_ENABLED",
@@ -2440,4 +2441,26 @@ export function caSalesPolicyEnabled(): boolean {
  */
 export function formEditNoopGuardEnabled(): boolean {
   return envFlag("FORM_EDIT_NOOP_GUARD_ENABLED") && formEditSingleWriterEnabled();
+}
+
+/**
+ * Step 5, names from the roster: first piece, the overnight scan's sf-s19
+ * "metrics read as people". A metric is never read as a person, and never
+ * stripped from the text (Pau, 4 Nov 2026: "I need
+ * a corrective action verbal for <name>. This is for Under Performance on
+ * PPTA, LPSVA, Club Average, Club Close %, and Spa %."). With a roster, a name
+ * candidate that matches nobody exactly or closely, and is not shaped like
+ * anyone on the roster (`forms/roster-shape.ts`: a 2+ word candidate whose
+ * first word is nobody's first name, one word that is nobody's first or last
+ * name), is left in the question: not stripped, not announced as "I couldn't
+ * find … in the Woven roster", and not cleared from the card; with the person
+ * guard's roster read this turn the name reader drops it too, so it is never
+ * the card's employee (`forms/answer-not-a-name.ts`). Needs
+ * CA_SALES_POLICY_ENABLED: off unless both are on. Alone, "Under Performance"
+ * left in the question is read as a metric-only request and the card is
+ * refused ("I won't open formal corrective action off a metric"); the sales
+ * policy is what takes a stated shortfall to the form. Off, as before.
+ */
+export function formNameFromRosterEnabled(): boolean {
+  return envFlag("FORM_NAME_FROM_ROSTER_ENABLED") && caSalesPolicyEnabled();
 }

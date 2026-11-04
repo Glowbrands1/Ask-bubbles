@@ -43,6 +43,7 @@ import {
   policyChangeRestOfTurnEnabled,
   openFormNoSelectionEnabled,
   personGuardEnabled,
+  formNameFromRosterEnabled,
   refusalNoRepeatEnabled,
   titleNotSpeakersManagerEnabled,
   newRequestOwnTurnsEnabled,
@@ -213,7 +214,16 @@ async function postChat(request: Request) {
           loadScopedRoster(context.identity.scope).catch(() => []),
           new Promise<[]>((resolve) => setTimeout(() => resolve([]), 1_500)),
         ]);
-        enterPersonRoster(roster.map((person) => `${person.preferredFirstName?.trim() || person.firstName} ${person.lastName}`));
+        const names = roster.map((person) => `${person.preferredFirstName?.trim() || person.firstName} ${person.lastName}`);
+        // FORM_NAME_FROM_ROSTER_ENABLED: a person with a preferred name is also known by the legal one.
+        if (formNameFromRosterEnabled()) {
+          for (const person of roster) {
+            if (person.preferredFirstName?.trim() && person.preferredFirstName.trim() !== person.firstName.trim()) {
+              names.push(`${person.firstName} ${person.lastName}`);
+            }
+          }
+        }
+        enterPersonRoster(names);
       }
       /*
        * "DELETE THAT DRAFT", "SAME INCIDENT" (ported from the sibling app, QA F8).

@@ -1,4 +1,10 @@
-import { antiLoopEnabled, caShortcutWordsEnabled, managerWordsOnlyEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import {
+  antiLoopEnabled,
+  caShortcutWordsEnabled,
+  managerWordsOnlyEnabled,
+  formNameFromRosterEnabled,
+  typedNameEnabled,
+} from "@/lib/config/chat-quality-flags";
 import { COMPANY_LOCATIONS } from "@/lib/locations";
 import { readCaPolicy } from "@/lib/forms/ca-policy";
 import {
@@ -14,6 +20,7 @@ import { supportsInlineDraft } from "@/lib/forms/inline-draft";
 import { readLocationMentions, rosterLocationName } from "@/lib/forms/location-mention";
 import { isExitTerms } from "@/lib/forms/answer-not-a-name";
 import { extractJobTitle, readEmployeeMentions } from "@/lib/forms/proposal";
+import { rosterShaped } from "@/lib/forms/roster-shape";
 import type { ChatFormProposal } from "@/types";
 
 import { uniqueRosterStore } from "./intake-augment";
@@ -331,6 +338,8 @@ function gateMentions(
     }
     if (isStorePhrase(name)) continue;
     if (antiLoopEnabled()) continue;
+    // FORM_NAME_FROM_ROSTER_ENABLED: "Club Close", "Under" (Pau, 4 Nov 2026) are shaped like nobody on the roster; they stay in the question.
+    if (formNameFromRosterEnabled() && !rosterShaped(name, roster)) continue;
     next = replacePhrase(next, name, "");
     unmatched.push(name);
   }
