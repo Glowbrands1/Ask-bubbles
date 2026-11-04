@@ -249,7 +249,7 @@ describe("the name reader, with the person guard's roster", () => {
 });
 
 /*
- * APPROVED (QA for Pau, 4 Nov 2026): in Ask Sunny, "CA for under performance
+ * APPROVED (QA for Pau, 4 Nov 2026): in the sibling app, "CA for under performance
  * on Club Close % and Spa %" with CA_SALES_POLICY_ENABLED on made the card
  * "for **under**". One word typed all in lowercase that is nobody's first,
  * preferred or last name on the roster is never the employee.
