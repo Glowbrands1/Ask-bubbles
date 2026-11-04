@@ -98,14 +98,13 @@ export const NOV4_CA_SALES_POLICY_CASES: ReplayCase[] = [
     title: "a CA for low sales / not hitting goals cites the Standards of Conduct, heading and page",
     report: `${REPORT}: (b) a CA for low sales, not hitting goals`,
     /*
-     * NO fixFlags YET. Turn 1 gets no card at all: a metric with no behaviour is
-     * answered with the progression ("I won't open formal corrective action off
-     * a metric", `correctiveActionBasis` → `metric_only`, the framework's §7).
-     * Whether CA_SALES_POLICY_ENABLED should let it through is Pau's decision
-     * (asked via QA, 4 Nov 2026). The reading and the draft are covered in
-     * `src/lib/forms/ca-sales-policy.test.ts`.
+     * Turn 1 got no card at all: a metric with no behaviour was answered with
+     * the progression ("I won't open formal corrective action off a metric").
+     * Pau, 4 Nov 2026: under CA_SALES_POLICY_ENABLED a stated sales shortfall
+     * goes to the form (`correctiveActionBasis`, corrective-action-intake.ts).
      */
     status: { open: "no card: a low-sales request is answered with the progression (metric only), so no policy is cited" },
+    fixFlags: [FLAG],
     async run(t) {
       const thread = start(t);
       const reply = await thread.say("write a corrective action for Bramwell Ostick, his sales are low and he is not hitting his goals");
@@ -159,6 +158,19 @@ export const NOV4_CA_SALES_POLICY_CASES: ReplayCase[] = [
       const reply = await thread.say("create a corrective action for Coralie Vantreese for ringing up the wrong items on a guest's order");
       expect(thread.proposal, `no CA card for Coralie Vantreese:\n${reply.content}`).toMatchObject({ templateKey: "dpoa", employeeName: "Coralie Vantreese" });
       expect(policyLine(reply), `the card does not cite Standards of Conduct:\n${reply.content}`).toMatch(/standards of conduct/i);
+    },
+  },
+  {
+    id: "nov4-ca-sales-negative-no-reason",
+    title: "negative control: a vague \"make a CA for her\" with no reason still asks for the reason, and cites nothing",
+    report: `${REPORT}: negative control, no reason given`,
+    status: "fixed",
+    fixFlags: [FLAG],
+    async run(t) {
+      const thread = start(t);
+      const reply = await thread.say("make a CA for Bramwell Ostick");
+      expect(policyLine(reply), `the card cites a policy with no reason given:\n${reply.content}`).not.toMatch(/standards of conduct/i);
+      expect(reply.content, `no question for what happened:\n${reply.content}`).toMatch(/\?/);
     },
   },
   {

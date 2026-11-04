@@ -1,6 +1,6 @@
 import { businessToday } from "@/lib/business-date";
 import { mentionsGlossaryTerm } from "@/lib/ai/glossary";
-import { nameQuestionOnlyEnabled } from "@/lib/config/chat-quality-flags";
+import { caSalesPolicyEnabled, nameQuestionOnlyEnabled } from "@/lib/config/chat-quality-flags";
 import { COMPANY_JOB_TITLES } from "@/config/company/job-titles";
 
 import {
@@ -727,10 +727,28 @@ const CONDUCT_SIGNAL: readonly RegExp[] = [
   /\b(?:written|verbal|final)(?:\s+written)?\s+warning\b/,
 ];
 
+/**
+ * A sales or performance shortfall the manager STATED: a metric named and a
+ * judgement of it, read by the two lists above (no other words). Used by
+ * CA_SALES_POLICY_ENABLED (`ca-policy.ts`), which cites the Standards of
+ * Conduct for it; "the sales floor" names no shortfall.
+ */
+export function statesMetricShortfall(text: string): boolean {
+  const normalized = normalize(text);
+  return any(normalized, METRIC_NAMED) && any(normalized, METRIC_JUDGED);
+}
+
 export function correctiveActionBasis(text: string): CorrectiveActionBasis {
   const normalized = normalize(text);
   if (any(normalized, CONDUCT_SIGNAL)) return "conduct";
   if (any(normalized, METRIC_NAMED) && any(normalized, METRIC_JUDGED)) {
+    /*
+     * CA_SALES_POLICY_ENABLED (client request; Pau, 4 Nov 2026): a stated
+     * sales shortfall — a metric named and judged, read by the two lists
+     * above, no new words — goes to the Corrective Action Form, which cites
+     * the Standards of Conduct. Off, the progression answers it as before.
+     */
+    if (caSalesPolicyEnabled()) return "conduct";
     return "metric_only";
   }
   return "unstated";
