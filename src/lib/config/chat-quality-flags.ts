@@ -2450,7 +2450,8 @@ export function formEditNoopGuardEnabled(): boolean {
  * for <name>. This is for Under Performance on PPTA, LPSVA, Club Average, Club
  * Close %, and Spa %.").
  *
- * When the message names somebody on the roster (an exact or close match), a
+ * When the message names somebody on the roster (an exact or close match, or
+ * a roster first or preferred name typed in lowercase: "for perpetua"), a
  * name candidate that matches nobody exactly or closely and is not shaped
  * like anyone on the roster (`forms/roster-shape.ts`: a 2+ word candidate
  * whose first word is nobody's first name, one word that is nobody's first or
