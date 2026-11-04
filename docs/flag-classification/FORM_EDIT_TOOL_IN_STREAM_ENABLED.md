@@ -4,6 +4,12 @@ Written by `node scripts/flag-classify.ts` (3 runs off, 3 on, each a child proce
 
 Run on the PR #427 tip `899438b5` (the merged A3: edit_form offered on question turns). The one UNCLASSIFIED row the run wrote (nov3-stepb-b15-make-that-update, fix mode) was classified afterwards in the classes file and its row filled in here by hand; the run itself was not repeated. The 30 FLAKY rows are DOM and database tests unrelated to this flag that failed in one run of either mode on a loaded shared machine.
 
+## Known costs and follow-ups before this flag flips (QA, 4 Nov 2026)
+
+- **Dictation costs one revision call.** When the manager's whole latest message is itself the content for a field (dictation, 3+ words), the tool's op is refused as `copies_message` (FORM_EDIT_NOOP_GUARD_ENABLED) and the turn goes to the revision, which writes it: +1 model call on that turn. Code cannot tell a request from dictation without reading intent. QA accepted this.
+- **b15 is INTENDED for now.** `nov3-stepb-b15-make-that-update` fails in its fix-flag mode only because the case scripts the model's readings by position, and its two question turns are now offered the tool (A3) and use readings meant for later turns. Follow-up before the flip: script that case's readings by turn, not by position.
+- **The 30 FLAKY rows** are re-run alone on a quiet machine before the flip.
+
 Tests run: 15899. Changed: 47. INTENDED 17, INTENDED-HARNESS 0, REGRESSION 0, FLAKY 30, UNCLASSIFIED 0.
 
 Replay pack, first run, all cases: 59455 ms off, 81898 ms on (stubbed models; 211 records).
