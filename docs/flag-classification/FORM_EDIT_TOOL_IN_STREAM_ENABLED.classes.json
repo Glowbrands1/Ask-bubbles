@@ -83,5 +83,10 @@
   "category": "INTENDED",
   "twin": "the same case, flag off (production)",
   "reason": "The open case now holds: its turns on the draft are written by edit_form and the replies are the saved diff (\"Changed …\"); turns the tool does not write are answered by the old chain, honestly."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov3-stepb-b15-make-that-update: \"make that update\" and \"I need to add that the shipping label …\" reach the team draft's Details, and no reply says updated without a change — holds with FORM_PATCH_REDUCER_ENABLED, FORM_REPLY_FROM_DIFF_ENABLED on": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (production's flags + FORM_PATCH_REDUCER_ENABLED, FORM_REPLY_FROM_DIFF_ENABLED, CI default); the A3 question tests in form-edit-tool-in-stream-e2e.test.ts",
+  "reason": "Pau's ruling A3 (4 Nov 2026): edit_form is now offered on question turns too. The case scripts the model's readings by position (t.patchWrites, sent as edit_form calls under this flag); its two question turns (\"i don't see the details updated … ?\", \"can i reopen this for an edit?\") are now offered the tool and take scripted readings meant for later turns, so the 15-minute rule is read on the wrong turn and refused (not in that turn's words). Not a code regression: a script artifact of the new offer. The case runs in CI with production's flags plus the Step B flags (this flag off) and holds there. Run made on the PR #427 tip 899438b5 (the merged A3)."
  }
 }
