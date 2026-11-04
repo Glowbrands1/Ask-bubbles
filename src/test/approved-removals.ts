@@ -99,6 +99,15 @@ export function withApprovedRemovals<T>(templateKey: string, document: T): T {
   return copy as T;
 }
 
+/** A reference PDF's text with each approved option change applied: the old labels, in order, become the new ones. */
+export function withApprovedOptionText(templateKey: string, text: string): string {
+  return APPROVED_OPTION_CHANGES.filter((entry) => entry.templateKey === templateKey).reduce(
+    (current, change) =>
+      current.split(change.before.map((option) => option.label).join(" ")).join(change.after.map((option) => option.label).join(" ")),
+    text,
+  );
+}
+
 /** The sample line a reference PDF printed for a removed field ("Sample uniform services"). */
 export function removedFieldReferenceText(templateKey: string, labelFor: (label: string) => string): string[] {
   return APPROVED_REMOVALS.filter((entry) => entry.templateKey === templateKey).map(

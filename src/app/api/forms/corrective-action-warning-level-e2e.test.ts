@@ -4,6 +4,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 import type { AccessScope, ChatMessage } from "@/types";
 
+/*
+ * CHANGED ON PURPOSE, Corrective Action revision 7 (client request, template
+ * approved 4 Nov 2026): expectations on the current form read its four boxes.
+ * Tardiness/Leaving Early and Absenteeism are Attendance Policy; Under
+ * Performance and Violation of Company Policies are Standards of Conduct.
+ * Forms filed on revision 6 keep their boxes: see
+ * `src/lib/forms/offense-revision-7.test.ts`.
+ */
+
 vi.mock("@/config/company/locations", async () =>
   (await import("@/test/fixtures/reference-roster")).referenceRosterModule(),
 );
@@ -333,7 +342,7 @@ describe("1. previous verbal warning, current warning unspecified (the productio
     const id = result.reference.instanceId;
     expect(await ticked(id)).toEqual(["verbal"]);
     expect((await row(id, "prior_actions"))?.value).toBe("Verbal warning — signed 09/21/2026");
-    expect((await row(id, "offense_type"))?.checked).toEqual(["tardiness"]);
+    expect((await row(id, "offense_type"))?.checked).toEqual(["attendance_policy"]);
 
     const text = await download(id);
     expect(text).toContain("Verbal warning - signed 09/21/2026");
