@@ -86,6 +86,7 @@ import {
   questionNotFormEnabled,
   googleReviewsInChatEnabled,
   typoReadingCopyEnabled,
+  caSalesPolicyEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { gateTexts, searchWithPlan } from "./continuation";
 import { fieldsFromManagerText, mergeConfirmed, retainFieldsInReply } from "./form-field-state";
@@ -113,6 +114,7 @@ import {
 } from "./form-answers";
 import { resolveChatEntities } from "./entity-facts";
 import { proposeFormForTurn, suggestFormsForTurn, type ChatActor } from "./form-proposal";
+import { acceptedCaOffer, caOfferLine } from "./ca-offer";
 import { rowsForQuestion } from "@/lib/knowledge/credential-redaction";
 import { assembleGrounding } from "./grounding-assembly";
 import { withManualReadingNotes } from "./manual-reading-notes";
@@ -214,8 +216,10 @@ export async function answerQuestion(
   actor: ChatActor,
   memory: { memoryOwnerId?: string } = {},
 ): Promise<AskResponse> {
+  // CA_SALES_POLICY_ENABLED: "yes" to the Corrective Action offer is the request it offered (`ca-offer.ts`). Off, unchanged.
+  const accepted = acceptedCaOffer({ question: asked.question, history: asked.history });
   // REPORT_NAME_NOT_A_PERSON_ENABLED: a form is never built from a question about a report. See `report-turns.ts`.
-  const request = withoutReportTurnsForForm(asked);
+  const request = withoutReportTurnsForForm(accepted ? { ...asked, question: accepted } : asked);
   /*
    * APP_PASSWORD_HELP_ENABLED: "I forgot my password" is answered about this
    * app's own sign-in, the "Forgot your password?" link (QA and Pau, 25 Oct
@@ -1240,6 +1244,21 @@ async function answerQuestionCore(
     history: request.history,
     attachedDocumentIds: request.attachedDocumentIds,
   }).content;
+  /*
+   * CA_SALES_POLICY_ENABLED: an answer about a policy and an employee the
+   * roster recognises ends with ONE offer to start a Corrective Action citing
+   * that policy; nothing is made until the manager says yes (Pau, 4 Nov 2026).
+   * Not beside a form suggestion. Off, nothing is read or added.
+   */
+  if (caSalesPolicyEnabled() && !suggested) {
+    const offer = caOfferLine({
+      history: request.history,
+      question: request.question,
+      questionMessageId: request.questionMessageId,
+      roster: await loadRosterQuiet(actor),
+    });
+    if (offer) content = `${content}\n\n${offer}`;
+  }
   return {
     content,
     formSelection: suggested?.selection,
