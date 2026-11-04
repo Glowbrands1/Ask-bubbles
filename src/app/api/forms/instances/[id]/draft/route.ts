@@ -1955,6 +1955,7 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
         notes,
         basis: offenseBasis,
         specific: specificTopic(notes) !== null,
+        writeInOffered: fields.some((field) => field.key === "other_offense"),
       }) ?? offenseApplied;
     const policyLeftForManager =
       describedChoices !== null && !(offenseApplied.checked.offense_type ?? []).some((key) => SPECIFIC_SECTION_BOXES.has(key));

@@ -77,7 +77,9 @@ export const NOV4_CA_CLEANING_CASES: ReplayCase[] = [
       expect(thread.proposal, "no CA card").toMatchObject({ templateKey: "dpoa", employeeName: "Halloran Sweetbriar" });
       const saved = await draftTickingConduct(t, thread, "The bathrooms were left dirty at close.", "upkeep_or_task");
       citesNoConduct(saved);
-      expect(saved.values.policy_violated ?? "", "Policy Violated is not the manager's account").toMatch(/bathrooms were left dirty at close/i);
+      // Revision 7 has no Other write-in ("Other prints just Other", Pau; QA, 4 Nov 2026): nothing is stored for it, and Policy Violated reads "Other".
+      expect(saved.values.policy_violated ?? "", "Policy Violated on revision 7").toBe("Other");
+      expect(Object.keys(saved.values), "an orphan Other write-in was stored").not.toContain("other_offense");
     },
   },
   {
