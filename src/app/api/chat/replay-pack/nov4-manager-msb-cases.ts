@@ -109,9 +109,9 @@ export const NOV4_MANAGER_MSB_CASES: ReplayCase[] = [
     // Holds with both flags (claude/ca-sales-msb-cases): a leading glossary term is the reason, not part of the request (`detectTemplateIntent`).
     fixFlags: ["CA_SALES_POLICY_ENABLED", "CHAT_GLOSSARY_ENABLED"],
     /*
-     * QA, 4 Nov 2026 (13:23 UTC), live with CHAT_GLOSSARY_ENABLED on: Ask Sunny's
+     * QA, 4 Nov 2026 (13:23 UTC), live with CHAT_GLOSSARY_ENABLED on: the sibling app's
      * Observation was the whole request ("MSB CA for <name> for underperformance
-     * in the month of October"); Ask Bubbles asked about "MSB gaps" / "MSB
+     * in the month of October"); this app asked about "MSB gaps" / "MSB
      * language" as if MSB were unknown. Neither, with the flags on.
      */
     async run(t) {
