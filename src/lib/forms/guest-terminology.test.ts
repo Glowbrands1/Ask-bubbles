@@ -146,7 +146,7 @@ describe("the six approved guest corrections", () => {
       "resignation-exit": 4,
       coaching: 2,
       // Revision 6: the Action Plan as two sentences (District Manager feedback, 21 Oct 2026).
-      dpoa: 6,
+      dpoa: 7, // Revision 7 (4 Nov 2026, client request, template approved): Type of Offense is four boxes.
       "policy-review": 2,
       "follow-up-coaching": 2,
       demotion: 2,

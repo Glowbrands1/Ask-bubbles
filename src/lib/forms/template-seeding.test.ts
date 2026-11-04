@@ -687,7 +687,7 @@ describe("the Corrective Action Form's revision 6 (District Manager feedback, 21
     const result = await ensureTemplateLibrary("system");
 
     expect(result.revised).toEqual(["dpoa"]);
-    expect(currentVersionOf("dpoa")).toMatchObject({ version: 2, status: "published", seed_revision: 6 });
+    expect(currentVersionOf("dpoa")).toMatchObject({ version: 2, status: "published", seed_revision: 7 }); // revision 7 (4 Nov 2026) is the current seed
     expect(JSON.stringify(currentVersionOf("dpoa")?.document)).toContain("may result in additional corrective action");
     expect(versionsOf("dpoa").find((row) => row.id === originalId)).toMatchObject({ status: "archived" });
     expect(JSON.stringify(versionsOf("dpoa").find((row) => row.id === originalId)?.document)).toContain(OLD_CLOSING);

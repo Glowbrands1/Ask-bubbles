@@ -350,7 +350,7 @@ describe("Issue 3 — Corrective Action from complete conversational information
     expect(field(form, "payroll_deduct")!.checked).toEqual(["no"]);
     expect(field(form, "job_title")!.value).toBe("Operator");
     expect(field(form, "observation")!.value).toContain("10 minutes late");
-    expect(field(form, "offense_type")!.checked).toEqual(["tardiness"]);
+    expect(field(form, "offense_type")!.checked).toEqual(["attendance_policy"]); // CHANGED ON PURPOSE, Corrective Action revision 7 (template approved 4 Nov 2026): Tardiness is Attendance Policy.
   });
 
   it("does not drop the intake when the manager only names a store or says she already answered", async () => {

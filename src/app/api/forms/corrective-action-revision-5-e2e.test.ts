@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { extractText, getDocumentProxy } from "unpdf";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 import type { AccessScope, ChatMessage } from "@/types";
@@ -695,5 +695,99 @@ describe("a Corrective Action filed on revision 5, edited as a new draft", () =>
         (event) => event.instance_id === id && event.kind === "revised" && (event.detail as Record<string, unknown>).revisionId === revision,
       ),
     ).toBe(true);
+  });
+});
+
+describe("a Corrective Action filed on revision 6, revised after revision 7 (Type of Offense, 4 Nov 2026)", () => {
+  /*
+   * PATH 1 OF THE TEMPLATE CHANGE (Pau, 4 Nov 2026: option A). "Edit as new
+   * draft" (`reviseInstance`) opens the revision on the CURRENT version. With
+   * CA_SALES_POLICY_ENABLED on, a tick on a box revision 7 replaced is carried
+   * as the box that replaced it; off, every row is carried as before. The
+   * FILED form — its version, its rows, and so its PDF — is never touched.
+   */
+  const FLAG = "CA_SALES_POLICY_ENABLED";
+  const saved = process.env[FLAG];
+  afterEach(() => {
+    if (saved === undefined) delete process.env[FLAG];
+    else process.env[FLAG] = saved;
+  });
+
+  /** A finalized form on `versionId` (the revision 6 fixture by default), with these ticks and an optional Other write-in. */
+  async function filed(ticks: string[], options: { other?: string; onCurrent?: boolean } = {}) {
+    const { default: REVISION_6 } = await import("@/test/fixtures/forms/corrective-action-revision-6.json");
+    const { result } = await conversation([OPENING]);
+    const id = result.reference.instanceId;
+    const instance = store.form_instances.find((entry) => entry.id === id)!;
+    if (!options.onCurrent) {
+      const current = store.form_template_versions.find((row) => row.id === instance.template_version_id)!;
+      const revision6 = { ...current, id: "dpoa-revision-6", version: 0, status: "archived", seed_revision: 6, document: REVISION_6 };
+      if (!store.form_template_versions.some((row) => row.id === revision6.id)) store.form_template_versions.push(revision6);
+      instance.template_version_id = revision6.id;
+    }
+    instance.status = "finalized";
+    instance.finalized_at = "2026-10-29T15:00:00Z";
+    const set = (key: string, row: Record<string, unknown>) => {
+      const existing = store.form_instance_values.find((entry) => entry.instance_id === id && entry.field_key === key);
+      if (existing) Object.assign(existing, row);
+      else store.form_instance_values.push({ instance_id: id, field_key: key, value: null, checked: [], filled_by: "assistant", provenance: {}, ...row } as never);
+    };
+    set("offense_type", { checked: ticks });
+    if (options.other) set("other_offense", { value: options.other });
+    return id;
+  }
+
+  async function revise(id: string) {
+    joinOverview();
+    const response = await instanceRoute.POST(
+      new Request(`https://app.test/api/forms/instances/${id}`, { method: "POST", body: JSON.stringify({ action: "revise" }) }),
+      { params: Promise.resolve({ id }) },
+    );
+    expect(response.status).toBe(200);
+    joinOverview();
+    return ((await response.json()) as { instance: { id: string } }).instance.id;
+  }
+
+  const rowsOf = (id: string) => JSON.stringify(store.form_instance_values.filter((entry) => entry.instance_id === id));
+  const ticks = (id: string) => store.form_instance_values.find((entry) => entry.instance_id === id && entry.field_key === "offense_type")?.checked ?? [];
+
+  it.each([
+    [["tardiness"], ["attendance_policy"]],
+    [["absenteeism"], ["attendance_policy"]],
+    [["tardiness", "absenteeism"], ["attendance_policy"]],
+    [["under_performance"], ["standards_of_conduct"]],
+    [["company_policies"], ["standards_of_conduct"]],
+    [["dress_code", "under_performance"], ["dress_code", "standards_of_conduct"]],
+  ])("flag on: an old %j tick is carried as %j on the revision; the filed form is untouched", async (old, expected) => {
+    process.env[FLAG] = "true";
+    const id = await filed(old);
+    const before = rowsOf(id);
+    const revision = await revise(id);
+    expect(ticks(revision)).toEqual(expected);
+    expect(store.form_instances.find((entry) => entry.id === id)!.template_version_id).toBe("dpoa-revision-6");
+    expect(rowsOf(id), "the filed form's rows changed").toBe(before);
+  });
+
+  it("flag on: an old Other write-in ticks Other on the revision; the filed write-in stays", async () => {
+    process.env[FLAG] = "true";
+    const id = await filed([], { other: "Register count left unfinished" });
+    const before = rowsOf(id);
+    const revision = await revise(id);
+    expect(ticks(revision)).toEqual(["other"]);
+    expect(rowsOf(id)).toBe(before);
+  });
+
+  it("flag off: every row is carried as before (the Tardiness tick, unchanged)", async () => {
+    delete process.env[FLAG];
+    const id = await filed(["tardiness"]);
+    const revision = await revise(id);
+    expect(ticks(revision)).toEqual(["tardiness"]);
+  });
+
+  it("negative control: a form already on the new template is copied exactly, flag on", async () => {
+    process.env[FLAG] = "true";
+    const id = await filed(["attendance_policy", "other"], { onCurrent: true });
+    const revision = await revise(id);
+    expect(ticks(revision)).toEqual(["attendance_policy", "other"]);
   });
 });
