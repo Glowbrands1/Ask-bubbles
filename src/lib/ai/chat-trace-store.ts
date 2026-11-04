@@ -36,6 +36,8 @@ export interface ChatTraceDraft {
    * there. Absent when the reader did not run.
    */
   reader?: Record<string, unknown>;
+  /** FORM_EDIT_TOOL_IN_STREAM_ENABLED: `slots.form_edit` — keys and reasons only. Absent when the flag is off. */
+  formEdit?: Record<string, unknown>;
   errorSubtype: ErrorSubtype | null;
   errorClass: string | null;
   errorStatus: number | null;

@@ -122,6 +122,19 @@ export interface CallClaudeInput {
    * so a later policy question can read it back instead of sending it again.
    */
   readonly cachedContext?: string | null;
+  /**
+   * FORM_EDIT_TOOL_IN_STREAM_ENABLED (Step 3): the one tool this call is
+   * offered while a draft form is open (`tool_choice: auto`), and its DATA
+   * block — the open form as JSON and the scoped staff — sent just before the
+   * question. A tool call is handed to `onToolUse` once; the call is not
+   * continued (no tool result goes back), and its text may then be empty.
+   * Absent, the request is exactly as before.
+   */
+  readonly formEditTool?: {
+    readonly tool: { readonly name: string; readonly description: string; readonly input_schema: { readonly type: "object" } & Record<string, unknown> };
+    readonly data: string;
+    readonly onToolUse: (input: unknown) => void;
+  } | null;
 }
 
 /**
@@ -231,10 +244,17 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
                 ...(input.formsLibrary ? [input.formsLibrary] : []),
                 ...(input.verifiedRecords ? [input.verifiedRecords] : []),
                 ...(input.formRecords ? [input.formRecords] : []),
+                ...(input.formEditTool ? [input.formEditTool.data] : []),
                 `QUESTION\n\n${input.question}`,
               ].join("\n\n"),
             },
           ],
+          ...(input.formEditTool
+            ? {
+                tools: [{ ...input.formEditTool.tool, input_schema: { ...input.formEditTool.tool.input_schema } }],
+                tool_choice: { type: "auto" as const },
+              }
+            : {}),
         };
         // The live client always has messages.stream. Streaming with the
         // flags off would change production on merge, so stream only when a
@@ -252,8 +272,17 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
         running.on("text", () => {
           if (firstTokenMs === null) firstTokenMs = Date.now() - attemptStarted;
         });
+        // FORM_EDIT_TOOL_IN_STREAM_ENABLED: a tool call's input arrives as input_json_delta; kept per block.
+        const toolJson = new Map<number, string>();
+        if (input.formEditTool) {
+          running.on("streamEvent", (event) => {
+            if (event.type === "content_block_delta" && event.delta.type === "input_json_delta") {
+              toolJson.set(event.index, (toolJson.get(event.index) ?? "") + event.delta.partial_json);
+            }
+          });
+        }
         const streamed = await running.finalMessage();
-        return Object.assign(streamed, { firstTokenMs });
+        return Object.assign(streamed, { firstTokenMs, ...(input.formEditTool ? { toolJson } : {}) });
       },
       `${ACTIVE_BRAND.assistantName} ran out of room before finishing that answer, so it was not shown. Try asking for less at once, or split the question into parts.`,
     );
@@ -280,6 +309,13 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
       .map((block) => block.text)
       .join("\n")
       .trim();
+
+    /* FORM_EDIT_TOOL_IN_STREAM_ENABLED: the offered tool's call, if the model made one. Its text may be empty. */
+    const toolCalled = input.formEditTool ? handToolUse(response, input.formEditTool) : false;
+    if (toolCalled) {
+      noteModelCall(noted);
+      return text;
+    }
 
     if (!text) {
       noteModelCall({ ...noted, subtype: "empty_answer" });
@@ -318,6 +354,36 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
       502,
     );
   }
+}
+
+/**
+ * The offered tool's first `tool_use` block, handed to `onToolUse`. Its input
+ * is the block's own (the SDK's parse); when that is empty and the stream
+ * carried the block's input_json_delta, the deltas are read instead. True
+ * when a call was handed over.
+ */
+function handToolUse(
+  response: { readonly content: readonly { readonly type: string }[]; readonly toolJson?: ReadonlyMap<number, string> },
+  offered: NonNullable<CallClaudeInput["formEditTool"]>,
+): boolean {
+  for (const [index, block] of response.content.entries()) {
+    if (block.type !== "tool_use") continue;
+    const use = block as { readonly name?: unknown; readonly input?: unknown };
+    if (use.name !== offered.tool.name) continue;
+    let toolInput = use.input;
+    const empty = toolInput === null || toolInput === undefined || (typeof toolInput === "object" && Object.keys(toolInput).length === 0);
+    const streamed = response.toolJson?.get(index);
+    if (empty && streamed) {
+      try {
+        toolInput = JSON.parse(streamed);
+      } catch {
+        toolInput = null;
+      }
+    }
+    offered.onToolUse(toolInput);
+    return true;
+  }
+  return false;
 }
 
 /**

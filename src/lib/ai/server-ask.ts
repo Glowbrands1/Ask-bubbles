@@ -252,6 +252,8 @@ async function answerQuestionTraced(
     originalQuery: request.question,
     formInProgress: Boolean(request.continueProposalTemplateKey || request.openForm || request.activeFormInstanceId),
   });
+  // FORM_EDIT_TOOL_IN_STREAM_ENABLED: slots.form_edit, keys and reasons only.
+  if (request.formEditTool) draft.formEdit = request.formEditTool.trace;
   return finishChatTrace(draft, () => answerQuestionBody(read, actor, memory));
 }
 
@@ -1066,11 +1068,39 @@ async function answerQuestionCore(
     content: row.content,
   }));
   const supplementalMarkers = grounding.map((chunk) => chunk.marker);
+  /*
+   * FORM_EDIT_TOOL_IN_STREAM_ENABLED (Step 3): with a draft open, this call is
+   * offered `edit_form` and the open form as JSON. A tool call is applied
+   * through the one writer and the turn ends here — no second call, and the
+   * model's text is not shown; the chat route answers from the saved diff or
+   * hands the turn to the old chain. Absent, the call is as before.
+   */
+  const formEdit = request.formEditTool?.offer ? request.formEditTool : null;
+  let toolInput: { readonly input: unknown } | null = null;
   let answer = await callClaude({
     ...claudeBase,
     grounding: dataAddition.help ? `${groundingText}\n\n${dataAddition.help}` : groundingText,
     ...(useManual && manualPlan?.cachedBlock ? { cachedContext: manualPlan.cachedBlock } : {}),
+    ...(formEdit && formEdit.offer
+      ? {
+          formEditTool: {
+            tool: formEdit.offer.tool,
+            data: formEdit.offer.data,
+            onToolUse: (input: unknown) => {
+              toolInput ??= { input };
+            },
+          },
+        }
+      : {}),
   });
+  if (formEdit) {
+    formEdit.sent();
+    const called = toolInput as { readonly input: unknown } | null;
+    if (called) {
+      await formEdit.apply(called.input);
+      return { content: "", citations: [], coverage: "not_applicable" };
+    }
+  }
 
   let settled: CitedManualAnswer | null = null;
   let fellBack = false;

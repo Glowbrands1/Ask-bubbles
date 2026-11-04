@@ -97,7 +97,10 @@ async function persistChatTrace(draft: ChatTraceDraft): Promise<void> {
       extraction_input_tokens: draft.formExtraction?.inputTokens ?? null,
       extraction_output_tokens: draft.formExtraction?.outputTokens ?? null,
       slots: withSpend(
-        draft.reader ? { ...(draft.formExtraction?.slots ?? {}), reader: draft.reader } : (draft.formExtraction?.slots ?? null),
+        withFormEdit(
+          draft.reader ? { ...(draft.formExtraction?.slots ?? {}), reader: draft.reader } : (draft.formExtraction?.slots ?? null),
+          draft.formEdit,
+        ),
         metered,
       ),
     });
@@ -111,6 +114,11 @@ async function persistChatTrace(draft: ChatTraceDraft): Promise<void> {
     console.error("chat_traces insert failed");
     // Tracing never changes what the manager sees.
   }
+}
+
+/** FORM_EDIT_TOOL_IN_STREAM_ENABLED: `form_edit` beside the other slots; absent, the slots as before. */
+function withFormEdit(slots: Record<string, unknown> | null, formEdit: Record<string, unknown> | undefined): Record<string, unknown> | null {
+  return formEdit ? { ...(slots ?? {}), form_edit: { ...formEdit } } : slots;
 }
 
 function withSpend(

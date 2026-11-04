@@ -914,6 +914,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FORM_PATCH_REDUCER_ENABLED",
   "FORM_REPLY_FROM_DIFF_ENABLED",
   "FORM_EDIT_SINGLE_WRITER_ENABLED",
+  "FORM_EDIT_TOOL_IN_STREAM_ENABLED",
   "CA_NAME_FROM_CHAT_ENABLED",
   "NEXT_PUBLIC_CARD_POLICY_TO_DRAFT_ENABLED",
   "NEW_REQUEST_OPEN_DRAFT_ENABLED",
@@ -2374,4 +2375,20 @@ export function policyCitationCheckEnabled(): boolean {
  */
 export function formEditSingleWriterEnabled(): boolean {
   return envFlag("FORM_EDIT_SINGLE_WRITER_ENABLED");
+}
+
+/**
+ * The edit tool in the main call (Step 3, 4 Nov 2026): with a draft form open
+ * and a turn that is not a question, a correction or a policy change, the
+ * answering call is offered one tool, `edit_form`, with the open form as JSON
+ * in one extra data block. A tool call is written through `writeFormEdits`
+ * (path "tool", all or nothing) and the reply is the saved diff; the model's
+ * text is not shown. No call, a refusal or nothing changed: the turn goes to
+ * the redraft, the copy and the revision as before. One model call, no tool
+ * result round trip. See `forms/form-edit-tool.ts`. Needs
+ * FORM_EDIT_SINGLE_WRITER_ENABLED too: off unless both are on. Off, the main
+ * request is byte for byte as before and the Step B patch turn runs as it did.
+ */
+export function formEditToolInStreamEnabled(): boolean {
+  return envFlag("FORM_EDIT_TOOL_IN_STREAM_ENABLED") && formEditSingleWriterEnabled();
 }
