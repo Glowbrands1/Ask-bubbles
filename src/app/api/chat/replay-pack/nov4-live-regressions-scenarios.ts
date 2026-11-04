@@ -888,12 +888,14 @@ export const ROSTER_SHORT_SCENARIOS: readonly CriteriaScenario[] = ROSTER_SHORT_
  *
  *   no-metric-person  as above;
  *   asks-who          no reply says "I have the employee", and a card with no
- *                     employee asks for one.
+ *                     employee asks for one;
+ *   ca-wins           Pau, 4 Nov 2026: any card is a Corrective Action, never
+ *                     the form named where the person goes.
  *
  * Controls (qa-full-*): the same three wordings for an invented roster person
  * of the same name shape, typed in full, at mgr-1's store.
  */
-const ASKS_FOR_EMPLOYEE = /Who is this (?:\*\*[^*]+\*\* |form )?for\?|the employee'?s full name/i;
+const ASKS_FOR_EMPLOYEE = /Who is this (?:\*\*[^*]+\*\* |form )?for\?|employee'?s full name/i;
 
 const ASKS_WHO_CRITERION: LiveCriterion = {
   name: "asks-who",
@@ -911,8 +913,14 @@ const QA_WORDINGS = (name: string) =>
     ["p1", `I need a corrective action verbal for ${name}. This is for Under Performance on PPTA, LPSVA, Club Average, Club Close %, and Spa %.`],
   ] as const;
 
+/** Pau, 4 Nov 2026: a corrective action asked for, with another form's name after "for", is a Corrective Action. */
+const CA_WINS_CRITERION: LiveCriterion = {
+  name: "ca-wins",
+  check: (run) => (everyCard(run).some((card) => card && card.templateKey !== "dpoa") ? `a ${everyCard(run).find((card) => card && card.templateKey !== "dpoa")?.templateKey} card, not a Corrective Action` : null),
+};
+
 export const QA_FORM_NAME_SCENARIOS: readonly CriteriaScenario[] = QA_WORDINGS("Coaching Form").map(([key, say]) => {
-  const criteria = [NO_METRIC_PERSON, ASKS_WHO_CRITERION];
+  const criteria = [NO_METRIC_PERSON, ASKS_WHO_CRITERION, CA_WINS_CRITERION];
   return {
     id: `qa-form-name-${key}`,
     roster: MANAGER_ROSTER,
@@ -920,7 +928,7 @@ export const QA_FORM_NAME_SCENARIOS: readonly CriteriaScenario[] = QA_WORDINGS("
     steps: [{ say }],
     criteria,
     expect: {
-      says: "no metric shown as a person or on the card; a card with no employee asks for one",
+      says: "no metric shown as a person or on the card; a card with no employee asks for one; any card is a Corrective Action",
       check: (run: LiveOutcome) => all(...criteria.map((criterion) => criterion.check(run))),
     },
   };

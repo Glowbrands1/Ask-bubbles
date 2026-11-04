@@ -261,36 +261,60 @@ export const NOV4_METRICS_NOT_PEOPLE_CASES: ReplayCase[] = [
   /*
    * QA, 4 NOV 2026, production with CA_SALES_POLICY_ENABLED OFF, in the
    * sibling app: the tester's "employee" was a form's name pasted where the
-   * person goes ("… for Coaching Form. …"). The named form wins (a Coaching
-   * Form card), so the Corrective Action's metric-only answer never runs, and
-   * there "Club Close" became the employee. Here the card has no employee but
-   * the reply says "I couldn't find **Club Close** or **Under** in the Woven
-   * roster". With FORM_NAME_FROM_ROSTER_ENABLED (which no longer needs the
-   * sales policy) no metric is named as a person and the reply asks for the
-   * employee. Exact wording.
+   * person goes ("… for Coaching Form. …"). The named form won (a Coaching
+   * Form card), so the Corrective Action's metric-only answer never ran, and
+   * there "Club Close" became the employee. Here the card is a Coaching Form
+   * with no employee, and for the metrics wordings the reply says "I couldn't
+   * find **Club Close** or **Under** in the Woven roster".
+   *
+   * Pau's decision (via QA, 4 Nov 2026): the CORRECTIVE ACTION WINS. With
+   * FORM_NAME_FROM_ROSTER_ENABLED (which no longer needs the sales policy) a
+   * registry form named after "for", after a request for a corrective action,
+   * is not the form asked for and is never the employee
+   * (`forms/template-intent.ts` caForAnotherForm, `forms/request-slot.ts`):
+   * a Corrective Action, no metric named as a person, and a card with no
+   * employee asks for one. With the sales policy off, a metrics message gets
+   * the metric-only answer (no card), which is the policy's answer. Each
+   * wording runs with FORM_NAME alone and with FORM_NAME, the sales policy and
+   * the glossary. Exact wording.
    */
   ...(
     [
-      ["b", "I need a corrective action for Coaching Form. This is for Under Performance on Club Close % and Spa %.", { open: "the reply says \"I couldn't find **Club Close** or **Under** in the Woven roster\"" }],
-      ["p1", say("Coaching Form"), { open: "the reply says \"I couldn't find **Club Close** or **Under** in the Woven roster\"" }],
-      // QA's (A): no metric in the message (the negative control).
-      ["a", "Create a Corrective Action for Coaching Form", "fixed"],
+      ["b", "I need a corrective action for Coaching Form. This is for Under Performance on Club Close % and Spa %."],
+      ["p1", say("Coaching Form")],
+      // QA's (A): no metric in the message. Production asks for the employee, but on a Coaching Form card.
+      ["a", "Create a Corrective Action for Coaching Form"],
     ] as const
-  ).map(
-    ([key, text, status]): ReplayCase => ({
-      id: `nov4-qa-form-name-as-person-${key}`,
-      title: `QA 4 Nov (CA_SALES off): "${text.slice(0, 60)}…": no metric is the employee or named as a person`,
-      report: `QA, 4 Nov 2026, production with CA_SALES off: "${text}"`,
-      status,
-      fixFlags: [FLAG],
-      async run(t) {
-        const thread = start(t);
-        const reply = await thread.say(text);
-        const card = thread.proposal?.employeeName ?? "";
-        expect(card, `a metric is the card's employee:\n${reply.content}`).not.toMatch(/club close|club average|^under$|ppta|lpsva|spa/i);
-        expect(reply.content, `a metric is named as a person:\n${reply.content}`).not.toMatch(/\*\*(?:Club Close|Club Average|Under)\*\*/i);
-        expect(reply.content, `the reply says it has the employee:\n${reply.content}`).not.toMatch(/I have the employee/i);
-      },
-    }),
+  ).flatMap(([key, text]) =>
+    (
+      [
+        ["", [FLAG]],
+        ["-with-sales", [FLAG, SALES, GLOSSARY]],
+      ] as const
+    ).map(
+      ([suffix, flags]): ReplayCase => ({
+        id: `nov4-qa-form-name-as-person-${key}${suffix}`,
+        title: `QA 4 Nov (CA_SALES off): "${text.slice(0, 60)}…": a Corrective Action, never a Coaching Form; no metric is named as a person; a card with no employee asks for one`,
+        report: `QA, 4 Nov 2026, production with CA_SALES off: "${text}"`,
+        status: {
+          open:
+            key === "a"
+              ? "a Coaching Form card (with no employee)"
+              : "a Coaching Form card; the reply says \"I couldn't find **Club Close** or **Under** in the Woven roster\"",
+        },
+        fixFlags: [...flags],
+        async run(t) {
+          const thread = start(t);
+          const reply = await thread.say(text);
+          const card = thread.proposal?.employeeName ?? "";
+          expect(card, `a metric is the card's employee:\n${reply.content}`).not.toMatch(/club close|club average|^under$|ppta|lpsva|spa|coaching form/i);
+          expect(reply.content, `a metric is named as a person:\n${reply.content}`).not.toMatch(/\*\*(?:Club Close|Club Average|Under)\*\*/i);
+          expect(reply.content, `the reply says it has the employee:\n${reply.content}`).not.toMatch(/I have the employee/i);
+          if (!thread.proposal) return; // the sales policy off: the metric-only answer
+          expect(thread.proposal.templateKey, `not a Corrective Action (Pau: the corrective action wins):\n${reply.content}`).toBe("dpoa");
+          if (!card) expect(reply.content, `a card with no employee does not ask for one:\n${reply.content}`).toMatch(/Who is this (?:\*\*[^*]+\*\* |form )?for\?|employee'?s full name/i);
+        },
+      }),
+    ),
   ),
 ];
