@@ -1,6 +1,15 @@
 # FORM_NAME_FROM_ROSTER_ENABLED: which tests it changes, and why
 
-Written by `node scripts/flag-classify.ts` (3 runs off, 3 on, each a child process with a clean env; on in both: `CA_SALES_POLICY_ENABLED`). Paths: `src/lib/ai`, `src/lib/forms`, `src/app/api/chat`, `src/app/api/forms`. Classifications are kept in `docs/flag-classification/FORM_NAME_FROM_ROSTER_ENABLED.classes.json`. The 14 changed rows were classified by hand after the run (all INTENDED; replies checked by re-running those cases with the flag off and on), so the table was not regenerated. Failing in both modes (30 off, 35 on with CA_SALES_POLICY_ENABLED in both, the same each run) is not caused by this flag and is not listed.
+Written by `node scripts/flag-classify.ts` (3 runs off, 3 on, each a child process with a clean env; on in both: `CA_SALES_POLICY_ENABLED`). Paths: `src/lib/ai`, `src/lib/forms`, `src/app/api/chat`, `src/app/api/forms`. Classifications are kept in `docs/flag-classification/FORM_NAME_FROM_ROSTER_ENABLED.classes.json`. The 14 changed rows were classified by hand after the run (all INTENDED; replies checked by re-running those cases with the flag off and on), so the table was not regenerated. The 30 tests failing in BOTH modes, every run, are not caused by this flag and are not listed. They are CA_SALES_POLICY_ENABLED's own changes, since that flag is on in both columns here. They pin the sales flag's off behaviour and are covered by CA_SALES_POLICY_ENABLED's own classification (#434):
+- corrective-action-conversation (7) and corrective-action-intake (6): a stated shortfall is "conduct", not "metric_only";
+- ca-policy (4): Standards of Conduct is ticked;
+- ca-template-map-f4 (1): a card is made;
+- corrective-action-revision-5-e2e (1);
+- pm-draft-route and its single-writer twin (2);
+- the replay pack's open cases that hold with the sales flag (7);
+- the flags-off identity tests that pin main with every flag off (chat-glossary, single-writer, flags-off-parity: 3).
+
+The 5 extra failures with this flag on are the rows below.
 
 Tests run: 11207. Changed: 14. INTENDED 14, INTENDED-HARNESS 0, REGRESSION 0, FLAKY 0, UNCLASSIFIED 0.
 
