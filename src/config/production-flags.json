@@ -1,6 +1,6 @@
 {
   "_about": "This app's PRODUCTION chat flags, for the replay pack (src/app/api/chat/replay-pack). 'on': read as on in Vercel production. 'assumedOn': encrypted or not visible to the Vercel reader (it lists 100 of 181 entries), taken as on from QA's 26 Oct decrypted reading and the replays that match production. 'off': known off. QA messages every flag flipped; update this file in the same pull request as the change it tests. Only *_ENABLED chat flags; integrations (Woven, Google reviews) are left out.",
-  "updated": "2026-11-03",
+  "updated": "2026-11-04",
   "on": [
     "ADDITIONAL_LOCATION_TAKEN_ENABLED",
     "AI_READS_CODE_CHECKS_ENABLED",
@@ -9,6 +9,7 @@
     "CARD_CHANGE_PLAN_REBUILD_ENABLED",
     "CA_NAME_FROM_CHAT_ENABLED",
     "CA_SHORTCUT_WORDS_ENABLED",
+    "CHAT_GLOSSARY_ENABLED",
     "CHAT_HISTORY_STATE_CHUNKED_ENABLED",
     "CHAT_RESPONSE_STREAM_ENABLED",
     "CLAIM_GUARD_ENABLED",
