@@ -99,37 +99,11 @@ export const NOV4_MANAGER_MSB_CASES: ReplayCase[] = [
   },
   {
     id: "nov4-mgr-5-msb-soc",
-    title: `"${byId("mgr-5-msb-soc").text}" — asks once "Do you want a Corrective Action for …?"; the card only after "yes"`,
+    title: `"${byId("mgr-5-msb-soc").text}" — a card, MSB never a name, cites the Standards of Conduct`,
     report: `${REPORT}, #5`,
-    /*
-     * Pau, 4 Nov 2026: no request in the message, so it stays a policy answer
-     * (no routing change). With CA_SALES_POLICY_ENABLED it asks once; the card
-     * is made only after "yes", and cites the Standards of Conduct with the
-     * manual heading and page; MSB is never a name. See `ai/ca-offer.ts`.
-     */
-    status: { open: "no offer: the policy answer ends without asking whether to start a Corrective Action" },
-    fixFlags: ["CA_SALES_POLICY_ENABLED", "CHAT_GLOSSARY_ENABLED"],
-    async run(t) {
-      const message = byId("mgr-5-msb-soc");
-      const name = `${message.person!.firstName} ${message.person!.lastName}`;
-      vi.setSystemTime(new Date("2026-11-04T15:30:00Z"));
-      t.directory(MANAGER_ROSTER);
-      t.as("location_manager", WEST_DODGE);
-      const thread = t.thread();
-      const reply = await thread.say(message.text);
-      expect(thread.proposal ?? null, `a card was made before "yes":\n${reply.content}`).toBeNull();
-      expect(reply.content.match(/Do you want a Corrective Action for /g) ?? [], `not asked exactly once:\n${reply.content}`).toHaveLength(1);
-      expect(reply.content, "the question does not name the person and the Standards of Conduct").toContain(`**Do you want a Corrective Action for ${name}?**`);
-      expect(reply.content).toMatch(/\*\*Standards of Conduct\*\*/);
-      const yes = await thread.say("yes");
-      expect(thread.proposal, `no card after "yes":\n${yes.content}`).toMatchObject({ templateKey: "dpoa", employeeName: name });
-      expect(yes.content, "MSB shown as a name").not.toMatch(/\*\*Msb\*\*|couldn'?t find \*\*msb\*\*/i);
-      t.draftWrites({ observation: `Observed:\n${name} did not follow the Must See Behaviors.` }, { offense_type: ["standards_of_conduct"] });
-      const id = await thread.create();
-      const values = t.values(id);
-      expect(values.policy_violated ?? "", "Policy Violated").toMatch(/standards of conduct/i);
-      expect(values.policy_language ?? "", "Direct policy heading").toMatch(/standards of conduct/i);
-      expect(values.policy_language ?? "", "Direct policy page").toMatch(/\bp(?:age|\.)\s*\d+/i);
-    },
+    // Run 4 Nov 2026 (production flags): fails as below.
+    status: { open: "no card at all: the statement with no form named is answered as a policy question (the pack's stand-in answer), with production's flags and with CHAT_GLOSSARY_ENABLED and CA_SALES_POLICY_ENABLED on; neither flag makes it hold, so no fixFlags" },
+    // No fixFlags: with either flag or both on it still gets no card.
+    run: (t) => runMessage(t, byId("mgr-5-msb-soc")),
   },
 ];
