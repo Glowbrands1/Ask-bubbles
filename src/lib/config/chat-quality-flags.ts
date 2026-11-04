@@ -2471,7 +2471,14 @@ export function formEditNoopGuardEnabled(): boolean {
  * card is refused ("I won't open formal corrective action off a metric") —
  * main only made a card because "Under" was stripped. The sales policy is
  * what takes a stated shortfall like Pau's to the form, citing the Standards
- * of Conduct. Off, as before.
+ * of Conduct.
+ *
+ * Part 2 (QA for Pau, 5 Nov 2026), roster-free: when the message's first
+ * sentence asks for a form "… for <Name>", that name is its only employee
+ * candidate, and a capitalised item of a list of three or more is never one
+ * (`forms/request-slot.ts`). A first name typed with a surname that is not
+ * close to a roster person's is never offered as them ("Remy Fenn" is not
+ * Remy Calder). Off, as before.
  */
 export function formNameFromRosterEnabled(): boolean {
   return envFlag("FORM_NAME_FROM_ROSTER_ENABLED") && caSalesPolicyEnabled();
