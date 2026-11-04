@@ -3,7 +3,8 @@ import * as React from "react";
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { FIELD_RESPONSIBILITIES } from "@/lib/forms/document";
+import { FIELD_RESPONSIBILITIES, parseFormDocument } from "@/lib/forms/document";
+import REVISION_6 from "@/test/fixtures/forms/corrective-action-revision-6.json";
 import { TEMPLATE_SEEDS } from "@/lib/forms/library";
 
 import { BlockView } from "./block-view";
@@ -58,10 +59,15 @@ describe("browser autofill is off on every typed form field", () => {
     }
   });
 
-  it("covers the Corrective Action Form's Other box", () => {
-    const corrective = TEMPLATE_SEEDS.find((seed) => seed.key === "dpoa")!;
+  /*
+   * CHANGED ON PURPOSE, Corrective Action revision 7 (client request, template
+   * approved 4 Nov 2026): the current form's Other is a box with no write-in.
+   * Forms filed on revision 6 still open with the write-in, so the guard is
+   * checked on that document.
+   */
+  it("covers the Corrective Action Form's Other box (revision 6, where it is a write-in)", () => {
     const { container } = render(
-      <ResponsiveForm document={corrective.document} variant={null} values={{ values: {}, checked: {} }} onValue={() => {}} />,
+      <ResponsiveForm document={parseFormDocument(REVISION_6)} variant={null} values={{ values: {}, checked: {} }} onValue={() => {}} />,
     );
     const other = typedFields(container).filter((field) => /other/i.test(field.id));
     expect(other.length).toBeGreaterThan(0);

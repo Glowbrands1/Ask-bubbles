@@ -568,7 +568,7 @@ describe("the rest of the library is where it was", () => {
     const expected: Record<string, number> = {
       coaching: 2,
       // Revision 6: the Action Plan as two sentences (District Manager feedback, 21 Oct 2026).
-      dpoa: 6,
+      dpoa: 7, // Revision 7 (4 Nov 2026, client request, template approved): Type of Offense is four boxes.
       "policy-review": 2,
       "follow-up-coaching": 2,
       "sdit-epp": 6,

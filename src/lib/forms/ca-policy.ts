@@ -1,4 +1,5 @@
-import { formEditDateRulesEnabled } from "@/lib/config/chat-quality-flags";
+import { foldsToGlossaryTerm } from "@/lib/ai/glossary";
+import { caSalesPolicyEnabled, formEditDateRulesEnabled } from "@/lib/config/chat-quality-flags";
 
 import { JOIN } from "./bounded-context";
 import { LATE_TO_OPEN, lateOpenOn } from "./late-open";
@@ -10,6 +11,8 @@ import {
   type ManualChunk,
   type ManualSection,
 } from "./official-policy-manual";
+import { statesMetricShortfall } from "./metric-shortfall";
+import { CURRENT_CA_OFFENSE_KEYS, offeredOffenseKey, offeredOffenseKeys } from "./offense-keys";
 
 /**
  * ============================================================================
@@ -88,8 +91,12 @@ export interface CaPolicyReading {
   alternatives: Exclude<CaPolicyName, "standards_of_conduct">[];
   /** Standards of Conduct, when the manager named it or the account clearly points at it. */
   suggestion: typeof STANDARDS_OF_CONDUCT | null;
-  /** Where the suggestion came from. */
-  source: "stated" | "incident" | null;
+  /**
+   * Where the suggestion came from. `sales_performance` and `msb` only with
+   * CA_SALES_POLICY_ENABLED on: the account reads as the Under Performance
+   * offense type, or uses a glossary term (MSB). See `withSalesPolicy`.
+   */
+  source: "stated" | "incident" | "sales_performance" | "msb" | null;
   /** Policies to ask between, when the account reads more than one way and none was named. */
   ambiguous: CaPolicyName[] | null;
   /** A scheduled meeting, seminar or training session the account says was not attended: "the monthly meeting". */
@@ -302,6 +309,58 @@ function statedIn(turn: string): CaPolicyName | null {
  * the drafting notes carry them.
  */
 export function readCaPolicy(rawText: string): CaPolicyReading {
+  return withSalesPolicy(readCaPolicyFromWords(rawText), rawText);
+}
+
+/**
+ * ============================================================================
+ * SALES AND MSB CORRECTIVE ACTIONS CITE THE STANDARDS OF CONDUCT
+ * (CA_SALES_POLICY_ENABLED, default off; client request relayed by Pau, 4 Nov 2026)
+ * ============================================================================
+ *
+ * A Corrective Action for sales underperformance or for MSB was created with
+ * no policy: the account read as the Under Performance offense type, which
+ * cites no section. With the flag on, such an account is read as the Standards
+ * of Conduct instead, and the manual's section is cited by heading and page.
+ *
+ * NO NEW WORDS ARE MATCHED HERE. "Sales performance" is a shortfall the
+ * manager stated, read by the reader the progression already uses
+ * (`statesMetricShortfall`: a metric named and judged — "the sales floor" is
+ * not one), or the manager naming Under Performance; "MSB" is a term of the approved glossary
+ * (`ai/glossary.ts`, read through `foldsToGlossaryTerm`), not a list kept here.
+ *
+ * WHAT IT LEAVES ALONE. A policy the manager named other than Under
+ * Performance; an account that reads as attendance or a missed meeting. Off,
+ * the reading is returned untouched.
+ */
+function withSalesPolicy(reading: CaPolicyReading, rawText: string): CaPolicyReading {
+  if (!caSalesPolicyEnabled()) return reading;
+  if (reading.stated !== null && reading.stated !== "under_performance") return reading;
+  if (reading.missedEvent !== null) return reading;
+  const sentences = statements(normalize(rawText));
+  const msb = sentences.some((sentence) =>
+    sentence.split(/[^a-z0-9.]+/).some((word) => foldsToGlossaryTerm(word.replace(/^\.+|\.+$/g, ""))),
+  );
+  // The stated shortfall reader the progression already uses (`corrective-action-intake.ts`): a metric named and judged.
+  const target = reading.stated === "under_performance" || statesMetricShortfall(rawText);
+  if (!msb && !target) return reading;
+  if (reading.stated === null && sentences.some((s) => ATTENDANCE.test(s))) return reading;
+  return {
+    ...reading,
+    stated: null,
+    alternatives: reading.alternatives.filter((name) => name !== "under_performance"),
+    suggestion: STANDARDS_OF_CONDUCT,
+    source: msb ? "msb" : "sales_performance",
+    ambiguous: null,
+  };
+}
+
+/** Whether the reading is CA_SALES_POLICY_ENABLED's: a sales or MSB account read as the Standards of Conduct. */
+export function isSalesPolicyReading(reading: CaPolicyReading): boolean {
+  return reading.source === "sales_performance" || reading.source === "msb";
+}
+
+function readCaPolicyFromWords(rawText: string): CaPolicyReading {
   const text = normalize(rawText);
   const turns = text.split(JOIN).map((turn) => turn.trim()).filter(Boolean);
 
@@ -334,7 +393,8 @@ export function readCaPolicy(rawText: string): CaPolicyReading {
   const alternatives: CaPolicyReading["alternatives"] = [];
   if (topics.length > 0) {
     if (missedEvent || sentences.some((s) => ATTENDANCE.test(s))) alternatives.push("attendance");
-    if (sentences.some((s) => TARGET.test(s))) alternatives.push("under_performance");
+    // Revision 7: the current form has no Under Performance box (it is the Standards of Conduct), so a target is no other reading.
+    if (sentences.some((s) => TARGET.test(s)) && CURRENT_CA_OFFENSE_KEYS.includes("under_performance")) alternatives.push("under_performance");
   }
 
   if (stated) {
@@ -443,7 +503,8 @@ function attendanceOffenseKeys(text: string, missed: boolean): string[] | null {
 export function statedOffenseKeys(reading: CaPolicyReading, rawText: string): string[] | null {
   switch (reading.stated) {
     case null:
-      return null;
+      // CA_SALES_POLICY_ENABLED: a sales or MSB account ticks the Standards of Conduct. Off, never set.
+      return isSalesPolicyReading(reading) ? [STANDARDS_OF_CONDUCT] : null;
     case "attendance": {
       const text = normalize(rawText);
       return attendanceOffenseKeys(text, missedEventIn(statements(text)) !== null) ?? ["tardiness"];
@@ -463,7 +524,8 @@ export function withStatedOffense(input: {
   keys: readonly string[];
   offered: readonly string[];
 }): { checked: Record<string, string[]>; values: Record<string, string>; ticked: string[]; replaced: string[] } {
-  const ticked = input.keys.filter((key) => input.offered.includes(key));
+  // Revision 7: a removed box is ticked as the box that replaced it, where this version offers only that (`offense-keys.ts`).
+  const ticked = offeredOffenseKeys(input.keys, input.offered);
   const before = input.checked.offense_type ?? [];
   const replaced: string[] = before.filter((key) => !ticked.includes(key));
   const values = { ...input.values };
@@ -524,12 +586,29 @@ export type NamedPolicyReading =
 
 /** The offense box a named section is cited under, as the form labels it. */
 const OFFENSE_BOX_LABEL: Record<string, string> = {
+  attendance_policy: "Attendance Policy",
   tardiness: "Tardiness/Leaving Early",
   absenteeism: "Absenteeism",
   standards_of_conduct: "Standards of Conduct",
   dress_code: "Dress Code Violation",
   company_policies: "Violation of Company Policies",
 };
+
+/**
+ * The box a section is cited under, as the CURRENT form labels it: a removed
+ * box is named as the one that replaced it — except the Standards of
+ * Conduct. A specific section (Cell Phone, Visitors, Animals) once cited
+ * under Violation of Company Policies is ticked under the Standards of
+ * Conduct on revision 7, and Policy Violated says so (Pau, 4 Nov 2026); the
+ * chat names the section alone, never "under Standards of Conduct", which
+ * reads as citing the catch-all instead of it (District Manager feedback,
+ * 21 Oct 2026; eval b6).
+ */
+function currentBoxLabel(key: string): string | undefined {
+  const current = offeredOffenseKey(key, CURRENT_CA_OFFENSE_KEYS) ?? key;
+  if (current !== key && current === STANDARDS_OF_CONDUCT) return undefined;
+  return OFFENSE_BOX_LABEL[current];
+}
 
 function namedPolicyLine(named: NamedPolicyReading): string | null {
   /*
@@ -546,7 +625,7 @@ function namedPolicyLine(named: NamedPolicyReading): string | null {
    * Watch Policy. Said as a reading the manager can change, not as theirs.
    */
   if (named.lookup === "described") {
-    const box = OFFENSE_BOX_LABEL[named.offenseKey];
+    const box = currentBoxLabel(named.offenseKey);
     // The manual's sentence closes this one: `… which says "… scheduled shifts." I'll quote it`.
     const end = named.anchor && /[.!?]$/.test(named.anchor) ? "" : ".";
     const says = !named.anchor
@@ -557,7 +636,7 @@ function namedPolicyLine(named: NamedPolicyReading): string | null {
     return `**Policy:** ${named.heading}, from what you described ("${named.phrase}") — the policy manual's section on page ${named.page}${says} I'll quote it on the draft${box ? ` under **${box}**` : ""}; tell me if a different policy applies.`;
   }
   if (named.lookup === "found") {
-    const box = OFFENSE_BOX_LABEL[named.offenseKey];
+    const box = currentBoxLabel(named.offenseKey);
     return `**Policy:** ${named.heading}, as you said — the policy manual's section on page ${named.page}. I'll quote it on the draft${box ? ` under **${box}**` : ""}.`;
   }
   if (named.lookup === "missing") {
@@ -605,6 +684,11 @@ export function unconfirmedManualLine(named: NamedPolicyReading | null): string 
 }
 
 export function caPolicyProposalLine(reading: CaPolicyReading, named: NamedPolicyReading | null = null): string | null {
+  // CA_SALES_POLICY_ENABLED: a sales or MSB account. Off, the source is never set and this line is never said.
+  if (isSalesPolicyReading(reading)) {
+    const what = reading.source === "msb" ? "Must See Behaviors (MSB)" : "sales performance against goals";
+    return `**Policy:** Standards of Conduct — ${what}. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.`;
+  }
   /*
    * A POLICY THE MANAGER NAMED, which the manual answers, is the policy — the
    * draft ticks its box and quotes its section. One the manual does not
@@ -628,6 +712,13 @@ export function caPolicyProposalLine(reading: CaPolicyReading, named: NamedPolic
   }
   if (reading.stated === "attendance" || reading.stated === "dress_code") {
     return `**Policy:** ${CA_POLICY_LABEL[reading.stated]}, as you said. I'll quote that section from the current policy manual on the draft.`;
+  }
+  if (
+    (reading.stated === "under_performance" || reading.stated === "company_policies") &&
+    !CURRENT_CA_OFFENSE_KEYS.includes(reading.stated)
+  ) {
+    // Revision 7: the form records it under the Standards of Conduct; the box is never offered by its old name.
+    return `**Policy:** Standards of Conduct — the Corrective Action Form records ${CA_POLICY_LABEL[reading.stated]} under the Standards of Conduct now. I'll quote that section from the current policy manual on the draft; tell me if a different policy applies.`;
   }
   if (reading.stated === "under_performance" || reading.stated === "company_policies") {
     return `**Policy:** ${CA_POLICY_LABEL[reading.stated]}, as you said. The policy manual has no single section to quote for it, so Direct policy is left for you to complete.`;

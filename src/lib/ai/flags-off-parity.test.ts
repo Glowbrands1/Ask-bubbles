@@ -107,9 +107,27 @@ const PROTECTED = [
  * `await namesOnRoster(<the same filtered list>, actor.scope)`. Behind
  * FORM_EDIT_NAME_GATE_ROSTER_ENABLED, default off; off, namesOnRoster returns
  * the list unchanged and reads nothing.
+ *
+ * The user (Pau) approved on 4 Nov 2026, via QA ("chat-revision.ts hunk 1,
+ * version 2: YES, same hunk in both apps"), in src/lib/forms/chat-revision.ts:
+ * the import `formEditSingleWriterEnabled` beside `revisionSameValueEnabled`,
+ * and the revision's save as `formEditSingleWriterEnabled() ?
+ * writeRevisionEdits(…, { actorId, latest: input.question, notes }) :
+ * applyAssistantRevision(…)`. Behind FORM_EDIT_SINGLE_WRITER_ENABLED, default
+ * off; off, the same applyAssistantRevision call as before.
+ *
+ * The user (Pau) approved on 4 Nov 2026 ("#424: Option A approved"), in
+ * src/lib/forms/instances.ts, `reviseInstance`: the imports
+ * `offeredOffenseKeys` (./offense-keys) and `caSalesPolicyEnabled`, and one
+ * block after `const byKey`: only when the revision lands on a NEWER version,
+ * a Type of Offense tick on a box Corrective Action revision 7 replaced is
+ * carried as the box that replaced it, and an old Other write-in ticks Other.
+ * Behind CA_SALES_POLICY_ENABLED, default off; off, every row is carried as
+ * before. The filed form is never touched.
  */
 const APPROVED_PROTECTED_EDITS = [
   ":(exclude)src/lib/forms/chat-revision.ts",
+  ":(exclude)src/lib/forms/instances.ts",
   ":(exclude)src/lib/forms/form-date-answer.ts",
   ":(exclude)src/lib/ai/form-proposal.ts",
   ":(exclude)src/lib/forms/proposal.ts",

@@ -1,0 +1,197 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-ca-sales-low-sales: a CA for low sales / not hitting goals cites the Standards of Conduct, heading and page — OPEN in production (no card: a low-sales request is answered with the progression (metric only), so no policy is cited)": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default); src/lib/forms/ca-sales-policy.test.ts (flag off: the reading and card line are as on main)",
+  "reason": "Client request (4 Nov 2026): a CA for sales or Under Performance cites the Standards of Conduct. With the flag on, a named Under Performance, or a stated shortfall, reads as the Standards of Conduct; the draft ticks it and Direct policy cites that section (heading and page from the manual) instead of leaving it blank."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-ca-sales-msb: a CA for MSB (Must See Behaviors) cites the Standards of Conduct, heading and page — OPEN in production (no policy is cited for an MSB corrective action)": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default); src/lib/forms/ca-sales-policy.test.ts (flag off: the reading and card line are as on main)",
+  "reason": "Client request (4 Nov 2026): a CA for sales or Under Performance cites the Standards of Conduct. With the flag on, a named Under Performance, or a stated shortfall, reads as the Standards of Conduct; the draft ticks it and Direct policy cites that section (heading and page from the manual) instead of leaving it blank."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-ca-sales-wrong-items: a CA for ringing up the wrong items cites the Standards of Conduct, heading and page — OPEN in production (a register-accuracy corrective action cites no policy)": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default); src/lib/forms/ca-sales-policy.test.ts (flag off: the reading and card line are as on main)",
+  "reason": "Client request (4 Nov 2026): a CA for sales or Under Performance cites the Standards of Conduct. With the flag on, a named Under Performance, or a stated shortfall, reads as the Standards of Conduct; the draft ticks it and Direct policy cites that section (heading and page from the manual) instead of leaving it blank."
+ },
+ "src/app/api/forms/pm-draft-route.single-writer.test.ts :: HR feedback 30 Sep — the Corrective Action's policy, from the manager's words does not tick it when the manual's section lists no such infraction": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default); src/lib/forms/ca-sales-policy.test.ts (flag off: the reading and card line are as on main)",
+  "reason": "Client request (4 Nov 2026): a CA for sales or Under Performance cites the Standards of Conduct. With the flag on, a named Under Performance, or a stated shortfall, reads as the Standards of Conduct; the draft ticks it and Direct policy cites that section (heading and page from the manual) instead of leaving it blank."
+ },
+ "src/app/api/forms/pm-draft-route.single-writer.test.ts :: HR feedback 30 Sep — the Corrective Action's policy, from the manager's words does not tick it when there is no manual to check": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default); src/lib/forms/ca-sales-policy.test.ts (flag off: the reading and card line are as on main)",
+  "reason": "Client request (4 Nov 2026): a CA for sales or Under Performance cites the Standards of Conduct. With the flag on, a named Under Performance, or a stated shortfall, reads as the Standards of Conduct; the draft ticks it and Direct policy cites that section (heading and page from the manual) instead of leaving it blank."
+ },
+ "src/app/api/forms/pm-draft-route.single-writer.test.ts :: HR feedback 30 Sep — the Corrective Action's policy, from the manager's words ticks a named policy with no section, and leaves Direct policy blank rather than inventing one": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default); src/lib/forms/ca-sales-policy.test.ts (flag off: the reading and card line are as on main)",
+  "reason": "Client request (4 Nov 2026): a CA for sales or Under Performance cites the Standards of Conduct. With the flag on, a named Under Performance, or a stated shortfall, reads as the Standards of Conduct; the draft ticks it and Direct policy cites that section (heading and page from the manual) instead of leaving it blank."
+ },
+ "src/app/api/forms/pm-draft-route.single-writer.test.ts :: the official policy manual, pinned cites nothing for an offense the manual states no section for": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default); src/lib/forms/ca-sales-policy.test.ts (flag off: the reading and card line are as on main)",
+  "reason": "Client request (4 Nov 2026): a CA for sales or Under Performance cites the Standards of Conduct. With the flag on, a named Under Performance, or a stated shortfall, reads as the Standards of Conduct; the draft ticks it and Direct policy cites that section (heading and page from the manual) instead of leaving it blank."
+ },
+ "src/app/api/forms/pm-draft-route.test.ts :: HR feedback 30 Sep — the Corrective Action's policy, from the manager's words does not tick it when the manual's section lists no such infraction": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default); src/lib/forms/ca-sales-policy.test.ts (flag off: the reading and card line are as on main)",
+  "reason": "Client request (4 Nov 2026): a CA for sales or Under Performance cites the Standards of Conduct. With the flag on, a named Under Performance, or a stated shortfall, reads as the Standards of Conduct; the draft ticks it and Direct policy cites that section (heading and page from the manual) instead of leaving it blank."
+ },
+ "src/app/api/forms/pm-draft-route.test.ts :: HR feedback 30 Sep — the Corrective Action's policy, from the manager's words does not tick it when there is no manual to check": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default); src/lib/forms/ca-sales-policy.test.ts (flag off: the reading and card line are as on main)",
+  "reason": "Client request (4 Nov 2026): a CA for sales or Under Performance cites the Standards of Conduct. With the flag on, a named Under Performance, or a stated shortfall, reads as the Standards of Conduct; the draft ticks it and Direct policy cites that section (heading and page from the manual) instead of leaving it blank."
+ },
+ "src/app/api/forms/pm-draft-route.test.ts :: HR feedback 30 Sep — the Corrective Action's policy, from the manager's words ticks a named policy with no section, and leaves Direct policy blank rather than inventing one": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default); src/lib/forms/ca-sales-policy.test.ts (flag off: the reading and card line are as on main)",
+  "reason": "Client request (4 Nov 2026): a CA for sales or Under Performance cites the Standards of Conduct. With the flag on, a named Under Performance, or a stated shortfall, reads as the Standards of Conduct; the draft ticks it and Direct policy cites that section (heading and page from the manual) instead of leaving it blank."
+ },
+ "src/app/api/forms/pm-draft-route.test.ts :: the official policy manual, pinned cites nothing for an offense the manual states no section for": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default); src/lib/forms/ca-sales-policy.test.ts (flag off: the reading and card line are as on main)",
+  "reason": "Client request (4 Nov 2026): a CA for sales or Under Performance cites the Standards of Conduct. With the flag on, a named Under Performance, or a stated shortfall, reads as the Standards of Conduct; the draft ticks it and Direct policy cites that section (heading and page from the manual) instead of leaving it blank."
+ },
+ "src/lib/ai/ca-template-map-f4.test.ts :: CA_TEMPLATE_MAP_ENABLED leaves the other readings alone a metric on its own stays the progression in the intent read": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default): the metric-only refusal holds byte for byte; src/lib/forms/ca-sales-policy.test.ts (\"off: a metric named and judged is the progression, as on main\")",
+  "reason": "Pau, 4 Nov 2026: under CA_SALES_POLICY_ENABLED a stated sales shortfall (a metric named and judged, the existing reader in corrective-action-intake.ts) goes to the Corrective Action Form citing the Standards of Conduct, instead of the progression's metric-only refusal (framework §7)."
+ },
+ "src/lib/ai/chat-glossary-flags-off.test.ts :: CHAT_GLOSSARY_ENABLED off: the model requests and replies, byte for byte production's flags and no flags: equal to main": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default)",
+  "reason": "A flags-off byte-identity test (\"production's flags and no flags: equal to main\"): with CA_SALES_POLICY_ENABLED forced on it differs by design. It passes with the flag off, which is the state it pins."
+ },
+ "src/lib/ai/corrective-action-conversation.test.ts :: a metric on its own is answered with the progression does not open a Corrective Action Form off a low Club Close": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default): the metric-only refusal holds byte for byte; src/lib/forms/ca-sales-policy.test.ts (\"off: a metric named and judged is the progression, as on main\")",
+  "reason": "Pau, 4 Nov 2026: under CA_SALES_POLICY_ENABLED a stated sales shortfall (a metric named and judged, the existing reader in corrective-action-intake.ts) goes to the Corrective Action Form citing the Standards of Conduct, instead of the progression's metric-only refusal (framework §7)."
+ },
+ "src/lib/ai/corrective-action-conversation.test.ts :: a metric on its own is answered with the progression holds even when the manager names the form": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default): the metric-only refusal holds byte for byte; src/lib/forms/ca-sales-policy.test.ts (\"off: a metric named and judged is the progression, as on main\")",
+  "reason": "Pau, 4 Nov 2026: under CA_SALES_POLICY_ENABLED a stated sales shortfall (a metric named and judged, the existing reader in corrective-action-intake.ts) goes to the Corrective Action Form citing the Standards of Conduct, instead of the progression's metric-only refusal (framework §7)."
+ },
+ "src/lib/ai/corrective-action-conversation.test.ts :: a metric on its own is answered with the progression maps each rung to the real form that records it, and says which rungs have none": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default): the metric-only refusal holds byte for byte; src/lib/forms/ca-sales-policy.test.ts (\"off: a metric named and judged is the progression, as on main\")",
+  "reason": "Pau, 4 Nov 2026: under CA_SALES_POLICY_ENABLED a stated sales shortfall (a metric named and judged, the existing reader in corrective-action-intake.ts) goes to the Corrective Action Form citing the Standards of Conduct, instead of the progression's metric-only refusal (framework §7)."
+ },
+ "src/lib/ai/corrective-action-conversation.test.ts :: a metric on its own is answered with the progression names the EPPs from the library rather than from a list in the code": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default): the metric-only refusal holds byte for byte; src/lib/forms/ca-sales-policy.test.ts (\"off: a metric named and judged is the progression, as on main\")",
+  "reason": "Pau, 4 Nov 2026: under CA_SALES_POLICY_ENABLED a stated sales shortfall (a metric named and judged, the existing reader in corrective-action-intake.ts) goes to the Corrective Action Form citing the Standards of Conduct, instead of the progression's metric-only refusal (framework §7)."
+ },
+ "src/lib/ai/corrective-action-conversation.test.ts :: a metric on its own is answered with the progression says why, and still answers the question it can answer": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default): the metric-only refusal holds byte for byte; src/lib/forms/ca-sales-policy.test.ts (\"off: a metric named and judged is the progression, as on main\")",
+  "reason": "Pau, 4 Nov 2026: under CA_SALES_POLICY_ENABLED a stated sales shortfall (a metric named and judged, the existing reader in corrective-action-intake.ts) goes to the Corrective Action Form citing the Standards of Conduct, instead of the progression's metric-only refusal (framework §7)."
+ },
+ "src/lib/ai/corrective-action-conversation.test.ts :: a metric on its own is answered with the progression shows the sequence again as soon as the framework answers": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default): the metric-only refusal holds byte for byte; src/lib/forms/ca-sales-policy.test.ts (\"off: a metric named and judged is the progression, as on main\")",
+  "reason": "Pau, 4 Nov 2026: under CA_SALES_POLICY_ENABLED a stated sales shortfall (a metric named and judged, the existing reader in corrective-action-intake.ts) goes to the Corrective Action Form citing the Standards of Conduct, instead of the progression's metric-only refusal (framework §7)."
+ },
+ "src/lib/ai/corrective-action-conversation.test.ts :: the form's name on its own still holds §7: a metric alone gets the progression, however the form is named": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default): the metric-only refusal holds byte for byte; src/lib/forms/ca-sales-policy.test.ts (\"off: a metric named and judged is the progression, as on main\")",
+  "reason": "Pau, 4 Nov 2026: under CA_SALES_POLICY_ENABLED a stated sales shortfall (a metric named and judged, the existing reader in corrective-action-intake.ts) goes to the Corrective Action Form citing the Standards of Conduct, instead of the progression's metric-only refusal (framework §7)."
+ },
+ "src/lib/forms/ca-policy.test.ts :: a policy the manager named wins a different policy named stops the suggestion, and the later turn wins": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default); src/lib/forms/ca-sales-policy.test.ts (flag off: the reading and card line are as on main)",
+  "reason": "Client request (4 Nov 2026): a CA for sales or Under Performance cites the Standards of Conduct. With the flag on, a named Under Performance, or a stated shortfall, reads as the Standards of Conduct; the draft ticks it and Direct policy cites that section (heading and page from the manual) instead of leaving it blank."
+ },
+ "src/lib/forms/ca-policy.test.ts :: the box a named policy ticks [\"She missed the Woven deadline.\",\"under performance\"] -> [\"under_performance\"]": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default); src/lib/forms/ca-sales-policy.test.ts (flag off: the reading and card line are as on main)",
+  "reason": "Client request (4 Nov 2026): a CA for sales or Under Performance cites the Standards of Conduct. With the flag on, a named Under Performance, or a stated shortfall, reads as the Standards of Conduct; the draft ticks it and Direct policy cites that section (heading and page from the manual) instead of leaving it blank."
+ },
+ "src/lib/forms/ca-policy.test.ts :: the box a named policy ticks the proposal says the named policy back": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default); src/lib/forms/ca-sales-policy.test.ts (flag off: the reading and card line are as on main)",
+  "reason": "Client request (4 Nov 2026): a CA for sales or Under Performance cites the Standards of Conduct. With the flag on, a named Under Performance, or a stated shortfall, reads as the Standards of Conduct; the draft ticks it and Direct policy cites that section (heading and page from the manual) instead of leaving it blank."
+ },
+ "src/lib/forms/ca-policy.test.ts :: the four conduct cases suggests nothing for Her upgrade rate is below goal again.": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default); src/lib/forms/ca-sales-policy.test.ts (flag off: the reading and card line are as on main)",
+  "reason": "Client request (4 Nov 2026): a CA for sales or Under Performance cites the Standards of Conduct. With the flag on, a named Under Performance, or a stated shortfall, reads as the Standards of Conduct; the draft ticks it and Direct policy cites that section (heading and page from the manual) instead of leaving it blank."
+ },
+ "src/lib/forms/corrective-action-intake.test.ts :: 3b. a repeated incident and a prior corrective action are different facts does not let repetition turn a metric complaint into conduct": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default): the metric-only refusal holds byte for byte; src/lib/forms/ca-sales-policy.test.ts (\"off: a metric named and judged is the progression, as on main\")",
+  "reason": "Pau, 4 Nov 2026: under CA_SALES_POLICY_ENABLED a stated sales shortfall (a metric named and judged, the existing reader in corrective-action-intake.ts) goes to the Corrective Action Form citing the Standards of Conduct, instead of the progression's metric-only refusal (framework §7)."
+ },
+ "src/lib/forms/corrective-action-intake.test.ts :: 4. a metric on its own is not grounds for a corrective action metric only — Her upgrade rate is down again this month.": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default): the metric-only refusal holds byte for byte; src/lib/forms/ca-sales-policy.test.ts (\"off: a metric named and judged is the progression, as on main\")",
+  "reason": "Pau, 4 Nov 2026: under CA_SALES_POLICY_ENABLED a stated sales shortfall (a metric named and judged, the existing reader in corrective-action-intake.ts) goes to the Corrective Action Form citing the Standards of Conduct, instead of the progression's metric-only refusal (framework §7)."
+ },
+ "src/lib/forms/corrective-action-intake.test.ts :: 4. a metric on its own is not grounds for a corrective action metric only — His numbers are behind everyone else's.": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default): the metric-only refusal holds byte for byte; src/lib/forms/ca-sales-policy.test.ts (\"off: a metric named and judged is the progression, as on main\")",
+  "reason": "Pau, 4 Nov 2026: under CA_SALES_POLICY_ENABLED a stated sales shortfall (a metric named and judged, the existing reader in corrective-action-intake.ts) goes to the Corrective Action Form citing the Standards of Conduct, instead of the progression's metric-only refusal (framework §7)."
+ },
+ "src/lib/forms/corrective-action-intake.test.ts :: 4. a metric on its own is not grounds for a corrective action metric only — Sarah's conversion is the lowest in the district.": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default): the metric-only refusal holds byte for byte; src/lib/forms/ca-sales-policy.test.ts (\"off: a metric named and judged is the progression, as on main\")",
+  "reason": "Pau, 4 Nov 2026: under CA_SALES_POLICY_ENABLED a stated sales shortfall (a metric named and judged, the existing reader in corrective-action-intake.ts) goes to the Corrective Action Form citing the Standards of Conduct, instead of the progression's metric-only refusal (framework §7)."
+ },
+ "src/lib/forms/corrective-action-intake.test.ts :: 4. a metric on its own is not grounds for a corrective action metric only — She is not hitting her EFTs.": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default): the metric-only refusal holds byte for byte; src/lib/forms/ca-sales-policy.test.ts (\"off: a metric named and judged is the progression, as on main\")",
+  "reason": "Pau, 4 Nov 2026: under CA_SALES_POLICY_ENABLED a stated sales shortfall (a metric named and judged, the existing reader in corrective-action-intake.ts) goes to the Corrective Action Form citing the Standards of Conduct, instead of the progression's metric-only refusal (framework §7)."
+ },
+ "src/lib/forms/corrective-action-intake.test.ts :: 4. a metric on its own is not grounds for a corrective action metric only — Their Club Close is low.": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default): the metric-only refusal holds byte for byte; src/lib/forms/ca-sales-policy.test.ts (\"off: a metric named and judged is the progression, as on main\")",
+  "reason": "Pau, 4 Nov 2026: under CA_SALES_POLICY_ENABLED a stated sales shortfall (a metric named and judged, the existing reader in corrective-action-intake.ts) goes to the Corrective Action Form citing the Standards of Conduct, instead of the progression's metric-only refusal (framework §7)."
+ },
+ "replay: nov2-p1a-policy-turn-drops-account [production]": {
+  "category": "INTENDED",
+  "twin": "the same case with the flag off (production's flags)",
+  "reason": "A stated metric shortfall (\"below in PPTA, LPSVA, average ticket…\", \"below the company average … average ticket, units per transaction\") now gets the Corrective Action card citing the Standards of Conduct instead of the progression refusal (Pau, 4 Nov 2026). The case's own invariants still hold or still fail exactly as before."
+ },
+ "replay: nov2-p6-dm-title [fix:TITLE_NOT_SPEAKERS_MANAGER_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "the same case with the flag off (production's flags)",
+  "reason": "A stated metric shortfall (\"below in PPTA, LPSVA, average ticket…\", \"below the company average … average ticket, units per transaction\") now gets the Corrective Action card citing the Standards of Conduct instead of the progression refusal (Pau, 4 Nov 2026). The case's own invariants still hold or still fail exactly as before."
+ },
+ "replay: nov2-p6-dm-title [production]": {
+  "category": "INTENDED",
+  "twin": "the same case with the flag off (production's flags)",
+  "reason": "A stated metric shortfall (\"below in PPTA, LPSVA, average ticket…\", \"below the company average … average ticket, units per transaction\") now gets the Corrective Action card citing the Standards of Conduct instead of the progression refusal (Pau, 4 Nov 2026). The case's own invariants still hold or still fail exactly as before."
+ },
+ "replay: nov4-ca-sales-low-sales [open]": {
+  "category": "INTENDED",
+  "twin": "its OPEN run with the flag off (production's flags)",
+  "reason": "The client request's own replay case: with the flag on it holds (the card and the draft cite the Standards of Conduct); OPEN in production with the flag off."
+ },
+ "replay: nov4-ca-sales-msb [open]": {
+  "category": "INTENDED",
+  "twin": "its OPEN run with the flag off (production's flags)",
+  "reason": "The client request's own replay case: with the flag on it holds (the card and the draft cite the Standards of Conduct); OPEN in production with the flag off."
+ },
+ "replay: nov4-ca-sales-wrong-items [open]": {
+  "category": "INTENDED",
+  "twin": "its OPEN run with the flag off (production's flags)",
+  "reason": "The client request's own replay case: with the flag on it holds (the card and the draft cite the Standards of Conduct); OPEN in production with the flag off."
+ },
+ "replay: nov4-scan-sf-s11-same-for-another [open]": {
+  "category": "INTENDED",
+  "twin": "the same case with the flag off (production's flags)",
+  "reason": "The card's policy line for a CA the manager calls Under Performance changes from \"Under Performance, as you said … Direct policy is left for you\" to \"Standards of Conduct — sales performance against goals\" (client request). The case still fails for its own open reason, unchanged."
+ },
+ "replay: nov4-scan-sf-s16-standards-of-conduct-turn-2 [open]": {
+  "category": "INTENDED",
+  "twin": "the same case with the flag off (production's flags)",
+  "reason": "The card's policy line for a CA the manager calls Under Performance changes from \"Under Performance, as you said … Direct policy is left for you\" to \"Standards of Conduct — sales performance against goals\" (client request). The case still fails for its own open reason, unchanged."
+ },
+ "replay: nov4-scan-sf-s19-corrective-action-answer [open]": {
+  "category": "INTENDED",
+  "twin": "the same case with the flag off (production's flags)",
+  "reason": "A stated metric shortfall (\"below in PPTA, LPSVA, average ticket…\", \"below the company average … average ticket, units per transaction\") now gets the Corrective Action card citing the Standards of Conduct instead of the progression refusal (Pau, 4 Nov 2026). The case's own invariants still hold or still fail exactly as before."
+ }
+}

@@ -95,6 +95,8 @@ import {
 import {
   approvedManualConfirmed,
   boxSectionNames,
+  headingKey as manualHeadingKey,
+  sectionHeadingsFor,
   isApprovedPolicyManualTitle,
   manualSectionsFor,
   officialManualProvenance,
@@ -184,6 +186,7 @@ import {
   cardPolicyToDraftEnabled,
   formEditSingleWriterEnabled,
   formPatchReducerEnabled,
+  caSalesPolicyEnabled,
 } from "@/lib/config/chat-quality-flags";
 import {
   STANDARDS_OF_CONDUCT,
@@ -198,6 +201,8 @@ import {
   withConductOffense,
   withStatedOffense,
 } from "@/lib/forms/ca-policy";
+import { CA_SALES_POLICY_RULE, withSalesOffense } from "@/lib/forms/ca-sales-policy";
+import { ATTENDANCE_POLICY, CA_REVISION_7_OFFENSE_RULE, offeredOffenseKey, withOfferedOffense } from "@/lib/forms/offense-keys";
 import { datesInText, priorStepDate } from "@/lib/forms/form-date-answer";
 import {
   COACHING_CONTEXT_RULES,
@@ -783,6 +788,8 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
      * version whose Type of Offense offers the box and that has the policy
      * field. See `ca-policy.ts`.
      */
+    /* The version's own Type of Offense keys (revision 7 replaced several; see `offense-keys.ts`). */
+    const offenseOffered = groups.find((group) => group.key === "offense_type")?.options.map((option) => option.key) ?? [];
     const offersConductPolicy =
       fields.some((field) => field.key === "policy_language") &&
       groups.some(
@@ -1214,6 +1221,12 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
         : "",
       offersConductPolicy
         ? `Type of Offense: assigned work, a required deadline, or required Woven items or training not completed, and a manager's direction not followed, are ${STANDARDS_OF_CONDUCT}. under_performance is for results against a sales or performance target.`
+        : "",
+      // CA_SALES_POLICY_ENABLED: one added line after the one above, which stays as it is. Off, nothing is added.
+      offersConductPolicy && caSalesPolicyEnabled() ? CA_SALES_POLICY_RULE : "",
+      // Revision 7 (the line above is unchanged): this form has no under_performance, tardiness or absenteeism box.
+      offersConductPolicy && offenseOffered.includes(ATTENDANCE_POLICY) && !offenseOffered.includes("under_performance")
+        ? CA_REVISION_7_OFFENSE_RULE
         : "",
     ]
       .filter(Boolean)
@@ -1803,7 +1816,13 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
         priorDate ? { ...draftedValues, [PREVIOUS_ACTION_DATE_KEY]: priorDate } : draftedValues,
         `${body.topic ?? ""} ${notes}`,
       ),
-      checked: exit?.checked ?? sensitive.checked,
+      /*
+       * A REMOVED BOX THE MODEL STILL NAMES (revision 7, 4 Nov 2026): "tardiness"
+       * on a form that offers Attendance Policy is ticked as Attendance Policy,
+       * rather than dropped as an unknown key. A version that offers the old
+       * box is untouched. See `offense-keys.ts`.
+       */
+      checked: withOfferedOffense(exit?.checked ?? sensitive.checked, offenseOffered),
     });
 
     /*
@@ -1852,7 +1871,20 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
     const conductOffense = conduct?.ok
       ? withConductOffense({ checked: enforced.checked, values: enforced.values })
       : null;
-    const offenseChange = statedOffense ?? conductOffense;
+    /*
+     * CA_SALES_POLICY_ENABLED: an Under Performance tick is the Standards of
+     * Conduct (client request, 4 Nov 2026), where nothing above settled the
+     * box. Off, null. See `ca-sales-policy.ts`.
+     */
+    const salesOffense =
+      caPolicy && !statedOffense && !conductOffense && caSalesPolicyEnabled()
+        ? withSalesOffense({
+            checked: enforced.checked,
+            values: enforced.values,
+            offered: groups.find((group) => group.key === "offense_type")?.options.map((option) => option.key) ?? [],
+          })
+        : null;
+    const offenseChange = statedOffense ?? conductOffense ?? salesOffense;
     const offenseChosen = offenseChange
       ? { ...enforced, values: offenseChange.values, checked: offenseChange.checked }
       : enforced;
@@ -2006,7 +2038,8 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
      */
     /* The section the manager named, first, while the box it is cited under is still ticked. */
     const namedManual =
-      policySection && (validated.checked.offense_type ?? []).includes(policySection.offenseKey)
+      policySection &&
+      (validated.checked.offense_type ?? []).includes(offeredOffenseKey(policySection.offenseKey, offenseOffered) ?? policySection.offenseKey)
         ? policySection.section
         : null;
     const tickedSections = manual.ok
@@ -2028,6 +2061,24 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
           notes: `${body.topic ?? ""} ${notes}`,
         })
       : [];
+    /*
+     * A SECTION FILED UNDER THE BOX THAT REPLACED ITS OWN (revision 7): the
+     * Cell Phone or Visitors section, once cited under Violation of Company
+     * Policies (a box with no section of its own), is now ticked under the
+     * Standards of Conduct — and is still cited ALONE, never with the
+     * Standards of Conduct's own section beside it (District Manager feedback,
+     * 21 Oct 2026). A form whose version offers the old box is untouched.
+     */
+    const namedUnderReplacement =
+      namedManual !== null &&
+      policySection !== null &&
+      (offeredOffenseKey(policySection.offenseKey, offenseOffered) ?? policySection.offenseKey) !== policySection.offenseKey;
+    const replacedBoxSections = namedUnderReplacement
+      ? sectionHeadingsFor({ offenseKeys: [offeredOffenseKey(policySection!.offenseKey, offenseOffered)!] }).flat()
+      : [];
+    const tickedSectionsShown = tickedSections.filter(
+      (section) => !replacedBoxSections.some((heading) => manualHeadingKey(heading) === manualHeadingKey(section.heading)),
+    );
     /* POLICY_SPECIFIC_TOPICS_ENABLED: the further sections the same incident is cited under (Animals, then Visitors). */
     const alsoManual: readonly ManualSection[] =
       namedManual && policySection && "also" in policySection ? (policySection.also ?? []) : [];
@@ -2036,7 +2087,7 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
         ? [
             namedManual,
             ...alsoManual.filter((section) => section.heading !== namedManual.heading),
-            ...tickedSections.filter(
+            ...tickedSectionsShown.filter(
               (section) => section.heading !== namedManual.heading && !alsoManual.some((also) => also.heading === section.heading),
             ),
           ]
@@ -2057,7 +2108,10 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
        * "Tardiness/Leaving Early — Late Opening": the section Direct policy
        * cites under a box, where it is not the box's own.
        */
-      sectionNames: boxSectionNames(manualSections.map((section) => section.heading)),
+      sectionNames: boxSectionNames(
+        manualSections.map((section) => section.heading),
+        offenseOffered.includes(ATTENDANCE_POLICY) ? offenseOffered : undefined,
+      ),
       /*
        * THE MANUAL'S OWN WORDING FOR EACH TICKED SECTION, THEN ITS SOURCE —
        * "Source: JBA Policy Manual — Dress Code for The Company, p. 15" — every
