@@ -258,4 +258,39 @@ export const NOV4_METRICS_NOT_PEOPLE_CASES: ReplayCase[] = [
       },
     }),
   ),
+  /*
+   * QA, 4 NOV 2026, production with CA_SALES_POLICY_ENABLED OFF, in the
+   * sibling app: the tester's "employee" was a form's name pasted where the
+   * person goes ("… for Coaching Form. …"). The named form wins (a Coaching
+   * Form card), so the Corrective Action's metric-only answer never runs, and
+   * there "Club Close" became the employee. Here the card has no employee but
+   * the reply says "I couldn't find **Club Close** or **Under** in the Woven
+   * roster". With FORM_NAME_FROM_ROSTER_ENABLED (which no longer needs the
+   * sales policy) no metric is named as a person and the reply asks for the
+   * employee. Exact wording.
+   */
+  ...(
+    [
+      ["b", "I need a corrective action for Coaching Form. This is for Under Performance on Club Close % and Spa %.", { open: "the reply says \"I couldn't find **Club Close** or **Under** in the Woven roster\"" }],
+      ["p1", say("Coaching Form"), { open: "the reply says \"I couldn't find **Club Close** or **Under** in the Woven roster\"" }],
+      // QA's (A): no metric in the message (the negative control).
+      ["a", "Create a Corrective Action for Coaching Form", "fixed"],
+    ] as const
+  ).map(
+    ([key, text, status]): ReplayCase => ({
+      id: `nov4-qa-form-name-as-person-${key}`,
+      title: `QA 4 Nov (CA_SALES off): "${text.slice(0, 60)}…": no metric is the employee or named as a person`,
+      report: `QA, 4 Nov 2026, production with CA_SALES off: "${text}"`,
+      status,
+      fixFlags: [FLAG],
+      async run(t) {
+        const thread = start(t);
+        const reply = await thread.say(text);
+        const card = thread.proposal?.employeeName ?? "";
+        expect(card, `a metric is the card's employee:\n${reply.content}`).not.toMatch(/club close|club average|^under$|ppta|lpsva|spa/i);
+        expect(reply.content, `a metric is named as a person:\n${reply.content}`).not.toMatch(/\*\*(?:Club Close|Club Average|Under)\*\*/i);
+        expect(reply.content, `the reply says it has the employee:\n${reply.content}`).not.toMatch(/I have the employee/i);
+      },
+    }),
+  ),
 ];

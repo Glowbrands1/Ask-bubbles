@@ -2466,12 +2466,18 @@ export function formEditNoopGuardEnabled(): boolean {
  * performance on Club Close % and Spa %": "under" is not said back or put on
  * the card; the reply asks for the employee).
  *
- * Needs CA_SALES_POLICY_ENABLED: off unless both are on. Alone, "Under
- * Performance" kept in the question is read as a metric-only request and the
- * card is refused ("I won't open formal corrective action off a metric") —
- * main only made a card because "Under" was stripped. The sales policy is
- * what takes a stated shortfall like Pau's to the form, citing the Standards
- * of Conduct.
+ * Works with CA_SALES_POLICY_ENABLED off too (QA, 4 Nov 2026). It used to
+ * need the sales policy: alone, "Under Performance" kept in the question is
+ * read as a metric-only request and a Corrective Action card is refused ("I
+ * won't open formal corrective action off a metric") — main only made a card
+ * because "Under" was stripped. That refusal is the policy's answer with the
+ * sales policy off. But a message that names another form where the person
+ * goes ("I need a corrective action for Coaching Form. This is for Under
+ * Performance on Club Close % and Spa %.") is not a Corrective Action, so the
+ * refusal never runs, and the sibling app made a Coaching Form card for "Club
+ * Close" in production; here the reply said "I couldn't find **Club Close**
+ * or **Under** in the Woven roster". The request slot and the list rule need
+ * no sales policy, so the flag is FORM_NAME alone.
  *
  * Part 2 (QA for Pau, 5 Nov 2026), roster-free: when the message's first
  * sentence asks for a form "… for <Name>", that name is its only employee
@@ -2481,5 +2487,5 @@ export function formEditNoopGuardEnabled(): boolean {
  * Remy Calder). Off, as before.
  */
 export function formNameFromRosterEnabled(): boolean {
-  return envFlag("FORM_NAME_FROM_ROSTER_ENABLED") && caSalesPolicyEnabled();
+  return envFlag("FORM_NAME_FROM_ROSTER_ENABLED");
 }
