@@ -62,8 +62,9 @@ export const NOV4_MANAGER_MSB_CASES: ReplayCase[] = [
     id: "nov4-mgr-1-verbal-metrics",
     title: `"${byId("mgr-1-verbal-metrics").text}" — a CA card, no "what happened", cites the Standards of Conduct`,
     report: `${REPORT}, #1`,
-    // Run 4 Nov 2026 (production flags): fails as below.
-    status: { open: "the CA card and its draft cite no policy: no Standards of Conduct with heading and page (the card also says \"I couldn't find **Club Close** or **Under** in the Woven roster\")" },
+    // Run 4 Nov 2026 on main before #427: OPEN, the CA card and its draft cite no policy: no Standards of Conduct with heading and page (the card also says "I couldn't find **Club Close** or **Under** in the Woven roster").
+    // Holds with production's flags since #427 (d55575c9): revision 7 of the form replaces Under Performance with the Standards of Conduct, so the draft cites it.
+    status: "fixed",
     fixFlags: ["CA_SALES_POLICY_ENABLED"],
     run: (t) => runMessage(t, byId("mgr-1-verbal-metrics")),
   },
@@ -80,8 +81,9 @@ export const NOV4_MANAGER_MSB_CASES: ReplayCase[] = [
     id: "nov4-mgr-3-salon-metrics",
     title: `"${byId("mgr-3-salon-metrics").text}" — a CA card, no "what happened", cites the Standards of Conduct`,
     report: `${REPORT}, #3`,
-    // Run 4 Nov 2026 (production flags): fails as below.
-    status: { open: "the card says \"Under Performance, as you said. The policy manual has no single section to quote for it\": no Standards of Conduct citation, on the card or the draft" },
+    // Run 4 Nov 2026 on main before #427: OPEN, the card says "Under Performance, as you said. The policy manual has no single section to quote for it": no Standards of Conduct citation, on the card or the draft.
+    // Holds with production's flags since #427 (d55575c9): revision 7 of the form replaces Under Performance with the Standards of Conduct, so the draft cites it.
+    status: "fixed",
     fixFlags: ["CA_SALES_POLICY_ENABLED"],
     run: (t) => runMessage(t, byId("mgr-3-salon-metrics")),
   },
