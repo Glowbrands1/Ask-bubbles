@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { CA_SALES_POLICY_PEOPLE } from "@/app/api/chat/replay-pack/nov4-ca-sales-policy-cases";
+import { caSalesPolicyPeople } from "@/app/api/chat/replay-pack/nov4-ca-sales-policy-cases";
 
 import { caPolicyProposalLine, readCaPolicy, statedOffenseKeys } from "./ca-policy";
 import { CA_SALES_POLICY_RULE, withSalesOffense } from "./ca-sales-policy";
@@ -99,7 +99,7 @@ describe("CA_SALES_POLICY_ENABLED on", () => {
 });
 
 describe("the replay cases' invented people are on no other fixture", () => {
-  it.each(CA_SALES_POLICY_PEOPLE.map((person) => `${person.firstName} ${person.lastName}`))("%s", (name) => {
+  it.each(caSalesPolicyPeople().map((person) => `${person.firstName} ${person.lastName}`))("%s", (name) => {
     const last = name.split(" ").pop()!;
     let hits = "";
     try {

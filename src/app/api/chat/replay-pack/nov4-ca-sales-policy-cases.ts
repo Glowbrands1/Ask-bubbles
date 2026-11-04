@@ -38,10 +38,18 @@ const CORALIE = person("e-coralie-vantreese", "Coralie", "Vantreese");
 const WRENNA = person("e-wrenna-dovecote", "Wrenna", "Dovecote");
 const IDRIS = person("e-idris-quillford", "Idris", "Quillford");
 
-/** The invented people of this file; the test in `ca-sales-policy.test.ts` checks none is on the shared fixtures. */
-export const CA_SALES_POLICY_PEOPLE: readonly DirectoryRow[] = [THESSALY, BRAMWELL, CORALIE, WRENNA, IDRIS];
+const PEOPLE: readonly DirectoryRow[] = [THESSALY, BRAMWELL, CORALIE, WRENNA, IDRIS];
 
-const ROSTER: readonly DirectoryRow[] = [...STAFF, ...CA_SALES_POLICY_PEOPLE];
+/**
+ * The invented people of this file; `ca-sales-policy.test.ts` checks none is
+ * on another fixture. A function, not an array: the pack's registry reads
+ * every exported array as cases.
+ */
+export function caSalesPolicyPeople(): readonly DirectoryRow[] {
+  return PEOPLE;
+}
+
+const ROSTER: readonly DirectoryRow[] = [...STAFF, ...PEOPLE];
 
 const REPORT = "Client request relayed by Pau, 4 Nov 2026 (part B, Corrective Action policy)";
 const FLAG = "CA_SALES_POLICY_ENABLED";
