@@ -916,6 +916,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FORM_EDIT_SINGLE_WRITER_ENABLED",
   "FORM_EDIT_TOOL_IN_STREAM_ENABLED",
   "CHAT_GLOSSARY_ENABLED",
+  "CA_SALES_POLICY_ENABLED",
   "CA_NAME_FROM_CHAT_ENABLED",
   "NEXT_PUBLIC_CARD_POLICY_TO_DRAFT_ENABLED",
   "NEW_REQUEST_OPEN_DRAFT_ENABLED",
@@ -2405,4 +2406,19 @@ export function formEditToolInStreamEnabled(): boolean {
  */
 export function chatGlossaryEnabled(): boolean {
   return envFlag("CHAT_GLOSSARY_ENABLED");
+}
+
+/**
+ * Sales and MSB corrective actions cite the Standards of Conduct (client
+ * request relayed by Pau, 4 Nov 2026). A Corrective Action whose account reads
+ * as the Under Performance offense type (results against a sales or
+ * performance target, the reading `ca-policy.ts` already makes) or uses a term
+ * from the approved glossary (`ai/glossary.ts`: MSB, Must See Behaviors) is
+ * read as the Standards of Conduct: the card says so, the draft ticks that box
+ * and Direct policy cites the manual's section by heading and page. The
+ * drafting model is also told so, in one added line. Off, every reading, card
+ * line, prompt and draft is byte for byte as before. See `forms/ca-sales-policy.ts`.
+ */
+export function caSalesPolicyEnabled(): boolean {
+  return envFlag("CA_SALES_POLICY_ENABLED");
 }
