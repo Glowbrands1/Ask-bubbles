@@ -85,12 +85,19 @@ function reply(question: string, employeeName: string | null) {
 }
 
 describe("the flag", () => {
-  it("needs CA_SALES_POLICY_ENABLED: alone, the grounding step is as on main", () => {
-    process.env.FORM_NAME_FROM_ROSTER_ENABLED = "true";
+  /*
+   * CHANGED ON PURPOSE (QA, 4 Nov 2026): the flag used to need
+   * CA_SALES_POLICY_ENABLED and, alone, left the grounding step as on main.
+   * "… for Coaching Form. This is for Under Performance on Club Close % …"
+   * names metrics as people with the sales policy off, so the flag now works
+   * without it.
+   */
+  it("works without CA_SALES_POLICY_ENABLED", () => {
     expect(formNameFromRosterEnabled()).toBe(false);
     expect(prep(say("Perpetua Thornquist")).unmatched).toEqual(expect.arrayContaining(["Club Close", "Under"]));
-    on();
+    process.env.FORM_NAME_FROM_ROSTER_ENABLED = "true";
     expect(formNameFromRosterEnabled()).toBe(true);
+    expect(prep(say("Perpetua Thornquist")).unmatched).not.toEqual(expect.arrayContaining(["Club Close"]));
   });
 });
 
