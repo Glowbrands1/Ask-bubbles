@@ -59,7 +59,12 @@ vi.mock("./instance-scope", () => ({
   visibleInstances: (_actor: unknown, rows: Row[]) => rows,
 }));
 
-vi.mock("./instances", () => ({
+/*
+ * FORM_EDIT_SINGLE_WRITER_ENABLED: the reopen reads the open draft before and
+ * after the change (`form-write.ts` editSnapshot / realizedClaim), so the mock
+ * has a `loadInstance` that returns the form as saved (`saved-form-instances`).
+ */
+vi.mock("./instances", async () => (await import("@/test/forms/saved-form-instances")).savedFormInstances({
   listInstances: async (_view: string, _limit: number, filter: unknown) => {
     state.listed += 1;
     state.filters.push(filter);
@@ -79,6 +84,11 @@ vi.mock("./instances", () => ({
     state.rows.push(revision);
     return revision;
   },
+}, async (id) => {
+  const found = state.rows.find((entry) => entry.id === id);
+  if (!found) return null;
+  const document = (await import("./library")).TEMPLATE_SEEDS.find((seed) => seed.key === found.templateKey)?.document ?? { blocks: [] };
+  return { instance: { variantKey: null, ...found }, version: { document }, values: [], events: found.events } as unknown as import("./instances").LoadedInstance;
 }));
 
 vi.mock("./repository", () => ({
@@ -119,7 +129,8 @@ const ask = (question: string, activeInstanceId?: string) =>
     activeInstanceId,
   });
 
-beforeEach(() => {
+beforeEach(async () => {
+  (await import("@/test/forms/saved-form-instances")).resetSavedForms();
   state.rows = [row({})];
   state.revised = [];
   state.listed = 0;

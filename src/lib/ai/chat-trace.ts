@@ -97,9 +97,12 @@ async function persistChatTrace(draft: ChatTraceDraft): Promise<void> {
       extraction_input_tokens: draft.formExtraction?.inputTokens ?? null,
       extraction_output_tokens: draft.formExtraction?.outputTokens ?? null,
       slots: withSpend(
-        withFormEdit(
-          draft.reader ? { ...(draft.formExtraction?.slots ?? {}), reader: draft.reader } : (draft.formExtraction?.slots ?? null),
-          draft.formEdit,
+        withDraftCheck(
+          withFormEdit(
+            draft.reader ? { ...(draft.formExtraction?.slots ?? {}), reader: draft.reader } : (draft.formExtraction?.slots ?? null),
+            draft.formEdit,
+          ),
+          draft.draftCheck,
         ),
         metered,
       ),
@@ -119,6 +122,11 @@ async function persistChatTrace(draft: ChatTraceDraft): Promise<void> {
 /** FORM_EDIT_TOOL_IN_STREAM_ENABLED: `form_edit` beside the other slots; absent, the slots as before. */
 function withFormEdit(slots: Record<string, unknown> | null, formEdit: Record<string, unknown> | undefined): Record<string, unknown> | null {
   return formEdit ? { ...(slots ?? {}), form_edit: { ...formEdit } } : slots;
+}
+
+/** FORM_EDIT_SINGLE_WRITER_ENABLED: the post-draft check's keys, when it ran; otherwise the slots as they were. */
+function withDraftCheck(slots: Record<string, unknown> | null, check: Record<string, unknown> | undefined): Record<string, unknown> | null {
+  return check ? { ...(slots ?? {}), draft_check: check } : slots;
 }
 
 function withSpend(
