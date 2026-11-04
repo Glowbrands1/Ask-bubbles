@@ -1,4 +1,5 @@
 import { businessToday } from "@/lib/business-date";
+import { mentionsGlossaryTerm } from "@/lib/ai/glossary";
 import { nameQuestionOnlyEnabled } from "@/lib/config/chat-quality-flags";
 import { COMPANY_JOB_TITLES } from "@/config/company/job-titles";
 
@@ -81,6 +82,12 @@ export interface IntakeItem {
   readonly prompt: string;
   /** An optional item is reported as missing but never blocks the form. */
   readonly optional: boolean;
+  /**
+   * CHAT_GLOSSARY_ENABLED, the employee item only: the manager's words use a
+   * glossary term ("… for msb") and name nobody, so the opening ask is the one
+   * question "Who is this form for?". Absent with the flag off.
+   */
+  readonly askWhichEmployee?: true;
 }
 
 /**
@@ -461,7 +468,10 @@ export function readCorrectiveActionIntake(input: {
     (item) => item.key !== "payroll_deduct" || input.asksPayrollDeduct !== false,
   );
   const supplied = items.filter((item) => answered[item.key]).map((item) => item.key);
-  const missing = items.filter((item) => !answered[item.key]);
+  const glossaryAsk = !input.employeeKnown && mentionsGlossaryTerm(input.text);
+  const missing = items
+    .filter((item) => !answered[item.key])
+    .map((item) => (glossaryAsk && item.key === "employee_name" ? { ...item, askWhichEmployee: true as const } : item));
   const missingRequired = missing.filter((item) => !item.optional);
 
   return {
@@ -763,7 +773,9 @@ export function correctiveActionIntakeRequest(input: {
   readonly today?: string | null;
 }): string {
   // NAME_QUESTION_ONLY_ENABLED (Pau, 26 Oct 2026): with no name yet, one plain question, never the list.
-  if (nameQuestionOnlyEnabled() && input.items.some((item) => item.key === "employee_name")) {
+  // CHAT_GLOSSARY_ENABLED: "corrective action for msb" names nobody — the same one question, asked once.
+  const askWhichEmployee = input.items.some((item) => item.key === "employee_name" && item.askWhichEmployee);
+  if ((nameQuestionOnlyEnabled() || askWhichEmployee) && input.items.some((item) => item.key === "employee_name")) {
     return "Who is this form for? Tell me the employee's full name.";
   }
   const numbered = input.items

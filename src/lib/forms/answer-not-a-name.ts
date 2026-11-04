@@ -1,6 +1,8 @@
 import { answerNotANameEnabled, dateAnswerAppliedEnabled, exitTermsNotNamesEnabled, storeWordNotANameEnabled, streetAddressNotANameEnabled } from "@/lib/config/chat-quality-flags";
 
 import { readLocationMentions } from "./location-mention";
+import { isGlossaryTerm } from "@/lib/ai/glossary";
+
 import { notAPerson } from "./person-guard";
 import { isPayrollWords } from "./payroll-words";
 
@@ -56,6 +58,8 @@ export function isExitTerms(name: string): boolean {
  * only a store's name is not either. Off, every candidate is kept: main.
  */
 export function namesSomebody(name: string): boolean {
+  // CHAT_GLOSSARY_ENABLED: "msb" is Must See Behaviors, never a person (`ai/glossary.ts`). Off, false.
+  if (isGlossaryTerm(name)) return false;
   // PERSON_GUARD_ENABLED: one answer for every reader — see `person-guard.ts`.
   if (notAPerson(name)) return false;
   if (answerNotANameEnabled() && (isPayrollWords(name) || isDateAnswer(name))) return false;

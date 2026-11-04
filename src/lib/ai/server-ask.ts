@@ -42,6 +42,7 @@ import { resolveScopeFor } from "@/lib/reporting/scope/server";
 import type { SourceCitation } from "@/types";
 
 import { callClaude } from "./call-claude";
+import { glossaryBlock } from "./glossary";
 import { loadChatDataBlock } from "./chat-data-tools";
 import { loadGoogleReviewsChatBlock } from "./google-reviews-chat-read";
 import { factsVisibleInConversation, formatRecalledMemory, memoryCue } from "./chat-memory";
@@ -1060,6 +1061,8 @@ async function answerQuestionCore(
     ...(longContext ? { historyPolicy: "budget" as const, priorSummary: longContext.summary } : {}),
     question: request.question,
     maxTokens: CLAUDE_MAX_TOKENS[request.mode],
+    // CHAT_GLOSSARY_ENABLED: the abbreviation table as one more context block. Off, no key at all.
+    ...(glossaryBlock() ? { glossary: glossaryBlock() } : {}),
   };
   const retrievalChunks: GroundingChunk[] = used.map((row, index) => ({
     marker: index + 1,

@@ -4,6 +4,7 @@ import { ACTIVE_BRAND } from "@/lib/brand";
 import { CLAUDE_HAIKU_MODEL } from "@/lib/config/models";
 
 import { callClaudeTool } from "./call-claude";
+import { glossaryBlock } from "./glossary";
 import {
   FORM_TOOL_DESCRIPTION,
   FORM_TOOL_INPUT_SCHEMA,
@@ -50,7 +51,9 @@ function conversationText(input: UnderstandFormTurnInput): string {
       return `${who}: ${turn.content.trim().slice(0, 1500)}`;
     });
   const open = input.openTemplateKey ? `Open form template key: ${input.openTemplateKey}\n` : "";
-  return `${open}Today is ${input.today}.\n\n${turns.join("\n\n")}`;
+  // CHAT_GLOSSARY_ENABLED: the abbreviation table first, as one more context block. Off, nothing is added.
+  const glossary = glossaryBlock();
+  return `${glossary ? `${glossary}\n\n` : ""}${open}Today is ${input.today}.\n\n${turns.join("\n\n")}`;
 }
 
 async function defaultToolCall(input: { model: string; system: string; user: string }): Promise<unknown> {
