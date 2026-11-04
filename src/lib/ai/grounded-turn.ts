@@ -9,6 +9,7 @@ import {
 import { conversationKeyOf } from "@/lib/forms/conversation-draft";
 import { formOpenedFor, openingLine } from "@/lib/forms/editable-draft";
 import { withKeptTypedNames } from "@/lib/forms/kept-typed-names";
+import { withRosterAnchor } from "@/lib/forms/roster-anchor-store";
 import { loadScopedRoster, readDirectoryFacts, withRosterLimit, type DirectoryFact } from "@/lib/forms/employee-roster";
 import { findAccountResentDraft } from "@/lib/forms/draft-reopen";
 import { historyWantsSeparateDocument } from "@/lib/ai/second-form";
@@ -82,7 +83,7 @@ export async function deliverFormProposal(input: {
       };
 
   const proposed = await withRosterLimit(prep.rosterIds, () =>
-    withKeptTypedNames(prep.keptTypedNames, () => input.propose(prep.question)),
+    withKeptTypedNames(prep.keptTypedNames, () => withRosterAnchor(prep.rosterAnchored === true, () => input.propose(prep.question))),
   );
   if (!proposed) return null;
   const decorated = typedName(await input.decorate(proposed));

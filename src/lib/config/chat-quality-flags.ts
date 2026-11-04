@@ -917,6 +917,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FORM_EDIT_TOOL_IN_STREAM_ENABLED",
   "CHAT_GLOSSARY_ENABLED",
   "CA_SALES_POLICY_ENABLED",
+  "FORM_NAME_FROM_ROSTER_ENABLED",
   "FORM_EDIT_NOOP_GUARD_ENABLED",
   "CA_NAME_FROM_CHAT_ENABLED",
   "NEXT_PUBLIC_CARD_POLICY_TO_DRAFT_ENABLED",
@@ -2440,4 +2441,38 @@ export function caSalesPolicyEnabled(): boolean {
  */
 export function formEditNoopGuardEnabled(): boolean {
   return envFlag("FORM_EDIT_NOOP_GUARD_ENABLED") && formEditSingleWriterEnabled();
+}
+
+/**
+ * Step 5, names from the roster: first piece, the overnight scan's sf-s19
+ * "metrics read as people". A metric is never read as a person, and never
+ * stripped from the text (Pau, 4 Nov 2026: "I need a corrective action verbal
+ * for <name>. This is for Under Performance on PPTA, LPSVA, Club Average, Club
+ * Close %, and Spa %.").
+ *
+ * When the message names somebody on the roster (an exact or close match, or
+ * a roster first or preferred name typed in lowercase: "for perpetua"), a
+ * name candidate that matches nobody exactly or closely and is not shaped
+ * like anyone on the roster (`forms/roster-shape.ts`: a 2+ word candidate
+ * whose first word is nobody's first name, one word that is nobody's first or
+ * last name) is left in the question: not stripped, not announced as "I
+ * couldn't find … in the Woven roster", and not cleared from the card; with
+ * the person guard's roster read this turn the name reader drops it too, so it
+ * is never the card's employee (`forms/answer-not-a-name.ts`). A message that
+ * names nobody on the roster is read as before: "Zuleika Brightwell" typed
+ * alone is still said back as not on the roster. One exception (QA for Pau,
+ * 4 Nov 2026): one word typed all in lowercase that is nobody's first,
+ * preferred or last name on the roster is never a name ("CA for under
+ * performance on Club Close % and Spa %": "under" is not said back or put on
+ * the card; the reply asks for the employee).
+ *
+ * Needs CA_SALES_POLICY_ENABLED: off unless both are on. Alone, "Under
+ * Performance" kept in the question is read as a metric-only request and the
+ * card is refused ("I won't open formal corrective action off a metric") —
+ * main only made a card because "Under" was stripped. The sales policy is
+ * what takes a stated shortfall like Pau's to the form, citing the Standards
+ * of Conduct. Off, as before.
+ */
+export function formNameFromRosterEnabled(): boolean {
+  return envFlag("FORM_NAME_FROM_ROSTER_ENABLED") && caSalesPolicyEnabled();
 }
