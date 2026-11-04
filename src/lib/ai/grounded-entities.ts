@@ -1,4 +1,10 @@
-import { antiLoopEnabled, caShortcutWordsEnabled, managerWordsOnlyEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import {
+  antiLoopEnabled,
+  caShortcutWordsEnabled,
+  managerWordsOnlyEnabled,
+  formNameFromRosterEnabled,
+  typedNameEnabled,
+} from "@/lib/config/chat-quality-flags";
 import { COMPANY_LOCATIONS } from "@/lib/locations";
 import { readCaPolicy } from "@/lib/forms/ca-policy";
 import {
@@ -14,6 +20,7 @@ import { supportsInlineDraft } from "@/lib/forms/inline-draft";
 import { readLocationMentions, rosterLocationName } from "@/lib/forms/location-mention";
 import { isExitTerms } from "@/lib/forms/answer-not-a-name";
 import { extractJobTitle, readEmployeeMentions } from "@/lib/forms/proposal";
+import { anchorsOnRoster, lowercaseRosterFirstNameIn, rosterShaped } from "@/lib/forms/roster-shape";
 import type { ChatFormProposal } from "@/types";
 
 import { uniqueRosterStore } from "./intake-augment";
@@ -51,6 +58,8 @@ export interface GroundedPrep {
   readonly ambiguousTyped: string | null;
   readonly keptTypedName: string | null;
   readonly employeeId: string | null;
+  /** FORM_NAME_FROM_ROSTER_ENABLED: the message names somebody on the roster (exact or close). */
+  readonly rosterAnchored?: boolean;
 }
 
 export function prepareGroundedQuestion(input: {
@@ -102,6 +111,7 @@ export function prepareGroundedQuestion(input: {
     ambiguousTyped: gated.ambiguousTyped,
     keptTypedName,
     employeeId: rosterIds && rosterIds.length === 1 ? rosterIds[0]! : null,
+    ...(gated.rosterAnchored ? { rosterAnchored: true } : {}),
   };
 }
 
@@ -273,6 +283,7 @@ function gateMentions(
   unmatched: string[];
   ambiguous: GroundedPerson[];
   ambiguousTyped: string | null;
+  rosterAnchored?: boolean;
 } {
   if (roster.length === 0) {
     return { question, rosterIds: null, unmatched: [], ambiguous: [], ambiguousTyped: null };
@@ -283,6 +294,11 @@ function gateMentions(
   let rosterIds: readonly string[] | null = null;
   let ambiguous: GroundedPerson[] = [];
   let ambiguousTyped: string | null = null;
+  // FORM_NAME_FROM_ROSTER_ENABLED: does the message name somebody on the roster? Only then is a nobody-shaped candidate set aside.
+  // A roster first name typed in lowercase ("for perpetua") is not read as a name, and still anchors the message.
+  const anchored =
+    formNameFromRosterEnabled() &&
+    (mentions.names.some((name) => anchorsOnRoster(name, roster)) || lowercaseRosterFirstNameIn(question, roster));
 
   for (const name of mentions.names) {
     if (isDocumentOrPolicyName(name)) continue;
@@ -331,6 +347,8 @@ function gateMentions(
     }
     if (isStorePhrase(name)) continue;
     if (antiLoopEnabled()) continue;
+    // FORM_NAME_FROM_ROSTER_ENABLED: beside a roster name, "Club Close", "Under" (Pau, 4 Nov 2026) are shaped like nobody on the roster; they stay in the question.
+    if (anchored && !rosterShaped(name, roster)) continue;
     next = replacePhrase(next, name, "");
     unmatched.push(name);
   }
@@ -341,6 +359,7 @@ function gateMentions(
     unmatched,
     ambiguous,
     ambiguousTyped,
+    ...(anchored ? { rosterAnchored: true } : {}),
   };
 }
 

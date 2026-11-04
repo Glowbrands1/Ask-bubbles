@@ -1,9 +1,17 @@
-import { answerNotANameEnabled, dateAnswerAppliedEnabled, exitTermsNotNamesEnabled, storeWordNotANameEnabled, streetAddressNotANameEnabled } from "@/lib/config/chat-quality-flags";
+import {
+  answerNotANameEnabled,
+  dateAnswerAppliedEnabled,
+  exitTermsNotNamesEnabled,
+  formNameFromRosterEnabled,
+  storeWordNotANameEnabled,
+  streetAddressNotANameEnabled,
+} from "@/lib/config/chat-quality-flags";
 
 import { readLocationMentions } from "./location-mention";
 import { isGlossaryTerm } from "@/lib/ai/glossary";
 
-import { notAPerson } from "./person-guard";
+import { notAPerson, personRosterNames } from "./person-guard";
+import { couldBeOnRoster, lowercaseNobody, rosterAnchored } from "./roster-shape";
 import { isPayrollWords } from "./payroll-words";
 
 /*
@@ -64,7 +72,42 @@ export function namesSomebody(name: string): boolean {
   if (notAPerson(name)) return false;
   if (answerNotANameEnabled() && (isPayrollWords(name) || isDateAnswer(name))) return false;
   if (isExitTerms(name)) return false;
+  if (isShapedLikeNobody(name)) return false;
+  if (isLowercaseNobody(name)) return false;
   return !isStoreReply(name);
+}
+
+/**
+ * FORM_NAME_FROM_ROSTER_ENABLED (Pau, 4 Nov 2026: "… for Under
+ * Performance on PPTA, LPSVA, Club Average, Club Close %, and Spa %."): with
+ * the actor's roster read this turn (PERSON_GUARD_ENABLED enters it), a
+ * candidate that matches nobody on it, closely or exactly, and is shaped like
+ * nobody on it ("Club Close", "Under") is not a name, when the same message
+ * names somebody on the roster (`rosterAnchored`). See `roster-shape.ts`.
+ * Off, or with no roster, every candidate is kept as before.
+ */
+function isShapedLikeNobody(name: string): boolean {
+  if (!formNameFromRosterEnabled()) return false;
+  // Only beside somebody on the roster: a name typed alone is still a person.
+  if (!rosterAnchored()) return false;
+  const roster = personRosterNames();
+  if (!roster || roster.length === 0) return false;
+  return !couldBeOnRoster(name, roster);
+}
+
+/**
+ * FORM_NAME_FROM_ROSTER_ENABLED (QA for Pau, 4 Nov 2026): "CA for under
+ * performance on Club Close % and Spa %" made the card "for **under**". With
+ * the actor's roster read this turn, one word typed all in lowercase that is
+ * nobody's first, preferred or last name on it is not a name, beside a roster
+ * name or not; the reply then asks who the form is for. See
+ * `roster-shape.ts` `lowercaseNobody`. Off, or with no roster, as before.
+ */
+function isLowercaseNobody(name: string): boolean {
+  if (!formNameFromRosterEnabled()) return false;
+  const roster = personRosterNames();
+  if (!roster || roster.length === 0) return false;
+  return lowercaseNobody(name, roster);
 }
 
 /**
