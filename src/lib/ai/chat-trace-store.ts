@@ -38,6 +38,13 @@ export interface ChatTraceDraft {
   reader?: Record<string, unknown>;
   /** FORM_EDIT_TOOL_IN_STREAM_ENABLED: `slots.form_edit` — keys and reasons only. Absent when the flag is off. */
   formEdit?: Record<string, unknown>;
+  /**
+   * FORM_EDIT_SINGLE_WRITER_ENABLED: the post-draft consistency check, written
+   * to `slots.draft_check` — `{ checked, missing_keys }`, the kinds of fact
+   * left out ("name", "date", "amount"), never their values. Absent when the
+   * check did not run.
+   */
+  draftCheck?: Record<string, unknown>;
   errorSubtype: ErrorSubtype | null;
   errorClass: string | null;
   errorStatus: number | null;

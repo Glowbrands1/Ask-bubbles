@@ -63,6 +63,10 @@ const state = vi.hoisted(() => ({
   policyManual: null as unknown,
   /** The role recorded on the instance. Decides which section of a split. */
   employeeRole: null as string | null,
+  /** The employee on the record, when a test names one (default: the synthetic Jordan Vance). */
+  employeeName: null as string | null,
+  /** One tool input per model call, in order, when set (the last repeats); otherwise `toolInput`. */
+  toolInputs: [] as Record<string, unknown>[],
 }));
 
 vi.mock("@/lib/api/respond", () => ({
@@ -97,7 +101,7 @@ vi.mock("@/lib/forms/instance-scope", () => ({
           templateName: seed.name,
           layoutFamily: seed.layoutFamily,
           variantKey: seed.variants[0]?.key ?? null,
-          employeeName: "Jordan Vance (test)",
+          employeeName: state.employeeName ?? "Jordan Vance (test)",
           employeeRole: state.employeeRole,
           locationName: "MO Kansas City Wornall",
           /*
@@ -194,8 +198,9 @@ vi.mock("@/lib/ai/anthropic", () => ({
       create: async (input: Record<string, unknown>) => {
         state.modelCalls += 1;
         state.modelInput = input;
+        const queued = state.toolInputs.length > 0 ? state.toolInputs[Math.min(state.modelCalls - 1, state.toolInputs.length - 1)] : undefined;
         return {
-          content: [{ type: "tool_use", name: "write_form_fields", input: state.toolInput }],
+          content: [{ type: "tool_use", name: "write_form_fields", input: queued ?? state.toolInput }],
         };
       },
     },
@@ -284,6 +289,8 @@ beforeEach(() => {
   state.policyViolatedGroundedOnPinnedVersion = false;
   state.policyManual = null;
   state.employeeRole = null;
+  state.employeeName = null;
+  state.toolInputs = [];
 });
 
 /* ==================================================================== */
@@ -2054,5 +2061,75 @@ describe("FRAMEWORK_UNPIN_ENABLED — the framework's sections and a governed dr
       expect(state.modelCalls).toBe(1);
       expect(systemPrompt()).not.toMatch(/LOWEST rung that fits/);
     });
+  });
+});
+
+/* ==================================================================== */
+/*  FORM_EDIT_SINGLE_WRITER_ENABLED: THE DRAFT KEEPS THE FACTS GIVEN    */
+/* ==================================================================== */
+
+/*
+ * QA spec (step 2b; final decision: detect and report only). Live, "Create a
+ * Corrective Action for Marnie Quill, she was late to open on 10-20-26" was
+ * drafted as "Marnie was late …": the last name gone from the Observation.
+ * With the flag on, the guarded draft is read against the header's name and
+ * the dates and amounts the notes state; a miss is saved and the reply (the
+ * route's notice) says what it left out — no retry, the drafting call count
+ * unchanged. Logged in the trace as kinds only.
+ */
+describe("FORM_EDIT_SINGLE_WRITER_ENABLED: the post-draft consistency check", () => {
+  const CREATE = "Create a Corrective Action for Marnie Quill, she was late to open on 10-20-26";
+  const SHORT = { values: { observation: "Marnie was late." }, checked: { offense_type: ["tardiness"] } };
+  const WHOLE = { values: { observation: "Marnie Quill was late to open on 10-20-26." }, checked: { offense_type: ["tardiness"] } };
+
+  async function traced(notes: string) {
+    const { runChatTrace } = await import("@/lib/ai/chat-trace-store");
+    const draft = { startedAt: Date.now() } as unknown as import("@/lib/ai/chat-trace-store").ChatTraceDraft;
+    const payload = await runChatTrace(draft, () => post(notes));
+    return { payload, check: draft.draftCheck };
+  }
+
+  beforeEach(() => {
+    vi.stubEnv("FORM_EDIT_SINGLE_WRITER_ENABLED", "true");
+    state.templateKey = "dpoa";
+    state.employeeName = "Marnie Quill";
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('"Marnie was late": the miss is detected and reported, and the drafting call count is unchanged', async () => {
+    state.toolInputs = [SHORT];
+    const { payload, check } = await traced(CREATE);
+
+    expect(state.modelCalls).toBe(1);
+    // Saved, and said: never silently.
+    expect(state.persisted.at(-1)!.values.observation).toBe("Marnie was late.");
+    expect(payload.notice).toContain("The draft left out Quill and 10-20-26 in Observation of Offense; tell me if you want it added.");
+    expect(check).toEqual({ checked: true, missing_keys: ["name", "date"] });
+  });
+
+  it("a clean draft: no note is added, and no extra call", async () => {
+    state.toolInputs = [WHOLE];
+    const { payload, check } = await traced(CREATE);
+
+    expect(state.modelCalls).toBe(1);
+    expect(String(payload.notice ?? "")).not.toContain("left out");
+    expect(check).toEqual({ checked: true, missing_keys: [] });
+  });
+
+  it("the drafting model never writes the header's Employee Name", async () => {
+    state.toolInputs = [{ values: { ...WHOLE.values, employee_name: "Marnie Q." }, checked: WHOLE.checked }];
+    await traced(CREATE);
+    expect(state.persisted.every((write) => !("employee_name" in write.values))).toBe(true);
+  });
+
+  it("flag off: no check, no note, no trace key", async () => {
+    vi.stubEnv("FORM_EDIT_SINGLE_WRITER_ENABLED", "");
+    state.toolInputs = [SHORT];
+    const { payload, check } = await traced(CREATE);
+    expect(state.modelCalls).toBe(1);
+    expect(String(payload.notice ?? "")).not.toContain("left out");
+    expect(check).toBeUndefined();
   });
 });
