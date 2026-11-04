@@ -1077,22 +1077,33 @@ async function answerQuestionCore(
    */
   const formEdit = request.formEditTool?.offer ? request.formEditTool : null;
   let toolInput: { readonly input: unknown } | null = null;
-  let answer = await callClaude({
-    ...claudeBase,
-    grounding: dataAddition.help ? `${groundingText}\n\n${dataAddition.help}` : groundingText,
-    ...(useManual && manualPlan?.cachedBlock ? { cachedContext: manualPlan.cachedBlock } : {}),
-    ...(formEdit && formEdit.offer
-      ? {
-          formEditTool: {
-            tool: formEdit.offer.tool,
-            data: formEdit.offer.data,
-            onToolUse: (input: unknown) => {
-              toolInput ??= { input };
+  /*
+   * FORM_EDIT_TOOL_IN_STREAM_ENABLED: a failed main call is recorded on the
+   * trace (the chat route hands the turn to the old chain) and rethrown —
+   * never fail-open. Ported from the sibling app (4 Nov 2026).
+   */
+  let answer: Awaited<ReturnType<typeof callClaude>>;
+  try {
+    answer = await callClaude({
+      ...claudeBase,
+      grounding: dataAddition.help ? `${groundingText}\n\n${dataAddition.help}` : groundingText,
+      ...(useManual && manualPlan?.cachedBlock ? { cachedContext: manualPlan.cachedBlock } : {}),
+      ...(formEdit && formEdit.offer
+        ? {
+            formEditTool: {
+              tool: formEdit.offer.tool,
+              data: formEdit.offer.data,
+              onToolUse: (input: unknown) => {
+                toolInput ??= { input };
+              },
             },
-          },
-        }
-      : {}),
-  });
+          }
+        : {}),
+    });
+  } catch (error) {
+    formEdit?.failed();
+    throw error;
+  }
   if (formEdit) {
     formEdit.sent();
     const called = toolInput as { readonly input: unknown } | null;

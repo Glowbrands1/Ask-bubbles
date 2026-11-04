@@ -455,6 +455,11 @@ async function postChat(request: Request) {
               scope: context.identity.scope,
             })
           : null;
+      /*
+       * A failed main call (a model or configuration error) is no offer: the
+       * paths below answer the turn as with the flag off, and the last
+       * fallback makes its own call (ported from the sibling app, 4 Nov 2026).
+       */
       const toolMain = formEditTool?.turn.offer
         ? await answerQuestion(
             {
@@ -464,7 +469,10 @@ async function postChat(request: Request) {
             },
             chatActor,
             { memoryOwnerId: context.identity.subject },
-          )
+          ).catch(() => {
+            formEditTool.turn.failed();
+            return null;
+          })
         : null;
       const toolEdit = formEditTool?.edited() ?? null;
       /*
@@ -650,7 +658,7 @@ async function postChat(request: Request) {
         toolMain ??
         (await answerQuestion(
           // FORM_EDIT_TOOL_IN_STREAM_ENABLED: a turn the tool was not offered on carries only its trace.
-          { ...parsed, openForm, ...(formEditTool ? { formEditTool: formEditTool.turn } : {}) },
+          { ...parsed, openForm, ...(formEditTool && !formEditTool.turn.offer ? { formEditTool: formEditTool.turn } : {}) },
           {
             role: context.identity.role,
             scope: context.identity.scope,

@@ -54,6 +54,8 @@ const model = vi.hoisted(() => ({
   next: { text: "A grounded answer from the policy manual.", tool: null as unknown },
   draft: { values: {} } as Record<string, unknown>,
   revision: { values: {} } as Record<string, unknown>,
+  /** The answering call fails (a model or configuration error) on its next request. */
+  mainFails: false,
 }));
 
 vi.mock("@/lib/supabase/server", () => ({ getSupabaseAdmin: () => fakeSupabase(store) }));
@@ -125,6 +127,10 @@ vi.mock("@/lib/ai/anthropic", async (importOriginal) => {
         create: async (request: { thinking?: unknown; tool_choice?: { name?: string } }) => {
           if (!request.thinking) return forced(request);
           model.main.push(JSON.parse(JSON.stringify(request)));
+          if (model.mainFails) {
+            model.mainFails = false;
+            throw Object.assign(new Error("overloaded"), { status: 529 });
+          }
           // A non-streamed answer carries the tool input whole.
           const message = answerMessage();
           return { ...message, content: message.content.map((block) => ((block as { type: string }).type === "tool_use" ? { ...(block as object), input: model.next.tool } : block)) };
@@ -132,6 +138,10 @@ vi.mock("@/lib/ai/anthropic", async (importOriginal) => {
         // The live client streams the answering call; a tool call's input arrives as input_json_delta.
         stream: (request: { thinking?: unknown }) => {
           model.main.push(JSON.parse(JSON.stringify(request)));
+          if (model.mainFails) {
+            model.mainFails = false;
+            throw Object.assign(new Error("overloaded"), { status: 529 });
+          }
           const listeners: Record<string, ((event: unknown) => void)[]> = {};
           return {
             on(name: string, listener: (event: unknown) => void) {
@@ -248,6 +258,7 @@ beforeEach(async () => {
   model.next = { text: "A grounded answer from the policy manual.", tool: null };
   model.draft = { values: {} };
   model.revision = { values: {} };
+  model.mainFails = false;
   setFlags(TOOL_FLAGS);
   await (await import("@/lib/forms/repository")).ensureTemplateLibrary("system");
 });
@@ -493,6 +504,27 @@ describe("FORM_EDIT_TOOL_IN_STREAM_ENABLED: a tool call", () => {
     expect(model.main.length).toBe(1);
     expect(lastMain().tools?.map((tool) => tool.name)).toEqual(["edit_form"]);
     expect(await lastTrace()).toMatchObject({ offered: true, called: false, handoff: "not_called" });
+  });
+});
+
+/*
+ * Ported from the sibling app (4 Nov 2026): with the tool on, the answering call
+ * runs before the old chain. When it failed (a model error, a configuration
+ * error), the whole turn failed — on a turn the old chain (here the revision)
+ * answers without it. A failed main call is now no offer: the chain answers.
+ */
+describe("a failed main call never costs a turn the old chain answers", () => {
+  it(`"${CA_CHAIN[2]}": the answering call fails, the revision still answers and writes`, async () => {
+    const thread = await marnieDraft();
+    const id = thread.id;
+    model.mainFails = true;
+    model.revision = { values: { observation: OBSERVATION_AFTER[2]! } };
+    const reply = await thread.say(CA_CHAIN[2]);
+    expect(model.main.length, "the main call was made").toBeGreaterThanOrEqual(1);
+    expect(model.revisionCalls, "the old chain ran").toBe(1);
+    expect(values(id).observation).toMatch(/also late on Tuesday/);
+    expect(reply.formUpdate?.updated ?? []).toContain("observation");
+    expect(await lastTrace()).toMatchObject({ called: false, handoff: "error" });
   });
 });
 

@@ -97,7 +97,7 @@ function emptyTrace(reason: FormEditOfferReason, gate: string | null): FormEditT
 function notOffered(reason: FormEditOfferReason, gate: string | null = null): FormEditToolSession {
   const trace = emptyTrace(reason, gate);
   return {
-    turn: { offer: null, trace: trace as unknown as Record<string, unknown>, sent: () => {}, apply: async () => {} },
+    turn: { offer: null, trace: trace as unknown as Record<string, unknown>, sent: () => {}, apply: async () => {}, failed: () => {} },
     edited: () => null,
     calledWithoutEdit: () => false,
   };
@@ -280,6 +280,11 @@ export async function prepareFormEditTool(input: {
           if (trace.called) return;
           trace.handoff = null;
           await apply(raw);
+        },
+        // Ported from the sibling app (4 Nov 2026): a failed main call hands the turn to the old chain.
+        failed: () => {
+          if (trace.called) return;
+          trace.handoff = "error";
         },
       },
       edited: () => edited,

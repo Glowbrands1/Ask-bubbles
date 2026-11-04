@@ -71,6 +71,8 @@ export interface FormEditToolTurn {
   readonly sent: () => void;
   /** The tool's input, applied through the one writer (once, inside the turn's trace). */
   readonly apply: (input: unknown) => Promise<void>;
+  /** The main call failed: nothing was offered, and the turn goes to the old chain (`handoff: "error"`). */
+  readonly failed: () => void;
 }
 
 export interface AskRequest {
