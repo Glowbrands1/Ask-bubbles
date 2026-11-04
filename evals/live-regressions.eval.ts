@@ -383,6 +383,8 @@ type Routes = {
   continuationFor: typeof import("@/lib/forms/proposal-continuation").continuationFor;
   ensureTemplateLibrary: typeof import("@/lib/forms/repository").ensureTemplateLibrary;
   createId: typeof import("@/lib/utils/id").createId;
+  streamHeader: string;
+  unwrapStreamed: typeof import("@/lib/api/streamed-response").unwrapStreamed;
 };
 let routes: Routes;
 
@@ -451,6 +453,13 @@ interface PathRun {
 }
 
 /** One scenario, every step through the real routes, with `flags` on top of production's. */
+const NO_CARD = "no card to create from";
+
+/*
+ * T1 sometimes gives no card (the model's choice, run to run). It is reported as
+ * "NO CARD at T1", never as an edit that did not stick. It is NOT retried: the
+ * live key's rule is no retries (maxRetries 0, no loops).
+ */
 async function runScenario(scenario: LiveScenario, extraFlags: readonly string[]): Promise<PathRun> {
   for (const key of Object.keys(store) as (keyof FakeStore)[]) store[key] = [];
   store.form_instances = new JoiningRows() as never;
@@ -475,7 +484,7 @@ async function runScenario(scenario: LiveScenario, extraFlags: readonly string[]
     await routes.ensureTemplateLibrary("system");
     for (const [index, step] of scenario.steps.entries()) {
       if ("create" in step) {
-        if (!proposal) throw new Error("no card to create from");
+        if (!proposal) throw new Error(NO_CARD);
         const result = await routes.createInlineForm({ proposal, messages, call, onCreated: () => {} });
         instanceId = toUuid(result.reference.instanceId);
         const warnings = (result as { warnings?: unknown }).warnings;
@@ -505,8 +514,11 @@ async function runScenario(scenario: LiveScenario, extraFlags: readonly string[]
           }),
         }),
       );
-      const payload = (await response.json()) as Answer & { error?: string };
-      if (response.status !== 200) throw new Error(`"${step.say}": HTTP ${response.status} ${payload.error ?? ""}`.trim());
+      /* A slow turn is streamed (CHAT_RESPONSE_STREAM_ENABLED): its body is { status, body }; unwrap it as the client does. */
+      const { status, body } =
+        response.headers.get(routes.streamHeader) === "1" ? routes.unwrapStreamed(await response.text()) : { status: response.status, body: await response.json() };
+      const payload = body as Answer & { error?: string };
+      if (status !== 200) throw new Error(`"${step.say}": HTTP ${status} ${payload.error ?? ""}`.trim());
       if (payload.formProposal) proposal = payload.formProposal;
       if (payload.formOpened) instanceId = toUuid(payload.formOpened.instanceId);
       messages.push(
@@ -544,7 +556,14 @@ const results: { id: string; oldPath: PathRun; newPath: PathRun | null }[] = [];
 const repeatCalls = { value: 0 };
 const repeat: { off: { saved: string | null; losesQuill: boolean }[]; on: { saved: string | null; losesQuill: boolean }[] } = { off: [], on: [] };
 
+/** LIVE_CASES=id,id: only these cases (after LIVE_SCENARIOS), e.g. the ones a capped run did not reach. */
 function scenarios(): readonly LiveScenario[] {
+  const only = (process.env.LIVE_CASES ?? "").split(",").map((id) => id.trim()).filter(Boolean);
+  const picked = pickScenarios();
+  return only.length ? picked.filter((scenario) => only.includes(scenario.id)) : picked;
+}
+
+function pickScenarios(): readonly LiveScenario[] {
   const which = process.env.LIVE_SCENARIOS ?? "all";
   if (which === "none") return [];
   if (which === "failures") return LIVE_FAILURE_SCENARIOS;
@@ -590,7 +609,7 @@ function writeResults(): void {
     const editTurns = oldPath.turns.filter((turn) => turn.said !== "(Create)").slice(1);
     const edited = oldPath.instanceId ? `${editTurns.filter((turn) => Object.keys(turn.diff).length > 0).length}/${editTurns.length}` : "—";
     lines.push(
-      `| ${id} | ${created} | ${edited} | ${cell(oldPath.error ? `ERROR ${oldPath.error}` : oldPath.reply)} | ${cell(changed || "—")} | ${cell(card)} | ${oldPath.ms} | ${oldPath.calls} (${oldPath.kinds.draft}/${oldPath.kinds.revision}) | ${fresh} |`,
+      `| ${id} | ${created} | ${edited} | ${cell(oldPath.error === NO_CARD ? "NO CARD at T1" : oldPath.error ? `ERROR ${oldPath.error}` : oldPath.reply)} | ${cell(changed || "—")} | ${cell(card)} | ${oldPath.ms} | ${oldPath.calls} (${oldPath.kinds.draft}/${oldPath.kinds.revision}) | ${fresh} |`,
     );
   }
   writeFileSync(`${base}.md`, `${lines.join("\n")}\n`);
@@ -612,6 +631,8 @@ describe.skipIf(!LIVE && !DRY)("live regressions (LIVE=1, or LIVE_DRY=1 with sta
       continuationFor: (await import("@/lib/forms/proposal-continuation")).continuationFor,
       ensureTemplateLibrary: (await import("@/lib/forms/repository")).ensureTemplateLibrary,
       createId: (await import("@/lib/utils/id")).createId,
+      streamHeader: (await import("@/lib/api/streamed-response")).STREAM_HEADER,
+      unwrapStreamed: (await import("@/lib/api/streamed-response")).unwrapStreamed,
     };
   });
 
