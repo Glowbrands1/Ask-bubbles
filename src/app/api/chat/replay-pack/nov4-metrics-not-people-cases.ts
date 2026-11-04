@@ -1,6 +1,6 @@
 import { expect, vi } from "vitest";
 
-import { STAFF, WEST_DODGE, type DirectoryRow, type ReplayAnswer, type ReplayCase, type ReplayContext } from "./cases";
+import { STAFF, WEST_DODGE, noRepeatedReply, type DirectoryRow, type ReplayAnswer, type ReplayCase, type ReplayContext } from "./cases";
 
 /**
  * ============================================================================
@@ -27,9 +27,13 @@ import { STAFF, WEST_DODGE, type DirectoryRow, type ReplayAnswer, type ReplayCas
  * message; it stays OPEN without this flag in its fixFlags: turn 1 holds with
  * it, turn 2 ("Corrective Action") repeats turn 1 word for word.
  *
+ * Only beside somebody on the roster (the middle ground, QA 4 Nov 2026): a
+ * message that names nobody on the roster is read as before.
+ *
  * Negative controls: a typo of a roster person still gets the close-match
- * note; with the flag off, a full name nobody on the roster shares is still
- * announced (with it on, it is not: see the case's note).
+ * note; a full name nobody on the roster shares, typed alone, is still
+ * announced, flag on or off. Metric words with no roster name beside them are
+ * read as before (the metrics-only case says what that means).
  *
  * Every person is invented (the repository is public) and is on this file's
  * own directory fixture only.
@@ -115,22 +119,45 @@ export const NOV4_METRICS_NOT_PEOPLE_CASES: ReplayCase[] = [
   },
   {
     id: "nov4-pau-metrics-not-people-unknown",
-    title: "negative control (flag off): a full name nobody on the roster shares is announced as not on the roster",
+    title: "negative control: a full name nobody on the roster shares, typed alone, is announced as not on the roster, flag on or off",
     report: `${REPORT}: negative control, a person not on the roster`,
     status: "fixed",
     /*
-     * NO fixFlags, ON PURPOSE. Under the flag's rule "Zuleika Brightwell" is
-     * shaped like nobody on the roster (nobody's first name is Zuleika), the
-     * same as "Club Close": it is no longer announced, and the reply asks for
-     * the employee's full name. Roster data alone cannot tell the two apart.
-     * That trade-off is pinned in `forms/form-name-from-roster.test.ts` and
-     * waits for Pau's decision before the flag goes on.
+     * The middle ground (QA, 4 Nov 2026): a nobody-shaped candidate is set
+     * aside only when the same message names somebody on the roster. Nobody
+     * here is on it, so the message is read as before.
      */
+    fixFlags: [FLAG, SALES, GLOSSARY],
     async run(t) {
       const thread = start(t);
       const reply = await thread.say(say("Zuleika Brightwell"));
       expect(reply.content, `the unknown person is not announced:\n${reply.content}`).toMatch(/couldn't find \*\*Zuleika Brightwell\*\*/);
       expect(thread.proposal?.employeeName ?? null, "an unknown person is on the card").not.toBe("Zuleika Brightwell");
+      // Said again, the chat moves on: not the same reply word for word (no loop).
+      const again = await thread.say("Zuleika Brightwell");
+      noRepeatedReply([reply, again]);
+    },
+  },
+  {
+    id: "nov4-pau-metrics-not-people-metrics-only",
+    title: "metrics with no roster name (\"CA for under performance on Club Close % and Spa %\"): no metric is said back as a person; no card either, flag on or off",
+    report: `${REPORT}: metric words with no roster name beside them`,
+    /*
+     * QA, 4 Nov 2026: report it, don't hide it. Nothing in the message names
+     * somebody on the roster, so the middle ground reads it as before. Through
+     * the route, with production's flags and with these on alike, the turn
+     * gets the answering model's reply and no card, so no name is said back.
+     * The grounding step itself, were a card proposed, would still say back
+     * "under" (from "for under performance") as not on the roster: pinned in
+     * `forms/form-name-from-roster.test.ts`. Put to Pau.
+     */
+    status: "fixed",
+    fixFlags: [FLAG, SALES, GLOSSARY],
+    async run(t) {
+      const thread = start(t);
+      const reply = await thread.say("CA for under performance on Club Close % and Spa %");
+      expect(reply.content, `a metric is announced as a missing person:\n${reply.content}`).not.toMatch(/couldn't find/i);
+      expect(thread.proposal?.employeeName ?? "", "a metric is on the card").not.toMatch(/under|club close/i);
     },
   },
 ];
