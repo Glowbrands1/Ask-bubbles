@@ -424,7 +424,8 @@ async function postChat(request: Request) {
        */
       /*
        * FORM_EDIT_TOOL_IN_STREAM_ENABLED (Step 3): with a draft open and a turn
-       * that is not a question, a correction or a policy change, the ordinary
+       * that is not a correction or a policy change (a question too, Pau's
+       * ruling A3), the ordinary
        * answering call is made HERE, offered the `edit_form` tool. A tool edit
        * that was written is this turn's reply (the saved diff), in the
        * redraft's place so no path below runs; otherwise the paths below run
@@ -447,12 +448,11 @@ async function postChat(request: Request) {
               history: parsed.history,
               today: parsed.context.todayIso,
               /*
-               * The existing question reading, decided by code: an ask to act on
-               * the form ("can you change …?", "is it possible to change …?") is
-               * an edit request, never a question. With QUESTION_NOT_FORM off it
-               * is still never offered on a question.
+               * Pau's ruling A3 (4 Nov 2026): offered on any turn with a draft
+               * open, question-phrased turns included. The existing question
+               * reading goes into the trace only; it no longer decides the offer.
                */
-              gate: (await import("@/lib/ai/question-not-form")).readQuestion(parsed.question, parsed.history, { asksToActAnyAction: true }),
+              gate: (await import("@/lib/ai/question-not-form")).readQuestion(parsed.question, parsed.history),
               scope: context.identity.scope,
             })
           : null;
