@@ -33,10 +33,13 @@ import { STAFF, WEST_DODGE, noRepeatedReply, type DirectoryRow, type ReplayAnswe
  * Negative controls: a typo of a roster person still gets the close-match
  * note; a full name nobody on the roster shares, typed alone, is still
  * announced, flag on or off. Metric words with no roster name beside them are
- * read as before (the metrics-only case says what that means).
+ * read as before, except that one lowercase word that is nobody on the roster
+ * ("under") is never the employee (the metrics-only case); a roster first name
+ * typed in lowercase is still matched.
  *
- * Every person is invented (the repository is public) and is on this file's
- * own directory fixture only.
+ * Every person is invented (the repository is public). Corin Bellweather is
+ * QA's pau-1 person, shared with `nov4-live-regressions-scenarios.ts`; the
+ * others are on this file's own directory fixture only.
  */
 
 type T = ReplayContext;
@@ -55,8 +58,10 @@ const person = (id: string, firstName: string, lastName: string): DirectoryRow =
 
 const PERPETUA = person("e-perpetua-thornquist", "Perpetua", "Thornquist");
 const LEOCADIA = person("e-leocadia-wexcombe", "Leocadia", "Wexcombe");
+/** QA's pau-1 person (`nov4-live-regressions-scenarios.ts`), invented. */
+const CORIN = person("e-corin-bellweather", "Corin", "Bellweather");
 
-const ROSTER: readonly DirectoryRow[] = [...STAFF, PERPETUA, LEOCADIA];
+const ROSTER: readonly DirectoryRow[] = [...STAFF, PERPETUA, LEOCADIA, CORIN];
 
 const REPORT = "Pau, 4 Nov 2026 (sf-s19, metrics read as people): a CA for Under Performance on named metrics";
 const FLAG = "FORM_NAME_FROM_ROSTER_ENABLED";
@@ -140,24 +145,53 @@ export const NOV4_METRICS_NOT_PEOPLE_CASES: ReplayCase[] = [
   },
   {
     id: "nov4-pau-metrics-not-people-metrics-only",
-    title: "metrics with no roster name (\"CA for under performance on Club Close % and Spa %\"): no metric is said back as a person; no card either, flag on or off",
+    title: "metrics with no roster name (\"CA for under performance on Club Close % and Spa %\"): no card for \"under\"; it asks who the form is for",
     report: `${REPORT}: metric words with no roster name beside them`,
     /*
-     * QA, 4 Nov 2026: report it, don't hide it. Nothing in the message names
-     * somebody on the roster, so the middle ground reads it as before. Through
-     * the route, with production's flags and with these on alike, the turn
-     * gets the answering model's reply and no card, so no name is said back.
-     * The grounding step itself, were a card proposed, would still say back
-     * "under" (from "for under performance") as not on the roster: pinned in
-     * `forms/form-name-from-roster.test.ts`. Put to Pau.
+     * With CA_SALES_POLICY_ENABLED on, the card was made "for **under**": the
+     * "under" of "for under performance" became the card's employee, with or
+     * without the middle ground. Approved (QA for Pau, 4 Nov 2026): one word
+     * typed all in lowercase that is nobody's first, preferred or last name on
+     * the roster is never the employee (`forms/roster-shape.ts`
+     * lowercaseNobody). The card asks for the employee, in this app's
+     * existing intake wording ("1. Employee's full name"). With production's
+     * flags the turn gets no card, so this holds there too.
      */
     status: "fixed",
-    fixFlags: [FLAG, SALES, GLOSSARY],
+    fixFlags: [SALES, FLAG],
     async run(t) {
       const thread = start(t);
       const reply = await thread.say("CA for under performance on Club Close % and Spa %");
       expect(reply.content, `a metric is announced as a missing person:\n${reply.content}`).not.toMatch(/couldn't find/i);
+      expect(reply.content, `"under" is named as the employee:\n${reply.content}`).not.toMatch(/\*\*under\*\*/i);
       expect(thread.proposal?.employeeName ?? "", "a metric is on the card").not.toMatch(/under|club close/i);
+      if (thread.proposal) expect(reply.content, `a card with no employee does not ask who it is for:\n${reply.content}`).toMatch(/Who is this (?:\*\*[^*]+\*\* |form )?for\?|Employee's full name/);
+    },
+  },
+  {
+    id: "nov4-pau-metrics-not-people-lowercase-roster-name",
+    title: "negative control: a roster first name typed alone in lowercase (\"perpetua\"), answering who the form is for, is still matched",
+    report: `${REPORT}: negative control, a lowercase roster first name`,
+    status: { open: "production answers turn 1 as metric-only (CA_SALES_POLICY_ENABLED off), so there is no form for \"perpetua\" to answer" },
+    fixFlags: [SALES, FLAG],
+    async run(t) {
+      const thread = start(t);
+      await thread.say("CA for under performance on Club Close % and Spa %");
+      const reply = await thread.say("perpetua");
+      const said = `${reply.content}\n${JSON.stringify(thread.proposal)}`;
+      expect(said, `"perpetua" is not matched to Perpetua Thornquist:\n${said}`).toMatch(/Perpetua Thornquist/);
+    },
+  },
+  {
+    id: "nov4-pau-metrics-not-people-pau-1-lowercase-full-name",
+    title: "negative control: QA's pau-1 wording, a lowercase full name (\"corin bellweather\") on the roster, is still the card's employee",
+    report: `${REPORT}: negative control, QA's pau-1 wording`,
+    status: "fixed",
+    fixFlags: [FLAG, SALES, GLOSSARY],
+    async run(t) {
+      const thread = start(t);
+      await thread.say("Corrective action: corin bellweather was rude to a guest at the front desk on Monday");
+      expect(thread.proposal, "no CA card for Corin Bellweather").toMatchObject({ templateKey: "dpoa", employeeName: "Corin Bellweather" });
     },
   },
 ];

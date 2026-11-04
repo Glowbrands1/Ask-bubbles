@@ -2459,8 +2459,11 @@ export function formEditNoopGuardEnabled(): boolean {
  * the person guard's roster read this turn the name reader drops it too, so it
  * is never the card's employee (`forms/answer-not-a-name.ts`). A message that
  * names nobody on the roster is read as before: "Zuleika Brightwell" typed
- * alone is still said back as not on the roster, and so is a metric typed
- * with no roster name beside it.
+ * alone is still said back as not on the roster. One exception (QA for Pau,
+ * 4 Nov 2026): one word typed all in lowercase that is nobody's first,
+ * preferred or last name on the roster is never a name ("CA for under
+ * performance on Club Close % and Spa %": "under" is not said back or put on
+ * the card; the reply asks for the employee).
  *
  * Needs CA_SALES_POLICY_ENABLED: off unless both are on. Alone, "Under
  * Performance" kept in the question is read as a metric-only request and the

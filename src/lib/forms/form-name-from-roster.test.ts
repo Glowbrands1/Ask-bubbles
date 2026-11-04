@@ -7,7 +7,7 @@ import { formNameFromRosterEnabled } from "@/lib/config/chat-quality-flags";
 import { namesSomebody } from "./answer-not-a-name";
 import { installPersonRoster } from "./person-guard";
 import { readEmployeeMentions } from "./proposal";
-import { couldBeOnRoster, installRosterAnchor, rosterShaped } from "./roster-shape";
+import { couldBeOnRoster, installRosterAnchor, lowercaseNobody, rosterShaped } from "./roster-shape";
 
 /**
  * ============================================================================
@@ -182,25 +182,31 @@ describe("the grounding step, Pau's exact message", () => {
   });
 
   /*
-   * WHAT IS STILL OPEN, PINNED SO NOBODY IS SURPRISED. Metric words with no
-   * roster name beside them: nothing anchors the message, so it is read as
-   * before, flag on or off. Here the name reader takes "under" (from "for
-   * under performance") for a person and the reply says "I couldn't find
-   * **under** in the Woven roster"; "Club Close" is not a candidate in this
-   * wording. Put to Pau, 4 Nov 2026.
+   * Metric words with no roster name beside them. With only the grounding
+   * roster (no person guard roster) the message is read as before, and the
+   * name reader takes "under" (from "for under performance") for a person:
+   * "I couldn't find **under** in the Woven roster". Approved (QA for Pau,
+   * 4 Nov 2026): with the person guard's roster read, one lowercase word that
+   * is nobody on it is never a name, so nothing is said back.
    */
-  it("on: metrics with no roster name are read as before — \"under\" is still announced", () => {
+  it("on, no person guard roster: metrics with no roster name are read as before", () => {
     const question = "CA for under performance on Club Close % and Spa %";
     const off = prep(question);
-    const offReply = reply(question, null).content;
     on();
     const prepared = prep(question);
     expect(prepared.rosterAnchored).toBeUndefined();
     expect(prepared).toEqual(off);
     expect(prepared.unmatched).toEqual(["under"]);
-    const content = reply(question, null).content;
-    expect(content).toBe(offReply);
-    expect(content).toMatch(/couldn't find \*\*under\*\* in the Woven roster/);
+  });
+
+  it("on, with the person guard's roster: \"under\" is not said back as a person", () => {
+    const question = "CA for under performance on Club Close % and Spa %";
+    process.env.PERSON_GUARD_ENABLED = "true";
+    installPersonRoster(() => NAMES);
+    expect(reply(question, null).content).toMatch(/couldn't find \*\*under\*\* in the Woven roster/);
+    on();
+    expect(prep(question).unmatched).not.toContain("under");
+    expect(reply(question, null).content).not.toMatch(/\*\*under\*\*/);
   });
 });
 
@@ -240,3 +246,45 @@ describe("the name reader, with the person guard's roster", () => {
     expect(namesSomebody("Club Close")).toBe(true);
   });
 });
+
+/*
+ * APPROVED (QA for Pau, 4 Nov 2026): in Ask Sunny, "CA for under performance
+ * on Club Close % and Spa %" with CA_SALES_POLICY_ENABLED on made the card
+ * "for **under**". One word typed all in lowercase that is nobody's first,
+ * preferred or last name on the roster is never the employee.
+ */
+describe("a lowercase word that is nobody on the roster", () => {
+  it("lowercaseNobody: how it was typed and the roster only", () => {
+    expect(lowercaseNobody("under", NAMES)).toBe(true);
+    expect(lowercaseNobody("perpetua", NAMES)).toBe(false);
+    expect(lowercaseNobody("thornquist", NAMES)).toBe(false);
+    expect(lowercaseNobody("izzy", NAMES)).toBe(false);
+    expect(lowercaseNobody("Under", NAMES)).toBe(false);
+    expect(lowercaseNobody("corin bellweather", NAMES)).toBe(false);
+    expect(lowercaseNobody("under", [])).toBe(false);
+  });
+
+  it("off (main): \"under\" is a name the reader takes", () => {
+    process.env.PERSON_GUARD_ENABLED = "true";
+    installPersonRoster(() => NAMES);
+    expect(namesSomebody("under")).toBe(true);
+    expect(readEmployeeMentions("CA for under performance on Club Close % and Spa %").names).toContain("under");
+  });
+
+  it("on: \"under\" is not a name, with no roster name in the message; a lowercase roster first name still is", () => {
+    process.env.PERSON_GUARD_ENABLED = "true";
+    installPersonRoster(() => NAMES);
+    on();
+    installRosterAnchor(() => false);
+    expect(namesSomebody("under")).toBe(false);
+    expect(readEmployeeMentions("CA for under performance on Club Close % and Spa %").names).not.toContain("under");
+    expect(namesSomebody("perpetua")).toBe(true);
+  });
+
+  it("on, with no roster: kept as before", () => {
+    process.env.PERSON_GUARD_ENABLED = "true";
+    on();
+    expect(namesSomebody("under")).toBe(true);
+  });
+});
+
