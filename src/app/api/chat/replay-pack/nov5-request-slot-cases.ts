@@ -200,4 +200,89 @@ export const NOV5_REQUEST_SLOT_CASES: ReplayCase[] = [
       expect(reply.content, `a location is named or asked about as a person:\n${reply.content}`).not.toMatch(/\*\*Store(?: \d+)?\*\*|couldn't find \*\*Store/i);
     },
   },
+  /*
+   * PAU, 5 NOV 2026 (FORM_NAME_FROM_ROSTER_ENABLED): "Don't treat raw text
+   * after 'for' as the person. Match it against the roster ignoring capitals,
+   * and put the roster's spelling on the card. No roster match means ask who
+   * it's for. Only roster names can ever be offered as choices."
+   * (`forms/roster-only-names.ts`). Pau's required wordings; invented people.
+   */
+  ...(
+    [
+      {
+        key: "ima-on-roster",
+        text: "create a CA form for ima employee, for opening the store late on 9-28-26",
+        roster: [...ROSTER, person("e-ima-employee", "Ima", "Employee")],
+        check: (card: string | null, reply: string) => {
+          expect(card, "not the roster's spelling").toBe("Ima Employee");
+          expect(reply, "the reply drafts for the typed name").not.toContain("**ima**");
+        },
+      },
+      {
+        key: "ima-off-roster",
+        text: "create a CA form for ima employee, for opening the store late on 9-28-26",
+        roster: ROSTER,
+        check: (card: string | null, reply: string) => {
+          expect(card, "a name on no roster is the employee").toBeNull();
+          expect(reply, "it does not ask who").toMatch(ASKS_WHO);
+        },
+      },
+      {
+        key: "lowercase-surname",
+        text: "make me a CA for Odalys merriwether for being late to opening this morning",
+        roster: [...ROSTER, person("e-odalys-merriwether", "Odalys", "Merriwether")],
+        check: (card: string | null, reply: string) => {
+          expect(card, "not the full roster name").toBe("Odalys Merriwether");
+          expect(reply, "the reply drafts for a short name").not.toMatch(/for \*\*Odalys\*\*/);
+        },
+      },
+      {
+        key: "being-late",
+        text: "CA for being late",
+        roster: ROSTER,
+        // This app answers "CA for being late" as a question (no card); a card, when there is one, asks who.
+        check: (card: string | null, reply: string, templateKey?: string | null) => {
+          expect(card, "an offense is the employee").toBeNull();
+          if (templateKey) expect(reply, "it does not ask who").toMatch(ASKS_WHO);
+        },
+      },
+      {
+        key: "coaching-form",
+        text: "CA for Coaching Form",
+        roster: ROSTER,
+        // With the flag, never a Coaching Form; this app answers "CA for Coaching Form" as a question (no card), and a card asks who.
+        check: (card: string | null, reply: string, templateKey?: string | null) => {
+          if (process.env.FORM_NAME_FROM_ROSTER_ENABLED === "true" && templateKey) expect(templateKey, "not a Corrective Action").toBe("dpoa");
+          expect(card, "a form's name is the employee").toBeNull();
+          if (templateKey === "dpoa") expect(reply, "it does not ask who").toMatch(ASKS_WHO);
+        },
+      },
+      {
+        // The sibling app's message 8 (invented name). Live with the flags on: "Which of them is this Corrective Action Form for — Dana Lane, LPSVA or Average Club?"
+        key: "message-8-metrics",
+        text: "Can you write me a performace ca for an employee who did not meet their numbers for the month of october Dana Lane  - verbal\n146 tans \nBelow in PPTA, LPSVA, Average Club, CC%, Spa%",
+        roster: [...ROSTER, person("e-dana-lane", "Dana", "Lane")],
+        check: (card: string | null, reply: string) => {
+          // The Observation may quote the metrics; a metric is never a choice or a name.
+          expect(reply, "a metric is offered as a person").not.toMatch(/(?:Which of them|Is this for|draft[^\n]*? for|couldn't find)[^\n?]*(?:LPSVA|Average Club|PPTA)|\*\*(?:LPSVA|Average Club|PPTA)\*\*/);
+          if (card) expect(card).toBe("Dana Lane");
+        },
+      },
+    ] as const
+  ).map(
+    ({ key, text, roster, check }): ReplayCase => ({
+      id: `nov5-roster-only-${key}`,
+      title: `Pau 5 Nov, only roster people: "${text.split("\n")[0]!.slice(0, 70)}"`,
+      report: `Pau, 5 Nov 2026: match the text after "for" against the roster; no match asks who; only roster people are choices — "${text.split("\n")[0]}"`,
+      status: "fixed",
+      fixFlags: [FLAG, SALES, GLOSSARY],
+      async run(t) {
+        const thread = start(t, roster);
+        const reply = await thread.say(text);
+        (check as (card: string | null, reply: string, templateKey?: string | null) => void)(thread.proposal?.employeeName ?? null, reply.content, thread.proposal?.templateKey ?? null);
+      },
+    }),
+  ),
 ];
+
+const ASKS_WHO = /Who is this (?:\*\*[^*]+\*\* |form )?for\?|employee'?s full name/i;
