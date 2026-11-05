@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { salesResultsOffenseLine, withCaChosenRule } from "@/lib/ai/ca-sales-prompt-lines";
 import { noteSpendUser } from "@/lib/ai/spend-meter";
 import { withSpendMeter } from "@/lib/ai/spend-meter-run";
 
@@ -1134,7 +1135,8 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
           ]
         : []),
       // FRAMEWORK_UNPIN_ENABLED: `unpinFramework` is only ever true on a governed form.
-      ...(unpinFramework
+      // CA_SALES_POLICY_ENABLED (Pau, 5 Nov 2026): one added rule after the lowest-rung rule. Off, the rules are as before.
+      ...withCaChosenRule(unpinFramework
         ? UNPINNED_PERFORMANCE_MANAGEMENT_DRAFT_RULES
         : governance.governed ? PERFORMANCE_MANAGEMENT_DRAFT_RULES : []),
       /*
@@ -1229,6 +1231,8 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
       offersConductPolicy && offenseOffered.includes(ATTENDANCE_POLICY) && !offenseOffered.includes("under_performance")
         ? CA_REVISION_7_OFFENSE_RULE
         : "",
+      // CA_SALES_POLICY_ENABLED (Pau, 5 Nov 2026): a form with no under_performance box reads sales results as standards_of_conduct. Off, nothing is added.
+      offersConductPolicy ? salesResultsOffenseLine(offenseOffered) : "",
     ]
       .filter(Boolean)
       .join("\n");
