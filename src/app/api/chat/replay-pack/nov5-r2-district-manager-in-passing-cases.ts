@@ -92,7 +92,8 @@ export const NOV5_R2_DISTRICT_MANAGER_IN_PASSING_CASES: ReplayCase[] = [
     id: "nov5-r2-dm-in-passing-position",
     title: "R2 (1): one employee's story naming their district manager in passing: the card's Position is the employee's Woven position, never \"District Manager\"",
     report: `${REPORT}: Position "District Manager", taken from the other person`,
-    status: { open: "the card's Position is \"District Manager\", the other person's" },
+    // Fixed in production by the re-flip (5 Nov 2026 02:41 PHT, main 15609aa2): FORM_NAME_FROM_ROSTER, CA_SALES_POLICY, ROSTER_NEAR_MISS, ROSTER_NAME_IN_CANDIDATE, TITLE_OF_THE_EMPLOYEE and REPLY_MATCHES_CARD are on.
+    status: "fixed",
     fixFlags: ["TITLE_OF_THE_EMPLOYEE_ENABLED"],
     run: position,
   },
@@ -108,7 +109,8 @@ export const NOV5_R2_DISTRICT_MANAGER_IN_PASSING_CASES: ReplayCase[] = [
     id: "nov5-r2-dm-in-passing-position-with-the-flip",
     title: "R2 (1) with FORM_NAME_FROM_ROSTER_ENABLED + CA_SALES_POLICY_ENABLED on: the Position is still the employee's",
     report: `${REPORT}: does the sales flip change it? Recorded 5 Nov 2026: no (Position "District Manager")`,
-    status: { open: "with the flip's flags too, the Position is \"District Manager\"" },
+    // Fixed in production by the re-flip (5 Nov 2026 02:41 PHT, main 15609aa2): FORM_NAME_FROM_ROSTER, CA_SALES_POLICY, ROSTER_NEAR_MISS, ROSTER_NAME_IN_CANDIDATE, TITLE_OF_THE_EMPLOYEE and REPLY_MATCHES_CARD are on.
+    status: "fixed",
     fixFlags: ["TITLE_OF_THE_EMPLOYEE_ENABLED"],
     run: withFlip(position),
   },

@@ -407,16 +407,9 @@ const NAME_OPEN: Readonly<Record<string, string>> = Object.fromEntries([
   ...(["code", "models"] as const).flatMap((mode) => [
     [`pau-2-on-${mode}`, PAU_2_MISS],
     [`pau-2-off-${mode}`, `${PAU_2_MISS}, and no question who it is for`],
-    [`last-date-caps-off-${mode}`, "the non-person \"BY CORIN BELLWEATHER\" is looked up as the name (\"I couldn't find **BY CORIN BELLWEATHER** in the Woven roster\")"],
+    // last-date-caps-off-*: Fixed in production by the re-flip (5 Nov 2026 02:41 PHT, main 15609aa2): FORM_NAME_FROM_ROSTER, CA_SALES_POLICY, ROSTER_NEAR_MISS, ROSTER_NAME_IN_CANDIDATE, TITLE_OF_THE_EMPLOYEE and REPLY_MATCHES_CARD are on.
   ]),
-  /*
-   * production-flags.json corrected to Vercel (QA, 5 Nov 2026): GROUNDED_ENTITIES_ENABLED is OFF in
-   * production, so the Sentence-case wordings off roster put "Corin Bellweather" on the card instead of
-   * "I couldn't find Corin Bellweather in the Woven roster". A production defect, recorded OPEN.
-   */
-  ...["first-nodate-sentence", "first-date-sentence", "middle-nodate-sentence", "middle-date-sentence", "last-nodate-sentence", "last-date-sentence"].flatMap((id) =>
-    (["code", "models"] as const).map((mode) => [`${id}-off-${mode}`, GROUNDED_OFF_MISS]),
-  ),
+  // The Sentence-case off-roster wordings (OPEN since the Vercel correction, GROUNDED off): Fixed in production by the re-flip (5 Nov 2026 02:41 PHT, main 15609aa2): FORM_NAME_FROM_ROSTER, CA_SALES_POLICY, ROSTER_NEAR_MISS, ROSTER_NAME_IN_CANDIDATE, TITLE_OF_THE_EMPLOYEE and REPLY_MATCHES_CARD are on.
 ]);
 
 const ASKED_WHO = /who is this\b[^?\n]*\bfor\?/i;

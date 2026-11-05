@@ -77,7 +77,8 @@ export const NOV4_CA_SALES_POLICY_CASES: ReplayCase[] = [
     id: "nov4-ca-sales-msb",
     title: "a CA for MSB (Must See Behaviors) cites the Standards of Conduct, heading and page",
     report: `${REPORT}: (a) a CA for MSB`,
-    status: { open: "no policy is cited for an MSB corrective action" },
+    // Fixed in production by the re-flip (5 Nov 2026 02:41 PHT, main 15609aa2): FORM_NAME_FROM_ROSTER, CA_SALES_POLICY, ROSTER_NEAR_MISS, ROSTER_NAME_IN_CANDIDATE, TITLE_OF_THE_EMPLOYEE and REPLY_MATCHES_CARD are on.
+    status: "fixed",
     fixFlags: [FLAG],
     async run(t) {
       const thread = start(t);
@@ -103,7 +104,8 @@ export const NOV4_CA_SALES_POLICY_CASES: ReplayCase[] = [
      * Pau, 4 Nov 2026: under CA_SALES_POLICY_ENABLED a stated sales shortfall
      * goes to the form (`correctiveActionBasis`, corrective-action-intake.ts).
      */
-    status: { open: "no card: a low-sales request is answered with the progression (metric only), so no policy is cited" },
+    // Fixed in production by the re-flip (5 Nov 2026 02:41 PHT, main 15609aa2): FORM_NAME_FROM_ROSTER, CA_SALES_POLICY, ROSTER_NEAR_MISS, ROSTER_NAME_IN_CANDIDATE, TITLE_OF_THE_EMPLOYEE and REPLY_MATCHES_CARD are on.
+    status: "fixed",
     fixFlags: [FLAG],
     async run(t) {
       const thread = start(t);

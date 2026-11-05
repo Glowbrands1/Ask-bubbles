@@ -58,17 +58,24 @@ export const NOV5_CA_SALES_PROMPT_LINES_CASES: ReplayCase[] = [
     report: `${REPORT}, flag off`,
     status: "fixed",
     async run(t) {
-      const prompt = await draftPrompt(t);
-      expect(prompt, "the sales results line with the flag off").not.toContain(SALES_RESULTS_OFFENSE_LINE);
+      // CA_SALES_POLICY_ENABLED is on in production since the re-flip (5 Nov 2026): this case pins the flag OFF, so it turns it off itself. Its assertions are unchanged.
+      vi.stubEnv("CA_SALES_POLICY_ENABLED", "");
+      try {
+        const prompt = await draftPrompt(t);
+        expect(prompt, "the sales results line with the flag off").not.toContain(SALES_RESULTS_OFFENSE_LINE);
       expect(prompt, "the Corrective Action line with the flag off").not.toContain(CA_CHOSEN_LINE);
-      expect(prompt, "the lowest-rung rule is missing").toMatch(/choose the LOWEST rung that fits\./);
+        expect(prompt, "the lowest-rung rule is missing").toMatch(/choose the LOWEST rung that fits\./);
+      } finally {
+        vi.unstubAllEnvs();
+      }
     },
   },
   {
     id: "nov5-ca-sales-prompt-lines-on",
     title: "flag on: \"When the manager has already chosen a Corrective Action, do not recommend coaching instead.\" follows the lowest-rung rule in the draft's prompt",
     report: `${REPORT}, flag on`,
-    status: { open: "with production's flags (CA_SALES_POLICY_ENABLED off) the draft's prompt does not have the line" },
+    // Fixed in production by the re-flip (5 Nov 2026 02:41 PHT, main 15609aa2): FORM_NAME_FROM_ROSTER, CA_SALES_POLICY, ROSTER_NEAR_MISS, ROSTER_NAME_IN_CANDIDATE, TITLE_OF_THE_EMPLOYEE and REPLY_MATCHES_CARD are on.
+    status: "fixed",
     fixFlags: ["CA_SALES_POLICY_ENABLED"],
     async run(t) {
       const prompt = await draftPrompt(t);
