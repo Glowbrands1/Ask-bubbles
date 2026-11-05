@@ -195,4 +195,37 @@ export const NOV5_REQUEST_SLOT_CASES: ReplayCase[] = [
       expect(reply.content, `a location is named or asked about as a person:\n${reply.content}`).not.toMatch(/\*\*Store(?: \d+)?\*\*|couldn't find \*\*Store/i);
     },
   },
+  /*
+   * The flip's eval check in the sibling app (5 Nov 2026): with
+   * FORM_NAME_FROM_ROSTER_ENABLED and the sales policy on, a name typed in
+   * lowercase straight after "for" was lost — "ima" to the lowercase rule (the
+   * card had no employee and asked who), "merriwether" to the request slot
+   * (the card was for "Odalys"). The words after a request's first "for" are
+   * the person asked for, in any case (`request-slot.ts` typedAfterFor).
+   */
+  {
+    id: "nov5-lowercase-after-for-ima",
+    title: "\"create a CA form for ima employee, for opening the store late on 9-28-26\": the card is for Ima",
+    report: "The flip's eval check, 5 Nov 2026 (the sibling app's eval s9 shape)",
+    status: "fixed",
+    fixFlags: [FLAG, SALES, GLOSSARY],
+    async run(t) {
+      // This app makes no card for a name on no roster, so the person is on it here.
+      const thread = start(t, [...ROSTER, person("e-ima-employee", "Ima", "Employee")]);
+      const reply = await thread.say("create a CA form for ima employee, for opening the store late on 9-28-26");
+      expect(thread.proposal?.employeeName ?? "", `no card for Ima:\n${reply.content}`).toMatch(/^Ima\b/i);
+    },
+  },
+  {
+    id: "nov5-lowercase-after-for-surname",
+    title: "\"make me a CA for Odalys merriwether for being late to opening this morning\": the card keeps the surname",
+    report: "The flip's eval check, 5 Nov 2026 (the sibling app's eval sf-s4)",
+    status: "fixed",
+    fixFlags: [FLAG, SALES, GLOSSARY],
+    async run(t) {
+      const thread = start(t, [...ROSTER, person("e-odalys-merriwether", "Odalys", "Merriwether")]);
+      const reply = await thread.say("make me a CA for Odalys merriwether for being late to opening this morning");
+      expect(thread.proposal?.employeeName ?? "", `the card lost the surname:\n${reply.content}`).toMatch(/^Odalys Merriwether$/i);
+    },
+  },
 ];
