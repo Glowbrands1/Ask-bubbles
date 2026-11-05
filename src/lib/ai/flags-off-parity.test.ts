@@ -147,6 +147,11 @@ const UI_PATHS = ["src/app/**/*.tsx", "src/components/**", "src/features/**/*.ts
  * off, it renders as before for every role.
  */
 const ALLOWED_UI = [
+  // District Manager, 3 Nov 2026 (QA approved 5 Nov, Pau 6 Nov): the Reviews page and the admin Google Reviews
+  // screen show the company's store number (Dawley Farms: 309; its Google code 338 stays the match key). Unflagged:
+  // it is a data correction, identical for every store whose number is its code.
+  "src/features/reviews/reviews-data.tsx",
+  "src/features/admin/google-reviews/google-reviews-screen.tsx",
   "src/features/chat/message-bubble.tsx",
   "src/features/chat/composer.tsx",
   "src/features/chat/inline-form.tsx",
