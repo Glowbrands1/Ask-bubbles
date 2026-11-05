@@ -276,6 +276,9 @@ async function script(): Promise<{ replies: unknown[]; bodies: string[] }> {
   return { replies, bodies };
 }
 
+/** The re-flip's six flags (on in production since 5 Nov 2026 02:41 PHT). */
+const REFLIP = ["FORM_NAME_FROM_ROSTER_ENABLED", "CA_SALES_POLICY_ENABLED", "ROSTER_NEAR_MISS_ENABLED", "ROSTER_NAME_IN_CANDIDATE_ENABLED", "TITLE_OF_THE_EMPLOYEE_ENABLED", "REPLY_MATCHES_CARD_ENABLED"];
+
 const FIXTURE = join("src", "lib", "ai", "chat-glossary-flags-off.main.json");
 const RECORDING = process.env.RECORD_MAIN_FIXTURE === "1";
 const GLOSSARY_HEAD = "ABBREVIATIONS MANAGERS USE";
@@ -311,6 +314,22 @@ describe("CHAT_GLOSSARY_ENABLED off: the model requests and replies, byte for by
     expect(answering.length).toBeGreaterThan(0);
     expect(reader.length).toBeGreaterThan(0);
     for (const body of [...answering, ...reader]) expect(body).toContain(GLOSSARY_HEAD);
-    expect(on.replies[0]).not.toEqual(main.production!.replies[0]);
-  }, 120_000);
+    /*
+     * The msb turn's reply changes with the glossary. Since the re-flip (5 Nov 2026) production has the
+     * six flip flags on, and with them "msb" is never read as a person and is cited as the Standards of
+     * Conduct with the glossary on or off, so under production's flags that first reply is the same either
+     * way. The glossary's effect on it is shown on production as it was before the re-flip (the six held
+     * off in both runs): flag on vs off.
+     */
+    const beforeReflip = () => {
+      for (const name of REFLIP) delete process.env[name];
+    };
+    setFlags("production", [FLAG]);
+    beforeReflip();
+    const onBefore = await script();
+    setFlags("production", []);
+    beforeReflip();
+    const offBefore = await script();
+    expect(onBefore.replies[0]).not.toEqual(offBefore.replies[0]);
+  }, 240_000);
 });
