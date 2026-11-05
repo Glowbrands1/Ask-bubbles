@@ -103,4 +103,28 @@ export const NOV5_METRIC_GUARD_CASES: ReplayCase[] = [
       expect(reply.content, `a metric is offered as a person:\n${reply.content}`).not.toMatch(METRIC_AS_PERSON);
     },
   },
+  /*
+   * Found in the smaller-set gate's records (5 Nov 2026), not in its table: nov2-p1b-next-message-new-draft
+   * passes with the flags on, but its turn 3 reply is EMPTY. With CA_SALES_POLICY_ENABLED on (alone, or in the
+   * six-flag set) "underperformance for the month of october", said with the Corrective Action draft open, gets
+   * no reply and no update; off, "I haven't changed the **Corrective Action Form** for **Remy Calder** …".
+   * Recorded OPEN, no fix yet.
+   */
+  {
+    id: "nov5-ca-sales-open-draft-reply-not-empty",
+    title: "the smaller set: with the CA draft open, \"underperformance for the month of october\" gets a reply, never an empty one",
+    report: "the smaller-set gate's records (5 Nov 2026): nov2-p1b-next-message-new-draft turn 3, an empty reply with CA_SALES_POLICY_ENABLED on",
+    status: { open: "with CA_SALES_POLICY_ENABLED on the reply is empty (no text, no update)" },
+    async run(t) {
+      const thread = start(t);
+      await thread.say("I need to create a verbal corrective action form");
+      await thread.say("Remy Calder");
+      t.draftWrites({});
+      const first = await thread.create();
+      t.typeOnForm(first, { observation: "Remy was below the store average in October on every metric we track." });
+      t.revisionWrites({ observation: "Remy was below the store average in October on every metric we track — underperformance for the month of October." });
+      const reply = await thread.say("underperformance for the month of october");
+      expect(reply.content.trim(), "the reply is empty").not.toBe("");
+    },
+  },
 ];
