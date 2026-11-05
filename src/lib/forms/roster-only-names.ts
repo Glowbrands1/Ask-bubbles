@@ -1,11 +1,12 @@
 import { formNameFromRosterEnabled, metricGuardEnabled, rosterNearMissEnabled } from "@/lib/config/chat-quality-flags";
+import { isGlossaryTerm } from "@/lib/ai/glossary";
 import type { AskResponse } from "@/lib/ai/types";
 
 import { HAS_EMPLOYEE_AND_PLACE, SAYS_READY } from "@/lib/ai/coaching-what-happened";
 
 import { matchEmployeeName, normalizeTypedName, type RosterEmployee } from "./employee-match";
 import { personRosterNames } from "./person-guard";
-import { capitalisedListItems, offensePhrases, requestMessage } from "./request-slot";
+import { metricMessage, namesAMetric, requestMessage } from "./request-slot";
 import { namesAForm } from "./template-intent";
 
 /**
@@ -287,7 +288,7 @@ export function slotName(message: string | undefined, names: readonly string[]):
 /** FORM_NAME_FROM_ROSTER_ENABLED: `rosterOnlyNames` with the actor's roster read this turn. Off, or no roster: as built. */
 export function withRosterOnlyNames(response: AskResponse): AskResponse {
   // METRIC_GUARD_ENABLED: with FORM_NAME off, the choices still never offer a metric (`withoutMetricChoices`).
-  if (!formNameFromRosterEnabled()) return metricGuardEnabled() ? withoutMetricChoices(response, requestMessage(), personRosterNames() ?? []) : response;
+  if (!formNameFromRosterEnabled()) return metricGuardEnabled() ? withoutMetricChoices(response, metricMessage(), personRosterNames() ?? []) : response;
   const names = personRosterNames();
   if (!names || names.length === 0) return response;
   return rosterOnlyNames(response, names, requestMessage());
@@ -308,11 +309,12 @@ export function withRosterOnlyNames(response: AskResponse): AskResponse {
 export function withoutMetricChoices(response: AskResponse, message: string | undefined, names: readonly string[]): AskResponse {
   if (!message) return response;
   const words = (text: string) => text.toLowerCase().match(/[\p{L}\p{N}'’]+/gu) ?? [];
-  const metricRuns = [...capitalisedListItems(message), ...offensePhrases(message)].map((run) => new Set(words(run)));
   const isMetric = (name: string) => {
     if (rosterSpelling(name, names)) return false;
-    const typed = words(name);
-    return typed.length > 0 && metricRuns.some((run) => typed.every((word) => run.has(word)));
+    // CHAT_GLOSSARY_ENABLED: an approved term ("MSB") is never a person, wherever the message put it.
+    if (isGlossaryTerm(name)) return true;
+    // The same rule as the name readers' (`request-slot.ts` namesAMetric): a list item, a "… %" phrase, an offense word.
+    return namesAMetric(name, message);
   };
   const asked = (name: string) => {
     const byFirst = names.filter((roster) => words(roster)[0] === words(name)[0]);

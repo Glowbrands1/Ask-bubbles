@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AskResponse } from "@/lib/ai/types";
 
 import { withoutMetricChoices, withRosterOnlyNames } from "./roster-only-names";
-import { installRequestMessage } from "./request-slot";
+import { installRequestMessage, namesAMetric } from "./request-slot";
 
 /**
  * METRIC_GUARD_ENABLED (QA's LIVE=1 on main f99ee58a, 5 Nov 2026, the smaller set, 3/3 runs, mgr-1-roster-first-initial).
@@ -42,6 +42,14 @@ describe("METRIC_GUARD_ENABLED on, FORM_NAME off: no metric is ever a choice", (
 
   it("\"Is this for **Club Average**?\" asks who instead", () => {
     expect(withoutMetricChoices(reply("Is this for **Club Average**?"), MESSAGE, ROSTER).content).toMatch(/^Who is this form for\?/);
+  });
+
+  it("a phrase written with a percent sign is a metric in a list of two (\"on Club Close % and Spa %\")", () => {
+    const message = "I need a corrective action for Coaching Form. This is for Under Performance on Club Close % and Spa %.";
+    expect(namesAMetric("Club Close", message)).toBe(true);
+    expect(namesAMetric("Spa", message)).toBe(true);
+    expect(namesAMetric("Under", message)).toBe(true);
+    expect(withoutMetricChoices(reply("Which of them is this **Coaching Form** for — **Club Close** or **Under**?"), message, ROSTER).content).toMatch(/^Who is this form for\?/);
   });
 
   it("negative: two people and no metric are left as they are", () => {
