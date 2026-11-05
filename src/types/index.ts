@@ -348,6 +348,19 @@ export interface ChatMessage {
    */
   formInstanceRef?: ChatFormInstanceRef;
   /**
+   * FORM_EDIT_SOURCE_TURN_ENABLED: this reply was about the form open in the
+   * chat, as the server stamped it; `unwritten` is the manager's turn it did
+   * not write onto that form. Sent back with the history so "make that
+   * update" / "the details we just discussed" find the turn they mean. See
+   * `lib/forms/form-content-turn.ts` (`sourceTurn`).
+   */
+  formReply?: ChatFormReply;
+  /**
+   * SERVER-SIDE ONLY, never stored: set by `parseHistory` on a turn that
+   * carried a form card (`formProposal(s)` / `formInstanceRef(s)`).
+   */
+  card?: true;
+  /**
    * The forms created from THIS message's cards when it carried more than one
    * (`formProposals`), one per proposal, matched by `proposalId`. Pointers,
    * like `formInstanceRef`.
@@ -972,4 +985,11 @@ export interface BrandConfig {
     locationNoun: string;
     locationNounPlural: string;
   };
+}
+
+/** FORM_EDIT_SOURCE_TURN_ENABLED: a reply about the open form, and the manager's turn it did not write. */
+export interface ChatFormReply {
+  instanceId: string;
+  /** At most 2,000 characters (`UNWRITTEN_MAX`). */
+  unwritten?: string;
 }
