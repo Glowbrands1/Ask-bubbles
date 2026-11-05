@@ -91,6 +91,28 @@ function namedStep(named: string): { start: number; end: number; label: string }
 }
 
 /**
+ * The first and the last step the manager's words name, by where they sit:
+ * the first is the one a sentence opens on, the last the one nearest its end
+ * (`namedStep`). Null when no step is named. Read by
+ * `ai/prior-coaching-denial.ts` to tell "no prior coaching" from "no prior
+ * coaching except a verbal in July".
+ */
+export function firstAndLastNamedStep(
+  named: string,
+): { first: { start: number; end: number; label: string }; last: { start: number; end: number; label: string } } | null {
+  const last = namedStep(named);
+  if (!last) return null;
+  let first = last;
+  for (const [pattern, label] of STEPS) {
+    for (const match of named.matchAll(new RegExp(pattern.source, "gi"))) {
+      const end = match.index + match[0].length;
+      if (match.index < first.start || (match.index === first.start && end > first.end)) first = { start: match.index, end, label };
+    }
+  }
+  return { first, last };
+}
+
+/**
  * The step a LINE of the list records: the first one it names, since a line
  * opens with its step ("Verbal warning for tardiness after coaching — …" is a
  * verbal warning). Null for a line that names no step.

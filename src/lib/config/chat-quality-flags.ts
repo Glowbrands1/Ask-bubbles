@@ -2604,3 +2604,17 @@ export function rosterNotFoundAnyPhrasingEnabled(): boolean {
 export function metricGuardEnabled(): boolean {
   return envFlag("METRIC_GUARD_ENABLED");
 }
+
+/**
+ * PRIOR_COACHING_DENIAL_ENABLED (QA, 5 Nov 2026; default off): "There's no
+ * prior coaching on file." was quoted back by PRIOR_COACHING_OPTIONAL_ENABLED
+ * as "Prior coaching note: prior coaching on file." — the protected note
+ * reader starts at "prior coaching" and drops the "no". With the flag on, the
+ * caller hands it the manager's turns with each sentence that denies prior
+ * coaching left out, unless it names a step with a time of its own ("no prior
+ * coaching except a verbal in July"), which is kept as that step
+ * (`ai/prior-coaching-denial.ts`). Off, the turns as before.
+ */
+export function priorCoachingDenialEnabled(): boolean {
+  return envFlag("PRIOR_COACHING_DENIAL_ENABLED");
+}
