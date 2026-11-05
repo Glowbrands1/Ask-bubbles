@@ -79,7 +79,8 @@ export const APPROVED_GOOGLE_STORES: readonly ApprovedGoogleStore[] = [
   },
   {
     code: "264",
-    displayName: "Omaha, NE",
+    // Pau, 6 Nov 2026: Omaha Dodge (migration 20261106000100).
+    displayName: "Omaha Dodge, NE",
     addressLine1: "7810 West Dodge Rd",
     addressLine2: null,
     city: "Omaha",
