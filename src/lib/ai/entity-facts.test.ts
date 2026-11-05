@@ -116,7 +116,11 @@ describe("authorised scope only", () => {
 describe("a store question is answered from the registered stores", () => {
   it.each([
     ["What is store 236?", "Grand Island, NE (Store 236)"],
-    ["Which store is Dawley Farms?", "Sioux Falls, SD (E 18th St) (Store 338)"],
+    // Changed on purpose (District Manager, 3 Nov 2026): Dawley Farms is the company's store 309; 338 is only its code (Google profile, loc-338).
+    ["Which store is Dawley Farms?", "Sioux Falls, SD (E 18th St) (Store 309)"],
+    // The DM's number, and the code it replaces on screen: both find the E 18th St store.
+    ["What is store 309?", "Sioux Falls, SD (E 18th St) (Store 309)"],
+    ["What is store 338?", "Sioux Falls, SD (E 18th St) (Store 309)"],
     ["What store is number 123?", "Grand Island, NE (Store 236)"],
   ])("%s", async (question, label) => {
     expect((await ask(question)).direct!.content).toContain(label);
@@ -264,8 +268,9 @@ describe("names typed in lower case are names too", () => {
 
 describe("stores, names and titles are read in any case in general chat", () => {
   it.each([
-    ["which store is dawley farms", "Store 338"],
-    ["WHICH STORE IS DAWLEY FARMS?", "Store 338"],
+    // Changed on purpose (District Manager, 3 Nov 2026): Dawley Farms is the company's store 309; 338 is only its code (Google profile, loc-338).
+    ["which store is dawley farms", "Store 309"],
+    ["WHICH STORE IS DAWLEY FARMS?", "Store 309"],
     ["what is store 236", "Grand Island, NE (Store 236)"],
     ["what store is ne grand island", "Store 236"],
   ])("%s", async (question, expected) => {

@@ -32,6 +32,8 @@ export interface CompanyLocation {
   readonly districtName: string | null;
   readonly regionId: string | null;
   readonly regionName: string | null;
+  /** The company's number for the store where it differs from `code` (`CompanyLocationEntry.companyNumber`). */
+  readonly number?: string;
 }
 
 export interface CompanyArea {
@@ -66,6 +68,7 @@ function toLocation(entry: CompanyLocationEntry): CompanyLocation {
     districtName: district?.name ?? null,
     regionId: region?.id ?? null,
     regionName: region?.name ?? null,
+    ...(entry.companyNumber ? { number: entry.companyNumber } : {}),
   };
 }
 
