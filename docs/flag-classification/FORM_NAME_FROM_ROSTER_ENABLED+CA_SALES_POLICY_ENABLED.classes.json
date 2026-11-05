@@ -463,5 +463,70 @@
     "category": "INTENDED",
     "twin": "the same case's test row above",
     "reason": "The OPEN case's record: fails with the flags off (the bug as reported), holds with FORM_NAME_FROM_ROSTER_ENABLED and CA_SALES_POLICY_ENABLED on."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-offer-exit-replaces-menu: a Coaching / Corrective Action menu for the employee is replaced by the one offer; \"yes\" makes the card — OPEN in production (with production's flags the reply is a Coaching / Corrective Action menu, with no offer)": {
+    "category": "INTENDED",
+    "twin": "the same case with production's flags (CA_SALES off): OPEN, expected to fail; src/lib/ai/ca-offer.test.ts",
+    "reason": "Pau, 4 Nov 2026, #5 (port of the sibling app's #535, added after #444): the one offer \"Do you want a Corrective Action for <name>?\" names the Standards of Conduct, which only CA_SALES_POLICY_ENABLED reads for an MSB/sales statement. With the flags on the menu is replaced by the offer and \"yes\" makes the card: the OPEN case holds (vitest reports the expected failure as failed)."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-offer-exit-tool-path: #5's statement with another draft open (the main call carries the edit tool): still the one offer — OPEN in production (with production's flags no offer)": {
+    "category": "INTENDED",
+    "twin": "the same case with production's flags (CA_SALES off): OPEN, expected to fail; src/lib/ai/ca-offer.test.ts",
+    "reason": "Pau, 4 Nov 2026, #5 (port of the sibling app's #535, added after #444): the one offer \"Do you want a Corrective Action for <name>?\" names the Standards of Conduct, which only CA_SALES_POLICY_ENABLED reads for an MSB/sales statement. With the flags on the menu is replaced by the offer and \"yes\" makes the card: the OPEN case holds (vitest reports the expected failure as failed)."
+  },
+  "replay: nov2-p5-name-claims [fix:CLAIM_GUARD_ENABLED,OPEN_FORM_NO_SELECTION_ENABLED]": {
+    "category": "INTENDED",
+    "twin": "the same case with production's flags (flag unset); nov2-p5's invariants hold in both",
+    "reason": "FORM_NAME_FROM_ROSTER_ENABLED: \"Delia Garza Ramso\" is on the case's roster with a two-word surname (Garza Ramso). Off, the reader misses the roster person (\"I couldn't find … in the Woven roster\") and asks for details; on, the roster match takes the roster's spelling and drafts the card. The case's claim invariants (no \"now reads\" / \"confirmed against records\" without an update) hold either way."
+  },
+  "replay: nov2-p5-name-claims [production]": {
+    "category": "INTENDED",
+    "twin": "the same case with production's flags (flag unset); nov2-p5's invariants hold in both",
+    "reason": "FORM_NAME_FROM_ROSTER_ENABLED: \"Delia Garza Ramso\" is on the case's roster with a two-word surname (Garza Ramso). Off, the reader misses the roster person (\"I couldn't find … in the Woven roster\") and asks for details; on, the roster match takes the roster's spelling and drafts the card. The case's claim invariants (no \"now reads\" / \"confirmed against records\" without an update) hold either way."
+  },
+  "replay: nov2-p5-name-corrections [fix:NAME_CORRECTION_WORDS_ENABLED]": {
+    "category": "INTENDED",
+    "twin": "the same case with production's flags (flag unset); nov2-p5's invariants hold in both",
+    "reason": "FORM_NAME_FROM_ROSTER_ENABLED: \"Delia Garza Ramso\" is on the case's roster with a two-word surname (Garza Ramso). Off, the reader misses the roster person (\"I couldn't find … in the Woven roster\") and asks for details; on, the roster match takes the roster's spelling and drafts the card. The case's claim invariants (no \"now reads\" / \"confirmed against records\" without an update) hold either way."
+  },
+  "replay: nov2-p5-name-corrections [production]": {
+    "category": "INTENDED",
+    "twin": "the same case with production's flags (flag unset); nov2-p5's invariants hold in both",
+    "reason": "FORM_NAME_FROM_ROSTER_ENABLED: \"Delia Garza Ramso\" is on the case's roster with a two-word surname (Garza Ramso). Off, the reader misses the roster person (\"I couldn't find … in the Woven roster\") and asks for details; on, the roster match takes the roster's spelling and drafts the card. The case's claim invariants (no \"now reads\" / \"confirmed against records\" without an update) hold either way."
+  },
+  "replay: nov4-offer-exit-replaces-menu [open]": {
+    "category": "INTENDED",
+    "twin": "the same case with production's flags (CA_SALES off): OPEN, expected to fail; src/lib/ai/ca-offer.test.ts",
+    "reason": "Pau, 4 Nov 2026, #5 (port of the sibling app's #535, added after #444): the one offer \"Do you want a Corrective Action for <name>?\" names the Standards of Conduct, which only CA_SALES_POLICY_ENABLED reads for an MSB/sales statement. With the flags on the menu is replaced by the offer and \"yes\" makes the card: the OPEN case holds (vitest reports the expected failure as failed)."
+  },
+  "replay: nov4-offer-exit-tool-path [open]": {
+    "category": "INTENDED",
+    "twin": "the same case with production's flags (CA_SALES off): OPEN, expected to fail; src/lib/ai/ca-offer.test.ts",
+    "reason": "Pau, 4 Nov 2026, #5 (port of the sibling app's #535, added after #444): the one offer \"Do you want a Corrective Action for <name>?\" names the Standards of Conduct, which only CA_SALES_POLICY_ENABLED reads for an MSB/sales statement. With the flags on the menu is replaced by the offer and \"yes\" makes the card: the OPEN case holds (vitest reports the expected failure as failed)."
+  },
+  "replay: nov4-scan-sf-b5-typo-name-rude-to-customer [open]": {
+    "category": "INTENDED",
+    "twin": "the same case with production's flags: OPEN; src/lib/forms/roster-only-names.test.ts",
+    "reason": "Pau, 5 Nov 2026 (FORM_NAME_FROM_ROSTER_ENABLED): only roster people are the card's employee. The misspelling \"Delphine Marlwoe Ostrander\" is not on the roster as typed, so the card no longer carries the typed name; off, it did. Still OPEN in both modes: matching the misspelling to the roster's Delphine Marlowe Ostrander is not this flag's change (KEEP_ROSTER_EXACT_NAME / typo work)."
+  },
+  "replay: nov4-scan-sf-s13-team-coaching-blank-employee [open]": {
+    "category": "INTENDED",
+    "twin": "the same case with production's flags: OPEN",
+    "reason": "FORM_NAME_FROM_ROSTER_ENABLED: \"Bath Bomb Kits\" (a product) is no roster person, so the team card no longer asks for \"Bath Bomb Kits's position\"; it asks for the employee's. Still OPEN in both modes for the case's other invariants (\"Everything I need is here\" on a blank employee)."
+  },
+  "replay: nov5-roster-only-coaching-form [production]": {
+    "category": "INTENDED",
+    "twin": "the case's own check (nov5-request-slot-cases.ts: with the flag, never a Coaching Form; a card asks who)",
+    "reason": "Pau, 5 Nov 2026: \"CA for Coaching Form\" names a form, not a person. With the flags on this app answers it as a question (no card), which the case's check allows by design; off, a Coaching Form card asked for details. Holds in both modes."
+  },
+  "replay: nov5-twin-sf-s21-must-see-behaviors-template [open]": {
+    "category": "INTENDED",
+    "twin": "the same case with production's flags: OPEN at turn 1",
+    "reason": "CA_SALES_POLICY_ENABLED: Pau's \"create a ca for must see behaviors for performace … Below in PPTA, LPSVA …\" now gets the Corrective Action card for Wynne Sarrow instead of the metric-only progression answer (Pau, 4 Nov 2026). The case gets further and stays OPEN on its own later-turn invariants (s21: \"I haven't changed the Corrective Action Form\" for the template; s22: a Coaching Form after \"It needs to be a CA\"), which are open items sf-s21/sf-s22, not caused by the flag."
+  },
+  "replay: nov5-twin-sf-s22-ca-not-coaching [open]": {
+    "category": "INTENDED",
+    "twin": "the same case with production's flags: OPEN at turn 1",
+    "reason": "CA_SALES_POLICY_ENABLED: Pau's \"create a ca for must see behaviors for performace … Below in PPTA, LPSVA …\" now gets the Corrective Action card for Wynne Sarrow instead of the metric-only progression answer (Pau, 4 Nov 2026). The case gets further and stays OPEN on its own later-turn invariants (s21: \"I haven't changed the Corrective Action Form\" for the template; s22: a Coaching Form after \"It needs to be a CA\"), which are open items sf-s21/sf-s22, not caused by the flag."
   }
 }
