@@ -88,8 +88,7 @@ export const NOV4_METRICS_NOT_PEOPLE_CASES: ReplayCase[] = [
     id: "nov4-pau-metrics-not-people",
     title: "sf-s19: Pau's Under Performance CA on PPTA, LPSVA, Club Average, Club Close %, Spa %: no roster note, the card cites Standards of Conduct",
     report: `${REPORT}: "I need a corrective action verbal for <name>. This is for Under Performance on PPTA, LPSVA, Club Average, Club Close %, and Spa %."`,
-    // Before FORM_NAME_FROM_ROSTER_ENABLED and CA_SALES_POLICY_ENABLED were on together in production (5 Nov 2026): OPEN, the reply says "I couldn't find Club Close or Under in the Woven roster" and the card cites no policy
-    status: "fixed",
+    status: { open: 'the reply says "I couldn\'t find Club Close or Under in the Woven roster" and the card cites no policy' },
     fixFlags: [FLAG, SALES, GLOSSARY],
     async run(t) {
       const thread = start(t);
@@ -173,8 +172,7 @@ export const NOV4_METRICS_NOT_PEOPLE_CASES: ReplayCase[] = [
     id: "nov4-pau-metrics-not-people-lowercase-roster-name",
     title: "negative control: a roster first name typed alone in lowercase (\"perpetua\"), answering who the form is for, is still matched",
     report: `${REPORT}: negative control, a lowercase roster first name`,
-    // Before FORM_NAME_FROM_ROSTER_ENABLED and CA_SALES_POLICY_ENABLED were on together in production (5 Nov 2026): OPEN, production answers turn 1 as metric-only (CA_SALES_POLICY_ENABLED off), so there is no form for "perpetua" to answer
-    status: "fixed",
+    status: { open: "production answers turn 1 as metric-only (CA_SALES_POLICY_ENABLED off), so there is no form for \"perpetua\" to answer" },
     fixFlags: [SALES, FLAG],
     async run(t) {
       const thread = start(t);
@@ -195,8 +193,7 @@ export const NOV4_METRICS_NOT_PEOPLE_CASES: ReplayCase[] = [
      * and "Under" are set aside. Before, the card was made "for **Club
      * Close**" with these flags on.
      */
-    // Before FORM_NAME_FROM_ROSTER_ENABLED and CA_SALES_POLICY_ENABLED were on together in production (5 Nov 2026): OPEN, production answers the message as metric-only (CA_SALES_POLICY_ENABLED off)
-    status: "fixed",
+    status: { open: "production answers the message as metric-only (CA_SALES_POLICY_ENABLED off)" },
     fixFlags: [FLAG, SALES, GLOSSARY],
     async run(t) {
       const thread = start(t);
@@ -299,9 +296,12 @@ export const NOV4_METRICS_NOT_PEOPLE_CASES: ReplayCase[] = [
         id: `nov4-qa-form-name-as-person-${key}${suffix}`,
         title: `QA 4 Nov (CA_SALES off): "${text.slice(0, 60)}…": a Corrective Action, never a Coaching Form; no metric is named as a person; a card with no employee asks for one`,
         report: `QA, 4 Nov 2026, production with CA_SALES off: "${text}"`,
-        // Before FORM_NAME_FROM_ROSTER_ENABLED and CA_SALES_POLICY_ENABLED were on together in production (5 Nov 2026): OPEN,
-        // (a) a Coaching Form card (with no employee); (b), (p1) a Coaching Form card; the reply says "I couldn't find **Club Close** or **Under** in the Woven roster"
-        status: "fixed",
+        status: {
+          open:
+            key === "a"
+              ? "a Coaching Form card (with no employee)"
+              : "a Coaching Form card; the reply says \"I couldn't find **Club Close** or **Under** in the Woven roster\"",
+        },
         fixFlags: [...flags],
         async run(t) {
           const thread = start(t);
