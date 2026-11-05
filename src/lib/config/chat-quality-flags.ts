@@ -2526,3 +2526,16 @@ export function formLeadFullSentenceEnabled(): boolean {
 export function caCardAddedDetailEnabled(): boolean {
   return envFlag("CA_CARD_ADDED_DETAIL_ENABLED");
 }
+
+/**
+ * PAYROLL_ANSWER_SPELLING_ENABLED (Pau via QA, 5 Nov 2026, sf-s23 in the
+ * sibling app; default off; same flag in both apps). "not pay roll
+ * deductable" was not read as the payroll answer. On, "pay roll" and
+ * "deductable" / "deductible" read as payroll deduct
+ * (`forms/payroll-deduct-answer.ts`, which reads the env itself). The
+ * sibling's Observation half has no counterpart here: this app's card has no
+ * Observation of Offense line. Off, as before.
+ */
+export function payrollAnswerSpellingEnabled(): boolean {
+  return envFlag("PAYROLL_ANSWER_SPELLING_ENABLED");
+}

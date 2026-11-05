@@ -127,6 +127,7 @@ export const NOV5_PAU_SF_S21_S25_TWIN_CASES: ReplayCase[] = [
     report: `${REPORT}, sf-s23`,
     // Holds in this app, also with the live trace's intent read (policyHeading): the card here has no Observation of Offense line and makes no "as you said" claim on this path (the sibling app's bug); kept as a guard.
     status: "fixed",
+    fixFlags: ["PAYROLL_ANSWER_SPELLING_ENABLED"],
     async run(t) {
       const thread = start(t);
       await thread.say("can you write me a Ca for wynne sarrow for performance for october");
