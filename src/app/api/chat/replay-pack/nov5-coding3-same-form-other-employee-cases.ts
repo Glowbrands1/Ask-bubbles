@@ -26,9 +26,9 @@ import { STAFF, WEST_DODGE, noClaimWithoutUpdate, type DirectoryRow, type Replay
  *       screen) and FORM_TYPE_SWITCH_AFTER_CREATE_NOTE_ENABLED (after Create),
  *       both on in this app's production, read the short "make … coaching"
  *       turn as "change this to a coaching form" and drop the name
- *       (`lib/ai/form-type-switch.ts`). SECOND_FORM_ENABLED (off here, on in
- *       Ask Sunny) does not change this: Ask Sunny gives <B>'s card because
- *       both switch flags are off there.
+ *       (`lib/ai/form-type-switch.ts`). SECOND_FORM_ENABLED does not change
+ *       this; the sibling app (the same code) has the same switch flags on
+ *       and gives <A>'s card too.
  */
 
 type T = ReplayContext;
@@ -83,7 +83,7 @@ async function lioraDraft(t: T, thread: ReturnType<T["thread"]>): Promise<string
   return id;
 }
 
-const REPORT_A = "QA's overnight scan of production chats, 4 Nov 2026, sf-s11 (Ask Sunny; the same code here): \"Can you do the same thing for <B> but switch it to a written\"";
+const REPORT_A = "QA's overnight scan of production chats, 4 Nov 2026, sf-s11 (the sibling app; the same code here): \"Can you do the same thing for <B> but switch it to a written\"";
 const REPORT_B = "Location manager via QA, replay set b13: \"can you create the same draft that we did with <C> by changing the name and position?\"";
 const REPORT_C = "QA, 5 Nov 2026 (this app's production): with <A>'s Corrective Action card open, \"also make a coaching form for <B>\" gave a Coaching card for <A>";
 
@@ -110,7 +110,7 @@ export const NOV5_CODING3_SAME_FORM_OTHER_EMPLOYEE_CASES: readonly ReplayCase[] 
     id: "nov5-coding3-sfo-b-same-draft-own-draft-open",
     title: "(b) with Liora's own Coaching draft open, \"can you create the same draft that we did with Liora Pellow by changing the name and position?\" — never a card for Liora, her draft untouched",
     report: `${REPORT_B}; Liora's own draft open, the new person not named yet`,
-    // Run 5 Nov 2026 (production flags): the answering model answers; no card, Liora's draft as it was. Open in Ask Sunny (INTENT_EXTRACTION_ENABLED makes a second Liora card).
+    // Run 5 Nov 2026 (production flags): the answering model answers; no card, Liora's draft as it was. Open in the sibling app (INTENT_EXTRACTION_ENABLED makes a second Liora card).
     status: "fixed",
     async run(t) {
       const thread = start(t);
@@ -150,7 +150,7 @@ export const NOV5_CODING3_SAME_FORM_OTHER_EMPLOYEE_CASES: readonly ReplayCase[] 
     id: "nov5-coding3-sfo-c-also-coaching-card-open",
     title: "(c) with Mireya's CA card on screen (not created), \"also make a coaching form for Caspian Drummet\" — a Coaching card for Caspian, never for Mireya",
     report: `${REPORT_C}; the card not created yet`,
-    // Run 5 Nov 2026 (production flags): a Coaching card for Mireya Vantrell (FORM_TYPE_SWITCH_ENABLED). Fixed in Ask Sunny, where the flag is off.
+    // Run 5 Nov 2026 (production flags): a Coaching card for Mireya Vantrell (FORM_TYPE_SWITCH_ENABLED). Open in the sibling app too (the same flag is on there).
     status: { open: "a Coaching card for Mireya Vantrell: FORM_TYPE_SWITCH_ENABLED reads the turn as \"change this to a coaching form\" and Caspian Drummet's name is dropped" },
     async run(t) {
       const thread = start(t);
@@ -169,7 +169,7 @@ export const NOV5_CODING3_SAME_FORM_OTHER_EMPLOYEE_CASES: readonly ReplayCase[] 
     id: "nov5-coding3-sfo-c-also-coaching-after-create",
     title: "(c) with Mireya's CA created and open, \"also make a coaching form for Caspian Drummet\" — a Coaching card for Caspian; Mireya's CA untouched",
     report: `${REPORT_C}; after Create`,
-    // Run 5 Nov 2026 (production flags): "You already have a Corrective Action draft for Mireya Vantrell. I'll start a Coaching Form too" — for Mireya. Fixed in Ask Sunny.
+    // Run 5 Nov 2026 (production flags): "You already have a Corrective Action draft for Mireya Vantrell. I'll start a Coaching Form too" — for Mireya. Open in the sibling app too.
     status: { open: "a Coaching card for Mireya Vantrell: FORM_TYPE_SWITCH_AFTER_CREATE_NOTE_ENABLED reads the turn as her CA request with the coaching form named, and Caspian Drummet's name is dropped" },
     async run(t) {
       const thread = start(t);
