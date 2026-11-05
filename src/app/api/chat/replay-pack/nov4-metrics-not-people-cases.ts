@@ -112,7 +112,8 @@ export const NOV4_METRICS_NOT_PEOPLE_CASES: ReplayCase[] = [
     id: "nov4-pau-metrics-not-people-typo",
     title: "negative control: a typo of a roster person on the same message still gets the close-match note",
     report: `${REPORT}: negative control, a typo of a roster name`,
-    status: "fixed",
+    // production-flags.json corrected to Vercel (QA, 5 Nov 2026): GROUNDED_ENTITIES_ENABLED is off in production since 24 Oct (a deliberate rollback), so a name on no roster goes on the card (no close-match note). Recorded OPEN, a production defect.
+    status: { open: "production: GROUNDED_ENTITIES_ENABLED off since 24 Oct (deliberate rollback: dropped non-roster names while ANTI_LOOP off; Vercel comment) — a name on no roster goes on the card (no close-match note)" },
     fixFlags: [FLAG, SALES, GLOSSARY],
     async run(t) {
       const thread = start(t);
@@ -126,13 +127,16 @@ export const NOV4_METRICS_NOT_PEOPLE_CASES: ReplayCase[] = [
     id: "nov4-pau-metrics-not-people-unknown",
     title: "negative control: a full name nobody on the roster shares, typed alone, is announced as not on the roster, flag on or off",
     report: `${REPORT}: negative control, a person not on the roster`,
-    status: "fixed",
+    // production-flags.json corrected to Vercel (QA, 5 Nov 2026): GROUNDED_ENTITIES_ENABLED is off in production since 24 Oct (a deliberate rollback), so a name on no roster goes on the card (the unknown person is not announced). Recorded OPEN, a production defect.
+    status: { open: "production: GROUNDED_ENTITIES_ENABLED off since 24 Oct (deliberate rollback: dropped non-roster names while ANTI_LOOP off; Vercel comment) — a name on no roster goes on the card (the unknown person is not announced)" },
     /*
      * The middle ground (QA, 4 Nov 2026): a nobody-shaped candidate is set
      * aside only when the same message names somebody on the roster. Nobody
      * here is on it, so the message is read as before.
      */
+    // The fix-flag run: fails with production's real flags (QA Vercel read 5 Nov); tracked: GROUNDED_ENTITIES_ENABLED (off in production since 24 Oct, a deliberate rollback) — the unknown person is not announced.
     fixFlags: [FLAG, SALES, GLOSSARY],
+    fixStatus: { open: "fails with production's real flags (QA Vercel read 5 Nov); tracked: GROUNDED_ENTITIES_ENABLED (off in production since 24 Oct, a deliberate rollback) — the unknown person is not announced" },
     async run(t) {
       const thread = start(t);
       const reply = await thread.say(say("Zuleika Brightwell"));
@@ -244,7 +248,8 @@ export const NOV4_METRICS_NOT_PEOPLE_CASES: ReplayCase[] = [
       id: `nov4-qa-roster-${shape}-metrics-not-people`,
       title: `QA 4 Nov: Pau's message 1 for a roster person typed "${typed}": the card is never "Club Close"; it is for Perpetua Thornquist or asks for her`,
       report: `QA, 4 Nov 2026: "I need a corrective action verbal for <Employee R>. This is for Under Performance on PPTA, LPSVA, Club Average, Club Close %, and Spa %." → card Employee "Club Close"`,
-      status: "fixed",
+      // production-flags.json corrected to Vercel (QA, 5 Nov 2026): GROUNDED_ENTITIES_ENABLED is off in production since 24 Oct (a deliberate rollback), so the typed first name is not matched to the roster. Recorded OPEN, a production defect.
+      status: { open: "production: GROUNDED_ENTITIES_ENABLED off since 24 Oct (deliberate rollback: dropped non-roster names while ANTI_LOOP off; Vercel comment) — neither a card for Perpetua Thornquist nor \"Is this for Perpetua Thornquist?\"" },
       fixFlags: [FLAG, SALES, GLOSSARY],
       async run(t) {
         const thread = start(t);

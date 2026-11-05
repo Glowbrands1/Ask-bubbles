@@ -427,7 +427,9 @@ export const NOV3_STEP_B_CASES: readonly ReplayCase[] = [
     title: "\"payroll deduct applies and $3.25 will be deducted from check\" — Yes, $3.25 exactly, and the deduction in the action plan",
     report:
       'HR, 21 Oct 2026: "create ca form for pat rivera for a register shortage on 10-20-26. payroll deduct applies and $3.25 will be deducted from check."',
-    status: { open: "the saved action plan is the generic sentence with no $3.25 deduction in it" },
+    // production-flags.json corrected to Vercel (QA, 5 Nov 2026): PLAN_PAYROLL_SENTENCE_ENABLED is on in production, and with it the saved action plan carries the $3.25 deduction. Was OPEN ("the saved action plan is the generic sentence with no $3.25 deduction in it").
+    // Pau ruled 5 Nov 2026: the AI SHOULD write the Action Plan (ACTION_PLAN_MANAGER_ONLY_ENABLED stays off in both apps).
+    status: "fixed",
     fixFlags: STEP_B_FLAGS,
     async run(t) {
       t.directory(PEOPLE);

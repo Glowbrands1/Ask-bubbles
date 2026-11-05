@@ -413,7 +413,15 @@ describe(`FORM_EDIT_NOOP_GUARD_ENABLED: the overnight scan's sf-s11, "${SF_S11_R
 });
 
 describe("FORM_EDIT_NOOP_GUARD_ENABLED: the reply after an edit is the saved diff", () => {
-  it(`a tool append ("${CA_CHAIN[5]}"): one "Updated:" line, never the old "Changed … to" text`, async () => {
+  /*
+   * PRODUCTION DEFECT (production-flags.json corrected to Vercel, QA 5 Nov 2026): with
+   * ACCOUNT_ONLY_POLICY_QUERY_ENABLED on in production, `withoutInventedDetail`
+   * (forms/account-only-policy-query.ts) rewrites the saved Observation on the edit: the
+   * Expectation sentence the manager did not write is dropped, so the reply reads
+   * "Updated: Observation of Offense: Observed: … 2026. she Must Practice …" instead of
+   * "… Expectation: An…". Expected to fail until fixed; not re-recorded (QA's ruling).
+   */
+  it.fails(`a tool append ("${CA_CHAIN[5]}"): one "Updated:" line, never the old "Changed … to" text`, async () => {
     const thread = await marnieDraft();
     model.next = { text: "I've updated the form.", tool: { ops: [{ op: "append", field: "observation", value: "she Must Practice the sanitizing checklist every shift." }] } };
     const reply = await thread.say(CA_CHAIN[5]);
@@ -430,7 +438,15 @@ describe("FORM_EDIT_NOOP_GUARD_ENABLED: the reply after an edit is the saved dif
    * label, and two changes (an append and a tick) are two lines. The wording names no policy
    * and no warning level, so the turn stays on the edit tool.
    */
-  it("a tick shows the option's label; two changes are two lines", async () => {
+  /*
+   * PRODUCTION DEFECT (production-flags.json corrected to Vercel, QA 5 Nov 2026): with
+   * ACCOUNT_ONLY_POLICY_QUERY_ENABLED on in production, `withoutInventedDetail`
+   * (forms/account-only-policy-query.ts) rewrites the saved Observation on the edit: the
+   * Expectation sentence the manager did not write is dropped, so the reply reads
+   * "Updated: Observation of Offense: Observed: … 2026. she Must Practice …" instead of
+   * "… Expectation: An…". Expected to fail until fixed; not re-recorded (QA's ruling).
+   */
+  it.fails("a tick shows the option's label; two changes are two lines", async () => {
     const thread = await marnieDraft();
     model.next = {
       text: "Done.",

@@ -83,7 +83,9 @@ export const NOV5_REQUEST_SLOT_CASES: ReplayCase[] = [
     title: "Pau's message 1 for \"Remy Fenn\", not on the roster (Remy Calder is): no metric named as a person, no \"Which of them\", never Remy Calder",
     report: `${REPORT}: "Which of them is this Corrective Action Form for — Remy Fenn, Club Close or Under?"`,
     status: { open: "\"I couldn't find **Remy Fenn** or **Club Close** or **Under** in the Woven roster\" (metrics named as people)" },
+    // The fix-flag run: fails with production's real flags (QA Vercel read 5 Nov); tracked: GROUNDED_ENTITIES_ENABLED (off in production since 24 Oct, a deliberate rollback) — neither a card for Remy Fenn nor the note naming only Remy Fenn.
     fixFlags: [FLAG, SALES, GLOSSARY],
+    fixStatus: { open: "fails with production's real flags (QA Vercel read 5 Nov); tracked: GROUNDED_ENTITIES_ENABLED (off in production since 24 Oct, a deliberate rollback) — neither a card for Remy Fenn nor the note naming only Remy Fenn" },
     async run(t) {
       const thread = start(t);
       const reply = await thread.say(say("Remy Fenn"));
@@ -101,7 +103,9 @@ export const NOV5_REQUEST_SLOT_CASES: ReplayCase[] = [
     title: "the same, with the reading models reading \"Remy Fenn\" as typed (the live path): no metric offered, no \"Which of them\", never Remy Calder",
     report: `${REPORT}: the AI reader's path`,
     status: { open: "metrics are named as people beside Remy Fenn" },
+    // The fix-flag run: fails with production's real flags (QA Vercel read 5 Nov); tracked: GROUNDED_ENTITIES_ENABLED (off in production since 24 Oct, a deliberate rollback) — neither a card for Remy Fenn nor the note naming only Remy Fenn.
     fixFlags: [FLAG, SALES, GLOSSARY],
+    fixStatus: { open: "fails with production's real flags (QA Vercel read 5 Nov); tracked: GROUNDED_ENTITIES_ENABLED (off in production since 24 Oct, a deliberate rollback) — neither a card for Remy Fenn nor the note naming only Remy Fenn" },
     async run(t) {
       const thread = start(t);
       const reply = await thread.say(say("Remy Fenn"), { employeeName: "Remy Fenn" });
@@ -217,6 +221,8 @@ export const NOV5_REQUEST_SLOT_CASES: ReplayCase[] = [
         key: "ima-off-roster",
         text: "create a CA form for ima employee, for opening the store late on 9-28-26",
         roster: ROSTER,
+        // production-flags.json corrected to Vercel (QA, 5 Nov 2026). Recorded OPEN, a production defect.
+        open: "production: GROUNDED_ENTITIES_ENABLED off since 24 Oct (deliberate rollback: dropped non-roster names while ANTI_LOOP off; Vercel comment) — the card is for \"ima employee\", a name on no roster",
         check: (card: string | null, reply: string) => {
           expect(card, "a name on no roster is the employee").toBeNull();
           expect(reply, "it does not ask who").toMatch(ASKS_WHO);
@@ -265,18 +271,22 @@ export const NOV5_REQUEST_SLOT_CASES: ReplayCase[] = [
       },
     ] as const
   ).map(
-    ({ key, text, roster, check }): ReplayCase => ({
+    (entry): ReplayCase => {
+      const { key, text, roster, check } = entry;
+      const open = "open" in entry ? entry.open : undefined;
+      return {
       id: `nov5-roster-only-${key}`,
       title: `Pau 5 Nov, only roster people: "${text.split("\n")[0]!.slice(0, 70)}"`,
       report: `Pau, 5 Nov 2026: match the text after "for" against the roster; no match asks who; only roster people are choices — "${text.split("\n")[0]}"`,
-      status: "fixed",
+      status: open ? { open } : "fixed",
       fixFlags: [FLAG, SALES, GLOSSARY],
       async run(t) {
         const thread = start(t, roster);
         const reply = await thread.say(text);
         (check as (card: string | null, reply: string, templateKey?: string | null) => void)(thread.proposal?.employeeName ?? null, reply.content, thread.proposal?.templateKey ?? null);
       },
-    }),
+      };
+    },
   ),
 ];
 
