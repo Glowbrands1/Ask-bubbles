@@ -12,7 +12,7 @@ vi.mock("server-only", () => ({}));
 /**
  * ============================================================================
  * sf-s15: CLEANING LEFT UNDONE IS CARE AND CLEANING, CHOSEN BY THE CODE
- * (POLICY_CLEANING_INCIDENT_ENABLED; port from Ask Sunny)
+ * (POLICY_CLEANING_INCIDENT_ENABLED; ported from the sibling app)
  * ============================================================================
  *
  * QA's overnight scan, 4 Nov 2026, sf-s15, in the manager's exact words (the
