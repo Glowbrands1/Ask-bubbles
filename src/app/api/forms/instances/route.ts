@@ -59,7 +59,10 @@ import {
   payrollDeductAmountFieldEnabled,
   typoReadingRoutesEnabled,
   checkedReadingEnabled,
+  sameFormOtherPersonEnabled,
 } from "@/lib/config/chat-quality-flags";
+import { loadScopedRoster } from "@/lib/forms/employee-roster";
+import { sameFormReadConversation } from "@/lib/forms/same-form-other-person";
 import { readerNamesCardEmployee, recheckCardReading, turnsOf } from "@/lib/ai/reader/recheck";
 import { incidentFingerprint } from "@/lib/forms/incident-key";
 import {
@@ -240,7 +243,12 @@ export async function POST(request: Request) {
       const alsoCalled = await preferredNamesOf(actor.scope, body.employeeName);
       const currency = checkProposalIsCurrent({
         // FORM_TYPE_SWITCH_ENABLED: "change to coaching" is read as the chat read it, so the switched card is current.
-        conversation: switchReadConversation(parseHistory(body.conversation)),
+        // SAME_FORM_OTHER_PERSON_ENABLED: "do the same thing for <B> …" is read as the chat read it — A's turns with B's name. Off: no roster read.
+        conversation: switchReadConversation(
+          sameFormOtherPersonEnabled()
+            ? sameFormReadConversation(parseHistory(body.conversation), await sameFormRoster(actor.scope))
+            : parseHistory(body.conversation),
+        ),
         templateKey: body.templateKey,
         employeeName: body.employeeName,
         alsoCalled,
@@ -720,4 +728,13 @@ function readerSamePerson(
 ): boolean {
   if (!checkedReadingEnabled() || !card.checkedReading || !resolvedName || !card.employeeName) return false;
   return readerNamesCardEmployee(card.checkedReading, turnsOf(card.conversation), card.employeeName, resolvedName);
+}
+
+/** SAME_FORM_OTHER_PERSON_ENABLED: the manager's roster, or none when it cannot be read. */
+async function sameFormRoster(scope: Parameters<typeof loadScopedRoster>[0]) {
+  try {
+    return await loadScopedRoster(scope);
+  } catch {
+    return [];
+  }
 }

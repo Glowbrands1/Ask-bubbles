@@ -1080,6 +1080,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "AI_READS_CODE_CHECKS_ENABLED",
   "LAST_FIRST_NAME_READ_ENABLED",
   "POLICY_CITATION_CHECK_ENABLED",
+  "SAME_FORM_OTHER_PERSON_ENABLED",
 ] as const;
 
 /**
@@ -2603,4 +2604,19 @@ export function rosterNotFoundAnyPhrasingEnabled(): boolean {
  */
 export function metricGuardEnabled(): boolean {
   return envFlag("METRIC_GUARD_ENABLED");
+}
+
+/**
+ * SAME_FORM_OTHER_PERSON_ENABLED (QA's overnight scan sf-s11, 4 Nov 2026, and
+ * coding3 (a), 5 Nov 2026; same flag in both apps; default off). With <A>'s
+ * card on screen or <A>'s form created and open, "Can you do the same thing
+ * for <B> but switch it to a written" made <A>'s card Written, or answered
+ * with no card for <B>. With the flag on, a turn naming exactly one other
+ * roster person, with no account and no form of its own, starts <B>'s card
+ * from <A>'s request turns with the names swapped and this turn's level
+ * (`forms/same-form-other-person.ts`); Create drafts it the same way. Off, as
+ * before.
+ */
+export function sameFormOtherPersonEnabled(): boolean {
+  return envFlag("SAME_FORM_OTHER_PERSON_ENABLED");
 }
