@@ -38,6 +38,15 @@ export interface ApprovedGoogleStore {
   /** Two-letter state. */
   readonly state: string;
   readonly postalCode: string;
+  /**
+   * Buff City Soap's own number for the store, where it differs from the code
+   * Google Business Profile lists (District Manager, 3 Nov 2026: the Dawley
+   * Farms store is 0309; its Google profile's code is 338). Shown to managers;
+   * never used to match a Google location — `code` and the address do that.
+   */
+  readonly companyNumber?: string;
+  /** What managers call the store besides its city ("Dawley Farms"), read when a question names a store. */
+  readonly alsoKnownAs?: readonly string[];
 }
 
 export const APPROVED_GOOGLE_STORES: readonly ApprovedGoogleStore[] = [
@@ -85,6 +94,8 @@ export const APPROVED_GOOGLE_STORES: readonly ApprovedGoogleStore[] = [
     city: "Sioux Falls",
     state: "SD",
     postalCode: "57110",
+     companyNumber: "309",
+    alsoKnownAs: ["Dawley Farms"],
   },
   {
     code: "66",
@@ -112,6 +123,11 @@ export const APPROVED_GOOGLE_STORES: readonly ApprovedGoogleStore[] = [
  * title with punctuation and spacing removed.
  */
 export const OTHER_BRAND_TITLE_MARKERS: readonly string[] = ["suntancity", "suntan city", "sun tan city"];
+
+/** The store number a manager sees for a Google store code: the company's own number, else the code. */
+export function googleStoreNumber(code: string): string {
+  return approvedStoreByCode(code)?.companyNumber ?? code;
+}
 
 export function approvedStoreByCode(code: string): ApprovedGoogleStore | undefined {
   return APPROVED_GOOGLE_STORES.find((store) => store.code === code);
