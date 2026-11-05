@@ -1080,6 +1080,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "AI_READS_CODE_CHECKS_ENABLED",
   "LAST_FIRST_NAME_READ_ENABLED",
   "POLICY_CITATION_CHECK_ENABLED",
+  "SWITCH_NOT_FOR_ANOTHER_PERSON_ENABLED",
 ] as const;
 
 /**
@@ -2603,4 +2604,18 @@ export function rosterNotFoundAnyPhrasingEnabled(): boolean {
  */
 export function metricGuardEnabled(): boolean {
   return envFlag("METRIC_GUARD_ENABLED");
+}
+
+/**
+ * SWITCH_NOT_FOR_ANOTHER_PERSON_ENABLED (QA, 5 Nov 2026; same flag in both
+ * apps; default off). With <A>'s Corrective Action card open, or created and
+ * open, "also make a coaching form for <B>" gave a Coaching card for <A>: the
+ * form-type switch read the short "make … coaching" turn as "change this to a
+ * coaching form" and dropped <B>. With the flag on, a turn that names somebody
+ * on the manager's roster other than the card's or the open form's employee is
+ * never a switch, in the chat, after Create and at Create alike
+ * (`ai/form-type-switch.ts`). Off, as before.
+ */
+export function switchNotForAnotherPersonEnabled(): boolean {
+  return envFlag("SWITCH_NOT_FOR_ANOTHER_PERSON_ENABLED");
 }

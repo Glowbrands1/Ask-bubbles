@@ -88,6 +88,7 @@ import {
   googleReviewsInChatEnabled,
   typoReadingCopyEnabled,
   caSalesPolicyEnabled,
+  switchNotForAnotherPersonEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { gateTexts, searchWithPlan } from "./continuation";
 import { fieldsFromManagerText, mergeConfirmed, retainFieldsInReply } from "./form-field-state";
@@ -249,7 +250,9 @@ async function answerQuestionAnyPath(
   }
   // FORM_TYPE_SWITCH: the switched card is drafted from the account, never from the switch turn (read on the turns as sent).
   // MANAGER_NAME_NOT_EMPLOYEE_ENABLED: last — the manager's own name is never the employee.
-  const answered = withManagerNameGuard(withSwitchSources(withoutSensitiveDefaults(await answerQuestionTraced(request, actor, memory), request.question), request), request);
+  // SWITCH_NOT_FOR_ANOTHER_PERSON_ENABLED: "also make a coaching form for <B>" stays the source of B's card. Off: no roster read.
+  const switchPeople = switchNotForAnotherPersonEnabled() ? await loadRosterQuiet(actor) : [];
+  const answered = withManagerNameGuard(withSwitchSources(withoutSensitiveDefaults(await answerQuestionTraced(request, actor, memory), request.question), request, switchPeople), request);
   /*
    * CA_SALES_POLICY_ENABLED: a reply about a policy and an employee the roster
    * recognises ends with ONE offer to start a Corrective Action citing that
@@ -279,7 +282,9 @@ async function answerQuestionTraced(
   // FORM_TYPE_SWITCH_ENABLED: "change to coaching" with the card open switches it to the other form.
   // ADDITIONAL_LOCATION_TAKEN_ENABLED: "Store: Kearney." from a manager who covers Kearney is read as the change it is.
   // FIRST_NAME_SUGGEST_ENABLED: "yes" to "Is this for **Quinn Marlowe**?" is read as that name.
-  const read = withFormTypeSwitch(withAdditionalStore(withTerseSlots(withNameBeforeTitle(withTypoReadingCopy(await withFirstNameAnswerFor(request, actor), names))), actor));
+  // SWITCH_NOT_FOR_ANOTHER_PERSON_ENABLED: "also make a coaching form for <B>" on <A>'s card is B's request, never a switch. Off: no roster read.
+  const switchPeople = switchNotForAnotherPersonEnabled() ? await loadRosterQuiet(actor) : [];
+  const read = withFormTypeSwitch(withAdditionalStore(withTerseSlots(withNameBeforeTitle(withTypoReadingCopy(await withFirstNameAnswerFor(request, actor), names))), actor), switchPeople);
   if (!chatTraceEnabled()) return answerQuestionBody(read, actor, memory);
   const draft = openChatTrace({
     conversationId: request.conversationId,
