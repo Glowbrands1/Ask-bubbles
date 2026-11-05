@@ -149,6 +149,7 @@ import { keepManagerActionPlan } from "./manager-action-plan-reply";
 import { withoutReportTurnsForForm } from "./report-turns";
 import { withManagerNameGuard } from "./manager-name-guard";
 import { withJobTitleFromWords } from "./job-title-from-words";
+import { withCoachingWhatHappened } from "./coaching-what-happened";
 import { withFreshDateReask } from "./date-reask-fresh";
 import { withFirstNameAsk } from "./first-name-ask";
 import { withFirstNameAnswerFor, withFirstNameSuggestFor } from "./first-name-suggest";
@@ -297,7 +298,7 @@ async function answerQuestionBody(
         withPayrollTypoAnswer(
           withUnknownNameAsk(
             withFirstNameAsk(
-              withWarningLevelFromClause(withFreshDateReask(withJobTitleFromWords(await answerQuestionCore(request, actor, memory), request), request), request),
+              withWarningLevelFromClause(withFreshDateReask(withJobTitleFromWords(withCoachingWhatHappened(await answerQuestionCore(request, actor, memory), request), request), request), request),
               request,
             ),
             request,
