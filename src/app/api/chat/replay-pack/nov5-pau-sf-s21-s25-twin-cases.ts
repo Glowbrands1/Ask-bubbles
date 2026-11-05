@@ -85,7 +85,10 @@ export const NOV5_PAU_SF_S21_S25_TWIN_CASES: ReplayCase[] = [
     async run(t) {
       const thread = start(t);
       const said: string[] = [S21_T1];
+      // The sibling app's live trace (5 Nov 2026): the intent read returned policyHeading "Standards of Conduct" for this turn.
+      t.slotsRead({ policyHeading: "Standards of Conduct" });
       const first = await thread.say(S21_T1);
+      t.slotsRead({});
       expect(thread.proposal, `no CA card for Wynne Sarrow:\n${first.content}`).toMatchObject({ templateKey: "dpoa", employeeName: "Wynne Sarrow" });
       expect(claimsUnsaid(first, said), `"as you said" for a policy the manager never typed:\n${policyLine(first)}`).toBeNull();
       t.draftWrites({ observation: "Observed:\nIn October 2026, Wynne completed 146 transactions and was below average in UPT, Average Sale, and Conversion." });
@@ -122,7 +125,7 @@ export const NOV5_PAU_SF_S21_S25_TWIN_CASES: ReplayCase[] = [
     id: "nov5-twin-sf-s23-payroll-answer-and-policy-change",
     title: "sf-s23: \"not pay roll deductable\" answers the payroll question (not the Observation, not asked again); \"under performance not standard of conduct\" changes the Action Plan and Direct policy too",
     report: `${REPORT}, sf-s23`,
-    // Holds in this app: the card here has no Observation of Offense line and no "as you said" policy claim on this path (the sibling app's bug); kept as a guard.
+    // Holds in this app, also with the live trace's intent read (policyHeading): the card here has no Observation of Offense line and makes no "as you said" claim on this path (the sibling app's bug); kept as a guard.
     status: "fixed",
     async run(t) {
       const thread = start(t);
@@ -136,13 +139,15 @@ export const NOV5_PAU_SF_S21_S25_TWIN_CASES: ReplayCase[] = [
     id: "nov5-twin-sf-s24-must-see-behaviors-and-coaching-on-file",
     title: "sf-s24: \"it should be must see behaviors and she also had coaching on file …\": no \"Standards of Conduct, as you said\"; the card and the saved form agree",
     report: `${REPORT}, sf-s24`,
-    // Holds in this app: the card here has no Observation of Offense line and no "as you said" policy claim on this path (the sibling app's bug); kept as a guard.
+    // Holds in this app, also with the live trace's intent read (policyHeading): the card here has no Observation of Offense line and makes no "as you said" claim on this path (the sibling app's bug); kept as a guard.
     status: "fixed",
     async run(t) {
       const thread = start(t);
       const t1 = "Can you write me a performace ca for an employee who did not meet their numbers for the month of october Wynne Sarrow  - verbal\n146 transactions \nBelow in UPT, Average Sale, Conversion";
       const t2 = "it should be must see behaviors and she also had coaching on file for open ended questions coahing done one 10/22 and bundle coachings done 10/15";
       await thread.say(t1);
+      // The sibling app's live trace: the intent read returned policyHeading "Standards of Conduct" for this turn.
+      t.slotsRead({ policyHeading: "Standards of Conduct" });
       const reply = await thread.say(t2);
       expect(claimsUnsaid(reply, [t1, t2]), `"as you said" for a policy the manager never typed:\n${policyLine(reply)}`).toBeNull();
     },
@@ -151,7 +156,7 @@ export const NOV5_PAU_SF_S21_S25_TWIN_CASES: ReplayCase[] = [
     id: "nov5-twin-sf-s25-closing-no-late-opening-claim",
     title: "sf-s25: a closing account is never \"Late Opening, as you said\"; the Observation is the incident, not the earlier question",
     report: `${REPORT}, sf-s25`,
-    // Holds in this app: the card here has no Observation of Offense line and no "as you said" policy claim on this path (the sibling app's bug); kept as a guard.
+    // Holds in this app, also with the live trace's intent read (policyHeading): the card here has no Observation of Offense line and makes no "as you said" claim on this path (the sibling app's bug); kept as a guard.
     status: "fixed",
     async run(t) {
       const thread = start(t);
@@ -162,6 +167,8 @@ export const NOV5_PAU_SF_S21_S25_TWIN_CASES: ReplayCase[] = [
       ];
       await thread.say(said[0]!);
       await thread.say(said[1]!);
+      // The sibling app's live trace: the intent read returned policyHeading "Late Opening" for this turn.
+      t.slotsRead({ policyHeading: "Late Opening" });
       const reply = await thread.say(said[2]!);
       expect(claimsUnsaid(reply, said), `"as you said" for a policy the manager never typed:\n${policyLine(reply)}`).toBeNull();
       expect(observationLine(reply), `the earlier question is in the Observation:\n${observationLine(reply)}`).not.toMatch(/What policy would it be/i);
