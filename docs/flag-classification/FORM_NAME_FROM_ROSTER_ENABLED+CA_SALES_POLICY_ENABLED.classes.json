@@ -1,0 +1,467 @@
+{
+  "src/app/api/chat/exit-shortcut-fields-e2e.test.ts :: the exit form's own words are not stripped as unknown people (EXIT_TERMS_NOT_NAMES_ENABLED) off: the words are stripped, and the line is blank": {
+    "category": "INTENDED",
+    "twin": "itself, FORM_NAME_FROM_ROSTER_ENABLED unset (CI default): pins EXIT_TERMS_NOT_NAMES off",
+    "reason": "With the flag on, the message names a roster person (Marnie), so words shaped like nobody on the roster are not stripped as unknown people (the flag's rule): the exit form keeps \"drop wage and forfeit bonus\" even with EXIT_TERMS_NOT_NAMES off. Same mechanism, wider effect; the words kept is the intended outcome."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-ca-sales-low-sales: a CA for low sales / not hitting goals cites the Standards of Conduct, heading and page — OPEN in production (no card: a low-sales request is answered with the progression (metric only), so no policy is cited)": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default); src/lib/forms/ca-sales-policy.test.ts (flag off: the reading and card line are as on main)",
+    "reason": "Client request (4 Nov 2026): a CA for sales or Under Performance cites the Standards of Conduct. With the flag on, a named Under Performance, or a stated shortfall, reads as the Standards of Conduct; the draft ticks it and Direct policy cites that section (heading and page from the manual) instead of leaving it blank."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-ca-sales-msb: a CA for MSB (Must See Behaviors) cites the Standards of Conduct, heading and page — OPEN in production (no policy is cited for an MSB corrective action)": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default); src/lib/forms/ca-sales-policy.test.ts (flag off: the reading and card line are as on main)",
+    "reason": "Client request (4 Nov 2026): a CA for sales or Under Performance cites the Standards of Conduct. With the flag on, a named Under Performance, or a stated shortfall, reads as the Standards of Conduct; the draft ticks it and Direct policy cites that section (heading and page from the manual) instead of leaving it blank."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-cleaning-basis-upkeep-duties: \"did not complete daily cleaning duties\" with the model's upkeep basis: Other — OPEN in production (with production's flags the task reading ticks and cites the Standards of Conduct)": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default); nov4-cleaning-negative-no-basis; src/lib/forms/ca-conduct-reason.test.ts",
+    "reason": "Pau, 4 Nov 2026: a cleaning CA does not cite the Standards of Conduct by default. With the flag on, the model's Standards of Conduct tick moves to Other when its offense_basis is upkeep_or_task and no reader gives a reason (ca-conduct-reason.ts); off, the tick stands, as in production today."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-cleaning-bathrooms-not-conduct: \"the bathrooms were left dirty at close\": the model's Standards of Conduct tick moves to Other, no Standards of Conduct citation — OPEN in production (with production's flags the model's Standards of Conduct tick stands and is cited (p.12))": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default); nov4-cleaning-negative-no-basis; src/lib/forms/ca-conduct-reason.test.ts",
+    "reason": "Pau, 4 Nov 2026: a cleaning CA does not cite the Standards of Conduct by default. With the flag on, the model's Standards of Conduct tick moves to Other when its offense_basis is upkeep_or_task and no reader gives a reason (ca-conduct-reason.ts); off, the tick stands, as in production today."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-cleaning-negative-msb: negative control: an MSB CA keeps the Standards of Conduct — OPEN in production (with production's flags an MSB CA gets no card (nov4-mgr-4))": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default); nov4-mgr-4",
+    "reason": "Negative control for the cleaning guard: an MSB CA (offense_basis msb) keeps the Standards of Conduct. Open with production's flags only because this app makes no card for an MSB CA there (nov4-mgr-4); holds with the flag."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-mgr-4-msb-october: \"MSB CA for Galen Thackeray for underperformance in the month of October\" — a CA card, MSB never a name, cites the Standards of Conduct — OPEN in production (no card at all: \"MSB CA for …\" is answered as a policy question (the pack's stand-in answer) with production's flags)": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default); ca-sales-policy.test.ts (detectTemplateIntent on/off)",
+    "reason": "\"MSB CA for <name> …\": with the flag on a leading glossary term is the reason, not the request (template-intent.ts), so the CA card is made and cites the Standards of Conduct; off, answered as a policy question as on main (open with production's flags)."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-mgr-5-msb-soc: \"Quintessa Harrowmere did not follow must see behaviors which violates standards of conduct policy\" — asks once \"Do you want a Corrective Action for …?\" (Standards of Conduct); \"yes\" makes the card, citing the Standards of Conduct — OPEN in production (turn 1 is answered as a policy question (the pack's stand-in answer): no offer \"Do you want a Corrective Action for …?\", so \"yes\" makes no card)": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default); nov4-pau5-5b (no employee, no offer)",
+    "reason": "Pau, 4 Nov 2026, #5: no routing change; the policy answer ends with one offer, \"Do you want a Corrective Action for <name>?\", and \"yes\" makes the card (ca-offer.ts). The case's expectation is Success's #433 (title changed since the last table)."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-pau-metrics-not-people-lowercase-first-name: Pau's message with the first name typed in lowercase (\"for perpetua\"): Perpetua Thornquist, never a \"Club Close\" card; Standards of Conduct cited — OPEN in production (production answers the message as metric-only (CA_SALES_POLICY_ENABLED off))": {
+    "category": "INTENDED",
+    "twin": "the same case with production's flags (flag unset): OPEN, expected to fail",
+    "reason": "An OPEN-in-production case that holds with the flag on (vitest reports the expected failure as failed when the case passes): metric words are never read as people or stripped, and the card is for the roster person, citing the Standards of Conduct."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-pau-metrics-not-people-lowercase-roster-name: negative control: a roster first name typed alone in lowercase (\"perpetua\"), answering who the form is for, is still matched — OPEN in production (production answers turn 1 as metric-only (CA_SALES_POLICY_ENABLED off), so there is no form for \"perpetua\" to answer)": {
+    "category": "INTENDED",
+    "twin": "the same case with production's flags (flag unset): OPEN, expected to fail",
+    "reason": "An OPEN-in-production case that holds with the flag on (vitest reports the expected failure as failed when the case passes): metric words are never read as people or stripped, and the card is for the roster person, citing the Standards of Conduct."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-pau-metrics-not-people: sf-s19: Pau's Under Performance CA on PPTA, LPSVA, Club Average, Club Close %, Spa %: no roster note, the card cites Standards of Conduct — OPEN in production (the reply says \"I couldn't find Club Close or Under in the Woven roster\" and the card cites no policy)": {
+    "category": "INTENDED",
+    "twin": "the same case with production's flags (flag unset)",
+    "reason": "Still OPEN (turn 2 repeats turn 1, step 6), but turn 1 improves: the metrics (\"Average Ticket\", \"Units Per Transaction\", \"Under\") are no longer announced as missing people, and the card's Issue keeps the manager's words."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-pau5-1-verbal-under-performance-metrics: 1. \"I need a corrective action verbal for … This is for Under Performance on PPTA, LPSVA, Club Average, Club Close %, and Spa %.\" — OPEN in production (the metrics \"Club Close\" and \"Under\" are read as names and dropped, so the card cites no policy)": {
+    "category": "INTENDED",
+    "twin": "the same case with production's flags (flag unset): OPEN, expected to fail",
+    "reason": "An OPEN-in-production case that holds with the flag on (vitest reports the expected failure as failed when the case passes): metric words are never read as people or stripped, and the card is for the roster person, citing the Standards of Conduct."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-pau5-2-ca-for-msb: 2. \"I need to make a corrective action for msb\": MSB is never the employee; the one question is who it is for — OPEN in production (\"msb\" is looked up as a person with production's flags)": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default); nov4-mgr-2",
+    "reason": "\"I need to make a corrective action for msb\": with the flag on MSB is never the employee and the reason is never asked again; open with production's flags, where msb is looked up as a person."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-pau5-4-msb-ca-underperformance-october: 4. \"MSB CA for … for underperformance in the month of October\" — OPEN in production (with production's flags the CA is not cited as the Standards of Conduct)": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default); ca-sales-policy.test.ts (detectTemplateIntent on/off)",
+    "reason": "\"MSB CA for <name> …\": with the flag on a leading glossary term is the reason, not the request (template-intent.ts), so the CA card is made and cites the Standards of Conduct; off, answered as a policy question as on main (open with production's flags)."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-pau5-5-must-see-behaviors-violates-soc: 5. \"… did not follow must see behaviors which violates standards of conduct policy\": asks once \"Do you want a Corrective Action for <name>?\"; the card opens only on \"yes\" — OPEN in production (no offer: the policy answer ends without offering a Corrective Action)": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default); nov4-pau5-5b (negative control: no employee, no offer)",
+    "reason": "Pau, 4 Nov 2026, #5: the answer ends with \"Do you want a Corrective Action for <name>?\" citing the Standards of Conduct; the card opens only on yes."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-qa-form-name-as-person-a-with-sales: QA 4 Nov (CA_SALES off): \"Create a Corrective Action for Coaching Form…\": a Corrective Action, never a Coaching Form; no metric is named as a person; a card with no employee asks for one — OPEN in production (a Coaching Form card (with no employee))": {
+    "category": "INTENDED",
+    "twin": "the case's production run (OPEN, flags off); request-slot.test.ts / form-name-from-roster.test.ts (flag off: as on main)",
+    "reason": "An OPEN replay case (expected to fail in production) that holds with FORM_NAME_FROM_ROSTER_ENABLED and CA_SALES_POLICY_ENABLED on: its production run now passes, so `it.fails` reports \"Expect test to fail\" (checked: every one of these rows). This is the fix the case tracks (Pau 4 Nov: metrics are never people; QA/Pau 4 Nov: a form's name is never the employee, the Corrective Action wins; step 5 part 2: the request slot)."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-qa-form-name-as-person-a: QA 4 Nov (CA_SALES off): \"Create a Corrective Action for Coaching Form…\": a Corrective Action, never a Coaching Form; no metric is named as a person; a card with no employee asks for one — OPEN in production (a Coaching Form card (with no employee))": {
+    "category": "INTENDED",
+    "twin": "the case's production run (OPEN, flags off); request-slot.test.ts / form-name-from-roster.test.ts (flag off: as on main)",
+    "reason": "An OPEN replay case (expected to fail in production) that holds with FORM_NAME_FROM_ROSTER_ENABLED and CA_SALES_POLICY_ENABLED on: its production run now passes, so `it.fails` reports \"Expect test to fail\" (checked: every one of these rows). This is the fix the case tracks (Pau 4 Nov: metrics are never people; QA/Pau 4 Nov: a form's name is never the employee, the Corrective Action wins; step 5 part 2: the request slot)."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-qa-form-name-as-person-b-with-sales: QA 4 Nov (CA_SALES off): \"I need a corrective action for Coaching Form. This is for Un…\": a Corrective Action, never a Coaching Form; no metric is named as a person; a card with no employee asks for one — OPEN in production (a Coaching Form card; the reply says \"I couldn't find **Club Close** or **Under** in the Woven roster\")": {
+    "category": "INTENDED",
+    "twin": "the case's production run (OPEN, flags off); request-slot.test.ts / form-name-from-roster.test.ts (flag off: as on main)",
+    "reason": "An OPEN replay case (expected to fail in production) that holds with FORM_NAME_FROM_ROSTER_ENABLED and CA_SALES_POLICY_ENABLED on: its production run now passes, so `it.fails` reports \"Expect test to fail\" (checked: every one of these rows). This is the fix the case tracks (Pau 4 Nov: metrics are never people; QA/Pau 4 Nov: a form's name is never the employee, the Corrective Action wins; step 5 part 2: the request slot)."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-qa-form-name-as-person-b: QA 4 Nov (CA_SALES off): \"I need a corrective action for Coaching Form. This is for Un…\": a Corrective Action, never a Coaching Form; no metric is named as a person; a card with no employee asks for one — OPEN in production (a Coaching Form card; the reply says \"I couldn't find **Club Close** or **Under** in the Woven roster\")": {
+    "category": "INTENDED",
+    "twin": "the case's production run (OPEN, flags off); request-slot.test.ts / form-name-from-roster.test.ts (flag off: as on main)",
+    "reason": "An OPEN replay case (expected to fail in production) that holds with FORM_NAME_FROM_ROSTER_ENABLED and CA_SALES_POLICY_ENABLED on: its production run now passes, so `it.fails` reports \"Expect test to fail\" (checked: every one of these rows). This is the fix the case tracks (Pau 4 Nov: metrics are never people; QA/Pau 4 Nov: a form's name is never the employee, the Corrective Action wins; step 5 part 2: the request slot)."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-qa-form-name-as-person-p1-with-sales: QA 4 Nov (CA_SALES off): \"I need a corrective action verbal for Coaching Form. This is…\": a Corrective Action, never a Coaching Form; no metric is named as a person; a card with no employee asks for one — OPEN in production (a Coaching Form card; the reply says \"I couldn't find **Club Close** or **Under** in the Woven roster\")": {
+    "category": "INTENDED",
+    "twin": "the case's production run (OPEN, flags off); request-slot.test.ts / form-name-from-roster.test.ts (flag off: as on main)",
+    "reason": "An OPEN replay case (expected to fail in production) that holds with FORM_NAME_FROM_ROSTER_ENABLED and CA_SALES_POLICY_ENABLED on: its production run now passes, so `it.fails` reports \"Expect test to fail\" (checked: every one of these rows). This is the fix the case tracks (Pau 4 Nov: metrics are never people; QA/Pau 4 Nov: a form's name is never the employee, the Corrective Action wins; step 5 part 2: the request slot)."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-qa-form-name-as-person-p1: QA 4 Nov (CA_SALES off): \"I need a corrective action verbal for Coaching Form. This is…\": a Corrective Action, never a Coaching Form; no metric is named as a person; a card with no employee asks for one — OPEN in production (a Coaching Form card; the reply says \"I couldn't find **Club Close** or **Under** in the Woven roster\")": {
+    "category": "INTENDED",
+    "twin": "the case's production run (OPEN, flags off); request-slot.test.ts / form-name-from-roster.test.ts (flag off: as on main)",
+    "reason": "An OPEN replay case (expected to fail in production) that holds with FORM_NAME_FROM_ROSTER_ENABLED and CA_SALES_POLICY_ENABLED on: its production run now passes, so `it.fails` reports \"Expect test to fail\" (checked: every one of these rows). This is the fix the case tracks (Pau 4 Nov: metrics are never people; QA/Pau 4 Nov: a form's name is never the employee, the Corrective Action wins; step 5 part 2: the request slot)."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov5-request-slot-ca-for-under-performance: QA review: \"I need a CA for Under Performance on …\": the slot is an offense, not a name; it asks who — OPEN in production (\"I couldn't find **Under** in the Woven roster\" and a card for **Club Close**; with the three flags on (before the QA review fix), \"I couldn't find **Under** …\")": {
+    "category": "INTENDED",
+    "twin": "the case's production run (OPEN, flags off); request-slot.test.ts / form-name-from-roster.test.ts (flag off: as on main)",
+    "reason": "An OPEN replay case (expected to fail in production) that holds with FORM_NAME_FROM_ROSTER_ENABLED and CA_SALES_POLICY_ENABLED on: its production run now passes, so `it.fails` reports \"Expect test to fail\" (checked: every one of these rows). This is the fix the case tracks (Pau 4 Nov: metrics are never people; QA/Pau 4 Nov: a form's name is never the employee, the Corrective Action wins; step 5 part 2: the request slot)."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov5-request-slot-no-name-verbal: QA review: \"I need a corrective action verbal. This is for Under Performance on …\" names nobody: it asks who; never \"Under Performance\" or \"Under\" — OPEN in production (\"I couldn't find **Club Close** or **Under** in the Woven roster\"; with the three flags on (before the QA review fix), \"I couldn't find **Under** …\")": {
+    "category": "INTENDED",
+    "twin": "the case's production run (OPEN, flags off); request-slot.test.ts / form-name-from-roster.test.ts (flag off: as on main)",
+    "reason": "An OPEN replay case (expected to fail in production) that holds with FORM_NAME_FROM_ROSTER_ENABLED and CA_SALES_POLICY_ENABLED on: its production run now passes, so `it.fails` reports \"Expect test to fail\" (checked: every one of these rows). This is the fix the case tracks (Pau 4 Nov: metrics are never people; QA/Pau 4 Nov: a form's name is never the employee, the Corrective Action wins; step 5 part 2: the request slot)."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov5-request-slot-off-roster-name-models: the same, with the reading models reading \"Remy Fenn\" as typed (the live path): no metric offered, no \"Which of them\", never Remy Calder — OPEN in production (metrics are named as people beside Remy Fenn)": {
+    "category": "INTENDED",
+    "twin": "the case's production run (OPEN, flags off); request-slot.test.ts / form-name-from-roster.test.ts (flag off: as on main)",
+    "reason": "An OPEN replay case (expected to fail in production) that holds with FORM_NAME_FROM_ROSTER_ENABLED and CA_SALES_POLICY_ENABLED on: its production run now passes, so `it.fails` reports \"Expect test to fail\" (checked: every one of these rows). This is the fix the case tracks (Pau 4 Nov: metrics are never people; QA/Pau 4 Nov: a form's name is never the employee, the Corrective Action wins; step 5 part 2: the request slot)."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov5-request-slot-off-roster-name: Pau's message 1 for \"Remy Fenn\", not on the roster (Remy Calder is): no metric named as a person, no \"Which of them\", never Remy Calder — OPEN in production (\"I couldn't find **Remy Fenn** or **Club Close** or **Under** in the Woven roster\" (metrics named as people))": {
+    "category": "INTENDED",
+    "twin": "the case's production run (OPEN, flags off); request-slot.test.ts / form-name-from-roster.test.ts (flag off: as on main)",
+    "reason": "An OPEN replay case (expected to fail in production) that holds with FORM_NAME_FROM_ROSTER_ENABLED and CA_SALES_POLICY_ENABLED on: its production run now passes, so `it.fails` reports \"Expect test to fail\" (checked: every one of these rows). This is the fix the case tracks (Pau 4 Nov: metrics are never people; QA/Pau 4 Nov: a form's name is never the employee, the Corrective Action wins; step 5 part 2: the request slot)."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov5-request-slot-on-roster-name: the same message for Remy Fenn ON the roster: the card is for Remy Fenn and cites the Standards of Conduct — OPEN in production (production answers the message as metric-only (CA_SALES_POLICY_ENABLED off))": {
+    "category": "INTENDED",
+    "twin": "the case's production run (OPEN, flags off); request-slot.test.ts / form-name-from-roster.test.ts (flag off: as on main)",
+    "reason": "An OPEN replay case (expected to fail in production) that holds with FORM_NAME_FROM_ROSTER_ENABLED and CA_SALES_POLICY_ENABLED on: its production run now passes, so `it.fails` reports \"Expect test to fail\" (checked: every one of these rows). This is the fix the case tracks (Pau 4 Nov: metrics are never people; QA/Pau 4 Nov: a form's name is never the employee, the Corrective Action wins; step 5 part 2: the request slot)."
+  },
+  "src/app/api/forms/corrective-action-revision-5-e2e.test.ts :: a Corrective Action filed on revision 6, revised after revision 7 (Type of Offense, 4 Nov 2026) with the deployment's flags (production: CA_SALES_POLICY_ENABLED off), an old Tardiness tick is carried as is": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default); the same file's flag-on case (an old Tardiness tick maps to Attendance Policy)",
+    "reason": "#424 Option A (approved): with the flag on, Edit as new draft onto a newer template version converts the old tick; this ambient test asserts the deployment's flags (production: off) carry it as is."
+  },
+  "src/app/api/forms/pm-draft-route.single-writer.test.ts :: HR feedback 30 Sep — the Corrective Action's policy, from the manager's words ticks a named policy with no section, and leaves Direct policy blank rather than inventing one": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default); src/lib/forms/ca-sales-policy.test.ts (flag off: the reading and card line are as on main)",
+    "reason": "Client request (4 Nov 2026): a CA for sales or Under Performance cites the Standards of Conduct. With the flag on, a named Under Performance, or a stated shortfall, reads as the Standards of Conduct; the draft ticks it and Direct policy cites that section (heading and page from the manual) instead of leaving it blank."
+  },
+  "src/app/api/forms/pm-draft-route.test.ts :: HR feedback 30 Sep — the Corrective Action's policy, from the manager's words ticks a named policy with no section, and leaves Direct policy blank rather than inventing one": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default); src/lib/forms/ca-sales-policy.test.ts (flag off: the reading and card line are as on main)",
+    "reason": "Client request (4 Nov 2026): a CA for sales or Under Performance cites the Standards of Conduct. With the flag on, a named Under Performance, or a stated shortfall, reads as the Standards of Conduct; the draft ticks it and Direct policy cites that section (heading and page from the manual) instead of leaving it blank."
+  },
+  "src/lib/ai/ca-template-map-f4.test.ts :: CA_TEMPLATE_MAP_ENABLED leaves the other readings alone a metric on its own stays the progression in the intent read": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default): the metric-only refusal holds byte for byte; src/lib/forms/ca-sales-policy.test.ts (\"off: a metric named and judged is the progression, as on main\")",
+    "reason": "Pau, 4 Nov 2026: under CA_SALES_POLICY_ENABLED a stated sales shortfall (a metric named and judged, the existing reader in corrective-action-intake.ts) goes to the Corrective Action Form citing the Standards of Conduct, instead of the progression's metric-only refusal (framework §7)."
+  },
+  "src/lib/ai/chat-glossary-flags-off.test.ts :: CHAT_GLOSSARY_ENABLED off: the model requests and replies, byte for byte production's flags and no flags: equal to main": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default)",
+    "reason": "A flags-off byte-identity test (\"production's flags and no flags: equal to main\"): with CA_SALES_POLICY_ENABLED forced on it differs by design. It passes with the flag off, which is the state it pins."
+  },
+  "src/lib/ai/corrective-action-conversation.test.ts :: a metric on its own is answered with the progression does not open a Corrective Action Form off a low Club Close": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default): the metric-only refusal holds byte for byte; src/lib/forms/ca-sales-policy.test.ts (\"off: a metric named and judged is the progression, as on main\")",
+    "reason": "Pau, 4 Nov 2026: under CA_SALES_POLICY_ENABLED a stated sales shortfall (a metric named and judged, the existing reader in corrective-action-intake.ts) goes to the Corrective Action Form citing the Standards of Conduct, instead of the progression's metric-only refusal (framework §7)."
+  },
+  "src/lib/ai/corrective-action-conversation.test.ts :: a metric on its own is answered with the progression holds even when the manager names the form": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default): the metric-only refusal holds byte for byte; src/lib/forms/ca-sales-policy.test.ts (\"off: a metric named and judged is the progression, as on main\")",
+    "reason": "Pau, 4 Nov 2026: under CA_SALES_POLICY_ENABLED a stated sales shortfall (a metric named and judged, the existing reader in corrective-action-intake.ts) goes to the Corrective Action Form citing the Standards of Conduct, instead of the progression's metric-only refusal (framework §7)."
+  },
+  "src/lib/ai/corrective-action-conversation.test.ts :: a metric on its own is answered with the progression maps each rung to the real form that records it, and says which rungs have none": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default): the metric-only refusal holds byte for byte; src/lib/forms/ca-sales-policy.test.ts (\"off: a metric named and judged is the progression, as on main\")",
+    "reason": "Pau, 4 Nov 2026: under CA_SALES_POLICY_ENABLED a stated sales shortfall (a metric named and judged, the existing reader in corrective-action-intake.ts) goes to the Corrective Action Form citing the Standards of Conduct, instead of the progression's metric-only refusal (framework §7)."
+  },
+  "src/lib/ai/corrective-action-conversation.test.ts :: a metric on its own is answered with the progression names the EPPs from the library rather than from a list in the code": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default): the metric-only refusal holds byte for byte; src/lib/forms/ca-sales-policy.test.ts (\"off: a metric named and judged is the progression, as on main\")",
+    "reason": "Pau, 4 Nov 2026: under CA_SALES_POLICY_ENABLED a stated sales shortfall (a metric named and judged, the existing reader in corrective-action-intake.ts) goes to the Corrective Action Form citing the Standards of Conduct, instead of the progression's metric-only refusal (framework §7)."
+  },
+  "src/lib/ai/corrective-action-conversation.test.ts :: a metric on its own is answered with the progression says why, and still answers the question it can answer": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default): the metric-only refusal holds byte for byte; src/lib/forms/ca-sales-policy.test.ts (\"off: a metric named and judged is the progression, as on main\")",
+    "reason": "Pau, 4 Nov 2026: under CA_SALES_POLICY_ENABLED a stated sales shortfall (a metric named and judged, the existing reader in corrective-action-intake.ts) goes to the Corrective Action Form citing the Standards of Conduct, instead of the progression's metric-only refusal (framework §7)."
+  },
+  "src/lib/ai/corrective-action-conversation.test.ts :: a metric on its own is answered with the progression shows the sequence again as soon as the framework answers": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default): the metric-only refusal holds byte for byte; src/lib/forms/ca-sales-policy.test.ts (\"off: a metric named and judged is the progression, as on main\")",
+    "reason": "Pau, 4 Nov 2026: under CA_SALES_POLICY_ENABLED a stated sales shortfall (a metric named and judged, the existing reader in corrective-action-intake.ts) goes to the Corrective Action Form citing the Standards of Conduct, instead of the progression's metric-only refusal (framework §7)."
+  },
+  "src/lib/ai/corrective-action-conversation.test.ts :: the form's name on its own still holds §7: a metric alone gets the progression, however the form is named": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default): the metric-only refusal holds byte for byte; src/lib/forms/ca-sales-policy.test.ts (\"off: a metric named and judged is the progression, as on main\")",
+    "reason": "Pau, 4 Nov 2026: under CA_SALES_POLICY_ENABLED a stated sales shortfall (a metric named and judged, the existing reader in corrective-action-intake.ts) goes to the Corrective Action Form citing the Standards of Conduct, instead of the progression's metric-only refusal (framework §7)."
+  },
+  "src/lib/forms/ca-policy.test.ts :: a policy the manager named wins a different policy named stops the suggestion, and the later turn wins": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default); src/lib/forms/ca-sales-policy.test.ts (flag off: the reading and card line are as on main)",
+    "reason": "Client request (4 Nov 2026): a CA for sales or Under Performance cites the Standards of Conduct. With the flag on, a named Under Performance, or a stated shortfall, reads as the Standards of Conduct; the draft ticks it and Direct policy cites that section (heading and page from the manual) instead of leaving it blank."
+  },
+  "src/lib/forms/ca-policy.test.ts :: the box a named policy ticks [\"She missed the Woven deadline.\",\"under performance\"] -> [\"under_performance\"]": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default); src/lib/forms/ca-sales-policy.test.ts (flag off: the reading and card line are as on main)",
+    "reason": "Client request (4 Nov 2026): a CA for sales or Under Performance cites the Standards of Conduct. With the flag on, a named Under Performance, or a stated shortfall, reads as the Standards of Conduct; the draft ticks it and Direct policy cites that section (heading and page from the manual) instead of leaving it blank."
+  },
+  "src/lib/forms/ca-policy.test.ts :: the box a named policy ticks the proposal says the named policy back": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default); src/lib/forms/ca-sales-policy.test.ts (flag off: the reading and card line are as on main)",
+    "reason": "Client request (4 Nov 2026): a CA for sales or Under Performance cites the Standards of Conduct. With the flag on, a named Under Performance, or a stated shortfall, reads as the Standards of Conduct; the draft ticks it and Direct policy cites that section (heading and page from the manual) instead of leaving it blank."
+  },
+  "src/lib/forms/ca-policy.test.ts :: the four conduct cases suggests nothing for Her upgrade rate is below goal again.": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default); src/lib/forms/ca-sales-policy.test.ts (flag off: the reading and card line are as on main)",
+    "reason": "Client request (4 Nov 2026): a CA for sales or Under Performance cites the Standards of Conduct. With the flag on, a named Under Performance, or a stated shortfall, reads as the Standards of Conduct; the draft ticks it and Direct policy cites that section (heading and page from the manual) instead of leaving it blank."
+  },
+  "src/lib/forms/corrective-action-intake.test.ts :: 3b. a repeated incident and a prior corrective action are different facts does not let repetition turn a metric complaint into conduct": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default): the metric-only refusal holds byte for byte; src/lib/forms/ca-sales-policy.test.ts (\"off: a metric named and judged is the progression, as on main\")",
+    "reason": "Pau, 4 Nov 2026: under CA_SALES_POLICY_ENABLED a stated sales shortfall (a metric named and judged, the existing reader in corrective-action-intake.ts) goes to the Corrective Action Form citing the Standards of Conduct, instead of the progression's metric-only refusal (framework §7)."
+  },
+  "src/lib/forms/corrective-action-intake.test.ts :: 4. a metric on its own is not grounds for a corrective action metric only — Her upgrade rate is down again this month.": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default): the metric-only refusal holds byte for byte; src/lib/forms/ca-sales-policy.test.ts (\"off: a metric named and judged is the progression, as on main\")",
+    "reason": "Pau, 4 Nov 2026: under CA_SALES_POLICY_ENABLED a stated sales shortfall (a metric named and judged, the existing reader in corrective-action-intake.ts) goes to the Corrective Action Form citing the Standards of Conduct, instead of the progression's metric-only refusal (framework §7)."
+  },
+  "src/lib/forms/corrective-action-intake.test.ts :: 4. a metric on its own is not grounds for a corrective action metric only — His numbers are behind everyone else's.": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default): the metric-only refusal holds byte for byte; src/lib/forms/ca-sales-policy.test.ts (\"off: a metric named and judged is the progression, as on main\")",
+    "reason": "Pau, 4 Nov 2026: under CA_SALES_POLICY_ENABLED a stated sales shortfall (a metric named and judged, the existing reader in corrective-action-intake.ts) goes to the Corrective Action Form citing the Standards of Conduct, instead of the progression's metric-only refusal (framework §7)."
+  },
+  "src/lib/forms/corrective-action-intake.test.ts :: 4. a metric on its own is not grounds for a corrective action metric only — Sarah's conversion is the lowest in the district.": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default): the metric-only refusal holds byte for byte; src/lib/forms/ca-sales-policy.test.ts (\"off: a metric named and judged is the progression, as on main\")",
+    "reason": "Pau, 4 Nov 2026: under CA_SALES_POLICY_ENABLED a stated sales shortfall (a metric named and judged, the existing reader in corrective-action-intake.ts) goes to the Corrective Action Form citing the Standards of Conduct, instead of the progression's metric-only refusal (framework §7)."
+  },
+  "src/lib/forms/corrective-action-intake.test.ts :: 4. a metric on its own is not grounds for a corrective action metric only — She is not hitting her EFTs.": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default): the metric-only refusal holds byte for byte; src/lib/forms/ca-sales-policy.test.ts (\"off: a metric named and judged is the progression, as on main\")",
+    "reason": "Pau, 4 Nov 2026: under CA_SALES_POLICY_ENABLED a stated sales shortfall (a metric named and judged, the existing reader in corrective-action-intake.ts) goes to the Corrective Action Form citing the Standards of Conduct, instead of the progression's metric-only refusal (framework §7)."
+  },
+  "src/lib/forms/corrective-action-intake.test.ts :: 4. a metric on its own is not grounds for a corrective action metric only — Their Club Close is low.": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default): the metric-only refusal holds byte for byte; src/lib/forms/ca-sales-policy.test.ts (\"off: a metric named and judged is the progression, as on main\")",
+    "reason": "Pau, 4 Nov 2026: under CA_SALES_POLICY_ENABLED a stated sales shortfall (a metric named and judged, the existing reader in corrective-action-intake.ts) goes to the Corrective Action Form citing the Standards of Conduct, instead of the progression's metric-only refusal (framework §7)."
+  },
+  "src/lib/forms/form-edit-single-writer-flags-off.test.ts :: FORM_EDIT_SINGLE_WRITER_ENABLED off: the same chats, byte for byte (a) and (b) equal main's behaviour with the same script (replies, rows, events)": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default)",
+    "reason": "Byte identity against main's script with default flags: with CA_SALES_POLICY_ENABLED on, the grounded policy answer naming Pat Rivera ends with the one Corrective Action offer (ca-offer.ts). Off, byte for byte as main."
+  },
+  "replay: nov2-p1a-policy-turn-drops-account [production]": {
+    "category": "INTENDED",
+    "twin": "the same case with the flag off (production's flags)",
+    "reason": "A stated metric shortfall (\"below in PPTA, LPSVA, average ticket…\", \"below the company average … average ticket, units per transaction\") now gets the Corrective Action card citing the Standards of Conduct instead of the progression refusal (Pau, 4 Nov 2026). The case's own invariants still hold or still fail exactly as before."
+  },
+  "replay: nov2-p1b-next-message-new-draft [fix:OPEN_DRAFT_KEEPS_TURNS_ENABLED]": {
+    "category": "INTENDED-HARNESS",
+    "twin": "itself with the flag off (CI default)",
+    "reason": "The redraft path: the chat route calls the draft route itself, and the pack's draft-route stub leaks into the chat response ({status, body}), so the recorded reply is empty in both modes; with the flag on the route's own JSON holds the expected \"Redrafted…\" content. A harness artefact, not a behaviour change. Follow-up: re-check after the harness unwrap fix (#432/#515)."
+  },
+  "replay: nov2-p1b-next-message-new-draft [production]": {
+    "category": "INTENDED-HARNESS",
+    "twin": "itself with the flag off (CI default)",
+    "reason": "The redraft path: the chat route calls the draft route itself, and the pack's draft-route stub leaks into the chat response ({status, body}), so the recorded reply is empty in both modes; with the flag on the route's own JSON holds the expected \"Redrafted…\" content. A harness artefact, not a behaviour change. Follow-up: re-check after the harness unwrap fix (#432/#515)."
+  },
+  "replay: nov2-p3-policy-and-prior-coaching [fix:POLICY_CHANGE_REST_OF_TURN_ENABLED]": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default)",
+    "reason": "The policy answer for a named employee ends with the one Corrective Action offer (Pau, 4 Nov 2026, #5: ask once, card only on yes; ca-offer.ts). Holds in both modes."
+  },
+  "replay: nov2-p3-policy-and-prior-coaching [production]": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default)",
+    "reason": "The policy answer for a named employee ends with the one Corrective Action offer (Pau, 4 Nov 2026, #5: ask once, card only on yes; ca-offer.ts). Holds in both modes."
+  },
+  "replay: nov2-p6-dm-title [fix:TITLE_NOT_SPEAKERS_MANAGER_ENABLED]": {
+    "category": "INTENDED",
+    "twin": "the same case with the flag off (production's flags)",
+    "reason": "A stated metric shortfall (\"below in PPTA, LPSVA, average ticket…\", \"below the company average … average ticket, units per transaction\") now gets the Corrective Action card citing the Standards of Conduct instead of the progression refusal (Pau, 4 Nov 2026). The case's own invariants still hold or still fail exactly as before."
+  },
+  "replay: nov2-p6-dm-title [production]": {
+    "category": "INTENDED",
+    "twin": "the same case with the flag off (production's flags)",
+    "reason": "A stated metric shortfall (\"below in PPTA, LPSVA, average ticket…\", \"below the company average … average ticket, units per transaction\") now gets the Corrective Action card citing the Standards of Conduct instead of the progression refusal (Pau, 4 Nov 2026). The case's own invariants still hold or still fail exactly as before."
+  },
+  "replay: nov4-ca-sales-low-sales [open]": {
+    "category": "INTENDED",
+    "twin": "its OPEN run with the flag off (production's flags)",
+    "reason": "The client request's own replay case: with the flag on it holds (the card and the draft cite the Standards of Conduct); OPEN in production with the flag off."
+  },
+  "replay: nov4-ca-sales-msb [open]": {
+    "category": "INTENDED",
+    "twin": "its OPEN run with the flag off (production's flags)",
+    "reason": "The client request's own replay case: with the flag on it holds (the card and the draft cite the Standards of Conduct); OPEN in production with the flag off."
+  },
+  "replay: nov4-cleaning-basis-upkeep-duties [open]": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default); nov4-cleaning-negative-no-basis; src/lib/forms/ca-conduct-reason.test.ts",
+    "reason": "Pau, 4 Nov 2026: a cleaning CA does not cite the Standards of Conduct by default. With the flag on, the model's Standards of Conduct tick moves to Other when its offense_basis is upkeep_or_task and no reader gives a reason (ca-conduct-reason.ts); off, the tick stands, as in production today."
+  },
+  "replay: nov4-cleaning-bathrooms-not-conduct [open]": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default); nov4-cleaning-negative-no-basis; src/lib/forms/ca-conduct-reason.test.ts",
+    "reason": "Pau, 4 Nov 2026: a cleaning CA does not cite the Standards of Conduct by default. With the flag on, the model's Standards of Conduct tick moves to Other when its offense_basis is upkeep_or_task and no reader gives a reason (ca-conduct-reason.ts); off, the tick stands, as in production today."
+  },
+  "replay: nov4-cleaning-negative-msb [open]": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default); nov4-mgr-4",
+    "reason": "Negative control for the cleaning guard: an MSB CA (offense_basis msb) keeps the Standards of Conduct. Open with production's flags only because this app makes no card for an MSB CA there (nov4-mgr-4); holds with the flag."
+  },
+  "replay: nov4-mgr-1-verbal-metrics [fix:CA_SALES_POLICY_ENABLED]": {
+    "category": "INTENDED",
+    "twin": "the same case with production's flags (flag unset)",
+    "reason": "Holds both ways; the reply drops \"I couldn't find **Club Close** or **Under** in the Woven roster\" and the card's Issue keeps the manager's words (metrics are never read as people)."
+  },
+  "replay: nov4-mgr-1-verbal-metrics [production]": {
+    "category": "INTENDED",
+    "twin": "the same case with production's flags (flag unset)",
+    "reason": "Holds both ways; the reply drops \"I couldn't find **Club Close** or **Under** in the Woven roster\" and the card's Issue keeps the manager's words (metrics are never read as people)."
+  },
+  "replay: nov4-mgr-3-salon-metrics [production]": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default)",
+    "reason": "Under performance in salon metrics: with the flag on the card's policy line cites the Standards of Conduct (the sales reading); holds in both modes, only the card wording differs."
+  },
+  "replay: nov4-mgr-4-msb-october [open]": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default); ca-sales-policy.test.ts (detectTemplateIntent on/off)",
+    "reason": "\"MSB CA for <name> …\": with the flag on a leading glossary term is the reason, not the request (template-intent.ts), so the CA card is made and cites the Standards of Conduct; off, answered as a policy question as on main (open with production's flags)."
+  },
+  "replay: nov4-mgr-5-msb-soc [open]": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default); nov4-pau5-5 (the same statement)",
+    "reason": "\"<name> did not follow must see behaviors which violates standards of conduct policy\": no routing change (Pau, 4 Nov 2026); with the flag on the policy answer ends with the one offer. Still no card on the first turn, so the case stays open as on main (its expectation is Success's #433)."
+  },
+  "replay: nov4-pau-metrics-not-people [open]": {
+    "category": "INTENDED",
+    "twin": "the same case with production's flags (flag unset): OPEN, expected to fail",
+    "reason": "An OPEN-in-production case that holds with the flag on (vitest reports the expected failure as failed when the case passes): metric words are never read as people or stripped, and the card is for the roster person, citing the Standards of Conduct."
+  },
+  "replay: nov4-pau-metrics-not-people-lowercase-first-name [open]": {
+    "category": "INTENDED",
+    "twin": "the same case with production's flags (flag unset): OPEN, expected to fail",
+    "reason": "An OPEN-in-production case that holds with the flag on (vitest reports the expected failure as failed when the case passes): metric words are never read as people or stripped, and the card is for the roster person, citing the Standards of Conduct."
+  },
+  "replay: nov4-pau-metrics-not-people-lowercase-roster-name [open]": {
+    "category": "INTENDED",
+    "twin": "the same case with production's flags (flag unset): OPEN, expected to fail",
+    "reason": "An OPEN-in-production case that holds with the flag on (vitest reports the expected failure as failed when the case passes): metric words are never read as people or stripped, and the card is for the roster person, citing the Standards of Conduct."
+  },
+  "replay: nov4-pau-metrics-not-people-metrics-only [production]": {
+    "category": "INTENDED",
+    "twin": "the same case with production's flags (flag unset)",
+    "reason": "Holds both ways; with the flag on, \"CA for under performance on Club Close % and Spa %\" gets the Corrective Action intake asking for the employee's full name (one lowercase word that is nobody on the roster is never the employee) instead of the answering model's reply."
+  },
+  "replay: nov4-pau-metrics-not-people-unknown [production]": {
+    "category": "INTENDED",
+    "twin": "the case's run with the flags off",
+    "reason": "Holds in both. Off: \"I couldn't find **Zuleika Brightwell** or **Club Close** or **Under** in the Woven roster\". On: \"I couldn't find **Zuleika Brightwell** in the Woven roster\" — the metrics are no longer named as people. Re-recorded and read, 5 Nov 2026."
+  },
+  "replay: nov4-pau5-1-verbal-under-performance-metrics [open]": {
+    "category": "INTENDED",
+    "twin": "the same case with production's flags (flag unset): OPEN, expected to fail",
+    "reason": "An OPEN-in-production case that holds with the flag on (vitest reports the expected failure as failed when the case passes): metric words are never read as people or stripped, and the card is for the roster person, citing the Standards of Conduct."
+  },
+  "replay: nov4-pau5-2-ca-for-msb [open]": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default); nov4-mgr-2",
+    "reason": "\"I need to make a corrective action for msb\": with the flag on MSB is never the employee and the reason is never asked again; open with production's flags, where msb is looked up as a person."
+  },
+  "replay: nov4-pau5-3-under-performance-salon-metrics [production]": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default)",
+    "reason": "Under performance in salon metrics: with the flag on the card's policy line cites the Standards of Conduct (the sales reading); holds in both modes, only the card wording differs."
+  },
+  "replay: nov4-pau5-4-msb-ca-underperformance-october [open]": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default); ca-sales-policy.test.ts (detectTemplateIntent on/off)",
+    "reason": "\"MSB CA for <name> …\": with the flag on a leading glossary term is the reason, not the request (template-intent.ts), so the CA card is made and cites the Standards of Conduct; off, answered as a policy question as on main (open with production's flags)."
+  },
+  "replay: nov4-pau5-5-must-see-behaviors-violates-soc [open]": {
+    "category": "INTENDED",
+    "twin": "itself with the flag off (CI default); nov4-pau5-5b (negative control: no employee, no offer)",
+    "reason": "Pau, 4 Nov 2026, #5: the answer ends with \"Do you want a Corrective Action for <name>?\" citing the Standards of Conduct; the card opens only on yes."
+  },
+  "replay: nov4-qa-form-name-as-person-a [open]": {
+    "category": "INTENDED",
+    "twin": "the same case's test row above",
+    "reason": "The OPEN case's record: fails with the flags off (the bug as reported), holds with FORM_NAME_FROM_ROSTER_ENABLED and CA_SALES_POLICY_ENABLED on."
+  },
+  "replay: nov4-qa-form-name-as-person-a-with-sales [open]": {
+    "category": "INTENDED",
+    "twin": "the same case's test row above",
+    "reason": "The OPEN case's record: fails with the flags off (the bug as reported), holds with FORM_NAME_FROM_ROSTER_ENABLED and CA_SALES_POLICY_ENABLED on."
+  },
+  "replay: nov4-qa-form-name-as-person-b [fix:FORM_NAME_FROM_ROSTER_ENABLED]": {
+    "category": "INTENDED",
+    "twin": "the case's FORM_NAME-only run (the metric-only answer)",
+    "reason": "Holds in both. With FORM_NAME alone (CA_SALES off) the metric-only answer; with CA_SALES too, a Corrective Action (never a Coaching Form, Pau 4 Nov) that asks for the employee's full name. Re-recorded and read, 5 Nov 2026."
+  },
+  "replay: nov4-qa-form-name-as-person-b [open]": {
+    "category": "INTENDED",
+    "twin": "the same case's test row above",
+    "reason": "The OPEN case's record: fails with the flags off (the bug as reported), holds with FORM_NAME_FROM_ROSTER_ENABLED and CA_SALES_POLICY_ENABLED on."
+  },
+  "replay: nov4-qa-form-name-as-person-b-with-sales [open]": {
+    "category": "INTENDED",
+    "twin": "the same case's test row above",
+    "reason": "The OPEN case's record: fails with the flags off (the bug as reported), holds with FORM_NAME_FROM_ROSTER_ENABLED and CA_SALES_POLICY_ENABLED on."
+  },
+  "replay: nov4-qa-form-name-as-person-p1 [fix:FORM_NAME_FROM_ROSTER_ENABLED]": {
+    "category": "INTENDED",
+    "twin": "the case's FORM_NAME-only run (the metric-only answer)",
+    "reason": "Holds in both. With FORM_NAME alone (CA_SALES off) the metric-only answer; with CA_SALES too, a Corrective Action (never a Coaching Form, Pau 4 Nov) that asks for the employee's full name. Re-recorded and read, 5 Nov 2026."
+  },
+  "replay: nov4-qa-form-name-as-person-p1 [open]": {
+    "category": "INTENDED",
+    "twin": "the same case's test row above",
+    "reason": "The OPEN case's record: fails with the flags off (the bug as reported), holds with FORM_NAME_FROM_ROSTER_ENABLED and CA_SALES_POLICY_ENABLED on."
+  },
+  "replay: nov4-qa-form-name-as-person-p1-with-sales [open]": {
+    "category": "INTENDED",
+    "twin": "the same case's test row above",
+    "reason": "The OPEN case's record: fails with the flags off (the bug as reported), holds with FORM_NAME_FROM_ROSTER_ENABLED and CA_SALES_POLICY_ENABLED on."
+  },
+  "replay: nov4-scan-sf-s11-same-for-another [open]": {
+    "category": "INTENDED",
+    "twin": "the same case with the flag off (production's flags)",
+    "reason": "The card's policy line for a CA the manager calls Under Performance changes from \"Under Performance, as you said … Direct policy is left for you\" to \"Standards of Conduct — sales performance against goals\" (client request). The case still fails for its own open reason, unchanged."
+  },
+  "replay: nov4-scan-sf-s16-standards-of-conduct-turn-2 [open]": {
+    "category": "INTENDED",
+    "twin": "the same case with the flag off (production's flags)",
+    "reason": "The card's policy line for a CA the manager calls Under Performance changes from \"Under Performance, as you said … Direct policy is left for you\" to \"Standards of Conduct — sales performance against goals\" (client request). The case still fails for its own open reason, unchanged."
+  },
+  "replay: nov4-scan-sf-s19-corrective-action-answer [open]": {
+    "category": "INTENDED",
+    "twin": "the same case with the flag off (production's flags)",
+    "reason": "A stated metric shortfall (\"below in PPTA, LPSVA, average ticket…\", \"below the company average … average ticket, units per transaction\") now gets the Corrective Action card citing the Standards of Conduct instead of the progression refusal (Pau, 4 Nov 2026). The case's own invariants still hold or still fail exactly as before."
+  },
+  "replay: nov5-request-slot-ca-for-under-performance [open]": {
+    "category": "INTENDED",
+    "twin": "the same case's test row above",
+    "reason": "The OPEN case's record: fails with the flags off (the bug as reported), holds with FORM_NAME_FROM_ROSTER_ENABLED and CA_SALES_POLICY_ENABLED on."
+  },
+  "replay: nov5-request-slot-metrics-only [production]": {
+    "category": "INTENDED",
+    "twin": "the case's run with the flags off",
+    "reason": "Holds in both. Off: a policy answer. On: the sales policy takes the stated shortfall to a Corrective Action, which asks for the employee's full name — no metric is the employee. Re-recorded and read, 5 Nov 2026."
+  },
+  "replay: nov5-request-slot-no-name-verbal [open]": {
+    "category": "INTENDED",
+    "twin": "the same case's test row above",
+    "reason": "The OPEN case's record: fails with the flags off (the bug as reported), holds with FORM_NAME_FROM_ROSTER_ENABLED and CA_SALES_POLICY_ENABLED on."
+  },
+  "replay: nov5-request-slot-off-roster-name [open]": {
+    "category": "INTENDED",
+    "twin": "the same case's test row above",
+    "reason": "The OPEN case's record: fails with the flags off (the bug as reported), holds with FORM_NAME_FROM_ROSTER_ENABLED and CA_SALES_POLICY_ENABLED on."
+  },
+  "replay: nov5-request-slot-off-roster-name-models [open]": {
+    "category": "INTENDED",
+    "twin": "the same case's test row above",
+    "reason": "The OPEN case's record: fails with the flags off (the bug as reported), holds with FORM_NAME_FROM_ROSTER_ENABLED and CA_SALES_POLICY_ENABLED on."
+  },
+  "replay: nov5-request-slot-on-roster-name [open]": {
+    "category": "INTENDED",
+    "twin": "the same case's test row above",
+    "reason": "The OPEN case's record: fails with the flags off (the bug as reported), holds with FORM_NAME_FROM_ROSTER_ENABLED and CA_SALES_POLICY_ENABLED on."
+  }
+}
