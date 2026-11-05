@@ -150,6 +150,7 @@ export function rosterOnlyNames(response: AskResponse, names: readonly string[],
         draftedFor(content),
       );
       if (!ask && !ASKS_WHO.test(content) && !ASKS_A_CHOICE.test(content) && !ASKS_FOR_THE_NAME.test(content)) ask = ASK_WHO;
+      content = withNotFoundNote(content, slotName(message, names), names);
     }
   }
 
@@ -253,6 +254,21 @@ export function withoutUnseatedName(content: string, typed: readonly (string | n
       return next.replace(/\u0000(\d+)\u0000/g, (_all, index: string) => kept[Number(index)]!);
     })
     .join("\n");
+}
+
+/**
+ * ROSTER_NEAR_MISS_ENABLED (QA's live run, 5 Nov 2026, mgr-1-off-roster-name): "I need a corrective
+ * action verbal for <name>. This is for Under Performance …" with the name on no roster got an empty card
+ * and "Who is this form for? Tell me the employee's full name." — never that the typed name was not found,
+ * so the manager retypes it. With GROUNDED_ENTITIES_ENABLED off in production (a deliberate rollback, 24 Oct)
+ * the app's own not-found sentence is never written. When the request's "for <Name>" is nobody's roster
+ * spelling and close to nobody, the empty card's reply opens with that sentence (grounded-entities.ts's
+ * template, which the scrub keeps); the name is said nowhere else. A metric or a form's name is never the
+ * request's name (`slotName`).
+ */
+function withNotFoundNote(content: string, typed: string | null, names: readonly string[]): string {
+  if (!typed || /I couldn['’]t find \*\*/.test(content) || oneCloseRosterPerson(typed, names)) return content;
+  return `I couldn't find **${typed}** in the Woven roster, so that name is not on the form.\n\n${content.trim()}`;
 }
 
 /** The person the reply says it drafts for: "I'll draft a **Corrective Action Form** for **<name>**". */
