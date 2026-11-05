@@ -398,8 +398,8 @@ export function intentPayrollManagerOnlyEnabled(): boolean {
  * ("blank", "n/a", "unknown"), a phrase that starts with a verb ("require
  * practice"), a word of the brand or a report, a place on the store roster,
  * and the app's own lines and lists (the stored "Policy reference: …" line,
- * an assistant reply, a bulleted or priced offer list). Ported from Ask
- * Sunny. Off, the readers take names as they do today.
+ * an assistant reply, a bulleted or priced offer list). Ported from the
+ * sibling app. Off, the readers take names as they do today.
  */
 export function notANameGuardEnabled(): boolean {
   return envFlag("NOT_A_NAME_GUARD_ENABLED");
@@ -2540,4 +2540,19 @@ export function titleOfTheEmployeeEnabled(): boolean {
  */
 export function rosterNameInCandidateEnabled(): boolean {
   return envFlag("ROSTER_NAME_IN_CANDIDATE_ENABLED");
+}
+
+/**
+ * ROSTER_NEAR_MISS_ENABLED (QA's testers, 5 Nov 2026, R3/R5/R7; default off,
+ * on with FORM_NAME_FROM_ROSTER_ENABLED). A real, active roster person's
+ * surname typed with one letter wrong: before the flip the card's Employee was
+ * the name as typed; with FORM_NAME on it was "Not yet", the Action Plan still
+ * named the person, and the reply asked "Who is this form for?". On: (a) a
+ * near-miss of exactly one roster name gets "Is this for <roster full name>?"
+ * (`forms/roster-only-names.ts` oneCloseRosterPerson also reads the typed-name
+ * matcher's close name); (b) with no employee on the card, no reply text names
+ * the person who is not on it. Off, as before.
+ */
+export function rosterNearMissEnabled(): boolean {
+  return envFlag("ROSTER_NEAR_MISS_ENABLED");
 }
