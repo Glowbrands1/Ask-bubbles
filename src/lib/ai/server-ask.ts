@@ -15,6 +15,7 @@ import { priorFormsReadingForChat } from "@/lib/forms/prior-forms";
 import { answersFormClarification } from "@/lib/forms/form-clarification";
 import { buildFormInventory, publishedEntries } from "@/lib/forms/inventory";
 import { detectInventoryQuestion, type InventoryQuestion } from "@/lib/forms/inventory-question";
+import { withRosterOnlyNames } from "@/lib/forms/roster-only-names";
 import {
   isEllipticalRegisterReference,
   resolveRegisterAnchor,
@@ -149,6 +150,7 @@ import { keepManagerActionPlan } from "./manager-action-plan-reply";
 import { withoutReportTurnsForForm } from "./report-turns";
 import { withManagerNameGuard } from "./manager-name-guard";
 import { withJobTitleFromWords } from "./job-title-from-words";
+import { withCoachingWhatHappened } from "./coaching-what-happened";
 import { withFreshDateReask } from "./date-reask-fresh";
 import { withFirstNameAsk } from "./first-name-ask";
 import { withFirstNameAnswerFor, withFirstNameSuggestFor } from "./first-name-suggest";
@@ -215,6 +217,15 @@ export async function answerQuestion(
   asked: AskRequest,
   actor: ChatActor,
   memory: { memoryOwnerId?: string } = {},
+): Promise<AskResponse> {
+  // FORM_NAME_FROM_ROSTER_ENABLED, last: only roster people are the employee or a choice (`forms/roster-only-names.ts`).
+  return withRosterOnlyNames(await answerQuestionAnyPath(asked, actor, memory));
+}
+
+async function answerQuestionAnyPath(
+  asked: AskRequest,
+  actor: ChatActor,
+  memory: { memoryOwnerId?: string },
 ): Promise<AskResponse> {
   // CA_SALES_POLICY_ENABLED: "yes" to the Corrective Action offer is the request it offered (`ca-offer.ts`). Off, unchanged.
   const accepted = acceptedCaOffer({ question: asked.question, history: asked.history });
@@ -297,7 +308,7 @@ async function answerQuestionBody(
         withPayrollTypoAnswer(
           withUnknownNameAsk(
             withFirstNameAsk(
-              withWarningLevelFromClause(withFreshDateReask(withJobTitleFromWords(await answerQuestionCore(request, actor, memory), request), request), request),
+              withWarningLevelFromClause(withFreshDateReask(withJobTitleFromWords(withCoachingWhatHappened(await answerQuestionCore(request, actor, memory), request), request), request), request),
               request,
             ),
             request,

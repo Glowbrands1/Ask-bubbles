@@ -2492,6 +2492,18 @@ export function formNameFromRosterEnabled(): boolean {
 }
 
 /**
+ * COACHING_ASKS_WHAT_HAPPENED_ENABLED (Pau, 5 Nov 2026, sf-s27; default off).
+ * "Create a coaching form." → "<name>" answered "Everything I need is here …
+ * I have the employee and the store." with no incident and no draft. On: a
+ * Coaching Form card for a person with no account in the manager's turns for
+ * it does not say it has everything; it asks what happened, once per card
+ * (`ai/coaching-what-happened.ts`). Off, as before.
+ */
+export function coachingAsksWhatHappenedEnabled(): boolean {
+  return envFlag("COACHING_ASKS_WHAT_HAPPENED_ENABLED");
+}
+
+/**
  * A question that asks about the Corrective Action and says what happened is
  * the account (Pau, sf-s28, 5 Nov 2026): "can i give a ca for not signing off
  * on the cleaning check list" was dropped from the form's turns as a question
