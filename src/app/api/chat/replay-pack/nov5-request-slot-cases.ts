@@ -218,7 +218,7 @@ export const NOV5_REQUEST_SLOT_CASES: ReplayCase[] = [
         text: "create a CA form for ima employee, for opening the store late on 9-28-26",
         roster: ROSTER,
         // production-flags.json corrected to Vercel (QA, 5 Nov 2026). Recorded OPEN, a production defect.
-        open: "GROUNDED_ENTITIES_ENABLED is off in production, so the card is for \"ima employee\", a name on no roster",
+        open: "production: GROUNDED_ENTITIES_ENABLED off since 24 Oct (deliberate rollback: dropped non-roster names while ANTI_LOOP off; Vercel comment) — the card is for \"ima employee\", a name on no roster",
         check: (card: string | null, reply: string) => {
           expect(card, "a name on no roster is the employee").toBeNull();
           expect(reply, "it does not ask who").toMatch(ASKS_WHO);

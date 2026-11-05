@@ -63,8 +63,8 @@ export const NOV5_TWIN_GATE_ROSTER_ONLY_CLAIMS_CASES: ReplayCase[] = [
     id: "nov5-twin-gate-ima-off-roster-observation",
     title: "gate regression 2: \"create a CA form for ima employee, for opening the store late on 9-28-26\" asks who; the Observation is \"opening the store late on 9-28-26\", never \"ima employee, …\"",
     report: "the sibling app's sales-flip gate (ask-sunny#530, 5 Nov 2026): nov5-roster-only-ima-off-roster, on — asks who, but the Observation becomes \"ima employee, opening the store late on 9-28-26\"",
-    // production-flags.json corrected to Vercel (QA, 5 Nov 2026): GROUNDED_ENTITIES_ENABLED is off in production, so a name on no roster goes on the card (the card is for ima employee). Recorded OPEN, a production defect.
-    status: { open: "GROUNDED_ENTITIES_ENABLED is off in production, so a name on no roster goes on the card (the card is for ima employee)" },
+    // production-flags.json corrected to Vercel (QA, 5 Nov 2026): GROUNDED_ENTITIES_ENABLED is off in production since 24 Oct (a deliberate rollback), so a name on no roster goes on the card (the card is for ima employee). Recorded OPEN, a production defect.
+    status: { open: "production: GROUNDED_ENTITIES_ENABLED off since 24 Oct (deliberate rollback: dropped non-roster names while ANTI_LOOP off; Vercel comment) — a name on no roster goes on the card (the card is for ima employee)" },
     fixFlags: [FLAG, SALES, GLOSSARY],
     async run(t) {
       vi.setSystemTime(new Date("2026-11-05T15:30:00Z"));
