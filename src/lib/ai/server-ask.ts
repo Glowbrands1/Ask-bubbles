@@ -155,6 +155,7 @@ import { withFreshDateReask } from "./date-reask-fresh";
 import { withFirstNameAsk } from "./first-name-ask";
 import { withFirstNameAnswerFor, withFirstNameSuggestFor } from "./first-name-suggest";
 import { withManagerStatedTitle } from "./manager-title";
+import { withReplyMatchesCard } from "./reply-matches-card";
 import { withProposalEditRules } from "./proposal-edit-rules";
 import { withFormTypeSwitch, withSwitchNote, withSwitchSources } from "./form-type-switch";
 import { withAdditionalStore } from "./additional-store";
@@ -219,7 +220,8 @@ export async function answerQuestion(
   memory: { memoryOwnerId?: string } = {},
 ): Promise<AskResponse> {
   // FORM_NAME_FROM_ROSTER_ENABLED, last: only roster people are the employee or a choice (`forms/roster-only-names.ts`).
-  return withRosterOnlyNames(await answerQuestionAnyPath(asked, actor, memory));
+  // REPLY_MATCHES_CARD_ENABLED, the very last step: the reply agrees with the finished card (`ai/reply-matches-card.ts`).
+  return withReplyMatchesCard(withRosterOnlyNames(await answerQuestionAnyPath(asked, actor, memory)));
 }
 
 async function answerQuestionAnyPath(
