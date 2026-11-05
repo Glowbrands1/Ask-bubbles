@@ -2492,6 +2492,82 @@ export function formNameFromRosterEnabled(): boolean {
 }
 
 /**
+ * CA_POLICY_SAID_ONLY_ENABLED (Pau via QA, 5 Nov 2026, sf-s21/s24/s25 in the
+ * sibling app; default off; same flag in both apps). The card said
+ * "**Policy:** <heading>, as you said" for a policy the manager never typed:
+ * the intent read's heading is stored as "Policy reference: <heading>, JBA
+ * Policy Manual p.N." ahead of the manager's words, and the Corrective Action
+ * card's policy reader took that sentence as the manager naming it. On, the
+ * card's policy line reads the manager's words without the stored sentence
+ * (`ai/form-state.ts` withoutPolicyReference). Off, as before.
+ */
+export function caPolicySaidOnlyEnabled(): boolean {
+  return envFlag("CA_POLICY_SAID_ONLY_ENABLED");
+}
+
+/**
+ * FORM_LEAD_FULL_SENTENCE_ENABLED (Pau via QA, 5 Nov 2026, sf-b6; default
+ * off; same flag in both apps). The reply ended "Based on what you've
+ * described, I can prepare:" with nothing after it. On, the line before the
+ * form cards is a whole sentence naming the forms offered
+ * (`forms/form-opportunity.ts` formOpportunityLead). Off, as before.
+ */
+export function formLeadFullSentenceEnabled(): boolean {
+  return envFlag("FORM_LEAD_FULL_SENTENCE_ENABLED");
+}
+
+/**
+ * CA_CARD_ADDED_DETAIL_ENABLED (Pau via QA, 5 Nov 2026, sf-b6; default off;
+ * same flag in both apps). The manager added the account on a later turn
+ * ("can you have it include that we recieved a customer complaint …") and the
+ * next Corrective Action card read the Issue from the request alone. On, the
+ * card shows the later turns that add to the account, in the manager's words
+ * (`forms/added-detail.ts`). Off, as before.
+ */
+export function caCardAddedDetailEnabled(): boolean {
+  return envFlag("CA_CARD_ADDED_DETAIL_ENABLED");
+}
+
+/**
+ * PAYROLL_ANSWER_SPELLING_ENABLED (Pau via QA, 5 Nov 2026, sf-s23 in the
+ * sibling app; default off; same flag in both apps). "not pay roll
+ * deductable" was not read as the payroll answer. On, "pay roll" and
+ * "deductable" / "deductible" read as payroll deduct
+ * (`forms/payroll-deduct-answer.ts`, which reads the env itself). The
+ * sibling's Observation half has no counterpart here: this app's card has no
+ * Observation of Offense line. Off, as before.
+ */
+export function payrollAnswerSpellingEnabled(): boolean {
+  return envFlag("PAYROLL_ANSWER_SPELLING_ENABLED");
+}
+
+/**
+ * PASTED_BLOCK_FORM_ENABLED (Pau via QA, 5 Nov 2026, sf-s22 in the sibling
+ * app; default off; same flag in both apps). "Make this:<a reviewer's notes>"
+ * read as a Coaching Form request because the pasted notes named a coaching
+ * document, after the manager had said "It needs to be a CA". On, a turn that
+ * is a short lead ending in a colon and a block of several lines is read for
+ * its form from the lead alone (`forms/template-intent.ts` pastedBlockLead).
+ * Off, as before.
+ */
+export function pastedBlockFormEnabled(): boolean {
+  return envFlag("PASTED_BLOCK_FORM_ENABLED");
+}
+
+/**
+ * CA_PROCEDURE_BASIS_ENABLED (Pau via QA, 5 Nov 2026, sf-b6 in this app; default
+ * off; same flag in both apps). A Corrective Action for closing a register
+ * early and turning away a customer came back with Standards of Conduct
+ * ticked and quoted, after the chat said no source states a policy for it.
+ * On, the drafting call may name the basis store_procedure, which moves an
+ * unreasoned Standards of Conduct tick to Other like upkeep does
+ * (`forms/ca-conduct-reason.ts`). Off, the tool and the tick are as before.
+ */
+export function caProcedureBasisEnabled(): boolean {
+  return envFlag("CA_PROCEDURE_BASIS_ENABLED");
+}
+
+/**
  * COACHING_ASKS_WHAT_HAPPENED_ENABLED (Pau, 5 Nov 2026, sf-s27; default off).
  * "Create a coaching form." → "<name>" answered "Everything I need is here …
  * I have the employee and the store." with no incident and no draft. On: a

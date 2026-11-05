@@ -2,9 +2,11 @@
 
 Written by `node scripts/flag-classify.ts` (3 runs off, 3 on, each a child process with a clean env). Paths: `src/lib/ai`, `src/lib/forms`, `src/app/api/chat`, `src/app/api/forms`. Classifications are kept in `docs/flag-classification/CA_SALES_POLICY_ENABLED.classes.json`.
 
-Tests run: 11288. Changed: 60. INTENDED 58, INTENDED-HARNESS 2, REGRESSION 0, FLAKY 0, UNCLASSIFIED 0.
+Tests run: 11365. Changed: 62. INTENDED 60, INTENDED-HARNESS 2, REGRESSION 0, FLAKY 0, UNCLASSIFIED 0.
 
-Replay pack, first run, all cases: 60947 ms off, 73238 ms on (stubbed models; 301 records).
+Run on 9beee5c0 (the bundle flags off). The 2 rows classified after the run were filled in from the classifications file (the run's raw reports were not kept).
+
+Replay pack, first run, all cases: 71905 ms off, 85994 ms on (stubbed models; 336 records).
 
 | test | off | on | category | twin | reason |
 | --- | --- | --- | --- | --- | --- |
@@ -68,5 +70,5 @@ Replay pack, first run, all cases: 60947 ms off, 73238 ms on (stubbed models; 30
 | replay: nov4-scan-sf-s11-same-for-another [open] | fails, 3 turns | fails, 3 turns; replies differ | INTENDED | the same case with the flag off (production's flags) | The card's policy line for a CA the manager calls Under Performance changes from "Under Performance, as you said … Direct policy is left for you" to "Standards of Conduct — sales performance against goals" (client request). The case still fails for its own open reason, unchanged. |
 | replay: nov4-scan-sf-s16-standards-of-conduct-turn-2 [open] | fails, 2 turns | fails, 2 turns; replies differ | INTENDED | the same case with the flag off (production's flags) | The card's policy line for a CA the manager calls Under Performance changes from "Under Performance, as you said … Direct policy is left for you" to "Standards of Conduct — sales performance against goals" (client request). The case still fails for its own open reason, unchanged. |
 | replay: nov4-scan-sf-s19-corrective-action-answer [open] | fails, 2 turns | fails, 2 turns; replies differ | INTENDED | the same case with the flag off (production's flags) | A stated metric shortfall ("below in PPTA, LPSVA, average ticket…", "below the company average … average ticket, units per transaction") now gets the Corrective Action card citing the Standards of Conduct instead of the progression refusal (Pau, 4 Nov 2026). The case's own invariants still hold or still fail exactly as before. |
-
-- Run 3+3 on claude/ca-offer-exit at 6ae4e125 (#5's offer at the turn's one exit). 0 REGRESSION, 0 UNCLASSIFIED.
+| replay: nov5-twin-sf-s21-must-see-behaviors-template [open] | fails, 1 turns | fails, 2 turns; replies differ | INTENDED | itself with the flag off (CI default); the case with its fixFlags | Open in both modes. Off, the must-see-behaviors request for metrics makes no Corrective Action card (fails at turn 1, as its open status states); on, the sales Corrective Action card for Wynne Sarrow (Pau, 4 Nov 2026), and the case fails at turn 2 on "as you said", which CA_POLICY_SAID_ONLY_ENABLED (the bundle, off in this run) fixes. |
+| replay: nov5-twin-sf-s22-ca-not-coaching [open] | fails, 1 turns | fails, 4 turns; replies differ | INTENDED | itself with the flag off (CI default); the case with its fixFlags | Open in both modes. Off, the first request makes no Corrective Action card (fails at turn 1, as its open status states); on, the sales Corrective Action card, and the case gets to turn 4, where the pasted reviewer notes open a Coaching Form; PASTED_BLOCK_FORM_ENABLED (one of its fixFlags, off in this run) fixes that. |

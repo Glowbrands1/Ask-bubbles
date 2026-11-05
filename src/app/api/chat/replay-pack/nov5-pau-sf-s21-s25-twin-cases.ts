@@ -105,6 +105,7 @@ export const NOV5_PAU_SF_S21_S25_TWIN_CASES: ReplayCase[] = [
     title: "sf-s22: \"It needs to be a CA, not a coaching form\" and \"Its a CA\" keep the Corrective Action; another employee's reviewer notes never go into the Observation",
     report: `${REPORT}, sf-s22`,
     status: { open: "with this app's production flags the first request makes no Corrective Action card" },
+    fixFlags: ["CA_SALES_POLICY_ENABLED", "FORM_NAME_FROM_ROSTER_ENABLED", "PASTED_BLOCK_FORM_ENABLED"],
     async run(t) {
       const thread = start(t);
       const first = await thread.say(
@@ -127,6 +128,7 @@ export const NOV5_PAU_SF_S21_S25_TWIN_CASES: ReplayCase[] = [
     report: `${REPORT}, sf-s23`,
     // Holds in this app, also with the live trace's intent read (policyHeading): the card here has no Observation of Offense line and makes no "as you said" claim on this path (the sibling app's bug); kept as a guard.
     status: "fixed",
+    fixFlags: ["PAYROLL_ANSWER_SPELLING_ENABLED"],
     async run(t) {
       const thread = start(t);
       await thread.say("can you write me a Ca for wynne sarrow for performance for october");
@@ -141,6 +143,7 @@ export const NOV5_PAU_SF_S21_S25_TWIN_CASES: ReplayCase[] = [
     report: `${REPORT}, sf-s24`,
     // Holds in this app, also with the live trace's intent read (policyHeading): the card here has no Observation of Offense line and makes no "as you said" claim on this path (the sibling app's bug); kept as a guard.
     status: "fixed",
+    fixFlags: ["CA_POLICY_SAID_ONLY_ENABLED"],
     async run(t) {
       const thread = start(t);
       const t1 = "Can you write me a performace ca for an employee who did not meet their numbers for the month of october Wynne Sarrow  - verbal\n146 transactions \nBelow in UPT, Average Sale, Conversion";
@@ -158,6 +161,7 @@ export const NOV5_PAU_SF_S21_S25_TWIN_CASES: ReplayCase[] = [
     report: `${REPORT}, sf-s25`,
     // Holds in this app, also with the live trace's intent read (policyHeading): the card here has no Observation of Offense line and makes no "as you said" claim on this path (the sibling app's bug); kept as a guard.
     status: "fixed",
+    fixFlags: ["CA_POLICY_SAID_ONLY_ENABLED"],
     async run(t) {
       const thread = start(t);
       const said = [
