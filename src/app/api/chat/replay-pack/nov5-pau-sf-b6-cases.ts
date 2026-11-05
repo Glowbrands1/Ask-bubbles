@@ -76,4 +76,30 @@ export const NOV5_PAU_SF_B6_CASES: ReplayCase[] = [
       expect(card.content, `the card ignores the detail added on turn 3:\n${card.content}`).toMatch(/4:56|customer complaint|told (?:them )?(?:that )?(?:we|the store) (?:were|was) closed/i);
     },
   },
+  {
+    id: "nov5-sf-b6-policy-left-for-the-manager",
+    title: "sf-b6: the reply said no source states a policy and it would leave that field for the manager; the saved Policy Violated and Direct policy are not AI-filled",
+    report: "Pau via QA, 5 Nov 2026 (this app's production, 4 Nov), sf-b6",
+    status: { open: "the drafting model's tick fills Policy Violated and quotes Direct policy after the reply said it would leave the policy to the manager" },
+    async run(t: T) {
+      vi.setSystemTime(new Date("2026-11-04T23:30:00Z"));
+      t.directory([...STAFF, WYNNE]);
+      t.as("location_manager", WEST_DODGE);
+      const thread = t.thread();
+      await thread.say("I need a corrective action form for Wynne Sarrow for counting the drawer early and turning away a customer");
+      t.modelSays(LIVE_T3_ANSWER);
+      await thread.say(T3);
+      t.modelSays(null);
+      await thread.say("Create a Corrective Action Form from this conversation.");
+      // The drafting model ticks the Standards of Conduct (a stand-in: the live draft's tick is not in the transcript).
+      t.draftWrites(
+        { observation: "Observed:\nOn Sunday, 11/1/2026, Wynne started closing the last register at 4:56pm, before the 5:00pm close, and a customer who came in at 4:59 was told the store was closed." },
+        { offense_type: ["standards_of_conduct"] },
+      );
+      const id = await thread.create();
+      const values = t.values(id);
+      expect(values.policy_language ?? "", `Direct policy was AI-filled after "I'd leave that field for you":\n${values.policy_language}`).toBe("");
+      expect(values.policy_violated ?? "", `Policy Violated was AI-filled after "I'd leave that field for you":\n${values.policy_violated}`).toBe("");
+    },
+  },
 ];
