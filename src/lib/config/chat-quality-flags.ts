@@ -2513,3 +2513,18 @@ export function coachingAsksWhatHappenedEnabled(): boolean {
 export function incidentFromEarlierTurnEnabled(): boolean {
   return envFlag("INCIDENT_FROM_EARLIER_TURN_ENABLED");
 }
+
+/**
+ * ROSTER_NEAR_MISS_ENABLED (QA's testers, 5 Nov 2026, R3/R5/R7; default off,
+ * on with FORM_NAME_FROM_ROSTER_ENABLED). A real, active roster person's
+ * surname typed with one letter wrong: before the flip the card's Employee was
+ * the name as typed; with FORM_NAME on it was "Not yet", the Action Plan still
+ * named the person, and the reply asked "Who is this form for?". On: (a) a
+ * near-miss of exactly one roster name gets "Is this for <roster full name>?"
+ * (`forms/roster-only-names.ts` oneCloseRosterPerson also reads the typed-name
+ * matcher's close name); (b) with no employee on the card, no reply text names
+ * the person who is not on it. Off, as before.
+ */
+export function rosterNearMissEnabled(): boolean {
+  return envFlag("ROSTER_NEAR_MISS_ENABLED");
+}
