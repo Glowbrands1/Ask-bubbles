@@ -21,9 +21,9 @@ const MARKER = "You haven't told me what happened yet";
 
 export const COACHING_WHAT_HAPPENED_NOTE = `**${MARKER}.** What happened, or what should this coaching cover? Tell me here and I'll draft it from your words.`;
 
-const SAYS_READY = /^Everything I need is here[^\n]*$/i;
+export const SAYS_READY = /^Everything I need is here[^\n]*$/i;
 // "I have the employee and the store (**<store>**)." — the store's name is optional.
-const HAS_EMPLOYEE_AND_PLACE = /I have the employee and the store(?: \(\*\*[^*]+\*\*\))?\.\s*/gi;
+export const HAS_EMPLOYEE_AND_PLACE = /I have the employee and the store(?: \(\*\*[^*]+\*\*\))?\.\s*/gi;
 
 interface Turn {
   readonly role: string;
