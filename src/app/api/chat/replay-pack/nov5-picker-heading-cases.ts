@@ -107,7 +107,8 @@ export const NOV5_PICKER_HEADING_CASES: readonly ReplayCase[] = [
       report: REPORT,
       // Fixed in production: OPEN_FORM_NO_SELECTION_ENABLED (QA, 3 Nov 2026, 04:20 UTC).
       status: "fixed",
-        async run(t) {
+      fixFlags: ["REPLY_CUT_CHECK_ENABLED"],
+      async run(t) {
         t.directory(STAFF);
         t.as("location_manager", WEST_DODGE);
         const thread = t.thread();

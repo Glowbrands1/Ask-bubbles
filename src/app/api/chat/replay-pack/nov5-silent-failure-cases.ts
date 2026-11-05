@@ -70,6 +70,7 @@ export const NOV5_SF_B6_CASES: readonly ReplayCase[] = [
     title: "a detail added while a Corrective Action is on its proposal card: the reply never ends on the form picker's heading",
     report: REPORT,
     status: { open: "REPLY_CUT_CHECK_ENABLED (Step 1): no picker or heading while a form is in progress" },
+    fixFlags: ["REPLY_CUT_CHECK_ENABLED"],
     async run(t) {
       t.directory([...STAFF, TALIA]);
       t.as("location_manager", WEST_DODGE);
