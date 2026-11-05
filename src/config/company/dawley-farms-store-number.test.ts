@@ -31,8 +31,11 @@ describe("DM report, 3 Nov 2026: the Dawley Farms store's number and name", () =
     for (const store of APPROVED_GOOGLE_STORES) expect(googleStoreNumber(store.code), store.code).toBe(COMPANY_LIST[store.code]);
   });
 
-  it("the Google match key is unchanged: code 338 is the E 18th St profile", () => {
+  it("the Google match key is unchanged: code 338 is the E 18th St profile, named Dawley Farms (Pau, 6 Nov 2026)", () => {
     expect(approvedStoreByCode("338")?.addressLine1).toBe("5902 E 18th St");
+    expect(approvedStoreByCode("338")?.displayName).toBe("Dawley Farms, SD");
+    expect(approvedStoreByCode("225")?.displayName).toBe("Sioux Falls, SD");
+    expect(approvedStoreByCode("264")?.displayName).toBe("Omaha, NE");
     expect(approvedStoreByCode("309")).toBeUndefined();
   });
 

@@ -88,7 +88,8 @@ export const APPROVED_GOOGLE_STORES: readonly ApprovedGoogleStore[] = [
   },
   {
     code: "338",
-    displayName: "Sioux Falls, SD",
+    // District Manager, 3 Nov 2026; Pau, 6 Nov: Dawley Farms (migration 20261106000100).
+    displayName: "Dawley Farms, SD",
     addressLine1: "5902 E 18th St",
     addressLine2: null,
     city: "Sioux Falls",
