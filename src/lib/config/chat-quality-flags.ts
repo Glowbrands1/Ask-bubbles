@@ -2513,3 +2513,14 @@ export function coachingAsksWhatHappenedEnabled(): boolean {
 export function incidentFromEarlierTurnEnabled(): boolean {
   return envFlag("INCIDENT_FROM_EARLIER_TURN_ENABLED");
 }
+
+/**
+ * An incident the policy reading's specific topics find in the manager's
+ * words ("he brought his new kitten to the store") is an account: the
+ * Corrective Action card never says "You haven't told me what happened yet"
+ * beside a citation "from what you described" (coordinator via QA,
+ * production, 5 Nov 2026). Off, the account is read exactly as before.
+ */
+export function describedTopicIsAccountEnabled(): boolean {
+  return envFlag("DESCRIBED_TOPIC_IS_ACCOUNT_ENABLED");
+}
