@@ -61,6 +61,8 @@ const draftAsked = vi.hoisted(() => [] as string[]);
 /** The draft call's tools, as sent (CA_SALES_POLICY_ENABLED adds an optional property). */
 const draftToolsAsked = vi.hoisted(() => [] as string[]);
 const state = vi.hoisted(() => ({
+  /** What the slot model reads on the next turns (`slotsRead`), as a production trace shows it. */
+  slotsRead: {} as Record<string, unknown>,
   slotReading: "none" as "none" | "ca" | "copy",
   remapObservation: null as string | null,
   /** What the form-reading model returns for this turn (extract_form_fields). */
@@ -248,6 +250,7 @@ vi.mock("@/lib/ai/call-claude", () => ({
       formType: state.slotReading === "ca" ? "Corrective Action Form" : null,
       formTurn: state.slotReading === "ca",
       policyHeading: null,
+      ...state.slotsRead,
     };
   },
 }));
@@ -506,6 +509,7 @@ beforeEach(async () => {
   store.form_instances = new JoiningRows() as never;
   state.slotReading = "none";
   state.remapObservation = null;
+  state.slotsRead = {};
   state.reading = {};
   state.draft = { values: {} };
   state.revision = { values: {} };
@@ -608,6 +612,9 @@ function context(): ReplayContext {
     },
     modelSays: (text) => {
       said.answer = text;
+    },
+    slotsRead: (slots) => {
+      state.slotsRead = slots;
     },
     modelCallsEditTool: (input) => {
       editTool.input = input;

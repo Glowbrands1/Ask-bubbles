@@ -314,10 +314,25 @@
   "twin": "itself with the flag off (CI default); nov4-mgr-2",
   "reason": "\"I need to make a corrective action for msb\": with the flag on MSB is never the employee and the reason is never asked again; open with production's flags, where msb is looked up as a person."
  },
- "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-request-not-observation-due-to: \"CA for <name> due to under performance in salon metrics\": the Observation is the reason, not the request — OPEN in production (with production's flags the Observation is the request as the model copied it)": {
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-offer-exit-replaces-menu: a Coaching / Corrective Action menu for the employee is replaced by the one offer; \"yes\" makes the card — OPEN in production (with production's flags the reply is a Coaching / Corrective Action menu, with no offer)": {
   "category": "INTENDED",
-  "twin": "itself with the flag off (CI default); src/lib/forms/request-observation.test.ts",
-  "reason": "QA, live, 4 Nov 2026 (\"CA for <name> due to …\"): with the flag on, \"due to\" / \"because (of)\" joins the request to its reason (incident-issue.ts), so the card's Issue is the reason and the drafted Observation is not the request (request-observation.ts); the sales account's Policy line is the Standards of Conduct one. Off, unchanged."
+  "twin": "itself with the flag off (CI default); src/lib/ai/ca-offer.test.ts (withCaOffer)",
+  "reason": "QA's live traces, 4 Nov 2026 (#5): with the flag on the one Corrective Action offer is added at the turn's one exit (answerQuestion, withCaOffer), and a menu offering the Corrective Action Form is replaced by it; the offer names this message's employee. Off, unchanged."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-offer-exit-tool-path: #5's statement with another draft open (the main call carries the edit tool): still the one offer — OPEN in production (with production's flags no offer)": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default); src/lib/ai/ca-offer.test.ts (withCaOffer)",
+  "reason": "QA's live traces, 4 Nov 2026 (#5): with the flag on the one Corrective Action offer is added at the turn's one exit (answerQuestion, withCaOffer), and a menu offering the Corrective Action Form is replaced by it; the offer names this message's employee. Off, unchanged."
+ },
+ "replay: nov4-offer-exit-replaces-menu [open]": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default); src/lib/ai/ca-offer.test.ts (withCaOffer)",
+  "reason": "QA's live traces, 4 Nov 2026 (#5): with the flag on the one Corrective Action offer is added at the turn's one exit (answerQuestion, withCaOffer), and a menu offering the Corrective Action Form is replaced by it; the offer names this message's employee. Off, unchanged."
+ },
+ "replay: nov4-offer-exit-tool-path [open]": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default); src/lib/ai/ca-offer.test.ts (withCaOffer)",
+  "reason": "QA's live traces, 4 Nov 2026 (#5): with the flag on the one Corrective Action offer is added at the turn's one exit (answerQuestion, withCaOffer), and a menu offering the Corrective Action Form is replaced by it; the offer names this message's employee. Off, unchanged."
  },
  "replay: nov4-qa-form-name-as-person-b [fix:FORM_NAME_FROM_ROSTER_ENABLED]": {
   "category": "INTENDED",
@@ -328,6 +343,11 @@
   "category": "INTENDED",
   "twin": "itself with the flag off (CI default); ca-sales-policy.test.ts",
   "reason": "Client request (4 Nov 2026), Pau: with the flag on a stated metric shortfall (\"Under Performance on Club Close % and Spa %\") goes to the Corrective Action intake citing the Standards of Conduct instead of the progression's metric-only answer; the form's name is still never the employee (FORM_NAME_FROM_ROSTER)."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-request-not-observation-due-to: \"CA for <name> due to under performance in salon metrics\": the Observation is the reason, not the request — OPEN in production (with production's flags the Observation is the request as the model copied it)": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (CI default); src/lib/forms/request-observation.test.ts",
+  "reason": "QA, live, 4 Nov 2026 (\"CA for <name> due to …\"): with the flag on, \"due to\" / \"because (of)\" joins the request to its reason (incident-issue.ts), so the card's Issue is the reason and the drafted Observation is not the request (request-observation.ts); the sales account's Policy line is the Standards of Conduct one. Off, unchanged."
  },
  "replay: nov4-request-not-observation-due-to [open]": {
   "category": "INTENDED",
