@@ -121,8 +121,8 @@ export const NOV5_COMPOUND_SURNAME_CASES: ReplayCase[] = [
  * QA-A / QA-B (the re-flip's live testers, 5 Nov 2026, flags on): a full name on no roster gave no not-found note.
  * A different path from the compound surname: #470's note read the name only from "for <Name>," or "for <Name>.",
  * and these requests had "i have an employee, <name> that needs …" or the name at the end of the message.
- * ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED also takes the name the roster-only step took off the card, and "for <Name>"
- * at the end of the message. Invented person, checked against both directories.
+ * ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED also reads "employee, <Name>" and "for <Name>" at the end of the message
+ * (Title Case names only). Invented person, checked against both directories.
  */
 const NOT_FOUND_FIX = ["FORM_NAME_FROM_ROSTER_ENABLED", "ROSTER_NEAR_MISS_ENABLED", "ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED"];
 const notFound = (id: string, message: string, what: string): ReplayCase => ({
