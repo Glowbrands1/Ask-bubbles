@@ -217,6 +217,8 @@ export const NOV5_REQUEST_SLOT_CASES: ReplayCase[] = [
         key: "ima-off-roster",
         text: "create a CA form for ima employee, for opening the store late on 9-28-26",
         roster: ROSTER,
+        // production-flags.json corrected to Vercel (QA, 5 Nov 2026). Recorded OPEN, a production defect.
+        open: "GROUNDED_ENTITIES_ENABLED is off in production, so the card is for \"ima employee\", a name on no roster",
         check: (card: string | null, reply: string) => {
           expect(card, "a name on no roster is the employee").toBeNull();
           expect(reply, "it does not ask who").toMatch(ASKS_WHO);
@@ -265,18 +267,22 @@ export const NOV5_REQUEST_SLOT_CASES: ReplayCase[] = [
       },
     ] as const
   ).map(
-    ({ key, text, roster, check }): ReplayCase => ({
+    (entry): ReplayCase => {
+      const { key, text, roster, check } = entry;
+      const open = "open" in entry ? entry.open : undefined;
+      return {
       id: `nov5-roster-only-${key}`,
       title: `Pau 5 Nov, only roster people: "${text.split("\n")[0]!.slice(0, 70)}"`,
       report: `Pau, 5 Nov 2026: match the text after "for" against the roster; no match asks who; only roster people are choices — "${text.split("\n")[0]}"`,
-      status: "fixed",
+      status: open ? { open } : "fixed",
       fixFlags: [FLAG, SALES, GLOSSARY],
       async run(t) {
         const thread = start(t, roster);
         const reply = await thread.say(text);
         (check as (card: string | null, reply: string, templateKey?: string | null) => void)(thread.proposal?.employeeName ?? null, reply.content, thread.proposal?.templateKey ?? null);
       },
-    }),
+      };
+    },
   ),
 ];
 

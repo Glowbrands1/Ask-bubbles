@@ -108,7 +108,8 @@ export const NOV4_MANAGER_MSB_CASES: ReplayCase[] = [
     report: `${REPORT}, #1`,
     // Run 4 Nov 2026 on main before #427: OPEN, the CA card and its draft cite no policy: no Standards of Conduct with heading and page (the card also says "I couldn't find **Club Close** or **Under** in the Woven roster").
     // Holds with production's flags since #427 (d55575c9): revision 7 of the form replaces Under Performance with the Standards of Conduct, so the draft cites it.
-    status: "fixed",
+    // production-flags.json corrected to Vercel (QA, 5 Nov 2026): GROUNDED_ENTITIES_ENABLED is off in production, so a name on no roster goes on the card. Recorded OPEN, a production defect.
+    status: { open: "GROUNDED_ENTITIES_ENABLED is off in production, so a name on no roster goes on the card" },
     fixFlags: ["CA_SALES_POLICY_ENABLED"],
     run: (t) => runMessage(t, byId("mgr-1-verbal-metrics")),
   },

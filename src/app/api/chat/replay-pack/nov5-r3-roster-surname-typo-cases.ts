@@ -134,7 +134,8 @@ export const NOV5_R3_ROSTER_SURNAME_TYPO_CASES: ReplayCase[] = [
     id: "nov5-r3-off-roster-lowercase-action-plan",
     title: "R3 (off roster, typed in lowercase): \"create a CA for zebulon marchbanks …\" with an action plan naming him: the card is empty, and no reply text names him",
     report: `${REPORT}: off roster, the reply names the person while the card is empty`,
-    status: "fixed",
+    // production-flags.json corrected to Vercel (QA, 5 Nov 2026): GROUNDED_ENTITIES_ENABLED is off in production, so a name on no roster goes on the card, and the reply names him. Recorded OPEN, a production defect.
+    status: { open: "GROUNDED_ENTITIES_ENABLED is off in production, so a name on no roster goes on the card, and the reply names him" },
     run: withFlip(async (t) => {
       const { reply, employee } = await said(t, "create a CA for zebulon marchbanks, he was 40 minutes late opening the store on 11/2. action plan: zebulon will be on time for every opening shift");
       expect(employee, "a name on no roster is the employee").toBeNull();
@@ -159,7 +160,8 @@ export const NOV5_R3_ROSTER_SURNAME_TYPO_CASES: ReplayCase[] = [
     id: "nov5-r3-off-roster-names-nobody",
     title: "R3 (off roster): \"create a CA for Zebulon Marchbanks …\", on no roster: the card is empty, asks who, and no reply text names him (\"I can create a CA for …\", \"Name: …\", the Action Plan)",
     report: `${REPORT}: off roster, the reply says "I can create a CA for <A>" / "Name: <B>" while the card is empty`,
-    status: "fixed",
+    // production-flags.json corrected to Vercel (QA, 5 Nov 2026): GROUNDED_ENTITIES_ENABLED is off in production, so a name on no roster goes on the card, and the reply names him. Recorded OPEN, a production defect.
+    status: { open: "GROUNDED_ENTITIES_ENABLED is off in production, so a name on no roster goes on the card, and the reply names him" },
     run: withFlip(async (t) => {
       const { reply, employee } = await said(t, "create a CA for Zebulon Marchbanks, he was 40 minutes late opening the store on 11/2. action plan: Zebulon will be on time for every opening shift");
       expect(employee, "a name on no roster is the employee").toBeNull();
