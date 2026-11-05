@@ -54,6 +54,13 @@ describe("METRIC_GUARD_ENABLED on, FORM_NAME off: no metric is ever a choice", (
     expect(withoutMetricChoices(reply(text), "CA for Marnie Holloway, Remy Calder, and Ignatius Wexlerby", ["Marnie Holloway", "Remy Calder", "Ignatius Wexlerby"]).content).toBe(text);
   });
 
+  it("negative (QA): a real off-roster name that is not a metric item stays a choice; only the metric goes", () => {
+    const message = "I need a corrective action verbal for Zebulon Marchbanks or Perpetua. This is for Under Performance on PPTA, LPSVA, Club Average, Club Close %, and Spa %.";
+    const text = "Which of them is this **Corrective Action Form** for — **Zebulon Marchbanks**, **Club Close** or **Perpetua**?";
+    expect(withoutMetricChoices(reply(text), message, ROSTER).content).toBe("Which of them is this **Corrective Action Form** for — **Zebulon Marchbanks** or **Perpetua**?");
+    expect(withoutMetricChoices(reply("Is this for **Zebulon Marchbanks**?"), message, ROSTER).content).toBe("Is this for **Zebulon Marchbanks**?");
+  });
+
   it("negative: a message with no list and no offense phrase changes nothing", () => {
     const text = "Which of them is this **Coaching Form** for — **Marnie Holloway** or **Club Close**?";
     expect(withoutMetricChoices(reply(text), "create a coaching form", ROSTER).content).toBe(text);
