@@ -43,6 +43,8 @@ export interface ReplayContext {
   revisionWrites(values: Record<string, string>): void;
   /** What the answering model says on its next turns (null: the default answer). */
   modelSays(text: string | null): void;
+  /** What the slot model reads on the next turns (record_intent_slots), as a production trace shows it. */
+  slotsRead(slots: Record<string, unknown>): void;
   /**
    * FORM_EDIT_TOOL_IN_STREAM_ENABLED: on its next turn that is offered
    * `edit_form`, the answering model calls it with this input (null: it does
