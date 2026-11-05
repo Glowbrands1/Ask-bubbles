@@ -105,6 +105,13 @@ export const NOV5_CODING3_BUBBLES_CA_TWIN_CASES: ReplayCase[] = [
     title: "\"can you write me a Ca for <name> for performance for october\": with CA_SALES_POLICY_ENABLED the card cites the Standards of Conduct; never \"You haven't told me what happened yet\"",
     report: `${REPORT}: "can you write me a Ca for <name> for performance for october" → "You haven't told me what happened yet"`,
     status: { open: "no card at all (\"A grounded answer from the policy manual.\"): \"can you write me a Ca\" is no request here (WRITES_THE_FORM has no \"write me a\", as nov5-twin-sf-s28 records); behind it, \"for performance\" is no account and no sales reading" },
+    /*
+     * Two readings, both behind CA_SALES_POLICY_ENABLED: "can you write me a Ca" is the request
+     * (`WRITES_THE_FORM_LOOSE`, forms/template-intent.ts, ported from the sibling app's main), and with
+     * CA_PERFORMANCE_REASON_ENABLED (default off, not in production) "for performance" in that request is
+     * the sales reading (`withSalesPolicy`, forms/ca-policy.ts).
+     */
+    fixFlags: ["CA_SALES_POLICY_ENABLED", "CA_PERFORMANCE_REASON_ENABLED"],
     async run(t: T) {
       /*
        * CA_SALES_POLICY_ENABLED is OFF in this app's production (production-

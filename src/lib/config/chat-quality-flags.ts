@@ -2428,6 +2428,23 @@ export function caSalesPolicyEnabled(): boolean {
 }
 
 /**
+ * CA_PERFORMANCE_REASON_ENABLED (QA, coding-3 item 5, 5 Nov 2026; default
+ * off; same flag in both apps; only effective with CA_SALES_POLICY_ENABLED).
+ * "can you write me a Ca for <name> for performance for october" got "You
+ * haven't told me what happened yet": the bare "performance" is neither a
+ * metric named and judged (`statesMetricShortfall`) nor the removed Under
+ * Performance box's name. On, the sentence that asks for the Corrective
+ * Action naming performance (the EPP reader's existing performance pattern,
+ * `namesPerformance` in `forms/epp-policy.ts`), with nothing else read from
+ * the account, is the sales-performance reading: the card cites the
+ * Standards of Conduct and does not ask what happened. See `withSalesPolicy`
+ * in `forms/ca-policy.ts`. Off, as before.
+ */
+export function caPerformanceReasonEnabled(): boolean {
+  return envFlag("CA_PERFORMANCE_REASON_ENABLED");
+}
+
+/**
  * No false "Updated" after a form edit (Step 4, 4 Nov 2026). The one writer
  * refuses, on the tool, patch, revision and correction paths, an op that sets
  * a field to the value it already has (`same_value`) and an op whose value
