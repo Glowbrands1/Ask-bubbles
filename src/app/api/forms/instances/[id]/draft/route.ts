@@ -245,7 +245,7 @@ import {
 } from "@/lib/forms/warning-level";
 import { warningLevelFromConversation } from "@/lib/forms/warning-level-conversation";
 import { readerPriorLines, withReaderPriorLines } from "@/lib/ai/reader/recheck";
-import { JOIN } from "@/lib/forms/bounded-context";
+import { JOIN } from "@/lib/forms/turn-join";
 import { businessToday } from "@/lib/business-date";
 import { updateChatTrace } from "@/lib/ai/chat-trace-store";
 import {
