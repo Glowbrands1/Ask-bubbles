@@ -90,14 +90,13 @@
       "pass": false,
       "misses": [
         "employee",
-        "blocking question",
         "reply has \"Coaching Form\""
       ],
       "card": {
-        "employee": null,
+        "employee": "wren tazelaal",
         "salon": "loc-264",
         "date": null,
-        "status": "needs_employee"
+        "status": "ready"
       }
     },
     {

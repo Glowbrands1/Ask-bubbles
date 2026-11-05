@@ -137,8 +137,7 @@ export const NOV4_MANAGER_MSB_CASES: ReplayCase[] = [
     title: `"${byId("mgr-4-msb-october").text}" — a CA card, MSB never a name, cites the Standards of Conduct`,
     report: `${REPORT}, #4`,
     // Run 4 Nov 2026 (production flags): fails as below.
-    // Before FORM_NAME_FROM_ROSTER_ENABLED and CA_SALES_POLICY_ENABLED were on together in production (5 Nov 2026): OPEN, no card at all: "MSB CA for …" is answered as a policy question (the pack's stand-in answer) with production's flags
-    status: "fixed",
+    status: { open: "no card at all: \"MSB CA for …\" is answered as a policy question (the pack's stand-in answer) with production's flags" },
     // Holds with both flags (claude/ca-sales-msb-cases): a leading glossary term is the reason, not part of the request (`detectTemplateIntent`).
     fixFlags: ["CA_SALES_POLICY_ENABLED", "CHAT_GLOSSARY_ENABLED"],
     /*
@@ -164,8 +163,7 @@ export const NOV4_MANAGER_MSB_CASES: ReplayCase[] = [
     title: `"${byId("mgr-5-msb-soc").text}" — asks once "Do you want a Corrective Action for …?" (Standards of Conduct); "yes" makes the card, citing the Standards of Conduct`,
     report: `${REPORT}, #5 (Pau: asks once, card after yes)`,
     // Run 4 Nov 2026 (production flags): fails as below.
-    // Before FORM_NAME_FROM_ROSTER_ENABLED and CA_SALES_POLICY_ENABLED were on together in production (5 Nov 2026): OPEN, turn 1 is answered as a policy question (the pack's stand-in answer): no offer "Do you want a Corrective Action for …?", so "yes" makes no card
-    status: "fixed",
+    status: { open: "turn 1 is answered as a policy question (the pack's stand-in answer): no offer \"Do you want a Corrective Action for …?\", so \"yes\" makes no card" },
     // Holds with both flags since #434 (the CA session's offer behind CA_SALES_POLICY_ENABLED): asks once, card after "yes", citing the Standards of Conduct.
     fixFlags: ["CA_SALES_POLICY_ENABLED", "CHAT_GLOSSARY_ENABLED"],
     run: (t) => runAsksOnceThenYes(t, byId("mgr-5-msb-soc")),
