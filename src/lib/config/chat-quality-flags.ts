@@ -398,8 +398,8 @@ export function intentPayrollManagerOnlyEnabled(): boolean {
  * ("blank", "n/a", "unknown"), a phrase that starts with a verb ("require
  * practice"), a word of the brand or a report, a place on the store roster,
  * and the app's own lines and lists (the stored "Policy reference: …" line,
- * an assistant reply, a bulleted or priced offer list). Ported from Ask
- * Sunny. Off, the readers take names as they do today.
+ * an assistant reply, a bulleted or priced offer list). Ported from the
+ * sibling app. Off, the readers take names as they do today.
  */
 export function notANameGuardEnabled(): boolean {
   return envFlag("NOT_A_NAME_GUARD_ENABLED");
