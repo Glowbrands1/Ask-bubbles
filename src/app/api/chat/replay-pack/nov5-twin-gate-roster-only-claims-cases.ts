@@ -31,7 +31,8 @@ const GLOSSARY = "CHAT_GLOSSARY_ENABLED";
 
 // This app may ask in its details list ("1. The employee's full name …"), as nov5-request-slot-cases.ts accepts.
 const ASKS_WHO = /Who is this (?:\*\*[^*]+\*\* |form )?for\?|employee'?s full name/i;
-const CLAIMS_READY = /Everything I need is here|I have the employee/i;
+// QA, 5 Nov 2026: "Create the draft here when you're ready" beside the asks-who contradicts it too.
+const CLAIMS_READY = /Everything I need is here|I have the employee|Create the draft here when you're ready/i;
 
 /** The card's Observation of Offense line, or "". */
 function observationLine(reply: ReplayAnswer): string {
