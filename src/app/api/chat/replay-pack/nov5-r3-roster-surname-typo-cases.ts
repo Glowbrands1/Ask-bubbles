@@ -38,6 +38,23 @@ const person = (id: string, firstName: string, lastName: string, positionName: s
 const IGNATIUS = person("e-ignatius-wexlerby", "Ignatius", "Wexlerby", "Team Member Part Time");
 const ROSALIND = person("e-rosalind-quenneville", "Rosalind", "Quenneville", "Team Member Part Time");
 
+/*
+ * The flip's flags, on inside every case: production had them on when the testers found this, and
+ * they were rolled back the same day (#462), so the cases no longer depend on production's flags.
+ */
+const FLIP = ["FORM_NAME_FROM_ROSTER_ENABLED", "CA_SALES_POLICY_ENABLED", "CHAT_GLOSSARY_ENABLED"];
+
+function withFlip(run: ReplayCase["run"]): ReplayCase["run"] {
+  return async (t) => {
+    for (const flag of FLIP) vi.stubEnv(flag, "true");
+    try {
+      await run(t);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  };
+}
+
 const REPORT = "QA's testers, 5 Nov 2026 (R3, R5, R7; flags on): a roster surname typed with one letter wrong or missing";
 
 const ASKS_WHO = /Who is this (?:\*\*[^*]+\*\* |form )?for\?/i;
@@ -80,7 +97,7 @@ export const NOV5_R3_ROSTER_SURNAME_TYPO_CASES: ReplayCase[] = [
     report: `${REPORT}: one letter wrong; Employee "Not yet", the reply names him and asks who`,
     status: { open: "the card is emptied and the reply asks \"Who is this form for?\" while its Action plan names Ignatius" },
     fixFlags: ["ROSTER_NEAR_MISS_ENABLED"],
-    async run(t) {
+    run: withFlip(async (t) => {
       const { reply, employee, thread } = await said(t, "create a CA for Ignatius Wexlarby, he was 40 minutes late opening the store on 11/2. action plan: Ignatius will be on time for every opening shift");
       offersTheRosterPerson(reply, employee, "Ignatius Wexlerby");
       namesNobodyOffTheCard(reply, employee, ["Ignatius", "Wexlarby"]);
@@ -89,40 +106,40 @@ export const NOV5_R3_ROSTER_SURNAME_TYPO_CASES: ReplayCase[] = [
       const answer = await thread.say("yes");
       expect(thread.proposal?.employeeName ?? null, `"yes" did not put him on the card:\n${answer.content}`).toBe("Ignatius Wexlerby");
       expect(answer.content, "the account is lost").toMatch(/late opening the store/i);
-    },
+    }),
   },
   {
     id: "nov5-r5-surname-one-letter-missing",
     title: "R5 shape: \"write up Ignatius Wexlrby …\" (one letter missing): the card is his, or the reply asks \"Is this for **Ignatius Wexlerby**?\"",
     report: `${REPORT}: one letter missing`,
     status: "fixed",
-    async run(t) {
+    run: withFlip(async (t) => {
       const { reply, employee } = await said(t, "I need a corrective action for Ignatius Wexlrby. He left the register drawer open and unattended on 11/1. Action plan: Ignatius will lock the drawer every time he leaves the register");
       offersTheRosterPerson(reply, employee, "Ignatius Wexlerby");
       namesNobodyOffTheCard(reply, employee, ["Ignatius", "Wexlrby"]);
-    },
+    }),
   },
   {
     id: "nov5-r7-coaching-surname-typo",
     title: "R7 shape: a coaching form for \"Rosalind Quennevile\" (one letter missing): the card is hers, or the reply asks \"Is this for **Rosalind Quenneville**?\"",
     report: `${REPORT}: coaching form, one letter missing; the Action Plan names her while the card is empty`,
     status: "fixed",
-    async run(t) {
+    run: withFlip(async (t) => {
       const { reply, employee } = await said(t, "make a coaching form for Rosalind Quennevile, she did not restock the shelves before close on 11/2. action plan: Rosalind will restock before every close");
       offersTheRosterPerson(reply, employee, "Rosalind Quenneville");
       namesNobodyOffTheCard(reply, employee, ["Rosalind", "Quennevile"]);
-    },
+    }),
   },
   {
     id: "nov5-r3-off-roster-lowercase-action-plan",
     title: "R3 (off roster, typed in lowercase): \"create a CA for zebulon marchbanks …\" with an action plan naming him: the card is empty, and no reply text names him",
     report: `${REPORT}: off roster, the reply names the person while the card is empty`,
     status: "fixed",
-    async run(t) {
+    run: withFlip(async (t) => {
       const { reply, employee } = await said(t, "create a CA for zebulon marchbanks, he was 40 minutes late opening the store on 11/2. action plan: zebulon will be on time for every opening shift");
       expect(employee, "a name on no roster is the employee").toBeNull();
       namesNobodyOffTheCard(reply, employee, ["Zebulon", "Marchbanks"]);
-    },
+    }),
   },
   {
     id: "nov5-r3-off-roster-name-line-unsaid",
@@ -130,24 +147,24 @@ export const NOV5_R3_ROSTER_SURNAME_TYPO_CASES: ReplayCase[] = [
     report: `${REPORT}: off roster, the reply names the person ("Name: …", "<name>'s position") and says "I have the employee" while the card is empty`,
     status: { open: "the empty card's reply says \"Everything I need is here … I have the employee and the store\" and asks for Zebulon Marchbanks's position" },
     fixFlags: ["ROSTER_NEAR_MISS_ENABLED"],
-    async run(t) {
+    run: withFlip(async (t) => {
       const { reply, employee } = await said(t, "I need a coaching form for Zebulon Marchbanks. Name: Zebulon Marchbanks. He did not restock the shelves before close on 11/2. Action plan: Zebulon will restock before every close");
       expect(employee, "a name on no roster is the employee").toBeNull();
       expect(reply.content, `says it has the employee:\n${reply.content}`).not.toMatch(/Everything I need is here|I have the employee/i);
       expect(reply.content, `does not ask who:\n${reply.content}`).toMatch(ASKS_WHO);
       namesNobodyOffTheCard(reply, employee, ["Zebulon", "Marchbanks"]);
-    },
+    }),
   },
   {
     id: "nov5-r3-off-roster-names-nobody",
     title: "R3 (off roster): \"create a CA for Zebulon Marchbanks …\", on no roster: the card is empty, asks who, and no reply text names him (\"I can create a CA for …\", \"Name: …\", the Action Plan)",
     report: `${REPORT}: off roster, the reply says "I can create a CA for <A>" / "Name: <B>" while the card is empty`,
     status: "fixed",
-    async run(t) {
+    run: withFlip(async (t) => {
       const { reply, employee } = await said(t, "create a CA for Zebulon Marchbanks, he was 40 minutes late opening the store on 11/2. action plan: Zebulon will be on time for every opening shift");
       expect(employee, "a name on no roster is the employee").toBeNull();
       expect(reply.content, `does not ask who:\n${reply.content}`).toMatch(ASKS_WHO);
       namesNobodyOffTheCard(reply, employee, ["Zebulon", "Marchbanks"]);
-    },
+    }),
   },
 ];
