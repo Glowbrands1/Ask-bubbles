@@ -10,7 +10,7 @@ import { ACTIVE_BRAND } from "@/lib/brand";
 import { CLAUDE_MAX_TOKENS, RETRIEVAL } from "@/lib/config/models";
 import { MissingConfigurationError, liveReadiness } from "@/lib/config/server-env";
 import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
-import { asksOnlyAboutFormsOnFile, isFormRecordsQuestion, loadFormRecords } from "@/lib/forms/chat-form-records";
+import { asksOnlyAboutFormsOnFile, candidateNameWords, isFormRecordsQuestion, loadFormRecords } from "@/lib/forms/chat-form-records";
 import { priorFormsReadingForChat } from "@/lib/forms/prior-forms";
 import { answersFormClarification } from "@/lib/forms/form-clarification";
 import { buildFormInventory, publishedEntries } from "@/lib/forms/inventory";
@@ -87,6 +87,7 @@ import {
   googleReviewsInChatEnabled,
   typoReadingCopyEnabled,
   caSalesPolicyEnabled,
+  pastFormsBeforeLibraryEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { gateTexts, searchWithPlan } from "./continuation";
 import { fieldsFromManagerText, mergeConfirmed, retainFieldsInReply } from "./form-field-state";
@@ -341,7 +342,18 @@ async function answerQuestionCore(
    * the library is answered from the library; only a request for a form
    * proposes one. Both detectors are pure and run before anything is read.
    */
-  const detected = detectInventoryQuestion(request.question);
+  const libraryReading = detectInventoryQuestion(request.question);
+  /*
+   * PAST_FORMS_BEFORE_LIBRARY_ENABLED (Pau, 5 Nov 2026, sf-s29): a message
+   * the forms-library check would answer, that names a person or asks about
+   * forms already on file, is answered from the forms on file — the
+   * past-forms lookup below runs for it, and the library answer steps aside.
+   */
+  const pastFormsFirst =
+    pastFormsBeforeLibraryEnabled() &&
+    libraryReading.kind !== "none" &&
+    (isFormRecordsQuestion(request.question) || candidateNameWords(request.question).length > 0);
+  const detected: InventoryQuestion = pastFormsFirst ? { kind: "none" } : libraryReading;
   /*
    * A QUESTION ABOUT FORMS ALREADY ON FILE NAMES A FORM WITHOUT ASKING FOR ONE.
    * "Does Dana have a previous CA form?" reads as naming the Corrective Action
@@ -675,8 +687,9 @@ async function answerQuestionCore(
    * coaching jba manual 11-1-26"), and each row says who created it.
    */
   const readsFormRecords =
-    isFormRecordsQuestion(request.question) &&
-    (!crossChatGuard || asksAboutRecords(request.question) || refersBack(request.question, request.history));
+    pastFormsFirst ||
+    (isFormRecordsQuestion(request.question) &&
+      (!crossChatGuard || asksAboutRecords(request.question) || refersBack(request.question, request.history)));
   const formRecordsPromise = readsFormRecords
     ? loadFormRecords({
         actor,
