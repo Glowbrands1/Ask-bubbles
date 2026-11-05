@@ -1,4 +1,5 @@
 import { expect, vi } from "vitest";
+import { formOpportunityLead } from "@/lib/forms/form-opportunity";
 
 import {
   endsAsSentence,
@@ -27,6 +28,9 @@ import {
  * The manager's words as written, with the employee's name invented
  * (checked against both apps' directories).
  */
+
+/** How the production replies ended, word for word. */
+const LIVE_ENDING = "Based on what you've described, I can prepare:";
 
 export const TALIA: DirectoryRow = {
   id: "e-tb",
@@ -71,6 +75,7 @@ export const NOV5_SF_B6_CASES: readonly ReplayCase[] = [
     title: "a detail added while a Corrective Action is on its proposal card: the reply never ends on the form picker's heading",
     report: REPORT,
     status: { open: "REPLY_CUT_CHECK_ENABLED (Step 1): no picker or heading while a form is in progress" },
+    fixFlags: ["REPLY_CUT_CHECK_ENABLED"],
     async run(t) {
       t.directory([...STAFF, TALIA]);
       t.as("location_manager", WEST_DODGE);
@@ -79,6 +84,28 @@ export const NOV5_SF_B6_CASES: readonly ReplayCase[] = [
       expect(first.formProposal, "the first turn shows the Corrective Action card").toBeTruthy();
       t.modelSays(MODEL_REPLY);
       const reply = await thread.say(DETAIL);
+      endsAsSentence(reply, DETAIL, true);
+      // The model's own words are all still there: the fix removes only what code added.
+      expect(reply.content).toContain("Let me know and I'll fold it all together");
+    },
+  },
+  {
+    // The live wording (QA for Pau, 5 Nov 2026: 4 replies in 2 chats, 2 and 4 Nov, ended exactly so).
+    id: "sf-b6-reply-live-ending",
+    title: "the live shape of sf-b6: the reply never ends exactly \"Based on what you've described, I can prepare:\"",
+    report: REPORT,
+    status: { open: "REPLY_CUT_CHECK_ENABLED (Step 1): no picker or heading while a form is in progress" },
+    fixFlags: ["REPLY_CUT_CHECK_ENABLED"],
+    async run(t) {
+      t.directory([...STAFF, TALIA]);
+      t.as("location_manager", WEST_DODGE);
+      const thread = t.thread();
+      const first = await thread.say(REQUEST);
+      expect(first.formProposal, "the first turn shows the Corrective Action card").toBeTruthy();
+      t.modelSays(MODEL_REPLY);
+      const reply = await thread.say(DETAIL);
+      expect(formOpportunityLead(), "the live line is the picker's own heading").toBe(LIVE_ENDING);
+      expect(reply.content.trimEnd().endsWith(LIVE_ENDING) ? reply.content : null, "the reply ends exactly on the picker's heading").toBeNull();
       endsAsSentence(reply, DETAIL, true);
       // The model's own words are all still there: the fix removes only what code added.
       expect(reply.content).toContain("Let me know and I'll fold it all together");
