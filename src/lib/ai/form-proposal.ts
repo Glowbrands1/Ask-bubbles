@@ -158,6 +158,7 @@ import type {
 import { correctiveActionPlan } from "@/lib/forms/ca-action-plan";
 import { correctiveActionIssue } from "@/lib/forms/incident-issue";
 import { signedDate, statedPriorActions } from "@/lib/forms/prior-actions";
+import { withoutPolicyReference } from "./form-state";
 import type { PriorFormOnFile, PriorFormsReading } from "@/lib/forms/prior-forms-lines";
 import {
   describedManualChoices,
@@ -173,6 +174,7 @@ import {
   slotRetentionEnabled,
   storedSlotsNotARequestEnabled,
   typedNameEnabled,
+  caPolicySaidOnlyEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { managerWords } from "./edit-date-rules";
 import { groundEmployeeResolution } from "./employee-candidate-grounding";
@@ -2852,7 +2854,9 @@ function proposalContent(
      * being stopped for it.
      */
     if (proposal.status !== "needs_location") {
-      return correctiveActionReady(proposal, intake, asksPayrollDeduct(match), readCaPolicy(context.text), {
+      // CA_POLICY_SAID_ONLY_ENABLED: the stored heading is not the manager naming a policy.
+      const policyText = caPolicySaidOnlyEnabled() ? withoutPolicyReference(context.text) : context.text;
+      return correctiveActionReady(proposal, intake, asksPayrollDeduct(match), readCaPolicy(policyText), {
         offersLevel: offeredWarningLevels(match).length > 0,
         earlierWarning: mentionsEarlierWarning(context.text, today),
         priorActions: statedPriorActions(context.text, today),

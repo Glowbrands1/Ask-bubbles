@@ -141,6 +141,7 @@ export const NOV5_PAU_SF_S21_S25_TWIN_CASES: ReplayCase[] = [
     report: `${REPORT}, sf-s24`,
     // Holds in this app, also with the live trace's intent read (policyHeading): the card here has no Observation of Offense line and makes no "as you said" claim on this path (the sibling app's bug); kept as a guard.
     status: "fixed",
+    fixFlags: ["CA_POLICY_SAID_ONLY_ENABLED"],
     async run(t) {
       const thread = start(t);
       const t1 = "Can you write me a performace ca for an employee who did not meet their numbers for the month of october Wynne Sarrow  - verbal\n146 transactions \nBelow in UPT, Average Sale, Conversion";
@@ -158,6 +159,7 @@ export const NOV5_PAU_SF_S21_S25_TWIN_CASES: ReplayCase[] = [
     report: `${REPORT}, sf-s25`,
     // Holds in this app, also with the live trace's intent read (policyHeading): the card here has no Observation of Offense line and makes no "as you said" claim on this path (the sibling app's bug); kept as a guard.
     status: "fixed",
+    fixFlags: ["CA_POLICY_SAID_ONLY_ENABLED"],
     async run(t) {
       const thread = start(t);
       const said = [
