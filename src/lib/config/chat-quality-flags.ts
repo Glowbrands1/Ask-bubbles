@@ -2503,3 +2503,26 @@ export function formNameFromRosterEnabled(): boolean {
 export function caPolicySaidOnlyEnabled(): boolean {
   return envFlag("CA_POLICY_SAID_ONLY_ENABLED");
 }
+
+/**
+ * FORM_LEAD_FULL_SENTENCE_ENABLED (Pau via QA, 5 Nov 2026, sf-b6; default
+ * off; same flag in both apps). The reply ended "Based on what you've
+ * described, I can prepare:" with nothing after it. On, the line before the
+ * form cards is a whole sentence naming the forms offered
+ * (`forms/form-opportunity.ts` formOpportunityLead). Off, as before.
+ */
+export function formLeadFullSentenceEnabled(): boolean {
+  return envFlag("FORM_LEAD_FULL_SENTENCE_ENABLED");
+}
+
+/**
+ * CA_CARD_ADDED_DETAIL_ENABLED (Pau via QA, 5 Nov 2026, sf-b6; default off;
+ * same flag in both apps). The manager added the account on a later turn
+ * ("can you have it include that we recieved a customer complaint …") and the
+ * next Corrective Action card read the Issue from the request alone. On, the
+ * card shows the later turns that add to the account, in the manager's words
+ * (`forms/added-detail.ts`). Off, as before.
+ */
+export function caCardAddedDetailEnabled(): boolean {
+  return envFlag("CA_CARD_ADDED_DETAIL_ENABLED");
+}

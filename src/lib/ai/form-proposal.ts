@@ -159,6 +159,7 @@ import { correctiveActionPlan } from "@/lib/forms/ca-action-plan";
 import { correctiveActionIssue } from "@/lib/forms/incident-issue";
 import { signedDate, statedPriorActions } from "@/lib/forms/prior-actions";
 import { withoutPolicyReference } from "./form-state";
+import { addedDetailTurns } from "@/lib/forms/added-detail";
 import type { PriorFormOnFile, PriorFormsReading } from "@/lib/forms/prior-forms-lines";
 import {
   describedManualChoices,
@@ -174,6 +175,7 @@ import {
   slotRetentionEnabled,
   storedSlotsNotARequestEnabled,
   typedNameEnabled,
+  caCardAddedDetailEnabled,
   caPolicySaidOnlyEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { managerWords } from "./edit-date-rules";
@@ -1153,7 +1155,23 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
                   .map((message) => message.content),
               })
             : null,
+          // CA_CARD_ADDED_DETAIL_ENABLED: this form's manager turns, before any reader removed one.
+          managerTurns: [...formHistory.filter((message) => message.role === "user").map((message) => message.content), input.question],
         });
+  /*
+   * CA_CARD_ADDED_DETAIL_ENABLED: the draft is written from `sourceMessageIds`,
+   * so a turn the card shows as added detail is one of them too.
+   */
+  if (caCardAddedDetailEnabled() && isCorrectiveActionForm(match) && proposal.sourceMessageIds) {
+    const added = addedDetailTurns(
+      formHistory.filter((message) => message.role === "user").map((message) => message.content),
+      proposal.issue ?? null,
+    );
+    const ids = formHistory
+      .filter((message) => message.role === "user" && message.id && added.includes(message.content.trim()))
+      .map((message) => message.id!);
+    proposal.sourceMessageIds = [...new Set([...proposal.sourceMessageIds, ...ids])];
+  }
   return turn(withNotes(content, notes), proposal);
 }
 
@@ -1693,7 +1711,7 @@ export function suggestFormsForTurn(input: ProposalTurn): SuggestedForms | null 
   if (offered.length === 0) return null;
 
   return {
-    lead: formOpportunityLead(),
+    lead: formOpportunityLead(offered.map((summary) => summary.name)),
     selection: {
       primary: choice(offered[0]!),
       additional: offered.slice(1).map(choice),
@@ -2673,6 +2691,7 @@ function proposalContent(
     namedPolicy?: NamedPolicyReading | null;
     priorOnFile?: PriorFormsReading;
     payrollAmountLine?: string | null;
+    managerTurns?: readonly string[];
   } = {},
 ): string {
   /*
@@ -2863,6 +2882,10 @@ function proposalContent(
         namedPolicy: extra.namedPolicy ?? null,
         priorOnFile: extra.priorOnFile ?? NO_PRIOR_FORMS,
         payrollAmountLine: extra.payrollAmountLine ?? null,
+        // CA_CARD_ADDED_DETAIL_ENABLED: what the manager added after the request is on the card.
+        addedDetail: caCardAddedDetailEnabled()
+          ? addedDetailTurns(extra.managerTurns ?? context.messages.map((message) => message.content), proposal.issue ?? null)
+          : [],
       });
     }
   }
@@ -3081,6 +3104,8 @@ function correctiveActionReady(
     priorOnFile?: PriorFormsReading;
     /** The amount line, already decided. Null leaves the reply unchanged. */
     payrollAmountLine?: string | null;
+    /** CA_CARD_ADDED_DETAIL_ENABLED: the manager's later turns that add to the account (`addedDetailTurns`). */
+    addedDetail?: readonly string[];
   } = {
     offersLevel: true,
     earlierWarning: false,
@@ -3123,6 +3148,9 @@ function correctiveActionReady(
     );
   }
   if (stated.length > 0) lines.push("", stated.join(" · "));
+  if (warning.addedDetail && warning.addedDetail.length > 0) {
+    lines.push("", `**Details you added:** ${warning.addedDetail.join(" ")}`);
+  }
   /*
    * THE HISTORY THE MANAGER GAVE, READ BACK as it will be listed on the form —
    * "previous coaching was jba policy manual 1-1-26" is the prior-actions
