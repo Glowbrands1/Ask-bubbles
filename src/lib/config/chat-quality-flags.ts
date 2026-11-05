@@ -2539,3 +2539,16 @@ export function caCardAddedDetailEnabled(): boolean {
 export function payrollAnswerSpellingEnabled(): boolean {
   return envFlag("PAYROLL_ANSWER_SPELLING_ENABLED");
 }
+
+/**
+ * PASTED_BLOCK_FORM_ENABLED (Pau via QA, 5 Nov 2026, sf-s22 in the sibling
+ * app; default off; same flag in both apps). "Make this:<a reviewer's notes>"
+ * read as a Coaching Form request because the pasted notes named a coaching
+ * document, after the manager had said "It needs to be a CA". On, a turn that
+ * is a short lead ending in a colon and a block of several lines is read for
+ * its form from the lead alone (`forms/template-intent.ts` pastedBlockLead).
+ * Off, as before.
+ */
+export function pastedBlockFormEnabled(): boolean {
+  return envFlag("PASTED_BLOCK_FORM_ENABLED");
+}

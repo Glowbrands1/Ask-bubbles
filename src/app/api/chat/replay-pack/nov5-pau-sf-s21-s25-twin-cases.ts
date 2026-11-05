@@ -105,6 +105,7 @@ export const NOV5_PAU_SF_S21_S25_TWIN_CASES: ReplayCase[] = [
     title: "sf-s22: \"It needs to be a CA, not a coaching form\" and \"Its a CA\" keep the Corrective Action; another employee's reviewer notes never go into the Observation",
     report: `${REPORT}, sf-s22`,
     status: { open: "with this app's production flags the first request makes no Corrective Action card" },
+    fixFlags: ["CA_SALES_POLICY_ENABLED", "FORM_NAME_FROM_ROSTER_ENABLED", "PASTED_BLOCK_FORM_ENABLED"],
     async run(t) {
       const thread = start(t);
       const first = await thread.say(

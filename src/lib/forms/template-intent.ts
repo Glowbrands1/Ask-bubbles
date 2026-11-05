@@ -23,7 +23,7 @@
  * Here, that sentence is AMBIGUOUS and the answer is a question.
  */
 
-import { caSalesPolicyEnabled, caShortcutWordsEnabled, formChoiceStatedEnabled, formNameFromRosterEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { caSalesPolicyEnabled, caShortcutWordsEnabled, formChoiceStatedEnabled, formNameFromRosterEnabled, pastedBlockFormEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { foldsToGlossaryTerm } from "@/lib/ai/glossary";
 import { NOT_A_NAME, NOT_A_TYPED_NAME, TYPED_NAME_WORD } from "./name-words";
 import { asksForTeamCoaching } from "./team-subject";
@@ -1510,7 +1510,25 @@ function withoutLeadingGlossaryTerm(question: string): string {
   return match && foldsToGlossaryTerm(match[1]!) ? question.slice(match[0].length) : question;
 }
 
+/**
+ * PASTED_BLOCK_FORM_ENABLED (Pau via QA, 5 Nov 2026, sf-s22 in the sibling app): "Make
+ * this:<a reviewer's numbered notes>" read as a Coaching Form request because
+ * the notes named a "Kit Coaching Document", and the card left the Corrective
+ * Action the manager had just insisted on. A short lead ending in a colon,
+ * followed by a block of several lines, is the manager's words and the block
+ * is what they pasted: the form is read from the lead alone. Null when the
+ * turn is not that shape.
+ */
+function pastedBlockLead(text: string): string | null {
+  const match = /^\s*([^\n:]{1,60}):\s*([\s\S]*)$/.exec(text);
+  if (!match) return null;
+  const lines = match[2]!.split("\n").filter((line) => line.trim() !== "");
+  return lines.length >= 3 ? match[1]! : null;
+}
+
 export function detectTemplateIntent(rawQuestion: string): TemplateIntent {
+  const lead = pastedBlockFormEnabled() ? pastedBlockLead(rawQuestion) : null;
+  if (lead !== null) return detectTemplateIntent(lead);
   const question = withoutLeadingGlossaryTerm(formChoiceStatedEnabled() ? withoutPolicyReference(rawQuestion) : rawQuestion);
   const q = canonicalFormWording(normalize(question));
   /* A question about forms — compared, explained, or when to use one — is answered, never opened. */
