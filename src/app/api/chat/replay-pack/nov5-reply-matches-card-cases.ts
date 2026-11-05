@@ -103,7 +103,8 @@ export const NOV5_REPLY_MATCHES_CARD_CASES: ReplayCase[] = [
     id: "nov5-reply-card-off-roster-name-line",
     title: "off roster: \"I need a coaching form for Zebulon Marchbanks. Name: Zebulon Marchbanks. …\": the empty card's reply never says it has the employee, names nobody, and asks who",
     report: `${REPORT}; QA's testers: "Name: <B>" and "I have the employee" while the card is empty`,
-    status: { open: "the empty card's reply says \"Everything I need is here … I have the employee and the store\"" },
+    // holds only because GROUNDED_ENTITIES is off in production; re-open if GROUNDED is turned on (QA ruling, 5 Nov 2026, as nov5-r3-off-roster-name-line-unsaid).
+    status: "fixed",
     fixFlags: [FIX],
     run: withFlip(async (t) => {
       const { reply, employee } = await said(t, "I need a coaching form for Zebulon Marchbanks. Name: Zebulon Marchbanks. He did not restock the shelves before close on 11/2. Action plan: Zebulon will restock before every close");
