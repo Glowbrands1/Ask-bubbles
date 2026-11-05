@@ -146,6 +146,7 @@ export function rosterOnlyNames(response: AskResponse, names: readonly string[],
         content.replace(HAS_EMPLOYEE_AND_PLACE, "").split("\n").filter((line) => !SAYS_READY.test(line.trim())).join("\n"),
         [employee, slotName(message, names)],
         names,
+        draftedFor(content),
       );
       if (!ask && !ASKS_WHO.test(content) && !ASKS_A_CHOICE.test(content)) ask = ASK_WHO;
     }
@@ -220,12 +221,19 @@ function withoutSlotNameInObservation(content: string, message: string | undefin
 /** A reply line that asks the manager to choose or confirm a person: its names are the choices. */
 const ASKS_A_CHOICE = /Did you mean|Which of them|Is this for \*\*/;
 
-function withoutUnseatedName(content: string, typed: readonly (string | null)[], names: readonly string[]): string {
-  const people = [...new Set(typed.map((name) => name?.trim() ?? "").filter((name) => name && !rosterSpelling(name, names)))];
-  if (people.length === 0) return content;
+function withoutUnseatedName(content: string, typed: readonly (string | null)[], names: readonly string[], drafted: readonly string[] = []): string {
+  const unseated = (list: readonly (string | null)[]) => [...new Set(list.map((name) => name?.trim() ?? "").filter((name) => name && !rosterSpelling(name, names)))];
+  const people = unseated(typed);
+  // The name the reply drafted for ("… for **zebulon marchbanks**") is a person's however it was typed: its words in any case.
+  const draftedPeople = unseated(drafted);
+  if (people.length === 0 && draftedPeople.length === 0) return content;
   const words = [...new Set(people.flatMap((name) => name.split(/\s+/)).filter((word) => /^\p{Lu}[\p{L}'’-]{2,}$/u.test(word)))];
-  const whole = people.map((name) => new RegExp(String.raw`\*{0,2}\b${escape(name)}\b\*{0,2}`, "g"));
-  const single = words.map((word) => new RegExp(String.raw`\*{0,2}\b${escape(word)}\b\*{0,2}`, "g"));
+  const anyCase = [...new Set(draftedPeople.flatMap((name) => name.split(/\s+/)).filter((word) => /^[\p{L}'’-]{3,}$/u.test(word)))];
+  const whole = [...people, ...draftedPeople].map((name) => new RegExp(String.raw`\*{0,2}\b${escape(name)}\b\*{0,2}`, "gi"));
+  const single = [
+    ...words.map((word) => new RegExp(String.raw`\*{0,2}\b${escape(word)}\b\*{0,2}`, "g")),
+    ...anyCase.map((word) => new RegExp(String.raw`\*{0,2}\b${escape(word)}\b\*{0,2}`, "gi")),
+  ];
   return content
     .split("\n")
     .filter((line) => !/^\s*\**\s*Name\s*:/i.test(line))
@@ -242,6 +250,11 @@ function withoutUnseatedName(content: string, typed: readonly (string | null)[],
       return next.replace(/\u0000(\d+)\u0000/g, (_all, index: string) => kept[Number(index)]!);
     })
     .join("\n");
+}
+
+/** The person the reply says it drafts for: "I'll draft a **Corrective Action Form** for **<name>**". */
+function draftedFor(content: string): string[] {
+  return [...content.matchAll(/\b(?:draft|create|put)\b[^\n.]*?\*\*[^*]+\*\* for \*\*([^*]+)\*\*/gi)].map((match) => match[1]!.trim());
 }
 
 /** The name the request put straight after "for" ("create a CA for <Name>, …"), when it is nobody's roster spelling; or null. */

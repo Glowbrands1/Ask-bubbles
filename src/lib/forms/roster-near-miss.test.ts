@@ -70,6 +70,17 @@ describe("ROSTER_NEAR_MISS_ENABLED (b): with no employee on the card, no reply t
     expect(out.content).toContain(ASK_WHO);
   });
 
+  it("on: the person the reply drafts for, typed in lowercase (\"… for **zebulon marchbanks**\"), is named nowhere, in any case", () => {
+    vi.stubEnv("ROSTER_NEAR_MISS_ENABLED", "true");
+    const out = rosterOnlyNames(
+      reply("I'll draft a **Corrective Action Form** for **zebulon marchbanks** from what you've described.\n\n**Action Plan:** zebulon will be on time for every opening shift", null),
+      ROSTER,
+      "create a CA for zebulon marchbanks, he was late opening the store on 11/2",
+    );
+    expect(out.content).not.toMatch(/zebulon|marchbanks/i);
+    expect(out.content).toContain("**Action Plan:** The employee will be on time for every opening shift");
+  });
+
   it("on: the line that says why (\"I couldn't find **<name>** …\") and a choice of roster people keep their names", () => {
     vi.stubEnv("ROSTER_NEAR_MISS_ENABLED", "true");
     const out = rosterOnlyNames(
