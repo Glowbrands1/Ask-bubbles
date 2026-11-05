@@ -3,6 +3,7 @@ import {
   dateAnswerAppliedEnabled,
   exitTermsNotNamesEnabled,
   formNameFromRosterEnabled,
+  metricGuardEnabled,
   storeWordNotANameEnabled,
   streetAddressNotANameEnabled,
 } from "@/lib/config/chat-quality-flags";
@@ -11,7 +12,7 @@ import { readLocationMentions } from "./location-mention";
 import { isGlossaryTerm } from "@/lib/ai/glossary";
 
 import { notAPerson, personRosterNames } from "./person-guard";
-import { outsideRequestSlot } from "./request-slot";
+import { namesAMetric, outsideRequestSlot } from "./request-slot";
 import { couldBeOnRoster, lowercaseNobody, rosterAnchored } from "./roster-shape";
 import { isPayrollWords } from "./payroll-words";
 
@@ -75,6 +76,8 @@ export function namesSomebody(name: string): boolean {
   if (isExitTerms(name)) return false;
   // FORM_NAME_FROM_ROSTER_ENABLED, part 2: outside the request slot, or an item of a list — see `request-slot.ts`.
   if (outsideRequestSlot(name)) return false;
+  // METRIC_GUARD_ENABLED: a list item or an offense word is never a person, with FORM_NAME off too.
+  if (metricGuardEnabled() && namesAMetric(name)) return false;
   if (isShapedLikeNobody(name)) return false;
   if (isLowercaseNobody(name)) return false;
   return !isStoreReply(name);
@@ -90,7 +93,8 @@ export function namesSomebody(name: string): boolean {
  * Off, or with no roster, every candidate is kept as before.
  */
 function isShapedLikeNobody(name: string): boolean {
-  if (!formNameFromRosterEnabled()) return false;
+  // METRIC_GUARD_ENABLED: this guard runs with FORM_NAME off too (QA's LIVE=1, the smaller set, 5 Nov 2026).
+  if (!formNameFromRosterEnabled() && !metricGuardEnabled()) return false;
   // Only beside somebody on the roster: a name typed alone is still a person.
   if (!rosterAnchored()) return false;
   const roster = personRosterNames();
@@ -107,7 +111,8 @@ function isShapedLikeNobody(name: string): boolean {
  * `roster-shape.ts` `lowercaseNobody`. Off, or with no roster, as before.
  */
 function isLowercaseNobody(name: string): boolean {
-  if (!formNameFromRosterEnabled()) return false;
+  // METRIC_GUARD_ENABLED: this guard runs with FORM_NAME off too ("CA for under performance …", the smaller set).
+  if (!formNameFromRosterEnabled() && !metricGuardEnabled()) return false;
   const roster = personRosterNames();
   if (!roster || roster.length === 0) return false;
   return lowercaseNobody(name, roster);
