@@ -219,6 +219,23 @@ export function outsideRequestSlot(candidate: string, text: string | undefined =
 }
 
 /**
+ * METRIC_GUARD_ENABLED (QA's LIVE=1 on f99ee58a, 5 Nov 2026, the smaller set): the two parts of
+ * `outsideRequestSlot` that rule out a metric, whatever FORM_NAME says — an item of a capitalised list of three
+ * or more ("Club Close" of "PPTA, LPSVA, Club Average, Club Close %, and Spa %") and a word of a "for <offense>"
+ * phrase ("Under Performance"). Somebody's whole roster name, or a candidate the message does not contain, is
+ * never ruled out. No message read this turn: false.
+ */
+export function namesAMetric(candidate: string, text: string | undefined = readMessage()): boolean {
+  if (!text || !candidate.trim() || isRosterName(candidate) || !containsWords(text, candidate)) return false;
+  const typed = wordsOf(candidate);
+  if (capitalisedListItems(text).some((item) => wordsOf(item).join(" ") === typed.join(" "))) return true;
+  return offensePhrases(text).some((phrase) => {
+    const named = new Set(wordsOf(phrase));
+    return typed.every((word) => named.has(word));
+  });
+}
+
+/**
  * FORM_NAME_FROM_ROSTER_ENABLED: the manager typed this first name with a
  * different surname ("Remy Fenn" for Remy Calder) — never offer that person,
  * unless the surname typed is close to theirs.

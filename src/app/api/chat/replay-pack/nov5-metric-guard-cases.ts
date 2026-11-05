@@ -77,6 +77,20 @@ export const NOV5_METRIC_GUARD_CASES: ReplayCase[] = [
     }),
   ),
   {
+    id: "nov5-metric-guard-metrics-only",
+    title: "the smaller set: \"CA for under performance on Club Close % and Spa %\" (no name): no card for \"under\" or \"Club Close\"; it asks who",
+    report: `${REPORT}; the gate's twin (5 Nov 2026): nov4-pau-metrics-not-people-metrics-only and nov5-request-slot-metrics-only hold with production's flags and fail with the smaller set (a card for **under**)`,
+    status: { open: "with the smaller set the card is for **under** (\"I'll draft a **Corrective Action Form** for **under**\")" },
+    fixFlags: ["METRIC_GUARD_ENABLED"],
+    async run(t) {
+      const thread = start(t);
+      const reply = await thread.say("CA for under performance on Club Close % and Spa %");
+      expect(thread.proposal?.employeeName ?? "", `a metric is the card's employee:\n${reply.content}`).not.toMatch(/^under$|club close|spa/i);
+      expect(reply.content, `a metric is offered as a person:\n${reply.content}`).not.toMatch(/\*\*(?:under|Club Close|Spa)\*\*/i);
+      expect(reply.content, `does not ask who:\n${reply.content}`).toMatch(/Who is this|employee'?s full name/i);
+    },
+  },
+  {
     id: "nov5-metric-guard-full-name-kept",
     title: "negative control, the smaller set: the same message for \"Perpetua Thornquist\" is her card",
     report: `${REPORT}; negative control`,
