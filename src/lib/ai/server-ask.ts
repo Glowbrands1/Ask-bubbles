@@ -114,7 +114,7 @@ import {
 } from "./form-answers";
 import { resolveChatEntities } from "./entity-facts";
 import { proposeFormForTurn, suggestFormsForTurn, type ChatActor } from "./form-proposal";
-import { acceptedCaOffer, caOfferLine } from "./ca-offer";
+import { acceptedCaOffer, caOfferLine, withCaOffer } from "./ca-offer";
 import { rowsForQuestion } from "@/lib/knowledge/credential-redaction";
 import { assembleGrounding } from "./grounding-assembly";
 import { withManualReadingNotes } from "./manual-reading-notes";
@@ -233,7 +233,22 @@ export async function answerQuestion(
   }
   // FORM_TYPE_SWITCH: the switched card is drafted from the account, never from the switch turn (read on the turns as sent).
   // MANAGER_NAME_NOT_EMPLOYEE_ENABLED: last — the manager's own name is never the employee.
-  return withManagerNameGuard(withSwitchSources(withoutSensitiveDefaults(await answerQuestionTraced(request, actor, memory), request.question), request), request);
+  const answered = withManagerNameGuard(withSwitchSources(withoutSensitiveDefaults(await answerQuestionTraced(request, actor, memory), request.question), request), request);
+  /*
+   * CA_SALES_POLICY_ENABLED: a reply about a policy and an employee the roster
+   * recognises ends with ONE offer to start a Corrective Action citing that
+   * policy, on whichever path answered; a menu offering the Corrective Action
+   * Form is replaced by it. Nothing is made until the manager says yes (Pau,
+   * 4 Nov 2026; QA's live traces). Off, nothing is read or added.
+   */
+  if (!caSalesPolicyEnabled()) return answered;
+  const offer = caOfferLine({
+    history: request.history,
+    question: request.question,
+    questionMessageId: request.questionMessageId,
+    roster: await loadRosterQuiet(actor),
+  });
+  return withCaOffer(answered, offer);
 }
 
 async function answerQuestionTraced(
@@ -1244,21 +1259,7 @@ async function answerQuestionCore(
     history: request.history,
     attachedDocumentIds: request.attachedDocumentIds,
   }).content;
-  /*
-   * CA_SALES_POLICY_ENABLED: an answer about a policy and an employee the
-   * roster recognises ends with ONE offer to start a Corrective Action citing
-   * that policy; nothing is made until the manager says yes (Pau, 4 Nov 2026).
-   * Not beside a form suggestion. Off, nothing is read or added.
-   */
-  if (caSalesPolicyEnabled() && !suggested) {
-    const offer = caOfferLine({
-      history: request.history,
-      question: request.question,
-      questionMessageId: request.questionMessageId,
-      roster: await loadRosterQuiet(actor),
-    });
-    if (offer) content = `${content}\n\n${offer}`;
-  }
+  // CA_SALES_POLICY_ENABLED: the Corrective Action offer is added at the turn's one exit (`answerQuestion`, `withCaOffer`).
   return {
     content,
     formSelection: suggested?.selection,
