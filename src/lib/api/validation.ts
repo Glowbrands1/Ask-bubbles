@@ -150,6 +150,41 @@ export function parseTags(value: unknown): string[] {
   return [...seen];
 }
 
+/** At most this much of a manager's unwritten turn is carried back on `formReply` (FORM_EDIT_SOURCE_TURN_ENABLED). */
+export const UNWRITTEN_MAX = 2_000;
+
+/**
+ * FORM_EDIT_SOURCE_TURN_ENABLED: the two markers a turn keeps from what the
+ * browser sent. `card`: the message carried a form card (`formProposal(s)` or
+ * `formInstanceRef(s)`) — the card's own words are never content for the
+ * form. `formReply`: the reply was about the open form (stamped by the chat
+ * route), with `unwritten`, the manager's turn it did not write. Bounded and
+ * type-checked; a malformed one is dropped. They select which earlier turn an
+ * edit like "the details we just discussed" means; nothing is trusted beyond
+ * that, and `unwritten` is only ever the manager's own words echoed back.
+ */
+export interface HistoryMarkers {
+  card?: true;
+  formReply?: { instanceId: string; unwritten?: string };
+}
+
+function historyMarkers(entry: object): HistoryMarkers {
+  const markers: HistoryMarkers = {};
+  const { formProposal, formProposals, formInstanceRef, formInstanceRefs, formReply } = entry as Record<string, unknown>;
+  const present = (value: unknown) => (Array.isArray(value) ? value.length > 0 : Boolean(value) && typeof value === "object");
+  if (present(formProposal) || present(formProposals) || present(formInstanceRef) || present(formInstanceRefs)) markers.card = true;
+  if (formReply && typeof formReply === "object") {
+    const { instanceId, unwritten } = formReply as { instanceId?: unknown; unwritten?: unknown };
+    if (typeof instanceId === "string" && UUID.test(instanceId)) {
+      markers.formReply =
+        typeof unwritten === "string" && unwritten.trim() !== ""
+          ? { instanceId, unwritten: unwritten.slice(0, UNWRITTEN_MAX) }
+          : { instanceId };
+    }
+  }
+  return markers;
+}
+
 /**
  * Chat history, filtered to well-formed turns and capped to the recent tail.
  *
@@ -161,8 +196,8 @@ export function parseTags(value: unknown): string[] {
  */
 export function parseHistory(
   value: unknown,
-  options: { refuseOverlong?: boolean } = {},
-): { id?: string; role: "user" | "assistant"; content: string }[] {
+  options: { refuseOverlong?: boolean; markers?: boolean } = {},
+): ({ id?: string; role: "user" | "assistant"; content: string } & HistoryMarkers)[] {
   if (!Array.isArray(value)) return [];
   return value
     .filter(
@@ -195,8 +230,10 @@ export function parseHistory(
         );
       }
       const content = entry.content.slice(0, LIMITS.historyMessage);
+      // FORM_EDIT_SOURCE_TURN_ENABLED: the turn's `card` and `formReply` markers; off, none, as before.
+      const markers = options.markers ? historyMarkers(entry) : {};
       return usable
-        ? { id: id as string, role: entry.role, content }
-        : { role: entry.role, content };
+        ? { id: id as string, role: entry.role, content, ...markers }
+        : { role: entry.role, content, ...markers };
     });
 }

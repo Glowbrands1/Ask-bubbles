@@ -147,6 +147,13 @@ const UI_PATHS = ["src/app/**/*.tsx", "src/components/**", "src/features/**/*.ts
  * off, it renders as before for every role.
  */
 const ALLOWED_UI = [
+  /*
+   * FORM_EDIT_SOURCE_TURN_ENABLED (coding 3, item 1, accepted design 5 Nov
+   * 2026): the answer's `formReply` is kept on the message it already builds,
+   * so it goes back with the history. Data only: nothing renders differently,
+   * and with the flag off the server never sends one.
+   */
+  "src/features/chat/chat-screen.tsx",
   "src/features/chat/message-bubble.tsx",
   "src/features/chat/composer.tsx",
   "src/features/chat/inline-form.tsx",
