@@ -104,17 +104,18 @@ export const NOV5_METRIC_GUARD_CASES: ReplayCase[] = [
     },
   },
   /*
-   * Found in the smaller-set gate's records (5 Nov 2026), not in its table: nov2-p1b-next-message-new-draft
-   * passes with the flags on, but its turn 3 reply is EMPTY. With CA_SALES_POLICY_ENABLED on (alone, or in the
-   * six-flag set) "underperformance for the month of october", said with the Corrective Action draft open, gets
-   * no reply and no update; off, "I haven't changed the **Corrective Action Form** for **Remy Calder** …".
-   * Recorded OPEN, no fix yet.
+   * Found in the smaller-set gate's records (5 Nov 2026): nov2-p1b-next-message-new-draft turn 3 was recorded
+   * as an EMPTY reply with CA_SALES_POLICY_ENABLED on. Root cause: the HARNESS, not the app. With CA_SALES on,
+   * "underperformance for the month of october" said with the draft open is a redraft citing the Standards of
+   * Conduct (`forms/chat-redraft.ts`), slower than START_AFTER_MS (about 4 s here), so the route streamed it
+   * (CHAT_RESPONSE_STREAM_ENABLED, `api/streamed-response.ts`); the browser unwraps that envelope, and the pack
+   * read the envelope as the answer. The pack now unwraps it too. A guard: the reply is the redraft's, never empty.
    */
   {
     id: "nov5-ca-sales-open-draft-reply-not-empty",
-    title: "the smaller set: with the CA draft open, \"underperformance for the month of october\" gets a reply, never an empty one",
-    report: "the smaller-set gate's records (5 Nov 2026): nov2-p1b-next-message-new-draft turn 3, an empty reply with CA_SALES_POLICY_ENABLED on",
-    status: { open: "with CA_SALES_POLICY_ENABLED on the reply is empty (no text, no update)" },
+    title: "the smaller set: with the CA draft open, \"underperformance for the month of october\" is redrafted and said so, never an empty reply",
+    report: "the smaller-set gate's records (5 Nov 2026): nov2-p1b-next-message-new-draft turn 3 recorded empty with CA_SALES_POLICY_ENABLED on (a streamed answer the pack did not unwrap)",
+    status: "fixed",
     async run(t) {
       const thread = start(t);
       await thread.say("I need to create a verbal corrective action form");
@@ -125,6 +126,7 @@ export const NOV5_METRIC_GUARD_CASES: ReplayCase[] = [
       t.revisionWrites({ observation: "Remy was below the store average in October on every metric we track — underperformance for the month of October." });
       const reply = await thread.say("underperformance for the month of october");
       expect(reply.content.trim(), "the reply is empty").not.toBe("");
+      expect(reply.content, `not the redraft's reply:\n${reply.content}`).toMatch(/Redrafted the \*\*Corrective Action Form\*\* for \*\*Remy Calder\*\*/);
     },
   },
 ];
