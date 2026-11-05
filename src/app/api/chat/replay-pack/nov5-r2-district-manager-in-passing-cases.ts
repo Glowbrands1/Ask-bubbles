@@ -19,9 +19,11 @@ import { STAFF, WEST_DODGE, type DirectoryRow, type ReplayAnswer, type ReplayCas
  *      warning The date she complained was Oct 31st"; the complaint itself
  *      (rude to a customer) is missing.
  *
- * OPEN with production's flags, no fix yet. The second test runs the same
- * turns with FORM_NAME_FROM_ROSTER_ENABLED + CA_SALES_POLICY_ENABLED on (the
- * flip): recorded 5 Nov 2026, it does not change either defect.
+ * Both OPEN with production's flags. Defect 1 is fixed behind
+ * TITLE_OF_THE_EMPLOYEE_ENABLED (default off; `ai/title-of-the-employee.ts`);
+ * defect 2 has no fix yet. Each runs again with FORM_NAME_FROM_ROSTER_ENABLED +
+ * CA_SALES_POLICY_ENABLED on (the flip): recorded 5 Nov 2026, the flip changes
+ * neither.
  */
 
 const person = (id: string, firstName: string, lastName: string, positionName: string): DirectoryRow => ({
@@ -49,7 +51,7 @@ function issueLine(reply: ReplayAnswer): string {
   return reply.content.split("\n").find((line) => /\*\*Issue:?\*\*/i.test(line)) ?? "";
 }
 
-async function run(t: Parameters<ReplayCase["run"]>[0]) {
+async function story(t: Parameters<ReplayCase["run"]>[0]) {
   vi.setSystemTime(new Date("2026-11-03T21:00:00Z"));
   t.directory([...STAFF, ODESSA, BRENNA]);
   t.as("location_manager", WEST_DODGE);
@@ -57,32 +59,64 @@ async function run(t: Parameters<ReplayCase["run"]>[0]) {
   await thread.say(T1);
   const reply = await thread.say(T2);
   expect(thread.proposal, `no CA card for Odessa Farrow Lindqvist:\n${reply.content}`).toMatchObject({ templateKey: "dpoa", employeeName: "Odessa Farrow Lindqvist" });
+  return { thread, reply };
+}
+
+/** Defect 1: the Position is the employee's (Woven: Team Member Part Time), never the district manager's. */
+async function position(t: Parameters<ReplayCase["run"]>[0]) {
+  const { thread } = await story(t);
   expect(thread.proposal?.employeeRole ?? "", "the Position is the district manager's").not.toMatch(/district manager/i);
+  expect(thread.proposal?.employeeRole ?? null, "the Position is not the employee's Woven position").toBe("Team Member Part Time");
+}
+
+/** Defect 2: What happened carries the complaint. */
+async function account(t: Parameters<ReplayCase["run"]>[0]) {
+  const { reply } = await story(t);
   expect(issueLine(reply), `What happened is only the first fragment:\n${issueLine(reply)}`).toMatch(/rude|attitude/i);
+}
+
+function withFlip(check: (t: Parameters<ReplayCase["run"]>[0]) => Promise<void>) {
+  return async (t: Parameters<ReplayCase["run"]>[0]) => {
+    vi.stubEnv("FORM_NAME_FROM_ROSTER_ENABLED", "true");
+    vi.stubEnv("CA_SALES_POLICY_ENABLED", "true");
+    try {
+      await check(t);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  };
 }
 
 export const NOV5_R2_DISTRICT_MANAGER_IN_PASSING_CASES: ReplayCase[] = [
   {
-    id: "nov5-r2-dm-in-passing-position-and-account",
-    title: "R2: one employee's story naming their district manager in passing: the Position is the employee's, never \"District Manager\"; What happened carries the complaint, not just \"verbal warning The date she complained was Oct 31st\"",
-    report: `${REPORT}: Position "District Manager" from the other person; What happened truncated to "verbal warning The date she complained was Oct 31st"`,
-    status: { open: "the card's Position is \"District Manager\" (the other person's) and What happened is \"verbal warning The date she complained was Oct 31st\"" },
-    run,
+    id: "nov5-r2-dm-in-passing-position",
+    title: "R2 (1): one employee's story naming their district manager in passing: the card's Position is the employee's Woven position, never \"District Manager\"",
+    report: `${REPORT}: Position "District Manager", taken from the other person`,
+    status: { open: "the card's Position is \"District Manager\", the other person's" },
+    fixFlags: ["TITLE_OF_THE_EMPLOYEE_ENABLED"],
+    run: position,
   },
   {
-    id: "nov5-r2-dm-in-passing-with-the-flip",
-    title: "R2 with FORM_NAME_FROM_ROSTER_ENABLED + CA_SALES_POLICY_ENABLED on: the same two checks",
-    report: `${REPORT}: does the sales flip change it?`,
-    // Recorded 5 Nov 2026: the flip only drops the "When Odessa" not-on-roster note; both defects stand.
-    status: { open: "with the flip's flags too: Position \"District Manager\" and What happened \"verbal warning The date she complained was Oct 31st\"" },
-    async run(t) {
-      vi.stubEnv("FORM_NAME_FROM_ROSTER_ENABLED", "true");
-      vi.stubEnv("CA_SALES_POLICY_ENABLED", "true");
-      try {
-        await run(t);
-      } finally {
-        vi.unstubAllEnvs();
-      }
-    },
+    id: "nov5-r2-dm-in-passing-account",
+    title: "R2 (2): the same story: What happened carries the complaint (rude to a customer), not just \"verbal warning The date she complained was Oct 31st\"",
+    report: `${REPORT}: What happened truncated to "verbal warning The date she complained was Oct 31st"`,
+    // No fix yet: correctiveActionIssue keeps the last run of incident sentences up to 180 characters, which here is the first fragment.
+    status: { open: "What happened is \"verbal warning The date she complained was Oct 31st\"" },
+    run: account,
+  },
+  {
+    id: "nov5-r2-dm-in-passing-position-with-the-flip",
+    title: "R2 (1) with FORM_NAME_FROM_ROSTER_ENABLED + CA_SALES_POLICY_ENABLED on: the Position is still the employee's",
+    report: `${REPORT}: does the sales flip change it? Recorded 5 Nov 2026: no (Position "District Manager")`,
+    status: { open: "with the flip's flags too, the Position is \"District Manager\"" },
+    fixFlags: ["TITLE_OF_THE_EMPLOYEE_ENABLED"],
+    run: withFlip(position),
+  },
+  {
+    id: "nov5-r2-dm-in-passing-account-with-the-flip",
+    title: "R2 (2) with FORM_NAME_FROM_ROSTER_ENABLED + CA_SALES_POLICY_ENABLED on: What happened carries the complaint",
+    report: `${REPORT}: does the sales flip change it? Recorded 5 Nov 2026: no`,
+    status: { open: "with the flip's flags too, What happened is \"verbal warning The date she complained was Oct 31st\"" },
+    run: withFlip(account),
   },
 ];

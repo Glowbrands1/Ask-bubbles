@@ -2513,3 +2513,15 @@ export function coachingAsksWhatHappenedEnabled(): boolean {
 export function incidentFromEarlierTurnEnabled(): boolean {
   return envFlag("INCIDENT_FROM_EARLIER_TURN_ENABLED");
 }
+
+/**
+ * TITLE_OF_THE_EMPLOYEE_ENABLED (QA, 5 Nov 2026, R2; default off). One
+ * employee's story naming their district manager in passing ("When <employee>
+ * spoke with District manager <name> …") gave the card Position "District
+ * Manager". On: a title the manager's words attach to another named person
+ * (`forms/title-of-another-person.ts`) is never the card's Position; the
+ * employee's Woven position stands. Off, as before.
+ */
+export function titleOfTheEmployeeEnabled(): boolean {
+  return envFlag("TITLE_OF_THE_EMPLOYEE_ENABLED");
+}
