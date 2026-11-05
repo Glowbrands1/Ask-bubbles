@@ -15,6 +15,7 @@ import { priorFormsReadingForChat } from "@/lib/forms/prior-forms";
 import { answersFormClarification } from "@/lib/forms/form-clarification";
 import { buildFormInventory, publishedEntries } from "@/lib/forms/inventory";
 import { detectInventoryQuestion, type InventoryQuestion } from "@/lib/forms/inventory-question";
+import { withRosterOnlyNames } from "@/lib/forms/roster-only-names";
 import {
   isEllipticalRegisterReference,
   resolveRegisterAnchor,
@@ -216,6 +217,15 @@ export async function answerQuestion(
   asked: AskRequest,
   actor: ChatActor,
   memory: { memoryOwnerId?: string } = {},
+): Promise<AskResponse> {
+  // FORM_NAME_FROM_ROSTER_ENABLED, last: only roster people are the employee or a choice (`forms/roster-only-names.ts`).
+  return withRosterOnlyNames(await answerQuestionAnyPath(asked, actor, memory));
+}
+
+async function answerQuestionAnyPath(
+  asked: AskRequest,
+  actor: ChatActor,
+  memory: { memoryOwnerId?: string },
 ): Promise<AskResponse> {
   // CA_SALES_POLICY_ENABLED: "yes" to the Corrective Action offer is the request it offered (`ca-offer.ts`). Off, unchanged.
   const accepted = acceptedCaOffer({ question: asked.question, history: asked.history });
