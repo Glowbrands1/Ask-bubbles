@@ -134,7 +134,9 @@ export const NOV4_METRICS_NOT_PEOPLE_CASES: ReplayCase[] = [
      * aside only when the same message names somebody on the roster. Nobody
      * here is on it, so the message is read as before.
      */
+    // The fix-flag run: fails with production's real flags (QA Vercel read 5 Nov); tracked: GROUNDED_ENTITIES_ENABLED (off in production since 24 Oct, a deliberate rollback) — the unknown person is not announced.
     fixFlags: [FLAG, SALES, GLOSSARY],
+    fixStatus: { open: "fails with production's real flags (QA Vercel read 5 Nov); tracked: GROUNDED_ENTITIES_ENABLED (off in production since 24 Oct, a deliberate rollback) — the unknown person is not announced" },
     async run(t) {
       const thread = start(t);
       const reply = await thread.say(say("Zuleika Brightwell"));
