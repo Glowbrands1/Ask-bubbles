@@ -102,7 +102,7 @@ describe("no roster read this turn", () => {
 /*
  * THE SALES-FLIP GATE (ask-sunny#530, 5 Nov 2026): the employee is taken off
  * after the reply is built, so the rest of the reply must not speak for them.
- * Ported from Ask Sunny: the replies are the sibling app's gate rows (replay
+ * Ported from the sibling app: the replies are the sibling app's gate rows (replay
  * records, flags on), in this app's wording.
  */
 describe("the gate's regressions: nothing in the reply speaks for a removed employee", () => {
