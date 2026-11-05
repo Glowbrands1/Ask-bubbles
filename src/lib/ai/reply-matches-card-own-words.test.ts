@@ -72,6 +72,15 @@ describe("REPLY_MATCHES_CARD rule 1: the removed name goes, the app's own words 
     expect(out).toContain("The employee will be on time.");
   });
 
+  it("a name word after a colon is a field's value, not a sentence start: scrubbed (\"action plan: Zebulon will …\")", () => {
+    const out = replyMatchesCard(
+      reply("I'll draft a **Corrective Action Form** for **Zebulon Marchbanks** from what you've described.\n\n**Observation of Offense:** he was late. action plan: Zebulon will be on time for every opening shift"),
+      ROSTER,
+      "create a CA for Zebulon Marchbanks, he was late opening on 11/2. action plan: Zebulon will be on time for every opening shift",
+    ).content;
+    expect(out).not.toMatch(/Zebulon|Marchbanks/);
+  });
+
   it("a name typed in lowercase (\"zebulon marchbanks\") is still scrubbed in every case, as before", () => {
     const out = replyMatchesCard(
       reply("I'll draft a **Corrective Action Form** for **zebulon marchbanks** from what you've described.\n\n**Action Plan:** zebulon will be on time for every opening shift"),

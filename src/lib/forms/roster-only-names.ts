@@ -265,7 +265,8 @@ export function withoutUnseatedName(
     const before = line.slice(0, at);
     const after = line.slice(at + found.length);
     const besideName = nameWords.has((/([\p{L}'’-]+)\W*$/u.exec(before)?.[1] ?? "").toLowerCase()) || nameWords.has((/^\W*([\p{L}'’-]+)/u.exec(after)?.[1] ?? "").toLowerCase());
-    return /^\s*$|[.!?:]\s+$/.test(before) && !besideName && !found.startsWith("*");
+    // A line or a sentence starts here (after ".", "!" or "?"; never after ":", where a name begins a field: "action plan: Zebulon will …").
+    return /^\s*$|[.!?]\s+$/.test(before) && !besideName && !found.startsWith("*");
   };
   return content
     .split("\n")
