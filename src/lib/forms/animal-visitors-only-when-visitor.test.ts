@@ -39,6 +39,7 @@ describe("ANIMAL_VISITORS_ONLY_WHEN_VISITOR_ENABLED", () => {
     "she let her friend's dog stay in the back room during her shift",
     "a guest's puppy was in the store and he played with it at the counter",
     "his family member came in with a cat and he let it stay at the store",
+    "a client walked in with her puppy and he let it stay at the counter",
     "she allowed a dog that belonged to a visitor in the store",
   ])("flag on: %s also cites Visitors in the Workplace", (text) => {
     on();
