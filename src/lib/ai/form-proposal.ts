@@ -169,6 +169,7 @@ import { manualDisplayTitle, manualSheetHeadings, type ManualChunk } from "@/lib
 import {
   actionPlanSentencesEnabled,
   antiLoopEnabled,
+  incidentFromEarlierTurnEnabled,
   nameQuestionOnlyEnabled,
   slotRetentionEnabled,
   storedSlotsNotARequestEnabled,
@@ -2301,7 +2302,7 @@ function turnsAboutThisForm(
       formStart = index;
     }
     if (forThisEmployee) requestAt = index;
-    return { names, otherForm, otherPerson, thisForm };
+    return { names, otherForm, otherPerson, thisForm, aboutThisForm };
   });
   /* The latest turn of this form that corrected the person TO this employee. */
   let correctionAt = -1;
@@ -2355,6 +2356,16 @@ function turnsAboutThisForm(
       (message, index, kept) =>
         index === kept.length - 1 ||
         readings[first + index]!.thisForm ||
+        /*
+         * INCIDENT_FROM_EARLIER_TURN_ENABLED (Pau, sf-s28, 5 Nov 2026): "can i
+         * give a ca for not signing off on the cleaning check list" asks about
+         * this form and says what happened, then "can you write me a ca for
+         * <name>" asks for it. The question is the account; dropped, the card
+         * said "You haven't told me what happened yet". Off, as before.
+         */
+        (incidentFromEarlierTurnEnabled() &&
+          readings[first + index]!.aboutThisForm &&
+          describesIncident(message.content)) ||
         !isQuestion(message.content) ||
         extractEmployeeNames(message.content).some(same),
     );

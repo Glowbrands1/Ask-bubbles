@@ -866,6 +866,7 @@ export function nameBeforeTitleEnabled(): boolean {
 }
 
 export const CHAT_QUALITY_FLAG_NAMES = [
+  "INCIDENT_FROM_EARLIER_TURN_ENABLED",
   "LEVEL_REQUEST_DATE_ENABLED",
   "CA_SHORTCUT_WORDS_ENABLED",
   "EXIT_SHORTCUT_WORDS_ENABLED",
@@ -2500,4 +2501,15 @@ export function formNameFromRosterEnabled(): boolean {
  */
 export function coachingAsksWhatHappenedEnabled(): boolean {
   return envFlag("COACHING_ASKS_WHAT_HAPPENED_ENABLED");
+}
+
+/**
+ * A question that asks about the Corrective Action and says what happened is
+ * the account (Pau, sf-s28, 5 Nov 2026): "can i give a ca for not signing off
+ * on the cleaning check list" was dropped from the form's turns as a question
+ * naming nobody. See `turnsAboutThisForm` in `ai/form-proposal.ts`. Off, as
+ * before.
+ */
+export function incidentFromEarlierTurnEnabled(): boolean {
+  return envFlag("INCIDENT_FROM_EARLIER_TURN_ENABLED");
 }

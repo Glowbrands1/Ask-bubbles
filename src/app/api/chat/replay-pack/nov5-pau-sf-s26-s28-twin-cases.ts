@@ -125,4 +125,40 @@ export const NOV5_PAU_SF_S26_S28_TWIN_CASES: ReplayCase[] = [
       }
     },
   },
+  {
+    id: "nov5-twin-sf-s28-incident-scope",
+    title: "sf-s28: \"can i give a ca for not signing off on the cleaning check list\" → \"write a ca for Thessaly Brandt from west dodge\": the question is the account",
+    report:
+      "Pau via QA, 5 Nov 2026, sf-s28 (twin): the earlier question that says what happened was dropped from the form's turns, so the card said \"You haven't told me what happened yet\". Turn 2 says \"write a ca\" here: \"can you write me a ca\" makes no card in this app until the WRITES_THE_FORM change (the case above).",
+    status: { open: "\"You haven't told me what happened yet\": the question naming nobody is dropped from the form's turns" },
+    fixFlags: ["INCIDENT_FROM_EARLIER_TURN_ENABLED"],
+    async run(t: T) {
+      start(t);
+      const thread = t.thread();
+      await thread.say("can i give a ca for not signing off on the cleaning check list");
+      const reply = await thread.say("write a ca for Thessaly Brandt from west dodge");
+      expect(thread.proposal, `no Corrective Action card for Thessaly Brandt:\n${reply.content}`).toMatchObject({ templateKey: "dpoa", employeeName: "Thessaly Brandt" });
+      expect(reply.content, `the earlier question's incident is not used:\n${reply.content}`).not.toMatch(NO_ACCOUNT);
+    },
+  },
+  {
+    id: "nov5-twin-sf-s28-control-policy-question",
+    title: "sf-s28 control: \"what does the manual say about shirts?\" → \"write a ca for Thessaly Brandt from west dodge\": a policy question is still no account, with INCIDENT_FROM_EARLIER_TURN on",
+    report: "Pau via QA, 5 Nov 2026: the sf-s28 change keeps only a question about the Corrective Action that says what happened; any other question stays out of the account.",
+    status: "fixed",
+    async run(t: T) {
+      vi.stubEnv("INCIDENT_FROM_EARLIER_TURN_ENABLED", "true");
+      try {
+        start(t);
+        const thread = t.thread();
+        await thread.say("what does the manual say about shirts?");
+        const reply = await thread.say("write a ca for Thessaly Brandt from west dodge");
+        expect(thread.proposal, `no Corrective Action card for Thessaly Brandt:\n${reply.content}`).toMatchObject({ templateKey: "dpoa", employeeName: "Thessaly Brandt" });
+        expect(reply.content, `the shirt question was read as the account:\n${reply.content}`).toMatch(NO_ACCOUNT);
+        expect(reply.content, `the shirt question is on the card:\n${reply.content}`).not.toMatch(/Observation[^\n]*shirts/i);
+      } finally {
+        vi.unstubAllEnvs();
+      }
+    },
+  },
 ];
