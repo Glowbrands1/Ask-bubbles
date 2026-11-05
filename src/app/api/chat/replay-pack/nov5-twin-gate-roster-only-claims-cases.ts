@@ -17,7 +17,7 @@ import { STAFF, WEST_DODGE, type ReplayAnswer, type ReplayCase } from "./cases";
  *   nov5-roster-only-ima-off-roster: it asked who, but the Observation read
  *     "ima employee, opening the store late on 9-28-26".
  *
- * Ported from Ask Sunny. In this app neither row showed on these turns (the
+ * Ported from the sibling app. In this app neither row showed on these turns (the
  * name is announced as not on the roster, and no Observation is drafted
  * before the employee is known), so the twins pin only the invariants: with
  * the employee taken off, nothing in the reply says it has one, and the
