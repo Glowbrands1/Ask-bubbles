@@ -2515,6 +2515,34 @@ export function incidentFromEarlierTurnEnabled(): boolean {
 }
 
 /**
+ * TITLE_OF_THE_EMPLOYEE_ENABLED (QA, 5 Nov 2026, R2; default off). One
+ * employee's story naming their district manager in passing ("When <employee>
+ * spoke with District manager <name> …") gave the card Position "District
+ * Manager". On: a title the manager's words attach to another named person
+ * (`forms/title-of-another-person.ts`) is never the card's Position; the
+ * employee's Woven position stands. Off, as before.
+ */
+export function titleOfTheEmployeeEnabled(): boolean {
+  return envFlag("TITLE_OF_THE_EMPLOYEE_ENABLED");
+}
+
+/**
+ * ROSTER_NAME_IN_CANDIDATE_ENABLED (QA, 5 Nov 2026, R2; found in the sibling
+ * app, same flag in both; default off). One employee's story that names their
+ * district manager in passing ("When <employee> spoke with District manager
+ * <name> …"): with FORM_NAME_FROM_ROSTER_ENABLED on, the candidate
+ * "When <employee>" is set aside as shaped like nobody on the roster (its
+ * first word is nobody's first name). There the card went to the district
+ * manager; here it stays on the employee, through another reader. On: a
+ * candidate whose last words are a roster person's first name, or a
+ * roster-shaped name, could be that person (`forms/roster-shape.ts`
+ * couldBeOnRoster). Off, as before.
+ */
+export function rosterNameInCandidateEnabled(): boolean {
+  return envFlag("ROSTER_NAME_IN_CANDIDATE_ENABLED");
+}
+
+/**
  * ROSTER_NEAR_MISS_ENABLED (QA's testers, 5 Nov 2026, R3/R5/R7; default off,
  * on with FORM_NAME_FROM_ROSTER_ENABLED). A real, active roster person's
  * surname typed with one letter wrong: before the flip the card's Employee was

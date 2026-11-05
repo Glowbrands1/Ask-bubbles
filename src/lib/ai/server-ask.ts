@@ -156,6 +156,7 @@ import { withFirstNameAsk } from "./first-name-ask";
 import { withFirstNameAnswerFor, withFirstNameSuggestFor } from "./first-name-suggest";
 import { withManagerStatedTitle } from "./manager-title";
 import { withReplyMatchesCard } from "./reply-matches-card";
+import { withTitleOfTheEmployee } from "./title-of-the-employee";
 import { withProposalEditRules } from "./proposal-edit-rules";
 import { withFormTypeSwitch, withSwitchNote, withSwitchSources } from "./form-type-switch";
 import { withAdditionalStore } from "./additional-store";
@@ -219,9 +220,11 @@ export async function answerQuestion(
   actor: ChatActor,
   memory: { memoryOwnerId?: string } = {},
 ): Promise<AskResponse> {
+  // TITLE_OF_THE_EMPLOYEE_ENABLED: a title the manager attached to another named person is never the card's Position (`ai/title-of-the-employee.ts`).
+  const answered = await withTitleOfTheEmployee(await answerQuestionAnyPath(asked, actor, memory), asked, () => loadRosterQuiet(actor));
   // FORM_NAME_FROM_ROSTER_ENABLED, last: only roster people are the employee or a choice (`forms/roster-only-names.ts`).
   // REPLY_MATCHES_CARD_ENABLED, the very last step: the reply agrees with the finished card (`ai/reply-matches-card.ts`).
-  return withReplyMatchesCard(withRosterOnlyNames(await answerQuestionAnyPath(asked, actor, memory)));
+  return withReplyMatchesCard(withRosterOnlyNames(answered));
 }
 
 async function answerQuestionAnyPath(
