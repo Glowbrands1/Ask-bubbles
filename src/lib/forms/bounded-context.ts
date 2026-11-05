@@ -36,14 +36,16 @@
  *      knowing it is partial.
  */
 
+import { JOIN } from "./turn-join";
+
 /** How many manager turns the bounded window may hold, including the current one. */
 export const MANAGER_CONTEXT_TURNS = 6;
 
 /** Characters the bounded window may hold in total. */
 export const MANAGER_CONTEXT_CHARS = 4_000;
 
-/** Separator between retained turns. Counted against the budget, not ignored. */
-export const JOIN = "\n\n";
+/** Separator between retained turns (`turn-join.ts`). Counted against the budget, not ignored. */
+export { JOIN };
 
 /** Appended when the CURRENT turn alone is longer than the whole budget. */
 export const TRUNCATION_MARKER =

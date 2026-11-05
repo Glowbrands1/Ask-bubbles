@@ -1,7 +1,7 @@
 import { foldsToGlossaryTerm } from "@/lib/ai/glossary";
 import { caSalesPolicyEnabled, formEditDateRulesEnabled } from "@/lib/config/chat-quality-flags";
 
-import { JOIN } from "./bounded-context";
+import { JOIN } from "./turn-join";
 import { LATE_TO_OPEN, lateOpenOn } from "./late-open";
 import {
   findManualSection,
