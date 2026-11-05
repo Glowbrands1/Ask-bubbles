@@ -1,6 +1,6 @@
 import { offeredOffenseKeys } from "./offense-keys";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
-import { JOIN } from "@/lib/forms/bounded-context";
+import { JOIN } from "@/lib/forms/turn-join";
 import { parseFormDocument } from "@/lib/forms/document";
 import {
   applyAssistantDraft,
