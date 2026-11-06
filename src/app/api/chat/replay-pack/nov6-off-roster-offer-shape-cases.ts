@@ -55,16 +55,12 @@ export const NOV6_OFF_ROSTER_OFFER_SHAPE_CASES: ReplayCase[] = [
     ],
     "Bath Bomb Kits",
   ),
-  {
-    ...neverOffered(
-      "nov6-offer-never-the-placeholder",
-      "\"create a CA form for ima employee, for opening the store late on 9-28-26\": the placeholder is never offered",
-      ["create a CA form for ima employee, for opening the store late on 9-28-26"],
-      "Ima Employee",
-    ),
-    // No existing reader tells "ima employee" from a lowercase name ("zebulon marchbanks"); QA decides (6 Nov 2026).
-    fixStatus: { open: "the placeholder is offered as \"use **Ima Employee**\": it has a lowercase name's place and shape" },
-  },
+  neverOffered(
+    "nov6-offer-never-the-placeholder",
+    "\"create a CA form for ima employee, for opening the store late on 9-28-26\": the placeholder is never offered",
+    ["create a CA form for ima employee, for opening the store late on 9-28-26"],
+    "Ima Employee",
+  ),
   neverOffered(
     "nov6-offer-never-an-all-caps-run",
     "an all-caps message ending \"… BY CORIN BELLWEATHER\": \"BY CORIN BELLWEATHER\" is never offered",

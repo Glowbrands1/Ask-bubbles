@@ -328,6 +328,7 @@ function withNotFoundNote(content: string, typed: string | null, names: readonly
 function offRosterTyped(employee: string, message: string | undefined, names: readonly string[]): string | null {
   const typed = employee.trim();
   if (!NAME_SHAPE.test(typed) || rosterSpelling(typed, names) || oneCloseRosterPerson(typed, names) || namesAForm(typed)) return null;
+  if (normalizeTypedName(typed).split(/\s+/).includes(UNNAMED_PERSON_WORD)) return null;
   const same = (said: string | null | undefined) => Boolean(said) && normalizeTypedName(said!) === normalizeTypedName(typed);
   const text = message ?? "";
   const placed =
@@ -335,6 +336,13 @@ function offRosterTyped(employee: string, message: string | undefined, names: re
     text.split(/\n/).some((line) => same(line.trim().replace(USE_NAME, "")) && NAME_SHAPE.test(line.trim().replace(USE_NAME, "")));
   return placed ? titleCased(typed) : null;
 }
+
+/**
+ * The app's own word for a person it has no name for ("the employee", "Tell me the employee's full name"); QA, 6 Nov
+ * 2026, under OFF_ROSTER_CONFIRM_ENABLED. A cleared name that holds it ("ima employee") is a placeholder, never
+ * offered. The one word, from the app's wording; nothing else is added.
+ */
+const UNNAMED_PERSON_WORD = "employee";
 
 /** One word of a name, as typed: Title Case or all lowercase. */
 const NAME_WORD = String.raw`(?:\p{Lu}\p{Ll}[\p{Ll}'’-]*|\p{Ll}[\p{Ll}'’-]+)`;
