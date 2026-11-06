@@ -1083,6 +1083,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // The sibling app's gate fix flags (6 Nov 2026): forced off with the others by flags-off-parity's child run.
   "TITLE_ENDS_AT_LINE_ENABLED",
   "PLACE_FROM_CUE_ENABLED",
+  // Port of the sibling app's fix flag after its flip (6 Nov 2026): forced off with the others.
+  "SALES_SHORTFALL_OBJECT_ENABLED",
   // Live in production since the 6 Nov flip, but missing from this list (QA, 6 Nov 2026): a gate run with them on
   // would keep them on inside flags-off-parity's child run. Test-only effect.
   "METRIC_GUARD_ENABLED",
@@ -2619,6 +2621,21 @@ export function rosterNotFoundAnyPhrasingEnabled(): boolean {
  */
 export function metricGuardEnabled(): boolean {
   return envFlag("METRIC_GUARD_ENABLED");
+}
+
+/**
+ * SALES_SHORTFALL_OBJECT_ENABLED (port of the sibling app's finding, 6 Nov
+ * 2026, tester batch 1 after its flip; default off). "Not meeting sales
+ * requirements for the month of October" got a Corrective Action with no
+ * policy: the stated-shortfall reader (`forms/metric-shortfall.ts`) named
+ * "sales" only as "sales are / is", so the CA_SALES_POLICY_ENABLED reading
+ * never fired. With this flag on, "sales" is a named metric where a shortfall
+ * verb of the reader's own judged list governs it, with only determiners or
+ * possessives between ("not meeting her sales goals"); "missing from the sales
+ * floor" is not. Off, as before.
+ */
+export function salesShortfallObjectEnabled(): boolean {
+  return envFlag("SALES_SHORTFALL_OBJECT_ENABLED");
 }
 
 /**
