@@ -1080,6 +1080,14 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "AI_READS_CODE_CHECKS_ENABLED",
   "LAST_FIRST_NAME_READ_ENABLED",
   "POLICY_CITATION_CHECK_ENABLED",
+  // The sibling app's gate fix flags (6 Nov 2026): forced off with the others by flags-off-parity's child run.
+  "TITLE_ENDS_AT_LINE_ENABLED",
+  "PLACE_FROM_CUE_ENABLED",
+  // Live in production since the 6 Nov flip, but missing from this list (QA, 6 Nov 2026): a gate run with them on
+  // would keep them on inside flags-off-parity's child run. Test-only effect.
+  "METRIC_GUARD_ENABLED",
+  "REPLY_MATCHES_CARD_ENABLED",
+  "TITLE_OF_THE_EMPLOYEE_ENABLED",
 ] as const;
 
 /**
@@ -2633,6 +2641,18 @@ export function placeFromCueEnabled(): boolean {
  */
 export function titleEndsAtLineEnabled(): boolean {
   return envFlag("TITLE_ENDS_AT_LINE_ENABLED");
+}
+
+/**
+ * POLICY_CHANGE_RELEVANT_ENABLED (QA, 5 Nov 2026, severe; default off). A location manager's revision of a
+ * Corrective Action ("in the previously recieved coaching include that <name> signed the jba policy manual on
+ * 10-15-26") cited the manual's 401k sheet headed "Warning": the bare "that" read as a reference back, and the
+ * app's own "**Verbal Warning** or **Written Warning**?" named the heading. On: a message whose only "policy" is
+ * the manual's own name changes no policy; a reference back must refer to a policy; an earlier turn names a
+ * section only as one (`forms/chat-policy-change.ts`). Off, as before.
+ */
+export function policyChangeRelevantEnabled(): boolean {
+  return envFlag("POLICY_CHANGE_RELEVANT_ENABLED");
 }
 
 /**
