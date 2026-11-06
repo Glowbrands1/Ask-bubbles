@@ -1091,6 +1091,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
 
   "CA_OFFER_KEEPS_ACCOUNT_ENABLED",
 
+
   // Default-off fix flag (#483).
   "REPLY_MATCHES_CARD_EACH_CARD_ENABLED",
 ] as const;
@@ -2688,7 +2689,6 @@ export function exitStatedOnlyEnabled(): boolean {
 export function caOfferKeepsAccountEnabled(): boolean {
   return envFlag("CA_OFFER_KEEPS_ACCOUNT_ENABLED");
 }
-
 
 /**
  * REPLY_MATCHES_CARD_EACH_CARD_ENABLED (QA's tester, 5 Nov 2026, item 6 "two forms"; default off). REPLY_MATCHES_CARD
