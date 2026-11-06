@@ -2619,3 +2619,18 @@ export function metricGuardEnabled(): boolean {
 export function placeFromCueEnabled(): boolean {
   return envFlag("PLACE_FROM_CUE_ENABLED");
 }
+
+/**
+ * TITLE_ENDS_AT_LINE_ENABLED (port from the sibling app's gate, 6 Nov 2026,
+ * s16; default off). With TITLE_OF_THE_EMPLOYEE_ENABLED on, an exit form
+ * typed as lines ("<name>\nTeam Member Part Time \nNE Omaha Dodge\n…") lost
+ * the employee's own Position: the capitalised words on the NEXT line (the
+ * store) were read as another person beside the title. With this flag on, the
+ * name after a title must be on the title's own line
+ * (`forms/title-of-another-person.ts`); a typed list's name on the line before
+ * still owns the title below it, and "District manager <name>" on one line is
+ * still that person's. Off, as before.
+ */
+export function titleEndsAtLineEnabled(): boolean {
+  return envFlag("TITLE_ENDS_AT_LINE_ENABLED");
+}

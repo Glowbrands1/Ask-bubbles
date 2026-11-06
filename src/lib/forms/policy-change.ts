@@ -107,6 +107,12 @@ const NOT_A_SECTION = new Set([
   "core values",
   "text",
   "document body",
+  // The retirement "Warning" sheet is not a policy. "Verbal warning" names a
+  // level on the form, and citing that sheet turned it into Warning Policy p.36.
+  // Ported from the sibling app's live code (QA, 6 Nov 2026: a revision cited the 401k "Warning" sheet on a
+  // Corrective Action here). Pau approved this as an exception to the flag/word-list rules, 6 Nov 2026, parity
+  // with the sibling's live code.
+  "warning",
 ]);
 
 /** A short heading must be a whole phrase of the request, never part of a word. */
