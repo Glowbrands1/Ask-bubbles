@@ -2669,6 +2669,7 @@ export function exitStatedOnlyEnabled(): boolean {
   return envFlag("EXIT_STATED_ONLY_ENABLED");
 }
 
+
 /**
  * CA_OFFER_KEEPS_ACCOUNT_ENABLED (QA's MSB case M5, 5 Nov 2026; same flag in
  * the sibling app; default off). "<name> did not follow must see behaviors
