@@ -287,14 +287,16 @@ describe("QA T11, flag on: the /reviews goal counts reach the answer", () => {
 
   it("the chatty wording names Omaha, for its store manager", async () => {
     const { reportData } = await ask(CHATTY, OMAHA_MANAGER);
-    expect(reportData).toContain("- Omaha, NE (store 264, this manager's store): 12 qualifying reviews month to date of the 10 goal, goal reached. Status: Goal met");
+    // Changed on purpose (Pau, 6 Nov 2026): store 264 is "Omaha Dodge, NE" on Google Reviews.
+    expect(reportData).toContain("- Omaha Dodge, NE (store 264, this manager's store): 12 qualifying reviews month to date of the 10 goal, goal reached. Status: Goal met");
     expect(reportData).not.toContain("store 219");
   });
 
   it("google reviews this month, for a store manager, is what the page shows them, their store marked", async () => {
     const { reportData } = await ask(THIS_MONTH, LEES_SUMMIT_MANAGER);
     expect(reportData).toContain("Lee's Summit, MO (store 219, this manager's store): 9 qualifying");
-    expect(reportData).toContain("Omaha, NE (store 264): 12 qualifying");
+    // Changed on purpose (Pau, 6 Nov 2026): store 264 is "Omaha Dodge, NE" on Google Reviews.
+    expect(reportData).toContain("Omaha Dodge, NE (store 264): 12 qualifying");
     expect(reportData).toContain("Total for the 7 counting stores above: 63");
   });
 

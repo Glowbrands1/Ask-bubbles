@@ -88,7 +88,8 @@ export const NOV4_METRICS_NOT_PEOPLE_CASES: ReplayCase[] = [
     id: "nov4-pau-metrics-not-people",
     title: "sf-s19: Pau's Under Performance CA on PPTA, LPSVA, Club Average, Club Close %, Spa %: no roster note, the card cites Standards of Conduct",
     report: `${REPORT}: "I need a corrective action verbal for <name>. This is for Under Performance on PPTA, LPSVA, Club Average, Club Close %, and Spa %."`,
-    status: { open: 'the reply says "I couldn\'t find Club Close or Under in the Woven roster" and the card cites no policy' },
+    // Changed on purpose (5 Nov 2026): QA flipped CA_SALES_POLICY + REPLY_MATCHES_CARD + TITLE_OF_THE_EMPLOYEE + METRIC_GUARD on in production (production-flags.json), so this case now holds with production's flags.
+    status: "fixed",
     fixFlags: [FLAG, SALES, GLOSSARY],
     async run(t) {
       const thread = start(t);
@@ -113,7 +114,8 @@ export const NOV4_METRICS_NOT_PEOPLE_CASES: ReplayCase[] = [
     title: "negative control: a typo of a roster person on the same message still gets the close-match note",
     report: `${REPORT}: negative control, a typo of a roster name`,
     // production-flags.json corrected to Vercel (QA, 5 Nov 2026): GROUNDED_ENTITIES_ENABLED is off in production since 24 Oct (a deliberate rollback), so a name on no roster goes on the card (no close-match note). Recorded OPEN, a production defect.
-    status: { open: "production: GROUNDED_ENTITIES_ENABLED off since 24 Oct (deliberate rollback: dropped non-roster names while ANTI_LOOP off; Vercel comment) — a name on no roster goes on the card (no close-match note)" },
+    // Changed on purpose (5 Nov 2026): QA flipped CA_SALES_POLICY + REPLY_MATCHES_CARD + TITLE_OF_THE_EMPLOYEE + METRIC_GUARD on in production (production-flags.json), so this case now holds with production's flags.
+    status: "fixed",
     fixFlags: [FLAG, SALES, GLOSSARY],
     async run(t) {
       const thread = start(t);
@@ -176,7 +178,8 @@ export const NOV4_METRICS_NOT_PEOPLE_CASES: ReplayCase[] = [
     id: "nov4-pau-metrics-not-people-lowercase-roster-name",
     title: "negative control: a roster first name typed alone in lowercase (\"perpetua\"), answering who the form is for, is still matched",
     report: `${REPORT}: negative control, a lowercase roster first name`,
-    status: { open: "production answers turn 1 as metric-only (CA_SALES_POLICY_ENABLED off), so there is no form for \"perpetua\" to answer" },
+    // Changed on purpose (5 Nov 2026): QA flipped CA_SALES_POLICY + REPLY_MATCHES_CARD + TITLE_OF_THE_EMPLOYEE + METRIC_GUARD on in production (production-flags.json), so this case now holds with production's flags.
+    status: "fixed",
     fixFlags: [SALES, FLAG],
     async run(t) {
       const thread = start(t);
@@ -197,7 +200,8 @@ export const NOV4_METRICS_NOT_PEOPLE_CASES: ReplayCase[] = [
      * and "Under" are set aside. Before, the card was made "for **Club
      * Close**" with these flags on.
      */
-    status: { open: "production answers the message as metric-only (CA_SALES_POLICY_ENABLED off)" },
+    // Changed on purpose (5 Nov 2026): QA flipped CA_SALES_POLICY + REPLY_MATCHES_CARD + TITLE_OF_THE_EMPLOYEE + METRIC_GUARD on in production (production-flags.json), so this case now holds with production's flags.
+    status: "fixed",
     fixFlags: [FLAG, SALES, GLOSSARY],
     async run(t) {
       const thread = start(t);
@@ -249,7 +253,8 @@ export const NOV4_METRICS_NOT_PEOPLE_CASES: ReplayCase[] = [
       title: `QA 4 Nov: Pau's message 1 for a roster person typed "${typed}": the card is never "Club Close"; it is for Perpetua Thornquist or asks for her`,
       report: `QA, 4 Nov 2026: "I need a corrective action verbal for <Employee R>. This is for Under Performance on PPTA, LPSVA, Club Average, Club Close %, and Spa %." → card Employee "Club Close"`,
       // production-flags.json corrected to Vercel (QA, 5 Nov 2026): GROUNDED_ENTITIES_ENABLED is off in production since 24 Oct (a deliberate rollback), so the typed first name is not matched to the roster. Recorded OPEN, a production defect.
-      status: { open: "production: GROUNDED_ENTITIES_ENABLED off since 24 Oct (deliberate rollback: dropped non-roster names while ANTI_LOOP off; Vercel comment) — neither a card for Perpetua Thornquist nor \"Is this for Perpetua Thornquist?\"" },
+      // Changed on purpose (5 Nov 2026): QA flipped CA_SALES_POLICY + REPLY_MATCHES_CARD + TITLE_OF_THE_EMPLOYEE + METRIC_GUARD on in production (production-flags.json), so both shapes now hold with production's flags.
+      status: "fixed",
       fixFlags: [FLAG, SALES, GLOSSARY],
       async run(t) {
         const thread = start(t);

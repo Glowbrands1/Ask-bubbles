@@ -92,7 +92,8 @@ export const NOV5_REPLY_MATCHES_CARD_CASES: ReplayCase[] = [
     id: "nov5-reply-card-r3-typo-action-plan",
     title: "R3: \"create a CA for Ignatius Wexlarby …\" (one letter wrong): whatever the card, the reply agrees with it (never the Action plan naming him beside an empty card)",
     report: `${REPORT}; R3 (QA's testers): the card emptied, the Action plan "with Ignatius", then "Who is this form for?"`,
-    status: { open: "the empty card's Action plan names Ignatius" },
+    // Changed on purpose (5 Nov 2026): QA flipped CA_SALES_POLICY + REPLY_MATCHES_CARD + TITLE_OF_THE_EMPLOYEE + METRIC_GUARD on in production (production-flags.json), so this case now holds with production's flags.
+    status: "fixed",
     fixFlags: [FIX],
     run: withFlip(async (t) => {
       const { reply, employee } = await said(t, "create a CA for Ignatius Wexlarby, he was 40 minutes late opening the store on 11/2. action plan: Ignatius will be on time for every opening shift");

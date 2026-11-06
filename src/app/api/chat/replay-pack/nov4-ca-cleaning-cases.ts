@@ -69,7 +69,8 @@ export const NOV4_CA_CLEANING_CASES: ReplayCase[] = [
     id: "nov4-cleaning-bathrooms-not-conduct",
     title: "\"the bathrooms were left dirty at close\": the model's Standards of Conduct tick moves to Other, no Standards of Conduct citation",
     report: `${REPORT}: QA's live wording`,
-    status: { open: "with production's flags the model's Standards of Conduct tick stands and is cited (p.12)" },
+    // Changed on purpose (5 Nov 2026): QA flipped CA_SALES_POLICY + REPLY_MATCHES_CARD + TITLE_OF_THE_EMPLOYEE + METRIC_GUARD on in production (production-flags.json), so this case now holds with production's flags.
+    status: "fixed",
     fixFlags: [FLAG],
     async run(t) {
       const thread = start(t);
@@ -113,7 +114,8 @@ export const NOV4_CA_CLEANING_CASES: ReplayCase[] = [
     id: "nov4-cleaning-negative-msb",
     title: "negative control: an MSB CA keeps the Standards of Conduct",
     report: `${REPORT}: negative control`,
-    status: { open: "with production's flags an MSB CA gets no card (nov4-mgr-4)" },
+    // Changed on purpose (5 Nov 2026): QA flipped CA_SALES_POLICY + REPLY_MATCHES_CARD + TITLE_OF_THE_EMPLOYEE + METRIC_GUARD on in production (production-flags.json), so this case now holds with production's flags.
+    status: "fixed",
     fixFlags: [FLAG, "CHAT_GLOSSARY_ENABLED"],
     async run(t) {
       const thread = start(t);
@@ -157,7 +159,8 @@ export const NOV4_CA_CLEANING_CASES: ReplayCase[] = [
     id: "nov4-cleaning-basis-upkeep-duties",
     title: "\"did not complete daily cleaning duties\" with the model's upkeep basis: Other",
     report: `${REPORT}: Pau's wording, with offense_basis`,
-    status: { open: "with production's flags the task reading ticks and cites the Standards of Conduct" },
+    // Changed on purpose (5 Nov 2026): QA flipped CA_SALES_POLICY + REPLY_MATCHES_CARD + TITLE_OF_THE_EMPLOYEE + METRIC_GUARD on in production (production-flags.json), so this case now holds with production's flags.
+    status: "fixed",
     fixFlags: [FLAG],
     async run(t) {
       const thread = start(t);
