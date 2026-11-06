@@ -1080,6 +1080,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "AI_READS_CODE_CHECKS_ENABLED",
   "LAST_FIRST_NAME_READ_ENABLED",
   "POLICY_CITATION_CHECK_ENABLED",
+  "FULL_POSITION_TITLE_ENABLED",
 ] as const;
 
 /**
@@ -2603,4 +2604,33 @@ export function rosterNotFoundAnyPhrasingEnabled(): boolean {
  */
 export function metricGuardEnabled(): boolean {
   return envFlag("METRIC_GUARD_ENABLED");
+}
+
+/**
+ * TITLE_ENDS_AT_LINE_ENABLED (port from the sibling app's gate, 6 Nov 2026,
+ * s16; default off). With TITLE_OF_THE_EMPLOYEE_ENABLED on, an exit form
+ * typed as lines ("<name>\nTeam Member Part Time \nNE Omaha Dodge\n…") lost
+ * the employee's own Position: the capitalised words on the NEXT line (the
+ * store) were read as another person beside the title. With this flag on, the
+ * name after a title must be on the title's own line
+ * (`forms/title-of-another-person.ts`); a typed list's name on the line before
+ * still owns the title below it, and "District manager <name>" on one line is
+ * still that person's. Off, as before.
+ */
+export function titleEndsAtLineEnabled(): boolean {
+  return envFlag("TITLE_ENDS_AT_LINE_ENABLED");
+}
+
+/**
+ * FULL_POSITION_TITLE_ENABLED (QA task A, 6 Nov 2026; default off). An exit
+ * form typed as lines with the position "Team Member Part Time" got the
+ * Position "Team Member": the title reader (`config/company/job-titles.ts`)
+ * reads the shorter title inside it. With this flag on, when the whole typed
+ * title (a line of its own, or a "Position: …" line) is one of the company's
+ * position names (`forms/staff-picker.ts`, `isCompanyPositionTitle`) and holds
+ * the title the card read, the card keeps the whole position
+ * (`ai/full-position-title.ts`). Off, as before.
+ */
+export function fullPositionTitleEnabled(): boolean {
+  return envFlag("FULL_POSITION_TITLE_ENABLED");
 }
