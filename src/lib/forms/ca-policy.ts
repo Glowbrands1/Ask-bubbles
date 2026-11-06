@@ -1,5 +1,5 @@
 import { foldsToGlossaryTerm } from "@/lib/ai/glossary";
-import { caSalesPolicyEnabled, formEditDateRulesEnabled } from "@/lib/config/chat-quality-flags";
+import { caSalesPolicyEnabled, formEditDateRulesEnabled, negatedLatenessTopicEnabled } from "@/lib/config/chat-quality-flags";
 
 import { JOIN } from "./bounded-context";
 import { LATE_TO_OPEN, lateOpenOn } from "./late-open";
@@ -12,6 +12,7 @@ import {
   type ManualSection,
 } from "./official-policy-manual";
 import { statesMetricShortfall } from "./metric-shortfall";
+import { withoutNegatedLateness } from "./negated-lateness";
 import { CURRENT_CA_OFFENSE_KEYS, offeredOffenseKey, offeredOffenseKeys } from "./offense-keys";
 
 /**
@@ -190,6 +191,14 @@ const CONDUCT_TOPICS: { topic: ConductTopic; pattern: RegExp }[] = [
 const ATTENDANCE =
   /\b(?:arrived|came in|showed up|clocked in|was|were|is|been|running)\s+(?:\S+\s+){0,2}?late\b|\b(?:tardy|tardiness|lateness|left early|leaving early|clocked out early|absent|absence|absences|absenteeism|no[- ]call|no[- ]show|called (?:out|off)|call[- ]?off|missed (?:her|his|their|a|the) shift)\b/;
 
+/**
+ * NEGATED_LATENESS_TOPIC_ENABLED (default off): "she was not late" is no attendance account; a lateness the
+ * manager denies is blanked before the pattern is read (`negated-lateness.ts`). Off, as before.
+ */
+function readsAsAttendance(sentence: string): boolean {
+  return ATTENDANCE.test(negatedLatenessTopicEnabled() ? withoutNegatedLateness(sentence) : sentence);
+}
+
 const TARGET =
   /\b(?:sales|quota|ppta|upgrades?|conversions?|close rate|closing rate|kpis?|metrics|scorecard|revenue|(?:her|his|their|the) numbers|(?:sales|membership|monthly|weekly) goals?|below (?:goal|target)|(?:hit|hitting|meet|meeting|missed|missing) (?:her|his|their|the) (?:goal|goals|target|targets))\b/;
 
@@ -344,7 +353,7 @@ function withSalesPolicy(reading: CaPolicyReading, rawText: string): CaPolicyRea
   // The stated shortfall reader the progression already uses (`corrective-action-intake.ts`): a metric named and judged.
   const target = reading.stated === "under_performance" || statesMetricShortfall(rawText);
   if (!msb && !target) return reading;
-  if (reading.stated === null && sentences.some((s) => ATTENDANCE.test(s))) return reading;
+  if (reading.stated === null && sentences.some(readsAsAttendance)) return reading;
   return {
     ...reading,
     stated: null,
@@ -392,7 +401,7 @@ function readCaPolicyFromWords(rawText: string): CaPolicyReading {
 
   const alternatives: CaPolicyReading["alternatives"] = [];
   if (topics.length > 0) {
-    if (missedEvent || sentences.some((s) => ATTENDANCE.test(s))) alternatives.push("attendance");
+    if (missedEvent || sentences.some(readsAsAttendance)) alternatives.push("attendance");
     // Revision 7: the current form has no Under Performance box (it is the Standards of Conduct), so a target is no other reading.
     if (sentences.some((s) => TARGET.test(s)) && CURRENT_CA_OFFENSE_KEYS.includes("under_performance")) alternatives.push("under_performance");
   }
