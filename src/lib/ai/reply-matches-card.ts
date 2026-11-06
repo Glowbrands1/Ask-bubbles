@@ -1,4 +1,4 @@
-import { replyMatchesCardEnabled } from "@/lib/config/chat-quality-flags";
+import { replyMatchesCardEachCardEnabled, replyMatchesCardEnabled } from "@/lib/config/chat-quality-flags";
 import { removedOffenseLabels } from "@/lib/forms/ca-policy";
 import { cardPolicyHeading } from "@/lib/forms/card-policy";
 import { personRosterNames } from "@/lib/forms/person-guard";
@@ -15,6 +15,8 @@ import {
 } from "@/lib/forms/roster-only-names";
 
 import { HAS_EMPLOYEE_AND_PLACE, SAYS_READY } from "./coaching-what-happened";
+import type { ChatFormProposal } from "@/types";
+
 import type { AskResponse } from "./types";
 
 /**
@@ -137,10 +139,30 @@ function withoutNotToldWhenTold(content: string, issue: string | null | undefine
     .join("\n");
 }
 
+/**
+ * TWO OR MORE CARDS (QA's tester, 5 Nov 2026, item 6 "two forms"): the rules above read one card — the first —
+ * so the second form's section ("I can create a **Corrective Action Form** for **<its person>**") was rewritten
+ * to the first card's person. With several cards, each "… **<form>** for **<name>**" line is matched to the card
+ * of that form, and gets that card's person; the single-card rules (who, one policy, "not told") do not run.
+ */
+function withEachCardsEmployee(content: string, cards: readonly ChatFormProposal[]): string {
+  return content.replace(/(\b(?:draft|create|put)\b[^\n.]*?\*\*([^*]+)\*\* for )\*\*([^*]+)\*\*/gi, (whole, lead: string, form: string, name: string) => {
+    const own = cards.filter((card) => card.templateName?.trim().toLowerCase() === form.trim().toLowerCase());
+    const employee = own.length === 1 && own[0]!.subject !== "team" ? own[0]!.employeeName?.trim() : undefined;
+    return !employee || name.trim() === employee ? whole : `${lead}**${employee}**`;
+  });
+}
+
 /** The reply made to agree with its card. Pure; see `withReplyMatchesCard`. */
 export function replyMatchesCard(response: AskResponse, names: readonly string[], message?: string): AskResponse {
   const card = response.formProposal;
   if (!card) return response;
+  const cards = response.formProposals ?? [];
+  // REPLY_MATCHES_CARD_EACH_CARD_ENABLED (default off): REPLY_MATCHES_CARD is live, so the change is behind its own flag.
+  if (cards.length > 1 && replyMatchesCardEachCardEnabled()) {
+    const each = tidy(withoutRemovedOffense(withEachCardsEmployee(response.content, cards)));
+    return each === response.content ? response : { ...response, content: each };
+  }
   let content = response.content;
   if (card.subject !== "team") {
     const employee = card.employeeName?.trim();
