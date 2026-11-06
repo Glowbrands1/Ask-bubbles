@@ -58,7 +58,8 @@ const typo = (id: string, typed: string, what: string): ReplayCase => ({
   id,
   title: `${what}: "create a ca form for ${typed}" (roster: Odalys Prewett Vansickle): the card is hers, or the reply asks "Is this for **Odalys Prewett Vansickle**?"`,
   report: `${REPORT}; ${what}`,
-  status: { open: "with production's flags (FORM_NAME off) the card keeps the typed spelling" },
+  // Fixed by flip 3 (6 Nov 2026): production now runs the name set + OFF_ROSTER_CONFIRM (docs/flag-classification/FLIP3D.md).
+  status: "fixed",
   fixFlags: FIX,
   async run(t) {
     const { reply, employee } = await said(t, [ODALYS], `create a ca form for ${typed}`);
@@ -76,7 +77,8 @@ export const NOV5_COMPOUND_SURNAME_CASES: ReplayCase[] = [
     id: "nov5-compound-surname-word2-rotated-earlier-turn",
     title: "R7: the R3 spelling \"Odalys Prewett Vancsikle\" only in turn 2; the CA request comes later with no name: the card is hers, or the reply asks \"Is this for **Odalys Prewett Vansickle**?\"",
     report: `${REPORT}; R7, the name in an earlier turn`,
-    status: { open: "with production's flags (FORM_NAME off) the card keeps the typed spelling" },
+    // Fixed by flip 3 (6 Nov 2026): production now runs the name set + OFF_ROSTER_CONFIRM (docs/flag-classification/FLIP3D.md).
+    status: "fixed",
     fixFlags: FIX,
     async run(t) {
       const { reply, employee } = await said(
@@ -93,7 +95,8 @@ export const NOV5_COMPOUND_SURNAME_CASES: ReplayCase[] = [
     id: "nov5-compound-surname-word1-typo-yes",
     title: "\"create a ca form for Odalys Perwett Vansickle\", then \"yes\" to \"Is this for **Odalys Prewett Vansickle**?\": the card is hers, in the roster's spelling",
     report: `${REPORT}; the answer`,
-    status: { open: "with production's flags (FORM_NAME off) the card keeps the typed spelling" },
+    // Fixed by flip 3 (6 Nov 2026): production now runs the name set + OFF_ROSTER_CONFIRM (docs/flag-classification/FLIP3D.md).
+    status: "fixed",
     fixFlags: FIX,
     async run(t) {
       const { reply, employee } = await said(t, [ODALYS], "create a ca form for Odalys Perwett Vansickle, she was late opening the store on 11/2", "yes");
@@ -162,7 +165,8 @@ const notFound = (id: string, message: string, what: string): ReplayCase => ({
   id,
   title: `QA-A/QA-B shape (${what}): "${message}", on no roster: "I couldn't find **Zebulon Marchbanks** in the Woven roster", then asks who; never the employee`,
   report: "The re-flip's live testers, 5 Nov 2026 (QA-A/QA-B, flags on): an off-roster full name, no not-found note",
-  status: { open: "with production's flags (FORM_NAME off) the card keeps the typed name" },
+  // Fixed by flip 3 (6 Nov 2026): production now runs the name set + OFF_ROSTER_CONFIRM (docs/flag-classification/FLIP3D.md).
+  status: "fixed",
   fixFlags: NOT_FOUND_FIX,
   async run(t) {
     const { reply, employee } = await said(t, [], message);
