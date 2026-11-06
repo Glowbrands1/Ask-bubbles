@@ -23,7 +23,8 @@ export const NOV5_POLICY_BENEFITS_WARNING_CASES: ReplayCase[] = [
     // 6 Nov 2026), so production never cites the benefits sheet — but the turn is still a policy change: the bare "that"
     // reaches back and re-cites Standards of Conduct ("Updated Direct policy … it now cites **Standards of Conduct**"), so
     // the revision never runs. POLICY_CHANGE_RELEVANT_ENABLED lets it run.
-    status: { open: "the reply is \"Updated Direct policy … it now cites **Standards of Conduct** (page 12)\": a policy change, so the revision never runs" },
+    // Fixed by flip 3 (6 Nov 2026): production now runs the name set + OFF_ROSTER_CONFIRM (docs/flag-classification/FLIP3D.md).
+    status: "fixed",
     fixFlags: ["POLICY_CHANGE_RELEVANT_ENABLED"],
     async run(t) {
       t.directory(STAFF);
