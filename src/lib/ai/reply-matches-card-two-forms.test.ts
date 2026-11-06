@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ChatFormProposal } from "@/types";
 
@@ -46,7 +46,21 @@ const TEXT = [
   "**Policy:** Late Opening, as you said. I'll quote that section from the current policy manual on the draft.",
 ].join("\n");
 
-describe("REPLY_MATCHES_CARD with two cards: each section matches its own card", () => {
+describe("REPLY_MATCHES_CARD_EACH_CARD_ENABLED off: as main (the bug)", () => {
+  it("the Corrective Action section is rewritten to the first card's person", () => {
+    const out = replyMatchesCard(two(TEXT), ROSTER, "coaching form for Marnie Holloway and a CA for Remy Calder for opening late").content;
+    expect(out).toContain("**Corrective Action Form** for **Marnie Holloway**");
+  });
+});
+
+describe("REPLY_MATCHES_CARD with two cards (REPLY_MATCHES_CARD_EACH_CARD_ENABLED on): each section matches its own card", () => {
+  beforeEach(() => {
+    vi.stubEnv("REPLY_MATCHES_CARD_EACH_CARD_ENABLED", "true");
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("the Corrective Action section keeps its own person (QA's item 6), and the Coaching section keeps hers", () => {
     const out = replyMatchesCard(two(TEXT), ROSTER, "coaching form for Marnie Holloway and a CA for Remy Calder for opening late").content;
     expect(out).toContain("I can create a **Corrective Action Form** for **Remy Calder**.");

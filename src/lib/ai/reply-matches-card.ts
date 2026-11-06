@@ -1,4 +1,4 @@
-import { replyMatchesCardEnabled } from "@/lib/config/chat-quality-flags";
+import { replyMatchesCardEachCardEnabled, replyMatchesCardEnabled } from "@/lib/config/chat-quality-flags";
 import { removedOffenseLabels } from "@/lib/forms/ca-policy";
 import { cardPolicyHeading } from "@/lib/forms/card-policy";
 import { personRosterNames } from "@/lib/forms/person-guard";
@@ -158,7 +158,8 @@ export function replyMatchesCard(response: AskResponse, names: readonly string[]
   const card = response.formProposal;
   if (!card) return response;
   const cards = response.formProposals ?? [];
-  if (cards.length > 1) {
+  // REPLY_MATCHES_CARD_EACH_CARD_ENABLED (default off): REPLY_MATCHES_CARD is live, so the change is behind its own flag.
+  if (cards.length > 1 && replyMatchesCardEachCardEnabled()) {
     const each = tidy(withoutRemovedOffense(withEachCardsEmployee(response.content, cards)));
     return each === response.content ? response : { ...response, content: each };
   }

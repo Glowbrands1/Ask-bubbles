@@ -27,7 +27,9 @@ export const NOV5_TWO_FORMS_REPLY_CASES: ReplayCase[] = [
     id: "nov5-two-forms-reply-each-card",
     title: "the flip set: \"coaching form for Marnie Holloway … and a CA for Remy Calder …\": the Corrective Action section names Remy Calder, the Coaching section Marnie Holloway",
     report: "QA's tester on the Bubbles smaller flip (5 Nov 2026), item 6 \"two forms\": the CA section named the Coaching card's person",
-    status: "fixed",
+    // REPLY_MATCHES_CARD is live, so the each-card rule has its own default-off flag: OPEN with the flip set alone.
+    status: { open: "the reply's Corrective Action section names the Coaching card's person (\"**Corrective Action Form** for **Marnie Holloway**\")" },
+    fixFlags: ["REPLY_MATCHES_CARD_EACH_CARD_ENABLED"],
     async run(t) {
       const thread = start(t);
       const reply = await thread.say("I need a coaching form for Marnie Holloway for her customer service at the register, and a CA for Remy Calder for opening the store late on 11/2");

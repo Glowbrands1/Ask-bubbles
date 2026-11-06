@@ -1088,6 +1088,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "METRIC_GUARD_ENABLED",
   "REPLY_MATCHES_CARD_ENABLED",
   "TITLE_OF_THE_EMPLOYEE_ENABLED",
+  // Default-off fix flag (#483).
+  "REPLY_MATCHES_CARD_EACH_CARD_ENABLED",
 ] as const;
 
 /**
@@ -2641,4 +2643,15 @@ export function placeFromCueEnabled(): boolean {
  */
 export function titleEndsAtLineEnabled(): boolean {
   return envFlag("TITLE_ENDS_AT_LINE_ENABLED");
+}
+
+/**
+ * REPLY_MATCHES_CARD_EACH_CARD_ENABLED (QA's tester, 5 Nov 2026, item 6 "two forms"; default off). REPLY_MATCHES_CARD
+ * read only the first card, so a two-form reply's second section ("I can create a **Corrective Action Form** for
+ * **<its person>**") was rewritten to the first card's person. On: with two or more cards each such line gets the
+ * person of its own form's card, and the single-card rules do not run (`ai/reply-matches-card.ts`). REPLY_MATCHES_CARD
+ * is live in this app, so this has its own flag: off, the step is byte-identical to main.
+ */
+export function replyMatchesCardEachCardEnabled(): boolean {
+  return envFlag("REPLY_MATCHES_CARD_EACH_CARD_ENABLED");
 }
