@@ -1,10 +1,11 @@
-import { formNameFromRosterEnabled, metricGuardEnabled, rosterNearMissEnabled, rosterNotFoundAnyPhrasingEnabled } from "@/lib/config/chat-quality-flags";
+import { formNameFromRosterEnabled, metricGuardEnabled, offRosterConfirmEnabled, rosterNearMissEnabled, rosterNotFoundAnyPhrasingEnabled } from "@/lib/config/chat-quality-flags";
 import { isGlossaryTerm } from "@/lib/ai/glossary";
 import type { AskResponse } from "@/lib/ai/types";
 
 import { HAS_EMPLOYEE_AND_PLACE, SAYS_READY } from "@/lib/ai/coaching-what-happened";
 
 import { matchEmployeeName, normalizeTypedName, type RosterEmployee } from "./employee-match";
+import { isAcceptedOffRoster, offRosterCardNote, offRosterOffer, offRosterTakenLine } from "./off-roster-confirm";
 import { personRosterNames } from "./person-guard";
 import { metricMessage, namesAMetric, requestMessage } from "./request-slot";
 import { namesAForm } from "./template-intent";
@@ -107,6 +108,13 @@ export function rosterOnlyNames(response: AskResponse, names: readonly string[],
         proposal = { ...proposal, employeeName: spelled };
         content = content.split(`**${employee}**`).join(`**${spelled}**`);
       }
+    } else if (!oneCloseRosterPerson(employee, names) && isAcceptedOffRoster(employee)) {
+      /*
+       * OFF_ROSTER_CONFIRM_ENABLED: the manager took the name as typed ("use <name>" to the offer below) — somebody
+       * not in Woven, nobody close on it. The card keeps it and says so, in the reply and in the card's note.
+       */
+      proposal = { ...proposal, closeMatchNote: offRosterCardNote(employee) };
+      content = `${offRosterTakenLine(employee)}\n\n${content.trim()}`;
     } else {
       const close = oneCloseRosterPerson(employee, names);
       /*
@@ -153,7 +161,10 @@ export function rosterOnlyNames(response: AskResponse, names: readonly string[],
         { ownWords: true },
       );
       if (!ask && !ASKS_WHO.test(content) && !ASKS_A_CHOICE.test(content) && !ASKS_FOR_THE_NAME.test(content)) ask = ASK_WHO;
-      content = withNotFoundNote(content, notFoundName(message, names), names);
+      // OFF_ROSTER_CONFIRM_ENABLED: the cleared name, however it was typed (alone on its own line too), is said back and offered.
+      const offered = offRosterConfirmEnabled() && employee && !rosterSpelling(employee, names) && !oneCloseRosterPerson(employee, names) ? employee : null;
+      content = withNotFoundNote(content, notFoundName(message, names) ?? offered, names);
+      if (offered) content = withOffRosterOffer(content, offered);
     }
   }
 
@@ -301,6 +312,13 @@ export function withoutUnseatedName(
 function withNotFoundNote(content: string, typed: string | null, names: readonly string[]): string {
   if (!typed || /I couldn['’]t find \*\*/.test(content) || oneCloseRosterPerson(typed, names)) return content;
   return `I couldn't find **${typed}** in the Woven roster, so that name is not on the form.\n\n${content.trim()}`;
+}
+
+/** OFF_ROSTER_CONFIRM_ENABLED: the offer right after the not-found note about this name (or first, with none). */
+function withOffRosterOffer(content: string, name: string): string {
+  if (content.includes(offRosterOffer(name))) return content;
+  const note = `I couldn't find **${name}** in the Woven roster, so that name is not on the form.`;
+  return content.includes(note) ? content.replace(note, `${note} ${offRosterOffer(name)}`) : `${offRosterOffer(name)}\n\n${content.trim()}`;
 }
 
 /**
