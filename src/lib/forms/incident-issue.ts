@@ -1,4 +1,4 @@
-import { decimalNotSentenceEndEnabled, levelRequestDateEnabled, levelStepNotAccountEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { caSalesPolicyEnabled, decimalNotSentenceEndEnabled, levelRequestDateEnabled, levelStepNotAccountEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { COMPANY_JOB_TITLES } from "@/config/company/job-titles";
 import { businessToday } from "@/lib/business-date";
 
@@ -68,7 +68,9 @@ function issueFromRequest(text: string, employeeName: string | null): string | n
       // "CA for jordan testperson, cash handling": the person, then the issue.
       if (person) {
         const words = [...personWords].map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
-        const after = new RegExp(`^(?:(?:${words})\\s*)+(?:\\s+(?:for|about|over|regarding)\\s+|\\s*[-—–:,]\\s*)(.+)$`, "i").exec(raw.trim());
+        // CA_SALES_POLICY_ENABLED (QA, live, 4 Nov 2026): "CA for <name> due to under performance in salon metrics" — "due to" and "because (of)" join the reason too. Off, as before.
+        const joins = caSalesPolicyEnabled() ? "for|about|over|regarding|due\\s+to|because(?:\\s+of)?" : "for|about|over|regarding";
+        const after = new RegExp(`^(?:(?:${words})\\s*)+(?:\\s+(?:${joins})\\s+|\\s*[-—–:,]\\s*)(.+)$`, "i").exec(raw.trim());
         if (after) raw = after[1]!;
       }
       const issue = raw.split(CUT)[0]!.trim().replace(/[\s"'”’)]+$/, "");
