@@ -2604,3 +2604,18 @@ export function rosterNotFoundAnyPhrasingEnabled(): boolean {
 export function metricGuardEnabled(): boolean {
   return envFlag("METRIC_GUARD_ENABLED");
 }
+
+/**
+ * PLACE_FROM_CUE_ENABLED (port of the sibling app's gate finding, 6 Nov 2026,
+ * sf-s28; default off). "create a corrective action for <name> from bellevue",
+ * from a manager not assigned to Bellevue: "from" was no place cue, so the
+ * store was not read and the card silently took the employee's own store with
+ * no word about Bellevue (CA_SALES_POLICY_ENABLED on or off). With this flag
+ * on, "for <name> from <store>" names the store (`forms/place-from-cue.ts`), so
+ * a store outside the assignment gets the "isn't a store on your assignment"
+ * question. Other "from"s ("transferred from", "a call from the store", "from
+ * 10/5") are left alone. Off, as before.
+ */
+export function placeFromCueEnabled(): boolean {
+  return envFlag("PLACE_FROM_CUE_ENABLED");
+}
