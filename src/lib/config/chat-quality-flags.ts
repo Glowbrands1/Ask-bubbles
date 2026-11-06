@@ -2625,6 +2625,18 @@ export function metricGuardEnabled(): boolean {
 }
 
 /**
+ * AS_YOU_SAID_MANAGER_WORDS_ENABLED (the sibling app's live chats, 4 Nov 2026; same flag in both apps; default off).
+ * "**Policy:** Late Opening, as you said" for leaving early, and "Standards of Conduct, as you said" for "it should be
+ * must see behaviors": the manager never named either. The intent reader's heading is written back onto the turn as
+ * the app's own line ("Policy reference: <heading>, JBA Policy Manual p.N.", `ai/form-state.ts`), and the policy
+ * reader took it as the manager naming that policy. On: `forms/ca-policy.ts` readCaPolicy reads without the app's
+ * lines (`ai/app-sentences.ts` withoutAppLines). Off, as before.
+ */
+export function asYouSaidManagerWordsEnabled(): boolean {
+  return envFlag("AS_YOU_SAID_MANAGER_WORDS_ENABLED");
+}
+
+/**
  * UNDER_PERFORMANCE_EXPLAINED_ENABLED (port of the sibling app's, Pau, 6 Nov
  * 2026; default off). When the manager's message names Under Performance and
  * the card cites the Standards of Conduct, the reply says why, once: "Under
