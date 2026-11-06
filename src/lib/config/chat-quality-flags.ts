@@ -1080,6 +1080,25 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "AI_READS_CODE_CHECKS_ENABLED",
   "LAST_FIRST_NAME_READ_ENABLED",
   "POLICY_CITATION_CHECK_ENABLED",
+  // The sibling app's gate fix flags (6 Nov 2026): forced off with the others by flags-off-parity's child run.
+  "TITLE_ENDS_AT_LINE_ENABLED",
+  "PLACE_FROM_CUE_ENABLED",
+  // Port of the sibling app's fix flag after its flip (6 Nov 2026): forced off with the others.
+  "SALES_SHORTFALL_OBJECT_ENABLED",
+  "UNDER_PERFORMANCE_EXPLAINED_ENABLED",
+  // Live in production since the 6 Nov flip, but missing from this list (QA, 6 Nov 2026): a gate run with them on
+  // would keep them on inside flags-off-parity's child run. Test-only effect.
+  "METRIC_GUARD_ENABLED",
+  "REPLY_MATCHES_CARD_ENABLED",
+  "TITLE_OF_THE_EMPLOYEE_ENABLED",
+
+  "CA_OFFER_KEEPS_ACCOUNT_ENABLED",
+
+
+  // Default-off fix flag (#483).
+  "REPLY_MATCHES_CARD_EACH_CARD_ENABLED",
+  // Default-off fix flag (the flip-3 gate, 6 Nov 2026).
+  "OFF_ROSTER_CONFIRM_ENABLED",
 ] as const;
 
 /**
@@ -2615,4 +2634,123 @@ export function metricGuardEnabled(): boolean {
  */
 export function asYouSaidManagerWordsEnabled(): boolean {
   return envFlag("AS_YOU_SAID_MANAGER_WORDS_ENABLED");
+}
+
+/**
+ * UNDER_PERFORMANCE_EXPLAINED_ENABLED (port of the sibling app's, Pau, 6 Nov
+ * 2026; default off). When the manager's message names Under Performance and
+ * the card cites the Standards of Conduct, the reply says why, once: "Under
+ * Performance isn't on the CA form. Sales performance CAs use the Standards
+ * of Conduct." (`ai/under-performance-explained.ts`). Off, as before.
+ */
+export function underPerformanceExplainedEnabled(): boolean {
+  return envFlag("UNDER_PERFORMANCE_EXPLAINED_ENABLED");
+}
+
+/**
+ * SALES_SHORTFALL_OBJECT_ENABLED (port of the sibling app's finding, 6 Nov
+ * 2026, tester batch 1 after its flip; default off). "Not meeting sales
+ * requirements for the month of October" got a Corrective Action with no
+ * policy: the stated-shortfall reader (`forms/metric-shortfall.ts`) named
+ * "sales" only as "sales are / is", so the CA_SALES_POLICY_ENABLED reading
+ * never fired. With this flag on, "sales" is a named metric where a shortfall
+ * verb of the reader's own judged list governs it, with only determiners or
+ * possessives between ("not meeting her sales goals"); "missing from the sales
+ * floor" is not. Off, as before.
+ */
+export function salesShortfallObjectEnabled(): boolean {
+  return envFlag("SALES_SHORTFALL_OBJECT_ENABLED");
+}
+
+/**
+ * PLACE_FROM_CUE_ENABLED (port of the sibling app's gate finding, 6 Nov 2026,
+ * sf-s28; default off). "create a corrective action for <name> from bellevue",
+ * from a manager not assigned to Bellevue: "from" was no place cue, so the
+ * store was not read and the card silently took the employee's own store with
+ * no word about Bellevue (CA_SALES_POLICY_ENABLED on or off). With this flag
+ * on, "for <name> from <store>" names the store (`forms/place-from-cue.ts`), so
+ * a store outside the assignment gets the "isn't a store on your assignment"
+ * question. Other "from"s ("transferred from", "a call from the store", "from
+ * 10/5") are left alone. Off, as before.
+ */
+export function placeFromCueEnabled(): boolean {
+  return envFlag("PLACE_FROM_CUE_ENABLED");
+}
+
+/**
+ * TITLE_ENDS_AT_LINE_ENABLED (port from the sibling app's gate, 6 Nov 2026,
+ * s16; default off). With TITLE_OF_THE_EMPLOYEE_ENABLED on, an exit form
+ * typed as lines ("<name>\nTeam Member Part Time \nNE Omaha Dodge\n…") lost
+ * the employee's own Position: the capitalised words on the NEXT line (the
+ * store) were read as another person beside the title. With this flag on, the
+ * name after a title must be on the title's own line
+ * (`forms/title-of-another-person.ts`); a typed list's name on the line before
+ * still owns the title below it, and "District manager <name>" on one line is
+ * still that person's. Off, as before.
+ */
+export function titleEndsAtLineEnabled(): boolean {
+  return envFlag("TITLE_ENDS_AT_LINE_ENABLED");
+}
+
+/**
+ * POLICY_CHANGE_RELEVANT_ENABLED (QA, 5 Nov 2026, severe; default off). A location manager's revision of a
+ * Corrective Action ("in the previously recieved coaching include that <name> signed the jba policy manual on
+ * 10-15-26") cited the manual's 401k sheet headed "Warning": the bare "that" read as a reference back, and the
+ * app's own "**Verbal Warning** or **Written Warning**?" named the heading. On: a message whose only "policy" is
+ * the manual's own name changes no policy; a reference back must refer to a policy; an earlier turn names a
+ * section only as one (`forms/chat-policy-change.ts`). Off, as before.
+ */
+export function policyChangeRelevantEnabled(): boolean {
+  return envFlag("POLICY_CHANGE_RELEVANT_ENABLED");
+}
+
+/**
+ * EXIT_STATED_ONLY_ENABLED (ported from the sibling app: QA, 5 Nov 2026, severe; default off). There a manager pasted a termination letter and
+ * asked for an exit form: How Employee Resigned became "Text message" (the text that caused the termination), Key
+ * Returned "returned" (the letter told the employee to return them), and Last Day Worked the final paycheck's
+ * "hours worked through" date. On: an Exit field is filled only from what the manager said happened — a termination
+ * is not a resignation, an instruction or condition to return is not a return, a pay period is not a last day
+ * (`forms/exit-details.ts`, `forms/exit-facts.ts`). Off, as before.
+ */
+export function exitStatedOnlyEnabled(): boolean {
+  return envFlag("EXIT_STATED_ONLY_ENABLED");
+}
+
+
+/**
+ * CA_OFFER_KEEPS_ACCOUNT_ENABLED (QA's MSB case M5, 5 Nov 2026; same flag in
+ * the sibling app; default off). "<name> did not follow must see behaviors
+ * which violates standards of conduct policy" → the one Corrective Action
+ * offer (CA_SALES_POLICY_ENABLED) → "yes": the card read "What happened: The
+ * policy is Standards of Conduct", because "yes" was rewritten into the
+ * request the offer accepts and the card read that sentence as her account.
+ * With the flag on, the accepted yes is the turn the offer answered — her own
+ * words — asked for as a Corrective Action Form, so the card's account is read
+ * from what she said and never from the rewritten request (`ai/ca-offer.ts`
+ * `acceptedCaOfferTurn`). Off, as before.
+ */
+export function caOfferKeepsAccountEnabled(): boolean {
+  return envFlag("CA_OFFER_KEEPS_ACCOUNT_ENABLED");
+}
+
+/**
+ * REPLY_MATCHES_CARD_EACH_CARD_ENABLED (QA's tester, 5 Nov 2026, item 6 "two forms"; default off). REPLY_MATCHES_CARD
+ * read only the first card, so a two-form reply's second section ("I can create a **Corrective Action Form** for
+ * **<its person>**") was rewritten to the first card's person. On: with two or more cards each such line gets the
+ * person of its own form's card, and the single-card rules do not run (`ai/reply-matches-card.ts`). REPLY_MATCHES_CARD
+ * is live in this app, so this has its own flag: off, the step is byte-identical to main.
+ */
+export function replyMatchesCardEachCardEnabled(): boolean {
+  return envFlag("REPLY_MATCHES_CARD_EACH_CARD_ENABLED");
+}
+
+/**
+ * OFF_ROSTER_CONFIRM_ENABLED (QA, the flip-3 gate, 6 Nov 2026; default off; ships with FORM_NAME_FROM_ROSTER). With
+ * the name flags a card's employee comes from the roster only, so a form for somebody not in Woven (an exit form for
+ * someone just removed) asked "Who is this form for?" on every answer and never made a card. On: the not-found note
+ * offers "reply **use <name>**"; that, "yes", or the same name again puts the typed name on the card, which says it is
+ * not from Woven. Another name is looked up as any name is (`forms/off-roster-confirm.ts`). Off, as before.
+ */
+export function offRosterConfirmEnabled(): boolean {
+  return envFlag("OFF_ROSTER_CONFIRM_ENABLED");
 }

@@ -59,6 +59,9 @@ const REPORT = "QA's testers, 5 Nov 2026 (R3, R5, R7; flags on): a roster surnam
 
 const ASKS_WHO = /Who is this (?:\*\*[^*]+\*\* |form )?for\?/i;
 
+/** Asks who the form is for, or (OFF_ROSTER_CONFIRM) offers the typed name as the one question about the person. */
+const ASKS_WHO_OR_OFFERS = new RegExp(`${ASKS_WHO.source}|reply \\*\\*use [^*]+\\*\\* and I'll put that name on the form`, ASKS_WHO.flags);
+
 async function said(t: Parameters<ReplayCase["run"]>[0], message: string, when = "2026-11-03T16:00:00Z") {
   vi.setSystemTime(new Date(when));
   t.directory([...STAFF, IGNATIUS, ROSALIND]);
@@ -80,10 +83,13 @@ function namesNobodyOffTheCard(reply: ReplayAnswer, employee: string | null, typ
   if (employee) return;
   const offered = /Is this for \*\*[^*]+\*\*\?/.exec(reply.content)?.[0] ?? "";
   // "I couldn't find **<name>** in the Woven roster, so that name is not on the form." says why the card is empty: not a contradiction.
+  // Changed on purpose (QA, 6 Nov: the OFF_ROSTER_CONFIRM offer names the typed person by design): the offer line
+  // ("If **<name>** isn't in Woven …, reply **use <name>** …") may name them too. Anywhere else — the action plan, the
+  // Observation, a "draft for <name>" line — still not, until the manager accepts.
   const text = reply.content
     .replace(offered, "")
     .split("\n")
-    .filter((line) => !/I couldn['’]t find \*\*/.test(line))
+    .filter((line) => !/I couldn['’]t find \*\*/.test(line) && !/reply \*\*use [^*]+\*\* and I'll put that name on the form/.test(line))
     .join("\n");
   for (const word of typed) {
     expect(text, `the card is empty but the reply names "${word}":\n${reply.content}`).not.toMatch(new RegExp(`\\b${word}\\b`, "i"));
@@ -95,7 +101,8 @@ export const NOV5_R3_ROSTER_SURNAME_TYPO_CASES: ReplayCase[] = [
     id: "nov5-r3-surname-one-letter-wrong",
     title: "R3 shape: \"create a CA for Ignatius Wexlarby …\" (roster: Ignatius Wexlerby): the card is his, or the reply asks \"Is this for **Ignatius Wexlerby**?\"; never dropped silently",
     report: `${REPORT}: one letter wrong; Employee "Not yet", the reply names him and asks who`,
-    status: { open: "the card is emptied and the reply asks \"Who is this form for?\" while its Action plan names Ignatius" },
+    // Fixed by flip 3 (6 Nov 2026): production now runs the name set + OFF_ROSTER_CONFIRM (docs/flag-classification/FLIP3D.md).
+    status: "fixed",
     fixFlags: ["ROSTER_NEAR_MISS_ENABLED"],
     run: withFlip(async (t) => {
       const { reply, employee, thread } = await said(t, "create a CA for Ignatius Wexlarby, he was 40 minutes late opening the store on 11/2. action plan: Ignatius will be on time for every opening shift");
@@ -153,7 +160,8 @@ export const NOV5_R3_ROSTER_SURNAME_TYPO_CASES: ReplayCase[] = [
       const { reply, employee } = await said(t, "I need a coaching form for Zebulon Marchbanks. Name: Zebulon Marchbanks. He did not restock the shelves before close on 11/2. Action plan: Zebulon will restock before every close");
       expect(employee, "a name on no roster is the employee").toBeNull();
       expect(reply.content, `says it has the employee:\n${reply.content}`).not.toMatch(/Everything I need is here|I have the employee/i);
-      expect(reply.content, `does not ask who:\n${reply.content}`).toMatch(ASKS_WHO);
+      // Changed on purpose (QA, finding C, 6 Nov 2026): with OFF_ROSTER_CONFIRM the off-roster offer ("reply **use <name>**") is the question about the person, instead of "Who is this form for?".
+      expect(reply.content, `does not ask who:\n${reply.content}`).toMatch(ASKS_WHO_OR_OFFERS);
       namesNobodyOffTheCard(reply, employee, ["Zebulon", "Marchbanks"]);
     }),
   },
@@ -167,7 +175,8 @@ export const NOV5_R3_ROSTER_SURNAME_TYPO_CASES: ReplayCase[] = [
     run: withFlip(async (t) => {
       const { reply, employee } = await said(t, "create a CA for Zebulon Marchbanks, he was 40 minutes late opening the store on 11/2. action plan: Zebulon will be on time for every opening shift");
       expect(employee, "a name on no roster is the employee").toBeNull();
-      expect(reply.content, `does not ask who:\n${reply.content}`).toMatch(ASKS_WHO);
+      // Changed on purpose (QA, finding C, 6 Nov 2026): with OFF_ROSTER_CONFIRM the off-roster offer ("reply **use <name>**") is the question about the person, instead of "Who is this form for?".
+      expect(reply.content, `does not ask who:\n${reply.content}`).toMatch(ASKS_WHO_OR_OFFERS);
       namesNobodyOffTheCard(reply, employee, ["Zebulon", "Marchbanks"]);
     }),
   },
