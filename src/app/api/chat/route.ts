@@ -63,6 +63,7 @@ import {
   formReplyFromDiffEnabled,
   formEditToolInStreamEnabled,
   formEditNoopGuardEnabled,
+  switchNotForAnotherPersonEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { streamWhenSlow } from "@/lib/api/streamed-response";
 import { LONG_MESSAGE_LIMIT } from "@/lib/chat/message-limit";
@@ -347,6 +348,14 @@ async function postChat(request: Request) {
                 ?.employeeName,
             })
           : false;
+      // SWITCH_NOT_FOR_ANOTHER_PERSON_ENABLED: with A's form open, "also make a coaching form for <B>" is B's request. Off: no reads.
+      const switchFor =
+        switchNotForAnotherPersonEnabled() && asked.activeFormInstanceId
+          ? await Promise.all([
+              (await import("@/lib/forms/open-form-summary")).describeOpenForm(request, asked.activeFormInstanceId).then((open) => open?.employeeName ?? null),
+              (await import("@/lib/forms/employee-roster")).loadScopedRoster(context.identity.scope).catch(() => []),
+            ])
+          : ([null, []] as const);
       const parsed = withSwitchAfterCreate(
         draftAction || staffPick || newRequestOpen
           ? {
@@ -365,6 +374,8 @@ async function postChat(request: Request) {
                 continueProposalTemplateKey: undefined,
               }
             : asked,
+        switchFor[0],
+        switchFor[1],
       );
       /*
        * A CORRECTION TO A FORM THIS CONVERSATION ALREADY CREATED — "change the
