@@ -31,7 +31,7 @@ import {
 } from "@/lib/analytics/taxonomy";
 import { activeKnowledgeCorpus } from "@/lib/knowledge/corpus";
 import { CONTINUATION_KEY_MAX } from "@/lib/forms/proposal-continuation";
-import { mayAskToReopen } from "@/lib/forms/reopen-cue";
+import { answersWhichFormOnFile, mayAskToReopen } from "@/lib/forms/reopen-cue";
 import { parseChatReportContext } from "@/lib/reporting/report-context";
 import { businessToday } from "@/lib/business-date";
 import {
@@ -63,6 +63,7 @@ import {
   formReplyFromDiffEnabled,
   formEditToolInStreamEnabled,
   formEditNoopGuardEnabled,
+  reopenByAnyOpenVerbEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { streamWhenSlow } from "@/lib/api/streamed-response";
 import { LONG_MESSAGE_LIMIT } from "@/lib/chat/message-limit";
@@ -657,7 +658,7 @@ async function postChat(request: Request) {
        * See `lib/forms/chat-reopen.ts`.
        */
       const reopened =
-        !sameCopy && !draftAnswer && !correction && !policyChange && !redraft && !revision && !which && mayAskToReopen(parsed.question)
+        !sameCopy && !draftAnswer && !correction && !policyChange && !redraft && !revision && !which && (mayAskToReopen(parsed.question, reopenByAnyOpenVerbEnabled()) || (reopenByAnyOpenVerbEnabled() && answersWhichFormOnFile(parsed.history)))
           ? await (await import("@/lib/forms/chat-reopen")).reopenRequestedForm({
               request,
               question: parsed.question,
