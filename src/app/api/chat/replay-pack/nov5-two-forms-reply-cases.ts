@@ -28,7 +28,8 @@ export const NOV5_TWO_FORMS_REPLY_CASES: ReplayCase[] = [
     title: "the flip set: \"coaching form for Marnie Holloway … and a CA for Remy Calder …\": the Corrective Action section names Remy Calder, the Coaching section Marnie Holloway",
     report: "QA's tester on the Bubbles smaller flip (5 Nov 2026), item 6 \"two forms\": the CA section named the Coaching card's person",
     // REPLY_MATCHES_CARD is live, so the each-card rule has its own default-off flag: OPEN with the flip set alone.
-    status: { open: "the reply's Corrective Action section names the Coaching card's person (\"**Corrective Action Form** for **Marnie Holloway**\")" },
+    // Fixed by flip 3 (6 Nov 2026): production now runs the name set + OFF_ROSTER_CONFIRM (docs/flag-classification/FLIP3D.md).
+    status: "fixed",
     fixFlags: ["REPLY_MATCHES_CARD_EACH_CARD_ENABLED"],
     async run(t) {
       const thread = start(t);
