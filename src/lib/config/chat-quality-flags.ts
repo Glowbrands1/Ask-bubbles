@@ -2604,3 +2604,14 @@ export function rosterNotFoundAnyPhrasingEnabled(): boolean {
 export function metricGuardEnabled(): boolean {
   return envFlag("METRIC_GUARD_ENABLED");
 }
+
+/**
+ * PAYROLL_AMOUNT_SAME_MESSAGE_ENABLED (live chat, 5 Nov 2026; default off). "…the register was off $20. which will
+ * be payroll deducted from <name>'s check. … payroll deduct applies" still asked "**Payroll deduction amount?**":
+ * "which" between the amount and "will be payroll deducted" hid the $20 from the amount reader. On: an amount
+ * followed by "which / that / this / it … (payroll) deducted" is the stated amount
+ * (`forms/payroll-amount-referent.ts`). Off, as before.
+ */
+export function payrollAmountSameMessageEnabled(): boolean {
+  return envFlag("PAYROLL_AMOUNT_SAME_MESSAGE_ENABLED");
+}
