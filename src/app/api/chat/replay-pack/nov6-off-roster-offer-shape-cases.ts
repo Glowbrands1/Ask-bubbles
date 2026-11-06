@@ -126,4 +126,10 @@ export const NOV6_OFF_ROSTER_OFFER_SHAPE_CASES: ReplayCase[] = [
     "ca for Ruairi McAllister, he was late opening the store on 11/2",
     "Ruairi McAllister",
   ),
+  offeredThenReady(
+    "nov6-offer-employee-comma-place",
+    "\"i have an employee, Zebulon Marchbanks that needs a corrective action form …\" (not in Woven): offered, then READY (gate rerun 3)",
+    "i have an employee, Zebulon Marchbanks that needs a corrective action form with a customer complaint",
+    "Zebulon Marchbanks",
+  ),
 ];
