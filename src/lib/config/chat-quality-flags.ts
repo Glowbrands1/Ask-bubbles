@@ -2606,6 +2606,36 @@ export function metricGuardEnabled(): boolean {
 }
 
 /**
+ * PLACE_FROM_CUE_ENABLED (port of the sibling app's gate finding, 6 Nov 2026,
+ * sf-s28; default off). "create a corrective action for <name> from bellevue",
+ * from a manager not assigned to Bellevue: "from" was no place cue, so the
+ * store was not read and the card silently took the employee's own store with
+ * no word about Bellevue (CA_SALES_POLICY_ENABLED on or off). With this flag
+ * on, "for <name> from <store>" names the store (`forms/place-from-cue.ts`), so
+ * a store outside the assignment gets the "isn't a store on your assignment"
+ * question. Other "from"s ("transferred from", "a call from the store", "from
+ * 10/5") are left alone. Off, as before.
+ */
+export function placeFromCueEnabled(): boolean {
+  return envFlag("PLACE_FROM_CUE_ENABLED");
+}
+
+/**
+ * TITLE_ENDS_AT_LINE_ENABLED (port from the sibling app's gate, 6 Nov 2026,
+ * s16; default off). With TITLE_OF_THE_EMPLOYEE_ENABLED on, an exit form
+ * typed as lines ("<name>\nTeam Member Part Time \nNE Omaha Dodge\n…") lost
+ * the employee's own Position: the capitalised words on the NEXT line (the
+ * store) were read as another person beside the title. With this flag on, the
+ * name after a title must be on the title's own line
+ * (`forms/title-of-another-person.ts`); a typed list's name on the line before
+ * still owns the title below it, and "District manager <name>" on one line is
+ * still that person's. Off, as before.
+ */
+export function titleEndsAtLineEnabled(): boolean {
+  return envFlag("TITLE_ENDS_AT_LINE_ENABLED");
+}
+
+/**
  * EXIT_STATED_ONLY_ENABLED (ported from the sibling app: QA, 5 Nov 2026, severe; default off). There a manager pasted a termination letter and
  * asked for an exit form: How Employee Resigned became "Text message" (the text that caused the termination), Key
  * Returned "returned" (the letter told the employee to return them), and Last Day Worked the final paycheck's
