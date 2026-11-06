@@ -101,7 +101,8 @@ export const NOV5_R3_ROSTER_SURNAME_TYPO_CASES: ReplayCase[] = [
     id: "nov5-r3-surname-one-letter-wrong",
     title: "R3 shape: \"create a CA for Ignatius Wexlarby …\" (roster: Ignatius Wexlerby): the card is his, or the reply asks \"Is this for **Ignatius Wexlerby**?\"; never dropped silently",
     report: `${REPORT}: one letter wrong; Employee "Not yet", the reply names him and asks who`,
-    status: { open: "the card is emptied and the reply asks \"Who is this form for?\" while its Action plan names Ignatius" },
+    // Fixed by flip 3 (6 Nov 2026): production now runs the name set + OFF_ROSTER_CONFIRM (docs/flag-classification/FLIP3D.md).
+    status: "fixed",
     fixFlags: ["ROSTER_NEAR_MISS_ENABLED"],
     run: withFlip(async (t) => {
       const { reply, employee, thread } = await said(t, "create a CA for Ignatius Wexlarby, he was 40 minutes late opening the store on 11/2. action plan: Ignatius will be on time for every opening shift");
