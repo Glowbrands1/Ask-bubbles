@@ -2779,3 +2779,14 @@ export function replyMatchesCardEachCardEnabled(): boolean {
 export function offRosterConfirmEnabled(): boolean {
   return envFlag("OFF_ROSTER_CONFIRM_ENABLED");
 }
+
+/**
+ * OWN_BRAND_ONLY_ENABLED (Pau, 6 Nov 2026; same flag in both apps; default off). A reply quoting the manual said
+ * "This applies company-wide across all brands — <this brand>, <two other brands> — …". Pau: only this company's
+ * brand. On: the finished reply names only this company's brand — a list of brands holding it becomes it, a line
+ * headed by another brand goes, any other sentence naming one goes; a quotation is kept or dropped whole, never
+ * reworded (`ai/own-brand-only.ts`). The brands are config data, not code. Off, as before.
+ */
+export function ownBrandOnlyEnabled(): boolean {
+  return envFlag("OWN_BRAND_ONLY_ENABLED");
+}
