@@ -340,3 +340,15 @@ export async function staffPickerTurn(input: {
 export function isCompanyPositionTitle(text: string): boolean {
   return STORE_TITLES.has(text.trim().replace(/\s+/g, " ").toLowerCase());
 }
+
+/**
+ * B1 (the flip-3 tester, 6 Nov 2026): the words name a company position as a manager types it — a title of the
+ * company's own list, or its first two or more words ("Team Member" of "Team Member Part Time"). From the title list
+ * only; one word ("General") is never enough.
+ */
+export function namesCompanyPositionTitle(text: string): boolean {
+  const typed = text.trim().replace(/\s+/g, " ").toLowerCase();
+  if (STORE_TITLES.has(typed)) return true;
+  if (typed.split(" ").length < 2) return false;
+  return [...STORE_TITLES].some((title) => title.startsWith(`${typed} `));
+}
