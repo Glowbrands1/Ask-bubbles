@@ -41,6 +41,8 @@ export const NOV6_CODING3_FULL_POSITION_TITLE_CASES: ReplayCase[] = [
       const reply = await thread.say(FULL_TITLE);
       expect(thread.proposal, `no exit card:\n${reply.content}`).toMatchObject({ employeeName: "Isaura Corvadine" });
       expect(thread.proposal?.employeeRole ?? null, `the card's Position:\n${reply.content}`).toBe("Team Member Part Time");
+      // The read-back says the same title as the card.
+      expect(reply.content).toMatch(/^- \*\*Job Title:\*\* Team Member Part Time$/m);
     },
   },
   {
@@ -58,6 +60,7 @@ export const NOV6_CODING3_FULL_POSITION_TITLE_CASES: ReplayCase[] = [
       const reply = await thread.say(TITLE_AND_MORE);
       expect(thread.proposal, `no exit card:\n${reply.content}`).toMatchObject({ employeeName: "Isaura Corvadine" });
       expect(thread.proposal?.employeeRole ?? null, `the card's Position:\n${reply.content}`).toBe("Team Member");
+      expect(reply.content).toMatch(/^- \*\*Job Title:\*\* Team Member$/m);
     },
   },
 ];
