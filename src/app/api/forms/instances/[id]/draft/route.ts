@@ -188,6 +188,7 @@ import {
   formEditSingleWriterEnabled,
   formPatchReducerEnabled,
   caSalesPolicyEnabled,
+  sameFormOtherPersonEnabled,
 } from "@/lib/config/chat-quality-flags";
 import {
   STANDARDS_OF_CONDUCT,
@@ -376,7 +377,15 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
     }
 
     const body = ((await request.json().catch(() => null)) ?? {}) as DraftBody;
-    const asTyped = String(body.notes ?? "").trim().slice(0, 4000);
+    const sent = String(body.notes ?? "").trim().slice(0, 4000);
+    // SAME_FORM_OTHER_PERSON_ENABLED: "do the same thing for <B> …" is drafted from A's turns with the names swapped, never as the account.
+    const asTyped = sameFormOtherPersonEnabled()
+      ? ((await import("@/lib/forms/same-form-other-person")).sameFormOtherPersonNotes(
+          sent,
+          loaded.instance.employeeName,
+          await (await import("@/lib/forms/employee-roster")).loadScopedRoster(actor.scope).catch(() => []),
+        ) ?? sent)
+      : sent;
     // TYPO_READING_ROUTES_ENABLED: the readers below see "coahed", "notcie", "amont" as the words they can only be.
     const notes = typoReadingRoutesEnabled() ? typoReadingText(asTyped, await protectedNameWords()) : asTyped;
     if (notes.length < 10) {
