@@ -2316,6 +2316,8 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
         templateKey: loaded.instance.templateKey,
         values: draftValues,
         notes,
+        // CA_SALES_POLICY_ENABLED: the Direct policy fill follows the ticked Type of Offense.
+        ticked: validated.checked.offense_type ?? [],
         chunks: manual.chunks,
         manual: {
           documentId: manual.documentId,
