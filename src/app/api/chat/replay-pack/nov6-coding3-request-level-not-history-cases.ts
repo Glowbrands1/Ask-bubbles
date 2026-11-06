@@ -39,7 +39,7 @@ const person = (id: string, firstName: string, lastName: string): DirectoryRow =
   positionName: "Team Member Part Time",
 });
 
-const MARISOL = person("e-marisol-quenneville", "Marisol", "Quenneville");
+const MARISOL = person("e-marisol-pendergrast", "Marisol", "Pendergrast");
 const TAMSIN = person("e-tamsin-okafor", "Tamsin", "Okafor");
 const BRIELLE = person("e-brielle-hartsough", "Brielle", "Hartsough");
 const PEOPLE: readonly DirectoryRow[] = [MARISOL, TAMSIN, BRIELLE];
@@ -69,6 +69,11 @@ function warningLevel(card: ReplayAnswer["formProposal"] | null | undefined): st
   return (card as { warningLevel?: string | null } | null | undefined)?.warningLevel ?? null;
 }
 
+/** The reply's "Prior actions" line. */
+function priorActions(reply: ReplayAnswer): string {
+  return reply.content.split("\n").find((line) => /\*\*Prior actions:?\*\*/i.test(line)) ?? "";
+}
+
 export const NOV6_CODING3_REQUEST_LEVEL_NOT_HISTORY_CASES: ReplayCase[] = [
   {
     id: "nov6-coding3-request-level-not-history-write-up-with",
@@ -79,9 +84,9 @@ export const NOV6_CODING3_REQUEST_LEVEL_NOT_HISTORY_CASES: ReplayCase[] = [
     async run(t: T) {
       const thread = start(t);
       const reply = await thread.say(
-        "I need to write up Marisol Quenneville with a written warning for leaving the front desk unattended for 30 minutes on 10/22. There's no prior coaching on file.",
+        "I need to write up Marisol Pendergrast with a written warning for leaving the front desk unattended for 30 minutes on 10/22. There's no prior coaching on file.",
       );
-      expect(thread.proposal, `no Corrective Action card for Marisol Quenneville:\n${reply.content}`).toMatchObject({ templateKey: "dpoa", employeeName: "Marisol Quenneville" });
+      expect(thread.proposal, `no Corrective Action card for Marisol Pendergrast:\n${reply.content}`).toMatchObject({ templateKey: "dpoa", employeeName: "Marisol Pendergrast" });
       expect(reply.content, `calls the warning asked for an earlier warning:\n${reply.content}`).not.toMatch(EARLIER_WARNING);
       expect(reply.content, `asks the level although a written warning was asked for:\n${reply.content}`).not.toMatch(ASKS_LEVEL);
       expect(warningLevel(thread.proposal), `the card is not the Written Warning asked for:\n${reply.content}`).toBe("written");
@@ -114,6 +119,7 @@ export const NOV6_CODING3_REQUEST_LEVEL_NOT_HISTORY_CASES: ReplayCase[] = [
       expect(thread.proposal, `no Corrective Action card for Brielle Hartsough:\n${reply.content}`).toMatchObject({ templateKey: "dpoa", employeeName: "Brielle Hartsough" });
       expect(warningLevel(thread.proposal), `the 9/1 warning was read as this form's level:\n${reply.content}`).toBeNull();
       expect(reply.content, `the level is not asked although only an earlier warning was named:\n${reply.content}`).toMatch(ASKS_LEVEL);
+      expect(priorActions(reply), `the 9/1 warning is not on the Prior actions line:\n${reply.content}`).toMatch(/09\/01/);
     },
   },
 ];

@@ -683,7 +683,7 @@ describe("a level said beside the request", () => {
 describe("the level asked for in the request's clause is this form's, whatever date follows (REQUEST_LEVEL_NOT_HISTORY_ENABLED)", () => {
   const NOV6 = "2026-11-06";
   const REPORTED =
-    "I need to write up Marisol Quenneville with a written warning for leaving the front desk unattended for 30 minutes on 10/22. There's no prior coaching on file.";
+    "I need to write up Marisol Pendergrast with a written warning for leaving the front desk unattended for 30 minutes on 10/22. There's no prior coaching on file.";
   const GIVE = "give Tamsin Okafor a written warning for being late on 10/22";
   const HISTORY = "Brielle Hartsough got a written warning on 9/1 and now she was late again on 10/22, write her up";
 
