@@ -72,6 +72,25 @@ const VARIANTS: readonly { readonly key: string; readonly typed: (shape: Shape) 
 
 /** With production's flags, 6 Nov 2026: the variants that already keep the roster person (card or asked). */
 const HOLDS_IN_PRODUCTION = new Set([
+  // Fixed by flip 3 (6 Nov 2026): production now runs the name set + OFF_ROSTER_CONFIRM (docs/flag-classification/FLIP3D.md).
+  "two-word-first/lowercase",
+  "two-word-first/first-initial",
+  "two-word-first/typo",
+  "two-word-first/swap",
+  "two-word-first/rotation",
+  "preferred/first-initial",
+  "preferred/typo",
+  "preferred/swap",
+  "preferred/rotation",
+  "short-surname/first-initial",
+  "compound-surname/lowercase",
+  "compound-surname/first-initial",
+  "compound-surname/typo",
+  "compound-surname/rotation",
+  "apostrophe/first-initial",
+  "apostrophe/typo",
+  "apostrophe/swap",
+  "apostrophe/rotation",
   "two-word-first/exact",
   "two-word-first/first-only",
   "preferred/exact",
