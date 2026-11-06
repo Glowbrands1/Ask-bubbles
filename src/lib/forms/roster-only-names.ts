@@ -7,6 +7,7 @@ import { HAS_EMPLOYEE_AND_PLACE, SAYS_READY } from "@/lib/ai/coaching-what-happe
 import { matchEmployeeName, normalizeTypedName, type RosterEmployee } from "./employee-match";
 import { isAcceptedOffRoster, offRosterCardNote, offRosterOffer, offRosterTakenLine } from "./off-roster-confirm";
 import { personRosterNames } from "./person-guard";
+import { namesThisCompany } from "./company-name";
 import { namesCompanyPositionTitle } from "./staff-picker";
 import { metricMessage, namesAMetric, requestMessage } from "./request-slot";
 import { namesAForm } from "./template-intent";
@@ -332,6 +333,8 @@ export function withoutUnseatedName(
 function withNotFoundNote(content: string, typed: string | null, names: readonly string[]): string {
   // B1 (the flip-3 tester, 6 Nov 2026): a company position title ("Team Member") is never a person said back as not found.
   if (typed && namesCompanyPositionTitle(typed)) return content;
+  // The sibling app's QA finding (7 Nov 2026): the company's own name or initials are never a person said back as not found.
+  if (typed && namesThisCompany(typed)) return content;
   if (!typed || /I couldn['’]t find \*\*/.test(content) || oneCloseRosterPerson(typed, names)) return content;
   return `I couldn't find **${typed}** in the Woven roster, so that name is not on the form.\n\n${content.trim()}`;
 }
@@ -367,6 +370,8 @@ function offRosterTyped(employee: string, message: string | undefined, names: re
   if (normalizeTypedName(typed).split(/\s+/).includes(UNNAMED_PERSON_WORD)) return null;
   // B1: a company position title ("Team Member") is never offered as a person.
   if (namesCompanyPositionTitle(typed)) return null;
+  // Nor is the company's own name or initials.
+  if (namesThisCompany(typed)) return null;
   const same = (said: string | null | undefined) => Boolean(said) && normalizeTypedName(said!) === normalizeTypedName(typed);
   const text = message ?? "";
   const placed =
