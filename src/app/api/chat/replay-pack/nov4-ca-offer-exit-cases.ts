@@ -40,7 +40,8 @@ export const NOV4_CA_OFFER_EXIT_CASES: ReplayCase[] = [
     id: "nov4-offer-exit-replaces-menu",
     title: "a Coaching / Corrective Action menu for the employee is replaced by the one offer; \"yes\" makes the card",
     report: `${REPORT}: the menu (the sibling app's trace and this app's)`,
-    status: { open: "with production's flags the reply is a Coaching / Corrective Action menu, with no offer" },
+    // Changed on purpose (5 Nov 2026): QA flipped CA_SALES_POLICY + REPLY_MATCHES_CARD + TITLE_OF_THE_EMPLOYEE + METRIC_GUARD on in production (production-flags.json), so this case now holds with production's flags.
+    status: "fixed",
     fixFlags: FLAGS,
     async run(t) {
       const thread = start(t);
@@ -56,7 +57,8 @@ export const NOV4_CA_OFFER_EXIT_CASES: ReplayCase[] = [
     id: "nov4-offer-exit-tool-path",
     title: "#5's statement with another draft open (the main call carries the edit tool): still the one offer",
     report: `${REPORT}: the tool path`,
-    status: { open: "with production's flags no offer" },
+    // Changed on purpose (5 Nov 2026): QA flipped CA_SALES_POLICY + REPLY_MATCHES_CARD + TITLE_OF_THE_EMPLOYEE + METRIC_GUARD on in production (production-flags.json), so this case now holds with production's flags.
+    status: "fixed",
     fixFlags: FLAGS,
     async run(t) {
       const thread = start(t);
