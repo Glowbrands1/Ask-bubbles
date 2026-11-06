@@ -1,7 +1,7 @@
 import "server-only";
 
 import { withoutAppLines } from "@/lib/ai/app-sentences";
-import { aiReadsCodeChecksEnabled, checkedReadingEnabled } from "@/lib/config/chat-quality-flags";
+import { aiReadsCodeChecksEnabled, checkedReadingEnabled, lastFirstAiFallbackEnabled } from "@/lib/config/chat-quality-flags";
 import { CLAUDE_READER_MODEL } from "@/lib/config/models";
 import { ACTIVE_BRAND } from "@/lib/brand";
 import { displayName } from "@/lib/forms/employee-match";
@@ -20,6 +20,7 @@ import { currentRequestStart } from "../remap-incident";
 import type { AskRequest, AskResponse } from "../types";
 import { plainWords, type CheckContext, type CheckedReading } from "./check";
 import { lastFirstResult } from "./last-first";
+import { withLastFirstFallback } from "./last-first-fallback";
 import { mergeCheckedReading } from "./merge";
 import { readFormRequest, type ReaderResult } from "./read";
 import type { FormReading } from "./schema";
@@ -98,7 +99,10 @@ export function startFormReading(request: AskRequest, actor: ChatActor): Started
   const result = context.then(
     (ready) =>
       aiReadsCodeChecksEnabled()
-        ? readFormRequest({ turns, context: ready })
+        ? lastFirstAiFallbackEnabled()
+          ? // LAST_FIRST_AI_FALLBACK_ENABLED: the AI reader read no employee or fell back; "Calder, Remy" is read as above.
+            readFormRequest({ turns, context: ready }).then((read) => withLastFirstFallback(read, ready))
+          : readFormRequest({ turns, context: ready })
         : (lastFirstResult(ready) ?? { fallback: NO_PAIR }),
     () => ({ fallback: "error" }),
   );
