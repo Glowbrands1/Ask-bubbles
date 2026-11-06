@@ -1,9 +1,10 @@
-import { formNameFromRosterEnabled, metricGuardEnabled, offRosterConfirmEnabled, rosterNearMissEnabled, rosterNotFoundAnyPhrasingEnabled } from "@/lib/config/chat-quality-flags";
+import { formNameFromRosterEnabled, metricGuardEnabled, offRosterConfirmEnabled, rosterNearMissEnabled, rosterNotFoundAnyPhrasingEnabled, storeWordNotAMissingPersonEnabled } from "@/lib/config/chat-quality-flags";
 import { isGlossaryTerm } from "@/lib/ai/glossary";
 import type { AskResponse } from "@/lib/ai/types";
 
 import { HAS_EMPLOYEE_AND_PLACE, SAYS_READY } from "@/lib/ai/coaching-what-happened";
 
+import { isStoreWord } from "./answer-not-a-name";
 import { matchEmployeeName, normalizeTypedName, type RosterEmployee } from "./employee-match";
 import { isAcceptedOffRoster, offRosterCardNote, offRosterOffer, offRosterTakenLine } from "./off-roster-confirm";
 import { personRosterNames } from "./person-guard";
@@ -310,6 +311,8 @@ export function withoutUnseatedName(
  * request's name (`slotName`).
  */
 function withNotFoundNote(content: string, typed: string | null, names: readonly string[]): string {
+  // STORE_WORD_NOT_A_MISSING_PERSON_ENABLED: a store ("Dodge") is never said back as a person not found.
+  if (typed && storeWordNotAMissingPersonEnabled() && isStoreWord(typed)) return content;
   if (!typed || /I couldn['’]t find \*\*/.test(content) || oneCloseRosterPerson(typed, names)) return content;
   return `I couldn't find **${typed}** in the Woven roster, so that name is not on the form.\n\n${content.trim()}`;
 }

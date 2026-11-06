@@ -1096,6 +1096,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REPLY_MATCHES_CARD_EACH_CARD_ENABLED",
   // Default-off fix flag (the flip-3 gate, 6 Nov 2026).
   "OFF_ROSTER_CONFIRM_ENABLED",
+  "STORE_WORD_NOT_A_MISSING_PERSON_ENABLED",
 ] as const;
 
 /**
@@ -2712,4 +2713,15 @@ export function replyMatchesCardEachCardEnabled(): boolean {
  */
 export function offRosterConfirmEnabled(): boolean {
   return envFlag("OFF_ROSTER_CONFIRM_ENABLED");
+}
+
+/**
+ * STORE_WORD_NOT_A_MISSING_PERSON_ENABLED (QA, the flip-3 gate, 6 Nov 2026; default off). With the name flags,
+ * "coaching form for Dodge, the team was slow at the register" said "I couldn't find **Dodge** in the Woven roster":
+ * the store, as a missing person. (The store's own Woven account is already never a person:
+ * SHARED_LOGIN_NOT_STAFF_ENABLED, live.) On: a name that is only a store's name — the live STORE_WORD_NOT_A_NAME
+ * reading (`forms/answer-not-a-name.ts` isStoreWord) — is never said back as a person not found. Off, as before.
+ */
+export function storeWordNotAMissingPersonEnabled(): boolean {
+  return envFlag("STORE_WORD_NOT_A_MISSING_PERSON_ENABLED");
 }

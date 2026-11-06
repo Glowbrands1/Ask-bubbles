@@ -30,7 +30,13 @@ function isDateAnswer(name: string): boolean {
 /** STORE_WORD_NOT_A_NAME_ENABLED: "dodge" — a reply that is only a store's name — is the store. */
 function isStoreReply(name: string): boolean {
   if (!storeWordNotANameEnabled()) return false;
+  return isStoreWord(name);
+}
+
+/** The words are only a store's name ("Dodge", "dodge"), read as the store reader reads it. Pure. */
+export function isStoreWord(name: string): boolean {
   const typed = name.trim().toLowerCase();
+  if (!typed) return false;
   return readLocationMentions(typed).some((mention) => !mention.confirm && (mention.matched ?? "").trim().toLowerCase() === typed);
 }
 
