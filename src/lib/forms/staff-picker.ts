@@ -335,3 +335,8 @@ export async function staffPickerTurn(input: {
     : draft;
   return staffPickerAnswer(content);
 }
+
+/** One of the company's own position names, as the directory writes them (TITLE_ENDS_AT_LINE_ENABLED reads it). */
+export function isCompanyPositionTitle(text: string): boolean {
+  return STORE_TITLES.has(text.trim().replace(/\s+/g, " ").toLowerCase());
+}

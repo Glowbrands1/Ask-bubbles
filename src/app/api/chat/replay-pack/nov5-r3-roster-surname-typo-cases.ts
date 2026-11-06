@@ -162,7 +162,8 @@ export const NOV5_R3_ROSTER_SURNAME_TYPO_CASES: ReplayCase[] = [
     title: "R3 (off roster): \"create a CA for Zebulon Marchbanks …\", on no roster: the card is empty, asks who, and no reply text names him (\"I can create a CA for …\", \"Name: …\", the Action Plan)",
     report: `${REPORT}: off roster, the reply says "I can create a CA for <A>" / "Name: <B>" while the card is empty`,
     // production-flags.json corrected to Vercel (QA, 5 Nov 2026): GROUNDED_ENTITIES_ENABLED is off in production since 24 Oct (a deliberate rollback), so a name on no roster goes on the card, and the reply names him. Recorded OPEN, a production defect.
-    status: { open: "production: GROUNDED_ENTITIES_ENABLED off since 24 Oct (deliberate rollback: dropped non-roster names while ANTI_LOOP off; Vercel comment) — a name on no roster goes on the card, and the reply names him" },
+    // Changed on purpose (5 Nov 2026): QA flipped CA_SALES_POLICY + REPLY_MATCHES_CARD + TITLE_OF_THE_EMPLOYEE + METRIC_GUARD on in production (production-flags.json), so this case now holds with production's flags.
+    status: "fixed",
     run: withFlip(async (t) => {
       const { reply, employee } = await said(t, "create a CA for Zebulon Marchbanks, he was 40 minutes late opening the store on 11/2. action plan: Zebulon will be on time for every opening shift");
       expect(employee, "a name on no roster is the employee").toBeNull();
