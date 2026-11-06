@@ -86,7 +86,7 @@ export const NOV5_REQUEST_SLOT_CASES: ReplayCase[] = [
     status: "fixed",
     // The fix-flag run: fails with production's real flags (QA Vercel read 5 Nov); tracked: GROUNDED_ENTITIES_ENABLED (off in production since 24 Oct, a deliberate rollback) — neither a card for Remy Fenn nor the note naming only Remy Fenn.
     fixFlags: [FLAG, SALES, GLOSSARY],
-    // Holds with its fix flags since flip 3 (6 Nov 2026): production now runs the name set + OFF_ROSTER_CONFIRM (docs/flag-classification/FLIP3D.md).
+    // Holds with its fix flags since flip 3 (6 Nov 2026): the fixStatus is removed, as in #515; it does not depend on FORM_NAME_FROM_ROSTER being on in production.
     async run(t) {
       const thread = start(t);
       const reply = await thread.say(say("Remy Fenn"));
@@ -107,7 +107,7 @@ export const NOV5_REQUEST_SLOT_CASES: ReplayCase[] = [
     status: "fixed",
     // The fix-flag run: fails with production's real flags (QA Vercel read 5 Nov); tracked: GROUNDED_ENTITIES_ENABLED (off in production since 24 Oct, a deliberate rollback) — neither a card for Remy Fenn nor the note naming only Remy Fenn.
     fixFlags: [FLAG, SALES, GLOSSARY],
-    // Holds with its fix flags since flip 3 (6 Nov 2026): production now runs the name set + OFF_ROSTER_CONFIRM (docs/flag-classification/FLIP3D.md).
+    // Holds with its fix flags since flip 3 (6 Nov 2026): the fixStatus is removed, as in #515; it does not depend on FORM_NAME_FROM_ROSTER being on in production.
     async run(t) {
       const thread = start(t);
       const reply = await thread.say(say("Remy Fenn"), { employeeName: "Remy Fenn" });
@@ -227,7 +227,7 @@ export const NOV5_REQUEST_SLOT_CASES: ReplayCase[] = [
         text: "create a CA form for ima employee, for opening the store late on 9-28-26",
         roster: ROSTER,
         // production-flags.json corrected to Vercel (QA, 5 Nov 2026). Recorded OPEN, a production defect.
-        // Fixed by flip 3 (6 Nov 2026): production now runs the name set + OFF_ROSTER_CONFIRM (docs/flag-classification/FLIP3D.md).
+        open: "production: GROUNDED_ENTITIES_ENABLED off since 24 Oct (deliberate rollback: dropped non-roster names while ANTI_LOOP off; Vercel comment) — the card is for \"ima employee\", a name on no roster",
         check: (card: string | null, reply: string) => {
           expect(card, "a name on no roster is the employee").toBeNull();
           expect(reply, "it does not ask who").toMatch(ASKS_WHO);
@@ -278,7 +278,7 @@ export const NOV5_REQUEST_SLOT_CASES: ReplayCase[] = [
   ).map(
     (entry): ReplayCase => {
       const { key, text, roster, check } = entry;
-      const open = "open" in entry ? (entry.open as string | undefined) : undefined;
+      const open = "open" in entry ? entry.open : undefined;
       return {
       id: `nov5-roster-only-${key}`,
       title: `Pau 5 Nov, only roster people: "${text.split("\n")[0]!.slice(0, 70)}"`,
