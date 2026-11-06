@@ -2604,3 +2604,16 @@ export function rosterNotFoundAnyPhrasingEnabled(): boolean {
 export function metricGuardEnabled(): boolean {
   return envFlag("METRIC_GUARD_ENABLED");
 }
+
+/**
+ * NO_CARD_DRAFT_CLAIM_ENABLED (QA B22-2, 25 Oct 2026; rebuilt 6 Nov 2026 from the unmerged #164; default off). With
+ * a CA card open, "now one for <another employee>, …, late today" was answered "A new Corrective Action Form draft
+ * is open for <them> … press Finalize on the card" with no card: CLAIM_GUARD reads only "updated / now reads"
+ * claims, and REPLY_MATCHES_CARD returns early when there is no card. On: an answer with no card never says a draft
+ * is open or created that is not on screen, nor to press Finalize or Create on a card that is not there; one honest
+ * line says how to get the card (`ai/no-card-draft-claim.ts`). A reply with a card, or about the form on screen,
+ * is kept. Off, as before.
+ */
+export function noCardDraftClaimEnabled(): boolean {
+  return envFlag("NO_CARD_DRAFT_CLAIM_ENABLED");
+}

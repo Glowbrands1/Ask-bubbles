@@ -794,6 +794,30 @@ async function postChat(request: Request) {
         void _dropped;
         answer = { ...rest, content: rest.content.replace(/\n*Based on what you've described, I can prepare:\s*$/, "").trimEnd() };
       }
+      /*
+       * NO_CARD_DRAFT_CLAIM_ENABLED (QA B22-2): the answering model's reply, with no card, never says a draft is open or
+       * created that is not on screen, nor to press Finalize or Create on "the card". A reply about the form on screen is
+       * kept; one whose open form could not be read is left alone. See `lib/ai/no-card-draft-claim.ts`.
+       */
+      if (
+        (await import("@/lib/config/chat-quality-flags")).noCardDraftClaimEnabled() &&
+        !draftAnswer && !correction && !policyChange && !redraft && !sameCopy && !revision && !which && !reopened && !toolNothing &&
+        !(parsed.activeFormInstanceId && !openForm)
+      ) {
+        answer = await (await import("@/lib/ai/no-card-draft-claim")).noCardDraftClaimChecked(
+          answer,
+          { question: asked.question, openForm, proposalPending: Boolean(parsed.continueProposalTemplateKey) },
+          async () => {
+            // Still on screen: a draft this turn set aside as a new request, and two cards from one message.
+            const ids = [asked.activeFormInstanceId, ...(openForm ? [] : (asked.activeFormCandidateIds ?? []))].filter(
+              (id): id is string => Boolean(id) && id !== parsed.activeFormInstanceId,
+            );
+            const { describeOpenForm } = await import("@/lib/forms/open-form-summary");
+            const forms = await Promise.all([...new Set(ids)].map((id) => describeOpenForm(request, id)));
+            return forms.filter((form) => form !== null);
+          },
+        );
+      }
     } catch (error) {
       /*
        * A FAILED ANSWER IS STILL A RECORDED TURN, closed as a failure. The row
