@@ -1080,6 +1080,9 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "AI_READS_CODE_CHECKS_ENABLED",
   "LAST_FIRST_NAME_READ_ENABLED",
   "POLICY_CITATION_CHECK_ENABLED",
+  // The sibling app's gate fix flags (6 Nov 2026): forced off with the others by flags-off-parity's child run.
+  "TITLE_ENDS_AT_LINE_ENABLED",
+  "PLACE_FROM_CUE_ENABLED",
 ] as const;
 
 /**
