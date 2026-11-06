@@ -1083,6 +1083,11 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // The sibling app's gate fix flags (6 Nov 2026): forced off with the others by flags-off-parity's child run.
   "TITLE_ENDS_AT_LINE_ENABLED",
   "PLACE_FROM_CUE_ENABLED",
+  // Live in production since the 6 Nov flip, but missing from this list (QA, 6 Nov 2026): a gate run with them on
+  // would keep them on inside flags-off-parity's child run. Test-only effect.
+  "METRIC_GUARD_ENABLED",
+  "REPLY_MATCHES_CARD_ENABLED",
+  "TITLE_OF_THE_EMPLOYEE_ENABLED",
 ] as const;
 
 /**
