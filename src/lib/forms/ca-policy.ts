@@ -1,5 +1,13 @@
+import { withoutAppLines } from "@/lib/ai/app-sentences";
 import { foldsToGlossaryTerm } from "@/lib/ai/glossary";
-import { caSalesPolicyEnabled, cleaningOtherEveryWordingEnabled, formEditDateRulesEnabled, policyCleaningIncidentEnabled, salesShortfallObjectEnabled } from "@/lib/config/chat-quality-flags";
+import {
+  asYouSaidManagerWordsEnabled,
+  caSalesPolicyEnabled,
+  cleaningOtherEveryWordingEnabled,
+  formEditDateRulesEnabled,
+  policyCleaningIncidentEnabled,
+  salesShortfallObjectEnabled,
+} from "@/lib/config/chat-quality-flags";
 
 import { JOIN } from "./bounded-context";
 import { LATE_TO_OPEN, lateOpenOn } from "./late-open";
@@ -425,7 +433,19 @@ function statedIn(turn: string): CaPolicyName | null {
  * the drafting notes carry them.
  */
 export function readCaPolicy(rawText: string): CaPolicyReading {
-  return withCleaningOther(withSalesPolicy(readCaPolicyFromWords(rawText), rawText), rawText);
+  const said = managerWords(rawText);
+  return withCleaningOther(withSalesPolicy(readCaPolicyFromWords(said), said), said);
+}
+
+/**
+ * ONLY THE MANAGER'S WORDS NAME A POLICY (AS_YOU_SAID_MANAGER_WORDS_ENABLED; the sibling app's live chats,
+ * 4 Nov 2026). "Policy reference: Standards of Conduct, JBA Policy Manual p.12." is the app's line — the intent
+ * reader's heading, written back onto the turn (`ai/form-state.ts`) — and the card said "Standards of Conduct,
+ * as you said" for "it should be must see behaviors". With the flag on, the app's own lines
+ * (`ai/app-sentences.ts`) are not read here. Off, as before.
+ */
+export function managerWords(rawText: string): string {
+  return asYouSaidManagerWordsEnabled() ? withoutAppLines(rawText ?? "") : rawText;
 }
 
 /**
