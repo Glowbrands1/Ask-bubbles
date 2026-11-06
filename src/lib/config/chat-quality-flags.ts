@@ -1085,6 +1085,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "PLACE_FROM_CUE_ENABLED",
   // Port of the sibling app's fix flag after its flip (6 Nov 2026): forced off with the others.
   "SALES_SHORTFALL_OBJECT_ENABLED",
+  "UNDER_PERFORMANCE_EXPLAINED_ENABLED",
   // Live in production since the 6 Nov flip, but missing from this list (QA, 6 Nov 2026): a gate run with them on
   // would keep them on inside flags-off-parity's child run. Test-only effect.
   "METRIC_GUARD_ENABLED",
@@ -2621,6 +2622,17 @@ export function rosterNotFoundAnyPhrasingEnabled(): boolean {
  */
 export function metricGuardEnabled(): boolean {
   return envFlag("METRIC_GUARD_ENABLED");
+}
+
+/**
+ * UNDER_PERFORMANCE_EXPLAINED_ENABLED (port of the sibling app's, Pau, 6 Nov
+ * 2026; default off). When the manager's message names Under Performance and
+ * the card cites the Standards of Conduct, the reply says why, once: "Under
+ * Performance isn't on the CA form. Sales performance CAs use the Standards
+ * of Conduct." (`ai/under-performance-explained.ts`). Off, as before.
+ */
+export function underPerformanceExplainedEnabled(): boolean {
+  return envFlag("UNDER_PERFORMANCE_EXPLAINED_ENABLED");
 }
 
 /**
