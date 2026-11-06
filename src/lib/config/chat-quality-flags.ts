@@ -1080,6 +1080,14 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "AI_READS_CODE_CHECKS_ENABLED",
   "LAST_FIRST_NAME_READ_ENABLED",
   "POLICY_CITATION_CHECK_ENABLED",
+  // The sibling app's gate fix flags (6 Nov 2026): forced off with the others by flags-off-parity's child run.
+  "TITLE_ENDS_AT_LINE_ENABLED",
+  "PLACE_FROM_CUE_ENABLED",
+  // Live in production since the 6 Nov flip, but missing from this list (QA, 6 Nov 2026): a gate run with them on
+  // would keep them on inside flags-off-parity's child run. Test-only effect.
+  "METRIC_GUARD_ENABLED",
+  "REPLY_MATCHES_CARD_ENABLED",
+  "TITLE_OF_THE_EMPLOYEE_ENABLED",
 ] as const;
 
 /**
@@ -2603,4 +2611,46 @@ export function rosterNotFoundAnyPhrasingEnabled(): boolean {
  */
 export function metricGuardEnabled(): boolean {
   return envFlag("METRIC_GUARD_ENABLED");
+}
+
+/**
+ * PLACE_FROM_CUE_ENABLED (port of the sibling app's gate finding, 6 Nov 2026,
+ * sf-s28; default off). "create a corrective action for <name> from bellevue",
+ * from a manager not assigned to Bellevue: "from" was no place cue, so the
+ * store was not read and the card silently took the employee's own store with
+ * no word about Bellevue (CA_SALES_POLICY_ENABLED on or off). With this flag
+ * on, "for <name> from <store>" names the store (`forms/place-from-cue.ts`), so
+ * a store outside the assignment gets the "isn't a store on your assignment"
+ * question. Other "from"s ("transferred from", "a call from the store", "from
+ * 10/5") are left alone. Off, as before.
+ */
+export function placeFromCueEnabled(): boolean {
+  return envFlag("PLACE_FROM_CUE_ENABLED");
+}
+
+/**
+ * TITLE_ENDS_AT_LINE_ENABLED (port from the sibling app's gate, 6 Nov 2026,
+ * s16; default off). With TITLE_OF_THE_EMPLOYEE_ENABLED on, an exit form
+ * typed as lines ("<name>\nTeam Member Part Time \nNE Omaha Dodge\n…") lost
+ * the employee's own Position: the capitalised words on the NEXT line (the
+ * store) were read as another person beside the title. With this flag on, the
+ * name after a title must be on the title's own line
+ * (`forms/title-of-another-person.ts`); a typed list's name on the line before
+ * still owns the title below it, and "District manager <name>" on one line is
+ * still that person's. Off, as before.
+ */
+export function titleEndsAtLineEnabled(): boolean {
+  return envFlag("TITLE_ENDS_AT_LINE_ENABLED");
+}
+
+/**
+ * POLICY_CHANGE_RELEVANT_ENABLED (QA, 5 Nov 2026, severe; default off). A location manager's revision of a
+ * Corrective Action ("in the previously recieved coaching include that <name> signed the jba policy manual on
+ * 10-15-26") cited the manual's 401k sheet headed "Warning": the bare "that" read as a reference back, and the
+ * app's own "**Verbal Warning** or **Written Warning**?" named the heading. On: a message whose only "policy" is
+ * the manual's own name changes no policy; a reference back must refer to a policy; an earlier turn names a
+ * section only as one (`forms/chat-policy-change.ts`). Off, as before.
+ */
+export function policyChangeRelevantEnabled(): boolean {
+  return envFlag("POLICY_CHANGE_RELEVANT_ENABLED");
 }
