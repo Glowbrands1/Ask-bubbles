@@ -407,8 +407,16 @@ const NAME_OPEN: Readonly<Record<string, string>> = Object.fromEntries([
   ...(["code", "models"] as const).flatMap((mode) => [
     [`pau-2-on-${mode}`, PAU_2_MISS],
     [`pau-2-off-${mode}`, `${PAU_2_MISS}, and no question who it is for`],
+    [`last-date-caps-off-${mode}`, "the non-person \"BY CORIN BELLWEATHER\" is looked up as the name (\"I couldn't find **BY CORIN BELLWEATHER** in the Woven roster\")"],
   ]),
-  // last-date-caps-off and the Sentence-case wordings off roster: Fixed by flip 3 (6 Nov 2026): production now runs the name set + OFF_ROSTER_CONFIRM (docs/flag-classification/FLIP3D.md).
+  /*
+   * production-flags.json corrected to Vercel (QA, 5 Nov 2026): GROUNDED_ENTITIES_ENABLED is OFF in
+   * production, so the Sentence-case wordings off roster put "Corin Bellweather" on the card instead of
+   * "I couldn't find Corin Bellweather in the Woven roster". A production defect, recorded OPEN.
+   */
+  ...["first-nodate-sentence", "first-date-sentence", "middle-nodate-sentence", "middle-date-sentence", "last-nodate-sentence", "last-date-sentence"].flatMap((id) =>
+    (["code", "models"] as const).map((mode) => [`${id}-off-${mode}`, GROUNDED_OFF_MISS]),
+  ),
 ]);
 
 const ASKED_WHO = /who is this\b[^?\n]*\bfor\?/i;
