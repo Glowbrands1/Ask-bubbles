@@ -89,8 +89,10 @@ import {
   typoReadingCopyEnabled,
   caSalesPolicyEnabled,
   sameFormOtherPersonEnabled,
+  differentEmployeeNewFormEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { withSameFormOtherPerson, withSameFormSources } from "@/lib/forms/same-form-other-person";
+import { withDifferentEmployee, withDifferentEmployeeSources } from "@/lib/forms/different-employee-new-form";
 import { gateTexts, searchWithPlan } from "./continuation";
 import { fieldsFromManagerText, mergeConfirmed, retainFieldsInReply } from "./form-field-state";
 import { loadConversationFormState, saveConversationFormState } from "./form-state-store";
@@ -282,13 +284,20 @@ async function answerQuestionTraced(
   // ADDITIONAL_LOCATION_TAKEN_ENABLED: "Store: Kearney." from a manager who covers Kearney is read as the change it is.
   // FIRST_NAME_SUGGEST_ENABLED: "yes" to "Is this for **Quinn Marlowe**?" is read as that name.
   // SAME_FORM_OTHER_PERSON_ENABLED: "Can you do the same thing for <B> but switch it to a written" on <A>'s card starts B's card. Off: no roster read.
-  const sameForm = withSameFormOtherPerson(
-    withAdditionalStore(withTerseSlots(withNameBeforeTitle(withTypoReadingCopy(await withFirstNameAnswerFor(request, actor), names))), actor),
-    sameFormOtherPersonEnabled() ? await loadRosterQuiet(actor) : [],
+  // DIFFERENT_EMPLOYEE_NEW_FORM_ENABLED, beside it: "now one for <B> … <B>'s account" on <A>'s card is <B>'s own request, from this turn only. Off: no roster read.
+  const people = sameFormOtherPersonEnabled() || differentEmployeeNewFormEnabled() ? await loadRosterQuiet(actor) : [];
+  const sameForm = withDifferentEmployee(
+    withSameFormOtherPerson(
+      withAdditionalStore(withTerseSlots(withNameBeforeTitle(withTypoReadingCopy(await withFirstNameAnswerFor(request, actor), names))), actor),
+      people,
+    ),
+    people,
   );
   const read = withFormTypeSwitch(sameForm);
   // SAME_FORM_OTHER_PERSON_ENABLED: B's card is drafted from A's request turns and this turn, at the level this turn stated.
-  if (!chatTraceEnabled()) return withSameFormSources(await answerQuestionBody(read, actor, memory), sameForm);
+  // DIFFERENT_EMPLOYEE_NEW_FORM_ENABLED: <B>'s own card is drafted from this turn only.
+  const sourced = (answer: AskResponse) => withDifferentEmployeeSources(withSameFormSources(answer, sameForm), sameForm);
+  if (!chatTraceEnabled()) return sourced(await answerQuestionBody(read, actor, memory));
   const draft = openChatTrace({
     conversationId: request.conversationId,
     messageId: request.questionMessageId,
@@ -298,7 +307,7 @@ async function answerQuestionTraced(
   });
   // FORM_EDIT_TOOL_IN_STREAM_ENABLED: slots.form_edit, keys and reasons only.
   if (request.formEditTool) draft.formEdit = request.formEditTool.trace;
-  return withSameFormSources(await finishChatTrace(draft, () => answerQuestionBody(read, actor, memory)), sameForm);
+  return sourced(await finishChatTrace(draft, () => answerQuestionBody(read, actor, memory)));
 }
 
 /** Last on every path: the Corrective Action card's Action Plan is the manager's or none. */
