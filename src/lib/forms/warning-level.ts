@@ -1,4 +1,4 @@
-import { caShortcutWordsEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { caShortcutWordsEnabled, requestLevelNotHistoryEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { businessToday } from "@/lib/business-date";
 
 import { datesInText } from "./form-date-answer";
@@ -474,6 +474,8 @@ function classify(text: string, start: number, end: number, today: string, cued:
   if (POSSESSIVE.test(before) || ADJACENT_HISTORY.test(before)) return "historical";
   if (PAST_OR_HABITUAL.test(before.slice(-60))) return "historical";
   if (ADJACENT_CURRENT.test(before) || CHANGED_TO.test(before)) return "current";
+  // The level asked for in the request's own clause: the date after it is the incident's (QA, 6 Nov 2026).
+  if (requestLevelNotHistoryEnabled() && levelInRequestClause(before)) return "current";
   // Dated on another day — after it, or right before it: history.
   const dated = when ?? dateBefore(before, today);
   if (dated === "earlier" || dated === "other") return "historical";
@@ -578,6 +580,44 @@ const REQUEST_CLAUSE =
 /** Words earlier in the sentence that make a level clause one more item of history. */
 const CLAUSE_HISTORY =
   /\b(?:had|has|have|got|received|given|issued|previous(?:ly)?|prior|past|earlier|already|before|history|record|ago|last(?!\s+(?:night|shift|evening|weekend|weekend'?s))|back\s+in|spring|summer|fall|autumn|winter|q[1-4]|review|warnings|write[- ]?ups|coached|coaching)\b/i;
+
+/**
+ * The words between the request and the level: the person it is for, then
+ * "with a" or "a" — "write up <Name> with a …", "give <Name> a …". The one
+ * word this reading needs ("with"), QA, coding-3 item 6, 6 Nov 2026.
+ */
+const REQUEST_OBJECT = /^\s*(?:[\p{L}'’.-]+\s+){0,3}?(?:with\s+)?an?\s+$/iu;
+
+/**
+ * ============================================================================
+ * THE LEVEL IN THE REQUEST'S OWN CLAUSE (REQUEST_LEVEL_NOT_HISTORY_ENABLED)
+ * ============================================================================
+ *
+ * QA, coding-3 item 6, 6 Nov 2026: "I need to write up <name> with a written
+ * warning for leaving the front desk unattended for 30 minutes on 10/22." was
+ * answered "I've treated the earlier warning you mentioned as previous
+ * corrective action history" and asked Verbal or Written. The date after the
+ * level was the incident's, before today, so `timing` made the level history.
+ *
+ * Read by structure, with the request reader the level-as-a-clause reading
+ * already uses (`REQUEST_CLAUSE`): when the clause the level sits in (since
+ * the last sentence break or comma) asks for the form, and the level is the
+ * object of that request — only the person and "with a" / "a" between them —
+ * it is this form's level, whatever date follows. Words of history in the
+ * clause (`CLAUSE_HISTORY`, `LISTS_EARLIER_STEPS`, as for the level clause)
+ * still make it history, and a warning in a clause of its own ("she got a
+ * written warning on 9/1, write her up") never reaches here: no request
+ * comes before it in its clause.
+ */
+function levelInRequestClause(before: string): boolean {
+  const clause = before.slice(before.lastIndexOf(",") + 1);
+  const requests = [...clause.matchAll(new RegExp(REQUEST_CLAUSE.source, "gi"))];
+  const last = requests[requests.length - 1];
+  if (!last) return false;
+  if (!REQUEST_OBJECT.test(clause.slice(last.index + last[0].length))) return false;
+  const rest = clause.replace(new RegExp(REQUEST_CLAUSE.source, "gi"), " ");
+  return !CLAUSE_HISTORY.test(rest) && !LISTS_EARLIER_STEPS.test(rest);
+}
 
 /**
  * Every warning level the text names, in order, with how each one reads.
