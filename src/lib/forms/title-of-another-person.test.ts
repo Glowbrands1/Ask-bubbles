@@ -66,3 +66,15 @@ describe("TITLE_ENDS_AT_LINE_ENABLED: a title line of capitalised words is one t
     expect(titleNamesAnotherPerson(S16, "Team Member", "Thessaly Varrow")).toBe(true);
   });
 });
+
+/* QA's review of the title-line rule, 6 Nov 2026: a DM named on her own line is not a longer title. */
+describe("TITLE_ENDS_AT_LINE_ENABLED: a title line is a company position name, never a title and a name", () => {
+  it("(a) \"District Manager Brenna Kowaldane\" on its own line is hers, not the employee's above", () => {
+    vi.stubEnv("TITLE_ENDS_AT_LINE_ENABLED", "true");
+    expect(titleNamesAnotherPerson("Thessaly Varrow\nDistrict Manager Brenna Kowaldane\nNE Omaha Dodge\nGave notice", "District Manager", "Thessaly Varrow")).toBe(true);
+  });
+  it("(b) \"Team Member Part Time\" on its own line is still the employee's", () => {
+    vi.stubEnv("TITLE_ENDS_AT_LINE_ENABLED", "true");
+    expect(titleNamesAnotherPerson("Thessaly Varrow\nTeam Member Part Time\nNE Omaha Dodge\nGave notice", "Team Member", "Thessaly Varrow")).toBe(false);
+  });
+});
