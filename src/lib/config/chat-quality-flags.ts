@@ -2625,6 +2625,43 @@ export function metricGuardEnabled(): boolean {
 }
 
 /**
+ * Cleaning left undone cites the manual's Care and Cleaning of Equipment and
+ * Facilities section, chosen by the code (Code 3, policy reading; QA T5,
+ * 25 Oct 2026): "cleaning duties not being completed", "weren't done",
+ * "didn't get done", "left dirty". Other duties left undone in those words are
+ * the Standards of Conduct. Off, the policy is read exactly as before.
+ */
+export function policyCleaningIncidentEnabled(): boolean {
+  return envFlag("POLICY_CLEANING_INCIDENT_ENABLED");
+}
+
+/**
+ * CLEANING_OTHER_EVERY_WORDING_ENABLED (ported from the sibling app: QA's live eval and replay, 6 Nov 2026; same
+ * flag in both apps; default off; Pau's ruling: cleaning left undone is Other, never the Standards of Conduct).
+ * With CA_SALES_POLICY_ENABLED on, "for not completing his daily cleaning duties" and "for not completing closing
+ * cleaning tasks" got no Policy line and a draft ticked Standards of Conduct (the cleaning reader missed
+ * "completing"), and the live model's own reply named the Standards of Conduct for "he did not complete daily
+ * cleaning duties". On: the cleaning reader also reads "not completing / finishing / doing … cleaning", an account
+ * that reads only as cleaning is Other (`forms/ca-policy.ts` withCleaningOther), and the final reply's **Policy:**
+ * line is the Other line whenever the account reads so (`ai/reply-matches-card.ts`). Off, as before.
+ */
+export function cleaningOtherEveryWordingEnabled(): boolean {
+  return envFlag("CLEANING_OTHER_EVERY_WORDING_ENABLED");
+}
+
+/**
+ * AS_YOU_SAID_MANAGER_WORDS_ENABLED (the sibling app's live chats, 4 Nov 2026; same flag in both apps; default off).
+ * "**Policy:** Late Opening, as you said" for leaving early, and "Standards of Conduct, as you said" for "it should be
+ * must see behaviors": the manager never named either. The intent reader's heading is written back onto the turn as
+ * the app's own line ("Policy reference: <heading>, JBA Policy Manual p.N.", `ai/form-state.ts`), and the policy
+ * reader took it as the manager naming that policy. On: `forms/ca-policy.ts` readCaPolicy reads without the app's
+ * lines (`ai/app-sentences.ts` withoutAppLines). Off, as before.
+ */
+export function asYouSaidManagerWordsEnabled(): boolean {
+  return envFlag("AS_YOU_SAID_MANAGER_WORDS_ENABLED");
+}
+
+/**
  * UNDER_PERFORMANCE_EXPLAINED_ENABLED (port of the sibling app's, Pau, 6 Nov
  * 2026; default off). When the manager's message names Under Performance and
  * the card cites the Standards of Conduct, the reply says why, once: "Under
@@ -2741,4 +2778,15 @@ export function replyMatchesCardEachCardEnabled(): boolean {
  */
 export function offRosterConfirmEnabled(): boolean {
   return envFlag("OFF_ROSTER_CONFIRM_ENABLED");
+}
+
+/**
+ * OWN_BRAND_ONLY_ENABLED (Pau, 6 Nov 2026; same flag in both apps; default off). A reply quoting the manual said
+ * "This applies company-wide across all brands — <this brand>, <two other brands> — …". Pau: only this company's
+ * brand. On: the finished reply names only this company's brand — a list of brands holding it becomes it, a line
+ * headed by another brand goes, any other sentence naming one goes; a quotation is kept or dropped whole, never
+ * reworded (`ai/own-brand-only.ts`). The brands are config data, not code. Off, as before.
+ */
+export function ownBrandOnlyEnabled(): boolean {
+  return envFlag("OWN_BRAND_ONLY_ENABLED");
 }

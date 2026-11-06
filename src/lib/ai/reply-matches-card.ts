@@ -1,6 +1,6 @@
-import { replyMatchesCardEachCardEnabled, replyMatchesCardEnabled } from "@/lib/config/chat-quality-flags";
+import { cleaningOtherEveryWordingEnabled, replyMatchesCardEachCardEnabled, replyMatchesCardEnabled } from "@/lib/config/chat-quality-flags";
 import { offeredOffRosterName } from "@/lib/forms/off-roster-confirm";
-import { removedOffenseLabels } from "@/lib/forms/ca-policy";
+import { caPolicyProposalLine, readCaPolicy, removedOffenseLabels } from "@/lib/forms/ca-policy";
 import { cardPolicyHeading } from "@/lib/forms/card-policy";
 import { personRosterNames } from "@/lib/forms/person-guard";
 import { requestMessage } from "@/lib/forms/request-slot";
@@ -18,6 +18,7 @@ import {
 import { HAS_EMPLOYEE_AND_PLACE, SAYS_READY } from "./coaching-what-happened";
 import type { ChatFormProposal } from "@/types";
 
+import { withOwnBrandOnly } from "./own-brand-only";
 import type { AskResponse } from "./types";
 
 /**
@@ -143,6 +144,34 @@ function withoutNotToldWhenTold(content: string, issue: string | null | undefine
 }
 
 /**
+ * CLEANING_OTHER_EVERY_WORDING_ENABLED (QA's live eval, 6 Nov 2026: the live model's reply said the Standards of
+ * Conduct for "he did not complete daily cleaning duties"). On a Corrective Action card whose account reads as
+ * cleaning left undone (`readCaPolicy`'s `other`, from the manager's message and the card's Issue), the
+ * **Policy:** line is the Other line, and a Standards of Conduct citation line goes. Pau: cleaning is Other.
+ */
+const CORRECTIVE_ACTION_KEY = "dpoa";
+const SOC_CITATION = /^\s*(?:[-*]\s*)?\**Standards of Conduct\**(?:\s+Policy)?,\s*JBA Policy Manual\b/i;
+
+export function withCleaningOtherPolicy(response: AskResponse, message?: string): AskResponse {
+  const card = response.formProposal;
+  if (!cleaningOtherEveryWordingEnabled() || !card || card.templateKey !== CORRECTIVE_ACTION_KEY) return response;
+  const reading = readCaPolicy([message ?? "", card.issue ?? ""].filter(Boolean).join("\n"));
+  if (reading.other !== "cleaning") return response;
+  const other = caPolicyProposalLine(reading);
+  if (!other) return response;
+  let placed = false;
+  const lines = response.content.split("\n").flatMap((line) => {
+    if (SOC_CITATION.test(line)) return [];
+    if (!/\*\*Policy:?\*\*/.test(line)) return [line];
+    if (placed) return [];
+    placed = true;
+    return [other];
+  });
+  const content = tidy(lines.join("\n"));
+  return content === response.content ? response : { ...response, content };
+}
+
+/**
  * TWO OR MORE CARDS (QA's tester, 5 Nov 2026, item 6 "two forms"): the rules above read one card — the first —
  * so the second form's section ("I can create a **Corrective Action Form** for **<its person>**") was rewritten
  * to the first card's person. With several cards, each "… **<form>** for **<name>**" line is matched to the card
@@ -178,6 +207,9 @@ export function replyMatchesCard(response: AskResponse, names: readonly string[]
 
 /** REPLY_MATCHES_CARD_ENABLED, the last step of the turn: `replyMatchesCard` with the actor's roster read this turn. Off: as built. */
 export function withReplyMatchesCard(response: AskResponse): AskResponse {
-  if (!replyMatchesCardEnabled()) return response;
-  return replyMatchesCard(response, personRosterNames() ?? [], requestMessage());
+  const cleaned = withCleaningOtherPolicy(response, requestMessage());
+  // OWN_BRAND_ONLY_ENABLED, gated on its own: only this company's brand is named (`ai/own-brand-only.ts`).
+  const branded = withOwnBrandOnly(cleaned);
+  if (!replyMatchesCardEnabled()) return branded;
+  return replyMatchesCard(branded, personRosterNames() ?? [], requestMessage());
 }
