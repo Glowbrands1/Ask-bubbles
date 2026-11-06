@@ -32,7 +32,10 @@ export const NOV6_TITLE_ENDS_AT_LINE_CASES: ReplayCase[] = [
       t.as("location_manager", WEST_DODGE);
       const thread = t.thread();
       await thread.say(TURNS[0]!);
-      const reply = await thread.say(TURNS[1]!);
+      let reply = await thread.say(TURNS[1]!);
+      // Changed on purpose (flip 3, 6 Nov 2026): with the name set and OFF_ROSTER_CONFIRM in production, a name not in
+      // Woven is offered ("reply **use Thessaly Varrow**") and the card is made once the manager takes it.
+      if (thread.proposal?.status !== "ready" && /reply \*\*use Thessaly Varrow\*\*/.test(reply.content)) reply = await thread.say("use Thessaly Varrow");
       expect(thread.proposal, `no exit card:\n${reply.content}`).toMatchObject({ employeeName: "Thessaly Varrow" });
       // The title reader keeps "Team Member" of "Team Member Part Time" (as before TITLE_OF_THE_EMPLOYEE; a separate, older reading). The fix is that the card has one, not null.
       expect(thread.proposal?.employeeRole ?? null, `the card's Position:\n${reply.content}`).toMatch(/^Team Member/);

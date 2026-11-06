@@ -129,7 +129,8 @@ export const NOV5_CODING3_CA_OFFER_ACCOUNT_CASES: ReplayCase[] = [
     title: "M5: \"<name> did not follow must see behaviors which violates standards of conduct policy\" → offer → \"yes\": the card's Issue is her MSB account, never \"The policy is Standards of Conduct\"; the Policy is still Standards of Conduct",
     report: `${REPORT}: "<name> did not follow must see behaviors which violates standards of conduct policy" → "Do you want a Corrective Action for <name>?" → "yes" → the card read "**Issue:** The policy is Standards of Conduct"`,
     // CA_SALES_POLICY_ENABLED (ships with the CA_SALES flip) stubbed on in the run; nothing else.
-    status: { open: "with the CA_SALES flip, the card's Issue is the offer's rewritten request (\"The policy is Standards of Conduct\"), not her MSB account" },
+    // Fixed by flip 3 (6 Nov 2026): production now runs the name set + OFF_ROSTER_CONFIRM (docs/flag-classification/FLIP3D.md).
+    status: "fixed",
     fixFlags: [FIX],
     async run(t) {
       await withOffer(t, false, async (thread) => {
@@ -144,7 +145,8 @@ export const NOV5_CODING3_CA_OFFER_ACCOUNT_CASES: ReplayCase[] = [
     title: "M5 on the full remap's card: \"yes\" keeps her MSB account as the card's account, never the offer's request",
     report: `${REPORT}: the same turns on the full remap's card (the sibling app's tester's card)`,
     // CA_SALES_POLICY_ENABLED and FORM_FULL_REMAP_ENABLED stubbed on in the run.
-    status: { open: "with the CA_SALES flip and the full remap, the card's account is the offer's rewritten request" },
+    // Fixed by flip 3 (6 Nov 2026): production now runs the name set + OFF_ROSTER_CONFIRM (docs/flag-classification/FLIP3D.md).
+    status: "fixed",
     fixFlags: [FIX],
     async run(t) {
       await withOffer(t, true, async (thread) => {
@@ -163,7 +165,8 @@ export const NOV5_CODING3_CA_OFFER_ACCOUNT_CASES: ReplayCase[] = [
      * too ("The policy is Standards of Conduct"). With the fix the card shows
      * only her words, or asks.
      */
-    status: { open: "with the CA_SALES flip, the card's Issue is \"The policy is Standards of Conduct\", an account she never gave" },
+    // Fixed by flip 3 (6 Nov 2026): production now runs the name set + OFF_ROSTER_CONFIRM (docs/flag-classification/FLIP3D.md).
+    status: "fixed",
     fixFlags: [FIX],
     async run(t) {
       await withOffer(t, false, async (thread) => {
@@ -178,7 +181,8 @@ export const NOV5_CODING3_CA_OFFER_ACCOUNT_CASES: ReplayCase[] = [
     id: "nov5-coding3-ca-offer-yes-no-account-remap",
     title: "negative control for M5 on the full remap's card: an offer that followed no account, accepted with \"yes\": the account is never the offer's request",
     report: `${REPORT}, negative control on the full remap's card`,
-    status: { open: "with the CA_SALES flip and the full remap, the card's account is the offer's rewritten request" },
+    // Fixed by flip 3 (6 Nov 2026): production now runs the name set + OFF_ROSTER_CONFIRM (docs/flag-classification/FLIP3D.md).
+    status: "fixed",
     fixFlags: [FIX],
     async run(t) {
       await withOffer(t, true, async (thread) => {
