@@ -93,13 +93,12 @@ const HOLDS_IN_PRODUCTION = new Set([
   "dot/swap",
 ]);
 
-/** With the name set, 6 Nov 2026: the two shapes it empties ("Who is this form for?"). */
-const EMPTIED_BY_THE_NAME_SET: Record<string, string> = {
-  "two-word-first/first-initial":
-    "the name set empties the card: a two-word first name is compared by its first typed word only (\"rosa\" is not \"rosa lind\")",
-  "compound-surname/first-initial":
-    "the name set empties the card: an initial is compared with the start of the whole surname only (\"F\" is not \"Ashdown Ferrant\")",
-};
+/**
+ * With the name set, 6 Nov 2026, the two shapes it emptied — "Rosa Lind T" (a two-word first name compared by its first
+ * word only) and "Severin F" (an initial compared with the start of the whole surname only). Changed on purpose: both
+ * now hold with ROSTER_COMPOUND_SURNAME_ENABLED, extended to compound first names and to an initial of any surname word.
+ */
+const EMPTIED_BY_THE_NAME_SET: Record<string, string> = {};
 
 const cases: ReplayCase[] = [];
 for (const shape of SHAPES) {
