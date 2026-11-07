@@ -300,10 +300,11 @@ describe("new flags default off", () => {
 const CHILD = process.env.FLAGS_OFF_PARITY_CHILD === "1";
 
 /*
- * The child run is split in three (ported from the sibling app, QA, 7 Nov 2026). As one run over all four
- * folders it neared its 540 s budget, and there the chat+forms part alone took 530 s on main on a 4-CPU
- * runner by 7 Nov — the replay pack had grown into most of it — and timed out (ETIMEDOUT) on busy runners.
- * Each child now has the whole budget with room to spare. The folders, the flags and what must pass are
+ * The child run is split in four (ported from the sibling app, QA, 7 Nov 2026): src/lib; src/app/api/chat
+ * without the replay pack; src/app/api/forms; the replay pack. As one run over all four folders it timed out
+ * (ETIMEDOUT at 540 s) on busy runners, and in the sibling app the chat+forms part alone had reached 530 s on
+ * main on a 4-CPU runner. Measured here with three children (4-CPU): src/lib 101 s, chat without the pack +
+ * forms 250 s, the replay pack 116 s. Each child has the whole budget with room to spare. The folders, the flags and what must pass are
  * unchanged, and every test file still runs in exactly one child.
  *
  * A path filter matches any file whose path contains it, so the chat folder without the pack is named entry
@@ -319,7 +320,8 @@ function chatWithoutReplayPack(): string[] {
 }
 const CHILDREN: readonly { readonly name: string; readonly paths: () => readonly string[] }[] = [
   { name: "src/lib/ai, src/lib/forms", paths: () => ["src/lib/ai", "src/lib/forms"] },
-  { name: `${CHAT} (without the replay pack), src/app/api/forms`, paths: () => [...chatWithoutReplayPack(), "src/app/api/forms"] },
+  { name: `${CHAT} (without the replay pack)`, paths: () => chatWithoutReplayPack() },
+  { name: "src/app/api/forms", paths: () => ["src/app/api/forms"] },
   { name: REPLAY_PACK, paths: () => [REPLAY_PACK] },
 ];
 
