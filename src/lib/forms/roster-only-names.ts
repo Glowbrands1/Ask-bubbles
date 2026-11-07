@@ -185,11 +185,15 @@ export function rosterOnlyNames(response: AskResponse, names: readonly string[],
     });
   }
 
-  // "Which of them is this … for — A, B or C?": roster people only.
-  content = content.replace(/Which of them is this ((?:\*\*[^*]+\*\* )?)for\s*[—–-]\s*([^?\n]+)\?/g, (whole, form: string, list: string) => {
+  /*
+   * "Which of them is this … for — A, B or C?": roster people only. The question's own "Tell me and I'll …" after it
+   * on the same line stays with a choice that is still asked, and goes with one that is not: ASK_WHO asks it already
+   * (QA, the FORM_NAME re-flip gate on ebfb566a, 7 Nov 2026: "… full name. Tell me and I'll fill in …" asked twice).
+   */
+  content = content.replace(/Which of them is this ((?:\*\*[^*]+\*\* )?)for\s*[—–-]\s*([^?\n]+)\?([ \t]+Tell me\b[^\n]*)?/g, (whole, form: string, list: string, tail: string | undefined) => {
     const kept = [...new Set(listedNames(list).map((name) => rosterSpelling(name, names)).filter((name): name is string => Boolean(name)))];
-    if (kept.length >= 2) return `Which of them is this ${form}for — ${said(kept)}?`;
-    if (kept.length === 1) return kept[0] === onCard ? "" : `Is this for **${kept[0]}**?`;
+    if (kept.length >= 2) return `Which of them is this ${form}for — ${said(kept)}?${tail ?? ""}`;
+    if (kept.length === 1) return kept[0] === onCard ? "" : `Is this for **${kept[0]}**?${tail ?? ""}`;
     return onCard ? "" : ASK_WHO;
   });
   // "Is this for X?": a roster person only.
@@ -376,6 +380,7 @@ function offRosterTyped(employee: string, message: string | undefined, names: re
   const text = message ?? "";
   const placed =
     personPlaces(typed).some((place) => place.test(text.trim())) ||
+    afterCompanyTitle(typed, text) ||
     text.split(/\n/).some((line) => same(line.trim().replace(USE_NAME, "")) && NAME_SHAPE.test(line.trim().replace(USE_NAME, "")));
   return placed ? titleCased(typed) : null;
 }
@@ -400,6 +405,17 @@ const NAME_SHAPE = new RegExp(String.raw`^${NAME_RUN}$`, "u");
  * Where a request types its person — "for <name>,", "for <name>" ending it, "employee, <name>" — read with the card's
  * own name, so the words after it ("…, Zebulon Marchbanks that needs …"; gate rerun 3) are never taken as part of it.
  */
+/**
+ * QA, the FORM_NAME live re-run (7 Nov 2026 09:39 PHT, FAIL 1, the real B1 message): "create a written corrective
+ * action for Team Member, <name>. …" — the name in a person's place after a company position title (the title list's,
+ * `staff-picker.ts` namesCompanyPositionTitle). The offer was never made, so the manager was asked who on every turn.
+ */
+function afterCompanyTitle(name: string, text: string): boolean {
+  const spelled = name.trim().split(/\s+/).map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(String.raw`\s+`);
+  const found = new RegExp(String.raw`\bfor\s+([\p{L}][\p{L} ]{1,40}?),\s*${spelled}(?![\p{L}'’-])`, "iu").exec(text);
+  return Boolean(found && namesCompanyPositionTitle(found[1]!));
+}
+
 function personPlaces(name: string): RegExp[] {
   const spelled = name.trim().split(/\s+/).map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(String.raw`\s+`);
   const end = String.raw`(?![\p{L}'’-])`;

@@ -1,0 +1,7 @@
+{
+  "src/lib/forms/as-you-said-manager-words.test.ts :: AS_YOU_SAID_MANAGER_WORDS_ENABLED off: the app's \"Policy reference\" line reads as the manager naming the Standards of Conduct": {
+    "category": "INTENDED-HARNESS",
+    "twin": "itself (the flag's off-pin)",
+    "reason": "AS_YOU_SAID_MANAGER_WORDS (bisected alone): its own off-pin."
+  }
+}

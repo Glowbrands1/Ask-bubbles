@@ -1,0 +1,227 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-ca-sales-negative-cleaning: negative control: a cleaning CA does not cite the Standards of Conduct by default \u2014 holds with CA_SALES_POLICY_ENABLED on": {
+    "category": "REGRESSION",
+    "twin": "itself with production's flags",
+    "reason": "POLICY_CLEANING_INCIDENT_ENABLED (bisected: this flag alone): cleaning left undone is read as the manual's Care and Cleaning section under the Standards of Conduct (25 Oct rule), so the draft ticks Standards of Conduct / Policy Violated is 'Standards of Conduct \u2014 Care and Cleaning\u2026' while the card says Other. Against Pau's ruling (cleaning left undone is Other, never the Standards of Conduct); the case holds with production's flags. Also CLEANING_OTHER_EVERY_WORDING alone fails this case: the card's new line 'Other \u2014 \u2026 not the Standards of Conduct' trips the case's /standards of conduct/i Policy-line check (nov4-ca-sales-policy-cases.ts:209); behaviour right, but the replay pack goes red once the flag is listed on."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-ca-sales-negative-cleaning: negative control: a cleaning CA does not cite the Standards of Conduct by default \u2014 holds with production's flags": {
+    "category": "REGRESSION",
+    "twin": "itself with production's flags",
+    "reason": "POLICY_CLEANING_INCIDENT_ENABLED (bisected: this flag alone): cleaning left undone is read as the manual's Care and Cleaning section under the Standards of Conduct (25 Oct rule), so the draft ticks Standards of Conduct / Policy Violated is 'Standards of Conduct \u2014 Care and Cleaning\u2026' while the card says Other. Against Pau's ruling (cleaning left undone is Other, never the Standards of Conduct); the case holds with production's flags. Also CLEANING_OTHER_EVERY_WORDING alone fails this case: the card's new line 'Other \u2014 \u2026 not the Standards of Conduct' trips the case's /standards of conduct/i Policy-line check (nov4-ca-sales-policy-cases.ts:209); behaviour right, but the replay pack goes red once the flag is listed on."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-cleaning-basis-upkeep-duties: \"did not complete daily cleaning duties\" with the model's upkeep basis: Other \u2014 holds with CA_SALES_POLICY_ENABLED on": {
+    "category": "REGRESSION",
+    "twin": "itself with production's flags",
+    "reason": "POLICY_CLEANING_INCIDENT_ENABLED (bisected: this flag alone): cleaning left undone is read as the manual's Care and Cleaning section under the Standards of Conduct (25 Oct rule), so the draft ticks Standards of Conduct / Policy Violated is 'Standards of Conduct \u2014 Care and Cleaning\u2026' while the card says Other. Against Pau's ruling (cleaning left undone is Other, never the Standards of Conduct); the case holds with production's flags."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-cleaning-basis-upkeep-duties: \"did not complete daily cleaning duties\" with the model's upkeep basis: Other \u2014 holds with production's flags": {
+    "category": "REGRESSION",
+    "twin": "itself with production's flags",
+    "reason": "POLICY_CLEANING_INCIDENT_ENABLED (bisected: this flag alone): cleaning left undone is read as the manual's Care and Cleaning section under the Standards of Conduct (25 Oct rule), so the draft ticks Standards of Conduct / Policy Violated is 'Standards of Conduct \u2014 Care and Cleaning\u2026' while the card says Other. Against Pau's ruling (cleaning left undone is Other, never the Standards of Conduct); the case holds with production's flags."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-cleaning-bathrooms-not-conduct: \"the bathrooms were left dirty at close\": the model's Standards of Conduct tick moves to Other, no Standards of Conduct citation \u2014 holds with CA_SALES_POLICY_ENABLED on": {
+    "category": "REGRESSION",
+    "twin": "itself with production's flags",
+    "reason": "POLICY_CLEANING_INCIDENT_ENABLED (bisected: this flag alone): cleaning left undone is read as the manual's Care and Cleaning section under the Standards of Conduct (25 Oct rule), so the draft ticks Standards of Conduct / Policy Violated is 'Standards of Conduct \u2014 Care and Cleaning\u2026' while the card says Other. Against Pau's ruling (cleaning left undone is Other, never the Standards of Conduct); the case holds with production's flags."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-cleaning-bathrooms-not-conduct: \"the bathrooms were left dirty at close\": the model's Standards of Conduct tick moves to Other, no Standards of Conduct citation \u2014 holds with production's flags": {
+    "category": "REGRESSION",
+    "twin": "itself with production's flags",
+    "reason": "POLICY_CLEANING_INCIDENT_ENABLED (bisected: this flag alone): cleaning left undone is read as the manual's Care and Cleaning section under the Standards of Conduct (25 Oct rule), so the draft ticks Standards of Conduct / Policy Violated is 'Standards of Conduct \u2014 Care and Cleaning\u2026' while the card says Other. Against Pau's ruling (cleaning left undone is Other, never the Standards of Conduct); the case holds with production's flags."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-cleaning-negative-no-basis: no offense_basis from the model: cleaning left undone still moves the Standards of Conduct tick to Other (Pau's cleaning ruling; QA sf-s15, 5 Nov 2026) \u2014 holds with CA_SALES_POLICY_ENABLED on": {
+    "category": "REGRESSION",
+    "twin": "itself with production's flags",
+    "reason": "POLICY_CLEANING_INCIDENT_ENABLED (bisected: this flag alone): cleaning left undone is read as the manual's Care and Cleaning section under the Standards of Conduct (25 Oct rule), so the draft ticks Standards of Conduct / Policy Violated is 'Standards of Conduct \u2014 Care and Cleaning\u2026' while the card says Other. Against Pau's ruling (cleaning left undone is Other, never the Standards of Conduct); the case holds with production's flags."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-cleaning-negative-no-basis: no offense_basis from the model: cleaning left undone still moves the Standards of Conduct tick to Other (Pau's cleaning ruling; QA sf-s15, 5 Nov 2026) \u2014 holds with production's flags": {
+    "category": "REGRESSION",
+    "twin": "itself with production's flags",
+    "reason": "POLICY_CLEANING_INCIDENT_ENABLED (bisected: this flag alone): cleaning left undone is read as the manual's Care and Cleaning section under the Standards of Conduct (25 Oct rule), so the draft ticks Standards of Conduct / Policy Violated is 'Standards of Conduct \u2014 Care and Cleaning\u2026' while the card says Other. Against Pau's ruling (cleaning left undone is Other, never the Standards of Conduct); the case holds with production's flags."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov5-cleaning-other-sf-s15-policy-citation: sf-s15 with POLICY_CITATION on (on in production): the draft ticks Other and Direct policy quotes no Standards of Conduct \u2014 holds with CA_SALES_POLICY_ENABLED, FORM_NAME_FROM_ROSTER_ENABLED, POLICY_CITATION_ENABLED on": {
+    "category": "REGRESSION",
+    "twin": "itself with production's flags",
+    "reason": "POLICY_CLEANING_INCIDENT_ENABLED (bisected: this flag alone): cleaning left undone is read as the manual's Care and Cleaning section under the Standards of Conduct (25 Oct rule), so the draft ticks Standards of Conduct / Policy Violated is 'Standards of Conduct \u2014 Care and Cleaning\u2026' while the card says Other. Against Pau's ruling (cleaning left undone is Other, never the Standards of Conduct); the case holds with production's flags."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov5-cleaning-other-sf-s15-policy-citation: sf-s15 with POLICY_CITATION on (on in production): the draft ticks Other and Direct policy quotes no Standards of Conduct \u2014 holds with production's flags": {
+    "category": "REGRESSION",
+    "twin": "itself with production's flags",
+    "reason": "POLICY_CLEANING_INCIDENT_ENABLED (bisected: this flag alone): cleaning left undone is read as the manual's Care and Cleaning section under the Standards of Conduct (25 Oct rule), so the draft ticks Standards of Conduct / Policy Violated is 'Standards of Conduct \u2014 Care and Cleaning\u2026' while the card says Other. Against Pau's ruling (cleaning left undone is Other, never the Standards of Conduct); the case holds with production's flags."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov5-cleaning-other-sf-s15: sf-s15: \"did not complete daily cleaning duties\" \u2014 the card names Other with no Standards of Conduct page, and a draft ticked Standards of Conduct with no basis becomes Other with no Standards of Conduct quote \u2014 holds with CA_SALES_POLICY_ENABLED, FORM_NAME_FROM_ROSTER_ENABLED on": {
+    "category": "REGRESSION",
+    "twin": "itself with production's flags",
+    "reason": "POLICY_CLEANING_INCIDENT_ENABLED (bisected: this flag alone): cleaning left undone is read as the manual's Care and Cleaning section under the Standards of Conduct (25 Oct rule), so the draft ticks Standards of Conduct / Policy Violated is 'Standards of Conduct \u2014 Care and Cleaning\u2026' while the card says Other. Against Pau's ruling (cleaning left undone is Other, never the Standards of Conduct); the case holds with production's flags."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov5-cleaning-other-sf-s15: sf-s15: \"did not complete daily cleaning duties\" \u2014 the card names Other with no Standards of Conduct page, and a draft ticked Standards of Conduct with no basis becomes Other with no Standards of Conduct quote \u2014 holds with production's flags": {
+    "category": "REGRESSION",
+    "twin": "itself with production's flags",
+    "reason": "POLICY_CLEANING_INCIDENT_ENABLED (bisected: this flag alone): cleaning left undone is read as the manual's Care and Cleaning section under the Standards of Conduct (25 Oct rule), so the draft ticks Standards of Conduct / Policy Violated is 'Standards of Conduct \u2014 Care and Cleaning\u2026' while the card says Other. Against Pau's ruling (cleaning left undone is Other, never the Standards of Conduct); the case holds with production's flags."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov6-cleaning-other-did-not-clean-restrooms: \"write a CA for Ansgar Whitlowe, he did not clean the restrooms before close\": the card says Other and the draft ticks Other, never the Standards of Conduct \u2014 holds with CHAT_GLOSSARY_ENABLED, CA_SALES_POLICY_ENABLED, REPLY_MATCHES_CARD_ENABLED, TITLE_OF_THE_EMPLOYEE_ENABLED, METRIC_GUARD_ENABLED, CLEANING_OTHER_EVERY_WORDING_ENABLED on": {
+    "category": "REGRESSION",
+    "twin": "itself with production's flags",
+    "reason": "POLICY_CLEANING_INCIDENT_ENABLED (bisected: this flag alone): cleaning left undone is read as the manual's Care and Cleaning section under the Standards of Conduct (25 Oct rule), so the draft ticks Standards of Conduct / Policy Violated is 'Standards of Conduct \u2014 Care and Cleaning\u2026' while the card says Other. Against Pau's ruling (cleaning left undone is Other, never the Standards of Conduct); the case holds with production's flags."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov6-cleaning-other-not-completing-closing: \"CA for Ansgar Whitlowe for not completing closing cleaning tasks\": the card says Other and the draft ticks Other, never the Standards of Conduct \u2014 holds with CHAT_GLOSSARY_ENABLED, CA_SALES_POLICY_ENABLED, REPLY_MATCHES_CARD_ENABLED, TITLE_OF_THE_EMPLOYEE_ENABLED, METRIC_GUARD_ENABLED, CLEANING_OTHER_EVERY_WORDING_ENABLED on": {
+    "category": "REGRESSION",
+    "twin": "itself with production's flags",
+    "reason": "POLICY_CLEANING_INCIDENT_ENABLED (bisected: this flag alone): cleaning left undone is read as the manual's Care and Cleaning section under the Standards of Conduct (25 Oct rule), so the draft ticks Standards of Conduct / Policy Violated is 'Standards of Conduct \u2014 Care and Cleaning\u2026' while the card says Other. Against Pau's ruling (cleaning left undone is Other, never the Standards of Conduct); the case holds with production's flags."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov6-cleaning-other-not-completing-daily: \"create a verbal ca for Ansgar Whitlowe for not completing his daily cleaning duties on 11-2-26\": the card says Other and the draft ticks Other, never the Standards of Conduct \u2014 holds with CHAT_GLOSSARY_ENABLED, CA_SALES_POLICY_ENABLED, REPLY_MATCHES_CARD_ENABLED, TITLE_OF_THE_EMPLOYEE_ENABLED, METRIC_GUARD_ENABLED, CLEANING_OTHER_EVERY_WORDING_ENABLED on": {
+    "category": "REGRESSION",
+    "twin": "itself with production's flags",
+    "reason": "POLICY_CLEANING_INCIDENT_ENABLED (bisected: this flag alone): cleaning left undone is read as the manual's Care and Cleaning section under the Standards of Conduct (25 Oct rule), so the draft ticks Standards of Conduct / Policy Violated is 'Standards of Conduct \u2014 Care and Cleaning\u2026' while the card says Other. Against Pau's ruling (cleaning left undone is Other, never the Standards of Conduct); the case holds with production's flags."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov6-cleaning-other-qa-live-wording: QA's live wording \"make a corrective action for <name>, he did not complete daily cleaning duties\": Other on the card and the draft \u2014 holds with CHAT_GLOSSARY_ENABLED, CA_SALES_POLICY_ENABLED, REPLY_MATCHES_CARD_ENABLED, TITLE_OF_THE_EMPLOYEE_ENABLED, METRIC_GUARD_ENABLED, CLEANING_OTHER_EVERY_WORDING_ENABLED on": {
+    "category": "REGRESSION",
+    "twin": "itself with production's flags",
+    "reason": "POLICY_CLEANING_INCIDENT_ENABLED (bisected: this flag alone): cleaning left undone is read as the manual's Care and Cleaning section under the Standards of Conduct (25 Oct rule), so the draft ticks Standards of Conduct / Policy Violated is 'Standards of Conduct \u2014 Care and Cleaning\u2026' while the card says Other. Against Pau's ruling (cleaning left undone is Other, never the Standards of Conduct); the case holds with production's flags."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov6-cleaning-other-qa-live-wording: QA's live wording \"make a corrective action for <name>, he did not complete daily cleaning duties\": Other on the card and the draft \u2014 holds with production's flags": {
+    "category": "REGRESSION",
+    "twin": "itself with production's flags",
+    "reason": "POLICY_CLEANING_INCIDENT_ENABLED (bisected: this flag alone): cleaning left undone is read as the manual's Care and Cleaning section under the Standards of Conduct (25 Oct rule), so the draft ticks Standards of Conduct / Policy Violated is 'Standards of Conduct \u2014 Care and Cleaning\u2026' while the card says Other. Against Pau's ruling (cleaning left undone is Other, never the Standards of Conduct); the case holds with production's flags."
+  },
+  "src/lib/ai/citation-follows-ticked-box.test.ts :: CA_SALES_POLICY_ENABLED: the Direct policy fill follows the ticked box off: with Other ticked, Direct policy is still filled with the Standards of Conduct (the defect), cleaning and other upkeep alike": {
+    "category": "REGRESSION",
+    "twin": "itself with production's flags",
+    "reason": "POLICY_CLEANING_INCIDENT_ENABLED (bisected: this flag alone): cleaning left undone is read as the manual's Care and Cleaning section under the Standards of Conduct (25 Oct rule), so the draft ticks Standards of Conduct / Policy Violated is 'Standards of Conduct \u2014 Care and Cleaning\u2026' while the card says Other. Against Pau's ruling (cleaning left undone is Other, never the Standards of Conduct); the case holds with production's flags."
+  },
+  "src/lib/ai/reply-matches-card-cleaning.test.ts :: withCleaningOtherPolicy off: the live reply stands (the failure)": {
+    "category": "INTENDED-HARNESS",
+    "twin": "itself (the flag's off-pin)",
+    "reason": "CLEANING_OTHER_EVERY_WORDING (bisected alone): its own off-pin."
+  },
+  "src/lib/forms/as-you-said-manager-words.test.ts :: AS_YOU_SAID_MANAGER_WORDS_ENABLED off: the app's \"Policy reference\" line reads as the manager naming the Standards of Conduct": {
+    "category": "INTENDED-HARNESS",
+    "twin": "itself (the flag's off-pin)",
+    "reason": "AS_YOU_SAID_MANAGER_WORDS (bisected alone): its own off-pin."
+  },
+  "src/lib/forms/ca-conduct-reason.test.ts :: a Standards of Conduct tick needs a reason in the manager's words (CA_SALES_POLICY_ENABLED) Pau's wording: the general task reading with the model's upkeep basis is no reason; with no basis it stands (Woven training past due reads the same)": {
+    "category": "REGRESSION",
+    "twin": "itself with production's flags",
+    "reason": "POLICY_CLEANING_INCIDENT_ENABLED (bisected: this flag alone): cleaning left undone is read as the manual's Care and Cleaning section under the Standards of Conduct (25 Oct rule), so the draft ticks Standards of Conduct / Policy Violated is 'Standards of Conduct \u2014 Care and Cleaning\u2026' while the card says Other. Against Pau's ruling (cleaning left undone is Other, never the Standards of Conduct); the case holds with production's flags."
+  },
+  "src/lib/forms/ca-sales-policy.test.ts :: CA_SALES_POLICY_ENABLED on negative control: cleaning is untouched and does not suggest the Standards of Conduct": {
+    "category": "INTENDED",
+    "twin": "cleaning-other-every-wording.test.ts off-pin",
+    "reason": "CLEANING_OTHER_EVERY_WORDING (bisected alone): readCaPolicy(cleaning) now suggests Other (Pau's ruling); the test pins the old 'no suggestion'."
+  },
+  "src/lib/forms/cleaning-other-every-wording.test.ts :: CLEANING_OTHER_EVERY_WORDING_ENABLED off: \"not completing \u2026 cleaning\" is not read, and the card names no policy": {
+    "category": "INTENDED-HARNESS",
+    "twin": "itself (the flag's off-pin)",
+    "reason": "CLEANING_OTHER_EVERY_WORDING (bisected alone): its own off-pin."
+  },
+  "replay: nov4-ca-sales-negative-cleaning [fix:CA_SALES_POLICY_ENABLED]": {
+    "category": "REGRESSION",
+    "twin": "itself with production's flags",
+    "reason": "POLICY_CLEANING_INCIDENT_ENABLED (bisected: this flag alone): cleaning left undone is read as the manual's Care and Cleaning section under the Standards of Conduct (25 Oct rule), so the draft ticks Standards of Conduct / Policy Violated is 'Standards of Conduct \u2014 Care and Cleaning\u2026' while the card says Other. Against Pau's ruling (cleaning left undone is Other, never the Standards of Conduct); the case holds with production's flags. Also CLEANING_OTHER_EVERY_WORDING alone fails this case: the card's new line 'Other \u2014 \u2026 not the Standards of Conduct' trips the case's /standards of conduct/i Policy-line check (nov4-ca-sales-policy-cases.ts:209); behaviour right, but the replay pack goes red once the flag is listed on."
+  },
+  "replay: nov4-ca-sales-negative-cleaning [production]": {
+    "category": "REGRESSION",
+    "twin": "itself with production's flags",
+    "reason": "POLICY_CLEANING_INCIDENT_ENABLED (bisected: this flag alone): cleaning left undone is read as the manual's Care and Cleaning section under the Standards of Conduct (25 Oct rule), so the draft ticks Standards of Conduct / Policy Violated is 'Standards of Conduct \u2014 Care and Cleaning\u2026' while the card says Other. Against Pau's ruling (cleaning left undone is Other, never the Standards of Conduct); the case holds with production's flags. Also CLEANING_OTHER_EVERY_WORDING alone fails this case: the card's new line 'Other \u2014 \u2026 not the Standards of Conduct' trips the case's /standards of conduct/i Policy-line check (nov4-ca-sales-policy-cases.ts:209); behaviour right, but the replay pack goes red once the flag is listed on."
+  },
+  "replay: nov4-cleaning-basis-upkeep-duties [fix:CA_SALES_POLICY_ENABLED]": {
+    "category": "REGRESSION",
+    "twin": "itself with production's flags",
+    "reason": "POLICY_CLEANING_INCIDENT_ENABLED (bisected: this flag alone): cleaning left undone is read as the manual's Care and Cleaning section under the Standards of Conduct (25 Oct rule), so the draft ticks Standards of Conduct / Policy Violated is 'Standards of Conduct \u2014 Care and Cleaning\u2026' while the card says Other. Against Pau's ruling (cleaning left undone is Other, never the Standards of Conduct); the case holds with production's flags."
+  },
+  "replay: nov4-cleaning-basis-upkeep-duties [production]": {
+    "category": "REGRESSION",
+    "twin": "itself with production's flags",
+    "reason": "POLICY_CLEANING_INCIDENT_ENABLED (bisected: this flag alone): cleaning left undone is read as the manual's Care and Cleaning section under the Standards of Conduct (25 Oct rule), so the draft ticks Standards of Conduct / Policy Violated is 'Standards of Conduct \u2014 Care and Cleaning\u2026' while the card says Other. Against Pau's ruling (cleaning left undone is Other, never the Standards of Conduct); the case holds with production's flags."
+  },
+  "replay: nov4-cleaning-bathrooms-not-conduct [fix:CA_SALES_POLICY_ENABLED]": {
+    "category": "REGRESSION",
+    "twin": "itself with production's flags",
+    "reason": "POLICY_CLEANING_INCIDENT_ENABLED (bisected: this flag alone): cleaning left undone is read as the manual's Care and Cleaning section under the Standards of Conduct (25 Oct rule), so the draft ticks Standards of Conduct / Policy Violated is 'Standards of Conduct \u2014 Care and Cleaning\u2026' while the card says Other. Against Pau's ruling (cleaning left undone is Other, never the Standards of Conduct); the case holds with production's flags."
+  },
+  "replay: nov4-cleaning-bathrooms-not-conduct [production]": {
+    "category": "REGRESSION",
+    "twin": "itself with production's flags",
+    "reason": "POLICY_CLEANING_INCIDENT_ENABLED (bisected: this flag alone): cleaning left undone is read as the manual's Care and Cleaning section under the Standards of Conduct (25 Oct rule), so the draft ticks Standards of Conduct / Policy Violated is 'Standards of Conduct \u2014 Care and Cleaning\u2026' while the card says Other. Against Pau's ruling (cleaning left undone is Other, never the Standards of Conduct); the case holds with production's flags."
+  },
+  "replay: nov4-cleaning-negative-no-basis [fix:CA_SALES_POLICY_ENABLED]": {
+    "category": "REGRESSION",
+    "twin": "itself with production's flags",
+    "reason": "POLICY_CLEANING_INCIDENT_ENABLED (bisected: this flag alone): cleaning left undone is read as the manual's Care and Cleaning section under the Standards of Conduct (25 Oct rule), so the draft ticks Standards of Conduct / Policy Violated is 'Standards of Conduct \u2014 Care and Cleaning\u2026' while the card says Other. Against Pau's ruling (cleaning left undone is Other, never the Standards of Conduct); the case holds with production's flags."
+  },
+  "replay: nov4-cleaning-negative-no-basis [production]": {
+    "category": "REGRESSION",
+    "twin": "itself with production's flags",
+    "reason": "POLICY_CLEANING_INCIDENT_ENABLED (bisected: this flag alone): cleaning left undone is read as the manual's Care and Cleaning section under the Standards of Conduct (25 Oct rule), so the draft ticks Standards of Conduct / Policy Violated is 'Standards of Conduct \u2014 Care and Cleaning\u2026' while the card says Other. Against Pau's ruling (cleaning left undone is Other, never the Standards of Conduct); the case holds with production's flags."
+  },
+  "replay: nov4-cleaning-offense-basis-only-with-flag [fix:CA_SALES_POLICY_ENABLED]": {
+    "category": "INTENDED",
+    "twin": "itself with production's flags",
+    "reason": "CLEANING_OTHER_EVERY_WORDING: the card adds '**Policy:** Other \u2014 cleaning duties left undone are recorded under Other \u2026'. Holds in both modes."
+  },
+  "replay: nov4-cleaning-offense-basis-only-with-flag [production]": {
+    "category": "INTENDED",
+    "twin": "itself with production's flags",
+    "reason": "CLEANING_OTHER_EVERY_WORDING: the card adds '**Policy:** Other \u2014 cleaning duties left undone are recorded under Other \u2026'. Holds in both modes."
+  },
+  "replay: nov5-cleaning-other-sf-s15 [fix:CA_SALES_POLICY_ENABLED,FORM_NAME_FROM_ROSTER_ENABLED]": {
+    "category": "REGRESSION",
+    "twin": "itself with production's flags",
+    "reason": "POLICY_CLEANING_INCIDENT_ENABLED (bisected: this flag alone): cleaning left undone is read as the manual's Care and Cleaning section under the Standards of Conduct (25 Oct rule), so the draft ticks Standards of Conduct / Policy Violated is 'Standards of Conduct \u2014 Care and Cleaning\u2026' while the card says Other. Against Pau's ruling (cleaning left undone is Other, never the Standards of Conduct); the case holds with production's flags."
+  },
+  "replay: nov5-cleaning-other-sf-s15 [production]": {
+    "category": "REGRESSION",
+    "twin": "itself with production's flags",
+    "reason": "POLICY_CLEANING_INCIDENT_ENABLED (bisected: this flag alone): cleaning left undone is read as the manual's Care and Cleaning section under the Standards of Conduct (25 Oct rule), so the draft ticks Standards of Conduct / Policy Violated is 'Standards of Conduct \u2014 Care and Cleaning\u2026' while the card says Other. Against Pau's ruling (cleaning left undone is Other, never the Standards of Conduct); the case holds with production's flags."
+  },
+  "replay: nov5-cleaning-other-sf-s15-policy-citation [fix:CA_SALES_POLICY_ENABLED,FORM_NAME_FROM_ROSTER_ENABLED,POLICY_CITATION_ENABLED]": {
+    "category": "REGRESSION",
+    "twin": "itself with production's flags",
+    "reason": "POLICY_CLEANING_INCIDENT_ENABLED (bisected: this flag alone): cleaning left undone is read as the manual's Care and Cleaning section under the Standards of Conduct (25 Oct rule), so the draft ticks Standards of Conduct / Policy Violated is 'Standards of Conduct \u2014 Care and Cleaning\u2026' while the card says Other. Against Pau's ruling (cleaning left undone is Other, never the Standards of Conduct); the case holds with production's flags."
+  },
+  "replay: nov5-cleaning-other-sf-s15-policy-citation [production]": {
+    "category": "REGRESSION",
+    "twin": "itself with production's flags",
+    "reason": "POLICY_CLEANING_INCIDENT_ENABLED (bisected: this flag alone): cleaning left undone is read as the manual's Care and Cleaning section under the Standards of Conduct (25 Oct rule), so the draft ticks Standards of Conduct / Policy Violated is 'Standards of Conduct \u2014 Care and Cleaning\u2026' while the card says Other. Against Pau's ruling (cleaning left undone is Other, never the Standards of Conduct); the case holds with production's flags."
+  },
+  "replay: nov6-cleaning-other-did-not-clean-restrooms [fix:CHAT_GLOSSARY_ENABLED,CA_SALES_POLICY_ENABLED,REPLY_MATCHES_CARD_ENABLED,TITLE_OF_THE_EMPLOYEE_ENABLED,METRIC_GUARD_ENABLED,CLEANING_OTHER_EVERY_WORDING_ENABLED]": {
+    "category": "REGRESSION",
+    "twin": "itself with production's flags",
+    "reason": "POLICY_CLEANING_INCIDENT_ENABLED (bisected: this flag alone): cleaning left undone is read as the manual's Care and Cleaning section under the Standards of Conduct (25 Oct rule), so the draft ticks Standards of Conduct / Policy Violated is 'Standards of Conduct \u2014 Care and Cleaning\u2026' while the card says Other. Against Pau's ruling (cleaning left undone is Other, never the Standards of Conduct); the case holds with production's flags."
+  },
+  "replay: nov6-cleaning-other-did-not-clean-restrooms [open]": {
+    "category": "INTENDED",
+    "twin": "the case's fix run",
+    "reason": "Still OPEN with the flip set (the draft ticks Standards of Conduct, see the fix rows); CLEANING_OTHER alone makes these OPEN cases hold \u2014 POLICY_CLEANING_INCIDENT undoes it."
+  },
+  "replay: nov6-cleaning-other-not-completing-closing [fix:CHAT_GLOSSARY_ENABLED,CA_SALES_POLICY_ENABLED,REPLY_MATCHES_CARD_ENABLED,TITLE_OF_THE_EMPLOYEE_ENABLED,METRIC_GUARD_ENABLED,CLEANING_OTHER_EVERY_WORDING_ENABLED]": {
+    "category": "REGRESSION",
+    "twin": "itself with production's flags",
+    "reason": "POLICY_CLEANING_INCIDENT_ENABLED (bisected: this flag alone): cleaning left undone is read as the manual's Care and Cleaning section under the Standards of Conduct (25 Oct rule), so the draft ticks Standards of Conduct / Policy Violated is 'Standards of Conduct \u2014 Care and Cleaning\u2026' while the card says Other. Against Pau's ruling (cleaning left undone is Other, never the Standards of Conduct); the case holds with production's flags."
+  },
+  "replay: nov6-cleaning-other-not-completing-closing [open]": {
+    "category": "INTENDED",
+    "twin": "the case's fix run",
+    "reason": "Still OPEN with the flip set (the draft ticks Standards of Conduct, see the fix rows); CLEANING_OTHER alone makes these OPEN cases hold \u2014 POLICY_CLEANING_INCIDENT undoes it."
+  },
+  "replay: nov6-cleaning-other-not-completing-daily [fix:CHAT_GLOSSARY_ENABLED,CA_SALES_POLICY_ENABLED,REPLY_MATCHES_CARD_ENABLED,TITLE_OF_THE_EMPLOYEE_ENABLED,METRIC_GUARD_ENABLED,CLEANING_OTHER_EVERY_WORDING_ENABLED]": {
+    "category": "REGRESSION",
+    "twin": "itself with production's flags",
+    "reason": "POLICY_CLEANING_INCIDENT_ENABLED (bisected: this flag alone): cleaning left undone is read as the manual's Care and Cleaning section under the Standards of Conduct (25 Oct rule), so the draft ticks Standards of Conduct / Policy Violated is 'Standards of Conduct \u2014 Care and Cleaning\u2026' while the card says Other. Against Pau's ruling (cleaning left undone is Other, never the Standards of Conduct); the case holds with production's flags."
+  },
+  "replay: nov6-cleaning-other-not-completing-daily [open]": {
+    "category": "INTENDED",
+    "twin": "the case's fix run",
+    "reason": "Still OPEN with the flip set (the draft ticks Standards of Conduct, see the fix rows); CLEANING_OTHER alone makes these OPEN cases hold \u2014 POLICY_CLEANING_INCIDENT undoes it."
+  },
+  "replay: nov6-cleaning-other-qa-live-wording [fix:CHAT_GLOSSARY_ENABLED,CA_SALES_POLICY_ENABLED,REPLY_MATCHES_CARD_ENABLED,TITLE_OF_THE_EMPLOYEE_ENABLED,METRIC_GUARD_ENABLED,CLEANING_OTHER_EVERY_WORDING_ENABLED]": {
+    "category": "REGRESSION",
+    "twin": "itself with production's flags",
+    "reason": "POLICY_CLEANING_INCIDENT_ENABLED (bisected: this flag alone): cleaning left undone is read as the manual's Care and Cleaning section under the Standards of Conduct (25 Oct rule), so the draft ticks Standards of Conduct / Policy Violated is 'Standards of Conduct \u2014 Care and Cleaning\u2026' while the card says Other. Against Pau's ruling (cleaning left undone is Other, never the Standards of Conduct); the case holds with production's flags."
+  },
+  "replay: nov6-cleaning-other-qa-live-wording [production]": {
+    "category": "REGRESSION",
+    "twin": "itself with production's flags",
+    "reason": "POLICY_CLEANING_INCIDENT_ENABLED (bisected: this flag alone): cleaning left undone is read as the manual's Care and Cleaning section under the Standards of Conduct (25 Oct rule), so the draft ticks Standards of Conduct / Policy Violated is 'Standards of Conduct \u2014 Care and Cleaning\u2026' while the card says Other. Against Pau's ruling (cleaning left undone is Other, never the Standards of Conduct); the case holds with production's flags."
+  }
+}
