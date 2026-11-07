@@ -374,19 +374,15 @@ async function answerQuestionCore(
    * proposes one. Both detectors are pure and run before anything is read.
    */
   const libraryReading = detectInventoryQuestion(request.question);
-  const formReading = detectTemplateIntent(request.question);
   /*
    * PAST_FORMS_BEFORE_LIBRARY_ENABLED (Pau, 5 Nov 2026, sf-s29): a message
-   * the forms library would answer — a question about the library, or a form
-   * named without asking to make one ("are there any coaching and ca's for
-   * <name>" reads as the Corrective Action, not requested) — that names a
-   * person or asks about forms already on file is answered from the forms on
-   * file: the past-forms lookup below runs for it, and the library answer
-   * steps aside. A request to make a form is never one of these.
+   * the forms-library check would answer, that names a person or asks about
+   * forms already on file, is answered from the forms on file — the
+   * past-forms lookup below runs for it, and the library answer steps aside.
    */
   const pastFormsFirst =
     pastFormsBeforeLibraryEnabled() &&
-    (libraryReading.kind !== "none" || (formReading.kind === "corrective_action" && !formReading.requestedCreation)) &&
+    libraryReading.kind !== "none" &&
     (isFormRecordsQuestion(request.question) || candidateNameWords(request.question).length > 0);
   const detected: InventoryQuestion = pastFormsFirst ? { kind: "none" } : libraryReading;
   /*
@@ -397,8 +393,9 @@ async function answerQuestionCore(
    * sentence also says to make one, it is answered from the Forms Register
    * below. See `chat-form-records.ts`.
    */
-  const spokenIntent: ReturnType<typeof detectTemplateIntent> =
-    pastFormsFirst || asksOnlyAboutFormsOnFile(request.question) ? { kind: "none" } : formReading;
+  const spokenIntent: ReturnType<typeof detectTemplateIntent> = asksOnlyAboutFormsOnFile(request.question)
+    ? { kind: "none" }
+    : detectTemplateIntent(request.question);
   const elliptical = isEllipticalRegisterReference(request.question);
 
   /*
