@@ -1,5 +1,6 @@
-import { formEditDateRulesEnabled } from "@/lib/config/chat-quality-flags";
+import { formEditDateRulesEnabled, proposalPolicySetAsideEnabled } from "@/lib/config/chat-quality-flags";
 import { correctiveActionIssue } from "@/lib/forms/incident-issue";
+import { citationSetAside, policiesSetAside, setAsideAnything, withPolicySetAside } from "@/lib/forms/policy-set-aside";
 
 import { managerWords, remapEditLine, remapObservation } from "./edit-date-rules";
 import type { AskRequest, AskResponse } from "./types";
@@ -27,6 +28,28 @@ import type { AskRequest, AskResponse } from "./types";
  * Off: the response as it was.
  */
 export function withProposalEditRules(response: AskResponse, request: AskRequest): AskResponse {
+  return withPolicySetAsideOnCard(withEditRules(response, request), request);
+}
+
+/**
+ * PROPOSAL_POLICY_SET_ASIDE_ENABLED (QA, 8 Nov 2026, live here at 00:20): "take the attendance policy off the form"
+ * after the manager named it left "Policy: Attendance, as you said" on the card. A policy the manager took off is
+ * not cited on the card, and the card says so (`forms/policy-set-aside.ts`). Read from the manager's words, never the
+ * app's state lines. Off, the response as it was.
+ */
+function withPolicySetAsideOnCard(response: AskResponse, request: AskRequest): AskResponse {
+  if (!proposalPolicySetAsideEnabled() || !response.formProposal) return response;
+  const users = [
+    ...(request.history ?? []).filter((turn) => turn.role === "user").map((turn) => turn.content),
+    request.question,
+  ].map(managerWords);
+  const setAside = policiesSetAside(users);
+  if (!setAsideAnything(setAside)) return response;
+  const citations = response.citations?.filter((citation) => !citationSetAside(citation, setAside));
+  return { ...response, content: withPolicySetAside(response.content, setAside), ...(citations ? { citations } : {}) };
+}
+
+function withEditRules(response: AskResponse, request: AskRequest): AskResponse {
   if (!formEditDateRulesEnabled()) return response;
   const card = response.formProposal;
   if (!card || card.issue === undefined) return response;
