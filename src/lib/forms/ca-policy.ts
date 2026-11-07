@@ -1,6 +1,7 @@
 import { withoutAppLines } from "@/lib/ai/app-sentences";
 import { foldsToGlossaryTerm } from "@/lib/ai/glossary";
 import {
+  asYouSaidAppReadEnabled,
   asYouSaidManagerWordsEnabled,
   caSalesPolicyEnabled,
   cleaningOtherEveryWordingEnabled,
@@ -114,6 +115,11 @@ export interface CaPolicyReading {
    * the Standards of Conduct (Pau's ruling; `withCleaningOther`). Absent off.
    */
   other?: "cleaning";
+  /**
+   * AS_YOU_SAID_APP_READ_ENABLED: the policy the app's own lines on the turn named, when the manager's words name
+   * none (AS_YOU_SAID_MANAGER_WORDS_ENABLED reads only the manager's). Said as a reading, never "as you said".
+   */
+  readFromApp?: CaPolicyName;
 }
 
 /* ------------------------------------------------------------ the words -- */
@@ -434,7 +440,22 @@ function statedIn(turn: string): CaPolicyName | null {
  */
 export function readCaPolicy(rawText: string): CaPolicyReading {
   const said = managerWords(rawText);
-  return withCleaningOther(withSalesPolicy(readCaPolicyFromWords(said), said), said);
+  return withAppReading(withCleaningOther(withSalesPolicy(readCaPolicyFromWords(said), said), said), rawText, said);
+}
+
+/**
+ * AS_YOU_SAID_APP_READ_ENABLED (ported from the sibling app; QA's gate there, 7 Nov 2026; ships with
+ * AS_YOU_SAID_MANAGER_WORDS_ENABLED; same flag in both apps; default off). There, with AS_YOU_SAID on, a late-opening
+ * CA lost its card's Policy line: the only one it had was "<policy>, as you said", read from the app's own line on the
+ * turn. On: when the manager's words read as no policy at all and the whole turn (app lines included, as before
+ * AS_YOU_SAID) names one, that policy is kept as the app's reading, and the card says it as one
+ * (`caPolicyProposalLine`), never "as you said". Off, the reading is returned untouched.
+ */
+function withAppReading(reading: CaPolicyReading, rawText: string, said: string): CaPolicyReading {
+  if (!asYouSaidAppReadEnabled() || said === rawText) return reading;
+  if (reading.stated !== null || reading.suggestion !== null || reading.ambiguous || reading.other || reading.missedEvent) return reading;
+  const app = readCaPolicyFromWords(rawText).stated;
+  return app ? { ...reading, readFromApp: app } : reading;
 }
 
 /**
@@ -929,6 +950,10 @@ export function caPolicyProposalLine(reading: CaPolicyReading, named: NamedPolic
   if (reading.suggestion && reading.source === "incident") {
     const what = reading.topics.map((topic) => TOPIC_WORDS[topic]).join(" and ");
     return `**Policy:** this reads as **Standards of Conduct** — ${what}. I'll check it against the current policy manual and quote that section on the draft; if the manual doesn't support it, I'll leave the policy for you. Tell me if a different policy applies.`;
+  }
+  // AS_YOU_SAID_APP_READ_ENABLED: the policy the app read, said as its reading. Off, never set.
+  if (reading.readFromApp) {
+    return `**Policy:** ${CA_POLICY_LABEL[reading.readFromApp]} — from what you described. I'll quote that section from the current policy manual on the draft; tell me if a different policy applies.`;
   }
   return null;
 }
