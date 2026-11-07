@@ -222,9 +222,35 @@ vi.mock("@/lib/forms/prior-forms", async (importOriginal) => ({
 
 vi.setConfig({ testTimeout: 300_000, hookTimeout: 60_000 });
 
-const PRODUCTION = [...PRODUCTION_FLAGS.on, ...PRODUCTION_FLAGS.assumedOn];
 const TOOL_FLAGS = ["FORM_EDIT_SINGLE_WRITER_ENABLED", "FORM_EDIT_TOOL_IN_STREAM_ENABLED"] as const;
 const NOOP = "FORM_EDIT_NOOP_GUARD_ENABLED";
+/*
+ * Changed on purpose (7 Nov 2026): production-flags.json now lists QA's flip 6 as on. The recorded fixture is
+ * main's behaviour before this flag, under production's flags as they were then, so the base leaves flip 6 off
+ * (this file turns the tool and Step B flags on itself where a case asks for them). The fixture and every
+ * assertion are unchanged.
+ */
+const FLIPPED_AFTER_FIXTURE: readonly string[] = [
+  "FORM_PATCH_REDUCER_ENABLED",
+  "FORM_REPLY_FROM_DIFF_ENABLED",
+  "FORM_EDIT_SINGLE_WRITER_ENABLED",
+  "FORM_EDIT_SAID_REPLACEMENT_ENABLED",
+  "FORM_PATCH_READER_FIXES_ENABLED",
+  "COACHING_OBSERVED_KEPT_ENABLED",
+  "POLITE_REQUEST_OWN_TURNS_ENABLED",
+  "LEVEL_ENDS_REQUEST_ENABLED",
+  "MSB_PHRASE_SOC_ENABLED",
+  "PRIOR_STEP_PREVIOUSLY_ENABLED",
+  "METRIC_CHOICE_ONE_QUESTION_ENABLED",
+  "AS_YOU_SAID_APP_READ_ENABLED",
+  "CLEANING_OTHER_EVERY_WORDING_ENABLED",
+  "OWN_BRAND_ONLY_ENABLED",
+  "UNDER_PERFORMANCE_EXPLAINED_ENABLED",
+  "TITLE_ENDS_AT_LINE_ENABLED",
+  "PLACE_FROM_CUE_ENABLED",
+  "ISSUE_IS_THE_ACCOUNT_ENABLED",
+];
+const PRODUCTION = [...PRODUCTION_FLAGS.on, ...PRODUCTION_FLAGS.assumedOn].filter((name) => name !== NOOP && !FLIPPED_AFTER_FIXTURE.includes(name));
 const TOUCHED = [...new Set([NOOP, ...TOOL_FLAGS, ...PRODUCTION, ...PRODUCTION_FLAGS.off, "FORM_PATCH_REDUCER_ENABLED", "FORM_REPLY_FROM_DIFF_ENABLED"])];
 const saved = new Map<string, string | undefined>();
 

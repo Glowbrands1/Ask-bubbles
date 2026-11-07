@@ -24,7 +24,8 @@ export const NOV6_PLACE_FROM_CUE_CASES: ReplayCase[] = [
     id: "nov6-place-from-cue-from-bellevue",
     title: "\"… for Marisol Quenby from bellevue, …\": Bellevue is not on the assignment, and nothing is filed there",
     report: REPORT,
-    status: { open: "with production's flags the card takes West Dodge with no word about Bellevue" },
+    // Was open in production ("with production's flags the card takes West Dodge with no word about Bellevue"); holds since flip 6 (QA, 7 Nov 2026 20:50 PHT), so it is fixed.
+    status: "fixed",
     fixFlags: ["PLACE_FROM_CUE_ENABLED"],
     async run(t) {
       vi.setSystemTime(new Date("2026-11-06T02:00:00Z"));
