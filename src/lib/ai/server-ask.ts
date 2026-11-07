@@ -42,6 +42,7 @@ import { reportById, routeReportQuestion } from "@/lib/reporting/registry";
 import { resolveScopeFor } from "@/lib/reporting/scope/server";
 import type { SourceCitation } from "@/types";
 
+import { cardPolicyTurns } from "./card-policy-request";
 import { callClaude } from "./call-claude";
 import { glossaryBlock } from "./glossary";
 import { loadChatDataBlock } from "./chat-data-tools";
@@ -88,6 +89,7 @@ import {
   googleReviewsInChatEnabled,
   typoReadingCopyEnabled,
   caSalesPolicyEnabled,
+  cardPolicyOwnRequestEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { gateTexts, searchWithPlan } from "./continuation";
 import { fieldsFromManagerText, mergeConfirmed, retainFieldsInReply } from "./form-field-state";
@@ -1475,7 +1477,9 @@ async function decorateFormAnswer(request: AskRequest, actor: ChatActor, respons
   if (policyOn) {
     try {
       const manual = await new SupabaseKnowledgeProvider().fetchOfficialPolicyManual(ACTIVE_BRAND.knowledgeScopeId);
-      if (manual.ok) content = withMappedPolicy(content, turns, manual.chunks, true);
+      // CARD_POLICY_OWN_REQUEST_ENABLED: a card for <B> is not cited from <A>'s earlier request.
+      const policyTurns = cardPolicyOwnRequestEnabled() && response.formProposal ? cardPolicyTurns(turns, response.formProposal.employeeName) : turns;
+      if (manual.ok) content = withMappedPolicy(content, policyTurns, manual.chunks, true);
     } catch {
       // A manual read that fails leaves the proposal as the forms path wrote it.
     }
