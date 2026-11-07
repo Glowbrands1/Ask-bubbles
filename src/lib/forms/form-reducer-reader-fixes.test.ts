@@ -248,3 +248,13 @@ describe("FORM_PATCH_READER_FIXES_ENABLED: \"make it for/about X\" keeps her X (
     expect(applyPatch(draft, op("coaching_details", "Perrin missed the monthly meeting.", "replace", "missing out monthly meeting"), rules(LATEST, ["coaching_details"], fixes)).diff.refused).toEqual([]);
   });
 });
+
+describe("FORM_PATCH_READER_FIXES_ENABLED: an in-place correction is not held to its instruction's words", () => {
+  it("\"fix her last name, it is Pembrooke\" rewrites the text with the word corrected", () => {
+    const latest = "fix her last name, it is Pembrooke";
+    const old = "Observed:\nIsolde Pembrook was late to open today.";
+    const draft: FormDraft = { coaching_details: field("coaching_details", old, "assistant") };
+    const fixed = op("coaching_details", old.replace("Pembrook", "Pembrooke"), "replace", latest);
+    expect(applyPatch(draft, fixed, rules(latest, ["coaching_details"], { employeeName: "Isolde Pembrook", formText: old })).diff.refused).toEqual([]);
+  });
+});

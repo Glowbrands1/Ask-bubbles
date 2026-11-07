@@ -422,9 +422,15 @@ export const MIN_KEPT_SHARE = 0.75;
  * words of content the manager gave (CONTENT_EVIDENCE_WORDS or more), MIN_SAID_SHARE of shorter evidence. A
  * reword is not checked (its evidence is the request).
  */
-function keepsEvidence(value: string, evidence: string | undefined): boolean {
+function keepsEvidence(value: string, evidence: string | undefined, old = ""): boolean {
   const want = wordsOf(evidence ?? "");
   if (want.length === 0) return true;
+  // An edit of the field's own text (a word corrected, a line added) is not new content: its evidence is the instruction.
+  if (want.length < CONTENT_EVIDENCE_WORDS && old.trim() !== "") {
+    const before = wordsOf(old);
+    const after = new Set(wordsOf(value));
+    if (before.length > 0 && before.filter((word) => after.has(word)).length / before.length >= MIN_SAID_SHARE) return true;
+  }
   const have = wordsOf(value);
   const kept = want.filter((word) => have.some((written) => sameStem(word, written))).length;
   /*
@@ -800,7 +806,7 @@ function setOne(draft: FormDraft, key: string, value: FieldValue, patch: FormPat
   // The value itself, not only its evidence, must be words the manager said (or an accepted offer).
   if (!valueWasSaid(text, rules, { old: how === "add" ? "" : have, evidence })) return refuse(key, "not_in_manager_words");
   // FORM_PATCH_READER_FIXES_ENABLED: content she gave is kept, not summarised away.
-  if (rules.faithful && !keepsEvidence(text, evidence)) return refuse(key, "drops_words");
+  if (rules.faithful && !keepsEvidence(text, evidence, how === "add" ? "" : have)) return refuse(key, "drops_words");
   /*
    * FORM_PATCH_READER_FIXES_ENABLED: a replace the manager asked for ("make it about showing up late") may
    * drop words of text the assistant wrote; what she typed herself still keeps every word she did not name.
