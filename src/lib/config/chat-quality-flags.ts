@@ -127,7 +127,7 @@ export function secondRequestOwnAccountEnabled(): boolean {
 }
 
 /**
- * CARD_POLICY_OWN_REQUEST_ENABLED (ported from Ask Sunny, QA's live tester, 7 Nov 2026; same flag in both apps;
+ * CARD_POLICY_OWN_REQUEST_ENABLED (ported from the sibling app, QA's live tester, 7 Nov 2026; same flag in both apps;
  * default off). "Coaching form for <A> for being on her phone …", then "Coaching form for <B>": with
  * POLICY_CITATION_ENABLED on, B's card cites Cell Phone/Smart Watch from A's request, because the form answer's mapped
  * policy is read over every manager turn. On: it is read from the latest form request that names the card's employee,

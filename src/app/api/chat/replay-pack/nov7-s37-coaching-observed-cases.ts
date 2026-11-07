@@ -112,9 +112,9 @@ export const NOV7_S37_COACHING_OBSERVED_CASES: ReplayCase[] = [
   {
     id: "nov7-s37-second-card-own-policy",
     title: "\"Coaching form for <A> for being on her phone\", then \"Coaching form for <B>\": B's card cites no policy from A's request",
-    report: "QA's live tester on Ask Sunny (flip 7, s37 flags on), 7 Nov 2026: B's card cited Cell Phone/Smart Watch p.19 from A's request",
+    report: "QA's live tester on the sibling app (flip 7, s37 flags on), 7 Nov 2026: B's card cited Cell Phone/Smart Watch p.19 from A's request",
     // Holds in production: POLICY_CITATION is off, so no coaching card cites the chat's policy. The fix run turns it on,
-    // the path where B's card cited A's Cell Phone/Smart Watch (as in Ask Sunny), with this flag.
+    // the path where B's card cited A's Cell Phone/Smart Watch (as in the sibling app), with this flag.
     status: "fixed",
     fixFlags: ["COACHING_OBSERVED_KEPT_ENABLED", "POLITE_REQUEST_OWN_TURNS_ENABLED", "POLICY_CITATION_ENABLED", "CARD_POLICY_OWN_REQUEST_ENABLED"],
     async run(t) {

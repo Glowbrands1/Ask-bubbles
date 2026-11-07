@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { cardPolicyTurns } from "./card-policy-request";
 
 /**
- * CARD_POLICY_OWN_REQUEST_ENABLED (QA's live tester on Ask Sunny, flip 7, 7 Nov 2026; latent here with POLICY_CITATION on): "Coaching form for <A> for being on
+ * CARD_POLICY_OWN_REQUEST_ENABLED (QA's live tester on the sibling app, flip 7, 7 Nov 2026; latent here with POLICY_CITATION on): "Coaching form for <A> for being on
  * her phone…", then "Coaching form for <B>": B's card cited Cell Phone/Smart Watch p.19 from A's request.
  * People invented.
  */

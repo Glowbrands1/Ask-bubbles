@@ -6,7 +6,7 @@ import { startsFormRequest } from "@/lib/forms/current-request";
  * ============================================================================
  *
  * QA's live tester (flip 7, 7 Nov 2026): "Coaching form for <A> for being on her phone …", then "Coaching form for
- * <B>". B's card had the right person, but cited Cell Phone/Smart Watch p.19 (Ask Sunny's live tester). Here the same
+ * <B>". B's card had the right person, but cited Cell Phone/Smart Watch p.19 (the sibling app's live tester). Here the same
  * reading is latent: with POLICY_CITATION_ENABLED on, the form answer's mapped policy (`server-ask.ts`
  * decorateFormAnswer, withMappedPolicy) is read over every manager turn of the chat, so B's card cites A's policy.
  *
