@@ -55,6 +55,8 @@ export interface ReplayContext {
   editToolOffers?(): { offered: number; lastData: string | null };
   /** Step B's form-patch model: its raw outputs, one per call in order (null: the call falls back). Unscripted calls fall back. */
   patchWrites(outputs: readonly unknown[]): void;
+  /** Step B's form-patch model, by the manager's latest message (exact text): its raw output for that turn; a message not listed falls back. */
+  patchReads?(byLatest: Readonly<Record<string, unknown>>): void;
   calls(): { chat: number; draft: number; revision: number; tool: number; patch: number };
   forms(): Record<string, unknown>[];
   values(instanceId: string): Record<string, string>;
