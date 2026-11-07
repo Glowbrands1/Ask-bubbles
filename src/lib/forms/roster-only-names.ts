@@ -1,4 +1,4 @@
-import { formNameFromRosterEnabled, metricGuardEnabled, offRosterConfirmEnabled, rosterNearMissEnabled, rosterNotFoundAnyPhrasingEnabled } from "@/lib/config/chat-quality-flags";
+import { formNameFromRosterEnabled, metricChoiceOneQuestionEnabled, metricGuardEnabled, offRosterConfirmEnabled, rosterNearMissEnabled, rosterNotFoundAnyPhrasingEnabled } from "@/lib/config/chat-quality-flags";
 import { isGlossaryTerm } from "@/lib/ai/glossary";
 import type { AskResponse } from "@/lib/ai/types";
 
@@ -380,6 +380,7 @@ function offRosterTyped(employee: string, message: string | undefined, names: re
   const text = message ?? "";
   const placed =
     personPlaces(typed).some((place) => place.test(text.trim())) ||
+    afterCompanyTitle(typed, text) ||
     text.split(/\n/).some((line) => same(line.trim().replace(USE_NAME, "")) && NAME_SHAPE.test(line.trim().replace(USE_NAME, "")));
   return placed ? titleCased(typed) : null;
 }
@@ -404,6 +405,17 @@ const NAME_SHAPE = new RegExp(String.raw`^${NAME_RUN}$`, "u");
  * Where a request types its person — "for <name>,", "for <name>" ending it, "employee, <name>" — read with the card's
  * own name, so the words after it ("…, Zebulon Marchbanks that needs …"; gate rerun 3) are never taken as part of it.
  */
+/**
+ * QA, the FORM_NAME live re-run (7 Nov 2026 09:39 PHT, FAIL 1, the real B1 message): "create a written corrective
+ * action for Team Member, <name>. …" — the name in a person's place after a company position title (the title list's,
+ * `staff-picker.ts` namesCompanyPositionTitle). The offer was never made, so the manager was asked who on every turn.
+ */
+function afterCompanyTitle(name: string, text: string): boolean {
+  const spelled = name.trim().split(/\s+/).map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(String.raw`\s+`);
+  const found = new RegExp(String.raw`\bfor\s+([\p{L}][\p{L} ]{1,40}?),\s*${spelled}(?![\p{L}'’-])`, "iu").exec(text);
+  return Boolean(found && namesCompanyPositionTitle(found[1]!));
+}
+
 function personPlaces(name: string): RegExp[] {
   const spelled = name.trim().split(/\s+/).map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(String.raw`\s+`);
   const end = String.raw`(?![\p{L}'’-])`;
@@ -499,12 +511,18 @@ export function withoutMetricChoices(response: AskResponse, message: string | un
     const byFirst = names.filter((roster) => words(roster)[0] === words(name)[0]);
     return `Is this for **${rosterSpelling(name, names) ?? (words(name).length === 1 && byFirst.length === 1 ? byFirst[0] : name)}**?`;
   };
-  let content = response.content.replace(/Which of them is this ((?:\*\*[^*]+\*\* )?)for\s*[—–-]\s*([^?\n]+)\?/g, (whole, form: string, list: string) => {
+  // METRIC_CHOICE_ONE_QUESTION_ENABLED: the question's own "Tell me and I'll …" after it on the same line is read with it.
+  const oneQuestion = metricChoiceOneQuestionEnabled();
+  const CHOICE = oneQuestion
+    ? /Which of them is this ((?:\*\*[^*]+\*\* )?)for\s*[—–-]\s*([^?\n]+)\?([ \t]+Tell me\b[^\n]*)?/g
+    : /Which of them is this ((?:\*\*[^*]+\*\* )?)for\s*[—–-]\s*([^?\n]+)\?/g;
+  let content = response.content.replace(CHOICE, (whole, form: string, list: string, tail: string | undefined) => {
     const all = listedNames(list);
     const kept = all.filter((name) => !isMetric(name));
     if (kept.length === all.length) return whole;
-    if (kept.length >= 2) return `Which of them is this ${form}for — ${said(kept)}?`;
-    return kept.length === 1 ? asked(kept[0]!) : ASK_WHO;
+    const keptTail = oneQuestion ? (tail ?? "") : "";
+    if (kept.length >= 2) return `Which of them is this ${form}for — ${said(kept)}?${keptTail}`;
+    return kept.length === 1 ? `${asked(kept[0]!)}${keptTail}` : ASK_WHO;
   });
   content = content.replace(/Is this for \*\*([^*]+)\*\*\?/g, (whole, name: string) => (isMetric(name) ? ASK_WHO : whole));
   return content === response.content ? response : { ...response, content };
