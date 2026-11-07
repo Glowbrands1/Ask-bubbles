@@ -67,9 +67,10 @@ export const NOV7_FORM_NAME_LIVE_RERUN_CASES: ReplayCase[] = [
     report: "QA, the FORM_NAME live re-run (7 Nov 2026 09:39 PHT), FAIL 2: no card, \"'verbal CA' isn't something I can put in writing …\"",
     // Not a FORM_NAME regression: the same with production's flags and with the name set (the request is answered by
     // the model, never read as a form request). Its fix is outside this session's files.
-    status: { open: "the message is answered by the model, not read as a Corrective Action request (no card)" },
+    // Was open in production ("the message is answered by the model, not read as a Corrective Action request (no card)"); holds since flip 6 (QA, 7 Nov 2026 20:50 PHT), so it is fixed.
+    status: "fixed",
     fixFlags: NAME_SET,
-    fixStatus: { open: "the same with the name set on: not a FORM_NAME regression" },
+    // fixStatus was open ("the same with the name set on: not a FORM_NAME regression"); with flip 6 on (LEVEL_ENDS_REQUEST) it holds too.
     async run(t) {
       t.directory(STAFF);
       t.as("location_manager", WEST_DODGE);

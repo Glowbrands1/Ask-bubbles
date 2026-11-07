@@ -64,7 +64,8 @@ export const NOV7_S37_COACHING_OBSERVED_CASES: ReplayCase[] = [
     id: "nov7-s37-observed-kept",
     title: "sf-s37 (a): a Coaching Form for \"not hitting her numbers\" keeps its Observed section and the Underperformance tick",
     report: `${REPORT}: the saved coaching_details had no "Observed:"`,
-    status: { open: "the framing guard strikes \"did not meet …\" and the empty Observed label goes with it" },
+    // Was open in production ("the framing guard strikes \"did not meet …\" and the empty Observed label goes with it"); holds since flip 6 (QA, 7 Nov 2026 20:50 PHT), so it is fixed.
+    status: "fixed",
     fixFlags: ["COACHING_OBSERVED_KEPT_ENABLED"],
     async run(t) {
       const thread = start(t);
