@@ -1,4 +1,9 @@
-import { politeRequestOwnTurnsEnabled, priorSentenceFixEnabled, remapIncidentFixEnabled } from "@/lib/config/chat-quality-flags";
+import {
+  politeRequestOwnTurnsEnabled,
+  priorSentenceFixEnabled,
+  remapIncidentFixEnabled,
+  secondRequestOwnAccountEnabled,
+} from "@/lib/config/chat-quality-flags";
 import { withoutPriorStepClauses } from "@/lib/forms/form-date-answer";
 import { CA_POLICY_LABEL, readCaPolicy, STANDARDS_OF_CONDUCT, type CaPolicyName } from "@/lib/forms/ca-policy";
 import {
@@ -406,7 +411,14 @@ export function currentRequestStart(input: {
     const turn = raw.replace(STATE_LEAD, "");
     // POLITE_REQUEST_OWN_TURNS_ENABLED: "Can you create me a coaching document for …" is a request too.
     const asked = politeRequestOwnTurnsEnabled() ? turn.trim().replace(POLITE_LEAD, "") : turn.trim();
-    if (!(remapIncidentFixEnabled() ? FIXED_REQUEST_TURN : MAIN_REQUEST_TURN).test(asked)) continue;
+    // SECOND_REQUEST_OWN_ACCOUNT_ENABLED (ported from the sibling app, 7 Nov 2026): after a request, a turn that names a
+    // form anywhere ("I need another corrective action for <A>, …", "now make a separate CA for <A> …") is a request
+    // too; it starts a new one only with its own incident, below.
+    const fixed = remapIncidentFixEnabled();
+    const isRequest =
+      (fixed ? FIXED_REQUEST_TURN : MAIN_REQUEST_TURN).test(asked) ||
+      (secondRequestOwnAccountEnabled() && requests >= 1 && (fixed ? FIXED_FORM_WORD_ANYWHERE : FORM_WORD_ANYWHERE).test(turn));
+    if (!isRequest) continue;
     requests += 1;
     if (requests > 1 && requestTellsIncident(turn, input.employeeName, input.slotClause)) start = index;
   }
@@ -445,6 +457,10 @@ const POLITE_LEAD = /^(?:hey,?\s+|hi,?\s+)?(?:can|could|would|will)\s+(?:you|u)\
 
 const MAIN_REQUEST_TURN = requestTurnFor(FORM_WORDS);
 const FIXED_REQUEST_TURN = requestTurnFor(FIXED_FORM_WORDS);
+
+/** SECOND_REQUEST_OWN_ACCOUNT_ENABLED: a form named anywhere in the turn, not only at its start. */
+const FORM_WORD_ANYWHERE = new RegExp(String.raw`\b${FORM_WORDS}\b`, "i");
+const FIXED_FORM_WORD_ANYWHERE = new RegExp(String.raw`\b${FIXED_FORM_WORDS}\b`, "i");
 
 /** The action plan the manager gave in their own words ("action plan: …"), or null. */
 export function statedActionPlan(text: string): string | null {
