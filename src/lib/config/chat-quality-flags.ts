@@ -1046,6 +1046,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "PRIVATE_CREATOR_FORMS_ENABLED",
   "NOT_DEDUCTIBLE_READ_ENABLED",
   "PRIOR_STEP_SENTENCE_ENABLED",
+  // coding 2: PRIOR_STEP_PREVIOUSLY (A2; default off): forced off with the others.
+  "PRIOR_STEP_PREVIOUSLY_ENABLED",
   "EXIT_FULFILLED_IS_LAST_DAY_ENABLED",
   "DATE_LINE_NO_ECHO_ENABLED",
   "FUTURE_PRIOR_ROW_DROP_ENABLED",
@@ -2958,6 +2960,17 @@ export function noNoticeNoDateEnabled(): boolean {
  */
 export function issueIsTheAccountEnabled(): boolean {
   return envFlag("ISSUE_IS_THE_ACCOUNT_ENABLED");
+}
+
+// coding 2: PRIOR_STEP_PREVIOUSLY
+/**
+ * PRIOR_STEP_PREVIOUSLY_ENABLED (A2, one of Pau's 7; QA 6 Nov 2026; default off). "in the previously recieved
+ * coaching include that <name> signed the jba policy manual on 10-15-26" listed no Prior actions row. With this
+ * flag on, a dated step that "previous(ly) / prior / earlier" leads is an earlier step (`forms/prior-actions.ts`).
+ * Off, as before.
+ */
+export function priorStepPreviouslyEnabled(): boolean {
+  return envFlag("PRIOR_STEP_PREVIOUSLY_ENABLED");
 }
 
 // --- Coding flags ---
