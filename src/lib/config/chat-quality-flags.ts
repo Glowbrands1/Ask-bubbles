@@ -3087,7 +3087,8 @@ export function metricChoiceOneQuestionEnabled(): boolean {
  * the account was lost; "… made for under performance. <A> was below on …" printed the whole message. With this flag
  * on, a request whose for-clause (after "made / done / written up …" too) is only a sales reason gives no Issue of
  * its own, and that request sentence is no account: the account sentence after it is the Issue. Alone, the reason
- * stays the Issue (`forms/incident-issue.ts`). Off, as before.
+ * stays the Issue (`forms/incident-issue.ts`). Ships only with CA_SALES_POLICY_ENABLED (live in both apps): without
+ * it no reason reads as a sales one, and this flag changes nothing. Off, as before.
  */
 export function issueAfterRequestReasonEnabled(): boolean {
   return envFlag("ISSUE_AFTER_REQUEST_REASON_ENABLED");

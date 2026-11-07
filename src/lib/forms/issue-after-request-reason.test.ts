@@ -36,6 +36,13 @@ describe("ISSUE_AFTER_REQUEST_REASON_ENABLED", () => {
       expect(correctiveActionIssue("I need a corrective action for Remy Calder for under performance", "Remy Calder")).toBe("under performance");
     });
 
+    it("with CA_SALES_POLICY off no reason reads as a sales one: the Issue is as with this flag off", () => {
+      vi.stubEnv("CA_SALES_POLICY_ENABLED", "");
+      const on = correctiveActionIssue(FOR, "Remy Calder");
+      vi.stubEnv("ISSUE_AFTER_REQUEST_REASON_ENABLED", "");
+      expect(on).toBe(correctiveActionIssue(FOR, "Remy Calder"));
+    });
+
     it("an offense in the for-clause is still the Issue", () => {
       expect(correctiveActionIssue("a corrective action for late opening the store on 11/2. He opened 40 minutes late.", "Remy Calder")).toMatch(
         /^late opening the store/,

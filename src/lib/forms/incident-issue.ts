@@ -286,6 +286,8 @@ export function managerIncidentClause(text: string, employeeName: string | null)
  * gives no sentence of its own.
  */
 export function requestIssueClause(text: string, employeeName: string | null): string | null {
+  // ISSUE_AFTER_REQUEST_REASON_ENABLED does not apply here, on purpose: DRAFT_NEVER_BLANK reads this only when the
+  // manager's account gives no sentence of its own, so a sales reason ("under performance") is then all there is.
   const fromRequest = issueFromRequest(text, employeeName);
   return fromRequest && !titleAndPlaceOnly(fromRequest, employeeName) ? fromRequest : null;
 }
