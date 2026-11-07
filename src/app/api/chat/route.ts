@@ -44,6 +44,8 @@ import {
   openFormNoSelectionEnabled,
   personGuardEnabled,
   formNameFromRosterEnabled,
+  offRosterConfirmEnabled,
+  metricGuardEnabled,
   refusalNoRepeatEnabled,
   titleNotSpeakersManagerEnabled,
   newRequestOwnTurnsEnabled,
@@ -59,6 +61,7 @@ import {
   staffPickerEnabled,
   chatResponseStreamEnabled,
   formPatchReducerEnabled,
+  formPatchReaderFixesEnabled,
   formReplyFromDiffEnabled,
   formEditToolInStreamEnabled,
   formEditNoopGuardEnabled,
@@ -198,9 +201,22 @@ async function postChat(request: Request) {
 
     let answer;
     try {
-      const asked = parseAskRequest(body);
+      let asked = parseAskRequest(body);
+      /*
+       * OFF_ROSTER_CONFIRM_ENABLED: "use <name>" (or "yes") to the offer for a person not in Woven is read as the
+       * manager's turn that typed the name, and the name is kept on the card as typed (`forms/off-roster-confirm.ts`).
+       */
+      if (offRosterConfirmEnabled()) {
+        const taken = (await import("@/lib/forms/off-roster-confirm")).withOffRosterAnswer(asked);
+        if (taken) {
+          asked = taken.request;
+          (await import("@/lib/forms/off-roster-store")).enterAcceptedOffRoster(taken.accepted);
+        }
+      }
       // FORM_NAME_FROM_ROSTER_ENABLED, part 2: every name reader of the turn reads this message's request slot (`lib/forms/request-slot.ts`).
       if (formNameFromRosterEnabled()) (await import("@/lib/forms/request-message-store")).enterRequestMessage(asked.question);
+      // METRIC_GUARD_ENABLED, FORM_NAME off: only the metric guards read the message (`request-slot.ts` metricMessage).
+      else if (metricGuardEnabled()) (await import("@/lib/forms/request-message-store")).enterMetricMessage(asked.question);
       /*
        * PERSON_GUARD_ENABLED: the actor's roster, for the rule that somebody on
        * it is always a person. One directory read per turn, only with the flag
@@ -398,6 +414,21 @@ async function postChat(request: Request) {
               return question && open ? { question, open } : null;
             })()
           : null;
+      /*
+       * FORM_PATCH_READER_FIXES_ENABLED (QA's latency ask, 7 Nov 2026): the Step B reading is started now, so
+       * its model call runs while the steps below do; the patch turn takes it only if its input is the same.
+       * A name correction the app's own reader recognised ("fix her last name, it is …") goes to the
+       * correction path without a reading (QA's re-run: those turns paid for both).
+       */
+      if (formPatchReaderFixesEnabled() && !formEditToolInStreamEnabled() && !askedQuestion && !nameFix && parsed.activeFormInstanceId) {
+        (await import("@/lib/forms/form-patch-turn")).startPatchReading({
+          request,
+          instanceId: parsed.activeFormInstanceId,
+          question: parsed.question,
+          history: parsed.history,
+          today: parsed.context.todayIso,
+        });
+      }
       const correction = parsed.activeFormInstanceId && !askedQuestion
         ? await (await import("@/lib/forms/chat-correction")).correctActiveForm({
             request,
@@ -516,7 +547,7 @@ async function postChat(request: Request) {
        * FORM_EDIT_TOOL_IN_STREAM_ENABLED: skipped; the tool reads the turn instead.
        */
       const patchTurn =
-        formPatchReducerEnabled() && !formEditToolInStreamEnabled() && !correction && !askedQuestion && !policyChange && parsed.activeFormInstanceId
+        formPatchReducerEnabled() && !formEditToolInStreamEnabled() && !correction && !askedQuestion && !policyChange && !(formPatchReaderFixesEnabled() && nameFix) && parsed.activeFormInstanceId
           ? await (await import("@/lib/forms/form-patch-turn")).patchActiveForm({
               request,
               instanceId: parsed.activeFormInstanceId,

@@ -1,3 +1,4 @@
+import { STREAM_HEADER, unwrapStreamed } from "@/lib/api/streamed-response";
 import { randomUUID } from "node:crypto";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -58,9 +59,13 @@ vi.hoisted(() => {
 const revisionAsked = vi.hoisted(() => [] as string[]);
 /** What the drafting model was given, per Create. */
 const draftAsked = vi.hoisted(() => [] as string[]);
+/** The drafting model's system prompt, per Create, as text (CA_SALES_POLICY_ENABLED prompt lines). */
+const draftSystemAsked = vi.hoisted(() => [] as string[]);
 /** The draft call's tools, as sent (CA_SALES_POLICY_ENABLED adds an optional property). */
 const draftToolsAsked = vi.hoisted(() => [] as string[]);
 const state = vi.hoisted(() => ({
+  /** What the slot model reads on the next turns (`slotsRead`), as a production trace shows it. */
+  slotsRead: {} as Record<string, unknown>,
   slotReading: "none" as "none" | "ca" | "copy",
   remapObservation: null as string | null,
   /** What the form-reading model returns for this turn (extract_form_fields). */
@@ -82,11 +87,24 @@ const state = vi.hoisted(() => ({
  * the evidence and date checks, the reducer, the writes and the reload are
  * the real ones.
  */
-const patchScript = vi.hoisted(() => ({ outputs: [] as unknown[], calls: 0 }));
+const patchScript = vi.hoisted(() => ({ outputs: [] as unknown[], calls: 0, byLatest: null as Record<string, unknown> | null }));
 vi.mock("@/lib/forms/form-patch-call", () => ({
   FORM_PATCH_DEFAULT_TIMEOUT_MS: 5_000,
   formPatchTimeoutMs: () => 5_000,
-  callFormPatchModel: async () => {
+  callFormPatchModel: async (input?: { prompt?: string }) => {
+    /*
+     * `t.patchReads` (coding 5, 7 Nov 2026): the reading is picked by the
+     * manager's latest message, so a turn another path answers first (a
+     * correction, a policy change) never shifts the script.
+     */
+    if (patchScript.byLatest) {
+      patchScript.calls += 1;
+      const marker = "LATEST MESSAGE FROM THE MANAGER: ";
+      const prompt = input?.prompt ?? "";
+      const latest = prompt.slice(prompt.lastIndexOf(marker) + marker.length).trim();
+      const output = patchScript.byLatest[latest];
+      return output === undefined || output === null ? { fallback: "error" } : { ok: true, output };
+    }
     const output = patchScript.outputs[patchScript.calls];
     patchScript.calls += 1;
     return output === undefined || output === null ? { fallback: "error" } : { ok: true, output };
@@ -248,6 +266,7 @@ vi.mock("@/lib/ai/call-claude", () => ({
       formType: state.slotReading === "ca" ? "Corrective Action Form" : null,
       formTurn: state.slotReading === "ca",
       policyHeading: null,
+      ...state.slotsRead,
     };
   },
 }));
@@ -260,6 +279,14 @@ vi.mock("@/lib/ai/anthropic", () => ({
         if (!revising) {
           state.draftCalls += 1;
           draftAsked.push(JSON.stringify((request as { messages?: unknown; system?: unknown }).messages ?? []));
+          const system = (request as { system?: unknown }).system;
+          draftSystemAsked.push(
+            typeof system === "string"
+              ? system
+              : Array.isArray(system)
+                ? system.map((block) => (block as { text?: string }).text ?? "").join("\n")
+                : "",
+          );
           draftToolsAsked.push(JSON.stringify((request as { tools?: unknown }).tools ?? []));
         }
         if (revising) {
@@ -454,8 +481,14 @@ class Thread {
         }),
       }),
     );
-    const payload = (await response.json()) as Answer & { error?: string };
-    expect(response.status, JSON.stringify(payload)).toBe(200);
+    /*
+     * CHAT_RESPONSE_STREAM_ENABLED: an answer slower than START_AFTER_MS comes as one streamed envelope
+     * {"status", "body"}; the browser (`ai/claude-provider.ts`) unwraps it, and so does the pack (5 Nov 2026:
+     * a slow CA_SALES redraft was recorded as an empty reply because the envelope was read as the answer).
+     */
+    const streamed = response.headers.get(STREAM_HEADER) === "1" ? unwrapStreamed(await response.text()) : null;
+    const payload = (streamed ? streamed.body : await response.json()) as Answer & { error?: string };
+    expect(streamed?.status ?? response.status, JSON.stringify(payload)).toBe(200);
     // EVERY REPLY (QA, 3 Nov 2026): "I still need …" is never said unless the reply asks who, which location or which date.
     if (/^I still need\b/m.test(payload.content ?? "")) {
       expect(stillAsks(payload.content), `"I still need" without a question:\n${payload.content}`).not.toBeNull();
@@ -506,11 +539,13 @@ beforeEach(async () => {
   store.form_instances = new JoiningRows() as never;
   state.slotReading = "none";
   state.remapObservation = null;
+  state.slotsRead = {};
   state.reading = {};
   state.draft = { values: {} };
   state.revision = { values: {} };
   patchScript.outputs = [];
   patchScript.calls = 0;
+  patchScript.byLatest = null;
   state.directory = [
     { id: "e-1", firstName: "Quinn", lastName: "Marlowe", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-66"], positionName: null },
     { id: "e-2", firstName: "Dale", lastName: "Ferris", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-66"], positionName: null },
@@ -587,6 +622,7 @@ afterEach(() => {
   editTool.offered = 0;
   editTool.lastData = null;
   draftAsked.length = 0;
+  draftSystemAsked.length = 0;
   draftToolsAsked.length = 0;
 });
 
@@ -609,6 +645,9 @@ function context(): ReplayContext {
     modelSays: (text) => {
       said.answer = text;
     },
+    slotsRead: (slots) => {
+      state.slotsRead = slots;
+    },
     modelCallsEditTool: (input) => {
       editTool.input = input;
     },
@@ -616,10 +655,17 @@ function context(): ReplayContext {
     patchWrites: (outputs) => {
       patchScript.outputs = [...outputs];
       patchScript.calls = 0;
+      patchScript.byLatest = null;
+    },
+    patchReads: (byLatest) => {
+      patchScript.outputs = [];
+      patchScript.calls = 0;
+      patchScript.byLatest = { ...byLatest };
     },
     calls: () => ({ chat: state.chatModelCalls, draft: state.draftCalls, revision: state.revisionCalls, tool: state.toolCalls, patch: patchScript.calls }),
     forms: () => store.form_instances as never,
     draftPrompts: () => [...draftAsked],
+    draftSystems: () => [...draftSystemAsked],
     draftTools: () => [...draftToolsAsked],
     redraft: (instanceId, notes) =>
       call<Record<string, unknown>>(`/api/forms/instances/${instanceId}/draft`, {
@@ -688,7 +734,13 @@ describe("the replay pack", () => {
         await recorded(replay.id, "open", () => replay.run(context()));
       });
     }
-    if (replay.fixFlags?.length) {
+    if (replay.fixFlags?.length && replay.fixStatus) {
+      // A fix-flag run that fails today (`fixStatus`): expected to fail. The day it passes, drop fixStatus.
+      it.fails(`${title} — OPEN with ${replay.fixFlags.join(", ")} on (${replay.fixStatus.open})`, async () => {
+        production(replay.fixFlags);
+        await recorded(replay.id, `fix-open:${replay.fixFlags!.join(",")}`, () => replay.run(context()));
+      });
+    } else if (replay.fixFlags?.length) {
       it(`${title} — holds with ${replay.fixFlags.join(", ")} on`, async () => {
         production(replay.fixFlags);
         await recorded(replay.id, `fix:${replay.fixFlags!.join(",")}`, () => replay.run(context()));

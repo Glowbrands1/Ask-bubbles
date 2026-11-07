@@ -1,0 +1,191 @@
+import { expect, vi } from "vitest";
+
+import { STAFF, WEST_DODGE, noClaimWithoutUpdate, type DirectoryRow, type ReplayAnswer, type ReplayCase, type ReplayContext } from "./cases";
+
+/**
+ * ============================================================================
+ * "THE SAME FORM FOR ANOTHER EMPLOYEE" (coding3 groundwork, 5 Nov 2026)
+ * ============================================================================
+ *
+ * Cases only: no fixFlags until a fix exists. The managers' turns are
+ * verbatim; every person is invented (Mireya Vantrell, Caspian Drummet, Liora
+ * Pellow, Teodric Sabrin). Extends, never repeats, the cases already here:
+ *
+ *   (a) "Can you do the same thing for <B> but switch it to a written" — QA's
+ *       sf-s11 (`nov4-scan-sf-s11-same-for-another`) is the turn AFTER Create.
+ *       Here: the same words with <A>'s card still on screen, not created —
+ *       the intake path, not the open-form one.
+ *   (b) "can you create the same draft that we did with <C> by changing the
+ *       name and position?" — `nov3-stepb-copy-keeps-details`,
+ *       `same-form-copy-e2e.test.ts` and `her-oct30-replay-e2e.test.ts` cover
+ *       it with the NEW person's draft open (the copy target). Here: <C>'s own
+ *       draft is the one open, the new person not named yet, as the words say
+ *       ("changing the name").
+ *   (c) With <A>'s Corrective Action card open, "also make a coaching form for
+ *       <B>" gives a Coaching card for <A>. FORM_TYPE_SWITCH_ENABLED (card on
+ *       screen) and FORM_TYPE_SWITCH_AFTER_CREATE_NOTE_ENABLED (after Create),
+ *       both on in this app's production, read the short "make … coaching"
+ *       turn as "change this to a coaching form" and drop the name
+ *       (`lib/ai/form-type-switch.ts`). SECOND_FORM_ENABLED does not change
+ *       this; the sibling app (the same code) has the same switch flags on
+ *       and gives <A>'s card too.
+ */
+
+type T = ReplayContext;
+
+const STORE = "loc-264";
+const person = (id: string, firstName: string, lastName: string, positionName = "Team Member Part Time"): DirectoryRow => ({
+  id,
+  firstName,
+  lastName,
+  preferredFirstName: null,
+  employmentStatus: "active",
+  locationIds: [STORE],
+  positionName,
+});
+
+const MIREYA = person("e-mireya-vantrell", "Mireya", "Vantrell");
+const CASPIAN = person("e-caspian-drummet", "Caspian", "Drummet");
+const LIORA = person("e-liora-pellow", "Liora", "Pellow");
+/** Another position than Liora's: "changing the name and position" — his own, never hers. */
+const TEODRIC = person("e-teodric-sabrin", "Teodric", "Sabrin", "Assistant General Manager");
+
+/** The invented people of this file (a function: the registry reads exported arrays as cases). */
+export function coding3SameFormPeople(): readonly DirectoryRow[] {
+  return [MIREYA, CASPIAN, LIORA, TEODRIC];
+}
+
+function start(t: T) {
+  vi.setSystemTime(new Date("2026-11-05T15:00:00Z"));
+  t.directory([...STAFF, MIREYA, CASPIAN, LIORA, TEODRIC]);
+  t.as("location_manager", WEST_DODGE);
+  return t.thread();
+}
+
+/** The warning level the card carries (the pack's answer type leaves it out). */
+function warningLevel(card: ReplayAnswer["formProposal"] | null | undefined): string | null {
+  return (card as { warningLevel?: string | null } | null | undefined)?.warningLevel ?? null;
+}
+
+const MIREYA_VERBAL = "I need a verbal corrective action for Mireya Vantrell, she was late opening the store on Monday";
+const MIREYA_CA = "I need a corrective action for Mireya Vantrell, she was late opening the store on Monday";
+const LIORA_DETAILS =
+  "Observed: Liora Pellow leaves the front display unfaced at close.\nExpectation: Liora faces and restocks the front display before every close.";
+const SAME_DRAFT = "can you create the same draft that we did with Liora Pellow by changing the name and position?";
+
+/** Liora's Coaching Form, created in this chat with its Details (from her account: a draft with nothing of the manager's words is dropped here); her draft stays open. */
+async function lioraDraft(t: T, thread: ReturnType<T["thread"]>): Promise<string> {
+  await thread.say("create a coaching form for Liora Pellow, she leaves the front display unfaced at close");
+  expect(thread.proposal, "no Coaching card for Liora Pellow").toMatchObject({ templateKey: "coaching", employeeName: "Liora Pellow" });
+  t.draftWrites({ coaching_details: LIORA_DETAILS });
+  const id = await thread.create();
+  expect(t.values(id).coaching_details ?? "", "Liora's draft has no Details").toMatch(/restocks the front display/);
+  return id;
+}
+
+const REPORT_A = "QA's overnight scan of production chats, 4 Nov 2026, sf-s11 (the sibling app; the same code here): \"Can you do the same thing for <B> but switch it to a written\"";
+const REPORT_B = "Location manager via QA, replay set b13: \"can you create the same draft that we did with <C> by changing the name and position?\"";
+const REPORT_C = "QA, 5 Nov 2026 (this app's production): with <A>'s Corrective Action card open, \"also make a coaching form for <B>\" gave a Coaching card for <A>";
+
+export const NOV5_CODING3_SAME_FORM_OTHER_EMPLOYEE_CASES: readonly ReplayCase[] = [
+  {
+    id: "nov5-coding3-sfo-a-same-thing-card-on-screen",
+    title: "(a) with Mireya's Verbal CA card on screen (not created), \"Can you do the same thing for Caspian Drummet but switch it to a written\" — a Written CA card for Caspian with the late opening, nothing of Mireya on it",
+    report: `${REPORT_A}; the same words before Create`,
+    // Run 5 Nov 2026 (production flags): the card stays Mireya Vantrell's, now Written — the switch lands on the wrong person.
+    status: { open: "the card stays Mireya Vantrell's and turns Written (the switch is applied to her); no card for Caspian Drummet" },
+    async run(t) {
+      const thread = start(t);
+      await thread.say(MIREYA_VERBAL);
+      expect(thread.proposal, "turn 1 made no CA card for Mireya Vantrell").toMatchObject({ templateKey: "dpoa", employeeName: "Mireya Vantrell" });
+      const reply = await thread.say("Can you do the same thing for Caspian Drummet but switch it to a written");
+      expect(reply.formProposal, `no card for Caspian Drummet:\n${reply.content}`).toMatchObject({ templateKey: "dpoa", employeeName: "Caspian Drummet" });
+      expect(warningLevel(reply.formProposal), "Caspian's card is not a Written Warning").toBe("written");
+      expect(reply.content, "Caspian's card lost the late opening").toMatch(/late opening/i);
+      expect(reply.content, "Mireya is on Caspian's card").not.toMatch(/mireya|vantrell/i);
+      expect(reply.content, "the request sentence is on the card").not.toMatch(/do the same thing|switch it to a written/i);
+    },
+  },
+  {
+    id: "nov5-coding3-sfo-b-same-draft-own-draft-open",
+    title: "(b) with Liora's own Coaching draft open, \"can you create the same draft that we did with Liora Pellow by changing the name and position?\" — never a card for Liora, her draft untouched",
+    report: `${REPORT_B}; Liora's own draft open, the new person not named yet`,
+    // Run 5 Nov 2026 (production flags): the answering model answers; no card, Liora's draft as it was. Open in the sibling app (INTENT_EXTRACTION_ENABLED makes a second Liora card).
+    status: "fixed",
+    async run(t) {
+      const thread = start(t);
+      const liora = await lioraDraft(t, thread);
+      const before = JSON.stringify(t.values(liora));
+      const reply = await thread.say(SAME_DRAFT);
+      expect(reply.formProposal?.employeeName ?? null, `a card for Liora Pellow, the draft to copy from:\n${reply.content}`).not.toBe("Liora Pellow");
+      expect(reply.formUpdate?.instanceId ?? null, "Liora's draft is written over").not.toBe(liora);
+      expect(JSON.stringify(t.values(liora)), "Liora's draft changed").toBe(before);
+      noClaimWithoutUpdate(reply);
+    },
+  },
+  {
+    id: "nov5-coding3-sfo-b-same-draft-then-name-copies",
+    title: "(b) \"can you create the same draft that we did with Liora Pellow by changing the name and position?\" → \"Teodric Sabrin\" → Create: Teodric's draft carries Liora's Details, his name and his own position",
+    report: `${REPORT_B}; then the new person's name, then Create`,
+    // Run 5 Nov 2026 (production flags): both turns go to the answering model; no card for Teodric.
+    status: { open: "no card for Teodric Sabrin: the copy request is answered by the answering model, and his name alone, with no card on screen, starts nothing" },
+    async run(t) {
+      const thread = start(t);
+      const liora = await lioraDraft(t, thread);
+      await thread.say(SAME_DRAFT);
+      const reply = await thread.say("Teodric Sabrin");
+      expect(reply.formProposal, `no Coaching card for Teodric Sabrin:\n${reply.content}`).toMatchObject({ templateKey: "coaching", employeeName: "Teodric Sabrin" });
+      t.draftWrites({ coaching_details: "Observed:\nCoaching for Teodric Sabrin." });
+      const teodric = await thread.create();
+      expect(teodric, "Teodric's form is Liora's").not.toBe(liora);
+      const values = t.values(teodric);
+      expect(values.employee_name).toBe("Teodric Sabrin");
+      expect(values.job_title, "Teodric's form carries Liora's position").toBe("Assistant General Manager");
+      expect(values.coaching_details ?? "", "Liora's Details were not copied onto Teodric's draft").toMatch(/restocks the front display/);
+      expect(values.coaching_details ?? "", "the copied Details still name Liora").not.toMatch(/liora|pellow/i);
+      expect(t.values(liora).coaching_details ?? "", "Liora's own draft changed").toMatch(/Liora Pellow leaves the front display/);
+    },
+  },
+  {
+    id: "nov5-coding3-sfo-c-also-coaching-card-open",
+    title: "(c) with Mireya's CA card on screen (not created), \"also make a coaching form for Caspian Drummet\" — a Coaching card for Caspian, never for Mireya",
+    report: `${REPORT_C}; the card not created yet`,
+    // Run 5 Nov 2026 (production flags): a Coaching card for Mireya Vantrell (FORM_TYPE_SWITCH_ENABLED). Open in the sibling app too (the same flag is on there).
+    status: { open: "a Coaching card for Mireya Vantrell: FORM_TYPE_SWITCH_ENABLED reads the turn as \"change this to a coaching form\" and Caspian Drummet's name is dropped" },
+    async run(t) {
+      const thread = start(t);
+      await thread.say(MIREYA_CA);
+      expect(thread.proposal, "turn 1 made no CA card for Mireya Vantrell").toMatchObject({ templateKey: "dpoa", employeeName: "Mireya Vantrell" });
+      const reply = await thread.say("also make a coaching form for Caspian Drummet");
+      expect(reply.formProposal, `the Coaching card is not Caspian Drummet's:\n${reply.content}`).toMatchObject({ templateKey: "coaching", employeeName: "Caspian Drummet" });
+      expect(reply.content, "Mireya is on Caspian's card").not.toMatch(/mireya|vantrell/i);
+      t.draftWrites({ coaching_details: "Observed:\nCoaching for Caspian Drummet." });
+      const caspian = await thread.create();
+      expect(t.values(caspian).employee_name).toBe("Caspian Drummet");
+      expect(t.forms().filter((row) => row.employee_name === "Mireya Vantrell" && row.template_key === "coaching"), "a Coaching Form for Mireya").toEqual([]);
+    },
+  },
+  {
+    id: "nov5-coding3-sfo-c-also-coaching-after-create",
+    title: "(c) with Mireya's CA created and open, \"also make a coaching form for Caspian Drummet\" — a Coaching card for Caspian; Mireya's CA untouched",
+    report: `${REPORT_C}; after Create`,
+    // Run 5 Nov 2026 (production flags): "You already have a Corrective Action draft for Mireya Vantrell. I'll start a Coaching Form too" — for Mireya. Open in the sibling app too.
+    status: { open: "a Coaching card for Mireya Vantrell: FORM_TYPE_SWITCH_AFTER_CREATE_NOTE_ENABLED reads the turn as her CA request with the coaching form named, and Caspian Drummet's name is dropped" },
+    async run(t) {
+      const thread = start(t);
+      await thread.say(MIREYA_CA);
+      t.draftWrites({ observation: "Observed:\nMireya Vantrell opened the store late on Monday." });
+      const mireya = await thread.create();
+      const before = JSON.stringify(t.values(mireya));
+      const reply = await thread.say("also make a coaching form for Caspian Drummet");
+      expect(reply.formProposal, `the Coaching card is not Caspian Drummet's:\n${reply.content}`).toMatchObject({ templateKey: "coaching", employeeName: "Caspian Drummet" });
+      expect(reply.formUpdate?.instanceId ?? null, "Mireya's CA is written over").not.toBe(mireya);
+      expect(JSON.stringify(t.values(mireya)), "Mireya's CA changed").toBe(before);
+      t.draftWrites({ coaching_details: "Observed:\nCoaching for Caspian Drummet." });
+      const caspian = await thread.create();
+      expect(caspian).not.toBe(mireya);
+      expect(t.values(caspian).employee_name).toBe("Caspian Drummet");
+      expect(t.forms().filter((row) => row.employee_name === "Mireya Vantrell" && row.template_key === "coaching"), "a Coaching Form for Mireya").toEqual([]);
+    },
+  },
+];

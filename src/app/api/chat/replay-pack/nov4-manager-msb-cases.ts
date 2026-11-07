@@ -108,6 +108,8 @@ export const NOV4_MANAGER_MSB_CASES: ReplayCase[] = [
     report: `${REPORT}, #1`,
     // Run 4 Nov 2026 on main before #427: OPEN, the CA card and its draft cite no policy: no Standards of Conduct with heading and page (the card also says "I couldn't find **Club Close** or **Under** in the Woven roster").
     // Holds with production's flags since #427 (d55575c9): revision 7 of the form replaces Under Performance with the Standards of Conduct, so the draft cites it.
+    // production-flags.json corrected to Vercel (QA, 5 Nov 2026): GROUNDED_ENTITIES_ENABLED is off in production since 24 Oct (a deliberate rollback), so a name on no roster goes on the card. Recorded OPEN, a production defect.
+    // Changed on purpose (5 Nov 2026): QA flipped CA_SALES_POLICY + REPLY_MATCHES_CARD + TITLE_OF_THE_EMPLOYEE + METRIC_GUARD on in production (production-flags.json), so this case now holds with production's flags.
     status: "fixed",
     fixFlags: ["CA_SALES_POLICY_ENABLED"],
     run: (t) => runMessage(t, byId("mgr-1-verbal-metrics")),
@@ -137,7 +139,8 @@ export const NOV4_MANAGER_MSB_CASES: ReplayCase[] = [
     title: `"${byId("mgr-4-msb-october").text}" — a CA card, MSB never a name, cites the Standards of Conduct`,
     report: `${REPORT}, #4`,
     // Run 4 Nov 2026 (production flags): fails as below.
-    status: { open: "no card at all: \"MSB CA for …\" is answered as a policy question (the pack's stand-in answer) with production's flags" },
+    // Changed on purpose (5 Nov 2026): QA flipped CA_SALES_POLICY + REPLY_MATCHES_CARD + TITLE_OF_THE_EMPLOYEE + METRIC_GUARD on in production (production-flags.json), so this case now holds with production's flags.
+    status: "fixed",
     // Holds with both flags (claude/ca-sales-msb-cases): a leading glossary term is the reason, not part of the request (`detectTemplateIntent`).
     fixFlags: ["CA_SALES_POLICY_ENABLED", "CHAT_GLOSSARY_ENABLED"],
     /*
@@ -163,7 +166,8 @@ export const NOV4_MANAGER_MSB_CASES: ReplayCase[] = [
     title: `"${byId("mgr-5-msb-soc").text}" — asks once "Do you want a Corrective Action for …?" (Standards of Conduct); "yes" makes the card, citing the Standards of Conduct`,
     report: `${REPORT}, #5 (Pau: asks once, card after yes)`,
     // Run 4 Nov 2026 (production flags): fails as below.
-    status: { open: "turn 1 is answered as a policy question (the pack's stand-in answer): no offer \"Do you want a Corrective Action for …?\", so \"yes\" makes no card" },
+    // Changed on purpose (5 Nov 2026): QA flipped CA_SALES_POLICY + REPLY_MATCHES_CARD + TITLE_OF_THE_EMPLOYEE + METRIC_GUARD on in production (production-flags.json), so this case now holds with production's flags.
+    status: "fixed",
     // Holds with both flags since #434 (the CA session's offer behind CA_SALES_POLICY_ENABLED): asks once, card after "yes", citing the Standards of Conduct.
     fixFlags: ["CA_SALES_POLICY_ENABLED", "CHAT_GLOSSARY_ENABLED"],
     run: (t) => runAsksOnceThenYes(t, byId("mgr-5-msb-soc")),

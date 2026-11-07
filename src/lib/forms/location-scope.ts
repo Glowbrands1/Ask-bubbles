@@ -5,6 +5,7 @@ import type { AccessScope } from "@/types";
 import type { StoreIndex, StoreNumbering } from "@/lib/stores/resolver";
 
 import { ROSTER_STORE_INDEX, readLocation, rosterLocationName } from "./location-mention";
+import { placeReading } from "./place-from-cue";
 import { CORRECTION, bareStoreReply, storeCorrection, storeReplyText } from "./store-confirmation";
 
 /**
@@ -291,7 +292,8 @@ function fromNamedLocations(
   index: StoreIndex,
   reportUnmatched: boolean,
 ): LocationProposal | null {
-  const { mentions, unmatched } = readLocation(managerText, index);
+  // PLACE_FROM_CUE_ENABLED: "for <name> from <store>" names the store; the manager's words before the app's lines (`place-from-cue.ts`).
+  const { mentions, unmatched } = placeReading(managerText, index);
 
   if (mentions.length === 0) {
     if (!reportUnmatched || unmatched.length === 0 || allowed.length === 0) return null;

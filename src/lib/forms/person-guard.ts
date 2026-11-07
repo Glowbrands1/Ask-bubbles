@@ -1,8 +1,8 @@
 import { NOT_A_NAME as BUSINESS_WORDS } from "@/lib/ai/employee-performance-gate";
 import { isReportName } from "@/lib/ai/report-name";
-import { personGuardEnabled } from "@/lib/config/chat-quality-flags";
+import { metricGuardEnabled, personGuardEnabled } from "@/lib/config/chat-quality-flags";
 import { isNotAName } from "@/lib/forms/not-a-name";
-import { outsideRequestSlot } from "@/lib/forms/request-slot";
+import { installSlotRosterNames, namesAMetric, outsideRequestSlot } from "@/lib/forms/request-slot";
 
 /**
  * ============================================================================
@@ -76,6 +76,9 @@ export function personRosterNames(): readonly string[] | undefined {
   return readRoster();
 }
 
+// FORM_NAME_FROM_ROSTER_ENABLED: the request slot never rules out somebody's whole roster name (`request-slot.ts`).
+installSlotRosterNames(personRosterNames);
+
 /** On the roster: the full name, or a one-word candidate that is someone's first or last name. */
 function onRoster(candidate: string): boolean {
   const roster = readRoster();
@@ -115,6 +118,8 @@ export function notAPerson(candidate: string | null | undefined): boolean {
   if (onRoster(candidate)) return false;
   // FORM_NAME_FROM_ROSTER_ENABLED, part 2: the message's shape rules it out (`request-slot.ts`).
   if (outsideRequestSlot(candidate)) return true;
+  // METRIC_GUARD_ENABLED: a list item or an offense word of the message ("Club Close") is never the card's person, with FORM_NAME off too.
+  if (metricGuardEnabled() && namesAMetric(candidate)) return true;
   const words = wordsOf(candidate);
   if (words.length === 0) return false;
   if (words.some((word) => THING_WORDS.has(word))) return true;

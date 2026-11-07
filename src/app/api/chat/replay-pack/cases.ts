@@ -19,7 +19,7 @@ import { expect } from "vitest";
 
 export interface ReplayAnswer {
   content: string;
-  formProposal?: { templateKey?: string; employeeName?: string | null; employeeRole?: string | null; status?: string; subject?: string; locationId?: string | null };
+  formProposal?: { templateKey?: string; employeeName?: string | null; employeeRole?: string | null; status?: string; subject?: string; locationId?: string | null; closeMatchNote?: string };
   formUpdate?: { instanceId: string; updated: string[] };
   formOpened?: { instanceId: string };
 }
@@ -43,6 +43,8 @@ export interface ReplayContext {
   revisionWrites(values: Record<string, string>): void;
   /** What the answering model says on its next turns (null: the default answer). */
   modelSays(text: string | null): void;
+  /** What the slot model reads on the next turns (record_intent_slots), as a production trace shows it. */
+  slotsRead(slots: Record<string, unknown>): void;
   /**
    * FORM_EDIT_TOOL_IN_STREAM_ENABLED: on its next turn that is offered
    * `edit_form`, the answering model calls it with this input (null: it does
@@ -53,6 +55,8 @@ export interface ReplayContext {
   editToolOffers?(): { offered: number; lastData: string | null };
   /** Step B's form-patch model: its raw outputs, one per call in order (null: the call falls back). Unscripted calls fall back. */
   patchWrites(outputs: readonly unknown[]): void;
+  /** Step B's form-patch model, by the manager's latest message (exact text): its raw output for that turn; a message not listed falls back. */
+  patchReads?(byLatest: Readonly<Record<string, unknown>>): void;
   calls(): { chat: number; draft: number; revision: number; tool: number; patch: number };
   forms(): Record<string, unknown>[];
   values(instanceId: string): Record<string, string>;
@@ -60,6 +64,8 @@ export interface ReplayContext {
   checked(instanceId: string): Record<string, string[]>;
   /** What the drafting model was given, one entry per draft written. */
   draftPrompts(): string[];
+  /** The drafting model's system prompt, one entry per draft written. */
+  draftSystems?(): string[];
   /** The draft call's tools as sent, one JSON string per call. */
   draftTools(): string[];
   /** The draft route's POST for this form, as a redraft sends it (`keepManagerValues`); the route's response. */
@@ -87,6 +93,12 @@ export interface ReplayCase {
   report: string;
   status: "fixed" | { open: string };
   fixFlags?: string[];
+  /**
+   * A fix-flag run that fails today: it runs as an expected failure (like `status.open`), so it
+   * flips to a reported pass the day it is fixed. Used for production defects found with
+   * production's real flags (QA's Vercel read, 5 Nov 2026).
+   */
+  fixStatus?: { open: string };
   run(context: ReplayContext): Promise<void>;
 }
 

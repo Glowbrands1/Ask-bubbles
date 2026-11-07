@@ -188,6 +188,8 @@ export const NOV4_OVERNIGHT_SCAN_CASES: readonly ReplayCase[] = [
     title: "a CA for not completing opening/cleaning duties on 11/2/2026 — Care and Cleaning of Equipment and Facilities (p.21), not Late Opening or Attendance, and no \"as you said\"",
     report: `${REPORT}, sf-s15: "Write me a CA for Isolde Brannock for failing to complete opening duties. Isolde did not complete daily cleaning duties. on november 2, 2026"`,
     // Run 4 Nov 2026 (production flags): fails as below.
+    // The policy half is POLICY_CLEANING_INCIDENT_ENABLED (Care and Cleaning, code-chosen; policy-cleaning-incident-sf-s15.test.ts); the card half is #453 (CA_SALES_POLICY_ENABLED).
+    // Checked locally with #453 merged: holds with both flags. fixFlags are added once #453 is on main.
     status: { open: "no card at all: \"Write me a CA for Isolde Brannock … on november 2, 2026\" is answered as a policy question (the pack's stand-in answer), so nothing cites Care and Cleaning" },
     async run(t) {
       const thread = start(t);

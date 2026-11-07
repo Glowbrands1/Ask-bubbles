@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { salesResultsOffenseLine, withCaChosenRule } from "@/lib/ai/ca-sales-prompt-lines";
 import { noteSpendUser } from "@/lib/ai/spend-meter";
 import { withSpendMeter } from "@/lib/ai/spend-meter-run";
 
@@ -21,6 +22,7 @@ import {
 } from "@/lib/api/respond";
 import { ACTIVE_BRAND } from "@/lib/brand";
 import { CLAUDE_MAX_TOKENS, CLAUDE_MODEL } from "@/lib/config/models";
+import { currentFormRequestText } from "@/lib/forms/current-request";
 import { authorizeInstance, InstanceNotVisibleError } from "@/lib/forms/instance-scope";
 import { readPriorFormsOnFile } from "@/lib/forms/prior-forms";
 import {
@@ -187,6 +189,7 @@ import {
   formEditSingleWriterEnabled,
   formPatchReducerEnabled,
   caSalesPolicyEnabled,
+  secondRequestOwnAccountEnabled,
 } from "@/lib/config/chat-quality-flags";
 import {
   STANDARDS_OF_CONDUCT,
@@ -753,13 +756,19 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
      * would turn a coaching document into a policy review, and the value is
      * derived by this route rather than written by the model either way.
      */
+    /*
+     * SECOND_REQUEST_OWN_ACCOUNT_ENABLED (the sibling app's audit, QA, 7 Nov 2026): the policy is read from the request
+     * this form is for, never the whole chat. Only the policy reads use it; payroll, exit and every other reader keep
+     * the notes as sent.
+     */
+    const policyNotes = secondRequestOwnAccountEnabled() ? currentFormRequestText(notes) : notes;
     const wantsEppPolicy = fields.some((field) => field.key === EPP_POLICY_REFERENCE_KEY);
     const needsPolicy = fields.some(
       (field) => field.policyGrounded && field.key !== EPP_POLICY_REFERENCE_KEY,
     );
     const grounding = needsPolicy
       ? // ACCOUNT_ONLY_POLICY_QUERY_ENABLED: "yes payroll deduct" and "$25" do not choose the policy.
-        await groundPolicy(`${body.topic ?? ""} ${policyQueryNotes(notes)}`.trim())
+        await groundPolicy(`${body.topic ?? ""} ${policyQueryNotes(policyNotes)}`.trim())
       : { passages: [], sources: [], unverified: false, reason: null };
 
     /*
@@ -797,7 +806,7 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
         (group) =>
           group.key === "offense_type" && group.options.some((option) => option.key === STANDARDS_OF_CONDUCT),
       );
-    const caPolicy = offersConductPolicy ? readCaPolicy(notes) : null;
+    const caPolicy = offersConductPolicy ? readCaPolicy(policyNotes) : null;
     /*
      * A POLICY THE MANAGER NAMED BY THE MANUAL'S OWN HEADING — "violating
      * visitors at work policy" is the manual's Visitors in the Workplace
@@ -819,12 +828,12 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
         : null;
     // Only where it ticks the box the manager's own words tick, or they tick none: a card's generic
     // "Attendance" never turns a missed meeting (Absenteeism) into Tardiness.
-    const ownKeys = cardHeading && caPolicy ? statedOffenseKeys(caPolicy, notes) : null;
+    const ownKeys = cardHeading && caPolicy ? statedOffenseKeys(caPolicy, policyNotes) : null;
     const cardSection = cardHeading && (!ownKeys || ownKeys.includes(cardHeading.offenseKey)) ? cardHeading : null;
     const namedSection =
       cardSection ??
       (caPolicy && caPolicy.stated === null && manual.ok
-        ? namedManualSection({ text: notes, chunks: manual.chunks })
+        ? namedManualSection({ text: policyNotes, chunks: manual.chunks })
         : null);
     /*
      * NO POLICY NAMED, BUT ONE DESCRIBED — "talking on her cell phone" is the
@@ -836,7 +845,7 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
      */
     const describedSection =
       caPolicy && caPolicy.stated === null && !namedSection && manual.ok
-        ? describedManualSection({ text: notes, chunks: manual.chunks })
+        ? describedManualSection({ text: policyNotes, chunks: manual.chunks })
         : null;
     /*
      * A MEETING NOT ATTENDED, WHERE THE MANUAL SAYS WHAT THAT IS — its
@@ -862,7 +871,7 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
      */
     const describedChoices =
       caPolicy && caPolicy.stated === null && !namedSection && !describedSection && !eventSection && manual.ok
-        ? describedManualChoices({ text: notes, chunks: manual.chunks })
+        ? describedManualChoices({ text: policyNotes, chunks: manual.chunks })
         : null;
 
     /*
@@ -1134,7 +1143,8 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
           ]
         : []),
       // FRAMEWORK_UNPIN_ENABLED: `unpinFramework` is only ever true on a governed form.
-      ...(unpinFramework
+      // CA_SALES_POLICY_ENABLED (Pau, 5 Nov 2026): one added rule after the lowest-rung rule. Off, the rules are as before.
+      ...withCaChosenRule(unpinFramework
         ? UNPINNED_PERFORMANCE_MANAGEMENT_DRAFT_RULES
         : governance.governed ? PERFORMANCE_MANAGEMENT_DRAFT_RULES : []),
       /*
@@ -1229,6 +1239,8 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
       offersConductPolicy && offenseOffered.includes(ATTENDANCE_POLICY) && !offenseOffered.includes("under_performance")
         ? CA_REVISION_7_OFFENSE_RULE
         : "",
+      // CA_SALES_POLICY_ENABLED (Pau, 5 Nov 2026): a form with no under_performance box reads sales results as standards_of_conduct. Off, nothing is added.
+      offersConductPolicy ? salesResultsOffenseLine(offenseOffered) : "",
     ]
       .filter(Boolean)
       .join("\n");
@@ -1855,7 +1867,7 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
         : null);
     const statedKeys = caPolicy
       ? ((cardSection ? [cardSection.offenseKey] : null) ??
-        statedOffenseKeys(caPolicy, notes) ??
+        statedOffenseKeys(caPolicy, policyNotes) ??
         (policySection ? [policySection.offenseKey] : null))
       : null;
     const statedOffense = statedKeys
@@ -2312,6 +2324,8 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
         templateKey: loaded.instance.templateKey,
         values: draftValues,
         notes,
+        // CA_SALES_POLICY_ENABLED: the Direct policy fill follows the ticked Type of Offense.
+        ticked: validated.checked.offense_type ?? [],
         chunks: manual.chunks,
         manual: {
           documentId: manual.documentId,

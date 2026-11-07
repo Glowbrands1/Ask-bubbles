@@ -82,8 +82,11 @@ export const NOV5_REQUEST_SLOT_CASES: ReplayCase[] = [
     id: "nov5-request-slot-off-roster-name",
     title: "Pau's message 1 for \"Remy Fenn\", not on the roster (Remy Calder is): no metric named as a person, no \"Which of them\", never Remy Calder",
     report: `${REPORT}: "Which of them is this Corrective Action Form for — Remy Fenn, Club Close or Under?"`,
-    status: { open: "\"I couldn't find **Remy Fenn** or **Club Close** or **Under** in the Woven roster\" (metrics named as people)" },
+    // Changed on purpose (5 Nov 2026): QA flipped CA_SALES_POLICY + REPLY_MATCHES_CARD + TITLE_OF_THE_EMPLOYEE + METRIC_GUARD on in production (production-flags.json), so this case now holds with production's flags.
+    status: "fixed",
+    // The fix-flag run: fails with production's real flags (QA Vercel read 5 Nov); tracked: GROUNDED_ENTITIES_ENABLED (off in production since 24 Oct, a deliberate rollback) — neither a card for Remy Fenn nor the note naming only Remy Fenn.
     fixFlags: [FLAG, SALES, GLOSSARY],
+    // Holds with its fix flags since flip 3 (6 Nov 2026): the fixStatus is removed, as in #515; it does not depend on FORM_NAME_FROM_ROSTER being on in production.
     async run(t) {
       const thread = start(t);
       const reply = await thread.say(say("Remy Fenn"));
@@ -100,8 +103,11 @@ export const NOV5_REQUEST_SLOT_CASES: ReplayCase[] = [
     id: "nov5-request-slot-off-roster-name-models",
     title: "the same, with the reading models reading \"Remy Fenn\" as typed (the live path): no metric offered, no \"Which of them\", never Remy Calder",
     report: `${REPORT}: the AI reader's path`,
-    status: { open: "metrics are named as people beside Remy Fenn" },
+    // Changed on purpose (5 Nov 2026): QA flipped CA_SALES_POLICY + REPLY_MATCHES_CARD + TITLE_OF_THE_EMPLOYEE + METRIC_GUARD on in production (production-flags.json), so this case now holds with production's flags.
+    status: "fixed",
+    // The fix-flag run: fails with production's real flags (QA Vercel read 5 Nov); tracked: GROUNDED_ENTITIES_ENABLED (off in production since 24 Oct, a deliberate rollback) — neither a card for Remy Fenn nor the note naming only Remy Fenn.
     fixFlags: [FLAG, SALES, GLOSSARY],
+    // Holds with its fix flags since flip 3 (6 Nov 2026): the fixStatus is removed, as in #515; it does not depend on FORM_NAME_FROM_ROSTER being on in production.
     async run(t) {
       const thread = start(t);
       const reply = await thread.say(say("Remy Fenn"), { employeeName: "Remy Fenn" });
@@ -118,7 +124,8 @@ export const NOV5_REQUEST_SLOT_CASES: ReplayCase[] = [
     id: "nov5-request-slot-on-roster-name",
     title: "the same message for Remy Fenn ON the roster: the card is for Remy Fenn and cites the Standards of Conduct",
     report: `${REPORT}: control, the person on the roster`,
-    status: { open: "production answers the message as metric-only (CA_SALES_POLICY_ENABLED off)" },
+    // Changed on purpose (5 Nov 2026): QA flipped CA_SALES_POLICY + REPLY_MATCHES_CARD + TITLE_OF_THE_EMPLOYEE + METRIC_GUARD on in production (production-flags.json), so this case now holds with production's flags.
+    status: "fixed",
     fixFlags: [FLAG, SALES, GLOSSARY],
     async run(t) {
       const thread = start(t, [...ROSTER, REMY_FENN]);
@@ -162,7 +169,8 @@ export const NOV5_REQUEST_SLOT_CASES: ReplayCase[] = [
     id: "nov5-request-slot-no-name-verbal",
     title: "QA review: \"I need a corrective action verbal. This is for Under Performance on …\" names nobody: it asks who; never \"Under Performance\" or \"Under\"",
     report: `${REPORT}: QA review of the request slot, edge case 1`,
-    status: { open: "\"I couldn't find **Club Close** or **Under** in the Woven roster\"; with the three flags on (before the QA review fix), \"I couldn't find **Under** …\"" },
+    // Changed on purpose (5 Nov 2026): QA flipped CA_SALES_POLICY + REPLY_MATCHES_CARD + TITLE_OF_THE_EMPLOYEE + METRIC_GUARD on in production (production-flags.json), so this case now holds with production's flags.
+    status: "fixed",
     fixFlags: [FLAG, SALES, GLOSSARY],
     async run(t) {
       const thread = start(t);
@@ -174,7 +182,8 @@ export const NOV5_REQUEST_SLOT_CASES: ReplayCase[] = [
     id: "nov5-request-slot-ca-for-under-performance",
     title: "QA review: \"I need a CA for Under Performance on …\": the slot is an offense, not a name; it asks who",
     report: `${REPORT}: QA review of the request slot, edge case 2`,
-    status: { open: "\"I couldn't find **Under** in the Woven roster\" and a card for **Club Close**; with the three flags on (before the QA review fix), \"I couldn't find **Under** …\"" },
+    // Changed on purpose (5 Nov 2026): QA flipped CA_SALES_POLICY + REPLY_MATCHES_CARD + TITLE_OF_THE_EMPLOYEE + METRIC_GUARD on in production (production-flags.json), so this case now holds with production's flags.
+    status: "fixed",
     fixFlags: [FLAG, SALES, GLOSSARY],
     async run(t) {
       const thread = start(t);
@@ -195,4 +204,95 @@ export const NOV5_REQUEST_SLOT_CASES: ReplayCase[] = [
       expect(reply.content, `a location is named or asked about as a person:\n${reply.content}`).not.toMatch(/\*\*Store(?: \d+)?\*\*|couldn't find \*\*Store/i);
     },
   },
+  /*
+   * PAU, 5 NOV 2026 (FORM_NAME_FROM_ROSTER_ENABLED): "Don't treat raw text
+   * after 'for' as the person. Match it against the roster ignoring capitals,
+   * and put the roster's spelling on the card. No roster match means ask who
+   * it's for. Only roster names can ever be offered as choices."
+   * (`forms/roster-only-names.ts`). Pau's required wordings; invented people.
+   */
+  ...(
+    [
+      {
+        key: "ima-on-roster",
+        text: "create a CA form for ima employee, for opening the store late on 9-28-26",
+        roster: [...ROSTER, person("e-ima-employee", "Ima", "Employee")],
+        check: (card: string | null, reply: string) => {
+          expect(card, "not the roster's spelling").toBe("Ima Employee");
+          expect(reply, "the reply drafts for the typed name").not.toContain("**ima**");
+        },
+      },
+      {
+        key: "ima-off-roster",
+        text: "create a CA form for ima employee, for opening the store late on 9-28-26",
+        roster: ROSTER,
+        // production-flags.json corrected to Vercel (QA, 5 Nov 2026). Recorded OPEN, a production defect.
+        open: "production: GROUNDED_ENTITIES_ENABLED off since 24 Oct (deliberate rollback: dropped non-roster names while ANTI_LOOP off; Vercel comment) — the card is for \"ima employee\", a name on no roster",
+        check: (card: string | null, reply: string) => {
+          expect(card, "a name on no roster is the employee").toBeNull();
+          expect(reply, "it does not ask who").toMatch(ASKS_WHO);
+        },
+      },
+      {
+        key: "lowercase-surname",
+        text: "make me a CA for Odalys merriwether for being late to opening this morning",
+        roster: [...ROSTER, person("e-odalys-merriwether", "Odalys", "Merriwether")],
+        check: (card: string | null, reply: string) => {
+          expect(card, "not the full roster name").toBe("Odalys Merriwether");
+          expect(reply, "the reply drafts for a short name").not.toMatch(/for \*\*Odalys\*\*/);
+        },
+      },
+      {
+        key: "being-late",
+        text: "CA for being late",
+        roster: ROSTER,
+        // This app answers "CA for being late" as a question (no card); a card, when there is one, asks who.
+        check: (card: string | null, reply: string, templateKey?: string | null) => {
+          expect(card, "an offense is the employee").toBeNull();
+          if (templateKey) expect(reply, "it does not ask who").toMatch(ASKS_WHO);
+        },
+      },
+      {
+        key: "coaching-form",
+        text: "CA for Coaching Form",
+        roster: ROSTER,
+        // With the flag, never a Coaching Form; this app answers "CA for Coaching Form" as a question (no card), and a card asks who.
+        check: (card: string | null, reply: string, templateKey?: string | null) => {
+          if (process.env.FORM_NAME_FROM_ROSTER_ENABLED === "true" && templateKey) expect(templateKey, "not a Corrective Action").toBe("dpoa");
+          expect(card, "a form's name is the employee").toBeNull();
+          if (templateKey === "dpoa") expect(reply, "it does not ask who").toMatch(ASKS_WHO);
+        },
+      },
+      {
+        // The sibling app's message 8 (invented name). Live with the flags on: "Which of them is this Corrective Action Form for — Dana Lane, LPSVA or Average Club?"
+        key: "message-8-metrics",
+        text: "Can you write me a performace ca for an employee who did not meet their numbers for the month of october Dana Lane  - verbal\n146 tans \nBelow in PPTA, LPSVA, Average Club, CC%, Spa%",
+        roster: [...ROSTER, person("e-dana-lane", "Dana", "Lane")],
+        check: (card: string | null, reply: string) => {
+          // The Observation may quote the metrics; a metric is never a choice or a name.
+          expect(reply, "a metric is offered as a person").not.toMatch(/(?:Which of them|Is this for|draft[^\n]*? for|couldn't find)[^\n?]*(?:LPSVA|Average Club|PPTA)|\*\*(?:LPSVA|Average Club|PPTA)\*\*/);
+          if (card) expect(card).toBe("Dana Lane");
+        },
+      },
+    ] as const
+  ).map(
+    (entry): ReplayCase => {
+      const { key, text, roster, check } = entry;
+      const open = "open" in entry ? entry.open : undefined;
+      return {
+      id: `nov5-roster-only-${key}`,
+      title: `Pau 5 Nov, only roster people: "${text.split("\n")[0]!.slice(0, 70)}"`,
+      report: `Pau, 5 Nov 2026: match the text after "for" against the roster; no match asks who; only roster people are choices — "${text.split("\n")[0]}"`,
+      status: open ? { open } : "fixed",
+      fixFlags: [FLAG, SALES, GLOSSARY],
+      async run(t) {
+        const thread = start(t, roster);
+        const reply = await thread.say(text);
+        (check as (card: string | null, reply: string, templateKey?: string | null) => void)(thread.proposal?.employeeName ?? null, reply.content, thread.proposal?.templateKey ?? null);
+      },
+      };
+    },
+  ),
 ];
+
+const ASKS_WHO = /Who is this (?:\*\*[^*]+\*\* |form )?for\?|employee'?s full name/i;
