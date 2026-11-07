@@ -1163,6 +1163,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "LAST_FIRST_NAME_READ_ENABLED",
   "POLICY_CITATION_CHECK_ENABLED",
   "PRIOR_ACTIONS_NO_SIGNED_ENABLED",
+  "REQUEST_LEVEL_NOT_HISTORY_ENABLED",
   // The sibling app's gate fix flags (6 Nov 2026): forced off with the others by flags-off-parity's child run.
   "TITLE_ENDS_AT_LINE_ENABLED",
   "PLACE_FROM_CUE_ENABLED",
@@ -2366,6 +2367,19 @@ export function exitTermsNotNamesEnabled(): boolean {
  */
 export function caShortcutWordsEnabled(): boolean {
   return envFlag("CA_SHORTCUT_WORDS_ENABLED");
+}
+
+/**
+ * REQUEST_LEVEL_NOT_HISTORY_ENABLED (QA, coding-3 item 6, 6 Nov 2026; same flag in both apps; default off).
+ * "I need to write up <name> with a written warning for leaving the front desk unattended for 30 minutes on
+ * 10/22" was answered "I've treated the earlier warning you mentioned as previous corrective action history"
+ * and asked Verbal or Written: the incident's date (before today) made the level asked for history. On: a
+ * level in the same clause as the request for this form is this form's level, whatever date the clause
+ * carries (`forms/warning-level.ts` levelInRequestClause). A dated warning in a clause of its own ("she got
+ * a written warning on 9/1") stays history. Off, as before.
+ */
+export function requestLevelNotHistoryEnabled(): boolean {
+  return envFlag("REQUEST_LEVEL_NOT_HISTORY_ENABLED");
 }
 
 /**
