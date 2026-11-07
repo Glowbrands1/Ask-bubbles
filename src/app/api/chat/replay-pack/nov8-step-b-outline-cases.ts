@@ -79,4 +79,25 @@ export const NOV8_STEP_B_OUTLINE_CASES: ReplayCase[] = [
       spaced(details);
     },
   },
+  {
+    id: "nov8-step-b-reply-keeps-lines",
+    title: "…and the reply quotes Details of Coaching line by line, never joined with \"; \"",
+    report: "QA's live draft test, Ask Bubbles production, 8 Nov 2026: the reply quoted the field as \"Observed:; …; Expectation:; …\"",
+    status: { open: "the reply quotes the field on one line, joined with \"; \"" },
+    fixFlags: [...FIX, "STEP_B_REPLY_KEEPS_LINES_ENABLED"],
+    async run(t) {
+      let reply = "";
+      vi.setSystemTime(new Date("2026-11-07T19:40:00Z"));
+      t.directory(REFUSAL_ROSTER);
+      t.as("location_manager", WEST_DODGE);
+      t.patchReads!({ [SAID]: patch("this_form", [{ field: "coaching_details", value: ADDED, how: "add", evidence: "she was reminded about the meeting twice" }]) });
+      const thread = t.thread();
+      await thread.say(REQUEST);
+      t.draftWrites({ coaching_details: DETAILS });
+      await thread.create();
+      reply = (await thread.say(SAID)).content;
+      expect(reply, `the reply joins the field's lines with "; ":\n${reply}`).not.toMatch(/Observed:;/);
+      expect(reply, `the reply does not quote the added line:\n${reply}`).toContain(ADDED);
+    },
+  },
 ];

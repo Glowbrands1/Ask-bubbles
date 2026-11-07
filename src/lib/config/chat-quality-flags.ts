@@ -2495,6 +2495,14 @@ export function stepBAddUnderObservedEnabled(): boolean {
 export function stepBSectionSpacingEnabled(): boolean {
   return envFlag("STEP_B_SECTION_SPACING_ENABLED");
 }
+/**
+ * STEP_B_REPLY_KEEPS_LINES_ENABLED (coding 5; QA's live draft test, 8 Nov 2026; same flag in both apps; default off).
+ * Step B's reply quoted a multi-line field on one line joined with "; " ("Observed:; … ; Expectation:; …"). On: it
+ * is quoted line by line, as the form shows it (`forms/form-diff-reply.ts` replyFromDiff). Off, as before.
+ */
+export function stepBReplyKeepsLinesEnabled(): boolean {
+  return envFlag("STEP_B_REPLY_KEEPS_LINES_ENABLED");
+}
 // --- end coding 5 flags ---
 
 /**
