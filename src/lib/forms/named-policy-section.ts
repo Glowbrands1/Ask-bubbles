@@ -1,6 +1,6 @@
 import { animalAnywhereEnabled, wovenTrainingConductEnabled } from "@/lib/config/chat-quality-flags";
 
-import { groundConductPolicy, isWovenWorkReading, readCaPolicy, STANDARDS_OF_CONDUCT } from "./ca-policy";
+import { cleaningIncidentPhrase, groundConductPolicy, isWovenWorkReading, readCaPolicy, STANDARDS_OF_CONDUCT } from "./ca-policy";
 import {
   OFFENSE_MANUAL_SECTIONS,
   findManualSection,
@@ -487,6 +487,26 @@ export function mayDescribeSection(text: string): boolean {
 }
 
 /**
+ * POLICY_CLEANING_INCIDENT_ENABLED: cleaning left undone ("the cleaning
+ * duties weren't done", "left the beds dirty") is the manual's Care and
+ * Cleaning of Equipment and Facilities section, found by its own heading on
+ * the pinned manual, and only where exactly one heading answers. Nothing
+ * else must decide the policy first: a policy the manager named wins.
+ * Off (`cleaningIncidentPhrase` reads nothing), this returns null.
+ */
+/** "she was not late, but she left the beds dirty": a lateness the manager denies decides nothing here. */
+const DENIED_LATENESS = /\b(?:not|never|was ?n[o']?t|wasn't|is ?n[o']?t|isn't)\s+(?:\S+\s+){0,1}?late\b/gi;
+
+function cleaningSection(text: string, chunks: readonly ManualChunk[]): NamedManualSection | null {
+  const phrase = cleaningIncidentPhrase(text);
+  if (!phrase || !mayDescribeSection(text.replace(DENIED_LATENESS, " "))) return null;
+  const headings = [...new Set(manualSheetHeadings(chunks).filter((heading) => /^care and cleaning\b/i.test(heading.trim())))];
+  if (headings.length !== 1) return null;
+  const section = findManualSection(chunks, headings);
+  return section ? { phrase, section, offenseKey: offenseKeyForManualHeading(section.heading) } : null;
+}
+
+/**
  * POLICY_SPECIFIC_TOPICS_ENABLED: the incident the manager's words name — no
  * wet floor sign, a long break, a social media post, sexual comments, a pet,
  * theft, a shortage, insubordination, talking badly about coworkers — is the
@@ -508,7 +528,14 @@ export function describedManualSection(input: {
 }): NamedManualSection | null {
   const woven = wovenWorkSection(input.text ?? "", input.chunks);
   if (woven) return woven;
+  const cleaning = input.chunks && input.chunks.length > 0 ? cleaningSection(input.text ?? "", input.chunks) : null;
   const specific = specificSection(input.text ?? "", input.chunks);
+  /* Two incidents in one account: cleaning leads, and the other is offered beside it, never dropped. */
+  if (cleaning) {
+    return specific && specific.section.heading !== cleaning.section.heading
+      ? { ...cleaning, also: [specific.section, ...(specific.also ?? [])] }
+      : cleaning;
+  }
   if (specific) return specific;
   const found = describedHeadings(input);
   if (!found || found.size !== 1) return null;
