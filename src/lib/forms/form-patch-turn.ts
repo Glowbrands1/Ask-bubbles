@@ -207,7 +207,7 @@ export async function patchActiveForm(input: PatchTurnInput): Promise<AskRespons
 
     const prepared = preparePatch(loaded, input);
     if (!prepared) return null;
-    const { template, before, allFields, allGroups, labels, stated, verbatim, writable, readerFixes, modelInput } = prepared;
+    const { template, before, allGroups, labels, stated, verbatim, writable, readerFixes, modelInput } = prepared;
     const reading = await readingFor(input, modelInput);
     if (!("ok" in reading) || reading.turn !== "this_form") return null;
     /*
