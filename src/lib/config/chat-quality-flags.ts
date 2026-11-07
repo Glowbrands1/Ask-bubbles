@@ -987,6 +987,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "TYPED_NAME_ENABLED",
   "PRINTED_PAGE_ONLY_ENABLED",
   "PAYROLL_DEDUCT_AMOUNT_ENABLED",
+  // Missing from this list since its PR (QA, 7 Nov 2026): forced off with the others.
+  "PAYROLL_AMOUNT_SAME_MESSAGE_ENABLED",
   "CA_POLICY_RETRIEVAL_ENABLED",
   "CROSS_CHAT_DRAFT_DEDUPE_ENABLED",
   "PRIOR_RECORD_FINAL_ONLY_ENABLED",
@@ -2694,6 +2696,17 @@ export function rosterNotFoundAnyPhrasingEnabled(): boolean {
  */
 export function metricGuardEnabled(): boolean {
   return envFlag("METRIC_GUARD_ENABLED");
+}
+
+/**
+ * PAYROLL_AMOUNT_SAME_MESSAGE_ENABLED (live chat, 5 Nov 2026; default off). "…the register was off $20. which will
+ * be payroll deducted from <name>'s check. … payroll deduct applies" still asked "**Payroll deduction amount?**":
+ * "which" between the amount and "will be payroll deducted" hid the $20 from the amount reader. On: an amount
+ * followed by "which / that / this / it … (payroll) deducted" is the stated amount
+ * (`forms/payroll-amount-referent.ts`). Off, as before.
+ */
+export function payrollAmountSameMessageEnabled(): boolean {
+  return envFlag("PAYROLL_AMOUNT_SAME_MESSAGE_ENABLED");
 }
 
 /**
