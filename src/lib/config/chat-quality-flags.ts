@@ -941,6 +941,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FORM_EDIT_TOOL_IN_STREAM_ENABLED",
   "CHAT_GLOSSARY_ENABLED",
   "CA_SALES_POLICY_ENABLED",
+  // Missing from this list since its PR (QA, 7 Nov 2026): forced off with the others.
+  "WOVEN_TRAINING_CONDUCT_ENABLED",
   "FORM_NAME_FROM_ROSTER_ENABLED",
   "FORM_EDIT_NOOP_GUARD_ENABLED",
   "CA_NAME_FROM_CHAT_ENABLED",
@@ -2727,6 +2729,19 @@ export function rosterNotFoundAnyPhrasingEnabled(): boolean {
  */
 export function metricGuardEnabled(): boolean {
   return envFlag("METRIC_GUARD_ENABLED");
+}
+
+/**
+ * WOVEN_TRAINING_CONDUCT_ENABLED (Pau's ruling, 6 Nov 2026; default off). Three managers asking for a Corrective
+ * Action for assigned Woven policy acknowledgements or training not completed by a deadline got three answers: a
+ * tentative Standards of Conduct, "Woven does not see a section … for \"not signing the woven\" … so I won't cite
+ * one", and no policy line at all, with "the applicable company policy" in the Action Plan. On: such an account is
+ * the Standards of Conduct, said on the card with the manual's section and page, ticked and quoted on the draft
+ * (`forms/ca-policy.ts` wovenWork, `forms/named-policy-section.ts`), and a section the manual lacks is said in
+ * the app's own voice ("I don't see a section …"), not with the product as its subject. Off, as before.
+ */
+export function wovenTrainingConductEnabled(): boolean {
+  return envFlag("WOVEN_TRAINING_CONDUCT_ENABLED");
 }
 
 /**
