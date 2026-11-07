@@ -1,7 +1,9 @@
 import { withoutAppLines } from "@/lib/ai/app-sentences";
-import { foldsToGlossaryTerm } from "@/lib/ai/glossary";
+import { CHAT_GLOSSARY, foldsToGlossaryTerm } from "@/lib/ai/glossary";
 import {
+  asYouSaidAppReadEnabled,
   asYouSaidManagerWordsEnabled,
+  msbPhraseSocEnabled,
   caSalesPolicyEnabled,
   cleaningOtherEveryWordingEnabled,
   formEditDateRulesEnabled,
@@ -114,6 +116,11 @@ export interface CaPolicyReading {
    * the Standards of Conduct (Pau's ruling; `withCleaningOther`). Absent off.
    */
   other?: "cleaning";
+  /**
+   * AS_YOU_SAID_APP_READ_ENABLED: the policy the app's own lines on the turn named, when the manager's words name
+   * none (AS_YOU_SAID_MANAGER_WORDS_ENABLED reads only the manager's). Said as a reading, never "as you said".
+   */
+  readFromApp?: CaPolicyName;
 }
 
 /* ------------------------------------------------------------ the words -- */
@@ -434,7 +441,22 @@ function statedIn(turn: string): CaPolicyName | null {
  */
 export function readCaPolicy(rawText: string): CaPolicyReading {
   const said = managerWords(rawText);
-  return withCleaningOther(withSalesPolicy(readCaPolicyFromWords(said), said), said);
+  return withAppReading(withCleaningOther(withSalesPolicy(readCaPolicyFromWords(said), said), said), rawText, said);
+}
+
+/**
+ * AS_YOU_SAID_APP_READ_ENABLED (ported from the sibling app; QA's gate there, 7 Nov 2026; ships with
+ * AS_YOU_SAID_MANAGER_WORDS_ENABLED; same flag in both apps; default off). There, with AS_YOU_SAID on, a late-opening
+ * CA lost its card's Policy line: the only one it had was "<policy>, as you said", read from the app's own line on the
+ * turn. On: when the manager's words read as no policy at all and the whole turn (app lines included, as before
+ * AS_YOU_SAID) names one, that policy is kept as the app's reading, and the card says it as one
+ * (`caPolicyProposalLine`), never "as you said". Off, the reading is returned untouched.
+ */
+function withAppReading(reading: CaPolicyReading, rawText: string, said: string): CaPolicyReading {
+  if (!asYouSaidAppReadEnabled() || said === rawText) return reading;
+  if (reading.stated !== null || reading.suggestion !== null || reading.ambiguous || reading.other || reading.missedEvent) return reading;
+  const app = readCaPolicyFromWords(rawText).stated;
+  return app ? { ...reading, readFromApp: app } : reading;
 }
 
 /**
@@ -520,14 +542,35 @@ function performanceIsTheReason(rawText: string): boolean {
   return statements(normalize(rawText)).some((sentence) => PERFORMANCE_AS_REASON.test(sentence));
 }
 
+/**
+ * MSB_PHRASE_SOC_ENABLED (Pau, 7 Nov 2026: "create a ca for must see behaviors for <name>" cited no policy; same flag
+ * in both apps; default off). The glossary term is matched word by word, so "MSB" was read and the spelled-out
+ * "must see behaviors" was not. The spelled-out phrases are the approved table's own: the right side of each
+ * "X = <phrase>." line of `CHAT_GLOSSARY`, folded to letters and digits — no list kept here. A singular
+ * ("must see behavior") and hyphens ("must-see") fold the same.
+ */
+const GLOSSARY_PHRASES: readonly string[] = CHAT_GLOSSARY.split("\n")
+  .map((line) => /^[A-Za-z0-9][A-Za-z0-9.&-]*\s+=\s+([^.]+)\./.exec(line)?.[1])
+  .filter((phrase): phrase is string => Boolean(phrase))
+  .map((phrase) => phrase.toLowerCase().replace(/[^a-z0-9]+/g, "").replace(/s$/, ""))
+  .filter((phrase) => phrase.length >= 6);
+
+function spellsOutGlossaryTerm(sentence: string): boolean {
+  const folded = sentence.toLowerCase().replace(/[^a-z0-9]+/g, "");
+  return GLOSSARY_PHRASES.some((phrase) => folded.includes(phrase));
+}
+
 function withSalesPolicy(reading: CaPolicyReading, rawText: string): CaPolicyReading {
   if (!caSalesPolicyEnabled()) return reading;
   if (reading.stated !== null && reading.stated !== "under_performance") return reading;
   if (reading.missedEvent !== null) return reading;
   const sentences = statements(normalize(rawText));
-  const msb = sentences.some((sentence) =>
-    sentence.split(/[^a-z0-9.]+/).some((word) => foldsToGlossaryTerm(word.replace(/^\.+|\.+$/g, ""))),
-  );
+  const msb =
+    sentences.some((sentence) =>
+      sentence.split(/[^a-z0-9.]+/).some((word) => foldsToGlossaryTerm(word.replace(/^\.+|\.+$/g, ""))),
+    ) ||
+    // MSB_PHRASE_SOC_ENABLED: the term spelled out ("must see behaviors") is the term too.
+    (msbPhraseSocEnabled() && sentences.some(spellsOutGlossaryTerm));
   // The stated shortfall reader the progression already uses (`corrective-action-intake.ts`): a metric named and judged.
   const target = reading.stated === "under_performance" || statesMetricShortfall(rawText) || (salesShortfallObjectEnabled() && performanceIsTheReason(rawText));
   if (!msb && !target) return reading;
@@ -929,6 +972,10 @@ export function caPolicyProposalLine(reading: CaPolicyReading, named: NamedPolic
   if (reading.suggestion && reading.source === "incident") {
     const what = reading.topics.map((topic) => TOPIC_WORDS[topic]).join(" and ");
     return `**Policy:** this reads as **Standards of Conduct** — ${what}. I'll check it against the current policy manual and quote that section on the draft; if the manual doesn't support it, I'll leave the policy for you. Tell me if a different policy applies.`;
+  }
+  // AS_YOU_SAID_APP_READ_ENABLED: the policy the app read, said as its reading. Off, never set.
+  if (reading.readFromApp) {
+    return `**Policy:** ${CA_POLICY_LABEL[reading.readFromApp]} — read from this request. I'll quote that section from the current policy manual on the draft; tell me if a different policy applies.`;
   }
   return null;
 }

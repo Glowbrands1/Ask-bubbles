@@ -1,4 +1,4 @@
-import { decimalNotSentenceEndEnabled, levelRequestDateEnabled, levelStepNotAccountEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { decimalNotSentenceEndEnabled, issueIsTheAccountEnabled, levelRequestDateEnabled, levelStepNotAccountEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { COMPANY_JOB_TITLES } from "@/config/company/job-titles";
 import { businessToday } from "@/lib/business-date";
 
@@ -7,6 +7,7 @@ import { JOIN } from "./bounded-context";
 import { describesIncident } from "./corrective-action-intake";
 import { withoutPriorStepClauses } from "./form-date-answer";
 import { priorSentenceFixFor } from "./prior-sentence-scope";
+import { statedWarningLevel } from "./warning-level";
 
 /**
  * ============================================================================
@@ -56,6 +57,23 @@ function turnsOf(text: string): string[] {
     .filter(Boolean);
 }
 
+/*
+ * ISSUE_IS_THE_ACCOUNT_ENABLED (QA, flip-3 tester, 6 Nov 2026: "…<name>, verbal, she was late on 10-20-26"):
+ * the Issue was the first clause after the person, so a bare warning level ("verbal") or a variant of the
+ * person's name ("Tammy Wexley", "Tamsin W") was printed as what happened. With the flag on, those clauses are
+ * passed over and the first clause that says something else is the Issue. A level clause is one the warning
+ * reader reads with at most three words; a name clause is one of at most three words sharing a word with the
+ * person. Off, the first clause, as before.
+ */
+function firstAccountClause(raw: string, personWords: ReadonlySet<string>): string {
+  const clauses = raw.split(CUT).map((clause) => clause.trim()).filter(Boolean);
+  if (!issueIsTheAccountEnabled()) return clauses[0] ?? "";
+  const short = (clause: string) => clause.split(/\s+/).length <= 3;
+  const levelOnly = (clause: string) => short(clause) && statedWarningLevel(clause) !== null;
+  const nameOnly = (clause: string) => short(clause) && clause.toLowerCase().split(/[^\p{L}'’-]+/u).some((word) => personWords.has(word));
+  return clauses.find((clause) => !levelOnly(clause) && !nameOnly(clause)) ?? clauses[0] ?? "";
+}
+
 /** The for-clause the request names, flags off and on. Capped at 80, as before. */
 function issueFromRequest(text: string, employeeName: string | null): string | null {
   const person = (employeeName ?? "").trim().toLowerCase();
@@ -71,7 +89,7 @@ function issueFromRequest(text: string, employeeName: string | null): string | n
         const after = new RegExp(`^(?:(?:${words})\\s*)+(?:\\s+(?:for|about|over|regarding)\\s+|\\s*[-—–:,]\\s*)(.+)$`, "i").exec(raw.trim());
         if (after) raw = after[1]!;
       }
-      const issue = raw.split(CUT)[0]!.trim().replace(/[\s"'”’)]+$/, "");
+      const issue = firstAccountClause(raw, personWords).trim().replace(/[\s"'”’)]+$/, "");
       const lower = issue.toLowerCase();
       if (issue.length < 3 || issue.length > 80 || NOT_AN_ISSUE.test(issue)) continue;
       // "a CA for Jordan Testperson" names the person, not the issue.
