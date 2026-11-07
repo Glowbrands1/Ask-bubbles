@@ -1086,6 +1086,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // Port of the sibling app's fix flag after its flip (6 Nov 2026): forced off with the others.
   "SALES_SHORTFALL_OBJECT_ENABLED",
   "UNDER_PERFORMANCE_EXPLAINED_ENABLED",
+  "NO_NOTICE_NO_DATE_ENABLED",
   // Live in production since the 6 Nov flip, but missing from this list (QA, 6 Nov 2026): a gate run with them on
   // would keep them on inside flags-off-parity's child run. Test-only effect.
   "METRIC_GUARD_ENABLED",
@@ -2794,6 +2795,29 @@ export function ownBrandOnlyEnabled(): boolean {
 // --- coding 4 flags ---
 
 /**
+ * COACHING_OBSERVED_KEPT_ENABLED (ported from the sibling app; Pau's scan, sf-s37, 7 Nov 2026; same flag in both apps; default off). Three Coaching
+ * Forms for "not hitting her numbers for the month of October" were saved with no "Observed:" section and with
+ * Underperformance unticked: the framing guard (`forms/coaching-framing.ts`) did not read the account as a shortfall,
+ * so it struck every "did not meet …" sentence and the label left empty. On: a metric named and judged — the reader
+ * the progression already uses (`forms/metric-shortfall.ts` statesMetricShortfall) — is a shortfall too, and the
+ * guard leaves the draft alone. Off, as before.
+ */
+export function coachingObservedKeptEnabled(): boolean {
+  return envFlag("COACHING_OBSERVED_KEPT_ENABLED");
+}
+
+/**
+ * POLITE_REQUEST_OWN_TURNS_ENABLED (ported from the sibling app; Pau's scan, sf-s37, 7 Nov 2026; same flag in both apps; default off). Three
+ * requests in one chat, each "Can you create me a coaching document for <name> for …": the second card's Observation
+ * of Offense read back the first employee's request. A request opened with "can / could / would / will you" was not
+ * read as a request, so a card read every earlier turn as its account. On: that lead is set aside before the request
+ * is read (`ai/remap-incident.ts` currentRequestStart). Off, as before.
+ */
+export function politeRequestOwnTurnsEnabled(): boolean {
+  return envFlag("POLITE_REQUEST_OWN_TURNS_ENABLED");
+}
+
+/**
  * MSB_PHRASE_SOC_ENABLED (ported from the sibling app; Pau via QA, 7 Nov 2026; same flag in both apps; default off). With CA_SALES_POLICY_ENABLED
  * on, "create a ca for MSB for <name>" cites the Standards of Conduct, and "create a ca for must see behaviors for
  * <name>" cited no policy: the glossary term was matched word by word. On: the phrase the approved glossary spells
@@ -2801,4 +2825,17 @@ export function ownBrandOnlyEnabled(): boolean {
  */
 export function msbPhraseSocEnabled(): boolean {
   return envFlag("MSB_PHRASE_SOC_ENABLED");
+}
+
+// --- coding 2 flags ---
+
+/**
+ * NO_NOTICE_NO_DATE_ENABLED (QA, flip-3 tester, 6 Nov 2026; default off).
+ * "exit form for <X>, resigned 11-3-26 with no notice" printed "Date that
+ * notice was given: November 3, 2026": "resigned" is a notice-given cue. With
+ * this flag on, a stated "no notice" leaves the notice date empty, and the
+ * date stays the resignation's (`forms/exit-facts.ts`). Off, as before.
+ */
+export function noNoticeNoDateEnabled(): boolean {
+  return envFlag("NO_NOTICE_NO_DATE_ENABLED");
 }
