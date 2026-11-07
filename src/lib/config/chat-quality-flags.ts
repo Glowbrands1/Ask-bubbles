@@ -941,6 +941,9 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FORM_EDIT_TOOL_IN_STREAM_ENABLED",
   "CHAT_GLOSSARY_ENABLED",
   "CA_SALES_POLICY_ENABLED",
+  // Default-off fix flags (#486, coding-3 items 4 and 5): forced off with the others.
+  "CA_PERFORMANCE_REASON_ENABLED",
+  "WRITE_ME_THE_FORM_ENABLED",
   "FORM_NAME_FROM_ROSTER_ENABLED",
   "FORM_EDIT_NOOP_GUARD_ENABLED",
   "CA_NAME_FROM_CHAT_ENABLED",
@@ -2774,6 +2777,18 @@ export function underPerformanceExplainedEnabled(): boolean {
  */
 export function salesShortfallObjectEnabled(): boolean {
   return envFlag("SALES_SHORTFALL_OBJECT_ENABLED");
+}
+
+/**
+ * WRITE_ME_THE_FORM_ENABLED (QA, 4 Nov 2026: "Can you write me a performace ca for an employee who … <name> - verbal"
+ * made no card; default off). "write me a …" and one or two plain words before the form ("a performance CA", "a quick
+ * CA") still ask to write the form; the object must still BE the form ("write a summary of the CA policy" does not
+ * match; `forms/template-intent.ts` WRITES_THE_FORM_LOOSE). Ask Sunny ships it under CA_SALES_POLICY_ENABLED
+ * (0d16be2a); here it has its own flag, because CA_SALES_POLICY is already live and nothing new may act under a live
+ * flag (QA, 7 Nov 2026). Off, as before.
+ */
+export function writeMeTheFormEnabled(): boolean {
+  return envFlag("WRITE_ME_THE_FORM_ENABLED");
 }
 
 /**
