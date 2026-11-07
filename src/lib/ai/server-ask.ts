@@ -101,6 +101,7 @@ import { augmentIntakeQuestion } from "./intake-augment";
 import { incidentFingerprint } from "@/lib/forms/incident-key";
 import { prepareLongContext } from "./long-context-claude";
 import { applyOptionalPriorCoaching } from "./prior-coaching-optional";
+import { priorCoachingManagerText } from "./prior-coaching-denial";
 import { rewriteRetrievalQuery } from "./query-rewrite-claude";
 import { followUpOwnQuery } from "./query-rewrite";
 import { matchHybridKnowledge } from "@/lib/knowledge/hybrid-match";
@@ -1444,7 +1445,12 @@ async function decorateFormAnswer(request: AskRequest, actor: ChatActor, respons
   const turns = [...request.history.filter((turn) => turn.role === "user").map((turn) => turn.content), request.question];
   let content = response.content;
   if (coachingOn) {
-    content = applyOptionalPriorCoaching(content, { enabled: true, records: [], managerText: turns.join("\n") });
+    // PRIOR_COACHING_DENIAL_ENABLED: "There's no prior coaching on file." is not read as a note; off, as before.
+    content = applyOptionalPriorCoaching(content, {
+      enabled: true,
+      records: [],
+      managerText: priorCoachingManagerText(turns, request.context.todayIso),
+    });
   }
   if (slotsOn) {
     const roster = await loadRosterQuiet(actor);
