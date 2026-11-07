@@ -2689,17 +2689,6 @@ export function salesShortfallObjectEnabled(): boolean {
 }
 
 /**
- * ISSUE_IS_THE_ACCOUNT_ENABLED (QA, flip-3 tester, 6 Nov 2026; default off).
- * "…<name>, verbal, she was late on 10-20-26" printed What happened =
- * "verbal", and with a nickname, the typed name: the first clause after the
- * person was taken. With this flag on, a bare level clause or a short clause
- * naming the person is passed over (`forms/incident-issue.ts`). Off, as before.
- */
-export function issueIsTheAccountEnabled(): boolean {
-  return envFlag("ISSUE_IS_THE_ACCOUNT_ENABLED");
-}
-
-/**
  * PLACE_FROM_CUE_ENABLED (port of the sibling app's gate finding, 6 Nov 2026,
  * sf-s28; default off). "create a corrective action for <name> from bellevue",
  * from a manager not assigned to Bellevue: "from" was no place cue, so the
@@ -2801,4 +2790,17 @@ export function offRosterConfirmEnabled(): boolean {
  */
 export function ownBrandOnlyEnabled(): boolean {
   return envFlag("OWN_BRAND_ONLY_ENABLED");
+}
+
+// --- coding 2 flags ---
+
+/**
+ * ISSUE_IS_THE_ACCOUNT_ENABLED (QA, flip-3 tester, 6 Nov 2026; default off).
+ * "…<name>, verbal, she was late on 10-20-26" printed What happened =
+ * "verbal", and with a nickname, the typed name: the first clause after the
+ * person was taken. With this flag on, a bare level clause or a short clause
+ * naming the person is passed over (`forms/incident-issue.ts`). Off, as before.
+ */
+export function issueIsTheAccountEnabled(): boolean {
+  return envFlag("ISSUE_IS_THE_ACCOUNT_ENABLED");
 }
