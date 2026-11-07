@@ -1160,6 +1160,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "AI_READS_CODE_CHECKS_ENABLED",
   "LAST_FIRST_NAME_READ_ENABLED",
   "POLICY_CITATION_CHECK_ENABLED",
+  "PRIOR_ACTIONS_NO_SIGNED_ENABLED",
   // The sibling app's gate fix flags (6 Nov 2026): forced off with the others by flags-off-parity's child run.
   "TITLE_ENDS_AT_LINE_ENABLED",
   "PLACE_FROM_CUE_ENABLED",
@@ -2835,6 +2836,19 @@ export function sameFormCopyNewPersonEnabled(): boolean {
  */
 export function payrollAmountSameMessageEnabled(): boolean {
   return envFlag("PAYROLL_AMOUNT_SAME_MESSAGE_ENABLED");
+}
+
+/**
+ * PRIOR_ACTIONS_NO_SIGNED_ENABLED (QA, a location manager's chat, 5 Nov 2026; default off). "this is a verbal
+ * warning. previous coaching policy manual 10-15-26" drafted Prior actions that said the earlier steps were
+ * SIGNED; nothing was ever signed or given. Rule (Pau / QA): list only finalized forms, and never say "signed"
+ * unless the record or the manager says so. On: the drafting prompt no longer asks for "— signed <date>",
+ * `groundPriorActions` drops a "signed" the manager did not write for that date, and the code's own lines read
+ * "<step> — finalized MM/DD/YYYY" for a form on file and "<step> — MM/DD/YYYY" for a step the manager told
+ * ("signed" only when they said so). The list parsers read every format. Off, as before.
+ */
+export function priorActionsNoSignedEnabled(): boolean {
+  return envFlag("PRIOR_ACTIONS_NO_SIGNED_ENABLED");
 }
 
 /**
