@@ -311,6 +311,9 @@ describe("CHAT_GLOSSARY_ENABLED off: the model requests and replies, byte for by
     expect(answering.length).toBeGreaterThan(0);
     expect(reader.length).toBeGreaterThan(0);
     for (const body of [...answering, ...reader]) expect(body).toContain(GLOSSARY_HEAD);
-    expect(on.replies[0]).not.toEqual(main.production!.replies[0]);
+    // Changed on purpose (5 Nov 2026, QA's smaller flip): with CA_SALES_POLICY + METRIC_GUARD on in production, "a
+    // corrective action for msb" already asks who without the glossary, so the msb turn is compared with the flags-off
+    // run (a card for **msb**), where the glossary is the only change.
+    expect(on.replies[0]).not.toEqual(main.none!.replies[0]);
   }, 120_000);
 });
