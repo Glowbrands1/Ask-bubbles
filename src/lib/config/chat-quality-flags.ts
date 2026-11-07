@@ -1101,6 +1101,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REPLY_MATCHES_CARD_EACH_CARD_ENABLED",
   // Default-off fix flag (the flip-3 gate, 6 Nov 2026).
   "OFF_ROSTER_CONFIRM_ENABLED",
+  // Default-off fix flag (QA, 7 Nov 2026).
+  "METRIC_CHOICE_ONE_QUESTION_ENABLED",
 ] as const;
 
 /**
@@ -2842,6 +2844,7 @@ export function noNoticeNoDateEnabled(): boolean {
   return envFlag("NO_NOTICE_NO_DATE_ENABLED");
 }
 
+// coding 2: ISSUE_IS_THE_ACCOUNT
 /**
  * ISSUE_IS_THE_ACCOUNT_ENABLED (QA, flip-3 tester, 6 Nov 2026; default off).
  * "…<name>, verbal, she was late on 10-20-26" printed What happened =
@@ -2851,4 +2854,17 @@ export function noNoticeNoDateEnabled(): boolean {
  */
 export function issueIsTheAccountEnabled(): boolean {
   return envFlag("ISSUE_IS_THE_ACCOUNT_ENABLED");
+}
+
+// --- Coding flags ---
+
+/**
+ * METRIC_CHOICE_ONE_QUESTION_ENABLED (QA, 7 Nov 2026; same flag in both apps; default off). The same doubled ask as
+ * the FORM_NAME re-flip gate regression, under METRIC_GUARD_ENABLED: a choice question with its own "Tell me and I'll
+ * …" after it, every choice a metric, became "Who is this form for? Tell me the employee's full name. Tell me and I'll
+ * fill in …". On: the question's tail goes with a choice that is replaced, and stays with one still asked
+ * (`forms/roster-only-names.ts` withoutMetricChoices). Off, as before.
+ */
+export function metricChoiceOneQuestionEnabled(): boolean {
+  return envFlag("METRIC_CHOICE_ONE_QUESTION_ENABLED");
 }
