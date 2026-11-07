@@ -1113,6 +1113,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // Port of the sibling app's fix flag after its flip (6 Nov 2026): forced off with the others.
   "SALES_SHORTFALL_OBJECT_ENABLED",
   "SALES_OBSERVATION_ACCOUNT_ENABLED",
+  // coding 2: SOURCE_NOTE_GUARD (default off): forced off with the others.
+  "SOURCE_NOTE_GUARD_ENABLED",
   "UNDER_PERFORMANCE_EXPLAINED_ENABLED",
   "NO_NOTICE_NO_DATE_ENABLED",
   "ISSUE_IS_THE_ACCOUNT_ENABLED",
@@ -2963,6 +2965,19 @@ export function asYouSaidAppReadEnabled(): boolean {
  */
 export function salesObservationAccountEnabled(): boolean {
   return envFlag("SALES_OBSERVATION_ACCOUNT_ENABLED");
+}
+
+// coding 2: SOURCE_NOTE_GUARD
+/**
+ * SOURCE_NOTE_GUARD_ENABLED (QA, 5 Nov 2026, item 9; port back from the sibling app's #571, which extends this
+ * app's d4ee64d2; default off). A reply reached a manager with the model's own note about a source in it: "[S1
+ * doesn't actually cover general tardiness — it only covers failing to open the store…]". The marker stripping
+ * removes only a bare marker ("[S1]") or a group of them. With the flag on, every reply's last step removes such a
+ * note and any bare marker group left ("[S12, S14]"); a citation with only a page or section after its tag is kept
+ * (`ai/source-note.ts`). Off, as before.
+ */
+export function sourceNoteGuardEnabled(): boolean {
+  return envFlag("SOURCE_NOTE_GUARD_ENABLED");
 }
 
 /**
