@@ -593,7 +593,7 @@ function withSalesPolicy(reading: CaPolicyReading, rawText: string): CaPolicyRea
     // MSB_PHRASE_SOC_ENABLED: the term spelled out ("must see behaviors") is the term too.
     (msbPhraseSocEnabled() && sentences.some(spellsOutGlossaryTerm));
   // The stated shortfall reader the progression already uses (`corrective-action-intake.ts`): a metric named and judged.
-  // Both default-off readings kept (merge of main into #486, as Ask Sunny's #573): CA_PERFORMANCE_REASON's "for performance" request and SALES_SHORTFALL_OBJECT's reason.
+  // Both default-off readings kept (merge of main into #486, as the sibling app's #573): CA_PERFORMANCE_REASON's "for performance" request and SALES_SHORTFALL_OBJECT's reason.
   const target =
     reading.stated === "under_performance" ||
     statesMetricShortfall(rawText) ||

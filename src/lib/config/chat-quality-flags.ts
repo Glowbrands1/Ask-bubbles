@@ -2783,7 +2783,7 @@ export function salesShortfallObjectEnabled(): boolean {
  * WRITE_ME_THE_FORM_ENABLED (QA, 4 Nov 2026: "Can you write me a performace ca for an employee who … <name> - verbal"
  * made no card; default off). "write me a …" and one or two plain words before the form ("a performance CA", "a quick
  * CA") still ask to write the form; the object must still BE the form ("write a summary of the CA policy" does not
- * match; `forms/template-intent.ts` WRITES_THE_FORM_LOOSE). Ask Sunny ships it under CA_SALES_POLICY_ENABLED
+ * match; `forms/template-intent.ts` WRITES_THE_FORM_LOOSE). The sibling app ships it under CA_SALES_POLICY_ENABLED
  * (0d16be2a); here it has its own flag, because CA_SALES_POLICY is already live and nothing new may act under a live
  * flag (QA, 7 Nov 2026). Off, as before.
  */
