@@ -4,6 +4,7 @@ import { businessToday } from "@/lib/business-date";
 
 import { withoutLevelAndStepClauses } from "./account-clauses";
 import { JOIN } from "./bounded-context";
+import { observationAccount } from "./ca-policy";
 import { describesIncident } from "./corrective-action-intake";
 import { withoutPriorStepClauses } from "./form-date-answer";
 import { priorSentenceFixFor } from "./prior-sentence-scope";
@@ -202,9 +203,19 @@ export function correctiveActionIssue(said: string, employeeName: string | null)
         .join("\n")
     : read;
   const fromRequest = issueFromRequest(text, employeeName);
-  if (!typedNameEnabled()) return fromRequest;
-  if (fromRequest && !titleAndPlaceOnly(fromRequest, employeeName)) return fromRequest;
-  return accountIssue(text);
+  if (!typedNameEnabled()) return accountOnly(fromRequest, employeeName);
+  if (fromRequest && !titleAndPlaceOnly(fromRequest, employeeName)) return accountOnly(fromRequest, employeeName);
+  return accountOnly(accountIssue(text), employeeName);
+}
+
+/**
+ * SALES_OBSERVATION_ACCOUNT_ENABLED (with SALES_SHORTFALL_OBJECT_ENABLED): the Issue is the account, never the
+ * request's own words ("written CA for <name> on performance"); null when nothing else is left. Off, unchanged.
+ */
+function accountOnly(issue: string | null, employeeName: string | null): string | null {
+  if (issue === null) return null;
+  const account = observationAccount(issue, employeeName);
+  return account === "" ? null : account;
 }
 
 /**
@@ -217,8 +228,8 @@ export function correctiveActionIssue(said: string, employeeName: string | null)
  */
 export function managerIncidentClause(text: string, employeeName: string | null): string | null {
   const fromRequest = issueFromRequest(text, employeeName);
-  if (fromRequest && !titleAndPlaceOnly(fromRequest, employeeName)) return fromRequest;
-  return accountIssue(text);
+  if (fromRequest && !titleAndPlaceOnly(fromRequest, employeeName)) return accountOnly(fromRequest, employeeName);
+  return accountOnly(accountIssue(text), employeeName);
 }
 
 /**
