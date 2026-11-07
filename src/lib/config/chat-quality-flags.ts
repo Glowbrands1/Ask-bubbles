@@ -2913,6 +2913,17 @@ export function levelEndsRequestEnabled(): boolean {
 }
 
 /**
+ * DESCRIBED_ATTENDANCE_CARD_ENABLED (Pau-approved 7 Nov 2026, option A; same flag name in both apps; default off). With
+ * no policy named, an attendance account — "for opening store late", "was late on 10-20-26", absent — gave a CA card
+ * with no Policy line, though the app reads it as attendance (`describedAttendanceKeys`). On: the card cites the
+ * manual's Attendance section for it, as a reading ("from what you described"), never "as you said"
+ * (`ai/form-proposal.ts` namedPolicyFor). Off, as before.
+ */
+export function describedAttendanceCardEnabled(): boolean {
+  return envFlag("DESCRIBED_ATTENDANCE_CARD_ENABLED");
+}
+
+/**
  * AS_YOU_SAID_APP_READ_ENABLED (ported from the sibling app; QA's gate there, 7 Nov 2026: regressions from
  * AS_YOU_SAID_MANAGER_WORDS; ships with it; same flag in both apps; default off). With AS_YOU_SAID on, a CA whose
  * only Policy line was "<policy>, as you said" (read from the app's own line) lost the line. On: the policy the app's
