@@ -1,4 +1,5 @@
-import { antiLoopEnabled, payrollDeductAmountFieldEnabled } from "@/lib/config/chat-quality-flags";
+import { antiLoopEnabled, payrollDeductAmountFieldEnabled, secondRequestOwnAccountEnabled } from "@/lib/config/chat-quality-flags";
+import { startsFormRequest } from "@/lib/forms/current-request";
 import { describesIncident } from "@/lib/forms/incident-reading";
 import { rosterLocationName } from "@/lib/forms/location-mention";
 import { statedPayrollDeductAmount } from "@/lib/forms/payroll-deduct-amount";
@@ -116,7 +117,14 @@ export function stateSentences(state: ConversationFormState): string[] {
   return lines;
 }
 
-export function prependFormState(question: string, state: ConversationFormState | null): string {
+/** The saved state as this turn may use it: without the earlier request's policy when this turn starts a new one. */
+export function stateForTurn(state: ConversationFormState | null, question: string): ConversationFormState | null {
+  if (!state || !secondRequestOwnAccountEnabled() || !state.policyHeading || !startsFormRequest(question)) return state;
+  return { ...state, policyHeading: null, policyPage: null };
+}
+
+export function prependFormState(question: string, given: ConversationFormState | null): string {
+  const state = stateForTurn(given, question);
   if (!state) return question;
   const lines = stateSentences(state).filter((line) => !question.includes(line));
   if (lines.length === 0) return question;
