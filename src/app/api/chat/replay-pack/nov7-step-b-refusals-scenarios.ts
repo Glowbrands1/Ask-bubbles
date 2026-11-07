@@ -121,7 +121,7 @@ const CREATE: LiveStep = { create: true };
 
 /* ------------------------------------------------------------ Bubbles 7 -- */
 
-const BUB_PHONE = "add that she was also on her phone";
+export const BUB_PHONE = "add that she was also on her phone";
 const BUB_SHIPPED = "oswin marked an order as shipped but the customer hadn't picked up yet";
 const BUB_DIDNT_EDIT = "it didnt edit in the card";
 const BUB_DATE_Q = "What's the date on the form for these details?";
