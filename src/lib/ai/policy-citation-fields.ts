@@ -25,6 +25,9 @@ const NARRATIVE_KEY: Readonly<Record<string, string>> = {
   "follow-up-coaching": "follow_up_observation",
 };
 
+/** The forms whose account field carries the citation line (EDIT_POLICY_ASK_ENABLED, `forms/edit-policy-ask.ts`). */
+export const NARRATIVE_CITATION_TEMPLATES: readonly string[] = Object.keys(NARRATIVE_KEY);
+
 /**
  * The page a retrieval row prints, for a check that must not use the PDF
  * sheet number. A footer the extractor knows, or a locator whose page is
