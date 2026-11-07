@@ -134,12 +134,12 @@ import { OTHER_WRITE_IN_INSTRUCTION, specificTopic, withConductLinePage, withCon
 import {
   PAYROLL_DEDUCT_KEY,
   isPayrollDeductAnswer,
-  payrollDeductAmount,
   statedPayrollDeduct,
 } from "@/lib/forms/payroll-deduct";
 import {
   PAYROLL_DEDUCT_AMOUNT_KEY,
   PAYROLL_DEDUCT_AMOUNT_STATED_KEYS,
+  managerPayrollAmount,
   payrollAmountForDraft,
 } from "@/lib/forms/payroll-deduct-amount";
 import {
@@ -2400,7 +2400,7 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
             answer: payrollAnswer,
             ...planPayrollAmount({
               answer: payrollAnswer,
-              stated: payrollDeductAmount(amountNotes),
+              stated: managerPayrollAmount(amountNotes),
               quotedPolicy: "policy_language" in pinnedProvenance ? (draftValues.policy_language ?? null) : null,
             }),
           },
@@ -2450,7 +2450,7 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
     const planValue = builtPlan && planInput
       ? withPayrollSentence(builtPlan, {
           answer: planInput.payroll.answer,
-          amount: payrollDeductAmount(amountNotes),
+          amount: managerPayrollAmount(amountNotes),
           employeeName: loaded.instance.employeeName,
         })
       : builtPlan;
