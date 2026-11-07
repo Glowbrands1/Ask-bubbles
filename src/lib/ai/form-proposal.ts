@@ -174,7 +174,9 @@ import {
   slotRetentionEnabled,
   storedSlotsNotARequestEnabled,
   typedNameEnabled,
+  secondRequestOwnAccountEnabled,
 } from "@/lib/config/chat-quality-flags";
+import { currentFormRequestText } from "@/lib/forms/current-request";
 import { managerWords } from "./edit-date-rules";
 import { groundEmployeeResolution } from "./employee-candidate-grounding";
 import { readFormRequests, type FormRequest } from "@/lib/forms/form-requests";
@@ -2603,10 +2605,10 @@ async function withManualIdentity(named: NamedPolicyReading | null, input: Propo
 }
 
 async function namedPolicyFor(text: string, input: ProposalTurn): Promise<NamedPolicyReading | null> {
-  const policyReading = readCaPolicy(text);
+  const policyReading = readCaPolicy(secondRequestOwnAccountEnabled() ? currentFormRequestText(text) : text);
   // A missed meeting reads as Attendance; the manual still says where (see `groundMissedEvent` below).
   if (policyReading.stated !== null && !(policyReading.stated === "attendance" && policyReading.missedEvent)) return null;
-  const named = namedPolicies(text);
+  const named = namedPolicies(secondRequestOwnAccountEnabled() ? currentFormRequestText(text) : text);
   const chunksOf = async (): Promise<readonly ManualChunk[] | null> => {
     try {
       return (await input.policyManual?.()) ?? null;
@@ -2863,7 +2865,7 @@ function proposalContent(
      * being stopped for it.
      */
     if (proposal.status !== "needs_location") {
-      return correctiveActionReady(proposal, intake, asksPayrollDeduct(match), readCaPolicy(context.text), {
+      return correctiveActionReady(proposal, intake, asksPayrollDeduct(match), readCaPolicy(secondRequestOwnAccountEnabled() ? currentFormRequestText(context.text) : context.text), {
         offersLevel: offeredWarningLevels(match).length > 0,
         earlierWarning: mentionsEarlierWarning(context.text, today),
         priorActions: statedPriorActions(context.text, today),
