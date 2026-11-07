@@ -1136,6 +1136,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "OFF_ROSTER_CONFIRM_ENABLED",
   // Default-off fix flag (QA, 7 Nov 2026).
   "METRIC_CHOICE_ONE_QUESTION_ENABLED",
+  // coding 4: PRIOR_STEP_DATE_LIST (round 5; default off): forced off with the others.
+  "PRIOR_STEP_DATE_LIST_ENABLED",
 ] as const;
 
 /**
@@ -3077,4 +3079,14 @@ export function removePolicyNotNamedEnabled(): boolean {
  */
 export function metricChoiceOneQuestionEnabled(): boolean {
   return envFlag("METRIC_CHOICE_ONE_QUESTION_ENABLED");
+}
+
+/**
+ * PRIOR_STEP_DATE_LIST_ENABLED (QA round 5, 8 Nov 2026; same flag in both apps; default off). "she already received a
+ * verbal warning and coaching on 9/8/2026, 9/15/2026 and 9/25/2026" listed only "Coaching — 09/08/2026". On: a step
+ * told with a list of dates is one row per date, and a step named just before it with "and" is listed with no date,
+ * since the manager tied no date to it (`forms/prior-actions.ts`). Off, as before.
+ */
+export function priorStepDateListEnabled(): boolean {
+  return envFlag("PRIOR_STEP_DATE_LIST_ENABLED");
 }
