@@ -915,6 +915,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FORM_PATCH_REDUCER_ENABLED",
   "FORM_REPLY_FROM_DIFF_ENABLED",
   "FORM_EDIT_SINGLE_WRITER_ENABLED",
+  "FORM_EDIT_SAID_REPLACEMENT_ENABLED",
   "FORM_EDIT_TOOL_IN_STREAM_ENABLED",
   "CHAT_GLOSSARY_ENABLED",
   "CA_SALES_POLICY_ENABLED",
@@ -1085,8 +1086,10 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "PLACE_FROM_CUE_ENABLED",
   // Port of the sibling app's fix flag after its flip (6 Nov 2026): forced off with the others.
   "SALES_SHORTFALL_OBJECT_ENABLED",
+  "SALES_OBSERVATION_ACCOUNT_ENABLED",
   "UNDER_PERFORMANCE_EXPLAINED_ENABLED",
   "NO_NOTICE_NO_DATE_ENABLED",
+  "ISSUE_IS_THE_ACCOUNT_ENABLED",
   // Live in production since the 6 Nov flip, but missing from this list (QA, 6 Nov 2026): a gate run with them on
   // would keep them on inside flags-off-parity's child run. Test-only effect.
   "METRIC_GUARD_ENABLED",
@@ -1094,7 +1097,6 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "TITLE_OF_THE_EMPLOYEE_ENABLED",
 
   "CA_OFFER_KEEPS_ACCOUNT_ENABLED",
-
 
   // Default-off fix flag (#483).
   "REPLY_MATCHES_CARD_EACH_CARD_ENABLED",
@@ -2405,6 +2407,45 @@ export function formEditSingleWriterEnabled(): boolean {
 }
 
 /**
+ * FORM_EDIT_SAID_REPLACEMENT_ENABLED (QA's Step B gate, 6 Nov 2026; default
+ * off; only with FORM_EDIT_SINGLE_WRITER_ENABLED). The single writer refused
+ * "fix her last name, it is Laine" (drops_words) and an offense changed to
+ * "absenteeism" (unknown_option). With this flag on, an old word the new text
+ * replaces in place with a word the manager's latest message says may go, and
+ * an old offense box is written as the box that replaced it; a word dropped
+ * with nothing in its place is still refused (`forms/form-reducer.ts`). Off,
+ * as before.
+ */
+export function formEditSaidReplacementEnabled(): boolean {
+  return envFlag("FORM_EDIT_SAID_REPLACEMENT_ENABLED") && formEditSingleWriterEnabled();
+}
+
+// --- coding 5 flags (Step B edit reader; placed after FORM_EDIT_SAID_REPLACEMENT, not at a block end, so merges do not collide) ---
+
+/**
+ * FORM_PATCH_READER_FIXES_ENABLED (coding 5, 7 Nov 2026; QA's Step B target, the real "I haven't changed the
+ * <form>" refusals; same flag in both apps; default off). Step B's reader, fixed where the real-AI trace (6 Nov)
+ * refused faithful edits. Active only with FORM_PATCH_REDUCER_ENABLED. On:
+ *   (1) a patch whose values are already on the form answers "<Field> already says that" (never "Updated"); an
+ *       empty or "other" reading goes to the old path, whose writes may not repeat the field, echo the instruction
+ *       or (after an empty reading) add nothing new;
+ *   (2) the evidence and word checks read the form's own employee name as said (a "<Name> must practice …"
+ *       for "Add that she Must Practice …"), match a word by its stem ("missed" for "missing"), and hold every
+ *       FACT word — a number, a date, a capitalised word inside a sentence — to the manager's words or the
+ *       form; only a few other added words (at most 2, or 15% of them) may be unsaid;
+ *   (3) Pau's "yes rewrite" (7 Nov 2026): the reader may answer how "reword" when the latest message asks for
+ *       the wording to change; the field's text is rewritten in new words, every fact still the manager's or
+ *       the form's, every protected value (name, date, amount) kept (one prompt line added, never edited);
+ *   (4) the form's Job Title is a field the reader may set, only to words of the latest message ("change her
+ *       position to Team Member"), written as the manager's own edit.
+ * Off, the reader, the schema, the prompt and the reducer are byte for byte as before.
+ */
+export function formPatchReaderFixesEnabled(): boolean {
+  return envFlag("FORM_PATCH_READER_FIXES_ENABLED") && formPatchReducerEnabled();
+}
+// --- end coding 5 flags ---
+
+/**
  * The edit tool in the main call (Step 3, 4 Nov 2026): with a draft form open
  * and a turn that is not a correction or a policy change (a question-phrased
  * turn too, Pau's ruling A3), the
@@ -2744,7 +2785,6 @@ export function exitStatedOnlyEnabled(): boolean {
   return envFlag("EXIT_STATED_ONLY_ENABLED");
 }
 
-
 /**
  * CA_OFFER_KEEPS_ACCOUNT_ENABLED (QA's MSB case M5, 5 Nov 2026; same flag in
  * the sibling app; default off). "<name> did not follow must see behaviors
@@ -2809,6 +2849,17 @@ export function coachingObservedKeptEnabled(): boolean {
 }
 
 /**
+ * EDIT_MAKE_IT_ABOUT_ENABLED (ported from the sibling app; Pau's scan, sf-s34, 7 Nov 2026; Pau-approved 7 Nov; same flag in both apps; default
+ * off). On an open Coaching draft, "I need you to make it about showing up late and please list the policy make the
+ * date for 10/14/26." was scoped to the date alone, so the Details rewrite was refused and the reply said nothing
+ * changed. On: "make it / this / the form … about …" also allows the form's account (Coaching Details, or a CA's
+ * Observation) in `forms/revision.ts` scopeRevision. Off, as before.
+ */
+export function editMakeItAboutEnabled(): boolean {
+  return envFlag("EDIT_MAKE_IT_ABOUT_ENABLED");
+}
+
+/**
  * POLITE_REQUEST_OWN_TURNS_ENABLED (ported from the sibling app; Pau's scan, sf-s37, 7 Nov 2026; same flag in both apps; default off). Three
  * requests in one chat, each "Can you create me a coaching document for <name> for …": the second card's Observation
  * of Offense read back the first employee's request. A request opened with "can / could / would / will you" was not
@@ -2820,6 +2871,16 @@ export function politeRequestOwnTurnsEnabled(): boolean {
 }
 
 /**
+ * MSB_PHRASE_SOC_ENABLED (ported from the sibling app; Pau via QA, 7 Nov 2026; same flag in both apps; default off). With CA_SALES_POLICY_ENABLED
+ * on, "create a ca for MSB for <name>" cites the Standards of Conduct, and "create a ca for must see behaviors for
+ * <name>" cited no policy: the glossary term was matched word by word. On: the phrase the approved glossary spells
+ * the term out as counts as the term (`forms/ca-policy.ts` withSalesPolicy). Off, as before.
+ */
+export function msbPhraseSocEnabled(): boolean {
+  return envFlag("MSB_PHRASE_SOC_ENABLED");
+}
+
+/**
  * CA_REQUEST_NOT_PRIOR_COACHING_ENABLED (ported from the sibling app; Pau's scan, sf-s35, 7 Nov 2026; same flag in both apps; default off). "Can you
  * draw me up a CA for <name> for being late on 10/23/26. <first> has signed a coaching document for being late on
  * 10/14/26. …" opened a Coaching Form: the coaching named as history was read as the form asked for. On: a form named
@@ -2828,6 +2889,16 @@ export function politeRequestOwnTurnsEnabled(): boolean {
  */
 export function caRequestNotPriorCoachingEnabled(): boolean {
   return envFlag("CA_REQUEST_NOT_PRIOR_COACHING_ENABLED");
+}
+
+/**
+ * LEVEL_ENDS_REQUEST_ENABLED (QA, live tester, 7 Nov 2026; same flag in both apps; default off). "my team member
+ * <name> was late on 10-20-26, verbal ca" got no card: the closing "verbal ca" had no request words before it, so the
+ * level read as history and the turn as a question. On: a level clause naming the document (ca, corrective action,
+ * write-up) as the turn's last clause is the form asked for (`forms/warning-level.ts`). Off, as before.
+ */
+export function levelEndsRequestEnabled(): boolean {
+  return envFlag("LEVEL_ENDS_REQUEST_ENABLED");
 }
 
 /**
@@ -2843,6 +2914,18 @@ export function asYouSaidAppReadEnabled(): boolean {
 
 // --- coding 2 flags ---
 
+// coding 2: SALES_OBSERVATION_ACCOUNT
+/**
+ * SALES_OBSERVATION_ACCOUNT_ENABLED (port of the sibling app's flip-4 gate finding, QA 7 Nov 2026; default off;
+ * acts only with SALES_SHORTFALL_OBJECT_ENABLED). Once "on performance" counts as the account, the request's own
+ * words ("written CA for <name> on performance") became the card's Issue. With this flag on, the Issue and the
+ * draft's account clause lose the request's head, the employee's name where it leads, the request's reason and a
+ * payroll answer (`observationAccount` in `forms/ca-policy.ts`); nothing left, no Issue. Off, as before.
+ */
+export function salesObservationAccountEnabled(): boolean {
+  return envFlag("SALES_OBSERVATION_ACCOUNT_ENABLED");
+}
+
 /**
  * NO_NOTICE_NO_DATE_ENABLED (QA, flip-3 tester, 6 Nov 2026; default off).
  * "exit form for <X>, resigned 11-3-26 with no notice" printed "Date that
@@ -2852,6 +2935,18 @@ export function asYouSaidAppReadEnabled(): boolean {
  */
 export function noNoticeNoDateEnabled(): boolean {
   return envFlag("NO_NOTICE_NO_DATE_ENABLED");
+}
+
+// coding 2: ISSUE_IS_THE_ACCOUNT
+/**
+ * ISSUE_IS_THE_ACCOUNT_ENABLED (QA, flip-3 tester, 6 Nov 2026; default off).
+ * "…<name>, verbal, she was late on 10-20-26" printed What happened =
+ * "verbal", and with a nickname, the typed name: the first clause after the
+ * person was taken. With this flag on, a bare level clause or a short clause
+ * naming the person is passed over (`forms/incident-issue.ts`). Off, as before.
+ */
+export function issueIsTheAccountEnabled(): boolean {
+  return envFlag("ISSUE_IS_THE_ACCOUNT_ENABLED");
 }
 
 // --- Coding flags ---

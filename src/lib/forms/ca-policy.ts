@@ -1,12 +1,14 @@
 import { withoutAppLines } from "@/lib/ai/app-sentences";
-import { foldsToGlossaryTerm } from "@/lib/ai/glossary";
+import { CHAT_GLOSSARY, foldsToGlossaryTerm } from "@/lib/ai/glossary";
 import {
   asYouSaidAppReadEnabled,
   asYouSaidManagerWordsEnabled,
+  msbPhraseSocEnabled,
   caSalesPolicyEnabled,
   cleaningOtherEveryWordingEnabled,
   formEditDateRulesEnabled,
   policyCleaningIncidentEnabled,
+  salesObservationAccountEnabled,
   salesShortfallObjectEnabled,
 } from "@/lib/config/chat-quality-flags";
 
@@ -541,14 +543,35 @@ function performanceIsTheReason(rawText: string): boolean {
   return statements(normalize(rawText)).some((sentence) => PERFORMANCE_AS_REASON.test(sentence));
 }
 
+/**
+ * MSB_PHRASE_SOC_ENABLED (Pau, 7 Nov 2026: "create a ca for must see behaviors for <name>" cited no policy; same flag
+ * in both apps; default off). The glossary term is matched word by word, so "MSB" was read and the spelled-out
+ * "must see behaviors" was not. The spelled-out phrases are the approved table's own: the right side of each
+ * "X = <phrase>." line of `CHAT_GLOSSARY`, folded to letters and digits — no list kept here. A singular
+ * ("must see behavior") and hyphens ("must-see") fold the same.
+ */
+const GLOSSARY_PHRASES: readonly string[] = CHAT_GLOSSARY.split("\n")
+  .map((line) => /^[A-Za-z0-9][A-Za-z0-9.&-]*\s+=\s+([^.]+)\./.exec(line)?.[1])
+  .filter((phrase): phrase is string => Boolean(phrase))
+  .map((phrase) => phrase.toLowerCase().replace(/[^a-z0-9]+/g, "").replace(/s$/, ""))
+  .filter((phrase) => phrase.length >= 6);
+
+function spellsOutGlossaryTerm(sentence: string): boolean {
+  const folded = sentence.toLowerCase().replace(/[^a-z0-9]+/g, "");
+  return GLOSSARY_PHRASES.some((phrase) => folded.includes(phrase));
+}
+
 function withSalesPolicy(reading: CaPolicyReading, rawText: string): CaPolicyReading {
   if (!caSalesPolicyEnabled()) return reading;
   if (reading.stated !== null && reading.stated !== "under_performance") return reading;
   if (reading.missedEvent !== null) return reading;
   const sentences = statements(normalize(rawText));
-  const msb = sentences.some((sentence) =>
-    sentence.split(/[^a-z0-9.]+/).some((word) => foldsToGlossaryTerm(word.replace(/^\.+|\.+$/g, ""))),
-  );
+  const msb =
+    sentences.some((sentence) =>
+      sentence.split(/[^a-z0-9.]+/).some((word) => foldsToGlossaryTerm(word.replace(/^\.+|\.+$/g, ""))),
+    ) ||
+    // MSB_PHRASE_SOC_ENABLED: the term spelled out ("must see behaviors") is the term too.
+    (msbPhraseSocEnabled() && sentences.some(spellsOutGlossaryTerm));
   // The stated shortfall reader the progression already uses (`corrective-action-intake.ts`): a metric named and judged.
   const target = reading.stated === "under_performance" || statesMetricShortfall(rawText) || (salesShortfallObjectEnabled() && performanceIsTheReason(rawText));
   if (!msb && !target) return reading;
@@ -1213,4 +1236,40 @@ export function caPolicyAmbiguousNotice(reading: CaPolicyReading): string | null
 export function describedPolicyChoiceNotice(choices: readonly { heading: string; page: number }[]): string {
   const listed = choices.map((choice) => `${choice.heading} (page ${choice.page})`);
   return `What you described reads as more than one policy in the manual — ${listed.slice(0, -1).join(", ")} or ${listed.at(-1)} — so the policy is left for you. Tell me which (for example "add the ${choices[0]!.heading}"), or tick Type of Offense and complete Direct policy on the form.`;
+}
+
+/*
+ * SALES_OBSERVATION_ACCOUNT_ENABLED (with SALES_SHORTFALL_OBJECT_ENABLED; port of the sibling app's flip-4 gate finding, QA 7 Nov 2026):
+ * once "on performance" counts as the account, the request's own words became the card's Observation —
+ * "<name> on performance", "performance for october not pay roll deductable". A sentence for the Observation
+ * loses the request's head ("can you write me a ca for"), the employee's name where it leads, the request's
+ * reason ("on / for performance (for october)") and a payroll answer ("not pay roll deductable"); what is
+ * left is the account, or nothing. Off (either flag), the sentence as it is.
+ */
+const OBSERVATION_REQUEST_HEAD =
+  /^(?:(?:hey|hi|ok|okay)[,\s]+)?(?:(?:can|could|would|will)\s+(?:you|we|i)\s+(?:please\s+)?)?(?:(?:make|write|create|do|draft|start|give|get|put)\s+(?:me\s+)?)?(?:(?:a|an)\s+)?(?:(?:written|verbal|final)\s+)?(?:corrective\s+action(?:\s+form)?|ca|c\/a|write[- ]?up|warning)\s+(?:for|on)\s+/i;
+const OBSERVATION_REASON = new RegExp(
+  String.raw`(?:^|\s)(?:on|for|about|regarding|due to)\s+(?:${REASON_DETERMINER}\s+){0,2}(?:under[- ]?)?performance\b(?:\s+(?:for|in|during)\s+(?:the\s+month\s+of\s+)?[a-z]+)?`,
+  "gi",
+);
+/** The reason with its "for" already cut off upstream: "performance for october …" at the start of a sentence. */
+const OBSERVATION_BARE_REASON = /^\s*(?:under[- ]?)?performance\b(?:\s+(?:for|in|during)\s+(?:the\s+month\s+of\s+)?[a-z]+)?/i;
+const OBSERVATION_PAYROLL = /\b(?:(?:not|no)\s+)?pay\s*roll\s+deduct\w*(?:\s+applicable)?\b|\b(?:not|no)\s+(?:a\s+)?pay\s*roll\s+deduction\b/gi;
+
+export function observationAccount(sentence: string, employeeName: string | null): string {
+  if (!salesObservationAccountEnabled() || !salesShortfallObjectEnabled()) return sentence;
+  const trimmed = sentence.trim();
+  let text = trimmed.replace(OBSERVATION_REQUEST_HEAD, "");
+  const wasRequest = text !== trimmed;
+  const own = new Set((employeeName ?? "").toLowerCase().split(/\s+/).filter(Boolean));
+  const words = text.split(/\s+/);
+  let lead = 0;
+  while (lead < words.length && own.has(words[lead]!.toLowerCase().replace(/[^\p{L}'’-]/gu, ""))) lead += 1;
+  // The name goes only where the sentence is the request ("<name> on performance"); "<name> was rude to a guest" keeps it.
+  OBSERVATION_REASON.lastIndex = 0;
+  const reasonFollows = new RegExp(`^${OBSERVATION_REASON.source}`, "i").test(` ${words.slice(lead).join(" ")}`);
+  if (lead > 0 && (wasRequest || reasonFollows)) words.splice(0, lead);
+  text = words.join(" ").replace(OBSERVATION_REASON, " ").replace(OBSERVATION_BARE_REASON, " ").replace(OBSERVATION_PAYROLL, " ");
+  text = text.replace(/\s{2,}/g, " ").replace(/^[\s,.;:-]+|[\s,;:-]+$/g, "").trim();
+  return /\p{L}{3,}/u.test(text) && text.split(/\s+/).length >= 2 ? text : "";
 }
