@@ -71,6 +71,13 @@ const CORRECTIONS: Record<string, string> = {
   "spelled": "it's spelled Penhallow",
 };
 
+/** This app's answer to an off-roster correction: it asks which, and no one is on the card meanwhile. */
+function offRosterAsked(after: ReplayAnswer): void {
+  expect(after.formProposal?.employeeName ?? null, `a name was kept or seated without the manager:\n${after.content}`).toBeNull();
+  expect(after.formProposal?.status, `the card does not wait for the employee:\n${after.content}`).toBe("needs_employee");
+  expect(after.content, `the reply does not ask which:\n${after.content}`).toMatch(/Which of them is this \*\*Corrective Action Form\*\* for — \*\*Odessa Lark Penhallwo\*\* or \*\*Odessa Lark Penhalloe\*\*\?/);
+}
+
 const ALREADY_HOLDS = new Set(["correct-way"]);
 
 export const NOV8_PROPOSAL_NAME_CORRECTION_CASES: ReplayCase[] = [
@@ -98,8 +105,19 @@ export const NOV8_PROPOSAL_NAME_CORRECTION_CASES: ReplayCase[] = [
     fixFlags: [FLAG],
     async run(t) {
       const { after } = await cardAfter(t, "fix her last name penhalloe");
-      expect(after.formProposal?.employeeName ?? null, `a roster person was seated for an off-roster spelling:\n${after.content}`).not.toBe("Odessa Lark Penhallow");
-      expect(after.content, `the reply never names the spelling she gave:\n${after.content}`).toMatch(/Odessa Lark Penhalloe/);
+      offRosterAsked(after);
+    },
+  },
+  {
+    id: "nov8-proposal-name-correction-typed-off-roster",
+    title: "\"change her name to Odessa Lark Penhalloe\" (typed, off the roster) asks which of the two: the reference the sibling app now follows",
+    report: "QA, round 5 (8 Nov 2026): in the sibling app an off-roster \"change her name to …\" on the card kept the old name and said nothing",
+    // Already so with production's flags here: a guard for the reference.
+    status: "fixed",
+    fixFlags: [FLAG],
+    async run(t) {
+      const { after } = await cardAfter(t, "change her name to Odessa Lark Penhalloe");
+      offRosterAsked(after);
     },
   },
   {
