@@ -5,6 +5,7 @@ import { businessToday } from "@/lib/business-date";
 import { withoutLevelAndStepClauses } from "./account-clauses";
 import { JOIN } from "./bounded-context";
 import { observationAccount } from "./ca-policy";
+import { onlyDeniesAFault } from "./denial-no-account";
 import { describesIncident } from "./corrective-action-intake";
 import { withoutPriorStepClauses } from "./form-date-answer";
 import { priorSentenceFixFor } from "./prior-sentence-scope";
@@ -214,6 +215,8 @@ export function correctiveActionIssue(said: string, employeeName: string | null)
  */
 function accountOnly(issue: string | null, employeeName: string | null): string | null {
   if (issue === null) return null;
+  // DENIAL_NO_ACCOUNT_ENABLED: "…, not late" only denies a fault; it is no Issue (`forms/denial-no-account.ts`).
+  if (onlyDeniesAFault(issue, employeeName)) return null;
   const account = observationAccount(issue, employeeName);
   return account === "" ? null : account;
 }
