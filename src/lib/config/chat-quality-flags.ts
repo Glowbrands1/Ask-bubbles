@@ -920,6 +920,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FORM_EDIT_REFERS_BACK_ENABLED",
   "CLAIM_GUARD_ENABLED",
   "NAME_CORRECTION_WORDS_ENABLED",
+  // Coding: PROPOSAL_NAME_CORRECTION (round 5, 8 Nov 2026; default off): forced off with the others.
+  "PROPOSAL_NAME_CORRECTION_ENABLED",
   "POLICY_CHANGE_REST_OF_TURN_ENABLED",
   "OPEN_FORM_NO_SELECTION_ENABLED",
   "ANGLE_PLACEHOLDER_GUARD_ENABLED",
@@ -3077,4 +3079,15 @@ export function removePolicyNotNamedEnabled(): boolean {
  */
 export function metricChoiceOneQuestionEnabled(): boolean {
   return envFlag("METRIC_CHOICE_ONE_QUESTION_ENABLED");
+}
+
+/**
+ * PROPOSAL_NAME_CORRECTION_ENABLED (QA, round 5, 8 Nov 2026; default off; reads with NAME_CORRECTION_WORDS_ENABLED,
+ * live). On a card not yet created, "fix her last name <surname>" (and "her last name is …", "it's spelled …") was
+ * not applied: the card kept the old name and the reply said nothing had changed. With this flag on, the turn is
+ * read as "change her name to <the name>" against the card's employee, and the roster decides as for any typed name
+ * (`forms/proposal-name-correction.ts`, called from the chat route). Off, as before.
+ */
+export function proposalNameCorrectionEnabled(): boolean {
+  return envFlag("PROPOSAL_NAME_CORRECTION_ENABLED");
 }
