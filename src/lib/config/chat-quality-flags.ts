@@ -2627,17 +2627,6 @@ export function metricGuardEnabled(): boolean {
 }
 
 /**
- * METRIC_CHOICE_ONE_QUESTION_ENABLED (QA, 7 Nov 2026; same flag in both apps; default off). The same doubled ask as
- * the FORM_NAME re-flip gate regression, under METRIC_GUARD_ENABLED: a choice question with its own "Tell me and I'll
- * …" after it, every choice a metric, became "Who is this form for? Tell me the employee's full name. Tell me and I'll
- * fill in …". On: the question's tail goes with a choice that is replaced, and stays with one still asked
- * (`forms/roster-only-names.ts` withoutMetricChoices). Off, as before.
- */
-export function metricChoiceOneQuestionEnabled(): boolean {
-  return envFlag("METRIC_CHOICE_ONE_QUESTION_ENABLED");
-}
-
-/**
  * Cleaning left undone cites the manual's Care and Cleaning of Equipment and
  * Facilities section, chosen by the code (Code 3, policy reading; QA T5,
  * 25 Oct 2026): "cleaning duties not being completed", "weren't done",
@@ -2802,4 +2791,17 @@ export function offRosterConfirmEnabled(): boolean {
  */
 export function ownBrandOnlyEnabled(): boolean {
   return envFlag("OWN_BRAND_ONLY_ENABLED");
+}
+
+// --- Coding flags ---
+
+/**
+ * METRIC_CHOICE_ONE_QUESTION_ENABLED (QA, 7 Nov 2026; same flag in both apps; default off). The same doubled ask as
+ * the FORM_NAME re-flip gate regression, under METRIC_GUARD_ENABLED: a choice question with its own "Tell me and I'll
+ * …" after it, every choice a metric, became "Who is this form for? Tell me the employee's full name. Tell me and I'll
+ * fill in …". On: the question's tail goes with a choice that is replaced, and stays with one still asked
+ * (`forms/roster-only-names.ts` withoutMetricChoices). Off, as before.
+ */
+export function metricChoiceOneQuestionEnabled(): boolean {
+  return envFlag("METRIC_CHOICE_ONE_QUESTION_ENABLED");
 }
