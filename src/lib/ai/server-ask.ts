@@ -10,7 +10,8 @@ import { ACTIVE_BRAND } from "@/lib/brand";
 import { CLAUDE_MAX_TOKENS, RETRIEVAL } from "@/lib/config/models";
 import { MissingConfigurationError, liveReadiness } from "@/lib/config/server-env";
 import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
-import { asksOnlyAboutFormsOnFile, candidateNameWords, isFormRecordsQuestion, loadFormRecords } from "@/lib/forms/chat-form-records";
+import { asksOnlyAboutFormsOnFile, isFormRecordsQuestion, loadFormRecords } from "@/lib/forms/chat-form-records";
+import { namesAPerson } from "@/lib/forms/names-a-person";
 import { priorFormsReadingForChat } from "@/lib/forms/prior-forms";
 import { answersFormClarification } from "@/lib/forms/form-clarification";
 import { buildFormInventory, publishedEntries } from "@/lib/forms/inventory";
@@ -431,7 +432,8 @@ async function answerQuestionCore(
   const pastFormsFirst =
     pastFormsBeforeLibraryEnabled() &&
     (libraryReading.kind !== "none" || (formReading.kind === "corrective_action" && !formReading.requestedCreation)) &&
-    (isFormRecordsQuestion(request.question) || candidateNameWords(request.question).length > 0);
+    // Only a message that names a person: a library question naming nobody keeps the library answer (`forms/names-a-person.ts`).
+    namesAPerson(request.question);
   const detected: InventoryQuestion = pastFormsFirst ? { kind: "none" } : libraryReading;
   /*
    * A QUESTION ABOUT FORMS ALREADY ON FILE NAMES A FORM WITHOUT ASKING FOR ONE.
