@@ -322,7 +322,11 @@ export function decideIntentTurn(rawInput: IntentTurnInput): IntentTurnDecision 
 
   if (clarification) return { question: input.question, state, clarification };
   if (!formTurn) return { question: input.question, state, clarification: null };
-  return { question: prependFormState(input.question, state), state, clarification: null };
+  return {
+    question: prependFormState(input.question, state, input.history.filter((turn) => turn.role === "user").map((turn) => turn.content)),
+    state,
+    clarification: null,
+  };
 }
 
 /**
