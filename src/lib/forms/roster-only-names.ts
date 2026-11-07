@@ -243,6 +243,11 @@ function withoutSlotNameInObservation(content: string, message: string | undefin
   return content.replace(/(\*\*Observation of Offense:\*\*[ \t]*)([^,\n]+),[ \t]*(?=\S)/g, (whole, label: string, lead: string) => {
     const typed = lead.trim();
     if (!typed || typed.split(/\s+/).length > 4 || rosterSpelling(typed, names)) return whole;
+    // The sibling app's flip-3 gate (6 Nov 2026, defect 3): "a CA for Under Performance on PPTA, LPSVA, …" — the clause
+    // after "for" opens with what happened (the name readers' metric rule: "Under Performance"), not a person, so the
+    // Observation keeps it.
+    const words = typed.split(/\s+/);
+    if (metricGuardEnabled() && words.some((_, end) => namesAMetric(words.slice(0, end + 1).join(" "), message))) return whole;
     return new RegExp(String.raw`\bfor\s+${escape(typed)}\s*,`, "i").test(message) ? label : whole;
   });
 }
