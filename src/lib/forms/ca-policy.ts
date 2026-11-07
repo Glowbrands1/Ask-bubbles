@@ -1,11 +1,15 @@
 import { withoutAppLines } from "@/lib/ai/app-sentences";
-import { foldsToGlossaryTerm } from "@/lib/ai/glossary";
+import { CHAT_GLOSSARY, foldsToGlossaryTerm } from "@/lib/ai/glossary";
 import {
+  asYouSaidAppReadEnabled,
   asYouSaidManagerWordsEnabled,
+  msbPhraseSocEnabled,
   caSalesPolicyEnabled,
   cleaningOtherEveryWordingEnabled,
   formEditDateRulesEnabled,
+  removePolicyNotNamedEnabled,
   policyCleaningIncidentEnabled,
+  salesObservationAccountEnabled,
   salesShortfallObjectEnabled,
 } from "@/lib/config/chat-quality-flags";
 
@@ -114,6 +118,11 @@ export interface CaPolicyReading {
    * the Standards of Conduct (Pau's ruling; `withCleaningOther`). Absent off.
    */
   other?: "cleaning";
+  /**
+   * AS_YOU_SAID_APP_READ_ENABLED: the policy the app's own lines on the turn named, when the manager's words name
+   * none (AS_YOU_SAID_MANAGER_WORDS_ENABLED reads only the manager's). Said as a reading, never "as you said".
+   */
+  readFromApp?: CaPolicyName;
 }
 
 /* ------------------------------------------------------------ the words -- */
@@ -403,6 +412,21 @@ const NEGATED_BEFORE = /\b(?:not|never|isn't|is not|wasn't|was not|no)\s+(?:\S+\
  * "rather than", "in place of" or "replace" is the one set aside.
  */
 const SET_ASIDE_BEFORE = /\b(?:instead\s+of|rather\s+than|in\s+place\s+of|replac(?:e|ing)|remov(?:e|ing)|swap\s+out)\s+(?:the\s+|our\s+|that\s+)?$/;
+/*
+ * REMOVE_POLICY_NOT_NAMED_ENABLED (A1, QA 6 Nov 2026; the flip-3 tester): "take the attendance policy off the
+ * form" got "Policy: Attendance, as you said": the verb's "off" comes after the policy, so SET_ASIDE_BEFORE never
+ * saw it. With the flag on, a policy between "take / get / pull" and "off / out", or after "drop / delete /
+ * strip", is the one set aside too. Off, as before.
+ */
+const TAKEN_OFF_BEFORE = /\b(?:take|taking|get|getting|pull|pulling)\s+(?:the\s+|our\s+|that\s+)?$/;
+const TAKEN_OFF_AFTER = /^\s*(?:polic(?:y|ies)\s+)?(?:off|out)\b/;
+const DROPPED_BEFORE = /\b(?:drop|dropping|delete|deleting|strip|stripping)\s+(?:the\s+|our\s+|that\s+)?$/;
+
+function takenOff(sentence: string, start: number, end: number): boolean {
+  if (!removePolicyNotNamedEnabled()) return false;
+  const before = sentence.slice(0, start);
+  return DROPPED_BEFORE.test(before) || (TAKEN_OFF_BEFORE.test(before) && TAKEN_OFF_AFTER.test(sentence.slice(end)));
+}
 
 function statedIn(turn: string): CaPolicyName | null {
   let found: { name: CaPolicyName; at: number } | null = null;
@@ -413,6 +437,7 @@ function statedIn(turn: string): CaPolicyName | null {
       if (!match) continue;
       if (NEGATED_BEFORE.test(sentence.slice(0, match.index))) continue;
       if (formEditDateRulesEnabled() && SET_ASIDE_BEFORE.test(sentence.slice(0, match.index))) continue;
+      if (takenOff(sentence, match.index, match.index + match[0].length)) continue;
       if (!alwaysAPolicy && !short && !POLICY_FRAME.test(sentence) && !AGAINST_BEFORE.test(sentence.slice(0, match.index))) {
         continue;
       }
@@ -434,7 +459,22 @@ function statedIn(turn: string): CaPolicyName | null {
  */
 export function readCaPolicy(rawText: string): CaPolicyReading {
   const said = managerWords(rawText);
-  return withCleaningOther(withSalesPolicy(readCaPolicyFromWords(said), said), said);
+  return withAppReading(withCleaningOther(withSalesPolicy(readCaPolicyFromWords(said), said), said), rawText, said);
+}
+
+/**
+ * AS_YOU_SAID_APP_READ_ENABLED (ported from the sibling app; QA's gate there, 7 Nov 2026; ships with
+ * AS_YOU_SAID_MANAGER_WORDS_ENABLED; same flag in both apps; default off). There, with AS_YOU_SAID on, a late-opening
+ * CA lost its card's Policy line: the only one it had was "<policy>, as you said", read from the app's own line on the
+ * turn. On: when the manager's words read as no policy at all and the whole turn (app lines included, as before
+ * AS_YOU_SAID) names one, that policy is kept as the app's reading, and the card says it as one
+ * (`caPolicyProposalLine`), never "as you said". Off, the reading is returned untouched.
+ */
+function withAppReading(reading: CaPolicyReading, rawText: string, said: string): CaPolicyReading {
+  if (!asYouSaidAppReadEnabled() || said === rawText) return reading;
+  if (reading.stated !== null || reading.suggestion !== null || reading.ambiguous || reading.other || reading.missedEvent) return reading;
+  const app = readCaPolicyFromWords(rawText).stated;
+  return app ? { ...reading, readFromApp: app } : reading;
 }
 
 /**
@@ -520,14 +560,35 @@ function performanceIsTheReason(rawText: string): boolean {
   return statements(normalize(rawText)).some((sentence) => PERFORMANCE_AS_REASON.test(sentence));
 }
 
+/**
+ * MSB_PHRASE_SOC_ENABLED (Pau, 7 Nov 2026: "create a ca for must see behaviors for <name>" cited no policy; same flag
+ * in both apps; default off). The glossary term is matched word by word, so "MSB" was read and the spelled-out
+ * "must see behaviors" was not. The spelled-out phrases are the approved table's own: the right side of each
+ * "X = <phrase>." line of `CHAT_GLOSSARY`, folded to letters and digits — no list kept here. A singular
+ * ("must see behavior") and hyphens ("must-see") fold the same.
+ */
+const GLOSSARY_PHRASES: readonly string[] = CHAT_GLOSSARY.split("\n")
+  .map((line) => /^[A-Za-z0-9][A-Za-z0-9.&-]*\s+=\s+([^.]+)\./.exec(line)?.[1])
+  .filter((phrase): phrase is string => Boolean(phrase))
+  .map((phrase) => phrase.toLowerCase().replace(/[^a-z0-9]+/g, "").replace(/s$/, ""))
+  .filter((phrase) => phrase.length >= 6);
+
+function spellsOutGlossaryTerm(sentence: string): boolean {
+  const folded = sentence.toLowerCase().replace(/[^a-z0-9]+/g, "");
+  return GLOSSARY_PHRASES.some((phrase) => folded.includes(phrase));
+}
+
 function withSalesPolicy(reading: CaPolicyReading, rawText: string): CaPolicyReading {
   if (!caSalesPolicyEnabled()) return reading;
   if (reading.stated !== null && reading.stated !== "under_performance") return reading;
   if (reading.missedEvent !== null) return reading;
   const sentences = statements(normalize(rawText));
-  const msb = sentences.some((sentence) =>
-    sentence.split(/[^a-z0-9.]+/).some((word) => foldsToGlossaryTerm(word.replace(/^\.+|\.+$/g, ""))),
-  );
+  const msb =
+    sentences.some((sentence) =>
+      sentence.split(/[^a-z0-9.]+/).some((word) => foldsToGlossaryTerm(word.replace(/^\.+|\.+$/g, ""))),
+    ) ||
+    // MSB_PHRASE_SOC_ENABLED: the term spelled out ("must see behaviors") is the term too.
+    (msbPhraseSocEnabled() && sentences.some(spellsOutGlossaryTerm));
   // The stated shortfall reader the progression already uses (`corrective-action-intake.ts`): a metric named and judged.
   const target = reading.stated === "under_performance" || statesMetricShortfall(rawText) || (salesShortfallObjectEnabled() && performanceIsTheReason(rawText));
   if (!msb && !target) return reading;
@@ -930,6 +991,10 @@ export function caPolicyProposalLine(reading: CaPolicyReading, named: NamedPolic
     const what = reading.topics.map((topic) => TOPIC_WORDS[topic]).join(" and ");
     return `**Policy:** this reads as **Standards of Conduct** — ${what}. I'll check it against the current policy manual and quote that section on the draft; if the manual doesn't support it, I'll leave the policy for you. Tell me if a different policy applies.`;
   }
+  // AS_YOU_SAID_APP_READ_ENABLED: the policy the app read, said as its reading. Off, never set.
+  if (reading.readFromApp) {
+    return `**Policy:** ${CA_POLICY_LABEL[reading.readFromApp]} — read from this request. I'll quote that section from the current policy manual on the draft; tell me if a different policy applies.`;
+  }
   return null;
 }
 
@@ -1188,4 +1253,40 @@ export function caPolicyAmbiguousNotice(reading: CaPolicyReading): string | null
 export function describedPolicyChoiceNotice(choices: readonly { heading: string; page: number }[]): string {
   const listed = choices.map((choice) => `${choice.heading} (page ${choice.page})`);
   return `What you described reads as more than one policy in the manual — ${listed.slice(0, -1).join(", ")} or ${listed.at(-1)} — so the policy is left for you. Tell me which (for example "add the ${choices[0]!.heading}"), or tick Type of Offense and complete Direct policy on the form.`;
+}
+
+/*
+ * SALES_OBSERVATION_ACCOUNT_ENABLED (with SALES_SHORTFALL_OBJECT_ENABLED; port of the sibling app's flip-4 gate finding, QA 7 Nov 2026):
+ * once "on performance" counts as the account, the request's own words became the card's Observation —
+ * "<name> on performance", "performance for october not pay roll deductable". A sentence for the Observation
+ * loses the request's head ("can you write me a ca for"), the employee's name where it leads, the request's
+ * reason ("on / for performance (for october)") and a payroll answer ("not pay roll deductable"); what is
+ * left is the account, or nothing. Off (either flag), the sentence as it is.
+ */
+const OBSERVATION_REQUEST_HEAD =
+  /^(?:(?:hey|hi|ok|okay)[,\s]+)?(?:(?:can|could|would|will)\s+(?:you|we|i)\s+(?:please\s+)?)?(?:(?:make|write|create|do|draft|start|give|get|put)\s+(?:me\s+)?)?(?:(?:a|an)\s+)?(?:(?:written|verbal|final)\s+)?(?:corrective\s+action(?:\s+form)?|ca|c\/a|write[- ]?up|warning)\s+(?:for|on)\s+/i;
+const OBSERVATION_REASON = new RegExp(
+  String.raw`(?:^|\s)(?:on|for|about|regarding|due to)\s+(?:${REASON_DETERMINER}\s+){0,2}(?:under[- ]?)?performance\b(?:\s+(?:for|in|during)\s+(?:the\s+month\s+of\s+)?[a-z]+)?`,
+  "gi",
+);
+/** The reason with its "for" already cut off upstream: "performance for october …" at the start of a sentence. */
+const OBSERVATION_BARE_REASON = /^\s*(?:under[- ]?)?performance\b(?:\s+(?:for|in|during)\s+(?:the\s+month\s+of\s+)?[a-z]+)?/i;
+const OBSERVATION_PAYROLL = /\b(?:(?:not|no)\s+)?pay\s*roll\s+deduct\w*(?:\s+applicable)?\b|\b(?:not|no)\s+(?:a\s+)?pay\s*roll\s+deduction\b/gi;
+
+export function observationAccount(sentence: string, employeeName: string | null): string {
+  if (!salesObservationAccountEnabled() || !salesShortfallObjectEnabled()) return sentence;
+  const trimmed = sentence.trim();
+  let text = trimmed.replace(OBSERVATION_REQUEST_HEAD, "");
+  const wasRequest = text !== trimmed;
+  const own = new Set((employeeName ?? "").toLowerCase().split(/\s+/).filter(Boolean));
+  const words = text.split(/\s+/);
+  let lead = 0;
+  while (lead < words.length && own.has(words[lead]!.toLowerCase().replace(/[^\p{L}'’-]/gu, ""))) lead += 1;
+  // The name goes only where the sentence is the request ("<name> on performance"); "<name> was rude to a guest" keeps it.
+  OBSERVATION_REASON.lastIndex = 0;
+  const reasonFollows = new RegExp(`^${OBSERVATION_REASON.source}`, "i").test(` ${words.slice(lead).join(" ")}`);
+  if (lead > 0 && (wasRequest || reasonFollows)) words.splice(0, lead);
+  text = words.join(" ").replace(OBSERVATION_REASON, " ").replace(OBSERVATION_BARE_REASON, " ").replace(OBSERVATION_PAYROLL, " ");
+  text = text.replace(/\s{2,}/g, " ").replace(/^[\s,.;:-]+|[\s,;:-]+$/g, "").trim();
+  return /\p{L}{3,}/u.test(text) && text.split(/\s+/).length >= 2 ? text : "";
 }
