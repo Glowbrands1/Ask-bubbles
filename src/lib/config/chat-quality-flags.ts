@@ -1019,6 +1019,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REFORMAT_KEEPS_SOURCES_ENABLED",
   "FRAMEWORK_GENERAL_SECTIONS_ENABLED",
   "FORM_EDIT_DATE_RULES_ENABLED",
+  // coding 2: REMOVE_POLICY_NOT_NAMED (A1; default off): forced off with the others.
+  "REMOVE_POLICY_NOT_NAMED_ENABLED",
   "QUESTION_NOT_FORM_ENABLED",
   "DRAFT_REUSE_SAME_CHAT_ONLY_ENABLED",
   "RESIGN_METHOD_FOLLOWUP_ENABLED",
@@ -2928,6 +2930,17 @@ export function levelEndsRequestEnabled(): boolean {
 }
 
 /**
+ * DESCRIBED_ATTENDANCE_CARD_ENABLED (Pau-approved 7 Nov 2026, option A; same flag name in both apps; default off). With
+ * no policy named, an attendance account — "for opening store late", "was late on 10-20-26", absent — gave a CA card
+ * with no Policy line, though the app reads it as attendance (`describedAttendanceKeys`). On: the card cites the
+ * manual's Attendance section for it, as a reading ("from what you described"), never "as you said"
+ * (`ai/form-proposal.ts` namedPolicyFor). Off, as before.
+ */
+export function describedAttendanceCardEnabled(): boolean {
+  return envFlag("DESCRIBED_ATTENDANCE_CARD_ENABLED");
+}
+
+/**
  * AS_YOU_SAID_APP_READ_ENABLED (ported from the sibling app; QA's gate there, 7 Nov 2026: regressions from
  * AS_YOU_SAID_MANAGER_WORDS; ships with it; same flag in both apps; default off). With AS_YOU_SAID on, a CA whose
  * only Policy line was "<policy>, as you said" (read from the app's own line) lost the line. On: the policy the app's
@@ -2995,6 +3008,16 @@ export function issueIsTheAccountEnabled(): boolean {
  */
 export function priorStepPreviouslyEnabled(): boolean {
   return envFlag("PRIOR_STEP_PREVIOUSLY_ENABLED");
+}
+
+// coding 2: REMOVE_POLICY_NOT_NAMED
+/**
+ * REMOVE_POLICY_NOT_NAMED_ENABLED (A1, QA 6 Nov 2026; default off). "take the attendance policy off the form"
+ * got "Policy: Attendance, as you said". With this flag on, a policy the turn takes off ("take … off", "drop …")
+ * is not the one it names (`forms/ca-policy.ts` statedIn). Off, as before.
+ */
+export function removePolicyNotNamedEnabled(): boolean {
+  return envFlag("REMOVE_POLICY_NOT_NAMED_ENABLED");
 }
 
 // --- Coding flags ---
