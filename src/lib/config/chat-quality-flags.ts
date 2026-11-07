@@ -1021,6 +1021,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REFORMAT_KEEPS_SOURCES_ENABLED",
   "FRAMEWORK_GENERAL_SECTIONS_ENABLED",
   "FORM_EDIT_DATE_RULES_ENABLED",
+  // coding 2: REMOVE_POLICY_NOT_NAMED (A1; default off): forced off with the others.
+  "REMOVE_POLICY_NOT_NAMED_ENABLED",
   "QUESTION_NOT_FORM_ENABLED",
   "DRAFT_REUSE_SAME_CHAT_ONLY_ENABLED",
   "RESIGN_METHOD_FOLLOWUP_ENABLED",
@@ -1113,9 +1115,13 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // Port of the sibling app's fix flag after its flip (6 Nov 2026): forced off with the others.
   "SALES_SHORTFALL_OBJECT_ENABLED",
   "SALES_OBSERVATION_ACCOUNT_ENABLED",
+  // coding 2: SOURCE_NOTE_GUARD (default off): forced off with the others.
+  "SOURCE_NOTE_GUARD_ENABLED",
   "UNDER_PERFORMANCE_EXPLAINED_ENABLED",
   "NO_NOTICE_NO_DATE_ENABLED",
   "ISSUE_IS_THE_ACCOUNT_ENABLED",
+  // coding 2: DENIAL_NO_ACCOUNT (default off): forced off with the others.
+  "DENIAL_NO_ACCOUNT_ENABLED",
   // Live in production since the 6 Nov flip, but missing from this list (QA, 6 Nov 2026): a gate run with them on
   // would keep them on inside flags-off-parity's child run. Test-only effect.
   "METRIC_GUARD_ENABLED",
@@ -2662,6 +2668,20 @@ export function rosterNearMissEnabled(): boolean {
 }
 
 /**
+ * NEAR_MISS_DETAILS_ACCEPT_ENABLED (QA's Bubbles gate on 4d42c342, 7 Nov 2026; default off). With FORM_NAME on, a
+ * full name typed close to one roster person ("Corvina Ashdown Vellacot") got "Is this for **<roster name>**? Tell me
+ * if that should change.", and the next turn ("verbal warning, no payroll deduct, part-time team member,") got the
+ * same question again: the answer reader took only "yes" or a name, the details were dropped and no card came. On: a
+ * turn after that question that gives form details (a warning level or a payroll answer, by the app's own readers)
+ * and does not turn the name down accepts the asked name, when the manager typed that person's first name and a
+ * surname close to theirs (`ai/first-name-suggest.ts` chosenName). A first name typed alone is still asked, as
+ * before. Off, as before.
+ */
+export function nearMissDetailsAcceptEnabled(): boolean {
+  return envFlag("NEAR_MISS_DETAILS_ACCEPT_ENABLED");
+}
+
+/**
  * REPLY_MATCHES_CARD_ENABLED (QA for Pau, 5 Nov 2026; default off). The last
  * step of every chat turn compares the finished reply with the finished card
  * and makes the reply agree with it: no employee on the card, no person named
@@ -2943,6 +2963,17 @@ export function levelEndsRequestEnabled(): boolean {
 }
 
 /**
+ * DESCRIBED_ATTENDANCE_CARD_ENABLED (Pau-approved 7 Nov 2026, option A; same flag name in both apps; default off). With
+ * no policy named, an attendance account — "for opening store late", "was late on 10-20-26", absent — gave a CA card
+ * with no Policy line, though the app reads it as attendance (`describedAttendanceKeys`). On: the card cites the
+ * manual's Attendance section for it, as a reading ("from what you described"), never "as you said"
+ * (`ai/form-proposal.ts` namedPolicyFor). Off, as before.
+ */
+export function describedAttendanceCardEnabled(): boolean {
+  return envFlag("DESCRIBED_ATTENDANCE_CARD_ENABLED");
+}
+
+/**
  * AS_YOU_SAID_APP_READ_ENABLED (ported from the sibling app; QA's gate there, 7 Nov 2026: regressions from
  * AS_YOU_SAID_MANAGER_WORDS; ships with it; same flag in both apps; default off). With AS_YOU_SAID on, a CA whose
  * only Policy line was "<policy>, as you said" (read from the app's own line) lost the line. On: the policy the app's
@@ -2967,6 +2998,19 @@ export function salesObservationAccountEnabled(): boolean {
   return envFlag("SALES_OBSERVATION_ACCOUNT_ENABLED");
 }
 
+// coding 2: SOURCE_NOTE_GUARD
+/**
+ * SOURCE_NOTE_GUARD_ENABLED (QA, 5 Nov 2026, item 9; port back from the sibling app's #571, which extends this
+ * app's d4ee64d2; default off). A reply reached a manager with the model's own note about a source in it: "[S1
+ * doesn't actually cover general tardiness — it only covers failing to open the store…]". The marker stripping
+ * removes only a bare marker ("[S1]") or a group of them. With the flag on, every reply's last step removes such a
+ * note and any bare marker group left ("[S12, S14]"); a citation with only a page or section after its tag is kept
+ * (`ai/source-note.ts`). Off, as before.
+ */
+export function sourceNoteGuardEnabled(): boolean {
+  return envFlag("SOURCE_NOTE_GUARD_ENABLED");
+}
+
 /**
  * NO_NOTICE_NO_DATE_ENABLED (QA, flip-3 tester, 6 Nov 2026; default off).
  * "exit form for <X>, resigned 11-3-26 with no notice" printed "Date that
@@ -2976,6 +3020,17 @@ export function salesObservationAccountEnabled(): boolean {
  */
 export function noNoticeNoDateEnabled(): boolean {
   return envFlag("NO_NOTICE_NO_DATE_ENABLED");
+}
+
+// coding 2: DENIAL_NO_ACCOUNT
+/**
+ * DENIAL_NO_ACCOUNT_ENABLED (coding 4's finding via QA, 7 Nov 2026; default off). "create a corrective action
+ * for <name>, not late" made a card with "**Issue:** not late" and no "what happened" ask. With this flag on, an
+ * Issue that only denies a fault is no Issue (`forms/denial-no-account.ts`, `forms/incident-issue.ts`
+ * accountOnly). Off, as before.
+ */
+export function denialNoAccountEnabled(): boolean {
+  return envFlag("DENIAL_NO_ACCOUNT_ENABLED");
 }
 
 // coding 2: ISSUE_IS_THE_ACCOUNT
@@ -2999,6 +3054,16 @@ export function issueIsTheAccountEnabled(): boolean {
  */
 export function priorStepPreviouslyEnabled(): boolean {
   return envFlag("PRIOR_STEP_PREVIOUSLY_ENABLED");
+}
+
+// coding 2: REMOVE_POLICY_NOT_NAMED
+/**
+ * REMOVE_POLICY_NOT_NAMED_ENABLED (A1, QA 6 Nov 2026; default off). "take the attendance policy off the form"
+ * got "Policy: Attendance, as you said". With this flag on, a policy the turn takes off ("take … off", "drop …")
+ * is not the one it names (`forms/ca-policy.ts` statedIn). Off, as before.
+ */
+export function removePolicyNotNamedEnabled(): boolean {
+  return envFlag("REMOVE_POLICY_NOT_NAMED_ENABLED");
 }
 
 // --- Coding flags ---
