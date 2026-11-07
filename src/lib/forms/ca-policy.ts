@@ -6,6 +6,7 @@ import {
   msbPhraseSocEnabled,
   caSalesPolicyEnabled,
   cleaningOtherEveryWordingEnabled,
+  describedAttendanceCardEnabled,
   formEditDateRulesEnabled,
   removePolicyNotNamedEnabled,
   policyCleaningIncidentEnabled,
@@ -14,6 +15,7 @@ import {
 } from "@/lib/config/chat-quality-flags";
 
 import { JOIN } from "./bounded-context";
+import { withoutDeniedFaults } from "./denial-no-account";
 import { LATE_TO_OPEN, lateOpenOn } from "./late-open";
 import {
   findManualSection,
@@ -928,7 +930,9 @@ export const CA_POLICY_QUESTION = "Which policy applies?";
  * lateness nor absence — it does not default every note to tardiness.
  */
 export function describedAttendanceKeys(rawText: string): string[] | null {
-  return attendanceOffenseKeys(normalize(rawText), false);
+  // DESCRIBED_ATTENDANCE_CARD_ENABLED (QA's round-3 gate, 7 Nov 2026): a denied fault ("not late") describes no attendance.
+  const described = describedAttendanceCardEnabled() ? withoutDeniedFaults(rawText) : rawText;
+  return attendanceOffenseKeys(normalize(described), false);
 }
 
 /**
