@@ -2475,6 +2475,17 @@ export function formEditSaidReplacementEnabled(): boolean {
 export function formPatchReaderFixesEnabled(): boolean {
   return envFlag("FORM_PATCH_READER_FIXES_ENABLED") && formPatchReducerEnabled();
 }
+/**
+ * PROPOSAL_MAKE_IT_ABOUT_ENABLED (coding 5, port from the sibling app: QA's flip-9 tester item 9, 8 Nov 2026; same
+ * flag in both apps; default off). On a proposal card (no draft yet), "I need you to make it about showing up late
+ * and please list the policy make the date for 10/14/26." was read as more account: the drafting model's notes at
+ * Create held the instruction word for word. On: a "make it / this / the form … about <X>" sentence makes <X> the
+ * account from that turn on in the draft's notes (`forms/instances/[id]/draft/route.ts`), never the instruction,
+ * and the account said before it is set aside (`ai/make-it-about.ts`). Off, as before.
+ */
+export function proposalMakeItAboutEnabled(): boolean {
+  return envFlag("PROPOSAL_MAKE_IT_ABOUT_ENABLED");
+}
 // --- end coding 5 flags ---
 
 /**
