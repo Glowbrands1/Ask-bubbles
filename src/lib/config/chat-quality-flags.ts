@@ -1087,6 +1087,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "SALES_SHORTFALL_OBJECT_ENABLED",
   "SALES_OBSERVATION_ACCOUNT_ENABLED",
   "UNDER_PERFORMANCE_EXPLAINED_ENABLED",
+  "NO_NOTICE_NO_DATE_ENABLED",
   // Live in production since the 6 Nov flip, but missing from this list (QA, 6 Nov 2026): a gate run with them on
   // would keep them on inside flags-off-parity's child run. Test-only effect.
   "METRIC_GUARD_ENABLED",
@@ -2817,8 +2818,20 @@ export function politeRequestOwnTurnsEnabled(): boolean {
   return envFlag("POLITE_REQUEST_OWN_TURNS_ENABLED");
 }
 
+/**
+ * CA_REQUEST_NOT_PRIOR_COACHING_ENABLED (ported from the sibling app; Pau's scan, sf-s35, 7 Nov 2026; same flag in both apps; default off). "Can you
+ * draw me up a CA for <name> for being late on 10/23/26. <first> has signed a coaching document for being late on
+ * 10/14/26. …" opened a Coaching Form: the coaching named as history was read as the form asked for. On: a form named
+ * after a Corrective Action request in the same message is a detail of that request, unless the manager switches to
+ * it (`forms/template-intent.ts` requestedNaming). Off, as before.
+ */
+export function caRequestNotPriorCoachingEnabled(): boolean {
+  return envFlag("CA_REQUEST_NOT_PRIOR_COACHING_ENABLED");
+}
+
 // --- coding 2 flags ---
 
+// coding 2: SALES_OBSERVATION_ACCOUNT
 /**
  * SALES_OBSERVATION_ACCOUNT_ENABLED (port of the sibling app's flip-4 gate finding, QA 7 Nov 2026; default off;
  * acts only with SALES_SHORTFALL_OBJECT_ENABLED). Once "on performance" counts as the account, the request's own
@@ -2828,4 +2841,15 @@ export function politeRequestOwnTurnsEnabled(): boolean {
  */
 export function salesObservationAccountEnabled(): boolean {
   return envFlag("SALES_OBSERVATION_ACCOUNT_ENABLED");
+}
+
+/**
+ * NO_NOTICE_NO_DATE_ENABLED (QA, flip-3 tester, 6 Nov 2026; default off).
+ * "exit form for <X>, resigned 11-3-26 with no notice" printed "Date that
+ * notice was given: November 3, 2026": "resigned" is a notice-given cue. With
+ * this flag on, a stated "no notice" leaves the notice date empty, and the
+ * date stays the resignation's (`forms/exit-facts.ts`). Off, as before.
+ */
+export function noNoticeNoDateEnabled(): boolean {
+  return envFlag("NO_NOTICE_NO_DATE_ENABLED");
 }
