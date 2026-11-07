@@ -941,6 +941,9 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FORM_EDIT_TOOL_IN_STREAM_ENABLED",
   "CHAT_GLOSSARY_ENABLED",
   "CA_SALES_POLICY_ENABLED",
+  // Default-off fix flags (#486, coding-3 items 4 and 5): forced off with the others.
+  "CA_PERFORMANCE_REASON_ENABLED",
+  "WRITE_ME_THE_FORM_ENABLED",
   "FORM_NAME_FROM_ROSTER_ENABLED",
   "FORM_EDIT_NOOP_GUARD_ENABLED",
   "CA_NAME_FROM_CHAT_ENABLED",
@@ -2519,6 +2522,23 @@ export function caSalesPolicyEnabled(): boolean {
 }
 
 /**
+ * CA_PERFORMANCE_REASON_ENABLED (QA, coding-3 item 5, 5 Nov 2026; default
+ * off; same flag in both apps; only effective with CA_SALES_POLICY_ENABLED).
+ * "can you write me a Ca for <name> for performance for october" got "You
+ * haven't told me what happened yet": the bare "performance" is neither a
+ * metric named and judged (`statesMetricShortfall`) nor the removed Under
+ * Performance box's name. On, the sentence that asks for the Corrective
+ * Action naming performance (the EPP reader's existing performance pattern,
+ * `namesPerformance` in `forms/epp-policy.ts`), with nothing else read from
+ * the account, is the sales-performance reading: the card cites the
+ * Standards of Conduct and does not ask what happened. See `withSalesPolicy`
+ * in `forms/ca-policy.ts`. Off, as before.
+ */
+export function caPerformanceReasonEnabled(): boolean {
+  return envFlag("CA_PERFORMANCE_REASON_ENABLED");
+}
+
+/**
  * No false "Updated" after a form edit (Step 4, 4 Nov 2026). The one writer
  * refuses, on the tool, patch, revision and correction paths, an op that sets
  * a field to the value it already has (`same_value`) and an op whose value
@@ -2757,6 +2777,18 @@ export function underPerformanceExplainedEnabled(): boolean {
  */
 export function salesShortfallObjectEnabled(): boolean {
   return envFlag("SALES_SHORTFALL_OBJECT_ENABLED");
+}
+
+/**
+ * WRITE_ME_THE_FORM_ENABLED (QA, 4 Nov 2026: "Can you write me a performace ca for an employee who … <name> - verbal"
+ * made no card; default off). "write me a …" and one or two plain words before the form ("a performance CA", "a quick
+ * CA") still ask to write the form; the object must still BE the form ("write a summary of the CA policy" does not
+ * match; `forms/template-intent.ts` WRITES_THE_FORM_LOOSE). The sibling app ships it under CA_SALES_POLICY_ENABLED
+ * (0d16be2a); here it has its own flag, because CA_SALES_POLICY is already live and nothing new may act under a live
+ * flag (QA, 7 Nov 2026). Off, as before.
+ */
+export function writeMeTheFormEnabled(): boolean {
+  return envFlag("WRITE_ME_THE_FORM_ENABLED");
 }
 
 /**
