@@ -7,6 +7,7 @@ import { HAS_EMPLOYEE_AND_PLACE, SAYS_READY } from "@/lib/ai/coaching-what-happe
 import { matchEmployeeName, normalizeTypedName, type RosterEmployee } from "./employee-match";
 import { isAcceptedOffRoster, offRosterCardNote, offRosterOffer, offRosterTakenLine } from "./off-roster-confirm";
 import { personRosterNames } from "./person-guard";
+import { namesCompanyPositionTitle } from "./staff-picker";
 import { metricMessage, namesAMetric, requestMessage } from "./request-slot";
 import { namesAForm } from "./template-intent";
 
@@ -184,11 +185,15 @@ export function rosterOnlyNames(response: AskResponse, names: readonly string[],
     });
   }
 
-  // "Which of them is this … for — A, B or C?": roster people only.
-  content = content.replace(/Which of them is this ((?:\*\*[^*]+\*\* )?)for\s*[—–-]\s*([^?\n]+)\?/g, (whole, form: string, list: string) => {
+  /*
+   * "Which of them is this … for — A, B or C?": roster people only. The question's own "Tell me and I'll …" after it
+   * on the same line stays with a choice that is still asked, and goes with one that is not: ASK_WHO asks it already
+   * (QA, the FORM_NAME re-flip gate on ebfb566a, 7 Nov 2026: "… full name. Tell me and I'll fill in …" asked twice).
+   */
+  content = content.replace(/Which of them is this ((?:\*\*[^*]+\*\* )?)for\s*[—–-]\s*([^?\n]+)\?([ \t]+Tell me\b[^\n]*)?/g, (whole, form: string, list: string, tail: string | undefined) => {
     const kept = [...new Set(listedNames(list).map((name) => rosterSpelling(name, names)).filter((name): name is string => Boolean(name)))];
-    if (kept.length >= 2) return `Which of them is this ${form}for — ${said(kept)}?`;
-    if (kept.length === 1) return kept[0] === onCard ? "" : `Is this for **${kept[0]}**?`;
+    if (kept.length >= 2) return `Which of them is this ${form}for — ${said(kept)}?${tail ?? ""}`;
+    if (kept.length === 1) return kept[0] === onCard ? "" : `Is this for **${kept[0]}**?${tail ?? ""}`;
     return onCard ? "" : ASK_WHO;
   });
   // "Is this for X?": a roster person only.
@@ -238,6 +243,11 @@ function withoutSlotNameInObservation(content: string, message: string | undefin
   return content.replace(/(\*\*Observation of Offense:\*\*[ \t]*)([^,\n]+),[ \t]*(?=\S)/g, (whole, label: string, lead: string) => {
     const typed = lead.trim();
     if (!typed || typed.split(/\s+/).length > 4 || rosterSpelling(typed, names)) return whole;
+    // The sibling app's flip-3 gate (6 Nov 2026, defect 3): "a CA for Under Performance on PPTA, LPSVA, …" — the clause
+    // after "for" opens with what happened (the name readers' metric rule: "Under Performance"), not a person, so the
+    // Observation keeps it.
+    const words = typed.split(/\s+/);
+    if (metricGuardEnabled() && words.some((_, end) => namesAMetric(words.slice(0, end + 1).join(" "), message))) return whole;
     return new RegExp(String.raw`\bfor\s+${escape(typed)}\s*,`, "i").test(message) ? label : whole;
   });
 }
@@ -329,6 +339,8 @@ export function withoutUnseatedName(
  * request's name (`slotName`).
  */
 function withNotFoundNote(content: string, typed: string | null, names: readonly string[]): string {
+  // B1 (the flip-3 tester, 6 Nov 2026): a company position title ("Team Member") is never a person said back as not found.
+  if (typed && namesCompanyPositionTitle(typed)) return content;
   if (!typed || /I couldn['’]t find \*\*/.test(content) || oneCloseRosterPerson(typed, names)) return content;
   return `I couldn't find **${typed}** in the Woven roster, so that name is not on the form.\n\n${content.trim()}`;
 }
@@ -362,6 +374,8 @@ function offRosterTyped(employee: string, message: string | undefined, names: re
   const typed = employee.trim();
   if (!NAME_SHAPE.test(typed) || rosterSpelling(typed, names) || anyRosterPersonClose(typed, names) || namesAForm(typed)) return null;
   if (normalizeTypedName(typed).split(/\s+/).includes(UNNAMED_PERSON_WORD)) return null;
+  // B1: a company position title ("Team Member") is never offered as a person.
+  if (namesCompanyPositionTitle(typed)) return null;
   const same = (said: string | null | undefined) => Boolean(said) && normalizeTypedName(said!) === normalizeTypedName(typed);
   const text = message ?? "";
   const placed =
@@ -397,6 +411,10 @@ function personPlaces(name: string): RegExp[] {
     new RegExp(String.raw`\bfor\s+${spelled}${end}\s*[,.]`, "iu"),
     new RegExp(String.raw`\bfor\s+${spelled}${end}\s*[.!]?$`, "iu"),
     new RegExp(String.raw`\bemployee,?\s+${spelled}${end}`, "iu"),
+    // B1 (the flip-3 tester, 6 Nov 2026): the name given after the first reply — "name is <name>", "her name is <name>",
+    // "it's <name>", "the employee is <name>".
+    new RegExp(String.raw`(?:^|[\s,.])(?:(?:her|his|their)\s+)?name\s+is\s+${spelled}${end}`, "iu"),
+    new RegExp(String.raw`(?:^|[\s,.])(?:it['’]?s|it\s+is|the\s+employee\s+is|this\s+is\s+for)\s+${spelled}${end}`, "iu"),
   ];
 }
 
