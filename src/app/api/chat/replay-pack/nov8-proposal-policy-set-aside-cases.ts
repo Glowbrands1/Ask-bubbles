@@ -73,10 +73,10 @@ export const NOV8_PROPOSAL_POLICY_SET_ASIDE_CASES: ReplayCase[] = [
     title: "Coaching card, Attendance named: \"take the attendance policy off the form\" takes it off the card and says so",
     report: REPORT,
     status: { open: "the take-off is answered as a policy question (\"A grounded answer from the policy manual.\"), never on the card" },
-    fixFlags: FIX,
-    // Here the turn never reaches the card: the route answers it as a policy question first, so the card's reader
-    // cannot take the policy off. A route change (server-ask.ts, coding 2's) is needed; open with the fix flag too.
-    fixStatus: { open: "the route answers the take-off as a policy question before the card is built (server-ask.ts)" },
+    // Changed on purpose (coding 2, 8 Nov 2026): the turn never reached the card, because the route answered it as a
+    // policy question first. TAKE_OFF_STAYS_CARD_ENABLED (`ai/take-off-stays-card.ts`, server-ask.ts) keeps it a card
+    // turn, so with both flags on it holds; fixStatus removed.
+    fixFlags: [...FIX, "TAKE_OFF_STAYS_CARD_ENABLED"],
     async run(t) {
       const thread = start(t);
       await thread.say(COACHING_REQUEST);
@@ -140,9 +140,9 @@ export const NOV8_PROPOSAL_POLICY_SET_ASIDE_CASES: ReplayCase[] = [
     title: "the flip-7 tester's \"take the policy off\": whatever policy the card cites comes off",
     report: `${REPORT} (the sibling app's flip-7 tester: "take the policy off" not honoured)`,
     status: { open: "the take-off is answered as a policy question, never on the card" },
-    fixFlags: FIX,
-    // As the Coaching card: "take the policy off" is answered as a policy question before the card (server-ask.ts).
-    fixStatus: { open: "the route answers \"take the policy off\" as a policy question before the card is built (server-ask.ts)" },
+    // Changed on purpose (coding 2, 8 Nov 2026): "take the policy off" read as a question (QUESTION_NOT_FORM) and was
+    // answered before the card. TAKE_OFF_STAYS_CARD_ENABLED keeps it a card turn; with both flags on it holds; fixStatus removed.
+    fixFlags: [...FIX, "TAKE_OFF_STAYS_CARD_ENABLED"],
     async run(t) {
       const thread = start(t);
       await thread.say(CA_REQUEST);

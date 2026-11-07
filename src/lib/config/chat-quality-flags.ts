@@ -1021,6 +1021,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REFORMAT_KEEPS_SOURCES_ENABLED",
   "FRAMEWORK_GENERAL_SECTIONS_ENABLED",
   "FORM_EDIT_DATE_RULES_ENABLED",
+  // coding 2: TAKE_OFF_STAYS_CARD (default off): forced off with the others.
+  "TAKE_OFF_STAYS_CARD_ENABLED",
   // coding 2: REMOVE_POLICY_NOT_NAMED (A1; default off): forced off with the others.
   "REMOVE_POLICY_NOT_NAMED_ENABLED",
   "QUESTION_NOT_FORM_ENABLED",
@@ -3078,6 +3080,18 @@ export function issueIsTheAccountEnabled(): boolean {
  */
 export function priorStepPreviouslyEnabled(): boolean {
   return envFlag("PRIOR_STEP_PREVIOUSLY_ENABLED");
+}
+
+// coding 2: TAKE_OFF_STAYS_CARD
+/**
+ * TAKE_OFF_STAYS_CARD_ENABLED (QA, 8 Nov 2026, relayed by coding 5; default off). With a card open, "take the
+ * attendance policy off the form" (a Coaching card) and "take the policy off" (any card) were answered as policy
+ * questions with no card, so PROPOSAL_POLICY_SET_ASIDE could not take the policy off. With this flag on, a turn on an
+ * open card that only takes a policy off is a card turn: never a question, and the card is proposed again from the
+ * manager's last turn (`ai/take-off-stays-card.ts`). Off, as before.
+ */
+export function takeOffStaysCardEnabled(): boolean {
+  return envFlag("TAKE_OFF_STAYS_CARD_ENABLED");
 }
 
 // coding 2: REMOVE_POLICY_NOT_NAMED
