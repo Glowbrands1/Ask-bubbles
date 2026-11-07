@@ -2689,17 +2689,6 @@ export function salesShortfallObjectEnabled(): boolean {
 }
 
 /**
- * NO_NOTICE_NO_DATE_ENABLED (QA, flip-3 tester, 6 Nov 2026; default off).
- * "exit form for <X>, resigned 11-3-26 with no notice" printed "Date that
- * notice was given: November 3, 2026": "resigned" is a notice-given cue. With
- * this flag on, a stated "no notice" leaves the notice date empty, and the
- * date stays the resignation's (`forms/exit-facts.ts`). Off, as before.
- */
-export function noNoticeNoDateEnabled(): boolean {
-  return envFlag("NO_NOTICE_NO_DATE_ENABLED");
-}
-
-/**
  * PLACE_FROM_CUE_ENABLED (port of the sibling app's gate finding, 6 Nov 2026,
  * sf-s28; default off). "create a corrective action for <name> from bellevue",
  * from a manager not assigned to Bellevue: "from" was no place cue, so the
@@ -2801,4 +2790,17 @@ export function offRosterConfirmEnabled(): boolean {
  */
 export function ownBrandOnlyEnabled(): boolean {
   return envFlag("OWN_BRAND_ONLY_ENABLED");
+}
+
+// --- coding 2 flags ---
+
+/**
+ * NO_NOTICE_NO_DATE_ENABLED (QA, flip-3 tester, 6 Nov 2026; default off).
+ * "exit form for <X>, resigned 11-3-26 with no notice" printed "Date that
+ * notice was given: November 3, 2026": "resigned" is a notice-given cue. With
+ * this flag on, a stated "no notice" leaves the notice date empty, and the
+ * date stays the resignation's (`forms/exit-facts.ts`). Off, as before.
+ */
+export function noNoticeNoDateEnabled(): boolean {
+  return envFlag("NO_NOTICE_NO_DATE_ENABLED");
 }
