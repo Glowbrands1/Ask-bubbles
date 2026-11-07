@@ -1,6 +1,6 @@
 import { formEditDateRulesEnabled, proposalPolicySetAsideEnabled } from "@/lib/config/chat-quality-flags";
 import { correctiveActionIssue } from "@/lib/forms/incident-issue";
-import { citationSetAside, policiesSetAside, setAsideAnything, withPolicySetAside } from "@/lib/forms/policy-set-aside";
+import { asksAboutPolicy, citationSetAside, policiesSetAside, setAsideAnything, withPolicySetAside } from "@/lib/forms/policy-set-aside";
 
 import { managerWords, remapEditLine, remapObservation } from "./edit-date-rules";
 import type { AskRequest, AskResponse } from "./types";
@@ -61,6 +61,8 @@ function withEditRules(response: AskResponse, request: AskRequest): AskResponse 
     users,
     current: card.issue ?? null,
     reread: (account) => correctiveActionIssue(account, card.employeeName ?? null),
+    // PROPOSAL_POLICY_SET_ASIDE_ENABLED: "take the … policy off" and "we have quoted the standards of conduct …" are asks, never the Issue.
+    ...(proposalPolicySetAsideEnabled() ? { alsoAnAsk: asksAboutPolicy } : {}),
   });
   const editLine = remapEditLine(managerWords(request.question));
   if (issue === (card.issue ?? null) && !editLine) return response;
