@@ -29,7 +29,8 @@ export const NOV6_UNDER_PERFORMANCE_EXPLAINED_CASES: ReplayCase[] = [
       id: `nov6-under-performance-explained-${key}`,
       title: `"${turns.at(-1)}": the card cites the Standards of Conduct and the reply says why, once`,
       report: REPORT,
-      status: { open: "with production's flags (UNDER_PERFORMANCE_EXPLAINED_ENABLED off) the reply cites the Standards of Conduct with no word why" },
+      // Was open in production ("with production's flags (UNDER_PERFORMANCE_EXPLAINED_ENABLED off) the reply cites the Standards of Conduct with no word why"); holds since flip 6 (QA, 7 Nov 2026 20:50 PHT), so it is fixed.
+      status: "fixed",
       fixFlags: ["UNDER_PERFORMANCE_EXPLAINED_ENABLED"],
       async run(t) {
         vi.setSystemTime(new Date("2026-11-06T15:00:00Z"));
@@ -61,7 +62,8 @@ export const NOV6_UNDER_PERFORMANCE_EXPLAINED_CASES: ReplayCase[] = [
     id: "nov6-under-performance-explained-one-word",
     title: "\"CA for <name> for underperformance for october\" (one word): the card cites the Standards of Conduct and says why",
     report: `${REPORT}; the one-word spelling, which the sibling app's card misses`,
-    status: { open: "with production's flags (UNDER_PERFORMANCE_EXPLAINED_ENABLED off) the reply does not say why" },
+    // Was open in production ("with production's flags (UNDER_PERFORMANCE_EXPLAINED_ENABLED off) the reply does not say why"); holds since flip 6 (QA, 7 Nov 2026 20:50 PHT), so it is fixed.
+    status: "fixed",
     fixFlags: ["UNDER_PERFORMANCE_EXPLAINED_ENABLED"],
     // Holds here with the flag: this app's card reads the one-word spelling (the sibling app's miss is its own item).
     async run(t) {

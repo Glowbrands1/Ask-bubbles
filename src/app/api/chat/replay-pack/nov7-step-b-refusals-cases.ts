@@ -25,14 +25,14 @@ import { BUB_PHONE, CASH, ROOM_PROCESS, ROOM_STEPS, STEP_B_REFUSAL_SCENARIOS, ST
  * the scenario's `expect`.
  *
  * `fixFlags`: the four Step B flags and FORM_PATCH_READER_FIXES_ENABLED
- * (coding 5, default off). `status` is production's (Step B off).
+ * (coding 5). `status` is production's (all on since flip 6).
  */
 
-const OPEN_IN_PRODUCTION = "production answers \"I haven't changed the …\" (Step B is off; the revision path writes nothing)";
-
-/** Production's outcome per case, from the run with production's flags (7 Nov 2026). */
-const PRODUCTION_HOLDS = new Set<string>(["bub-date-question", "bub-last-name", "bub-name-redo", "sun-towel-nothing-said", "sun-msb-format", "sun-make-that-update-live-shape", "sun-monthly-meeting-drift", "sun-late-date-drift", "sun-towel-echo-by-patch"]);
-
+/**
+ * Production's outcome: every case holds since flip 6 (QA, 7 Nov 2026 20:50 PHT: the Step B flags and
+ * FORM_PATCH_READER_FIXES are on). Before it, all but nine were open: "production answers \"I haven't changed the …\"
+ * (Step B is off; the revision path writes nothing)".
+ */
 /** Fix runs that still fail, and why (the path that owns the turn is not Step B's reader). */
 const FIX_OPEN: Readonly<Record<string, string>> = {};
 
@@ -285,7 +285,7 @@ export const NOV7_STEP_B_REFUSAL_CASES: readonly ReplayCase[] = [...STEP_B_REFUS
     id: `nov7-refusal-${scenario.id}`,
     title: `"${scenario.refused}" — ${scenario.expect.says}`,
     report: scenario.report,
-    status: PRODUCTION_HOLDS.has(scenario.id) ? "fixed" : { open: OPEN_IN_PRODUCTION },
+    status: "fixed",
     fixFlags: [...STEP_B_READER_FLAGS],
     ...(FIX_OPEN[scenario.id] ? { fixStatus: { open: FIX_OPEN[scenario.id]! } } : {}),
     run: (t) => play(t, scenario),
