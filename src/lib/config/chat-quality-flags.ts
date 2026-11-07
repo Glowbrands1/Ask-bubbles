@@ -2790,3 +2790,15 @@ export function offRosterConfirmEnabled(): boolean {
 export function ownBrandOnlyEnabled(): boolean {
   return envFlag("OWN_BRAND_ONLY_ENABLED");
 }
+
+// --- coding 4 flags ---
+
+/**
+ * MSB_PHRASE_SOC_ENABLED (ported from the sibling app; Pau via QA, 7 Nov 2026; same flag in both apps; default off). With CA_SALES_POLICY_ENABLED
+ * on, "create a ca for MSB for <name>" cites the Standards of Conduct, and "create a ca for must see behaviors for
+ * <name>" cited no policy: the glossary term was matched word by word. On: the phrase the approved glossary spells
+ * the term out as counts as the term (`forms/ca-policy.ts` withSalesPolicy). Off, as before.
+ */
+export function msbPhraseSocEnabled(): boolean {
+  return envFlag("MSB_PHRASE_SOC_ENABLED");
+}
