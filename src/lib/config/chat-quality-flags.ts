@@ -1086,6 +1086,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // Port of the sibling app's fix flag after its flip (6 Nov 2026): forced off with the others.
   "SALES_SHORTFALL_OBJECT_ENABLED",
   "UNDER_PERFORMANCE_EXPLAINED_ENABLED",
+  "NO_NOTICE_NO_DATE_ENABLED",
   // Live in production since the 6 Nov flip, but missing from this list (QA, 6 Nov 2026): a gate run with them on
   // would keep them on inside flags-off-parity's child run. Test-only effect.
   "METRIC_GUARD_ENABLED",
@@ -2814,4 +2815,17 @@ export function coachingObservedKeptEnabled(): boolean {
  */
 export function politeRequestOwnTurnsEnabled(): boolean {
   return envFlag("POLITE_REQUEST_OWN_TURNS_ENABLED");
+}
+
+// --- coding 2 flags ---
+
+/**
+ * NO_NOTICE_NO_DATE_ENABLED (QA, flip-3 tester, 6 Nov 2026; default off).
+ * "exit form for <X>, resigned 11-3-26 with no notice" printed "Date that
+ * notice was given: November 3, 2026": "resigned" is a notice-given cue. With
+ * this flag on, a stated "no notice" leaves the notice date empty, and the
+ * date stays the resignation's (`forms/exit-facts.ts`). Off, as before.
+ */
+export function noNoticeNoDateEnabled(): boolean {
+  return envFlag("NO_NOTICE_NO_DATE_ENABLED");
 }
