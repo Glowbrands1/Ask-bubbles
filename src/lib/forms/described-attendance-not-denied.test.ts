@@ -32,3 +32,15 @@ describe("describedAttendanceKeys and a denied fault", () => {
     });
   });
 });
+
+describe("withoutDeniedFaults: the denial goes, what sits beside it stays (coding 2's review)", () => {
+  it("removes the denied fault and keeps the account or omission next to it", async () => {
+    const { withoutDeniedFaults } = await import("./denial-no-account");
+    const kept = (text: string) => withoutDeniedFaults(text).replace(/\s+/g, " ").trim();
+    expect(kept("not late but left the register open")).toBe("but left the register open");
+    expect(kept("she was never late, she did not count the drawer")).toBe("she was , she did not count the drawer");
+    expect(kept("wasn't really late and forgot to clock out")).toBe("and forgot to clock out");
+    expect(kept("she didn't show up and was late")).toBe("she didn't show up and was late");
+    expect(kept("no complaints, but she was absent on 11/2")).toBe(", but she was absent on 11/2");
+  });
+});
