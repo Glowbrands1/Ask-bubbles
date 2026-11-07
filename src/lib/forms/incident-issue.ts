@@ -1,10 +1,17 @@
-import { decimalNotSentenceEndEnabled, issueIsTheAccountEnabled, levelRequestDateEnabled, levelStepNotAccountEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import {
+  decimalNotSentenceEndEnabled,
+  issueAfterRequestReasonEnabled,
+  issueIsTheAccountEnabled,
+  levelRequestDateEnabled,
+  levelStepNotAccountEnabled,
+  typedNameEnabled,
+} from "@/lib/config/chat-quality-flags";
 import { COMPANY_JOB_TITLES } from "@/config/company/job-titles";
 import { businessToday } from "@/lib/business-date";
 
 import { withoutLevelAndStepClauses } from "./account-clauses";
 import { JOIN } from "./bounded-context";
-import { observationAccount } from "./ca-policy";
+import { isSalesPolicyReading, observationAccount, readCaPolicy } from "./ca-policy";
 import { onlyDeniesAFault } from "./denial-no-account";
 import { describesIncident } from "./corrective-action-intake";
 import { withoutPriorStepClauses } from "./form-date-answer";
@@ -160,6 +167,29 @@ function withoutLevelRequestLead(sentence: string): string {
   return sentence.replace(LEVEL_REQUEST_LEAD, "");
 }
 
+/*
+ * ISSUE_AFTER_REQUEST_REASON_ENABLED (QA's round-5 Bubbles check, 8 Nov 2026): "I need a corrective action (made)
+ * for under performance. <A> was below on …". The request's for-clause is only its reason, a sales one the policy
+ * reader reads as no stated offense; it is no Issue while an account follows, and the request sentence itself is no
+ * account. A participle between the form and "for" ("made / done / written up for") is still the request.
+ */
+const REASON_REQUEST =
+  /^(?:[\p{L}'’]+\s+){0,6}?(?:warning|write[- ]?up|corrective\s+action(?:\s+form)?|ca|c\/a|dpoa)\s+(?:(?:made|done|created|drawn\s+up|written(?:\s+up)?|filled\s+out|put\s+together|prepared|started|completed)\s+)?(?:for|about|over|regarding)\s+([^.;!?\n]+)[.!?]*$/iu;
+
+/** ISSUE_AFTER_REQUEST_REASON_ENABLED: a few words that read only as a sales reason ("under performance"). */
+function onlySalesReason(phrase: string): boolean {
+  const words = phrase.trim().replace(/[.!?]+$/, "");
+  if (!words || words.split(/\s+/).length > 5) return false;
+  const reading = readCaPolicy(words);
+  return reading.stated === null && isSalesPolicyReading(reading);
+}
+
+/** ISSUE_AFTER_REQUEST_REASON_ENABLED: the sentence is a request whose for-clause is only a sales reason. */
+function reasonOnlyRequest(sentence: string): boolean {
+  const match = REASON_REQUEST.exec(sentence.trim());
+  return match !== null && onlySalesReason(match[1]!);
+}
+
 function accountIssue(text: string): string | null {
   for (const turn of [...turnsOf(text)].reverse()) {
     const violation = VIOLATION.exec(turn);
@@ -172,7 +202,8 @@ function accountIssue(text: string): string | null {
       .filter((sentence) => sentence.length >= 3 && sentence.length <= 180);
     const hits = sentences
       .map((sentence, index) => ({ sentence, index }))
-      .filter(({ sentence }) => !NOT_THE_ACCOUNT.test(sentence) && describesIncident(sentence));
+      .filter(({ sentence }) => !NOT_THE_ACCOUNT.test(sentence) && describesIncident(sentence))
+      .filter(({ sentence }) => !(issueAfterRequestReasonEnabled() && reasonOnlyRequest(sentence)));
     if (hits.length === 0) continue;
     let start = hits.length - 1;
     while (start > 0 && hits[start]!.index === hits[start - 1]!.index + 1) start -= 1;
@@ -204,8 +235,19 @@ export function correctiveActionIssue(said: string, employeeName: string | null)
         .join("\n")
     : read;
   const fromRequest = issueFromRequest(text, employeeName);
+  const reasonFirst = reasonThenAccount(fromRequest, text, employeeName);
+  if (reasonFirst) return reasonFirst;
   if (!typedNameEnabled()) return accountOnly(fromRequest, employeeName);
   if (fromRequest && !titleAndPlaceOnly(fromRequest, employeeName)) return accountOnly(fromRequest, employeeName);
+  return accountOnly(accountIssue(text), employeeName);
+}
+
+/**
+ * ISSUE_AFTER_REQUEST_REASON_ENABLED: the request's for-clause is only a sales reason and the manager gave an
+ * account as well: the account is the Issue. Null otherwise (the callers read the Issue as before).
+ */
+function reasonThenAccount(fromRequest: string | null, text: string, employeeName: string | null): string | null {
+  if (!issueAfterRequestReasonEnabled() || !fromRequest || !onlySalesReason(fromRequest)) return null;
   return accountOnly(accountIssue(text), employeeName);
 }
 
@@ -231,6 +273,8 @@ function accountOnly(issue: string | null, employeeName: string | null): string 
  */
 export function managerIncidentClause(text: string, employeeName: string | null): string | null {
   const fromRequest = issueFromRequest(text, employeeName);
+  const reasonFirst = reasonThenAccount(fromRequest, text, employeeName);
+  if (reasonFirst) return reasonFirst;
   if (fromRequest && !titleAndPlaceOnly(fromRequest, employeeName)) return accountOnly(fromRequest, employeeName);
   return accountOnly(accountIssue(text), employeeName);
 }
