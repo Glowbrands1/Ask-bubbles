@@ -300,8 +300,8 @@ describe("new flags default off", () => {
 const CHILD = process.env.FLAGS_OFF_PARITY_CHILD === "1";
 
 /*
- * The child run is split in four (ported from the sibling app, QA, 7 Nov 2026): src/lib; src/app/api/chat
- * without the replay pack; src/app/api/forms; the replay pack. As one run over all four folders it timed out
+ * The child run is split in five (ported from the sibling app, QA, 7 Nov 2026): src/lib; src/app/api/chat
+ * without the replay pack, in two halves by name; src/app/api/forms; the replay pack. As one run over all four folders it timed out
  * (ETIMEDOUT at 540 s) on busy runners, and in the sibling app the chat+forms part alone had reached 530 s on
  * main on a 4-CPU runner. Measured here with three children (4-CPU): src/lib 101 s, chat without the pack +
  * forms 250 s, the replay pack 116 s. Each child has the whole budget with room to spare. The folders, the flags and what must pass are
@@ -316,11 +316,19 @@ function chatWithoutReplayPack(): string[] {
   return readdirSync(CHAT, { withFileTypes: true })
     .filter((entry) => `${CHAT}/${entry.name}` !== REPLAY_PACK)
     .filter((entry) => entry.isDirectory() || /\.test\.tsx?$/.test(entry.name))
-    .map((entry) => `${CHAT}/${entry.name}${entry.isDirectory() ? "/" : ""}`);
+    .map((entry) => `${CHAT}/${entry.name}${entry.isDirectory() ? "/" : ""}`)
+    .sort();
+}
+/** The chat folder without the pack, in two halves by name (`half` 0 or 1): each half is its own child. */
+function chatHalf(half: 0 | 1): string[] {
+  const all = chatWithoutReplayPack();
+  const middle = Math.ceil(all.length / 2);
+  return half === 0 ? all.slice(0, middle) : all.slice(middle);
 }
 const CHILDREN: readonly { readonly name: string; readonly paths: () => readonly string[] }[] = [
   { name: "src/lib/ai, src/lib/forms", paths: () => ["src/lib/ai", "src/lib/forms"] },
-  { name: `${CHAT} (without the replay pack)`, paths: () => chatWithoutReplayPack() },
+  { name: `${CHAT} (without the replay pack), first half by name`, paths: () => chatHalf(0) },
+  { name: `${CHAT} (without the replay pack), second half by name`, paths: () => chatHalf(1) },
   { name: "src/app/api/forms", paths: () => ["src/app/api/forms"] },
   { name: REPLAY_PACK, paths: () => [REPLAY_PACK] },
 ];
