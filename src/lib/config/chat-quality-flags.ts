@@ -2645,6 +2645,20 @@ export function rosterNearMissEnabled(): boolean {
 }
 
 /**
+ * NEAR_MISS_DETAILS_ACCEPT_ENABLED (QA's Bubbles gate on 4d42c342, 7 Nov 2026; default off). With FORM_NAME on, a
+ * full name typed close to one roster person ("Corvina Ashdown Vellacot") got "Is this for **<roster name>**? Tell me
+ * if that should change.", and the next turn ("verbal warning, no payroll deduct, part-time team member,") got the
+ * same question again: the answer reader took only "yes" or a name, the details were dropped and no card came. On: a
+ * turn after that question that gives form details (a warning level or a payroll answer, by the app's own readers)
+ * and does not turn the name down accepts the asked name, when the manager typed that person's first name and a
+ * surname close to theirs (`ai/first-name-suggest.ts` chosenName). A first name typed alone is still asked, as
+ * before. Off, as before.
+ */
+export function nearMissDetailsAcceptEnabled(): boolean {
+  return envFlag("NEAR_MISS_DETAILS_ACCEPT_ENABLED");
+}
+
+/**
  * REPLY_MATCHES_CARD_ENABLED (QA for Pau, 5 Nov 2026; default off). The last
  * step of every chat turn compares the finished reply with the finished card
  * and makes the reply agree with it: no employee on the card, no person named
