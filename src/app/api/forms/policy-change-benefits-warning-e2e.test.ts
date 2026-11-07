@@ -20,7 +20,7 @@
  * invented person for the real one.
  */
 import { rosterResultFor } from "@/test/roster-result";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 import type { AccessScope, ChatMessage } from "@/types";
@@ -361,6 +361,41 @@ describe("QA, 5 Nov 2026: the manager's revision never cites the manual's benefi
   it("negative: \"add the late opening policy\" is added as before", async () => {
     state.manual = WITH_BENEFITS;
     const { history, id } = await createdForm();
+    const answer = await changeActiveFormPolicy({ request: chat(), instanceId: id, question: "add the late opening policy", history });
+    expect(answer?.content).toMatch(/Late Opening/);
+  });
+});
+
+describe("POLICY_CHANGE_RELEVANT_ENABLED: the manager's revision is not a policy change at all", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("off (main): no benefits citation, but the turn is still a policy change — \"I couldn't find a section called …\" — and the revision never runs", async () => {
+    const { answer } = await theFlow();
+    expect(answer?.content).toMatch(/^I couldn't find a section called "pat rivera signed the jba"/);
+  });
+
+  it("on: the message is not a policy change (its only \"policy\" is the manual's own name); nothing is cited, the turn goes on to the ordinary revision", async () => {
+    vi.stubEnv("POLICY_CHANGE_RELEVANT_ENABLED", "true");
+    const { id, answer } = await theFlow();
+    expect(answer).toBeNull();
+    expect((await row(id, "policy_language"))?.value ?? "").not.toMatch(/legal retirement age|income taxes|IRA/);
+  });
+
+  it("negative, on: \"please use that policy on the form\" after the app quoted **Late Opening** still adds Late Opening", async () => {
+    vi.stubEnv("POLICY_CHANGE_RELEVANT_ENABLED", "true");
+    state.manual = WITH_BENEFITS;
+    const { id, history } = await createdForm();
+    const quoted = [...history, said("what does the late opening policy say?"), answered("**Late Opening** (page 15): When an employee assigned to open a location is unable to open the location at the proper time, the employee must notify the manager as soon as possible.")];
+    const answer = await changeActiveFormPolicy({ request: chat(), instanceId: id, question: "please use that policy on the form", history: quoted });
+    expect(answer?.content).toMatch(/Late Opening/);
+  });
+
+  it("negative, on: \"add the late opening policy\" is added as before", async () => {
+    vi.stubEnv("POLICY_CHANGE_RELEVANT_ENABLED", "true");
+    state.manual = WITH_BENEFITS;
+    const { id, history } = await createdForm();
     const answer = await changeActiveFormPolicy({ request: chat(), instanceId: id, question: "add the late opening policy", history });
     expect(answer?.content).toMatch(/Late Opening/);
   });

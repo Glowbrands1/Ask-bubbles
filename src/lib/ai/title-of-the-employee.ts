@@ -1,5 +1,6 @@
-import { titleOfTheEmployeeEnabled } from "@/lib/config/chat-quality-flags";
+import { exitStatedOnlyEnabled, titleOfTheEmployeeEnabled } from "@/lib/config/chat-quality-flags";
 import { displayName, normalizeTypedName, type RosterEmployee } from "@/lib/forms/employee-match";
+import { EXIT_TEMPLATE_KEY } from "@/lib/forms/exit-library";
 import { titleNamesAnotherPerson } from "@/lib/forms/title-of-another-person";
 
 import type { AskRequest, AskResponse } from "./types";
@@ -26,20 +27,39 @@ export async function withTitleOfTheEmployee(
   request: Pick<AskRequest, "question" | "history">,
   roster: () => Promise<readonly RosterEmployee[]>,
 ): Promise<AskResponse> {
-  if (!titleOfTheEmployeeEnabled()) return response;
+  const exitOwned = exitStatedOnlyEnabled();
+  if (!titleOfTheEmployeeEnabled() && !exitOwned) return response;
   const card = response.formProposal;
   const role = card?.employeeRole?.trim();
   if (!card || !role || !card.employeeName || card.subject === "team") return response;
   const said = [...(request.history ?? []).filter((turn) => turn.role === "user").map((turn) => turn.content), request.question].join("\n");
-  if (!titleNamesAnotherPerson(said, role, card.employeeName)) return response;
+  const another = titleOfTheEmployeeEnabled() && titleNamesAnotherPerson(said, role, card.employeeName);
+  // EXIT_STATED_ONLY_ENABLED (ported from the sibling app, QA 5 Nov 2026): on an exit card, a title the manager only ever
+  // wrote as someone's ("your General Manager", "our General Managers") is that person's, never the employee's.
+  const owned = exitOwned && card.templateKey === EXIT_TEMPLATE_KEY && onlyAsSomeonesTitle(said, role);
+  if (!another && !owned) return response;
   const wanted = normalizeTypedName(card.employeeName);
   const own = (await roster()).find((person) => normalizeTypedName(displayName(person)) === wanted)?.positionName?.trim() || null;
-  const content = own
+  let content = own
     ? response.content.split(`**Position:** ${role}`).join(`**Position:** ${own}`)
     : response.content;
+  if (owned) {
+    const line = new RegExp(String.raw`^(\s*(?:-\s*)?\*\*Job title:\*\*\s*)${escape(role)}\s*$`, "im");
+    content = own ? content.replace(line, (_all, lead: string) => `${lead}${own}`) : content.replace(line, "").replace(/\n{3,}/g, "\n\n");
+  }
   return {
     ...response,
     content,
     formProposal: { ...card, employeeRole: own, employeeRoleSource: own ? "woven" : null },
   };
+}
+
+function escape(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** Every place the manager wrote the title has a possessive before it: "your General Manager", "our General Managers". */
+function onlyAsSomeonesTitle(said: string, role: string): boolean {
+  const all = [...said.matchAll(new RegExp(String.raw`(\S+\s+)?\b${escape(role)}s?\b`, "gi"))];
+  return all.length > 0 && all.every((match) => /^(?:your|her|his|their|my|our)\s+$/i.test(match[1] ?? ""));
 }

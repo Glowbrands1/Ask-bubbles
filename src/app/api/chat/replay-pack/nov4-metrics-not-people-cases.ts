@@ -138,7 +138,7 @@ export const NOV4_METRICS_NOT_PEOPLE_CASES: ReplayCase[] = [
      */
     // The fix-flag run: fails with production's real flags (QA Vercel read 5 Nov); tracked: GROUNDED_ENTITIES_ENABLED (off in production since 24 Oct, a deliberate rollback) — the unknown person is not announced.
     fixFlags: [FLAG, SALES, GLOSSARY],
-    fixStatus: { open: "fails with production's real flags (QA Vercel read 5 Nov); tracked: GROUNDED_ENTITIES_ENABLED (off in production since 24 Oct, a deliberate rollback) — the unknown person is not announced" },
+    // Holds with its fix flags since flip 3 (6 Nov 2026): the fixStatus is removed, as in #515; it does not depend on FORM_NAME_FROM_ROSTER being on in production.
     async run(t) {
       const thread = start(t);
       const reply = await thread.say(say("Zuleika Brightwell"));

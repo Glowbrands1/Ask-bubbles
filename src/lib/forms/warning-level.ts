@@ -1,4 +1,4 @@
-import { caShortcutWordsEnabled, requestLevelNotHistoryEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { caShortcutWordsEnabled, levelEndsRequestEnabled, requestLevelNotHistoryEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { businessToday } from "@/lib/business-date";
 
 import { datesInText } from "./form-date-answer";
@@ -620,6 +620,19 @@ function levelInRequestClause(before: string): boolean {
 }
 
 /**
+ * LEVEL_ENDS_REQUEST_ENABLED (QA, live tester, 7 Nov 2026: "my team member <name> was late on 10-20-26, verbal ca"
+ * gave no card; same flag in both apps; default off). A level clause that NAMES THE DOCUMENT — "verbal ca",
+ * "written corrective action", "verbal write-up" — as the LAST clause of the turn is the form asked for, with no
+ * request words before it. A bare level or "verbal warning" there is still asked about (QA, 22 Oct 2026: "she was
+ * late last night, verbal warning"), and history earlier in the sentence still makes it history. Off, as before.
+ */
+const NAMES_THE_FORM = /\b(?:ca|c\/a|corrective\s+action|write[- ]?up)\b/i;
+
+function endsTheTurnNamingTheForm(source: string, clause: string, end: number): boolean {
+  return NAMES_THE_FORM.test(clause) && /^[\s.!]*$/.test(source.slice(end));
+}
+
+/**
  * Every warning level the text names, in order, with how each one reads.
  *
  * `today` is the business day (`YYYY-MM-DD`): a warning dated before it is
@@ -702,7 +715,7 @@ export function warningMentions(text: string, today: string): WarningMention[] {
     if (source[end] === "?") continue;
     const head = source.slice(0, clause.index);
     const sentenceBefore = head.slice(Math.max(...[".", ";", "!", "?", "\n"].map((mark) => head.lastIndexOf(mark))) + 1);
-    if (!REQUEST_CLAUSE.test(sentenceBefore)) continue;
+    if (!REQUEST_CLAUSE.test(sentenceBefore) && !(levelEndsRequestEnabled() && endsTheTurnNamingTheForm(source, own[0], end))) continue;
     // "write up" asks for this form; it is not a write-up on file.
     const history = sentenceBefore.replace(new RegExp(REQUEST_CLAUSE.source, "gi"), " ");
     if (CLAUSE_HISTORY.test(history) || LISTS_EARLIER_STEPS.test(history)) continue;

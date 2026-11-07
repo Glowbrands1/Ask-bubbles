@@ -86,7 +86,7 @@ export const NOV5_REQUEST_SLOT_CASES: ReplayCase[] = [
     status: "fixed",
     // The fix-flag run: fails with production's real flags (QA Vercel read 5 Nov); tracked: GROUNDED_ENTITIES_ENABLED (off in production since 24 Oct, a deliberate rollback) — neither a card for Remy Fenn nor the note naming only Remy Fenn.
     fixFlags: [FLAG, SALES, GLOSSARY],
-    fixStatus: { open: "fails with production's real flags (QA Vercel read 5 Nov); tracked: GROUNDED_ENTITIES_ENABLED (off in production since 24 Oct, a deliberate rollback) — neither a card for Remy Fenn nor the note naming only Remy Fenn" },
+    // Holds with its fix flags since flip 3 (6 Nov 2026): the fixStatus is removed, as in #515; it does not depend on FORM_NAME_FROM_ROSTER being on in production.
     async run(t) {
       const thread = start(t);
       const reply = await thread.say(say("Remy Fenn"));
@@ -107,7 +107,7 @@ export const NOV5_REQUEST_SLOT_CASES: ReplayCase[] = [
     status: "fixed",
     // The fix-flag run: fails with production's real flags (QA Vercel read 5 Nov); tracked: GROUNDED_ENTITIES_ENABLED (off in production since 24 Oct, a deliberate rollback) — neither a card for Remy Fenn nor the note naming only Remy Fenn.
     fixFlags: [FLAG, SALES, GLOSSARY],
-    fixStatus: { open: "fails with production's real flags (QA Vercel read 5 Nov); tracked: GROUNDED_ENTITIES_ENABLED (off in production since 24 Oct, a deliberate rollback) — neither a card for Remy Fenn nor the note naming only Remy Fenn" },
+    // Holds with its fix flags since flip 3 (6 Nov 2026): the fixStatus is removed, as in #515; it does not depend on FORM_NAME_FROM_ROSTER being on in production.
     async run(t) {
       const thread = start(t);
       const reply = await thread.say(say("Remy Fenn"), { employeeName: "Remy Fenn" });
