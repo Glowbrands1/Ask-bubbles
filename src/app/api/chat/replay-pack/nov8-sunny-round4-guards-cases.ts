@@ -7,7 +7,7 @@ import { STAFF, WEST_DODGE, type ReplayCase, type ReplayContext } from "./cases"
  * GUARDS: THE SIBLING APP'S ROUND-4 ITEMS, ALREADY RIGHT HERE (QA, 8 Nov 2026)
  * ============================================================================
  *
- * Ask Sunny's flip-9 live tester found (1) "ca for <A> not late" asking what happened beside "**Policy:**
+ * The sibling app's flip-9 live tester found (1) "ca for <A> not late" asking what happened beside "**Policy:**
  * Attendance — read from this request", and (2) "… $20 payroll deduct applies" reading Yes but asking the amount
  * again. Checked on this app's main with production's flags plus its flips 6 and 8 (not yet in production-flags.json): (1) asks what happened with no
  * policy read from the request, and (2) reads the $20. These cases keep it so. See `docs/parity-log/2026-11-08-*`.
