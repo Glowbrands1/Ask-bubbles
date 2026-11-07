@@ -89,6 +89,21 @@ export function priorCoachingOptionalEnabled(): boolean {
 }
 
 /**
+ * PRIOR_COACHING_DENIAL_ENABLED (QA, 5 Nov 2026; default off): "There's no
+ * prior coaching on file." was quoted back by PRIOR_COACHING_OPTIONAL_ENABLED
+ * as "Prior coaching note: prior coaching on file." — the protected note
+ * reader starts at "prior coaching" and drops the "no". With the flag on, the
+ * caller hands it the manager's turns with each sentence that denies prior
+ * coaching left out, unless it names a further step after "except", "other
+ * than" or "but" ("no prior coaching except a verbal in July", "… except a
+ * verbal warning"; Pau's decision B, 6 Nov 2026), which is kept as that step
+ * (`ai/prior-coaching-denial.ts`). Off, the turns as before.
+ */
+export function priorCoachingDenialEnabled(): boolean {
+  return envFlag("PRIOR_COACHING_DENIAL_ENABLED");
+}
+
+/**
  * Carry a store, employee name, or job title from anywhere in the
  * conversation onto the current turn, including a persisted conversation
  * form state. Off, the proposal reads the turn exactly as it does today.
