@@ -1099,7 +1099,6 @@ export const CHAT_QUALITY_FLAG_NAMES = [
 
   "CA_OFFER_KEEPS_ACCOUNT_ENABLED",
 
-
   // Default-off fix flag (#483).
   "REPLY_MATCHES_CARD_EACH_CARD_ENABLED",
   // Default-off fix flag (the flip-3 gate, 6 Nov 2026).
@@ -2787,7 +2786,6 @@ export function exitStatedOnlyEnabled(): boolean {
   return envFlag("EXIT_STATED_ONLY_ENABLED");
 }
 
-
 /**
  * CA_OFFER_KEEPS_ACCOUNT_ENABLED (QA's MSB case M5, 5 Nov 2026; same flag in
  * the sibling app; default off). "<name> did not follow must see behaviors
@@ -2852,6 +2850,17 @@ export function coachingObservedKeptEnabled(): boolean {
 }
 
 /**
+ * EDIT_MAKE_IT_ABOUT_ENABLED (ported from the sibling app; Pau's scan, sf-s34, 7 Nov 2026; Pau-approved 7 Nov; same flag in both apps; default
+ * off). On an open Coaching draft, "I need you to make it about showing up late and please list the policy make the
+ * date for 10/14/26." was scoped to the date alone, so the Details rewrite was refused and the reply said nothing
+ * changed. On: "make it / this / the form … about …" also allows the form's account (Coaching Details, or a CA's
+ * Observation) in `forms/revision.ts` scopeRevision. Off, as before.
+ */
+export function editMakeItAboutEnabled(): boolean {
+  return envFlag("EDIT_MAKE_IT_ABOUT_ENABLED");
+}
+
+/**
  * POLITE_REQUEST_OWN_TURNS_ENABLED (ported from the sibling app; Pau's scan, sf-s37, 7 Nov 2026; same flag in both apps; default off). Three
  * requests in one chat, each "Can you create me a coaching document for <name> for …": the second card's Observation
  * of Offense read back the first employee's request. A request opened with "can / could / would / will you" was not
@@ -2860,6 +2869,16 @@ export function coachingObservedKeptEnabled(): boolean {
  */
 export function politeRequestOwnTurnsEnabled(): boolean {
   return envFlag("POLITE_REQUEST_OWN_TURNS_ENABLED");
+}
+
+/**
+ * MSB_PHRASE_SOC_ENABLED (ported from the sibling app; Pau via QA, 7 Nov 2026; same flag in both apps; default off). With CA_SALES_POLICY_ENABLED
+ * on, "create a ca for MSB for <name>" cites the Standards of Conduct, and "create a ca for must see behaviors for
+ * <name>" cited no policy: the glossary term was matched word by word. On: the phrase the approved glossary spells
+ * the term out as counts as the term (`forms/ca-policy.ts` withSalesPolicy). Off, as before.
+ */
+export function msbPhraseSocEnabled(): boolean {
+  return envFlag("MSB_PHRASE_SOC_ENABLED");
 }
 
 /**
