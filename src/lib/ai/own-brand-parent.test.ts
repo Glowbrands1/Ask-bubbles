@@ -10,7 +10,7 @@ import type { AskResponse } from "./types";
 const LIVE =
   "This applies company-wide across all brands (Buff City Soap, and JB & Associates), since the policy manual doesn't limit it to one brand.";
 
-const reply = (content: string): AskResponse => ({ content, citations: [], recommendedVideoIds: [] });
+const reply = (content: string): AskResponse => ({ content, citations: [] });
 const out = (content: string) => withOwnBrandOnly(reply(content)).content;
 
 describe("OWN_BRAND_PARENT_ENABLED", () => {
