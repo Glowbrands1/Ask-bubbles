@@ -2425,8 +2425,9 @@ export function formEditSaidReplacementEnabled(): boolean {
  * FORM_PATCH_READER_FIXES_ENABLED (coding 5, 7 Nov 2026; QA's Step B target, the real "I haven't changed the
  * <form>" refusals; same flag in both apps; default off). Step B's reader, fixed where the real-AI trace (6 Nov)
  * refused faithful edits. Active only with FORM_PATCH_REDUCER_ENABLED. On:
- *   (1) a patch turn whose write changes nothing (an empty set, "other", a no-op) goes to the old path, never
- *       "I didn't change anything on the form" from the patch;
+ *   (1) a patch whose values are already on the form answers "<Field> already says that" (never "Updated"); an
+ *       empty or "other" reading goes to the old path, whose writes may not repeat the field, echo the instruction
+ *       or (after an empty reading) add nothing new;
  *   (2) the evidence and word checks read the form's own employee name as said (a "<Name> must practice …"
  *       for "Add that she Must Practice …"), match a word by its stem ("missed" for "missing"), and hold every
  *       FACT word — a number, a date, a capitalised word inside a sentence — to the manager's words or the
