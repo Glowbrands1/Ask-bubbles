@@ -14,7 +14,7 @@ import { STAFF, type DirectoryRow } from "./cases";
  * where they make the context, trimmed where they only repeat it.
  *
  *   bub-*  Ask Bubbles' 7 (project dyurgwieyltnhphihwwj, 25 Oct – 3 Nov).
- *   sun-*  Ask Sunny's 9 (project rbkylaavthsjepsczccv, 27 Oct – 6 Nov), the
+ *   sun-*  the sibling app's 9 (project rbkylaavthsjepsczccv, 27 Oct – 6 Nov), the
  *          mechanism in this app's setting.
  *   trace-* coding 2's real-AI trace (6 Nov) of the same chats with Step B on.
  *
@@ -311,7 +311,7 @@ const CASH = "add to the details: reminded her to call a manager for any cash dr
 export const SUNNY_REFUSALS: readonly RefusalScenario[] = [
   {
     id: "sun-monthly-meeting",
-    report: 'Ask Sunny, 27 Oct 2026: "can you create a coaching form for attendance policy" → "<name>" → card → "can you make it for missing out monthly meeting"',
+    report: 'the sibling app, 27 Oct 2026: "can you create a coaching form for attendance policy" → "<name>" → card → "can you make it for missing out monthly meeting"',
     refused: SUN_MEETING,
     owner: null,
     roster: REFUSAL_ROSTER,
@@ -327,7 +327,7 @@ export const SUNNY_REFUSALS: readonly RefusalScenario[] = [
   },
   {
     id: "sun-towel-nothing-said",
-    report: 'Ask Sunny, 31 Oct 2026 (twice): "create a coaching form for <name>" → card → "add details about the towel" (no towel details were ever given)',
+    report: 'the sibling app, 31 Oct 2026 (twice): "create a coaching form for <name>" → card → "add details about the towel" (no towel details were ever given)',
     refused: SUN_TOWEL,
     owner: "nothing to write: the manager gave no towel details; the honest reply asks for them",
     roster: REFUSAL_ROSTER,
@@ -341,7 +341,7 @@ export const SUNNY_REFUSALS: readonly RefusalScenario[] = [
   },
   {
     id: "sun-quitting",
-    report: 'Ask Sunny, 31 Oct 2026: coaching form → "for whole staff" (one person per form) → "update the draft: he told the whole team he was quitting"',
+    report: 'the sibling app, 31 Oct 2026: coaching form → "for whole staff" (one person per form) → "update the draft: he told the whole team he was quitting"',
     refused: SUN_QUITTING,
     owner: null,
     roster: REFUSAL_ROSTER,
@@ -360,7 +360,7 @@ export const SUNNY_REFUSALS: readonly RefusalScenario[] = [
   },
   {
     id: "sun-position",
-    report: 'Ask Sunny, 3 Nov 2026 (QA\'s live test, twice): coaching form → … → "change her position to Tanning Consultant" (here: a title this app has)',
+    report: 'the sibling app, 3 Nov 2026 (QA\'s live test, twice): coaching form → … → "change her position to Tanning Consultant" (here: a title this app has)',
     refused: SUN_POSITION,
     owner: null,
     roster: REFUSAL_ROSTER,
@@ -378,7 +378,7 @@ export const SUNNY_REFUSALS: readonly RefusalScenario[] = [
   {
     id: "sun-same-outline",
     report:
-      'Ask Sunny, 4 Nov 2026: MSB CA with the metrics → the manager pastes another employee\'s CA as the outline (it was saved with that employee\'s name and numbers) → "No this should be the same out line but with <name>s info i told you in the first chat"',
+      'the sibling app, 4 Nov 2026: MSB CA with the metrics → the manager pastes another employee\'s CA as the outline (it was saved with that employee\'s name and numbers) → "No this should be the same out line but with <name>s info i told you in the first chat"',
     refused: SUN_OUTLINE,
     owner: null,
     roster: REFUSAL_ROSTER,
@@ -409,7 +409,7 @@ export const SUNNY_REFUSALS: readonly RefusalScenario[] = [
   {
     id: "sun-msb-format",
     report:
-      'Ask Sunny, 4 Nov 2026, the same chat, next turn: "I need the CA for the Must see behaviors and not the standard of conduct. Make it in the format that I explained above in the first chat for <name>."',
+      'the sibling app, 4 Nov 2026, the same chat, next turn: "I need the CA for the Must see behaviors and not the standard of conduct. Make it in the format that I explained above in the first chat for <name>."',
     refused: SUN_MSB,
     owner: null,
     roster: REFUSAL_ROSTER,
@@ -439,7 +439,7 @@ export const SUNNY_REFUSALS: readonly RefusalScenario[] = [
   {
     id: "sun-late-date",
     report:
-      'Ask Sunny, 6 Nov 2026: "I need you to draw me up a a coachong document for <name>. … this is the coaching document dreated on 10/14/26" → card → "I need you to make it about showing up late and please list the policy make the date for 10/14/26."',
+      'the sibling app, 6 Nov 2026: "I need you to draw me up a a coachong document for <name>. … this is the coaching document dreated on 10/14/26" → card → "I need you to make it about showing up late and please list the policy make the date for 10/14/26."',
     refused: SUN_LATE,
     owner: null,
     roster: REFUSAL_ROSTER,
@@ -467,7 +467,7 @@ export const SUNNY_REFUSALS: readonly RefusalScenario[] = [
   {
     id: "sun-make-that-update",
     report:
-      'Ask Sunny, 31 Oct 2026: coaching form → the process given → "add details about the towel" → "i don\'t see the details updated in the draft card. …" → "make that update"',
+      'the sibling app, 31 Oct 2026: coaching form → the process given → "add details about the towel" → "i don\'t see the details updated in the draft card. …" → "make that update"',
     refused: SUN_MAKE_UPDATE,
     owner: null,
     roster: REFUSAL_ROSTER,
@@ -499,7 +499,7 @@ export const SUNNY_REFUSALS: readonly RefusalScenario[] = [
   },
   {
     id: "sun-yes-do-that",
-    report: 'Ask Sunny, 3 Nov 2026 (twice): coaching form → "add to the details: reminded her to call a manager for any cash drawer shortage" ("Updated") → "yes, do that"',
+    report: 'the sibling app, 3 Nov 2026 (twice): coaching form → "add to the details: reminded her to call a manager for any cash drawer shortage" ("Updated") → "yes, do that"',
     refused: SUN_YES,
     owner: null,
     roster: REFUSAL_ROSTER,
