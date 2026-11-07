@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
@@ -299,33 +299,50 @@ describe("new flags default off", () => {
 
 const CHILD = process.env.FLAGS_OFF_PARITY_CHILD === "1";
 
+/*
+ * The child run is split in three (ported from the sibling app, QA, 7 Nov 2026). As one run over all four
+ * folders it neared its 540 s budget, and there the chat+forms part alone took 530 s on main on a 4-CPU
+ * runner by 7 Nov — the replay pack had grown into most of it — and timed out (ETIMEDOUT) on busy runners.
+ * Each child now has the whole budget with room to spare. The folders, the flags and what must pass are
+ * unchanged, and every test file still runs in exactly one child.
+ *
+ * A path filter matches any file whose path contains it, so the chat folder without the pack is named entry
+ * by entry — each test file, and each folder with its trailing "/" — read from the folder itself.
+ */
+const CHAT = "src/app/api/chat";
+const REPLAY_PACK = `${CHAT}/replay-pack`;
+function chatWithoutReplayPack(): string[] {
+  return readdirSync(CHAT, { withFileTypes: true })
+    .filter((entry) => `${CHAT}/${entry.name}` !== REPLAY_PACK)
+    .filter((entry) => entry.isDirectory() || /\.test\.tsx?$/.test(entry.name))
+    .map((entry) => `${CHAT}/${entry.name}${entry.isDirectory() ? "/" : ""}`);
+}
+const CHILDREN: readonly { readonly name: string; readonly paths: () => readonly string[] }[] = [
+  { name: "src/lib/ai, src/lib/forms", paths: () => ["src/lib/ai", "src/lib/forms"] },
+  { name: `${CHAT} (without the replay pack), src/app/api/forms`, paths: () => [...chatWithoutReplayPack(), "src/app/api/forms"] },
+  { name: REPLAY_PACK, paths: () => [REPLAY_PACK] },
+];
+
 describe("existing chat and form suites with every new flag off", () => {
-  it.skipIf(CHILD)(
-    "passes the suites whose expectations are already on main",
-    () => {
-      const env: NodeJS.ProcessEnv = { ...process.env, FLAGS_OFF_PARITY_CHILD: "1" };
-      delete env.VITEST;
-      delete env.VITEST_WORKER_ID;
-      delete env.VITEST_POOL_ID;
-      for (const name of CHAT_QUALITY_FLAG_NAMES) env[name] = "off";
-      const output = execFileSync(
-        process.execPath,
-        [
-          "node_modules/vitest/vitest.mjs",
-          "run",
-          "--exclude",
-          "src/lib/ai/flags-off-parity.test.ts",
-          "src/lib/ai",
-          "src/lib/forms",
-          "src/app/api/chat",
-          "src/app/api/forms",
-        ],
-        // The child's output (every suite's logs) passed Node's 1 MB default
-        // buffer on CI and failed with ENOBUFS before any test failed.
-        { env, encoding: "utf8", timeout: 540_000, stdio: "pipe", maxBuffer: 256 * 1024 * 1024 },
-      );
-      expect(output).toMatch(/Test Files[\s\S]*passed/);
-    },
-    560_000,
-  );
+  for (const child of CHILDREN) {
+    it.skipIf(CHILD)(
+      `passes the suites whose expectations are already on main: ${child.name}`,
+      () => {
+        const env: NodeJS.ProcessEnv = { ...process.env, FLAGS_OFF_PARITY_CHILD: "1" };
+        delete env.VITEST;
+        delete env.VITEST_WORKER_ID;
+        delete env.VITEST_POOL_ID;
+        for (const name of CHAT_QUALITY_FLAG_NAMES) env[name] = "off";
+        const output = execFileSync(
+          process.execPath,
+          ["node_modules/vitest/vitest.mjs", "run", "--exclude", "src/lib/ai/flags-off-parity.test.ts", ...child.paths()],
+          // The child's output (every suite's logs) passed Node's 1 MB default
+          // buffer on CI and failed with ENOBUFS before any test failed.
+          { env, encoding: "utf8", timeout: 540_000, stdio: "pipe", maxBuffer: 256 * 1024 * 1024 },
+        );
+        expect(output).toMatch(/Test Files[\s\S]*passed/);
+      },
+      560_000,
+    );
+  }
 });
