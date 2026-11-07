@@ -383,6 +383,28 @@ describe("a policy named in the conversation goes onto the open form", () => {
     expect((await row(id, "policy_language"))?.value ?? "").toBe("");
   });
 
+  // The flip-3 gate (6 Nov 2026): with POLICY_CHANGE_RELEVANT_ENABLED on, the form's option "Attendance Policy" was
+  // taken out of the manager's words as a form word, so "take the attendance policy off the form" found no section.
+  it("adds and removes the attendance policy with POLICY_CHANGE_RELEVANT_ENABLED on (the form's option names it)", async () => {
+    vi.stubEnv("POLICY_CHANGE_RELEVANT_ENABLED", "true");
+    try {
+      const { id, history } = await createdForm();
+      const added = await changeActiveFormPolicy({ request: chat(), instanceId: id, question: "use the attendance policy instead", history });
+      expect(added?.content).not.toMatch(/couldn't find a section/);
+      expect((await row(id, "policy_language"))?.value ?? "").toMatch(/Attendance/);
+      const answer = await changeActiveFormPolicy({
+        request: chat(),
+        instanceId: id,
+        question: "take the attendance policy off the form",
+        history,
+      });
+      expect(answer?.content).toMatch(/Removed \*\*Attendance\*\* \(page 14\)/);
+      expect((await row(id, "policy_language"))?.value ?? "").toBe("");
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it("finds a section named the way managers name it, as a first draft does", async () => {
     const { id, history } = await createdForm();
     await changeActiveFormPolicy({

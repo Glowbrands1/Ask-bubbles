@@ -150,8 +150,8 @@ export function sameCode(a: string, b: string): boolean {
 }
 
 /** How a store reads in anything a person sees: its registered name and number. */
-export function describeStore(store: Pick<CompanyLocation, "name" | "code">): string {
-  return `${store.name} (Store ${store.code})`;
+export function describeStore(store: Pick<CompanyLocation, "name" | "code" | "number">): string {
+  return `${store.name} (Store ${store.number ?? store.code})`;
 }
 
 function foldKey(text: string, abbreviations: StoreIndex["abbreviations"]): string {
@@ -352,7 +352,10 @@ function idsForNumber(
   index: StoreIndex,
   typed: string,
 ): { ids: string[]; collision: boolean; via: StoreMatchVia; numbering: StoreNumbering } {
-  const registered = index.stores.filter((store) => sameCode(store.code, typed)).map((store) => store.id);
+  // The company's own number counts as the registered number too (Dawley Farms: 309, code 338); the code still matches.
+  const registered = index.stores
+    .filter((store) => sameCode(store.code, typed) || (store.number !== undefined && sameCode(store.number, typed)))
+    .map((store) => store.id);
   const woven = [...index.wovenNumbers]
     .filter(([number]) => sameCode(number, typed))
     .flatMap(([, ids]) => ids);

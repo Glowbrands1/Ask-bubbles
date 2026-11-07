@@ -1,4 +1,4 @@
-import { APPROVED_GOOGLE_STORES } from "@/config/company/google-reviews";
+import { APPROVED_GOOGLE_STORES, googleStoreNumber } from "@/config/company/google-reviews";
 import {
   GOAL_STATUS_LABEL,
   goalProgress,
@@ -58,7 +58,10 @@ export function storeCodesNamedIn(question: string): string[] {
   return APPROVED_GOOGLE_STORES.filter((store) => {
     const byCity = new RegExp(`\\b${escapeRegExp(store.city.replace(/'/g, ""))}\\b`, "i");
     const byNumber = new RegExp(`\\bstore\\s*#?\\s*${escapeRegExp(store.code)}\\b`, "i");
-    return byCity.test(normalized) || byNumber.test(normalized);
+    // The company's own number (Dawley Farms: 0309, Google code 338), with or without its leading zeros, and its other name.
+    const byCompanyNumber = store.companyNumber ? new RegExp(`\\bstore\\s*#?\\s*0*${escapeRegExp(store.companyNumber)}\\b`, "i") : null;
+    const byOtherName = (store.alsoKnownAs ?? []).some((name) => new RegExp(`\\b${escapeRegExp(name)}\\b`, "i").test(normalized));
+    return byCity.test(normalized) || byNumber.test(normalized) || (byCompanyNumber?.test(normalized) ?? false) || byOtherName;
   }).map((store) => store.code);
 }
 
@@ -139,7 +142,7 @@ export function formatGoogleReviewsBlock(input: {
 
   for (const row of input.rows) {
     const own = input.ownStoreCodes.has(row.storeCode) ? ", this manager's store" : "";
-    const name = `${row.displayName} (store ${row.storeCode}${own})`;
+    const name = `${row.displayName} (store ${googleStoreNumber(row.storeCode)}${own})`;
     const status = goalStatus(row, context);
     if (status === "not_counting") {
       lines.push(`- ${name}: not counting yet. No baseline is set, so the page shows no month-to-date figure for it.`);
