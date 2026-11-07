@@ -28,7 +28,8 @@ export const NOV7_MSB_PHRASE_SOC_CASES: ReplayCase[] = [
     id: "nov7-msb-phrase-soc",
     title: "\"create a ca for must see behaviors for <name>\" cites the Standards of Conduct, with no \"as you said\"",
     report: "Pau via QA, 7 Nov 2026 (MSB = Standards of Conduct)",
-    status: { open: "the spelled-out phrase is not read as MSB, so the card cites no policy" },
+    // Was open in production ("the spelled-out phrase is not read as MSB, so the card cites no policy"); holds since flip 6 (QA, 7 Nov 2026 20:50 PHT), so it is fixed.
+    status: "fixed",
     fixFlags: ["MSB_PHRASE_SOC_ENABLED", "CA_SALES_POLICY_ENABLED", "AS_YOU_SAID_MANAGER_WORDS_ENABLED"],
     async run(t) {
       vi.setSystemTime(new Date("2026-11-06T14:00:00Z"));
