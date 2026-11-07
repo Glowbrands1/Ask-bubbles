@@ -1114,6 +1114,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "UNDER_PERFORMANCE_EXPLAINED_ENABLED",
   "NO_NOTICE_NO_DATE_ENABLED",
   "ISSUE_IS_THE_ACCOUNT_ENABLED",
+  // coding 2: DENIAL_NO_ACCOUNT (default off): forced off with the others.
+  "DENIAL_NO_ACCOUNT_ENABLED",
   // Live in production since the 6 Nov flip, but missing from this list (QA, 6 Nov 2026): a gate run with them on
   // would keep them on inside flags-off-parity's child run. Test-only effect.
   "METRIC_GUARD_ENABLED",
@@ -2959,6 +2961,17 @@ export function salesObservationAccountEnabled(): boolean {
  */
 export function noNoticeNoDateEnabled(): boolean {
   return envFlag("NO_NOTICE_NO_DATE_ENABLED");
+}
+
+// coding 2: DENIAL_NO_ACCOUNT
+/**
+ * DENIAL_NO_ACCOUNT_ENABLED (coding 4's finding via QA, 7 Nov 2026; default off). "create a corrective action
+ * for <name>, not late" made a card with "**Issue:** not late" and no "what happened" ask. With this flag on, an
+ * Issue that only denies a fault is no Issue (`forms/denial-no-account.ts`, `forms/incident-issue.ts`
+ * accountOnly). Off, as before.
+ */
+export function denialNoAccountEnabled(): boolean {
+  return envFlag("DENIAL_NO_ACCOUNT_ENABLED");
 }
 
 // coding 2: ISSUE_IS_THE_ACCOUNT
