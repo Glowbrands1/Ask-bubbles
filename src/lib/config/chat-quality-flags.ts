@@ -1089,6 +1089,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "SALES_OBSERVATION_ACCOUNT_ENABLED",
   "UNDER_PERFORMANCE_EXPLAINED_ENABLED",
   "NO_NOTICE_NO_DATE_ENABLED",
+  "ISSUE_IS_THE_ACCOUNT_ENABLED",
   // Live in production since the 6 Nov flip, but missing from this list (QA, 6 Nov 2026): a gate run with them on
   // would keep them on inside flags-off-parity's child run. Test-only effect.
   "METRIC_GUARD_ENABLED",
@@ -1096,7 +1097,6 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "TITLE_OF_THE_EMPLOYEE_ENABLED",
 
   "CA_OFFER_KEEPS_ACCOUNT_ENABLED",
-
 
   // Default-off fix flag (#483).
   "REPLY_MATCHES_CARD_EACH_CARD_ENABLED",
@@ -2785,7 +2785,6 @@ export function exitStatedOnlyEnabled(): boolean {
   return envFlag("EXIT_STATED_ONLY_ENABLED");
 }
 
-
 /**
  * CA_OFFER_KEEPS_ACCOUNT_ENABLED (QA's MSB case M5, 5 Nov 2026; same flag in
  * the sibling app; default off). "<name> did not follow must see behaviors
@@ -2850,6 +2849,17 @@ export function coachingObservedKeptEnabled(): boolean {
 }
 
 /**
+ * EDIT_MAKE_IT_ABOUT_ENABLED (ported from the sibling app; Pau's scan, sf-s34, 7 Nov 2026; Pau-approved 7 Nov; same flag in both apps; default
+ * off). On an open Coaching draft, "I need you to make it about showing up late and please list the policy make the
+ * date for 10/14/26." was scoped to the date alone, so the Details rewrite was refused and the reply said nothing
+ * changed. On: "make it / this / the form … about …" also allows the form's account (Coaching Details, or a CA's
+ * Observation) in `forms/revision.ts` scopeRevision. Off, as before.
+ */
+export function editMakeItAboutEnabled(): boolean {
+  return envFlag("EDIT_MAKE_IT_ABOUT_ENABLED");
+}
+
+/**
  * POLITE_REQUEST_OWN_TURNS_ENABLED (ported from the sibling app; Pau's scan, sf-s37, 7 Nov 2026; same flag in both apps; default off). Three
  * requests in one chat, each "Can you create me a coaching document for <name> for …": the second card's Observation
  * of Offense read back the first employee's request. A request opened with "can / could / would / will you" was not
@@ -2861,6 +2871,16 @@ export function politeRequestOwnTurnsEnabled(): boolean {
 }
 
 /**
+ * MSB_PHRASE_SOC_ENABLED (ported from the sibling app; Pau via QA, 7 Nov 2026; same flag in both apps; default off). With CA_SALES_POLICY_ENABLED
+ * on, "create a ca for MSB for <name>" cites the Standards of Conduct, and "create a ca for must see behaviors for
+ * <name>" cited no policy: the glossary term was matched word by word. On: the phrase the approved glossary spells
+ * the term out as counts as the term (`forms/ca-policy.ts` withSalesPolicy). Off, as before.
+ */
+export function msbPhraseSocEnabled(): boolean {
+  return envFlag("MSB_PHRASE_SOC_ENABLED");
+}
+
+/**
  * CA_REQUEST_NOT_PRIOR_COACHING_ENABLED (ported from the sibling app; Pau's scan, sf-s35, 7 Nov 2026; same flag in both apps; default off). "Can you
  * draw me up a CA for <name> for being late on 10/23/26. <first> has signed a coaching document for being late on
  * 10/14/26. …" opened a Coaching Form: the coaching named as history was read as the form asked for. On: a form named
@@ -2869,6 +2889,16 @@ export function politeRequestOwnTurnsEnabled(): boolean {
  */
 export function caRequestNotPriorCoachingEnabled(): boolean {
   return envFlag("CA_REQUEST_NOT_PRIOR_COACHING_ENABLED");
+}
+
+/**
+ * LEVEL_ENDS_REQUEST_ENABLED (QA, live tester, 7 Nov 2026; same flag in both apps; default off). "my team member
+ * <name> was late on 10-20-26, verbal ca" got no card: the closing "verbal ca" had no request words before it, so the
+ * level read as history and the turn as a question. On: a level clause naming the document (ca, corrective action,
+ * write-up) as the turn's last clause is the form asked for (`forms/warning-level.ts`). Off, as before.
+ */
+export function levelEndsRequestEnabled(): boolean {
+  return envFlag("LEVEL_ENDS_REQUEST_ENABLED");
 }
 
 /**
@@ -2905,6 +2935,18 @@ export function salesObservationAccountEnabled(): boolean {
  */
 export function noNoticeNoDateEnabled(): boolean {
   return envFlag("NO_NOTICE_NO_DATE_ENABLED");
+}
+
+// coding 2: ISSUE_IS_THE_ACCOUNT
+/**
+ * ISSUE_IS_THE_ACCOUNT_ENABLED (QA, flip-3 tester, 6 Nov 2026; default off).
+ * "…<name>, verbal, she was late on 10-20-26" printed What happened =
+ * "verbal", and with a nickname, the typed name: the first clause after the
+ * person was taken. With this flag on, a bare level clause or a short clause
+ * naming the person is passed over (`forms/incident-issue.ts`). Off, as before.
+ */
+export function issueIsTheAccountEnabled(): boolean {
+  return envFlag("ISSUE_IS_THE_ACCOUNT_ENABLED");
 }
 
 // --- Coding flags ---
