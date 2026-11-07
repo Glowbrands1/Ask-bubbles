@@ -1101,6 +1101,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REPLY_MATCHES_CARD_EACH_CARD_ENABLED",
   // Default-off fix flag (the flip-3 gate, 6 Nov 2026).
   "OFF_ROSTER_CONFIRM_ENABLED",
+  // Default-off fix flag (QA, 7 Nov 2026).
+  "METRIC_CHOICE_ONE_QUESTION_ENABLED",
 ] as const;
 
 /**
@@ -2867,6 +2869,17 @@ export function caRequestNotPriorCoachingEnabled(): boolean {
   return envFlag("CA_REQUEST_NOT_PRIOR_COACHING_ENABLED");
 }
 
+/**
+ * AS_YOU_SAID_APP_READ_ENABLED (ported from the sibling app; QA's gate there, 7 Nov 2026: regressions from
+ * AS_YOU_SAID_MANAGER_WORDS; ships with it; same flag in both apps; default off). With AS_YOU_SAID on, a CA whose
+ * only Policy line was "<policy>, as you said" (read from the app's own line) lost the line. On: the policy the app's
+ * own lines named is kept as its reading and said as one ("**Policy:** Attendance — read from this request …"),
+ * never "as you said" and never nothing (`forms/ca-policy.ts` readCaPolicy, caPolicyProposalLine). Off, as before.
+ */
+export function asYouSaidAppReadEnabled(): boolean {
+  return envFlag("AS_YOU_SAID_APP_READ_ENABLED");
+}
+
 // --- coding 2 flags ---
 
 /**
@@ -2878,4 +2891,17 @@ export function caRequestNotPriorCoachingEnabled(): boolean {
  */
 export function noNoticeNoDateEnabled(): boolean {
   return envFlag("NO_NOTICE_NO_DATE_ENABLED");
+}
+
+// --- Coding flags ---
+
+/**
+ * METRIC_CHOICE_ONE_QUESTION_ENABLED (QA, 7 Nov 2026; same flag in both apps; default off). The same doubled ask as
+ * the FORM_NAME re-flip gate regression, under METRIC_GUARD_ENABLED: a choice question with its own "Tell me and I'll
+ * …" after it, every choice a metric, became "Who is this form for? Tell me the employee's full name. Tell me and I'll
+ * fill in …". On: the question's tail goes with a choice that is replaced, and stays with one still asked
+ * (`forms/roster-only-names.ts` withoutMetricChoices). Off, as before.
+ */
+export function metricChoiceOneQuestionEnabled(): boolean {
+  return envFlag("METRIC_CHOICE_ONE_QUESTION_ENABLED");
 }
