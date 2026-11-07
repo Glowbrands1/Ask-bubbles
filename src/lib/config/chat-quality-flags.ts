@@ -2417,6 +2417,30 @@ export function formEditSaidReplacementEnabled(): boolean {
   return envFlag("FORM_EDIT_SAID_REPLACEMENT_ENABLED") && formEditSingleWriterEnabled();
 }
 
+// --- coding 5 flags (Step B edit reader; placed after FORM_EDIT_SAID_REPLACEMENT, not at a block end, so merges do not collide) ---
+
+/**
+ * FORM_PATCH_READER_FIXES_ENABLED (coding 5, 7 Nov 2026; QA's Step B target, the real "I haven't changed the
+ * <form>" refusals; same flag in both apps; default off). Step B's reader, fixed where the real-AI trace (6 Nov)
+ * refused faithful edits. Active only with FORM_PATCH_REDUCER_ENABLED. On:
+ *   (1) a patch turn whose write changes nothing (an empty set, "other", a no-op) goes to the old path, never
+ *       "I didn't change anything on the form" from the patch;
+ *   (2) the evidence and word checks read the form's own employee name as said (a "<Name> must practice …"
+ *       for "Add that she Must Practice …"), match a word by its stem ("missed" for "missing"), and hold every
+ *       FACT word — a number, a date, a capitalised word inside a sentence — to the manager's words or the
+ *       form; only a few other added words (at most 2, or 15% of them) may be unsaid;
+ *   (3) Pau's "yes rewrite" (7 Nov 2026): the reader may answer how "reword" when the latest message asks for
+ *       the wording to change; the field's text is rewritten in new words, every fact still the manager's or
+ *       the form's, every protected value (name, date, amount) kept (one prompt line added, never edited);
+ *   (4) the form's Job Title is a field the reader may set, only to words of the latest message ("change her
+ *       position to Team Member"), written as the manager's own edit.
+ * Off, the reader, the schema, the prompt and the reducer are byte for byte as before.
+ */
+export function formPatchReaderFixesEnabled(): boolean {
+  return envFlag("FORM_PATCH_READER_FIXES_ENABLED") && formPatchReducerEnabled();
+}
+// --- end coding 5 flags ---
+
 /**
  * The edit tool in the main call (Step 3, 4 Nov 2026): with a draft form open
  * and a turn that is not a correction or a policy change (a question-phrased
@@ -2854,27 +2878,4 @@ export function caRequestNotPriorCoachingEnabled(): boolean {
  */
 export function noNoticeNoDateEnabled(): boolean {
   return envFlag("NO_NOTICE_NO_DATE_ENABLED");
-}
-
-// --- coding 5 flags ---
-
-/**
- * FORM_PATCH_READER_FIXES_ENABLED (coding 5, 7 Nov 2026; QA's Step B target, the real "I haven't changed the
- * <form>" refusals; same flag in both apps; default off). Step B's reader, fixed where the real-AI trace (6 Nov)
- * refused faithful edits. Active only with FORM_PATCH_REDUCER_ENABLED. On:
- *   (1) a patch turn whose write changes nothing (an empty set, "other", a no-op) goes to the old path, never
- *       "I didn't change anything on the form" from the patch;
- *   (2) the evidence and word checks read the form's own employee name as said (a "<Name> must practice …"
- *       for "Add that she Must Practice …"), match a word by its stem ("missed" for "missing"), and hold every
- *       FACT word — a number, a date, a capitalised word inside a sentence — to the manager's words or the
- *       form; only a few other added words (at most 2, or 15% of them) may be unsaid;
- *   (3) Pau's "yes rewrite" (7 Nov 2026): the reader may answer how "reword" when the latest message asks for
- *       the wording to change; the field's text is rewritten in new words, every fact still the manager's or
- *       the form's, every protected value (name, date, amount) kept (one prompt line added, never edited);
- *   (4) the form's Job Title is a field the reader may set, only to words of the latest message ("change her
- *       position to Team Member"), written as the manager's own edit.
- * Off, the reader, the schema, the prompt and the reducer are byte for byte as before.
- */
-export function formPatchReaderFixesEnabled(): boolean {
-  return envFlag("FORM_PATCH_READER_FIXES_ENABLED") && formPatchReducerEnabled();
 }
