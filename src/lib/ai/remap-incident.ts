@@ -1,4 +1,4 @@
-import { priorSentenceFixEnabled, remapIncidentFixEnabled } from "@/lib/config/chat-quality-flags";
+import { politeRequestOwnTurnsEnabled, priorSentenceFixEnabled, remapIncidentFixEnabled } from "@/lib/config/chat-quality-flags";
 import { withoutPriorStepClauses } from "@/lib/forms/form-date-answer";
 import { CA_POLICY_LABEL, readCaPolicy, STANDARDS_OF_CONDUCT, type CaPolicyName } from "@/lib/forms/ca-policy";
 import {
@@ -404,7 +404,9 @@ export function currentRequestStart(input: {
   let start = 0;
   for (const [index, raw] of input.turns.entries()) {
     const turn = raw.replace(STATE_LEAD, "");
-    if (!(remapIncidentFixEnabled() ? FIXED_REQUEST_TURN : MAIN_REQUEST_TURN).test(turn.trim())) continue;
+    // POLITE_REQUEST_OWN_TURNS_ENABLED: "Can you create me a coaching document for …" is a request too.
+    const asked = politeRequestOwnTurnsEnabled() ? turn.trim().replace(POLITE_LEAD, "") : turn.trim();
+    if (!(remapIncidentFixEnabled() ? FIXED_REQUEST_TURN : MAIN_REQUEST_TURN).test(asked)) continue;
     requests += 1;
     if (requests > 1 && requestTellsIncident(turn, input.employeeName, input.slotClause)) start = index;
   }
@@ -433,6 +435,14 @@ const requestTurnFor = (formWords: string) =>
     String.raw`^\s*(?:please\s+)?(?:(?:create|make|start|open|do|file|write|draft)\s+(?:me\s+)?)?${LEVEL_WORDS}${formWords}\b`,
     "i",
   );
+/*
+ * POLITE_REQUEST_OWN_TURNS_ENABLED (ported from the sibling app, sf-s37, 7 Nov 2026): three requests in one chat, each
+ * "Can you create me a coaching document for <name> for …", were never read as requests, so the second card's
+ * Observation read back the first employee's request too. A polite lead before the request words is not part of
+ * them: "can / could / would / will you (please)". Off, as before.
+ */
+const POLITE_LEAD = /^(?:hey,?\s+|hi,?\s+)?(?:can|could|would|will)\s+(?:you|u)\s+(?:please\s+)?/i;
+
 const MAIN_REQUEST_TURN = requestTurnFor(FORM_WORDS);
 const FIXED_REQUEST_TURN = requestTurnFor(FIXED_FORM_WORDS);
 
