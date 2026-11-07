@@ -2790,3 +2790,15 @@ export function offRosterConfirmEnabled(): boolean {
 export function ownBrandOnlyEnabled(): boolean {
   return envFlag("OWN_BRAND_ONLY_ENABLED");
 }
+
+// --- coding 4 flags ---
+
+/**
+ * LEVEL_ENDS_REQUEST_ENABLED (QA, live tester, 7 Nov 2026; same flag in both apps; default off). "my team member
+ * <name> was late on 10-20-26, verbal ca" got no card: the closing "verbal ca" had no request words before it, so the
+ * level read as history and the turn as a question. On: a level clause naming the document (ca, corrective action,
+ * write-up) as the turn's last clause is the form asked for (`forms/warning-level.ts`). Off, as before.
+ */
+export function levelEndsRequestEnabled(): boolean {
+  return envFlag("LEVEL_ENDS_REQUEST_ENABLED");
+}
