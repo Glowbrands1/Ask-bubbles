@@ -1019,6 +1019,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REFORMAT_KEEPS_SOURCES_ENABLED",
   "FRAMEWORK_GENERAL_SECTIONS_ENABLED",
   "FORM_EDIT_DATE_RULES_ENABLED",
+  // coding 2: LIST_POLICY_IS_EDIT (default off): forced off with the others.
+  "LIST_POLICY_IS_EDIT_ENABLED",
   // coding 2: REMOVE_POLICY_NOT_NAMED (A1; default off): forced off with the others.
   "REMOVE_POLICY_NOT_NAMED_ENABLED",
   "QUESTION_NOT_FORM_ENABLED",
@@ -3021,6 +3023,17 @@ export function issueIsTheAccountEnabled(): boolean {
  */
 export function priorStepPreviouslyEnabled(): boolean {
   return envFlag("PRIOR_STEP_PREVIOUSLY_ENABLED");
+}
+
+// coding 2: LIST_POLICY_IS_EDIT
+/**
+ * LIST_POLICY_IS_EDIT_ENABLED (QA, 8 Nov 2026; default off; works with EDIT_POLICY_ASK_ENABLED; same flag in both
+ * apps). With a form open, a turn that was only "please list the policy" read as a question and was answered as a
+ * general policy question, so EDIT_POLICY_ASK never saw it. With this flag on, such a turn is not a question and the
+ * edit path takes it (`ai/list-policy-ask.ts`); "what policy covers lateness?" is still a question. Off, as before.
+ */
+export function listPolicyIsEditEnabled(): boolean {
+  return envFlag("LIST_POLICY_IS_EDIT_ENABLED");
 }
 
 // coding 2: REMOVE_POLICY_NOT_NAMED
