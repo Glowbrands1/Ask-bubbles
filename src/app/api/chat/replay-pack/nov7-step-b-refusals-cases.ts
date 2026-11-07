@@ -1,7 +1,7 @@
 import { expect } from "vitest";
 
 import { WEST_DODGE, replyMatchesDiff, savedForm, type ReplayCase } from "./cases";
-import { CASH, ROOM_PROCESS, ROOM_STEPS, STEP_B_REFUSAL_SCENARIOS, STEP_B_READER_FLAGS, SUN_YES, patch, type RefusalScenario } from "./nov7-step-b-refusals-scenarios";
+import { CASH, ROOM_PROCESS, ROOM_STEPS, STEP_B_REFUSAL_SCENARIOS, STEP_B_READER_FLAGS, SUN_TOWEL, SUN_YES, patch, type RefusalScenario } from "./nov7-step-b-refusals-scenarios";
 
 /**
  * ============================================================================
@@ -31,7 +31,7 @@ import { CASH, ROOM_PROCESS, ROOM_STEPS, STEP_B_REFUSAL_SCENARIOS, STEP_B_READER
 const OPEN_IN_PRODUCTION = "production answers \"I haven't changed the …\" (Step B is off; the revision path writes nothing)";
 
 /** Production's outcome per case, from the run with production's flags (7 Nov 2026). */
-const PRODUCTION_HOLDS = new Set<string>(["bub-date-question", "bub-name-redo", "sun-towel-nothing-said", "sun-msb-format", "sun-make-that-update-live-shape"]);
+const PRODUCTION_HOLDS = new Set<string>(["bub-date-question", "bub-last-name", "bub-name-redo", "sun-towel-nothing-said", "sun-msb-format", "sun-make-that-update-live-shape"]);
 
 /** Fix runs that still fail, and why (the path that owns the turn is not Step B's reader). */
 const FIX_OPEN: Readonly<Record<string, string>> = {};
@@ -89,6 +89,32 @@ const LIVE_SHAPES: readonly RefusalScenario[] = [
       patch: {
         [CASH]: patch("this_form", [{ field: "coaching_details", value: "Reminded her to call a manager for any cash drawer shortage.", how: "add", evidence: "reminded her to call a manager for any cash drawer shortage" }]),
         [SUN_YES]: patch("this_form", [{ field: "coaching_details", value: "Reminded her to call a manager for any cash drawer shortage.", how: "add", evidence: "Reminded her to call a manager for any cash drawer shortage" }]),
+      },
+      revisionFrom: {
+        [SUN_YES]: { coaching_details: "Reminded her to call a manager for any cash drawer shortage.\nReminded her to call a manager for any cash drawer shortage." },
+      },
+    },
+  },
+  /*
+   * QA's re-run (7 Nov 2026, sonnet-5, patch on Haiku): the reader found nothing to write in "add details about the
+   * towel" and "yes, do that"; the old revision then wrote the instruction ("Observed: Add details about the
+   * towel.") and the reminder a second time.
+   */
+  {
+    ...byId("sun-towel-nothing-said"),
+    id: "sun-towel-nothing-said-live-shape",
+    script: {
+      patch: { [SUN_TOWEL]: patch("this_form") },
+      revisionFrom: { [SUN_TOWEL]: { coaching_details: "Observed:\nAdd details about the towel." } },
+    },
+  },
+  {
+    ...byId("sun-yes-do-that"),
+    id: "sun-yes-do-that-empty-reading",
+    script: {
+      patch: {
+        [CASH]: patch("this_form", [{ field: "coaching_details", value: "Reminded her to call a manager for any cash drawer shortage.", how: "add", evidence: "reminded her to call a manager for any cash drawer shortage" }]),
+        [SUN_YES]: patch("this_form"),
       },
       revisionFrom: {
         [SUN_YES]: { coaching_details: "Reminded her to call a manager for any cash drawer shortage.\nReminded her to call a manager for any cash drawer shortage." },
