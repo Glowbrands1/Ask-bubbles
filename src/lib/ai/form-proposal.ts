@@ -37,6 +37,7 @@ import {
   readCorrectiveActionIntake,
   type IntakeReading,
 } from "@/lib/forms/corrective-action-intake";
+import { onlyDeniesAFault } from "@/lib/forms/denial-no-account";
 import {
   CA_POLICY_QUESTION,
   caPolicyProposalLine,
@@ -1067,15 +1068,17 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
     isCorrectiveActionForm(match) &&
     proposal.status !== "needs_employee" &&
     // This form's turns only: another person's account earlier in the chat is not this one's.
-    !describesIncident(scoped.text) &&
-    !describesMoreThanTheRequest(scoped.text, {
-      ignore: [
-        proposal.employeeName ?? "",
-        proposal.employeeRole ?? "",
-        ...storeIndex.stores.map((store) => store.name),
-        ...storeIndex.aliases.map((alias) => alias.phrase),
-      ],
-    }) &&
+    // DENIAL_NO_ACCOUNT_ENABLED: what only denies a fault ("…, not late") tells nothing that happened.
+    (onlyDeniesAFault(scoped.text, proposal.employeeName) ||
+      (!describesIncident(scoped.text) &&
+        !describesMoreThanTheRequest(scoped.text, {
+          ignore: [
+            proposal.employeeName ?? "",
+            proposal.employeeRole ?? "",
+            ...storeIndex.stores.map((store) => store.name),
+            ...storeIndex.aliases.map((alias) => alias.phrase),
+          ],
+        }))) &&
     !answeredWhatHappened([...input.history, { role: "user", content: input.question }])
   ) {
     proposal.awaitingIncident = true;
