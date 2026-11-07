@@ -915,6 +915,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FORM_PATCH_REDUCER_ENABLED",
   "FORM_REPLY_FROM_DIFF_ENABLED",
   "FORM_EDIT_SINGLE_WRITER_ENABLED",
+  "FORM_EDIT_SAID_REPLACEMENT_ENABLED",
   "FORM_EDIT_TOOL_IN_STREAM_ENABLED",
   "CHAT_GLOSSARY_ENABLED",
   "CA_SALES_POLICY_ENABLED",
@@ -1034,6 +1035,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "PRIVATE_CREATOR_FORMS_ENABLED",
   "NOT_DEDUCTIBLE_READ_ENABLED",
   "PRIOR_STEP_SENTENCE_ENABLED",
+  // coding 2: PRIOR_STEP_PREVIOUSLY (A2; default off): forced off with the others.
+  "PRIOR_STEP_PREVIOUSLY_ENABLED",
   "EXIT_FULFILLED_IS_LAST_DAY_ENABLED",
   "DATE_LINE_NO_ECHO_ENABLED",
   "FUTURE_PRIOR_ROW_DROP_ENABLED",
@@ -1085,8 +1088,9 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "PLACE_FROM_CUE_ENABLED",
   // Port of the sibling app's fix flag after its flip (6 Nov 2026): forced off with the others.
   "SALES_SHORTFALL_OBJECT_ENABLED",
-  "PRIOR_STEP_PREVIOUSLY_ENABLED",
   "UNDER_PERFORMANCE_EXPLAINED_ENABLED",
+  "NO_NOTICE_NO_DATE_ENABLED",
+  "ISSUE_IS_THE_ACCOUNT_ENABLED",
   // Live in production since the 6 Nov flip, but missing from this list (QA, 6 Nov 2026): a gate run with them on
   // would keep them on inside flags-off-parity's child run. Test-only effect.
   "METRIC_GUARD_ENABLED",
@@ -1100,6 +1104,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REPLY_MATCHES_CARD_EACH_CARD_ENABLED",
   // Default-off fix flag (the flip-3 gate, 6 Nov 2026).
   "OFF_ROSTER_CONFIRM_ENABLED",
+  // Default-off fix flag (QA, 7 Nov 2026).
+  "METRIC_CHOICE_ONE_QUESTION_ENABLED",
 ] as const;
 
 /**
@@ -2403,6 +2409,45 @@ export function formEditSingleWriterEnabled(): boolean {
 }
 
 /**
+ * FORM_EDIT_SAID_REPLACEMENT_ENABLED (QA's Step B gate, 6 Nov 2026; default
+ * off; only with FORM_EDIT_SINGLE_WRITER_ENABLED). The single writer refused
+ * "fix her last name, it is Laine" (drops_words) and an offense changed to
+ * "absenteeism" (unknown_option). With this flag on, an old word the new text
+ * replaces in place with a word the manager's latest message says may go, and
+ * an old offense box is written as the box that replaced it; a word dropped
+ * with nothing in its place is still refused (`forms/form-reducer.ts`). Off,
+ * as before.
+ */
+export function formEditSaidReplacementEnabled(): boolean {
+  return envFlag("FORM_EDIT_SAID_REPLACEMENT_ENABLED") && formEditSingleWriterEnabled();
+}
+
+// --- coding 5 flags (Step B edit reader; placed after FORM_EDIT_SAID_REPLACEMENT, not at a block end, so merges do not collide) ---
+
+/**
+ * FORM_PATCH_READER_FIXES_ENABLED (coding 5, 7 Nov 2026; QA's Step B target, the real "I haven't changed the
+ * <form>" refusals; same flag in both apps; default off). Step B's reader, fixed where the real-AI trace (6 Nov)
+ * refused faithful edits. Active only with FORM_PATCH_REDUCER_ENABLED. On:
+ *   (1) a patch whose values are already on the form answers "<Field> already says that" (never "Updated"); an
+ *       empty or "other" reading goes to the old path, whose writes may not repeat the field, echo the instruction
+ *       or (after an empty reading) add nothing new;
+ *   (2) the evidence and word checks read the form's own employee name as said (a "<Name> must practice …"
+ *       for "Add that she Must Practice …"), match a word by its stem ("missed" for "missing"), and hold every
+ *       FACT word — a number, a date, a capitalised word inside a sentence — to the manager's words or the
+ *       form; only a few other added words (at most 2, or 15% of them) may be unsaid;
+ *   (3) Pau's "yes rewrite" (7 Nov 2026): the reader may answer how "reword" when the latest message asks for
+ *       the wording to change; the field's text is rewritten in new words, every fact still the manager's or
+ *       the form's, every protected value (name, date, amount) kept (one prompt line added, never edited);
+ *   (4) the form's Job Title is a field the reader may set, only to words of the latest message ("change her
+ *       position to Team Member"), written as the manager's own edit.
+ * Off, the reader, the schema, the prompt and the reducer are byte for byte as before.
+ */
+export function formPatchReaderFixesEnabled(): boolean {
+  return envFlag("FORM_PATCH_READER_FIXES_ENABLED") && formPatchReducerEnabled();
+}
+// --- end coding 5 flags ---
+
+/**
  * The edit tool in the main call (Step 3, 4 Nov 2026): with a draft form open
  * and a turn that is not a correction or a policy change (a question-phrased
  * turn too, Pau's ruling A3), the
@@ -2817,8 +2862,54 @@ export function politeRequestOwnTurnsEnabled(): boolean {
   return envFlag("POLITE_REQUEST_OWN_TURNS_ENABLED");
 }
 
+/**
+ * CA_REQUEST_NOT_PRIOR_COACHING_ENABLED (ported from the sibling app; Pau's scan, sf-s35, 7 Nov 2026; same flag in both apps; default off). "Can you
+ * draw me up a CA for <name> for being late on 10/23/26. <first> has signed a coaching document for being late on
+ * 10/14/26. …" opened a Coaching Form: the coaching named as history was read as the form asked for. On: a form named
+ * after a Corrective Action request in the same message is a detail of that request, unless the manager switches to
+ * it (`forms/template-intent.ts` requestedNaming). Off, as before.
+ */
+export function caRequestNotPriorCoachingEnabled(): boolean {
+  return envFlag("CA_REQUEST_NOT_PRIOR_COACHING_ENABLED");
+}
+
+/**
+ * AS_YOU_SAID_APP_READ_ENABLED (ported from the sibling app; QA's gate there, 7 Nov 2026: regressions from
+ * AS_YOU_SAID_MANAGER_WORDS; ships with it; same flag in both apps; default off). With AS_YOU_SAID on, a CA whose
+ * only Policy line was "<policy>, as you said" (read from the app's own line) lost the line. On: the policy the app's
+ * own lines named is kept as its reading and said as one ("**Policy:** Attendance — read from this request …"),
+ * never "as you said" and never nothing (`forms/ca-policy.ts` readCaPolicy, caPolicyProposalLine). Off, as before.
+ */
+export function asYouSaidAppReadEnabled(): boolean {
+  return envFlag("AS_YOU_SAID_APP_READ_ENABLED");
+}
+
 // --- coding 2 flags ---
 
+/**
+ * NO_NOTICE_NO_DATE_ENABLED (QA, flip-3 tester, 6 Nov 2026; default off).
+ * "exit form for <X>, resigned 11-3-26 with no notice" printed "Date that
+ * notice was given: November 3, 2026": "resigned" is a notice-given cue. With
+ * this flag on, a stated "no notice" leaves the notice date empty, and the
+ * date stays the resignation's (`forms/exit-facts.ts`). Off, as before.
+ */
+export function noNoticeNoDateEnabled(): boolean {
+  return envFlag("NO_NOTICE_NO_DATE_ENABLED");
+}
+
+// coding 2: ISSUE_IS_THE_ACCOUNT
+/**
+ * ISSUE_IS_THE_ACCOUNT_ENABLED (QA, flip-3 tester, 6 Nov 2026; default off).
+ * "…<name>, verbal, she was late on 10-20-26" printed What happened =
+ * "verbal", and with a nickname, the typed name: the first clause after the
+ * person was taken. With this flag on, a bare level clause or a short clause
+ * naming the person is passed over (`forms/incident-issue.ts`). Off, as before.
+ */
+export function issueIsTheAccountEnabled(): boolean {
+  return envFlag("ISSUE_IS_THE_ACCOUNT_ENABLED");
+}
+
+// coding 2: PRIOR_STEP_PREVIOUSLY
 /**
  * PRIOR_STEP_PREVIOUSLY_ENABLED (A2, one of Pau's 7; QA 6 Nov 2026; default off). "in the previously recieved
  * coaching include that <name> signed the jba policy manual on 10-15-26" listed no Prior actions row. With this
@@ -2827,4 +2918,17 @@ export function politeRequestOwnTurnsEnabled(): boolean {
  */
 export function priorStepPreviouslyEnabled(): boolean {
   return envFlag("PRIOR_STEP_PREVIOUSLY_ENABLED");
+}
+
+// --- Coding flags ---
+
+/**
+ * METRIC_CHOICE_ONE_QUESTION_ENABLED (QA, 7 Nov 2026; same flag in both apps; default off). The same doubled ask as
+ * the FORM_NAME re-flip gate regression, under METRIC_GUARD_ENABLED: a choice question with its own "Tell me and I'll
+ * …" after it, every choice a metric, became "Who is this form for? Tell me the employee's full name. Tell me and I'll
+ * fill in …". On: the question's tail goes with a choice that is replaced, and stays with one still asked
+ * (`forms/roster-only-names.ts` withoutMetricChoices). Off, as before.
+ */
+export function metricChoiceOneQuestionEnabled(): boolean {
+  return envFlag("METRIC_CHOICE_ONE_QUESTION_ENABLED");
 }
