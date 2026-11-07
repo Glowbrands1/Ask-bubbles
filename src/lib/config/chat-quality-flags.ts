@@ -1008,6 +1008,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REMAP_INCIDENT_FIX_ENABLED",
   "PRIOR_ACTIONS_PARSE_ENABLED",
   "CROSS_CHAT_REPLY_GUARD_ENABLED",
+  // Missing from this list since its PR (QA, 7 Nov 2026): forced off with the others.
+  "PAST_FORMS_BEFORE_LIBRARY_ENABLED",
   "FOLLOWUP_NEW_TOPIC_RETRIEVAL_ENABLED",
   "ACTION_PLAN_MANAGER_ONLY_ENABLED",
   "KEEP_FORM_EMPLOYEE_ENABLED",
@@ -1113,6 +1115,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // Port of the sibling app's fix flag after its flip (6 Nov 2026): forced off with the others.
   "SALES_SHORTFALL_OBJECT_ENABLED",
   "SALES_OBSERVATION_ACCOUNT_ENABLED",
+  // coding 2: SOURCE_NOTE_GUARD (default off): forced off with the others.
+  "SOURCE_NOTE_GUARD_ENABLED",
   "UNDER_PERFORMANCE_EXPLAINED_ENABLED",
   "NO_NOTICE_NO_DATE_ENABLED",
   "ISSUE_IS_THE_ACCOUNT_ENABLED",
@@ -2583,6 +2587,21 @@ export function formNameFromRosterEnabled(): boolean {
 }
 
 /**
+ * PAST_FORMS_BEFORE_LIBRARY_ENABLED (Pau, 5 Nov 2026; overnight scan sf-s29,
+ * default off). "are there any coaching and ca's for <name>" was answered
+ * from the forms library ("Yes. **Corrective Action Form** — …") instead of
+ * the forms on file for that person. On: when the forms-library check
+ * (`detectInventoryQuestion`) would answer a message that names a person or
+ * asks about forms already on file, the past-forms lookup
+ * (`chat-form-records.ts`) runs for it instead and the library answer steps
+ * aside. "do we have a coaching form?" still gets the library answer. Off, as
+ * before.
+ */
+export function pastFormsBeforeLibraryEnabled(): boolean {
+  return envFlag("PAST_FORMS_BEFORE_LIBRARY_ENABLED");
+}
+
+/**
  * COACHING_ASKS_WHAT_HAPPENED_ENABLED (Pau, 5 Nov 2026, sf-s27; default off).
  * "Create a coaching form." → "<name>" answered "Everything I need is here …
  * I have the employee and the store." with no incident and no draft. On: a
@@ -2646,6 +2665,20 @@ export function rosterNameInCandidateEnabled(): boolean {
  */
 export function rosterNearMissEnabled(): boolean {
   return envFlag("ROSTER_NEAR_MISS_ENABLED");
+}
+
+/**
+ * NEAR_MISS_DETAILS_ACCEPT_ENABLED (QA's Bubbles gate on 4d42c342, 7 Nov 2026; default off). With FORM_NAME on, a
+ * full name typed close to one roster person ("Corvina Ashdown Vellacot") got "Is this for **<roster name>**? Tell me
+ * if that should change.", and the next turn ("verbal warning, no payroll deduct, part-time team member,") got the
+ * same question again: the answer reader took only "yes" or a name, the details were dropped and no card came. On: a
+ * turn after that question that gives form details (a warning level or a payroll answer, by the app's own readers)
+ * and does not turn the name down accepts the asked name, when the manager typed that person's first name and a
+ * surname close to theirs (`ai/first-name-suggest.ts` chosenName). A first name typed alone is still asked, as
+ * before. Off, as before.
+ */
+export function nearMissDetailsAcceptEnabled(): boolean {
+  return envFlag("NEAR_MISS_DETAILS_ACCEPT_ENABLED");
 }
 
 /**
@@ -2963,6 +2996,19 @@ export function asYouSaidAppReadEnabled(): boolean {
  */
 export function salesObservationAccountEnabled(): boolean {
   return envFlag("SALES_OBSERVATION_ACCOUNT_ENABLED");
+}
+
+// coding 2: SOURCE_NOTE_GUARD
+/**
+ * SOURCE_NOTE_GUARD_ENABLED (QA, 5 Nov 2026, item 9; port back from the sibling app's #571, which extends this
+ * app's d4ee64d2; default off). A reply reached a manager with the model's own note about a source in it: "[S1
+ * doesn't actually cover general tardiness — it only covers failing to open the store…]". The marker stripping
+ * removes only a bare marker ("[S1]") or a group of them. With the flag on, every reply's last step removes such a
+ * note and any bare marker group left ("[S12, S14]"); a citation with only a page or section after its tag is kept
+ * (`ai/source-note.ts`). Off, as before.
+ */
+export function sourceNoteGuardEnabled(): boolean {
+  return envFlag("SOURCE_NOTE_GUARD_ENABLED");
 }
 
 /**
