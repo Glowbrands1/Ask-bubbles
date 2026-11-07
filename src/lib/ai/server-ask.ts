@@ -148,6 +148,7 @@ import { protectedNameWords } from "./typo-name-words";
 import type { AskRequest, AskResponse } from "./types";
 import { keepManagerActionPlan } from "./manager-action-plan-reply";
 import { withoutReportTurnsForForm } from "./report-turns";
+import { withoutSourceMarkers, withoutSourceNotes } from "./source-note";
 import { withManagerNameGuard } from "./manager-name-guard";
 import { withJobTitleFromWords } from "./job-title-from-words";
 import { withCoachingWhatHappened } from "./coaching-what-happened";
@@ -274,8 +275,11 @@ async function answerQuestionAnyPath(
   }
   // FORM_TYPE_SWITCH: the switched card is drafted from the account, never from the switch turn (read on the turns as sent).
   // MANAGER_NAME_NOT_EMPLOYEE_ENABLED: last — the manager's own name is never the employee.
-  const answer = async (turn: AskRequest) =>
-    withManagerNameGuard(withSwitchSources(withoutSensitiveDefaults(await answerQuestionTraced(turn, actor, memory), turn.question), turn), turn);
+  // SOURCE_NOTE_GUARD_ENABLED: no note about a source ("[S1 doesn't actually cover …]") and no bare marker group ("[S12, S14]") reaches the reply on any path (`ai/source-note.ts`).
+  const answer = async (turn: AskRequest) => {
+    const guarded = withManagerNameGuard(withSwitchSources(withoutSensitiveDefaults(await answerQuestionTraced(turn, actor, memory), turn.question), turn), turn);
+    return { ...guarded, content: withoutSourceMarkers(withoutSourceNotes(guarded.content)) };
+  };
   let answered = await answer(request);
   const fallbacks = kept ? [withoutReportTurnsForForm({ ...asked, question: kept.employee, continueProposalTemplateKey: kept.templateKey }), plain] : [];
   for (const next of fallbacks) {
