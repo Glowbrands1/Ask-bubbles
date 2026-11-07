@@ -1097,6 +1097,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "PLACE_FROM_CUE_ENABLED",
   // Port of the sibling app's fix flag after its flip (6 Nov 2026): forced off with the others.
   "SALES_SHORTFALL_OBJECT_ENABLED",
+  "SALES_OBSERVATION_ACCOUNT_ENABLED",
   "UNDER_PERFORMANCE_EXPLAINED_ENABLED",
   "NO_NOTICE_NO_DATE_ENABLED",
   "ISSUE_IS_THE_ACCOUNT_ENABLED",
@@ -2923,6 +2924,18 @@ export function asYouSaidAppReadEnabled(): boolean {
 }
 
 // --- coding 2 flags ---
+
+// coding 2: SALES_OBSERVATION_ACCOUNT
+/**
+ * SALES_OBSERVATION_ACCOUNT_ENABLED (port of the sibling app's flip-4 gate finding, QA 7 Nov 2026; default off;
+ * acts only with SALES_SHORTFALL_OBJECT_ENABLED). Once "on performance" counts as the account, the request's own
+ * words ("written CA for <name> on performance") became the card's Issue. With this flag on, the Issue and the
+ * draft's account clause lose the request's head, the employee's name where it leads, the request's reason and a
+ * payroll answer (`observationAccount` in `forms/ca-policy.ts`); nothing left, no Issue. Off, as before.
+ */
+export function salesObservationAccountEnabled(): boolean {
+  return envFlag("SALES_OBSERVATION_ACCOUNT_ENABLED");
+}
 
 /**
  * NO_NOTICE_NO_DATE_ENABLED (QA, flip-3 tester, 6 Nov 2026; default off).
