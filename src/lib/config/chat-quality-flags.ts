@@ -1021,6 +1021,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REFORMAT_KEEPS_SOURCES_ENABLED",
   "FRAMEWORK_GENERAL_SECTIONS_ENABLED",
   "FORM_EDIT_DATE_RULES_ENABLED",
+  // coding 2: COPY_OPEN_FORM_FOR_PERSON (default off): forced off with the others.
+  "COPY_OPEN_FORM_FOR_PERSON_ENABLED",
   // coding 2: REMOVE_POLICY_NOT_NAMED (A1; default off): forced off with the others.
   "REMOVE_POLICY_NOT_NAMED_ENABLED",
   "QUESTION_NOT_FORM_ENABLED",
@@ -3054,6 +3056,17 @@ export function issueIsTheAccountEnabled(): boolean {
  */
 export function priorStepPreviouslyEnabled(): boolean {
   return envFlag("PRIOR_STEP_PREVIOUSLY_ENABLED");
+}
+
+// coding 2: COPY_OPEN_FORM_FOR_PERSON
+/**
+ * COPY_OPEN_FORM_FOR_PERSON_ENABLED (QA, 8 Nov 2026; default off). With <A>'s Coaching Form open, "copy this form for
+ * <B>" made no card: the answering model replied and the card stayed A's. With this flag on, a same-form copy request
+ * naming one roster person other than the open form's is read as that person's request for the open template, the
+ * open draft set aside for the turn (`forms/copy-open-form-for.ts`); Create copies A's form as before. Off, as before.
+ */
+export function copyOpenFormForPersonEnabled(): boolean {
+  return envFlag("COPY_OPEN_FORM_FOR_PERSON_ENABLED");
 }
 
 // coding 2: REMOVE_POLICY_NOT_NAMED
