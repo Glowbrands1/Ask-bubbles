@@ -9,7 +9,7 @@ import { STAFF, WEST_DODGE, type ReplayCase, type ReplayContext } from "./cases"
  *
  * The sibling app's flip-9 live tester found (1) "ca for <A> not late" asking what happened beside "**Policy:**
  * Attendance — read from this request", and (2) "… $20 payroll deduct applies" reading Yes but asking the amount
- * again. Checked on this app's main with production's flags plus its flips 6 and 8 (not yet in production-flags.json): (1) asks what happened with no
+ * again. Checked on this app's main with production's flags (flips 6 and 8 included since #559 and #568): (1) asks what happened with no
  * policy read from the request, and (2) reads the $20. These cases keep it so. See `docs/parity-log/2026-11-08-*`.
  * The person is invented.
  */
@@ -27,9 +27,9 @@ export const NOV8_SUNNY_ROUND4_GUARDS_CASES: ReplayCase[] = [
     id: "nov8-guard-ca-for-not-late-no-app-policy",
     title: "\"ca for <A> not late\": the card asks what happened, and reads no policy from the request",
     report: "QA, 8 Nov 2026: the sibling app's flip-9 live tester (1); a guard here",
-    // production-flags.json does not list flip 8 yet: without DENIAL_NO_ACCOUNT (live since flip 8) the card drafts
-    // with no account and does not ask. With the live flags named here it holds.
-    status: { open: "the flags file's production (flip 8 not listed): no ask, drafted with no account" },
+    // Changed on purpose (8 Nov 2026): open until production-flags.json listed flip 8 (#568). With DENIAL_NO_ACCOUNT now
+    // in the file, it holds with production's flags; AS_YOU_SAID_APP_READ (flip 6) is kept as a fix flag.
+    status: "fixed",
     fixFlags: ["DENIAL_NO_ACCOUNT_ENABLED", "AS_YOU_SAID_APP_READ_ENABLED"],
     async run(t) {
       const thread = await start(t);
