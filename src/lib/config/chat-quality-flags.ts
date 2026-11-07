@@ -2895,6 +2895,17 @@ export function ownBrandOnlyEnabled(): boolean {
   return envFlag("OWN_BRAND_ONLY_ENABLED");
 }
 
+/**
+ * OWN_BRAND_PARENT_ENABLED (QA's live tester, 7 Nov 2026; this app only — the sibling app's parent company is its
+ * own; default off). With OWN_BRAND_ONLY on, "cite animals in the workplace policy" still answered "… across all
+ * brands (Buff City Soap, and JB & Associates) …". On: the operating company's name (`PARENT_COMPANY_NAMES`) is not
+ * shown either, and "across all brands (A, B)" reads "at Buff City Soap" (`ai/own-brand-only.ts`). The manual's
+ * title is never touched. Off, as before.
+ */
+export function ownBrandParentEnabled(): boolean {
+  return envFlag("OWN_BRAND_PARENT_ENABLED");
+}
+
 // --- coding 4 flags ---
 
 /**
