@@ -41,7 +41,9 @@ import {
   CA_POLICY_QUESTION,
   caPolicyProposalLine,
   unconfirmedManualLine,
+  describedAttendanceKeys,
   groundMissedEvent,
+  LATE_OPENING_OFFENSE,
   MISSED_EVENT_OFFENSE,
   missedEventPhrase,
   type NamedPolicyReading,
@@ -165,7 +167,7 @@ import {
   namedManualSection,
   namedPolicies,
 } from "@/lib/forms/named-policy-section";
-import { manualDisplayTitle, manualSheetHeadings, type ManualChunk } from "@/lib/forms/official-policy-manual";
+import { manualDisplayTitle, manualSectionFor, manualSheetHeadings, type ManualChunk } from "@/lib/forms/official-policy-manual";
 import {
   actionPlanSentencesEnabled,
   antiLoopEnabled,
@@ -174,6 +176,7 @@ import {
   slotRetentionEnabled,
   storedSlotsNotARequestEnabled,
   typedNameEnabled,
+  describedAttendanceCardEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { managerWords } from "./edit-date-rules";
 import { groundEmployeeResolution } from "./employee-candidate-grounding";
@@ -2642,6 +2645,20 @@ async function namedPolicyFor(text: string, input: ProposalTurn): Promise<NamedP
               : {}),
           }
         : null;
+    }
+    /*
+     * DESCRIBED_ATTENDANCE_CARD_ENABLED (Pau-approved 7 Nov): an account the app reads as attendance — late, absent,
+     * opening late — cites the manual's Attendance section (Late Opening under it), the reader the intent reader and
+     * the draft already use. Off, as before.
+     */
+    const attendanceKeys = describedAttendanceCardEnabled() ? describedAttendanceKeys(text) : null;
+    if (attendanceKeys) {
+      const manual = await chunksOf();
+      const section = manual ? manualSectionFor({ chunks: manual, offenseKeys: attendanceKeys, notes: text }) : null;
+      if (section) {
+        const phrase = attendanceKeys.includes(LATE_OPENING_OFFENSE) ? "opening late" : attendanceKeys.includes("tardiness") ? "late" : "absent";
+        return { phrase, lookup: "described", heading: section.heading, page: section.page, offenseKey: attendanceKeys[0]! };
+      }
     }
     const chunks = await chunksOf();
     const described = describedManualSection({ text, chunks });

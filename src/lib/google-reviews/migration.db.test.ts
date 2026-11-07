@@ -51,6 +51,8 @@ const finish = (run: string, status = "succeeded") => q(`select public.google_re
 
 describe("the allowlist", () => {
   it("is seeded with exactly the seven approved stores, identical to the company configuration", async () => {
+    // The seed, with the later renames applied (20261106000100: Dawley Farms and Omaha Dodge, Pau, 6 Nov 2026), is the configuration.
+    await t.db.exec(read("migrations/20261106000100_google_reviews_dawley_farms_name.sql"));
     const rows = await q<{ store_code: string; display_name: string; address_line1: string; address_line2: string | null; city: string; state: string; postal_code: string }>(
       `select store_code, display_name, address_line1, address_line2, city, state, postal_code from public.google_review_locations order by store_code`,
     );

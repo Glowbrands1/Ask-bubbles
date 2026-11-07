@@ -11,6 +11,13 @@ import { GoogleReviewsActions, StoreLinkAction } from "./actions";
 import { MATCH_HELP, MATCH_LABEL, MATCH_TONE, OAUTH_ERROR_TEXT, REASON_TEXT, SYNC_ERROR_TEXT, blockerText } from "./copy";
 import { rating, reviewDate, stamp } from "./format";
 import type { GoogleReviewsPageProps } from "./load";
+import { googleStoreNumber } from "@/config/company/google-reviews";
+
+/** The admin screen shows the company's number, and Google's code beside it where they differ (the match key). */
+function storeNumberLabel(code: string): string {
+  const number = googleStoreNumber(code);
+  return number === code ? code : `${number} (Google code ${code})`;
+}
 
 /**
  * THE GOOGLE REVIEWS SCREEN — administrators only (the page guards it).
@@ -66,7 +73,7 @@ function StoresTable({ stores }: { stores: StoreSummary[] }) {
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <p className="font-semibold text-foreground">{s.displayName}</p>
-                <p className="text-[12px] text-muted-foreground">Store {s.storeCode} · {s.address}</p>
+                <p className="text-[12px] text-muted-foreground">Store {storeNumberLabel(s.storeCode)} · {s.address}</p>
               </div>
               <Badge tone={MATCH_TONE[s.matchStatus]}>{MATCH_LABEL[s.matchStatus]}</Badge>
             </div>
@@ -101,7 +108,7 @@ function StoresTable({ stores }: { stores: StoreSummary[] }) {
                 <tr key={s.storeCode} className="border-b border-border last:border-0 align-top">
                   <td className="px-4 py-3">
                     <p className="font-semibold text-foreground">{s.displayName}</p>
-                    <p className="text-[12px] text-muted-foreground">Store {s.storeCode} · {s.address}</p>
+                    <p className="text-[12px] text-muted-foreground">Store {storeNumberLabel(s.storeCode)} · {s.address}</p>
                   </td>
                   <td className="px-4 py-3">
                     <Badge tone={MATCH_TONE[s.matchStatus]}>{MATCH_LABEL[s.matchStatus]}</Badge>
@@ -153,7 +160,7 @@ function ReviewFilters({ query, stores }: { query: ReviewQuery; stores: StoreSum
         <select name="store" defaultValue={query.store ?? ""} className={field}>
           <option value="">All seven stores</option>
           {stores.map((s) => (
-            <option key={s.storeCode} value={s.storeCode}>{s.displayName} ({s.storeCode})</option>
+            <option key={s.storeCode} value={s.storeCode}>{s.displayName} ({googleStoreNumber(s.storeCode)})</option>
           ))}
         </select>
       </label>
@@ -212,7 +219,7 @@ function ReviewList({ page, query }: { page: ReviewPage; query: ReviewQuery }) {
               <Stars value={r.starRating} />
               <span className="text-[13px] font-semibold text-foreground">{r.reviewerName ?? "Anonymous reviewer"}</span>
               <span className="text-[13px] text-muted-foreground">{r.storeName}</span>
-              <span className="text-[12px] text-muted-foreground">Store {r.storeCode} · {reviewDate(r.createdAt)}</span>
+              <span className="text-[12px] text-muted-foreground">Store {googleStoreNumber(r.storeCode)} · {reviewDate(r.createdAt)}</span>
               <Badge tone={r.hasReply ? "ready" : "attention"}>{r.hasReply ? "Answered" : "Unanswered"}</Badge>
               {r.removedAt ? <Badge tone="neutral">No longer returned by Google</Badge> : null}
             </div>
