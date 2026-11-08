@@ -165,6 +165,7 @@ import { withReplyMatchesCard } from "./reply-matches-card";
 import { withTitleOfTheEmployee } from "./title-of-the-employee";
 import { withUnderPerformanceExplained } from "./under-performance-explained";
 import { withProposalEditRules } from "./proposal-edit-rules";
+import { cardTurnQuestion, takeOffStaysCard } from "./take-off-stays-card";
 import { withFormTypeSwitch, withSwitchNote, withSwitchSources } from "./form-type-switch";
 import { withAdditionalStore } from "./additional-store";
 import { withOutOfScopePlace } from "./out-of-scope-place";
@@ -406,7 +407,9 @@ async function answerQuestionCore(
    * phrased, is not a question. See `question-not-form.ts`. Behind
    * QUESTION_NOT_FORM_ENABLED; off, every turn is routed as before.
    */
-  const askedQuestion = questionNotFormEnabled() && isQuestionNotForm(request.question, request.history);
+  // TAKE_OFF_STAYS_CARD_ENABLED: "take the policy off" with a card open is a card turn, never a question.
+  const takeOffOnCard = takeOffStaysCard(request);
+  const askedQuestion = !takeOffOnCard && questionNotFormEnabled() && isQuestionNotForm(request.question, request.history);
   if (intentExtractionEnabled() && !askedQuestion) {
     const prepared = await applyIntentExtraction({ request, actor });
     if (prepared.clarification) return prepared.clarification;
@@ -575,15 +578,15 @@ async function answerQuestionCore(
     const reading = askedQuestion ? null : startFormReading(request, actor);
     const proposalQuestion = await questionForProposal(request, actor);
     // AI_READS_CODE_CHECKS_ENABLED: no "couldn't find" line about the name the reader put on the card.
-    const proposal = askedQuestion ? null : withoutStaleRosterNote(await deliverFormProposal({
+    const proposeFrom = async (question: string, questionMessageId = request.questionMessageId) => withoutStaleRosterNote(await deliverFormProposal({
       request,
       actor,
-      question: proposalQuestion,
+      question,
       decorate: (response) => decorateFormAnswer(request, actor, response),
       propose: readerPropose(reading, request, (question) => proposeFormForTurn({
       history: request.history,
       question,
-      questionMessageId: request.questionMessageId,
+      questionMessageId,
       actor,
       continueTemplateKey: request.continueProposalTemplateKey,
       summaries,
@@ -629,6 +632,18 @@ async function answerQuestionCore(
       priorFormsOnFile: (employeeName, locationId) => priorFormsReadingForChat(actor, employeeName, locationId),
     })),
     }));
+    let proposal = askedQuestion ? null : await proposeFrom(proposalQuestion);
+    // TAKE_OFF_STAYS_CARD_ENABLED: a take-off the open intake did not carry on is proposed again from the manager's
+    // last turn; this turn's words stay in the request, for the card's own readers. Off, never.
+    if (takeOffOnCard && !proposal) {
+      // The card is proposed from the manager's last request turn, so its draft is written from that turn's words; this
+      // take-off turn is added to its sources, so the draft also sees the policy taken off (coding 5, 8 Nov 2026).
+      const card = await proposeFrom(cardTurnQuestion(request), (request.history ?? []).filter((turn) => turn.role === "user").at(-1)?.id ?? request.questionMessageId);
+      const fp = card?.formProposal;
+      proposal = fp && request.questionMessageId && !fp.sourceMessageIds.includes(request.questionMessageId)
+        ? { ...card, formProposal: { ...fp, sourceMessageIds: [...fp.sourceMessageIds, request.questionMessageId] } }
+        : card;
+    }
     // Flags off: decoration returns the same proposal, and the forms-library
     // answer returns here, before retrieval.
     if (proposal) return proposal;

@@ -1072,6 +1072,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REFORMAT_KEEPS_SOURCES_ENABLED",
   "FRAMEWORK_GENERAL_SECTIONS_ENABLED",
   "FORM_EDIT_DATE_RULES_ENABLED",
+  // coding 2: TAKE_OFF_STAYS_CARD (default off): forced off with the others.
+  "TAKE_OFF_STAYS_CARD_ENABLED",
   // coding 2: REMOVE_POLICY_NOT_NAMED (A1; default off): forced off with the others.
   "REMOVE_POLICY_NOT_NAMED_ENABLED",
   "QUESTION_NOT_FORM_ENABLED",
@@ -2584,6 +2586,19 @@ export function proposalMakeItAboutEnabled(): boolean {
 export function proposalPolicySetAsideEnabled(): boolean {
   return envFlag("PROPOSAL_POLICY_SET_ASIDE_ENABLED");
 }
+
+/**
+ * EDIT_POLICY_ASK_ENABLED (QA's live run, 7 Nov 2026; coding 5; same flag in both apps; default off; only with
+ * FORM_PATCH_REDUCER_ENABLED). "I need you to make it about showing up late and please list the policy make the
+ * date for 10/14/26." on an open Coaching Form changed Details and said nothing about the policy. On: the patch
+ * reader says whether the latest message asks for the policy (`policy_asked`, a prompt line added after the
+ * approved text), and the app lists it the way a first draft does — the manual sections the account reads as, as
+ * its own "Policy reference" line on the account field — or the reply says it found none and asks which applies
+ * (`forms/edit-policy-ask.ts`). Off, as before.
+ */
+export function editPolicyAskEnabled(): boolean {
+  return envFlag("EDIT_POLICY_ASK_ENABLED") && formPatchReducerEnabled();
+}
 // --- end coding 5 flags ---
 
 /**
@@ -3256,6 +3271,18 @@ export function issueIsTheAccountEnabled(): boolean {
  */
 export function priorStepPreviouslyEnabled(): boolean {
   return envFlag("PRIOR_STEP_PREVIOUSLY_ENABLED");
+}
+
+// coding 2: TAKE_OFF_STAYS_CARD
+/**
+ * TAKE_OFF_STAYS_CARD_ENABLED (QA, 8 Nov 2026, relayed by coding 5; default off). With a card open, "take the
+ * attendance policy off the form" (a Coaching card) and "take the policy off" (any card) were answered as policy
+ * questions with no card, so PROPOSAL_POLICY_SET_ASIDE could not take the policy off. With this flag on, a turn on an
+ * open card that only takes a policy off is a card turn: never a question, and the card is proposed again from the
+ * manager's last turn (`ai/take-off-stays-card.ts`). Off, as before.
+ */
+export function takeOffStaysCardEnabled(): boolean {
+  return envFlag("TAKE_OFF_STAYS_CARD_ENABLED");
 }
 
 // coding 2: REMOVE_POLICY_NOT_NAMED
