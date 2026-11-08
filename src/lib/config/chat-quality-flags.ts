@@ -920,6 +920,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FORM_EDIT_REFERS_BACK_ENABLED",
   "CLAIM_GUARD_ENABLED",
   "NAME_CORRECTION_WORDS_ENABLED",
+  // Coding: NEAR_MISS_QUESTION_RULES (round 5, 8 Nov 2026; port from the sibling app; default off): forced off with the others.
+  "NEAR_MISS_QUESTION_RULES_ENABLED",
   "POLICY_CHANGE_REST_OF_TURN_ENABLED",
   "OPEN_FORM_NO_SELECTION_ENABLED",
   "ANGLE_PLACEHOLDER_GUARD_ENABLED",
@@ -3077,4 +3079,17 @@ export function removePolicyNotNamedEnabled(): boolean {
  */
 export function metricChoiceOneQuestionEnabled(): boolean {
   return envFlag("METRIC_CHOICE_ONE_QUESTION_ENABLED");
+}
+
+/**
+ * NEAR_MISS_QUESTION_RULES_ENABLED (ported from the sibling app: QA's gate there, 8 Nov 2026; default off; ships with
+ * the name set, FORM_NAME_FROM_ROSTER and ROSTER_NEAR_MISS — the latter is live here, so this flag is its own). Two
+ * rules for "Is this for **<roster name>**? Tell me if that should change.": (a) a reply that turns it down ("no,
+ * verbal warning, …") never gets a card for that name, nor the same question again (`forms/near-miss-question-rules.ts`);
+ * (b) a card already on screen is never replaced by the bare question: a near-miss of the card's own employee keeps
+ * the card in the roster's spelling, another name keeps the card's details with the question under it
+ * (`forms/roster-only-names.ts`). Off, as before.
+ */
+export function nearMissQuestionRulesEnabled(): boolean {
+  return envFlag("NEAR_MISS_QUESTION_RULES_ENABLED");
 }

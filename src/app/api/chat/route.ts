@@ -65,6 +65,7 @@ import {
   formReplyFromDiffEnabled,
   formEditToolInStreamEnabled,
   formEditNoopGuardEnabled,
+  nearMissQuestionRulesEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { streamWhenSlow } from "@/lib/api/streamed-response";
 import { LONG_MESSAGE_LIMIT } from "@/lib/chat/message-limit";
@@ -215,6 +216,11 @@ async function postChat(request: Request) {
       }
       // FORM_NAME_FROM_ROSTER_ENABLED, part 2: every name reader of the turn reads this message's request slot (`lib/forms/request-slot.ts`).
       if (formNameFromRosterEnabled()) (await import("@/lib/forms/request-message-store")).enterRequestMessage(asked.question);
+      // NEAR_MISS_QUESTION_RULES_ENABLED: the card on screen, so a near-miss never replaces it (`lib/forms/near-miss-question-rules.ts`).
+      if (nearMissQuestionRulesEnabled()) {
+        const onScreen = (await import("@/lib/forms/near-miss-question-rules")).cardEmployee(asked);
+        if (onScreen) (await import("@/lib/forms/request-message-store")).enterCardOnScreen(onScreen);
+      }
       // METRIC_GUARD_ENABLED, FORM_NAME off: only the metric guards read the message (`request-slot.ts` metricMessage).
       else if (metricGuardEnabled()) (await import("@/lib/forms/request-message-store")).enterMetricMessage(asked.question);
       /*
@@ -796,6 +802,8 @@ async function postChat(request: Request) {
       }
       // PERSON_GUARD_ENABLED: whichever reader named the card's employee, a name that is not a person never stays on it.
       if (personGuardEnabled()) answer = (await import("@/lib/forms/person-guard")).withPersonOnCard(answer);
+      // NEAR_MISS_QUESTION_RULES_ENABLED: "no, …" to "Is this for <name>?" never gets a card for that name, nor the question again.
+      if (nearMissQuestionRulesEnabled()) answer = (await import("@/lib/forms/near-miss-question-rules")).withoutTurnedDownName(answer, asked);
       /*
        * FORM_EDIT_HONEST_REPLY_ENABLED: the ordinary answer, with a form open,
        * changed nothing — so it never says it updated the form. See

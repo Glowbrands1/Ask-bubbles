@@ -1,4 +1,4 @@
-import { formNameFromRosterEnabled, metricChoiceOneQuestionEnabled, metricGuardEnabled, offRosterConfirmEnabled, rosterNearMissEnabled, rosterNotFoundAnyPhrasingEnabled } from "@/lib/config/chat-quality-flags";
+import { formNameFromRosterEnabled, metricChoiceOneQuestionEnabled, metricGuardEnabled, offRosterConfirmEnabled, rosterNearMissEnabled, rosterNotFoundAnyPhrasingEnabled, nearMissQuestionRulesEnabled } from "@/lib/config/chat-quality-flags";
 import { isGlossaryTerm } from "@/lib/ai/glossary";
 import type { AskResponse } from "@/lib/ai/types";
 
@@ -9,7 +9,7 @@ import { isAcceptedOffRoster, offRosterCardNote, offRosterOffer, offRosterTakenL
 import { personRosterNames } from "./person-guard";
 import { namesThisCompany } from "./company-name";
 import { namesCompanyPositionTitle } from "./staff-picker";
-import { metricMessage, namesAMetric, requestMessage } from "./request-slot";
+import { metricMessage, namesAMetric, requestMessage, cardOnScreen } from "./request-slot";
 import { namesAForm } from "./template-intent";
 
 /**
@@ -130,7 +130,16 @@ export function rosterOnlyNames(response: AskResponse, names: readonly string[],
        * answer ("yes", the name) is read by that machinery as the request with
        * the roster's name in full.
        */
-      if (rosterNearMissEnabled() && close) {
+      /*
+       * NEAR_MISS_QUESTION_RULES_ENABLED (ported from the sibling app's round-4 gate, 8 Nov 2026: "make that change to
+       * <a typo of the card's employee>"): a card already on screen is never replaced by the bare question. A near-miss
+       * of the card's own employee is her, in the roster's spelling; anyone else is asked under the card.
+       */
+      const onScreen = nearMissQuestionRulesEnabled() ? cardOnScreen() : undefined;
+      if (onScreen && close && close.toLowerCase() === onScreen.toLowerCase()) {
+        return { ...response, content: content.split(`**${employee}**`).join(`**${close}**`), formProposal: { ...proposal, employeeName: close } };
+      }
+      if (rosterNearMissEnabled() && close && !onScreen) {
         return { ...response, content: `Is this for **${close}**? Tell me if that should change.`, formProposal: undefined };
       }
       proposal = { ...proposal, employeeName: null, status: "needs_employee" };

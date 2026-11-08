@@ -82,8 +82,10 @@ export const NOV7_NEAR_MISS_DETAILS_CASES: ReplayCase[] = CHATS.flatMap(({ id, p
     id: `nov7-near-miss-details-${id}-turned-down`,
     title: `negative: the same chat, but "no, …" before the details: the asked name is not taken`,
     report: REPORT,
+    // Changed on purpose (ported from the sibling app's round-4 gate, 8 Nov 2026): NEAR_MISS_QUESTION_RULES_ENABLED ships
+    // with the name set; here "no, …" was asked the same question again (Corvina), never answered with a card for it.
     status: "fixed",
-    fixFlags: [...NAME_SET, FLAG],
+    fixFlags: [...NAME_SET, FLAG, "NEAR_MISS_QUESTION_RULES_ENABLED"],
     async run(t) {
       vi.setSystemTime(new Date("2026-11-04T15:30:00Z"));
       t.directory([...STAFF, CORVINA, DELPHINE]);
@@ -92,7 +94,11 @@ export const NOV7_NEAR_MISS_DETAILS_CASES: ReplayCase[] = CHATS.flatMap(({ id, p
       const first = await thread.say(turns[0]);
       const reply = await thread.say(`no, ${turns[1]}`);
       // Only an answer to the question can turn it down; where the name was not asked about, this checks nothing.
-      if (ASKED.test(first.content)) expect(thread.proposal?.employeeName ?? null, `the turned-down name is on the card:\n${reply.content}`).not.toBe(person);
+      if (ASKED.test(first.content)) {
+        expect(thread.proposal?.employeeName ?? null, `the turned-down name is on the card:\n${reply.content}`).not.toBe(person);
+        expect(reply.content, `the turned-down name is asked about again or drafted for:\n${reply.content}`).not.toContain(`**${person}**`);
+        expect(reply.content, `the reply does not ask who:\n${reply.content}`).toMatch(/Who is this form for\?/);
+      }
     },
   },
 ]);
