@@ -420,7 +420,14 @@ export function currentRequestStart(input: {
       (secondRequestOwnAccountEnabled() && requests >= 1 && (fixed ? FIXED_FORM_WORD_ANYWHERE : FORM_WORD_ANYWHERE).test(turn));
     if (!isRequest) continue;
     requests += 1;
-    if (requests > 1 && requestTellsIncident(turn, input.employeeName, input.slotClause)) start = index;
+    // SECOND_REQUEST_OWN_ACCOUNT_ENABLED (QA's Sunny round-3 gate, 7 Nov 2026; ported from the sibling app): the turn's
+    // incident must also stand without the request words, a few words at least, so "ok create the CA now" ("now") or
+    // "create a CA for <A>" ("for <A>") after an account is never a new request with nothing in it.
+    const own = withoutRequestWords(turn, fixed ? FIXED_FORM_WORD_ANYWHERE : FORM_WORD_ANYWHERE);
+    const tells =
+      !secondRequestOwnAccountEnabled() ||
+      (own.split(/\s+/).filter(Boolean).length >= OWN_ACCOUNT_WORDS && requestTellsIncident(own, input.employeeName, input.slotClause));
+    if (requests > 1 && tells && requestTellsIncident(turn, input.employeeName, input.slotClause)) start = index;
   }
   return start;
 }
@@ -461,6 +468,25 @@ const FIXED_REQUEST_TURN = requestTurnFor(FIXED_FORM_WORDS);
 /** SECOND_REQUEST_OWN_ACCOUNT_ENABLED: a form named anywhere in the turn, not only at its start. */
 const FORM_WORD_ANYWHERE = new RegExp(String.raw`\b${FORM_WORDS}\b`, "i");
 const FIXED_FORM_WORD_ANYWHERE = new RegExp(String.raw`\b${FIXED_FORM_WORDS}\b`, "i");
+
+/** SECOND_REQUEST_OWN_ACCOUNT_ENABLED: an incident of its own is more than "now" or "for <first> <last>". */
+const OWN_ACCOUNT_WORDS = 4;
+
+/**
+ * SECOND_REQUEST_OWN_ACCOUNT_ENABLED: the turn without its request words. Each sentence that names a form keeps only
+ * what follows the form ("I need another corrective action for <A>, his cash drawer was short $20" → "for <A>, his
+ * cash drawer was short $20"; "ok create the CA now" → "now"); the other sentences stay as they are.
+ */
+function withoutRequestWords(turn: string, formWord: RegExp): string {
+  return turn
+    .split(/(?<=[.!?;])\s+/)
+    .map((sentence) => {
+      const form = formWord.exec(sentence);
+      return form ? sentence.slice(form.index + form[0].length).trim() : sentence;
+    })
+    .filter(Boolean)
+    .join(" ");
+}
 
 /** The action plan the manager gave in their own words ("action plan: …"), or null. */
 export function statedActionPlan(text: string): string | null {
