@@ -71,6 +71,10 @@ export const NOV8_LIST_POLICY_ON_CARD_CASES: ReplayCase[] = [
     status: { open: "answered as a general policy question; the card's turn is lost" },
     fixFlags: FLAGS,
     async run(t) {
+      // Changed on purpose (8 Nov 2026): DESCRIBED_ATTENDANCE_CARD is live (round 4), so this late-account CA card already
+      // shows its own "Policy: Attendance …" line; the "listed on the draft at Create" note is for a card with no policy
+      // line (LIST_POLICY_IS_EDIT shows the line OR says that). The case checks the note, so it turns the live flag off.
+      vi.stubEnv("DESCRIBED_ATTENDANCE_CARD_ENABLED", "false");
       const thread = await start(t, CA_REQUEST, "dpoa");
       const reply = await thread.say("please list the policy");
       expect(reply.content, `answered as a policy question:\n${reply.content}`).not.toMatch(GROUNDED);
