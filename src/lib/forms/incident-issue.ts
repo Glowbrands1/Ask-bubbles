@@ -14,7 +14,6 @@ import { isPolicyCorrection } from "@/lib/ai/policy-correction-turn";
 import { businessToday } from "@/lib/business-date";
 
 import { withoutLevelAndStepClauses } from "./account-clauses";
-import { JOIN } from "./bounded-context";
 import { isSalesPolicyReading, observationAccount, readCaPolicy } from "./ca-policy";
 import { onlyDeniesAFault } from "./denial-no-account";
 import { JOIN } from "./turn-join";
