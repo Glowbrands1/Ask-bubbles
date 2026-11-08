@@ -1204,6 +1204,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "SIGNED_STEP_NOT_A_REQUEST_ENABLED",
   "STEP_DATES_NOT_FORM_DATE_ENABLED",
   "TAKE_OFF_STAYS_CARD_ENABLED",
+  // Default-off fix flag (QA's live Create test, 8 Nov 2026).
+  "UNDATED_ACCOUNT_BRIEF_ENABLED",
 ] as const;
 
 /**
@@ -2568,6 +2570,16 @@ export function formPatchReaderFixesEnabled(): boolean {
  */
 export function editPolicyAskEnabled(): boolean {
   return envFlag("EDIT_POLICY_ASK_ENABLED") && formPatchReducerEnabled();
+}
+/**
+ * UNDATED_ACCOUNT_BRIEF_ENABLED (QA's live Create test, 8 Nov 2026; coding 5; same flag in both apps; default off). An
+ * account with no date ("missing her saturday and sunday shifts …") was saved as "… scheduled shifts on November 8,
+ * 2026", the day the form was created: the draft brief told the model the form's date was the incident's. On: with no
+ * date stated (a stated "today" is one), the brief says the form is dated the day it is created and no date goes into
+ * the account (`forms/form-date-grounding.ts` formDateBrief). Off, as before.
+ */
+export function undatedAccountBriefEnabled(): boolean {
+  return envFlag("UNDATED_ACCOUNT_BRIEF_ENABLED");
 }
 // --- end coding 5 flags ---
 
