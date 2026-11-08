@@ -71,6 +71,26 @@ describe("SALES_OBSERVATION_ACCOUNT keeps the manager's words", () => {
       );
     });
 
+    it("on: a roster store in any case, before a comma, goes too (QA's round-6 gate)", () => {
+      on();
+      vi.stubEnv("ACCOUNT_PLACE_LEAD_ENABLED", "true");
+      expect(observationAccount("create a ca for Remy Calder at kearney, she was late on 10-5", "Remy Calder")).toBe("she was late on 10-5");
+      expect(observationAccount("create a ca for Remy Calder at west dodge rd for missing the 10-15-26 woven deadline", "Remy Calder")).toBe(
+        "missing the 10-15-26 woven deadline",
+      );
+    });
+
+    it.each([
+      "create a ca for Remy Calder at lunch, she was rude to a guest",
+      "create a ca for Remy Calder at the register, she was rude to a guest",
+      "create a ca for Remy Calder in the past week, she missed two shifts",
+    ])("on, negative: %j is as with the flag off (not a store)", (sentence) => {
+      on();
+      const before = observationAccount(sentence, "Remy Calder");
+      vi.stubEnv("ACCOUNT_PLACE_LEAD_ENABLED", "true");
+      expect(observationAccount(sentence, "Remy Calder")).toBe(before);
+    });
+
     it("on: the register stays where it happened", () => {
       on();
       vi.stubEnv("ACCOUNT_PLACE_LEAD_ENABLED", "true");
@@ -106,7 +126,8 @@ describe("SALES_OBSERVATION_ACCOUNT keeps the manager's words", () => {
       "create a written CA for Remy Calder at the register for being rude to a guest",
       "create a written CA for Remy Calder in the past week for missing two shifts",
       "create a written CA for Remy Calder from the stockroom for leaving boxes in the aisle",
-      "create a written CA for Remy Calder at west dodge rd for missing the 10-15-26 woven deadline",
+      // Changed on purpose (QA's round-6 gate, 8 Nov 2026): a lower-case roster store ("at west dodge rd") is now cut too,
+      // so that row moved to "a roster store in any case" above; a lower-case word that is no store stays (below).
     ])("on, negative: %j is as with the flag off", (sentence) => {
       on();
       const before = observationAccount(sentence, "Remy Calder");

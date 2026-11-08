@@ -76,4 +76,22 @@ export const NOV8_SALES_TRIPLE_KEEPS_WORDS_CASES: ReplayCase[] = [
       expect(issueLine(reply), `the account is lost:\n${reply.content}`).toMatch(/woven deadline/i);
     },
   },
+  {
+    id: "nov8-sales-triple-store-lead-comma",
+    title: "\"create a ca for <A> at kearney, she was late on 10-5\": the Issue never opens with \"at kearney,\"",
+    report: "QA's Bubbles round-6 gate, 8 Nov 2026 (the sales group held out again)",
+    status: "fixed",
+    fixFlags: [...PAIR, "ACCOUNT_PLACE_LEAD_ENABLED"],
+    async run(t) {
+      // A Kearney manager and a Kearney employee: the store is on the manager's assignment, so the card is made.
+      vi.setSystemTime(new Date("2026-11-07T18:56:00Z"));
+      t.directory([
+        { id: "e-mara-quell-kearney", firstName: "Mara", lastName: "Quell", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-66"], positionName: "Team Member Part Time" },
+      ]);
+      t.as("location_manager", { level: "location", primaryAreaId: "loc-66", alsoCoversAreaIds: [] });
+      const reply = await t.thread().say("create a ca for Mara Quell at kearney, she was late on 10-5");
+      expect(issueLine(reply), `the Issue opens with the request's place:\n${reply.content}`).not.toMatch(/Issue:\*\*\s*at\b/i);
+      expect(issueLine(reply), `the account is lost:\n${reply.content}`).toMatch(/late on 10-5/i);
+    },
+  },
 ];
