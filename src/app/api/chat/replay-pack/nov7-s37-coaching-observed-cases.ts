@@ -64,7 +64,8 @@ export const NOV7_S37_COACHING_OBSERVED_CASES: ReplayCase[] = [
     id: "nov7-s37-observed-kept",
     title: "sf-s37 (a): a Coaching Form for \"not hitting her numbers\" keeps its Observed section and the Underperformance tick",
     report: `${REPORT}: the saved coaching_details had no "Observed:"`,
-    status: { open: "the framing guard strikes \"did not meet …\" and the empty Observed label goes with it" },
+    // Was open in production ("the framing guard strikes \"did not meet …\" and the empty Observed label goes with it"); holds since flip 6 (QA, 7 Nov 2026 20:50 PHT), so it is fixed.
+    status: "fixed",
     fixFlags: ["COACHING_OBSERVED_KEPT_ENABLED"],
     async run(t) {
       const thread = start(t);
@@ -107,6 +108,25 @@ export const NOV7_S37_COACHING_OBSERVED_CASES: ReplayCase[] = [
         );
         await thread.create();
       }
+    },
+  },
+  {
+    id: "nov7-s37-second-card-own-policy",
+    title: "\"Coaching form for <A> for being on her phone\", then \"Coaching form for <B>\": B's card cites no policy from A's request",
+    report: "QA's live tester on the sibling app (flip 7, s37 flags on), 7 Nov 2026: B's card cited Cell Phone/Smart Watch p.19 from A's request",
+    // Holds in production: POLICY_CITATION is off, so no coaching card cites the chat's policy. The fix run turns it on,
+    // the path where B's card cited A's Cell Phone/Smart Watch (as in the sibling app), with this flag.
+    status: "fixed",
+    fixFlags: ["COACHING_OBSERVED_KEPT_ENABLED", "POLITE_REQUEST_OWN_TURNS_ENABLED", "POLICY_CITATION_ENABLED", "CARD_POLICY_OWN_REQUEST_ENABLED"],
+    async run(t) {
+      const thread = start(t);
+      await thread.say("Coaching form for Tamsin Holt for being on her phone");
+      expect(thread.proposal, "no Coaching card for Tamsin Holt").toMatchObject({ templateKey: "coaching", employeeName: "Tamsin Holt" });
+      t.draftWrites({ coaching_details: "Observed:\nTamsin was on her phone during her shift." }, { coaching_type: ["standards_of_conduct"] });
+      await thread.create();
+      const second = await thread.say("Coaching form for Corwin Hale");
+      expect(thread.proposal, "no Coaching card for Corwin Hale").toMatchObject({ templateKey: "coaching", employeeName: "Corwin Hale" });
+      expect(second.content, `B's card cites A's policy:\n${second.content}`).not.toMatch(/Cell Phone|Smart Watch/i);
     },
   },
 ];

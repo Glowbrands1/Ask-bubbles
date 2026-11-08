@@ -118,7 +118,9 @@ export function stateSentences(state: ConversationFormState): string[] {
 }
 
 /**
- * The saved state as this turn may use it: without the earlier request's policy when this turn starts a new one.
+ * The saved state as this turn may use it: without the earlier request's policy and incident when this turn starts a
+ * new one. Both are written in front of the turn ("Policy reference: … Incident: ….") and read as the manager's own
+ * words (the sibling app's audit, QA, 7 Nov 2026).
  *
  * Only when this turn starts a request of its own after earlier ones (`earlier`, the manager's turns before this one;
  * `forms/current-request.ts` startsNewRequest; QA's Sunny round-3 gate, 7 Nov 2026, ported from the sibling app): the
@@ -130,9 +132,9 @@ export function stateForTurn(
   question: string,
   earlier: readonly string[] = [],
 ): ConversationFormState | null {
-  if (!state || !secondRequestOwnAccountEnabled() || !state.policyHeading || !startsFormRequest(question)) return state;
+  if (!state || !secondRequestOwnAccountEnabled() || (!state.policyHeading && !state.incidentType) || !startsFormRequest(question)) return state;
   if (!startsNewRequest(earlier, question)) return state;
-  return { ...state, policyHeading: null, policyPage: null };
+  return { ...state, policyHeading: null, policyPage: null, incidentType: null };
 }
 
 export function prependFormState(question: string, given: ConversationFormState | null, earlier: readonly string[] = []): string {
