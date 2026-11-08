@@ -2612,6 +2612,18 @@ export function proposalMakeItAboutEnabled(): boolean {
 export function proposalPolicySetAsideEnabled(): boolean {
   return envFlag("PROPOSAL_POLICY_SET_ASIDE_ENABLED");
 }
+/**
+ * STEP_B_MAKE_IT_ABOUT_ACCOUNT_ENABLED (coding 5; QA's live draft test, Ask Bubbles production, 8 Nov 2026; same flag
+ * in both apps; default off). On a saved Coaching draft, "I need you to make it about showing up late" answered
+ * "Changed Other to 'Showing up late'": the live reader set only the Other topic, so Details of Coaching stayed about
+ * the missed meeting. Active only with FORM_PATCH_READER_FIXES_ENABLED. On: the reader is told the account is the
+ * form's Details / Observation, never the topic (a line added after the approved prompt, `forms/form-patch-
+ * prompt.ts`), and a "make it about <X>" turn whose patch does not set the account goes to the old path before
+ * anything is written, where EDIT_MAKE_IT_ABOUT's revision rewrites it (`forms/form-patch-turn.ts`). Off, as before.
+ */
+export function stepBMakeItAboutAccountEnabled(): boolean {
+  return envFlag("STEP_B_MAKE_IT_ABOUT_ACCOUNT_ENABLED") && formPatchReaderFixesEnabled();
+}
 
 /**
  * EDIT_POLICY_ASK_ENABLED (QA's live run, 7 Nov 2026; coding 5; same flag in both apps; default off; only with

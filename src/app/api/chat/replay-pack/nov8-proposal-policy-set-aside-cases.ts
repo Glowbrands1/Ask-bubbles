@@ -61,6 +61,11 @@ export const NOV8_PROPOSAL_POLICY_SET_ASIDE_CASES: ReplayCase[] = [
     // question first; TAKE_OFF_STAYS_CARD_ENABLED keeps it a card turn (and proposes the card from the request turn, with
     // the take-off in its sources, so Create keeps the account), so with both flags on it holds.
     fixFlags: [...FIX, "TAKE_OFF_STAYS_CARD_ENABLED"],
+    fixFlags: FIX,
+    // Changed on purpose (8 Nov 2026, merging main e7a7ba9c): since main, the route answers this take-off turn as a
+    // policy question before the card is built, as it already did on a Coaching card. It holds again with coding 2's
+    // TAKE_OFF_STAYS_CARD_ENABLED (Glowbrands1/Ask-bubbles#578, stacked on this branch); open with this flag alone until then.
+    fixStatus: { open: "the route answers the take-off as a policy question before the card is built (TAKE_OFF_STAYS_CARD, #578)" },
     async run(t) {
       const thread = start(t);
       const first = await thread.say(CA_REQUEST);
@@ -111,6 +116,11 @@ export const NOV8_PROPOSAL_POLICY_SET_ASIDE_CASES: ReplayCase[] = [
     // question first; TAKE_OFF_STAYS_CARD_ENABLED keeps it a card turn (and proposes the card from the request turn, with
     // the take-off in its sources, so Create keeps the account), so with both flags on it holds.
     fixFlags: [...FIX, "TAKE_OFF_STAYS_CARD_ENABLED"],
+    fixFlags: FIX,
+    // Changed on purpose (8 Nov 2026, merging main e7a7ba9c): since main, the route answers this take-off turn as a
+    // policy question before the card is built, as it already did on a Coaching card. It holds again with coding 2's
+    // TAKE_OFF_STAYS_CARD_ENABLED (Glowbrands1/Ask-bubbles#578, stacked on this branch); open with this flag alone until then.
+    fixStatus: { open: "the route answers the take-off as a policy question before the card is built (TAKE_OFF_STAYS_CARD, #578)" },
     async run(t) {
       const thread = start(t);
       await thread.say(CA_REQUEST);
