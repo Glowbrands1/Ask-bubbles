@@ -2900,6 +2900,15 @@ export function replyMatchesCardEnabled(): boolean {
  */
 export function conductIncidentCitesPageEnabled(): boolean {
   return envFlag("CONDUCT_INCIDENT_CITES_PAGE_ENABLED");
+// coding 5: REQUEST_FROM_NAMES_EMPLOYEE (beside REPLY_MATCHES_CARD, not at a block end, so merges do not collide)
+/**
+ * REQUEST_FROM_NAMES_EMPLOYEE_ENABLED (coding 5; QA, 8 Nov 2026; this app only, see docs/parity-log; default off).
+ * "Please create another corrective action from <A>. This would be a verbal …" ("from" typed for "for") named nobody,
+ * and the card asked who. On: "<form> from <name>" reads as "<form> for <name>" (`forms/template-intent.ts`
+ * canonicalShorthand), never before a word that cannot start a name. Off, as before.
+ */
+export function requestFromNamesEmployeeEnabled(): boolean {
+  return envFlag("REQUEST_FROM_NAMES_EMPLOYEE_ENABLED");
 }
 
 /**
