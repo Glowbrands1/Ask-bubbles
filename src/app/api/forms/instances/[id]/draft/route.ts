@@ -192,7 +192,11 @@ import {
   caSalesPolicyEnabled,
   priorActionsNoSignedEnabled,
   secondRequestOwnAccountEnabled,
+  proposalMakeItAboutEnabled,
+  proposalPolicySetAsideEnabled,
 } from "@/lib/config/chat-quality-flags";
+import { NOTHING_SET_ASIDE, policiesSetAside, setAsideAnything, valuesWithPolicySetAside, withoutPolicyTakeOff } from "@/lib/forms/policy-set-aside";
+import { notesMadeAbout } from "@/lib/ai/make-it-about";
 import {
   STANDARDS_OF_CONDUCT,
   caPolicyAmbiguousNotice,
@@ -390,7 +394,12 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
     const body = ((await request.json().catch(() => null)) ?? {}) as DraftBody;
     const asTyped = String(body.notes ?? "").trim().slice(0, 4000);
     // TYPO_READING_ROUTES_ENABLED: the readers below see "coahed", "notcie", "amont" as the words they can only be.
-    const notes = typoReadingRoutesEnabled() ? typoReadingText(asTyped, await protectedNameWords()) : asTyped;
+    const read = typoReadingRoutesEnabled() ? typoReadingText(asTyped, await protectedNameWords()) : asTyped;
+    // PROPOSAL_MAKE_IT_ABOUT_ENABLED: "make it about showing up late …" makes "Showing up late." the account from that turn on (`ai/make-it-about.ts`).
+    const about = proposalMakeItAboutEnabled() ? notesMadeAbout(read) : read;
+    // PROPOSAL_POLICY_SET_ASIDE_ENABLED: a policy the manager took off stays off the draft, and the take-off sentence is no account (`forms/policy-set-aside.ts`).
+    const setAside = proposalPolicySetAsideEnabled() ? policiesSetAside(about.split(/\n{2,}/)) : NOTHING_SET_ASIDE;
+    const notes = setAsideAnything(setAside) ? withoutPolicyTakeOff(about.split(/\n{2,}/)).join("\n\n") : about;
     if (notes.length < 10) {
       throw new AiError(
         "bad_request",
@@ -2480,14 +2489,16 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
           }
         : { values: draftValues, provenance: draftProvenance };
 
+    // PROPOSAL_POLICY_SET_ASIDE_ENABLED: the policy fields and "Policy reference" lines leave a policy taken off out.
+    const plannedValues = setAsideAnything(setAside) ? valuesWithPolicySetAside(planned.values, setAside) : planned.values;
     const merged = draftEditMergeEnabled()
       ? retainFilledFields({
           question: notes,
           existing: loaded.values ?? [],
-          values: planned.values,
+          values: plannedValues,
           checked: validated.checked,
         })
-      : { values: planned.values, checked: validated.checked };
+      : { values: plannedValues, checked: validated.checked };
 
     /*
      * FORM_PATCH_REDUCER_ENABLED: the same draft, merged by the reducer — only
