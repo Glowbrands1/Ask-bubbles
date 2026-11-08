@@ -981,6 +981,9 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FORM_PATCH_REDUCER_ENABLED",
   "FORM_REPLY_FROM_DIFF_ENABLED",
   "FORM_EDIT_SINGLE_WRITER_ENABLED",
+  // coding 2: CREATE_COMMAND_POINTS_TO_CARD and CARD_COMPLAINT_NOT_ACCOUNT (default off): forced off with the others.
+  "CREATE_COMMAND_POINTS_TO_CARD_ENABLED",
+  "CARD_COMPLAINT_NOT_ACCOUNT_ENABLED",
   "FORM_EDIT_SAID_REPLACEMENT_ENABLED",
   "FORM_EDIT_TOOL_IN_STREAM_ENABLED",
   "CHAT_GLOSSARY_ENABLED",
@@ -1574,6 +1577,26 @@ export function lastFirstNameReadEnabled(): boolean {
 /** A checked reading reaches the card: the AI reader's, or the Last, First one. */
 export function checkedReadingEnabled(): boolean {
   return aiReadsCodeChecksEnabled() || lastFirstNameReadEnabled();
+}
+
+// coding 2: CREATE_COMMAND_POINTS_TO_CARD
+/**
+ * CREATE_COMMAND_POINTS_TO_CARD_ENABLED (QA's sf-s38, 8 Nov 2026; default off; same flag in both apps). With only a card
+ * open, "create it" was answered as a policy question with no card. With this flag on, the card is kept and one line
+ * says to press **Create draft** on it (`ai/card-meta-turn.ts`). Off, as before.
+ */
+export function createCommandPointsToCardEnabled(): boolean {
+  return envFlag("CREATE_COMMAND_POINTS_TO_CARD_ENABLED");
+}
+
+// coding 2: CARD_COMPLAINT_NOT_ACCOUNT
+/**
+ * CARD_COMPLAINT_NOT_ACCOUNT_ENABLED (QA's sf-s38, 8 Nov 2026; default off; same flag in both apps). "this proposal is out
+ * od fate" with a card open was answered as a policy question with no card. With this flag on, the card is kept with its
+ * account and the reply asks what to change (`ai/card-meta-turn.ts`). Off, as before.
+ */
+export function cardComplaintNotAccountEnabled(): boolean {
+  return envFlag("CARD_COMPLAINT_NOT_ACCOUNT_ENABLED");
 }
 
 /**
