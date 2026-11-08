@@ -832,6 +832,18 @@ export function reopenByAnyOpenVerbEnabled(): boolean {
   return envFlag("REOPEN_BY_ANY_OPEN_VERB_ENABLED");
 }
 
+// coding 2: POSSESSIVE_NO_APOSTROPHE
+/**
+ * POSSESSIVE_NO_APOSTROPHE_ENABLED (QA, Bubbles live tester with round 5, 8 Nov 2026; default off; same flag in both
+ * apps; only with REOPEN_BY_ANY_OPEN_VERB). "bring up <first name>s corrective action" — the possessive typed without
+ * its apostrophe, one roster person by that first name — asked "Who is this form for?" with a blank card, while
+ * "<first name>'s" opened the form on file. With this flag on, a first name the roster does not have as typed is tried
+ * without its final "s" ("ss" never), by the same one-person rule (`forms/chat-reopen.ts`). Off, as before.
+ */
+export function possessiveNoApostropheEnabled(): boolean {
+  return envFlag("POSSESSIVE_NO_APOSTROPHE_ENABLED");
+}
+
 /**
  * A terse "ca <name> <store> <what happened> <date> verbal" line is written
  * out as the long form before it is read, so the name, store, date, warning
@@ -1172,6 +1184,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 2: SOURCE_NOTE_GUARD (default off): forced off with the others.
   "SOURCE_NOTE_GUARD_ENABLED",
   "UNDER_PERFORMANCE_EXPLAINED_ENABLED",
+  // coding 2: POSSESSIVE_NO_APOSTROPHE (default off): forced off with the others.
+  "POSSESSIVE_NO_APOSTROPHE_ENABLED",
   "NO_NOTICE_NO_DATE_ENABLED",
   "ISSUE_IS_THE_ACCOUNT_ENABLED",
   // coding 2: DENIAL_NO_ACCOUNT (default off): forced off with the others.
