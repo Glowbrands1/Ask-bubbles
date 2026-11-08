@@ -58,6 +58,7 @@ import {
   wholeTeamCoachingEnabled,
   sameAskNoRepeatEnabled,
   newRequestOpenDraftEnabled,
+  copyOpenFormForPersonEnabled,
   coachingForEveryoneEnabled,
   staffPickerEnabled,
   chatResponseStreamEnabled,
@@ -391,11 +392,41 @@ async function postChat(request: Request) {
                 ?.employeeName,
             })
           : false;
+      /*
+       * COPY_OPEN_FORM_FOR_PERSON_ENABLED: with <A>'s form open, "copy this form for <B>" is <B>'s request for the
+       * open template, never the open intake carried on (`lib/forms/copy-open-form-for.ts`).
+       */
+      const copyFor =
+        copyOpenFormForPersonEnabled() && !draftAction && !staffPick && !team && !newRequestOpen && asked.activeFormInstanceId
+          ? await (async () => {
+              const open = await (await import("@/lib/forms/open-form-summary")).describeOpenForm(request, asked.activeFormInstanceId!);
+              if (!open) return null;
+              let actor: Awaited<ReturnType<typeof import("@/lib/forms/access").authorizeForms>>;
+              try {
+                actor = await (await import("@/lib/forms/access")).authorizeForms(request, "ask_questions");
+              } catch {
+                return null;
+              }
+              let roster: Awaited<ReturnType<typeof import("@/lib/forms/employee-roster").loadScopedRoster>>;
+              try {
+                roster = await (await import("@/lib/forms/employee-roster")).loadScopedRoster(actor.scope);
+              } catch {
+                return null;
+              }
+              return (await import("@/lib/forms/copy-open-form-for")).copyOpenFormFor({
+                question: asked.question,
+                openTemplateName: open.templateName,
+                openEmployeeName: open.employeeName,
+                roster,
+              });
+            })()
+          : null;
       const parsed = withSwitchAfterCreate(
-        draftAction || staffPick || newRequestOpen
+        draftAction || staffPick || newRequestOpen || copyFor
           ? {
               ...asked,
               ...(draftAction && "question" in draftAction ? { question: draftAction.question } : {}),
+              ...(copyFor ? { question: copyFor } : {}),
               activeFormInstanceId: undefined,
               activeFormCandidateIds: undefined,
             }
