@@ -19,6 +19,7 @@ import {
 import { JOIN } from "./bounded-context";
 import { withoutDeniedFaults } from "./denial-no-account";
 import { namesPerformance } from "./epp-policy";
+import { JOIN } from "./turn-join";
 import { LATE_TO_OPEN, lateOpenOn } from "./late-open";
 import {
   findManualSection,
