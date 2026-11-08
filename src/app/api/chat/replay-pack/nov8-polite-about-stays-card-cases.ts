@@ -17,8 +17,8 @@ import { STAFF, WEST_DODGE, type ReplayCase, type ReplayContext } from "./cases"
 const REQUEST = "create a coaching form for Marnie Holloway, she was late to her shift on 11/2";
 const FIX = ["POLITE_ABOUT_STAYS_CARD_ENABLED"];
 const REPORT = "The Bubbles live tester, QA, 8 Nov 2026: \"can you make it for missing out monthly meeting\" lost the Coaching card";
-// The route call (`ai/server-ask.ts`, coding 2's file) is not in yet: the fix-flag run is open until it is.
-const ROUTE = { open: "withoutPoliteLeadOnCard is not called on the route yet (server-ask.ts, coding 2)" };
+// Changed on purpose (coding 2, 8 Nov 2026): `ai/server-ask.ts` now proposes the turn without its polite lead, so these
+// cases hold with their fix flag; their route hold and its constant are gone.
 
 function start(t: ReplayContext) {
   vi.setSystemTime(new Date("2026-11-07T15:00:00Z"));
@@ -43,7 +43,6 @@ export const NOV8_POLITE_ABOUT_STAYS_CARD_CASES: ReplayCase[] = [
     report: REPORT,
     status: { open: "no card: the reply is a policy answer" },
     fixFlags: FIX,
-    fixStatus: ROUTE,
     async run(t) {
       const thread = await keepsCard(t, "can you make it for missing out monthly meeting");
       await thread.create();
@@ -61,7 +60,7 @@ export const NOV8_POLITE_ABOUT_STAYS_CARD_CASES: ReplayCase[] = [
       id: `nov8-polite-about-stays-card-negative-${index + 1}`,
       title: `${index === 0 ? "\"can you … about\"" : "negative"}: "${said}" keeps the card`,
       report: `${REPORT} (${index === 0 ? "the same with \"about\"" : "the wordings that already kept the card"})`,
-      ...(index === 0 ? { status: { open: "no card: the reply is a policy answer" } as const, fixStatus: ROUTE } : { status: "fixed" as const }),
+      ...(index === 0 ? { status: { open: "no card: the reply is a policy answer" } as const } : { status: "fixed" as const }),
       fixFlags: FIX,
       async run(t) {
         await keepsCard(t, said);

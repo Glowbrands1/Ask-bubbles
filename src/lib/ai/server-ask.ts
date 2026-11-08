@@ -162,6 +162,7 @@ import { withJobTitleFromWords } from "./job-title-from-words";
 import { withCoachingWhatHappened } from "./coaching-what-happened";
 import { withFreshDateReask } from "./date-reask-fresh";
 import { withFirstNameAsk } from "./first-name-ask";
+import { withoutPoliteLeadOnCard } from "./polite-about-request";
 import { withFirstNameAnswerFor, withFirstNameSuggestFor } from "./first-name-suggest";
 import { withManagerStatedTitle } from "./manager-title";
 import { withReplyMatchesCard } from "./reply-matches-card";
@@ -591,7 +592,8 @@ async function answerQuestionCore(
      */
     const reading = askedQuestion ? null : startFormReading(request, actor);
     // LIST_POLICY_IS_EDIT_ENABLED: with only a card open, the card is proposed again from the manager's last turn.
-    const proposalQuestion = listPolicyCard ? cardRequestTurn(request) : await questionForProposal(request, actor);
+    // POLITE_ABOUT_STAYS_CARD_ENABLED: "can you make it for <topic>" on an open card is proposed without its polite lead (`ai/polite-about-request.ts`).
+    const proposalQuestion = listPolicyCard ? cardRequestTurn(request) : await questionForProposal({ ...request, question: withoutPoliteLeadOnCard(request) }, actor);
     // AI_READS_CODE_CHECKS_ENABLED: no "couldn't find" line about the name the reader put on the card.
     const proposeFrom = async (question: string, questionMessageId = request.questionMessageId) => withoutStaleRosterNote(await deliverFormProposal({
       request,
