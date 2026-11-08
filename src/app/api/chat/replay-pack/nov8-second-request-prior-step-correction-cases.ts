@@ -4,7 +4,7 @@ import { WEST_DODGE, STAFF, type DirectoryRow, type ReplayCase } from "./cases";
 
 /**
  * ============================================================================
- * A CORRECTION OF A PRIOR STEP'S DATE IS NEVER A SECOND REQUEST (the sibling app's round-5 gate (QA, Ask Sunny), 8 Nov 2026)
+ * A CORRECTION OF A PRIOR STEP'S DATE IS NEVER A SECOND REQUEST (the sibling app's round-5 gate, 8 Nov 2026)
  * ============================================================================
  *
  * The gate ran corrective-action-conversation-qa-e2e "Q6 corrections before the draft is created" with
@@ -27,7 +27,7 @@ export const NOV8_SECOND_REQUEST_PRIOR_STEP_CORRECTION_CASES: ReplayCase[] = [
   {
     id: "nov8-second-request-prior-step-correction",
     title: "Q6: \"… previous coaching: jba policy manual 1-1-26, verbal ca 9-1-26\", three corrections, \"no payroll deduct\", Create: Attendance Policy, the corrected dates, one request",
-    report: "the sibling app's round-5 gate (QA, Ask Sunny) (8 Nov 2026): with SECOND_REQUEST_OWN_ACCOUNT on, \"sorry, the verbal ca was on 9-2-26 not 9-1-26\" was a new request and the form became Standards of Conduct",
+    report: "the sibling app's round-5 gate (8 Nov 2026): with SECOND_REQUEST_OWN_ACCOUNT on, \"sorry, the verbal ca was on 9-2-26 not 9-1-26\" was a new request and the form became Standards of Conduct",
     status: "fixed",
     fixFlags: ["SECOND_REQUEST_OWN_ACCOUNT_ENABLED"],
     async run(t) {
