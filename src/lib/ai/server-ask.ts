@@ -166,6 +166,7 @@ import { withTitleOfTheEmployee } from "./title-of-the-employee";
 import { withUnderPerformanceExplained } from "./under-performance-explained";
 import { withProposalEditRules } from "./proposal-edit-rules";
 import { cardTurnQuestion, takeOffStaysCard } from "./take-off-stays-card";
+import { cardRequestTurn, listPolicyOnCard, withPolicyListedAtCreate } from "./list-policy-ask";
 import { withFormTypeSwitch, withSwitchNote, withSwitchSources } from "./form-type-switch";
 import { withAdditionalStore } from "./additional-store";
 import { withOutOfScopePlace } from "./out-of-scope-place";
@@ -410,6 +411,9 @@ async function answerQuestionCore(
   // TAKE_OFF_STAYS_CARD_ENABLED: "take the policy off" with a card open is a card turn, never a question.
   const takeOffOnCard = takeOffStaysCard(request);
   const askedQuestion = !takeOffOnCard && questionNotFormEnabled() && isQuestionNotForm(request.question, request.history);
+  // LIST_POLICY_IS_EDIT_ENABLED: "please list the policy" with only a card open is a card turn, never a question.
+  const listPolicyCard = listPolicyOnCard(request);
+  const askedQuestion = !listPolicyCard && questionNotFormEnabled() && isQuestionNotForm(request.question, request.history);
   if (intentExtractionEnabled() && !askedQuestion) {
     const prepared = await applyIntentExtraction({ request, actor });
     if (prepared.clarification) return prepared.clarification;
@@ -576,13 +580,17 @@ async function answerQuestionCore(
      * (`reader/hook.ts`). Off, `readerPropose` is the proposal call itself.
      */
     const reading = askedQuestion ? null : startFormReading(request, actor);
-    const proposalQuestion = await questionForProposal(request, actor);
+    // LIST_POLICY_IS_EDIT_ENABLED: with only a card open, the card is proposed again from the manager's last turn.
+    const proposalQuestion = listPolicyCard ? cardRequestTurn(request) : await questionForProposal(request, actor);
     // AI_READS_CODE_CHECKS_ENABLED: no "couldn't find" line about the name the reader put on the card.
     const proposeFrom = async (question: string, questionMessageId = request.questionMessageId) => withoutStaleRosterNote(await deliverFormProposal({
       request,
       actor,
       question,
       decorate: (response) => decorateFormAnswer(request, actor, response),
+      question: proposalQuestion,
+      // LIST_POLICY_IS_EDIT_ENABLED: the card shows its policy line, or says the policy is listed on the draft at Create.
+      decorate: async (response) => (listPolicyCard ? withPolicyListedAtCreate(await decorateFormAnswer(request, actor, response)) : decorateFormAnswer(request, actor, response)),
       propose: readerPropose(reading, request, (question) => proposeFormForTurn({
       history: request.history,
       question,
