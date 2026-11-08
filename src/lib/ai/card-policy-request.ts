@@ -20,7 +20,9 @@ function nameWords(employeeName: string): RegExp | null {
     .split(/\s+/)
     .map((word) => word.replace(/[^\p{L}'’-]/gu, ""))
     .filter((word) => word.length >= 2)
-    .map((word) => word.replace(/[-'’]/g, (mark) => `\\${mark}`));
+    // Only the pattern's own characters are escaped: "\'" and "\-" are invalid escapes under the "u" flag, so an
+    // apostrophe or hyphen name ("O'Dallagher") threw, and the policy step was skipped (the sibling app's round-4 gate).
+    .map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
   return words.length > 0 ? new RegExp(String.raw`(?<![\p{L}])(?:${words.join("|")})(?![\p{L}])`, "iu") : null;
 }
 

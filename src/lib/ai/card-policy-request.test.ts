@@ -41,4 +41,9 @@ describe("cardPolicyTurns", () => {
     const turns = [A, "Coaching form for Corwin Hale"];
     expect(cardPolicyTurns(turns, null)).toBe(turns);
   });
+
+  it("an apostrophe or hyphen in the name does not throw (the sibling app's round-4 gate, 8 Nov 2026)", () => {
+    const turns = ["Coaching form for Tamsin Holt for being on her phone", "Coaching form for Caoimhe O'Dallagher-Reyes"];
+    expect(cardPolicyTurns(turns, "Caoimhe O'Dallagher-Reyes")).toEqual(["Coaching form for Caoimhe O'Dallagher-Reyes"]);
+  });
 });
