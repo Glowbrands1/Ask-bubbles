@@ -2694,6 +2694,20 @@ export function replyMatchesCardEnabled(): boolean {
   return envFlag("REPLY_MATCHES_CARD_ENABLED");
 }
 
+// coding 5: CONDUCT_INCIDENT_CITES_PAGE (beside REPLY_MATCHES_CARD, not at a block end, so merges do not collide)
+/**
+ * CONDUCT_INCIDENT_CITES_PAGE_ENABLED (coding 5, port from the sibling app; QA's live tester there, 8 Nov 2026, the
+ * managers' Woven wordings; here too; same flag in both apps; default off). "create a verbal corrective action for <A>
+ * for missing the 10-15-26 woven deadline" got "Policy: this reads as Standards of Conduct …" with no section or page;
+ * "… a verbal due to not completing her woven courses by the deadline" got no Policy line at all. On: "not completing
+ * / not finishing <task>" is unfinished assigned work (`forms/ca-policy.ts`), and the card keeps its "Standards of
+ * Conduct Policy, JBA Policy Manual p.N" line: REPLY_MATCHES_CARD's one-policy rule read "this reads as **Standards of
+ * Conduct**" as another heading and dropped it (`ai/reply-matches-card.ts`). Off, as before.
+ */
+export function conductIncidentCitesPageEnabled(): boolean {
+  return envFlag("CONDUCT_INCIDENT_CITES_PAGE_ENABLED");
+}
+
 /**
  * ROSTER_COMPOUND_SURNAME_ENABLED (the re-flip's rollback, 5 Nov 2026; default
  * off). The flip's live testers (R3/R5/R7): a real employee's surname is two
