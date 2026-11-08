@@ -1,7 +1,8 @@
+import { priorActionsNoSignedEnabled } from "@/lib/config/chat-quality-flags";
 import { withoutAppLines } from "@/lib/ai/app-sentences";
 import { editDistance } from "@/lib/forms/employee-match";
 import { readLocationMentions } from "@/lib/forms/location-mention";
-import { priorActionLine } from "@/lib/forms/prior-actions";
+import { priorActionLine, priorLineDate } from "@/lib/forms/prior-actions";
 import type { ChatFormProposal } from "@/types";
 
 import { checkReading, plainWords, quoted, type CheckedReading } from "./check";
@@ -106,7 +107,8 @@ export function readerPriorLines(raw: unknown, notes: string, today: string, for
     .flatMap((step) => {
       const row = card.priorSteps!.find((candidate) => candidate?.value?.date === step.iso);
       const label = stepLabel(row?.quote ?? "", step.kind);
-      return label ? [priorActionLine(label, step.iso)] : [];
+      // PRIOR_ACTIONS_NO_SIGNED_ENABLED: "signed" only when the manager's quoted words say so.
+      return label ? [priorActionLine(label, step.iso, "", "", /\bsign(?:ed|ing)?\b/i.test(row?.quote ?? "") ? "said_signed" : "said")] : [];
     });
 }
 
@@ -114,7 +116,8 @@ export function readerPriorLines(raw: unknown, notes: string, today: string, for
 export function withReaderPriorLines(drafted: string, lines: readonly string[]): string {
   const rows = (drafted ?? "").split("\n").filter((row) => row.trim() !== "");
   for (const line of lines) {
-    const signed = /signed (\S+)$/.exec(line)?.[1];
+    // PRIOR_ACTIONS_NO_SIGNED_ENABLED: a line may end "— 09/01/2026" or "— finalized 09/01/2026" too.
+    const signed = priorActionsNoSignedEnabled() ? priorLineDate(line) || undefined : /signed (\S+)$/.exec(line)?.[1];
     if (signed && rows.some((row) => row.includes(signed))) continue;
     rows.push(line);
   }

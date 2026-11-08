@@ -117,10 +117,14 @@ export function stateSentences(state: ConversationFormState): string[] {
   return lines;
 }
 
-/** The saved state as this turn may use it: without the earlier request's policy when this turn starts a new one. */
+/**
+ * The saved state as this turn may use it: without the earlier request's policy and incident when this turn starts a
+ * new one. Both are written in front of the turn ("Policy reference: … Incident: ….") and read as the manager's own
+ * words (the sibling app's audit, QA, 7 Nov 2026).
+ */
 export function stateForTurn(state: ConversationFormState | null, question: string): ConversationFormState | null {
-  if (!state || !secondRequestOwnAccountEnabled() || !state.policyHeading || !startsFormRequest(question)) return state;
-  return { ...state, policyHeading: null, policyPage: null };
+  if (!state || !secondRequestOwnAccountEnabled() || (!state.policyHeading && !state.incidentType) || !startsFormRequest(question)) return state;
+  return { ...state, policyHeading: null, policyPage: null, incidentType: null };
 }
 
 export function prependFormState(question: string, given: ConversationFormState | null): string {

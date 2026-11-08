@@ -28,7 +28,8 @@ export const NOV7_LEVEL_ENDS_REQUEST_CASES: ReplayCase[] = [
     id: "nov7-level-ends-request",
     title: "\"my team member <name> was late on 10-20-26, verbal ca\" opens a Corrective Action card, Verbal Warning",
     report: "QA, live tester, 7 Nov 2026",
-    status: { open: "the closing \"verbal ca\" reads as history, so the turn is answered as a question with no card" },
+    // Was open in production ("the closing \"verbal ca\" reads as history, so the turn is answered as a question with no card"); holds since flip 6 (QA, 7 Nov 2026 20:50 PHT), so it is fixed.
+    status: "fixed",
     fixFlags: ["LEVEL_ENDS_REQUEST_ENABLED"],
     async run(t) {
       vi.setSystemTime(new Date("2026-11-06T14:00:00Z"));

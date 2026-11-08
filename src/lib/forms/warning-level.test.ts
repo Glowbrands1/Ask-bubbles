@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { JOIN } from "./bounded-context";
 import { correctiveActionIssue } from "./incident-issue";
@@ -672,5 +672,52 @@ describe("a level said beside the request", () => {
     "previous coaching: jba policy manual 1-1-26, verbal ca 9-1-26",
   ])("%s states no level for this form", (text) => {
     expect(statedWarningLevel(text, TODAY)).toBeNull();
+  });
+});
+
+/*
+ * QA, coding-3 item 6, 6 Nov 2026: the written warning asked for in the
+ * request's own clause was read as an earlier warning, because the incident's
+ * date (10/22) followed it. REQUEST_LEVEL_NOT_HISTORY_ENABLED; names invented.
+ */
+describe("the level asked for in the request's clause is this form's, whatever date follows (REQUEST_LEVEL_NOT_HISTORY_ENABLED)", () => {
+  const NOV6 = "2026-11-06";
+  const REPORTED =
+    "I need to write up Marisol Pendergrast with a written warning for leaving the front desk unattended for 30 minutes on 10/22. There's no prior coaching on file.";
+  const GIVE = "give Tamsin Okafor a written warning for being late on 10/22";
+  const HISTORY = "Brielle Hartsough got a written warning on 9/1 and now she was late again on 10/22, write her up";
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("off: unchanged — the level asked for is read as an earlier warning and no level is stated", () => {
+    vi.stubEnv("REQUEST_LEVEL_NOT_HISTORY_ENABLED", "");
+    for (const text of [REPORTED, GIVE]) {
+      expect(statedWarningLevel(text, NOV6), text).toBeNull();
+      expect(mentionsEarlierWarning(text, NOV6), text).toBe(true);
+    }
+  });
+
+  it.each([REPORTED, GIVE, "please write her up with a written warning for no call no show on 10/30"])(
+    "on: %s states Written and names no earlier warning",
+    (text) => {
+      vi.stubEnv("REQUEST_LEVEL_NOT_HISTORY_ENABLED", "true");
+      expect(statedWarningLevel(text, NOV6)).toBe("written");
+      expect(mentionsEarlierWarning(text, NOV6)).toBe(false);
+    },
+  );
+
+  it.each([
+    HISTORY,
+    "I need to tell you about the written warning on 9/1",
+    "write up Brielle Hartsough, she already had a written warning on 9/1",
+    "write up Brielle Hartsough for her written warning on 9/1",
+  ])("on or off: %s keeps the dated warning as history", (text) => {
+    for (const value of ["", "true"]) {
+      vi.stubEnv("REQUEST_LEVEL_NOT_HISTORY_ENABLED", value);
+      expect(statedWarningLevel(text, NOV6), `flag "${value}"`).toBeNull();
+      expect(mentionsEarlierWarning(text, NOV6), `flag "${value}"`).toBe(true);
+    }
   });
 });

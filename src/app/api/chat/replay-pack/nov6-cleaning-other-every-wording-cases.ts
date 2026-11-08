@@ -65,7 +65,8 @@ export const NOV6_CLEANING_OTHER_EVERY_WORDING_CASES: ReplayCase[] = [
       id: `nov6-cleaning-other-${id}`,
       title: `"${said}": the card says Other and the draft ticks Other, never the Standards of Conduct`,
       report: REPORT,
-      status: { open: "with production's flags (CLEANING_OTHER_EVERY_WORDING off) cleaning is not Other" },
+      // Was open in production ("with production's flags (CLEANING_OTHER_EVERY_WORDING off) cleaning is not Other"); holds since flip 6 (QA, 7 Nov 2026 20:50 PHT), so it is fixed.
+      status: "fixed",
       fixFlags: [...QA_LIVE, FLAG],
       async run(t) {
         await cleaningIsOther(t, said);

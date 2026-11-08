@@ -6,6 +6,7 @@ import {
   typedNameEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { COMPANY_LOCATIONS } from "@/lib/locations";
+import { namesThisCompany } from "@/lib/forms/company-name";
 import { namesCompanyPositionTitle } from "@/lib/forms/staff-picker";
 import { readCaPolicy } from "@/lib/forms/ca-policy";
 import {
@@ -349,6 +350,8 @@ function gateMentions(
     if (isStorePhrase(name)) continue;
     // B1 (the flip-3 tester, 6 Nov 2026), FORM_NAME_FROM_ROSTER_ENABLED: a company position title ("Team Member") is never a person missing from the roster.
     if (formNameFromRosterEnabled() && namesCompanyPositionTitle(name)) continue;
+    // The sibling app's QA finding (7 Nov 2026), FORM_NAME_FROM_ROSTER_ENABLED: the company's own name or initials are never a person missing from the roster.
+    if (formNameFromRosterEnabled() && namesThisCompany(name)) continue;
     if (antiLoopEnabled()) continue;
     // FORM_NAME_FROM_ROSTER_ENABLED: beside a roster name, "Club Close", "Under" (Pau, 4 Nov 2026) are shaped like nobody on the roster; they stay in the question.
     if (anchored && !rosterShaped(name, roster)) continue;
