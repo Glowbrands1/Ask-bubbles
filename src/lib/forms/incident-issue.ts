@@ -1,4 +1,4 @@
-import { decimalNotSentenceEndEnabled, issueIsTheAccountEnabled, levelRequestDateEnabled, levelStepNotAccountEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { complaintAccountEnabled, decimalNotSentenceEndEnabled, issueIsTheAccountEnabled, levelRequestDateEnabled, levelStepNotAccountEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { COMPANY_JOB_TITLES } from "@/config/company/job-titles";
 import { businessToday } from "@/lib/business-date";
 
@@ -156,8 +156,24 @@ const LEVEL_REQUEST_LEAD =
   /^\s*(?:please\s+)?(?:create|make|start|open|do|file|write|draft)\s+(?:a\s+|an\s+)?(?:verbal|written|final)(?:\s+warning)?(?:\s+(?:on\s+)?(?<![\d/-])\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?(?![\d/-]))?\s+for\b[^,]*,\s*/i;
 
 function withoutLevelRequestLead(sentence: string): string {
-  if (!levelRequestDateEnabled()) return sentence;
-  return sentence.replace(LEVEL_REQUEST_LEAD, "");
+  const read = complaintAccountEnabled() ? sentence.replace(LEVEL_RUN_ON_LEAD, "") : sentence;
+  if (!levelRequestDateEnabled()) return read;
+  return read.replace(LEVEL_REQUEST_LEAD, "");
+}
+
+/*
+ * COMPLAINT_ACCOUNT_ENABLED (QA's audit, 7 Nov 2026, a real manager's chat here on 3 Nov 2026): "verbal warning The
+ * date she complained was Oct 31st . The customer said she was giving her an attitude …" was the card's Issue as
+ * "verbal warning The date she complained was Oct 31st". The level that opens the turn and runs on into a new sentence
+ * is the form's Type of Warning, never the account (`warning-level.ts`); and a sentence that only says on which day
+ * it happened dates the account, it is not the account.
+ */
+const LEVEL_RUN_ON_LEAD = /^\s*(?:[Vv]erbal|[Ww]ritten|[Ff]inal)\s+(?:[Ww]arning|CA|ca|C\/A|c\/a|[Cc]orrective\s+[Aa]ction)\s+(?=(?:The|She|He|They|It|Her|His|Their|This|That|When)\b)/;
+const DATE_ONLY_LINE =
+  /^(?:the\s+)?(?:date|day)\b[^.!?]{0,40}?\b(?:was|is)\s+(?:on\s+)?(?:\d{1,2}[/.-]\d{1,2}(?:[/.-]\d{2,4})?|(?:jan|feb|mar|apr|may|jun|jul|aug|sept?|oct|nov|dec)[a-z]*\.?\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s*\d{2,4})?)\s*[.!]*$/i;
+
+function onlyDatesTheAccount(sentence: string): boolean {
+  return complaintAccountEnabled() && DATE_ONLY_LINE.test(sentence.trim());
 }
 
 function accountIssue(text: string): string | null {
@@ -172,7 +188,7 @@ function accountIssue(text: string): string | null {
       .filter((sentence) => sentence.length >= 3 && sentence.length <= 180);
     const hits = sentences
       .map((sentence, index) => ({ sentence, index }))
-      .filter(({ sentence }) => !NOT_THE_ACCOUNT.test(sentence) && describesIncident(sentence));
+      .filter(({ sentence }) => !NOT_THE_ACCOUNT.test(sentence) && !onlyDatesTheAccount(sentence) && describesIncident(sentence));
     if (hits.length === 0) continue;
     let start = hits.length - 1;
     while (start > 0 && hits[start]!.index === hits[start - 1]!.index + 1) start -= 1;
