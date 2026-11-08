@@ -1212,6 +1212,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "STEP_B_DATE_WITH_ABOUT_ENABLED",
   // coding 5: COMPLAINT_ACCOUNT (port of the sibling app's flag, default off): forced off with the others.
   "COMPLAINT_ACCOUNT_ENABLED",
+  // coding 5: UNKNOWN_NAME_ASK_WHO_FOR (default off): forced off with the others.
+  "UNKNOWN_NAME_ASK_WHO_FOR_ENABLED",
 ] as const;
 
 /**
@@ -2601,6 +2603,17 @@ export function stepBDateWithAboutEnabled(): boolean {
  */
 export function complaintAccountEnabled(): boolean {
   return envFlag("COMPLAINT_ACCOUNT_ENABLED");
+}
+
+/**
+ * UNKNOWN_NAME_ASK_WHO_FOR_ENABLED (QA's round-6 audit, 8 Nov 2026; coding 5; default off; only with
+ * UNKNOWN_NAME_ASK_ENABLED). The live repeat "I still need a name that is on the directory — **<name>** isn't. What is
+ * the employee's full name as the directory has it?" says "I still need" beside no "Who is this … for?" (the replay
+ * pack's `stillAsks` check refuses it). On: every ask is worded around "Who is this **<form>** for?", the wording of
+ * the sibling app's port (`ai/unknown-name-ask.ts`). Off, as before.
+ */
+export function unknownNameAskWhoForEnabled(): boolean {
+  return envFlag("UNKNOWN_NAME_ASK_WHO_FOR_ENABLED");
 }
 // --- end coding 5 flags ---
 

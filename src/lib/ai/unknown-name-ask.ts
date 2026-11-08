@@ -1,4 +1,4 @@
-import { unknownNameAskEnabled } from "@/lib/config/chat-quality-flags";
+import { unknownNameAskEnabled, unknownNameAskWhoForEnabled } from "@/lib/config/chat-quality-flags";
 
 import type { AskRequest, AskResponse } from "./types";
 
@@ -47,15 +47,34 @@ export function withUnknownNameAsk(response: AskResponse, request: AskRequest): 
   const turns = [...history.filter((turn) => turn.role === "user").map((turn) => turn.content), request.question];
   const last = [...history].reverse().find((turn) => turn.role === "assistant")?.content ?? "";
   const name = typedName(turns);
-  const named = name ? `I couldn't match **${name}** to anyone on the directory. Tell me the employee's full name as it is on the directory.` : null;
   const askedBefore = (text: string) => history.some((turn) => turn.role === "assistant" && turn.content.includes(text));
+  const form = opening[1]!;
+  /*
+   * UNKNOWN_NAME_ASK_WHO_FOR_ENABLED (QA's round-6 audit, 8 Nov 2026): "I still need a name that is on the directory
+   * — **<name>** isn't. What is …?" says "I still need" beside no "Who is this … for?", which the replay pack's
+   * `stillAsks` check refuses. With the flag every ask is worded around "Who is this **<form>** for?", as the sibling
+   * app's port is. Off, the wording below is as before.
+   */
+  const whoFor = unknownNameAskWhoForEnabled();
+  const named = name
+    ? whoFor
+      ? `I couldn't match **${name}** to anyone on the directory. Who is this **${form}** for? Tell me their full name as it is on the directory.`
+      : `I couldn't match **${name}** to anyone on the directory. Tell me the employee's full name as it is on the directory.`
+    : null;
   // The typed name is named back once; after that, what is still needed, never the reply before word for word.
-  const options = [
-    ...(named && !askedBefore(named) ? [named] : []),
-    ...(name ? [`I still need a name that is on the directory — **${name}** isn't. What is the employee's full name as the directory has it?`] : []),
-    `I still need the employee's full name to start the **${opening[1]}**.`,
-    `To start the **${opening[1]}** I need one thing: the employee's full name as it is on the directory.`,
-  ];
+  const options = whoFor
+    ? [
+        ...(named && !askedBefore(named) ? [named] : []),
+        ...(name ? [`**${name}** isn't on the directory. Who is this **${form}** for? Their full name as the directory has it.`] : []),
+        `Who is this **${form}** for? I need the employee's full name before I can start it.`,
+        `To start the **${form}** I need one thing: who is it for? Their full name as it is on the directory.`,
+      ]
+    : [
+        ...(named && !askedBefore(named) ? [named] : []),
+        ...(name ? [`I still need a name that is on the directory — **${name}** isn't. What is the employee's full name as the directory has it?`] : []),
+        `I still need the employee's full name to start the **${form}**.`,
+        `To start the **${form}** I need one thing: the employee's full name as it is on the directory.`,
+      ];
   if (!name && !OPENING.test(last)) return response;
   const question = options.find((option) => !last.includes(option)) ?? options[options.length - 1]!;
   return { ...response, content: response.content.replace(opening[0], question) };
