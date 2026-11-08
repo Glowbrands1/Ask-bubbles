@@ -40,6 +40,7 @@ import {
   formEditHonestReplyEnabled,
   claimGuardEnabled,
   nameCorrectionWordsEnabled,
+  listPolicyIsEditEnabled,
   policyChangeRestOfTurnEnabled,
   openFormNoSelectionEnabled,
   personGuardEnabled,
@@ -58,6 +59,7 @@ import {
   wholeTeamCoachingEnabled,
   sameAskNoRepeatEnabled,
   newRequestOpenDraftEnabled,
+  copyOpenFormForPersonEnabled,
   coachingForEveryoneEnabled,
   staffPickerEnabled,
   chatResponseStreamEnabled,
@@ -69,6 +71,7 @@ import {
   reopenByAnyOpenVerbEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { streamWhenSlow } from "@/lib/api/streamed-response";
+import { finalReplyWithoutMarkers } from "@/lib/ai/source-note";
 import { LONG_MESSAGE_LIMIT } from "@/lib/chat/message-limit";
 import { isClientConversationId } from "@/lib/chat/client-ids";
 import type { AskRequest, AskResponse } from "@/lib/ai/types";
@@ -198,7 +201,7 @@ async function postChat(request: Request) {
     const capped = await modelSpendGuard({ userId: context.identity.subject, role: context.identity.role });
     if (capped) {
       await closeTurn(turnId, { category: "unclassified", succeeded: true, latencyMs: Date.now() - askedAt });
-      return NextResponse.json({ ...capped, turnId });
+      return NextResponse.json({ ...finalReplyWithoutMarkers(capped), turnId });
     }
 
     let answer;
@@ -234,7 +237,7 @@ async function postChat(request: Request) {
           : null;
       if (newPersonCopy && "answer" in newPersonCopy) {
         await closeTurn(turnId, { category: "unclassified", succeeded: true, latencyMs: Date.now() - askedAt });
-        return NextResponse.json({ ...newPersonCopy.answer, turnId });
+        return NextResponse.json({ ...finalReplyWithoutMarkers(newPersonCopy.answer), turnId });
       }
       if (newPersonCopy) {
         asked = {
@@ -391,11 +394,41 @@ async function postChat(request: Request) {
                 ?.employeeName,
             })
           : false;
+      /*
+       * COPY_OPEN_FORM_FOR_PERSON_ENABLED: with <A>'s form open, "copy this form for <B>" is <B>'s request for the
+       * open template, never the open intake carried on (`lib/forms/copy-open-form-for.ts`).
+       */
+      const copyFor =
+        copyOpenFormForPersonEnabled() && !draftAction && !staffPick && !team && !newRequestOpen && asked.activeFormInstanceId
+          ? await (async () => {
+              const open = await (await import("@/lib/forms/open-form-summary")).describeOpenForm(request, asked.activeFormInstanceId!);
+              if (!open) return null;
+              let actor: Awaited<ReturnType<typeof import("@/lib/forms/access").authorizeForms>>;
+              try {
+                actor = await (await import("@/lib/forms/access")).authorizeForms(request, "ask_questions");
+              } catch {
+                return null;
+              }
+              let roster: Awaited<ReturnType<typeof import("@/lib/forms/employee-roster").loadScopedRoster>>;
+              try {
+                roster = await (await import("@/lib/forms/employee-roster")).loadScopedRoster(actor.scope);
+              } catch {
+                return null;
+              }
+              return (await import("@/lib/forms/copy-open-form-for")).copyOpenFormFor({
+                question: asked.question,
+                openTemplateName: open.templateName,
+                openEmployeeName: open.employeeName,
+                roster,
+              });
+            })()
+          : null;
       const parsed = withSwitchAfterCreate(
-        draftAction || staffPick || newRequestOpen
+        draftAction || staffPick || newRequestOpen || copyFor
           ? {
               ...asked,
               ...(draftAction && "question" in draftAction ? { question: draftAction.question } : {}),
+              ...(copyFor ? { question: copyFor } : {}),
               activeFormInstanceId: undefined,
               activeFormCandidateIds: undefined,
             }
@@ -426,7 +459,10 @@ async function postChat(request: Request) {
        * is open. See `lib/ai/question-not-form.ts`. Behind
        * QUESTION_NOT_FORM_ENABLED.
        */
-      const askedQuestion = questionNotFormEnabled() && isQuestionNotForm(parsed.question, parsed.history);
+      // LIST_POLICY_IS_EDIT_ENABLED: "please list the policy" with a form open is an edit (EDIT_POLICY_ASK), never a question.
+      const listPolicyEdit =
+        listPolicyIsEditEnabled() && (await import("@/lib/ai/list-policy-ask")).listPolicyIsEdit(parsed.question, Boolean(parsed.activeFormInstanceId));
+      const askedQuestion = !listPolicyEdit && questionNotFormEnabled() && isQuestionNotForm(parsed.question, parsed.history);
       /*
        * STEP B (FORM_PATCH_REDUCER_ENABLED + FORM_REPLY_FROM_DIFF_ENABLED): the
        * open form as saved before this turn, so the reply about it can come
@@ -724,6 +760,8 @@ async function postChat(request: Request) {
               today: parsed.context.todayIso,
               activeInstanceId: parsed.activeFormInstanceId,
               continuingTemplateKey: parsed.continueProposalTemplateKey,
+              // REOPEN_NOT_OPEN_FORM_ENABLED: the form open when the turn arrived, read only by that flag.
+              openWhenAsked: asked.activeFormInstanceId,
             })
           : null;
       /*
@@ -903,7 +941,8 @@ async function postChat(request: Request) {
       logTurnEvent("turn.answer.missing_turn", { surface, where: "api/chat" });
     }
 
-    return NextResponse.json({ ...answer, turnId });
+    // FINAL_REPLY_MARKER_GUARD_ENABLED: no bare source tag reaches the manager, whatever path answered. See `ai/source-note.ts`.
+    return NextResponse.json({ ...finalReplyWithoutMarkers(answer), turnId });
   } catch (error) {
     return errorResponse(error, "POST /api/chat");
   }

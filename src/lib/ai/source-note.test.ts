@@ -75,3 +75,31 @@ describe("SOURCE_NOTE_GUARD_ENABLED: bare markers on every path (QA's live Sunny
   });
 });
 
+
+/*
+ * FINAL_REPLY_MARKER_GUARD_ENABLED (ported from the sibling app: its live tester, 8 Nov 2026, "… [S4][S3]." and
+ * "… [S1]- …"). The mechanism, in neutral words.
+ */
+describe("FINAL_REPLY_MARKER_GUARD_ENABLED", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("withoutSourceMarkers, guard on: off leaves the first of two adjacent tags; on takes the run, a dash no bar", async () => {
+    vi.stubEnv("SOURCE_NOTE_GUARD_ENABLED", "true");
+    const { withoutSourceMarkers } = await import("./source-note");
+    expect(withoutSourceMarkers("Greet every guest [S4][S3].")).toBe("Greet every guest [S4].");
+    vi.stubEnv("FINAL_REPLY_MARKER_GUARD_ENABLED", "true");
+    expect(withoutSourceMarkers("Greet every guest [S4][S3].")).toBe("Greet every guest.");
+    expect(withoutSourceMarkers("Those sections [S1]- don't cover it.")).toBe("Those sections- don't cover it.");
+  });
+
+  it("finalReplyWithoutMarkers: on, with or without SOURCE_NOTE_GUARD; a page tag and other brackets stay; off, as it is", async () => {
+    const { finalReplyWithoutMarkers } = await import("./source-note");
+    const answer = { content: "…not an employee name [S1][S2]." };
+    expect(finalReplyWithoutMarkers(answer)).toBe(answer);
+    vi.stubEnv("FINAL_REPLY_MARKER_GUARD_ENABLED", "true");
+    expect(finalReplyWithoutMarkers(answer).content).toBe("…not an employee name.");
+    expect(finalReplyWithoutMarkers({ content: "See the Late Opening Policy [S1 p.14]." }).content).toBe("See the Late Opening Policy [S1 p.14].");
+    expect(finalReplyWithoutMarkers({ content: "Hi [Employee]." }).content).toBe("Hi [Employee].");
+    expect(finalReplyWithoutMarkers({ content: "It is on page 10 of the manual [p.10]." }).content).toBe("It is on page 10 of the manual [p.10].");
+  });
+});
