@@ -1,5 +1,5 @@
 import { isAppLine, withoutAppLines } from "@/lib/ai/app-sentences";
-import { antiLoopEnabled, dateAnswerAppliedEnabled, dateAnswerKeepsOpenEnabled, keepFormEmployeeEnabled, priorSentenceFixEnabled } from "@/lib/config/chat-quality-flags";
+import { antiLoopEnabled, correctedDateKeptEnabled, dateAnswerAppliedEnabled, dateAnswerKeepsOpenEnabled, keepFormEmployeeEnabled, priorSentenceFixEnabled } from "@/lib/config/chat-quality-flags";
 
 /** DATE_ANSWER_KEEPS_OPEN_ENABLED, on top of the live DATE_ANSWER_APPLIED_ENABLED. */
 const keepsOpen = () => dateAnswerAppliedEnabled() && dateAnswerKeepsOpenEnabled();
@@ -10,6 +10,7 @@ import {
   heldCoachingDates,
   listFormDates,
   listIncidentDates,
+  priorSteps,
   statedIncidentDates,
   yearlessWrittenOut,
 } from "./form-date-answer";
@@ -215,10 +216,18 @@ export function answersDateQuestion(history: readonly Turn[], question: string, 
  */
 export function correctedIncidentDate(turns: readonly string[], today: string): string | null {
   let date: string | null = null;
+  // CORRECTED_DATE_KEPT_ENABLED: the prior steps' dates, read over the whole conversation (with their corrections).
+  const stepDates = correctedDateKeptEnabled() ? new Set(priorSteps(turns.join("\n\n"), today).map((step) => step.iso)) : null;
   for (const turn of turns.slice(1)) {
     // "wait, was it 10/19/26?" asks; it corrects nothing (QA, 22 Oct 2026, round 3).
     if (!CORRECTS_DATE.test(turn) || ADDS_AN_INCIDENT.test(turn) || /\?\s*$/.test(turn.trim())) continue;
     const own = incidentDates(turn, today);
+    /*
+     * CORRECTED_DATE_KEPT_ENABLED (the sibling app's round-5 trace of corrective-action-conversation-qa Q6, 8 Nov
+     * 2026): "sorry, the verbal ca was on 9-2-26 not 9-1-26" corrects a prior step's date, never the incident's, so it
+     * leaves the incident date the manager corrected before it ("the meeting was actually on 10-19-26") as it was.
+     */
+    if (own.length === 1 && stepDates?.has(own[0]!)) continue;
     if (own.length === 1) date = own[0]!;
   }
   return date;
