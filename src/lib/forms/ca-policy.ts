@@ -14,6 +14,7 @@ import {
   salesObservationAccountEnabled,
   salesShortfallObjectEnabled,
   wovenTrainingConductEnabled,
+  accountPlaceLeadEnabled,
 } from "@/lib/config/chat-quality-flags";
 
 import { JOIN } from "./bounded-context";
@@ -1441,6 +1442,10 @@ const OBSERVATION_REASON = new RegExp(
 const OBSERVATION_BARE_REASON = /^\s*(?:under[- ]?)?performance\b(?:\s+(?:for|in|during)\s+(?:the\s+month\s+of\s+)?[a-z]+)?/i;
 const OBSERVATION_PAYROLL = /\b(?:(?:not|no)\s+)?pay\s*roll\s+deduct\w*(?:\s+applicable)?\b|\b(?:not|no)\s+(?:a\s+)?pay\s*roll\s+deduction\b/gi;
 
+/** "at West Dodge Rd ", "in the Lawrence store ": a place before the request's "for", at most six words. */
+const PLACE_LEAD = /^\s*(?:at|in|from)\s+(?:the\s+)?(?:[\p{L}\d'’.&-]+\s+){1,6}?(?=for\s)/iu;
+const FOR_LEAD = /^\s*for\s+/i;
+
 export function observationAccount(sentence: string, employeeName: string | null): string {
   if (!salesObservationAccountEnabled() || !salesShortfallObjectEnabled()) return sentence;
   const trimmed = sentence.trim();
@@ -1455,6 +1460,17 @@ export function observationAccount(sentence: string, employeeName: string | null
   const reasonFollows = reasonAtStart.test(` ${words.slice(lead).join(" ")}`);
   if (lead > 0 && (wasRequest || reasonFollows)) words.splice(0, lead);
   text = words.join(" ");
+  /*
+   * ACCOUNT_PLACE_LEAD_ENABLED (QA's Bubbles round-5 final gate, 8 Nov 2026): "create a written CA for <name> at West
+   * Dodge Rd for missing the 10-15-26 woven deadline" left "at West Dodge Rd for missing …": the request's head and
+   * name were cut, its place was not. Once the request was cut, the place that opens what is left ("at / in / from
+   * <place>" right before the request's "for") goes, and so does that "for" unless a performance reason follows it
+   * (the reason is cut below). Off, as before.
+   */
+  if (accountPlaceLeadEnabled() && (wasRequest || lead > 0) && PLACE_LEAD.test(text)) {
+    text = text.replace(PLACE_LEAD, "");
+    if (!reasonAtStart.test(` ${text}`)) text = text.replace(FOR_LEAD, "");
+  }
   /*
    * ONLY THE REQUEST CLAUSE IS CUT (QA's round-4 gate, 8 Nov 2026): the reason and a payroll answer were cut
    * wherever they stood, so "This is for Under Performance on PPTA, …" became "This is on PPTA, …" and "…payroll

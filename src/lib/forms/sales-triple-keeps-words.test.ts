@@ -61,4 +61,38 @@ describe("SALES_OBSERVATION_ACCOUNT keeps the manager's words", () => {
     on();
     expect(correctiveActionIssue("I need a corrective action for Remy Calder for under performance", "Remy Calder")).toBe("under performance");
   });
+
+  describe("ACCOUNT_PLACE_LEAD_ENABLED (QA's Bubbles round-5 final gate, 8 Nov 2026)", () => {
+    const SAID = "create a written CA for Wrenna Thistlecombe at West Dodge Rd for missing the 10-15-26 woven deadline";
+
+    it("off: the request's place opens what is left (the gate's finding)", () => {
+      on();
+      expect(observationAccount(SAID, "Wrenna Thistlecombe")).toBe("at West Dodge Rd for missing the 10-15-26 woven deadline");
+    });
+
+    it("on: the place and the request's \"for\" go; the account is left", () => {
+      on();
+      vi.stubEnv("ACCOUNT_PLACE_LEAD_ENABLED", "true");
+      expect(observationAccount(SAID, "Wrenna Thistlecombe")).toBe("missing the 10-15-26 woven deadline");
+    });
+
+    it("on: a performance reason after the place is still the request's, cut as before", () => {
+      on();
+      vi.stubEnv("ACCOUNT_PLACE_LEAD_ENABLED", "true");
+      expect(observationAccount("written CA for Remy Calder at West Dodge Rd for performance, she missed her sales goals", "Remy Calder")).toBe(
+        "she missed her sales goals",
+      );
+    });
+
+    it.each([
+      "Remy Calder was at the front desk for an hour and ignored the guests",
+      "at the register she was rude for no reason",
+      "create a written CA for Remy Calder for missing the 10-15-26 woven deadline",
+    ])("on, negative: %j is as with the flag off", (sentence) => {
+      on();
+      const before = observationAccount(sentence, "Remy Calder");
+      vi.stubEnv("ACCOUNT_PLACE_LEAD_ENABLED", "true");
+      expect(observationAccount(sentence, "Remy Calder")).toBe(before);
+    });
+  });
 });
