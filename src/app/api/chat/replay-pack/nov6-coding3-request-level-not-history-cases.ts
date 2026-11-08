@@ -79,7 +79,8 @@ export const NOV6_CODING3_REQUEST_LEVEL_NOT_HISTORY_CASES: ReplayCase[] = [
     id: "nov6-coding3-request-level-not-history-write-up-with",
     title: "\"I need to write up <name> with a written warning for … on 10/22\": the card is a Written Warning; no \"earlier warning\" line, no level question",
     report: `${REPORT}: "I need to write up <name> with a written warning for leaving the front desk unattended for 30 minutes on 10/22. There's no prior coaching on file." → "I've treated the earlier warning you mentioned as previous corrective action history — it doesn't decide this one. Is this new corrective action a Verbal Warning or a Written Warning?"`,
-    status: { open: "the written warning asked for is read as history (dated 10/22, before today): the reply says \"earlier warning … previous corrective action history\" and asks Verbal or Written" },
+    // fixed in production by REQUEST_LEVEL_NOT_HISTORY_ENABLED, QA round 4, 8 Nov 2026
+    status: "fixed",
     fixFlags: FIX,
     async run(t: T) {
       const thread = start(t);
@@ -96,7 +97,8 @@ export const NOV6_CODING3_REQUEST_LEVEL_NOT_HISTORY_CASES: ReplayCase[] = [
     id: "nov6-coding3-request-level-not-history-give-a",
     title: "\"give <name> a written warning for being late on 10/22\": the card is a Written Warning; no \"earlier warning\" line, no level question",
     report: `${REPORT}: a variant of item 6, "give <name> a written warning for being late on 10/22"`,
-    status: { open: "the written warning asked for is read as history (dated 10/22, before today)" },
+    // fixed in production by REQUEST_LEVEL_NOT_HISTORY_ENABLED, QA round 4, 8 Nov 2026
+    status: "fixed",
     fixFlags: FIX,
     async run(t: T) {
       const thread = start(t);

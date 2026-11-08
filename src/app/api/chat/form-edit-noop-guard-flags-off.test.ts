@@ -228,7 +228,7 @@ const NOOP = "FORM_EDIT_NOOP_GUARD_ENABLED";
  * Changed on purpose (7 Nov 2026): production-flags.json now lists QA's flip 6 as on. The recorded fixture is
  * main's behaviour before this flag, under production's flags as they were then, so the base leaves flip 6 off
  * (this file turns the tool and Step B flags on itself where a case asks for them). The fixture and every
- * assertion are unchanged.
+ * assertion are unchanged. The same holds for every flag flipped after it, listed below.
  */
 const FLIPPED_AFTER_FIXTURE: readonly string[] = [
   "FORM_PATCH_REDUCER_ENABLED",
@@ -249,6 +249,26 @@ const FLIPPED_AFTER_FIXTURE: readonly string[] = [
   "TITLE_ENDS_AT_LINE_ENABLED",
   "PLACE_FROM_CUE_ENABLED",
   "ISSUE_IS_THE_ACCOUNT_ENABLED",
+  // Flipped in production 8 Nov 2026 (QA round 4): the same reason, flip 8's four, the round-4 14 and WOVEN_PDF_OCR.
+  "DENIAL_NO_ACCOUNT_ENABLED",
+  "REMOVE_POLICY_NOT_NAMED_ENABLED",
+  "SOURCE_NOTE_GUARD_ENABLED",
+  "EDIT_MAKE_IT_ABOUT_ENABLED",
+  "CARD_POLICY_OWN_REQUEST_ENABLED",
+  "EDIT_POLICY_ASK_ENABLED",
+  "OWN_BRAND_PARENT_ENABLED",
+  "PRIOR_COACHING_DENIAL_ENABLED",
+  "REQUEST_LEVEL_NOT_HISTORY_ENABLED",
+  "WRITE_ME_THE_FORM_ENABLED",
+  "SAME_FORM_COPY_NEW_PERSON_ENABLED",
+  "PAYROLL_AMOUNT_SAME_MESSAGE_ENABLED",
+  "PRIOR_ACTIONS_NO_SIGNED_ENABLED",
+  "WOVEN_TRAINING_CONDUCT_ENABLED",
+  "CA_REQUEST_NOT_PRIOR_COACHING_ENABLED",
+  "STALE_PROMPT_LINES_OFF_ENABLED",
+  "DESCRIBED_ATTENDANCE_CARD_ENABLED",
+  "PAST_FORMS_BEFORE_LIBRARY_ENABLED",
+  "WOVEN_PDF_OCR_ENABLED",
 ];
 const PRODUCTION = [...PRODUCTION_FLAGS.on, ...PRODUCTION_FLAGS.assumedOn].filter((name) => name !== NOOP && !FLIPPED_AFTER_FIXTURE.includes(name));
 const TOUCHED = [...new Set([NOOP, ...TOOL_FLAGS, ...PRODUCTION, ...PRODUCTION_FLAGS.off, "FORM_PATCH_REDUCER_ENABLED", "FORM_REPLY_FROM_DIFF_ENABLED"])];

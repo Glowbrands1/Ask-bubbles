@@ -24,7 +24,8 @@ export const NOV6_PAYROLL_AMOUNT_SAME_MESSAGE_CASES: ReplayCase[] = [
     id: "nov6-payroll-amount-same-message",
     title: `"…the register was off $20. which will be payroll deducted… payroll deduct applies": the $20 is used, the amount is not asked`,
     report: "Live chat, 5 Nov 2026 (relayed by QA, 6 Nov): the app asked \"Payroll deduction amount?\" after the manager gave $20",
-    status: { open: "the amount question is asked; PAYROLL_AMOUNT_SAME_MESSAGE_ENABLED reads the $20" },
+    // fixed in production by PAYROLL_AMOUNT_SAME_MESSAGE_ENABLED, QA round 4, 8 Nov 2026
+    status: "fixed",
     fixFlags: ["PAYROLL_AMOUNT_SAME_MESSAGE_ENABLED"],
     async run(t) {
       vi.setSystemTime(new Date("2026-11-05T15:49:00Z"));
