@@ -1,5 +1,6 @@
-import { decimalNotSentenceEndEnabled, issueIsTheAccountEnabled, levelRequestDateEnabled, levelStepNotAccountEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { decimalNotSentenceEndEnabled, issueIsTheAccountEnabled, levelRequestDateEnabled, levelStepNotAccountEnabled, policyCorrectionNotAccountEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { COMPANY_JOB_TITLES } from "@/config/company/job-titles";
+import { isPolicyCorrection } from "@/lib/ai/policy-correction-turn";
 import { businessToday } from "@/lib/business-date";
 
 import { withoutLevelAndStepClauses } from "./account-clauses";
@@ -188,7 +189,18 @@ function accountIssue(text: string): string | null {
   return null;
 }
 
-export function correctiveActionIssue(said: string, employeeName: string | null): string | null {
+/** POLICY_CORRECTION_NOT_ACCOUNT_ENABLED: the text without its sentences that only correct the policy (`ai/policy-correction-turn.ts`). */
+function withoutPolicyCorrections(text: string): string {
+  if (!policyCorrectionNotAccountEnabled()) return text;
+  return text
+    .split("\n")
+    .map((line) => line.split(/(?<=[.!?])\s+/).filter((sentence) => !isPolicyCorrection(sentence)).join(" "))
+    .join("\n");
+}
+
+export function correctiveActionIssue(rawSaid: string, employeeName: string | null): string | null {
+  // POLICY_CORRECTION_NOT_ACCOUNT_ENABLED: "it should be under performance not standard of conduct" is no Issue.
+  const said = withoutPolicyCorrections(rawSaid);
   /*
    * PRIOR_SENTENCE_FIX_ENABLED (ported from the sibling app, 26 Oct 2026): on a
    * Corrective Action a held coaching or warning with its date ("coached her
@@ -229,7 +241,8 @@ function accountOnly(issue: string | null, employeeName: string | null): string 
  * DRAFT_NEVER_BLANK_ENABLED to write an Observation from the manager's own
  * words; `correctiveActionIssue` is unchanged.
  */
-export function managerIncidentClause(text: string, employeeName: string | null): string | null {
+export function managerIncidentClause(rawText: string, employeeName: string | null): string | null {
+  const text = withoutPolicyCorrections(rawText);
   const fromRequest = issueFromRequest(text, employeeName);
   if (fromRequest && !titleAndPlaceOnly(fromRequest, employeeName)) return accountOnly(fromRequest, employeeName);
   return accountOnly(accountIssue(text), employeeName);
