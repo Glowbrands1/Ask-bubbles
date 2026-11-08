@@ -113,7 +113,7 @@ export function withCorrectionNotDropped(answer: AskResponse, request: Pick<AskR
   const said = nameWords(wanted);
   const had = nameWords(old);
   if (said.length < 2 || !(said[0] === had[0] || said.at(-1) === had.at(-1))) return answer;
-  const kept = cardKeptOnRoster(answer, card, old, wanted);
+  const kept = cardKeptOnRoster(answer, card, request, old, wanted);
   if (kept) return kept;
   if ((card.employeeName ?? "").trim().toLowerCase() !== old.toLowerCase()) return answer;
   return {
@@ -135,6 +135,7 @@ export function withCorrectionNotDropped(answer: AskResponse, request: Pick<AskR
 function cardKeptOnRoster(
   answer: AskResponse,
   card: NonNullable<AskResponse["formProposal"]>,
+  request: Pick<AskRequest, "history" | "activeFormInstanceId">,
   old: string,
   wanted: string,
 ): AskResponse | null {
@@ -150,7 +151,8 @@ function cardKeptOnRoster(
     return { ...answer, content: answer.content.includes(unchanged) ? answer.content : `${unchanged}\n\n${answer.content}` };
   }
   const onCard = (card.employeeName ?? "").trim();
-  const content = onCard && onCard !== person ? answer.content.split(`**${onCard}**`).join(`**${person}**`) : answer.content;
+  if (!onCard) return askReplaced(answer, card, request, old, wanted, person);
+  const content = onCard !== person ? answer.content.split(`**${onCard}**`).join(`**${person}**`) : answer.content;
   const note = `"${wanted}" isn't a name on the roster, so the card is for **${person}**. Tell me if it's someone else.`;
   return {
     ...answer,
@@ -179,4 +181,31 @@ function oneMistypedRosterName(name: string, names: readonly string[]): string |
   });
   const people = [...new Set(close.map((roster) => roster.trim()))];
   return people.length === 1 ? people[0]! : null;
+}
+
+/**
+ * This app's own answer to an off-roster correction (`form-proposal.ts`, the employee read as ambiguous) asks "Which
+ * of them … — **<old>** or **<typo>**?" with no one on the card. With one roster person that close, the card on screen
+ * before this turn is drafted again for them: the reply before this turn, with only the employee's name changed, and
+ * the card's employee seated. Anything but that ask, or no card before this turn: null (the callers go on as before).
+ */
+function askReplaced(
+  answer: AskResponse,
+  card: NonNullable<AskResponse["formProposal"]>,
+  request: Pick<AskRequest, "history" | "activeFormInstanceId">,
+  old: string,
+  wanted: string,
+  person: string,
+): AskResponse | null {
+  if (!/^Which of them is this \*\*/.test(answer.content.trim())) return null;
+  const previous = [...request.history].reverse().find((turn) => turn.role === "assistant");
+  const before = String(previous?.content ?? "");
+  if (!CARD_LEAD.test(before)) return null;
+  const note = `"${wanted}" isn't a name on the roster, so the card is for **${person}**. Tell me if it's someone else.`;
+  const ready = card.locationId !== null;
+  return {
+    ...answer,
+    content: `${note}\n\n${before.split(`**${old}**`).join(`**${person}**`)}`,
+    formProposal: { ...card, employeeName: person, status: ready ? "ready" : "needs_location", supportsInlineDraft: ready || card.supportsInlineDraft },
+  };
 }

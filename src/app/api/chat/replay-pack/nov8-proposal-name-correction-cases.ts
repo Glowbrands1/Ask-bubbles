@@ -37,7 +37,7 @@ const OPENING = [
 
 type Card = NonNullable<ReplayAnswer["formProposal"]>;
 
-async function cardAfter(t: ReplayContext, correction: string): Promise<{ before: Card; after: ReplayAnswer }> {
+async function cardAfter(t: ReplayContext, correction: string): Promise<{ before: Card; after: ReplayAnswer; thread: ReturnType<ReplayContext["thread"]> }> {
   vi.setSystemTime(new Date("2026-11-02T17:54:00Z"));
   t.directory([...STAFF, ODESSA]);
   t.as("location_manager", WEST_DODGE);
@@ -45,7 +45,7 @@ async function cardAfter(t: ReplayContext, correction: string): Promise<{ before
   await thread.say(OPENING[0]!);
   const before = (await thread.say(OPENING[1]!)).formProposal!;
   expect(before?.employeeName, "the opening card does not carry the typed name").toBe("Odessa Lark Penhallwo");
-  return { before, after: await thread.say(correction) };
+  return { before, after: await thread.say(correction), thread };
 }
 
 /**
@@ -71,11 +71,18 @@ const CORRECTIONS: Record<string, string> = {
   "spelled": "it's spelled Penhallow",
 };
 
-/** This app's answer to an off-roster correction: it asks which, and no one is on the card meanwhile. */
-function offRosterAsked(after: ReplayAnswer): void {
-  expect(after.formProposal?.employeeName ?? null, `a name was kept or seated without the manager:\n${after.content}`).toBeNull();
-  expect(after.formProposal?.status, `the card does not wait for the employee:\n${after.content}`).toBe("needs_employee");
-  expect(after.content, `the reply does not ask which:\n${after.content}`).toMatch(/Which of them is this \*\*Corrective Action Form\*\* for — \*\*Odessa Lark Penhallwo\*\* or \*\*Odessa Lark Penhalloe\*\*\?/);
+/*
+ * An off-roster correction (QA, round 6, 8 Nov 2026). This expectation changed on purpose: round 5 kept this app's own
+ * "Which of them … — **Odessa Lark Penhallwo** or **Odessa Lark Penhalloe**?" with no one on the card. QA's round-6
+ * rule: the card stays, and a spelling on nobody's roster is never offered as a person. One roster person is that
+ * close, so the card is for her, nothing else on it changes, and the reply says the typed spelling is not on the roster.
+ */
+function offRosterKept(before: Card, after: ReplayAnswer): void {
+  expect(after.formProposal, `the card was dropped:\n${after.content}`).toBeTruthy();
+  expect(after.formProposal?.employeeName, `the card is not for the roster's Odessa:\n${after.content}`).toBe("Odessa Lark Penhallow");
+  restUnchanged(before, after.formProposal!);
+  expect(after.content, `the typo is offered as a person:\n${after.content}`).not.toMatch(/Which of them|\*\*Odessa Lark Penhalloe\*\*|\*\*Odessa Lark Penhallwo\*\*/);
+  expect(after.content, `the reply does not say the spelling is not on the roster:\n${after.content}`).toContain('"Odessa Lark Penhalloe" isn\'t a name on the roster');
 }
 
 const ALREADY_HOLDS = new Set(["correct-way"]);
@@ -99,25 +106,25 @@ export const NOV8_PROPOSAL_NAME_CORRECTION_CASES: ReplayCase[] = [
   ),
   {
     id: "nov8-proposal-name-correction-off-roster",
-    title: "an off-roster spelling (\"fix her last name penhalloe\") goes the way a typed off-roster name does: nobody is seated without the manager, and the reply names her spelling",
+    title: "an off-roster spelling (\"fix her last name penhalloe\") keeps the card, for the one roster person that close; the typo is never offered as a person",
     report: REPORT,
     status: { open: "with production's flags the correction is not read, so the reply never names her spelling" },
     fixFlags: [FLAG],
     async run(t) {
-      const { after } = await cardAfter(t, "fix her last name penhalloe");
-      offRosterAsked(after);
+      const { before, after } = await cardAfter(t, "fix her last name penhalloe");
+      offRosterKept(before, after);
     },
   },
   {
     id: "nov8-proposal-name-correction-typed-off-roster",
-    title: "\"change her name to Odessa Lark Penhalloe\" (typed, off the roster) asks which of the two: the reference the sibling app now follows",
-    report: "QA, round 5 (8 Nov 2026): in the sibling app an off-roster \"change her name to …\" on the card kept the old name and said nothing",
-    // Already so with production's flags here: a guard for the reference.
-    status: "fixed",
+    title: "\"change her name to Odessa Lark Penhalloe\" (typed, off the roster) keeps the card, for the one roster person that close; never \"A or B\"",
+    report: "QA, round 6 (8 Nov 2026): an off-roster or mistyped correction keeps the card; the typo is never offered as a person",
+    // Round 5 marked this fixed (this app's own "A or B" ask); QA's round-6 rule replaces that answer.
+    status: { open: "with production's flags the reply asks \"Which of them … — Odessa Lark Penhallwo or Odessa Lark Penhalloe?\" with no one on the card" },
     fixFlags: [FLAG],
     async run(t) {
-      const { after } = await cardAfter(t, "change her name to Odessa Lark Penhalloe");
-      offRosterAsked(after);
+      const { before, after } = await cardAfter(t, "change her name to Odessa Lark Penhalloe");
+      offRosterKept(before, after);
     },
   },
   {
@@ -131,5 +138,27 @@ export const NOV8_PROPOSAL_NAME_CORRECTION_CASES: ReplayCase[] = [
       expect(after.formProposal?.employeeName ?? null, `the card's employee was replaced:\n${after.content}`).not.toBe("Odessa Lark Penhallow");
     },
   },
+  ...(
+    [
+      // The sibling's R6 t5 (two letters swapped) and t7 (a neighbouring key for the first letter), on this file's Odessa.
+      ["t5", "under the employee line the name is supposed to be odessa lark penhalow", "Odessa Lark Penhalow"],
+      ["t7", "make that change to Odessa Lark Oenhallow", "Odessa Lark Oenhallow"],
+    ] as const
+  ).map(
+    ([turn, said, typo]): ReplayCase => ({
+      id: `nov8-proposal-name-correction-r6-${turn}`,
+      title: `R6 ${turn} (ported): "${said}" on the card for the roster's Odessa Lark Penhallow keeps the card for her; the typo is never offered or seated`,
+      report: `QA, round 6 (8 Nov 2026): the sibling app's nov5-r6-policy-kept-across-turns ${turn} asked "Which of them … — <A> or <the typo>?"`,
+      status: { open: "with production's flags the reply asks which, or the typo is put on the card" },
+      fixFlags: [FLAG],
+      async run(t) {
+        const { after: fixed, thread } = await cardAfter(t, "fix her last name penhallow");
+        expect(fixed.formProposal?.employeeName, "the premise: the card is for the roster's Odessa").toBe("Odessa Lark Penhallow");
+        const after = await thread.say(said);
+        expect(after.formProposal, `the card was dropped:\n${after.content}`).toBeTruthy();
+        expect(after.formProposal?.employeeName, `the card is not for the roster's Odessa:\n${after.content}`).toBe("Odessa Lark Penhallow");
+        expect(after.content, `the typo is offered as a person:\n${after.content}`).not.toMatch(new RegExp(`Which of them|\\*\\*${typo}\\*\\*`));
+      },
+    }),
+  ),
 ];
-
