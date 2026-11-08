@@ -1,0 +1,44 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { detectTemplateIntent } from "./template-intent";
+
+/*
+ * WRITE_ME_THE_FORM_ENABLED (QA, 4 Nov 2026): "Can you write me a performace ca
+ * for an employee who …" made no card. "write me a …" and one or two plain
+ * words before the form still write the form; writing ABOUT the form does
+ * not. QA's wording (its metrics in this app's terms, as the sf-s21 twin has
+ * them), the person invented.
+ *
+ * Changed on purpose (7 Nov 2026, QA): the reading moved from CA_SALES_POLICY_ENABLED, now live in production, to its
+ * own default-off flag, so these tests turn on WRITE_ME_THE_FORM_ENABLED. Every expectation is unchanged.
+ */
+const SAID = "Can you write me a performace ca for an employee who did not meet their numbers for the month of october Talise Vorn  - verbal\n146 transactions \nBelow in UPT, Average Sale, Conversion";
+
+afterEach(() => vi.unstubAllEnvs());
+
+describe("\"write me a … CA\" writes the form (WRITE_ME_THE_FORM_ENABLED)", () => {
+  it("QA's wording, and shorter forms of it, ask to create a Corrective Action", () => {
+    vi.stubEnv("WRITE_ME_THE_FORM_ENABLED", "true");
+    for (const said of [SAID, "write me a ca for Talise Vorn", "can you write me a performance ca for Talise Vorn", "write us a quick corrective action for Talise Vorn", "can you write me a Ca for Talise Vorn for performance for october"]) {
+      expect(detectTemplateIntent(said), said).toEqual({ kind: "corrective_action", requestedCreation: true });
+    }
+  });
+
+  it("writing about the form is not creating one", () => {
+    vi.stubEnv("WRITE_ME_THE_FORM_ENABLED", "true");
+    for (const said of ["can you write a summary of the corrective action policy", "write a note explaining the corrective action steps", "write an email to Talise about her CA"]) {
+      expect(detectTemplateIntent(said), said).not.toEqual({ kind: "corrective_action", requestedCreation: true });
+    }
+  });
+
+  it("off: \"write me a ca for <name>\" is read as before", () => {
+    vi.stubEnv("WRITE_ME_THE_FORM_ENABLED", "false");
+    expect(detectTemplateIntent("write me a ca for Talise Vorn")).toEqual({ kind: "corrective_action", requestedCreation: false });
+  });
+
+  it("CA_SALES_POLICY_ENABLED (live) alone changes nothing: the reading has its own flag", () => {
+    vi.stubEnv("CA_SALES_POLICY_ENABLED", "true");
+    vi.stubEnv("WRITE_ME_THE_FORM_ENABLED", "false");
+    expect(detectTemplateIntent("write me a ca for Talise Vorn")).toEqual({ kind: "corrective_action", requestedCreation: false });
+  });
+});
