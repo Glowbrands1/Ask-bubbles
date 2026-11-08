@@ -29,8 +29,7 @@ import {
   caShortcutWordsEnabled,
   formChoiceStatedEnabled,
   formNameFromRosterEnabled,
-  typedNameEnabled,
-} from "@/lib/config/chat-quality-flags";
+  typedNameEnabled, requestFromNamesEmployeeEnabled } from "@/lib/config/chat-quality-flags";
 import { foldsToGlossaryTerm } from "@/lib/ai/glossary";
 import { NOT_A_NAME, NOT_A_TYPED_NAME, TYPED_NAME_WORD } from "./name-words";
 import { asksForTeamCoaching } from "./team-subject";
@@ -539,8 +538,17 @@ const COURTESY_SHORTHAND: [RegExp, string][] = [
 ];
 
 /** Shorthand and near-miss spellings of the form's own words; everything else unchanged. */
+/*
+ * REQUEST_FROM_NAMES_EMPLOYEE_ENABLED (QA, 8 Nov 2026; the managers' wording): "Please create another corrective action
+ * from <A>. This would be a verbal …" — "from" typed for "for" — named nobody here, and the card asked "Who is this
+ * form for?": a name in any case is read only straight after "<form> for". With the flag on, "<form> from <name>"
+ * reads as "<form> for <name>". Only after a form's own words, and never before a word that cannot start a name
+ * ("from the …", "from my …", "from last week").
+ */
+const FORM_FROM = /\b((?:corrective actions?|c\.?a\.?|coaching(?:\s+(?:form|document))?|write[- ]?ups?|warnings?|forms?))\s+from\s+(?!(?:the|a|an|my|our|her|his|their|this|that|last|yesterday|today|tonight|this|next|earlier|before|when|what|which|where|home|work|corporate|hr|district|store|salon|woven)\b)(?=[\p{L}])/giu;
+
 export function canonicalShorthand(text: string): string {
-  let out = text;
+  let out = requestFromNamesEmployeeEnabled() ? text.replace(FORM_FROM, "$1 for ") : text;
   for (const [pattern, replacement] of COURTESY_SHORTHAND) out = out.replace(pattern, replacement);
   return out.replace(/\bc[a-z]{5,9}\b/gi, (word) => {
     const lower = word.toLowerCase();

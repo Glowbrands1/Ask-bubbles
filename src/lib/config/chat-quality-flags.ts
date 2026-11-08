@@ -2694,6 +2694,17 @@ export function replyMatchesCardEnabled(): boolean {
   return envFlag("REPLY_MATCHES_CARD_ENABLED");
 }
 
+// coding 5: REQUEST_FROM_NAMES_EMPLOYEE (beside REPLY_MATCHES_CARD, not at a block end, so merges do not collide)
+/**
+ * REQUEST_FROM_NAMES_EMPLOYEE_ENABLED (coding 5; QA, 8 Nov 2026; this app only, see docs/parity-log; default off).
+ * "Please create another corrective action from <A>. This would be a verbal …" ("from" typed for "for") named nobody,
+ * and the card asked who. On: "<form> from <name>" reads as "<form> for <name>" (`forms/template-intent.ts`
+ * canonicalShorthand), never before a word that cannot start a name. Off, as before.
+ */
+export function requestFromNamesEmployeeEnabled(): boolean {
+  return envFlag("REQUEST_FROM_NAMES_EMPLOYEE_ENABLED");
+}
+
 /**
  * ROSTER_COMPOUND_SURNAME_ENABLED (the re-flip's rollback, 5 Nov 2026; default
  * off). The flip's live testers (R3/R5/R7): a real employee's surname is two
