@@ -23,9 +23,8 @@ export const NOV8_COACHING_CARD_POLICY_CASES: ReplayCase[] = [
     report: "QA's live test, Ask Bubbles production, 8 Nov 2026: the Coaching card has no policy line",
     status: { open: "the Coaching card has no policy line" },
     fixFlags: FIX,
-    // The answer step is called from the route (`ai/server-ask.ts`, coding 2's file): open with the flag until that
-    // one-line call is in. Then this holds, and `fixStatus` goes.
-    fixStatus: { open: "the route does not call withCoachingCardPolicyOnAnswer yet (server-ask.ts, coding 2)" },
+    // Changed on purpose (coding 2, 8 Nov 2026): `ai/server-ask.ts` now calls withCoachingCardPolicyOnAnswer on the
+    // forms path's proposal, so the case holds with its flag and `fixStatus` is gone.
     async run(t) {
       vi.setSystemTime(new Date("2026-11-07T15:00:00Z"));
       t.directory(STAFF);
