@@ -91,6 +91,7 @@ import {
   typoReadingCopyEnabled,
   caSalesPolicyEnabled,
   pastFormsBeforeLibraryEnabled,
+  coachingCardPolicyEnabled,
   cardPolicyOwnRequestEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { gateTexts, searchWithPlan } from "./continuation";
@@ -631,6 +632,8 @@ async function answerQuestionCore(
     }));
     // Flags off: decoration returns the same proposal, and the forms-library
     // answer returns here, before retrieval.
+    // COACHING_CARD_POLICY_ENABLED: a Coaching card cites the policy its account falls under (`forms/coaching-card-policy.ts`).
+    if (proposal && coachingCardPolicyEnabled()) return await (await import("./coaching-card-policy-answer")).withCoachingCardPolicyOnAnswer(proposal, request, readManual);
     if (proposal) return proposal;
     // AMOUNT_TURN_STAYS_ENABLED: "i dont know the amount" with a card open is the form's, not a policy question.
     const amountReply = amountTurnReply(request);
