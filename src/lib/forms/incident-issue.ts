@@ -190,6 +190,24 @@ function reasonOnlyRequest(sentence: string): boolean {
   return match !== null && onlySalesReason(match[1]!);
 }
 
+/*
+ * ISSUE_AFTER_REQUEST_REASON_ENABLED (QA's round-5 Bubbles check, 8 Nov 2026, nov6-under-performance-explained-tester):
+ * "it should be under performance not standard of conduct" became the Issue. A turn that only corrects the policy
+ * or the level is no account.
+ */
+const CORRECTED_NAME = String.raw`(?:a\s+|an\s+|the\s+)?(?:standards?\s+of\s+conduct|code\s+of\s+conduct|attendance|tardiness|absenteeism|dress\s+code|under[- ]?performance|sales(?:\s+performance)?|violation\s+of\s+company\s+polic(?:y|ies)|(?:verbal|written|final)(?:\s+(?:warning|ca|c\/a|corrective\s+action|write[- ]?up))?)(?:\s+polic(?:y|ies))?`;
+const CORRECTION_LEAD = String.raw`(?:(?:it|this|that)(?:\s+one)?(?:['’]s|\s+is|\s+should\s+(?:be|say)|\s+needs\s+to\s+be|\s+(?:should\s+)?(?:falls?|goes?|go|fall)\s+under)|should\s+be|make\s+(?:it|this)|change\s+(?:it|this|the\s+policy)\s+to|switch\s+(?:it\s+)?to|use|go\s+with|put\s+it\s+under)\s+`;
+const NOT_NAME = String.raw`(?:[,;]?\s*(?:and\s+)?(?:not|instead\s+of|rather\s+than)\s+${CORRECTED_NAME})`;
+const CORRECTION_ONLY = new RegExp(
+  String.raw`^(?:(?:actually|sorry|no|nope|oops|ok|okay|oh|wait)[,.!\s]+)*(?:${CORRECTION_LEAD}${CORRECTED_NAME}${NOT_NAME}?|not\s+${CORRECTED_NAME}[,;.]?\s+(?:${CORRECTION_LEAD})?${CORRECTED_NAME})(?:\s+instead)?\s*[.!]*$`,
+  "iu",
+);
+
+/** ISSUE_AFTER_REQUEST_REASON_ENABLED: the sentence only corrects the policy or the level. */
+function onlyCorrectsPolicyOrLevel(sentence: string): boolean {
+  return issueAfterRequestReasonEnabled() && CORRECTION_ONLY.test(sentence.trim());
+}
+
 function accountIssue(text: string): string | null {
   for (const turn of [...turnsOf(text)].reverse()) {
     const violation = VIOLATION.exec(turn);
@@ -203,7 +221,8 @@ function accountIssue(text: string): string | null {
     const hits = sentences
       .map((sentence, index) => ({ sentence, index }))
       .filter(({ sentence }) => !NOT_THE_ACCOUNT.test(sentence) && describesIncident(sentence))
-      .filter(({ sentence }) => !(issueAfterRequestReasonEnabled() && reasonOnlyRequest(sentence)));
+      .filter(({ sentence }) => !(issueAfterRequestReasonEnabled() && reasonOnlyRequest(sentence)))
+      .filter(({ sentence }) => !onlyCorrectsPolicyOrLevel(sentence));
     if (hits.length === 0) continue;
     let start = hits.length - 1;
     while (start > 0 && hits[start]!.index === hits[start - 1]!.index + 1) start -= 1;
@@ -248,6 +267,9 @@ export function correctiveActionIssue(said: string, employeeName: string | null)
  */
 function reasonThenAccount(fromRequest: string | null, text: string, employeeName: string | null): string | null {
   if (!issueAfterRequestReasonEnabled() || !fromRequest || !onlySalesReason(fromRequest)) return null;
+  // Only a request whose for-clause is the reason ("a corrective action for under performance"): "CA for <A>, her
+  // sales are low" is an account in the request sentence, and stays the Issue as before (QA's round-5 regression).
+  if (![...text.matchAll(SENTENCE)].some((match) => reasonOnlyRequest(withoutLevelRequestLead(match[0].trim())))) return null;
   return accountOnly(accountIssue(text), employeeName);
 }
 

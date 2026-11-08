@@ -1,6 +1,7 @@
 import { expect, vi } from "vitest";
 
 import { STAFF, WEST_DODGE, type ReplayAnswer, type ReplayCase } from "./cases";
+import { underPerformanceExplainedPeople } from "./nov6-under-performance-explained-cases";
 
 /**
  * QA's round-5 Bubbles check (8 Nov 2026), from the sibling app's history 1143df48: "I need a corrective action for
@@ -69,6 +70,26 @@ export const NOV8_ISSUE_AFTER_REQUEST_REASON_CASES: ReplayCase[] = [
     async run(t) {
       const line = await issue(t, "I need a corrective action for Remy Calder for late opening the store on 11/2. He opened 40 minutes late.");
       expect(line).toMatch(/late opening the store/i);
+    },
+  },
+  {
+    // QA's round-5 regression on this flag (8 Nov 2026): the sibling-port tester's two turns. With the flag the
+    // correction turn became the Issue; off, the Issue is "her sales are low". A turn that only corrects the policy or
+    // the level is no account. The person is nov6-under-performance-explained's invented Odalys Fenmarrow.
+    id: "nov8-issue-after-request-reason-policy-correction",
+    title: "negative: \"it should be under performance not standard of conduct\" (a policy correction) is never the Issue",
+    report: "QA's round-5 Bubbles check (8 Nov 2026): in nov6-under-performance-explained-tester, T2 \"it should be under performance not standard of conduct\" became the Issue (off: \"her sales are low\")",
+    status: "fixed",
+    fixFlags: [FLAG],
+    async run(t) {
+      vi.setSystemTime(new Date("2026-11-06T15:00:00Z"));
+      t.directory([...STAFF, ...underPerformanceExplainedPeople()]);
+      t.as("location_manager", WEST_DODGE);
+      const thread = t.thread();
+      await thread.say("CA for Odalys Fenmarrow, her sales are low");
+      const line = issueLine(await thread.say("it should be under performance not standard of conduct"));
+      expect(line, "the policy correction is the Issue").not.toMatch(/should be|standard of conduct/i);
+      expect(line, "the account is lost").toMatch(/her sales are low/i);
     },
   },
 ];

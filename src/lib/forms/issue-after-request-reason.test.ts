@@ -50,3 +50,39 @@ describe("ISSUE_AFTER_REQUEST_REASON_ENABLED", () => {
     });
   });
 });
+
+describe("ISSUE_AFTER_REQUEST_REASON_ENABLED: a turn that only corrects the policy or the level is no account (QA, 8 Nov 2026)", () => {
+  // nov6-under-performance-explained-tester, the tester's two turns; the person is invented.
+  const TESTER = "CA for Odalys Fenmarrow, her sales are low\n\nit should be under performance not standard of conduct";
+  beforeEach(() => {
+    vi.stubEnv("CA_SALES_POLICY_ENABLED", "true");
+    vi.stubEnv("ISSUE_IS_THE_ACCOUNT_ENABLED", "true");
+    vi.stubEnv("TYPED_NAME_ENABLED", "true");
+  });
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("the tester's correction is not the Issue: it is as with the flag off", () => {
+    const off = correctiveActionIssue(TESTER, "Odalys Fenmarrow");
+    vi.stubEnv("ISSUE_AFTER_REQUEST_REASON_ENABLED", "true");
+    expect(correctiveActionIssue(TESTER, "Odalys Fenmarrow")).toBe(off);
+    expect(managerIncidentClause(TESTER, "Odalys Fenmarrow")).not.toMatch(/should be|standard of conduct/i);
+    expect(off).toBe("her sales are low");
+  });
+
+  it("a correction after a reason and an account leaves the account the Issue", () => {
+    vi.stubEnv("ISSUE_AFTER_REQUEST_REASON_ENABLED", "true");
+    for (const correction of [
+      "it should be under performance not standard of conduct",
+      "actually make it a written warning",
+      "not standards of conduct, under performance",
+      "this should fall under attendance instead",
+    ]) {
+      expect(correctiveActionIssue(`${FOR}\n\n${correction}`, "Remy Calder"), correction).toMatch(/^Remy Calder was below on sales per hour/);
+    }
+  });
+
+  it("a turn that names a policy and says what happened is still an account", () => {
+    vi.stubEnv("ISSUE_AFTER_REQUEST_REASON_ENABLED", "true");
+    expect(correctiveActionIssue(`${FOR}\n\nshe was 30 minutes late on 11/3, it should be attendance`, "Remy Calder")).toMatch(/30 minutes late/);
+  });
+});
