@@ -53,4 +53,15 @@ export const NOV8_SALES_TRIPLE_KEEPS_WORDS_CASES: ReplayCase[] = [
       expect(issueLine(reply), `the Issue cuts "payroll deducted":\n${reply.content}`).not.toMatch(/which will be from/i);
     },
   },
+  {
+    id: "nov8-sales-triple-reason-alone-is-the-issue",
+    title: "\"I need a corrective action for <A> for under performance\": the reason alone stays the Issue",
+    report: "QA's Bubbles round-5 gate, 8 Nov 2026 (the sales group lost the Issue)",
+    status: "fixed",
+    fixFlags: PAIR,
+    async run(t) {
+      const reply = await start(t).say("I need a corrective action for Remy Calder for under performance");
+      expect(issueLine(reply), `the Issue is lost:\n${reply.content}`).toMatch(/\*\*Issue:\*\* under performance\b/i);
+    },
+  },
 ];

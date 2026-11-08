@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { observationAccount, readCaPolicy } from "./ca-policy";
+import { correctiveActionIssue } from "./incident-issue";
 
 /**
  * Ported from the sibling app (its round-4 gate, 8 Nov 2026, dropped the sales triple). With SALES_SHORTFALL_OBJECT and
@@ -53,5 +54,11 @@ describe("SALES_OBSERVATION_ACCOUNT keeps the manager's words", () => {
     vi.stubEnv("CA_PERFORMANCE_REASON_ENABLED", "true");
     on();
     expect(readCaPolicy("can you write me a Ca for Odalys Fenmarrow for performance for october")).toMatchObject({ source: "sales_performance" });
+  });
+
+  it("the request's reason alone stays the Issue (QA's Bubbles round-5 gate, 8 Nov 2026)", () => {
+    vi.stubEnv("CA_SALES_POLICY_ENABLED", "true");
+    on();
+    expect(correctiveActionIssue("I need a corrective action for Remy Calder for under performance", "Remy Calder")).toBe("under performance");
   });
 });
