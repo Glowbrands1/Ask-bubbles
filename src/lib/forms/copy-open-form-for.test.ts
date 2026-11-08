@@ -23,6 +23,9 @@ describe("copyOpenFormFor", () => {
     ["names two people", "copy this form for Cormac Teague and Ines Marrow"],
     ["is not a copy request", "add that Cormac Teague saw it too"],
     ["is someone off the roster", "copy this form for Tamsin Oddway"],
+    // QA's round-5 gate (8 Nov 2026): the person named is the form to copy FROM, onto the open draft (SAME_FORM_COPY_NEW_PERSON's turn).
+    ["names the form to copy from", "can you create the same draft that we did with cormac teague by changing the name and position?"],
+    ["names the form to copy from, first name", "copy the same coaching form from Cormac onto this one"],
   ])("a turn that %s: null", (_why, question) => {
     expect(copyOpenFormFor({ ...open, question })).toBeNull();
   });
