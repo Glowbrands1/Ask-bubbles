@@ -46,4 +46,12 @@ describe("cardPolicyTurns", () => {
     const turns = ["Coaching form for Tamsin Holt for being on her phone", "Coaching form for Caoimhe O'Dallagher-Reyes"];
     expect(cardPolicyTurns(turns, "Caoimhe O'Dallagher-Reyes")).toEqual(["Coaching form for Caoimhe O'Dallagher-Reyes"]);
   });
+
+  it("a name-only answer behind the app's slot lines is no new request: every turn (the sibling app's round-4 gate)", () => {
+    const turns = [
+      "can you create a coaching form for attendance policy",
+      "The form is the Coaching Form.\nThe employee is Perrin Fennimore. Job title: Team Member. It happened at the store.\nPerrin Fennimore",
+    ];
+    expect(cardPolicyTurns(turns, "Perrin Fennimore")).toBe(turns);
+  });
 });
