@@ -80,7 +80,8 @@ export const NOV5_CODING3_BUBBLES_CA_TWIN_CASES: ReplayCase[] = [
     id: "nov5-coding3-twin-prior-coaching-none-on-file",
     title: "\"… There's no prior coaching on file.\": the card's prior-coaching note never says prior coaching is on file",
     report: `${REPORT}: "I need to write up <name> with a written warning … There's no prior coaching on file." → "Prior coaching note: prior coaching on file. No finalized record was required."`,
-    status: { open: "the note quotes \"prior coaching on file\" without the manager's \"no\": \"Prior coaching note: prior coaching on file.\"" },
+    // fixed in production by PRIOR_COACHING_DENIAL_ENABLED, QA round 4, 8 Nov 2026
+    status: "fixed",
     fixFlags: ["PRIOR_COACHING_DENIAL_ENABLED"],
     async run(t: T) {
       /*

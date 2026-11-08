@@ -1,6 +1,6 @@
 import { exitIntakeFixEnabled, exitShortcutWordsEnabled, exitStatedOnlyEnabled, resignMethodFollowupEnabled } from "@/lib/config/chat-quality-flags";
 
-import { JOIN } from "./bounded-context";
+import { JOIN } from "./turn-join";
 import { isQuestion } from "./employment-change";
 import { EXIT_DETAIL_FIELDS, EXIT_NOTICE_GROUP, EXIT_TYPE_GROUP } from "./exit-library";
 import { EXIT_DERIVED_KEYS, exitFactValues, JOB_ABANDONED, NO_CALL_FOR_SHIFT, readExitFacts, type ExitFacts } from "./exit-facts";

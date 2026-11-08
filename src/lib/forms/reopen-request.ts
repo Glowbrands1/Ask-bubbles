@@ -107,6 +107,16 @@ const ADDED_VERB_THEN_A_NEW_ONE = new RegExp(
 /** Words that point at a form when none is named: "edit the form", "show the draft". */
 const POINTS_AT_A_FORM = /\b(?:form|draft|paperwork)\b/i;
 
+/**
+ * REOPEN_NOT_OPEN_FORM_ENABLED (QA's round-4 gate in the sibling app, 8 Nov 2026): the reopen verb is the request
+ * itself, at the start of the turn ("show me the draft", "open her CA", "edit the form"), never a word inside an edit
+ * instruction ("the Must see behaviors … Make it in the format …").
+ */
+export function leadsWithReopenRequest(question: string): boolean {
+  const text = (question ?? "").replace(/\s+/g, " ").trim();
+  return LEADING_REQUEST_ANY_OPEN.test(text) || LEADING_REQUEST.test(text) || LEADS_WITH_AN_OPEN_VERB.test(text);
+}
+
 export function readReopenRequest(question: string): ReopenRequest | null {
   const text = (question ?? "").replace(/\s+/g, " ").trim();
   if (text === "" || text.length > 400) return null;
