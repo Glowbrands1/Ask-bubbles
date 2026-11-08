@@ -69,4 +69,24 @@ describe("currentFormRequestTurns (SECOND_REQUEST_OWN_ACCOUNT_ENABLED; QA's audi
       expect(startsNewRequest([FIRST, "no payroll deduct"], "create a corrective action for Remy Calder, his cash drawer was short $20 on 11/3")).toBe(true);
     });
   });
+
+  /*
+   * The sibling app's round-4 gate (8 Nov 2026, sf-s21 / sf-s22): a pasted document naming a form below its first line,
+   * "It needs to be a CA, not a coaching form", and the intent read's appended state lines are no request of their own.
+   */
+  describe("one request, whatever is pasted into it (the round-4 gate)", () => {
+    const first = "create a ca for remy calder - verbal\n146 sales\nbelow on add-on sales  but i need it in the format of the other ca";
+    it("a pasted document naming a form after its first line", () => {
+      const turns = [first, "Use this to make it: Please make the following edits and resubmit:\n\n1. **Kit Coaching Document:** This was signed on 10/16/2026."];
+      expect(currentFormRequestTurns(turns)).toEqual(turns);
+    });
+    it("choosing the form, with the state lines the intent read appends", () => {
+      const turns = [first, "The employee is Remy Calder. Job title: Team Member.\nIt needs to be a CA, not a coaching form\ncorrective action form\nWarning level: verbal."];
+      expect(currentFormRequestTurns(turns)).toEqual(turns);
+    });
+    it("a later request with its own incident still starts its own", () => {
+      const second = "I need another corrective action for Remy Calder, his cash drawer was short $20 on 11/3";
+      expect(currentFormRequestTurns([first, second])).toEqual([second]);
+    });
+  });
 });
