@@ -1219,6 +1219,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "OFF_ROSTER_CONFIRM_ENABLED",
   // Default-off fix flag (QA, 7 Nov 2026).
   "METRIC_CHOICE_ONE_QUESTION_ENABLED",
+  // coding 5: POLICY_SET_ASIDE_PLAN (default off): forced off with the others.
+  "POLICY_SET_ASIDE_PLAN_ENABLED",
   // QA round-5 batch (8 Nov 2026): the round-5 PRs' entries (lost in the batch merge), forced off with the others.
   "ACCOUNT_VERB_NOT_A_NAME_ENABLED",
   "CARD_COMPLAINT_NOT_ACCOUNT_ENABLED",
@@ -2667,6 +2669,16 @@ export function correctedDateKeptEnabled(): boolean {
  */
 export function missedShiftNotLatenessEnabled(): boolean {
   return envFlag("MISSED_SHIFT_NOT_LATENESS_ENABLED");
+}
+
+/**
+ * POLICY_SET_ASIDE_PLAN_ENABLED (the Bubbles live tester, QA, 8 Nov 2026, round 5 on; coding 5; default off; with
+ * PROPOSAL_POLICY_SET_ASIDE). "take the attendance policy off the form" made the card say "**Policy:** none", while
+ * its Action plan still reviewed the Attendance policy. On: the plan names no policy that was taken off, the ones
+ * left or "the applicable company policy" (`forms/policy-set-aside.ts`). Off, as before.
+ */
+export function policySetAsidePlanEnabled(): boolean {
+  return envFlag("POLICY_SET_ASIDE_PLAN_ENABLED");
 }
 // --- end coding 5 flags ---
 
