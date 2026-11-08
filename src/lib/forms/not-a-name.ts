@@ -1,6 +1,6 @@
 import { BCS_BRAND } from "@/config/company/brand";
 import { COMPANY_REPORTS } from "@/config/company/reports";
-import { notANameGuardEnabled } from "@/lib/config/chat-quality-flags";
+import { accountVerbNotANameEnabled, notANameGuardEnabled } from "@/lib/config/chat-quality-flags";
 import { COMPANY_LOCATIONS, locationNameKey } from "@/lib/locations";
 
 /**
@@ -47,6 +47,18 @@ const PLACEHOLDER = new Set([
  * employee once "test employe" was given in the same turn.
  */
 const NEVER_IN_A_NAME = new Set(["if", "possible", "possibly", "maybe", "perhaps", "whatever", "unless", "whether"]);
+
+/*
+ * ACCOUNT_VERB_NOT_A_NAME_ENABLED (QA round 5, sf-s38, 8 Nov 2026): "make me CA for <first name> failing to complete
+ * shifts" made the card for "<First> Failing". A verb that opens the account after a name ("for <name> failing to …",
+ * "… missing her shift", "… not showing up", "… being late") is never part of the name. The words are the request's
+ * reasons the intake already reads (`corrective-action-intake.ts`, "for missing / not / being / failing …").
+ */
+const ACCOUNT_VERBS = new Set([
+  "not", "missing", "skipping", "being", "failing", "leaving", "arriving", "using", "taking", "violating", "ignoring",
+  "refusing", "talking", "wearing", "coming", "showing", "attending", "calling", "opening", "closing", "forgetting",
+  "losing", "breaking", "mishandling", "clocking",
+]);
 
 /** Given alone, these are the whole team or nobody in particular. */
 const NOBODY_IN_PARTICULAR = new Set([
@@ -153,6 +165,7 @@ export function isNotAName(candidate: string | null | undefined): boolean {
   if (words.length === 0) return false;
   if (isThingRun(words)) return true;
   if (words.some((word) => NEVER_IN_A_NAME.has(word))) return true;
+  if (accountVerbNotANameEnabled() && words.some((word) => ACCOUNT_VERBS.has(word))) return true;
   if (words.every((word) => NOBODY_IN_PARTICULAR.has(word))) return true;
   if (words.length >= 2 && LEADING_VERB.has(words[0]!)) return true;
   return PLACE_KEYS.has(locationNameKey(candidate));

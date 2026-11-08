@@ -1136,6 +1136,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "OFF_ROSTER_CONFIRM_ENABLED",
   // Default-off fix flag (QA, 7 Nov 2026).
   "METRIC_CHOICE_ONE_QUESTION_ENABLED",
+  // coding 4: ACCOUNT_VERB_NOT_A_NAME (sf-s38; default off): forced off with the others.
+  "ACCOUNT_VERB_NOT_A_NAME_ENABLED",
 ] as const;
 
 /**
@@ -3077,4 +3079,14 @@ export function removePolicyNotNamedEnabled(): boolean {
  */
 export function metricChoiceOneQuestionEnabled(): boolean {
   return envFlag("METRIC_CHOICE_ONE_QUESTION_ENABLED");
+}
+
+/**
+ * ACCOUNT_VERB_NOT_A_NAME_ENABLED (ported from the sibling app, QA round 5, sf-s38, 8 Nov 2026; same flag in both apps;
+ * default off). "make me CA for <first name> failing to complete shifts" made the card for "<First> Failing". On, with
+ * NOT_A_NAME_GUARD: a verb that opens the account ("failing", "missing", "not", "being", …) is never part of a name
+ * (`forms/not-a-name.ts`). Off, as before.
+ */
+export function accountVerbNotANameEnabled(): boolean {
+  return envFlag("ACCOUNT_VERB_NOT_A_NAME_ENABLED");
 }
