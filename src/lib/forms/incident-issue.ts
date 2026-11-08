@@ -6,6 +6,7 @@ import {
   levelRequestDateEnabled,
   levelStepNotAccountEnabled,
   policyCorrectionNotAccountEnabled,
+  requestParticipleLeadEnabled,
   typedNameEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { COMPANY_JOB_TITLES } from "@/config/company/job-titles";
@@ -13,6 +14,7 @@ import { isPolicyCorrection } from "@/lib/ai/policy-correction-turn";
 import { businessToday } from "@/lib/business-date";
 
 import { withoutLevelAndStepClauses } from "./account-clauses";
+import { JOIN } from "./bounded-context";
 import { isSalesPolicyReading, observationAccount, readCaPolicy } from "./ca-policy";
 import { onlyDeniesAFault } from "./denial-no-account";
 import { JOIN } from "./turn-join";
@@ -42,6 +44,46 @@ import { statedWarningLevel } from "./warning-level";
 
 const REQUEST =
   /\b(?:warning|write[- ]?up|corrective\s+action(?:\s+form)?|ca|c\/a|dpoa)\s+(?:for|about|over|regarding|re:?)\s+([^.;!?\n]+)/gi;
+/*
+ * REQUEST_PARTICIPLE_LEAD_ENABLED (port of the sibling app's flag; its round-5 live check, 8 Nov 2026): "I need a
+ * corrective action made for under performance. <A> was below on PPTA, …" made the card's Issue the whole request, "I
+ * need a corrective action made for under performance. <A> was below …": "made / done / written up for" after the form
+ * was not read as part of the request. With the flag the request reads it, and a request whose for-clause is only a
+ * sales reason ("under performance") leaves the account to the sentence that gives it.
+ */
+const PARTICIPLE = String.raw`(?:made|done|written(?:\s+up)?|put\s+together|drawn\s+up)`;
+const FORM = String.raw`(?:warning|write[- ]?up|corrective\s+action(?:\s+form)?|ca|c\/a|dpoa)`;
+const REQUEST_PARTICIPLE = new RegExp(String.raw`\b${FORM}\s+(?:${PARTICIPLE}\s+)?(?:for|about|over|regarding|re:?)\s+([^.;!?\n]+)`, "gi");
+const REQUEST_PARTICIPLE_KEEPING_DECIMALS = new RegExp(
+  String.raw`\b${FORM}\s+(?:${PARTICIPLE}\s+)?(?:for|about|over|regarding|re:?)\s+((?:[^.;!?\n]|(?<=\d)\.(?=\d))+)`,
+  "gi",
+);
+const PARTICIPLE_REQUEST_LEAD = new RegExp(
+  String.raw`^\s*(?:please\s+)?(?:(?:can|could)\s+you\s+)?(?:(?:i\s+)?(?:need|want)\s+(?:to\s+)?)?(?:(?:create|make|start|open|do|file|write|draft|fill\s+out|put\s+together)\s+(?:me\s+)?)?(?:(?:a|an|another|new)\s+)?(?:(?:verbal|written|final)\s+)?${FORM}\b\s*${PARTICIPLE}\s+for\s+`,
+  "i",
+);
+
+function salesReasonOnly(words: string): boolean {
+  if (words.split(/\s+/).length > 5) return false;
+  const reading = readCaPolicy(words);
+  return reading.stated === null && isSalesPolicyReading(reading);
+}
+
+function requestPattern(): RegExp {
+  if (requestParticipleLeadEnabled()) return decimalNotSentenceEndEnabled() ? REQUEST_PARTICIPLE_KEEPING_DECIMALS : REQUEST_PARTICIPLE;
+  return decimalNotSentenceEndEnabled() ? REQUEST_KEEPING_DECIMALS : REQUEST;
+}
+
+/** REQUEST_PARTICIPLE_LEAD_ENABLED: "I need a corrective action made for under performance." is a request and its sales reason, no account. */
+function isRequestReasonOnly(sentence: string): boolean {
+  if (!requestParticipleLeadEnabled()) return false;
+  const lead = PARTICIPLE_REQUEST_LEAD.exec(sentence);
+  if (!lead) return false;
+  const rest = sentence.slice(lead[0].length).replace(/[.!?]+$/, "").trim();
+  if (!rest || rest.split(/\s+/).length > 5) return false;
+  const reading = readCaPolicy(rest);
+  return reading.stated === null && isSalesPolicyReading(reading);
+}
 const CUT = /\s*(?:,|\s-\s|\s—\s|\band\b(?=\s+(?:a|an|the|also|then|she|he|they|i|we|please|pls)\b)|\bplease\b|\bpls\b|\bthanks?\b|\bthank you\b)/i;
 const NOT_AN_ISSUE = /^(?:her|him|them|this|that|it|the\s+employee|my\s+employee|an?\s+employee|today|tomorrow|yesterday)$/i;
 /** "violation is that …" names the offense. The request's for-clause often names only the person. */
@@ -92,7 +134,7 @@ function issueFromRequest(text: string, employeeName: string | null): string | n
   const personWords = new Set(person.split(/\s+/).filter(Boolean));
   for (const turn of [...turnsOf(text)].reverse()) {
     let found: string | null = null;
-    for (const match of turn.matchAll(decimalNotSentenceEndEnabled() ? REQUEST_KEEPING_DECIMALS : REQUEST)) {
+    for (const match of turn.matchAll(requestPattern())) {
       let raw = match[1]!;
       // "a CA for Jordan Testperson for cash handling", "… for jordan testperson - cash handling",
       // "CA for jordan testperson, cash handling": the person, then the issue.
@@ -237,11 +279,14 @@ function accountIssue(text: string): string | null {
     const sentences = [...turn.matchAll(decimalNotSentenceEndEnabled() ? SENTENCE_KEEPING_DECIMALS : SENTENCE)]
       .map((match) => withoutLevelRequestLead(match[0].trim()))
       .filter((sentence) => sentence.length >= 3 && sentence.length <= 180);
-    const hits = sentences
+    const found = sentences
       .map((sentence, index) => ({ sentence, index }))
       .filter(({ sentence }) => !NOT_THE_ACCOUNT.test(sentence) && !onlyDatesTheAccount(sentence) && describesIncident(sentence))
       .filter(({ sentence }) => !(issueAfterRequestReasonEnabled() && reasonOnlyRequest(sentence)))
       .filter(({ sentence }) => !onlyCorrectsPolicyOrLevel(sentence));
+    // REQUEST_PARTICIPLE_LEAD_ENABLED: with the account in another sentence, the request's sales reason is left out.
+    const reasonOnly = found.filter(({ sentence }) => isRequestReasonOnly(sentence));
+    const hits = reasonOnly.length > 0 && reasonOnly.length < found.length ? found.filter((hit) => !reasonOnly.includes(hit)) : found;
     if (hits.length === 0) continue;
     let start = hits.length - 1;
     while (start > 0 && hits[start]!.index === hits[start - 1]!.index + 1) start -= 1;
@@ -286,6 +331,11 @@ export function correctiveActionIssue(rawSaid: string, employeeName: string | nu
   const fromRequest = issueFromRequest(text, employeeName);
   const reasonFirst = reasonThenAccount(fromRequest, text, employeeName);
   if (reasonFirst) return reasonFirst;
+  // REQUEST_PARTICIPLE_LEAD_ENABLED: a for-clause that is only a sales reason ("under performance") gives way to the account.
+  if (requestParticipleLeadEnabled() && fromRequest && salesReasonOnly(fromRequest)) {
+    const account = accountIssue(text);
+    if (account) return accountOnly(account, employeeName);
+  }
   if (!typedNameEnabled()) return accountOnly(fromRequest, employeeName);
   if (fromRequest && !titleAndPlaceOnly(fromRequest, employeeName)) return accountOnly(fromRequest, employeeName);
   return accountOnly(accountIssue(text), employeeName);
