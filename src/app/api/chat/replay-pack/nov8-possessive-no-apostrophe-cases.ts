@@ -76,7 +76,9 @@ export const NOV8_POSSESSIVE_NO_APOSTROPHE_CASES: ReplayCase[] = [
     id: "nov8-possessive-apostrophe-guard",
     title: "must not change: \"bring up Quilla's corrective action\" (with the apostrophe) opens it, with round 5's flags",
     report: REPORT,
-    status: { open: "production's flags here are before round 5's reopen flags" },
+    // Changed on purpose (8 Nov 2026): round 5's reopen flags (PAST_FORMS_BEFORE_LIBRARY, REOPEN_BY_ANY_OPEN_VERB,
+    // REOPEN_NOT_OPEN_FORM) are live in production-flags.json since main 97c051ec, so the guard holds with production's flags.
+    status: "fixed",
     fixFlags: ROUND_5,
     async run(t) {
       const id = await caOnFile(t);

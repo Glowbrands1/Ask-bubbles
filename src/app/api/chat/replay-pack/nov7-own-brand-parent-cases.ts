@@ -26,7 +26,8 @@ export const NOV7_OWN_BRAND_PARENT_CASES: ReplayCase[] = [
     id: "nov7-own-brand-parent",
     title: "\"cite animals in the workplace policy\": the reply names only Buff City Soap, and the manual's title stays",
     report: "QA's live tester, 7 Nov 2026 (OWN_BRAND_ONLY live)",
-    status: { open: "the reply names the operating company beside this brand" },
+    // fixed in production by OWN_BRAND_PARENT_ENABLED, QA round 4, 8 Nov 2026
+    status: "fixed",
     fixFlags: ["OWN_BRAND_ONLY_ENABLED", "OWN_BRAND_PARENT_ENABLED"],
     async run(t) {
       t.directory(STAFF);

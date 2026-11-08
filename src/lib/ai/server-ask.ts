@@ -91,7 +91,9 @@ import {
   typoReadingCopyEnabled,
   caSalesPolicyEnabled,
   pastFormsBeforeLibraryEnabled,
+  coachingCardPolicyEnabled,
   cardPolicyOwnRequestEnabled,
+  outOfDateIsTheProposalEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { gateTexts, searchWithPlan } from "./continuation";
 import { fieldsFromManagerText, mergeConfirmed, retainFieldsInReply } from "./form-field-state";
@@ -154,6 +156,7 @@ import type { AskRequest, AskResponse } from "./types";
 import { keepManagerActionPlan } from "./manager-action-plan-reply";
 import { withoutReportTurnsForForm } from "./report-turns";
 import { withoutSourceMarkers, withoutSourceNotes } from "./source-note";
+import { asksWhatOutOfDateMeans, cardTurn, outOfDateAnswer } from "./out-of-date-is-the-proposal";
 import { withManagerNameGuard } from "./manager-name-guard";
 import { withJobTitleFromWords } from "./job-title-from-words";
 import { withCoachingWhatHappened } from "./coaching-what-happened";
@@ -165,6 +168,9 @@ import { withReplyMatchesCard } from "./reply-matches-card";
 import { withTitleOfTheEmployee } from "./title-of-the-employee";
 import { withUnderPerformanceExplained } from "./under-performance-explained";
 import { withProposalEditRules } from "./proposal-edit-rules";
+import { cardTurnQuestion, takeOffStaysCard } from "./take-off-stays-card";
+import { cardRequestTurn, listPolicyOnCard, withPolicyListedAtCreate } from "./list-policy-ask";
+import { cardMetaTurn } from "./card-meta-turn";
 import { withFormTypeSwitch, withSwitchNote, withSwitchSources } from "./form-type-switch";
 import { withAdditionalStore } from "./additional-store";
 import { withOutOfScopePlace } from "./out-of-scope-place";
@@ -227,6 +233,13 @@ export async function answerQuestion(
   actor: ChatActor,
   memory: { memoryOwnerId?: string } = {},
 ): Promise<AskResponse> {
+  // OUT_OF_DATE_IS_THE_PROPOSAL_ENABLED: "what does out of date mean" in a form chat is about the card (ai/out-of-date-is-the-proposal.ts).
+  const outOfDateTurn = outOfDateIsTheProposalEnabled() && asksWhatOutOfDateMeans(asked) ? cardTurn(asked) : null;
+  if (outOfDateTurn) return outOfDateAnswer(await answerQuestion(outOfDateTurn, actor, memory));
+  // CREATE_COMMAND_POINTS_TO_CARD_ENABLED / CARD_COMPLAINT_NOT_ACCOUNT_ENABLED: "create it" or "this proposal is out of
+  // date" with only a card open is about the card: kept as it was, answered in one line (`ai/card-meta-turn.ts`).
+  const aboutTheCard = cardMetaTurn(asked);
+  if (aboutTheCard) return aboutTheCard.card ?? aboutTheCard.answer(await answerQuestion({ ...asked, question: aboutTheCard.from }, actor, memory));
   // TITLE_OF_THE_EMPLOYEE_ENABLED: a title the manager attached to another named person is never the card's Position (`ai/title-of-the-employee.ts`).
   // UNDER_PERFORMANCE_EXPLAINED_ENABLED: Under Performance asked for, the Standards of Conduct cited: the reply says why (`ai/under-performance-explained.ts`).
   const answered = withUnderPerformanceExplained(
@@ -406,7 +419,11 @@ async function answerQuestionCore(
    * phrased, is not a question. See `question-not-form.ts`. Behind
    * QUESTION_NOT_FORM_ENABLED; off, every turn is routed as before.
    */
-  const askedQuestion = questionNotFormEnabled() && isQuestionNotForm(request.question, request.history);
+  // TAKE_OFF_STAYS_CARD_ENABLED: "take the policy off" with a card open is a card turn, never a question.
+  const takeOffOnCard = takeOffStaysCard(request);
+  // LIST_POLICY_IS_EDIT_ENABLED: "please list the policy" with only a card open is a card turn, never a question.
+  const listPolicyCard = listPolicyOnCard(request);
+  const askedQuestion = !takeOffOnCard && !listPolicyCard && questionNotFormEnabled() && isQuestionNotForm(request.question, request.history);
   if (intentExtractionEnabled() && !askedQuestion) {
     const prepared = await applyIntentExtraction({ request, actor });
     if (prepared.clarification) return prepared.clarification;
@@ -573,17 +590,19 @@ async function answerQuestionCore(
      * (`reader/hook.ts`). Off, `readerPropose` is the proposal call itself.
      */
     const reading = askedQuestion ? null : startFormReading(request, actor);
-    const proposalQuestion = await questionForProposal(request, actor);
+    // LIST_POLICY_IS_EDIT_ENABLED: with only a card open, the card is proposed again from the manager's last turn.
+    const proposalQuestion = listPolicyCard ? cardRequestTurn(request) : await questionForProposal(request, actor);
     // AI_READS_CODE_CHECKS_ENABLED: no "couldn't find" line about the name the reader put on the card.
-    const proposal = askedQuestion ? null : withoutStaleRosterNote(await deliverFormProposal({
+    const proposeFrom = async (question: string, questionMessageId = request.questionMessageId) => withoutStaleRosterNote(await deliverFormProposal({
       request,
       actor,
-      question: proposalQuestion,
-      decorate: (response) => decorateFormAnswer(request, actor, response),
+      question,
+      // LIST_POLICY_IS_EDIT_ENABLED: the card shows its policy line, or says the policy is listed on the draft at Create.
+      decorate: async (response) => (listPolicyCard ? withPolicyListedAtCreate(await decorateFormAnswer(request, actor, response)) : decorateFormAnswer(request, actor, response)),
       propose: readerPropose(reading, request, (question) => proposeFormForTurn({
       history: request.history,
       question,
-      questionMessageId: request.questionMessageId,
+      questionMessageId,
       actor,
       continueTemplateKey: request.continueProposalTemplateKey,
       summaries,
@@ -629,8 +648,22 @@ async function answerQuestionCore(
       priorFormsOnFile: (employeeName, locationId) => priorFormsReadingForChat(actor, employeeName, locationId),
     })),
     }));
+    let proposal = askedQuestion ? null : await proposeFrom(proposalQuestion);
+    // TAKE_OFF_STAYS_CARD_ENABLED: a take-off the open intake did not carry on is proposed again from the manager's
+    // last turn; this turn's words stay in the request, for the card's own readers. Off, never.
+    if (takeOffOnCard && !proposal) {
+      // The card is proposed from the manager's last request turn, so its draft is written from that turn's words; this
+      // take-off turn is added to its sources, so the draft also sees the policy taken off (coding 5, 8 Nov 2026).
+      const card = await proposeFrom(cardTurnQuestion(request), (request.history ?? []).filter((turn) => turn.role === "user").at(-1)?.id ?? request.questionMessageId);
+      const fp = card?.formProposal;
+      proposal = fp && request.questionMessageId && !fp.sourceMessageIds.includes(request.questionMessageId)
+        ? { ...card, formProposal: { ...fp, sourceMessageIds: [...fp.sourceMessageIds, request.questionMessageId] } }
+        : card;
+    }
     // Flags off: decoration returns the same proposal, and the forms-library
     // answer returns here, before retrieval.
+    // COACHING_CARD_POLICY_ENABLED: a Coaching card cites the policy its account falls under (`forms/coaching-card-policy.ts`).
+    if (proposal && coachingCardPolicyEnabled()) return await (await import("./coaching-card-policy-answer")).withCoachingCardPolicyOnAnswer(proposal, request, readManual);
     if (proposal) return proposal;
     // AMOUNT_TURN_STAYS_ENABLED: "i dont know the amount" with a card open is the form's, not a policy question.
     const amountReply = amountTurnReply(request);

@@ -43,7 +43,8 @@ export const NOV7_DESCRIBED_ATTENDANCE_CARD_CASES: ReplayCase[] = [
     id: "nov7-described-attendance-late-opening",
     title: "\"create verbal ca for <name> for opening store late on 10-1-26 …\" cites Attendance (Late Opening), never \"as you said\"",
     report: "QA's finding (g), 7 Nov 2026 (the manager's words, 6 Nov 2026 18:18Z)",
-    status: { open: "no policy named, so the card cites none" },
+    // fixed in production by DESCRIBED_ATTENDANCE_CARD_ENABLED, QA round 4, 8 Nov 2026
+    status: "fixed",
     fixFlags: FIX,
     run: (t) =>
       citesAttendance(
@@ -55,7 +56,8 @@ export const NOV7_DESCRIBED_ATTENDANCE_CARD_CASES: ReplayCase[] = [
     id: "nov7-described-attendance-late-verbal-ca",
     title: "\"my team member <name> was late on 10-20-26, verbal ca\" cites Attendance, never \"as you said\"",
     report: "QA, live tester, 7 Nov 2026 (the card also needs LEVEL_ENDS_REQUEST)",
-    status: { open: "no card in production (LEVEL_ENDS_REQUEST off); with it, the card cites no policy" },
+    // fixed in production by DESCRIBED_ATTENDANCE_CARD_ENABLED, QA round 4, 8 Nov 2026
+    status: "fixed",
     fixFlags: [...FIX, "LEVEL_ENDS_REQUEST_ENABLED"],
     run: (t) => citesAttendance(t, "my team member Wrenna Calloway was late on 10-20-26, verbal ca"),
   },
@@ -63,7 +65,8 @@ export const NOV7_DESCRIBED_ATTENDANCE_CARD_CASES: ReplayCase[] = [
     id: "nov7-described-attendance-absent",
     title: "\"create a ca for <name> for being absent from her shift on 10-22-26\" cites Attendance, never \"as you said\"",
     report: "Pau's option A, 7 Nov 2026 (an absence, as QA asked)",
-    status: { open: "no policy named, so the card cites none" },
+    // fixed in production by DESCRIBED_ATTENDANCE_CARD_ENABLED, QA round 4, 8 Nov 2026
+    status: "fixed",
     fixFlags: FIX,
     run: (t) => citesAttendance(t, "create a ca for Wrenna Calloway for being absent from her shift on 10-22-26"),
   },
