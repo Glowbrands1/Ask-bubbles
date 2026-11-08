@@ -1178,6 +1178,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 2: SOURCE_NOTE_GUARD (default off): forced off with the others.
   "SOURCE_NOTE_GUARD_ENABLED",
   "UNDER_PERFORMANCE_EXPLAINED_ENABLED",
+  // coding 2: POLICY_CORRECTION_NOT_ACCOUNT (default off): forced off with the others.
+  "POLICY_CORRECTION_NOT_ACCOUNT_ENABLED",
   "NO_NOTICE_NO_DATE_ENABLED",
   "ISSUE_IS_THE_ACCOUNT_ENABLED",
   // coding 2: DENIAL_NO_ACCOUNT (default off): forced off with the others.
@@ -3002,6 +3004,18 @@ export function asYouSaidManagerWordsEnabled(): boolean {
  */
 export function underPerformanceExplainedEnabled(): boolean {
   return envFlag("UNDER_PERFORMANCE_EXPLAINED_ENABLED");
+}
+
+// coding 2: POLICY_CORRECTION_NOT_ACCOUNT
+/**
+ * POLICY_CORRECTION_NOT_ACCOUNT_ENABLED (QA, 8 Nov 2026, ported from the sibling app's round-5 live tester, item 3;
+ * default off; same flag in both apps). "it should be under performance not standard of conduct", turn 4 of a sales
+ * Corrective Action, became the card's Issue. With this flag on, a short sentence that only says which policy or
+ * category applies ("it should be X not Y", "it's X not Y", "wrong policy") is no account (`ai/policy-correction-turn.ts`,
+ * `forms/incident-issue.ts`); the turn stays in the request for the policy readers. Off, as before.
+ */
+export function policyCorrectionNotAccountEnabled(): boolean {
+  return envFlag("POLICY_CORRECTION_NOT_ACCOUNT_ENABLED");
 }
 
 /**
