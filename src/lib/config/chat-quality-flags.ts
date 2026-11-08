@@ -1190,6 +1190,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "OFF_ROSTER_CONFIRM_ENABLED",
   // Default-off fix flag (QA, 7 Nov 2026).
   "METRIC_CHOICE_ONE_QUESTION_ENABLED",
+  // coding 5: REQUEST_PARTICIPLE_LEAD (port, default off): forced off with the others.
+  "REQUEST_PARTICIPLE_LEAD_ENABLED",
 ] as const;
 
 /**
@@ -2554,6 +2556,16 @@ export function formPatchReaderFixesEnabled(): boolean {
  */
 export function editPolicyAskEnabled(): boolean {
   return envFlag("EDIT_POLICY_ASK_ENABLED") && formPatchReducerEnabled();
+}
+/**
+ * REQUEST_PARTICIPLE_LEAD_ENABLED (port of the sibling app's flag; its round-5 live check, 8 Nov 2026; coding 5; same
+ * flag in both apps; default off). "I need a corrective action made for under performance. <A> was below on PPTA, …"
+ * made the card's Issue the whole request. On: "<form> made / done / written up for …" is read as the request, and a
+ * request whose for-clause is only a sales reason leaves the Issue to the account (`forms/incident-issue.ts`). Off, as
+ * before.
+ */
+export function requestParticipleLeadEnabled(): boolean {
+  return envFlag("REQUEST_PARTICIPLE_LEAD_ENABLED");
 }
 // --- end coding 5 flags ---
 
