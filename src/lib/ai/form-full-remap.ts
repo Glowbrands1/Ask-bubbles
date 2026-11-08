@@ -32,8 +32,8 @@ import { supportsInlineDraft } from "@/lib/forms/inline-draft";
 import { TEMPLATE_SEEDS } from "@/lib/forms/library";
 import { statedPriorActions } from "@/lib/forms/prior-actions";
 import { readLocationMentions, rosterLocationName } from "@/lib/forms/location-mention";
-import { payrollDeductAmount, payrollDeductFromConversation } from "@/lib/forms/payroll-deduct";
-import { PAYROLL_DEDUCT_AMOUNT_QUESTION } from "@/lib/forms/payroll-deduct-amount";
+import { payrollDeductFromConversation } from "@/lib/forms/payroll-deduct";
+import { managerPayrollAmount as statedDeductionAmount, PAYROLL_DEDUCT_AMOUNT_QUESTION } from "@/lib/forms/payroll-deduct-amount";
 import { extractEmployeeNames, extractJobTitle, statedJobTitle } from "@/lib/forms/proposal";
 import { spokenDates } from "@/lib/forms/relative-date";
 import { typedEmployeeName } from "@/lib/forms/typed-employee-name";
@@ -1137,7 +1137,7 @@ function monthDayIso(year: number, month: number, day: number): string | null {
 
 function managerPayrollAmount(text: string): string | null {
   const stripped = text.replace(POLICY_QUOTE, " ");
-  return payrollDeductAmount(stripped) ?? clausePayrollAmount(stripped);
+  return statedDeductionAmount(stripped) ?? clausePayrollAmount(stripped);
 }
 
 function clausePayrollAmount(text: string): string | null {

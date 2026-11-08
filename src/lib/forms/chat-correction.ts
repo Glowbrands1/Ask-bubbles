@@ -35,7 +35,7 @@ import {
   payrollAmountPrompt,
   statedPayrollDeductAmount,
 } from "./payroll-deduct-amount";
-import { formEditSingleWriterEnabled, payrollDeductAmountFieldEnabled } from "@/lib/config/chat-quality-flags";
+import { formEditSingleWriterEnabled, payrollDeductAmountFieldEnabled, priorActionsNoSignedEnabled } from "@/lib/config/chat-quality-flags";
 import { syncCorrectiveActionPlan } from "./ca-action-plan-sync";
 import { extractEmployeeNames, samePerson as samePersonByName } from "./proposal";
 import { clausesOf, LEAD_IN, separateQuestions } from "./message-parts";
@@ -49,7 +49,7 @@ import { correctCaFromChat } from "./ca-chat-corrections";
 const EMPLOYEE_NAME_KEY = "employee_name";
 import { enforcePersonEdit } from "./responsibility";
 import { namesIncidentTopic } from "./corrective-action-intake";
-import { NO_PRIOR_ACTION, statedPriorActions } from "./prior-actions";
+import { NO_PRIOR_ACTION, priorLineDate, statedPriorActions } from "./prior-actions";
 import {
   WARNING_LEVEL_KEYS,
   WARNING_TYPE_KEY,
@@ -1118,7 +1118,8 @@ const PRIOR_ACTIONS_KEY = "prior_actions";
 /** The step and the signed date a Prior Actions line names, for telling a repeat. */
 function priorLineKey(line: string): string {
   const step = line.split(" — ")[0]!.trim().toLowerCase();
-  const date = /signed\s+(\d{2}\/\d{2}\/\d{4})/i.exec(line)?.[1] ?? "";
+  // PRIOR_ACTIONS_NO_SIGNED_ENABLED: the date of "— signed <date>", "— finalized <date>" or "— <date>".
+  const date = priorActionsNoSignedEnabled() ? priorLineDate(line) : (/signed\s+(\d{2}\/\d{2}\/\d{4})/i.exec(line)?.[1] ?? "");
   return `${step}|${date}`;
 }
 

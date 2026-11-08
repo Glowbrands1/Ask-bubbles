@@ -34,7 +34,8 @@ export const NOV7_DENIAL_NO_ACCOUNT_CASES: ReplayCase[] = [
       id: `nov7-denial-no-account-${key}`,
       title: `"${said}": the denial is no Issue on the card`,
       report: REPORT,
-      status: { open: "the card shows \"**Issue:** not late\"" },
+      // Was open in production ("the card shows **Issue:** not late"); holds since flip 8 (QA, 8 Nov 2026 00:05 PHT), so it is fixed.
+      status: "fixed",
       fixFlags: FIX,
       async run(t) {
         const thread = start(t);
@@ -47,7 +48,8 @@ export const NOV7_DENIAL_NO_ACCOUNT_CASES: ReplayCase[] = [
       id: `nov7-denial-no-account-asks-${key}`,
       title: `"${said}": the card asks what happened`,
       report: REPORT,
-      status: { open: "the card drafts \"from what you've described\" with no \"what happened\" ask" },
+      // Was open in production ("the card drafts from what you've described with no what happened ask"); holds since flip 8 (QA, 8 Nov 2026 00:05 PHT), so it is fixed.
+      status: "fixed",
       fixFlags: FIX,
       // The ask is decided in the protected ai/form-proposal.ts (awaitingIncident); Pau approved those lines (7 Nov 2026).
       async run(t) {
