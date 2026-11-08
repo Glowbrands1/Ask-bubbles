@@ -1,0 +1,54 @@
+import { expect, vi } from "vitest";
+
+import { STAFF, WEST_DODGE, type DirectoryRow, type ReplayCase } from "./cases";
+
+/**
+ * ============================================================================
+ * "WHAT DOES OUT OF DATE MEAN" AFTER A CARD IS ABOUT THE PROPOSAL (QA round 5, sf-s38; production, 7 Nov 2026)
+ * ============================================================================
+ *
+ * The manager's words (the employee invented): a CA request, the same again, "create it", then "what does out of date
+ * mean" (Create had answered "This proposal is out of date: …"). The turn went to the knowledge answer; in the sibling app it replied
+ * about tanning-bed schematics with a "[S1]-" left in. OUT_OF_DATE_IS_THE_PROPOSAL_ENABLED
+ * (`ai/out-of-date-is-the-proposal.ts`): the answer is about the card, no retrieval, no source tag, the card kept.
+ */
+const RHEA: DirectoryRow = {
+  id: "e-rhea-calloway-s38-ood",
+  firstName: "Rhea",
+  lastName: "Calloway",
+  preferredFirstName: null,
+  employmentStatus: "active",
+  locationIds: ["loc-264"],
+  positionName: "Team Member Part Time",
+};
+const T1 =
+  "make me an CA for Rhea Calloway missing her saturday and sunday shifts due to wanting to go home for the weekend but failed to communicate proporley";
+
+export const NOV8_OUT_OF_DATE_IS_THE_PROPOSAL_CASES: ReplayCase[] = [
+  {
+    id: "nov8-s38-what-does-out-of-date-mean",
+    title: "\"what does out of date mean\" after a CA card: answered about the proposal, never from the knowledge base",
+    report: "QA round 5, sf-s38 (the sibling app's production chat, 7 Nov 2026; ported)",
+    status: { open: "the turn goes to the knowledge answer" },
+    // Create needs the name read without "missing" (ACCOUNT_VERB_NOT_A_NAME), or it refuses this very card as out of date.
+    fixFlags: ["OUT_OF_DATE_IS_THE_PROPOSAL_ENABLED", "ACCOUNT_VERB_NOT_A_NAME_ENABLED"],
+    async run(t) {
+      vi.setSystemTime(new Date("2026-11-07T16:14:00Z"));
+      t.directory([...STAFF, RHEA]);
+      t.as("location_manager", WEST_DODGE);
+      const thread = t.thread();
+      await thread.say(T1);
+      await thread.say(T1);
+      await thread.say("create it");
+      const reply = await thread.say("what does out of date mean");
+      expect(reply.content, `not about the proposal:\n${reply.content}`).toMatch(/Which part of the proposal looks out of date\?/);
+      expect(reply.content, `a knowledge answer:\n${reply.content}`).not.toMatch(/grounded answer|knowledge base|schematic/i);
+      expect(reply.content, `a source tag reached the reply:\n${reply.content}`).not.toMatch(/\[\s*S\d/i);
+      expect(thread.proposal, `the card was dropped:\n${reply.content}`).toMatchObject({ templateKey: "dpoa" });
+      // Create from the rebuilt card drafts from the account, never from this question (coding 2's review).
+      await thread.create();
+      expect(t.draftPrompts().join("\n"), "the draft is written from the meta question").not.toMatch(/what does out of date mean/i);
+      expect(t.draftPrompts().join("\n"), "the draft is not written from the account").toMatch(/missing her saturday and sunday shifts/i);
+    },
+  },
+];
