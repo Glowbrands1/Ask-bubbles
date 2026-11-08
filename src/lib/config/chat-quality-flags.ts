@@ -1172,6 +1172,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 2: SOURCE_NOTE_GUARD (default off): forced off with the others.
   "SOURCE_NOTE_GUARD_ENABLED",
   "UNDER_PERFORMANCE_EXPLAINED_ENABLED",
+  // coding 2: EXIT_ANSWER_NOT_A_CORRECTION (default off): forced off with the others.
+  "EXIT_ANSWER_NOT_A_CORRECTION_ENABLED",
   "NO_NOTICE_NO_DATE_ENABLED",
   "ISSUE_IS_THE_ACCOUNT_ENABLED",
   // coding 2: DENIAL_NO_ACCOUNT (default off): forced off with the others.
@@ -3020,6 +3022,19 @@ export function policyChangeRelevantEnabled(): boolean {
  */
 export function exitStatedOnlyEnabled(): boolean {
   return envFlag("EXIT_STATED_ONLY_ENABLED");
+}
+
+// coding 2: EXIT_ANSWER_NOT_A_CORRECTION
+/**
+ * EXIT_ANSWER_NOT_A_CORRECTION_ENABLED (QA, the Bubbles live tester, 8 Nov 2026; pre-existing; default off; same flag
+ * in both apps). An exit request whose turn 1 says "store items not returned … not eligible for rehire" lost its
+ * address, last day worked, items, key, wage/bonus and rehire from turn 2 on: "not returned" and "not eligible" were
+ * read as names negated, so the turn counted as a name correction, its other words ("mo", "drop wage", the street)
+ * as people, and the turns about this form started after it. With this flag on, a negated word that is one of the
+ * exit form's own terms is no person corrected (`forms/proposal.ts`, `settle`). Off, as before.
+ */
+export function exitAnswerNotACorrectionEnabled(): boolean {
+  return envFlag("EXIT_ANSWER_NOT_A_CORRECTION_ENABLED");
 }
 
 /**
