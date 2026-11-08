@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { AskResponse } from "@/lib/ai/types";
-import { editPolicyAskEnabled, formEditSingleWriterEnabled, formPatchReaderFixesEnabled, stepBDateSaidEnabled, stepBMakeItAboutAccountEnabled } from "@/lib/config/chat-quality-flags";
+import { editPolicyAskEnabled, formEditSingleWriterEnabled, formPatchReaderFixesEnabled, stepBDateSaidEnabled, stepBDateWithAboutEnabled, stepBMakeItAboutAccountEnabled } from "@/lib/config/chat-quality-flags";
 import { madeAbout } from "@/lib/ai/make-it-about";
 import { saidFormDate } from "./form-date-said";
 import { syncCorrectiveActionPlan } from "./ca-action-plan-sync";
@@ -252,14 +252,33 @@ export async function patchActiveForm(input: PatchTurnInput): Promise<AskRespons
      * says what the form is about, whose patch does not set the form's account, goes to the old path before anything
      * is written: EDIT_MAKE_IT_ABOUT's revision rewrites the account there.
      */
-    if (
+    // STEP_B_DATE_SAID_ENABLED: the date the manager says the form takes (read before the make-it-about guard below).
+    const saidDate = stepBDateSaidEnabled() ? saidFormDate(input.question, input.today) : null;
+    const dateToWrite = saidDate !== null && "form_date" in before && before.form_date?.value !== saidDate ? saidDate : null;
+    const aboutNotRewritten =
       stepBMakeItAboutAccountEnabled() &&
       madeAbout(input.question) !== null &&
       ACCOUNT_KEYS.some((key) => writable.has(key)) &&
-      !ACCOUNT_KEYS.some((key) => key in reading.patch.set)
-    ) {
+      !ACCOUNT_KEYS.some((key) => key in reading.patch.set);
+    /*
+     * STEP_B_DATE_WITH_ABOUT_ENABLED (the Bubbles round-5 gate, 8 Nov 2026; QA's ruling, option A): with both flags on,
+     * "I need you to make it about showing up late and please list the policy make the date for 10/14/26" was handed to
+     * the old path, and the Date stayed 10/10. A turn that also says the form's date stays here: the reader's edits and
+     * the date are written, and the reply says plainly that the account field was kept (below).
+     */
+    const keepsAccount = aboutNotRewritten && dateToWrite !== null && stepBDateWithAboutEnabled();
+    if (aboutNotRewritten && !keepsAccount) {
       return handOff("none");
     }
+    // STEP_B_DATE_WITH_ABOUT_ENABLED: the account field this turn did not rewrite is named as kept, never left unsaid.
+    const keptAccountKey = ACCOUNT_KEYS.find((key) => writable.has(key));
+    const withKeptAccount = (response: AskResponse): AskResponse =>
+      keepsAccount && keptAccountKey
+        ? {
+            ...response,
+            content: `${response.content.trimEnd()}\n\nI kept **${labels[keptAccountKey] ?? keptAccountKey}** as it was: it is not rewritten to be about ${madeAbout(input.question)}. Tell me what it should say, or say "rewrite it", and I'll change it.`,
+          }
+        : response;
     /*
      * EDIT_POLICY_ASK_ENABLED (QA's live run, 7 Nov 2026): the latest message asks for the policy on a form whose
      * account field carries the citation line. Answered after the edit is written, below; asked alone ("please list
@@ -282,8 +301,6 @@ export async function patchActiveForm(input: PatchTurnInput): Promise<AskRespons
      * offered the form's Date. A date the manager says the form takes (`form-date-said.ts`) is written as their own
      * statement after the reader's edits, and the reply says "Changed Date to …".
      */
-    const saidDate = stepBDateSaidEnabled() ? saidFormDate(input.question, input.today) : null;
-    const dateToWrite = saidDate !== null && "form_date" in before && before.form_date?.value !== saidDate ? saidDate : null;
     // A date to write goes on below even with no patch (STEP_B_DATE_SAID); the policy is then answered after it.
     if (Object.keys(reading.patch.set).length === 0 && reading.patch.clear.length === 0 && dateToWrite === null) {
       if (!policyAsk) return handOff("nothing");
@@ -462,13 +479,13 @@ export async function patchActiveForm(input: PatchTurnInput): Promise<AskRespons
     if (!reloaded) return null;
     const changed = snapshotDiff(snapshotOf(loaded), snapshotOf(reloaded));
     /* FORM_PATCH_READER_FIXES_ENABLED: the reader's values are already on the form (the old writers' path). */
-    if (readerFixes && changed.length === 0) return withPolicySentence(alreadyThere(Object.keys(reading.patch.set), labels), policyOutcome);
-    return withPolicySentence({
+    if (readerFixes && changed.length === 0) return withKeptAccount(withPolicySentence(alreadyThere(Object.keys(reading.patch.set), labels), policyOutcome));
+    return withKeptAccount(withPolicySentence({
       content: replyFromDiff({ changed }, labels),
       citations: [],
       coverage: "not_applicable",
       ...(changed.length > 0 ? { formUpdate: { instanceId: input.instanceId, updated: changed.map((change) => change.key) } } : {}),
-    }, policyOutcome);
+    }, policyOutcome));
   } catch {
     return null;
   }
