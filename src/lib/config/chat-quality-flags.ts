@@ -1203,6 +1203,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "NEXT_PUBLIC_REVISION_EDIT_NEEDS_EDIT_ENABLED",
   // coding 2: EXIT_TERMINATION_STATED (default off): forced off with the others.
   "EXIT_TERMINATION_STATED_ENABLED",
+  // coding 2: EXIT_OTHER_PERSON_NOT_SUBJECT (default off): forced off with the others.
+  "EXIT_OTHER_PERSON_NOT_SUBJECT_ENABLED",
   "NO_NOTICE_NO_DATE_ENABLED",
   "ISSUE_IS_THE_ACCOUNT_ENABLED",
   // coding 2: DENIAL_NO_ACCOUNT (default off): forced off with the others.
@@ -3183,6 +3185,18 @@ export function exitStatedOnlyEnabled(): boolean {
  */
 export function exitTerminationStatedEnabled(): boolean {
   return envFlag("EXIT_TERMINATION_STATED_ENABLED");
+}
+
+// coding 2: EXIT_OTHER_PERSON_NOT_SUBJECT
+/**
+ * EXIT_OTHER_PERSON_NOT_SUBJECT_ENABLED (QA, 8 Nov 2026, ported from the sibling app's round-5 live tester, item 4b;
+ * default off; same flag in both apps). A termination letter naming "your General Manager, <B>" was answered "Which of
+ * them is this **Resignation/Exit Form** for — **<B>** or **<A>**?". With this flag on, a candidate named only right
+ * after a title is not offered as the subject, and a title line echoing that title goes too (`ai/exit-other-person.ts`,
+ * one server-ask.ts step). Off, as before.
+ */
+export function exitOtherPersonNotSubjectEnabled(): boolean {
+  return envFlag("EXIT_OTHER_PERSON_NOT_SUBJECT_ENABLED");
 }
 
 /**
