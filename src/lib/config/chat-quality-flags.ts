@@ -981,6 +981,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FORM_PATCH_REDUCER_ENABLED",
   "FORM_REPLY_FROM_DIFF_ENABLED",
   "FORM_EDIT_SINGLE_WRITER_ENABLED",
+  // coding 2: CARD_NAME_THEN_WORDS_CURRENT (default off): forced off with the others.
+  "CARD_NAME_THEN_WORDS_CURRENT_ENABLED",
   "FORM_EDIT_SAID_REPLACEMENT_ENABLED",
   "FORM_EDIT_TOOL_IN_STREAM_ENABLED",
   "CHAT_GLOSSARY_ENABLED",
@@ -1574,6 +1576,18 @@ export function lastFirstNameReadEnabled(): boolean {
 /** A checked reading reaches the card: the AI reader's, or the Last, First one. */
 export function checkedReadingEnabled(): boolean {
   return aiReadsCodeChecksEnabled() || lastFirstNameReadEnabled();
+}
+
+// coding 2: CARD_NAME_THEN_WORDS_CURRENT
+/**
+ * CARD_NAME_THEN_WORDS_CURRENT_ENABLED (QA's sf-s38, 8 Nov 2026; default off; same flag in both apps). "make me an CA for
+ * <A> missing her saturday …" made the card here for "<A> missing", and Create saved the form under that name (also
+ * "<A> failing …", and "<a> missing …" typed in lower case). With this flag on, a reading that is one roster person's
+ * whole name followed by a verb-shaped word typed in lower case is that person, on the card and at Create
+ * (`ai/card-name-then-words.ts`, `forms/proposal-currency.ts`). Off, as before.
+ */
+export function cardNameThenWordsCurrentEnabled(): boolean {
+  return envFlag("CARD_NAME_THEN_WORDS_CURRENT_ENABLED");
 }
 
 /**

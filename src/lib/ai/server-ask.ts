@@ -165,6 +165,7 @@ import { withReplyMatchesCard } from "./reply-matches-card";
 import { withTitleOfTheEmployee } from "./title-of-the-employee";
 import { withUnderPerformanceExplained } from "./under-performance-explained";
 import { withProposalEditRules } from "./proposal-edit-rules";
+import { withCardNameThenWords } from "./card-name-then-words";
 import { withFormTypeSwitch, withSwitchNote, withSwitchSources } from "./form-type-switch";
 import { withAdditionalStore } from "./additional-store";
 import { withOutOfScopePlace } from "./out-of-scope-place";
@@ -235,7 +236,13 @@ export async function answerQuestion(
   );
   // FORM_NAME_FROM_ROSTER_ENABLED, last: only roster people are the employee or a choice (`forms/roster-only-names.ts`).
   // REPLY_MATCHES_CARD_ENABLED, the very last step: the reply agrees with the finished card (`ai/reply-matches-card.ts`).
-  return withReplyMatchesCard(withRosterOnlyNames(answered));
+  // CARD_NAME_THEN_WORDS_CURRENT_ENABLED: a card for "<A> missing" is the roster's <A> (`ai/card-name-then-words.ts`).
+  const named = await withCardNameThenWords(
+    answered,
+    [...asked.history.filter((turn) => turn.role === "user").map((turn) => turn.content), asked.question].join("\n"),
+    () => loadRosterQuiet(actor),
+  );
+  return withReplyMatchesCard(withRosterOnlyNames(named));
 }
 
 async function answerQuestionAnyPath(
