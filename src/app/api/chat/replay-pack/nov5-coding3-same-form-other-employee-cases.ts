@@ -110,6 +110,7 @@ export const NOV5_CODING3_SAME_FORM_OTHER_EMPLOYEE_CASES: readonly ReplayCase[] 
     id: "nov5-coding3-sfo-b-same-draft-own-draft-open",
     title: "(b) with Liora's own Coaching draft open, \"can you create the same draft that we did with Liora Pellow by changing the name and position?\" — never a card for Liora, her draft untouched",
     report: `${REPORT_B}; Liora's own draft open, the new person not named yet`,
+    fixFlags: ["SAME_FORM_COPY_NEW_PERSON_ENABLED"],
     // Run 5 Nov 2026 (production flags): the answering model answers; no card, Liora's draft as it was. Open in the sibling app (INTENT_EXTRACTION_ENABLED makes a second Liora card).
     status: "fixed",
     async run(t) {
@@ -127,6 +128,7 @@ export const NOV5_CODING3_SAME_FORM_OTHER_EMPLOYEE_CASES: readonly ReplayCase[] 
     id: "nov5-coding3-sfo-b-same-draft-then-name-copies",
     title: "(b) \"can you create the same draft that we did with Liora Pellow by changing the name and position?\" → \"Teodric Sabrin\" → Create: Teodric's draft carries Liora's Details, his name and his own position",
     report: `${REPORT_B}; then the new person's name, then Create`,
+    fixFlags: ["SAME_FORM_COPY_NEW_PERSON_ENABLED"],
     // Run 5 Nov 2026 (production flags): both turns go to the answering model; no card for Teodric.
     status: { open: "no card for Teodric Sabrin: the copy request is answered by the answering model, and his name alone, with no card on screen, starts nothing" },
     async run(t) {

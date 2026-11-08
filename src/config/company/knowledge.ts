@@ -476,6 +476,15 @@ export const POLICY_MANUAL_BRAND_SCOPE: ManualBrandScope = {
 };
 
 /**
+ * OWN_BRAND_PARENT_ENABLED (QA's live tester, 7 Nov 2026): the company that operates every brand of the manual,
+ * as a reply must not name it beside this brand ("across all brands (Buff City Soap, and JB & Associates)").
+ * Regular expression SOURCES, like `POLICY_MANUAL_BRAND_SCOPE.otherBrands`. The manual's own title ("JBA Policy
+ * Manual") and its "JB & Associates Office" label are not matched, and bare "JBA" is left alone, so a citation of
+ * the manual is never touched.
+ */
+export const PARENT_COMPANY_NAMES: readonly string[] = [String.raw`JB\s*(?:&|and)\s*Associates(?!\s+Office)`];
+
+/**
  * The sibling company's brand, as a source excerpt must never show it
  * (EXCERPT_BRAND_FILTER_ENABLED, `lib/knowledge/excerpt-brand-filter.ts`).
  * Regular expression SOURCES, like `POLICY_MANUAL_BRAND_SCOPE.otherBrands`:

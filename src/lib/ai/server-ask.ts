@@ -11,6 +11,7 @@ import { CLAUDE_MAX_TOKENS, RETRIEVAL } from "@/lib/config/models";
 import { MissingConfigurationError, liveReadiness } from "@/lib/config/server-env";
 import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
 import { asksOnlyAboutFormsOnFile, isFormRecordsQuestion, loadFormRecords } from "@/lib/forms/chat-form-records";
+import { namesAPerson } from "@/lib/forms/names-a-person";
 import { priorFormsReadingForChat } from "@/lib/forms/prior-forms";
 import { answersFormClarification } from "@/lib/forms/form-clarification";
 import { buildFormInventory, publishedEntries } from "@/lib/forms/inventory";
@@ -42,6 +43,7 @@ import { reportById, routeReportQuestion } from "@/lib/reporting/registry";
 import { resolveScopeFor } from "@/lib/reporting/scope/server";
 import type { SourceCitation } from "@/types";
 
+import { cardPolicyTurns } from "./card-policy-request";
 import { callClaude } from "./call-claude";
 import { glossaryBlock } from "./glossary";
 import { loadChatDataBlock } from "./chat-data-tools";
@@ -88,6 +90,8 @@ import {
   googleReviewsInChatEnabled,
   typoReadingCopyEnabled,
   caSalesPolicyEnabled,
+  pastFormsBeforeLibraryEnabled,
+  cardPolicyOwnRequestEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { gateTexts, searchWithPlan } from "./continuation";
 import { fieldsFromManagerText, mergeConfirmed, retainFieldsInReply } from "./form-field-state";
@@ -101,6 +105,7 @@ import { augmentIntakeQuestion } from "./intake-augment";
 import { incidentFingerprint } from "@/lib/forms/incident-key";
 import { prepareLongContext } from "./long-context-claude";
 import { applyOptionalPriorCoaching } from "./prior-coaching-optional";
+import { priorCoachingManagerText } from "./prior-coaching-denial";
 import { rewriteRetrievalQuery } from "./query-rewrite-claude";
 import { followUpOwnQuery } from "./query-rewrite";
 import { matchHybridKnowledge } from "@/lib/knowledge/hybrid-match";
@@ -148,6 +153,7 @@ import { protectedNameWords } from "./typo-name-words";
 import type { AskRequest, AskResponse } from "./types";
 import { keepManagerActionPlan } from "./manager-action-plan-reply";
 import { withoutReportTurnsForForm } from "./report-turns";
+import { withoutSourceMarkers, withoutSourceNotes } from "./source-note";
 import { withManagerNameGuard } from "./manager-name-guard";
 import { withJobTitleFromWords } from "./job-title-from-words";
 import { withCoachingWhatHappened } from "./coaching-what-happened";
@@ -275,8 +281,11 @@ async function answerQuestionAnyPath(
   }
   // FORM_TYPE_SWITCH: the switched card is drafted from the account, never from the switch turn (read on the turns as sent).
   // MANAGER_NAME_NOT_EMPLOYEE_ENABLED: last — the manager's own name is never the employee.
-  const answer = async (turn: AskRequest) =>
-    withManagerNameGuard(withSwitchSources(withoutSensitiveDefaults(await answerQuestionTraced(turn, actor, memory), turn.question), turn), turn);
+  // SOURCE_NOTE_GUARD_ENABLED: no note about a source ("[S1 doesn't actually cover …]") and no bare marker group ("[S12, S14]") reaches the reply on any path (`ai/source-note.ts`).
+  const answer = async (turn: AskRequest) => {
+    const guarded = withManagerNameGuard(withSwitchSources(withoutSensitiveDefaults(await answerQuestionTraced(turn, actor, memory), turn.question), turn), turn);
+    return { ...guarded, content: withoutSourceMarkers(withoutSourceNotes(guarded.content)) };
+  };
   let answered = await answer(request);
   const fallbacks = kept ? [withoutReportTurnsForForm({ ...asked, question: kept.employee, continueProposalTemplateKey: kept.templateKey }), plain] : [];
   for (const next of fallbacks) {
@@ -413,7 +422,23 @@ async function answerQuestionCore(
    * the library is answered from the library; only a request for a form
    * proposes one. Both detectors are pure and run before anything is read.
    */
-  const detected = detectInventoryQuestion(request.question);
+  const libraryReading = detectInventoryQuestion(request.question);
+  const formReading = detectTemplateIntent(request.question);
+  /*
+   * PAST_FORMS_BEFORE_LIBRARY_ENABLED (Pau, 5 Nov 2026, sf-s29): a message
+   * the forms library would answer — a question about the library, or a form
+   * named without asking to make one ("are there any coaching and ca's for
+   * <name>" reads as the Corrective Action, not requested) — that names a
+   * person or asks about forms already on file is answered from the forms on
+   * file: the past-forms lookup below runs for it, and the library answer
+   * steps aside. A request to make a form is never one of these.
+   */
+  const pastFormsFirst =
+    pastFormsBeforeLibraryEnabled() &&
+    (libraryReading.kind !== "none" || (formReading.kind === "corrective_action" && !formReading.requestedCreation)) &&
+    // Only a message that names a person: a library question naming nobody keeps the library answer (`forms/names-a-person.ts`).
+    namesAPerson(request.question);
+  const detected: InventoryQuestion = pastFormsFirst ? { kind: "none" } : libraryReading;
   /*
    * A QUESTION ABOUT FORMS ALREADY ON FILE NAMES A FORM WITHOUT ASKING FOR ONE.
    * "Does Dana have a previous CA form?" reads as naming the Corrective Action
@@ -422,9 +447,8 @@ async function answerQuestionCore(
    * sentence also says to make one, it is answered from the Forms Register
    * below. See `chat-form-records.ts`.
    */
-  const spokenIntent: ReturnType<typeof detectTemplateIntent> = asksOnlyAboutFormsOnFile(request.question)
-    ? { kind: "none" }
-    : detectTemplateIntent(request.question);
+  const spokenIntent: ReturnType<typeof detectTemplateIntent> =
+    pastFormsFirst || asksOnlyAboutFormsOnFile(request.question) ? { kind: "none" } : formReading;
   const elliptical = isEllipticalRegisterReference(request.question);
 
   /*
@@ -749,8 +773,9 @@ async function answerQuestionCore(
    * coaching jba manual 11-1-26"), and each row says who created it.
    */
   const readsFormRecords =
-    isFormRecordsQuestion(request.question) &&
-    (!crossChatGuard || asksAboutRecords(request.question) || refersBack(request.question, request.history));
+    pastFormsFirst ||
+    (isFormRecordsQuestion(request.question) &&
+      (!crossChatGuard || asksAboutRecords(request.question) || refersBack(request.question, request.history)));
   const formRecordsPromise = readsFormRecords
     ? loadFormRecords({
         actor,
@@ -1449,7 +1474,12 @@ async function decorateFormAnswer(request: AskRequest, actor: ChatActor, respons
   const turns = [...request.history.filter((turn) => turn.role === "user").map((turn) => turn.content), request.question];
   let content = response.content;
   if (coachingOn) {
-    content = applyOptionalPriorCoaching(content, { enabled: true, records: [], managerText: turns.join("\n") });
+    // PRIOR_COACHING_DENIAL_ENABLED: "There's no prior coaching on file." is not read as a note; off, as before.
+    content = applyOptionalPriorCoaching(content, {
+      enabled: true,
+      records: [],
+      managerText: priorCoachingManagerText(turns, request.context.todayIso),
+    });
   }
   if (slotsOn) {
     const roster = await loadRosterQuiet(actor);
@@ -1480,7 +1510,9 @@ async function decorateFormAnswer(request: AskRequest, actor: ChatActor, respons
   if (policyOn) {
     try {
       const manual = await new SupabaseKnowledgeProvider().fetchOfficialPolicyManual(ACTIVE_BRAND.knowledgeScopeId);
-      if (manual.ok) content = withMappedPolicy(content, turns, manual.chunks, true);
+      // CARD_POLICY_OWN_REQUEST_ENABLED: a card for <B> is not cited from <A>'s earlier request.
+      const policyTurns = cardPolicyOwnRequestEnabled() && response.formProposal ? cardPolicyTurns(turns, response.formProposal.employeeName) : turns;
+      if (manual.ok) content = withMappedPolicy(content, policyTurns, manual.chunks, true);
     } catch {
       // A manual read that fails leaves the proposal as the forms path wrote it.
     }
