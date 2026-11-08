@@ -1190,6 +1190,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "OFF_ROSTER_CONFIRM_ENABLED",
   // Default-off fix flag (QA, 7 Nov 2026).
   "METRIC_CHOICE_ONE_QUESTION_ENABLED",
+  // coding 4: SIGNED_STEP_NOT_A_REQUEST (s35, round 5; default off): forced off with the others.
+  "SIGNED_STEP_NOT_A_REQUEST_ENABLED",
 ] as const;
 
 /**
@@ -3265,4 +3267,14 @@ export function metricChoiceOneQuestionEnabled(): boolean {
  */
 export function stalePromptLinesOffEnabled(): boolean {
   return envFlag("STALE_PROMPT_LINES_OFF_ENABLED");
+}
+
+/**
+ * SIGNED_STEP_NOT_A_REQUEST_ENABLED (QA's Bubbles live tester, round 4, 8 Nov 2026; same flag in both apps; default
+ * off). "… <A> has signed a coaching document for being late on 10/14/26. …" beside a CA request made a second,
+ * Coaching Form card. On: a clause that tells a step already signed, given or received, and asks for nothing, is no
+ * form request (`forms/form-requests.ts`); it stays the CA's Prior actions. Off, as before.
+ */
+export function signedStepNotARequestEnabled(): boolean {
+  return envFlag("SIGNED_STEP_NOT_A_REQUEST_ENABLED");
 }
