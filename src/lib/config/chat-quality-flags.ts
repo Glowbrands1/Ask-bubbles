@@ -1087,6 +1087,10 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FORM_DATE_INCIDENT_ONLY_ENABLED",
   "REOPEN_VERB_GUARD_ENABLED",
   "REOPEN_BY_ANY_OPEN_VERB_ENABLED",
+  // coding 2: KEPT_REQUEST_SAME_FORM and CARRIED_PERSON_NOTICE (default off): forced off with the others.
+  "KEPT_REQUEST_SAME_FORM_ENABLED",
+  "NEXT_PUBLIC_KEPT_REQUEST_SAME_FORM_ENABLED",
+  "CARRIED_PERSON_NOTICE_ENABLED",
   "TERSE_SLOT_READ_ENABLED",
   "POLICY_SPECIFIC_TOPICS_ENABLED",
   "EXIT_PROSE_FACTS_ENABLED",
@@ -3640,4 +3644,49 @@ export function proposalNameCorrectionEnabled(): boolean {
  */
 export function accountPlaceLeadEnabled(): boolean {
   return envFlag("ACCOUNT_PLACE_LEAD_ENABLED");
+}
+
+// coding 2: KEPT_REQUEST_SAME_FORM
+/**
+ * KEPT_REQUEST_SAME_FORM_ENABLED / NEXT_PUBLIC_KEPT_REQUEST_SAME_FORM_ENABLED (QA's round-6 item, 8 Nov 2026; default
+ * off; only with REQUEST_KEPT_IN_WINDOW). "Create a Coaching Form from this conversation", asked well after "create
+ * corrective action for <A> for Late Opening …", kept that Corrective Action request in the window, so the Coaching
+ * card read <A> from the window and no longer said "I took <A> from earlier in this conversation — if this form is for
+ * somebody else, tell me who." With this flag on, an earlier request is kept only when the current turn asks for the
+ * same form or for none; a turn that asks for a different form keeps the window as it was without the flag, so the
+ * person is carried from earlier turns with its notice (`forms/bounded-context.ts`). Same pair as
+ * REQUEST_KEPT_IN_WINDOW: the server (the card) and the browser (the draft) read the window, so FLIP BOTH TOGETHER.
+ * Off, as before.
+ */
+export function keptRequestSameFormEnabled(): boolean {
+  if (typeof window === "undefined") return envFlag("KEPT_REQUEST_SAME_FORM_ENABLED");
+  const inlined = process.env.NEXT_PUBLIC_KEPT_REQUEST_SAME_FORM_ENABLED;
+  return typeof inlined === "string" && ON.has(inlined.trim().toLowerCase());
+}
+
+// coding 2: CARRIED_PERSON_NOTICE
+/**
+ * CARRIED_PERSON_NOTICE_ENABLED (QA's round-6 item, 8 Nov 2026; default off; same flag in both apps). On the route,
+ * production's INTENT_EXTRACTION, SLOT_RETENTION and REQUEST_KEPT_IN_WINDOW each made a card that carried a person from
+ * earlier turns drop "I took <A> from earlier in this conversation — if this form is for somebody else, tell me who."
+ * With this flag on, a performance-form card whose person is not named in the manager's own last six turns, but is
+ * named before them, says so (`ai/carried-person-notice.ts`, one server-ask.ts step). Off, as before.
+ */
+export function carriedPersonNoticeEnabled(): boolean {
+  return envFlag("CARRIED_PERSON_NOTICE_ENABLED");
+}
+
+/**
+ * STALE_PROMPT_LINES_OFF_ENABLED (QA, 5 Nov 2026; default off). Two lines of
+ * the Corrective Action draft's prompt describe boxes the current template no
+ * longer has: "name the topic in the matching write-in field" (revision 7 has
+ * no write-in beside Other) and "under_performance is for results against a
+ * sales or performance target" (revision 7 has no Under Performance box). With
+ * the flag on, each line is left out when the version being drafted lacks what
+ * it describes, read from the version's own fields and options
+ * (`ai/stale-prompt-lines.ts`). A version that still has them keeps the line.
+ * Off, the prompt is byte for byte as before.
+ */
+export function stalePromptLinesOffEnabled(): boolean {
+  return envFlag("STALE_PROMPT_LINES_OFF_ENABLED");
 }

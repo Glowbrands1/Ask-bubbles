@@ -162,6 +162,7 @@ import { withJobTitleFromWords } from "./job-title-from-words";
 import { withCoachingWhatHappened } from "./coaching-what-happened";
 import { withFreshDateReask } from "./date-reask-fresh";
 import { withFirstNameAsk } from "./first-name-ask";
+import { withCarriedPersonNotice } from "./carried-person-notice";
 import { withFirstNameAnswerFor, withFirstNameSuggestFor } from "./first-name-suggest";
 import { withManagerStatedTitle } from "./manager-title";
 import { withReplyMatchesCard } from "./reply-matches-card";
@@ -246,9 +247,11 @@ export async function answerQuestion(
     await withTitleOfTheEmployee(await answerQuestionAnyPath(asked, actor, memory), asked, () => loadRosterQuiet(actor)),
     asked,
   );
+  // CARRIED_PERSON_NOTICE_ENABLED: a card whose person the manager last named before their last six turns says so (`ai/carried-person-notice.ts`).
+  const noticed = withCarriedPersonNotice(answered, asked);
   // FORM_NAME_FROM_ROSTER_ENABLED, last: only roster people are the employee or a choice (`forms/roster-only-names.ts`).
   // REPLY_MATCHES_CARD_ENABLED, the very last step: the reply agrees with the finished card (`ai/reply-matches-card.ts`).
-  return withReplyMatchesCard(withRosterOnlyNames(answered));
+  return withReplyMatchesCard(withRosterOnlyNames(noticed));
 }
 
 async function answerQuestionAnyPath(
