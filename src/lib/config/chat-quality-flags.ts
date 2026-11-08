@@ -1208,6 +1208,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "TAKE_OFF_STAYS_CARD_ENABLED",
   // coding 4: ACCOUNT_PLACE_LEAD (round 6; default off): forced off with the others.
   "ACCOUNT_PLACE_LEAD_ENABLED",
+  // coding 5: STEP_B_DATE_WITH_ABOUT (default off): forced off with the others.
+  "STEP_B_DATE_WITH_ABOUT_ENABLED",
 ] as const;
 
 /**
@@ -2572,6 +2574,16 @@ export function formPatchReaderFixesEnabled(): boolean {
  */
 export function editPolicyAskEnabled(): boolean {
   return envFlag("EDIT_POLICY_ASK_ENABLED") && formPatchReducerEnabled();
+}
+/**
+ * STEP_B_DATE_WITH_ABOUT_ENABLED (the Bubbles round-5 gate, 8 Nov 2026; QA's ruling; coding 5; default off; only with
+ * STEP_B_DATE_SAID_ENABLED and STEP_B_MAKE_IT_ABOUT_ACCOUNT_ENABLED). With both on, a turn that says what the form is
+ * about AND its date ("… make it about showing up late … make the date for 10/14/26") was handed to the old path and
+ * the Date was never written. On: that turn stays on Step B (the reader's edits and the date are written), and the
+ * reply says plainly that the account field was kept (`forms/form-patch-turn.ts`). Off, as before.
+ */
+export function stepBDateWithAboutEnabled(): boolean {
+  return envFlag("STEP_B_DATE_WITH_ABOUT_ENABLED");
 }
 // --- end coding 5 flags ---
 
