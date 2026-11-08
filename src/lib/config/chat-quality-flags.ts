@@ -1190,6 +1190,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "OFF_ROSTER_CONFIRM_ENABLED",
   // Default-off fix flag (QA, 7 Nov 2026).
   "METRIC_CHOICE_ONE_QUESTION_ENABLED",
+  // coding 5: POLITE_ABOUT_STAYS_CARD (default off): forced off with the others.
+  "POLITE_ABOUT_STAYS_CARD_ENABLED",
   // QA round-5 batch (8 Nov 2026): the round-5 PRs' entries (lost in the batch merge), forced off with the others.
   "ACCOUNT_VERB_NOT_A_NAME_ENABLED",
   "CARD_COMPLAINT_NOT_ACCOUNT_ENABLED",
@@ -2568,6 +2570,15 @@ export function formPatchReaderFixesEnabled(): boolean {
  */
 export function editPolicyAskEnabled(): boolean {
   return envFlag("EDIT_POLICY_ASK_ENABLED") && formPatchReducerEnabled();
+}
+/**
+ * POLITE_ABOUT_STAYS_CARD_ENABLED (the Bubbles live tester, QA, 8 Nov 2026; coding 5; default off). With a card open,
+ * "can you make it for missing out monthly meeting" lost the card (a policy answer); without "can you" it kept it. On:
+ * that polite request reaches the proposal without its polite lead (`ai/polite-about-request.ts`; the call is one
+ * line in `ai/server-ask.ts`). Off, as before.
+ */
+export function politeAboutStaysCardEnabled(): boolean {
+  return envFlag("POLITE_ABOUT_STAYS_CARD_ENABLED");
 }
 // --- end coding 5 flags ---
 

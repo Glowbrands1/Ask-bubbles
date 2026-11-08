@@ -1,3 +1,5 @@
+import { politeAboutStaysCardEnabled } from "@/lib/config/chat-quality-flags";
+
 /**
  * ============================================================================
  * "MAKE IT ABOUT <X>": <X> IS THE ACCOUNT, THE INSTRUCTION IS NOT
@@ -25,8 +27,16 @@ const ENDS =
   /[.;!?\n]|,?\s+(?:and\s+)?(?:please|pls)\b|,?\s+and\s+(?:also\s+)?(?:list|cite|add|make|change|set|put|use|include|reference|remove|date|switch|update)\b|,?\s+(?:make|set|change|put|update)\s+(?:the\s+)?(?:date|policy|title|store|location)\b|,?\s+(?:list|cite|reference)\s+the\s+polic/i;
 
 /** <X> from one sentence or turn, or null when it does not say what the form is about. */
+/*
+ * POLITE_ABOUT_STAYS_CARD_ENABLED (the Bubbles live tester, QA, 8 Nov 2026): "can you make it for missing out monthly
+ * meeting" says what the form is for, as "make it about …" does. Only a topic: <X> opens with an -ing word or a
+ * negation ("missing …", "not clocking in …", "no call no show …"), never a name ("make it for <name>" changes who).
+ */
+const MAKE_IT_FOR =
+  /\bmake\s+(?:it|this|that|the\s+(?:form|document|coaching(?:\s+(?:form|document))?|ca|c\/a|corrective\s+action(?:\s+form)?|write-?up))\s+(?:be\s+)?for\s+(?=(?:[a-z]+ing|not|no|never)\b)/i;
+
 export function madeAbout(text: string): string | null {
-  const found = MAKE_IT_ABOUT.exec(text ?? "");
+  const found = MAKE_IT_ABOUT.exec(text ?? "") ?? (politeAboutStaysCardEnabled() ? MAKE_IT_FOR.exec(text ?? "") : null);
   if (!found) return null;
   const rest = text.slice(found.index + found[0].length);
   const end = ENDS.exec(rest);
