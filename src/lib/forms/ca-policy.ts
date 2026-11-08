@@ -1442,8 +1442,13 @@ const OBSERVATION_REASON = new RegExp(
 const OBSERVATION_BARE_REASON = /^\s*(?:under[- ]?)?performance\b(?:\s+(?:for|in|during)\s+(?:the\s+month\s+of\s+)?[a-z]+)?/i;
 const OBSERVATION_PAYROLL = /\b(?:(?:not|no)\s+)?pay\s*roll\s+deduct\w*(?:\s+applicable)?\b|\b(?:not|no)\s+(?:a\s+)?pay\s*roll\s+deduction\b/gi;
 
-/** "at West Dodge Rd ", "in the Lawrence store ": a place before the request's "for", at most six words. */
-const PLACE_LEAD = /^\s*(?:at|in|from)\s+(?:the\s+)?(?:[\p{L}\d'’.&-]+\s+){1,6}?(?=for\s)/iu;
+/**
+ * "at West Dodge Rd ", "at Store 264 ": a named place before the request's "for", at most six words, each starting
+ * with a capital or a digit (coding 2's review). "at the register" or "at the front desk" is where it happened, an
+ * account fact, and stays; "in …" (most often a time) and "from …" never lead here. A lower-case "at west dodge rd" is
+ * left as before, the safe miss.
+ */
+const PLACE_LEAD = /^\s*[Aa]t\s+(?:the\s+)?(?:[\p{Lu}\d][\p{L}\d'’.&-]*\s+){1,6}?(?=for\s)/u;
 const FOR_LEAD = /^\s*for\s+/i;
 
 export function observationAccount(sentence: string, employeeName: string | null): string {
@@ -1463,9 +1468,9 @@ export function observationAccount(sentence: string, employeeName: string | null
   /*
    * ACCOUNT_PLACE_LEAD_ENABLED (QA's Bubbles round-5 final gate, 8 Nov 2026): "create a written CA for <name> at West
    * Dodge Rd for missing the 10-15-26 woven deadline" left "at West Dodge Rd for missing …": the request's head and
-   * name were cut, its place was not. Once the request was cut, the place that opens what is left ("at / in / from
-   * <place>" right before the request's "for") goes, and so does that "for" unless a performance reason follows it
-   * (the reason is cut below). Off, as before.
+   * name were cut, its place was not. Once the request was cut, a named place that opens what is left ("at <Place>"
+   * right before the request's "for") goes, and so does that "for" unless a performance reason follows it (the reason
+   * is cut below). Off, as before.
    */
   if (accountPlaceLeadEnabled() && (wasRequest || lead > 0) && PLACE_LEAD.test(text)) {
     text = text.replace(PLACE_LEAD, "");

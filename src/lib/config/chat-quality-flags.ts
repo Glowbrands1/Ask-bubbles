@@ -3272,7 +3272,7 @@ export function stalePromptLinesOffEnabled(): boolean {
 /**
  * ACCOUNT_PLACE_LEAD_ENABLED (QA's Bubbles round-5 final gate, 8 Nov 2026; same flag in both apps; default off). With
  * SALES_OBSERVATION_ACCOUNT, "create a written CA for <name> at <store> for missing the 10-15-26 woven deadline" made
- * the Issue "at <store> for missing …". On: once the request is cut, a place that opens what is left, and the request's
+ * the Issue "at <store> for missing …". On: once the request is cut, a named place ("at <Place>") that opens what is left, and the request's
  * "for" after it, go (`forms/ca-policy.ts` observationAccount). Off, as before.
  */
 export function accountPlaceLeadEnabled(): boolean {

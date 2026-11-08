@@ -63,6 +63,20 @@ describe("SALES_OBSERVATION_ACCOUNT keeps the manager's words", () => {
   });
 
   describe("ACCOUNT_PLACE_LEAD_ENABLED (QA's Bubbles round-5 final gate, 8 Nov 2026)", () => {
+    it("on: \"at Store 264\" is a named place too", () => {
+      on();
+      vi.stubEnv("ACCOUNT_PLACE_LEAD_ENABLED", "true");
+      expect(observationAccount("create a written CA for Remy Calder at Store 264 for missing the 10-15-26 woven deadline", "Remy Calder")).toBe(
+        "missing the 10-15-26 woven deadline",
+      );
+    });
+
+    it("on: the register stays where it happened", () => {
+      on();
+      vi.stubEnv("ACCOUNT_PLACE_LEAD_ENABLED", "true");
+      expect(observationAccount("create a written CA for Remy Calder at the register for being rude to a guest", "Remy Calder")).toMatch(/^at the register/);
+    });
+
     const SAID = "create a written CA for Wrenna Thistlecombe at West Dodge Rd for missing the 10-15-26 woven deadline";
 
     it("off: the request's place opens what is left (the gate's finding)", () => {
@@ -88,6 +102,11 @@ describe("SALES_OBSERVATION_ACCOUNT keeps the manager's words", () => {
       "Remy Calder was at the front desk for an hour and ignored the guests",
       "at the register she was rude for no reason",
       "create a written CA for Remy Calder for missing the 10-15-26 woven deadline",
+      // coding 2's review: an account's own place or time stays; a lower-case store name is the safe miss.
+      "create a written CA for Remy Calder at the register for being rude to a guest",
+      "create a written CA for Remy Calder in the past week for missing two shifts",
+      "create a written CA for Remy Calder from the stockroom for leaving boxes in the aisle",
+      "create a written CA for Remy Calder at west dodge rd for missing the 10-15-26 woven deadline",
     ])("on, negative: %j is as with the flag off", (sentence) => {
       on();
       const before = observationAccount(sentence, "Remy Calder");
