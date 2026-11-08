@@ -578,7 +578,7 @@ async function answerQuestionCore(
     const reading = askedQuestion ? null : startFormReading(request, actor);
     const proposalQuestion = await questionForProposal(request, actor);
     // AI_READS_CODE_CHECKS_ENABLED: no "couldn't find" line about the name the reader put on the card.
-    const proposeFrom = async (question: string) => withoutStaleRosterNote(await deliverFormProposal({
+    const proposeFrom = async (question: string, questionMessageId = request.questionMessageId) => withoutStaleRosterNote(await deliverFormProposal({
       request,
       actor,
       question,
@@ -586,7 +586,7 @@ async function answerQuestionCore(
       propose: readerPropose(reading, request, (question) => proposeFormForTurn({
       history: request.history,
       question,
-      questionMessageId: request.questionMessageId,
+      questionMessageId,
       actor,
       continueTemplateKey: request.continueProposalTemplateKey,
       summaries,
@@ -635,7 +635,15 @@ async function answerQuestionCore(
     let proposal = askedQuestion ? null : await proposeFrom(proposalQuestion);
     // TAKE_OFF_STAYS_CARD_ENABLED: a take-off the open intake did not carry on is proposed again from the manager's
     // last turn; this turn's words stay in the request, for the card's own readers. Off, never.
-    if (takeOffOnCard && !proposal) proposal = await proposeFrom(cardTurnQuestion(request));
+    if (takeOffOnCard && !proposal) {
+      // The card is proposed from the manager's last request turn, so its draft is written from that turn's words; this
+      // take-off turn is added to its sources, so the draft also sees the policy taken off (coding 5, 8 Nov 2026).
+      const card = await proposeFrom(cardTurnQuestion(request), (request.history ?? []).filter((turn) => turn.role === "user").at(-1)?.id ?? request.questionMessageId);
+      const fp = card?.formProposal;
+      proposal = fp && request.questionMessageId && !fp.sourceMessageIds.includes(request.questionMessageId)
+        ? { ...card, formProposal: { ...fp, sourceMessageIds: [...fp.sourceMessageIds, request.questionMessageId] } }
+        : card;
+    }
     // Flags off: decoration returns the same proposal, and the forms-library
     // answer returns here, before retrieval.
     if (proposal) return proposal;

@@ -57,7 +57,10 @@ export const NOV8_PROPOSAL_POLICY_SET_ASIDE_CASES: ReplayCase[] = [
     title: "CA card, Attendance named: \"take the attendance policy off the form\" takes it off the card and says so",
     report: REPORT,
     status: { open: "the card keeps \"Policy: Attendance, as you said\" and the manual citation, and the sentence is added to the Observation" },
-    fixFlags: FIX,
+    // Changed on purpose (coding 2, 8 Nov 2026): since Bubbles main e7a7ba9 this CA-card take-off is answered as a policy
+    // question first; TAKE_OFF_STAYS_CARD_ENABLED keeps it a card turn (and proposes the card from the request turn, with
+    // the take-off in its sources, so Create keeps the account), so with both flags on it holds.
+    fixFlags: [...FIX, "TAKE_OFF_STAYS_CARD_ENABLED"],
     async run(t) {
       const thread = start(t);
       const first = await thread.say(CA_REQUEST);
@@ -104,7 +107,10 @@ export const NOV8_PROPOSAL_POLICY_SET_ASIDE_CASES: ReplayCase[] = [
     title: "…then Create: the Corrective Action Form's Policy Violated and Policy Language do not cite Attendance",
     report: REPORT,
     status: { open: "the draft's Policy Violated is \"Attendance Policy, JBA Policy Manual p.14\" with its Policy Language" },
-    fixFlags: FIX,
+    // Changed on purpose (coding 2, 8 Nov 2026): since Bubbles main e7a7ba9 this CA-card take-off is answered as a policy
+    // question first; TAKE_OFF_STAYS_CARD_ENABLED keeps it a card turn (and proposes the card from the request turn, with
+    // the take-off in its sources, so Create keeps the account), so with both flags on it holds.
+    fixFlags: [...FIX, "TAKE_OFF_STAYS_CARD_ENABLED"],
     async run(t) {
       const thread = start(t);
       await thread.say(CA_REQUEST);
