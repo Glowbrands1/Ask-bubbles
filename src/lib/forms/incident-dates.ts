@@ -1,5 +1,12 @@
 import { isAppLine, withoutAppLines } from "@/lib/ai/app-sentences";
-import { antiLoopEnabled, dateAnswerAppliedEnabled, dateAnswerKeepsOpenEnabled, keepFormEmployeeEnabled, priorSentenceFixEnabled } from "@/lib/config/chat-quality-flags";
+import {
+  antiLoopEnabled,
+  dateAnswerAppliedEnabled,
+  dateAnswerKeepsOpenEnabled,
+  keepFormEmployeeEnabled,
+  priorSentenceFixEnabled,
+  stepDatesNotFormDateEnabled,
+} from "@/lib/config/chat-quality-flags";
 
 /** DATE_ANSWER_KEEPS_OPEN_ENABLED, on top of the live DATE_ANSWER_APPLIED_ENABLED. */
 const keepsOpen = () => dateAnswerAppliedEnabled() && dateAnswerKeepsOpenEnabled();
@@ -283,6 +290,15 @@ export function decideFormDate(input: {
   }
   if (antiLoopEnabled() && dates.length === 0 && /\btoday(?:'?s|s)?(?:\s+date)?\b/i.test(input.text)) {
     return { formDate: input.today };
+  }
+  /*
+   * STEP_DATES_NOT_FORM_DATE_ENABLED (QA round 5): "she already received a verbal warning and coaching on 9/8/2026,
+   * 9/15/2026 and 9/25/2026 … today's date is fine": the steps' dates are set aside, so the card must not keep the
+   * first date `extractFormDate` read (9/15, a coaching). With at most one incident date left, that date dates the
+   * form ("today's date is fine" is today), and with none, the day it is created.
+   */
+  if (stepDatesNotFormDateEnabled() && dates.length <= 1 && stepSentenceDates(input.text, input.today).size > 0) {
+    return { formDate: dates[0] ?? null };
   }
   /*
    * FORM_DATE_INCIDENT_ONLY_ENABLED (D3): the date the card would otherwise

@@ -1190,6 +1190,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "OFF_ROSTER_CONFIRM_ENABLED",
   // Default-off fix flag (QA, 7 Nov 2026).
   "METRIC_CHOICE_ONE_QUESTION_ENABLED",
+  // coding 4: STEP_DATES_NOT_FORM_DATE (round 5; default off): forced off with the others.
+  "STEP_DATES_NOT_FORM_DATE_ENABLED",
 ] as const;
 
 /**
@@ -3288,4 +3290,13 @@ export function metricChoiceOneQuestionEnabled(): boolean {
  */
 export function stalePromptLinesOffEnabled(): boolean {
   return envFlag("STALE_PROMPT_LINES_OFF_ENABLED");
+ * STEP_DATES_NOT_FORM_DATE_ENABLED (QA round 5, 8 Nov 2026; default off; this app only). "i need a performance
+ * corrective action for <name>, a team member. she is under performance for september. she already received a verbal
+ * warning and coaching on 9/8/2026, 9/15/2026 and 9/25/2026. no payroll deduction applies. today's date is fine."
+ * With STEP_DATE_NOT_INCIDENT on, every date was a step's, so no incident date was left and the card kept the first
+ * date `extractFormDate` read (9/15, a coaching). On: when step dates are all the dates there are, the form is dated
+ * today (`forms/incident-dates.ts` decideFormDate). Off, as before.
+ */
+export function stepDatesNotFormDateEnabled(): boolean {
+  return envFlag("STEP_DATES_NOT_FORM_DATE_ENABLED");
 }
