@@ -284,8 +284,17 @@ function accountOnly(issue: string | null, employeeName: string | null): string 
   // DENIAL_NO_ACCOUNT_ENABLED: "…, not late" only denies a fault; it is no Issue (`forms/denial-no-account.ts`).
   if (onlyDeniesAFault(issue, employeeName)) return null;
   const account = observationAccount(issue, employeeName);
+  /*
+   * THE REASON ALONE STAYS THE ISSUE (QA's Bubbles round-5 gate, 8 Nov 2026): with SALES_OBSERVATION_ACCOUNT, "I need
+   * a corrective action for <A> for under performance" lost its Issue: the reason is request matter when an account
+   * may follow, but here nothing else was said, so it is the Issue, as with the flag off.
+   */
+  if (account === "" && REASON_ALONE.test(issue.trim())) return issue.trim();
   return account === "" ? null : account;
 }
+
+/** A request's sales reason and nothing else: "under performance", "performance for october". */
+const REASON_ALONE = /^(?:(?:her|his|their|poor|low)\s+)?(?:under[- ]?)?performance(?:\s+(?:for|in|during)\s+(?:the\s+month\s+of\s+)?[a-z]+)?[.!]?$/i;
 
 /**
  * The incident clause the card shows as "Issue", read the way the card reads
