@@ -1190,6 +1190,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "OFF_ROSTER_CONFIRM_ENABLED",
   // Default-off fix flag (QA, 7 Nov 2026).
   "METRIC_CHOICE_ONE_QUESTION_ENABLED",
+  // coding 5: UNKNOWN_NAME_ASK_WHO_FOR (default off): forced off with the others.
+  "UNKNOWN_NAME_ASK_WHO_FOR_ENABLED",
 ] as const;
 
 /**
@@ -2554,6 +2556,16 @@ export function formPatchReaderFixesEnabled(): boolean {
  */
 export function editPolicyAskEnabled(): boolean {
   return envFlag("EDIT_POLICY_ASK_ENABLED") && formPatchReducerEnabled();
+}
+/**
+ * UNKNOWN_NAME_ASK_WHO_FOR_ENABLED (QA's round-6 audit, 8 Nov 2026; coding 5; default off; only with
+ * UNKNOWN_NAME_ASK_ENABLED). The live repeat "I still need a name that is on the directory — **<name>** isn't. What is
+ * the employee's full name as the directory has it?" says "I still need" beside no "Who is this … for?" (the replay
+ * pack's `stillAsks` check refuses it). On: every ask is worded around "Who is this **<form>** for?", the wording of
+ * the sibling app's port (`ai/unknown-name-ask.ts`). Off, as before.
+ */
+export function unknownNameAskWhoForEnabled(): boolean {
+  return envFlag("UNKNOWN_NAME_ASK_WHO_FOR_ENABLED");
 }
 // --- end coding 5 flags ---
 
