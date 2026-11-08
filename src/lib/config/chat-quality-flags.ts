@@ -1210,6 +1210,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ACCOUNT_PLACE_LEAD_ENABLED",
   // coding 5: STEP_B_DATE_WITH_ABOUT (default off): forced off with the others.
   "STEP_B_DATE_WITH_ABOUT_ENABLED",
+  // coding 5: COMPLAINT_ACCOUNT (port of the sibling app's flag, default off): forced off with the others.
+  "COMPLAINT_ACCOUNT_ENABLED",
 ] as const;
 
 /**
@@ -2584,6 +2586,21 @@ export function editPolicyAskEnabled(): boolean {
  */
 export function stepBDateWithAboutEnabled(): boolean {
   return envFlag("STEP_B_DATE_WITH_ABOUT_ENABLED");
+
+}
+
+/**
+ * COMPLAINT_ACCOUNT_ENABLED (port of the sibling app's flag; QA's audit, 7 Nov 2026, a real manager's chat here on
+ * 3 Nov 2026; default off). "create a ca form for <name>", then "verbal warning The date she complained was Oct 31st .
+ * The customer said she was giving her an attitude …" made the card's Issue "verbal warning The date she complained
+ * was Oct 31st" and read the level as an earlier warning ("I've treated the earlier warning you mentioned as previous
+ * corrective action history"). On: a level that opens the turn and runs straight on into a new sentence is this
+ * form's Type of Warning, the date after it belongs to that sentence (`forms/warning-level.ts`); the Issue never opens
+ * with the level, and a sentence that only dates the account is not the account (`forms/incident-issue.ts`). Off, as
+ * before.
+ */
+export function complaintAccountEnabled(): boolean {
+  return envFlag("COMPLAINT_ACCOUNT_ENABLED");
 }
 // --- end coding 5 flags ---
 
