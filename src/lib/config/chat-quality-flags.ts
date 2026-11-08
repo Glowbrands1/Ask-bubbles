@@ -1191,6 +1191,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "SALES_OBSERVATION_ACCOUNT_ENABLED",
   // coding 2: SOURCE_NOTE_GUARD (default off): forced off with the others.
   "SOURCE_NOTE_GUARD_ENABLED",
+  // Coding: FINAL_REPLY_MARKER_GUARD (round 5, 8 Nov 2026; port from the sibling app; default off): forced off with the others.
+  "FINAL_REPLY_MARKER_GUARD_ENABLED",
   "UNDER_PERFORMANCE_EXPLAINED_ENABLED",
   "NO_NOTICE_NO_DATE_ENABLED",
   "ISSUE_IS_THE_ACCOUNT_ENABLED",
@@ -3503,4 +3505,18 @@ export function accountVerbNotANameEnabled(): boolean {
  */
 export function outOfDateIsTheProposalEnabled(): boolean {
   return envFlag("OUT_OF_DATE_IS_THE_PROPOSAL_ENABLED");
+}
+
+/**
+ * FINAL_REPLY_MARKER_GUARD_ENABLED (ported from the sibling app: QA's live tester there after round 4, 8 Nov 2026; default off; SOURCE_NOTE_GUARD is live here too). With
+ * SOURCE_NOTE_GUARD on, a Corrective Action turn answered on the form path ("I need a corrective action for under
+ * performance" → "must see behaviors", intent form|no_card) still reached the manager with "…their eyewear [S4][S3]."
+ * and "…not an employee name [S1][S2]." — the guard never ran on that answer — and the bare-marker step itself left the
+ * first of two side-by-side tags, or a tag followed by a dash ("…context [S1]- don't cover it.", coding 4's sf-s38).
+ * With this flag on: the chat route runs the bare-marker step once more on the final reply, as the very last step on
+ * every exit, whatever path made it; and the step takes a run of tags side by side as one, a dash after it no bar
+ * (`ai/source-note.ts`). Off, as before.
+ */
+export function finalReplyMarkerGuardEnabled(): boolean {
+  return envFlag("FINAL_REPLY_MARKER_GUARD_ENABLED");
 }
