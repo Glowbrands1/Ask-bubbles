@@ -226,7 +226,8 @@ export async function answerQuestion(
   memory: { memoryOwnerId?: string } = {},
 ): Promise<AskResponse> {
   // OUT_OF_DATE_IS_THE_PROPOSAL_ENABLED: "what does out of date mean" in a form chat is about the card (ai/out-of-date-is-the-proposal.ts).
-  if (outOfDateIsTheProposalEnabled() && asksWhatOutOfDateMeans(asked)) return outOfDateAnswer(await answerQuestion(cardTurn(asked)!, actor, memory));
+  const outOfDateTurn = outOfDateIsTheProposalEnabled() && asksWhatOutOfDateMeans(asked) ? cardTurn(asked) : null;
+  if (outOfDateTurn) return outOfDateAnswer(await answerQuestion(outOfDateTurn, actor, memory));
   // TITLE_OF_THE_EMPLOYEE_ENABLED: a title the manager attached to another named person is never the card's Position (`ai/title-of-the-employee.ts`).
   // UNDER_PERFORMANCE_EXPLAINED_ENABLED: Under Performance asked for, the Standards of Conduct cited: the reply says why (`ai/under-performance-explained.ts`).
   const answered = withUnderPerformanceExplained(
