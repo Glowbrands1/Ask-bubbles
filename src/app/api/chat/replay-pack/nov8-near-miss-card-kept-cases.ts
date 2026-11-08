@@ -30,7 +30,12 @@ export const NOV8_NEAR_MISS_CARD_KEPT_CASES: ReplayCase[] = [
       const first = await thread.say("create a corrective action for Remy Calder, he was rude to a guest at the register on 11/2");
       expect(first.formProposal?.employeeName ?? null, `no card for Remy Calder (the premise):\n${first.content}`).toBe("Remy Calder");
       const reply = await thread.say("make that change to Remy Caldre");
-      expect(reply.content, `the card was replaced by the bare question:\n${reply.content}`).toMatch(/^I'll draft a \*\*Corrective Action Form\*\* for \*\*Remy Calder\*\*/);
+      // Changed on purpose (QA's round-6 gate, 8 Nov 2026): with PROPOSAL_NAME_CORRECTION_ENABLED (#573) on too, the
+      // kept card is led by its one notice, '"Remy Caldre" isn't a name on the roster, so the card is for **Remy
+      // Calder**. …' — the card itself is unchanged. That line is allowed ahead of the card; nothing else is.
+      const card = reply.content.replace(/^"Remy Caldre" isn't a name on the roster, so the card is for \*\*Remy Calder\*\*\. Tell me if it's someone else\.\n\n/, "");
+      expect(card, `the card was replaced by the bare question:\n${reply.content}`).toMatch(/^I'll draft a \*\*Corrective Action Form\*\* for \*\*Remy Calder\*\*/);
+      expect(reply.content, `the bare question is asked:\n${reply.content}`).not.toMatch(/Is this for \*\*Remy Calder\*\*\?/);
       expect(reply.formProposal?.employeeName ?? null).toBe("Remy Calder");
     },
   },
