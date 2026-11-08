@@ -1176,6 +1176,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ISSUE_IS_THE_ACCOUNT_ENABLED",
   // coding 2: DENIAL_NO_ACCOUNT (default off): forced off with the others.
   "DENIAL_NO_ACCOUNT_ENABLED",
+  // Coding: ISSUE_AFTER_REQUEST_REASON (round 5, 8 Nov 2026; default off): forced off with the others.
+  "ISSUE_AFTER_REQUEST_REASON_ENABLED",
   // Live in production since the 6 Nov flip, but missing from this list (QA, 6 Nov 2026): a gate run with them on
   // would keep them on inside flags-off-parity's child run. Test-only effect.
   "METRIC_GUARD_ENABLED",
@@ -3299,4 +3301,14 @@ export function stalePromptLinesOffEnabled(): boolean {
  */
 export function stepDatesNotFormDateEnabled(): boolean {
   return envFlag("STEP_DATES_NOT_FORM_DATE_ENABLED");
+ * ISSUE_AFTER_REQUEST_REASON_ENABLED (QA's round-5 Bubbles check, 8 Nov 2026; default off). "I need a corrective
+ * action for under performance. <A> was below on …" printed "Issue: under performance" — the request's reason, and
+ * the account was lost; "… made for under performance. <A> was below on …" printed the whole message. With this flag
+ * on, a request whose for-clause (after "made / done / written up …" too) is only a sales reason gives no Issue of
+ * its own, and that request sentence is no account: the account sentence after it is the Issue. Alone, the reason
+ * stays the Issue (`forms/incident-issue.ts`). Ships only with CA_SALES_POLICY_ENABLED (live in both apps): without
+ * it no reason reads as a sales one, and this flag changes nothing. Off, as before.
+ */
+export function issueAfterRequestReasonEnabled(): boolean {
+  return envFlag("ISSUE_AFTER_REQUEST_REASON_ENABLED");
 }
