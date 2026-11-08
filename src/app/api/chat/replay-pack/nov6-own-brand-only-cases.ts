@@ -26,7 +26,8 @@ export const NOV6_OWN_BRAND_ONLY_CASES: ReplayCase[] = [
     id: "nov6-own-brand-only-pets",
     title: "a policy answer listing every brand (\"across all brands — …\") names only this company's brand",
     report: "Pau, 6 Nov 2026 (relayed by QA): \"remove other brand names, should be only buff city soap\"",
-    status: { open: "the reply lists the other brands" },
+    // Was open in production ("the reply lists the other brands"); holds since flip 6 (QA, 7 Nov 2026 20:50 PHT), so it is fixed.
+    status: "fixed",
     fixFlags: ["OWN_BRAND_ONLY_ENABLED"],
     async run(t) {
       vi.setSystemTime(new Date("2026-11-06T15:00:00Z"));

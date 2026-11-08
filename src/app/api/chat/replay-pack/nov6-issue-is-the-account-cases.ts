@@ -24,7 +24,8 @@ export const NOV6_ISSUE_IS_THE_ACCOUNT_CASES: ReplayCase[] = SHAPES.map(({ key, 
   id: `nov6-issue-is-the-account-${key}`,
   title: `"${text}": the card's Issue is the lateness, never the level or the name`,
   report: "QA, 6 Nov 2026 (flip-3 tester, D): What happened = \"verbal\", or the typed name",
-  status: { open: "with production's flags the card's Issue is \"verbal\" (lowercase) or the typed name (nickname)" },
+  // Was open in production ("with production's flags the card's Issue is \"verbal\" (lowercase) or the typed name (nickname)"); holds since flip 6 (QA, 7 Nov 2026 20:50 PHT), so it is fixed.
+  status: "fixed",
   fixFlags: ["ISSUE_IS_THE_ACCOUNT_ENABLED"],
   async run(t) {
     vi.setSystemTime(new Date("2026-11-06T15:00:00Z"));

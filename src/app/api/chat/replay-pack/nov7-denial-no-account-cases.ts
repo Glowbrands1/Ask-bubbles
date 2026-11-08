@@ -4,7 +4,7 @@ import { STAFF, WEST_DODGE, type ReplayCase, type ReplayContext } from "./cases"
 
 /**
  * coding 4's finding, relayed by QA (7 Nov 2026): "create a corrective action for <name>, not late" made a card
- * with "**Issue:** not late" and no "what happened" ask. A denial is no account. This branch is the Issue half (forms/incident-issue.ts); the ask half is in the protected ai/form-proposal.ts and waits for Pau. The sibling app's
+ * with "**Issue:** not late" and no "what happened" ask. A denial is no account. The Issue half is in forms/incident-issue.ts; the ask half is in the protected ai/form-proposal.ts (Pau-approved 7 Nov 2026). The sibling app's
  * BARE_NOT_AFTER_REQUEST fix (and its REPLY_MATCHES_CARD follow-up) for the same shape. The person is the
  * pack's invented Rowan Kestrel.
  */
@@ -34,7 +34,8 @@ export const NOV7_DENIAL_NO_ACCOUNT_CASES: ReplayCase[] = [
       id: `nov7-denial-no-account-${key}`,
       title: `"${said}": the denial is no Issue on the card`,
       report: REPORT,
-      status: { open: "the card shows \"**Issue:** not late\"" },
+      // Was open in production ("the card shows **Issue:** not late"); holds since flip 8 (QA, 8 Nov 2026 00:05 PHT), so it is fixed.
+      status: "fixed",
       fixFlags: FIX,
       async run(t) {
         const thread = start(t);
@@ -47,10 +48,10 @@ export const NOV7_DENIAL_NO_ACCOUNT_CASES: ReplayCase[] = [
       id: `nov7-denial-no-account-asks-${key}`,
       title: `"${said}": the card asks what happened`,
       report: REPORT,
-      status: { open: "the card drafts \"from what you've described\" with no \"what happened\" ask" },
+      // Was open in production ("the card drafts from what you've described with no what happened ask"); holds since flip 8 (QA, 8 Nov 2026 00:05 PHT), so it is fixed.
+      status: "fixed",
       fixFlags: FIX,
-      // The ask is decided in the protected ai/form-proposal.ts (awaitingIncident); that half waits for Pau (QA, 7 Nov 2026).
-      fixStatus: { open: "the ask is decided in the protected form-proposal.ts; that half waits for Pau's approval" },
+      // The ask is decided in the protected ai/form-proposal.ts (awaitingIncident); Pau approved those lines (7 Nov 2026).
       async run(t) {
         const thread = start(t);
         const reply = await thread.say(said);
