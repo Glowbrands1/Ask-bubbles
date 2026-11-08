@@ -4,7 +4,8 @@ import {
   remapIncidentFixEnabled,
   secondRequestOwnAccountEnabled,
 } from "@/lib/config/chat-quality-flags";
-import { withoutPriorStepClauses } from "@/lib/forms/form-date-answer";
+import { correctedDates, withoutPriorStepClauses } from "@/lib/forms/form-date-answer";
+import { businessToday } from "@/lib/business-date";
 import { CA_POLICY_LABEL, readCaPolicy, STANDARDS_OF_CONDUCT, type CaPolicyName } from "@/lib/forms/ca-policy";
 import {
   findManualSection,
@@ -394,6 +395,22 @@ export function isEditTurn(turn: string): boolean {
   return text !== "" && EDIT_TURN.some((pattern) => pattern.test(text));
 }
 
+/*
+ * SECOND_REQUEST_OWN_ACCOUNT_ENABLED (port of the sibling app's round-5 gate fix, 8 Nov 2026,
+ * corrective-action-conversation-qa Q6): a turn that corrects a date ("… on 9-2-26 not 9-1-26") or only states an
+ * earlier step ("the verbal ca was on 9-2-26"), and asks for nothing, is that step's history. The form it names is the
+ * step, not a new request.
+ */
+const ASKS_FOR_A_FORM = /\b(?:create|make\s+(?:a|an|it|another|me)|start|draft|new|another|need\s+(?:a|an)|open|write\s+(?:up|her|him|them))\b/i;
+
+function onlyAboutAPriorStep(turn: string, formWord: RegExp): boolean {
+  if (ASKS_FOR_A_FORM.test(turn)) return false;
+  const today = businessToday();
+  if (correctedDates(turn, today).size > 0) return true;
+  const { text, dropped } = withoutPriorStepClauses(turn, today, turn);
+  return dropped && !formWord.test(text);
+}
+
 /**
  * The turn that starts the form now being written. A later create request
  * with its own incident is a new form: What happened, the policy and the
@@ -415,9 +432,12 @@ export function currentRequestStart(input: {
     // form anywhere ("I need another corrective action for <A>, …", "now make a separate CA for <A> …") is a request
     // too; it starts a new one only with its own incident, below.
     const fixed = remapIncidentFixEnabled();
+    // The sibling app's round-5 gate (8 Nov 2026, Q6): "sorry, the verbal ca was on 9-2-26 not 9-1-26" corrects a prior
+    // step's date; the "ca" in it is that step, never a second request.
+    const formWord = fixed ? FIXED_FORM_WORD_ANYWHERE : FORM_WORD_ANYWHERE;
     const isRequest =
       (fixed ? FIXED_REQUEST_TURN : MAIN_REQUEST_TURN).test(asked) ||
-      (secondRequestOwnAccountEnabled() && requests >= 1 && (fixed ? FIXED_FORM_WORD_ANYWHERE : FORM_WORD_ANYWHERE).test(turn));
+      (secondRequestOwnAccountEnabled() && requests >= 1 && formWord.test(turn) && !onlyAboutAPriorStep(turn, formWord));
     if (!isRequest) continue;
     requests += 1;
     // SECOND_REQUEST_OWN_ACCOUNT_ENABLED (QA's Sunny round-3 gate, 7 Nov 2026; ported from the sibling app): the turn's
