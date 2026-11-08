@@ -23,7 +23,8 @@ export const NOV5_SOURCE_NOTE_CASES: ReplayCase[] = [
     id: "nov5-source-note-leak",
     title: "a bracketed note that starts with a source tag (\"[S1 doesn't actually cover general tardiness …]\") never reaches the reply",
     report: REPORT,
-    status: { open: "with production's flags the note is in the reply" },
+    // Was open in production ("with production's flags the note is in the reply"); holds since flip 8 (QA, 8 Nov 2026 00:05 PHT), so it is fixed.
+    status: "fixed",
     fixFlags: ["SOURCE_NOTE_GUARD_ENABLED"],
     async run(t) {
       vi.setSystemTime(new Date("2026-11-05T15:00:00Z"));
