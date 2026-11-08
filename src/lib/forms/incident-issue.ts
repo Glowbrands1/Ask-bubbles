@@ -10,9 +10,7 @@ import { COMPANY_JOB_TITLES } from "@/config/company/job-titles";
 import { businessToday } from "@/lib/business-date";
 
 import { withoutLevelAndStepClauses } from "./account-clauses";
-import { JOIN } from "./bounded-context";
 import { isSalesPolicyReading, observationAccount, readCaPolicy } from "./ca-policy";
-import { observationAccount } from "./ca-policy";
 import { onlyDeniesAFault } from "./denial-no-account";
 import { JOIN } from "./turn-join";
 import { describesIncident } from "./corrective-action-intake";

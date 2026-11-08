@@ -1,9 +1,14 @@
 import "server-only";
 
 import type { AskResponse } from "@/lib/ai/types";
-import { editPolicyAskEnabled, formEditSingleWriterEnabled, formPatchReaderFixesEnabled, stepBMakeItAboutAccountEnabled } from "@/lib/config/chat-quality-flags";
+import {
+  editPolicyAskEnabled,
+  formEditSingleWriterEnabled,
+  formPatchReaderFixesEnabled,
+  stepBMakeItAboutAccountEnabled,
+  stepBDateSaidEnabled,
+} from "@/lib/config/chat-quality-flags";
 import { madeAbout } from "@/lib/ai/make-it-about";
-import { editPolicyAskEnabled, formEditSingleWriterEnabled, formPatchReaderFixesEnabled, stepBDateSaidEnabled } from "@/lib/config/chat-quality-flags";
 import { saidFormDate } from "./form-date-said";
 import { syncCorrectiveActionPlan } from "./ca-action-plan-sync";
 import { checkboxGroupsForVariant, fieldsForVariant, parseFormDocument } from "./document";
@@ -11,7 +16,13 @@ import { replyFromDiff } from "./form-diff-reply";
 import { readFormPatch, type FormPatchReading } from "./form-patch-model";
 import type { FormPatchField, FormPatchInput, FormPatchReadOnly, FormPatchTurn } from "./form-patch-prompt";
 import { MANAGER_STATED_KEYS, statedDates, templateRules } from "./form-reducer-draft";
-import { applyPatch, draftFromRows, fold, type FieldValue, type PatchRules } from "./form-reducer";
+import {
+  applyPatch,
+  draftFromRows,
+  fold,
+  type FieldValue,
+  type PatchRules,
+} from "./form-reducer";
 import { formLabels, snapshotDiff, snapshotOf } from "./form-snapshot";
 import { authorizeInstance } from "./instance-scope";
 import { applyAssistantRevision, applyStatedFacts, loadInstance, saveInstanceValues } from "./instances";

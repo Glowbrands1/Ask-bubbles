@@ -1,11 +1,11 @@
-import { futurePriorRowDropEnabled, priorActionsNoSignedEnabled, priorActionsParseEnabled, priorRowNotOnIncidentDateEnabled, priorStepPreviouslyEnabled, priorStepSentenceEnabled } from "@/lib/config/chat-quality-flags";
 import {
   futurePriorRowDropEnabled,
+  priorActionsNoSignedEnabled,
   priorActionsParseEnabled,
   priorRowNotOnIncidentDateEnabled,
-  priorStepDateListEnabled,
   priorStepPreviouslyEnabled,
   priorStepSentenceEnabled,
+  priorStepDateListEnabled,
 } from "@/lib/config/chat-quality-flags";
 
 import { statesFirstOccurrence } from "./corrective-action-intake";

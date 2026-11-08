@@ -421,10 +421,9 @@ async function answerQuestionCore(
    */
   // TAKE_OFF_STAYS_CARD_ENABLED: "take the policy off" with a card open is a card turn, never a question.
   const takeOffOnCard = takeOffStaysCard(request);
-  const askedQuestion = !takeOffOnCard && questionNotFormEnabled() && isQuestionNotForm(request.question, request.history);
   // LIST_POLICY_IS_EDIT_ENABLED: "please list the policy" with only a card open is a card turn, never a question.
   const listPolicyCard = listPolicyOnCard(request);
-  const askedQuestion = !listPolicyCard && questionNotFormEnabled() && isQuestionNotForm(request.question, request.history);
+  const askedQuestion = !takeOffOnCard && !listPolicyCard && questionNotFormEnabled() && isQuestionNotForm(request.question, request.history);
   if (intentExtractionEnabled() && !askedQuestion) {
     const prepared = await applyIntentExtraction({ request, actor });
     if (prepared.clarification) return prepared.clarification;
@@ -598,8 +597,6 @@ async function answerQuestionCore(
       request,
       actor,
       question,
-      decorate: (response) => decorateFormAnswer(request, actor, response),
-      question: proposalQuestion,
       // LIST_POLICY_IS_EDIT_ENABLED: the card shows its policy line, or says the policy is listed on the draft at Create.
       decorate: async (response) => (listPolicyCard ? withPolicyListedAtCreate(await decorateFormAnswer(request, actor, response)) : decorateFormAnswer(request, actor, response)),
       propose: readerPropose(reading, request, (question) => proposeFormForTurn({
