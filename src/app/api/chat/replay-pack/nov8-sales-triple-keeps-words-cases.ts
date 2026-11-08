@@ -64,4 +64,16 @@ export const NOV8_SALES_TRIPLE_KEEPS_WORDS_CASES: ReplayCase[] = [
       expect(issueLine(reply), `the Issue is lost:\n${reply.content}`).toMatch(/\*\*Issue:\*\* under performance\b/i);
     },
   },
+  {
+    id: "nov8-sales-triple-place-lead",
+    title: "\"create a written CA for <A> at <store> for missing the 10-15-26 woven deadline\": the Issue never opens with \"at <store>\"",
+    report: "QA's Bubbles round-5 final gate, 8 Nov 2026 (nov7-refusal-bub-phone, with the sales group on)",
+    status: "fixed",
+    fixFlags: [...PAIR, "ACCOUNT_PLACE_LEAD_ENABLED"],
+    async run(t) {
+      const reply = await start(t).say("create a written CA for Remy Calder at West Dodge Rd for missing the 10-15-26 woven deadline");
+      expect(issueLine(reply), `the Issue opens with the request's place:\n${reply.content}`).not.toMatch(/Issue:\*\*\s*at\b/i);
+      expect(issueLine(reply), `the account is lost:\n${reply.content}`).toMatch(/woven deadline/i);
+    },
+  },
 ];

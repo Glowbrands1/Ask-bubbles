@@ -1206,6 +1206,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "SIGNED_STEP_NOT_A_REQUEST_ENABLED",
   "STEP_DATES_NOT_FORM_DATE_ENABLED",
   "TAKE_OFF_STAYS_CARD_ENABLED",
+  // coding 4: ACCOUNT_PLACE_LEAD (round 6; default off): forced off with the others.
+  "ACCOUNT_PLACE_LEAD_ENABLED",
 ] as const;
 
 /**
@@ -3586,4 +3588,14 @@ export function cardComplaintNotAccountEnabled(): boolean {
  */
 export function proposalNameCorrectionEnabled(): boolean {
   return envFlag("PROPOSAL_NAME_CORRECTION_ENABLED");
+}
+
+/**
+ * ACCOUNT_PLACE_LEAD_ENABLED (QA's Bubbles round-5 final gate, 8 Nov 2026; same flag in both apps; default off). With
+ * SALES_OBSERVATION_ACCOUNT, "create a written CA for <name> at <store> for missing the 10-15-26 woven deadline" made
+ * the Issue "at <store> for missing …". On: once the request is cut, a named place ("at <Place>") that opens what is left, and the request's
+ * "for" after it, go (`forms/ca-policy.ts` observationAccount). Off, as before.
+ */
+export function accountPlaceLeadEnabled(): boolean {
+  return envFlag("ACCOUNT_PLACE_LEAD_ENABLED");
 }
