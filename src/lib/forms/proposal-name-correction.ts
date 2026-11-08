@@ -1,8 +1,8 @@
 import type { AskRequest, AskResponse } from "@/lib/ai/types";
 import { proposalNameCorrectionEnabled } from "@/lib/config/chat-quality-flags";
 
-import { editDistance } from "./employee-match";
 import { nameCorrectionQuestion } from "./name-correction-words";
+import { editDistance } from "./employee-match";
 import { personRosterNames } from "./person-guard";
 import { oneCloseRosterPerson, rosterSpelling } from "./roster-only-names";
 
@@ -86,6 +86,14 @@ export function withProposalNameCorrection<T extends AskRequest>(request: T): T 
   const employee = cardEmployee(request);
   if (!employee) return request;
   const question = proposalNameCorrection(request.question, employee);
+  // QA, round 6: a spelling on nobody's roster that can only be one roster person is read as that person (below).
+  const wanted = changedTo(question ?? request.question);
+  const person = wanted ? rosterPersonFor(wanted, employee) : null;
+  if (wanted && person) {
+    const rewritten = { ...request, question: `${CHANGE_TO}${person}` };
+    TYPED_SPELLING.set(rewritten, wanted);
+    return rewritten;
+  }
   return question ? { ...request, question } : request;
 }
 
@@ -98,6 +106,32 @@ export function withProposalNameCorrection<T extends AskRequest>(request: T): T 
  */
 const CHANGE_NAME = /^\s*(?:please\s+)?change\s+(?:her|his|their|the\s+employee'?s?)\s+name\s+to\s+(.+?)\s*[.!]?\s*$/i;
 
+/** The name a "change her name to <name>" turn asks for, or null. */
+function changedTo(question: string): string | null {
+  return CHANGE_NAME.exec(question)?.[1]?.replace(/^["'“‘]+|["'”’]+$/g, "").trim() || null;
+}
+
+/** The spelling the manager typed, for the request `withProposalNameCorrection` rewrote to a roster person. */
+const TYPED_SPELLING = new WeakMap<object, string>();
+
+/**
+ * QA, round 6 (8 Nov 2026): the one roster person a corrected spelling on nobody's roster can only be (a roster
+ * reader's close match, or one roster name every word of it is at most an edit from), sharing the card employee's
+ * first or last name, and the card's own employee when she is on the roster. Null with no roster, a roster spelling,
+ * a tie or no one close (the turn is read as typed).
+ */
+function rosterPersonFor(wanted: string, onCard: string): string | null {
+  const names = personRosterNames();
+  if (!names || names.length === 0 || rosterSpelling(wanted, names)) return null;
+  const said = nameWords(wanted);
+  const had = nameWords(onCard);
+  if (said.length < 2 || !(said[0] === had[0] || said.at(-1) === had.at(-1))) return null;
+  const meant = oneCloseRosterPerson(wanted, names) ?? oneMistypedRosterName(wanted, names);
+  if (!meant) return null;
+  const cardPerson = rosterSpelling(onCard, names);
+  return cardPerson && cardPerson !== meant ? null : meant;
+}
+
 function nameWords(name: string): string[] {
   return name.toLowerCase().split(/[^\p{L}'’-]+/u).filter(Boolean);
 }
@@ -109,11 +143,16 @@ export function withCorrectionNotDropped(answer: AskResponse, request: Pick<AskR
   const old = cardEmployee(request);
   const wanted = CHANGE_NAME.exec(request.question)?.[1]?.replace(/^["'“‘]+|["'”’]+$/g, "").trim();
   if (!card || !old || !wanted || card.subject === "team") return answer;
+  const typed = TYPED_SPELLING.get(request);
+  if (typed && (card.employeeName ?? "").trim() === wanted) {
+    const note = `"${typed}" isn't a name on the roster, so the card is for **${wanted}**. Tell me if it's someone else.`;
+    return answer.content.includes(note) ? answer : { ...answer, content: `${note}\n\n${answer.content}` };
+  }
   if (wanted.toLowerCase() === old.toLowerCase()) return answer;
   const said = nameWords(wanted);
   const had = nameWords(old);
   if (said.length < 2 || !(said[0] === had[0] || said.at(-1) === had.at(-1))) return answer;
-  const kept = cardKeptOnRoster(answer, card, request, old, wanted);
+  const kept = cardKeptOnRoster(answer, card, old, wanted);
   if (kept) return kept;
   if ((card.employeeName ?? "").trim().toLowerCase() !== old.toLowerCase()) return answer;
   return {
@@ -135,7 +174,6 @@ export function withCorrectionNotDropped(answer: AskResponse, request: Pick<AskR
 function cardKeptOnRoster(
   answer: AskResponse,
   card: NonNullable<AskResponse["formProposal"]>,
-  request: Pick<AskRequest, "history" | "activeFormInstanceId">,
   old: string,
   wanted: string,
 ): AskResponse | null {
@@ -151,7 +189,8 @@ function cardKeptOnRoster(
     return { ...answer, content: answer.content.includes(unchanged) ? answer.content : `${unchanged}\n\n${answer.content}` };
   }
   const onCard = (card.employeeName ?? "").trim();
-  if (!onCard) return askReplaced(answer, card, request, old, wanted, person);
+  // A card with no one on it is a question (this app's own "Which of them …"): never a note on top of it.
+  if (!onCard) return null;
   const content = onCard !== person ? answer.content.split(`**${onCard}**`).join(`**${person}**`) : answer.content;
   const note = `"${wanted}" isn't a name on the roster, so the card is for **${person}**. Tell me if it's someone else.`;
   return {
@@ -181,31 +220,4 @@ function oneMistypedRosterName(name: string, names: readonly string[]): string |
   });
   const people = [...new Set(close.map((roster) => roster.trim()))];
   return people.length === 1 ? people[0]! : null;
-}
-
-/**
- * This app's own answer to an off-roster correction (`form-proposal.ts`, the employee read as ambiguous) asks "Which
- * of them … — **<old>** or **<typo>**?" with no one on the card. With one roster person that close, the card on screen
- * before this turn is drafted again for them: the reply before this turn, with only the employee's name changed, and
- * the card's employee seated. Anything but that ask, or no card before this turn: null (the callers go on as before).
- */
-function askReplaced(
-  answer: AskResponse,
-  card: NonNullable<AskResponse["formProposal"]>,
-  request: Pick<AskRequest, "history" | "activeFormInstanceId">,
-  old: string,
-  wanted: string,
-  person: string,
-): AskResponse | null {
-  if (!/^Which of them is this \*\*/.test(answer.content.trim())) return null;
-  const previous = [...request.history].reverse().find((turn) => turn.role === "assistant");
-  const before = String(previous?.content ?? "");
-  if (!CARD_LEAD.test(before)) return null;
-  const note = `"${wanted}" isn't a name on the roster, so the card is for **${person}**. Tell me if it's someone else.`;
-  const ready = card.locationId !== null;
-  return {
-    ...answer,
-    content: `${note}\n\n${before.split(`**${old}**`).join(`**${person}**`)}`,
-    formProposal: { ...card, employeeName: person, status: ready ? "ready" : "needs_location", supportsInlineDraft: ready || card.supportsInlineDraft },
-  };
 }
