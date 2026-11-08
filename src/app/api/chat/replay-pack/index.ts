@@ -1,5 +1,6 @@
 /// <reference types="vite/client" />
 import type { ReplayCase } from "./cases";
+import { FIXED_IN_PRODUCTION } from "./production-fixes";
 
 /*
  * EVERY CASE FILE REGISTERS ITSELF (QA, 3 Nov 2026). The pack used to list
@@ -31,4 +32,6 @@ export const CASES: readonly ReplayCase[] = Object.keys(FILES)
     Object.values(FILES[path]!)
       .filter(Array.isArray)
       .flatMap((list) => (list as unknown[]).filter(isCase)),
-  );
+  )
+  // Cases the round-5 flip fixed in production (see production-fixes.ts): fixed, whatever their file still says.
+  .map((replay): ReplayCase => (FIXED_IN_PRODUCTION[replay.id] ? { ...replay, status: "fixed" } : replay));

@@ -1,20 +1,37 @@
 import "server-only";
 
 import type { AskResponse } from "@/lib/ai/types";
-import { editPolicyAskEnabled, formEditSingleWriterEnabled, formPatchReaderFixesEnabled } from "@/lib/config/chat-quality-flags";
+import {
+  editPolicyAskEnabled,
+  formEditSingleWriterEnabled,
+  formPatchReaderFixesEnabled,
+  stepBMakeItAboutAccountEnabled,
+  stepBDateSaidEnabled,
+} from "@/lib/config/chat-quality-flags";
+import { madeAbout } from "@/lib/ai/make-it-about";
+import { saidFormDate } from "./form-date-said";
 import { syncCorrectiveActionPlan } from "./ca-action-plan-sync";
 import { checkboxGroupsForVariant, fieldsForVariant, parseFormDocument } from "./document";
 import { replyFromDiff } from "./form-diff-reply";
 import { readFormPatch, type FormPatchReading } from "./form-patch-model";
 import type { FormPatchField, FormPatchInput, FormPatchReadOnly, FormPatchTurn } from "./form-patch-prompt";
 import { MANAGER_STATED_KEYS, statedDates, templateRules } from "./form-reducer-draft";
-import { applyPatch, draftFromRows, fold, type FieldValue, type PatchRules } from "./form-reducer";
+import {
+  applyPatch,
+  draftFromRows,
+  fold,
+  type FieldValue,
+  type PatchRules,
+} from "./form-reducer";
 import { formLabels, snapshotDiff, snapshotOf } from "./form-snapshot";
 import { authorizeInstance } from "./instance-scope";
 import { applyAssistantRevision, applyStatedFacts, loadInstance, saveInstanceValues } from "./instances";
 import { NO_PRIOR_ACTION, PRIOR_ACTIONS_KEY } from "./prior-actions";
 import { draftableCheckboxGroups, draftableFields } from "./responsibility";
 import type { ChatMessage } from "@/types";
+
+/** STEP_B_MAKE_IT_ABOUT_ACCOUNT_ENABLED: the fields that give a form's account (Coaching Details, a CA's Observation). */
+const ACCOUNT_KEYS = ["coaching_details", "observation"] as const;
 
 /**
  * ============================================================================
@@ -242,6 +259,20 @@ export async function patchActiveForm(input: PatchTurnInput): Promise<AskRespons
     };
     if (!("ok" in reading) || reading.turn !== "this_form") return handOff("none");
     /*
+     * STEP_B_MAKE_IT_ABOUT_ACCOUNT_ENABLED (QA's live draft test, 8 Nov 2026): "I need you to make it about showing up
+     * late" was read as the Other topic alone, and Details of Coaching stayed about the missed meeting. A turn that
+     * says what the form is about, whose patch does not set the form's account, goes to the old path before anything
+     * is written: EDIT_MAKE_IT_ABOUT's revision rewrites the account there.
+     */
+    if (
+      stepBMakeItAboutAccountEnabled() &&
+      madeAbout(input.question) !== null &&
+      ACCOUNT_KEYS.some((key) => writable.has(key)) &&
+      !ACCOUNT_KEYS.some((key) => key in reading.patch.set)
+    ) {
+      return handOff("none");
+    }
+    /*
      * EDIT_POLICY_ASK_ENABLED (QA's live run, 7 Nov 2026): the latest message asks for the policy on a form whose
      * account field carries the citation line. Answered after the edit is written, below; asked alone ("please list
      * the policy"), it is this turn's whole answer.
@@ -257,7 +288,16 @@ export async function patchActiveForm(input: PatchTurnInput): Promise<AskRespons
      * path's turn: null, so the redraft and revision paths run as before.
      * (A patch whose sets were all refused still answers from its diff.)
      */
-    if (Object.keys(reading.patch.set).length === 0 && reading.patch.clear.length === 0) {
+    /*
+     * STEP_B_DATE_SAID_ENABLED (QA's live test, Ask Bubbles production, 8 Nov 2026): "… make the date for 10/14/26"
+     * on a saved draft set the topic and the policy, and the Date stayed 10/10 with nothing said: the reader is never
+     * offered the form's Date. A date the manager says the form takes (`form-date-said.ts`) is written as their own
+     * statement after the reader's edits, and the reply says "Changed Date to …".
+     */
+    const saidDate = stepBDateSaidEnabled() ? saidFormDate(input.question, input.today) : null;
+    const dateToWrite = saidDate !== null && "form_date" in before && before.form_date?.value !== saidDate ? saidDate : null;
+    // A date to write goes on below even with no patch (STEP_B_DATE_SAID); the policy is then answered after it.
+    if (Object.keys(reading.patch.set).length === 0 && reading.patch.clear.length === 0 && dateToWrite === null) {
       if (!policyAsk) return handOff("nothing");
       const outcome = await answerPolicy();
       if (!outcome) return handOff("nothing");
@@ -323,8 +363,9 @@ export async function patchActiveForm(input: PatchTurnInput): Promise<AskRespons
      * owner split below moved there. A patch with any refusal writes nothing
      * and the turn goes on (redraft, revision).
      */
+    const patchOps = Object.keys(reading.patch.set).length + reading.patch.clear.length;
     let policyOutcome: Awaited<ReturnType<typeof answerPolicy>> = null;
-    if (formEditSingleWriterEnabled()) {
+    if (formEditSingleWriterEnabled() && patchOps > 0) {
       const ops = [
         ...Object.entries(reading.patch.set).map(([field, value]) => ({
           op: reading.patch.how?.[field] === "add" ? ("append" as const) : ("set" as const),
@@ -361,12 +402,13 @@ export async function patchActiveForm(input: PatchTurnInput): Promise<AskRespons
        * to the old path, whose revision rewrote the form and said "Updated"): what the reader set is already on
        * the form. Said so; the old path does not run.
        */
-      if (readerFixes && result.handoff === "noop") {
+      // With a date still to write, the turn goes on: the date is written below, and the policy after it.
+      if (readerFixes && result.handoff === "noop" && dateToWrite === null) {
         const outcome = await answerPolicy();
         if (!outcome?.written) return withPolicySentence(alreadyThere(Object.keys(reading.patch.set), labels), outcome);
         policyOutcome = outcome;
       }
-    } else {
+    } else if (patchOps > 0) {
       const { diff } = applyPatch(before, reading.patch, rules);
 
       const groupKeys = new Set(allGroups.map((group) => group.key));
@@ -410,6 +452,22 @@ export async function patchActiveForm(input: PatchTurnInput): Promise<AskRespons
       }
     }
 
+    if (dateToWrite !== null) {
+      const fresh = await loadInstance(input.instanceId);
+      // The manager's own statement: through the one writer when it is on, else as a stated fact, as the old path writes it.
+      if (fresh && formEditSingleWriterEnabled()) {
+        await (await import("./form-write")).correctionWrite({
+          instanceId: input.instanceId,
+          loaded: fresh,
+          stated: { values: { form_date: dateToWrite }, checked: {} },
+          actorId: actor.id,
+          said: input.question,
+          today: input.today,
+        });
+      } else if (fresh) {
+        await applyStatedFacts(input.instanceId, { values: { form_date: dateToWrite }, checked: {} }, actor.id, new Set(["form_date"]));
+      }
+    }
     // EDIT_POLICY_ASK_ENABLED: the policy, after the edit is on the form (its account is what the policy is read from).
     policyOutcome ??= await answerPolicy();
     const reloaded = await loadInstance(input.instanceId);
