@@ -134,12 +134,12 @@ import { OTHER_WRITE_IN_INSTRUCTION, specificTopic, withConductLinePage, withCon
 import {
   PAYROLL_DEDUCT_KEY,
   isPayrollDeductAnswer,
-  payrollDeductAmount,
   statedPayrollDeduct,
 } from "@/lib/forms/payroll-deduct";
 import {
   PAYROLL_DEDUCT_AMOUNT_KEY,
   PAYROLL_DEDUCT_AMOUNT_STATED_KEYS,
+  managerPayrollAmount,
   payrollAmountForDraft,
 } from "@/lib/forms/payroll-deduct-amount";
 import {
@@ -183,12 +183,14 @@ import {
   policyCitationEnabled,
   policySpecificTopicsEnabled,
   sameFormCopyEnabled,
+  sameFormCopyNewPersonEnabled,
   typoReadingRoutesEnabled,
   teamCardWordingEnabled,
   cardPolicyToDraftEnabled,
   formEditSingleWriterEnabled,
   formPatchReducerEnabled,
   caSalesPolicyEnabled,
+  priorActionsNoSignedEnabled,
   secondRequestOwnAccountEnabled,
   proposalMakeItAboutEnabled,
   proposalPolicySetAsideEnabled,
@@ -252,6 +254,7 @@ import { readerPriorLines, withReaderPriorLines } from "@/lib/ai/reader/recheck"
 import { JOIN } from "@/lib/forms/bounded-context";
 import { businessToday } from "@/lib/business-date";
 import { updateChatTrace } from "@/lib/ai/chat-trace-store";
+import { conductLineWithoutUnderPerformance, leaveOutOtherWriteInLine, leaveOutUnderPerformanceLine } from "@/lib/ai/stale-prompt-lines";
 import {
   correctDraftedDates,
   draftBriefDates,
@@ -312,6 +315,13 @@ interface DraftBody {
    * that heading. See `lib/forms/card-policy.ts`.
    */
   cardPolicy?: string;
+  /**
+   * SAME_FORM_COPY_NEW_PERSON_ENABLED: the form the card was asked to copy
+   * ("the same draft that we did with <name>"). Re-checked: this account's
+   * own form of this template, still visible to it. See
+   * `lib/forms/same-form-copy.ts`.
+   */
+  copyFromInstanceId?: string;
 }
 
 function fieldBrief(field: FormField, variantLabel: string | null): string {
@@ -485,6 +495,33 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
       return NextResponse.json({ values: {}, checked: {}, withheld: [], notice: null, statedFacts });
     }
 
+    /*
+     * SAME_FORM_COPY_NEW_PERSON_ENABLED: the card names the form it copies
+     * (asked for before this person was named), so the copy comes from that
+     * form, never from re-reading the card's wording.
+     */
+    if (sameFormCopyEnabled() && sameFormCopyNewPersonEnabled() && typeof body.copyFromInstanceId === "string") {
+      const copy = await import("@/lib/forms/same-form-copy");
+      const source = await copy.ownCopySourceById({
+        actor,
+        instanceId: body.copyFromInstanceId,
+        templateKey: loaded.instance.templateKey,
+        targetInstanceId: id,
+        targetEmployeeName: loaded.instance.employeeName,
+      });
+      if (source) {
+        const copied = await copy.copyFormContent({ source, target: loaded, actorId: actor.id, notes });
+        if (Object.keys(copied.values).length > 0 || Object.keys(copied.checked).length > 0) {
+          return NextResponse.json({
+            values: copied.values,
+            checked: copied.checked,
+            withheld: [],
+            notice: copy.copiedNotice(source.instance),
+            statedFacts,
+          });
+        }
+      }
+    }
     /*
      * "DO THE SAME COACHING FORM FOR <ANOTHER PERSON>" (SAME_FORM_COPY_ENABLED).
      * The content of the manager's own earlier form of this template, name
@@ -977,7 +1014,19 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
      */
     const hasPriorActions = fields.some((field) => field.key === PRIOR_ACTIONS_KEY);
     const PRIOR_ACTIONS_RULES = [
-      `The field ${PRIOR_ACTIONS_KEY} lists every coaching or corrective action the employee PREVIOUSLY received, as the manager described it — one per line, each written as "<what it was> — signed <MM/DD/YYYY>".`,
+      /*
+       * PRIOR_ACTIONS_NO_SIGNED_ENABLED (QA, a location manager's chat, 5 Nov 2026): the line format asked
+       * for "signed", so the model wrote it for steps nobody signed. On, the format has the plain date and
+       * "signed" is written only where the manager said so. Off, as before.
+       */
+      ...(priorActionsNoSignedEnabled()
+        ? [
+            `The field ${PRIOR_ACTIONS_KEY} lists every coaching or corrective action the employee PREVIOUSLY received, as the manager described it — one per line, each written as "<what it was> — <MM/DD/YYYY>".`,
+            'Never write "signed" on this list unless the manager said that step was signed; then write "<what it was> — signed <MM/DD/YYYY>".',
+          ]
+        : [
+            `The field ${PRIOR_ACTIONS_KEY} lists every coaching or corrective action the employee PREVIOUSLY received, as the manager described it — one per line, each written as "<what it was> — signed <MM/DD/YYYY>".`,
+          ]),
       "List only steps and dates the manager actually gave. Never invent a prior step or a date; a step whose date the manager did not give is listed without one.",
       "List them oldest first. Keep each step exactly as the manager named it and what they said it was for; never upgrade a step (a verbal warning is not a written warning).",
       `If the manager said this is the first occurrence, write "${NO_PRIOR_ACTION}". If they said nothing about history, leave it empty.`,
@@ -1234,12 +1283,16 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
        * things on the document, and ticking one without filling the other
        * prints a ticked box with no label beside it.
        */
-      promptGroups.some((group) => group.options.some((option) => option.key === "other"))
+      // STALE_PROMPT_LINES_OFF_ENABLED: left out when this version has no write-in beside Other (`stale-prompt-lines.ts`). Off, as before.
+      promptGroups.some((group) => group.options.some((option) => option.key === "other")) && !leaveOutOtherWriteInLine(fields)
         ? policySpecificTopicsEnabled()
           ? OTHER_WRITE_IN_INSTRUCTION
           : 'When no listed option fits, tick "other" AND name the topic in the matching write-in field — for lateness that write-in is "Punctuality".'
         : "",
-      offersConductPolicy
+      // STALE_PROMPT_LINES_OFF_ENABLED: with no under_performance box, the line's first sentence alone. Off, as before.
+      offersConductPolicy && leaveOutUnderPerformanceLine(offenseOffered)
+        ? conductLineWithoutUnderPerformance(STANDARDS_OF_CONDUCT)
+        : offersConductPolicy
         ? `Type of Offense: assigned work, a required deadline, or required Woven items or training not completed, and a manager's direction not followed, are ${STANDARDS_OF_CONDUCT}. under_performance is for results against a sales or performance target.`
         : "",
       // CA_SALES_POLICY_ENABLED: one added line after the one above, which stays as it is. Off, nothing is added.
@@ -2374,7 +2427,7 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
             answer: payrollAnswer,
             ...planPayrollAmount({
               answer: payrollAnswer,
-              stated: payrollDeductAmount(amountNotes),
+              stated: managerPayrollAmount(amountNotes),
               quotedPolicy: "policy_language" in pinnedProvenance ? (draftValues.policy_language ?? null) : null,
             }),
           },
@@ -2424,7 +2477,7 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
     const planValue = builtPlan && planInput
       ? withPayrollSentence(builtPlan, {
           answer: planInput.payroll.answer,
-          amount: payrollDeductAmount(amountNotes),
+          amount: managerPayrollAmount(amountNotes),
           employeeName: loaded.instance.employeeName,
         })
       : builtPlan;

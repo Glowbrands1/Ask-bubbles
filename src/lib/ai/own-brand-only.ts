@@ -1,6 +1,6 @@
 import { BCS_BRAND } from "@/config/company/brand";
-import { POLICY_MANUAL_BRAND_SCOPE } from "@/config/company/knowledge";
-import { ownBrandOnlyEnabled } from "@/lib/config/chat-quality-flags";
+import { PARENT_COMPANY_NAMES, POLICY_MANUAL_BRAND_SCOPE } from "@/config/company/knowledge";
+import { ownBrandOnlyEnabled, ownBrandParentEnabled } from "@/lib/config/chat-quality-flags";
 
 import type { AskResponse } from "./types";
 
@@ -43,6 +43,16 @@ export interface BrandWords {
 
 const DEFAULT_WORDS: BrandWords = { own: BCS_BRAND.brandName, others: POLICY_MANUAL_BRAND_SCOPE.otherBrands };
 
+/**
+ * OWN_BRAND_PARENT_ENABLED (QA's live tester, 7 Nov 2026): "This applies company-wide across all brands (Buff City
+ * Soap, and JB & Associates), …" kept the operating company beside this brand. With the flag on, its name
+ * (`PARENT_COMPANY_NAMES`, config) is one of the names a reply does not show, and "across all brands (A, B)" reads
+ * "at <this brand>" as "across all brands — A, B" already did. Off, as before.
+ */
+function brandWords(): BrandWords {
+  return ownBrandParentEnabled() ? { ...DEFAULT_WORDS, others: [...DEFAULT_WORDS.others, ...PARENT_COMPANY_NAMES] } : DEFAULT_WORDS;
+}
+
 function patterns(words: BrandWords) {
   const own = escape(words.own).replace(/\\? /g, String.raw`\s+`);
   const other = `(?:${words.others.join("|")})`;
@@ -55,6 +65,11 @@ function patterns(words: BrandWords) {
     /** "across all brands — A, B, C": the lead and the list. */
     acrossList: new RegExp(
       String.raw`\b(?:across|for|in)\s+(?:all|every)(?:\s+(?:of\s+)?(?:the|our))?\s+brands?\b(?:\s*\([^)]*\))?\s*[—–:-]\s*(${brand}(?:${sep}${brand})+)`,
+      "gi",
+    ),
+    /** OWN_BRAND_PARENT_ENABLED: "across all brands (A, and B)": the lead and the bracketed list. */
+    acrossBracketed: new RegExp(
+      String.raw`\b(?:across|for|in)\s+(?:all|every)(?:\s+(?:of\s+)?(?:the|our))?\s+brands?\b\s*\((${brand}(?:${sep}${brand})+)\)`,
       "gi",
     ),
     /** "A, B and C": a list of two or more brands. */
@@ -116,6 +131,7 @@ function withinLine(line: string, p: ReturnType<typeof patterns>): string {
       if (!p.other.test(sentence)) return sentence;
       if (QUOTE.test(sentence)) return "";
       let next = sentence.replace(p.acrossList, (whole, list: string) => (p.own.test(list) ? `at ${p.ownName}` : whole));
+      if (ownBrandParentEnabled()) next = next.replace(p.acrossBracketed, (whole, list: string) => (p.own.test(list) ? `at ${p.ownName}` : whole));
       next = next.replace(p.list, (list) => (p.own.test(list) ? p.ownName : list));
       return p.other.test(next) ? "" : next;
     })
@@ -127,6 +143,6 @@ function withinLine(line: string, p: ReturnType<typeof patterns>): string {
 /** OWN_BRAND_ONLY_ENABLED: the finished reply with only this company's brand named. Off: as built. */
 export function withOwnBrandOnly(response: AskResponse): AskResponse {
   if (!ownBrandOnlyEnabled()) return response;
-  const content = ownBrandOnly(response.content);
+  const content = ownBrandOnly(response.content, brandWords());
   return content === response.content ? response : { ...response, content };
 }
