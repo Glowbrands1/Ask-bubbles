@@ -2791,6 +2791,19 @@ export function replyMatchesCardEnabled(): boolean {
   return envFlag("REPLY_MATCHES_CARD_ENABLED");
 }
 
+// coding 5: COACHING_CARD_POLICY (beside REPLY_MATCHES_CARD, not at a block end, so merges do not collide)
+/**
+ * COACHING_CARD_POLICY_ENABLED (coding 5; QA's live test, Ask Bubbles production, 8 Nov 2026; port of the sibling app's
+ * card citation; default off). "my employee <A> was late on 10-20-26, create a coaching form" gave a Coaching card with
+ * no policy line; the sibling app's card cites "Attendance Policy, JBA Policy Manual p.14". On: a Coaching or Follow-Up
+ * Coaching card that cites no manual line yet cites the sections its account points at, with the page the manual
+ * prints (`forms/coaching-card-policy.ts`, called on the forms path's answer by `ai/coaching-card-policy-answer.ts`).
+ * Off, as before.
+ */
+export function coachingCardPolicyEnabled(): boolean {
+  return envFlag("COACHING_CARD_POLICY_ENABLED");
+}
+
 /**
  * ROSTER_COMPOUND_SURNAME_ENABLED (the re-flip's rollback, 5 Nov 2026; default
  * off). The flip's live testers (R3/R5/R7): a real employee's surname is two
