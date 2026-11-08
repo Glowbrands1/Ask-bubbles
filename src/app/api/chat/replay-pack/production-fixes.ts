@@ -141,8 +141,6 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   // Changed on purpose (9 Nov 2026): fixed in production by REQUEST_KEPT_IN_WINDOW, PROPOSAL_NAME_CORRECTION, QA round 6
   "nov5-r6-policy-kept-across-turns": "REQUEST_KEPT_IN_WINDOW, PROPOSAL_NAME_CORRECTION",
   // Changed on purpose (9 Nov 2026): fixed in production by SALES_SHORTFALL_OBJECT, SALES_OBSERVATION_ACCOUNT, CA_PERFORMANCE_REASON, QA round 6
-  "nov5-stale-prompt-lines-sales-other-write-in": "SALES_SHORTFALL_OBJECT, SALES_OBSERVATION_ACCOUNT, CA_PERFORMANCE_REASON",
-  // Changed on purpose (9 Nov 2026): fixed in production by SALES_SHORTFALL_OBJECT, SALES_OBSERVATION_ACCOUNT, CA_PERFORMANCE_REASON, QA round 6
   "nov6-sales-shortfall-object-performance-h01": "SALES_SHORTFALL_OBJECT, SALES_OBSERVATION_ACCOUNT, CA_PERFORMANCE_REASON",
   // Changed on purpose (9 Nov 2026): fixed in production by SALES_SHORTFALL_OBJECT, SALES_OBSERVATION_ACCOUNT, CA_PERFORMANCE_REASON, QA round 6
   "nov6-sales-shortfall-object-performance-h13": "SALES_SHORTFALL_OBJECT, SALES_OBSERVATION_ACCOUNT, CA_PERFORMANCE_REASON",
