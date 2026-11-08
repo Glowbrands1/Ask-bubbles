@@ -1190,6 +1190,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "OFF_ROSTER_CONFIRM_ENABLED",
   // Default-off fix flag (QA, 7 Nov 2026).
   "METRIC_CHOICE_ONE_QUESTION_ENABLED",
+  // coding 5: MISSED_SHIFT_NOT_LATENESS (default off): forced off with the others.
+  "MISSED_SHIFT_NOT_LATENESS_ENABLED",
 ] as const;
 
 /**
@@ -2554,6 +2556,16 @@ export function formPatchReaderFixesEnabled(): boolean {
  */
 export function editPolicyAskEnabled(): boolean {
   return envFlag("EDIT_POLICY_ASK_ENABLED") && formPatchReducerEnabled();
+}
+/**
+ * MISSED_SHIFT_NOT_LATENESS_ENABLED (the sibling app's live Create test, QA round 5, 8 Nov 2026; sf-s38; coding 5; same
+ * flag in both apps; default off). A Corrective Action for missed weekend shifts was saved with the Attendance
+ * lateness plan ("expected to arrive on time … Continued lateness …"), not the plan the card showed. On: an account of
+ * a missed or no-show shift, a call-out or an absence that says nothing about lateness keeps the general plan, as a
+ * missed meeting does under MEETING_NOT_LATENESS_PLAN (`forms/attendance-action-plan.ts`). Off, as before.
+ */
+export function missedShiftNotLatenessEnabled(): boolean {
+  return envFlag("MISSED_SHIFT_NOT_LATENESS_ENABLED");
 }
 // --- end coding 5 flags ---
 
