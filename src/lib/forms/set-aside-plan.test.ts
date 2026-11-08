@@ -1,13 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { NOTHING_SET_ASIDE, withPolicySetAside } from "./policy-set-aside";
+import type { CaPolicyName } from "./ca-policy";
+import { NOTHING_SET_ASIDE, withPolicySetAside, type PolicySetAside } from "./policy-set-aside";
 
 /** POLICY_SET_ASIDE_PLAN_ENABLED (the Bubbles live tester, QA, 8 Nov 2026); an invented person. */
 const CARD = [
   "**Policy:** Attendance, from what you described (\"late\") — the policy manual's section on page 14.",
   "**Action plan:** Management will review the Attendance policy with Marnie. Future policy violations may result in additional corrective action up to and including termination of employment.",
 ].join("\n\n");
-const ATTENDANCE = { names: new Set(["attendance"] as never), any: false };
+const ATTENDANCE: PolicySetAside = { names: new Set<CaPolicyName>(["attendance"]), any: false };
 
 afterEach(() => vi.unstubAllEnvs());
 
