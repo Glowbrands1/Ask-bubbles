@@ -14,6 +14,10 @@ const PRODUCTION = [...production.on, ...production.assumedOn];
 function flags(on: boolean) {
   for (const flag of PRODUCTION) vi.stubEnv(flag, "true");
   vi.stubEnv("REQUEST_PARTICIPLE_LEAD_ENABLED", on ? "true" : "false");
+  // Changed on purpose (9 Nov 2026): the "off" half is the Issue as it was before the flag, in a world where round 5's
+  // ISSUE_AFTER_REQUEST_REASON (live since 8 Nov) and the flag are both off. ISSUE_AFTER_REQUEST_REASON alone already
+  // makes the account the Issue for this wording, so with production's flags read from the file the old pin failed.
+  if (!on) vi.stubEnv("ISSUE_AFTER_REQUEST_REASON_ENABLED", "false");
 }
 
 afterEach(() => vi.unstubAllEnvs());

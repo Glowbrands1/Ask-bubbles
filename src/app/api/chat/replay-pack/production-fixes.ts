@@ -208,4 +208,10 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov8-undated-weekend-shifts-no-form-date": "UNDATED_ACCOUNT_BRIEF, SALES_SHORTFALL_OBJECT, SALES_OBSERVATION_ACCOUNT, CA_PERFORMANCE_REASON",
   // Changed on purpose (9 Nov 2026): fixed in production by UNKNOWN_NAME_ASK_WHO_FOR, QA round 6
   "nov8-unknown-name-who-for-chain": "UNKNOWN_NAME_ASK_WHO_FOR",
+  // Changed on purpose (9 Nov 2026): fixed in production by POLICY_CORRECTION_NOT_ACCOUNT, QA round 6
+  "nov8-policy-correction-not-account": "POLICY_CORRECTION_NOT_ACCOUNT",
+  // Changed on purpose (9 Nov 2026): fixed in production by REQUEST_PARTICIPLE_LEAD, QA round 6
+  "nov8-observation-made-for-under-performance": "REQUEST_PARTICIPLE_LEAD",
+  // Changed on purpose (9 Nov 2026): fixed in production by REQUEST_PARTICIPLE_LEAD, QA round 6
+  "nov8-observation-done-for-under-performance": "REQUEST_PARTICIPLE_LEAD",
 };
