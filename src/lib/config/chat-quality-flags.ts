@@ -2954,6 +2954,16 @@ export function requestFromNamesEmployeeEnabled(): boolean {
  */
 export function coachingCardPolicyEnabled(): boolean {
   return envFlag("COACHING_CARD_POLICY_ENABLED");
+// coding 5: FORM_RECORDS_NO_JUDGEMENT (beside REPLY_MATCHES_CARD, not at a block end, so merges do not collide)
+/**
+ * FORM_RECORDS_NO_JUDGEMENT_ENABLED (coding 5; QA's live test, Ask Bubbles, 8 Nov 2026; same flag in both apps; default
+ * off). Listing someone's forms added "a notable number of Corrective Actions in under two weeks for one person" and
+ * "worth reviewing … before deciding what comes next". On: the Forms Register block tells the model to list each form
+ * with its date and status only, and `withoutRecordJudgement` drops such sentences from a records answer
+ * (`forms/chat-form-records.ts`). Off, as before.
+ */
+export function formRecordsNoJudgementEnabled(): boolean {
+  return envFlag("FORM_RECORDS_NO_JUDGEMENT_ENABLED");
 }
 
 /**
