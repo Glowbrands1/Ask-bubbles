@@ -1218,6 +1218,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "COMPLAINT_ACCOUNT_ENABLED",
   // coding 5: UNKNOWN_NAME_ASK_WHO_FOR (default off): forced off with the others.
   "UNKNOWN_NAME_ASK_WHO_FOR_ENABLED",
+  // coding 5: CORRECTED_DATE_KEPT (default off): forced off with the others.
+  "CORRECTED_DATE_KEPT_ENABLED",
 ] as const;
 
 /**
@@ -2618,6 +2620,17 @@ export function complaintAccountEnabled(): boolean {
  */
 export function unknownNameAskWhoForEnabled(): boolean {
   return envFlag("UNKNOWN_NAME_ASK_WHO_FOR_ENABLED");
+}
+
+/**
+ * CORRECTED_DATE_KEPT_ENABLED (the sibling app's round-5 trace of corrective-action-conversation-qa Q6, 8 Nov 2026;
+ * coding 5; same flag in both apps; default off). "the meeting was actually on 10-19-26", then "sorry, the verbal ca
+ * was on 9-2-26 not 9-1-26": the card's date became 09-02, the prior step's corrected date, and Create saved it. On: a
+ * correction of a prior step's date is never the form's date (`forms/incident-dates.ts` correctedIncidentDate). Off,
+ * as before.
+ */
+export function correctedDateKeptEnabled(): boolean {
+  return envFlag("CORRECTED_DATE_KEPT_ENABLED");
 }
 // --- end coding 5 flags ---
 

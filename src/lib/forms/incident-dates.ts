@@ -1,6 +1,7 @@
 import { isAppLine, withoutAppLines } from "@/lib/ai/app-sentences";
 import {
   antiLoopEnabled,
+  correctedDateKeptEnabled,
   dateAnswerAppliedEnabled,
   dateAnswerKeepsOpenEnabled,
   keepFormEmployeeEnabled,
@@ -18,6 +19,7 @@ import {
   heldCoachingDates,
   listFormDates,
   listIncidentDates,
+  priorSteps,
   statedIncidentDates,
   yearlessWrittenOut,
 } from "./form-date-answer";
@@ -224,10 +226,18 @@ export function answersDateQuestion(history: readonly Turn[], question: string, 
  */
 export function correctedIncidentDate(turns: readonly string[], today: string): string | null {
   let date: string | null = null;
+  // CORRECTED_DATE_KEPT_ENABLED: the prior steps' dates, read over the whole conversation (with their corrections).
+  const stepDates = correctedDateKeptEnabled() ? new Set(priorSteps(turns.join("\n\n"), today).map((step) => step.iso)) : null;
   for (const turn of turns.slice(1)) {
     // "wait, was it 10/19/26?" asks; it corrects nothing (QA, 22 Oct 2026, round 3).
     if (!CORRECTS_DATE.test(turn) || ADDS_AN_INCIDENT.test(turn) || /\?\s*$/.test(turn.trim())) continue;
     const own = incidentDates(turn, today);
+    /*
+     * CORRECTED_DATE_KEPT_ENABLED (the sibling app's round-5 trace of corrective-action-conversation-qa Q6, 8 Nov
+     * 2026): "sorry, the verbal ca was on 9-2-26 not 9-1-26" corrects a prior step's date, never the incident's, so it
+     * leaves the incident date the manager corrected before it ("the meeting was actually on 10-19-26") as it was.
+     */
+    if (own.length === 1 && stepDates?.has(own[0]!)) continue;
     if (own.length === 1) date = own[0]!;
   }
   return date;
@@ -287,6 +297,15 @@ export function decideFormDate(input: {
   if (said) return { formDate: said };
 
   let dates = incidentDates(input.text, input.today, COACHING_TEMPLATES.has(input.templateKey));
+  /*
+   * CORRECTED_DATE_KEPT_ENABLED (QA's round-5 trace of Q6, 8 Nov 2026): "sorry, the verbal ca was on 9-2-26 not
+   * 9-1-26" names the prior step's corrected date; it is that step's date, never one of the incident's. Without this,
+   * several dates left the card on the last one stated (ANTI_LOOP), here the step's 09-02.
+   */
+  if (correctedDateKeptEnabled()) {
+    const stepDates = new Set(priorSteps(input.text, input.today).map((step) => step.iso));
+    dates = dates.filter((iso) => !stepDates.has(iso));
+  }
   if (COACHING_TEMPLATES.has(input.templateKey)) {
     const latestIncident = dates[dates.length - 1] ?? "";
     const held = heldCoachingDates(input.text, input.today).filter((iso) => iso >= latestIncident);
