@@ -20,6 +20,7 @@ import {
 import { proposeLocationWithSource, type LocationProposal } from "./location-scope";
 import { ROSTER_STORE_INDEX, rosterLocationName } from "./location-mention";
 import { isExitTerms, namesSomebody, notInStreetAddress } from "./answer-not-a-name";
+import { nameBeforeAccountVerb } from "./not-a-name";
 import { isStoreName, type StoreIndex } from "@/lib/stores/resolver";
 import type { AccessScope, ChatFormProposal, ChatMessage, EmployeeVerification } from "@/types";
 
@@ -1390,6 +1391,10 @@ function isFieldLabelCandidate(name: string): boolean {
 }
 
 function settle(strong: string[], weak: string[], text: string, subjects: readonly string[] = []): EmployeeMentions {
+  // ACCOUNT_VERB_NOT_A_NAME_ENABLED (sf-s38, Pau-approved): "rhea failing" / "Rhea Calloway failing" end at the verb.
+  const beforeVerb = (names: string[]) => names.map(nameBeforeAccountVerb).filter((name): name is string => Boolean(name));
+  strong = beforeVerb(strong);
+  weak = beforeVerb(weak);
   if (antiLoopEnabled()) {
     const fromLabel = nameAfterNameLabel(text);
     if (fromLabel) strong = [fromLabel, ...strong];

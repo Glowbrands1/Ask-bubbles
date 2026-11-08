@@ -93,6 +93,7 @@ import {
   pastFormsBeforeLibraryEnabled,
   coachingCardPolicyEnabled,
   cardPolicyOwnRequestEnabled,
+  outOfDateIsTheProposalEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { gateTexts, searchWithPlan } from "./continuation";
 import { fieldsFromManagerText, mergeConfirmed, retainFieldsInReply } from "./form-field-state";
@@ -155,6 +156,7 @@ import type { AskRequest, AskResponse } from "./types";
 import { keepManagerActionPlan } from "./manager-action-plan-reply";
 import { withoutReportTurnsForForm } from "./report-turns";
 import { withoutSourceMarkers, withoutSourceNotes } from "./source-note";
+import { asksWhatOutOfDateMeans, cardTurn, outOfDateAnswer } from "./out-of-date-is-the-proposal";
 import { withManagerNameGuard } from "./manager-name-guard";
 import { withJobTitleFromWords } from "./job-title-from-words";
 import { withCoachingWhatHappened } from "./coaching-what-happened";
@@ -230,6 +232,9 @@ export async function answerQuestion(
   actor: ChatActor,
   memory: { memoryOwnerId?: string } = {},
 ): Promise<AskResponse> {
+  // OUT_OF_DATE_IS_THE_PROPOSAL_ENABLED: "what does out of date mean" in a form chat is about the card (ai/out-of-date-is-the-proposal.ts).
+  const outOfDateTurn = outOfDateIsTheProposalEnabled() && asksWhatOutOfDateMeans(asked) ? cardTurn(asked) : null;
+  if (outOfDateTurn) return outOfDateAnswer(await answerQuestion(outOfDateTurn, actor, memory));
   // TITLE_OF_THE_EMPLOYEE_ENABLED: a title the manager attached to another named person is never the card's Position (`ai/title-of-the-employee.ts`).
   // UNDER_PERFORMANCE_EXPLAINED_ENABLED: Under Performance asked for, the Standards of Conduct cited: the reply says why (`ai/under-performance-explained.ts`).
   const answered = withUnderPerformanceExplained(
