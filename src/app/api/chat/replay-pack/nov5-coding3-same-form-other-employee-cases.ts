@@ -130,7 +130,8 @@ export const NOV5_CODING3_SAME_FORM_OTHER_EMPLOYEE_CASES: readonly ReplayCase[] 
     report: `${REPORT_B}; then the new person's name, then Create`,
     fixFlags: ["SAME_FORM_COPY_NEW_PERSON_ENABLED"],
     // Run 5 Nov 2026 (production flags): both turns go to the answering model; no card for Teodric.
-    status: { open: "no card for Teodric Sabrin: the copy request is answered by the answering model, and his name alone, with no card on screen, starts nothing" },
+    // fixed in production by SAME_FORM_COPY_NEW_PERSON_ENABLED, QA round 4, 8 Nov 2026
+    status: "fixed",
     async run(t) {
       const thread = start(t);
       const liora = await lioraDraft(t, thread);

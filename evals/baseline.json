@@ -178,10 +178,8 @@
     },
     {
       "id": "b8",
-      "pass": false,
-      "misses": [
-        "policy"
-      ],
+      "pass": true,
+      "misses": [],
       "card": {
         "employee": "juniper halvorsrud",
         "salon": null,
