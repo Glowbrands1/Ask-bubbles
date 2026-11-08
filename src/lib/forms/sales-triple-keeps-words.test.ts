@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { observationAccount } from "./ca-policy";
+import { observationAccount, readCaPolicy } from "./ca-policy";
 
 /**
  * Ported from the sibling app (its round-4 gate, 8 Nov 2026, dropped the sales triple). With SALES_SHORTFALL_OBJECT and
@@ -36,5 +36,22 @@ describe("SALES_OBSERVATION_ACCOUNT keeps the manager's words", () => {
   ])("only the request clause is cut: %j → %j", (sentence, account) => {
     on();
     expect(observationAccount(sentence, "Remy Calder")).toBe(account);
+  });
+
+  it.each(["CA for Odalys Fenmarrow for her performance review", "CA for Odalys Fenmarrow for a performance improvement plan"])(
+    "CA_PERFORMANCE_REASON: %j is not sales performance (\"performance\" must end its phrase)",
+    (text) => {
+      vi.stubEnv("CA_SALES_POLICY_ENABLED", "true");
+      vi.stubEnv("CA_PERFORMANCE_REASON_ENABLED", "true");
+      on();
+      expect(readCaPolicy(text).source).not.toBe("sales_performance");
+    },
+  );
+
+  it("CA_PERFORMANCE_REASON: the request it was for still is", () => {
+    vi.stubEnv("CA_SALES_POLICY_ENABLED", "true");
+    vi.stubEnv("CA_PERFORMANCE_REASON_ENABLED", "true");
+    on();
+    expect(readCaPolicy("can you write me a Ca for Odalys Fenmarrow for performance for october")).toMatchObject({ source: "sales_performance" });
   });
 });

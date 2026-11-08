@@ -726,7 +726,19 @@ function withSalesPolicy(reading: CaPolicyReading, rawText: string): CaPolicyRea
 function performanceIsTheRequest(reading: CaPolicyReading, sentences: string[]): boolean {
   if (!caPerformanceReasonEnabled()) return false;
   if (reading.stated !== null || reading.topics.length > 0 || reading.missedEvent !== null) return false;
-  return sentences.some((sentence) => namesPerformance.test(sentence) && asksForCorrectiveAction(sentence));
+  return sentences.some((sentence) => namesPerformance.test(sentence) && performanceEndsItsPhrase(sentence) && asksForCorrectiveAction(sentence));
+}
+
+/**
+ * "performance" ends its phrase wherever it stands (QA's round-4 gate, 8 Nov 2026): "for her performance review" and
+ * "for a performance improvement plan" name another thing, so they are no sales-performance account. "for sales
+ * performance" and "for performance for october" still are. A sentence without the word (another `namesPerformance`
+ * shape, "not meeting her goals") is unchanged.
+ */
+const PHRASE_END_AFTER = new RegExp(`^${PHRASE_ENDS}`);
+
+function performanceEndsItsPhrase(sentence: string): boolean {
+  return [...sentence.matchAll(/\bperformance\b/gi)].every((match) => PHRASE_END_AFTER.test(sentence.slice(match.index + match[0].length)));
 }
 
 function asksForCorrectiveAction(sentence: string): boolean {
