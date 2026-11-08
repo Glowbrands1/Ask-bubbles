@@ -1255,6 +1255,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "MISSED_SHIFT_NOT_LATENESS_ENABLED",
   // coding 5: REQUEST_PARTICIPLE_LEAD (port, default off): forced off with the others.
   "REQUEST_PARTICIPLE_LEAD_ENABLED",
+  // Default-off fix flag (QA's live Create test, 8 Nov 2026).
+  "UNDATED_ACCOUNT_BRIEF_ENABLED",
 ] as const;
 
 /**
@@ -2708,6 +2710,17 @@ export function politeAboutStaysCardEnabled(): boolean {
  */
 export function requestParticipleLeadEnabled(): boolean {
   return envFlag("REQUEST_PARTICIPLE_LEAD_ENABLED");
+}
+
+/**
+ * UNDATED_ACCOUNT_BRIEF_ENABLED (QA's live Create test, 8 Nov 2026; coding 5; same flag in both apps; default off). An
+ * account with no date ("missing her saturday and sunday shifts …") was saved as "… scheduled shifts on November 8,
+ * 2026", the day the form was created: the draft brief told the model the form's date was the incident's. On: with no
+ * date stated (a stated "today" is one), the brief says the form is dated the day it is created and no date goes into
+ * the account (`forms/form-date-grounding.ts` formDateBrief). Off, as before.
+ */
+export function undatedAccountBriefEnabled(): boolean {
+  return envFlag("UNDATED_ACCOUNT_BRIEF_ENABLED");
 }
 // --- end coding 5 flags ---
 
