@@ -13,10 +13,6 @@ import { STAFF, WEST_DODGE, type ReplayCase } from "./cases";
 const ASKED = "create a corrective action for Remy Calder, he missed his saturday and sunday shifts at the store and didnt call in";
 const REPORT = "The sibling app's sf-s38 (QA's round-6 gate, 8 Nov 2026): the same request sent twice lost its Policy line";
 
-function policyLine(content: string): string {
-  return content.split("\n").find((line) => /\*\*Policy:?\*\*/i.test(line)) ?? "";
-}
-
 export const NOV8_RESEND_KEEPS_POLICY_CASES: ReplayCase[] = [
   ...(
     [
