@@ -1,5 +1,6 @@
 import "server-only";
 
+import { readingIsCardThenVerb } from "@/lib/ai/card-name-then-words";
 import { firstNameSuggestAccepted } from "@/lib/ai/first-name-suggest";
 import { staleNeedsRosterPersonEnabled } from "@/lib/config/chat-quality-flags";
 import { firstNameSuggestEnabled, partialNameCardCurrentEnabled, partialNameLooseMatchEnabled, severalFormsStayCurrentEnabled } from "@/lib/config/chat-quality-flags";
@@ -82,6 +83,8 @@ export function checkProposalIsCurrent(input: {
   );
   const last = turns[turns.length - 1];
   if (!last) return { current: true };
+  // CARD_NAME_THEN_WORDS_CURRENT_ENABLED: the manager's own text, where the case of a word after the name is read.
+  const managerText = turns.map((turn) => turn.content).join("\n");
 
   // An id is provenance only; one the history arrived without is simply absent.
   const prior = turns.slice(0, -1).map((turn) => ({ id: turn.id ?? "", role: turn.role, content: turn.content }));
@@ -199,7 +202,9 @@ export function checkProposalIsCurrent(input: {
   if (
     resolution.kind === "resolved" &&
     !samePerson(resolution.employeeName, input.employeeName) &&
-    !accepted
+    !accepted &&
+    // CARD_NAME_THEN_WORDS_CURRENT_ENABLED: "<A> missing" read from "for <A> missing her saturday …" is the card's <A>.
+    !readingIsCardThenVerb(resolution.employeeName, input.employeeName, managerText)
   ) {
     return {
       current: false,
