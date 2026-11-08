@@ -650,6 +650,22 @@ export function formRevisionsEnabled(): boolean {
   return envFlag("FORM_REVISIONS_ENABLED") || envFlag("NEXT_PUBLIC_FORM_REVISIONS_ENABLED");
 }
 
+// coding 2: REVISION_EDIT_NEEDS_EDIT
+/**
+ * REVISION_EDIT_NEEDS_EDIT_ENABLED / NEXT_PUBLIC_REVISION_EDIT_NEEDS_EDIT_ENABLED (QA, 8 Nov 2026, the sibling
+ * app's round-5 live tester, item 1; default off; same flags in both apps). "Change <A> CA" opened a new draft of the finalized form
+ * whose banner said "You edited the policy wording: … was changed by hand" when nobody had edited anything: on a
+ * revision, every carried policy field without verified provenance counted as an edit. With this flag on, a revision
+ * counts as edited only once it has an edit of its own (`forms/policy-verification.ts`). The banner is shown in the
+ * browser and Finalize reads the same rule on the server, so there are two variables: FLIP BOTH TOGETHER
+ * (NEXT_PUBLIC_ is inlined at build time). Off, as before.
+ */
+export function revisionEditNeedsEditEnabled(): boolean {
+  if (typeof window === "undefined") return envFlag("REVISION_EDIT_NEEDS_EDIT_ENABLED");
+  const inlined = process.env.NEXT_PUBLIC_REVISION_EDIT_NEEDS_EDIT_ENABLED;
+  return typeof inlined === "string" && ON.has(inlined.trim().toLowerCase());
+}
+
 /**
  * The browser half of `formRevisionsEnabled`: the reason dialog, the marks
  * and the history on the form card, the form page and the register row.
@@ -1172,6 +1188,9 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 2: SOURCE_NOTE_GUARD (default off): forced off with the others.
   "SOURCE_NOTE_GUARD_ENABLED",
   "UNDER_PERFORMANCE_EXPLAINED_ENABLED",
+  // coding 2: REVISION_EDIT_NEEDS_EDIT (default off): forced off with the others.
+  "REVISION_EDIT_NEEDS_EDIT_ENABLED",
+  "NEXT_PUBLIC_REVISION_EDIT_NEEDS_EDIT_ENABLED",
   "NO_NOTICE_NO_DATE_ENABLED",
   "ISSUE_IS_THE_ACCOUNT_ENABLED",
   // coding 2: DENIAL_NO_ACCOUNT (default off): forced off with the others.
