@@ -27,3 +27,17 @@ export function onlyDeniesAFault(text: string, employeeName: string | null): boo
     .filter(Boolean);
   return parts.length > 0 && parts.every((part) => ONLY_A_DENIAL.test(part));
 }
+
+/**
+ * A denied fault inside a longer text: "not late", "was never late", "wasn't really late". At most two words between
+ * the negation and the fault, and never a conjunction, so "didn't show up and was late" denies nothing.
+ */
+const DENIED_FAULT = new RegExp(String.raw`\b${NEGATION}\b(?:\s+(?!(?:and|but|or|then|so)\b)[\w'’]+){0,2}?\s+${FAULT}\b`, "gi");
+
+/**
+ * The text with every denied fault taken out (DESCRIBED_ATTENDANCE_CARD_ENABLED; QA's Bubbles round-3 gate,
+ * 7 Nov 2026): "ca for <name> not late" describes no lateness. Not gated here; the caller gates it.
+ */
+export function withoutDeniedFaults(text: string): string {
+  return text.replace(DENIED_FAULT, " ");
+}

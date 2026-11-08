@@ -28,6 +28,12 @@ When the latest message says what the form is about or for ("make it about …",
  */
 export const FORM_PATCH_ACCOUNT_LINE = `The field that gives the account is the form's narrative field (Details of Coaching, Observation of Offense), never a topic, type or "Other" field: "make it about …" always sets the narrative field, how "replace", keeping its headings (Observed:, Expectation:, Going Forward:) and writing what is under them about what the manager said; a topic field may be set as well.`;
 
+/**
+ * EDIT_POLICY_ASK_ENABLED (coding 5, 7 Nov 2026): a line ADDED after the approved system text (and after the
+ * reader-fix lines when those are on). Sent only with the flag on, with the `policy_asked` key in the schema.
+ */
+export const EDIT_POLICY_ASK_LINES = `policy_asked: true when the latest message asks for a policy to be listed, added, cited or included on this form, whether or not it names one; otherwise false. Do not write a policy for that ask yourself: the app adds the manual's own line.`;
+
 export interface FormPatchField {
   readonly key: string;
   readonly label: string;
