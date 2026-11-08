@@ -68,3 +68,32 @@ export const NOV7_DESCRIBED_ATTENDANCE_CARD_CASES: ReplayCase[] = [
     run: (t) => citesAttendance(t, "create a ca for Wrenna Calloway for being absent from her shift on 10-22-26"),
   },
 ];
+
+/*
+ * QA's Bubbles round-3 gate (7 Nov 2026): with DENIAL_NO_ACCOUNT on, "ca for <name> not late" asks what happened;
+ * DESCRIBED_ATTENDANCE_CARD on as well drafted it as "Policy: Attendance, from what you described ("late")". A
+ * denied fault is no attendance account (`describedAttendanceKeys`, forms/ca-policy.ts). The pack's invented
+ * Rowan Kestrel, as in nov7-denial-no-account-cases.ts. Holds in production (both flags off: no Policy line).
+ */
+const DENIED: readonly (readonly [string, string])[] = [
+  ["ca-for-not-late", "ca for Rowan Kestrel not late"],
+  ["comma-not-late", "create a corrective action for Rowan Kestrel, not late"],
+];
+
+export const NOV7_DESCRIBED_ATTENDANCE_NOT_DENIED_CASES: ReplayCase[] = DENIED.map(([key, said]): ReplayCase => ({
+  id: `nov7-described-attendance-denied-${key}`,
+  title: `"${said}": with DENIAL_NO_ACCOUNT and DESCRIBED_ATTENDANCE_CARD on, the card cites no Attendance`,
+  report: "QA's Bubbles round-3 gate, 7 Nov 2026: \"Policy: Attendance, from what you described (\"late\")\"",
+  status: "fixed",
+  fixFlags: [...FIX, "DENIAL_NO_ACCOUNT_ENABLED"],
+  async run(t) {
+    vi.setSystemTime(new Date("2026-11-06T15:00:00Z"));
+    t.directory(STAFF);
+    t.as("location_manager", WEST_DODGE);
+    const thread = t.thread();
+    const reply = await thread.say(said);
+    const policy = reply.content.split("\n").filter((line) => /^\*\*Policy:\*\*/.test(line)).join("\n");
+    expect(policy, `a denied fault is cited as Attendance:\n${reply.content}`).not.toMatch(/Attendance/);
+    expect(reply.content, `a denied fault is drafted as described:\n${reply.content}`).not.toMatch(/from what you described \("late"\)/i);
+  },
+}));
