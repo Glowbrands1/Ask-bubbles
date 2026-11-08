@@ -3,6 +3,7 @@ import { noteSpendUser } from "@/lib/ai/spend-meter";
 import { withSpendMeter } from "@/lib/ai/spend-meter-run";
 
 import { withSwitchAfterCreate } from "@/lib/ai/form-type-switch";
+import { withCorrectionNotDropped, withProposalNameCorrection } from "@/lib/forms/proposal-name-correction";
 import { answerQuestion } from "@/lib/ai/server-ask";
 import { modelSpendGuard } from "@/lib/ai/spend-guard";
 import { isQuestionNotForm } from "@/lib/ai/question-not-form";
@@ -423,7 +424,8 @@ async function postChat(request: Request) {
               });
             })()
           : null;
-      const parsed = withSwitchAfterCreate(
+      // PROPOSAL_NAME_CORRECTION_ENABLED: "fix her last name …" on a card not yet created. See `lib/forms/proposal-name-correction.ts`.
+      const parsed = withProposalNameCorrection(withSwitchAfterCreate(
         draftAction || staffPick || newRequestOpen || copyFor
           ? {
               ...asked,
@@ -442,7 +444,7 @@ async function postChat(request: Request) {
                 continueProposalTemplateKey: undefined,
               }
             : asked,
-      );
+      ));
       /*
        * A CORRECTION TO A FORM THIS CONVERSATION ALREADY CREATED — "change the
        * date to yesterday". Tried first, and only where the browser named such
@@ -865,6 +867,8 @@ async function postChat(request: Request) {
       }
       // PERSON_GUARD_ENABLED: whichever reader named the card's employee, a name that is not a person never stays on it.
       if (personGuardEnabled()) answer = (await import("@/lib/forms/person-guard")).withPersonOnCard(answer);
+      // PROPOSAL_NAME_CORRECTION_ENABLED: an off-roster "change her name to …" on the card asks which, never kept silently.
+      answer = withCorrectionNotDropped(answer, parsed);
       /*
        * FORM_EDIT_HONEST_REPLY_ENABLED: the ordinary answer, with a form open,
        * changed nothing — so it never says it updated the form. See
