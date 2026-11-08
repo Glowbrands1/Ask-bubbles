@@ -545,7 +545,17 @@ const COURTESY_SHORTHAND: [RegExp, string][] = [
  * reads as "<form> for <name>". Only after a form's own words, and never before a word that cannot start a name
  * ("from the …", "from my …", "from last week").
  */
-const FORM_FROM = /\b((?:corrective actions?|c\.?a\.?|coaching(?:\s+(?:form|document))?|write[- ]?ups?|warnings?|forms?))\s+from\s+(?!(?:the|a|an|my|our|her|his|their|this|that|last|yesterday|today|tonight|this|next|earlier|before|when|what|which|where|home|work|corporate|hr|district|store|salon|woven)\b)(?=[\p{L}])/giu;
+/*
+ * NEVER A PERSON AFTER "FROM" (QA, the Bubbles round-5 gate, 8 Nov 2026): "she has a written warning from august" read
+ * "august" as a second employee and the level was dropped. A month, a weekday, a season or quarter, or a word that
+ * says when ("last week", "a while ago", "previous") names a time, never a person, whatever its case: managers type
+ * names lower-case, so capitals decide nothing.
+ */
+const FROM_NOT_A_PERSON = String.raw`(?:the|a|an|my|our|her|his|their|this|that|these|those|last|next|past|previous|prior|earlier|before|ago|back|then|now|yesterday|today|tonight|tomorrow|when|what|which|where|home|work|corporate|hr|district|store|salon|woven|jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?|mon(?:day)?|tues?(?:day)?|wed(?:nesday)?|thu(?:rs?)?(?:day)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?|weekend|week|weeks|month|months|year|years|spring|summer|fall|autumn|winter|q[1-4]|quarter|morning|afternoon|evening|night)`;
+const FORM_FROM = new RegExp(
+  String.raw`\b((?:corrective actions?|c\.?a\.?|coaching(?:\s+(?:form|document))?|write[- ]?ups?|warnings?|forms?))\s+from\s+(?!${FROM_NOT_A_PERSON}\b)(?=[\p{L}])`,
+  "giu",
+);
 
 export function canonicalShorthand(text: string): string {
   let out = requestFromNamesEmployeeEnabled() ? text.replace(FORM_FROM, "$1 for ") : text;

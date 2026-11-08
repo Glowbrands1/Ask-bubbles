@@ -51,4 +51,18 @@ export const NOV8_REQUEST_FROM_NAMES_EMPLOYEE_CASES: ReplayCase[] = [
       expect(thread.proposal?.employeeName ?? "", "a word after \"from\" became the employee").not.toMatch(/last|week/i);
     },
   },
+  {
+    id: "nov8-request-from-month-not-a-name",
+    title: "negative (the round-5 gate): \"… given verbal warning on 9/21. she has a written warning from august\": August is no person, the card is Marnie Holloway's at Verbal",
+    report: "QA, the Bubbles round-5 gate (8 Nov 2026): with REQUEST_FROM_NAMES_EMPLOYEE on, \"from august\" named a second employee and the level was dropped",
+    status: "fixed",
+    fixFlags: FIX,
+    async run(t) {
+      const thread = start(t);
+      const reply = await thread.say("create a ca form for marnie holloway, she was late again for 30 mins today. given verbal warning on 9/21. she has a written warning from august");
+      expect(thread.proposal, `no card for her:\n${reply.content}`).toMatchObject({ templateKey: "dpoa", employeeName: "Marnie Holloway" });
+      expect(reply.content, `"august" was read as a person:\n${reply.content}`).not.toMatch(/\baugust\b[^\n]*\b(?:which|who)\b|Which of them/i);
+      expect((thread.proposal as { warningLevel?: string | null } | null)?.warningLevel ?? null, `the level was dropped:\n${reply.content}`).toBe("verbal");
+    },
+  },
 ];
