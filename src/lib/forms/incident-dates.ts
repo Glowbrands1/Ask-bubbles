@@ -284,6 +284,15 @@ export function decideFormDate(input: {
   if (explicit) return { formDate: explicit };
 
   let dates = incidentDates(input.text, input.today, COACHING_TEMPLATES.has(input.templateKey));
+  /*
+   * CORRECTED_DATE_KEPT_ENABLED (QA's round-5 trace of Q6, 8 Nov 2026): "sorry, the verbal ca was on 9-2-26 not
+   * 9-1-26" names the prior step's corrected date; it is that step's date, never one of the incident's. Without this,
+   * several dates left the card on the last one stated (ANTI_LOOP), here the step's 09-02.
+   */
+  if (correctedDateKeptEnabled()) {
+    const stepDates = new Set(priorSteps(input.text, input.today).map((step) => step.iso));
+    dates = dates.filter((iso) => !stepDates.has(iso));
+  }
   if (COACHING_TEMPLATES.has(input.templateKey)) {
     const latestIncident = dates[dates.length - 1] ?? "";
     const held = heldCoachingDates(input.text, input.today).filter((iso) => iso >= latestIncident);

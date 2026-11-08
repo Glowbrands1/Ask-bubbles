@@ -63,10 +63,6 @@ export const NOV8_CORRECTED_DATE_KEPT_CASES: ReplayCase[] = [
     report: `${REPORT} (the same chat without the incident correction)`,
     status: { open: "the card's date is 2026-09-02" },
     fixFlags: FIX,
-    // Open with the flag too, for a different cause (QA, 8 Nov 2026): the intent read writes "It happened on 9/2/2026."
-    // in front of this turn, reading the prior step's corrected date as the incident's, and the proposal takes it.
-    // CORRECTED_DATE_KEPT only stops a correction from moving the date; it does not touch that line.
-    fixStatus: { open: "the intent read's \"It happened on 9/2/2026.\" line dates the card 2026-09-02" },
     async run(t) {
       const thread = start(t);
       await thread.say(REQUEST);
