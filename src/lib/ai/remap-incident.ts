@@ -437,13 +437,22 @@ export function currentRequestStart(input: {
     const formWord = fixed ? FIXED_FORM_WORD_ANYWHERE : FORM_WORD_ANYWHERE;
     const isRequest =
       (fixed ? FIXED_REQUEST_TURN : MAIN_REQUEST_TURN).test(asked) ||
-      (secondRequestOwnAccountEnabled() && requests >= 1 && formWord.test(turn) && !onlyAboutAPriorStep(turn, formWord));
+      // The sibling app's round-4 gate (8 Nov 2026, sf-s21 / sf-s22): only in the turn's own first line — a pasted
+      // document after it ("Use this to make it: … 1. **Kit Coaching Document** …") names a form without asking for one.
+      // And its round-5 gate (Q6): never a turn that only corrects a prior step.
+      (secondRequestOwnAccountEnabled() && requests >= 1 && formWord.test(firstLine(turn)) && !onlyAboutAPriorStep(turn, formWord));
     if (!isRequest) continue;
     requests += 1;
     // SECOND_REQUEST_OWN_ACCOUNT_ENABLED (QA's Sunny round-3 gate, 7 Nov 2026; ported from the sibling app): the turn's
     // incident must also stand without the request words, a few words at least, so "ok create the CA now" ("now") or
     // "create a CA for <A>" ("for <A>") after an account is never a new request with nothing in it.
-    const own = withoutRequestWords(turn, fixed ? FIXED_FORM_WORD_ANYWHERE : FORM_WORD_ANYWHERE);
+    // The sibling app's round-4 gate (8 Nov 2026, sf-s22 t3): "It needs to be a CA, not a coaching form" chooses the form;
+    // a form named in what is left (", not a coaching form") is no account, nor are the state lines the intent read
+    // appends after the turn ("Warning level: verbal.").
+    const own = withoutRequestWords(withoutStateLines(turn), fixed ? FIXED_FORM_WORD_ANYWHERE : FORM_WORD_ANYWHERE).replace(
+      new RegExp((fixed ? FIXED_FORM_WORD_ANYWHERE : FORM_WORD_ANYWHERE).source, "gi"),
+      " ",
+    );
     const tells =
       !secondRequestOwnAccountEnabled() ||
       (own.split(/\s+/).filter(Boolean).length >= OWN_ACCOUNT_WORDS && requestTellsIncident(own, input.employeeName, input.slotClause));
@@ -497,9 +506,22 @@ const OWN_ACCOUNT_WORDS = 4;
  * what follows the form ("I need another corrective action for <A>, his cash drawer was short $20" → "for <A>, his
  * cash drawer was short $20"; "ok create the CA now" → "now"); the other sentences stay as they are.
  */
+/** Each line without the state sentences the intent read puts in front of it or appends ("Warning level: verbal."). */
+function withoutStateLines(turn: string): string {
+  return turn
+    .split("\n")
+    .map((line) => line.replace(STATE_LEAD, ""))
+    .join("\n");
+}
+
+/** The turn's first non-empty line: where a request is asked, before anything pasted under it. */
+function firstLine(turn: string): string {
+  return turn.split("\n").find((line) => line.trim() !== "") ?? "";
+}
+
 function withoutRequestWords(turn: string, formWord: RegExp): string {
   return turn
-    .split(/(?<=[.!?;])\s+/)
+    .split(/(?<=[.!?;])\s+|\n+/)
     .map((sentence) => {
       const form = formWord.exec(sentence);
       return form ? sentence.slice(form.index + form[0].length).trim() : sentence;
