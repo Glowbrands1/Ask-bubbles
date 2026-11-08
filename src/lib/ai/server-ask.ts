@@ -166,6 +166,7 @@ import { withTitleOfTheEmployee } from "./title-of-the-employee";
 import { withUnderPerformanceExplained } from "./under-performance-explained";
 import { withProposalEditRules } from "./proposal-edit-rules";
 import { withCardNameThenWords } from "./card-name-then-words";
+import { cardMetaTurn } from "./card-meta-turn";
 import { withFormTypeSwitch, withSwitchNote, withSwitchSources } from "./form-type-switch";
 import { withAdditionalStore } from "./additional-store";
 import { withOutOfScopePlace } from "./out-of-scope-place";
@@ -228,6 +229,10 @@ export async function answerQuestion(
   actor: ChatActor,
   memory: { memoryOwnerId?: string } = {},
 ): Promise<AskResponse> {
+  // CREATE_COMMAND_POINTS_TO_CARD_ENABLED / CARD_COMPLAINT_NOT_ACCOUNT_ENABLED: "create it" or "this proposal is out of
+  // date" with only a card open is about the card: kept as it was, answered in one line (`ai/card-meta-turn.ts`).
+  const aboutTheCard = cardMetaTurn(asked);
+  if (aboutTheCard) return aboutTheCard.card ?? aboutTheCard.answer(await answerQuestion({ ...asked, question: aboutTheCard.from }, actor, memory));
   // TITLE_OF_THE_EMPLOYEE_ENABLED: a title the manager attached to another named person is never the card's Position (`ai/title-of-the-employee.ts`).
   // UNDER_PERFORMANCE_EXPLAINED_ENABLED: Under Performance asked for, the Standards of Conduct cited: the reply says why (`ai/under-performance-explained.ts`).
   const answered = withUnderPerformanceExplained(
