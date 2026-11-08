@@ -3,7 +3,7 @@ import { COMPANY_LOCATIONS } from "@/lib/locations";
 import { priorSentenceFixFor } from "@/lib/forms/prior-sentence-scope";
 import { blankYearlessStepDates, extractFormDate, listIncidentDates, statedIncidentDates } from "@/lib/forms/form-date-answer";
 import { lateOpenOn, yearlessCuedDates } from "@/lib/forms/late-open";
-import { payrollDeductAmount } from "@/lib/forms/payroll-deduct";
+import { managerPayrollAmount } from "@/lib/forms/payroll-deduct-amount";
 import { statedPayrollDeduct } from "@/lib/forms/payroll-deduct-answer";
 import { statedWarningLevel, warningLevelFromTurns } from "@/lib/forms/warning-level";
 import { extractJobTitle, readEmployeeMentions } from "@/lib/forms/proposal";
@@ -71,7 +71,7 @@ function slotLines(input: {
     payrollDeductAmountFieldEnabled() &&
     merged.payrollAmount &&
     merged.payrollDeduct !== "no" &&
-    !payrollDeductAmount(input.question)
+    !managerPayrollAmount(input.question)
   ) {
     lines.push(`Payroll deduction of ${merged.payrollAmount}.`);
   }
@@ -238,8 +238,8 @@ export function fieldLines(question: string, today: string, earlier = ""): strin
     }
   }
 
-  if (!payrollDeductAmount(question)) {
-    const known = payrollDeductAmount(corpus);
+  if (!managerPayrollAmount(question)) {
+    const known = managerPayrollAmount(corpus);
     /*
      * A dollar sign next to the word "payroll" is not, by itself, the
      * manager's amount. The Late Opening sentence states "$25.00 via payroll

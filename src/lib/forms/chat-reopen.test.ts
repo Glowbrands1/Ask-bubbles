@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { reopenByAnyOpenVerbEnabled } from "@/lib/config/chat-quality-flags";
+
 /**
  * "Change exit for jordan smith" with no form in the conversation: the form
  * on file is found among the ones this actor may see and put in the thread —
@@ -230,6 +232,19 @@ describe("bringing a form on file back into the conversation", () => {
       row({ id: "coaching-1", templateKey: "coaching", templateName: "Coaching Form", createdAt: "2026-10-15T12:00:00Z" }),
     ];
     const response = await ask("change exit for Jordan Smith");
+    /*
+     * Changed on purpose (QA decision d, 6 Nov 2026; port of ask-sunny #640): with REOPEN_BY_ANY_OPEN_VERB_ENABLED on,
+     * several forms on file for the named employee are listed and the manager is asked which, for every verb,
+     * "change" and "edit" included. Somebody else's form is never listed. Flag off, unchanged: the newest form opens.
+     */
+    if (reopenByAnyOpenVerbEnabled()) {
+      expect(state.revised).toEqual([]);
+      expect(response!.formOpened).toBeUndefined();
+      expect(response!.content).toMatch(/I found 2 forms on file for \*\*Jordan Smith\*\*/);
+      expect(response!.content).toMatch(/Which one should I open\?/);
+      expect(response!.content).not.toMatch(/Jane Doe/);
+      return;
+    }
     expect(state.revised).toEqual(["exit-new"]);
     expect(response!.formOpened!.revisesInstanceId).toBe("exit-new");
   });
