@@ -52,6 +52,7 @@ import {
   offRosterAskBeforeCardEnabled,
   exitLetterAddresseeEnabled,
   letterGreetingNotNameEnabled,
+  exitFormDateFromTerminationEnabled,
   metricGuardEnabled,
   refusalNoRepeatEnabled,
   titleNotSpeakersManagerEnabled,
@@ -915,6 +916,14 @@ async function postChat(request: Request) {
           ...parsed.history.filter((turn) => turn.role === "user").map((turn) => turn.content),
           asked.question,
         ]);
+      }
+      // EXIT_FORM_DATE_FROM_TERMINATION_ENABLED: a stated "terminated, effective <date>" dates the exit card (`lib/forms/exit-form-date.ts`).
+      if (exitFormDateFromTerminationEnabled()) {
+        answer = (await import("@/lib/forms/exit-form-date")).withExitFormDateFromTermination(
+          answer,
+          [...parsed.history.filter((turn) => turn.role === "user").map((turn) => turn.content), asked.question],
+          businessToday(),
+        );
       }
       // PROPOSAL_NAME_CORRECTION_ENABLED: an off-roster "change her name to …" on the card asks which, never kept silently.
       answer = withCorrectionNotDropped(answer, parsed);
