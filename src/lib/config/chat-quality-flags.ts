@@ -1275,6 +1275,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REQUEST_PARTICIPLE_LEAD_ENABLED",
   // Default-off fix flag (QA's live Create test, 8 Nov 2026).
   "UNDATED_ACCOUNT_BRIEF_ENABLED",
+  // Default-off fix flag (QA, the Bubbles round-6 live test, 9 Nov 2026).
+  "POSSESSIVE_PLACE_NOT_PERSON_ENABLED",
 ] as const;
 
 /**
@@ -2739,6 +2741,15 @@ export function requestParticipleLeadEnabled(): boolean {
  */
 export function undatedAccountBriefEnabled(): boolean {
   return envFlag("UNDATED_ACCOUNT_BRIEF_ENABLED");
+}
+/**
+ * POSSESSIVE_PLACE_NOT_PERSON_ENABLED (QA, the Bubbles round-6 live test, 9 Nov 2026; coding 5; same flag in both apps;
+ * default off). "create a CA for Lee's Summit Plaza, she was late on 10-20-26" made a card for Employee "Lee". On: a
+ * card whose person is only ever the possessive of a place ("<Name>'s <store name>", "<Name>'s … Plaza") loses that
+ * name and asks who the form is for (`forms/possessive-place.ts`, after PERSON_GUARD in the chat route). Off, as before.
+ */
+export function possessivePlaceNotPersonEnabled(): boolean {
+  return envFlag("POSSESSIVE_PLACE_NOT_PERSON_ENABLED");
 }
 // --- end coding 5 flags ---
 

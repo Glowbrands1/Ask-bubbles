@@ -45,6 +45,7 @@ import {
   policyChangeRestOfTurnEnabled,
   openFormNoSelectionEnabled,
   personGuardEnabled,
+  possessivePlaceNotPersonEnabled,
   formNameFromRosterEnabled,
   offRosterConfirmEnabled,
   metricGuardEnabled,
@@ -874,6 +875,13 @@ async function postChat(request: Request) {
       }
       // PERSON_GUARD_ENABLED: whichever reader named the card's employee, a name that is not a person never stays on it.
       if (personGuardEnabled()) answer = (await import("@/lib/forms/person-guard")).withPersonOnCard(answer);
+      // POSSESSIVE_PLACE_NOT_PERSON_ENABLED: "Lee's Summit Plaza" never puts "Lee" on the card (`lib/forms/possessive-place.ts`).
+      if (possessivePlaceNotPersonEnabled()) {
+        answer = (await import("@/lib/forms/possessive-place")).withPossessivePlaceNotPerson(answer, [
+          ...parsed.history.filter((turn) => turn.role === "user").map((turn) => turn.content),
+          asked.question,
+        ]);
+      }
       // PROPOSAL_NAME_CORRECTION_ENABLED: an off-roster "change her name to …" on the card asks which, never kept silently.
       answer = withCorrectionNotDropped(answer, parsed);
       // NEAR_MISS_QUESTION_RULES_ENABLED: "no, …" to "Is this for <name>?" never gets a card for that name, nor the question again.
