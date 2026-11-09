@@ -51,6 +51,7 @@ import {
   offRosterConfirmEnabled,
   offRosterAskBeforeCardEnabled,
   exitLetterAddresseeEnabled,
+  letterGreetingNotNameEnabled,
   metricGuardEnabled,
   refusalNoRepeatEnabled,
   titleNotSpeakersManagerEnabled,
@@ -219,12 +220,20 @@ async function postChat(request: Request) {
        * manager's earlier ones, so the signer is never offered as the form's person nor her title taken
        * (`ai/letter-signer.ts`). The stored messages, and the draft, keep the whole letter.
        */
-      if (exitLetterAddresseeEnabled()) {
-        const { withoutLetterSigner } = await import("@/lib/ai/letter-signer");
+      /*
+       * LETTER_GREETING_NOT_NAME_ENABLED: a letter's "Dear <A>," is read as "<A>," — the salutation is no part of the
+       * name (`ai/letter-signer.ts`), so the roster finds <A>. The stored messages, and the draft, keep the letter.
+       */
+      if (exitLetterAddresseeEnabled() || letterGreetingNotNameEnabled()) {
+        const { withoutLetterGreeting, withoutLetterSigner } = await import("@/lib/ai/letter-signer");
+        const read = (text: string) => {
+          const greeted = withoutLetterGreeting(text);
+          return exitLetterAddresseeEnabled() ? withoutLetterSigner({ question: greeted }) : greeted;
+        };
         asked = {
           ...asked,
-          question: withoutLetterSigner({ question: asked.question }),
-          history: asked.history.map((turn) => (turn.role === "user" && typeof turn.content === "string" ? { ...turn, content: withoutLetterSigner({ question: turn.content }) } : turn)),
+          question: read(asked.question),
+          history: asked.history.map((turn) => (turn.role === "user" && typeof turn.content === "string" ? { ...turn, content: read(turn.content) } : turn)),
         };
       }
       /*
