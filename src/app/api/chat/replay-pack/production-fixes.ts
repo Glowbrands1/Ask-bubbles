@@ -246,4 +246,16 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov9-work-area-absence-coaching-card": "WORK_AREA_ABSENCE_CITES_CONDUCT",
   // Changed on purpose (9 Nov 2026): fixed in production by WORK_AREA_ABSENCE_CITES_CONDUCT, QA round 7
   "nov9-work-area-absence-coaching-made-about": "WORK_AREA_ABSENCE_CITES_CONDUCT",
+  // Changed on purpose (9 Nov 2026): fixed in production by EXIT_LINE_ANSWERS_ADD_UP, QA round 8
+  "nov9-exit-lines-keep-method": "EXIT_LINE_ANSWERS_ADD_UP",
+  // Changed on purpose (9 Nov 2026): fixed in production by EXIT_LETTER_ADDRESSEE, QA round 8
+  "nov9-letter-title-date-off-roster": "EXIT_LETTER_ADDRESSEE",
+  // Changed on purpose (9 Nov 2026): fixed in production by EXIT_LETTER_ADDRESSEE, QA round 8
+  "nov9-letter-title-date-on-roster": "EXIT_LETTER_ADDRESSEE",
+  // Changed on purpose (9 Nov 2026): fixed in production by MISSED_SHIFT_CITES_ATTENDANCE, QA round 8
+  "nov9-missed-shift-cites-attendance-after-first-name": "MISSED_SHIFT_CITES_ATTENDANCE",
+  // Changed on purpose (9 Nov 2026): fixed in production by MISSED_SHIFT_CITES_ATTENDANCE, QA round 8
+  "nov9-missed-shift-cites-attendance-single": "MISSED_SHIFT_CITES_ATTENDANCE",
+  // Changed on purpose (9 Nov 2026): fixed in production by POSSESSIVE_PLACE_ACCOUNT, QA round 8
+  "nov9-possessive-place-what-happened": "POSSESSIVE_PLACE_ACCOUNT",
 };
