@@ -1300,6 +1300,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "MADE_ABOUT_ALL_OR_NOTHING_ENABLED",
   // coding 4: MADE_ABOUT_READER_ACCOUNT (QA's live round-9 test, 9 Nov 2026; default off).
   "MADE_ABOUT_READER_ACCOUNT_ENABLED",
+  // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
+  "CHAT_STAGE_TIMINGS_ENABLED",
 ] as const;
 
 /**
@@ -4043,4 +4045,15 @@ export function madeAboutAllOrNothingEnabled(): boolean {
  */
 export function madeAboutReaderAccountEnabled(): boolean {
   return envFlag("MADE_ABOUT_READER_ACCOUNT_ENABLED");
+}
+
+/**
+ * CHAT_STAGE_TIMINGS_ENABLED (ported from the sibling app; QA, 9 Nov 2026; default off; same flag in both apps). Each
+ * awaited step of a chat turn before the answering model (intent extraction, the form paths, entities, the query
+ * rewrite, retrieval, the reads, the briefing, the memory, context, data and grounding loads) is timed into
+ * `chat_traces.slots.stages`: names and milliseconds only (`ai/chat-stage-timings.ts`). Changes nothing the manager
+ * sees. Off, as before.
+ */
+export function chatStageTimingsEnabled(): boolean {
+  return envFlag("CHAT_STAGE_TIMINGS_ENABLED");
 }
