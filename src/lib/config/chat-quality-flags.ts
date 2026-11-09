@@ -1286,6 +1286,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "OFF_ROSTER_ASK_BEFORE_CARD_ENABLED",
   // coding 4: WORK_AREA_ABSENCE_CITES_CONDUCT (Pau's decision, 9 Nov 2026; default off).
   "WORK_AREA_ABSENCE_CITES_CONDUCT_ENABLED",
+  // Default-off fix flag (QA, the Bubbles round-7 live test, 9 Nov 2026).
+  "EXIT_LINE_ANSWERS_ADD_UP_ENABLED",
 ] as const;
 
 /**
@@ -2781,6 +2783,16 @@ export function possessivePlaceNotPersonEnabled(): boolean {
  */
 export function offRosterAskBeforeCardEnabled(): boolean {
   return envFlag("OFF_ROSTER_ASK_BEFORE_CARD_ENABLED");
+}
+/**
+ * EXIT_LINE_ANSWERS_ADD_UP_ENABLED (QA, the Bubbles round-7 live test, 9 Nov 2026; coding 5; same flag in both apps;
+ * default off; with FIELD_LABEL_NOT_A_QUESTION_ENABLED). An exit form answered one field per turn lost How Employee
+ * Resigned once a later turn filled another field: the earlier "how employee resigned - …" turn was read as a question
+ * and left out of the form's turns. On: a turn that fills an exit field by its label is never a question
+ * (`forms/employment-change.ts` isQuestion), so the line answers add up. Off, as before.
+ */
+export function exitLineAnswersAddUpEnabled(): boolean {
+  return envFlag("EXIT_LINE_ANSWERS_ADD_UP_ENABLED");
 }
 // --- end coding 5 flags ---
 
