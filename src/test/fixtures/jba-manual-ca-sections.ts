@@ -77,7 +77,7 @@ const ROWS: Row[] = [
     s: "Standards of Conduct",
     printedPage: 13,
     sections: [],
-    c: "o Fighting or threats at work\no Loud or disruptive behavior at work\no Insubordination - refusing a manager's direction.\no Disrespect toward a manager or coworker\no Breaking safety rules\no Excessive absences or any absence without notice\no Leaving the work area without approval during a shift\no Unapproved use of telephones, computers or other company equipment\no Sharing confidential business or customer information",
+    c: "o Fighting or threats at work\no Loud or disruptive behavior at work\no Insubordination - refusing a manager's direction.\no Disrespect toward a manager or coworker\no Breaking safety rules\no Excessive absences or any absence without notice\no Unapproved absence from the work area during a shift\no Unapproved use of telephones, computers or other company equipment\no Sharing confidential business or customer information",
   },
   {
     i: 39,

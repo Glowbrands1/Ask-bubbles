@@ -1,7 +1,8 @@
-import { coachingCardPolicyEnabled } from "@/lib/config/chat-quality-flags";
+import { coachingCardPolicyEnabled, workAreaAbsenceCitesConductEnabled } from "@/lib/config/chat-quality-flags";
 import { withCoachingCardPolicy } from "@/lib/forms/coaching-card-policy";
 import type { ManualChunk } from "@/lib/forms/official-policy-manual";
 
+import { turnsMadeAbout } from "./make-it-about";
 import type { AskRequest, AskResponse } from "./types";
 
 /**
@@ -18,7 +19,13 @@ export async function withCoachingCardPolicyOnAnswer(
   try {
     const manual = await readManual();
     if (!manual.ok || !manual.chunks) return response;
-    const notes = [...(request.history ?? []).filter((turn) => turn.role === "user").map((turn) => turn.content), request.question].join("\n");
+    const turns = [...(request.history ?? []).filter((turn) => turn.role === "user").map((turn) => turn.content), request.question];
+    /*
+     * WORK_AREA_ABSENCE_CITES_CONDUCT_ENABLED (QA, 9 Nov 2026): "make it about leaving the front desk unattended on 11/6/26"
+     * on a Coaching card about a missed meeting still cited Attendance: the policy was read from every turn. The account
+     * from the last "make it about …" on is what the card is about, as its Observation already reads (`make-it-about.ts`).
+     */
+    const notes = (workAreaAbsenceCitesConductEnabled() ? turnsMadeAbout(turns) : turns).join("\n");
     const content = withCoachingCardPolicy({ content: response.content, templateKey: response.formProposal.templateKey, notes, chunks: manual.chunks });
     return content === response.content ? response : { ...response, content };
   } catch {

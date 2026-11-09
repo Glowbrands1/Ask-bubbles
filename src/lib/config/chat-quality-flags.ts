@@ -1275,6 +1275,17 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REQUEST_PARTICIPLE_LEAD_ENABLED",
   // Default-off fix flag (QA's live Create test, 8 Nov 2026).
   "UNDATED_ACCOUNT_BRIEF_ENABLED",
+  // coding 4: FIRST_NAME_ANSWER_KEEPS_ACCOUNT and SHIFT_ACCOUNT_IS_INCIDENT (port from the sibling app, default off).
+  "FIRST_NAME_ANSWER_KEEPS_ACCOUNT_ENABLED",
+  "SHIFT_ACCOUNT_IS_INCIDENT_ENABLED",
+  // Default-off fix flag (QA, the Bubbles round-6 live test, 9 Nov 2026).
+  "EXIT_LETTER_SIGNER_NOT_SUBJECT_ENABLED",
+  // Default-off fix flag (QA, the Bubbles round-6 live test, 9 Nov 2026).
+  "POSSESSIVE_PLACE_NOT_PERSON_ENABLED",
+  // Default-off fix flag (QA, the Bubbles round-6 live test, 9 Nov 2026).
+  "OFF_ROSTER_ASK_BEFORE_CARD_ENABLED",
+  // coding 4: WORK_AREA_ABSENCE_CITES_CONDUCT (Pau's decision, 9 Nov 2026; default off).
+  "WORK_AREA_ABSENCE_CITES_CONDUCT_ENABLED",
 ] as const;
 
 /**
@@ -2740,6 +2751,37 @@ export function requestParticipleLeadEnabled(): boolean {
 export function undatedAccountBriefEnabled(): boolean {
   return envFlag("UNDATED_ACCOUNT_BRIEF_ENABLED");
 }
+/**
+ * EXIT_LETTER_SIGNER_NOT_SUBJECT_ENABLED (QA, the Bubbles round-6 live test, 9 Nov 2026; coding 5; same flag in both
+ * apps; default off). "create an exit form for <B>, team member … Here is the termination letter: '… <C>, District
+ * Manager'" offered <B>, <C> and "District Manager'" as the exit form's person, and took "District Manager" as the
+ * Position. On: when the turn names the form's person, the proposal reads it without a letter's closing "<Name>,
+ * <Title>" sign-off of another person (`ai/letter-signer.ts`). Off, as before.
+ */
+export function exitLetterSignerNotSubjectEnabled(): boolean {
+  return envFlag("EXIT_LETTER_SIGNER_NOT_SUBJECT_ENABLED");
+}
+
+/**
+ * POSSESSIVE_PLACE_NOT_PERSON_ENABLED (QA, the Bubbles round-6 live test, 9 Nov 2026; coding 5; same flag in both apps;
+ * default off). "create a CA for Lee's Summit Plaza, she was late on 10-20-26" made a card for Employee "Lee". On: a
+ * card whose person is only ever the possessive of a place ("<Name>'s <store name>", "<Name>'s … Plaza") loses that
+ * name and asks who the form is for (`forms/possessive-place.ts`, after PERSON_GUARD in the chat route). Off, as before.
+ */
+export function possessivePlaceNotPersonEnabled(): boolean {
+  return envFlag("POSSESSIVE_PLACE_NOT_PERSON_ENABLED");
+}
+
+/**
+ * OFF_ROSTER_ASK_BEFORE_CARD_ENABLED (QA, the Bubbles round-6 live test, 9 Nov 2026; coding 5; same flag in both apps;
+ * default off). "create a coaching form for <full name not on the roster>" gave a ready card with no question. On: for a
+ * store-scoped manager, such a card is held back once and the reply asks "I can't find <name> on your roster — is that
+ * the right name, or are they at another store?", with OFF_ROSTER_CONFIRM's "reply use <name>" offer
+ * (`forms/off-roster-ask.ts`). District, region and global managers are never held up. Off, as before.
+ */
+export function offRosterAskBeforeCardEnabled(): boolean {
+  return envFlag("OFF_ROSTER_ASK_BEFORE_CARD_ENABLED");
+}
 // --- end coding 5 flags ---
 
 /**
@@ -3871,3 +3913,33 @@ export function carriedPersonNoticeEnabled(): boolean {
   return envFlag("CARRIED_PERSON_NOTICE_ENABLED");
 }
 
+/**
+ * FIRST_NAME_ANSWER_KEEPS_ACCOUNT_ENABLED (ported from the sibling app: QA's live test there, 8 Nov 2026; default off; same flag in both apps).
+ * "make me CA for <first name> failing to complete shifts" → "Is this for **<full name>**?" → "make me CA for <full
+ * name> failing to complete shifts 11/7 and 11/8" (or "<full name> 11/7 and 11/8") lost the dates: an answer that
+ * named the person in full was read as the name alone. With this flag on, what the answer says besides the name is
+ * kept (`ai/first-name-suggest.ts`). Off, as before.
+ */
+export function firstNameAnswerKeepsAccountEnabled(): boolean {
+  return envFlag("FIRST_NAME_ANSWER_KEEPS_ACCOUNT_ENABLED");
+}
+
+/**
+ * SHIFT_ACCOUNT_IS_INCIDENT_ENABLED (ported from the sibling app: QA's live test there, 8 Nov 2026; default off; same flag in both apps). "make me CA
+ * for <name> not showing up to her shifts on 11/7 and 11/8" had no Observation: a shift not shown up to, not completed
+ * or missed, told with no subject and no "for", was read as the request alone. With this flag on it is an account
+ * (`forms/corrective-action-intake.ts` describesIncident). Off, as before.
+ */
+export function shiftAccountIsIncidentEnabled(): boolean {
+  return envFlag("SHIFT_ACCOUNT_IS_INCIDENT_ENABLED");
+}
+
+/**
+ * WORK_AREA_ABSENCE_CITES_CONDUCT_ENABLED (Pau's decision, 9 Nov 2026, via QA; default off; same flag in both apps).
+ * "leaving the front desk unattended" (the desk, register, counter, work area or floor left unattended during the shift)
+ * cites the Standards of Conduct line "Unauthorized absence from the work area during the workday", never Attendance, and
+ * only it, whatever else the account says (`forms/specific-policy-topics.ts`). Off, as before.
+ */
+export function workAreaAbsenceCitesConductEnabled(): boolean {
+  return envFlag("WORK_AREA_ABSENCE_CITES_CONDUCT_ENABLED");
+}

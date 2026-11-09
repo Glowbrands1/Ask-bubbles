@@ -26,6 +26,30 @@ describe("EXIT_ANSWER_NOT_A_CORRECTION_ENABLED", () => {
     expect(reading.names.map((name) => name.toLowerCase())).toEqual(["marnie holloway"]);
   });
 
+  /*
+   * The Bubbles gate runner, R6-2 (8 Nov 2026): an exit form typed as lines in turn 2, its last line "… payroll deduction
+   * does not apply eligible for rehire". With the flag on, the exit term was dropped and with it the reading of the name
+   * line, so the card asked "Who is this Resignation/Exit Form for?". The name on its own line is still the answer.
+   */
+  const LINES =
+    "Thessaly Varrow\nTeam Member Part Time \nNE Omaha Dodge\nGave notice - fulfilled notice\nGave notice 9/25/26 - date notice fulfilled 10/9/26\nResigning to pursue other career options\nStore items returned payroll deduction does not apply eligible for rehire";
+
+  it("on: an exit form typed as lines keeps the name on its own line", () => {
+    const reading = readEmployeeMentions(LINES);
+    expect(reading.negated).toEqual([]);
+    expect(reading.names).toEqual(["Thessaly Varrow"]);
+    expect(reading.explicit).toBe(true);
+  });
+
+  it("off: the same lines read the same name, as before", () => {
+    vi.stubEnv("EXIT_ANSWER_NOT_A_CORRECTION_ENABLED", "");
+    expect(readEmployeeMentions(LINES).names).toEqual(["Thessaly Varrow"]);
+  });
+
+  it("on: turn 1 on one line names no clause as a person (no own line)", () => {
+    expect(readEmployeeMentions(TURN_1).names.map((name) => name.toLowerCase())).toEqual(["marnie holloway"]);
+  });
+
   it("on: a real correction of the person still negates the name", () => {
     expect(readEmployeeMentions("not Jane, it's for Ana Ruiz").negated.map((name) => name.toLowerCase())).toContain("jane");
   });
