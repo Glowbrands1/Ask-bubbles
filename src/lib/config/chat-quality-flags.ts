@@ -1275,6 +1275,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REQUEST_PARTICIPLE_LEAD_ENABLED",
   // Default-off fix flag (QA's live Create test, 8 Nov 2026).
   "UNDATED_ACCOUNT_BRIEF_ENABLED",
+  // Default-off fix flag (QA, the Bubbles round-6 live test, 9 Nov 2026).
+  "OFF_ROSTER_ASK_BEFORE_CARD_ENABLED",
 ] as const;
 
 /**
@@ -2739,6 +2741,16 @@ export function requestParticipleLeadEnabled(): boolean {
  */
 export function undatedAccountBriefEnabled(): boolean {
   return envFlag("UNDATED_ACCOUNT_BRIEF_ENABLED");
+}
+/**
+ * OFF_ROSTER_ASK_BEFORE_CARD_ENABLED (QA, the Bubbles round-6 live test, 9 Nov 2026; coding 5; same flag in both apps;
+ * default off). "create a coaching form for <full name not on the roster>" gave a ready card with no question. On: for a
+ * store-scoped manager, such a card is held back once and the reply asks "I can't find <name> on your roster — is that
+ * the right name, or are they at another store?", with OFF_ROSTER_CONFIRM's "reply use <name>" offer
+ * (`forms/off-roster-ask.ts`). District, region and global managers are never held up. Off, as before.
+ */
+export function offRosterAskBeforeCardEnabled(): boolean {
+  return envFlag("OFF_ROSTER_ASK_BEFORE_CARD_ENABLED");
 }
 // --- end coding 5 flags ---
 
