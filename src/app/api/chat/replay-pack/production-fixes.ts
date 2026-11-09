@@ -212,4 +212,38 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov8-observation-made-for-under-performance": "REQUEST_PARTICIPLE_LEAD",
   // Changed on purpose (9 Nov 2026): fixed in production by REQUEST_PARTICIPLE_LEAD, QA round 6
   "nov8-observation-done-for-under-performance": "REQUEST_PARTICIPLE_LEAD",
+  // Changed on purpose (9 Nov 2026): fixed in production by SHIFT_ACCOUNT_IS_INCIDENT, FIRST_NAME_ANSWER_KEEPS_ACCOUNT, QA round 7
+  "nov8-ca-shift-dates-name-and-dates": "SHIFT_ACCOUNT_IS_INCIDENT, FIRST_NAME_ANSWER_KEEPS_ACCOUNT",
+  // Changed on purpose (9 Nov 2026): fixed in production by SHIFT_ACCOUNT_IS_INCIDENT, FIRST_NAME_ANSWER_KEEPS_ACCOUNT, QA round 7
+  "nov8-ca-shift-dates-not-showing-up": "SHIFT_ACCOUNT_IS_INCIDENT, FIRST_NAME_ANSWER_KEEPS_ACCOUNT",
+  // Changed on purpose (9 Nov 2026): fixed in production by SHIFT_ACCOUNT_IS_INCIDENT, FIRST_NAME_ANSWER_KEEPS_ACCOUNT, QA round 7
+  "nov8-ca-shift-dates-request-again": "SHIFT_ACCOUNT_IS_INCIDENT, FIRST_NAME_ANSWER_KEEPS_ACCOUNT",
+  // Changed on purpose (9 Nov 2026): fixed in production by SHIFT_ACCOUNT_IS_INCIDENT, FIRST_NAME_ANSWER_KEEPS_ACCOUNT, QA round 7
+  "nov9-ca-shift-answer-same-account": "SHIFT_ACCOUNT_IS_INCIDENT, FIRST_NAME_ANSWER_KEEPS_ACCOUNT",
+  // Changed on purpose (9 Nov 2026): fixed in production by SHIFT_ACCOUNT_IS_INCIDENT, FIRST_NAME_ANSWER_KEEPS_ACCOUNT, QA round 7
+  "nov9-ca-shift-answer-other-account": "SHIFT_ACCOUNT_IS_INCIDENT, FIRST_NAME_ANSWER_KEEPS_ACCOUNT",
+  // Changed on purpose (9 Nov 2026): fixed in production by SHIFT_ACCOUNT_IS_INCIDENT, FIRST_NAME_ANSWER_KEEPS_ACCOUNT, QA round 7
+  "nov9-ca-shift-answer-own-account-next-turn": "SHIFT_ACCOUNT_IS_INCIDENT, FIRST_NAME_ANSWER_KEEPS_ACCOUNT",
+  // Changed on purpose (9 Nov 2026): fixed in production by EXIT_ANSWER_NOT_A_CORRECTION, QA round 7
+  "nov8-exit-answer-not-a-correction": "EXIT_ANSWER_NOT_A_CORRECTION",
+  // Changed on purpose (9 Nov 2026): fixed in production by FIELD_LABEL_NOT_A_QUESTION, EXIT_ANSWER_NOT_A_CORRECTION, QA round 7
+  "nov8-field-label-not-a-question": "FIELD_LABEL_NOT_A_QUESTION, EXIT_ANSWER_NOT_A_CORRECTION",
+  // Changed on purpose (9 Nov 2026): fixed in production by EXIT_LETTER_SIGNER_NOT_SUBJECT, QA round 7
+  "nov9-exit-letter-signer-off-roster": "EXIT_LETTER_SIGNER_NOT_SUBJECT",
+  // Changed on purpose (9 Nov 2026): fixed in production by EXIT_LETTER_SIGNER_NOT_SUBJECT, QA round 7
+  "nov9-exit-letter-signer-on-roster": "EXIT_LETTER_SIGNER_NOT_SUBJECT",
+  // Changed on purpose (9 Nov 2026): fixed in production by POSSESSIVE_PLACE_NOT_PERSON, QA round 7
+  "nov9-possessive-place-own-store": "POSSESSIVE_PLACE_NOT_PERSON",
+  // Changed on purpose (9 Nov 2026): fixed in production by POSSESSIVE_PLACE_NOT_PERSON, QA round 7
+  "nov9-possessive-place-other-store": "POSSESSIVE_PLACE_NOT_PERSON",
+  // Changed on purpose (9 Nov 2026): fixed in production by POSSESSIVE_PLACE_NOT_PERSON, QA round 7
+  "nov9-possessive-place-then-name": "POSSESSIVE_PLACE_NOT_PERSON",
+  // Changed on purpose (9 Nov 2026): fixed in production by WORK_AREA_ABSENCE_CITES_CONDUCT, QA round 7
+  "nov9-work-area-absence-ca": "WORK_AREA_ABSENCE_CITES_CONDUCT",
+  // Changed on purpose (9 Nov 2026): fixed in production by WORK_AREA_ABSENCE_CITES_CONDUCT, QA round 7
+  "nov9-work-area-absence-left-the-building": "WORK_AREA_ABSENCE_CITES_CONDUCT",
+  // Changed on purpose (9 Nov 2026): fixed in production by WORK_AREA_ABSENCE_CITES_CONDUCT, QA round 7
+  "nov9-work-area-absence-coaching-card": "WORK_AREA_ABSENCE_CITES_CONDUCT",
+  // Changed on purpose (9 Nov 2026): fixed in production by WORK_AREA_ABSENCE_CITES_CONDUCT, QA round 7
+  "nov9-work-area-absence-coaching-made-about": "WORK_AREA_ABSENCE_CITES_CONDUCT",
 };
