@@ -11,6 +11,7 @@ import {
 } from "@/lib/config/chat-quality-flags";
 import { madeAbout } from "@/lib/ai/make-it-about";
 import { saidFormDate } from "./form-date-said";
+import { madeAboutDate } from "./made-about-date";
 import { syncCorrectiveActionPlan } from "./ca-action-plan-sync";
 import { checkboxGroupsForVariant, fieldsForVariant, parseFormDocument } from "./document";
 import { replyFromDiff } from "./form-diff-reply";
@@ -267,7 +268,7 @@ export async function patchActiveForm(input: PatchTurnInput): Promise<AskRespons
      */
     // STEP_B_DATE_SAID_ENABLED: the date the manager says the form takes (read before the make-it-about guard below).
     const saidDate = stepBDateSaidEnabled() ? saidFormDate(input.question, input.today) : null;
-    const dateToWrite = saidDate !== null && "form_date" in before && before.form_date?.value !== saidDate ? saidDate : null;
+    let dateToWrite = saidDate !== null && "form_date" in before && before.form_date?.value !== saidDate ? saidDate : null;
     const aboutNotRewritten =
       stepBMakeItAboutAccountEnabled() &&
       madeAbout(input.question) !== null &&
@@ -280,7 +281,19 @@ export async function patchActiveForm(input: PatchTurnInput): Promise<AskRespons
      * the date are written, and the reply says plainly that the account field was kept (below).
      */
     const keepsAccount = aboutNotRewritten && dateToWrite !== null && stepBDateWithAboutEnabled();
-    if (aboutNotRewritten && !keepsAccount) {
+    /*
+     * STEP_B_MAKE_IT_ABOUT_ACCOUNT_ENABLED (QA's live round-6 trace, Ask Bubbles, 9 Nov 2026; the person invented): on a
+     * saved Coaching draft about the missed meeting on 10/10/26, "make it about leaving the front desk unattended on
+     * 11/6/26" was handed to the old path, whose revision wrote the new account and was refused for dropping 10/10/26
+     * (the form's Date, a protected value): "I haven't changed the Coaching Form …", Other and the Date left too. A
+     * made-about incident with its own date is a new account: it stays here. The old path's revision rewrites the
+     * account first, then that date and the reader's edits are written. One reply, from the whole diff; an account not
+     * rewritten changes nothing (below).
+     */
+    const aboutDate = aboutNotRewritten && !keepsAccount ? madeAboutDate(input.question, input.today) : null;
+    const rewritesAccount = aboutDate !== null && "form_date" in before;
+    if (rewritesAccount && before.form_date?.value !== aboutDate) dateToWrite = aboutDate;
+    if (aboutNotRewritten && !keepsAccount && !rewritesAccount) {
       return handOff("none");
     }
     // STEP_B_DATE_WITH_ABOUT_ENABLED: the account field this turn did not rewrite is named as kept, never left unsaid.
@@ -292,6 +305,45 @@ export async function patchActiveForm(input: PatchTurnInput): Promise<AskRespons
             content: `${response.content.trimEnd()}\n\nI kept **${labels[keptAccountKey] ?? keptAccountKey}** as it was: it is not rewritten to be about ${madeAbout(input.question)}. Tell me what it should say, or say "rewrite it", and I'll change it.`,
           }
         : response;
+    // The manager's own statement: through the one writer when it is on, else as a stated fact, as the old path writes it.
+    const writeFormDate = async (iso: string): Promise<void> => {
+      const fresh = await loadInstance(input.instanceId);
+      if (fresh && formEditSingleWriterEnabled()) {
+        await (await import("./form-write")).correctionWrite({
+          instanceId: input.instanceId,
+          loaded: fresh,
+          stated: { values: { form_date: iso }, checked: {} },
+          actorId: actor.id,
+          said: input.question,
+          today: input.today,
+        });
+      } else if (fresh) {
+        await applyStatedFacts(input.instanceId, { values: { form_date: iso }, checked: {} }, actor.id, new Set(["form_date"]));
+      }
+    };
+    /*
+     * STEP_B_MAKE_IT_ABOUT_ACCOUNT_ENABLED: the account first, by the old path's revision (`reviseActiveForm`,
+     * unchanged; its rewrite follows the incident's own date, `form-write.ts`). QA's ruling (9 Nov 2026): the Date,
+     * Other and the topic describe the same incident as the account, so they change with it or not at all. An account
+     * not rewritten writes nothing, and the reply asks what the account should say. Rewritten, the Date and the
+     * reader's edits are written below.
+     */
+    if (rewritesAccount && keptAccountKey) {
+      await (await import("./chat-revision"))
+        .reviseActiveForm({ request: input.request, instanceId: input.instanceId, question: input.question, history: input.history, today: input.today })
+        .catch(() => null);
+      const revised = await loadInstance(input.instanceId);
+      const rewritten = revised !== null && snapshotDiff(snapshotOf(loaded), snapshotOf(revised)).some((change) => change.key === keptAccountKey);
+      if (!rewritten) {
+        const label = labels[keptAccountKey] ?? keptAccountKey;
+        const about = madeAbout(input.question);
+        return {
+          content: `I haven't changed the **${loaded.instance.templateName}** for **${loaded.instance.employeeName}**: I couldn't rewrite **${label}** to be about ${about}, so the Date and the topic stay as they were too. What should **${label}** say about ${about}?`,
+          citations: [],
+          coverage: "not_applicable",
+        };
+      }
+    }
     /*
      * EDIT_POLICY_ASK_ENABLED (QA's live run, 7 Nov 2026): the latest message asks for the policy on a form whose
      * account field carries the citation line. Answered after the edit is written, below; asked alone ("please list
@@ -470,22 +522,7 @@ export async function patchActiveForm(input: PatchTurnInput): Promise<AskRespons
       }
     }
 
-    if (dateToWrite !== null) {
-      const fresh = await loadInstance(input.instanceId);
-      // The manager's own statement: through the one writer when it is on, else as a stated fact, as the old path writes it.
-      if (fresh && formEditSingleWriterEnabled()) {
-        await (await import("./form-write")).correctionWrite({
-          instanceId: input.instanceId,
-          loaded: fresh,
-          stated: { values: { form_date: dateToWrite }, checked: {} },
-          actorId: actor.id,
-          said: input.question,
-          today: input.today,
-        });
-      } else if (fresh) {
-        await applyStatedFacts(input.instanceId, { values: { form_date: dateToWrite }, checked: {} }, actor.id, new Set(["form_date"]));
-      }
-    }
+    if (dateToWrite !== null) await writeFormDate(dateToWrite);
     // EDIT_POLICY_ASK_ENABLED: the policy, after the edit is on the form (its account is what the policy is read from).
     policyOutcome ??= await answerPolicy();
     const reloaded = await loadInstance(input.instanceId);
