@@ -4,6 +4,7 @@ import {
   asYouSaidAppReadEnabled,
   caPerformanceReasonEnabled,
   asYouSaidManagerWordsEnabled,
+  missedShiftCitesAttendanceEnabled,
   msbPhraseSocEnabled,
   caSalesPolicyEnabled,
   cleaningOtherEveryWordingEnabled,
@@ -494,7 +495,25 @@ export function policiesNamedIn(sentence: string): { name: CaPolicyName; start: 
 export function readCaPolicy(rawText: string): CaPolicyReading {
   const said = managerWords(rawText);
   // WOVEN_TRAINING_CONDUCT's reading (default off) before AS_YOU_SAID_APP_READ's fallback, on the manager's words (as the sibling app's #595).
-  return withAppReading(withWovenWork(withCleaningOther(withSalesPolicy(readCaPolicyFromWords(said), said), said), said), rawText, said);
+  return withMissedShift(withAppReading(withWovenWork(withCleaningOther(withSalesPolicy(readCaPolicyFromWords(said), said), said), said), rawText, said), said);
+}
+
+/*
+ * MISSED_SHIFT_CITES_ATTENDANCE_ENABLED (QA, the Bubbles round-7 live test, 9 Nov 2026): "create a CA for <A>, not
+ * showing up to her shifts on 11/7 and 11/8" (and the same after "make me CA for <first name> failing to complete
+ * shifts") made a card with no Policy line, its Action plan on "the applicable company policy". "late" and "no call no
+ * show" are read as Attendance from the manual's own words; a shift not shown up to, missed or not worked was not. The
+ * sibling app's live card says "Policy: Attendance — read from this request" for the same words. With the flag on, an
+ * account that names no policy and says a shift was not shown up to, missed, skipped or not worked is that reading.
+ * Off, the reading as it was.
+ */
+const MISSED_SHIFT =
+  /\b(?:(?:not|never|didn['’]?t|did\s+not|failed\s+to|failing\s+to|fails\s+to|wasn['’]?t)\s+(?:show(?:ing)?\s+up|com(?:e|ing)\s+in|(?:work(?:ing)?|complet(?:e|ing)))\s+(?:(?:to|for)\s+)?(?:\S+\s+){0,3}?shifts?|(?:missed|missing|skipped|skipping|no[- ]show(?:ed)?\s+(?:for|to)?)\s+(?:\S+\s+){0,3}?shifts?)\b/i;
+
+function withMissedShift(reading: CaPolicyReading, said: string): CaPolicyReading {
+  if (!missedShiftCitesAttendanceEnabled()) return reading;
+  if (reading.stated !== null || reading.suggestion !== null || reading.ambiguous || reading.other || reading.missedEvent || reading.readFromApp) return reading;
+  return MISSED_SHIFT.test(said) ? { ...reading, readFromApp: "attendance" } : reading;
 }
 
 /**
