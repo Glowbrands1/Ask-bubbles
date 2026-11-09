@@ -1277,6 +1277,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "UNDATED_ACCOUNT_BRIEF_ENABLED",
   // Default-off fix flag (QA, the Bubbles round-6 live test, 9 Nov 2026).
   "EXIT_LETTER_SIGNER_NOT_SUBJECT_ENABLED",
+  // Default-off fix flag (ported from the sibling app: QA's live test there, 9 Nov 2026).
+  "EXIT_LETTER_ADDRESSEE_ENABLED",
 ] as const;
 
 /**
@@ -2751,6 +2753,18 @@ export function undatedAccountBriefEnabled(): boolean {
  */
 export function exitLetterSignerNotSubjectEnabled(): boolean {
   return envFlag("EXIT_LETTER_SIGNER_NOT_SUBJECT_ENABLED");
+}
+/**
+ * EXIT_LETTER_ADDRESSEE_ENABLED (ported from the sibling app: QA's live test there, 9 Nov 2026; coding 5; same flag in
+ * both apps; default off; with EXIT_LETTER_SIGNER_NOT_SUBJECT_ENABLED). "I need an exit form with this information." and
+ * a termination letter to <A> signed "Sincerely,\n<C>\nDistrict Manager" gave the exit card the signer's title, and the
+ * first no-show date as the Resignation Date; with <A> off the roster the signer was offered. On: the letter's
+ * salutation names the form's person when no "form for <X>" does, a sign-off on lines of its own is not read
+ * (`ai/letter-signer.ts`), another person's title on the exit read-back is the employee's own or goes
+ * (`ai/title-of-the-employee.ts`), and a stated "terminated, effective <date>" is the Resignation Date. Off, as before.
+ */
+export function exitLetterAddresseeEnabled(): boolean {
+  return envFlag("EXIT_LETTER_ADDRESSEE_ENABLED");
 }
 // --- end coding 5 flags ---
 
