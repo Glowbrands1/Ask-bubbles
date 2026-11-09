@@ -1278,6 +1278,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 4: FIRST_NAME_ANSWER_KEEPS_ACCOUNT and SHIFT_ACCOUNT_IS_INCIDENT (port from the sibling app, default off).
   "FIRST_NAME_ANSWER_KEEPS_ACCOUNT_ENABLED",
   "SHIFT_ACCOUNT_IS_INCIDENT_ENABLED",
+  // Default-off fix flag (QA, the Bubbles round-6 live test, 9 Nov 2026).
+  "EXIT_LETTER_SIGNER_NOT_SUBJECT_ENABLED",
 ] as const;
 
 /**
@@ -2742,6 +2744,16 @@ export function requestParticipleLeadEnabled(): boolean {
  */
 export function undatedAccountBriefEnabled(): boolean {
   return envFlag("UNDATED_ACCOUNT_BRIEF_ENABLED");
+}
+/**
+ * EXIT_LETTER_SIGNER_NOT_SUBJECT_ENABLED (QA, the Bubbles round-6 live test, 9 Nov 2026; coding 5; same flag in both
+ * apps; default off). "create an exit form for <B>, team member … Here is the termination letter: '… <C>, District
+ * Manager'" offered <B>, <C> and "District Manager'" as the exit form's person, and took "District Manager" as the
+ * Position. On: when the turn names the form's person, the proposal reads it without a letter's closing "<Name>,
+ * <Title>" sign-off of another person (`ai/letter-signer.ts`). Off, as before.
+ */
+export function exitLetterSignerNotSubjectEnabled(): boolean {
+  return envFlag("EXIT_LETTER_SIGNER_NOT_SUBJECT_ENABLED");
 }
 // --- end coding 5 flags ---
 
