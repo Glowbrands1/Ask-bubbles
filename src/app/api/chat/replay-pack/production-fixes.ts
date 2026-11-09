@@ -258,4 +258,8 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov9-missed-shift-cites-attendance-single": "MISSED_SHIFT_CITES_ATTENDANCE",
   // Changed on purpose (9 Nov 2026): fixed in production by POSSESSIVE_PLACE_ACCOUNT, QA round 8
   "nov9-possessive-place-what-happened": "POSSESSIVE_PLACE_ACCOUNT",
+  // Changed on purpose (9 Nov 2026): fixed in production by MADE_ABOUT_ALL_OR_NOTHING, QA round 9
+  "nov9-made-about-all-or-nothing-no-reading": "MADE_ABOUT_ALL_OR_NOTHING",
+  // Changed on purpose (9 Nov 2026): fixed in production by MADE_ABOUT_ALL_OR_NOTHING, QA round 9
+  "nov9-made-about-all-or-nothing-other-form": "MADE_ABOUT_ALL_OR_NOTHING",
 };

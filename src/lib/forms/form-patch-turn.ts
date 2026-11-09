@@ -6,12 +6,13 @@ import {
   formEditSingleWriterEnabled,
   formPatchReaderFixesEnabled,
   stepBMakeItAboutAccountEnabled,
+  madeAboutAllOrNothingEnabled,
   stepBDateSaidEnabled,
   stepBDateWithAboutEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { madeAbout } from "@/lib/ai/make-it-about";
 import { saidFormDate } from "./form-date-said";
-import { madeAboutDate } from "./made-about-date";
+import { endMadeAboutWrite, madeAboutDate, madeAboutTopic, noteMadeAboutWrite } from "./made-about-date";
 import { syncCorrectiveActionPlan } from "./ca-action-plan-sync";
 import { checkboxGroupsForVariant, fieldsForVariant, parseFormDocument } from "./document";
 import { replyFromDiff } from "./form-diff-reply";
@@ -34,6 +35,8 @@ import type { ChatMessage } from "@/types";
 
 /** STEP_B_MAKE_IT_ABOUT_ACCOUNT_ENABLED: the fields that give a form's account (Coaching Details, a CA's Observation). */
 const ACCOUNT_KEYS = ["coaching_details", "observation"] as const;
+/** The Coaching Form's Other line, written beside its "other" box (MADE_ABOUT_ALL_OR_NOTHING_ENABLED). */
+const OTHER_TOPIC_KEY = "other_topic";
 
 /**
  * ============================================================================
@@ -244,21 +247,31 @@ export async function patchActiveForm(input: PatchTurnInput): Promise<AskRespons
     const prepared = preparePatch(loaded, input);
     if (!prepared) return null;
     const { template, before, allGroups, labels, stated, verbatim, writable, readerFixes, modelInput } = prepared;
-    const reading = await readingFor(input, modelInput);
+    let reading = await readingFor(input, modelInput);
     /*
      * FORM_PATCH_READER_FIXES_ENABLED: a hand-off after a reading tells the old path's revision what the reader saw —
      * "nothing to write" (an empty reading: the revision may not add nothing new), and the evidence of ops it
      * refused (the revision's new content there keeps it). A model fallback tells it nothing.
      */
     const handOff = async (found: "nothing" | "refused" | "none"): Promise<null> => {
-      if (readerFixes && found !== "none" && "ok" in reading) {
+      const read = reading;
+      if (readerFixes && found !== "none" && "ok" in read) {
         const evidence = Object.fromEntries(
-          Object.entries(reading.patch.evidence ?? {}).filter(([key, quote]) => key in reading.patch.set && fold(input.question).includes(fold(quote))),
+          Object.entries(read.patch.evidence ?? {}).filter(([key, quote]) => key in read.patch.set && fold(input.question).includes(fold(quote))),
         );
         (await import("./reader-found-nothing")).noteReaderFoundNothing(input.instanceId, evidence, found === "nothing");
       }
       return null;
     };
+    /*
+     * MADE_ABOUT_ALL_OR_NOTHING_ENABLED (QA's live round-7 test, 9 Nov 2026): "make it about leaving the front desk
+     * unattended on 11/6/26" with no reading of this form (the reader timed out, or read another form) went to the old
+     * path, whose revision rewrote Details alone: Other and the Date stayed. A made-about incident with its own date is
+     * read here from the manager's words: the topic (Other, its box ticked) and, below, the Date and the account.
+     */
+    if ((!("ok" in reading) || reading.turn !== "this_form") && madeAboutAllOrNothingEnabled()) {
+      reading = madeAboutReading(input, before, writable, allGroups) ?? reading;
+    }
     if (!("ok" in reading) || reading.turn !== "this_form") return handOff("none");
     /*
      * STEP_B_MAKE_IT_ABOUT_ACCOUNT_ENABLED (QA's live draft test, 8 Nov 2026): "I need you to make it about showing up
@@ -329,9 +342,15 @@ export async function patchActiveForm(input: PatchTurnInput): Promise<AskRespons
      * reader's edits are written below.
      */
     if (rewritesAccount && keptAccountKey) {
-      await (await import("./chat-revision"))
-        .reviseActiveForm({ request: input.request, instanceId: input.instanceId, question: input.question, history: input.history, today: input.today })
-        .catch(() => null);
+      const coordinate = madeAboutAllOrNothingEnabled();
+      if (coordinate) noteMadeAboutWrite(input.instanceId);
+      try {
+        await (await import("./chat-revision"))
+          .reviseActiveForm({ request: input.request, instanceId: input.instanceId, question: input.question, history: input.history, today: input.today })
+          .catch(() => null);
+      } finally {
+        if (coordinate) endMadeAboutWrite(input.instanceId);
+      }
       const revised = await loadInstance(input.instanceId);
       const rewritten = revised !== null && snapshotDiff(snapshotOf(loaded), snapshotOf(revised)).some((change) => change.key === keptAccountKey);
       if (!rewritten) {
@@ -539,4 +558,30 @@ export async function patchActiveForm(input: PatchTurnInput): Promise<AskRespons
   } catch {
     return null;
   }
+}
+
+/**
+ * MADE_ABOUT_ALL_OR_NOTHING_ENABLED: the reading of a dated made-about turn the reader did not read as this form's — the
+ * topic only (the form's "other" box and its Other line, where the draft has both), from the manager's own words; the
+ * Date and the account follow (`patchActiveForm`). Null when the turn is not one, or the draft has no Date or account.
+ */
+function madeAboutReading(
+  input: PatchTurnInput,
+  before: Readonly<Record<string, { readonly value: unknown }>>,
+  writable: ReadonlySet<string>,
+  groups: readonly { readonly key: string; readonly options: readonly { readonly key: string }[] }[],
+): FormPatchReading | null {
+  if (!stepBMakeItAboutAccountEnabled() || !madeAboutDate(input.question, input.today) || !("form_date" in before)) return null;
+  if (!ACCOUNT_KEYS.some((key) => writable.has(key))) return null;
+  const topic = madeAboutTopic(input.question, input.today);
+  const box = groups.find((group) => writable.has(group.key) && group.options.some((option) => option.key === "other"));
+  const set: Record<string, string | string[]> = {};
+  const evidence: Record<string, string> = {};
+  if (topic && box && writable.has(OTHER_TOPIC_KEY)) {
+    set[OTHER_TOPIC_KEY] = topic;
+    set[box.key] = ["other"];
+    evidence[OTHER_TOPIC_KEY] = topic.toLowerCase();
+    evidence[box.key] = topic.toLowerCase();
+  }
+  return { ok: true, turn: "this_form", patch: { set, clear: [], evidence } };
 }
