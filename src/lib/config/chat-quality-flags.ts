@@ -1286,6 +1286,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "OFF_ROSTER_ASK_BEFORE_CARD_ENABLED",
   // coding 4: WORK_AREA_ABSENCE_CITES_CONDUCT (Pau's decision, 9 Nov 2026; default off).
   "WORK_AREA_ABSENCE_CITES_CONDUCT_ENABLED",
+  // Default-off fix flag (QA, the Bubbles round-7 live test, 9 Nov 2026).
+  "POSSESSIVE_PLACE_ACCOUNT_ENABLED",
 ] as const;
 
 /**
@@ -2781,6 +2783,15 @@ export function possessivePlaceNotPersonEnabled(): boolean {
  */
 export function offRosterAskBeforeCardEnabled(): boolean {
   return envFlag("OFF_ROSTER_ASK_BEFORE_CARD_ENABLED");
+}
+/**
+ * POSSESSIVE_PLACE_ACCOUNT_ENABLED (QA, the Bubbles round-7 live test, 9 Nov 2026; coding 5; same flag in both apps;
+ * default off; with POSSESSIVE_PLACE_NOT_PERSON_ENABLED). The ask-who card for "create a CA for Lee's Summit Plaza, she
+ * was late on 10-20-26" read "What happened: Lee's Summit Plaza". On: that card's Issue is the words after the place
+ * ("she was late on 10-20-26"), or blank (`forms/possessive-place.ts`). Off, as before.
+ */
+export function possessivePlaceAccountEnabled(): boolean {
+  return envFlag("POSSESSIVE_PLACE_ACCOUNT_ENABLED");
 }
 // --- end coding 5 flags ---
 
