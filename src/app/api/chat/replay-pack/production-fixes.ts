@@ -160,8 +160,6 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov8-exit-other-person-not-offered": "EXIT_OTHER_PERSON_NOT_SUBJECT",
   // Changed on purpose (9 Nov 2026): fixed in production by EXIT_TERMINATION_STATED, EXIT_OTHER_PERSON_NOT_SUBJECT, QA round 6
   "nov8-exit-termination-stated-facts": "EXIT_TERMINATION_STATED, EXIT_OTHER_PERSON_NOT_SUBJECT",
-  // Changed on purpose (9 Nov 2026): fixed in production by FIELD_LABEL_NOT_A_QUESTION, QA round 6
-  "nov8-field-label-not-a-question": "FIELD_LABEL_NOT_A_QUESTION",
   // Changed on purpose (9 Nov 2026): fixed in production by MISSED_SHIFT_NOT_LATENESS, QA round 6
   "nov8-missed-shift-plan-cites-attendance": "MISSED_SHIFT_NOT_LATENESS",
   // Changed on purpose (9 Nov 2026): fixed in production by PROPOSAL_NAME_CORRECTION, QA round 6

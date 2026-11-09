@@ -59,4 +59,34 @@ export const NOV8_FIELD_LABEL_NOT_A_QUESTION_CASES: ReplayCase[] = [
       void t;
     },
   },
+  {
+    id: "nov8-exit-field-label-keeps-no-notice",
+    title: "a six-turn exit chat whose turn 1 says \"no notice given\": turn 5 (field labels answered) leaves Date that notice was given blank and adds no \"You also asked\" line",
+    report: "QA, the round-6 rollback, 9 Nov 2026 (a district manager's chat, replayed; the person, address and store words invented): with FIELD_LABEL_NOT_A_QUESTION_ENABLED on, turn 5 filled \"Date that notice was given: October 26, 2026\" and added 'You also asked \"how employee resigned - …\" — ask that again on its own and I'll answer it.'",
+    // Holds with production's flags (FIELD_LABEL_NOT_A_QUESTION is off there). The run with that flag on fails: the known open bug.
+    status: "fixed",
+    fixFlags: ["FIELD_LABEL_NOT_A_QUESTION_ENABLED"],
+    fixStatus: { open: "with FIELD_LABEL_NOT_A_QUESTION_ENABLED on, turn 5 fills Date that notice was given and adds a \"You also asked\" line (exit-details.ts labelledMethod builds the card from the label turn; exit-facts.ts no longer sees turn 1's \"no notice given\")" },
+    async run(t) {
+      vi.setSystemTime(new Date("2026-11-08T15:00:00Z"));
+      t.directory(STAFF);
+      t.as("location_manager", TWO_STORES);
+      const thread = t.thread();
+      const turns = [
+        "create an exit for marisol fenwick, assistant store manager at lees summit, mo. last day worked 10-26-26. store items not returned and $25 will be payroll deducted for store key. immediate voluntary term, no notice given. payroll deduct applies. drop wage and forfeit bonus. not eligible for rehire. marisol's address is 812 Ne Larkmoor Court, lees summit, MO. 64064",
+        "marisol told management on 10-26-26 that she quit effective immediately due to personal reasons.",
+        "exit is for marisol fenwick",
+        "create exit for marisol fenwick",
+        "resignation date 10-26-2026. how employee resigned - Marisol told management she quit effective immediately on 10-26-2026. Reason for resignation - Marisol quit due to personal family issues.",
+        "how employee resigned - told management",
+      ];
+      const replies: string[] = [];
+      for (const said of turns) replies.push((await thread.say(said)).content);
+      for (const turn of [4, 5]) {
+        const content = replies[turn]!;
+        expect(content, `turn ${turn + 1} fills the notice date although turn 1 said no notice:\n${content}`).not.toMatch(/Date that notice was given:\*\*\s*\S/);
+        expect(content, `turn ${turn + 1} has the stray "You also asked" line:\n${content}`).not.toContain("You also asked");
+      }
+    },
+  },
 ];
