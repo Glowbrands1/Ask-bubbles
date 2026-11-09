@@ -15,8 +15,10 @@ import {
   salesShortfallObjectEnabled,
   wovenTrainingConductEnabled,
   conductIncidentCitesPageEnabled,
+  accountPlaceLeadEnabled,
 } from "@/lib/config/chat-quality-flags";
 
+import { readLocationMentions } from "./location-mention";
 import { withoutDeniedFaults } from "./denial-no-account";
 import { namesPerformance } from "./epp-policy";
 import { JOIN } from "./turn-join";
@@ -1467,6 +1469,23 @@ const OBSERVATION_REASON = new RegExp(
 const OBSERVATION_BARE_REASON = /^\s*(?:under[- ]?)?performance\b(?:\s+(?:for|in|during)\s+(?:the\s+month\s+of\s+)?[a-z]+)?/i;
 const OBSERVATION_PAYROLL = /\b(?:(?:not|no)\s+)?pay\s*roll\s+deduct\w*(?:\s+applicable)?\b|\b(?:not|no)\s+(?:a\s+)?pay\s*roll\s+deduction\b/gi;
 
+/**
+ * "at West Dodge Rd ", "at Store 264 ": a named place before the request's "for", at most six words, each starting
+ * with a capital or a digit (coding 2's review). "at the register" or "at the front desk" is where it happened, an
+ * account fact, and stays; "in …" (most often a time) and "from …" never lead here. A lower-case "at west dodge rd" is
+ * left as before, the safe miss.
+ */
+const PLACE_LEAD = /^\s*[Aa]t\s+(?:the\s+)?(?:[\p{Lu}\d][\p{L}\d'’.&-]*\s+){1,6}?(?=for\s)/u;
+const FOR_LEAD = /^\s*for\s+/i;
+/** "at kearney," / "at west dodge rd for": what follows "at", up to a comma or the request's "for". */
+const STORE_LEAD = /^\s*at\s+(?:the\s+)?([^,]{1,60}?)(?=\s*,|\s+for\s)/i;
+
+/** The whole phrase is one store of the roster, as the store reader reads it after "at" (any case). */
+function isRosterStore(phrase: string): boolean {
+  const said = phrase.trim().toLowerCase();
+  return readLocationMentions(`at ${said}`).some((mention) => (mention.matched ?? "").trim().toLowerCase() === said);
+}
+
 export function observationAccount(sentence: string, employeeName: string | null): string {
   if (!salesObservationAccountEnabled() || !salesShortfallObjectEnabled()) return sentence;
   const trimmed = sentence.trim();
@@ -1481,6 +1500,24 @@ export function observationAccount(sentence: string, employeeName: string | null
   const reasonFollows = reasonAtStart.test(` ${words.slice(lead).join(" ")}`);
   if (lead > 0 && (wasRequest || reasonFollows)) words.splice(0, lead);
   text = words.join(" ");
+  /*
+   * ACCOUNT_PLACE_LEAD_ENABLED (QA's Bubbles round-5 final gate, 8 Nov 2026): "create a written CA for <name> at West
+   * Dodge Rd for missing the 10-15-26 woven deadline" left "at West Dodge Rd for missing …": the request's head and
+   * name were cut, its place was not. Once the request was cut, a named place that opens what is left ("at <Place>"
+   * right before the request's "for") goes, and so does that "for" unless a performance reason follows it (the reason
+   * is cut below). Off, as before.
+   */
+  if (accountPlaceLeadEnabled() && (wasRequest || lead > 0) && PLACE_LEAD.test(text)) {
+    text = text.replace(PLACE_LEAD, "");
+    if (!reasonAtStart.test(` ${text}`)) text = text.replace(FOR_LEAD, "");
+  } else if (accountPlaceLeadEnabled() && (wasRequest || lead > 0)) {
+    // QA's round-6 gate: "… at kearney, she was late on 10-5": a store of the roster, in any case, before "," or "for".
+    const store = STORE_LEAD.exec(text);
+    if (store && isRosterStore(store[1]!)) {
+      text = text.slice(store[0].length).replace(/^\s*,\s*/, "");
+      if (!reasonAtStart.test(` ${text}`)) text = text.replace(FOR_LEAD, "");
+    }
+  }
   /*
    * ONLY THE REQUEST CLAUSE IS CUT (QA's round-4 gate, 8 Nov 2026): the reason and a payroll answer were cut
    * wherever they stood, so "This is for Under Performance on PPTA, …" became "This is on PPTA, …" and "…payroll

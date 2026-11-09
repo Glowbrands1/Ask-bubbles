@@ -162,6 +162,9 @@ import { withJobTitleFromWords } from "./job-title-from-words";
 import { withCoachingWhatHappened } from "./coaching-what-happened";
 import { withFreshDateReask } from "./date-reask-fresh";
 import { withFirstNameAsk } from "./first-name-ask";
+import { withCarriedPersonNotice } from "./carried-person-notice";
+import { withoutPoliteLeadOnCard } from "./polite-about-request";
+import { withExitOtherPersonNotOffered } from "./exit-other-person";
 import { withFirstNameAnswerFor, withFirstNameSuggestFor } from "./first-name-suggest";
 import { withManagerStatedTitle } from "./manager-title";
 import { withReplyMatchesCard } from "./reply-matches-card";
@@ -246,9 +249,12 @@ export async function answerQuestion(
     await withTitleOfTheEmployee(await answerQuestionAnyPath(asked, actor, memory), asked, () => loadRosterQuiet(actor)),
     asked,
   );
+  // CARRIED_PERSON_NOTICE_ENABLED: a card whose person the manager last named before their last six turns says so (`ai/carried-person-notice.ts`).
+  const noticed = withCarriedPersonNotice(answered, asked);
   // FORM_NAME_FROM_ROSTER_ENABLED, last: only roster people are the employee or a choice (`forms/roster-only-names.ts`).
   // REPLY_MATCHES_CARD_ENABLED, the very last step: the reply agrees with the finished card (`ai/reply-matches-card.ts`).
-  return withReplyMatchesCard(withRosterOnlyNames(answered));
+  // EXIT_OTHER_PERSON_NOT_SUBJECT_ENABLED: the letter's other person ("your General Manager, <B>") is never offered as the exit form's subject (`ai/exit-other-person.ts`).
+  return withReplyMatchesCard(withRosterOnlyNames(withExitOtherPersonNotOffered(noticed, asked)));
 }
 
 async function answerQuestionAnyPath(
@@ -591,7 +597,8 @@ async function answerQuestionCore(
      */
     const reading = askedQuestion ? null : startFormReading(request, actor);
     // LIST_POLICY_IS_EDIT_ENABLED: with only a card open, the card is proposed again from the manager's last turn.
-    const proposalQuestion = listPolicyCard ? cardRequestTurn(request) : await questionForProposal(request, actor);
+    // POLITE_ABOUT_STAYS_CARD_ENABLED: "can you make it for <topic>" on an open card is proposed without its polite lead (`ai/polite-about-request.ts`).
+    const proposalQuestion = listPolicyCard ? cardRequestTurn(request) : await questionForProposal({ ...request, question: withoutPoliteLeadOnCard(request) }, actor);
     // AI_READS_CODE_CHECKS_ENABLED: no "couldn't find" line about the name the reader put on the card.
     const proposeFrom = async (question: string, questionMessageId = request.questionMessageId) => withoutStaleRosterNote(await deliverFormProposal({
       request,

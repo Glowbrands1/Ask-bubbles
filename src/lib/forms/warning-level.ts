@@ -1,4 +1,4 @@
-import { caShortcutWordsEnabled, levelEndsRequestEnabled, requestLevelNotHistoryEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { caShortcutWordsEnabled, complaintAccountEnabled, levelEndsRequestEnabled, requestLevelNotHistoryEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { businessToday } from "@/lib/business-date";
 
 import { datesInText } from "./form-date-answer";
@@ -316,6 +316,9 @@ const HYPOTHETICAL_AFTER = /^\s*(?:would|could|might|may)\b/i;
 const CHANGED_TO =
   /\b(?:change|changed|switch|switched|set|move|update|correct|make)\b[^.;!?\n]{0,40}?\s(?:to|into|as)\s+(?:(?:a|an)\s+)?$/i;
 
+/** COMPLAINT_ACCOUNT_ENABLED: a new sentence begun right after the level, with no stop: "verbal warning The date …". Case-sensitive. */
+const RUN_ON_SENTENCE = /^\s+(?:The|She|He|They|It|Her|His|Their|This|That|When)\b/;
+
 /** The turn opens with the level: "Verbal warning for Sarah", "actually, written warning". */
 const OPENING = new RegExp(String.raw`^\s*${LEAD_IN}(?:please\s+)?(?:(?:a|an|new)\s+)?$`, "i");
 
@@ -459,6 +462,12 @@ function classify(text: string, start: number, end: number, today: string, cued:
   if (/^\s*(?:please|pls|plz)\b/i.test(after) && !PAST_OR_HABITUAL.test(before.slice(-60))) return "current";
   // A bare adjective was only matched after a phrase that sets this form's level.
   if (cued) return "current";
+  /*
+   * COMPLAINT_ACCOUNT_ENABLED (QA's audit, 7 Nov 2026): "verbal warning The date she complained was Oct 31st . The
+   * customer said …" — the turn opens with the level and runs straight on into a new sentence, with no stop between
+   * them. The level is this form's; the date after it is that sentence's, never the level's.
+   */
+  if (complaintAccountEnabled() && opensTurn && OPENING.test(before) && RUN_ON_SENTENCE.test(text.slice(end, end + 40))) return "current";
 
   const when = timing(after, today);
   /*

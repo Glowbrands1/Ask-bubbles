@@ -6,7 +6,7 @@ import { COMPANY_LOCATIONS, locationByCode, locationById, locationNameKey } from
 
 import { extractFormDate } from "./form-date-answer";
 import { FORM_NAME_PATTERN, canonicalShorthand, canonicalWarningWording, isFormVocabulary, leadingFormRequest } from "./template-intent";
-import { antiLoopEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { antiLoopEnabled, exitAnswerNotACorrectionEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { companyNameStops } from "./name-stops";
 import { isTypedStopSpan, isTypedStopWord, NAME_LABEL_WORDS, NOT_A_NAME, NOT_A_NAME_LEAD, NOT_A_TYPED_NAME, TYPED_NAME_WORD, isNameLabelPhrase, lowercaseMonths, nameAfterNameLabel, stripTrailingJobOrTitle } from "./name-words";
 import { keepTypedPerson } from "./typed-name";
@@ -1417,7 +1417,8 @@ function settle(strong: string[], weak: string[], text: string, subjects: readon
       weak = weak.filter((name) => !isCompanyPlaceWord(name));
     }
   }
-  const negated = negatedNames(text);
+  // EXIT_ANSWER_NOT_A_CORRECTION_ENABLED: "store items not returned", "not eligible for rehire" negate an exit answer's word, never a person.
+  const negated = negatedNames(text).filter((name) => !(exitAnswerNotACorrectionEnabled() && isExitTerms(name)));
   const correction = negated.length > 0 || CORRECTION_CUE.test(text);
   const given = correction ? [...strong, ...sentenceAnswers(text)] : strong;
   const recipient = formRecipient(subjects, given, weak, text);

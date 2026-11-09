@@ -30,6 +30,19 @@ export function copyOpenFormFor(input: {
   const others = input.roster.filter(
     (person) => displayName(person).toLowerCase() !== open && rosterNameNamedIn(input.question, [person]) !== null,
   );
-  if (others.length !== 1) return null;
+  if (others.length !== 1 || !namedAfterFor(input.question, others[0]!)) return null;
   return `create the same ${template.toLowerCase()} for ${displayName(others[0]!)}`;
+}
+
+/*
+ * Only "… for <B>": the person the new form is FOR. "the same draft that we did with <A> by changing the name" names
+ * the form to copy FROM, onto the open draft; that is SAME_FORM_COPY_NEW_PERSON's turn and is left to it (QA's
+ * round-5 gate, 8 Nov 2026: same-form-copy-e2e and form-edit-single-writer-flags-off).
+ */
+function namedAfterFor(question: string, person: RosterEmployee): boolean {
+  const names = [displayName(person), person.preferredFirstName ?? "", person.firstName]
+    .map((name) => name.trim())
+    .filter((name) => name.length > 0)
+    .map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+"));
+  return new RegExp(`\\bfor\\s+(?:${names.join("|")})(?![\\p{L}])`, "iu").test(question);
 }

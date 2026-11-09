@@ -1,3 +1,5 @@
+import { policySetAsidePlanEnabled } from "@/lib/config/chat-quality-flags";
+
 import { CA_POLICY_LABEL, policiesNamedIn, type CaPolicyName } from "./ca-policy";
 
 /**
@@ -153,10 +155,32 @@ export function policySetAsideLine(setAside: PolicySetAside): string {
  * The card without the policy rows and manual citations of what was set aside, and one line saying so. Unchanged
  * when nothing is set aside.
  */
+/*
+ * POLICY_SET_ASIDE_PLAN_ENABLED (the Bubbles live tester, QA, 8 Nov 2026, round 5 on): "CA for <A> she was late today",
+ * then "take the attendance policy off the form": the card said "**Policy:** none — you took the Attendance policy
+ * off", and its Action plan still said "Management will review the Attendance policy with <A>". With the flag the
+ * plan names no policy that was taken off: the ones left, or "the applicable company policy" when none is.
+ */
+const PLAN_REVIEW = /(Management will review the )(.+?)( polic(?:y|ies))( with)/i;
+
+function planWithoutSetAside(line: string, setAside: PolicySetAside): string {
+  const found = PLAN_REVIEW.exec(line);
+  if (!found) return line;
+  const names = found[2]!.split(/\s*(?:,|\band\b)\s*/).map((name) => name.trim()).filter(Boolean);
+  const left = names.filter((name) => !citesSetAside(name, setAside));
+  if (left.length === names.length) return line;
+  const replacement =
+    left.length === 0
+      ? "Management will review the applicable company policy with"
+      : `Management will review the ${left.length === 1 ? left[0] : `${left.slice(0, -1).join(", ")} and ${left.at(-1)}`}${left.length === 1 ? " policy" : " policies"} with`;
+  return line.replace(found[0], replacement);
+}
+
 export function withPolicySetAside(content: string, setAside: PolicySetAside): string {
   if (!setAsideAnything(setAside)) return content;
   const kept = content
     .split("\n")
+    .map((line) => (policySetAsidePlanEnabled() && /\*\*Action plan:\*\*/i.test(line) ? planWithoutSetAside(line, setAside) : line))
     .filter((line) => {
       const trimmed = line.trim();
       if (POLICY_ROW.test(trimmed)) return !citesSetAside(trimmed, setAside) && !setAside.any;

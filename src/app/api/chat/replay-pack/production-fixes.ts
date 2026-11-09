@@ -132,4 +132,86 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov8-step-b-date-said-with-policy-ask": "STEP_B_DATE_SAID",
   // fixed in production by CONDUCT_INCIDENT_CITES_PAGE, QA round 5, 8 Nov 2026
   "nov8-woven-courses-cites-conduct": "CONDUCT_INCIDENT_CITES_PAGE",
+  // Changed on purpose (9 Nov 2026): fixed in production by SALES_SHORTFALL_OBJECT, SALES_OBSERVATION_ACCOUNT, CA_PERFORMANCE_REASON, QA round 6
+  "nov5-coding3-twin-ca-for-performance-is-an-account": "SALES_SHORTFALL_OBJECT, SALES_OBSERVATION_ACCOUNT, CA_PERFORMANCE_REASON",
+  // Changed on purpose (9 Nov 2026): fixed in production by COMPLAINT_ACCOUNT, SALES_SHORTFALL_OBJECT, SALES_OBSERVATION_ACCOUNT, CA_PERFORMANCE_REASON, QA round 6
+  "nov5-r2-dm-in-passing-account": "COMPLAINT_ACCOUNT, SALES_SHORTFALL_OBJECT, SALES_OBSERVATION_ACCOUNT, CA_PERFORMANCE_REASON",
+  // Changed on purpose (9 Nov 2026): fixed in production by COMPLAINT_ACCOUNT, SALES_SHORTFALL_OBJECT, SALES_OBSERVATION_ACCOUNT, CA_PERFORMANCE_REASON, QA round 6
+  "nov5-r2-dm-in-passing-account-with-the-flip": "COMPLAINT_ACCOUNT, SALES_SHORTFALL_OBJECT, SALES_OBSERVATION_ACCOUNT, CA_PERFORMANCE_REASON",
+  // Changed on purpose (9 Nov 2026): fixed in production by REQUEST_KEPT_IN_WINDOW, PROPOSAL_NAME_CORRECTION, QA round 6
+  "nov5-r6-policy-kept-across-turns": "REQUEST_KEPT_IN_WINDOW, PROPOSAL_NAME_CORRECTION",
+  // Changed on purpose (9 Nov 2026): fixed in production by SALES_SHORTFALL_OBJECT, SALES_OBSERVATION_ACCOUNT, CA_PERFORMANCE_REASON, QA round 6
+  "nov6-sales-shortfall-object-performance-h01": "SALES_SHORTFALL_OBJECT, SALES_OBSERVATION_ACCOUNT, CA_PERFORMANCE_REASON",
+  // Changed on purpose (9 Nov 2026): fixed in production by SALES_SHORTFALL_OBJECT, SALES_OBSERVATION_ACCOUNT, CA_PERFORMANCE_REASON, QA round 6
+  "nov6-sales-shortfall-object-performance-h13": "SALES_SHORTFALL_OBJECT, SALES_OBSERVATION_ACCOUNT, CA_PERFORMANCE_REASON",
+  // Changed on purpose (9 Nov 2026): fixed in production by SALES_SHORTFALL_OBJECT, SALES_OBSERVATION_ACCOUNT, CA_PERFORMANCE_REASON, QA round 6
+  "nov6-sales-shortfall-object-requirements": "SALES_SHORTFALL_OBJECT, SALES_OBSERVATION_ACCOUNT, CA_PERFORMANCE_REASON",
+  // Changed on purpose (9 Nov 2026): fixed in production by COMPLAINT_ACCOUNT, SALES_SHORTFALL_OBJECT, SALES_OBSERVATION_ACCOUNT, CA_PERFORMANCE_REASON, QA round 6
+  "nov8-complaint-account-issue": "COMPLAINT_ACCOUNT, SALES_SHORTFALL_OBJECT, SALES_OBSERVATION_ACCOUNT, CA_PERFORMANCE_REASON",
+  // Changed on purpose (9 Nov 2026): fixed in production by COMPLAINT_ACCOUNT, SALES_SHORTFALL_OBJECT, SALES_OBSERVATION_ACCOUNT, CA_PERFORMANCE_REASON, QA round 6
+  "nov8-complaint-account-level": "COMPLAINT_ACCOUNT, SALES_SHORTFALL_OBJECT, SALES_OBSERVATION_ACCOUNT, CA_PERFORMANCE_REASON",
+  // Changed on purpose (9 Nov 2026): fixed in production by COPY_OPEN_FORM_FOR_PERSON, QA round 6
+  "nov8-copy-open-form-for-person": "COPY_OPEN_FORM_FOR_PERSON",
+  // Changed on purpose (9 Nov 2026): fixed in production by CORRECTED_DATE_KEPT, QA round 6
+  "nov8-corrected-date-kept-prior-step-only": "CORRECTED_DATE_KEPT",
+  // Changed on purpose (9 Nov 2026): fixed in production by CORRECTED_DATE_KEPT, QA round 6
+  "nov8-corrected-date-kept-q6": "CORRECTED_DATE_KEPT",
+  // Changed on purpose (9 Nov 2026): fixed in production by EXIT_OTHER_PERSON_NOT_SUBJECT, QA round 6
+  "nov8-exit-other-person-not-offered": "EXIT_OTHER_PERSON_NOT_SUBJECT",
+  // Changed on purpose (9 Nov 2026): fixed in production by EXIT_TERMINATION_STATED, EXIT_OTHER_PERSON_NOT_SUBJECT, QA round 6
+  "nov8-exit-termination-stated-facts": "EXIT_TERMINATION_STATED, EXIT_OTHER_PERSON_NOT_SUBJECT",
+  // Changed on purpose (9 Nov 2026): fixed in production by FIELD_LABEL_NOT_A_QUESTION, QA round 6
+  "nov8-field-label-not-a-question": "FIELD_LABEL_NOT_A_QUESTION",
+  // Changed on purpose (9 Nov 2026): fixed in production by MISSED_SHIFT_NOT_LATENESS, QA round 6
+  "nov8-missed-shift-plan-cites-attendance": "MISSED_SHIFT_NOT_LATENESS",
+  // Changed on purpose (9 Nov 2026): fixed in production by PROPOSAL_NAME_CORRECTION, QA round 6
+  "nov8-near-miss-card-kept-make-that-change": "PROPOSAL_NAME_CORRECTION",
+  // Changed on purpose (9 Nov 2026): fixed in production by REQUEST_PARTICIPLE_LEAD, QA round 6
+  "nov8-observation-made-for-late-opening": "REQUEST_PARTICIPLE_LEAD",
+  // Changed on purpose (9 Nov 2026): fixed in production by POLITE_ABOUT_STAYS_CARD, QA round 6
+  "nov8-polite-about-stays-card": "POLITE_ABOUT_STAYS_CARD",
+  // Changed on purpose (9 Nov 2026): fixed in production by POLITE_ABOUT_STAYS_CARD, QA round 6
+  "nov8-polite-about-stays-card-negative-1": "POLITE_ABOUT_STAYS_CARD",
+  // Changed on purpose (9 Nov 2026): fixed in production by POSSESSIVE_NO_APOSTROPHE, QA round 6
+  "nov8-possessive-no-apostrophe-ca": "POSSESSIVE_NO_APOSTROPHE",
+  // Changed on purpose (9 Nov 2026): fixed in production by POSSESSIVE_NO_APOSTROPHE, QA round 6
+  "nov8-possessive-no-apostrophe-capital": "POSSESSIVE_NO_APOSTROPHE",
+  // Changed on purpose (9 Nov 2026): fixed in production by POSSESSIVE_NO_APOSTROPHE, QA round 6
+  "nov8-possessive-no-apostrophe-lower-case": "POSSESSIVE_NO_APOSTROPHE",
+  // Changed on purpose (9 Nov 2026): fixed in production by PROPOSAL_NAME_CORRECTION, QA round 6
+  "nov8-proposal-name-correction-comma-it-is": "PROPOSAL_NAME_CORRECTION",
+  // Changed on purpose (9 Nov 2026): fixed in production by PROPOSAL_NAME_CORRECTION, QA round 6
+  "nov8-proposal-name-correction-fix-her-last-name": "PROPOSAL_NAME_CORRECTION",
+  // Changed on purpose (9 Nov 2026): fixed in production by PROPOSAL_NAME_CORRECTION, QA round 6
+  "nov8-proposal-name-correction-last-name-is": "PROPOSAL_NAME_CORRECTION",
+  // Changed on purpose (9 Nov 2026): fixed in production by PROPOSAL_NAME_CORRECTION, QA round 6
+  "nov8-proposal-name-correction-off-roster": "PROPOSAL_NAME_CORRECTION",
+  // Changed on purpose (9 Nov 2026): fixed in production by PROPOSAL_NAME_CORRECTION, QA round 6
+  "nov8-proposal-name-correction-r6-t5": "PROPOSAL_NAME_CORRECTION",
+  // Changed on purpose (9 Nov 2026): fixed in production by PROPOSAL_NAME_CORRECTION, QA round 6
+  "nov8-proposal-name-correction-r6-t7": "PROPOSAL_NAME_CORRECTION",
+  // Changed on purpose (9 Nov 2026): fixed in production by PROPOSAL_NAME_CORRECTION, QA round 6
+  "nov8-proposal-name-correction-spelled": "PROPOSAL_NAME_CORRECTION",
+  // Changed on purpose (9 Nov 2026): fixed in production by PROPOSAL_NAME_CORRECTION, QA round 6
+  "nov8-proposal-name-correction-supposed-to-be": "PROPOSAL_NAME_CORRECTION",
+  // Changed on purpose (9 Nov 2026): fixed in production by PROPOSAL_NAME_CORRECTION, QA round 6
+  "nov8-proposal-name-correction-typed-off-roster": "PROPOSAL_NAME_CORRECTION",
+  // Changed on purpose (9 Nov 2026): fixed in production by REQUEST_FROM_NAMES_EMPLOYEE, QA round 6
+  "nov8-request-from-names-employee": "REQUEST_FROM_NAMES_EMPLOYEE",
+  // Changed on purpose (9 Nov 2026): fixed in production by POLICY_SET_ASIDE_PLAN, SALES_SHORTFALL_OBJECT, SALES_OBSERVATION_ACCOUNT, CA_PERFORMANCE_REASON, QA round 6
+  "nov8-set-aside-plan": "POLICY_SET_ASIDE_PLAN, SALES_SHORTFALL_OBJECT, SALES_OBSERVATION_ACCOUNT, CA_PERFORMANCE_REASON",
+  // Changed on purpose (9 Nov 2026): fixed in production by STEP_B_DATE_WITH_ABOUT, STEP_B_MAKE_IT_ABOUT_ACCOUNT, QA round 6
+  "nov8-step-b-date-with-about": "STEP_B_DATE_WITH_ABOUT, STEP_B_MAKE_IT_ABOUT_ACCOUNT",
+  // Changed on purpose (9 Nov 2026): fixed in production by STEP_B_MAKE_IT_ABOUT_ACCOUNT, QA round 6
+  "nov8-step-b-make-it-about-topic-only": "STEP_B_MAKE_IT_ABOUT_ACCOUNT",
+  // Changed on purpose (9 Nov 2026): fixed in production by UNDATED_ACCOUNT_BRIEF, SALES_SHORTFALL_OBJECT, SALES_OBSERVATION_ACCOUNT, CA_PERFORMANCE_REASON, QA round 6
+  "nov8-undated-weekend-shifts-no-form-date": "UNDATED_ACCOUNT_BRIEF, SALES_SHORTFALL_OBJECT, SALES_OBSERVATION_ACCOUNT, CA_PERFORMANCE_REASON",
+  // Changed on purpose (9 Nov 2026): fixed in production by UNKNOWN_NAME_ASK_WHO_FOR, QA round 6
+  "nov8-unknown-name-who-for-chain": "UNKNOWN_NAME_ASK_WHO_FOR",
+  // Changed on purpose (9 Nov 2026): fixed in production by POLICY_CORRECTION_NOT_ACCOUNT, QA round 6
+  "nov8-policy-correction-not-account": "POLICY_CORRECTION_NOT_ACCOUNT",
+  // Changed on purpose (9 Nov 2026): fixed in production by REQUEST_PARTICIPLE_LEAD, QA round 6
+  "nov8-observation-made-for-under-performance": "REQUEST_PARTICIPLE_LEAD",
+  // Changed on purpose (9 Nov 2026): fixed in production by REQUEST_PARTICIPLE_LEAD, QA round 6
+  "nov8-observation-done-for-under-performance": "REQUEST_PARTICIPLE_LEAD",
 };

@@ -3,6 +3,7 @@ import { noteSpendUser } from "@/lib/ai/spend-meter";
 import { withSpendMeter } from "@/lib/ai/spend-meter-run";
 
 import { withSwitchAfterCreate } from "@/lib/ai/form-type-switch";
+import { withCorrectionNotDropped, withProposalNameCorrection } from "@/lib/forms/proposal-name-correction";
 import { answerQuestion } from "@/lib/ai/server-ask";
 import { modelSpendGuard } from "@/lib/ai/spend-guard";
 import { isQuestionNotForm } from "@/lib/ai/question-not-form";
@@ -68,6 +69,7 @@ import {
   formReplyFromDiffEnabled,
   formEditToolInStreamEnabled,
   formEditNoopGuardEnabled,
+  nearMissQuestionRulesEnabled,
   reopenByAnyOpenVerbEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { streamWhenSlow } from "@/lib/api/streamed-response";
@@ -251,6 +253,12 @@ async function postChat(request: Request) {
       if (formNameFromRosterEnabled()) (await import("@/lib/forms/request-message-store")).enterRequestMessage(asked.question);
       // METRIC_GUARD_ENABLED, FORM_NAME off: only the metric guards read the message (`request-slot.ts` metricMessage).
       else if (metricGuardEnabled()) (await import("@/lib/forms/request-message-store")).enterMetricMessage(asked.question);
+      // NEAR_MISS_QUESTION_RULES_ENABLED (after the FORM_NAME / METRIC_GUARD pair above, never between them — QA's round-6
+      // gate, 8 Nov 2026: there it took that `else` and the metric guards stopped reading the message): the card on screen, so a near-miss never replaces it (`lib/forms/near-miss-question-rules.ts`).
+      if (nearMissQuestionRulesEnabled()) {
+        const onScreen = (await import("@/lib/forms/near-miss-question-rules")).cardEmployee(asked);
+        if (onScreen) (await import("@/lib/forms/request-message-store")).enterCardOnScreen(onScreen);
+      }
       /*
        * PERSON_GUARD_ENABLED: the actor's roster, for the rule that somebody on
        * it is always a person. One directory read per turn, only with the flag
@@ -423,7 +431,8 @@ async function postChat(request: Request) {
               });
             })()
           : null;
-      const parsed = withSwitchAfterCreate(
+      // PROPOSAL_NAME_CORRECTION_ENABLED: "fix her last name …" on a card not yet created. See `lib/forms/proposal-name-correction.ts`.
+      const parsed = withProposalNameCorrection(withSwitchAfterCreate(
         draftAction || staffPick || newRequestOpen || copyFor
           ? {
               ...asked,
@@ -442,7 +451,7 @@ async function postChat(request: Request) {
                 continueProposalTemplateKey: undefined,
               }
             : asked,
-      );
+      ));
       /*
        * A CORRECTION TO A FORM THIS CONVERSATION ALREADY CREATED — "change the
        * date to yesterday". Tried first, and only where the browser named such
@@ -865,6 +874,10 @@ async function postChat(request: Request) {
       }
       // PERSON_GUARD_ENABLED: whichever reader named the card's employee, a name that is not a person never stays on it.
       if (personGuardEnabled()) answer = (await import("@/lib/forms/person-guard")).withPersonOnCard(answer);
+      // PROPOSAL_NAME_CORRECTION_ENABLED: an off-roster "change her name to …" on the card asks which, never kept silently.
+      answer = withCorrectionNotDropped(answer, parsed);
+      // NEAR_MISS_QUESTION_RULES_ENABLED: "no, …" to "Is this for <name>?" never gets a card for that name, nor the question again.
+      if (nearMissQuestionRulesEnabled()) answer = (await import("@/lib/forms/near-miss-question-rules")).withoutTurnedDownName(answer, asked);
       /*
        * FORM_EDIT_HONEST_REPLY_ENABLED: the ordinary answer, with a form open,
        * changed nothing — so it never says it updated the form. See

@@ -214,10 +214,10 @@
       "pass": true,
       "misses": [],
       "card": {
-        "employee": null,
+        "employee": "All team members",
         "salon": null,
         "date": null,
-        "status": "needs_employee"
+        "status": "ready"
       }
     },
     {
