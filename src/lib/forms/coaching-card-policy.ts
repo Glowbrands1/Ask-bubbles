@@ -1,7 +1,10 @@
 import { formatManualCitation } from "@/lib/ai/policy-citation-fields";
 
+import { workAreaAbsenceCitesConductEnabled } from "@/lib/config/chat-quality-flags";
+
 import { describedAttendanceKeys, readCaPolicy, statedOffenseKeys } from "./ca-policy";
 import { manualSectionsFor, type ManualChunk } from "./official-policy-manual";
+import { specificTopic, specificTopicSection } from "./specific-policy-topics";
 
 /**
  * ============================================================================
@@ -36,10 +39,25 @@ export function withCoachingCardPolicy(input: {
     statedOffenseKeys(reading, input.notes) ??
     describedAttendanceKeys(input.notes) ??
     (reading.suggestion === "standards_of_conduct" && !reading.ambiguous ? ["standards_of_conduct"] : []);
-  if (keys.length === 0) return input.content;
+  if (keys.length === 0) return withWorkAreaAbsence(input);
   const lines = manualSectionsFor({ chunks: input.chunks, offenseKeys: keys, notes: input.notes })
     .filter((section) => section.page > 0)
     .map((section) => formatManualCitation(section.heading, section.page));
+  if (lines.length === 0) return input.content;
+  return `${input.content.trim()}\n\n${[...new Set(lines)].join("\n")}`.trim();
+}
+
+/**
+ * WORK_AREA_ABSENCE_CITES_CONDUCT_ENABLED (Pau's decision, 9 Nov 2026): "left the front desk unattended" on a Coaching
+ * card cites the Standards of Conduct line for an unauthorized absence from the work area, by the page the manual prints
+ * for it (`forms/specific-policy-topics.ts`).
+ * Only this incident: the other specific topics are left as they were on a Coaching card. Off, the content as it was.
+ */
+function withWorkAreaAbsence(input: { readonly content: string; readonly notes: string; readonly chunks: readonly ManualChunk[] }): string {
+  if (!workAreaAbsenceCitesConductEnabled() || specificTopic(input.notes)?.id !== "work_area_absence") return input.content;
+  const found = specificTopicSection({ text: input.notes, chunks: input.chunks });
+  if (!found) return input.content;
+  const lines = [found.section].filter((section) => section.page > 0).map((section) => formatManualCitation(section.heading, section.page));
   if (lines.length === 0) return input.content;
   return `${input.content.trim()}\n\n${[...new Set(lines)].join("\n")}`.trim();
 }

@@ -1275,6 +1275,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REQUEST_PARTICIPLE_LEAD_ENABLED",
   // Default-off fix flag (QA's live Create test, 8 Nov 2026).
   "UNDATED_ACCOUNT_BRIEF_ENABLED",
+  // coding 4: WORK_AREA_ABSENCE_CITES_CONDUCT (Pau's decision, 9 Nov 2026; default off).
+  "WORK_AREA_ABSENCE_CITES_CONDUCT_ENABLED",
 ] as const;
 
 /**
@@ -3871,3 +3873,12 @@ export function carriedPersonNoticeEnabled(): boolean {
   return envFlag("CARRIED_PERSON_NOTICE_ENABLED");
 }
 
+/**
+ * WORK_AREA_ABSENCE_CITES_CONDUCT_ENABLED (Pau's decision, 9 Nov 2026, via QA; default off; same flag in both apps).
+ * "leaving the front desk unattended" (the desk, register, counter, work area or floor left unattended during the shift)
+ * cites the Standards of Conduct line "Unauthorized absence from the work area during the workday", never Attendance, and
+ * only it, whatever else the account says (`forms/specific-policy-topics.ts`). Off, as before.
+ */
+export function workAreaAbsenceCitesConductEnabled(): boolean {
+  return envFlag("WORK_AREA_ABSENCE_CITES_CONDUCT_ENABLED");
+}
