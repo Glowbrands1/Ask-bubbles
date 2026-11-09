@@ -45,6 +45,7 @@ import {
   policyChangeRestOfTurnEnabled,
   openFormNoSelectionEnabled,
   personGuardEnabled,
+  fieldLabelNotAQuestionEnabled,
   formNameFromRosterEnabled,
   offRosterConfirmEnabled,
   metricGuardEnabled,
@@ -253,6 +254,12 @@ async function postChat(request: Request) {
       if (formNameFromRosterEnabled()) (await import("@/lib/forms/request-message-store")).enterRequestMessage(asked.question);
       // METRIC_GUARD_ENABLED, FORM_NAME off: only the metric guards read the message (`request-slot.ts` metricMessage).
       else if (metricGuardEnabled()) (await import("@/lib/forms/request-message-store")).enterMetricMessage(asked.question);
+      // FIELD_LABEL_NOT_A_QUESTION_ENABLED: the manager's earlier turns, so an earlier "no notice given" still holds on the exit card (`lib/forms/exit-facts.ts`).
+      if (fieldLabelNotAQuestionEnabled()) {
+        (await import("@/lib/forms/request-message-store")).enterEarlierManagerTurns(
+          asked.history.filter((turn) => turn.role === "user").map((turn) => turn.content),
+        );
+      }
       // NEAR_MISS_QUESTION_RULES_ENABLED (after the FORM_NAME / METRIC_GUARD pair above, never between them — QA's round-6
       // gate, 8 Nov 2026: there it took that `else` and the metric guards stopped reading the message): the card on screen, so a near-miss never replaces it (`lib/forms/near-miss-question-rules.ts`).
       if (nearMissQuestionRulesEnabled()) {

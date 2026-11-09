@@ -1,3 +1,4 @@
+import { fillsAField } from "@/lib/ai/question-not-form";
 import { payrollAmountSameMessageEnabled } from "@/lib/config/chat-quality-flags";
 
 /**
@@ -61,7 +62,13 @@ export function separateQuestions(text: string): { statements: string; questions
   for (const sentence of sentencesOf(text)) {
     const opened = sentence.replace(LEAD_IN, "");
     const relative = relativeNotQuestion && !/\?\s*$/.test(sentence) && RELATIVE_CLAUSE.test(opened);
-    if (/\?\s*$/.test(sentence) || (WH_OPENER.test(opened) && !relative)) questions.push(sentence);
+    /*
+     * FIELD_LABEL_NOT_A_QUESTION_ENABLED (QA, the round-6 rollback, 9 Nov 2026): "how employee resigned - <C> told
+     * management …" fills that field (`ai/question-not-form.ts` fillsAField), so it is a statement here too — the card
+     * reads it, and no "You also asked \"how employee resigned - …\"" line follows it.
+     */
+    const fills = fillsAField(opened);
+    if (/\?\s*$/.test(sentence) || (WH_OPENER.test(opened) && !relative && !fills)) questions.push(sentence);
     else statements.push(sentence);
   }
   return { statements: statements.join(" "), questions };
