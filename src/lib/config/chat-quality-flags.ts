@@ -1294,6 +1294,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "MISSED_SHIFT_CITES_ATTENDANCE_ENABLED",
   // Default-off fix flag (QA, the Bubbles round-7 live test, 9 Nov 2026).
   "EXIT_LINE_ANSWERS_ADD_UP_ENABLED",
+  // coding 4: MADE_ABOUT_ALL_OR_NOTHING (QA's live round-7 test, 9 Nov 2026; default off).
+  "MADE_ABOUT_ALL_OR_NOTHING_ENABLED",
 ] as const;
 
 /**
@@ -3994,4 +3996,15 @@ export function shiftAccountIsIncidentEnabled(): boolean {
  */
 export function workAreaAbsenceCitesConductEnabled(): boolean {
   return envFlag("WORK_AREA_ABSENCE_CITES_CONDUCT_ENABLED");
+}
+
+/**
+ * MADE_ABOUT_ALL_OR_NOTHING_ENABLED (QA's live round-7 test, Ask Bubbles, 9 Nov 2026; default off). "make it about leaving
+ * the front desk unattended on 11/6/26" on a saved Coaching draft rewrote Details and left Other and the Date: the reader
+ * read no this-form edit, the turn went to the old path, and its revision was let drop the old date. With the flag on, the
+ * old path may drop it only while Step B writes the Date and the topic with the account, and Step B reads the topic from
+ * the manager's words when the reader read none (`forms/form-patch-turn.ts`, `forms/form-write.ts`). Off, as before.
+ */
+export function madeAboutAllOrNothingEnabled(): boolean {
+  return envFlag("MADE_ABOUT_ALL_OR_NOTHING_ENABLED");
 }
