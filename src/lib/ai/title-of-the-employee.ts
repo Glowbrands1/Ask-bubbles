@@ -1,4 +1,4 @@
-import { exitStatedOnlyEnabled, titleOfTheEmployeeEnabled } from "@/lib/config/chat-quality-flags";
+import { exitLetterAddresseeEnabled, exitStatedOnlyEnabled, titleOfTheEmployeeEnabled } from "@/lib/config/chat-quality-flags";
 import { displayName, normalizeTypedName, type RosterEmployee } from "@/lib/forms/employee-match";
 import { EXIT_TEMPLATE_KEY } from "@/lib/forms/exit-library";
 import { titleNamesAnotherPerson } from "@/lib/forms/title-of-another-person";
@@ -43,7 +43,14 @@ export async function withTitleOfTheEmployee(
   let content = own
     ? response.content.split(`**Position:** ${role}`).join(`**Position:** ${own}`)
     : response.content;
-  if (owned) {
+  /*
+   * EXIT_LETTER_ADDRESSEE_ENABLED (ported from the sibling app: QA's live test there, 9 Nov 2026): a termination letter
+   * signed "<C>, District Manager" left "- **Job Title:** District Manager" on the exit card's read-back: the card's role
+   * was cleared as another person's, but only EXIT_STATED_ONLY's titles replaced that line. With the flag, on an exit
+   * card another person's title in it is the employee's own from the roster, or the line goes.
+   */
+  const lineOwned = owned || (another && exitLetterAddresseeEnabled() && card.templateKey === EXIT_TEMPLATE_KEY);
+  if (lineOwned) {
     const line = new RegExp(String.raw`^(\s*(?:-\s*)?\*\*Job title:\*\*\s*)${escape(role)}\s*$`, "im");
     content = own ? content.replace(line, (_all, lead: string) => `${lead}${own}`) : content.replace(line, "").replace(/\n{3,}/g, "\n\n");
   }

@@ -1286,6 +1286,14 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "OFF_ROSTER_ASK_BEFORE_CARD_ENABLED",
   // coding 4: WORK_AREA_ABSENCE_CITES_CONDUCT (Pau's decision, 9 Nov 2026; default off).
   "WORK_AREA_ABSENCE_CITES_CONDUCT_ENABLED",
+  // Default-off fix flag (ported from the sibling app: QA's live test there, 9 Nov 2026).
+  "EXIT_LETTER_ADDRESSEE_ENABLED",
+  // Default-off fix flag (QA, the Bubbles round-7 live test, 9 Nov 2026).
+  "POSSESSIVE_PLACE_ACCOUNT_ENABLED",
+  // Default-off fix flag (QA, the Bubbles round-7 live test, 9 Nov 2026).
+  "MISSED_SHIFT_CITES_ATTENDANCE_ENABLED",
+  // Default-off fix flag (QA, the Bubbles round-7 live test, 9 Nov 2026).
+  "EXIT_LINE_ANSWERS_ADD_UP_ENABLED",
 ] as const;
 
 /**
@@ -2781,6 +2789,50 @@ export function possessivePlaceNotPersonEnabled(): boolean {
  */
 export function offRosterAskBeforeCardEnabled(): boolean {
   return envFlag("OFF_ROSTER_ASK_BEFORE_CARD_ENABLED");
+}
+
+/**
+ * EXIT_LETTER_ADDRESSEE_ENABLED (ported from the sibling app: QA's live test there, 9 Nov 2026; coding 5; same flag in
+ * both apps; default off; with EXIT_LETTER_SIGNER_NOT_SUBJECT_ENABLED). "I need an exit form with this information." and
+ * a termination letter to <A> signed "Sincerely,\n<C>\nDistrict Manager" gave the exit card the signer's title, and the
+ * first no-show date as the Resignation Date; with <A> off the roster the signer was offered. On: the letter's
+ * salutation names the form's person when no "form for <X>" does, a sign-off on lines of its own is not read
+ * (`ai/letter-signer.ts`), another person's title on the exit read-back is the employee's own or goes
+ * (`ai/title-of-the-employee.ts`), and a stated "terminated, effective <date>" is the Resignation Date. Off, as before.
+ */
+export function exitLetterAddresseeEnabled(): boolean {
+  return envFlag("EXIT_LETTER_ADDRESSEE_ENABLED");
+}
+
+/**
+ * POSSESSIVE_PLACE_ACCOUNT_ENABLED (QA, the Bubbles round-7 live test, 9 Nov 2026; coding 5; same flag in both apps;
+ * default off; with POSSESSIVE_PLACE_NOT_PERSON_ENABLED). The ask-who card for "create a CA for Lee's Summit Plaza, she
+ * was late on 10-20-26" read "What happened: Lee's Summit Plaza". On: that card's Issue is the words after the place
+ * ("she was late on 10-20-26"), or blank (`forms/possessive-place.ts`). Off, as before.
+ */
+export function possessivePlaceAccountEnabled(): boolean {
+  return envFlag("POSSESSIVE_PLACE_ACCOUNT_ENABLED");
+}
+
+/**
+ * MISSED_SHIFT_CITES_ATTENDANCE_ENABLED (QA, the Bubbles round-7 live test, 9 Nov 2026; coding 5; same flag in both
+ * apps; default off). "create a CA for <A>, not showing up to her shifts on 11/7 and 11/8" made a card with no Policy
+ * line. On: an account that names no policy and says a shift was not shown up to, missed, skipped or not worked reads
+ * as Attendance, said on the card as "Attendance — read from this request" (`forms/ca-policy.ts`). Off, as before.
+ */
+export function missedShiftCitesAttendanceEnabled(): boolean {
+  return envFlag("MISSED_SHIFT_CITES_ATTENDANCE_ENABLED");
+}
+
+/**
+ * EXIT_LINE_ANSWERS_ADD_UP_ENABLED (QA, the Bubbles round-7 live test, 9 Nov 2026; coding 5; same flag in both apps;
+ * default off; with FIELD_LABEL_NOT_A_QUESTION_ENABLED). An exit form answered one field per turn lost How Employee
+ * Resigned once a later turn filled another field: the earlier "how employee resigned - …" turn was read as a question
+ * and left out of the form's turns. On: a turn that fills an exit field by its label is never a question
+ * (`forms/employment-change.ts` isQuestion), so the line answers add up. Off, as before.
+ */
+export function exitLineAnswersAddUpEnabled(): boolean {
+  return envFlag("EXIT_LINE_ANSWERS_ADD_UP_ENABLED");
 }
 // --- end coding 5 flags ---
 
