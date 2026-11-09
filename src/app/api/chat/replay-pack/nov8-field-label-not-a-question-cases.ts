@@ -64,8 +64,9 @@ export const NOV8_FIELD_LABEL_NOT_A_QUESTION_CASES: ReplayCase[] = [
     title: "a six-turn exit chat whose turn 1 says \"no notice given\": turn 5 (field labels answered) leaves Date that notice was given blank and adds no \"You also asked\" line",
     report: "QA, the round-6 rollback, 9 Nov 2026 (a district manager's chat, replayed; the person, address and store words invented): with FIELD_LABEL_NOT_A_QUESTION_ENABLED on, turn 5 filled \"Date that notice was given: October 26, 2026\" and added 'You also asked \"how employee resigned - …\" — ask that again on its own and I'll answer it.'",
     // Changed on purpose (coding 5, 9 Nov 2026): the flag-on run held as an expected failure (fixStatus) until this fix.
-    // With FIELD_LABEL_NOT_A_QUESTION on, turn 1's "no notice given" still holds (`forms/exit-facts.ts`, the manager's
-    // earlier turns) and a field label is no question (`forms/message-parts.ts` separateQuestions), so both runs hold.
+    // Production's flags have FIELD_LABEL_NOT_A_QUESTION off again (the round-6 re-flip, 57a02169); with it on, turn 1's
+    // "no notice given" still holds (`forms/exit-facts.ts`, the manager's earlier turns) and a field label is no question
+    // (`forms/message-parts.ts` separateQuestions), so both runs hold.
     status: "fixed",
     fixFlags: ["FIELD_LABEL_NOT_A_QUESTION_ENABLED"],
     async run(t) {
