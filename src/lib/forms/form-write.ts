@@ -6,6 +6,7 @@ import { businessToday } from "@/lib/business-date";
 import {
   formEditNoopGuardEnabled,
   formPatchReaderFixesEnabled,
+  madeAboutAllOrNothingEnabled,
   stepBAddUnderObservedEnabled,
   stepBMakeItAboutAccountEnabled,
   stepBSectionSpacingEnabled,
@@ -18,7 +19,7 @@ import { syncCorrectiveActionPlan } from "./ca-action-plan-sync";
 import { checkboxGroupsForVariant, fieldsForVariant, parseFormDocument } from "./document";
 import { NOTHING_CHANGED } from "./form-diff-reply";
 import { datesInText } from "./form-date-answer";
-import { madeAboutDate } from "./made-about-date";
+import { madeAboutDate, madeAboutWriteNoted } from "./made-about-date";
 import {
   applyPatch,
   sameValue,
@@ -329,7 +330,9 @@ function basePresetRules(loaded: LoadedInstance, ops: readonly FormEditOp[], rul
    * unattended on 11/6/26" is a new account told with its own date. The revision's rewrite follows that date, so the
    * old account's date (the form's Date, 10/10/26) may go; the Date itself is written by Step B with the account.
    */
-  const aboutDate = rules.path === "revision" && stepBMakeItAboutAccountEnabled() ? madeAboutDate(latest, today) : null;
+  // MADE_ABOUT_ALL_OR_NOTHING_ENABLED: only while Step B writes the Date and the topic with the account.
+  const coordinatedWrite = !madeAboutAllOrNothingEnabled() || madeAboutWriteNoted(loaded.instance.id);
+  const aboutDate = rules.path === "revision" && stepBMakeItAboutAccountEnabled() && coordinatedWrite ? madeAboutDate(latest, today) : null;
   const guard = aboutDate ? { ...read, formDate: aboutDate } : read;
   const writeIns = writeInsOf(loaded);
   const groups = groupsOf(loaded);
