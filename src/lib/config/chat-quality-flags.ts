@@ -1290,6 +1290,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "EXIT_LETTER_ADDRESSEE_ENABLED",
   // Default-off fix flag (QA, the Bubbles round-7 live test, 9 Nov 2026).
   "POSSESSIVE_PLACE_ACCOUNT_ENABLED",
+  // Default-off fix flag (QA, the Bubbles round-7 live test, 9 Nov 2026).
+  "MISSED_SHIFT_CITES_ATTENDANCE_ENABLED",
 ] as const;
 
 /**
@@ -2808,6 +2810,16 @@ export function exitLetterAddresseeEnabled(): boolean {
  */
 export function possessivePlaceAccountEnabled(): boolean {
   return envFlag("POSSESSIVE_PLACE_ACCOUNT_ENABLED");
+}
+
+/**
+ * MISSED_SHIFT_CITES_ATTENDANCE_ENABLED (QA, the Bubbles round-7 live test, 9 Nov 2026; coding 5; same flag in both
+ * apps; default off). "create a CA for <A>, not showing up to her shifts on 11/7 and 11/8" made a card with no Policy
+ * line. On: an account that names no policy and says a shift was not shown up to, missed, skipped or not worked reads
+ * as Attendance, said on the card as "Attendance — read from this request" (`forms/ca-policy.ts`). Off, as before.
+ */
+export function missedShiftCitesAttendanceEnabled(): boolean {
+  return envFlag("MISSED_SHIFT_CITES_ATTENDANCE_ENABLED");
 }
 // --- end coding 5 flags ---
 
