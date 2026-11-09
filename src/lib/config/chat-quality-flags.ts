@@ -1290,12 +1290,15 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "EXIT_LETTER_ADDRESSEE_ENABLED",
   // Default-off fix flag (QA, the Bubbles round-7 live test, 9 Nov 2026).
   "POSSESSIVE_PLACE_ACCOUNT_ENABLED",
+  "LETTER_GREETING_NOT_NAME_ENABLED",
   // Default-off fix flag (QA, the Bubbles round-7 live test, 9 Nov 2026).
   "MISSED_SHIFT_CITES_ATTENDANCE_ENABLED",
   // Default-off fix flag (QA, the Bubbles round-7 live test, 9 Nov 2026).
   "EXIT_LINE_ANSWERS_ADD_UP_ENABLED",
   // coding 4: MADE_ABOUT_ALL_OR_NOTHING (QA's live round-7 test, 9 Nov 2026; default off).
   "MADE_ABOUT_ALL_OR_NOTHING_ENABLED",
+  // coding 4: MADE_ABOUT_READER_ACCOUNT (QA's live round-9 test, 9 Nov 2026; default off).
+  "MADE_ABOUT_READER_ACCOUNT_ENABLED",
 ] as const;
 
 /**
@@ -2836,6 +2839,16 @@ export function missedShiftCitesAttendanceEnabled(): boolean {
 export function exitLineAnswersAddUpEnabled(): boolean {
   return envFlag("EXIT_LINE_ANSWERS_ADD_UP_ENABLED");
 }
+/**
+ * LETTER_GREETING_NOT_NAME_ENABLED (QA, 9 Nov 2026; coding 5; same flag in both apps; default off). A letter opening
+ * "Dear <A>," gave the exit card the employee "Dear <A>", no Job Title and no store, on the roster or off it. On: a
+ * letter's salutation word (Dear, Hi, Hello, Hey, To, Attn, Good morning, …) before the addressee is not part of the
+ * name; the proposal reads "<A>," (`ai/letter-signer.ts`). Off, as before.
+ */
+export function letterGreetingNotNameEnabled(): boolean {
+  return envFlag("LETTER_GREETING_NOT_NAME_ENABLED");
+}
+
 // --- end coding 5 flags ---
 
 /**
@@ -4007,4 +4020,15 @@ export function workAreaAbsenceCitesConductEnabled(): boolean {
  */
 export function madeAboutAllOrNothingEnabled(): boolean {
   return envFlag("MADE_ABOUT_ALL_OR_NOTHING_ENABLED");
+}
+
+/**
+ * MADE_ABOUT_READER_ACCOUNT_ENABLED (QA's live Bubbles round-9 test, 9 Nov 2026; default off; same flag in both apps).
+ * "make it about leaving the front desk unattended on 11/6/26" on a saved Coaching draft changed Other and Details and
+ * left the Date: the reader set Details itself (the new incident added under the old one), so the made-about path that
+ * writes the Date never ran. With the flag on, a dated made-about turn's own account edit from the reader is set aside, and
+ * the account is rewritten with the Date and the topic, all or nothing (`forms/form-patch-turn.ts`). Off, as before.
+ */
+export function madeAboutReaderAccountEnabled(): boolean {
+  return envFlag("MADE_ABOUT_READER_ACCOUNT_ENABLED");
 }

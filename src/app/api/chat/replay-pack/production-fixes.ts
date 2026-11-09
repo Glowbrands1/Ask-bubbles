@@ -262,4 +262,16 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov9-made-about-all-or-nothing-no-reading": "MADE_ABOUT_ALL_OR_NOTHING",
   // Changed on purpose (9 Nov 2026): fixed in production by MADE_ABOUT_ALL_OR_NOTHING, QA round 9
   "nov9-made-about-all-or-nothing-other-form": "MADE_ABOUT_ALL_OR_NOTHING",
+  // Changed on purpose (9 Nov 2026): fixed in production by LETTER_GREETING_NOT_NAME, QA round 11
+  "nov9-letter-greeting-dear-off-roster": "LETTER_GREETING_NOT_NAME",
+  // Changed on purpose (9 Nov 2026): fixed in production by LETTER_GREETING_NOT_NAME, QA round 11
+  "nov9-letter-greeting-dear-on-roster": "LETTER_GREETING_NOT_NAME",
+  // Changed on purpose (9 Nov 2026): fixed in production by MADE_ABOUT_READER_ACCOUNT, QA round 11
+  "nov9-made-about-reader-account-added": "MADE_ABOUT_READER_ACCOUNT",
+  // Changed on purpose (9 Nov 2026): fixed in production by MADE_ABOUT_READER_ACCOUNT, QA round 11
+  "nov9-made-about-reader-account-refused": "MADE_ABOUT_READER_ACCOUNT",
+  // Changed on purpose (9 Nov 2026): fixed in production by MADE_ABOUT_READER_ACCOUNT, QA round 11
+  "nov9-made-about-reader-account-replaced": "MADE_ABOUT_READER_ACCOUNT",
+  // Changed on purpose (9 Nov 2026): fixed in production by MADE_ABOUT_READER_ACCOUNT, QA round 11
+  "nov9-made-about-reader-account-replaced-live": "MADE_ABOUT_READER_ACCOUNT",
 };
