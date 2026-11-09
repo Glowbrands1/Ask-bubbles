@@ -71,4 +71,19 @@ export const NOV9_POSSESSIVE_PLACE_CASES: ReplayCase[] = [
       expect(thread.proposal?.employeeName ?? null, `the card is not for Marnie Holloway:\n${content}`).toBe("Marnie Holloway");
     },
   },
+  {
+    id: "nov9-possessive-place-what-happened",
+    title: "the ask-who card for QA's wording: \"What happened\" is \"she was late on 10-20-26\" or blank, never the place name",
+    report: "QA, the Bubbles round-7 live test (9 Nov 2026): the ask-who card's What happened read only \"Lee's Summit Plaza\"",
+    status: { open: "What happened: Lee's Summit Plaza" },
+    fixFlags: ["POSSESSIVE_PLACE_ACCOUNT_ENABLED"],
+    async run(t) {
+      const thread = start(t, LEES_SUMMIT);
+      const { content } = await thread.say(REPORTED);
+      const issue = (thread.proposal as { issue?: string | null } | null)?.issue ?? null;
+      expect(thread.proposal?.employeeName ?? null, `the place's possessive is the card's person:\n${content}`).toBeNull();
+      expect(issue ?? "", `What happened is the place name: ${issue}`).not.toMatch(/Lee['’]s Summit/i);
+      if (issue) expect(issue).toMatch(/she was late on 10-20-26/);
+    },
+  },
 ];
