@@ -7,6 +7,7 @@ import {
   formPatchReaderFixesEnabled,
   stepBMakeItAboutAccountEnabled,
   madeAboutAllOrNothingEnabled,
+  madeAboutReaderAccountEnabled,
   stepBDateSaidEnabled,
   stepBDateWithAboutEnabled,
 } from "@/lib/config/chat-quality-flags";
@@ -274,6 +275,35 @@ export async function patchActiveForm(input: PatchTurnInput): Promise<AskRespons
     }
     if (!("ok" in reading) || reading.turn !== "this_form") return handOff("none");
     /*
+     * MADE_ABOUT_READER_ACCOUNT_ENABLED (QA's live Bubbles round-9 test, 9 Nov 2026; the person invented): "make it about
+     * leaving the front desk unattended on 11/6/26" on a saved Coaching draft about the missed meeting on 10/10/26 changed
+     * Other and Details, and the Date stayed 2026-10-10. The reader set Details itself ("add": the new incident under the
+     * old one), so the turn never took the made-about path that writes the Date: "Changed Details of Coaching … Changed
+     * Other …". A dated made-about incident is a new account: the reader's own edit of the account is set aside, and the
+     * account is rewritten by the old path's revision with the Date and the topic, all or nothing (below).
+     */
+    const readerSet = reading.patch.set;
+    if (
+      madeAboutReaderAccountEnabled() &&
+      madeAbout(input.question) !== null &&
+      madeAboutDate(input.question, input.today) !== null &&
+      "form_date" in before &&
+      ACCOUNT_KEYS.some((key) => key in readerSet)
+    ) {
+      const drop = new Set<string>(ACCOUNT_KEYS);
+      const keep = <T,>(record: Readonly<Record<string, T>> | undefined) =>
+        record ? Object.fromEntries(Object.entries(record).filter(([key]) => !drop.has(key))) : undefined;
+      reading = {
+        ...reading,
+        patch: {
+          ...reading.patch,
+          set: keep(reading.patch.set) ?? {},
+          ...(reading.patch.how ? { how: keep(reading.patch.how) } : {}),
+          ...(reading.patch.evidence ? { evidence: keep(reading.patch.evidence) } : {}),
+        },
+      };
+    }
+    /*
      * STEP_B_MAKE_IT_ABOUT_ACCOUNT_ENABLED (QA's live draft test, 8 Nov 2026): "I need you to make it about showing up
      * late" was read as the Other topic alone, and Details of Coaching stayed about the missed meeting. A turn that
      * says what the form is about, whose patch does not set the form's account, goes to the old path before anything
@@ -282,11 +312,12 @@ export async function patchActiveForm(input: PatchTurnInput): Promise<AskRespons
     // STEP_B_DATE_SAID_ENABLED: the date the manager says the form takes (read before the make-it-about guard below).
     const saidDate = stepBDateSaidEnabled() ? saidFormDate(input.question, input.today) : null;
     let dateToWrite = saidDate !== null && "form_date" in before && before.form_date?.value !== saidDate ? saidDate : null;
+    const readSet = reading.patch.set;
     const aboutNotRewritten =
       stepBMakeItAboutAccountEnabled() &&
       madeAbout(input.question) !== null &&
       ACCOUNT_KEYS.some((key) => writable.has(key)) &&
-      !ACCOUNT_KEYS.some((key) => key in reading.patch.set);
+      !ACCOUNT_KEYS.some((key) => key in readSet);
     /*
      * STEP_B_DATE_WITH_ABOUT_ENABLED (the Bubbles round-5 gate, 8 Nov 2026; QA's ruling, option A): with both flags on,
      * "I need you to make it about showing up late and please list the policy make the date for 10/14/26" was handed to
