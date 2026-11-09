@@ -300,7 +300,9 @@ async function postChat(request: Request) {
         ]);
         const names = roster.map((person) => `${person.preferredFirstName?.trim() || person.firstName} ${person.lastName}`);
         // FORM_NAME_FROM_ROSTER_ENABLED: a person with a preferred name is also known by the legal one.
-        if (formNameFromRosterEnabled()) {
+        // OFF_ROSTER_ASK_BEFORE_CARD_ENABLED too (the switch-on's gate, 9 Nov 2026): "create a CA for tamsin wexley", the legal
+        // name of the roster's "Tammy Wexley", was asked about as a name not on the roster (`lib/forms/off-roster-ask.ts`).
+        if (formNameFromRosterEnabled() || offRosterAskBeforeCardEnabled()) {
           for (const person of roster) {
             if (person.preferredFirstName?.trim() && person.preferredFirstName.trim() !== person.firstName.trim()) {
               names.push(`${person.firstName} ${person.lastName}`);
