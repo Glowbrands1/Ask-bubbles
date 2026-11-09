@@ -1297,6 +1297,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "EXIT_LINE_ANSWERS_ADD_UP_ENABLED",
   // coding 4: MADE_ABOUT_ALL_OR_NOTHING (QA's live round-7 test, 9 Nov 2026; default off).
   "MADE_ABOUT_ALL_OR_NOTHING_ENABLED",
+  // coding 4: MADE_ABOUT_READER_ACCOUNT (QA's live round-9 test, 9 Nov 2026; default off).
+  "MADE_ABOUT_READER_ACCOUNT_ENABLED",
 ] as const;
 
 /**
@@ -4018,4 +4020,15 @@ export function workAreaAbsenceCitesConductEnabled(): boolean {
  */
 export function madeAboutAllOrNothingEnabled(): boolean {
   return envFlag("MADE_ABOUT_ALL_OR_NOTHING_ENABLED");
+}
+
+/**
+ * MADE_ABOUT_READER_ACCOUNT_ENABLED (QA's live Bubbles round-9 test, 9 Nov 2026; default off; same flag in both apps).
+ * "make it about leaving the front desk unattended on 11/6/26" on a saved Coaching draft changed Other and Details and
+ * left the Date: the reader set Details itself (the new incident added under the old one), so the made-about path that
+ * writes the Date never ran. With the flag on, a dated made-about turn's own account edit from the reader is set aside, and
+ * the account is rewritten with the Date and the topic, all or nothing (`forms/form-patch-turn.ts`). Off, as before.
+ */
+export function madeAboutReaderAccountEnabled(): boolean {
+  return envFlag("MADE_ABOUT_READER_ACCOUNT_ENABLED");
 }
