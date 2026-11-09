@@ -3913,6 +3913,7 @@ export function carriedPersonNoticeEnabled(): boolean {
   return envFlag("CARRIED_PERSON_NOTICE_ENABLED");
 }
 
+/**
  * FIRST_NAME_ANSWER_KEEPS_ACCOUNT_ENABLED (ported from the sibling app: QA's live test there, 8 Nov 2026; default off; same flag in both apps).
  * "make me CA for <first name> failing to complete shifts" → "Is this for **<full name>**?" → "make me CA for <full
  * name> failing to complete shifts 11/7 and 11/8" (or "<full name> 11/7 and 11/8") lost the dates: an answer that
