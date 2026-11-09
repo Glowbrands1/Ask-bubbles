@@ -1,5 +1,5 @@
 import { shiftDays, weekdayOf } from "@/lib/business-date";
-import { exitFulfilledIsLastDayEnabled, exitIntakeFixEnabled, exitShortcutWordsEnabled, exitStatedOnlyEnabled, exitTerminationStatedEnabled, noNoticeNoDateEnabled } from "@/lib/config/chat-quality-flags";
+import { exitFulfilledIsLastDayEnabled, exitIntakeFixEnabled, exitShortcutWordsEnabled, exitStatedOnlyEnabled, exitTerminationStatedEnabled, fieldLabelNotAQuestionEnabled, noNoticeNoDateEnabled } from "@/lib/config/chat-quality-flags";
 
 import {
   EXIT_DATE_FIELDS,
@@ -611,6 +611,13 @@ function readSeparation(text: string): SeparationReading {
  * `today` is the business day (`YYYY-MM-DD`). It supplies the year for "9/15"
  * and the anchor for "yesterday" and "last Friday".
  */
+/** The manager's earlier turns of this chat, as the chat route enters them (`request-message-store.ts`); none elsewhere. */
+let readEarlierManagerTurns: () => readonly string[] | undefined = () => undefined;
+
+export function installEarlierManagerTurns(read: () => readonly string[] | undefined): void {
+  readEarlierManagerTurns = read;
+}
+
 export function readExitFacts(rawText: string, today: string): ExitFacts {
   const text = normalize(rawText);
   const ambiguities: ExitAmbiguity[] = [];
@@ -661,7 +668,15 @@ export function readExitFacts(rawText: string, today: string): ExitFacts {
    * so a resignation date was also printed as "Date that notice was given" when the manager said no notice was
    * given. With the flag on, a stated "no notice" leaves that date empty; the date still stands as the resignation's.
    */
-  const noticeDenied = noNoticeNoDateEnabled() && NO_NOTICE.test(text.toLowerCase());
+  /*
+   * FIELD_LABEL_NOT_A_QUESTION_ENABLED (QA, the round-6 rollback, 9 Nov 2026): a turn answering the exit card's labels
+   * ("resignation date 10-26-2026. how employee resigned - …") is read with this form's turns only, which can start
+   * after the turn that said "no notice given"; "resigned" then dated the notice. A "no notice" in an earlier turn of
+   * the manager's still holds when the text read here says nothing about notice at all (its date was only inferred).
+   */
+  const earlierNoNotice =
+    fieldLabelNotAQuestionEnabled() && !/\bnotice\b/i.test(text) && (readEarlierManagerTurns() ?? []).some((turn) => NO_NOTICE.test(normalize(turn).toLowerCase()));
+  const noticeDenied = noNoticeNoDateEnabled() && (NO_NOTICE.test(text.toLowerCase()) || earlierNoNotice);
   const noticeGiven = noticeDenied ? null : noticeRead;
   let noticeFulfilled = settle("noticeFulfilled");
   const quitDate = settle("resigned");

@@ -147,7 +147,8 @@ const FIELD_LABEL = new RegExp(
   "i",
 );
 
-function fillsAField(clause: string): boolean {
+/** The clause fills one of the exit form's fields by its label (the flag on); also read by `forms/message-parts.ts` separateQuestions. */
+export function fillsAField(clause: string): boolean {
   return fieldLabelNotAQuestionEnabled() && FIELD_LABEL.test(clause) && !/\?\s*$/.test(clause);
 }
 

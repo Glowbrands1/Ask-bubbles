@@ -2,6 +2,7 @@ import "server-only";
 
 import { AsyncLocalStorage } from "node:async_hooks";
 
+import { installEarlierManagerTurns } from "./exit-facts";
 import { installCardOnScreen, installMetricMessage, installRequestMessage } from "./request-slot";
 
 /**
@@ -39,4 +40,16 @@ installCardOnScreen(() => card.getStore());
 /** From here to the end of this request, the card on screen is for this employee. */
 export function enterCardOnScreen(employee: string): void {
   card.enterWith(employee);
+}
+
+/**
+ * FIELD_LABEL_NOT_A_QUESTION_ENABLED (QA, the round-6 rollback, 9 Nov 2026): the manager's earlier turns of this chat,
+ * for `exit-facts.ts` (an earlier "no notice given" still holds). Entered once by the chat route, with the flag on.
+ */
+const earlierTurns = new AsyncLocalStorage<readonly string[]>();
+
+installEarlierManagerTurns(() => earlierTurns.getStore());
+
+export function enterEarlierManagerTurns(turns: readonly string[]): void {
+  earlierTurns.enterWith(turns);
 }
