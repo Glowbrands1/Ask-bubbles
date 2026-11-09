@@ -1302,6 +1302,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "MADE_ABOUT_READER_ACCOUNT_ENABLED",
   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
   "CHAT_STAGE_TIMINGS_ENABLED",
+  "CHAT_PARALLEL_LOADS_ENABLED",
 ] as const;
 
 /**
@@ -4056,4 +4057,16 @@ export function madeAboutReaderAccountEnabled(): boolean {
  */
 export function chatStageTimingsEnabled(): boolean {
   return envFlag("CHAT_STAGE_TIMINGS_ENABLED");
+}
+
+/**
+ * CHAT_PARALLEL_LOADS_ENABLED (ported from the sibling app; QA, 9 Nov 2026; default off; same flag in both apps). The
+ * chat turn's reads that need nothing the query rewrite or retrieval returns (the few-shot examples, the cited-manual
+ * grounding, the Google-reviews block and the chat data block) start before the rewrite, and the two loads that write
+ * (recalled memory, the long-context summary) start right before the system prompt is built (nothing between there and
+ * their awaits can throw), instead of each being awaited one after another before the answer. Each is awaited where it
+ * was with the same inputs, so the prompt and the reply are the same (`ai/server-ask.ts`). Off, as before.
+ */
+export function chatParallelLoadsEnabled(): boolean {
+  return envFlag("CHAT_PARALLEL_LOADS_ENABLED");
 }

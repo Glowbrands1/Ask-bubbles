@@ -44,6 +44,7 @@ import { resolveScopeFor } from "@/lib/reporting/scope/server";
 import type { SourceCitation } from "@/types";
 
 import { markStage } from "./chat-stage-timings";
+import { held } from "./held-promise";
 import { cardPolicyTurns } from "./card-policy-request";
 import { callClaude } from "./call-claude";
 import { glossaryBlock } from "./glossary";
@@ -62,6 +63,7 @@ import { finishChatTrace, openChatTrace, redactTraceText } from "./chat-trace";
 import { chatTraceDraft, updateChatTrace } from "./chat-trace-store";
 import {
   chatDataToolsEnabled,
+  chatParallelLoadsEnabled,
   chatMemoryEnabled,
   chatStyleRulesEnabled,
   chatTraceEnabled,
@@ -890,6 +892,14 @@ async function answerQuestionCore(
    * See `slot-only-turn.ts`.
    */
   const slotTopic = slotOnlyRetrievalTopic(request.question, request.history);
+  /*
+   * CHAT_PARALLEL_LOADS_ENABLED (ported from the sibling app; QA, 9 Nov 2026): the reads below that need nothing the
+   * rewrite or retrieval returns start here, so they run alongside them instead of one after another before the answer.
+   * Each is awaited where it was, with the same inputs, so the prompt is the same. The two that write (recalled memory,
+   * the long-context summary) start just before the system prompt is built (`turnWrites`), so a turn that fails before
+   * then writes no more than before.
+   */
+  const reads = chatParallelLoadsEnabled() ? turnReads({ request, actor, knowledge }) : null;
   markStage("query_rewrite");
   const rewrittenQuestion = slotTopic
     ? slotTopic
@@ -1084,7 +1094,7 @@ async function answerQuestionCore(
    */
   markStage("google_reviews");
   const reviewBlock = googleReviewsInChatEnabled()
-    ? await loadGoogleReviewsChatBlock({ question: request.question, role: actor.role, scope: actor.scope })
+    ? await (reads?.reviews ?? loadGoogleReviewsChatBlock({ question: request.question, role: actor.role, scope: actor.scope }))
     : null;
 
   markStage("summaries_memory");
@@ -1100,6 +1110,11 @@ async function answerQuestionCore(
     .filter((entry) => pinnedIds.has(entry.documentId))
     .map((entry) => entry.documentTitle);
 
+  /*
+   * CHAT_PARALLEL_LOADS_ENABLED: the two loads that write start here, where nothing between their start and their
+   * awaits can throw, and after everything that reads the conversation's memory (`memoryPromise`, above).
+   */
+  const writes = reads ? turnWrites({ request, actor }) : null;
   markStage("system_prompt");
   const system = buildSystemPrompt({
     assistantName: ACTIVE_BRAND.assistantName,
@@ -1136,8 +1151,8 @@ async function answerQuestionCore(
     openForm: request.openForm ?? null,
     styleRules: chatStyleRulesEnabled(),
     priorCoachingOptional: priorCoachingOptionalEnabled(),
-    recalledMemory: await recalledMemoryBlock(request, actor),
-    fewShotExamples: await loadFewShotBlock(request.question),
+    recalledMemory: await (writes?.recalled ?? recalledMemoryBlock(request, actor)),
+    fewShotExamples: await (reads?.fewShot ?? loadFewShotBlock(request.question)),
     typedName: typedNameEnabled(),
     policyCitation: policyCitationEnabled(),
     printedPageOnly: printedPageOnlyEnabled(),
@@ -1155,22 +1170,24 @@ async function answerQuestionCore(
 
   markStage("long_context");
   const longContext = longContextEnabled()
-    ? await prepareLongContext({
-        history: request.history,
-        userId: actor.subject ?? null,
-        conversationId: request.conversationId ?? null,
-      })
+    ? await (writes?.longContext ??
+        prepareLongContext({
+          history: request.history,
+          userId: actor.subject ?? null,
+          conversationId: request.conversationId ?? null,
+        }))
     : null;
   markStage("chat_data");
-  const dataAddition = await loadChatDataBlock({
-    enabled: chatDataToolsEnabled(),
-    question: request.question,
-    role: actor.role,
-    breakdown: reportBreakdownEnabled(),
-    reviewsHandled: reviewBlock !== null,
-  });
+  const dataAddition = await (reads?.data ??
+    loadChatDataBlock({
+      enabled: chatDataToolsEnabled(),
+      question: request.question,
+      role: actor.role,
+      breakdown: reportBreakdownEnabled(),
+      reviewsHandled: reviewBlock !== null,
+    }));
   markStage("cited_grounding");
-  const pinnedPolicy = await citedManualGrounding(request, knowledge);
+  const pinnedPolicy = await (reads?.cited ?? citedManualGrounding(request, knowledge));
   const supplementalChunks = grounding;
   const supplementalText =
     useManual && supplementalChunks.length > 0
@@ -1657,6 +1674,50 @@ async function loadRosterQuiet(actor: ChatActor) {
   } catch {
     return [];
   }
+}
+
+/**
+ * CHAT_PARALLEL_LOADS_ENABLED: the turn's reads that need nothing the rewrite or retrieval returns, started together. The
+ * same calls, with the same inputs, as where they are awaited; a rejection is held until that await (`held-promise.ts`).
+ */
+function turnReads(input: { readonly request: AskRequest; readonly actor: ChatActor; readonly knowledge: Parameters<typeof citedManualGrounding>[1] }) {
+  const { request, actor } = input;
+  const reviews = googleReviewsInChatEnabled()
+    ? held(loadGoogleReviewsChatBlock({ question: request.question, role: actor.role, scope: actor.scope }))
+    : Promise.resolve(null);
+  return {
+    reviews,
+    fewShot: held(loadFewShotBlock(request.question)),
+    data: held(
+      reviews.then((reviewBlock) =>
+        loadChatDataBlock({
+          enabled: chatDataToolsEnabled(),
+          question: request.question,
+          role: actor.role,
+          breakdown: reportBreakdownEnabled(),
+          reviewsHandled: reviewBlock !== null,
+        }),
+      ),
+    ),
+    cited: held(citedManualGrounding(request, input.knowledge)),
+  };
+}
+
+/** CHAT_PARALLEL_LOADS_ENABLED: the two loads that write (recalled memory, the long-context summary), started just before the system prompt. */
+function turnWrites(input: { readonly request: AskRequest; readonly actor: ChatActor }) {
+  const { request, actor } = input;
+  return {
+    recalled: held(recalledMemoryBlock(request, actor)),
+    longContext: longContextEnabled()
+      ? held(
+          prepareLongContext({
+            history: request.history,
+            userId: actor.subject ?? null,
+            conversationId: request.conversationId ?? null,
+          }),
+        )
+      : null,
+  };
 }
 
 async function recalledMemoryBlock(request: AskRequest, actor: ChatActor): Promise<string | null> {
