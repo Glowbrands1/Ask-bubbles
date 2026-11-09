@@ -165,6 +165,7 @@ import { withFirstNameAsk } from "./first-name-ask";
 import { withCarriedPersonNotice } from "./carried-person-notice";
 import { withoutPoliteLeadOnCard } from "./polite-about-request";
 import { withExitOtherPersonNotOffered } from "./exit-other-person";
+import { withoutLetterSigner } from "./letter-signer";
 import { withFirstNameAnswerFor, withFirstNameSuggestFor } from "./first-name-suggest";
 import { withManagerStatedTitle } from "./manager-title";
 import { withReplyMatchesCard } from "./reply-matches-card";
@@ -598,7 +599,8 @@ async function answerQuestionCore(
     const reading = askedQuestion ? null : startFormReading(request, actor);
     // LIST_POLICY_IS_EDIT_ENABLED: with only a card open, the card is proposed again from the manager's last turn.
     // POLITE_ABOUT_STAYS_CARD_ENABLED: "can you make it for <topic>" on an open card is proposed without its polite lead (`ai/polite-about-request.ts`).
-    const proposalQuestion = listPolicyCard ? cardRequestTurn(request) : await questionForProposal({ ...request, question: withoutPoliteLeadOnCard(request) }, actor);
+    // EXIT_LETTER_SIGNER_NOT_SUBJECT_ENABLED: a letter's "<C>, District Manager" sign-off is not proposed as the form's person (`ai/letter-signer.ts`).
+    const proposalQuestion = listPolicyCard ? cardRequestTurn(request) : await questionForProposal({ ...request, question: withoutLetterSigner({ question: withoutPoliteLeadOnCard(request) }) }, actor);
     // AI_READS_CODE_CHECKS_ENABLED: no "couldn't find" line about the name the reader put on the card.
     const proposeFrom = async (question: string, questionMessageId = request.questionMessageId) => withoutStaleRosterNote(await deliverFormProposal({
       request,
@@ -717,7 +719,7 @@ async function answerQuestionCore(
           deliverFormProposal({
             request,
             actor,
-            question: await questionForProposal({ ...request, question: adjusted.question }, actor),
+            question: await questionForProposal({ ...request, question: withoutLetterSigner(adjusted) }, actor),
             decorate: (response) => decorateFormAnswer(request, actor, response),
             propose: (question) => proposeFormForTurn({
             history: request.history,
