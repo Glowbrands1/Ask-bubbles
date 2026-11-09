@@ -1,4 +1,4 @@
-import { formEditDateRulesEnabled, proposalPolicySetAsideEnabled } from "@/lib/config/chat-quality-flags";
+import { formEditDateRulesEnabled, missedShiftCitesAttendanceEnabled, proposalPolicySetAsideEnabled } from "@/lib/config/chat-quality-flags";
 import { correctiveActionIssue } from "@/lib/forms/incident-issue";
 import { asksAboutPolicy, citationSetAside, policiesSetAside, setAsideAnything, withPolicySetAside } from "@/lib/forms/policy-set-aside";
 
@@ -28,7 +28,23 @@ import type { AskRequest, AskResponse } from "./types";
  * Off: the response as it was.
  */
 export function withProposalEditRules(response: AskResponse, request: AskRequest): AskResponse {
-  return withPolicySetAsideOnCard(withEditRules(response, request), request);
+  return withPlanOnReadPolicy(withPolicySetAsideOnCard(withEditRules(response, request), request));
+}
+
+/*
+ * MISSED_SHIFT_CITES_ATTENDANCE_ENABLED (QA, the Bubbles round-7 live test, 9 Nov 2026): a card whose Policy line is
+ * the app's own reading ("**Policy:** Attendance — read from this request.") still wrote its Action plan on "the
+ * applicable company policy": the plan names only a policy read from the manual's words. With the flag, that plan
+ * reviews the policy the card says it read. Off, the response as it was.
+ */
+const READ_POLICY_LINE = /^\*\*Policy:\*\*\s*(.+?)\s+—\s+read from this request\./m;
+const GENERIC_PLAN = /(\*\*Action plan:\*\*[^\n]*?Management will review )the applicable company policy( with)/i;
+
+function withPlanOnReadPolicy(response: AskResponse): AskResponse {
+  if (!missedShiftCitesAttendanceEnabled() || !response.formProposal) return response;
+  const read = READ_POLICY_LINE.exec(response.content)?.[1]?.trim();
+  if (!read || !GENERIC_PLAN.test(response.content)) return response;
+  return { ...response, content: response.content.replace(GENERIC_PLAN, (_all, lead: string, tail: string) => `${lead}the ${read} policy${tail}`) };
 }
 
 /**
