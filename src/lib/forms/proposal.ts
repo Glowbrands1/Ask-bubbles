@@ -1418,9 +1418,14 @@ function settle(strong: string[], weak: string[], text: string, subjects: readon
     }
   }
   // EXIT_ANSWER_NOT_A_CORRECTION_ENABLED: "store items not returned", "not eligible for rehire" negate an exit answer's word, never a person.
-  const negated = negatedNames(text).filter((name) => !(exitAnswerNotACorrectionEnabled() && isExitTerms(name)));
+  const negatedAll = negatedNames(text);
+  const negated = negatedAll.filter((name) => !(exitAnswerNotACorrectionEnabled() && isExitTerms(name)));
   const correction = negated.length > 0 || CORRECTION_CUE.test(text);
-  const given = correction ? [...strong, ...sentenceAnswers(text)] : strong;
+  // An exit form typed as lines ("Thessaly Varrow\nTeam Member Part Time\n…\npayroll deduction does not apply"): only
+  // the exit term was dropped, and a name on a line of its own is still the answer it was (the Bubbles gate, R6-2).
+  const exitTermsOnly = !correction && negated.length < negatedAll.length;
+  const ownLine = (name: string) => text.split(/\n+/).some((line) => line.trim().replace(/[.?!]+$/, "").toLowerCase() === name.toLowerCase());
+  const given = correction ? [...strong, ...sentenceAnswers(text)] : exitTermsOnly ? [...strong, ...sentenceAnswers(text).filter(ownLine)] : strong;
   const recipient = formRecipient(subjects, given, weak, text);
   const narrative = recipient ? weak.filter((name) => samePerson(name, recipient)) : weak;
   const names = distinctNames([...given, ...narrative]).filter(
