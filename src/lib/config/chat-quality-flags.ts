@@ -1275,6 +1275,9 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REQUEST_PARTICIPLE_LEAD_ENABLED",
   // Default-off fix flag (QA's live Create test, 8 Nov 2026).
   "UNDATED_ACCOUNT_BRIEF_ENABLED",
+  // coding 4: FIRST_NAME_ANSWER_KEEPS_ACCOUNT and SHIFT_ACCOUNT_IS_INCIDENT (port from the sibling app, default off).
+  "FIRST_NAME_ANSWER_KEEPS_ACCOUNT_ENABLED",
+  "SHIFT_ACCOUNT_IS_INCIDENT_ENABLED",
 ] as const;
 
 /**
@@ -3871,3 +3874,22 @@ export function carriedPersonNoticeEnabled(): boolean {
   return envFlag("CARRIED_PERSON_NOTICE_ENABLED");
 }
 
+ * FIRST_NAME_ANSWER_KEEPS_ACCOUNT_ENABLED (ported from the sibling app: QA's live test there, 8 Nov 2026; default off; same flag in both apps).
+ * "make me CA for <first name> failing to complete shifts" → "Is this for **<full name>**?" → "make me CA for <full
+ * name> failing to complete shifts 11/7 and 11/8" (or "<full name> 11/7 and 11/8") lost the dates: an answer that
+ * named the person in full was read as the name alone. With this flag on, what the answer says besides the name is
+ * kept (`ai/first-name-suggest.ts`). Off, as before.
+ */
+export function firstNameAnswerKeepsAccountEnabled(): boolean {
+  return envFlag("FIRST_NAME_ANSWER_KEEPS_ACCOUNT_ENABLED");
+}
+
+/**
+ * SHIFT_ACCOUNT_IS_INCIDENT_ENABLED (ported from the sibling app: QA's live test there, 8 Nov 2026; default off; same flag in both apps). "make me CA
+ * for <name> not showing up to her shifts on 11/7 and 11/8" had no Observation: a shift not shown up to, not completed
+ * or missed, told with no subject and no "for", was read as the request alone. With this flag on it is an account
+ * (`forms/corrective-action-intake.ts` describesIncident). Off, as before.
+ */
+export function shiftAccountIsIncidentEnabled(): boolean {
+  return envFlag("SHIFT_ACCOUNT_IS_INCIDENT_ENABLED");
+}
