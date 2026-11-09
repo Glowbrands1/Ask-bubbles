@@ -3,7 +3,13 @@ import "server-only";
 import type { AskResponse } from "@/lib/ai/types";
 import { payrollAmounts } from "@/lib/ai/intent-slots";
 import { businessToday } from "@/lib/business-date";
-import { formEditNoopGuardEnabled, formPatchReaderFixesEnabled, stepBAddUnderObservedEnabled, stepBSectionSpacingEnabled } from "@/lib/config/chat-quality-flags";
+import {
+  formEditNoopGuardEnabled,
+  formPatchReaderFixesEnabled,
+  stepBAddUnderObservedEnabled,
+  stepBMakeItAboutAccountEnabled,
+  stepBSectionSpacingEnabled,
+} from "@/lib/config/chat-quality-flags";
 import { addUnderObserved, hasSections, tailAfterLastSection, withSectionSpacing } from "./outline-sections";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { isGlossaryTerm } from "@/lib/ai/glossary";
@@ -12,6 +18,7 @@ import { syncCorrectiveActionPlan } from "./ca-action-plan-sync";
 import { checkboxGroupsForVariant, fieldsForVariant, parseFormDocument } from "./document";
 import { NOTHING_CHANGED } from "./form-diff-reply";
 import { datesInText } from "./form-date-answer";
+import { madeAboutDate } from "./made-about-date";
 import {
   applyPatch,
   sameValue,
@@ -316,7 +323,14 @@ function basePresetRules(loaded: LoadedInstance, ops: readonly FormEditOp[], rul
   const latest = rules.latest ?? "";
   // A draft is written from all of the manager's notes: on a draft path they are what names a value that may change.
   const drafts = !["correction", "reopen", "patch", "tool", "revision"].includes(rules.path);
-  const guard = protectedValuesFor(loaded, drafts ? [latest, rules.notes ?? ""].join("\n") : latest, today, rules.named);
+  const read = protectedValuesFor(loaded, drafts ? [latest, rules.notes ?? ""].join("\n") : latest, today, rules.named);
+  /*
+   * STEP_B_MAKE_IT_ABOUT_ACCOUNT_ENABLED (QA's live round-6 trace, 9 Nov 2026): "make it about leaving the front desk
+   * unattended on 11/6/26" is a new account told with its own date. The revision's rewrite follows that date, so the
+   * old account's date (the form's Date, 10/10/26) may go; the Date itself is written by Step B with the account.
+   */
+  const aboutDate = rules.path === "revision" && stepBMakeItAboutAccountEnabled() ? madeAboutDate(latest, today) : null;
+  const guard = aboutDate ? { ...read, formDate: aboutDate } : read;
   const writeIns = writeInsOf(loaded);
   const groups = groupsOf(loaded);
   const lists = new Set([PRIOR_ACTIONS_KEY]);
