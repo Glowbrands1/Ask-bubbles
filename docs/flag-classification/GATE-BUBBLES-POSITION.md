@@ -4,10 +4,9 @@ Session: session_01VVEkRRzGew9sHHGbAhxGaQ. Reports to QA session_01VVEkRTbAAAt57
 
 ## Where I stopped
 - R17B (#685 #703 #706 #707): GO for all four flags (docs/flag-classification/R17B.md on this branch).
-- Release head 1e58ef1 (tree daf22287) on main f53c409a, built in /home/user/gate/r17b-rel, NOT pushed yet.
-  Lint 0 errors, tsc ok, 21 flag/replay test files pass. Full `npm test` was running at pause.
-  On resume: check the full suite, then push to claude/gate-bubbles-r17b (fast-forward of preview 23e1e32), then send QA the verdict + head.
-- Verdict NOT yet sent to QA.
+- RELEASE HEAD ALREADY ON GITHUB: claude/gate-bubbles-r17b = fab769b, pushed 18:35Z by the OLD Gate-Bubbles session (old account) after this session's fetch. Same 4 flags, same 7 FIXED_IN_PRODUCTION cases, on a529c29e; differs from mine only in the _about note.
+- My equivalent head 1e58ef1 (main f53c409a + the gated preview + the same flip) is LOCAL ONLY: this session gets 403 pushing that branch, and fab769b makes it redundant. Its full npm test is green (857 files passed / 6 skipped; 18264 passed, 85 expected fail, 62 skipped), i.e. fab769b plus a merge of main f53c409a (docs + #675's replay case) passes.
+- Verdict NOT yet sent to QA. On RESUME, first action: send QA "R17B GO; release head fab769b (old session) on a529c29e; merging main f53c409a is clean and the full suite is green on that tree (my 1e58ef1)".
 
 ## Queue (next first)
 1. 16c re-gate on d7487833
