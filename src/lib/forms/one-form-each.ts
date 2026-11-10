@@ -29,6 +29,8 @@ const PEOPLE_LIST = new RegExp(
   String.raw`^(.*?\bfor\s+)(${PERSON}(?:(?:\s*,\s*(?:and\s+)?|\s+and\s+)${PERSON})+)(\s+(?:for|about|because|due\s+to|regarding)\b[^\n]*?)?\s*[.!]?$`,
   "u",
 );
+/** A word that names a form, not a person: "CA", "C/A", "coaching", "policy review", "warning". */
+const FORM_WORD = /^(?:ca|c\/a|dpoa|coaching|coach|form|forms|policy|review|written|verbal|warning|write-?up)\b/i;
 const NEXT_LINE = /^\*\*Next:\*\* an? (.+?) each for (.+?)(?:, for (.+?))?\. Say \*\*yes\*\* when this one is done and I'll start the next\.$/m;
 const ASKS_WHO_IT_IS = /\bIs this for \*\*[^*]+\*\*\?|\bDid you mean\b/;
 
@@ -66,6 +68,14 @@ export function peopleRequest(question: string): { readonly first: string; reado
   const people = match[2]!.split(/\s*,\s*(?:and\s+)?|\s+and\s+/).map((name) => name.trim()).filter(Boolean);
   if (people.length < 2) return null;
   const rest = (match[3] ?? "").replace(/[.!]+$/, "");
+  /*
+   * ONE FORM, SEVERAL PEOPLE — NEVER SEVERAL FORMS (QA's round-16B gate, 10 Nov 2026): "coaching form for Avery
+   * Testperson, CA for Jordan Testperson" and "…, CA for Jordan Testperson, and a policy review for Sam Rivera" ask
+   * for different forms, one per person, and already get one card each; "CA" read as a second person queued Jordan
+   * instead. A turn whose list or rest names a form is not this request.
+   */
+  if (people.some((name) => FORM_WORD.test(name) || detectTemplateIntent(name).kind !== "none")) return null;
+  if (rest && detectTemplateIntent(rest).kind !== "none") return null;
   return {
     first: `${match[1]}${people[0]}${rest}`,
     queue: { form: formName(templateKey), people: people.slice(1), reason: rest.trim().replace(/^for\s+/i, "") },
