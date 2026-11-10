@@ -9,6 +9,9 @@ import {
   stepBMakeItAboutAccountEnabled,
   madeAboutAllOrNothingEnabled,
   madeAboutReaderAccountEnabled,
+  policyTopicIntoFieldEnabled,
+  madeAboutTopicEvidenceEnabled,
+  formDateSaidAloneEnabled,
   madeAboutRewriteFinishesEnabled,
   stepBDateSaidEnabled,
   stepBDateWithAboutEnabled,
@@ -280,6 +283,64 @@ export async function patchActiveForm(input: PatchTurnInput): Promise<AskRespons
     if ((!("ok" in reading) || reading.turn !== "this_form") && madeAboutAllOrNothingEnabled()) {
       reading = madeAboutReading(input, before, writable, allGroups) ?? reading;
     }
+    /*
+     * POLICY_TOPIC_INTO_FIELD_ENABLED (QA, a manager's 1★ rating, 10 Nov 2026): "In details of coaching inlude our woven
+     * policy on finding a cover for your shift" wrote a sentence telling the manager to refer to the policy manual. The
+     * policy asked for is written from the manual here (`policy-topic-write.ts`), before any hand-off: the reader's own
+     * text for that field, and any line that only points at the manual, are not written, and the old path's revision
+     * never runs for this turn. Anything else the message asks is written as before, and the reply says what happened
+     * to the policy.
+     */
+    let topicOutcome: { readonly sentence: string; readonly written: string | null } | null = null;
+    // The turn's reply when the policy is its answer: what was said about it, and whatever changed on the form.
+    const topicReply = async (sentence: string): Promise<AskResponse> => {
+      const reloadedTopic = await loadInstance(input.instanceId);
+      const changedTopic = reloadedTopic ? snapshotDiff(snapshotOf(loaded), snapshotOf(reloadedTopic)) : [];
+      return {
+        content: sentence,
+        citations: [],
+        coverage: "not_applicable",
+        ...(changedTopic.length > 0 ? { formUpdate: { instanceId: input.instanceId, updated: changedTopic.map((change) => change.key) } } : {}),
+      };
+    };
+    if (policyTopicIntoFieldEnabled()) {
+      const topicField = await import("./policy-topic-field");
+      const topic = topicField.policyTopicAsked(input.question);
+      if (topic) {
+        const read = "ok" in reading && reading.turn === "this_form" ? reading : null;
+        const readKeys = read ? Object.keys(read.patch.set) : [];
+        const readerField =
+          readKeys.find((key) => topicField.pointsAtManual(String(read!.patch.set[key]))) ?? (readKeys.length === 1 ? readKeys[0]! : null);
+        topicOutcome = await (await import("./policy-topic-write")).writePolicyTopic({
+          instanceId: input.instanceId,
+          actorId: actor.id,
+          question: input.question,
+          topic,
+          readerField,
+        });
+        if (topicOutcome) {
+          const field = topicOutcome.written ?? topicField.fieldNamedIn(input.question, labels) ?? readerField;
+          const kept = read
+            ? Object.fromEntries(
+                Object.entries(read.patch.set).filter(([key, value]) => key !== field && !topicField.pointsAtManual(String(value))),
+              )
+            : {};
+          if (read) reading = { ...read, patch: { ...read.patch, set: kept } };
+          if (!read || Object.keys(kept).length + read.patch.clear.length === 0) return topicReply(topicOutcome.sentence);
+        }
+      }
+    }
+    /*
+     * FORM_DATE_SAID_ALONE_ENABLED (QA's live Bubbles round 13, 9 Nov 2026): "make the date 11/7/26" as the first edit of a
+     * fresh draft answered "I haven't changed the Coaching Form …": the reader did not read the turn as this form's, so it
+     * went to the old path, whose revision does not write the Date. A turn that says the date the form takes
+     * (STEP_B_DATE_SAID's reading, `form-date-said.ts`) is this form's: read with nothing else to set, and the Date is
+     * written below as the manager's statement.
+     */
+    if ((!("ok" in reading) || reading.turn !== "this_form") && formDateSaidAloneEnabled() && stepBDateSaidEnabled() && "form_date" in before) {
+      const said = saidFormDate(input.question, input.today);
+      if (said !== null && before.form_date?.value !== said) reading = { ok: true, turn: "this_form", patch: { set: {}, clear: [], evidence: {} } };
+    }
     if (!("ok" in reading) || reading.turn !== "this_form") return handOff("none");
     /*
      * ACCOUNT_WIPE_GUARD_ENABLED (QA, a Bubbles manager's 1★ rating, 5–6 Nov 2026): "this is a verbal warning. previous
@@ -427,7 +488,7 @@ export async function patchActiveForm(input: PatchTurnInput): Promise<AskRespons
      * the policy"), it is this turn's whole answer.
      */
     const policyAsk =
-      editPolicyAskEnabled() && reading.policyAsked === true && (await import("./edit-policy-ask")).policyAskApplies(loaded.instance.templateKey);
+      topicOutcome === null && editPolicyAskEnabled() && reading.policyAsked === true && (await import("./edit-policy-ask")).policyAskApplies(loaded.instance.templateKey);
     const answerPolicy = async () =>
       policyAsk ? (await import("./edit-policy-ask")).answerPolicyAsk({ instanceId: input.instanceId, actorId: actor.id, question: input.question }) : null;
     /*
@@ -544,6 +605,7 @@ export async function patchActiveForm(input: PatchTurnInput): Promise<AskRespons
         syncPlan: { after: [...stated], amountSentence: true, notes: input.question },
         ...(readerFixes ? { readerFixes } : {}),
       });
+      // POLICY_TOPIC_INTO_FIELD_ENABLED: the policy was answered; the old path's revision never runs for this turn.
       /*
        * MADE_ABOUT_REWRITE_FINISHES_ENABLED (ported from the sibling app's live round-13 test, 9 Nov 2026): the account is
        * already rewritten, so handing off would run the old path's revision a second time and leave Other and the Date.
@@ -578,7 +640,7 @@ export async function patchActiveForm(input: PatchTurnInput): Promise<AskRespons
             },
           );
         }
-      } else if (result.handoff === "refused") return handOff("refused");
+      } else if (result.handoff === "refused") return topicOutcome ? topicReply(topicOutcome.sentence) : handOff("refused");
       /*
        * FORM_PATCH_READER_FIXES_ENABLED (QA's live run, 7 Nov 2026: "yes, do that" after the edit was saved went
        * to the old path, whose revision rewrote the form and said "Updated"): what the reader set is already on
@@ -587,7 +649,7 @@ export async function patchActiveForm(input: PatchTurnInput): Promise<AskRespons
       // With a date still to write, the turn goes on: the date is written below, and the policy after it.
       if (readerFixes && result.handoff === "noop" && dateToWrite === null) {
         const outcome = await answerPolicy();
-        if (!outcome?.written) return withPolicySentence(alreadyThere(Object.keys(reading.patch.set), labels), outcome);
+        if (!outcome?.written) return withPolicySentence(withPolicySentence(alreadyThere(Object.keys(reading.patch.set), labels), outcome), topicOutcome);
         policyOutcome = outcome;
       }
     } else if (patchOps > 0) {
@@ -641,13 +703,14 @@ export async function patchActiveForm(input: PatchTurnInput): Promise<AskRespons
     if (!reloaded) return null;
     const changed = snapshotDiff(snapshotOf(loaded), snapshotOf(reloaded));
     /* FORM_PATCH_READER_FIXES_ENABLED: the reader's values are already on the form (the old writers' path). */
-    if (readerFixes && changed.length === 0) return withKeptAccount(withPolicySentence(alreadyThere(Object.keys(reading.patch.set), labels), policyOutcome));
-    return withKeptAccount(withPolicySentence({
+    if (readerFixes && changed.length === 0)
+      return withKeptAccount(withPolicySentence(withPolicySentence(alreadyThere(Object.keys(reading.patch.set), labels), policyOutcome), topicOutcome));
+    return withKeptAccount(withPolicySentence(withPolicySentence({
       content: replyFromDiff({ changed }, labels),
       citations: [],
       coverage: "not_applicable",
       ...(changed.length > 0 ? { formUpdate: { instanceId: input.instanceId, updated: changed.map((change) => change.key) } } : {}),
-    }, policyOutcome));
+    }, policyOutcome), topicOutcome));
   } catch (error) {
     noteMadeAboutExit(input, `error:${error instanceof Error ? error.name : typeof error}`, rewroteFrom !== null);
     // MADE_ABOUT_REWRITE_FINISHES_ENABLED: after the rewrite, an error answers from what was saved, never with the old path.
@@ -705,8 +768,15 @@ function madeAboutReading(
   if (topic && box && writable.has(OTHER_TOPIC_KEY)) {
     set[OTHER_TOPIC_KEY] = topic;
     set[box.key] = ["other"];
-    evidence[OTHER_TOPIC_KEY] = topic.toLowerCase();
-    evidence[box.key] = topic.toLowerCase();
+    /*
+     * MADE_ABOUT_TOPIC_EVIDENCE_ENABLED (QA's live Bubbles round 13, 9 Nov 2026): "make it about being late on 11/5/26"
+     * saved the Date and Details and left Other on "Missed monthly meeting": the topic's evidence, "being late", is two
+     * words, under the reducer's floor for evidence (MIN_EVIDENCE_WORDS), so Other was refused. Its evidence is the
+     * whole made-about clause the manager wrote ("being late on 11/5/26"), which holds the topic's words.
+     */
+    const said = madeAboutTopicEvidenceEnabled() ? (madeAbout(input.question) ?? topic.toLowerCase()) : topic.toLowerCase();
+    evidence[OTHER_TOPIC_KEY] = said;
+    evidence[box.key] = said;
   }
   return { ok: true, turn: "this_form", patch: { set, clear: [], evidence } };
 }

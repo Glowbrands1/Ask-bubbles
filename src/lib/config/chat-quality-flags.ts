@@ -1300,10 +1300,15 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "MADE_ABOUT_ALL_OR_NOTHING_ENABLED",
   // coding 4: MADE_ABOUT_READER_ACCOUNT (QA's live round-9 test, 9 Nov 2026; default off).
   "MADE_ABOUT_READER_ACCOUNT_ENABLED",
+  // coding 5: POLICY_TOPIC_INTO_FIELD (QA, a manager's 1★ rating, 10 Nov 2026; default off).
+  "POLICY_TOPIC_INTO_FIELD_ENABLED",
   // coding 4: MADE_ABOUT_REWRITE_FINISHES (the sibling app's live round-13 test, 9 Nov 2026; default off).
   "MADE_ABOUT_REWRITE_FINISHES_ENABLED",
   // coding 5: ACCOUNT_WIPE_GUARD (QA, a Bubbles manager's 1★ rating, 5–6 Nov 2026; default off).
   "ACCOUNT_WIPE_GUARD_ENABLED",
+  // coding 4: QA's live Bubbles round 13 (9 Nov 2026; default off).
+  "MADE_ABOUT_TOPIC_EVIDENCE_ENABLED",
+  "FORM_DATE_SAID_ALONE_ENABLED",
 ] as const;
 
 /**
@@ -2877,6 +2882,17 @@ export function accountWipeGuardEnabled(): boolean {
   return envFlag("ACCOUNT_WIPE_GUARD_ENABLED");
 }
 
+/**
+ * POLICY_TOPIC_INTO_FIELD_ENABLED (QA, a manager's 1★ rating, 10 Nov 2026; coding 5; same flag in both apps; default
+ * off). "In details of coaching inlude our woven policy on finding a cover for your shift" on a saved draft wrote a
+ * sentence telling the manager to refer to the policy manual. On: an edit asking for "our policy on <topic>" in a field
+ * writes the manual's section for that topic, quoted with its "Policy reference: …, JBA Policy Manual p.N" line, or
+ * says no section matches and asks; never a pointer to the manual (`forms/policy-topic-field.ts`). Off, as before.
+ */
+export function policyTopicIntoFieldEnabled(): boolean {
+  return envFlag("POLICY_TOPIC_INTO_FIELD_ENABLED");
+}
+
 // --- end coding 5 flags ---
 
 /**
@@ -4072,4 +4088,24 @@ export function madeAboutReaderAccountEnabled(): boolean {
  */
 export function madeAboutRewriteFinishesEnabled(): boolean {
   return envFlag("MADE_ABOUT_REWRITE_FINISHES_ENABLED");
+}
+
+/**
+ * MADE_ABOUT_TOPIC_EVIDENCE_ENABLED (QA's live Bubbles round 13, 9 Nov 2026; default off; same flag in both apps). "make it
+ * about being late on 11/5/26" left Other on the old topic: the topic read from the manager's words ("Being late") came
+ * with "being late" as its evidence, two words, under the reducer's floor, so it was refused. With the flag on, its
+ * evidence is the whole made-about clause the manager wrote (`forms/form-patch-turn.ts`). Off, as before.
+ */
+export function madeAboutTopicEvidenceEnabled(): boolean {
+  return envFlag("MADE_ABOUT_TOPIC_EVIDENCE_ENABLED");
+}
+
+/**
+ * FORM_DATE_SAID_ALONE_ENABLED (QA's live Bubbles round 13, 9 Nov 2026; default off; same flag in both apps). "make the date
+ * 11/7/26" as the first edit of a fresh draft answered "I haven't changed …": the reader did not read the turn as this
+ * form's. With the flag on, a turn that says the date the form takes (STEP_B_DATE_SAID's reading) is this form's, and
+ * the Date is written (`forms/form-patch-turn.ts`). Off, as before.
+ */
+export function formDateSaidAloneEnabled(): boolean {
+  return envFlag("FORM_DATE_SAID_ALONE_ENABLED");
 }
