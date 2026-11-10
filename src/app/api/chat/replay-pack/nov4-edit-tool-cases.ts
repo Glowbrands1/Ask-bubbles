@@ -1,3 +1,4 @@
+import { stepBReplyKeepsLinesEnabled } from "@/lib/config/chat-quality-flags";
 import { expect } from "vitest";
 
 import { WEST_DODGE, noClaimWithoutUpdate, replyMatchesDiff, savedForm, type ReplayCase, type ReplayContext } from "./cases";
@@ -102,7 +103,9 @@ export const NOV4_EDIT_TOOL_CASES: readonly ReplayCase[] = [
         expect(reply.formUpdate?.updated).toEqual(["observation"]);
         expect(t.values(id).observation ?? "").toMatch(/she Must Practice the sanitizing checklist every shift\.$/);
         expect(t.values(id).observation ?? "", "the first name was dropped").toMatch(/\bMarnie Quill\b/);
-        expect(reply.content).toMatch(/^Changed Observation of Offense to "/);
+        // Changed on purpose (10 Nov 2026, the off-flag audit): STEP_B_REPLY_KEEPS_LINES quotes a multi-line field line by
+        // line ("Changed Observation of Offense to:" then "> …" lines) instead of one quoted line joined with "; ".
+        expect(reply.content).toMatch(stepBReplyKeepsLinesEnabled() ? /^Changed Observation of Offense to:\n>/ : /^Changed Observation of Offense to "/);
         expect(reply.content, "the tool's text was shown").not.toContain("I added that");
         // One model call: the main one; no revision, no draft.
         expect(t.calls().chat - calls.chat).toBe(1);

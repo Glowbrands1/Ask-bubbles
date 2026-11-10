@@ -1304,6 +1304,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "POLICY_TOPIC_INTO_FIELD_ENABLED",
   // coding 4: MADE_ABOUT_REWRITE_FINISHES (the sibling app's live round-13 test, 9 Nov 2026; default off).
   "MADE_ABOUT_REWRITE_FINISHES_ENABLED",
+  // coding 5: CARD_POLICY_MADE_ABOUT (the off-flag audit, QA, 10 Nov 2026; default off).
+  "CARD_POLICY_MADE_ABOUT_ENABLED",
 ] as const;
 
 /**
@@ -2874,6 +2876,16 @@ export function exitFormDateFromTerminationEnabled(): boolean {
  */
 export function policyTopicIntoFieldEnabled(): boolean {
   return envFlag("POLICY_TOPIC_INTO_FIELD_ENABLED");
+}
+
+/**
+ * CARD_POLICY_MADE_ABOUT_ENABLED (the off-flag audit, QA, 10 Nov 2026; coding 5; default off; this app only — the
+ * sibling's card policy is read another way and holds). With POLICY_CITATION on, a Coaching card made about a new
+ * account ("make it about leaving the front desk unattended on 11/6/26") cited the earlier account's Attendance Policy.
+ * On: the card's policy is read from the turns as "make it about" leaves them (`ai/card-policy-request.ts`). Off, as before.
+ */
+export function cardPolicyMadeAboutEnabled(): boolean {
+  return envFlag("CARD_POLICY_MADE_ABOUT_ENABLED");
 }
 
 // --- end coding 5 flags ---

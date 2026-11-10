@@ -1,3 +1,4 @@
+import { policyCitationEnabled } from "@/lib/config/chat-quality-flags";
 import { expect, vi } from "vitest";
 
 import { STAFF, WEST_DODGE, type ReplayCase, type ReplayContext } from "./cases";
@@ -30,6 +31,15 @@ async function start(t: ReplayContext, request: string, templateKey: string) {
   return thread;
 }
 
+/*
+ * Changed on purpose (10 Nov 2026, the off-flag audit): with POLICY_CITATION on, the card itself prints the section it
+ * cites ("**Policy cited from the JBA Policy Manual**"), so "please list the policy" is answered on the card; without it
+ * the card says the policy goes on the draft at Create. Either keeps the card and answers the ask.
+ */
+function answersTheAsk(content: string): boolean {
+  return LISTED_AT_CREATE.test(content) || (policyCitationEnabled() && /\*\*Policy cited from the JBA Policy Manual\*\*/.test(content));
+}
+
 export const NOV8_LIST_POLICY_ON_CARD_CASES: ReplayCase[] = [
   {
     id: "nov8-list-policy-on-card-coaching",
@@ -42,7 +52,7 @@ export const NOV8_LIST_POLICY_ON_CARD_CASES: ReplayCase[] = [
       const reply = await thread.say("please list the policy");
       expect(reply.content, `answered as a policy question:\n${reply.content}`).not.toMatch(GROUNDED);
       expect(reply.formProposal, `no card:\n${reply.content}`).toMatchObject({ templateKey: "coaching", employeeName: "Rowan Kestrel" });
-      expect(reply.content, `the card does not say where the policy goes:\n${reply.content}`).toMatch(LISTED_AT_CREATE);
+      expect(answersTheAsk(reply.content), `the card does not say where the policy goes:\n${reply.content}`).toBe(true);
       t.draftWrites({ coaching_details: "Observed:\nOn 10/31/2026 Rowan Kestrel was 30 minutes late to her shift." });
       const id = await thread.create();
       expect(t.values(id).coaching_details ?? "", "the account was lost at Create").toMatch(/late/i);
@@ -79,7 +89,7 @@ export const NOV8_LIST_POLICY_ON_CARD_CASES: ReplayCase[] = [
       const reply = await thread.say("please list the policy");
       expect(reply.content, `answered as a policy question:\n${reply.content}`).not.toMatch(GROUNDED);
       expect(reply.formProposal, `no card:\n${reply.content}`).toMatchObject({ templateKey: "dpoa", employeeName: "Rowan Kestrel" });
-      expect(reply.content, `the card does not say where the policy goes:\n${reply.content}`).toMatch(LISTED_AT_CREATE);
+      expect(answersTheAsk(reply.content), `the card does not say where the policy goes:\n${reply.content}`).toBe(true);
       t.draftWrites({ observation: "Observed:\nOn 10/31/2026 Rowan Kestrel was 30 minutes late to her shift." });
       const id = await thread.create();
       expect(t.values(id).observation ?? "", "the account was lost at Create").toMatch(/late/i);
