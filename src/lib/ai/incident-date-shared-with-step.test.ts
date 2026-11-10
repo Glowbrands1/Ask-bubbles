@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import productionFlags from "@/config/production-flags.json";
+import { decideFormDate } from "@/lib/forms/incident-dates";
+
 import { formDateByRules } from "./edit-date-rules";
 
 /**
@@ -27,6 +30,17 @@ const SHARED = [
   "write up ava pellmore, i gave her a verbal on 10-21 for being late",
 ];
 
+/*
+ * NEVER-BREAK: where no incident cue governs the step's date, the flag changes nothing. ("previous coaching … for being
+ * late" is history, not the incident.)
+ */
+const GUARDS = [
+  "ca for ava pellmore, she was late on 10-24. previous coaching on 10-21 for being late",
+  "ca for ava pellmore, late on 10-24. prior verbal on 10-21 for being late",
+  "ca for ava pellmore, she was late on 10-24. jba manual 10-21",
+  "write up ava pellmore, late on 10-24, i coached her on 10-21",
+];
+
 describe("INCIDENT_DATE_SHARED_WITH_STEP: the day a step was given can be the incident's day", () => {
   beforeEach(() => withFlag(false));
   afterEach(() => withFlag(false));
@@ -40,19 +54,53 @@ describe("INCIDENT_DATE_SHARED_WITH_STEP: the day a step was given can be the in
       withFlag(true);
       // undefined: the card's own date (2026-10-21) stays.
       expect(dateOf(said)).toBeUndefined();
-      expect(dateOf(said, null)).toBe("2026-10-21");
+      // With no date on the card yet, an incident cue before the date ("late on 10-21") supplies it.
+      if (/late on 10-21/.test(said)) expect(dateOf(said, null)).toBe("2026-10-21");
     });
   }
 
-  for (const on of [false, true]) {
-    it(`NEVER-BREAK (flag ${on ? "on" : "off"}): an earlier step's date is still not the form's`, () => {
-      withFlag(on);
-      // "previous coaching … for being late" is history, not the incident.
-      expect(dateOf("ca for ava pellmore, she was late on 10-24. previous coaching on 10-21 for being late", "2026-10-21")).toBe("2026-10-24");
-      expect(dateOf("ca for ava pellmore, late on 10-24. prior verbal on 10-21 for being late", "2026-10-21")).toBe("2026-10-24");
-      expect(dateOf("ca for ava pellmore, she was late on 10-24. jba manual 10-21", "2026-10-21")).toBe("2026-10-24");
-      // "i coached her on 10-21" alone (no incident cue): the step's date only.
-      expect(dateOf("write up ava pellmore, late on 10-24, i coached her on 10-21", "2026-10-21")).toBe("2026-10-24");
+  for (const said of GUARDS) {
+    it(`NEVER-BREAK: "${said}" reads the same with the flag on and off`, () => {
+      const off = [dateOf(said, "2026-10-21"), dateOf(said, "2026-10-24"), dateOf(said, null)];
+      withFlag(true);
+      const on = [dateOf(said, "2026-10-21"), dateOf(said, "2026-10-24"), dateOf(said, null)];
+      expect(on).toEqual(off);
+    });
+  }
+});
+
+/*
+ * The card's path in production (FORM_FULL_REMAP is off): `decideFormDate`, with production's flags on (CORRECTED_DATE_KEPT
+ * sets aside every prior step's date).
+ */
+describe("INCIDENT_DATE_SHARED_WITH_STEP: the card's Date (decideFormDate)", () => {
+  const decide = (text: string) =>
+    decideFormDate({ text, templateKey: "dpoa", history: [], conversation: [{ role: "user", content: text }], today: TODAY });
+  // Production's flags, as the replay pack reads them.
+  const CARD_FLAGS = (productionFlags as { on: string[] }).on;
+  beforeEach(() => {
+    for (const name of CARD_FLAGS) process.env[name] = "true";
+  });
+  afterEach(() => {
+    for (const name of CARD_FLAGS) delete process.env[name];
+    withFlag(false);
+  });
+
+  for (const said of SHARED) {
+    it(`flag off (as production today): "${said}" gives the card no 10-21`, () => {
+      expect(decide(said).formDate ?? null).not.toBe("2026-10-21");
+    });
+    it(`flag on: "${said}" dates the card 10-21`, () => {
+      withFlag(true);
+      expect(decide(said).formDate).toBe("2026-10-21");
+    });
+  }
+
+  for (const said of GUARDS) {
+    it(`NEVER-BREAK: "${said}" decides the same with the flag on and off`, () => {
+      const off = decide(said);
+      withFlag(true);
+      expect(decide(said)).toEqual(off);
     });
   }
 });
