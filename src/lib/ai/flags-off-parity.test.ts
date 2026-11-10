@@ -124,6 +124,15 @@ const PROTECTED = [
  * carried as the box that replaced it, and an old Other write-in ticks Other.
  * Behind CA_SALES_POLICY_ENABLED, default off; off, every row is carried as
  * before. The filed form is never touched.
+ *
+ * The user (Pau) approved on 10 Nov 2026, via QA ("Ok typo same person"), in
+ * src/lib/ai/form-proposal.ts, both apps, exactly the lines of
+ * docs/patches/typo-corrected-same-person.patch: the imports
+ * `typoCorrectedSamePersonEnabled` and `editDistance`, and in
+ * turnsAboutThisForm's same(): after the existing match, the same surname
+ * and a first name at most two letters off (both at least four letters) is
+ * the same person. Behind TYPO_CORRECTED_SAME_PERSON_ENABLED, default off;
+ * off, same() returns as before. form-proposal.ts is already excluded.
  */
 const APPROVED_PROTECTED_EDITS = [
   ":(exclude)src/lib/forms/chat-revision.ts",
