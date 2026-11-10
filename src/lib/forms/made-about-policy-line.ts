@@ -1,12 +1,15 @@
 import "server-only";
 
+import { madeAbout } from "@/lib/ai/make-it-about";
 import { flaggedCitationWrite } from "@/lib/ai/policy-citation-fields";
+import type { AskResponse } from "@/lib/ai/types";
 import { ACTIVE_BRAND } from "@/lib/brand";
-import { formEditSingleWriterEnabled } from "@/lib/config/chat-quality-flags";
+import { formEditSingleWriterEnabled, madeAboutPolicyLineReplacesEnabled } from "@/lib/config/chat-quality-flags";
 import { SupabaseKnowledgeProvider } from "@/lib/knowledge/providers/supabase";
 
 import { splitAppCitationLine } from "./app-citation-line";
 import { draftFromRows } from "./form-reducer";
+import { authorizeInstance } from "./instance-scope";
 import { applyAssistantRevision, loadInstance } from "./instances";
 
 /**
@@ -77,6 +80,62 @@ export async function rewriteMadeAboutPolicyLine(input: {
   } catch {
     return null;
   }
+}
+
+/**
+ * MADE_ABOUT_POLICY_LINE_OLD_PATH_ENABLED (QA's live Bubbles report, 10 Nov 2026, exact wording): on a saved Coaching draft
+ * whose Details carried "Policy reference: Attendance Policy, JBA Policy Manual p.14" (written by an earlier make-about turn
+ * that asked for the policy), "make it about not following the dress code" kept the stale line and wrote no dress-code
+ * reference. An undated made-about turn is not the patch path's to rewrite here (it hands it off), so the old path's
+ * revision (`chat-revision.ts`, unchanged) rewrote Details and kept the line. Around that revision: each field that carried
+ * the app's line before it and was rewritten by it has its reference read again from the new account
+ * (`rewriteMadeAboutPolicyLine`, the old line always replaced; any shape of it with MADE_ABOUT_POLICY_LINE_REPLACES). Only
+ * on a turn that says what the form is about. The revision's reply is returned as it is.
+ */
+export async function withMadeAboutPolicyLine(
+  request: Request,
+  instanceId: string,
+  question: string,
+  revise: () => Promise<AskResponse | null>,
+): Promise<AskResponse | null> {
+  if (madeAbout(question) === null) return revise();
+  let actorId: string;
+  // Each field carrying the app's line before the revision: its text then, and the line.
+  const lines = new Map<string, { readonly text: string; readonly line: string }>();
+  try {
+    const { actor, loaded } = await authorizeInstance(request, instanceId, "edit");
+    if (loaded.instance.status !== "draft") return revise();
+    actorId = actor.id;
+    for (const [key, field] of Object.entries(draftFromRows(loaded.values))) {
+      const line = typeof field.value === "string" ? splitAppCitationLine(field.value).line : null;
+      if (line !== null) lines.set(key, { text: (field.value as string).trim(), line });
+    }
+  } catch {
+    return revise();
+  }
+  const response = await revise();
+  if (!response || lines.size === 0) return response;
+  try {
+    const revised = await loadInstance(instanceId);
+    if (!revised) return response;
+    const after = draftFromRows(revised.values);
+    for (const [key, { text, line }] of lines) {
+      const value = after[key]?.value;
+      // Only an account the revision rewrote.
+      if (typeof value !== "string" || value.trim() === "" || value.trim() === text) continue;
+      await rewriteMadeAboutPolicyLine({
+        instanceId,
+        actorId,
+        question,
+        accountKey: key,
+        oldLine: line,
+        ...(madeAboutPolicyLineReplacesEnabled() ? { replaceAnywhere: true } : {}),
+      });
+    }
+  } catch {
+    // The revision's write stands; the line is left as the revision wrote it.
+  }
+  return response;
 }
 
 /** MADE_ABOUT_POLICY_LINE_REPLACES_ENABLED: the text without any "Policy reference: …" line, wherever it sits. */

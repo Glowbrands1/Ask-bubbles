@@ -30,6 +30,10 @@ const DETAILS = "Observed:\nOttoline Ormsworth missed the monthly meeting on 10/
 const LATE = "Observed:\nOttoline Ormsworth showed up late on 10/14/26.\n\nExpectation:\nOttoline is expected to arrive on time for every shift.";
 const LATE_SAID = "I need you to make it about showing up late and please list the policy make the date for 10/14/26";
 const DESK_SAID = "make it about leaving the front desk unattended on 11/6/26";
+const DRESS_SAID = "make it about not following the dress code";
+// Undated: the form's Date (10/14/26) stays the incident's, and the revision keeps it.
+const DRESS = "Observed:\nOttoline Ormsworth did not follow the dress code on 10/14/26.\n\nExpectation:\nOttoline is expected to follow the dress code on every shift.";
+const DRESS_LINE = "Policy reference: Dress Code for The Company Policy, JBA Policy Manual p.15";
 const DRESS_CODE = {
   chunkIndex: 35,
   chunkId: "jba-35",
@@ -50,6 +54,7 @@ const POLICY_LINE_FIX = [
   "MADE_ABOUT_POLICY_LINE_ENABLED",
 ];
 const REPLACES_FIX = [...POLICY_LINE_FIX, "MADE_ABOUT_POLICY_LINE_REPLACES_ENABLED"];
+const OLD_PATH_FIX = [...REPLACES_FIX, "MADE_ABOUT_POLICY_LINE_OLD_PATH_ENABLED"];
 
 /** The first made-about turn, asking for the policy: Details about showing up late, ending in the Attendance line. */
 async function lateWithPolicy(t: ReplayContext, next: Readonly<Record<string, unknown>>) {
@@ -109,6 +114,25 @@ function deskAfterLate(kept: Kept) {
   };
 }
 
+/** The undated made-about this app hands to the old path, after the first turn; the revision keeps the old line, as live. */
+function dressAfterLate(said: string, revised: string, wants: "not stale" | "dress code") {
+  return async (t: ReplayContext) => {
+    vi.setSystemTime(new Date("2026-11-10T05:10:00Z"));
+    const topic = said.replace(/^make it about /, "");
+    const { id, thread } = await lateWithPolicy(t, {
+      [said]: patch("this_form", [{ field: "other_topic", value: topic.charAt(0).toUpperCase() + topic.slice(1), how: "replace", evidence: topic }]),
+    });
+    t.revisionWrites({ coaching_details: `${revised}\n\n${ATTENDANCE_LINE}` });
+    const reply = await thread.say(said);
+    const details = t.values(id).coaching_details ?? "";
+    expect(details, `Details:\n${reply.content}`).toMatch(/dress code/);
+    expect(details, `the stale reference is kept:\n${details}`).not.toMatch(/Attendance Policy/);
+    const lines = policyLines(details);
+    if (wants === "dress code") expect(lines, `the dress-code reference:\n${details}`).toEqual([DRESS_LINE]);
+    else expect(lines.filter((line) => line !== DRESS_LINE), `another section's line:\n${details}`).toEqual([]);
+  };
+}
+
 const DESK_REPORT = "Ported from the sibling app's live rounds 11, 13 and 15 (9–10 Nov 2026): the rewritten account's reference was missing, the old one's kept, or both";
 
 const DESK_CASES: Readonly<Record<Kept, { readonly title: string; readonly open: string; readonly fixFlags: readonly string[] }>> = {
@@ -137,6 +161,41 @@ const DESK_CASES: Readonly<Record<Kept, { readonly title: string; readonly open:
 const REPORT = "QA's live Bubbles report (10 Nov 2026): \"make it about not following the dress code\" kept the stale \"Policy reference: Attendance Policy, JBA Policy Manual p.14\" and wrote no dress-code reference line";
 
 export const NOV10_MADE_ABOUT_POLICY_LINE_CASES: ReplayCase[] = [
+  {
+    id: "nov10-made-about-policy-line-dress-code-live",
+    title: "QA's live Bubbles report: Details ending \"Policy reference: Attendance Policy, JBA Policy Manual p.14\" (an earlier make-about that asked for the policy), then \"make it about not following the dress code\", the revision keeping the old line: the stale Attendance line is gone, and no other section's line is written",
+    report: REPORT,
+    status: { open: "the undated made-about goes to the old path, whose revision keeps the old account's Attendance line" },
+    fixFlags: OLD_PATH_FIX,
+    run: dressAfterLate(DRESS_SAID, DRESS, "not stale"),
+  },
+  {
+    id: "nov10-made-about-policy-line-dress-code-reference",
+    title: "QA's live Bubbles report, the reference wanted: \"make it about not following the dress code\" writes the Dress Code reference line (this app's manual has the section, p.15)",
+    report: `${REPORT} (the dress-code reference line)`,
+    status: { open: "the undated made-about goes to the old path, whose revision keeps the old account's Attendance line" },
+    fixFlags: OLD_PATH_FIX,
+    /*
+     * Still open with the fix: the policy reader (`forms/ca-policy.ts`, `statedIn`: NEGATED_BEFORE skips a policy name
+     * after "not … two words", so "not following the dress code" reads as no policy; and "dress code" without a policy
+     * frame is not counted) finds no section in these words, so none is written, rather than the old one. ca-policy.ts
+     * is not this change's to edit. "…breaking the dress code policy" (below) holds.
+     */
+    fixStatus: { open: "the policy reader reads \"not following the dress code\" as no policy named (ca-policy.ts NEGATED_BEFORE), so no section is found" },
+    run: dressAfterLate(DRESS_SAID, DRESS, "dress code"),
+  },
+  {
+    id: "nov10-made-about-policy-line-dress-code-named",
+    title: "the same draft, \"make it about breaking the dress code policy\" (the policy named): the Attendance line is replaced by the Dress Code reference, p.15",
+    report: `${REPORT} (the mechanism, where the reader finds the section)`,
+    status: { open: "the undated made-about goes to the old path, whose revision keeps the old account's Attendance line" },
+    fixFlags: OLD_PATH_FIX,
+    run: dressAfterLate(
+      "make it about breaking the dress code policy",
+      "Observed:\nOttoline Ormsworth broke the dress code policy on 10/14/26.\n\nExpectation:\nOttoline is expected to follow the dress code on every shift.",
+      "dress code",
+    ),
+  },
   ...(["dropped", "end", "period", "middle"] as const).map(
     (kept): ReplayCase => ({
       id: kept === "period" || kept === "middle" ? `nov10-made-about-policy-line-chained-${kept}` : `nov10-made-about-policy-line-${kept}`,
