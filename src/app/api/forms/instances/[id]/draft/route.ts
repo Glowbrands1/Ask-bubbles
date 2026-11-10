@@ -194,6 +194,7 @@ import {
   secondRequestOwnAccountEnabled,
   proposalMakeItAboutEnabled,
   proposalPolicySetAsideEnabled,
+  sameRequestOtherPersonEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { NOTHING_SET_ASIDE, policiesSetAside, setAsideAnything, valuesWithPolicySetAside, withoutPolicyTakeOff } from "@/lib/forms/policy-set-aside";
 import { notesMadeAbout } from "@/lib/ai/make-it-about";
@@ -394,7 +395,17 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
     const body = ((await request.json().catch(() => null)) ?? {}) as DraftBody;
     // CREATE_COMMAND_POINTS_TO_CARD_ENABLED / CARD_COMPLAINT_NOT_ACCOUNT_ENABLED: "create it" or "this proposal is out of
     // date" is no account (`ai/card-meta-turn.ts`).
-    const asTyped = (await import("@/lib/ai/card-meta-turn")).withoutCardMetaTurns(String(body.notes ?? "").trim().slice(0, 4000));
+    const sent = String(body.notes ?? "").trim().slice(0, 4000);
+    // SAME_REQUEST_OTHER_PERSON_ENABLED: "the same thing for <B>" is drafted from the earlier request, read with <B>'s name.
+    const typed = sameRequestOtherPersonEnabled()
+      ? (await import("@/lib/forms/same-request-other-person")).notesForOtherPerson({
+          notes: sent,
+          employeeName: loaded.instance.employeeName,
+          templateKey: loaded.instance.templateKey,
+          roster: await (await import("@/lib/forms/employee-roster")).loadScopedRoster(actor.scope).catch(() => []),
+        })
+      : sent;
+    const asTyped = (await import("@/lib/ai/card-meta-turn")).withoutCardMetaTurns(typed);
     // TYPO_READING_ROUTES_ENABLED: the readers below see "coahed", "notcie", "amont" as the words they can only be.
     const read = typoReadingRoutesEnabled() ? typoReadingText(asTyped, await protectedNameWords()) : asTyped;
     // PROPOSAL_MAKE_IT_ABOUT_ENABLED: "make it about showing up late …" makes "Showing up late." the account from that turn on (`ai/make-it-about.ts`).
