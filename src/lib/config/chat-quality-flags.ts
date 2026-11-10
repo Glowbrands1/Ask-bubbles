@@ -1307,6 +1307,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 4: QA's live Bubbles round 13 (9 Nov 2026; default off).
   "MADE_ABOUT_TOPIC_EVIDENCE_ENABLED",
   "FORM_DATE_SAID_ALONE_ENABLED",
+  // coding 5: ADD_THAT_IS_ACCOUNT (QA's live test, 10 Nov 2026; default off).
+  "ADD_THAT_IS_ACCOUNT_ENABLED",
 ] as const;
 
 /**
@@ -2877,6 +2879,16 @@ export function exitFormDateFromTerminationEnabled(): boolean {
  */
 export function policyTopicIntoFieldEnabled(): boolean {
   return envFlag("POLICY_TOPIC_INTO_FIELD_ENABLED");
+}
+
+/**
+ * ADD_THAT_IS_ACCOUNT_ENABLED (QA's live test on a saved Corrective Action draft, 10 Nov 2026; coding 5; same flag in
+ * both apps; default off). "add that she was reminded of the policy" was read as a policy to add ("I couldn't find a
+ * section called …") and nothing reached the Observation. On: an add that introduces a clause ("add that she …", "note
+ * that he was told …") is the account, never a policy change (`forms/policy-change.ts`). Off, as before.
+ */
+export function addThatIsAccountEnabled(): boolean {
+  return envFlag("ADD_THAT_IS_ACCOUNT_ENABLED");
 }
 
 // --- end coding 5 flags ---
