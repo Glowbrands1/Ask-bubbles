@@ -87,7 +87,7 @@ import { streamWhenSlow } from "@/lib/api/streamed-response";
 import { finalReplyWithoutMarkers } from "@/lib/ai/source-note";
 import { LONG_MESSAGE_LIMIT } from "@/lib/chat/message-limit";
 import { isClientConversationId } from "@/lib/chat/client-ids";
-import { hasCard, noCardNoDraftClaim, type NoCardClaimContext } from "@/lib/ai/no-card-draft-claim";
+import { hasDraftCard, noCardNoDraftClaim, type NoCardClaimContext } from "@/lib/ai/no-card-draft-claim";
 import type { AskRequest, AskResponse, OpenFormSummary } from "@/lib/ai/types";
 import type { AnswerMode, ChatMessage } from "@/types";
 
@@ -1103,7 +1103,7 @@ async function noCardClaimChecked(
   context: NoCardClaimContext,
   openFormsOnScreen: () => Promise<OpenFormSummary[]>,
 ): Promise<AskResponse> {
-  if (!noCardNoDraftClaimEnabled() || hasCard(answer)) return answer;
+  if (!noCardNoDraftClaimEnabled() || hasDraftCard(answer)) return answer;
   return noCardNoDraftClaim(answer, { ...context, openForms: await openFormsOnScreen() });
 }
 

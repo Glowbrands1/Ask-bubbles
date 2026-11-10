@@ -57,6 +57,11 @@ export interface NoCardClaimContext {
  * Any card this turn puts on screen. `formProposals` (several cards from one
  * message) is read where the response carries it.
  */
+/** A card that is, or opens, a draft: everything `hasCard` counts but an "I can prepare:" choice. */
+export function hasDraftCard(response: AskResponse): boolean {
+  return hasCard({ ...response, formSelection: undefined });
+}
+
 export function hasCard(response: AskResponse): boolean {
   const several = (response as { formProposals?: readonly unknown[] }).formProposals;
   return Boolean(
@@ -449,7 +454,13 @@ export function noCardNoDraftClaim(
   response: AskResponse,
   context: NoCardClaimContext,
 ): AskResponse {
-  if (hasCard(response)) return response;
-  const content = withoutPhantomDraftClaim(response.content, context);
+  if (hasDraftCard(response)) return response;
+  /*
+   * An "I can prepare:" choice (`formSelection`) is no draft (rebuilt on main, 10 Nov 2026: main's answers now carry
+   * one, and QA's B22 claim came back beside it unchanged). A claim that a draft is open or created, or "press
+   * Finalize", is still rewritten; "press Create" is kept, as for a pending proposal.
+   */
+  const choice = response.formSelection ? { ...context, proposalPending: true } : context;
+  const content = withoutPhantomDraftClaim(response.content, choice);
   return content === response.content ? response : { ...response, content };
 }

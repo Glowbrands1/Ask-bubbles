@@ -175,7 +175,8 @@ describe("noCardNoDraftClaim", () => {
     for (const card of [
       { formProposal: { templateKey: "dpoa" } },
       { formProposals: [{ templateKey: "dpoa" }] },
-      { formSelection: { options: [] } },
+      // Changed on purpose (10 Nov 2026, rebuilt on main): an "I can prepare:" choice is no draft, so a reply carrying
+      // only one is checked (QA B22's claim came back beside one unchanged). See the test below.
       { formUpdate: { instanceId: "i-1", updated: ["observation"] } },
       {
         formOpened: {
@@ -193,6 +194,16 @@ describe("noCardNoDraftClaim", () => {
         noCardNoDraftClaim(response, { question: QUESTION, openForm: OPEN }),
       ).toBe(response);
     }
+  });
+
+  it("an \"I can prepare:\" choice is no draft: the claim and its Finalize line are rewritten, Create is kept", () => {
+    const out = noCardNoDraftClaim(
+      reply("A new Corrective Action Form draft is open for Test Employee Two. Press Finalize on the card.", { formSelection: { options: [] } } as unknown as Partial<AskResponse>),
+      { question: QUESTION, openForm: OPEN },
+    );
+    expect(out.content).not.toMatch(/draft is open for test employee two|press finalize/i);
+    const create = noCardNoDraftClaim(reply("Press Create on the card below.", { formSelection: { options: [] } } as unknown as Partial<AskResponse>), { question: QUESTION, openForm: OPEN });
+    expect(create.content).toMatch(/press create/i);
   });
 
   it("returns the same object when nothing is claimed", () => {
