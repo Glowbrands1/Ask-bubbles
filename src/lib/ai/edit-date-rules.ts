@@ -215,6 +215,8 @@ export function remapObservation(input: {
   readonly users: readonly string[];
   readonly current: string | null;
   readonly reread: (said: string) => string | null;
+  /** PROPOSAL_POLICY_SET_ASIDE_ENABLED: a sentence the caller knows is an ask too (a policy ask, `forms/policy-set-aside.ts`). */
+  readonly alsoAnAsk?: (sentence: string) => boolean;
 }): string | null {
   let literal: string | null = null;
   const added: string[] = [];
@@ -236,7 +238,7 @@ export function remapObservation(input: {
     }
     const kept: string[] = [];
     for (const sentence of sentencesOf(turn)) {
-      if (readSentenceEdit(sentence) === null) kept.push(sentence);
+      if (readSentenceEdit(sentence) === null && !input.alsoAnAsk?.(sentence)) kept.push(sentence);
       else edits.push(sentence);
     }
     if (kept.length > 0) account.push(kept.join(" "));

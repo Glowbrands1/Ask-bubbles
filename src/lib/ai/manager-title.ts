@@ -1,6 +1,7 @@
 import { managerWordsOnlyEnabled } from "@/lib/config/chat-quality-flags";
 import { extractJobTitle } from "@/lib/forms/proposal";
 
+import { withoutLetterSigner } from "./letter-signer";
 import { titleTextFromQuestion } from "./title-words";
 import type { AskRequest, AskResponse } from "./types";
 
@@ -30,7 +31,8 @@ export function withManagerStatedTitle(response: AskResponse, request: AskReques
     request.question,
   ];
   for (const turn of turns.reverse()) {
-    const stated = extractJobTitle(titleTextFromQuestion(turn));
+    // EXIT_LETTER_SIGNER_NOT_SUBJECT_ENABLED: a letter's "<C>, District Manager" sign-off is the signer's title, not one stated (`ai/letter-signer.ts`).
+    const stated = extractJobTitle(titleTextFromQuestion(withoutLetterSigner({ question: turn })));
     if (!stated) continue;
     if (stated === card.employeeRole) return response;
     return { ...response, formProposal: { ...card, employeeRole: stated, employeeRoleSource: "manager" } };

@@ -1,7 +1,9 @@
-import { antiLoopEnabled, payrollDeductAmountFieldEnabled } from "@/lib/config/chat-quality-flags";
+import { antiLoopEnabled, payrollDeductAmountFieldEnabled, secondRequestOwnAccountEnabled } from "@/lib/config/chat-quality-flags";
+import { startsFormRequest, startsNewRequest } from "@/lib/forms/current-request";
 import { describesIncident } from "@/lib/forms/incident-reading";
 import { rosterLocationName } from "@/lib/forms/location-mention";
 import { statedPayrollDeductAmount } from "@/lib/forms/payroll-deduct-amount";
+import { editDistance } from "@/lib/forms/typo-match";
 import type { ChatFormProposal } from "@/types";
 
 import type { GroundedCandidate } from "./roster-grounding";
@@ -116,7 +118,65 @@ export function stateSentences(state: ConversationFormState): string[] {
   return lines;
 }
 
-export function prependFormState(question: string, state: ConversationFormState | null): string {
+/**
+ * The saved state as this turn may use it: without the earlier request's policy and incident when this turn starts a
+ * new one. Both are written in front of the turn ("Policy reference: … Incident: ….") and read as the manager's own
+ * words (the sibling app's audit, QA, 7 Nov 2026).
+ *
+ * Only when this turn starts a request of its own after earlier ones (`earlier`, the manager's turns before this one;
+ * `forms/current-request.ts` startsNewRequest; QA's Sunny round-3 gate, 7 Nov 2026, ported from the sibling app): the
+ * first request's own state ("CA for <name>, she was rude to <name> …" → Standards of Conduct) is this request's, and
+ * dropping it left single-request cards with no Policy line. No earlier turns given: kept, as before the flag.
+ */
+export function stateForTurn(
+  state: ConversationFormState | null,
+  question: string,
+  earlier: readonly string[] = [],
+): ConversationFormState | null {
+  if (!state || !secondRequestOwnAccountEnabled() || (!state.policyHeading && !state.incidentType) || !startsFormRequest(question)) return state;
+  if (!startsNewRequest(earlier, question)) return state;
+  // Ported from the sibling app (its sf-s38, QA's round-6 gate, 8 Nov 2026): the same request sent again is no new
+  // request; its policy stays.
+  if (earlier.some((turn) => sameRequestAgain(turn, question))) return state;
+  return { ...state, policyHeading: null, policyPage: null, incidentType: null };
+}
+
+/*
+ * THE SAME REQUEST SENT AGAIN (SECOND_REQUEST_OWN_ACCOUNT_ENABLED; ported from the sibling app: QA's round-6 gate there,
+ * 8 Nov 2026, its sf-s38). A manager's request sent twice was read as a second request, so the second card lost its
+ * Policy line and its Action Plan fell back to "the applicable company policy". A turn is the
+ * same request as an earlier one when their words are the same, read without case, punctuation or extra spaces and
+ * without a closing "please" / "thanks" — or when one word differs only as a typo fix: at most a third of the longer
+ * spelling's letters, words of 4 letters or more ("properly" for a misspelling). Another day ("saturday" → "sunday"),
+ * another person or anything added or taken away is a request of its own, as before.
+ */
+const COURTESY = new Set(["please", "pls", "plz", "thanks", "thank", "you", "thx"]);
+
+function requestWords(text: string): string[] {
+  const words = text
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s'’-]+/gu, " ")
+    .split(/\s+/)
+    .filter(Boolean);
+  while (words.length > 0 && COURTESY.has(words.at(-1)!)) words.pop();
+  while (words.length > 0 && COURTESY.has(words[0]!)) words.shift();
+  return words;
+}
+
+function sameRequestAgain(earlier: string, turn: string): boolean {
+  const a = requestWords(earlier);
+  const b = requestWords(turn);
+  if (a.length === 0 || a.length !== b.length) return false;
+  const differing = a.flatMap((word, index) => (word === b[index] ? [] : [index]));
+  if (differing.length === 0) return true;
+  if (differing.length > 1) return false;
+  const [x, y] = [a[differing[0]!]!, b[differing[0]!]!];
+  const longer = Math.max(x.length, y.length);
+  return Math.min(x.length, y.length) >= 4 && editDistance(x, y) <= Math.floor(longer / 3);
+}
+
+export function prependFormState(question: string, given: ConversationFormState | null, earlier: readonly string[] = []): string {
+  const state = stateForTurn(given, question, earlier);
   if (!state) return question;
   const lines = stateSentences(state).filter((line) => !question.includes(line));
   if (lines.length === 0) return question;

@@ -1,3 +1,6 @@
+import { fillsAField } from "@/lib/ai/question-not-form";
+import { exitLineAnswersAddUpEnabled } from "@/lib/config/chat-quality-flags";
+
 import { extractFormDate, listFormDates } from "./form-date-answer";
 import { JOB_TITLES, extractJobTitle } from "./proposal";
 import { SALON_PHRASE, resolveSalonText, tidyWords } from "./salon-text";
@@ -229,6 +232,14 @@ const QUESTION_OPENER =
 /** True when a sentence asks rather than states. Questions are never read as facts. */
 export function isQuestion(text: string): boolean {
   const trimmed = text.trim();
+  /*
+   * EXIT_LINE_ANSWERS_ADD_UP_ENABLED (QA, the Bubbles round-7 live test, 9 Nov 2026; conv_mw96du1226ye0it): an exit
+   * form answered one field per turn — "how employee resigned - told management", then "reason for resignation -
+   * personal family issues" — lost How Employee Resigned on the next turn: as an earlier turn, "how …" was read as a
+   * question and left out of the form's turns. A turn whose first line fills an exit field by its own label
+   * (`ai/question-not-form.ts` fillsAField, FIELD_LABEL_NOT_A_QUESTION) states it, wherever it sits in the chat.
+   */
+  if (exitLineAnswersAddUpEnabled() && fillsAField(trimmed.split("\n")[0] ?? "")) return false;
   return trimmed.endsWith("?") || QUESTION_OPENER.test(trimmed);
 }
 
