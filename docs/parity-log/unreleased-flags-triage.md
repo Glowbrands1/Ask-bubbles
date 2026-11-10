@@ -62,7 +62,7 @@ section supersedes those rows' "check Vercel" notes in the table below.
 |---|---|---|
 | CHAT_STYLE_RULES_ENABLED | R | System-prompt rules for names, payroll and a chosen corrective action; company-neutral. Gate: replay pack byte-compare plus the eval. |
 | DRAFT_MERGE_ENABLED / DRAFT_EDIT_MERGE_ENABLED | R | An empty draft edit never blanks Offense or the Action Plan. One switch, two names (`draftEditMergeEnabled` reads both): release under DRAFT_MERGE, the sibling's name, and retire DRAFT_EDIT_MERGE. |
-| FEWSHOT_EXAMPLES_ENABLED | R | Similar 5-star exchanges in the system prompt; reads this app's own `chat_traces` (migration present). Gate: check there are rated exchanges to draw from, then the eval. |
+| FEWSHOT_EXAMPLES_ENABLED | R after join fix | Similar 5-star exchanges in the system prompt. QA, 10 Nov 2026: release only with FEWSHOT_TURN_JOIN_ENABLED (#751): this app's loader joined ratings to traces by an id that never matches, so it would add nothing (below). |
 | FOLLOWUP_NEW_TOPIC_RETRIEVAL_ENABLED | R | A follow-up naming its own documents is searched on them (#147). Builds on QUERY_REWRITE: gate them together. |
 | INTENT_PAYROLL_MANAGER_ONLY_ENABLED | R | Payroll answer read only from the manager's turns (production bug, 24 Oct: "verbal, no payroll" saved $25, Yes). Gate: replay pack. |
 | LONG_CONTEXT_ENABLED | R | Longer history window plus a stored summary of older turns (`chat_context_summaries` migration present). Gate: replay pack plus a long-chat latency check. |
@@ -79,8 +79,10 @@ section supersedes those rows' "check Vercel" notes in the table below.
   `assistant_feedback.client_message_id` to `chat_traces.message_id`, and 0 of
   14 match (214 of 5,424 traces have no `message_id` at all). The likely cause is
   a key mismatch (the rated answer's id vs the trace's), so with the flag on the
-  prompt would be unchanged. Fix the join before releasing; the sibling app,
-  where the flag is on, should be checked for the same no-op.
+  prompt would be unchanged. **Code, not data:** all 9 five-star ratings join
+  their answer through `activity_event_id` = `chat_messages.turn_id`, the join the
+  sibling app's loader uses (QA checked its production: it works there). Fixed
+  behind FEWSHOT_TURN_JOIN_ENABLED (#751); release FEWSHOT with it.
 - **LONG_CONTEXT: latency cost close to zero at today's chat lengths.** It adds
   a summary call (Haiku, capped at 3.5 s, stored and reused) only when the
   history passes 40 messages or 6,000 tokens. Last 14 days: 981 turns, the
