@@ -87,10 +87,13 @@
     },
     {
       "id": "b0",
-      "pass": true,
-      "misses": [],
+      "pass": false,
+      "misses": [
+        "employee",
+        "reply has \"Coaching Form\""
+      ],
       "card": {
-        "employee": "Wren Tazelaar",
+        "employee": "wren tazelaal",
         "salon": "loc-264",
         "date": null,
         "status": "ready"
