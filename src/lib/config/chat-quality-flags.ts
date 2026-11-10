@@ -1333,9 +1333,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ADD_NOT_REPEATED_ENABLED",
   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
   "CHAT_STAGE_TIMINGS_ENABLED",
-}
-
-/**
+  // coding 6: NO_CARD_NO_DRAFT_CLAIM (QA B22-2, #164 rebuilt on main, 10 Nov 2026; default off).
   "NO_CARD_NO_DRAFT_CLAIM_ENABLED",
 ] as const;
 
