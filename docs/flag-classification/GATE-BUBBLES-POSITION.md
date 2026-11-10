@@ -1,4 +1,4 @@
-# Gate-Bubbles position at PAUSE (QA, 10 Nov 2026 ~20:48Z; resume 05:55 PHT)
+# Gate-Bubbles position (resumed 21:53Z; was paused (QA, 10 Nov 2026 ~20:48Z; resume 05:55 PHT)
 
 Session: session_01VVEkRRzGew9sHHGbAhxGaQ. Reports to QA session_01VVEkRTbAAAt573oWSKM3jW.
 
@@ -6,7 +6,9 @@ Session: session_01VVEkRRzGew9sHHGbAhxGaQ. Reports to QA session_01VVEkRTbAAAt57
 - R17B (#685 #703 #706 #707): GO for all four flags (docs/flag-classification/R17B.md on this branch).
 - RELEASE HEAD ALREADY ON GITHUB: claude/gate-bubbles-r17b = fab769b, pushed 18:35Z by the OLD Gate-Bubbles session (old account) after this session's fetch. Same 4 flags, same 7 FIXED_IN_PRODUCTION cases, on a529c29e; differs from mine only in the _about note.
 - My equivalent head 1e58ef1 (main f53c409a + the gated preview + the same flip) is LOCAL ONLY: this session gets 403 pushing that branch, and fab769b makes it redundant. Its full npm test is green (857 files passed / 6 skipped; 18264 passed, 85 expected fail, 62 skipped), i.e. fab769b plus a merge of main f53c409a (docs + #675's replay case) passes.
-- Verdict NOT yet sent to QA. On RESUME, first action: send QA "R17B GO; release head fab769b (old session) on a529c29e; merging main f53c409a is clean and the full suite is green on that tree (my 1e58ef1)".
+- R17B verdict SENT to QA 21:55Z.
+- NOW: 16c re-gate (gate name R16D) running on d7487833 in /home/user/gate/r16c, with production-flags.json + production-fixes.ts reverted to ec9f740 (uncommitted) so OFF = production; ON = + FORM_NAME_FROM_ROSTER, NEAR_MISS_QUESTION_RULES, NEAR_MISS_DETAILS_ACCEPT, FORM_NAME_OFF_ROSTER_ASK; --with prodenv.csv.
+- (old) On RESUME, first action: send QA "R17B GO; release head fab769b (old session) on a529c29e; merging main f53c409a is clean and the full suite is green on that tree (my 1e58ef1)".
 
 ## Queue (next first)
 1. 16c re-gate on d7487833
@@ -23,7 +25,8 @@ Session: session_01VVEkRRzGew9sHHGbAhxGaQ. Reports to QA session_01VVEkRTbAAAt57
     #686, #687+#728 (2b6eceb6+73ff31ea, + TEMPLATE_OUTLINE_FIELDS), #688+#694+#724, #689, #691, #692, #694;
     #696+#727 (12db873c+680a7798); #697+#647 (+POLICY_LINE port); #698, #500, #480, #702, #464, #704, #708;
     #690 @ 47c7ef9c (Observation OFF vs ON); A7, A8, A9
-12. End: #732 BC_NOT_A_NAME, #733 (HOLD for Coding-2 wiring), then #731 REVISION_ARCHIVED_NOT_OPEN (low)
+12. #734 PRIOR_ACTIONS_NO_COMMA alone after #729; #735 STORE_ALIAS HOLD (Coding-2 wiring)
+13. End: #732 BC_NOT_A_NAME, #733 (HOLD for Coding-2 wiring), then #731 REVISION_ARCHIVED_NOT_OPEN (low)
 
 Replay-case mapping and other notes:
     #690 fixed head 47c7ef9c (Coding-4), same queue slot; compare saved Observation OFF vs ON
