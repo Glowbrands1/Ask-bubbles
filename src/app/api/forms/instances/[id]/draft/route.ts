@@ -194,6 +194,7 @@ import {
   secondRequestOwnAccountEnabled,
   proposalMakeItAboutEnabled,
   proposalPolicySetAsideEnabled,
+  incidentDateOnceEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { NOTHING_SET_ASIDE, policiesSetAside, setAsideAnything, valuesWithPolicySetAside, withoutPolicyTakeOff } from "@/lib/forms/policy-set-aside";
 import { notesMadeAbout } from "@/lib/ai/make-it-about";
@@ -2492,7 +2493,15 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
         : { values: draftValues, provenance: draftProvenance };
 
     // PROPOSAL_POLICY_SET_ASIDE_ENABLED: the policy fields and "Policy reference" lines leave a policy taken off out.
-    const plannedValues = setAsideAnything(setAside) ? valuesWithPolicySetAside(planned.values, setAside) : planned.values;
+    const setAsideValues = setAsideAnything(setAside) ? valuesWithPolicySetAside(planned.values, setAside) : planned.values;
+    // INCIDENT_DATE_ONCE_ENABLED (port from the sibling app): the form's Date is not said again in the Observation (`lib/forms/incident-date-once.ts`).
+    const plannedValues = incidentDateOnceEnabled()
+      ? ((await import("@/lib/forms/incident-date-once")).withIncidentDateOnce(
+          setAsideValues,
+          String(setAsideValues.form_date ?? (loaded.values ?? []).find((row) => row.fieldKey === "form_date")?.value ?? ""),
+          businessToday(),
+        ) as typeof setAsideValues)
+      : setAsideValues;
     const merged = draftEditMergeEnabled()
       ? retainFilledFields({
           question: notes,
