@@ -31,7 +31,8 @@ export const NOV9_OFF_ROSTER_ASK_CASES: ReplayCase[] = [
     id: "nov9-off-roster-ask-before-card",
     title: "QA's \"create a coaching form for <full name not on the roster>\" (a store manager): asked about before any card",
     report: REPORT,
-    status: { open: "a ready Coaching Form card for **Wrenna Pollard**, no question" },
+    // Changed on purpose (9 Nov 2026): OFF_ROSTER_ASK_BEFORE_CARD is ON in production (Pau's "on" via QA); it holds with production's flags.
+    status: "fixed",
     fixFlags: FIX,
     async run(t) {
       const thread = start(t);
@@ -44,7 +45,8 @@ export const NOV9_OFF_ROSTER_ASK_CASES: ReplayCase[] = [
     id: "nov9-off-roster-ask-then-use",
     title: "after the question, \"use Wrenna Pollard\" (OFF_ROSTER_CONFIRM's offer) makes the card, marked not from Woven",
     report: REPORT,
-    status: { open: "no question: the first card is already for **Wrenna Pollard**" },
+    // Changed on purpose (9 Nov 2026): OFF_ROSTER_ASK_BEFORE_CARD is ON in production (Pau's "on" via QA); it holds with production's flags.
+    status: "fixed",
     fixFlags: FIX,
     async run(t) {
       const thread = start(t);

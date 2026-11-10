@@ -246,4 +246,44 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov9-work-area-absence-coaching-card": "WORK_AREA_ABSENCE_CITES_CONDUCT",
   // Changed on purpose (9 Nov 2026): fixed in production by WORK_AREA_ABSENCE_CITES_CONDUCT, QA round 7
   "nov9-work-area-absence-coaching-made-about": "WORK_AREA_ABSENCE_CITES_CONDUCT",
+  // Changed on purpose (9 Nov 2026): fixed in production by EXIT_LINE_ANSWERS_ADD_UP, QA round 8
+  "nov9-exit-lines-keep-method": "EXIT_LINE_ANSWERS_ADD_UP",
+  // Changed on purpose (9 Nov 2026): fixed in production by EXIT_LETTER_ADDRESSEE, QA round 8
+  "nov9-letter-title-date-off-roster": "EXIT_LETTER_ADDRESSEE",
+  // Changed on purpose (9 Nov 2026): fixed in production by EXIT_LETTER_ADDRESSEE, QA round 8
+  "nov9-letter-title-date-on-roster": "EXIT_LETTER_ADDRESSEE",
+  // Changed on purpose (9 Nov 2026): fixed in production by MISSED_SHIFT_CITES_ATTENDANCE, QA round 8
+  "nov9-missed-shift-cites-attendance-after-first-name": "MISSED_SHIFT_CITES_ATTENDANCE",
+  // Changed on purpose (9 Nov 2026): fixed in production by MISSED_SHIFT_CITES_ATTENDANCE, QA round 8
+  "nov9-missed-shift-cites-attendance-single": "MISSED_SHIFT_CITES_ATTENDANCE",
+  // Changed on purpose (9 Nov 2026): fixed in production by POSSESSIVE_PLACE_ACCOUNT, QA round 8
+  "nov9-possessive-place-what-happened": "POSSESSIVE_PLACE_ACCOUNT",
+  // Changed on purpose (9 Nov 2026): fixed in production by MADE_ABOUT_ALL_OR_NOTHING, QA round 9
+  "nov9-made-about-all-or-nothing-no-reading": "MADE_ABOUT_ALL_OR_NOTHING",
+  // Changed on purpose (9 Nov 2026): fixed in production by MADE_ABOUT_ALL_OR_NOTHING, QA round 9
+  "nov9-made-about-all-or-nothing-other-form": "MADE_ABOUT_ALL_OR_NOTHING",
+  // Changed on purpose (9 Nov 2026): fixed in production by LETTER_GREETING_NOT_NAME, QA round 11
+  "nov9-letter-greeting-dear-off-roster": "LETTER_GREETING_NOT_NAME",
+  // Changed on purpose (9 Nov 2026): fixed in production by LETTER_GREETING_NOT_NAME, QA round 11
+  "nov9-letter-greeting-dear-on-roster": "LETTER_GREETING_NOT_NAME",
+  // Changed on purpose (9 Nov 2026): fixed in production by MADE_ABOUT_READER_ACCOUNT, QA round 11
+  "nov9-made-about-reader-account-added": "MADE_ABOUT_READER_ACCOUNT",
+  // Changed on purpose (9 Nov 2026): fixed in production by MADE_ABOUT_READER_ACCOUNT, QA round 11
+  "nov9-made-about-reader-account-refused": "MADE_ABOUT_READER_ACCOUNT",
+  // Changed on purpose (9 Nov 2026): fixed in production by MADE_ABOUT_READER_ACCOUNT, QA round 11
+  "nov9-made-about-reader-account-replaced": "MADE_ABOUT_READER_ACCOUNT",
+  // Changed on purpose (9 Nov 2026): fixed in production by MADE_ABOUT_READER_ACCOUNT, QA round 11
+  "nov9-made-about-reader-account-replaced-live": "MADE_ABOUT_READER_ACCOUNT",
+  // Changed on purpose (9 Nov 2026): fixed in production by EXIT_FORM_DATE_FROM_TERMINATION, QA round 12
+  "nov9-exit-form-date-termination": "EXIT_FORM_DATE_FROM_TERMINATION",
+  // Changed on purpose (10 Nov 2026): fixed in production by POLICY_TOPIC_INTO_FIELD, QA round 14
+  "nov10-policy-topic-in-field-finding-a-cover": "POLICY_TOPIC_INTO_FIELD",
+  // Changed on purpose (10 Nov 2026): fixed in production by POLICY_TOPIC_INTO_FIELD, QA round 14
+  "nov10-policy-topic-in-field-no-section": "POLICY_TOPIC_INTO_FIELD",
+  // Changed on purpose (10 Nov 2026): fixed in production by MADE_ABOUT_REWRITE_FINISHES, QA round 13
+  "nov9-made-about-rewrite-finishes-details-only": "MADE_ABOUT_REWRITE_FINISHES",
+  // Changed on purpose (10 Nov 2026): fixed in production by MADE_ABOUT_REWRITE_FINISHES, QA round 13
+  "nov9-made-about-rewrite-finishes-error-after-rewrite": "MADE_ABOUT_REWRITE_FINISHES",
+  // Changed on purpose (10 Nov 2026): fixed in production by MADE_ABOUT_REWRITE_FINISHES, QA round 13
+  "nov9-made-about-rewrite-finishes-reader-refused": "MADE_ABOUT_REWRITE_FINISHES",
 };

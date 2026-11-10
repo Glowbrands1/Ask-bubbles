@@ -42,3 +42,26 @@ describe("withPossessivePlaceNotPerson", () => {
     expect(answer.content).toMatch(/^Who is this \*\*Corrective Action Form\*\* for\?/);
   });
 });
+
+describe("POSSESSIVE_PLACE_ACCOUNT_ENABLED: the ask-who card's What happened (QA, the Bubbles round-7 live test, 9 Nov 2026)", () => {
+  const placeCard = (issue: string | null) => ({
+    content: "I'll draft a **Corrective Action Form** for **Lee**.",
+    formProposal: { employeeName: "Lee", issue, templateName: "Corrective Action Form", status: "ready", supportsInlineDraft: true },
+  });
+
+  it("off: What happened stays the place name (the bug)", () => {
+    expect(withPossessivePlaceNotPerson(placeCard("Lee's Summit Plaza"), [REPORTED]).formProposal?.issue).toBe("Lee's Summit Plaza");
+  });
+
+  it("on: the words after the place", () => {
+    vi.stubEnv("POSSESSIVE_PLACE_ACCOUNT_ENABLED", "true");
+    expect(withPossessivePlaceNotPerson(placeCard("Lee's Summit Plaza"), [REPORTED]).formProposal?.issue).toBe("she was late on 10-20-26");
+  });
+
+  it("on: no account after the place is blank; an Issue that is not the place is kept", () => {
+    vi.stubEnv("POSSESSIVE_PLACE_ACCOUNT_ENABLED", "true");
+    expect(withPossessivePlaceNotPerson(placeCard("Lee's Summit Plaza"), ["create a CA for Lee's Summit Plaza"]).formProposal?.issue).toBeNull();
+    expect(withPossessivePlaceNotPerson(placeCard("she was late on 10-20-26"), [REPORTED]).formProposal?.issue).toBe("she was late on 10-20-26");
+  });
+});
+

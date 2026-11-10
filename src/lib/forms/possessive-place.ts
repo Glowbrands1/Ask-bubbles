@@ -1,4 +1,4 @@
-import { possessivePlaceNotPersonEnabled } from "@/lib/config/chat-quality-flags";
+import { possessivePlaceAccountEnabled, possessivePlaceNotPersonEnabled } from "@/lib/config/chat-quality-flags";
 import { COMPANY_LOCATIONS } from "@/lib/locations";
 
 /*
@@ -46,6 +46,7 @@ export function onlyAsPossessivePlace(name: string, said: string): boolean {
 
 interface CardLike {
   employeeName: string | null;
+  issue?: string | null;
   employeeRole?: string | null;
   templateName?: string;
   subject?: string;
@@ -65,6 +66,31 @@ export function withPossessivePlaceNotPerson<T extends { content: string; formPr
   return {
     ...answer,
     content: `Who is this **${form}** for? "${card.employeeName}'s" is part of a place's name, not a person — tell me the employee's full name, and I'll fill in what you've already described.`,
-    formProposal: { ...card, employeeName: null, employeeRole: null, status: "needs_employee", supportsInlineDraft: false },
+    formProposal: {
+      ...card,
+      employeeName: null,
+      employeeRole: null,
+      status: "needs_employee",
+      supportsInlineDraft: false,
+      ...(possessivePlaceAccountEnabled() ? { issue: accountAfterPlace(card.employeeName, card.issue ?? null, managerTurns) } : {}),
+    },
   };
+}
+
+/*
+ * POSSESSIVE_PLACE_ACCOUNT_ENABLED (QA, the Bubbles round-7 live test, 9 Nov 2026): on the ask-who card for "create a CA
+ * for Lee's Summit Plaza, she was late on 10-20-26", "What happened" read "Lee's Summit Plaza" — the place, taken for
+ * the request's person and then for its account. With the flag, an Issue that is only the place (or starts with it)
+ * is the words after it ("she was late on 10-20-26"), or nothing. An Issue that never names the place is kept.
+ */
+function accountAfterPlace(name: string, issue: string | null, managerTurns: readonly string[]): string | null {
+  if (!issue) return issue;
+  const startsWithPlace = new RegExp(String.raw`^\s*${escape(name)}['’]s\b`, "iu");
+  if (!startsWithPlace.test(issue)) return issue;
+  const placeThenAccount = new RegExp(String.raw`(?<![\p{L}])${escape(name)}['’]s\s+[^,.;\n]*?[,;]\s*([^\n]+?)\s*[.!]?\s*$`, "iu");
+  for (const turn of [...managerTurns].reverse()) {
+    const account = placeThenAccount.exec(turn)?.[1]?.trim();
+    if (account && account.split(/\s+/).length >= 3) return account;
+  }
+  return null;
 }

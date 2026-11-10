@@ -1,6 +1,7 @@
 import { expect, vi } from "vitest";
 
 import { STAFF, WEST_DODGE, type DirectoryRow, type ReplayAnswer, type ReplayCase, type ReplayContext } from "./cases";
+import { answerOffRosterAsk } from "./off-roster-answer";
 
 /**
  * ============================================================================
@@ -89,7 +90,10 @@ export const NOV5_REQUEST_SLOT_CASES: ReplayCase[] = [
     // Holds with its fix flags since flip 3 (6 Nov 2026): the fixStatus is removed, as in #515; it does not depend on FORM_NAME_FROM_ROSTER being on in production.
     async run(t) {
       const thread = start(t);
-      const reply = await thread.say(say("Remy Fenn"));
+      // Changed on purpose (9 Nov 2026, the off-roster switch-on: OFF_ROSTER_ASK_BEFORE_CARD, Pau's "on" via QA): the name is
+      // on no roster here, so a store manager is asked about it first; "use <name>" makes the card, and every assertion
+      // below holds on that card turn (`off-roster-answer.ts`).
+      const reply = await answerOffRosterAsk(thread, await thread.say(say("Remy Fenn")), "Remy Fenn");
       expect(reply.content, `a metric is named or offered as a person:\n${reply.content}`).not.toMatch(METRIC_AS_PERSON);
       expect(reply.content, `"Which of them" was asked:\n${reply.content}`).not.toMatch(/which of them/i);
       expect(reply.content, `Remy Fenn became Remy Calder:\n${reply.content}`).not.toMatch(/Remy Calder/);
@@ -110,7 +114,8 @@ export const NOV5_REQUEST_SLOT_CASES: ReplayCase[] = [
     // Holds with its fix flags since flip 3 (6 Nov 2026): the fixStatus is removed, as in #515; it does not depend on FORM_NAME_FROM_ROSTER being on in production.
     async run(t) {
       const thread = start(t);
-      const reply = await thread.say(say("Remy Fenn"), { employeeName: "Remy Fenn" });
+      // Changed on purpose (9 Nov 2026, the off-roster switch-on): asked about first; "use <name>" makes the card (`off-roster-answer.ts`).
+      const reply = await answerOffRosterAsk(thread, await thread.say(say("Remy Fenn"), { employeeName: "Remy Fenn" }), "Remy Fenn");
       expect(reply.content, `a metric is named or offered as a person:\n${reply.content}`).not.toMatch(METRIC_AS_PERSON);
       expect(reply.content, `"Which of them" was asked:\n${reply.content}`).not.toMatch(/which of them/i);
       expect(reply.content, `Remy Fenn became Remy Calder:\n${reply.content}`).not.toMatch(/Remy Calder/);

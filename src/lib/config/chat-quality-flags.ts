@@ -1286,10 +1286,26 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "OFF_ROSTER_ASK_BEFORE_CARD_ENABLED",
   // coding 4: WORK_AREA_ABSENCE_CITES_CONDUCT (Pau's decision, 9 Nov 2026; default off).
   "WORK_AREA_ABSENCE_CITES_CONDUCT_ENABLED",
+  // Default-off fix flag (ported from the sibling app: QA's live test there, 9 Nov 2026).
+  "EXIT_LETTER_ADDRESSEE_ENABLED",
+  // Default-off fix flag (QA, the Bubbles round-7 live test, 9 Nov 2026).
+  "POSSESSIVE_PLACE_ACCOUNT_ENABLED",
+  "LETTER_GREETING_NOT_NAME_ENABLED",
+  "EXIT_FORM_DATE_FROM_TERMINATION_ENABLED",
+  // Default-off fix flag (QA, the Bubbles round-7 live test, 9 Nov 2026).
+  "MISSED_SHIFT_CITES_ATTENDANCE_ENABLED",
+  // Default-off fix flag (QA, the Bubbles round-7 live test, 9 Nov 2026).
+  "EXIT_LINE_ANSWERS_ADD_UP_ENABLED",
   // coding 4: MADE_ABOUT_ALL_OR_NOTHING (QA's live round-7 test, 9 Nov 2026; default off).
   "MADE_ABOUT_ALL_OR_NOTHING_ENABLED",
   // coding 4: MADE_ABOUT_UNDATED_TOGETHER (QA, 9 Nov 2026; default off).
   "MADE_ABOUT_UNDATED_TOGETHER_ENABLED",
+  // coding 4: MADE_ABOUT_READER_ACCOUNT (QA's live round-9 test, 9 Nov 2026; default off).
+  "MADE_ABOUT_READER_ACCOUNT_ENABLED",
+  // coding 5: POLICY_TOPIC_INTO_FIELD (QA, a manager's 1★ rating, 10 Nov 2026; default off).
+  "POLICY_TOPIC_INTO_FIELD_ENABLED",
+  // coding 4: MADE_ABOUT_REWRITE_FINISHES (the sibling app's live round-13 test, 9 Nov 2026; default off).
+  "MADE_ABOUT_REWRITE_FINISHES_ENABLED",
 ] as const;
 
 /**
@@ -2786,6 +2802,82 @@ export function possessivePlaceNotPersonEnabled(): boolean {
 export function offRosterAskBeforeCardEnabled(): boolean {
   return envFlag("OFF_ROSTER_ASK_BEFORE_CARD_ENABLED");
 }
+
+/**
+ * EXIT_LETTER_ADDRESSEE_ENABLED (ported from the sibling app: QA's live test there, 9 Nov 2026; coding 5; same flag in
+ * both apps; default off; with EXIT_LETTER_SIGNER_NOT_SUBJECT_ENABLED). "I need an exit form with this information." and
+ * a termination letter to <A> signed "Sincerely,\n<C>\nDistrict Manager" gave the exit card the signer's title, and the
+ * first no-show date as the Resignation Date; with <A> off the roster the signer was offered. On: the letter's
+ * salutation names the form's person when no "form for <X>" does, a sign-off on lines of its own is not read
+ * (`ai/letter-signer.ts`), another person's title on the exit read-back is the employee's own or goes
+ * (`ai/title-of-the-employee.ts`), and a stated "terminated, effective <date>" is the Resignation Date. Off, as before.
+ */
+export function exitLetterAddresseeEnabled(): boolean {
+  return envFlag("EXIT_LETTER_ADDRESSEE_ENABLED");
+}
+
+/**
+ * POSSESSIVE_PLACE_ACCOUNT_ENABLED (QA, the Bubbles round-7 live test, 9 Nov 2026; coding 5; same flag in both apps;
+ * default off; with POSSESSIVE_PLACE_NOT_PERSON_ENABLED). The ask-who card for "create a CA for Lee's Summit Plaza, she
+ * was late on 10-20-26" read "What happened: Lee's Summit Plaza". On: that card's Issue is the words after the place
+ * ("she was late on 10-20-26"), or blank (`forms/possessive-place.ts`). Off, as before.
+ */
+export function possessivePlaceAccountEnabled(): boolean {
+  return envFlag("POSSESSIVE_PLACE_ACCOUNT_ENABLED");
+}
+
+/**
+ * MISSED_SHIFT_CITES_ATTENDANCE_ENABLED (QA, the Bubbles round-7 live test, 9 Nov 2026; coding 5; same flag in both
+ * apps; default off). "create a CA for <A>, not showing up to her shifts on 11/7 and 11/8" made a card with no Policy
+ * line. On: an account that names no policy and says a shift was not shown up to, missed, skipped or not worked reads
+ * as Attendance, said on the card as "Attendance — read from this request" (`forms/ca-policy.ts`). Off, as before.
+ */
+export function missedShiftCitesAttendanceEnabled(): boolean {
+  return envFlag("MISSED_SHIFT_CITES_ATTENDANCE_ENABLED");
+}
+
+/**
+ * EXIT_LINE_ANSWERS_ADD_UP_ENABLED (QA, the Bubbles round-7 live test, 9 Nov 2026; coding 5; same flag in both apps;
+ * default off; with FIELD_LABEL_NOT_A_QUESTION_ENABLED). An exit form answered one field per turn lost How Employee
+ * Resigned once a later turn filled another field: the earlier "how employee resigned - …" turn was read as a question
+ * and left out of the form's turns. On: a turn that fills an exit field by its label is never a question
+ * (`forms/employment-change.ts` isQuestion), so the line answers add up. Off, as before.
+ */
+export function exitLineAnswersAddUpEnabled(): boolean {
+  return envFlag("EXIT_LINE_ANSWERS_ADD_UP_ENABLED");
+}
+/**
+ * LETTER_GREETING_NOT_NAME_ENABLED (QA, 9 Nov 2026; coding 5; same flag in both apps; default off). A letter opening
+ * "Dear <A>," gave the exit card the employee "Dear <A>", no Job Title and no store, on the roster or off it. On: a
+ * letter's salutation word (Dear, Hi, Hello, Hey, To, Attn, Good morning, …) before the addressee is not part of the
+ * name; the proposal reads "<A>," (`ai/letter-signer.ts`). Off, as before.
+ */
+export function letterGreetingNotNameEnabled(): boolean {
+  return envFlag("LETTER_GREETING_NOT_NAME_ENABLED");
+}
+
+/**
+ * EXIT_FORM_DATE_FROM_TERMINATION_ENABLED (ported from the sibling app: QA's live round 11 there, 9 Nov 2026; coding 5;
+ * same flag in both apps; default off). A termination letter "… is terminated, effective 11/08/2026 … no-call no-shows
+ * on 11/3, 11/5 and 11/7" gave the exit card the Date November 7 (the last no-show) beside Resignation Date November 8.
+ * On: an exit card whose manager states the termination's effective date is dated that day, in the card and in the
+ * reply's Date line (`forms/exit-form-date.ts`). Off, as before.
+ */
+export function exitFormDateFromTerminationEnabled(): boolean {
+  return envFlag("EXIT_FORM_DATE_FROM_TERMINATION_ENABLED");
+}
+
+/**
+ * POLICY_TOPIC_INTO_FIELD_ENABLED (QA, a manager's 1★ rating, 10 Nov 2026; coding 5; same flag in both apps; default
+ * off). "In details of coaching inlude our woven policy on finding a cover for your shift" on a saved draft wrote a
+ * sentence telling the manager to refer to the policy manual. On: an edit asking for "our policy on <topic>" in a field
+ * writes the manual's section for that topic, quoted with its "Policy reference: …, JBA Policy Manual p.N" line, or
+ * says no section matches and asks; never a pointer to the manual (`forms/policy-topic-field.ts`). Off, as before.
+ */
+export function policyTopicIntoFieldEnabled(): boolean {
+  return envFlag("POLICY_TOPIC_INTO_FIELD_ENABLED");
+}
+
 // --- end coding 5 flags ---
 
 /**
@@ -3967,4 +4059,28 @@ export function madeAboutAllOrNothingEnabled(): boolean {
  */
 export function madeAboutUndatedTogetherEnabled(): boolean {
   return envFlag("MADE_ABOUT_UNDATED_TOGETHER_ENABLED");
+}
+
+/**
+ * MADE_ABOUT_READER_ACCOUNT_ENABLED (QA's live Bubbles round-9 test, 9 Nov 2026; default off; same flag in both apps).
+ * "make it about leaving the front desk unattended on 11/6/26" on a saved Coaching draft changed Other and Details and
+ * left the Date: the reader set Details itself (the new incident added under the old one), so the made-about path that
+ * writes the Date never ran. With the flag on, a dated made-about turn's own account edit from the reader is set aside, and
+ * the account is rewritten with the Date and the topic, all or nothing (`forms/form-patch-turn.ts`). Off, as before.
+ */
+export function madeAboutReaderAccountEnabled(): boolean {
+  return envFlag("MADE_ABOUT_READER_ACCOUNT_ENABLED");
+}
+
+/**
+ * MADE_ABOUT_REWRITE_FINISHES_ENABLED (ported from the sibling app: QA's live round-13 test there, 9 Nov 2026; default
+ * off; same flag in both apps). On a saved Coaching draft, "make it about leaving the front desk unattended on 11/6/26"
+ * ran the made-about revision (Details rewritten), then the reader's own edits were refused, the turn left the patch
+ * path, and the old path's revision ran a second time: "Updated … Details of Coaching", Other and the Date stayed.
+ * With the flag on, once the account is rewritten the turn always finishes there: a refused reader patch falls back to
+ * the topic read from the manager's words, the Date is still written, and an error after the rewrite answers from what
+ * was saved. Off, as before.
+ */
+export function madeAboutRewriteFinishesEnabled(): boolean {
+  return envFlag("MADE_ABOUT_REWRITE_FINISHES_ENABLED");
 }

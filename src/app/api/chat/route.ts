@@ -50,6 +50,9 @@ import {
   formNameFromRosterEnabled,
   offRosterConfirmEnabled,
   offRosterAskBeforeCardEnabled,
+  exitLetterAddresseeEnabled,
+  letterGreetingNotNameEnabled,
+  exitFormDateFromTerminationEnabled,
   metricGuardEnabled,
   refusalNoRepeatEnabled,
   titleNotSpeakersManagerEnabled,
@@ -213,6 +216,28 @@ async function postChat(request: Request) {
     try {
       let asked = parseAskRequest(body);
       /*
+       * EXIT_LETTER_ADDRESSEE_ENABLED (ported from the sibling app: QA's live test there, 9 Nov 2026): a letter to the
+       * employee, signed "Sincerely,\n<C>\nDistrict Manager", is read without that sign-off in this turn and the
+       * manager's earlier ones, so the signer is never offered as the form's person nor her title taken
+       * (`ai/letter-signer.ts`). The stored messages, and the draft, keep the whole letter.
+       */
+      /*
+       * LETTER_GREETING_NOT_NAME_ENABLED: a letter's "Dear <A>," is read as "<A>," — the salutation is no part of the
+       * name (`ai/letter-signer.ts`), so the roster finds <A>. The stored messages, and the draft, keep the letter.
+       */
+      if (exitLetterAddresseeEnabled() || letterGreetingNotNameEnabled()) {
+        const { withoutLetterGreeting, withoutLetterSigner } = await import("@/lib/ai/letter-signer");
+        const read = (text: string) => {
+          const greeted = withoutLetterGreeting(text);
+          return exitLetterAddresseeEnabled() ? withoutLetterSigner({ question: greeted }) : greeted;
+        };
+        asked = {
+          ...asked,
+          question: read(asked.question),
+          history: asked.history.map((turn) => (turn.role === "user" && typeof turn.content === "string" ? { ...turn, content: read(turn.content) } : turn)),
+        };
+      }
+      /*
        * OFF_ROSTER_CONFIRM_ENABLED: "use <name>" (or "yes") to the offer for a person not in Woven is read as the
        * manager's turn that typed the name, and the name is kept on the card as typed (`forms/off-roster-confirm.ts`).
        */
@@ -285,7 +310,9 @@ async function postChat(request: Request) {
         ]);
         const names = roster.map((person) => `${person.preferredFirstName?.trim() || person.firstName} ${person.lastName}`);
         // FORM_NAME_FROM_ROSTER_ENABLED: a person with a preferred name is also known by the legal one.
-        if (formNameFromRosterEnabled()) {
+        // OFF_ROSTER_ASK_BEFORE_CARD_ENABLED too (the switch-on's gate, 9 Nov 2026): "create a CA for tamsin wexley", the legal
+        // name of the roster's "Tammy Wexley", was asked about as a name not on the roster (`lib/forms/off-roster-ask.ts`).
+        if (formNameFromRosterEnabled() || offRosterAskBeforeCardEnabled()) {
           for (const person of roster) {
             if (person.preferredFirstName?.trim() && person.preferredFirstName.trim() !== person.firstName.trim()) {
               names.push(`${person.firstName} ${person.lastName}`);
@@ -889,6 +916,14 @@ async function postChat(request: Request) {
           ...parsed.history.filter((turn) => turn.role === "user").map((turn) => turn.content),
           asked.question,
         ]);
+      }
+      // EXIT_FORM_DATE_FROM_TERMINATION_ENABLED: a stated "terminated, effective <date>" dates the exit card (`lib/forms/exit-form-date.ts`).
+      if (exitFormDateFromTerminationEnabled()) {
+        answer = (await import("@/lib/forms/exit-form-date")).withExitFormDateFromTermination(
+          answer,
+          [...parsed.history.filter((turn) => turn.role === "user").map((turn) => turn.content), asked.question],
+          businessToday(),
+        );
       }
       // PROPOSAL_NAME_CORRECTION_ENABLED: an off-roster "change her name to …" on the card asks which, never kept silently.
       answer = withCorrectionNotDropped(answer, parsed);
