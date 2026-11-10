@@ -1,6 +1,6 @@
 import "server-only";
 
-import { UPLOAD_LIMITS } from "@/lib/config/models";
+import { syncedFileMaxBytes } from "@/lib/ingestion/synced-file-limit";
 import {
   PartFetchError,
   type ConnectionInfo,
@@ -263,7 +263,8 @@ export class BuffCitySoapWovenConnector implements KnowledgeSourceConnector {
   }
 
   private maxBytes(): number {
-    return this.options.maxBytes ?? UPLOAD_LIMITS.maxBytes;
+    // WOVEN_LARGER_FILES_ENABLED: the sync's own cap (`ingestion/synced-file-limit.ts`); the upload cap when off.
+    return this.options.maxBytes ?? syncedFileMaxBytes();
   }
 
   private textFile(contentType: ContentType, entityId: string, title: string, body: string | null): FetchedFile {

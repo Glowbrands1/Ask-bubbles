@@ -1319,6 +1319,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ADD_NOT_REPEATED_ENABLED",
   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
   "CHAT_STAGE_TIMINGS_ENABLED",
+  // coding 5: WOVEN_LARGER_FILES (QA, the two Woven files over the upload limit, 10 Nov 2026; default off).
+  "WOVEN_LARGER_FILES_ENABLED",
 ] as const;
 
 /**
@@ -2931,6 +2933,18 @@ export function cardNamesEmployeeEnabled(): boolean {
  */
 export function policyTopicIntoFieldEnabled(): boolean {
   return envFlag("POLICY_TOPIC_INTO_FIELD_ENABLED");
+}
+
+/**
+ * WOVEN_LARGER_FILES_ENABLED (QA, 10 Nov 2026: two Woven PDFs, "Local Grassroots Marketing Playbook" and "Soap
+ * Troubleshooting & Quality Control", stop every sync as larger than the 50 MB upload limit; coding 5; same flag in both
+ * apps; default off). On: a file the sync downloads may be up to 200 MB (a manager's upload keeps 50 MB), a file still
+ * over the cap is reported with its size, and OCR refuses a scan too big for one request before sending it
+ * (`ingestion/synced-file-limit.ts`, `knowledge-sync/woven/http.ts`, `ingestion/extract/pdf-ocr.ts`). The storage
+ * bucket's file_size_limit must be raised to 200 MB first (QA's release step). Off, as before.
+ */
+export function wovenLargerFilesEnabled(): boolean {
+  return envFlag("WOVEN_LARGER_FILES_ENABLED");
 }
 
 // --- end coding 5 flags ---
