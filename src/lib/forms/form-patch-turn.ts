@@ -8,6 +8,7 @@ import {
   stepBMakeItAboutAccountEnabled,
   madeAboutAllOrNothingEnabled,
   madeAboutReaderAccountEnabled,
+  policyTopicIntoFieldEnabled,
   stepBDateSaidEnabled,
   stepBDateWithAboutEnabled,
 } from "@/lib/config/chat-quality-flags";
@@ -273,6 +274,53 @@ export async function patchActiveForm(input: PatchTurnInput): Promise<AskRespons
     if ((!("ok" in reading) || reading.turn !== "this_form") && madeAboutAllOrNothingEnabled()) {
       reading = madeAboutReading(input, before, writable, allGroups) ?? reading;
     }
+    /*
+     * POLICY_TOPIC_INTO_FIELD_ENABLED (QA, a manager's 1★ rating, 10 Nov 2026): "In details of coaching inlude our woven
+     * policy on finding a cover for your shift" wrote a sentence telling the manager to refer to the policy manual. The
+     * policy asked for is written from the manual here (`policy-topic-write.ts`), before any hand-off: the reader's own
+     * text for that field, and any line that only points at the manual, are not written, and the old path's revision
+     * never runs for this turn. Anything else the message asks is written as before, and the reply says what happened
+     * to the policy.
+     */
+    let topicOutcome: { readonly sentence: string; readonly written: string | null } | null = null;
+    // The turn's reply when the policy is its answer: what was said about it, and whatever changed on the form.
+    const topicReply = async (sentence: string): Promise<AskResponse> => {
+      const reloadedTopic = await loadInstance(input.instanceId);
+      const changedTopic = reloadedTopic ? snapshotDiff(snapshotOf(loaded), snapshotOf(reloadedTopic)) : [];
+      return {
+        content: sentence,
+        citations: [],
+        coverage: "not_applicable",
+        ...(changedTopic.length > 0 ? { formUpdate: { instanceId: input.instanceId, updated: changedTopic.map((change) => change.key) } } : {}),
+      };
+    };
+    if (policyTopicIntoFieldEnabled()) {
+      const topicField = await import("./policy-topic-field");
+      const topic = topicField.policyTopicAsked(input.question);
+      if (topic) {
+        const read = "ok" in reading && reading.turn === "this_form" ? reading : null;
+        const readKeys = read ? Object.keys(read.patch.set) : [];
+        const readerField =
+          readKeys.find((key) => topicField.pointsAtManual(String(read!.patch.set[key]))) ?? (readKeys.length === 1 ? readKeys[0]! : null);
+        topicOutcome = await (await import("./policy-topic-write")).writePolicyTopic({
+          instanceId: input.instanceId,
+          actorId: actor.id,
+          question: input.question,
+          topic,
+          readerField,
+        });
+        if (topicOutcome) {
+          const field = topicOutcome.written ?? topicField.fieldNamedIn(input.question, labels) ?? readerField;
+          const kept = read
+            ? Object.fromEntries(
+                Object.entries(read.patch.set).filter(([key, value]) => key !== field && !topicField.pointsAtManual(String(value))),
+              )
+            : {};
+          if (read) reading = { ...read, patch: { ...read.patch, set: kept } };
+          if (!read || Object.keys(kept).length + read.patch.clear.length === 0) return topicReply(topicOutcome.sentence);
+        }
+      }
+    }
     if (!("ok" in reading) || reading.turn !== "this_form") return handOff("none");
     /*
      * MADE_ABOUT_READER_ACCOUNT_ENABLED (QA's live Bubbles round-9 test, 9 Nov 2026; the person invented): "make it about
@@ -400,7 +448,7 @@ export async function patchActiveForm(input: PatchTurnInput): Promise<AskRespons
      * the policy"), it is this turn's whole answer.
      */
     const policyAsk =
-      editPolicyAskEnabled() && reading.policyAsked === true && (await import("./edit-policy-ask")).policyAskApplies(loaded.instance.templateKey);
+      topicOutcome === null && editPolicyAskEnabled() && reading.policyAsked === true && (await import("./edit-policy-ask")).policyAskApplies(loaded.instance.templateKey);
     const answerPolicy = async () =>
       policyAsk ? (await import("./edit-policy-ask")).answerPolicyAsk({ instanceId: input.instanceId, actorId: actor.id, question: input.question }) : null;
     /*
@@ -516,7 +564,8 @@ export async function patchActiveForm(input: PatchTurnInput): Promise<AskRespons
         syncPlan: { after: [...stated], amountSentence: true, notes: input.question },
         ...(readerFixes ? { readerFixes } : {}),
       });
-      if (result.handoff === "refused") return handOff("refused");
+      // POLICY_TOPIC_INTO_FIELD_ENABLED: the policy was answered; the old path's revision never runs for this turn.
+      if (result.handoff === "refused") return topicOutcome ? topicReply(topicOutcome.sentence) : handOff("refused");
       /*
        * FORM_PATCH_READER_FIXES_ENABLED (QA's live run, 7 Nov 2026: "yes, do that" after the edit was saved went
        * to the old path, whose revision rewrote the form and said "Updated"): what the reader set is already on
@@ -525,7 +574,7 @@ export async function patchActiveForm(input: PatchTurnInput): Promise<AskRespons
       // With a date still to write, the turn goes on: the date is written below, and the policy after it.
       if (readerFixes && result.handoff === "noop" && dateToWrite === null) {
         const outcome = await answerPolicy();
-        if (!outcome?.written) return withPolicySentence(alreadyThere(Object.keys(reading.patch.set), labels), outcome);
+        if (!outcome?.written) return withPolicySentence(withPolicySentence(alreadyThere(Object.keys(reading.patch.set), labels), outcome), topicOutcome);
         policyOutcome = outcome;
       }
     } else if (patchOps > 0) {
@@ -579,13 +628,14 @@ export async function patchActiveForm(input: PatchTurnInput): Promise<AskRespons
     if (!reloaded) return null;
     const changed = snapshotDiff(snapshotOf(loaded), snapshotOf(reloaded));
     /* FORM_PATCH_READER_FIXES_ENABLED: the reader's values are already on the form (the old writers' path). */
-    if (readerFixes && changed.length === 0) return withKeptAccount(withPolicySentence(alreadyThere(Object.keys(reading.patch.set), labels), policyOutcome));
-    return withKeptAccount(withPolicySentence({
+    if (readerFixes && changed.length === 0)
+      return withKeptAccount(withPolicySentence(withPolicySentence(alreadyThere(Object.keys(reading.patch.set), labels), policyOutcome), topicOutcome));
+    return withKeptAccount(withPolicySentence(withPolicySentence({
       content: replyFromDiff({ changed }, labels),
       citations: [],
       coverage: "not_applicable",
       ...(changed.length > 0 ? { formUpdate: { instanceId: input.instanceId, updated: changed.map((change) => change.key) } } : {}),
-    }, policyOutcome));
+    }, policyOutcome), topicOutcome));
   } catch {
     return null;
   }

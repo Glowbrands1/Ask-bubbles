@@ -28,6 +28,11 @@ const NARRATIVE_KEY: Readonly<Record<string, string>> = {
 /** The forms whose account field carries the citation line (EDIT_POLICY_ASK_ENABLED, `forms/edit-policy-ask.ts`). */
 export const NARRATIVE_CITATION_TEMPLATES: readonly string[] = Object.keys(NARRATIVE_KEY);
 
+/** The account field a form's citation line goes in (POLICY_TOPIC_INTO_FIELD_ENABLED), or null. */
+export function narrativeFieldOf(templateKey: string): string | null {
+  return NARRATIVE_KEY[templateKey] ?? null;
+}
+
 /**
  * The page a retrieval row prints, for a check that must not use the PDF
  * sheet number. A footer the extractor knows, or a locator whose page is
