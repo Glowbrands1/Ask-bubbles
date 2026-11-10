@@ -81,6 +81,7 @@ import {
   formEditNoopGuardEnabled,
   nearMissQuestionRulesEnabled,
   reopenByAnyOpenVerbEnabled,
+  accountBeforeRequestEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { streamWhenSlow } from "@/lib/api/streamed-response";
 import { finalReplyWithoutMarkers } from "@/lib/ai/source-note";
@@ -999,6 +1000,13 @@ async function postChat(request: Request) {
         const { formSelection: _dropped, ...rest } = answer;
         void _dropped;
         answer = { ...rest, content: rest.content.replace(/\n*Based on what you've described, I can prepare:\s*$/, "").trimEnd() };
+      }
+      // ACCOUNT_BEFORE_REQUEST_ENABLED: the account given before the request is handed to the draft (`lib/forms/account-before-request.ts`).
+      if (accountBeforeRequestEnabled() && answer.formProposal) {
+        answer = (await import("@/lib/forms/account-before-request")).withAccountBeforeRequest(answer, [
+          ...parsed.history,
+          { id: parsed.questionMessageId, role: "user", content: asked.question },
+        ]);
       }
       // OFF_ROSTER_ASK_BEFORE_CARD_ENABLED: a store manager's card for a full name not on their roster is asked about once, before the card (`lib/forms/off-roster-ask.ts`).
       if (offRosterAskBeforeCardEnabled()) {

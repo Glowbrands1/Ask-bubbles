@@ -1319,6 +1319,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ADD_NOT_REPEATED_ENABLED",
   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
   "CHAT_STAGE_TIMINGS_ENABLED",
+  "ACCOUNT_BEFORE_REQUEST_ENABLED",
 ] as const;
 
 /**
@@ -2931,6 +2932,17 @@ export function cardNamesEmployeeEnabled(): boolean {
  */
 export function policyTopicIntoFieldEnabled(): boolean {
   return envFlag("POLICY_TOPIC_INTO_FIELD_ENABLED");
+}
+
+/**
+ * ACCOUNT_BEFORE_REQUEST_ENABLED (Pau's P14(a), QA 10 Nov 2026; coding 5; the same flag name as the sibling app's #776,
+ * a different mechanism here; default off). An account given over several turns before "create a coaching form for
+ * <first name>" → "yes" was not handed to the draft ("No specific incident … was described"): a turn that opens with a
+ * question was left out of the card's turns. On: the turns just before the card's first cited turn that recount an
+ * incident by this person join its turns (`forms/account-before-request.ts`). Off, as before.
+ */
+export function accountBeforeRequestEnabled(): boolean {
+  return envFlag("ACCOUNT_BEFORE_REQUEST_ENABLED");
 }
 
 // --- end coding 5 flags ---
