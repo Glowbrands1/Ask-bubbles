@@ -1,5 +1,6 @@
 import "server-only";
 
+import { withNameCase, withNameTitleCase } from "./name-case";
 import { approvedManualConfirmed, manualDisplayTitle } from "@/lib/forms/official-policy-manual";
 import { describedAttendanceKeys } from "@/lib/forms/ca-policy";
 import { mayDescribeSection } from "@/lib/forms/named-policy-section";
@@ -347,8 +348,9 @@ async function answerQuestionTraced(
   // FORM_TYPE_SWITCH_ENABLED: "change to coaching" with the card open switches it to the other form.
   // ADDITIONAL_LOCATION_TAKEN_ENABLED: "Store: Kearney." from a manager who covers Kearney is read as the change it is.
   // FIRST_NAME_SUGGEST_ENABLED: "yes" to "Is this for **Quinn Marlowe**?" is read as that name.
-  const read = withFormTypeSwitch(withAdditionalStore(withTerseSlots(withNameBeforeTitle(withTypoReadingCopy(await withFirstNameAnswerFor(request, actor), names))), actor));
-  if (!chatTraceEnabled()) return answerQuestionBody(read, actor, memory);
+  // NAME_CASE_INSENSITIVE_ENABLED: a name is read the same however it is typed, and the card stores it in Title Case.
+  const read = withNameCase(withFormTypeSwitch(withAdditionalStore(withTerseSlots(withNameBeforeTitle(withTypoReadingCopy(await withFirstNameAnswerFor(request, actor), names))), actor)));
+  if (!chatTraceEnabled()) return answerQuestionBody(read, actor, memory).then((response) => withNameTitleCase(response, request));
   const draft = openChatTrace({
     conversationId: request.conversationId,
     messageId: request.questionMessageId,
@@ -358,7 +360,7 @@ async function answerQuestionTraced(
   });
   // FORM_EDIT_TOOL_IN_STREAM_ENABLED: slots.form_edit, keys and reasons only.
   if (request.formEditTool) draft.formEdit = request.formEditTool.trace;
-  return finishChatTrace(draft, () => answerQuestionBody(read, actor, memory));
+  return finishChatTrace(draft, () => answerQuestionBody(read, actor, memory).then((response) => withNameTitleCase(response, request)));
 }
 
 /** Last on every path: the Corrective Action card's Action Plan is the manager's or none. */
