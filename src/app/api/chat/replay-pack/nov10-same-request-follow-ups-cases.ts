@@ -99,7 +99,7 @@ export const NOV10_SAME_REQUEST_FOLLOW_UP_CASES: ReplayCase[] = [
     title: `(a), off roster: "${SAME}" — <B>'s card's Observation is <A>'s account with <B>'s name`,
     report: `QA's Sunny round-23 live test, conv_mwb1xng82tz2tyr (names off the directory): (a) <B>'s card had no Observation of Offense`,
     status: { open: "with <A> and <B> off the directory the same request is never read: <B>'s turn goes to <A>'s card" },
-    fixFlags: ["SAME_REQUEST_OTHER_PERSON_ENABLED", "SAME_REQUEST_CARRIES_ACCOUNT_ENABLED", "SAME_REQUEST_OFF_ROSTER_ENABLED"],
+    fixFlags: ["SAME_REQUEST_CARRIES_ACCOUNT_ENABLED", "SAME_REQUEST_OFF_ROSTER_ENABLED"],
     async run(t) {
       const { second } = await both(t, true);
       expect(observation(second), `<B>'s card's Observation:\n${second.content}`).toBe("Mara Quell was late on 11/3/26");
@@ -110,7 +110,7 @@ export const NOV10_SAME_REQUEST_FOLLOW_UP_CASES: ReplayCase[] = [
     title: `(b), off roster: "${SAME}" — <A>'s card is not superseded, and both cards stay creatable`,
     report: `QA's Sunny round-23 live test, conv_mwb1xng82tz2tyr (names off the directory): (b) <A>'s card read "Superseded — nothing created"`,
     status: { open: "with <A> and <B> off the directory <A>'s card is superseded by <B>'s" },
-    fixFlags: ["SAME_REQUEST_OTHER_PERSON_ENABLED", "SAME_REQUEST_KEEPS_EARLIER_CARD_ENABLED", "NEXT_PUBLIC_SAME_REQUEST_KEEPS_EARLIER_CARD_ENABLED", "SAME_REQUEST_OFF_ROSTER_ENABLED"],
+    fixFlags: ["SAME_REQUEST_KEEPS_EARLIER_CARD_ENABLED", "NEXT_PUBLIC_SAME_REQUEST_KEEPS_EARLIER_CARD_ENABLED", "SAME_REQUEST_OFF_ROSTER_ENABLED"],
     async run(t) {
       const { thread } = await both(t, true);
       const rory = thread.conversation!.find((message) => message.formProposal?.employeeName === "Rory Vance")!.formProposal!;
