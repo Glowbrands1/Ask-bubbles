@@ -6,7 +6,7 @@ import { COMPANY_LOCATIONS, locationByCode, locationById, locationNameKey } from
 
 import { extractFormDate } from "./form-date-answer";
 import { FORM_NAME_PATTERN, canonicalShorthand, canonicalWarningWording, isFormVocabulary, leadingFormRequest } from "./template-intent";
-import { antiLoopEnabled, exitAnswerNotACorrectionEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { antiLoopEnabled, bcNotANameEnabled, exitAnswerNotACorrectionEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { companyNameStops } from "./name-stops";
 import { isTypedStopSpan, isTypedStopWord, NAME_LABEL_WORDS, NOT_A_NAME, NOT_A_NAME_LEAD, NOT_A_TYPED_NAME, TYPED_NAME_WORD, isNameLabelPhrase, lowercaseMonths, nameAfterNameLabel, stripTrailingJobOrTitle } from "./name-words";
 import { keepTypedPerson } from "./typed-name";
@@ -152,6 +152,23 @@ const GERUND_OBJECT = /^(?:the|a|an|her|his|their|my|our|its|this|that|these|tho
  */
 const COUNTS_PEOPLE = new Set(["both", "either", "neither", "each", "all", "everyone", "everybody", "anyone", "anybody", "nobody", "none", "whoever"]);
 
+/*
+ * BC_NOT_A_NAME_ENABLED (coding 6, October rebuild 2, 10 Nov 2026; conv_mvofjlco271mr0t): "crete a ca for <first>
+ * <last> bc she didnt do the deep clean i assignd by 9-15" put "<First> <Last> Bc" on the card. "bc" (and its
+ * spellings) is "because", never a name word; a name ends before it.
+ */
+const BECAUSE_SHORTHAND = /^(?:bc|b\/c|bcuz|bcz|bcos|bcus|becuz|cuz|coz)$/i;
+function isBecauseShorthand(word: string): boolean {
+  return bcNotANameEnabled() && BECAUSE_SHORTHAND.test(word);
+}
+/** A read name without a trailing "bc …" (all-caps runs read "ORLA PENHALLOW BC" whole). */
+function withoutBecauseShorthand(name: string): string {
+  if (!bcNotANameEnabled()) return name;
+  const words = name.trim().split(/\s+/);
+  const at = words.findIndex((word, index) => index > 0 && BECAUSE_SHORTHAND.test(word));
+  return at > 0 ? words.slice(0, at).join(" ") : name;
+}
+
 function readTypedName(words: readonly string[], whole: boolean): string | null {
   const parts: string[] = [];
   let endedOnPunctuation = false;
@@ -189,6 +206,7 @@ function readTypedName(words: readonly string[], whole: boolean): string | null 
       !isJobTitleAbbreviation(word) &&
       !NOT_A_NAME.has(lower) &&
       !COUNTS_PEOPLE.has(lower) &&
+      !isBecauseShorthand(lower) &&
       (!NOT_A_TYPED_NAME.has(lower) || willAsFirstName(lower, parts.length, words, whole)) &&
       (!isFormVocabulary(lower) || employeeSurname || labelSurname) &&
       !stateOrTitle;
@@ -1393,8 +1411,8 @@ function isFieldLabelCandidate(name: string): boolean {
 function settle(strong: string[], weak: string[], text: string, subjects: readonly string[] = []): EmployeeMentions {
   // ACCOUNT_VERB_NOT_A_NAME_ENABLED (sf-s38, Pau-approved): "rhea failing" / "Rhea Calloway failing" end at the verb.
   const beforeVerb = (names: string[]) => names.map(nameBeforeAccountVerb).filter((name): name is string => Boolean(name));
-  strong = beforeVerb(strong);
-  weak = beforeVerb(weak);
+  strong = beforeVerb(strong).map(withoutBecauseShorthand);
+  weak = beforeVerb(weak).map(withoutBecauseShorthand);
   if (antiLoopEnabled()) {
     const fromLabel = nameAfterNameLabel(text);
     if (fromLabel) strong = [fromLabel, ...strong];
