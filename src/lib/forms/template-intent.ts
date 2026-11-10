@@ -30,6 +30,7 @@ import {
   caShortcutWordsEnabled,
   formChoiceStatedEnabled,
   formNameFromRosterEnabled,
+  writeUpNameAnyCaseEnabled,
   typedNameEnabled, requestFromNamesEmployeeEnabled } from "@/lib/config/chat-quality-flags";
 import { foldsToGlossaryTerm } from "@/lib/ai/glossary";
 import { NOT_A_NAME, NOT_A_TYPED_NAME, TYPED_NAME_WORD } from "./name-words";
@@ -538,6 +539,25 @@ const COURTESY_SHORTHAND: [RegExp, string][] = [
   [/\b(?:frms|froms|fomrs)\b/gi, "forms"],
 ];
 
+/*
+ * "WRITE UP <NAME>" NAMES THE PERSON IN ANY CASE (WRITE_UP_NAME_ANY_CASE_ENABLED;
+ * October triage #1, #202). "write up <first> <last> for opening the store
+ * late today", in lower case or capitals, was asked "Who is this Corrective
+ * Action Form for?" — only a capitalised pair was read as a person there.
+ * "For" is where a name is read however it is typed, so a person written up is
+ * read as "write up for <name>". A thing written up ("write up the notes",
+ * "write up a summary", "write up her …") is left as it is, by the same test
+ * `writesAPersonUp` uses.
+ */
+const WRITE_UP_NAMED = /\b(writ(?:e|ing)\s+up)\s+(?!(?:for|on)\b)([a-z][a-z'’-]*)/gi;
+
+function writeUpForPerson(text: string): string {
+  return text.replace(WRITE_UP_NAMED, (match, verb: string, word: string) => {
+    const lower = word.toLowerCase();
+    return NOT_WRITTEN_UP.has(lower) || !couldBeName(word) ? match : `${verb} for ${word}`;
+  });
+}
+
 /** Shorthand and near-miss spellings of the form's own words; everything else unchanged. */
 /*
  * REQUEST_FROM_NAMES_EMPLOYEE_ENABLED (QA, 8 Nov 2026; the managers' wording): "Please create another corrective action
@@ -561,6 +581,7 @@ const FORM_FROM = new RegExp(
 export function canonicalShorthand(text: string): string {
   let out = requestFromNamesEmployeeEnabled() ? text.replace(FORM_FROM, "$1 for ") : text;
   for (const [pattern, replacement] of COURTESY_SHORTHAND) out = out.replace(pattern, replacement);
+  if (writeUpNameAnyCaseEnabled()) out = writeUpForPerson(out);
   return out.replace(/\bc[a-z]{5,9}\b/gi, (word) => {
     const lower = word.toLowerCase();
     if (lower === "coaching" || lower === "couching") return word;

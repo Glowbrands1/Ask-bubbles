@@ -4209,3 +4209,16 @@ export function sameRequestOtherPersonEnabled(): boolean {
 export function chatStageTimingsEnabled(): boolean {
   return envFlag("CHAT_STAGE_TIMINGS_ENABLED");
 }
+
+/**
+ * WRITE_UP_NAME_ANY_CASE_ENABLED (coding 6, 10 Nov 2026; default off; October
+ * triage #1, #202). "write up <first> <last> for opening the store late today"
+ * in lower case or capitals named nobody, and the card asked who it was for;
+ * only "Write up <First> <Last> …" was read. On: "write up <name>" is read as
+ * "write up for <name>", where a name is read in any case. A thing written up
+ * ("the notes", "a summary", "her") is left alone. See
+ * `forms/template-intent.ts`. Off, as before.
+ */
+export function writeUpNameAnyCaseEnabled(): boolean {
+  return envFlag("WRITE_UP_NAME_ANY_CASE_ENABLED");
+}
