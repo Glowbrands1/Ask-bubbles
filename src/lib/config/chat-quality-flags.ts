@@ -1309,6 +1309,9 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 5: ONE_FORM_EACH_PERSON, CARD_NAMES_EMPLOYEE (the sibling app's P7, 10 Nov 2026; default off).
   "ONE_FORM_EACH_PERSON_ENABLED",
   "CARD_NAMES_EMPLOYEE_ENABLED",
+  // coding 4: QA's live Bubbles round 13 (9 Nov 2026; default off).
+  "MADE_ABOUT_TOPIC_EVIDENCE_ENABLED",
+  "FORM_DATE_SAID_ALONE_ENABLED",
 ] as const;
 
 /**
@@ -4106,4 +4109,24 @@ export function madeAboutReaderAccountEnabled(): boolean {
  */
 export function madeAboutRewriteFinishesEnabled(): boolean {
   return envFlag("MADE_ABOUT_REWRITE_FINISHES_ENABLED");
+}
+
+/**
+ * MADE_ABOUT_TOPIC_EVIDENCE_ENABLED (QA's live Bubbles round 13, 9 Nov 2026; default off; same flag in both apps). "make it
+ * about being late on 11/5/26" left Other on the old topic: the topic read from the manager's words ("Being late") came
+ * with "being late" as its evidence, two words, under the reducer's floor, so it was refused. With the flag on, its
+ * evidence is the whole made-about clause the manager wrote (`forms/form-patch-turn.ts`). Off, as before.
+ */
+export function madeAboutTopicEvidenceEnabled(): boolean {
+  return envFlag("MADE_ABOUT_TOPIC_EVIDENCE_ENABLED");
+}
+
+/**
+ * FORM_DATE_SAID_ALONE_ENABLED (QA's live Bubbles round 13, 9 Nov 2026; default off; same flag in both apps). "make the date
+ * 11/7/26" as the first edit of a fresh draft answered "I haven't changed …": the reader did not read the turn as this
+ * form's. With the flag on, a turn that says the date the form takes (STEP_B_DATE_SAID's reading) is this form's, and
+ * the Date is written (`forms/form-patch-turn.ts`). Off, as before.
+ */
+export function formDateSaidAloneEnabled(): boolean {
+  return envFlag("FORM_DATE_SAID_ALONE_ENABLED");
 }
