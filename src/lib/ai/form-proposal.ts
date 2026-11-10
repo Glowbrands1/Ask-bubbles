@@ -180,6 +180,8 @@ import {
   secondRequestOwnAccountEnabled,
   describedAttendanceCardEnabled,
 } from "@/lib/config/chat-quality-flags";
+import { lateOpeningOwnWordsEnabled } from "@/lib/config/chat-quality-flags";
+import { lateOpeningWords } from "@/lib/forms/late-open";
 import { currentFormRequestText } from "@/lib/forms/current-request";
 import { managerWords } from "./edit-date-rules";
 import { groundEmployeeResolution } from "./employee-candidate-grounding";
@@ -2661,7 +2663,9 @@ async function namedPolicyFor(text: string, input: ProposalTurn): Promise<NamedP
       const manual = await chunksOf();
       const section = manual ? manualSectionFor({ chunks: manual, offenseKeys: attendanceKeys, notes: text }) : null;
       if (section) {
-        const phrase = attendanceKeys.includes(LATE_OPENING_OFFENSE) ? "opening late" : attendanceKeys.includes("tardiness") ? "late" : "absent";
+        // LATE_OPENING_OWN_WORDS_ENABLED (QA's live round 17b): a late opening is quoted in the manager's own words.
+        const ownWords = attendanceKeys.includes(LATE_OPENING_OFFENSE) && lateOpeningOwnWordsEnabled() ? lateOpeningWords(text) : null;
+        const phrase = ownWords ?? (attendanceKeys.includes(LATE_OPENING_OFFENSE) ? "opening late" : attendanceKeys.includes("tardiness") ? "late" : "absent");
         return { phrase, lookup: "described", heading: section.heading, page: section.page, offenseKey: attendanceKeys[0]! };
       }
     }

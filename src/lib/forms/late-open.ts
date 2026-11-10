@@ -49,6 +49,38 @@ export function saysFailureToOpen(text: string): boolean {
   return failureToOpenIsLateOpeningEnabled() && FAILURE_TO_OPEN.test(text);
 }
 
+/*
+ * LATE_OPENING_OWN_WORDS_ENABLED (QA's live Bubbles round 17b, 10 Nov 2026): the words the manager typed that read as
+ * a late opening, for the card's 'from what you described ("…")'. It used to be the app's own "opening late", which
+ * the manager never said ("did not show up for a scheduled opening shift", "failure to open on time"). The span is
+ * taken from the text as typed, with "on time" / "late" after it when they follow.
+ */
+const OWN_LATE_OPENING = [
+  FAILURE_TO_OPEN,
+  /\blate\s+to\s+open(?:\s+(?:the\s+)?(?:store|location|shop|makery))?\b/i,
+  /\bopen(?:ed|ing)?\s+(?:(?:the|our|her|his|their)\s+)?(?:store|location|shop|makery|doors)\s+late\b/i,
+  /\bopen(?:ed|ing)\s+late\b/i,
+  /\blate[- ]open(?:ing|ed)?\b/i,
+  /\b(?:(?:scheduled|assigned)\s+)?opening\s+shift\b/i,
+  /\b(?:scheduled|supposed|assigned|due)\s+to\s+open\b/i,
+  /\bopen(?:ed|ing)?\s+(?:(?:the|our|her|his|their)\s+)?(?:store|location|shop|makery|doors)\b/i,
+  /\bopener\b/i,
+];
+const AFTER_OPEN = /^\s+(?:on\s+time|late)\b/i;
+
+/** LATE_OPENING_OWN_WORDS_ENABLED: the manager's own words that read as a late opening, as typed, or null. */
+export function lateOpeningWords(text: string): string | null {
+  const said = text ?? "";
+  for (const pattern of OWN_LATE_OPENING) {
+    const found = pattern.exec(said);
+    if (!found) continue;
+    const end = found.index + found[0].length;
+    const tail = AFTER_OPEN.exec(said.slice(end))?.[0] ?? "";
+    return `${found[0]}${tail}`.replace(/\s+/g, " ").trim();
+  }
+  return null;
+}
+
 /**
  * An account that is also about a shift or an absence, which the Attendance
  * section governs whatever else happened.
