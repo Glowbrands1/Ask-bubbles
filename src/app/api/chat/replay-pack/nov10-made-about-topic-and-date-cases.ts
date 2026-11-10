@@ -197,6 +197,46 @@ export const NOV10_MADE_ABOUT_TOPIC_AND_DATE_CASES: ReplayCase[] = [
       expect(details, `the sections were run into one paragraph:\n${details}`).toMatch(/^Observed:\n[^\n]+\n\nExpectation:\n[^\n]+/);
     },
   },
+  /*
+   * QA's Bubbles gate (10 Nov 2026) on SECTION_BREAKS_KEPT alone: nov7-refusal-bub-phone-trace, "add that she was also
+   * on her phone", saved "Observed:; …deadline.; Also; observed:; Wrenna was on her phone.;…": the flag read the
+   * in-text "Also observed:" as a section label and split it. Only a known label that starts the text, a line or a
+   * sentence is a heading. The reader's add as the live trace returned it (the whole field, lines joined by " / ").
+   */
+  {
+    id: "nov10-section-breaks-not-also-observed",
+    title: "\"add that she was also on her phone\" with SECTION_BREAKS_KEPT on: the added \"Also observed:\" line is saved as it was said, not split as a section label",
+    report: "QA's Bubbles gate (10 Nov 2026): SECTION_BREAKS_KEPT split \"Also observed:\" in nov7-refusal-bub-phone-trace",
+    status: "fixed",
+    fixFlags: [...STEP_B_READER_FLAGS, "SECTION_BREAKS_KEPT_ENABLED"],
+    run: (t) =>
+      play(t, {
+        ...STEP_B_REFUSAL_SCENARIOS.find((scenario) => scenario.id === "bub-phone")!,
+        id: "section-breaks-not-also-observed",
+        script: {
+          draft: { observation: "Observed:\nWrenna Thistlecombe missed the October 15, 2026 Woven deadline.\nExpectation:\nWoven deadlines are met on time." },
+          patch: {
+            [BUB_PHONE]: patch("this_form", [
+              {
+                field: "observation",
+                value: "Observed: / Wrenna Thistlecombe missed the October 15, 2026 Woven deadline. / Also observed: Wrenna was on her phone. / Expectation: / Woven deadlines are met on time.",
+                how: "add",
+                evidence: "also she was also on her phone",
+              },
+            ]),
+          },
+        },
+        expect: {
+          says: "the Observation keeps \"Also observed: Wrenna was on her phone.\" on one line, and the Woven deadline",
+          check: (run) => {
+            const observation = String(run.saved.observation ?? "");
+            if (!/Woven deadline/.test(observation)) return `lost the Woven deadline: ${JSON.stringify(observation)}`;
+            if (!/Also observed: Wrenna was on her phone\./.test(observation)) return `"Also observed:" was split: ${JSON.stringify(observation)}`;
+            return null;
+          },
+        },
+      }),
+  },
   {
     id: "nov10-add-not-repeated-after-made-about",
     title: "QA's live Bubbles round 15: \"make it about being late on 11/5/26\", then \"add that she was reminded of the policy\" with the reader returning the whole field (on one line) and the new sentence as an add: Details hold ONE copy of the account plus the new line",
