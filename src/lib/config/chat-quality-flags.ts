@@ -1319,6 +1319,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ADD_NOT_REPEATED_ENABLED",
   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
   "CHAT_STAGE_TIMINGS_ENABLED",
+  "TYPO_CORRECTED_SAME_PERSON_ENABLED",
 ] as const;
 
 /**
@@ -3138,6 +3139,18 @@ export function rosterNameInCandidateEnabled(): boolean {
  * matcher's close name); (b) with no employee on the card, no reply text names
  * the person who is not on it. Off, as before.
  */
+/**
+ * TYPO_CORRECTED_SAME_PERSON_ENABLED (QA, 10 Nov 2026, Bubbles s14 path 2; default off). "ok, create a follow-up
+ * coaching form for rozline quellmar …", corrected to Rozlyn Quellmar, was read as ANOTHER person on every later turn
+ * (`turnsAboutThisForm` in ai/form-proposal.ts compares whole names or first words), so the next "create a follow-up
+ * coaching form for rozlyn quellmar" built its card from that turn alone and lost the date given earlier. On: the
+ * same surname and a first name at most two letters off (four letters or more) is the same person. Off, as before.
+ * The ai/form-proposal.ts lines are protected: they wait on Pau (docs/patches/typo-corrected-same-person.patch).
+ */
+export function typoCorrectedSamePersonEnabled(): boolean {
+  return envFlag("TYPO_CORRECTED_SAME_PERSON_ENABLED");
+}
+
 export function rosterNearMissEnabled(): boolean {
   return envFlag("ROSTER_NEAR_MISS_ENABLED");
 }
