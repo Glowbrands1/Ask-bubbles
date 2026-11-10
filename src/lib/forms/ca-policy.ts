@@ -23,7 +23,7 @@ import { readLocationMentions } from "./location-mention";
 import { withoutDeniedFaults } from "./denial-no-account";
 import { namesPerformance } from "./epp-policy";
 import { JOIN } from "./turn-join";
-import { LATE_TO_OPEN, lateOpenOn } from "./late-open";
+import { LATE_TO_OPEN, lateOpenOn, saysFailureToOpen } from "./late-open";
 import {
   findManualSection,
   isApprovedPolicyManualTitle,
@@ -920,6 +920,8 @@ const OPENED_LATE = /\bopen(?:ed|ing)\s+late\b/i;
 
 function opensLate(text: string): boolean {
   if (LATE_OPENING.test(text)) return true;
+  // "failure to open on time" (FAILURE_TO_OPEN_IS_LATE_OPENING_ENABLED). Off, false.
+  if (saysFailureToOpen(text)) return true;
   return lateOpenOn() && (LATE_TO_OPEN.test(text) || OPENED_LATE.test(text));
 }
 

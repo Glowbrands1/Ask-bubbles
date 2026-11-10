@@ -4237,3 +4237,17 @@ export function chatStageTimingsEnabled(): boolean {
 export function draftWriteNeverSilentEnabled(): boolean {
   return envFlag("DRAFT_WRITE_NEVER_SILENT_ENABLED");
 }
+
+/**
+ * FAILURE_TO_OPEN_IS_LATE_OPENING_ENABLED (coding 6, 10 Nov 2026; default off;
+ * ported from the sibling app, where a manager's "Can you make a CA for <name>
+ * for failure to open on time?" was asked what happened). Here the card had
+ * an empty Issue, no policy and a plan on "the applicable company policy": no
+ * reader took "failure to open" as an account. On: "failure / failed to open",
+ * "did not open on time", "didn't open the store" are the manual's Late
+ * Opening and an account. "open the form / the drawer" is not. See
+ * `forms/late-open.ts`. Off, as before.
+ */
+export function failureToOpenIsLateOpeningEnabled(): boolean {
+  return envFlag("FAILURE_TO_OPEN_IS_LATE_OPENING_ENABLED");
+}
