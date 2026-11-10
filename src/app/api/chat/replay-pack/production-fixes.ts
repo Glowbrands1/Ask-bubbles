@@ -368,4 +368,18 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov10-reopened-edit-keeps-details-clear": "ACCOUNT_WIPE_GUARD",
   // Changed on purpose (10 Nov 2026): fixed in production by ACCOUNT_WIPE_GUARD, CARD_NAMES_EMPLOYEE, QA round 16
   "nov10-reopened-edit-keeps-details-replace": "ACCOUNT_WIPE_GUARD",
+  // Changed on purpose (10 Nov 2026): fixed in production by DRAFT_WRITE_NEVER_SILENT, QA round 17b
+  "nov10-draft-write-refused-field-never-drops-the-draft": "DRAFT_WRITE_NEVER_SILENT",
+  // Changed on purpose (10 Nov 2026): fixed in production by PAYROLL_BARE_SENTENCE, QA round 17b
+  "nov10-p15-payroll-deduction-sentence-is-yes": "PAYROLL_BARE_SENTENCE",
+  // Changed on purpose (10 Nov 2026): fixed in production by FAILURE_TO_OPEN_IS_LATE_OPENING, QA round 17b
+  "nov10-p16-failure-to-open-is-what-happened": "FAILURE_TO_OPEN_IS_LATE_OPENING",
+  // Changed on purpose (10 Nov 2026): fixed in production by CA_REASON_DUE_TO, QA round 17b
+  "nov6-ca-reason-at-store-then-account": "CA_REASON_DUE_TO",
+  // Changed on purpose (10 Nov 2026): fixed in production by CA_REASON_DUE_TO, QA round 17b
+  "nov6-ca-reason-because-of-draft-observation": "CA_REASON_DUE_TO",
+  // Changed on purpose (10 Nov 2026): fixed in production by CA_REASON_DUE_TO, QA round 17b
+  "nov6-ca-reason-due-to-card-issue": "CA_REASON_DUE_TO",
+  // Changed on purpose (10 Nov 2026): fixed in production by CA_REASON_DUE_TO, QA round 17b
+  "nov6-ca-reason-due-to-draft-observation": "CA_REASON_DUE_TO",
 };
