@@ -1317,6 +1317,9 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "MADE_ABOUT_SAID_DATE_ENABLED",
   "SECTION_BREAKS_KEPT_ENABLED",
   "ADD_NOT_REPEATED_ENABLED",
+  "POLICY_REFERENCE_NOT_ACCOUNT_ENABLED",
+  "LEVEL_AFTER_FORM_NAME_ENABLED",
+  "LEVEL_REQUEST_MORE_VERBS_ENABLED",
   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
   "CHAT_STAGE_TIMINGS_ENABLED",
 ] as const;
@@ -4208,4 +4211,37 @@ export function sameRequestOtherPersonEnabled(): boolean {
  */
 export function chatStageTimingsEnabled(): boolean {
   return envFlag("CHAT_STAGE_TIMINGS_ENABLED");
+}
+
+/**
+ * POLICY_REFERENCE_NOT_ACCOUNT_ENABLED (ported from the sibling app: coding 6, 10 Nov 2026; default off; same flag in both
+ * apps; QA's overnight scan sf-s16, sf-s17). "In the past we have quoted the standards of conduct for creating a ca due to
+ * underperformance", after the CA card, was handed to the drafting model as part of what happened. On: a turn that only
+ * says which policy to quote, cite or reference is left out of the account the draft is written from; the policy readers
+ * still read it. See `ai/policy-reference-turn.ts`. Off, as before.
+ */
+export function policyReferenceNotAccountEnabled(): boolean {
+  return envFlag("POLICY_REFERENCE_NOT_ACCOUNT_ENABLED");
+}
+
+/**
+ * LEVEL_AFTER_FORM_NAME_ENABLED (ported from the sibling app: coding 6, 10 Nov 2026; default off; same flag in both apps;
+ * QA's overnight scan sf-s19). "I need a corrective action verbal for <A>" named the level after the form and the card
+ * left it unset; "Corrective Action" on the next turn still made no Verbal card. On: "corrective action verbal", "ca
+ * written", "c/a verbal" are the form's level unless the sentence says it is a step already taken
+ * (`forms/warning-level.ts`). Off, as before.
+ */
+export function levelAfterFormNameEnabled(): boolean {
+  return envFlag("LEVEL_AFTER_FORM_NAME_ENABLED");
+}
+
+/**
+ * LEVEL_REQUEST_MORE_VERBS_ENABLED (QA's audit, 10 Nov 2026; default off; this app only, see the parity log). The overnight
+ * scan's sf-s17, "put together a written CA for <A> for not compelting her woven courses by the deadline of october
+ * 31st", left the card's level unset here ("put together" is no request verb in `forms/warning-level.ts`, and the
+ * deadline's date made "written" unclear); it holds in the sibling app, whose level reader is built differently. On:
+ * "put together", "prepare", "draw up", "do up" open a request as "create" does. Off, as before.
+ */
+export function levelRequestMoreVerbsEnabled(): boolean {
+  return envFlag("LEVEL_REQUEST_MORE_VERBS_ENABLED");
 }
