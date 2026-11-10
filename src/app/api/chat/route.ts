@@ -57,6 +57,8 @@ import {
   refusalNoRepeatEnabled,
   titleNotSpeakersManagerEnabled,
   newRequestOwnTurnsEnabled,
+  addressAsksWhoEnabled,
+  leadFullSentenceEnabled,
   formEditPlainWordsEnabled,
   payrollDeductAmountFieldEnabled,
   questionNotFormEnabled,
@@ -825,7 +827,7 @@ async function postChat(request: Request) {
         draftAnswer ??
         correction ??
         // A name correction this form does not take in chat: said plainly, never a model's "updated".
-        (nameFix && !correction ? (await import("@/lib/forms/name-correction-words")).nameNotCorrectedReply(nameFix.open) : null) ??
+        (nameFix && !correction ? (await import("@/lib/forms/name-correction-words")).nameNotCorrectedReply(nameFix.open, nameFix.question) : null) ??
         policyChange ??
         redraft ??
         sameCopy ??
@@ -897,9 +899,12 @@ async function postChat(request: Request) {
           { id: parsed.questionMessageId, role: "user", content: asked.question },
         ]);
       }
-      // REFUSAL_NO_REPEAT_ENABLED, TITLE_NOT_SPEAKERS_MANAGER_ENABLED: see `lib/forms/reply-guards.ts`.
+      // ADDRESS_ASKS_WHO_ENABLED: "Corrective action for 123 Main Street" with no card asks who it is for (`lib/forms/address-asks-who.ts`).
+      if (addressAsksWhoEnabled() && !parsed.activeFormInstanceId)
+        answer = (await import("@/lib/forms/address-asks-who")).withAddressFormAsk(answer, asked.question);
       // SAME_ASK_NO_REPEAT_ENABLED: a card still waiting never repeats the last reply word for word (`lib/forms/reply-guards.ts`).
       if (sameAskNoRepeatEnabled()) answer = (await import("@/lib/forms/reply-guards")).withoutRepeatedAsk(answer, asked.history);
+      // REFUSAL_NO_REPEAT_ENABLED, TITLE_NOT_SPEAKERS_MANAGER_ENABLED: see `lib/forms/reply-guards.ts`.
       if (refusalNoRepeatEnabled() || titleNotSpeakersManagerEnabled()) {
         const guards = await import("@/lib/forms/reply-guards");
         answer = guards.withoutRepeatedRefusal(answer, parsed.history);
@@ -955,6 +960,8 @@ async function postChat(request: Request) {
         void _dropped;
         answer = { ...rest, content: rest.content.replace(/\n*Based on what you've described, I can prepare:\s*$/, "").trimEnd() };
       }
+      // LEAD_FULL_SENTENCE_ENABLED: a reply never ends at "I can prepare:" (`lib/forms/lead-full-sentence.ts`).
+      if (leadFullSentenceEnabled()) answer = (await import("@/lib/forms/lead-full-sentence")).withLeadFullSentence(answer);
       // OFF_ROSTER_ASK_BEFORE_CARD_ENABLED: a store manager's card for a full name not on their roster is asked about once, before the card (`lib/forms/off-roster-ask.ts`).
       if (offRosterAskBeforeCardEnabled()) {
         answer = (await import("@/lib/forms/off-roster-ask")).withOffRosterAskBeforeCard(answer, { scope: context.identity.scope, history: parsed.history, question: asked.question });
