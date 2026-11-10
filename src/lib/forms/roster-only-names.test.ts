@@ -1,9 +1,9 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AskResponse } from "@/lib/ai/types";
 import type { ChatFormProposal } from "@/types";
 
-import { ASK_WHO, rosterOnlyNames, rosterSpelling } from "./roster-only-names";
+import { ASK_WHO, rosterOnlyNames, rosterSpelling, withoutUnseatedName } from "./roster-only-names";
 
 /**
  * Pau, 5 Nov 2026 (FORM_NAME_FROM_ROSTER_ENABLED): only roster people are ever
@@ -51,7 +51,9 @@ describe("the card's employee", () => {
 
   it("a first name that is one roster person's is asked about, never put on the card", () => {
     const out = rosterOnlyNames(reply("I'll draft a **Corrective Action Form** for **Perpetua** from what you've described.", "Perpetua"), ROSTER);
-    expect(out.formProposal?.employeeName).toBeNull();
+    // Changed on purpose (the sibling app's #741 gate, 10 Nov 2026): with ROSTER_NEAR_MISS on the card waits for the
+    // answer (no proposal at all), which is "never put on the card" too.
+    expect(out.formProposal?.employeeName ?? null).toBeNull();
     expect(out.content).toContain("Is this for **Perpetua Thornquist**?");
   });
 
@@ -151,5 +153,25 @@ describe("the gate's regressions: nothing in the reply speaks for a removed empl
   it("a roster person who opens the account is the account's, even with no card name", () => {
     const text = IMA.replace("ima employee, opening", "Dana Lane, opening");
     expect(rosterOnlyNames(reply(text, null), ["Dana Lane"], "create a CA form for Dana Lane, for opening the store late on 9-28-26").content).toContain("Dana Lane, opening");
+  });
+});
+
+/*
+ * FORM_NAME_OFF_ROSTER_ASK_ENABLED (the sibling app's #741 gate, 10 Nov 2026; here nov9-possessive-place-other-store):
+ * with the roster-name set on, the possessive-place question quoted "the employee" instead of the place's word: the
+ * unseated-name scrub took "Lee" for the typed name.
+ */
+describe("the possessive-place question keeps the place's word (FORM_NAME_OFF_ROSTER_ASK_ENABLED)", () => {
+  const question = `Who is this **Corrective Action Form** for? "Lee's" is part of a place's name, not a person — tell me the employee's full name, and I'll fill in what you've already described.`;
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("on: \"Lee's\" stays quoted", () => {
+    vi.stubEnv("FORM_NAME_OFF_ROSTER_ASK_ENABLED", "true");
+    expect(withoutUnseatedName(question, ["Lee"], ["Marnie Holloway"])).toBe(question);
+  });
+
+  it("off: scrubbed as before", () => {
+    vi.stubEnv("FORM_NAME_OFF_ROSTER_ASK_ENABLED", "false");
+    expect(withoutUnseatedName(question, ["Lee"], ["Marnie Holloway"])).not.toContain("Lee");
   });
 });
