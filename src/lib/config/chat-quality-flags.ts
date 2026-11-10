@@ -1319,6 +1319,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ADD_NOT_REPEATED_ENABLED",
   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
   "CHAT_STAGE_TIMINGS_ENABLED",
+  // coding 5: BUBBLES_METRIC_WORDS (QA, 10 Nov 2026; default off).
+  "BUBBLES_METRIC_WORDS_ENABLED",
 ] as const;
 
 /**
@@ -2931,6 +2933,16 @@ export function cardNamesEmployeeEnabled(): boolean {
  */
 export function policyTopicIntoFieldEnabled(): boolean {
   return envFlag("POLICY_TOPIC_INTO_FIELD_ENABLED");
+}
+
+/**
+ * BUBBLES_METRIC_WORDS_ENABLED (QA, 10 Nov 2026; coding 5; Bubbles only; default off). The metric readers came over from
+ * the sibling app with that company's own metrics ("club close", upgrades, EFTs, membership %). On: those are left out
+ * and this company's are read — UPT, units per transaction, average sale, transactions (`forms/metric-shortfall.ts`,
+ * the target reading in `forms/ca-policy.ts`). Off, as before.
+ */
+export function bubblesMetricWordsEnabled(): boolean {
+  return envFlag("BUBBLES_METRIC_WORDS_ENABLED");
 }
 
 // --- end coding 5 flags ---

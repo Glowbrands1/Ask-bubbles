@@ -1,4 +1,4 @@
-import { salesShortfallObjectEnabled } from "@/lib/config/chat-quality-flags";
+import { bubblesMetricWordsEnabled, salesShortfallObjectEnabled } from "@/lib/config/chat-quality-flags";
 
 /**
  * ============================================================================
@@ -31,6 +31,18 @@ const METRIC_NAMED: readonly RegExp[] = [
   /\b(?:sales|revenue|units|packages) (?:are|is|have been|has been)\b/,
 ];
 
+/**
+ * BUBBLES_METRIC_WORDS_ENABLED (QA, 10 Nov 2026; coding 5; default off). The list above came over from the sibling app
+ * with that company's own metrics. On: those four are left out and this company's are read instead — UPT, units per
+ * transaction, average sale, transactions — so "her UPT is low" is a stated shortfall and "club close" is not.
+ */
+const SIBLING_ONLY = new Set(METRIC_NAMED.filter((pattern) => /club close|upgrade|eft|membership/.test(pattern.source)));
+const THIS_COMPANYS: readonly RegExp[] = [/\bupts?\b/, /\bunits per transaction\b/, /\baverage sales?\b/, /\btransactions?\b/];
+
+function metricsNamed(): readonly RegExp[] {
+  return bubblesMetricWordsEnabled() ? [...METRIC_NAMED.filter((pattern) => !SIBLING_ONLY.has(pattern)), ...THIS_COMPANYS] : METRIC_NAMED;
+}
+
 const METRIC_JUDGED: readonly RegExp[] = [
   /\b(?:low|lowest|down|below|behind|weak|weakest|poor|under|dropping|declining|slipping|worst|bottom|last)\b/,
   /\b(?:not hitting|missing|misses|failing to hit|under target|off target|below target|not meeting)\b/,
@@ -61,5 +73,5 @@ function normalize(text: string): string {
 export function statesMetricShortfall(text: string): boolean {
   const normalized = normalize(text);
   if (salesShortfallObjectEnabled() && SALES_GOVERNED.test(normalized.replace(/[‘’]/g, "'"))) return true;
-  return METRIC_NAMED.some((pattern) => pattern.test(normalized)) && METRIC_JUDGED.some((pattern) => pattern.test(normalized));
+  return metricsNamed().some((pattern) => pattern.test(normalized)) && METRIC_JUDGED.some((pattern) => pattern.test(normalized));
 }
