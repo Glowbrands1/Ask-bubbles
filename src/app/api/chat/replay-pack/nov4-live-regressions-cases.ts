@@ -188,7 +188,8 @@ const STEP_B_CASES: readonly ReplayCase[] = [
     title: `CA chat T2 "${CA_CHAIN[1]}" with Step B ON — a patch REPLACING the Observation with "Quill-Hart was late …" must not drop "Marnie"`,
     report:
       `${REPORT}: root cause confirmed by QA — live, the form-patch model sent how:"replace" on the Observation with its own sentence ("Quill-Hart was late …") and evidence "Quill-Hart"; the reducer checks the evidence, not what the new text removes (form-reducer.ts setOne, a replace on an assistant-owned field)`,
-    status: { open: "with Step B on, the replace is accepted on its evidence and the Observation becomes \"Quill-Hart was late to open on 10-20-26.\": \"Marnie\" is dropped (and the Expectation with it); nothing checks what a replace removes" },
+    // Was open in production ("with Step B on, the replace is accepted on its evidence and the Observation becomes \"Quill-Hart was late to open on 10-20-26.\": \"Marnie\" is dropped (and the Expectation with it); nothing checks what a replace removes"); holds since flip 6 (QA, 7 Nov 2026 20:50 PHT), so it is fixed.
+    status: "fixed",
     fixFlags: [],
     async run(t) {
       await withStepB(async () => {

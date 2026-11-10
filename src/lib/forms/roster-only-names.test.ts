@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { AskResponse } from "@/lib/ai/types";
 import type { ChatFormProposal } from "@/types";
@@ -125,6 +125,19 @@ describe("the gate's regressions: nothing in the reply speaks for a removed empl
     const out = rosterOnlyNames(reply(IMA, null), ["Dana Lane"], "create a CA form for ima employee, for opening the store late on 9-28-26");
     expect(out.content).toContain("**Observation of Offense:** opening the store late on 9-28-26");
     expect(out.content).not.toMatch(/\bima\b/);
+  });
+
+  it("the sibling app's flip-3 gate, defect 3 (METRIC_GUARD_ENABLED): \"a CA for Under Performance on PPTA, …\" keeps the clause in the Observation", () => {
+    vi.stubEnv("METRIC_GUARD_ENABLED", "1");
+    try {
+      const message = "I need a CA for Under Performance on PPTA, LPSVA, Club Average, Club Close %, and Spa %.";
+      const built = "Who is this form for? Tell me the employee's full name.\n\n**Observation of Offense:** Under Performance on PPTA, LPSVA, Club Average, Club Close %, and Spa %.";
+      expect(rosterOnlyNames(reply(built, null), ["Dana Lane"], message).content).toContain("**Observation of Offense:** Under Performance on PPTA, LPSVA");
+      // A person's name after "for" still never opens the Observation.
+      expect(rosterOnlyNames(reply(IMA, null), ["Dana Lane"], "create a CA form for ima employee, for opening the store late on 9-28-26").content).toContain("**Observation of Offense:** opening the store late on 9-28-26");
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it("a card's roster person, a name later in the account, or no message: the Observation stays as built", () => {

@@ -1,5 +1,11 @@
-import { priorSentenceFixEnabled, remapIncidentFixEnabled } from "@/lib/config/chat-quality-flags";
-import { withoutPriorStepClauses } from "@/lib/forms/form-date-answer";
+import {
+  politeRequestOwnTurnsEnabled,
+  priorSentenceFixEnabled,
+  remapIncidentFixEnabled,
+  secondRequestOwnAccountEnabled,
+} from "@/lib/config/chat-quality-flags";
+import { correctedDates, withoutPriorStepClauses } from "@/lib/forms/form-date-answer";
+import { businessToday } from "@/lib/business-date";
 import { CA_POLICY_LABEL, readCaPolicy, STANDARDS_OF_CONDUCT, type CaPolicyName } from "@/lib/forms/ca-policy";
 import {
   findManualSection,
@@ -389,6 +395,22 @@ export function isEditTurn(turn: string): boolean {
   return text !== "" && EDIT_TURN.some((pattern) => pattern.test(text));
 }
 
+/*
+ * SECOND_REQUEST_OWN_ACCOUNT_ENABLED (port of the sibling app's round-5 gate fix, 8 Nov 2026,
+ * corrective-action-conversation-qa Q6): a turn that corrects a date ("… on 9-2-26 not 9-1-26") or only states an
+ * earlier step ("the verbal ca was on 9-2-26"), and asks for nothing, is that step's history. The form it names is the
+ * step, not a new request.
+ */
+const ASKS_FOR_A_FORM = /\b(?:create|make\s+(?:a|an|it|another|me)|start|draft|new|another|need\s+(?:a|an)|open|write\s+(?:up|her|him|them))\b/i;
+
+function onlyAboutAPriorStep(turn: string, formWord: RegExp): boolean {
+  if (ASKS_FOR_A_FORM.test(turn)) return false;
+  const today = businessToday();
+  if (correctedDates(turn, today).size > 0) return true;
+  const { text, dropped } = withoutPriorStepClauses(turn, today, turn);
+  return dropped && !formWord.test(text);
+}
+
 /**
  * The turn that starts the form now being written. A later create request
  * with its own incident is a new form: What happened, the policy and the
@@ -404,9 +426,37 @@ export function currentRequestStart(input: {
   let start = 0;
   for (const [index, raw] of input.turns.entries()) {
     const turn = raw.replace(STATE_LEAD, "");
-    if (!(remapIncidentFixEnabled() ? FIXED_REQUEST_TURN : MAIN_REQUEST_TURN).test(turn.trim())) continue;
+    // POLITE_REQUEST_OWN_TURNS_ENABLED: "Can you create me a coaching document for …" is a request too.
+    const asked = politeRequestOwnTurnsEnabled() ? turn.trim().replace(POLITE_LEAD, "") : turn.trim();
+    // SECOND_REQUEST_OWN_ACCOUNT_ENABLED (ported from the sibling app, 7 Nov 2026): after a request, a turn that names a
+    // form anywhere ("I need another corrective action for <A>, …", "now make a separate CA for <A> …") is a request
+    // too; it starts a new one only with its own incident, below.
+    const fixed = remapIncidentFixEnabled();
+    // The sibling app's round-5 gate (8 Nov 2026, Q6): "sorry, the verbal ca was on 9-2-26 not 9-1-26" corrects a prior
+    // step's date; the "ca" in it is that step, never a second request.
+    const formWord = fixed ? FIXED_FORM_WORD_ANYWHERE : FORM_WORD_ANYWHERE;
+    const isRequest =
+      (fixed ? FIXED_REQUEST_TURN : MAIN_REQUEST_TURN).test(asked) ||
+      // The sibling app's round-4 gate (8 Nov 2026, sf-s21 / sf-s22): only in the turn's own first line — a pasted
+      // document after it ("Use this to make it: … 1. **Kit Coaching Document** …") names a form without asking for one.
+      // And its round-5 gate (Q6): never a turn that only corrects a prior step.
+      (secondRequestOwnAccountEnabled() && requests >= 1 && formWord.test(firstLine(turn)) && !onlyAboutAPriorStep(turn, formWord));
+    if (!isRequest) continue;
     requests += 1;
-    if (requests > 1 && requestTellsIncident(turn, input.employeeName, input.slotClause)) start = index;
+    // SECOND_REQUEST_OWN_ACCOUNT_ENABLED (QA's Sunny round-3 gate, 7 Nov 2026; ported from the sibling app): the turn's
+    // incident must also stand without the request words, a few words at least, so "ok create the CA now" ("now") or
+    // "create a CA for <A>" ("for <A>") after an account is never a new request with nothing in it.
+    // The sibling app's round-4 gate (8 Nov 2026, sf-s22 t3): "It needs to be a CA, not a coaching form" chooses the form;
+    // a form named in what is left (", not a coaching form") is no account, nor are the state lines the intent read
+    // appends after the turn ("Warning level: verbal.").
+    const own = withoutRequestWords(withoutStateLines(turn), fixed ? FIXED_FORM_WORD_ANYWHERE : FORM_WORD_ANYWHERE).replace(
+      new RegExp((fixed ? FIXED_FORM_WORD_ANYWHERE : FORM_WORD_ANYWHERE).source, "gi"),
+      " ",
+    );
+    const tells =
+      !secondRequestOwnAccountEnabled() ||
+      (own.split(/\s+/).filter(Boolean).length >= OWN_ACCOUNT_WORDS && requestTellsIncident(own, input.employeeName, input.slotClause));
+    if (requests > 1 && tells && requestTellsIncident(turn, input.employeeName, input.slotClause)) start = index;
   }
   return start;
 }
@@ -433,8 +483,52 @@ const requestTurnFor = (formWords: string) =>
     String.raw`^\s*(?:please\s+)?(?:(?:create|make|start|open|do|file|write|draft)\s+(?:me\s+)?)?${LEVEL_WORDS}${formWords}\b`,
     "i",
   );
+/*
+ * POLITE_REQUEST_OWN_TURNS_ENABLED (ported from the sibling app, sf-s37, 7 Nov 2026): three requests in one chat, each
+ * "Can you create me a coaching document for <name> for …", were never read as requests, so the second card's
+ * Observation read back the first employee's request too. A polite lead before the request words is not part of
+ * them: "can / could / would / will you (please)". Off, as before.
+ */
+const POLITE_LEAD = /^(?:hey,?\s+|hi,?\s+)?(?:can|could|would|will)\s+(?:you|u)\s+(?:please\s+)?/i;
+
 const MAIN_REQUEST_TURN = requestTurnFor(FORM_WORDS);
 const FIXED_REQUEST_TURN = requestTurnFor(FIXED_FORM_WORDS);
+
+/** SECOND_REQUEST_OWN_ACCOUNT_ENABLED: a form named anywhere in the turn, not only at its start. */
+const FORM_WORD_ANYWHERE = new RegExp(String.raw`\b${FORM_WORDS}\b`, "i");
+const FIXED_FORM_WORD_ANYWHERE = new RegExp(String.raw`\b${FIXED_FORM_WORDS}\b`, "i");
+
+/** SECOND_REQUEST_OWN_ACCOUNT_ENABLED: an incident of its own is more than "now" or "for <first> <last>". */
+const OWN_ACCOUNT_WORDS = 4;
+
+/**
+ * SECOND_REQUEST_OWN_ACCOUNT_ENABLED: the turn without its request words. Each sentence that names a form keeps only
+ * what follows the form ("I need another corrective action for <A>, his cash drawer was short $20" → "for <A>, his
+ * cash drawer was short $20"; "ok create the CA now" → "now"); the other sentences stay as they are.
+ */
+/** Each line without the state sentences the intent read puts in front of it or appends ("Warning level: verbal."). */
+function withoutStateLines(turn: string): string {
+  return turn
+    .split("\n")
+    .map((line) => line.replace(STATE_LEAD, ""))
+    .join("\n");
+}
+
+/** The turn's first non-empty line: where a request is asked, before anything pasted under it. */
+function firstLine(turn: string): string {
+  return turn.split("\n").find((line) => line.trim() !== "") ?? "";
+}
+
+function withoutRequestWords(turn: string, formWord: RegExp): string {
+  return turn
+    .split(/(?<=[.!?;])\s+|\n+/)
+    .map((sentence) => {
+      const form = formWord.exec(sentence);
+      return form ? sentence.slice(form.index + form[0].length).trim() : sentence;
+    })
+    .filter(Boolean)
+    .join(" ");
+}
 
 /** The action plan the manager gave in their own words ("action plan: …"), or null. */
 export function statedActionPlan(text: string): string | null {

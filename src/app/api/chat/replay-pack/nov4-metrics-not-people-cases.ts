@@ -138,7 +138,7 @@ export const NOV4_METRICS_NOT_PEOPLE_CASES: ReplayCase[] = [
      */
     // The fix-flag run: fails with production's real flags (QA Vercel read 5 Nov); tracked: GROUNDED_ENTITIES_ENABLED (off in production since 24 Oct, a deliberate rollback) — the unknown person is not announced.
     fixFlags: [FLAG, SALES, GLOSSARY],
-    fixStatus: { open: "fails with production's real flags (QA Vercel read 5 Nov); tracked: GROUNDED_ENTITIES_ENABLED (off in production since 24 Oct, a deliberate rollback) — the unknown person is not announced" },
+    // Holds with its fix flags since flip 3 (6 Nov 2026): the fixStatus is removed, as in #515; it does not depend on FORM_NAME_FROM_ROSTER being on in production.
     async run(t) {
       const thread = start(t);
       const reply = await thread.say(say("Zuleika Brightwell"));
@@ -306,12 +306,8 @@ export const NOV4_METRICS_NOT_PEOPLE_CASES: ReplayCase[] = [
         id: `nov4-qa-form-name-as-person-${key}${suffix}`,
         title: `QA 4 Nov (CA_SALES off): "${text.slice(0, 60)}…": a Corrective Action, never a Coaching Form; no metric is named as a person; a card with no employee asks for one`,
         report: `QA, 4 Nov 2026, production with CA_SALES off: "${text}"`,
-        status: {
-          open:
-            key === "a"
-              ? "a Coaching Form card (with no employee)"
-              : "a Coaching Form card; the reply says \"I couldn't find **Club Close** or **Under** in the Woven roster\"",
-        },
+        // fixed in production by CA_REQUEST_NOT_PRIOR_COACHING_ENABLED, QA round 4, 8 Nov 2026
+        status: "fixed",
         fixFlags: [...flags],
         async run(t) {
           const thread = start(t);
