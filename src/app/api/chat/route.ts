@@ -62,6 +62,9 @@ import {
   questionNotFormEnabled,
   sameFormCopyEnabled,
   sameFormCopyNewPersonEnabled,
+  noSelectionOnOpenCardEnabled,
+  addressOnlyAsksWhoEnabled,
+  teamCardNotProductEnabled,
   staffPickerBareAnswerEnabled,
   wholeTeamCoachingEnabled,
   sameAskNoRepeatEnabled,
@@ -909,6 +912,17 @@ async function postChat(request: Request) {
         ]);
       }
       // PERSON_GUARD_ENABLED: whichever reader named the card's employee, a name that is not a person never stays on it.
+      // TEAM_CARD_NOT_PRODUCT_ENABLED: a team coaching card's "Spray Tan Kits" is the topic, not a person (`lib/forms/team-card-not-product.ts`).
+      if (teamCardNotProductEnabled() && answer.formProposal?.employeeName) {
+        const { loadScopedRoster } = await import("@/lib/forms/employee-roster");
+        answer = (await import("@/lib/forms/team-card-not-product")).withTeamCardNotProduct(answer, {
+          turns: [
+            ...parsed.history.filter((turn) => turn.role === "user").map((turn) => ({ id: turn.id, content: String(turn.content ?? "") })),
+            { id: parsed.questionMessageId, content: parsed.question },
+          ],
+          roster: await loadScopedRoster(context.identity.scope).catch(() => []),
+        });
+      }
       if (personGuardEnabled()) answer = (await import("@/lib/forms/person-guard")).withPersonOnCard(answer);
       // POSSESSIVE_PLACE_NOT_PERSON_ENABLED: "Lee's Summit Plaza" never puts "Lee" on the card (`lib/forms/possessive-place.ts`).
       if (possessivePlaceNotPersonEnabled()) {
@@ -955,6 +969,12 @@ async function postChat(request: Request) {
         void _dropped;
         answer = { ...rest, content: rest.content.replace(/\n*Based on what you've described, I can prepare:\s*$/, "").trimEnd() };
       }
+      // NO_SELECTION_ON_OPEN_CARD_ENABLED: the card on screen is the form; no "I can prepare:" choice offering it again.
+      if (noSelectionOnOpenCardEnabled()) {
+        answer = (await import("@/lib/forms/no-selection-on-open-card")).withoutSelectionOnOpenCard(answer, parsed.continueProposalTemplateKey);
+      }
+      // ADDRESS_ONLY_ASKS_WHO_ENABLED: "Corrective action for 123 Main Street" asks who, never a policy answer (`lib/forms/address-only-asks-who.ts`).
+      if (addressOnlyAsksWhoEnabled()) answer = (await import("@/lib/forms/address-only-asks-who")).withAddressOnlyAsksWho(answer, parsed.question);
       // OFF_ROSTER_ASK_BEFORE_CARD_ENABLED: a store manager's card for a full name not on their roster is asked about once, before the card (`lib/forms/off-roster-ask.ts`).
       if (offRosterAskBeforeCardEnabled()) {
         answer = (await import("@/lib/forms/off-roster-ask")).withOffRosterAskBeforeCard(answer, { scope: context.identity.scope, history: parsed.history, question: asked.question });

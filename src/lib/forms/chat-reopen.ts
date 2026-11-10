@@ -18,7 +18,7 @@ import { extractEmployeeNames, samePerson } from "./proposal";
 import { EDIT_VERB, SHOW_OR_OPEN_VERB, WHICH_FORM_ON_FILE } from "./reopen-cue";
 import { leadsWithReopenRequest, readReopenRequest } from "./reopen-request";
 import { getTemplateByKey } from "./repository";
-import { formEditDateRulesEnabled, formEditSingleWriterEnabled, possessiveNoApostropheEnabled, reopenByAnyOpenVerbEnabled, reopenNotOpenFormEnabled } from "@/lib/config/chat-quality-flags";
+import { formEditDateRulesEnabled, formEditSingleWriterEnabled, possessiveNoApostropheEnabled, reopenByAnyOpenVerbEnabled, reopenCloseSpellingEnabled, reopenNotOpenFormEnabled } from "@/lib/config/chat-quality-flags";
 import { privateAwareLimit } from "./private-creators";
 
 /**
@@ -184,11 +184,25 @@ export async function reopenRequestedForm(input: {
     } catch {
       return null;
     }
-    const candidates = visible
+    const onFile = visible
       .filter((row) => (templateKey === null || row.templateKey === templateKey) && row.status !== "revised")
-      .filter((row) => !finalizedMeant || row.status === "finalized")
+      .filter((row) => !finalizedMeant || row.status === "finalized");
+    let candidates = onFile
       .filter((row) => named(row.employeeName))
       .sort((a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0));
+    /*
+     * REOPEN_CLOSE_SPELLING_ENABLED (port from the sibling app; sf-s26): "Edit <misspelled name> CA" — nobody named exactly;
+     * the one person on these forms whose name the request spells closely (`forms/reopen-close-spelling.ts`).
+     */
+    if (candidates.length === 0 && reopenCloseSpellingEnabled()) {
+      const meant = (await import("./reopen-close-spelling")).closelySpelledEmployee(question, onFile.map((row) => row.employeeName));
+      if (meant) {
+        names = [meant];
+        candidates = onFile
+          .filter((row) => samePerson(meant, row.employeeName))
+          .sort((a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0));
+      }
+    }
     /*
      * REOPEN_BY_ANY_OPEN_VERB_ENABLED (QA/Pau, 6 Nov 2026): several forms on
      * file for the person named — listed, and the manager asked which. One

@@ -143,6 +143,10 @@ export const NOV5_CODING3_CHAT_EDITS_CASES: ReplayCase[] = [
     status: {
       open: "the live answer \"It should update automatically — no copy-and-paste needed\" is sent unchanged with nothing written (the claim guard's phrase list misses it); past that, the \"make that update\" the honest reply invites writes nothing",
     },
+    // CLAIM_GUARD_AUTO_UPDATE_ENABLED (port from the sibling app, 10 Nov 2026) makes the reply to (b) truthful. Still open with it:
+    // the case fails on its later write step (see fixStatus).
+    fixFlags: ["CLAIM_GUARD_AUTO_UPDATE_ENABLED"],
+    fixStatus: { open: "with the flag the reply to (b) is truthful; the account typed on the open draft is still not written" },
     async run(t: T) {
       start(t);
       const thread = t.thread();

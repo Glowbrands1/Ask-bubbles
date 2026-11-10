@@ -4073,3 +4073,92 @@ export function madeAboutRewriteFinishesEnabled(): boolean {
 export function policyReferenceNotAccountEnabled(): boolean {
   return envFlag("POLICY_REFERENCE_NOT_ACCOUNT_ENABLED");
 }
+
+/**
+ * LEVEL_AFTER_FORM_NAME_ENABLED (coding 6, 10 Nov 2026; default off; QA's
+ * overnight scan sf-s19). "I need a corrective action verbal for <A>" named
+ * the level after the form and the card left it unset; "Corrective Action"
+ * on the next turn still made no Verbal card. On: "corrective action
+ * verbal", "ca written", "c/a verbal" are the form's level unless the
+ * sentence says it is a step already taken. Read in `forms/warning-level.ts`.
+ * Off, as before.
+ */
+export function levelAfterFormNameEnabled(): boolean {
+  return envFlag("LEVEL_AFTER_FORM_NAME_ENABLED");
+}
+
+/**
+ * TEAM_CARD_NOT_PRODUCT_ENABLED (coding 6, 10 Nov 2026; default off; QA's
+ * overnight scan sf-s13). "a coaching form for the team at Kearney on selling
+ * Spray Tan Kits …" made a card for "Spray Tan Kits", and "The employee needs
+ * to be left blank for now" went into its Observation. On: a coaching card
+ * whose name is nobody on the roster and was only written as the topic
+ * ("selling …", "on …"), in a request for the team (or one that leaves the
+ * employee blank), is the team card, and the blank-employee turn is no
+ * account. See `forms/team-card-not-product.ts`. Off, as before.
+ */
+export function teamCardNotProductEnabled(): boolean {
+  return envFlag("TEAM_CARD_NOT_PRODUCT_ENABLED");
+}
+
+/**
+ * REOPEN_CLOSE_SPELLING_ENABLED (coding 6, 10 Nov 2026; default off; Pau via
+ * QA, sf-s26, 5 Nov 2026). "Edit Thesaly Brant CA" with Thessaly Brandt's CA
+ * on file was answered "Who is this form for?". On: when a reopen request
+ * names nobody it can find, the one employee on the forms the manager may
+ * open whose every name word it spells closely (same first letter, one or two
+ * letters off) is the one meant, and that form is opened. Nothing is created
+ * or written. See `forms/reopen-close-spelling.ts`. Off, as before.
+ */
+export function reopenCloseSpellingEnabled(): boolean {
+  return envFlag("REOPEN_CLOSE_SPELLING_ENABLED");
+}
+
+/**
+ * NO_SELECTION_ON_OPEN_CARD_ENABLED (coding 6, 10 Nov 2026; default off;
+ * Pau's sf-b6; port from the sibling app). With a Corrective Action card on screen, a turn adding
+ * a detail ended "Based on what you've described, I can prepare:" above a
+ * choice offering the same form again. On: when the card on screen's form is
+ * among the choices, the choice and its lead are left off. See
+ * `forms/no-selection-on-open-card.ts`. Off, as before.
+ */
+export function noSelectionOnOpenCardEnabled(): boolean {
+  return envFlag("NO_SELECTION_ON_OPEN_CARD_ENABLED");
+}
+
+/**
+ * ADDRESS_ONLY_ASKS_WHO_ENABLED (coding 6, 10 Nov 2026; default off; QA, 4
+ * Nov 2026; port from the sibling app). "Corrective action for 123 Main Street"
+ * made no card but was answered as a policy question that never asked who
+ * the form is for. On: a request that is only a form's name and "for <house
+ * number> <street>", answered with no card, gets the sibling app's address
+ * question ("Who is this … for? "Main Street" reads as a street address …"). See `forms/address-only-asks-who.ts`. Off, as before.
+ */
+export function addressOnlyAsksWhoEnabled(): boolean {
+  return envFlag("ADDRESS_ONLY_ASKS_WHO_ENABLED");
+}
+
+/**
+ * INCIDENT_DATE_ONCE_ENABLED (coding 6, 10 Nov 2026; default off; HR, 21 Oct
+ * 2026, replay nov3-stepb-date-as-given). The form "repeated the date of the
+ * offense": the Date said 10/1/2026 and the Observation said "on 10-1-26"
+ * again. On: a narrative field whose only date is the form's Date loses that
+ * date phrase; a field naming any other date is left as it is. See
+ * `forms/incident-date-once.ts`. Off, as before.
+ */
+export function incidentDateOnceEnabled(): boolean {
+  return envFlag("INCIDENT_DATE_ONCE_ENABLED");
+}
+
+/**
+ * CLAIM_GUARD_AUTO_UPDATE_ENABLED (coding 6, 10 Nov 2026; default off;
+ * coding3's chat edits (b), 5 Nov 2026). "Do i need to copy and paste it? or
+ * should it be automatically updating?" was answered "It should update
+ * automatically — no copy-and-paste needed. The details are on the draft
+ * card." with nothing written. On: those lines are claims about the form,
+ * and the open-form honest reply replaces them ("Nothing on the form has
+ * changed yet."). See `forms/form-content-turn.ts`. Off, as before.
+ */
+export function claimGuardAutoUpdateEnabled(): boolean {
+  return envFlag("CLAIM_GUARD_AUTO_UPDATE_ENABLED");
+}

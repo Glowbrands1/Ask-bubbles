@@ -1,4 +1,4 @@
-import { caShortcutWordsEnabled, complaintAccountEnabled, levelEndsRequestEnabled, requestLevelNotHistoryEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { caShortcutWordsEnabled, complaintAccountEnabled, levelAfterFormNameEnabled, levelEndsRequestEnabled, requestLevelNotHistoryEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { businessToday } from "@/lib/business-date";
 
 import { datesInText } from "./form-date-answer";
@@ -809,10 +809,24 @@ const WHOLE_TURN_LEVEL =
 
 const WHOLE_TURN_MAX = 80;
 
+/*
+ * LEVEL_AFTER_FORM_NAME_ENABLED (port from the sibling app, 10 Nov 2026; QA's overnight scan sf-s19): the level named after
+ * the form — "corrective action verbal", "ca written", "c/a verbal" followed by "for", "on", a stop or the end — is read
+ * in the usual order, so every check below (a step already taken states nothing) still applies. Off, as before.
+ */
+const LEVEL_AFTER_FORM =
+  /\b(corrective\s+action|ca|c\/a)\s+(verbal|written)\b(?=\s*(?:$|[.,;:!—–-]|warning\b|form\b|for\b|on\b|about\b|because|regarding|due\b|please|today))/gi;
+
+function withLevelBeforeFormName(text: string): string {
+  return text.replace(LEVEL_AFTER_FORM, (_all, form: string, level: string) => `${level} ${form}`);
+}
+
 export function statedWarningLevel(raw: string, today: string = businessToday()): WarningLevel | null {
   // CA_SHORTCUT_WORDS_ENABLED: "1st written", "first written" — the same level as "written";
   // "final written" too (Pau, 30 Oct 2026: "Tick written"). "final warning" still asks.
-  const text = caShortcutWordsEnabled() ? (raw ?? "").replace(/\b(?:1st|first)\s+(?=(?:verbal|written)\b)|\bfinal\s+(?=written\b)/gi, "") : raw;
+  const shortcut = caShortcutWordsEnabled() ? (raw ?? "").replace(/\b(?:1st|first)\s+(?=(?:verbal|written)\b)|\bfinal\s+(?=written\b)/gi, "") : raw;
+  // LEVEL_AFTER_FORM_NAME_ENABLED (port from the sibling app): "a corrective action verbal for <A>" is read as "a verbal corrective action for <A>".
+  const text = levelAfterFormNameEnabled() ? withLevelBeforeFormName(shortcut ?? "") : shortcut;
   // A change of mind is a few words; testing only a short turn keeps a long one linear.
   const whole = (text ?? "").length <= WHOLE_TURN_MAX ? WHOLE_TURN_LEVEL.exec(text ?? "") : null;
   if (whole) return whole[1]!.toLowerCase() as WarningLevel;
