@@ -1,4 +1,4 @@
-import { readCaPolicy, statedOffenseKeys } from "./ca-policy";
+import { isWovenWorkReading, readCaPolicy, statedOffenseKeys } from "./ca-policy";
 import { manualSectionNamedBy } from "./named-policy-section";
 import {
   boxSectionNames,
@@ -107,6 +107,12 @@ const NOT_A_SECTION = new Set([
   "core values",
   "text",
   "document body",
+  // The retirement "Warning" sheet is not a policy. "Verbal warning" names a
+  // level on the form, and citing that sheet turned it into Warning Policy p.36.
+  // Ported from the sibling app's live code (QA, 6 Nov 2026: a revision cited the 401k "Warning" sheet on a
+  // Corrective Action here). Pau approved this as an exception to the flag/word-list rules, 6 Nov 2026, parity
+  // with the sibling's live code.
+  "warning",
 ]);
 
 /** A short heading must be a whole phrase of the request, never part of a word. */
@@ -223,7 +229,14 @@ export function sectionsNamedIn(input: {
   if (found.length > 0) return found;
 
   const reading = readCaPolicy(input.text);
-  const offenseKeys = statedOffenseKeys(reading, input.text) ?? [];
+  /*
+   * WOVEN_TRAINING_CONDUCT_ENABLED (narrowed after QA's Sunny round-3 gate, 7 Nov 2026): an account that reads as
+   * Woven acknowledgements not done names no policy; the first draft cites the Standards of Conduct for it from the
+   * account (`describedManualSection`), not here. Read as a name, an earlier turn "did not acknowledge woven
+   * policies …" answered "include THAT … signed the jba policy manual" with "Updated Direct policy … Attendance and
+   * Standards of Conduct". Off, the reading has no such source and this is as before.
+   */
+  const offenseKeys = isWovenWorkReading(reading) ? [] : (statedOffenseKeys(reading, input.text) ?? []);
   for (const wanted of sectionHeadingsFor({ offenseKeys, jobTitle: input.jobTitle })) {
     keep(findManualSection(input.chunks, wanted));
   }

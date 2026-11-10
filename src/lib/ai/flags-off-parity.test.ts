@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
@@ -154,6 +154,11 @@ const ALLOWED_UI = [
    * and with the flag off the server never sends one.
    */
   "src/features/chat/chat-screen.tsx",
+  // District Manager, 3 Nov 2026 (QA approved 5 Nov, Pau 6 Nov): the Reviews page and the admin Google Reviews
+  // screen show the company's store number (Dawley Farms: 309; its Google code 338 stays the match key). Unflagged:
+  // it is a data correction, identical for every store whose number is its code.
+  "src/features/reviews/reviews-data.tsx",
+  "src/features/admin/google-reviews/google-reviews-screen.tsx",
   "src/features/chat/message-bubble.tsx",
   "src/features/chat/composer.tsx",
   "src/features/chat/inline-form.tsx",
@@ -301,33 +306,69 @@ describe("new flags default off", () => {
 
 const CHILD = process.env.FLAGS_OFF_PARITY_CHILD === "1";
 
+/*
+ * The child run is split in five (ported from the sibling app, QA, 7 Nov 2026): src/lib; src/app/api/chat
+ * without the replay pack, in two halves by name; src/app/api/forms; the replay pack. As one run over all four folders it timed out
+ * (ETIMEDOUT at 540 s) on busy runners, and in the sibling app the chat+forms part alone had reached 530 s on
+ * main on a 4-CPU runner. Measured here with three children (4-CPU): src/lib 101 s, chat without the pack +
+ * forms 250 s, the replay pack 116 s. Each child has the whole budget with room to spare. The folders, the flags and what must pass are
+ * unchanged, and every test file still runs in exactly one child.
+ *
+ * A path filter matches any file whose path contains it, so the chat folder without the pack is named entry
+ * by entry — each test file, and each folder with its trailing "/" — read from the folder itself.
+ */
+const CHAT = "src/app/api/chat";
+const REPLAY_PACK = `${CHAT}/replay-pack`;
+function chatWithoutReplayPack(): string[] {
+  return readdirSync(CHAT, { withFileTypes: true })
+    .filter((entry) => `${CHAT}/${entry.name}` !== REPLAY_PACK)
+    .filter((entry) => entry.isDirectory() || /\.test\.tsx?$/.test(entry.name))
+    .map((entry) => `${CHAT}/${entry.name}${entry.isDirectory() ? "/" : ""}`)
+    .sort();
+}
+/** The chat folder without the pack, in two halves by name (`half` 0 or 1): each half is its own child. */
+function chatHalf(half: 0 | 1): string[] {
+  const all = chatWithoutReplayPack();
+  const middle = Math.ceil(all.length / 2);
+  return half === 0 ? all.slice(0, middle) : all.slice(middle);
+}
+/*
+ * THE REPLAY PACK IN TWO HALVES (QA, 9 Nov 2026; the same as the sibling app's): the sibling's replay-pack child timed
+ * out at 540 s on CI as its pack grew, and this pack grows the same way. Nearly all of its time is one file,
+ * `replay-pack-e2e.test.ts`, so it is halved by case, not by file: the first child runs the whole folder with the first
+ * half of the cases by id (`REPLAY_PACK_HALF` "0"; the pack's other test files run there, once), the second child that
+ * one file with the second half ("1"). Every case and every file still runs exactly once, with every new flag off.
+ */
+const REPLAY_PACK_E2E = `${REPLAY_PACK}/replay-pack-e2e.test.ts`;
+const CHILDREN: readonly { readonly name: string; readonly paths: () => readonly string[]; readonly env?: Readonly<Record<string, string>> }[] = [
+  { name: "src/lib/ai, src/lib/forms", paths: () => ["src/lib/ai", "src/lib/forms"] },
+  { name: `${CHAT} (without the replay pack), first half by name`, paths: () => chatHalf(0) },
+  { name: `${CHAT} (without the replay pack), second half by name`, paths: () => chatHalf(1) },
+  { name: "src/app/api/forms", paths: () => ["src/app/api/forms"] },
+  { name: `${REPLAY_PACK}, first half of the cases by id`, paths: () => [REPLAY_PACK], env: { REPLAY_PACK_HALF: "0" } },
+  { name: `${REPLAY_PACK}, second half of the cases by id`, paths: () => [REPLAY_PACK_E2E], env: { REPLAY_PACK_HALF: "1" } },
+];
+
 describe("existing chat and form suites with every new flag off", () => {
-  it.skipIf(CHILD)(
-    "passes the suites whose expectations are already on main",
-    () => {
-      const env: NodeJS.ProcessEnv = { ...process.env, FLAGS_OFF_PARITY_CHILD: "1" };
-      delete env.VITEST;
-      delete env.VITEST_WORKER_ID;
-      delete env.VITEST_POOL_ID;
-      for (const name of CHAT_QUALITY_FLAG_NAMES) env[name] = "off";
-      const output = execFileSync(
-        process.execPath,
-        [
-          "node_modules/vitest/vitest.mjs",
-          "run",
-          "--exclude",
-          "src/lib/ai/flags-off-parity.test.ts",
-          "src/lib/ai",
-          "src/lib/forms",
-          "src/app/api/chat",
-          "src/app/api/forms",
-        ],
-        // The child's output (every suite's logs) passed Node's 1 MB default
-        // buffer on CI and failed with ENOBUFS before any test failed.
-        { env, encoding: "utf8", timeout: 540_000, stdio: "pipe", maxBuffer: 256 * 1024 * 1024 },
-      );
-      expect(output).toMatch(/Test Files[\s\S]*passed/);
-    },
-    560_000,
-  );
+  for (const child of CHILDREN) {
+    it.skipIf(CHILD)(
+      `passes the suites whose expectations are already on main: ${child.name}`,
+      () => {
+        const env: NodeJS.ProcessEnv = { ...process.env, FLAGS_OFF_PARITY_CHILD: "1", ...child.env };
+        delete env.VITEST;
+        delete env.VITEST_WORKER_ID;
+        delete env.VITEST_POOL_ID;
+        for (const name of CHAT_QUALITY_FLAG_NAMES) env[name] = "off";
+        const output = execFileSync(
+          process.execPath,
+          ["node_modules/vitest/vitest.mjs", "run", "--exclude", "src/lib/ai/flags-off-parity.test.ts", ...child.paths()],
+          // The child's output (every suite's logs) passed Node's 1 MB default
+          // buffer on CI and failed with ENOBUFS before any test failed.
+          { env, encoding: "utf8", timeout: 540_000, stdio: "pipe", maxBuffer: 256 * 1024 * 1024 },
+        );
+        expect(output).toMatch(/Test Files[\s\S]*passed/);
+      },
+      560_000,
+    );
+  }
 });

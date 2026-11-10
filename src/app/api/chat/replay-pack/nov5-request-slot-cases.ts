@@ -1,6 +1,7 @@
 import { expect, vi } from "vitest";
 
 import { STAFF, WEST_DODGE, type DirectoryRow, type ReplayAnswer, type ReplayCase, type ReplayContext } from "./cases";
+import { answerOffRosterAsk } from "./off-roster-answer";
 
 /**
  * ============================================================================
@@ -82,13 +83,17 @@ export const NOV5_REQUEST_SLOT_CASES: ReplayCase[] = [
     id: "nov5-request-slot-off-roster-name",
     title: "Pau's message 1 for \"Remy Fenn\", not on the roster (Remy Calder is): no metric named as a person, no \"Which of them\", never Remy Calder",
     report: `${REPORT}: "Which of them is this Corrective Action Form for — Remy Fenn, Club Close or Under?"`,
-    status: { open: "\"I couldn't find **Remy Fenn** or **Club Close** or **Under** in the Woven roster\" (metrics named as people)" },
+    // Changed on purpose (5 Nov 2026): QA flipped CA_SALES_POLICY + REPLY_MATCHES_CARD + TITLE_OF_THE_EMPLOYEE + METRIC_GUARD on in production (production-flags.json), so this case now holds with production's flags.
+    status: "fixed",
     // The fix-flag run: fails with production's real flags (QA Vercel read 5 Nov); tracked: GROUNDED_ENTITIES_ENABLED (off in production since 24 Oct, a deliberate rollback) — neither a card for Remy Fenn nor the note naming only Remy Fenn.
     fixFlags: [FLAG, SALES, GLOSSARY],
-    fixStatus: { open: "fails with production's real flags (QA Vercel read 5 Nov); tracked: GROUNDED_ENTITIES_ENABLED (off in production since 24 Oct, a deliberate rollback) — neither a card for Remy Fenn nor the note naming only Remy Fenn" },
+    // Holds with its fix flags since flip 3 (6 Nov 2026): the fixStatus is removed, as in #515; it does not depend on FORM_NAME_FROM_ROSTER being on in production.
     async run(t) {
       const thread = start(t);
-      const reply = await thread.say(say("Remy Fenn"));
+      // Changed on purpose (9 Nov 2026, the off-roster switch-on: OFF_ROSTER_ASK_BEFORE_CARD, Pau's "on" via QA): the name is
+      // on no roster here, so a store manager is asked about it first; "use <name>" makes the card, and every assertion
+      // below holds on that card turn (`off-roster-answer.ts`).
+      const reply = await answerOffRosterAsk(thread, await thread.say(say("Remy Fenn")), "Remy Fenn");
       expect(reply.content, `a metric is named or offered as a person:\n${reply.content}`).not.toMatch(METRIC_AS_PERSON);
       expect(reply.content, `"Which of them" was asked:\n${reply.content}`).not.toMatch(/which of them/i);
       expect(reply.content, `Remy Fenn became Remy Calder:\n${reply.content}`).not.toMatch(/Remy Calder/);
@@ -102,13 +107,15 @@ export const NOV5_REQUEST_SLOT_CASES: ReplayCase[] = [
     id: "nov5-request-slot-off-roster-name-models",
     title: "the same, with the reading models reading \"Remy Fenn\" as typed (the live path): no metric offered, no \"Which of them\", never Remy Calder",
     report: `${REPORT}: the AI reader's path`,
-    status: { open: "metrics are named as people beside Remy Fenn" },
+    // Changed on purpose (5 Nov 2026): QA flipped CA_SALES_POLICY + REPLY_MATCHES_CARD + TITLE_OF_THE_EMPLOYEE + METRIC_GUARD on in production (production-flags.json), so this case now holds with production's flags.
+    status: "fixed",
     // The fix-flag run: fails with production's real flags (QA Vercel read 5 Nov); tracked: GROUNDED_ENTITIES_ENABLED (off in production since 24 Oct, a deliberate rollback) — neither a card for Remy Fenn nor the note naming only Remy Fenn.
     fixFlags: [FLAG, SALES, GLOSSARY],
-    fixStatus: { open: "fails with production's real flags (QA Vercel read 5 Nov); tracked: GROUNDED_ENTITIES_ENABLED (off in production since 24 Oct, a deliberate rollback) — neither a card for Remy Fenn nor the note naming only Remy Fenn" },
+    // Holds with its fix flags since flip 3 (6 Nov 2026): the fixStatus is removed, as in #515; it does not depend on FORM_NAME_FROM_ROSTER being on in production.
     async run(t) {
       const thread = start(t);
-      const reply = await thread.say(say("Remy Fenn"), { employeeName: "Remy Fenn" });
+      // Changed on purpose (9 Nov 2026, the off-roster switch-on): asked about first; "use <name>" makes the card (`off-roster-answer.ts`).
+      const reply = await answerOffRosterAsk(thread, await thread.say(say("Remy Fenn"), { employeeName: "Remy Fenn" }), "Remy Fenn");
       expect(reply.content, `a metric is named or offered as a person:\n${reply.content}`).not.toMatch(METRIC_AS_PERSON);
       expect(reply.content, `"Which of them" was asked:\n${reply.content}`).not.toMatch(/which of them/i);
       expect(reply.content, `Remy Fenn became Remy Calder:\n${reply.content}`).not.toMatch(/Remy Calder/);
@@ -122,7 +129,8 @@ export const NOV5_REQUEST_SLOT_CASES: ReplayCase[] = [
     id: "nov5-request-slot-on-roster-name",
     title: "the same message for Remy Fenn ON the roster: the card is for Remy Fenn and cites the Standards of Conduct",
     report: `${REPORT}: control, the person on the roster`,
-    status: { open: "production answers the message as metric-only (CA_SALES_POLICY_ENABLED off)" },
+    // Changed on purpose (5 Nov 2026): QA flipped CA_SALES_POLICY + REPLY_MATCHES_CARD + TITLE_OF_THE_EMPLOYEE + METRIC_GUARD on in production (production-flags.json), so this case now holds with production's flags.
+    status: "fixed",
     fixFlags: [FLAG, SALES, GLOSSARY],
     async run(t) {
       const thread = start(t, [...ROSTER, REMY_FENN]);
@@ -166,7 +174,8 @@ export const NOV5_REQUEST_SLOT_CASES: ReplayCase[] = [
     id: "nov5-request-slot-no-name-verbal",
     title: "QA review: \"I need a corrective action verbal. This is for Under Performance on …\" names nobody: it asks who; never \"Under Performance\" or \"Under\"",
     report: `${REPORT}: QA review of the request slot, edge case 1`,
-    status: { open: "\"I couldn't find **Club Close** or **Under** in the Woven roster\"; with the three flags on (before the QA review fix), \"I couldn't find **Under** …\"" },
+    // Changed on purpose (5 Nov 2026): QA flipped CA_SALES_POLICY + REPLY_MATCHES_CARD + TITLE_OF_THE_EMPLOYEE + METRIC_GUARD on in production (production-flags.json), so this case now holds with production's flags.
+    status: "fixed",
     fixFlags: [FLAG, SALES, GLOSSARY],
     async run(t) {
       const thread = start(t);
@@ -178,7 +187,8 @@ export const NOV5_REQUEST_SLOT_CASES: ReplayCase[] = [
     id: "nov5-request-slot-ca-for-under-performance",
     title: "QA review: \"I need a CA for Under Performance on …\": the slot is an offense, not a name; it asks who",
     report: `${REPORT}: QA review of the request slot, edge case 2`,
-    status: { open: "\"I couldn't find **Under** in the Woven roster\" and a card for **Club Close**; with the three flags on (before the QA review fix), \"I couldn't find **Under** …\"" },
+    // Changed on purpose (5 Nov 2026): QA flipped CA_SALES_POLICY + REPLY_MATCHES_CARD + TITLE_OF_THE_EMPLOYEE + METRIC_GUARD on in production (production-flags.json), so this case now holds with production's flags.
+    status: "fixed",
     fixFlags: [FLAG, SALES, GLOSSARY],
     async run(t) {
       const thread = start(t);

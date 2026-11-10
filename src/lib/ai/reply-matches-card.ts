@@ -1,5 +1,6 @@
-import { replyMatchesCardEnabled } from "@/lib/config/chat-quality-flags";
-import { removedOffenseLabels } from "@/lib/forms/ca-policy";
+import { cleaningOtherEveryWordingEnabled, conductIncidentCitesPageEnabled, replyMatchesCardEachCardEnabled, replyMatchesCardEnabled } from "@/lib/config/chat-quality-flags";
+import { offeredOffRosterName } from "@/lib/forms/off-roster-confirm";
+import { caPolicyProposalLine, readCaPolicy, removedOffenseLabels } from "@/lib/forms/ca-policy";
 import { cardPolicyHeading } from "@/lib/forms/card-policy";
 import { personRosterNames } from "@/lib/forms/person-guard";
 import { requestMessage } from "@/lib/forms/request-slot";
@@ -15,6 +16,9 @@ import {
 } from "@/lib/forms/roster-only-names";
 
 import { HAS_EMPLOYEE_AND_PLACE, SAYS_READY } from "./coaching-what-happened";
+import type { ChatFormProposal } from "@/types";
+
+import { withOwnBrandOnly } from "./own-brand-only";
 import type { AskResponse } from "./types";
 
 /**
@@ -77,8 +81,11 @@ function withNobodyNamed(content: string, names: readonly string[], message: str
     .split("\n")
     .filter((line) => !SAYS_READY.test(line.trim()))
     .join("\n");
-  next = withoutUnseatedName(next, [slotName(message, names)], names, draftedFor(next));
-  if (!ASKS_WHO.test(next) && !ASKS_A_CHOICE.test(next) && !ASKS_FOR_THE_NAME.test(next)) next = `${next.trim()}\n\n${ASK_WHO}`;
+  // The app's own words stay: one word of the name alone at a sentence start, or in another case (`ownWords`).
+  next = withoutUnseatedName(next, [slotName(message, names)], names, draftedFor(next), { ownWords: true });
+  // OFF_ROSTER_CONFIRM_ENABLED (finding C, 6 Nov 2026): the off-roster offer ("reply **use <name>**") is the question.
+  const offers = offeredOffRosterName(next) !== null;
+  if (!offers && !ASKS_WHO.test(next) && !ASKS_A_CHOICE.test(next) && !ASKS_FOR_THE_NAME.test(next)) next = `${next.trim()}\n\n${ASK_WHO}`;
   return next;
 }
 
@@ -100,7 +107,15 @@ function withTheCardsEmployee(content: string, employee: string): string {
 /** Rule 3: one policy, the card's. */
 function withOnePolicy(content: string): string {
   // The card's policy is its **Policy:** line; a card without one (a Coaching Form) cites it on its first manual line.
-  const heading = cardPolicyHeading(content) ?? content.split("\n").map((line) => MANUAL_LINE.exec(line)?.[1]).find(Boolean) ?? null;
+  const read = cardPolicyHeading(content) ?? content.split("\n").map((line) => MANUAL_LINE.exec(line)?.[1]).find(Boolean) ?? null;
+  /*
+   * CONDUCT_INCIDENT_CITES_PAGE_ENABLED (QA's live tester, 8 Nov 2026): "**Policy:** this reads as **Standards of
+   * Conduct** — a required deadline that was missed …" was read as the heading "this reads as Standards of Conduct",
+   * so the card's own "Standards of Conduct Policy, JBA Policy Manual p.12" line was taken as another policy and
+   * dropped: the card named the policy with no page. With the flag on, the policy such a line reads as is the one in
+   * bold. Off, as before.
+   */
+  const heading = read && conductIncidentCitesPageEnabled() ? (/^this reads as \*\*([^*]+)\*\*/i.exec(read)?.[1] ?? read) : read;
   if (!heading) return content;
   const card = normalHeading(heading);
   return content
@@ -136,10 +151,58 @@ function withoutNotToldWhenTold(content: string, issue: string | null | undefine
     .join("\n");
 }
 
+/**
+ * CLEANING_OTHER_EVERY_WORDING_ENABLED (QA's live eval, 6 Nov 2026: the live model's reply said the Standards of
+ * Conduct for "he did not complete daily cleaning duties"). On a Corrective Action card whose account reads as
+ * cleaning left undone (`readCaPolicy`'s `other`, from the manager's message and the card's Issue), the
+ * **Policy:** line is the Other line, and a Standards of Conduct citation line goes. Pau: cleaning is Other.
+ */
+const CORRECTIVE_ACTION_KEY = "dpoa";
+const SOC_CITATION = /^\s*(?:[-*]\s*)?\**Standards of Conduct\**(?:\s+Policy)?,\s*JBA Policy Manual\b/i;
+
+export function withCleaningOtherPolicy(response: AskResponse, message?: string): AskResponse {
+  const card = response.formProposal;
+  if (!cleaningOtherEveryWordingEnabled() || !card || card.templateKey !== CORRECTIVE_ACTION_KEY) return response;
+  const reading = readCaPolicy([message ?? "", card.issue ?? ""].filter(Boolean).join("\n"));
+  if (reading.other !== "cleaning") return response;
+  const other = caPolicyProposalLine(reading);
+  if (!other) return response;
+  let placed = false;
+  const lines = response.content.split("\n").flatMap((line) => {
+    if (SOC_CITATION.test(line)) return [];
+    if (!/\*\*Policy:?\*\*/.test(line)) return [line];
+    if (placed) return [];
+    placed = true;
+    return [other];
+  });
+  const content = tidy(lines.join("\n"));
+  return content === response.content ? response : { ...response, content };
+}
+
+/**
+ * TWO OR MORE CARDS (QA's tester, 5 Nov 2026, item 6 "two forms"): the rules above read one card — the first —
+ * so the second form's section ("I can create a **Corrective Action Form** for **<its person>**") was rewritten
+ * to the first card's person. With several cards, each "… **<form>** for **<name>**" line is matched to the card
+ * of that form, and gets that card's person; the single-card rules (who, one policy, "not told") do not run.
+ */
+function withEachCardsEmployee(content: string, cards: readonly ChatFormProposal[]): string {
+  return content.replace(/(\b(?:draft|create|put)\b[^\n.]*?\*\*([^*]+)\*\* for )\*\*([^*]+)\*\*/gi, (whole, lead: string, form: string, name: string) => {
+    const own = cards.filter((card) => card.templateName?.trim().toLowerCase() === form.trim().toLowerCase());
+    const employee = own.length === 1 && own[0]!.subject !== "team" ? own[0]!.employeeName?.trim() : undefined;
+    return !employee || name.trim() === employee ? whole : `${lead}**${employee}**`;
+  });
+}
+
 /** The reply made to agree with its card. Pure; see `withReplyMatchesCard`. */
 export function replyMatchesCard(response: AskResponse, names: readonly string[], message?: string): AskResponse {
   const card = response.formProposal;
   if (!card) return response;
+  const cards = response.formProposals ?? [];
+  // REPLY_MATCHES_CARD_EACH_CARD_ENABLED (default off): REPLY_MATCHES_CARD is live, so the change is behind its own flag.
+  if (cards.length > 1 && replyMatchesCardEachCardEnabled()) {
+    const each = tidy(withoutRemovedOffense(withEachCardsEmployee(response.content, cards)));
+    return each === response.content ? response : { ...response, content: each };
+  }
   let content = response.content;
   if (card.subject !== "team") {
     const employee = card.employeeName?.trim();
@@ -152,6 +215,9 @@ export function replyMatchesCard(response: AskResponse, names: readonly string[]
 
 /** REPLY_MATCHES_CARD_ENABLED, the last step of the turn: `replyMatchesCard` with the actor's roster read this turn. Off: as built. */
 export function withReplyMatchesCard(response: AskResponse): AskResponse {
-  if (!replyMatchesCardEnabled()) return response;
-  return replyMatchesCard(response, personRosterNames() ?? [], requestMessage());
+  const cleaned = withCleaningOtherPolicy(response, requestMessage());
+  // OWN_BRAND_ONLY_ENABLED, gated on its own: only this company's brand is named (`ai/own-brand-only.ts`).
+  const branded = withOwnBrandOnly(cleaned);
+  if (!replyMatchesCardEnabled()) return branded;
+  return replyMatchesCard(branded, personRosterNames() ?? [], requestMessage());
 }

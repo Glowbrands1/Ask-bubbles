@@ -6,7 +6,7 @@ import { COMPANY_LOCATIONS, locationByCode, locationById, locationNameKey } from
 
 import { extractFormDate } from "./form-date-answer";
 import { FORM_NAME_PATTERN, canonicalShorthand, canonicalWarningWording, isFormVocabulary, leadingFormRequest } from "./template-intent";
-import { antiLoopEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { antiLoopEnabled, exitAnswerNotACorrectionEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { companyNameStops } from "./name-stops";
 import { isTypedStopSpan, isTypedStopWord, NAME_LABEL_WORDS, NOT_A_NAME, NOT_A_NAME_LEAD, NOT_A_TYPED_NAME, TYPED_NAME_WORD, isNameLabelPhrase, lowercaseMonths, nameAfterNameLabel, stripTrailingJobOrTitle } from "./name-words";
 import { keepTypedPerson } from "./typed-name";
@@ -20,6 +20,7 @@ import {
 import { proposeLocationWithSource, type LocationProposal } from "./location-scope";
 import { ROSTER_STORE_INDEX, rosterLocationName } from "./location-mention";
 import { isExitTerms, namesSomebody, notInStreetAddress } from "./answer-not-a-name";
+import { nameBeforeAccountVerb } from "./not-a-name";
 import { isStoreName, type StoreIndex } from "@/lib/stores/resolver";
 import type { AccessScope, ChatFormProposal, ChatMessage, EmployeeVerification } from "@/types";
 
@@ -1390,6 +1391,10 @@ function isFieldLabelCandidate(name: string): boolean {
 }
 
 function settle(strong: string[], weak: string[], text: string, subjects: readonly string[] = []): EmployeeMentions {
+  // ACCOUNT_VERB_NOT_A_NAME_ENABLED (sf-s38, Pau-approved): "rhea failing" / "Rhea Calloway failing" end at the verb.
+  const beforeVerb = (names: string[]) => names.map(nameBeforeAccountVerb).filter((name): name is string => Boolean(name));
+  strong = beforeVerb(strong);
+  weak = beforeVerb(weak);
   if (antiLoopEnabled()) {
     const fromLabel = nameAfterNameLabel(text);
     if (fromLabel) strong = [fromLabel, ...strong];
@@ -1412,9 +1417,15 @@ function settle(strong: string[], weak: string[], text: string, subjects: readon
       weak = weak.filter((name) => !isCompanyPlaceWord(name));
     }
   }
-  const negated = negatedNames(text);
+  // EXIT_ANSWER_NOT_A_CORRECTION_ENABLED: "store items not returned", "not eligible for rehire" negate an exit answer's word, never a person.
+  const negatedAll = negatedNames(text);
+  const negated = negatedAll.filter((name) => !(exitAnswerNotACorrectionEnabled() && isExitTerms(name)));
   const correction = negated.length > 0 || CORRECTION_CUE.test(text);
-  const given = correction ? [...strong, ...sentenceAnswers(text)] : strong;
+  // An exit form typed as lines ("Thessaly Varrow\nTeam Member Part Time\n…\npayroll deduction does not apply"): only
+  // the exit term was dropped, and a name on a line of its own is still the answer it was (the Bubbles gate, R6-2).
+  const exitTermsOnly = !correction && negated.length < negatedAll.length;
+  const ownLine = (name: string) => text.split(/\n+/).some((line) => line.trim().replace(/[.?!]+$/, "").toLowerCase() === name.toLowerCase());
+  const given = correction ? [...strong, ...sentenceAnswers(text)] : exitTermsOnly ? [...strong, ...sentenceAnswers(text).filter(ownLine)] : strong;
   const recipient = formRecipient(subjects, given, weak, text);
   const narrative = recipient ? weak.filter((name) => samePerson(name, recipient)) : weak;
   const names = distinctNames([...given, ...narrative]).filter(

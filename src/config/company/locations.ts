@@ -31,6 +31,13 @@ export interface CompanyLocationEntry {
   /** Two-letter state, when known. */
   readonly state: string | null;
   readonly districtId: string | null;
+  /**
+   * The company's own store number where it differs from `code` (District
+   * Manager, 3 Nov 2026: Dawley Farms is 0309, its code is 338). Shown in
+   * place of the code and read when a manager types it; `code` and the
+   * location id are unchanged.
+   */
+  readonly companyNumber?: string;
 }
 
 export interface CompanyAreaEntry {
@@ -58,7 +65,9 @@ export const COMPANY_LOCATION_ENTRIES: readonly CompanyLocationEntry[] = [
   { code: "225", name: "Sioux Falls, SD (W 41st St)", state: "SD", districtId: null },
   { code: "236", name: "Grand Island, NE", state: "NE", districtId: null },
   { code: "264", name: "Omaha, NE (West Dodge Rd)", state: "NE", districtId: null },
-  { code: "338", name: "Sioux Falls, SD (E 18th St)", state: "SD", districtId: null },
+  // District Manager, 3 Nov 2026: this is Dawley Farms, the company's store 0309. "338" stays the code (Google's profile and loc-338).
+  // The name is unchanged: store resolution reads it as "City, ST (street)" ("Sioux Falls E 18th St"); "Dawley Farms" resolves through Woven's name.
+  { code: "338", name: "Sioux Falls, SD (E 18th St)", state: "SD", districtId: null, companyNumber: "309" },
 ];
 
 export const COMPANY_DISTRICT_ENTRIES: readonly CompanyDistrictEntry[] = [];

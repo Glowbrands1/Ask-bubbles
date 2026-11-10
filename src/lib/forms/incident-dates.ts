@@ -1,5 +1,14 @@
 import { isAppLine, withoutAppLines } from "@/lib/ai/app-sentences";
-import { antiLoopEnabled, dateAnswerAppliedEnabled, dateAnswerKeepsOpenEnabled, keepFormEmployeeEnabled, priorSentenceFixEnabled } from "@/lib/config/chat-quality-flags";
+import {
+  antiLoopEnabled,
+  correctedDateKeptEnabled,
+  dateAnswerAppliedEnabled,
+  dateAnswerKeepsOpenEnabled,
+  keepFormEmployeeEnabled,
+  priorSentenceFixEnabled,
+  stepDatesNotFormDateEnabled,
+  formDateSaidSettlesEnabled,
+} from "@/lib/config/chat-quality-flags";
 
 /** DATE_ANSWER_KEEPS_OPEN_ENABLED, on top of the live DATE_ANSWER_APPLIED_ENABLED. */
 const keepsOpen = () => dateAnswerAppliedEnabled() && dateAnswerKeepsOpenEnabled();
@@ -10,9 +19,11 @@ import {
   heldCoachingDates,
   listFormDates,
   listIncidentDates,
+  priorSteps,
   statedIncidentDates,
   yearlessWrittenOut,
 } from "./form-date-answer";
+import { saidFormDate } from "./form-date-said";
 import { incidentOnly, incidentOnlyOn } from "./form-date-incident-only";
 import { priorSentenceFixFor } from "./prior-sentence-scope";
 import { stepSentenceDates } from "./step-sentence-dates";
@@ -215,10 +226,18 @@ export function answersDateQuestion(history: readonly Turn[], question: string, 
  */
 export function correctedIncidentDate(turns: readonly string[], today: string): string | null {
   let date: string | null = null;
+  // CORRECTED_DATE_KEPT_ENABLED: the prior steps' dates, read over the whole conversation (with their corrections).
+  const stepDates = correctedDateKeptEnabled() ? new Set(priorSteps(turns.join("\n\n"), today).map((step) => step.iso)) : null;
   for (const turn of turns.slice(1)) {
     // "wait, was it 10/19/26?" asks; it corrects nothing (QA, 22 Oct 2026, round 3).
     if (!CORRECTS_DATE.test(turn) || ADDS_AN_INCIDENT.test(turn) || /\?\s*$/.test(turn.trim())) continue;
     const own = incidentDates(turn, today);
+    /*
+     * CORRECTED_DATE_KEPT_ENABLED (the sibling app's round-5 trace of corrective-action-conversation-qa Q6, 8 Nov
+     * 2026): "sorry, the verbal ca was on 9-2-26 not 9-1-26" corrects a prior step's date, never the incident's, so it
+     * leaves the incident date the manager corrected before it ("the meeting was actually on 10-19-26") as it was.
+     */
+    if (own.length === 1 && stepDates?.has(own[0]!)) continue;
     if (own.length === 1) date = own[0]!;
   }
   return date;
@@ -273,8 +292,20 @@ export function decideFormDate(input: {
   if (!DATED_TEMPLATES.has(input.templateKey)) return {};
   const explicit = explicitFormDate(input.text, input.today);
   if (explicit) return { formDate: explicit };
+  // FORM_DATE_SAID_SETTLES_ENABLED: "make the date for 10/14/26" is the form's Date; no question is asked (`form-date-said.ts`).
+  const said = formDateSaidSettlesEnabled() ? saidFormDate(input.text, input.today) : null;
+  if (said) return { formDate: said };
 
   let dates = incidentDates(input.text, input.today, COACHING_TEMPLATES.has(input.templateKey));
+  /*
+   * CORRECTED_DATE_KEPT_ENABLED (QA's round-5 trace of Q6, 8 Nov 2026): "sorry, the verbal ca was on 9-2-26 not
+   * 9-1-26" names the prior step's corrected date; it is that step's date, never one of the incident's. Without this,
+   * several dates left the card on the last one stated (ANTI_LOOP), here the step's 09-02.
+   */
+  if (correctedDateKeptEnabled()) {
+    const stepDates = new Set(priorSteps(input.text, input.today).map((step) => step.iso));
+    dates = dates.filter((iso) => !stepDates.has(iso));
+  }
   if (COACHING_TEMPLATES.has(input.templateKey)) {
     const latestIncident = dates[dates.length - 1] ?? "";
     const held = heldCoachingDates(input.text, input.today).filter((iso) => iso >= latestIncident);
@@ -283,6 +314,15 @@ export function decideFormDate(input: {
   }
   if (antiLoopEnabled() && dates.length === 0 && /\btoday(?:'?s|s)?(?:\s+date)?\b/i.test(input.text)) {
     return { formDate: input.today };
+  }
+  /*
+   * STEP_DATES_NOT_FORM_DATE_ENABLED (QA round 5): "she already received a verbal warning and coaching on 9/8/2026,
+   * 9/15/2026 and 9/25/2026 … today's date is fine": the steps' dates are set aside, so the card must not keep the
+   * first date `extractFormDate` read (9/15, a coaching). With at most one incident date left, that date dates the
+   * form ("today's date is fine" is today), and with none, the day it is created.
+   */
+  if (stepDatesNotFormDateEnabled() && dates.length <= 1 && stepSentenceDates(input.text, input.today).size > 0) {
+    return { formDate: dates[0] ?? null };
   }
   /*
    * FORM_DATE_INCIDENT_ONLY_ENABLED (D3): the date the card would otherwise

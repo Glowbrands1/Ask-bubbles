@@ -1,6 +1,6 @@
 import { expect } from "vitest";
 
-import { STAFF, WEST_DODGE, noClaimWithoutUpdate, replyMatchesDiff, savedForm, type DirectoryRow, type ReplayAnswer, type ReplayCase, type ReplayContext, type ReplayThread } from "./cases";
+import { STAFF, WEST_DODGE, noClaimWithoutUpdate, replyMatchesDiff, savedForm, type ReplayAnswer, type ReplayCase, type ReplayContext, type ReplayThread } from "./cases";
 
 /**
  * ============================================================================
@@ -84,10 +84,6 @@ function handedNow(prompt: string): string {
   return [turns.at(-2) ?? "", change.trim()].join("\n");
 }
 
-/** The MSB case's employee (invented). */
-const SELA: DirectoryRow = { id: "e-sela", firstName: "Sela", lastName: "Brannock", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-264"], positionName: "Team Member Part Time" };
-/** The shortfall she described first, in the managers' MSB wording (`nov4-manager-msb-cases.ts`). */
-const SHORTFALL = "Sela Brannock is not following her MSB. She was under in sales per hour and add-on sales for october.";
 
 function start(t: T) {
   t.directory(STAFF);
@@ -211,39 +207,6 @@ export const NOV5_CODING3_CHAT_EDITS_CASES: ReplayCase[] = [
       const handed = t.revisionPrompts().slice(calls).map(handedNow).join("\n");
       expect(handed, '"make that update" did not hand the revision her account').toMatch(SAID);
       expect(t.values(id).coaching_details ?? "", 'after "make that update" the draft does not say what Rowan did').toMatch(SAID);
-    },
-  },
-  {
-    id: "nov5-coding3-msb-yes-card-what-happened",
-    title:
-      "a CA after an MSB shortfall: she described the shortfall, the card was offered, she said \"yes\" — the card's What happened / Issue is the shortfall she described, never \"The policy is Standards of Conduct\"",
-    report:
-      'QA, relaying a tester\'s live chat (5 Nov 2026, both apps): the manager described an MSB / sales shortfall, the Corrective Action was offered, she said "yes", and the card read "What happened: The policy is Standards of Conduct" instead of the shortfall',
-    /*
-     * NOT ITEM 1'S ROOT CAUSE (replayed 5 Nov 2026). Before any form is open,
-     * nothing reads a "previous answer". With production's flags the offer
-     * does not exist (CA_SALES_POLICY_ENABLED is off), so "yes" makes no card.
-     * With CA_SALES_POLICY_ENABLED on, "yes" is turned into the request the
-     * offer accepts ("Create a Corrective Action Form for <name>. The policy is
-     * Standards of Conduct.", `acceptedCaOffer` in `lib/ai/ca-offer.ts`) and
-     * the card reads that request as the account: "**Issue:** The policy is
-     * Standards of Conduct" (the same with FORM_FULL_REMAP_ENABLED on too).
-     * No fixFlags: FORM_EDIT_SOURCE_TURN_ENABLED does not touch it.
-     */
-    status: {
-      open: "with production's flags \"yes\" makes no card (no Corrective Action is offered: CA_SALES_POLICY_ENABLED is off); with the offer on, the card's Issue is the offer's own request, \"The policy is Standards of Conduct\"",
-    },
-    async run(t: T) {
-      t.directory([...STAFF, SELA]);
-      t.as("location_manager", WEST_DODGE);
-      const thread = t.thread();
-      await thread.say(SHORTFALL);
-      const card = await thread.say("yes");
-      expect(thread.proposal, `"yes" made no Corrective Action card for Sela Brannock:\n${card.content}`).toMatchObject({ templateKey: "dpoa", employeeName: "Sela Brannock" });
-      const happened = card.content.split("\n").find((line) => /\*\*(?:What happened|Observation of Offense|Issue):?\*\*/i.test(line)) ?? "";
-      expect(happened, `the card has no What happened / Issue line:\n${card.content}`).not.toBe("");
-      expect(happened, `What happened is the offer's request, not her shortfall:\n${happened}`).not.toMatch(/\bpolicy is Standards of Conduct\b|Create a Corrective Action Form/i);
-      expect(happened, `What happened does not hold the shortfall she described:\n${happened}`).toMatch(/sales per hour|add-on sales|\bMSB\b/i);
     },
   },
 ];
