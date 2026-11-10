@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 import type { ChatFormProposal, ChatMessage } from "@/types";
+import { oneFormEachPersonEnabled } from "@/lib/config/chat-quality-flags";
 
 vi.mock("@/config/company/locations", async () =>
   (await import("@/test/fixtures/reference-roster")).referenceRosterModule(),
@@ -558,6 +559,16 @@ describe("related multi-intent patterns, through the chat route", () => {
 
   it("one form for two people is still asked about, never split or guessed (QA F18)", async () => {
     const answer = await say("coaching form for Avery Testperson and Jordan Testperson");
+    if (oneFormEachPersonEnabled()) {
+      /*
+       * Changed on purpose (Pau's P7 ruling via QA, 10 Nov 2026: "one form each, also for two people"; QA's round-16B
+       * gate): with ONE_FORM_EACH_PERSON_ENABLED the request is the first person's form, and a "**Next:**" line queues
+       * the other — never one card guessed for both. Off, F18 as before.
+       */
+      expect(summary(answer)).toEqual([["coaching", "avery testperson"]]);
+      expect(answer.content).toMatch(/\*\*Next:\*\* a Coaching Form each for \*\*Jordan Testperson\*\*/);
+      return;
+    }
     expect(summary(answer)).toEqual([["coaching", null]]);
     expect(answer.content).toContain("Which of them");
   });
