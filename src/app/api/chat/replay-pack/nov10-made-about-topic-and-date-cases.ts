@@ -1,7 +1,7 @@
 import { expect, vi } from "vitest";
 
 import { WEST_DODGE, type ReplayCase, type ReplayContext } from "./cases";
-import { play } from "./nov7-step-b-refusals-cases";
+import { phoneUnderObserved, play } from "./nov7-step-b-refusals-cases";
 import { BUB_PHONE, REFUSAL_ROSTER, STEP_B_READER_FLAGS, STEP_B_REFUSAL_SCENARIOS, patch } from "./nov7-step-b-refusals-scenarios";
 
 /**
@@ -232,7 +232,8 @@ export const NOV10_MADE_ABOUT_TOPIC_AND_DATE_CASES: ReplayCase[] = [
             const observation = String(run.saved.observation ?? "");
             if (!/Woven deadline/.test(observation)) return `lost the Woven deadline: ${JSON.stringify(observation)}`;
             if (!/Also observed: Wrenna was on her phone\./.test(observation)) return `"Also observed:" was split: ${JSON.stringify(observation)}`;
-            return null;
+            // Changed on purpose (QA's gate, 10 Nov 2026): one Expectation, and the phone under Observed, before it.
+            return phoneUnderObserved(observation);
           },
         },
       }),
