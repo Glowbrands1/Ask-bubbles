@@ -76,6 +76,7 @@ import {
   formEditToolInStreamEnabled,
   formEditNoopGuardEnabled,
   nearMissQuestionRulesEnabled,
+  formNameOffRosterAskEnabled,
   reopenByAnyOpenVerbEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { streamWhenSlow } from "@/lib/api/streamed-response";
@@ -320,6 +321,8 @@ async function postChat(request: Request) {
           }
         }
         enterPersonRoster(names);
+        // FORM_NAME_OFF_ROSTER_ASK_ENABLED: the scope's level, so a name not on the roster is held for a store manager only (`lib/forms/roster-scope.ts`).
+        if (formNameOffRosterAskEnabled()) (await import("@/lib/forms/person-roster-store")).enterRosterScope(context.identity.scope?.level ?? "");
         /*
          * FORM_NAME_FROM_ROSTER_ENABLED: does this message name somebody on the
          * roster (exact or close, or a roster first name typed in lowercase)?
