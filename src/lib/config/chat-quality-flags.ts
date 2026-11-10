@@ -1315,6 +1315,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "MADE_ABOUT_SAID_DATE_ENABLED",
   "SECTION_BREAKS_KEPT_ENABLED",
   "ADD_NOT_REPEATED_ENABLED",
+  "CREATE_REPLY_PLAIN_ENABLED",
 ] as const;
 
 /**
@@ -2915,6 +2916,16 @@ export function cardNamesEmployeeEnabled(): boolean {
  */
 export function policyTopicIntoFieldEnabled(): boolean {
   return envFlag("POLICY_TOPIC_INTO_FIELD_ENABLED");
+}
+
+/**
+ * CREATE_REPLY_PLAIN_ENABLED (QA's Bubbles round-16b live test, 10 Nov 2026; coding 5; same flag in both apps; default
+ * off; with CREATE_FROM_CONVERSATION_POINTS_TO_CARD). "Create a Coaching Form from this conversation." after a card got
+ * the card's text again. On: naming the card's own form points to the card too, and the reply says plainly that the
+ * card above is ready and to press Create draft (`ai/card-meta-turn.ts`). Off, as before.
+ */
+export function createReplyPlainEnabled(): boolean {
+  return envFlag("CREATE_REPLY_PLAIN_ENABLED");
 }
 
 // --- end coding 5 flags ---
