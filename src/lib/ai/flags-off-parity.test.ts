@@ -147,6 +147,9 @@ const UI_PATHS = ["src/app/**/*.tsx", "src/components/**", "src/features/**/*.ts
  * off, it renders as before for every role.
  */
 const ALLOWED_UI = [
+  // WOVEN_DOCUMENT_KEEP_OUT_ENABLED (QA, 10 Nov 2026): the Content tab's per-document "Keep out" button, rendered only
+  // when the content route says the flag is on; off, the tab renders exactly as before.
+  "src/features/admin/woven-knowledge/woven-knowledge-content.tsx",
   // District Manager, 3 Nov 2026 (QA approved 5 Nov, Pau 6 Nov): the Reviews page and the admin Google Reviews
   // screen show the company's store number (Dawley Farms: 309; its Google code 338 stays the match key). Unflagged:
   // it is a data correction, identical for every store whose number is its code.

@@ -47,7 +47,7 @@ export async function GET(request: Request) {
     assertLiveMode();
     await authorizeRequest(request, "manage_integrations");
     const content = await readWovenKnowledgeContent({ documentTitles, supersededUploads });
-    // WOVEN_DOCUMENT_KEEP_OUT_ENABLED: the screen offers "Keep out of Ask Sunny" per document only when on.
+    // WOVEN_DOCUMENT_KEEP_OUT_ENABLED: the screen offers "Keep out of Ask Bubbles" per document only when on.
     return NextResponse.json({ status: "ok", content, ...(wovenDocumentKeepOutEnabled() ? { keepOut: true } : {}) }, { headers: NO_STORE });
   } catch (error) {
     if (error instanceof KnowledgeSyncStoreError) {
