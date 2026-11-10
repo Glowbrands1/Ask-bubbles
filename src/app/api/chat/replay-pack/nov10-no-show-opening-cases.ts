@@ -16,7 +16,6 @@ import { failureToOpenPeople } from "./nov10-failure-to-open-cases";
  */
 const FLAG = "NO_SHOW_OPENING_IS_ATTENDANCE_ENABLED";
 const REPORT = "QA's live Bubbles round 17b, item 4 (10 Nov 2026), and QA's ruling";
-const WIRING = "NO_SHOW_OPENING_IS_ATTENDANCE's two lines in ca-policy.ts await Coding-2 (requested 10 Nov 2026)";
 const NO_SHOW = "Can you make a CA for Corisande Pell, she did not show up for a scheduled opening shift";
 const FAILURE = "Can you make a CA for Corisande Pell for failure to open on time?";
 const policyLine = (content: string) => /\*\*Policy:\*\*[^\n]*/.exec(content)?.[0] ?? "";
@@ -38,7 +37,7 @@ export const NOV10_NO_SHOW_OPENING_CASES: ReplayCase[] = [
     report: `${REPORT}; ${casing}`,
     status: { open: "cited as Late Opening" },
     fixFlags: [FLAG],
-    fixStatus: { open: WIRING },
+    // The ca-policy.ts lines are in (coding 2): it holds with the fix flag, so the fixStatus goes.
     async run(t: ReplayContext) {
       const thread = start(t);
       const reply = await thread.say(said);
