@@ -48,8 +48,9 @@ const ASKS: readonly { key: string; text: string; check: (content: string) => vo
     key: "someone-who-quit",
     text: "what form do i use for someone who quit",
     check: (content) => {
-      expect(content).toMatch(/Exit/);
-      expect(content).not.toMatch(/you can create these \d+ forms/);
+      // The situation's own form, never the whole inventory ("These are the forms published in …").
+      expect(content).toMatch(/The forms? for this (?:is|are)/);
+      expect(content).not.toMatch(/These are the forms published|you can create these \d+ forms/);
     },
   },
   {
