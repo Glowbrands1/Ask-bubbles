@@ -1,7 +1,7 @@
 /**
  * ============================================================================
  * THE APP'S OWN CITATION LINE AT THE END OF A NARRATIVE FIELD
- * (ported from the sibling app: CITATION_LINE_KEPT_ON_REVISION_ENABLED, its production-flags read, 5 Nov 2026)
+ * (ported from the sibling app, its production-flags read, 5 Nov 2026; read here by the made-about policy line)
  * ============================================================================
  *
  * With POLICY_CITATION_ENABLED, or EDIT_POLICY_ASK_ENABLED's "please list the policy", the app appends, to a Coaching

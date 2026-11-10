@@ -6,9 +6,9 @@
 
 **Ported (each default off; same flag in both apps):**
 
-- CITATION_LINE_KEPT_ON_REVISION_ENABLED (sibling 61c6219a, PR #560): `forms/app-citation-line.ts` and `planRevision` (`forms/revision.ts`) keep the app's trailing line on a wording or additive edit instead of refusing it.
+- The splitter only, `forms/app-citation-line.ts` (sibling 61c6219a, PR #560), which the two ports below read. CITATION_LINE_KEPT_ON_REVISION itself (a wording or additive edit keeps the app's trailing line instead of being refused) is held: its wiring is in `forms/revision.ts`, a protected file here; the exact lines went to QA for the owner first.
 - MADE_ABOUT_POLICY_LINE_ENABLED (sibling 70119f97, with the `oldLine` input from 48c45d11): `forms/made-about-policy-line.ts`, from `form-patch-turn.ts` once a dated made-about rewrote the account.
-- MADE_ABOUT_POLICY_LINE_REPLACES_ENABLED (sibling edb1ecb, on its branch `claude/made-about-topic-and-date`, not yet on its main): every "Policy reference: …" line is taken off the rewritten account, wherever it sits (`withoutPolicyLines`).
+- MADE_ABOUT_POLICY_LINE_REPLACES_ENABLED (sibling edb1ecb, on its main since its QA round 18, 0880609f): every "Policy reference: …" line is taken off the rewritten account, wherever it sits (`withoutPolicyLines`).
 
 **This app only: MADE_ABOUT_POLICY_LINE_OLD_PATH_ENABLED.** QA's live turn is undated. Here the patch path hands an undated made-about to the old path (`chat-revision.ts`), so the ported wiring never sees it: this app has no MADE_ABOUT_UNDATED_TOGETHER on main (its port, 3b0c47c5, is on the unmerged branch `claude/made-about-undated-together`). With the flag, the chat route's revision is wrapped (`withMadeAboutPolicyLine`): a field that carried the app's line and was rewritten by a made-about turn has its reference read again. Not needed in the sibling app: MADE_ABOUT_UNDATED_TOGETHER is on in its production, so its undated made-about turns take the patch path, where MADE_ABOUT_POLICY_LINE already runs.
 

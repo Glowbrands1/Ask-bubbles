@@ -1,6 +1,4 @@
-import { citationLineKeptOnRevisionEnabled, editMakeItAboutEnabled } from "@/lib/config/chat-quality-flags";
-
-import { splitAppCitationLine } from "./app-citation-line";
+import { editMakeItAboutEnabled } from "@/lib/config/chat-quality-flags";
 
 /**
  * ============================================================================
@@ -483,19 +481,6 @@ const sameList = (a: readonly string[], b: readonly string[]) =>
   a.length === b.length && [...a].sort().join("|") === [...b].sort().join("|");
 
 /**
- * CITATION_LINE_KEPT_ON_REVISION_ENABLED (ported from the sibling app): a rewording or an addition that dropped the app's
- * own trailing citation line ("Policy reference: …, JBA Policy Manual p.N") gets it back, so the line's page numbers never
- * make keepsSubstance refuse the manager's edit. Only that line (`app-citation-line.ts`); only for those two modes. Off,
- * the revision as the model wrote it.
- */
-function withAppCitationLine(before: string, revised: string, mode: RevisionScope["mode"]): string {
-  if (!citationLineKeptOnRevisionEnabled() || (mode !== "wording" && mode !== "additive")) return revised;
-  const { line } = splitAppCitationLine(before);
-  if (!line || splitAppCitationLine(revised).line !== null) return revised;
-  return `${revised}\n\n${line}`;
-}
-
-/**
  * Turns what the model proposed into what may be written.
  *
  * `proposed` is the model's output; `current` is the stored form. Nothing that
@@ -540,13 +525,12 @@ export function planRevision(input: {
   for (const [key, raw] of Object.entries(input.proposed.values ?? {})) {
     if (typeof raw !== "string" || raw.trim() === "") continue;
     const before = (input.current.get(key)?.value ?? "").trim();
-    const revised = withAppCitationLine(before, raw.trim(), scope.mode);
-    if (revised === before) continue;
-    if (!mayChangeText(key, revised)) {
+    if (raw.trim() === before) continue;
+    if (!mayChangeText(key, raw.trim())) {
       if (known.has(key)) untouched.push(key);
       continue;
     }
-    values[key] = revised;
+    values[key] = raw.trim();
   }
 
   const checked: Record<string, string[]> = {};
