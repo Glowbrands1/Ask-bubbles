@@ -1304,6 +1304,9 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "MADE_ABOUT_REWRITE_FINISHES_ENABLED",
   // coding 5: CREATE_FROM_CONVERSATION_POINTS_TO_CARD (the sibling app's P6, 10 Nov 2026; default off).
   "CREATE_FROM_CONVERSATION_POINTS_TO_CARD_ENABLED",
+  // coding 5: ONE_FORM_EACH_PERSON, CARD_NAMES_EMPLOYEE (the sibling app's P7, 10 Nov 2026; default off).
+  "ONE_FORM_EACH_PERSON_ENABLED",
+  "CARD_NAMES_EMPLOYEE_ENABLED",
 ] as const;
 
 /**
@@ -2874,6 +2877,25 @@ export function exitFormDateFromTerminationEnabled(): boolean {
  */
 export function createFromConversationPointsToCardEnabled(): boolean {
   return envFlag("CREATE_FROM_CONVERSATION_POINTS_TO_CARD_ENABLED");
+}
+
+/**
+ * ONE_FORM_EACH_PERSON_ENABLED (ported from the sibling app: QA's P7 there, 10 Nov 2026; coding 5; default off). "Make
+ * me a coaching form for <A>, <B>, and <C> for not closing duties correctly" handled only <A>. On: one form each — <A>'s
+ * card (or the question which <A>), then a "Next:" line; "yes" starts the next person's form with the same reason
+ * (`forms/one-form-each.ts`, steps in the chat route). Off, as before.
+ */
+export function oneFormEachPersonEnabled(): boolean {
+  return envFlag("ONE_FORM_EACH_PERSON_ENABLED");
+}
+
+/**
+ * CARD_NAMES_EMPLOYEE_ENABLED (ported from the sibling app: QA's P7 there, 10 Nov 2026; coding 5; default off). A card's
+ * reply said "I have the employee and the store" without naming them. On: "I have **<name>** and the store"
+ * (`forms/one-form-each.ts`). Off, as before.
+ */
+export function cardNamesEmployeeEnabled(): boolean {
+  return envFlag("CARD_NAMES_EMPLOYEE_ENABLED");
 }
 
 // --- end coding 5 flags ---
