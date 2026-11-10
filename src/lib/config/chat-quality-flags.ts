@@ -1319,6 +1319,9 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ADD_NOT_REPEATED_ENABLED",
   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
   "CHAT_STAGE_TIMINGS_ENABLED",
+  // coding 5: POLICY_GATE_NONBLOCKING (the sibling app's, ported; QA's October triage, 10 Nov 2026; default off).
+  "POLICY_GATE_NONBLOCKING_ENABLED",
+  "NEXT_PUBLIC_POLICY_GATE_NONBLOCKING_ENABLED",
 ] as const;
 
 /**
@@ -2931,6 +2934,23 @@ export function cardNamesEmployeeEnabled(): boolean {
  */
 export function policyTopicIntoFieldEnabled(): boolean {
   return envFlag("POLICY_TOPIC_INTO_FIELD_ENABLED");
+}
+
+/**
+ * POLICY_GATE_NONBLOCKING_ENABLED (ported from the sibling app, where it is on main; QA's October triage of #174,
+ * 10 Nov 2026; coding 5; default off). Managers' feedback, "not letting me complete it due to policy verification": a
+ * BLANK Direct policy held Corrective Action finalize. On: a blank policy-grounded field is left off the unresolved
+ * list (`forms/policy-verification.ts`), so the card and finalize are not held for a policy the manual did not match;
+ * the field stays empty. A value somebody TYPED that was never verified still asks for the acknowledgement. Off, as
+ * before.
+ *
+ * The form card is a client component, so the browser reads `NEXT_PUBLIC_POLICY_GATE_NONBLOCKING_ENABLED`, written out
+ * statically for Next to inline (a redeploy is needed after setting it). The server reads either spelling, so the card
+ * and `finalizeInstance` agree.
+ */
+export function policyGateNonblockingEnabled(): boolean {
+  const inlined = process.env.NEXT_PUBLIC_POLICY_GATE_NONBLOCKING_ENABLED;
+  return envFlag("POLICY_GATE_NONBLOCKING_ENABLED") || (typeof inlined === "string" && ON.has(inlined.trim().toLowerCase()));
 }
 
 // --- end coding 5 flags ---

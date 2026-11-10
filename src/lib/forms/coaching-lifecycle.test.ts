@@ -362,6 +362,55 @@ describe("a new coaching form", () => {
   });
 
   /*
+   * QA's October triage of #174 (10 Nov 2026), the sibling app's fix ported: managers' feedback (10/7 and 10/20), "not
+   * letting me complete it due to policy verification" — a blank Direct policy held Corrective Action finalize. Off
+   * (main), finalize still throws; with POLICY_GATE_NONBLOCKING_ENABLED on, a blank policy field stays blank and is
+   * not held for.
+   */
+  it('feedback 10/7 and 10/20, off (main): "not letting me complete it due to policy verification"', async () => {
+    const instance = await startCorrectiveForm();
+    await expect(finalizeInstance(instance.id, "dana", null)).rejects.toBeInstanceOf(UnverifiedPolicyError);
+  });
+
+  it('feedback 10/7 and 10/20, on: "not letting me complete it due to policy verification"', async () => {
+    vi.stubEnv("POLICY_GATE_NONBLOCKING_ENABLED", "1");
+    try {
+      const instance = await startCorrectiveForm();
+      const finalized = await finalizeInstance(instance.id, "dana", null);
+      expect(finalized.status).toBe("finalized");
+      const loaded = await loadInstance(instance.id);
+      const policy = loaded!.values.find((row) => row.fieldKey === "policy_language");
+      expect((policy?.value ?? "").trim()).toBe("");
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("on, the browser spelling alone: a blank Direct policy is not held for", async () => {
+    vi.stubEnv("NEXT_PUBLIC_POLICY_GATE_NONBLOCKING_ENABLED", "true");
+    try {
+      const instance = await startCorrectiveForm();
+      expect((await finalizeInstance(instance.id, "dana", null)).status).toBe("finalized");
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it.each([
+    ["sentence case", "Typed from the manager's own copy."],
+    ["all lowercase", "typed from the managers own copy"],
+  ])("on: a hand-typed Direct policy still asks for the acknowledgement (%s)", async (_register, typed) => {
+    vi.stubEnv("POLICY_GATE_NONBLOCKING_ENABLED", "1");
+    try {
+      const instance = await startCorrectiveForm();
+      await saveInstanceValues(instance.id, { values: { policy_language: typed } }, "dana");
+      await expect(finalizeInstance(instance.id, "dana", null)).rejects.toBeInstanceOf(UnverifiedPolicyError);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  /*
    * HR, 22 Oct 2026: the manager rewrote the verified quote, and
    * the refusal read as though no policy had matched. It says what happened.
    */
