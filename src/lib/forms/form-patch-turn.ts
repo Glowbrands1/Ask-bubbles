@@ -16,6 +16,7 @@ import {
   formDateSaidAloneEnabled,
   madeAboutRewriteFinishesEnabled,
   madeAboutPolicyLineEnabled,
+  madeAboutPolicyLineReplacesEnabled,
   stepBDateSaidEnabled,
   stepBDateWithAboutEnabled,
 } from "@/lib/config/chat-quality-flags";
@@ -496,6 +497,8 @@ export async function patchActiveForm(input: PatchTurnInput): Promise<AskRespons
           accountKey,
           // MADE_ABOUT_REWRITE_FINISHES_ENABLED: the old account's line, kept by the revision, is replaced, never left on the new one.
           ...(finishes ? { oldLine } : {}),
+          // MADE_ABOUT_POLICY_LINE_REPLACES_ENABLED: the old account's line, in whatever shape the revision kept it, never stays.
+          ...(madeAboutPolicyLineReplacesEnabled() ? { replaceAnywhere: true } : {}),
         });
       }
       return changed;

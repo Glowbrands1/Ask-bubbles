@@ -49,6 +49,7 @@ const POLICY_LINE_FIX = [
   "MADE_ABOUT_SAID_DATE_ENABLED",
   "MADE_ABOUT_POLICY_LINE_ENABLED",
 ];
+const REPLACES_FIX = [...POLICY_LINE_FIX, "MADE_ABOUT_POLICY_LINE_REPLACES_ENABLED"];
 
 /** The first made-about turn, asking for the policy: Details about showing up late, ending in the Attendance line. */
 async function lateWithPolicy(t: ReplayContext, next: Readonly<Record<string, unknown>>) {
@@ -77,7 +78,7 @@ async function lateWithPolicy(t: ReplayContext, next: Readonly<Record<string, un
 
 const policyLines = (details: string) => details.match(/Policy reference:[^\n]*/g) ?? [];
 
-type Kept = "dropped" | "end";
+type Kept = "dropped" | "end" | "period" | "middle";
 
 /**
  * After the first turn, a dated made-about ("make it about leaving the front desk unattended on 11/6/26") whose revision
@@ -96,6 +97,8 @@ function deskAfterLate(kept: Kept) {
     const revised = {
       dropped: `${observed}\n\n${expectation}`,
       end: `${observed}\n\n${expectation}\n\n${ATTENDANCE_LINE}`,
+      period: `${observed}\n\n${expectation}\n\n${ATTENDANCE_LINE}.`,
+      middle: `${observed}\n\n${ATTENDANCE_LINE}\n\n${expectation}`,
     }[kept];
     t.revisionWrites({ coaching_details: revised });
     const reply = await thread.say(DESK_SAID);
@@ -119,14 +122,24 @@ const DESK_CASES: Readonly<Record<Kept, { readonly title: string; readonly open:
     open: "the old account's Attendance line stays on the new account",
     fixFlags: POLICY_LINE_FIX,
   },
+  period: {
+    title: "the revision keeps the first turn's Attendance line with a trailing period (the sibling's round 15): the new Details carries the Standards of Conduct reference alone",
+    open: "the first turn's line stays, and the new reference is read from it too: both sections",
+    fixFlags: REPLACES_FIX,
+  },
+  middle: {
+    title: "the revision keeps the first turn's Attendance line mid-text (the sibling's round 15): the new Details carries the Standards of Conduct reference alone",
+    open: "the first turn's line stays mid-text and no reference is written for the new account",
+    fixFlags: REPLACES_FIX,
+  },
 };
 
 const REPORT = "QA's live Bubbles report (10 Nov 2026): \"make it about not following the dress code\" kept the stale \"Policy reference: Attendance Policy, JBA Policy Manual p.14\" and wrote no dress-code reference line";
 
 export const NOV10_MADE_ABOUT_POLICY_LINE_CASES: ReplayCase[] = [
-  ...(["dropped", "end"] as const).map(
+  ...(["dropped", "end", "period", "middle"] as const).map(
     (kept): ReplayCase => ({
-      id: `nov10-made-about-policy-line-${kept}`,
+      id: kept === "period" || kept === "middle" ? `nov10-made-about-policy-line-chained-${kept}` : `nov10-made-about-policy-line-${kept}`,
       title: `"${LATE_SAID}" wrote the Attendance line; then "${DESK_SAID}": ${DESK_CASES[kept].title}`,
       report: DESK_REPORT,
       status: { open: DESK_CASES[kept].open },
