@@ -56,14 +56,14 @@ const state = vi.hoisted(() => ({
   toolChecked: {} as Record<string, string[]>,
   modelCalls: 0,
   manual: null as unknown,
-  /* Which one-open-revision index the database has: 20261025233000's, or 20261110200000's (archived drafts left out). */
+  /* Which one-open-revision index the database has: 20261025233000's, or 20261110201714's (archived drafts left out). */
   indexSkipsArchived: false,
 }));
 
 /*
  * THE ONE-OPEN-REVISION INDEX, which the fake does not model (it enforces the primary key only):
  * `form_instances_one_open_revision` refuses a second draft revising the same form (23505). As built by
- * 20261025233000 it counts archived drafts too; 20261110200000 leaves them out (`state.indexSkipsArchived`).
+ * 20261025233000 it counts archived drafts too; 20261110201714 leaves them out (`state.indexSkipsArchived`).
  */
 vi.mock("@/lib/supabase/server", () => ({
   getSupabaseAdmin: () => {
@@ -678,9 +678,8 @@ describe("an archived revision draft (QA's audit item 17a, 10 Nov 2026)", () => 
     vi.unstubAllEnvs();
   });
 
-  // Fails until Pau's forms/instances.ts lines land (docs/patches/revision-archived-not-open.patch): `findOpenRevision`
-  // still returns the archived draft. With the patch applied it passes; then this becomes `it(`.
-  it.fails("REVISION_ARCHIVED_NOT_OPEN_ENABLED with the narrowed index: an archived draft is not reused; asking again opens a new revision", async () => {
+  // Pau's forms/instances.ts lines are in ("ok revision archived", 10 Nov 2026), so this holds now.
+  it("REVISION_ARCHIVED_NOT_OPEN_ENABLED with the narrowed index: an archived draft is not reused; asking again opens a new revision", async () => {
     vi.stubEnv("REVISION_ARCHIVED_NOT_OPEN_ENABLED", "true");
     state.indexSkipsArchived = true;
     try {
