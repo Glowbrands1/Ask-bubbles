@@ -101,6 +101,8 @@ export const NOV4_OVERNIGHT_SCAN_CASES: readonly ReplayCase[] = [
     report: `${REPORT}, sf-s11: "what information do you need for a corrective action for an employee" → "Odalys Frewen. Verbal Warning. Under Performance." → "Can you do the same thing for Perrin Haldane but switch it to a written"`,
     // Run 4 Nov 2026 (production flags): fails as below.
     status: { open: "turn 3 gets no card at all: it is answered as a policy question (the pack's stand-in answer) — no CA for Perrin Haldane, Written or otherwise (turn 2's card for Odalys Frewen also reads \"Verbal Warning\" as earlier history and asks Verbal or Written)" },
+    // Fixed under SAME_REQUEST_OTHER_PERSON_ENABLED (port from Ask Sunny, 10 Nov 2026): a new request for the other person; open on production flags until QA flips it.
+    fixFlags: ["SAME_REQUEST_OTHER_PERSON_ENABLED"],
     async run(t) {
       const thread = start(t);
       await thread.say("what information do you need for a corrective action for an employee");

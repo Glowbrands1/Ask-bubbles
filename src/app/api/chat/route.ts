@@ -62,6 +62,7 @@ import {
   questionNotFormEnabled,
   sameFormCopyEnabled,
   sameFormCopyNewPersonEnabled,
+  sameRequestOtherPersonEnabled,
   staffPickerBareAnswerEnabled,
   wholeTeamCoachingEnabled,
   sameAskNoRepeatEnabled,
@@ -276,6 +277,29 @@ async function postChat(request: Request) {
           activeFormInstanceId: undefined,
           continueProposalTemplateKey: newPersonCopy.source.templateKey,
         };
+      }
+      let sameRequestOther: import("@/lib/forms/same-request-other-person").SameRequestTurn | null = null;
+      if (sameRequestOtherPersonEnabled() && !newPersonCopy) {
+        const { sameRequestForOtherPerson } = await import("@/lib/forms/same-request-other-person");
+        const { loadScopedRoster } = await import("@/lib/forms/employee-roster");
+        const roster = await loadScopedRoster(context.identity.scope).catch(() => []);
+        const other = sameRequestForOtherPerson({
+          question: asked.question,
+          history: asked.history,
+          roster,
+          continueTemplateKey: asked.continueProposalTemplateKey,
+          formOpen: Boolean(asked.activeFormInstanceId),
+        });
+        if (other) {
+          sameRequestOther = other;
+          asked = {
+            ...asked,
+            question: other.question,
+            history: asked.history.slice(0, other.historyBefore),
+            activeFormInstanceId: undefined,
+            continueProposalTemplateKey: undefined,
+          };
+        }
       }
       // FORM_NAME_FROM_ROSTER_ENABLED, part 2: every name reader of the turn reads this message's request slot (`lib/forms/request-slot.ts`).
       if (formNameFromRosterEnabled()) (await import("@/lib/forms/request-message-store")).enterRequestMessage(asked.question);
@@ -963,6 +987,8 @@ async function postChat(request: Request) {
       if (newPersonCopy) {
         answer = (await import("@/lib/forms/same-form-copy")).withCopyFrom(answer, newPersonCopy.source, newPersonCopy.name);
       }
+      // SAME_REQUEST_OTHER_PERSON_ENABLED: <B>'s card says what of the earlier request it carries.
+      if (sameRequestOther) answer = (await import("@/lib/forms/same-request-other-person")).withSameRequestNote(answer, sameRequestOther);
     } catch (error) {
       /*
        * A FAILED ANSWER IS STILL A RECORDED TURN, closed as a failure. The row
