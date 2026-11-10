@@ -962,7 +962,7 @@ export function nameBeforeTitleEnabled(): boolean {
  * create here?" are answered from the app's own published form templates and
  * role matrix (`lib/forms/forms-guide.ts`), never from model memory or a
  * knowledge-base miss. Off (the default), those turns are answered exactly as
- * before. Ported from Ask Sunny; same flag name.
+ * before. Same flag name as the sibling app.
  */
 export function formsGuideEnabled(): boolean {
   return envFlag("FORMS_GUIDE_ENABLED");
