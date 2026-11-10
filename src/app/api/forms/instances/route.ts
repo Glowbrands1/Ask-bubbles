@@ -34,12 +34,12 @@ import { getTemplateByKey } from "@/lib/forms/repository";
 import {
   isPayrollDeductAnswer,
   PAYROLL_DEDUCT_STATED_KEYS,
-  payrollDeductAmount,
   payrollDeductChecked,
 } from "@/lib/forms/payroll-deduct";
 import {
   PAYROLL_DEDUCT_AMOUNT_KEY,
   PAYROLL_DEDUCT_AMOUNT_STATED_KEYS,
+  managerPayrollAmount,
 } from "@/lib/forms/payroll-deduct-amount";
 import {
   WARNING_LEVEL_STATED_KEYS,
@@ -377,7 +377,7 @@ export async function POST(request: Request) {
           .join("\n");
         // TYPO_READING_ROUTES_ENABLED: the reader sees "dedcut" as deduct; the stored conversation stays as typed.
         // AI_READS_CODE_CHECKS_ENABLED: an amount the reader quoted, checked again against these turns.
-        const amount = payrollDeductAmount(await readingText(said)) ?? readerAmount(card);
+        const amount = managerPayrollAmount(await readingText(said)) ?? readerAmount(card);
         if (amount) {
           await applyStatedFacts(
             instanceId,

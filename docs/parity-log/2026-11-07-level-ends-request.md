@@ -1,0 +1,5 @@
+# This-app-only fix: a closing "verbal ca" is the request (LEVEL_ENDS_REQUEST_ENABLED)
+
+QA's live tester here (7 Nov 2026) wrote "my team member <name> was late on 10-20-26, verbal ca" and got no card. The closing "verbal ca" had no request words before it in its sentence, so `warningMentions` (`forms/warning-level.ts`) read it as history. `statedWarningLevel` returned null and `detectTemplateIntent` left `requestedCreation` false, so the turn was answered as a policy question. With LEVEL_ENDS_REQUEST_ENABLED (default off), a level clause that names the document (ca, c/a, corrective action, write-up) as the turn's last clause is the form asked for.
+
+Not ported: the sibling app's warning reader is shaped differently and already reads it. "my tanning consultant <name> was late on 10-20-26, verbal ca" gives `statedWarningLevel` "verbal" and `requestedCreation` true there, and its real chat route with production's flags opens a Corrective Action card with Verbal Warning. A guard replay case with that wording is added there (`nov7-level-ends-request`, status "fixed") so it stays that way.

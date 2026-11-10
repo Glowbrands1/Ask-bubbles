@@ -77,7 +77,7 @@ const ROWS: Row[] = [
     s: "Standards of Conduct",
     printedPage: 13,
     sections: [],
-    c: "o Fighting or threats at work\no Loud or disruptive behavior at work\no Insubordination - refusing a manager's direction.\no Disrespect toward a manager or coworker\no Breaking safety rules\no Excessive absences or any absence without notice\no Leaving the work area without approval during a shift\no Unapproved use of telephones, computers or other company equipment\no Sharing confidential business or customer information",
+    c: "o Fighting or threats at work\no Loud or disruptive behavior at work\no Insubordination - refusing a manager's direction.\no Disrespect toward a manager or coworker\no Breaking safety rules\no Excessive absences or any absence without notice\no Unapproved absence from the work area during a shift\no Unapproved use of telephones, computers or other company equipment\no Sharing confidential business or customer information",
   },
   {
     i: 39,
@@ -132,6 +132,15 @@ const ROWS: Row[] = [
     printedPage: 19,
     sections: [{ page: 19, heading: "Cell Phone/Smart Watch Policy" }],
     c: "Cell Phone/Smart Watch Policy\nPersonal cell phones may be brought to work but stay out of sight. Texting, phone calls or social\nmedia while working take attention away from customers. Phones stay on silent and off the\nEmployee's person (not in a pocket or on the counter). A cell phone is used while clocked in only\nfor an emergency.\nSmart Watches may be worn if they are not used for social media, texting or phone calls.",
+  },
+  {
+    i: 70,
+    l: "Page 21 — Care and Cleaning of Equipment and Facilities",
+    p: 22,
+    s: "Care and Cleaning of Equipment and Facilities",
+    printedPage: 21,
+    sections: [{ page: 21, heading: "Care and Cleaning of Equipment and Facilities" }],
+    c: "Care and Cleaning of Equipment and Facilities\nEmployees keep the equipment and the location clean and sanitized, and finish the cleaning duties\nassigned to their shift before it ends.",
   },
   {
     i: 73,

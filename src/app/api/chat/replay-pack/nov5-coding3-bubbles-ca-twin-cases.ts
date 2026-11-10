@@ -80,7 +80,9 @@ export const NOV5_CODING3_BUBBLES_CA_TWIN_CASES: ReplayCase[] = [
     id: "nov5-coding3-twin-prior-coaching-none-on-file",
     title: "\"… There's no prior coaching on file.\": the card's prior-coaching note never says prior coaching is on file",
     report: `${REPORT}: "I need to write up <name> with a written warning … There's no prior coaching on file." → "Prior coaching note: prior coaching on file. No finalized record was required."`,
-    status: { open: "the note quotes \"prior coaching on file\" without the manager's \"no\": \"Prior coaching note: prior coaching on file.\"" },
+    // fixed in production by PRIOR_COACHING_DENIAL_ENABLED, QA round 4, 8 Nov 2026
+    status: "fixed",
+    fixFlags: ["PRIOR_COACHING_DENIAL_ENABLED"],
     async run(t: T) {
       /*
        * PRIOR_COACHING_OPTIONAL_ENABLED writes the note this case reports. It
@@ -105,6 +107,13 @@ export const NOV5_CODING3_BUBBLES_CA_TWIN_CASES: ReplayCase[] = [
     title: "\"can you write me a Ca for <name> for performance for october\": with CA_SALES_POLICY_ENABLED the card cites the Standards of Conduct; never \"You haven't told me what happened yet\"",
     report: `${REPORT}: "can you write me a Ca for <name> for performance for october" → "You haven't told me what happened yet"`,
     status: { open: "no card at all (\"A grounded answer from the policy manual.\"): \"can you write me a Ca\" is no request here (WRITES_THE_FORM has no \"write me a\", as nov5-twin-sf-s28 records); behind it, \"for performance\" is no account and no sales reading" },
+    /*
+     * Two readings: with WRITE_ME_THE_FORM_ENABLED (default off) "can you write me a Ca" is the request
+     * (`WRITES_THE_FORM_LOOSE`, forms/template-intent.ts, ported from the sibling app's main, where it sits under
+     * CA_SALES_POLICY_ENABLED), and with CA_PERFORMANCE_REASON_ENABLED (default off) "for performance" in that
+     * request is the sales reading (`withSalesPolicy`, forms/ca-policy.ts, only with CA_SALES_POLICY_ENABLED, live).
+     */
+    fixFlags: ["CA_SALES_POLICY_ENABLED", "WRITE_ME_THE_FORM_ENABLED", "CA_PERFORMANCE_REASON_ENABLED"],
     async run(t: T) {
       /*
        * CA_SALES_POLICY_ENABLED is OFF in this app's production (production-

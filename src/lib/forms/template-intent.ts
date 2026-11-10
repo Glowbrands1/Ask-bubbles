@@ -23,7 +23,14 @@
  * Here, that sentence is AMBIGUOUS and the answer is a question.
  */
 
-import { caSalesPolicyEnabled, caShortcutWordsEnabled, formChoiceStatedEnabled, formNameFromRosterEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import {
+  caRequestNotPriorCoachingEnabled,
+  caSalesPolicyEnabled,
+  writeMeTheFormEnabled,
+  caShortcutWordsEnabled,
+  formChoiceStatedEnabled,
+  formNameFromRosterEnabled,
+  typedNameEnabled, requestFromNamesEmployeeEnabled } from "@/lib/config/chat-quality-flags";
 import { foldsToGlossaryTerm } from "@/lib/ai/glossary";
 import { NOT_A_NAME, NOT_A_TYPED_NAME, TYPED_NAME_WORD } from "./name-words";
 import { asksForTeamCoaching } from "./team-subject";
@@ -532,8 +539,27 @@ const COURTESY_SHORTHAND: [RegExp, string][] = [
 ];
 
 /** Shorthand and near-miss spellings of the form's own words; everything else unchanged. */
+/*
+ * REQUEST_FROM_NAMES_EMPLOYEE_ENABLED (QA, 8 Nov 2026; the managers' wording): "Please create another corrective action
+ * from <A>. This would be a verbal …" — "from" typed for "for" — named nobody here, and the card asked "Who is this
+ * form for?": a name in any case is read only straight after "<form> for". With the flag on, "<form> from <name>"
+ * reads as "<form> for <name>". Only after a form's own words, and never before a word that cannot start a name
+ * ("from the …", "from my …", "from last week").
+ */
+/*
+ * NEVER A PERSON AFTER "FROM" (QA, the Bubbles round-5 gate, 8 Nov 2026): "she has a written warning from august" read
+ * "august" as a second employee and the level was dropped. A month, a weekday, a season or quarter, or a word that
+ * says when ("last week", "a while ago", "previous") names a time, never a person, whatever its case: managers type
+ * names lower-case, so capitals decide nothing.
+ */
+const FROM_NOT_A_PERSON = String.raw`(?:the|a|an|my|our|her|his|their|this|that|these|those|last|next|past|previous|prior|earlier|before|ago|back|then|now|yesterday|today|tonight|tomorrow|when|what|which|where|home|work|corporate|hr|district|store|salon|woven|jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?|mon(?:day)?|tues?(?:day)?|wed(?:nesday)?|thu(?:rs?)?(?:day)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?|weekend|week|weeks|month|months|year|years|spring|summer|fall|autumn|winter|q[1-4]|quarter|morning|afternoon|evening|night)`;
+const FORM_FROM = new RegExp(
+  String.raw`\b((?:corrective actions?|c\.?a\.?|coaching(?:\s+(?:form|document))?|write[- ]?ups?|warnings?|forms?))\s+from\s+(?!${FROM_NOT_A_PERSON}\b)(?=[\p{L}])`,
+  "giu",
+);
+
 export function canonicalShorthand(text: string): string {
-  let out = text;
+  let out = requestFromNamesEmployeeEnabled() ? text.replace(FORM_FROM, "$1 for ") : text;
   for (const [pattern, replacement] of COURTESY_SHORTHAND) out = out.replace(pattern, replacement);
   return out.replace(/\bc[a-z]{5,9}\b/gi, (word) => {
     const lower = word.toLowerCase();
@@ -649,8 +675,18 @@ function leadsWithTheForm(q: string, original: string): boolean {
 const WRITES_THE_FORM =
   /\bwrite\s+(?:up\s+)?(?:a|an|the|another|one|her|his|their)\s+(?:(?:new|formal|first|second|third|final|verbal|written|official)\s+){0,2}(?:c\.?\s?a\.?|c\/a|corrective[\s-]+actions?|warning|write[\s-]?up|dpoa|disciplinary(?:\s+action)?)\b/;
 
+/*
+ * WRITE_ME_THE_FORM_ENABLED (QA, 4 Nov 2026: "Can you write me a performace ca
+ * for an employee who … <name> - verbal" made no card): "write me a …" and
+ * one or two plain words before the form ("a performance CA", "a quick CA")
+ * still write the form. The object must still BE the form: "write a summary
+ * of the CA policy" does not match. Off, as before.
+ */
+const WRITES_THE_FORM_LOOSE =
+  /\bwrite\s+(?:up\s+)?(?:me\s+|us\s+)?(?:a|an|the|another|one|her|his|their)\s+(?:[a-z'’-]+\s+){0,2}?(?:c\.?\s?a\.?|c\/a|corrective[\s-]+actions?|warning|write[\s-]?up|dpoa|disciplinary(?:\s+action)?)\b/;
+
 function writesTheForm(q: string): boolean {
-  return WRITES_THE_FORM.test(q);
+  return WRITES_THE_FORM.test(q) || (writeMeTheFormEnabled() && WRITES_THE_FORM_LOOSE.test(q));
 }
 
 /**
@@ -1237,6 +1273,27 @@ export function namesAForm(phrase: string): boolean {
  * "Policy Review for Avery Testperson" names one form in a request position,
  * so it is still the standalone Policy Review.
  */
+/**
+ * CA_REQUEST_NOT_PRIOR_COACHING_ENABLED (ported from the sibling app, sf-s35, 7 Nov 2026): "Can you draw me up a CA for
+ * <name> for being late on 10/23/26. <first> has signed a coaching document for being late on 10/14/26. …" opened a
+ * Coaching Form: the coaching named as history was the only form named. A form named AFTER a Corrective Action
+ * request in the same message is a detail of that request — read by this function itself on the words before it —
+ * unless the manager switches to it (`SWITCH_BEFORE`). Off, as before.
+ */
+/*
+ * ONE READING, NOT ONE PER NAMING (QA's gate runner, 7 Nov 2026). Reading the words before each naming with
+ * detectTemplateIntent re-read every shorter prefix, which read its own namings the same way: the work doubled with
+ * each naming, and a ~40-naming coaching intake never finished. The answer is the same for every naming after the
+ * first: if the words before the FIRST form named (other than the CA itself) are a Corrective Action request, every
+ * form named after it is a detail of that request; if they are not, the first form named is the one asked for. So
+ * `requestedNaming` reads that one prefix, once, lazily — it names no other form, so nothing recurses.
+ */
+function detailOfAnEarlierCaRequest(key: string, before: string, leadIsCaRequest: () => boolean): boolean {
+  if (!caRequestNotPriorCoachingEnabled() || key === "dpoa" || before.trim() === "") return false;
+  if (SWITCH_BEFORE.test(before)) return false;
+  return leadIsCaRequest();
+}
+
 function requestedNaming(q: string, original: string): { key: string; phrase: string } | null {
   type Naming = { key: string; phrase: string; start: number; end: number; order: number };
   const found: Naming[] = [];
@@ -1254,10 +1311,25 @@ function requestedNaming(q: string, original: string): { key: string; phrase: st
       !all.slice(0, index).some((kept) => kept.order < naming.order && kept.start < naming.end && naming.start < kept.end),
     );
 
+  /* CA_REQUEST_NOT_PRIOR_COACHING_ENABLED: the words before the first non-CA naming, read once and only if asked. */
+  let caLead: boolean | undefined;
+  const leadIsCaRequest = (): boolean => {
+    if (caLead === undefined) {
+      const first = Math.min(...spans.filter((naming) => naming.key !== "dpoa").map((naming) => naming.start));
+      caLead = Number.isFinite(first) && first > 0 && detectTemplateIntent(q.slice(0, first)).kind === "corrective_action";
+    }
+    return caLead;
+  };
+
   // 2 and 3. Not wanted, and only the topic.
   const wanted = spans.filter((naming) => {
     const before = q.slice(0, naming.start);
-    return !NEGATED_BEFORE.test(before) && !TOPIC_BEFORE.test(before) && !caForAnotherForm(naming.key, before);
+    return (
+      !NEGATED_BEFORE.test(before) &&
+      !TOPIC_BEFORE.test(before) &&
+      !caForAnotherForm(naming.key, before) &&
+      !detailOfAnEarlierCaRequest(naming.key, before, leadIsCaRequest)
+    );
   });
   if (wanted.length === 0) return null;
 
@@ -1602,6 +1674,12 @@ export function detectTemplateIntent(rawQuestion: string): TemplateIntent {
       requestedCreation:
         !informational &&
         (CREATION_VERBS.some((verb) => mentions(q, verb)) ||
+          /*
+           * CA_REQUEST_NOT_PRIOR_COACHING_ENABLED (QA's live tester, 7 Nov 2026, sf-s35's exact wording): "Can you
+           * draw me up a CA for <name> …" asks for the form. With the coaching document set aside as history, nothing
+           * else in the message asked for one, so no card opened.
+           */
+          (caRequestNotPriorCoachingEnabled() && /\bdraw\s+(?:(?:me|us)\s+)?up\b/.test(q)) ||
           writesTheForm(q) ||
           leadsWithTheForm(q, question) ||
           /*

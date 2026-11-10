@@ -3,11 +3,12 @@ import { COMPANY_LOCATIONS } from "@/lib/locations";
 import { priorSentenceFixFor } from "@/lib/forms/prior-sentence-scope";
 import { blankYearlessStepDates, extractFormDate, listIncidentDates, statedIncidentDates } from "@/lib/forms/form-date-answer";
 import { lateOpenOn, yearlessCuedDates } from "@/lib/forms/late-open";
-import { payrollDeductAmount } from "@/lib/forms/payroll-deduct";
+import { managerPayrollAmount } from "@/lib/forms/payroll-deduct-amount";
 import { statedPayrollDeduct } from "@/lib/forms/payroll-deduct-answer";
 import { statedWarningLevel, warningLevelFromTurns } from "@/lib/forms/warning-level";
 import { extractJobTitle, readEmployeeMentions } from "@/lib/forms/proposal";
 import { readLocationMentions, rosterLocationName } from "@/lib/forms/location-mention";
+import { placeText } from "@/lib/forms/place-from-cue";
 import type { RosterEmployee } from "@/lib/forms/employee-match";
 
 import { fieldsFromManagerText, mergeConfirmed, type ConfirmedFormFields } from "./form-field-state";
@@ -70,7 +71,7 @@ function slotLines(input: {
     payrollDeductAmountFieldEnabled() &&
     merged.payrollAmount &&
     merged.payrollDeduct !== "no" &&
-    !payrollDeductAmount(input.question)
+    !managerPayrollAmount(input.question)
   ) {
     lines.push(`Payroll deduction of ${merged.payrollAmount}.`);
   }
@@ -87,7 +88,8 @@ function slotLines(input: {
     merged.store ||
     singleStore([...earlier, input.question]) ||
     fuzzyStore([...earlier, input.question].join("\n"));
-  if (store && readLocationMentions(input.question).length === 0) lines.push(`It happened at ${store}.`);
+  // PLACE_FROM_CUE_ENABLED: "… for <name> from <store>" already names one (`forms/place-from-cue.ts`).
+  if (store && readLocationMentions(placeText(input.question)).length === 0) lines.push(`It happened at ${store}.`);
   return lines;
 }
 
@@ -236,8 +238,8 @@ export function fieldLines(question: string, today: string, earlier = ""): strin
     }
   }
 
-  if (!payrollDeductAmount(question)) {
-    const known = payrollDeductAmount(corpus);
+  if (!managerPayrollAmount(question)) {
+    const known = managerPayrollAmount(corpus);
     /*
      * A dollar sign next to the word "payroll" is not, by itself, the
      * manager's amount. The Late Opening sentence states "$25.00 via payroll

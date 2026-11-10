@@ -6,6 +6,8 @@ import {
   typedNameEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { COMPANY_LOCATIONS } from "@/lib/locations";
+import { namesThisCompany } from "@/lib/forms/company-name";
+import { namesCompanyPositionTitle } from "@/lib/forms/staff-picker";
 import { readCaPolicy } from "@/lib/forms/ca-policy";
 import {
   displayName,
@@ -70,7 +72,7 @@ export function prepareGroundedQuestion(input: {
 }): GroundedPrep {
   const people = input.people;
   const roster = people as readonly RosterEmployee[];
-  let question = prependFormState(input.question, input.saved);
+  let question = prependFormState(input.question, input.saved, managerTurns(input.history));
   const kept = new Set<string>();
   if (input.saved?.keptTypedName) kept.add(input.saved.keptTypedName);
 
@@ -346,6 +348,10 @@ function gateMentions(
       continue;
     }
     if (isStorePhrase(name)) continue;
+    // B1 (the flip-3 tester, 6 Nov 2026), FORM_NAME_FROM_ROSTER_ENABLED: a company position title ("Team Member") is never a person missing from the roster.
+    if (formNameFromRosterEnabled() && namesCompanyPositionTitle(name)) continue;
+    // The sibling app's QA finding (7 Nov 2026), FORM_NAME_FROM_ROSTER_ENABLED: the company's own name or initials are never a person missing from the roster.
+    if (formNameFromRosterEnabled() && namesThisCompany(name)) continue;
     if (antiLoopEnabled()) continue;
     // FORM_NAME_FROM_ROSTER_ENABLED: beside a roster name, "Club Close", "Under" (Pau, 4 Nov 2026) are shaped like nobody on the roster; they stay in the question.
     if (anchored && !rosterShaped(name, roster)) continue;
@@ -501,4 +507,9 @@ function asPerson(employee: RosterEmployee): GroundedPerson {
 function replacePhrase(text: string, phrase: string, replacement: string): string {
   const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return text.replace(new RegExp(`\\b${escaped}\\b`, "i"), replacement);
+}
+
+/** The manager's earlier turns (SECOND_REQUEST_OWN_ACCOUNT_ENABLED: `form-state.ts` stateForTurn). */
+function managerTurns(history: readonly { role: string; content: string }[]): string[] {
+  return history.filter((turn) => turn.role === "user").map((turn) => turn.content);
 }
