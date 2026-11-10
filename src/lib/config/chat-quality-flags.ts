@@ -1320,6 +1320,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
   "CHAT_STAGE_TIMINGS_ENABLED",
   "CA_REASON_DUE_TO_ENABLED",
+  // coding 6: FEWSHOT_TURN_JOIN (QA, 10 Nov 2026; default off).
+  "FEWSHOT_TURN_JOIN_ENABLED",
 ] as const;
 
 /**
@@ -4262,4 +4264,14 @@ export function failureToOpenIsLateOpeningEnabled(): boolean {
  */
 export function payrollBareSentenceEnabled(): boolean {
   return envFlag("PAYROLL_BARE_SENTENCE_ENABLED");
+}
+
+/**
+ * FEWSHOT_TURN_JOIN_ENABLED (QA, 10 Nov 2026): FEWSHOT_EXAMPLES found no rated exchange here, because its loader joined
+ * ratings to traces by a message id that never matches. With the flag on, a 5-star rating is joined to its answer by
+ * turn (`assistant_feedback.activity_event_id` = `chat_messages.turn_id`), as the sibling app does, and the question is
+ * the manager's message before it (`ai/feedback-examples.ts`). Reads nothing unless FEWSHOT_EXAMPLES is on. Off, as before.
+ */
+export function fewShotTurnJoinEnabled(): boolean {
+  return envFlag("FEWSHOT_TURN_JOIN_ENABLED");
 }

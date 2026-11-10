@@ -15,7 +15,12 @@ export interface RatedExchange {
   readonly rating: number;
   readonly question: string;
   readonly comment: string | null;
+  /** FEWSHOT_TURN_JOIN_ENABLED: the rated assistant answer, the example's output (as the sibling app shows it). */
+  readonly answer?: string | null;
 }
+
+/** FEWSHOT_TURN_JOIN_ENABLED: an example answer is cut here, so a long answer cannot crowd the prompt. */
+const ANSWER_CAP = 1500;
 
 export function similarExchanges(
   question: string,
@@ -43,6 +48,21 @@ export function formatFewShot(
 ): string | null {
   const picked = similarExchanges(question, rows);
   if (picked.length === 0) return null;
+  /*
+   * FEWSHOT_TURN_JOIN_ENABLED (QA, 10 Nov 2026): with the rated answers read, each example is the question and the
+   * answer it was rated for, redacted, as the sibling app's few-shot block shows them. Without answers (the flag
+   * off), the questions alone, as before.
+   */
+  if (picked.some((row) => row.answer?.trim())) {
+    const body = picked
+      .map((row, index) => {
+        const asked = redactReplayText(row.question, places);
+        const answered = redactReplayText((row.answer ?? "").slice(0, ANSWER_CAP), places);
+        return `Example ${index + 1}, rated ${row.rating}:\nManager: ${asked}\nAssistant: ${answered}`;
+      })
+      .join("\n\n");
+    return `SIMILAR PAST ANSWERS THIS COMPANY RATED HIGHLY\n\nThese are examples of shape from other conversations at this company. They are not this conversation and not something the manager said earlier today. Do not tell the manager they mentioned a person, a date, or an event from an example. Do not copy a name, a date, a figure, or a policy from them unless the sources for this question also say it.\n\n${body}`;
+  }
   const lines = picked.map((row, index) => {
     const asked = redactReplayText(row.question, places);
     const note = row.comment?.trim() ? ` The manager noted: ${redactReplayText(row.comment, places)}` : "";
