@@ -10,8 +10,9 @@ import { formatFewShot, type RatedExchange } from "./feedback-eval";
  * Similar 5-star exchanges, redacted, for the system prompt.
  *
  * The flag is off: nothing is read and the prompt is unchanged. A missing
- * table, or a trace with no question, leaves the prompt unchanged. The
- * answer text is never selected.
+ * table, or a trace with no question, leaves the prompt unchanged. The old
+ * join selects no answer text; FEWSHOT_TURN_JOIN_ENABLED reads the rated answer
+ * as the example's output (below).
  */
 
 export async function loadFewShotBlock(question: string): Promise<string | null> {
@@ -65,8 +66,8 @@ export async function loadFewShotBlock(question: string): Promise<string | null>
  * loader matched `assistant_feedback.client_message_id` to `chat_traces.message_id`, and in production 0 of 14 ratings
  * since traces began match (all 9 five-star ratings do join their answer through `activity_event_id` =
  * `chat_messages.turn_id`). With the flag on, a 5-star rating is read as the sibling app reads it: its turn's assistant
- * message in `chat_messages`, and the question is the manager's message just before it in the same conversation. The
- * answer text is never selected. Off, the old join, as before.
+ * message in `chat_messages` is the example's answer (redacted, as the sibling app shows it), and the question is the manager's
+ * message just before it in the same conversation. Off, the old join (questions only), as before.
  */
 type Admin = ReturnType<typeof getSupabaseAdmin>;
 
@@ -84,7 +85,7 @@ async function ratedExchangesByTurn(supabase: Admin): Promise<RatedExchange[]> {
   if (turnIds.length === 0) return [];
   const { data: answers, error: answerError } = await supabase
     .from("chat_messages")
-    .select("conversation_id, position, role, turn_id")
+    .select("conversation_id, position, role, turn_id, content")
     .in("turn_id", turnIds)
     .eq("role", "assistant");
   if (answerError || !answers || answers.length === 0) return [];
@@ -103,7 +104,9 @@ async function ratedExchangesByTurn(supabase: Admin): Promise<RatedExchange[]> {
       .sort((a, b) => Number(b.position) - Number(a.position))[0];
     const question = typeof before?.content === "string" ? before.content.trim() : "";
     if (!question) continue;
-    exchanges.push({ rating: 5, question, comment: commentByTurn.get(String(answer.turn_id)) ?? null });
+    const answered = typeof answer.content === "string" ? answer.content.trim() : "";
+    if (!answered) continue;
+    exchanges.push({ rating: 5, question, answer: answered, comment: commentByTurn.get(String(answer.turn_id)) ?? null });
   }
   return exchanges;
 }

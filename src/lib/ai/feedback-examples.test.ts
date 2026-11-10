@@ -41,8 +41,9 @@ describe("FEWSHOT_TURN_JOIN_ENABLED", () => {
     vi.stubEnv("FEWSHOT_TURN_JOIN_ENABLED", "true");
     const { loadFewShotBlock } = await import("./feedback-examples");
     const block = await loadFewShotBlock("what is the attendance policy");
-    expect(block).toContain("what is the attendance policy");
-    expect(block ?? "").not.toContain("ANSWER TEXT");
+    expect(block).toContain("Manager: what is the attendance policy");
+    // QA (10 Nov 2026): the rated answer is the example's output, as the sibling app shows it.
+    expect(block).toContain("Assistant: ANSWER TEXT");
     expect(block ?? "").not.toContain("later question");
   });
 
