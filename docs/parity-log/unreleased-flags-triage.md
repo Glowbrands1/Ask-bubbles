@@ -24,7 +24,7 @@ Note: `ANTI_LOOP_ENABLED` is **not** on in the sibling; the sibling never had it
 commit that imported this repository's history (2,204 files); for those, the
 October pull request is named where `docs/parity-log/oct-pr-triage.md` gives one.
 
-**Counts (51):** R 7 · R? 23 · X 4 · K 11 · K? 4 · ? 2.
+**Counts (51):** R 7 · R? 20 · X 4 · K 14 · K? 4 · ? 2 (after QA's rulings of 10 Nov 2026 below).
 R = release candidate; X = retire; K = keep off on purpose; `?` = uncertain,
 with what would decide it.
 
@@ -49,6 +49,28 @@ against Vercel, the other ten:
 - `RETRIEVAL_RECALL_ENABLED`
 - `SECOND_FORM_ENABLED`
 
+
+## Sunny-on, never enabled in Bubbles (QA's Vercel read, 10 Nov 2026)
+
+QA checked the ten flags that are on in the sibling's production list against
+Bubbles' Vercel production: **none is set at all** (never enabled, no rollback
+note). That is a parity gap, not a mismatch. Each needs a flag-only gate in this
+app before it is turned on (R), or stays sibling-only on purpose (K). This
+section supersedes those rows' "check Vercel" notes in the table below.
+
+| Flag | Verdict | Why |
+|---|---|---|
+| CHAT_STYLE_RULES_ENABLED | R | System-prompt rules for names, payroll and a chosen corrective action; company-neutral. Gate: replay pack byte-compare plus the eval. |
+| DRAFT_MERGE_ENABLED / DRAFT_EDIT_MERGE_ENABLED | R | An empty draft edit never blanks Offense or the Action Plan. One switch, two names (`draftEditMergeEnabled` reads both): release under DRAFT_MERGE, the sibling's name, and retire DRAFT_EDIT_MERGE. |
+| FEWSHOT_EXAMPLES_ENABLED | R | Similar 5-star exchanges in the system prompt; reads this app's own `chat_traces` (migration present). Gate: check there are rated exchanges to draw from, then the eval. |
+| FOLLOWUP_NEW_TOPIC_RETRIEVAL_ENABLED | R | A follow-up naming its own documents is searched on them (#147). Builds on QUERY_REWRITE: gate them together. |
+| INTENT_PAYROLL_MANAGER_ONLY_ENABLED | R | Payroll answer read only from the manager's turns (production bug, 24 Oct: "verbal, no payroll" saved $25, Yes). Gate: replay pack. |
+| LONG_CONTEXT_ENABLED | R | Longer history window plus a stored summary of older turns (`chat_context_summaries` migration present). Gate: replay pack plus a long-chat latency check. |
+| QUERY_REWRITE_ENABLED | R | Retrieval query rewritten into manual terms from the conversation. Gate with FOLLOWUP_NEW_TOPIC_RETRIEVAL and the retrieval eval. |
+| RETRIEVAL_RECALL_ENABLED | R | Wider keyword+vector candidates and a model pick; takes precedence over HYBRID_SEARCH in `server-ask.ts`. Gate: retrieval eval on this app's manual (citations, pages). |
+| SECOND_FORM_ENABLED | R | A follow-up or second document is not revised into the form on screen. Gate: replay pack. |
+| NEXT_PUBLIC_ASD_NO_FORM_MONITORING_ENABLED | K | Sibling role rule (its assistant role loses the sibling's forms list). Here the owner lifted that block: NEXT_PUBLIC_ASSISTANT_MANAGER_CREATE is on and keeps the Forms Register, own forms only, so this flag has no effect (table: X). Sibling-only on purpose. |
+
 | Flag | What it does | Origin | Sibling | Verdict | Evidence / replaced by / why |
 | --- | --- | --- | --- | --- | --- |
 | CHAT_IMPORT_PROVEN_OWN_ENABLED | Importing a chat this account does not hold must prove every answered turn is its own; else declined | #425 (import) | unlisted | R | Independent review, 31 Oct 2026 (`docs/parity-log.md`): another account's chat could still be imported on a shared browser. Security fix, both apps. No replay case (import route, not chat). |
@@ -65,14 +87,14 @@ against Vercel, the other ten:
 | EXIT_PROSE_FACTS_ENABLED | Exit form prose and Additional Details say only what the manager said (date, notice, call-in) | #425 (import); PR #195 | not in code | R? | Oct triage (b): live bug, base guard needs this flag; even on, #195's own cases still fail. Needs #195's addition before it fully fixes it. No replay case. |
 | FEWSHOT_EXAMPLES_ENABLED | Similar 5-star exchanges added to the system prompt | #425 (import) | on | R? | On in the sibling; unlisted here: check Vercel (reads `chat_traces`, migration present). No replay case. |
 | FOLLOWUP_NEW_TOPIC_RETRIEVAL_ENABLED | A follow-up naming its own documents is searched on them, not only on the earlier subject | #425 (import); PR #147 | on | R? | On in the sibling. Oct triage: code on main, "not on in production". Check Vercel. No replay case. |
-| FORM_EDIT_NOOP_GUARD_ENABLED | No false "Updated": a same-value or whole-message op is refused; the reply is the saved diff | d55575c (Step 4) | unlisted | R? | Replay `nov4-noop-guard-same-value-edit`. Classification (`docs/flag-classification/FORM_EDIT_NOOP_GUARD_ENABLED.md`) run with the tool on: 51 INTENDED, 0 REGRESSION. Flip with FORM_EDIT_TOOL_IN_STREAM. |
-| FORM_EDIT_TOOL_IN_STREAM_ENABLED | `edit_form` offered in the main call while a draft is open; reply is the saved diff | #425 (import); A3 on #427 | unlisted | R? | Replay `nov4-edit-tool-ca-t2-drops-marnie`, `nov4-edit-tool-ca-t6-append`, gate cases; fixes OPEN cases b13, b17, daily-stats. Pending follow-ups in its classification doc (b15 script by turn, flaky rerun). |
+| FORM_EDIT_NOOP_GUARD_ENABLED | No false "Updated": a same-value or whole-message op is refused; the reply is the saved diff | d55575c (Step 4) | unlisted | K | QA, 10 Nov 2026: K, revisit after the queue (Step B is live and stable; Steps 3–4 not scheduled). Replay `nov4-noop-guard-same-value-edit`; flips with FORM_EDIT_TOOL_IN_STREAM. |
+| FORM_EDIT_TOOL_IN_STREAM_ENABLED | `edit_form` offered in the main call while a draft is open; reply is the saved diff | #425 (import); A3 on #427 | unlisted | K | QA, 10 Nov 2026: K, revisit after the queue (Step B is live and stable; Steps 3–4 not scheduled). Replay `nov4-edit-tool-ca-t2-drops-marnie`, `nov4-edit-tool-ca-t6-append`. |
 | FRAMEWORK_GENERAL_SECTIONS_ENABLED | Coaching framework answers from its general sections instead of "the knowledge base does not have it" | #425 (import) | unlisted | R? | QA conversation report. No replay case. Decided by a replay of that question. |
 | INCIDENT_CLAUSE_SPLIT_ENABLED | The card's Issue is read from clauses that say what happened, not title/store/policy text | #425 (import); PR #192 | not in code | R? | Oct triage: "The Issue is a fragment of the turn"; code on main, flag not on. No replay case. Later Issue fixes may cover it: a replay of #192's wording decides. |
 | INTENT_PAYROLL_MANAGER_ONLY_ENABLED | Payroll amount and Yes/No read only from the manager's turns, not the assistant's policy quote | #425 (import) | on | R? | Production bug 24 Oct ("verbal, no payroll" saved $25, Yes). On in the sibling; unlisted here: check Vercel. No replay case. |
 | LONG_CONTEXT_ENABLED | Longer history window plus a stored summary of older turns | #425 (import) | on | R? | On in the sibling; unlisted here: check Vercel (`chat_context_summaries` migration present). No replay case. |
 | NEXT_PUBLIC_CHAT_LONG_MESSAGE_ENABLED | Browser twin of CHAT_LONG_MESSAGE (composer limit) | #425 (import); PR #153 | not in code | R? | Must flip with CHAT_LONG_MESSAGE; the server reads either name. |
-| NEXT_PUBLIC_INVITED_SIGNIN_ACCEPTS_ENABLED | A successful password sign-in also accepts a pending invitation (invited to active) | #425 (import) | unlisted | R? | 28 Oct 2026, both apps: accounts stayed "invited" after a mail scanner spent the link. Auth, not chat; no replay case. Independent of INVITE_LINK_HOLD. |
+| NEXT_PUBLIC_INVITED_SIGNIN_ACCEPTS_ENABLED | A successful password sign-in also accepts a pending invitation (invited to active) | #425 (import) | unlisted | K | QA, 10 Nov 2026: K. Overlaps INVITE_LINK_HOLD (the same mail-scanner invite problem); only one of the two should ever ship. |
 | POLICY_CITATION_ENABLED | Writes a JBA Policy Manual name and printed page onto coaching forms / empty CA policy line | #425 (import) | on | R? | Known off: `_about` "stays off until the card-policy name fix is ported". Replay `nov5-cleaning-other-sf-s15-policy-citation`, `nov5-upkeep-other-policy-citation`, `nov7-s37-second-card-own-policy`, `nov8-560-*-name-keeps-policy`. QA confirms the fix landed (CARD_POLICY_OWN_REQUEST is on). |
 | PRIOR_RECORD_FINAL_ONLY_ENABLED | A previous/prior coaching question lists only finalized forms; drafts in a separate section | #425 (import) | not in code | R? | A draft is never described as previous coaching (`docs/parity-log.md`). This app only. No replay case. |
 | QUERY_REWRITE_ENABLED | Retrieval query rewritten into manual terms from the conversation | #425 (import) | on | R? | On in the sibling; unlisted here: check Vercel. FOLLOWUP_NEW_TOPIC_RETRIEVAL builds on it. No replay case. |
@@ -90,7 +112,7 @@ against Vercel, the other ten:
 | FORM_REVISIONS_ENABLED | Finalized-form edits need a reason; revision chain on PDF and form view | #425 (import) | unlisted | K | Feature awaiting a decision; unset in the sibling too. Must flip with NEXT_PUBLIC_FORM_REVISIONS (server refuses an edit with no reason; only the browser flag asks). |
 | GOOGLE_REVIEWS_IN_CHAT_ENABLED | Google review questions get month-to-date figures, goal and pace for the caller's stores | #425 (import) | unlisted | K | Integration: `_about` leaves Google reviews out on purpose. Check Vercel; not a chat-flags entry. |
 | HYBRID_SEARCH_ENABLED | Keyword + vector fusion via `match_knowledge_chunks_hybrid` | #425 (import) | off | K | Verified off in the sibling. RETRIEVAL_RECALL wins over it when both are on (`server-ask.ts`). |
-| INVITE_LINK_HOLD_ENABLED | Invite link held on GET and verified only on Continue (scanner-safe) | #425 (import) | unlisted | K | Ops: nothing links to the routes until the Supabase Invite template is changed (`invite-hold-flag.ts`). Flip with that template change. |
+| INVITE_LINK_HOLD_ENABLED | Invite link held on GET and verified only on Continue (scanner-safe) | #425 (import) | unlisted | K | QA, 10 Nov 2026: K. Overlaps NEXT_PUBLIC_INVITED_SIGNIN_ACCEPTS; only one of the two should ever ship. Needs the Supabase Invite template change (`invite-hold-flag.ts`). |
 | NEAR_MISS_DETAILS_ACCEPT_ENABLED | After "Is this for <roster name>?", a turn with form details accepts the asked name | a4df2ec (#555 batch) | unlisted | K | Only acts with FORM_NAME_FROM_ROSTER on, which is off since 7 Nov (`_about`). Replay `nov7-near-miss-details-*`. Ship with FORM_NAME_FROM_ROSTER. |
 | NEXT_PUBLIC_FORM_REVISIONS_ENABLED | Browser twin of FORM_REVISIONS (reason dialog, revision marks, history) | #425 (import) | unlisted | K | Flips only with FORM_REVISIONS. |
 | POLICY_CITATION_CHECK_ENABLED | Code checks every manual quote, heading and page against retrieved chunks | #425 (import) | not in code | K | Scaffold (Step A, 3 Nov): "Nothing reads it yet"; its getter has no caller. Keep off until wired. |
