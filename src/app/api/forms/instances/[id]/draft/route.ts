@@ -198,6 +198,7 @@ import {
 } from "@/lib/config/chat-quality-flags";
 import { NOTHING_SET_ASIDE, policiesSetAside, setAsideAnything, valuesWithPolicySetAside, withoutPolicyTakeOff } from "@/lib/forms/policy-set-aside";
 import { notesMadeAbout } from "@/lib/ai/make-it-about";
+import { withoutPolicyReferenceTurns } from "@/lib/ai/policy-reference-turn";
 import {
   STANDARDS_OF_CONDUCT,
   caPolicyAmbiguousNotice,
@@ -1259,7 +1260,8 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
       "",
       "WHAT THE MANAGER DESCRIBED:",
       // TEAM_CARD_WORDING_ENABLED: on a team card, "for the whole store" is who it is for, not what happened (QA, 3 Nov 2026).
-      teamSubject && teamCardWordingEnabled() ? teamCardNotes(notes) : notes,
+      // POLICY_REFERENCE_NOT_ACCOUNT_ENABLED: "you can reference the standards of conduct for a policy" is no account.
+      withoutPolicyReferenceTurns(teamSubject && teamCardWordingEnabled() ? teamCardNotes(notes) : notes),
       progressionBlock,
       policyBlock,
       /*

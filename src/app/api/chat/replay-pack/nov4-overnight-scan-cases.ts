@@ -215,6 +215,8 @@ export const NOV4_OVERNIGHT_SCAN_CASES: readonly ReplayCase[] = [
     report: `${REPORT}, sf-s16: "put together a corrective action for Calista Venn due to under performance in store metrics for the month of october" → "In the past we have quoted the standards of conduct for creating a ca due to underperformance"`,
     // Run 4 Nov 2026 (production flags): fails as below.
     status: { open: "turn 2 does switch the card to Standards of Conduct, but the card's Issue becomes the instruction \"In the past we have quoted the standards of conduct for creating a ca due to underperformance\"" },
+    // Fixed under POLICY_REFERENCE_NOT_ACCOUNT_ENABLED (ported from the sibling app, 10 Nov 2026): the policy instruction is no account; open on production flags until QA flips it.
+    fixFlags: ["POLICY_REFERENCE_NOT_ACCOUNT_ENABLED"],
     async run(t) {
       const thread = start(t);
       await thread.say("put together a corrective action for Calista Venn due to under performance in store metrics for the month of october");
@@ -238,6 +240,8 @@ export const NOV4_OVERNIGHT_SCAN_CASES: readonly ReplayCase[] = [
     report: `${REPORT}, sf-s17: "put together a written CA for Marit Sollano for not compelting her woven courses by the deadline of october 31st" → "you can reference the standards of conduct for a policy"`,
     // Run 4 Nov 2026 (production flags): fails as below.
     status: { open: "turn 1 takes the incident as given but not the warning level: \"written\" is read as earlier history (\"I've treated the earlier warning you mentioned as previous corrective action history\") and the card asks Verbal or Written; at Create the drafting model is also handed \"you can reference the standards of conduct for a policy\" as the account" },
+    // Fixed under LEVEL_REQUEST_MORE_VERBS_ENABLED (QA's audit, 10 Nov 2026: "put together" opens the request, so "written" is this CA's level) and POLICY_REFERENCE_NOT_ACCOUNT_ENABLED (turn 2 is a policy instruction, no account); open on production flags until QA flips them.
+    fixFlags: ["LEVEL_REQUEST_MORE_VERBS_ENABLED", "POLICY_REFERENCE_NOT_ACCOUNT_ENABLED"],
     async run(t) {
       const thread = start(t);
       const first = await thread.say("put together a written CA for Marit Sollano for not compelting her woven courses by the deadline of october 31st");
@@ -275,6 +279,8 @@ export const NOV4_OVERNIGHT_SCAN_CASES: readonly ReplayCase[] = [
     report: `${REPORT}, sf-s19: "I need a corrective action verbal for Odalys Frewen. This is for Under Performance on Average Ticket, Units Per Transaction, Store Average, Store Close %, and Add-On %." → "Corrective Action"`,
     // Run 4 Nov 2026 (production flags): fails as below.
     status: { open: "turn 1 makes the card for Odalys Frewen but reads the metrics as people (\"I couldn't find **Average Ticket** or **Units Per Transaction** or **Under** in the Woven roster\") and asks Verbal or Written though she said verbal; turn 2 \"Corrective Action\" then refuses (\"I won't open formal corrective action off a metric\" and the progression list) with no card" },
+    // Fixed under LEVEL_AFTER_FORM_NAME_ENABLED (ported from the sibling app, 10 Nov 2026): "a corrective action verbal" is the Verbal she chose; open on production flags until QA flips it.
+    fixFlags: ["LEVEL_AFTER_FORM_NAME_ENABLED"],
     async run(t) {
       const thread = start(t);
       const first = await thread.say("I need a corrective action verbal for Odalys Frewen. This is for Under Performance on Average Ticket, Units Per Transaction, Store Average, Store Close %, and Add-On %.");
