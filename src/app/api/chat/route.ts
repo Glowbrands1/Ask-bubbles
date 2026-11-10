@@ -50,6 +50,9 @@ import {
   formNameFromRosterEnabled,
   offRosterConfirmEnabled,
   offRosterAskBeforeCardEnabled,
+  oneFormEachPersonEnabled,
+  createFromConversationPointsToCardEnabled,
+  cardNamesEmployeeEnabled,
   exitLetterAddresseeEnabled,
   letterGreetingNotNameEnabled,
   exitFormDateFromTerminationEnabled,
@@ -246,6 +249,19 @@ async function postChat(request: Request) {
         if (taken) {
           asked = taken.request;
           (await import("@/lib/forms/off-roster-store")).enterAcceptedOffRoster(taken.accepted);
+        }
+      }
+      /*
+       * ONE_FORM_EACH_PERSON_ENABLED: "a coaching form for <A>, <B>, and <C> for …" is asked as <A>'s request alone, and
+       * "yes" to the "**Next:**" line as the next person's, a new request; the line is added after the answer
+       * (`forms/one-form-each.ts`).
+       */
+      let eachQueue: import("@/lib/forms/one-form-each").Queue | null = null;
+      if (oneFormEachPersonEnabled()) {
+        const each = (await import("@/lib/forms/one-form-each")).beforeTurn(asked);
+        if (each) {
+          eachQueue = each.queue;
+          asked = { ...asked, question: each.question, ...(each.fresh ? { continueProposalTemplateKey: undefined } : {}) };
         }
       }
       /*
@@ -958,6 +974,13 @@ async function postChat(request: Request) {
       // OFF_ROSTER_ASK_BEFORE_CARD_ENABLED: a store manager's card for a full name not on their roster is asked about once, before the card (`lib/forms/off-roster-ask.ts`).
       if (offRosterAskBeforeCardEnabled()) {
         answer = (await import("@/lib/forms/off-roster-ask")).withOffRosterAskBeforeCard(answer, { scope: context.identity.scope, history: parsed.history, question: asked.question });
+      }
+      // CREATE_FROM_CONVERSATION_POINTS_TO_CARD_ENABLED: "Create a form from this conversation." keeps the re-read card; only the reply points to Create (`ai/card-meta-turn.ts`).
+      if (createFromConversationPointsToCardEnabled()) answer = (await import("@/lib/ai/card-meta-turn")).withPressCreateReply(answer, asked);
+      // ONE_FORM_EACH_PERSON_ENABLED / CARD_NAMES_EMPLOYEE_ENABLED: the people still to do, and the card's employee named (`forms/one-form-each.ts`).
+      if (oneFormEachPersonEnabled() || cardNamesEmployeeEnabled()) {
+        const each = await import("@/lib/forms/one-form-each");
+        answer = each.withCardNamingEmployee(each.afterTurn(answer, eachQueue));
       }
       // SAME_FORM_COPY_NEW_PERSON_ENABLED: the named person's card carries the form to copy from.
       if (newPersonCopy) {
