@@ -194,6 +194,7 @@ import {
   secondRequestOwnAccountEnabled,
   proposalMakeItAboutEnabled,
   proposalPolicySetAsideEnabled,
+  coachingObservedSavedEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { NOTHING_SET_ASIDE, policiesSetAside, setAsideAnything, valuesWithPolicySetAside, withoutPolicyTakeOff } from "@/lib/forms/policy-set-aside";
 import { notesMadeAbout } from "@/lib/ai/make-it-about";
@@ -2492,7 +2493,17 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
         : { values: draftValues, provenance: draftProvenance };
 
     // PROPOSAL_POLICY_SET_ASIDE_ENABLED: the policy fields and "Policy reference" lines leave a policy taken off out.
-    const plannedValues = setAsideAnything(setAside) ? valuesWithPolicySetAside(planned.values, setAside) : planned.values;
+    const setAsideValues = setAsideAnything(setAside) ? valuesWithPolicySetAside(planned.values, setAside) : planned.values;
+    // COACHING_OBSERVED_SAVED_ENABLED (port from the sibling app): the saved coaching Details always have an "Observed:" with the account.
+    const plannedValues = coachingObservedSavedEnabled()
+      ? ((await import("@/lib/forms/coaching-observed-saved")).withCoachingObservedSaved({
+          values: setAsideValues,
+          narrativeKeys: narrativeTargets,
+          coaching: isCoachingFamily,
+          notes,
+          employeeName: loaded.instance.employeeName,
+        }) as typeof setAsideValues)
+      : setAsideValues;
     const merged = draftEditMergeEnabled()
       ? retainFilledFields({
           question: notes,
