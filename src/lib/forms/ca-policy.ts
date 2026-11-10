@@ -17,6 +17,7 @@ import {
   wovenTrainingConductEnabled,
   conductIncidentCitesPageEnabled,
   accountPlaceLeadEnabled,
+  bubblesMetricWordsEnabled,
 } from "@/lib/config/chat-quality-flags";
 
 import { readLocationMentions } from "./location-mention";
@@ -345,6 +346,10 @@ const ATTENDANCE =
 
 const TARGET =
   /\b(?:sales|quota|ppta|upgrades?|conversions?|close rate|closing rate|kpis?|metrics|scorecard|revenue|(?:her|his|their|the) numbers|(?:sales|membership|monthly|weekly) goals?|below (?:goal|target)|(?:hit|hitting|meet|meeting|missed|missing) (?:her|his|their|the) (?:goal|goals|target|targets))\b/;
+
+/** BUBBLES_METRIC_WORDS_ENABLED (see `metric-shortfall.ts`): the sibling app's upgrades and membership goals left out, this company's UPT, units per transaction, average sale and transactions read. */
+const TARGET_THIS_COMPANY =
+  /\b(?:sales|quota|ppta|upts?|units per transaction|average sales?|transactions?|conversions?|close rate|closing rate|kpis?|metrics|scorecard|revenue|(?:her|his|their|the) numbers|(?:sales|monthly|weekly) goals?|below (?:goal|target)|(?:hit|hitting|meet|meeting|missed|missing) (?:her|his|their|the) (?:goal|goals|target|targets))\b/;
 
 /**
  * ============================================================================
@@ -841,7 +846,7 @@ function readCaPolicyFromWords(rawText: string): CaPolicyReading {
   if (topics.length > 0) {
     if (missedEvent || sentences.some((s) => ATTENDANCE.test(s))) alternatives.push("attendance");
     // Revision 7: the current form has no Under Performance box (it is the Standards of Conduct), so a target is no other reading.
-    if (sentences.some((s) => TARGET.test(s)) && CURRENT_CA_OFFENSE_KEYS.includes("under_performance")) alternatives.push("under_performance");
+    if (sentences.some((s) => (bubblesMetricWordsEnabled() ? TARGET_THIS_COMPANY : TARGET).test(s)) && CURRENT_CA_OFFENSE_KEYS.includes("under_performance")) alternatives.push("under_performance");
   }
 
   if (stated) {
