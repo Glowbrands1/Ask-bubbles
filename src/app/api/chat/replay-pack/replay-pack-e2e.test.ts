@@ -198,6 +198,8 @@ const ANSWER = "A grounded answer from the policy manual.";
 const said = { answer: null as string | null };
 /** FORM_EDIT_TOOL_IN_STREAM_ENABLED: the edit_form call the answering model makes next, and the offers it saw. */
 const editTool = { input: null as unknown, offered: 0, lastData: null as string | null };
+/* The answering model's system prompt per call (`answerSystems`), as in the sibling app's harness. */
+const systemPrompts = vi.hoisted(() => ({ texts: [] as string[] }));
 
 vi.mock("@/lib/ai/call-claude", () => ({
   /*
@@ -219,8 +221,9 @@ vi.mock("@/lib/ai/call-claude", () => ({
       usage: { inputTokens: 10, outputTokens: 5, cacheReadTokens: 0, cacheWriteTokens: 0 },
     };
   },
-  callClaude: async (input?: { formEditTool?: { data: string; onToolUse: (call: unknown) => void } | null }) => {
+  callClaude: async (input?: { system?: unknown; formEditTool?: { data: string; onToolUse: (call: unknown) => void } | null }) => {
     state.chatModelCalls += 1;
+    systemPrompts.texts.push(String(input?.system ?? ""));
     if (input?.formEditTool) {
       editTool.offered += 1;
       editTool.lastData = input.formEditTool.data;
@@ -618,6 +621,7 @@ const CLASSIFY_ON = (process.env.FLAG_CLASSIFY_ON ?? "").split(",").map((name) =
 const record: { turns: { question: string; reply: string; updated: string[] | null }[] } = { turns: [] };
 async function recorded(id: string, mode: string, run: () => Promise<void>) {
   record.turns = [];
+  systemPrompts.texts = [];
   const at = performance.now();
   let error: string | null = null;
   try {
@@ -705,6 +709,7 @@ function context(): ReplayContext {
     forms: () => store.form_instances as never,
     draftPrompts: () => [...draftAsked],
     draftSystems: () => [...draftSystemAsked],
+    answerSystems: () => [...systemPrompts.texts],
     draftTools: () => [...draftToolsAsked],
     redraft: (instanceId, notes) =>
       call<Record<string, unknown>>(`/api/forms/instances/${instanceId}/draft`, {
