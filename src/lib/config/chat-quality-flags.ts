@@ -4209,3 +4209,14 @@ export function sameRequestOtherPersonEnabled(): boolean {
 export function chatStageTimingsEnabled(): boolean {
   return envFlag("CHAT_STAGE_TIMINGS_ENABLED");
 }
+
+/**
+ * REVISION_ARCHIVED_NOT_OPEN_ENABLED (QA's audit item 17a, 10 Nov 2026; default off; same flag in both apps).
+ * `findOpenRevision` (`forms/instances.ts`, protected) handed back a revision draft an administrator had archived, so
+ * "Edit as new draft" reopened the draft somebody had put away. On, an archived draft is not the open revision and a new
+ * request opens a new one. Needs the migration 20261110200000_form_instances_one_open_revision_not_archived.sql applied
+ * first: the one-open-revision index otherwise counts the archived draft and refuses the new one. Off, as before.
+ */
+export function revisionArchivedNotOpenEnabled(): boolean {
+  return envFlag("REVISION_ARCHIVED_NOT_OPEN_ENABLED");
+}
