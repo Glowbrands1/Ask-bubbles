@@ -1,4 +1,9 @@
-import { failureToOpenIsLateOpeningEnabled, formDateIncidentOnlyEnabled, lateOpenDateEnabled } from "@/lib/config/chat-quality-flags";
+import {
+  failureToOpenIsLateOpeningEnabled,
+  formDateIncidentOnlyEnabled,
+  lateOpenDateEnabled,
+  noShowOpeningIsAttendanceEnabled,
+} from "@/lib/config/chat-quality-flags";
 
 import { listIncidentDates } from "./form-date-answer";
 import { incidentOnly } from "./form-date-incident-only";
@@ -79,6 +84,37 @@ export function lateOpeningWords(text: string): string | null {
     return `${found[0]}${tail}`.replace(/\s+/g, " ").trim();
   }
   return null;
+}
+
+/*
+ * NO_SHOW_OPENING_IS_ATTENDANCE_ENABLED (QA's ruling on round 17b, 10 Nov 2026): "did not show up for a scheduled
+ * opening shift" is an absence (Attendance), as Pau's missed-shift ruling has it, never a Late Opening. A Late Opening
+ * is the store opening late: "failure to open on time", "opened late", "late to open". The words say the employee did
+ * not come, and nothing says the store opened late.
+ */
+const NO_SHOW =
+  /\b(?:did\s*n['’]?t\s+show(?:\s+up)?|did\s+not\s+show(?:\s+up)?|didnt\s+show(?:\s+up)?|never\s+show(?:ed)?(?:\s+up)?|no[- ]?show(?:ed)?|no[- ]call|did\s*n['’]?t\s+come\s+in|did\s+not\s+come\s+in|missed\s+(?:her|his|their|a|the)\s+(?:scheduled\s+)?(?:opening\s+)?shift)\b/i;
+const STORE_OPENED_LATE =
+  /\b(?:late[- ]open(?:ing|ed)?|open(?:ed|ing)?\s+(?:(?:the|our|her|his|their)\s+)?(?:store|location|shop|makery|doors)\s+late|open(?:ed|ing)\s+late|late\s+to\s+open)\b/i;
+
+/** NO_SHOW_OPENING_IS_ATTENDANCE_ENABLED: the manager's own words for the no-show, as typed ("did not show up for a scheduled opening shift"), or null. */
+export function noShowWords(text: string): string | null {
+  if (!noShowNotLateOpening(text)) return null;
+  const said = text ?? "";
+  const found = NO_SHOW.exec(said);
+  if (!found) return null;
+  const tail = /^\s+(?:for|to)\s+(?:(?:her|his|their|a|the)\s+)?(?:scheduled\s+)?(?:opening\s+)?shift\b/i.exec(said.slice(found.index + found[0].length))?.[0] ?? "";
+  return `${found[0]}${tail}`.replace(/\s+/g, " ").trim();
+}
+
+/** NO_SHOW_OPENING_IS_ATTENDANCE_ENABLED: the employee did not come to (an opening) shift, and the store's late opening is not said. Off, false. */
+export function noShowNotLateOpening(text: string): boolean {
+  return (
+    noShowOpeningIsAttendanceEnabled() &&
+    NO_SHOW.test(text) &&
+    !STORE_OPENED_LATE.test(text) &&
+    !FAILURE_TO_OPEN.test(text)
+  );
 }
 
 /**
