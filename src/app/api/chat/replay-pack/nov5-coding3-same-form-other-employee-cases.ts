@@ -94,7 +94,7 @@ export const NOV5_CODING3_SAME_FORM_OTHER_EMPLOYEE_CASES: readonly ReplayCase[] 
     report: `${REPORT_A}; the same words before Create`,
     // Run 5 Nov 2026 (production flags): the card stays Mireya Vantrell's, now Written — the switch lands on the wrong person.
     status: { open: "the card stays Mireya Vantrell's and turns Written (the switch is applied to her); no card for Caspian Drummet" },
-    // Fixed under SAME_REQUEST_OTHER_PERSON_ENABLED (port from Ask Sunny, 10 Nov 2026): a new request for the other person; open on production flags until QA flips it.
+    // Fixed under SAME_REQUEST_OTHER_PERSON_ENABLED (port from the sibling app, 10 Nov 2026): a new request for the other person; open on production flags until QA flips it.
     fixFlags: ["SAME_REQUEST_OTHER_PERSON_ENABLED"],
     async run(t) {
       const thread = start(t);
@@ -157,7 +157,7 @@ export const NOV5_CODING3_SAME_FORM_OTHER_EMPLOYEE_CASES: readonly ReplayCase[] 
     report: `${REPORT_C}; the card not created yet`,
     // Run 5 Nov 2026 (production flags): a Coaching card for Mireya Vantrell (FORM_TYPE_SWITCH_ENABLED). Open in the sibling app too (the same flag is on there).
     status: { open: "a Coaching card for Mireya Vantrell: FORM_TYPE_SWITCH_ENABLED reads the turn as \"change this to a coaching form\" and Caspian Drummet's name is dropped" },
-    // Fixed under SAME_REQUEST_OTHER_PERSON_ENABLED (port from Ask Sunny, 10 Nov 2026): a new request for the other person; open on production flags until QA flips it.
+    // Fixed under SAME_REQUEST_OTHER_PERSON_ENABLED (port from the sibling app, 10 Nov 2026): a new request for the other person; open on production flags until QA flips it.
     fixFlags: ["SAME_REQUEST_OTHER_PERSON_ENABLED"],
     async run(t) {
       const thread = start(t);
@@ -178,7 +178,7 @@ export const NOV5_CODING3_SAME_FORM_OTHER_EMPLOYEE_CASES: readonly ReplayCase[] 
     report: `${REPORT_C}; after Create`,
     // Run 5 Nov 2026 (production flags): "You already have a Corrective Action draft for Mireya Vantrell. I'll start a Coaching Form too" — for Mireya. Open in the sibling app too.
     status: { open: "a Coaching card for Mireya Vantrell: FORM_TYPE_SWITCH_AFTER_CREATE_NOTE_ENABLED reads the turn as her CA request with the coaching form named, and Caspian Drummet's name is dropped" },
-    // Fixed under SAME_REQUEST_OTHER_PERSON_ENABLED (port from Ask Sunny, 10 Nov 2026): a new request for the other person; open on production flags until QA flips it.
+    // Fixed under SAME_REQUEST_OTHER_PERSON_ENABLED (port from the sibling app, 10 Nov 2026): a new request for the other person; open on production flags until QA flips it.
     fixFlags: ["SAME_REQUEST_OTHER_PERSON_ENABLED"],
     async run(t) {
       const thread = start(t);
