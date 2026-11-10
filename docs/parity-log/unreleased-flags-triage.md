@@ -71,6 +71,26 @@ section supersedes those rows' "check Vercel" notes in the table below.
 | SECOND_FORM_ENABLED | R | A follow-up or second document is not revised into the form on screen. Gate: replay pack. |
 | NEXT_PUBLIC_ASD_NO_FORM_MONITORING_ENABLED | K | Sibling role rule (its assistant role loses the sibling's forms list). Here the owner lifted that block: NEXT_PUBLIC_ASSISTANT_MANAGER_CREATE is on and keeps the Forms Register, own forms only, so this flag has no effect (table: X). Sibling-only on purpose. |
 
+### Gate prep for the nine (read-only production data, 10 Nov 2026)
+
+- **FEWSHOT_EXAMPLES: nothing to draw from today.** Bubbles production has 31
+  ratings, 9 of them 5-star; 14 ratings (5 of them 5-star) since traces began
+  on 24 Oct. **None** of them joins a trace: `loadFewShotBlock` matches
+  `assistant_feedback.client_message_id` to `chat_traces.message_id`, and 0 of
+  14 match (214 of 5,424 traces have no `message_id` at all). The likely cause is
+  a key mismatch (the rated answer's id vs the trace's), so with the flag on the
+  prompt would be unchanged. Fix the join before releasing; the sibling app,
+  where the flag is on, should be checked for the same no-op.
+- **LONG_CONTEXT: latency cost close to zero at today's chat lengths.** It adds
+  a summary call (Haiku, capped at 3.5 s, stored and reused) only when the
+  history passes 40 messages or 6,000 tokens. Last 14 days: 981 turns, the
+  longest conversation 11 earlier turns (about 22 messages), 0 turns past 40
+  messages; p50 latency 2.75 s, p95 7.06 s, p50 input 9,270 tokens. Stage
+  timings (on) record only the form-proposal step here (p50 2.65 s, p95 3.07 s),
+  so there is no `long_context` stage to read yet. Expected cost: 0 s for every
+  turn seen, at most +3.5 s on a turn past the window when its summary is
+  rewritten.
+
 | Flag | What it does | Origin | Sibling | Verdict | Evidence / replaced by / why |
 | --- | --- | --- | --- | --- | --- |
 | CHAT_IMPORT_PROVEN_OWN_ENABLED | Importing a chat this account does not hold must prove every answered turn is its own; else declined | #425 (import) | unlisted | R | Independent review, 31 Oct 2026 (`docs/parity-log.md`): another account's chat could still be imported on a shared browser. Security fix, both apps. No replay case (import route, not chat). |
