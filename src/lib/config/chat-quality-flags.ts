@@ -1306,6 +1306,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "MADE_ABOUT_TOPIC_EVIDENCE_ENABLED",
   "FORM_DATE_SAID_ALONE_ENABLED",
   "MADE_ABOUT_SAID_DATE_ENABLED",
+  "SECTION_BREAKS_KEPT_ENABLED",
 ] as const;
 
 /**
@@ -4094,4 +4095,14 @@ export function formDateSaidAloneEnabled(): boolean {
  */
 export function madeAboutSaidDateEnabled(): boolean {
   return envFlag("MADE_ABOUT_SAID_DATE_ENABLED");
+}
+
+/**
+ * SECTION_BREAKS_KEPT_ENABLED (ported from the sibling app: QA's live round 15 there, 10 Nov 2026; default off; same flag in
+ * both apps). A saved Details of Coaching came out as one paragraph ("Observed: … Expectation: … Going Forward: …") over a
+ * field written in sections: the reader returned the new account on one line. With the flag on, each heading such a value
+ * runs inline starts its own paragraph again (`forms/section-breaks.ts`). Off, as before.
+ */
+export function sectionBreaksKeptEnabled(): boolean {
+  return envFlag("SECTION_BREAKS_KEPT_ENABLED");
 }

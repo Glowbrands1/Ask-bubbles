@@ -171,4 +171,30 @@ export const NOV10_MADE_ABOUT_TOPIC_AND_DATE_CASES: ReplayCase[] = [
     fixFlags: SAID_DATE_FIX,
     run: p9({ saved: false }),
   },
+  {
+    id: "nov10-section-breaks-kept-one-line",
+    title: "ported from the sibling app's live round 15: the reader returns Details on ONE line (\"Observed: … Expectation: …\") over a field written in sections: the saved Details keep their sections",
+    report: "Ported from the sibling app: QA's live round 15 there (10 Nov 2026, 03:07:44Z): Details of Coaching saved as one paragraph",
+    status: { open: "the reader's one-line account is written as it came, over a field written in sections" },
+    fixFlags: ["SECTION_BREAKS_KEPT_ENABLED"],
+    async run(t) {
+      vi.setSystemTime(new Date("2026-11-10T03:04:00Z"));
+      t.directory(REFUSAL_ROSTER);
+      t.as("location_manager", WEST_DODGE);
+      const said = "rewrite the details: she missed the monthly meeting on 10/10/26, she is expected to be at every meeting";
+      const flat = "Observed: Ottoline Ormsworth missed the monthly meeting on 10/10/26. Expectation: Ottoline is expected to be at every meeting.";
+      t.patchReads!({
+        [said]: patch("this_form", [{ field: "coaching_details", value: flat, how: "replace", evidence: "she missed the monthly meeting on 10/10/26, she is expected to be at every meeting" }]) as never,
+      });
+      const thread = t.thread();
+      await thread.say("create a coaching form for Ottoline Ormsworth, she missed the monthly meeting on 10/10/26");
+      t.draftWrites({ coaching_details: DETAILS, other_topic: "Missed monthly meeting" }, { coaching_topics: ["other"] });
+      const id = await thread.create();
+      const reply = await thread.say(said);
+      const details = t.values(id).coaching_details ?? "";
+      expect(details, `Details:\n${reply.content}`).toMatch(/expected to be at every meeting/);
+      expect(details, `the sections were run into one paragraph:\n${details}`).toMatch(/^Observed:\n[^\n]+\n\nExpectation:\n[^\n]+/);
+    },
+  },
 ];
+
