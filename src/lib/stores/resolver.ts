@@ -1,5 +1,5 @@
 import { isJobTitleAbbreviation } from "@/config/company/job-titles";
-import { placeSpanGuardEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { placeSpanGuardEnabled, storeAliasEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { editDistance } from "@/lib/forms/employee-match";
 import { companyNameStops } from "@/lib/forms/name-stops";
 import { isTypedStopSpan } from "@/lib/forms/name-words";
@@ -117,6 +117,16 @@ interface IndexedAlias {
    * place only where the sentence says so, never because it is bracketed.
    */
   readonly road?: boolean;
+  /**
+   * STORE_ALIAS_ENABLED (October triage #6, #186): the road with the store's
+   * state — "dodge ne", "west dodge ne". Built always, read only with the flag.
+   */
+  readonly roadWithState?: boolean;
+}
+
+/** An alias the reader may use now: a road-with-state alias only with STORE_ALIAS_ENABLED. */
+function usable(alias: IndexedAlias): boolean {
+  return !alias.roadWithState || storeAliasEnabled();
 }
 
 export interface StoreIndex {
@@ -245,18 +255,19 @@ export function buildStoreIndex(sources: StoreIndexSources = {}): StoreIndex {
   const shared = [...counts].filter(([, count]) => count > 1).map(([head]) => head);
   const sharedCities = shared.filter((head) => !shared.some((other) => other !== head && other.startsWith(`${head} `)));
 
-  const merged = new Map<string, { ids: Set<string>; needsCue: boolean; via: StoreMatchVia; road: boolean }>();
-  const add = (phrase: string, storeId: string, needsCue: boolean, via: StoreMatchVia, road = false) => {
+  const merged = new Map<string, { ids: Set<string>; needsCue: boolean; via: StoreMatchVia; road: boolean; roadWithState: boolean }>();
+  const add = (phrase: string, storeId: string, needsCue: boolean, via: StoreMatchVia, road = false, roadWithState = false) => {
     const trimmed = phrase.replace(/\s+/g, " ").trim();
     if (!trimmed) return;
     const existing = merged.get(trimmed);
     if (!existing) {
-      merged.set(trimmed, { ids: new Set([storeId]), needsCue, via, road });
+      merged.set(trimmed, { ids: new Set([storeId]), needsCue, via, road, roadWithState });
       return;
     }
     existing.ids.add(storeId);
     existing.needsCue = existing.needsCue && needsCue;
     existing.road = existing.road && road;
+    existing.roadWithState = existing.roadWithState && roadWithState;
     if (existing.via === "initials" && via !== "initials") existing.via = via;
   };
 
@@ -281,6 +292,8 @@ export function buildStoreIndex(sources: StoreIndexSources = {}): StoreIndex {
         add(`${city} ${variant}`, store.id, false, "name");
         // The road on its own is a place only where the sentence says so ("at Dodge").
         if (variant.includes(" ") || variant === core) add(variant, store.id, true, "name", true);
+        // STORE_ALIAS_ENABLED: "dodge ne" — the road with its state is as specific as "omaha ne".
+        if (state && (variant.includes(" ") || variant === core)) add(`${variant} ${state}`, store.id, false, "name", false, true);
       }
       if (core) add(`${city} ${core}`, store.id, false, "name");
     }
@@ -322,6 +335,7 @@ export function buildStoreIndex(sources: StoreIndexSources = {}): StoreIndex {
     needsCue: entry.needsCue,
     via: entry.via,
     ...(entry.road ? { road: true } : {}),
+    ...(entry.roadWithState ? { roadWithState: true } : {}),
   }));
   aliases.sort((a, b) => b.phrase.length - a.phrase.length);
 
@@ -376,6 +390,7 @@ function fuzzy(query: string, index: StoreIndex): { ids: string[]; phrase: strin
   let best = Infinity;
   let hits: IndexedAlias[] = [];
   for (const alias of index.aliases) {
+    if (!usable(alias)) continue;
     if (alias.via === "initials" || alias.phrase.length < 5) continue;
     if (alias.phrase[0] !== query[0]) continue;
     const shorter = Math.min(query.length, alias.phrase.length);
@@ -396,6 +411,7 @@ function partial(query: string, index: StoreIndex): string[] {
   if (words.length === 0 || words.length !== query.split(" ").length) return [];
   const ids = new Set<string>();
   for (const alias of index.aliases) {
+    if (!usable(alias)) continue;
     if (alias.via === "initials") continue;
     const tokens = alias.phrase.split(" ");
     if (words.every((word) => tokens.includes(word))) for (const id of alias.locationIds) ids.add(id);
@@ -442,7 +458,7 @@ export function resolveStoreText(query: string, index: StoreIndex = defaultStore
   if (typedNameEnabled() && isTypedStopSpan(key, companyNameStops())) return { kind: "not_found", query };
 
   const exact = index.byPhrase.get(key);
-  if (exact) return settle(exact.locationIds, exact.via === "initials" ? "initials" : exact.via, exact.via === "initials", typed);
+  if (exact && usable(exact)) return settle(exact.locationIds, exact.via === "initials" ? "initials" : exact.via, exact.via === "initials", typed);
 
   const parts = partial(key, index);
   if (parts.length > 0) return settle(parts, "partial", false, typed);
@@ -463,7 +479,7 @@ export function isStoreName(phrase: string, index: StoreIndex = defaultStoreInde
   const key = foldKey(phrase, index.abbreviations).trim();
   if (key.split(" ").length < 2) return false;
   const alias = index.byPhrase.get(key);
-  return Boolean(alias && alias.via !== "initials");
+  return Boolean(alias && usable(alias) && alias.via !== "initials");
 }
 
 /* ------------------------------------------------------------ in a sentence */
@@ -593,6 +609,7 @@ export function readStoreMentions(text: string, index: StoreIndex = defaultStore
 
   let haystack = foldKey(withBoundaries(text, index.states), index.abbreviations);
   for (const alias of index.aliases) {
+    if (!usable(alias)) continue;
     const pattern = new RegExp(`(?<= )${escape(alias.phrase)}(?= )`, "g");
     let found = false;
     haystack = haystack.replace(pattern, (phrase, offset: number) => {
@@ -622,7 +639,7 @@ export function readStoreMentions(text: string, index: StoreIndex = defaultStore
     const key = foldKey(match[1]!, index.abbreviations).trim();
     if (key.split(" ").length < 2) continue;
     const alias = index.byPhrase.get(key);
-    if (!alias || alias.via === "initials" || alias.road) continue;
+    if (!alias || !usable(alias) || alias.via === "initials" || alias.road) continue;
     if (mentions.some((mention) => alias.locationIds.every((id) => mention.locationIds.includes(id)))) continue;
     mentions.push({ locationIds: alias.locationIds, matched: alias.phrase });
   }

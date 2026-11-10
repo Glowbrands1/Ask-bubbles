@@ -4209,3 +4209,14 @@ export function sameRequestOtherPersonEnabled(): boolean {
 export function chatStageTimingsEnabled(): boolean {
   return envFlag("CHAT_STAGE_TIMINGS_ENABLED");
 }
+
+/**
+ * STORE_ALIAS_ENABLED (coding 6, 10 Nov 2026; default off; October triage #6,
+ * #186). "dodge ne", "dodge, ne", "at dodge ne", "dodge ne location" and "our
+ * dodge, ne store" named no store, and a two-store manager was asked which
+ * store it was. On: a store's road with its state ("dodge ne", "west dodge ne")
+ * names that store, as "omaha ne" does. See `stores/resolver.ts`. Off, as before.
+ */
+export function storeAliasEnabled(): boolean {
+  return envFlag("STORE_ALIAS_ENABLED");
+}
