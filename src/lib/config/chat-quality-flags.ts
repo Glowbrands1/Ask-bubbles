@@ -1300,6 +1300,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "MADE_ABOUT_ALL_OR_NOTHING_ENABLED",
   // coding 4: MADE_ABOUT_READER_ACCOUNT (QA's live round-9 test, 9 Nov 2026; default off).
   "MADE_ABOUT_READER_ACCOUNT_ENABLED",
+  // coding 4: MADE_ABOUT_REWRITE_FINISHES (the sibling app's live round-13 test, 9 Nov 2026; default off).
+  "MADE_ABOUT_REWRITE_FINISHES_ENABLED",
   // coding 5: CREATE_FROM_CONVERSATION_POINTS_TO_CARD (the sibling app's P6, 10 Nov 2026; default off).
   "CREATE_FROM_CONVERSATION_POINTS_TO_CARD_ENABLED",
 ] as const;
@@ -4056,4 +4058,17 @@ export function madeAboutAllOrNothingEnabled(): boolean {
  */
 export function madeAboutReaderAccountEnabled(): boolean {
   return envFlag("MADE_ABOUT_READER_ACCOUNT_ENABLED");
+}
+
+/**
+ * MADE_ABOUT_REWRITE_FINISHES_ENABLED (ported from the sibling app: QA's live round-13 test there, 9 Nov 2026; default
+ * off; same flag in both apps). On a saved Coaching draft, "make it about leaving the front desk unattended on 11/6/26"
+ * ran the made-about revision (Details rewritten), then the reader's own edits were refused, the turn left the patch
+ * path, and the old path's revision ran a second time: "Updated … Details of Coaching", Other and the Date stayed.
+ * With the flag on, once the account is rewritten the turn always finishes there: a refused reader patch falls back to
+ * the topic read from the manager's words, the Date is still written, and an error after the rewrite answers from what
+ * was saved. Off, as before.
+ */
+export function madeAboutRewriteFinishesEnabled(): boolean {
+  return envFlag("MADE_ABOUT_REWRITE_FINISHES_ENABLED");
 }
