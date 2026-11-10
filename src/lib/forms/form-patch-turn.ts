@@ -12,6 +12,7 @@ import {
   policyTopicIntoFieldEnabled,
   madeAboutTopicEvidenceEnabled,
   madeAboutSaidDateEnabled,
+  madeForIsMadeAboutEnabled,
   sectionBreaksKeptEnabled,
   addNotRepeatedEnabled,
   formDateSaidAloneEnabled,
@@ -19,7 +20,7 @@ import {
   stepBDateSaidEnabled,
   stepBDateWithAboutEnabled,
 } from "@/lib/config/chat-quality-flags";
-import { madeAbout } from "@/lib/ai/make-it-about";
+import { asMadeAboutWording, madeAbout } from "@/lib/ai/make-it-about";
 import { saidFormDate } from "./form-date-said";
 import { withSectionBreaks } from "./section-breaks";
 import { addedTail } from "./added-tail";
@@ -370,9 +371,20 @@ export async function patchActiveForm(input: PatchTurnInput): Promise<AskRespons
     const readerSet = reading.patch.set;
     if (
       madeAboutReaderAccountEnabled() &&
-      madeAbout(input.question) !== null &&
-      madeAboutDate(input.question, input.today) !== null &&
-      "form_date" in before &&
+      /*
+       * MADE_FOR_IS_MADE_ABOUT_ENABLED: a "make it for <X>" turn keeps its reader's own account (the sibling app's
+       * nov7-refusal-sun-monthly-meeting: set aside, the account hung on the old revision alone, which wrote text about
+       * the form, and the turn was refused).
+       */
+      madeAbout(input.question, madeForIsMadeAboutEnabled() ? { aboutOnly: true } : {}) !== null &&
+      ((madeAboutDate(input.question, input.today) !== null && "form_date" in before) ||
+        /*
+         * As in the sibling app (MADE_ABOUT_REWRITE_FINISHES with MADE_ABOUT_UNDATED_TOGETHER, its round-13/14 tests): an
+         * undated made-about turn whose reader rewrote the account sets it aside the same way, and the account and the
+         * topic are rewritten together (QA's round-20 probe there: "make it about missing the monthly meeting" set
+         * Other too). Only a turn that says no date at all.
+         */
+        (madeAboutRewriteFinishesEnabled() && madeAboutUndatedTogetherEnabled() && saidFormDate(input.question, input.today) === null)) &&
       ACCOUNT_KEYS.some((key) => key in readerSet)
     ) {
       const drop = new Set<string>(ACCOUNT_KEYS);
@@ -480,7 +492,8 @@ export async function patchActiveForm(input: PatchTurnInput): Promise<AskRespons
       if (coordinate) noteMadeAboutWrite(input.instanceId);
       try {
         await (await import("./chat-revision"))
-          .reviseActiveForm({ request: input.request, instanceId: input.instanceId, question: input.question, history: input.history, today: input.today })
+          // MADE_FOR_IS_MADE_ABOUT_ENABLED: "make it for <X>" as the revision reads a made-about ("make it about <X>").
+          .reviseActiveForm({ request: input.request, instanceId: input.instanceId, question: asMadeAboutWording(input.question), history: input.history, today: input.today })
           .catch(() => null);
       } finally {
         if (coordinate) endMadeAboutWrite(input.instanceId);
@@ -663,6 +676,61 @@ export async function patchActiveForm(input: PatchTurnInput): Promise<AskRespons
               ...(readerFixes ? { readerFixes } : {}),
             },
           );
+        }
+      } else if (
+        result.handoff === "refused" &&
+        madeForIsMadeAboutEnabled() &&
+        rewroteFrom === null &&
+        keptAccountKey !== undefined &&
+        keptAccountKey in reading.patch.set &&
+        madeAbout(input.question) !== null &&
+        madeAbout(input.question, { aboutOnly: true }) === null
+      ) {
+        /*
+         * MADE_FOR_IS_MADE_ABOUT_ENABLED (ported from the sibling app: QA's live round 20 there, 10 Nov 2026): "can you make it for missing out monthly
+         * meeting" on a saved Coaching draft in sections. The reader's own account was kept for a "for" turn (above), and
+         * refused here (words the manager did not say: an Expectation and a Going Forward of its own). Handed to the old
+         * path, the revision would read "make it for …" as a rewording and refuse the new account. The account is
+         * rewritten here instead, as "make it about …" (the made-about path's revision), then the topic with it.
+         */
+        noteMadeAboutExit(input, "reader_refused_made_for", false);
+        if (!(await rewriteAccountByRevision(keptAccountKey))) {
+          const label = labels[keptAccountKey] ?? keptAccountKey;
+          const about = madeAbout(input.question);
+          return {
+            content: `I haven't changed the **${loaded.instance.templateName}** for **${loaded.instance.employeeName}**: I couldn't rewrite **${label}** to be about ${about}, so the topic stays as it was too. What should **${label}** say about ${about}?`,
+            citations: [],
+            coverage: "not_applicable",
+          };
+        }
+        const rest = ops.filter((op) => !(ACCOUNT_KEYS as readonly string[]).includes(op.field));
+        const topic = madeAboutReading(input, before, writable, allGroups);
+        const topicSet = topic && "ok" in topic ? topic.patch.set : {};
+        const sets = rest.length > 0 ? [rest] : [];
+        if (Object.keys(topicSet).length > 0)
+          sets.push(
+            Object.entries(topicSet).map(([field, value]) => ({
+              op: "set" as const,
+              field,
+              value,
+              ...(topic && "ok" in topic && topic.patch.evidence?.[field] !== undefined ? { evidence: topic.patch.evidence[field] } : {}),
+            })),
+          );
+        for (const attempt of sets) {
+          const written = await (await import("./form-write")).writeFormEdits(input.instanceId, attempt, {
+            path: "patch",
+            actorId: actor.id,
+            latest: input.question,
+            managerTurns: managerTurns(input.history, input.question),
+            ...(offered !== undefined ? { offered } : {}),
+            acceptedOffer: false,
+            today: input.today,
+            loaded: (await loadInstance(input.instanceId)) ?? loaded,
+            writable,
+            statedKeys: stated,
+            ...(readerFixes ? { readerFixes } : {}),
+          });
+          if (written.handoff !== "refused") break;
         }
       } else if (result.handoff === "refused" && saidDateRetry(input, before, reading, keptAccountKey, rewroteFrom !== null)) {
         /*

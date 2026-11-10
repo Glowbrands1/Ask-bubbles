@@ -1312,6 +1312,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "MADE_ABOUT_SAID_DATE_ENABLED",
   "SECTION_BREAKS_KEPT_ENABLED",
   "ADD_NOT_REPEATED_ENABLED",
+  "MADE_FOR_IS_MADE_ABOUT_ENABLED",
 ] as const;
 
 /**
@@ -4142,4 +4143,15 @@ export function sectionBreaksKeptEnabled(): boolean {
  */
 export function addNotRepeatedEnabled(): boolean {
   return envFlag("ADD_NOT_REPEATED_ENABLED");
+}
+
+/**
+ * MADE_FOR_IS_MADE_ABOUT_ENABLED (ported from the sibling app: QA's live round 20 there, 10 Nov 2026; default off; same flag
+ * in both apps). "can you make it for missing out monthly meeting" on a saved Coaching draft in sections was refused there.
+ * Here POLITE_ABOUT_STAYS_CARD already reads "make it for <X>" as a made-about; with this flag on too, a "for" turn keeps
+ * its reader's own account, and the made-about path's revision is given the sentence as "make it about <X>"
+ * (`ai/make-it-about.ts`, `forms/form-patch-turn.ts`). Off, as before.
+ */
+export function madeForIsMadeAboutEnabled(): boolean {
+  return envFlag("MADE_FOR_IS_MADE_ABOUT_ENABLED");
 }
