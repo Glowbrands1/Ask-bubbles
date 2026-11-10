@@ -1307,6 +1307,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 4: QA's live Bubbles round 13 (9 Nov 2026; default off).
   "MADE_ABOUT_TOPIC_EVIDENCE_ENABLED",
   "FORM_DATE_SAID_ALONE_ENABLED",
+  "MADE_ABOUT_SAID_DATE_ENABLED",
+  "SECTION_BREAKS_KEPT_ENABLED",
 ] as const;
 
 /**
@@ -4094,4 +4096,26 @@ export function madeAboutTopicEvidenceEnabled(): boolean {
  */
 export function formDateSaidAloneEnabled(): boolean {
   return envFlag("FORM_DATE_SAID_ALONE_ENABLED");
+}
+
+/**
+ * MADE_ABOUT_SAID_DATE_ENABLED (ported from the sibling app: QA's live round 14 there, 10 Nov 2026; default off; same flag in
+ * both apps). "I need you to make it about showing up late and please list the policy make the date for 10/14/26" on a
+ * saved draft already about another incident answered "I haven't changed …": the reader wrote the policy into Details,
+ * its patch was refused whole, and the old path's revision would not drop the old account's date. With the flag on, such
+ * a refused patch is retried by the made-about path: the account rewritten (the said date as the incident's), the reader's
+ * other edits written without it, then the Date (`forms/form-patch-turn.ts`). Off, as before.
+ */
+export function madeAboutSaidDateEnabled(): boolean {
+  return envFlag("MADE_ABOUT_SAID_DATE_ENABLED");
+}
+
+/**
+ * SECTION_BREAKS_KEPT_ENABLED (ported from the sibling app: QA's live round 15 there, 10 Nov 2026; default off; same flag in
+ * both apps). A saved Details of Coaching came out as one paragraph ("Observed: … Expectation: … Going Forward: …") over a
+ * field written in sections: the reader returned the new account on one line. With the flag on, each heading such a value
+ * runs inline starts its own paragraph again (`forms/section-breaks.ts`). Off, as before.
+ */
+export function sectionBreaksKeptEnabled(): boolean {
+  return envFlag("SECTION_BREAKS_KEPT_ENABLED");
 }
