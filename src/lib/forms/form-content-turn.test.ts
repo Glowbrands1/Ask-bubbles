@@ -129,3 +129,33 @@ describe("independent review item 12, 31 Oct 2026", () => {
     expect(formContentQuestion({ ...OPEN, question: said, history: [PRINTED] })).toBeNull();
   });
 });
+
+/*
+ * DETAILS_FROM_EARLIER_ANSWER_ENABLED (chat-edits (a), relayed 5 Nov 2026): the details were the app's answer BEFORE the
+ * card; then the card and the app's own "I haven't changed …" came after it. The person is invented (Rowan Kestrel).
+ */
+describe("DETAILS_FROM_EARLIER_ANSWER_ENABLED", () => {
+  const history: { role: "user" | "assistant"; content: string }[] = [
+    { role: "user", content: "how do i coach on ship from store?" },
+    { role: "assistant", content: "Here's how to coach on ship from store:\n\n**Details of Coaching:** Press **Ready for Pick Up** only once the order is packed and on the pickup shelf." },
+    { role: "user", content: "Create a coaching form for Rowan Kestrel" },
+    { role: "assistant", content: "Here is what I would put on a **Coaching Form**.\n\nCreate the draft here when you're ready." },
+    { role: "user", content: "it didnt edit in the card" },
+    { role: "assistant", content: "I haven't changed the **Coaching Form** for **Rowan Kestrel** — everything on it is as it was.\n\nTell me which part to change and what it should say, and I'll update just that." },
+  ];
+  const ask = (question: string) => formContentQuestion({ question, history, templateName: "Coaching Form", employeeName: "Rowan Kestrel" });
+
+  it("reads \"the details we just discussed\" from the answer before the app's own card and edit replies", () => {
+    process.env.FORM_EDIT_REFERS_BACK_ENABLED = "true";
+    try {
+      expect(ask("the details we just discussed!!!") ?? "").not.toMatch(/packed and on the pickup shelf/);
+      process.env.DETAILS_FROM_EARLIER_ANSWER_ENABLED = "true";
+      expect(ask("the details we just discussed!!!")).toMatch(/^Add this to the Details of Coaching: Press \*\*Ready for Pick Up\*\* only once the order is packed and on the pickup shelf/);
+      // "make that update" keeps its rule: the last reply offered nothing.
+      expect(ask("make that update")).toBeNull();
+    } finally {
+      delete process.env.FORM_EDIT_REFERS_BACK_ENABLED;
+      delete process.env.DETAILS_FROM_EARLIER_ANSWER_ENABLED;
+    }
+  });
+});
