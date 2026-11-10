@@ -1300,6 +1300,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "MADE_ABOUT_ALL_OR_NOTHING_ENABLED",
   // coding 4: MADE_ABOUT_READER_ACCOUNT (QA's live round-9 test, 9 Nov 2026; default off).
   "MADE_ABOUT_READER_ACCOUNT_ENABLED",
+  // coding 5: POLICY_TOPIC_INTO_FIELD (QA, a manager's 1★ rating, 10 Nov 2026; default off).
+  "POLICY_TOPIC_INTO_FIELD_ENABLED",
   // coding 4: MADE_ABOUT_REWRITE_FINISHES (the sibling app's live round-13 test, 9 Nov 2026; default off).
   "MADE_ABOUT_REWRITE_FINISHES_ENABLED",
   // coding 5: CREATE_FROM_CONVERSATION_POINTS_TO_CARD (the sibling app's P6, 10 Nov 2026; default off).
@@ -2896,6 +2898,17 @@ export function oneFormEachPersonEnabled(): boolean {
  */
 export function cardNamesEmployeeEnabled(): boolean {
   return envFlag("CARD_NAMES_EMPLOYEE_ENABLED");
+}
+
+/**
+ * POLICY_TOPIC_INTO_FIELD_ENABLED (QA, a manager's 1★ rating, 10 Nov 2026; coding 5; same flag in both apps; default
+ * off). "In details of coaching inlude our woven policy on finding a cover for your shift" on a saved draft wrote a
+ * sentence telling the manager to refer to the policy manual. On: an edit asking for "our policy on <topic>" in a field
+ * writes the manual's section for that topic, quoted with its "Policy reference: …, JBA Policy Manual p.N" line, or
+ * says no section matches and asks; never a pointer to the manual (`forms/policy-topic-field.ts`). Off, as before.
+ */
+export function policyTopicIntoFieldEnabled(): boolean {
+  return envFlag("POLICY_TOPIC_INTO_FIELD_ENABLED");
 }
 
 // --- end coding 5 flags ---
