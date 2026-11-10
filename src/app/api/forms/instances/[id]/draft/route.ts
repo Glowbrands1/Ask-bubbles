@@ -2550,17 +2550,19 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
       // Refused again, or nothing written; a retry that changed nothing (the form already says it) is not "nothing saved".
       draftNothingSaved = written.result.handoff === "refused" || (silent.fieldCount(written.accepted) === 0 && written.result.handoff !== "noop");
     }
+    // The old writer only in the single writer's flag-off branch (form-write-one-writer.test.ts reads this shape).
     const guarded =
-      written ??
-      (await applyAssistantDraft(
-        id,
-        reduced ? reduced.write : {
-          values: Object.fromEntries(Object.entries(merged.values).filter(([key]) => !keeps(key))),
-          checked: Object.fromEntries(Object.entries(merged.checked).filter(([key]) => !keeps(key))),
-        },
-        actor.id,
-        draftProvenanceWritten,
-      ));
+      formEditSingleWriterEnabled() && written
+        ? written
+        : await applyAssistantDraft(
+            id,
+            reduced ? reduced.write : {
+              values: Object.fromEntries(Object.entries(merged.values).filter(([key]) => !keeps(key))),
+              checked: Object.fromEntries(Object.entries(merged.checked).filter(([key]) => !keeps(key))),
+            },
+            actor.id,
+            draftProvenanceWritten,
+          );
     /*
      * NEVER A SILENT BLANK (DRAFT_NEVER_BLANK_ENABLED). Whenever an attempt
      * failed or wrote nothing, or the write itself holds no field, the reason
