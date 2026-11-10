@@ -12,14 +12,15 @@ import { describe, expect, it } from "vitest";
  * QA (10 Nov 2026): never copy the sibling company's content into this app. Every string literal, template text and
  * JSX text under `src/` (tests, test support and the replay pack aside) is read with the TypeScript parser — comments
  * and regular expressions are not strings — and none may name the sibling company or its products: "Sun Tan City",
- * "STC", "tanning", "spray tan", "Sunny". "MyGlow" and "Sunlync" only from `config/company/forms/exit-systems.ts`, where
+ * "STC", "tanning", "spray tan", "Sunny", and its "Club Close" metric (QA, 10 Nov 2026: only in strings the app writes until
+ * the tests and cases are rewritten into this company's metrics). "MyGlow" and "Sunlync" only from `config/company/forms/exit-systems.ts`, where
  * Pau's 25 Oct 2026 ruling (via QA) put them: Buff City Soap uses both systems. "Salon" is allowed: the readers must
  * understand a manager who types it.
  *
  * The files below may name them, each for the reason given. A new hit anywhere else fails: move the wording to this
  * app's own, or add the file here with its reason.
  */
-const BANNED = /sun\s?tan\s?city|\bstc\b|\btanning\b|spray\s?tan|\bsunny\b|myglow|sunlync/i;
+const BANNED = /sun\s?tan\s?city|\bstc\b|\btanning\b|spray\s?tan|\bsunny\b|myglow|sunlync|club\s?close/i;
 
 const ALLOWED: Readonly<Record<string, string>> = {
   "src/components/shell/app-switcher.tsx": "the switcher's link to the sibling app names it",
@@ -32,7 +33,9 @@ const ALLOWED: Readonly<Record<string, string>> = {
   "src/lib/ai/employee-performance-gate.ts": "the sibling's brand marker, so its rows are filtered",
   "src/lib/ai/full-manual-context.ts": "the shared manual's sibling-only parts, so they are skipped",
   "src/lib/forms/chooser.ts": "a hidden sibling form's key, so the chooser withholds it",
+  "src/lib/forms/epp-intake.ts": "the EPP's productivity metrics, pending Pau's BCS EPP metrics (QA, 10 Nov 2026)",
   "src/lib/forms/hiring-library.ts": "the sibling's interview forms, seeded hidden (config/company/forms/hidden.ts)",
+  "src/lib/forms/library.ts": "the EPP template's productivity metrics, pending Pau's BCS EPP metrics (QA, 10 Nov 2026)",
   "src/lib/forms/template-intent.ts": "readers: a manager may type the sibling's job titles or form names",
 };
 
