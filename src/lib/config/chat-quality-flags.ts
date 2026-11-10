@@ -1319,6 +1319,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ADD_NOT_REPEATED_ENABLED",
   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
   "CHAT_STAGE_TIMINGS_ENABLED",
+  // coding 5: WRITE_UP_LEAD_NOT_ACCOUNT (ported from the sibling app's #167, QA's October triage, 10 Nov 2026; default off).
+  "WRITE_UP_LEAD_NOT_ACCOUNT_ENABLED",
 ] as const;
 
 /**
@@ -2931,6 +2933,17 @@ export function cardNamesEmployeeEnabled(): boolean {
  */
 export function policyTopicIntoFieldEnabled(): boolean {
   return envFlag("POLICY_TOPIC_INTO_FIELD_ENABLED");
+}
+
+/**
+ * WRITE_UP_LEAD_NOT_ACCOUNT_ENABLED (ported from the sibling app: QA's October triage of its #167, 10 Nov 2026; coding 5;
+ * same flag in both apps; default off). "write up <employee> for cell phone use" gave the Corrective Action card the
+ * Issue "write up <employee> for cell phone use", the raw message: the request's verb and the employee's name stayed in.
+ * On: an Issue sentence that opens "write up <employee> for …" keeps only the account after "for" ("Cell phone use")
+ * (`forms/write-up-lead.ts`, in `forms/incident-issue.ts`). Off, as before.
+ */
+export function writeUpLeadNotAccountEnabled(): boolean {
+  return envFlag("WRITE_UP_LEAD_NOT_ACCOUNT_ENABLED");
 }
 
 // --- end coding 5 flags ---
