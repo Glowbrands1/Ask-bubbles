@@ -851,17 +851,17 @@
   },
   "replay: nov10-observation-own-person-p7 [production]": {
     "category": "REGRESSION",
-    "twin": "FORM_NAME_FROM_ROSTER set (solo pending)",
+    "twin": "FORM_NAME_FROM_ROSTER (solo reproduces it 3/3; the other three flags alone: 0)",
     "reason": "turn 1 now opens \"I couldn't find **Tamsin** in the Woven roster, so that name is not on the form.\" and then asks \"Did you mean **Tamsin Ashby** or **Tamsin Rookwood**?\": a first name two roster people share is said to be not found (false, contradictory). 3/3 ON runs, 0/3 OFF."
   },
   "replay: nov10-p7-one-form-each-named [open]": {
     "category": "REGRESSION",
-    "twin": "FORM_NAME_FROM_ROSTER set (solo pending)",
+    "twin": "FORM_NAME_FROM_ROSTER (solo reproduces it 3/3; the other three flags alone: 0)",
     "reason": "turn 1 now opens \"I couldn't find **Tamsin** in the Woven roster, so that name is not on the form.\" and then asks \"Did you mean **Tamsin Ashby** or **Tamsin Rookwood**?\": a first name two roster people share is said to be not found (false, contradictory). 3/3 ON runs, 0/3 OFF."
   },
   "replay: nov10-p7-unanswered-which-tamsin-asked-again [open]": {
     "category": "REGRESSION",
-    "twin": "FORM_NAME_FROM_ROSTER set (solo pending)",
+    "twin": "FORM_NAME_FROM_ROSTER (solo reproduces it 3/3; the other three flags alone: 0)",
     "reason": "turn 1 now opens \"I couldn't find **Tamsin** in the Woven roster, so that name is not on the form.\" and then asks \"Did you mean **Tamsin Ashby** or **Tamsin Rookwood**?\": a first name two roster people share is said to be not found (false, contradictory). 3/3 ON runs, 0/3 OFF."
   },
   "replay: nov10-r22-s14-date-kept-after-name-correction [open]": {
