@@ -1,4 +1,4 @@
-import { antiLoopEnabled, followUpCitationFieldEnabled } from "@/lib/config/chat-quality-flags";
+import { antiLoopEnabled, caSalesPolicyEnabled, followUpCitationFieldEnabled } from "@/lib/config/chat-quality-flags";
 import { printedPageForHeading } from "@/lib/forms/policy-page-map";
 import { printedPageOf } from "@/lib/ingestion/extract/pdf-sections";
 import { manualGroundedPolicies, policyFieldValue } from "@/lib/forms/policy-citation";
@@ -24,6 +24,14 @@ const NARRATIVE_KEY: Readonly<Record<string, string>> = {
   coaching: "coaching_details",
   "follow-up-coaching": "follow_up_observation",
 };
+
+/** The forms whose account field carries the citation line (EDIT_POLICY_ASK_ENABLED, `forms/edit-policy-ask.ts`). */
+export const NARRATIVE_CITATION_TEMPLATES: readonly string[] = Object.keys(NARRATIVE_KEY);
+
+/** The account field a form's citation line goes in (POLICY_TOPIC_INTO_FIELD_ENABLED), or null. */
+export function narrativeFieldOf(templateKey: string): string | null {
+  return NARRATIVE_KEY[templateKey] ?? null;
+}
 
 /**
  * The page a retrieval row prints, for a check that must not use the PDF
@@ -84,6 +92,8 @@ export function flaggedCitationWrite(input: {
   readonly notes: string;
   readonly chunks: readonly ManualChunk[];
   readonly manual?: FlaggedManualIdentity | null;
+  /** The Type of Offense boxes the draft ticks (CA_SALES_POLICY_ENABLED: the fill follows them). */
+  readonly ticked?: readonly string[];
 }): { values: Record<string, string>; provenance: Record<string, Record<string, unknown>> } {
   if (!input.enabled) return { values: input.values, provenance: {} };
   const found = accountManualSections(input.notes, input.chunks).map((section) => {
@@ -114,7 +124,16 @@ export function flaggedCitationWrite(input: {
     return { values: { ...input.values, [narrative]: next }, provenance: {} };
   }
 
-  const paged = found.filter((item) => item.page !== null && item.page > 0);
+  /*
+   * CA_SALES_POLICY_ENABLED (ported from the sibling app; its production-flags bisect, 5 Nov 2026): the empty
+   * Direct policy is filled from the lines the notes point at, and cleaning moved to Other still had the
+   * Standards of Conduct written in. The fill follows the ticked box: no Standards of Conduct line unless that
+   * box is ticked when another box is. Off, or with nothing ticked, as before.
+   */
+  const conductUnticked = caSalesPolicyEnabled() && (input.ticked ?? []).length > 0 && !input.ticked!.includes("standards_of_conduct");
+  const paged = found.filter(
+    (item) => item.page !== null && item.page > 0 && !(conductUnticked && /^standards of conduct\b/i.test(item.section.trim())),
+  );
   const writesPolicyLine =
     input.templateKey === "dpoa" ||
     input.templateKey === "policy-review" ||

@@ -1,5 +1,6 @@
-import { formEditDateRulesEnabled } from "@/lib/config/chat-quality-flags";
+import { formEditDateRulesEnabled, missedShiftCitesAttendanceEnabled, proposalPolicySetAsideEnabled } from "@/lib/config/chat-quality-flags";
 import { correctiveActionIssue } from "@/lib/forms/incident-issue";
+import { asksAboutPolicy, citationSetAside, policiesSetAside, setAsideAnything, withPolicySetAside } from "@/lib/forms/policy-set-aside";
 
 import { managerWords, remapEditLine, remapObservation } from "./edit-date-rules";
 import type { AskRequest, AskResponse } from "./types";
@@ -27,6 +28,44 @@ import type { AskRequest, AskResponse } from "./types";
  * Off: the response as it was.
  */
 export function withProposalEditRules(response: AskResponse, request: AskRequest): AskResponse {
+  return withPlanOnReadPolicy(withPolicySetAsideOnCard(withEditRules(response, request), request));
+}
+
+/*
+ * MISSED_SHIFT_CITES_ATTENDANCE_ENABLED (QA, the Bubbles round-7 live test, 9 Nov 2026): a card whose Policy line is
+ * the app's own reading ("**Policy:** Attendance — read from this request.") still wrote its Action plan on "the
+ * applicable company policy": the plan names only a policy read from the manual's words. With the flag, that plan
+ * reviews the policy the card says it read. Off, the response as it was.
+ */
+const READ_POLICY_LINE = /^\*\*Policy:\*\*\s*(.+?)\s+—\s+read from this request\./m;
+const GENERIC_PLAN = /(\*\*Action plan:\*\*[^\n]*?Management will review )the applicable company policy( with)/i;
+
+function withPlanOnReadPolicy(response: AskResponse): AskResponse {
+  if (!missedShiftCitesAttendanceEnabled() || !response.formProposal) return response;
+  const read = READ_POLICY_LINE.exec(response.content)?.[1]?.trim();
+  if (!read || !GENERIC_PLAN.test(response.content)) return response;
+  return { ...response, content: response.content.replace(GENERIC_PLAN, (_all, lead: string, tail: string) => `${lead}the ${read} policy${tail}`) };
+}
+
+/**
+ * PROPOSAL_POLICY_SET_ASIDE_ENABLED (QA, 8 Nov 2026, live here at 00:20): "take the attendance policy off the form"
+ * after the manager named it left "Policy: Attendance, as you said" on the card. A policy the manager took off is
+ * not cited on the card, and the card says so (`forms/policy-set-aside.ts`). Read from the manager's words, never the
+ * app's state lines. Off, the response as it was.
+ */
+function withPolicySetAsideOnCard(response: AskResponse, request: AskRequest): AskResponse {
+  if (!proposalPolicySetAsideEnabled() || !response.formProposal) return response;
+  const users = [
+    ...(request.history ?? []).filter((turn) => turn.role === "user").map((turn) => turn.content),
+    request.question,
+  ].map(managerWords);
+  const setAside = policiesSetAside(users);
+  if (!setAsideAnything(setAside)) return response;
+  const citations = response.citations?.filter((citation) => !citationSetAside(citation, setAside));
+  return { ...response, content: withPolicySetAside(response.content, setAside), ...(citations ? { citations } : {}) };
+}
+
+function withEditRules(response: AskResponse, request: AskRequest): AskResponse {
   if (!formEditDateRulesEnabled()) return response;
   const card = response.formProposal;
   if (!card || card.issue === undefined) return response;
@@ -38,6 +77,8 @@ export function withProposalEditRules(response: AskResponse, request: AskRequest
     users,
     current: card.issue ?? null,
     reread: (account) => correctiveActionIssue(account, card.employeeName ?? null),
+    // PROPOSAL_POLICY_SET_ASIDE_ENABLED: "take the … policy off" and "we have quoted the standards of conduct …" are asks, never the Issue.
+    ...(proposalPolicySetAsideEnabled() ? { alsoAnAsk: asksAboutPolicy } : {}),
   });
   const editLine = remapEditLine(managerWords(request.question));
   if (issue === (card.issue ?? null) && !editLine) return response;

@@ -37,11 +37,14 @@ import {
   readCorrectiveActionIntake,
   type IntakeReading,
 } from "@/lib/forms/corrective-action-intake";
+import { onlyDeniesAFault } from "@/lib/forms/denial-no-account";
 import {
   CA_POLICY_QUESTION,
   caPolicyProposalLine,
   unconfirmedManualLine,
+  describedAttendanceKeys,
   groundMissedEvent,
+  LATE_OPENING_OFFENSE,
   MISSED_EVENT_OFFENSE,
   missedEventPhrase,
   type NamedPolicyReading,
@@ -165,7 +168,7 @@ import {
   namedManualSection,
   namedPolicies,
 } from "@/lib/forms/named-policy-section";
-import { manualDisplayTitle, manualSheetHeadings, type ManualChunk } from "@/lib/forms/official-policy-manual";
+import { manualDisplayTitle, manualSectionFor, manualSheetHeadings, type ManualChunk } from "@/lib/forms/official-policy-manual";
 import {
   actionPlanSentencesEnabled,
   antiLoopEnabled,
@@ -174,7 +177,10 @@ import {
   slotRetentionEnabled,
   storedSlotsNotARequestEnabled,
   typedNameEnabled,
+  secondRequestOwnAccountEnabled,
+  describedAttendanceCardEnabled,
 } from "@/lib/config/chat-quality-flags";
+import { currentFormRequestText } from "@/lib/forms/current-request";
 import { managerWords } from "./edit-date-rules";
 import { groundEmployeeResolution } from "./employee-candidate-grounding";
 import { readFormRequests, type FormRequest } from "@/lib/forms/form-requests";
@@ -1067,15 +1073,17 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
     isCorrectiveActionForm(match) &&
     proposal.status !== "needs_employee" &&
     // This form's turns only: another person's account earlier in the chat is not this one's.
-    !describesIncident(scoped.text) &&
-    !describesMoreThanTheRequest(scoped.text, {
-      ignore: [
-        proposal.employeeName ?? "",
-        proposal.employeeRole ?? "",
-        ...storeIndex.stores.map((store) => store.name),
-        ...storeIndex.aliases.map((alias) => alias.phrase),
-      ],
-    }) &&
+    // DENIAL_NO_ACCOUNT_ENABLED: what only denies a fault ("…, not late") tells nothing that happened.
+    (onlyDeniesAFault(scoped.text, proposal.employeeName) ||
+      (!describesIncident(scoped.text) &&
+        !describesMoreThanTheRequest(scoped.text, {
+          ignore: [
+            proposal.employeeName ?? "",
+            proposal.employeeRole ?? "",
+            ...storeIndex.stores.map((store) => store.name),
+            ...storeIndex.aliases.map((alias) => alias.phrase),
+          ],
+        }))) &&
     !answeredWhatHappened([...input.history, { role: "user", content: input.question }])
   ) {
     proposal.awaitingIncident = true;
@@ -2603,10 +2611,10 @@ async function withManualIdentity(named: NamedPolicyReading | null, input: Propo
 }
 
 async function namedPolicyFor(text: string, input: ProposalTurn): Promise<NamedPolicyReading | null> {
-  const policyReading = readCaPolicy(text);
+  const policyReading = readCaPolicy(secondRequestOwnAccountEnabled() ? currentFormRequestText(text) : text);
   // A missed meeting reads as Attendance; the manual still says where (see `groundMissedEvent` below).
   if (policyReading.stated !== null && !(policyReading.stated === "attendance" && policyReading.missedEvent)) return null;
-  const named = namedPolicies(text);
+  const named = namedPolicies(secondRequestOwnAccountEnabled() ? currentFormRequestText(text) : text);
   const chunksOf = async (): Promise<readonly ManualChunk[] | null> => {
     try {
       return (await input.policyManual?.()) ?? null;
@@ -2642,6 +2650,20 @@ async function namedPolicyFor(text: string, input: ProposalTurn): Promise<NamedP
               : {}),
           }
         : null;
+    }
+    /*
+     * DESCRIBED_ATTENDANCE_CARD_ENABLED (Pau-approved 7 Nov): an account the app reads as attendance — late, absent,
+     * opening late — cites the manual's Attendance section (Late Opening under it), the reader the intent reader and
+     * the draft already use. Off, as before.
+     */
+    const attendanceKeys = describedAttendanceCardEnabled() ? describedAttendanceKeys(text) : null;
+    if (attendanceKeys) {
+      const manual = await chunksOf();
+      const section = manual ? manualSectionFor({ chunks: manual, offenseKeys: attendanceKeys, notes: text }) : null;
+      if (section) {
+        const phrase = attendanceKeys.includes(LATE_OPENING_OFFENSE) ? "opening late" : attendanceKeys.includes("tardiness") ? "late" : "absent";
+        return { phrase, lookup: "described", heading: section.heading, page: section.page, offenseKey: attendanceKeys[0]! };
+      }
     }
     const chunks = await chunksOf();
     const described = describedManualSection({ text, chunks });
@@ -2863,7 +2885,7 @@ function proposalContent(
      * being stopped for it.
      */
     if (proposal.status !== "needs_location") {
-      return correctiveActionReady(proposal, intake, asksPayrollDeduct(match), readCaPolicy(context.text), {
+      return correctiveActionReady(proposal, intake, asksPayrollDeduct(match), readCaPolicy(secondRequestOwnAccountEnabled() ? currentFormRequestText(context.text) : context.text), {
         offersLevel: offeredWarningLevels(match).length > 0,
         earlierWarning: mentionsEarlierWarning(context.text, today),
         priorActions: statedPriorActions(context.text, today),

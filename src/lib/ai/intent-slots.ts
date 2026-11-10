@@ -4,7 +4,8 @@ import { displayName, editDistance, matchEmployeeName, type RosterEmployee } fro
 import { describedAttendanceKeys } from "@/lib/forms/ca-policy";
 import { headingKey, sectionHeadingsFor } from "@/lib/forms/official-policy-manual";
 import { namesHeading } from "@/lib/forms/named-policy-section";
-import { payrollDeductAmount, payrollDeductFromConversation, type PayrollDeductAnswer } from "@/lib/forms/payroll-deduct";
+import { payrollDeductFromConversation, type PayrollDeductAnswer } from "@/lib/forms/payroll-deduct";
+import { managerPayrollAmount } from "@/lib/forms/payroll-deduct-amount";
 import {
   intentPayrollManagerOnlyEnabled,
   keepFormEmployeeEnabled,
@@ -322,7 +323,11 @@ export function decideIntentTurn(rawInput: IntentTurnInput): IntentTurnDecision 
 
   if (clarification) return { question: input.question, state, clarification };
   if (!formTurn) return { question: input.question, state, clarification: null };
-  return { question: prependFormState(input.question, state), state, clarification: null };
+  return {
+    question: prependFormState(input.question, state, input.history.filter((turn) => turn.role === "user").map((turn) => turn.content)),
+    state,
+    clarification: null,
+  };
 }
 
 /**
@@ -585,7 +590,7 @@ function managerBlob(input: IntentTurnInput): string {
 function payrollClauseAmount(input: IntentTurnInput): string | null {
   const said = [...input.history.filter((turn) => turn.role === "user").map((turn) => turn.content), input.question];
   for (let at = said.length - 1; at >= 0; at -= 1) {
-    const stated = payrollDeductAmount(said[at] ?? "");
+    const stated = managerPayrollAmount(said[at] ?? "");
     if (stated) return canonicalAmount(stated);
   }
   return null;

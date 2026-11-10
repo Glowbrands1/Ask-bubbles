@@ -1,5 +1,5 @@
 import { shiftDays, weekdayOf } from "@/lib/business-date";
-import { exitFulfilledIsLastDayEnabled, exitIntakeFixEnabled, exitShortcutWordsEnabled } from "@/lib/config/chat-quality-flags";
+import { exitFulfilledIsLastDayEnabled, exitLetterAddresseeEnabled, exitIntakeFixEnabled, exitShortcutWordsEnabled, exitStatedOnlyEnabled, exitTerminationStatedEnabled, fieldLabelNotAQuestionEnabled, noNoticeNoDateEnabled } from "@/lib/config/chat-quality-flags";
 
 import {
   EXIT_DATE_FIELDS,
@@ -365,6 +365,8 @@ function nearestCue(
       ) {
         continue;
       }
+      // EXIT_STATED_ONLY_ENABLED (QA, 5 Nov 2026): "your final paycheck, including all hours worked through 11/05" is a pay period, not a last day.
+      if (cue.role === "lastDayWorked" && exitStatedOnlyEnabled() && /\bhours?\s+$/i.test(window.slice(0, start))) continue;
       if (!best || end >= best.end) best = { role: cue.role, end };
     }
   }
@@ -456,7 +458,57 @@ const COMPLETED_INVOLUNTARY = [
 const HYPOTHETICAL =
   /\b(?:may|might|could|would|should|must|will|shall|can|going to|gonna|plan(?:ning)? to|want(?:s|ed)? to|need(?:s)? to|thinking (?:about|of)|considering|about to|if|whether|unless|once)\b[^.;!?\n]{0,30}$/;
 
+/*
+ * EXIT_TERMINATION_STATED_ENABLED (QA, 8 Nov 2026, ported from the sibling app's round-5 live tester, item 4): a termination letter says
+ * "your employment with <company> is terminated, effective 11/06/2026" — the act, in the present, with its date — and
+ * EXIT_STATED_ONLY left the separation and its date blank. With the flag on, that sentence is the completed involuntary
+ * separation, and its "effective <date>" is the Resignation Date. A question, a negation or a plan before it still is
+ * not ("should your employment be terminated?", "your employment will be terminated if …").
+ */
+const STATED_TERMINATION = [
+  /\b(?:your|(?:her|his|their)|the)\s+(?:employment|position|job)\b[^.;!?\n]{0,60}?\b(?:is|has been)\s+(?:hereby\s+|now\s+)?terminated\b/g,
+  /\byou\s+are\s+(?:hereby\s+)?terminated\b/g,
+];
+const EFFECTIVE_BEFORE = /\beffective\s+(?:on\s+|as\s+of\s+)?$/;
+
+function statedTermination(q: string): RegExpMatchArray | null {
+  if (!exitTerminationStatedEnabled()) return null;
+  for (const pattern of STATED_TERMINATION) {
+    for (const match of q.matchAll(pattern)) {
+      const start = match.index ?? 0;
+      const clauseStart = Math.max(...[".", "!", "?", ";", "\n"].map((mark) => q.lastIndexOf(mark, start - 1)));
+      const before = q.slice(clauseStart + 1, start);
+      const endMatch = /[.!?\n]/.exec(q.slice(start));
+      if (endMatch && q[start + endMatch.index] === "?") continue;
+      if (NEGATED_BEFORE.test(before) || HYPOTHETICAL.test(before)) continue;
+      return match;
+    }
+  }
+  return null;
+}
+
+/** The one "effective <date>" in the sentence that states the termination, or null (none, or more than one). */
+function effectiveDate(text: string, tokens: readonly DateToken[], terminated: RegExpMatchArray): string | null {
+  const sentenceEnd = text.slice(terminated.index ?? 0).search(/[.!?\n]/);
+  const end = sentenceEnd < 0 ? text.length : (terminated.index ?? 0) + sentenceEnd;
+  const effective = tokens.filter(
+    (token) => token.iso && token.index >= (terminated.index ?? 0) && token.end <= end + 12 && EFFECTIVE_BEFORE.test(text.slice(Math.max(0, token.index - 24), token.index).toLowerCase()),
+  );
+  return effective.length === 1 ? effective[0]!.iso : null;
+}
+
+/**
+ * The date a stated termination takes effect: "your employment … is terminated, effective 11/08/2026" → "2026-11-08".
+ * Null when no termination is stated (or EXIT_TERMINATION_STATED is off), or its sentence has no single effective date.
+ */
+export function terminationEffectiveDate(rawText: string, today: string): string | null {
+  const text = normalize(rawText);
+  const terminated = statedTermination(text.toLowerCase());
+  return terminated ? effectiveDate(text, dateTokens(text, today), terminated) : null;
+}
+
 function completedInvoluntary(q: string): boolean {
+  if (statedTermination(q)) return true;
   for (const pattern of COMPLETED_INVOLUNTARY) {
     for (const match of q.matchAll(pattern)) {
       const start = match.index ?? 0;
@@ -579,6 +631,13 @@ function readSeparation(text: string): SeparationReading {
  * `today` is the business day (`YYYY-MM-DD`). It supplies the year for "9/15"
  * and the anchor for "yesterday" and "last Friday".
  */
+/** The manager's earlier turns of this chat, as the chat route enters them (`request-message-store.ts`); none elsewhere. */
+let readEarlierManagerTurns: () => readonly string[] | undefined = () => undefined;
+
+export function installEarlierManagerTurns(read: () => readonly string[] | undefined): void {
+  readEarlierManagerTurns = read;
+}
+
 export function readExitFacts(rawText: string, today: string): ExitFacts {
   const text = normalize(rawText);
   const ambiguities: ExitAmbiguity[] = [];
@@ -623,7 +682,22 @@ export function readExitFacts(rawText: string, today: string): ExitFacts {
   };
 
   let lastDayWorked = settle("lastDayWorked");
-  const noticeGiven = settle("noticeGiven");
+  const noticeRead = settle("noticeGiven");
+  /*
+   * NO_NOTICE_NO_DATE_ENABLED (QA, 6 Nov 2026: "resigned 11-3-26 with no notice"): "resigned" is a notice-given cue,
+   * so a resignation date was also printed as "Date that notice was given" when the manager said no notice was
+   * given. With the flag on, a stated "no notice" leaves that date empty; the date still stands as the resignation's.
+   */
+  /*
+   * FIELD_LABEL_NOT_A_QUESTION_ENABLED (QA, the round-6 rollback, 9 Nov 2026): a turn answering the exit card's labels
+   * ("resignation date 10-26-2026. how employee resigned - …") is read with this form's turns only, which can start
+   * after the turn that said "no notice given"; "resigned" then dated the notice. A "no notice" in an earlier turn of
+   * the manager's still holds when the text read here says nothing about notice at all (its date was only inferred).
+   */
+  const earlierNoNotice =
+    fieldLabelNotAQuestionEnabled() && !/\bnotice\b/i.test(text) && (readEarlierManagerTurns() ?? []).some((turn) => NO_NOTICE.test(normalize(turn).toLowerCase()));
+  const noticeDenied = noNoticeNoDateEnabled() && (NO_NOTICE.test(text.toLowerCase()) || earlierNoNotice);
+  const noticeGiven = noticeDenied ? null : noticeRead;
   let noticeFulfilled = settle("noticeFulfilled");
   const quitDate = settle("resigned");
   /*
@@ -631,8 +705,25 @@ export function readExitFacts(rawText: string, today: string): ExitFacts {
    * resignation date nobody stated separately. Two different ones — "gave
    * notice 9/1, then quit 9/10" — are the manager's to settle.
    */
-  let resignationDate = quitDate ?? noticeGiven;
-  if (quitDate && noticeGiven && quitDate !== noticeGiven) {
+  let resignationDate = quitDate ?? noticeRead;
+  // EXIT_TERMINATION_STATED_ENABLED: "… is terminated, effective 11/06/2026" — the date the separation took effect.
+  const terminated = statedTermination(text.toLowerCase());
+  /*
+   * EXIT_LETTER_ADDRESSEE_ENABLED (ported from the sibling app: QA's live test there, 9 Nov 2026): a termination letter "…
+   * terminated, effective 11/08/2026 … no call no show on 11/3, 11/5 and 11/7" printed Resignation Date "November 3,
+   * 2026", an incident's date. With the flag, the stated effective date of the termination wins over the dates read
+   * as quitting or notice.
+   */
+  const terminationWins = exitLetterAddresseeEnabled() && Boolean(terminated);
+  let fromTermination = false;
+  if ((!resignationDate || terminationWins) && terminated) {
+    const effective = effectiveDate(text, tokens, terminated);
+    if (effective) {
+      resignationDate = effective;
+      fromTermination = terminationWins;
+    }
+  }
+  if (quitDate && noticeGiven && quitDate !== noticeGiven && !fromTermination) {
     ambiguities.push({ kind: "date_conflict", role: "resigned", dates: [noticeGiven, quitDate].sort() });
     resignationDate = null;
   }

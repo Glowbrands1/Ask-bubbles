@@ -1,7 +1,8 @@
-import { payrollDeductAmountFieldEnabled } from "@/lib/config/chat-quality-flags";
+import { payrollAmountSameMessageEnabled, payrollDeductAmountFieldEnabled } from "@/lib/config/chat-quality-flags";
 
 import { field } from "./catalog";
 import type { FormBlock, FormDocument } from "./document";
+import { joinReferredAmount } from "./payroll-amount-referent";
 import { PAYROLL_DEDUCT_KEY, payrollDeductAmount, quotedDeductionAmount } from "./payroll-deduct";
 
 /**
@@ -43,11 +44,21 @@ function dollars(written: string): string | null {
 }
 
 /**
+ * The amount the manager said would be deducted (`payrollDeductAmount`). With
+ * PAYROLL_AMOUNT_SAME_MESSAGE_ENABLED, also "$20. which will be payroll
+ * deducted" (`payroll-amount-referent.ts`). Every manager-words amount read
+ * outside the protected payroll reader goes through here.
+ */
+export function managerPayrollAmount(text: string): string | null {
+  return payrollDeductAmount(payrollAmountSameMessageEnabled() ? joinReferredAmount(text) : text);
+}
+
+/**
  * The amount to store from a manager's words. Policy text is not read.
  * A reply that is only an amount counts only after the amount question.
  */
 export function statedPayrollDeductAmount(text: string, lastAssistant = ""): string | null {
-  const stated = payrollDeductAmount(text);
+  const stated = managerPayrollAmount(text);
   if (stated) return stated;
   if (!lastAssistant.includes(ASKED)) return null;
   const bare = BARE_AMOUNT.exec(text.trim());
@@ -65,7 +76,7 @@ export function payrollAmountPrompt(input: {
 }): string | null {
   if (!payrollDeductAmountFieldEnabled()) return null;
   if (input.payroll !== "yes") return null;
-  const stated = payrollDeductAmount(input.managerText);
+  const stated = managerPayrollAmount(input.managerText);
   if (stated) {
     return `**${PAYROLL_DEDUCT_AMOUNT_LABEL}:** ${stated} — tell me if that should change.`;
   }
@@ -87,7 +98,7 @@ export function payrollAmountForDraft(input: {
 }): string | null {
   if (!payrollDeductAmountFieldEnabled()) return null;
   if ((input.existing ?? "").trim()) return null;
-  return payrollDeductAmount(input.notes) ?? carriedPayrollAmount(input.saved);
+  return managerPayrollAmount(input.notes) ?? carriedPayrollAmount(input.saved);
 }
 
 function carriedPayrollAmount(saved: string | null): string | null {

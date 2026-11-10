@@ -1,7 +1,7 @@
 import { antiLoopEnabled, priorActionsParseEnabled, priorSentenceFixEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { withWiderDates } from "./wider-dates";
 
-import { JOIN } from "./bounded-context";
+import { JOIN } from "./turn-join";
 
 /**
  * ============================================================================
