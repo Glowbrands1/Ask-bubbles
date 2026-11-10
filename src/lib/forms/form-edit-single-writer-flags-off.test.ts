@@ -216,7 +216,6 @@ vi.mock("@/lib/forms/prior-forms", async (importOriginal) => ({
 
 const FLAG = "FORM_EDIT_SINGLE_WRITER_ENABLED";
 const STEP_B = ["FORM_PATCH_REDUCER_ENABLED", "FORM_REPLY_FROM_DIFF_ENABLED"] as const;
-const PRODUCTION = [...PRODUCTION_FLAGS.on, ...PRODUCTION_FLAGS.assumedOn];
 /*
  * FORM_EDIT_TOOL_IN_STREAM_ENABLED (Step 3) is pinned off here like the Step B
  * flags: this file is about the single writer alone, and the edit tool makes
@@ -224,6 +223,12 @@ const PRODUCTION = [...PRODUCTION_FLAGS.on, ...PRODUCTION_FLAGS.assumedOn];
  * form-edit-tool-in-stream-*.test.ts). Classification, 4 Nov 2026: the
  * control's model count read the shell's tool flag.
  */
+/*
+ * Changed on purpose (7 Nov 2026, flip 6): production-flags.json now lists the single writer and the Step B flags as on. This file turns them on
+ * itself where a case asks for them, so the production base leaves them off, as it did before the flip. Every
+ * assertion is unchanged.
+ */
+const PRODUCTION = [...PRODUCTION_FLAGS.on, ...PRODUCTION_FLAGS.assumedOn].filter((name) => !([FLAG, ...STEP_B, "FORM_EDIT_TOOL_IN_STREAM_ENABLED"] as readonly string[]).includes(name));
 const TOUCHED = [...new Set([FLAG, ...STEP_B, "FORM_EDIT_TOOL_IN_STREAM_ENABLED", ...PRODUCTION, ...PRODUCTION_FLAGS.off])];
 const saved = new Map<string, string | undefined>();
 

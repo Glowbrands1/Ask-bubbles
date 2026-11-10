@@ -178,10 +178,8 @@
     },
     {
       "id": "b8",
-      "pass": false,
-      "misses": [
-        "policy"
-      ],
+      "pass": true,
+      "misses": [],
       "card": {
         "employee": "juniper halvorsrud",
         "salon": null,
@@ -216,10 +214,10 @@
       "pass": true,
       "misses": [],
       "card": {
-        "employee": null,
+        "employee": "All team members",
         "salon": null,
         "date": null,
-        "status": "needs_employee"
+        "status": "ready"
       }
     },
     {

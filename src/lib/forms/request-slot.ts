@@ -54,6 +54,30 @@ export function requestMessage(): string | undefined {
   return readMessage();
 }
 
+let readCardOnScreen: () => string | undefined = () => undefined;
+
+/** NEAR_MISS_QUESTION_RULES_ENABLED: the server installs the reader of the card on screen's employee (`request-message-store.ts`). */
+export function installCardOnScreen(read: () => string | undefined): void {
+  readCardOnScreen = read;
+}
+
+/** The employee of the card the reply before this turn drafted, when no form is open; undefined with none. */
+export function cardOnScreen(): string | undefined {
+  return readCardOnScreen();
+}
+
+let readMetricMessage: () => string | undefined = () => undefined;
+
+/** METRIC_GUARD_ENABLED: the server installs the metric guards' own message reader (`request-message-store.ts`). */
+export function installMetricMessage(read: () => string | undefined): void {
+  readMetricMessage = read;
+}
+
+/** The message the metric guards read: the request message, or with FORM_NAME off their own copy of it. */
+export function metricMessage(): string | undefined {
+  return readMessage() ?? readMetricMessage();
+}
+
 let readRosterNames: () => readonly string[] | undefined = () => undefined;
 
 /** `person-guard.ts` installs the turn's roster names (it reads this module, so this module does not read it). */
@@ -216,6 +240,26 @@ export function outsideRequestSlot(candidate: string, text: string | undefined =
   })) return true;
   const slot = requestSlotNames(text);
   return slot !== null && !inSlot(candidate, slot);
+}
+
+/**
+ * METRIC_GUARD_ENABLED (QA's LIVE=1 on f99ee58a, 5 Nov 2026, the smaller set): the two parts of
+ * `outsideRequestSlot` that rule out a metric, whatever FORM_NAME says — an item of a capitalised list of three
+ * or more ("Club Close" of "PPTA, LPSVA, Club Average, Club Close %, and Spa %"), a phrase written with a percent
+ * sign ("Club Close %" in a list of two), and a word of a "for <offense>" phrase ("Under Performance"). Somebody's whole roster name, or a candidate the message does not contain, is
+ * never ruled out. No message read this turn: false.
+ */
+export function namesAMetric(candidate: string, text: string | undefined = metricMessage()): boolean {
+  if (!text || !candidate.trim() || isRosterName(candidate) || !containsWords(text, candidate)) return false;
+  // A phrase the message writes with a percent sign ("Club Close %", "Spa %") is a metric, in a list of any length.
+  const spelled = candidate.trim().split(/\s+/).map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(String.raw`\s+`);
+  if (new RegExp(String.raw`(?:^|[^\p{L}])${spelled}\s*%`, "iu").test(text)) return true;
+  const typed = wordsOf(candidate);
+  if (capitalisedListItems(text).some((item) => wordsOf(item).join(" ") === typed.join(" "))) return true;
+  return offensePhrases(text).some((phrase) => {
+    const named = new Set(wordsOf(phrase));
+    return typed.every((word) => named.has(word));
+  });
 }
 
 /**

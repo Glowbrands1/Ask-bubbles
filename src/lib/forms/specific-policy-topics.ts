@@ -1,4 +1,4 @@
-import { animalAnywhereEnabled, animalVisitorsOnlyWhenVisitorEnabled, policySpecificTopicsEnabled } from "@/lib/config/chat-quality-flags";
+import { animalAnywhereEnabled, animalVisitorsOnlyWhenVisitorEnabled, policySpecificTopicsEnabled, workAreaAbsenceCitesConductEnabled } from "@/lib/config/chat-quality-flags";
 
 import {
   findManualSection,
@@ -77,6 +77,14 @@ interface TopicRule {
     readonly whenEnabled?: () => boolean;
   }[];
 }
+
+/*
+ * WORK_AREA_ABSENCE_CITES_CONDUCT_ENABLED (Pau's decision, 9 Nov 2026, via QA): "leaving the front desk unattended", and
+ * the same said another way (the desk, register, counter, work area or floor left unattended during the shift), is the
+ * Standards of Conduct's own line "Unauthorized absence from the work area during the workday", not Attendance. Pau, the
+ * same day: the Standards of Conduct only, whatever else the account says (leaving the building, going to the car).
+ */const WORK_AREA = String.raw`(?:front\s+desk|desk|register|counter|cash\s+wrap|work\s*area|work\s*station|station|sales\s+floor|floor|post)`;
+const WORK_AREA_LEFT = String.raw`(?:left|leaving|leave|leaves|abandon(?:ed|ing|s)?|walk(?:ed|ing|s)?\s+away\s+from)\s+(?:the\s+|her\s+|his\s+|their\s+)?${WORK_AREA}`;
 
 /* ------------------------------------------------------------ the words -- */
 
@@ -224,6 +232,18 @@ const TOPICS: readonly TopicRule[] = [
     ],
     not: /\bbreak\s*(?:room|rooms|in)\b|\b(?:late|call(?:ed)?\s*(?:out|off)|no[- ]?call|no[- ]?show)\b|\bwet\s+floor\b/,
     cite: { kind: "heading", heading: "Meal and Rest Policy" },
+  },
+  {
+    id: "work_area_absence",
+    enabled: workAreaAbsenceCitesConductEnabled,
+    words: [
+      new RegExp(String.raw`\b${WORK_AREA_LEFT}\s+(?:\S+\s+){0,3}?(?:unattended|unmanned|uncovered|empty|alone)\b`),
+      new RegExp(String.raw`\b${WORK_AREA_LEFT}\s+(?:\S+\s+){0,3}?during\s+(?:her|his|their|the|a)\s+(?:shift|work\s*day)\b`),
+      new RegExp(String.raw`\b${WORK_AREA}\s+(?:was\s+|is\s+|were\s+)?(?:left\s+)?(?:unattended|unmanned|uncovered)\b`),
+      new RegExp(String.raw`\b(?:unauthorized|unapproved)\s+absence\s+from\s+(?:the\s+|her\s+|his\s+|their\s+)?${WORK_AREA}\b`),
+    ],
+    not: /\b(?:late|tardy|no[- ]?call|no[- ]?show|call(?:ed)?\s*(?:out|off))\b/,
+    cite: { kind: "conduct_line", anchor: /absence\s+from\s+the\s+work\s+area/i },
   },
   {
     id: "insubordination",

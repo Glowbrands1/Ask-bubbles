@@ -11,6 +11,7 @@ import {
 } from "@/lib/reporting/registry";
 import type { AnswerMode } from "@/types";
 import { managerNameNotEmployeeEnabled, promptCacheEnabled } from "@/lib/config/chat-quality-flags";
+import { salesExceptionSuffix, withSalesException } from "./ca-sales-prompt-lines";
 import { MANAGER_NAME_RULE } from "./manager-name-guard";
 import { CROSS_CHAT_REPLY_RULE } from "@/lib/chat/cross-chat-guard";
 import { CHAT_STYLE_RULES } from "./chat-style-rules";
@@ -473,7 +474,7 @@ ${input.styleRules ? `${FORM_LIBRARY_DETAIL_RULES}\n` : ""}- Knowledge base docu
 
   const purpose = ASSISTANT_PURPOSE.replaceAll("{noun}", locationNoun);
   const styleSection = input.styleRules
-    ? `\n\n${CHAT_STYLE_RULES}\n\n${COACHING_CONSEQUENCE_RULES}\n\n${EMPLOYEE_FIGURE_RULES}`
+    ? `\n\n${CHAT_STYLE_RULES}\n\n${withSalesException(COACHING_CONSEQUENCE_RULES)}\n\n${EMPLOYEE_FIGURE_RULES}`
     : "";
   const priorCoachingSection = input.priorCoachingOptional ? `\n\n${PRIOR_COACHING_OPTIONAL_RULES}` : "";
   const actionPlanSection = input.actionPlanSentences ? `\n\n${ACTION_PLAN_SENTENCE_RULE}` : "";
@@ -526,7 +527,7 @@ ${RETRIEVED_NOT_SHARED_RULE}
 ${nameRule}${citationRule}${printedPageSection}
 ${reportFigureRule}
 - Never give medical, allergy or safety assurances about a product beyond what the provided sources say. If a guest's health question is not answered by the sources, say so and point them to the product's labelling or a medical professional.
-- A metric is a coaching signal, not a finding. Never recommend discipline, a corrective action, a suspension or a termination on the strength of numbers alone, and never infer attitude, effort or character from a number. Documentation follows observed behaviour, prior coaching or a confirmed pattern; where those are missing, recommend observing first and say what to watch for.
+- A metric is a coaching signal, not a finding. Never recommend discipline, a corrective action, a suspension or a termination on the strength of numbers alone, and never infer attitude, effort or character from a number. Documentation follows observed behaviour, prior coaching or a confirmed pattern; where those are missing, recommend observing first and say what to watch for.${salesExceptionSuffix()}
 - Keep what the person told you at the standing they gave it. A report is a report and an allegation is an allegation; never restate either as an established fact, and never add a detail, date, witness or prior warning they did not give you.
 - If the question is genuinely ambiguous in a way that changes the answer — "how many days do I get?" could be vacation, sick or bereavement leave — ask ONE short clarifying question that names the options, instead of guessing or answering every reading at length. If one reading is clearly meant from the conversation so far, answer that one.
 - When somebody uses a relative date ("yesterday", "last Friday", "next week"), work it out from today's date above and say the actual date you mean, so they can catch a mistake.
@@ -560,7 +561,7 @@ RULES YOU DO NOT BREAK
 ${RETRIEVED_NOT_SHARED_RULE}
 ${nameRule}${citationRule}${printedPageSection}
 - Never give medical, allergy or safety assurances about a product beyond what the provided sources say. If a guest's health question is not answered by the sources, say so and point them to the product's labelling or a medical professional.
-- A metric is a coaching signal, not a finding. Never recommend discipline, a corrective action, a suspension or a termination on the strength of numbers alone, and never infer attitude, effort or character from a number. Documentation follows observed behaviour, prior coaching or a confirmed pattern; where those are missing, recommend observing first and say what to watch for.
+- A metric is a coaching signal, not a finding. Never recommend discipline, a corrective action, a suspension or a termination on the strength of numbers alone, and never infer attitude, effort or character from a number. Documentation follows observed behaviour, prior coaching or a confirmed pattern; where those are missing, recommend observing first and say what to watch for.${salesExceptionSuffix()}
 - Keep what the person told you at the standing they gave it. A report is a report and an allegation is an allegation; never restate either as an established fact, and never add a detail, date, witness or prior warning they did not give you.
 - If the question is genuinely ambiguous in a way that changes the answer — "how many days do I get?" could be vacation, sick or bereavement leave — ask ONE short clarifying question that names the options, instead of guessing or answering every reading at length. If one reading is clearly meant from the conversation so far, answer that one.
 - When somebody uses a relative date ("yesterday", "last Friday", "next week"), work it out from today's date stated below, with who you are talking to, and say the actual date you mean, so they can catch a mistake.

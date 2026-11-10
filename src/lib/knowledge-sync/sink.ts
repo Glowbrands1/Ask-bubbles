@@ -3,6 +3,7 @@ import "server-only";
 import { editionSupersessionEnabled } from "@/lib/config/chat-quality-flags";
 import { activeKnowledgeCorpus } from "@/lib/knowledge/corpus";
 import { IngestionError } from "@/lib/ingestion/errors";
+import { OcrBudget } from "@/lib/ingestion/extract/pdf-ocr";
 import { retireDocument, supersedeDocument, supersedeEdition, updateDocumentMetadata } from "@/lib/ingestion/lifecycle";
 import { ingestDocument } from "@/lib/ingestion/pipeline";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
@@ -71,6 +72,8 @@ function asSinkError(error: unknown, fallback: string): SinkError {
 
 export function createSupabaseKnowledgeSink(source: SourceSystem): KnowledgeSink {
   const scopeId = activeKnowledgeCorpus();
+  /* WOVEN_PDF_OCR_ENABLED: one page budget for scanned PDFs per sink, which is one per sync run. */
+  const ocrBudget = new OcrBudget();
 
   return {
     async ingest(document) {
@@ -90,6 +93,7 @@ export function createSupabaseKnowledgeSink(source: SourceSystem): KnowledgeSink
           documentId: document.documentId,
           source,
           supersededNote: "Updated in Woven",
+          ocrBudget,
         });
         return { reusedExistingEmbeddings: result.reusedExistingEmbeddings, stayedSuperseded: result.stayedSuperseded };
       } catch (error) {

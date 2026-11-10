@@ -141,6 +141,8 @@ export const NOV5_PAU_SF_S21_S25_TWIN_CASES: ReplayCase[] = [
     report: `${REPORT}, sf-s24`,
     // Holds in this app, also with the live trace's intent read (policyHeading): the card here has no Observation of Offense line and makes no "as you said" claim on this path (the sibling app's bug); kept as a guard.
     status: "fixed",
+    // AS_YOU_SAID_MANAGER_WORDS_ENABLED (6 Nov 2026): the reader that decides "as you said" no longer reads the app's own "Policy reference" line; must still hold.
+    fixFlags: ["AS_YOU_SAID_MANAGER_WORDS_ENABLED"],
     async run(t) {
       const thread = start(t);
       const t1 = "Can you write me a performace ca for an employee who did not meet their numbers for the month of october Wynne Sarrow  - verbal\n146 transactions \nBelow in UPT, Average Sale, Conversion";
@@ -158,6 +160,8 @@ export const NOV5_PAU_SF_S21_S25_TWIN_CASES: ReplayCase[] = [
     report: `${REPORT}, sf-s25`,
     // Holds in this app, also with the live trace's intent read (policyHeading): the card here has no Observation of Offense line and makes no "as you said" claim on this path (the sibling app's bug); kept as a guard.
     status: "fixed",
+    // AS_YOU_SAID_MANAGER_WORDS_ENABLED (6 Nov 2026): the reader that decides "as you said" no longer reads the app's own "Policy reference" line; must still hold.
+    fixFlags: ["AS_YOU_SAID_MANAGER_WORDS_ENABLED"],
     async run(t) {
       const thread = start(t);
       const said = [

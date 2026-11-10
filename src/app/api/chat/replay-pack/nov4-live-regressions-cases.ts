@@ -188,7 +188,8 @@ const STEP_B_CASES: readonly ReplayCase[] = [
     title: `CA chat T2 "${CA_CHAIN[1]}" with Step B ON — a patch REPLACING the Observation with "Quill-Hart was late …" must not drop "Marnie"`,
     report:
       `${REPORT}: root cause confirmed by QA — live, the form-patch model sent how:"replace" on the Observation with its own sentence ("Quill-Hart was late …") and evidence "Quill-Hart"; the reducer checks the evidence, not what the new text removes (form-reducer.ts setOne, a replace on an assistant-owned field)`,
-    status: { open: "with Step B on, the replace is accepted on its evidence and the Observation becomes \"Quill-Hart was late to open on 10-20-26.\": \"Marnie\" is dropped (and the Expectation with it); nothing checks what a replace removes" },
+    // Was open in production ("with Step B on, the replace is accepted on its evidence and the Observation becomes \"Quill-Hart was late to open on 10-20-26.\": \"Marnie\" is dropped (and the Expectation with it); nothing checks what a replace removes"); holds since flip 6 (QA, 7 Nov 2026 20:50 PHT), so it is fixed.
+    status: "fixed",
     fixFlags: [],
     async run(t) {
       await withStepB(async () => {
@@ -387,6 +388,7 @@ export const NOV4_LIVE_REGRESSION_CASES: readonly ReplayCase[] = [...CA_CASES, .
 type Mode = "code" | "models";
 
 const NAME_LAST_MISS = "name LAST in the sentence (\"… by <name>\") is not read: no card for Corin Bellweather";
+const GROUNDED_OFF_MISS = "production: GROUNDED_ENTITIES_ENABLED off since 24 Oct (deliberate rollback: dropped non-roster names while ANTI_LOOP off; Vercel comment) — a name on no roster goes on the card (\"Corin Bellweather\")";
 const PAU_2_MISS = "answered as a policy question (\"for the primary salon manager\"): no card";
 
 /*
@@ -408,6 +410,14 @@ const NAME_OPEN: Readonly<Record<string, string>> = Object.fromEntries([
     [`pau-2-off-${mode}`, `${PAU_2_MISS}, and no question who it is for`],
     [`last-date-caps-off-${mode}`, "the non-person \"BY CORIN BELLWEATHER\" is looked up as the name (\"I couldn't find **BY CORIN BELLWEATHER** in the Woven roster\")"],
   ]),
+  /*
+   * production-flags.json corrected to Vercel (QA, 5 Nov 2026): GROUNDED_ENTITIES_ENABLED is OFF in
+   * production, so the Sentence-case wordings off roster put "Corin Bellweather" on the card instead of
+   * "I couldn't find Corin Bellweather in the Woven roster". A production defect, recorded OPEN.
+   */
+  ...["first-nodate-sentence", "first-date-sentence", "middle-nodate-sentence", "middle-date-sentence", "last-nodate-sentence", "last-date-sentence"].flatMap((id) =>
+    (["code", "models"] as const).map((mode) => [`${id}-off-${mode}`, GROUNDED_OFF_MISS]),
+  ),
 ]);
 
 const ASKED_WHO = /who is this\b[^?\n]*\bfor\?/i;
