@@ -398,45 +398,38 @@ export async function POST(request: Request) {
           readerWarningLevel(card) === card.warningLevel)
           ? card.warningLevel
           : null;
-      if (warningLevel) {
+      /*
+       * TERMINATION_STATED_TICKS_ENABLED (ported from the sibling app: Pau's P15 ruling "A", 10 Nov 2026): with no
+       * verbal or written stated, a termination the manager STATED for this form in chat ("I need a term CA for …") is
+       * ticked as their statement, through the same write, where the pinned version offers it; the card has said it
+       * needs DM/HR approval before it is finalized. Read from the manager's own turns; a hedge ("she might be
+       * terminated if this continues") states nothing. Off, `statesTermination` is false.
+       */
+      const termination =
+        !warningLevel &&
+        card.source === "assistant" &&
+        card.templateKey === "dpoa" &&
+        Array.isArray(card.conversation) &&
+        statesTermination(
+          (await readingTurns(parseHistory(card.conversation)))
+            .filter((turn) => turn.role === "user")
+            .map((turn) => String(turn.content))
+            .join("\n"),
+        );
+      if (warningLevel || termination) {
         const loaded = await loadInstance(instanceId);
         const offered = loaded
           ? (checkboxGroupsForVariant(parseFormDocument(loaded.version.document), loaded.instance.variantKey)
               .find((group) => group.key === WARNING_TYPE_KEY)
               ?.options.map((option) => option.key) ?? [])
           : [];
-        await applyStatedFacts(
-          instanceId,
-          { values: {}, checked: warningLevelChecked(warningLevel, offered) },
-          actor.id,
-          WARNING_LEVEL_STATED_KEYS,
-        );
-      }
-
-      /*
-       * TERMINATION_STATED_TICKS_ENABLED (ported from the sibling app: Pau's P15 ruling "A", 10 Nov 2026): a termination
-       * the manager STATED for this form in chat ("I need a term CA for …") is ticked as their statement, where the
-       * pinned version offers it; the card has said it needs DM/HR approval before it is finalized. Read from the
-       * manager's own turns; a hedge ("she might be terminated if this continues") states nothing. Off, false.
-       */
-      if (!warningLevel && card.source === "assistant" && card.templateKey === "dpoa" && Array.isArray(card.conversation)) {
-        const turns = await readingTurns(parseHistory(card.conversation));
-        const said = turns.filter((turn) => turn.role === "user").map((turn) => String(turn.content)).join("\n");
-        if (statesTermination(said)) {
-          const loaded = await loadInstance(instanceId);
-          const offered = loaded
-            ? (checkboxGroupsForVariant(parseFormDocument(loaded.version.document), loaded.instance.variantKey)
-                .find((group) => group.key === WARNING_TYPE_KEY)
-                ?.options.map((option) => option.key) ?? [])
-            : [];
-          if (offered.includes(TERMINATION_OPTION)) {
-            await applyStatedFacts(
-              instanceId,
-              { values: {}, checked: { [WARNING_TYPE_KEY]: [TERMINATION_OPTION] } },
-              actor.id,
-              WARNING_LEVEL_STATED_KEYS,
-            );
-          }
+        const checked = warningLevel
+          ? warningLevelChecked(warningLevel, offered)
+          : offered.includes(TERMINATION_OPTION)
+            ? { [WARNING_TYPE_KEY]: [TERMINATION_OPTION] }
+            : {};
+        if (Object.keys(checked).length > 0) {
+          await applyStatedFacts(instanceId, { values: {}, checked }, actor.id, WARNING_LEVEL_STATED_KEYS);
         }
       }
     }
