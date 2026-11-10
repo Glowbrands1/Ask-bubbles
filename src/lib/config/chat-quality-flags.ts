@@ -1319,6 +1319,9 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ADD_NOT_REPEATED_ENABLED",
   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
   "CHAT_STAGE_TIMINGS_ENABLED",
+  // coding 5: INGEST_FAILURE_KEEPS_LAST_GOOD, WOVEN_OCR_PAGE_BATCHES (QA, the recipe book's lost content, 10 Nov 2026; default off).
+  "INGEST_FAILURE_KEEPS_LAST_GOOD_ENABLED",
+  "WOVEN_OCR_PAGE_BATCHES_ENABLED",
 ] as const;
 
 /**
@@ -2931,6 +2934,28 @@ export function cardNamesEmployeeEnabled(): boolean {
  */
 export function policyTopicIntoFieldEnabled(): boolean {
   return envFlag("POLICY_TOPIC_INTO_FIELD_ENABLED");
+}
+
+/**
+ * INGEST_FAILURE_KEEPS_LAST_GOOD_ENABLED (QA, 10 Nov 2026: "Everyday Auxiliary Recipe Book v072726", searchable since 6
+ * Oct 2026, dropped out of search when a newer Woven file failed to read; coding 5; same flag in both apps; default
+ * off). A failed re-ingest marked the whole document "failed", hiding its last good version's chunks. On: when a new
+ * version of a document that was indexed before fails and an earlier version's chunks are stored, the row is put back
+ * on that version (status "indexed"), and the next version number is past every version in its history
+ * (`ingestion/pipeline.ts` `keepLastGoodVersion`). Off, as before.
+ */
+export function ingestFailureKeepsLastGoodEnabled(): boolean {
+  return envFlag("INGEST_FAILURE_KEEPS_LAST_GOOD_ENABLED");
+}
+
+/**
+ * WOVEN_OCR_PAGE_BATCHES_ENABLED (QA, 10 Nov 2026: the 45-page scanned "Everyday Auxiliary Recipe Book v072726" was
+ * refused at the 40-page OCR cap; coding 5; same flag in both apps; default off). On: a scanned PDF over 40 pages, up
+ * to 100 (the API's PDF page limit), is read in requests of at most 20 pages each, run together, each asked for its
+ * own page range of the same file (`ingestion/extract/pdf-ocr.ts`). The run's page budget is unchanged. Off, as before.
+ */
+export function wovenOcrPageBatchesEnabled(): boolean {
+  return envFlag("WOVEN_OCR_PAGE_BATCHES_ENABLED");
 }
 
 // --- end coding 5 flags ---
