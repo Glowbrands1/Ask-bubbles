@@ -1,6 +1,8 @@
+import { cardPolicyMadeAboutEnabled } from "@/lib/config/chat-quality-flags";
 import { startsFormRequest } from "@/lib/forms/current-request";
 
 import { withoutAppLines } from "./app-sentences";
+import { turnsMadeAbout } from "./make-it-about";
 
 /**
  * ============================================================================
@@ -29,7 +31,19 @@ function nameWords(employeeName: string): RegExp | null {
 }
 
 /** The manager turns the card's policy is read from: its own request's, or all of them. */
+/*
+ * CARD_POLICY_MADE_ABOUT_ENABLED (the off-flag audit, QA, 10 Nov 2026): with POLICY_CITATION on, "create a coaching form
+ * for <A>, she missed the monthly meeting on 10/10/26" then "make it about leaving the front desk unattended on 11/6/26"
+ * cited the meeting's Attendance Policy (p.14) on the card, not the Standards of Conduct (p.13) the new account is
+ * about. With the flag on, the card's policy is read from the turns as "make it about" leaves them (`turnsMadeAbout`):
+ * the account before it is set aside. Off, as before.
+ */
 export function cardPolicyTurns(turns: readonly string[], employeeName: string | null): readonly string[] {
+  const own = ownRequestTurns(turns, employeeName);
+  return cardPolicyMadeAboutEnabled() ? turnsMadeAbout(own) : own;
+}
+
+function ownRequestTurns(turns: readonly string[], employeeName: string | null): readonly string[] {
   const named = employeeName ? nameWords(employeeName) : null;
   if (!named) return turns;
   /*
