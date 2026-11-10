@@ -45,13 +45,58 @@ export interface ChatTraceDraft {
    * check did not run.
    */
   draftCheck?: Record<string, unknown>;
+  /**
+   * CHAT_STAGE_TIMINGS_ENABLED: how long each awaited step of the turn took, written to `slots.stages`. Names and
+   * milliseconds only (from the trace's start), never content. Absent when the flag is off.
+   */
+  stages?: ChatStageTiming[];
+  /** CHAT_STAGE_TIMINGS_ENABLED: when the trace started, which `stages` count from. */
+  stagesFrom?: number;
   errorSubtype: ErrorSubtype | null;
   errorClass: string | null;
   errorStatus: number | null;
   succeeded: boolean | null;
 }
 
+/** CHAT_STAGE_TIMINGS_ENABLED: one awaited step — its name, when it started and how long it took (-1 while open), in ms from the trace's start. */
+export interface ChatStageTiming {
+  readonly name: string;
+  readonly startMs: number;
+  readonly ms: number;
+}
+
 const storage = new AsyncLocalStorage<ChatTraceDraft>();
+
+/** When POST /api/chat received the request (CHAT_STAGE_TIMINGS_ENABLED: the route's marks start here). */
+const requestClock = new AsyncLocalStorage<number>();
+
+/**
+ * CHAT_STAGE_TIMINGS_ENABLED (ported from the sibling app; QA, 10 Nov 2026: 1.7 s before trace_open on its live turn): the
+ * route's own steps, marked before the turn's trace is open. The trace takes them over when it opens (`markStage`).
+ * Per request, like the clock.
+ */
+const routeStages = new AsyncLocalStorage<ChatStageTiming[]>();
+
+export function enterChatRequestClock(at = Date.now()): void {
+  requestClock.enterWith(at);
+  routeStages.enterWith([]);
+}
+
+export function runWithRequestClock<T>(fn: () => Promise<T>, at = Date.now()): Promise<T> {
+  return requestClock.run(at, () => routeStages.run([], fn));
+}
+
+/** Request receipt, then the trace start, then now. */
+export function chatRequestReceivedAt(): number {
+  const marked = requestClock.getStore();
+  if (typeof marked === "number") return marked;
+  return storage.getStore()?.startedAt ?? Date.now();
+}
+
+/** CHAT_STAGE_TIMINGS_ENABLED: this request's marks made before its trace opened; undefined outside a request. */
+export function pendingRouteStages(): ChatStageTiming[] | undefined {
+  return routeStages.getStore();
+}
 
 export function runChatTrace<T>(draft: ChatTraceDraft, fn: () => Promise<T>): Promise<T> {
   return storage.run(draft, fn);
