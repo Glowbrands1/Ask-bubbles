@@ -1319,6 +1319,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ADD_NOT_REPEATED_ENABLED",
   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
   "CHAT_STAGE_TIMINGS_ENABLED",
+  "CA_REASON_DUE_TO_ENABLED",
 ] as const;
 
 /**
@@ -3205,6 +3206,18 @@ export function metricGuardEnabled(): boolean {
 }
 
 /**
+ * CA_REASON_DUE_TO_ENABLED (QA, live, 4 Nov 2026; rebuilds #454; default off). With CA_SALES_POLICY on in
+ * production, "CA for <name> due to under performance in salon metrics" put the whole request on the card's
+ * Issue, and the draft's Observation of Offense was the request as the model copied it. On: "due to" and
+ * "because (of)" join the reason after the person (`forms/incident-issue.ts`); "create a ca for <name> at
+ * <store>, she was late …" reads the account after the comma; and a drafted Observation whose first sentence
+ * is the request begins with its reason instead (`forms/request-observation.ts`). Off, as before.
+ */
+export function caReasonDueToEnabled(): boolean {
+  return envFlag("CA_REASON_DUE_TO_ENABLED");
+}
+
+/**
  * SAME_FORM_COPY_NEW_PERSON_ENABLED (coding3, 5 Nov 2026; same flag in both
  * apps; default off). "can you create the same draft that we did with <C> by
  * changing the name and position?" with <C>'s own form open (or no form open
@@ -4208,4 +4221,45 @@ export function sameRequestOtherPersonEnabled(): boolean {
  */
 export function chatStageTimingsEnabled(): boolean {
   return envFlag("CHAT_STAGE_TIMINGS_ENABLED");
+}
+
+/**
+ * DRAFT_WRITE_NEVER_SILENT_ENABLED (coding 6, 10 Nov 2026; default off; QA's
+ * live finding, the sibling app's round 17; port). One Create in five saved only the Name and
+ * Date: the drafting model ran (chat_traces: forms_draft succeeded), the
+ * "left out <surname>" check saw filled Details, and the route answered 200 —
+ * but nothing was saved. The one writer is all or nothing: a single refused
+ * field drops every value. On: a draft write refused as a whole is retried
+ * once without the refused fields; if that saves nothing either, the notice
+ * says nothing was saved (and no "left out" line). Never a 200 with a silent
+ * empty draft. See `forms/draft-write-never-silent.ts`. Off, as before.
+ */
+export function draftWriteNeverSilentEnabled(): boolean {
+  return envFlag("DRAFT_WRITE_NEVER_SILENT_ENABLED");
+}
+
+/**
+ * FAILURE_TO_OPEN_IS_LATE_OPENING_ENABLED (coding 6, 10 Nov 2026; default off;
+ * ported from the sibling app, where a manager's "Can you make a CA for <name>
+ * for failure to open on time?" was asked what happened). Here the card had
+ * an empty Issue, no policy and a plan on "the applicable company policy": no
+ * reader took "failure to open" as an account. On: "failure / failed to open",
+ * "did not open on time", "didn't open the store" are the manual's Late
+ * Opening and an account. "open the form / the drawer" is not. See
+ * `forms/late-open.ts`. Off, as before.
+ */
+export function failureToOpenIsLateOpeningEnabled(): boolean {
+  return envFlag("FAILURE_TO_OPEN_IS_LATE_OPENING_ENABLED");
+}
+
+/**
+ * PAYROLL_BARE_SENTENCE_ENABLED (coding 6, 10 Nov 2026; default off; ported
+ * from the sibling app, its P15). "I need a term CA for <name>. Didn't show
+ * up for her opening shift. Payroll deduction." — the card still asked "Is
+ * payroll deduct applicable?". On, a sentence that is only "Payroll
+ * deduction." is a Yes. Read in `forms/payroll-deduct-answer.ts` (which
+ * imports nothing). Off, as before.
+ */
+export function payrollBareSentenceEnabled(): boolean {
+  return envFlag("PAYROLL_BARE_SENTENCE_ENABLED");
 }
