@@ -1317,6 +1317,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "MADE_ABOUT_SAID_DATE_ENABLED",
   "SECTION_BREAKS_KEPT_ENABLED",
   "ADD_NOT_REPEATED_ENABLED",
+  "CORRECTION_PLAN_KEEPS_AMOUNT_ENABLED",
   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
   "CHAT_STAGE_TIMINGS_ENABLED",
 ] as const;
@@ -4208,4 +4209,15 @@ export function sameRequestOtherPersonEnabled(): boolean {
  */
 export function chatStageTimingsEnabled(): boolean {
   return envFlag("CHAT_STAGE_TIMINGS_ENABLED");
+}
+
+/**
+ * CORRECTION_PLAN_KEEPS_AMOUNT_ENABLED (QA's prod-env reading, 10 Nov 2026, D1; default off; same flag in both apps). With
+ * production's flags, after Create, "change the payroll deduction to $5.00" replied "The Action Plan now states the payroll
+ * deduction." and the saved plan named no deduction (the earlier one was gone too): `forms/chat-correction.ts` synced the
+ * plan without its amount sentence. On: it writes the amount sentence as every other edit path does, and says "now states"
+ * only when the saved plan does. Off, as before.
+ */
+export function correctionPlanKeepsAmountEnabled(): boolean {
+  return envFlag("CORRECTION_PLAN_KEEPS_AMOUNT_ENABLED");
 }
