@@ -1319,6 +1319,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ADD_NOT_REPEATED_ENABLED",
   "POLICY_REFERENCE_NOT_ACCOUNT_ENABLED",
   "LEVEL_AFTER_FORM_NAME_ENABLED",
+  "LEVEL_REQUEST_MORE_VERBS_ENABLED",
   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
   "CHAT_STAGE_TIMINGS_ENABLED",
 ] as const;
@@ -4232,4 +4233,15 @@ export function policyReferenceNotAccountEnabled(): boolean {
  */
 export function levelAfterFormNameEnabled(): boolean {
   return envFlag("LEVEL_AFTER_FORM_NAME_ENABLED");
+}
+
+/**
+ * LEVEL_REQUEST_MORE_VERBS_ENABLED (QA's audit, 10 Nov 2026; default off; this app only, see the parity log). The overnight
+ * scan's sf-s17, "put together a written CA for <A> for not compelting her woven courses by the deadline of october
+ * 31st", left the card's level unset here ("put together" is no request verb in `forms/warning-level.ts`, and the
+ * deadline's date made "written" unclear); it holds in the sibling app, whose level reader is built differently. On:
+ * "put together", "prepare", "draw up", "do up" open a request as "create" does. Off, as before.
+ */
+export function levelRequestMoreVerbsEnabled(): boolean {
+  return envFlag("LEVEL_REQUEST_MORE_VERBS_ENABLED");
 }

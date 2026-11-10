@@ -1,4 +1,4 @@
-import { caShortcutWordsEnabled, complaintAccountEnabled, levelAfterFormNameEnabled, levelEndsRequestEnabled, requestLevelNotHistoryEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { caShortcutWordsEnabled, complaintAccountEnabled, levelAfterFormNameEnabled, levelEndsRequestEnabled, levelRequestMoreVerbsEnabled, requestLevelNotHistoryEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { businessToday } from "@/lib/business-date";
 
 import { datesInText } from "./form-date-answer";
@@ -618,13 +618,25 @@ const REQUEST_OBJECT = /^\s*(?:[\p{L}'’.-]+\s+){0,3}?(?:with\s+)?an?\s+$/iu;
  * written warning on 9/1, write her up") never reaches here: no request
  * comes before it in its clause.
  */
+/*
+ * LEVEL_REQUEST_MORE_VERBS_ENABLED (QA's audit, 10 Nov 2026: the overnight scan's sf-s17 holds in the sibling app, not
+ * here): "put together a written CA for <A> for not compelting her woven courses by the deadline of october 31st" was
+ * read as no level ("unclear": the deadline's date, and "put together" is no request verb here). With the flag on,
+ * "put together", "prepare", "draw up" and "do up" open a request as "create" does. Off, as before.
+ */
+const MORE_REQUEST_VERBS = /\b(?:put\s+together|prepare|draw\s+up|do\s+up)\b/i;
+
+function requestClauseSource(): string {
+  return levelRequestMoreVerbsEnabled() ? `(?:${REQUEST_CLAUSE.source}|${MORE_REQUEST_VERBS.source})` : REQUEST_CLAUSE.source;
+}
+
 function levelInRequestClause(before: string): boolean {
   const clause = before.slice(before.lastIndexOf(",") + 1);
-  const requests = [...clause.matchAll(new RegExp(REQUEST_CLAUSE.source, "gi"))];
+  const requests = [...clause.matchAll(new RegExp(requestClauseSource(), "gi"))];
   const last = requests[requests.length - 1];
   if (!last) return false;
   if (!REQUEST_OBJECT.test(clause.slice(last.index + last[0].length))) return false;
-  const rest = clause.replace(new RegExp(REQUEST_CLAUSE.source, "gi"), " ");
+  const rest = clause.replace(new RegExp(requestClauseSource(), "gi"), " ");
   return !CLAUSE_HISTORY.test(rest) && !LISTS_EARLIER_STEPS.test(rest);
 }
 
