@@ -28,6 +28,7 @@ import {
   caSalesPolicyEnabled,
   writeMeTheFormEnabled,
   caShortcutWordsEnabled,
+  caShorthandRequestEnabled,
   formChoiceStatedEnabled,
   formNameFromRosterEnabled,
   typedNameEnabled, requestFromNamesEmployeeEnabled } from "@/lib/config/chat-quality-flags";
@@ -696,6 +697,22 @@ function writesTheForm(q: string): boolean {
  * "start a corrective action for Sarah" is a manager asking for a document, and
  * the document has to be settled before anything is proposed for her file.
  */
+/*
+ * CA_SHORTHAND_REQUEST_ENABLED (October triage #9; #181's wording): "an employee opened the store 15 min late and
+ * needs CA" and "write ca" got a process answer and no card, and so did "crete a ca for …" and "writen ca …": the
+ * creation verbs above want an article ("needs a", "write a CA") and are spelled right. With the flag on, a verb that
+ * asks for the document, typed as managers type it, directly before the form's name is a request for it. Not after
+ * a negation ("doesn't need a ca") and not in a question, which `informational` already sets aside.
+ */
+const CA_VERB_NO_ARTICLE =
+  /\b(?:write|writen|wrte|crete|creat|craete|cretae|create|make|do|start|need|needs|draw\s+up)\s+(?:(?:me|her|him|them|us)\s+)?(?:an?\s+)?(?:new\s+)?corrective actions?\b/;
+const CA_NEGATED_BEFORE = /\b(?:not|no|never|don'?t|doesn'?t|didn'?t|won'?t|shouldn'?t|wouldn'?t)\s+(?:\S+\s+){0,2}$/;
+
+function asksForCaWithoutArticle(q: string): boolean {
+  const found = CA_VERB_NO_ARTICLE.exec(q);
+  return found !== null && !CA_NEGATED_BEFORE.test(q.slice(0, found.index));
+}
+
 const CREATION_VERBS = [
   "create",
   "start",
@@ -1699,7 +1716,9 @@ export function detectTemplateIntent(rawQuestion: string): TemplateIntent {
            */
           statedWarningLevel(question) !== null ||
           // "… CA please", "corrective action form please"
-          /\bcorrective actions?(?:\s+form)?[\s,]+please\b/.test(q)),
+          /\bcorrective actions?(?:\s+form)?[\s,]+please\b/.test(q) ||
+          // CA_SHORTHAND_REQUEST_ENABLED: "write ca", "… needs CA", "crete a ca for …" (see `CA_VERB_NO_ARTICLE`).
+          (caShorthandRequestEnabled() && asksForCaWithoutArticle(q))),
     };
   }
   if (informational) return { kind: "none" };

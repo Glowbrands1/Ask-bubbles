@@ -4209,3 +4209,16 @@ export function sameRequestOtherPersonEnabled(): boolean {
 export function chatStageTimingsEnabled(): boolean {
   return envFlag("CHAT_STAGE_TIMINGS_ENABLED");
 }
+
+/**
+ * CA_SHORTHAND_REQUEST_ENABLED (coding 6, 10 Nov 2026; default off; October
+ * triage #9, #181). "an employee opened the store 15 min late and needs CA",
+ * "write ca", "crete a ca for …" and "writen ca …" got a process answer and
+ * no card. On: a verb asking for the document, typed with no article or
+ * misspelt, directly before "CA" asks for the Corrective Action Form; never
+ * after a negation or in a question. See `forms/template-intent.ts`. Off, as
+ * before.
+ */
+export function caShorthandRequestEnabled(): boolean {
+  return envFlag("CA_SHORTHAND_REQUEST_ENABLED");
+}
