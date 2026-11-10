@@ -4209,3 +4209,15 @@ export function sameRequestOtherPersonEnabled(): boolean {
 export function chatStageTimingsEnabled(): boolean {
   return envFlag("CHAT_STAGE_TIMINGS_ENABLED");
 }
+
+/**
+ * BECAUSE_NOT_A_NAME_ENABLED (coding 6, 10 Nov 2026; default off; October
+ * triage #15, ported from the sibling app). "create a ca for <first> <last> bc
+ * she didnt do the deep clean …" made the employee "<first> <last> bc": "bc"
+ * was read as a third name word because "she" after it ends a name. On: "bc",
+ * "b/c", "bcuz", "bcoz" and "bcz" are read as "because" before any reader
+ * runs, so the name stops there. See `forms/template-intent.ts`. Off, as before.
+ */
+export function becauseNotANameEnabled(): boolean {
+  return envFlag("BECAUSE_NOT_A_NAME_ENABLED");
+}
