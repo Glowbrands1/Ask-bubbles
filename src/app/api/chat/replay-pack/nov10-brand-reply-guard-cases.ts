@@ -1,5 +1,7 @@
 import { expect } from "vitest";
 
+import { POLICY_MANUAL_BRAND_SCOPE } from "@/config/company/knowledge";
+
 import { STAFF, WEST_DODGE, type ReplayCase } from "./cases";
 
 /**
@@ -11,8 +13,9 @@ import { STAFF, WEST_DODGE, type ReplayCase } from "./cases";
  * "(Buff City Soap, JB & Associates office)", and the "for any brand under JB & Associates" late-opening reply was
  * dropped whole, rule included. Fixed with BRAND_REPLY_GUARD_ENABLED (`ai/brand-reply-rest.ts`).
  */
-const ATTENDANCE =
-  "The attendance policy applies across all brands (Buff City Soap, Crunch, Sun Tan City, JB & Associates office) [p.14]. A no call no show for a scheduled shift may result in immediate termination [p.14].";
+/* The other brands come from config, as in the step itself: no production-scanned file names another company. */
+const OTHER_BRANDS = POLICY_MANUAL_BRAND_SCOPE.otherBrands.map((source) => source.replace(/\\s\+/g, " ").replace(/\(\?:[^)]*\)\?/g, ""));
+const ATTENDANCE = `The attendance policy applies across all brands (Buff City Soap, ${OTHER_BRANDS.join(", ")}, JB & Associates office) [p.14]. A no call no show for a scheduled shift may result in immediate termination [p.14].`;
 const LATE_OPENING = "The Late Opening policy applies for any brand under JB & Associates: the employee who failed to open reimburses $25.00 [p.15].";
 
 export const NOV10_BRAND_REPLY_GUARD_CASES: ReplayCase[] = [
@@ -27,7 +30,8 @@ export const NOV10_BRAND_REPLY_GUARD_CASES: ReplayCase[] = [
       t.as("location_manager", WEST_DODGE);
       t.modelSays(ATTENDANCE);
       const reply = await t.thread().say("what does our policy say about attendance?");
-      expect(reply.content, reply.content).not.toMatch(/jb\s*&\s*associates|sun\s+tan\s+city|crunch/i);
+      expect(reply.content, reply.content).not.toMatch(/jb\s*&\s*associates/i);
+      for (const brand of POLICY_MANUAL_BRAND_SCOPE.otherBrands) expect(reply.content, reply.content).not.toMatch(new RegExp(String.raw`\b${brand}\b`, "i"));
       expect(reply.content, reply.content).toMatch(/no call no show for a scheduled shift may result in immediate termination \[p\.14\]/i);
     },
   },

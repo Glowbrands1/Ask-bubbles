@@ -9,7 +9,7 @@ import { brandReplyGuardEnabled } from "@/lib/config/chat-quality-flags";
  *
  * QA's October triage of #198 (10 Nov 2026), on main with production's flags (OWN_BRAND_ONLY and OWN_BRAND_PARENT on):
  *
- *   "… applies across all brands (Buff City Soap, Crunch, Sun Tan City, JB & Associates office) [p.14]."
+ *   "… applies across all brands (Buff City Soap, <the other brands>, JB & Associates office) [p.14]."
  *        kept "(Buff City Soap, JB & Associates office)".
  *   "IF YOU CAN'T OPEN THE SALON/STORE ON TIME …"                 kept "SALON/STORE".
  *   "Submit availability changes … in MyGlow for Buff City Soap, MyGlow for <another brand>, or Woven for <another>"
