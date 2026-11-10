@@ -39,7 +39,6 @@ import {
   chatLongMessageEnabled,
   draftActionsEnabled,
   formEditHonestReplyEnabled,
-  madeAboutPolicyLineOldPathEnabled,
   claimGuardEnabled,
   nameCorrectionWordsEnabled,
   listPolicyIsEditEnabled,
@@ -709,24 +708,13 @@ async function postChat(request: Request) {
           : false;
       const askedRevision =
         !sameCopy && !correction && !askedQuestion && !policyChange && !redraft && !separateDocument && parsed.activeFormInstanceId
-          ? await (async () => {
-              const revise = async () =>
-                (await import("@/lib/forms/chat-revision")).reviseActiveForm({
-                  request,
-                  instanceId: parsed.activeFormInstanceId!,
-                  question: parsed.question,
-                  history: parsed.history,
-                  today: parsed.context.todayIso,
-                });
-              /*
-               * MADE_ABOUT_POLICY_LINE_OLD_PATH_ENABLED (QA's live Bubbles report, 10 Nov 2026): an undated "make it
-               * about …" is rewritten here, not by the patch path; the old account's policy line is replaced by the
-               * new account's reference after the revision. See `lib/forms/made-about-policy-line.ts`.
-               */
-              return madeAboutPolicyLineOldPathEnabled()
-                ? (await import("@/lib/forms/made-about-policy-line")).withMadeAboutPolicyLine(request, parsed.activeFormInstanceId!, parsed.question, revise)
-                : revise();
-            })()
+          ? await (await import("@/lib/forms/chat-revision")).reviseActiveForm({
+              request,
+              instanceId: parsed.activeFormInstanceId,
+              question: parsed.question,
+              history: parsed.history,
+              today: parsed.context.todayIso,
+            })
           : null;
       /*
        * FORM_EDIT_PLAIN_WORDS_ENABLED: "this is what i am wanting to coach on:

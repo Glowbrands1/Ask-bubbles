@@ -1315,8 +1315,6 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "MADE_ABOUT_POLICY_LINE_ENABLED",
   // coding 4: MADE_ABOUT_POLICY_LINE_REPLACES (the sibling app's live round 15; QA's live Bubbles report, 10 Nov 2026; default off).
   "MADE_ABOUT_POLICY_LINE_REPLACES_ENABLED",
-  // coding 4: MADE_ABOUT_POLICY_LINE_OLD_PATH (QA's live Bubbles report, 10 Nov 2026; default off).
-  "MADE_ABOUT_POLICY_LINE_OLD_PATH_ENABLED",
 ] as const;
 
 /**
@@ -4163,17 +4161,4 @@ export function madeAboutPolicyLineEnabled(): boolean {
  */
 export function madeAboutPolicyLineReplacesEnabled(): boolean {
   return envFlag("MADE_ABOUT_POLICY_LINE_REPLACES_ENABLED");
-}
-
-/**
- * MADE_ABOUT_POLICY_LINE_OLD_PATH_ENABLED (QA's live Bubbles report, 10 Nov 2026; default off). On a saved Coaching draft
- * whose Details carried "Policy reference: Attendance Policy, JBA Policy Manual p.14" (written by an earlier make-about turn
- * that asked for the policy), "make it about not following the dress code" kept the stale line and wrote no dress-code
- * reference. That undated turn is handed off by the patch path, and the old path's revision rewrote Details with the old
- * line kept. With the flag on, after that revision the rewritten account's old line is taken off and its reference is read
- * again from the new account, as MADE_ABOUT_POLICY_LINE does on the patch path (`forms/made-about-policy-line.ts`,
- * `withMadeAboutPolicyLine`, around the chat route's revision). Off, as before.
- */
-export function madeAboutPolicyLineOldPathEnabled(): boolean {
-  return envFlag("MADE_ABOUT_POLICY_LINE_OLD_PATH_ENABLED");
 }

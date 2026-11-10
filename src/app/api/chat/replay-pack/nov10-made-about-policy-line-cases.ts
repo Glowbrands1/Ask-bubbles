@@ -18,8 +18,9 @@ import { REFUSAL_ROSTER, patch } from "./nov7-step-b-refusals-scenarios";
  * Ported with it from the sibling app: its live round 11 (the line dropped by the rewrite, none written for the new
  * account), round 13 (the line kept by the revision as it was) and round 15 (two made-about turns in a row, the second
  * revision keeping the first turn's line with a trailing period, or mid-text). MADE_ABOUT_POLICY_LINE_ENABLED,
- * MADE_ABOUT_POLICY_LINE_REPLACES_ENABLED and, for the undated turn this app hands to the old path,
- * MADE_ABOUT_POLICY_LINE_OLD_PATH_ENABLED (`forms/made-about-policy-line.ts`).
+ * MADE_ABOUT_POLICY_LINE_REPLACES_ENABLED (`forms/made-about-policy-line.ts`) and, for QA's undated turn, the sibling
+ * app's MADE_ABOUT_UNDATED_TOGETHER_ENABLED (ported in Glowbrands1/Ask-bubbles#647), which takes an undated made-about
+ * to the patch path, where the policy line is read again.
  *
  * The person is invented. The first made-about turn is this app's live P9 sentence, which asks for the policy
  * (EDIT_POLICY_ASK_ENABLED). The pack's manual (wording invented) also has this app's Dress Code section, printed p.15.
@@ -54,7 +55,7 @@ const POLICY_LINE_FIX = [
   "MADE_ABOUT_POLICY_LINE_ENABLED",
 ];
 const REPLACES_FIX = [...POLICY_LINE_FIX, "MADE_ABOUT_POLICY_LINE_REPLACES_ENABLED"];
-const OLD_PATH_FIX = [...REPLACES_FIX, "MADE_ABOUT_POLICY_LINE_OLD_PATH_ENABLED"];
+const UNDATED_FIX = [...REPLACES_FIX, "MADE_ABOUT_UNDATED_TOGETHER_ENABLED"];
 
 /** The first made-about turn, asking for the policy: Details about showing up late, ending in the Attendance line. */
 async function lateWithPolicy(t: ReplayContext, next: Readonly<Record<string, unknown>>) {
@@ -165,16 +166,16 @@ export const NOV10_MADE_ABOUT_POLICY_LINE_CASES: ReplayCase[] = [
     id: "nov10-made-about-policy-line-dress-code-live",
     title: "QA's live Bubbles report: Details ending \"Policy reference: Attendance Policy, JBA Policy Manual p.14\" (an earlier make-about that asked for the policy), then \"make it about not following the dress code\", the revision keeping the old line: the stale Attendance line is gone, and no other section's line is written",
     report: REPORT,
-    status: { open: "the undated made-about goes to the old path, whose revision keeps the old account's Attendance line" },
-    fixFlags: OLD_PATH_FIX,
+    status: { open: "the undated made-about goes to the old path, whose revision keeps the old account's Attendance line (MADE_ABOUT_UNDATED_TOGETHER is off in production)" },
+    fixFlags: UNDATED_FIX,
     run: dressAfterLate(DRESS_SAID, DRESS, "not stale"),
   },
   {
     id: "nov10-made-about-policy-line-dress-code-reference",
     title: "QA's live Bubbles report, the reference wanted: \"make it about not following the dress code\" writes the Dress Code reference line (this app's manual has the section, p.15)",
     report: `${REPORT} (the dress-code reference line)`,
-    status: { open: "the undated made-about goes to the old path, whose revision keeps the old account's Attendance line" },
-    fixFlags: OLD_PATH_FIX,
+    status: { open: "the undated made-about goes to the old path, whose revision keeps the old account's Attendance line (MADE_ABOUT_UNDATED_TOGETHER is off in production)" },
+    fixFlags: UNDATED_FIX,
     /*
      * Still open with the fix: the policy reader (`forms/ca-policy.ts`, `statedIn`: NEGATED_BEFORE skips a policy name
      * after "not … two words", so "not following the dress code" reads as no policy; and "dress code" without a policy
@@ -188,8 +189,8 @@ export const NOV10_MADE_ABOUT_POLICY_LINE_CASES: ReplayCase[] = [
     id: "nov10-made-about-policy-line-dress-code-named",
     title: "the same draft, \"make it about breaking the dress code policy\" (the policy named): the Attendance line is replaced by the Dress Code reference, p.15",
     report: `${REPORT} (the mechanism, where the reader finds the section)`,
-    status: { open: "the undated made-about goes to the old path, whose revision keeps the old account's Attendance line" },
-    fixFlags: OLD_PATH_FIX,
+    status: { open: "the undated made-about goes to the old path, whose revision keeps the old account's Attendance line (MADE_ABOUT_UNDATED_TOGETHER is off in production)" },
+    fixFlags: UNDATED_FIX,
     run: dressAfterLate(
       "make it about breaking the dress code policy",
       "Observed:\nOttoline Ormsworth broke the dress code policy on 10/14/26.\n\nExpectation:\nOttoline is expected to follow the dress code on every shift.",
