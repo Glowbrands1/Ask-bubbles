@@ -1,4 +1,4 @@
-import { cardComplaintNotAccountEnabled, createCommandPointsToCardEnabled } from "@/lib/config/chat-quality-flags";
+import { cardComplaintNotAccountEnabled, createCommandPointsToCardEnabled, createFromConversationPointsToCardEnabled } from "@/lib/config/chat-quality-flags";
 
 import type { AskRequest, AskResponse } from "./types";
 
@@ -29,6 +29,20 @@ export const WHAT_IS_WRONG = "What on the proposal is wrong? Tell me what to cha
 const CREATE_COMMAND =
   /^(?:(?:ok(?:ay)?|yes|yep|sure|great|thanks?)[,.!\s]+)?(?:(?:can|could|would|will)\s+you\s+)?(?:please\s+)?(?:go\s+ahead\s+(?:and\s+)?)?(?:create|make|start|generate|build|do)\s+(?:it|this|that|the\s+(?:draft|form|ca|corrective\s+action(?:\s+form)?|coaching(?:\s+form)?)|a\s+draft|(?:it|the\s+form)\s+(?:now|please))(?:\s+(?:now|please|for\s+me))?\s*[.!?]*$/i;
 
+/*
+ * CREATE_FROM_CONVERSATION_POINTS_TO_CARD_ENABLED (ported from the sibling app: QA's P6 there, 10 Nov 2026; the person invented): with a
+ * Corrective Action card open and its payroll question asked, "Create a form from this conversation." got the same reply
+ * word for word: CREATE_COMMAND reads "create it" / "create the draft", not "a form" nor "from this conversation". With
+ * the flag on, a create command also reads "a form" / "a new draft" / "my form", with "from this conversation", "from our
+ * chat", "based on this", "with this information" and the like after it. Only the generic nouns: a named form ("create
+ * a coaching form") may be another form than the card's, and stays a request.
+ */
+const CREATE_FROM_CONVERSATION = new RegExp(
+  String.raw`^(?:(?:ok(?:ay)?|yes|yep|sure|great|thanks?|perfect)[,.!\s]+)?(?:(?:can|could|would|will)\s+you\s+)?(?:please\s+)?(?:go\s+ahead\s+(?:and\s+)?)?(?:create|make|start|generate|build|do|draft|prepare)\s+(?:(?:a|the|this|that|my|our)\s+)?(?:new\s+)?(?:draft|form|it|this|that)` +
+    String.raw`(?:\s+(?:(?:from|out\s+of|using|based\s+on|with)\s+(?:(?:this|the|our|that|all\s+(?:of\s+)?(?:this|that))\s*)(?:conversation|chat|discussion|thread|info(?:rmation)?|details)?|from\s+what\s+(?:we|i)\s+(?:discussed|talked\s+about|said|told\s+you)|now|please|for\s+me|here))*\s*[.!?]*$`,
+  "i",
+);
+
 /** "this proposal is out od fate", "the card is wrong", "that form looks outdated". */
 const COMPLAINT =
   /^(?:(?:but|hmm|um|uh|ok(?:ay)?)[,\s]+)?(?:this|that|the|your)\s+(?:proposal|card|form|draft)\s+(?:is|looks|seems|was)\s+(?:(?:all|still|kind\s+of|completely)\s+)?(out\s+o[fd]\s+[dfs]ate|outdated|old|wrong|incorrect|not\s+right|off)\s*[.!?]*$/i;
@@ -40,9 +54,22 @@ function squeezed(question: string): string {
 function kindOf(question: string): "create" | "outdated" | "wrong" | null {
   const text = squeezed(question);
   if (createCommandPointsToCardEnabled() && CREATE_COMMAND.test(text)) return "create";
+  // CREATE_FROM_CONVERSATION_POINTS_TO_CARD_ENABLED: "Create a form from this conversation." (the sibling app's P6).
+  if (createCommandPointsToCardEnabled() && createFromConversationPointsToCardEnabled() && CREATE_FROM_CONVERSATION.test(text)) return "create";
   const complaint = cardComplaintNotAccountEnabled() ? COMPLAINT.exec(text) : null;
   if (!complaint) return null;
   return /^out\s+o[fd]\s+[dfs]ate$|outdated|^old$/i.test(complaint[1]!) ? "outdated" : "wrong";
+}
+
+/**
+ * CREATE_FROM_CONVERSATION_POINTS_TO_CARD_ENABLED (QA's CI eval, 10 Nov 2026): a wording only this flag reads ("Create a
+ * form from this conversation.") was answered from the card in the history, which lacks what the turn's own re-read
+ * fills — the exit card lost its Date (s8), the coaching card its Policy (s7). Such a turn is answered as before the
+ * flag, the whole conversation re-read, and only the reply becomes the press-Create line.
+ */
+function rereadsCard(question: string): boolean {
+  const text = squeezed(question);
+  return createFromConversationPointsToCardEnabled() && CREATE_FROM_CONVERSATION.test(text) && !CREATE_COMMAND.test(text);
 }
 
 export interface CardMetaTurn {
@@ -59,6 +86,8 @@ export function cardMetaTurn(
   request: Pick<AskRequest, "question" | "history" | "continueProposalTemplateKey" | "activeFormInstanceId" | "questionMessageId">,
 ): CardMetaTurn | null {
   if (!request.continueProposalTemplateKey || request.activeFormInstanceId) return null;
+  // CREATE_FROM_CONVERSATION_POINTS_TO_CARD_ENABLED: answered as before (the whole conversation re-read); the reply is set after (`withPressCreateReply`).
+  if (rereadsCard(request.question)) return null;
   const kind = kindOf(request.question);
   if (!kind) return null;
   const fromTurn = [...(request.history ?? [])]
@@ -93,6 +122,22 @@ export function cardMetaTurn(
       return { ...again, content: line, formProposal: { ...again.formProposal, sourceMessageIds } };
     },
   };
+}
+
+/**
+ * CREATE_FROM_CONVERSATION_POINTS_TO_CARD_ENABLED, the last step of the turn: "Create a form from this conversation."
+ * with only a card open was answered as before — the whole conversation re-read, so the card keeps its Date and Policy
+ * (QA's CI eval s7, s8) — and its reply leads with the press-Create line, the card's read-back (fields, cited policy)
+ * kept under it. Off, or any other turn, as it was.
+ */
+export function withPressCreateReply<T extends { content: string; formProposal?: unknown }>(
+  answer: T,
+  request: Pick<AskRequest, "question" | "continueProposalTemplateKey" | "activeFormInstanceId">,
+): T {
+  if (!createCommandPointsToCardEnabled() || !request.continueProposalTemplateKey || request.activeFormInstanceId) return answer;
+  if (!rereadsCard(request.question) || !answer.formProposal || answer.content.startsWith(PRESS_CREATE)) return answer;
+  // The line leads; the card's own read-back (its fields, the policy it cites) stays under it, as the re-read wrote it.
+  return { ...answer, content: `${PRESS_CREATE}\n\n${answer.content.trim()}` };
 }
 
 /**
