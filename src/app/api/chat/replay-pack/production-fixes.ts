@@ -292,4 +292,8 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov10-made-about-short-topic-no-reading": "MADE_ABOUT_TOPIC_EVIDENCE",
   // Changed on purpose (10 Nov 2026): fixed in production by FORM_DATE_SAID_ALONE, QA round 15
   "nov10-form-date-said-alone-first-edit": "FORM_DATE_SAID_ALONE",
+  // Changed on purpose (10 Nov 2026): fixed in production by MADE_ABOUT_SAID_DATE, QA round 15 re-release
+  "nov10-made-about-said-date-vague-draft-live": "MADE_ABOUT_SAID_DATE",
+  // Changed on purpose (10 Nov 2026): fixed in production by ADD_NOT_REPEATED, QA round 15 re-release
+  "nov10-add-not-repeated-after-made-about": "ADD_NOT_REPEATED",
 };
