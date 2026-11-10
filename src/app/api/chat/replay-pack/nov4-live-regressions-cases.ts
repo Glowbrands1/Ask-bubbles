@@ -338,7 +338,8 @@ const QA_EXTRA_CASES: readonly ReplayCase[] = [
     title: "\"Corrective action for 123 Main Street\" — no card for an address, and the reply asks who it is for instead of looking an address up as a person",
     report: 'QA, 4 Nov 2026: "Corrective action for 123 Main Street" — refused today as a name not in the Woven roster',
     status: { open: "no card and no question: in the pack it is answered as a policy question (QA saw it refused live as a name not in the Woven roster); it never asks who the form is for" },
-    fixFlags: [],
+    // Fixed under ADDRESS_ONLY_ASKS_WHO_ENABLED (port from the sibling app, 10 Nov 2026): asks who; open on production flags until QA flips it.
+    fixFlags: ["ADDRESS_ONLY_ASKS_WHO_ENABLED"],
     async run(t) {
       t.directory(LIVE_ROSTER);
       t.as("location_manager", WEST_DODGE);
