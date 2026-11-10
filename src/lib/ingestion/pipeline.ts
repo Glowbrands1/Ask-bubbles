@@ -2,7 +2,7 @@ import "server-only";
 
 import { createHash, randomUUID } from "node:crypto";
 
-import { editionSupersessionEnabled } from "@/lib/config/chat-quality-flags";
+import { editionSupersessionEnabled, wovenDuplicateContentHoldEnabled } from "@/lib/config/chat-quality-flags";
 import { EMBEDDING_DIMENSIONS } from "@/lib/config/models";
 import { MissingConfigurationError } from "@/lib/config/server-env";
 import { getEmbeddingProvider } from "@/lib/embeddings";
@@ -230,6 +230,16 @@ export async function ingestDocument(input: IngestInput): Promise<IngestResult> 
     const contentHash = hashChunks(chunks);
 
     /*
+     * WOVEN_DUPLICATE_CONTENT_HOLD_ENABLED (ported from the sibling app, QA, 10 Nov 2026): a Woven file whose text is
+     * the same as another live document with a different title is not indexed a second time. The first one indexed
+     * stays; this one fails, naming it, and the sync lists it under Needs attention for a person to resolve in Woven.
+     */
+    if (input.source === "woven" && wovenDuplicateContentHoldEnabled()) {
+      const same = await liveDocumentWithSameContent(input.scopeId, documentId, contentHash, title);
+      if (same) throw new IngestionError("duplicate_content", `Same file as "${same}"; not indexed a second time.`, 409);
+    }
+
+    /*
      * A new Woven record whose extracted text matches a superseded document
      * is a re-filed old copy. Remove the uploading placeholder and leave
      * search as it was. The live document (an update of a current row) is
@@ -420,6 +430,21 @@ export async function ingestDocument(input: IngestInput): Promise<IngestResult> 
 }
 
 /* ------------------------------------------------------------- helpers --- */
+
+/** WOVEN_DUPLICATE_CONTENT_HOLD_ENABLED: the title of another live document with this content and a different title. */
+async function liveDocumentWithSameContent(scopeId: string, documentId: string, contentHash: string, title: string): Promise<string | null> {
+  const { data, error } = await getSupabaseAdmin()
+    .from("knowledge_documents")
+    .select("id, title")
+    .eq("knowledge_scope_id", scopeId)
+    .eq("content_hash", contentHash)
+    .eq("status", "indexed")
+    .neq("id", documentId)
+    .limit(5);
+  if (error || !Array.isArray(data)) return null;
+  const other = (data as { id: string; title: string }[]).find((row) => String(row.title ?? "").trim().toLowerCase() !== title.trim().toLowerCase());
+  return other ? String(other.title) : null;
+}
 
 async function findByTitle(
   scopeId: string,

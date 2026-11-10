@@ -1319,6 +1319,9 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ADD_NOT_REPEATED_ENABLED",
   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
   "CHAT_STAGE_TIMINGS_ENABLED",
+  // coding 5: WOVEN_DOCUMENT_KEEP_OUT, WOVEN_DUPLICATE_CONTENT_HOLD (ported from the sibling app's duplicates, QA, 10 Nov 2026; default off).
+  "WOVEN_DOCUMENT_KEEP_OUT_ENABLED",
+  "WOVEN_DUPLICATE_CONTENT_HOLD_ENABLED",
 ] as const;
 
 /**
@@ -2931,6 +2934,28 @@ export function cardNamesEmployeeEnabled(): boolean {
  */
 export function policyTopicIntoFieldEnabled(): boolean {
   return envFlag("POLICY_TOPIC_INTO_FIELD_ENABLED");
+}
+
+/**
+ * WOVEN_DOCUMENT_KEEP_OUT_ENABLED (ported from the sibling app: QA, 10 Nov 2026, duplicate titles there that Pau
+ * wanted hidden; coding 5; same flag in both apps; default off). An administrator could keep out only a whole Woven
+ * audience, not one document. On: the Content view offers "Keep out" per document, stored beside the audience
+ * decisions (`document:<ref>`); every sync retires it if live and never ingests it while the choice stands; "Undo"
+ * removes the choice (`knowledge-sync/reconcile.ts`, `/api/admin/knowledge-sync/woven/documents`). Off, as before.
+ */
+export function wovenDocumentKeepOutEnabled(): boolean {
+  return envFlag("WOVEN_DOCUMENT_KEEP_OUT_ENABLED");
+}
+
+/**
+ * WOVEN_DUPLICATE_CONTENT_HOLD_ENABLED (ported from the sibling app: QA, 10 Nov 2026, different Woven titles with
+ * identical text all indexed there; coding 5; same flag in both apps; default off). On: a Woven file whose extracted
+ * text matches another live document with a different title is not indexed; it fails with "Same file as <title>" and
+ * the sync lists it under Needs attention, not retried (`ingestion/pipeline.ts`, `knowledge-sync/sink.ts`,
+ * `engine.ts`). The first one indexed stays. Off, as before.
+ */
+export function wovenDuplicateContentHoldEnabled(): boolean {
+  return envFlag("WOVEN_DUPLICATE_CONTENT_HOLD_ENABLED");
 }
 
 // --- end coding 5 flags ---
