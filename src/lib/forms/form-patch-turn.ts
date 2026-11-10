@@ -15,6 +15,7 @@ import {
   addNotRepeatedEnabled,
   formDateSaidAloneEnabled,
   madeAboutRewriteFinishesEnabled,
+  madeAboutPolicyLineEnabled,
   stepBDateSaidEnabled,
   stepBDateWithAboutEnabled,
 } from "@/lib/config/chat-quality-flags";
@@ -22,6 +23,7 @@ import { madeAbout } from "@/lib/ai/make-it-about";
 import { saidFormDate } from "./form-date-said";
 import { withSectionBreaks } from "./section-breaks";
 import { addedTail } from "./added-tail";
+import { splitAppCitationLine } from "./app-citation-line";
 import { endMadeAboutWrite, madeAboutDate, madeAboutTopic, noteMadeAboutWrite } from "./made-about-date";
 import { syncCorrectiveActionPlan } from "./ca-action-plan-sync";
 import { checkboxGroupsForVariant, fieldsForVariant, parseFormDocument } from "./document";
@@ -462,9 +464,9 @@ export async function patchActiveForm(input: PatchTurnInput): Promise<AskRespons
      * reader's edits are written below.
      */
     /*
-     * The account rewritten by the old path's revision, with the made-about note set. True when the account changed. Used
-     * by the made-about path below and, with MADE_ABOUT_SAID_DATE_ENABLED, when a reader's account edit was refused on a
-     * turn that says the form's date.
+     * The account rewritten by the old path's revision, with the made-about note set, and its policy reference written again
+     * (MADE_ABOUT_POLICY_LINE). True when the account changed. Used by the made-about path below and, with
+     * MADE_ABOUT_SAID_DATE_ENABLED, when a reader's account edit was refused on a turn that says the form's date.
      */
     const rewriteAccountByRevision = async (accountKey: string): Promise<boolean> => {
       const coordinate = madeAboutAllOrNothingEnabled();
@@ -478,7 +480,24 @@ export async function patchActiveForm(input: PatchTurnInput): Promise<AskRespons
       }
       const revised = await loadInstance(input.instanceId);
       const changed = revised !== null && snapshotDiff(snapshotOf(loaded), snapshotOf(revised)).some((change) => change.key === accountKey);
-      if (changed && madeAboutRewriteFinishesEnabled()) rewroteFrom = { loaded, labels };
+      const finishes = madeAboutRewriteFinishesEnabled();
+      if (changed && finishes) rewroteFrom = { loaded, labels };
+      /*
+       * MADE_ABOUT_POLICY_LINE_ENABLED (ported from the sibling app's live round 11; QA's live Bubbles report, 10 Nov 2026):
+       * the old account's "Policy reference: …" line no longer matched the rewritten account. The account rewritten, its
+       * reference is written again from the new account (`made-about-policy-line.ts`), only where the old account carried one.
+       */
+      const oldLine = typeof before[accountKey]?.value === "string" ? splitAppCitationLine(before[accountKey]!.value as string).line : null;
+      if (changed && oldLine !== null && madeAboutPolicyLineEnabled()) {
+        await (await import("./made-about-policy-line")).rewriteMadeAboutPolicyLine({
+          instanceId: input.instanceId,
+          actorId: actor.id,
+          question: input.question,
+          accountKey,
+          // MADE_ABOUT_REWRITE_FINISHES_ENABLED: the old account's line, kept by the revision, is replaced, never left on the new one.
+          ...(finishes ? { oldLine } : {}),
+        });
+      }
       return changed;
     };
     if (rewritesAccount && keptAccountKey) {

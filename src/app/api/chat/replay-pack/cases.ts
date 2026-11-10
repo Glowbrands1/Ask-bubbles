@@ -59,6 +59,8 @@ export interface ReplayContext {
   patchReads?(byLatest: Readonly<Record<string, unknown>>): void;
   /** Fault injection (QA, 9 Nov 2026): from now on, a save of the form's values that includes this field fails (the save throws). */
   failSavesOf?(field: string): void;
+  /** The pinned policy manual also has these chunks this case (as `fetchOfficialPolicyManual` returns them); none by default. */
+  manualAlsoHas?(chunks: readonly Record<string, unknown>[]): void;
   calls(): { chat: number; draft: number; revision: number; tool: number; patch: number };
   forms(): Record<string, unknown>[];
   values(instanceId: string): Record<string, string>;

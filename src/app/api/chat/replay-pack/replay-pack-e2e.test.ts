@@ -77,6 +77,8 @@ const state = vi.hoisted(() => ({
   toolCalls: 0,
   chatModelCalls: 0,
   directory: [] as unknown[],
+  /** Chunks the pinned manual also has, when a case sets them (`manualAlsoHas`, ported from the sibling app); none by default. */
+  manualExtra: [] as Record<string, unknown>[],
 }));
 
 /*
@@ -380,7 +382,7 @@ vi.mock("@/lib/knowledge/providers/supabase", () => ({
         documentTitle: "2025 JBA Policy Manual - Edited 5-2025",
         documentCategory: "policies_compliance",
         matchedBy: "tag",
-        chunks: JBA_MANUAL_CA_CHUNKS,
+        chunks: [...JBA_MANUAL_CA_CHUNKS, ...state.manualExtra],
       };
     }
   },
@@ -578,6 +580,7 @@ beforeEach(async () => {
   state.reading = {};
   state.draft = { values: {} };
   state.revision = { values: {} };
+  state.manualExtra = [];
   patchScript.outputs = [];
   patchScript.calls = 0;
   patchScript.byLatest = null;
@@ -700,6 +703,9 @@ function context(): ReplayContext {
     },
     failSavesOf: (field) => {
       faults.field = field;
+    },
+    manualAlsoHas: (chunks) => {
+      state.manualExtra = [...chunks];
     },
     calls: () => ({ chat: state.chatModelCalls, draft: state.draftCalls, revision: state.revisionCalls, tool: state.toolCalls, patch: patchScript.calls }),
     forms: () => store.form_instances as never,

@@ -1312,6 +1312,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ADD_NOT_REPEATED_ENABLED",
   // Ported from the sibling app (its production-flags read, 5 Nov 2026; default off).
   "CITATION_LINE_KEPT_ON_REVISION_ENABLED",
+  // coding 4: MADE_ABOUT_POLICY_LINE (the sibling app's live round 11; QA's live Bubbles report, 10 Nov 2026; default off).
+  "MADE_ABOUT_POLICY_LINE_ENABLED",
 ] as const;
 
 /**
@@ -4144,4 +4146,16 @@ export function addNotRepeatedEnabled(): boolean {
  */
 export function citationLineKeptOnRevisionEnabled(): boolean {
   return envFlag("CITATION_LINE_KEPT_ON_REVISION_ENABLED");
+}
+
+/**
+ * MADE_ABOUT_POLICY_LINE_ENABLED (ported from the sibling app: QA's live round-11 test there, 9 Nov 2026; QA's live Bubbles
+ * report, 10 Nov 2026; default off; same flag in both apps). On a saved Coaching draft whose Details carried "Policy
+ * reference: Attendance Policy, JBA Policy Manual p.14", a made-about turn rewrote Details and the reference no longer
+ * matched the new account. With the flag on, the rewritten account's reference is written again from the manual, as the
+ * card cites it, and the old account's line (kept by the revision, with MADE_ABOUT_REWRITE_FINISHES) is taken off
+ * (`forms/made-about-policy-line.ts`). Off, as before.
+ */
+export function madeAboutPolicyLineEnabled(): boolean {
+  return envFlag("MADE_ABOUT_POLICY_LINE_ENABLED");
 }
