@@ -34,7 +34,15 @@ const NEEDS_CA = /\b(?:needs?|write|do|file)\s+(?:an?\s+|the\s+)?(?:ca|c\/a|corr
  */
 const NEGATED = /\b(?:not|never|no|don'?t|do\s+not|doesn'?t|does\s+not|without)\b/i;
 
+/*
+ * QA's October triage (10 Nov 2026, U4's terse typo wording): "writen ca rowan kestrel not atending monthly meeting
+ * 12-20-26" gave a policy answer and no card. "writen ca" / "written ca" OPENING the turn asks for one, as "write ca"
+ * does; anywhere else "written ca" is an earlier step ("she got a written ca last month") and asks for nothing.
+ */
+const WRITE_TYPO_LEAD = /^\s*(?:writen|written)\s+(?:an?\s+)?(?:ca|c\/a)\b(?!\s+(?:policy|process|step))/i;
+
 function needsCa(text: string): boolean {
+  if (WRITE_TYPO_LEAD.test(text)) return true;
   for (const clause of text.split(/[,.;!]+/)) {
     const hit = NEEDS_CA.exec(clause);
     if (!hit) continue;

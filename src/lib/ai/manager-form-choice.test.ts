@@ -93,3 +93,22 @@ describe("on: a negated 'needs CA' is read as typed", () => {
     expect(chosenFormQuestion(BUTTON, [WRITE])).toBe("Create a Corrective Action Form from this conversation.");
   });
 });
+
+describe("\"writen ca …\" opening the turn asks for the Corrective Action Form (QA's October triage, 10 Nov 2026)", () => {
+  it.each([
+    "writen ca rowan kestrel not atending monthly meeting 12-20-26",
+    "Writen ca rowan kestrel not atending monthly meeting 12-20-26",
+    "written ca rowan kestrel not attending monthly meeting 12-20-26",
+  ])("%s", (said) => {
+    process.env[FLAG] = "true";
+    expect(chosenFormQuestion(said, [])).toBe(`Create a Corrective Action Form. ${said}`);
+  });
+
+  it.each([
+    "she got a written ca last month for cash handling",
+    "what does the written ca policy say",
+  ])("not a request: %s", (said) => {
+    process.env[FLAG] = "true";
+    expect(chosenFormQuestion(said, [])).toBe(said);
+  });
+});

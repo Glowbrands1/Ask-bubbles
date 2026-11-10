@@ -52,3 +52,28 @@ export const NOV10_MANAGER_FORM_CHOICE_CASES: ReplayCase[] = TURNS.flatMap((turn
     },
   })),
 );
+
+/**
+ * QA's October triage (10 Nov 2026; U4's terse typo wording, from the FUTURE_INCIDENT_DATE_ASK report): "writen ca
+ * rowan kestrel not atending monthly meeting 12-20-26" is not read as a form request at all: a policy answer, no card.
+ * QA: a real defect of its own. The same MANAGER_FORM_CHOICE line, so open until it lands.
+ */
+const TERSE = "writen ca rowan kestrel not atending monthly meeting 12-20-26";
+
+export const NOV10_WRITEN_CA_CASES: ReplayCase[] = ([
+  ["lower", TERSE],
+  ["sentence", TERSE[0]!.toUpperCase() + TERSE.slice(1)],
+] as const).map(([casing, text]) => ({
+  id: `nov10-writen-ca-terse-${casing}`,
+  title: `"${text}" gives the Corrective Action card for Rowan Kestrel`,
+  report: `QA's October triage, 10 Nov 2026 (U4's terse typo wording); ${casing}`,
+  status: { open: "a policy answer, no card" },
+  fixFlags: [FLAG],
+  fixStatus: { open: WIRING },
+  async run(t: ReplayContext) {
+    const thread = start(t);
+    const reply = await thread.say(text);
+    expect(isCa(reply.formProposal?.templateKey), `no Corrective Action card:\n${reply.content}`).toBe(true);
+    expect(reply.formProposal?.employeeName, `not for Rowan Kestrel:\n${reply.content}`).toBe("Rowan Kestrel");
+  },
+}));
