@@ -81,6 +81,7 @@ import {
   formEditNoopGuardEnabled,
   nearMissQuestionRulesEnabled,
   reopenByAnyOpenVerbEnabled,
+  crossPersonFreshFactsEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { streamWhenSlow } from "@/lib/api/streamed-response";
 import { finalReplyWithoutMarkers } from "@/lib/ai/source-note";
@@ -1017,6 +1018,8 @@ async function postChat(request: Request) {
       }
       // SAME_REQUEST_OTHER_PERSON_ENABLED: <B>'s card says what of the earlier request it carries.
       if (sameRequestOther) answer = (await import("@/lib/forms/same-request-other-person")).withSameRequestNote(answer, sameRequestOther);
+      // CROSS_PERSON_FRESH_FACTS_ENABLED (B#166): another person's date and payroll answer never ride onto this card.
+      if (crossPersonFreshFactsEnabled()) answer = (await import("@/lib/ai/cross-person-facts")).withFreshPersonFacts(answer, asked);
     } catch (error) {
       /*
        * A FAILED ANSWER IS STILL A RECORDED TURN, closed as a failure. The row

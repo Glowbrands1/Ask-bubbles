@@ -4209,3 +4209,16 @@ export function sameRequestOtherPersonEnabled(): boolean {
 export function chatStageTimingsEnabled(): boolean {
   return envFlag("CHAT_STAGE_TIMINGS_ENABLED");
 }
+
+/**
+ * CROSS_PERSON_FRESH_FACTS_ENABLED (coding 6, 10 Nov 2026; default off; B#166
+ * and the sibling app's #236; the October triage's #2). After <A>'s card, a card for
+ * <B> kept <A>'s Date (here, <A>'s payroll answer): the
+ * stored form state went ahead of <B>'s turn unchanged. On: when the turn's
+ * employee is a different person, the stored date, payroll answer and
+ * amount, warning level, policy and incident are kept only when the turn
+ * states them. See `ai/cross-person-facts.ts`. Off, as before.
+ */
+export function crossPersonFreshFactsEnabled(): boolean {
+  return envFlag("CROSS_PERSON_FRESH_FACTS_ENABLED");
+}
