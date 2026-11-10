@@ -51,3 +51,14 @@ describe("withCardNamingEmployee (CARD_NAMES_EMPLOYEE_ENABLED)", () => {
     expect(withCardNamingEmployee(card).content).toBe("I have **Tamsin Ashby** and the store (**Omaha, NE (West Dodge Rd)**).");
   });
 });
+
+describe("peopleRequest: one form, several people — never several forms (QA's round-16B gate)", () => {
+  it("a turn naming a different form for each person is not a one-form-each request", () => {
+    expect(peopleRequest("coaching form for Avery Testperson, CA for Jordan Testperson")).toBeNull();
+    expect(peopleRequest("coaching form for Avery Testperson, CA for Jordan Testperson, and a policy review for Sam Rivera")).toBeNull();
+  });
+
+  it("one form for two people still is", () => {
+    expect(peopleRequest("CA for Wilhelmina Corvina and Peregrine Varnholt for being late")?.queue.people).toEqual(["Peregrine Varnholt"]);
+  });
+});

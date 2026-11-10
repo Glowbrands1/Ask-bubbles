@@ -2,6 +2,7 @@ import { expect, vi } from "vitest";
 
 import { STAFF, WEST_DODGE, type DirectoryRow, type ReplayAnswer, type ReplayCase, type ReplayContext } from "./cases";
 import { answerOffRosterAsk } from "./off-roster-answer";
+import { oneFormEachPersonEnabled } from "@/lib/config/chat-quality-flags";
 
 /**
  * ============================================================================
@@ -167,6 +168,16 @@ export const NOV5_REQUEST_SLOT_CASES: ReplayCase[] = [
       const reply = await thread.say("CA for Wilhelmina Corvina and Peregrine Varnholt for being late");
       expect(reply.content, `does not ask which of the two:\n${reply.content}`).toMatch(/Wilhelmina Corvina/);
       expect(reply.content, `does not ask which of the two:\n${reply.content}`).toMatch(/Peregrine Varnholt/);
+      if (oneFormEachPersonEnabled()) {
+        /*
+         * Changed on purpose (Pau's P7 ruling via QA, 10 Nov 2026: "one form each, also for two people"; QA's round-16B
+         * gate): with ONE_FORM_EACH_PERSON_ENABLED the request is the first person's card, and a "**Next:**" line queues
+         * the other with the reason — neither person is dropped or guessed. Off, the control as before.
+         */
+        expect(thread.proposal?.employeeName ?? null, "the first person's card").toBe("Wilhelmina Corvina");
+        expect(reply.content, `the other person is not queued:\n${reply.content}`).toMatch(/\*\*Next:\*\* an? Corrective Action Form each for \*\*Peregrine Varnholt\*\*, for being late/);
+        return;
+      }
       expect(thread.proposal?.employeeName ?? null, "a card was made for one of them without asking").toBeNull();
     },
   },
