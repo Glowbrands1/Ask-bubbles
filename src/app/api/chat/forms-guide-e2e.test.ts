@@ -61,7 +61,6 @@ vi.mock("@/lib/config/server-env", async (importOriginal) => {
 });
 vi.mock("@/lib/auth/server", async () => {
   const { DEFAULT_PERMISSION_MATRIX, hasPermission } = await import("@/lib/permissions");
-const { isHiddenTemplate } = await import("@/config/company/forms/hidden");
   const { AuthError } = await import("@/lib/auth/types");
   return {
     authorizeRequest: async (_request: Request, permission: string) => {
