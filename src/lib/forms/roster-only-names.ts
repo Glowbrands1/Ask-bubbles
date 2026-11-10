@@ -380,7 +380,9 @@ export function withoutUnseatedName(
   };
   return content
     .split("\n")
-    .filter((line) => !/^\s*\**\s*Name\s*:/i.test(line))
+    // FORM_NAME_OFF_ROSTER_ASK_ENABLED (QA's roster-set gate R16A, 10 Nov 2026): the exit read-back's "- **Name:** <name>"
+    // line goes too, never "- **Name:** The employee".
+    .filter((line) => !/^\s*\**\s*Name\s*:/i.test(line) && !(formNameOffRosterAskEnabled() && /^\s*[-*•]\s+\**\s*Name\s*:/i.test(line)))
     .map((line) => {
       if (/I couldn['’]t find \*\*/.test(line) || ASKS_A_CHOICE.test(line)) return line;
       // FORM_NAME_OFF_ROSTER_ASK_ENABLED (the sibling app's #741 gate, 10 Nov 2026): the possessive-place question quotes
