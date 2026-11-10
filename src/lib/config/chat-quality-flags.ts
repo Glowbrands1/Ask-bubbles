@@ -1310,6 +1310,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "MADE_ABOUT_SAID_DATE_ENABLED",
   "SECTION_BREAKS_KEPT_ENABLED",
   "ADD_NOT_REPEATED_ENABLED",
+  "WHAT_HAPPENED_NO_CREATE_ENABLED",
 ] as const;
 
 /**
@@ -2880,6 +2881,16 @@ export function exitFormDateFromTerminationEnabled(): boolean {
  */
 export function policyTopicIntoFieldEnabled(): boolean {
   return envFlag("POLICY_TOPIC_INTO_FIELD_ENABLED");
+}
+
+/**
+ * WHAT_HAPPENED_NO_CREATE_ENABLED (QA, live r19, 10 Nov 2026; coding 5; same flag in both apps; default off). With
+ * COACHING_ASKS_WHAT_HAPPENED on, the reply asked "You haven't told me what happened yet…" while the card beside it
+ * offered an active Create draft. On: while the reply asks what happened, the card shows but offers no Create
+ * (`forms/what-happened-no-create.ts`). Off, as before.
+ */
+export function whatHappenedNoCreateEnabled(): boolean {
+  return envFlag("WHAT_HAPPENED_NO_CREATE_ENABLED");
 }
 
 // --- end coding 5 flags ---
