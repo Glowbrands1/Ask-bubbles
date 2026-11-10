@@ -15,7 +15,6 @@ import { STAFF, TWO_STORES, type ReplayCase, type ReplayContext } from "./cases"
 const FLAG = "STORE_ALIAS_ENABLED";
 const DODGE = "loc-264";
 const REPORT = "QA, Bubbles production, 25-26 Oct 2026 (#186; the October triage, 10 Nov 2026), a two-store manager, a person not in the directory";
-const WIRING = "STORE_ALIAS's read step is wired in server-ask.ts by its sole writer (coding 2); until then the flag reaches no turn";
 
 function start(t: ReplayContext) {
   vi.setSystemTime(new Date("2026-10-25T15:00:00Z"));
@@ -37,7 +36,7 @@ export const NOV10_STORE_ALIAS_CASES: ReplayCase[] = WORDINGS.map((wording) => (
   report: `${REPORT}; ${wording.key}`,
   status: { open: "the store the manager named is not read: no store on the card" },
   fixFlags: [FLAG],
-  fixStatus: { open: WIRING },
+  // The read step is wired in server-ask.ts (coding 2): it holds with the fix flag, so the fixStatus goes.
   async run(t: ReplayContext) {
     const thread = start(t);
     let reply = "";

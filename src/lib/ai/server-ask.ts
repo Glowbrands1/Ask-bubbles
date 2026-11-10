@@ -1,5 +1,6 @@
 import "server-only";
 
+import { withStoreAliases } from "./store-alias";
 import { approvedManualConfirmed, manualDisplayTitle } from "@/lib/forms/official-policy-manual";
 import { describedAttendanceKeys } from "@/lib/forms/ca-policy";
 import { mayDescribeSection } from "@/lib/forms/named-policy-section";
@@ -347,7 +348,8 @@ async function answerQuestionTraced(
   // FORM_TYPE_SWITCH_ENABLED: "change to coaching" with the card open switches it to the other form.
   // ADDITIONAL_LOCATION_TAKEN_ENABLED: "Store: Kearney." from a manager who covers Kearney is read as the change it is.
   // FIRST_NAME_SUGGEST_ENABLED: "yes" to "Is this for **Quinn Marlowe**?" is read as that name.
-  const read = withFormTypeSwitch(withAdditionalStore(withTerseSlots(withNameBeforeTitle(withTypoReadingCopy(await withFirstNameAnswerFor(request, actor), names))), actor));
+  // STORE_ALIAS_ENABLED: a store named the managers' way ("dodge ne") is read as its roster name.
+  const read = withFormTypeSwitch(withAdditionalStore(withStoreAliases(withTerseSlots(withNameBeforeTitle(withTypoReadingCopy(await withFirstNameAnswerFor(request, actor), names)))), actor));
   if (!chatTraceEnabled()) return answerQuestionBody(read, actor, memory);
   const draft = openChatTrace({
     conversationId: request.conversationId,
