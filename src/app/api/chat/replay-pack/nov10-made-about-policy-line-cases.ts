@@ -175,14 +175,11 @@ export const NOV10_MADE_ABOUT_POLICY_LINE_CASES: ReplayCase[] = [
     title: "QA's live Bubbles report, the reference wanted: \"make it about not following the dress code\" writes the Dress Code reference line (this app's manual has the section, p.15)",
     report: `${REPORT} (the dress-code reference line)`,
     status: { open: "the undated made-about goes to the old path, whose revision keeps the old account's Attendance line (MADE_ABOUT_UNDATED_TOGETHER is off in production)" },
-    fixFlags: UNDATED_FIX,
     /*
-     * Still open with the fix: the policy reader (`forms/ca-policy.ts`, `statedIn`: NEGATED_BEFORE skips a policy name
-     * after "not … two words", so "not following the dress code" reads as no policy; and "dress code" without a policy
-     * frame is not counted) finds no section in these words, so none is written, rather than the old one. ca-policy.ts
-     * is not this change's to edit. "…breaking the dress code policy" (below) holds.
+     * Changed on purpose (10 Nov 2026): fixed with coding 2's NOT_FOLLOWING_IS_VIOLATION_ENABLED (ca-policy.ts reads "not
+     * following the dress code" as the Dress Code broken), merged into this branch. It was open with the fix flags alone.
      */
-    fixStatus: { open: "the policy reader reads \"not following the dress code\" as no policy named (ca-policy.ts NEGATED_BEFORE), so no section is found" },
+    fixFlags: [...UNDATED_FIX, "NOT_FOLLOWING_IS_VIOLATION_ENABLED"],
     run: dressAfterLate(DRESS_SAID, DRESS, "dress code"),
   },
   {
