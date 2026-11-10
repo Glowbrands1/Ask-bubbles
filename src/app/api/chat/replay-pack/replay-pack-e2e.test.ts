@@ -444,9 +444,14 @@ async function call<T>(url: string, init?: RequestInit): Promise<T> {
       : null;
   if (!response) throw new Error(`no route for ${url}`);
   const body = (await response.json()) as T & { error?: string };
+  // The draft route's replies, in order, as the browser receives them (`draftReplies`).
+  if (draft) draftReplies.push(body as Record<string, unknown>);
   if (!response.ok) throw new Error(body.error ?? `HTTP ${response.status}`);
   return body;
 }
+
+/** The draft route's replies this case (DRAFT_WROTE_NOTHING_NOTICE_ENABLED reads its `notice`). */
+const draftReplies: Record<string, unknown>[] = [];
 
 /** The chat route only accepts a UUID for the open form; the fake numbers rows `fake-N`. */
 function toUuid(id: string): string {
@@ -571,6 +576,7 @@ class JoiningRows extends Array<Record<string, unknown>> {
 }
 beforeEach(async () => {
   for (const key of Object.keys(store) as (keyof FakeStore)[]) store[key] = [];
+  draftReplies.length = 0;
   store.form_instances = new JoiningRows() as never;
   state.slotReading = "none";
   state.remapObservation = null;
@@ -728,6 +734,7 @@ function context(): ReplayContext {
           .map((row) => [String(row.field_key), (row.checked as unknown[]).map(String)]),
       ),
 
+    draftReplies: () => [...draftReplies],
     draftNotYetSaved: (instanceId) => {
       store.form_instance_values = store.form_instance_values.filter((row) => !(row.instance_id === instanceId && row.filled_by === "ai"));
     },

@@ -187,6 +187,7 @@ import {
   typoReadingRoutesEnabled,
   teamCardWordingEnabled,
   cardPolicyToDraftEnabled,
+  draftWroteNothingNoticeEnabled,
   formEditSingleWriterEnabled,
   formPatchReducerEnabled,
   caSalesPolicyEnabled,
@@ -2556,6 +2557,17 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
           draftProvenanceWritten,
         );
     /*
+     * DRAFT_WROTE_NOTHING_NOTICE_ENABLED (ported from the sibling app, QA's r21 live check there, 10 Nov 2026): a
+     * name-only Coaching card's Create saved the Name and Date and no Details, and said nothing — no account, so the
+     * drafting model wrote no narrative. With the flag on, when the notes hold no account and no narrative field was
+     * written, the reply says so (`forms/draft-wrote-nothing.ts`).
+     */
+    const draftWroteNothing =
+      draftWroteNothingNoticeEnabled() &&
+      narrativeTargets.length > 0 &&
+      !notesHoldAccount(notes, loaded.instance.employeeName) &&
+      !narrativeTargets.some((key) => (guarded.accepted.values[key] ?? "").trim() !== "");
+    /*
      * NEVER A SILENT BLANK (DRAFT_NEVER_BLANK_ENABLED). Whenever an attempt
      * failed or wrote nothing, or the write itself holds no field, the reason
      * goes on a drafted event of its own (the write's event is
@@ -2689,6 +2701,8 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
           : null,
         // FORM_EDIT_SINGLE_WRITER_ENABLED: what the draft left out of the account (detected, never retried).
         leftOut,
+        // DRAFT_WROTE_NOTHING_NOTICE_ENABLED: no account, so no Details — said, never a silent blank.
+        draftWroteNothing ? (await import("@/lib/forms/draft-wrote-nothing")).DRAFT_WROTE_NOTHING_NOTICE : null,
       ]
         .filter((line): line is string => Boolean(line))
         .join(" ") || null,
