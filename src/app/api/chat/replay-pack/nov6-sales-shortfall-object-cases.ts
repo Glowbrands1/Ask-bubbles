@@ -75,18 +75,12 @@ export const NOV6_SALES_SHORTFALL_OBJECT_CASES: ReplayCase[] = [
       },
     }),
   ),
-  {
-    id: "nov6-sales-shortfall-object-count-h18",
-    title: "H18 (turn 2): \"<name> 131 tans verbal\": the card cites the Standards of Conduct and does not ask what happened",
-    report: "QA, 6 Nov 2026 (the sibling app's tester batch 2, in this app, H18, paraphrased): a metric count as the reason got \"You haven't told me what happened yet\"",
-    status: { open: "no reader knows \"tans\" as a metric: the card cites no policy and asks what happened" },
-    fixFlags: ["SALES_SHORTFALL_OBJECT_ENABLED"],
-    // Approved in principle (QA, 6 Nov 2026): a number and a glossary metric term is the metric named and counted. Open until Pau's glossary line.
-    fixStatus: { open: "the glossary has no \"Tans\" line yet (Pau's wording, pending)" },
-    async run(t) {
-      await performanceCase(t, ["create a corrective action", "Odalys Fenmarrow 131 tans verbal"]);
-    },
-  },
+  /*
+   * Changed on purpose (QA, 10 Nov 2026): nov6-sales-shortfall-object-count-h18 ("<name> 131 tans verbal") is dropped. "Tans"
+   * is the sibling app's metric (its tester batch 2, paraphrased into this app); this app has no counted metric of that
+   * shape (no glossary metric, no report catalog), so the case tested a word no manager here uses. See
+   * docs/parity-log/2026-11-10-count-h18-dropped.md.
+   */
 ];
 
 async function performanceCase(t: ReplayContext, turns: readonly string[]) {
