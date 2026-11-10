@@ -71,3 +71,6 @@ support/variation-report/out/
 
 # npm run eval output (results of the last local run)
 evals/results/
+
+# A local roster export for src/lib/security/no-real-people.test.ts — never committed.
+/.real-people-roster.txt
