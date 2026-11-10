@@ -6,7 +6,7 @@ import { COMPANY_LOCATIONS, locationByCode, locationById, locationNameKey } from
 
 import { extractFormDate } from "./form-date-answer";
 import { FORM_NAME_PATTERN, canonicalShorthand, canonicalWarningWording, isFormVocabulary, leadingFormRequest } from "./template-intent";
-import { antiLoopEnabled, exitAnswerNotACorrectionEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { antiLoopEnabled, capsPrepositionNotNameEnabled, exitAnswerNotACorrectionEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { companyNameStops } from "./name-stops";
 import { isTypedStopSpan, isTypedStopWord, NAME_LABEL_WORDS, NOT_A_NAME, NOT_A_NAME_LEAD, NOT_A_TYPED_NAME, TYPED_NAME_WORD, isNameLabelPhrase, lowercaseMonths, nameAfterNameLabel, stripTrailingJobOrTitle } from "./name-words";
 import { keepTypedPerson } from "./typed-name";
@@ -449,6 +449,18 @@ export interface EmployeeMentions {
   negated: string[];
 }
 
+/**
+ * CAPS_PREPOSITION_NOT_NAME_ENABLED (coding 6, 10 Nov 2026; default off; QA's name matrix, 4 Nov 2026):
+ * "… ON MONDAY 10/05/2026 BY CORIN BELLWEATHER" — in capitals, the preposition before the name is a capitalised word
+ * too, so the run was "BY CORIN BELLWEATHER" and the card's employee was nobody. A run of three or more words led by
+ * a preposition is read without it. Off, as before.
+ */
+const CAPS_LEAD_PREPOSITION = /^(?:by|from|to|of|on|with)\s+(?=\S+\s+\S)/i;
+function withoutCapsPreposition(run: string | null): string | null {
+  if (run === null) return null;
+  return capsPrepositionNotNameEnabled() ? run.replace(CAPS_LEAD_PREPOSITION, "") : run;
+}
+
 export function readEmployeeMentions(typed: string): EmployeeMentions {
   // "pls", "u", "frm" are never names and never end one; read them as words.
   // "general training", "team-wide", "everyone at the salon" describe the team,
@@ -736,7 +748,7 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
       words.pop();
     }
     // "Wren Halvorsen's coaching form": the name ends at the possessive.
-    const run = nameBeforeRole(beforePossessive(words.join(" ")));
+    const run = withoutCapsPreposition(nameBeforeRole(beforePossessive(words.join(" "))));
     if (run === null || !run.includes(" ") || places.has(run)) continue;
     /*
      * "It's Avery Testperson", "Sorry Avery Testperson": the capitalised run
