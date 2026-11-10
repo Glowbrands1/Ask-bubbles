@@ -276,4 +276,10 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov9-made-about-reader-account-replaced-live": "MADE_ABOUT_READER_ACCOUNT",
   // Changed on purpose (9 Nov 2026): fixed in production by EXIT_FORM_DATE_FROM_TERMINATION, QA round 12
   "nov9-exit-form-date-termination": "EXIT_FORM_DATE_FROM_TERMINATION",
+  // Changed on purpose (10 Nov 2026): fixed in production by MADE_ABOUT_REWRITE_FINISHES, QA round 13
+  "nov9-made-about-rewrite-finishes-details-only": "MADE_ABOUT_REWRITE_FINISHES",
+  // Changed on purpose (10 Nov 2026): fixed in production by MADE_ABOUT_REWRITE_FINISHES, QA round 13
+  "nov9-made-about-rewrite-finishes-error-after-rewrite": "MADE_ABOUT_REWRITE_FINISHES",
+  // Changed on purpose (10 Nov 2026): fixed in production by MADE_ABOUT_REWRITE_FINISHES, QA round 13
+  "nov9-made-about-rewrite-finishes-reader-refused": "MADE_ABOUT_REWRITE_FINISHES",
 };
