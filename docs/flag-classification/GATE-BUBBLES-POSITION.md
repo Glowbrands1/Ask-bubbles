@@ -1,0 +1,63 @@
+# Gate-Bubbles position at PAUSE (QA, 10 Nov 2026 ~20:48Z; resume 05:55 PHT)
+
+Session: session_01VVEkRRzGew9sHHGbAhxGaQ. Reports to QA session_01VVEkRTbAAAt573oWSKM3jW.
+
+## Where I stopped
+- R17B (#685 #703 #706 #707): GO for all four flags (docs/flag-classification/R17B.md on this branch).
+- Release head 1e58ef1 (tree daf22287) on main f53c409a, built in /home/user/gate/r17b-rel, NOT pushed yet.
+  Lint 0 errors, tsc ok, 21 flag/replay test files pass. Full `npm test` was running at pause.
+  On resume: check the full suite, then push to claude/gate-bubbles-r17b (fast-forward of preview 23e1e32), then send QA the verdict + head.
+- Verdict NOT yet sent to QA.
+
+## Queue (next first)
+1. 16c re-gate on d7487833
+2. EXCERPT_BRAND_FILTER flag-only (HIGH)
+3. #719 @ c4cc11a4 (HIGH; server flag + NEXT_PUBLIC_ twin together; blank-Direct-policy replay case)
+4. #723 BRAND_REPLY_GUARD (HIGH) + HIDDEN_TEMPLATE_KEYS when it arrives
+5. #730 (brand, rebuild of #200)
+6. #716 NEAR_MISS_ANSWER_KEEPS_REQUEST @ caf15503 (16c's 4 flags in both arms; bar: s14 path 1)
+7. #720 TYPO_CORRECTED_SAME_PERSON @ 7de59a2 (s14 path 2; read saved date)
+8. #721 D1 CORRECTION_PLAN_KEEPS_AMOUNT @ e1d8c889 (read saved Action Plan amount)
+9. #705 (sf-s16/s17/s19), #710, #712 NOT_FOLLOWING_IS_VIOLATION 131400e9, #713 EXIT_TYPO_WORDS, #714 ACCOUNT_BEFORE_REQUEST
+10. #718 LETTER_GREETING_ANY_CASE 3cb4e25f, #722 CAPS_PREPOSITION_NOT_NAME (off-roster twins stay open by design), #725, #726 (FLAG_CLASSIFY_ON), #729
+11. Rest of the handoff queue: B504 d71d2d50; #678+#684; #695; #663+A3+#693, #709; #681; PROPOSAL_NAME_CORRECTION;
+    #686, #687+#728 (2b6eceb6+73ff31ea, + TEMPLATE_OUTLINE_FIELDS), #688+#694+#724, #689, #691, #692, #694;
+    #696+#727 (12db873c+680a7798); #697+#647 (+POLICY_LINE port); #698, #500, #480, #702, #464, #704, #708;
+    #690 @ 47c7ef9c (Observation OFF vs ON); A7, A8, A9
+12. End: #732 BC_NOT_A_NAME, #733 (HOLD for Coding-2 wiring), then #731 REVISION_ARCHIVED_NOT_OPEN (low)
+
+Replay-case mapping and other notes:
+    #690 fixed head 47c7ef9c (Coding-4), same queue slot; compare saved Observation OFF vs ON
+    #718 LETTER_GREETING_ANY_CASE (Coding-6, 3cb4e25f): after #714, single flag, standard gate
+    STANDING RULE (Pau via QA, 10 Nov): never call Vercel API / curl api.vercel.com / Vercel tools. Gate arms use prodenv.csv / production-flags.json (QA-verified, 0 mismatches).
+    HIGH #719 POLICY_GATE_NONBLOCKING + NEXT_PUBLIC_POLICY_GATE_NONBLOCKING (Coding-5, 77612648, supersedes #174): right after 16c, with EXCERPT_BRAND_FILTER. Server flag + NEXT_PUBLIC_ twin always together (ON: both; OFF: neither).
+    #720 TYPO_CORRECTED_SAME_PERSON (Coding-2, 7de59a2; form-proposal.ts verified = Pau patch ca4d0a01): s14 path 2, right after #716 (path 1, follows 16c — #716 never queued to me). s14 replay case should hold with ON; read saved date OFF vs ON.
+    CONFIRMED ORDER after 16c: (1) EXCERPT_BRAND_FILTER (2) #719 (3) #716 (4) #720, then #705, #710, #712, #713, #714, #718, ... as handoff.
+    #716 = NEAR_MISS_ANSWER_KEEPS_REQUEST_ENABLED, Coding-2, caf15503 on claude/near-miss-answer-keeps-request, stacked on gate-bubbles-r16c. Both arms: 16c's four flags ON; ON arm adds this flag. Bar: s14 path 1 holds (date survives near-miss answer). (Replaces handoff queue item 19.)
+    #721 D1 CORRECTION_PLAN_KEEPS_AMOUNT (Coding-4, e1d8c889; replay nov10-correction-plan-keeps-amount-{change,repeat}): live prod defect, after #720. Read saved Action Plan amount OFF vs ON.
+    REPLAY CASES each PR must close (Coding-6 mapping):
+     #688: nov4-live-street-address-not-a-person, nov3-stepb-date-as-given, nov5-sf-b6-reply-full-sentence
+     #688+#694 gated TOGETHER once: nov5-sf-b6-full-sentence-and-added-detail holds with both
+     #686: nov5-twin-sf-s22-ca-not-coaching
+     #698: nov5-twin-sf-s26-edit-misspelled-ca
+     #691: nov4-ca-sales-wrong-items-card
+     #668: nov4-scan-sf-s13 (#668 not in my queue — ask QA when reached)
+     #705: sf-s16/s17/s19
+    #722 CAPS_PREPOSITION_NOT_NAME (Coding-6; 'BY <NAME>' caps): after #718. Off-roster twins stay OPEN by design (GROUNDED_ENTITIES off) — not a regression.
+    HIGH #723 BRAND_REPLY_GUARD (Coding-5, rebuild of #198; replies naming JB & Associates / SALON/STORE): right after #719. HIDDEN_TEMPLATE_KEYS (Coding-5, config-only, hides 6 sibling EPP templates) coming — goes beside #723. ORDER after 16c: EXCERPT_BRAND_FILTER, #719, #723(+HIDDEN_TEMPLATE_KEYS), #716, #720, #721, #705...
+    #725 (Coding-6) SECOND_PERSON_ACCOUNT_WORDS + CROSS_PERSON_OWN_TURNS (B's card no longer takes A's "no payroll deduct"; live bug; supersedes #155/#166): after #722.
+    #724 (Coding-6) copy-paste "make that update": stacked on #688 -> gate WITH #688 (so #688+#694+#724 group).
+    COMING (Coding-6): ports of r23 fixes stacked on #696 / #687 -> gate each pair together on arrival.
+    #719 HEAD UPDATED -> 998c4459 (not 77612648): + audit marker at finalize + honest 'blank, not checked' summary line. Must include a replay case with a blank Direct policy draft so the summary line is reached (check PR has one; else flag to QA).
+    #726 NO_CARD_NO_DRAFT_CLAIM (Coding-6, Bubbles only, supersedes #164): after #725. Main now f53c409a (#675 merged, test only) — base future gates on current main.
+    #727 SAME_REQUEST_OFF_ROSTER (on #696) -> gate #696+#727 once; #728 PASTED_OUTLINE_TO_OPEN_DRAFT (on #687) -> gate #687+#728 once. HOLD both pairs until Coding-6 merges main into #696/#687 (#696 was pre-16b base). Slots: with #696 / #687.
+    STACKS NOW ON main f53c409a — no longer held:
+     #696 @ 12db873c + #727 @ 680a7798 (SAME_REQUEST off roster) — gate together
+     #687 @ 2b6eceb6 + #728 @ 73ff31ea (pasted outline) — gate together; TEMPLATE_OUTLINE_FIELDS NOT in Bubbles prod -> part of the ON unit
+     #726: flag is in CHAT_QUALITY_FLAG_NAMES -> ON arm must use FLAG_CLASSIFY_ON (check harness passes it)
+    LOW, END OF QUEUE: #731 REVISION_ARCHIVED_NOT_OPEN (Coding-2, 66569425; instances.ts verified = Pau patch; migration already in prod). Check: archived revision draft not reopened ON; nothing changes OFF.
+    #732 BC_NOT_A_NAME (Coding-6, Oct rebuild; guards, Bubbles already holds on prod): end of queue, before #731.
+    #733 NAME_CASE_INSENSITIVE (Coding-6, supersedes #202): HOLD until Coding-2 adds server-ask wiring; end of queue, before #731.
+    #730 (Coding-5, rebuild of #200, brand): card opener repeated + "JB & Associates" in EPP opener -> right after #723.
+    #729 RELATIVE_BESIDE_TYPED_DATE (Coding-5): after #726.
+    #719 HEAD NOW c4cc11a4 (has blank-Direct-policy replay case reaching summary line; fails on old code with flag ON). Gate THAT head.
