@@ -51,6 +51,7 @@ import {
   offRosterConfirmEnabled,
   offRosterAskBeforeCardEnabled,
   oneFormEachPersonEnabled,
+  createFromConversationPointsToCardEnabled,
   cardNamesEmployeeEnabled,
   exitLetterAddresseeEnabled,
   letterGreetingNotNameEnabled,
@@ -974,6 +975,8 @@ async function postChat(request: Request) {
       if (offRosterAskBeforeCardEnabled()) {
         answer = (await import("@/lib/forms/off-roster-ask")).withOffRosterAskBeforeCard(answer, { scope: context.identity.scope, history: parsed.history, question: asked.question });
       }
+      // CREATE_FROM_CONVERSATION_POINTS_TO_CARD_ENABLED: "Create a form from this conversation." keeps the re-read card; only the reply points to Create (`ai/card-meta-turn.ts`).
+      if (createFromConversationPointsToCardEnabled()) answer = (await import("@/lib/ai/card-meta-turn")).withPressCreateReply(answer, asked);
       // ONE_FORM_EACH_PERSON_ENABLED / CARD_NAMES_EMPLOYEE_ENABLED: the people still to do, and the card's employee named (`forms/one-form-each.ts`).
       if (oneFormEachPersonEnabled() || cardNamesEmployeeEnabled()) {
         const each = await import("@/lib/forms/one-form-each");
