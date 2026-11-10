@@ -17,7 +17,7 @@ Session: session_01VVEkRRzGew9sHHGbAhxGaQ. Reports to QA session_01VVEkRTbAAAt57
 4. #720 TYPO_CORRECTED_SAME_PERSON @ 7de59a2 (s14 path 2; read saved date)
 5. #705 (sf-s16/s17/s19), #710, #712 (131400e9), #713, #714, #718 (3cb4e25f)
 6. B504 d71d2d50; #678+#684; #695 (revision.ts diff = approved lines); #663 6c68b998+A3+#693, then #709; #681; PROPOSAL_NAME_CORRECTION
-7. #686, #689, #691, #694 (NB: #694 was to be gated with #688, which Gate-Bubbles-2 now owns — ask QA)
+7. #686, #689, #691 (#694 moved to Gate-Bubbles-2 with #688+#724)
 8. #697+#647 (+POLICY_LINE port); #698, #500, #480, #702, #464, #704, #708; #690 @ 47c7ef9c (Observation OFF vs ON); A7, A8, A9
 
 Gate-Bubbles-2 (session_01VVEkRTubRY6Gy3uXrqxWfW) owns: #742 #736 #719 #723 #730 #721 #737 #725 #726 #696+#727 #687+#728 #692 #729 #733 #734 #735 #739 #688+#724 #722 #743 #744 #731 #740 #745.
