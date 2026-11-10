@@ -1310,6 +1310,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "MADE_ABOUT_SAID_DATE_ENABLED",
   "SECTION_BREAKS_KEPT_ENABLED",
   "ADD_NOT_REPEATED_ENABLED",
+  "ADDED_DETAIL_KEPT_ENABLED",
 ] as const;
 
 /**
@@ -2880,6 +2881,16 @@ export function exitFormDateFromTerminationEnabled(): boolean {
  */
 export function policyTopicIntoFieldEnabled(): boolean {
   return envFlag("POLICY_TOPIC_INTO_FIELD_ENABLED");
+}
+
+/**
+ * ADDED_DETAIL_KEPT_ENABLED (Pau via QA, sf-b6; coding 5; same flag in both apps; default off). "can you have it include
+ * that we recieved a customer complaint …" was left out of the card's turns (it reads as a question), so neither the
+ * card nor the draft carried it. On: such a turn inside the card's span joins its turns and shows on the card
+ * (`forms/added-detail-kept.ts`). Off, as before.
+ */
+export function addedDetailKeptEnabled(): boolean {
+  return envFlag("ADDED_DETAIL_KEPT_ENABLED");
 }
 
 // --- end coding 5 flags ---

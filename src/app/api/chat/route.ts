@@ -77,6 +77,7 @@ import {
   formEditNoopGuardEnabled,
   nearMissQuestionRulesEnabled,
   reopenByAnyOpenVerbEnabled,
+  addedDetailKeptEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { streamWhenSlow } from "@/lib/api/streamed-response";
 import { finalReplyWithoutMarkers } from "@/lib/ai/source-note";
@@ -954,6 +955,13 @@ async function postChat(request: Request) {
         const { formSelection: _dropped, ...rest } = answer;
         void _dropped;
         answer = { ...rest, content: rest.content.replace(/\n*Based on what you've described, I can prepare:\s*$/, "").trimEnd() };
+      }
+      // ADDED_DETAIL_KEPT_ENABLED: "can you have it include that …" stays in the card's turns and shows on the card (`lib/forms/added-detail-kept.ts`).
+      if (addedDetailKeptEnabled() && answer.formProposal) {
+        answer = (await import("@/lib/forms/added-detail-kept")).withAddedDetailKept(answer, [
+          ...parsed.history,
+          { id: parsed.questionMessageId, role: "user", content: asked.question },
+        ]);
       }
       // OFF_ROSTER_ASK_BEFORE_CARD_ENABLED: a store manager's card for a full name not on their roster is asked about once, before the card (`lib/forms/off-roster-ask.ts`).
       if (offRosterAskBeforeCardEnabled()) {
