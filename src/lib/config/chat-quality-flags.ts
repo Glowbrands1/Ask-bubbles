@@ -1317,6 +1317,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "MADE_ABOUT_SAID_DATE_ENABLED",
   "SECTION_BREAKS_KEPT_ENABLED",
   "ADD_NOT_REPEATED_ENABLED",
+  // coding 4: DETAILS_FROM_EARLIER_ANSWER (ported from Ask Sunny, QA, 10 Nov 2026; default off).
+  "DETAILS_FROM_EARLIER_ANSWER_ENABLED",
   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
   "CHAT_STAGE_TIMINGS_ENABLED",
 ] as const;
@@ -4208,4 +4210,16 @@ export function sameRequestOtherPersonEnabled(): boolean {
  */
 export function chatStageTimingsEnabled(): boolean {
   return envFlag("CHAT_STAGE_TIMINGS_ENABLED");
+}
+
+/**
+ * DETAILS_FROM_EARLIER_ANSWER_ENABLED (ported from Ask Sunny, 10 Nov 2026; default off; same flag in both apps. A manager's
+ * production chat relayed 5 Nov 2026, both apps: chat-edits (a)). The coaching details were in the app's own answer
+ * BEFORE the card; then "can you upate the draft with these details of coaching?" → "it didnt edit in the card" → "the
+ * details we just discussed!!!" left the Details empty: "these details" and "the details we just discussed" were read
+ * from the last reply only — the card, then the app's own "I haven't changed …". On: they are read from the latest answer
+ * that is not the app's own card or edit reply (`forms/form-content-turn.ts`). Off, as before.
+ */
+export function detailsFromEarlierAnswerEnabled(): boolean {
+  return envFlag("DETAILS_FROM_EARLIER_ANSWER_ENABLED");
 }
