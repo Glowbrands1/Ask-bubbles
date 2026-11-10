@@ -4209,3 +4209,13 @@ export function sameRequestOtherPersonEnabled(): boolean {
 export function chatStageTimingsEnabled(): boolean {
   return envFlag("CHAT_STAGE_TIMINGS_ENABLED");
 }
+
+/**
+ * SURNAME_PARTICLES_ENABLED (QA's audit item 17b, 10 Nov 2026; default off; same flag in both apps). A typed surname
+ * that opens with a particle was cut at it ("maria de la cruz" → "maria de"). On, a first name followed by particles
+ * ("de la", "van der", "von", …) and a surname word reads the whole surname (`forms/surname-particles.ts`, used by the
+ * protected `forms/proposal.ts` reader). Off, as before.
+ */
+export function surnameParticlesEnabled(): boolean {
+  return envFlag("SURNAME_PARTICLES_ENABLED");
+}
