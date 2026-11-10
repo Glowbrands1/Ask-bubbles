@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { incidentSplitFixEnabled } from "@/lib/config/chat-quality-flags";
 
 vi.mock("server-only", () => ({}));
 
@@ -20,8 +21,10 @@ afterEach(() => {
 
 describe("ISSUE_IS_THE_ACCOUNT_ENABLED", () => {
   it("off (main): the level word, or the typed nickname, is the Issue (the bug)", () => {
-    expect(correctiveActionIssue("create a CA for tamsin wexley, verbal, she was late on 10-20-26", ROSTER_NAME)).toBe("verbal");
-    expect(correctiveActionIssue("create a CA for Tammy Wexley, verbal, she was late on 10-20-26", ROSTER_NAME)).toBe("Tammy Wexley");
+    // Changed on purpose (QA's October triage, 10 Nov 2026): INCIDENT_SPLIT_FIX_ENABLED on (#189) reads the request's account in whole sentences, which already leaves out what this pin reproduces; flag off unchanged.
+    const split = incidentSplitFixEnabled();
+    expect(correctiveActionIssue("create a CA for tamsin wexley, verbal, she was late on 10-20-26", ROSTER_NAME)).toBe(split ? "she was late on 10-20-26" : "verbal");
+    expect(correctiveActionIssue("create a CA for Tammy Wexley, verbal, she was late on 10-20-26", ROSTER_NAME)).toBe(split ? "she was late on 10-20-26" : "Tammy Wexley");
   });
 
   it.each([

@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { incidentSplitFixEnabled } from "@/lib/config/chat-quality-flags";
 import { continuationFor } from "@/lib/forms/proposal-continuation";
 import { createId } from "@/lib/utils/id";
 import { rosterResultFor } from "@/test/roster-result";
@@ -674,10 +675,28 @@ const PROD_MAIN: Record<string, Record<string, unknown>> = {
   COWORKER: { formDate: "2026-10-16", observation: "create a ca for Quinn Marlowe at kearney, she was late on 10-5", priorLine: null, asks: false },
   COACHING_FORM: { formDate: "2026-10-16", observation: "", priorLine: null, asks: false },
 };
+/*
+ * Changed on purpose (QA's October triage, 10 Nov 2026): with INCIDENT_SPLIT_FIX_ENABLED on (#189), the card's Issue is
+ * the request's account in whole sentences, without the request words, the store or the manager's own coaching. Only
+ * the Issue changes; the date, the prior line and the question are as above. Flag off unchanged.
+ */
+const SPLIT_OBSERVATION: Record<string, string> = {
+  D2: "she was late on 10-5 and 10-15",
+  TWO: "she was late on 10-5 and 10-15",
+  THREE: "she was late 10/5, 10/15 and 10/16",
+  RANGE: "she was late from 10-5 to 10-9",
+  ONE: "she was late on 10-5",
+  OTHER_IN_LIST: "she was late on 10-5",
+  COWORKER: "she was late on 10-5",
+};
 /** Where D3 (FORM_DATE_INCIDENT_ONLY_ENABLED) on changes it. */
 const PROD_FIO_MAIN: Record<string, Record<string, unknown>> = {
   TWO: { formDate: "2026-10-15", observation: "create a ca for Quinn Marlowe at kearney, she was late on 10-5 and 10-15", priorLine: null, asks: false },
 };
+
+function withSplitIssue(key: string, expected: Record<string, unknown>): Record<string, unknown> {
+  return incidentSplitFixEnabled() && SPLIT_OBSERVATION[key] !== undefined ? { ...expected, observation: SPLIT_OBSERVATION[key] } : expected;
+}
 
 describe.each(REMAP_RUNS)("%s", (_remapLabel, remap) => {
   describe.each(FIO_RUNS)("production env, flag off, %s: as main", (_fioLabel, fio) => {
@@ -690,7 +709,7 @@ describe.each(REMAP_RUNS)("%s", (_remapLabel, remap) => {
         observation: observation(answer.content),
         priorLine: priorLine(answer.content),
         asks: ASKS.test(answer.content),
-      }).toEqual(fio && PROD_FIO_MAIN[key] ? PROD_FIO_MAIN[key] : expected);
+      }).toEqual(withSplitIssue(key, fio && PROD_FIO_MAIN[key] ? PROD_FIO_MAIN[key] : expected));
     });
   });
 });
