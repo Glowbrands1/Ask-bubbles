@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { audienceKey } from "../../access";
+import { plainErrorReason } from "../../error-reasons";
 import { contentRows, keepOutKey } from "../../inventory";
 import { MemoryKnowledgeSink, MemoryKnowledgeSyncStore } from "../../memory-store";
 import { SinkError } from "../../ports";
@@ -128,5 +129,6 @@ describe("a file with the same content as another live document", () => {
     const attention = report.attention.find((a) => a.code === "duplicate_content")!;
     expect(attention.message).toContain(`"${held.title}": Same file as "Shift Checklist"`);
     expect(attention.message).toContain("Resolve in Woven, or keep one out on the Content tab.");
+    expect(plainErrorReason(held.errorCategory)).toBe("This file has the same text as another document already in Ask Bubbles, so it was not added twice. Resolve it in Woven, or keep one of them out.");
   });
 });
