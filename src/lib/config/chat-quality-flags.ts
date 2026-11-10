@@ -1319,6 +1319,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ADD_NOT_REPEATED_ENABLED",
   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
   "CHAT_STAGE_TIMINGS_ENABLED",
+  // coding 5: BRAND_REPLY_GUARD (QA's October triage of #198, 10 Nov 2026; default off).
+  "BRAND_REPLY_GUARD_ENABLED",
 ] as const;
 
 /**
@@ -2931,6 +2933,16 @@ export function cardNamesEmployeeEnabled(): boolean {
  */
 export function policyTopicIntoFieldEnabled(): boolean {
   return envFlag("POLICY_TOPIC_INTO_FIELD_ENABLED");
+}
+
+/**
+ * BRAND_REPLY_GUARD_ENABLED (QA's October triage of #198, 10 Nov 2026; coding 5; default off). With OWN_BRAND_ONLY on,
+ * a reply still kept "(Buff City Soap, JB & Associates office)" and "SALON/STORE", and dropped whole the availability
+ * and "for any brand under JB & Associates" late-opening replies, rule included. On: those are rewritten before the
+ * own-brand step (`ai/brand-reply-rest.ts`), so the rule stays and names only this company. Off, as before.
+ */
+export function brandReplyGuardEnabled(): boolean {
+  return envFlag("BRAND_REPLY_GUARD_ENABLED");
 }
 
 // --- end coding 5 flags ---

@@ -2,6 +2,7 @@ import { BCS_BRAND } from "@/config/company/brand";
 import { PARENT_COMPANY_NAMES, POLICY_MANUAL_BRAND_SCOPE } from "@/config/company/knowledge";
 import { ownBrandOnlyEnabled, ownBrandParentEnabled } from "@/lib/config/chat-quality-flags";
 
+import { withBrandReplyRest } from "./brand-reply-rest";
 import type { AskResponse } from "./types";
 
 /**
@@ -143,6 +144,7 @@ function withinLine(line: string, p: ReturnType<typeof patterns>): string {
 /** OWN_BRAND_ONLY_ENABLED: the finished reply with only this company's brand named. Off: as built. */
 export function withOwnBrandOnly(response: AskResponse): AskResponse {
   if (!ownBrandOnlyEnabled()) return response;
-  const content = ownBrandOnly(response.content, brandWords());
+  // BRAND_REPLY_GUARD_ENABLED: what this step would leave or drop with its rule is rewritten first (`brand-reply-rest.ts`).
+  const content = ownBrandOnly(withBrandReplyRest(response.content), brandWords());
   return content === response.content ? response : { ...response, content };
 }
