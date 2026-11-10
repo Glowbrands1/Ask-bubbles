@@ -204,9 +204,16 @@ describe("a non-salon manager's typed off-roster name stays (FORM_NAME_OFF_ROSTE
     expect(rosterOnlyNames(card("Evangeline Pembury"), ROSTER, "evangeline pembury, team member at dodge").formProposal?.employeeName).toBe("Evangeline Pembury");
   });
 
-  it("a location manager is still asked", () => {
+  it("a location manager is still asked on the turn that types the name", () => {
+    scope("location", ["create a coaching form for Sarah Test"]);
+    expect(rosterOnlyNames(card("Sarah Test"), ROSTER, "create a coaching form for Sarah Test").formProposal?.employeeName ?? null).toBeNull();
+  });
+
+  // Changed on purpose (the sibling app's #741 gate, 10 Nov 2026): after that one ask, production keeps the typed name on the
+  // turns after (OFF_ROSTER_ASK_BEFORE_CARD), so the set does too.
+  it("a location manager's card keeps the name on the turn after the ask", () => {
     scope("location", ["create a coaching form for Sarah Test", "she was out of dress code"]);
-    expect(rosterOnlyNames(card("Sarah Test"), ROSTER, "she was out of dress code").formProposal?.employeeName ?? null).toBeNull();
+    expect(rosterOnlyNames(card("Sarah Test"), ROSTER, "she was out of dress code").formProposal?.employeeName).toBe("Sarah Test");
   });
 
   it("a placeholder is never kept", () => {
