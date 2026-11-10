@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { incidentSplitFixEnabled } from "@/lib/config/chat-quality-flags";
 
 vi.mock("server-only", () => ({}));
 
@@ -32,7 +33,8 @@ describe("a level request is the request, not the account (LEVEL_REQUEST_DATE_EN
 
   it("off, as reported: the request is the Issue", () => {
     flag(false);
-    expect(correctiveActionIssue(SAID, NAME)).toMatch(/^create a written on 10\/20/);
+    // Changed on purpose (QA's October triage, 10 Nov 2026): INCIDENT_SPLIT_FIX_ENABLED on (#189) reads the request's account in whole sentences, which already leaves out what this pin reproduces; flag off unchanged.
+    expect(correctiveActionIssue(SAID, NAME)).toMatch(incidentSplitFixEnabled() ? /^she was late again$/ : /^create a written on 10\/20/);
   });
 
   it("the draft written from the manager's words starts with what happened", () => {
