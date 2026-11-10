@@ -213,6 +213,8 @@ export const NOV4_OVERNIGHT_SCAN_CASES: readonly ReplayCase[] = [
     report: `${REPORT}, sf-s16: "put together a corrective action for Calista Venn due to under performance in store metrics for the month of october" → "In the past we have quoted the standards of conduct for creating a ca due to underperformance"`,
     // Run 4 Nov 2026 (production flags): fails as below.
     status: { open: "turn 2 does switch the card to Standards of Conduct, but the card's Issue becomes the instruction \"In the past we have quoted the standards of conduct for creating a ca due to underperformance\"" },
+    // Fixed under POLICY_REFERENCE_NOT_ACCOUNT_ENABLED (port from the sibling app, 10 Nov 2026): the policy instruction is no account; open on production flags until QA flips it.
+    fixFlags: ["POLICY_REFERENCE_NOT_ACCOUNT_ENABLED"],
     async run(t) {
       const thread = start(t);
       await thread.say("put together a corrective action for Calista Venn due to under performance in store metrics for the month of october");
@@ -236,6 +238,7 @@ export const NOV4_OVERNIGHT_SCAN_CASES: readonly ReplayCase[] = [
     report: `${REPORT}, sf-s17: "put together a written CA for Marit Sollano for not compelting her woven courses by the deadline of october 31st" → "you can reference the standards of conduct for a policy"`,
     // Run 4 Nov 2026 (production flags): fails as below.
     status: { open: "turn 1 takes the incident as given but not the warning level: \"written\" is read as earlier history (\"I've treated the earlier warning you mentioned as previous corrective action history\") and the card asks Verbal or Written; at Create the drafting model is also handed \"you can reference the standards of conduct for a policy\" as the account" },
+    // Not fixed by POLICY_REFERENCE_NOT_ACCOUNT_ENABLED here (coding 6, 10 Nov 2026): turn 1 already fails here — the card has no Written level.
     async run(t) {
       const thread = start(t);
       const first = await thread.say("put together a written CA for Marit Sollano for not compelting her woven courses by the deadline of october 31st");
