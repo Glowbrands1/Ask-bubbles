@@ -62,9 +62,10 @@ export const NOV10_SAME_REQUEST_FOLLOW_UP_CASES: ReplayCase[] = [
     id: "nov10-same-request-carries-account",
     title: `(a) "${SAME}": <B>'s card's Observation is <A>'s account with <B>'s name — "Mara Quell was late on 11/3/26"`,
     report: `${REPORT}: (a) <B>'s card had no Observation of Offense`,
-    status: { open: "no card for <B> on this app's production flags (SAME_REQUEST_OTHER_PERSON off); with it, <B>'s card's Observation is not \"Mara Quell was late on 11/3/26\" (live: none; here \"she was late on 11/3/26 Written Warning.\")" },
+    // Changed on purpose (10 Nov 2026, merged with main): SAME_REQUEST_OTHER_PERSON is on in production (round 16b), so it is no fix flag here.
+    status: { open: "<B>'s card's Observation is not \"Mara Quell was late on 11/3/26\" (live: none; here \"she was late on 11/3/26 Written Warning.\")" },
     // SAME_REQUEST_OTHER_PERSON_ENABLED is not in this app's production flags yet (its own pull request): it is on with the fix.
-    fixFlags: ["SAME_REQUEST_OTHER_PERSON_ENABLED", "SAME_REQUEST_CARRIES_ACCOUNT_ENABLED"],
+    fixFlags: ["SAME_REQUEST_CARRIES_ACCOUNT_ENABLED"],
     async run(t) {
       const { second } = await both(t);
       expect(observation(second), `<B>'s card's Observation:\n${second.content}`).toBe("Mara Quell was late on 11/3/26");
@@ -74,8 +75,9 @@ export const NOV10_SAME_REQUEST_FOLLOW_UP_CASES: ReplayCase[] = [
     id: "nov10-same-request-keeps-earlier-card",
     title: `(b) "${SAME}": <A>'s card is not superseded, and <A>'s form is still created from it, for <A>`,
     report: `${REPORT}: (b) <A>'s card read "Superseded — nothing created"`,
-    status: { open: "no card for <B> on this app's production flags (SAME_REQUEST_OTHER_PERSON off); with it, <A>'s card is superseded by <B>'s, so <A> can no longer be created from this chat" },
-    fixFlags: ["SAME_REQUEST_OTHER_PERSON_ENABLED", "SAME_REQUEST_KEEPS_EARLIER_CARD_ENABLED", "NEXT_PUBLIC_SAME_REQUEST_KEEPS_EARLIER_CARD_ENABLED"],
+    // Changed on purpose (10 Nov 2026, merged with main): SAME_REQUEST_OTHER_PERSON is on in production (round 16b), so it is no fix flag here.
+    status: { open: "<A>'s card is superseded by <B>'s, so <A> can no longer be created from this chat" },
+    fixFlags: ["SAME_REQUEST_KEEPS_EARLIER_CARD_ENABLED", "NEXT_PUBLIC_SAME_REQUEST_KEEPS_EARLIER_CARD_ENABLED"],
     async run(t) {
       const { thread } = await both(t);
       const rory = thread.conversation!.find((message) => message.formProposal?.employeeName === "Rory Vance")!.formProposal!;
