@@ -1304,12 +1304,21 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "POLICY_TOPIC_INTO_FIELD_ENABLED",
   // coding 4: MADE_ABOUT_REWRITE_FINISHES (the sibling app's live round-13 test, 9 Nov 2026; default off).
   "MADE_ABOUT_REWRITE_FINISHES_ENABLED",
+  // coding 5: ACCOUNT_WIPE_GUARD (QA, a Bubbles manager's 1★ rating, 5–6 Nov 2026; default off).
+  "ACCOUNT_WIPE_GUARD_ENABLED",
+  // coding 5: CREATE_FROM_CONVERSATION_POINTS_TO_CARD (the sibling app's P6, 10 Nov 2026; default off).
+  "CREATE_FROM_CONVERSATION_POINTS_TO_CARD_ENABLED",
+  // coding 5: ONE_FORM_EACH_PERSON, CARD_NAMES_EMPLOYEE (the sibling app's P7, 10 Nov 2026; default off).
+  "ONE_FORM_EACH_PERSON_ENABLED",
+  "CARD_NAMES_EMPLOYEE_ENABLED",
   // coding 4: QA's live Bubbles round 13 (9 Nov 2026; default off).
   "MADE_ABOUT_TOPIC_EVIDENCE_ENABLED",
   "FORM_DATE_SAID_ALONE_ENABLED",
   "MADE_ABOUT_SAID_DATE_ENABLED",
   "SECTION_BREAKS_KEPT_ENABLED",
   "ADD_NOT_REPEATED_ENABLED",
+  // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
+  "CHAT_STAGE_TIMINGS_ENABLED",
 ] as const;
 
 /**
@@ -2872,6 +2881,48 @@ export function exitFormDateFromTerminationEnabled(): boolean {
 }
 
 /**
+ * ACCOUNT_WIPE_GUARD_ENABLED (QA, a Bubbles manager's 1★ rating, 5–6 Nov 2026; coding 5; same flag in both apps; default
+ * off). "this is a verbal warning. previous coaching policy manual 10-15-26" on a reopened Coaching Form wiped Details of
+ * Coaching: the form-patch reader's clear (or full replace) was written though nothing asked for it. On: a clear or full
+ * replace of an account field that holds text (Details of Coaching, Observation of Offense, Follow-Up Observation) is
+ * written only when the latest message names that field or asks to remove or rewrite it (`forms/account-wipe-guard.ts`).
+ * Off, as before.
+ */
+export function accountWipeGuardEnabled(): boolean {
+  return envFlag("ACCOUNT_WIPE_GUARD_ENABLED");
+}
+
+/**
+ * CREATE_FROM_CONVERSATION_POINTS_TO_CARD_ENABLED (ported from the sibling app: QA's P6 there, 10 Nov 2026; coding 5;
+ * same flag in both apps; default off; with CREATE_COMMAND_POINTS_TO_CARD_ENABLED). "Create a form from this
+ * conversation." with a card open repeated the card's reply word for word. On: that wording, and "make a new draft from
+ * our chat", "create the form based on this" and the like, are a create command, answered as "create it" is
+ * (`ai/card-meta-turn.ts`). Off, as before.
+ */
+export function createFromConversationPointsToCardEnabled(): boolean {
+  return envFlag("CREATE_FROM_CONVERSATION_POINTS_TO_CARD_ENABLED");
+}
+
+/**
+ * ONE_FORM_EACH_PERSON_ENABLED (ported from the sibling app: QA's P7 there, 10 Nov 2026; coding 5; default off). "Make
+ * me a coaching form for <A>, <B>, and <C> for not closing duties correctly" handled only <A>. On: one form each — <A>'s
+ * card (or the question which <A>), then a "Next:" line; "yes" starts the next person's form with the same reason
+ * (`forms/one-form-each.ts`, steps in the chat route). Off, as before.
+ */
+export function oneFormEachPersonEnabled(): boolean {
+  return envFlag("ONE_FORM_EACH_PERSON_ENABLED");
+}
+
+/**
+ * CARD_NAMES_EMPLOYEE_ENABLED (ported from the sibling app: QA's P7 there, 10 Nov 2026; coding 5; default off). A card's
+ * reply said "I have the employee and the store" without naming them. On: "I have **<name>** and the store"
+ * (`forms/one-form-each.ts`). Off, as before.
+ */
+export function cardNamesEmployeeEnabled(): boolean {
+  return envFlag("CARD_NAMES_EMPLOYEE_ENABLED");
+}
+
+/**
  * POLICY_TOPIC_INTO_FIELD_ENABLED (QA, a manager's 1★ rating, 10 Nov 2026; coding 5; same flag in both apps; default
  * off). "In details of coaching inlude our woven policy on finding a cover for your shift" on a saved draft wrote a
  * sentence telling the manager to refer to the policy manual. On: an edit asking for "our policy on <topic>" in a field
@@ -4130,6 +4181,33 @@ export function sectionBreaksKeptEnabled(): boolean {
  */
 export function addNotRepeatedEnabled(): boolean {
   return envFlag("ADD_NOT_REPEATED_ENABLED");
+}
+
+/**
+ * SAME_REQUEST_OTHER_PERSON_ENABLED (coding 6, 10 Nov 2026; default off). With
+ * <A>'s card on screen or <A>'s form just created, "Can you do the same thing
+ * for <B> but switch it to a written" and "also make a coaching form for <B>"
+ * gave <A>'s card back (the request sentence in <A>'s Observation, or a
+ * Coaching card for <A>). On: a short turn of that shape naming one roster
+ * person other than the card's subject is answered as a new request for that
+ * person — <A>'s request with <A>'s name swapped for <B>'s and the level
+ * switched ("the same thing"), or a plain request for the named form ("also
+ * make") — without <A>'s card, open form or turns. <A>'s card and form are
+ * never written. See `forms/same-request-other-person.ts`. Off, as before.
+ */
+export function sameRequestOtherPersonEnabled(): boolean {
+  return envFlag("SAME_REQUEST_OTHER_PERSON_ENABLED");
+}
+
+/**
+ * CHAT_STAGE_TIMINGS_ENABLED (ported from the sibling app; QA, 9 Nov 2026; default off; same flag in both apps). Each
+ * awaited step of a chat turn before the answering model (intent extraction, the form paths, entities, the query
+ * rewrite, retrieval, the reads, the briefing, the memory, context, data and grounding loads) is timed into
+ * `chat_traces.slots.stages`: names and milliseconds only (`ai/chat-stage-timings.ts`). Changes nothing the manager
+ * sees. Off, as before.
+ */
+export function chatStageTimingsEnabled(): boolean {
+  return envFlag("CHAT_STAGE_TIMINGS_ENABLED");
 }
 
 /**
