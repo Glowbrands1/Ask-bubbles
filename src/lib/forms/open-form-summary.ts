@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { OpenFormSummary } from "@/lib/ai/types";
+import { policyBlankHonestReplyEnabled } from "@/lib/config/chat-quality-flags";
 
 import { blocksForVariant, checkboxGroupsForVariant, fieldsForVariant, interpolate, parseFormDocument } from "./document";
 import { authorizeInstance } from "./instance-scope";
@@ -66,7 +67,30 @@ export async function describeOpenForm(request: Request, instanceId: string): Pr
     unverifiedPolicy: unverifiedPolicyFields(document, variantKey, loaded.values).map((field) => field.label),
     ...withBlankPolicy(blankPolicyFields(document, variantKey, loaded.values).map((field) => field.label)),
     cited: citedSectionsOf(fieldsForVariant(document, variantKey), rows),
+    ...withEmptyPolicy(document, variantKey, rows),
   };
+}
+
+/**
+ * POLICY_BLANK_HONEST_REPLY_ENABLED (ported from the sibling app's live round-24 test, 11 Nov 2026): the policy text
+ * fields that are EMPTY (cleared or never filled, whatever their provenance says), and the policy the form names, so
+ * the answer can say plainly that the draft quotes nothing. Empty object with the flag off.
+ */
+function withEmptyPolicy(
+  document: ReturnType<typeof parseFormDocument>,
+  variantKey: string | null,
+  rows: ReadonlyMap<string, { value?: string | null }>,
+): Pick<OpenFormSummary, "emptyPolicy"> {
+  if (!policyBlankHonestReplyEnabled()) return {};
+  const fields = fieldsForVariant(document, variantKey);
+  const labels = fields
+    .filter((field) => field.policyGrounded)
+    // Empty is empty: a field cleared after it was quoted keeps its old "verified" provenance, and quotes nothing.
+    .filter((field) => (rows.get(field.key)?.value ?? "").trim() === "")
+    .map((field) => interpolate(field.label, null));
+  if (labels.length === 0) return {};
+  const named = (rows.get("policy_violated")?.value ?? "").trim();
+  return { emptyPolicy: { labels, policyNamed: named || null } };
 }
 
 /**

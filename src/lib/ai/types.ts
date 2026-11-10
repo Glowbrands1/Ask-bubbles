@@ -58,6 +58,12 @@ export interface OpenFormSummary {
    * provenance — so a long, clipped line still says what it cites.
    */
   cited?: string[];
+  /**
+   * POLICY_BLANK_HONEST_REPLY_ENABLED: the policy lines whose text is EMPTY on this draft (policy-grounded and blank,
+   * whatever the gate flag or their provenance), by label; and the policy the form names (its "Policy Violated" line).
+   * Absent when there are none or the flag is off.
+   */
+  emptyPolicy?: { labels: string[]; policyNamed: string | null };
 }
 
 /**

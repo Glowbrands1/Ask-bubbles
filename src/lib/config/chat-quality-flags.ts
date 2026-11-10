@@ -2953,6 +2953,19 @@ export function policyGateNonblockingEnabled(): boolean {
   return envFlag("POLICY_GATE_NONBLOCKING_ENABLED") || (typeof inlined === "string" && ON.has(inlined.trim().toLowerCase()));
 }
 
+/**
+ * POLICY_BLANK_HONEST_REPLY_ENABLED (ported from the sibling app: QA's live round-24 test there, 11 Nov 2026; coding 5;
+ * same flag in both apps; default off). A Corrective Action draft named its policy with the Direct policy field blank;
+ * "did you check the policy on this form?" got "… That's the section quoted on <A>'s draft." and "is the policy
+ * verified?" got "**Nothing on the form has changed yet.** …" (read as an edit). On: the open-form summary says the
+ * policy text field is EMPTY and names the policy the form only names; a question whether the policy was checked or
+ * verified is answered plainly from the form, never as an edit; any line claiming a section is quoted on the draft is
+ * replaced (`forms/policy-blank-honest.ts`). Off, as before.
+ */
+export function policyBlankHonestReplyEnabled(): boolean {
+  return envFlag("POLICY_BLANK_HONEST_REPLY_ENABLED");
+}
+
 // --- end coding 5 flags ---
 
 /**
