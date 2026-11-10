@@ -1300,6 +1300,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "MADE_ABOUT_ALL_OR_NOTHING_ENABLED",
   // coding 4: MADE_ABOUT_READER_ACCOUNT (QA's live round-9 test, 9 Nov 2026; default off).
   "MADE_ABOUT_READER_ACCOUNT_ENABLED",
+  // coding 5: ACCOUNT_WIPE_GUARD (QA, a Bubbles manager's 1★ rating, 5–6 Nov 2026; default off).
+  "ACCOUNT_WIPE_GUARD_ENABLED",
 ] as const;
 
 /**
@@ -2859,6 +2861,18 @@ export function letterGreetingNotNameEnabled(): boolean {
  */
 export function exitFormDateFromTerminationEnabled(): boolean {
   return envFlag("EXIT_FORM_DATE_FROM_TERMINATION_ENABLED");
+}
+
+/**
+ * ACCOUNT_WIPE_GUARD_ENABLED (QA, a Bubbles manager's 1★ rating, 5–6 Nov 2026; coding 5; same flag in both apps; default
+ * off). "this is a verbal warning. previous coaching policy manual 10-15-26" on a reopened Coaching Form wiped Details of
+ * Coaching: the form-patch reader's clear (or full replace) was written though nothing asked for it. On: a clear or full
+ * replace of an account field that holds text (Details of Coaching, Observation of Offense, Follow-Up Observation) is
+ * written only when the latest message names that field or asks to remove or rewrite it (`forms/account-wipe-guard.ts`).
+ * Off, as before.
+ */
+export function accountWipeGuardEnabled(): boolean {
+  return envFlag("ACCOUNT_WIPE_GUARD_ENABLED");
 }
 
 // --- end coding 5 flags ---
