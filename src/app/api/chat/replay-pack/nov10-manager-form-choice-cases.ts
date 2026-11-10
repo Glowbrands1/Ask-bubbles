@@ -15,7 +15,6 @@ import { STAFF, WEST_DODGE, type ReplayCase, type ReplayContext } from "./cases"
  */
 const FLAG = "MANAGER_FORM_CHOICE_ENABLED";
 const REPORT = "conv_mvofmpei2c50lhp, 25 Oct 2026 (#181; the October triage, 10 Nov 2026)";
-const WIRING = "MANAGER_FORM_CHOICE's line in server-ask.ts awaits Coding-2 (requested through QA, 10 Nov 2026)";
 
 function start(t: ReplayContext) {
   vi.setSystemTime(new Date("2026-11-10T15:00:00Z"));
@@ -41,7 +40,7 @@ export const NOV10_MANAGER_FORM_CHOICE_CASES: ReplayCase[] = TURNS.flatMap((turn
     report: `${REPORT}; ${turn.key}, ${casing}`,
     status: { open: "a process answer with no card, then \"Which form do you need?\"" },
     fixFlags: [FLAG],
-    fixStatus: { open: WIRING },
+    // The server-ask.ts line is in (coding 2): it holds with the fix flag, so the fixStatus goes.
     async run(t: ReplayContext) {
       const thread = start(t);
       const reply = await thread.say(text);
@@ -56,7 +55,7 @@ export const NOV10_MANAGER_FORM_CHOICE_CASES: ReplayCase[] = TURNS.flatMap((turn
 /**
  * QA's October triage (10 Nov 2026; U4's terse typo wording, from the FUTURE_INCIDENT_DATE_ASK report): "writen ca
  * rowan kestrel not atending monthly meeting 12-20-26" is not read as a form request at all: a policy answer, no card.
- * QA: a real defect of its own. The same MANAGER_FORM_CHOICE line, so open until it lands.
+ * QA: a real defect of its own. The same MANAGER_FORM_CHOICE line (in server-ask.ts, coding 2).
  */
 const TERSE = "writen ca rowan kestrel not atending monthly meeting 12-20-26";
 
@@ -69,7 +68,7 @@ export const NOV10_WRITEN_CA_CASES: ReplayCase[] = ([
   report: `QA's October triage, 10 Nov 2026 (U4's terse typo wording); ${casing}`,
   status: { open: "a policy answer, no card" },
   fixFlags: [FLAG],
-  fixStatus: { open: WIRING },
+  // The server-ask.ts line is in (coding 2): it holds with the fix flag, so the fixStatus goes.
   async run(t: ReplayContext) {
     const thread = start(t);
     const reply = await thread.say(text);
