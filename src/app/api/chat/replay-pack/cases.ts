@@ -28,6 +28,10 @@ export interface ReplayThread {
   /** `reading`: what the stand-in reading models return this turn (e.g. `{ employeeName }`, the name as typed); none by default. */
   say(text: string, reading?: Record<string, unknown>): Promise<ReplayAnswer>;
   create(): Promise<string>;
+  /** Create from the latest card for this person (an earlier card still on screen). */
+  createCard?(employeeName: string): Promise<string>;
+  /** The chat as the browser holds it. */
+  readonly conversation?: readonly import("@/types").ChatMessage[];
   readonly proposal: ReplayAnswer["formProposal"] | null;
   readonly instanceId: string | null;
 }
