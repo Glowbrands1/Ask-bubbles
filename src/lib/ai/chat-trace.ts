@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/server";
 
 import type { TokenUsage } from "./model-prices";
 import { activeSpendMeter, takeSpend, type SpendSource } from "./spend-meter";
+import { closeStages } from "./chat-stage-timings";
 import { chatTraceDraft, runChatTrace, type ChatTraceDraft } from "./chat-trace-store";
 
 const SECRET = /sk-ant-[A-Za-z0-9_-]+|sb_secret_[A-Za-z0-9_-]+|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g;
@@ -96,15 +97,19 @@ async function persistChatTrace(draft: ChatTraceDraft): Promise<void> {
       extraction_model: draft.formExtraction?.model ?? null,
       extraction_input_tokens: draft.formExtraction?.inputTokens ?? null,
       extraction_output_tokens: draft.formExtraction?.outputTokens ?? null,
-      slots: withSpend(
-        withDraftCheck(
-          withFormEdit(
-            draft.reader ? { ...(draft.formExtraction?.slots ?? {}), reader: draft.reader } : (draft.formExtraction?.slots ?? null),
-            draft.formEdit,
+      slots: withStages(
+        withSpend(
+          withDraftCheck(
+            withFormEdit(
+              draft.reader ? { ...(draft.formExtraction?.slots ?? {}), reader: draft.reader } : (draft.formExtraction?.slots ?? null),
+              draft.formEdit,
+            ),
+            draft.draftCheck,
           ),
-          draft.draftCheck,
+          metered,
         ),
-        metered,
+        draft.stages,
+        draft.stagesFrom ?? draft.startedAt,
       ),
     });
     if (error) {
@@ -120,6 +125,12 @@ async function persistChatTrace(draft: ChatTraceDraft): Promise<void> {
 }
 
 /** FORM_EDIT_TOOL_IN_STREAM_ENABLED: `form_edit` beside the other slots; absent, the slots as before. */
+/** CHAT_STAGE_TIMINGS_ENABLED: `stages` beside the other slots; absent, the slots as before. */
+function withStages(slots: Record<string, unknown> | null, stages: ChatTraceDraft["stages"], from: number): Record<string, unknown> | null {
+  const closed = closeStages(stages, from);
+  return closed && closed.length > 0 ? { ...(slots ?? {}), stages: closed } : slots;
+}
+
 function withFormEdit(slots: Record<string, unknown> | null, formEdit: Record<string, unknown> | undefined): Record<string, unknown> | null {
   return formEdit ? { ...(slots ?? {}), form_edit: { ...formEdit } } : slots;
 }

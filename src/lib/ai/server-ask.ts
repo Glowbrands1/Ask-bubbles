@@ -43,6 +43,7 @@ import { reportById, routeReportQuestion } from "@/lib/reporting/registry";
 import { resolveScopeFor } from "@/lib/reporting/scope/server";
 import type { SourceCitation } from "@/types";
 
+import { markStage } from "./chat-stage-timings";
 import { cardPolicyTurns } from "./card-policy-request";
 import { callClaude } from "./call-claude";
 import { glossaryBlock } from "./glossary";
@@ -432,6 +433,7 @@ async function answerQuestionCore(
   const listPolicyCard = listPolicyOnCard(request);
   const askedQuestion = !takeOffOnCard && !listPolicyCard && questionNotFormEnabled() && isQuestionNotForm(request.question, request.history);
   if (intentExtractionEnabled() && !askedQuestion) {
+    markStage("intent_extraction");
     const prepared = await applyIntentExtraction({ request, actor });
     if (prepared.clarification) return prepared.clarification;
     request = prepared.request;
@@ -657,6 +659,7 @@ async function answerQuestionCore(
       priorFormsOnFile: (employeeName, locationId) => priorFormsReadingForChat(actor, employeeName, locationId),
     })),
     }));
+    markStage("form_proposal");
     let proposal = askedQuestion ? null : await proposeFrom(proposalQuestion);
     // TAKE_OFF_STAYS_CARD_ENABLED: a take-off the open intake did not carry on is proposed again from the manager's
     // last turn; this turn's words stay in the request, for the card's own readers. Off, never.
@@ -685,6 +688,7 @@ async function answerQuestionCore(
    * A tool failure returns null and this falls through to retrieval.
    */
   if (formToolsEnabled() && !formsTurn) {
+    markStage("form_understand");
     const roster = slotRetentionEnabled() ? await loadRosterQuiet(actor) : [];
     const stored = await storedFields(request, actor);
     // A question is answered, never read as a form command (`question-not-form.ts`).
@@ -761,6 +765,7 @@ async function answerQuestionCore(
    * is only a lookup, otherwise attached as verified records. Deterministic and
    * read-only; see `entity-facts.ts`.
    */
+  markStage("entities");
   const entities = await resolveChatEntities({ question: request.question, history: request.history, actor });
   if (entities.direct) return entities.direct;
 
@@ -885,6 +890,7 @@ async function answerQuestionCore(
    * See `slot-only-turn.ts`.
    */
   const slotTopic = slotOnlyRetrievalTopic(request.question, request.history);
+  markStage("query_rewrite");
   const rewrittenQuestion = slotTopic
     ? slotTopic
     : queryRewriteEnabled()
@@ -924,6 +930,7 @@ async function answerQuestionCore(
         : hybridSearchEnabled()
           ? matchHybridKnowledge({ query, scopeId: request.scopeId, limit })
           : knowledge.match({ query, scopeId: request.scopeId, limit });
+    markStage("retrieval");
     rows = await searchWithPlan(plan, search, limit);
     /*
      * A REFORMAT TURN KEEPS THE SOURCES OF THE ANSWER IT REFORMATS
@@ -955,6 +962,7 @@ async function answerQuestionCore(
     );
   }
 
+  markStage("parallel_reads");
   const pinnedResults = await pinnedPromise;
   const handbook = await handbookPromise;
 
@@ -1035,6 +1043,7 @@ async function answerQuestionCore(
   let manualPlan: FullManualPlan | null = null;
   if (fullManualContextEnabled()) {
     try {
+      markStage("full_manual");
       manualPlan = await loadFullManualPlan(request.scopeId, request.question, policyText);
     } catch {
       manualPlan = null;
@@ -1066,16 +1075,19 @@ async function answerQuestionCore(
       )
     : null;
 
+  markStage("briefing");
   const briefing = await briefingPromise;
   /*
    * GOOGLE_REVIEWS_IN_CHAT_ENABLED: the Google Reviews page's month to date,
    * goal and pace for the caller's stores, read only on a Google review
    * question and only with View reports. Null otherwise.
    */
+  markStage("google_reviews");
   const reviewBlock = googleReviewsInChatEnabled()
     ? await loadGoogleReviewsChatBlock({ question: request.question, role: actor.role, scope: actor.scope })
     : null;
 
+  markStage("summaries_memory");
   const settledSummaries = await summariesPromise;
   const personMemory = await memoryPromise;
   const formRecords = await formRecordsPromise;
@@ -1088,6 +1100,7 @@ async function answerQuestionCore(
     .filter((entry) => pinnedIds.has(entry.documentId))
     .map((entry) => entry.documentTitle);
 
+  markStage("system_prompt");
   const system = buildSystemPrompt({
     assistantName: ACTIVE_BRAND.assistantName,
     brandName: ACTIVE_BRAND.brandName,
@@ -1140,6 +1153,7 @@ async function answerQuestionCore(
       : {}),
   });
 
+  markStage("long_context");
   const longContext = longContextEnabled()
     ? await prepareLongContext({
         history: request.history,
@@ -1147,6 +1161,7 @@ async function answerQuestionCore(
         conversationId: request.conversationId ?? null,
       })
     : null;
+  markStage("chat_data");
   const dataAddition = await loadChatDataBlock({
     enabled: chatDataToolsEnabled(),
     question: request.question,
@@ -1154,6 +1169,7 @@ async function answerQuestionCore(
     breakdown: reportBreakdownEnabled(),
     reviewsHandled: reviewBlock !== null,
   });
+  markStage("cited_grounding");
   const pinnedPolicy = await citedManualGrounding(request, knowledge);
   const supplementalChunks = grounding;
   const supplementalText =
@@ -1227,6 +1243,7 @@ async function answerQuestionCore(
    */
   let answer: Awaited<ReturnType<typeof callClaude>>;
   try {
+    markStage("answer_model");
     answer = await callClaude({
       ...claudeBase,
       grounding: dataAddition.help ? `${groundingText}\n\n${dataAddition.help}` : groundingText,
