@@ -84,6 +84,11 @@ function list(items: string[]): string {
   return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
 }
 
+/*
+ * MyGlow and Sunlync ARE this company's systems (Pau, via QA, 25 Oct 2026: Buff City Soap uses both), read from
+ * `config/company/forms/exit-systems.ts`. Not sibling-brand wording — QA re-confirmed the ruling on 10 Nov 2026. The
+ * no-other-brand scan (`lib/security/no-other-brand-strings.test.ts`) allows them only from that file.
+ */
 export const EXIT_DOES_NOT_ACT = `Creating the draft doesn't sign anything, remove anyone from ${EXIT_EMPLOYEE_SYSTEM}, change payroll or update ${EXIT_ACCOUNT_SYSTEM} — the Steps to Finish Termination stay on the form for you to do once it's complete.`;
 
 /** The opening intake, for a manager who has only named the form. */
