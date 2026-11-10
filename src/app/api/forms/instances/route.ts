@@ -7,6 +7,7 @@ import { isHiddenTemplate } from "@/config/company/forms/hidden";
 import { locationById as salonById } from "@/lib/locations";
 
 import { errorResponse } from "@/lib/api/respond";
+import { turnsWithoutPastedReview } from "@/lib/ai/pasted-review";
 import { parseHistory } from "@/lib/api/validation";
 import { authorizeForms } from "@/lib/forms/access";
 import { isIsoCalendarDate } from "@/lib/forms/form-date-answer";
@@ -240,7 +241,8 @@ export async function POST(request: Request) {
       const alsoCalled = await preferredNamesOf(actor.scope, body.employeeName);
       const currency = checkProposalIsCurrent({
         // FORM_TYPE_SWITCH_ENABLED: "change to coaching" is read as the chat read it, so the switched card is current.
-        conversation: switchReadConversation(parseHistory(body.conversation)),
+        // PASTED_REVIEW_NOT_ACCOUNT_ENABLED: a pasted reviewer's notes are read as the chat read them (`ai/pasted-review.ts`).
+        conversation: switchReadConversation(turnsWithoutPastedReview(parseHistory(body.conversation))),
         templateKey: body.templateKey,
         employeeName: body.employeeName,
         alsoCalled,
