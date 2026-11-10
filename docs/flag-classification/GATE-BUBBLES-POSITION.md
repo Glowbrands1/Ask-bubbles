@@ -11,8 +11,8 @@ Session: session_01VVEkRRzGew9sHHGbAhxGaQ. Reports to QA session_01VVEkRTbAAAt57
 - (old) On RESUME, first action: send QA "R17B GO; release head fab769b (old session) on a529c29e; merging main f53c409a is clean and the full suite is green on that tree (my 1e58ef1)".
 
 ## Queue (next first) — after QA's split 23:18Z; Gate-Bubbles-2 owns the rest
-1. 16c re-gate (R16D, running)
-2. EXCERPT_BRAND_FILTER flag-only (HIGH)
+1. DONE: 16c re-gate R16D = HOLD (false not-found note for a shared first name, FORM_NAME_FROM_ROSTER); verdict sent 11 Nov ~00:10Z
+2. NOW: EXCERPT_BRAND_FILTER flag-only (HIGH), gate EBF on main 59526ed in /home/user/gate/ebf; OFF = prodenv + main production-flags on (adds the 4 R17B flags; scratch prodenv-59526ed.csv); paths + src/lib/knowledge
 3. #716 NEAR_MISS_ANSWER_KEEPS_REQUEST @ caf15503 (16c's 4 flags in both arms; bar: s14 path 1)
 4. #720 TYPO_CORRECTED_SAME_PERSON @ 7de59a2 (s14 path 2; read saved date)
 5. #705 (sf-s16/s17/s19), #710, #712 (131400e9), #713, #714, #718 (3cb4e25f)
