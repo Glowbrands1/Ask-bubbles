@@ -8,7 +8,7 @@ transaction, average sale, transactions (`forms/metric-shortfall.ts`, the
 target reading in `forms/ca-policy.ts`). The brand scan
 (`security/no-other-brand-strings.test.ts`) now bans "club close" in strings
 the app writes. The EPP template and intake (`forms/library.ts`,
-`forms/epp-intake.ts`) are allowlisted pending Pau's BCS EPP metrics.
+`forms/epp-intake.ts`) are allowlisted: deferred by Pau (10 Nov 2026), BCS EPP metrics not defined yet.
 
 The sibling app's words are its own company's metrics, so nothing changes
 there. Rewriting this app's tests and replay cases into its own metrics is

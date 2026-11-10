@@ -33,9 +33,9 @@ const ALLOWED: Readonly<Record<string, string>> = {
   "src/lib/ai/employee-performance-gate.ts": "the sibling's brand marker, so its rows are filtered",
   "src/lib/ai/full-manual-context.ts": "the shared manual's sibling-only parts, so they are skipped",
   "src/lib/forms/chooser.ts": "a hidden sibling form's key, so the chooser withholds it",
-  "src/lib/forms/epp-intake.ts": "the EPP's productivity metrics, pending Pau's BCS EPP metrics (QA, 10 Nov 2026)",
+  "src/lib/forms/epp-intake.ts": "the EPP's productivity metrics, deferred by Pau (10 Nov 2026): BCS EPP metrics not defined yet",
   "src/lib/forms/hiring-library.ts": "the sibling's interview forms, seeded hidden (config/company/forms/hidden.ts)",
-  "src/lib/forms/library.ts": "the EPP template's productivity metrics, pending Pau's BCS EPP metrics (QA, 10 Nov 2026)",
+  "src/lib/forms/library.ts": "the EPP template's productivity metrics, deferred by Pau (10 Nov 2026): BCS EPP metrics not defined yet",
   "src/lib/forms/template-intent.ts": "readers: a manager may type the sibling's job titles or form names",
 };
 
