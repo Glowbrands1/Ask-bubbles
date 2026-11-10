@@ -4209,3 +4209,15 @@ export function sameRequestOtherPersonEnabled(): boolean {
 export function chatStageTimingsEnabled(): boolean {
   return envFlag("CHAT_STAGE_TIMINGS_ENABLED");
 }
+
+/**
+ * PAYROLL_BARE_SENTENCE_ENABLED (coding 6, 10 Nov 2026; default off; ported
+ * from the sibling app, its P15). "I need a term CA for <name>. Didn't show
+ * up for her opening shift. Payroll deduction." — the card still asked "Is
+ * payroll deduct applicable?". On, a sentence that is only "Payroll
+ * deduction." is a Yes. Read in `forms/payroll-deduct-answer.ts` (which
+ * imports nothing). Off, as before.
+ */
+export function payrollBareSentenceEnabled(): boolean {
+  return envFlag("PAYROLL_BARE_SENTENCE_ENABLED");
+}
