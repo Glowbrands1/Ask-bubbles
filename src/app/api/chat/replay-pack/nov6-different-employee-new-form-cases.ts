@@ -142,6 +142,17 @@ const WORDINGS: readonly Wording[] = [
     status: { open: "SECOND_PERSON_ACCOUNT_WORDS_ENABLED is off in production: <B>'s turn is read into <A>'s card, and <B> gets no card" },
     fixFlags: [FLAG, "SECOND_PERSON_ACCOUNT_WORDS_ENABLED"],
   },
+  {
+    // The October triage's on-roster wording for #155 / #164 (10 Nov 2026): no card for <B> with production's flags.
+    key: "qa-title-roster",
+    first: "I need a corrective action for Test Employee, she was late opening the store on Monday",
+    a: "Test Employee",
+    b: "Remy Calder",
+    text: "now one for Remy Calder, Store Associate, late today",
+    account: /late today/i,
+    status: { open: "SECOND_PERSON_ACCOUNT_WORDS_ENABLED is off in production: <B> gets no card" },
+    fixFlags: [FLAG, "SECOND_PERSON_ACCOUNT_WORDS_ENABLED"],
+  },
 ];
 
 const OTHER_EMPLOYEE: ReplayCase[] = [];
