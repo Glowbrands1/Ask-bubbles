@@ -1304,6 +1304,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "MADE_ABOUT_READER_ACCOUNT_ENABLED",
   // coding 4: MADE_ABOUT_REWRITE_FINISHES (the sibling app's live round-13 test, 9 Nov 2026; default off).
   "MADE_ABOUT_REWRITE_FINISHES_ENABLED",
+  "ROSTER_COMPOUND_FIRST_NEAR_MISS_ENABLED",
 ] as const;
 
 /**
@@ -3112,6 +3113,17 @@ export function replyMatchesCardEnabled(): boolean {
  */
 export function rosterCompoundSurnameEnabled(): boolean {
   return envFlag("ROSTER_COMPOUND_SURNAME_ENABLED");
+}
+
+/**
+ * ROSTER_COMPOUND_FIRST_NEAR_MISS_ENABLED (QA, 10 Nov 2026, coding 6's B1 triage sf-b5; default off). A roster
+ * person whose first name is two words ("Delphine Marlowe" + "Ostrander") typed with a transposed letter in its
+ * second word ("Delphine Marlwoe Ostrander") matched nobody, even with every ROSTER_* flag on: the two-word first
+ * name had to be typed exactly. On: it is compared word by word, a typo of it is a near miss, asked with "Did you
+ * mean …", never filled (`forms/employee-match.ts`). Off, as before.
+ */
+export function rosterCompoundFirstNearMissEnabled(): boolean {
+  return envFlag("ROSTER_COMPOUND_FIRST_NEAR_MISS_ENABLED");
 }
 
 /**

@@ -1,4 +1,4 @@
-import { rosterCompoundSurnameEnabled, sharedLoginNotStaffEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { rosterCompoundFirstNearMissEnabled, rosterCompoundSurnameEnabled, sharedLoginNotStaffEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 
 /**
  * ============================================================================
@@ -279,6 +279,7 @@ export function matchEmployeeName(typed: string, roster: readonly RosterEmployee
 
   const exact: RosterEmployee[] = [];
   const close: { employee: RosterEmployee; score: number }[] = [];
+  let nearFirstHit = false;
 
   for (const employee of roster) {
     const firsts = firstNames(employee);
@@ -307,6 +308,37 @@ export function matchEmployeeName(typed: string, roster: readonly RosterEmployee
         if (compound !== null) close.push({ employee, score: Math.max(1, compound) });
       }
       continue;
+    }
+
+    /*
+     * ROSTER_COMPOUND_FIRST_NEAR_MISS_ENABLED (QA, 10 Nov 2026, sf-b5): "Delphine Marlwoe Ostrander" for the roster's
+     * "Delphine Marlowe" + "Ostrander" — a two-word first name with a typo in a word of it, then the surname (exact or
+     * close). Word by word; a word of three letters or fewer counts only exactly. A near miss, never exact.
+     */
+    const nearFirst =
+      rosterCompoundFirstNearMissEnabled() && words.length > 2
+        ? firsts.find((first) => {
+            const parts = first.split(" ");
+            if (parts.length < 2 || words.length <= parts.length) return false;
+            return parts.every((part, index) => {
+              const word = words[index]!;
+              return word === part || (word.length > 3 && part.length > 3 && closeWord(word, part));
+            });
+          })
+        : undefined;
+    if (nearFirst) {
+      const parts = nearFirst.split(" ");
+      const firstScore = parts.reduce((sum, part, index) => sum + editDistance(words[index]!, part), 0);
+      const restText = words.slice(parts.length).join(" ");
+      if (firstScore === 0 && restText === last) {
+        exact.push(employee);
+        continue;
+      }
+      if (restText === last || closeWord(restText, last)) {
+        close.push({ employee, score: Math.max(1, firstScore + editDistance(restText, last)) });
+        nearFirstHit = true;
+        continue;
+      }
     }
 
     if (typedLast === null) {
@@ -357,6 +389,12 @@ export function matchEmployeeName(typed: string, roster: readonly RosterEmployee
     }
   }
 
+  // ROSTER_COMPOUND_FIRST_NEAR_MISS_ENABLED: "Delphine Marlwoe Ostrander" is close to "Delphine Marlowe Ostrander" and
+  // "exact" for a "Delphine Ostrander" only by skipping a word: neither is filled, both are offered.
+  if (nearFirstHit && exact.length > 0 && !readKeptTypedNames()?.has(normalize(typed))) {
+    const offered = [...exact.map((employee) => ({ employee, score: 1 })), ...close].sort((a, b) => a.score - b.score);
+    return { kind: "confirm", candidates: offered.slice(0, MAX_SUGGESTIONS).map(({ employee }) => ({ employee, name: displayName(employee) })) };
+  }
   if (exact.length === 1 && typedLast !== null && typedLast.length > 1) {
     return { kind: "exact", employee: exact[0]!, name: displayName(exact[0]!) };
   }
