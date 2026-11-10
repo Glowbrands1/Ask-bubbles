@@ -12,10 +12,19 @@ describe("lateOpeningWords: the manager's own words for a late opening", () => {
     ["Can you make a CA for Corisande Pell, she did not show up for a scheduled opening shift", "scheduled opening shift"],
     ["she was late to open the store", "late to open the store"],
     ["Opened the store late on 10/2", "Opened the store late"],
+    // QA's Gate-Bubbles-2 (nov6-reopen-write-up-still-creates): the negation is part of the quote, never dropped.
+    ["write up Corisande Pell for not opening the store on time on Tuesday", "not opening the store on time"],
+    ["she didn't open the store on time", "didn't open the store on time"],
+    ["she opened the store 40 minutes late", "opened the store 40 minutes late"],
   ])("%s → %s", (said, words) => {
     vi.stubEnv("FAILURE_TO_OPEN_IS_LATE_OPENING_ENABLED", "true");
     expect(lateOpeningWords(said)).toBe(words);
     expect(said).toContain(lateOpeningWords(said)!);
+  });
+
+  it("\"on time\" is never quoted without its negation", () => {
+    vi.stubEnv("FAILURE_TO_OPEN_IS_LATE_OPENING_ENABLED", "true");
+    expect(lateOpeningWords("she was scheduled for opening the store on time today")).toBe("opening the store");
   });
 
   it("nothing about opening: null", () => {

@@ -35,6 +35,8 @@ const issueLine = (content: string) => /\*\*Issue:\*\*([^·\n]*)/.exec(content)?
 
 const P16 = "Can you make a CA for Corisande Pell for failure to open on time?";
 const OPENING_SHIFT = "Can you make a CA for Corisande Pell, she did not show up for a scheduled opening shift";
+/** QA's Gate-Bubbles-2 (10 Nov 2026), nov6-reopen-write-up-still-creates turn 2: the "not" was dropped from the quote. */
+const NOT_ON_TIME = "write up Corisande Pell for not opening the store on time on Tuesday";
 
 export const NOV10_ROUND17B_GAPS_CASES: ReplayCase[] = [
   ...([
@@ -56,6 +58,7 @@ export const NOV10_ROUND17B_GAPS_CASES: ReplayCase[] = [
   ...([
     ["p16", P16],
     ["opening-shift", OPENING_SHIFT],
+    ["not-on-time", NOT_ON_TIME],
   ] as const).map(([key, said]) => ({
     id: `nov10-r17b-late-opening-quote-${key}`,
     title: `"${said}": the Late Opening quote is the manager's own words`,
@@ -68,6 +71,8 @@ export const NOV10_ROUND17B_GAPS_CASES: ReplayCase[] = [
       const words = quoted(reply.content);
       expect(words, `no quote:\n${reply.content}`).not.toBeNull();
       expect(said.toLowerCase(), `the card quotes words the manager never said:\n${reply.content}`).toContain(words!.toLowerCase());
+      // Gate-Bubbles-2: a negation the manager typed is never dropped from the quote ("not opening the store on time").
+      if (/\bnot\s+open/i.test(said)) expect(words, `the negation was dropped:\n${reply.content}`).toMatch(/^not\b/i);
     },
   })),
   {

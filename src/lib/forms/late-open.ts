@@ -66,7 +66,15 @@ const OWN_LATE_OPENING = [
   /\bopen(?:ed|ing)?\s+(?:(?:the|our|her|his|their)\s+)?(?:store|location|shop|makery|doors)\b/i,
   /\bopener\b/i,
 ];
-const AFTER_OPEN = /^\s+(?:on\s+time|late)\b/i;
+/** A late tail, kept with the match: "late", "40 minutes late", "an hour late". */
+const LATE_TAIL = /^\s+(?:(?:\d+|an?|one|two|three|half\s+an?)\s+(?:min(?:ute)?s?|hours?|hrs?)\s+)?late\b/i;
+/** "on time" is kept only after a negation the quote carries ("not opening the store on time"), never on its own. */
+const ON_TIME_TAIL = /^\s+on\s+time\b/i;
+/**
+ * QA's Gate-Bubbles-2 (10 Nov 2026), nov6-reopen-write-up-still-creates: "for not opening the store on time" was quoted
+ * "opening the store on time", the meaning reversed. A negation right before the match is part of the quote.
+ */
+const NEGATION_BEFORE = /\b(?:not|never|did\s*n['’]?t|did\s+not|didnt|failed\s+to|failure\s+to|was\s*n['’]?t|was\s+not)\s+$/i;
 
 /** LATE_OPENING_OWN_WORDS_ENABLED: the manager's own words that read as a late opening, as typed, or null. */
 export function lateOpeningWords(text: string): string | null {
@@ -74,9 +82,12 @@ export function lateOpeningWords(text: string): string | null {
   for (const pattern of OWN_LATE_OPENING) {
     const found = pattern.exec(said);
     if (!found) continue;
+    const negation = NEGATION_BEFORE.exec(said.slice(Math.max(0, found.index - 20), found.index))?.[0] ?? "";
+    const negated = negation !== "" || /^fail/i.test(found[0]);
     const end = found.index + found[0].length;
-    const tail = AFTER_OPEN.exec(said.slice(end))?.[0] ?? "";
-    return `${found[0]}${tail}`.replace(/\s+/g, " ").trim();
+    const rest = said.slice(end);
+    const tail = LATE_TAIL.exec(rest)?.[0] ?? (negated ? (ON_TIME_TAIL.exec(rest)?.[0] ?? "") : "");
+    return `${negation}${found[0]}${tail}`.replace(/\s+/g, " ").trim();
   }
   return null;
 }
