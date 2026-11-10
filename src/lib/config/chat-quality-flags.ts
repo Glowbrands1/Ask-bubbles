@@ -1318,6 +1318,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "SECTION_BREAKS_KEPT_ENABLED",
   "ADD_NOT_REPEATED_ENABLED",
   "POLICY_REFERENCE_NOT_ACCOUNT_ENABLED",
+  "LEVEL_AFTER_FORM_NAME_ENABLED",
   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
   "CHAT_STAGE_TIMINGS_ENABLED",
 ] as const;
@@ -4220,4 +4221,15 @@ export function chatStageTimingsEnabled(): boolean {
  */
 export function policyReferenceNotAccountEnabled(): boolean {
   return envFlag("POLICY_REFERENCE_NOT_ACCOUNT_ENABLED");
+}
+
+/**
+ * LEVEL_AFTER_FORM_NAME_ENABLED (ported from the sibling app: coding 6, 10 Nov 2026; default off; same flag in both apps;
+ * QA's overnight scan sf-s19). "I need a corrective action verbal for <A>" named the level after the form and the card
+ * left it unset; "Corrective Action" on the next turn still made no Verbal card. On: "corrective action verbal", "ca
+ * written", "c/a verbal" are the form's level unless the sentence says it is a step already taken
+ * (`forms/warning-level.ts`). Off, as before.
+ */
+export function levelAfterFormNameEnabled(): boolean {
+  return envFlag("LEVEL_AFTER_FORM_NAME_ENABLED");
 }

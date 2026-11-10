@@ -1,4 +1,4 @@
-import { caShortcutWordsEnabled, complaintAccountEnabled, levelEndsRequestEnabled, requestLevelNotHistoryEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { caShortcutWordsEnabled, complaintAccountEnabled, levelAfterFormNameEnabled, levelEndsRequestEnabled, requestLevelNotHistoryEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { businessToday } from "@/lib/business-date";
 
 import { datesInText } from "./form-date-answer";
@@ -781,6 +781,23 @@ export function warningMentions(text: string, today: string): WarningMention[] {
       push(levelOf(match[1]!), start, match.index + match[0].length, true);
     }
   }
+  /*
+   * LEVEL_AFTER_FORM_NAME_ENABLED (ported from the sibling app: QA's overnight scan sf-s19): "I need a corrective action
+   * verbal for <A>" names the level after the form; the card left it unset. "corrective action verbal", "ca written",
+   * "c/a verbal" followed by "for", "on", a stop or the end are this form's level, unless the sentence says it is a step
+   * already taken ("she had a ca verbal on 9/1", "her last ca written was in august"): then it is history. Off, as before.
+   */
+  if (levelAfterFormNameEnabled()) {
+    for (const match of source.matchAll(LEVEL_AFTER_FORM)) {
+      const start = match.index + match[0].length - match[1]!.length;
+      const end = match.index + match[0].length;
+      const sentenceStart = Math.max(source.lastIndexOf(".", match.index), source.lastIndexOf("\n", match.index)) + 1;
+      const nextStop = source.slice(end).search(/[.\n]/);
+      const sentence = source.slice(sentenceStart, nextStop < 0 ? source.length : end + nextStop);
+      const taken = AFTER_FORM_TAKEN.test(sentence) || datesInText(sentence, today).length > 0;
+      push(levelOf(match[1]!), start, end, !taken, taken ? "historical" : undefined);
+    }
+  }
   for (const match of source.matchAll(NAMED)) {
     // "verbal warnings" is a pattern of past ones; this form issues one.
     const plural = /(?:warnings|cas|actions)$/i.test(match[0]);
@@ -804,6 +821,13 @@ export function warningMentions(text: string, today: string): WarningMention[] {
  * 2026). Only when the turn is nothing else, so "again" here is a change back,
  * never "she got a written warning again".
  */
+/** LEVEL_AFTER_FORM_NAME_ENABLED: the level named after the form ("corrective action verbal for <A>"). */
+/** LEVEL_AFTER_FORM_NAME_ENABLED: a sentence that says the step was already taken. */
+const AFTER_FORM_TAKEN = /\b(?:had|has\s+had|got|gave|given|received|issued|last|previous|prior|earlier|already|was|were)\b/i;
+
+const LEVEL_AFTER_FORM =
+  /\b(?:corrective\s+action|ca|c\/a)\s+(verbal|written)\b(?=\s*(?:$|[.,;:!—–-]|warning\b|form\b|for\b|on\b|about\b|because|regarding|due\b|please|today))/gi;
+
 const WHOLE_TURN_LEVEL =
   /^\s*(?:(?:no|nope|actually|sorry|wait|ok(?:ay)?|rather|on\s+second\s+thought)[\s,.!:-]+)*(?:(?:make\s+it|make\s+this|(?:change|switch|set|put)\s+(?:it|this)\s+(?:back\s+)?to|switch\s+(?:back\s+)?to|go\s+(?:back\s+)?(?:to|with)|let['’]?s\s+(?:do|go\s+with)|do|it['’]?s|just)\s+)?(?:a\s+)?(verbal|written)(?:\s+(?:warning|ca|c\/a|corrective\s+action|one))?(?:[\s,]+(?:instead|then|please|now|after\s+all|again))*\s*[.!]?\s*$/i;
 
