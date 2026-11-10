@@ -1317,6 +1317,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "MADE_ABOUT_SAID_DATE_ENABLED",
   "SECTION_BREAKS_KEPT_ENABLED",
   "ADD_NOT_REPEATED_ENABLED",
+  "POLICY_REFERENCE_NOT_ACCOUNT_ENABLED",
   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
   "CHAT_STAGE_TIMINGS_ENABLED",
 ] as const;
@@ -4208,4 +4209,15 @@ export function sameRequestOtherPersonEnabled(): boolean {
  */
 export function chatStageTimingsEnabled(): boolean {
   return envFlag("CHAT_STAGE_TIMINGS_ENABLED");
+}
+
+/**
+ * POLICY_REFERENCE_NOT_ACCOUNT_ENABLED (ported from the sibling app: coding 6, 10 Nov 2026; default off; same flag in both
+ * apps; QA's overnight scan sf-s16, sf-s17). "In the past we have quoted the standards of conduct for creating a ca due to
+ * underperformance", after the CA card, was handed to the drafting model as part of what happened. On: a turn that only
+ * says which policy to quote, cite or reference is left out of the account the draft is written from; the policy readers
+ * still read it. See `ai/policy-reference-turn.ts`. Off, as before.
+ */
+export function policyReferenceNotAccountEnabled(): boolean {
+  return envFlag("POLICY_REFERENCE_NOT_ACCOUNT_ENABLED");
 }

@@ -215,6 +215,8 @@ export const NOV4_OVERNIGHT_SCAN_CASES: readonly ReplayCase[] = [
     report: `${REPORT}, sf-s16: "put together a corrective action for Calista Venn due to under performance in store metrics for the month of october" → "In the past we have quoted the standards of conduct for creating a ca due to underperformance"`,
     // Run 4 Nov 2026 (production flags): fails as below.
     status: { open: "turn 2 does switch the card to Standards of Conduct, but the card's Issue becomes the instruction \"In the past we have quoted the standards of conduct for creating a ca due to underperformance\"" },
+    // Fixed under POLICY_REFERENCE_NOT_ACCOUNT_ENABLED (ported from the sibling app, 10 Nov 2026): the policy instruction is no account; open on production flags until QA flips it.
+    fixFlags: ["POLICY_REFERENCE_NOT_ACCOUNT_ENABLED"],
     async run(t) {
       const thread = start(t);
       await thread.say("put together a corrective action for Calista Venn due to under performance in store metrics for the month of october");
