@@ -4209,3 +4209,16 @@ export function sameRequestOtherPersonEnabled(): boolean {
 export function chatStageTimingsEnabled(): boolean {
   return envFlag("CHAT_STAGE_TIMINGS_ENABLED");
 }
+
+/**
+ * FUTURE_INCIDENT_DATE_ASK_ENABLED (coding 6, 10 Nov 2026; default off;
+ * October triage #11, #207 BH5, ported from the sibling app). Written on
+ * 10/25, "… for not attending the monthly meeting on 12-20-26" gave a card
+ * dated 12/20/2026 and asked nothing. On: an incident date after today, with
+ * no past incident date beside it, is asked about once and never dates the
+ * form; a deadline or a "by"/"due" date is not asked about. See
+ * `forms/incident-dates.ts` and `ai/future-incident-date.ts`. Off, as before.
+ */
+export function futureIncidentDateAskEnabled(): boolean {
+  return envFlag("FUTURE_INCIDENT_DATE_ASK_ENABLED");
+}

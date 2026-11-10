@@ -66,6 +66,7 @@ import {
   sameFormCopyEnabled,
   sameFormCopyNewPersonEnabled,
   sameRequestOtherPersonEnabled,
+  futureIncidentDateAskEnabled,
   staffPickerBareAnswerEnabled,
   wholeTeamCoachingEnabled,
   sameAskNoRepeatEnabled,
@@ -1017,6 +1018,8 @@ async function postChat(request: Request) {
       }
       // SAME_REQUEST_OTHER_PERSON_ENABLED: <B>'s card says what of the earlier request it carries.
       if (sameRequestOther) answer = (await import("@/lib/forms/same-request-other-person")).withSameRequestNote(answer, sameRequestOther);
+      // FUTURE_INCIDENT_DATE_ASK_ENABLED: a card dated after today by the account's own date is asked about.
+      if (futureIncidentDateAskEnabled()) answer = (await import("@/lib/ai/future-incident-date")).withFutureDateQuestion(answer, parsed);
     } catch (error) {
       /*
        * A FAILED ANSWER IS STILL A RECORDED TURN, closed as a failure. The row
