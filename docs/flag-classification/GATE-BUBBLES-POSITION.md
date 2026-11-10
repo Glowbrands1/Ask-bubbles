@@ -10,23 +10,17 @@ Session: session_01VVEkRRzGew9sHHGbAhxGaQ. Reports to QA session_01VVEkRTbAAAt57
 - NOW: 16c re-gate (gate name R16D) running on d7487833 in /home/user/gate/r16c, with production-flags.json + production-fixes.ts reverted to ec9f740 (uncommitted) so OFF = production; ON = + FORM_NAME_FROM_ROSTER, NEAR_MISS_QUESTION_RULES, NEAR_MISS_DETAILS_ACCEPT, FORM_NAME_OFF_ROSTER_ASK; --with prodenv.csv.
 - (old) On RESUME, first action: send QA "R17B GO; release head fab769b (old session) on a529c29e; merging main f53c409a is clean and the full suite is green on that tree (my 1e58ef1)".
 
-## Queue (next first)
-1. 16c re-gate on d7487833
+## Queue (next first) — after QA's split 23:18Z; Gate-Bubbles-2 owns the rest
+1. 16c re-gate (R16D, running)
 2. EXCERPT_BRAND_FILTER flag-only (HIGH)
-3. #719 @ c4cc11a4 (HIGH; server flag + NEXT_PUBLIC_ twin together; blank-Direct-policy replay case)
-4. #723 BRAND_REPLY_GUARD (HIGH) + HIDDEN_TEMPLATE_KEYS when it arrives
-5. #730 (brand, rebuild of #200)
-6. #716 NEAR_MISS_ANSWER_KEEPS_REQUEST @ caf15503 (16c's 4 flags in both arms; bar: s14 path 1)
-7. #720 TYPO_CORRECTED_SAME_PERSON @ 7de59a2 (s14 path 2; read saved date)
-8. #721 D1 CORRECTION_PLAN_KEEPS_AMOUNT @ e1d8c889 (read saved Action Plan amount)
-9. #705 (sf-s16/s17/s19), #710, #712 NOT_FOLLOWING_IS_VIOLATION 131400e9, #713 EXIT_TYPO_WORDS, #714 ACCOUNT_BEFORE_REQUEST
-10. #718 LETTER_GREETING_ANY_CASE 3cb4e25f, #722 CAPS_PREPOSITION_NOT_NAME (off-roster twins stay open by design), #725, #726 (FLAG_CLASSIFY_ON), #729
-11. Rest of the handoff queue: B504 d71d2d50; #678+#684; #695; #663+A3+#693, #709; #681; PROPOSAL_NAME_CORRECTION;
-    #686, #687+#728 (2b6eceb6+73ff31ea, + TEMPLATE_OUTLINE_FIELDS), #688+#694+#724, #689, #691, #692, #694;
-    #696+#727 (12db873c+680a7798); #697+#647 (+POLICY_LINE port); #698, #500, #480, #702, #464, #704, #708;
-    #690 @ 47c7ef9c (Observation OFF vs ON); A7, A8, A9
-12. #734 PRIOR_ACTIONS_NO_COMMA alone after #729; #735 STORE_ALIAS HOLD (Coding-2 wiring)
-13. End: #732 BC_NOT_A_NAME, #733 (HOLD for Coding-2 wiring), then #731 REVISION_ARCHIVED_NOT_OPEN (low)
+3. #716 NEAR_MISS_ANSWER_KEEPS_REQUEST @ caf15503 (16c's 4 flags in both arms; bar: s14 path 1)
+4. #720 TYPO_CORRECTED_SAME_PERSON @ 7de59a2 (s14 path 2; read saved date)
+5. #705 (sf-s16/s17/s19), #710, #712 (131400e9), #713, #714, #718 (3cb4e25f)
+6. B504 d71d2d50; #678+#684; #695 (revision.ts diff = approved lines); #663 6c68b998+A3+#693, then #709; #681; PROPOSAL_NAME_CORRECTION
+7. #686, #689, #691, #694 (NB: #694 was to be gated with #688, which Gate-Bubbles-2 now owns — ask QA)
+8. #697+#647 (+POLICY_LINE port); #698, #500, #480, #702, #464, #704, #708; #690 @ 47c7ef9c (Observation OFF vs ON); A7, A8, A9
+
+Gate-Bubbles-2 (session_01VVEkRTubRY6Gy3uXrqxWfW) owns: #742 #736 #719 #723 #730 #721 #737 #725 #726 #696+#727 #687+#728 #692 #729 #733 #734 #735 #739 #688+#724 #722 #743 #744 #731 #740 #745.
 
 Replay-case mapping and other notes:
     #690 fixed head 47c7ef9c (Coding-4), same queue slot; compare saved Observation OFF vs ON
