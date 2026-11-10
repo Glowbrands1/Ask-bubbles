@@ -62,6 +62,7 @@ import {
   questionNotFormEnabled,
   sameFormCopyEnabled,
   sameFormCopyNewPersonEnabled,
+  teamCardNotProductEnabled,
   staffPickerBareAnswerEnabled,
   wholeTeamCoachingEnabled,
   sameAskNoRepeatEnabled,
@@ -909,6 +910,17 @@ async function postChat(request: Request) {
         ]);
       }
       // PERSON_GUARD_ENABLED: whichever reader named the card's employee, a name that is not a person never stays on it.
+      // TEAM_CARD_NOT_PRODUCT_ENABLED: a team coaching card's "Spray Tan Kits" is the topic, not a person (`lib/forms/team-card-not-product.ts`).
+      if (teamCardNotProductEnabled() && answer.formProposal?.employeeName) {
+        const { loadScopedRoster } = await import("@/lib/forms/employee-roster");
+        answer = (await import("@/lib/forms/team-card-not-product")).withTeamCardNotProduct(answer, {
+          turns: [
+            ...parsed.history.filter((turn) => turn.role === "user").map((turn) => ({ id: turn.id, content: String(turn.content ?? "") })),
+            { id: parsed.questionMessageId, content: parsed.question },
+          ],
+          roster: await loadScopedRoster(context.identity.scope).catch(() => []),
+        });
+      }
       if (personGuardEnabled()) answer = (await import("@/lib/forms/person-guard")).withPersonOnCard(answer);
       // POSSESSIVE_PLACE_NOT_PERSON_ENABLED: "Lee's Summit Plaza" never puts "Lee" on the card (`lib/forms/possessive-place.ts`).
       if (possessivePlaceNotPersonEnabled()) {

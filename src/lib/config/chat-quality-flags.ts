@@ -4072,3 +4072,17 @@ export function madeAboutReaderAccountEnabled(): boolean {
 export function madeAboutRewriteFinishesEnabled(): boolean {
   return envFlag("MADE_ABOUT_REWRITE_FINISHES_ENABLED");
 }
+
+/**
+ * TEAM_CARD_NOT_PRODUCT_ENABLED (coding 6, 10 Nov 2026; default off; QA's
+ * overnight scan sf-s13). "a coaching form for the team at Kearney on selling
+ * Spray Tan Kits …" made a card for "Spray Tan Kits", and "The employee needs
+ * to be left blank for now" went into its Observation. On: a coaching card
+ * whose name is nobody on the roster and was only written as the topic
+ * ("selling …", "on …"), in a request for the team (or one that leaves the
+ * employee blank), is the team card, and the blank-employee turn is no
+ * account. See `forms/team-card-not-product.ts`. Off, as before.
+ */
+export function teamCardNotProductEnabled(): boolean {
+  return envFlag("TEAM_CARD_NOT_PRODUCT_ENABLED");
+}

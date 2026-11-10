@@ -147,6 +147,8 @@ export const NOV4_OVERNIGHT_SCAN_CASES: readonly ReplayCase[] = [
     report: `${REPORT}, sf-s13: "I need to make a coaching form for the team at West Dodge Rd on selling Bath Bomb Kits, not writing proper rainchecks which results in inventory not being correct." → "The employee needs to be left blank for now"`,
     // Run 4 Nov 2026 (production flags): fails as below.
     status: { open: "turn 1 makes the team card but says \"I couldn't find **Bath Bomb Kits** in the Woven roster\"; turn 2 \"The employee needs to be left blank for now\" makes the card for \"Bath Bomb Kits\" (\"I have the employee\") and asks for Bath Bomb Kits's job title" },
+    // Fixed under TEAM_CARD_NOT_PRODUCT_ENABLED (port from the sibling app, 10 Nov 2026): the team card, the product is the topic; open on production flags until QA flips it.
+    fixFlags: ["TEAM_CARD_NOT_PRODUCT_ENABLED"],
     async run(t) {
       const thread = start(t);
       await thread.say(
