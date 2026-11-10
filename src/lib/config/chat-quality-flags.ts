@@ -4200,6 +4200,18 @@ export function sameRequestOtherPersonEnabled(): boolean {
 }
 
 /**
+ * SECOND_PERSON_ACCOUNT_WORDS_ENABLED (coding 6, 10 Nov 2026; default off; QA B22-2, Ask-bubbles#164 rebuilt):
+ * "now one for Test Employee Two, Store Associate, late today" is <B>'s own request with <B>'s own account, as
+ * "now one for Test Employee Two for being late today" already is. SAME_REQUEST_OTHER_PERSON read the account only
+ * after "for / because / she / was / …", so a title between the name and "late today" left the turn to <A>'s card.
+ * On, an account word (late, tardy, absent, no call, left early, …) after the name reads the same way. Needs
+ * SAME_REQUEST_OTHER_PERSON_ENABLED. Off, as before. See `lib/forms/same-request-other-person.ts`.
+ */
+export function secondPersonAccountWordsEnabled(): boolean {
+  return envFlag("SECOND_PERSON_ACCOUNT_WORDS_ENABLED");
+}
+
+/**
  * CHAT_STAGE_TIMINGS_ENABLED (ported from the sibling app; QA, 9 Nov 2026; default off; same flag in both apps). Each
  * awaited step of a chat turn before the answering model (intent extraction, the form paths, entities, the query
  * rewrite, retrieval, the reads, the briefing, the memory, context, data and grounding loads) is timed into
