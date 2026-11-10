@@ -189,7 +189,7 @@ const ASKS_FOR_THE_FORM =
 const LEVEL_REQUEST_DATED_ASK =
   /\b(?:create|make|start|open|do|file|write|draft)\s+(?:a\s+|an\s+)?(?:verbal|written|final)(?:\s+warning)?\s+(?:on\s+)?(?<![\d/-])\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?(?![\d/-])\s+for\s/i;
 
-function asksForTheForm(sentence: string): boolean {
+export function asksForTheForm(sentence: string): boolean {
   return ASKS_FOR_THE_FORM.test(sentence) || (levelRequestDateEnabled() && LEVEL_REQUEST_DATED_ASK.test(sentence));
 }
 const NOT_THE_INCIDENT =

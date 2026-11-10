@@ -1319,6 +1319,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ADD_NOT_REPEATED_ENABLED",
   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
   "CHAT_STAGE_TIMINGS_ENABLED",
+  "CA_REASON_DUE_TO_ENABLED",
 ] as const;
 
 /**
@@ -3202,6 +3203,18 @@ export function rosterNotFoundAnyPhrasingEnabled(): boolean {
  */
 export function metricGuardEnabled(): boolean {
   return envFlag("METRIC_GUARD_ENABLED");
+}
+
+/**
+ * CA_REASON_DUE_TO_ENABLED (QA, live, 4 Nov 2026; rebuilds #454; default off). With CA_SALES_POLICY on in
+ * production, "CA for <name> due to under performance in salon metrics" put the whole request on the card's
+ * Issue, and the draft's Observation of Offense was the request as the model copied it. On: "due to" and
+ * "because (of)" join the reason after the person (`forms/incident-issue.ts`); "create a ca for <name> at
+ * <store>, she was late …" reads the account after the comma; and a drafted Observation whose first sentence
+ * is the request begins with its reason instead (`forms/request-observation.ts`). Off, as before.
+ */
+export function caReasonDueToEnabled(): boolean {
+  return envFlag("CA_REASON_DUE_TO_ENABLED");
 }
 
 /**
