@@ -4209,3 +4209,16 @@ export function sameRequestOtherPersonEnabled(): boolean {
 export function chatStageTimingsEnabled(): boolean {
   return envFlag("CHAT_STAGE_TIMINGS_ENABLED");
 }
+
+/**
+ * PRIOR_ACTIONS_NO_COMMA_ENABLED (coding 6, 10 Nov 2026; default off; October
+ * triage #5, #187, ported from the sibling app). "prior coaching verbal 6/25
+ * written 7/28 no deduct" listed "Written warning — verbal 6/25 — 07/28/2026";
+ * "prior coachings 9/8 9/15 9/25" listed garbled Coaching rows. On: a date
+ * followed by another step gets the comma it was typed without, and a step
+ * followed by a run of bare dates is that step once per date. See
+ * `forms/prior-actions.ts`. Off, as before.
+ */
+export function priorActionsNoCommaEnabled(): boolean {
+  return envFlag("PRIOR_ACTIONS_NO_COMMA_ENABLED");
+}
