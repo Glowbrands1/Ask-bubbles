@@ -1319,6 +1319,9 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ADD_NOT_REPEATED_ENABLED",
   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
   "CHAT_STAGE_TIMINGS_ENABLED",
+  // coding 5: WOVEN_TEXT_NUL_STRIP, WOVEN_FAILED_RETRY (ported from the sibling app's stuck Woven files, QA, 10 Nov 2026; default off).
+  "WOVEN_TEXT_NUL_STRIP_ENABLED",
+  "WOVEN_FAILED_RETRY_ENABLED",
 ] as const;
 
 /**
@@ -2931,6 +2934,30 @@ export function cardNamesEmployeeEnabled(): boolean {
  */
 export function policyTopicIntoFieldEnabled(): boolean {
   return envFlag("POLICY_TOPIC_INTO_FIELD_ENABLED");
+}
+
+/**
+ * WOVEN_TEXT_NUL_STRIP_ENABLED (ported from the sibling app: QA, 10 Nov 2026, three Woven manuals stuck "failed" there
+ * since 4 Nov 2026; coding 5; same flag in both apps; default off). A PDF whose text layer holds NUL characters (U+0000)
+ * failed with "Chunks could not be saved: unsupported Unicode escape sequence": Postgres text and jsonb refuse NUL. On:
+ * every extracted segment's text, locator and section lose their NUL characters before chunking
+ * (`ingestion/extract/strip-nul.ts`), for an upload and a Woven sync alike. Off, as before.
+ */
+export function wovenTextNulStripEnabled(): boolean {
+  return envFlag("WOVEN_TEXT_NUL_STRIP_ENABLED");
+}
+
+/**
+ * WOVEN_FAILED_RETRY_ENABLED (ported from the sibling app: QA, 10 Nov 2026, six scanned Woven PDFs stuck "No text could
+ * be extracted ... run OCR" there since 4 Nov 2026 although WOVEN_PDF_OCR is on; coding 5; same flag in both apps;
+ * default off). They were never re-attempted: "no_text" was a permanent failure (retry count set to the maximum, so a
+ * `continue` run skips the item), and a full sync applies previously failed items last, so a sync's time budget
+ * deferred them. On: with WOVEN_PDF_OCR on, "no_text" is retryable, and a full sync applies previously failed items
+ * right after the retirements, before the rest (`knowledge-sync/engine.ts` `orderDue`, `knowledge-sync/sink.ts`). Off,
+ * as before.
+ */
+export function wovenFailedRetryEnabled(): boolean {
+  return envFlag("WOVEN_FAILED_RETRY_ENABLED");
 }
 
 // --- end coding 5 flags ---
