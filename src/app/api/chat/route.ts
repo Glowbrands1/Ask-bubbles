@@ -214,8 +214,11 @@ async function postChat(request: Request) {
     }
 
     let answer;
+    // TEMPLATE_OUTLINE_FIELDS_ENABLED: the parsed turn the closing note reads (never the raw body's question).
+    let outlineTurn: { question: string; instanceId: string } | null = null;
     try {
       let asked = parseAskRequest(body);
+      if (asked.activeFormInstanceId) outlineTurn = { question: asked.question, instanceId: asked.activeFormInstanceId };
       /*
        * EXIT_LETTER_ADDRESSEE_ENABLED (ported from the sibling app: QA's live test there, 9 Nov 2026): a letter to the
        * employee, signed "Sincerely,\n<C>\nDistrict Manager", is read without that sign-off in this turn and the
@@ -1014,15 +1017,16 @@ async function postChat(request: Request) {
      * TEMPLATE_OUTLINE_FIELDS_ENABLED (Pau's sf-s21, QA's ruling; port): "the Must see behaviors and not the standard of
      * conduct" on a form that still cites Standards of Conduct is answered with why (`lib/forms/template-outline.ts`).
      */
-    if (templateOutlineFieldsEnabled() && body.activeFormInstanceId && typeof body.question === "string") {
+    if (templateOutlineFieldsEnabled() && outlineTurn) {
+      const { question: outlineQuestion, instanceId: outlineInstanceId } = outlineTurn;
       const outline = await import("@/lib/forms/template-outline");
       const loaded = await (await import("@/lib/forms/instance-scope"))
-        .authorizeInstance(request, body.activeFormInstanceId, "view")
+        .authorizeInstance(request, outlineInstanceId, "view")
         .then((authorized) => authorized.loaded)
         .catch(() => null);
       const value = (key: string) => loaded?.values.find((row) => row.fieldKey === key)?.value ?? "";
       const note = loaded
-        ? outline.policyKeptNote({ question: body.question, policyViolated: value("policy_violated"), policyLanguage: value("policy_language") })
+        ? outline.policyKeptNote({ question: outlineQuestion, policyViolated: value("policy_violated"), policyLanguage: value("policy_language") })
         : null;
       if (note) answer = { ...answer, content: outline.withPolicyKeptNote(answer.content, note) };
     }
