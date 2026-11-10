@@ -13,8 +13,8 @@ import { STAFF, WEST_DODGE, type DirectoryRow, type ReplayCase } from "./cases";
  * termination as the manager's statement, add "Termination needs your DM/HR approval before you finalize.", and end
  * the plan with "Effective immediately, employment is terminated following the progressive corrective action plan."
  * TERMINATION_STATED_TICKS_ENABLED; the payroll half is PAYROLL_BARE_SENTENCE_ENABLED (Ask-bubbles #707, which this stacks on).
- * The saved plan's closing is not asserted here: it is written by protected files (`required-closing.ts`,
- * `ca-action-plan.ts`), waiting on Pau's approval.
+ * The saved plan's closing is written by protected files (`required-closing.ts`, `ca-action-plan.ts`), edited with Pau's
+ * written approval, 10 Nov 2026: "ok termination closing".
  */
 
 const BRIONY: DirectoryRow = {
@@ -60,6 +60,9 @@ export const NOV10_TERMINATION_STATED_CASES: ReplayCase[] = [
       const id = await thread.create();
       expect(t.checked(id).warning_type ?? [], "Create did not tick Termination").toEqual(["termination"]);
       expect(t.checked(id).payroll_deduct ?? [], "Payroll Deduct is not Yes").toEqual(["yes"]);
+      const saved = t.values(id).action_plan ?? "";
+      expect(saved.trim(), `the saved plan does not end with the termination sentence:\n${saved}`).toMatch(/Effective immediately, employment is terminated following the progressive corrective action plan\.$/);
+      expect(saved, "the saved plan still warns of future violations").not.toMatch(/Future policy violations/);
     },
   },
   {
