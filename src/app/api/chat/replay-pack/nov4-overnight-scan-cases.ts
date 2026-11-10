@@ -273,6 +273,8 @@ export const NOV4_OVERNIGHT_SCAN_CASES: readonly ReplayCase[] = [
     report: `${REPORT}, sf-s19: "I need a corrective action verbal for Odalys Frewen. This is for Under Performance on Average Ticket, Units Per Transaction, Store Average, Store Close %, and Add-On %." → "Corrective Action"`,
     // Run 4 Nov 2026 (production flags): fails as below.
     status: { open: "turn 1 makes the card for Odalys Frewen but reads the metrics as people (\"I couldn't find **Average Ticket** or **Units Per Transaction** or **Under** in the Woven roster\") and asks Verbal or Written though she said verbal; turn 2 \"Corrective Action\" then refuses (\"I won't open formal corrective action off a metric\" and the progression list) with no card" },
+    // Fixed under LEVEL_AFTER_FORM_NAME_ENABLED (port from the sibling app, 10 Nov 2026): "a corrective action verbal" is the Verbal she chose; open on production flags until QA flips it.
+    fixFlags: ["LEVEL_AFTER_FORM_NAME_ENABLED"],
     async run(t) {
       const thread = start(t);
       const first = await thread.say("I need a corrective action verbal for Odalys Frewen. This is for Under Performance on Average Ticket, Units Per Transaction, Store Average, Store Close %, and Add-On %.");
