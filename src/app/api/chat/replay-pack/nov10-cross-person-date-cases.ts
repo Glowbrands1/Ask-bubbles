@@ -55,7 +55,7 @@ export const NOV10_CROSS_PERSON_DATE_CASES: ReplayCase[] = casings(TURN_3).map((
   id: `nov10-cross-person-date-${casing}`,
   title: `after Marla Quince's coaching card (10-16-26), "${turn3}" — Petra Linwood's card carries no date of Marla's`,
   report: `${REPORT}; ${casing}`,
-  // Holds with production's flags here (10 Nov 2026): a guard. Ask Sunny needed CROSS_PERSON_DATE_OWN_TURNS_ENABLED.
+  // Holds with production's flags here (10 Nov 2026): a guard. Ask Sunny needed CROSS_PERSON_OWN_TURNS_ENABLED.
   status: "fixed",
 
   async run(t) {

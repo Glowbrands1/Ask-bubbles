@@ -4212,6 +4212,18 @@ export function secondPersonAccountWordsEnabled(): boolean {
 }
 
 /**
+ * CROSS_PERSON_OWN_TURNS_ENABLED (coding 6, 10 Nov 2026; default off; conv_mvoftzhs29se8nb, Ask-bubbles#166
+ * rebuilt): after <A>'s Corrective Action and "no payroll deduct", "create a verbal corrective action form for
+ * <B>. …" gave <B>'s card "Is payroll deduct applicable? **No**", never said for <B>: the intent read
+ * (`ai/intake-augment.ts`) wrote <A>'s payroll answer, warning level and date onto <B>'s turn. On, a turn that
+ * names one person reads those earlier facts from the last turn that mentions them (none: the turn alone). Off, as
+ * before.
+ */
+export function crossPersonOwnTurnsEnabled(): boolean {
+  return envFlag("CROSS_PERSON_OWN_TURNS_ENABLED");
+}
+
+/**
  * CHAT_STAGE_TIMINGS_ENABLED (ported from the sibling app; QA, 9 Nov 2026; default off; same flag in both apps). Each
  * awaited step of a chat turn before the answering model (intent extraction, the form paths, entities, the query
  * rewrite, retrieval, the reads, the briefing, the memory, context, data and grounding loads) is timed into

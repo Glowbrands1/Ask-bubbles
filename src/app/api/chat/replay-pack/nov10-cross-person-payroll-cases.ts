@@ -53,6 +53,7 @@ export const NOV10_CROSS_PERSON_PAYROLL_CASES: ReplayCase[] = casings(TURN_3).ma
   title: `after Wren Calloway's CA and "no payroll deduct", "${turn3}" — Remy Calder's card has no payroll answer`,
   report: `${REPORT}; ${casing}`,
   status: { open: OPEN },
+  fixFlags: ["CROSS_PERSON_OWN_TURNS_ENABLED"],
   async run(t) {
     const thread = start(t);
     await thread.say(TURN_1);
