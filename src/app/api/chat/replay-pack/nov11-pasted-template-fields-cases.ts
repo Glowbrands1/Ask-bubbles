@@ -1,7 +1,7 @@
 import { expect, vi } from "vitest";
 
 import { STAFF, type ReplayCase } from "./cases";
-import { PEOPLE, S21_T1, TEMPLATE } from "./nov5-pau-sf-s21-s25-twin-cases";
+import { pauSfS21TwinPeople, S21_T1, TEMPLATE } from "./nov5-pau-sf-s21-s25-twin-cases";
 
 /**
  * ============================================================================
@@ -30,7 +30,7 @@ export const NOV11_PASTED_TEMPLATE_FIELDS_CASES: ReplayCase[] = [
     fixFlags: ["TEMPLATE_OUTLINE_FIELDS_ENABLED", "PASTED_OUTLINE_TO_OPEN_DRAFT_ENABLED", FLAG],
     async run(t) {
       vi.setSystemTime(new Date("2026-11-11T03:30:00Z"));
-      t.directory([...STAFF, ...PEOPLE]);
+      t.directory([...STAFF, ...pauSfS21TwinPeople()]);
       t.as("admin", { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] } as never);
       const thread = t.thread();
       await thread.say(S21_T1);
@@ -57,7 +57,7 @@ export const NOV11_PASTED_TEMPLATE_FIELDS_CASES: ReplayCase[] = [
     fixFlags: ["TEMPLATE_OUTLINE_FIELDS_ENABLED", "PASTED_OUTLINE_TO_OPEN_DRAFT_ENABLED", FLAG],
     async run(t) {
       vi.setSystemTime(new Date("2026-11-11T03:30:00Z"));
-      t.directory([...STAFF, ...PEOPLE]);
+      t.directory([...STAFF, ...pauSfS21TwinPeople()]);
       t.as("admin", { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] } as never);
       const thread = t.thread();
       await thread.say(S21_T1);

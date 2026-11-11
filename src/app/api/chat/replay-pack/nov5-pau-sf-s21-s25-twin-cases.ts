@@ -31,7 +31,7 @@ const person = (id: string, firstName: string, lastName: string): DirectoryRow =
   positionName: "Team Member Part Time",
 });
 
-export const PEOPLE: readonly DirectoryRow[] = [
+const PEOPLE: readonly DirectoryRow[] = [
   person("e-wynne-sarrow", "Wynne", "Sarrow"),
   person("e-tamsyn-fairlow", "Tamsyn", "Fairlow"),
   person("e-corwen-pell", "Corwen", "Pell"),
