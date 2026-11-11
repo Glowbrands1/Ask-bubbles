@@ -8,3 +8,11 @@ Replay pack, first run, all cases: 461961 ms off, 462797 ms on (stubbed models; 
 
 | test | off | on | category | twin | reason |
 | --- | --- | --- | --- | --- | --- |
+
+## Verdict (Gate-Bubbles, 11 Nov 2026)
+
+Main 59526ed (after #738 R17B and #741). OFF = prodenv.csv + main's production-flags.json "on" (adds the 4 R17B flags); ON = OFF + EXCERPT_BRAND_FILTER_ENABLED. Paths: src/lib/ai, src/lib/forms, src/app/api/chat, src/app/api/forms, **src/lib/knowledge**. 3+3, 13994 tests: OFF 756 failing every run, ON 756 every run, **0 changed**; replay records identical.
+
+Zero is real, not a switch that never reached the code: a probe (deleted, not committed) under the harness's clean env called `rowToCitation` on a "JBA Policy Manual" row with QA's B22-4 bullet ("Holidays are as listed below: o Sun Tan City – February 1 and June 1 o Buff City Soap – March 1."). OFF: the excerpt keeps the Sun Tan City bullet. ON: "Holidays are as listed below: o Buff City Soap – March 1." — only the sibling's bullet is gone, the rest verbatim. The flag's own tests (excerpt-brand-filter.test.ts) pin the env themselves, so they pass in both arms; the replay pack has no case whose retrieved excerpt names the sibling company.
+
+**Verdict: GO.** Gap: no replay case covers a sibling-brand excerpt on the production path (B22-4); worth adding one so CI holds the flag once it is in production-flags.json.
