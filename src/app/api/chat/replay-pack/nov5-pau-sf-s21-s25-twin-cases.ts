@@ -226,3 +226,51 @@ export const NOV10_TWIN_TEMPLATE_OUTLINE_CASES: ReplayCase[] = [
   },
 ];
 
+/*
+ * The sibling app's round-23 live test of sf-s21 (10 Nov 2026, conv_mwb21a4z2rxf5y1, an all-locations admin; this app's twin
+ * wording for 5a and 5b, the live words for 5c and 5d): 5a S21_T1 and Create; 5b the pasted TEMPLATE → "Is this for Tamsyn?" and a new card over the
+ * draft; 5c "No this should be the same out line …" → the new card, with an unexpected location; 5d → a new card for
+ * "Wynne". Saved: the 5a metrics sentence, no outline. The case above scripts the revision model to write the
+ * outline, so it never saw the turn go elsewhere. Here the revision model is the stand-in (it writes nothing), and
+ * the invariants are where each turn goes and what the revision model is HANDED.
+ */
+const LIVE_5C = "No this should be the same out line but with wynnes info i told you in the first chat";
+const LIVE_5D = "I need the CA for the Must see behaviors and not the standard of conduct. Make it in the format that I explained above in the first chat for Wynne.";
+
+export const NOV10_R23_SF_S21_TWIN_LIVE_CASES: ReplayCase[] = [
+  {
+    // The live test's people were invented. Off the directory, 5a here asks before any card (OFF_ROSTER_ASK_BEFORE_CARD),
+    // and how the tester answered is not recorded, so the case starts from the state live reached: Wynne's CA created.
+    id: "nov10-r23-sf-s21-pasted-outline-to-open-draft",
+    title: "sf-s21 as QA's r23 live test ran it: with Wynne's CA draft open, the pasted Tamsyn CA is that draft's outline — no new card, no \"Is this for Tamsyn?\", and the revision is handed the outline with the draft's own facts",
+    report: `The sibling app's round-23 live test, conv_mwb21a4z2rxf5y1 (twin wording): 5b "Is this for Tamsyn?" and a new card over Wynne's draft; the outline never saved`,
+    status: { open: "the pasted outline names Tamsyn, so it is read as a new request: a new card covers Wynne's draft and the outline never reaches it" },
+    // TEMPLATE_OUTLINE_FIELDS (#687) is not on in this app's production; it reads the outline once the turn reaches the draft.
+    fixFlags: ["TEMPLATE_OUTLINE_FIELDS_ENABLED", "PASTED_OUTLINE_TO_OPEN_DRAFT_ENABLED"],
+    async run(t) {
+      vi.setSystemTime(new Date("2026-11-10T19:00:00Z"));
+      t.directory([...STAFF, ...PEOPLE]);
+      t.as("admin", { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] } as never);
+      const thread = t.thread();
+      await thread.say(S21_T1);
+      // Off the directory the name proceeds as typed ("wynne sarrow", TYPED_NAME_PROCEEDS).
+      expect(thread.proposal, "5a: no CA card").toMatchObject({ templateKey: "dpoa" });
+      expect(thread.proposal?.employeeName ?? "", "5a: the card is not Wynne Sarrow's").toMatch(/^wynne sarrow$/i);
+      t.draftWrites({ observation: "Observed:\nWynne completed 146 tans, below average in PPTA, LPSVA, Average Club, CC% and Spa%." });
+      const draft = await thread.create();
+      const asked = (t.revisionPrompts?.() ?? []).length;
+      for (const [turn, label] of [[TEMPLATE, "5b"], [LIVE_5C, "5c"], [LIVE_5D, "5d"]] as const) {
+        const reply = await thread.say(turn);
+        // No new card: so no unexpected location and no first-name-only "Wynne" card (live 5c and 5d) either.
+        expect(reply.formProposal ?? null, `${label}: a new card over Wynne's open draft:\n${reply.content}`).toBeNull();
+        // QA (10 Nov): the outline's other person never triggers "Is this for <name>?" and never becomes the draft's employee.
+        expect(reply.content, `${label}: asked whether the form is for Tamsyn`).not.toMatch(/is this for \**tamsyn/i);
+        expect(reply.content, `${label}: asked who the form is for`).not.toMatch(/is this for \*\*|who is this (?:form )?for\?/i);
+        expect(t.values(draft).employee_name ?? "", `${label}: the open draft's employee changed`).toMatch(/^wynne sarrow$/i);
+      }
+      const prompts = (t.revisionPrompts?.() ?? []).slice(asked).join("\n");
+      expect(prompts, "the revision was never handed the pasted outline").toMatch(/Observation of Offense:/);
+      expect(prompts, "the revision was not asked to rewrite the Action Plan in the outline").toMatch(/rewrite the Action Plan/i);
+    },
+  },
+];
