@@ -1,4 +1,6 @@
-import { datesInText, listFormDates } from "@/lib/forms/form-date-answer";
+import { datesInText, formDateChange, listFormDates, priorSteps, yearlessWrittenOut } from "@/lib/forms/form-date-answer";
+import { incidentDatesSaid } from "@/lib/forms/incident-dates";
+import { priorSentenceFixFor } from "@/lib/forms/prior-sentence-scope";
 import { managerStatedWarningLevel, templateHasWarningLevel } from "@/lib/forms/warning-level";
 import { displayName, editDistance, matchEmployeeName, type RosterEmployee } from "@/lib/forms/employee-match";
 import { describedAttendanceKeys } from "@/lib/forms/ca-policy";
@@ -35,6 +37,7 @@ import {
 } from "./form-state";
 import { priorActionDates } from "./edit-date-rules";
 import type { GroundedPerson } from "./grounded-entities";
+import { withoutAppLines } from "./app-sentences";
 import { titleTextFromTurns } from "./title-words";
 import { titleInWords } from "./title-in-words";
 
@@ -204,6 +207,8 @@ export function decideIntentTurn(rawInput: IntentTurnInput): IntentTurnDecision 
         lateOpen ? withYearlessDatesWritten(blob, input.today) : blob,
         input.today,
       );
+  // PRIOR_SENTENCE_FIX_ENABLED (Corrective Action only): only the manager's incident dates, asked once.
+  const dateSlot = choice?.date ? date : (incidentDateChoice(input, date) ?? date);
   /*
    * THE MANAGER'S LEVEL ONLY (WARNING_LEVEL_MANAGER_ONLY_ENABLED; ported from
    * the sibling app, live replays 24 Oct 2026). The blob holds the assistant's own
@@ -271,7 +276,7 @@ export function decideIntentTurn(rawInput: IntentTurnInput): IntentTurnDecision 
     store,
     title,
     incidentType,
-    date: date.iso,
+    date: dateSlot.iso,
     payrollAmount,
     payrollAnswer,
     managerOnly,
@@ -308,7 +313,7 @@ export function decideIntentTurn(rawInput: IntentTurnInput): IntentTurnDecision 
     store,
     title,
     incidentType,
-    date,
+    date: dateSlot,
     payrollAmount,
     warningLevel,
     formType,
@@ -1039,6 +1044,39 @@ function personQuestion(people: readonly GroundedPerson[], typed: string | null,
 function storeQuestion(stores: readonly StoreRow[]): string {
   const options = stores.map((store, index) => `${index + 1}. **${store.name}**`);
   return `Which store did you mean? Reply with the number or the store.\n${options.join("\n")}`;
+}
+
+/*
+ * PRIOR_SENTENCE_FIX_ENABLED, on a Corrective Action (coordinator's ruling,
+ * 26 Oct 2026; QA-7 found the numbered question offering another person's
+ * coaching, "1. 10/5 2. 10/17"). The date read from the manager's own turns:
+ * one incident date dates the form; two or more are the numbered question,
+ * asked once (after it, the form stays dated the day it is created until the
+ * manager picks); a held coaching, an earlier step's or another person's date
+ * is never one of them (`incidentDatesSaid`: "jba manual 11-1-25" in a turn
+ * of its own, or a corrected step's date, too). The newest "change the date to
+ * …" beats them all (`formDateChange`). With no incident date, the
+ * reader's date stands unless it is an earlier step's. Null with the flag off
+ * or on any other form: the reader's date stands.
+ */
+function incidentDateChoice(
+  input: IntentTurnInput,
+  read: { iso: string | null; ambiguous: readonly string[] },
+): { iso: string | null; ambiguous: readonly string[] } | null {
+  const said = managerTurns(input).map((turn) => withoutAppLines(turn)).filter((turn) => turn.trim() !== "");
+  const text = said.join("\n");
+  if (!priorSentenceFixFor(text)) return null;
+  // "change the date to 10-22" still dates the form, on this turn and the ones after it.
+  const corrected = [...said].reverse().map((turn) => formDateChange(yearlessWrittenOut(turn, input.today), input.today)).find((iso) => iso !== null);
+  if (corrected) return { iso: corrected, ambiguous: [] };
+  const dates = incidentDatesSaid(text, input.today);
+  if (dates.length === 1) return { iso: dates[0]!, ambiguous: [] };
+  if (dates.length > 1) {
+    const asked = input.history.some((turn) => turn.role === "assistant" && turn.content.startsWith("Which date should go on the form?"));
+    return { iso: null, ambiguous: asked ? [] : dates };
+  }
+  const steps = new Set([...priorSteps(text, input.today).map((step) => step.iso), ...priorActionDates(text, input.today)]);
+  return read.iso && steps.has(read.iso) ? { iso: null, ambiguous: [] } : { iso: read.iso, ambiguous: read.ambiguous.filter((iso) => !steps.has(iso)) };
 }
 
 function dateQuestion(dates: readonly string[]): string {

@@ -1,7 +1,9 @@
 import { withoutAppLines } from "@/lib/ai/app-sentences";
+import { priorActionDates } from "@/lib/ai/edit-date-rules";
 import { antiLoopEnabled, priorSentenceFixEnabled } from "@/lib/config/chat-quality-flags";
 
 import {
+  datesInText,
   explicitFormDate,
   formDateChange,
   heldCoachingDates,
@@ -11,6 +13,7 @@ import {
   yearlessWrittenOut,
 } from "./form-date-answer";
 import { incidentOnly, incidentOnlyOn } from "./form-date-incident-only";
+import { priorSentenceFixFor } from "./prior-sentence-scope";
 
 /**
  * ============================================================================
@@ -51,9 +54,47 @@ export function incidentDates(text: string, today: string, coaching = false): st
   const explicit = explicitFormDate(text, today);
   // PRIOR_SENTENCE_FIX_ENABLED: yearless "10-5 and 10-15" are two incident dates too, a range is one
   // (`statedIncidentDates`). Not on a Coaching Form, whose date is the coaching held.
-  const read = priorSentenceFixEnabled() && !coaching ? statedIncidentDates(text, today) : listIncidentDates(text, today);
+  const sentenceFix = priorSentenceFixFor(text) && !coaching;
+  const read = sentenceFix ? statedIncidentDates(text, today) : listIncidentDates(text, today);
+  const steps = sentenceFix ? stepDateCorrections(text, today) : new Set<string>();
   return [...new Set(incidentOnly(text, today, read).map((found) => found.iso))]
-    .filter((iso) => iso <= today && iso !== explicit)
+    .filter((iso) => iso <= today && iso !== explicit && !steps.has(iso))
+    .sort();
+}
+
+const CORRECTED_DATE = /(\d{1,2}[-/]\d{1,2}(?:[-/]\d{2,4})?)\s*,?\s+not\s+(?:on\s+)?(\d{1,2}[-/]\d{1,2}(?:[-/]\d{2,4})?)/gi;
+
+/*
+ * PRIOR_SENTENCE_FIX_ENABLED: "sorry, the verbal ca was on 9-2-26 not
+ * 9-1-26" corrects an earlier step's date ("verbal ca 9-1-26" in the
+ * account), so 9-2-26 is that step's date too, never an incident date
+ * (Q6, corrective-action-conversation-qa-e2e). A day set against an
+ * incident date ("10-19-26, not 10-20-26") is read as before.
+ */
+function stepDateCorrections(text: string, today: string): Set<string> {
+  const written = yearlessWrittenOut(text, today);
+  const incident = new Set(statedIncidentDates(text, today).map((found) => found.iso));
+  const steps = new Set<string>();
+  for (const match of written.matchAll(CORRECTED_DATE)) {
+    const to = datesInText(match[1]!, today)[0]?.iso;
+    const from = datesInText(match[2]!, today)[0]?.iso;
+    if (to && from && !incident.has(from)) steps.add(to);
+  }
+  return steps;
+}
+
+/**
+ * PRIOR_SENTENCE_FIX_ENABLED: the manager's incident dates in `text`, sorted —
+ * `statedIncidentDates` without an earlier step's date that it reads as one:
+ * "jba manual 11-1-25" in a turn of its own (`priorActionDates`), or a
+ * correction of an earlier step's date ("the verbal ca was on 9-2-26 not
+ * 9-1-26").
+ */
+export function incidentDatesSaid(text: string, today: string): string[] {
+  const prior = priorActionDates(text, today);
+  const steps = stepDateCorrections(text, today);
+  return [...new Set(statedIncidentDates(text, today).map((found) => found.iso))]
+    .filter((iso) => !prior.has(iso) && !steps.has(iso))
     .sort();
 }
 
@@ -290,7 +331,7 @@ export function dateAnswersSaid(conversation: readonly Turn[], today: string): S
 }
 
 export function statedFormDate(conversation: readonly Turn[], today: string): StatedFormDate | null {
-  if (!priorSentenceFixEnabled()) return null;
+  if (!priorSentenceFixFor(conversation.filter((turn) => turn.role === "user").map((turn) => String(turn.content)).join("\n"))) return null;
   const said = inOwnWords(conversation);
   const answers = answerTurns(said, today);
   const users = said
@@ -305,7 +346,11 @@ export function statedFormDate(conversation: readonly Turn[], today: string): St
   const text = users.filter((turn) => !change(turn)).join("\n");
   const explicit = explicitFormDate(yearlessWrittenOut(text, today), today);
   if (explicit) return { iso: explicit, candidates: [], question: null };
-  const dates = [...new Set(incidentOnly(text, today, statedIncidentDates(text, today)).map((found) => found.iso))].sort();
+  // "jba manual 11-1-25" in a turn of its own, a corrected step's date: never an incident date.
+  const incident = new Set(incidentDatesSaid(text, today));
+  const dates = [...new Set(incidentOnly(text, today, statedIncidentDates(text, today)).map((found) => found.iso))]
+    .filter((iso) => incident.has(iso))
+    .sort();
   if (dates.length === 0) return null;
   if (dates.length === 1) return { iso: dates[0]!, candidates: [], question: null };
   const written = said.map((turn) => (turn.role === "user" ? { ...turn, content: yearlessWrittenOut(String(turn.content), today) } : turn));

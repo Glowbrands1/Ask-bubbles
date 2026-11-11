@@ -718,3 +718,53 @@ describe("QA B5 conv_mvnmf1ik2lqkfld: the woven deadline request (prod, 25 Oct 2
     expect(slots.incidentDateIso).toBe("2026-10-15");
   });
 });
+
+/*
+ * PRIOR_SENTENCE_FIX_ENABLED twins (coordinator's ruling, 26 Oct 2026): the
+ * form's date is the manager's incident date, asked about only when there are
+ * two. A new request's date is not a second date beside the earlier request's,
+ * and "jba manual 11-1-25" answering the prior coaching is an earlier step's.
+ */
+describe("PRIOR_SENTENCE_FIX_ENABLED: the date conversations above, with the flag on", () => {
+  beforeEach(() => {
+    process.env.PRIOR_SENTENCE_FIX_ENABLED = "true";
+  });
+  afterEach(() => {
+    delete process.env.PRIOR_SENTENCE_FIX_ENABLED;
+  });
+
+  it("conv_mvmzmjxc2mkyriw: the new request is dated its own 10-20-26, nothing asked", async () => {
+    const turns = [
+      {
+        say: "create verbal CA for Test Testy for violating visitors at work policy on 10-10-26. Test Employee spent 40 minutes talking with friend and ignoring guests. previous coaching was jba policy manual 1-1-26",
+        raw: { employeeName: "Test Testy", observation: "Spent 40 minutes talking with friend and ignoring guests" },
+      },
+      { say: "no payroll deduct", raw: { employeeName: "Test Testy" } },
+      {
+        say: "create a verbal corrective action form for Test Employee. on 10-20-26 Test was talking on her cell phone for over 30 minutes",
+        raw: { employeeName: "Test Employee", observation: "Spent 40 minutes talking with friend and ignoring guests" },
+      },
+      { say: "verbal", raw: { employeeName: "Test Employee", observation: "Spent 40 minutes talking with friend and ignoring guests" } },
+    ];
+    for (const count of [3, 4]) {
+      const response = await chat(turns.slice(0, count));
+      expect(response.formProposal?.formDate, `turn ${count}`).toBe("2026-10-20");
+      expect(response.content, `turn ${count}`).not.toMatch(/Which date/);
+    }
+  });
+
+  it("conv_mvmznap42vcw0dl: dated the incident's 10-22-26, never 'jba manual 11-1-25', nothing asked", async () => {
+    const response = await chat([
+      {
+        say: "do verbal for team member Test Employee at empire, sd. payroll deduct does not apply. previous coaching jba manual 11-1-26. on 10-22-26 Test was not scheduled to work and came into the store to show her team her new puppy. Test was in the store 45 min",
+        raw: { templateKey: null },
+      },
+      { say: "jba manual 11-1-25", raw: { templateKey: null } },
+      { say: "cite pets in workplace", raw: { templateKey: null } },
+      { say: "cite animals in the workplace policy", raw: { templateKey: null } },
+      { say: "store location is empire, sd. create corrective action", raw: { employeeName: "Test Employee" } },
+    ]);
+    expect(response.formProposal?.formDate).toBe("2026-10-22");
+    expect(response.content).not.toMatch(/Which date/);
+  });
+});

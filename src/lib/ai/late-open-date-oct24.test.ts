@@ -136,6 +136,8 @@ describe("F5: late to open 10-19, verbal, no payroll", () => {
 
   it("with the flag off, the intent read says Attendance and no date, and the card names no policy", () => {
     vi.stubEnv("FORM_FULL_REMAP_ENABLED", "1");
+    // Pinned off: PRIOR_SENTENCE_FIX_ENABLED dates the one incident date it reads (twin below).
+    vi.stubEnv("PRIOR_SENTENCE_FIX_ENABLED", "");
     const played = play([F5]);
     expect(played.intent.formDate).toBeNull();
     expect(played.intent.incidentType).toBe("Attendance");
@@ -456,5 +458,64 @@ describe("LATE_OPEN_PAYROLL_FROM_FORM_ENABLED with this app's production env (WA
       vi.stubEnv("LATE_OPEN_PAYROLL_FROM_FORM_ENABLED", "");
       expect(two(request, card, reply, form).payrollDeduct ?? null).toBe(ipmo ? mainOn : mainOff);
     });
+  });
+});
+
+/*
+ * PRIOR_SENTENCE_FIX_ENABLED (Corrective Action only; coordinator's ruling, 26
+ * Oct 2026): the intent read dates the form from the manager's own incident
+ * dates, and "change the date to …" still sets it, on that turn and after.
+ * "jba manual 11-1-25" in a turn of its own is the earlier step's date, never
+ * a second incident date to ask about (conv_mvmznap42vcw0dl, in the remap
+ * test's words).
+ */
+describe("PRIOR_SENTENCE_FIX_ENABLED on the intent read", () => {
+  function psf() {
+    vi.stubEnv("PRIOR_SENTENCE_FIX_ENABLED", "1");
+  }
+
+  it("flag-on twin: with LATE_OPEN_DATE off the one incident date, 10/19, dates the intent read", () => {
+    vi.stubEnv("FORM_FULL_REMAP_ENABLED", "1");
+    psf();
+    const played = play([F5]);
+    expect(played.intent.formDate).toBe("2026-10-19");
+    expect(played.intent.incidentType).toBe("Attendance");
+    expect(played.slots.policySection).toBeNull();
+  });
+
+  it('"change the date to 10-22" dates it 10/22, and a later turn keeps 10/22', () => {
+    on();
+    psf();
+    const played = play([F5, "change the date to 10-22"]);
+    expect(played.slots.incidentDateIso).toBe("2026-10-22");
+    expect(played.intent.formDate).toBe("2026-10-22");
+    const later = play([F5, "change the date to 10-22", "verbal"]);
+    expect(later.intent.formDate).toBe("2026-10-22");
+    expect(later.slots.incidentDateIso).toBe("2026-10-22");
+  });
+
+  it("S1 ends dated 10/21 on the card and in the saved state", () => {
+    on();
+    psf();
+    const played = play([
+      "I need a CA for Test Employee",
+      "she works at Kearney and it happened on 10-20",
+      "she opened the store 20 minutes late and did not call anyone",
+      "change the date to 10-21",
+    ]);
+    expect(played.slots.incidentDateIso).toBe("2026-10-21");
+    expect(played.intent.formDate).toBe("2026-10-21");
+  });
+
+  it('"jba manual 11-1-25" in its own turn is no second incident date: dated 10/22, nothing asked', () => {
+    on();
+    psf();
+    const played = play([
+      "do verbal ca for team member Test Employee at Kearney. payroll deduct does not apply. previous coaching jba manual 11-1-26. on 10-22-26 Test was not scheduled to work and came into the store to show her team her new puppy",
+      "jba manual 11-1-25",
+    ]);
+    expect(played.intent.formDate).toBe("2026-10-22");
+    expect(played.replies.join("\n")).not.toMatch(/Which date/);
+    expect(played.slots.incidentDateIso).toBe("2026-10-22");
   });
 });

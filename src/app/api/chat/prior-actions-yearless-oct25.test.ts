@@ -271,6 +271,8 @@ describe("the late opening with an earlier coaching, on the live path", () => {
 describe("the readers", () => {
   it("read the yearless coaching as an earlier step, and the late opening as the incident", async () => {
     const { fieldLines } = await import("@/lib/ai/intake-augment");
+    // Pinned off: with PRIOR_SENTENCE_FIX_ENABLED the flag-off field line below is the incident's too (twin below).
+    vi.stubEnv("PRIOR_SENTENCE_FIX_ENABLED", "");
     vi.stubEnv(FLAG_UNDER_TEST, "true");
     // QA 25 Oct 2026: no "signed" — the manager never wrote it (see the header).
     expect(statedPriorActions(SAID, TODAY)).toEqual(["Coaching for being late — 09/15/2026"]);
@@ -279,6 +281,15 @@ describe("the readers", () => {
     vi.stubEnv(FLAG_UNDER_TEST, "");
     expect(statedPriorActions(SAID, TODAY)).toEqual([]);
     expect(fieldLines(SAID, TODAY)).toEqual(["It happened on 9/15/2026."]);
+  });
+
+  // Flag-on twin: PRIOR_SENTENCE_FIX_ENABLED writes out the one incident date on a Corrective Action, never the coaching's.
+  it("with PRIOR_SENTENCE_FIX_ENABLED alone the field line is the incident's 10/20, never the coaching's 9/15", async () => {
+    const { fieldLines } = await import("@/lib/ai/intake-augment");
+    vi.stubEnv("PRIOR_SENTENCE_FIX_ENABLED", "1");
+    vi.stubEnv(FLAG_UNDER_TEST, "");
+    expect(statedPriorActions(SAID, TODAY)).toEqual([]);
+    expect(fieldLines(SAID, TODAY)).toEqual(["It happened on 10/20/2026."]);
   });
 
   it("leave a range and a held coaching alone", async () => {

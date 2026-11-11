@@ -204,9 +204,13 @@ export function groundFormSlots(input: {
    * answered — and otherwise this reader's own, with every earlier step's
    * date ("i coached her on 10-16", "written warning on 10-20") blanked first.
    */
-  const sentenceFix = priorSentenceFixEnabled();
+  // A later create request with its own incident starts a new form: What
+  // happened, the policy, the prior actions, the plan (and with
+  // PRIOR_SENTENCE_FIX_ENABLED the date) are read from there.
+  const start = fixed ? currentRequestStart({ turns: users, employeeName, slotClause }) : 0;
   // Corrective Action only: on a Coaching Form the coaching held is its date.
-  const settled = sentenceFix && templateKey === "dpoa" ? statedFormDate(allTurns, input.today) : null;
+  const sentenceFix = priorSentenceFixEnabled() && templateKey === "dpoa";
+  const settled = sentenceFix ? statedFormDate(start > 0 ? fromUserTurn(conversation, start) : allTurns, input.today) : null;
   const incidentDateIso = settled
     ? settled.iso
     : groundedDate(sentenceFix ? blankPriorStepDates(said, input.today) : said, input.today);
@@ -225,9 +229,6 @@ export function groundFormSlots(input: {
   // A bare "Yes" after a list of questions answers none of them (REMAP_INCIDENT_FIX_ENABLED).
   const payrollDeduct = payrollDeductFromConversation(fixed ? withoutAmbiguousAnswers(conversation) : conversation);
   const payrollAmount = payrollDeduct === "yes" ? managerPayrollAmount(said) : null;
-  // A later create request with its own incident starts a new form: What
-  // happened, the policy, the prior actions and the plan are read from there.
-  const start = fixed ? currentRequestStart({ turns: users, employeeName, slotClause }) : 0;
   const scoped = users.slice(start).join("\n");
   const named = fixed ? namedPolicy(withoutPriorList(scoped)) : null;
   // LATE_OPEN_DATE_ENABLED with REMAP_INCIDENT_FIX_ENABLED: a described late
@@ -370,6 +371,13 @@ export function groundFormSlots(input: {
     ...(slots.templateKey ? { formProposal: proposalFor(slots) } : {}),
   };
   return { slots, response };
+}
+
+/** The turns from the `index`-th manager turn on (PRIOR_SENTENCE_FIX_ENABLED: a new request's own dates). */
+function fromUserTurn<T extends { readonly role: string }>(turns: readonly T[], index: number): T[] {
+  let seen = -1;
+  const at = turns.findIndex((turn) => turn.role === "user" && ++seen === index);
+  return at < 0 ? [...turns] : turns.slice(at);
 }
 
 /**

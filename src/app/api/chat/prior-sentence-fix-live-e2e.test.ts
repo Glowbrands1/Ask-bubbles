@@ -4,7 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { continuationFor } from "@/lib/forms/proposal-continuation";
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
-import type { ChatFormProposal, ChatMessage } from "@/types";
+import { rosterResultFor } from "@/test/roster-result";
+import type { AccessScope, ChatFormProposal, ChatMessage } from "@/types";
 
 /**
  * ============================================================================
@@ -57,6 +58,7 @@ const store: FakeStore & Record<string, Record<string, unknown>[]> = {
 const state = vi.hoisted(() => ({
   /** The extraction model's reading for the turn. Production's readings were not recorded. */
   remap: {} as Record<string, unknown>,
+  intent: "employee" as "none" | "employee" | "copyDate",
   draft: {} as { values?: Record<string, unknown>; checked?: Record<string, unknown> },
   revision: {} as { values?: Record<string, unknown>; checked?: Record<string, unknown>; clear?: string[] },
 }));
@@ -111,7 +113,24 @@ function namedForm(text: string): string | null {
 
 vi.mock("@/lib/ai/call-claude", () => ({
   callClaude: async () => "A grounded answer.",
-  callClaudeTool: async () => null,
+  /** The intent read's slots, copied from the manager's words: the employee and the form; `intentDate` also the first date typed. */
+  callClaudeTool: async (input: { tool?: { name?: string }; messages?: { content?: unknown }[] }) => {
+    if (input.tool?.name !== "record_intent_slots" || state.intent === "none") return null;
+    const text = JSON.stringify(input.messages ?? []);
+    const manager = (text.split("Manager:").pop() ?? text).replace(/\\n/g, "\n");
+    const date = state.intent === "copyDate" ? (/\b\d{1,2}[-/]\d{1,2}(?:[-/]\d{2,4})?\b/.exec(manager)?.[0] ?? null) : null;
+    return {
+      employee: /rory vance/i.test(manager) ? "Rory Vance" : null,
+      store: null,
+      title: /team member/i.test(manager) ? "Team Member" : null,
+      incidentType: null,
+      incidentDate: date,
+      payrollAmount: null,
+      warningLevel: /\bverbal\b/i.test(manager) ? "verbal" : null,
+      formType: /coaching form/i.test(manager) ? "Coaching Form" : /\b(?:ca|corrective action)\b/i.test(manager) ? "Corrective Action Form" : null,
+      formTurn: true,
+    };
+  },
   callClaudeToolDetailed: async (input: { messages?: { content?: unknown }[] }) => {
     const text = JSON.stringify(input.messages ?? []);
     const last = text.split(/Manager:|User:/i).pop() ?? text;
@@ -207,6 +226,22 @@ vi.mock("@/lib/forms/prior-forms", async (importOriginal) => ({
   priorFormsReadingForChat: async () => ({ attach: [], possible: [], identity: "none" }),
 }));
 
+/* Synthetic people only: Rory Vance, a team member at the West Dodge Rd store. */
+vi.mock("@/lib/forms/employee-roster", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/forms/employee-roster")>();
+  const directory = [
+    { id: "e-1", firstName: "Rory", lastName: "Vance", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-264"], positionName: "Team Member Part Time" },
+  ];
+  return {
+    ...actual,
+    readDirectoryFacts: async () => [
+      { id: "e-1", firstName: "Rory", lastName: "Vance", preferredFirstName: null, locationIds: ["loc-264"], positionName: "Team Member Part Time", title: "Team Member", primaryLocationName: "Omaha, NE (West Dodge Rd)" },
+    ],
+    loadScopedRoster: async (scope: AccessScope | null) => actual.scopeRoster(directory as never, scope),
+    loadScopedRosterResult: async (scope: AccessScope | null) => rosterResultFor(actual.scopeRoster, directory as never, scope),
+  };
+});
+
 process.env.NEXT_PUBLIC_DEMO_MODE = "false";
 vi.setConfig({ hookTimeout: 30_000, testTimeout: 60_000 });
 
@@ -217,29 +252,56 @@ const instancesRoute = await import("../forms/instances/route");
 const draftRoute = await import("../forms/instances/[id]/draft/route");
 
 /**
- * The production env QA-6/QA-7 run (coordinator, 26 Oct 2026), on this app's
- * form path: the full remap with the flags on with it here, and intent
- * extraction off, as this app's production runs (`edits-dates-replay-e2e`).
+ * This app's production env, exactly (Vercel production, read 26 Oct 2026
+ * 09:44Z, coordinator relay; PROD-FLAGS-2026-10-26-0944Z): FORM_FULL_REMAP
+ * false, intent extraction on. Every other flag is off.
  */
 const PROD_FLAGS = [
-  "FORM_FULL_REMAP_ENABLED",
-  "KEEP_FORM_EMPLOYEE_ENABLED",
-  "DRAFT_ACTIONS_ENABLED",
-  "CONVERSATION_DRAFT_REUSE_ENABLED",
-  "WARNING_LEVEL_MANAGER_ONLY_ENABLED",
-  "LATE_OPEN_DATE_ENABLED",
-  "PRIOR_ACTIONS_PARSE_ENABLED",
-  "FIELD_ACCURACY_ENABLED",
-  "REMAP_INCIDENT_FIX_ENABLED",
-  "NOT_A_NAME_GUARD_ENABLED",
-  "MANAGER_WORDS_ONLY_ENABLED",
-  "SLOT_RETENTION_ENABLED",
-  "TYPED_NAME_PROCEEDS_ENABLED",
+  "APP_PASSWORD_HELP_ENABLED",
+  "DRAFT_NEVER_BLANK_ENABLED",
+  "DRAFT_REUSE_SAME_CHAT_ONLY_ENABLED",
   "EXIT_INTAKE_FIX_ENABLED",
+  "LATE_OPEN_PAYROLL_FROM_FORM_ENABLED",
+  "MANUAL_NEGATED_LIST_NOTE_ENABLED",
+  "NAME_BEFORE_TITLE_ENABLED",
+  "POLICY_SPECIFIC_TOPICS_ENABLED",
   "REOPEN_VERB_GUARD_ENABLED",
-  "PLACE_SPAN_GUARD_ENABLED",
   "STATE_CODE_NOT_A_PERSON_ENABLED",
+  "ACTION_PLAN_MANAGER_ONLY_ENABLED",
+  "ACTION_PLAN_SENTENCES_ENABLED",
+  "CA_TEMPLATE_MAP_ENABLED",
+  "CHAT_TRACE_ENABLED",
+  "CONVERSATION_DRAFT_REUSE_ENABLED",
+  "CROSS_CHAT_REPLY_GUARD_ENABLED",
+  "DRAFT_ACTIONS_ENABLED",
+  "FIELD_ACCURACY_ENABLED",
+  "FORM_CHOICE_STATED_ENABLED",
+  "FORM_STATE_ENABLED",
+  "FULL_MANUAL_CONTEXT_ENABLED",
+  "GLOBAL_STORE_ASK_ENABLED",
+  "GOOGLE_REVIEWS_SCHEDULE_ENABLED",
+  "GOOGLE_REVIEWS_SYNC_ENABLED",
+  "GOOGLE_REVIEWS_WRITES_ENABLED",
+  "GROUNDED_ENTITIES_ENABLED",
+  "INTENT_EXTRACTION_ENABLED",
+  "KEEP_FORM_EMPLOYEE_ENABLED",
+  "LATE_OPEN_DATE_ENABLED",
+  "NOT_A_NAME_GUARD_ENABLED",
+  "PAYROLL_DEDUCT_AMOUNT_ENABLED",
+  "PLACE_SPAN_GUARD_ENABLED",
+  "PRINTED_PAGE_ONLY_ENABLED",
+  "PRIOR_ACTIONS_PARSE_ENABLED",
+  "PROMPT_CACHE_ENABLED",
+  "REMAP_DRAFT_SOURCES_ENABLED",
+  "REMAP_INCIDENT_FIX_ENABLED",
+  "SLOT_RETENTION_ENABLED",
+  "TITLE_WHOLE_WORD_ENABLED",
+  "TYPED_NAME_ENABLED",
+  "WARNING_LEVEL_MANAGER_ONLY_ENABLED",
+  "WOVEN_VALIDATION_ENABLED",
 ] as const;
+/** Not production here (FORM_FULL_REMAP is false in production): the full remap, as extra coverage. */
+const REMAP_EXTRA = ["FORM_FULL_REMAP_ENABLED"] as const;
 const FLAG = "PRIOR_SENTENCE_FIX_ENABLED";
 /**
  * FORM_DATE_INCIDENT_ONLY_ENABLED (D3, on main since 5e151777, off in
@@ -275,10 +337,11 @@ class JoiningRows extends Array<Record<string, unknown>> {
 beforeEach(async () => {
   for (const key of Object.keys(store)) (store as Record<string, unknown[]>)[key] = [];
   store.form_instances = new JoiningRows() as never;
-  for (const name of [...PROD_FLAGS, FLAG, "INTENT_EXTRACTION_ENABLED", "REMAP_INCIDENT_FIX_ENABLED", "MANAGER_WORDS_ONLY_ENABLED", "REMAP_DRAFT_SOURCES_ENABLED", "NEXT_PUBLIC_REMAP_DRAFT_SOURCES_ENABLED", FIO]) {
+  for (const name of [...PROD_FLAGS, FLAG, "INTENT_EXTRACTION_ENABLED", "REMAP_INCIDENT_FIX_ENABLED", "MANAGER_WORDS_ONLY_ENABLED", "REMAP_DRAFT_SOURCES_ENABLED", FIO]) {
     saved.set(name, process.env[name]);
   }
   state.remap = {};
+  state.intent = "employee";
   state.draft = { values: {} };
   state.revision = { values: {} };
   vi.useFakeTimers({ toFake: ["Date"] });
@@ -403,9 +466,12 @@ class Thread {
 /** The extraction model's reading: the employee typed, nothing else guessed. */
 const READING = { employeeName: "Rory Vance" };
 
-function useProfile(fix: boolean, fio = false) {
+function useProfile(fix: boolean, fio = false, remap = false) {
   for (const name of saved.keys()) delete process.env[name];
   for (const name of PROD_FLAGS) process.env[name] = "true";
+  if (remap) for (const name of REMAP_EXTRA) process.env[name] = "true";
+  // Not production: the remap block runs with intent extraction off, the profile QA-7 first probed.
+  if (remap) delete process.env.INTENT_EXTRACTION_ENABLED;
   if (fix) process.env[FLAG] = "true";
   if (fio) process.env[FIO] = "true";
 }
@@ -419,6 +485,7 @@ const SAID = {
   ONE: "create a ca for rory vance at omaha ne, she was late on 10-5",
   OTHER_IN_LIST: "create a ca for rory vance at omaha ne, she was late on 10-5. i coached her on 10-16 and corvin mallow on 10-17",
   COWORKER: "create a ca for rory vance at omaha ne, she was late on 10-5. i coached her coworker, not her, on 10-16",
+  COACHING_FORM: "create a coaching form for rory vance at omaha ne, i coached her on 10-16",
 } as const;
 
 /** Sentence case: each sentence opens with a capital, and "i" is "I". */
@@ -469,8 +536,118 @@ async function created(thread: Thread, observationText: string) {
   return { observation: value("observation"), priorActions: value("prior_actions"), formDate: value("form_date") };
 }
 
-describe.each(FIO_RUNS)("flag on, %s", (_fioLabel, fio) => {
-  beforeEach(() => useProfile(true, fio));
+
+/** The intent read's saved form date after the turn (the card's Date once it is drafted). */
+function savedDate(): string | null {
+  return ((store.chat_form_state.at(-1) as { state?: { formDate?: string | null } } | undefined)?.state?.formDate ?? null) as string | null;
+}
+
+const PROD_CASINGS = CASINGS.filter(([casing]) => casing !== "CAPS");
+
+/*
+ * ============================================================================
+ * PRODUCTION: this app's exact env (the intent read; FORM_FULL_REMAP false)
+ * ============================================================================
+ *
+ * The intent read asks the slots it lacks ("I still need the warning level")
+ * and, for several dates, its own numbered "Which date should go on the
+ * form?". With the flag on, on a Corrective Action, that question lists only
+ * the manager's incident dates, once; one incident date is saved silently;
+ * another person's or an earlier step's date is never offered or saved.
+ */
+describe.each(FIO_RUNS)("production env, flag on, %s", (_fioLabel, fio) => {
+  beforeEach(() => {
+    useProfile(true, fio);
+    store.chat_form_state = [];
+  });
+
+  describe.each(PROD_CASINGS)("%s", (_casing, cased) => {
+    it("D2: asks which of 10/5 and 10/15 only, never the coaching's 10/16, and saves no date until answered", async () => {
+      const { answer } = await card(cased(SAID.D2));
+      expect(answer.content).toBe("Which date should go on the form? Reply with the number.\n1. **10/5/2026**\n2. **10/15/2026**");
+      expect(savedDate()).toBeNull();
+    });
+
+    it("D1: no incident date, never 10/16 or 10/20 offered or saved", async () => {
+      const { answer } = await card(cased(SAID.D1));
+      expect(answer.content).not.toMatch(/10\/(?:16|20)\/2026/);
+      expect(savedDate()).toBeNull();
+    });
+
+    it("QA-7 defect 1: the other person's 10/17 is never a choice; the one incident date, 10/5, is saved without a question", async () => {
+      const { answer } = await card(cased(SAID.OTHER_IN_LIST));
+      expect(answer.content).not.toMatch(/Which date/);
+      expect(answer.content).not.toMatch(/10\/17/);
+      expect(savedDate()).toBe("2026-10-05");
+    });
+
+    it("QA-7 defect 2 and a single date: 10/5, no question", async () => {
+      for (const said of [SAID.COWORKER, SAID.ONE]) {
+        store.chat_form_state = [];
+        const { answer } = await card(cased(said));
+        expect(answer.content).not.toMatch(/Which date/);
+        expect(savedDate()).toBe("2026-10-05");
+      }
+    });
+
+    it("the numbered answer sets the date", async () => {
+      const { thread } = await card(cased(SAID.D2));
+      await thread.say("2");
+      expect(savedDate()).toBe("2026-10-15");
+    });
+
+    it("a Coaching Form reads exactly as with the flag off", async () => {
+      state.intent = "copyDate";
+      const on = await card(cased(SAID.COACHING_FORM));
+      const onDate = savedDate();
+      useProfile(false, fio);
+      store.chat_form_state = [];
+      const off = await card(cased(SAID.COACHING_FORM));
+      expect(on.answer.content).toBe(off.answer.content);
+      expect(onDate).toBe(savedDate());
+    });
+  });
+});
+
+/* NEVER-BREAK: flag off, as main today (5f64ff8f), the live failures pinned. */
+describe("production env, flag off: as main", () => {
+  beforeEach(() => {
+    useProfile(false);
+    store.chat_form_state = [];
+  });
+
+  it("D2 is saved as 10/5 without asking; the other person's 10/17 is offered as a date", async () => {
+    const d2 = await card(SAID.D2);
+    expect(d2.answer.content).toBe("I still need the warning level, verbal or written.");
+    expect(savedDate()).toBe("2026-10-05");
+    const other = await card(SAID.OTHER_IN_LIST);
+    expect(other.answer.content).toBe("Which date should go on the form? Reply with the number.\n1. **10/5/2026**\n2. **10/17/2026**");
+  });
+});
+
+/*
+ * ============================================================================
+ * NOT PRODUCTION: the full remap on, as extra coverage
+ * ============================================================================
+ */
+/** Full remap on, flag off: main today. */
+const REMAP_MAIN: Record<string, { formDate: string | null; issue: string | null; priorActions: string | null }> = {
+  D1: { formDate: "2026-10-20", issue: "written warning", priorActions: null },
+  D2: { formDate: "2026-10-16", issue: "late on 10-5 and", priorActions: null },
+  TWO: { formDate: "2026-10-15", issue: "late on 10-5 and", priorActions: null },
+  THREE: { formDate: "2026-10-16", issue: "and", priorActions: null },
+  RANGE: { formDate: "2026-10-09", issue: "late from 10-5 to", priorActions: null },
+  ONE: { formDate: "2026-10-05", issue: "late", priorActions: null },
+  OTHER_IN_LIST: { formDate: "2026-10-17", issue: "late", priorActions: null },
+  COWORKER: { formDate: "2026-10-16", issue: "not her", priorActions: null },
+};
+/** Where D3 on changes it. */
+const REMAP_FIO_MAIN: Record<string, { formDate: string | null; issue: string | null; priorActions: string | null } | undefined> = {
+  D2: { formDate: "2026-10-15", issue: "late on 10-5 and", priorActions: null },
+};
+
+describe.each(FIO_RUNS)("NOT PRODUCTION (full remap on, intent extraction off, extra coverage): flag on, %s", (_fioLabel, fio) => {
+  beforeEach(() => useProfile(true, fio, true));
 
   describe.each(CASINGS)("%s", (_casing, cased) => {
     it("D1: never dated 10/20 or 10/16; \"written warning\" is not What happened; both priors listed", async () => {
@@ -589,32 +766,13 @@ describe.each(FIO_RUNS)("flag on, %s", (_fioLabel, fio) => {
   });
 });
 
-/** Production today (main 5e151777, flag off, D3 unset), the live failures pinned. */
-const MAIN: Record<string, { formDate: string | null; issue: string | null; priorActions: string | null }> = {
-  D1: { formDate: "2026-10-20", issue: "written warning", priorActions: null },
-  D2: { formDate: "2026-10-16", issue: "late on 10-5 and", priorActions: null },
-  TWO: { formDate: "2026-10-15", issue: "late on 10-5 and", priorActions: null },
-  THREE: { formDate: "2026-10-16", issue: "and", priorActions: null },
-  RANGE: { formDate: "2026-10-09", issue: "late from 10-5 to", priorActions: null },
-  ONE: { formDate: "2026-10-05", issue: "late", priorActions: null },
-  OTHER_IN_LIST: { formDate: "2026-10-17", issue: "late", priorActions: null },
-  COWORKER: { formDate: "2026-10-16", issue: "not her", priorActions: null },
-};
-/** Where D3 (FORM_DATE_INCIDENT_ONLY_ENABLED) on changes production's reading. */
-const FIO_MAIN: Record<string, { formDate: string | null; issue: string | null; priorActions: string | null } | undefined> = {
-  D2: { formDate: "2026-10-15", issue: "late on 10-5 and", priorActions: null },
-};
 
-/*
- * NEVER-BREAK: with the flag off, each case reads exactly as production does
- * today (main 5e151777), the live failures included.
- */
-describe.each(FIO_RUNS)("flag off, %s: as production", (_fioLabel, fio) => {
-  beforeEach(() => useProfile(false, fio));
+describe.each(FIO_RUNS)("NOT PRODUCTION (full remap on, intent extraction off): flag off, %s, as main", (_fioLabel, fio) => {
+  beforeEach(() => useProfile(false, fio, true));
 
-  it.each(Object.entries(MAIN))("%s", async (key, expected) => {
+  it.each(Object.entries(REMAP_MAIN))("%s", async (key, expected) => {
     const { proposal } = await card(SAID[key as keyof typeof SAID]);
-    const want = fio && FIO_MAIN[key] ? FIO_MAIN[key]! : expected;
+    const want = fio && REMAP_FIO_MAIN[key] ? REMAP_FIO_MAIN[key]! : expected;
     expect({ formDate: proposal?.formDate ?? null, issue: proposal?.issue ?? null, priorActions: proposal?.priorActions ?? null }).toEqual(want);
   });
 });
