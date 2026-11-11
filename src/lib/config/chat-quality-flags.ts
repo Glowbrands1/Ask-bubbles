@@ -1320,6 +1320,12 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
   "CHAT_STAGE_TIMINGS_ENABLED",
   "CA_REASON_DUE_TO_ENABLED",
+  // coding 6: REQUEST_ISSUE_KEPT, LATE_OPENING_OWN_WORDS, FIRST_NAME_ENOUGH (QA round 17b, 10 Nov 2026; default off).
+  "REQUEST_ISSUE_KEPT_ENABLED",
+  "LATE_OPENING_OWN_WORDS_ENABLED",
+  "FIRST_NAME_ENOUGH_ENABLED",
+  // coding 6: NO_SHOW_OPENING_IS_ATTENDANCE (QA ruling, 10 Nov 2026; default off; wiring in ca-policy.ts awaits Coding-2).
+  "NO_SHOW_OPENING_IS_ATTENDANCE_ENABLED",
 ] as const;
 
 /**
@@ -4262,4 +4268,44 @@ export function failureToOpenIsLateOpeningEnabled(): boolean {
  */
 export function payrollBareSentenceEnabled(): boolean {
   return envFlag("PAYROLL_BARE_SENTENCE_ENABLED");
+}
+
+/**
+ * REQUEST_ISSUE_KEPT_ENABLED (QA's live Bubbles round 17b, 10 Nov 2026, P16): "Can you make a CA for <name> for failure
+ * to open on time?" carded with an empty Issue. The edit rules read the whole question as an instruction to the app,
+ * so its account ("failure to open on time") was dropped and nothing was left. With the flag on, an Issue the edit
+ * rules would empty is kept when the manager's turns hold no replace or add edit and the Issue itself is no
+ * instruction (`ai/proposal-edit-rules.ts`). Off, as before.
+ */
+export function requestIssueKeptEnabled(): boolean {
+  return envFlag("REQUEST_ISSUE_KEPT_ENABLED");
+}
+
+/**
+ * LATE_OPENING_OWN_WORDS_ENABLED (QA's live Bubbles round 17b, 10 Nov 2026): a card citing Late Opening from an
+ * account said 'from what you described ("opening late")' when the manager typed "did not show up for a scheduled
+ * opening shift" or "failure to open on time". With the flag on, the quoted words are the ones the manager typed
+ * that read as the late opening (`forms/late-open.ts`, `lateOpeningWords`); with none found, no quote. Off, as before.
+ */
+export function lateOpeningOwnWordsEnabled(): boolean {
+  return envFlag("LATE_OPENING_OWN_WORDS_ENABLED");
+}
+
+/**
+ * FIRST_NAME_ENOUGH_ENABLED (QA's live Bubbles round 17b, 10 Nov 2026; DRAFT_WRITE_NEVER_SILENT's note): "The draft
+ * left out <surname> in Details of Coaching" while Details named the employee by first name. With the flag on, the
+ * name is reported missing only when no word of it is in the account (`forms/draft-consistency.ts`). Off, as before.
+ */
+export function firstNameEnoughEnabled(): boolean {
+  return envFlag("FIRST_NAME_ENOUGH_ENABLED");
+}
+
+/**
+ * NO_SHOW_OPENING_IS_ATTENDANCE_ENABLED (QA's ruling on live round 17b, 10 Nov 2026): "did not show up for a scheduled
+ * opening shift" was cited as Late Opening. A no-show to an opening shift is an absence, cited as Attendance (Pau's
+ * missed-shift ruling, MISSED_SHIFT_CITES_ATTENDANCE); a Late Opening is the store opening late ("failure to open on
+ * time", "opened late"). See `noShowNotLateOpening` (`forms/late-open.ts`), read by `ca-policy.ts`. Off, as before.
+ */
+export function noShowOpeningIsAttendanceEnabled(): boolean {
+  return envFlag("NO_SHOW_OPENING_IS_ATTENDANCE_ENABLED");
 }

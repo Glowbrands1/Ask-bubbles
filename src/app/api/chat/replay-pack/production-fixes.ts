@@ -382,4 +382,20 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov6-ca-reason-due-to-card-issue": "CA_REASON_DUE_TO",
   // Changed on purpose (10 Nov 2026): fixed in production by CA_REASON_DUE_TO, QA round 17b
   "nov6-ca-reason-due-to-draft-observation": "CA_REASON_DUE_TO",
+  // Changed on purpose (11 Nov 2026): fixed in production by NO_SHOW_OPENING_IS_ATTENDANCE, QA round 17d
+  "nov10-no-show-opening-is-attendance-as-typed": "NO_SHOW_OPENING_IS_ATTENDANCE",
+  // Changed on purpose (11 Nov 2026): fixed in production by NO_SHOW_OPENING_IS_ATTENDANCE, QA round 17d
+  "nov10-no-show-opening-is-attendance-lower": "NO_SHOW_OPENING_IS_ATTENDANCE",
+  // Changed on purpose (11 Nov 2026): fixed in production by REQUEST_ISSUE_KEPT, QA round 17d
+  "nov10-r17b-p16-issue-as-typed": "REQUEST_ISSUE_KEPT",
+  // Changed on purpose (11 Nov 2026): fixed in production by REQUEST_ISSUE_KEPT, QA round 17d
+  "nov10-r17b-p16-issue-lower": "REQUEST_ISSUE_KEPT",
+  // Changed on purpose (11 Nov 2026): fixed in production by LATE_OPENING_OWN_WORDS, QA round 17d
+  "nov10-r17b-late-opening-quote-p16": "LATE_OPENING_OWN_WORDS",
+  // Changed on purpose (11 Nov 2026): fixed in production by LATE_OPENING_OWN_WORDS, QA round 17d
+  "nov10-r17b-late-opening-quote-opening-shift": "LATE_OPENING_OWN_WORDS",
+  // Changed on purpose (11 Nov 2026): fixed in production by LATE_OPENING_OWN_WORDS, QA round 17d
+  "nov10-r17b-late-opening-quote-not-on-time": "LATE_OPENING_OWN_WORDS",
+  // Changed on purpose (11 Nov 2026): fixed in production by FIRST_NAME_ENOUGH, QA round 17d
+  "nov10-r17b-first-name-enough": "FIRST_NAME_ENOUGH",
 };
