@@ -1,4 +1,9 @@
-import { failureToOpenIsLateOpeningEnabled, formDateIncidentOnlyEnabled, lateOpenDateEnabled } from "@/lib/config/chat-quality-flags";
+import {
+  failureToOpenIsLateOpeningEnabled,
+  formDateIncidentOnlyEnabled,
+  lateOpenDateEnabled,
+  noShowOpeningIsAttendanceEnabled,
+} from "@/lib/config/chat-quality-flags";
 
 import { listIncidentDates } from "./form-date-answer";
 import { incidentOnly } from "./form-date-incident-only";
@@ -47,6 +52,80 @@ export const FAILURE_TO_OPEN = new RegExp(
 /** FAILURE_TO_OPEN_IS_LATE_OPENING_ENABLED: whether the words say the employee failed to open. Off, false. */
 export function saysFailureToOpen(text: string): boolean {
   return failureToOpenIsLateOpeningEnabled() && FAILURE_TO_OPEN.test(text);
+}
+
+/*
+ * LATE_OPENING_OWN_WORDS_ENABLED (QA's live Bubbles round 17b, 10 Nov 2026): the words the manager typed that read as
+ * a late opening, for the card's 'from what you described ("…")'. It used to be the app's own "opening late", which
+ * the manager never said ("did not show up for a scheduled opening shift", "failure to open on time"). The span is
+ * taken from the text as typed, with "on time" / "late" after it when they follow.
+ */
+const OWN_LATE_OPENING = [
+  FAILURE_TO_OPEN,
+  /\blate\s+to\s+open(?:\s+(?:the\s+)?(?:store|location|shop|makery))?\b/i,
+  /\bopen(?:ed|ing)?\s+(?:(?:the|our|her|his|their)\s+)?(?:store|location|shop|makery|doors)\s+late\b/i,
+  /\bopen(?:ed|ing)\s+late\b/i,
+  /\blate[- ]open(?:ing|ed)?\b/i,
+  /\b(?:(?:scheduled|assigned)\s+)?opening\s+shift\b/i,
+  /\b(?:scheduled|supposed|assigned|due)\s+to\s+open\b/i,
+  /\bopen(?:ed|ing)?\s+(?:(?:the|our|her|his|their)\s+)?(?:store|location|shop|makery|doors)\b/i,
+  /\bopener\b/i,
+];
+/** A late tail, kept with the match: "late", "40 minutes late", "an hour late". */
+const LATE_TAIL = /^\s+(?:(?:\d+|an?|one|two|three|half\s+an?)\s+(?:min(?:ute)?s?|hours?|hrs?)\s+)?late\b/i;
+/** "on time" is kept only after a negation the quote carries ("not opening the store on time"), never on its own. */
+const ON_TIME_TAIL = /^\s+on\s+time\b/i;
+/**
+ * QA's Gate-Bubbles-2 (10 Nov 2026), nov6-reopen-write-up-still-creates: "for not opening the store on time" was quoted
+ * "opening the store on time", the meaning reversed. A negation right before the match is part of the quote.
+ */
+const NEGATION_BEFORE = /\b(?:not|never|did\s*n['’]?t|did\s+not|didnt|failed\s+to|failure\s+to|was\s*n['’]?t|was\s+not)\s+$/i;
+
+/** LATE_OPENING_OWN_WORDS_ENABLED: the manager's own words that read as a late opening, as typed, or null. */
+export function lateOpeningWords(text: string): string | null {
+  const said = text ?? "";
+  for (const pattern of OWN_LATE_OPENING) {
+    const found = pattern.exec(said);
+    if (!found) continue;
+    const negation = NEGATION_BEFORE.exec(said.slice(Math.max(0, found.index - 20), found.index))?.[0] ?? "";
+    const negated = negation !== "" || /^fail/i.test(found[0]);
+    const end = found.index + found[0].length;
+    const rest = said.slice(end);
+    const tail = LATE_TAIL.exec(rest)?.[0] ?? (negated ? (ON_TIME_TAIL.exec(rest)?.[0] ?? "") : "");
+    return `${negation}${found[0]}${tail}`.replace(/\s+/g, " ").trim();
+  }
+  return null;
+}
+
+/*
+ * NO_SHOW_OPENING_IS_ATTENDANCE_ENABLED (QA's ruling on round 17b, 10 Nov 2026): "did not show up for a scheduled
+ * opening shift" is an absence (Attendance), as Pau's missed-shift ruling has it, never a Late Opening. A Late Opening
+ * is the store opening late: "failure to open on time", "opened late", "late to open". The words say the employee did
+ * not come, and nothing says the store opened late.
+ */
+const NO_SHOW =
+  /\b(?:did\s*n['’]?t\s+show(?:\s+up)?|did\s+not\s+show(?:\s+up)?|didnt\s+show(?:\s+up)?|never\s+show(?:ed)?(?:\s+up)?|no[- ]?show(?:ed)?|no[- ]call|did\s*n['’]?t\s+come\s+in|did\s+not\s+come\s+in|missed\s+(?:her|his|their|a|the)\s+(?:scheduled\s+)?(?:opening\s+)?shift)\b/i;
+const STORE_OPENED_LATE =
+  /\b(?:late[- ]open(?:ing|ed)?|open(?:ed|ing)?\s+(?:(?:the|our|her|his|their)\s+)?(?:store|location|shop|makery|doors)\s+late|open(?:ed|ing)\s+late|late\s+to\s+open)\b/i;
+
+/** NO_SHOW_OPENING_IS_ATTENDANCE_ENABLED: the manager's own words for the no-show, as typed ("did not show up for a scheduled opening shift"), or null. */
+export function noShowWords(text: string): string | null {
+  if (!noShowNotLateOpening(text)) return null;
+  const said = text ?? "";
+  const found = NO_SHOW.exec(said);
+  if (!found) return null;
+  const tail = /^\s+(?:for|to)\s+(?:(?:her|his|their|a|the)\s+)?(?:scheduled\s+)?(?:opening\s+)?shift\b/i.exec(said.slice(found.index + found[0].length))?.[0] ?? "";
+  return `${found[0]}${tail}`.replace(/\s+/g, " ").trim();
+}
+
+/** NO_SHOW_OPENING_IS_ATTENDANCE_ENABLED: the employee did not come to (an opening) shift, and the store's late opening is not said. Off, false. */
+export function noShowNotLateOpening(text: string): boolean {
+  return (
+    noShowOpeningIsAttendanceEnabled() &&
+    NO_SHOW.test(text) &&
+    !STORE_OPENED_LATE.test(text) &&
+    !FAILURE_TO_OPEN.test(text)
+  );
 }
 
 /**

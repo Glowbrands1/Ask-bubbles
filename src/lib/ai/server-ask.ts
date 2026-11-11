@@ -28,7 +28,7 @@ import { isFrameworkAvailable } from "@/lib/knowledge/framework-availability";
 import { rowToCitation, type MatchedChunkRow } from "@/lib/knowledge/mappers";
 import { buildHandbookNote, namesHandbook, selectHandbookCoverage } from "@/lib/knowledge/named-handbook";
 import { isMultiBrandManual } from "@/lib/knowledge/brand-sections";
-import { loadFullManualPlan } from "@/lib/knowledge/full-manual-load";
+import { loadFullManualPlan, loadManualCitationPlan } from "@/lib/knowledge/full-manual-load";
 import { SupabaseKnowledgeProvider } from "@/lib/knowledge/providers/supabase";
 import type { RoleGrounding } from "@/lib/knowledge/role-grounding";
 import { recallPeople } from "@/lib/chat/person-memory-store";
@@ -83,6 +83,7 @@ import {
   antiLoopEnabled,
   formFullRemapEnabled,
   fullManualContextEnabled,
+  fullManualWideGateEnabled,
   frameworkGeneralSectionsEnabled,
   reformatKeepsSourcesEnabled,
   crossChatReplyGuardEnabled,
@@ -132,6 +133,8 @@ import { assembleGrounding } from "./grounding-assembly";
 import { withManualReadingNotes } from "./manual-reading-notes";
 import {
   citePolicyAnswer,
+  citeRetrievedAnswer,
+  retrievedLocatorPages,
   fullManualGroundingNote,
   keepRestatedFallbackMarkers,
   validateManualCitations,
@@ -1050,7 +1053,13 @@ async function answerQuestionCore(
   if (fullManualContextEnabled()) {
     try {
       markStage("full_manual");
-      manualPlan = await loadFullManualPlan(request.scopeId, request.question, policyText);
+      // FULL_MANUAL_WIDE_GATE_ENABLED: the wide gate's options only with the flag; off, the call as before.
+      manualPlan = fullManualWideGateEnabled()
+        ? await loadFullManualPlan(request.scopeId, request.question, policyText, {
+            wideGate: true,
+            topRowIsManual: rows[0] ? isMultiBrandManual(rows[0].document_title, MULTI_BRAND_MANUAL_TITLES) : false,
+          })
+        : await loadFullManualPlan(request.scopeId, request.question, policyText);
     } catch {
       manualPlan = null;
     }
@@ -1061,8 +1070,20 @@ async function answerQuestionCore(
    * after the answer, from the printed pages it cites. One card for the
    * whole manual is what showed up as JBA Policy Manual p.1.
    */
+  /*
+   * FULL_MANUAL_WIDE_GATE_ENABLED (QA parity with the sibling app, 25 Oct 2026): on a full-manual turn only a pinned
+   * role document or a named handbook rides along; a retrieved excerpt from any other document (a wiring diagram for
+   * "policy specific to uggs?") is not sent as OTHER COMPANY SOURCES. Off, as before.
+   */
+  const wideGate = fullManualWideGateEnabled();
+  const mandatoryChunkIds = wideGate
+    ? new Set([...pinned.flatMap((entry) => entry.rows), ...(handbookCoverage?.rows ?? [])].map((row) => row.chunk_id))
+    : null;
   const supplemental = useManual
-    ? used.filter((row) => !isMultiBrandManual(row.document_title, MULTI_BRAND_MANUAL_TITLES))
+    ? used.filter(
+        (row) =>
+          !isMultiBrandManual(row.document_title, MULTI_BRAND_MANUAL_TITLES) && (!mandatoryChunkIds || mandatoryChunkIds.has(row.chunk_id)),
+      )
     : used;
   const grounding: GroundingChunk[] = supplemental.map((row, index) => ({
     marker: index + 1,
@@ -1285,6 +1306,13 @@ async function answerQuestionCore(
     const checkedManual = citePolicyAnswer(answer, manualPlan, supplementalMarkers);
     if (checkedManual.ok) {
       settled = checkedManual;
+    } else if (wideGate) {
+      /*
+       * FULL_MANUAL_WIDE_GATE_ENABLED (QA parity with the sibling app, 25 Oct 2026): an answer with the manual in
+       * context is the answer, page or no page. Asked again without the manual, it could deny the manual existed
+       * ("policy specific to uggs?" came back "I only have wiring diagrams"). It stands as written, no page marked.
+       */
+      settled = { text: checkedManual.text, sources: [], ok: false };
     } else {
       /*
        * The answer named no printed page from the manual that was loaded.
@@ -1308,8 +1336,30 @@ async function answerQuestionCore(
    * restates them (see `keepRestatedFallbackMarkers`).
    */
   const manualDocuments = new Set((manualPlan?.passages ?? []).map((passage) => passage.documentId));
-  const fallbackText =
-    fellBack && manualPlan
+  /*
+   * FULL_MANUAL_WIDE_GATE_ENABLED: a reply answered from retrieved excerpts cites each manual excerpt as the printed
+   * page its sentence restates, in the sentence (see `citeRetrievedAnswer`). Only when the reply cites a manual
+   * excerpt is the manual read for this. Off, as before.
+   */
+  const manualRowPages = (marker: number): number[] | null => {
+    const row = activeRows[marker - 1];
+    if (!row || !isMultiBrandManual(row.document_title, MULTI_BRAND_MANUAL_TITLES)) return null;
+    const printed = printedPageFromRetrieval(row);
+    const pages = retrievedLocatorPages(row);
+    return printed && !pages.includes(printed) ? [printed, ...pages] : pages;
+  };
+  let retrievalCited: CitedManualAnswer | null = null;
+  if (wideGate && !settled && fullManualContextEnabled()) {
+    const citesManual = extractUsedMarkers(answer, activeMarkers).some((marker) => manualRowPages(marker) !== null);
+    if (citesManual || /\[pp?\.\s*\d/i.test(answer)) {
+      const citePlan = manualPlan?.passages.length ? manualPlan : await loadManualCitationPlan(request.scopeId);
+      const cited = citePlan ? citeRetrievedAnswer(answer, citePlan, manualRowPages) : null;
+      retrievalCited = cited?.ok ? cited : null;
+    }
+  }
+  const fallbackText = retrievalCited
+    ? retrievalCited.text
+    : fellBack && manualPlan
       ? keepRestatedFallbackMarkers(answer, manualPlan, (marker) => {
           const row = activeRows[marker - 1];
           return row && manualDocuments.has(row.document_id) ? printedPageFromRetrieval(row) : null;
@@ -1319,7 +1369,7 @@ async function answerQuestionCore(
   const guarded = settled
     ? settled.text
     : fullManualContextEnabled() && !fellBack
-      ? validateManualCitations(answer, { shownMarkers: markers, index: manualPlan?.index ?? null })
+      ? validateManualCitations(retrievalCited ? fallbackText : answer, { shownMarkers: markers, index: manualPlan?.index ?? null })
       : fallbackText;
   const toCitation = (source: FullManualSource): SourceCitation => ({
     documentId: source.documentId,
@@ -1336,7 +1386,9 @@ async function answerQuestionCore(
     });
   let citations: SourceCitation[] = settled
     ? [...settled.sources.map(toCitation), ...citedRows(markers, citationRows)]
-    : citedRows(markers, activeRows);
+    : retrievalCited
+      ? [...retrievalCited.sources.map(toCitation), ...citedRows(markers, activeRows)]
+      : citedRows(markers, activeRows);
 
   const suggested = await suggestedFormsFor({ summariesPromise, request, actor });
 
@@ -1375,7 +1427,7 @@ async function answerQuestionCore(
     } else {
       const tidy = { tidy: reformatKeepsSourcesEnabled() };
       content = suggested ? `${stripMarkers(settled.text, tidy)}\n\n${suggested.lead}` : stripMarkers(settled.text, tidy);
-      citations = settled.sources.map(toCitation);
+      citations = wideGate ? [...settled.sources.map(toCitation), ...citedRows(markers, citationRows)] : settled.sources.map(toCitation);
     }
   }
   /*
