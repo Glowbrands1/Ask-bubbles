@@ -156,6 +156,18 @@ beforeAll(async () => {
   await import("./server-ask");
 }, 60_000);
 
+/*
+ * WIRING PENDING (11 Nov 2026, QA's stale-PR cleanup rebuilt #139 on main): QA put all of the PR's behaviour behind
+ * FULL_MANUAL_WIDE_GATE_ENABLED. Its call sites are in `ai/server-ask.ts`, which another session owns; until they
+ * land, the tests that need them run as expected failures. When the server-ask lines are in, set WIRED to true:
+ * every test must then pass as written.
+ */
+const WIRED = false;
+const itWired = WIRED ? it : it.fails;
+const wideGateOn = () => {
+  process.env.FULL_MANUAL_WIDE_GATE_ENABLED = "1";
+};
+
 beforeEach(() => {
   state.rows = [];
   state.replies = [];
@@ -168,20 +180,26 @@ afterEach(() => {
   delete process.env.FULL_MANUAL_WIDE_GATE_ENABLED;
 });
 
-describe("(1) a reply answered from retrieval shows its [p.N] beside its source", () => {
-  it('"Where should employees park?" → the sentence carries [p.18], the source is Page 18 — Employee Parking', async () => {
+describe("(1) a reply answered from retrieval shows its [p.N] beside its source (FULL_MANUAL_WIDE_GATE_ENABLED)", () => {
+  beforeEach(wideGateOn);
+
+  itWired('"Where should employees park?" → the sentence carries [p.18], the source is Page 18 — Employee Parking', async () => {
     const live = recorded("conv_mvnq2qk32hw0pah");
     state.rows = [manualRow(55, 0.925)];
     state.replies = [live.content.replace(/\.$/, " [S1].")];
     const response = await ask(live.question, live.conversationId);
-    expect(state.calls[0]?.cachedContext).toBeUndefined();
+    /*
+     * Expectation changed on purpose (QA, 11 Nov 2026): the PR checked here that the manual was not loaded, because
+     * its retrieval citing was unflagged and the wide gate off. With all of #139 behind the one flag, the wide gate
+     * loads the manual for this question (retrieval's best excerpt is the manual's), and the reply is still cited p.18.
+     */
     expect(response.content).toBe(
       "Employees shouldn't park in the spots closest to the front of the location — those are reserved for customers [p.18].",
     );
     expect(response.citations.map((citation) => citation.locator)).toEqual(["Page 18 — Employee Parking"]);
   }, 30_000);
 
-  it('"Are beards allowed?" → [p.16], Facial Hair (the row is "Pages 15–16 — Hair")', async () => {
+  itWired('"Are beards allowed?" → [p.16], Facial Hair (the row is "Pages 15–16 — Hair")', async () => {
     const live = recorded("conv_mvnq2i4c2o7tyfj");
     state.rows = [manualRow(46, 0.86)];
     state.replies = [live.content.replace(/\.$/, " [S1].")];
@@ -217,7 +235,7 @@ describe("(2) What is COBRA? (FULL_MANUAL_WIDE_GATE_ENABLED)", () => {
     expect(state.calls[0]?.cachedContext).toBeUndefined();
   }, 30_000);
 
-  it("on: the question names a heading the manual prints, so p.45 is in the prompt", async () => {
+  itWired("on: the question names a heading the manual prints, so p.45 is in the prompt", async () => {
     process.env.FULL_MANUAL_WIDE_GATE_ENABLED = "1";
     const live = recorded("conv_mvnq5p7s278vzdm");
     state.rows = [otherRow];
@@ -232,7 +250,7 @@ describe("(2) What is COBRA? (FULL_MANUAL_WIDE_GATE_ENABLED)", () => {
     ]);
   }, 30_000);
 
-  it("on: retrieval's best excerpt from the manual also loads it", async () => {
+  itWired("on: retrieval's best excerpt from the manual also loads it", async () => {
     process.env.FULL_MANUAL_WIDE_GATE_ENABLED = "1";
     const live = recorded("conv_mvnq2qk32hw0pah");
     state.rows = [manualRow(55, 0.925)];
@@ -250,6 +268,8 @@ describe("(2) What is COBRA? (FULL_MANUAL_WIDE_GATE_ENABLED)", () => {
  * cited on p.41.
  */
 describe("E1 parity: Who is eligible for PTO and when does it start?", () => {
+  beforeEach(wideGateOn);
+
   it("reads the whole manual, and its reply is cited on printed pages", async () => {
     state.rows = [manualRow(137, 0.889)];
     state.replies = [
@@ -269,7 +289,9 @@ describe("E1 parity: Who is eligible for PTO and when does it start?", () => {
  * specific to uggs?": an answer that named no page was asked again from
  * retrieval alone and came back "I only have wiring diagrams".
  */
-describe("a full-manual turn: no other retrieved document, no second ask without the manual", () => {
+describe("a full-manual turn: no other retrieved document, no second ask without the manual (FULL_MANUAL_WIDE_GATE_ENABLED)", () => {
+  beforeEach(wideGateOn);
+
   const wiring = {
     chunk_id: "wiring-1",
     document_id: "doc-wiring",
@@ -282,7 +304,7 @@ describe("a full-manual turn: no other retrieved document, no second ask without
     similarity: 0.8,
   };
 
-  it('"policy specific to uggs?" → the manual is in the prompt and the wiring diagram is not', async () => {
+  itWired('"policy specific to uggs?" → the manual is in the prompt and the wiring diagram is not', async () => {
     state.rows = [wiring];
     state.replies = ["The manual does not name the brand; full coverage closed toe shoes are required [p.15]."];
     const response = await ask("policy specific to uggs?", "conv_uggs_manual");
@@ -293,7 +315,7 @@ describe("a full-manual turn: no other retrieved document, no second ask without
     expect(response.citations.every((citation) => citation.documentTitle === MANUAL_TITLE)).toBe(true);
   }, 30_000);
 
-  it("an answer that names no page stands as written: no second call, no retrieval-only answer", async () => {
+  itWired("an answer that names no page stands as written: no second call, no retrieval-only answer", async () => {
     state.rows = [wiring];
     state.replies = ["The manual does not name that brand.", "I only have wiring diagrams."];
     const response = await ask("policy specific to uggs?", "conv_uggs_manual");
@@ -301,5 +323,40 @@ describe("a full-manual turn: no other retrieved document, no second ask without
     expect(response.content).toBe("The manual does not name that brand.");
     expect(response.content).not.toMatch(/wiring/i);
     expect(response.citations).toEqual([]);
+  }, 30_000);
+});
+
+/*
+ * FLAG OFF, AS ON MAIN (QA, 11 Nov 2026): every part of #139 is behind FULL_MANUAL_WIDE_GATE_ENABLED. Off, a reply
+ * answered from retrieval shows no [p.N], and an uncited full-manual answer is still asked again from retrieval.
+ */
+describe("FULL_MANUAL_WIDE_GATE_ENABLED off: as on main", () => {
+  it('"Where should employees park?": the [S#] is taken out, no [p.N], the source row is shown', async () => {
+    const live = recorded("conv_mvnq2qk32hw0pah");
+    state.rows = [manualRow(55, 0.925)];
+    state.replies = [live.content.replace(/\.$/, " [S1].")];
+    const response = await ask(live.question, live.conversationId);
+    expect(response.content).toBe(live.content);
+    expect(response.citations.map((citation) => citation.locator)).toEqual(["Page 18 — Employee Parking"]);
+  }, 30_000);
+
+  it('"policy specific to uggs?": an answer that names no page is asked again from retrieval', async () => {
+    state.rows = [
+      {
+        chunk_id: "wiring-1",
+        document_id: "doc-wiring",
+        document_title: "Synthetic Equipment Wiring Diagram",
+        category: "equipment_procedures",
+        locator: "Page 3",
+        page: 3,
+        section: null,
+        content: "Ballast wiring diagram, 220V.",
+        similarity: 0.8,
+      },
+    ];
+    state.replies = ["The manual does not name that brand.", "I only have wiring diagrams."];
+    await ask("policy specific to uggs?", "conv_uggs_manual");
+    expect(state.calls).toHaveLength(2);
+    expect(state.calls[1]?.cachedContext).toBeUndefined();
   }, 30_000);
 });

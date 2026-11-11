@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import manual151 from "@/test/fixtures/jba-manual-production-151.json";
 import sweep from "@/test/fixtures/bubbles-live-policy-answers-oct25-sweep.json";
@@ -17,6 +17,17 @@ import {
   retrievedLocatorPages,
   type FullManualDocument,
 } from "./full-manual-context";
+
+/*
+ * QA, 11 Nov 2026: all of #139's citing is behind FULL_MANUAL_WIDE_GATE_ENABLED (default off), so these tests read
+ * it with the flag on. Off, the citing is exactly as on main (`full-manual-sweep-runtime.test.ts`, "off: as on main").
+ */
+beforeEach(() => {
+  vi.stubEnv("FULL_MANUAL_WIDE_GATE_ENABLED", "1");
+});
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 /**
  * QA policy sweep, 25 Oct 2026 (Bubbles prod 7174fdc, FULL_MANUAL_CONTEXT
