@@ -994,6 +994,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "PROPOSAL_NAME_CORRECTION_ENABLED",
   // Coding: NEAR_MISS_QUESTION_RULES (round 5, 8 Nov 2026; port from the sibling app; default off): forced off with the others.
   "NEAR_MISS_QUESTION_RULES_ENABLED",
+  // Coding 2: FORM_NAME_OFF_ROSTER_ASK (QA, 10 Nov 2026; port from the sibling app; default off; ships with the name set).
+  "FORM_NAME_OFF_ROSTER_ASK_ENABLED",
   "POLICY_CHANGE_REST_OF_TURN_ENABLED",
   "OPEN_FORM_NO_SELECTION_ENABLED",
   "ANGLE_PLACEHOLDER_GUARD_ENABLED",
@@ -1326,6 +1328,15 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FIRST_NAME_ENOUGH_ENABLED",
   // coding 6: NO_SHOW_OPENING_IS_ATTENDANCE (QA ruling, 10 Nov 2026; default off; wiring in ca-policy.ts awaits Coding-2).
   "NO_SHOW_OPENING_IS_ATTENDANCE_ENABLED",
+  // coding 5: WOVEN_TEXT_NUL_STRIP, WOVEN_FAILED_RETRY (ported from the sibling app's stuck Woven files, QA, 10 Nov 2026; default off).
+  "WOVEN_TEXT_NUL_STRIP_ENABLED",
+  "WOVEN_FAILED_RETRY_ENABLED",
+  // coding 5: INGEST_FAILURE_KEEPS_LAST_GOOD, WOVEN_OCR_PAGE_BATCHES (QA, the recipe book's lost content, 10 Nov 2026; default off).
+  "INGEST_FAILURE_KEEPS_LAST_GOOD_ENABLED",
+  "WOVEN_OCR_PAGE_BATCHES_ENABLED",
+  // coding 5: EXCERPT_BRAND_HEADING_DROP (QA's round 17c live test, 11 Nov 2026; default off).
+  "EXCERPT_BRAND_HEADING_DROP_ENABLED",
+  "NEAR_MISS_ANSWER_KEEPS_REQUEST_ENABLED",
 ] as const;
 
 /**
@@ -2940,6 +2951,63 @@ export function policyTopicIntoFieldEnabled(): boolean {
   return envFlag("POLICY_TOPIC_INTO_FIELD_ENABLED");
 }
 
+/**
+ * WOVEN_TEXT_NUL_STRIP_ENABLED (ported from the sibling app: QA, 10 Nov 2026, three Woven manuals stuck "failed" there
+ * since 4 Nov 2026; coding 5; same flag in both apps; default off). A PDF whose text layer holds NUL characters (U+0000)
+ * failed with "Chunks could not be saved: unsupported Unicode escape sequence": Postgres text and jsonb refuse NUL. On:
+ * every extracted segment's text, locator and section lose their NUL characters before chunking
+ * (`ingestion/extract/strip-nul.ts`), for an upload and a Woven sync alike. Off, as before.
+ */
+export function wovenTextNulStripEnabled(): boolean {
+  return envFlag("WOVEN_TEXT_NUL_STRIP_ENABLED");
+}
+
+/**
+ * WOVEN_FAILED_RETRY_ENABLED (ported from the sibling app: QA, 10 Nov 2026, six scanned Woven PDFs stuck "No text could
+ * be extracted ... run OCR" there since 4 Nov 2026 although WOVEN_PDF_OCR is on; coding 5; same flag in both apps;
+ * default off). They were never re-attempted: "no_text" was a permanent failure (retry count set to the maximum, so a
+ * `continue` run skips the item), and a full sync applies previously failed items last, so a sync's time budget
+ * deferred them. On: with WOVEN_PDF_OCR on, "no_text" is retryable, and a full sync applies previously failed items
+ * right after the retirements, before the rest (`knowledge-sync/engine.ts` `orderDue`, `knowledge-sync/sink.ts`). Off,
+ * as before.
+ */
+export function wovenFailedRetryEnabled(): boolean {
+  return envFlag("WOVEN_FAILED_RETRY_ENABLED");
+}
+
+/**
+ * INGEST_FAILURE_KEEPS_LAST_GOOD_ENABLED (QA, 10 Nov 2026: "Everyday Auxiliary Recipe Book v072726", searchable since 6
+ * Oct 2026, dropped out of search when a newer Woven file failed to read; coding 5; same flag in both apps; default
+ * off). A failed re-ingest marked the whole document "failed", hiding its last good version's chunks. On: when a new
+ * version of a document that was indexed before fails and an earlier version's chunks are stored, the row is put back
+ * on that version (status "indexed"), and the next version number is past every version in its history
+ * (`ingestion/pipeline.ts` `keepLastGoodVersion`). Off, as before.
+ */
+export function ingestFailureKeepsLastGoodEnabled(): boolean {
+  return envFlag("INGEST_FAILURE_KEEPS_LAST_GOOD_ENABLED");
+}
+
+/**
+ * WOVEN_OCR_PAGE_BATCHES_ENABLED (QA, 10 Nov 2026: the 45-page scanned "Everyday Auxiliary Recipe Book v072726" was
+ * refused at the 40-page OCR cap; coding 5; same flag in both apps; default off). On: a scanned PDF over 40 pages, up
+ * to 100 (the API's PDF page limit), is read in requests of at most 20 pages each, run together, each asked for its
+ * own page range of the same file (`ingestion/extract/pdf-ocr.ts`). The run's page budget is unchanged. Off, as before.
+ */
+export function wovenOcrPageBatchesEnabled(): boolean {
+  return envFlag("WOVEN_OCR_PAGE_BATCHES_ENABLED");
+}
+
+/**
+ * EXCERPT_BRAND_HEADING_DROP_ENABLED (QA, round 17c live test, 11 Nov 2026; coding 5; same flag in both apps; default
+ * off). With EXCERPT_BRAND_FILTER on, "what are the holidays?" still showed a source card labelled "Page 42 — <the
+ * sibling brand>" whose excerpt was that heading alone. On: a source card whose label names a hidden brand, or whose
+ * excerpt is empty or only its heading, is left out, and the rest are numbered in order
+ * (`knowledge/excerpt-brand-filter.ts` keepsSourceCard, `ai/full-manual-context.ts`). Off, as before.
+ */
+export function excerptBrandHeadingDropEnabled(): boolean {
+  return envFlag("EXCERPT_BRAND_HEADING_DROP_ENABLED");
+}
+
 // --- end coding 5 flags ---
 
 /**
@@ -3145,6 +3213,18 @@ export function rosterNameInCandidateEnabled(): boolean {
  * matcher's close name); (b) with no employee on the card, no reply text names
  * the person who is not on it. Off, as before.
  */
+/**
+ * NEAR_MISS_ANSWER_KEEPS_REQUEST_ENABLED (QA, 10 Nov 2026, Bubbles s14 path 1; default off). "ok, create a follow-up
+ * coaching form for rozline quellmar. i trained her …" was asked "Is this for **Rozlyn Quellmar**?"; the answer
+ * "Oops, it's Rozlyn quellmar" became the name alone, because the request was looked for by the chosen first name
+ * ("Rozlyn") and the manager had typed "rozline". The card went back to the earlier Coaching Form and lost its date.
+ * On: when no turn typed the chosen name, the turn the question asked about is the request, with the near-miss
+ * replaced by the chosen name (`ai/first-name-suggest.ts`). Off, as before.
+ */
+export function nearMissAnswerKeepsRequestEnabled(): boolean {
+  return envFlag("NEAR_MISS_ANSWER_KEEPS_REQUEST_ENABLED");
+}
+
 export function rosterNearMissEnabled(): boolean {
   return envFlag("ROSTER_NEAR_MISS_ENABLED");
 }
@@ -3721,6 +3801,24 @@ export function metricChoiceOneQuestionEnabled(): boolean {
  */
 export function nearMissQuestionRulesEnabled(): boolean {
   return envFlag("NEAR_MISS_QUESTION_RULES_ENABLED");
+}
+
+// coding 2: FORM_NAME_OFF_ROSTER_ASK
+/**
+ * FORM_NAME_OFF_ROSTER_ASK_ENABLED (ported from the sibling app: QA's roster-set gate there, 10 Nov 2026; default off; ships with the name set, the
+ * eighth FORM_NAME companion). With FORM_NAME on, three replies the off-roster flow should own went another way:
+ * (a) a termination letter's own person ("Dear <name>,", a letter that opens "<name>,") was never offered as typed
+ * ("reply **use <name>**"), only asked who; (b) for a store manager, a full name not on the roster got "I couldn't find
+ * **<name>** in the Woven roster, so that name is not on the form." under an empty card, never OFF_ROSTER_ASK_BEFORE_CARD's
+ * "I can't find **<name>** on your roster — is that the right name, or are they at another store?" with the card held;
+ * (c) "create a CA for <Name>'s Crossing Plaza, …" said the place back as a name not found, never POSSESSIVE_PLACE's
+ * question. On: (a) those letter places count as a person's (`forms/roster-only-names.ts` personPlaces); (b) the
+ * not-found note and offer are OFF_ROSTER_ASK's question and offer, once per name, the card held (`forms/off-roster-
+ * ask.ts`), store managers only, as OFF_ROSTER_ASK; (c) a possessive place is asked as POSSESSIVE_PLACE asks it. Off, as
+ * before.
+ */
+export function formNameOffRosterAskEnabled(): boolean {
+  return envFlag("FORM_NAME_OFF_ROSTER_ASK_ENABLED");
 }
 
 /**
