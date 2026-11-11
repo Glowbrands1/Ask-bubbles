@@ -4263,3 +4263,14 @@ export function failureToOpenIsLateOpeningEnabled(): boolean {
 export function payrollBareSentenceEnabled(): boolean {
   return envFlag("PAYROLL_BARE_SENTENCE_ENABLED");
 }
+
+/**
+ * QUERY_REWRITE_KEEPS_NOUNS_ENABLED (port of the sibling app's, QA 11 Nov 2026; default off; same flag in both apps).
+ * With QUERY_REWRITE on, the rewrite phrases the search "in the manual's terms", which can turn an operational how-to
+ * ("how do I reset the register after closing?") into a policy heading and lose the words that find the training
+ * document's steps. On, an operational how-to's search keeps the manager's own equipment and action words
+ * (`ai/query-rewrite.ts`, `operationalHowTo`). Off, as before. QUERY_REWRITE is off in production here today.
+ */
+export function queryRewriteKeepsNounsEnabled(): boolean {
+  return envFlag("QUERY_REWRITE_KEEPS_NOUNS_ENABLED");
+}
