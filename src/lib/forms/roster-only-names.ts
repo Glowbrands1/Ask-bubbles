@@ -433,7 +433,20 @@ function withNotFoundNote(content: string, typed: string | null, names: readonly
   // The sibling app's QA finding (7 Nov 2026): the company's own name or initials are never a person said back as not found.
   if (typed && namesThisCompany(typed)) return content;
   if (!typed || /I couldn['’]t find \*\*/.test(content) || oneCloseRosterPerson(typed, names)) return content;
+  /*
+   * FORM_NAME_FROM_ROSTER_ENABLED (Gate-Bubbles' 16c re-gate, via QA, 10 Nov 2026): P7's "… for Tamsin, Corwin, and Ione …",
+   * with two roster people called Tamsin, opened "I couldn't find **Tamsin** …" and then asked "Did you mean Tamsin Ashby or
+   * Tamsin Rookwood?". A roster first name is found, and a reply that offers a choice has found someone: no note.
+   */
+  if (formNameFromRosterEnabled() && (/Did you mean\b/.test(content) || isRosterFirstName(typed, names))) return content;
   return `I couldn't find **${typed}** in the Woven roster, so that name is not on the form.\n\n${content.trim()}`;
+}
+
+/** A single typed word that is some roster person's first name ("Tamsin" beside Tamsin Ashby and Tamsin Rookwood). */
+function isRosterFirstName(typed: string, names: readonly string[]): boolean {
+  const word = typed.trim().toLowerCase();
+  if (!word || /\s/.test(word)) return false;
+  return names.some((name) => (name.trim().split(/\s+/)[0] ?? "").toLowerCase() === word);
 }
 
 /**
