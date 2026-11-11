@@ -81,7 +81,8 @@ export const NOV5_PAU_SF_S21_S25_TWIN_CASES: ReplayCase[] = [
     id: "nov5-twin-sf-s21-must-see-behaviors-template",
     title: "sf-s21: \"create a ca for must see behaviors …\": no \"Standards of Conduct, as you said\"; the template's outline is applied with Wynne's own facts, never \"I haven't changed the form\"",
     report: `${REPORT}, sf-s21`,
-    status: { open: "with this app's production flags (CA_SALES_POLICY_ENABLED rolled back here) the must-see-behaviors request for metrics makes no Corrective Action card" },
+    // The open note changed on purpose (QA, 10 Nov 2026: CA_SALES_POLICY has been on here since 5 Nov): still open, later in the chat.
+    status: { open: "the card is made (its Issue keeps \"this should be for wynne sarrow\"), but the pasted Observation of Offense is answered \"I haven't changed the Corrective Action Form\"" },
     async run(t) {
       const thread = start(t);
       const said: string[] = [S21_T1];
@@ -104,7 +105,8 @@ export const NOV5_PAU_SF_S21_S25_TWIN_CASES: ReplayCase[] = [
     id: "nov5-twin-sf-s22-ca-not-coaching",
     title: "sf-s22: \"It needs to be a CA, not a coaching form\" and \"Its a CA\" keep the Corrective Action; another employee's reviewer notes never go into the Observation",
     report: `${REPORT}, sf-s22`,
-    status: { open: "with this app's production flags the first request makes no Corrective Action card" },
+    // The open note changed on purpose (QA, 10 Nov 2026: CA_SALES_POLICY has been on here since 5 Nov): still open, later in the chat.
+    status: { open: "the card is made, but the pasted reviewer notes make a Coaching card offering \"resubmit\" or \"Average Sale\" as the person, and \"It needs to be a CA\" asks who the form is for" },
     async run(t) {
       const thread = start(t);
       const first = await thread.say(
