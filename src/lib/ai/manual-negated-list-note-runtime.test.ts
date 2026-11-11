@@ -212,6 +212,10 @@ async function run(question: string, flag: string | undefined): Promise<Captured
   };
 }
 
+/* FULL_MANUAL_WIDE_GATE_ENABLED's server-ask.ts lines await Coding-2; set true when they land. */
+const WIRED = false;
+const itWired = WIRED ? it : it.fails;
+
 const saved = {
   note: process.env.MANUAL_NEGATED_LIST_NOTE_ENABLED,
   manual: process.env.FULL_MANUAL_CONTEXT_ENABLED,
@@ -297,6 +301,29 @@ describe("conv_mvnoscyz200gtat — the full manual is loaded (the live path)", (
     expect(offRetry?.grounding).toContain("charging in the break room");
     expect(offRetry?.grounding).not.toContain("Reading note");
     expect(onRetry?.grounding).toBe(`${offRetry?.grounding}\n\n${NOTE_BLOCK}`);
+  });
+
+  /*
+   * FULL_MANUAL_WIDE_GATE_ENABLED (#139, citation-d, QA parity with Ask Sunny, 25 Oct 2026; rebuilt on main
+   * 11 Nov 2026 behind the flag): with the flag on, an answer that names no page is not asked again without the
+   * manual, so there is no retrieval retry to carry the note. The test above keeps the flag-off behaviour. Its
+   * server-ask.ts lines await Coding-2: until they land this runs as an expected failure (WIRED = false).
+   */
+  itWired("FULL_MANUAL_WIDE_GATE_ENABLED: an uncited reply is not asked again without the manual; its one call carried the note", async () => {
+    vi.stubEnv("FULL_MANUAL_WIDE_GATE_ENABLED", "1");
+    try {
+      state.reply = "An answer with no page.";
+      const off = await run(B9_QUESTION, undefined);
+      expect(state.calls).toHaveLength(1);
+      const on = await run(B9_QUESTION, "1");
+      expect(state.calls).toHaveLength(1);
+      expect(on.cachedContext).toContain("charging in the break room");
+      expect(off.grounding).not.toContain("Reading note");
+      expect(on.grounding).toContain("Reading note");
+      expect(on.content).toBe("An answer with no page.");
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it("a correct answer is left as written", async () => {
