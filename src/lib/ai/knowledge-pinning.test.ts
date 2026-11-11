@@ -22,6 +22,16 @@ const config = vi.hoisted(() => ({
   headings: [] as string[],
 }));
 
+// RETRIEVAL_RECALL_ENABLED (test harness only, QA 11 Nov 2026): recall reads through this test's real provider on
+// PGlite (which has no hybrid search function), so the flag can be gated here. Off, recall is never called.
+vi.mock("@/lib/knowledge/recall-match", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/knowledge/recall-match")>()),
+  matchRecallKnowledge: async (input: { query: string; scopeId: string; limit?: number }) => {
+    const { SupabaseKnowledgeProvider } = await import("@/lib/knowledge/providers/supabase");
+    return (await new SupabaseKnowledgeProvider().match(input as never)) as never;
+  },
+}));
+
 vi.mock("@/config/company/knowledge", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/config/company/knowledge")>()),
   KNOWLEDGE_SOURCES: [],
