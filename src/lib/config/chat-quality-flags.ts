@@ -1337,6 +1337,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 5: EXCERPT_BRAND_HEADING_DROP (QA's round 17c live test, 11 Nov 2026; default off).
   "EXCERPT_BRAND_HEADING_DROP_ENABLED",
   "NEAR_MISS_ANSWER_KEEPS_REQUEST_ENABLED",
+  "RELATIVE_BESIDE_TYPED_DATE_ENABLED",
 ] as const;
 
 /**
@@ -3006,6 +3007,16 @@ export function wovenOcrPageBatchesEnabled(): boolean {
  */
 export function excerptBrandHeadingDropEnabled(): boolean {
   return envFlag("EXCERPT_BRAND_HEADING_DROP_ENABLED");
+}
+
+/**
+ * RELATIVE_BESIDE_TYPED_DATE_ENABLED (coding 4's production-flag reading via QA, 10 Nov 2026; coding 5; same flag in
+ * both apps; default off). With RELATIVE_DATE_READER on, "missed our team meeting yesterday 10/21/26" read two dates and
+ * the card had none. On: a relative day word right beside a typed date names that date (`forms/wider-dates.ts`). Off, as
+ * before.
+ */
+export function relativeBesideTypedDateEnabled(): boolean {
+  return envFlag("RELATIVE_BESIDE_TYPED_DATE_ENABLED");
 }
 
 // --- end coding 5 flags ---
