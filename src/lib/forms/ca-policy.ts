@@ -414,13 +414,21 @@ function missedEventIn(sentences: readonly string[]): string | null {
  * code"), so they count only as an answer — a short reply, or a sentence that
  * frames them as the policy.
  */
+/** "out of uniform" ending its phrase: then the end, punctuation, a date or a connecting word — never a noun ("uniform shirts"). */
+const OUT_OF_UNIFORM =
+  /\bout\s+of\s+uniform\b(?=\s*(?:$|[.,;:!?)\n—-]|\d|(?:on|at|for|again|today|yesterday|tonight|during|while|and|or|but|when|in|this|last|twice|all|every|since|after|before|until|so|because|as|which|that|despite)\b))/;
+
 const NAMED: { name: CaPolicyName; pattern: RegExp; alwaysAPolicy: boolean; enabled?: () => boolean }[] = [
   { name: "standards_of_conduct", pattern: /\b(?:standards? of conduct|code of conduct)\b/, alwaysAPolicy: true },
   { name: "under_performance", pattern: /\b(?:under[- ]?performance|underperforming)\b/, alwaysAPolicy: false },
   { name: "attendance", pattern: /\b(?:attendance|tardiness|absenteeism)\b/, alwaysAPolicy: false },
   { name: "dress_code", pattern: /\bdress code\b/, alwaysAPolicy: false },
-  /* NOT_FOLLOWING_IS_VIOLATION_ENABLED (QA, 10 Nov 2026): "out of uniform" is the dress code broken, as "out of dress code" is. */
-  { name: "dress_code", pattern: /\bout\s+of\s+uniform\b/, alwaysAPolicy: true, enabled: notFollowingIsViolationEnabled },
+  /*
+   * NOT_FOLLOWING_IS_VIOLATION_ENABLED (QA, 10 Nov 2026): "out of uniform" is the dress code broken, as "out of dress code"
+   * is — only when "uniform" ends the phrase (QA's gate, 11 Nov 2026: "we ran out of uniform shirts so she wore her own"
+   * is a store running out of stock, not a person out of uniform). A noun after it ("shirts", "pants") is not a match.
+   */
+  { name: "dress_code", pattern: OUT_OF_UNIFORM, alwaysAPolicy: true, enabled: notFollowingIsViolationEnabled },
   { name: "company_policies", pattern: /\bviolation of company polic(?:y|ies)\b/, alwaysAPolicy: true },
 ];
 const POLICY_FRAME =
