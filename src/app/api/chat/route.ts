@@ -62,6 +62,7 @@ import {
   titleNotSpeakersManagerEnabled,
   newRequestOwnTurnsEnabled,
   formEditPlainWordsEnabled,
+  pastedTemplateFieldsToOpenDraftEnabled,
   payrollDeductAmountFieldEnabled,
   questionNotFormEnabled,
   sameFormCopyEnabled,
@@ -762,7 +763,7 @@ async function postChat(request: Request) {
         !sameCopy && !correction && !askedQuestion && !policyChange && !redraft && parsed.activeFormInstanceId
           ? await separateFormRequested(parsed.question)
           : false;
-      const askedRevision =
+      const askedRevisionRead =
         !sameCopy && !correction && !askedQuestion && !policyChange && !redraft && !separateDocument && parsed.activeFormInstanceId
           ? await (await import("@/lib/forms/chat-revision")).reviseActiveForm({
               request,
@@ -772,6 +773,18 @@ async function postChat(request: Request) {
               today: parsed.context.todayIso,
             })
           : null;
+      /*
+       * PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT_ENABLED (ported from the sibling app; its round-25 live test of sf-s21): a
+       * pasted labelled template the revision changed nothing for ("I haven't changed the … — everything on it is as
+       * it was.") goes on to the open-draft path, which places its sections (`lib/forms/open-draft-turn.ts`).
+       */
+      const askedRevision =
+        askedRevisionRead &&
+        pastedTemplateFieldsToOpenDraftEnabled() &&
+        (await import("@/lib/forms/pasted-template-fields")).looksLikePastedTemplate(parsed.question) &&
+        (await import("@/lib/forms/pasted-template-fields")).revisionChangedNothing(askedRevisionRead.content)
+          ? null
+          : askedRevisionRead;
       /*
        * FORM_EDIT_PLAIN_WORDS_ENABLED: "this is what i am wanting to coach on:
        * …", "make that update", "update the draft with these details" — said

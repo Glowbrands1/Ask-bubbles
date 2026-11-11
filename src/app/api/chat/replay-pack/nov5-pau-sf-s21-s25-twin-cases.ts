@@ -70,8 +70,8 @@ function claimsUnsaid(reply: ReplayAnswer, said: readonly string[]): string | nu
   return said.some((turn) => turn.toLowerCase().includes(policy)) ? null : claim[1]!.trim();
 }
 
-const S21_T1 = "create a ca for must see behaviors for performace  this should be for wynne sarrow  - verbal\n146 transactions \nBelow in UPT, Average Sale, Conversion";
-const TEMPLATE =
+export const S21_T1 = "create a ca for must see behaviors for performace  this should be for wynne sarrow  - verbal\n146 transactions \nBelow in UPT, Average Sale, Conversion";
+export const TEMPLATE =
   "Observation of Offense:  During the month of September 2026, Tamsyn completed 237 transactions. Throughout these transactions, Tamsyn failed to follow their Must See Behaviors resulting in a performance below Buff City Soap averages in the following areas UPT, Average Sale, and Conversion.  \n\nAt Buff City Soap, we strive to provide the best store experience for every client. In order to ensure the best results for our clients, every employee is expected to follow their Client Service Must See Behaviors and Engagement Must See Behaviors with every client interaction.\t\n\nAction Plan:  The Leadership Team will coach Tamsyn on Must See Behaviors to make sure these are not only understood but also put into practice. Tamsyn is expected to follow these Must See Behaviors with every client interaction. Failure to consistenly meet expectations may result in additional corrective action up to and including termination of employment.";
 /** The template's outline with Wynne's own facts, as the revision model writes it (the stand-in). */
 const TEMPLATE_WITH_WYNNE = {
