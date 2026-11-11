@@ -46,6 +46,8 @@ describe('"what are the holidays?": no source card that is only the sibling bran
     expect(cards.some((source) => SIBLING.test(`${source.locator} ${source.excerpt}`))).toBe(false);
     expect(cards.map((source) => source.locator)).toEqual(["Page 43 — Buff City Soap", "Page 42 — Corporate Office", "Page 43 — Crunch Fitness"]);
     expect(cards.map((source) => source.marker)).toEqual([1, 2, 3]);
+    // The heading cut from "Buff City Soap: …" leaves no ": " at the front of the excerpt.
+    expect(cards.map((source) => source.excerpt.slice(0, 14))).toEqual(["Buff City Soap", "The Corporate ", "Crunch Fitness"]);
   });
 });
 

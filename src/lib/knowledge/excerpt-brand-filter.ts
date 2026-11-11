@@ -135,6 +135,16 @@ export function excerptTextForDisplay(text: string, documentTitle: string): stri
  * With the flag on, a source card is left out when its label names a brand in `EXCERPT_HIDDEN_BRANDS`, or when its
  * excerpt is empty or only its heading. Every other card is kept as it was. Pure apart from the flag.
  */
+/**
+ * EXCERPT_BRAND_HEADING_DROP_ENABLED (QA, 11 Nov 2026): a kept excerpt began ": Buff City Soap is closed …" — the card's
+ * heading ("Buff City Soap") was cut from the front of "Buff City Soap: …" and its colon stayed. Off: as given.
+ */
+export function withoutLeadingColon<T extends { excerpt: string }>(card: T): T {
+  if (!excerptBrandHeadingDropEnabled()) return card;
+  const excerpt = card.excerpt.replace(/^\s*[:;,\u2013\u2014-]\s*/, "");
+  return excerpt === card.excerpt ? card : { ...card, excerpt };
+}
+
 export function keepsSourceCard(card: { locator: string; excerpt: string }): boolean {
   if (!excerptBrandHeadingDropEnabled()) return true;
   const names = brandPattern(EXCERPT_HIDDEN_BRANDS);

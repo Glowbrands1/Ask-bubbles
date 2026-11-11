@@ -1320,6 +1320,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
   "CHAT_STAGE_TIMINGS_ENABLED",
   "CA_REASON_DUE_TO_ENABLED",
+  // coding 5: EXCERPT_BRAND_HEADING_DROP (QA's round 17c live test, 11 Nov 2026; default off).
+  "EXCERPT_BRAND_HEADING_DROP_ENABLED",
 ] as const;
 
 /**

@@ -1,7 +1,7 @@
 import { MULTI_BRAND_MANUAL_TITLES, POLICY_MANUAL_BRAND_SCOPE } from "@/config/company/knowledge";
 import { isTableOfContents } from "@/lib/forms/official-policy-manual";
 import { readManualForBrand, isMultiBrandManual, type ManualBrandScope } from "@/lib/knowledge/brand-sections";
-import { excerptTextForDisplay, keepsSourceCard } from "@/lib/knowledge/excerpt-brand-filter";
+import { excerptTextForDisplay, keepsSourceCard, withoutLeadingColon } from "@/lib/knowledge/excerpt-brand-filter";
 import { estimateTokens } from "@/lib/ingestion/chunking";
 import { isPageFooter, printedPageOf } from "@/lib/ingestion/extract/pdf-sections";
 import type { KnowledgeCategory } from "@/types";
@@ -1431,6 +1431,7 @@ export function citePolicyAnswer(
     }))
     // EXCERPT_BRAND_HEADING_DROP_ENABLED: a card that is only the sibling company's heading is left out (`excerpt-brand-filter.ts`).
     .filter(keepsSourceCard)
+    .map(withoutLeadingColon)
     .map((source, index) => ({ marker: index + 1, ...source }));
 
   return { text: marked, sources, ok: true };
