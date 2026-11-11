@@ -1,0 +1,477 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov5-request-slot-off-roster-name-models: the same, with the reading models reading \"Remy Fenn\" as typed (the live path): no metric offered, no \"Which of them\", never Remy Calder \u2014 holds with production's flags": {
+  "category": "REGRESSION",
+  "twin": "OFF_ROSTER_ASK_BEFORE_CARD_ENABLED",
+  "reason": "A replay invariant that asserts a card for an off-roster name fails because the ask replaces the card: AssertionError: neither a card for Remy Fenn nor the note naming only Remy Fenn: I can't find **Remy Fenn** on your rost"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov5-request-slot-off-roster-name: Pau's message 1 for \"Remy Fenn\", not on the roster (Remy Calder is): no metric named as a person, no \"Which of them\", never Remy Calder \u2014 holds with production's flags": {
+  "category": "REGRESSION",
+  "twin": "OFF_ROSTER_ASK_BEFORE_CARD_ENABLED",
+  "reason": "A replay invariant that asserts a card for an off-roster name fails because the ask replaces the card: AssertionError: neither a card for Remy Fenn nor the note naming only Remy Fenn: I can't find **Remy Fenn** on your rost"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov6-issue-is-the-account-lowercase: \"create a CA for tamsin wexley, verbal, she was late on 10-20-26\": the card's Issue is the lateness, never the level or the name \u2014 holds with ISSUE_IS_THE_ACCOUNT_ENABLED on": {
+  "category": "REGRESSION",
+  "twin": "OFF_ROSTER_ASK_BEFORE_CARD_ENABLED",
+  "reason": "A replay invariant that asserts a card for an off-roster name fails because the ask replaces the card: AssertionError: the Issue is not the account: expected 'I can\\'t find **Tamsin Wexley** on yo\u2026' to match /\\*\\*Issue:\\*\\*"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov6-issue-is-the-account-lowercase: \"create a CA for tamsin wexley, verbal, she was late on 10-20-26\": the card's Issue is the lateness, never the level or the name \u2014 holds with production's flags": {
+  "category": "REGRESSION",
+  "twin": "OFF_ROSTER_ASK_BEFORE_CARD_ENABLED",
+  "reason": "A replay invariant that asserts a card for an off-roster name fails because the ask replaces the card: AssertionError: the Issue is not the account: expected 'I can\\'t find **Tamsin Wexley** on yo\u2026' to match /\\*\\*Issue:\\*\\*"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov6-no-notice-no-date-resigned: \"exit form for <X>, resigned 11-3-26 with no notice, not eligible for rehire\": no notice date, and the resignation date stays \u2014 holds with NO_NOTICE_NO_DATE_ENABLED on": {
+  "category": "REGRESSION",
+  "twin": "OFF_ROSTER_ASK_BEFORE_CARD_ENABLED",
+  "reason": "A replay invariant that asserts a card for an off-roster name fails because the ask replaces the card: AssertionError: the resignation date is lost: expected 'I can\\'t find **Peregrine Ashcombe** \u2026' to match /Resignation Da"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov6-no-notice-no-date-resigned: \"exit form for <X>, resigned 11-3-26 with no notice, not eligible for rehire\": no notice date, and the resignation date stays \u2014 holds with production's flags": {
+  "category": "REGRESSION",
+  "twin": "OFF_ROSTER_ASK_BEFORE_CARD_ENABLED",
+  "reason": "A replay invariant that asserts a card for an off-roster name fails because the ask replaces the card: AssertionError: the resignation date is lost: expected 'I can\\'t find **Peregrine Ashcombe** \u2026' to match /Resignation Da"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov8-ca-shift-dates-name-and-dates: \u2192 \"Rhea Calloway 11/7 and 11/8\": the dates follow the request \u2014 OPEN in production (the card has no Issue: 11/7 and 11/8 are lost and no date question is asked)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with combination"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov8-ca-shift-dates-not-showing-up: \u2192 \"make me CA for Rhea Calloway not showing up to her shifts on 11/7 and 11/8\": the dates reach the Observation \u2014 OPEN in production (the card has no Issue: 11/7 and 11/8 are lost and no date question is asked)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with combination"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov8-ca-shift-dates-request-again: \"Is this for Rhea Calloway?\" \u2192 \"make me CA for Rhea Calloway failing to complete shifts 11/7 and 11/8\": the dates reach the Observation \u2014 OPEN in production (the card has no Issue: 11/7 and 11/8 are lost and no date question is asked)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with combination"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov8-exit-answer-not-a-correction: a six-turn exit chat: every later card keeps every fact turn 1 stated (address, last day, items, key, wage/bonus, rehire) \u2014 OPEN in production (from turn 2, Permanent Address, Last Day Worked, Store Items/Key, Wage/Bonus and Rehire are \"Left blank for you to review\")": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with EXIT_ANSWER_NOT_A_CORRECTION_ENABL"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov8-field-label-not-a-question: an open exit card: \"how employee resigned - told management\" and \"resignation date \u2026 Reason for resignation - \u2026\" fill the card, never a policy answer \u2014 OPEN in production (turns 5 and 6 are \"A grounded answer from the policy manual.\" with no card)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with FIELD_LABEL_NOT_A_QUESTION_ENABLED"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov9-ca-shift-answer-other-account: \u2192 \"Rhea Calloway not showing up to her shifts on 11/7 and 11/8\": the answer's account, not the request's before it \u2014 OPEN in production (the card has no Issue: the account and the dates are lost)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with combination"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov9-ca-shift-answer-own-account-next-turn: \u2192 the same answer, then \"no payroll deduct\": the next turn's Observation is not doubled either \u2014 OPEN in production (the card has no Issue: the account and the dates are lost)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with combination"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov9-ca-shift-answer-same-account: \u2192 \"Rhea Calloway failing to complete shifts 11/7 and 11/8\": the account once, not \"\u2026 shifts failing to complete shifts \u2026\" \u2014 OPEN in production (the card has no Issue: the account and the dates are lost)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with combination"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov9-exit-letter-signer-off-roster: \"create an exit form for <B>, team member \u2026 '<B>, your employment \u2026 <C>, District Manager'\" (the live chat: <B> is not on this store's roster): the card is for <B>, Position Team Member; the signer is never offered, nor her title used \u2014 OPEN in production (\"Which of them is this Resignation/Exit Form for \u2014 <B>, <C> or District Manager'?\"; Position \"District Manager\")": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with EXIT_LETTER_SIGNER_NOT_SUBJECT_ENA"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov9-exit-letter-signer-on-roster: \"create an exit form for <B>, team member \u2026 '<B>, your employment \u2026 <C>, District Manager'\" (<B> on the roster): the card is for <B>, Position Team Member; the signer is never offered, nor her title used \u2014 OPEN in production (the card is for <B> but its read-back says \"Job Title: District Manager\")": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with EXIT_LETTER_SIGNER_NOT_SUBJECT_ENA"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov9-off-roster-ask-before-card: QA's \"create a coaching form for <full name not on the roster>\" (a store manager): asked about before any card \u2014 OPEN in production (a ready Coaching Form card for **Wrenna Pollard**, no question)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with OFF_ROSTER_ASK_BEFORE_CARD_ENABLED"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov9-off-roster-ask-then-use: after the question, \"use Wrenna Pollard\" (OFF_ROSTER_CONFIRM's offer) makes the card, marked not from Woven \u2014 OPEN in production (no question: the first card is already for **Wrenna Pollard**)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with OFF_ROSTER_ASK_BEFORE_CARD_ENABLED"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov9-possessive-place-other-store: QA's \"create a CA for Lee's Summit Plaza, she was late on 10-20-26\" (a manager of another store): no Employee \"Lee\"; it asks who the form is for \u2014 OPEN in production (a Corrective Action card for **Lee**)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with POSSESSIVE_PLACE_NOT_PERSON_ENABLE"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov9-possessive-place-own-store: QA's \"create a CA for Lee's Summit Plaza, she was late on 10-20-26\" (a Lee's Summit manager): no Employee \"Lee\"; it asks who the form is for \u2014 OPEN in production (a Corrective Action card for **Lee**)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with POSSESSIVE_PLACE_NOT_PERSON_ENABLE"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov9-possessive-place-then-name: after the question, \"Marnie Holloway\" makes the card for her \u2014 OPEN in production (the first card is for **Lee**)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with POSSESSIVE_PLACE_NOT_PERSON_ENABLE"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov9-work-area-absence-ca: a CA for \"left the front desk unattended on 11/6/26\": the card and the saved form cite the Standards of Conduct, never Attendance \u2014 OPEN in production (no section of the manual is cited: the card falls to the model's heading (live: Attendance p.14))": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with WORK_AREA_ABSENCE_CITES_CONDUCT_EN"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov9-work-area-absence-coaching-card: a Coaching card for \"left the front desk unattended on 11/6/26\": the Standards of Conduct by its printed page \u2014 OPEN in production (no section of the manual is cited: the card falls to the model's heading (live: Attendance p.14))": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with WORK_AREA_ABSENCE_CITES_CONDUCT_EN"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov9-work-area-absence-coaching-made-about: a Coaching card about a missed meeting, then \"make it about leaving the front desk unattended on 11/6/26\": the Standards of Conduct, not the meeting's Attendance \u2014 OPEN in production (the card cites Attendance p.14, read from the missed meeting before the \"make it about\")": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with WORK_AREA_ABSENCE_CITES_CONDUCT_EN"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov9-work-area-absence-left-the-building: a CA for \"left the front desk unattended and went to her car\": the Standards of Conduct only (Pau, 9 Nov 2026) \u2014 OPEN in production (no section of the manual is cited: the card falls to the model's heading (live: Attendance p.14))": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with WORK_AREA_ABSENCE_CITES_CONDUCT_EN"
+ },
+ "src/lib/ai/ca-shift-dates-kept.test.ts :: FIRST_NAME_ANSWER_KEEPS_ACCOUNT_ENABLED off: \"Rhea Calloway 11/7 and 11/8\" is read as the name alone (the reported loss)": {
+  "category": "INTENDED-HARNESS",
+  "twin": "itself, flag unset (CI default)",
+  "reason": "The flag's own off-pin: asserts today's behaviour with the flag unset; the gate turns it on."
+ },
+ "src/lib/ai/ca-shift-dates-kept.test.ts :: SHIFT_ACCOUNT_IS_INCIDENT_ENABLED off: the request is read as no account (the reported empty Observation)": {
+  "category": "INTENDED-HARNESS",
+  "twin": "itself, flag unset (CI default)",
+  "reason": "The flag's own off-pin: asserts today's behaviour with the flag unset; the gate turns it on."
+ },
+ "replay: nov2-p5-name-claims [fix:CLAIM_GUARD_ENABLED,OPEN_FORM_NO_SELECTION_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (OFF_ROSTER_ASK_BEFORE_CARD_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov2-p5-name-claims [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (OFF_ROSTER_ASK_BEFORE_CARD_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov2-p5-name-corrections [fix:NAME_CORRECTION_WORDS_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (OFF_ROSTER_ASK_BEFORE_CARD_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov2-p5-name-corrections [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (OFF_ROSTER_ASK_BEFORE_CARD_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov4-pau-metrics-not-people-unknown [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (OFF_ROSTER_ASK_BEFORE_CARD_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov5-coding3-twin-prior-coaching-none-on-file [fix:PRIOR_COACHING_DENIAL_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (WORK_AREA_ABSENCE_CITES_CONDUCT_EN): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov5-coding3-twin-prior-coaching-none-on-file [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (WORK_AREA_ABSENCE_CITES_CONDUCT_EN): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov5-compound-surname-short-word-no-match [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (OFF_ROSTER_ASK_BEFORE_CARD_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov5-not-found-employee-first [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (OFF_ROSTER_ASK_BEFORE_CARD_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov5-not-found-name-at-end [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (OFF_ROSTER_ASK_BEFORE_CARD_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov5-request-slot-off-roster-name [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (OFF_ROSTER_ASK_BEFORE_CARD_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov5-request-slot-off-roster-name-models [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (OFF_ROSTER_ASK_BEFORE_CARD_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov6-b1-its-name [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (OFF_ROSTER_ASK_BEFORE_CARD_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov6-b1-my-team-member-then-name-is [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (OFF_ROSTER_ASK_BEFORE_CARD_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov6-b1-name-with-title-then-name-is [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (OFF_ROSTER_ASK_BEFORE_CARD_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov6-b1-title-then-her-name-is [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (OFF_ROSTER_ASK_BEFORE_CARD_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov6-coding3-request-level-not-history-write-up-with [fix:REQUEST_LEVEL_NOT_HISTORY_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (WORK_AREA_ABSENCE_CITES_CONDUCT_EN): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov6-coding3-request-level-not-history-write-up-with [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (WORK_AREA_ABSENCE_CITES_CONDUCT_EN): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov6-issue-is-the-account-lowercase [fix:ISSUE_IS_THE_ACCOUNT_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (OFF_ROSTER_ASK_BEFORE_CARD_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov6-issue-is-the-account-lowercase [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (OFF_ROSTER_ASK_BEFORE_CARD_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov6-no-notice-no-date-resigned [fix:NO_NOTICE_NO_DATE_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (OFF_ROSTER_ASK_BEFORE_CARD_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov6-no-notice-no-date-resigned [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (OFF_ROSTER_ASK_BEFORE_CARD_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov6-off-roster-ca-use [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (OFF_ROSTER_ASK_BEFORE_CARD_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov6-off-roster-exit-for-name-yes [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (OFF_ROSTER_ASK_BEFORE_CARD_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov6-off-roster-exit-own-line-name-again [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (OFF_ROSTER_ASK_BEFORE_CARD_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov6-off-roster-exit-own-line-use [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (OFF_ROSTER_ASK_BEFORE_CARD_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov6-offer-apostrophe-surname [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (OFF_ROSTER_ASK_BEFORE_CARD_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov6-offer-employee-comma-place [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (OFF_ROSTER_ASK_BEFORE_CARD_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov6-offer-lowercase-said-back-title-case [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (OFF_ROSTER_ASK_BEFORE_CARD_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov6-offer-mixed-case-surname [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (OFF_ROSTER_ASK_BEFORE_CARD_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov6-one-question-ca [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (OFF_ROSTER_ASK_BEFORE_CARD_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov6-one-question-employee-comma [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (OFF_ROSTER_ASK_BEFORE_CARD_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov6-one-question-for-name [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (OFF_ROSTER_ASK_BEFORE_CARD_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov6-one-question-own-line [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (OFF_ROSTER_ASK_BEFORE_CARD_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov6-title-ends-at-line-exit-s16 [fix:TITLE_ENDS_AT_LINE_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (OFF_ROSTER_ASK_BEFORE_CARD_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov6-title-ends-at-line-exit-s16 [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (OFF_ROSTER_ASK_BEFORE_CARD_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov7-live-b1-team-member-off-roster-three-turns [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (OFF_ROSTER_ASK_BEFORE_CARD_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov8-ca-shift-dates-name-and-dates [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (FIRST_NAME_ANSWER_KEEPS_ACCOUNT_EN,SHIFT_ACCOUNT_IS_INCIDENT_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov8-ca-shift-dates-name-only [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (SHIFT_ACCOUNT_IS_INCIDENT_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov8-ca-shift-dates-not-showing-up [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (FIRST_NAME_ANSWER_KEEPS_ACCOUNT_EN,SHIFT_ACCOUNT_IS_INCIDENT_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov8-ca-shift-dates-request-again [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (FIRST_NAME_ANSWER_KEEPS_ACCOUNT_EN,SHIFT_ACCOUNT_IS_INCIDENT_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov8-exit-answer-not-a-correction [fix:EXIT_ANSWER_NOT_A_CORRECTION_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (FIELD_LABEL_NOT_A_QUESTION_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov8-exit-answer-not-a-correction [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (EXIT_ANSWER_NOT_A_CORRECTION_ENABL): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov8-exit-field-label-keeps-no-notice [fix:FIELD_LABEL_NOT_A_QUESTION_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (EXIT_ANSWER_NOT_A_CORRECTION_ENABL,OFF_ROSTER_ASK_BEFORE_CARD_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov8-exit-field-label-keeps-no-notice [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (EXIT_ANSWER_NOT_A_CORRECTION_ENABL,FIELD_LABEL_NOT_A_QUESTION_ENABLED,OFF_ROSTER_ASK_BEFORE_CARD_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov8-field-label-not-a-question [fix:FIELD_LABEL_NOT_A_QUESTION_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (EXIT_ANSWER_NOT_A_CORRECTION_ENABL): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov8-field-label-not-a-question [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (EXIT_ANSWER_NOT_A_CORRECTION_ENABL,FIELD_LABEL_NOT_A_QUESTION_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov8-s38-failing-full-name [fix:ACCOUNT_VERB_NOT_A_NAME_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (SHIFT_ACCOUNT_IS_INCIDENT_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov8-s38-failing-full-name [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (SHIFT_ACCOUNT_IS_INCIDENT_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov8-s38-keep-not-showing-up [fix:ACCOUNT_VERB_NOT_A_NAME_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (SHIFT_ACCOUNT_IS_INCIDENT_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov8-s38-keep-not-showing-up [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (SHIFT_ACCOUNT_IS_INCIDENT_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov8-s38-missing-hyphenated [fix:ACCOUNT_VERB_NOT_A_NAME_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (SHIFT_ACCOUNT_IS_INCIDENT_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov8-s38-missing-hyphenated [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (SHIFT_ACCOUNT_IS_INCIDENT_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov8-two-forms-card-not-asked-ef902fec [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (OFF_ROSTER_ASK_BEFORE_CARD_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov9-ca-shift-answer-other-account [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (FIRST_NAME_ANSWER_KEEPS_ACCOUNT_EN,SHIFT_ACCOUNT_IS_INCIDENT_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov9-ca-shift-answer-own-account-next-turn [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (FIRST_NAME_ANSWER_KEEPS_ACCOUNT_EN,SHIFT_ACCOUNT_IS_INCIDENT_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov9-ca-shift-answer-same-account [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (FIRST_NAME_ANSWER_KEEPS_ACCOUNT_EN,SHIFT_ACCOUNT_IS_INCIDENT_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov9-exit-letter-signer-off-roster [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (EXIT_LETTER_SIGNER_NOT_SUBJECT_ENA): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov9-exit-letter-signer-on-roster [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (EXIT_LETTER_SIGNER_NOT_SUBJECT_ENA): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov9-off-roster-ask-before-card [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (OFF_ROSTER_ASK_BEFORE_CARD_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov9-off-roster-ask-then-use [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (OFF_ROSTER_ASK_BEFORE_CARD_ENABLED): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov9-possessive-place-other-store [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (POSSESSIVE_PLACE_NOT_PERSON_ENABLE): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov9-possessive-place-own-store [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (POSSESSIVE_PLACE_NOT_PERSON_ENABLE): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov9-possessive-place-then-name [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (POSSESSIVE_PLACE_NOT_PERSON_ENABLE): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov9-work-area-absence-ca [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (WORK_AREA_ABSENCE_CITES_CONDUCT_EN): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov9-work-area-absence-coaching-card [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (WORK_AREA_ABSENCE_CITES_CONDUCT_EN): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov9-work-area-absence-coaching-made-about [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (WORK_AREA_ABSENCE_CITES_CONDUCT_EN): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ },
+ "replay: nov9-work-area-absence-left-the-building [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply changes as the flag(s) mean it to (WORK_AREA_ABSENCE_CITES_CONDUCT_EN): diffs read \u2014 Standards of Conduct cited for leaving the front desk; shift accounts become the Issue (and ask which date); 'Lee' no longer the employee for Lee's Summit Plaza; exit letter signer not offered/title not taken; turn-1 exit facts kept; off-roster names asked before a card (OFF_ROSTER_ASK_BEFORE_CARD)"
+ }
+}
