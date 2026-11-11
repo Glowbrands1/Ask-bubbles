@@ -1357,6 +1357,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT_ENABLED",
   // coding 6: GROUP_WORDS_NOT_A_NAME (Problem 19, 11 Nov 2026; default off).
   "GROUP_WORDS_NOT_A_NAME_ENABLED",
+  // coding 6: OUTLINE_ON_OPEN_PROPOSAL (QA's Bubbles 17i live test, 11 Nov 2026; default off).
+  "OUTLINE_ON_OPEN_PROPOSAL_ENABLED",
 ] as const;
 
 /**
@@ -4570,4 +4572,15 @@ export function pastedTemplateFieldsToOpenDraftEnabled(): boolean {
  */
 export function groupWordsNotANameEnabled(): boolean {
   return envFlag("GROUP_WORDS_NOT_A_NAME_ENABLED");
+}
+
+/**
+ * OUTLINE_ON_OPEN_PROPOSAL_ENABLED (coding 6, 11 Nov 2026; default off; QA's Bubbles 17i live test). On a proposal
+ * (Create not pressed), a pasted "Observation of Offense: … / Action Plan: …" outline for another person, then "same
+ * outline but with <A>'s info", cost the card its Issue and Policy. On: with no form open, a pasted outline and a
+ * "same outline" turn are no account — left out of the proposal's re-read, which takes the request before them — and
+ * the reply says the outline is kept as her form's layout (`forms/outline-on-proposal.ts`). Off, as before.
+ */
+export function outlineOnOpenProposalEnabled(): boolean {
+  return envFlag("OUTLINE_ON_OPEN_PROPOSAL_ENABLED");
 }
