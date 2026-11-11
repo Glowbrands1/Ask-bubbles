@@ -1,5 +1,7 @@
 import { expect, vi } from "vitest";
 
+import { typoFullNameToRosterEnabled } from "@/lib/config/chat-quality-flags";
+
 import { STAFF, WEST_DODGE, type DirectoryRow, type ReplayAnswer, type ReplayCase, type ReplayContext } from "./cases";
 
 /**
@@ -44,7 +46,11 @@ async function cardAfter(t: ReplayContext, correction: string): Promise<{ before
   const thread = t.thread();
   await thread.say(OPENING[0]!);
   const before = (await thread.say(OPENING[1]!)).formProposal!;
-  expect(before?.employeeName, "the opening card does not carry the typed name").toBe("Odessa Lark Penhallwo");
+  // Changed on purpose (11 Nov 2026): with TYPO_FULL_NAME_TO_ROSTER_ENABLED (sf-b5) the opening card is already the
+  // roster's Odessa Lark Penhallow (one swap in a surname word); the correction must then leave her as she is.
+  expect(before?.employeeName, "the opening card does not carry the typed name").toBe(
+    typoFullNameToRosterEnabled() ? "Odessa Lark Penhallow" : "Odessa Lark Penhallwo",
+  );
   return { before, after: await thread.say(correction), thread };
 }
 
