@@ -4309,3 +4309,13 @@ export function firstNameEnoughEnabled(): boolean {
 export function noShowOpeningIsAttendanceEnabled(): boolean {
   return envFlag("NO_SHOW_OPENING_IS_ATTENDANCE_ENABLED");
 }
+
+/**
+ * ACCOUNT_TYPOS_FIXED_ENABLED (QA, the Ask Sunny sanitation report, 10 Nov 2026 18:49Z; port from Ask Sunny; default off;
+ * same flag in both apps). "not doing th e10 minute sanitaion" went onto the card's Issue line word for word. On, the card
+ * shows the manager's words with obvious slips mended ("the 10-minute sanitation"; `forms/account-spelling.ts`). The stored
+ * messages and the record keep what was typed. Off, as before.
+ */
+export function accountTyposFixedEnabled(): boolean {
+  return envFlag("ACCOUNT_TYPOS_FIXED_ENABLED");
+}

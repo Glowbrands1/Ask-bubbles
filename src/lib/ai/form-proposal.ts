@@ -186,6 +186,7 @@ import { currentFormRequestText } from "@/lib/forms/current-request";
 import { managerWords } from "./edit-date-rules";
 import { groundEmployeeResolution } from "./employee-candidate-grounding";
 import { readFormRequests, type FormRequest } from "@/lib/forms/form-requests";
+import { cardAccountText } from "@/lib/forms/account-spelling";
 import { answerCorrectiveAction } from "./form-answers";
 import type { AskResponse } from "./types";
 
@@ -3143,7 +3144,8 @@ function correctiveActionReady(
    * became the employee's name and the stated level was left unticked.
    */
   const stated: string[] = [];
-  if (proposal.issue) stated.push(`**Issue:** ${proposal.issue}`);
+  // ACCOUNT_TYPOS_FIXED_ENABLED: the obvious slips mended, the manager's words kept (`forms/account-spelling.ts`).
+  if (proposal.issue) stated.push(`**Issue:** ${cardAccountText(proposal.issue, proposal.employeeName)}`);
   if (warning.offersLevel && proposal.warningLevel) {
     stated.push(`**Type of warning:** ${warningLevelLabel(proposal.warningLevel as WarningLevel)}, as you said — tell me if that should change`);
   }

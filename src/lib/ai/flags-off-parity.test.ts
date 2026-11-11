@@ -124,6 +124,15 @@ const PROTECTED = [
  * carried as the box that replaced it, and an old Other write-in ticks Other.
  * Behind CA_SALES_POLICY_ENABLED, default off; off, every row is carried as
  * before. The filed form is never touched.
+ *
+ * The user (Pau) approved, under Pau's standing approval via QA, 11 Nov 2026, in
+ * src/lib/ai/form-proposal.ts, exactly: the import
+ * `import { cardAccountText } from "@/lib/forms/account-spelling";` and the
+ * card's Issue line wrapped as
+ * `stated.push(`**Issue:** ${cardAccountText(proposal.issue, proposal.employeeName)}`)`
+ * with its comment (port from Ask Sunny b206494f: the card's account keeps the
+ * manager's words with obvious slips mended). Behind ACCOUNT_TYPOS_FIXED_ENABLED,
+ * default off; off, cardAccountText returns its input and the card is as before.
  */
 const APPROVED_PROTECTED_EDITS = [
   ":(exclude)src/lib/forms/chat-revision.ts",
