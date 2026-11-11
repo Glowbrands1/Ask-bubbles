@@ -1265,6 +1265,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FORM_FOR_FOR_TYPO_ENABLED",
   // coding 4: TITLE_NOT_PART_OF_NAME (B-C3 part 2, QA, 11 Nov 2026; default off).
   "TITLE_NOT_PART_OF_NAME_ENABLED",
+  // coding 4: TITLE_BEFORE_NAME (Bubbles 17h live test, QA, 11 Nov 2026; default off).
+  "TITLE_BEFORE_NAME_ENABLED",
   "TAKE_OFF_STAYS_CARD_ENABLED",
   // coding 4: ACCOUNT_PLACE_LEAD (round 6; default off): forced off with the others.
   "ACCOUNT_PLACE_LEAD_ENABLED",
@@ -4455,4 +4457,15 @@ export function fullManualWideGateEnabled(): boolean {
  */
 export function formForForTypoEnabled(): boolean {
   return envFlag("FORM_FOR_FOR_TYPO_ENABLED");
+}
+
+/**
+ * TITLE_BEFORE_NAME_ENABLED (QA's Bubbles 17h live test, 11 Nov 2026; default off). As Admin, "Corrective action for
+ * Team Member <name>" gave no card: the form's name then "for <words>" is a request only when the first word could be a
+ * name, and "Team" cannot, so the message was read as a question about corrective action. "Create a corrective action
+ * for Team Member <name>" carded with no employee. On: a store job title (or its short form) straight after "for" and
+ * before a name is not part of the name (`forms/title-before-name.ts`). Off, as before.
+ */
+export function titleBeforeNameEnabled(): boolean {
+  return envFlag("TITLE_BEFORE_NAME_ENABLED");
 }

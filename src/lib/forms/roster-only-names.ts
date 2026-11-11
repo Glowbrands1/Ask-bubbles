@@ -1,4 +1,4 @@
-import { formNameFromRosterEnabled, metricChoiceOneQuestionEnabled, metricGuardEnabled, offRosterConfirmEnabled, rosterNearMissEnabled, rosterNotFoundAnyPhrasingEnabled, nearMissQuestionRulesEnabled, formNameOffRosterAskEnabled, offRosterAskBeforeCardEnabled, possessivePlaceNotPersonEnabled } from "@/lib/config/chat-quality-flags";
+import { formNameFromRosterEnabled, metricChoiceOneQuestionEnabled, metricGuardEnabled, offRosterConfirmEnabled, rosterNearMissEnabled, rosterNotFoundAnyPhrasingEnabled, nearMissQuestionRulesEnabled, formNameOffRosterAskEnabled, offRosterAskBeforeCardEnabled, possessivePlaceNotPersonEnabled, titleBeforeNameEnabled } from "@/lib/config/chat-quality-flags";
 import { isGlossaryTerm } from "@/lib/ai/glossary";
 import type { AskResponse } from "@/lib/ai/types";
 
@@ -13,6 +13,7 @@ import { metricMessage, namesAMetric, requestMessage, cardOnScreen } from "./req
 import { namesAForm } from "./template-intent";
 import { onlyAsPossessivePlace, POSSESSIVE_PLACE_QUESTION_LINE, withPossessivePlaceNotPerson } from "./possessive-place";
 import { rosterScopeLevel, rosterScopeTurns } from "./roster-scope";
+import { withoutLeadingTitle } from "./title-before-name";
 import { withoutTitleWord } from "./title-not-part-of-name";
 
 /**
@@ -107,7 +108,8 @@ function said(names: readonly string[]): string {
  */
 function withoutTrailingTitle(response: AskResponse): AskResponse {
   const typed = response.formProposal?.employeeName?.trim() ?? "";
-  const name = withoutTitleWord(typed);
+  // TITLE_BEFORE_NAME_ENABLED: "Team Member <name>" — the store title in front is not part of the name either.
+  const name = withoutLeadingTitle(withoutTitleWord(typed));
   if (!typed || name === typed) return response;
   return {
     ...response,
@@ -576,7 +578,9 @@ const NAME_SHAPE = new RegExp(String.raw`^${NAME_RUN}$`, "u");
  */
 function afterCompanyTitle(name: string, text: string): boolean {
   const spelled = name.trim().split(/\s+/).map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(String.raw`\s+`);
-  const found = new RegExp(String.raw`\bfor\s+([\p{L}][\p{L} ]{1,40}?),\s*${spelled}(?![\p{L}'’-])`, "iu").exec(text);
+  // TITLE_BEFORE_NAME_ENABLED: "for Team Member <name>", without the comma, is the same place.
+  const comma = titleBeforeNameEnabled() ? String.raw`,?\s+` : String.raw`,\s*`;
+  const found = new RegExp(String.raw`\bfor\s+([\p{L}][\p{L} ]{1,40}?)${comma}${spelled}(?![\p{L}'’-])`, "iu").exec(text);
   return Boolean(found && namesCompanyPositionTitle(found[1]!));
 }
 

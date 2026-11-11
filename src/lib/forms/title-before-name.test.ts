@@ -1,0 +1,49 @@
+import { afterEach, describe, expect, it } from "vitest";
+
+import { detectTemplateIntent, leadingFormRequest } from "./template-intent";
+import { leadingTitleLength, withoutLeadingTitle } from "./title-before-name";
+
+/**
+ * TITLE_BEFORE_NAME_ENABLED (QA's Bubbles 17h live test, 11 Nov 2026): the tester's wording, "Corrective action for
+ * Team Member <name>"; the person is invented.
+ */
+const FLAG = "TITLE_BEFORE_NAME_ENABLED";
+const SAID = "Corrective action for Team Member Wren Tallis";
+
+afterEach(() => {
+  delete process.env[FLAG];
+});
+
+describe("TITLE_BEFORE_NAME: a store title before the name", () => {
+  it("flag off (as on main 8ff2e3ba): the tester's wording is read as a question about corrective action", () => {
+    expect(detectTemplateIntent(SAID)).toEqual({ kind: "corrective_action", requestedCreation: false });
+  });
+
+  it("flag on: the tester's wording asks for the Corrective Action Form, for the name", () => {
+    process.env[FLAG] = "true";
+    expect(detectTemplateIntent(SAID)).toEqual({ kind: "explicit", templateKey: "dpoa" });
+    expect(leadingFormRequest(SAID)).toMatchObject({ templateKey: "dpoa", subject: ["Wren", "Tallis"] });
+  });
+
+  it.each([
+    ["Team Member Wren Tallis", "Wren Tallis"],
+    ["TM Wren Tallis", "Wren Tallis"],
+    ["Shift Lead Wren Tallis", "Wren Tallis"],
+    ["Assistant Store Manager Wren Tallis", "Wren Tallis"],
+  ])("flag on: %j is %j", (typed, name) => {
+    process.env[FLAG] = "true";
+    expect(withoutLeadingTitle(typed)).toBe(name);
+  });
+
+  it("flag on: a title with nobody after it, or a name with no title, is left as typed", () => {
+    process.env[FLAG] = "true";
+    expect(leadingTitleLength(["Team", "Members"])).toBe(0);
+    expect(withoutLeadingTitle("Wren Tallis")).toBe("Wren Tallis");
+    expect(detectTemplateIntent("Corrective action for Wren Tallis")).toEqual({ kind: "explicit", templateKey: "dpoa" });
+  });
+
+  it("flag off: names are read as before", () => {
+    expect(withoutLeadingTitle("Team Member Wren Tallis")).toBe("Team Member Wren Tallis");
+    expect(detectTemplateIntent("Corrective action for Wren Tallis")).toEqual({ kind: "explicit", templateKey: "dpoa" });
+  });
+});
