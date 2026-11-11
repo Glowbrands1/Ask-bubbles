@@ -431,7 +431,8 @@ function nameCase(wording: NameWording, onRoster: boolean, mode: Mode): ReplayCa
     title: `"${wording.text}" — ${onRoster ? "on roster: the card is for Corin Bellweather" : "off roster: asks who, invents no one"} (${mode === "code" ? "code only" : "models read the name"})`,
     report: `QA's exact name matrix, 4 Nov 2026: "${wording.text}"`,
     status: open ? { open } : "fixed",
-    fixFlags: [],
+    // REQUEST_FOR_LABEL_ENABLED (B-C2, 11 Nov 2026): Pau's "Corrective action for the primary salon manager: …" is a request.
+    fixFlags: wording.id === "pau-2" ? ["REQUEST_FOR_LABEL_ENABLED"] : [],
     async run(t) {
       t.directory(nameRoster(onRoster));
       t.as("location_manager", WEST_DODGE);

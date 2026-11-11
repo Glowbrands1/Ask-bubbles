@@ -1258,6 +1258,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REOPEN_NOT_OPEN_FORM_ENABLED",
   "SIGNED_STEP_NOT_A_REQUEST_ENABLED",
   "STEP_DATES_NOT_FORM_DATE_ENABLED",
+  // coding 4: REQUEST_FOR_LABEL (B-C2, QA, 11 Nov 2026; default off).
+  "REQUEST_FOR_LABEL_ENABLED",
   "TAKE_OFF_STAYS_CARD_ENABLED",
   // coding 4: ACCOUNT_PLACE_LEAD (round 6; default off): forced off with the others.
   "ACCOUNT_PLACE_LEAD_ENABLED",
@@ -4373,4 +4375,16 @@ export function firstNameEnoughEnabled(): boolean {
  */
 export function noShowOpeningIsAttendanceEnabled(): boolean {
   return envFlag("NO_SHOW_OPENING_IS_ATTENDANCE_ENABLED");
+}
+
+/**
+ * REQUEST_FOR_LABEL_ENABLED (B-C2 from QA's open-case list, 11 Nov 2026; Pau's wording in QA's name matrix, 4 Nov 2026;
+ * default off). "Corrective action for the primary salon manager: on Monday 10/05/2026 <name> was working a shift at the
+ * front desk and was rude to a guest" was answered as a policy question: no card, and no "who is this for". The words
+ * after "for" were not a name, so the form's name leading the message was not read as the request. On: a short "for …"
+ * that ends at a colon labels the request (`forms/template-intent.ts` leadingFormRequest), and the account after the
+ * colon is read for the person. Off, as before.
+ */
+export function requestForLabelEnabled(): boolean {
+  return envFlag("REQUEST_FOR_LABEL_ENABLED");
 }

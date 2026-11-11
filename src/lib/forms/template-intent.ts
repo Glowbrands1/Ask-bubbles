@@ -30,7 +30,7 @@ import {
   caShortcutWordsEnabled,
   formChoiceStatedEnabled,
   formNameFromRosterEnabled,
-  typedNameEnabled, requestFromNamesEmployeeEnabled } from "@/lib/config/chat-quality-flags";
+  typedNameEnabled, requestFromNamesEmployeeEnabled, requestForLabelEnabled } from "@/lib/config/chat-quality-flags";
 import { foldsToGlossaryTerm } from "@/lib/ai/glossary";
 import { NOT_A_NAME, NOT_A_TYPED_NAME, TYPED_NAME_WORD } from "./name-words";
 import { asksForTeamCoaching } from "./team-subject";
@@ -1075,7 +1075,14 @@ export function leadingFormRequest(text: string): LeadingFormRequest | null {
   const introduced = /^(?:for|about|regarding)\s+(.+)$/i.exec(rest);
   if (introduced) {
     const words = introduced[1]!.split(" ");
-    return couldBeName(words[0]) ? found(words) : null;
+    if (couldBeName(words[0])) return found(words);
+    /*
+     * REQUEST_FOR_LABEL_ENABLED (B-C2, Pau's wording, QA's matrix 4 Nov 2026): "Corrective action for the primary salon
+     * manager: on Monday 10/05/2026 <name> was … rude to a guest" was answered as a policy question. A short "for …"
+     * that ends at a colon labels the request; what follows the colon is the account, and the person is read from it.
+     */
+    const labelled = requestForLabelEnabled() ? /^[^:]{1,60}:\s*(.+)$/.exec(introduced[1]!) : null;
+    return labelled ? found(nameAfterSeparator(labelled[1]!)) : null;
   }
 
   /*
