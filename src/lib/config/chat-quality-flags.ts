@@ -1336,6 +1336,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "WOVEN_OCR_PAGE_BATCHES_ENABLED",
   // coding 5: EXCERPT_BRAND_HEADING_DROP (QA's round 17c live test, 11 Nov 2026; default off).
   "EXCERPT_BRAND_HEADING_DROP_ENABLED",
+  "NEAR_MISS_ANSWER_KEEPS_REQUEST_ENABLED",
 ] as const;
 
 /**
@@ -3212,6 +3213,18 @@ export function rosterNameInCandidateEnabled(): boolean {
  * matcher's close name); (b) with no employee on the card, no reply text names
  * the person who is not on it. Off, as before.
  */
+/**
+ * NEAR_MISS_ANSWER_KEEPS_REQUEST_ENABLED (QA, 10 Nov 2026, Bubbles s14 path 1; default off). "ok, create a follow-up
+ * coaching form for rozline quellmar. i trained her …" was asked "Is this for **Rozlyn Quellmar**?"; the answer
+ * "Oops, it's Rozlyn quellmar" became the name alone, because the request was looked for by the chosen first name
+ * ("Rozlyn") and the manager had typed "rozline". The card went back to the earlier Coaching Form and lost its date.
+ * On: when no turn typed the chosen name, the turn the question asked about is the request, with the near-miss
+ * replaced by the chosen name (`ai/first-name-suggest.ts`). Off, as before.
+ */
+export function nearMissAnswerKeepsRequestEnabled(): boolean {
+  return envFlag("NEAR_MISS_ANSWER_KEEPS_REQUEST_ENABLED");
+}
+
 export function rosterNearMissEnabled(): boolean {
   return envFlag("ROSTER_NEAR_MISS_ENABLED");
 }
