@@ -33,6 +33,7 @@ afterEach(() => vi.unstubAllEnvs());
 
 describe('"what are the holidays?": no source card that is only the sibling brand\'s heading', () => {
   it("off (production today, EXCERPT_BRAND_FILTER on): a card labelled with the sibling brand, its excerpt only the heading (the bug)", () => {
+    vi.stubEnv(FLAG, "");
     vi.stubEnv("EXCERPT_BRAND_FILTER_ENABLED", "true");
     const sibling = sources().filter((source) => SIBLING.test(source.locator));
     expect(sibling).toHaveLength(1);
@@ -53,6 +54,7 @@ describe('"what are the holidays?": no source card that is only the sibling bran
 
 describe("keepsSourceCard", () => {
   it("off: every card", () => {
+    vi.stubEnv(FLAG, "");
     expect(keepsSourceCard({ locator: "Page 42 — Sun Tan City", excerpt: "Sun Tan City" })).toBe(true);
   });
 
