@@ -11,6 +11,7 @@ import { namesThisCompany } from "./company-name";
 import { namesCompanyPositionTitle } from "./staff-picker";
 import { metricMessage, namesAMetric, requestMessage, cardOnScreen } from "./request-slot";
 import { namesAForm } from "./template-intent";
+import { withoutTitleWord } from "./title-not-part-of-name";
 
 /**
  * ============================================================================
@@ -96,8 +97,26 @@ function said(names: readonly string[]): string {
 }
 
 /** The reply and card with only roster people as the employee and as choices. Pure; see `withRosterOnlyNames`. */
-export function rosterOnlyNames(response: AskResponse, names: readonly string[], message?: string): AskResponse {
-  if (names.length === 0) return response;
+/**
+ * TITLE_NOT_PART_OF_NAME_ENABLED (B-C3 part 2, QA, 11 Nov 2026; the sibling app's Pau scan sf-s36): "I need a exit for for
+ * <first> <last, one letter off> TM. Quit without notice. …" put "<first> <last> TM" on the card, so the roster readers
+ * found nobody and never offered the roster's spelling. A store title written short after the name (two words or more)
+ * is not part of it: it is taken off the card's name, and off the reply's bold name, before the roster is read.
+ */
+function withoutTrailingTitle(response: AskResponse): AskResponse {
+  const typed = response.formProposal?.employeeName?.trim() ?? "";
+  const name = withoutTitleWord(typed);
+  if (!typed || name === typed) return response;
+  return {
+    ...response,
+    content: response.content.split(`**${typed}**`).join(`**${name}**`),
+    formProposal: { ...response.formProposal!, employeeName: name },
+  };
+}
+
+export function rosterOnlyNames(input: AskResponse, names: readonly string[], message?: string): AskResponse {
+  if (names.length === 0) return input;
+  const response = withoutTrailingTitle(input);
   let content = response.content;
   let proposal = response.formProposal;
   let ask: string | null = null;
@@ -485,7 +504,9 @@ export function draftedFor(content: string): string[] {
 
 /** The name the request put straight after "for" ("create a CA for <Name>, …"), when it is nobody's roster spelling; or null. */
 export function slotName(message: string | undefined, names: readonly string[]): string | null {
-  const named = message ? /\bfor\s+(\p{Lu}[\p{L}'’-]+(?:\s+\p{Lu}[\p{L}'’-]+){0,2})\s*[,.]/u.exec(message)?.[1] : undefined;
+  const found = message ? /\bfor\s+(\p{Lu}[\p{L}'’-]+(?:\s+\p{Lu}[\p{L}'’-]+){0,2})\s*[,.]/u.exec(message)?.[1] : undefined;
+  // TITLE_NOT_PART_OF_NAME_ENABLED: "for <first> <last> TM." — the store title is not part of the name.
+  const named = found ? withoutTitleWord(found) : undefined;
   // A form's name is never the person: "a corrective action for Coaching Form." (the pre-check, 5 Nov 2026).
   return named && !rosterSpelling(named, names) && !namesAForm(named) ? named : null;
 }

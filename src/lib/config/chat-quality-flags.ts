@@ -1258,6 +1258,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REOPEN_NOT_OPEN_FORM_ENABLED",
   "SIGNED_STEP_NOT_A_REQUEST_ENABLED",
   "STEP_DATES_NOT_FORM_DATE_ENABLED",
+  // coding 4: TITLE_NOT_PART_OF_NAME (B-C3 part 2, QA, 11 Nov 2026; default off).
+  "TITLE_NOT_PART_OF_NAME_ENABLED",
   "TAKE_OFF_STAYS_CARD_ENABLED",
   // coding 4: ACCOUNT_PLACE_LEAD (round 6; default off): forced off with the others.
   "ACCOUNT_PLACE_LEAD_ENABLED",
@@ -4373,4 +4375,15 @@ export function firstNameEnoughEnabled(): boolean {
  */
 export function noShowOpeningIsAttendanceEnabled(): boolean {
   return envFlag("NO_SHOW_OPENING_IS_ATTENDANCE_ENABLED");
+}
+
+/**
+ * TITLE_NOT_PART_OF_NAME_ENABLED (B-C3 part 2 from QA's open-case list, 11 Nov 2026; the sibling app's Pau scan sf-s36;
+ * default off; QA: the roster set goes on with Bubbles 16c). "… exit for <first> <last, one letter off> TM. Quit without
+ * notice." put "<first> <last> TM" on the card, so the roster readers found nobody and never offered the roster's
+ * spelling. On: a store title written short after a typed name of two words or more is taken off it before the roster is
+ * read (`forms/roster-only-names.ts`). Off, as before.
+ */
+export function titleNotPartOfNameEnabled(): boolean {
+  return envFlag("TITLE_NOT_PART_OF_NAME_ENABLED");
 }
