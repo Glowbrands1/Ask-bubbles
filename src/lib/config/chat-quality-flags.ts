@@ -4266,8 +4266,8 @@ export function payrollBareSentenceEnabled(): boolean {
 }
 
 /**
- * "payroll is deductable" / "payroll deductible" is the manager's Yes, and
- * "not payroll deductible" their No (ported from the sibling app, QA
+ * "payroll is deductable" / "payroll deductible" is the manager's Yes (a negated
+ * "not payroll deductible" stays NOT_DEDUCTIBLE_READ's No) (ported from the sibling app, QA
  * conv_mvh9a9q62mjffk2 there: the card asked the payroll question again on
  * every turn after "payroll is deductable"). Off, those words are read as
  * nothing.

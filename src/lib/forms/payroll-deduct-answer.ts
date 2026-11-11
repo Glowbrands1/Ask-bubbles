@@ -191,7 +191,9 @@ function payrollBareSentenceOn(): boolean {
  * PAYROLL_DEDUCTIBLE_WORD_ENABLED. "payroll is deductable" (ported from the
  * sibling app, QA conv_mvh9a9q62mjffk2 there) was read as nothing, so the card asked
  * "Is payroll deduct applicable?" on every later turn. "Deductible", either
- * spelling, after "payroll" is the answer; "not (payroll) deductible" is No.
+ * spelling, after "payroll" is the Yes. A negated "not (payroll) deductible" is
+ * left to NOT_DEDUCTIBLE_READ_ENABLED, which is live and already reads it as No
+ * (QA, 11 Nov 2026: one reader per answer).
  */
 const DEDUCTIBLE = String.raw`deduct[ai]ble`;
 
@@ -204,7 +206,8 @@ function deductibleWordOn(): boolean {
   const raw = typeof process === "undefined" ? undefined : process.env.PAYROLL_DEDUCTIBLE_WORD_ENABLED;
   return typeof raw === "string" && ["1", "true", "on", "yes"].includes(raw.trim().toLowerCase());
 }
-const DEDUCTIBLE_NO: readonly RegExp[] = [
+/** A negated "deductible": never this reader's Yes (NOT_DEDUCTIBLE_READ reads it as No). */
+const DEDUCTIBLE_NEGATED: readonly RegExp[] = [
   new RegExp(String.raw`\b(?:not|isn't|isnt|is not|non)[\s-]+(?:payroll[\s-]+)?${DEDUCTIBLE}\b`),
   new RegExp(String.raw`\bpayroll\s+(?:is\s+|will\s+be\s+)?not\s+${DEDUCTIBLE}\b`),
 ];
@@ -213,8 +216,8 @@ const DEDUCTIBLE_YES = new RegExp(String.raw`\bpayroll\s+(?:is\s+|will\s+be\s+|w
 function readClause(clause: string): ClauseReading {
   if (payrollBareSentenceOn() && BARE_PAYROLL_SENTENCE.test(clause)) return "yes";
   if (deductibleWordOn() && !UNDECIDED.test(clause)) {
-    if (DEDUCTIBLE_NO.some((pattern) => pattern.test(clause))) return "no";
-    if (DEDUCTIBLE_YES.test(clause) && !DENIAL.test(clause)) return "yes";
+    const negated = DEDUCTIBLE_NEGATED.some((pattern) => pattern.test(clause));
+    if (!negated && DEDUCTIBLE_YES.test(clause) && !DENIAL.test(clause)) return "yes";
   }
   if (UNDECIDED.test(clause) && ABOUT_DEDUCTION.test(clause)) return "unclear";
   if (DENIED_WAIVER.test(clause) && ABOUT_DEDUCTION.test(clause)) return "unclear";
