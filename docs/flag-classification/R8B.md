@@ -1,0 +1,15 @@
+# R8B: which tests they change, and why
+
+Written by `node scripts/flag-classify.ts` (3 runs off, 3 on, each a child process with a clean env; on in both: `CHAT_GLOSSARY_ENABLED`; on together with MADE_ABOUT_ALL_OR_NOTHING_ENABLED in the on runs only: `--with`). Paths: `src/lib/ai`, `src/lib/forms`, `src/app/api/chat`, `src/app/api/forms`. Classifications are kept in `docs/flag-classification/R8B.classes.json`.
+
+Tests run: 13207. Changed: 5. INTENDED 0, INTENDED-HARNESS 0, REGRESSION 0, FLAKY 0, UNCLASSIFIED 5.
+
+Replay pack, first run, all cases: 424713 ms off, 424733 ms on (stubbed models; 1210 records).
+
+| test | off | on | category | twin | reason |
+| --- | --- | --- | --- | --- | --- |
+| src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov9-made-about-all-or-nothing-no-reading: the reader reads nothing (the live shape): Other, the Date and Details change together — OPEN in production (Details changes alone; Other stays "Missed monthly meeting" and the Date 2026-10-10) | passed | failed | UNCLASSIFIED |  |  |
+| src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov9-made-about-all-or-nothing-other-form: the reader reads another form's turn: Other, the Date and Details change together — OPEN in production (Details changes alone; Other stays "Missed monthly meeting" and the Date 2026-10-10) | passed | failed | UNCLASSIFIED |  |  |
+| replay: nov9-made-about-all-or-nothing-no-reading [open] | fails, 2 turns | holds, 2 turns; replies differ | UNCLASSIFIED |  |  |
+| replay: nov9-made-about-all-or-nothing-other-form [open] | fails, 2 turns | holds, 2 turns; replies differ | UNCLASSIFIED |  |  |
+| replay: nov9-made-about-all-or-nothing-refused [production] | holds, 2 turns | holds, 2 turns; replies differ | UNCLASSIFIED |  |  |

@@ -1,0 +1,62 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov9-letter-greeting-dear-off-roster: \"Dear Marcus Tellefsen,\" (off the roster): the card is for Marcus Tellefsen, never \"Dear Marcus Tellefsen\" \u2014 OPEN in production (Name: Dear Marcus Tellefsen)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "LETTER_GREETING_NOT_NAME / MADE_ABOUT_READER_ACCOUNT: an OPEN case now holds (salutation not part of the name, roster Job Title and Store; Date, Other and Details written together or nothing). Read."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov9-letter-greeting-dear-on-roster: \"Dear Marcus Tellefsen,\" (on the roster): the card is for Marcus Tellefsen, with his Job Title and store from the roster \u2014 OPEN in production (Name: Dear Marcus Tellefsen; no Job Title; no store)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "LETTER_GREETING_NOT_NAME / MADE_ABOUT_READER_ACCOUNT: an OPEN case now holds (salutation not part of the name, roster Job Title and Store; Date, Other and Details written together or nothing). Read."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov9-made-about-reader-account-added: the reader adds the new incident to Details and sets Other (the live shape): Other, the Date and Details together \u2014 OPEN in production (Other and Details (the new incident added under the old) change; the Date stays 2026-10-10)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "LETTER_GREETING_NOT_NAME / MADE_ABOUT_READER_ACCOUNT: an OPEN case now holds (salutation not part of the name, roster Job Title and Store; Date, Other and Details written together or nothing). Read."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov9-made-about-reader-account-refused: the reader adds to Details and the revision's account is refused: nothing is saved, and the reply says so \u2014 OPEN in production (Other and the added sentence are saved, the Date stays)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "LETTER_GREETING_NOT_NAME / MADE_ABOUT_READER_ACCOUNT: an OPEN case now holds (salutation not part of the name, roster Job Title and Store; Date, Other and Details written together or nothing). Read."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov9-made-about-reader-account-replaced-live: the live shape (QA's read of the saved draft): the reader replaces Details and sets Other on an account with no date the app reads \u2014 the Date is written too \u2014 OPEN in production (Other and Details change; the Date stays 2026-10-10)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "LETTER_GREETING_NOT_NAME / MADE_ABOUT_READER_ACCOUNT: an OPEN case now holds (salutation not part of the name, roster Job Title and Store; Date, Other and Details written together or nothing). Read."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov9-made-about-reader-account-replaced: the reader replaces Details and sets Other: Other, the Date and Details together, never refused for the old date \u2014 OPEN in production (nothing is saved: the reader's Details drops 10/10/26 and the write is refused)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "LETTER_GREETING_NOT_NAME / MADE_ABOUT_READER_ACCOUNT: an OPEN case now holds (salutation not part of the name, roster Job Title and Store; Date, Other and Details written together or nothing). Read."
+ },
+ "replay: nov9-letter-greeting-dear-off-roster [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "LETTER_GREETING_NOT_NAME / MADE_ABOUT_READER_ACCOUNT: an OPEN case now holds (salutation not part of the name, roster Job Title and Store; Date, Other and Details written together or nothing). Read."
+ },
+ "replay: nov9-letter-greeting-dear-on-roster [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "LETTER_GREETING_NOT_NAME / MADE_ABOUT_READER_ACCOUNT: an OPEN case now holds (salutation not part of the name, roster Job Title and Store; Date, Other and Details written together or nothing). Read."
+ },
+ "replay: nov9-made-about-reader-account-added [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "LETTER_GREETING_NOT_NAME / MADE_ABOUT_READER_ACCOUNT: an OPEN case now holds (salutation not part of the name, roster Job Title and Store; Date, Other and Details written together or nothing). Read."
+ },
+ "replay: nov9-made-about-reader-account-refused [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "LETTER_GREETING_NOT_NAME / MADE_ABOUT_READER_ACCOUNT: an OPEN case now holds (salutation not part of the name, roster Job Title and Store; Date, Other and Details written together or nothing). Read."
+ },
+ "replay: nov9-made-about-reader-account-replaced [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "LETTER_GREETING_NOT_NAME / MADE_ABOUT_READER_ACCOUNT: an OPEN case now holds (salutation not part of the name, roster Job Title and Store; Date, Other and Details written together or nothing). Read."
+ },
+ "replay: nov9-made-about-reader-account-replaced-live [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "LETTER_GREETING_NOT_NAME / MADE_ABOUT_READER_ACCOUNT: an OPEN case now holds (salutation not part of the name, roster Job Title and Store; Date, Other and Details written together or nothing). Read."
+ }
+}
