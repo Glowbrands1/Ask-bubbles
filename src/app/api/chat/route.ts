@@ -81,6 +81,7 @@ import {
   formEditToolInStreamEnabled,
   formEditNoopGuardEnabled,
   nearMissQuestionRulesEnabled,
+  formNameOffRosterAskEnabled,
   reopenByAnyOpenVerbEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { streamWhenSlow } from "@/lib/api/streamed-response";
@@ -366,6 +367,12 @@ async function postChat(request: Request) {
           }
         }
         enterPersonRoster(names);
+        // FORM_NAME_OFF_ROSTER_ASK_ENABLED: the scope's level, so a name not on the roster is held for a store manager only (`lib/forms/roster-scope.ts`).
+        // The manager's own turns too, so a full name typed on an earlier turn is still the manager's (the sibling app's #741 eval).
+        if (formNameOffRosterAskEnabled()) {
+          const managerTurns = [...asked.history.filter((turn) => turn.role === "user").map((turn) => String(turn.content ?? "")), asked.question];
+          (await import("@/lib/forms/person-roster-store")).enterRosterScope(context.identity.scope?.level ?? "", managerTurns);
+        }
         /*
          * FORM_NAME_FROM_ROSTER_ENABLED: does this message name somebody on the
          * roster (exact or close, or a roster first name typed in lowercase)?
