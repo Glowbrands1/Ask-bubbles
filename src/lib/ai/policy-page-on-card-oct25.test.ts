@@ -33,7 +33,7 @@ const FLAG = "POLICY_PAGE_ON_CARD_ENABLED";
  * read through answerQuestion gets no page, so the tests that need the page run as expected failures. When the
  * server-ask lines are in, set WIRED to true: every test must then pass as written.
  */
-const WIRED = false;
+const WIRED = true; // coding 2: the server-ask.ts lines are in (QA-approved, 11 Nov 2026).
 const itWired = WIRED ? it : it.fails;
 const ALL = ["FORM_FULL_REMAP_ENABLED", "REMAP_INCIDENT_FIX_ENABLED", "LATE_OPEN_DATE_ENABLED", FLAG] as const;
 

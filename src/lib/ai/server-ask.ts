@@ -95,6 +95,7 @@ import {
   coachingCardPolicyEnabled,
   cardPolicyOwnRequestEnabled,
   outOfDateIsTheProposalEnabled,
+  policyPageOnCardEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { gateTexts, searchWithPlan } from "./continuation";
 import { fieldsFromManagerText, mergeConfirmed, retainFieldsInReply } from "./form-field-state";
@@ -114,6 +115,8 @@ import { followUpOwnQuery } from "./query-rewrite";
 import { matchHybridKnowledge } from "@/lib/knowledge/hybrid-match";
 import { matchRecallKnowledge } from "@/lib/knowledge/recall-match";
 import { withMappedPolicy } from "./violation-policy";
+import type { RemapManual } from "./remap-incident";
+import { withPolicyPagesOnCard } from "@/lib/forms/policy-page-on-card";
 import { loadScopedRoster } from "@/lib/forms/employee-roster";
 import { AiError } from "./errors";
 import {
@@ -565,6 +568,16 @@ async function answerQuestionCore(
           history = request.history;
         }
       }
+      // One manual read for the remap and the card's printed page (POLICY_PAGE_ON_CARD_ENABLED).
+      let remapManual: Promise<RemapManual | null> | null = null;
+      const readRemapManual = () =>
+        (remapManual ??= new SupabaseKnowledgeProvider()
+          .fetchOfficialPolicyManual(ACTIVE_BRAND.knowledgeScopeId)
+          .then((manual) =>
+            manual.ok
+              ? { documentId: manual.documentId, documentTitle: manual.documentTitle, documentCategory: manual.documentCategory ?? null, chunks: manual.chunks }
+              : null,
+          ));
       const remapped = await remapFormTurn({
         question: request.question,
         history,
@@ -574,20 +587,13 @@ async function answerQuestionCore(
         saved,
         unpublished,
         // Read only with REMAP_INCIDENT_FIX_ENABLED on, so the card cites the section and page.
-        policyManual: async () => {
-          const manual = await new SupabaseKnowledgeProvider().fetchOfficialPolicyManual(ACTIVE_BRAND.knowledgeScopeId);
-          return manual.ok
-            ? {
-                documentId: manual.documentId,
-                documentTitle: manual.documentTitle,
-                documentCategory: manual.documentCategory ?? null,
-                chunks: manual.chunks,
-              }
-            : null;
-        },
+        policyManual: readRemapManual,
       });
       // REMAP_DRAFT_SOURCES_ENABLED: the card names the turns its draft is written from.
-      if (remapped) return withRemapDraftSources(remapped, request);
+      if (remapped) {
+        const paged = policyPageOnCardEnabled() ? await withCardPolicyPages(remapped, readRemapManual) : remapped;
+        return withRemapDraftSources(paged, request);
+      }
     }
 
     let manualRead: ReturnType<SupabaseKnowledgeProvider["fetchOfficialPolicyManual"]> | null = null;
@@ -1520,11 +1526,26 @@ async function suggestedFormsFor(input: {
   }
 }
 
+/** POLICY_PAGE_ON_CARD_ENABLED: the card's own policy line with the printed page from the manual's chunk metadata. A failed manual read leaves the card as the form path wrote it. */
+async function withCardPolicyPages(response: AskResponse, read: () => Promise<RemapManual | null>): Promise<AskResponse> {
+  if (!response.formProposal) return response;
+  let manual: RemapManual | null = null;
+  try {
+    manual = await read();
+  } catch {
+    manual = null;
+  }
+  if (!manual) return response;
+  const content = withPolicyPagesOnCard(response.content, manual.chunks);
+  return content === response.content ? response : { ...response, content };
+}
+
 async function decorateFormAnswer(request: AskRequest, actor: ChatActor, response: AskResponse): Promise<AskResponse> {
   const coachingOn = priorCoachingOptionalEnabled();
   const policyOn = policyCitationEnabled();
   const slotsOn = slotRetentionEnabled();
-  if (!coachingOn && !policyOn && !slotsOn) return response;
+  const pageOn = policyPageOnCardEnabled();
+  if (!coachingOn && !policyOn && !slotsOn && !pageOn) return response;
   const turns = [...request.history.filter((turn) => turn.role === "user").map((turn) => turn.content), request.question];
   let content = response.content;
   if (coachingOn) {
@@ -1561,12 +1582,14 @@ async function decorateFormAnswer(request: AskRequest, actor: ChatActor, respons
     content = retainFieldsInReply(content, fields);
     await persistFields(request, actor, fields);
   }
-  if (policyOn) {
+  if (policyOn || (pageOn && response.formProposal)) {
     try {
       const manual = await new SupabaseKnowledgeProvider().fetchOfficialPolicyManual(ACTIVE_BRAND.knowledgeScopeId);
       // CARD_POLICY_OWN_REQUEST_ENABLED: a card for <B> is not cited from <A>'s earlier request.
       const policyTurns = cardPolicyOwnRequestEnabled() && response.formProposal ? cardPolicyTurns(turns, response.formProposal.employeeName) : turns;
-      if (manual.ok) content = withMappedPolicy(content, policyTurns, manual.chunks, true);
+      // POLICY_PAGE_ON_CARD_ENABLED: the card's own policy line carries its printed page.
+      if (manual.ok && pageOn && response.formProposal) content = withPolicyPagesOnCard(content, manual.chunks);
+      if (manual.ok && policyOn) content = withMappedPolicy(content, policyTurns, manual.chunks, true);
     } catch {
       // A manual read that fails leaves the proposal as the forms path wrote it.
     }

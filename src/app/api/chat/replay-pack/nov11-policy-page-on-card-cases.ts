@@ -29,7 +29,7 @@ export const NOV11_POLICY_PAGE_ON_CARD_CASES: ReplayCase[] = [
       "QA, 25 Oct 2026 (S4, S7, S22, S24, B1, B5, B7, H13): the CA and coaching card printed \"Policy: Standards of Conduct\" with no page (should be p.12)",
     status: { open: "**Policy:** Standards of Conduct, with no page" },
     fixFlags: ["POLICY_PAGE_ON_CARD_ENABLED"],
-    fixStatus: { open: "POLICY_PAGE_ON_CARD_ENABLED's lines in src/lib/ai/server-ask.ts await Coding-2" },
+    // The server-ask.ts lines are in (coding 2): it holds with the fix flag, so the fixStatus goes.
     async run(t) {
       t.directory(STAFF);
       t.as("location_manager", WEST_DODGE);
