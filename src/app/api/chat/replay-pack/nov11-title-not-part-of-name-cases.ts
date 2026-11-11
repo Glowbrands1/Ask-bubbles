@@ -45,3 +45,26 @@ export const NOV11_TITLE_NOT_PART_OF_NAME_CASES: ReplayCase[] = [
     },
   },
 ];
+
+/*
+ * Gate-Bubbles R785 (record 7ee6be16, 11 Nov 2026): after "yes" to "Is this for Marnie Holloway?", the exit card's
+ * read-back said "- **Name:** Marnie Holloway TM" (`forms/exit-intake.ts` prints the card's employee name). The title is
+ * off the card's name and off the read-back's Name line too.
+ */
+NOV11_TITLE_NOT_PART_OF_NAME_CASES.push({
+  id: "nov11-title-not-part-of-name-yes-then-card",
+  title: `"I need an exit for ${TYPED} TM. …", then "yes": the exit card's Name is ${ROSTER}, without TM`,
+  report: "Gate-Bubbles R785 (11 Nov 2026): the exit card's Name line kept the store title after \"yes\"",
+  status: { open: `the read-back's Name line is "${ROSTER} TM"` },
+  fixFlags: [...ROSTER_SET, "TITLE_NOT_PART_OF_NAME_ENABLED"],
+  async run(t) {
+    t.directory(STAFF);
+    t.as("location_manager", WEST_DODGE);
+    const thread = t.thread();
+    let reply = await thread.say(SAID);
+    if (new RegExp(String.raw`Is this for \*\*${ROSTER}\*\*\?`).test(reply.content)) reply = await thread.say("yes");
+    expect(thread.proposal?.templateKey, `no exit card:\n${reply.content}`).toBe("resignation-exit");
+    expect(thread.proposal?.employeeName, reply.content).toBe(ROSTER);
+    expect(reply.content, `the Name line keeps the title:\n${reply.content}`).not.toMatch(/\*\*Name:\*\*\s*Marnie H[ao]lloway\s+TM\b/);
+  },
+});

@@ -111,7 +111,12 @@ function withoutTrailingTitle(response: AskResponse): AskResponse {
   if (!typed || name === typed) return response;
   return {
     ...response,
-    content: response.content.split(`**${typed}**`).join(`**${name}**`),
+    // Gate-Bubbles R785 (11 Nov 2026): the exit read-back's "- **Name:** <name> TM" line (`forms/exit-intake.ts`) too.
+    content: response.content
+      .split(`**${typed}**`)
+      .join(`**${name}**`)
+      .split(`**Name:** ${typed}`)
+      .join(`**Name:** ${name}`),
     formProposal: { ...response.formProposal!, employeeName: name },
   };
 }
