@@ -68,3 +68,24 @@ describe("controls: the card as built", () => {
     expect(askCoachingWhatHappened(reply(LIVE, ca), "Thessaly Brandt", HISTORY).content).toBe(LIVE);
   });
 });
+
+/*
+ * QA, 11 Nov 2026 (the ONE_FORM_EACH_PERSON + COACHING_ASKS_WHAT_HAPPENED flip blocker, nov10-p7-one-form-each-named):
+ * "Make me a coaching form for Tamsin, Corwin, and Ione for not closing duties correctly" — a duty not done is the
+ * account, so the card is as built (and keeps the "I have the employee" line CARD_NAMES_EMPLOYEE names). Invented people.
+ */
+describe("a duty not done is an account", () => {
+  const P7 = [{ role: "user", content: "Make me a coaching form for Tamsin, Corwin, and Ione for not closing duties correctly" }];
+
+  it("\"for not closing duties correctly\": the card as built", () => {
+    expect(askCoachingWhatHappened(reply(LIVE, coaching("Tamsin Ashby")), "Tamsin Ashby", P7).content).toBe(LIVE);
+    expect(askCoachingWhatHappened(reply(LIVE, coaching("Corwin Halsey")), "a coaching form for Corwin Halsey for not closing duties correctly", HISTORY).content).toBe(LIVE);
+    expect(askCoachingWhatHappened(reply(LIVE, coaching("Thessaly Brandt")), "she keeps never following the closing checklist", HISTORY).content).toBe(LIVE);
+  });
+
+  it("negative: what did not happen is still no account", () => {
+    for (const said of ["she was not late", "nothing happened", "she is not doing anything wrong"]) {
+      expect(askCoachingWhatHappened(reply(LIVE, coaching("Thessaly Brandt")), said, HISTORY).content, said).toContain(COACHING_WHAT_HAPPENED_NOTE);
+    }
+  });
+});
