@@ -93,6 +93,25 @@ section supersedes those rows' "check Vercel" notes in the table below.
   turn seen, at most +3.5 s on a turn past the window when its summary is
   rewritten.
 
+### Tests that change when the nine are turned on (11 Nov 2026)
+
+Replay pack, production's flags vs production + the nine (`FLAG_CLASSIFY_ON`):
+**byte-identical**, 1,362 records, 1,280 pass / 83 expected fail both ways. No
+replay case needs a "Changed on purpose" update (the stand-in model does not
+read prompt-only or retrieval changes; the live gate is where they show).
+
+Unit and e2e suites (`src/lib/ai`, `src/lib/forms`, `src/app/api/chat`,
+`src/app/api/forms`), all nine forced on: 270 failures in 45 files. The same 45
+files pass with no flag forced (1,120/1,120). Each flag alone on those files:
+
+| Flag | Fails alone | What changes |
+|---|---|---|
+| RETRIEVAL_RECALL | 264 (41 files) | **Test harness gap, not behaviour**: the recall path (`matchRecallKnowledge`) is not mocked in the chat e2e harnesses, so turns reach the live Supabase path ("Live mode is not configured") or a mock missing an export (`TurnUnavailableError`). Releasing it needs the harnesses to stub recall first; then re-run for real expectation changes. |
+| INTENT_PAYROLL_MANAGER_ONLY | 5 | Pins of the flag-off reading: `intent-payroll-quote-oct24.test.ts` (2: "defaults off", "off reads the assistant's $25"), `warning-level-invented-oct24.test.ts` (1, "flag off keeps main's reading"), and 2 reading changes in `intent-extraction.test.ts` (lowercase roster name with a known date; payroll from dollars). Each needs "Changed on purpose" with the reason, or pinning the flag off in that test. |
+| CHAT_STYLE_RULES | 1 | `chat-glossary-flags-off.test.ts` "production's flags and no flags: equal to main" (the system prompt gains the style rules). Changed on purpose. |
+| QUERY_REWRITE | 1 | The same `chat-glossary-flags-off.test.ts` pin (the retrieval query is rewritten). Changed on purpose. |
+| DRAFT_MERGE, FEWSHOT_EXAMPLES, FOLLOWUP_NEW_TOPIC_RETRIEVAL, LONG_CONTEXT, SECOND_FORM | 0 | — |
+
 | Flag | What it does | Origin | Sibling | Verdict | Evidence / replaced by / why |
 | --- | --- | --- | --- | --- | --- |
 | CHAT_IMPORT_PROVEN_OWN_ENABLED | Importing a chat this account does not hold must prove every answered turn is its own; else declined | #425 (import) | unlisted | R | Independent review, 31 Oct 2026 (`docs/parity-log.md`): another account's chat could still be imported on a shared browser. Security fix, both apps. No replay case (import route, not chat). |
