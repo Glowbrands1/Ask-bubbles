@@ -1,4 +1,4 @@
-import { withoutCreateNowWhenNoEmployee } from "@/lib/forms/no-name-reply-wording";
+import { withNoEmployeeCard, withoutCreateNowWhenNoEmployee } from "@/lib/forms/no-name-reply-wording";
 import { cleaningOtherEveryWordingEnabled, conductIncidentCitesPageEnabled, replyMatchesCardEachCardEnabled, replyMatchesCardEnabled } from "@/lib/config/chat-quality-flags";
 import { offeredOffRosterName } from "@/lib/forms/off-roster-confirm";
 import { caPolicyProposalLine, readCaPolicy, removedOffenseLabels } from "@/lib/forms/ca-policy";
@@ -224,5 +224,6 @@ export function withReplyMatchesCard(response: AskResponse): AskResponse {
   const card = matched.formProposal;
   if (!card?.templateKey) return matched;
   const content = withoutCreateNowWhenNoEmployee(matched.content, card.employeeName);
-  return content === matched.content ? matched : { ...matched, content };
+  // NO_NAME_REPLY_WORDING_ENABLED (Bubbles 16c live): no name-derived plan or store note, no Create button.
+  return withNoEmployeeCard(content === matched.content ? matched : { ...matched, content });
 }
