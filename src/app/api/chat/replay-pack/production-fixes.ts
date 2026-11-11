@@ -398,4 +398,6 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov10-r17b-late-opening-quote-not-on-time": "LATE_OPENING_OWN_WORDS",
   // Changed on purpose (11 Nov 2026): fixed in production by FIRST_NAME_ENOUGH, QA round 17d
   "nov10-r17b-first-name-enough": "FIRST_NAME_ENOUGH",
+  // Changed on purpose (11 Nov 2026): fixed in production by EXCERPT_BRAND_HEADING_DROP, QA round 17f
+  "nov11-excerpt-brand-heading-holidays": "EXCERPT_BRAND_HEADING_DROP",
 };
