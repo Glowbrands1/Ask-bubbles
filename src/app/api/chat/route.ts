@@ -252,12 +252,12 @@ async function postChat(request: Request) {
         };
       }
       // OUTLINE_ON_OPEN_PROPOSAL_ENABLED: a pasted outline on an open proposal is no account (`lib/forms/outline-on-proposal.ts`).
-      let outlineOnProposal = false;
+      let outlineOnProposal: { readonly requestId?: string } | null = null;
       if (outlineOnOpenProposalEnabled()) {
         const read = (await import("@/lib/forms/outline-on-proposal")).withoutOutlineTurns(asked);
         if (read) {
           asked = read.asked;
-          outlineOnProposal = read.outline;
+          outlineOnProposal = read.outline ? { ...(read.requestId ? { requestId: read.requestId } : {}) } : null;
         }
       }
       /*
@@ -1020,7 +1020,9 @@ async function postChat(request: Request) {
       // PROPOSAL_NAME_CORRECTION_ENABLED: an off-roster "change her name to …" on the card asks which, never kept silently.
       answer = withCorrectionNotDropped(answer, parsed);
       // OUTLINE_ON_OPEN_PROPOSAL_ENABLED: the outline turn's reply says the outline is kept as her form's layout.
-      if (outlineOnProposal) answer = (await import("@/lib/forms/outline-on-proposal")).withOutlineKeptNote(answer);
+      if (outlineOnProposal) {
+        answer = (await import("@/lib/forms/outline-on-proposal")).withOutlineKeptNote(answer, { outlineTurnId: parsed.questionMessageId, requestId: outlineOnProposal.requestId });
+      }
       // NEAR_MISS_QUESTION_RULES_ENABLED: "no, …" to "Is this for <name>?" never gets a card for that name, nor the question again.
       if (nearMissQuestionRulesEnabled()) answer = (await import("@/lib/forms/near-miss-question-rules")).withoutTurnedDownName(answer, asked);
       /*
