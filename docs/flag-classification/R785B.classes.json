@@ -1,0 +1,70 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-sf-s36-off-roster-exit: sf-s36's wording with an off-roster name near nobody: the typed name is offered (\"use <name>\"), and \"yes\" puts it on the card \u2014 OPEN in production (the message is answered by the model, not read as an exit form request (no card))": {
+    "category": "INTENDED",
+    "reason": "OPEN pin now holds with both flags: the exit request is read (FORM_FOR_FOR_TYPO), the roster offer and the read-back's Name line are \"Marnie Holloway\" without TM (TITLE_NOT_PART_OF_NAME)."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-sf-s36-off-roster-exit: sf-s36's wording with an off-roster name near nobody: the typed name is offered (\"use <name>\"), and \"yes\" puts it on the card \u2014 OPEN with FORM_NAME_FROM_ROSTER_ENABLED, ROSTER_NEAR_MISS_ENABLED, ROSTER_NAME_IN_CANDIDATE_ENABLED, ROSTER_COMPOUND_SURNAME_ENABLED, ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED, NEAR_MISS_QUESTION_RULES_ENABLED, NEAR_MISS_DETAILS_ACCEPT_ENABLED, FORM_NAME_OFF_ROSTER_ASK_ENABLED on (the message is answered by the model, not read as an exit form request (no card), with the name set on too)": {
+    "category": "INTENDED",
+    "reason": "OPEN pin now holds with both flags: the exit request is read (FORM_FOR_FOR_TYPO), the roster offer and the read-back's Name line are \"Marnie Holloway\" without TM (TITLE_NOT_PART_OF_NAME)."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov11-exit-for-for-is-an-exit-request: \"I need a exit for for Marnie Halloway TM. Quit without notic\u2026\": the Resignation/Exit Form is proposed \u2014 OPEN in production (the message is answered by the model; no Resignation/Exit Form card)": {
+    "category": "INTENDED",
+    "reason": "OPEN pin now holds with both flags: the exit request is read (FORM_FOR_FOR_TYPO), the roster offer and the read-back's Name line are \"Marnie Holloway\" without TM (TITLE_NOT_PART_OF_NAME)."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov11-title-not-part-of-name-yes-then-card: \"I need an exit for Marnie Halloway TM. \u2026\", then \"yes\": the exit card's Name is Marnie Holloway, without TM \u2014 OPEN in production (the read-back's Name line is \"Marnie Holloway TM\")": {
+    "category": "INTENDED",
+    "reason": "OPEN pin now holds with both flags: the exit request is read (FORM_FOR_FOR_TYPO), the roster offer and the read-back's Name line are \"Marnie Holloway\" without TM (TITLE_NOT_PART_OF_NAME)."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov11-title-not-part-of-name: \"I need an exit for Marnie Halloway TM. \u2026\": the card is Marnie Holloway's, or the reply asks \"Is this for **Marnie Holloway**?\" \u2014 OPEN in production (the card's name is \"Marnie Halloway TM\" (or no one): no roster spelling offered)": {
+    "category": "INTENDED",
+    "reason": "OPEN pin now holds with both flags: the exit request is read (FORM_FOR_FOR_TYPO), the roster offer and the read-back's Name line are \"Marnie Holloway\" without TM (TITLE_NOT_PART_OF_NAME)."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov7-sf-s36-exit-surname-typo: sf-s36: \"I need a exit for for <roster name, one letter wrong> TM. Quit without notice. \u2026\" (the reading model returns the name as typed): the card is the roster person's, or the reply asks \"Is this for **<roster name>**?\" \u2014 OPEN in production (the message is answered by the model, not read as an exit form request (no card))": {
+    "category": "INTENDED",
+    "reason": "OPEN pin now holds with both flags: the exit request is read (FORM_FOR_FOR_TYPO), the roster offer and the read-back's Name line are \"Marnie Holloway\" without TM (TITLE_NOT_PART_OF_NAME)."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov7-sf-s36-exit-surname-typo: sf-s36: \"I need a exit for for <roster name, one letter wrong> TM. Quit without notice. \u2026\" (the reading model returns the name as typed): the card is the roster person's, or the reply asks \"Is this for **<roster name>**?\" \u2014 OPEN with FORM_NAME_FROM_ROSTER_ENABLED, ROSTER_NEAR_MISS_ENABLED, ROSTER_NAME_IN_CANDIDATE_ENABLED, ROSTER_COMPOUND_SURNAME_ENABLED, ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED, OFF_ROSTER_CONFIRM_ENABLED, FORM_FOR_FOR_TYPO_ENABLED on (the exit card is made, but the name is read as \"<name> TM\": not found on the roster, no \"Is this for \u2026?\")": {
+    "category": "INTENDED",
+    "reason": "OPEN pin now holds with both flags: the exit request is read (FORM_FOR_FOR_TYPO), the roster offer and the read-back's Name line are \"Marnie Holloway\" without TM (TITLE_NOT_PART_OF_NAME)."
+  },
+  "src/lib/forms/form-for-for-typo.test.ts :: FORM_FOR_FOR_TYPO flag off (as production today): no form is read": {
+    "category": "INTENDED-HARNESS",
+    "reason": "Unit test pinning the flag-off reading; the ON arm forces the flag on."
+  },
+  "src/lib/forms/title-not-part-of-name.test.ts :: TITLE_NOT_PART_OF_NAME flag off (as before): the title stays in the name": {
+    "category": "INTENDED-HARNESS",
+    "reason": "Unit test pinning the flag-off reading; the ON arm forces the flag on."
+  },
+  "replay: nov10-sf-s36-off-roster-exit [fix-open:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,NEAR_MISS_QUESTION_RULES_ENABLED,NEAR_MISS_DETAILS_ACCEPT_ENABLED,FORM_NAME_OFF_ROSTER_ASK_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "OPEN pin now holds with both flags: the exit request is read (FORM_FOR_FOR_TYPO), the roster offer and the read-back's Name line are \"Marnie Holloway\" without TM (TITLE_NOT_PART_OF_NAME)."
+  },
+  "replay: nov10-sf-s36-off-roster-exit [open]": {
+    "category": "INTENDED",
+    "reason": "OPEN pin now holds with both flags: the exit request is read (FORM_FOR_FOR_TYPO), the roster offer and the read-back's Name line are \"Marnie Holloway\" without TM (TITLE_NOT_PART_OF_NAME)."
+  },
+  "replay: nov11-exit-for-for-is-an-exit-request [fix:FORM_FOR_FOR_TYPO_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "Holds in both arms; with TITLE_NOT_PART_OF_NAME on, turn 1 is \"Is this for **Marnie Holloway**?\" and the case's \"yes\" gives the exit card (\"- **Name:** Marnie Holloway\") \u2014 the R785 case conflict is fixed (9459cbda)."
+  },
+  "replay: nov11-exit-for-for-is-an-exit-request [open]": {
+    "category": "INTENDED",
+    "reason": "OPEN pin now holds with both flags: the exit request is read (FORM_FOR_FOR_TYPO), the roster offer and the read-back's Name line are \"Marnie Holloway\" without TM (TITLE_NOT_PART_OF_NAME)."
+  },
+  "replay: nov11-title-not-part-of-name [open]": {
+    "category": "INTENDED",
+    "reason": "OPEN pin now holds with both flags: the exit request is read (FORM_FOR_FOR_TYPO), the roster offer and the read-back's Name line are \"Marnie Holloway\" without TM (TITLE_NOT_PART_OF_NAME)."
+  },
+  "replay: nov11-title-not-part-of-name-yes-then-card [open]": {
+    "category": "INTENDED",
+    "reason": "OPEN pin now holds with both flags: the exit request is read (FORM_FOR_FOR_TYPO), the roster offer and the read-back's Name line are \"Marnie Holloway\" without TM (TITLE_NOT_PART_OF_NAME)."
+  },
+  "replay: nov7-sf-s36-exit-surname-typo [fix-open:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED,FORM_FOR_FOR_TYPO_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "OPEN pin now holds with both flags: the exit request is read (FORM_FOR_FOR_TYPO), the roster offer and the read-back's Name line are \"Marnie Holloway\" without TM (TITLE_NOT_PART_OF_NAME)."
+  },
+  "replay: nov7-sf-s36-exit-surname-typo [open]": {
+    "category": "INTENDED",
+    "reason": "OPEN pin now holds with both flags: the exit request is read (FORM_FOR_FOR_TYPO), the roster offer and the read-back's Name line are \"Marnie Holloway\" without TM (TITLE_NOT_PART_OF_NAME)."
+  }
+}
