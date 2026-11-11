@@ -1,0 +1,12 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-r21-name-only-coaching-blank-draft-is-said: r21: \"make me a coaching form for <name>\" \u2192 Create with no account: the draft says its details are blank, never a silent blank \u2014 OPEN in production (Create saves no Details and the draft's reply says nothing about it)": {
+    "category": "INTENDED",
+    "twin": "replay: nov10-r21-name-only-coaching-blank-draft-is-said [open]",
+    "reason": "The OPEN pin for r21 (name-only coaching card, Create with no account) now holds with DRAFT_WROTE_NOTHING_NOTICE_ENABLED: the draft reply carries \"The details are blank\". Its expected-fail test goes passed->failed."
+  },
+  "replay: nov10-r21-name-only-coaching-blank-draft-is-said [open]": {
+    "category": "INTENDED",
+    "twin": "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-r21-name-only-coaching-blank-draft-is-said: r21: \"make me a coaching form for <name>\" \u2192 Create with no account: the draft says its details are blank, never a silent blank \u2014 OPEN in production (Create saves no Details and the draft's reply says nothing about it)",
+    "reason": "The OPEN pin for r21 (name-only coaching card, Create with no account) now holds with DRAFT_WROTE_NOTHING_NOTICE_ENABLED: the draft reply carries \"The details are blank\". Its expected-fail test goes passed->failed."
+  }
+}
