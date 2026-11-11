@@ -15,7 +15,7 @@ Session: session_01VVEkRRzGew9sHHGbAhxGaQ. Reports to QA session_01VVEkRTbAAAt57
 2. DONE: EXCERPT_BRAND_FILTER GO (0 changed; probe proves the flag reaches rowToCitation); verdict sent 03:10Z. Was: flag-only (HIGH), gate EBF on main 59526ed in /home/user/gate/ebf; OFF = prodenv + main production-flags on (adds the 4 R17B flags; scratch prodenv-59526ed.csv); paths + src/lib/knowledge
 2b. DONE: R16E (16c @ 952bdeb + #716): P7 note gone, 4 INTENDED, 0 REGRESSION; s14 path-1 Follow-Up type kept, date still null after the answer in every arm and in production too (pre-existing); verdict sent ~05:05Z (R16E.md)
 3. (folded into 2b) #716 NEAR_MISS_ANSWER_KEEPS_REQUEST @ caf15503 (16c's 4 flags in both arms; bar: s14 path 1)
-4. NOW (gate R720, /home/user/gate/r720): #720 TYPO_CORRECTED_SAME_PERSON @ 7de59a2 merged onto main bebcf58 (flags-file keep-both); OFF = prodenv-bebcf58.csv (prodenv-59526ed + EXCERPT_BRAND_FILTER, now in production); s14 path 2; read saved date
+4. DONE: R720 #720 GO (2 INTENDED, date 2026-10-01 kept ON, null OFF); verdict sent
 5. #705 (sf-s16/s17/s19), #710, #712 (131400e9), #713, #714, #718 (3cb4e25f)
 6. B504 d71d2d50; #678+#684; #695 (revision.ts diff = approved lines); #663 6c68b998+A3+#693, then #709; #681; PROPOSAL_NAME_CORRECTION
 7. #686, #689, #691 (#694 moved to Gate-Bubbles-2 with #688+#724)

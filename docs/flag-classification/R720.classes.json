@@ -1,0 +1,12 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-typo-corrected-same-person-keeps-date: after \"Oops, it's Rozlyn quellmar\", the next follow-up coaching request for her keeps the date given earlier \u2014 OPEN in production (with production's flags the card for the later request has no date)": {
+    "category": "INTENDED",
+    "twin": "replay: nov10-typo-corrected-same-person-keeps-date [open]",
+    "reason": "The OPEN pin for s14 path 2 now holds with TYPO_CORRECTED_SAME_PERSON_ENABLED, so its expected-fail test goes passed->failed."
+  },
+  "replay: nov10-typo-corrected-same-person-keeps-date [open]": {
+    "category": "INTENDED",
+    "twin": "itself",
+    "reason": "TYPO_CORRECTED_SAME_PERSON_ENABLED: after \"Oops, it's Rozlyn quellmar\", the next request \"create a follow-up coaching form for rozlyn quellmar\" keeps the date given on turn 2 (probe: formDate 2026-10-01 ON, null OFF; Follow-Up Coaching Form and Rozlyn Quellmar in both arms)."
+  }
+}
