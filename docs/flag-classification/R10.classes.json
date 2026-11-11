@@ -1,0 +1,202 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov9-off-roster-ask-before-card: QA's \"create a coaching form for <full name not on the roster>\" (a store manager): asked about before any card \u2014 holds with production's flags": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "OFF_ROSTER_ASK_BEFORE_CARD: an off-roster full name is asked about before any card ('I can't find <name> on your roster\u2026'); the Policy line comes back after 'use <name>'. Read."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov9-off-roster-ask-then-use: after the question, \"use Wrenna Pollard\" (OFF_ROSTER_CONFIRM's offer) makes the card, marked not from Woven \u2014 holds with production's flags": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "OFF_ROSTER_ASK_BEFORE_CARD: an off-roster full name is asked about before any card ('I can't find <name> on your roster\u2026'); the Policy line comes back after 'use <name>'. Read."
+ },
+ "replay: nov2-p5-name-claims [fix:CLAIM_GUARD_ENABLED,OPEN_FORM_NO_SELECTION_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "OFF_ROSTER_ASK_BEFORE_CARD: an off-roster full name is asked about before any card ('I can't find <name> on your roster\u2026'); the Policy line comes back after 'use <name>'. Read."
+ },
+ "replay: nov2-p5-name-claims [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "OFF_ROSTER_ASK_BEFORE_CARD: an off-roster full name is asked about before any card ('I can't find <name> on your roster\u2026'); the Policy line comes back after 'use <name>'. Read."
+ },
+ "replay: nov2-p5-name-corrections [fix:NAME_CORRECTION_WORDS_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "OFF_ROSTER_ASK_BEFORE_CARD: an off-roster full name is asked about before any card ('I can't find <name> on your roster\u2026'); the Policy line comes back after 'use <name>'. Read."
+ },
+ "replay: nov2-p5-name-corrections [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "OFF_ROSTER_ASK_BEFORE_CARD: an off-roster full name is asked about before any card ('I can't find <name> on your roster\u2026'); the Policy line comes back after 'use <name>'. Read."
+ },
+ "replay: nov4-pau-metrics-not-people-unknown [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "OFF_ROSTER_ASK_BEFORE_CARD: an off-roster full name is asked about before any card ('I can't find <name> on your roster\u2026'); the Policy line comes back after 'use <name>'. Read."
+ },
+ "replay: nov5-compound-surname-short-word-no-match [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "OFF_ROSTER_ASK_BEFORE_CARD: an off-roster full name is asked about before any card ('I can't find <name> on your roster\u2026'); the Policy line comes back after 'use <name>'. Read."
+ },
+ "replay: nov5-not-found-employee-first [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "OFF_ROSTER_ASK_BEFORE_CARD: an off-roster full name is asked about before any card ('I can't find <name> on your roster\u2026'); the Policy line comes back after 'use <name>'. Read."
+ },
+ "replay: nov5-not-found-name-at-end [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "OFF_ROSTER_ASK_BEFORE_CARD: an off-roster full name is asked about before any card ('I can't find <name> on your roster\u2026'); the Policy line comes back after 'use <name>'. Read."
+ },
+ "replay: nov5-request-slot-off-roster-name [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "OFF_ROSTER_ASK_BEFORE_CARD: an off-roster full name is asked about before any card ('I can't find <name> on your roster\u2026'); the Policy line comes back after 'use <name>'. Read."
+ },
+ "replay: nov5-request-slot-off-roster-name-models [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "OFF_ROSTER_ASK_BEFORE_CARD: an off-roster full name is asked about before any card ('I can't find <name> on your roster\u2026'); the Policy line comes back after 'use <name>'. Read."
+ },
+ "replay: nov6-b1-its-name [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "OFF_ROSTER_ASK_BEFORE_CARD: an off-roster full name is asked about before any card ('I can't find <name> on your roster\u2026'); the Policy line comes back after 'use <name>'. Read."
+ },
+ "replay: nov6-b1-my-team-member-then-name-is [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "OFF_ROSTER_ASK_BEFORE_CARD: an off-roster full name is asked about before any card ('I can't find <name> on your roster\u2026'); the Policy line comes back after 'use <name>'. Read."
+ },
+ "replay: nov6-b1-name-with-title-then-name-is [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "OFF_ROSTER_ASK_BEFORE_CARD: an off-roster full name is asked about before any card ('I can't find <name> on your roster\u2026'); the Policy line comes back after 'use <name>'. Read."
+ },
+ "replay: nov6-b1-title-then-her-name-is [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "OFF_ROSTER_ASK_BEFORE_CARD: an off-roster full name is asked about before any card ('I can't find <name> on your roster\u2026'); the Policy line comes back after 'use <name>'. Read."
+ },
+ "replay: nov6-no-notice-no-date-resigned [fix:NO_NOTICE_NO_DATE_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "OFF_ROSTER_ASK_BEFORE_CARD: an off-roster full name is asked about before any card ('I can't find <name> on your roster\u2026'); the Policy line comes back after 'use <name>'. Read."
+ },
+ "replay: nov6-no-notice-no-date-resigned [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "OFF_ROSTER_ASK_BEFORE_CARD: an off-roster full name is asked about before any card ('I can't find <name> on your roster\u2026'); the Policy line comes back after 'use <name>'. Read."
+ },
+ "replay: nov6-off-roster-ca-use [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "OFF_ROSTER_ASK_BEFORE_CARD: an off-roster full name is asked about before any card ('I can't find <name> on your roster\u2026'); the Policy line comes back after 'use <name>'. Read."
+ },
+ "replay: nov6-off-roster-exit-for-name-yes [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "OFF_ROSTER_ASK_BEFORE_CARD: an off-roster full name is asked about before any card ('I can't find <name> on your roster\u2026'); the Policy line comes back after 'use <name>'. Read."
+ },
+ "replay: nov6-off-roster-exit-own-line-name-again [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "OFF_ROSTER_ASK_BEFORE_CARD: an off-roster full name is asked about before any card ('I can't find <name> on your roster\u2026'); the Policy line comes back after 'use <name>'. Read."
+ },
+ "replay: nov6-off-roster-exit-own-line-use [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "OFF_ROSTER_ASK_BEFORE_CARD: an off-roster full name is asked about before any card ('I can't find <name> on your roster\u2026'); the Policy line comes back after 'use <name>'. Read."
+ },
+ "replay: nov6-offer-apostrophe-surname [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "OFF_ROSTER_ASK_BEFORE_CARD: an off-roster full name is asked about before any card ('I can't find <name> on your roster\u2026'); the Policy line comes back after 'use <name>'. Read."
+ },
+ "replay: nov6-offer-employee-comma-place [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "OFF_ROSTER_ASK_BEFORE_CARD: an off-roster full name is asked about before any card ('I can't find <name> on your roster\u2026'); the Policy line comes back after 'use <name>'. Read."
+ },
+ "replay: nov6-offer-lowercase-said-back-title-case [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "OFF_ROSTER_ASK_BEFORE_CARD: an off-roster full name is asked about before any card ('I can't find <name> on your roster\u2026'); the Policy line comes back after 'use <name>'. Read."
+ },
+ "replay: nov6-offer-mixed-case-surname [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "OFF_ROSTER_ASK_BEFORE_CARD: an off-roster full name is asked about before any card ('I can't find <name> on your roster\u2026'); the Policy line comes back after 'use <name>'. Read."
+ },
+ "replay: nov6-one-question-ca [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "OFF_ROSTER_ASK_BEFORE_CARD: an off-roster full name is asked about before any card ('I can't find <name> on your roster\u2026'); the Policy line comes back after 'use <name>'. Read."
+ },
+ "replay: nov6-one-question-employee-comma [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "OFF_ROSTER_ASK_BEFORE_CARD: an off-roster full name is asked about before any card ('I can't find <name> on your roster\u2026'); the Policy line comes back after 'use <name>'. Read."
+ },
+ "replay: nov6-one-question-for-name [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "OFF_ROSTER_ASK_BEFORE_CARD: an off-roster full name is asked about before any card ('I can't find <name> on your roster\u2026'); the Policy line comes back after 'use <name>'. Read."
+ },
+ "replay: nov6-one-question-own-line [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "OFF_ROSTER_ASK_BEFORE_CARD: an off-roster full name is asked about before any card ('I can't find <name> on your roster\u2026'); the Policy line comes back after 'use <name>'. Read."
+ },
+ "replay: nov6-title-ends-at-line-exit-s16 [fix:TITLE_ENDS_AT_LINE_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "OFF_ROSTER_ASK_BEFORE_CARD: an off-roster full name is asked about before any card ('I can't find <name> on your roster\u2026'); the Policy line comes back after 'use <name>'. Read."
+ },
+ "replay: nov6-title-ends-at-line-exit-s16 [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "OFF_ROSTER_ASK_BEFORE_CARD: an off-roster full name is asked about before any card ('I can't find <name> on your roster\u2026'); the Policy line comes back after 'use <name>'. Read."
+ },
+ "replay: nov7-live-b1-team-member-off-roster-three-turns [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "OFF_ROSTER_ASK_BEFORE_CARD: an off-roster full name is asked about before any card ('I can't find <name> on your roster\u2026'); the Policy line comes back after 'use <name>'. Read."
+ },
+ "replay: nov8-exit-field-label-keeps-no-notice [fix:FIELD_LABEL_NOT_A_QUESTION_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "OFF_ROSTER_ASK_BEFORE_CARD: an off-roster full name is asked about before any card ('I can't find <name> on your roster\u2026'); the Policy line comes back after 'use <name>'. Read."
+ },
+ "replay: nov8-exit-field-label-keeps-no-notice [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "OFF_ROSTER_ASK_BEFORE_CARD: an off-roster full name is asked about before any card ('I can't find <name> on your roster\u2026'); the Policy line comes back after 'use <name>'. Read."
+ },
+ "replay: nov8-two-forms-card-not-asked-ef902fec [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "OFF_ROSTER_ASK_BEFORE_CARD: an off-roster full name is asked about before any card ('I can't find <name> on your roster\u2026'); the Policy line comes back after 'use <name>'. Read."
+ },
+ "replay: nov9-exit-lines-keep-method [fix:EXIT_LINE_ANSWERS_ADD_UP_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "OFF_ROSTER_ASK_BEFORE_CARD: an off-roster full name is asked about before any card ('I can't find <name> on your roster\u2026'); the Policy line comes back after 'use <name>'. Read."
+ },
+ "replay: nov9-exit-lines-keep-method [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "OFF_ROSTER_ASK_BEFORE_CARD: an off-roster full name is asked about before any card ('I can't find <name> on your roster\u2026'); the Policy line comes back after 'use <name>'. Read."
+ },
+ "replay: nov9-off-roster-ask-before-card [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "OFF_ROSTER_ASK_BEFORE_CARD: an off-roster full name is asked about before any card ('I can't find <name> on your roster\u2026'); the Policy line comes back after 'use <name>'. Read."
+ },
+ "replay: nov9-off-roster-ask-then-use [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "OFF_ROSTER_ASK_BEFORE_CARD: an off-roster full name is asked about before any card ('I can't find <name> on your roster\u2026'); the Policy line comes back after 'use <name>'. Read."
+ }
+}
