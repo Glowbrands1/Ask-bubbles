@@ -1332,6 +1332,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 5: INGEST_FAILURE_KEEPS_LAST_GOOD, WOVEN_OCR_PAGE_BATCHES (QA, the recipe book's lost content, 10 Nov 2026; default off).
   "INGEST_FAILURE_KEEPS_LAST_GOOD_ENABLED",
   "WOVEN_OCR_PAGE_BATCHES_ENABLED",
+  // coding 6: NAME_LAST_AFTER_BY (QA's B-C1, 11 Nov 2026; default off).
+  "NAME_LAST_AFTER_BY_ENABLED",
 ] as const;
 
 /**
@@ -4360,4 +4362,15 @@ export function firstNameEnoughEnabled(): boolean {
  */
 export function noShowOpeningIsAttendanceEnabled(): boolean {
   return envFlag("NO_SHOW_OPENING_IS_ATTENDANCE_ENABLED");
+}
+
+/**
+ * NAME_LAST_AFTER_BY_ENABLED (coding 6, 11 Nov 2026; default off; QA's B-C1 from the open-cases audit, QA's name
+ * matrix of 4 Nov 2026). "corrective action: a guest was treated rudely at the front desk on monday by corin
+ * bellweather" (lower case or capitals) made no card for the roster's Corin Bellweather. On: a full roster name after
+ * "by" at the end of a passive sentence is the doer, not a reporter (unless "reported / signed / seen … by"), and a
+ * card name "BY <roster name>" is that roster person (`forms/name-after-by.ts`). Off, as before.
+ */
+export function nameLastAfterByEnabled(): boolean {
+  return envFlag("NAME_LAST_AFTER_BY_ENABLED");
 }

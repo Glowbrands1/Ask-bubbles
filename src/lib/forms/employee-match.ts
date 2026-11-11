@@ -1,5 +1,7 @@
 import { rosterCompoundSurnameEnabled, sharedLoginNotStaffEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 
+import { doerAfterBy } from "./name-after-by";
+
 /**
  * ============================================================================
  * IS THE NAME THE MANAGER TYPED SOMEBODY ON THEIR TEAM?
@@ -170,7 +172,8 @@ export function rosterNameNamedIn(text: string, roster: readonly RosterEmployee[
         // Somebody else in the account: "her coworker remy calder", "remy calder told me".
         const before = said.slice(Math.max(0, at - 40), at);
         const after = said.slice(at + full.length, at + full.length + 30);
-        if (!OTHER_PARTY_BEFORE.test(before) && !OTHER_PARTY_AFTER.test(after)) {
+        // NAME_LAST_AFTER_BY_ENABLED: "… was treated rudely … by corin bellweather" names the doer (`forms/name-after-by.ts`).
+        if ((!OTHER_PARTY_BEFORE.test(before) || doerAfterBy(said.slice(0, at), said.slice(at + full.length))) && !OTHER_PARTY_AFTER.test(after)) {
           names.add(displayName(employee));
           break;
         }
