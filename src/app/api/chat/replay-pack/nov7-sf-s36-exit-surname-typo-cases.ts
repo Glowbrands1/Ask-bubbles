@@ -43,7 +43,7 @@ function typoCase(id: string): ReplayCase {
     fixFlags: [...NAME_SET, "FORM_FOR_FOR_TYPO_ENABLED"],
     // FORM_FOR_FOR_TYPO_ENABLED (B-C3, 11 Nov 2026) makes the exit card (`nov11-exit-for-for-cases.ts`); still open: the
     // name is read with the title glued on ("<name> TM"), so no roster spelling is offered.
-    fixStatus: { open: "the exit card is made, but the name is read as \"<name> TM\": not found on the roster, no \"Is this for …?\"" },
+    // Changed on purpose (12 Nov 2026): fixStatus removed — the fix flags hold with the name set on since QA round 17h (FORM_FOR_FOR_TYPO + TITLE_NOT_PART_OF_NAME live).
     async run(t) {
       t.directory(STAFF);
       t.as("location_manager", WEST_DODGE);
