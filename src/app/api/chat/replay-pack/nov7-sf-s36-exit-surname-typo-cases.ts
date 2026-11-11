@@ -40,8 +40,10 @@ function typoCase(id: string): ReplayCase {
     // "a exit for for" alone is not a form request): the model answers it, with and without the name set. Kept OPEN as
     // the record of the sibling's report until a live trace from this app shows the path.
     status: { open: "the message is answered by the model, not read as an exit form request (no card)" },
-    fixFlags: NAME_SET,
-    fixStatus: { open: "the same with the name set on" },
+    fixFlags: [...NAME_SET, "FORM_FOR_FOR_TYPO_ENABLED"],
+    // FORM_FOR_FOR_TYPO_ENABLED (B-C3, 11 Nov 2026) makes the exit card (`nov11-exit-for-for-cases.ts`); still open: the
+    // name is read with the title glued on ("<name> TM"), so no roster spelling is offered.
+    fixStatus: { open: "the exit card is made, but the name is read as \"<name> TM\": not found on the roster, no \"Is this for …?\"" },
     async run(t) {
       t.directory(STAFF);
       t.as("location_manager", WEST_DODGE);
