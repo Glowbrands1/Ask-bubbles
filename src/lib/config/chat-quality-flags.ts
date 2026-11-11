@@ -1258,6 +1258,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REOPEN_NOT_OPEN_FORM_ENABLED",
   "SIGNED_STEP_NOT_A_REQUEST_ENABLED",
   "STEP_DATES_NOT_FORM_DATE_ENABLED",
+  // coding 4: ATTENDANCE_PLAN_NEEDS_LATENESS (QA ruling, 11 Nov 2026; default off).
+  "ATTENDANCE_PLAN_NEEDS_LATENESS_ENABLED",
   "TAKE_OFF_STAYS_CARD_ENABLED",
   // coding 4: ACCOUNT_PLACE_LEAD (round 6; default off): forced off with the others.
   "ACCOUNT_PLACE_LEAD_ENABLED",
@@ -4360,4 +4362,16 @@ export function firstNameEnoughEnabled(): boolean {
  */
 export function noShowOpeningIsAttendanceEnabled(): boolean {
   return envFlag("NO_SHOW_OPENING_IS_ATTENDANCE_ENABLED");
+}
+
+/**
+ * ATTENDANCE_PLAN_NEEDS_LATENESS_ENABLED (QA's prod-env reading and ruling, 11 Nov 2026; default off; same flag in both
+ * apps). With ATTENDANCE_ACTION_PLAN on (production), "create ca form for <name> for violating attendance policy on
+ * 10-20-26. verbal. …" saved Pau's lateness plan ("expected to arrive on time … Continued lateness …") though no lateness
+ * was described. On: an Attendance account that never states lateness (late, tardy, on time, clocked in, arrived) keeps
+ * the general plan, as a missed meeting or shift already does (`forms/attendance-action-plan.ts`); an account that states
+ * lateness keeps Pau's plan. Off, as before.
+ */
+export function attendancePlanNeedsLatenessEnabled(): boolean {
+  return envFlag("ATTENDANCE_PLAN_NEEDS_LATENESS_ENABLED");
 }
