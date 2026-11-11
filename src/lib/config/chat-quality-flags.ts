@@ -1258,6 +1258,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REOPEN_NOT_OPEN_FORM_ENABLED",
   "SIGNED_STEP_NOT_A_REQUEST_ENABLED",
   "STEP_DATES_NOT_FORM_DATE_ENABLED",
+  // coding 4: STORE_CHOICES_NAMED (Problem 20, Bubbles production, 10 Nov 2026; default off).
+  "STORE_CHOICES_NAMED_ENABLED",
   "TAKE_OFF_STAYS_CARD_ENABLED",
   // coding 4: ACCOUNT_PLACE_LEAD (round 6; default off): forced off with the others.
   "ACCOUNT_PLACE_LEAD_ENABLED",
@@ -4262,4 +4264,15 @@ export function failureToOpenIsLateOpeningEnabled(): boolean {
  */
 export function payrollBareSentenceEnabled(): boolean {
   return envFlag("PAYROLL_BARE_SENTENCE_ENABLED");
+}
+
+/**
+ * STORE_CHOICES_NAMED_ENABLED (Problem 20, Bubbles production, 10 Nov 2026; default off; same flag in both apps). A
+ * manager covering two stores named a person who works at both, was asked "Which store is this about?", sent the request
+ * again and got the same question back with no stores named, and no card was made. On: a card waiting for its store asks
+ * with the choices named — the person's own stores in Woven on the manager's assignment, or the manager's stores
+ * (`forms/store-choices-named.ts`). Off, as before.
+ */
+export function storeChoicesNamedEnabled(): boolean {
+  return envFlag("STORE_CHOICES_NAMED_ENABLED");
 }

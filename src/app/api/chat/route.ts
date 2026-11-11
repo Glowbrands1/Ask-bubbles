@@ -69,6 +69,7 @@ import {
   staffPickerBareAnswerEnabled,
   wholeTeamCoachingEnabled,
   sameAskNoRepeatEnabled,
+  storeChoicesNamedEnabled,
   newRequestOpenDraftEnabled,
   copyOpenFormForPersonEnabled,
   coachingForEveryoneEnabled,
@@ -944,6 +945,8 @@ async function postChat(request: Request) {
       }
       // REFUSAL_NO_REPEAT_ENABLED, TITLE_NOT_SPEAKERS_MANAGER_ENABLED: see `lib/forms/reply-guards.ts`.
       // SAME_ASK_NO_REPEAT_ENABLED: a card still waiting never repeats the last reply word for word (`lib/forms/reply-guards.ts`).
+      // STORE_CHOICES_NAMED_ENABLED: a card waiting for its store names the choices, before the repeat check (`lib/forms/store-choices-named.ts`).
+      if (storeChoicesNamedEnabled()) answer = (await import("@/lib/forms/store-choices-named")).withStoreChoicesNamed(answer);
       if (sameAskNoRepeatEnabled()) answer = (await import("@/lib/forms/reply-guards")).withoutRepeatedAsk(answer, asked.history);
       if (refusalNoRepeatEnabled() || titleNotSpeakersManagerEnabled()) {
         const guards = await import("@/lib/forms/reply-guards");
