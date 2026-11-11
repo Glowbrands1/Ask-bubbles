@@ -1320,6 +1320,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
   "CHAT_STAGE_TIMINGS_ENABLED",
   "CA_REASON_DUE_TO_ENABLED",
+  "PAYROLL_DEDUCTIBLE_WORD_ENABLED",
 ] as const;
 
 /**
@@ -4262,4 +4263,15 @@ export function failureToOpenIsLateOpeningEnabled(): boolean {
  */
 export function payrollBareSentenceEnabled(): boolean {
   return envFlag("PAYROLL_BARE_SENTENCE_ENABLED");
+}
+
+/**
+ * "payroll is deductable" / "payroll deductible" is the manager's Yes, and
+ * "not payroll deductible" their No (ported from the sibling app, QA
+ * conv_mvh9a9q62mjffk2 there: the card asked the payroll question again on
+ * every turn after "payroll is deductable"). Off, those words are read as
+ * nothing.
+ */
+export function payrollDeductibleWordEnabled(): boolean {
+  return envFlag("PAYROLL_DEDUCTIBLE_WORD_ENABLED");
 }
