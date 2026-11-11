@@ -1258,6 +1258,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REOPEN_NOT_OPEN_FORM_ENABLED",
   "SIGNED_STEP_NOT_A_REQUEST_ENABLED",
   "STEP_DATES_NOT_FORM_DATE_ENABLED",
+  // coding 4: FORM_FOR_FOR_TYPO (B-C3, QA, 11 Nov 2026; default off).
+  "FORM_FOR_FOR_TYPO_ENABLED",
   "TAKE_OFF_STAYS_CARD_ENABLED",
   // coding 4: ACCOUNT_PLACE_LEAD (round 6; default off): forced off with the others.
   "ACCOUNT_PLACE_LEAD_ENABLED",
@@ -4373,4 +4375,14 @@ export function firstNameEnoughEnabled(): boolean {
  */
 export function noShowOpeningIsAttendanceEnabled(): boolean {
   return envFlag("NO_SHOW_OPENING_IS_ATTENDANCE_ENABLED");
+}
+
+/**
+ * FORM_FOR_FOR_TYPO_ENABLED (B-C3 from QA's open-case list, 11 Nov 2026; the sibling app's Pau scan sf-s36, a real
+ * manager: "I need a exit for for <name> TM. Quit without notice. …"; default off). The message was never read as an exit
+ * request: "for for" is "form for" mistyped, and "exit for for" named no form. On: a form's name followed by "for for" is
+ * read as "<form> form for" (`forms/template-intent.ts` canonicalFormWording). Off, as before.
+ */
+export function formForForTypoEnabled(): boolean {
+  return envFlag("FORM_FOR_FOR_TYPO_ENABLED");
 }
