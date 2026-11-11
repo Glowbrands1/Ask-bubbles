@@ -400,4 +400,82 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov10-r17b-first-name-enough": "FIRST_NAME_ENOUGH",
   // Changed on purpose (11 Nov 2026): fixed in production by EXCERPT_BRAND_HEADING_DROP, QA round 17f
   "nov11-excerpt-brand-heading-holidays": "EXCERPT_BRAND_HEADING_DROP",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov4-name-first-date-sentence-off-code": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov4-name-first-date-sentence-off-models": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov4-name-first-nodate-sentence-off-code": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov4-name-first-nodate-sentence-off-models": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov4-name-last-date-caps-off-code": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov4-name-last-date-caps-off-models": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov4-name-last-date-sentence-off-code": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov4-name-last-date-sentence-off-models": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov4-name-last-nodate-sentence-off-code": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov4-name-last-nodate-sentence-off-models": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov4-name-middle-date-sentence-off-code": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov4-name-middle-date-sentence-off-models": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov4-name-middle-nodate-sentence-off-code": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov4-name-middle-nodate-sentence-off-models": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov5-compound-surname-one-word-typo": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov5-compound-surname-word1-typo": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov5-compound-surname-word1-typo-yes": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov5-compound-surname-word2-rotated": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov5-compound-surname-word2-rotated-earlier-turn": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov5-compound-surname-word2-typo": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_OFF_ROSTER_ASK, QA round 16c
+  "nov5-r3-off-roster-lowercase-action-plan": "FORM_NAME_OFF_ROSTER_ASK",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov5-roster-only-ima-off-roster": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov5-twin-gate-ima-off-roster-observation": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov6-roster-shape-apostrophe-first-initial": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov6-roster-shape-apostrophe-rotation": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov6-roster-shape-apostrophe-swap": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov6-roster-shape-apostrophe-typo": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov6-roster-shape-compound-surname-first-initial": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov6-roster-shape-compound-surname-rotation": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov6-roster-shape-compound-surname-typo": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov6-roster-shape-preferred-first-initial": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov6-roster-shape-preferred-rotation": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov6-roster-shape-preferred-swap": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov6-roster-shape-preferred-typo": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov6-roster-shape-short-surname-first-initial": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov6-roster-shape-two-word-first-first-initial": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov6-roster-shape-two-word-first-rotation": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov6-roster-shape-two-word-first-swap": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov6-roster-shape-two-word-first-typo": "FORM_NAME_FROM_ROSTER",
 };

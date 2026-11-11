@@ -8,6 +8,7 @@ import {
   partialSurnameAskEnabled,
   suggestAnswerReplacesTypedEnabled,
   nearMissQuestionRulesEnabled,
+  formNameOffRosterAskEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { compoundSurnameScore, displayName, editDistance, type RosterEmployee } from "@/lib/forms/employee-match";
 import { looseFits } from "@/lib/forms/loose-fit";
@@ -90,10 +91,20 @@ function statedFirstName(turns: readonly string[], roster: readonly RosterEmploy
   return said.size === 1 ? [...said][0]! : null;
 }
 
+/**
+ * FORM_NAME_OFF_ROSTER_ASK_ENABLED (QA's roster-set gate, 10 Nov 2026; sf-s38 "make me a CA for Ines Varga-Lund missing
+ * her shift"): the roster's surname read as the message is ("Varga-Lund" → "varga lund"), so a hyphenated surname typed
+ * in full is somebody named in full. Off, as before.
+ */
+function surnameAsTyped(lastName: string): string {
+  const own = lastName.trim().toLowerCase();
+  return formNameOffRosterAskEnabled() ? own.replace(/[^a-z' ]+/g, " ").replace(/\s+/g, " ").trim() : own;
+}
+
 function namesSomebodyInFull(turns: readonly string[], roster: readonly RosterEmployee[]): boolean {
   const text = ` ${turns.join(" ").toLowerCase().replace(/[^a-z' ]+/g, " ")} `;
   return roster.some((person) =>
-    firstNamesOf(person).some((first) => text.includes(` ${first} ${person.lastName.trim().toLowerCase()} `)),
+    firstNamesOf(person).some((first) => text.includes(` ${first} ${surnameAsTyped(person.lastName)} `)),
   );
 }
 
@@ -468,9 +479,18 @@ function chosenName(
  */
 const ASKS_FOR_A_FORM = /\b(?:warning|write[- ]?up|corrective\s+action(?:\s+form)?|ca|c\/a|dpoa)\s+(?:for|about|over|regarding)\s/i;
 
-function besidesTheName(reply: string, name: string): string {
+/** ROSTER_NEAR_MISS_ENABLED: what may come before the name in an answer to "Is this for <name>?" and say nothing else. */
+const NAME_ANSWER_LEAD =
+  /^[\s,.!-]*(?:(?:oops|sorry|my\s+bad|actually|no|nope|yes|yeah|yep|ok|okay|correct|right)[\s,.!-]+)*(?:it'?s|it\s+is|its|this\s+is(?:\s+for)?|that'?s|for|i\s+meant?)?[\s,.!:-]*$/i;
+
+export function besidesTheName(reply: string, name: string): string {
   const at = reply.toLowerCase().indexOf(name.toLowerCase());
-  const rest = `${reply.slice(0, at)} ${reply.slice(at + name.length)}`.replace(/\s+/g, " ").replace(/^[\s,.;:!-]+|[\s,;:-]+$/g, "");
+  // ROSTER_NEAR_MISS_ENABLED (QA's round-22 eval check, 10 Nov 2026, s14): "Oops, it's Rozlyn quellmar" answered "Is this
+  // for **Rozlyn Quellmar**?" and became "Rozlyn Quellmar Oops, it's"; the next request for her read "Rozlyn Quellmar
+  // Oops" as somebody else, started a new form and lost the date given earlier. Words before the name that only correct
+  // or confirm it ("oops, it's", "sorry, it is", "no, this is for") say nothing besides the name.
+  const lead = rosterNearMissEnabled() && NAME_ANSWER_LEAD.test(reply.slice(0, at)) ? "" : reply.slice(0, at);
+  const rest = `${lead} ${reply.slice(at + name.length)}`.replace(/\s+/g, " ").replace(/^[\s,.;:!-]+|[\s,;:-]+$/g, "");
   return /[\p{L}\d]/u.test(rest) ? ` ${rest}` : "";
 }
 
