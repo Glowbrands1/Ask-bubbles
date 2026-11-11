@@ -51,6 +51,7 @@ import {
   offRosterConfirmEnabled,
   offRosterAskBeforeCardEnabled,
   oneFormEachPersonEnabled,
+  groupWordsNotANameEnabled,
   createFromConversationPointsToCardEnabled,
   cardNamesEmployeeEnabled,
   exitLetterAddresseeEnabled,
@@ -969,6 +970,13 @@ async function postChat(request: Request) {
           [...parsed.history.filter((turn) => turn.role === "user").map((turn) => turn.content), asked.question],
           businessToday(),
         );
+      }
+      // GROUP_WORDS_NOT_A_NAME_ENABLED: "the same form for multiple employees" asks which employees (`lib/forms/group-words-ask.ts`).
+      if (groupWordsNotANameEnabled()) {
+        answer = (await import("@/lib/forms/group-words-ask")).withGroupWordsAsk(answer, [
+          ...parsed.history.filter((turn) => turn.role === "user").map((turn) => turn.content),
+          asked.question,
+        ]);
       }
       // PROPOSAL_NAME_CORRECTION_ENABLED: an off-roster "change her name to …" on the card asks which, never kept silently.
       answer = withCorrectionNotDropped(answer, parsed);
