@@ -1355,6 +1355,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "PASTED_OUTLINE_TO_OPEN_DRAFT_ENABLED",
   // coding 6: PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT (ported from the sibling app, 11 Nov 2026; default off).
   "PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT_ENABLED",
+  // coding 6: GROUP_WORDS_NOT_A_NAME (Problem 19, 11 Nov 2026; default off).
+  "GROUP_WORDS_NOT_A_NAME_ENABLED",
 ] as const;
 
 /**
@@ -4557,4 +4559,15 @@ export function formForForTypoEnabled(): boolean {
  */
 export function pastedTemplateFieldsToOpenDraftEnabled(): boolean {
   return envFlag("PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT_ENABLED");
+}
+
+/**
+ * GROUP_WORDS_NOT_A_NAME_ENABLED (coding 6, 11 Nov 2026; default off; Problem 19, this app's production, 10 Nov 2026):
+ * "I want the same form for multiple employees" put "multiple employees" on the coaching card as the employee, with
+ * "Everything I need is here". On, a group of people ("multiple employees", "my employees", "several team members",
+ * "the team", "everyone") is never a person's name (`forms/not-a-name.ts` isGroupOfPeople, with NOT_A_NAME_GUARD),
+ * so the bot asks who they are and the coaching topic is kept. Off, as before.
+ */
+export function groupWordsNotANameEnabled(): boolean {
+  return envFlag("GROUP_WORDS_NOT_A_NAME_ENABLED");
 }
