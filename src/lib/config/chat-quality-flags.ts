@@ -1260,6 +1260,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REOPEN_NOT_OPEN_FORM_ENABLED",
   "SIGNED_STEP_NOT_A_REQUEST_ENABLED",
   "STEP_DATES_NOT_FORM_DATE_ENABLED",
+  // coding 4: INCIDENT_DATE_SHARED_WITH_STEP (QA's prod-env reading, 10 Nov 2026, D3; default off).
+  "INCIDENT_DATE_SHARED_WITH_STEP_ENABLED",
   "TAKE_OFF_STAYS_CARD_ENABLED",
   // coding 4: ACCOUNT_PLACE_LEAD (round 6; default off): forced off with the others.
   "ACCOUNT_PLACE_LEAD_ENABLED",
@@ -3872,6 +3874,17 @@ export function proposalPolicySetAsideEnabled(): boolean {
  */
 export function stepDatesNotFormDateEnabled(): boolean {
   return envFlag("STEP_DATES_NOT_FORM_DATE_ENABLED");
+}
+
+/**
+ * INCIDENT_DATE_SHARED_WITH_STEP_ENABLED (QA's prod-env reading, 10 Nov 2026, D3; default off; same flag in both apps).
+ * With production's flags, "verbal for <name>, gave her a verbal on 10-21 for being late on 10-21" and "ca for <name>, she
+ * was late on 10-21 and i gave her a verbal on 10-21" dated the form today: FORM_EDIT_DATE_RULES drops every date that is
+ * also a step's, even when the same day is the incident's. On: a step's date is set aside only when no incident cue also
+ * governs that date ("late on 10-21", or the step given that day "for being late"). Off, as before.
+ */
+export function incidentDateSharedWithStepEnabled(): boolean {
+  return envFlag("INCIDENT_DATE_SHARED_WITH_STEP_ENABLED");
 }
 
 /**

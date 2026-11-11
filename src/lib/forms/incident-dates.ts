@@ -8,6 +8,7 @@ import {
   priorSentenceFixEnabled,
   stepDatesNotFormDateEnabled,
   formDateSaidSettlesEnabled,
+  incidentDateSharedWithStepEnabled,
 } from "@/lib/config/chat-quality-flags";
 
 /** DATE_ANSWER_KEEPS_OPEN_ENABLED, on top of the live DATE_ANSWER_APPLIED_ENABLED. */
@@ -26,7 +27,8 @@ import {
 import { saidFormDate } from "./form-date-said";
 import { incidentOnly, incidentOnlyOn } from "./form-date-incident-only";
 import { priorSentenceFixFor } from "./prior-sentence-scope";
-import { stepSentenceDates } from "./step-sentence-dates";
+import { incidentGovernedDates, stepSentenceDates } from "./step-sentence-dates";
+import { withYearlessDatesWritten } from "./late-open";
 import { correctsTheEmployee } from "./proposal";
 
 /**
@@ -298,13 +300,28 @@ export function decideFormDate(input: {
 
   let dates = incidentDates(input.text, input.today, COACHING_TEMPLATES.has(input.templateKey));
   /*
+   * INCIDENT_DATE_SHARED_WITH_STEP_ENABLED (QA's prod-env reading, 10 Nov 2026, D3): "ca for <name>, she was late on
+   * 10-21 and i gave her a verbal on 10-21" and "… gave her a verbal on 10-21 for being late on 10-21" lost 10-21: it is
+   * the verbal's date, so it was read as a prior step's only and the form was dated today. A date an incident cue governs
+   * ("late on 10-21", a step given that day "for being late") is the incident's as well (`incidentGovernedDates`).
+   */
+  const sharedWithStep = new Set<string>();
+  if (incidentDateSharedWithStepEnabled()) {
+    // Only a day that is ALSO a prior step's: a plain incident date is read as before.
+    const stepDays = new Set(
+      [input.text, withYearlessDatesWritten(input.text, input.today)].flatMap((text) => priorSteps(text, input.today).map((step) => step.iso)),
+    );
+    for (const iso of incidentGovernedDates(input.text, input.today)) if (stepDays.has(iso)) sharedWithStep.add(iso);
+  }
+  if (sharedWithStep.size > 0) dates = [...new Set([...dates, ...sharedWithStep])].sort();
+  /*
    * CORRECTED_DATE_KEPT_ENABLED (QA's round-5 trace of Q6, 8 Nov 2026): "sorry, the verbal ca was on 9-2-26 not
    * 9-1-26" names the prior step's corrected date; it is that step's date, never one of the incident's. Without this,
    * several dates left the card on the last one stated (ANTI_LOOP), here the step's 09-02.
    */
   if (correctedDateKeptEnabled()) {
     const stepDates = new Set(priorSteps(input.text, input.today).map((step) => step.iso));
-    dates = dates.filter((iso) => !stepDates.has(iso));
+    dates = dates.filter((iso) => !stepDates.has(iso) || sharedWithStep.has(iso));
   }
   if (COACHING_TEMPLATES.has(input.templateKey)) {
     const latestIncident = dates[dates.length - 1] ?? "";
@@ -334,6 +351,8 @@ export function decideFormDate(input: {
     const first = listIncidentDates(input.text, input.today)[0];
     if (first && incidentOnly(input.text, input.today, [first]).length === 0) return { formDate: dates[0] ?? null };
   }
+  // INCIDENT_DATE_SHARED_WITH_STEP_ENABLED: the card's own reading skips a step's date, so the shared day is set here.
+  if (dates.length === 1 && sharedWithStep.has(dates[0]!)) return { formDate: dates[0]! };
   if (dates.length <= 1) return {};
   if (input.correctedTo && dates.includes(input.correctedTo)) return { formDate: input.correctedTo };
 
