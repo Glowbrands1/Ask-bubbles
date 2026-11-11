@@ -4,6 +4,8 @@ import { cardChangePlanRebuildEnabled } from "@/lib/config/chat-quality-flags";
 import { syncCorrectiveActionPlan } from "@/lib/forms/ca-action-plan-sync";
 import { PAYROLL_DEDUCT_AMOUNT_KEY } from "@/lib/forms/payroll-deduct-amount";
 import { errorResponse } from "@/lib/api/respond";
+import { isDemoMode } from "@/lib/config/runtime";
+import { demoFormsRoute } from "@/lib/demo/forms-routes";
 import { POLICY_ACKNOWLEDGEMENT_REQUIRED } from "@/lib/forms/policy-verification";
 import {
   authorizeInstance,
@@ -193,6 +195,11 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await context.params;
+    // DEMO BUILD ONLY: the invented Forms Register (`lib/demo/forms-fixtures.ts`).
+    if (isDemoMode()) {
+      const body = (await request.json().catch(() => null)) as { archived?: boolean } | null;
+      return demoFormsRoute(id, { kind: "archive", archived: body?.archived !== false })!;
+    }
     const { actor } = await authorizeInstance(request, id, "manage");
     const body = (await request.json().catch(() => null)) as { archived?: boolean } | null;
 
@@ -221,6 +228,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
 export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await context.params;
+    if (isDemoMode()) return demoFormsRoute(id, { kind: "delete" })!;
     await authorizeInstance(request, id, "manage");
     const deleted = await deleteInstance(id);
     return NextResponse.json({

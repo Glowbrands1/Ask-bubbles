@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { isDemoMode } from "@/lib/config/runtime";
+import { DEMO_TEMPLATE_WRITE_REFUSAL } from "@/lib/demo/template-fixtures";
 import { noteSpendUser } from "@/lib/ai/spend-meter";
 import { withSpendMeter } from "@/lib/ai/spend-meter-run";
 
@@ -48,6 +50,10 @@ export async function POST(request: Request, context: { params: Promise<{ key: s
 
 async function postFormIngest(request: Request, context: { params: Promise<{ key: string }> }) {
   try {
+    // DEMO BUILD ONLY: nothing is published or stored.
+    if (isDemoMode()) {
+      return NextResponse.json({ error: DEMO_TEMPLATE_WRITE_REFUSAL, code: "demo_mode" }, { status: 409 });
+    }
     const actor = await authorizeForms(request, "manage_form_templates");
     noteSpendUser(actor.id);
     assertWithinRateLimit(request, "upload");

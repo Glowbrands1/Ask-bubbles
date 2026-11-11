@@ -1,4 +1,6 @@
 import { errorResponse } from "@/lib/api/respond";
+import { isDemoMode } from "@/lib/config/runtime";
+import { demoTemplate } from "@/lib/demo/template-fixtures";
 import { businessToday } from "@/lib/business-date";
 import { authorizeForms } from "@/lib/forms/access";
 import { fieldsForVariant } from "@/lib/forms/document";
@@ -24,7 +26,9 @@ export async function GET(request: Request, context: { params: Promise<{ key: st
   try {
     await authorizeForms(request, "manage_form_templates");
     const { key } = await context.params;
-    const template = await getTemplateByKey(key);
+    // DEMO BUILD ONLY: the seed library's template, not the database's.
+    const demo = isDemoMode() ? demoTemplate(key) : null;
+    const template = isDemoMode() ? (demo?.template ?? null) : await getTemplateByKey(key);
     if (!template) {
       return new Response(JSON.stringify({ error: "No such template." }), {
         status: 404,
@@ -32,9 +36,9 @@ export async function GET(request: Request, context: { params: Promise<{ key: st
       });
     }
 
-    const versions = await listVersions(template.id);
+    const versions = demo ? demo.versions : await listVersions(template.id);
     const draft = versions.find((version) => version.status === "draft");
-    const version = draft ?? (await getCurrentVersion(template.id));
+    const version = draft ?? (demo ? demo.current : await getCurrentVersion(template.id));
     if (!version) {
       return new Response(JSON.stringify({ error: "Nothing to preview yet." }), {
         status: 409,

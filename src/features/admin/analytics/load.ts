@@ -9,6 +9,12 @@ import {
 import { parseFeedbackFilters } from "@/lib/analytics/feedback-filters";
 import { businessToday } from "@/lib/business-date";
 import type { AnalyticsView } from "./analytics-screen";
+import { isDemoMode } from "@/lib/config/runtime";
+import {
+  demoAnalyticsSnapshot,
+  demoFeedbackPage,
+  demoFeedbackSnapshot,
+} from "@/lib/demo/analytics-fixtures";
 
 /**
  * Everything the analytics screen needs, loaded once.
@@ -29,6 +35,27 @@ export async function loadAnalyticsPage(
 ) {
   const filters = parseFilters(searchParams);
   const queueFilters = parseFeedbackFilters(searchParams);
+
+  /*
+   * DEMO BUILD ONLY: the same shape, aggregated from an invented event log
+   * (`lib/demo/analytics-fixtures.ts`) instead of the database functions.
+   */
+  if (isDemoMode()) {
+    const window = resolveWindow(filters, businessToday());
+    return {
+      view,
+      filters,
+      snapshot: demoAnalyticsSnapshot(filters),
+      previousCategories: demoAnalyticsSnapshot({
+        ...filters,
+        from: window.previousFrom.slice(0, 10),
+        to: isoDayBefore(window.previousTo),
+      }).byCategory,
+      feedback: demoFeedbackSnapshot(filters),
+      queueFilters,
+      feedbackPage: view === "feedback" ? demoFeedbackPage(filters, queueFilters) : null,
+    };
+  }
 
   /*
    * THE TWO SNAPSHOTS GO TOGETHER, not one after the other. They share the

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
 import { errorResponse } from "@/lib/api/respond";
+import { isDemoMode } from "@/lib/config/runtime";
+import { demoFormsRoute } from "@/lib/demo/forms-routes";
 import { authorizeInstance, InstanceNotVisibleError } from "@/lib/forms/instance-scope";
 import {
   FollowUpError,
@@ -38,6 +40,11 @@ export const dynamic = "force-dynamic";
 export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await context.params;
+    // DEMO BUILD ONLY: the invented Forms Register (`lib/demo/forms-fixtures.ts`).
+    if (isDemoMode()) {
+      const body = (await request.json().catch(() => null)) as { date?: string } | null;
+      return demoFormsRoute(id, { kind: "follow-up-date", date: body?.date })!;
+    }
     const { actor } = await authorizeInstance(request, id, "edit");
     const body = (await request.json().catch(() => null)) as { date?: string } | null;
 
@@ -63,6 +70,11 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await context.params;
+    if (isDemoMode()) {
+      const body = (await request.json().catch(() => null)) as { action?: string } | null;
+      const by = request.headers.get("x-ask-bubbles-demo-name")?.trim() || "Demo user";
+      return demoFormsRoute(id, { kind: "follow-up", action: body?.action }, by)!;
+    }
     const { actor } = await authorizeInstance(request, id, "edit");
     const body = (await request.json().catch(() => null)) as {
       action?: "complete" | "reopen";

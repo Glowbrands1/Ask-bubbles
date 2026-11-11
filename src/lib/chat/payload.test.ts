@@ -385,6 +385,14 @@ describe("partitioning a whole local history", () => {
     expect(eligible.map((payload) => payload.clientConversationId)).toEqual([real.id]);
     expect(declined).toHaveLength(DEMO_CONVERSATIONS.length + seeds.length);
     for (const entry of declined) {
+      /*
+       * DEMO BRANCH: the History seeds (`demo-conv-*`, `data/demo/chat.ts`) are
+       * declined as well — by their id shape, which no client id can have.
+       */
+      if (entry.id.startsWith("demo-conv-")) {
+        expect(entry.reason).toBe("malformed_conversation_id");
+        continue;
+      }
       expect(entry.reason).toBe("demo_seed");
       expect(entry.id).toMatch(/^conv-seed-/);
     }
