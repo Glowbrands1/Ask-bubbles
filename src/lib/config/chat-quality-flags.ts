@@ -1339,6 +1339,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "NEAR_MISS_ANSWER_KEEPS_REQUEST_ENABLED",
   // TEMPLATE_OUTLINE_FIELDS (default off): in the list, as every chat flag (Gate-Bubbles-2, 11 Nov 2026).
   "TEMPLATE_OUTLINE_FIELDS_ENABLED",
+  // PASTED_OUTLINE_TO_OPEN_DRAFT (default off): in the list, as every chat flag (Gate-Bubbles-2, 11 Nov 2026).
+  "PASTED_OUTLINE_TO_OPEN_DRAFT_ENABLED",
 ] as const;
 
 /**
