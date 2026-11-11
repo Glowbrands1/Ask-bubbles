@@ -958,6 +958,7 @@ export function nameBeforeTitleEnabled(): boolean {
 }
 
 export const CHAT_QUALITY_FLAG_NAMES = [
+  "NOT_FOLLOWING_IS_VIOLATION_ENABLED",
   "INCIDENT_FROM_EARLIER_TURN_ENABLED",
   "LEVEL_REQUEST_DATE_ENABLED",
   "CA_SHORTCUT_WORDS_ENABLED",
@@ -1260,6 +1261,10 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REOPEN_NOT_OPEN_FORM_ENABLED",
   "SIGNED_STEP_NOT_A_REQUEST_ENABLED",
   "STEP_DATES_NOT_FORM_DATE_ENABLED",
+  // coding 4: FORM_FOR_FOR_TYPO (B-C3, QA, 11 Nov 2026; default off).
+  "FORM_FOR_FOR_TYPO_ENABLED",
+  // coding 4: TITLE_NOT_PART_OF_NAME (B-C3 part 2, QA, 11 Nov 2026; default off).
+  "TITLE_NOT_PART_OF_NAME_ENABLED",
   "TAKE_OFF_STAYS_CARD_ENABLED",
   // coding 4: ACCOUNT_PLACE_LEAD (round 6; default off): forced off with the others.
   "ACCOUNT_PLACE_LEAD_ENABLED",
@@ -4354,6 +4359,16 @@ export function addNotRepeatedEnabled(): boolean {
 }
 
 /**
+ * NOT_FOLLOWING_IS_VIOLATION_ENABLED (QA's live Bubbles report, 10 Nov 2026; default off; same flag in both apps). "make it about not
+ * following the dress code" was read as no policy named, so no Dress Code reference was written. With the flag on, "not
+ * following / not wearing / not meeting / failed to follow <policy topic>" names that policy as broken (`forms/ca-policy.ts`,
+ * NOT_FOLLOWING_BEFORE). Off, as before.
+ */
+export function notFollowingIsViolationEnabled(): boolean {
+  return envFlag("NOT_FOLLOWING_IS_VIOLATION_ENABLED");
+}
+
+/**
  * SAME_REQUEST_OTHER_PERSON_ENABLED (coding 6, 10 Nov 2026; default off). With
  * <A>'s card on screen or <A>'s form just created, "Can you do the same thing
  * for <B> but switch it to a written" and "also make a coaching form for <B>"
@@ -4462,6 +4477,17 @@ export function noShowOpeningIsAttendanceEnabled(): boolean {
 }
 
 /**
+ * TITLE_NOT_PART_OF_NAME_ENABLED (B-C3 part 2 from QA's open-case list, 11 Nov 2026; the sibling app's Pau scan sf-s36;
+ * default off; QA: the roster set goes on with Bubbles 16c). "… exit for <first> <last, one letter off> TM. Quit without
+ * notice." put "<first> <last> TM" on the card, so the roster readers found nobody and never offered the roster's
+ * spelling. On: a store title written short after a typed name of two words or more is taken off it before the roster is
+ * read (`forms/roster-only-names.ts`). Off, as before.
+ */
+export function titleNotPartOfNameEnabled(): boolean {
+  return envFlag("TITLE_NOT_PART_OF_NAME_ENABLED");
+}
+
+/**
  * With FULL_MANUAL_CONTEXT_ENABLED on, a question the policy words do not
  * catch ("Where should employees park?", "What is COBRA?") is still asked
  * with the whole manual when retrieval's best excerpt is from the manual or
@@ -4471,4 +4497,14 @@ export function noShowOpeningIsAttendanceEnabled(): boolean {
  */
 export function fullManualWideGateEnabled(): boolean {
   return envFlag("FULL_MANUAL_WIDE_GATE_ENABLED");
+}
+
+/**
+ * FORM_FOR_FOR_TYPO_ENABLED (B-C3 from QA's open-case list, 11 Nov 2026; the sibling app's Pau scan sf-s36, a real
+ * manager: "I need a exit for for <name> TM. Quit without notice. …"; default off). The message was never read as an exit
+ * request: "for for" is "form for" mistyped, and "exit for for" named no form. On: a form's name followed by "for for" is
+ * read as "<form> form for" (`forms/template-intent.ts` canonicalFormWording). Off, as before.
+ */
+export function formForForTypoEnabled(): boolean {
+  return envFlag("FORM_FOR_FOR_TYPO_ENABLED");
 }
