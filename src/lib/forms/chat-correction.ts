@@ -35,14 +35,14 @@ import {
   payrollAmountPrompt,
   statedPayrollDeductAmount,
 } from "./payroll-deduct-amount";
-import { formEditSingleWriterEnabled, payrollDeductAmountFieldEnabled, priorActionsNoSignedEnabled } from "@/lib/config/chat-quality-flags";
+import { correctionPlanKeepsAmountEnabled, formEditSingleWriterEnabled, payrollDeductAmountFieldEnabled, priorActionsNoSignedEnabled } from "@/lib/config/chat-quality-flags";
 import { syncCorrectiveActionPlan } from "./ca-action-plan-sync";
 import { extractEmployeeNames, samePerson as samePersonByName } from "./proposal";
 import { clausesOf, LEAD_IN, separateQuestions } from "./message-parts";
 import { isQuestion } from "./question";
 import { singleSpokenDate } from "./relative-date";
 import { detectTemplateIntent } from "./template-intent";
-import { applyAssistantDraft, saveInstanceValues } from "./instances";
+import { applyAssistantDraft, loadInstance, saveInstanceValues } from "./instances";
 import { correctCaFromChat } from "./ca-chat-corrections";
 
 /** The header line a Corrective Action may take from chat under CA_NAME_FROM_CHAT_ENABLED. */
@@ -516,8 +516,12 @@ async function correctFromFormReaders(
         employeeColumn: caNewName,
         syncPlan: {
           after: PAYROLL_DEDUCT_KEY in accepted.checked ? [PAYROLL_DEDUCT_KEY, PAYROLL_DEDUCT_AMOUNT_KEY] : [],
+          /*
+           * CORRECTION_PLAN_KEEPS_AMOUNT_ENABLED: the plan states the amount, as every other edit path writes it, read from
+           * the form as saved by this turn (the form as it was would state the old amount).
+           */
+          ...(correctionPlanKeepsAmountEnabled() ? { amountSentence: true } : { loaded }),
           notes: input.message ?? input.question,
-          loaded,
           checked: accepted.checked,
         },
       })
@@ -534,6 +538,7 @@ async function correctFromFormReaders(
     const planMoved =
       formEditSingleWriterEnabled() && PAYROLL_DEDUCT_KEY in accepted.checked
         ? await (await import("./form-write")).syncPlan(input.instanceId, actor.id, {
+            ...(correctionPlanKeepsAmountEnabled() ? { amountSentence: true } : {}),
             notes: input.message ?? input.question,
             loaded,
             checked: accepted.checked,
@@ -542,7 +547,13 @@ async function correctFromFormReaders(
     applied.reads = (clause) => readersRead(clause);
     if (planMoved.length > 0) {
       return {
-        ...reply(payroll === "no" ? "The Action Plan no longer states a payroll deduction." : "The Action Plan now states the payroll deduction."),
+        ...reply(
+          payroll === "no"
+            ? "The Action Plan no longer states a payroll deduction."
+            : (await planStatesDeduction(input.instanceId))
+              ? "The Action Plan now states the payroll deduction."
+              : "The Action Plan was updated.",
+        ),
         formUpdate: { instanceId: input.instanceId, updated: planMoved },
       };
     }
@@ -631,7 +642,11 @@ async function correctFromFormReaders(
     written.push(...planKeys);
     lines.push(
       "",
-      payroll === "yes" ? "The Action Plan now states the payroll deduction." : "The Action Plan no longer states a payroll deduction.",
+      payroll === "yes"
+        ? (await planStatesDeduction(input.instanceId))
+          ? "The Action Plan now states the payroll deduction."
+          : "The Action Plan was updated."
+        : "The Action Plan no longer states a payroll deduction.",
     );
   }
   if (whichDate) lines.push("", whichDate);
@@ -1334,4 +1349,16 @@ export async function askWhichFormToCorrect(input: {
     citations: [],
     coverage: "not_applicable",
   };
+}
+
+/**
+ * CORRECTION_PLAN_KEEPS_AMOUNT_ENABLED (QA's prod-env reading, 10 Nov 2026, D1): "The Action Plan now states the payroll
+ * deduction" was said while the saved plan named none. With the flag on, it is said only when the saved Action Plan states a
+ * deduction (a dollar amount and a deduct word); off, always, as before.
+ */
+async function planStatesDeduction(instanceId: string): Promise<boolean> {
+  if (!correctionPlanKeepsAmountEnabled()) return true;
+  const loaded = await loadInstance(instanceId);
+  const plan = loaded?.values.find((row) => row.fieldKey === "action_plan")?.value;
+  return typeof plan === "string" && /\$\s?\d/.test(plan) && /deduct/i.test(plan);
 }
