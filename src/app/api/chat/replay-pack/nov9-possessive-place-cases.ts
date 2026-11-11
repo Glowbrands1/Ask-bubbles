@@ -40,6 +40,8 @@ const reported = ([
     expect(thread.proposal?.employeeName ?? null, `the place's possessive is the card's person:\n${content}`).toBeNull();
     expect(content, `the reply does not ask who:\n${content}`).toMatch(ASKS_WHO);
     expect(content, `the reply names "Lee" as the person:\n${content}`).not.toMatch(/\bfor \*\*Lee\*\*/);
+    // The sibling app's #741 gate (10 Nov 2026): with the roster-name set on, the question quoted "the employee" instead of the place's word.
+    expect(content, `the question does not quote the place's word:\n${content}`).toContain('"Lee\'s" is part of a place\'s name');
   },
 }));
 

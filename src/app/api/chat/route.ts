@@ -50,6 +50,9 @@ import {
   formNameFromRosterEnabled,
   offRosterConfirmEnabled,
   offRosterAskBeforeCardEnabled,
+  oneFormEachPersonEnabled,
+  createFromConversationPointsToCardEnabled,
+  cardNamesEmployeeEnabled,
   exitLetterAddresseeEnabled,
   letterGreetingNotNameEnabled,
   exitFormDateFromTerminationEnabled,
@@ -62,6 +65,7 @@ import {
   questionNotFormEnabled,
   sameFormCopyEnabled,
   sameFormCopyNewPersonEnabled,
+  sameRequestOtherPersonEnabled,
   staffPickerBareAnswerEnabled,
   wholeTeamCoachingEnabled,
   sameAskNoRepeatEnabled,
@@ -76,6 +80,7 @@ import {
   formEditToolInStreamEnabled,
   formEditNoopGuardEnabled,
   nearMissQuestionRulesEnabled,
+  formNameOffRosterAskEnabled,
   reopenByAnyOpenVerbEnabled,
   addedDetailKeptEnabled,
 } from "@/lib/config/chat-quality-flags";
@@ -250,6 +255,19 @@ async function postChat(request: Request) {
         }
       }
       /*
+       * ONE_FORM_EACH_PERSON_ENABLED: "a coaching form for <A>, <B>, and <C> for …" is asked as <A>'s request alone, and
+       * "yes" to the "**Next:**" line as the next person's, a new request; the line is added after the answer
+       * (`forms/one-form-each.ts`).
+       */
+      let eachQueue: import("@/lib/forms/one-form-each").Queue | null = null;
+      if (oneFormEachPersonEnabled()) {
+        const each = (await import("@/lib/forms/one-form-each")).beforeTurn(asked);
+        if (each) {
+          eachQueue = each.queue;
+          asked = { ...asked, question: each.question, ...(each.fresh ? { continueProposalTemplateKey: undefined } : {}) };
+        }
+      }
+      /*
        * SAME_FORM_COPY_NEW_PERSON_ENABLED: "can you create the same draft that
        * we did with <C> by changing the name and position?" with <C>'s own form
        * open — asked who the new form is for, nothing written, no card. The
@@ -277,6 +295,34 @@ async function postChat(request: Request) {
           activeFormInstanceId: undefined,
           continueProposalTemplateKey: newPersonCopy.source.templateKey,
         };
+      }
+      let sameRequestOther: import("@/lib/forms/same-request-other-person").SameRequestTurn | null = null;
+      const sameRequest = sameRequestOtherPersonEnabled() && !newPersonCopy ? await import("@/lib/forms/same-request-other-person") : null;
+      // Only a turn of that shape reads the roster, and never for long (`sameRequestKind` leaves "the same coaching form for <B>" to the copy path).
+      if (sameRequest && sameRequest.sameRequestKind(asked.question)) {
+        const { sameRequestForOtherPerson } = sameRequest;
+        const { loadScopedRoster } = await import("@/lib/forms/employee-roster");
+        const roster = await Promise.race([
+          loadScopedRoster(context.identity.scope).catch(() => []),
+          new Promise<[]>((resolve) => setTimeout(() => resolve([]), 1_500)),
+        ]);
+        const other = sameRequestForOtherPerson({
+          question: asked.question,
+          history: asked.history,
+          roster,
+          continueTemplateKey: asked.continueProposalTemplateKey,
+          formOpen: Boolean(asked.activeFormInstanceId),
+        });
+        if (other) {
+          sameRequestOther = other;
+          asked = {
+            ...asked,
+            question: other.question,
+            history: asked.history.slice(0, other.historyBefore),
+            activeFormInstanceId: undefined,
+            continueProposalTemplateKey: undefined,
+          };
+        }
       }
       // FORM_NAME_FROM_ROSTER_ENABLED, part 2: every name reader of the turn reads this message's request slot (`lib/forms/request-slot.ts`).
       if (formNameFromRosterEnabled()) (await import("@/lib/forms/request-message-store")).enterRequestMessage(asked.question);
@@ -321,6 +367,12 @@ async function postChat(request: Request) {
           }
         }
         enterPersonRoster(names);
+        // FORM_NAME_OFF_ROSTER_ASK_ENABLED: the scope's level, so a name not on the roster is held for a store manager only (`lib/forms/roster-scope.ts`).
+        // The manager's own turns too, so a full name typed on an earlier turn is still the manager's (the sibling app's #741 eval).
+        if (formNameOffRosterAskEnabled()) {
+          const managerTurns = [...asked.history.filter((turn) => turn.role === "user").map((turn) => String(turn.content ?? "")), asked.question];
+          (await import("@/lib/forms/person-roster-store")).enterRosterScope(context.identity.scope?.level ?? "", managerTurns);
+        }
         /*
          * FORM_NAME_FROM_ROSTER_ENABLED: does this message name somebody on the
          * roster (exact or close, or a roster first name typed in lowercase)?
@@ -967,10 +1019,19 @@ async function postChat(request: Request) {
       if (offRosterAskBeforeCardEnabled()) {
         answer = (await import("@/lib/forms/off-roster-ask")).withOffRosterAskBeforeCard(answer, { scope: context.identity.scope, history: parsed.history, question: asked.question });
       }
+      // CREATE_FROM_CONVERSATION_POINTS_TO_CARD_ENABLED: "Create a form from this conversation." keeps the re-read card; only the reply points to Create (`ai/card-meta-turn.ts`).
+      if (createFromConversationPointsToCardEnabled()) answer = (await import("@/lib/ai/card-meta-turn")).withPressCreateReply(answer, asked);
+      // ONE_FORM_EACH_PERSON_ENABLED / CARD_NAMES_EMPLOYEE_ENABLED: the people still to do, and the card's employee named (`forms/one-form-each.ts`).
+      if (oneFormEachPersonEnabled() || cardNamesEmployeeEnabled()) {
+        const each = await import("@/lib/forms/one-form-each");
+        answer = each.withCardNamingEmployee(each.afterTurn(answer, eachQueue));
+      }
       // SAME_FORM_COPY_NEW_PERSON_ENABLED: the named person's card carries the form to copy from.
       if (newPersonCopy) {
         answer = (await import("@/lib/forms/same-form-copy")).withCopyFrom(answer, newPersonCopy.source, newPersonCopy.name);
       }
+      // SAME_REQUEST_OTHER_PERSON_ENABLED: <B>'s card says what of the earlier request it carries.
+      if (sameRequestOther) answer = (await import("@/lib/forms/same-request-other-person")).withSameRequestNote(answer, sameRequestOther);
     } catch (error) {
       /*
        * A FAILED ANSWER IS STILL A RECORDED TURN, closed as a failure. The row
