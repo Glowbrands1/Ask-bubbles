@@ -75,11 +75,14 @@ export function ReviewsDashboard({
   tab,
   status,
   data = null,
+  demo = false,
 }: {
   tab: ReviewsTab;
   status: ReviewsIntegrationStatus;
   /** Imported Google reviews. Null: nothing imported yet, every data area says so. */
   data?: ReviewsData | null;
+  /** A demo build: the data is the labelled sample, and the page says so. */
+  demo?: boolean;
 }) {
   return (
     <div
@@ -124,6 +127,12 @@ export function ReviewsDashboard({
       </FilterBar>
 
       <div className="flex min-w-0 flex-col gap-5 px-5 py-5 pb-7 sm:px-6">
+        {demo && data ? (
+          <Notice tone="accent" icon={<Info />} title="Demo data">
+            Every review, reviewer, reply and goal figure on this page is invented
+            for the demo. Nothing here was read from Google.
+          </Notice>
+        ) : null}
         {tab === "overview" ? (
           <OverviewView status={status} data={data} />
         ) : null}

@@ -7,6 +7,8 @@ import {
   FALLBACK_ANSWER,
   userForRole as seededUserForRole,
 } from "@/data/demo";
+import { buildGoogleReviewsSample } from "@/data/demo/google-reviews";
+import { buildReportsSample } from "@/data/demo/reports";
 import { WOVEN_SAMPLE_DATASET } from "@/data/demo/woven";
 import type { Role } from "@/types";
 
@@ -52,6 +54,14 @@ export const demoRuntime: DemoRuntime = {
 
   async loadWovenSample() {
     return WOVEN_SAMPLE_DATASET;
+  },
+
+  async loadGoogleReviewsSample(now?: Date) {
+    return buildGoogleReviewsSample(now);
+  },
+
+  async loadReportsSample(now?: Date) {
+    return buildReportsSample(now);
   },
 };
 

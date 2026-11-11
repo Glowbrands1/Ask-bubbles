@@ -1,4 +1,6 @@
 import type { WovenSampleDataset } from "@/lib/employees/woven/view-types";
+import type { GoogleReviewsSample } from "@/lib/google-reviews/sample-views";
+import type { ReportsSample } from "@/lib/reporting/demo-sample";
 import type {
   AnswerMode,
   ChatConversation,
@@ -75,4 +77,15 @@ export interface DemoRuntime {
    * database on the Woven tabs in a demo build. Null in production.
    */
   loadWovenSample(): Promise<WovenSampleDataset | null>;
+  /**
+   * The Google Reviews integration's LABELLED SAMPLE SET — invented reviews for
+   * the seven approved Business Profiles, pinned to `now` — shown on `/reviews`
+   * and the Google Reviews admin screen in a demo build. Null in production.
+   */
+  loadGoogleReviewsSample(now?: Date): Promise<GoogleReviewsSample | null>;
+  /**
+   * Invented weekly store figures for the demo's reports, and which stores each
+   * demo account's area covers. Null in production.
+   */
+  loadReportsSample(now?: Date): Promise<ReportsSample | null>;
 }

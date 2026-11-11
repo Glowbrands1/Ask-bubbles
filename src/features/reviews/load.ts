@@ -7,6 +7,16 @@ import {
   type GoalTone,
   type RankMetric,
 } from "@/lib/google-reviews/goals";
+import { isDemoMode } from "@/lib/config/runtime";
+import { demoRuntime } from "@/lib/demo/runtime";
+import {
+  sampleGoalData,
+  sampleGoalDataForMonth,
+  samplePeriodTrend,
+  sampleReviewPage,
+  sampleStoreSummaries,
+  type GoogleReviewsSample,
+} from "@/lib/google-reviews/sample-views";
 import {
   PAGE_SIZE,
   parseReviewQuery,
@@ -92,6 +102,13 @@ export async function loadReviewsData(
 ): Promise<ReviewsData | null> {
   try {
     const query = parseReviewQuery(params);
+    /*
+     * A DEMO BUILD READS THE LABELLED SAMPLE, never Supabase or Google: the
+     * same shapes, computed from invented reviews, so the live dashboard
+     * renders unchanged. Production's runtime returns null and never gets here.
+     */
+    const sample = isDemoMode() ? await demoRuntime.loadGoogleReviewsSample() : null;
+    if (sample) return fromSample(sample, params, query, withList);
     const stores = await readStoreSummaries();
     if (!stores.some((s) => s.reviewCount > 0)) return null;
     const rankParam = params.rank;
@@ -130,6 +147,30 @@ export async function loadReviewsData(
   } catch {
     return null;
   }
+}
+
+/** The demo build's dashboard data: `loadReviewsData`'s rules, over the sample. */
+function fromSample(
+  sample: GoogleReviewsSample,
+  params: Record<string, string | string[] | undefined>,
+  query: ReturnType<typeof parseReviewQuery>,
+  withList: boolean,
+): ReviewsData {
+  const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
+  const month = params.tab === "leaderboard" ? parseMonth(params) : monthOptions()[0]!;
+  const period: PeriodUnit = one(params.period) === "week" ? "week" : "month";
+  const trend = samplePeriodTrend(sample, period, query.store);
+  return {
+    query,
+    stores: sampleStoreSummaries(sample),
+    trend: period === "week" ? trend.slice(-52) : trend,
+    period,
+    page: withList ? sampleReviewPage(sample, query) : null,
+    goals: month === monthOptions()[0] ? sampleGoalData(sample) : sampleGoalDataForMonth(sample, month),
+    rank: one(params.rank) === "week" ? "week" : "month",
+    goalFilter: parseGoalFilter(params),
+    month,
+  };
 }
 
 export { PAGE_SIZE };

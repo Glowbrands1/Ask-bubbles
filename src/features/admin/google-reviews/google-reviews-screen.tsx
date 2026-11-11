@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, CheckCircle2, MessageSquareReply, Star } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Info, MessageSquareReply, Star } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -296,7 +296,7 @@ function RunHistory({ runs }: { runs: RunRow[] }) {
   );
 }
 
-export function GoogleReviewsScreen({ state, flash }: GoogleReviewsPageProps) {
+export function GoogleReviewsScreen({ state, flash, demo = false }: GoogleReviewsPageProps) {
   return (
     <PageShell>
       <PageHeader
@@ -313,6 +313,13 @@ export function GoogleReviewsScreen({ state, flash }: GoogleReviewsPageProps) {
       {flash?.kind === "error" ? (
         <Notice tone="attention" icon={<AlertTriangle />} className="mb-4" title="Google sign-in did not finish">
           {OAUTH_ERROR_TEXT[flash.code] ?? "Nothing was connected. You can try again."}
+        </Notice>
+      ) : null}
+
+      {demo && state.state === "ready" ? (
+        <Notice tone="accent" icon={<Info />} className="mb-4" title="Demo data">
+          The connection, sync history, stores&apos; figures and every review below are invented for the demo. Nothing here was read from
+          Google, and the buttons on this screen do not contact it.
         </Notice>
       ) : null}
 

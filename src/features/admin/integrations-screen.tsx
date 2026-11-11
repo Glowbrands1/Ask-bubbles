@@ -12,6 +12,7 @@ import { Dialog, DialogActions, DialogClose, DialogContent } from "@/components/
 import { BROWSER_STORAGE_INTEGRATION } from "@/data/integrations";
 import { IntegrationCard } from "./integration-card";
 import { ACTIVE_BRAND } from "@/lib/brand";
+import { isDemoMode } from "@/lib/config/runtime";
 import { useAppStore } from "@/lib/store/app-store";
 import type { Integration } from "@/types";
 import { ServiceStatusPanel } from "./service-status";
@@ -25,6 +26,39 @@ const CATEGORY_LABEL: Record<Integration["category"], string> = {
   storage: "Storage",
 };
 
+/**
+ * DEMO BUILDS ONLY: the two integrations the demo shows as connected, each
+ * backed by the demo runtime's labelled sample (see the screens they open).
+ * A live build lists neither here; their status there is measured on their
+ * own screens.
+ */
+const DEMO_CONNECTED: readonly (Integration & { href: string })[] = [
+  {
+    id: "int-demo-google-reviews",
+    name: "Google Reviews",
+    vendor: "Google Business Profile",
+    description: "All seven approved Business Profiles linked. Reviews sync every six hours, read-only.",
+    status: "connected",
+    unlocks: "The Google Reviews dashboard: monthly goal progress, the store leaderboard, rating mix and every review.",
+    category: "reviews",
+    iconKey: "star",
+    notes: "Demo: the connection, sync history and reviews are invented. Nothing is read from Google.",
+    href: "/admin/integrations/google-reviews",
+  },
+  {
+    id: "int-demo-reporting",
+    name: "Store reporting",
+    vendor: "Weekly store figures",
+    description: "Weekly sales, labor and Makery figures for every store, refreshed each Monday.",
+    status: "connected",
+    unlocks: "The Store Sales and Labor & Productivity reports, scoped to each manager's stores.",
+    category: "reporting",
+    iconKey: "bar-chart-3",
+    notes: "Demo: every figure in Reports is invented. No store system is read.",
+    href: "/reports",
+  },
+];
+
 export function IntegrationsScreen() {
   const { storageAvailable } = useAppStore();
   const [selected, setSelected] = useState<Integration | null>(null);
@@ -34,7 +68,10 @@ export function IntegrationsScreen() {
    * that described a connection was a roadmap; this is the browser's own
    * storage, reported from `storageAvailable`.
    */
-  const connected = [BROWSER_STORAGE_INTEGRATION];
+  const connected: Integration[] = isDemoMode()
+    ? [...DEMO_CONNECTED, BROWSER_STORAGE_INTEGRATION]
+    : [BROWSER_STORAGE_INTEGRATION];
+  const openHref = (integration: Integration) => DEMO_CONNECTED.find((entry) => entry.id === integration.id)?.href ?? null;
 
   return (
     <PageShell>
@@ -94,7 +131,12 @@ export function IntegrationsScreen() {
             key={integration.id}
             integration={{
               ...integration,
-              status: storageAvailable ? "connected" : "not_connected",
+              status:
+                integration.id === BROWSER_STORAGE_INTEGRATION.id
+                  ? storageAvailable
+                    ? "connected"
+                    : "not_connected"
+                  : integration.status,
             }}
             onOpen={setSelected}
           />
@@ -143,12 +185,21 @@ export function IntegrationsScreen() {
               <DialogClose asChild>
                 <Button variant="ghost">Close</Button>
               </DialogClose>
-              <Button disabled={selected.status === "connected"}>
-                <Settings2 />
-                {selected.status === "connected"
-                  ? "Already connected"
-                  : "Configure (coming later)"}
-              </Button>
+              {openHref(selected) ? (
+                <Button asChild>
+                  <Link href={openHref(selected)!}>
+                    <Settings2 />
+                    Open
+                  </Link>
+                </Button>
+              ) : (
+                <Button disabled={selected.status === "connected"}>
+                  <Settings2 />
+                  {selected.status === "connected"
+                    ? "Already connected"
+                    : "Configure (coming later)"}
+                </Button>
+              )}
             </DialogActions>
           </DialogContent>
         ) : null}

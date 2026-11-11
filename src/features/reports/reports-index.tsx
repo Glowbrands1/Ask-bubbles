@@ -9,7 +9,14 @@ import { REPORTS } from "./reports-routes";
 /**
  * The Reports landing page. Driven entirely by the report registry.
  */
-export function ReportsIndex({ scopeNotice }: { scopeNotice: string | null }) {
+export function ReportsIndex({
+  scopeNotice,
+  notices = null,
+}: {
+  scopeNotice: string | null;
+  /** Extra notices above the list (a demo build's "invented figures" and client-side scope). */
+  notices?: React.ReactNode;
+}) {
   return (
     <div className="min-w-0">
       <ReportBand
@@ -17,6 +24,7 @@ export function ReportsIndex({ scopeNotice }: { scopeNotice: string | null }) {
         description="Reports connected to this workspace. Figures are scoped to your assignment."
       />
       <div className="flex min-w-0 flex-col gap-5 px-5 py-5 pb-7 sm:px-6">
+        {notices}
         {scopeNotice ? <Notice>{scopeNotice}</Notice> : null}
         {REPORTS.length === 0 ? (
           <EmptyState

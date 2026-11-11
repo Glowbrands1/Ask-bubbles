@@ -6,6 +6,7 @@ import { loadReviewsData } from "@/features/reviews/load";
 import { ReviewsDashboard } from "@/features/reviews/reviews-dashboard";
 import { parseReviewsTab } from "@/features/reviews/reviews-tabs";
 import { requirePagePermission } from "@/lib/auth/page";
+import { isDemoMode } from "@/lib/config/runtime";
 
 export const metadata: Metadata = {
   title: "Google Reviews",
@@ -33,6 +34,7 @@ export default async function ReviewsPage({
         tab={tab}
         status={resolveReviewsIntegrationStatus()}
         data={data}
+        demo={isDemoMode()}
       />
     </PermissionGate>
   );
