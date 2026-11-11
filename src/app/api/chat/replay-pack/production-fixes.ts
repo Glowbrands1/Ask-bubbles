@@ -494,4 +494,26 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov11-title-not-part-of-name": "TITLE_NOT_PART_OF_NAME",
   // Changed on purpose (12 Nov 2026): fixed in production by TITLE_NOT_PART_OF_NAME, QA round 17h
   "nov11-title-not-part-of-name-yes-then-card": "TITLE_NOT_PART_OF_NAME",
+  // fixed in production by NAME_LINE_COMMA, QA round 17i, 11 Nov 2026
+  "nov4-live-ca-t2-name-line-on-roster": "NAME_LINE_COMMA",
+  // fixed in production by ADDRESS_ASKS_WHO, QA round 17i, 11 Nov 2026
+  "nov4-live-street-address-not-a-person": "ADDRESS_ASKS_WHO",
+  // fixed in production by LEAD_FULL_SENTENCE, QA round 17i, 11 Nov 2026
+  "nov5-sf-b6-reply-full-sentence": "LEAD_FULL_SENTENCE",
+  // fixed in production by COPY_PASTE_CLAIM_HONEST, QA round 17i, 11 Nov 2026
+  "nov10-copy-paste-claim-not-sent": "COPY_PASTE_CLAIM_HONEST",
+  // fixed in production by TEMPLATE_OUTLINE_FIELDS, QA round 17i, 11 Nov 2026
+  "nov5-twin-sf-s21-must-see-behaviors-template": "TEMPLATE_OUTLINE_FIELDS",
+  // fixed in production by TEMPLATE_OUTLINE_FIELDS, QA round 17i, 11 Nov 2026
+  "nov10-twin-sf-s21-template-outline-saved": "TEMPLATE_OUTLINE_FIELDS",
+  // fixed in production by PASTED_OUTLINE_TO_OPEN_DRAFT, QA round 17i, 11 Nov 2026
+  "nov10-r23-sf-s21-pasted-outline-to-open-draft": "PASTED_OUTLINE_TO_OPEN_DRAFT",
+  // fixed in production by PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT, QA round 17i, 11 Nov 2026
+  "nov11-r25-sf-s21-pasted-template-fills-open-draft": "PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT",
+  // fixed in production by PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT, QA round 17i, 11 Nov 2026
+  "nov11-r25-5c-pasted-steps-keep-line-breaks": "PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT",
+  // fixed in production by GROUP_WORDS_NOT_A_NAME, QA round 17i, 11 Nov 2026
+  "nov11-p19-group-words-not-a-name-as-typed": "GROUP_WORDS_NOT_A_NAME",
+  // fixed in production by GROUP_WORDS_NOT_A_NAME, QA round 17i, 11 Nov 2026
+  "nov11-p19-group-words-not-a-name-lower": "GROUP_WORDS_NOT_A_NAME",
 };
