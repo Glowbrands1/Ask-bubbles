@@ -1332,6 +1332,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 5: INGEST_FAILURE_KEEPS_LAST_GOOD, WOVEN_OCR_PAGE_BATCHES (QA, the recipe book's lost content, 10 Nov 2026; default off).
   "INGEST_FAILURE_KEEPS_LAST_GOOD_ENABLED",
   "WOVEN_OCR_PAGE_BATCHES_ENABLED",
+  // coding 5: EXCERPT_BRAND_HEADING_DROP (QA's round 17c live test, 11 Nov 2026; default off).
+  "EXCERPT_BRAND_HEADING_DROP_ENABLED",
 ] as const;
 
 /**
@@ -2990,6 +2992,17 @@ export function ingestFailureKeepsLastGoodEnabled(): boolean {
  */
 export function wovenOcrPageBatchesEnabled(): boolean {
   return envFlag("WOVEN_OCR_PAGE_BATCHES_ENABLED");
+}
+
+/**
+ * EXCERPT_BRAND_HEADING_DROP_ENABLED (QA, round 17c live test, 11 Nov 2026; coding 5; same flag in both apps; default
+ * off). With EXCERPT_BRAND_FILTER on, "what are the holidays?" still showed a source card labelled "Page 42 — <the
+ * sibling brand>" whose excerpt was that heading alone. On: a source card whose label names a hidden brand, or whose
+ * excerpt is empty or only its heading, is left out, and the rest are numbered in order
+ * (`knowledge/excerpt-brand-filter.ts` keepsSourceCard, `ai/full-manual-context.ts`). Off, as before.
+ */
+export function excerptBrandHeadingDropEnabled(): boolean {
+  return envFlag("EXCERPT_BRAND_HEADING_DROP_ENABLED");
 }
 
 // --- end coding 5 flags ---
