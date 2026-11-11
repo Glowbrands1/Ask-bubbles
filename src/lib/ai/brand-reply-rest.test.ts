@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { withOwnBrandOnly } from "./own-brand-only";
+import { EMPTIED_REPLY, ownBrandOnly, withOwnBrandOnly } from "./own-brand-only";
 import type { AskResponse } from "./types";
 
 /**
@@ -47,6 +47,21 @@ describe("on: only this company, every rule kept, citations kept", () => {
     expect(reply(REPLIES.attendance)).toBe(
       "The attendance policy applies across all brands [p.14]. A no call no show for a scheduled shift may result in immediate termination [p.14].",
     );
+  });
+
+  it('the sibling\'s #266 leftover, this company\'s names: "MyGlow for Buff City Soap, or MyGlow for Sun Tan City [p.37]" keeps this company\'s clause', () => {
+    const said = "Submit availability changes in MyGlow for Buff City Soap, or MyGlow for Sun Tan City [p.37].";
+    vi.stubEnv("OWN_BRAND_ONLY_ENABLED", "true");
+    vi.stubEnv("BRAND_REPLY_GUARD_ENABLED", "true");
+    expect(reply(said)).toBe("Submit availability changes in MyGlow for Buff City Soap [p.37].");
+  });
+
+  it("on: a reply the own-brand step would empty whole is never sent empty", () => {
+    const said = "Crunch Fitness members check in with the Crunch app at the front desk [p.40].";
+    vi.stubEnv("OWN_BRAND_ONLY_ENABLED", "true");
+    expect(reply(said)).toBe("");
+    vi.stubEnv("BRAND_REPLY_GUARD_ENABLED", "true");
+    expect(reply(said)).toBe(EMPTIED_REPLY);
   });
 
   it("availability: this company's own system is kept", () => {
