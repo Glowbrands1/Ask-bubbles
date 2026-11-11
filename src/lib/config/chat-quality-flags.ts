@@ -1334,6 +1334,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "WOVEN_OCR_PAGE_BATCHES_ENABLED",
   // coding 5: EXCERPT_BRAND_HEADING_DROP (QA's round 17c live test, 11 Nov 2026; default off).
   "EXCERPT_BRAND_HEADING_DROP_ENABLED",
+  // coding 6: ONE_DRAFT_NOTICE (QA, 11 Nov 2026; default off).
+  "ONE_DRAFT_NOTICE_ENABLED",
 ] as const;
 
 /**
@@ -4385,4 +4387,15 @@ export function noShowOpeningIsAttendanceEnabled(): boolean {
  */
 export function draftWroteNothingNoticeEnabled(): boolean {
   return envFlag("DRAFT_WROTE_NOTHING_NOTICE_ENABLED");
+}
+
+/**
+ * ONE_DRAFT_NOTICE_ENABLED (coding 6, 11 Nov 2026; default off; QA, after merging DRAFT_WROTE_NOTHING_NOTICE with the
+ * live DRAFT_WRITE_NEVER_SILENT). With both on, a refused draft write with no account showed two notices and two
+ * "fill it in below" offers, the first saying "Nothing was saved on this draft" though Name, Date, Job Title and
+ * Location were. On: one notice names the field that was not saved and asks what happened once
+ * (`forms/one-draft-notice.ts`). Off, as before.
+ */
+export function oneDraftNoticeEnabled(): boolean {
+  return envFlag("ONE_DRAFT_NOTICE_ENABLED");
 }

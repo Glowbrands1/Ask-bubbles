@@ -189,6 +189,7 @@ import {
   cardPolicyToDraftEnabled,
   draftWriteNeverSilentEnabled,
   draftWroteNothingNoticeEnabled,
+  oneDraftNoticeEnabled,
   formEditSingleWriterEnabled,
   formPatchReducerEnabled,
   caSalesPolicyEnabled,
@@ -2565,9 +2566,12 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
      * a silent 200 (`lib/forms/draft-write-never-silent.ts`).
      */
     let draftNothingSaved = false;
+    // ONE_DRAFT_NOTICE_ENABLED: the fields the writer refused, named in the one notice (`lib/forms/one-draft-notice.ts`).
+    let refusedKeys: string[] = [];
     if (draftWriteNeverSilentEnabled() && singleWriter && reduced && written?.result.handoff === "refused") {
       const silent = await import("@/lib/forms/draft-write-never-silent");
-      const rest = silent.withoutRefused(reduced.write, written.result.refused.map((refusal) => refusal.key));
+      refusedKeys = written.result.refused.map((refusal) => refusal.key);
+      const rest = silent.withoutRefused(reduced.write, refusedKeys);
       if (silent.fieldCount(rest) > 0) written = await singleWriter.draftWrite(id, rest, actor.id, draftProvenanceWritten, redraftContext);
       // Refused again, or nothing written; a retry that changed nothing (the form already says it) is not "nothing saved".
       draftNothingSaved = written.result.handoff === "refused" || (silent.fieldCount(written.accepted) === 0 && written.result.handoff !== "noop");
@@ -2728,11 +2732,26 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
         policyLeftForManager && !managerOffense
           ? describedPolicyChoiceNotice(describedChoices!.map((choice) => choice.section))
           : null,
-        // FORM_EDIT_SINGLE_WRITER_ENABLED: what the draft left out of the account (detected, never retried).
-        // DRAFT_WRITE_NEVER_SILENT_ENABLED: nothing saved is said instead — there is no account to have left anything out of.
-        draftNothingSaved ? (await import("@/lib/forms/draft-write-never-silent")).DRAFT_NOTHING_SAVED_NOTICE : leftOut,
-        // DRAFT_WROTE_NOTHING_NOTICE_ENABLED: no account, so no Details — said, never a silent blank.
-        draftWroteNothing ? (await import("@/lib/forms/draft-wrote-nothing")).DRAFT_WROTE_NOTHING_NOTICE : null,
+        ...(oneDraftNoticeEnabled() && draftNothingSaved && draftWroteNothing
+          ? /*
+             * ONE_DRAFT_NOTICE_ENABLED (QA, 11 Nov 2026): with both notices due, one notice says which field was not
+             * saved (the header was) and asks what happened once (`lib/forms/one-draft-notice.ts`).
+             */
+            [
+              (await import("@/lib/forms/one-draft-notice")).oneDraftNotice({
+                // The form's own fields only: a refused key that is not on the form has no label to name.
+                notSaved: [...refusedKeys, ...narrativeTargets]
+                  .map((key) => promptFields.find((field) => field.key === key)?.label ?? null)
+                  .filter((label): label is string => Boolean(label)),
+              }) ?? (await import("@/lib/forms/draft-wrote-nothing")).DRAFT_WROTE_NOTHING_NOTICE,
+            ]
+          : [
+              // FORM_EDIT_SINGLE_WRITER_ENABLED: what the draft left out of the account (detected, never retried).
+              // DRAFT_WRITE_NEVER_SILENT_ENABLED: nothing saved is said instead — there is no account to have left anything out of.
+              draftNothingSaved ? (await import("@/lib/forms/draft-write-never-silent")).DRAFT_NOTHING_SAVED_NOTICE : leftOut,
+              // DRAFT_WROTE_NOTHING_NOTICE_ENABLED: no account, so no Details — said, never a silent blank.
+              draftWroteNothing ? (await import("@/lib/forms/draft-wrote-nothing")).DRAFT_WROTE_NOTHING_NOTICE : null,
+            ]),
       ]
         .filter((line): line is string => Boolean(line))
         .join(" ") || null,
