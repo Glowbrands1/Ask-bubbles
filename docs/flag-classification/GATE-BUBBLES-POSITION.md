@@ -16,7 +16,7 @@ Session: session_01VVEkRRzGew9sHHGbAhxGaQ. Reports to QA session_01VVEkRTbAAAt57
 2b. DONE: R16E (16c @ 952bdeb + #716): P7 note gone, 4 INTENDED, 0 REGRESSION; s14 path-1 Follow-Up type kept, date still null after the answer in every arm and in production too (pre-existing); verdict sent ~05:05Z (R16E.md)
 3. (folded into 2b) #716 NEAR_MISS_ANSWER_KEEPS_REQUEST @ caf15503 (16c's 4 flags in both arms; bar: s14 path 1)
 4. DONE: R720 #720 GO (2 INTENDED, date 2026-10-01 kept ON, null OFF); verdict sent
-5. #705 (sf-s16/s17/s19), #710, #712 (131400e9), #713, #714, #718 (3cb4e25f)
+5. NOW (gate R705, /home/user/gate/r705): #705 ab2bc8f5 on main bebcf58 (flags-file keep-both, functions verified); flags POLICY_REFERENCE_NOT_ACCOUNT, LEVEL_AFTER_FORM_NAME, LEVEL_REQUEST_MORE_VERBS (sf-s16/s17/s19). Then, #710, #712 (131400e9), #713, #714, #718 (3cb4e25f)
 6. B504 d71d2d50; #678+#684; #695 (revision.ts diff = approved lines); #663 6c68b998+A3+#693, then #709; #681; PROPOSAL_NAME_CORRECTION
 7. #686, #689, #691 (#694 moved to Gate-Bubbles-2 with #688+#724)
 8. #697+#647 (+POLICY_LINE port); #698, #500, #480, #702, #464, #704, #708; #690 @ 47c7ef9c (Observation OFF vs ON); A7, A8, A9
