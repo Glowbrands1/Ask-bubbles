@@ -1,0 +1,1797 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-create-from-conversation-after-no: the CA card, \"No\" to payroll, then \"Create a form from this conversation.\": points to Create draft, never the same reply again \u2014 OPEN in production (the same reply word for word)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with the flag(s)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-create-from-conversation-payroll-asked: the CA card then \"Create a form from this conversation.\": points to Create draft, never the same reply again \u2014 OPEN in production (the same reply word for word)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with the flag(s)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-p7-one-form-each-named: T1 \u2192 \"Tamsin Ashby\" \u2192 \"yes\" \u2192 \"yes\": one Coaching card each for Tamsin Ashby, Corwin Halsey and Ione Marchetti, each reply naming them \u2014 holds with ONE_FORM_EACH_PERSON_ENABLED, CARD_NAMES_EMPLOYEE_ENABLED on": {
+  "category": "INTENDED-HARNESS",
+  "twin": "itself",
+  "reason": "P7 case run with A3 alone: needs ONE_FORM_EACH_PERSON (they ship together)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-p7-unanswered-which-tamsin-asked-again: QA's two turns: \"Did you mean \u2026?\" is asked again (no card for either Tamsin, as here today), and Corwin's and Ione's forms are queued \u2014 OPEN in production (Corwin's and Ione's forms are never queued)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with the flag(s)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-reopened-edit-keeps-details-clear: a reopened Coaching Form, \"this is a verbal warning. previous coaching policy manual 10-15-26\" (the reader clears Details): the saved Details are kept \u2014 OPEN in production (Details of Coaching: empty (\"Cleared Details of Coaching.\"))": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with the flag(s)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-reopened-edit-keeps-details-replace: a reopened Coaching Form, \"this is a verbal warning. previous coaching policy manual 10-15-26\" (the reader replaces Details): the saved Details are kept \u2014 OPEN in production (Details of Coaching: \"This is a verbal warning.\")": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with the flag(s)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-scan-sf-s11-same-for-another: \"Can you do the same thing for Perrin Haldane but switch it to a written\" \u2014 a NEW Written CA for Perrin, Under Performance, with nothing of Odalys on it and the request never in the Observation \u2014 OPEN in production (turn 3 gets no card at all: it is answered as a policy question (the pack's stand-in answer) \u2014 no CA for Perrin Haldane, Written or otherwise (turn 2's card for Odalys Frewen also reads \"Verbal Warning\" as earlier history and asks Verbal or Written))": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with the flag(s)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-scan-sf-s20-now-one-for-lysandra: \"Now make one for LYsandra\" after a coaching form for Jovelle Kerrigan \u2014 confirm \"Lysandra Quade?\" or make her card; never \"I have the employee\" without naming her \u2014 OPEN in production (turn 2 \"Now make one for LYsandra\" keeps the card on Jovelle Kerrigan and says \"I have the employee and the store\" without naming Lysandra Quade or asking)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with the flag(s)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov5-coding3-sfo-a-same-thing-card-on-screen: (a) with Mireya's Verbal CA card on screen (not created), \"Can you do the same thing for Caspian Drummet but switch it to a written\" \u2014 a Written CA card for Caspian with the late opening, nothing of Mireya on it \u2014 OPEN in production (the card stays Mireya Vantrell's and turns Written (the switch is applied to her); no card for Caspian Drummet)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with the flag(s)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov5-coding3-sfo-c-also-coaching-after-create: (c) with Mireya's CA created and open, \"also make a coaching form for Caspian Drummet\" \u2014 a Coaching card for Caspian; Mireya's CA untouched \u2014 OPEN in production (a Coaching card for Mireya Vantrell: FORM_TYPE_SWITCH_AFTER_CREATE_NOTE_ENABLED reads the turn as her CA request with the coaching form named, and Caspian Drummet's name is dropped)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with the flag(s)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov5-coding3-sfo-c-also-coaching-card-open: (c) with Mireya's CA card on screen (not created), \"also make a coaching form for Caspian Drummet\" \u2014 a Coaching card for Caspian, never for Mireya \u2014 OPEN in production (a Coaching card for Mireya Vantrell: FORM_TYPE_SWITCH_ENABLED reads the turn as \"change this to a coaching form\" and Caspian Drummet's name is dropped)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with the flag(s)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov5-request-slot-two-people: control: \"CA for Wilhelmina Corvina and Peregrine Varnholt for being late\", both on the roster, still asks which of them \u2014 holds with FORM_NAME_FROM_ROSTER_ENABLED, CA_SALES_POLICY_ENABLED, CHAT_GLOSSARY_ENABLED on": {
+  "category": "REGRESSION",
+  "twin": "ONE_FORM_EACH_PERSON_ENABLED",
+  "reason": "'CA for <A> and <B>' now makes <A>'s card + a Next line instead of asking which; existing assertions (ask / forms count) not updated"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov5-request-slot-two-people: control: \"CA for Wilhelmina Corvina and Peregrine Varnholt for being late\", both on the roster, still asks which of them \u2014 holds with production's flags": {
+  "category": "REGRESSION",
+  "twin": "ONE_FORM_EACH_PERSON_ENABLED",
+  "reason": "'CA for <A> and <B>' now makes <A>'s card + a Next line instead of asking which; existing assertions (ask / forms count) not updated"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov5-twin-sf-s27-coaching-name-only-asks-what-happened: sf-s27: \"Create a coaching form.\" \u2192 \"Thessaly Brandt\": asks what happened; never \"Everything I need is here\" \u2014 OPEN in production (says \"Everything I need is here \u2026 I have the employee and the store.\" with no incident)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with the flag(s)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov6-diffemp-distinct-after-create-caps: with Rory Vance's CA created and open, \"NOW ONE FOR MARA QUELL FOR BEING LATE ON 10-20-26\" \u2014 Mara Quell's own card from that turn only; Rory Vance's form unchanged \u2014 OPEN in production (no card for <B>: \"I haven't changed the Corrective Action Form for <A>\")": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with the flag(s)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov6-diffemp-distinct-after-create-lower: with Rory Vance's CA created and open, \"now one for mara quell for being late on 10-20-26\" \u2014 Mara Quell's own card from that turn only; Rory Vance's form unchanged \u2014 OPEN in production (no card for <B>: \"I haven't changed the Corrective Action Form for <A>\")": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with the flag(s)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov6-diffemp-distinct-after-create-sentence: with Rory Vance's CA created and open, \"Now one for Mara Quell for being late on 10-20-26\" \u2014 Mara Quell's own card from that turn only; Rory Vance's form unchanged \u2014 OPEN in production (no card for <B>: \"I haven't changed the Corrective Action Form for <A>\")": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with the flag(s)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov6-diffemp-distinct-card-on-screen-caps: with Rory Vance's CA card on screen, \"NOW ONE FOR MARA QUELL FOR BEING LATE ON 10-20-26\" \u2014 Mara Quell's own card from that turn only; Rory Vance's card unchanged \u2014 OPEN in production (the card stays <A>'s and <B>'s turn joins <A>'s card sources \u2014 <B>'s incident would go onto <A>'s form)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with the flag(s)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov6-diffemp-distinct-card-on-screen-lower: with Rory Vance's CA card on screen, \"now one for mara quell for being late on 10-20-26\" \u2014 Mara Quell's own card from that turn only; Rory Vance's card unchanged \u2014 OPEN in production (the card stays <A>'s and <B>'s turn joins <A>'s card sources \u2014 <B>'s incident would go onto <A>'s form)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with the flag(s)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov6-diffemp-distinct-card-on-screen-sentence: with Rory Vance's CA card on screen, \"Now one for Mara Quell for being late on 10-20-26\" \u2014 Mara Quell's own card from that turn only; Rory Vance's card unchanged \u2014 OPEN in production (the card stays <A>'s and <B>'s turn joins <A>'s card sources \u2014 <B>'s incident would go onto <A>'s form)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with the flag(s)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov6-diffemp-distinct-read-after-create-caps: with Odile Brannock's CA created and open, \"NOW ONE FOR CASPIAN DRUMMET FOR BEING LATE ON 10-20-26\" \u2014 Caspian Drummet's own card from that turn only; Odile Brannock's form unchanged \u2014 OPEN in production (no card for <B>: \"I haven't changed the Corrective Action Form for <A>\")": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with the flag(s)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov6-diffemp-distinct-read-after-create-lower: with Odile Brannock's CA created and open, \"now one for caspian drummet for being late on 10-20-26\" \u2014 Caspian Drummet's own card from that turn only; Odile Brannock's form unchanged \u2014 OPEN in production (no card for <B>: \"I haven't changed the Corrective Action Form for <A>\")": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with the flag(s)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov6-diffemp-distinct-read-after-create-sentence: with Odile Brannock's CA created and open, \"Now one for Caspian Drummet for being late on 10-20-26\" \u2014 Caspian Drummet's own card from that turn only; Odile Brannock's form unchanged \u2014 OPEN in production (no card for <B>: \"I haven't changed the Corrective Action Form for <A>\")": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with the flag(s)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov6-diffemp-distinct-read-card-on-screen-caps: with Odile Brannock's CA card on screen, \"NOW ONE FOR CASPIAN DRUMMET FOR BEING LATE ON 10-20-26\" \u2014 Caspian Drummet's own card from that turn only; Odile Brannock's card unchanged \u2014 OPEN in production (the card stays <A>'s and <B>'s turn joins <A>'s card sources \u2014 <B>'s incident would go onto <A>'s form)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with the flag(s)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov6-diffemp-distinct-read-card-on-screen-lower: with Odile Brannock's CA card on screen, \"now one for caspian drummet for being late on 10-20-26\" \u2014 Caspian Drummet's own card from that turn only; Odile Brannock's card unchanged \u2014 OPEN in production (the card stays <A>'s and <B>'s turn joins <A>'s card sources \u2014 <B>'s incident would go onto <A>'s form)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with the flag(s)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov6-diffemp-distinct-read-card-on-screen-sentence: with Odile Brannock's CA card on screen, \"Now one for Caspian Drummet for being late on 10-20-26\" \u2014 Caspian Drummet's own card from that turn only; Odile Brannock's card unchanged \u2014 OPEN in production (the card stays <A>'s and <B>'s turn joins <A>'s card sources \u2014 <B>'s incident would go onto <A>'s form)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with the flag(s)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov6-diffemp-guard-no-account-stays-same-form-after-create: guard: with Rory's CA created, \"Can you do the same thing for Mara Quell but switch it to a written\" (no account) \u2014 coding 3's copy of Rory's, never a card from the request sentence alone \u2014 OPEN in production (no card for Mara Quell: the card stays Rory's (nov5-coding3-sfo-a, open on production flags))": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with the flag(s)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov6-diffemp-guard-no-account-stays-same-form-card-on-screen: guard: with Rory's CA card on screen, \"Can you do the same thing for Mara Quell but switch it to a written\" (no account) \u2014 coding 3's copy of Rory's, never a card from the request sentence alone \u2014 OPEN in production (no card for Mara Quell: the card stays Rory's (nov5-coding3-sfo-a, open on production flags))": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with the flag(s)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov6-diffemp-qa-after-create-caps: with Test Employee's CA created and open, \"NOW ONE FOR TEST EMPLOYEE TWO AT KEARNEY FOR BEING LATE ON 10-20-26\" \u2014 Test Employee Two's own card from that turn only; Test Employee's form unchanged \u2014 OPEN in production (no card for <B>: \"I haven't changed the Corrective Action Form for <A>\")": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with the flag(s)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov6-diffemp-qa-after-create-lower: with Test Employee's CA created and open, \"now one for test employee two at kearney for being late on 10-20-26\" \u2014 Test Employee Two's own card from that turn only; Test Employee's form unchanged \u2014 OPEN in production (no card for <B>: \"I haven't changed the Corrective Action Form for <A>\")": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with the flag(s)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov6-diffemp-qa-after-create-sentence: with Test Employee's CA created and open, \"Now one for Test Employee Two at Kearney for being late on 10-20-26\" \u2014 Test Employee Two's own card from that turn only; Test Employee's form unchanged \u2014 OPEN in production (no card for <B>: \"I haven't changed the Corrective Action Form for <A>\")": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with the flag(s)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov6-diffemp-qa-card-on-screen-caps: with Test Employee's CA card on screen, \"NOW ONE FOR TEST EMPLOYEE TWO AT KEARNEY FOR BEING LATE ON 10-20-26\" \u2014 Test Employee Two's own card from that turn only; Test Employee's card unchanged \u2014 OPEN in production (the card stays <A>'s and <B>'s turn joins <A>'s card sources \u2014 <B>'s incident would go onto <A>'s form)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with the flag(s)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov6-diffemp-qa-card-on-screen-lower: with Test Employee's CA card on screen, \"now one for test employee two at kearney for being late on 10-20-26\" \u2014 Test Employee Two's own card from that turn only; Test Employee's card unchanged \u2014 OPEN in production (the card stays <A>'s and <B>'s turn joins <A>'s card sources \u2014 <B>'s incident would go onto <A>'s form)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with the flag(s)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov6-diffemp-qa-card-on-screen-sentence: with Test Employee's CA card on screen, \"Now one for Test Employee Two at Kearney for being late on 10-20-26\" \u2014 Test Employee Two's own card from that turn only; Test Employee's card unchanged \u2014 OPEN in production (the card stays <A>'s and <B>'s turn joins <A>'s card sources \u2014 <B>'s incident would go onto <A>'s form)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with the flag(s)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov6-diffemp-qa-nostore-after-create-caps: with Test Employee's CA created and open, \"NOW ONE FOR TEST EMPLOYEE TWO FOR BEING LATE ON 10-20-26\" \u2014 Test Employee Two's own card from that turn only; Test Employee's form unchanged \u2014 OPEN in production (no card for <B>: \"I haven't changed the Corrective Action Form for <A>\")": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with the flag(s)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov6-diffemp-qa-nostore-after-create-lower: with Test Employee's CA created and open, \"now one for test employee two for being late on 10-20-26\" \u2014 Test Employee Two's own card from that turn only; Test Employee's form unchanged \u2014 OPEN in production (no card for <B>: \"I haven't changed the Corrective Action Form for <A>\")": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with the flag(s)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov6-diffemp-qa-nostore-after-create-sentence: with Test Employee's CA created and open, \"Now one for Test Employee Two for being late on 10-20-26\" \u2014 Test Employee Two's own card from that turn only; Test Employee's form unchanged \u2014 OPEN in production (no card for <B>: \"I haven't changed the Corrective Action Form for <A>\")": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with the flag(s)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov6-diffemp-qa-nostore-card-on-screen-caps: with Test Employee's CA card on screen, \"NOW ONE FOR TEST EMPLOYEE TWO FOR BEING LATE ON 10-20-26\" \u2014 Test Employee Two's own card from that turn only; Test Employee's card unchanged \u2014 OPEN in production (the card stays <A>'s and <B>'s turn joins <A>'s card sources \u2014 <B>'s incident would go onto <A>'s form)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with the flag(s)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov6-diffemp-qa-nostore-card-on-screen-lower: with Test Employee's CA card on screen, \"now one for test employee two for being late on 10-20-26\" \u2014 Test Employee Two's own card from that turn only; Test Employee's card unchanged \u2014 OPEN in production (the card stays <A>'s and <B>'s turn joins <A>'s card sources \u2014 <B>'s incident would go onto <A>'s form)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with the flag(s)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov6-diffemp-qa-nostore-card-on-screen-sentence: with Test Employee's CA card on screen, \"Now one for Test Employee Two for being late on 10-20-26\" \u2014 Test Employee Two's own card from that turn only; Test Employee's card unchanged \u2014 OPEN in production (the card stays <A>'s and <B>'s turn joins <A>'s card sources \u2014 <B>'s incident would go onto <A>'s form)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with the flag(s)"
+ },
+ "src/app/api/forms/multi-form-chat-e2e.test.ts :: related multi-intent patterns, through the chat route a comma: 'coaching form for Avery Testperson, CA for Jordan Testperson'": {
+  "category": "REGRESSION",
+  "twin": "ONE_FORM_EACH_PERSON_ENABLED",
+  "reason": "'CA for <A> and <B>' now makes <A>'s card + a Next line instead of asking which; existing assertions (ask / forms count) not updated"
+ },
+ "src/app/api/forms/multi-form-chat-e2e.test.ts :: related multi-intent patterns, through the chat route one form for two people is still asked about, never split or guessed (QA F18)": {
+  "category": "REGRESSION",
+  "twin": "ONE_FORM_EACH_PERSON_ENABLED",
+  "reason": "'CA for <A> and <B>' now makes <A>'s card + a Next line instead of asking which; existing assertions (ask / forms count) not updated"
+ },
+ "src/app/api/forms/owner-retest-e2e.test.ts :: capitalisation, misspellings, shorthand and word order three forms, three people": {
+  "category": "REGRESSION",
+  "twin": "ONE_FORM_EACH_PERSON_ENABLED",
+  "reason": "'CA for <A> and <B>' now makes <A>'s card + a Next line instead of asking which; existing assertions (ask / forms count) not updated"
+ },
+ "src/lib/ai/chat-stage-timings-trace.test.ts :: CHAT_STAGE_TIMINGS_ENABLED on the written trace row (coding 2's condition) off: the row's slots carry no stages": {
+  "category": "INTENDED-HARNESS",
+  "twin": "itself, flag unset (CI default)",
+  "reason": "The flag's own off-pin"
+ },
+ "src/lib/ai/chat-stage-timings.test.ts :: CHAT_STAGE_TIMINGS_ENABLED (QA, 9 Nov 2026): each awaited step's name and length, nothing else off: nothing is recorded": {
+  "category": "INTENDED-HARNESS",
+  "twin": "itself, flag unset (CI default)",
+  "reason": "The flag's own off-pin"
+ },
+ "src/lib/forms/form-edit-single-writer-flags-off.test.ts :: FORM_EDIT_SINGLE_WRITER_ENABLED off: the same chats, byte for byte (a) and (b) equal main's behaviour with the same script (replies, rows, events)": {
+  "category": "INTENDED-HARNESS",
+  "twin": "itself, flag unset (CI default)",
+  "reason": "The flag's own off-pin"
+ },
+ "src/lib/forms/one-form-each.test.ts :: beforeTurn / afterTurn (ONE_FORM_EACH_PERSON_ENABLED) off: nothing": {
+  "category": "INTENDED-HARNESS",
+  "twin": "itself, flag unset (CI default)",
+  "reason": "The flag's own off-pin"
+ },
+ "src/lib/forms/one-form-each.test.ts :: withCardNamingEmployee (CARD_NAMES_EMPLOYEE_ENABLED) off as before; on, named": {
+  "category": "INTENDED-HARNESS",
+  "twin": "itself, flag unset (CI default)",
+  "reason": "The flag's own off-pin"
+ },
+ "replay: nov10-add-not-repeated-after-made-about [fix:MADE_ABOUT_TOPIC_EVIDENCE_ENABLED,FORM_DATE_SAID_ALONE_ENABLED,ADD_NOT_REPEATED_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov10-add-not-repeated-after-made-about [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov10-create-from-conversation-after-no [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CREATE_FROM_CONVERSATION_POINT"
+ },
+ "replay: nov10-create-from-conversation-coaching-keeps-policy [fix:CREATE_FROM_CONVERSATION_POINTS_TO_CARD_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov10-create-from-conversation-coaching-keeps-policy [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,CREATE_FROM_CONVERSATION_POINT"
+ },
+ "replay: nov10-create-from-conversation-exit-keeps-date [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CREATE_FROM_CONVERSATION_POINT"
+ },
+ "replay: nov10-create-from-conversation-payroll-asked [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CREATE_FROM_CONVERSATION_POINT"
+ },
+ "replay: nov10-form-date-said-alone-first-edit [fix:FORM_DATE_SAID_ALONE_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov10-form-date-said-alone-first-edit [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov10-form-date-said-alone-negative [fix:FORM_DATE_SAID_ALONE_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov10-form-date-said-alone-negative [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov10-made-about-said-date-saved-draft-live [fix:MADE_ABOUT_READER_ACCOUNT_ENABLED,MADE_ABOUT_REWRITE_FINISHES_ENABLED,EDIT_POLICY_ASK_ENABLED,MADE_ABOUT_SAID_DATE_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov10-made-about-said-date-saved-draft-live [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov10-made-about-said-date-vague-draft-live [fix:MADE_ABOUT_READER_ACCOUNT_ENABLED,MADE_ABOUT_REWRITE_FINISHES_ENABLED,EDIT_POLICY_ASK_ENABLED,MADE_ABOUT_SAID_DATE_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov10-made-about-said-date-vague-draft-live [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov10-made-about-short-topic-no-reading [fix:MADE_ABOUT_REWRITE_FINISHES_ENABLED,MADE_ABOUT_TOPIC_EVIDENCE_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov10-made-about-short-topic-no-reading [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov10-made-about-short-topic-reader-other [fix:MADE_ABOUT_REWRITE_FINISHES_ENABLED,MADE_ABOUT_TOPIC_EVIDENCE_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov10-made-about-short-topic-reader-other [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov10-observation-own-person-p7 [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: ONE_FORM_EACH_PERSON_ENABLED"
+ },
+ "replay: nov10-p7-one-form-each-named [fix:ONE_FORM_EACH_PERSON_ENABLED,CARD_NAMES_EMPLOYEE_ENABLED]": {
+  "category": "INTENDED-HARNESS",
+  "twin": "itself",
+  "reason": "P7 case run with A3 alone: needs ONE_FORM_EACH_PERSON (they ship together)"
+ },
+ "replay: nov10-p7-one-form-each-named [open]": {
+  "category": "INTENDED-HARNESS",
+  "twin": "itself",
+  "reason": "P7 case run with A3 alone: needs ONE_FORM_EACH_PERSON (they ship together)"
+ },
+ "replay: nov10-p7-unanswered-which-tamsin-asked-again [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: ONE_FORM_EACH_PERSON_ENABLED"
+ },
+ "replay: nov10-reopened-edit-keeps-details-clear [fix:ACCOUNT_WIPE_GUARD_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov10-reopened-edit-keeps-details-clear [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: ACCOUNT_WIPE_GUARD_ENABLED,CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov10-reopened-edit-keeps-details-replace [fix:ACCOUNT_WIPE_GUARD_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov10-reopened-edit-keeps-details-replace [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: ACCOUNT_WIPE_GUARD_ENABLED,CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov10-section-breaks-kept-one-line [fix:SECTION_BREAKS_KEPT_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov10-section-breaks-kept-one-line [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov3-b2-yes-keeps-request [fix:FIRST_NAME_YES_KEEPS_REQUEST_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov3-b2-yes-keeps-request [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov3-edit-capitalised-words [fix:FORM_EDIT_NAME_GATE_ROSTER_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov3-edit-capitalised-words [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov3-open-coaching-draft-duplicate-card [fix:OPEN_DRAFT_KEEPS_TURNS_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov3-open-coaching-draft-duplicate-card [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov3-placeholder-tbd [fix:FORM_PLACEHOLDER_WORDS_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov3-placeholder-tbd [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov3-stepb-b13-rolling-rack [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov3-stepb-b13-rolling-rack [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov3-stepb-b17-write-the-observation [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov3-stepb-b17-write-the-observation [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov3-stepb-daily-stats-edit [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov3-stepb-daily-stats-edit [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov3-stepb-invented-sentence-refused [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov3-stepb-invented-sentence-refused [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov3-stepb-position-not-a-topic [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov3-stepb-position-not-a-topic [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov3-stepb-typed-add-stays-the-managers [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov3-stepb-typed-add-stays-the-managers [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov3-stepb-wording-only-revision-can-you [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov3-stepb-wording-only-revision-can-you [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov3-stepb-wording-only-revision-make-it [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov3-stepb-wording-only-revision-make-it [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov4-live-coaching-c1 [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov4-live-coaching-c2 [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov4-live-coaching-c3 [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov4-live-coaching-then-jane-doe [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov4-scan-sf-s11-same-for-another [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: SAME_REQUEST_OTHER_PERSON_ENAB"
+ },
+ "replay: nov4-scan-sf-s13-team-coaching-blank-employee [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov4-scan-sf-s20-now-one-for-lysandra [fix:SAME_REQUEST_OTHER_PERSON_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov4-scan-sf-s20-now-one-for-lysandra [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN,SAME_REQUEST_OTHER_PERSON_ENAB"
+ },
+ "replay: nov5-coding3-account-before-the-request-reaches-the-draft [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov5-coding3-copy-paste-question-told-the-truth [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov5-coding3-sfo-a-same-thing-card-on-screen [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: SAME_REQUEST_OTHER_PERSON_ENAB"
+ },
+ "replay: nov5-coding3-sfo-b-same-draft-own-draft-open [fix:SAME_FORM_COPY_NEW_PERSON_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov5-coding3-sfo-b-same-draft-own-draft-open [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov5-coding3-sfo-b-same-draft-then-name-copies [fix:SAME_FORM_COPY_NEW_PERSON_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov5-coding3-sfo-b-same-draft-then-name-copies [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov5-coding3-sfo-c-also-coaching-after-create [fix:SAME_REQUEST_OTHER_PERSON_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov5-coding3-sfo-c-also-coaching-after-create [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,SAME_REQUEST_OTHER_PERSON_ENAB"
+ },
+ "replay: nov5-coding3-sfo-c-also-coaching-card-open [fix:SAME_REQUEST_OTHER_PERSON_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov5-coding3-sfo-c-also-coaching-card-open [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,SAME_REQUEST_OTHER_PERSON_ENAB"
+ },
+ "replay: nov5-coding3-these-details-answered-before-the-card [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov5-request-slot-two-people [fix:FORM_NAME_FROM_ROSTER_ENABLED,CA_SALES_POLICY_ENABLED,CHAT_GLOSSARY_ENABLED]": {
+  "category": "REGRESSION",
+  "twin": "ONE_FORM_EACH_PERSON_ENABLED",
+  "reason": "'CA for <A> and <B>' now makes <A>'s card + a Next line instead of asking which; existing assertions (ask / forms count) not updated"
+ },
+ "replay: nov5-request-slot-two-people [production]": {
+  "category": "REGRESSION",
+  "twin": "ONE_FORM_EACH_PERSON_ENABLED",
+  "reason": "'CA for <A> and <B>' now makes <A>'s card + a Next line instead of asking which; existing assertions (ask / forms count) not updated"
+ },
+ "replay: nov5-twin-sf-s27-coaching-name-only-asks-what-happened [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov5-two-forms-reply-each-card [fix:REPLY_MATCHES_CARD_EACH_CARD_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov5-two-forms-reply-each-card [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov6-coding3-prior-actions-never-signed-unsaid [fix:PRIOR_ACTIONS_NO_SIGNED_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov6-coding3-prior-actions-never-signed-unsaid [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov6-coding3-prior-actions-never-signed-unsaid-parse-off [fix:PRIOR_ACTIONS_NO_SIGNED_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov6-coding3-prior-actions-never-signed-unsaid-parse-off [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov6-coding3-prior-actions-signed-policy-manual-kept [fix:PRIOR_ACTIONS_NO_SIGNED_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov6-coding3-prior-actions-signed-policy-manual-kept [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov6-diffemp-distinct-after-create-caps [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: SAME_REQUEST_OTHER_PERSON_ENAB"
+ },
+ "replay: nov6-diffemp-distinct-after-create-lower [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: SAME_REQUEST_OTHER_PERSON_ENAB"
+ },
+ "replay: nov6-diffemp-distinct-after-create-sentence [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: SAME_REQUEST_OTHER_PERSON_ENAB"
+ },
+ "replay: nov6-diffemp-distinct-card-on-screen-caps [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: SAME_REQUEST_OTHER_PERSON_ENAB"
+ },
+ "replay: nov6-diffemp-distinct-card-on-screen-lower [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: SAME_REQUEST_OTHER_PERSON_ENAB"
+ },
+ "replay: nov6-diffemp-distinct-card-on-screen-sentence [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: SAME_REQUEST_OTHER_PERSON_ENAB"
+ },
+ "replay: nov6-diffemp-distinct-read-after-create-caps [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: SAME_REQUEST_OTHER_PERSON_ENAB"
+ },
+ "replay: nov6-diffemp-distinct-read-after-create-lower [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: SAME_REQUEST_OTHER_PERSON_ENAB"
+ },
+ "replay: nov6-diffemp-distinct-read-after-create-sentence [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: SAME_REQUEST_OTHER_PERSON_ENAB"
+ },
+ "replay: nov6-diffemp-distinct-read-card-on-screen-caps [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: SAME_REQUEST_OTHER_PERSON_ENAB"
+ },
+ "replay: nov6-diffemp-distinct-read-card-on-screen-lower [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: SAME_REQUEST_OTHER_PERSON_ENAB"
+ },
+ "replay: nov6-diffemp-distinct-read-card-on-screen-sentence [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: SAME_REQUEST_OTHER_PERSON_ENAB"
+ },
+ "replay: nov6-diffemp-guard-no-account-stays-same-form-after-create [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: SAME_REQUEST_OTHER_PERSON_ENAB"
+ },
+ "replay: nov6-diffemp-guard-no-account-stays-same-form-card-on-screen [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: SAME_REQUEST_OTHER_PERSON_ENAB"
+ },
+ "replay: nov6-diffemp-qa-after-create-caps [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: SAME_REQUEST_OTHER_PERSON_ENAB"
+ },
+ "replay: nov6-diffemp-qa-after-create-lower [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: SAME_REQUEST_OTHER_PERSON_ENAB"
+ },
+ "replay: nov6-diffemp-qa-after-create-sentence [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: SAME_REQUEST_OTHER_PERSON_ENAB"
+ },
+ "replay: nov6-diffemp-qa-card-on-screen-caps [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: SAME_REQUEST_OTHER_PERSON_ENAB"
+ },
+ "replay: nov6-diffemp-qa-card-on-screen-lower [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: SAME_REQUEST_OTHER_PERSON_ENAB"
+ },
+ "replay: nov6-diffemp-qa-card-on-screen-sentence [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: SAME_REQUEST_OTHER_PERSON_ENAB"
+ },
+ "replay: nov6-diffemp-qa-nostore-after-create-caps [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: SAME_REQUEST_OTHER_PERSON_ENAB"
+ },
+ "replay: nov6-diffemp-qa-nostore-after-create-lower [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: SAME_REQUEST_OTHER_PERSON_ENAB"
+ },
+ "replay: nov6-diffemp-qa-nostore-after-create-sentence [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: SAME_REQUEST_OTHER_PERSON_ENAB"
+ },
+ "replay: nov6-diffemp-qa-nostore-card-on-screen-caps [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: SAME_REQUEST_OTHER_PERSON_ENAB"
+ },
+ "replay: nov6-diffemp-qa-nostore-card-on-screen-lower [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: SAME_REQUEST_OTHER_PERSON_ENAB"
+ },
+ "replay: nov6-diffemp-qa-nostore-card-on-screen-sentence [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: SAME_REQUEST_OTHER_PERSON_ENAB"
+ },
+ "replay: nov6-offer-never-a-product [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov6-reopen-a-coaching-first-name-possessive [fix:REOPEN_BY_ANY_OPEN_VERB_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov6-reopen-a-coaching-first-name-possessive [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov6-reopen-a-coaching-made-earlier-today-finalized [fix:REOPEN_BY_ANY_OPEN_VERB_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov6-reopen-a-coaching-made-earlier-today-finalized [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov6-reopen-a-find-my-earlier-coaching [fix:REOPEN_BY_ANY_OPEN_VERB_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov6-reopen-a-find-my-earlier-coaching [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov6-reopen-a-open-my-last-coaching-first-name [fix:REOPEN_BY_ANY_OPEN_VERB_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov6-reopen-a-open-my-last-coaching-first-name [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov6-reopen-a-pull-up-my-old-coaching-finalized [fix:REOPEN_BY_ANY_OPEN_VERB_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov6-reopen-a-pull-up-my-old-coaching-finalized [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov6-reopen-a-show-my-previous-coaching [fix:REOPEN_BY_ANY_OPEN_VERB_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov6-reopen-a-show-my-previous-coaching [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov6-reopen-b-any-coaching-and-cas [fix:PAST_FORMS_BEFORE_LIBRARY_ENABLED,REOPEN_BY_ANY_OPEN_VERB_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov6-reopen-b-any-coaching-and-cas [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov6-reopen-b-any-coachings [fix:PAST_FORMS_BEFORE_LIBRARY_ENABLED,REOPEN_BY_ANY_OPEN_VERB_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov6-reopen-b-any-coachings [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov6-reopen-b-past-coachings [fix:PAST_FORMS_BEFORE_LIBRARY_ENABLED,REOPEN_BY_ANY_OPEN_VERB_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov6-reopen-b-past-coachings [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov6-reopen-b-past-write-ups [fix:PAST_FORMS_BEFORE_LIBRARY_ENABLED,REOPEN_BY_ANY_OPEN_VERB_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov6-reopen-b-past-write-ups [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov6-reopen-b-what-coaching-forms [fix:PAST_FORMS_BEFORE_LIBRARY_ENABLED,REOPEN_BY_ANY_OPEN_VERB_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov6-reopen-b-what-coaching-forms [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov6-reopen-b-what-forms-does-she-have [fix:PAST_FORMS_BEFORE_LIBRARY_ENABLED,REOPEN_BY_ANY_OPEN_VERB_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov6-reopen-b-what-forms-does-she-have [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov6-reopen-bring-up-coaching-nobody-named [fix:REOPEN_BY_ANY_OPEN_VERB_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov6-reopen-bring-up-coaching-nobody-named [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov6-reopen-bring-up-old-coaching-first-name [fix:REOPEN_BY_ANY_OPEN_VERB_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov6-reopen-bring-up-old-coaching-first-name [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov6-reopen-qa-c-her-unresolved-asks-whose-coaching [fix:REOPEN_BY_ANY_OPEN_VERB_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov6-reopen-qa-c-her-unresolved-asks-whose-coaching [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov6-reopen-several-coachings-asks-which [fix:REOPEN_BY_ANY_OPEN_VERB_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov6-reopen-several-coachings-asks-which [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov7-edit-policy-ask-not-asked [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED,EDIT_POLICY_ASK_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov7-edit-policy-ask-not-asked [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov7-edit-policy-ask-sun-late-date [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED,EDIT_POLICY_ASK_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov7-edit-policy-ask-sun-late-date [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov7-refusal-bub-date-question [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov7-refusal-bub-date-question [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov7-refusal-bub-didnt-edit [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov7-refusal-bub-didnt-edit [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov7-refusal-bub-last-name [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov7-refusal-bub-last-name [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov7-refusal-sun-late-date [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov7-refusal-sun-late-date [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov7-refusal-sun-late-date-drift [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov7-refusal-sun-late-date-drift [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov7-refusal-sun-late-date-trace [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov7-refusal-sun-late-date-trace [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov7-refusal-sun-make-that-update [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov7-refusal-sun-make-that-update [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov7-refusal-sun-make-that-update-live-shape [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov7-refusal-sun-make-that-update-live-shape [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov7-refusal-sun-monthly-meeting [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov7-refusal-sun-monthly-meeting [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov7-refusal-sun-monthly-meeting-drift [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov7-refusal-sun-monthly-meeting-drift [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov7-refusal-sun-monthly-meeting-trace [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov7-refusal-sun-monthly-meeting-trace [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov7-refusal-sun-position [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov7-refusal-sun-position [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov7-refusal-sun-quitting [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov7-refusal-sun-quitting [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov7-refusal-sun-towel-echo-by-patch [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov7-refusal-sun-towel-echo-by-patch [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov7-refusal-sun-towel-echo-by-revision [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov7-refusal-sun-towel-echo-by-revision [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov7-refusal-sun-towel-nothing-said [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov7-refusal-sun-towel-nothing-said [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov7-refusal-sun-towel-nothing-said-live-shape [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov7-refusal-sun-towel-nothing-said-live-shape [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov7-refusal-sun-yes-do-that [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov7-refusal-sun-yes-do-that [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov7-refusal-sun-yes-do-that-empty-reading [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov7-refusal-sun-yes-do-that-empty-reading [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov7-refusal-sun-yes-do-that-live-shape [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov7-refusal-sun-yes-do-that-live-shape [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov7-refusal-sun-yes-do-that-other-reading [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov7-refusal-sun-yes-do-that-other-reading [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov7-refusal-sun-yes-do-that-reworded [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov7-refusal-sun-yes-do-that-reworded [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov7-refusal-trace-professional [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov7-refusal-trace-professional [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov7-s34-edit-make-it-about [fix:EDIT_MAKE_IT_ABOUT_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov7-s34-edit-make-it-about [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov7-s37-observed-kept [fix:COACHING_OBSERVED_KEPT_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov7-s37-observed-kept [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov7-s37-own-request-turns [fix:POLITE_REQUEST_OWN_TURNS_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov7-s37-own-request-turns [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov7-s37-second-card-own-policy [fix:COACHING_OBSERVED_KEPT_ENABLED,POLITE_REQUEST_OWN_TURNS_ENABLED,POLICY_CITATION_ENABLED,CARD_POLICY_OWN_REQUEST_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov7-s37-second-card-own-policy [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov7-two-forms-each-person-coaching-and-ca [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-coaching-card-policy [fix:COACHING_CARD_POLICY_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-coaching-card-policy [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-copy-open-form-for-person [fix:COPY_OPEN_FORM_FOR_PERSON_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-copy-open-form-for-person [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-copy-open-form-for-person-edit-stays-on-open-form [fix:COPY_OPEN_FORM_FOR_PERSON_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-copy-open-form-for-person-edit-stays-on-open-form [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-form-date-said-settles [fix:FORM_DATE_SAID_SETTLES_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-form-date-said-settles [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-kept-request-coaching-named-now-no-notice [fix:REQUEST_KEPT_IN_WINDOW_ENABLED,NEXT_PUBLIC_REQUEST_KEPT_IN_WINDOW_ENABLED,KEPT_REQUEST_SAME_FORM_ENABLED,NEXT_PUBLIC_KEPT_REQUEST_SAME_FORM_ENABLED,CARRIED_PERSON_NOTICE_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-kept-request-coaching-named-now-no-notice [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-kept-request-coaching-says-where-the-name-came-from [fix:REQUEST_KEPT_IN_WINDOW_ENABLED,NEXT_PUBLIC_REQUEST_KEPT_IN_WINDOW_ENABLED,KEPT_REQUEST_SAME_FORM_ENABLED,NEXT_PUBLIC_KEPT_REQUEST_SAME_FORM_ENABLED,CARRIED_PERSON_NOTICE_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-kept-request-coaching-says-where-the-name-came-from [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-list-policy-is-edit-alone [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED,QUESTION_NOT_FORM_ENABLED,EDIT_POLICY_ASK_ENABLED,LIST_POLICY_IS_EDIT_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov8-list-policy-is-edit-alone [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov8-list-policy-is-edit-question-still-answered [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED,QUESTION_NOT_FORM_ENABLED,EDIT_POLICY_ASK_ENABLED,LIST_POLICY_IS_EDIT_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov8-list-policy-is-edit-question-still-answered [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov8-list-policy-on-card-coaching [fix:QUESTION_NOT_FORM_ENABLED,EDIT_POLICY_ASK_ENABLED,LIST_POLICY_IS_EDIT_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-list-policy-on-card-coaching [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-list-policy-on-card-no-account [fix:QUESTION_NOT_FORM_ENABLED,EDIT_POLICY_ASK_ENABLED,LIST_POLICY_IS_EDIT_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov8-list-policy-on-card-no-account [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov8-list-policy-on-card-question-still-answered [fix:QUESTION_NOT_FORM_ENABLED,EDIT_POLICY_ASK_ENABLED,LIST_POLICY_IS_EDIT_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-list-policy-on-card-question-still-answered [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-policy-set-aside-coaching-card [fix:PROPOSAL_POLICY_SET_ASIDE_ENABLED,TAKE_OFF_STAYS_CARD_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-policy-set-aside-coaching-card [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-policy-set-aside-coaching-create [fix:PROPOSAL_POLICY_SET_ASIDE_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-policy-set-aside-coaching-create [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-polite-about-stays-card [fix:POLITE_ABOUT_STAYS_CARD_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-polite-about-stays-card [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-polite-about-stays-card-negative-1 [fix:POLITE_ABOUT_STAYS_CARD_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-polite-about-stays-card-negative-1 [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-polite-about-stays-card-negative-2 [fix:POLITE_ABOUT_STAYS_CARD_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-polite-about-stays-card-negative-2 [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-polite-about-stays-card-negative-3 [fix:POLITE_ABOUT_STAYS_CARD_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-polite-about-stays-card-negative-3 [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-proposal-make-it-about-card [fix:PROPOSAL_MAKE_IT_ABOUT_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-proposal-make-it-about-card [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-proposal-make-it-about-create [fix:PROPOSAL_MAKE_IT_ABOUT_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-proposal-make-it-about-create [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-proposal-make-it-about-negative [fix:PROPOSAL_MAKE_IT_ABOUT_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-proposal-make-it-about-negative [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-questions-not-account-coaching-from-conversation [fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-questions-not-account-coaching-from-conversation [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-s35-two-forms-still-two [fix:SIGNED_STEP_NOT_A_REQUEST_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-s35-two-forms-still-two [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-step-b-add-under-observed [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED,STEP_B_ADD_UNDER_OBSERVED_ENABLED,STEP_B_SECTION_SPACING_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-step-b-add-under-observed [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-step-b-date-said [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED,EDIT_POLICY_ASK_ENABLED,STEP_B_DATE_SAID_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-step-b-date-said [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-step-b-date-said-alone [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED,EDIT_POLICY_ASK_ENABLED,STEP_B_DATE_SAID_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-step-b-date-said-alone [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-step-b-date-said-policy-ask-no-patch [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED,EDIT_POLICY_ASK_ENABLED,STEP_B_DATE_SAID_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-step-b-date-said-policy-ask-no-patch [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-step-b-date-said-with-policy-ask [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED,EDIT_POLICY_ASK_ENABLED,STEP_B_DATE_SAID_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-step-b-date-said-with-policy-ask [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-step-b-date-with-about [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED,EDIT_POLICY_ASK_ENABLED,STEP_B_DATE_SAID_ENABLED,STEP_B_MAKE_IT_ABOUT_ACCOUNT_ENABLED,STEP_B_DATE_WITH_ABOUT_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-step-b-date-with-about [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-step-b-date-with-about-no-date [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED,EDIT_POLICY_ASK_ENABLED,STEP_B_DATE_SAID_ENABLED,STEP_B_MAKE_IT_ABOUT_ACCOUNT_ENABLED,STEP_B_DATE_WITH_ABOUT_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-step-b-date-with-about-no-date [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-step-b-make-it-about-topic-only [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED,EDIT_MAKE_IT_ABOUT_ENABLED,STEP_B_MAKE_IT_ABOUT_ACCOUNT_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-step-b-make-it-about-topic-only [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-step-b-reply-keeps-lines [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED,STEP_B_ADD_UNDER_OBSERVED_ENABLED,STEP_B_SECTION_SPACING_ENABLED,STEP_B_REPLY_KEEPS_LINES_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-step-b-reply-keeps-lines [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-step-b-whole-text-tail [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED,STEP_B_ADD_UNDER_OBSERVED_ENABLED,STEP_B_SECTION_SPACING_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-step-b-whole-text-tail [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-take-off-stays-card-question-still-answered [fix:PROPOSAL_POLICY_SET_ASIDE_ENABLED,TAKE_OFF_STAYS_CARD_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov8-take-off-stays-card-question-still-answered [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov9-made-about-all-or-nothing-no-reading [fix:MADE_ABOUT_ALL_OR_NOTHING_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov9-made-about-all-or-nothing-no-reading [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov9-made-about-all-or-nothing-other-form [fix:MADE_ABOUT_ALL_OR_NOTHING_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov9-made-about-all-or-nothing-other-form [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov9-made-about-all-or-nothing-refused [fix:MADE_ABOUT_ALL_OR_NOTHING_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov9-made-about-all-or-nothing-refused [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov9-made-about-reader-account-added [fix:MADE_ABOUT_READER_ACCOUNT_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov9-made-about-reader-account-added [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov9-made-about-reader-account-refused [fix:MADE_ABOUT_READER_ACCOUNT_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov9-made-about-reader-account-refused [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov9-made-about-reader-account-replaced [fix:MADE_ABOUT_READER_ACCOUNT_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov9-made-about-reader-account-replaced [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov9-made-about-reader-account-replaced-live [fix:MADE_ABOUT_READER_ACCOUNT_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov9-made-about-reader-account-replaced-live [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov9-made-about-rewrite-finishes-details-only [fix:MADE_ABOUT_REWRITE_FINISHES_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov9-made-about-rewrite-finishes-details-only [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov9-made-about-rewrite-finishes-error-after-rewrite [fix:MADE_ABOUT_REWRITE_FINISHES_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov9-made-about-rewrite-finishes-error-after-rewrite [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov9-made-about-rewrite-finishes-reader-refused [fix:MADE_ABOUT_REWRITE_FINISHES_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov9-made-about-rewrite-finishes-reader-refused [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov9-off-roster-ask-district-not-held [fix:OFF_ROSTER_ASK_BEFORE_CARD_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov9-off-roster-ask-district-not-held [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov9-off-roster-ask-roster-name [fix:OFF_ROSTER_ASK_BEFORE_CARD_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov9-off-roster-ask-roster-name [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov9-off-roster-ask-then-use [fix:OFF_ROSTER_ASK_BEFORE_CARD_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov9-off-roster-ask-then-use [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: nov9-step-b-make-it-about-dated-incident [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED,EDIT_MAKE_IT_ABOUT_ENABLED,STEP_B_MAKE_IT_ABOUT_ACCOUNT_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov9-step-b-make-it-about-dated-incident [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov9-step-b-make-it-about-dated-revision-refused [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED,EDIT_MAKE_IT_ABOUT_ENABLED,STEP_B_MAKE_IT_ABOUT_ACCOUNT_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov9-step-b-make-it-about-dated-revision-refused [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov9-work-area-absence-coaching-card [fix:WORK_AREA_ABSENCE_CITES_CONDUCT_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov9-work-area-absence-coaching-card [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov9-work-area-absence-coaching-made-about [fix:WORK_AREA_ABSENCE_CITES_CONDUCT_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: nov9-work-area-absence-coaching-made-about [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: oct30-claims [fix:FORM_EDIT_REFERS_BACK_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: oct30-claims [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: oct30-do-the-same [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: oct30-refers-back-discussed [fix:FORM_EDIT_REFERS_BACK_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: oct30-refers-back-discussed [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: oct30-refers-back-do-that [fix:FORM_EDIT_REFERS_BACK_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: oct30-refers-back-do-that [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED,COACHING_ASKS_WHAT_HAPPENED_EN"
+ },
+ "replay: person-guard-roster-wins [fix:PERSON_GUARD_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ },
+ "replay: person-guard-roster-wins [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: CARD_NAMES_EMPLOYEE_ENABLED"
+ }
+}
