@@ -12,8 +12,8 @@ Session: session_01VVEkRRzGew9sHHGbAhxGaQ. Reports to QA session_01VVEkRTbAAAt57
 
 ## Queue (next first) — after QA's split 23:18Z; Gate-Bubbles-2 owns the rest
 1. DONE: 16c re-gate R16D = HOLD (false not-found note for a shared first name, FORM_NAME_FROM_ROSTER); verdict sent 11 Nov ~00:10Z
-2. PAUSED 00:49Z until 10:00 PHT (02:00Z). EBF run was left to finish in the background (results in scratch ebf.log / tmp-x; classify on resume; if lost, re-run from ck-ebf checkpoints). EXCERPT_BRAND_FILTER flag-only (HIGH), gate EBF on main 59526ed in /home/user/gate/ebf; OFF = prodenv + main production-flags on (adds the 4 R17B flags; scratch prodenv-59526ed.csv); paths + src/lib/knowledge
-2b. AFTER EBF: 16c re-gate on r16c @ 952bdeb (Coding-2 Tamsin fix) + #716 caf15503 merged; BOTH arms the 4 roster flags; ON + NEAR_MISS_ANSWER_KEEPS_REQUEST. Bar: P7 note gone (replay nov11-shared-first-name-not-found-{p7,bare}), s14 path-1 date kept, nothing new.
+2. DONE: EXCERPT_BRAND_FILTER GO (0 changed; probe proves the flag reaches rowToCitation); verdict sent 03:10Z. Was: flag-only (HIGH), gate EBF on main 59526ed in /home/user/gate/ebf; OFF = prodenv + main production-flags on (adds the 4 R17B flags; scratch prodenv-59526ed.csv); paths + src/lib/knowledge
+2b. NOW (gate R16E, /home/user/gate/r16e, tree 290a2290): 16c re-gate on r16c @ 952bdeb (Coding-2 Tamsin fix) + #716 caf15503 merged; BOTH arms the 4 roster flags; ON + NEAR_MISS_ANSWER_KEEPS_REQUEST. Bar: P7 note gone (replay nov11-shared-first-name-not-found-{p7,bare}), s14 path-1 date kept, nothing new.
 3. (folded into 2b) #716 NEAR_MISS_ANSWER_KEEPS_REQUEST @ caf15503 (16c's 4 flags in both arms; bar: s14 path 1)
 4. #720 TYPO_CORRECTED_SAME_PERSON @ 7de59a2 (s14 path 2; read saved date)
 5. #705 (sf-s16/s17/s19), #710, #712 (131400e9), #713, #714, #718 (3cb4e25f)
