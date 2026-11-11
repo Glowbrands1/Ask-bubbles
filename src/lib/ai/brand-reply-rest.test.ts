@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { EMPTIED_REPLY, ownBrandOnly, withOwnBrandOnly } from "./own-brand-only";
+import { EMPTIED_REPLY, withOwnBrandOnly } from "./own-brand-only";
 import type { AskResponse } from "./types";
 
 /**
