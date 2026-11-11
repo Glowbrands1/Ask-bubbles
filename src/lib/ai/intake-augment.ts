@@ -1,4 +1,4 @@
-import { dateLineNoEchoEnabled, payrollDeductAmountFieldEnabled, priorActionsParseEnabled } from "@/lib/config/chat-quality-flags";
+import { crossPersonOwnTurnsEnabled, dateLineNoEchoEnabled, payrollDeductAmountFieldEnabled, priorActionsParseEnabled } from "@/lib/config/chat-quality-flags";
 import { COMPANY_LOCATIONS } from "@/lib/locations";
 import { priorSentenceFixFor } from "@/lib/forms/prior-sentence-scope";
 import { blankYearlessStepDates, extractFormDate, listIncidentDates, statedIncidentDates } from "@/lib/forms/form-date-answer";
@@ -7,6 +7,7 @@ import { managerPayrollAmount } from "@/lib/forms/payroll-deduct-amount";
 import { statedPayrollDeduct } from "@/lib/forms/payroll-deduct-answer";
 import { statedWarningLevel, warningLevelFromTurns } from "@/lib/forms/warning-level";
 import { extractJobTitle, readEmployeeMentions } from "@/lib/forms/proposal";
+import { detectTemplateIntent } from "@/lib/forms/template-intent";
 import { readLocationMentions, rosterLocationName } from "@/lib/forms/location-mention";
 import { placeText } from "@/lib/forms/place-from-cue";
 import type { RosterEmployee } from "@/lib/forms/employee-match";
@@ -41,14 +42,33 @@ export function augmentIntakeQuestion(input: {
   const additions: string[] = [];
   if (input.slots) additions.push(...slotLines(input));
   if (input.fields) {
-    const earlier = input.history
-      .filter((turn) => turn.role === "user")
-      .map((turn) => turn.content)
-      .join("\n");
+    const said = input.history.filter((turn) => turn.role === "user").map((turn) => turn.content);
+    const earlier = (crossPersonOwnTurnsEnabled() ? turnsSinceNamed(input.question, said) : said).join("\n");
     additions.push(...fieldLines(input.question, input.today, earlier));
   }
   if (additions.length === 0) return input.question;
   return `${input.question.trim()}\n${additions.join(" ")}`;
+}
+
+/**
+ * CROSS_PERSON_OWN_TURNS_ENABLED (#166, rebuilt 10 Nov 2026): a turn that names one person reads the earlier facts
+ * from the last earlier turn that mentions them; a person no earlier turn mentions is a new request, read alone.
+ * After <A>'s Corrective Action and "no payroll deduct", "create a verbal corrective action form for <B>. …" was given
+ * "No payroll deduction." A turn that names nobody, or several people, keeps every earlier turn, as before.
+ */
+function turnsSinceNamed(question: string, earlier: readonly string[]): readonly string[] {
+  // Only a request for a form ("create a … form for <B>"): "Job title: Shift Lead." on an open card names no new person.
+  const intent = detectTemplateIntent(question);
+  if (!(intent.kind === "explicit" || (intent.kind === "corrective_action" && intent.requestedCreation))) return earlier;
+  const names = readEmployeeMentions(question).names;
+  if (names.length !== 1) return earlier;
+  const first = names[0]!.trim().split(/\s+/)[0]!.toLowerCase();
+  if (first.length < 2) return earlier;
+  const mentions = new RegExp(`\\b${first.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i");
+  for (let index = earlier.length - 1; index >= 0; index -= 1) {
+    if (mentions.test(earlier[index]!)) return earlier.slice(index);
+  }
+  return [];
 }
 
 function slotLines(input: {

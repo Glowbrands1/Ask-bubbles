@@ -4317,6 +4317,30 @@ export function sameRequestOtherPersonEnabled(): boolean {
 }
 
 /**
+ * SECOND_PERSON_ACCOUNT_WORDS_ENABLED (coding 6, 10 Nov 2026; default off; QA B22-2, Ask-bubbles#164 rebuilt):
+ * "now one for Test Employee Two, Store Associate, late today" is <B>'s own request with <B>'s own account, as
+ * "now one for Test Employee Two for being late today" already is. SAME_REQUEST_OTHER_PERSON read the account only
+ * after "for / because / she / was / …", so a title between the name and "late today" left the turn to <A>'s card.
+ * On, an account word (late, tardy, absent, no call, left early, …) after the name reads the same way. Needs
+ * SAME_REQUEST_OTHER_PERSON_ENABLED. Off, as before. See `lib/forms/same-request-other-person.ts`.
+ */
+export function secondPersonAccountWordsEnabled(): boolean {
+  return envFlag("SECOND_PERSON_ACCOUNT_WORDS_ENABLED");
+}
+
+/**
+ * CROSS_PERSON_OWN_TURNS_ENABLED (coding 6, 10 Nov 2026; default off; conv_mvoftzhs29se8nb, Ask-bubbles#166
+ * rebuilt): after <A>'s Corrective Action and "no payroll deduct", "create a verbal corrective action form for
+ * <B>. …" gave <B>'s card "Is payroll deduct applicable? **No**", never said for <B>: the intent read
+ * (`ai/intake-augment.ts`) wrote <A>'s payroll answer, warning level and date onto <B>'s turn. On, a turn that
+ * names one person reads those earlier facts from the last turn that mentions them (none: the turn alone). Off, as
+ * before.
+ */
+export function crossPersonOwnTurnsEnabled(): boolean {
+  return envFlag("CROSS_PERSON_OWN_TURNS_ENABLED");
+}
+
+/**
  * CHAT_STAGE_TIMINGS_ENABLED (ported from the sibling app; QA, 9 Nov 2026; default off; same flag in both apps). Each
  * awaited step of a chat turn before the answering model (intent extraction, the form paths, entities, the query
  * rewrite, retrieval, the reads, the briefing, the memory, context, data and grounding loads) is timed into
