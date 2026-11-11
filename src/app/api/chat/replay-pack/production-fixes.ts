@@ -286,4 +286,100 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov9-made-about-rewrite-finishes-error-after-rewrite": "MADE_ABOUT_REWRITE_FINISHES",
   // Changed on purpose (10 Nov 2026): fixed in production by MADE_ABOUT_REWRITE_FINISHES, QA round 13
   "nov9-made-about-rewrite-finishes-reader-refused": "MADE_ABOUT_REWRITE_FINISHES",
+  // Changed on purpose (10 Nov 2026): fixed in production by MADE_ABOUT_TOPIC_EVIDENCE, QA round 15
+  "nov10-made-about-short-topic-reader-other": "MADE_ABOUT_TOPIC_EVIDENCE",
+  // Changed on purpose (10 Nov 2026): fixed in production by MADE_ABOUT_TOPIC_EVIDENCE, QA round 15
+  "nov10-made-about-short-topic-no-reading": "MADE_ABOUT_TOPIC_EVIDENCE",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_DATE_SAID_ALONE, QA round 15
+  "nov10-form-date-said-alone-first-edit": "FORM_DATE_SAID_ALONE",
+  // Changed on purpose (10 Nov 2026): fixed in production by MADE_ABOUT_SAID_DATE, QA round 15 re-release
+  "nov10-made-about-said-date-vague-draft-live": "MADE_ABOUT_SAID_DATE",
+  // Changed on purpose (10 Nov 2026): fixed in production by ADD_NOT_REPEATED, QA round 15 re-release
+  "nov10-add-not-repeated-after-made-about": "ADD_NOT_REPEATED",
+  // Changed on purpose (10 Nov 2026): fixed in production by SECTION_BREAKS_KEPT, QA round 15 re-release 2
+  "nov10-section-breaks-kept-one-line": "SECTION_BREAKS_KEPT",
+  // Changed on purpose (10 Nov 2026): fixed in production by SAME_REQUEST_OTHER_PERSON, QA round 16
+  "nov4-scan-sf-s11-same-for-another": "SAME_REQUEST_OTHER_PERSON",
+  // Changed on purpose (10 Nov 2026): fixed in production by CARD_NAMES_EMPLOYEE, SAME_REQUEST_OTHER_PERSON, QA round 16
+  "nov4-scan-sf-s20-now-one-for-lysandra": "CARD_NAMES_EMPLOYEE",
+  // Changed on purpose (10 Nov 2026): fixed in production by SAME_REQUEST_OTHER_PERSON, QA round 16
+  "nov5-coding3-sfo-a-same-thing-card-on-screen": "SAME_REQUEST_OTHER_PERSON",
+  // Changed on purpose (10 Nov 2026): fixed in production by CARD_NAMES_EMPLOYEE, SAME_REQUEST_OTHER_PERSON, QA round 16
+  "nov5-coding3-sfo-c-also-coaching-card-open": "CARD_NAMES_EMPLOYEE",
+  // Changed on purpose (10 Nov 2026): fixed in production by CARD_NAMES_EMPLOYEE, SAME_REQUEST_OTHER_PERSON, QA round 16
+  "nov5-coding3-sfo-c-also-coaching-after-create": "CARD_NAMES_EMPLOYEE",
+  // Changed on purpose (10 Nov 2026): fixed in production by SAME_REQUEST_OTHER_PERSON, QA round 16
+  "nov6-diffemp-qa-card-on-screen-lower": "SAME_REQUEST_OTHER_PERSON",
+  // Changed on purpose (10 Nov 2026): fixed in production by SAME_REQUEST_OTHER_PERSON, QA round 16
+  "nov6-diffemp-qa-after-create-lower": "SAME_REQUEST_OTHER_PERSON",
+  // Changed on purpose (10 Nov 2026): fixed in production by SAME_REQUEST_OTHER_PERSON, QA round 16
+  "nov6-diffemp-qa-card-on-screen-sentence": "SAME_REQUEST_OTHER_PERSON",
+  // Changed on purpose (10 Nov 2026): fixed in production by SAME_REQUEST_OTHER_PERSON, QA round 16
+  "nov6-diffemp-qa-after-create-sentence": "SAME_REQUEST_OTHER_PERSON",
+  // Changed on purpose (10 Nov 2026): fixed in production by SAME_REQUEST_OTHER_PERSON, QA round 16
+  "nov6-diffemp-qa-card-on-screen-caps": "SAME_REQUEST_OTHER_PERSON",
+  // Changed on purpose (10 Nov 2026): fixed in production by SAME_REQUEST_OTHER_PERSON, QA round 16
+  "nov6-diffemp-qa-after-create-caps": "SAME_REQUEST_OTHER_PERSON",
+  // Changed on purpose (10 Nov 2026): fixed in production by SAME_REQUEST_OTHER_PERSON, QA round 16
+  "nov6-diffemp-qa-nostore-card-on-screen-lower": "SAME_REQUEST_OTHER_PERSON",
+  // Changed on purpose (10 Nov 2026): fixed in production by SAME_REQUEST_OTHER_PERSON, QA round 16
+  "nov6-diffemp-qa-nostore-after-create-lower": "SAME_REQUEST_OTHER_PERSON",
+  // Changed on purpose (10 Nov 2026): fixed in production by SAME_REQUEST_OTHER_PERSON, QA round 16
+  "nov6-diffemp-qa-nostore-card-on-screen-sentence": "SAME_REQUEST_OTHER_PERSON",
+  // Changed on purpose (10 Nov 2026): fixed in production by SAME_REQUEST_OTHER_PERSON, QA round 16
+  "nov6-diffemp-qa-nostore-after-create-sentence": "SAME_REQUEST_OTHER_PERSON",
+  // Changed on purpose (10 Nov 2026): fixed in production by SAME_REQUEST_OTHER_PERSON, QA round 16
+  "nov6-diffemp-qa-nostore-card-on-screen-caps": "SAME_REQUEST_OTHER_PERSON",
+  // Changed on purpose (10 Nov 2026): fixed in production by SAME_REQUEST_OTHER_PERSON, QA round 16
+  "nov6-diffemp-qa-nostore-after-create-caps": "SAME_REQUEST_OTHER_PERSON",
+  // Changed on purpose (10 Nov 2026): fixed in production by SAME_REQUEST_OTHER_PERSON, QA round 16
+  "nov6-diffemp-distinct-card-on-screen-lower": "SAME_REQUEST_OTHER_PERSON",
+  // Changed on purpose (10 Nov 2026): fixed in production by SAME_REQUEST_OTHER_PERSON, QA round 16
+  "nov6-diffemp-distinct-after-create-lower": "SAME_REQUEST_OTHER_PERSON",
+  // Changed on purpose (10 Nov 2026): fixed in production by SAME_REQUEST_OTHER_PERSON, QA round 16
+  "nov6-diffemp-distinct-card-on-screen-sentence": "SAME_REQUEST_OTHER_PERSON",
+  // Changed on purpose (10 Nov 2026): fixed in production by SAME_REQUEST_OTHER_PERSON, QA round 16
+  "nov6-diffemp-distinct-after-create-sentence": "SAME_REQUEST_OTHER_PERSON",
+  // Changed on purpose (10 Nov 2026): fixed in production by SAME_REQUEST_OTHER_PERSON, QA round 16
+  "nov6-diffemp-distinct-card-on-screen-caps": "SAME_REQUEST_OTHER_PERSON",
+  // Changed on purpose (10 Nov 2026): fixed in production by SAME_REQUEST_OTHER_PERSON, QA round 16
+  "nov6-diffemp-distinct-after-create-caps": "SAME_REQUEST_OTHER_PERSON",
+  // Changed on purpose (10 Nov 2026): fixed in production by SAME_REQUEST_OTHER_PERSON, QA round 16
+  "nov6-diffemp-distinct-read-card-on-screen-lower": "SAME_REQUEST_OTHER_PERSON",
+  // Changed on purpose (10 Nov 2026): fixed in production by SAME_REQUEST_OTHER_PERSON, QA round 16
+  "nov6-diffemp-distinct-read-after-create-lower": "SAME_REQUEST_OTHER_PERSON",
+  // Changed on purpose (10 Nov 2026): fixed in production by SAME_REQUEST_OTHER_PERSON, QA round 16
+  "nov6-diffemp-distinct-read-card-on-screen-sentence": "SAME_REQUEST_OTHER_PERSON",
+  // Changed on purpose (10 Nov 2026): fixed in production by SAME_REQUEST_OTHER_PERSON, QA round 16
+  "nov6-diffemp-distinct-read-after-create-sentence": "SAME_REQUEST_OTHER_PERSON",
+  // Changed on purpose (10 Nov 2026): fixed in production by SAME_REQUEST_OTHER_PERSON, QA round 16
+  "nov6-diffemp-distinct-read-card-on-screen-caps": "SAME_REQUEST_OTHER_PERSON",
+  // Changed on purpose (10 Nov 2026): fixed in production by SAME_REQUEST_OTHER_PERSON, QA round 16
+  "nov6-diffemp-distinct-read-after-create-caps": "SAME_REQUEST_OTHER_PERSON",
+  // Changed on purpose (10 Nov 2026): fixed in production by SAME_REQUEST_OTHER_PERSON, QA round 16
+  "nov6-diffemp-guard-no-account-stays-same-form-card-on-screen": "SAME_REQUEST_OTHER_PERSON",
+  // Changed on purpose (10 Nov 2026): fixed in production by SAME_REQUEST_OTHER_PERSON, QA round 16
+  "nov6-diffemp-guard-no-account-stays-same-form-after-create": "SAME_REQUEST_OTHER_PERSON",
+  // Changed on purpose (10 Nov 2026): fixed in production by CREATE_FROM_CONVERSATION_POINTS_TO_CARD, QA round 16
+  "nov10-create-from-conversation-payroll-asked": "CREATE_FROM_CONVERSATION_POINTS_TO_CARD",
+  // Changed on purpose (10 Nov 2026): fixed in production by CREATE_FROM_CONVERSATION_POINTS_TO_CARD, QA round 16
+  "nov10-create-from-conversation-after-no": "CREATE_FROM_CONVERSATION_POINTS_TO_CARD",
+  // Changed on purpose (10 Nov 2026): fixed in production by ACCOUNT_WIPE_GUARD, CARD_NAMES_EMPLOYEE, QA round 16
+  "nov10-reopened-edit-keeps-details-clear": "ACCOUNT_WIPE_GUARD",
+  // Changed on purpose (10 Nov 2026): fixed in production by ACCOUNT_WIPE_GUARD, CARD_NAMES_EMPLOYEE, QA round 16
+  "nov10-reopened-edit-keeps-details-replace": "ACCOUNT_WIPE_GUARD",
+  // Changed on purpose (10 Nov 2026): fixed in production by DRAFT_WRITE_NEVER_SILENT, QA round 17b
+  "nov10-draft-write-refused-field-never-drops-the-draft": "DRAFT_WRITE_NEVER_SILENT",
+  // Changed on purpose (10 Nov 2026): fixed in production by PAYROLL_BARE_SENTENCE, QA round 17b
+  "nov10-p15-payroll-deduction-sentence-is-yes": "PAYROLL_BARE_SENTENCE",
+  // Changed on purpose (10 Nov 2026): fixed in production by FAILURE_TO_OPEN_IS_LATE_OPENING, QA round 17b
+  "nov10-p16-failure-to-open-is-what-happened": "FAILURE_TO_OPEN_IS_LATE_OPENING",
+  // Changed on purpose (10 Nov 2026): fixed in production by CA_REASON_DUE_TO, QA round 17b
+  "nov6-ca-reason-at-store-then-account": "CA_REASON_DUE_TO",
+  // Changed on purpose (10 Nov 2026): fixed in production by CA_REASON_DUE_TO, QA round 17b
+  "nov6-ca-reason-because-of-draft-observation": "CA_REASON_DUE_TO",
+  // Changed on purpose (10 Nov 2026): fixed in production by CA_REASON_DUE_TO, QA round 17b
+  "nov6-ca-reason-due-to-card-issue": "CA_REASON_DUE_TO",
+  // Changed on purpose (10 Nov 2026): fixed in production by CA_REASON_DUE_TO, QA round 17b
+  "nov6-ca-reason-due-to-draft-observation": "CA_REASON_DUE_TO",
 };
