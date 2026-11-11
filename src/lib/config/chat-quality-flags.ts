@@ -1337,6 +1337,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 5: EXCERPT_BRAND_HEADING_DROP (QA's round 17c live test, 11 Nov 2026; default off).
   "EXCERPT_BRAND_HEADING_DROP_ENABLED",
   "NEAR_MISS_ANSWER_KEEPS_REQUEST_ENABLED",
+  "FULL_MANUAL_WIDE_GATE_ENABLED",
 ] as const;
 
 /**
@@ -4406,4 +4407,16 @@ export function firstNameEnoughEnabled(): boolean {
  */
 export function noShowOpeningIsAttendanceEnabled(): boolean {
   return envFlag("NO_SHOW_OPENING_IS_ATTENDANCE_ENABLED");
+}
+
+/**
+ * With FULL_MANUAL_CONTEXT_ENABLED on, a question the policy words do not
+ * catch ("Where should employees park?", "What is COBRA?") is still asked
+ * with the whole manual when retrieval's best excerpt is from the manual or
+ * the question names a word of a heading the manual prints. Off, only the
+ * policy words choose the manual and every other question keeps retrieval.
+ * Default off: it moves most manual questions onto the full-manual prompt.
+ */
+export function fullManualWideGateEnabled(): boolean {
+  return envFlag("FULL_MANUAL_WIDE_GATE_ENABLED");
 }
