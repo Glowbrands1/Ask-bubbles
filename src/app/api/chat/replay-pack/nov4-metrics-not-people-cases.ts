@@ -130,7 +130,10 @@ export const NOV4_METRICS_NOT_PEOPLE_CASES: ReplayCase[] = [
     title: "negative control: a full name nobody on the roster shares, typed alone, is announced as not on the roster, flag on or off",
     report: `${REPORT}: negative control, a person not on the roster`,
     // production-flags.json corrected to Vercel (QA, 5 Nov 2026): GROUNDED_ENTITIES_ENABLED is off in production since 24 Oct (a deliberate rollback), so a name on no roster goes on the card (the unknown person is not announced). Recorded OPEN, a production defect.
-    status: { open: "production: GROUNDED_ENTITIES_ENABLED off since 24 Oct (deliberate rollback: dropped non-roster names while ANTI_LOOP off; Vercel comment) — a name on no roster goes on the card (the unknown person is not announced)" },
+    // Changed on purpose (10 Nov 2026, QA's roster-set gate): OFF_ROSTER_ASK_BEFORE_CARD (on in production) announces the
+    // name ("I can't find **<name>** on your roster — …") with the card held, which this case now accepts; it holds with
+    // production's flags.
+    status: "fixed",
     /*
      * The middle ground (QA, 4 Nov 2026): a nobody-shaped candidate is set
      * aside only when the same message names somebody on the roster. Nobody
@@ -142,7 +145,9 @@ export const NOV4_METRICS_NOT_PEOPLE_CASES: ReplayCase[] = [
     async run(t) {
       const thread = start(t);
       const reply = await thread.say(say("Zuleika Brightwell"));
-      expect(reply.content, `the unknown person is not announced:\n${reply.content}`).toMatch(/couldn't find \*\*Zuleika Brightwell\*\*/);
+      // Changed on purpose (10 Nov 2026, QA's roster-set gate): OFF_ROSTER_ASK_BEFORE_CARD's "I can't find **<name>** on your
+      // roster — …" (production) announces the unknown person as the not-found note does.
+      expect(reply.content, `the unknown person is not announced:\n${reply.content}`).toMatch(/couldn't find \*\*Zuleika Brightwell\*\*|can't find \*\*Zuleika Brightwell\*\* on your roster/);
       expect(thread.proposal?.employeeName ?? null, "an unknown person is on the card").not.toBe("Zuleika Brightwell");
       // Said again, the chat moves on: not the same reply word for word (no loop).
       const again = await thread.say("Zuleika Brightwell");
