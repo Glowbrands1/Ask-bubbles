@@ -25,16 +25,17 @@ import type { ChatFormProposal, ChatMessage } from "@/types";
  * the way `resign-method-followup-oct25.test.ts` does) and reads its date fields: a
  * card line and the draft field must agree.
  *
- * THE MODELS COPY THE MANAGER. This app's production form path is the full
- * remap: its extraction model returns the form, the employee and the warning
- * level as typed, What happened as the manager's own words after the request
- * clause ("ca for <name>, …" — the remap refuses a pasted message), "today"
- * as its `useToday` flag when the manager typed it, and NO date
- * (`incidentDateIso: null`, as Ask Sunny's production traces store it) — so
- * every date on the card is this app's own reading. The drafting model writes
- * no date.
+ * THE MODELS COPY THE MANAGER. This app's production form path is the
+ * intent read (the full remap is off in production): the intent model returns
+ * the employee, the form and the warning level as typed, and NO date — Ask
+ * Sunny's production traces store `incidentDate: null` for these turns — so
+ * every date on the card is this app's own reading. The remap's extraction
+ * stand-in (What happened as the manager's words after the request clause,
+ * "today" as `useToday`, no date) is kept for a profile with the remap on.
+ * The drafting model writes no date.
  *
- * NO NEW FLAG. Tests and data only; the flags below are production's.
+ * NO NEW FLAG. Tests and data only; the flags below are production's
+ * (Vercel, 26 Oct 2026 09:44Z; the full remap is off there).
  *
  * KNOWN GAPS (`GAPS`, at the bottom). A cell that fails on main runs as
  * `it.fails` with a `gap:` note naming its owner — Code 1 (PRIOR_SENTENCE_FIX,
@@ -50,41 +51,74 @@ import type { ChatFormProposal, ChatMessage } from "@/types";
  */
 
 /**
- * Ask Bubbles' production flag profile: the full remap (FORM_FULL_REMAP_ENABLED,
- * "on in production" in every route test here) with the warning level the
- * manager's only, the flags QA reads as on (`exit-intake-oct25.test.ts`:
- * NOT_A_NAME_GUARD, TYPED_NAME, FIELD_ACCURACY), plus the date and name fixes
- * known to be on — LATE_OPEN_DATE_ENABLED, PRIOR_ACTIONS_PARSE_ENABLED,
- * STATE_CODE_NOT_A_PERSON_ENABLED. Intent extraction is off in this app's
- * production, and the fixes still being built (PRIOR_SENTENCE_FIX,
- * LATE_OPEN_DATE_FIX, DATE_READER_WIDE, the edit date rules,
- * EXIT_INTAKE_FIX) are off: their cells are gaps.
+ * ASK BUBBLES' PRODUCTION FLAGS, EXACTLY AS READ FROM VERCEL PRODUCTION
+ * (26 Oct 2026 09:44Z; the coordinator's relay, "Authoritative production flag
+ * lists"). Every flag below is on; every flag in PROD_OFF is 0 or not set
+ * there; any flag in neither list stays at its code default (off), as in
+ * production. FORM_FULL_REMAP is false in production (QA).
+ * WOVEN_* in that read are Woven connection settings and credentials, not
+ * on/off flags; the matrix makes no Woven call. NEXT_PUBLIC_REMAP_DRAFT_SOURCES
+ * (=0) is the browser's copy and is not read by these routes.
+ * The fixes still being built (PRIOR_SENTENCE_FIX, LATE_OPEN_DATE_FIX,
+ * DATE_READER_WIDE, the edit date rules) are off: their cells are gaps.
+ * When production changes, change these lists and re-tag the gaps.
  */
 const PROD_FLAGS = [
-  "FORM_FULL_REMAP_ENABLED",
-  "WARNING_LEVEL_MANAGER_ONLY_ENABLED",
-  "NOT_A_NAME_GUARD_ENABLED",
-  "TYPED_NAME_ENABLED",
-  "FIELD_ACCURACY_ENABLED",
-  "LATE_OPEN_DATE_ENABLED",
-  "PRIOR_ACTIONS_PARSE_ENABLED",
+  "APP_PASSWORD_HELP_ENABLED",
+  "DRAFT_NEVER_BLANK_ENABLED",
+  "DRAFT_REUSE_SAME_CHAT_ONLY_ENABLED",
+  "EXIT_INTAKE_FIX_ENABLED",
+  "LATE_OPEN_PAYROLL_FROM_FORM_ENABLED",
+  "MANUAL_NEGATED_LIST_NOTE_ENABLED",
+  "NAME_BEFORE_TITLE_ENABLED",
+  "POLICY_SPECIFIC_TOPICS_ENABLED",
+  "REOPEN_VERB_GUARD_ENABLED",
   "STATE_CODE_NOT_A_PERSON_ENABLED",
+  "ACTION_PLAN_MANAGER_ONLY_ENABLED",
+  "ACTION_PLAN_SENTENCES_ENABLED",
+  "CA_TEMPLATE_MAP_ENABLED",
+  "CHAT_TRACE_ENABLED",
+  "CONVERSATION_DRAFT_REUSE_ENABLED",
+  "CROSS_CHAT_REPLY_GUARD_ENABLED",
+  "DRAFT_ACTIONS_ENABLED",
+  "FIELD_ACCURACY_ENABLED",
+  "FORM_CHOICE_STATED_ENABLED",
+  "FORM_STATE_ENABLED",
+  "FULL_MANUAL_CONTEXT_ENABLED",
+  "GLOBAL_STORE_ASK_ENABLED",
+  "GOOGLE_REVIEWS_SCHEDULE_ENABLED",
+  "GOOGLE_REVIEWS_SYNC_ENABLED",
+  "GOOGLE_REVIEWS_WRITES_ENABLED",
+  "GROUNDED_ENTITIES_ENABLED",
+  "INTENT_EXTRACTION_ENABLED",
+  "KEEP_FORM_EMPLOYEE_ENABLED",
+  "LATE_OPEN_DATE_ENABLED",
+  "NOT_A_NAME_GUARD_ENABLED",
+  "PAYROLL_DEDUCT_AMOUNT_ENABLED",
+  "PLACE_SPAN_GUARD_ENABLED",
+  "PRINTED_PAGE_ONLY_ENABLED",
+  "PRIOR_ACTIONS_PARSE_ENABLED",
+  "PROMPT_CACHE_ENABLED",
+  "REMAP_DRAFT_SOURCES_ENABLED",
+  "REMAP_INCIDENT_FIX_ENABLED",
+  "SLOT_RETENTION_ENABLED",
+  "TITLE_WHOLE_WORD_ENABLED",
+  "TYPED_NAME_ENABLED",
+  "WARNING_LEVEL_MANAGER_ONLY_ENABLED",
 ] as const;
 
-/** Off in production; cleared so a developer's shell cannot change the matrix. */
+/** 0 or not set in production, and the fixes in progress; cleared so a developer's shell cannot change the matrix. */
 const PROD_OFF = [
-  "INTENT_EXTRACTION_ENABLED",
-  "CODE_SLOTS_ENABLED",
-  "FORM_STATE_ENABLED",
-  "SLOT_RETENTION_ENABLED",
+  "FORM_DATE_INCIDENT_ONLY_ENABLED",
+  "SENSITIVE_DEFAULTS_REDACT_ENABLED",
+  "TERSE_SLOT_READ_ENABLED",
+  "FORM_FULL_REMAP_ENABLED",
   "MANAGER_WORDS_ONLY_ENABLED",
-  "CHAT_MEMORY_ENABLED",
-  "SELF_CHECK_ENABLED",
-  "FORM_EDIT_DATE_RULES_ENABLED",
-  "EXIT_INTAKE_FIX_ENABLED",
+  "INTENT_PAYROLL_MANAGER_ONLY_ENABLED",
   "PRIOR_SENTENCE_FIX_ENABLED",
   "LATE_OPEN_DATE_FIX_ENABLED",
   "DATE_READER_WIDE_ENABLED",
+  "FORM_EDIT_DATE_RULES_ENABLED",
 ] as const;
 
 /** This app's place for a live sentence's `{place}`. */
@@ -167,8 +201,9 @@ vi.mock("@/lib/ai/call-claude", () => ({
     return {
       employee: state.raw.employee ?? null,
       store: null,
-      title: null,
-      incidentType: null,
+      title: state.raw.title ?? null,
+      // What happened, copied: the manager's account after the request clause.
+      incidentType: state.raw.observation ?? null,
       incidentDate: null,
       payrollAmount: null,
       warningLevel: state.raw.warningLevel ?? null,
@@ -339,6 +374,7 @@ function copiesTheManager(said: string): Record<string, unknown> {
     warningLevel: /\bwritten\b/i.test(said) && !/written warning (?:on|\d)/i.test(said) ? "written" : /\bverbal\b(?! warning)/i.test(said) ? "verbal" : null,
     // The manager's account after the request ("ca for <name>, …"): the model may not paste the whole message.
     saysToday: /\btoday\b/i.test(said),
+    title: /\bteam member\b/i.exec(said)?.[0] ?? null,
     observation: said.replace(/\n/g, " ").replace(new RegExp(`^.*?${NAMES.source}[,.]?\\s*`, "i"), "") || null,
   };
 }
@@ -352,8 +388,18 @@ async function converse(testCase: DateMatrixCase) {
   let proposal: ChatFormProposal | null = null;
   let instanceId: string | null = null;
   const replies: Answer[] = [];
-  for (const [index, question] of testCase.turns.entries()) {
-    state.raw = copiesTheManager(testCase.turns.slice(0, index + 1).join("\n"));
+  /*
+   * THE SLOT ANSWER A MANAGER GIVES. With the full remap off (production), a
+   * create turn that names no job title, store or level is answered "I still
+   * need which store, the job title, …" and no card. The manager then answers
+   * those — never with a date — once, and the case goes on. Who and where only:
+   * "team member at <this app's store>, verbal".
+   */
+  const turns = [...testCase.turns];
+  let answered = false;
+  for (let index = 0; index < turns.length; index += 1) {
+    const question = turns[index]!;
+    state.raw = copiesTheManager(turns.slice(0, index + 1).join("\n"));
     const continuation = instanceId ? null : continuationFor(messages);
     const id = `m${index + 1}`;
     const response = await chatRoute.POST(
@@ -391,6 +437,14 @@ async function converse(testCase: DateMatrixCase) {
     );
     if (payload.formProposal) proposal = payload.formProposal;
     if (payload.formOpened) instanceId = toUuid(payload.formOpened.instanceId);
+    if (!answered && !payload.formProposal && /\bI still need\b/i.test(payload.content)) {
+      answered = true;
+      const parts = [/job title/i.test(payload.content) ? "team member" : "", /which store/i.test(payload.content) ? `at ${PLACE}` : ""]
+        .filter(Boolean)
+        .join(" ");
+      const answer = [parts, /verbal or written/i.test(payload.content) ? "verbal" : ""].filter(Boolean).join(", ");
+      if (answer) turns.splice(index + 1, 0, answer);
+    }
   }
   return { replies, messages, proposal };
 }
@@ -444,6 +498,13 @@ function agreed(card: string | null, draft: string | null | undefined): string |
   if (draft === undefined || card === draft) return card;
   return `card ${card ?? "blank"} / draft ${draft ?? "blank"}`;
 }
+
+/** The profile's own flags on top of production's, set before each case. */
+const askWith = (flags: readonly string[]) => async (testCase: DateMatrixCase) => {
+  for (const name of PROD_OFF) delete process.env[name];
+  for (const name of flags) process.env[name] = "true";
+  return ask(testCase);
+};
 
 async function ask(testCase: DateMatrixCase): Promise<FormReading> {
   const today = testCase.today;
@@ -659,4 +720,4 @@ const GAPS: Record<string, string> = {
  */
 const IN_FLAGS_OFF_PARITY_CHILD = process.env.FLAGS_OFF_PARITY_CHILD === "1";
 
-runDateMatrix({ app: "Ask Bubbles", ask, gaps: GAPS, place: PLACE, skip: IN_FLAGS_OFF_PARITY_CHILD });
+runDateMatrix({ app: "Ask Bubbles", ask: askWith([]), gaps: GAPS, place: PLACE, skip: IN_FLAGS_OFF_PARITY_CHILD });
