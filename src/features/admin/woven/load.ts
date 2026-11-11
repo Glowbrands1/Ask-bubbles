@@ -6,6 +6,8 @@ import { supabaseReadiness } from "@/lib/config/server-env";
 import { loadAccessPreviewRows } from "@/lib/employees/woven/access-preview";
 import { readWovenAccessMode, type WovenAccessMode } from "@/lib/employees/woven/access/config";
 import { loadAccessPlan, type AccessPlan } from "@/lib/employees/woven/access/load";
+import { AutoSyncError, readAutoSync, wovenCronSchedule } from "@/lib/employees/woven/auto-sync";
+import { describeDaily, nextDailyRun } from "@/lib/employees/woven/auto-sync-schedule";
 import { readWovenConfig } from "@/lib/employees/woven/config";
 import { validationAccessCodeConfigured } from "@/lib/employees/woven/validation-access";
 import { loadChangePage, loadDirectoryRows, loadEmployeeDetail, loadRuns } from "@/lib/employees/woven/directory";
@@ -65,6 +67,21 @@ export type DatabaseState =
   | { state: "unavailable"; code: string | null }
   | { state: "unconfigured" };
 
+/**
+ * THE AUTO SYNC PANEL'S DATA. The setting comes from the database; the schedule
+ * from THIS BUILD'S vercel.json; the readiness checks from the same switches the
+ * server route enforces. Nothing is declared by hand.
+ */
+export interface AutoSyncPanelData {
+  setting: { state: "ready"; enabled: boolean; updatedAt: string | null } | { state: "missing" } | { state: "unavailable"; code: string | null };
+  /** null: this build does not schedule the cron at all. */
+  schedule: { expression: string; description: string | null; nextRunAt: string | null } | null;
+  readiness: { syncReady: boolean; writesEnabled: boolean; scheduled: boolean; directorySaved: boolean };
+  lastSuccessAt: string | null;
+  lastScheduledSuccessAt: string | null;
+  recentRuns: { id: string; startedAt: string; scheduled: boolean; status: string; errorCode: string | null; employeesReceived: number; changesRecorded: number }[];
+}
+
 export interface WovenSyncPageProps {
   /** WOVEN_SYNC_ENABLED: "Run employee sync" may be used. */
   enabled: boolean;
@@ -86,6 +103,8 @@ export interface WovenSyncPageProps {
   /** Login-eligible email domains. Not secret. Empty: nobody is login-eligible. */
   loginEmailDomains: string[];
   database: DatabaseState;
+  /** The Auto Sync panel; null in demo builds, which read nothing live. */
+  autoSync: AutoSyncPanelData | null;
   /** The Overview's cards, when they could be read (or the sample's, in a demo build). */
   overview: OverviewCounts | null;
   /** The sample label when this screen is showing sample data. */
@@ -114,21 +133,64 @@ export async function loadWovenSyncPage(): Promise<WovenSyncPageProps> {
     sampleLabel: sample?.label ?? null,
   };
 
-  if (!supabaseReadiness().ready) return { ...base, database: { state: "unconfigured" } };
+  if (!supabaseReadiness().ready) return { ...base, autoSync: null, database: { state: "unconfigured" } };
 
   try {
     const status = await readWovenSyncStatus();
     const overview = sample ? sample.overview : await readOverviewCounts();
-    return { ...base, overview, database: { state: "ready", status } };
+    const autoSync = sample || isDemoMode() ? null : await loadAutoSyncPanel(config, status);
+    /* The schedule step reads the DATABASE setting, not the retired environment switch. */
+    const scheduleEnabled = autoSync?.setting.state === "ready" ? autoSync.setting.enabled : false;
+    return { ...base, scheduleEnabled, autoSync, overview, database: { state: "ready", status } };
   } catch (error) {
     if (error instanceof WovenStatusError && error.reason === "missing") {
-      return { ...base, database: { state: "missing" } };
+      return { ...base, autoSync: null, database: { state: "missing" } };
     }
     return {
       ...base,
+      autoSync: null,
       database: { state: "unavailable", code: error instanceof WovenStatusError ? error.code : null },
     };
   }
+}
+
+async function loadAutoSyncPanel(config: ReturnType<typeof readWovenConfig>, status: WovenSyncStatus): Promise<AutoSyncPanelData> {
+  const cron = wovenCronSchedule();
+  const schedule = cron
+    ? {
+        expression: cron.expression,
+        description: cron.daily ? describeDaily(cron.daily) : null,
+        nextRunAt: cron.daily ? nextDailyRun(cron.daily, new Date()).toISOString() : null,
+      }
+    : null;
+  let setting: AutoSyncPanelData["setting"];
+  try {
+    const read = await readAutoSync();
+    setting = { state: "ready", enabled: read.enabled, updatedAt: read.updatedAt };
+  } catch (error) {
+    setting = error instanceof AutoSyncError && error.code === "setting_missing" ? { state: "missing" } : { state: "unavailable", code: error instanceof AutoSyncError ? error.code : null };
+  }
+  return {
+    setting,
+    schedule,
+    readiness: {
+      syncReady: !config.tenantProblem && config.enabled && config.missingCredentials.length === 0,
+      writesEnabled: config.writesEnabled,
+      scheduled: schedule !== null,
+      directorySaved: status.lastSuccessAt !== null,
+    },
+    lastSuccessAt: status.lastSuccessAt,
+    lastScheduledSuccessAt: status.lastCronSuccessAt,
+    recentRuns: status.recentRuns.slice(0, 8).map((r) => ({
+      id: r.id,
+      startedAt: r.startedAt,
+      scheduled: r.requestedBy === "cron",
+      status: r.status,
+      errorCode: r.errorCode,
+      employeesReceived: r.employeesReceived,
+      changesRecorded: r.changesRecorded,
+    })),
+  };
 }
 
 /* ------------------------------------------------------------- the tabs -- */

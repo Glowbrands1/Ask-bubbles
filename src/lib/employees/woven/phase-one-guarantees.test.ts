@@ -284,10 +284,14 @@ describe("7. no employee-sync UI, route or library code can reach app_users, aut
     "employee_directory_login_matches", "employee_access_preview", "locations",
     /* The access planner (stage 1): accounts through a read-only VIEW, the links, and the shadow record. */
     "employee_access_accounts", "employee_account_links", "employee_access_runs", "employee_access_actions",
+    /* The Auto Sync on/off setting: one row, defaults off, touches no account (auto-sync.db.test.ts). */
+    "employee_sync_settings",
   ]);
   const RPCS = new Set([
     "employee_sync_claim_run", "employee_sync_commit_run", "employee_sync_abandon_run",
     "woven_location_map_review", "woven_position_map_review",
+    /* Writes ONLY employee_sync_settings / employee_sync_setting_audit; refuses ON before a directory is saved. */
+    "employee_sync_set_auto",
     /* Writes ONLY employee_access_runs / employee_access_actions, mode shadow (asserted below against the SQL). */
     "employee_access_record_shadow_run",
   ]);

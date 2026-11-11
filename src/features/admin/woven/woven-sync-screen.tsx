@@ -6,6 +6,7 @@ import { PageShell, SectionHeader } from "@/components/ui/layout";
 import type { WovenSyncPageProps } from "./load";
 import { SummaryCards } from "./summary-cards";
 import { WovenHeader } from "./tabs";
+import { AutoSyncPanel } from "./auto-sync-panel";
 import { SyncPanel } from "./sync-panel";
 import { ValidationPanel } from "./validation-panel";
 
@@ -260,6 +261,8 @@ export function WovenSyncScreen(props: WovenSyncPageProps) {
         </Notice>
       )}
 
+      {props.autoSync ? <AutoSyncPanel data={props.autoSync} /> : null}
+
       <SectionHeader title="Go-live steps" description="Each one is read from this deployment, not typed in." />
       <ol className="mb-8 flex flex-col divide-y divide-border rounded-[var(--radius-md)] border border-border bg-surface">
         {steps.map((step) => (
@@ -279,6 +282,7 @@ export function WovenSyncScreen(props: WovenSyncPageProps) {
         accessCodeRequired={!props.liveMode}
       />
 
+      <div id="manual-sync">
       <SyncPanel
         writesEnabled={props.syncWritesEnabled}
         available={props.liveMode && props.enabled && props.missingCredentials.length === 0}
@@ -292,6 +296,7 @@ export function WovenSyncScreen(props: WovenSyncPageProps) {
                 : null
         }
       />
+      </div>
 
       <SectionHeader title="Built" description="Ships in this build and is covered by automated tests." />
       <ul className="mb-8 grid gap-3 sm:grid-cols-2">

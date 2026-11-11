@@ -38,6 +38,7 @@ const BASE: WovenSyncPageProps = {
   credentialSource: null,
   loginEmailDomains: [],
   database: { state: "missing" },
+  autoSync: null,
   overview: null,
   sampleLabel: null,
 };
