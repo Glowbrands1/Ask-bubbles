@@ -147,3 +147,31 @@ describe("a reversed name in \"Corrective action for Team Member Wren Tallis\": 
     expect(state.visibilityCalls).toEqual([{ subject: "user-1", role: "location_manager", scope: KEARNEY_ONLY }]);
   });
 });
+
+describe("FORMS_ON_FILE_ORDER_MATCH_POSSIBLE: a reversed name is a possible match, never the person's own", () => {
+  const FLAG = "FORMS_ON_FILE_ORDER_MATCH_POSSIBLE_ENABLED";
+
+  it("flag off (as on main 8ff2e3ba): \"Tallis Wren\" is listed as naming the person asked about", async () => {
+    delete process.env[FLAG];
+    wornallDrafts();
+    const block = await blockFor("admin", EVERY_STORE);
+    expect(block).toMatch(/Forms naming the person in the question \(\d+\)[\s\S]*Tallis Wren/);
+  });
+
+  it("flag on: \"Tallis Wren\" is a possible match, and \"Wren Tallis\" still names them", async () => {
+    process.env[FLAG] = "true";
+    try {
+      wornallDrafts();
+      const reversed = await blockFor("admin", EVERY_STORE);
+      expect(reversed).not.toMatch(/Forms naming the person in the question/);
+      expect(reversed).toMatch(/Possible matches[\s\S]*Tallis Wren/);
+
+      store.form_instances.length = 0;
+      store.form_instances.push(row({ employee_name: "Wren Tallis", location_id: WORNALL, location_name: "MO Kansas City Wornall" }));
+      const same = await blockFor("admin", EVERY_STORE);
+      expect(same).toMatch(/Forms naming the person in the question \(1\)[\s\S]*Wren Tallis/);
+    } finally {
+      delete process.env[FLAG];
+    }
+  });
+});

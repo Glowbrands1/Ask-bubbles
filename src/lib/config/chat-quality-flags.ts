@@ -1267,6 +1267,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "TITLE_NOT_PART_OF_NAME_ENABLED",
   // coding 4: TITLE_BEFORE_NAME (Bubbles 17h live test, QA, 11 Nov 2026; default off).
   "TITLE_BEFORE_NAME_ENABLED",
+  // coding 4: FORMS_ON_FILE_ORDER_MATCH_POSSIBLE (Bubbles 17h live test, QA, 11 Nov 2026; default off).
+  "FORMS_ON_FILE_ORDER_MATCH_POSSIBLE_ENABLED",
   "TAKE_OFF_STAYS_CARD_ENABLED",
   // coding 4: ACCOUNT_PLACE_LEAD (round 6; default off): forced off with the others.
   "ACCOUNT_PLACE_LEAD_ENABLED",
@@ -4468,4 +4470,14 @@ export function formForForTypoEnabled(): boolean {
  */
 export function titleBeforeNameEnabled(): boolean {
   return envFlag("TITLE_BEFORE_NAME_ENABLED");
+}
+
+/**
+ * FORMS_ON_FILE_ORDER_MATCH_POSSIBLE_ENABLED (QA's Bubbles 17h live test, 11 Nov 2026; default off). The FORMS ON FILE
+ * block counts a row as naming the person when every word of its employee name is in the question, in any order, so
+ * drafts filed as "<last> <first>" were listed as the asked person's own. On: a name whose words are all there but in
+ * another order is a POSSIBLE match, for the model to ask about (`forms/chat-form-records.ts`). Off, as before.
+ */
+export function formsOnFileOrderMatchPossibleEnabled(): boolean {
+  return envFlag("FORMS_ON_FILE_ORDER_MATCH_POSSIBLE_ENABLED");
 }
