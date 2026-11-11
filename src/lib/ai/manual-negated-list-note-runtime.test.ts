@@ -292,15 +292,21 @@ describe("conv_mvnoscyz200gtat — the full manual is loaded (the live path)", (
   });
 
   it("the retrieval retry after an uncited reply carries the note too", async () => {
-    state.reply = "An answer with no page.";
-    await run(B9_QUESTION, undefined);
-    const offRetry = state.calls[1];
-    await run(B9_QUESTION, "1");
-    const onRetry = state.calls[1];
-    expect(offRetry?.cachedContext).toBeUndefined();
-    expect(offRetry?.grounding).toContain("charging in the break room");
-    expect(offRetry?.grounding).not.toContain("Reading note");
-    expect(onRetry?.grounding).toBe(`${offRetry?.grounding}\n\n${NOTE_BLOCK}`);
+    // An OFF pin: with FULL_MANUAL_WIDE_GATE on (flags-on runs), the uncited reply takes the wide gate, not this retry.
+    vi.stubEnv("FULL_MANUAL_WIDE_GATE_ENABLED", "");
+    try {
+      state.reply = "An answer with no page.";
+      await run(B9_QUESTION, undefined);
+      const offRetry = state.calls[1];
+      await run(B9_QUESTION, "1");
+      const onRetry = state.calls[1];
+      expect(offRetry?.cachedContext).toBeUndefined();
+      expect(offRetry?.grounding).toContain("charging in the break room");
+      expect(offRetry?.grounding).not.toContain("Reading note");
+      expect(onRetry?.grounding).toBe(`${offRetry?.grounding}\n\n${NOTE_BLOCK}`);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   /*
