@@ -104,6 +104,7 @@ describe('"Opening Checklist Copy" with the same content as the live "Shift Chec
   const SAME = [{ id: "doc-shift", title: "Shift Checklist" }];
 
   it("off (production today): indexed a second time (the bug)", async () => {
+    process.env[FLAG] = "";
     const { ops, inserted, ingestDocument } = await load({ sameContent: SAME });
     await ingestDocument(woven("Opening Checklist Copy"));
     expect(verdict(ops)).toMatchObject({ status: "indexed" });

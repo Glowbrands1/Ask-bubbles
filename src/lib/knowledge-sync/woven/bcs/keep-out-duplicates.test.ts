@@ -75,6 +75,7 @@ afterEach(() => vi.unstubAllEnvs());
 
 describe("keep one document out of Ask Bubbles", () => {
   it("off (production today): a stored choice is ignored; the document stays live", async () => {
+    vi.stubEnv("WOVEN_DOCUMENT_KEEP_OUT_ENABLED", "");
     const h = await synced();
     const target = h.live()[0]!;
     await h.keepOut(target);
