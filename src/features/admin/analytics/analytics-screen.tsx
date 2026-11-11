@@ -90,6 +90,7 @@ export function AnalyticsScreen({
   feedback,
   queueFilters,
   feedbackPage,
+  demoNotice = null,
 }: {
   view: AnalyticsView;
   filters: AnalyticsFilters;
@@ -106,6 +107,8 @@ export function AnalyticsScreen({
    * complaints.
    */
   feedbackPage: FeedbackPage | null;
+  /** Demo builds only: says the figures below are invented. */
+  demoNotice?: React.ReactNode;
 }) {
   const { totals, previous, window } = snapshot;
 
@@ -142,6 +145,8 @@ export function AnalyticsScreen({
         title="Analytics"
         description={`Who is using ${ACTIVE_BRAND.productName}, from which location, how often, and what for.`}
       />
+
+      {demoNotice}
 
       <div className="space-y-4">
         <AnalyticsFilterBar

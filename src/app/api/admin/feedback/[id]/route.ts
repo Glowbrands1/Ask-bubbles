@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 
+import { isDemoMode } from "@/lib/config/runtime";
+import { isDemoFeedbackId, moderateDemoFeedback } from "@/lib/demo/analytics-fixtures";
+
 import {
   assertLiveMode,
   assertNoConfigurationProblems,
@@ -74,6 +77,26 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    // DEMO BUILD ONLY: moderates the invented feedback (`lib/demo/analytics-fixtures.ts`), in memory.
+    if (isDemoMode()) {
+      const { id } = await params;
+      if (!isDemoFeedbackId(id)) {
+        return NextResponse.json({ error: "That feedback was not found." }, { status: 404 });
+      }
+      const body = (await request.json().catch(() => ({}))) as {
+        status?: unknown;
+        resolutionNote?: unknown;
+        hidden?: unknown;
+      };
+      moderateDemoFeedback(id, {
+        ...(isFeedbackStatus(body.status) ? { status: body.status } : {}),
+        ...(typeof body.resolutionNote === "string" || body.resolutionNote === null
+          ? { resolutionNote: body.resolutionNote as string | null }
+          : {}),
+        ...(typeof body.hidden === "boolean" ? { hidden: body.hidden } : {}),
+      });
+      return NextResponse.json({ ok: true });
+    }
     assertLiveMode();
     assertNoConfigurationProblems();
     const context = await authorizeRequest(request, "view_analytics");
@@ -169,6 +192,14 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    if (isDemoMode()) {
+      const { id } = await params;
+      if (!isDemoFeedbackId(id)) {
+        return NextResponse.json({ error: "That feedback was not found." }, { status: 404 });
+      }
+      moderateDemoFeedback(id, { deleted: true });
+      return NextResponse.json({ ok: true, deleted: id });
+    }
     assertLiveMode();
     assertNoConfigurationProblems();
     await authorizeRequest(request, "view_analytics");

@@ -64,7 +64,13 @@
  * client id format below in any case; the list stays so a future seed is
  * excluded by name rather than by accident.
  */
-export const DEMO_SEED_CONVERSATION_IDS: readonly string[] = [];
+export const DEMO_SEED_CONVERSATION_IDS: readonly string[] = [
+  // DEMO BRANCH: the invented History threads in `data/demo/chat.ts`.
+  "demo-conv-opening",
+  "demo-conv-guest",
+  "demo-conv-attendance",
+  "demo-conv-holiday",
+];
 const DEMO_CONVERSATION_IDS = DEMO_SEED_CONVERSATION_IDS;
 
 /** Column bound in `chat_conversations` / `chat_messages`. */

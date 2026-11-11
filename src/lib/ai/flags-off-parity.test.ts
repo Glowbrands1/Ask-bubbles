@@ -147,6 +147,21 @@ const UI_PATHS = ["src/app/**/*.tsx", "src/components/**", "src/features/**/*.ts
  * off, it renders as before for every role.
  */
 const ALLOWED_UI = [
+  /*
+   * DEMO BRANCH ONLY (demo-bubbles-forms, never merged): these screens draw
+   * invented data when isDemoMode() is true. Every change is gated on demo
+   * mode; the live render is unchanged.
+   */
+  "src/app/(app)/admin/ai-usage/page.tsx",
+  "src/app/(app)/admin/analytics/page.tsx",
+  "src/app/(app)/admin/analytics/[view]/page.tsx",
+  "src/app/(app)/forms/monitoring/page.tsx",
+  "src/app/(app)/forms/templates/page.tsx",
+  "src/app/(app)/forms/templates/[key]/page.tsx",
+  "src/components/demo-content-notice.tsx",
+  "src/features/admin/ai-usage-demo.tsx",
+  "src/features/admin/analytics/analytics-screen.tsx",
+  "src/features/forms/demo-forms-register.tsx",
   // District Manager, 3 Nov 2026 (QA approved 5 Nov, Pau 6 Nov): the Reviews page and the admin Google Reviews
   // screen show the company's store number (Dawley Farms: 309; its Google code 338 stays the match key). Unflagged:
   // it is a data correction, identical for every store whose number is its code.

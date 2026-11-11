@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { isDemoMode } from "@/lib/config/runtime";
+import { demoSyncResult, demoTemplateSummaries } from "@/lib/demo/template-fixtures";
 
 import { assertWithinRateLimit, errorResponse } from "@/lib/api/respond";
 import { authorizeForms } from "@/lib/forms/access";
@@ -21,7 +23,8 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   try {
     await authorizeForms(request, "manage_form_templates");
-    const templates = await listTemplateSummaries();
+    // DEMO BUILD ONLY: the seed library, drawn as installed.
+    const templates = isDemoMode() ? demoTemplateSummaries() : await listTemplateSummaries();
     return NextResponse.json({ templates });
   } catch (error) {
     return errorResponse(error, "forms/templates");
@@ -32,6 +35,8 @@ export async function POST(request: Request) {
   try {
     const actor = await authorizeForms(request, "manage_form_templates");
     assertWithinRateLimit(request, "upload");
+    // DEMO BUILD ONLY: a sync that finds everything up to date, and touches nothing.
+    if (isDemoMode()) return NextResponse.json(demoSyncResult());
     const result = await ensureTemplateLibrary(actor.id);
     /*
      * REFUSED ON A PREVIEW, AND SAID SO. A 200 with empty lists would read as

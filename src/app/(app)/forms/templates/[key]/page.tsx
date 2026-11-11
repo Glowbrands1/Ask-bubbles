@@ -12,6 +12,8 @@ import {
 import { TemplateEditorScreen } from "@/features/forms/template-editor-screen";
 import { requirePagePermission } from "@/lib/auth/page";
 import { supabaseSecretKeyConfigured } from "@/lib/config/server-env";
+import { isDemoMode } from "@/lib/config/runtime";
+import { demoTemplate } from "@/lib/demo/template-fixtures";
 
 export const metadata: Metadata = { title: "Edit template" };
 export const dynamic = "force-dynamic";
@@ -30,18 +32,24 @@ export default async function EditTemplatePage({
 }) {
   await requirePagePermission("manage_form_templates");
 
+  const demoMode = isDemoMode();
   /* No forms database in this deployment: there is no template to edit. */
-  if (!supabaseSecretKeyConfigured()) notFound();
+  if (!demoMode && !supabaseSecretKeyConfigured()) notFound();
 
   const { key } = await params;
-  const template = await getTemplateByKey(key);
+  /* DEMO BUILD ONLY: the seed library's template, with an invented version history. */
+  const demo = demoMode ? demoTemplate(key) : null;
+  if (demoMode && !demo) notFound();
+  const template = demo ? demo.template : await getTemplateByKey(key);
   if (!template) notFound();
 
-  const [versions, current, assets] = await Promise.all([
-    listVersions(template.id),
-    getCurrentVersion(template.id),
-    listAssets(template.id),
-  ]);
+  const [versions, current, assets] = demo
+    ? [demo.versions, demo.current, demo.assets]
+    : await Promise.all([
+        listVersions(template.id),
+        getCurrentVersion(template.id),
+        listAssets(template.id),
+      ]);
 
   return (
     <PermissionGate permission="manage_form_templates">

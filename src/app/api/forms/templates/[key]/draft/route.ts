@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
 import { errorResponse } from "@/lib/api/respond";
+import { isDemoMode } from "@/lib/config/runtime";
+import { demoTemplate } from "@/lib/demo/template-fixtures";
 import { authorizeForms } from "@/lib/forms/access";
 import { parseFormDocument, parseFormVariants } from "@/lib/forms/document";
 import {
@@ -35,6 +37,18 @@ export async function POST(request: Request, context: { params: Promise<{ key: s
   try {
     const actor = await authorizeForms(request, "manage_form_templates");
     const { key } = await context.params;
+    /*
+     * DEMO BUILD ONLY: a draft that lives in the editor's own state. It is
+     * cloned from the current version and never stored; publishing is refused.
+     */
+    if (isDemoMode()) {
+      const current = demoTemplate(key)?.current;
+      if (!current) return NextResponse.json({ error: "No such form template." }, { status: 404 });
+      return NextResponse.json({
+        draft: { ...current, id: `demo-draft-${key}`, version: current.version + 1, status: "draft", publishedAt: null, publishedBy: null, notes: "" },
+        clonedFrom: current.version,
+      });
+    }
     const template = await resolve(key);
     const result = await openDraft(template.id, actor.id);
     return NextResponse.json(result);
@@ -47,7 +61,7 @@ export async function PUT(request: Request, context: { params: Promise<{ key: st
   try {
     await authorizeForms(request, "manage_form_templates");
     const { key } = await context.params;
-    await resolve(key);
+    if (!isDemoMode()) await resolve(key);
 
     const body = (await request.json().catch(() => null)) as {
       versionId?: string;
@@ -57,6 +71,24 @@ export async function PUT(request: Request, context: { params: Promise<{ key: st
     } | null;
     if (!body?.versionId || !body.document) {
       return NextResponse.json({ error: "A draft and a document are required." }, { status: 400 });
+    }
+    // DEMO BUILD ONLY: checked and echoed back, never stored.
+    if (isDemoMode()) {
+      const current = demoTemplate(key)?.current;
+      if (!current) return NextResponse.json({ error: "No such form template." }, { status: 404 });
+      return NextResponse.json({
+        draft: {
+          ...current,
+          id: body.versionId,
+          version: current.version + 1,
+          status: "draft",
+          document: parseFormDocument(body.document),
+          variants: parseFormVariants(body.variants ?? []),
+          notes: body.notes ?? "",
+          publishedAt: null,
+          publishedBy: null,
+        },
+      });
     }
 
     // Parsed here as well as in the repository: a document the reader cannot
@@ -76,6 +108,8 @@ export async function DELETE(request: Request, context: { params: Promise<{ key:
   try {
     await authorizeForms(request, "manage_form_templates");
     const { key } = await context.params;
+    // DEMO BUILD ONLY: the draft only ever lived in the editor.
+    if (isDemoMode()) return NextResponse.json({ discarded: true });
     await resolve(key);
 
     const { searchParams } = new URL(request.url);

@@ -26,6 +26,10 @@ import {
 import { pageFormsAccess } from "@/lib/forms/page-scope";
 import { supabaseSecretKeyConfigured } from "@/lib/config/server-env";
 import { privateAwareLimit, privateCreatorsActive } from "@/lib/forms/private-creators";
+import { isDemoMode } from "@/lib/config/runtime";
+import { demoFormsFor } from "@/lib/demo/forms-fixtures";
+import { DemoContentNotice } from "@/components/demo-content-notice";
+import { DemoFormsRegister, type DemoMonitoredForm } from "@/features/forms/demo-forms-register";
 
 export const metadata: Metadata = { title: "Forms Register" };
 export const dynamic = "force-dynamic";
@@ -73,11 +77,48 @@ export default async function FormMonitoringPage({
   let attention = { overdue: 0, dueThisWeek: 0, needsAttention: 0 };
   let demo = { deletable: 0, protected: 0 };
   let failure: string | null = null;
-  const connected = supabaseSecretKeyConfigured();
-  const access = connected ? await pageFormsAccess(identity) : null;
+  /*
+   * DEMO BUILD ONLY: invented forms (`lib/demo/forms-fixtures.ts`), scoped to
+   * the previewed role's stores, rendered through the real table.
+   */
+  const demoMode = isDemoMode();
+  const connected = demoMode || supabaseSecretKeyConfigured();
+  const access = connected && !demoMode ? await pageFormsAccess(identity) : null;
   const noStore = access?.noStore === true;
 
-  if (connected && access && !noStore) {
+  /* DEMO BUILD ONLY: every store's invented forms; `DemoFormsRegister` scopes them in the browser. */
+  let demoRows: DemoMonitoredForm[] = [];
+  let demoActive: DemoMonitoredForm[] = [];
+  if (demoMode) {
+    const everyone = { role: null, scopeLevel: null };
+    const toRow = (instance: ReturnType<typeof demoFormsFor>[number]): DemoMonitoredForm => ({
+      id: instance.id,
+      templateName: instance.templateName,
+      templateShortName: instance.templateShortName,
+      templateVersion: instance.templateVersion,
+      variantKey: instance.variantKey,
+      employeeName: instance.employeeName,
+      locationName: instance.locationName,
+      createdBy: instance.createdBy,
+      createdByRole: instance.createdByRole,
+      source: instance.source,
+      status: instance.status,
+      formDate: instance.formDate,
+      followUpDate: instance.followUpDate,
+      followedUpAt: instance.followedUpAt,
+      followedUpBy: instance.followedUpBy,
+      finalizedAt: instance.finalizedAt,
+      exportedAt: instance.exportedAt,
+      revisesInstanceId: instance.revisesInstanceId,
+      archivedAt: instance.archivedAt,
+      isDemo: false,
+      updatedAt: instance.updatedAt,
+      locationId: instance.locationId,
+      layoutFamily: instance.layoutFamily,
+    });
+    demoRows = demoFormsFor(everyone, view, today).map(toRow);
+    demoActive = demoFormsFor(everyone, "active", today).map(toRow);
+  } else if (connected && access && !noStore) {
     try {
       /*
        * NARROWED IN THE QUERY AND AGAIN ON THE ROWS RETURNED. `instanceListFilterFor`
@@ -166,6 +207,13 @@ export default async function FormMonitoringPage({
             {failure}
           </Notice>
         ) : (
+          <>
+          {demoMode ? (
+            <DemoContentNotice screen="Forms Register" contents="form, employee and follow-up" />
+          ) : null}
+          {demoMode ? (
+            <DemoFormsRegister forms={demoRows} active={demoActive} view={view} followUp={followUp} today={today} />
+          ) : (
           <MonitoringTable
             forms={forms}
             notice={formsIdentityIsUnverified() ? SYNTHETIC_DATA_NOTICE : null}
@@ -175,6 +223,8 @@ export default async function FormMonitoringPage({
             attention={attention}
             demo={demo}
           />
+          )}
+          </>
         )}
       </PageShell>
     </PermissionGate>

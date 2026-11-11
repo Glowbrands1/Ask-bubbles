@@ -1,4 +1,5 @@
 import { errorResponse } from "@/lib/api/respond";
+import { demoFormsRoute } from "@/lib/demo/forms-routes";
 import { authorizeInstance, InstanceNotVisibleError } from "@/lib/forms/instance-scope";
 import { markExported } from "@/lib/forms/instances";
 import { parseFormVariants } from "@/lib/forms/document";
@@ -22,6 +23,8 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await context.params;
+    const demo = demoFormsRoute(id, { kind: "pdf" });
+    if (demo) return demo;
     /*
      * A PDF IS THE WHOLE RECORD, so this needs the same location check as reading
      * it on screen. It asked only for `view_form_monitoring`, which every

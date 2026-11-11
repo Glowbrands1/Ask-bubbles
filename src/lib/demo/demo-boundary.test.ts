@@ -117,7 +117,13 @@ describe("the demo implementation still works", () => {
      * company's own templates — never seeded — so even the demo starts with
      * none in state.
      */
-    expect(seeds.conversations).toEqual([]);
+    /*
+     * DEMO BRANCH: History is seeded with a few invented past conversations
+     * (`data/demo/chat.ts`) so the History screen is not empty in the client
+     * demo. They are listed, never auto-opened: chat still starts fresh.
+     */
+    expect(seeds.conversations.length).toBeGreaterThan(0);
+    for (const conversation of seeds.conversations) expect(conversation.id).toMatch(/^demo-conv-/);
     expect(seeds.templates).toEqual([]);
     expect(seeds.forms).toEqual([]);
   });

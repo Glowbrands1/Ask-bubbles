@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { PermissionGate } from "@/components/permission-gate";
 import { AIUsageScreen } from "@/features/admin/ai-usage-screen";
 import { requirePagePermission } from "@/lib/auth/page";
+import { isDemoMode } from "@/lib/config/runtime";
+import { AIUsageDemoScreen } from "@/features/admin/ai-usage-demo";
 
 export const metadata: Metadata = {
   title: "AI Usage",
@@ -15,7 +17,8 @@ export default async function AIUsagePage() {
 
   return (
     <PermissionGate permission="view_ai_usage" adminOnly>
-      <AIUsageScreen />
+      {/* DEMO BUILD ONLY: invented spend; live has no usage source and says so. */}
+      {isDemoMode() ? <AIUsageDemoScreen /> : <AIUsageScreen />}
     </PermissionGate>
   );
 }

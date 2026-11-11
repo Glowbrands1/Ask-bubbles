@@ -1,4 +1,5 @@
 import type { ChatConversation } from "@/types";
+import { isoHoursFromAnchor } from "@/lib/utils/date";
 
 /**
  * Seeded chat content — DEMO CONTENT.
@@ -86,4 +87,52 @@ export const FALLBACK_ANSWER = {
     "That isn't covered by the demo knowledge base, so there's nothing to cite.\n\nIn a live deployment, every answer is grounded in the documents uploaded to the knowledge base and cites them. When the documents don't cover a question, the assistant says so plainly rather than inventing an answer.",
 };
 
-export const DEMO_CONVERSATIONS: ChatConversation[] = [];
+/**
+ * A few past conversations so History is not empty in a demo. Invented, and
+ * answered from the demo answer bank above — the same words the demo chat
+ * gives today. A new chat still opens on a fresh thread: these are listed,
+ * never auto-opened.
+ */
+function demoThread(
+  id: string,
+  title: string,
+  /** Hours before the demo clock (`DEMO_ANCHOR`), which stamps new demo turns too. */
+  hoursAgo: number,
+  turns: [question: string, answer: string][],
+): ChatConversation {
+  const messages = turns.flatMap(([question, answer], index) => {
+    const asked = isoHoursFromAnchor(-hoursAgo + index * 0.05);
+    const answered = new Date(Date.parse(asked) + 9_000).toISOString();
+    return [
+      { id: `${id}-q${index}`, role: "user" as const, content: question, createdAt: asked },
+      { id: `${id}-a${index}`, role: "assistant" as const, content: answer, createdAt: answered, mode: "standard" as const },
+    ];
+  });
+  return {
+    id,
+    title,
+    createdAt: messages[0]!.createdAt,
+    updatedAt: messages[messages.length - 1]!.createdAt,
+    messages,
+    attachedDocumentIds: [],
+  };
+}
+
+const answer = (id: string, length: "quick" | "standard" | "detailed" = "standard") =>
+  DEMO_ANSWERS.find((entry) => entry.id === id)?.[length] ?? FALLBACK_ANSWER.standard;
+
+export const DEMO_CONVERSATIONS: ChatConversation[] = [
+  demoThread("demo-conv-opening", "Opening checklist for Saturday", 2, [
+    ["What's the opening checklist for the store?", answer("ans-demo-opening")],
+    ["Can you give me that as steps?", answer("ans-demo-opening", "detailed")],
+  ]),
+  demoThread("demo-conv-guest", "Guest asked about ingredients", 27, [
+    ["A guest asked whether the oatmeal bar is safe for sensitive skin. What do I tell her?", answer("ans-demo-guest")],
+  ]),
+  demoThread("demo-conv-attendance", "Team member late three times", 4 * 24 + 3, [
+    ["One of my soap makers has been late three shifts this month. What's the attendance expectation?", answer("ans-demo-attendance")],
+  ]),
+  demoThread("demo-conv-holiday", "Holiday staffing question", 12 * 24 + 1, [
+    ["How many people should I schedule for Black Friday?", FALLBACK_ANSWER.standard],
+  ]),
+];

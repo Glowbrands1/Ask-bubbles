@@ -17,6 +17,9 @@ import { PermissionGate } from "@/components/permission-gate";
 import { supabaseSecretKeyConfigured } from "@/lib/config/server-env";
 import { describeError } from "@/lib/api/redact";
 import { TemplateSyncReport } from "@/features/forms/template-sync-report";
+import { isDemoMode } from "@/lib/config/runtime";
+import { demoSyncResult, demoTemplateSummaries } from "@/lib/demo/template-fixtures";
+import { DemoContentNotice } from "@/components/demo-content-notice";
 
 /**
  * FORM TEMPLATES — the authorized administration screen.
@@ -90,14 +93,16 @@ export default async function FormTemplatesPage() {
   /** What the sync did this visit, shown to the administrator. See `TemplateSyncReport`. */
   let syncResult: Awaited<ReturnType<typeof ensureTemplateLibrary>> | null = null;
 
-  const connected = supabaseSecretKeyConfigured();
+  /* DEMO BUILD ONLY: the real seed library, drawn as an installed, synced deployment. */
+  const demoMode = isDemoMode();
+  const connected = demoMode || supabaseSecretKeyConfigured();
 
   if (connected) {
     try {
-      const sync = await ensureTemplateLibrary("system");
+      const sync = demoMode ? demoSyncResult() : await ensureTemplateLibrary("system");
       syncSkipped = sync.skipped?.reason ?? null;
       syncResult = sync;
-      const summaries = await listTemplateSummaries();
+      const summaries = demoMode ? demoTemplateSummaries() : await listTemplateSummaries();
       // A retired template (switched off, never deleted) is not offered here.
       templates = summaries.filter((summary) => summary.active).map((summary) => {
         const version = summary.currentVersion ?? summary.draftVersion;
@@ -185,6 +190,10 @@ export default async function FormTemplatesPage() {
           title="Form Templates"
           description="Two layers: the document template Ask Bubbles fills, and the official PDF or Word copy each form was issued as."
         />
+
+        {demoMode ? (
+          <DemoContentNotice screen="Form Templates" contents="publish date, version history and official copy" />
+        ) : null}
 
         {syncSkipped ? (
           <Notice tone="attention" title="Template sync is off on this deployment">

@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { isDemoMode } from "@/lib/config/runtime";
+import { demoTemplate } from "@/lib/demo/template-fixtures";
 
 import { errorResponse } from "@/lib/api/respond";
 import { authorizeForms } from "@/lib/forms/access";
@@ -26,6 +28,13 @@ export async function GET(
   try {
     await authorizeForms(request, "manage_form_templates");
     const { key } = await context.params;
+    // DEMO BUILD ONLY: the seed library's template, with an invented history.
+    if (isDemoMode()) {
+      const demo = demoTemplate(key);
+      return demo
+        ? NextResponse.json(demo)
+        : NextResponse.json({ error: "No such form template." }, { status: 404 });
+    }
 
     const template = await getTemplateByKey(key);
     if (!template) {
