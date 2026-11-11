@@ -22,6 +22,8 @@ export interface ReplayAnswer {
   formProposal?: { templateKey?: string; employeeName?: string | null; employeeRole?: string | null; status?: string; subject?: string; locationId?: string | null; closeMatchNote?: string; formDate?: string | null };
   formUpdate?: { instanceId: string; updated: string[] };
   formOpened?: { instanceId: string };
+  /** The answer's source cards, as the route returns them. */
+  citations?: { documentTitle?: string; locator?: string; excerpt?: string }[];
 }
 
 export interface ReplayThread {
@@ -37,6 +39,11 @@ export interface ReplayContext {
   /** `subject`: who is signed in (default "qa-manager"), for a case with two managers. */
   as(role: string, scope: unknown, subject?: string): void;
   directory(rows: readonly DirectoryRow[]): void;
+  /**
+   * The full policy manual a policy question reads (`loadFullManualPlan`), as indexed chunks; this case only. Without
+   * it the pack reads no manual. Used to put a source excerpt through the production path.
+   */
+  fullManual?(document: { id: string; title: string; chunks: readonly unknown[] }): void;
   /** What the drafting model writes at Create. */
   /** `extra`: other fields of the draft tool's input, e.g. `{ offense_basis: "sales" }` (CA_SALES_POLICY_ENABLED). */
   draftWrites(values: Record<string, string>, checked?: Record<string, string[]>, extra?: Record<string, unknown>): void;

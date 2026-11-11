@@ -63,6 +63,25 @@ const draftAsked = vi.hoisted(() => [] as string[]);
 const draftSystemAsked = vi.hoisted(() => [] as string[]);
 /** The draft call's tools, as sent (CA_SALES_POLICY_ENABLED adds an optional property). */
 const draftToolsAsked = vi.hoisted(() => [] as string[]);
+/* `t.fullManual(...)`: the full policy manual this case's policy questions read; none unless a case gives one. */
+const fullManual = vi.hoisted(() => ({ document: null as null | { id: string; title: string; chunks: readonly unknown[] } }));
+vi.mock("@/lib/knowledge/full-manual-load", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/knowledge/full-manual-load")>();
+  const { isPolicyQuestion, planFullManualContext } = await import("@/lib/ai/full-manual-context");
+  return {
+    ...actual,
+    loadFullManualPlan: async (scopeId: string, question: string, policyText?: string) => {
+      const document = fullManual.document;
+      if (!document) return actual.loadFullManualPlan(scopeId, question, policyText);
+      const asked = policyText ?? question;
+      const documents = isPolicyQuestion(asked)
+        ? [{ id: document.id, title: document.title, category: "policies_compliance", status: "indexed", indexed: true, chunks: document.chunks.map((row) => actual.manualChunkFromRow(row as never)) }]
+        : [];
+      return planFullManualContext({ question, policyText: asked, documents: documents as never });
+    },
+  };
+});
+
 const state = vi.hoisted(() => ({
   /** What the slot model reads on the next turns (`slotsRead`), as a production trace shows it. */
   slotsRead: {} as Record<string, unknown>,
@@ -591,6 +610,7 @@ beforeEach(async () => {
   for (const key of Object.keys(store) as (keyof FakeStore)[]) store[key] = [];
   store.form_instances = new JoiningRows() as never;
   state.slotReading = "none";
+  fullManual.document = null;
   state.remapObservation = null;
   state.slotsRead = {};
   state.reading = {};
@@ -695,6 +715,9 @@ function context(): ReplayContext {
     },
     directory: (rows) => {
       state.directory = rows as never;
+    },
+    fullManual: (document) => {
+      fullManual.document = document;
     },
     draftWrites: (values, checked, extra) => {
       state.draft = { values, ...(checked ? { checked } : {}), ...(extra ?? {}) };
