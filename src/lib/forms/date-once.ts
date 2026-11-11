@@ -8,7 +8,7 @@ import { dateOnceEnabled } from "@/lib/config/chat-quality-flags";
  * DATE_ONCE_ENABLED (QA's backlog B7; HR's report of 21 Oct 2026, replayed 3 Nov 2026; same flag in both apps; default
  * off). "create verbal ca for <name>, she was late … 15 minutes on 10-1-26. no payroll deduct": the form's Date held
  * 10/01/2026 and the Observation said it again ("… on 10-1-26"). On: a drafted account field that names the form's own
- * date drops it — "on 10-1-26", "(10/1/26)", "on October 1st, 2026" — and keeps everything else it says. Another date,
+ * date more than once drops the repeats (the first mention stays) — "on 10-1-26", "(10/1/26)", "on October 1st, 2026" — and keeps everything else it says. Another date,
  * or the date in a field that would be left empty without it, is kept. Pure.
  */
 
@@ -24,12 +24,20 @@ function sameDay(iso: string, month: number, day: number, year: string | undefin
   return (year.length === 2 ? 2000 + Number(year) : Number(year)) === y;
 }
 
+/*
+ * QA's ruling (11 Nov 2026, the flags-on replay of #688): the defect is the same date written TWICE in an account
+ * ("… on 10/10/26 … on October 10"). One natural mention ("missed the monthly meeting on 10/10/26") stays, though the
+ * Date field holds it: only the second and later mentions of the form's date go.
+ */
 export function withoutFormDate(text: string, formDateIso: string): string {
+  let seen = 0;
   const out = text.replace(MENTION, (whole, lead: string, m1, d1, y1, mon, d2, y2, close: string | undefined) => {
     const isNumeric = m1 !== undefined;
     const month = isNumeric ? Number(m1) : MONTHS.indexOf(String(mon).toLowerCase().slice(0, 3)) + 1;
     const day = Number(isNumeric ? d1 : d2);
     if (!sameDay(formDateIso, month, day, isNumeric ? y1 : y2)) return whole;
+    seen += 1;
+    if (seen === 1) return whole;
     // "(10/1/26)" goes with its brackets; "on 10-1-26" with its "on"; a bare date only when brackets or "on" lead it.
     if (lead.includes("(") && !close) return whole;
     if (!/\b(?:on|dated)\b|\(/i.test(lead)) return whole;

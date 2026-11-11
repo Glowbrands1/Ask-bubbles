@@ -465,7 +465,9 @@ export const NOV3_STEP_B_CASES: readonly ReplayCase[] = [
      * fields; it does not rewrite a sentence, and taking "on 10-1-26" out of
      * one needs a word list or a drafting-prompt change, both outside it.
      */
-    status: { open: "the incident date is written twice: the Date field and again in the Observation (\"… on 10-1-26\")" },
+    // Holds with production's flags under QA's ruling of 11 Nov 2026 (the same date twice in one field is the defect; one
+    // mention in the account is not): the pack's Observation names 10-1-26 once. DATE_ONCE drops a second mention.
+    status: "fixed",
     // QA's backlog B7 (10 Nov 2026): the fix — an account field drops the form's own date (`forms/date-once.ts`).
     fixFlags: ["DATE_ONCE_ENABLED"],
     async run(t) {
@@ -481,7 +483,11 @@ export const NOV3_STEP_B_CASES: readonly ReplayCase[] = [
       expect(values.form_date, "the Date is not the incident date she gave").toBe("2026-10-01");
       const dates = Object.entries(values).flatMap(([key, value]) => (value.match(DATE_SHAPES) ?? []).map((text) => ({ key, text, day: monthDay(text) })));
       expect(dates.filter((date) => date.day !== "10-01"), "a date she did not give is on the form").toEqual([]);
-      expect(dates.map((date) => `${date.key}: ${date.text}`), "the incident date is written more than once").toEqual(["form_date: 2026-10-01"]);
+      // Changed on purpose (QA's ruling, 11 Nov 2026): "repeated the date" is the same date written twice in one field;
+      // one natural mention in the account ("late to her shift on 10-1-26") stays, though the Date field holds it.
+      const perField = new Map<string, number>();
+      for (const date of dates) perField.set(date.key, (perField.get(date.key) ?? 0) + 1);
+      expect([...perField].filter(([, count]) => count > 1), "the incident date is written twice in one field").toEqual([]);
     },
   },
   {

@@ -13,18 +13,29 @@ describe("DATE_ONCE_ENABLED", () => {
     expect(withFormDateOnce(values, "2026-10-01", KEYS)).toEqual(values);
   });
 
-  it("on: the form's own date leaves the account; the rest stays", () => {
+  // Changed on purpose (QA's ruling, 11 Nov 2026): one natural mention of the date stays in the account; only a second
+  // and later mention of the same date goes ("written twice").
+  it("on: one mention of the form's date stays in the account", () => {
     vi.stubEnv("DATE_ONCE_ENABLED", "true");
-    expect(withFormDateOnce({ observation: "Pat was late to the store 15 minutes on 10-1-26.", form_date: "2026-10-01" }, "2026-10-01", KEYS)).toEqual({
-      observation: "Pat was late to the store 15 minutes.",
-      form_date: "2026-10-01",
+    const values = { observation: "Pat was late to the store 15 minutes on 10-1-26.", form_date: "2026-10-01" };
+    expect(withFormDateOnce(values, "2026-10-01", KEYS)).toEqual(values);
+    expect(withFormDateOnce({ observation: "Ottoline missed the monthly meeting on 10/10/26." }, "2026-10-10", KEYS)).toEqual({
+      observation: "Ottoline missed the monthly meeting on 10/10/26.",
     });
   });
 
-  it("the shapes of the same day go; another day stays", () => {
-    expect(withoutFormDate("She was late on October 1st, 2026, by 15 minutes.", "2026-10-01")).toBe("She was late, by 15 minutes.");
-    expect(withoutFormDate("She was late (10/1/26) by 15 minutes.", "2026-10-01")).toBe("She was late by 15 minutes.");
-    expect(withoutFormDate("She was late on 10-1-26 and again on 10-8-26.", "2026-10-01")).toBe("She was late and again on 10-8-26.");
+  it("on: the same date written twice keeps only its first mention; the rest stays", () => {
+    vi.stubEnv("DATE_ONCE_ENABLED", "true");
+    expect(
+      withFormDateOnce({ observation: "Pat was late to the store on 10-1-26 and clocked in at 9:15 on October 1st, 2026." }, "2026-10-01", KEYS),
+    ).toEqual({ observation: "Pat was late to the store on 10-1-26 and clocked in at 9:15." });
+    expect(withoutFormDate("She was late on 10-1-26, by 15 minutes, on October 1st, 2026.", "2026-10-01")).toBe("She was late on 10-1-26, by 15 minutes.");
+  });
+
+  it("the shapes of the same day count as one date; another day stays", () => {
+    expect(withoutFormDate("She was late on 10/1/26 (10/1/26) by 15 minutes.", "2026-10-01")).toBe("She was late on 10/1/26 by 15 minutes.");
+    expect(withoutFormDate("She was late on October 1st, 2026, by 15 minutes.", "2026-10-01")).toBe("She was late on October 1st, 2026, by 15 minutes.");
+    expect(withoutFormDate("She was late on 10-1-26 and again on 10-8-26.", "2026-10-01")).toBe("She was late on 10-1-26 and again on 10-8-26.");
     expect(withoutFormDate("She was late on 10-1-25.", "2026-10-01")).toBe("She was late on 10-1-25.");
   });
 
