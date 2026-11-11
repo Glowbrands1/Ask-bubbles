@@ -45,3 +45,13 @@ supabase functions deploy embed
 ```
 
 Then run the Supabase security and performance advisors.
+
+## Applied by hand in Production
+
+Some migrations were applied with the Supabase MCP `apply_migration`, which
+records the apply time as the history version, not the file version. Keep this
+list current so the files and the history row can be matched:
+
+- `20261025233000_form_instances_one_open_revision.sql` (T9, one open revision
+  per form): applied 26 Oct 2026 as version `20261026011704`, name
+  `form_instances_one_open_revision`.
