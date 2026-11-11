@@ -78,3 +78,23 @@ export function nameNotCorrectedReply(open: { templateName: string; employeeName
     coverage: "not_applicable",
   };
 }
+
+const escapeRe = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * NAME_LINE_COMMA_ENABLED (QA's ruling, 11 Nov 2026; #688's flags-on replay): "fix her last name, it is Pembrooke"
+ * corrected the Employee Name and left the drafted account on the old surname ("Isolde Pembrook was late …"). The
+ * account the app drafted follows the name: the old full name becomes the new one, and the old surname, as a whole
+ * word, the new surname. Null when the text does not name her by the old surname.
+ */
+export function renamedInAccount(text: string, oldName: string, newName: string): string | null {
+  const oldWords = oldName.trim().split(/\s+/);
+  const newWords = newName.trim().split(/\s+/);
+  const oldLast = oldWords[oldWords.length - 1] ?? "";
+  const newLast = newWords[newWords.length - 1] ?? "";
+  if (!oldLast || !newLast || oldLast.toLowerCase() === newLast.toLowerCase()) return null;
+  const full = new RegExp(String.raw`(?<![\p{L}'’-])${escapeRe(oldName.trim()).replace(/\s+/g, String.raw`\s+`)}(?![\p{L}'’-])`, "giu");
+  const last = new RegExp(String.raw`(?<![\p{L}'’-])${escapeRe(oldLast)}(?![\p{L}'’-])`, "giu");
+  const out = text.replace(full, newName.trim()).replace(last, newLast);
+  return out === text ? null : out;
+}
