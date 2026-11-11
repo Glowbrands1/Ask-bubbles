@@ -23,7 +23,7 @@ import { readLocationMentions } from "./location-mention";
 import { withoutDeniedFaults } from "./denial-no-account";
 import { namesPerformance } from "./epp-policy";
 import { JOIN } from "./turn-join";
-import { LATE_TO_OPEN, lateOpenOn } from "./late-open";
+import { LATE_TO_OPEN, lateOpenOn, noShowNotLateOpening, saysFailureToOpen } from "./late-open";
 import {
   findManualSection,
   isApprovedPolicyManualTitle,
@@ -919,7 +919,11 @@ const LATE_OPENING =
 const OPENED_LATE = /\bopen(?:ed|ing)\s+late\b/i;
 
 function opensLate(text: string): boolean {
+  // NO_SHOW_OPENING_IS_ATTENDANCE_ENABLED (QA's ruling, 10 Nov 2026): a no-show to an opening shift is an absence. Off, false.
+  if (noShowNotLateOpening(text)) return false;
   if (LATE_OPENING.test(text)) return true;
+  // "failure to open on time" (FAILURE_TO_OPEN_IS_LATE_OPENING_ENABLED). Off, false.
+  if (saysFailureToOpen(text)) return true;
   return lateOpenOn() && (LATE_TO_OPEN.test(text) || OPENED_LATE.test(text));
 }
 
@@ -937,7 +941,7 @@ export function describesLateOpening(rawText: string): boolean {
  */
 function attendanceOffenseKeys(text: string, missed: boolean): string[] | null {
   const opening = opensLate(text);
-  const absent = ABSENCE.test(text) || missed;
+  const absent = ABSENCE.test(text) || missed || noShowNotLateOpening(text);
   const late = !opening && LATENESS.test(text);
   if (!opening && !absent && !late) return null;
   const keys: string[] = [];
