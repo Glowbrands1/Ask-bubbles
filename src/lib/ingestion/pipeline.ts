@@ -16,6 +16,7 @@ import type { OcrBudget } from "./extract/pdf-ocr";
 import { IngestionError } from "./errors";
 import { extractDocument } from "./extract";
 import { buildStoragePath, sanitizeFileName } from "./paths";
+import { syncedFileMaxBytes } from "./synced-file-limit";
 import { validateUpload } from "./validation";
 
 /**
@@ -100,6 +101,8 @@ export async function ingestDocument(input: IngestInput): Promise<IngestResult> 
     fileName: input.fileName,
     mimeType: input.mimeType,
     sizeBytes: input.file.size,
+    // WOVEN_LARGER_FILES_ENABLED: a Woven-synced file has the sync's cap (`synced-file-limit.ts`); an upload keeps 50 MB.
+    ...(input.source === "woven" ? { maxBytes: syncedFileMaxBytes() } : {}),
   });
 
   const title = input.title.trim();
