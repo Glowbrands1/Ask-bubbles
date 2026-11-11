@@ -1,0 +1,187 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-scan-sf-s16-standards-of-conduct-turn-2: \"In the past we have quoted the standards of conduct \u2026\" switches the policy to Standards of Conduct; the Issue stays the underperformance \u2014 OPEN in production (turn 2 does switch the card to Standards of Conduct, but the card's Issue becomes the instruction \"In the past we have quoted the standards of conduct for creating a ca due to underperformance\")": {
+    "category": "INTENDED",
+    "twin": "replay: nov4-scan-sf-s16-standards-of-conduct-turn-2 [open]",
+    "reason": "The OPEN pin now holds with POLICY_REFERENCE_NOT_ACCOUNT_ENABLED (solo), so its expected-fail test goes passed->failed."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-scan-sf-s17-woven-courses-written: a written CA for not completing Woven courses by Oct 31 \u2014 the incident is taken as given; turn 2 cites Standards of Conduct; the Observation stays the courses \u2014 OPEN in production (turn 1 takes the incident as given but not the warning level: \"written\" is read as earlier history (\"I've treated the earlier warning you mentioned as previous corrective action history\") and the card asks Verbal or Written; at Create the drafting model is also handed \"you can reference the standards of conduct for a policy\" as the account)": {
+    "category": "INTENDED",
+    "twin": "replay: nov4-scan-sf-s17-woven-courses-written [open]",
+    "reason": "The OPEN pin now holds with LEVEL_REQUEST_MORE_VERBS_ENABLED + POLICY_REFERENCE_NOT_ACCOUNT_ENABLED (together; neither alone makes it hold, as its fixFlags say), so its expected-fail test goes passed->failed."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-scan-sf-s19-corrective-action-answer: \"Corrective Action\" after a verbal CA request for Odalys Frewen \u2014 proceed with the Verbal CA, or say once what is needed; never the same refusal word for word \u2014 OPEN in production (turn 1 makes the card for Odalys Frewen but reads the metrics as people (\"I couldn't find **Average Ticket** or **Units Per Transaction** or **Under** in the Woven roster\") and asks Verbal or Written though she said verbal; turn 2 \"Corrective Action\" then refuses (\"I won't open formal corrective action off a metric\" and the progression list) with no card)": {
+    "category": "INTENDED",
+    "twin": "replay: nov4-scan-sf-s19-corrective-action-answer [open]",
+    "reason": "The OPEN pin now holds with LEVEL_AFTER_FORM_NAME_ENABLED (solo), so its expected-fail test goes passed->failed."
+  },
+  "src/lib/forms/level-request-more-verbs.test.ts :: \"put together a written CA for <A> \u2026 by the deadline of october 31st\" off, as before: the level is not read": {
+    "category": "INTENDED-HARNESS",
+    "twin": "",
+    "reason": "A unit test that pins the flag-OFF behaviour (\"off, as before: the level is not read\"); with LEVEL_REQUEST_MORE_VERBS_ENABLED forced on in the env it reads the level. The flag-on half is covered by the same file."
+  },
+  "src/lib/forms/warning-level-after-form.test.ts :: the level named after the form \"a corrective action verbal for <A>\" is Verbal with the flag on, nothing with it off": {
+    "category": "INTENDED-HARNESS",
+    "twin": "",
+    "reason": "The unit test checks both states (\"Verbal with the flag on, nothing with it off\"); the off half cannot pass with LEVEL_AFTER_FORM_NAME_ENABLED forced on in the env."
+  },
+  "replay: nov4-mgr-1-verbal-metrics [fix:CA_SALES_POLICY_ENABLED]": {
+    "category": "INTENDED",
+    "twin": "",
+    "reason": "LEVEL_AFTER_FORM_NAME_ENABLED (solo). The case still holds; \"I need a corrective action verbal for <A>\" now shows \"Type of warning: Verbal Warning, as you said\" and no longer asks Verbal or Written."
+  },
+  "replay: nov4-mgr-1-verbal-metrics [production]": {
+    "category": "INTENDED",
+    "twin": "",
+    "reason": "LEVEL_AFTER_FORM_NAME_ENABLED (solo). The case still holds; \"I need a corrective action verbal for <A>\" now shows \"Type of warning: Verbal Warning, as you said\" and no longer asks Verbal or Written."
+  },
+  "replay: nov4-pau-metrics-not-people [fix:FORM_NAME_FROM_ROSTER_ENABLED,CA_SALES_POLICY_ENABLED,CHAT_GLOSSARY_ENABLED]": {
+    "category": "INTENDED",
+    "twin": "",
+    "reason": "LEVEL_AFTER_FORM_NAME_ENABLED (solo). The case still holds; \"I need a corrective action verbal for <A>\" now shows \"Type of warning: Verbal Warning, as you said\" and no longer asks Verbal or Written."
+  },
+  "replay: nov4-pau-metrics-not-people [production]": {
+    "category": "INTENDED",
+    "twin": "",
+    "reason": "LEVEL_AFTER_FORM_NAME_ENABLED (solo). The case still holds; \"I need a corrective action verbal for <A>\" now shows \"Type of warning: Verbal Warning, as you said\" and no longer asks Verbal or Written."
+  },
+  "replay: nov4-pau-metrics-not-people-lowercase-first-name [fix:FORM_NAME_FROM_ROSTER_ENABLED,CA_SALES_POLICY_ENABLED,CHAT_GLOSSARY_ENABLED]": {
+    "category": "INTENDED",
+    "twin": "",
+    "reason": "LEVEL_AFTER_FORM_NAME_ENABLED (solo). The case still holds; \"I need a corrective action verbal for <A>\" now shows \"Type of warning: Verbal Warning, as you said\" and no longer asks Verbal or Written."
+  },
+  "replay: nov4-pau-metrics-not-people-lowercase-first-name [production]": {
+    "category": "INTENDED",
+    "twin": "",
+    "reason": "LEVEL_AFTER_FORM_NAME_ENABLED (solo). The case still holds; \"I need a corrective action verbal for <A>\" now shows \"Type of warning: Verbal Warning, as you said\" and no longer asks Verbal or Written."
+  },
+  "replay: nov4-pau-metrics-not-people-unknown [fix:FORM_NAME_FROM_ROSTER_ENABLED,CA_SALES_POLICY_ENABLED,CHAT_GLOSSARY_ENABLED]": {
+    "category": "INTENDED",
+    "twin": "",
+    "reason": "LEVEL_AFTER_FORM_NAME_ENABLED (solo). The case still holds; \"I need a corrective action verbal for <A>\" now shows \"Type of warning: Verbal Warning, as you said\" and no longer asks Verbal or Written."
+  },
+  "replay: nov4-pau5-1-verbal-under-performance-metrics [production]": {
+    "category": "INTENDED",
+    "twin": "",
+    "reason": "LEVEL_AFTER_FORM_NAME_ENABLED (solo). The case still holds; \"I need a corrective action verbal for <A>\" now shows \"Type of warning: Verbal Warning, as you said\" and no longer asks Verbal or Written."
+  },
+  "replay: nov4-qa-form-name-as-person-p1 [fix:FORM_NAME_FROM_ROSTER_ENABLED]": {
+    "category": "INTENDED",
+    "twin": "",
+    "reason": "LEVEL_AFTER_FORM_NAME_ENABLED (solo). The case still holds. Where a person is named, the card adds \"Type of warning: Verbal Warning, as you said\" and drops the \"Verbal or Written?\" question; with no person named (\"\u2026verbal for Coaching Form\"), \"Who is this form for?\" becomes \"Who is this **Corrective Action Form** for? \u2026\" (the Verbal level read). Same change in every one of these rows."
+  },
+  "replay: nov4-qa-form-name-as-person-p1 [production]": {
+    "category": "INTENDED",
+    "twin": "",
+    "reason": "LEVEL_AFTER_FORM_NAME_ENABLED (solo). The case still holds. Where a person is named, the card adds \"Type of warning: Verbal Warning, as you said\" and drops the \"Verbal or Written?\" question; with no person named (\"\u2026verbal for Coaching Form\"), \"Who is this form for?\" becomes \"Who is this **Corrective Action Form** for? \u2026\" (the Verbal level read). Same change in every one of these rows."
+  },
+  "replay: nov4-qa-form-name-as-person-p1-with-sales [fix:FORM_NAME_FROM_ROSTER_ENABLED,CA_SALES_POLICY_ENABLED,CHAT_GLOSSARY_ENABLED]": {
+    "category": "INTENDED",
+    "twin": "",
+    "reason": "LEVEL_AFTER_FORM_NAME_ENABLED (solo). The case still holds. Where a person is named, the card adds \"Type of warning: Verbal Warning, as you said\" and drops the \"Verbal or Written?\" question; with no person named (\"\u2026verbal for Coaching Form\"), \"Who is this form for?\" becomes \"Who is this **Corrective Action Form** for? \u2026\" (the Verbal level read). Same change in every one of these rows."
+  },
+  "replay: nov4-qa-form-name-as-person-p1-with-sales [production]": {
+    "category": "INTENDED",
+    "twin": "",
+    "reason": "LEVEL_AFTER_FORM_NAME_ENABLED (solo). The case still holds. Where a person is named, the card adds \"Type of warning: Verbal Warning, as you said\" and drops the \"Verbal or Written?\" question; with no person named (\"\u2026verbal for Coaching Form\"), \"Who is this form for?\" becomes \"Who is this **Corrective Action Form** for? \u2026\" (the Verbal level read). Same change in every one of these rows."
+  },
+  "replay: nov4-scan-sf-s16-standards-of-conduct-turn-2 [open]": {
+    "category": "INTENDED",
+    "twin": "itself",
+    "reason": "POLICY_REFERENCE_NOT_ACCOUNT_ENABLED (solo): \"In the past we have quoted the standards of conduct\u2026\" sets the policy and is no longer handed over as the account."
+  },
+  "replay: nov4-scan-sf-s17-woven-courses-written [open]": {
+    "category": "INTENDED",
+    "twin": "itself",
+    "reason": "LEVEL_REQUEST_MORE_VERBS + POLICY_REFERENCE_NOT_ACCOUNT: turn 1 now states \"Type of warning: Written Warning, as you said\" (no longer read as earlier history), and turn 2 cites Standards of Conduct with the courses kept as the account."
+  },
+  "replay: nov4-scan-sf-s19-corrective-action-answer [open]": {
+    "category": "INTENDED",
+    "twin": "itself",
+    "reason": "LEVEL_AFTER_FORM_NAME_ENABLED (solo): \"a corrective action verbal for Odalys Frewen\" is the Verbal Warning; turn 2 \"Corrective Action\" keeps it, no refusal."
+  },
+  "replay: nov5-live-off-roster-not-found-code [production]": {
+    "category": "INTENDED",
+    "twin": "",
+    "reason": "LEVEL_AFTER_FORM_NAME_ENABLED (solo). The case still holds. Where a person is named, the card adds \"Type of warning: Verbal Warning, as you said\" and drops the \"Verbal or Written?\" question; with no person named (\"\u2026verbal for Coaching Form\"), \"Who is this form for?\" becomes \"Who is this **Corrective Action Form** for? \u2026\" (the Verbal level read). Same change in every one of these rows."
+  },
+  "replay: nov5-live-off-roster-not-found-models [production]": {
+    "category": "INTENDED",
+    "twin": "",
+    "reason": "LEVEL_AFTER_FORM_NAME_ENABLED (solo). The case still holds. Where a person is named, the card adds \"Type of warning: Verbal Warning, as you said\" and drops the \"Verbal or Written?\" question; with no person named (\"\u2026verbal for Coaching Form\"), \"Who is this form for?\" becomes \"Who is this **Corrective Action Form** for? \u2026\" (the Verbal level read). Same change in every one of these rows."
+  },
+  "replay: nov5-metric-guard-full-name-kept [fix:METRIC_GUARD_ENABLED]": {
+    "category": "INTENDED",
+    "twin": "",
+    "reason": "LEVEL_AFTER_FORM_NAME_ENABLED (solo). The case still holds. Where a person is named, the card adds \"Type of warning: Verbal Warning, as you said\" and drops the \"Verbal or Written?\" question; with no person named (\"\u2026verbal for Coaching Form\"), \"Who is this form for?\" becomes \"Who is this **Corrective Action Form** for? \u2026\" (the Verbal level read). Same change in every one of these rows."
+  },
+  "replay: nov5-metric-guard-full-name-kept [production]": {
+    "category": "INTENDED",
+    "twin": "",
+    "reason": "LEVEL_AFTER_FORM_NAME_ENABLED (solo). The case still holds. Where a person is named, the card adds \"Type of warning: Verbal Warning, as you said\" and drops the \"Verbal or Written?\" question; with no person named (\"\u2026verbal for Coaching Form\"), \"Who is this form for?\" becomes \"Who is this **Corrective Action Form** for? \u2026\" (the Verbal level read). Same change in every one of these rows."
+  },
+  "replay: nov5-reply-own-words-qa-probe [production]": {
+    "category": "INTENDED",
+    "twin": "",
+    "reason": "LEVEL_AFTER_FORM_NAME_ENABLED (solo). The case still holds. Where a person is named, the card adds \"Type of warning: Verbal Warning, as you said\" and drops the \"Verbal or Written?\" question; with no person named (\"\u2026verbal for Coaching Form\"), \"Who is this form for?\" becomes \"Who is this **Corrective Action Form** for? \u2026\" (the Verbal level read). Same change in every one of these rows."
+  },
+  "replay: nov5-request-slot-no-name-verbal [fix:FORM_NAME_FROM_ROSTER_ENABLED,CA_SALES_POLICY_ENABLED,CHAT_GLOSSARY_ENABLED]": {
+    "category": "INTENDED",
+    "twin": "",
+    "reason": "LEVEL_AFTER_FORM_NAME_ENABLED (solo). The case still holds. Where a person is named, the card adds \"Type of warning: Verbal Warning, as you said\" and drops the \"Verbal or Written?\" question; with no person named (\"\u2026verbal for Coaching Form\"), \"Who is this form for?\" becomes \"Who is this **Corrective Action Form** for? \u2026\" (the Verbal level read). Same change in every one of these rows."
+  },
+  "replay: nov5-request-slot-no-name-verbal [production]": {
+    "category": "INTENDED",
+    "twin": "",
+    "reason": "LEVEL_AFTER_FORM_NAME_ENABLED (solo). The case still holds. Where a person is named, the card adds \"Type of warning: Verbal Warning, as you said\" and drops the \"Verbal or Written?\" question; with no person named (\"\u2026verbal for Coaching Form\"), \"Who is this form for?\" becomes \"Who is this **Corrective Action Form** for? \u2026\" (the Verbal level read). Same change in every one of these rows."
+  },
+  "replay: nov5-request-slot-off-roster-name [fix:FORM_NAME_FROM_ROSTER_ENABLED,CA_SALES_POLICY_ENABLED,CHAT_GLOSSARY_ENABLED]": {
+    "category": "INTENDED",
+    "twin": "",
+    "reason": "LEVEL_AFTER_FORM_NAME_ENABLED (solo). The case still holds. Where a person is named, the card adds \"Type of warning: Verbal Warning, as you said\" and drops the \"Verbal or Written?\" question; with no person named (\"\u2026verbal for Coaching Form\"), \"Who is this form for?\" becomes \"Who is this **Corrective Action Form** for? \u2026\" (the Verbal level read). Same change in every one of these rows."
+  },
+  "replay: nov5-request-slot-off-roster-name [production]": {
+    "category": "INTENDED",
+    "twin": "",
+    "reason": "LEVEL_AFTER_FORM_NAME_ENABLED (solo). The case still holds. Where a person is named, the card adds \"Type of warning: Verbal Warning, as you said\" and drops the \"Verbal or Written?\" question; with no person named (\"\u2026verbal for Coaching Form\"), \"Who is this form for?\" becomes \"Who is this **Corrective Action Form** for? \u2026\" (the Verbal level read). Same change in every one of these rows."
+  },
+  "replay: nov5-request-slot-off-roster-name-models [fix:FORM_NAME_FROM_ROSTER_ENABLED,CA_SALES_POLICY_ENABLED,CHAT_GLOSSARY_ENABLED]": {
+    "category": "INTENDED",
+    "twin": "",
+    "reason": "LEVEL_AFTER_FORM_NAME_ENABLED (solo). The case still holds. Where a person is named, the card adds \"Type of warning: Verbal Warning, as you said\" and drops the \"Verbal or Written?\" question; with no person named (\"\u2026verbal for Coaching Form\"), \"Who is this form for?\" becomes \"Who is this **Corrective Action Form** for? \u2026\" (the Verbal level read). Same change in every one of these rows."
+  },
+  "replay: nov5-request-slot-off-roster-name-models [production]": {
+    "category": "INTENDED",
+    "twin": "",
+    "reason": "LEVEL_AFTER_FORM_NAME_ENABLED (solo). The case still holds. Where a person is named, the card adds \"Type of warning: Verbal Warning, as you said\" and drops the \"Verbal or Written?\" question; with no person named (\"\u2026verbal for Coaching Form\"), \"Who is this form for?\" becomes \"Who is this **Corrective Action Form** for? \u2026\" (the Verbal level read). Same change in every one of these rows."
+  },
+  "replay: nov5-request-slot-on-roster-name [fix:FORM_NAME_FROM_ROSTER_ENABLED,CA_SALES_POLICY_ENABLED,CHAT_GLOSSARY_ENABLED]": {
+    "category": "INTENDED",
+    "twin": "",
+    "reason": "LEVEL_AFTER_FORM_NAME_ENABLED (solo). The case still holds; \"I need a corrective action verbal for <A>\" now shows \"Type of warning: Verbal Warning, as you said\" and no longer asks Verbal or Written."
+  },
+  "replay: nov5-request-slot-on-roster-name [production]": {
+    "category": "INTENDED",
+    "twin": "",
+    "reason": "LEVEL_AFTER_FORM_NAME_ENABLED (solo). The case still holds; \"I need a corrective action verbal for <A>\" now shows \"Type of warning: Verbal Warning, as you said\" and no longer asks Verbal or Written."
+  },
+  "replay: nov6-offer-never-qa-probe [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED]": {
+    "category": "INTENDED",
+    "twin": "",
+    "reason": "LEVEL_AFTER_FORM_NAME_ENABLED (solo). The case still holds. Where a person is named, the card adds \"Type of warning: Verbal Warning, as you said\" and drops the \"Verbal or Written?\" question; with no person named (\"\u2026verbal for Coaching Form\"), \"Who is this form for?\" becomes \"Who is this **Corrective Action Form** for? \u2026\" (the Verbal level read). Same change in every one of these rows."
+  },
+  "replay: nov6-offer-never-qa-probe [production]": {
+    "category": "INTENDED",
+    "twin": "",
+    "reason": "LEVEL_AFTER_FORM_NAME_ENABLED (solo). The case still holds. Where a person is named, the card adds \"Type of warning: Verbal Warning, as you said\" and drops the \"Verbal or Written?\" question; with no person named (\"\u2026verbal for Coaching Form\"), \"Who is this form for?\" becomes \"Who is this **Corrective Action Form** for? \u2026\" (the Verbal level read). Same change in every one of these rows."
+  },
+  "replay: nov8-sales-triple-this-is-for-under-performance [fix:SALES_SHORTFALL_OBJECT_ENABLED,SALES_OBSERVATION_ACCOUNT_ENABLED]": {
+    "category": "INTENDED",
+    "twin": "",
+    "reason": "LEVEL_AFTER_FORM_NAME_ENABLED (solo). The case still holds; \"I need a corrective action verbal for <A>\" now shows \"Type of warning: Verbal Warning, as you said\" and no longer asks Verbal or Written."
+  },
+  "replay: nov8-sales-triple-this-is-for-under-performance [production]": {
+    "category": "INTENDED",
+    "twin": "",
+    "reason": "LEVEL_AFTER_FORM_NAME_ENABLED (solo). The case still holds; \"I need a corrective action verbal for <A>\" now shows \"Type of warning: Verbal Warning, as you said\" and no longer asks Verbal or Written."
+  }
+}
