@@ -1324,6 +1324,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REQUEST_ISSUE_KEPT_ENABLED",
   "LATE_OPENING_OWN_WORDS_ENABLED",
   "FIRST_NAME_ENOUGH_ENABLED",
+  // coding 6: NO_SHOW_OPENING_IS_ATTENDANCE (QA ruling, 10 Nov 2026; default off; wiring in ca-policy.ts awaits Coding-2).
+  "NO_SHOW_OPENING_IS_ATTENDANCE_ENABLED",
 ] as const;
 
 /**
@@ -4296,4 +4298,14 @@ export function lateOpeningOwnWordsEnabled(): boolean {
  */
 export function firstNameEnoughEnabled(): boolean {
   return envFlag("FIRST_NAME_ENOUGH_ENABLED");
+}
+
+/**
+ * NO_SHOW_OPENING_IS_ATTENDANCE_ENABLED (QA's ruling on live round 17b, 10 Nov 2026): "did not show up for a scheduled
+ * opening shift" was cited as Late Opening. A no-show to an opening shift is an absence, cited as Attendance (Pau's
+ * missed-shift ruling, MISSED_SHIFT_CITES_ATTENDANCE); a Late Opening is the store opening late ("failure to open on
+ * time", "opened late"). See `noShowNotLateOpening` (`forms/late-open.ts`), read by `ca-policy.ts`. Off, as before.
+ */
+export function noShowOpeningIsAttendanceEnabled(): boolean {
+  return envFlag("NO_SHOW_OPENING_IS_ATTENDANCE_ENABLED");
 }
