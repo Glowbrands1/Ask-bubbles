@@ -1,23 +1,24 @@
 import { withoutAppLines } from "@/lib/ai/app-sentences";
 import { CHAT_GLOSSARY, foldsToGlossaryTerm } from "@/lib/ai/glossary";
 import {
+  accountPlaceLeadEnabled,
   asYouSaidAppReadEnabled,
-  caPerformanceReasonEnabled,
   asYouSaidManagerWordsEnabled,
-  missedShiftCitesAttendanceEnabled,
-  msbPhraseSocEnabled,
+  caPerformanceReasonEnabled,
   caSalesPolicyEnabled,
   cleaningOtherEveryWordingEnabled,
+  conductIncidentCitesPageEnabled,
   describedAttendanceCardEnabled,
   formEditDateRulesEnabled,
-  removePolicyNotNamedEnabled,
+  missedShiftCitesAttendanceEnabled,
+  msbPhraseSocEnabled,
+  notFollowingIsViolationEnabled,
   policyCleaningIncidentEnabled,
+  removePolicyNotNamedEnabled,
   salesObservationAccountEnabled,
   salesShortfallObjectEnabled,
+  wornClothingIsDressCodeEnabled,
   wovenTrainingConductEnabled,
-  conductIncidentCitesPageEnabled,
-  accountPlaceLeadEnabled,
-  notFollowingIsViolationEnabled,
 } from "@/lib/config/chat-quality-flags";
 
 import { readLocationMentions } from "./location-mention";
@@ -436,6 +437,14 @@ const NAMED: { name: CaPolicyName; pattern: RegExp; alwaysAPolicy: boolean; enab
 ];
 const POLICY_FRAME =
   /\b(?:polic(?:y|ies)|violat\w*|falls? under|under|use|it'?s|it is|should be|applies|apply|is the|was the)\b/;
+/**
+ * WORN_CLOTHING_IS_DRESS_CODE_ENABLED (QA's Bubbles 17i live test, 11 Nov 2026): a garment the person wore, after a
+ * wearing verb ("wearing a hoodie", "wore sweatpants", "showed up in joggers"). Only clothes a dress code rules out;
+ * "uniform", "shirt" and "apron" are what an employee is meant to wear and say nothing on their own.
+ */
+const WORN_CLOTHING =
+  /\b(?:wearing|wore|wears|wear|(?:showed|shows|showing|came|comes|coming)\s+(?:up\s+)?(?:to\s+work\s+)?in)\s+(?:a\s+|an\s+|her\s+|his\s+|their\s+|the\s+)?(?:hoodies?|hooded\s+sweatshirts?|sweatshirts?|sweatpants|sweats|joggers|yoga\s+pants|pajamas?|pyjamas?|flip[- ]?flops|crop\s+tops?)\b/;
+
 /* "wore jeans against dress code" — the policy broken, straight after "against" (QA, 22 Oct 2026, round 3). */
 const AGAINST_BEFORE = /\b(?:against|breaking|broke|breaks)\s+(?:the\s+|our\s+|company\s+)?$/;
 const NEGATED_BEFORE = /\b(?:not|never|isn't|is not|wasn't|was not|no)\s+(?:\S+\s+){0,2}$/;
@@ -522,7 +531,7 @@ export function policiesNamedIn(sentence: string): { name: CaPolicyName; start: 
 export function readCaPolicy(rawText: string): CaPolicyReading {
   const said = managerWords(rawText);
   // WOVEN_TRAINING_CONDUCT's reading (default off) before AS_YOU_SAID_APP_READ's fallback, on the manager's words (as the sibling app's #595).
-  return withMissedShift(withAppReading(withWovenWork(withCleaningOther(withSalesPolicy(readCaPolicyFromWords(said), said), said), said), rawText, said), said);
+  return withWornClothing(withMissedShift(withAppReading(withWovenWork(withCleaningOther(withSalesPolicy(readCaPolicyFromWords(said), said), said), said), rawText, said), said), said);
 }
 
 /*
@@ -536,6 +545,18 @@ export function readCaPolicy(rawText: string): CaPolicyReading {
  */
 const MISSED_SHIFT =
   /\b(?:(?:not|never|didn['’]?t|did\s+not|failed\s+to|failing\s+to|fails\s+to|wasn['’]?t)\s+(?:show(?:ing)?\s+up|com(?:e|ing)\s+in|(?:work(?:ing)?|complet(?:e|ing)))\s+(?:(?:to|for)\s+)?(?:\S+\s+){0,3}?shifts?|(?:missed|missing|skipped|skipping|no[- ]show(?:ed)?\s+(?:for|to)?)\s+(?:\S+\s+){0,3}?shifts?)\b/i;
+
+/**
+ * WORN_CLOTHING_IS_DRESS_CODE_ENABLED (QA's Bubbles 17i live test, 11 Nov 2026): "can you make a CA for <C> for wearing
+ * a hoodie to work?" named no policy, so the card had no Policy line and its plan said "review the applicable company
+ * policy". An account that names no policy and says the person wore clothes a dress code rules out is the Dress Code,
+ * read from the request (the card says so, never "as you said"). Off, the reading as it was.
+ */
+function withWornClothing(reading: CaPolicyReading, said: string): CaPolicyReading {
+  if (!wornClothingIsDressCodeEnabled()) return reading;
+  if (reading.stated !== null || reading.suggestion !== null || reading.ambiguous || reading.other || reading.missedEvent || reading.readFromApp) return reading;
+  return WORN_CLOTHING.test(said.toLowerCase()) ? { ...reading, readFromApp: "dress_code" } : reading;
+}
 
 function withMissedShift(reading: CaPolicyReading, said: string): CaPolicyReading {
   if (!missedShiftCitesAttendanceEnabled()) return reading;

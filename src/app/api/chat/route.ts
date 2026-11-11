@@ -64,6 +64,7 @@ import {
   newRequestOwnTurnsEnabled,
   addressAsksWhoEnabled,
   leadFullSentenceEnabled,
+  formsBelowNeedsFormsEnabled,
   formEditPlainWordsEnabled,
   pastedTemplateFieldsToOpenDraftEnabled,
   payrollDeductAmountFieldEnabled,
@@ -1120,6 +1121,8 @@ async function postChat(request: Request) {
       if (note) answer = { ...answer, content: outline.withPolicyKeptNote(answer.content, note) };
     }
     // FINAL_REPLY_MARKER_GUARD_ENABLED: no bare source tag reaches the manager, whatever path answered. See `ai/source-note.ts`.
+    // FORMS_BELOW_NEEDS_FORMS_ENABLED: "… one of the forms below." only with forms below it (`lib/forms/lead-full-sentence.ts`).
+    if (formsBelowNeedsFormsEnabled()) answer = (await import("@/lib/forms/lead-full-sentence")).withFormsBelowOnlyWithForms(answer);
     return NextResponse.json({ ...finalReplyWithoutMarkers(answer), turnId });
   } catch (error) {
     return errorResponse(error, "POST /api/chat");
