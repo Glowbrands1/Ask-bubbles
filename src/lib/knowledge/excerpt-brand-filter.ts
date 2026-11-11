@@ -1,5 +1,5 @@
 import { EXCERPT_HIDDEN_BRANDS, MULTI_BRAND_MANUAL_TITLES } from "@/config/company/knowledge";
-import { excerptBrandFilterEnabled } from "@/lib/config/chat-quality-flags";
+import { excerptBrandFilterEnabled, excerptBrandHeadingDropEnabled } from "@/lib/config/chat-quality-flags";
 
 import { isMultiBrandManual } from "./brand-sections";
 
@@ -121,4 +121,26 @@ export function excerptTextForDisplay(text: string, documentTitle: string): stri
   if (!excerptBrandFilterEnabled()) return text;
   if (!isMultiBrandManual(documentTitle, MULTI_BRAND_MANUAL_TITLES)) return text;
   return withoutBrandLines(text, EXCERPT_HIDDEN_BRANDS);
+}
+
+/**
+ * ============================================================================
+ * A SOURCE CARD THAT IS ONLY THE SIBLING COMPANY'S HEADING IS LEFT OUT (EXCERPT_BRAND_HEADING_DROP_ENABLED)
+ * ============================================================================
+ *
+ * QA, round 17c live test (11 Nov 2026), EXCERPT_BRAND_FILTER on: "what are the holidays?" had a clean reply, but source
+ * 3 of 5 was labelled "Page 42 — <the sibling brand>" and its excerpt was that heading alone. The filter above left the
+ * passage's text empty, and the source card fell back to showing the heading.
+ *
+ * With the flag on, a source card is left out when its label names a brand in `EXCERPT_HIDDEN_BRANDS`, or when its
+ * excerpt is empty or only its heading. Every other card is kept as it was. Pure apart from the flag.
+ */
+export function keepsSourceCard(card: { locator: string; excerpt: string }): boolean {
+  if (!excerptBrandHeadingDropEnabled()) return true;
+  const names = brandPattern(EXCERPT_HIDDEN_BRANDS);
+  if (names?.test(card.locator)) return false;
+  const excerpt = card.excerpt.trim();
+  if (!excerpt) return false;
+  const heading = /\u2014\s*(.+)$/.exec(card.locator)?.[1]?.trim();
+  return !(heading && excerpt.replace(/[\s.:]+$/, "").toLowerCase() === heading.toLowerCase());
 }
