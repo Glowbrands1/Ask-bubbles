@@ -478,4 +478,6 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov6-roster-shape-two-word-first-swap": "FORM_NAME_FROM_ROSTER",
   // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
   "nov6-roster-shape-two-word-first-typo": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (11 Nov 2026): fixed in production by NEAR_MISS_ANSWER_KEEPS_REQUEST, QA round 16c
+  "nov10-near-miss-answer-keeps-request": "NEAR_MISS_ANSWER_KEEPS_REQUEST",
 };
