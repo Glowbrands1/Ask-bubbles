@@ -1,6 +1,12 @@
 import type { AskResponse } from "@/lib/ai/types";
 import { isQuestionNotForm } from "@/lib/ai/question-not-form";
-import { formEditSingleWriterEnabled, openDraftKeepsTurnsEnabled, pastedOutlineToOpenDraftEnabled, templateOutlineFieldsEnabled } from "@/lib/config/chat-quality-flags";
+import {
+  formEditSingleWriterEnabled,
+  openDraftKeepsTurnsEnabled,
+  pastedOutlineToOpenDraftEnabled,
+  pastedTemplateFieldsToOpenDraftEnabled,
+  templateOutlineFieldsEnabled,
+} from "@/lib/config/chat-quality-flags";
 import { extractEmployeeNames, samePerson } from "@/lib/forms/proposal";
 import { detectTemplateIntent } from "@/lib/forms/template-intent";
 import type { ChatMessage } from "@/types";
@@ -58,6 +64,8 @@ export async function openDraftTurn(input: {
   const before = formEditSingleWriterEnabled()
     ? await (await import("@/lib/forms/form-write")).editSnapshot(input.instanceId, "open_draft")
     : null;
+  // PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT_ENABLED: the draft's words before the revision, to see whether it placed the paste.
+  const wordsBefore = pasted && pastedTemplateFieldsToOpenDraftEnabled() ? await draftWords(input.instanceId) : null;
   const revised = await (await import("@/lib/forms/chat-revision")).reviseActiveForm({
     request: input.request,
     instanceId: input.instanceId,
@@ -66,6 +74,16 @@ export async function openDraftTurn(input: {
     history: [...input.history],
     today: input.today,
   });
+  /*
+   * PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT_ENABLED (round-25 live test of sf-s21, 11 Nov 2026): the pasted template
+   * reached the open draft, but the revision placed none of it ("Nothing on the form has changed yet. I couldn't place
+   * that …", or "I haven't changed the Corrective Action Form …"). Its labelled sections go into the draft's fields of
+   * those labels, in the draft's employee's name.
+   */
+  if (wordsBefore && JSON.stringify(await draftWords(input.instanceId)) === JSON.stringify(wordsBefore)) {
+    const placed = await placePastedTemplate({ ...input, question, employeeName: open.employeeName });
+    if (placed) return placed;
+  }
   if (revised && formEditSingleWriterEnabled() && before) {
     return (await import("@/lib/forms/form-write")).realizedClaim(revised, input.instanceId, before);
   }
@@ -124,4 +142,65 @@ async function pastedOutline(input: { request: Request; instanceId: string; ques
   const asked = `${input.question}\n\nThe same outline, with this form's own facts.`;
   const named = outline.withTemplateFieldsNamed({ question: asked, history: input.history, fields });
   return named === asked ? null : named;
+}
+
+/**
+ * PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT_ENABLED: the pasted template's labelled sections written onto the open draft
+ * (`lib/forms/pasted-template-fields.ts`) as the manager's own words, through the one writer when it is on. Null when
+ * nothing could be placed, so the caller says so.
+ */
+async function placePastedTemplate(input: {
+  request: Request;
+  instanceId: string;
+  question: string;
+  employeeName: string;
+  today: string;
+}): Promise<AskResponse | null> {
+  const authorized = await (await import("./instance-scope"))
+    .authorizeInstance(input.request, input.instanceId, "edit")
+    .catch(() => null);
+  if (!authorized) return null;
+  const { fieldsForVariant, interpolate, parseFormDocument } = await import("./document");
+  const fields = fieldsForVariant(parseFormDocument(authorized.loaded.version.document), authorized.loaded.instance.variantKey).map((field) => ({
+    key: field.key,
+    label: interpolate(field.label, null),
+  }));
+  const values = (await import("./pasted-template-fields")).pastedTemplateValues({
+    text: input.question,
+    fields,
+    employeeName: input.employeeName,
+  });
+  if (Object.keys(values).length === 0) return null;
+  let written: string[];
+  if (formEditSingleWriterEnabled()) {
+    const { opsFrom, writeFormEdits } = await import("./form-write");
+    const result = await writeFormEdits(input.instanceId, opsFrom({ values }, { by: "manager" }), {
+      path: "open_draft",
+      actorId: authorized.actor.id,
+      latest: input.question,
+      today: input.today,
+    });
+    written = result.changed.map((change) => change.key);
+  } else {
+    await (await import("./instances")).saveInstanceValues(input.instanceId, { values, checked: {} }, authorized.actor.id);
+    written = Object.keys(values);
+  }
+  if (written.length === 0) return null;
+  const labels = fields.filter((field) => written.includes(field.key)).map((field) => `**${field.label}**`);
+  return {
+    content: [
+      `Placed your pasted outline on the open form for ${input.employeeName}: ${labels.join(" and ")}, in ${input.employeeName}'s name.`,
+      "The rest of the template's wording is as you pasted it — check its numbers and dates are this employee's before you finalize.",
+    ].join("\n\n"),
+    citations: [],
+    coverage: "not_applicable",
+    formUpdate: { instanceId: input.instanceId, updated: written },
+  };
+}
+
+/** PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT_ENABLED: the open draft's text values, to see whether a turn changed them. */
+async function draftWords(instanceId: string): Promise<Record<string, string> | null> {
+  const loaded = await (await import("./instances")).loadInstance(instanceId).catch(() => null);
+  if (!loaded) return null;
+  return Object.fromEntries(loaded.values.map((row) => [row.fieldKey, String(row.value ?? "")]));
 }
