@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 
 import { PermissionGate } from "@/components/permission-gate";
 import { ReportsIndex } from "@/features/reports/reports-index";
+import { DemoDataNotice, DemoScopeNotice } from "@/features/reports/demo-report";
 import { requirePagePermission } from "@/lib/auth/page";
+import { isDemoMode } from "@/lib/config/runtime";
+import { demoRuntime } from "@/lib/demo/runtime";
 import { resolveReportingScope } from "@/lib/reporting/scope/server";
 import { scopeNoticeSentence } from "@/lib/reporting/scope/authorized-locations";
 
@@ -20,10 +23,22 @@ export const dynamic = "force-dynamic";
 export default async function ReportsPage() {
   await requirePagePermission("view_reports");
   const scope = await resolveReportingScope();
+  // Demo build: the scope comes from the demo role in the browser, not the server's default identity.
+  const sample = isDemoMode() ? await demoRuntime.loadReportsSample() : null;
 
   return (
     <PermissionGate permission="view_reports">
-      <ReportsIndex scopeNotice={scopeNoticeSentence(scope)} />
+      <ReportsIndex
+        scopeNotice={sample ? null : scopeNoticeSentence(scope)}
+        notices={
+          sample ? (
+            <>
+              <DemoDataNotice />
+              <DemoScopeNotice sample={sample} />
+            </>
+          ) : null
+        }
+      />
     </PermissionGate>
   );
 }

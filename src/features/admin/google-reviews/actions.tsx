@@ -68,7 +68,7 @@ export function GoogleReviewsActions({
       const response = await fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
       const json = (await response.json().catch(() => ({}))) as Outcome & { disconnected?: boolean; revokedAtGoogle?: boolean };
       if (kind === "disconnect") {
-        setMessage({ tone: "accent", text: json.disconnected ? "Disconnected. Reviews already saved are kept." : "Nothing was connected." });
+        setMessage({ tone: "accent", text: json.disconnected ? "Disconnected. Reviews already saved are kept." : ((json as { reason?: string }).reason ?? "Nothing was connected.") });
       } else {
         setMessage({ tone: response.ok && (json.status === "succeeded" || json.status === "partial") ? "accent" : "attention", text: describe(json) });
       }

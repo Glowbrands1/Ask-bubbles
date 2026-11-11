@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 
+import { isDemoMode } from "@/lib/config/runtime";
+import { demoLocationsResponse } from "@/lib/google-reviews/demo-responses";
+
 import { approvedStoreByCode } from "@/config/company/google-reviews";
 import { assertLiveMode, assertNoConfigurationProblems, assertWithinRateLimit, errorResponse } from "@/lib/api/respond";
 import { parseJsonBody } from "@/lib/api/validation";
@@ -49,6 +52,8 @@ export async function POST(request: Request) {
     if (!isSameOriginRequest(request)) {
       return NextResponse.json({ status: "refused", reason: "Cross-site request refused." }, { status: 403, headers: NO_STORE });
     }
+    // Demo build: the sample integration answers, changing nothing and contacting nothing.
+    if (isDemoMode()) return demoLocationsResponse();
     assertLiveMode();
     assertNoConfigurationProblems();
     const context = await authorizeRequest(request, "manage_integrations");

@@ -2,6 +2,8 @@ import "server-only";
 
 import { isDemoMode } from "@/lib/config/runtime";
 import { supabaseReadiness } from "@/lib/config/server-env";
+import { demoRuntime } from "@/lib/demo/runtime";
+import { sampleReviewPage, sampleStatus, sampleStoreSummaries } from "@/lib/google-reviews/sample-views";
 import { OAUTH_RESULTS } from "@/lib/google-reviews/route-helpers";
 import { readGoogleReviewsStatus, type GoogleReviewsStatus } from "@/lib/google-reviews/status";
 import {
@@ -20,9 +22,8 @@ import {
  *
  * EVERY STATE IS MEASURED: the credentials (by NAME), the connection and the
  * last run (from the database), the blocker (derived from those), the stores and
- * the reviews. A demo build shows nothing from Google or Supabase — this
- * integration has no sample data on purpose, so nothing here can be mistaken for
- * a real review.
+ * the reviews. A demo build shows nothing from Google or Supabase: it shows the
+ * demo runtime's labelled sample, under a notice saying it is invented.
  */
 
 export type Flash = { kind: "connected" } | { kind: "error"; code: string };
@@ -44,6 +45,8 @@ export type PageState =
 export interface GoogleReviewsPageProps {
   state: PageState;
   flash: Flash | null;
+  /** A demo build: the ready state is built from the labelled sample, and the screen says so. */
+  demo?: boolean;
 }
 
 type Params = Record<string, string | string[] | undefined>;
@@ -57,7 +60,22 @@ export function parseFlash(params: Params): Flash | null {
 
 export async function loadGoogleReviewsPage(params: Params): Promise<GoogleReviewsPageProps> {
   const flash = parseFlash(params);
-  if (isDemoMode()) return { state: { state: "demo" }, flash };
+  if (isDemoMode()) {
+    /*
+     * The labelled sample (invented reviews for the seven approved profiles),
+     * shaped exactly as the live reads return it, so the real screen renders.
+     * A build without one keeps the old "not available in the demo" state.
+     */
+    const sample = await demoRuntime.loadGoogleReviewsSample();
+    if (!sample) return { state: { state: "demo" }, flash };
+    const query = parseReviewQuery(params);
+    const stores = sampleStoreSummaries(sample);
+    return {
+      state: { state: "ready", status: sampleStatus(sample), stores, totals: summarize(stores), reviews: sampleReviewPage(sample, query), query },
+      flash,
+      demo: true,
+    };
+  }
   if (!supabaseReadiness().ready) return { state: { state: "unconfigured" }, flash };
 
   try {

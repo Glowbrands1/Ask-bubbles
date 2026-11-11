@@ -51,6 +51,12 @@ export const demoRuntime: DemoRuntime = {
   async loadWovenSample() {
     return null;
   },
+  async loadGoogleReviewsSample() {
+    return null;
+  },
+  async loadReportsSample() {
+    return null;
+  },
 };
 
 export type { DemoAnswer, DemoAnswerBank, DemoKnowledge, DemoRuntime, DemoSeeds } from "./types";

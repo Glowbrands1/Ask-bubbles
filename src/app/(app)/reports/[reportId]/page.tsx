@@ -2,9 +2,13 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { PermissionGate } from "@/components/permission-gate";
+import { DemoReportBody, DemoReportFilters, DemoReportProvenance } from "@/features/reports/demo-report";
+import { ReportFrame } from "@/features/reports/report-frame";
 import { ReportPlaceholder } from "@/features/reports/report-placeholder";
 import { REPORTS } from "@/features/reports/reports-routes";
 import { requirePagePermission } from "@/lib/auth/page";
+import { isDemoMode } from "@/lib/config/runtime";
+import { demoRuntime } from "@/lib/demo/runtime";
 import { resolveReportingScope } from "@/lib/reporting/scope/server";
 import { scopeNoticeSentence } from "@/lib/reporting/scope/authorized-locations";
 
@@ -29,6 +33,25 @@ export default async function ReportPage({ params }: { params: Promise<{ reportI
   const { reportId } = await params;
   const report = REPORTS.find((entry) => entry.key === reportId);
   if (!report) notFound();
+
+  /*
+   * A DEMO BUILD fills its demo reports from the labelled sample, scoped in the
+   * browser to whichever demo role is signed in. Production has no sample.
+   */
+  const sample = isDemoMode() ? await demoRuntime.loadReportsSample() : null;
+  if (sample) {
+    return (
+      <PermissionGate permission="view_reports">
+        <ReportFrame
+          report={report}
+          provenance={<DemoReportProvenance sample={sample} />}
+          filters={<DemoReportFilters sample={sample} base={report.path} />}
+        >
+          <DemoReportBody reportId={report.key} sample={sample} />
+        </ReportFrame>
+      </PermissionGate>
+    );
+  }
 
   const scope = await resolveReportingScope();
 
