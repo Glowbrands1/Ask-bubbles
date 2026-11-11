@@ -1,9 +1,10 @@
 import "server-only";
 
+import { queryRewriteKeepsNounsEnabled } from "@/lib/config/chat-quality-flags";
 import { CLAUDE_HAIKU_MODEL } from "@/lib/config/models";
 
 import { callClaudeTool } from "./call-claude";
-import { queryAfterRewrite, shouldRewriteFollowUp } from "./query-rewrite";
+import { operationalHowTo, queryAfterRewrite, shouldRewriteFollowUp, withOwnNouns } from "./query-rewrite";
 
 /**
  * Rewrite a short follow-up into a standalone search query.
@@ -102,7 +103,9 @@ export async function rewriteRetrievalQuery(input: {
         },
       ],
     });
-    return queryAfterRewrite(basis, readQuery(raw));
+    const query = queryAfterRewrite(basis, readQuery(raw));
+    // QUERY_REWRITE_KEEPS_NOUNS_ENABLED: an operational how-to's search keeps the manager's equipment and action words.
+    return queryRewriteKeepsNounsEnabled() && operationalHowTo(input.question) ? withOwnNouns(input.question, query) : query;
   } catch {
     return basis;
   }

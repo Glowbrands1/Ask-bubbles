@@ -130,3 +130,24 @@ export function followUpOwnQuery(input: {
   const kept = new Set(namedWords(input.rewritten));
   return fresh.some((word) => kept.has(word)) ? input.rewritten : input.ownWords;
 }
+
+/*
+ * AN OPERATIONAL HOW-TO KEEPS THE MANAGER'S OWN WORDS (QUERY_REWRITE_KEEPS_NOUNS_ENABLED; the sibling app's mechanism, QA
+ * 11 Nov 2026). A question asking how to do something with the store's equipment is about a procedure in the training
+ * documents: its search keeps the manager's equipment and action words, whatever "manual terms" the rewrite chose.
+ */
+const HOW_TO = /\b(?:how\s+(?:do|does|to|should|can|would)|what\s+do\s+(?:i|we|you)\s+do|steps?\b|instructions?\b|procedures?\b|process\s+for)\b/i;
+const OPERATIONAL = /\b(?:equipment|machines?|register|pos|tablet|computer|printer|scale|scales|ovens?|mixers?|displays?|shelv(?:es|ing)|cases?|fridge|freezer|timers?|reset(?:ting)?|restart|power|clean(?:ing|ed)?|sanitiz\w*|wipe|wiped|calibrat\w*)\b/gi;
+
+/** A how-to question about the store's equipment or an operating step. */
+export function operationalHowTo(question: string): boolean {
+  OPERATIONAL.lastIndex = 0;
+  return HOW_TO.test(question) && OPERATIONAL.test(question);
+}
+
+/** `query`, with any of the manager's equipment and action words it lacks added at the end (each once). */
+export function withOwnNouns(question: string, query: string): string {
+  const have = query.toLowerCase();
+  const missing = [...new Set((question.match(OPERATIONAL) ?? []).map((word) => word.toLowerCase()))].filter((word) => !have.includes(word));
+  return missing.length > 0 ? `${query.trim()} ${missing.join(" ")}` : query;
+}
