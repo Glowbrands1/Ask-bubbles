@@ -44,7 +44,7 @@ export const SWITCHABLE_APPS = [
     emoji: "🫧",
     name: "Ask Bubbles",
     company: "Buff City Soap",
-    url: "https://askbubbles.vercel.app",
+    url: process.env.NEXT_PUBLIC_ASK_BUBBLES_URL?.trim() || "https://askbubbles.vercel.app",
   },
   {
     id: "leadership-hub",
