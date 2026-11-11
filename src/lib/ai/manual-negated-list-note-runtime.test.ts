@@ -213,7 +213,7 @@ async function run(question: string, flag: string | undefined): Promise<Captured
 }
 
 /* FULL_MANUAL_WIDE_GATE_ENABLED's server-ask.ts lines await Coding-2; set true when they land. */
-const WIRED = false;
+const WIRED = true; // coding 2: the server-ask.ts lines are in (QA-approved, 11 Nov 2026).
 const itWired = WIRED ? it : it.fails;
 
 const saved = {

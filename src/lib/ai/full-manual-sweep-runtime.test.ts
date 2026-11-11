@@ -162,7 +162,7 @@ beforeAll(async () => {
  * land, the tests that need them run as expected failures. When the server-ask lines are in, set WIRED to true:
  * every test must then pass as written.
  */
-const WIRED = false;
+const WIRED = true; // coding 2: the server-ask.ts lines are in (QA-approved, 11 Nov 2026).
 const itWired = WIRED ? it : it.fails;
 const wideGateOn = () => {
   process.env.FULL_MANUAL_WIDE_GATE_ENABLED = "1";
