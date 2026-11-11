@@ -55,6 +55,7 @@ import {
   cardNamesEmployeeEnabled,
   exitLetterAddresseeEnabled,
   letterGreetingNotNameEnabled,
+  templateOutlineFieldsEnabled,
   exitFormDateFromTerminationEnabled,
   metricGuardEnabled,
   refusalNoRepeatEnabled,
@@ -63,6 +64,7 @@ import {
   addressAsksWhoEnabled,
   leadFullSentenceEnabled,
   formEditPlainWordsEnabled,
+  pastedTemplateFieldsToOpenDraftEnabled,
   payrollDeductAmountFieldEnabled,
   questionNotFormEnabled,
   sameFormCopyEnabled,
@@ -220,8 +222,11 @@ async function postChat(request: Request) {
     }
 
     let answer;
+    // TEMPLATE_OUTLINE_FIELDS_ENABLED: the parsed turn the closing note reads (never the raw body's question).
+    let outlineTurn: { question: string; instanceId: string } | null = null;
     try {
       let asked = parseAskRequest(body);
+      if (asked.activeFormInstanceId) outlineTurn = { question: asked.question, instanceId: asked.activeFormInstanceId };
       /*
        * EXIT_LETTER_ADDRESSEE_ENABLED (ported from the sibling app: QA's live test there, 9 Nov 2026): a letter to the
        * employee, signed "Sincerely,\n<C>\nDistrict Manager", is read without that sign-off in this turn and the
@@ -760,7 +765,7 @@ async function postChat(request: Request) {
         !sameCopy && !correction && !askedQuestion && !policyChange && !redraft && parsed.activeFormInstanceId
           ? await separateFormRequested(parsed.question)
           : false;
-      const askedRevision =
+      const askedRevisionRead =
         !sameCopy && !correction && !askedQuestion && !policyChange && !redraft && !separateDocument && parsed.activeFormInstanceId
           ? await (await import("@/lib/forms/chat-revision")).reviseActiveForm({
               request,
@@ -770,6 +775,18 @@ async function postChat(request: Request) {
               today: parsed.context.todayIso,
             })
           : null;
+      /*
+       * PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT_ENABLED (ported from the sibling app; its round-25 live test of sf-s21): a
+       * pasted labelled template the revision changed nothing for ("I haven't changed the … — everything on it is as
+       * it was.") goes on to the open-draft path, which places its sections (`lib/forms/open-draft-turn.ts`).
+       */
+      const askedRevision =
+        askedRevisionRead &&
+        pastedTemplateFieldsToOpenDraftEnabled() &&
+        (await import("@/lib/forms/pasted-template-fields")).looksLikePastedTemplate(parsed.question) &&
+        (await import("@/lib/forms/pasted-template-fields")).revisionChangedNothing(askedRevisionRead.content)
+          ? null
+          : askedRevisionRead;
       /*
        * FORM_EDIT_PLAIN_WORDS_ENABLED: "this is what i am wanting to coach on:
        * …", "make that update", "update the draft with these details" — said
@@ -1077,6 +1094,23 @@ async function postChat(request: Request) {
       logTurnEvent("turn.answer.missing_turn", { surface, where: "api/chat" });
     }
 
+    /*
+     * TEMPLATE_OUTLINE_FIELDS_ENABLED (Pau's sf-s21, QA's ruling; port): "the Must see behaviors and not the standard of
+     * conduct" on a form that still cites Standards of Conduct is answered with why (`lib/forms/template-outline.ts`).
+     */
+    if (templateOutlineFieldsEnabled() && outlineTurn) {
+      const { question: outlineQuestion, instanceId: outlineInstanceId } = outlineTurn;
+      const outline = await import("@/lib/forms/template-outline");
+      const loaded = await (await import("@/lib/forms/instance-scope"))
+        .authorizeInstance(request, outlineInstanceId, "view")
+        .then((authorized) => authorized.loaded)
+        .catch(() => null);
+      const value = (key: string) => loaded?.values.find((row) => row.fieldKey === key)?.value ?? "";
+      const note = loaded
+        ? outline.policyKeptNote({ question: outlineQuestion, policyViolated: value("policy_violated"), policyLanguage: value("policy_language") })
+        : null;
+      if (note) answer = { ...answer, content: outline.withPolicyKeptNote(answer.content, note) };
+    }
     // FINAL_REPLY_MARKER_GUARD_ENABLED: no bare source tag reaches the manager, whatever path answered. See `ai/source-note.ts`.
     return NextResponse.json({ ...finalReplyWithoutMarkers(answer), turnId });
   } catch (error) {
