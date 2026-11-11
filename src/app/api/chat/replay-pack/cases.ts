@@ -43,6 +43,8 @@ export interface ReplayContext {
    * it the pack reads no manual. Used to put a source excerpt through the production path.
    */
   fullManual?(document: { id: string; title: string; chunks: readonly unknown[] }): void;
+  /** Chunks the pinned policy manual also has, this case only (ported from Ask Sunny's pack); none by default. */
+  manualAlsoHas?(chunks: readonly Record<string, unknown>[]): void;
   /** What the drafting model writes at Create. */
   /** `extra`: other fields of the draft tool's input, e.g. `{ offense_basis: "sales" }` (CA_SALES_POLICY_ENABLED). */
   draftWrites(values: Record<string, string>, checked?: Record<string, string[]>, extra?: Record<string, unknown>): void;
