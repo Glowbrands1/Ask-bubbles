@@ -110,14 +110,17 @@ describe("Direct policy never cites the manual's contents page (the sibling app'
       document: parseFormDocument(correctiveActionDocument()),
       variantKey: null,
       values: {},
-      checked: { offense_type: ["company_policies"] },
+      // Corrective Action revision 7 (#424, after this test was written) has no "Violation of Company Policies" box;
+      // "Other" is the box with no manual section of its own, so it takes the same retrieval path (expectation
+      // changed on purpose when this fix was rebuilt on main, 11 Nov 2026).
+      checked: { offense_type: ["other"] },
       grounding: DRAWER_SHORT_65,
       fieldKeys: new Set(["policy_violated", "policy_language"]),
       manualReference: null,
       manualPinned: true,
       officialManualDocumentId: MANUAL_ID,
     });
-    expect(result.values.policy_violated).toBe("Violation of Company Policies");
+    expect(result.values.policy_violated).toBe("Other");
     expect(result.values.policy_language ?? null).toBeNull();
   });
 
@@ -126,13 +129,16 @@ describe("Direct policy never cites the manual's contents page (the sibling app'
       document: parseFormDocument(correctiveActionDocument()),
       variantKey: null,
       values: {},
-      checked: { offense_type: ["company_policies"] },
+      // Corrective Action revision 7 (#424, after this test was written) has no "Violation of Company Policies" box;
+      // "Other" is the box with no manual section of its own, so it takes the same retrieval path (expectation
+      // changed on purpose when this fix was rebuilt on main, 11 Nov 2026).
+      checked: { offense_type: ["other"] },
       grounding: DRAWER_SHORT_65,
       fieldKeys: new Set(["policy_violated", "policy_language"]),
       manualReference: null,
       officialManualDocumentId: MANUAL_ID,
     });
-    expect(result.values.policy_violated).toBe("Violation of Company Policies");
+    expect(result.values.policy_violated).toBe("Other");
     expect(result.values.policy_language).not.toMatch(/Table of Contents/);
     expect(result.values.policy_language).not.toMatch(DOT_LEADERS);
     expect(result.values.policy_language).toContain("Source: JBA Policy Manual — Bonus Policy, p. 39");
