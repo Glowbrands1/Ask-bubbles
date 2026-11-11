@@ -1,0 +1,22 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-policy-topic-in-field-finding-a-cover: a saved whole-team Coaching draft, \"In details of coaching inlude our woven policy on finding a cover for your shift\": the Details hold the Shift Replacement section and its citation, never a pointer \u2014 OPEN in production (Details of Coaching: \"Refer to the Woven policy manual for finding a cover for your shift.\")": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "POLICY_TOPIC_INTO_FIELD: an OPEN case now holds (the named policy's text and 'Policy reference: <title>, JBA Policy Manual p.<n>' go into the field; no section found: nothing written and a question)."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-policy-topic-in-field-no-section: the same draft, a policy the manual has no section on: nothing is written, never a pointer, and the reply asks which policy \u2014 OPEN in production (Details of Coaching: \"Refer to the Woven policy manual for pet insurance.\")": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "POLICY_TOPIC_INTO_FIELD: an OPEN case now holds (the named policy's text and 'Policy reference: <title>, JBA Policy Manual p.<n>' go into the field; no section found: nothing written and a question)."
+ },
+ "replay: nov10-policy-topic-in-field-finding-a-cover [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "POLICY_TOPIC_INTO_FIELD: an OPEN case now holds (the named policy's text and 'Policy reference: <title>, JBA Policy Manual p.<n>' go into the field; no section found: nothing written and a question)."
+ },
+ "replay: nov10-policy-topic-in-field-no-section [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "POLICY_TOPIC_INTO_FIELD: an OPEN case now holds (the named policy's text and 'Policy reference: <title>, JBA Policy Manual p.<n>' go into the field; no section found: nothing written and a question)."
+ }
+}
