@@ -584,7 +584,7 @@ const fullName = (row: DirectoryRow) => `${row.firstName} ${row.lastName}`;
 export const MANAGER_MESSAGES: readonly ManagerMessage[] = [
   {
     id: "mgr-1-verbal-metrics",
-    text: `I need a corrective action verbal for ${fullName(MANAGER_CA_VERBAL)}. This is for Under Performance on PPTA, LPSVA, Club Average, Club Close %, and Spa %.`,
+    text: `I need a corrective action verbal for ${fullName(MANAGER_CA_VERBAL)}. This is for Under Performance on UPT, ATV, Average Ticket, Bundle Rate %, and Gift %.`,
     person: MANAGER_CA_VERBAL,
   },
   { id: "mgr-2-msb-no-name", text: "I need to make a corrective action for msb", person: null },
@@ -732,13 +732,13 @@ export function applicableCriteria(criteria: readonly LiveCriterion[], flagsOn: 
 
 /*
  * PAU'S MESSAGE 1, LIVE (4 Nov 2026): "I need a corrective action verbal for
- * <name>. This is for Under Performance on PPTA, LPSVA, Club Average, Club
- * Close %, and Spa %." The metric words must never be read as people, and a
+ * <name>. This is for Under Performance on UPT, ATV, Average Ticket, Bundle
+ * Rate %, and Gift %." The metric words must never be read as people, and a
  * typed name that is NOT on the roster must not be swapped for a roster
  * person who shares its first name.
  *
- *   no-metric-person  no metric phrase (Club Close, Under, Club Average, PPTA,
- *                     LPSVA, Spa), bold or not, appears as a name: not in a
+ *   no-metric-person  no metric phrase (Bundle Rate, Under, Average Ticket, UPT,
+ *                     ATV, Gift), bold or not, appears as a name: not in a
  *                     "couldn't find" note, not in a "Which of them" question,
  *                     not as the card's employee, not in an "Is this for …?";
  *                     on mgr-1 and on the off-roster case;
@@ -759,7 +759,7 @@ export const OFF_ROSTER_TRAP = at("lf-leofric-dunmarrow", "Leofric", "Dunmarrow"
 const OFF_ROSTER_ROSTER: readonly DirectoryRow[] = [...MANAGER_ROSTER, OFF_ROSTER_TRAP];
 
 /** The metric phrases of Pau's message 1, as a name would show them. */
-const METRIC_AS_NAME = /\b(?:club close|club average|under|ppta|lpsva|spa)\b/i;
+const METRIC_AS_NAME = /\b(?:bundle rate|average ticket|under|upt|atv|gift)\b/i;
 
 const nameList = (list: string) =>
   list
@@ -832,7 +832,7 @@ export const OFF_ROSTER_SCENARIO: CriteriaScenario = {
   id: "mgr-1-off-roster-name",
   roster: OFF_ROSTER_ROSTER,
   field: null,
-  steps: [{ say: `I need a corrective action verbal for ${OFF_ROSTER_TYPED}. This is for Under Performance on PPTA, LPSVA, Club Average, Club Close %, and Spa %.` }],
+  steps: [{ say: `I need a corrective action verbal for ${OFF_ROSTER_TYPED}. This is for Under Performance on UPT, ATV, Average Ticket, Bundle Rate %, and Gift %.` }],
   criteria: offRosterCriteriaFor,
   expect: {
     says: `no metric shown as a person; never ${fullName(OFF_ROSTER_TRAP)}; a card for ${OFF_ROSTER_TYPED} or a note naming only ${OFF_ROSTER_TYPED} as not found`,
@@ -845,7 +845,7 @@ export const OFF_ROSTER_SCENARIO: CriteriaScenario = {
 /*
  * QA, 4 NOV 2026, 19:21 UTC: live in the sibling app, a REAL roster employee,
  * Pau's message 1, CA_SALES_POLICY_ENABLED on and FORM_NAME_FROM_ROSTER_ENABLED
- * off, made a card whose Employee was "Club Close"; there the shapes that do it
+ * off, made a card whose Employee was "Bundle Rate"; there the shapes that do it
  * are a roster person typed by first name only, or by first name and last
  * initial. So the live script runs Pau's message 1 with mgr-1's roster person
  * typed both short ways.
@@ -893,7 +893,7 @@ export const ROSTER_SHORT_SCENARIOS: readonly CriteriaScenario[] = ROSTER_SHORT_
     id: `mgr-1-roster-${id}`,
     roster: MANAGER_ROSTER,
     field: null,
-    steps: [{ say: `I need a corrective action verbal for ${typed(person)}. This is for Under Performance on PPTA, LPSVA, Club Average, Club Close %, and Spa %.` }],
+    steps: [{ say: `I need a corrective action verbal for ${typed(person)}. This is for Under Performance on UPT, ATV, Average Ticket, Bundle Rate %, and Gift %.` }],
     criteria,
     expect: {
       says: `typed "${typed(person)}": no metric shown as a person; a card for ${fullName(person)} or "Is this for ${fullName(person)}?" (CA_SALES_POLICY_ENABLED on)`,
@@ -909,9 +909,9 @@ export const ROSTER_SHORT_SCENARIOS: readonly CriteriaScenario[] = ROSTER_SHORT_
  *   (A) "Create a Corrective Action for Coaching Form" → a Coaching Form card
  *       with no employee and a question for who;
  *   (B) "I need a corrective action for Coaching Form. This is for Under
- *       Performance on Club Close % and Spa %." → a card for "Club Close";
- *   (P1) Pau's message 1 for "Coaching Form" → a card for "Club Close".
- * Here, in replay, the card has no employee but the reply names "Club Close"
+ *       Performance on Bundle Rate % and Gift %." → a card for "Bundle Rate";
+ *   (P1) Pau's message 1 for "Coaching Form" → a card for "Bundle Rate".
+ * Here, in replay, the card has no employee but the reply names "Bundle Rate"
  * and "Under" as people not found.
  *
  *   no-metric-person  as above;
@@ -937,8 +937,8 @@ const ASKS_WHO_CRITERION: LiveCriterion = {
 const QA_WORDINGS = (name: string) =>
   [
     ["a-alone", `Create a Corrective Action for ${name}`],
-    ["b-metrics", `I need a corrective action for ${name}. This is for Under Performance on Club Close % and Spa %.`],
-    ["p1", `I need a corrective action verbal for ${name}. This is for Under Performance on PPTA, LPSVA, Club Average, Club Close %, and Spa %.`],
+    ["b-metrics", `I need a corrective action for ${name}. This is for Under Performance on Bundle Rate % and Gift %.`],
+    ["p1", `I need a corrective action verbal for ${name}. This is for Under Performance on UPT, ATV, Average Ticket, Bundle Rate %, and Gift %.`],
   ] as const;
 
 /** Pau, 4 Nov 2026: a corrective action asked for, with another form's name after "for", is a Corrective Action. */
