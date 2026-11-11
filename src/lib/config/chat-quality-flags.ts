@@ -1304,9 +1304,22 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "POLICY_TOPIC_INTO_FIELD_ENABLED",
   // coding 4: MADE_ABOUT_REWRITE_FINISHES (the sibling app's live round-13 test, 9 Nov 2026; default off).
   "MADE_ABOUT_REWRITE_FINISHES_ENABLED",
+  // coding 5: ACCOUNT_WIPE_GUARD (QA, a Bubbles manager's 1★ rating, 5–6 Nov 2026; default off).
+  "ACCOUNT_WIPE_GUARD_ENABLED",
+  // coding 5: CREATE_FROM_CONVERSATION_POINTS_TO_CARD (the sibling app's P6, 10 Nov 2026; default off).
+  "CREATE_FROM_CONVERSATION_POINTS_TO_CARD_ENABLED",
+  // coding 5: ONE_FORM_EACH_PERSON, CARD_NAMES_EMPLOYEE (the sibling app's P7, 10 Nov 2026; default off).
+  "ONE_FORM_EACH_PERSON_ENABLED",
+  "CARD_NAMES_EMPLOYEE_ENABLED",
   // coding 4: QA's live Bubbles round 13 (9 Nov 2026; default off).
   "MADE_ABOUT_TOPIC_EVIDENCE_ENABLED",
   "FORM_DATE_SAID_ALONE_ENABLED",
+  "MADE_ABOUT_SAID_DATE_ENABLED",
+  "SECTION_BREAKS_KEPT_ENABLED",
+  "ADD_NOT_REPEATED_ENABLED",
+  // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
+  "CHAT_STAGE_TIMINGS_ENABLED",
+  "CA_REASON_DUE_TO_ENABLED",
 ] as const;
 
 /**
@@ -2869,6 +2882,48 @@ export function exitFormDateFromTerminationEnabled(): boolean {
 }
 
 /**
+ * ACCOUNT_WIPE_GUARD_ENABLED (QA, a Bubbles manager's 1★ rating, 5–6 Nov 2026; coding 5; same flag in both apps; default
+ * off). "this is a verbal warning. previous coaching policy manual 10-15-26" on a reopened Coaching Form wiped Details of
+ * Coaching: the form-patch reader's clear (or full replace) was written though nothing asked for it. On: a clear or full
+ * replace of an account field that holds text (Details of Coaching, Observation of Offense, Follow-Up Observation) is
+ * written only when the latest message names that field or asks to remove or rewrite it (`forms/account-wipe-guard.ts`).
+ * Off, as before.
+ */
+export function accountWipeGuardEnabled(): boolean {
+  return envFlag("ACCOUNT_WIPE_GUARD_ENABLED");
+}
+
+/**
+ * CREATE_FROM_CONVERSATION_POINTS_TO_CARD_ENABLED (ported from the sibling app: QA's P6 there, 10 Nov 2026; coding 5;
+ * same flag in both apps; default off; with CREATE_COMMAND_POINTS_TO_CARD_ENABLED). "Create a form from this
+ * conversation." with a card open repeated the card's reply word for word. On: that wording, and "make a new draft from
+ * our chat", "create the form based on this" and the like, are a create command, answered as "create it" is
+ * (`ai/card-meta-turn.ts`). Off, as before.
+ */
+export function createFromConversationPointsToCardEnabled(): boolean {
+  return envFlag("CREATE_FROM_CONVERSATION_POINTS_TO_CARD_ENABLED");
+}
+
+/**
+ * ONE_FORM_EACH_PERSON_ENABLED (ported from the sibling app: QA's P7 there, 10 Nov 2026; coding 5; default off). "Make
+ * me a coaching form for <A>, <B>, and <C> for not closing duties correctly" handled only <A>. On: one form each — <A>'s
+ * card (or the question which <A>), then a "Next:" line; "yes" starts the next person's form with the same reason
+ * (`forms/one-form-each.ts`, steps in the chat route). Off, as before.
+ */
+export function oneFormEachPersonEnabled(): boolean {
+  return envFlag("ONE_FORM_EACH_PERSON_ENABLED");
+}
+
+/**
+ * CARD_NAMES_EMPLOYEE_ENABLED (ported from the sibling app: QA's P7 there, 10 Nov 2026; coding 5; default off). A card's
+ * reply said "I have the employee and the store" without naming them. On: "I have **<name>** and the store"
+ * (`forms/one-form-each.ts`). Off, as before.
+ */
+export function cardNamesEmployeeEnabled(): boolean {
+  return envFlag("CARD_NAMES_EMPLOYEE_ENABLED");
+}
+
+/**
  * POLICY_TOPIC_INTO_FIELD_ENABLED (QA, a manager's 1★ rating, 10 Nov 2026; coding 5; same flag in both apps; default
  * off). "In details of coaching inlude our woven policy on finding a cover for your shift" on a saved draft wrote a
  * sentence telling the manager to refer to the policy manual. On: an edit asking for "our policy on <topic>" in a field
@@ -3148,6 +3203,18 @@ export function rosterNotFoundAnyPhrasingEnabled(): boolean {
  */
 export function metricGuardEnabled(): boolean {
   return envFlag("METRIC_GUARD_ENABLED");
+}
+
+/**
+ * CA_REASON_DUE_TO_ENABLED (QA, live, 4 Nov 2026; rebuilds #454; default off). With CA_SALES_POLICY on in
+ * production, "CA for <name> due to under performance in salon metrics" put the whole request on the card's
+ * Issue, and the draft's Observation of Offense was the request as the model copied it. On: "due to" and
+ * "because (of)" join the reason after the person (`forms/incident-issue.ts`); "create a ca for <name> at
+ * <store>, she was late …" reads the account after the comma; and a drafted Observation whose first sentence
+ * is the request begins with its reason instead (`forms/request-observation.ts`). Off, as before.
+ */
+export function caReasonDueToEnabled(): boolean {
+  return envFlag("CA_REASON_DUE_TO_ENABLED");
 }
 
 /**
@@ -4110,4 +4177,105 @@ export function formDateSaidAloneEnabled(): boolean {
  */
 export function pastedReviewNotAccountEnabled(): boolean {
   return envFlag("PASTED_REVIEW_NOT_ACCOUNT_ENABLED");
+}
+
+/**
+ * MADE_ABOUT_SAID_DATE_ENABLED (ported from the sibling app: QA's live round 14 there, 10 Nov 2026; default off; same flag in
+ * both apps). "I need you to make it about showing up late and please list the policy make the date for 10/14/26" on a
+ * saved draft already about another incident answered "I haven't changed …": the reader wrote the policy into Details,
+ * its patch was refused whole, and the old path's revision would not drop the old account's date. With the flag on, such
+ * a refused patch is retried by the made-about path: the account rewritten (the said date as the incident's), the reader's
+ * other edits written without it, then the Date (`forms/form-patch-turn.ts`). Off, as before.
+ */
+export function madeAboutSaidDateEnabled(): boolean {
+  return envFlag("MADE_ABOUT_SAID_DATE_ENABLED");
+}
+
+/**
+ * SECTION_BREAKS_KEPT_ENABLED (ported from the sibling app: QA's live round 15 there, 10 Nov 2026; default off; same flag in
+ * both apps). A saved Details of Coaching came out as one paragraph ("Observed: … Expectation: … Going Forward: …") over a
+ * field written in sections: the reader returned the new account on one line. With the flag on, each heading such a value
+ * runs inline starts its own paragraph again (`forms/section-breaks.ts`). Off, as before.
+ */
+export function sectionBreaksKeptEnabled(): boolean {
+  return envFlag("SECTION_BREAKS_KEPT_ENABLED");
+}
+
+/**
+ * ADD_NOT_REPEATED_ENABLED (QA's live Bubbles round 15, 10 Nov 2026; default off; same flag in both apps). After "make it
+ * about being late on 11/5/26", "add that she was reminded of the policy" saved the whole Observed/Expectation/Going
+ * Forward block twice, then the new line: the reader returned the field's text (on one line) and the new sentence as an
+ * "add". With the flag on, an "add" that repeats the field's text word for word adds only what follows it
+ * (`forms/added-tail.ts`). Off, as before.
+ */
+export function addNotRepeatedEnabled(): boolean {
+  return envFlag("ADD_NOT_REPEATED_ENABLED");
+}
+
+/**
+ * SAME_REQUEST_OTHER_PERSON_ENABLED (coding 6, 10 Nov 2026; default off). With
+ * <A>'s card on screen or <A>'s form just created, "Can you do the same thing
+ * for <B> but switch it to a written" and "also make a coaching form for <B>"
+ * gave <A>'s card back (the request sentence in <A>'s Observation, or a
+ * Coaching card for <A>). On: a short turn of that shape naming one roster
+ * person other than the card's subject is answered as a new request for that
+ * person — <A>'s request with <A>'s name swapped for <B>'s and the level
+ * switched ("the same thing"), or a plain request for the named form ("also
+ * make") — without <A>'s card, open form or turns. <A>'s card and form are
+ * never written. See `forms/same-request-other-person.ts`. Off, as before.
+ */
+export function sameRequestOtherPersonEnabled(): boolean {
+  return envFlag("SAME_REQUEST_OTHER_PERSON_ENABLED");
+}
+
+/**
+ * CHAT_STAGE_TIMINGS_ENABLED (ported from the sibling app; QA, 9 Nov 2026; default off; same flag in both apps). Each
+ * awaited step of a chat turn before the answering model (intent extraction, the form paths, entities, the query
+ * rewrite, retrieval, the reads, the briefing, the memory, context, data and grounding loads) is timed into
+ * `chat_traces.slots.stages`: names and milliseconds only (`ai/chat-stage-timings.ts`). Changes nothing the manager
+ * sees. Off, as before.
+ */
+export function chatStageTimingsEnabled(): boolean {
+  return envFlag("CHAT_STAGE_TIMINGS_ENABLED");
+}
+
+/**
+ * DRAFT_WRITE_NEVER_SILENT_ENABLED (coding 6, 10 Nov 2026; default off; QA's
+ * live finding, the sibling app's round 17; port). One Create in five saved only the Name and
+ * Date: the drafting model ran (chat_traces: forms_draft succeeded), the
+ * "left out <surname>" check saw filled Details, and the route answered 200 —
+ * but nothing was saved. The one writer is all or nothing: a single refused
+ * field drops every value. On: a draft write refused as a whole is retried
+ * once without the refused fields; if that saves nothing either, the notice
+ * says nothing was saved (and no "left out" line). Never a 200 with a silent
+ * empty draft. See `forms/draft-write-never-silent.ts`. Off, as before.
+ */
+export function draftWriteNeverSilentEnabled(): boolean {
+  return envFlag("DRAFT_WRITE_NEVER_SILENT_ENABLED");
+}
+
+/**
+ * FAILURE_TO_OPEN_IS_LATE_OPENING_ENABLED (coding 6, 10 Nov 2026; default off;
+ * ported from the sibling app, where a manager's "Can you make a CA for <name>
+ * for failure to open on time?" was asked what happened). Here the card had
+ * an empty Issue, no policy and a plan on "the applicable company policy": no
+ * reader took "failure to open" as an account. On: "failure / failed to open",
+ * "did not open on time", "didn't open the store" are the manual's Late
+ * Opening and an account. "open the form / the drawer" is not. See
+ * `forms/late-open.ts`. Off, as before.
+ */
+export function failureToOpenIsLateOpeningEnabled(): boolean {
+  return envFlag("FAILURE_TO_OPEN_IS_LATE_OPENING_ENABLED");
+}
+
+/**
+ * PAYROLL_BARE_SENTENCE_ENABLED (coding 6, 10 Nov 2026; default off; ported
+ * from the sibling app, its P15). "I need a term CA for <name>. Didn't show
+ * up for her opening shift. Payroll deduction." — the card still asked "Is
+ * payroll deduct applicable?". On, a sentence that is only "Payroll
+ * deduction." is a Yes. Read in `forms/payroll-deduct-answer.ts` (which
+ * imports nothing). Off, as before.
+ */
+export function payrollBareSentenceEnabled(): boolean {
+  return envFlag("PAYROLL_BARE_SENTENCE_ENABLED");
 }

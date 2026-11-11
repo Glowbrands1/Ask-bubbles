@@ -104,7 +104,7 @@ export const NOV5_PAU_SF_S21_S25_TWIN_CASES: ReplayCase[] = [
     id: "nov5-twin-sf-s22-ca-not-coaching",
     title: "sf-s22: \"It needs to be a CA, not a coaching form\" and \"Its a CA\" keep the Corrective Action; another employee's reviewer notes never go into the Observation",
     report: `${REPORT}, sf-s22`,
-    status: { open: "with this app's production flags the first request makes no Corrective Action card" },
+    status: { open: "on production flags \"Make this: <reviewer notes>\" after \"It needs to be a CA\" goes back to the Coaching Form (the first request makes the CA card since main moved on, checked 11 Nov 2026)" },
     // Fixed under PASTED_REVIEW_NOT_ACCOUNT_ENABLED (coding 6, 10 Nov 2026; port): a pasted review is no account; open on production flags until QA flips it.
     fixFlags: ["PASTED_REVIEW_NOT_ACCOUNT_ENABLED"],
     async run(t) {

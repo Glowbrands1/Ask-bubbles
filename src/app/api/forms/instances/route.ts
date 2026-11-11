@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { sameRequestReadConversation } from "@/lib/forms/same-request-other-person";
 import { switchReadConversation } from "@/lib/ai/form-type-switch";
 import { typoReadingText, typoReadingTurns } from "@/lib/ai/typo-reading-copy";
 import { protectedNameWords } from "@/lib/ai/typo-name-words";
@@ -241,8 +242,9 @@ export async function POST(request: Request) {
       const alsoCalled = await preferredNamesOf(actor.scope, body.employeeName);
       const currency = checkProposalIsCurrent({
         // FORM_TYPE_SWITCH_ENABLED: "change to coaching" is read as the chat read it, so the switched card is current.
-        // PASTED_REVIEW_NOT_ACCOUNT_ENABLED: a pasted reviewer's notes are read as the chat read them (`ai/pasted-review.ts`).
-        conversation: switchReadConversation(turnsWithoutPastedReview(parseHistory(body.conversation))),
+        // PASTED_REVIEW_NOT_ACCOUNT_ENABLED: pasted reviewer's notes are read as the chat read them (`ai/pasted-review.ts`).
+        // SAME_REQUEST_OTHER_PERSON_ENABLED: "the same thing for <B>" is read from that turn on, as the chat read it.
+        conversation: sameRequestReadConversation(switchReadConversation(turnsWithoutPastedReview(parseHistory(body.conversation)))),
         templateKey: body.templateKey,
         employeeName: body.employeeName,
         alsoCalled,
