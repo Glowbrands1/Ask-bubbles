@@ -1337,6 +1337,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 5: EXCERPT_BRAND_HEADING_DROP (QA's round 17c live test, 11 Nov 2026; default off).
   "EXCERPT_BRAND_HEADING_DROP_ENABLED",
   "NEAR_MISS_ANSWER_KEEPS_REQUEST_ENABLED",
+  // coding 5: HUMAN_REPLIES (QA's October triage of #200, 10 Nov 2026; default off).
+  "HUMAN_REPLIES_ENABLED",
 ] as const;
 
 /**
@@ -3006,6 +3008,19 @@ export function wovenOcrPageBatchesEnabled(): boolean {
  */
 export function excerptBrandHeadingDropEnabled(): boolean {
   return envFlag("EXCERPT_BRAND_HEADING_DROP_ENABLED");
+}
+
+/**
+ * HUMAN_REPLIES_ENABLED (QA's October triage of #200, 10 Nov 2026, rebuilt on main; coding 5; default off). Every turn
+ * of a Corrective Action chat repeated the whole opener ("I'll draft a **Corrective Action Form** for … from what
+ * you've described, and check the applicable company policy …") and the long save notice. On: the first card turn for
+ * a form and employee is as built; a later one opens with one line on what changed, read from the card's own fields
+ * ("Got it — the date's 10/14."), leaves out lines the manager already read, and says "Nothing's saved until you tap
+ * **Create draft**." where the long notice was. Questions and the card are unchanged (`ai/human-replies.ts`, the last
+ * step of the chat route). Off, as before.
+ */
+export function humanRepliesEnabled(): boolean {
+  return envFlag("HUMAN_REPLIES_ENABLED");
 }
 
 // --- end coding 5 flags ---
