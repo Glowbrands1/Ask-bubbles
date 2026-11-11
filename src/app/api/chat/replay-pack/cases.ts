@@ -36,7 +36,8 @@ export interface ReplayThread {
 
 export interface ReplayContext {
   thread(): ReplayThread;
-  as(role: string, scope: unknown): void;
+  /** `subject`: who is signed in (default "qa-manager"), for a case with two managers. */
+  as(role: string, scope: unknown, subject?: string): void;
   directory(rows: readonly DirectoryRow[]): void;
   /**
    * The full policy manual a policy question reads (`loadFullManualPlan`), as indexed chunks; this case only. Without

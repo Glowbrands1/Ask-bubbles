@@ -3,8 +3,13 @@
  * incident date.
  *
  * The card-id match and DRAFT_DEDUPE_ENABLED stay as they are. This picker
- * does not care which chat or which manager created the draft. A different
- * date does not match. A finalized form does not match.
+ * does not care which chat created the draft. A different date does not
+ * match. A finalized form does not match.
+ *
+ * Which manager created it matters only with DRAFT_REUSE_OWN_ONLY_ENABLED
+ * (`ownOnly`): then only a row whose `createdBy` is the caller's matches, and
+ * a row whose creator was not read, or a caller with none, does not. Off (the
+ * default), any manager's draft matches, as before.
  */
 
 export interface CrossChatDraftRow {
@@ -21,6 +26,9 @@ export interface CrossChatDraftWanted {
   readonly templateKey: string;
   readonly employeeName: string;
   readonly formDate: string | null;
+  /** DRAFT_REUSE_OWN_ONLY_ENABLED: only a draft `createdBy` made. */
+  readonly ownOnly?: boolean;
+  readonly createdBy?: string | null;
 }
 
 function sameEmployee(left: string, right: string): boolean {
@@ -34,6 +42,7 @@ export function pickCrossChatOpenDraft(
 ): string | null {
   if (!wanted.formDate || !/^\d{4}-\d{2}-\d{2}$/.test(wanted.formDate)) return null;
   const matches = rows.filter((row) => {
+    if (wanted.ownOnly && (!wanted.createdBy || row.createdBy !== wanted.createdBy)) return false;
     if (row.status !== "draft") return false;
     if (row.templateKey !== wanted.templateKey) return false;
     if (row.formDate !== wanted.formDate) return false;

@@ -488,6 +488,22 @@ export function draftReuseSameChatOnlyEnabled(): boolean {
 }
 
 /**
+ * DRAFT_REUSE_OWN_ONLY_ENABLED (QA, 25 Oct 2026; rebuilt 6 Nov 2026; default
+ * off): a create from chat reopens an existing draft only when the manager
+ * creating made it (`created_by`). Every lookup that can hand the create
+ * route an existing draft reads only this manager's drafts, in the query
+ * itself, and a create with no acting user reuses nothing. Another manager's
+ * draft for the same employee, form and date is never handed over: a new
+ * draft is filed. It holds whatever DRAFT_REUSE_SAME_CHAT_ONLY_ENABLED and
+ * CROSS_CHAT_DRAFT_DEDUPE_ENABLED say and whatever chat key the browser sends.
+ * Opening or editing a named draft at the same store is not a reuse and is
+ * not changed. Off, every lookup is as it was.
+ */
+export function draftReuseOwnOnlyEnabled(): boolean {
+  return envFlag("DRAFT_REUSE_OWN_ONLY_ENABLED");
+}
+
+/**
  * "Delete that draft" deletes the draft on screen where the manager may
  * delete forms (the forms API's own rule), and says truthfully who can where
  * they may not; "same incident", answering "is this the same incident as the
@@ -1110,6 +1126,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REMOVE_POLICY_NOT_NAMED_ENABLED",
   "QUESTION_NOT_FORM_ENABLED",
   "DRAFT_REUSE_SAME_CHAT_ONLY_ENABLED",
+  "DRAFT_REUSE_OWN_ONLY_ENABLED",
   "RESIGN_METHOD_FOLLOWUP_ENABLED",
   "FRAMEWORK_UNPIN_ENABLED",
   "CHAT_LONG_MESSAGE_ENABLED",

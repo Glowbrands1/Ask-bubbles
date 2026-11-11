@@ -1,12 +1,23 @@
 import "server-only";
 
 import { trigramSimilarity } from "@/lib/ai/intake-augment";
+import { draftReuseOwnOnlyEnabled } from "@/lib/config/chat-quality-flags";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 
 import { pickCrossChatOpenDraft, type CrossChatDraftRow } from "./cross-chat-draft";
 import { draftsFromChat, keepSameChat, type SameChat } from "./draft-same-chat";
 import { sameIncident as sameIncidentKey } from "./incident-key";
 import { DUPLICATE_DRAFT_WINDOW_HOURS, loadInstance, type InstanceRow } from "./instances";
+
+/**
+ * DRAFT_REUSE_OWN_ONLY_ENABLED: whether a draft read back from the database
+ * may be handed to `createdBy`. Off, always (as before). On, only a draft
+ * that manager made; no acting user reuses nothing.
+ */
+function ownedBy(instance: InstanceRow, createdBy: string | null | undefined): boolean {
+  if (!draftReuseOwnOnlyEnabled()) return true;
+  return Boolean(createdBy) && instance.createdBy === createdBy;
+}
 
 /**
  * A resent create for the same incident.
@@ -29,8 +40,15 @@ export interface ResentDraftWanted {
 
 /**
  * An open draft for the same employee, template, and incident date, from
- * any chat and any manager. A different date does not match. The card-id
- * match stays in the route and runs first.
+ * any chat. A different date does not match. The card-id match stays in the
+ * route and runs first.
+ *
+ * WHOSE DRAFT (DRAFT_REUSE_OWN_ONLY_ENABLED, QA 25 Oct 2026). Off, any
+ * manager's draft counts, as before. On, the query reads only drafts
+ * `createdBy` made (`created_by` in the query, not after it), the picker and
+ * the loaded draft are checked again, and no `createdBy` finds nothing. So one
+ * manager's create is never handed another manager's draft, whatever chat key
+ * the browser sends and whatever DRAFT_REUSE_SAME_CHAT_ONLY_ENABLED says.
  */
 export async function findCrossChatOpenDraft(input: {
   readonly templateKey: string;
@@ -38,8 +56,12 @@ export async function findCrossChatOpenDraft(input: {
   readonly formDate: string;
   /** DRAFT_REUSE_SAME_CHAT_ONLY_ENABLED: only a draft this chat made. */
   readonly sameChat?: SameChat;
+  /** The manager creating. Read only with DRAFT_REUSE_OWN_ONLY_ENABLED on. */
+  readonly createdBy?: string | null;
 }): Promise<InstanceRow | null> {
   try {
+    const ownOnly = draftReuseOwnOnlyEnabled();
+    if (ownOnly && !input.createdBy) return null;
     const supabase = getSupabaseAdmin();
     const { data: template, error: templateError } = await supabase
       .from("form_templates")
@@ -47,14 +69,14 @@ export async function findCrossChatOpenDraft(input: {
       .eq("key", input.templateKey)
       .maybeSingle();
     if (templateError || !template) return null;
-    const { data, error } = await supabase
+    let drafts = supabase
       .from("form_instances")
       .select("id, employee_name, created_at, form_date, status, created_by")
       .eq("template_id", template.id)
       .eq("status", "draft")
-      .eq("form_date", input.formDate)
-      .order("created_at", { ascending: false })
-      .limit(25);
+      .eq("form_date", input.formDate);
+    if (ownOnly) drafts = drafts.eq("created_by", input.createdBy!);
+    const { data, error } = await drafts.order("created_at", { ascending: false }).limit(25);
     if (error || !Array.isArray(data)) return null;
     const read: CrossChatDraftRow[] = (
       data as {
@@ -75,10 +97,10 @@ export async function findCrossChatOpenDraft(input: {
       createdBy: typeof row.created_by === "string" ? row.created_by : undefined,
     }));
     const rows = await keepSameChat(read, input.sameChat);
-    const id = pickCrossChatOpenDraft(rows, input);
+    const id = pickCrossChatOpenDraft(rows, ownOnly ? { ...input, ownOnly: true, createdBy: input.createdBy! } : input);
     if (!id) return null;
     const loaded = await loadInstance(id);
-    return loaded?.instance.status === "draft" ? loaded.instance : null;
+    return loaded?.instance.status === "draft" && ownedBy(loaded.instance, input.createdBy) ? loaded.instance : null;
   } catch {
     return null;
   }
@@ -86,6 +108,8 @@ export async function findCrossChatOpenDraft(input: {
 
 export async function findResentDraft(input: ResentDraftWanted): Promise<InstanceRow | null> {
   try {
+    // DRAFT_REUSE_OWN_ONLY_ENABLED: the incidents read are this manager's (`user_id`); the draft found is checked too.
+    if (draftReuseOwnOnlyEnabled() && !input.createdBy) return null;
     const supabase = getSupabaseAdmin();
     const since = new Date((input.now ?? new Date()).getTime() - DUPLICATE_DRAFT_WINDOW_HOURS * 3_600_000);
     const { data, error } = await supabase
@@ -112,7 +136,7 @@ export async function findResentDraft(input: ResentDraftWanted): Promise<Instanc
     );
     if (!match || typeof match.instance_id !== "string") return null;
     const loaded = await loadInstance(match.instance_id);
-    return loaded?.instance.status === "draft" ? loaded.instance : null;
+    return loaded?.instance.status === "draft" && ownedBy(loaded.instance, input.createdBy) ? loaded.instance : null;
   } catch {
     return null;
   }
@@ -217,6 +241,8 @@ export async function findAccountResentDraft(input: {
   readonly now?: Date;
 }): Promise<InstanceRow | null> {
   try {
+    // DRAFT_REUSE_OWN_ONLY_ENABLED: the query reads only `created_by`'s drafts already; no manager reuses nothing.
+    if (draftReuseOwnOnlyEnabled() && !input.createdBy) return null;
     const supabase = getSupabaseAdmin();
     const { data: template, error: templateError } = await supabase
       .from("form_templates")
@@ -267,7 +293,7 @@ export async function findAccountResentDraft(input: {
     const id = pickResentDraft(rows, input);
     if (!id) return null;
     const loaded = await loadInstance(id);
-    return loaded?.instance.status === "draft" ? loaded.instance : null;
+    return loaded?.instance.status === "draft" && ownedBy(loaded.instance, input.createdBy) ? loaded.instance : null;
   } catch {
     return null;
   }

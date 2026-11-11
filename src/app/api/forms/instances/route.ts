@@ -54,6 +54,7 @@ import { businessToday } from "@/lib/business-date";
 import {
   conversationDraftReuseEnabled,
   draftReuseSameChatOnlyEnabled,
+  draftReuseOwnOnlyEnabled,
   crossChatDraftDedupeEnabled,
   draftActionsEnabled,
   draftDedupeEnabled,
@@ -297,6 +298,16 @@ export async function POST(request: Request) {
       : null;
     const sameChat: SameChat | undefined = sameChatOnly ? { conversationKey: chatKey } : undefined;
     const cardDate = isIsoCalendarDate(body.formDate) ? body.formDate : null;
+    /*
+     * DRAFT_REUSE_OWN_ONLY_ENABLED (QA, 25 Oct 2026). On, no lookup below
+     * hands this manager a draft another manager made: the finders read only
+     * this manager's drafts, and each draft found is checked here again
+     * (`mine`). No acting user reuses nothing. Off, `mine` is always true.
+     * Opening or editing a named draft through the chat is not a reuse and
+     * is not changed by this.
+     */
+    const ownOnly = draftReuseOwnOnlyEnabled();
+    const mine = (instance: { createdBy?: string | null }) => !ownOnly || (Boolean(actor.id) && instance.createdBy === actor.id);
     const reused = (instance: { formDate?: string | null }) =>
       NextResponse.json({
         instance,
@@ -320,7 +331,7 @@ export async function POST(request: Request) {
         locationId,
         proposalId,
       });
-      if (existing) return reused(existing);
+      if (existing && mine(existing)) return reused(existing);
     }
 
     /*
@@ -447,7 +458,7 @@ export async function POST(request: Request) {
       const newRequest =
         same !== null &&
         newRequestSinceDraft({ turns: chatTurns, lastTurnId: same.lastTurnId, employeeName: body.employeeName.trim().slice(0, 120) });
-      if (same && !newRequest) {
+      if (same && !newRequest && mine(same.instance)) {
         /*
          * The facts said since that draft was made, then this card's own
          * stated answers where the draft is still blank — never over a value.
@@ -486,7 +497,7 @@ export async function POST(request: Request) {
         incidentKey,
         ...(sameChat ? { sameChat } : {}),
       });
-      if (resent) return reused(resent);
+      if (resent && mine(resent)) return reused(resent);
     }
 
     /*
@@ -508,14 +519,15 @@ export async function POST(request: Request) {
         formDate: isIsoCalendarDate(body.formDate) ? body.formDate : null,
         ...(sameChat ? { sameChat } : {}),
       });
-      if (narrative) return reused(narrative);
+      if (narrative && mine(narrative)) return reused(narrative);
     }
 
     /*
      * SAME EMPLOYEE, TEMPLATE, AND INCIDENT DATE, ACROSS CHATS. The card-id
      * match above stays first. This does not widen DRAFT_DEDUPE_ENABLED: a
      * different date, or a request for a separate document, still creates.
-     * Off, this block does not run.
+     * Off, this block does not run. With DRAFT_REUSE_OWN_ONLY_ENABLED on,
+     * only a draft this manager made is reopened; off, any manager's counts.
      */
     const crossChatDate = isIsoCalendarDate(body.formDate) ? body.formDate : null;
     if (
@@ -530,8 +542,10 @@ export async function POST(request: Request) {
         employeeName: body.employeeName.trim().slice(0, 120),
         formDate: crossChatDate,
         ...(sameChat ? { sameChat } : {}),
+        // DRAFT_REUSE_OWN_ONLY_ENABLED: only this manager's drafts. Off, the call is as it was.
+        ...(ownOnly ? { createdBy: actor.id } : {}),
       });
-      if (open) return reused(open);
+      if (open && mine(open)) return reused(open);
     }
 
     const instance = await createInstance({
