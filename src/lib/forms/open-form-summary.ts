@@ -4,7 +4,7 @@ import type { OpenFormSummary } from "@/lib/ai/types";
 
 import { blocksForVariant, checkboxGroupsForVariant, fieldsForVariant, interpolate, parseFormDocument } from "./document";
 import { authorizeInstance } from "./instance-scope";
-import { unverifiedPolicyFields } from "./policy-verification";
+import { blankPolicyFields, unverifiedPolicyFields } from "./policy-verification";
 
 /** Enough of a long field for the model to know what it says, not the whole record. */
 const VALUE_CHARS = 600;
@@ -64,6 +64,7 @@ export async function describeOpenForm(request: Request, instanceId: string): Pr
     status: instance.status === "draft" ? "draft" : "finalized",
     lines,
     unverifiedPolicy: unverifiedPolicyFields(document, variantKey, loaded.values).map((field) => field.label),
+    ...withBlankPolicy(blankPolicyFields(document, variantKey, loaded.values).map((field) => field.label)),
     cited: citedSectionsOf(fieldsForVariant(document, variantKey), rows),
   };
 }
@@ -97,4 +98,9 @@ function clip(value: string): string {
 function humanize(key: string): string {
   const words = key.replace(/_/g, " ").trim();
   return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+/** POLICY_GATE_NONBLOCKING_ENABLED: the blank policy lines, only when there are any (so the summary is unchanged off). */
+function withBlankPolicy(labels: string[]): { blankPolicy?: string[] } {
+  return labels.length > 0 ? { blankPolicy: labels } : {};
 }
