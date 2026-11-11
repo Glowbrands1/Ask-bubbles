@@ -16,6 +16,7 @@ import { acceptsNearMissWithDetails, nearMissTypedRest } from "@/lib/forms/near-
 import { typedWithOtherSurname, cardOnScreen } from "@/lib/forms/request-slot";
 
 import type { ChatActor } from "./form-proposal";
+import { withNameCorrectionDate } from "./name-correction-keeps-date";
 import type { AskRequest, AskResponse } from "./types";
 import type { ChatMessage } from "@/types";
 
@@ -539,6 +540,8 @@ export async function withFirstNameSuggestFor(
   actor: ChatActor,
 ): Promise<AskResponse> {
   if (!firstNameSuggestEnabled()) return response;
+  // NAME_CORRECTION_KEEPS_DATE_ENABLED: the answer to the name question keeps the card's date (`name-correction-keeps-date.ts`).
+  response = withNameCorrectionDate(response, request);
   const card = response.formProposal;
   const oneWordCard = Boolean(card?.employeeName && !/\s/.test(card.employeeName.trim()));
   const maybeFilled = cardNameNotTypedInFull(card?.employeeName, request);

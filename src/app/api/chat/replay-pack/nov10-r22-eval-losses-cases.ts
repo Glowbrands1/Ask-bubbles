@@ -90,8 +90,9 @@ export const NOV10_R22_EVAL_LOSSES_CASES: ReplayCase[] = [
      * roster set off, the later "create a follow-up coaching form for rozlyn quellmar" drops it. Reported to QA.
      */
     status: { open: "the date given on turn 2 is lost after the near-miss answer and on the next request for her" },
-    fixFlags: SET,
-    fixStatus: { open: "the same with the roster set on: the fix for these two paths is pending" },
+    // NAME_CORRECTION_KEEPS_DATE_ENABLED (QA, 11 Nov 2026; coding 2): a name correction never clears the card's date; with
+    // it, the case holds on every turn after the answer, with the roster set on or off. The fixStatus goes.
+    fixFlags: [...SET, "NAME_CORRECTION_KEEPS_DATE_ENABLED"],
     async run(t) {
       t.directory([...STAFF, ROZLYN]);
       t.as("location_manager", GLOBAL);
