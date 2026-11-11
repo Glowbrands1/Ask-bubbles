@@ -10,9 +10,9 @@ import { REFUSAL_ROSTER } from "./nov7-step-b-refusals-scenarios";
  * ============================================================================
  *
  * Pau's wording, "make it about not following the dress code", read as no policy named: "not" + up to two words before
- * the policy topic set it aside (`forms/ca-policy.ts`, NEGATED_BEFORE). Ported from coding 4's Ask Sunny case
- * (ask-sunny 4e268731). That case checks the saved Coaching draft's "Policy reference:" line after an earlier
- * made-about; this app has no made-about policy line (MADE_ABOUT_POLICY_LINE is Ask Sunny's), so here the same words
+ * the policy topic set it aside (`forms/ca-policy.ts`, NEGATED_BEFORE). Ported from coding 4's case in the sibling app
+ * (the sibling repository, 4e268731). That case checks the saved Coaching draft's "Policy reference:" line after an earlier
+ * made-about; this app has no made-about policy line (MADE_ABOUT_POLICY_LINE is the sibling app's), so here the same words
  * are checked where this app cites the manual from them: the Coaching card's citation and the Corrective Action card's
  * Policy line. Off (production's flags), neither names the Dress Code. The pack's invented person.
  */
