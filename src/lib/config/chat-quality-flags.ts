@@ -994,6 +994,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "PROPOSAL_NAME_CORRECTION_ENABLED",
   // Coding: NEAR_MISS_QUESTION_RULES (round 5, 8 Nov 2026; port from the sibling app; default off): forced off with the others.
   "NEAR_MISS_QUESTION_RULES_ENABLED",
+  // Coding 2: FORM_NAME_OFF_ROSTER_ASK (QA, 10 Nov 2026; port from the sibling app; default off; ships with the name set).
+  "FORM_NAME_OFF_ROSTER_ASK_ENABLED",
   "POLICY_CHANGE_REST_OF_TURN_ENABLED",
   "OPEN_FORM_NO_SELECTION_ENABLED",
   "ANGLE_PLACEHOLDER_GUARD_ENABLED",
@@ -1334,6 +1336,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "WOVEN_OCR_PAGE_BATCHES_ENABLED",
   // coding 5: EXCERPT_BRAND_HEADING_DROP (QA's round 17c live test, 11 Nov 2026; default off).
   "EXCERPT_BRAND_HEADING_DROP_ENABLED",
+  "NEAR_MISS_ANSWER_KEEPS_REQUEST_ENABLED",
 ] as const;
 
 /**
@@ -3210,6 +3213,18 @@ export function rosterNameInCandidateEnabled(): boolean {
  * matcher's close name); (b) with no employee on the card, no reply text names
  * the person who is not on it. Off, as before.
  */
+/**
+ * NEAR_MISS_ANSWER_KEEPS_REQUEST_ENABLED (QA, 10 Nov 2026, Bubbles s14 path 1; default off). "ok, create a follow-up
+ * coaching form for rozline quellmar. i trained her …" was asked "Is this for **Rozlyn Quellmar**?"; the answer
+ * "Oops, it's Rozlyn quellmar" became the name alone, because the request was looked for by the chosen first name
+ * ("Rozlyn") and the manager had typed "rozline". The card went back to the earlier Coaching Form and lost its date.
+ * On: when no turn typed the chosen name, the turn the question asked about is the request, with the near-miss
+ * replaced by the chosen name (`ai/first-name-suggest.ts`). Off, as before.
+ */
+export function nearMissAnswerKeepsRequestEnabled(): boolean {
+  return envFlag("NEAR_MISS_ANSWER_KEEPS_REQUEST_ENABLED");
+}
+
 export function rosterNearMissEnabled(): boolean {
   return envFlag("ROSTER_NEAR_MISS_ENABLED");
 }
@@ -3786,6 +3801,24 @@ export function metricChoiceOneQuestionEnabled(): boolean {
  */
 export function nearMissQuestionRulesEnabled(): boolean {
   return envFlag("NEAR_MISS_QUESTION_RULES_ENABLED");
+}
+
+// coding 2: FORM_NAME_OFF_ROSTER_ASK
+/**
+ * FORM_NAME_OFF_ROSTER_ASK_ENABLED (ported from the sibling app: QA's roster-set gate there, 10 Nov 2026; default off; ships with the name set, the
+ * eighth FORM_NAME companion). With FORM_NAME on, three replies the off-roster flow should own went another way:
+ * (a) a termination letter's own person ("Dear <name>,", a letter that opens "<name>,") was never offered as typed
+ * ("reply **use <name>**"), only asked who; (b) for a store manager, a full name not on the roster got "I couldn't find
+ * **<name>** in the Woven roster, so that name is not on the form." under an empty card, never OFF_ROSTER_ASK_BEFORE_CARD's
+ * "I can't find **<name>** on your roster — is that the right name, or are they at another store?" with the card held;
+ * (c) "create a CA for <Name>'s Crossing Plaza, …" said the place back as a name not found, never POSSESSIVE_PLACE's
+ * question. On: (a) those letter places count as a person's (`forms/roster-only-names.ts` personPlaces); (b) the
+ * not-found note and offer are OFF_ROSTER_ASK's question and offer, once per name, the card held (`forms/off-roster-
+ * ask.ts`), store managers only, as OFF_ROSTER_ASK; (c) a possessive place is asked as POSSESSIVE_PLACE asks it. Off, as
+ * before.
+ */
+export function formNameOffRosterAskEnabled(): boolean {
+  return envFlag("FORM_NAME_OFF_ROSTER_ASK_ENABLED");
 }
 
 /**
