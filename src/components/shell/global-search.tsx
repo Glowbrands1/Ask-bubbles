@@ -10,6 +10,7 @@ import { KNOWLEDGE_CATEGORY_LABEL } from "@/data/knowledge-taxonomy";
 import { ACTIVE_BRAND } from "@/lib/brand";
 import { useAppStore } from "@/lib/store/app-store";
 
+import { useHidesFormMonitoring } from "./hides-form-monitoring";
 import { NAV_SECTIONS } from "./navigation";
 
 /**
@@ -38,8 +39,13 @@ const KIND_LABEL = {
   form: "Form",
 };
 
+const NO_FORMS: never[] = [];
+
 export function GlobalSearch() {
-  const { documents, forms } = useAppStore();
+  const { documents, forms: storeForms } = useAppStore();
+  // ASD_NO_FORM_MONITORING: form hits and the screen open the Forms Register, so a reader without it gets neither.
+  const hidesMonitoring = useHidesFormMonitoring();
+  const forms = hidesMonitoring ? NO_FORMS : storeForms;
   const [query, setQuery] = useState("");
 
   const hits = useMemo<Hit[]>(() => {
@@ -47,7 +53,7 @@ export function GlobalSearch() {
     if (q.length < 2) return [];
 
     const screens: Hit[] = NAV_SECTIONS.flatMap((section) =>
-      section.items.map((item) => ({
+      section.items.filter((item) => !(hidesMonitoring && item.permission === "view_form_monitoring")).map((item) => ({
         id: `screen-${item.href}`,
         label: item.label,
         detail: section.label,
@@ -77,7 +83,7 @@ export function GlobalSearch() {
         (hit) => hit.label.toLowerCase().includes(q) || hit.detail.toLowerCase().includes(q),
       )
       .slice(0, 24);
-  }, [query, documents, forms]);
+  }, [query, documents, forms, hidesMonitoring]);
 
   return (
     <div>

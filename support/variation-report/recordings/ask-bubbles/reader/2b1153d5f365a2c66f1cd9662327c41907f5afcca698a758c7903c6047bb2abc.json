@@ -1,0 +1,51 @@
+{
+  "key": "2b1153d5f365a2c66f1cd9662327c41907f5afcca698a758c7903c6047bb2abc",
+  "model": "claude-haiku-5-5",
+  "reply": {
+    "employee": {
+      "value": "Ferris, Dale",
+      "evidence": "Ferris, Dale"
+    },
+    "location": null,
+    "jobTitle": null,
+    "incident": {
+      "value": "Opened store late",
+      "evidence": "opening store late on 10-1-26"
+    },
+    "incidentDate": {
+      "value": "2026-10-01",
+      "evidence": "10-1-26"
+    },
+    "warningLevel": {
+      "value": "verbal",
+      "evidence": "create verbal ca"
+    },
+    "payroll": {
+      "value": "yes",
+      "evidence": "payroll deduct DOES apply"
+    },
+    "payrollAmount": {
+      "value": "25",
+      "evidence": "state $25 will be payroll deducted"
+    },
+    "policyHeading": {
+      "value": "Late Opening",
+      "evidence": "opening store late on 10-1-26"
+    },
+    "priorSteps": [
+      {
+        "kind": "other",
+        "date": "2026-01-01",
+        "evidence": "previous coaching is jba policy manual 1-1-26"
+      }
+    ],
+    "otherDates": []
+  },
+  "usage": {
+    "inputTokens": 4643,
+    "outputTokens": 506,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0
+  },
+  "ms": 2046
+}

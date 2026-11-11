@@ -1,9 +1,12 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
+import { DEFAULT_ON } from "@/lib/config/default-on";
+
 import { CHAT_QUALITY_FLAG_NAMES, antiLoopEnabled, envFlag } from "@/lib/config/chat-quality-flags";
+import { cardChangeEnabled, cardChangeFinalizedEnabled } from "@/lib/forms/card-change-flag";
 
 /**
  * Flags off must match the path the suites already expect.
@@ -40,13 +43,189 @@ const PROTECTED = [
  * The user (Pau) approved, via QA on 25 Oct 2026, editing
  * src/lib/forms/form-date-answer.ts to fix prior-action parsing behind
  * PRIOR_ACTIONS_PARSE_ENABLED, with the flag-off reading unchanged. It stays
+ * on the PROTECTED list; only the diff check leaves it out.
+ *
+ * The user (Pau) approved, on 26 Oct 2026, editing src/lib/ai/form-proposal.ts
+ * for STORED_SLOTS_NOT_A_REQUEST_ENABLED: in turnsAboutThisForm the new-request
+ * check reads the manager's words, not the app's stored-slot lines, with the
+ * flag-off reading unchanged. It stays on the PROTECTED list; only the diff
+ * check leaves it out. No other protected file is excepted.
+ * PRIOR_ACTIONS_PARSE_ENABLED, with the flag-off reading unchanged, and on
+ * 26 Oct 2026 again for the incident date behind PRIOR_SENTENCE_FIX_ENABLED
+ * (a prior step's date is never the form's Date). It stays
  * on the PROTECTED list; only the diff check leaves it out. No other
  * protected file is excepted.
+ *
+ * The user (Pau) approved, in the Code session on 27 Oct 2026 ("yes, name
+ * question form-proposal.ts both apps"), two lines in src/lib/ai/form-proposal.ts
+ * openingQuestions behind NAME_QUESTION_ONLY_ENABLED: with no employee named,
+ * one plain question instead of the list. Off, the list as before.
+ *
+ * The user (Pau) approved, in the Code session on 27 Oct 2026, editing
+ * src/lib/forms/proposal.ts, only two lines, for the Madeline chain (QA BF7):
+ * the import of `namesSomebody` from "./answer-not-a-name", and in
+ * readEmployeeMentions `settle(strong.filter(namesSomebody),
+ * found.filter(namesSomebody), text, subjects)`. Behind
+ * ANSWER_NOT_A_NAME_ENABLED and STORE_WORD_NOT_A_NAME_ENABLED, both default
+ * off; off, namesSomebody keeps every candidate. It stays on the PROTECTED
+ * list; only the diff check leaves it out.
+ *
+ * The user (Pau) approved, via QA on 29 Oct 2026 ("yes do that please"),
+ * two more lines in src/lib/forms/proposal.ts, both apps: the import
+ * `import { isExitTerms, namesSomebody } from "./answer-not-a-name";` and in
+ * employeeState `reading.names.filter((name) => !excluded.some((not) =>
+ * samePerson(not, name)) && !isExitTerms(name))`. Behind
+ * EXIT_TERMS_NOT_NAMES_ENABLED, default off; off, isExitTerms is false and
+ * every name is kept.
+ *
+ * The user (Pau) approved, via QA on 29 Oct 2026 ("ok address line"), the
+ * same two lines again in src/lib/forms/proposal.ts, both apps: the import
+ * `import { isExitTerms, namesSomebody, notInStreetAddress } from
+ * "./answer-not-a-name";` and in employeeState `… && !isExitTerms(name) &&
+ * notInStreetAddress(message.content)(name)`. Behind
+ * STREET_ADDRESS_NOT_A_NAME_ENABLED, default off; off, notInStreetAddress
+ * keeps every name.
+ *
+ * The user (Pau) approved, in the Code session on 27 Oct 2026, editing
+ * src/lib/forms/form-date-answer.ts in both apps, only two lines: the import
+ * of `withWiderDates` from "./wider-dates", and datesInText's last line
+ * `return withWiderDates(text ?? "", today, found);`. Behind
+ * WIDER_DATE_READER_ENABLED, default off; off, the dates found are returned
+ * as they were. form-date-answer.ts is already excluded from the diff check.
+ *
+ * The user (Pau) approved in writing, via QA on 31 Oct 2026 ("Approve both"),
+ * in src/lib/forms/chat-revision.ts, both apps: the import
+ * `import { revisionSameValueEnabled } from "@/lib/config/chat-quality-flags";`
+ * and, before `const changed`, a value equal to the field's current text is
+ * dropped from `byName.values`. Behind REVISION_SAME_VALUE_ENABLED, default
+ * off; off, nothing is dropped.
+ *
+ * The user (Pau) approved in the Code session on 3 Nov 2026 ("Approve chat
+ * revisions"), in src/lib/forms/chat-revision.ts, both apps: the import
+ * `import { namesOnRoster } from "./roster-name-gate";` and the existing
+ * `const named = extractEmployeeNames(...).filter(...)` wrapped as
+ * `await namesOnRoster(<the same filtered list>, actor.scope)`. Behind
+ * FORM_EDIT_NAME_GATE_ROSTER_ENABLED, default off; off, namesOnRoster returns
+ * the list unchanged and reads nothing.
+ *
+ * The user (Pau) approved on 4 Nov 2026, via QA ("chat-revision.ts hunk 1,
+ * version 2: YES, same hunk in both apps"), in src/lib/forms/chat-revision.ts:
+ * the import `formEditSingleWriterEnabled` beside `revisionSameValueEnabled`,
+ * and the revision's save as `formEditSingleWriterEnabled() ?
+ * writeRevisionEdits(…, { actorId, latest: input.question, notes }) :
+ * applyAssistantRevision(…)`. Behind FORM_EDIT_SINGLE_WRITER_ENABLED, default
+ * off; off, the same applyAssistantRevision call as before.
+ *
+ * The user (Pau) approved on 4 Nov 2026 ("#424: Option A approved"), in
+ * src/lib/forms/instances.ts, `reviseInstance`: the imports
+ * `offeredOffenseKeys` (./offense-keys) and `caSalesPolicyEnabled`, and one
+ * block after `const byKey`: only when the revision lands on a NEWER version,
+ * a Type of Offense tick on a box Corrective Action revision 7 replaced is
+ * carried as the box that replaced it, and an old Other write-in ticks Other.
+ * Behind CA_SALES_POLICY_ENABLED, default off; off, every row is carried as
+ * before. The filed form is never touched.
  */
-const APPROVED_PROTECTED_EDITS = [":(exclude)src/lib/forms/form-date-answer.ts"];
+const APPROVED_PROTECTED_EDITS = [
+  ":(exclude)src/lib/forms/chat-revision.ts",
+  ":(exclude)src/lib/forms/instances.ts",
+  ":(exclude)src/lib/forms/form-date-answer.ts",
+  ":(exclude)src/lib/ai/form-proposal.ts",
+  ":(exclude)src/lib/forms/proposal.ts",
+];
 
 const UI_PATHS = ["src/app/**/*.tsx", "src/components/**", "src/features/**/*.tsx", "**/*.css"];
-const ALLOWED_UI = "src/features/chat/message-bubble.tsx";
+/*
+ * The UI files this branch may change. The composer was added with QA's
+ * approval on 25 Oct 2026: behind CHAT_LONG_MESSAGE_ENABLED, a
+ * character-count line under the field and send disabled over the limit.
+ * Off, it renders as before.
+ */
+/*
+ * And the Forms Register links an Assistant Manager would meet (chat card
+ * button, search and its hook): QA approved on 27 Oct 2026, behind
+ * NEXT_PUBLIC_ASD_NO_FORM_MONITORING_ENABLED. Each gate reads the flag first;
+ * off, it renders as before for every role.
+ */
+const ALLOWED_UI = [
+  // District Manager, 3 Nov 2026 (QA approved 5 Nov, Pau 6 Nov): the Reviews page and the admin Google Reviews
+  // screen show the company's store number (Dawley Farms: 309; its Google code 338 stays the match key). Unflagged:
+  // it is a data correction, identical for every store whose number is its code.
+  "src/features/reviews/reviews-data.tsx",
+  "src/features/admin/google-reviews/google-reviews-screen.tsx",
+  "src/features/chat/message-bubble.tsx",
+  "src/features/chat/composer.tsx",
+  "src/features/chat/inline-form.tsx",
+  "src/components/shell/global-search.tsx",
+  "src/components/shell/hides-form-monitoring.ts",
+  // App switcher gains a Leadership Hub link, shown only when the server says the signed-in
+  // email is on LEADERSHIP_HUB_TAB_EMAILS (requested via the QA session, Nov 2026 — QA to confirm).
+  // Unset, the switcher renders exactly as before.
+  "src/components/shell/app-switcher.tsx",
+  "src/components/shell/sidebar.tsx",
+  "src/components/shell/app-shell.tsx",
+  // PRIVATE_CREATOR_FORMS_ENABLED (QA approved 27 Oct 2026): the follow-up and list reads over-read and trim to
+  // their page while the rule is active; off, each asks for its page exactly as before.
+  "src/app/(app)/page.tsx",
+  "src/app/(app)/layout.tsx",
+  "src/app/(app)/forms/monitoring/page.tsx",
+  // QA-approved 2026-10-27 (owner asked for the Change something button), behind
+  // NEXT_PUBLIC_CARD_CHANGE_ENABLED; off, it renders nothing.
+  "src/features/chat/card-change-panel.tsx",
+  // QA-approved 2026-10-28 (Pau: structured changes on a finalized form), behind
+  // NEXT_PUBLIC_CARD_CHANGE_FINALIZED_ENABLED; off, it renders nothing.
+  "src/features/chat/finalized-change-panel.tsx",
+  // INVITE_LINK_HOLD_ENABLED (QA approved 28 Oct 2026, both apps): the new invitation
+  // Continue page and its form. Off, the page never shows Continue.
+  "src/app/auth/invite-continue/page.tsx",
+  "src/features/auth/invite-continue-form.tsx",
+  // Public /about and /privacy for Google's OAuth consent screen; no chat or form
+  // behavior; requested by Pau (1 Nov 2026). Two new pages, their shared frame, and the
+  // About / Privacy links under the sign-in form. login-screen.tsx is listed as a whole
+  // file, so later edits to it are not checked by this guard.
+  "src/app/about/page.tsx",
+  "src/app/privacy/page.tsx",
+  "src/features/public/public-page.tsx",
+  "src/features/auth/login-screen.tsx",
+];
+
+/*
+ * The user (Pau) approved, via QA on 25 Oct 2026, the forms list's Edit and
+ * History mount for form revisions in both apps: exactly these two added
+ * lines in monitoring-table.tsx, rendering nothing with
+ * NEXT_PUBLIC_FORM_REVISIONS_ENABLED off. Any other change to the file fails.
+ */
+const MONITORING_TABLE = "src/features/forms/monitoring-table.tsx";
+const MONITORING_MOUNT = [
+  '+import { RegisterRowActions } from "@/form-revisions/register-row-actions";',
+  "+                            <RegisterRowActions form={form} />",
+  /*
+   * Pau approved, via QA on 29 Oct 2026, both apps, no flag: the row menu
+   * "…" shows only when it has an item. A role that may track but not manage
+   * got an empty menu on a row that is not followed up ("wanted to delete
+   * some form but the ... is not showing when clicked").
+   */
+  "-                            {mayManage || mayTrack ? (",
+  "+                            {mayManage || (form.followedUpAt && mayTrack) ? (",
+];
+
+/*
+ * NEXT_PUBLIC_INVITED_SIGNIN_ACCEPTS_ENABLED (QA approved 28 Oct 2026, both
+ * apps; QA reviews the auth diff line by line): sign-in-form.tsx may add
+ * exactly the flag import and the gated accept call, plus comment lines.
+ * Off, the form behaves as before. Any other change to the file fails.
+ */
+const SIGN_IN_FORM = "src/features/auth/sign-in-form.tsx";
+const SIGN_IN_ACCEPT = [
+  '+import { invitedSignInAcceptsEnabled } from "@/lib/auth/invited-signin-flag";',
+  "+      if (invitedSignInAcceptsEnabled()) {",
+  '+        await fetch("/api/auth/accept-invitation", { method: "POST" }).catch(() => undefined);',
+  "+      }",
+];
+const isAddedCommentOrBlank = (line: string) => /^\+\s*(\/\*.*|\*.*|)$/.test(line);
+
+function changedLines(patch: string): string[] {
+  return patch.split("\n").filter((line) => /^[+-](?![+-]{2} )/.test(line));
+}
 
 function diff(ref: string, args: string[]): string {
   return execFileSync("git", ["diff", ref, "--", ...args], { encoding: "utf8" });
@@ -76,8 +255,17 @@ describe("new flags default off", () => {
   it("treats unset flags as off, including the anti-loop flag", () => {
     const previous = Object.fromEntries(CHAT_QUALITY_FLAG_NAMES.map((name) => [name, process.env[name]]));
     for (const name of CHAT_QUALITY_FLAG_NAMES) delete process.env[name];
-    for (const name of CHAT_QUALITY_FLAG_NAMES) expect(envFlag(name)).toBe(false);
+    // Since 3 Nov 2026 ("(E) batch 1", config/default-on.ts) the flags in DEFAULT_ON read as on when unset; every other flag, off.
+    for (const name of CHAT_QUALITY_FLAG_NAMES) expect(envFlag(name), name).toBe(DEFAULT_ON.has(name));
+    // ...and "off" still turns each of them off (the emergency off switch).
+    for (const name of DEFAULT_ON) {
+      process.env[name] = "off";
+      expect(envFlag(name), name).toBe(false);
+      delete process.env[name];
+    }
     expect(antiLoopEnabled()).toBe(false);
+    expect(cardChangeEnabled()).toBe(false);
+    expect(cardChangeFinalizedEnabled()).toBe(false);
     for (const name of CHAT_QUALITY_FLAG_NAMES) {
       const saved = previous[name];
       if (saved === undefined) delete process.env[name];
@@ -85,16 +273,20 @@ describe("new flags default off", () => {
     }
   });
 
-  it("does not edit the protected modules, and the only UI diff is the close-match note", () => {
+  it("does not edit the protected modules, and the only UI diffs are the close-match note and the composer's length line", () => {
     expect(diff("HEAD", [...PROTECTED, ...APPROVED_PROTECTED_EDITS])).toBe("");
     const uiBase = uiDiffBase();
     if (uiBase) {
       const raw = diff(uiBase, [...UI_PATHS, ":(exclude)**/*.test.tsx", ":(exclude)**/*.dom.test.tsx"]);
       const unexpected = raw
         .split(/(?=^diff --git )/m)
-        .filter((block) => block.trim().length > 0 && !block.includes(ALLOWED_UI))
+        .filter((block) => block.trim().length > 0 && !ALLOWED_UI.some((file) => block.includes(file)) && !block.includes(MONITORING_TABLE) && !block.includes(SIGN_IN_FORM))
         .join("");
       expect(unexpected).toBe("");
+      expect(changedLines(diff(uiBase, [MONITORING_TABLE])).filter((line) => !MONITORING_MOUNT.includes(line))).toEqual([]);
+      expect(
+        changedLines(diff(uiBase, [SIGN_IN_FORM])).filter((line) => !SIGN_IN_ACCEPT.includes(line) && !isAddedCommentOrBlank(line)),
+      ).toEqual([]);
     }
     const ask = readFileSync("src/lib/ai/server-ask.ts", "utf8");
     const code = ask.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
@@ -107,31 +299,69 @@ describe("new flags default off", () => {
 
 const CHILD = process.env.FLAGS_OFF_PARITY_CHILD === "1";
 
+/*
+ * The child run is split in five (ported from the sibling app, QA, 7 Nov 2026): src/lib; src/app/api/chat
+ * without the replay pack, in two halves by name; src/app/api/forms; the replay pack. As one run over all four folders it timed out
+ * (ETIMEDOUT at 540 s) on busy runners, and in the sibling app the chat+forms part alone had reached 530 s on
+ * main on a 4-CPU runner. Measured here with three children (4-CPU): src/lib 101 s, chat without the pack +
+ * forms 250 s, the replay pack 116 s. Each child has the whole budget with room to spare. The folders, the flags and what must pass are
+ * unchanged, and every test file still runs in exactly one child.
+ *
+ * A path filter matches any file whose path contains it, so the chat folder without the pack is named entry
+ * by entry — each test file, and each folder with its trailing "/" — read from the folder itself.
+ */
+const CHAT = "src/app/api/chat";
+const REPLAY_PACK = `${CHAT}/replay-pack`;
+function chatWithoutReplayPack(): string[] {
+  return readdirSync(CHAT, { withFileTypes: true })
+    .filter((entry) => `${CHAT}/${entry.name}` !== REPLAY_PACK)
+    .filter((entry) => entry.isDirectory() || /\.test\.tsx?$/.test(entry.name))
+    .map((entry) => `${CHAT}/${entry.name}${entry.isDirectory() ? "/" : ""}`)
+    .sort();
+}
+/** The chat folder without the pack, in two halves by name (`half` 0 or 1): each half is its own child. */
+function chatHalf(half: 0 | 1): string[] {
+  const all = chatWithoutReplayPack();
+  const middle = Math.ceil(all.length / 2);
+  return half === 0 ? all.slice(0, middle) : all.slice(middle);
+}
+/*
+ * THE REPLAY PACK IN TWO HALVES (QA, 9 Nov 2026; the same as the sibling app's): the sibling's replay-pack child timed
+ * out at 540 s on CI as its pack grew, and this pack grows the same way. Nearly all of its time is one file,
+ * `replay-pack-e2e.test.ts`, so it is halved by case, not by file: the first child runs the whole folder with the first
+ * half of the cases by id (`REPLAY_PACK_HALF` "0"; the pack's other test files run there, once), the second child that
+ * one file with the second half ("1"). Every case and every file still runs exactly once, with every new flag off.
+ */
+const REPLAY_PACK_E2E = `${REPLAY_PACK}/replay-pack-e2e.test.ts`;
+const CHILDREN: readonly { readonly name: string; readonly paths: () => readonly string[]; readonly env?: Readonly<Record<string, string>> }[] = [
+  { name: "src/lib/ai, src/lib/forms", paths: () => ["src/lib/ai", "src/lib/forms"] },
+  { name: `${CHAT} (without the replay pack), first half by name`, paths: () => chatHalf(0) },
+  { name: `${CHAT} (without the replay pack), second half by name`, paths: () => chatHalf(1) },
+  { name: "src/app/api/forms", paths: () => ["src/app/api/forms"] },
+  { name: `${REPLAY_PACK}, first half of the cases by id`, paths: () => [REPLAY_PACK], env: { REPLAY_PACK_HALF: "0" } },
+  { name: `${REPLAY_PACK}, second half of the cases by id`, paths: () => [REPLAY_PACK_E2E], env: { REPLAY_PACK_HALF: "1" } },
+];
+
 describe("existing chat and form suites with every new flag off", () => {
-  it.skipIf(CHILD)(
-    "passes the suites whose expectations are already on main",
-    () => {
-      const env: NodeJS.ProcessEnv = { ...process.env, FLAGS_OFF_PARITY_CHILD: "1" };
-      delete env.VITEST;
-      delete env.VITEST_WORKER_ID;
-      delete env.VITEST_POOL_ID;
-      for (const name of CHAT_QUALITY_FLAG_NAMES) env[name] = "off";
-      const output = execFileSync(
-        process.execPath,
-        [
-          "node_modules/vitest/vitest.mjs",
-          "run",
-          "--exclude",
-          "src/lib/ai/flags-off-parity.test.ts",
-          "src/lib/ai",
-          "src/lib/forms",
-          "src/app/api/chat",
-          "src/app/api/forms",
-        ],
-        { env, encoding: "utf8", timeout: 540_000, stdio: "pipe" },
-      );
-      expect(output).toMatch(/Test Files[\s\S]*passed/);
-    },
-    560_000,
-  );
+  for (const child of CHILDREN) {
+    it.skipIf(CHILD)(
+      `passes the suites whose expectations are already on main: ${child.name}`,
+      () => {
+        const env: NodeJS.ProcessEnv = { ...process.env, FLAGS_OFF_PARITY_CHILD: "1", ...child.env };
+        delete env.VITEST;
+        delete env.VITEST_WORKER_ID;
+        delete env.VITEST_POOL_ID;
+        for (const name of CHAT_QUALITY_FLAG_NAMES) env[name] = "off";
+        const output = execFileSync(
+          process.execPath,
+          ["node_modules/vitest/vitest.mjs", "run", "--exclude", "src/lib/ai/flags-off-parity.test.ts", ...child.paths()],
+          // The child's output (every suite's logs) passed Node's 1 MB default
+          // buffer on CI and failed with ENOBUFS before any test failed.
+          { env, encoding: "utf8", timeout: 540_000, stdio: "pipe", maxBuffer: 256 * 1024 * 1024 },
+        );
+        expect(output).toMatch(/Test Files[\s\S]*passed/);
+      },
+      560_000,
+    );
+  }
 });

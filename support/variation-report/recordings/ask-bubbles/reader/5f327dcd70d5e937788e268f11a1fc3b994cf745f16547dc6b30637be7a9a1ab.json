@@ -1,0 +1,42 @@
+{
+  "key": "5f327dcd70d5e937788e268f11a1fc3b994cf745f16547dc6b30637be7a9a1ab",
+  "model": "claude-haiku-5-5",
+  "reply": {
+    "employee": {
+      "value": "quinn",
+      "evidence": "create a CA form for quinn, team member"
+    },
+    "location": {
+      "value": "grand island",
+      "evidence": "team member at grand island"
+    },
+    "jobTitle": {
+      "value": "team member",
+      "evidence": "quinn, team member at grand island"
+    },
+    "incident": {
+      "value": "Late opening of store",
+      "evidence": "for opening store late on 9-28-26"
+    },
+    "incidentDate": {
+      "value": "2026-09-28",
+      "evidence": "for opening store late on 9-28-26"
+    },
+    "warningLevel": null,
+    "payroll": null,
+    "payrollAmount": null,
+    "policyHeading": {
+      "value": "Late Opening",
+      "evidence": "for opening store late on 9-28-26"
+    },
+    "priorSteps": [],
+    "otherDates": []
+  },
+  "usage": {
+    "inputTokens": 4601,
+    "outputTokens": 443,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0
+  },
+  "ms": 1739
+}

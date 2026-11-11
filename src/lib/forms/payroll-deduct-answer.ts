@@ -161,10 +161,37 @@ function deniedNearby(clause: string, at: number, end: number): boolean {
 /** Yes, No, nothing about the deduction (null), or something about it that cannot safely be read. */
 export type ClauseReading = PayrollDeductAnswer | "unclear" | null;
 
+/*
+ * NOT_DEDUCTIBLE_READ_ENABLED (a manager in the sibling app, 26 Oct 2026: "…
+ * verbal warning received … not payroll deductible <title>"): "not payroll
+ * deductible", "non-deductible" said No, but no pattern read it, and the
+ * payroll question was asked on every turn. With the flag on it is a No. Read
+ * from the environment here because this module imports nothing (see the top).
+ */
+const NOT_DEDUCTIBLE = /\b(?:not|isn't|isnt|is not|non)[\s-]+(?:payroll\s+)?deductible\b/;
+function notDeductibleRead(): boolean {
+  const raw = typeof process === "undefined" ? undefined : process.env.NOT_DEDUCTIBLE_READ_ENABLED;
+  return typeof raw === "string" && ["1", "true", "yes", "on"].includes(raw.trim().toLowerCase());
+}
+
+/*
+ * PAYROLL_BARE_SENTENCE_ENABLED (coding 6, 10 Nov 2026; ported from the sibling app, its P15): "I need a term CA for
+ * <name>. Didn't show up for her opening shift. Payroll deduction." — the last sentence is the answer, Yes, and the card
+ * asked "Is payroll deduct applicable?". With the flag on, a sentence that is only "payroll deduction" / "payroll
+ * deduct" (a statement, not a question) is a Yes, as "payroll deduction applies" is. Read here because this module
+ * imports nothing. Off, as before.
+ */
+const BARE_PAYROLL_SENTENCE = /^(?:payroll\s+deduct(?:ion)?|payroll\s+ded)\s*[.!]?$/;
+function payrollBareSentenceOn(): boolean {
+  const raw = typeof process === "undefined" ? undefined : process.env.PAYROLL_BARE_SENTENCE_ENABLED;
+  return typeof raw === "string" && ["1", "true", "on", "yes"].includes(raw.trim().toLowerCase());
+}
+
 function readClause(clause: string): ClauseReading {
+  if (payrollBareSentenceOn() && BARE_PAYROLL_SENTENCE.test(clause)) return "yes";
   if (UNDECIDED.test(clause) && ABOUT_DEDUCTION.test(clause)) return "unclear";
   if (DENIED_WAIVER.test(clause) && ABOUT_DEDUCTION.test(clause)) return "unclear";
-  const negative = NEGATIVE.find((pattern) => pattern.test(clause));
+  const negative = NEGATIVE.find((pattern) => pattern.test(clause)) ?? (notDeductibleRead() && NOT_DEDUCTIBLE.test(clause) ? NOT_DEDUCTIBLE : undefined);
   if (negative) {
     /*
      * BOTH IN ONE CLAUSE IS NO ANSWER (F-01). With the negative's own words
@@ -207,15 +234,36 @@ export function readPayrollDeduct(text: string): ClauseReading {
   return answer;
 }
 
+/**
+ * CA_SHORTCUT_WORDS_ENABLED (Pau, 29 Oct 2026: "recognize all form wording …
+ * so when manager type shortcuts, it can understand it"). Read here, not
+ * through `chat-quality-flags`, because this module imports nothing.
+ */
+function caShortcutWordsOn(): boolean {
+  const raw = typeof process === "undefined" ? undefined : process.env.CA_SHORTCUT_WORDS_ENABLED;
+  return typeof raw === "string" && ["1", "true", "on", "yes"].includes(raw.trim().toLowerCase());
+}
+
 /** Lower case, curly quotes straightened, "payroll-deduct" spaced — the text the patterns read. */
 export function normalizePayrollWording(text: string): string {
-  return (text ?? "")
+  const read = (text ?? "")
     .toLowerCase()
     .replace(/[’‘]/g, "'")
     // "payroll-deduct", "payroll‑deduction"
     .replace(/[‐‑–—]/g, "-")
     .replace(/\bpayroll-deduct/g, "payroll deduct")
     .replace(/[^\S\n]+/g, " ");
+  if (!caShortcutWordsOn()) return read;
+  return (
+    read
+      // CA_SHORTCUT_WORDS_ENABLED: "no PD", "PD applies", "pd yes", "PD $25" — the form's own abbreviation.
+      .replace(/\bp\.?\s?d\.?(?=\s|:|=|-|,|;|\.|!|$)/g, "payroll deduct")
+      // "deduct 25", "payroll deduct 25" — an amount with no dollar sign, not a time or a count.
+      .replace(
+        /\b(payroll deduct(?:ion)?|deduct(?:ion)?)\s+(\d{1,4}(?:\.\d{2})?)\b(?!\s*(?:%|min|mins|minutes|hrs?|hours?|days?|weeks?|times|x\b|am\b|pm\b))/g,
+        "$1 $$$2",
+      )
+  );
 }
 
 /**

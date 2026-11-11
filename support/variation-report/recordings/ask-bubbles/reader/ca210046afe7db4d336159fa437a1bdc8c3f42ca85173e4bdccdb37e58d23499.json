@@ -1,0 +1,51 @@
+{
+  "key": "ca210046afe7db4d336159fa437a1bdc8c3f42ca85173e4bdccdb37e58d23499",
+  "model": "claude-haiku-4-5",
+  "reply": {
+    "employee": {
+      "value": "quinn",
+      "evidence": "quinn"
+    },
+    "location": {
+      "value": "grand island",
+      "evidence": "grand island"
+    },
+    "jobTitle": {
+      "value": "team member",
+      "evidence": "team member"
+    },
+    "incident": {
+      "value": "opening store late",
+      "evidence": "opening store late"
+    },
+    "incidentDate": {
+      "value": "2026-09-28",
+      "evidence": "9-28-26"
+    },
+    "warningLevel": {
+      "value": null,
+      "evidence": null
+    },
+    "payroll": {
+      "value": null,
+      "evidence": null
+    },
+    "payrollAmount": {
+      "value": null,
+      "evidence": null
+    },
+    "policyHeading": {
+      "value": "Late Opening",
+      "evidence": "opening store late"
+    },
+    "priorSteps": [],
+    "otherDates": []
+  },
+  "usage": {
+    "inputTokens": 3499,
+    "outputTokens": 330,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0
+  },
+  "ms": 2839
+}

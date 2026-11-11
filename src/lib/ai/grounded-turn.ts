@@ -2,12 +2,17 @@ import "server-only";
 
 import {
   draftDedupeEnabled,
+  draftReuseSameChatOnlyEnabled,
   formStateEnabled,
   groundedEntitiesEnabled,
+  secondRequestOwnAccountEnabled,
 } from "@/lib/config/chat-quality-flags";
+import { conversationKeyOf } from "@/lib/forms/conversation-draft";
 import { formOpenedFor, openingLine } from "@/lib/forms/editable-draft";
 import { withKeptTypedNames } from "@/lib/forms/kept-typed-names";
+import { withRosterAnchor } from "@/lib/forms/roster-anchor-store";
 import { loadScopedRoster, readDirectoryFacts, withRosterLimit, type DirectoryFact } from "@/lib/forms/employee-roster";
+import { reopenIncidentText } from "@/lib/forms/current-request";
 import { findAccountResentDraft } from "@/lib/forms/draft-reopen";
 import { historyWantsSeparateDocument } from "@/lib/ai/second-form";
 import type { AskResponse } from "@/lib/ai/types";
@@ -17,6 +22,7 @@ import { loadFormState, saveFormState } from "./form-state-store";
 import { applyGroundedProposal, prepareGroundedQuestion, type GroundedPerson, type GroundedPrep } from "./grounded-entities";
 import type { ChatActor } from "./form-proposal";
 import type { AskRequest } from "./types";
+import { isTeamCardTurn } from "@/lib/forms/whole-team-coaching";
 import { withTypedEmployeeOnCard } from "./typed-employee-card";
 
 /**
@@ -55,7 +61,15 @@ export async function deliverFormProposal(input: {
     return proposed ? typedName(await input.decorate(proposed)) : null;
   }
 
-  const saved = await readSaved(stateOn, input.actor.subject, input.request.conversationId);
+  /*
+   * WHOLE_TEAM_COACHING_ENABLED (3 Nov 2026; found in the sibling app, where the
+   * saved form state put the person this conversation was about back in front
+   * of "Coaching Form for the whole team"): while the team card is being made
+   * or is the card on screen, the saved state is neither read nor written.
+   */
+  const team = isTeamCardTurn(input.request) || isTeamCardTurn({ ...input.request, question: input.question });
+  const keepState = stateOn && !team;
+  const saved = await readSaved(keepState, input.actor.subject, input.request.conversationId);
   const people = entities ? await loadPeople(input.actor) : [];
   const prep = entities
     ? prepareGroundedQuestion({
@@ -66,12 +80,14 @@ export async function deliverFormProposal(input: {
       })
     : {
         ...EMPTY_PREP,
-        question: stateOn ? prependFormState(input.question, saved) : input.question,
+        question: stateOn
+          ? prependFormState(input.question, saved, input.request.history.filter((turn) => turn.role === "user").map((turn) => turn.content))
+          : input.question,
         keptTypedName: saved?.keptTypedName ?? null,
       };
 
   const proposed = await withRosterLimit(prep.rosterIds, () =>
-    withKeptTypedNames(prep.keptTypedNames, () => input.propose(prep.question)),
+    withKeptTypedNames(prep.keptTypedNames, () => withRosterAnchor(prep.rosterAnchored === true, () => input.propose(prep.question))),
   );
   if (!proposed) return null;
   const decorated = typedName(await input.decorate(proposed));
@@ -81,10 +97,10 @@ export async function deliverFormProposal(input: {
 
   const reopened = await reopenSameIncident(dedupe, input, applied);
   if (reopened) {
-    await writeSaved(stateOn, input, saved, applied, prep);
+    await writeSaved(keepState, input, saved, applied, prep);
     return reopened;
   }
-  await writeSaved(stateOn, input, saved, applied, prep);
+  await writeSaved(keepState, input, saved, applied, prep);
   return applied;
 }
 
@@ -154,10 +170,14 @@ async function reopenSameIncident(
   if (historyWantsSeparateDocument([...input.request.history, { role: "user", content: input.request.question }])) {
     return null;
   }
-  const incident = [...input.request.history.filter((turn) => turn.role === "user").map((turn) => turn.content), input.request.question]
-    .join("\n")
-    .trim()
-    .slice(0, 2000);
+  const said = [...input.request.history.filter((turn) => turn.role === "user").map((turn) => turn.content), input.request.question];
+  /*
+   * SECOND_REQUEST_OWN_ACCOUNT_ENABLED (the sibling app's audit, QA, 7 Nov 2026): the incident is the request now
+   * being written, never the whole chat. Joined, "a CA for <A>, late opening" and "another CA for <A>, cash drawer
+   * short" matched the first draft, so the first draft was reopened and no second form was made. A resend of the same
+   * request is still the same incident. (DRAFT_DEDUPE is off in this app's production.)
+   */
+  const incident = reopenIncidentText(said, secondRequestOwnAccountEnabled());
   try {
     const resent = await findAccountResentDraft({
       templateKey: proposal.templateKey,
@@ -165,6 +185,15 @@ async function reopenSameIncident(
       createdBy: input.actor.subject,
       locationId: proposal.locationId,
       ...(incident ? { incident, formDate: proposal.formDate ?? null } : {}),
+      /*
+       * DRAFT_REUSE_SAME_CHAT_ONLY_ENABLED: only a draft this chat made, as
+       * the create route already keeps (QA B22, 25 Oct 2026: a new chat's
+       * no-call-no-show reopened another chat's tardiness draft through this
+       * lookup). No chat id keeps nothing. See `draft-same-chat.ts`.
+       */
+      ...(draftReuseSameChatOnlyEnabled()
+        ? { sameChat: { conversationKey: conversationKeyOf({ conversationId: input.request.conversationId }) } }
+        : {}),
     });
     if (!resent) return null;
     const draft = {

@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 
 import { reviewDate, rating } from "@/features/admin/google-reviews/format";
-import { APPROVED_GOOGLE_STORES } from "@/config/company/google-reviews";
+import { APPROVED_GOOGLE_STORES, googleStoreNumber } from "@/config/company/google-reviews";
 import {
   GOAL_STATUS_LABEL,
   GOAL_TONE,
@@ -121,7 +121,7 @@ export function LiveFilters({
           <option key={s.code} value={s.code}>
             {data.stores.find((x) => x.storeCode === s.code)?.displayName ??
               s.code}{" "}
-            · #{s.code}
+            · #{googleStoreNumber(s.code)}
           </option>
         ))}
       </select>
@@ -654,7 +654,7 @@ export function ReviewsList({ data }: { data: ReviewsData }) {
                     {r.reviewerName ?? "Anonymous reviewer"}
                   </p>
                   <p className="text-[11px] text-muted-foreground">
-                    {r.storeName} · #{r.storeCode}
+                    {r.storeName} · #{googleStoreNumber(r.storeCode)}
                   </p>
                 </div>
                 <div className="ml-auto flex flex-col items-end gap-0.5">
@@ -873,7 +873,7 @@ export function Meter({
     <div className="flex items-center gap-2.5">
       <span
         role="progressbar"
-        aria-label={`${row.displayName} #${row.storeCode}: ${row.qualifyingMonthToDate} of ${row.monthlyTarget} qualifying reviews, ${GOAL_STATUS_LABEL[status]}`}
+        aria-label={`${row.displayName} #${googleStoreNumber(row.storeCode)}: ${row.qualifyingMonthToDate} of ${row.monthlyTarget} qualifying reviews, ${GOAL_STATUS_LABEL[status]}`}
         aria-valuemin={0}
         aria-valuemax={row.monthlyTarget}
         aria-valuenow={Math.min(row.qualifyingMonthToDate, row.monthlyTarget)}
@@ -976,7 +976,7 @@ export function GoalTable({
                   ) : null}
                 </td>
                 <td className="px-4 py-3 text-right tabular-nums">
-                  {r.storeCode}
+                  {googleStoreNumber(r.storeCode)}
                 </td>
                 <td className="px-4 py-3 text-right tabular-nums">
                   {counting ? r.qualifyingThisWeek : "—"}
@@ -1203,7 +1203,7 @@ export function Leaderboard({
             <span className="font-bold">
               {row.displayName}{" "}
               <span className="font-normal text-muted-foreground">
-                #{row.storeCode}
+                #{googleStoreNumber(row.storeCode)}
               </span>
             </span>
             <span className="col-span-2 flex gap-4 text-[11.5px] text-muted-foreground lg:hidden">

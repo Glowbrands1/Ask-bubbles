@@ -100,6 +100,10 @@ const DPOA_NOTE_REVISION_5 = String(TEMPLATES.find((template) => template.key ==
 const DPOA_REVISION_6 =
   'Revision 6 (District Manager feedback, 21 Oct 2026) makes the Action Plan two sentences — "Management will review the <policy> policy with <employee>." and "Future policy violations may result in additional corrective action up to and including termination of employment." — with the payroll deduction between them when payroll deduct is Yes.';
 
+/** The one sentence revision 7 adds (client request, template approved 4 Nov 2026). */
+const DPOA_REVISION_7 =
+  "Revision 7 (client request, 4 Nov 2026) makes Type of Offense four boxes — Attendance Policy, Standards of Conduct, Dress Code Violation, Other — removing Tardiness/Leaving Early and Absenteeism (now Attendance Policy), Under Performance and Violation of Company Policies (now Standards of Conduct), and the Other write-in line (Other is a box).";
+
 const APPROVED_CONTENT_CHANGES: { decision: string; from: string; to: string }[] = [
   { decision: "D3 — 7G Service", from: "Follow through with Client Engagement Strategies with every client.", to: "Follow through with 7G Service with every guest." },
   { decision: "D4 — Employee Performance Plan acknowledgement", from: "I confirm that my supervisor and I have discussed this training document and I will participate in the plan for improvement.", to: "I confirm that my supervisor and I have discussed this Employee Performance Plan and I will participate in the plan for improvement." },
@@ -112,7 +116,8 @@ const APPROVED_CONTENT_CHANGES: { decision: string; from: string; to: string }[]
    */
   { decision: "DM-1 — Corrective Action Action Plan help", from: "One paragraph: what is being done, what the employee does going forward, and that the manual's own wording is reviewed with them. No dates and no follow-up meeting. It always ends with the form's closing sentence, which is added automatically.", to: "Two sentences: management will review the policy cited under Direct policy with the employee, and the form's closing sentence — with the payroll deduction between them when payroll deduct is Yes. Written by Ask Bubbles from the form; the closing is added automatically." },
   { decision: "DM-2 — Corrective Action closing, \"may result in\"", from: CA_ACTION_PLAN_CLOSING_REVISION_5, to: CA_ACTION_PLAN_CLOSING },
-  { decision: "DM-3 — Corrective Action revision 6 note", from: DPOA_NOTE_REVISION_5, to: DPOA_NOTE_REVISION_5.replace(" Forms filed against earlier versions", ` ${DPOA_REVISION_6} Forms filed against earlier versions`) },
+  // Revision 7 (client request, template approved 4 Nov 2026) adds its own sentence after revision 6's.
+  { decision: "DM-3 — Corrective Action revision 6 and 7 note", from: DPOA_NOTE_REVISION_5, to: DPOA_NOTE_REVISION_5.replace(" Forms filed against earlier versions", ` ${DPOA_REVISION_6} ${DPOA_REVISION_7} Forms filed against earlier versions`) },
   /*
    * QA, 25 Oct 2026 (Pau's answers): Buff City Soap uses MyGlow and Sunlync,
    * so both exit steps keep the source wording and only the tanning clause
@@ -130,6 +135,13 @@ const APPROVED_CONTENT_CHANGES: { decision: string; from: string; to: string }[]
    * See `seed-sibling-brand.test.ts`.
    */
   { decision: "QA-4 — Tanning Consultant Interview core-values heading", from: "Sun Tan City Core Values", to: "Core Values" },
+  /*
+   * QA, 29 Oct 2026: the drafting prompt has written this field as Observed /
+   * Expectation / Going Forward since the Corrective Action change; the help
+   * still said two sections. Wording only (no revision: the published version
+   * keeps its help until a revision is approved).
+   */
+  { decision: "QA-5 — Coaching details help, three sections", from: "Written as \"Observed:\" — what happened — then \"Expectation:\" — what the manager told the employee to do differently. One field, two labelled sections.", to: "Written as \"Observed:\" — what happened — then \"Expectation:\" — what the manager told the employee to do differently — then \"Going Forward:\" — what the employee will do from now on. One field, three labelled sections." },
 ];
 
 function comparable(seed: Record<string, unknown>) {
@@ -200,13 +212,15 @@ describe("the migrated templates are the reference platform's published template
   });
 
   it("approved removals are narrow: each block exists in the snapshot, is gone from the seed, and nothing else was dropped", () => {
-    expect(APPROVED_REMOVALS).toHaveLength(1);
+    // 2: Corrective Action revision 7 (4 Nov 2026) removes the Other write-in line.
+    expect(APPROVED_REMOVALS).toHaveLength(2);
     for (const removal of APPROVED_REMOVALS) {
       const template = TEMPLATES.find((entry) => entry.key === removal.templateKey)!;
       const seed = MIGRATED_TEMPLATE_SEEDS.find((entry) => entry.key === removal.templateKey)!;
       type Block = { kind?: string; field?: { key?: string; label?: string } };
       const before = (template.document as { blocks: Block[] }).blocks;
-      const after = (seed.document as { blocks: Block[] }).blocks;
+      // The unpublished payroll amount line is not on the snapshot (see `withoutUnpublishedPayrollAmount`).
+      const after = (withoutUnpublishedPayrollAmount(seed.key, seed.document) as { blocks: Block[] }).blocks;
       const removed = before.find((block) => block.kind === "field" && block.field?.key === removal.fieldKey);
       expect(removed?.field?.label, removal.decision).toBe(removal.snapshotLabel);
       expect(after.some((block) => block.field?.key === removal.fieldKey), removal.decision).toBe(false);
@@ -223,12 +237,13 @@ describe("the migrated templates are the reference platform's published template
     );
     // D3 x2 (SDIT, both lists), D4 x10 (six EPPs; SDIT, TSD and both DMIT print it twice), D12 x1, D18 x1, DM-1..3 x1 each,
     // QA-2..4 x1 each (QA, 25 Oct 2026: no sibling-company wording; QA-1 dropped, MyGlow confirmed by Pau).
-    expect(matching).toHaveLength(20);
+    // QA-5 x1 (QA, 29 Oct 2026: the Coaching details help names the three sections the prompt asks for).
+    expect(matching).toHaveLength(21);
     for (const entry of APPROVED_CONTENT_CHANGES) {
       expect(matching.some((change) => change.from === entry.from), entry.decision).toBe(true);
     }
     expect(new Set(matching.map((change) => change.sourceKey))).toEqual(
-      new Set(["sdit-epp", "tsd-epp", "asd-sdit-epp", "fttc-epp", "dmit-epp-tsd", "dmit-epp-dmit", "demotion", "management-interview-round-1", "dpoa", "stc-exit", "tanning-consultant-interview"]),
+      new Set(["coaching", "sdit-epp", "tsd-epp", "asd-sdit-epp", "fttc-epp", "dmit-epp-tsd", "dmit-epp-dmit", "demotion", "management-interview-round-1", "dpoa", "stc-exit", "tanning-consultant-interview"]),
     );
   });
 

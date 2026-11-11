@@ -10,11 +10,13 @@ const db = vi.hoisted(() => ({
   linkInserts: [] as Record<string, unknown>[],
   linkError: null as unknown,
   create: vi.fn(),
+  invite: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/employees/woven/access/load", () => ({ loadAccessPlan: vi.fn() }));
 vi.mock("@/lib/admin/create-account", async (orig) => ({ ...(await orig<typeof import("@/lib/admin/create-account")>()), createAccountWithoutEmail: db.create }));
+vi.mock("@/lib/admin/user-directory", async (orig) => ({ ...(await orig<typeof import("@/lib/admin/user-directory")>()), inviteUser: db.invite }));
 vi.mock("@/lib/supabase/server", () => ({
   getSupabaseAdmin: () => ({
     from: (table: string) => ({
@@ -63,6 +65,7 @@ beforeEach(() => {
   db.linkInserts = [];
   db.linkError = null;
   db.create.mockReset().mockResolvedValue({ id: "u1" });
+  db.invite.mockReset().mockResolvedValue({ id: "u2" });
 });
 
 describe("createLinkedAccount", () => {
@@ -127,6 +130,38 @@ describe("createLinkedAccount", () => {
   it("never links an administrator account by email", async () => {
     db.appUser = { id: "u9", role: "admin" };
     await expect(call()).rejects.toMatchObject({ code: "protected_account" });
+  });
+});
+
+/* NEW_HIRE_INVITES_ENABLED (Pau, 28 Oct 2026): the hourly new-hire run makes the account by its invitation. */
+describe("createLinkedAccount with an invitation (new hires only)", () => {
+  it("the invitation makes the account (Supabase emails the link), and it is linked to Woven", async () => {
+    await expect(createLinkedAccount({ externalEmployeeId: "E1", role: "employee", scope: loc("loc-66") }, actor, { invite: { redirectTo: "https://b.test/auth/accept" } })).resolves.toEqual({
+      outcome: "created",
+      userId: "u2",
+      linked: true,
+    });
+    expect(db.create).not.toHaveBeenCalled();
+    expect(db.invite).toHaveBeenCalledWith(
+      expect.objectContaining({ email: "jo@example.com", role: "employee", redirectTo: "https://b.test/auth/accept" }),
+      actor,
+    );
+    expect(db.linkInserts[0]).toMatchObject({ app_user_id: "u2", link_method: "provisioned", reason: expect.stringContaining("new hire") });
+  });
+
+  it("never repairs or links an existing account: that is left to an administrator", async () => {
+    db.appUser = { id: "u9", role: "employee" };
+    await expect(createLinkedAccount({ externalEmployeeId: "E1", role: "employee", scope: loc("loc-66") }, actor, { invite: { redirectTo: "https://b.test/auth/accept" } })).rejects.toMatchObject({
+      code: "duplicate_email",
+    });
+    expect(db.invite).not.toHaveBeenCalled();
+    expect(db.linkInserts).toEqual([]);
+  });
+
+  it("without the option, as before: no invitation", async () => {
+    await call();
+    expect(db.invite).not.toHaveBeenCalled();
+    expect(db.create).toHaveBeenCalled();
   });
 });
 

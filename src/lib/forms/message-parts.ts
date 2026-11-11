@@ -1,3 +1,6 @@
+import { fillsAField } from "@/lib/ai/question-not-form";
+import { payrollAmountSameMessageEnabled } from "@/lib/config/chat-quality-flags";
+
 /**
  * ============================================================================
  * ONE MESSAGE, SEVERAL REQUESTS
@@ -43,12 +46,29 @@ export function sentencesOf(text: string): string[] {
  */
 const WH_OPENER = /^(?:what|what's|whats|how|how's|when|where|why|who|which)\b/i;
 
+/*
+ * "WHICH WILL BE PAYROLL DEDUCTED" IS NOT A QUESTION (PAYROLL_AMOUNT_SAME_MESSAGE_ENABLED; live chat, 5 Nov 2026).
+ * "…the register was off $20. which will be payroll deducted from <name>'s check." got "You also asked
+ * \"which will be payroll deducted…\"": a stray full stop cut a relative clause off its sentence. "Which" straight
+ * before a helping verb, with no "?", goes on describing what came before; "which store is she at" still asks.
+ */
+const RELATIVE_CLAUSE = /^which\s+(?:will|would|is|was|are|were|has|had|have|should|must|can|could|may|might)\b/i;
+
 /** The message's questions, and the statements left once they are taken out. */
 export function separateQuestions(text: string): { statements: string; questions: string[] } {
   const questions: string[] = [];
   const statements: string[] = [];
+  const relativeNotQuestion = payrollAmountSameMessageEnabled();
   for (const sentence of sentencesOf(text)) {
-    if (/\?\s*$/.test(sentence) || WH_OPENER.test(sentence.replace(LEAD_IN, ""))) questions.push(sentence);
+    const opened = sentence.replace(LEAD_IN, "");
+    const relative = relativeNotQuestion && !/\?\s*$/.test(sentence) && RELATIVE_CLAUSE.test(opened);
+    /*
+     * FIELD_LABEL_NOT_A_QUESTION_ENABLED (QA, the round-6 rollback, 9 Nov 2026): "how employee resigned - <C> told
+     * management …" fills that field (`ai/question-not-form.ts` fillsAField), so it is a statement here too — the card
+     * reads it, and no "You also asked \"how employee resigned - …\"" line follows it.
+     */
+    const fills = fillsAField(opened);
+    if (/\?\s*$/.test(sentence) || (WH_OPENER.test(opened) && !relative && !fills)) questions.push(sentence);
     else statements.push(sentence);
   }
   return { statements: statements.join(" "), questions };

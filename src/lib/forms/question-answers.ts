@@ -1,10 +1,19 @@
+import { dateAnswerAppliedEnabled, wholeTeamCoachingEnabled } from "@/lib/config/chat-quality-flags";
+
 import { POSITION_QUESTION_TAG, readPositionAnswer } from "./employee-position";
-import { DATE_QUESTION_TAG, readDateChoice } from "./incident-dates";
+import { DATE_QUESTION_TAG, dateAnswerTurns, readDateChoice } from "./incident-dates";
 import { readLocationMentions } from "./location-mention";
 import { correctsTheEmployee, extractJobTitle } from "./proposal";
 
 /** The fixed words of the store question, so it is asked once and its answer recognised. */
 export const STORE_QUESTION_TAG = "which store they work at";
+
+/**
+ * The card's own store question (a team Coaching card asks it: there is no
+ * person whose store it could be). WHOLE_TEAM_COACHING_ENABLED: "dodge" said
+ * to it is the store, so the card's Create is not refused as "now for dodge".
+ */
+const CARD_STORE_QUESTION = "Which store is this about?";
 
 /**
  * The manager turns that DIRECTLY ANSWER a question Ask Bubbles asked about the
@@ -36,9 +45,12 @@ export function answersToOpenQuestions(
     const isAnswer =
       (before.content.includes(POSITION_QUESTION_TAG) && answersPosition(reply)) ||
       (before.content.includes(DATE_QUESTION_TAG) && readDateChoice(reply, ["0000-00-00"], "9999-12-31") !== null) ||
-      (before.content.includes(STORE_QUESTION_TAG) && readLocationMentions(reply).length > 0);
+      (before.content.includes(STORE_QUESTION_TAG) && readLocationMentions(reply).length > 0) ||
+      (wholeTeamCoachingEnabled() && before.content.includes(CARD_STORE_QUESTION) && readLocationMentions(reply).length > 0);
     if (isAnswer) answered.add(reply);
   }
+  // DATE_ANSWER_APPLIED_ENABLED: "most recent" answering the date question a turn or two back is no name either.
+  if (dateAnswerAppliedEnabled()) for (const reply of dateAnswerTurns(conversation as never)) answered.add(reply);
   return answered;
 }
 

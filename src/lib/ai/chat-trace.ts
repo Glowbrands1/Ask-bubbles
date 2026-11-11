@@ -2,6 +2,9 @@ import "server-only";
 
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 
+import type { TokenUsage } from "./model-prices";
+import { activeSpendMeter, takeSpend, type SpendSource } from "./spend-meter";
+import { closeStages } from "./chat-stage-timings";
 import { chatTraceDraft, runChatTrace, type ChatTraceDraft } from "./chat-trace-store";
 
 const SECRET = /sk-ant-[A-Za-z0-9_-]+|sb_secret_[A-Za-z0-9_-]+|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g;
@@ -60,6 +63,8 @@ export function chatTraceInsertErrors(): number {
 }
 
 async function persistChatTrace(draft: ChatTraceDraft): Promise<void> {
+  // SPEND_GUARD_ALL_CALLS_ENABLED: every call this turn made so far goes on its row (`spend-meter.ts`).
+  const metered = activeSpendMeter() ? { metered: true, spend: takeSpend() } : null;
   try {
     const model = draft.modelCall;
     const { error } = await getSupabaseAdmin().from("chat_traces").insert({
@@ -92,7 +97,20 @@ async function persistChatTrace(draft: ChatTraceDraft): Promise<void> {
       extraction_model: draft.formExtraction?.model ?? null,
       extraction_input_tokens: draft.formExtraction?.inputTokens ?? null,
       extraction_output_tokens: draft.formExtraction?.outputTokens ?? null,
-      slots: draft.formExtraction?.slots ?? null,
+      slots: withStages(
+        withSpend(
+          withDraftCheck(
+            withFormEdit(
+              draft.reader ? { ...(draft.formExtraction?.slots ?? {}), reader: draft.reader } : (draft.formExtraction?.slots ?? null),
+              draft.formEdit,
+            ),
+            draft.draftCheck,
+          ),
+          metered,
+        ),
+        draft.stages,
+        draft.stagesFrom ?? draft.startedAt,
+      ),
     });
     if (error) {
       chatTraceInsertErrorCount += 1;
@@ -103,6 +121,62 @@ async function persistChatTrace(draft: ChatTraceDraft): Promise<void> {
     chatTraceInsertErrorCount += 1;
     console.error("chat_traces insert failed");
     // Tracing never changes what the manager sees.
+  }
+}
+
+/** FORM_EDIT_TOOL_IN_STREAM_ENABLED: `form_edit` beside the other slots; absent, the slots as before. */
+/** CHAT_STAGE_TIMINGS_ENABLED: `stages` beside the other slots; absent, the slots as before. */
+function withStages(slots: Record<string, unknown> | null, stages: ChatTraceDraft["stages"], from: number): Record<string, unknown> | null {
+  const closed = closeStages(stages, from);
+  return closed && closed.length > 0 ? { ...(slots ?? {}), stages: closed } : slots;
+}
+
+function withFormEdit(slots: Record<string, unknown> | null, formEdit: Record<string, unknown> | undefined): Record<string, unknown> | null {
+  return formEdit ? { ...(slots ?? {}), form_edit: { ...formEdit } } : slots;
+}
+
+/** FORM_EDIT_SINGLE_WRITER_ENABLED: the post-draft check's keys, when it ran; otherwise the slots as they were. */
+function withDraftCheck(slots: Record<string, unknown> | null, check: Record<string, unknown> | undefined): Record<string, unknown> | null {
+  return check ? { ...(slots ?? {}), draft_check: check } : slots;
+}
+
+function withSpend(
+  slots: Record<string, unknown> | null,
+  metered: { metered: boolean; spend: TokenUsage[] } | null,
+): Record<string, unknown> | null {
+  return metered ? { ...(slots ?? {}), ...metered } : slots;
+}
+
+/**
+ * SPEND_GUARD_ALL_CALLS_ENABLED: the Claude calls of a request that no chat
+ * trace row carries — a turn answered before `answerQuestion` (a correction, a
+ * revision), the Create card's draft, template ingest. No conversation, so no
+ * turn's slots are read from it; no model, so the daily cap does not count it.
+ * Never blocks or fails the request.
+ */
+export async function persistSpendRow(input: {
+  readonly source: SpendSource;
+  readonly userId: string | null;
+  readonly calls: readonly TokenUsage[];
+}): Promise<void> {
+  try {
+    const { error } = await getSupabaseAdmin().from("chat_traces").insert({
+      conversation_id: null,
+      message_id: null,
+      user_id: input.userId,
+      original_query: `[spend] ${input.source}`,
+      intent: "spend",
+      model: null,
+      slots: { spend_source: input.source, spend: input.calls },
+      succeeded: true,
+    });
+    if (error) {
+      chatTraceInsertErrorCount += 1;
+      console.error(`chat_traces spend insert failed: ${error.message}`);
+    }
+  } catch {
+    chatTraceInsertErrorCount += 1;
+    console.error("chat_traces spend insert failed");
   }
 }
 

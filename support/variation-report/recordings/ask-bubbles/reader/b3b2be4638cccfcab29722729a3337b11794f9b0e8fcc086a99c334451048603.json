@@ -1,0 +1,27 @@
+{
+  "key": "b3b2be4638cccfcab29722729a3337b11794f9b0e8fcc086a99c334451048603",
+  "model": "claude-haiku-5-5",
+  "reply": {
+    "employee": {
+      "value": "dale",
+      "evidence": "create coaching form for dale"
+    },
+    "location": null,
+    "jobTitle": null,
+    "incident": null,
+    "incidentDate": null,
+    "warningLevel": null,
+    "payroll": null,
+    "payrollAmount": null,
+    "policyHeading": null,
+    "priorSteps": [],
+    "otherDates": []
+  },
+  "usage": {
+    "inputTokens": 4580,
+    "outputTokens": 299,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0
+  },
+  "ms": 1729
+}

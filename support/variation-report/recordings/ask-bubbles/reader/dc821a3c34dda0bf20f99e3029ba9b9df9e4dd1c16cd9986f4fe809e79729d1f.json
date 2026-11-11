@@ -1,0 +1,30 @@
+{
+  "key": "dc821a3c34dda0bf20f99e3029ba9b9df9e4dd1c16cd9986f4fe809e79729d1f",
+  "model": "claude-haiku-5-5",
+  "reply": {
+    "employee": {
+      "value": "Quill, Mara",
+      "evidence": "Quill, Mara, Store Manager"
+    },
+    "location": null,
+    "jobTitle": {
+      "value": "Store Manager",
+      "evidence": "Quill, Mara, Store Manager"
+    },
+    "incident": null,
+    "incidentDate": null,
+    "warningLevel": null,
+    "payroll": null,
+    "payrollAmount": null,
+    "policyHeading": null,
+    "priorSteps": [],
+    "otherDates": []
+  },
+  "usage": {
+    "inputTokens": 4610,
+    "outputTokens": 340,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0
+  },
+  "ms": 1466
+}

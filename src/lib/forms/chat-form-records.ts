@@ -3,7 +3,7 @@ import "server-only";
 import { promptLabel } from "@/lib/ai/prompts";
 import { ACTIVE_BRAND } from "@/lib/brand";
 import { businessToday } from "@/lib/business-date";
-import { priorRecordFinalOnlyEnabled } from "@/lib/config/chat-quality-flags";
+import { formRecordsNoJudgementEnabled, priorRecordFinalOnlyEnabled } from "@/lib/config/chat-quality-flags";
 import { locationById } from "@/lib/locations";
 import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
 import type { AccessScope, Role } from "@/types";
@@ -14,6 +14,7 @@ import { resolveFormsVisibility } from "./forms-visibility";
 import { instanceListFilterFor, visibleInstances } from "./instance-scope";
 import { listInstances, type InstanceRow } from "./instances";
 import { authorizedLocationIds } from "./location-scope";
+import { privateAwareLimit } from "./private-creators";
 
 /**
  * ============================================================================
@@ -290,6 +291,38 @@ function scopeSentence(visibility: AccessScope): string {
 
 const RECORDS_RULES = `These are records of forms that exist, read from the Forms Register for this user. Never mark them with a source marker. Only the form name, employee, ${NOUN}, dates and status are shown — you have NOT seen what any form says, so never describe or guess its contents, reasons or wording. A draft is not a completed coaching. Tell the manager they can open any of these in ${REGISTER_PATH}.`;
 
+/*
+ * FORM_RECORDS_NO_JUDGEMENT_ENABLED (QA's live test, Ask Bubbles, 8 Nov 2026; PAST_FORMS_BEFORE_LIBRARY on): "are there
+ * any coaching forms or corrective actions for <A>?" listed the forms, and added a judgement nobody asked for: "a notable
+ * number of Corrective Actions in under two weeks for one person", "worth reviewing … before deciding what comes next".
+ * A list of someone's forms is the forms, their dates and their status; never an assessment of the person's record.
+ */
+export const RECORDS_NO_JUDGEMENT_RULE =
+  "List each form with its date and status only. Never assess the person's record: do not call the number of forms notable, high, a pattern or a concern, do not compare their dates, and do not suggest reviewing them or what to do next, unless the manager asks for that assessment in this message.";
+
+/** A sentence that judges the person's record or advises on it, rather than listing a form. */
+const JUDGEMENT = /\b(?:notable|significant|concerning|a lot of|quite a few|several .{0,30}in (?:under|less than|just)|in (?:under|less than|just) (?:a|one|two|three|\d+) (?:days?|weeks?|months?)|a pattern|patterns? of|worth (?:reviewing|looking|discussing|noting|considering)|before deciding|what comes next|next step|escalat\w*|consider(?:ing)? (?:a|the) (?:next|further)|may (?:want|wish) to review)\b/i;
+
+/**
+ * The reply without its sentences of judgement about the person's record (`RECORDS_NO_JUDGEMENT_RULE`): a line that
+ * lists a form is never touched; a sentence that judges or advises is dropped. Pure; the caller decides when the flag
+ * applies and that the reply is a records answer.
+ */
+export function withoutRecordJudgement(reply: string): string {
+  return (reply ?? "")
+    .split("\n")
+    .map((line) => {
+      if (/^\s*(?:[-*•]|\d+[.)])\s/.test(line)) return line;
+      return line
+        .split(/(?<=[.!?])\s+/)
+        .filter((sentence) => !JUDGEMENT.test(sentence))
+        .join(" ");
+    })
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 export function renderFormRecordsBlock(input: {
   visibility: AccessScope;
   /** The name words searched for, or empty when the question named nobody. */
@@ -304,7 +337,10 @@ export function renderFormRecordsBlock(input: {
 }): string {
   const viewerId = input.viewerId ?? null;
   const { words, matches, recent, today } = input;
-  const sections: string[] = [FORM_RECORDS_HEADING, `${RECORDS_RULES} ${scopeSentence(input.visibility)}${viewerId ? ` ${CREATED_BY_RULE}` : ""}`];
+  const sections: string[] = [
+    FORM_RECORDS_HEADING,
+    `${RECORDS_RULES} ${scopeSentence(input.visibility)}${viewerId ? ` ${CREATED_BY_RULE}` : ""}${formRecordsNoJudgementEnabled() ? ` ${RECORDS_NO_JUDGEMENT_RULE}` : ""}`,
+  ];
 
   if (matches) {
     if (matches.named.length > 0) {
@@ -418,8 +454,9 @@ export async function loadFormRecords(input: {
         input.question,
         visibleInstances(
           formsActor,
-          await listInstances("all", MATCH_LIMIT, { ...filter, employeeNameWords: words }),
-        ),
+          // PRIVATE_CREATOR_FORMS: over-read, then trim to the page; off, the page itself.
+          await listInstances("all", privateAwareLimit(MATCH_LIMIT), { ...filter, employeeNameWords: words }),
+        ).slice(0, MATCH_LIMIT),
       );
       const matches = matchRowsToQuestion(split.onFile, words);
       const drafts = matchRowsToQuestion(split.notOnFile, words);
@@ -431,7 +468,7 @@ export async function loadFormRecords(input: {
 
     const recentSplit = splitRecordDrafts(
       input.question,
-      visibleInstances(formsActor, await listInstances("active", RECENT_LIMIT, filter)),
+      visibleInstances(formsActor, await listInstances("active", privateAwareLimit(RECENT_LIMIT), filter)).slice(0, RECENT_LIMIT),
     );
     const recent = recentSplit.onFile;
     /*

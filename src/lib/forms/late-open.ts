@@ -1,6 +1,7 @@
-import { lateOpenDateEnabled } from "@/lib/config/chat-quality-flags";
+import { failureToOpenIsLateOpeningEnabled, formDateIncidentOnlyEnabled, lateOpenDateEnabled } from "@/lib/config/chat-quality-flags";
 
 import { listIncidentDates } from "./form-date-answer";
+import { incidentOnly } from "./form-date-incident-only";
 
 /**
  * ============================================================================
@@ -28,6 +29,25 @@ import { listIncidentDates } from "./form-date-answer";
 
 /** "late to open", "was late to open the store". */
 export const LATE_TO_OPEN = /\blate\s+to\s+open\b/i;
+
+/*
+ * FAILURE_TO_OPEN_IS_LATE_OPENING_ENABLED (ported from the sibling app, 10 Nov 2026): "a CA for <name> for failure to
+ * open on time" is a late opening. "failure / failed / failing to open" (not "open the form", "the drawer", "the
+ * register" …), and "did not / didn't / couldn't open" with "on time" or the store. Read lower-cased.
+ */
+const NOT_THE_STORE =
+  /(?!\s+(?:(?:a|an|the|this|that|her|his|my|their|our|up)\s+)?(?:forms?|drafts?|cards?|files?|ca|c\/a|corrective|coaching|documents?|app|apps|e-?mails?|messages?|tickets?|accounts?|registers?|drawers?|tills?|safes?|boxe?s?|packages?|doors?\s+for)\b)/;
+export const FAILURE_TO_OPEN = new RegExp(
+  String.raw`\bfail(?:ed|ure|ing|s)?\s+to\s+open${NOT_THE_STORE.source}\b` +
+    String.raw`|\b(?:did\s*n['’]?t|did\s+not|didnt|never|could\s*n['’]?t|could\s+not|unable\s+to|(?:was|were)\s*n['’]?t\s+able\s+to|(?:was|were)\s+not\s+able\s+to)\s+open\s+(?:(?:the\s+)?(?:store|location|shop|makery)\s+)?(?:on|in)\s+time\b` +
+    String.raw`|\b(?:did\s*n['’]?t|did\s+not|didnt|never)\s+open\s+(?:the\s+|her\s+|his\s+)?(?:store|location|shop|makery)\b`,
+  "i",
+);
+
+/** FAILURE_TO_OPEN_IS_LATE_OPENING_ENABLED: whether the words say the employee failed to open. Off, false. */
+export function saysFailureToOpen(text: string): boolean {
+  return failureToOpenIsLateOpeningEnabled() && FAILURE_TO_OPEN.test(text);
+}
 
 /**
  * An account that is also about a shift or an absence, which the Attendance
@@ -82,7 +102,18 @@ export function yearlessCuedDates(text: string, today: string): YearlessDate[] {
   for (const match of source.matchAll(YEARLESS_DASHED)) {
     const index = match.index ?? 0;
     const end = index + match[0].length;
-    if (!DATE_CUE_BEFORE.test(source.slice(Math.max(0, index - 60), index))) continue;
+    /*
+     * FORM_DATE_INCIDENT_ONLY_ENABLED (QA, 26 Oct 2026, live tester finding):
+     * "late on 10-5 and 10-15" — the second date continues the cued list and
+     * is a date too, or the form took the first one alone.
+     */
+    const previous = found[found.length - 1];
+    const continuesList =
+      formDateIncidentOnlyEnabled() &&
+      previous !== undefined &&
+      index - previous.end <= 8 &&
+      /^\s*(?:,|and|&|or|,\s*and)\s*$/i.test(source.slice(previous.end, index));
+    if (!continuesList && !DATE_CUE_BEFORE.test(source.slice(Math.max(0, index - 60), index))) continue;
     if (RANGE_AFTER.test(source.slice(end, end + 12))) continue;
     const iso = mostRecent(Number(match[1]), Number(match[2]), today);
     if (iso) found.push({ iso, index, end });
@@ -123,7 +154,7 @@ export function newestStatedDate(
 }
 
 function singleIncidentDate(text: string, today: string): string | null {
-  const dates = [...new Set(listIncidentDates(text, today).map((found) => found.iso))];
+  const dates = [...new Set(incidentOnly(text, today, listIncidentDates(text, today)).map((found) => found.iso))];
   return dates.length === 1 ? dates[0]! : null;
 }
 

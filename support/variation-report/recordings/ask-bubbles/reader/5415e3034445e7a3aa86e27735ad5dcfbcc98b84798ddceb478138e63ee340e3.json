@@ -1,0 +1,51 @@
+{
+  "key": "5415e3034445e7a3aa86e27735ad5dcfbcc98b84798ddceb478138e63ee340e3",
+  "model": "claude-haiku-5-5",
+  "reply": {
+    "employee": {
+      "value": "quinn",
+      "evidence": "create a CA form for quinn, team member at grand island"
+    },
+    "location": {
+      "value": "grand island",
+      "evidence": "team member at grand island"
+    },
+    "jobTitle": {
+      "value": "team member",
+      "evidence": "team member at grand island"
+    },
+    "incident": {
+      "value": "Opened store late",
+      "evidence": "for opening store late on 9-28-26"
+    },
+    "incidentDate": {
+      "value": "2026-09-28",
+      "evidence": "for opening store late on 9-28-26"
+    },
+    "warningLevel": {
+      "value": "written",
+      "evidence": "this should be a written and note a verbal ca was given on 9-1-26"
+    },
+    "payroll": null,
+    "payrollAmount": null,
+    "policyHeading": {
+      "value": "Late Opening",
+      "evidence": "for opening store late on 9-28-26"
+    },
+    "priorSteps": [
+      {
+        "kind": "verbal",
+        "date": "2026-09-01",
+        "evidence": "note a verbal ca was given on 9-1-26"
+      }
+    ],
+    "otherDates": []
+  },
+  "usage": {
+    "inputTokens": 4643,
+    "outputTokens": 523,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0
+  },
+  "ms": 1996
+}

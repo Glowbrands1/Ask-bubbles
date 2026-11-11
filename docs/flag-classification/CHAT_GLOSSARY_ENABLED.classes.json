@@ -1,0 +1,17 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov4-scan-sf-s12-msb-not-a-person: \"I need to make a corrective action for msb\" — MSB is Must See Behaviors (the reason), not a person: ask which employee, never save \"Msb\" as the name — OPEN in production (\"msb\" is looked up as a person — \"I couldn't find **msb** in the Woven roster, so that name is not on the form\" — instead of being read as Must See Behaviors; the card waits for an employee without asking which one)": {
+  "category": "INTENDED",
+  "twin": "itself with the flag off (production's flags, CI default): still expected to fail there; and its own fix run (\"holds with CHAT_GLOSSARY_ENABLED on\")",
+  "reason": "An OPEN-in-production case that holds with the glossary on (vitest reports the expected failure as failed): \"msb\" is not read as a person, nothing names \"Msb\", and the reply is the existing one question \"Who is this form for? Tell me the employee's full name.\"."
+ },
+ "replay: nov4-scan-sf-s12-msb-not-a-person [open]": {
+  "category": "INTENDED",
+  "twin": "src/lib/ai/chat-glossary-flags-off.test.ts (the msb turn, flag off, byte for byte as main) and this case's OPEN run with the flag off",
+  "reason": "The sf-s12 turn with the glossary on: the reply changes from main's \"I couldn't find **msb** in the Woven roster …\" plus the seven-item list to \"Who is this form for? Tell me the employee's full name.\"; no card names \"Msb\"."
+ },
+ "src/lib/google-reviews/migration.db.test.ts :: the allowlist is seeded with exactly the seven approved stores, identical to the company configuration": {
+  "category": "FLAKY",
+  "twin": "itself, run alone 3x off and 3x on (all pass)",
+  "reason": "Load, not the flag: the file's beforeEach (an in-process migrated Postgres) timed out while three suite runs shared 4 CPUs (load 10-13). Its 16 siblings in the same file failed the same way in both modes and are FLAKY above; this one happened to fail in all three off runs only. The file reads no glossary code. Re-run alone, 4 Nov 2026: 24/24 passed three times off and three times on."
+ }
+}

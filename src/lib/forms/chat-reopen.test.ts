@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { reopenByAnyOpenVerbEnabled } from "@/lib/config/chat-quality-flags";
+
 /**
  * "Change exit for jordan smith" with no form in the conversation: the form
  * on file is found among the ones this actor may see and put in the thread —
@@ -59,7 +61,12 @@ vi.mock("./instance-scope", () => ({
   visibleInstances: (_actor: unknown, rows: Row[]) => rows,
 }));
 
-vi.mock("./instances", () => ({
+/*
+ * FORM_EDIT_SINGLE_WRITER_ENABLED: the reopen reads the open draft before and
+ * after the change (`form-write.ts` editSnapshot / realizedClaim), so the mock
+ * has a `loadInstance` that returns the form as saved (`saved-form-instances`).
+ */
+vi.mock("./instances", async () => (await import("@/test/forms/saved-form-instances")).savedFormInstances({
   listInstances: async (_view: string, _limit: number, filter: unknown) => {
     state.listed += 1;
     state.filters.push(filter);
@@ -79,6 +86,11 @@ vi.mock("./instances", () => ({
     state.rows.push(revision);
     return revision;
   },
+}, async (id) => {
+  const found = state.rows.find((entry) => entry.id === id);
+  if (!found) return null;
+  const document = (await import("./library")).TEMPLATE_SEEDS.find((seed) => seed.key === found.templateKey)?.document ?? { blocks: [] };
+  return { instance: { variantKey: null, ...found }, version: { document }, values: [], events: found.events } as unknown as import("./instances").LoadedInstance;
 }));
 
 vi.mock("./repository", () => ({
@@ -119,7 +131,8 @@ const ask = (question: string, activeInstanceId?: string) =>
     activeInstanceId,
   });
 
-beforeEach(() => {
+beforeEach(async () => {
+  (await import("@/test/forms/saved-form-instances")).resetSavedForms();
   state.rows = [row({})];
   state.revised = [];
   state.listed = 0;
@@ -219,6 +232,19 @@ describe("bringing a form on file back into the conversation", () => {
       row({ id: "coaching-1", templateKey: "coaching", templateName: "Coaching Form", createdAt: "2026-10-15T12:00:00Z" }),
     ];
     const response = await ask("change exit for Jordan Smith");
+    /*
+     * Changed on purpose (QA decision d, 6 Nov 2026; port of ask-sunny #640): with REOPEN_BY_ANY_OPEN_VERB_ENABLED on,
+     * several forms on file for the named employee are listed and the manager is asked which, for every verb,
+     * "change" and "edit" included. Somebody else's form is never listed. Flag off, unchanged: the newest form opens.
+     */
+    if (reopenByAnyOpenVerbEnabled()) {
+      expect(state.revised).toEqual([]);
+      expect(response!.formOpened).toBeUndefined();
+      expect(response!.content).toMatch(/I found 2 forms on file for \*\*Jordan Smith\*\*/);
+      expect(response!.content).toMatch(/Which one should I open\?/);
+      expect(response!.content).not.toMatch(/Jane Doe/);
+      return;
+    }
     expect(state.revised).toEqual(["exit-new"]);
     expect(response!.formOpened!.revisesInstanceId).toBe("exit-new");
   });

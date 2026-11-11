@@ -12,6 +12,8 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "eval": "vitest run --config vitest.eval.config.mts",
+    "variation-report": "VARIATION_APP=ask-bubbles vitest run --config vitest.variation.config.mts",
     "e2e": "playwright test",
     "e2e:update": "playwright test --update-snapshots",
     "e2e:build": "NEXT_PUBLIC_DEMO_MODE=true NEXT_PUBLIC_SUPABASE_URL=https://recovery-e2e.supabase.co NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_e2e_placeholder next build",
@@ -28,6 +30,7 @@
     "verify:secrets": "SUPABASE_SECRET_KEY=sb_secret_CANARYcanary0000 ANTHROPIC_API_KEY=sk-ant-CANARYcanary0000 CRON_SECRET=cron-canary-0000000000000000 WOVEN_PASSWORD=woven-canary-000000 WOVEN_TEAM_PASSWORD=woventeam-canary-0000 WOVEN_BCS_PASSWORD=wovenbcs-canary-00000 WOVEN_SUBSCRIPTION_KEY=wovensub-canary-0000 GOOGLE_OAUTH_CLIENT_SECRET=googleclient-canary-000000 GOOGLE_TOKEN_ENCRYPTION_KEY=Z29vZ2xla2V5LWNhbmFyeS0wMDAwMDAwMDAwMDAwMDA= REPORTING_INGEST_SECRET=ingest-canary-000000000000000 NEXT_PUBLIC_DEMO_MODE=false next build && SUPABASE_SECRET_KEY=sb_secret_CANARYcanary0000 ANTHROPIC_API_KEY=sk-ant-CANARYcanary0000 CRON_SECRET=cron-canary-0000000000000000 WOVEN_PASSWORD=woven-canary-000000 WOVEN_TEAM_PASSWORD=woventeam-canary-0000 WOVEN_BCS_PASSWORD=wovenbcs-canary-00000 WOVEN_SUBSCRIPTION_KEY=wovensub-canary-0000 GOOGLE_OAUTH_CLIENT_SECRET=googleclient-canary-000000 GOOGLE_TOKEN_ENCRYPTION_KEY=Z29vZ2xla2V5LWNhbmFyeS0wMDAwMDAwMDAwMDAwMDA= REPORTING_INGEST_SECRET=ingest-canary-000000000000000 node scripts/verify-no-secrets-in-bundle.mjs"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "3.0.138",
     "@anthropic-ai/sdk": "^0.122.0",
     "@radix-ui/react-accordion": "^1.2.20",
     "@radix-ui/react-avatar": "^1.2.6",
@@ -46,6 +49,7 @@
     "@radix-ui/react-tooltip": "^1.2.16",
     "@supabase/ssr": "^0.12.6",
     "@supabase/supabase-js": "^2.112.4",
+    "ai": "6.0.322",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "exceljs": "^4.4.0",
@@ -58,7 +62,8 @@
     "recharts": "^3.10.1",
     "server-only": "^0.0.1",
     "tailwind-merge": "^3.6.0",
-    "unpdf": "^1.8.1"
+    "unpdf": "^1.8.1",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",

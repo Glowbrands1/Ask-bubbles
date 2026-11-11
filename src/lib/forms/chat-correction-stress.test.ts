@@ -66,18 +66,30 @@ vi.mock("./instance-scope", () => ({
   },
 }));
 
-vi.mock("./instances", () => ({
-  findOpenRevision: async () => null,
-  reviseInstance: async () => ({ id: REVISION_ID, templateName: "", employeeName: "", status: "draft" }),
-  saveInstanceValues: async (
-    id: string,
-    submitted: { values: Record<string, string>; checked: Record<string, string[]> },
-  ) => {
-    state.saved.push(submitted);
-    state.savedTo.push(id);
-    return { rejected: [] };
-  },
-}));
+/*
+ * FORM_EDIT_SINGLE_WRITER_ENABLED: the one writer (`form-write.ts`) reads the form
+ * before and after it writes, so this mock also has a `loadInstance` that returns
+ * the form as the writers below saved it (`src/test/forms/saved-form-instances.ts`).
+ */
+vi.mock("./instances", async () =>
+  (await import("@/test/forms/saved-form-instances")).savedFormInstances(
+    {
+      findOpenRevision: async () => null,
+      reviseInstance: async () => ({ id: REVISION_ID, templateName: "", employeeName: "", status: "draft" }),
+      saveInstanceValues: async (
+        id: string,
+        submitted: { values: Record<string, string>; checked: Record<string, string[]> },
+      ) => {
+        state.saved.push(submitted);
+        state.savedTo.push(id);
+        return { rejected: [] };
+      },
+    },
+    async (id) =>
+      (await (await import("./instance-scope")).authorizeInstance(new Request("http://localhost/api/forms"), id, "view")).loaded,
+  ),
+);
+beforeEach(async () => (await import("@/test/forms/saved-form-instances")).resetSavedForms());
 
 const { correctActiveForm } = await import("./chat-correction");
 

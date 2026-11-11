@@ -3,6 +3,8 @@ import { readFileSync, writeFileSync } from "node:fs";
 
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { formDateIncidentOnlyEnabled } from "@/lib/config/chat-quality-flags";
+
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 import { rosterResultFor } from "@/test/roster-result";
 import { ACTIVE_BRAND } from "@/lib/brand";
@@ -250,7 +252,7 @@ function judge(spec: ReplayCase, snaps: Snap[], latencyMs: number): string[] {
         item.templateKey === spec.templateKey &&
         item.warningLevel === spec.warningLevel &&
         item.payrollDeduct === spec.payrollDeduct &&
-        item.formDate === spec.formDate,
+        item.formDate === expectedFormDate(spec),
     );
   if (!early) {
     misses.push(
@@ -421,6 +423,17 @@ async function score(flags: "on" | "off", runs: number, prompt: "current" | "lkg
       });
     }
   }
+}
+
+/*
+ * FORM_DATE_INCIDENT_ONLY_ENABLED (D3, changed on purpose; QA ruled D3 wins over
+ * "dated 10/15", 26 Oct 2026): b9's only date is the deadline ("… complete
+ * policy acknowledgements in woven by 10-15-26 and failed to meet the
+ * deadline"), so with the flag on the card is dated the day it is created
+ * (null). Flag off keeps 2026-10-15.
+ */
+function expectedFormDate(spec: { id: string; formDate: string }): string | null {
+  return formDateIncidentOnlyEnabled() && spec.id === "b9" ? null : spec.formDate;
 }
 
 function missCount(rows: CaseResult[]): number {

@@ -1,7 +1,9 @@
 import { isPolicySourceSpan } from "@/lib/ai/employee-candidate-grounding";
+import { isGlossaryTerm } from "@/lib/ai/glossary";
 import { manualDisplayTitle, OFFICIAL_POLICY_MANUAL } from "@/lib/forms/official-policy-manual";
 import { COMPANY_LOCATIONS } from "@/lib/locations";
 
+import { isExitAnswerPhrase } from "./exit-answer-phrase";
 import { isNotAName } from "./not-a-name";
 
 /**
@@ -32,6 +34,8 @@ export function isNotAPersonCandidate(candidate: string): boolean {
   if (/^[A-Za-z]{2}$/.test(trimmed) && STATE_CODES.has(trimmed.toUpperCase())) return true;
   // NOT_A_NAME_GUARD_ENABLED: "blank", "require practice", a store's city.
   if (isNotAName(trimmed)) return true;
+  // EXIT_INTAKE_FIX_ENABLED: "items returned" is one of the exit form's answers.
+  if (isExitAnswerPhrase(trimmed)) return true;
   return isPolicySourceSpan(trimmed, policyTitles());
 }
 
@@ -40,6 +44,12 @@ export function isNotAPersonCandidate(candidate: string): boolean {
  * Dropping every candidate leaves the original list, so nothing is invented.
  */
 export function keepTypedPerson(resolution: TypedNameResolution): TypedNameResolution {
+  // CHAT_GLOSSARY_ENABLED: a glossary term ("msb") is never the employee; the manager is asked who it is. Off, unchanged.
+  if (resolution.kind === "resolved" && isGlossaryTerm(resolution.employeeName)) return { kind: "missing" };
+  if (resolution.kind === "ambiguous" && resolution.candidates.some((candidate) => isGlossaryTerm(candidate))) {
+    const people = resolution.candidates.filter((candidate) => !isGlossaryTerm(candidate));
+    resolution = people.length === 0 ? { kind: "missing" } : people.length === 1 ? { kind: "resolved", employeeName: people[0]! } : { kind: "ambiguous", candidates: people };
+  }
   // NOT_A_NAME_GUARD_ENABLED: a name that is not a person is nobody, and a
   // list of only such words is not a question to ask the manager.
   if (resolution.kind === "resolved" && isNotAName(resolution.employeeName)) return { kind: "missing" };

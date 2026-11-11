@@ -1,5 +1,7 @@
 import "server-only";
 
+import { randomUUID } from "node:crypto";
+
 import { isHiddenTemplate } from "@/config/company/forms/hidden";
 import { CLAUDE_HAIKU_MODEL } from "@/lib/config/models";
 import {
@@ -13,20 +15,25 @@ import {
   placeSpanGuardEnabled,
   priorActionsParseEnabled,
   keepFormEmployeeEnabled,
+  formEditDateRulesEnabled,
+  formDateIncidentOnlyEnabled,
+  priorSentenceFixEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { managerTypedActionPlan } from "@/lib/forms/manager-action-plan";
 import { CA_POLICY_LABEL, readCaPolicy, describedAttendanceKeys, LATE_OPENING_OFFENSE } from "@/lib/forms/ca-policy";
 import { asksOnlyAboutFormsOnFile } from "@/lib/forms/chat-form-records";
 import { matchEmployeeName, wovenCloseNote, type RosterEmployee } from "@/lib/forms/employee-match";
-import { listIncidentDates, datesInText, datesInTextWithYearless } from "@/lib/forms/form-date-answer";
+import { blankPriorStepDates, datesInText, datesInTextWithYearless, listIncidentDates, withoutPriorStepClauses } from "@/lib/forms/form-date-answer";
+import { dateAnswersSaid, statedFormDate } from "@/lib/forms/incident-dates";
+import { incidentOnly } from "@/lib/forms/form-date-incident-only";
 import { isNotAName, maskNotANameText, saidInReply } from "@/lib/forms/not-a-name";
 import { lateOpenOn, mostRecent } from "@/lib/forms/late-open";
 import { supportsInlineDraft } from "@/lib/forms/inline-draft";
 import { TEMPLATE_SEEDS } from "@/lib/forms/library";
 import { statedPriorActions } from "@/lib/forms/prior-actions";
 import { readLocationMentions, rosterLocationName } from "@/lib/forms/location-mention";
-import { payrollDeductAmount, payrollDeductFromConversation } from "@/lib/forms/payroll-deduct";
-import { PAYROLL_DEDUCT_AMOUNT_QUESTION } from "@/lib/forms/payroll-deduct-amount";
+import { payrollDeductFromConversation } from "@/lib/forms/payroll-deduct";
+import { managerPayrollAmount as statedDeductionAmount, PAYROLL_DEDUCT_AMOUNT_QUESTION } from "@/lib/forms/payroll-deduct-amount";
 import { extractEmployeeNames, extractJobTitle, statedJobTitle } from "@/lib/forms/proposal";
 import { spokenDates } from "@/lib/forms/relative-date";
 import { typedEmployeeName } from "@/lib/forms/typed-employee-name";
@@ -38,6 +45,7 @@ import type { ChatFormProposal } from "@/types";
 import { withoutAppLines } from "./app-sentences";
 import { callClaudeToolDetailed } from "./call-claude";
 import { chatTraceDraft } from "./chat-trace-store";
+import { remapEditLine, formDateByRules, managerWords, remapObservation, withoutSetAsidePolicies } from "./edit-date-rules";
 import { readsAsPolicyPaste, readsAsStatedTitle, spelledAssistant } from "./title-words";
 import {
   currentRequestStart,
@@ -54,6 +62,8 @@ import {
   remapPolicyLine,
   placeSpans,
   requestIncident,
+  namesTheirStore,
+  sentenceAboutThem,
   saidInWords,
   statedActionPlan,
   withoutAmbiguousAnswers,
@@ -187,7 +197,19 @@ export function groundFormSlots(input: {
   const jobTitle = managerOnly ? managerTitle(titleTurns, raw.employeeName) : groundedTitle(titleTurns);
   const store =
     (placeSpanGuardEnabled() ? newestNamedStore(users) : null) ?? groundedStore(said) ?? (fixed ? placeStore(said) : null);
-  const incidentDateIso = groundedDate(said, input.today);
+  /*
+   * PRIOR_SENTENCE_FIX_ENABLED (coordinator's ruling, 26 Oct 2026): the form's
+   * date by `statedFormDate` — one incident date, or two asked about once and
+   * dated the day it is created until answered — and otherwise this reader's
+   * own, with every earlier step's date ("coached her 10-16", "written
+   * warning on 10-20") blanked first.
+   */
+  // Corrective Action only: on a Coaching Form the coaching held is its date.
+  const sentenceFix = priorSentenceFixEnabled() && templateKey === "dpoa";
+  const statedDate = sentenceFix ? statedFormDate(conversation, input.today) : null;
+  const incidentDateIso = statedDate
+    ? statedDate.iso
+    : groundedDate(sentenceFix ? blankPriorStepDates(said, input.today) : said, input.today);
   /*
    * WARNING_LEVEL_MANAGER_ONLY_ENABLED (ported from the sibling app, 24 Oct 2026):
    * the latest level the manager states, with a bare "Yes" counted only after
@@ -213,24 +235,40 @@ export function groundFormSlots(input: {
   // manual gives no section for it.
   const lateOpening = fixed && !named ? describedLateOpening(withoutPriorList(scoped)) : null;
   const policySection = fixed ? (named ?? lateOpening) : groundedPolicy(said);
+  // PRIOR_SENTENCE_FIX_ENABLED: an answer to the date question ("10/15", "most recent") is no account.
+  const answers = sentenceFix ? dateAnswersSaid(conversation) : null;
+  const incidentScope = answers?.size
+    ? users.slice(start).filter((turn) => !answers.has(withoutAppLines(turn).trim())).join("\n")
+    : scoped;
   // MANAGER_WORDS_ONLY_ENABLED: a clause that only names the employee or says
   // where they work is not what happened, on either reader.
   const incidentSlot = managerOnly ? (clause: string) => slotClause(clause) || namesOrPlacesThem(clause) : slotClause;
   const observation = fixed
-    ? (requestIncident({ text: scoped, employeeName, slotClause: incidentSlot }) ??
-      (isRequestLeftover(raw.observation, employeeName) || hasCutDate(raw.observation, said)
+    ? (requestIncident({ text: incidentScope, employeeName, slotClause: incidentSlot, managerOnly, ...(sentenceFix ? { today: input.today } : {}) }) ??
+      (isRequestLeftover(raw.observation, employeeName) ||
+      hasCutDate(raw.observation, said) ||
+      // MANAGER_WORDS_ONLY_ENABLED: the model's "She works at Grand Island" says
+      // where, not what happened, and a summary that keeps the store is not the
+      // manager's account without their place (QA, 25 Oct 2026).
+      (managerOnly && (namesOrPlacesThem(raw.observation ?? "") || namesTheirStore(raw.observation)))
         ? null
-        : acceptSummary(raw.observation, scoped)))
-    : (statedIncident(said, employeeName, managerOnly) ?? acceptSummary(raw.observation, said));
+        : acceptSummary(raw.observation, scoped)) ??
+      (managerOnly ? sentenceAboutThem({ text: scoped, employeeName, slotClause: incidentSlot }) : null))
+    : (statedIncident(sentenceFix ? withoutPriorStepClauses(said, input.today, said).text : said, employeeName, managerOnly) ??
+      acceptSummary(raw.observation, said));
   // Both readers contribute, each behind its own flag: the "previous coaching: …"
   // list (REMAP_INCIDENT_FIX_ENABLED) and the intent path's step reader
   // (PRIOR_ACTIONS_PARSE_ENABLED). With both on, a list item whose date a
   // parsed step already holds is the same step and is not listed twice.
-  const priorList = fixed ? priorListActions(said) : [];
+  // REMAP_INCIDENT_FIX_ENABLED: priors belong to the request that typed them. A
+  // later create request with its own incident starts with none unless the
+  // manager restates them (QA, 25 Oct 2026, conv_mvnt9by62zckttk).
+  const priorSaid = fixed ? scoped : said;
+  const priorList = fixed ? priorListActions(priorSaid) : [];
   const priorActions = priorActionsParseEnabled()
-    ? remapPriorActions(statedPrior(said), said, input.today, priorList)
+    ? remapPriorActions(statedPrior(priorSaid), priorSaid, input.today, priorList)
     : fixed
-      ? mergePriorActions(statedPrior(said), priorList)
+      ? mergePriorActions(statedPrior(priorSaid), priorList)
       : statedPrior(said);
   const incidentTime = statedTime(said);
   // The action plan is the manager's, or blank. The model's summary and
@@ -275,10 +313,23 @@ export function groundFormSlots(input: {
       ? { ...kept, warningLevel: null }
       : kept;
   let slots = finishSlots(firstCoachingUnlessEarlier(mergeSlots(read, savedSlots), users), said);
+  // PRIOR_SENTENCE_FIX_ENABLED: a date settled (or asked about) this turn is not replaced by a saved one.
+  if (statedDate) slots = { ...slots, incidentDateIso: statedDate.iso };
+  // FORM_EDIT_DATE_RULES_ENABLED: an edit replaces, adds to, or never becomes What happened; the Date follows the incident.
+  if (formEditDateRulesEnabled()) {
+    slots = withEditDateRules(slots, {
+      users,
+      question: input.question,
+      today: input.today,
+      reread: (account) =>
+        fixed ? requestIncident({ text: account, employeeName, slotClause: incidentSlot }) : statedIncident(account, employeeName, managerOnly),
+    });
+  }
   const sections =
     fixed && input.manual
       ? remapManualSections({
-          said: scoped,
+          // FORM_EDIT_DATE_RULES_ENABLED: "INSTEAD of the attendance policy" cites no Attendance.
+          said: formEditDateRulesEnabled() ? withoutSetAsidePolicies(scoped) : scoped,
           chunks: input.manual.chunks,
           incident: slots.observation,
           modelHeading: raw.policySection,
@@ -293,7 +344,12 @@ export function groundFormSlots(input: {
     .map((turn) => turn.content);
   // An ambiguous "Yes" answered nothing, so the questions before it are asked again.
   if (fixed && isAmbiguousAnswer(conversation, conversation.length - 1)) assistants.pop();
-  const questions = questionsFor(slots, assistants);
+  const questionsRead = questionsFor(slots, assistants);
+  // PRIOR_SENTENCE_FIX_ENABLED: two incident dates are asked about by name, once.
+  const questions =
+    statedDate && statedDate.candidates.length > 1
+      ? questionsRead.flatMap((question) => (question === QUESTIONS.incidentDateIso ? (statedDate.question ? [statedDate.question] : []) : [question]))
+      : questionsRead;
   const content = renderReply(
     slots,
     questions,
@@ -306,8 +362,10 @@ export function groundFormSlots(input: {
         }
       : null,
   );
+  // FORM_EDIT_DATE_RULES_ENABLED: the reply says what an edit did.
+  const editLine = formEditDateRulesEnabled() ? remapEditLine(managerWords(input.question)) : null;
   const response: AskResponse = {
-    content,
+    content: editLine ? `${content}\n\n${editLine}` : content,
     citations: fixed && input.manual ? remapCitations(input.manual, sections) : [],
     ...(slots.templateKey ? { formProposal: proposalFor(slots) } : {}),
   };
@@ -917,7 +975,7 @@ function groundedDate(text: string, today: string): string | null {
   // LATE_OPEN_DATE_ENABLED: the newest date the manager typed, dashed or not.
   const newest = lateOpenOn() ? newestDate(text, today) : null;
   if (newest) return newest;
-  const found = listIncidentDates(text, today).filter((item) => !dateIsPrior(text, item.index));
+  const found = incidentOnly(text, today, listIncidentDates(text, today)).filter((item) => !dateIsPrior(text, item.index));
   const calendar = [...new Set(found.map((item) => item.iso))];
   // One incident date, or the later one when they correct it. A prior step's
   // date ("manual ack 9/01") is not this form's date and must not wipe it.
@@ -950,10 +1008,38 @@ function calendarPhrase(phrase: string): boolean {
 }
 
 /** A date that belongs to an earlier step, not the form being written. */
+const PRIOR_STEP_JUST_BEFORE =
+  /\b(?:coached|coaching\s+(?:was\s+)?(?:given|held|done))\s+(?:(?:her|him|them|[a-z]+)\s+)?on\s*$|\b(?:gave|given|issued|had|got|received)\s+(?:(?:her|him|them)\s+)?(?:a\s+|an\s+)?(?:final\s+)?(?:verbal|written|warning|coaching|ca|c\/a|corrective\s+action|write[- ]?up)\b[^.;\n]{0,20}?\bon\s*$/i;
+
+/*
+ * A step "given on <date>" is an earlier one only when the turn dates the
+ * incident some other way ("no call no show today. … gave a verbal on 10-21").
+ * "write up <name>, i gave her a verbal on 10-21 for being late" is the
+ * verbal this form documents, dated 10-21 (dispatcher probe, 26 Oct 2026).
+ */
+const DAY_WORD = /\b(?:today|yesterday|this\s+morning|last\s+night|tonight)\b/i;
+const DATE_TOKEN = /\b\d{1,2}[-/]\d{1,2}(?:[-/]\d{2,4})?\b/g;
+
+function incidentDatedElsewhere(text: string, index: number): boolean {
+  if (DAY_WORD.test(text)) return true;
+  for (const match of text.matchAll(DATE_TOKEN)) {
+    const at = match.index ?? 0;
+    if (at === index) continue;
+    if (!PRIOR_STEP_JUST_BEFORE.test(text.slice(Math.max(0, at - 80), at))) return true;
+  }
+  return false;
+}
+
 function dateIsPrior(text: string, index: number): boolean {
   const before = text.slice(Math.max(0, index - 80), index);
   const clause = before.slice(Math.max(before.search(/[^.;\n]*$/), 0));
   if (/\b(?:prior|previous|coached\s+on|manual\s+ack|already|got|received)\b/i.test(clause)) return true;
+  /*
+   * FORM_DATE_INCIDENT_ONLY_ENABLED (QA, 26 Oct 2026, live tester finding):
+   * "I coached her on 10-16 and gave a verbal on 10-21" are earlier steps,
+   * never the form's date.
+   */
+  if (formDateIncidentOnlyEnabled() && PRIOR_STEP_JUST_BEFORE.test(before) && incidentDatedElsewhere(text, index)) return true;
   // REMAP_INCIDENT_FIX_ENABLED: "jba manual 11-1-25" dates the manual acknowledgement, not this form.
   return remapIncidentFixEnabled() && /\b(?:jba\s+(?:policy\s+)?manual|policy\s+manual)\b/i.test(clause);
 }
@@ -992,7 +1078,7 @@ function explicitWarning(turns: readonly string[], today: string): "verbal" | "w
  * yearless "10-22" is the most recent 22 October, never a future one.
  */
 function newestDate(text: string, today: string): string | null {
-  const calendar = listIncidentDates(text, today)
+  const calendar = incidentOnly(text, today, listIncidentDates(text, today))
     .filter((item) => !dateIsPrior(text, item.index))
     .map((item) => ({ iso: item.iso, index: item.index }));
   const dashed = dashedMonthDays(text, today).map((item) => ({
@@ -1051,7 +1137,7 @@ function monthDayIso(year: number, month: number, day: number): string | null {
 
 function managerPayrollAmount(text: string): string | null {
   const stripped = text.replace(POLICY_QUOTE, " ");
-  return payrollDeductAmount(stripped) ?? clausePayrollAmount(stripped);
+  return statedDeductionAmount(stripped) ?? clausePayrollAmount(stripped);
 }
 
 function clausePayrollAmount(text: string): string | null {
@@ -1192,7 +1278,7 @@ const STATE_ONLY = new RegExp(
   "i",
 );
 
-function slotClause(clause: string): boolean {
+export function slotClause(clause: string): boolean {
   const text = clause.trim();
   if (/^(?:verbal|written|yes|no|yeah|nope)[.!]?\s*$/i.test(text)) return true;
   // "Create a Coaching Form" names the form. It is not what happened.
@@ -1332,7 +1418,7 @@ function withoutLeftovers(
     ...saved,
     observation: newRequest || leftover ? null : observation,
     actionPlan: null,
-    ...(newRequest ? { policySection: null } : {}),
+    ...(newRequest ? { policySection: null, priorActions: null } : {}),
   };
 }
 
@@ -1419,13 +1505,49 @@ function renderReply(
   return [body, asked].filter((part) => part.trim() !== "").join("\n\n");
 }
 
+/**
+ * FORM_EDIT_DATE_RULES_ENABLED: What happened under the three edit kinds, and
+ * the Date read past a prior step's date (see `edit-date-rules.ts`).
+ */
+function withEditDateRules(
+  slots: FormRemapSlots,
+  input: {
+    readonly users: readonly string[];
+    readonly question: string;
+    readonly today: string;
+    readonly reread: (account: string) => string | null;
+  },
+): FormRemapSlots {
+  const users = input.users.map(managerWords).filter((turn) => turn.trim());
+  const observation = remapObservation({ users, current: slots.observation, reread: input.reread });
+  const date = formDateByRules({
+    managerTurns: users,
+    question: managerWords(input.question),
+    today: input.today,
+    current: slots.incidentDateIso,
+  });
+  const incidentDateIso = date === undefined ? slots.incidentDateIso : date;
+  return observation === slots.observation && incidentDateIso === slots.incidentDateIso
+    ? slots
+    : { ...slots, observation, incidentDateIso };
+}
+
 function proposalFor(slots: FormRemapSlots): ChatFormProposal {
   const templateKey = slots.templateKey!;
   const named = Boolean(slots.employeeName);
   const located = Boolean(slots.locationId);
   const status = !named ? "needs_employee" : located ? "ready" : "needs_location";
   return {
-    proposalId: "form-remap",
+    /*
+     * ONE ID PER CARD, generated here as the proposal flow does. A proposal id
+     * names one card: the create route's card-id match returns the draft that
+     * card already made, and `createInstance` files a card's form under an id
+     * derived from the manager, the form and the card id (`cardInstanceId`).
+     * A fixed "form-remap" made every remap card of a manager the same card,
+     * so a new chat about a different incident got the first chat's draft
+     * back (B18, conv_mvnurfc02cj2y7l, 25 Oct 2026).
+     */
+    proposalId: randomUUID(),
     templateKey,
     templateName: TEMPLATE_SEEDS.find((seed) => seed.key === templateKey)?.name ?? templateKey,
     supportsInlineDraft: status === "ready" && supportsInlineDraft(templateKey, []),

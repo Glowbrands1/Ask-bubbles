@@ -1,0 +1,131 @@
+import { describe, expect, it } from "vitest";
+
+import { formContentQuestion, formContentRevision, honestFormReply } from "./form-content-turn";
+
+/** QA, 30 Oct 2026: the managers' own wording with a Coaching Form draft open. Names are invented. */
+const OPEN = { templateName: "Coaching Form", employeeName: "Marnie Holloway" };
+const PRINTED = { role: "assistant" as const, content: "Here's the update applied to the draft: **Details of Coaching:** Observed: slips are pinned in order." };
+
+describe("formContentQuestion", () => {
+  it("details in plain words", () => {
+    const said = "this is what i am wanting to coach on: managing our ship from store operation";
+    expect(formContentQuestion({ ...OPEN, question: said, history: [] })).toBe(`Add this to the Details of Coaching: ${said}`);
+  });
+
+  it('"make that update": the Details the previous reply printed, without its claim', () => {
+    expect(formContentQuestion({ ...OPEN, question: "make that update", history: [PRINTED] })).toBe(
+      "Add this to the Details of Coaching: Observed: slips are pinned in order.",
+    );
+  });
+
+  it('"make that update" with nothing before it: not a change', () => {
+    expect(formContentQuestion({ ...OPEN, question: "make that update", history: [] })).toBeNull();
+  });
+
+  it('"can you upate the draft with these details of coaching?": the previous answer', () => {
+    const guide = { role: "assistant" as const, content: "Confirm the order, pick, bag and hold it at the counter." };
+    expect(formContentQuestion({ ...OPEN, question: "can you upate the draft with these details of coaching?", history: [guide] })).toBe(
+      "Add this to the Details of Coaching: Confirm the order, pick, bag and hold it at the counter.",
+    );
+  });
+
+  it.each(["how long has Marnie worked here?", "Is Marnie on the schedule Saturday", "Marnie was late"])(
+    "a question, or too short to be an account, is not a change: %s",
+    (said) => {
+      expect(formContentQuestion({ ...OPEN, question: said, history: [] })).toBeNull();
+    },
+  );
+
+  it('"start" and "create" in the account go to the revision as "begin" and "make" (the revision reads them as a new-form request)', () => {
+    const printed = { role: "assistant" as const, content: "**Details of Coaching:** Start each order when its slip prints; create the label last." };
+    expect(formContentQuestion({ ...OPEN, question: "make that update", history: [printed] })).toBe(
+      "Add this to the Details of Coaching: begin each order when its slip prints; make the label last.",
+    );
+  });
+
+  it("only the Coaching Form", () => {
+    expect(
+      formContentQuestion({ templateName: "Corrective Action Form", employeeName: "Marnie Holloway", question: "make that update", history: [PRINTED] }),
+    ).toBeNull();
+  });
+});
+
+describe("honestFormReply", () => {
+  it("drops the claim and says nothing changed, keeping what it drafted", () => {
+    const reply = honestFormReply("Here's the updated **Coaching Form** for Marnie Holloway.\n\nObserved: slips are pinned.", true)!;
+    expect(reply).not.toMatch(/here's the updated/i);
+    expect(reply).toMatch(/^\*\*Nothing on the form has changed yet\.\*\*/);
+    expect(reply).toContain("Observed: slips are pinned.");
+    expect(reply).toContain("make that update");
+  });
+
+  it("an answer that claims nothing is left as it is", () => {
+    expect(honestFormReply("Press Finalize on the card when it is ready.", true)).toBeNull();
+  });
+});
+
+describe("formContentRevision (Bubbles live check, 31 Oct 2026)", () => {
+  const guide = {
+    id: "a1",
+    role: "assistant" as const,
+    content: "Print the Packing Slip and use it as your shopping list. Use Split Ship to move unavailable items. Submit a Help Desk request.",
+  };
+
+  it('"these details" whose words read as other people: the answer goes as the last turn, the request names nobody', () => {
+    const turn = formContentRevision({ ...OPEN, question: "can you upate the draft with these details of coaching?", history: [guide] })!;
+    expect(turn.question).toBe("Add the details in my last message to the Details of Coaching.");
+    expect(turn.history.at(-1)).toMatchObject({ role: "user", content: guide.content });
+  });
+
+  it("an answer naming nobody stays in the request, as before", () => {
+    const plain = { id: "a1", role: "assistant" as const, content: "Confirm the order, pick, bag and hold it at the counter." };
+    const turn = formContentRevision({ ...OPEN, question: "can you upate the draft with these details of coaching?", history: [plain] })!;
+    expect(turn.question).toBe("Add this to the Details of Coaching: Confirm the order, pick, bag and hold it at the counter.");
+    expect(turn.history).toEqual([plain]);
+  });
+
+  it("the manager's own words naming somebody else keep the revision's rule", () => {
+    const said = "this is what i am wanting to coach on: Jordan Blake showed the team how to pack orders";
+    expect(formContentRevision({ ...OPEN, question: said, history: [] })!.question).toBe(`Add this to the Details of Coaching: ${said}`);
+  });
+
+  it('"make that update" after a reply that offered no update is not a change', () => {
+    const meta = { role: "assistant" as const, content: "It should update automatically — no copy-and-paste needed." };
+    expect(formContentQuestion({ ...OPEN, question: "make that update", history: [meta] })).toBeNull();
+  });
+});
+
+describe("independent review, 31 Oct 2026", () => {
+  it.each([
+    "Marnie was late 3 times this week what should I put for the policy",
+    "Marnie needs to sign this before Friday, remind me",
+  ])("a question or an errand about the employee is not written: %s", (said) => {
+    expect(formContentQuestion({ ...OPEN, question: said, history: [] })).toBeNull();
+  });
+
+  it('"Add the details that she clocked out early on 10/20" gives its own details, never the previous answer', () => {
+    const turn = formContentQuestion({ ...OPEN, question: "Add the details that she clocked out early on 10/20", history: [PRINTED] });
+    expect(turn ?? "").not.toContain("rooms are checked before each guest");
+    expect(turn ?? "").not.toContain("slips are pinned in order");
+  });
+
+  it("the honest reply's own lines are never content for \"make that update\"", () => {
+    const honest = honestFormReply("Here's the updated **Coaching Form** for Marnie Holloway.\n\n**Details of Coaching:** Observed: late twice.", true)!;
+    const turn = formContentQuestion({ ...OPEN, question: "make that update", history: [{ role: "assistant", content: honest }] })!;
+    expect(turn).toBe("Add this to the Details of Coaching: Observed: late twice.");
+  });
+
+  it('a policy answer\'s "last updated the first quarter" is not a claim about the form', () => {
+    expect(honestFormReply("The attendance policy was last updated the first quarter.\n\nIt applies to every shift.", true)).toBeNull();
+  });
+});
+
+describe("independent review item 12, 31 Oct 2026", () => {
+  it.each([
+    "What's the date on the form for these details?",
+    "I want to coach on the new dress code, what does the manual say?",
+    "Marnie asked me to move her shift on Saturday",
+  ])("never written into the Details: %s", (said) => {
+    expect(formContentQuestion({ ...OPEN, question: said, history: [PRINTED] })).toBeNull();
+  });
+});

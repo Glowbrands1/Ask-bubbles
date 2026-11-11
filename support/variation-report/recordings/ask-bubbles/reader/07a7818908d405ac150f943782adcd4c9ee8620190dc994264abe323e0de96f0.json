@@ -1,0 +1,48 @@
+{
+  "key": "07a7818908d405ac150f943782adcd4c9ee8620190dc994264abe323e0de96f0",
+  "model": "claude-haiku-5-5",
+  "reply": {
+    "employee": {
+      "value": "dale",
+      "evidence": "create ca form for dale for violating attendance policy on 10-20-26"
+    },
+    "location": null,
+    "jobTitle": null,
+    "incident": {
+      "value": "Violating attendance policy",
+      "evidence": "create ca form for dale for violating attendance policy on 10-20-26"
+    },
+    "incidentDate": {
+      "value": "2026-10-20",
+      "evidence": "create ca form for dale for violating attendance policy on 10-20-26"
+    },
+    "warningLevel": {
+      "value": "verbal",
+      "evidence": "verbal"
+    },
+    "payroll": {
+      "value": "no",
+      "evidence": "no payroll deduct"
+    },
+    "payrollAmount": null,
+    "policyHeading": {
+      "value": "Attendance",
+      "evidence": "violating attendance policy on 10-20-26"
+    },
+    "priorSteps": [
+      {
+        "kind": "other",
+        "date": "2026-01-01",
+        "evidence": "jba manual 1-1-26 for previous coaching"
+      }
+    ],
+    "otherDates": []
+  },
+  "usage": {
+    "inputTokens": 4632,
+    "outputTokens": 512,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0
+  },
+  "ms": 2330
+}

@@ -61,6 +61,8 @@ export interface ConversationDraftRow {
   readonly conversation: string | null;
   /** The last manager turn the chat had when it was made. */
   readonly lastTurnId: string | null;
+  /** The draft's form date, when it was read. */
+  readonly formDate?: string | null;
 }
 
 export interface ConversationDraftWanted {
@@ -68,6 +70,11 @@ export interface ConversationDraftWanted {
   readonly employeeName: string;
   readonly conversationKey: string;
   readonly turns: readonly ConversationTurn[];
+  /**
+   * DRAFT_REUSE_SAME_CHAT_ONLY_ENABLED only: the card's own date. A draft of
+   * this chat dated differently is another incident, so it is not reused.
+   */
+  readonly formDate?: string | null;
 }
 
 /** The id of the last manager turn, recorded on the draft so later turns can be told apart. */
@@ -123,7 +130,8 @@ export function pickConversationDraft(
       (row) =>
         row.conversation === wanted.conversationKey &&
         row.templateId === wanted.templateId &&
-        sameEmployee(row.employeeName, wanted.employeeName),
+        sameEmployee(row.employeeName, wanted.employeeName) &&
+        !(wanted.formDate && row.formDate && row.formDate !== wanted.formDate),
     )
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
     .find((row) => !separateAskedSince(wanted.turns, row.lastTurnId));
@@ -136,6 +144,8 @@ export async function findConversationDraft(input: {
   readonly employeeName: string;
   readonly conversationKey: string;
   readonly turns: readonly ConversationTurn[];
+  /** See `ConversationDraftWanted.formDate`. */
+  readonly formDate?: string | null;
   readonly now?: Date;
 }): Promise<{ instance: InstanceRow; lastTurnId: string | null } | null> {
   if (!input.conversationKey) return null;
@@ -150,7 +160,7 @@ export async function findConversationDraft(input: {
   const since = new Date((input.now ?? new Date()).getTime() - WINDOW_MS).toISOString();
   const { data, error } = await supabase
     .from("form_instances")
-    .select("id, employee_name, template_id, created_at")
+    .select("id, employee_name, template_id, created_at, form_date")
     .eq("created_by", input.createdBy)
     .eq("template_id", template.id)
     .eq("source", "assistant")
@@ -160,7 +170,13 @@ export async function findConversationDraft(input: {
     .limit(25);
   if (error || !Array.isArray(data) || data.length === 0) return null;
 
-  const instances = data as { id: unknown; employee_name: unknown; template_id: unknown; created_at: unknown }[];
+  const instances = data as {
+    id: unknown;
+    employee_name: unknown;
+    template_id: unknown;
+    created_at: unknown;
+    form_date?: unknown;
+  }[];
   const { data: events, error: eventsError } = await supabase
     .from("form_instance_events")
     .select("instance_id, detail")
@@ -187,6 +203,7 @@ export async function findConversationDraft(input: {
     createdAt: String(row.created_at ?? ""),
     conversation: recorded.get(String(row.id))?.conversation ?? null,
     lastTurnId: recorded.get(String(row.id))?.lastTurnId ?? null,
+    formDate: typeof row.form_date === "string" ? row.form_date : null,
   }));
 
   const id = pickConversationDraft(rows, {
@@ -194,6 +211,7 @@ export async function findConversationDraft(input: {
     employeeName: input.employeeName,
     conversationKey: input.conversationKey,
     turns: input.turns,
+    ...(input.formDate ? { formDate: input.formDate } : {}),
   });
   if (!id) return null;
   const loaded = await loadInstance(id);

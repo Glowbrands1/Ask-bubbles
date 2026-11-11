@@ -325,7 +325,7 @@ describe("a policy named in the conversation goes onto the open form", () => {
     expect(answer?.formUpdate).toEqual({ instanceId: id, updated: ["policy_language", "policy_violated", "action_plan"] });
     expect(store.form_instances).toHaveLength(1);
     /* Policy Violated names the section beside its box, as a first draft does (District Manager feedback, 21 Oct 2026). */
-    expect((await row(id, "policy_violated"))?.value).toBe("Tardiness/Leaving Early — Late Opening");
+    expect((await row(id, "policy_violated"))?.value).toBe("Attendance Policy — Late Opening"); // CHANGED ON PURPOSE, Corrective Action revision 7 (client request, template approved 4 Nov 2026)
     /* The Action Plan follows Direct policy: both sections, in the order cited. */
     expect(answer?.content).toContain("The Action Plan now says management will review the Attendance and Late Opening policies with Pat.");
     expect((await row(id, "action_plan"))?.value).toBe(
@@ -381,6 +381,28 @@ describe("a policy named in the conversation goes onto the open form", () => {
     expect(answer?.content).toMatch(/Removed \*\*Attendance\*\* \(page 14\)/);
     expect(answer?.content).toMatch(/That line is now blank/);
     expect((await row(id, "policy_language"))?.value ?? "").toBe("");
+  });
+
+  // The flip-3 gate (6 Nov 2026): with POLICY_CHANGE_RELEVANT_ENABLED on, the form's option "Attendance Policy" was
+  // taken out of the manager's words as a form word, so "take the attendance policy off the form" found no section.
+  it("adds and removes the attendance policy with POLICY_CHANGE_RELEVANT_ENABLED on (the form's option names it)", async () => {
+    vi.stubEnv("POLICY_CHANGE_RELEVANT_ENABLED", "true");
+    try {
+      const { id, history } = await createdForm();
+      const added = await changeActiveFormPolicy({ request: chat(), instanceId: id, question: "use the attendance policy instead", history });
+      expect(added?.content).not.toMatch(/couldn't find a section/);
+      expect((await row(id, "policy_language"))?.value ?? "").toMatch(/Attendance/);
+      const answer = await changeActiveFormPolicy({
+        request: chat(),
+        instanceId: id,
+        question: "take the attendance policy off the form",
+        history,
+      });
+      expect(answer?.content).toMatch(/Removed \*\*Attendance\*\* \(page 14\)/);
+      expect((await row(id, "policy_language"))?.value ?? "").toBe("");
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it("finds a section named the way managers name it, as a first draft does", async () => {
@@ -459,8 +481,9 @@ describe("a section cited under Violation of Company Policies", () => {
       "create verbal CA for pat rivera for violating visitors at work policy on 10-10-26. pat spent 40 minutes talking with a friend and ignoring guests. payroll deduct no.",
       { values: { observation: "Observed:\nPat Rivera spent 40 minutes talking with a friend." }, checked: {} },
     );
-    expect((await row(id, "offense_type"))?.checked).toEqual(["company_policies"]);
-    expect((await row(id, "policy_violated"))?.value).toBe("Violation of Company Policies — Visitors in the Workplace");
+    // CHANGED ON PURPOSE, Corrective Action revision 7 (client request, template approved 4 Nov 2026): Visitors in the Workplace is cited under the Standards of Conduct (Pau, 4 Nov 2026).
+    expect((await row(id, "offense_type"))?.checked).toEqual(["standards_of_conduct"]);
+    expect((await row(id, "policy_violated"))?.value).toBe("Standards of Conduct — Visitors in the Workplace");
     expect((await row(id, "action_plan"))?.value).toBe(
       "Management will review the Visitors in the Workplace policy with Pat. Future policy violations may result in additional corrective action up to and including termination of employment.",
     );
@@ -478,8 +501,8 @@ describe("a section cited under Violation of Company Policies", () => {
     );
     expect(answer?.content).toMatch(/Policy Violated now names the same section/);
     expect((await row(id, "policy_language"))?.value).toContain("Source: JBA Policy Manual — Cell Phone Usage, p. 32");
-    expect((await row(id, "policy_violated"))?.value).toBe("Violation of Company Policies — Cell Phone Usage");
-    expect((await row(id, "offense_type"))?.checked).toEqual(["company_policies"]);
+    expect((await row(id, "policy_violated"))?.value).toBe("Standards of Conduct — Cell Phone Usage"); // CHANGED ON PURPOSE, Corrective Action revision 7 (client request, template approved 4 Nov 2026)
+    expect((await row(id, "offense_type"))?.checked).toEqual(["standards_of_conduct"]);
   });
 });
 
@@ -510,11 +533,16 @@ describe("any other change to the open Corrective Action Form is made in place",
     });
 
     expect(answer?.content).toMatch(/Updated the \*\*Corrective Action Form\*\* for \*\*Pat Rivera\*\*/);
-    expect(answer?.content).toMatch(/Direct policy from official manual is as it was/);
+    /*
+     * CHANGED ON PURPOSE, Corrective Action revision 7 (client request, template approved 4 Nov 2026): Absenteeism is
+     * the Attendance Policy box this form already ticks, so the offense does
+     * not move, and the reply says everything else is as it was.
+     */
+    expect(answer?.content).toMatch(/Everything else on the form is as it was/);
     expect(store.form_instances).toHaveLength(1);
     expect((await row(id, "warning_type"))?.checked).toEqual(["written"]);
-    expect((await row(id, "offense_type"))?.checked).toEqual(["absenteeism"]);
-    expect((await row(id, "policy_violated"))?.value).toBe("Absenteeism");
+    expect((await row(id, "offense_type"))?.checked).toEqual(["attendance_policy"]);
+    expect((await row(id, "policy_violated"))?.value).toBe("Attendance Policy");
     expect((await row(id, "policy_language"))?.value).toBe(before);
     /* The Action Plan is built, not drafted: a revision that did not name it leaves it as built. */
     expect((await row(id, "action_plan"))?.value).toBe(plan);

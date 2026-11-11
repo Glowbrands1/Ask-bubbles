@@ -1,0 +1,50 @@
+{
+  "key": "0d3f5a18190192bee47c01103d33697a7720950abcdc53a44856e293333d68ca",
+  "model": "claude-haiku-5-5",
+  "reply": {
+    "employee": {
+      "value": "Ferris, Dale",
+      "evidence": "create a written CA for Ferris, Dale"
+    },
+    "location": null,
+    "jobTitle": null,
+    "incident": {
+      "value": "Not attending the monthly meeting",
+      "evidence": "for not attending the monthly meeting on 10-20-26"
+    },
+    "incidentDate": {
+      "value": "2026-10-20",
+      "evidence": "for not attending the monthly meeting on 10-20-26"
+    },
+    "warningLevel": {
+      "value": "written",
+      "evidence": "create a written CA for Ferris, Dale"
+    },
+    "payroll": {
+      "value": "no",
+      "evidence": "payroll deduct not applicable"
+    },
+    "payrollAmount": null,
+    "policyHeading": null,
+    "priorSteps": [
+      {
+        "kind": "manual_ack",
+        "date": "2026-01-01",
+        "evidence": "jba policy manual 1-1-26"
+      },
+      {
+        "kind": "verbal",
+        "date": "2026-09-01",
+        "evidence": "verbal ca 9-1-26"
+      }
+    ],
+    "otherDates": []
+  },
+  "usage": {
+    "inputTokens": 4646,
+    "outputTokens": 526,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0
+  },
+  "ms": 2183
+}

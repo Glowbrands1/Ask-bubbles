@@ -176,6 +176,70 @@ describe("remap: the job title and what happened are the manager's words", () =>
   });
 });
 
+/*
+ * QA decision, 25 Oct 2026: "With MANAGER_WORDS_ONLY on, drop only the
+ * clauses that just request the form, name the employee or give their place
+ * (the store, job title at a place). Keep everything else word for word."
+ * QA's example in this app's words: "She opened the store late at Grand
+ * Island" is "She opened the store late". On the live remap path with
+ * REMAP_INCIDENT_FIX_ENABLED on too. Before this change the one-sentence
+ * account was left to the model's summary: a copy of the sentence was refused
+ * as the question itself and the card asked "What happened?" again, and a
+ * two-sentence account kept "at Grand Island".
+ */
+describe("remap, MANAGER_WORDS_ONLY + REMAP_INCIDENT_FIX: What happened without the request, the name or the store", () => {
+  const history = [
+    { role: "user", content: "I need to coach an employee" },
+    { role: "assistant", content: "Happy to help." },
+    { role: "user", content: "Her name is Test Employee" },
+    { role: "assistant", content: "Here is the Coaching Form." },
+  ];
+
+  beforeEach(() => {
+    vi.stubEnv("REMAP_INCIDENT_FIX_ENABLED", "1");
+  });
+
+  function observed(question: string, modelObservation: string | null, employeeName = "Test Employee", turns = history) {
+    return remap({ question, history: turns, raw: { templateKey: "coaching", employeeName, observation: modelObservation } }).slots
+      .observation;
+  }
+
+  it("She opened the store late at Grand Island → She opened the store late", () => {
+    const said = "She opened the store late at Grand Island";
+    // With no summary from the model, and with the model copying the sentence.
+    expect(observed(said, null)).toBe("She opened the store late");
+    expect(observed(said, said)).toBe("She opened the store late");
+  });
+
+  it("She opened the store late at Grand Island. She did not call anyone", () => {
+    expect(observed("She opened the store late at Grand Island. She did not call anyone", null)).toBe(
+      "She opened the store late. She did not call anyone",
+    );
+  });
+
+  it("create a CA form for ima employee, soap maker at kearney, for opening store late on 9-28-26", () => {
+    const said = "create a CA form for ima employee, soap maker at kearney, for opening store late on 9-28-26";
+    // The request, the name and "soap maker at kearney" go. The incident's own
+    // date at the end goes too: this path's date rule, the date is the form's date.
+    expect(observed(said, null, "ima employee", [])).toBe("opening store late");
+  });
+
+  it("create a CA form for test employee at kearney, she opened the store late", () => {
+    // Was "at kearney".
+    expect(observed("create a CA form for test employee at kearney, she opened the store late", null)).toBe(
+      "she opened the store late",
+    );
+  });
+
+  it("She works at Grand Island is still no account, also when the model copies it", () => {
+    const said = "She works at Grand Island";
+    expect(observed(said, null)).toBeNull();
+    expect(observed(said, said)).toBeNull();
+    // A place that is not a store is part of what happened.
+    expect(observed("on cell phone 30+ min at the front desk", null)).toBe("cell phone use 30+ min");
+  });
+});
+
 const STORES = [
   { id: "loc-66", name: "Kearney, NE" },
   { id: "loc-236", name: "Grand Island, NE" },

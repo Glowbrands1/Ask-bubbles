@@ -37,11 +37,14 @@ import {
   readCorrectiveActionIntake,
   type IntakeReading,
 } from "@/lib/forms/corrective-action-intake";
+import { onlyDeniesAFault } from "@/lib/forms/denial-no-account";
 import {
   CA_POLICY_QUESTION,
   caPolicyProposalLine,
   unconfirmedManualLine,
+  describedAttendanceKeys,
   groundMissedEvent,
+  LATE_OPENING_OFFENSE,
   MISSED_EVENT_OFFENSE,
   missedEventPhrase,
   type NamedPolicyReading,
@@ -165,8 +168,20 @@ import {
   namedManualSection,
   namedPolicies,
 } from "@/lib/forms/named-policy-section";
-import { manualDisplayTitle, manualSheetHeadings, type ManualChunk } from "@/lib/forms/official-policy-manual";
-import { actionPlanSentencesEnabled, antiLoopEnabled, slotRetentionEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { manualDisplayTitle, manualSectionFor, manualSheetHeadings, type ManualChunk } from "@/lib/forms/official-policy-manual";
+import {
+  actionPlanSentencesEnabled,
+  antiLoopEnabled,
+  incidentFromEarlierTurnEnabled,
+  nameQuestionOnlyEnabled,
+  slotRetentionEnabled,
+  storedSlotsNotARequestEnabled,
+  typedNameEnabled,
+  secondRequestOwnAccountEnabled,
+  describedAttendanceCardEnabled,
+} from "@/lib/config/chat-quality-flags";
+import { currentFormRequestText } from "@/lib/forms/current-request";
+import { managerWords } from "./edit-date-rules";
 import { groundEmployeeResolution } from "./employee-candidate-grounding";
 import { readFormRequests, type FormRequest } from "@/lib/forms/form-requests";
 import { answerCorrectiveAction } from "./form-answers";
@@ -1058,15 +1073,17 @@ async function proposeTemplate(input: ProposalTurn, match: TemplateSummary): Pro
     isCorrectiveActionForm(match) &&
     proposal.status !== "needs_employee" &&
     // This form's turns only: another person's account earlier in the chat is not this one's.
-    !describesIncident(scoped.text) &&
-    !describesMoreThanTheRequest(scoped.text, {
-      ignore: [
-        proposal.employeeName ?? "",
-        proposal.employeeRole ?? "",
-        ...storeIndex.stores.map((store) => store.name),
-        ...storeIndex.aliases.map((alias) => alias.phrase),
-      ],
-    }) &&
+    // DENIAL_NO_ACCOUNT_ENABLED: what only denies a fault ("…, not late") tells nothing that happened.
+    (onlyDeniesAFault(scoped.text, proposal.employeeName) ||
+      (!describesIncident(scoped.text) &&
+        !describesMoreThanTheRequest(scoped.text, {
+          ignore: [
+            proposal.employeeName ?? "",
+            proposal.employeeRole ?? "",
+            ...storeIndex.stores.map((store) => store.name),
+            ...storeIndex.aliases.map((alias) => alias.phrase),
+          ],
+        }))) &&
     !answeredWhatHappened([...input.history, { role: "user", content: input.question }])
   ) {
     proposal.awaitingIncident = true;
@@ -2210,7 +2227,9 @@ function turnsAboutThisForm(
   /* Whether the turns kept so far start just after a turn about somebody else. */
   let afterAnotherPerson = false;
   const readings = context.messages.map((message, index) => {
-    const intent = detectTemplateIntent(message.content);
+    // STORED_SLOTS_NOT_A_REQUEST_ENABLED: the app's reminder lines are not the manager's request.
+    const said = storedSlotsNotARequestEnabled() ? managerWords(message.content) : message.content;
+    const intent = detectTemplateIntent(said);
     /*
      * "CREATE VERBAL CA FOR …" IS A REQUEST FOR THIS FORM. Production, 21 Oct
      * 2026: a request in the progression's shorthand reads as a corrective
@@ -2231,11 +2250,11 @@ function turnsAboutThisForm(
     const aboutThisForm =
       options.correctiveActionForm === true &&
       ((intent.kind === "corrective_action" && !intent.requestedCreation) ||
-        statesHistoryOnly(message.content, businessToday()));
+        statesHistoryOnly(said, businessToday()));
     const otherForm =
       (intent.kind === "explicit" && intent.templateKey !== templateKey && !aboutThisForm) ||
       (intent.kind === "corrective_action" && !thisForm && !aboutThisForm);
-    const reading = readEmployeeMentions(message.content);
+    const reading = readEmployeeMentions(said);
     const names = reading.names;
     /*
      * A person named only inside the account ("new hire Sam Lee") is not a
@@ -2266,7 +2285,7 @@ function turnsAboutThisForm(
       requestAt < 0 &&
       afterAnotherPerson &&
       start < index &&
-      !correctsTheEmployee(message.content)
+      !correctsTheEmployee(said)
     ) {
       start = index;
       formStart = index;
@@ -2284,14 +2303,14 @@ function turnsAboutThisForm(
       options.correctiveActionForm === true &&
       forThisEmployee &&
       requestAt >= 0 &&
-      (describesIncident(message.content) ||
-        describesMoreThanTheRequest(message.content, { ignore: [employeeName ?? ""] }))
+      (describesIncident(said) ||
+        describesMoreThanTheRequest(said, { ignore: [employeeName ?? ""] }))
     ) {
       start = index;
       formStart = index;
     }
     if (forThisEmployee) requestAt = index;
-    return { names, otherForm, otherPerson, thisForm };
+    return { names, otherForm, otherPerson, thisForm, aboutThisForm };
   });
   /* The latest turn of this form that corrected the person TO this employee. */
   let correctionAt = -1;
@@ -2345,6 +2364,16 @@ function turnsAboutThisForm(
       (message, index, kept) =>
         index === kept.length - 1 ||
         readings[first + index]!.thisForm ||
+        /*
+         * INCIDENT_FROM_EARLIER_TURN_ENABLED (Pau, sf-s28, 5 Nov 2026): "can i
+         * give a ca for not signing off on the cleaning check list" asks about
+         * this form and says what happened, then "can you write me a ca for
+         * <name>" asks for it. The question is the account; dropped, the card
+         * said "You haven't told me what happened yet". Off, as before.
+         */
+        (incidentFromEarlierTurnEnabled() &&
+          readings[first + index]!.aboutThisForm &&
+          describesIncident(message.content)) ||
         !isQuestion(message.content) ||
         extractEmployeeNames(message.content).some(same),
     );
@@ -2582,10 +2611,10 @@ async function withManualIdentity(named: NamedPolicyReading | null, input: Propo
 }
 
 async function namedPolicyFor(text: string, input: ProposalTurn): Promise<NamedPolicyReading | null> {
-  const policyReading = readCaPolicy(text);
+  const policyReading = readCaPolicy(secondRequestOwnAccountEnabled() ? currentFormRequestText(text) : text);
   // A missed meeting reads as Attendance; the manual still says where (see `groundMissedEvent` below).
   if (policyReading.stated !== null && !(policyReading.stated === "attendance" && policyReading.missedEvent)) return null;
-  const named = namedPolicies(text);
+  const named = namedPolicies(secondRequestOwnAccountEnabled() ? currentFormRequestText(text) : text);
   const chunksOf = async (): Promise<readonly ManualChunk[] | null> => {
     try {
       return (await input.policyManual?.()) ?? null;
@@ -2621,6 +2650,20 @@ async function namedPolicyFor(text: string, input: ProposalTurn): Promise<NamedP
               : {}),
           }
         : null;
+    }
+    /*
+     * DESCRIBED_ATTENDANCE_CARD_ENABLED (Pau-approved 7 Nov): an account the app reads as attendance — late, absent,
+     * opening late — cites the manual's Attendance section (Late Opening under it), the reader the intent reader and
+     * the draft already use. Off, as before.
+     */
+    const attendanceKeys = describedAttendanceCardEnabled() ? describedAttendanceKeys(text) : null;
+    if (attendanceKeys) {
+      const manual = await chunksOf();
+      const section = manual ? manualSectionFor({ chunks: manual, offenseKeys: attendanceKeys, notes: text }) : null;
+      if (section) {
+        const phrase = attendanceKeys.includes(LATE_OPENING_OFFENSE) ? "opening late" : attendanceKeys.includes("tardiness") ? "late" : "absent";
+        return { phrase, lookup: "described", heading: section.heading, page: section.page, offenseKey: attendanceKeys[0]! };
+      }
     }
     const chunks = await chunksOf();
     const described = describedManualSection({ text, chunks });
@@ -2842,7 +2885,7 @@ function proposalContent(
      * being stopped for it.
      */
     if (proposal.status !== "needs_location") {
-      return correctiveActionReady(proposal, intake, asksPayrollDeduct(match), readCaPolicy(context.text), {
+      return correctiveActionReady(proposal, intake, asksPayrollDeduct(match), readCaPolicy(secondRequestOwnAccountEnabled() ? currentFormRequestText(context.text) : context.text), {
         offersLevel: offeredWarningLevels(match).length > 0,
         earlierWarning: mentionsEarlierWarning(context.text, today),
         priorActions: statedPriorActions(context.text, today),
@@ -3327,6 +3370,8 @@ function openingQuestions(proposal: ChatFormProposal, context: ManagerContext): 
     const names = employee.candidates.map((name) => `**${name}**`);
     return `Which of them is this **${proposal.templateName}** for — ${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}?`;
   }
+  // NAME_QUESTION_ONLY_ENABLED (Pau, 26 Oct 2026): one plain question for the name, never a list.
+  if (nameQuestionOnlyEnabled()) return "Who is this form for? Tell me the employee's full name.";
   const coaching = COACHING_TEMPLATES.has(proposal.templateKey);
   /*
    * A COACHING FORM MAY BE FOR THE WHOLE TEAM, and the question says so, so a

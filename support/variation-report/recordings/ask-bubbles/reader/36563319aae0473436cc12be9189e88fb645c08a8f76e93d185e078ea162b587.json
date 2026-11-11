@@ -1,0 +1,50 @@
+{
+  "key": "36563319aae0473436cc12be9189e88fb645c08a8f76e93d185e078ea162b587",
+  "model": "claude-haiku-5-5",
+  "reply": {
+    "employee": {
+      "value": "quinn",
+      "evidence": "do verbal for quinn at dodge"
+    },
+    "location": {
+      "value": "dodge",
+      "evidence": "do verbal for quinn at dodge"
+    },
+    "jobTitle": null,
+    "incident": {
+      "value": "Came into the store while not scheduled to work to show her team her new puppy; was in the store 45 minutes",
+      "evidence": "on 10-22-26 quinn was not scheduled to work and came into the store to show her team her new puppy. quinn was in the store 45 min"
+    },
+    "incidentDate": {
+      "value": "2026-10-22",
+      "evidence": "on 10-22-26 quinn was not scheduled to work and came into the store to show her team her new puppy"
+    },
+    "warningLevel": {
+      "value": "verbal",
+      "evidence": "do verbal for quinn at dodge"
+    },
+    "payroll": {
+      "value": "no",
+      "evidence": "payroll deduct does not apply"
+    },
+    "payrollAmount": null,
+    "policyHeading": {
+      "value": "Visitors in the Workplace",
+      "evidence": "came into the store to show her team her new puppy"
+    },
+    "priorSteps": [
+      {
+        "kind": "manual_ack",
+        "date": "2026-11-01",
+        "evidence": "previous coaching jba manual 11-1-26"
+      }
+    ]
+  },
+  "usage": {
+    "inputTokens": 4682,
+    "outputTokens": 600,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0
+  },
+  "ms": 3093
+}

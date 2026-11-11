@@ -1,3 +1,5 @@
+import { asdNoFormMonitoringEnabled } from "@/lib/permissions/asd-no-form-monitoring";
+import { ASSISTANT_MANAGER_CREATES, assistantManagerCreateEnabled } from "@/lib/permissions/assistant-manager-create";
 import type { Permission, PermissionMatrix, Role } from "@/types";
 
 /**
@@ -80,13 +82,28 @@ export const ROLE_COPY: Readonly<Record<Role, RoleCopy>> = {
  */
 const EMPLOYEE: Permission[] = ["ask_questions", "view_knowledge"];
 
-const ASSISTANT_MANAGER: Permission[] = [
+const ASSISTANT_MANAGER_BASE: Permission[] = [
   ...EMPLOYEE,
   "view_overview",
   "view_forms_workspace",
   "view_form_monitoring",
   "view_reports",
 ];
+/*
+ * NEXT_PUBLIC_ASD_NO_FORM_MONITORING_ENABLED: the Assistant Manager loses the
+ * Forms Register (it still opens the forms it created; see `instance-scope.ts`).
+ * The location manager builds on the base list, so it keeps it.
+ */
+/*
+ * NEXT_PUBLIC_ASSISTANT_MANAGER_CREATE_ENABLED (Pau, 30 Oct 2026): the location
+ * manager's forms to create, and the Forms Register back even with the ASD flag
+ * on, limited to their own forms by `hiddenAsPrivate` (`private-creators.ts`).
+ */
+const ASSISTANT_MANAGER: Permission[] = assistantManagerCreateEnabled()
+  ? [...ASSISTANT_MANAGER_BASE, ...ASSISTANT_MANAGER_CREATES]
+  : asdNoFormMonitoringEnabled()
+    ? ASSISTANT_MANAGER_BASE.filter((permission) => permission !== "view_form_monitoring")
+    : ASSISTANT_MANAGER_BASE;
 
 /**
  * THE MIGRATED HR FORMS FOLLOW THE REFERENCE PLATFORM'S MATRIX. The location
@@ -96,7 +113,7 @@ const ASSISTANT_MANAGER: Permission[] = [
  * like the Assistant Salon Director, can see the register but create none.
  */
 const LOCATION_MANAGER: Permission[] = [
-  ...ASSISTANT_MANAGER,
+  ...ASSISTANT_MANAGER_BASE,
   "create_forms",
   "create_coaching_form",
   "create_corrective_action",

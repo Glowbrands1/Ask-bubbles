@@ -28,10 +28,12 @@ export function AppShell({
   overdueFollowUps = 0,
   /** Administrators and two named users, decided on the server by the layout. */
   showAppSwitcher = false,
+  showLeadershipHub = false,
 }: {
   children: ReactNode;
   overdueFollowUps?: number;
   showAppSwitcher?: boolean;
+  showLeadershipHub?: boolean;
 }) {
   const { hydrated, signedIn, demoMode, role } = useSession();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -98,6 +100,7 @@ export function AppShell({
           onToggleCollapse={toggleCollapse}
           overdueFollowUps={overdueFollowUps}
           showAppSwitcher={showAppSwitcher}
+          showLeadershipHub={showLeadershipHub}
         />
       </aside>
 
@@ -193,6 +196,7 @@ export function AppShell({
                 onNavigate={() => setDrawerOpen(false)}
                 overdueFollowUps={overdueFollowUps}
                 showAppSwitcher={showAppSwitcher}
+          showLeadershipHub={showLeadershipHub}
               />
             </div>
           </div>

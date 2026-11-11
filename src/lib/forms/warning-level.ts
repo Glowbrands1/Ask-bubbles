@@ -1,4 +1,4 @@
-import { typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { caShortcutWordsEnabled, complaintAccountEnabled, levelEndsRequestEnabled, requestLevelNotHistoryEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { businessToday } from "@/lib/business-date";
 
 import { datesInText } from "./form-date-answer";
@@ -316,6 +316,9 @@ const HYPOTHETICAL_AFTER = /^\s*(?:would|could|might|may)\b/i;
 const CHANGED_TO =
   /\b(?:change|changed|switch|switched|set|move|update|correct|make)\b[^.;!?\n]{0,40}?\s(?:to|into|as)\s+(?:(?:a|an)\s+)?$/i;
 
+/** COMPLAINT_ACCOUNT_ENABLED: a new sentence begun right after the level, with no stop: "verbal warning The date …". Case-sensitive. */
+const RUN_ON_SENTENCE = /^\s+(?:The|She|He|They|It|Her|His|Their|This|That|When)\b/;
+
 /** The turn opens with the level: "Verbal warning for Sarah", "actually, written warning". */
 const OPENING = new RegExp(String.raw`^\s*${LEAD_IN}(?:please\s+)?(?:(?:a|an|new)\s+)?$`, "i");
 
@@ -459,6 +462,12 @@ function classify(text: string, start: number, end: number, today: string, cued:
   if (/^\s*(?:please|pls|plz)\b/i.test(after) && !PAST_OR_HABITUAL.test(before.slice(-60))) return "current";
   // A bare adjective was only matched after a phrase that sets this form's level.
   if (cued) return "current";
+  /*
+   * COMPLAINT_ACCOUNT_ENABLED (QA's audit, 7 Nov 2026): "verbal warning The date she complained was Oct 31st . The
+   * customer said …" — the turn opens with the level and runs straight on into a new sentence, with no stop between
+   * them. The level is this form's; the date after it is that sentence's, never the level's.
+   */
+  if (complaintAccountEnabled() && opensTurn && OPENING.test(before) && RUN_ON_SENTENCE.test(text.slice(end, end + 40))) return "current";
 
   const when = timing(after, today);
   /*
@@ -474,6 +483,8 @@ function classify(text: string, start: number, end: number, today: string, cued:
   if (POSSESSIVE.test(before) || ADJACENT_HISTORY.test(before)) return "historical";
   if (PAST_OR_HABITUAL.test(before.slice(-60))) return "historical";
   if (ADJACENT_CURRENT.test(before) || CHANGED_TO.test(before)) return "current";
+  // The level asked for in the request's own clause: the date after it is the incident's (QA, 6 Nov 2026).
+  if (requestLevelNotHistoryEnabled() && levelInRequestClause(before)) return "current";
   // Dated on another day — after it, or right before it: history.
   const dated = when ?? dateBefore(before, today);
   if (dated === "earlier" || dated === "other") return "historical";
@@ -580,6 +591,57 @@ const CLAUSE_HISTORY =
   /\b(?:had|has|have|got|received|given|issued|previous(?:ly)?|prior|past|earlier|already|before|history|record|ago|last(?!\s+(?:night|shift|evening|weekend|weekend'?s))|back\s+in|spring|summer|fall|autumn|winter|q[1-4]|review|warnings|write[- ]?ups|coached|coaching)\b/i;
 
 /**
+ * The words between the request and the level: the person it is for, then
+ * "with a" or "a" — "write up <Name> with a …", "give <Name> a …". The one
+ * word this reading needs ("with"), QA, coding-3 item 6, 6 Nov 2026.
+ */
+const REQUEST_OBJECT = /^\s*(?:[\p{L}'’.-]+\s+){0,3}?(?:with\s+)?an?\s+$/iu;
+
+/**
+ * ============================================================================
+ * THE LEVEL IN THE REQUEST'S OWN CLAUSE (REQUEST_LEVEL_NOT_HISTORY_ENABLED)
+ * ============================================================================
+ *
+ * QA, coding-3 item 6, 6 Nov 2026: "I need to write up <name> with a written
+ * warning for leaving the front desk unattended for 30 minutes on 10/22." was
+ * answered "I've treated the earlier warning you mentioned as previous
+ * corrective action history" and asked Verbal or Written. The date after the
+ * level was the incident's, before today, so `timing` made the level history.
+ *
+ * Read by structure, with the request reader the level-as-a-clause reading
+ * already uses (`REQUEST_CLAUSE`): when the clause the level sits in (since
+ * the last sentence break or comma) asks for the form, and the level is the
+ * object of that request — only the person and "with a" / "a" between them —
+ * it is this form's level, whatever date follows. Words of history in the
+ * clause (`CLAUSE_HISTORY`, `LISTS_EARLIER_STEPS`, as for the level clause)
+ * still make it history, and a warning in a clause of its own ("she got a
+ * written warning on 9/1, write her up") never reaches here: no request
+ * comes before it in its clause.
+ */
+function levelInRequestClause(before: string): boolean {
+  const clause = before.slice(before.lastIndexOf(",") + 1);
+  const requests = [...clause.matchAll(new RegExp(REQUEST_CLAUSE.source, "gi"))];
+  const last = requests[requests.length - 1];
+  if (!last) return false;
+  if (!REQUEST_OBJECT.test(clause.slice(last.index + last[0].length))) return false;
+  const rest = clause.replace(new RegExp(REQUEST_CLAUSE.source, "gi"), " ");
+  return !CLAUSE_HISTORY.test(rest) && !LISTS_EARLIER_STEPS.test(rest);
+}
+
+/**
+ * LEVEL_ENDS_REQUEST_ENABLED (QA, live tester, 7 Nov 2026: "my team member <name> was late on 10-20-26, verbal ca"
+ * gave no card; same flag in both apps; default off). A level clause that NAMES THE DOCUMENT — "verbal ca",
+ * "written corrective action", "verbal write-up" — as the LAST clause of the turn is the form asked for, with no
+ * request words before it. A bare level or "verbal warning" there is still asked about (QA, 22 Oct 2026: "she was
+ * late last night, verbal warning"), and history earlier in the sentence still makes it history. Off, as before.
+ */
+const NAMES_THE_FORM = /\b(?:ca|c\/a|corrective\s+action|write[- ]?up)\b/i;
+
+function endsTheTurnNamingTheForm(source: string, clause: string, end: number): boolean {
+  return NAMES_THE_FORM.test(clause) && /^[\s.!]*$/.test(source.slice(end));
+}
+
+/**
  * Every warning level the text names, in order, with how each one reads.
  *
  * `today` is the business day (`YYYY-MM-DD`): a warning dated before it is
@@ -662,7 +724,7 @@ export function warningMentions(text: string, today: string): WarningMention[] {
     if (source[end] === "?") continue;
     const head = source.slice(0, clause.index);
     const sentenceBefore = head.slice(Math.max(...[".", ";", "!", "?", "\n"].map((mark) => head.lastIndexOf(mark))) + 1);
-    if (!REQUEST_CLAUSE.test(sentenceBefore)) continue;
+    if (!REQUEST_CLAUSE.test(sentenceBefore) && !(levelEndsRequestEnabled() && endsTheTurnNamingTheForm(source, own[0], end))) continue;
     // "write up" asks for this form; it is not a write-up on file.
     const history = sentenceBefore.replace(new RegExp(REQUEST_CLAUSE.source, "gi"), " ");
     if (CLAUSE_HISTORY.test(history) || LISTS_EARLIER_STEPS.test(history)) continue;
@@ -747,7 +809,10 @@ const WHOLE_TURN_LEVEL =
 
 const WHOLE_TURN_MAX = 80;
 
-export function statedWarningLevel(text: string, today: string = businessToday()): WarningLevel | null {
+export function statedWarningLevel(raw: string, today: string = businessToday()): WarningLevel | null {
+  // CA_SHORTCUT_WORDS_ENABLED: "1st written", "first written" — the same level as "written";
+  // "final written" too (Pau, 30 Oct 2026: "Tick written"). "final warning" still asks.
+  const text = caShortcutWordsEnabled() ? (raw ?? "").replace(/\b(?:1st|first)\s+(?=(?:verbal|written)\b)|\bfinal\s+(?=written\b)/gi, "") : raw;
   // A change of mind is a few words; testing only a short turn keeps a long one linear.
   const whole = (text ?? "").length <= WHOLE_TURN_MAX ? WHOLE_TURN_LEVEL.exec(text ?? "") : null;
   if (whole) return whole[1]!.toLowerCase() as WarningLevel;

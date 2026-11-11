@@ -1,0 +1,618 @@
+[
+  {
+    "id": "b9",
+    "source": "24 Oct 2026 low-rated chat (src/lib/ai/priority-replay.test.ts)",
+    "turns": [
+      "create a written corrective action for Team Member, Test Employee. Test was assigned to complete policy acknowledgements in woven by 10-15-26 and failed to meet the deadline. Previous coaching was a Verbal CA 10-1-26. Payroll deduct is not applicable.",
+      "name is Test Employee",
+      "this is a violation under Standards of Conduct"
+    ],
+    "criteria": {
+      "employee": "Test Employee",
+      "salon": null,
+      "date": null,
+      "policy": "Standards of Conduct p.12",
+      "noBlockingQuestion": true,
+      "noLeakedInternalText": true
+    }
+  },
+  {
+    "id": "b10",
+    "source": "24 Oct 2026 low-rated chat (src/lib/ai/priority-replay.test.ts)",
+    "turns": [
+      "create a verbal CA for team member Testy Testerson at Dodge, NE. location. On 10-16-26 Testy was not properly measuring and weighing product. payroll deduct is not applicable",
+      "employee name is Testy Testerson",
+      "cite standards of conduct as policy violated",
+      "show draft",
+      "violation is that on 10-16-26 Testy was not measuring and weighing product",
+      "show draft with edits"
+    ],
+    "criteria": {
+      "employee": "Testy Testerson",
+      "salon": "loc-264",
+      "date": "2026-10-16",
+      "policy": "Standards of Conduct p.12",
+      "noBlockingQuestion": true,
+      "noLeakedInternalText": true
+    }
+  },
+  {
+    "id": "b11",
+    "source": "24 Oct 2026 low-rated chat (src/lib/ai/priority-replay.test.ts)",
+    "turns": [
+      "write a verbal CA for Team Member, Testy Testerson at Dodge, NE. On 10-20-26 Testy was late for shift and did not call supervisor as outlined in attendance policy. payroll deduct is not applicable. previous coaching is JBA Manual 1-1-25"
+    ],
+    "criteria": {
+      "employee": "Testy Testerson",
+      "salon": "loc-264",
+      "date": "2026-10-20",
+      "policy": "Attendance p.14",
+      "noBlockingQuestion": true,
+      "noLeakedInternalText": true
+    }
+  },
+  {
+    "id": "b12",
+    "source": "24 Oct 2026 low-rated chat (src/lib/ai/priority-replay.test.ts); the employee's name is replaced with an invented one",
+    "turns": [
+      "do verbal for team member maisie quillfeather at empire, sd. payroll deduct does not apply. previous coaching jba manual 11-1-26. on 10-22-26 maisie was not scheduled to work and came into the store to show her team her new puppy. Maisie was in the store 45 min",
+      "jba manual 11-1-25",
+      "cite pets in workplace",
+      "cite animals in the workplace policy",
+      "store location is empire, sd. create corrective action"
+    ],
+    "criteria": {
+      "employee": "Maisie Quillfeather",
+      "salon": null,
+      "date": "2026-10-22",
+      "policy": "Animals in the Workplace p.30",
+      "noBlockingQuestion": false,
+      "noLeakedInternalText": true
+    }
+  },
+  {
+    "id": "b18a",
+    "source": "25 Oct 2026, conv_mvnuktv82h8v0yo (src/app/api/chat/b18-new-chat-new-draft-e2e.test.ts)",
+    "turns": [
+      "create a CA for Test Employee at Kearney for being late to open on 10-20-26, verbal, no payroll"
+    ],
+    "criteria": {
+      "employee": "Test Employee",
+      "salon": "loc-66",
+      "date": "2026-10-20",
+      "policy": null,
+      "noBlockingQuestion": true,
+      "noLeakedInternalText": true
+    }
+  },
+  {
+    "id": "b18b",
+    "source": "25 Oct 2026, conv_mvnurfc02cj2y7l (src/app/api/chat/b18-new-chat-new-draft-e2e.test.ts)",
+    "turns": [
+      "create a written CA for Test Employee at Kearney for missing the 10-15-26 woven deadline"
+    ],
+    "criteria": {
+      "employee": "Test Employee",
+      "salon": "loc-66",
+      "date": null,
+      "policy": null,
+      "noBlockingQuestion": true,
+      "noLeakedInternalText": true
+    }
+  },
+  {
+    "id": "r1",
+    "source": "Master plan step 1 (3 Nov 2026): the whole-staff list at one store; asked for a Corrective Action Form (a Coaching Form for the whole staff is the team card in production: COACHING_FOR_EVERYONE, WHOLE_TEAM_COACHING). Invented people; the Dodge Account row carries the store login's real Woven id.",
+    "turns": [
+      "can you create a corrective action form for my whole staff?"
+    ],
+    "criteria": {
+      "employee": null,
+      "salon": null,
+      "date": null,
+      "policy": null,
+      "noBlockingQuestion": false,
+      "noLeakedInternalText": true,
+      "replyIncludes": [
+        "Dana Hollisworth",
+        "Eli Brackwater"
+      ],
+      "replyExcludes": [
+        "Dodge Account",
+        "Fern Ostrander",
+        "Gus Penhallow"
+      ]
+    },
+    "actor": {
+      "role": "location_manager",
+      "scope": {
+        "level": "location",
+        "primaryAreaId": "loc-264",
+        "alsoCoversAreaIds": []
+      }
+    },
+    "flags": [
+      "STAFF_PICKER_ENABLED"
+    ],
+    "roster": [
+      {
+        "id": "r-dana",
+        "firstName": "Dana",
+        "lastName": "Hollisworth",
+        "positionName": "Team Member Part Time",
+        "locationIds": [
+          "loc-264"
+        ]
+      },
+      {
+        "id": "r-eli",
+        "firstName": "Eli",
+        "lastName": "Brackwater",
+        "positionName": "General Manager",
+        "locationIds": [
+          "loc-264"
+        ]
+      },
+      {
+        "id": "r-fern",
+        "firstName": "Fern",
+        "lastName": "Ostrander",
+        "positionName": "Team Member Full Time",
+        "employmentStatus": "terminated",
+        "locationIds": [
+          "loc-264"
+        ]
+      },
+      {
+        "id": "r-login",
+        "firstName": "Dodge",
+        "lastName": "Account",
+        "positionName": "Team Member Full Time",
+        "locationIds": [
+          "loc-264"
+        ],
+        "wovenEmployeeId": "25edf0b1-bb48-4b95-a7d5-f76d8be1dd13"
+      },
+      {
+        "id": "r-gus",
+        "firstName": "Gus",
+        "lastName": "Penhallow",
+        "positionName": "Team Member Part Time",
+        "locationIds": [
+          "loc-66"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "b0",
+    "source": "replay_set 2026-10-24, Ask Bubbles feedback 2026-10-16, rating 1; names invented",
+    "turns": [
+      "My employee wren tazelaar has was 10 minutes late on her last two shifts. On the first shift I verbally coached her on our policy and expectations. Then she was late again. Please create a CA form so I can document. She was late on 10/5 and 10/15",
+      "I already told you the employee name. She is at Dodge",
+      "I gave bubbles all of the information it should need, but it still would not generate the coaching form.",
+      "Create the coaching form with the information given. Her name is wren tazelaal and she is at Dodge. She is a makery associate",
+      "she is at Omaha dodge"
+    ],
+    "criteria": {
+      "employee": "Wren Tazelaar",
+      "salon": "loc-264",
+      "date": null,
+      "policy": null,
+      "noBlockingQuestion": true,
+      "noLeakedInternalText": true,
+      "replyExcludes": [
+        "Coaching Form"
+      ]
+    },
+    "expected": "CA for Wren Tazelaar, Omaha Dodge, Makery Associate, late 10/5 and 10/15, prior verbal coaching; no re-ask; stay on CA (not coaching).",
+    "roster": [
+      {
+        "id": "b0-wren",
+        "firstName": "Wren",
+        "lastName": "Tazelaar",
+        "positionName": "Makery Associate",
+        "locationIds": [
+          "loc-264"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "b1",
+    "source": "replay_set 2026-10-24, Ask Bubbles feedback 2026-10-16, rating 3; names invented",
+    "turns": [
+      "I need a CA form for RJ Vantassel at Kearney for being out of dress code on October 11",
+      "This is a verbal warning. Her prior coaching is her policy manual ackwnelegement on 9/01. payroll deduction is not applicable.",
+      "Use Kearney as the location"
+    ],
+    "criteria": {
+      "employee": null,
+      "salon": "loc-66",
+      "date": "2026-10-11",
+      "policy": null,
+      "noBlockingQuestion": false,
+      "noLeakedInternalText": true
+    },
+    "expected": "CA verbal, Kearney, dress code 10/11, prior = policy manual ack 9/01, payroll N/A; ask position; use Kearney."
+  },
+  {
+    "id": "b2",
+    "source": "replay_set 2026-10-24, Ask Bubbles feedback 2026-10-16, rating 3; names invented",
+    "turns": [
+      "I have an employee Odessa at our Grand Island location who has been out of dress code three shifts. I verbally coached her on the second offense and she still is out of dress code",
+      "Create a Coaching Form from this conversation.",
+      "Yes"
+    ],
+    "criteria": {
+      "employee": "Odessa Ferncliff",
+      "salon": "loc-236",
+      "date": null,
+      "policy": null,
+      "noBlockingQuestion": true,
+      "noLeakedInternalText": true
+    },
+    "expected": "Coaching for Odessa Ferncliff at Grand Island without re-asking location; cite Dress Code policy + page.",
+    "roster": [
+      {
+        "id": "b2-odessa",
+        "firstName": "Odessa",
+        "lastName": "Ferncliff",
+        "locationIds": [
+          "loc-236"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "b3",
+    "source": "replay_set 2026-10-24, Ask Bubbles feedback 2026-10-21, rating 2; names invented",
+    "turns": [
+      "create corrective action for juniper halvorsrud for violating standards of conduct policy on 10-20-26. juniper failed to acknowledge policies in woven by the 10-15-26 deadline."
+    ],
+    "criteria": {
+      "employee": null,
+      "salon": null,
+      "date": "2026-10-20",
+      "policy": null,
+      "noBlockingQuestion": false,
+      "noLeakedInternalText": true,
+      "replyExcludes": [
+        "9-30-26"
+      ]
+    },
+    "expected": "CA Standards of Conduct 10-20-26, deadline 10-15-26; Other offense blank; never invent 9-30-26; 2-sentence action plan."
+  },
+  {
+    "id": "b4",
+    "source": "replay_set 2026-10-24, Ask Bubbles feedback 2026-10-21, rating 3; names invented",
+    "turns": [
+      "create ca form for juniper halvorsrud for violating attendance policy on 10-20-26. verbal. no payroll deduct. jba manual 1-1-26 for previous coaching",
+      "verbal",
+      "create ca form for juniper halvorsrud for a register shortage on 10-20-26. payroll deduct applies and $3.25 will be deducted from check. previous coaching - jba policy manual 1-20-26."
+    ],
+    "criteria": {
+      "employee": null,
+      "salon": null,
+      "date": "2026-10-20",
+      "policy": null,
+      "noBlockingQuestion": true,
+      "noLeakedInternalText": true
+    },
+    "expected": "Two CAs: attendance 10-20-26 verbal no payroll; then register shortage $3.25 payroll Yes; no repeated date; no re-asking \"verbal\"."
+  },
+  {
+    "id": "b5",
+    "source": "replay_set 2026-10-24, Ask Bubbles feedback 2026-10-21, rating 2; names invented",
+    "turns": [
+      "create ca form for juniper halvorsrud. juniper had a register shortage of $3.25 on 10-20-26. payroll deduct of $3.25 is applicable",
+      "verbal",
+      "yes payroll deduct"
+    ],
+    "criteria": {
+      "employee": null,
+      "salon": null,
+      "date": null,
+      "policy": null,
+      "noBlockingQuestion": true,
+      "noLeakedInternalText": true
+    },
+    "expected": "Action plan states $3.25 payroll deduction; payroll Yes; verbal accepted once."
+  },
+  {
+    "id": "b6",
+    "source": "replay_set 2026-10-24, Ask Bubbles feedback 2026-10-21, rating 3; names invented",
+    "turns": [
+      "create verbal CA for petra wolkenhauer for violating visitors at work policy on 10-10-26. juniper spent 40 minutes talking with friend and ignoring guests. previous coaching was jba policy manual 1-1-26",
+      "no payroll deduct",
+      "create a verbal corrective action form for juniper halvorsrud. on 10-20-26 juniper was talking on her cell phone for over 30 minutes",
+      "verbal"
+    ],
+    "criteria": {
+      "employee": "Juniper Halvorsrud",
+      "salon": null,
+      "date": null,
+      "policy": "Cell Phone/Smart Watch Policy p.19",
+      "noBlockingQuestion": true,
+      "noLeakedInternalText": true,
+      "replyExcludes": [
+        "Standards of Conduct"
+      ]
+    },
+    "expected": "Petra CA: Visitors at Work policy; Juniper CA: Cell Phone/Smart Watch p.19 (not Standards of Conduct); accept \"verbal\" once."
+  },
+  {
+    "id": "b7",
+    "source": "replay_set 2026-10-24, Ask Bubbles feedback 2026-10-21, rating 1; names invented",
+    "turns": [
+      "create a written CA for juniper halvorsrud for not attending the monthly meeting on 10-20-26. previous coaching: jba policy manual 1-1-26, verbal ca 9-1-26. payroll deduct not applicable",
+      "written"
+    ],
+    "criteria": {
+      "employee": null,
+      "salon": null,
+      "date": "2026-10-20",
+      "policy": null,
+      "noBlockingQuestion": false,
+      "noLeakedInternalText": true
+    },
+    "expected": "Fill all CA sections: written, missed monthly meeting 10-20-26, prior JBA 1-1-26 + verbal 9-1-26, payroll N/A."
+  },
+  {
+    "id": "b8",
+    "source": "replay_set 2026-10-24, Ask Bubbles feedback 2026-10-21, rating 3; names invented",
+    "turns": [
+      "create verbal ca for juniper halvorsrud for opening store late on 10-1-26. previous coaching is jba policy manual 1-1-26. payroll deduct DOES apply and state $25 will be payroll deducted"
+    ],
+    "criteria": {
+      "employee": null,
+      "salon": null,
+      "date": "2026-10-01",
+      "policy": "Late Opening p.15",
+      "noBlockingQuestion": false,
+      "noLeakedInternalText": true,
+      "replyExcludes": [
+        "Tardiness"
+      ]
+    },
+    "expected": "Date 10-1-26 (not 10-21-26); $25 payroll deduction stated; Late Opening p.15 not Tardiness."
+  },
+  {
+    "id": "b13",
+    "source": "replay_set 2026-10-24, Ask Bubbles feedback 2026-10-30, rating 2; names invented; Location Manager at West Dodge Rd (as in replay-pack oct30-cases)",
+    "turns": [
+      "Create a coaching form.",
+      "for whole staff - associates",
+      "Bryony",
+      "yes",
+      "this is what i am wanting to coach on: managing our ship from store operation, here are the details of the process: print packing slip, use rolling rack and use clips to pin them in order of first come first serve. Pick and customize products, pack, once the order is ready, then print shipping label to tape on box.",
+      "add details about the rolling rack",
+      "Do the same coaching form for tamsin rookwood",
+      "can you create the same draft that we did with bryony castellane by changing the name and position?",
+      "ok, create the draft, but include the details of rolling rack."
+    ],
+    "criteria": {
+      "employee": "Tamsin Rookwood",
+      "salon": "loc-264",
+      "date": null,
+      "policy": null,
+      "noBlockingQuestion": false,
+      "noLeakedInternalText": true
+    },
+    "expected": "Refuse whole staff politely is OK, but be consistent with the team-form path used elsewhere. After \"Do the same coaching form for tamsin rookwood\" / \"create the same draft that we did with bryony castellane by changing the name and position\", create a new Coaching Form card for Tamsin Rookwood (Team Member Part Time, Omaha West Dodge Rd from Woven) with the exact same Details of Coaching, Type and Topic as Bryony Castellane's card, including the rolling rack/clips first-come-first-serve detail. The card itself must hold the text; never claim \"Updated\" unless the card fields changed. Messages must not be saved twice.",
+    "actor": {
+      "role": "location_manager",
+      "scope": {
+        "level": "location",
+        "primaryAreaId": "loc-264",
+        "alsoCoversAreaIds": []
+      }
+    },
+    "roster": [
+      {
+        "id": "b13-bryony",
+        "firstName": "Bryony",
+        "lastName": "Castellane",
+        "locationIds": [
+          "loc-264"
+        ]
+      },
+      {
+        "id": "b13-tamsin",
+        "firstName": "Tamsin",
+        "lastName": "Rookwood",
+        "positionName": "Team Member Part Time",
+        "locationIds": [
+          "loc-264"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "b14",
+    "source": "replay_set 2026-10-24, Ask Bubbles feedback 2026-10-30, rating 1; no employee named; Assistant Manager at West Dodge Rd (as in replay-pack oct30-cases)",
+    "turns": [
+      "can you create a weekly coaching form using the promotions from the most recent weekly newsletter, make it for a week, on days there is no sale use google review"
+    ],
+    "criteria": {
+      "employee": null,
+      "salon": null,
+      "date": null,
+      "policy": null,
+      "noBlockingQuestion": false,
+      "noLeakedInternalText": true,
+      "replyExcludes": [
+        "Your role cannot create"
+      ]
+    },
+    "expected": "Assistant managers can create Coaching Forms. Check the role-to-form permission mapping for this user (user_id <id removed>) and fix it from data. For this request, read the most recent weekly newsletter, build a 7-day coaching plan (promotion of the day; Google reviews on days with no sale), and offer to put it on a coaching form, asking who it is for or using the team path.",
+    "actor": {
+      "role": "assistant_manager",
+      "scope": {
+        "level": "location",
+        "primaryAreaId": "loc-264",
+        "alsoCoversAreaIds": []
+      }
+    }
+  },
+  {
+    "id": "b15",
+    "source": "replay_set 2026-10-24, Ask Bubbles feedback 2026-10-30, rating 3; no employee named",
+    "turns": [
+      "can you create a coaching form for my whole staff?",
+      "coaching is on sfs operations for clean organization and flow.  BCS has flagged our SFS due to printing shipping labels within 0 minutes of printing packing slips.  So we are implementing a new flow.  when packing slips are printed, they will be clipped to a designated rolling rack, in order of receiving the orders, then those orders will be fulfilled in order, and placed back on the rack in their basket, once orders are all fulfilled, the rack will go back to the shipping station, packed, and then print the shipping label.   Then, the next round of packing slips will be printed and clipped in order on the rack.",
+      "this is perfect",
+      "i don't see the details updated in the draft card.  Do i need to copy and paste it?  or should it be automatically updating?",
+      "make that update",
+      "can i reopen this for an edit?",
+      "I need to add that the shipping label must not be printed until 15 minutes has passed form the packing slip being printed.",
+      "the changes weren't made in the details",
+      "these details are prefect, i checked the card and it still isn't reflecting these updated details.  I can't click 'save changes' because the option is null.  When I copy and pasted the details back into the card, it opens up the 'save changes' option.  i'll flag as a display issue."
+    ],
+    "criteria": {
+      "employee": null,
+      "salon": null,
+      "date": null,
+      "policy": null,
+      "noBlockingQuestion": false,
+      "noLeakedInternalText": true
+    },
+    "expected": "Every time the bot writes Details of Coaching for the open draft, the card's Details field must update (and Save changes enable) in the same turn: after turn 2 (new SFS rolling-rack flow), after \"make that update\", and after the reopened draft gets \"shipping label must not be printed until 15 minutes has passed from the packing slip being printed\". Never say it cannot edit the card, and never say \"updated\" if the card did not change."
+  },
+  {
+    "id": "b16",
+    "source": "replay_set 2026-10-24, Ask Bubbles feedback 2026-10-30, rating 1; no employee named; Assistant Manager at West Dodge Rd (as in replay-pack oct30-cases)",
+    "turns": [
+      "coaching form"
+    ],
+    "criteria": {
+      "employee": null,
+      "salon": null,
+      "date": null,
+      "policy": null,
+      "noBlockingQuestion": false,
+      "noLeakedInternalText": true,
+      "replyExcludes": [
+        "Your role cannot create"
+      ]
+    },
+    "expected": "Assistant manager can create a Coaching Form: ask who it is for (one question) and proceed.",
+    "actor": {
+      "role": "assistant_manager",
+      "scope": {
+        "level": "location",
+        "primaryAreaId": "loc-264",
+        "alsoCoversAreaIds": []
+      }
+    }
+  },
+  {
+    "id": "b17",
+    "source": "replay_set 2026-10-24, Ask Bubbles feedback 2026-10-30, rating 2; names invented; the store on the roster is assumed (the chat names none)",
+    "turns": [
+      "Create a coaching form.",
+      "Rosalind",
+      "yes",
+      "ship from store, when to press ready for pick up and when to press mark as shipped",
+      "can you upate the draft with these details of coaching?",
+      "rosalind marked an order as shipped but the customer hadn't picked up yet",
+      "yes, do that",
+      "it didnt edit in the card",
+      "the details we just discussed!!!",
+      "write the observtion"
+    ],
+    "criteria": {
+      "employee": "Rosalind Ashgrove",
+      "salon": null,
+      "date": null,
+      "policy": null,
+      "noBlockingQuestion": false,
+      "noLeakedInternalText": true
+    },
+    "expected": "Coaching Form for Rosalind Ashgrove (Team Member Part Time from Woven). Ask the store once only if Woven has more than one. On \"can you upate the draft with these details of coaching?\" put the Ship From Store Ready for Pickup / Mark as Shipped guidance into Details of Coaching; on \"rosalind marked an order as shipped but the customer hadn't picked up yet\" + \"yes, do that\" add it to the card immediately; \"write the observtion\" goes on the card too. The card must actually change each time.",
+    "roster": [
+      {
+        "id": "b17-rosalind",
+        "firstName": "Rosalind",
+        "lastName": "Ashgrove",
+        "positionName": "Team Member Part Time",
+        "locationIds": [
+          "loc-264"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "sf-b1",
+    "source": "replay_set 2026-10-24, Ask Bubbles silent-failure scan 2026-11-02; names invented",
+    "turns": [
+      "i have an employee, Anouk Varela Quinetro that needs a corrective action form with a customer complaint",
+      "verbal warning, no payroll deduct, part-time team member,",
+      "fix her last name quintero",
+      "make that update",
+      "under the employee line the name is supposed to be anouk varlea quintero",
+      "redo anouk varela quintero",
+      "make that change to Anouk Barela Quintero",
+      "okay the correct way is Anouk Varela Quintero"
+    ],
+    "criteria": {
+      "employee": null,
+      "salon": null,
+      "date": null,
+      "policy": null,
+      "noBlockingQuestion": false,
+      "noLeakedInternalText": true
+    },
+    "expected": "Only say the name changed when the draft's employee name (and header) actually changes; never claim a Woven match that wasn't checked; no dangling sentences."
+  },
+  {
+    "id": "sf-b3",
+    "source": "replay_set 2026-10-24, Ask Bubbles silent-failure scan 2026-11-02; no employee named; the Dodge Account row carries an invented Woven id",
+    "turns": [
+      "Create a coaching form.",
+      "we do not accept $100 bills, this coaching form is for all team members",
+      "omaha",
+      "no name",
+      "can you draft a coaching form without attatching a name"
+    ],
+    "criteria": {
+      "employee": null,
+      "salon": null,
+      "date": null,
+      "policy": null,
+      "noBlockingQuestion": false,
+      "noLeakedInternalText": true,
+      "replyExcludes": [
+        "Dodge Account"
+      ]
+    },
+    "expected": "Handle whole-staff coaching consistently on the first ask; treat 'no name' as the answer to the name question; don't list the Dodge Account login.",
+    "roster": [
+      {
+        "id": "sfb3-login",
+        "firstName": "Dodge",
+        "lastName": "Account",
+        "positionName": "Team Member Full Time",
+        "locationIds": [
+          "loc-264"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "sf-b4",
+    "source": "replay_set 2026-10-24, Ask Bubbles silent-failure scan 2026-11-02; no employee named",
+    "turns": [
+      "how do i make foaming hand soap give me the ingredient amount too"
+    ],
+    "criteria": {
+      "employee": null,
+      "salon": null,
+      "date": null,
+      "policy": null,
+      "noBlockingQuestion": false,
+      "noLeakedInternalText": true
+    },
+    "expected": "Every manager message gets a reply (the Foaming Hand Soap recipe with amounts)."
+  }
+]

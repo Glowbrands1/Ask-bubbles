@@ -1,0 +1,45 @@
+{
+  "key": "3e5fc5380cd270cb364e0e9ff82a3722935fc42fb576b6d16e0ba77f8c6e388f",
+  "model": "claude-haiku-5-5",
+  "reply": {
+    "employee": {
+      "value": "Dale Ferris",
+      "evidence": "employee name is Dale Ferris"
+    },
+    "location": {
+      "value": "grand island",
+      "evidence": "dale Ferris who is a team member at grand island"
+    },
+    "jobTitle": {
+      "value": "team member",
+      "evidence": "Dale Ferris who is a team member at grand island"
+    },
+    "incident": {
+      "value": "Out of dress code",
+      "evidence": "on 9-29-26 dale was out of dress code"
+    },
+    "incidentDate": {
+      "value": "2026-09-29",
+      "evidence": "on 9-29-26 dale was out of dress code"
+    },
+    "warningLevel": {
+      "value": "coaching",
+      "evidence": "create coaching form for employee Dale Ferris"
+    },
+    "payroll": null,
+    "payrollAmount": null,
+    "policyHeading": {
+      "value": "Dress Code for The Company",
+      "evidence": "on 9-29-26 dale was out of dress code"
+    },
+    "priorSteps": [],
+    "otherDates": []
+  },
+  "usage": {
+    "inputTokens": 4629,
+    "outputTokens": 508,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0
+  },
+  "ms": 1930
+}

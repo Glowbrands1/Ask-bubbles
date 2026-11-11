@@ -10,8 +10,10 @@ import { COMPANY_LOCATIONS } from "@/lib/locations";
 import { SupabaseKnowledgeProvider } from "@/lib/knowledge/providers/supabase";
 
 import { callClaudeTool } from "./call-claude";
+import { glossaryBlock } from "./glossary";
 import type { ChatActor } from "./form-proposal";
 import { loadFormState, saveFormState } from "./form-state-store";
+import { isTeamCardTurn } from "@/lib/forms/whole-team-coaching";
 import { stateSentences } from "./form-state";
 import type { GroundedPerson } from "./grounded-entities";
 import {
@@ -43,6 +45,8 @@ export async function applyIntentExtraction(input: {
   readonly actor: ChatActor;
 }): Promise<{ request: AskRequest; clarification: AskResponse | null }> {
   if (!intentExtractionEnabled()) return { request: input.request, clarification: null };
+  // WHOLE_TEAM_COACHING_ENABLED: the team card is the intake's; the stored slots of a person are not its subject.
+  if (isTeamCardTurn(input.request)) return { request: input.request, clarification: null };
   try {
     const saved = await readSaved(input.actor.subject, input.request.conversationId);
     const [people, headings, templates] = await Promise.all([
@@ -109,7 +113,9 @@ function userBlock(request: AskRequest, saved: string): string {
     .slice(-12)
     .map((turn) => `${turn.role === "assistant" ? "Assistant" : "Manager"}: ${turn.content.trim().slice(0, 1500)}`);
   const state = saved ? `Stored form state:\n${saved}\n\n` : "";
-  return `${state}Today is ${request.context.todayIso}.\n\n${turns.join("\n\n")}`;
+  // CHAT_GLOSSARY_ENABLED: the abbreviation table first, as one more context block. Off, nothing is added.
+  const glossary = glossaryBlock();
+  return `${glossary ? `${glossary}\n\n` : ""}${state}Today is ${request.context.todayIso}.\n\n${turns.join("\n\n")}`;
 }
 
 async function readSaved(userId: string | undefined, conversationId: string | undefined) {

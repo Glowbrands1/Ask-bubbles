@@ -1,12 +1,14 @@
-import { payrollDeductAmountFieldEnabled, priorActionsParseEnabled } from "@/lib/config/chat-quality-flags";
+import { dateLineNoEchoEnabled, payrollDeductAmountFieldEnabled, priorActionsParseEnabled } from "@/lib/config/chat-quality-flags";
 import { COMPANY_LOCATIONS } from "@/lib/locations";
-import { extractFormDate, listIncidentDates, blankYearlessStepDates } from "@/lib/forms/form-date-answer";
+import { priorSentenceFixFor } from "@/lib/forms/prior-sentence-scope";
+import { blankYearlessStepDates, extractFormDate, listIncidentDates, statedIncidentDates } from "@/lib/forms/form-date-answer";
 import { lateOpenOn, yearlessCuedDates } from "@/lib/forms/late-open";
-import { payrollDeductAmount } from "@/lib/forms/payroll-deduct";
+import { managerPayrollAmount } from "@/lib/forms/payroll-deduct-amount";
 import { statedPayrollDeduct } from "@/lib/forms/payroll-deduct-answer";
 import { statedWarningLevel, warningLevelFromTurns } from "@/lib/forms/warning-level";
 import { extractJobTitle, readEmployeeMentions } from "@/lib/forms/proposal";
 import { readLocationMentions, rosterLocationName } from "@/lib/forms/location-mention";
+import { placeText } from "@/lib/forms/place-from-cue";
 import type { RosterEmployee } from "@/lib/forms/employee-match";
 
 import { fieldsFromManagerText, mergeConfirmed, type ConfirmedFormFields } from "./form-field-state";
@@ -69,7 +71,7 @@ function slotLines(input: {
     payrollDeductAmountFieldEnabled() &&
     merged.payrollAmount &&
     merged.payrollDeduct !== "no" &&
-    !payrollDeductAmount(input.question)
+    !managerPayrollAmount(input.question)
   ) {
     lines.push(`Payroll deduction of ${merged.payrollAmount}.`);
   }
@@ -86,7 +88,8 @@ function slotLines(input: {
     merged.store ||
     singleStore([...earlier, input.question]) ||
     fuzzyStore([...earlier, input.question].join("\n"));
-  if (store && readLocationMentions(input.question).length === 0) lines.push(`It happened at ${store}.`);
+  // PLACE_FROM_CUE_ENABLED: "… for <name> from <store>" already names one (`forms/place-from-cue.ts`).
+  if (store && readLocationMentions(placeText(input.question)).length === 0) lines.push(`It happened at ${store}.`);
   return lines;
 }
 
@@ -195,20 +198,48 @@ function rankStores(phrase: string): { name: string; score: number } | null {
  * the amount reader skipped. Rewritten into shapes those readers already accept.
  * A date the reader already returned is left alone.
  */
+/*
+ * DATE_LINE_NO_ECHO_ENABLED (QA LS-B5, 26 Oct 2026: "create ca form for <name>
+ * for violating attendance policy on 10-20-26. verbal. no payroll deduct. jba
+ * manual 1-1-26 for previous coaching" / "verbal"): the reply was sent on as
+ * "verbal / It happened on 10/20/2026.", and after "… for previous coaching"
+ * the step reader took that line's date for a second earlier step, so the
+ * form was dated today. With the flag on the line is not added when the
+ * conversation with this reply already dates the form that day. Off, as
+ * before.
+ */
+function alreadyDated(question: string, earlier: string, today: string, line: string): boolean {
+  if (!dateLineNoEchoEnabled() || !earlier.trim()) return false;
+  const stated = extractFormDate(`${earlier}\n\n${question}`, today);
+  return stated !== null && line === `It happened on ${slashDate(stated)}.`;
+}
+
 export function fieldLines(question: string, today: string, earlier = ""): string[] {
   const lines: string[] = [];
   const corpus = earlier.trim() ? `${earlier}\n${question}` : question;
-  if (!extractFormDate(question, today)) {
+  // PRIOR_SENTENCE_FIX_ENABLED, on a Corrective Action: one incident date is written out; two or more
+  // are asked about ("Which date goes on the form?"), never picked here; an earlier step's date never
+  // is one. With none, the line below reads as before (earlier steps' dates blanked).
+  const stated =
+    !extractFormDate(question, today) && priorSentenceFixFor(corpus)
+      ? [...new Set(statedIncidentDates(corpus, today).map((found) => found.iso))]
+      : [];
+  if (stated.length === 1) {
+    const line = `It happened on ${slashDate(stated[0]!)}.`;
+    if (!alreadyDated(question, earlier, today, line)) lines.push(line);
+  } else if (stated.length === 0 && !extractFormDate(question, today)) {
     const known = listIncidentDates(corpus, today);
     const sole = known.length === 1 ? known[0]!.iso : null;
     // "she was coached on 9-15": an earlier step's yearless date is not the incident (PRIOR_ACTIONS_PARSE_ENABLED).
     const yearless = priorActionsParseEnabled() ? blankYearlessStepDates(corpus, today) : corpus;
     const slash = sole ? slashDate(sole) : lastUnyearDated(yearless, today);
-    if (slash && !extractFormDate(question, today)) lines.push(`It happened on ${slash}.`);
+    if (slash && !extractFormDate(question, today) && !alreadyDated(question, earlier, today, `It happened on ${slash}.`)) {
+      lines.push(`It happened on ${slash}.`);
+    }
   }
 
-  if (!payrollDeductAmount(question)) {
-    const known = payrollDeductAmount(corpus);
+  if (!managerPayrollAmount(question)) {
+    const known = managerPayrollAmount(corpus);
     /*
      * A dollar sign next to the word "payroll" is not, by itself, the
      * manager's amount. The Late Opening sentence states "$25.00 via payroll

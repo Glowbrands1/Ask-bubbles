@@ -1,5 +1,13 @@
-import { antiLoopEnabled, managerWordsOnlyEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import {
+  antiLoopEnabled,
+  caShortcutWordsEnabled,
+  managerWordsOnlyEnabled,
+  formNameFromRosterEnabled,
+  typedNameEnabled,
+} from "@/lib/config/chat-quality-flags";
 import { COMPANY_LOCATIONS } from "@/lib/locations";
+import { namesThisCompany } from "@/lib/forms/company-name";
+import { namesCompanyPositionTitle } from "@/lib/forms/staff-picker";
 import { readCaPolicy } from "@/lib/forms/ca-policy";
 import {
   displayName,
@@ -8,10 +16,13 @@ import {
   wovenCloseNote,
   type RosterEmployee,
 } from "@/lib/forms/employee-match";
+import { isDateAnswerWords } from "@/lib/forms/incident-dates";
 import { withKeptTypedNames } from "@/lib/forms/kept-typed-names";
 import { supportsInlineDraft } from "@/lib/forms/inline-draft";
 import { readLocationMentions, rosterLocationName } from "@/lib/forms/location-mention";
+import { isExitTerms } from "@/lib/forms/answer-not-a-name";
 import { extractJobTitle, readEmployeeMentions } from "@/lib/forms/proposal";
+import { anchorsOnRoster, lowercaseRosterFirstNameIn, rosterShaped } from "@/lib/forms/roster-shape";
 import type { ChatFormProposal } from "@/types";
 
 import { uniqueRosterStore } from "./intake-augment";
@@ -49,6 +60,8 @@ export interface GroundedPrep {
   readonly ambiguousTyped: string | null;
   readonly keptTypedName: string | null;
   readonly employeeId: string | null;
+  /** FORM_NAME_FROM_ROSTER_ENABLED: the message names somebody on the roster (exact or close). */
+  readonly rosterAnchored?: boolean;
 }
 
 export function prepareGroundedQuestion(input: {
@@ -59,7 +72,7 @@ export function prepareGroundedQuestion(input: {
 }): GroundedPrep {
   const people = input.people;
   const roster = people as readonly RosterEmployee[];
-  let question = prependFormState(input.question, input.saved);
+  let question = prependFormState(input.question, input.saved, managerTurns(input.history));
   const kept = new Set<string>();
   if (input.saved?.keptTypedName) kept.add(input.saved.keptTypedName);
 
@@ -100,6 +113,7 @@ export function prepareGroundedQuestion(input: {
     ambiguousTyped: gated.ambiguousTyped,
     keptTypedName,
     employeeId: rosterIds && rosterIds.length === 1 ? rosterIds[0]! : null,
+    ...(gated.rosterAnchored ? { rosterAnchored: true } : {}),
   };
 }
 
@@ -185,8 +199,10 @@ export function applyGroundedProposal(
   } else if (input.prep.ambiguous.length > 1 || content.startsWith("Did you mean **")) {
     content = labelDuplicateQuestion(content, input.people, input.prep.ambiguousTyped);
   }
-  if (!antiLoopEnabled() && !input.rosterEmpty && input.prep.unmatched.length > 0) {
-    const names = input.prep.unmatched.map((name) => `**${name}**`).join(" or ");
+  // EXIT_TERMS_NOT_NAMES_ENABLED: "drop wage" or "forfeit bonus" is never a name missing from the roster.
+  const unmatched = input.prep.unmatched.filter((name) => !isExitTerms(name));
+  if (!antiLoopEnabled() && !input.rosterEmpty && unmatched.length > 0) {
+    const names = unmatched.map((name) => `**${name}**`).join(" or ");
     const sentence = `I couldn't find ${names} in the Woven roster, so that name is not on the form.`;
     if (!content.includes("couldn't find")) content = `${sentence}\n\n${content}`;
   }
@@ -269,6 +285,7 @@ function gateMentions(
   unmatched: string[];
   ambiguous: GroundedPerson[];
   ambiguousTyped: string | null;
+  rosterAnchored?: boolean;
 } {
   if (roster.length === 0) {
     return { question, rosterIds: null, unmatched: [], ambiguous: [], ambiguousTyped: null };
@@ -279,9 +296,20 @@ function gateMentions(
   let rosterIds: readonly string[] | null = null;
   let ambiguous: GroundedPerson[] = [];
   let ambiguousTyped: string | null = null;
+  // FORM_NAME_FROM_ROSTER_ENABLED: does the message name somebody on the roster? Only then is a nobody-shaped candidate set aside.
+  // A roster first name typed in lowercase ("for perpetua") is not read as a name, and still anchors the message.
+  const anchored =
+    formNameFromRosterEnabled() &&
+    (mentions.names.some((name) => anchorsOnRoster(name, roster)) || lowercaseRosterFirstNameIn(question, roster));
 
   for (const name of mentions.names) {
     if (isDocumentOrPolicyName(name)) continue;
+    // DATE_ANSWER_APPLIED_ENABLED: "most recent" answers the date question; it is not an unknown person to strip.
+    if (isDateAnswerWords(name)) continue;
+    // CA_SHORTCUT_WORDS_ENABLED: "No PD." answers the payroll question; "PD" is not an unknown person to strip.
+    if (caShortcutWordsEnabled() && /^p\.?\s?d\.?$/i.test(name.trim())) continue;
+    // EXIT_TERMS_NOT_NAMES_ENABLED: "drop wage and forfeit bonus" is the exit form's answer, not an unknown person to strip.
+    if (isExitTerms(name)) continue;
     const match = matchEmployeeName(name, roster);
     if (match.kind === "unchecked") continue;
     if (match.kind === "exact") {
@@ -320,7 +348,13 @@ function gateMentions(
       continue;
     }
     if (isStorePhrase(name)) continue;
+    // B1 (the flip-3 tester, 6 Nov 2026), FORM_NAME_FROM_ROSTER_ENABLED: a company position title ("Team Member") is never a person missing from the roster.
+    if (formNameFromRosterEnabled() && namesCompanyPositionTitle(name)) continue;
+    // The sibling app's QA finding (7 Nov 2026), FORM_NAME_FROM_ROSTER_ENABLED: the company's own name or initials are never a person missing from the roster.
+    if (formNameFromRosterEnabled() && namesThisCompany(name)) continue;
     if (antiLoopEnabled()) continue;
+    // FORM_NAME_FROM_ROSTER_ENABLED: beside a roster name, "Club Close", "Under" (Pau, 4 Nov 2026) are shaped like nobody on the roster; they stay in the question.
+    if (anchored && !rosterShaped(name, roster)) continue;
     next = replacePhrase(next, name, "");
     unmatched.push(name);
   }
@@ -331,6 +365,7 @@ function gateMentions(
     unmatched,
     ambiguous,
     ambiguousTyped,
+    ...(anchored ? { rosterAnchored: true } : {}),
   };
 }
 
@@ -472,4 +507,9 @@ function asPerson(employee: RosterEmployee): GroundedPerson {
 function replacePhrase(text: string, phrase: string, replacement: string): string {
   const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return text.replace(new RegExp(`\\b${escaped}\\b`, "i"), replacement);
+}
+
+/** The manager's earlier turns (SECOND_REQUEST_OWN_ACCOUNT_ENABLED: `form-state.ts` stateForTurn). */
+function managerTurns(history: readonly { role: string; content: string }[]): string[] {
+  return history.filter((turn) => turn.role === "user").map((turn) => turn.content);
 }

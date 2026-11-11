@@ -715,11 +715,35 @@ export interface ChatFormProposal {
    */
   sourceMessageIds: string[];
   /**
+   * AI_READS_CODE_CHECKS_ENABLED: the fields the reader returned that passed
+   * the code checks, each with the manager's words it was read from
+   * (`lib/ai/reader`). The create and draft routes check every quote again
+   * against the conversation they receive, so an edited card gains nothing.
+   * Absent with the flag off.
+   */
+  checkedReading?: {
+    employee?: { value: string; quote: string };
+    warningLevel?: { value: "verbal" | "written" | "final_warning"; quote: string };
+    payrollDeduct?: { value: "yes" | "no"; quote: string };
+    payrollAmount?: { value: string; quote: string };
+    incidentDate?: { value: string; quote: string };
+    priorSteps?: { value: { step: string; date: string }; quote: string }[];
+    policyHeading?: { value: string; quote: string };
+  };
+  /**
    * "team" for a team-wide Coaching Form, whose `employeeName` is the fixed
    * subject label rather than a person. Absent means one employee — every
    * proposal stored before this existed. See `lib/forms/team-subject.ts`.
    */
   subject?: "team";
+  /**
+   * SAME_FORM_COPY_NEW_PERSON_ENABLED: the manager's own form this card's
+   * draft is copied from ("the same draft that we did with <name>"), set by the
+   * chat on the card of the person named after it was asked. An id, never
+   * values: the drafting route re-checks that this account created it and may
+   * still see it, and copies only its content fields.
+   */
+  copyFromInstanceId?: string;
 }
 
 export interface FormHandoff {

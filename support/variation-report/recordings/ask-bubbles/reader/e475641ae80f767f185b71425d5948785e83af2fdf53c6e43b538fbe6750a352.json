@@ -1,0 +1,57 @@
+{
+  "key": "e475641ae80f767f185b71425d5948785e83af2fdf53c6e43b538fbe6750a352",
+  "model": "claude-haiku-4-5",
+  "reply": {
+    "employee": {
+      "value": "quinn marlowe",
+      "evidence": "my employee quinn marlowe"
+    },
+    "location": {
+      "value": "dodge",
+      "evidence": "she is at dodge"
+    },
+    "jobTitle": {
+      "value": null,
+      "evidence": null
+    },
+    "incident": {
+      "value": "10 minutes late on shift",
+      "evidence": "was 10 minutes late on her last two shifts"
+    },
+    "incidentDate": {
+      "value": "2026-10-15",
+      "evidence": "she was late on 10/5 and 10/15"
+    },
+    "warningLevel": {
+      "value": "written",
+      "evidence": "<UNKNOWN>"
+    },
+    "payroll": {
+      "value": null,
+      "evidence": null
+    },
+    "payrollAmount": {
+      "value": null,
+      "evidence": null
+    },
+    "policyHeading": {
+      "value": "Attendance",
+      "evidence": "<UNKNOWN>"
+    },
+    "priorSteps": [
+      {
+        "kind": "verbal",
+        "date": "2026-10-05",
+        "evidence": "on the first shift i verbally coached her on our policy"
+      }
+    ],
+    "otherDates": []
+  },
+  "usage": {
+    "inputTokens": 3553,
+    "outputTokens": 390,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0
+  },
+  "ms": 0
+}

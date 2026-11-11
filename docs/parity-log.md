@@ -6,6 +6,146 @@ citation, access or sync is either ported to the sibling or listed here as
 staying one-sided, with the reason.
 See `CLAUDE.md`.
 
+## 3 Nov 2026: "yes, do that" and "the details we just discussed!!!" are written into the open Coaching draft — both apps (FORM_EDIT_REFERS_BACK_ENABLED, default off)
+
+Found here (a Location Manager, 30 Oct 2026, two chats rated 2 stars: "it
+would never automatically put it in the coaching form, I had to copy and
+paste it myself"). Replayed 3 Nov with this app's production flags: same-form
+copy and the Assistant Manager's create now work, but with a draft open "yes,
+do that", "the details we just discussed!!!" and "ok, create the draft, but
+include the details of rolling rack." still went to the answering model,
+whose "Updating the draft now." / "That's on the card." the honest-reply
+guard did not catch. On, those turns are revisions of the draft (the previous
+answer's content, or the details named from the conversation), and those
+claims are caught. Ported to Ask Sunny with the same flag.
+
+## 25 Oct 2026: a follow-up that names its own documents is searched on them — ported from Ask Sunny (a47bf19)
+
+`FOLLOWUP_NEW_TOPIC_RETRIEVAL_ENABLED` defaults off, same name in both apps.
+Found in Ask Sunny (QA Round 17, conv_mvo0ayai2x20aiy): a follow-up naming
+new documents was searched on the earlier turn's subject. This app's
+`rewriteRetrievalQuery` also reads the earlier turn and can do the same. On,
+after the rewrite, a turn that names two or more words no earlier manager
+turn used keeps the rewritten query only when it still has one of them;
+otherwise the turn is searched as typed. The test is a neutral store/HR
+case ("The I-9 and W-4 forms, direct deposit agreements"; the rewrite stubbed
+with this manual's Employment Verification heading): none of the sibling's
+documents or wording were copied.
+
+## 3 Nov 2026: "coaching form for all team members" is the team card in every chat — both apps (WHOLE_TEAM_COACHING_ENABLED, STAFF_PICKER_REMEMBER_LOCATION_ENABLED, SHARED_LOGIN_NOT_STAFF_ENABLED, STAFF_PICKER_NO_REPEAT_ENABLED, all default off)
+
+Found here (a Location Manager covering two stores, 2 Nov 2026, rated 1
+star): six turns asking for a coaching form for all team members got the
+same staff-picker refusal, "dodge" was asked for again, and the store's
+shared "<Store> Account" login was listed as a team member, while in two
+other chats that evening other wordings made the team card. Pau, 3 Nov: "I
+need all managers to have it". On: a whole-staff Coaching Form is the team
+card ("All team members", one store) for every role that may create one, the
+picker steps aside for it and a bare "whole staff" said to an open Coaching
+card is that card; the picker (still one person at a time for other forms)
+reuses the store already named and, once it has listed the staff, says what
+to do next instead of repeating itself; a directory row whose last name is
+only Account/Login/Shared is never a team member. Ported to Ask Sunny with
+the same flags; the test there uses its own salons and invented people. Two
+Sunny-side gaps found there: a bare salon name was not read (the picker's
+short-name reader, ported back here under STAFF_PICKER_REMEMBER_LOCATION),
+and keep-filled-slots dropped the team label — Sunny-only, this app has no
+keep-filled-slots.
+
+## 3 Nov 2026: with a draft open, a turn about it goes to it — ported from the sibling app (e8e3ee1) (OPEN_DRAFT_KEEPS_TURNS_ENABLED, default off)
+
+Found in the sibling app (the 2 Nov scan): a draft typed on by hand, then
+"underperformance for the month of october" offered a new card whose Create
+made a second draft, and that one was finalized. Replayed here with this
+app's production flags it already holds (and so does the case where a metric
+was read as another person), so the flag is ported for the same mechanism in
+both apps; replay-pack cases nov2-p1a and nov2-p1b hold here.
+
+## 3 Nov 2026: one answer to "is this a person?" for every reader — ported from the sibling app (PERSON_GUARD_ENABLED, default off)
+
+Found in the sibling app (the 2 Nov scan): a policy name, "Practice" and a
+metric became people on cards. Replayed here with this app's production flags
+those wordings already hold; the mechanism is ported behind the same flag
+(forms/person-guard.ts: a roster person is always a person; otherwise a
+policy, a practice run, a metric with this app's own business vocabulary, a
+report name or the not-a-name lists never are), read by namesSomebody and once
+more on every card the route returns. With the flag forced on, the chat and
+forms suites pass.
+
+## 3 Nov 2026: a new request for the same person is drafted from its own turns — ported from the sibling app (NEW_REQUEST_OWN_TURNS_ENABLED, default off)
+
+Found in the sibling app (the 2 Nov scan): a second Corrective Action request
+for the same person, "… for being late to opening this morning", was drafted
+from the earlier trash-and-rugs incident too. Replayed here it reproduces;
+the ported check trims the card to the new request, but Create then reuses
+the earlier draft for the same person in the same chat, so the new incident
+still never gets its own draft — a separate fix (replay-pack case nov2-p2,
+open).
+
+## 3 Nov 2026: no reply claims a change or a check it did not make — both apps (CLAIM_GUARD_ENABLED, OPEN_FORM_NO_SELECTION_ENABLED, default off)
+
+Found here (the 2 Nov scan): with the draft open, the answer said "the
+employee name on the draft now reads …" and later "Confirmed against records
+— … matching Woven" while nothing changed and nothing was read; several
+replies ended with the form selection's "Based on what you've described, I can
+prepare:" and nothing under it. On, every line about the form, the name or the
+record that says it changed or was checked ("now reads", "is now", "confirmed
+against", "matching Woven", …) is replaced by the honest reply unless this
+turn changed the form; with a draft open no form selection is offered.
+Ported to Ask Sunny with the same flags.
+
+## 3 Nov 2026: a policy named with more in the same message — the rest is not dropped — ported from the sibling app (POLICY_CHANGE_REST_OF_TURN_ENABLED, default off)
+
+Found in the sibling app (the 2 Nov scan): a policy cited and "Previous
+Coaching is when she signed the Policy manual May 2025" in one message — the
+reply said "Everything else on the form is as it was" and Prior Actions
+stayed empty. Replayed here it reproduces; the same fix behind the same flag
+(replay-pack case nov2-p3).
+
+## 3 Nov 2026: a refusal is never repeated word for word; "my DM" is not the employee's title — ported from the sibling app (REFUSAL_NO_REPEAT_ENABLED, TITLE_NOT_SPEAKERS_MANAGER_ENABLED, default off)
+
+Found in the sibling app (the 2 Nov scan): the same refusal three times, and
+"my DM told me …" put District Manager on a team member's card. Replayed
+here, the title case already holds; the guards are ported behind the same
+flags (forms/reply-guards.ts).
+
+## 3 Nov 2026: "fix her last name …" corrects the name on the open draft, or says how — both apps (NAME_CORRECTION_WORDS_ENABLED, default off)
+
+Found here (the 2 Nov scan): "fix her last name …", "the name is supposed to
+be …", "make that change to …", "okay the correct way is …" went to the
+answering model, which said the name was updated. On, each is read as "change
+her name to …" (a last name keeps the first; a whole name only when it shares
+a first or last name with the person on the draft). A Corrective Action's name
+is not chat-correctable (the form registry); there the reply says to edit the
+Employee Name line on the card — never "updated". Ported to Ask Sunny.
+
+## 3 Nov 2026: "create this coaching form for everyone on my team" makes one draft each — both apps (COACHING_FOR_EVERYONE_ENABLED, default off)
+
+Pau, 3 Nov 2026, for a Location Manager who wrote one store-wide coaching:
+"also having to replicate that coaching verbiage to all coaching forms so she
+doesn't have to copy paste". With a Coaching draft open, the request gets one
+confirmation listing the people at the draft's store (the staff picker's
+roster: active, store titles) and the count; "create all" (or "create all
+except …") makes one draft each through the unchanged create path, with the
+draft's content copied and the name swapped. No model call, nothing
+finalized, at most 40; each draft's id comes from the source and the person,
+so a second "create all" makes nothing new. Ported to Ask Sunny with the same
+flag.
+
+## 25 Oct 2026: the framework's sections are not pinned into governed drafts — Bubbles-only
+
+`FRAMEWORK_UNPIN_ENABLED` defaults off. The uploaded Performance Management
+Framework (`ASK BUBBLES PERFORMANCE MANAGEMENT FRAMEWORK KB TEXT`) was
+prepared from the sibling app's framework with only the app name changed,
+so it still carries the sibling company's name, examples and metrics, and
+the draft route pinned up to sixteen of its sections into every governed
+form's prompt (Follow-Up Coaching, Corrective Action, Policy Review, EPPs).
+On, a governed draft does not read the framework, its absence no longer
+withholds the draft, and the app's own escalation rules stay in the system
+prompt. Off, nothing changes. Test: `src/app/api/forms/pm-draft-route.test.ts`
+("FRAMEWORK_UNPIN_ENABLED"). **Sibling app: not needed** — Ask Sunny's
+framework is its own company's text; a matching note is in its parity log.
+
 ## 25 Oct 2026: the job title is a title the manager stated — ported from Ask Sunny (PR 188)
 
 Ask Sunny PR 188 (`59fe1ca`, the same patch as `517992a`) is the title rule
@@ -63,6 +203,7 @@ no amount, and a figure the manager typed is still kept.
 **Sibling app: ported in the same session.** Ask Sunny's `intent-slots.ts`
 has the same `mergeSlots` rule; the mechanism is ported there under the same
 flag name. No store names or policy wording were copied.
+
 ## 24 Oct 2026: a manual citation only marks a page the sentence restates
 
 `FULL_MANUAL_CONTEXT_ENABLED` stays off. On, `citePolicyAnswer` reads the
@@ -775,3 +916,354 @@ store <name>" as "at <name>" (the store reader's own rules still apply), and
 the store the newest manager turn names wins on the remap and the intent
 slots. No salon wording was copied. Test:
 `src/lib/forms/store-label-cue.test.ts`.
+
+## 25 Oct 2026: edits are applied or answered; dates follow the incident (port)
+
+`FORM_EDIT_DATE_RULES_ENABLED` (default off), the sibling app's flag and
+mechanism on this app's remap path. "change observation of offense to: …"
+makes What happened that text; "add that she was also on her phone" appends
+it and the reply says so (conv_mvnuh50i2hanl53); "clean up my grammar" and
+"change the date to 10-23-26" (conv_mvnsowzl20ljr9m) never become What
+happened; "X instead of Y" names X; a prior action's date ("jba manual
+11-1-25", conv_mvnsqglc2v7zuyk) is never the Date; "late today" is today
+(conv_mvnu46n823v1unt); "can you edit the form I already finalized" opens a
+revision. Not ported: the Follow-up line rule (this card has none) and the
+card salon edit (the store edit is its own fix here). No salon wording was
+copied. Test: `src/app/api/chat/edits-dates-replay-e2e.test.ts`.
+
+## 26 Oct 2026: the stored-slot lines are not a new request — ported from Ask Sunny (STORED_SLOTS_NOT_A_REQUEST_ENABLED)
+
+`STORED_SLOTS_NOT_A_REQUEST_ENABLED` defaults off, same name in both apps; Pau
+approved the form-proposal.ts edit for both apps on 26 Oct 2026. In the
+sibling app the stored-slot lines put ahead of a slot answer made
+`turnsAboutThisForm` start the form over at that turn, so its card was drafted
+from the last turn alone. The same ~8 lines here: with the flag on, the
+new-request check in `turnsAboutThisForm` reads `managerWords(...)`, not the
+app's lines (detectTemplateIntent, statesHistoryOnly, readEmployeeMentions,
+correctsTheEmployee, describesIncident, describesMoreThanTheRequest). This
+app's live form path is that proposal path (FORM_FULL_REMAP off in
+production). Replayed through POST /api/chat with this app's production list,
+a Corrective Action, "yes", "$25" and Create draft already keep the incident
+turn and the observation with the flag off; the live blank draft
+(conv_mvp2eerf23op5u7) was not reproduced by this replay. Test:
+`src/app/api/chat/stored-slots-not-a-request-e2e.test.ts`.
+
+- 26 Oct 2026, POSITION_ANSWER_GUARD_ENABLED (Bubbles only): with the
+  position (job title) question open, a warning-level or payroll answer
+  ("verbal", "This is a verbal", "Payroll deduct is not applicable") was saved
+  as the Job Title. Not ported: the sibling app has no position question
+  (`employee-position.ts` does not exist there). Test:
+  `src/app/api/chat/position-answer-guard-e2e.test.ts`.
+
+- 31 Oct 2026: NEXT_PUBLIC_CHAT_LOCAL_OWNER_ENABLED (new, default off, both apps; build-time, read by the browser and by GET /api/chat/conversations/import). QA, 30 Oct (production): an Assistant Manager on the browser a Location Manager had used saw the manager's chats and pressed Import (conv_mvvadk9k8yp7ck2 and five more). QA's option A: the history state returns an opaque per-account key (sha256, never the id); each local chat is stamped with it; until it arrives nothing already stored is shown; then only this account's chats (its key, or no key and stored on this account) are shown, offered for Import or synced. Everyone else's — including unstamped chats this account does not hold — are kept in IndexedDB untouched and never shown. Nothing is deleted. If the account cannot be reached, no stored chat is shown (fail closed). `lib/chat/local-owner.ts`, `lib/store/app-store.tsx`. Port to the sibling app in the same session.
+
+- 31 Oct 2026: NEXT_PUBLIC_CHAT_LOCAL_OWNER_ENABLED (new, default off, both apps; build-time, read by the browser and by GET /api/chat/conversations/import). QA, 30 Oct (production): an Assistant Manager on the browser a Location Manager had used saw the manager's chats and pressed Import (conv_mvvadk9k8yp7ck2 and five more). QA's option A: the history state returns an opaque per-account key (sha256, never the id); each local chat is stamped with it; until it arrives nothing already stored is shown; then only this account's chats (its key, or no key and stored on this account) are shown, offered for Import or synced. A chat stamped with another account's key is kept in IndexedDB untouched and never shown; an unstamped chat this account does not hold stays visible as before and is not stamped (Pau, 31 Oct 2026: "Keep them visible"); every new chat is stamped by the account that starts it. Nothing is deleted. If the account cannot be reached, no stored chat is shown (fail closed). `lib/chat/local-owner.ts`, `lib/store/app-store.tsx`. Port to the sibling app in the same session.
+
+## 27 Oct 2026: the Assistant Manager has no Forms Register — ported from Ask Sunny (NEXT_PUBLIC_ASD_NO_FORM_MONITORING_ENABLED)
+
+Pau asked that the sibling app's Assistant Salon Director rule apply here to the equivalent role, the Assistant Manager. Same flag (build time, default off): with it on, `assistant_manager` loses `view_form_monitoring` (sidebar, page, Overview follow-ups, chat card link, search hits) but still opens and downloads the forms it created; the location manager and every role above keep it. This replaces the sibling app's earlier "Bubbles: not requested" note. Bubbles prod had no active Assistant Managers on 27 Oct 2026.
+
+## 27 Oct 2026: forms some accounts create are private to them and to admin — ported from Ask Sunny (PRIVATE_CREATOR_FORMS_ENABLED)
+
+Same mechanism as the sibling app's #321: `PRIVATE_FORM_CREATOR_IDS` (user ids, set per app in Vercel, never in the repository) plus the default-off flag; `actorMaySeeInstance` hides those forms from every reader but the creator and admin/owner/developer, on every read path; bounded reads over-read 4x while active and trim back to the page.
+
+## 26 Oct 2026: the reply is not sent on with a date line the conversation already gives — Bubbles-only (DATE_LINE_NO_ECHO_ENABLED)
+
+QA LS-B5: "create ca form for <name> for violating attendance policy on 10-20-26 … jba manual 1-1-26 for previous coaching" / "verbal" dated the form today here. The same two turns in Ask Sunny's production env keep 10/20 on the card and the form (checked 26 Oct 2026: its intent path reads the slots, not the augmented reply). Not ported.
+
+## 27 Oct 2026: a pet at work cites Animals in the Workplace — both apps (ANIMAL_ANYWHERE_ENABLED)
+
+Pau reversed the earlier "no" on 27 Oct 2026. With the flag on, an animal word (puppy, kitten, dog, cat, pet, …) anywhere in a sentence about being at work is the Animals in the Workplace incident (service animal, hot dog and guinea pig stay excluded), and a "cite <policy>" line names that policy without the word "cite". Same flag and mechanism in the sibling app.
+
+
+## 27 Oct 2026: a step's date is not the incident date — both apps (STEP_DATE_NOT_INCIDENT_ENABLED)
+
+Ported from Ask Sunny (QA SF4). Here "note a verbal ca was given on 9-1-26" dated the card and the form 9/1; with the flag on the step's date is not an incident date and the incident's 9/28 stays. Ask Sunny's sibling fix CA_ASKS_WHAT_HAPPENED is not needed here: this app already asks "You haven't told me what happened yet" on "create corrective action form for <name>, <job title>".
+
+## 27 Oct 2026: a typed job title, and the date question asked again in fresh words
+
+JOB_TITLE_FROM_WORDS_ENABLED: both apps (the fill); asking the position once on an exit form stays Bubbles-only, as Ask Sunny has no position question. DATE_REASK_FRESH_ENABLED: Bubbles-only for now. QA D3 showed this app's re-ask came back byte for byte the same as the reply before (stored messages, conv_mvpyha5v22c52vd), while Ask Sunny's live reply on the same turn showed the question; port it if Sunny is seen repeating a reply.
+
+## 27 Oct 2026: S12 bundle — warning level per clause, title by apposition, exit read-back; the Follow-up read-back is Sunny-only
+
+WARNING_LEVEL_AND_CLAUSE_ENABLED, JOB_TITLE_APPOSITION_ENABLED and EXIT_READBACK_JOB_TITLE_ENABLED are in both apps. FOLLOW_UP_READBACK_CUE_ENABLED (QA item 5, "jba manual 11-1-25" read back as "Follow-up: 11/1/2025") is not needed here: the same turns through this app's chat show no Follow-up line (the sibling app's code-slot read-back writes it; this app's path does not).
+
+## 27 Oct 2026: P5 — the Follow-Up Coaching citation field (both apps); a grammar request on the card (sibling-only)
+
+FOLLOW_UP_CITATION_FIELD_ENABLED is in both apps. GRAMMAR_ASK_NOT_ACCOUNT_ENABLED is not needed here: QA's replay turns through this app's chat do not add "can you clean up my grammar…" to the card (that turn is answered as a question), so there is nothing on the card to take out.
+
+## 27 Oct 2026: S1 follow-ups — level/step clause (both apps); title case (sibling-only)
+
+LEVEL_STEP_NOT_ACCOUNT_ENABLED is in both apps (here the Issue, there the Observation). JOB_TITLE_CASE_ENABLED is not needed here: QA's S1 turns through this app's chat give "Makery Associate" from the title list. (The sibling app dropped its APP_SENTENCES_NOT_ACCOUNT flag before shipping; this app's card shows no state sentences either.) WARNING_LEVEL_AND_CLAUSE's saved-draft fix (QA B1) is this app's: the sibling app's live draft already ticked Written.
+
+## 27 Oct 2026: AI reads, code checks (both apps; this app's hook is its own)
+
+AI_READS_CODE_CHECKS_ENABLED (default off, same name in both apps). Ported from the sibling app's branch `claude/code2-ai-reads-code-checks` (c23bdad, not yet on its main): the tool `record_form_reading`, its schema, instructions and timed call, the code checks, the merge rule ("a field today's readers settled stays; one they left open is filled"; a disagreement is traced), and the record/replay format, with this app's stores, roster and wording. The hook is this app's: it has no live slot call, so the reader runs beside the form proposal and hands each filled value to the code readers as the app's own line ("The employee is …"), the card carries the passed quotes, and the create and draft routes check them again (`src/lib/ai/reader/hook.ts`, `recheck.ts`).
+
+- 31 Oct 2026: CHAT_IMPORT_PROVEN_OWN_ENABLED (new, default off, server, both apps). Independent review of #321: `writtenByAnotherAccount` returned false for a chat with no turn evidence (no turn id, a turn with no activity row, a row with no actor), so another account's chat could still be imported on a shared browser. With the flag an IMPORT of a chat this account does not hold yet must prove every answered turn is this account's (`activity_events.actor_user_id`), else it is declined as "another_account". The activity read is batched (100 ids). Live saves are unchanged (a brand-new chat has no turn before its first answer). Still open after it: a live save of another account's chat whose earlier turns have no turn id (only NEXT_PUBLIC_CHAT_LOCAL_OWNER, 4b, stops the browser offering it).
+
+## 27 Oct 2026: S1 residuals — read-back title case and the step date in the date question (sibling-only)
+
+JOB_TITLE_READBACK_CASE_ENABLED and STEP_DATE_NO_QUESTION_ENABLED are not needed here: QA's S1 turns through this app's chat, with STEP_DATE_NOT_INCIDENT on, ask no date question (this app's incidentDates already leaves out a step's date under STEP_DATE_NOT_INCIDENT) and read back the title the card has.
+
+## 27 Oct 2026: a decimal point ends no sentence in the Issue (DECIMAL_NOT_SENTENCE_END_ENABLED, Bubbles-only)
+
+Not needed in the sibling app: its card has no Issue / What happened line. The same sentences through its harness ("she was 10 minutes late on 10.2", "… 3.5 hours late and owes $10.25") give an Observation of Offense with both whole.
+
+## 27 Oct 2026: the amount turn stays with the card (AMOUNT_TURN_STAYS_ENABLED, Bubbles-only)
+
+Not needed in the sibling app: QA ran "i dont know the amount" and "$25" live there after a Corrective Action card with payroll yes (conv_mvqon26f2a5kvdh, conv_mvqon20g24chpan), and both turns stayed on the card with no policy answer.
+
+- 31 Oct 2026: prior forms "complete" under the private-creator over-read (both apps; only changes anything while that over-read is on, i.e. NEXT_PUBLIC_ASSISTANT_MANAGER_CREATE_ENABLED or the private-creator list). Independent review item 15b: with the 4× read, an employee with 201–799 matching forms read "complete" though only the newest 200 were used, so prior forms were attached as the whole history. Now complete only when every visible row was used. With the over-read off the test is the same as before.
+
+## 27 Oct 2026: "yes payrol ldeduct" is the payroll answer — this app only (PAYROLL_TYPO_ANSWER_ENABLED)
+
+QA BF7b live. The sibling app already reads the typo as the payroll answer on that turn (checked through its chat with its production flags), so the flag is not needed there.
+
+## 27 Oct 2026: known gap — no amount row on the card (left as is)
+
+After "$25", the Payroll deduction amount shows in the reply and on the saved draft but the card has no amount row: this app's proposal carries no amount field and the card renders only "Payroll deduct". The sibling app's card has no amount row either. QA: skip for now (UI work, low value).
+
+## 27 Oct 2026: AI reader — the sibling app's final design (both apps)
+
+Brought to the sibling app's PR #341 design (head 07caf11): the reader defaults to claude-haiku-5-5 (`ANTHROPIC_READER_MODEL` overrides), with a 3.5 s limit (`AI_READER_TIMEOUT_MS`, 500 to 10,000 ms); the same merge invariant, check rules, fail-soft log line and trace shape (`slots.reader`, which the spend guard counts). This app's own parts stay: the reader runs beside the form proposal (no live slot call here), the card carries the passed quotes and the routes check them again, and a "couldn't find" line about the name the reader put on the card is dropped. Tests: `live-flags-with-reader-e2e.test.ts` (every flag live here, reader off and on) and `reader/merge.test.ts` (the invariant).
+
+## 27 Oct 2026: the monthly budget counts the AI reader's call, and prices Claude Haiku 5.5 — both apps
+
+Ported from Ask Sunny. The spend guard read only each `chat_traces` row's own model and token columns; the AI reader (`AI_READS_CODE_CHECKS_ENABLED`) records its call in `slots.reader`, so its spend was invisible to the monthly budget. `modelUsageSince` now adds a row for `slots.reader.usage` (priced at `slots.reader.model`, or as Haiku 4.5 when the trace has none), counts form turns that had a reader call but no answering model call, and `model-prices.ts` lists Claude Haiku 5.5 ($0.10 in / $0.50 out per MTok, cache read $0.01, cache write $0.125, prompts up to 100K) instead of pricing it as Opus. If the reader-aware read errors, the old read (answering calls only) is used and a warning is logged: never zero, never the guard off. The daily call cap is unchanged. It only makes the guard count more, and the guard flags stay default off, so there is no flag of its own. Same change in Ask Sunny.
+
+## 27 Oct 2026: "Calder, Remy" is read as Remy Calder, without a model — both apps (LAST_FIRST_NAME_READ_ENABLED)
+
+Ported from Ask Sunny (QA's five "Last, First" variants). Today's name reader stops at the comma: "My employee Calder, Remy" was the employee "Calder", and Create refused the card as out of date. With the flag on and the AI reader off, a capitalised "Word, Word" pair in the manager's own turns goes through `ai/reader/check.ts`: it must fit exactly one person on the scoped roster, in either order. It joins this app's form proposal the way the AI reader does (`ai/reader/hook.ts`): the card is made again with "The employee is …", the reader's `merge.ts` fills only an employee today's readers left open, and the create route checks the quote again (`ai/reader/recheck.ts`). No model, no cost, no protected file. Same change in Ask Sunny.
+
+## 28 Oct 2026: a short turn naming the manager's additional store is taken — Ask Bubbles only (ADDITIONAL_LOCATION_TAKEN_ENABLED)
+
+Pau: a manager's additional locations are theirs and are taken. A manager covering West Dodge Rd and Kearney opened a CA at Dodge and then said "Store: Kearney.", "kearney" or "the store is Kearney": the short turn was not read as a change, both stores were read together, the reply asked "Kearney or Omaha?" and the card stayed at Dodge. With the flag on, `ai/additional-store.ts` lets the readers see such a turn (six words at most, one store, one of the manager's own) as "actually it was at …", the change of mind `location-scope.ts` already reads; earlier turns of that shape too, so later turns keep it. Stored text stays as typed; a store outside the scope is read as before. Not needed in Ask Sunny: there the same short turns already move the card to an additional salon (pinned by `out-of-scope-place-e2e.test.ts`, all seven wordings).
+
+## 28 Oct 2026: a store the manager is not assigned to is said so in the reply — both apps (OUT_OF_SCOPE_PLACE_SAID_ENABLED)
+
+Ported from Ask Sunny. Here the card already keeps a store-scoped manager's own store when they name one outside their scope, and the Change something panel's sentences and "actually it was at kearney" already get "isn't a store on your assignment". Short corrections ("Store: Kearney.", "store: kearney", "the store is Kearney", "kearney", "it was at the kearney store") got the card alone. With the flag on, `ai/out-of-scope-place.ts` adds "**<Store>** isn't a store on your assignment, so the form stays at **<own store>**." Once, never beside the existing line, never for a store in scope, no store named, or a company-wide manager. In Ask Sunny the same flag also covers the panel's sentences: there the card took the unassigned salon and only Create refused it.
+
+## 28 Oct 2026: an off-roster typed name keeps the manager's spelling — both apps (no change)
+
+QA asked whether "dale ferris", typed in lower case and not on the roster, should be title-cased as in Ask Sunny. Ask Sunny does not title-case it either: `tidyTypedName` only tidies spacing, by the 22 Oct 2026 decision that the manager's own spelling is kept unless the directory has an exact match. Closed as parity. The stale "capitalised" comment in Ask Sunny's ai/form-proposal.ts is noted, not changed (protected file).
+
+## 28 Oct 2026: `guardEvidenceBasis` has no Ask Sunny twin (no change)
+
+This app's draft route runs `guardEvidenceBasis` (forms/evidence-basis.ts) on every drafted field, with no flag; Ask Sunny has no equivalent. When the model adds an unsaid "acknowledged …" to a sentence about a prior step ("… coached on October 16, 2026 regarding attendance and acknowledged the expectation."), the whole sentence is dropped, so the Observation can lose the prior-coaching sentence Ask Sunny keeps. QA saw this once (a test draft, since deleted) and closed it as not confirmed, likely model variance; the guard is a safety feature and stays. Reopen only on a manager's report, with their wording as the regression test.
+
+## 28 Oct 2026: "change to coaching" switches the open card to the other form — both apps (FORM_TYPE_SWITCH_ENABLED)
+
+Ported from Ask Sunny. Pau: "Can we change the type of form mid conversation?" With the card open, only "change this to a coaching form" and "actually make it a ca" switched it; Pau's "change to coaching" / "change to ca" / "change to corrective action" (any case) and QA's other wordings kept the CA, or answered a coaching card's switch to CA with no card at all, and a switch to CA lost the account ("You haven't told me what happened yet"). With the flag on, `ai/form-type-switch.ts` lets the readers see a short switch request as the one the chat already switches on, and the turn that asked for the old form as asking for the new one, so the card keeps the employee, the date, the store and the account. Never a second card; stored text as typed; after Create unchanged (a separate decision with Pau).
+
+## 28 Oct 2026: "Change something" on a finalized form — both apps (NEXT_PUBLIC_CARD_CHANGE_FINALIZED_ENABLED)
+
+Ported from Ask Sunny (same panel file). Beside "Edit as new draft" on a finalized form, for a role that may edit that template: the date and, on a Corrective Action Form, the type of warning and payroll deduct, prefilled. Send opens the revision exactly as Edit does (same reason dialog when revisions are on, or when the server asks for a reason) and saves only the changed values onto the new draft with the form's own save. No chat turn, no model; the signed form is never written; a refused value is said; a payroll change asks the manager to check the Action Plan.
+
+## 28 Oct 2026: after Create, "change to coaching" starts the other form and leaves the draft — both apps (FORM_TYPE_SWITCH_AFTER_CREATE_NOTE_ENABLED)
+
+Ported from Ask Sunny. Pau's decision A: once this conversation's form exists, a request for the other form leaves the existing form untouched (never changed, archived or deleted) and says so, then starts the other form's card. On main here, Pau's wordings after Create kept the CA or answered with no card. With the flag on the chat route reads the switch turn as the request that asked for the first form with the other form named and drops the open form from the turn, so the new card keeps the employee, the date, the store and the account; the reply opens with "You already have a Corrective Action draft for <name>. I'll start a Coaching Form too, and the Corrective Action draft stays in the Forms Register until you delete it."
+
+## 28 Oct 2026: a switched form is drafted from the account, never from the switch turn — both apps (FORM_TYPE_SWITCH_ENABLED / FORM_TYPE_SWITCH_AFTER_CREATE_NOTE_ENABLED)
+
+QA live here (after-Create note on): the new Coaching draft read "Observed:\nA change to coaching was noted for <name>." — drafted from the switch turn alone. `withSwitchSources` (`ai/form-type-switch.ts`) leaves out every turn that asked for the other form and, after Create, takes the turns from the one that asked for the first form. Here it reads the turns as the manager sent them (this app's answer chain sees the switch reading's rewritten turns), so it runs on the answer from `answerQuestionBody`. Same change in Ask Sunny.
+
+## 28 Oct 2026: payroll deduct changed from the finalized form's panel rebuilds the draft's Action Plan — both apps (CARD_CHANGE_PLAN_REBUILD_ENABLED)
+
+Ported from Ask Sunny. When payroll deduct goes No → Yes through the Change something panel, the new revision draft's Action Plan is rebuilt with the existing `syncCorrectiveActionPlan` (only a plan the app built; never the signed form). With production's plan wording a Yes without an amount rebuilds nothing, and the panel keeps its notice.
+
+## 28 Oct 2026: an archived revision draft and "Edit as new draft" — open finding, waiting on Pau
+
+This app's `findOpenRevision` skips archived revision drafts (Ask Sunny's does not), but the unique index `form_instances_one_open_revision` still counts them: "Edit as new draft" on a form whose only open revision draft is archived fails here ("duplicate key … form_instances_one_open_revision"), while Ask Sunny reopens that draft. `instances.ts` is protected; the fix is Pau's decision.
+
+## 28 Oct 2026: a card never holds a store the manager is not assigned to — both apps (OUT_OF_SCOPE_PLACE_KEEPS_OWN_ENABLED)
+
+Ported from Ask Sunny, where the card took an unassigned salon from a later "Salon: …" turn and only Create refused it. Here the readers already keep a store-scoped manager's own store, so `ai/keeps-own-place.ts` is the same last check after them: a store outside the full scope (primary and every store also covered) on the card goes back to (1) the store the earlier turns gave it, else (2) the manager's only store, else (3) no store and "Which of your stores is this about?" — never a guess. An additional store is still taken. With OUT_OF_SCOPE_PLACE_SAID_ENABLED the reply says where the form stays, once. No protected file is edited.
+
+## 28 Oct 2026: an archived revision draft is reopened by "Edit as new draft" — Ask Bubbles now matches Ask Sunny (Pau's option C)
+
+Pau approved (28 Oct 2026, "2. C, yes") removing exactly one line from this app's protected `src/lib/forms/instances.ts`: `findOpenRevision`'s `.is("archived_at", null)`. With it, a finalized form whose only open revision draft was archived could not be edited: the new revision hit the unique index `form_instances_one_open_revision` (which counts archived drafts) and failed with "duplicate key …". Now the archived draft is found and reopened, as Ask Sunny always did. Regression test: `src/lib/forms/archived-open-revision.test.ts` (red before, green after). Ask Sunny unchanged.
+
+## 28 Oct 2026: the Change something panel's Payroll deduction amount — both apps (CARD_CHANGE_PLAN_REBUILD_ENABLED)
+
+Port from Ask Sunny. QA / Pau: with payroll deduct Yes, the finalized form's panel also offers Payroll deduction amount (only when the server's flag is on — the form's GET carries `cardChangeAmount` — and the form has the line, which here is `PAYROLL_DEDUCT_AMOUNT_ENABLED`'s injected field). The PATCH rebuild (`syncCorrectiveActionPlan(..., { amountSentence: true })`) then puts "<first name> will be payroll deducted <amount>." before the closing (`planWithPayrollSentence`, the flag-free form of `withPayrollSentence`, which is unchanged), rebuilds when only the amount changed, and drops an earlier figure. No protected file is touched.
+
+## 28 Oct 2026: every Claude call counted toward the monthly budget — both apps (SPEND_GUARD_ALL_CALLS_ENABLED)
+
+Port from Ask Sunny. Pau / QA: the spend guard read only the chat answer and the AI reader from chat_traces. With the flag on, the Anthropic client (`anthropic.ts` → `ai/spend-meter.ts`) records every `messages.create` of a request, retries included: the helpers, form revision, the Create card's draft (route `forms_draft`) and template ingest (`form_ingest`). A chat turn's trace row carries its calls in `slots.spend` (marked `slots.metered`); calls no trace row took are one more chat_traces row, `intent` "spend", no conversation and no message id (so `form-remap-scope.ts` and `feedback-examples.ts` never read it) and no model (so the daily cap is unchanged). The monthly budget sums `slots.spend` in place of those rows' model columns. Counting only: the Create route is not blocked over budget. Analytics that count turns in chat_traces should leave out `intent = 'spend'`. This app has no Sales Totals route. No migration; no protected file.
+
+## 28 Oct 2026: a first name alone is asked about from the manager's roster — both apps (FIRST_NAME_SUGGEST_ENABLED)
+
+Port from Ask Sunny. QA / Pau: a bare "quinn" got a card for the first name or a plain "Who is this … for?". With the flag on, `ai/first-name-suggest.ts` replaces such a reply with a question about the people on the manager's scoped roster with that first name (additional stores included, nobody outside it): two or more → "Did you mean **X** or **Y**? Tell me which, or give the full name."; one → "Is this for **X**? Tell me if that should change."; none → the reply as it was. Where this app's own numbered "Did you mean" already shows (a card for "quinn" with two matches), it is left as it is. No card until the answer; asked once; never accepted for the manager. The answer ("yes", "the second", "ashby", "no, Quinn Ashby", a full name) makes the turn the manager's own request again with the name in full. No protected file.
+
+## 28 Oct 2026: new hires get their access link one at a time — both apps (NEW_HIRE_INVITES_ENABLED)
+
+Pau: "i just dont want to bulk send link to everyone coz im limited 2 sends an hr" — built in both apps, off. The mechanism differs because the apps do: Ask Sunny's account lifecycle already creates and invites, so there the daily run holds the invitations and an hourly cron sends them. This app's Woven sync never creates accounts (phase-one-guarantees), so here the hourly cron (`/api/employees/woven/invites/cron`, `src/lib/admin/new-hire-invites.ts`) creates each new hire's account by its invitation, in the name of NEW_HIRE_INVITE_ACTOR, at most NEW_HIRE_INVITES_PER_HOUR (1 or 2) an hour, oldest hire first, only for NEW_HIRE_INVITE_ROLES (empty by default) and hire dates on or after NEW_HIRE_INVITE_SINCE. Same switch names; see `docs/woven.md`. No migration.
+
+## 28 Oct 2026: scanner-safe invitation link — both apps (INVITE_LINK_HOLD_ENABLED, default off)
+
+Invited accounts stayed `invited` because a mail scanner opened Supabase's stock invite link (it verifies on GET) before the person did. `/auth/invite-start` + `/auth/invite-continue` copy the recovery pair: GET only holds the token in an HttpOnly cookie; only the Continue POST runs `verifyOtp({ type: "invite" })` and goes on to `/reset-password`, which accepts the invitation. Off: both routes send to sign in and touch nothing. Inert until the Supabase Invite template is changed to `docs/supabase-invite-template.html` — dashboard not touched. Same flag, same routes in Ask Sunny.
+
+## 28 Oct 2026: a successful sign-in accepts an invitation a mail scanner opened first — both apps (NEXT_PUBLIC_INVITED_SIGNIN_ACCEPTS_ENABLED)
+
+QA / Pau: accounts stayed `invited` with the email confirmed 10–20 s after the invitation (a mail scanner fetching Supabase's stock invite link, which verifies on GET), a password set, and every sign-in refused as "not active". `invited → active` happens only in `accept_invitation`, called from the set-password screen (`reset-password-form.tsx`); a link spent by a scanner never reaches it. With the flag on, `sign-in-form.tsx` also calls `/api/auth/accept-invitation` after a successful password sign-in (idempotent; the database refuses a disabled account and an unconfirmed email). The scanner-safe invitation link itself needs the Supabase Invite template changed, like the recovery template (`docs/password-reset-runbook.md`) — not done here.
+
+## 28 Oct 2026: a card whose full name was filled from a first name alone is asked about too — both apps (FIRST_NAME_SUGGEST_ENABLED)
+
+QA, live here: "katherine was late on 10/20, write her up" with one Katherine on the roster gave a card for her full name at once — the AI reader (AI_READS_CODE_CHECKS_ENABLED) found the one roster person the first name fits and filled the card, so the first-name question never fired. Now a card whose employee is a roster person whose last name the manager never typed, and whose first name they did, is asked about like a one-word card — unless the previous question already named that person ("Did you mean 1. **…**" — "2"). Same change in Ask Sunny, whose reader fills the same way.
+
+## 29 Oct 2026: a ticked "Other" is never left with its write-in empty — both apps (OTHER_WRITE_IN_GUARD_ENABLED, default off)
+
+QA, a tester's live Ask Bubbles draft: "she was late three times last week" drafted Topic of Coaching "Other" with the Other write-in empty. `forms/other-write-in.ts` (after the coaching framing guard in the draft route) fills the write-in with what happened in the manager's words, else unticks "Other". The Coaching details help now names the three sections the draft prompt already writes (wording only; no template revision). Same flag and mechanism in both apps.
+
+## 29 Oct 2026: FORM_EDIT_DATE_RULES and MANAGER_WORDS_ONLY on the proposal path — Bubbles only
+
+QA / Pau ("Fix it and ask testers to validate targeted problem only"): both flags were built and tested on the full remap, off in production since 26 Oct. `src/app/api/chat/proposal-path-flags-e2e.test.ts` runs the reports' wording on the live proposal path with this app's 29 Oct production flags. FORM_EDIT_DATE_RULES: the dates, "INSTEAD of" and the finalized-form reopen already hold there; "add that she was also on her phone" (B17) and "change observation of offense to: …" (S22) replaced or kept the card's Issue, and a grammar request was not answered — `proposal-edit-rules.ts` applies the same three edit kinds to the card's Issue (flag-gated; off unchanged). MANAGER_WORDS_ONLY: no code needed; on, "ass't store manager" reads Assistant Manager (off: Store Manager). Not ported: Ask Sunny's live path is the intent read, where FORM_EDIT_DATE_RULES already applies the edit rules (`keep-filled-slots.ts`, `grounded-turn.ts`).
+
+## 29 Oct 2026: MANAGER_WORDS_ONLY reads the stated title on every turn — Bubbles only
+
+QA, live with the flag on: "create coaching form. tessa ormond is ass't store manager. tessa did not call anyone about opening late" (name not on the roster) gave Position "Store Manager", and the next turn "kearney" kept it. The flag read the title only from the turn being answered (grounded entities), so a card built from the whole conversation read "ass't store manager" as Store Manager again. `ai/manager-title.ts`, last in the answer chain and flag-gated, sets the card's Position to the title the manager last stated, read as the flag reads it. Not ported: Ask Sunny's live path is the intent read, which already reads the title from every manager turn with the flag (`intent-slots.ts`).
+
+## 29 Oct 2026: "she was late last week" is never drafted as today's date — both apps (UNREAD_DAY_NOT_INCIDENT_DATE_ENABLED, default off)
+
+QA: the card asked "I couldn't read "last week" — which date?", the manager pressed Create without answering, the form was dated today, and the Corrective Action draft was told today was the incident's date ("use exactly <today> and no other date"). With the flag on, when the notes hold an unread day, no calendar incident date and no "today", and the form kept its default date, `forms/unread-day-date.ts` replaces that brief (today is NOT the incident date; say it in the manager's words), stops treating today as a date the manager gave (a sentence stating it is not kept as the incident's date), and the draft says: "The form is dated today; you wrote "last week" - set the incident date on the form." A date the manager gave, and the Coaching Form (never told a form date), are unchanged. Same flag and mechanism in both apps.
+
+## 29 Oct 2026: the unread-date question says plainly it can't guess — both apps (UNREAD_DATE_PLAIN_ASK_ENABLED, default off)
+
+Pau: when the card can't read a day phrase, the question should say plainly that it can't guess and show the date format to type. With UNREAD_DATE_ASK_ENABLED and this flag on, `ai/unread-date-ask.ts` asks: I can't guess "last week" - what date was it? Type it like 9/11/26. Off, the question reads as before. Same flag and wording in both apps.
+
+- 29 Oct 2026: the Forms Register row menu "…" shows only when it has an item (a track-only role got an empty menu on a draft) — both apps, no flag, Pau-approved one line in monitoring-table.tsx.
+
+- 31 Oct 2026: CHAT_HISTORY_STATE_CHUNKED_ENABLED (server) and NEXT_PUBLIC_CHAT_HISTORY_TOLERANT_ENABLED (browser, build-time), new, default off, both apps. QA, 31 Oct (Sunny tester, Pau's Admin login): chats were on the account but a freshly signed-in browser showed "No conversations yet". GET /api/chat/conversations/import answered 503 on every load: `ownHistoryState` counts turns with one `in` over every live conversation (up to 1,500 ids in one request URL); accounts with thousands of chats (2,863 here, 2,175 in the sibling app) make that read fail. Chunked: batches of 100 ids. Tolerant: the browser settles the list and the history state separately, so the account's own list is merged even when the state fails (nothing suppressed, offered for Import or released by NEXT_PUBLIC_CHAT_LOCAL_OWNER). Not built: opening ?c=<id> for a chat older than the 50 the list returns still needs the list.
+
+## 29 Oct 2026: a name accepted from the first-name question is the card's person at Create — both apps (FIRST_NAME_SUGGEST_ENABLED)
+
+Pau, live: "pls create a coaching form for katrin dov" → "Is this for **<full name>**?" → "yes" → Create refused the card: "This proposal is out of date: the conversation now says the form is for katrin dov, not <full name>". The creation check (`proposal-currency.ts`) counted only the older close-match questions as accepted. A name accepted from this question ("yes", a full name, the surname or an ordinal) now covers what the manager typed for it (every word the conversation reads begins a word of that name); a later turn naming somebody else still makes the card stale. Same mechanism in both apps.
+
+- 29 Oct 2026, same PR: the first-name answer finds the turn by the person's preferred name too ("kit dov" → "yes" no longer loses the request), and Create accepts a suggested name the manager had already typed in some form ("katrin dovtail") — both apps (FIRST_NAME_SUGGEST_ENABLED). New PARTIAL_NAME_CARD_CURRENT_ENABLED (default off, both apps): with the question off and the AI reader on, "katrin dov" filled as Katrin Dovetail was refused at Create; it is now current, and a later turn naming somebody else still makes it stale.
+
+- 29 Oct 2026: Create-refusal audit (Pau: "i dont want that blocker and problem in both sunny and bubbles"). Every way a card is reached went chat → Create offline with the production flags; correct cards refused were fixed, each behind a new default-off flag, both apps: PREFERRED_NAME_CARD_CURRENT_ENABLED ("kit dovetail" for Katrin Dovetail, preferred name Kit, read against the manager's roster at Create), SWITCH_KEEPS_NAMED_FORM_ENABLED ("make it a follow up coaching" is not read as plain coaching), SEVERAL_FORMS_STAY_CURRENT_ENABLED (a card from "a coaching form for A and a CA for B" stays current after later turns that name nobody else and ask for no form). Real corrections still refuse. `create-currency-audit-e2e.test.ts`.
+
+- 29 Oct 2026, same PR, from the Ask Sunny port (c7b32d99): the preferred name is passed into the creation check (`alsoCalled`) instead of overriding a 409 afterwards, so "kit dovetail" then "make it a coaching form instead" still refuses the old card and "this isn't for kit dovetail" refuses it; and "make it a follow up coaching" is read as typed by the chat too (`withFormTypeSwitch`, `withSwitchSources`), so a CA card becomes the Follow-Up Coaching card Create accepts.
+
+- 29 Oct 2026: PARTIAL_SURNAME_ASK_ENABLED (new, default off, both apps; needs FIRST_NAME_SUGGEST_ENABLED). QA live: "pls create a coaching form for quinn co" asked "Is this for …?" only when the AI reader read "quinn"; when it read "quinn co" the reader's name was rejected and the card kept the raw name, which Create saved. A card name that is a first or preferred name plus the start of a surname is matched against the manager's roster in code: one person "Is this for", several "Did you mean", none as before.
+
+- 31 Oct 2026: ANGLE_PLACEHOLDER_GUARD_ENABLED (new, default off, both apps). Port of the sibling app's live-check fix (A3): a revision there appended the literal "<UNKNOWN>" to Details of Coaching. Same model, same guard here: `stripPlaceholdersFromDraft` (`lib/forms/drafted-text.ts`) also drops an all-caps angle-bracket token and its sentence. Bubbles' own "add details about the rolling rack" wrote a proper sentence live, but nothing stops the model emitting the token here.
+
+- 29 Oct 2026: PARTIAL_NAME_LOOSE_MATCH_ENABLED (new, default off, both apps). QA live in Ask Sunny with PARTIAL_NAME_CARD_CURRENT on: "pls create a coaching form for quinn co" gave a card for the roster person and Create refused it, because "co" does not begin the surname. With the manager's roster passed into the creation check, a surname piece that begins the surname or has its letters in order from the same first letter ("co", "camrillo", "dovtail") is the card's person when nobody else on the roster fits; two fits still refuse. Used by the reader-filled path and the accepted-question path. `loose-name.ts`.
+
+- 29 Oct 2026: STALE_NEEDS_ROSTER_PERSON_ENABLED (new, default off, both apps). A Buff City manager's exit ("… drop wage and forfeit bonus. not eligible for rehire …") was refused at Create as naming "more than one person (<the person>, drop wage, forfeit bonus)"; the manager confirmed removing "drop wage and forfeit bonus" let it create. With the manager's roster passed into the creation check, a name in the conversation that is neither the card's person nor anybody on the roster is not another person. Two roster people still refuse. `exit-shortcut-terms-e2e.test.ts` (her exact wording, name and address invented) and `stale-needs-roster-person.test.ts`.
+
+- 29 Oct 2026: SUGGEST_ANSWER_REPLACES_TYPED_ENABLED (new, default off, both apps). QA live: "pls create a coaching form for quinn co" → "Is this for …?" → "no, jordan testperson" gave a card for "jordan testperson co". The answer replaced the first name only; now the whole typed name ("marisol co": the first name and a following surname piece of the people asked about) is replaced.
+
+- 29 Oct 2026: EXIT_TERMS_NOT_NAMES_ENABLED (new, default off, both apps). A Buff City manager's exit for somebody not on the roster ("… drop wage and forfeit bonus. not eligible for rehire …") asked "Which of them is this Resignation/Exit Form for — <the person>, drop wage or forfeit bonus?", and with the person on the roster the reply said "I couldn't find **drop wage** or **forfeit bonus** in the Woven roster". With this flag a candidate made only of the exit form's own words is not a person: two lines in protected `forms/proposal.ts` (approved by Pau via QA, 29 Oct 2026), `isExitTerms` in `forms/answer-not-a-name.ts`, and the roster note in `ai/grounded-entities.ts`. Two real people still ask which of them. Same change in Ask Sunny, where the same words reach the same resolver.
+
+- 29 Oct 2026: CA_SHORTCUT_WORDS_ENABLED (new, default off, both apps). Pau: "recognize all form wording … so when manager type shortcuts, it can understand it". The Corrective Action card read "payroll deduct applies" but not "no PD", "PD applies", "pd yes", "PD: no" or "deduct 25". With this flag `normalizePayrollWording` (`forms/payroll-deduct-answer.ts`, which imports nothing and reads the flag itself) reads "PD" as payroll deduct and a bare figure after "deduct" as dollars ("late 25 min" is not an amount). Here also: "No PD." was read as a name and stripped by the roster check ("I couldn't find **PD** in the Woven roster"); `ai/grounded-entities.ts` skips it. The sibling app has no such note. The amount itself is still read only with "$" (protected `payroll-deduct.ts`). `ca-shortcut-fields-e2e.test.ts`. A prior step's date in shorthand ("verbal on 10/1", "verbal 10/1", "written: 10/5") no longer takes the card's Date away (`forms/step-sentence-dates.ts`, same flag; "a verbal was given on 10/1" already worked with STEP_DATE_NOT_INCIDENT_ENABLED). The warning level: "1st written" / "first written" is Written (`forms/warning-level.ts`); "final warning" already asks the level here. "final written" waits on Pau. "create a written on 10/20 for …" / "make a verbal for …" (no form named) made no card at all; the level now names the Corrective Action form (`forms/template-intent.ts`); a question about one ("how do i create a written?") is still answered. 30 Oct 2026, Pau via QA: "Tick written" — "final written" is Written too (`forms/warning-level.ts`); "final warning" still asks. "asm" / "pos: asm" / "she is an asm" (Pau: "Assistant atore manager") already card Assistant Manager from this app's title list, flag on or off; pinned in the same test. Not copied to the sibling app, where the abbreviation's meaning is not answered. The sibling app's amount line ("deduct 25" → $25) is its own: this app's Corrective Action card carries no amount (not even for "$25 payroll deduct"), so there is nothing to port.
+
+- 29 Oct 2026: EXIT_SHORTCUT_WORDS_ENABLED (new, default off, both apps). Pau: "recognize all form wording … so when manager type shortcuts, it can understand it … prioritize the exit form". Offline inventory of the exit form's shortcuts through chat → card: "drop wage" now fills the minimum-wage line (with "forfeit bonus", both), "$25 will be payroll deducted for store key" the key line (not returned), "called to quit" How Employee Resigned (Phone call), "immediate voluntary term" or quit/voluntary with "no notice given" the Immediate Voluntary box, "abandoned job" / "job abandonment" No Call No Show (Pau, 29 Oct). The involuntary box still needs the act in a sentence (QA kept it: "fired" or "involuntary" alone, and "termination form", tick nothing). And under EXIT_TERMS_NOT_NAMES_ENABLED, the roster check (`ai/grounded-entities.ts`) no longer strips the exit form's words from the text as unknown people — "drop wage and forfeit bonus" had become "and" before the exit reader saw it. `exit-shortcut-fields-e2e.test.ts`. Same change in the sibling app.
+
+## 30 Oct 2026: a typed job title keeps a word that is also a field label — sibling-app fix, pinned here (no code)
+
+The sibling app carded "assistant … manager" as a title cut short at a word that is also a field label; its fix is behind TITLE_KEEPS_LABEL_WORDS_ENABLED there. This app has no such label reader on the card: "create an exit for marnie holloway, assistant store manager at kearney, ne. …" and the manager's own exit wording (the person invented) already card "Assistant Manager", with and without the slot model's title and the title flags. Pinned by `src/app/api/chat/exit-title-label-words-e2e.test.ts`; no flag here.
+
+- 29 Oct 2026: STREET_ADDRESS_NOT_A_NAME_ENABLED (new, default off, both apps). QA: the street address in a manager's exit ("marnie's address is 125 Ne Oakfield Lane, lees summit, MO. 64064") was read as more people ("Ne Oakfield Lane", "lees summit", "mo"); in the sibling app the chat asked "Which of them … — marnie holloway or Ne Oakfield Lane?". With this flag a name whose words all sit inside a street address (a house number, a street word, through the ZIP or the end of the sentence) is not a person: `notInStreetAddress` in `forms/answer-not-a-name.ts`, read by the same `employeeState` line in protected `forms/proposal.ts` as the exit terms (approved by Pau via QA, 29 Oct 2026, "ok address line"). "jordan lane" with no house number is still a person; two real people still ask which of them. Same change in the sibling app.
+
+- 30 Oct 2026: LEVEL_REQUEST_DATE_ENABLED (new, default off, both apps). Port of the sibling app's fix (QA, its live chat): "create a written on 10/20 for <name> at <store>, she was late again" put the whole request on the Corrective Action card. Here it was the card's **Issue**, word for word: `accountIssue` in `forms/incident-issue.ts` keeps a sentence that describes an incident, request and all. With the flag the clause that asks for the level (dated or not: "create a written on 10/20 for …", "make a verbal 10/20 for …", "create a written for … at <store>,") is dropped and the Issue is "she was late again"; `ASKS_FOR_THE_FORM` in `forms/draft-never-blank.ts` reads the dated request as the request too, so a draft written from the manager's words starts with what happened. (The sibling app's fix sits in its `remap-incident.ts`; here that reader already read it.) `src/lib/ai/level-request-date.test.ts`.
+
+- 31 Oct 2026: REVISION_SAME_VALUE_ENABLED (new, default off, both apps; protected file approved by Pau in writing, 31 Oct 2026). Port from Ask Sunny. The sibling's live check A3: with ANGLE_PLACEHOLDER_GUARD_ENABLED the "<UNKNOWN>" sentence is dropped, Details are written back as they were, and the reply still said "Updated the Coaching Form …". Protected `forms/chat-revision.ts`: one import and, before `const changed`, a value equal to the field's current text is dropped, so the existing "I haven't changed …" answers. Test: `src/app/api/chat/form-edit-plain-words-e2e.test.ts`.
+
+- 31 Oct 2026: THIS_PERSONS_TURNS_ENABLED — sibling-app fix, not needed here (no code; Pau approved the protected `forms/proposal.ts` edit for both apps, 31 Oct 2026). The sibling's live check B2: "create a coaching form for Marnie Holloway", Marnie's details, then "create a coaching form for remy calder" — its Remy card cited every one of those turns. Here, through this app's chat route with its production flags, Remy's card already cites only Remy's own request, so `proposal.ts` is left untouched; pinned by a test in `src/app/api/chat/same-form-copy-e2e.test.ts`.
+
+- 1 Nov 2026: CHAT_RESPONSE_STREAM_ENABLED (new, default off, both apps). Port from Ask Sunny. There, with `maxDuration = 120` deployed, a 30.5 s answer still showed "No answer was produced" at about 30 s: a request whose response had not begun within ~30 s was cut off between the browser and the function. Pau: "Go streaming". With the flag, `POST /api/chat` goes through `streamWhenSlow` (`lib/api/streamed-response.ts`): a handler that answers within 2 s (auth, rate limit, bad body) is returned byte for byte; a slower one gets 200 with `x-chat-stream: 1` at once, a newline every 5 s, then `{"status","body"}`, which `ai/claude-provider.ts` unwraps and handles exactly like a plain response. Test: `src/lib/api/streamed-response.test.ts`.
+
+- 1 Nov 2026: TRUNCATION_RETRY_BUDGET_ENABLED (new, default off, both apps). Port from Ask Sunny. There a cut-off briefing took about 31 s and its retry 36 s. With the flag, `withTruncationRetry` (`ai/truncation.ts`, every caller: chat, draft, revision) starts no retry when the first attempt already took over 50 s, and throws the caller's own "truncated" message, so a call never stacks past its route's 120 s ceiling. Test: `src/lib/ai/truncation.test.ts`.
+
+- 1 Nov 2026: /api/chat `maxDuration = 120` (both apps, no flag). Port from Ask Sunny. There the route's missing `maxDuration` left the platform's 30 s default in force: 10 answers in 7 days were cut at 30 s and finished on the server afterwards, paid for and never shown. This route exports none either; no 30 s cases here in 7 days (answers come back sooner), so the same ceiling the draft route uses is set before one is. Test: `src/app/api/chat/route-max-duration.test.ts`.
+
+- 1 Nov 2026: REPORT_NAME_NOT_A_PERSON_ENABLED, a question about a report is never the account on a form (both apps). Port from Ask Sunny (#430), inert here today. The sibling's live retest: a question about one of its reports, then "create a coaching form", made a card for the report's name with the question as its account — the card is built from every manager turn. Same here through the chat route (the card for "Daily Stats" there; QA: no broader name guard, 0 such real chats here in 30 days). With the flag, on a form-request turn `answerQuestion` (`ai/server-ask.ts`) leaves out a manager turn that asks about one of this app's reports and names nobody, and its answer (`withoutReportTurnsForForm`, `ai/report-turns.ts`; `mentionsReportName`, `ai/report-name.ts`). The report catalog is empty, so nothing is left out until a report is registered. Test: `src/lib/ai/report-turns.test.ts` (an invented report).
+
+- 1 Nov 2026: REPORT_NAME_NOT_A_PERSON_ENABLED (new, default off, both apps). Port from Ask Sunny. The sibling's live QA: "Show me the most recent Daily Stats and what I need to focus on today." saved its report's name as the conversation's employee. Here the slot reader takes the employee only from the reader's reading or the directory (never from capitalised words), so the risk is the reader returning a report; with the flag `guardedTyped` (`ai/intent-slots.ts`) drops a name that is one of this app's own reports (`ai/report-name.ts`, read from `REPORT_REGISTRY`). The catalog is empty today, so nothing is matched until a report is added; the test registers an invented one. Test: `src/lib/ai/report-name-not-a-person.test.ts`.
+
+- 1 Nov 2026: MANAGER_NAME_NOT_EMPLOYEE_ENABLED (new, default off, both apps). Port from Ask Sunny. The sibling's live QA: a how-to question that named nobody got "If <the manager's own first name> is leaving the company voluntarily…" — the prompt opens "You are talking to <manager>", and the model used that name for the employee. Same prompt line here (`listener`, `ai/prompts.ts`); read-only count, 30 days: 2 such chats here. With the flag the listener line adds that the name is only for addressing them (`MANAGER_NAME_RULE`), and `answerQuestion` passes `withManagerNameGuard` (`ai/manager-name-guard.ts`) last: the manager's first name as a sentence's subject becomes "the employee", never when the manager typed that name or a card's employee shares it; a greeting is left alone. Flag off, the prompt is byte-identical (prompts.base.fixture.txt). Test: `src/lib/ai/manager-name-guard.test.ts`.
+
+- 31 Oct 2026: AM_PRIOR_WARNINGS_ENABLED (new, default off, both apps). Port from Ask Sunny. Independent review item 15a, decided by Pau ("Yes option A", 31 Oct 2026): with NEXT_PUBLIC_ASSISTANT_MANAGER_CREATE_ENABLED on, an Assistant Manager sees only their own forms, so the prior coaching and corrective action history on their Corrective Action read only their own, and an employee the General Manager had already warned could be drafted a first warning. With the flag, `forms/prior-forms.ts` reads the history without that one rule (`assistantOwnFormsRule: false` through `visibleInstances` → `actorMaySeeInstance` → `hiddenAsPrivate`); location scope and every other privacy rule still apply. A form they could not open shows only its level and date (its location label is dropped); every other reader and list is unchanged. Test: `src/lib/forms/prior-forms-am-warnings.test.ts`.
+
+- 31 Oct 2026: SAME_FORM_COPY_ENABLED, "the same draft that we did with <name>" when that person's draft has no details (both apps). Port from Ask Sunny. QA, live retest: Marnie's draft had no details, then Remy's blank draft; "can you create the same draft that we did with marnie holloway by changing the name and position?" found nothing to copy and said nothing, and the answering model then said "No draft was actually created for Marnie Holloway" (false; the sibling made another Remy card). `copyIntoOpenForm` now answers itself when the named form is this account's own and has nothing to copy ("**Marnie Holloway**'s Coaching Form has no details yet, so there is nothing to copy. **Remy Calder**'s draft is as it was. …"); no model call, both drafts unchanged. No form for that person is answered as before; a form with details still copies. Test: `src/app/api/chat/same-form-copy-e2e.test.ts`.
+
+- 31 Oct 2026: SAME_FORM_COPY_ENABLED, "Do the same coaching form for <name>" with another draft open (both apps). Port from Ask Sunny. QA, the sibling's live retest: in a new chat, "create a coaching form for Marnie Holloway" → Create with no details, then "Do the same coaching form for remy calder" copied an EARLIER Remy Calder form of that account onto Marnie's draft and gave no Remy card. Same code here (QA's account had no earlier Remy form, so it found no source and gave the card). A person named right after "the same <form> for" (`namedAsTarget` in `forms/same-form-copy.ts`) is who the new form is for, never the copy's source; "the same draft that we did with <name>" still copies. Test: `src/app/api/chat/same-form-copy-e2e.test.ts`.
+
+- 31 Oct 2026: STAFF_PICKER_BARE_ANSWER_ENABLED (new, default off, both apps). Port from Ask Sunny. QA, the sibling's live retest (C6): after "Do the same coaching form for remy calder" with Remy's draft open, "for whole staff" made another card for Remy there. Here the same turn reached the answering model, which wrote its own "one named employee" refusal (no card). With the flag, a turn that is only the whole staff (`isBareWholeStaff` in `forms/staff-picker.ts`) goes to the picker with a draft open, so both apps give the same staff list; the draft is untouched, and an edit mentioning the whole team stays the draft's. Test: `src/app/api/chat/same-form-copy-e2e.test.ts`.
+
+- 31 Oct 2026: STAFF_PICKER_STORE_TITLES_ENABLED (new, default off, both apps; held for Pau). The directory affiliates office accounts with a store (Kearney, NE live: Corporate, Accounting, Maintenance, District Manager, Owner, Operator, Payroll, HR beside the Team Members and managers). With the flag the whole-staff list shows only Team Member Full Time, Team Member Part Time, Seasonal Team Member Part Time, General Manager and Assistant General Manager; no title on file is kept. Sibling: Tanning Consultant, Salon Director, Assistant Salon Director.
+
+- 31 Oct 2026: STAFF_PICKER_ENABLED role gate (both apps). Independent review item 11: the picker checked only the scope, and every role may ask questions, so an employee could be shown their location's staff by name and title. Now only a role that may create the form (Coaching Form, Corrective Action Form, either for a form not named; the Assistant Manager per NEXT_PUBLIC_ASSISTANT_MANAGER_CREATE_ENABLED) is shown the list; otherwise the turn is answered as before.
+
+- 31 Oct 2026: STAFF_PICKER_ENABLED narrowed (both apps, same flag; QA switched it off pending this). Independent review: "the whole store", "every team", "everyone" anywhere in a form request fired the picker ("Coaching form for Jordan, he yelled at customers in front of the whole store" → staff list, no card), and with a draft open "update the draft: he told the whole team he was quitting" was dropped. Now it fires only when the whole staff is who the form is for ("a form for the whole / my whole staff", "for everyone", "for all associates"), or as a short answer to the intake's "Who is this form for?", and never with a draft open.
+
+- 30 Oct 2026: NEXT_PUBLIC_ASSISTANT_MANAGER_CREATE_ENABLED (new, default off, this app only). Pau: "An assistant general manager is logged into Ask Bubbles, but unable to create coaching forms. Is this a restricted function for AGM's? …", then "also they should only be able to see their OWN forms", "yes all forms but they can only see their own forms in the form register or form monitoring", and of NEXT_PUBLIC_ASD_NO_FORM_MONITORING_ENABLED (which she had set): "lift the block". One flag, three parts: the Assistant Manager gains the location manager's create set (`ASSISTANT_MANAGER_CREATES` in `lib/permissions/assistant-manager-create.ts`, read by `config/company/access.ts`; not EPPs or any manage_* permission), keeps the Forms Register even with the ASD flag on, and sees only the forms they created (`hiddenAsPrivate`, the first check every list, count, badge, chat look-up and the per-form guard apply). Their own exit forms stay readable (they now hold `create_exit_form`). NEXT_PUBLIC_ so the browser and server agree. Ported to the sibling app for its Assistant Salon Director (Pau: "same pls", "yes sunny too") in Glowbrands1/ask-sunny#398, same flag. `src/app/api/forms/assistant-manager-create.test.ts`.
+
+- 31 Oct 2026: FORM_EDIT_PLAIN_WORDS_ENABLED, FORM_EDIT_HONEST_REPLY_ENABLED (new, default off, both apps). Ported to the sibling app (commit "Port from Ask Bubbles (7d6c60fa)", same module `lib/forms/form-content-turn.ts`). There, flag off, the plain-words account with a draft open drew a new Coaching Form card beside it rather than an update claim; with FORM_EDIT_PLAIN_WORDS on it is written into the open draft, as here.
+
+- 31 Oct 2026: SAME_FORM_COPY_ENABLED (new, default off, both apps). QA, 30 Oct (production, a Location Manager): after a Coaching Form for one employee had its Details, "Do the same coaching form for remy calder" gave a blank card, and with that card open "can you create the same draft that we did with marnie holloway by changing the name and position?" only printed the content (names invented). With the flag: at Create, the draft route copies the content fields (the ones the assistant may write, never who/where/when/signatures or policy quotes) of this manager's OWN earlier form of the same template for another employee, name swapped, with no model call; with a draft open, the named person's form is copied onto it (formUpdate). Only forms the account created and may still see (`lib/forms/same-form-copy.ts`). Not covered: "ok, create the draft, but include the details of rolling rack." on its own. Ported to the sibling app ("Port from Ask Bubbles" commit, same flag).
+
+- 31 Oct 2026: SAME_FORM_COPY_ENABLED name swap (both apps). Independent review item 13: the copy swapped the first and last name case-insensitively everywhere, so a source employee called Will, Mark or Grace changed "will", "mark", "grace" in the text. Now the full name is swapped wherever it appears; a first or last name alone only as a capitalised whole word and never when it is also an ordinary word. Pronouns are not changed; the reply says to check them.
+
+- 31 Oct 2026: SAME_FORM_COPY_ENABLED, open-draft copy narrowed (both apps). Independent review: with a draft open, "Add that she did the same thing as Remy Calder last week" was read as a copy and overwrote the draft. Now only an explicit copy request (as for Create), never a sentence that adds to the form ("add/include/note/put/also …"), and when the open draft already has text in fields the copy would fill, it asks "… Replace them with **<name>**'s … content? Say **yes, replace them**" and copies only on that answer. Fields the manager typed are kept either way.
+
+- 31 Oct 2026: SAME_FORM_COPY_ENABLED narrowed (both apps, same flag; QA switched it off pending this). Independent review: the copy matched "same thing / one / details / content / coaching" anywhere, so Create notes such as "She was late again today, same thing as last week" skipped the drafting model and filled the new form from another person's. Now a copy is asked for only in so many words ("do/create/make … the same coaching form/draft", "copy <someone's> form", "the same form as / that we did"), only by the card's own request (the last turn of the notes), in at most 25 words, and never in a turn that also gives an account (late, absent, yelled, again, today, …).
+
+- 31 Oct 2026: SAME_FORM_COPY_ENABLED follow-up (both apps, same flag). Sunny live check B2: "create a coaching form for remy calder" after an earlier "Do the same coaching form for remy calder" in the same chat was copied too, because the second card cites the earlier turn and its Create notes held "the same". Now only the card's own request — the last turn of the notes — can ask for a copy (`requestTurn`, `lib/forms/same-form-copy.ts`). Known and unchanged (protected `forms/proposal.ts`): the second card's sourceMessageIds still include the first person's turns, so the drafting model can read them.
+
+- 31 Oct 2026: STAFF_PICKER_ENABLED (new, default off, both apps). QA, 30 Oct (production): "Create a coaching form." → "Who is this form for?" → "for whole staff - associates" was refused in one chat, and "can you create a coaching form for my whole staff?" made a card for "All team members" in another. Pau: list the staff of the manager's location from Woven, ask which location when there are several, one person at a time. With the flag: no card for a whole staff; several locations in scope and none named → asks which (never guesses); one → that location's current staff from the same scoped roster the name checks read (`loadScopedRoster`; terminated people and other locations left out), name and position only, grouped by position, at most 40, then "Who is this form for?" and "do the same <form> for <next name>" (SAME_FORM_COPY_ENABLED). One directory read, no model call (`lib/forms/staff-picker.ts`). Port to the sibling app in the same session.
+
+- 31 Oct 2026: FORM_EDIT_PLAIN_WORDS_ENABLED / FORM_EDIT_HONEST_REPLY_ENABLED follow-up (both apps, same flags, already on). Bubbles live check A6 (QA's tester): after a how-to answer about BOPIS orders, "can you upate the draft with these details of coaching?" wrote nothing. The turn was rewritten, but the answer's "Packing Slip", "Help Desk", "Use Split Ship" and "that's a separate process — partial fulfillment" read as other people to the protected open-form revision, which drops a request about somebody else, and the ordinary answer ran. Now (`formContentRevision`): when the content is the bot's previous answer and reads as naming somebody else, it is handed to the revision as the manager's latest turn and the request names nobody; the manager's own words keep the rule. A rewritten turn that still writes nothing answers "Nothing on the form has changed yet…" (honest flag), never the unrelated answer. And "make that update" takes the previous reply only when it printed the Details or offered an update (A5: it followed "It should update automatically…"). No protected file touched.
+
+- 31 Oct 2026: FORM_EDIT_PLAIN_WORDS / FORM_EDIT_HONEST_REPLY review fixes (both apps, same flags). Independent review items 4, 5, 7, 8: the honest reply's own instruction ("Say make that update … Save changes") was written into Details after "make that update" — now never content; a statement about the employee is written only when it says what they did in the past tense, with no question word or ask anywhere ("…what should I put for the policy", "…remind me" are answered); "make that update" is the whole turn, so "Add the details that she clocked out early on 10/20" never takes the previous answer; the claim filter drops only lines about the form ("last updated the first quarter" stays); an earlier answer is capped at 2,000 characters. Not changed (item 8): the start/create → begin/make swap reaches only the revision model's input; the saved text is the model's output.
+
+- 31 Oct 2026: FORM_EDIT_PLAIN_WORDS review item 12 (both apps): "these details" needs a real verb (the old "u?p?d?ate" matched "date": "What's the date on the form for these details?" became an edit); a coaching topic followed by a question stays a question ("I want to coach on the new dress code, what does the manual say?"); a sentence naming the employee is written only when it reads as conduct or the manager says to add/note it ("Marnie asked me to move her shift on Saturday" is not).
+
+- 31 Oct 2026: Import says when a chat belongs to another account (both apps; shown only when the server declines one, i.e. with CHAT_IMPORT_OWN_ONLY_ENABLED). Independent review item 14: Import on such a chat showed nothing and the count stayed. Now "1 chat on this device belongs to another account and was not imported. It stays on this device." Open until NEXT_PUBLIC_CHAT_LOCAL_OWNER (4b): the chat is still listed on the device and still counted; and a chat with no turn evidence is declined only with CHAT_IMPORT_PROVEN_OWN_ENABLED.
+
+## 3 Nov 2026: two more team-card wordings — both apps (TEAM_CARD_WORDING_ENABLED, default off)
+
+Found in QA's live check of WHOLE_TEAM_COACHING (both apps): "store wide
+everyone needs the reminder to call a manager for cash drawer shortages,
+overages, and returns" got no team card when said on its own — it never says
+"coaching"; and the team card's Details echoed the audience ("the whole team:
+for the whole …"). On: a turn that opens with the team and says what it needs,
+or asks to remind the team, is the team Coaching card when no draft is open
+and no other form's intake is asking; and on a team card, lines that only
+name the audience are not handed to the drafting model (with nothing else, it
+is told nothing is described yet). Ported from the sibling app (8f66ee1),
+same flag.
+
+## 3 Nov 2026: with her draft open, a new request for her is a new card — ported from the sibling app (NEW_REQUEST_OPEN_DRAFT_ENABLED, default off)
+
+Found in the sibling app (QA live check, 3 Nov 2026): "make me a CA for
+<name> for being late to opening this morning", sent before the open draft's
+first values were saved, was redrafted into that draft. Here QA's live run
+was correct, but the same race reproduces in the replay pack
+(nov3-open-draft-new-request, `draftNotYetSaved`); the same flag and
+mechanism. Create for the new card still reuses the open draft here until
+DRAFT_REUSE_NEW_REQUEST is on (nov2-p2).
+
+## 3 Nov 2026: a new incident for the same person gets its own draft — both apps (DRAFT_REUSE_NEW_REQUEST_ENABLED, default off)
+
+Found here (the 2 Nov scan, replay case nov2-p2): with CONVERSATION_DRAFT_REUSE
+on, "make me a CA for <name> for being late to opening this morning", said
+after the same chat's trash-and-rugs Corrective Action, reused that draft, so
+the late opening never got its own. On: a turn since the earlier draft that
+asks for this form for this person and is mostly about something not said
+before is a new incident, and Create makes a new draft; a request that
+repeats the account still reuses. QA: "yes", 3 Nov 2026. Ported to the
+sibling app with the same flag (there CONVERSATION_DRAFT_REUSE is off, so it
+changes nothing until both are on).
+
+## 3 Nov 2026: the policy on each Corrective Action history line — both apps (PRIOR_ACTIONS_POLICY_ENABLED, default off)
+
+Pau, 3 Nov 2026 (through QA): a Corrective Action's history read from the
+Forms Register said only the step and the date. On: each earlier Corrective
+Action's "Policy violated" is named on its line — "Verbal corrective action
+(Attendance) — signed 11/02/2026" — in the chat read-back and on the drafted
+form alike. Coaching lines are unchanged. Ported from the sibling app
+(8754989), same flag.

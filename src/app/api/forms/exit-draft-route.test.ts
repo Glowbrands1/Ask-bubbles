@@ -96,28 +96,40 @@ vi.mock("@/lib/knowledge", () => ({
   },
 }));
 
-vi.mock("@/lib/forms/instances", () => ({
-  applyStatedFacts: async (
-    _id: string,
-    stated: { values: Record<string, string>; checked: Record<string, string[]> },
-    _actor: string,
-    keys?: ReadonlySet<string>,
-  ) => {
-    state.stated.push({ values: stated.values, checked: stated.checked, keys });
-    return [...Object.keys(stated.values), ...Object.keys(stated.checked)];
-  },
-  applyAssistantDraft: async (
-    _id: string,
-    draft: { values: Record<string, string>; checked: Record<string, string[]> },
-  ) => {
-    state.persisted.push({ values: draft.values ?? {}, checked: draft.checked ?? {} });
-    return {
-      accepted: { values: draft.values ?? {}, checked: draft.checked ?? {} },
-      rejected: [],
-      policyRefused: [],
-    };
-  },
-}));
+/*
+ * FORM_EDIT_SINGLE_WRITER_ENABLED: the one writer (`form-write.ts`) reads the form
+ * before and after it writes, so this mock also has a `loadInstance` that returns
+ * the form as the writers below saved it (`src/test/forms/saved-form-instances.ts`).
+ */
+vi.mock("@/lib/forms/instances", async () =>
+  (await import("@/test/forms/saved-form-instances")).savedFormInstances(
+    {
+      applyStatedFacts: async (
+        _id: string,
+        stated: { values: Record<string, string>; checked: Record<string, string[]> },
+        _actor: string,
+        keys?: ReadonlySet<string>,
+      ) => {
+        state.stated.push({ values: stated.values, checked: stated.checked, keys });
+        return [...Object.keys(stated.values), ...Object.keys(stated.checked)];
+      },
+      applyAssistantDraft: async (
+        _id: string,
+        draft: { values: Record<string, string>; checked: Record<string, string[]> },
+      ) => {
+        state.persisted.push({ values: draft.values ?? {}, checked: draft.checked ?? {} });
+        return {
+          accepted: { values: draft.values ?? {}, checked: draft.checked ?? {} },
+          rejected: [],
+          policyRefused: [],
+        };
+      },
+    },
+    async (id) =>
+      (await (await import("@/lib/forms/instance-scope")).authorizeInstance(new Request("http://localhost/api/forms"), id, "view")).loaded,
+  ),
+);
+beforeEach(async () => (await import("@/test/forms/saved-form-instances")).resetSavedForms());
 
 vi.mock("@/lib/ai/anthropic", () => ({
   getAnthropicClient: () => ({
@@ -366,9 +378,38 @@ describe("what is stored", () => {
     expect(keys?.has("written_notice_attached")).toBe(false);
   });
 
+  it("EXIT_INTAKE_FIX_ENABLED: the Permanent Address the manager typed is filled; one the model wrote never is", async () => {
+    const previous = process.env.EXIT_INTAKE_FIX_ENABLED;
+    process.env.EXIT_INTAKE_FIX_ENABLED = "true";
+    try {
+      state.toolInput = { values: { details: "Sarah did not call in.", permanent_address: "1 Invented Road" } };
+      await post(
+        "create an exit form for Sarah Jones, permanent address 12 Invented Rd, Kearney, NE 68847. She did not call in for her last two shifts. Last day worked 10-20-26",
+      );
+      const { values, keys } = state.stated[0]!;
+      expect(values.permanent_address).toBe("12 Invented Rd, Kearney, NE 68847");
+      expect(keys?.has("permanent_address")).toBe(true);
+      expect(stored().values.permanent_address ?? null).not.toBe("1 Invented Road");
+    } finally {
+      if (previous === undefined) delete process.env.EXIT_INTAKE_FIX_ENABLED;
+      else process.env.EXIT_INTAKE_FIX_ENABLED = previous;
+    }
+  });
+
   it("fills nothing the manager did not say", async () => {
     state.toolInput = { values: { details: "Sarah's last day was 9/15." } };
     await post("Exit form for Sarah Jones. Last day 9/15.");
+    if (process.env.FORM_EDIT_SINGLE_WRITER_ENABLED === "true") {
+      /*
+       * FORM_EDIT_SINGLE_WRITER_ENABLED: the one writer does not call
+       * `applyStatedFacts` with nothing to state, so there is no call to read;
+       * what is asserted is the saved form — no stated line on it.
+       */
+      expect(state.stated).toEqual([]);
+      const { savedRows } = await import("@/test/forms/saved-form-instances");
+      expect(Object.values(savedRows("form-1")).filter((row) => row.provenance.source === "manager_statement")).toEqual([]);
+      return;
+    }
     expect(state.stated[0]!.values).toEqual({});
     expect(state.stated[0]!.checked).toEqual({});
   });

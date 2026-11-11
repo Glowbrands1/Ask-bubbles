@@ -10,7 +10,9 @@ import {
   type ReportDefinition,
 } from "@/lib/reporting/registry";
 import type { AnswerMode } from "@/types";
-import { promptCacheEnabled } from "@/lib/config/chat-quality-flags";
+import { managerNameNotEmployeeEnabled, promptCacheEnabled } from "@/lib/config/chat-quality-flags";
+import { salesExceptionSuffix, withSalesException } from "./ca-sales-prompt-lines";
+import { MANAGER_NAME_RULE } from "./manager-name-guard";
 import { CROSS_CHAT_REPLY_RULE } from "@/lib/chat/cross-chat-guard";
 import { CHAT_STYLE_RULES } from "./chat-style-rules";
 import { PRIOR_COACHING_OPTIONAL_RULES } from "./prior-coaching-optional";
@@ -335,6 +337,12 @@ export function buildSystemPrompt(input: {
   formState?: string | null;
   /** The manager's message. Below the marker when caching is on. */
   message?: string | null;
+  /**
+   * The coaching framework is among this turn's sources and
+   * FRAMEWORK_GENERAL_SECTIONS_ENABLED is on. Omitted or false leaves the
+   * prompt byte-for-byte unchanged.
+   */
+  frameworkGeneralSections?: boolean;
 }): string {
   const { assistantName, brandName, productName, locationNoun, context, mode, hasContext } = input;
   const hasReportData = input.hasReportData ?? false;
@@ -466,7 +474,7 @@ ${input.styleRules ? `${FORM_LIBRARY_DETAIL_RULES}\n` : ""}- Knowledge base docu
 
   const purpose = ASSISTANT_PURPOSE.replaceAll("{noun}", locationNoun);
   const styleSection = input.styleRules
-    ? `\n\n${CHAT_STYLE_RULES}\n\n${COACHING_CONSEQUENCE_RULES}\n\n${EMPLOYEE_FIGURE_RULES}`
+    ? `\n\n${CHAT_STYLE_RULES}\n\n${withSalesException(COACHING_CONSEQUENCE_RULES)}\n\n${EMPLOYEE_FIGURE_RULES}`
     : "";
   const priorCoachingSection = input.priorCoachingOptional ? `\n\n${PRIOR_COACHING_OPTIONAL_RULES}` : "";
   const actionPlanSection = input.actionPlanSentences ? `\n\n${ACTION_PLAN_SENTENCE_RULE}` : "";
@@ -482,7 +490,8 @@ ${input.styleRules ? `${FORM_LIBRARY_DETAIL_RULES}\n` : ""}- Knowledge base docu
 
   const userName = promptLabel(context.userName) || "a team member";
   const locationName = promptLabel(context.locationName);
-  const listener = `You are talking to ${userName}${locationName ? `, who works at ${locationName}` : ""}. ${todayLine(context.todayIso)}`;
+  // MANAGER_NAME_NOT_EMPLOYEE_ENABLED: the name is only for addressing them. See `manager-name-guard.ts`.
+  const listener = `You are talking to ${userName}${locationName ? `, who works at ${locationName}` : ""}.${managerNameNotEmployeeEnabled() ? ` ${MANAGER_NAME_RULE}` : ""} ${todayLine(context.todayIso)}`;
   const reportFigureRule = hasReportData
     ? "- Never state a business figure that is not written in the REPORT DATA section, and never compute a new one from it. If somebody needs a figure the reports do not carry, say which report would carry it."
     : "- You have NO report figures for this question. Do not state a sales figure, a count, a rate or a comparison from memory. If somebody asks for one, say the reports available to you do not cover it.";
@@ -498,7 +507,7 @@ ${input.styleRules ? `${FORM_LIBRARY_DETAIL_RULES}\n` : ""}- Knowledge base docu
   // listener stays on the first line, the mode stays on the tone line, and
   // the marker is not emitted. Chunks and name matches stay off this string.
   if (!promptCacheEnabled()) {
-    return `You are ${assistantName}, the internal assistant for ${brandName} teams. ${listener}
+    return withFrameworkGeneralSections(`You are ${assistantName}, the internal assistant for ${brandName} teams. ${listener}
 
 ${purpose}
 
@@ -518,7 +527,7 @@ ${RETRIEVED_NOT_SHARED_RULE}
 ${nameRule}${citationRule}${printedPageSection}
 ${reportFigureRule}
 - Never give medical, allergy or safety assurances about a product beyond what the provided sources say. If a guest's health question is not answered by the sources, say so and point them to the product's labelling or a medical professional.
-- A metric is a coaching signal, not a finding. Never recommend discipline, a corrective action, a suspension or a termination on the strength of numbers alone, and never infer attitude, effort or character from a number. Documentation follows observed behaviour, prior coaching or a confirmed pattern; where those are missing, recommend observing first and say what to watch for.
+- A metric is a coaching signal, not a finding. Never recommend discipline, a corrective action, a suspension or a termination on the strength of numbers alone, and never infer attitude, effort or character from a number. Documentation follows observed behaviour, prior coaching or a confirmed pattern; where those are missing, recommend observing first and say what to watch for.${salesExceptionSuffix()}
 - Keep what the person told you at the standing they gave it. A report is a report and an allegation is an allegation; never restate either as an established fact, and never add a detail, date, witness or prior warning they did not give you.
 - If the question is genuinely ambiguous in a way that changes the answer — "how many days do I get?" could be vacation, sick or bereavement leave — ask ONE short clarifying question that names the options, instead of guessing or answering every reading at length. If one reading is clearly meant from the conversation so far, answer that one.
 - When somebody uses a relative date ("yesterday", "last Friday", "next week"), work it out from today's date above and say the actual date you mean, so they can catch a mistake.
@@ -533,7 +542,7 @@ ${noMatch ? `${noMatch}\n\n` : ""}TONE
 
 ${ASSISTANT_TONE} ${MODE_INSTRUCTION[mode]}
 
-${ASSISTANT_VOICE_RULES}`;
+${ASSISTANT_VOICE_RULES}`, input.frameworkGeneralSections === true);
   }
 
   // Flag on: one static prefix. User, store, date, answer mode, the open
@@ -552,7 +561,7 @@ RULES YOU DO NOT BREAK
 ${RETRIEVED_NOT_SHARED_RULE}
 ${nameRule}${citationRule}${printedPageSection}
 - Never give medical, allergy or safety assurances about a product beyond what the provided sources say. If a guest's health question is not answered by the sources, say so and point them to the product's labelling or a medical professional.
-- A metric is a coaching signal, not a finding. Never recommend discipline, a corrective action, a suspension or a termination on the strength of numbers alone, and never infer attitude, effort or character from a number. Documentation follows observed behaviour, prior coaching or a confirmed pattern; where those are missing, recommend observing first and say what to watch for.
+- A metric is a coaching signal, not a finding. Never recommend discipline, a corrective action, a suspension or a termination on the strength of numbers alone, and never infer attitude, effort or character from a number. Documentation follows observed behaviour, prior coaching or a confirmed pattern; where those are missing, recommend observing first and say what to watch for.${salesExceptionSuffix()}
 - Keep what the person told you at the standing they gave it. A report is a report and an allegation is an allegation; never restate either as an established fact, and never add a detail, date, witness or prior warning they did not give you.
 - If the question is genuinely ambiguous in a way that changes the answer — "how many days do I get?" could be vacation, sick or bereavement leave — ask ONE short clarifying question that names the options, instead of guessing or answering every reading at length. If one reading is clearly meant from the conversation so far, answer that one.
 - When somebody uses a relative date ("yesterday", "last Friday", "next week"), work it out from today's date stated below, with who you are talking to, and say the actual date you mean, so they can catch a mistake.
@@ -595,7 +604,10 @@ ${ASSISTANT_VOICE_RULES}`;
     .filter((part) => part.length > 0)
     .join("\n\n");
 
-  return `${staticPrompt}\n\n${DYNAMIC_PROMPT_MARKER}\n${dynamicPrompt}`;
+  return withFrameworkGeneralSections(
+    `${staticPrompt}\n\n${DYNAMIC_PROMPT_MARKER}\n${dynamicPrompt}`,
+    input.frameworkGeneralSections === true,
+  );
 }
 
 /**
@@ -729,6 +741,33 @@ export function extractUsedMarkers(answer: string, validMarkers: number[]): numb
   return order;
 }
 
+const UNCOVERED_RULE =
+  '- If the sources do not cover the question, say plainly that the knowledge base does not have it, say what you would need, and stop. Do not fill the gap with plausible-sounding policy. An honest "I do not have that" is the correct answer, not a failure.';
+
+/**
+ * THE COACHING FRAMEWORK COVERS AN ISSUE IT DOES NOT NAME
+ * (FRAMEWORK_GENERAL_SECTIONS_ENABLED).
+ *
+ * "Struggling to complete production timely … complains every shift" was
+ * answered "the knowledge base doesn't have a section that matches" with the
+ * framework's root-cause, performance-vs-behavior and conversation sections in
+ * the sources (QA, conv_mvb28ztb85z53mc). The rule above read "no section
+ * names it" as "not covered". Added after that rule only when the framework is
+ * a source and the flag is on; otherwise the prompt is unchanged.
+ */
+export const FRAMEWORK_GENERAL_SECTIONS_RULE =
+  "- WHEN THE COACHING FRAMEWORK IS AMONG THE SOURCES, A PEOPLE ISSUE IT DOES NOT NAME IS STILL COVERED BY ITS GENERAL SECTIONS: root cause identification, the difference between performance issues and behavior issues, and the coaching conversation structure. Answer from those sections and cite them by their markers. Say only that no section names this exact issue; do not say the knowledge base does not have it.";
+
+function withFrameworkGeneralSections(prompt: string, on: boolean): string {
+  if (!on || !prompt.includes(UNCOVERED_RULE)) return prompt;
+  return prompt.split(UNCOVERED_RULE).join(`${UNCOVERED_RULE}\n${FRAMEWORK_GENERAL_SECTIONS_RULE}`);
+}
+
+/** The coaching framework, read from a source's title. */
+export function isCoachingFrameworkTitle(title: string): boolean {
+  return /\bperformance management framework\b/i.test(title);
+}
+
 /**
  * Strips markers from the prose before display.
  *
@@ -736,7 +775,8 @@ export function extractUsedMarkers(answer: string, validMarkers: number[]): numb
  * the existing UI renders them. Markers out of range are removed too, so a
  * model slip never reaches the manager as a dangling "[S9]".
  */
-export function stripMarkers(answer: string): string {
+export function stripMarkers(answer: string, options: { readonly tidy?: boolean } = {}): string {
+  if (options.tidy) return stripMarkersTidily(normalizeMarkers(answer));
   /*
    * "[S2][S3]" — the adjacent form the prompt itself asks for — used to keep
    * its first marker: the lookahead after "[S2]" did not allow a "[", so only
@@ -744,6 +784,39 @@ export function stripMarkers(answer: string): string {
    */
   return normalizeMarkers(answer)
     .replace(/\s*\[S\d{1,2}\](?=[\s.,;:!?)\[]|$)/g, "")
+    .replace(/[^\S\n]{2,}/g, " ")
+    .trim();
+}
+
+/*
+ * REMOVING A MARKER NEVER LEAVES ITS GRAMMAR BEHIND (REFORMAT_KEEPS_SOURCES_ENABLED).
+ *
+ * "I cited two markers, [S6] and [S7], that are not valid sources" became
+ * "I cited two markers, and, that are not valid sources" (QA, sibling app).
+ * A run of markers joined by commas, "and", "or" or "&" is one group and goes
+ * as one; a group between two commas takes the commas, a group in brackets
+ * takes the brackets, and the word it was read through ("see [S2]", "per
+ * [S1]") goes with it. "[S2][S3]" goes whole. A list item left with nothing
+ * but its bullet is dropped.
+ */
+const MARKER = String.raw`\[S\d{1,2}\]`;
+const MARKER_GROUP = String.raw`${MARKER}(?:[^\S\n]*(?:,[^\S\n]*(?:and|or)[^\S\n]+|,|;|&|and[^\S\n]+|or[^\S\n]+)?[^\S\n]*${MARKER})*`;
+const AFTER_GROUP = String.raw`(?=[\s.,;:!?)]|$)`;
+
+function stripMarkersTidily(answer: string): string {
+  const group = (pattern: string) => new RegExp(pattern, "gi");
+  return answer
+    .replace(group(String.raw`[^\S\n]*\([^\S\n]*(?:(?:see|per|from|in)[^\S\n]+)?${MARKER_GROUP}[^\S\n]*\)`), "")
+    .replace(group(String.raw`[^\S\n]*,[^\S\n]*${MARKER_GROUP}[^\S\n]*,`), "")
+    .replace(group(String.raw`[^\S\n]+(?:at|see|on|in|per|from|under)[^\S\n]+${MARKER_GROUP}${AFTER_GROUP}`), "")
+    .replace(group(String.raw`[^\S\n]*${MARKER_GROUP}${AFTER_GROUP}`), "")
+    .replace(/[^\S\n]+([,.;:!?)])/g, "$1")
+    .replace(/,(?=[.;:!?])/g, "")
+    .replace(/,{2,}/g, ",")
+    .replace(/\([^\S\n]*\)/g, "")
+    .split("\n")
+    .filter((line) => !/^[^\S\n]*(?:[-*•]|\d{1,2}[.)])[^\S\n]*[.,;:]?[^\S\n]*$/.test(line))
+    .join("\n")
     .replace(/[^\S\n]{2,}/g, " ")
     .trim();
 }

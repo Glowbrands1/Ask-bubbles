@@ -122,6 +122,25 @@ export interface CallClaudeInput {
    * so a later policy question can read it back instead of sending it again.
    */
   readonly cachedContext?: string | null;
+  /**
+   * FORM_EDIT_TOOL_IN_STREAM_ENABLED (Step 3): the one tool this call is
+   * offered while a draft form is open (`tool_choice: auto`), and its DATA
+   * block — the open form as JSON and the scoped staff — sent just before the
+   * question. A tool call is handed to `onToolUse` once; the call is not
+   * continued (no tool result goes back), and its text may then be empty.
+   * Absent, the request is exactly as before.
+   */
+  readonly formEditTool?: {
+    readonly tool: { readonly name: string; readonly description: string; readonly input_schema: { readonly type: "object" } & Record<string, unknown> };
+    readonly data: string;
+    readonly onToolUse: (input: unknown) => void;
+  } | null;
+  /**
+   * CHAT_GLOSSARY_ENABLED: the approved abbreviation table (`ai/glossary.ts`),
+   * one more context block just before the question. Absent, the request is
+   * exactly as before.
+   */
+  readonly glossary?: string | null;
 }
 
 /**
@@ -231,10 +250,18 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
                 ...(input.formsLibrary ? [input.formsLibrary] : []),
                 ...(input.verifiedRecords ? [input.verifiedRecords] : []),
                 ...(input.formRecords ? [input.formRecords] : []),
+                ...(input.formEditTool ? [input.formEditTool.data] : []),
+                ...(input.glossary ? [input.glossary] : []),
                 `QUESTION\n\n${input.question}`,
               ].join("\n\n"),
             },
           ],
+          ...(input.formEditTool
+            ? {
+                tools: [{ ...input.formEditTool.tool, input_schema: { ...input.formEditTool.tool.input_schema } }],
+                tool_choice: { type: "auto" as const },
+              }
+            : {}),
         };
         // The live client always has messages.stream. Streaming with the
         // flags off would change production on merge, so stream only when a
@@ -252,8 +279,17 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
         running.on("text", () => {
           if (firstTokenMs === null) firstTokenMs = Date.now() - attemptStarted;
         });
+        // FORM_EDIT_TOOL_IN_STREAM_ENABLED: a tool call's input arrives as input_json_delta; kept per block.
+        const toolJson = new Map<number, string>();
+        if (input.formEditTool) {
+          running.on("streamEvent", (event) => {
+            if (event.type === "content_block_delta" && event.delta.type === "input_json_delta") {
+              toolJson.set(event.index, (toolJson.get(event.index) ?? "") + event.delta.partial_json);
+            }
+          });
+        }
         const streamed = await running.finalMessage();
-        return Object.assign(streamed, { firstTokenMs });
+        return Object.assign(streamed, { firstTokenMs, ...(input.formEditTool ? { toolJson } : {}) });
       },
       `${ACTIVE_BRAND.assistantName} ran out of room before finishing that answer, so it was not shown. Try asking for less at once, or split the question into parts.`,
     );
@@ -280,6 +316,13 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
       .map((block) => block.text)
       .join("\n")
       .trim();
+
+    /* FORM_EDIT_TOOL_IN_STREAM_ENABLED: the offered tool's call, if the model made one. Its text may be empty. */
+    const toolCalled = input.formEditTool ? handToolUse(response, input.formEditTool) : false;
+    if (toolCalled) {
+      noteModelCall(noted);
+      return text;
+    }
 
     if (!text) {
       noteModelCall({ ...noted, subtype: "empty_answer" });
@@ -318,6 +361,36 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
       502,
     );
   }
+}
+
+/**
+ * The offered tool's first `tool_use` block, handed to `onToolUse`. Its input
+ * is the block's own (the SDK's parse); when that is empty and the stream
+ * carried the block's input_json_delta, the deltas are read instead. True
+ * when a call was handed over.
+ */
+function handToolUse(
+  response: { readonly content: readonly { readonly type: string }[]; readonly toolJson?: ReadonlyMap<number, string> },
+  offered: NonNullable<CallClaudeInput["formEditTool"]>,
+): boolean {
+  for (const [index, block] of response.content.entries()) {
+    if (block.type !== "tool_use") continue;
+    const use = block as { readonly name?: unknown; readonly input?: unknown };
+    if (use.name !== offered.tool.name) continue;
+    let toolInput = use.input;
+    const empty = toolInput === null || toolInput === undefined || (typeof toolInput === "object" && Object.keys(toolInput).length === 0);
+    const streamed = response.toolJson?.get(index);
+    if (empty && streamed) {
+      try {
+        toolInput = JSON.parse(streamed);
+      } catch {
+        toolInput = null;
+      }
+    }
+    offered.onToolUse(toolInput);
+    return true;
+  }
+  return false;
 }
 
 /**
@@ -436,4 +509,70 @@ function logAnthropicFailure(error: unknown): void {
   console.error(
     `[callClaude] Anthropic request failed: ${detail} model=${JSON.stringify(CLAUDE_MODEL)} effort=${JSON.stringify(CLAUDE_EFFORT)}`,
   );
+}
+
+/**
+ * AI_READS_CODE_CHECKS_ENABLED: `callClaudeTool` with a hard time limit and
+ * the token usage, for a caller that falls back to its own readers when the
+ * model is slow (ported from the sibling app, same contract). No retry: a
+ * retry would outlive the limit. Nothing from the SDK escapes.
+ */
+export async function callClaudeToolTimed(input: Parameters<typeof callClaudeTool>[0] & { readonly timeoutMs: number }): Promise<{
+  readonly input: unknown;
+  readonly usage: { readonly inputTokens: number; readonly outputTokens: number; readonly cacheReadTokens: number; readonly cacheWriteTokens: number };
+}> {
+  const client = getAnthropicClient();
+  const messages = input.messages.filter((message) => message.content.trim() !== "");
+  try {
+    const response = await client.messages.create(
+      {
+        model: input.model,
+        max_tokens: input.maxTokens,
+        system: input.system,
+        tools: [
+          {
+            name: input.tool.name,
+            description: input.tool.description,
+            input_schema: {
+              type: "object" as const,
+              properties: (input.tool.input_schema.properties ?? {}) as Record<string, unknown>,
+              required: input.tool.input_schema.required ? [...input.tool.input_schema.required] : undefined,
+              additionalProperties: input.tool.input_schema.additionalProperties,
+            },
+          },
+        ],
+        tool_choice: { type: "tool" as const, name: input.tool.name },
+        messages: messages.map((message) => ({ role: message.role, content: message.content })),
+      },
+      { timeout: input.timeoutMs, maxRetries: 0 },
+    );
+    const block = response.content.find((item) => item.type === "tool_use");
+    if (!block || block.type !== "tool_use") {
+      throw new AiError("model_failed", `${ACTIVE_BRAND.assistantName} could not reach the language model. No answer was generated.`, 502);
+    }
+    const usage = response.usage as
+      | { input_tokens?: number; output_tokens?: number; cache_read_input_tokens?: number | null; cache_creation_input_tokens?: number | null }
+      | undefined;
+    return {
+      input: block.input,
+      usage: {
+        inputTokens: usage?.input_tokens ?? 0,
+        outputTokens: usage?.output_tokens ?? 0,
+        cacheReadTokens: usage?.cache_read_input_tokens ?? 0,
+        cacheWriteTokens: usage?.cache_creation_input_tokens ?? 0,
+      },
+    };
+  } catch (error) {
+    if (error instanceof AiError) throw error;
+    if (error instanceof MissingConfigurationError) throw error;
+    // The reader falls back to today's readers; this says why (status and type only, never the request).
+    console.warn(`ai.reader: the model call failed (${describeCallError(error)}); the turn runs on today's readers`);
+    throw new AiError("model_failed", `${ACTIVE_BRAND.assistantName} could not reach the language model. No answer was generated.`, 502);
+  }
+}
+
+function describeCallError(error: unknown): string {
+  const record = (error && typeof error === "object" ? error : {}) as { status?: unknown; name?: unknown; error?: { type?: unknown } };
+  const parts = [typeof record.status === "number" ? `HTTP ${record.status}` : null, typeof record.error?.type === "string" ? record.error.type : typeof record.name === "string" ? record.name : null];
+  return parts.filter(Boolean).join(" ") || "unknown error";
 }

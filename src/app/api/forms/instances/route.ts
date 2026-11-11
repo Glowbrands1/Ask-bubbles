@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 
+import { sameRequestReadConversation } from "@/lib/forms/same-request-other-person";
+import { switchReadConversation } from "@/lib/ai/form-type-switch";
+import { typoReadingText, typoReadingTurns } from "@/lib/ai/typo-reading-copy";
+import { protectedNameWords } from "@/lib/ai/typo-name-words";
 import { isHiddenTemplate } from "@/config/company/forms/hidden";
 import { locationById as salonById } from "@/lib/locations";
 
@@ -22,18 +26,21 @@ import { instanceListFilterFor, visibleInstances } from "@/lib/forms/instance-sc
 import { authorizeLocation } from "@/lib/forms/location-scope";
 import { isProposalId } from "@/lib/forms/proposal-id";
 import { checkProposalIsCurrent } from "@/lib/forms/proposal-currency";
+import { preferredNamesOf } from "@/lib/forms/preferred-name-current";
+import { looseRosterFor } from "@/lib/forms/loose-name";
+import { rosterNamesFor } from "@/lib/forms/roster-names";
 import { allowsTeamSubject, isTeamSubject } from "@/lib/forms/team-subject";
 import { isDemoMode } from "@/lib/config/runtime";
 import { getTemplateByKey } from "@/lib/forms/repository";
 import {
   isPayrollDeductAnswer,
   PAYROLL_DEDUCT_STATED_KEYS,
-  payrollDeductAmount,
   payrollDeductChecked,
 } from "@/lib/forms/payroll-deduct";
 import {
   PAYROLL_DEDUCT_AMOUNT_KEY,
   PAYROLL_DEDUCT_AMOUNT_STATED_KEYS,
+  managerPayrollAmount,
 } from "@/lib/forms/payroll-deduct-amount";
 import {
   WARNING_LEVEL_STATED_KEYS,
@@ -46,11 +53,15 @@ import { checkboxGroupsForVariant, parseFormDocument } from "@/lib/forms/documen
 import { businessToday } from "@/lib/business-date";
 import {
   conversationDraftReuseEnabled,
+  draftReuseSameChatOnlyEnabled,
   crossChatDraftDedupeEnabled,
   draftActionsEnabled,
   draftDedupeEnabled,
   payrollDeductAmountFieldEnabled,
+  typoReadingRoutesEnabled,
+  checkedReadingEnabled,
 } from "@/lib/config/chat-quality-flags";
+import { readerNamesCardEmployee, recheckCardReading, turnsOf } from "@/lib/ai/reader/recheck";
 import { incidentFingerprint } from "@/lib/forms/incident-key";
 import {
   findAccountResentDraft,
@@ -58,6 +69,7 @@ import {
   findResentDraft,
   rememberDraftIncident,
 } from "@/lib/forms/draft-reopen";
+import type { SameChat } from "@/lib/forms/draft-same-chat";
 import { historyWantsSeparateDocument } from "@/lib/ai/second-form";
 import {
   applyTurnsSinceDraft,
@@ -67,7 +79,9 @@ import {
   noteConversationDraft,
 } from "@/lib/forms/conversation-draft";
 import { historySaysDifferentIncident } from "@/lib/forms/draft-actions";
+import { newRequestSinceDraft } from "@/lib/forms/new-request-turns";
 import type { Permission } from "@/types";
+import { privateAwareLimit, privateCreatorsActive } from "@/lib/forms/private-creators";
 
 /**
  * GET    /api/forms/instances   Form Monitoring's history, and what a demo
@@ -122,10 +136,11 @@ export async function GET(request: Request) {
      * predicate re-checks what is returned, and the predicate is the one that
      * fails closed if they ever drift.
      */
+    // PRIVATE_CREATOR_FORMS: over-read, then trim to the default page of 200; off, as before.
     const instances = visibleInstances(
       actor,
-      await listInstances(view, undefined, instanceListFilterFor(actor)),
-    );
+      await listInstances(view, privateCreatorsActive() ? privateAwareLimit(200) : undefined, instanceListFilterFor(actor)),
+    ).slice(0, 200);
 
     // The sweep's shape is returned alongside so the screen can say "Delete 5
     // demo forms" with a real number rather than counting what it happens to
@@ -167,6 +182,8 @@ export async function POST(request: Request) {
       conversationId?: unknown;
       /** The card's id: a repeated press of the same card returns its draft. */
       proposalId?: unknown;
+      /** AI_READS_CODE_CHECKS_ENABLED: the card's checked reading, checked again here. */
+      checkedReading?: unknown;
     } | null;
 
     if (!body?.templateKey || !body.employeeName?.trim()) {
@@ -220,12 +237,22 @@ export async function POST(request: Request) {
      * `lib/forms/proposal-currency.ts`.
      */
     if (body.source === "assistant" && Array.isArray(body.conversation)) {
+      // PREFERRED_NAME_CARD_CURRENT_ENABLED: "kit dovetail" is the card's Katrin Dovetail when the manager's roster says Kit is her preferred name. Off: none, and no roster read.
+      const alsoCalled = await preferredNamesOf(actor.scope, body.employeeName);
       const currency = checkProposalIsCurrent({
-        conversation: parseHistory(body.conversation),
+        // FORM_TYPE_SWITCH_ENABLED: "change to coaching" is read as the chat read it, so the switched card is current.
+        // SAME_REQUEST_OTHER_PERSON_ENABLED: "the same thing for <B>" is read from that turn on, as the chat read it.
+        conversation: sameRequestReadConversation(switchReadConversation(parseHistory(body.conversation))),
         templateKey: body.templateKey,
         employeeName: body.employeeName,
+        alsoCalled,
+        // PARTIAL_NAME_LOOSE_MATCH_ENABLED: "marisol co" is the card's Marisol Camarillo when nobody else on the roster fits. Off: undefined, no roster read.
+        looseRoster: await looseRosterFor(actor.scope),
+        // STALE_NEEDS_ROSTER_PERSON_ENABLED: "drop wage" and "forfeit bonus" are not more people. Off: undefined, and no roster read.
+        rosterNames: await rosterNamesFor(actor.scope),
       });
-      if (!currency.current) {
+      // AI_READS_CODE_CHECKS_ENABLED: "Marlowe, Quinn" read as "Marlowe" is the card's Quinn Marlowe when the reader's quote says so.
+      if (!currency.current && !readerSamePerson(body, currency.resolvedName)) {
         return NextResponse.json({ error: currency.reason, code: "proposal_superseded" }, { status: 409 });
       }
     }
@@ -258,6 +285,26 @@ export async function POST(request: Request) {
     const locationName = resolveLocationName(locationId, body.locationName ?? null);
 
     /*
+     * DRAFT_REUSE_SAME_CHAT_ONLY_ENABLED. Every lookup below that hands back
+     * an existing draft keeps only a draft this chat made (`sameChat`), the
+     * chat's own draft is not reused for a card dated differently, every new
+     * chat draft records its chat, and a reuse tells the card the draft's
+     * date (`reused`). See `draft-same-chat.ts`.
+     */
+    const sameChatOnly = body.source === "assistant" && draftReuseSameChatOnlyEnabled();
+    const chatKey = sameChatOnly
+      ? conversationKeyOf({ conversationId: body.conversationId, conversation: body.conversation })
+      : null;
+    const sameChat: SameChat | undefined = sameChatOnly ? { conversationKey: chatKey } : undefined;
+    const cardDate = isIsoCalendarDate(body.formDate) ? body.formDate : null;
+    const reused = (instance: { formDate?: string | null }) =>
+      NextResponse.json({
+        instance,
+        reused: true,
+        ...(sameChatOnly && instance.formDate ? { reusedFrom: instance.formDate } : {}),
+      });
+
+    /*
      * ONE DRAFT PER CARD. A press of a card whose create already succeeded —
      * the response was lost, or the card was pressed in another tab — returns
      * that draft instead of filing a second record. A new card (a new request,
@@ -273,7 +320,7 @@ export async function POST(request: Request) {
         locationId,
         proposalId,
       });
-      if (existing) return NextResponse.json({ instance: existing, reused: true });
+      if (existing) return reused(existing);
     }
 
     /*
@@ -319,7 +366,9 @@ export async function POST(request: Request) {
             return row.role === "user" && typeof row.content === "string" ? [row.content] : [];
           })
           .join("\n");
-        const amount = payrollDeductAmount(said);
+        // TYPO_READING_ROUTES_ENABLED: the reader sees "dedcut" as deduct; the stored conversation stays as typed.
+        // AI_READS_CODE_CHECKS_ENABLED: an amount the reader quoted, checked again against these turns.
+        const amount = managerPayrollAmount(await readingText(said)) ?? readerAmount(card);
         if (amount) {
           await applyStatedFacts(
             instanceId,
@@ -344,7 +393,8 @@ export async function POST(request: Request) {
         isWarningLevel(card.warningLevel) &&
         card.source === "assistant" &&
         Array.isArray(card.conversation) &&
-        warningLevelFromConversation(parseHistory(card.conversation), businessToday()) === card.warningLevel
+        (warningLevelFromConversation(await readingTurns(parseHistory(card.conversation)), businessToday()) === card.warningLevel ||
+          readerWarningLevel(card) === card.warningLevel)
           ? card.warningLevel
           : null;
       if (warningLevel) {
@@ -391,8 +441,13 @@ export async function POST(request: Request) {
         employeeName: body.employeeName.trim().slice(0, 120),
         conversationKey: draftChat,
         turns: chatTurns,
+        ...(sameChatOnly && cardDate ? { formDate: cardDate } : {}),
       }).catch(() => null);
-      if (same) {
+      // DRAFT_REUSE_NEW_REQUEST_ENABLED: a new request for this person since that draft is its own draft.
+      const newRequest =
+        same !== null &&
+        newRequestSinceDraft({ turns: chatTurns, lastTurnId: same.lastTurnId, employeeName: body.employeeName.trim().slice(0, 120) });
+      if (same && !newRequest) {
         /*
          * The facts said since that draft was made, then this card's own
          * stated answers where the draft is still blank — never over a value.
@@ -406,7 +461,7 @@ export async function POST(request: Request) {
         }).catch(() => undefined);
         await applyCardFacts(String(same.instance.id)).catch(() => undefined);
         const updated = await loadInstance(String(same.instance.id)).catch(() => null);
-        return NextResponse.json({ instance: updated?.instance ?? same.instance, reused: true });
+        return reused(updated?.instance ?? same.instance);
       }
     }
 
@@ -429,8 +484,9 @@ export async function POST(request: Request) {
         employeeName: body.employeeName.trim().slice(0, 120),
         createdBy: actor.id,
         incidentKey,
+        ...(sameChat ? { sameChat } : {}),
       });
-      if (resent) return NextResponse.json({ instance: resent, reused: true });
+      if (resent) return reused(resent);
     }
 
     /*
@@ -450,8 +506,9 @@ export async function POST(request: Request) {
         locationId,
         incident: account,
         formDate: isIsoCalendarDate(body.formDate) ? body.formDate : null,
+        ...(sameChat ? { sameChat } : {}),
       });
-      if (narrative) return NextResponse.json({ instance: narrative, reused: true });
+      if (narrative) return reused(narrative);
     }
 
     /*
@@ -472,8 +529,9 @@ export async function POST(request: Request) {
         templateKey: body.templateKey,
         employeeName: body.employeeName.trim().slice(0, 120),
         formDate: crossChatDate,
+        ...(sameChat ? { sameChat } : {}),
       });
-      if (open) return NextResponse.json({ instance: open, reused: true });
+      if (open) return reused(open);
     }
 
     const instance = await createInstance({
@@ -491,9 +549,13 @@ export async function POST(request: Request) {
       proposalId,
     });
     /* A concurrent press of the same card: its row, as it already is. See `cardInstanceId`. */
-    if (instance.reused) return NextResponse.json({ instance, reused: true });
+    if (instance.reused) return reused(instance);
     if (draftChat) {
       await noteConversationDraft(String(instance.id), draftChat, lastManagerTurnId(chatTurns)).catch(() => undefined);
+    } else if (chatKey) {
+      // Same chat only: the draft records its chat even with CONVERSATION_DRAFT_REUSE_ENABLED off.
+      const turns = Array.isArray(body.conversation) ? parseHistory(body.conversation) : [];
+      await noteConversationDraft(String(instance.id), chatKey, lastManagerTurnId(turns)).catch(() => undefined);
     }
 
     if (incidentKey) {
@@ -617,4 +679,47 @@ function resolveLocationName(
   const rostered = salonById(locationId)?.name ?? null;
   if (!isDemoMode()) return rostered;
   return requested ?? rostered;
+}
+
+/**
+ * TYPO_READING_ROUTES_ENABLED: the manager's words as the payroll-amount and
+ * warning-level readers above see them, each typo read as the one known word
+ * it can only be (`ai/typo-reading-copy.ts`). Only those readers get it; the
+ * conversation stored and compared elsewhere in this route is the raw one.
+ * Off, as given.
+ */
+async function readingText(text: string): Promise<string> {
+  if (!typoReadingRoutesEnabled()) return text;
+  return typoReadingText(text, await protectedNameWords());
+}
+
+async function readingTurns<T extends { role: string; content: string }>(turns: T[]): Promise<T[]> {
+  if (!typoReadingRoutesEnabled()) return turns;
+  return typoReadingTurns(turns, await protectedNameWords());
+}
+
+/*
+ * AI_READS_CODE_CHECKS_ENABLED: a value the chat's reader took from the
+ * manager's words, accepted here only when its quote is still in the manager
+ * turns this request carries (`ai/reader/recheck.ts`). Off, nothing.
+ */
+function readerChecks(card: { checkedReading?: unknown; conversation?: unknown }) {
+  if (!checkedReadingEnabled() || !card.checkedReading) return null;
+  return recheckCardReading(card.checkedReading, turnsOf(card.conversation), businessToday());
+}
+
+function readerWarningLevel(card: { checkedReading?: unknown; conversation?: unknown }): string | null {
+  return readerChecks(card)?.warningLevel ?? null;
+}
+
+function readerAmount(card: { checkedReading?: unknown; conversation?: unknown }): string | null {
+  return readerChecks(card)?.payrollAmount ?? null;
+}
+
+function readerSamePerson(
+  card: { checkedReading?: unknown; conversation?: unknown; employeeName?: string },
+  resolvedName: string | undefined,
+): boolean {
+  if (!checkedReadingEnabled() || !card.checkedReading || !resolvedName || !card.employeeName) return false;
+  return readerNamesCardEmployee(card.checkedReading, turnsOf(card.conversation), card.employeeName, resolvedName);
 }

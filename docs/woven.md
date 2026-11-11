@@ -105,6 +105,30 @@ the API's schema but **not yet observed live** for this company.
 5. Review the location and position mappings on the Woven screen.
 6. Optionally `WOVEN_ACCESS_MODE=shadow` to record the access plan each run.
 
+### New hires invited one at a time (built 28 Oct 2026; OFF)
+
+Pau, 28 Oct 2026: new hires get their access link without an administrator,
+never in a batch — the mailer allows two emails an hour. No migration; the
+Woven sync itself still never creates an account. Switches, all closed by
+default (`src/lib/admin/new-hire-invites.ts`):
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `NEW_HIRE_INVITES_ENABLED` | off | Master switch. Off: the hourly route answers `disabled` and reads nothing. |
+| `NEW_HIRE_INVITE_SINCE` | unset | `YYYY-MM-DD`. Only people whose Woven hire date is on or after it (and not after today) are new hires. |
+| `NEW_HIRE_INVITE_ROLES` | empty | Which approved provisioning roles get the automatic link (`location_manager`, `assistant_manager`, `employee`). Empty: nobody. |
+| `NEW_HIRE_INVITES_PER_HOUR` | 1 | `1` or `2`; anything else is 1. |
+| `NEW_HIRE_INVITE_ACTOR` | unset | Email of an active administrator with all-locations access; accounts are made in their name. |
+
+`GET /api/employees/woven/invites/cron` (hourly, minute 29, `CRON_SECRET`):
+while the access guards allow changes, the plan's READY employees (the bulk
+provisioning's rule) who are new hires in a named role, oldest hire first; for
+at most `NEW_HIRE_INVITES_PER_HOUR` of them the account is created by its
+invitation (`createLinkedAccount` with `invite`: active, `invited`, Supabase
+emails the link) and linked to Woven. The mailer's limit stops the hour and
+creates nothing for that person. Everybody hired before the date is left to
+an administrator (User Management, or the bulk provisioning).
+
 ### Decisions Buff needs to make
 
 - Which Woven positions map to which Ask Bubbles roles

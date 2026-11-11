@@ -24,9 +24,14 @@ import { instanceRefFor, isProposalSuperseded, proposalsOf } from "@/lib/forms/p
 import type { ChatFormInstanceRef, ChatFormProposal, ChatMessage } from "@/types";
 import { chatErrorTitle } from "./chat-error";
 import { FormPicker } from "./form-picker";
+import { CardChangePanel } from "./card-change-panel";
 import { logTurnEvent } from "@/lib/analytics/telemetry";
+import { reusedDraftNotice } from "@/lib/forms/reused-draft-notice";
+
 import { DRAFT_FAILED_WARNING, createInlineForm } from "./create-inline-form";
 import { InlineForm, type PrefillState } from "./inline-form";
+import { FormRevisionsMount } from "@/form-revisions/form-revisions-mount";
+import { teamCardNoPositionEnabled } from "@/lib/config/chat-quality-flags";
 
 export function MessageBubble({
   message,
@@ -201,6 +206,7 @@ export function MessageBubble({
               ) : null}
             </React.Fragment>
           ))}
+          <CardChangePanel proposal={proposalsOf(message).length === 1 ? proposalsOf(message)[0] : null} created={proposalsOf(message).some((proposal) => instanceRefFor(message, proposal.proposalId))} conversation={conversation ?? []} placeLabel={LOCATION_LABEL} onSend={onSuggestion} />
           {proposalsOf(message).length === 0 && message.formInstanceRef ? (
             /*
               A FORM ALREADY ON FILE, OPENED BY THIS TURN — "edit the exit
@@ -208,12 +214,17 @@ export function MessageBubble({
               proposal: the form existed before this answer. The card is the
               same live editor a created form gets.
             */
-            <InlineForm
+            <FormRevisionsMount
               reference={message.formInstanceRef}
-              prefill={OPENED_PREFILL}
               onReplaced={(reference) => onFormCreated?.(message.id, reference)}
-              onStartAnother={onStartAnother}
-            />
+            >
+              <InlineForm
+                reference={message.formInstanceRef}
+                prefill={OPENED_PREFILL}
+                onReplaced={(reference) => onFormCreated?.(message.id, reference)}
+                onStartAnother={onStartAnother}
+              />
+            </FormRevisionsMount>
           ) : null}
 
           {/*
@@ -381,6 +392,12 @@ function FormProposalCard({
    */
   const [created, setCreated] = React.useState<ChatFormInstanceRef | null>(null);
   /*
+   * CREATE REOPENED THIS CHAT'S OPEN DRAFT (DRAFT_REUSE_SAME_CHAT_ONLY_ENABLED):
+   * its date, said on the card so the manager knows no new draft was filed.
+   * The server sends it only with the flag on.
+   */
+  const [reusedFrom, setReusedFrom] = React.useState<string | null>(null);
+  /*
    * WHICH LOCATION, WHEN THE ACTOR COVERS SEVERAL.
    *
    * Offered by the registered store's name and number, from the roster; only
@@ -505,6 +522,7 @@ function FormProposalCard({
        * what appears is what the server stored rather than what the drafting
        * response happened to return.
        */
+      if (result.reusedFrom) setReusedFrom(result.reusedFrom);
       if (result.draftWarning) {
         /*
          * THE ROW EXISTS AND THE PREFILL DID NOT. Said on the card, and said in
@@ -558,24 +576,36 @@ function FormProposalCard({
     }
   }
 
+  const reusedNote = reusedFrom ? (
+    <p data-testid="reused-draft-note" className="mt-2 text-xs leading-relaxed text-muted-foreground">
+      {reusedDraftNotice(reusedFrom)}
+    </p>
+  ) : null;
+
   const reference = instanceRef ?? created;
+  const replaced = (next: ChatFormInstanceRef) => {
+    setCreated(next);
+    onCreated(next);
+  };
   if (reference) {
     return (
-      <InlineForm
-        reference={reference}
-        prefill={prefill}
-        onStartAnother={onStartAnother}
-        /*
-          "Edit as new draft" on a finalized form: the card now points at the
-          new draft, persisted on this message the same way the created form
-          was (`withInstanceRef`, by this card's proposal id), so a refresh
-          reopens the draft rather than the frozen original.
-        */
-        onReplaced={(next) => {
-          setCreated(next);
-          onCreated(next);
-        }}
-      />
+      <>
+        {reusedNote}
+        <FormRevisionsMount reference={reference} onReplaced={replaced}>
+        <InlineForm
+          reference={reference}
+          prefill={prefill}
+          onStartAnother={onStartAnother}
+          /*
+            "Edit as new draft" on a finalized form: the card now points at the
+            new draft, persisted on this message the same way the created form
+            was (`withInstanceRef`, by this card's proposal id), so a refresh
+            reopens the draft rather than the frozen original.
+          */
+          onReplaced={replaced}
+        />
+        </FormRevisionsMount>
+      </>
     );
   }
 
@@ -603,7 +633,9 @@ function FormProposalCard({
             <Missing>Not yet — tell Bubbles who this form is about</Missing>
           )}
         </ProposalRow>
-        {proposal.employeeRole || POSITION_FORMS.has(proposal.templateKey) ? (
+        {/* NEXT_PUBLIC_TEAM_CARD_NO_POSITION_ENABLED: the team card is for "All team members", who have no one position (QA, 3 Nov 2026). */}
+        {!(teamCardNoPositionEnabled() && proposal.subject === "team") &&
+        (proposal.employeeRole || POSITION_FORMS.has(proposal.templateKey)) ? (
           <ProposalRow label="Position">
             {proposal.employeeRole ? (
               <>

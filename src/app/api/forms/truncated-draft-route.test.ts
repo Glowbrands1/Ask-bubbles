@@ -108,28 +108,40 @@ vi.mock("@/lib/knowledge", () => ({
   },
 }));
 
-vi.mock("@/lib/forms/instances", () => ({
-  applyStatedFacts: async (
-    _id: string,
-    stated: { values: Record<string, string>; checked: Record<string, string[]> },
-    _actor: string,
-    keys?: ReadonlySet<string>,
-  ) => {
-    state.stated.push({ values: stated.values, checked: stated.checked, keys });
-    return [...Object.keys(stated.values), ...Object.keys(stated.checked)];
-  },
-  applyAssistantDraft: async (
-    _id: string,
-    draft: { values: Record<string, string>; checked: Record<string, string[]> },
-  ) => {
-    state.persisted.push({ values: draft.values ?? {}, checked: draft.checked ?? {} });
-    return {
-      accepted: { values: draft.values ?? {}, checked: draft.checked ?? {} },
-      rejected: [],
-      policyRefused: [],
-    };
-  },
-}));
+/*
+ * FORM_EDIT_SINGLE_WRITER_ENABLED: the one writer (`form-write.ts`) reads the form
+ * before and after it writes, so this mock also has a `loadInstance` that returns
+ * the form as the writers below saved it (`src/test/forms/saved-form-instances.ts`).
+ */
+vi.mock("@/lib/forms/instances", async () =>
+  (await import("@/test/forms/saved-form-instances")).savedFormInstances(
+    {
+      applyStatedFacts: async (
+        _id: string,
+        stated: { values: Record<string, string>; checked: Record<string, string[]> },
+        _actor: string,
+        keys?: ReadonlySet<string>,
+      ) => {
+        state.stated.push({ values: stated.values, checked: stated.checked, keys });
+        return [...Object.keys(stated.values), ...Object.keys(stated.checked)];
+      },
+      applyAssistantDraft: async (
+        _id: string,
+        draft: { values: Record<string, string>; checked: Record<string, string[]> },
+      ) => {
+        state.persisted.push({ values: draft.values ?? {}, checked: draft.checked ?? {} });
+        return {
+          accepted: { values: draft.values ?? {}, checked: draft.checked ?? {} },
+          rejected: [],
+          policyRefused: [],
+        };
+      },
+    },
+    async (id) =>
+      (await (await import("@/lib/forms/instance-scope")).authorizeInstance(new Request("http://localhost/api/forms"), id, "view")).loaded,
+  ),
+);
+beforeEach(async () => (await import("@/test/forms/saved-form-instances")).resetSavedForms());
 
 vi.mock("@/lib/ai/anthropic", () => ({
   getAnthropicClient: () => ({

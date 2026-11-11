@@ -1,0 +1,7 @@
+{
+  "src/lib/forms/roster-name-in-candidate.test.ts :: ROSTER_NAME_IN_CANDIDATE_ENABLED: a candidate ending in a roster person's name could be them off: \"When Odessa\" is shaped like nobody (as before)": {
+    "category": "INTENDED-HARNESS",
+    "twin": "itself with the flag off (CI default)",
+    "reason": "The flag's own off-pin: it checks the behavior with ROSTER_NAME_IN_CANDIDATE_ENABLED off, so it fails when the gate forces the flag on in every child test. It passes with the flag off, the state it pins."
+  }
+}

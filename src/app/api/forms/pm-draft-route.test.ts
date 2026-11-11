@@ -1,7 +1,16 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { parseFormDocument } from "@/lib/forms/document";
 import { TEMPLATE_SEEDS } from "@/lib/forms/library";
+
+/*
+ * CHANGED ON PURPOSE, Corrective Action revision 7 (client request, template
+ * approved 4 Nov 2026): expectations on the current form read its four boxes.
+ * Tardiness/Leaving Early and Absenteeism are Attendance Policy; Under
+ * Performance and Violation of Company Policies are Standards of Conduct.
+ * Forms filed on revision 6 keep their boxes: see
+ * `src/lib/forms/offense-revision-7.test.ts`.
+ */
 
 vi.mock("@/config/company/locations", async () =>
   (await import("@/test/fixtures/reference-roster")).referenceRosterModule(),
@@ -63,6 +72,10 @@ const state = vi.hoisted(() => ({
   policyManual: null as unknown,
   /** The role recorded on the instance. Decides which section of a split. */
   employeeRole: null as string | null,
+  /** The employee on the record, when a test names one (default: the synthetic Jordan Vance). */
+  employeeName: null as string | null,
+  /** One tool input per model call, in order, when set (the last repeats); otherwise `toolInput`. */
+  toolInputs: [] as Record<string, unknown>[],
 }));
 
 vi.mock("@/lib/api/respond", () => ({
@@ -97,7 +110,7 @@ vi.mock("@/lib/forms/instance-scope", () => ({
           templateName: seed.name,
           layoutFamily: seed.layoutFamily,
           variantKey: seed.variants[0]?.key ?? null,
-          employeeName: "Jordan Vance (test)",
+          employeeName: state.employeeName ?? "Jordan Vance (test)",
           employeeRole: state.employeeRole,
           locationName: "MO Kansas City Wornall",
           /*
@@ -147,34 +160,46 @@ vi.mock("@/lib/knowledge", () => ({
   },
 }));
 
-vi.mock("@/lib/forms/instances", () => ({
-  applyStatedFacts: async (
-    _id: string,
-    stated: { values: Record<string, string>; checked: Record<string, string[]> },
-    _actor: string,
-    keys?: ReadonlySet<string>,
-  ) => {
-    state.stated.push({ checked: stated.checked ?? {}, keys: [...(keys ?? [])] });
-    return Object.keys(stated.checked ?? {});
-  },
-  applyAssistantDraft: async (
-    _id: string,
-    draft: { values: Record<string, string>; checked: Record<string, string[]> },
-    _actor: string,
-    provenance: Record<string, Record<string, unknown>> = {},
-  ) => {
-    state.persisted.push({
-      values: draft.values ?? {},
-      checked: draft.checked ?? {},
-      provenance,
-    });
-    return {
-      accepted: { values: draft.values ?? {}, checked: draft.checked ?? {} },
-      rejected: [],
-      policyRefused: [],
-    };
-  },
-}));
+/*
+ * FORM_EDIT_SINGLE_WRITER_ENABLED: the one writer (`form-write.ts`) reads the form
+ * before and after it writes, so this mock also has a `loadInstance` that returns
+ * the form as the writers below saved it (`src/test/forms/saved-form-instances.ts`).
+ */
+vi.mock("@/lib/forms/instances", async () =>
+  (await import("@/test/forms/saved-form-instances")).savedFormInstances(
+    {
+      applyStatedFacts: async (
+        _id: string,
+        stated: { values: Record<string, string>; checked: Record<string, string[]> },
+        _actor: string,
+        keys?: ReadonlySet<string>,
+      ) => {
+        state.stated.push({ checked: stated.checked ?? {}, keys: [...(keys ?? [])] });
+        return Object.keys(stated.checked ?? {});
+      },
+      applyAssistantDraft: async (
+        _id: string,
+        draft: { values: Record<string, string>; checked: Record<string, string[]> },
+        _actor: string,
+        provenance: Record<string, Record<string, unknown>> = {},
+      ) => {
+        state.persisted.push({
+          values: draft.values ?? {},
+          checked: draft.checked ?? {},
+          provenance,
+        });
+        return {
+          accepted: { values: draft.values ?? {}, checked: draft.checked ?? {} },
+          rejected: [],
+          policyRefused: [],
+        };
+      },
+    },
+    async (id) =>
+      (await (await import("@/lib/forms/instance-scope")).authorizeInstance(new Request("http://localhost/api/forms"), id, "view")).loaded,
+  ),
+);
+beforeEach(async () => (await import("@/test/forms/saved-form-instances")).resetSavedForms());
 
 vi.mock("@/lib/ai/anthropic", () => ({
   getAnthropicClient: () => ({
@@ -182,8 +207,9 @@ vi.mock("@/lib/ai/anthropic", () => ({
       create: async (input: Record<string, unknown>) => {
         state.modelCalls += 1;
         state.modelInput = input;
+        const queued = state.toolInputs.length > 0 ? state.toolInputs[Math.min(state.modelCalls - 1, state.toolInputs.length - 1)] : undefined;
         return {
-          content: [{ type: "tool_use", name: "write_form_fields", input: state.toolInput }],
+          content: [{ type: "tool_use", name: "write_form_fields", input: queued ?? state.toolInput }],
         };
       },
     },
@@ -272,6 +298,8 @@ beforeEach(() => {
   state.policyViolatedGroundedOnPinnedVersion = false;
   state.policyManual = null;
   state.employeeRole = null;
+  state.employeeName = null;
+  state.toolInputs = [];
 });
 
 /* ==================================================================== */
@@ -469,7 +497,7 @@ describe("a sensitive final action never reaches the persistence call", () => {
 
     expect(state.stated).toEqual([{ checked: { warning_type: ["verbal"] }, keys: ["warning_type"] }]);
     expect(state.persisted[0]!.checked.warning_type).toBeUndefined();
-    expect(state.persisted[0]!.checked.offense_type).toEqual(["tardiness"]);
+    expect(state.persisted[0]!.checked.offense_type).toEqual(["attendance_policy"]);
     expect(payload.warningLevel).toEqual({ stated: "verbal", modelDiscarded: ["written"] });
     expect(payload.statedFacts).toContain("warning_type");
   });
@@ -673,7 +701,7 @@ describe("the Corrective Action Form's generation behaviour", () => {
        * the manager's account ticked; Direct policy names the manual that
        * answered, with its section and page.
        */
-      expect(state.persisted[0]!.values.policy_violated).toBe("Tardiness/Leaving Early");
+      expect(state.persisted[0]!.values.policy_violated).toBe("Attendance Policy");
       expect(state.persisted[0]!.values.policy_language).toBe(
         "Employees are expected to be clocked in and ready to work at their scheduled start time.\n\n" +
           "Source: JBA Policy Manual — Attendance & Punctuality, page 12",
@@ -682,7 +710,7 @@ describe("the Corrective Action Form's generation behaviour", () => {
       expect(payload.withheld).toEqual([]);
 
       // Classified as tardiness, from the manager's own account.
-      expect(state.persisted[0]!.checked.offense_type).toEqual(["tardiness"]);
+      expect(state.persisted[0]!.checked.offense_type).toEqual(["attendance_policy"]);
     });
 
     it("keeps the observation to what was seen", async () => {
@@ -1038,6 +1066,22 @@ describe("the mini-skirt case, end to end", () => {
     expect(state.stated).toEqual([{ checked: { warning_type: ["verbal"] }, keys: ["warning_type"] }]);
     expect(state.persisted[0]!.checked.warning_type).toBeUndefined();
     expect(state.persisted[0]!.values.prior_actions).toBe("None - first occurrence");
+  });
+
+  it("HIDE_NO_POLICY_MATCH_NOTICE_ENABLED (Pau, 26 Oct 2026): the \"Woven does not see a matching policy\" note is not shown, the other notes still are", async () => {
+    const before = process.env.HIDE_NO_POLICY_MATCH_NOTICE_ENABLED;
+    process.env.HIDE_NO_POLICY_MATCH_NOTICE_ENABLED = "1";
+    try {
+      const payload = await post(NOTES);
+
+      expect(String(payload.notice)).not.toMatch(/Woven does not see a matching policy/);
+      expect(String(payload.notice)).toMatch(/removed the statement that a policy was breached/i);
+      // The policy fields stay blank for the manager, as with the note.
+      expect(payload.withheld).toEqual(["policy_language"]);
+    } finally {
+      if (before === undefined) delete process.env.HIDE_NO_POLICY_MATCH_NOTICE_ENABLED;
+      else process.env.HIDE_NO_POLICY_MATCH_NOTICE_ENABLED = before;
+    }
   });
 
   it("tells the manager everything it removed and why", async () => {
@@ -1403,8 +1447,9 @@ describe("the official policy manual, pinned", () => {
 
     const payload = await post("Her Club Close has been low.");
 
-    expect(state.persisted[0]!.values.policy_language).toBeUndefined();
-    expect(payload.withheld).toContain("policy_language");
+    // CHANGED ON PURPOSE, Corrective Action revision 7 (client request, template approved 4 Nov 2026): Under Performance is the Standards of Conduct box now, and its section is cited (heading and page from the manual).
+    expect(state.persisted[0]!.values.policy_language).toMatch(/Standards of Conduct/);
+    expect(payload.withheld ?? []).not.toContain("policy_language");
   });
 
   /*
@@ -1652,6 +1697,8 @@ describe("the approved-policy search", () => {
  * the Production manual's text, below — lists the infraction.
  */
 describe("HR feedback 30 Sep — the Corrective Action's policy, from the manager's words", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
   const SOC_OPENING =
     "The Company expects Employees to follow rules of conduct that will protect the interests and\n" +
     "safety of all customers, Employees, and The Company.\n" +
@@ -1745,16 +1792,38 @@ describe("HR feedback 30 Sep — the Corrective Action's policy, from the manage
       section: "Standards of Conduct",
       page: 12,
       anchor: "o Failing to follow the policies and procedures of The Company",
-      replaced: ["under_performance", "other_offense"],
+      // CHANGED ON PURPOSE, Corrective Action revision 7 (client request, template approved 4 Nov 2026): the model's Under Performance tick is already the Standards of Conduct, and the form has no Other write-in, so nothing is replaced.
+      replaced: [],
     });
     expect(payload.withheld ?? []).not.toContain("policy_language");
     expect(prompt()).toMatch(/required Woven items or training not completed, and a manager.s direction not followed, are standards_of_conduct/);
   });
 
   it("rests a direction not followed on the manual's insubordination line", async () => {
+    vi.stubEnv("POLICY_SPECIFIC_TOPICS_ENABLED", "");
     const payload = await post("Harper was told to restock the lotion wall before close and refused.");
     expect(state.persisted[0]!.checked.offense_type).toEqual(["standards_of_conduct"]);
     expect(state.persisted[0]!.values.policy_language).toBe(CITED);
+    expect(payload.caPolicy).toMatchObject({
+      applied: true,
+      anchor: "o Insubordination -the refusal to follow the directions of the manager.",
+    });
+  });
+
+  it("POLICY_SPECIFIC_TOPICS_ENABLED on: rests a direction not followed on the manual's insubordination line, quoting the bullet", async () => {
+    vi.stubEnv("POLICY_SPECIFIC_TOPICS_ENABLED", "true");
+    const payload = await post("Harper was told to restock the lotion wall before close and refused.");
+    expect(state.persisted[0]!.checked.offense_type).toEqual(["standards_of_conduct"]);
+    /*
+     * POLICY_SPECIFIC_TOPICS_ENABLED changes this one on purpose (QA ruling,
+     * 26 Oct 2026): the policy quotes the manual's insubordination bullet, not
+     * the top of the section, and cites the printed page that bullet is on. In
+     * this fixture manual the bullet is on p. 12 (in the production manual it
+     * is p. 13: policy-specific-topics-oct26.test.ts).
+     */
+    expect(state.persisted[0]!.values.policy_language).toBe(
+      "Insubordination -the refusal to follow the directions of the manager.\n\nSource: JBA Policy Manual — Standards of Conduct, p. 12",
+    );
     expect(payload.caPolicy).toMatchObject({
       applied: true,
       anchor: "o Insubordination -the refusal to follow the directions of the manager.",
@@ -1772,16 +1841,22 @@ describe("HR feedback 30 Sep — the Corrective Action's policy, from the manage
   it("does not tick it when the manual's section lists no such infraction", async () => {
     state.policyManual = SECTION_WITHOUT_INFRACTIONS;
     const payload = await post("Create a corrective action for Harper for missing the Woven deadline.");
-    expect(state.persisted[0]!.checked.offense_type).toEqual(["under_performance"]);
-    expect(state.persisted[0]!.values.policy_language).toBeUndefined();
-    expect(payload.withheld).toContain("policy_language");
+    expect(state.persisted[0]!.checked.offense_type).toEqual(["standards_of_conduct"]);
+    /*
+     * CHANGED ON PURPOSE, Corrective Action revision 7 (client request, template approved 4 Nov 2026): the reading
+     * still does not apply (below), but the model's Under Performance tick IS
+     * the Standards of Conduct box now, so Direct policy cites that section
+     * from the manual — what the client asked for. (It was left blank.)
+     */
+    expect(state.persisted[0]!.values.policy_language).toMatch(/Source: JBA Policy Manual — Standards of Conduct/);
+    expect(payload.withheld ?? []).not.toContain("policy_language");
     expect(payload.caPolicy).toEqual({ applied: false, reason: "not_supported", ambiguous: null });
   });
 
   it("does not tick it when there is no manual to check", async () => {
     state.policyManual = { ok: false, reason: "not indexed" };
     const payload = await post("Create a corrective action for Harper for missing the Woven deadline.");
-    expect(state.persisted[0]!.checked.offense_type).toEqual(["under_performance"]);
+    expect(state.persisted[0]!.checked.offense_type).toEqual(["standards_of_conduct"]);
     expect(state.persisted[0]!.values.policy_language).toBeUndefined();
     expect(payload.caPolicy).toMatchObject({ applied: false, reason: "no_manual" });
   });
@@ -1841,8 +1916,8 @@ describe("HR feedback 30 Sep — the Corrective Action's policy, from the manage
     const payload = await post(
       "Create a corrective action for Harper because she came in late and didn't finish her opening tasks.\n\nstandards of conduct\n\nactually use attendance",
     );
-    expect(state.persisted[0]!.checked.offense_type).toEqual(["tardiness"]);
-    expect(state.persisted[0]!.values.policy_violated).toBe("Tardiness/Leaving Early");
+    expect(state.persisted[0]!.checked.offense_type).toEqual(["attendance_policy"]);
+    expect(state.persisted[0]!.values.policy_violated).toBe("Attendance Policy");
     expect(state.persisted[0]!.values.policy_language).toBe(
       "It is the responsibility of each employee to know his or her work schedule\n\nSource: JBA Policy Manual — Attendance, p. 14",
     );
@@ -1854,9 +1929,10 @@ describe("HR feedback 30 Sep — the Corrective Action's policy, from the manage
     const payload = await post(
       "Create a corrective action for Harper for missing the Woven deadline.\n\nit's under performance",
     );
-    expect(state.persisted[0]!.checked.offense_type).toEqual(["under_performance"]);
-    expect(state.persisted[0]!.values.policy_language).toBeUndefined();
-    expect(payload.withheld).toContain("policy_language");
+    expect(state.persisted[0]!.checked.offense_type).toEqual(["standards_of_conduct"]);
+    // CHANGED ON PURPOSE, Corrective Action revision 7 (client request, template approved 4 Nov 2026): Under Performance is the Standards of Conduct box, whose section is cited (it was left blank).
+    expect(state.persisted[0]!.values.policy_language).toMatch(/Source: JBA Policy Manual — Standards of Conduct/);
+    expect(payload.withheld ?? []).not.toContain("policy_language");
     expect(payload.caPolicy).toMatchObject({ applied: true, source: "stated", stated: "under_performance" });
   });
 
@@ -1892,5 +1968,186 @@ describe("Owner's QA 8 Oct — the Policy Review keeps its retrieved reference",
     state.toolInput = { values: {}, checked: {} };
     await post("Policy review with Harper about the attendance policy and her schedule.");
     expect(state.persisted[0]!.values.policy_language ?? "").toContain("work schedule");
+  });
+});
+
+/* ==================================================================== */
+/*  FRAMEWORK_UNPIN_ENABLED                                             */
+/* ==================================================================== */
+
+/*
+ * QA, 25 Oct 2026: the uploaded Performance Management Framework (document
+ * 6e192b76, "ASK BUBBLES PERFORMANCE MANAGEMENT FRAMEWORK KB TEXT") still
+ * carries the sibling company's name, examples and metrics, and a governed
+ * draft pinned its sections into the prompt. With the flag on they are not
+ * pinned. With it off (unset, "0", "false") the draft is exactly as before.
+ */
+describe("FRAMEWORK_UNPIN_ENABLED — the framework's sections and a governed draft", () => {
+  const GOVERNED = ["follow-up-coaching", "dpoa", "policy-review", "sdit-epp"] as const;
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  describe.each([
+    ["unset", undefined],
+    ["0", "0"],
+    ["false", "false"],
+  ])("flag off (%s): pinned as before", (_label, value) => {
+    beforeEach(() => {
+      if (value === undefined) vi.stubEnv("FRAMEWORK_UNPIN_ENABLED", undefined as unknown as string);
+      else vi.stubEnv("FRAMEWORK_UNPIN_ENABLED", value);
+    });
+
+    it.each(GOVERNED)("%s reads the framework and sends its sections", async (key) => {
+      state.templateKey = key;
+      await post(NOTES);
+
+      expect(state.roleCalls).toContain(PROGRESSION_ID);
+      expect(state.modelCalls).toBe(1);
+      expect(prompt()).toContain("PERFORMANCE MANAGEMENT FRAMEWORK (the approved progression");
+      expect(prompt()).toContain("[ASK BUBBLES PERFORMANCE MANAGEMENT FRAMEWORK KB TEXT — SECTION 2 – PERFORMANCE MANAGEMENT LADDER]");
+      expect(prompt()).toContain("Solve the issue at the lowest appropriate level.");
+      expect(systemPrompt()).toContain("The PERFORMANCE MANAGEMENT FRAMEWORK section below is that progression.");
+    });
+
+    it("still withholds a governed draft when the framework is unavailable", async () => {
+      state.templateKey = "dpoa";
+      state.roleResults = { [PROGRESSION_ID]: DOWN };
+
+      const payload = await post(NOTES);
+
+      expect(state.modelCalls).toBe(0);
+      expect(String(payload.notice)).toContain("Performance Management Framework");
+    });
+  });
+
+  describe("flag on: not pinned", () => {
+    beforeEach(() => {
+      vi.stubEnv("FRAMEWORK_UNPIN_ENABLED", "true");
+    });
+
+    it.each(GOVERNED)("%s does not read the framework or send its sections", async (key) => {
+      state.templateKey = key;
+      await post(NOTES);
+
+      expect(state.roleCalls).not.toContain(PROGRESSION_ID);
+      expect(state.modelCalls).toBe(1);
+      expect(prompt()).not.toContain("PERFORMANCE MANAGEMENT FRAMEWORK");
+      expect(prompt()).not.toContain("Solve the issue at the lowest appropriate level.");
+      expect(prompt()).not.toContain("SECTION 2 – PERFORMANCE MANAGEMENT LADDER");
+      expect(prompt()).not.toContain("10.7 Final operating rule");
+    });
+
+    it("keeps the app's own escalation rules, without pointing at a missing section", async () => {
+      state.templateKey = "follow-up-coaching";
+      await post(NOTES);
+
+      expect(systemPrompt()).toContain("THIS FORM RECORDS A STEP IN THE APPROVED CORRECTIVE-ACTION PROGRESSION.");
+      expect(systemPrompt()).not.toContain("PERFORMANCE MANAGEMENT FRAMEWORK section below");
+      expect(systemPrompt()).toMatch(/classify it as a skill, knowledge, confidence, effort, policy or leadership issue/i);
+      expect(systemPrompt()).toMatch(/LOWEST rung that fits/);
+      expect(systemPrompt()).toMatch(/NEVER SELECT A TERMINATION, DEMOTION OR SUSPENSION/);
+      expect(systemPrompt()).toMatch(/LEAVE THE STEP UNSET/);
+    });
+
+    it("drafts a governed form when the framework is unavailable", async () => {
+      state.templateKey = "dpoa";
+      state.roleResults = { [PROGRESSION_ID]: DOWN };
+
+      const payload = await post(NOTES);
+
+      expect(state.modelCalls).toBe(1);
+      expect(String(payload.notice ?? "")).not.toContain("Performance Management Framework");
+    });
+
+    it("still refuses a model-selected termination", async () => {
+      state.templateKey = "dpoa";
+      state.toolInput = { values: {}, checked: { warning_type: ["termination"] } };
+
+      const payload = await post(NOTES);
+
+      expect(state.persisted[0]?.checked.warning_type).toBeUndefined();
+      expect(payload.sensitiveRefused).toEqual({ warning_type: ["termination"] });
+    });
+
+    it("leaves the plain Coaching Form as it was", async () => {
+      state.templateKey = "coaching";
+      await post(NOTES);
+
+      expect(state.roleCalls).not.toContain(PROGRESSION_ID);
+      expect(state.modelCalls).toBe(1);
+      expect(systemPrompt()).not.toMatch(/LOWEST rung that fits/);
+    });
+  });
+});
+
+/* ==================================================================== */
+/*  FORM_EDIT_SINGLE_WRITER_ENABLED: THE DRAFT KEEPS THE FACTS GIVEN    */
+/* ==================================================================== */
+
+/*
+ * QA spec (step 2b; final decision: detect and report only). Live, "Create a
+ * Corrective Action for Marnie Quill, she was late to open on 10-20-26" was
+ * drafted as "Marnie was late …": the last name gone from the Observation.
+ * With the flag on, the guarded draft is read against the header's name and
+ * the dates and amounts the notes state; a miss is saved and the reply (the
+ * route's notice) says what it left out — no retry, the drafting call count
+ * unchanged. Logged in the trace as kinds only.
+ */
+describe("FORM_EDIT_SINGLE_WRITER_ENABLED: the post-draft consistency check", () => {
+  const CREATE = "Create a Corrective Action for Marnie Quill, she was late to open on 10-20-26";
+  const SHORT = { values: { observation: "Marnie was late." }, checked: { offense_type: ["tardiness"] } };
+  const WHOLE = { values: { observation: "Marnie Quill was late to open on 10-20-26." }, checked: { offense_type: ["tardiness"] } };
+
+  async function traced(notes: string) {
+    const { runChatTrace } = await import("@/lib/ai/chat-trace-store");
+    const draft = { startedAt: Date.now() } as unknown as import("@/lib/ai/chat-trace-store").ChatTraceDraft;
+    const payload = await runChatTrace(draft, () => post(notes));
+    return { payload, check: draft.draftCheck };
+  }
+
+  beforeEach(() => {
+    vi.stubEnv("FORM_EDIT_SINGLE_WRITER_ENABLED", "true");
+    state.templateKey = "dpoa";
+    state.employeeName = "Marnie Quill";
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('"Marnie was late": the miss is detected and reported, and the drafting call count is unchanged', async () => {
+    state.toolInputs = [SHORT];
+    const { payload, check } = await traced(CREATE);
+
+    expect(state.modelCalls).toBe(1);
+    // Saved, and said: never silently.
+    expect(state.persisted.at(-1)!.values.observation).toBe("Marnie was late.");
+    expect(payload.notice).toContain("The draft left out Quill and 10-20-26 in Observation of Offense; tell me if you want it added.");
+    expect(check).toEqual({ checked: true, missing_keys: ["name", "date"] });
+  });
+
+  it("a clean draft: no note is added, and no extra call", async () => {
+    state.toolInputs = [WHOLE];
+    const { payload, check } = await traced(CREATE);
+
+    expect(state.modelCalls).toBe(1);
+    expect(String(payload.notice ?? "")).not.toContain("left out");
+    expect(check).toEqual({ checked: true, missing_keys: [] });
+  });
+
+  it("the drafting model never writes the header's Employee Name", async () => {
+    state.toolInputs = [{ values: { ...WHOLE.values, employee_name: "Marnie Q." }, checked: WHOLE.checked }];
+    await traced(CREATE);
+    expect(state.persisted.every((write) => !("employee_name" in write.values))).toBe(true);
+  });
+
+  it("flag off: no check, no note, no trace key", async () => {
+    vi.stubEnv("FORM_EDIT_SINGLE_WRITER_ENABLED", "");
+    state.toolInputs = [SHORT];
+    const { payload, check } = await traced(CREATE);
+    expect(state.modelCalls).toBe(1);
+    expect(String(payload.notice ?? "")).not.toContain("left out");
+    expect(check).toBeUndefined();
   });
 });
