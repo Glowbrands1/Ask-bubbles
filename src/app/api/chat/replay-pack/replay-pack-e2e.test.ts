@@ -84,6 +84,8 @@ vi.mock("@/lib/knowledge/full-manual-load", async (importOriginal) => {
 
 const state = vi.hoisted(() => ({
   /** What the slot model reads on the next turns (`slotsRead`), as a production trace shows it. */
+  /** Chunks the pinned manual also has, when a case sets them (`manualAlsoHas`); none by default. */
+  manualExtra: [] as Record<string, unknown>[],
   slotsRead: {} as Record<string, unknown>,
   slotReading: "none" as "none" | "ca" | "copy",
   remapObservation: null as string | null,
@@ -417,7 +419,7 @@ vi.mock("@/lib/knowledge/providers/supabase", () => ({
         documentTitle: "2025 JBA Policy Manual - Edited 5-2025",
         documentCategory: "policies_compliance",
         matchedBy: "tag",
-        chunks: JBA_MANUAL_CA_CHUNKS,
+        chunks: [...JBA_MANUAL_CA_CHUNKS, ...state.manualExtra],
       };
     }
   },
@@ -613,6 +615,7 @@ beforeEach(async () => {
   fullManual.document = null;
   state.remapObservation = null;
   state.slotsRead = {};
+  state.manualExtra = [];
   state.reading = {};
   state.draft = { values: {} };
   state.revision = { values: {} };
@@ -717,6 +720,9 @@ function context(): ReplayContext {
     },
     draftWrites: (values, checked, extra) => {
       state.draft = { values, ...(checked ? { checked } : {}), ...(extra ?? {}) };
+    },
+    manualAlsoHas: (chunks) => {
+      state.manualExtra = [...chunks];
     },
     revisionWrites: (values) => {
       state.revision = { values };

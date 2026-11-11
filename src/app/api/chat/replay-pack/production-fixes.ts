@@ -480,4 +480,18 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov6-roster-shape-two-word-first-typo": "FORM_NAME_FROM_ROSTER",
   // Changed on purpose (11 Nov 2026): fixed in production by NEAR_MISS_ANSWER_KEEPS_REQUEST, QA round 16c
   "nov10-near-miss-answer-keeps-request": "NEAR_MISS_ANSWER_KEEPS_REQUEST",
+  // Changed on purpose (12 Nov 2026): fixed in production by TITLE_NOT_PART_OF_NAME, QA round 17h
+  "nov7-sf-s36-exit-surname-typo": "TITLE_NOT_PART_OF_NAME",
+  // Changed on purpose (12 Nov 2026): fixed in production by NOT_FOLLOWING_IS_VIOLATION, QA round 17h
+  "nov10-not-following-dress-code-coaching-cites": "NOT_FOLLOWING_IS_VIOLATION",
+  // Changed on purpose (12 Nov 2026): fixed in production by NOT_FOLLOWING_IS_VIOLATION, QA round 17h
+  "nov10-not-following-dress-code-ca-policy": "NOT_FOLLOWING_IS_VIOLATION",
+  // Changed on purpose (12 Nov 2026): fixed in production by FORM_FOR_FOR_TYPO, QA round 17h
+  "nov10-sf-s36-off-roster-exit": "FORM_FOR_FOR_TYPO",
+  // Changed on purpose (12 Nov 2026): fixed in production by FORM_FOR_FOR_TYPO, QA round 17h
+  "nov11-exit-for-for-is-an-exit-request": "FORM_FOR_FOR_TYPO",
+  // Changed on purpose (12 Nov 2026): fixed in production by TITLE_NOT_PART_OF_NAME, QA round 17h
+  "nov11-title-not-part-of-name": "TITLE_NOT_PART_OF_NAME",
+  // Changed on purpose (12 Nov 2026): fixed in production by TITLE_NOT_PART_OF_NAME, QA round 17h
+  "nov11-title-not-part-of-name-yes-then-card": "TITLE_NOT_PART_OF_NAME",
 };
