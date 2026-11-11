@@ -1326,6 +1326,12 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FIRST_NAME_ENOUGH_ENABLED",
   // coding 6: NO_SHOW_OPENING_IS_ATTENDANCE (QA ruling, 10 Nov 2026; default off; wiring in ca-policy.ts awaits Coding-2).
   "NO_SHOW_OPENING_IS_ATTENDANCE_ENABLED",
+  // coding 5: WOVEN_TEXT_NUL_STRIP, WOVEN_FAILED_RETRY (ported from the sibling app's stuck Woven files, QA, 10 Nov 2026; default off).
+  "WOVEN_TEXT_NUL_STRIP_ENABLED",
+  "WOVEN_FAILED_RETRY_ENABLED",
+  // coding 5: INGEST_FAILURE_KEEPS_LAST_GOOD, WOVEN_OCR_PAGE_BATCHES (QA, the recipe book's lost content, 10 Nov 2026; default off).
+  "INGEST_FAILURE_KEEPS_LAST_GOOD_ENABLED",
+  "WOVEN_OCR_PAGE_BATCHES_ENABLED",
 ] as const;
 
 /**
@@ -2938,6 +2944,52 @@ export function cardNamesEmployeeEnabled(): boolean {
  */
 export function policyTopicIntoFieldEnabled(): boolean {
   return envFlag("POLICY_TOPIC_INTO_FIELD_ENABLED");
+}
+
+/**
+ * WOVEN_TEXT_NUL_STRIP_ENABLED (ported from the sibling app: QA, 10 Nov 2026, three Woven manuals stuck "failed" there
+ * since 4 Nov 2026; coding 5; same flag in both apps; default off). A PDF whose text layer holds NUL characters (U+0000)
+ * failed with "Chunks could not be saved: unsupported Unicode escape sequence": Postgres text and jsonb refuse NUL. On:
+ * every extracted segment's text, locator and section lose their NUL characters before chunking
+ * (`ingestion/extract/strip-nul.ts`), for an upload and a Woven sync alike. Off, as before.
+ */
+export function wovenTextNulStripEnabled(): boolean {
+  return envFlag("WOVEN_TEXT_NUL_STRIP_ENABLED");
+}
+
+/**
+ * WOVEN_FAILED_RETRY_ENABLED (ported from the sibling app: QA, 10 Nov 2026, six scanned Woven PDFs stuck "No text could
+ * be extracted ... run OCR" there since 4 Nov 2026 although WOVEN_PDF_OCR is on; coding 5; same flag in both apps;
+ * default off). They were never re-attempted: "no_text" was a permanent failure (retry count set to the maximum, so a
+ * `continue` run skips the item), and a full sync applies previously failed items last, so a sync's time budget
+ * deferred them. On: with WOVEN_PDF_OCR on, "no_text" is retryable, and a full sync applies previously failed items
+ * right after the retirements, before the rest (`knowledge-sync/engine.ts` `orderDue`, `knowledge-sync/sink.ts`). Off,
+ * as before.
+ */
+export function wovenFailedRetryEnabled(): boolean {
+  return envFlag("WOVEN_FAILED_RETRY_ENABLED");
+}
+
+/**
+ * INGEST_FAILURE_KEEPS_LAST_GOOD_ENABLED (QA, 10 Nov 2026: "Everyday Auxiliary Recipe Book v072726", searchable since 6
+ * Oct 2026, dropped out of search when a newer Woven file failed to read; coding 5; same flag in both apps; default
+ * off). A failed re-ingest marked the whole document "failed", hiding its last good version's chunks. On: when a new
+ * version of a document that was indexed before fails and an earlier version's chunks are stored, the row is put back
+ * on that version (status "indexed"), and the next version number is past every version in its history
+ * (`ingestion/pipeline.ts` `keepLastGoodVersion`). Off, as before.
+ */
+export function ingestFailureKeepsLastGoodEnabled(): boolean {
+  return envFlag("INGEST_FAILURE_KEEPS_LAST_GOOD_ENABLED");
+}
+
+/**
+ * WOVEN_OCR_PAGE_BATCHES_ENABLED (QA, 10 Nov 2026: the 45-page scanned "Everyday Auxiliary Recipe Book v072726" was
+ * refused at the 40-page OCR cap; coding 5; same flag in both apps; default off). On: a scanned PDF over 40 pages, up
+ * to 100 (the API's PDF page limit), is read in requests of at most 20 pages each, run together, each asked for its
+ * own page range of the same file (`ingestion/extract/pdf-ocr.ts`). The run's page budget is unchanged. Off, as before.
+ */
+export function wovenOcrPageBatchesEnabled(): boolean {
+  return envFlag("WOVEN_OCR_PAGE_BATCHES_ENABLED");
 }
 
 // --- end coding 5 flags ---
