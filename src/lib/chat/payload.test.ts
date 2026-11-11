@@ -389,7 +389,7 @@ describe("partitioning a whole local history", () => {
        * DEMO BRANCH: the History seeds (`demo-conv-*`, `data/demo/chat.ts`) are
        * declined as well — by their id shape, which no client id can have.
        */
-      if (entry.id.startsWith("demo-conv-")) {
+      if (entry.id?.startsWith("demo-conv-")) {
         expect(entry.reason).toBe("malformed_conversation_id");
         continue;
       }
