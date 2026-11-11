@@ -722,7 +722,7 @@ function labelledMethod(turn: string): string | null {
 }
 
 /*
- * EXIT_TYPO_WORDS_ENABLED (Pau's P17, the sibling app's production, 10 Nov 2026): "salon items will be returneded … they are
+ * EXIT_TYPO_WORDS_ENABLED (Pau's P17, the sibling app's production, 10 Nov 2026): "store items will be returneded … they are
  * eligiable for rehire" left Store Items Returned and Eligible for Rehire blank — the readers match "returned" and
  * "eligible", and the typed words were one or two letters off. With the flag on, the words the answer readers key on
  * are read through a close-spelling check first: a word the reader does not know, with the same first letter and one
@@ -731,8 +731,34 @@ function labelledMethod(turn: string): string | null {
  */
 const EXIT_WORDS = ["returned", "returning", "return", "returns", "eligible", "ineligible", "eligibility", "rehire", "rehired", "rehirable", "deducted", "deduction", "forfeited", "forfeit", "minimum"];
 const KNOWN = new Set(EXIT_WORDS);
-/** Real words one or two letters from a target: never "corrected" ("she retired" is not "she rehired"). */
-const REAL_WORDS = new Set(["retired", "retire", "retires", "retiring", "reliable", "related", "retained", "retain", "retains", "retuned", "minimal", "deduced", "deduce", "regained", "relined", "remained", "refunded", "reported", "rehired", "elegant"]);
+/**
+ * Real words one or two letters from a target: never "corrected" ("she retired" is not "she rehired").
+ * QA, R713 (11 Nov 2026): "he is not required back" read as "not rehired" — every word on an English word list that
+ * the check would change is here, except plain forms of the readers' own words ("deducts", "rehires", "forfeits").
+ */
+const REAL_WORDS = new Set([
+  "retired", "retire", "retires", "retiring", "reliable", "related", "retained", "retain", "retains", "retuned",
+  "minimal", "deduced", "deduce", "regained", "relined", "remained", "refunded", "reported", "rehired", "elegant",
+  "debuted", "decocted", "decoction", "dedicated", "dedication", "deduces", "deductive", "defect", "defected",
+  "defecting", "defection", "defects", "defunction", "degusted", "dejected", "dejection", "depicted", "depiction",
+  "deputed", "detect", "detected", "detecting", "detection", "detects", "elidible", "eligibly", "eludible",
+  "exigible", "forefeet", "forefelt", "forest", "forested", "foresting", "forests", "forfair", "forfaired",
+  "forfaiter", "forfend", "forfended", "forhent", "forlent", "fornent", "forwent", "ineligibly", "ineludible",
+  "intelligible", "maximum", "minibus", "minicam", "minicom", "minimax", "minimism", "minimus", "minium", "miniums",
+  "rebored", "reburied", "reburying", "recitable", "recited", "recured", "recures", "recuring", "recurred",
+  "recurring", "recursed", "recursing", "recurved", "recurving", "redshire", "reearned", "reearning", "reearns",
+  "referable", "refiled", "refinable", "refined", "refire", "refired", "refires", "refixed", "rehinge", "rehinged",
+  "rehomed", "rejourn", "rejourned", "rejourning", "rejourns", "relivable", "relived", "remised", "remixed",
+  "reoiled", "repair", "repairable", "repaired", "repairing", "repairs", "reparable", "repined", "repugned",
+  "repugning", "repugns", "repured", "repures", "repuring", "requins", "requirable", "require", "required",
+  "requires", "requiring", "rerunning", "reshine", "reshined", "resided", "resiled", "resined", "resited", "resized",
+  "respirable", "respire", "respired", "resurged", "resurging", "retaining", "retarded", "retarding", "retards",
+  "retiled", "retimed", "retiree", "retirer", "retorn", "retorted", "retorting", "retorts", "retoured", "retouring",
+  "retours", "retried", "retrying", "retunded", "retunding", "retunds", "retunes", "retuning", "returf", "returfed",
+  "returfing", "returfs", "returnee", "returnees", "returner", "returners", "returnik", "returniks", "reurged",
+  "reurging", "reverable", "revered", "reviled", "revisable", "revised", "revivable", "revive", "revived", "revives",
+  "reviving", "rewirable", "rewire", "rewired", "rewires", "rewiring",
+]);
 
 export function withExitWordsSpelled(turn: string): string {
   return turn.replace(/[A-Za-z]{5,}/g, (word) => {
