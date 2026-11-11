@@ -1,0 +1,30 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-p14a-account-opens-with-a-question: the account's first turn opens with a question (\"can you help me with rowan? she marked \u2026\"), then the request and \"yes\": the draft is handed the account \u2014 OPEN in production (the turn that opens with a question is left out of the card's turns, so the draft is written without the account)": {
+    "category": "INTENDED",
+    "reason": "Pau's P14(a) wording (\"can you help me with rowan? \u2026\" then the request and \"yes\"): the OPEN pin now holds \u2014 the draft is handed the account."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov7-second-ca-same-employee-separate-observation: the same chat: the second card's Issue and the second form's Observation are only the cash-drawer account \u2014 holds with SECOND_REQUEST_OWN_ACCOUNT_ENABLED on": {
+    "category": "REGRESSION",
+    "reason": "Regression: the second CA's request turn is preceded by the FIRST CA's request (same employee, 'late opening the store'); withAccountBeforeRequest walks back over it as an 'account' and prepends it to the second card's turns, so the second form's Observation is the late-opening account, not the cash drawer (production mode too)."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov7-second-ca-same-employee-separate-observation: the same chat: the second card's Issue and the second form's Observation are only the cash-drawer account \u2014 holds with production's flags": {
+    "category": "REGRESSION",
+    "reason": "Regression: the second CA's request turn is preceded by the FIRST CA's request (same employee, 'late opening the store'); withAccountBeforeRequest walks back over it as an 'account' and prepends it to the second card's turns, so the second form's Observation is the late-opening account, not the cash drawer (production mode too)."
+  },
+  "src/lib/forms/account-before-request.test.ts :: ACCOUNT_BEFORE_REQUEST_ENABLED off: the card's turns are as built": {
+    "category": "INTENDED-HARNESS",
+    "reason": "Unit test pinning flag-off behaviour (card turns as built); with the flag forced on it adds the account turns, as designed."
+  },
+  "replay: nov10-p14a-account-opens-with-a-question [open]": {
+    "category": "INTENDED",
+    "reason": "Pau's P14(a) wording (\"can you help me with rowan? \u2026\" then the request and \"yes\"): the OPEN pin now holds \u2014 the draft is handed the account."
+  },
+  "replay: nov7-second-ca-same-employee-separate-observation [fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "Regression: the second CA's request turn is preceded by the FIRST CA's request (same employee, 'late opening the store'); withAccountBeforeRequest walks back over it as an 'account' and prepends it to the second card's turns, so the second form's Observation is the late-opening account, not the cash drawer (production mode too)."
+  },
+  "replay: nov7-second-ca-same-employee-separate-observation [production]": {
+    "category": "REGRESSION",
+    "reason": "Regression: the second CA's request turn is preceded by the FIRST CA's request (same employee, 'late opening the store'); withAccountBeforeRequest walks back over it as an 'account' and prepends it to the second card's turns, so the second form's Observation is the late-opening account, not the cash drawer (production mode too)."
+  }
+}
