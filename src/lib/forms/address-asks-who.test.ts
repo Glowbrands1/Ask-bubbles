@@ -9,6 +9,8 @@ describe("ADDRESS_ASKS_WHO_ENABLED", () => {
   afterEach(() => vi.unstubAllEnvs());
 
   it("off: the answer is left as it is", () => {
+    // QA, 11 Nov 2026: an off pin sets its flag off, so it holds in a flags-on run.
+    vi.stubEnv("ADDRESS_ASKS_WHO_ENABLED", "");
     expect(withAddressFormAsk(POLICY_ANSWER, "Corrective action for 123 Main Street")).toEqual(POLICY_ANSWER);
   });
 

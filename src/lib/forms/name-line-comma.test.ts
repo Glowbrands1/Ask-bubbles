@@ -9,6 +9,8 @@ describe("NAME_LINE_COMMA_ENABLED", () => {
   afterEach(() => vi.unstubAllEnvs());
 
   it("off: the comma keeps the turn from reading as a name correction", () => {
+    // QA, 11 Nov 2026: an off pin sets its flag off, so it holds in a flags-on run.
+    vi.stubEnv("NAME_LINE_COMMA_ENABLED", "");
     vi.stubEnv("NAME_CORRECTION_WORDS_ENABLED", "true");
     expect(nameCorrectionQuestion(TYPED, "Jane Doe")).not.toBe("change her name to Jane Doe-Smith");
     expect(nameNotCorrectedReply({ templateName: "Corrective Action Form", employeeName: "Jane Doe" }, "change her name to Jane Doe-Smith").content).not.toContain("?");

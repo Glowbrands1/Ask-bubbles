@@ -10,6 +10,8 @@ describe("COPY_PASTE_CLAIM_HONEST_ENABLED", () => {
   afterEach(() => vi.unstubAllEnvs());
 
   it("off: the live answer is not read as a claim", () => {
+    // QA, 11 Nov 2026: an off pin sets its flag off, so it holds in a flags-on run.
+    vi.stubEnv("COPY_PASTE_CLAIM_HONEST_ENABLED", "");
     expect(honestFormReply(LIVE, true)).toBeNull();
   });
 

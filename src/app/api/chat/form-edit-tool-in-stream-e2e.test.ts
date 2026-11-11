@@ -220,7 +220,9 @@ const TOOL_FLAGS = ["FORM_EDIT_SINGLE_WRITER_ENABLED", "FORM_EDIT_TOOL_IN_STREAM
  * assertion is unchanged.
  */
 const PRODUCTION = [...PRODUCTION_FLAGS.on, ...PRODUCTION_FLAGS.assumedOn].filter((name) => !([...TOOL_FLAGS, "FORM_PATCH_REDUCER_ENABLED", "FORM_REPLY_FROM_DIFF_ENABLED", "FORM_EDIT_NOOP_GUARD_ENABLED"] as readonly string[]).includes(name));
-const TOUCHED = [...new Set([...TOOL_FLAGS, ...PRODUCTION, ...PRODUCTION_FLAGS.off, "FORM_PATCH_REDUCER_ENABLED", "FORM_REPLY_FROM_DIFF_ENABLED", "FORM_EDIT_NOOP_GUARD_ENABLED"])];
+// NAME_LINE_COMMA_ENABLED (QA, 11 Nov 2026): pinned off here, so "fix her last name, it is Quill-Hart" is handed to the old chain as
+// this file expects, whatever the env says (with the flag on, the turn is the app's own name correction).
+const TOUCHED = [...new Set([...TOOL_FLAGS, ...PRODUCTION, ...PRODUCTION_FLAGS.off, "FORM_PATCH_REDUCER_ENABLED", "FORM_REPLY_FROM_DIFF_ENABLED", "FORM_EDIT_NOOP_GUARD_ENABLED", "NAME_LINE_COMMA_ENABLED"])];
 const saved = new Map<string, string | undefined>();
 
 function setFlags(on: readonly string[]) {

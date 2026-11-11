@@ -9,6 +9,8 @@ describe("LEAD_FULL_SENTENCE_ENABLED", () => {
   afterEach(() => vi.unstubAllEnvs());
 
   it("off: the reply is left as it is", () => {
+    // QA, 11 Nov 2026: an off pin sets its flag off, so it holds in a flags-on run.
+    vi.stubEnv("LEAD_FULL_SENTENCE_ENABLED", "");
     expect(withLeadFullSentence({ content: REPLY }).content).toBe(REPLY);
   });
 

@@ -209,6 +209,8 @@ describe("through correctActiveForm: a refused correction hands the turn off and
 
   it("flag off: unchanged — today's save of the header line", async () => {
     vi.stubEnv("FORM_EDIT_SINGLE_WRITER_ENABLED", "");
+    // QA, 11 Nov 2026: an off pin sets its flag off, so it holds in a flags-on run.
+    vi.stubEnv("NAME_LINE_COMMA_ENABLED", "");
     try {
       const reply = await ask();
       expect(reply?.content).toMatch(/^Updated the \*\*Coaching Form\*\*/);
