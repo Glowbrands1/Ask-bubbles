@@ -1,0 +1,27 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov9-made-about-all-or-nothing-no-reading: the reader reads nothing (the live shape): Other, the Date and Details change together \u2014 OPEN in production (Details changes alone; Other stays \"Missed monthly meeting\" and the Date 2026-10-10)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "MADE_ABOUT_ALL_OR_NOTHING: an OPEN case now holds (Other, Date and Details change together) / the refusal now says why and that the Date and topic stay too. Read."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov9-made-about-all-or-nothing-other-form: the reader reads another form's turn: Other, the Date and Details change together \u2014 OPEN in production (Details changes alone; Other stays \"Missed monthly meeting\" and the Date 2026-10-10)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "MADE_ABOUT_ALL_OR_NOTHING: an OPEN case now holds (Other, Date and Details change together) / the refusal now says why and that the Date and topic stay too. Read."
+ },
+ "replay: nov9-made-about-all-or-nothing-no-reading [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "MADE_ABOUT_ALL_OR_NOTHING: an OPEN case now holds (Other, Date and Details change together) / the refusal now says why and that the Date and topic stay too. Read."
+ },
+ "replay: nov9-made-about-all-or-nothing-other-form [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "MADE_ABOUT_ALL_OR_NOTHING: an OPEN case now holds (Other, Date and Details change together) / the refusal now says why and that the Date and topic stay too. Read."
+ },
+ "replay: nov9-made-about-all-or-nothing-refused [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "MADE_ABOUT_ALL_OR_NOTHING: an OPEN case now holds (Other, Date and Details change together) / the refusal now says why and that the Date and topic stay too. Read."
+ }
+}

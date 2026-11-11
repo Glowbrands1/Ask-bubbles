@@ -637,6 +637,14 @@ describe("the exit form's own words are not stripped as unknown people (EXIT_TER
   });
 
   it("off: the words are stripped, and the line is blank", async () => {
-    expect(await terms(false)).not.toContain("- **Minimum Wage / Bonus Forfeiture:**");
+    // Changed on purpose (QA's roster-set gate R16A, 10 Nov 2026): the flag is pinned off here, so the set's env (FORM_NAME and companions on) does not leak in.
+    const formName = process.env.FORM_NAME_FROM_ROSTER_ENABLED;
+    process.env.FORM_NAME_FROM_ROSTER_ENABLED = "false";
+    try {
+      expect(await terms(false)).not.toContain("- **Minimum Wage / Bonus Forfeiture:**");
+    } finally {
+      if (formName === undefined) delete process.env.FORM_NAME_FROM_ROSTER_ENABLED;
+      else process.env.FORM_NAME_FROM_ROSTER_ENABLED = formName;
+    }
   });
 });
