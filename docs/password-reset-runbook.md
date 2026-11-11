@@ -57,3 +57,25 @@ Outlook/Defender "safe links" can open the link before the employee does and use
 default template the employee then gets "no longer valid" + **Request a new link**. Pasting
 `docs/supabase-reset-password-template.html` into the Reset Password template prevents it (the token is only
 spent when the person presses Continue).
+
+## 2026-10-14 production investigation: "This reset link is no longer valid" one second after clicking
+
+Evidence (Supabase auth + edge logs, fresh email sent 19:39:33Z):
+
+| Time (UTC) | Event |
+| --- | --- |
+| 19:39:33 | `mail.send` recovery. Sent by our server route (`node` user agent, after the `app_users` eligibility lookup). |
+| 19:39:44 | **`GET /verify` succeeds ("login", implicit) from 72.153.231.20 with an Android Chrome 133 mobile user agent. Not the employee's desktop.** 11 s after the email was sent. |
+| 19:40:01–02 | `HEAD /verify` (405, Microsoft Exchange Online Protection IP 104.47.x, harmless) then the employee's own `GET /verify` from 180.190.252.184: `403 One-time token not found`. |
+
+Conclusions:
+
+1. Supabase did not reject a valid token and our handler did not lose a session. **The one-time token was already spent by another client before the employee clicked.** The employee's request returned `#error=access_denied&error_code=otp_expired` to the site root, which the app forwarded to `/reset-password` and rendered as the friendly "no longer valid" screen (as designed).
+2. Supabase's default recovery email is `{{ .ConfirmationURL }}`: a URL on `supabase.co` that **any GET consumes**. Corporate mail filters, phone mail apps with link previews and "safe link" scanners fetch every link in a message, so the token is gone before a person clicks. The app cannot intercept it: the link points at supabase.co, not at us. This is a property of the default template, not a bug in the app, and custom SMTP does not change it.
+3. The same log shows `redirect_to=https://askbubbles.vercel.app/` (the Site URL, with a trailing slash) for an email our server asked to send with `redirectTo=<NEXT_PUBLIC_SITE_URL>/reset-password`. Supabase only substitutes the Site URL when the requested `redirectTo` does not match its Redirect URLs allowlist. So either the Vercel value of `NEXT_PUBLIC_SITE_URL` is not exactly `https://askbubbles.vercel.app`, or the allowlist entry does not match what is sent. The forward script in PR #38 makes this harmless for recovery links, but it should be corrected.
+
+### The only reliable fix: scanner-safe email template (no custom SMTP needed)
+
+Paste `docs/supabase-reset-password-template.html` into Supabase → Authentication → Email Templates → **Reset Password**. The link then points at `https://askbubbles.vercel.app/auth/recovery-start?token_hash=…`, which a scanner can GET without effect: it only shows a **Continue** button (`/auth/recovery-continue`). The token is spent only when a person presses the button (`POST /auth/recovery-start` → `verifyOtp`). The whole path already exists in the app and is covered by tests (`app/auth/recovery-start`, `recovery-continue`).
+
+Email templates are editable on Supabase's built-in email service; custom SMTP is not required (the built-in service is rate limited to a few emails per hour and meant for testing, which matters when testing repeatedly).

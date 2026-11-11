@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
-import { EXPIRED_MARKER, EXPIRED_QUERY, readRecoveryLink } from "./recovery-link";
+import { EXPIRED_MARKER, EXPIRED_QUERY, linkWasAlreadyUsed, readRecoveryLink } from "./recovery-link";
 
 /**
  * ============================================================================
@@ -155,5 +155,18 @@ describe("the source itself", () => {
     // The route writes it and the parser reads it; a literal in either would
     // let them drift apart silently.
     expect(EXPIRED_QUERY).toBe(`?${EXPIRED_MARKER}=expired`);
+  });
+});
+
+describe("linkWasAlreadyUsed", () => {
+  it("is true for Supabase's otp_expired refusal, in the fragment or the query", () => {
+    expect(linkWasAlreadyUsed("", "#error=access_denied&error_code=otp_expired")).toBe(true);
+    expect(linkWasAlreadyUsed("?error_code=otp_expired", "")).toBe(true);
+    expect(linkWasAlreadyUsed(EXPIRED_QUERY, "")).toBe(true);
+  });
+
+  it("is false for other refusals and for ordinary pages", () => {
+    expect(linkWasAlreadyUsed("", "#error=access_denied&error_code=bad_jwt")).toBe(false);
+    expect(linkWasAlreadyUsed("", "")).toBe(false);
   });
 });
