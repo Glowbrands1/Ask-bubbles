@@ -27,6 +27,8 @@ begin
 end;
 $$;
 
+/* Re-runnable: the project this was first applied to already has the trigger, so tooling that applies it again must not fail here. */
+drop trigger if exists google_review_goals_guard_count_from on public.google_review_goals;
 create trigger google_review_goals_guard_count_from
   before update on public.google_review_goals
   for each row execute function public.google_review_goals_guard_count_from();
