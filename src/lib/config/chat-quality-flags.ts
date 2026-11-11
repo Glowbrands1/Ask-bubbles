@@ -1343,6 +1343,20 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "EXCERPT_BRAND_HEADING_DROP_ENABLED",
   "NEAR_MISS_ANSWER_KEEPS_REQUEST_ENABLED",
   "FULL_MANUAL_WIDE_GATE_ENABLED",
+  // coding 5: B3 (QA's backlog, 10 Nov 2026; default off).
+  "COPY_PASTE_CLAIM_HONEST_ENABLED",
+  "DATE_ONCE_ENABLED",
+  "ADDRESS_ASKS_WHO_ENABLED",
+  "LEAD_FULL_SENTENCE_ENABLED",
+  "NAME_LINE_COMMA_ENABLED",
+  // TEMPLATE_OUTLINE_FIELDS (default off): in the list, as every chat flag (Gate-Bubbles-2, 11 Nov 2026).
+  "TEMPLATE_OUTLINE_FIELDS_ENABLED",
+  // PASTED_OUTLINE_TO_OPEN_DRAFT (default off): in the list, as every chat flag (Gate-Bubbles-2, 11 Nov 2026).
+  "PASTED_OUTLINE_TO_OPEN_DRAFT_ENABLED",
+  // coding 6: PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT (ported from the sibling app, 11 Nov 2026; default off).
+  "PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT_ENABLED",
+  // coding 6: GROUP_WORDS_NOT_A_NAME (Problem 19, 11 Nov 2026; default off).
+  "GROUP_WORDS_NOT_A_NAME_ENABLED",
 ] as const;
 
 /**
@@ -3014,6 +3028,52 @@ export function excerptBrandHeadingDropEnabled(): boolean {
   return envFlag("EXCERPT_BRAND_HEADING_DROP_ENABLED");
 }
 
+/**
+ * COPY_PASTE_CLAIM_HONEST_ENABLED (QA's backlog B3; same report; coding 5; same flag in both apps; default off). "It
+ * should update automatically — no copy-and-paste needed. The details are on the draft card." went out with nothing
+ * written. On: those are claims the honest reply drops (`forms/form-content-turn.ts`). Off, as before.
+ */
+export function copyPasteClaimHonestEnabled(): boolean {
+  return envFlag("COPY_PASTE_CLAIM_HONEST_ENABLED");
+}
+
+/**
+ * DATE_ONCE_ENABLED (QA's backlog B7; HR's report of 21 Oct 2026; coding 5; same flag in both apps; default off). The
+ * incident date was written twice: the Date field and again in the Observation ("… on 10-1-26"). On: a drafted account
+ * field drops the form's own date (`forms/date-once.ts`). Off, as before.
+ */
+export function dateOnceEnabled(): boolean {
+  return envFlag("DATE_ONCE_ENABLED");
+}
+
+/**
+ * ADDRESS_ASKS_WHO_ENABLED (QA's backlog B7; QA, 4 Nov 2026; coding 5; same flag in both apps; default off).
+ * "Corrective action for 123 Main Street" made no card and was answered as a policy question. On: it asks who the
+ * form is for (`forms/address-asks-who.ts`). Off, as before.
+ */
+export function addressAsksWhoEnabled(): boolean {
+  return envFlag("ADDRESS_ASKS_WHO_ENABLED");
+}
+
+/**
+ * LEAD_FULL_SENTENCE_ENABLED (QA's backlog B7; Pau via QA, 5 Nov 2026, sf-b6; coding 5; same flag in both apps; default
+ * off). A reply ended "Based on what you've described, I can prepare:" with nothing after it. On: the lead is a full
+ * sentence when form choices follow, and goes when none do (`forms/lead-full-sentence.ts`). Off, as before.
+ */
+export function leadFullSentenceEnabled(): boolean {
+  return envFlag("LEAD_FULL_SENTENCE_ENABLED");
+}
+
+/**
+ * NAME_LINE_COMMA_ENABLED (QA's backlog B7; QA's live CA chat, 4 Nov 2026; coding 5; same flag in both apps; default
+ * off). "fix her last name, it is Doe-Smith": the comma kept it from reading as a name correction. On: it reads as one,
+ * and a name the form does not take from the chat is named back as a question (`forms/name-correction-words.ts`).
+ * Off, as before.
+ */
+export function nameLineCommaEnabled(): boolean {
+  return envFlag("NAME_LINE_COMMA_ENABLED");
+}
+
 // --- end coding 5 flags ---
 
 /**
@@ -4274,6 +4334,38 @@ export function formDateSaidAloneEnabled(): boolean {
 }
 
 /**
+ * TEMPLATE_OUTLINE_FIELDS_ENABLED (coding 6, 10 Nov 2026; default off; Pau
+ * via QA, sf-s21, 5 Nov 2026; port from the sibling app). With Wynne's Corrective Action created, the
+ * manager pasted another employee's CA ("Observation of Offense: … Action
+ * Plan: …") and asked "No this should be the same out line but with wynnes
+ * info i told you in the first chat": the revision was scoped to the
+ * Observation only, so the template's Action Plan was dropped (the CA's plan
+ * is changed only when the request names it), and the next ask was answered
+ * "I haven't changed the Corrective Action Form". On: a request for a pasted
+ * template's outline ("the same outline", "in the format of / that …",
+ * "look exactly the same as") is handed to the revision naming every field
+ * the template heads, so it may write them all; and "Must See Behaviors and
+ * not the standard of conduct" on a form citing Standards of Conduct is
+ * answered with why it stays (the manual has no Must See Behaviors section;
+ * QA's ruling). See `forms/template-outline.ts`. Off, as before.
+ */
+export function templateOutlineFieldsEnabled(): boolean {
+  return envFlag("TEMPLATE_OUTLINE_FIELDS_ENABLED");
+}
+
+/**
+ * PASTED_OUTLINE_TO_OPEN_DRAFT_ENABLED (coding 6, 10 Nov 2026; default off; QA's Sunny round-23 live test of Pau's
+ * sf-s21, conv_mwb21a4z2rxf5y1): with <A>'s Corrective Action draft open, a pasted Corrective Action of <B>
+ * ("Observation of Offense: … Action Plan: …") was read as a new request for <B> ("Is this for <B>?"), so a new card
+ * covered the draft and the outline was never saved on it (TEMPLATE_OUTLINE_FIELDS only reads the open draft). On, a
+ * turn with two or more of the open draft's field labels as headings goes to that draft as its outline, with the
+ * draft's own facts (`forms/open-draft-turn.ts`). Off, as before.
+ */
+export function pastedOutlineToOpenDraftEnabled(): boolean {
+  return envFlag("PASTED_OUTLINE_TO_OPEN_DRAFT_ENABLED");
+}
+
+/**
  * MADE_ABOUT_SAID_DATE_ENABLED (ported from the sibling app: QA's live round 14 there, 10 Nov 2026; default off; same flag in
  * both apps). "I need you to make it about showing up late and please list the policy make the date for 10/14/26" on a
  * saved draft already about another incident answered "I haven't changed …": the reader wrote the policy into Details,
@@ -4455,4 +4547,27 @@ export function fullManualWideGateEnabled(): boolean {
  */
 export function formForForTypoEnabled(): boolean {
   return envFlag("FORM_FOR_FOR_TYPO_ENABLED");
+}
+
+/**
+ * PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT_ENABLED (coding 6, 11 Nov 2026; default off; ported from the sibling app's round-25 live test of
+ * sf-s21, dpl_E584Q17G): with <A>'s Corrective Action draft open, a pasted labelled template of <B>'s CA ("Observation
+ * of Offense: … Action Plan: …") stayed on the draft (PASTED_OUTLINE_TO_OPEN_DRAFT) but nothing was saved ("Nothing on
+ * the form has changed yet. I couldn't place that …"). On, when the revision writes nothing, each labelled section goes
+ * into the draft's field of that label, with the template's person written as the draft's employee, never a person
+ * switch (`forms/pasted-template-fields.ts`). Off, as before.
+ */
+export function pastedTemplateFieldsToOpenDraftEnabled(): boolean {
+  return envFlag("PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT_ENABLED");
+}
+
+/**
+ * GROUP_WORDS_NOT_A_NAME_ENABLED (coding 6, 11 Nov 2026; default off; Problem 19, this app's production, 10 Nov 2026):
+ * "I want the same form for multiple employees" put "multiple employees" on the coaching card as the employee, with
+ * "Everything I need is here". On, a group of people ("multiple employees", "my employees", "several team members",
+ * "the team", "everyone") is never a person's name (`forms/not-a-name.ts` isGroupOfPeople, with NOT_A_NAME_GUARD),
+ * so the bot asks who they are and the coaching topic is kept. Off, as before.
+ */
+export function groupWordsNotANameEnabled(): boolean {
+  return envFlag("GROUP_WORDS_NOT_A_NAME_ENABLED");
 }
