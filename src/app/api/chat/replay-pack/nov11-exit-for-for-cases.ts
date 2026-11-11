@@ -26,7 +26,15 @@ export const NOV11_EXIT_FOR_FOR_CASES: ReplayCase[] = [
       t.directory(STAFF);
       t.as("location_manager", WEST_DODGE);
       const thread = t.thread();
-      const reply = await thread.say(SAID);
+      let reply = await thread.say(SAID);
+      /*
+       * With TITLE_NOT_PART_OF_NAME (#786, shipped with this) on, the roster's spelling is offered first ("Is this for
+       * Marnie Holloway?"), as in the sibling app's sf-s36. Gate-Bubbles R785 (11 Nov 2026): the manager answers "yes",
+       * then the exit card follows. Without it, turn 1 is the card.
+       */
+      if (thread.proposal?.templateKey !== "resignation-exit" && /Is this for \*{0,2}Marnie Holloway\*{0,2}\?/.test(reply.content)) {
+        reply = await thread.say("yes");
+      }
       expect(thread.proposal?.templateKey, `no exit card:\n${reply.content}`).toBe("resignation-exit");
     },
   },
