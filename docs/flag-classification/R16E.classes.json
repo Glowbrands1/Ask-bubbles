@@ -1,0 +1,22 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-near-miss-answer-keeps-request: \"Oops, it's Rozlyn quellmar\" answering the near-miss question keeps the follow-up coaching request it answered \u2014 OPEN in production (with production's flags the answer is the name alone: the card goes back to the earlier Coaching Form)": {
+    "category": "INTENDED",
+    "twin": "replay: nov10-near-miss-answer-keeps-request [open]",
+    "reason": "The OPEN pin for s14 path 1 now holds with NEAR_MISS_ANSWER_KEEPS_REQUEST_ENABLED, so its expected-fail test goes passed->failed: the answer \"Oops, it's Rozlyn quellmar\" keeps the Follow-Up Coaching request (templateKey follow-up-coaching) instead of going back to the earlier Coaching Form."
+  },
+  "replay: nov10-near-miss-answer-keeps-request [open]": {
+    "category": "INTENDED",
+    "twin": "itself",
+    "reason": "NEAR_MISS_ANSWER_KEEPS_REQUEST_ENABLED: the near-miss answer keeps the follow-up coaching request it answered (turn 4 card is the Follow-Up Coaching Form in all 3 ON runs, the Coaching Form in all 3 OFF runs)."
+  },
+  "replay: nov10-r22-s14-date-kept-after-name-correction [fix-open:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED]": {
+    "category": "INTENDED",
+    "twin": "replay: nov10-near-miss-answer-keeps-request [open]",
+    "reason": "Same cause: with NEAR_MISS_ANSWER_KEEPS_REQUEST_ENABLED the turn-4 reply names the Follow-Up Coaching Form instead of the Coaching Form. The case still fails in both arms on its last assertion: formDate is null after the near-miss answer (probe: 2026-10-01 on turns 2-3, null from turn 4, OFF and ON alike, and also with production's flags without the 4 roster flags), so the date loss is pre-existing, not caused by 16c or #716."
+  },
+  "replay: nov10-r22-s14-date-kept-after-name-correction [open]": {
+    "category": "INTENDED",
+    "twin": "replay: nov10-near-miss-answer-keeps-request [open]",
+    "reason": "Same cause: with NEAR_MISS_ANSWER_KEEPS_REQUEST_ENABLED the turn-4 reply names the Follow-Up Coaching Form instead of the Coaching Form. The case still fails in both arms on its last assertion: formDate is null after the near-miss answer (probe: 2026-10-01 on turns 2-3, null from turn 4, OFF and ON alike, and also with production's flags without the 4 roster flags), so the date loss is pre-existing, not caused by 16c or #716."
+  }
+}
