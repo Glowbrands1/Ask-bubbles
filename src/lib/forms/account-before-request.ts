@@ -17,14 +17,28 @@ import { detectTemplateIntent } from "@/lib/forms/template-intent";
  *
  * On: walking back from the card's first cited turn, each manager turn just before it that recounts an incident by this
  * person — naming them by first name or opening with she / he / they, and describing what happened in the past tense (read
- * without a leading question) — joins the card's turns; the walk stops at the first turn that does not, at a request for another
- * form, or at a turn naming somebody else. After the reply is built; outside the proposal flow. Pure.
+ * without a leading question) — joins the card's turns; the walk stops at the first turn that does not, at a turn that is
+ * itself a form request, at a turn an earlier card cited, or at a turn naming somebody else. After the reply is built; outside the proposal flow. Pure.
  */
 
 interface Turn {
   readonly id?: string;
   readonly role: string;
   readonly content: string;
+  /** An earlier card in the chat, when the turn carries it: the turns it already cited are its account, not this one's. */
+  readonly formProposal?: { readonly sourceMessageIds?: readonly string[] } | null;
+}
+
+/*
+ * Gate-Bubbles' NO-GO on #714 (11 Nov 2026, R714): "create a corrective action for Remy Calder, he was late opening the
+ * store on 11/2", then "now make a separate CA for Remy Calder for his cash drawer being short $20 on 11/3" — the walk
+ * back took the FIRST card's request as the second card's account, and the cash drawer was lost. A turn that is itself
+ * a form request belongs to its own card: the walk stops there.
+ */
+const FORM_REQUEST = /\b(?:create|make|write|draw\s+up|start|need|do|give|draft|prepare)\b[^.?!\n]{0,40}\b(?:ca|c\/a|corrective\s+action|coaching(?:\s+form)?|write[- ]?up|warning|form|dpoa)\b/i;
+
+function isFormRequest(text: string): boolean {
+  return detectTemplateIntent(text).kind === "explicit" || FORM_REQUEST.test(text);
 }
 
 interface Card {
@@ -67,12 +81,14 @@ export function withAccountBeforeRequest<T extends { content: string; formPropos
   if (!accountBeforeRequestEnabled() || !card?.employeeName || card.sourceMessageIds.length === 0) return answer;
   const manager = turns.filter((turn) => turn.role === "user" && turn.id);
   const cited = new Set(card.sourceMessageIds);
+  // Turns an earlier card in the chat already cited (when the turns carry it).
+  const earlier = new Set(turns.flatMap((turn) => (turn.role === "assistant" ? (turn.formProposal?.sourceMessageIds ?? []) : [])));
   const firstAt = manager.findIndex((turn) => cited.has(turn.id!));
   if (firstAt <= 0) return answer;
   const added: string[] = [];
   for (let index = firstAt - 1; index >= 0; index -= 1) {
     const turn = manager[index]!;
-    if (cited.has(turn.id!) || !accountTurn(turn.content, card)) break;
+    if (cited.has(turn.id!) || earlier.has(turn.id!) || isFormRequest(turn.content) || !accountTurn(turn.content, card)) break;
     added.unshift(turn.id!);
   }
   if (added.length === 0) return answer;

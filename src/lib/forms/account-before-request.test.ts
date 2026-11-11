@@ -32,4 +32,22 @@ describe("ACCOUNT_BEFORE_REQUEST_ENABLED", () => {
     const question = turns.map((turn) => (turn.id === "m1" ? { ...turn, content: "what is the policy on shipping orders?" } : turn));
     expect(withAccountBeforeRequest(CARD, question)).toEqual(CARD);
   });
+
+  // Gate-Bubbles' NO-GO (R714, 11 Nov 2026), its exact turns; Remy Calder is a fixture name.
+  it("on: the first card's request is never the second card's account", () => {
+    vi.stubEnv("ACCOUNT_BEFORE_REQUEST_ENABLED", "true");
+    const two = [
+      { id: "r1", role: "user", content: "create a corrective action for Remy Calder, he was late opening the store on 11/2" },
+      { id: "a1", role: "assistant", content: "I'll draft a **Corrective Action Form** for **Remy Calder** …" },
+      { id: "r2", role: "user", content: "now make a separate CA for Remy Calder for his cash drawer being short $20 on 11/3" },
+    ];
+    const second = { content: "card", formProposal: { templateKey: "dpoa", employeeName: "Remy Calder", sourceMessageIds: ["r2"] } };
+    expect(withAccountBeforeRequest(second, two)).toEqual(second);
+  });
+
+  it("on: a turn an earlier card already cited stops the walk", () => {
+    vi.stubEnv("ACCOUNT_BEFORE_REQUEST_ENABLED", "true");
+    const cited = turns.map((turn) => (turn.id === "a1" ? { ...turn, formProposal: { sourceMessageIds: ["m1"] } } : turn));
+    expect(withAccountBeforeRequest(CARD, cited).formProposal.sourceMessageIds).toEqual(["m2", "m3", "m4"]);
+  });
 });
