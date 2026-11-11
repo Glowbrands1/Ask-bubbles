@@ -1327,6 +1327,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
   "CHAT_STAGE_TIMINGS_ENABLED",
   "CA_REASON_DUE_TO_ENABLED",
+  "COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED",
   // coding 6: REQUEST_ISSUE_KEPT, LATE_OPENING_OWN_WORDS, FIRST_NAME_ENOUGH (QA round 17b, 10 Nov 2026; default off).
   "REQUEST_ISSUE_KEPT_ENABLED",
   "LATE_OPENING_OWN_WORDS_ENABLED",
@@ -4455,4 +4456,15 @@ export function fullManualWideGateEnabled(): boolean {
  */
 export function formForForTypoEnabled(): boolean {
   return envFlag("FORM_FOR_FOR_TYPO_ENABLED");
+}
+
+/**
+ * COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED (QA, 11 Nov 2026; Coding-5's BCS-metrics probe; default off). "She was below
+ * goal in IPT, AOV and Comp Sales % for October" on a sales Corrective Action lost its Issue: the name reader took
+ * "Comp Sales" (and "Discount Rate") for a person, and the next turn's card was drawn from that turn alone. On: a
+ * candidate made only of the company's own metric words (`config/company/metric-words.ts`), measure words and percent
+ * signs is not a person (`forms/person-guard.ts`); somebody on the roster still always is. Off, as before.
+ */
+export function companyMetricWordsNotNamesEnabled(): boolean {
+  return envFlag("COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED");
 }
