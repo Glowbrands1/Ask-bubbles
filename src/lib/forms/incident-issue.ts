@@ -1,4 +1,5 @@
 import {
+  caReasonDueToEnabled,
   complaintAccountEnabled,
   decimalNotSentenceEndEnabled,
   issueAfterRequestReasonEnabled,
@@ -139,7 +140,9 @@ function issueFromRequest(text: string, employeeName: string | null): string | n
       // "CA for jordan testperson, cash handling": the person, then the issue.
       if (person) {
         const words = [...personWords].map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
-        const after = new RegExp(`^(?:(?:${words})\\s*)+(?:\\s+(?:for|about|over|regarding)\\s+|\\s*[-—–:,]\\s*)(.+)$`, "i").exec(raw.trim());
+        // CA_REASON_DUE_TO_ENABLED (QA, live, 4 Nov 2026): "CA for <name> due to under performance in salon metrics" — "due to" and "because (of)" join the reason too. Off, as before.
+        const joins = caReasonDueToEnabled() ? "for|about|over|regarding|due\\s+to|because(?:\\s+of)?" : "for|about|over|regarding";
+        const after = new RegExp(`^(?:(?:${words})\\s*)+(?:\\s+(?:${joins})\\s+|\\s*[-—–:,]\\s*)(.+)$`, "i").exec(raw.trim());
         if (after) raw = after[1]!;
       }
       const issue = firstAccountClause(raw, personWords).trim().replace(/[\s"'”’)]+$/, "");
@@ -206,10 +209,25 @@ function clipAccount(raw: string): string | null {
 const LEVEL_REQUEST_LEAD =
   /^\s*(?:please\s+)?(?:create|make|start|open|do|file|write|draft)\s+(?:a\s+|an\s+)?(?:verbal|written|final)(?:\s+warning)?(?:\s+(?:on\s+)?(?<![\d/-])\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?(?![\d/-]))?\s+for\b[^,]*,\s*/i;
 
+/*
+ * CA_REASON_DUE_TO_ENABLED (the #237 audit, live 26 Oct 2026): "create a ca
+ * for <name> at <store>, she was late on 10-5 and 10-15" was the card's Issue
+ * with the request words in front. The clause that asks for the form, up to
+ * its comma, is the request; what follows is the account.
+ */
+const FORM_REQUEST_LEAD =
+  /^\s*(?:please\s+)?(?:(?:create|make|start|open|do|file|write|draft|need|i\s+need)\s+)?(?:a\s+|an\s+)?(?:corrective\s+action(?:\s+form)?|ca|c\/a|dpoa|write[- ]?up|warning)\s+for\b[^,]*,\s*(?=\S)/i;
+
 function withoutLevelRequestLead(sentence: string): string {
-  const read = complaintAccountEnabled() ? sentence.replace(LEVEL_RUN_ON_LEAD, "") : sentence;
+  let read = complaintAccountEnabled() ? sentence.replace(LEVEL_RUN_ON_LEAD, "") : sentence;
+  if (caReasonDueToEnabled()) read = withoutFormRequestLead(read);
   if (!levelRequestDateEnabled()) return read;
   return read.replace(LEVEL_REQUEST_LEAD, "");
+}
+
+/** "create a ca for <name> at <store>, she was late …" → "she was late …" (CA_REASON_DUE_TO_ENABLED); unchanged when nothing follows the comma. */
+export function withoutFormRequestLead(sentence: string): string {
+  return sentence.replace(FORM_REQUEST_LEAD, "");
 }
 
 /*
@@ -311,6 +329,40 @@ function withoutPolicyCorrections(text: string): string {
 }
 
 export function correctiveActionIssue(rawSaid: string, employeeName: string | null): string | null {
+  const read = issueAsRead(rawSaid, employeeName);
+  if (!caReasonDueToEnabled()) return read;
+  /*
+   * CA_REASON_DUE_TO_ENABLED (QA, 10 Nov 2026, the B#501 rerun on main): with production's SALES_OBSERVATION_ACCOUNT
+   * and SALES_SHORTFALL_OBJECT, "CA for <name> due to under performance in salon metrics" had no Issue (the sales
+   * reason is cut as request matter and nothing else was said), and "… because of under performance …" kept the
+   * request's "because of". The reason the request gives after the person is the Issue when nothing else was read,
+   * or when what was read is only that request's own "due to / because (of) …" clause.
+   */
+  const reason = dueToReason(rawSaid, employeeName);
+  if (reason === null) return read;
+  return read === null || REASON_JOIN_LEAD.test(read) ? reason : read;
+}
+
+/** CA_REASON_DUE_TO_ENABLED: the request's own reason join, left at the start of what was read. */
+const REASON_JOIN_LEAD = /^\s*(?:due\s+to|because(?:\s+of)?)\s+/i;
+
+/** CA_REASON_DUE_TO_ENABLED: "CA for <name> due to <reason>" / "… because (of) <reason>" → "<reason>"; null otherwise. */
+function dueToReason(text: string, employeeName: string | null): string | null {
+  const personWords = new Set((employeeName ?? "").trim().toLowerCase().split(/\s+/).filter(Boolean));
+  if (personWords.size === 0) return null;
+  const words = [...personWords].map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+  const joined = new RegExp(`^(?:(?:${words})\\s*)+\\s+(?:due\\s+to|because(?:\\s+of)?)\\s+(.+)$`, "i");
+  let found: string | null = null;
+  for (const match of text.matchAll(requestPattern())) {
+    const after = joined.exec(match[1]!.trim());
+    if (!after) continue;
+    const reason = firstAccountClause(after[1]!, personWords).trim().replace(/[\s"'”’).!?]+$/, "");
+    if (reason.length >= 3 && reason.length <= 80) found = reason;
+  }
+  return found;
+}
+
+function issueAsRead(rawSaid: string, employeeName: string | null): string | null {
   // POLICY_CORRECTION_NOT_ACCOUNT_ENABLED: "it should be under performance not standard of conduct" is no Issue.
   const said = withoutPolicyCorrections(rawSaid);
   /*

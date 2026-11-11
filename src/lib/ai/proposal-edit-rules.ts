@@ -1,8 +1,13 @@
-import { formEditDateRulesEnabled, missedShiftCitesAttendanceEnabled, proposalPolicySetAsideEnabled } from "@/lib/config/chat-quality-flags";
+import {
+  formEditDateRulesEnabled,
+  missedShiftCitesAttendanceEnabled,
+  proposalPolicySetAsideEnabled,
+  requestIssueKeptEnabled,
+} from "@/lib/config/chat-quality-flags";
 import { correctiveActionIssue } from "@/lib/forms/incident-issue";
 import { asksAboutPolicy, citationSetAside, policiesSetAside, setAsideAnything, withPolicySetAside } from "@/lib/forms/policy-set-aside";
 
-import { managerWords, remapEditLine, remapObservation } from "./edit-date-rules";
+import { managerWords, readSentenceEdit, readTurnEdit, remapEditLine, remapObservation } from "./edit-date-rules";
 import type { AskRequest, AskResponse } from "./types";
 
 /**
@@ -73,13 +78,25 @@ function withEditRules(response: AskResponse, request: AskRequest): AskResponse 
     ...(request.history ?? []).filter((turn) => turn.role === "user").map((turn) => turn.content),
     request.question,
   ].map(managerWords);
-  const issue = remapObservation({
+  const reread = remapObservation({
     users,
     current: card.issue ?? null,
     reread: (account) => correctiveActionIssue(account, card.employeeName ?? null),
     // PROPOSAL_POLICY_SET_ASIDE_ENABLED: "take the … policy off" and "we have quoted the standards of conduct …" are asks, never the Issue.
     ...(proposalPolicySetAsideEnabled() ? { alsoAnAsk: asksAboutPolicy } : {}),
   });
+  /*
+   * REQUEST_ISSUE_KEPT_ENABLED (QA's live round 17b, P16): "Can you make a CA for <name> for failure to open on time?"
+   * is read whole as an instruction, so its account was dropped and the Issue emptied. Kept when no turn replaces or
+   * adds to it and the Issue is no instruction itself.
+   */
+  const keep =
+    requestIssueKeptEnabled() &&
+    !reread?.trim() &&
+    Boolean(card.issue?.trim()) &&
+    users.every((turn) => readTurnEdit(turn) === null) &&
+    readSentenceEdit(card.issue ?? "") === null;
+  const issue = keep ? (card.issue ?? null) : reread;
   const editLine = remapEditLine(managerWords(request.question));
   if (issue === (card.issue ?? null) && !editLine) return response;
   let content = response.content;
