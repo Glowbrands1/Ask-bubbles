@@ -368,4 +368,130 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov10-reopened-edit-keeps-details-clear": "ACCOUNT_WIPE_GUARD",
   // Changed on purpose (10 Nov 2026): fixed in production by ACCOUNT_WIPE_GUARD, CARD_NAMES_EMPLOYEE, QA round 16
   "nov10-reopened-edit-keeps-details-replace": "ACCOUNT_WIPE_GUARD",
+  // Changed on purpose (10 Nov 2026): fixed in production by DRAFT_WRITE_NEVER_SILENT, QA round 17b
+  "nov10-draft-write-refused-field-never-drops-the-draft": "DRAFT_WRITE_NEVER_SILENT",
+  // Changed on purpose (10 Nov 2026): fixed in production by PAYROLL_BARE_SENTENCE, QA round 17b
+  "nov10-p15-payroll-deduction-sentence-is-yes": "PAYROLL_BARE_SENTENCE",
+  // Changed on purpose (10 Nov 2026): fixed in production by FAILURE_TO_OPEN_IS_LATE_OPENING, QA round 17b
+  "nov10-p16-failure-to-open-is-what-happened": "FAILURE_TO_OPEN_IS_LATE_OPENING",
+  // Changed on purpose (10 Nov 2026): fixed in production by CA_REASON_DUE_TO, QA round 17b
+  "nov6-ca-reason-at-store-then-account": "CA_REASON_DUE_TO",
+  // Changed on purpose (10 Nov 2026): fixed in production by CA_REASON_DUE_TO, QA round 17b
+  "nov6-ca-reason-because-of-draft-observation": "CA_REASON_DUE_TO",
+  // Changed on purpose (10 Nov 2026): fixed in production by CA_REASON_DUE_TO, QA round 17b
+  "nov6-ca-reason-due-to-card-issue": "CA_REASON_DUE_TO",
+  // Changed on purpose (10 Nov 2026): fixed in production by CA_REASON_DUE_TO, QA round 17b
+  "nov6-ca-reason-due-to-draft-observation": "CA_REASON_DUE_TO",
+  // Changed on purpose (11 Nov 2026): fixed in production by NO_SHOW_OPENING_IS_ATTENDANCE, QA round 17d
+  "nov10-no-show-opening-is-attendance-as-typed": "NO_SHOW_OPENING_IS_ATTENDANCE",
+  // Changed on purpose (11 Nov 2026): fixed in production by NO_SHOW_OPENING_IS_ATTENDANCE, QA round 17d
+  "nov10-no-show-opening-is-attendance-lower": "NO_SHOW_OPENING_IS_ATTENDANCE",
+  // Changed on purpose (11 Nov 2026): fixed in production by REQUEST_ISSUE_KEPT, QA round 17d
+  "nov10-r17b-p16-issue-as-typed": "REQUEST_ISSUE_KEPT",
+  // Changed on purpose (11 Nov 2026): fixed in production by REQUEST_ISSUE_KEPT, QA round 17d
+  "nov10-r17b-p16-issue-lower": "REQUEST_ISSUE_KEPT",
+  // Changed on purpose (11 Nov 2026): fixed in production by LATE_OPENING_OWN_WORDS, QA round 17d
+  "nov10-r17b-late-opening-quote-p16": "LATE_OPENING_OWN_WORDS",
+  // Changed on purpose (11 Nov 2026): fixed in production by LATE_OPENING_OWN_WORDS, QA round 17d
+  "nov10-r17b-late-opening-quote-opening-shift": "LATE_OPENING_OWN_WORDS",
+  // Changed on purpose (11 Nov 2026): fixed in production by LATE_OPENING_OWN_WORDS, QA round 17d
+  "nov10-r17b-late-opening-quote-not-on-time": "LATE_OPENING_OWN_WORDS",
+  // Changed on purpose (11 Nov 2026): fixed in production by FIRST_NAME_ENOUGH, QA round 17d
+  "nov10-r17b-first-name-enough": "FIRST_NAME_ENOUGH",
+  // Changed on purpose (11 Nov 2026): fixed in production by EXCERPT_BRAND_HEADING_DROP, QA round 17f
+  "nov11-excerpt-brand-heading-holidays": "EXCERPT_BRAND_HEADING_DROP",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov4-name-first-date-sentence-off-code": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov4-name-first-date-sentence-off-models": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov4-name-first-nodate-sentence-off-code": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov4-name-first-nodate-sentence-off-models": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov4-name-last-date-caps-off-code": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov4-name-last-date-caps-off-models": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov4-name-last-date-sentence-off-code": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov4-name-last-date-sentence-off-models": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov4-name-last-nodate-sentence-off-code": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov4-name-last-nodate-sentence-off-models": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov4-name-middle-date-sentence-off-code": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov4-name-middle-date-sentence-off-models": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov4-name-middle-nodate-sentence-off-code": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov4-name-middle-nodate-sentence-off-models": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov5-compound-surname-one-word-typo": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov5-compound-surname-word1-typo": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov5-compound-surname-word1-typo-yes": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov5-compound-surname-word2-rotated": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov5-compound-surname-word2-rotated-earlier-turn": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov5-compound-surname-word2-typo": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_OFF_ROSTER_ASK, QA round 16c
+  "nov5-r3-off-roster-lowercase-action-plan": "FORM_NAME_OFF_ROSTER_ASK",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov5-roster-only-ima-off-roster": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov5-twin-gate-ima-off-roster-observation": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov6-roster-shape-apostrophe-first-initial": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov6-roster-shape-apostrophe-rotation": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov6-roster-shape-apostrophe-swap": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov6-roster-shape-apostrophe-typo": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov6-roster-shape-compound-surname-first-initial": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov6-roster-shape-compound-surname-rotation": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov6-roster-shape-compound-surname-typo": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov6-roster-shape-preferred-first-initial": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov6-roster-shape-preferred-rotation": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov6-roster-shape-preferred-swap": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov6-roster-shape-preferred-typo": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov6-roster-shape-short-surname-first-initial": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov6-roster-shape-two-word-first-first-initial": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov6-roster-shape-two-word-first-rotation": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov6-roster-shape-two-word-first-swap": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
+  "nov6-roster-shape-two-word-first-typo": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (11 Nov 2026): fixed in production by NEAR_MISS_ANSWER_KEEPS_REQUEST, QA round 16c
+  "nov10-near-miss-answer-keeps-request": "NEAR_MISS_ANSWER_KEEPS_REQUEST",
+  // Changed on purpose (12 Nov 2026): fixed in production by TITLE_NOT_PART_OF_NAME, QA round 17h
+  "nov7-sf-s36-exit-surname-typo": "TITLE_NOT_PART_OF_NAME",
+  // Changed on purpose (12 Nov 2026): fixed in production by NOT_FOLLOWING_IS_VIOLATION, QA round 17h
+  "nov10-not-following-dress-code-coaching-cites": "NOT_FOLLOWING_IS_VIOLATION",
+  // Changed on purpose (12 Nov 2026): fixed in production by NOT_FOLLOWING_IS_VIOLATION, QA round 17h
+  "nov10-not-following-dress-code-ca-policy": "NOT_FOLLOWING_IS_VIOLATION",
+  // Changed on purpose (12 Nov 2026): fixed in production by FORM_FOR_FOR_TYPO, QA round 17h
+  "nov10-sf-s36-off-roster-exit": "FORM_FOR_FOR_TYPO",
+  // Changed on purpose (12 Nov 2026): fixed in production by FORM_FOR_FOR_TYPO, QA round 17h
+  "nov11-exit-for-for-is-an-exit-request": "FORM_FOR_FOR_TYPO",
+  // Changed on purpose (12 Nov 2026): fixed in production by TITLE_NOT_PART_OF_NAME, QA round 17h
+  "nov11-title-not-part-of-name": "TITLE_NOT_PART_OF_NAME",
+  // Changed on purpose (12 Nov 2026): fixed in production by TITLE_NOT_PART_OF_NAME, QA round 17h
+  "nov11-title-not-part-of-name-yes-then-card": "TITLE_NOT_PART_OF_NAME",
 };
