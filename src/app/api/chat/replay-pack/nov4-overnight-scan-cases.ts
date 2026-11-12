@@ -149,6 +149,8 @@ export const NOV4_OVERNIGHT_SCAN_CASES: readonly ReplayCase[] = [
     report: `${REPORT}, sf-s13: "I need to make a coaching form for the team at West Dodge Rd on selling Bath Bomb Kits, not writing proper rainchecks which results in inventory not being correct." → "The employee needs to be left blank for now"`,
     // Run 4 Nov 2026 (production flags): fails as below.
     status: { open: "turn 1 makes the team card but says \"I couldn't find **Bath Bomb Kits** in the Woven roster\"; turn 2 \"The employee needs to be left blank for now\" makes the card for \"Bath Bomb Kits\" (\"I have the employee\") and asks for Bath Bomb Kits's job title" },
+    // Fixed under TEAM_CARD_NOT_PRODUCT_ENABLED (port from the sibling app, 10 Nov 2026): the team card, the product is the topic; open on production flags until QA flips it.
+    fixFlags: ["TEAM_CARD_NOT_PRODUCT_ENABLED"],
     async run(t) {
       const thread = start(t);
       await thread.say(
@@ -328,7 +330,7 @@ export const NOV4_OVERNIGHT_SCAN_CASES: readonly ReplayCase[] = [
     title: "a Verbal CA for \"Delphine Marlwoe Ostrander\" (Delphine Marlowe Ostrander) — dated 10/31/2026, payroll deduct No, Standards of Conduct, her own job title (never \"District Manager\")",
     report: `${REPORT}, sf-b5: "create a ca form for Delphine Marlwoe Ostrander" → "verbal warning The date she complained was Oct 31st . The customer said she was giving her an attitude …"`,
     // Run 4 Nov 2026 (production flags): fails as below.
-    status: { open: "\"Delphine Marlwoe Ostrander\" is not matched to the roster's Delphine Marlowe Ostrander (\"I couldn't find … in the Woven roster\"); turn 2's card is for the name as typed, reads \"When Delphine\" and \"Tobias Wrenfield\" as names, asks Verbal or Written though she said verbal warning, and its Position is \"District Manager\"" },
+    status: { open: "on production flags the card is for \"Delphine Marlwoe Ostrander\" as typed (fixed with TYPO_FULL_NAME_TO_ROSTER_ENABLED, see nov11-sf-b5-typo-name-and-title); with that, it still cites no Standards of Conduct (GUEST_ATTITUDE_CONDUCT, its own pull request)" },
     async run(t) {
       const thread = start(t);
       await thread.say("create a ca form for Delphine Marlwoe Ostrander");
@@ -349,6 +351,65 @@ export const NOV4_OVERNIGHT_SCAN_CASES: readonly ReplayCase[] = [
       expect(t.checked(id).warning_type, "not a Verbal Warning").toEqual(["verbal"]);
       expect(t.checked(id).payroll_deduct, "payroll deduct is not No").toEqual(["no"]);
       expect(values.policy_violated ?? "", "Policy Violated is not Standards of Conduct").toMatch(/standards of conduct/i);
+    },
+  },
+  {
+    /*
+     * QA's audit item 15.10 (11 Nov 2026): sf-b5's name and job-title halves, without the policy half (that is
+     * GUEST_ATTITUDE_CONDUCT, its own pull request). On production flags the card is for "Delphine Marlwoe Ostrander"
+     * as typed, so Woven's position never reaches it. Changed on purpose (12 Nov 2026, QA's ruling on #776): the typo is
+     * still asked about first; the details turn opens her card (NEAR_MISS_DETAILS_ACCEPT), and with
+     * TYPO_FULL_NAME_TO_ROSTER_ENABLED the "verbal warning" that opens it is the card's level. "spoke with District
+     * manager <name>" is never her Position.
+     */
+    id: "nov11-sf-b5-typo-name-and-title",
+    title: "sf-b5: \"Delphine Marlwoe Ostrander\" is the roster's Delphine Marlowe Ostrander, and \"spoke with District manager Tobias Wrenfield\" is never her Position",
+    report: `${REPORT}, sf-b5; QA's audit item 15.10, 11 Nov 2026`,
+    status: { open: "the card is for \"Delphine Marlwoe Ostrander\" as typed, not the roster's Delphine Marlowe Ostrander, and has no Woven position" },
+    fixFlags: ["TYPO_FULL_NAME_TO_ROSTER_ENABLED"],
+    async run(t) {
+      const thread = start(t);
+      await thread.say("create a ca form for Delphine Marlwoe Ostrander");
+      const reply = await thread.say(
+        "verbal warning The date she complained was Oct 31st . The customer said she was giving her an attitude when she brought up that the register was charging for scent in her laundry refills and it has never done that before. When Delphine spoke with District manager Tobias Wrenfield she said the customer had raised her voice first and she only explained the price.",
+      );
+      expect(thread.proposal, `no CA card for Delphine Marlowe Ostrander:\n${reply.content}`).toMatchObject({ templateKey: "dpoa", employeeName: "Delphine Marlowe Ostrander" });
+      expect(reply.content, `the typed spelling is on the card:\n${reply.content}`).not.toMatch(/\*\*Delphine Marlwoe Ostrander\*\*/);
+      expect(thread.proposal?.employeeRole ?? "", "the job title is District Manager").not.toMatch(/district manager/i);
+      expect(warningLevel(thread.proposal), "the card is not the Verbal Warning she said").toBe("verbal");
+      // QA (12 Nov 2026, after G4-776b): with the level set, the reply never calls it an earlier warning.
+      expect(reply.content, reply.content).not.toMatch(/treated the earlier warning you mentioned/);
+      t.draftWrites({ observation: "Observed:\nOn October 31, 2026 a customer reported that Delphine was rude to her when she asked about a charge at the register." });
+      const id = await thread.create();
+      const values = t.values(id);
+      expect(values.employee_name).toBe("Delphine Marlowe Ostrander");
+      expect(values.job_title ?? "", "the job title is District Manager").not.toMatch(/district manager/i);
+      expect(values.job_title ?? "", "the job title is not the roster's").toBe("Team Member Part Time");
+      expect(values.form_date, "the Date is not 10/31/2026").toBe("2026-10-31");
+    },
+  },
+  {
+    /*
+     * QA's ruling on #776 (12 Nov 2026): a full-name typo of a roster person is still asked "Is this for **<roster
+     * name>**?" first; a "yes" opens that person's card, and the level said in a later turn is kept.
+     */
+    id: "nov12-sf-b5-typo-name-yes-then-level",
+    title: "sf-b5 through the confirmation: \"Is this for Delphine Marlowe Ostrander?\" → \"yes\" → \"verbal warning …\": her card, Verbal Warning",
+    report: `${REPORT}, sf-b5; QA's ruling on #776, 12 Nov 2026`,
+    // A guard: after an explicit "yes", the level in the next turn is already kept on production flags (12 Nov 2026).
+    // The gap was the details turn straight after the question (nov11-sf-b5-typo-name-and-title).
+    status: "fixed",
+    fixFlags: ["TYPO_FULL_NAME_TO_ROSTER_ENABLED"],
+    async run(t) {
+      const thread = start(t);
+      const asked = await thread.say("create a ca form for Delphine Marlwoe Ostrander");
+      expect(asked.content, `the typo is not asked about first:\n${asked.content}`).toMatch(/Is this for \*\*Delphine Marlowe Ostrander\*\*\?/);
+      await thread.say("yes");
+      const reply = await thread.say(
+        "verbal warning The date she complained was Oct 31st . The customer said she was giving her an attitude when she brought up that the register was charging for scent in her laundry refills and it has never done that before.",
+      );
+      expect(thread.proposal, `no CA card for Delphine Marlowe Ostrander:\n${reply.content}`).toMatchObject({ templateKey: "dpoa", employeeName: "Delphine Marlowe Ostrander" });
+      expect(warningLevel(thread.proposal), `the card is not the Verbal Warning she said:\n${reply.content}`).toBe("verbal");
     },
   },
   /*

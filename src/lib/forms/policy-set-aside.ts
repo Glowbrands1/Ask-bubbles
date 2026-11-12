@@ -1,4 +1,5 @@
 import { policySetAsidePlanEnabled } from "@/lib/config/chat-quality-flags";
+import { withoutCitedPassages } from "@/lib/ai/violation-policy";
 
 import { CA_POLICY_LABEL, policiesNamedIn, type CaPolicyName } from "./ca-policy";
 
@@ -176,8 +177,14 @@ function planWithoutSetAside(line: string, setAside: PolicySetAside): string {
   return line.replace(found[0], replacement);
 }
 
-export function withPolicySetAside(content: string, setAside: PolicySetAside): string {
-  if (!setAsideAnything(setAside)) return content;
+export function withPolicySetAside(rawContent: string, setAside: PolicySetAside): string {
+  if (!setAsideAnything(setAside)) return rawContent;
+  /*
+   * POLICY_CITATION_ENABLED (Gate-Bubbles-3, Rpcf, 12 Nov 2026): the card below says "**Policy:** none — you took … off"
+   * (`policySetAsideLine`), so it quotes nothing: the block is taken out whole. Without the block (the flag off),
+   * unchanged.
+   */
+  const content = withoutCitedPassages(rawContent, () => true);
   const kept = content
     .split("\n")
     .map((line) => (policySetAsidePlanEnabled() && /\*\*Action plan:\*\*/i.test(line) ? planWithoutSetAside(line, setAside) : line))
