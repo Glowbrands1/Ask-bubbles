@@ -1,5 +1,5 @@
 import { businessToday } from "@/lib/business-date";
-import { levelRequestDateEnabled, requestLineAccountEnabled } from "@/lib/config/chat-quality-flags";
+import { bareCoachingRequestLeadEnabled, levelRequestDateEnabled, requestLineAccountEnabled } from "@/lib/config/chat-quality-flags";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 
 import { describesIncident } from "./corrective-action-intake";
@@ -189,8 +189,15 @@ const ASKS_FOR_THE_FORM =
 const LEVEL_REQUEST_DATED_ASK =
   /\b(?:create|make|start|open|do|file|write|draft)\s+(?:a\s+|an\s+)?(?:verbal|written|final)(?:\s+warning)?\s+(?:on\s+)?(?<![\d/-])\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?(?![\d/-])\s+for\s/i;
 
+/** BARE_COACHING_REQUEST_LEAD_ENABLED (the sibling app's round 31; checked here): "create a coaching for <A>, …" asks for the form too. */
+const COACHING_ASK = /\b(?:create|make|start|open|do|file|write|draft|need)\s+(?:a\s+|an\s+)?coaching(?:\s+(?:form|document|doc|paperwork))?\s+for\s/i;
+
 export function asksForTheForm(sentence: string): boolean {
-  return ASKS_FOR_THE_FORM.test(sentence) || (levelRequestDateEnabled() && LEVEL_REQUEST_DATED_ASK.test(sentence));
+  return (
+    ASKS_FOR_THE_FORM.test(sentence) ||
+    (levelRequestDateEnabled() && LEVEL_REQUEST_DATED_ASK.test(sentence)) ||
+    (bareCoachingRequestLeadEnabled() && COACHING_ASK.test(sentence))
+  );
 }
 const NOT_THE_INCIDENT =
   /\b(?:payroll\s+deduct|previous\s+coaching|prior\s+(?:coaching|actions?)|jba\s+(?:policy\s+)?manual)\b/i;
