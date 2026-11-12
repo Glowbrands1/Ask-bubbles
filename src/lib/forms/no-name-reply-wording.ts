@@ -5,7 +5,7 @@ import { noNameReplyWordingEnabled } from "@/lib/config/chat-quality-flags";
  * A REPLY WITH NO NAME ON THE CARD READS CLEANLY (NO_NAME_REPLY_WORDING_ENABLED)
  * ============================================================================
  *
- * Ask Sunny's round 22 live test (QA, 11 Nov 2026; port from Ask Sunny, same flag in both apps): "create a CA for ima employee" rightly made no card, but the reply said
+ * The sibling app's round 22 live test (QA, 11 Nov 2026; port from the sibling app, same flag in both apps): "create a CA for ima employee" rightly made no card, but the reply said
  * "… Corrective Action Form for the the employee." and "… policy with the the employee.", and "You can create it now"
  * over a card with no Create button. The name "ima employee" was taken off the reply as "the employee", and its word
  * "employee" was then taken off again inside the words just put in (`roster-only-names.ts`, withoutUnseatedName). With

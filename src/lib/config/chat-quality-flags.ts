@@ -4529,7 +4529,7 @@ export function noShowOpeningIsAttendanceEnabled(): boolean {
 }
 
 /**
- * NO_NAME_REPLY_WORDING_ENABLED (QA, Ask Sunny's round 22 live test, 11 Nov 2026; port from Ask Sunny; default off; same
+ * NO_NAME_REPLY_WORDING_ENABLED (QA, the sibling app's round 22 live test, 11 Nov 2026; port from the sibling app; default off; same
  * flag in both apps). "create a CA for ima employee" made no card, but the reply said "for the the employee" twice and
  * "You can create it now" with no Create button. On, the name's stand-in is never re-replaced and a card with no employee
  * says it can be created once the name is given (`forms/no-name-reply-wording.ts`). Off, as before.

@@ -7,7 +7,7 @@ import { STAFF, WEST_DODGE, type ReplayCase } from "./cases";
  * A REPLY WITH NO NAME ON THE CARD READS CLEANLY (NO_NAME_REPLY_WORDING_ENABLED)
  * ============================================================================
  *
- * Port from Ask Sunny (its round 22 live test, QA, 11 Nov 2026): "create a CA for ima employee" rightly made no card, but
+ * Port from the sibling app (its round 22 live test, QA, 11 Nov 2026): "create a CA for ima employee" rightly made no card, but
  * the reply said "for the the employee" and "You can create it now" with no Create button.
  *
  * Bubbles 16c live (QA, main ffa571ea, 11 Nov 2026), the tester's words "create a CA for ima employee": no card, but the
@@ -17,7 +17,7 @@ import { STAFF, WEST_DODGE, type ReplayCase } from "./cases";
  */
 const EVERY_STORE = { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] };
 const IMA = "create a CA for ima employee";
-const REPORT = "Bubbles 16c live test (QA, 11 Nov 2026, main ffa571ea); Ask Sunny round 22 live test";
+const REPORT = "Bubbles 16c live test (QA, 11 Nov 2026, main ffa571ea); the sibling app's round 22 live test";
 
 export const NOV11_LIVE_NO_NAME_CASES: ReplayCase[] = (
   [
