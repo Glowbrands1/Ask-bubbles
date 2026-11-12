@@ -1,0 +1,62 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-p12-coaching-observed-saved-empty-heading: P12 (empty-heading): \"make me a coaching form for Brisa Talvenor not hitting October numbers\" \u2192 Create: the saved Details have \"Observed:\" with the October account under it \u2014 OPEN in production (the saved Details have no \"Observed:\", or an empty one)": {
+    "category": "INTENDED",
+    "reason": "P12: with the flag on, the Details saved at Create carry \"Observed:\" with the October account under it (no heading, empty heading, model writes nothing). The open pin now fails because the case holds."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-p12-coaching-observed-saved-model-writes-nothing: P12 (model-writes-nothing): \"make me a coaching form for Brisa Talvenor not hitting October numbers\" \u2192 Create: the saved Details have \"Observed:\" with the October account under it \u2014 OPEN in production (the saved Details have no \"Observed:\", or an empty one)": {
+    "category": "INTENDED",
+    "reason": "P12: with the flag on, the Details saved at Create carry \"Observed:\" with the October account under it (no heading, empty heading, model writes nothing). The open pin now fails because the case holds."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-p12-coaching-observed-saved-no-heading: P12 (no-heading): \"make me a coaching form for Brisa Talvenor not hitting October numbers\" \u2192 Create: the saved Details have \"Observed:\" with the October account under it \u2014 OPEN in production (the saved Details have no \"Observed:\", or an empty one)": {
+    "category": "INTENDED",
+    "reason": "P12: with the flag on, the Details saved at Create carry \"Observed:\" with the October account under it (no heading, empty heading, model writes nothing). The open pin now fails because the case holds."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-reopened-edit-keeps-details-clear: a reopened Coaching Form, \"this is a verbal warning. previous coaching policy manual 10-15-26\" (the reader clears Details): the saved Details are kept \u2014 holds with ACCOUNT_WIPE_GUARD_ENABLED on": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Stale exact pin, not a lost account: the case (added on main after this PR) checks the reopened Details with toBe(raw account), and with the flag on the saved Details are \"Observed:\\n\" + the account. The gate re-ran these 4 with the pin changed to toContain: all 4 pass, so the wipe guard still keeps the Details. The pin needs updating before the flag flips."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-reopened-edit-keeps-details-clear: a reopened Coaching Form, \"this is a verbal warning. previous coaching policy manual 10-15-26\" (the reader clears Details): the saved Details are kept \u2014 holds with production's flags": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Stale exact pin, not a lost account: the case (added on main after this PR) checks the reopened Details with toBe(raw account), and with the flag on the saved Details are \"Observed:\\n\" + the account. The gate re-ran these 4 with the pin changed to toContain: all 4 pass, so the wipe guard still keeps the Details. The pin needs updating before the flag flips."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-reopened-edit-keeps-details-replace: a reopened Coaching Form, \"this is a verbal warning. previous coaching policy manual 10-15-26\" (the reader replaces Details): the saved Details are kept \u2014 holds with ACCOUNT_WIPE_GUARD_ENABLED on": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Stale exact pin, not a lost account: the case (added on main after this PR) checks the reopened Details with toBe(raw account), and with the flag on the saved Details are \"Observed:\\n\" + the account. The gate re-ran these 4 with the pin changed to toContain: all 4 pass, so the wipe guard still keeps the Details. The pin needs updating before the flag flips."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-reopened-edit-keeps-details-replace: a reopened Coaching Form, \"this is a verbal warning. previous coaching policy manual 10-15-26\" (the reader replaces Details): the saved Details are kept \u2014 holds with production's flags": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Stale exact pin, not a lost account: the case (added on main after this PR) checks the reopened Details with toBe(raw account), and with the flag on the saved Details are \"Observed:\\n\" + the account. The gate re-ran these 4 with the pin changed to toContain: all 4 pass, so the wipe guard still keeps the Details. The pin needs updating before the flag flips."
+  },
+  "src/lib/ai/flags-off-parity.test.ts :: existing chat and form suites with every new flag off passes the suites whose expectations are already on main: src/app/api/chat/replay-pack, first half of the cases by id": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The child run of the replay pack (first half) inherits the ON flag; its only failures are the 3 P12 open cases now holding and the 4 stale reopened-edit pins above."
+  },
+  "replay: nov10-p12-coaching-observed-saved-empty-heading [open]": {
+    "category": "INTENDED",
+    "reason": "P12: with the flag on, the Details saved at Create carry \"Observed:\" with the October account under it (no heading, empty heading, model writes nothing). The open pin now fails because the case holds."
+  },
+  "replay: nov10-p12-coaching-observed-saved-model-writes-nothing [open]": {
+    "category": "INTENDED",
+    "reason": "P12: with the flag on, the Details saved at Create carry \"Observed:\" with the October account under it (no heading, empty heading, model writes nothing). The open pin now fails because the case holds."
+  },
+  "replay: nov10-p12-coaching-observed-saved-no-heading [open]": {
+    "category": "INTENDED",
+    "reason": "P12: with the flag on, the Details saved at Create carry \"Observed:\" with the October account under it (no heading, empty heading, model writes nothing). The open pin now fails because the case holds."
+  },
+  "replay: nov10-reopened-edit-keeps-details-clear [fix:ACCOUNT_WIPE_GUARD_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Stale exact pin, not a lost account: the case (added on main after this PR) checks the reopened Details with toBe(raw account), and with the flag on the saved Details are \"Observed:\\n\" + the account. The gate re-ran these 4 with the pin changed to toContain: all 4 pass, so the wipe guard still keeps the Details. The pin needs updating before the flag flips."
+  },
+  "replay: nov10-reopened-edit-keeps-details-clear [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Stale exact pin, not a lost account: the case (added on main after this PR) checks the reopened Details with toBe(raw account), and with the flag on the saved Details are \"Observed:\\n\" + the account. The gate re-ran these 4 with the pin changed to toContain: all 4 pass, so the wipe guard still keeps the Details. The pin needs updating before the flag flips."
+  },
+  "replay: nov10-reopened-edit-keeps-details-replace [fix:ACCOUNT_WIPE_GUARD_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Stale exact pin, not a lost account: the case (added on main after this PR) checks the reopened Details with toBe(raw account), and with the flag on the saved Details are \"Observed:\\n\" + the account. The gate re-ran these 4 with the pin changed to toContain: all 4 pass, so the wipe guard still keeps the Details. The pin needs updating before the flag flips."
+  },
+  "replay: nov10-reopened-edit-keeps-details-replace [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Stale exact pin, not a lost account: the case (added on main after this PR) checks the reopened Details with toBe(raw account), and with the flag on the saved Details are \"Observed:\\n\" + the account. The gate re-ran these 4 with the pin changed to toContain: all 4 pass, so the wipe guard still keeps the Details. The pin needs updating before the flag flips."
+  }
+}
