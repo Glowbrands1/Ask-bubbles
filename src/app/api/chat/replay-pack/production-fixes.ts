@@ -368,6 +368,38 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov10-reopened-edit-keeps-details-clear": "ACCOUNT_WIPE_GUARD",
   // Changed on purpose (10 Nov 2026): fixed in production by ACCOUNT_WIPE_GUARD, CARD_NAMES_EMPLOYEE, QA round 16
   "nov10-reopened-edit-keeps-details-replace": "ACCOUNT_WIPE_GUARD",
+  // Changed on purpose (10 Nov 2026): fixed in production by DRAFT_WRITE_NEVER_SILENT, QA round 17b
+  "nov10-draft-write-refused-field-never-drops-the-draft": "DRAFT_WRITE_NEVER_SILENT",
+  // Changed on purpose (10 Nov 2026): fixed in production by PAYROLL_BARE_SENTENCE, QA round 17b
+  "nov10-p15-payroll-deduction-sentence-is-yes": "PAYROLL_BARE_SENTENCE",
+  // Changed on purpose (10 Nov 2026): fixed in production by FAILURE_TO_OPEN_IS_LATE_OPENING, QA round 17b
+  "nov10-p16-failure-to-open-is-what-happened": "FAILURE_TO_OPEN_IS_LATE_OPENING",
+  // Changed on purpose (10 Nov 2026): fixed in production by CA_REASON_DUE_TO, QA round 17b
+  "nov6-ca-reason-at-store-then-account": "CA_REASON_DUE_TO",
+  // Changed on purpose (10 Nov 2026): fixed in production by CA_REASON_DUE_TO, QA round 17b
+  "nov6-ca-reason-because-of-draft-observation": "CA_REASON_DUE_TO",
+  // Changed on purpose (10 Nov 2026): fixed in production by CA_REASON_DUE_TO, QA round 17b
+  "nov6-ca-reason-due-to-card-issue": "CA_REASON_DUE_TO",
+  // Changed on purpose (10 Nov 2026): fixed in production by CA_REASON_DUE_TO, QA round 17b
+  "nov6-ca-reason-due-to-draft-observation": "CA_REASON_DUE_TO",
+  // Changed on purpose (11 Nov 2026): fixed in production by NO_SHOW_OPENING_IS_ATTENDANCE, QA round 17d
+  "nov10-no-show-opening-is-attendance-as-typed": "NO_SHOW_OPENING_IS_ATTENDANCE",
+  // Changed on purpose (11 Nov 2026): fixed in production by NO_SHOW_OPENING_IS_ATTENDANCE, QA round 17d
+  "nov10-no-show-opening-is-attendance-lower": "NO_SHOW_OPENING_IS_ATTENDANCE",
+  // Changed on purpose (11 Nov 2026): fixed in production by REQUEST_ISSUE_KEPT, QA round 17d
+  "nov10-r17b-p16-issue-as-typed": "REQUEST_ISSUE_KEPT",
+  // Changed on purpose (11 Nov 2026): fixed in production by REQUEST_ISSUE_KEPT, QA round 17d
+  "nov10-r17b-p16-issue-lower": "REQUEST_ISSUE_KEPT",
+  // Changed on purpose (11 Nov 2026): fixed in production by LATE_OPENING_OWN_WORDS, QA round 17d
+  "nov10-r17b-late-opening-quote-p16": "LATE_OPENING_OWN_WORDS",
+  // Changed on purpose (11 Nov 2026): fixed in production by LATE_OPENING_OWN_WORDS, QA round 17d
+  "nov10-r17b-late-opening-quote-opening-shift": "LATE_OPENING_OWN_WORDS",
+  // Changed on purpose (11 Nov 2026): fixed in production by LATE_OPENING_OWN_WORDS, QA round 17d
+  "nov10-r17b-late-opening-quote-not-on-time": "LATE_OPENING_OWN_WORDS",
+  // Changed on purpose (11 Nov 2026): fixed in production by FIRST_NAME_ENOUGH, QA round 17d
+  "nov10-r17b-first-name-enough": "FIRST_NAME_ENOUGH",
+  // Changed on purpose (11 Nov 2026): fixed in production by EXCERPT_BRAND_HEADING_DROP, QA round 17f
+  "nov11-excerpt-brand-heading-holidays": "EXCERPT_BRAND_HEADING_DROP",
   // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
   "nov4-name-first-date-sentence-off-code": "FORM_NAME_FROM_ROSTER",
   // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
@@ -446,4 +478,48 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov6-roster-shape-two-word-first-swap": "FORM_NAME_FROM_ROSTER",
   // Changed on purpose (10 Nov 2026): fixed in production by FORM_NAME_FROM_ROSTER, QA round 16c
   "nov6-roster-shape-two-word-first-typo": "FORM_NAME_FROM_ROSTER",
+  // Changed on purpose (11 Nov 2026): fixed in production by NEAR_MISS_ANSWER_KEEPS_REQUEST, QA round 16c
+  "nov10-near-miss-answer-keeps-request": "NEAR_MISS_ANSWER_KEEPS_REQUEST",
+  // Changed on purpose (12 Nov 2026): fixed in production by TITLE_NOT_PART_OF_NAME, QA round 17h
+  "nov7-sf-s36-exit-surname-typo": "TITLE_NOT_PART_OF_NAME",
+  // Changed on purpose (12 Nov 2026): fixed in production by NOT_FOLLOWING_IS_VIOLATION, QA round 17h
+  "nov10-not-following-dress-code-coaching-cites": "NOT_FOLLOWING_IS_VIOLATION",
+  // Changed on purpose (12 Nov 2026): fixed in production by NOT_FOLLOWING_IS_VIOLATION, QA round 17h
+  "nov10-not-following-dress-code-ca-policy": "NOT_FOLLOWING_IS_VIOLATION",
+  // Changed on purpose (12 Nov 2026): fixed in production by FORM_FOR_FOR_TYPO, QA round 17h
+  "nov10-sf-s36-off-roster-exit": "FORM_FOR_FOR_TYPO",
+  // Changed on purpose (12 Nov 2026): fixed in production by FORM_FOR_FOR_TYPO, QA round 17h
+  "nov11-exit-for-for-is-an-exit-request": "FORM_FOR_FOR_TYPO",
+  // Changed on purpose (12 Nov 2026): fixed in production by TITLE_NOT_PART_OF_NAME, QA round 17h
+  "nov11-title-not-part-of-name": "TITLE_NOT_PART_OF_NAME",
+  // Changed on purpose (12 Nov 2026): fixed in production by TITLE_NOT_PART_OF_NAME, QA round 17h
+  "nov11-title-not-part-of-name-yes-then-card": "TITLE_NOT_PART_OF_NAME",
+  // fixed in production by NAME_LINE_COMMA, QA round 17i, 11 Nov 2026
+  "nov4-live-ca-t2-name-line-on-roster": "NAME_LINE_COMMA",
+  // fixed in production by ADDRESS_ASKS_WHO, QA round 17i, 11 Nov 2026
+  "nov4-live-street-address-not-a-person": "ADDRESS_ASKS_WHO",
+  // fixed in production by LEAD_FULL_SENTENCE, QA round 17i, 11 Nov 2026
+  "nov5-sf-b6-reply-full-sentence": "LEAD_FULL_SENTENCE",
+  // fixed in production by COPY_PASTE_CLAIM_HONEST, QA round 17i, 11 Nov 2026
+  "nov10-copy-paste-claim-not-sent": "COPY_PASTE_CLAIM_HONEST",
+  // fixed in production by TEMPLATE_OUTLINE_FIELDS, QA round 17i, 11 Nov 2026
+  "nov5-twin-sf-s21-must-see-behaviors-template": "TEMPLATE_OUTLINE_FIELDS",
+  // fixed in production by TEMPLATE_OUTLINE_FIELDS, QA round 17i, 11 Nov 2026
+  "nov10-twin-sf-s21-template-outline-saved": "TEMPLATE_OUTLINE_FIELDS",
+  // fixed in production by PASTED_OUTLINE_TO_OPEN_DRAFT, QA round 17i, 11 Nov 2026
+  "nov10-r23-sf-s21-pasted-outline-to-open-draft": "PASTED_OUTLINE_TO_OPEN_DRAFT",
+  // fixed in production by PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT, QA round 17i, 11 Nov 2026
+  "nov11-r25-sf-s21-pasted-template-fills-open-draft": "PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT",
+  // fixed in production by PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT, QA round 17i, 11 Nov 2026
+  "nov11-r25-5c-pasted-steps-keep-line-breaks": "PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT",
+  // fixed in production by GROUP_WORDS_NOT_A_NAME, QA round 17i, 11 Nov 2026
+  "nov11-p19-group-words-not-a-name-as-typed": "GROUP_WORDS_NOT_A_NAME",
+  // fixed in production by GROUP_WORDS_NOT_A_NAME, QA round 17i, 11 Nov 2026
+  "nov11-p19-group-words-not-a-name-lower": "GROUP_WORDS_NOT_A_NAME",
+  // fixed in production by EXIT_TYPO_WORDS, QA round 17j, 12 Nov 2026
+  "nov10-p17-exit-items-and-rehire-misspelled": "EXIT_TYPO_WORDS",
+  // fixed in production by NO_NAME_REPLY_WORDING, QA round 17j, 12 Nov 2026
+  "nov11-live-ima-employee-no-name-words-every-store": "NO_NAME_REPLY_WORDING",
+  // fixed in production by NO_NAME_REPLY_WORDING, QA round 17j, 12 Nov 2026
+  "nov11-live-ima-employee-no-name-words-store-manager": "NO_NAME_REPLY_WORDING",
 };
