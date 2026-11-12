@@ -29,7 +29,9 @@ export const NOV10_METRIC_ALONE_NOT_A_NAME_CASES: ReplayCase[] = [
     id: "nov10-metric-alone-not-a-name",
     title: `"${SAID}": no card names "Lather Club" as the employee`,
     report: REPORT,
-    status: { open: "the card's employee is \"Lather Club\"" },
+    // Changed on purpose (12 Nov 2026): with main 1471dab3's production flags the card no longer names "Lather Club" (the
+    // roster-name set, on since Bubbles 16c, already keeps a metric off the card), so this holds without METRIC_ALONE_NOT_A_NAME.
+    status: "fixed",
     fixFlags: FIX,
     async run(t) {
       const thread = start(t);
