@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import { decideFormDate, FUTURE_DATE_TAG } from "./incident-dates";
+import { withoutBareDateAnswers } from "./incident-issue";
 
 /**
  * QA, 26 Oct 2026 (U4, the sibling tester; invented names): a written CA for
@@ -158,4 +159,25 @@ describe.each(DEADLINE_REGISTERS)("FUTURE_INCIDENT_DATE_ASK_ENABLED, a date befo
     process.env[FLAG] = "true";
     expect(decide(as("write up ava pellmore for missing the meeting on 11/1")).question ?? "").toContain(FUTURE_DATE_TAG);
   });
+});
+
+/*
+ * Gate-Bubbles-5 (G5-743, 12 Nov 2026): the manager's answer to the flag's own question became the card's Issue
+ * ("Issue: it was 10-20-26"), losing the account. `correctiveActionIssue` reads the text without a turn that only gives a
+ * day (with the flag on); the replay cases nov10-future-incident-date-full-* check the card's Issue on production's flags.
+ */
+describe("FUTURE_INCIDENT_DATE_ASK_ENABLED: the answer to its question is never the Issue", () => {
+  it.each(["it was 10-20-26", "It happened on 10/20/26.", "10-20-26", "on Oct 20", "today", "the meeting was on 10-20-26"])(
+    "%s is dropped from the Issue's text; the account stays",
+    (answer) => {
+      expect(withoutBareDateAnswers(`${SENTENCE}\n\n${answer}`)).toBe(`${SENTENCE}\n`);
+    },
+  );
+
+  it.each(["she was late on 10-20-26", "it was the 3rd time she was late", "it was 10-20-26 and she left early"])(
+    "an account with a date in it is kept: %s",
+    (account) => {
+      expect(withoutBareDateAnswers(`${SENTENCE}\n\n${account}`)).toBe(`${SENTENCE}\n\n${account}`);
+    },
+  );
 });

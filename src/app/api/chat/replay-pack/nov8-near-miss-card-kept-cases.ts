@@ -1,6 +1,6 @@
 import { expect } from "vitest";
 
-import { STAFF, WEST_DODGE, type ReplayCase } from "./cases";
+import { STAFF, WEST_DODGE, type ReplayCase, onStoryClock } from "./cases";
 
 /**
  * NEAR_MISS_QUESTION_RULES_ENABLED (ported from the sibling app: QA's round-4 gate there, 8 Nov 2026, nov5-r6 turn 7
@@ -40,3 +40,6 @@ export const NOV8_NEAR_MISS_CARD_KEPT_CASES: ReplayCase[] = [
     },
   },
 ];
+
+// Gate-Bubbles-5 (G5-743): these cases tell a story dated after the pack's 10/26/2026; they run on a day after it.
+onStoryClock(NOV8_NEAR_MISS_CARD_KEPT_CASES);

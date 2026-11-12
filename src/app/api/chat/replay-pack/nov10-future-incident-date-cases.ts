@@ -53,6 +53,10 @@ export const NOV10_FUTURE_INCIDENT_DATE_CASES: ReplayCase[] = WORDINGS.flatMap((
       const answer = await thread.say("it was 10-20-26");
       expect(cardDate(thread), `the answer does not date the card:\n${answer.content}`).toBe("2026-10-20");
       expect(answer.content, `the date is asked about again:\n${answer.content}`).not.toMatch(/after today/i);
+      // Gate-Bubbles-5 (G5-743): the answer only dates the card; the Issue stays the account.
+      const issue = (thread.proposal as { issue?: string | null } | null)?.issue ?? "";
+      expect(issue, `the answer replaced the Issue:\n${answer.content}`).toMatch(/monthly meeting/i);
+      expect(issue, `the answer is the Issue:\n${answer.content}`).not.toMatch(/^\s*it was 10-20-26/i);
     },
   })),
 );
