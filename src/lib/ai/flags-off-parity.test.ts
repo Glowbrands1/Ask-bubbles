@@ -133,6 +133,15 @@ const PROTECTED = [
  * REVISION_ARCHIVED_NOT_OPEN_ENABLED (default off), `.is("archived_at", null)`
  * leaves archived drafts out. Off, the same query as before. instances.ts is
  * already excluded; the narrowed index migration is applied in both DBs.
+ *
+ * The user (Pau) approved on 10 Nov 2026, via QA ("ok surname particles"), in
+ * src/lib/forms/proposal.ts, both apps, exactly the lines of
+ * docs/patches/surname-particles.patch: the import of `particleSurname`
+ * ("./surname-particles"), and in readTypedName a particle surname after a
+ * first name ("de la vega") taken as one part, its extra words skipped and
+ * counted in the middle-name and whole-reply checks. Behind
+ * SURNAME_PARTICLES_ENABLED, default off; off, particleSurname is null and
+ * the reader is as before. proposal.ts is already excluded.
  */
 const APPROVED_PROTECTED_EDITS = [
   ":(exclude)src/lib/forms/chat-revision.ts",
