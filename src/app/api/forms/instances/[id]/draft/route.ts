@@ -408,7 +408,9 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
           roster: await (await import("@/lib/forms/employee-roster")).loadScopedRoster(actor.scope).catch(() => []),
         })
       : sent;
-    const asTyped = (await import("@/lib/ai/card-meta-turn")).withoutCardMetaTurns(typed);
+    // APP_INSTRUCTIONS_NOT_ACCOUNT_ENABLED (port from the sibling app): "Please word it in a professional way. I need the policy attached as well." is no account.
+    const plain = (await import("@/lib/ai/app-instructions")).withoutAppInstructions(typed);
+    const asTyped = (await import("@/lib/ai/card-meta-turn")).withoutCardMetaTurns(plain === typed ? typed : plain.trim());
     // TYPO_READING_ROUTES_ENABLED: the readers below see "coahed", "notcie", "amont" as the words they can only be.
     const read = typoReadingRoutesEnabled() ? typoReadingText(asTyped, await protectedNameWords()) : asTyped;
     // PROPOSAL_MAKE_IT_ABOUT_ENABLED: "make it about showing up late …" makes "Showing up late." the account from that turn on (`ai/make-it-about.ts`).
