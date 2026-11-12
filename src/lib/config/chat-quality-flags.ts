@@ -1396,6 +1396,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED",
   // coding 5: EXIT_NOTICE_VERB_TYPOS (QA's October triage, 10 Nov 2026; default off).
   "EXIT_NOTICE_VERB_TYPOS_ENABLED",
+  // coding 5: TITLE_INITIALISM_CASE (QA, #207 "she is an HR assistant" read as "Hr Assistant"; default off).
+  "TITLE_INITIALISM_CASE_ENABLED",
   // coding 6: REQUEST_ISSUE_KEPT, LATE_OPENING_OWN_WORDS, FIRST_NAME_ENOUGH (QA round 17b, 10 Nov 2026; default off).
   "REQUEST_ISSUE_KEPT_ENABLED",
   "LATE_OPENING_OWN_WORDS_ENABLED",
@@ -4979,6 +4981,17 @@ export function attendancePlanNeedsLatenessEnabled(): boolean {
  */
 export function exitNoticeVerbTyposEnabled(): boolean {
   return envFlag("EXIT_NOTICE_VERB_TYPOS_ENABLED");
+}
+
+/**
+ * A job title the manager typed keeps an initialism upper case: "she is an HR
+ * assistant" (or "an hr assistant") is "HR Assistant" on the card, never "Hr
+ * Assistant" (QA, #207; the title casing of `job-title-from-words.ts`). Only
+ * HR, IT, DM and GM; every other word is Capitalized as before. Off, as
+ * before.
+ */
+export function titleInitialismCaseEnabled(): boolean {
+  return envFlag("TITLE_INITIALISM_CASE_ENABLED");
 }
 
 /**
