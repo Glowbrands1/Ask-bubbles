@@ -25,6 +25,8 @@ describe("COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED", () => {
   });
 
   it.each(LOST)("off (production today): %s names a person (the bug)", (text) => {
+    // Off pins its own flag (QA's off-pins guard, 11 Nov 2026): it must hold once production turns the flag on.
+    vi.stubEnv("COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED", "");
     expect(people(text)).not.toEqual([]);
   });
 
