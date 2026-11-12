@@ -1,0 +1,978 @@
+{
+  "src/app/api/chat/form-type-switch-e2e.test.ts :: the open card switches form and keeps the employee, the date and the store coaching -> dpoa: \"CHANGE TO CA\"": {
+    "category": "REGRESSION",
+    "reason": "R1: switching an open Coaching card to a CA (11 of Pau's phrasings) gives a CA card with NO Issue. And \"change to ca\" on an open CA returns no card at all (after is undefined)."
+  },
+  "src/app/api/chat/form-type-switch-e2e.test.ts :: the open card switches form and keeps the employee, the date and the store coaching -> dpoa: \"CHANGE TO CORRECTIVE ACTION\"": {
+    "category": "REGRESSION",
+    "reason": "R1: switching an open Coaching card to a CA (11 of Pau's phrasings) gives a CA card with NO Issue. And \"change to ca\" on an open CA returns no card at all (after is undefined)."
+  },
+  "src/app/api/chat/form-type-switch-e2e.test.ts :: the open card switches form and keeps the employee, the date and the store coaching -> dpoa: \"Change to ca\"": {
+    "category": "REGRESSION",
+    "reason": "R1: switching an open Coaching card to a CA (11 of Pau's phrasings) gives a CA card with NO Issue. And \"change to ca\" on an open CA returns no card at all (after is undefined)."
+  },
+  "src/app/api/chat/form-type-switch-e2e.test.ts :: the open card switches form and keeps the employee, the date and the store coaching -> dpoa: \"Change to corrective action\"": {
+    "category": "REGRESSION",
+    "reason": "R1: switching an open Coaching card to a CA (11 of Pau's phrasings) gives a CA card with NO Issue. And \"change to ca\" on an open CA returns no card at all (after is undefined)."
+  },
+  "src/app/api/chat/form-type-switch-e2e.test.ts :: the open card switches form and keeps the employee, the date and the store coaching -> dpoa: \"actually make it a ca\"": {
+    "category": "REGRESSION",
+    "reason": "R1: switching an open Coaching card to a CA (11 of Pau's phrasings) gives a CA card with NO Issue. And \"change to ca\" on an open CA returns no card at all (after is undefined)."
+  },
+  "src/app/api/chat/form-type-switch-e2e.test.ts :: the open card switches form and keeps the employee, the date and the store coaching -> dpoa: \"ca instead of coaching\"": {
+    "category": "REGRESSION",
+    "reason": "R1: switching an open Coaching card to a CA (11 of Pau's phrasings) gives a CA card with NO Issue. And \"change to ca\" on an open CA returns no card at all (after is undefined)."
+  },
+  "src/app/api/chat/form-type-switch-e2e.test.ts :: the open card switches form and keeps the employee, the date and the store coaching -> dpoa: \"can this be a ca instead\"": {
+    "category": "REGRESSION",
+    "reason": "R1: switching an open Coaching card to a CA (11 of Pau's phrasings) gives a CA card with NO Issue. And \"change to ca\" on an open CA returns no card at all (after is undefined)."
+  },
+  "src/app/api/chat/form-type-switch-e2e.test.ts :: the open card switches form and keeps the employee, the date and the store coaching -> dpoa: \"change this to a corrective action\"": {
+    "category": "REGRESSION",
+    "reason": "R1: switching an open Coaching card to a CA (11 of Pau's phrasings) gives a CA card with NO Issue. And \"change to ca\" on an open CA returns no card at all (after is undefined)."
+  },
+  "src/app/api/chat/form-type-switch-e2e.test.ts :: the open card switches form and keeps the employee, the date and the store coaching -> dpoa: \"change to ca\"": {
+    "category": "REGRESSION",
+    "reason": "R1: switching an open Coaching card to a CA (11 of Pau's phrasings) gives a CA card with NO Issue. And \"change to ca\" on an open CA returns no card at all (after is undefined)."
+  },
+  "src/app/api/chat/form-type-switch-e2e.test.ts :: the open card switches form and keeps the employee, the date and the store coaching -> dpoa: \"change to corrective action\"": {
+    "category": "REGRESSION",
+    "reason": "R1: switching an open Coaching card to a CA (11 of Pau's phrasings) gives a CA card with NO Issue. And \"change to ca\" on an open CA returns no card at all (after is undefined)."
+  },
+  "src/app/api/chat/form-type-switch-e2e.test.ts :: the open card switches form and keeps the employee, the date and the store coaching -> dpoa: \"switch it to a ca\"": {
+    "category": "REGRESSION",
+    "reason": "R1: switching an open Coaching card to a CA (11 of Pau's phrasings) gives a CA card with NO Issue. And \"change to ca\" on an open CA returns no card at all (after is undefined)."
+  },
+  "src/app/api/chat/job-title-from-words-e2e.test.ts :: LEVEL_STEP_NOT_ACCOUNT_ENABLED off: as main, the level and step are the Issue": {
+    "category": "REGRESSION",
+    "reason": "An off-pin of LEVEL_STEP_NOT_ACCOUNT, but the ON Issue opens with the job title and place (\"makery associate at dodge, …\"), the class this flag is meant to fix."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap off (production) production env, flag off, D3 on: as main COWORKER": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The PR edited this test's expectation to the flag-ON Issue without stubbing INCIDENT_SPLIT_FIX itself: it FAILS under production's flags with the flag off (the OFF arm) and passes only with the flag in the env. It must stub its flags."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap off (production) production env, flag off, D3 on: as main D2": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The PR edited this test's expectation to the flag-ON Issue without stubbing INCIDENT_SPLIT_FIX itself: it FAILS under production's flags with the flag off (the OFF arm) and passes only with the flag in the env. It must stub its flags."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap off (production) production env, flag off, D3 on: as main ONE": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The PR edited this test's expectation to the flag-ON Issue without stubbing INCIDENT_SPLIT_FIX itself: it FAILS under production's flags with the flag off (the OFF arm) and passes only with the flag in the env. It must stub its flags."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap off (production) production env, flag off, D3 on: as main OTHER_IN_LIST": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The PR edited this test's expectation to the flag-ON Issue without stubbing INCIDENT_SPLIT_FIX itself: it FAILS under production's flags with the flag off (the OFF arm) and passes only with the flag in the env. It must stub its flags."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap off (production) production env, flag off, D3 on: as main RANGE": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The PR edited this test's expectation to the flag-ON Issue without stubbing INCIDENT_SPLIT_FIX itself: it FAILS under production's flags with the flag off (the OFF arm) and passes only with the flag in the env. It must stub its flags."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap off (production) production env, flag off, D3 on: as main THREE": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The PR edited this test's expectation to the flag-ON Issue without stubbing INCIDENT_SPLIT_FIX itself: it FAILS under production's flags with the flag off (the OFF arm) and passes only with the flag in the env. It must stub its flags."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap off (production) production env, flag off, D3 on: as main TWO": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The PR edited this test's expectation to the flag-ON Issue without stubbing INCIDENT_SPLIT_FIX itself: it FAILS under production's flags with the flag off (the OFF arm) and passes only with the flag in the env. It must stub its flags."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap off (production) production env, flag off, D3 unset: as main COWORKER": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The PR edited this test's expectation to the flag-ON Issue without stubbing INCIDENT_SPLIT_FIX itself: it FAILS under production's flags with the flag off (the OFF arm) and passes only with the flag in the env. It must stub its flags."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap off (production) production env, flag off, D3 unset: as main D2": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The PR edited this test's expectation to the flag-ON Issue without stubbing INCIDENT_SPLIT_FIX itself: it FAILS under production's flags with the flag off (the OFF arm) and passes only with the flag in the env. It must stub its flags."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap off (production) production env, flag off, D3 unset: as main ONE": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The PR edited this test's expectation to the flag-ON Issue without stubbing INCIDENT_SPLIT_FIX itself: it FAILS under production's flags with the flag off (the OFF arm) and passes only with the flag in the env. It must stub its flags."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap off (production) production env, flag off, D3 unset: as main OTHER_IN_LIST": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The PR edited this test's expectation to the flag-ON Issue without stubbing INCIDENT_SPLIT_FIX itself: it FAILS under production's flags with the flag off (the OFF arm) and passes only with the flag in the env. It must stub its flags."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap off (production) production env, flag off, D3 unset: as main RANGE": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The PR edited this test's expectation to the flag-ON Issue without stubbing INCIDENT_SPLIT_FIX itself: it FAILS under production's flags with the flag off (the OFF arm) and passes only with the flag in the env. It must stub its flags."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap off (production) production env, flag off, D3 unset: as main THREE": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The PR edited this test's expectation to the flag-ON Issue without stubbing INCIDENT_SPLIT_FIX itself: it FAILS under production's flags with the flag off (the OFF arm) and passes only with the flag in the env. It must stub its flags."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap off (production) production env, flag off, D3 unset: as main TWO": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The PR edited this test's expectation to the flag-ON Issue without stubbing INCIDENT_SPLIT_FIX itself: it FAILS under production's flags with the flag off (the OFF arm) and passes only with the flag in the env. It must stub its flags."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap on (not production, extra coverage) production env, flag off, D3 on: as main COWORKER": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The PR edited this test's expectation to the flag-ON Issue without stubbing INCIDENT_SPLIT_FIX itself: it FAILS under production's flags with the flag off (the OFF arm) and passes only with the flag in the env. It must stub its flags."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap on (not production, extra coverage) production env, flag off, D3 on: as main D2": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The PR edited this test's expectation to the flag-ON Issue without stubbing INCIDENT_SPLIT_FIX itself: it FAILS under production's flags with the flag off (the OFF arm) and passes only with the flag in the env. It must stub its flags."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap on (not production, extra coverage) production env, flag off, D3 on: as main ONE": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The PR edited this test's expectation to the flag-ON Issue without stubbing INCIDENT_SPLIT_FIX itself: it FAILS under production's flags with the flag off (the OFF arm) and passes only with the flag in the env. It must stub its flags."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap on (not production, extra coverage) production env, flag off, D3 on: as main OTHER_IN_LIST": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The PR edited this test's expectation to the flag-ON Issue without stubbing INCIDENT_SPLIT_FIX itself: it FAILS under production's flags with the flag off (the OFF arm) and passes only with the flag in the env. It must stub its flags."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap on (not production, extra coverage) production env, flag off, D3 on: as main RANGE": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The PR edited this test's expectation to the flag-ON Issue without stubbing INCIDENT_SPLIT_FIX itself: it FAILS under production's flags with the flag off (the OFF arm) and passes only with the flag in the env. It must stub its flags."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap on (not production, extra coverage) production env, flag off, D3 on: as main THREE": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The PR edited this test's expectation to the flag-ON Issue without stubbing INCIDENT_SPLIT_FIX itself: it FAILS under production's flags with the flag off (the OFF arm) and passes only with the flag in the env. It must stub its flags."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap on (not production, extra coverage) production env, flag off, D3 on: as main TWO": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The PR edited this test's expectation to the flag-ON Issue without stubbing INCIDENT_SPLIT_FIX itself: it FAILS under production's flags with the flag off (the OFF arm) and passes only with the flag in the env. It must stub its flags."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap on (not production, extra coverage) production env, flag off, D3 unset: as main COWORKER": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The PR edited this test's expectation to the flag-ON Issue without stubbing INCIDENT_SPLIT_FIX itself: it FAILS under production's flags with the flag off (the OFF arm) and passes only with the flag in the env. It must stub its flags."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap on (not production, extra coverage) production env, flag off, D3 unset: as main D2": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The PR edited this test's expectation to the flag-ON Issue without stubbing INCIDENT_SPLIT_FIX itself: it FAILS under production's flags with the flag off (the OFF arm) and passes only with the flag in the env. It must stub its flags."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap on (not production, extra coverage) production env, flag off, D3 unset: as main ONE": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The PR edited this test's expectation to the flag-ON Issue without stubbing INCIDENT_SPLIT_FIX itself: it FAILS under production's flags with the flag off (the OFF arm) and passes only with the flag in the env. It must stub its flags."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap on (not production, extra coverage) production env, flag off, D3 unset: as main OTHER_IN_LIST": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The PR edited this test's expectation to the flag-ON Issue without stubbing INCIDENT_SPLIT_FIX itself: it FAILS under production's flags with the flag off (the OFF arm) and passes only with the flag in the env. It must stub its flags."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap on (not production, extra coverage) production env, flag off, D3 unset: as main RANGE": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The PR edited this test's expectation to the flag-ON Issue without stubbing INCIDENT_SPLIT_FIX itself: it FAILS under production's flags with the flag off (the OFF arm) and passes only with the flag in the env. It must stub its flags."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap on (not production, extra coverage) production env, flag off, D3 unset: as main THREE": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The PR edited this test's expectation to the flag-ON Issue without stubbing INCIDENT_SPLIT_FIX itself: it FAILS under production's flags with the flag off (the OFF arm) and passes only with the flag in the env. It must stub its flags."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap on (not production, extra coverage) production env, flag off, D3 unset: as main TWO": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The PR edited this test's expectation to the flag-ON Issue without stubbing INCIDENT_SPLIT_FIX itself: it FAILS under production's flags with the flag off (the OFF arm) and passes only with the flag in the env. It must stub its flags."
+  },
+  "src/app/api/chat/proposal-path-flags-e2e.test.ts :: FORM_EDIT_DATE_RULES off: production today B17: the Issue becomes \"add that she was also on her phone\"": {
+    "category": "INTENDED-HARNESS",
+    "reason": "Production-today pin of a deleted flag's buggy Issue (B17/S22) with no INCIDENT_SPLIT stub. Note B17's ON Issue opens \"at Kearney for being late to open …\" (R2)."
+  },
+  "src/app/api/chat/proposal-path-flags-e2e.test.ts :: FORM_EDIT_DATE_RULES off: production today S22: the Issue keeps \"general manager\"": {
+    "category": "INTENDED-HARNESS",
+    "reason": "Production-today pin of a deleted flag's buggy Issue (B17/S22) with no INCIDENT_SPLIT stub. Note B17's ON Issue opens \"at Kearney for being late to open …\" (R2)."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-incident-split-dodge-ne-team-member: \"…, she is a team member at our Dodge, NE store. On 10-1-26 she opened the store late. She did not call ahead.\": the Issue is what she did, never where she works — OPEN in production (Issue: she is a team member at our Dodge)": {
+    "category": "INTENDED",
+    "reason": "Open to holding: the Issue is what happened, not where she works / not the later policy line / both sentences (INCIDENT_SPLIT_FIX's own case)."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-incident-split-dodge-ne-works-as: \"…, she works at our Dodge, NE store as a team member and was late today.\": the Issue is \"was late today\" — OPEN in production (Issue: she works at our Dodge)": {
+    "category": "INTENDED",
+    "reason": "Open to holding: the Issue is what happened, not where she works / not the later policy line / both sentences (INCIDENT_SPLIT_FIX's own case)."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-incident-split-policy-line-later: a later \"Policy violated: Standards of Conduct\" does not replace the account — OPEN in production (Issue: Policy violated: Standards of Conduct)": {
+    "category": "INTENDED",
+    "reason": "Open to holding: the Issue is what happened, not where she works / not the later policy line / both sentences (INCIDENT_SPLIT_FIX's own case)."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-incident-split-second-sentence: \"… for violating visitors at work policy on 10-10-26. Remy spent 40 minutes talking with friend …\": both sentences are the Issue — OPEN in production (Issue: violating visitors at work policy on 10-10-26 (the second sentence dropped))": {
+    "category": "INTENDED",
+    "reason": "Open to holding: the Issue is what happened, not where she works / not the later policy line / both sentences (INCIDENT_SPLIT_FIX's own case)."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov8-policy-correction-not-account: \"it should be under performance not standard of conduct\" on a sales CA: the Issue keeps the account, never the correction — holds with POLICY_CORRECTION_NOT_ACCOUNT_ENABLED on": {
+    "category": "REGRESSION",
+    "reason": "R1 ACCOUNT LOST: the account is in its own turn (\"She had 24 tans and was below in …\", or an earlier turn before \"make a CA for <name>\" / \"Create … from this conversation\"). OFF the Issue is that account; ON the card has NO Issue."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov8-policy-correction-not-account: \"it should be under performance not standard of conduct\" on a sales CA: the Issue keeps the account, never the correction — holds with production's flags": {
+    "category": "REGRESSION",
+    "reason": "R1 ACCOUNT LOST: the account is in its own turn (\"She had 24 tans and was below in …\", or an earlier turn before \"make a CA for <name>\" / \"Create … from this conversation\"). OFF the Issue is that account; ON the card has NO Issue."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov8-sales-triple-place-lead: \"create a written CA for <A> at <store> for missing the 10-15-26 woven deadline\": the Issue never opens with \"at <store>\" — holds with SALES_SHORTFALL_OBJECT_ENABLED, SALES_OBSERVATION_ACCOUNT_ENABLED, ACCOUNT_PLACE_LEAD_ENABLED on": {
+    "category": "REGRESSION",
+    "reason": "R2 PLACE LEAD: \"create a written CA for <A> at West Dodge Rd for missing the 10-15-26 woven deadline\": OFF Issue \"missing the 10-15-26 woven deadline\"; ON \"at West Dodge Rd for missing …\" (ACCOUNT_PLACE_LEAD's guard fails)."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov8-sales-triple-place-lead: \"create a written CA for <A> at <store> for missing the 10-15-26 woven deadline\": the Issue never opens with \"at <store>\" — holds with production's flags": {
+    "category": "REGRESSION",
+    "reason": "R2 PLACE LEAD: \"create a written CA for <A> at West Dodge Rd for missing the 10-15-26 woven deadline\": OFF Issue \"missing the 10-15-26 woven deadline\"; ON \"at West Dodge Rd for missing …\" (ACCOUNT_PLACE_LEAD's guard fails)."
+  },
+  "src/app/api/forms/owner-retest-e2e.test.ts :: capitalisation, misspellings, shorthand and word order 'given verbal warning on 9/21' → Verbal, never Written": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The PR edited this test's expectation to the flag-ON Issue without stubbing INCIDENT_SPLIT_FIX itself: it FAILS under production's flags with the flag off (the OFF arm) and passes only with the flag in the env. It must stub its flags."
+  },
+  "src/app/api/forms/owner-retest-e2e.test.ts :: capitalisation, misspellings, shorthand and word order jordan testperson cash handling written warning": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The PR edited this test's expectation to the flag-ON Issue without stubbing INCIDENT_SPLIT_FIX itself: it FAILS under production's flags with the flag off (the OFF arm) and passes only with the flag in the env. It must stub its flags."
+  },
+  "src/app/api/forms/owner-retest-e2e.test.ts :: capitalisation, misspellings, shorthand and word order jordan testperson was $40 short on her drawer last night, needs a written warning": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The PR edited this test's expectation to the flag-ON Issue without stubbing INCIDENT_SPLIT_FIX itself: it FAILS under production's flags with the flag off (the OFF arm) and passes only with the flag in the env. It must stub its flags."
+  },
+  "src/lib/forms/form-edit-single-writer-flags-off.test.ts :: FORM_EDIT_SINGLE_WRITER_ENABLED off: the same chats, byte for byte (a) and (b) equal main's behaviour with the same script (replies, rows, events)": {
+    "category": "INTENDED-HARNESS",
+    "reason": "Recorded main fixture; the Issue wording changes. Re-record when it ships."
+  },
+  "src/lib/forms/issue-is-the-account.test.ts :: ISSUE_IS_THE_ACCOUNT_ENABLED off (main): the level word, or the typed nickname, is the Issue (the bug)": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The PR edited this test's expectation to the flag-ON Issue without stubbing INCIDENT_SPLIT_FIX itself: it FAILS under production's flags with the flag off (the OFF arm) and passes only with the flag in the env. It must stub its flags."
+  },
+  "replay: nov10-incident-split-dodge-ne-team-member [open]": {
+    "category": "INTENDED",
+    "reason": "Open to holding: the Issue is what happened, not where she works / not the later policy line / both sentences (INCIDENT_SPLIT_FIX's own case)."
+  },
+  "replay: nov10-incident-split-dodge-ne-works-as [open]": {
+    "category": "INTENDED",
+    "reason": "Open to holding: the Issue is what happened, not where she works / not the later policy line / both sentences (INCIDENT_SPLIT_FIX's own case)."
+  },
+  "replay: nov10-incident-split-policy-line-later [open]": {
+    "category": "INTENDED",
+    "reason": "Open to holding: the Issue is what happened, not where she works / not the later policy line / both sentences (INCIDENT_SPLIT_FIX's own case)."
+  },
+  "replay: nov10-incident-split-second-sentence [open]": {
+    "category": "INTENDED",
+    "reason": "Open to holding: the Issue is what happened, not where she works / not the later policy line / both sentences (INCIDENT_SPLIT_FIX's own case)."
+  },
+  "replay: nov10-r23-sf-s21-pasted-outline-to-open-draft [fix:TEMPLATE_OUTLINE_FIELDS_ENABLED,PASTED_OUTLINE_TO_OPEN_DRAFT_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R3 NOT-ACCOUNT TEXT IN ISSUE: the pasted outline's warning level enters the Issue: \"… this should be for <name> - verbal. 146 transactions. Below in …\" (LEVEL_STEP_NOT_ACCOUNT kept \"verbal\" out OFF)."
+  },
+  "replay: nov10-r23-sf-s21-pasted-outline-to-open-draft [production]": {
+    "category": "REGRESSION",
+    "reason": "R3 NOT-ACCOUNT TEXT IN ISSUE: the pasted outline's warning level enters the Issue: \"… this should be for <name> - verbal. 146 transactions. Below in …\" (LEVEL_STEP_NOT_ACCOUNT kept \"verbal\" out OFF)."
+  },
+  "replay: nov10-section-breaks-not-also-observed [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED,SECTION_BREAKS_KEPT_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R2 PLACE LEAD: \"create a written CA for <A> at West Dodge Rd for missing the 10-15-26 woven deadline\": OFF Issue \"missing the 10-15-26 woven deadline\"; ON \"at West Dodge Rd for missing …\" (ACCOUNT_PLACE_LEAD's guard fails)."
+  },
+  "replay: nov10-section-breaks-not-also-observed [production]": {
+    "category": "REGRESSION",
+    "reason": "R2 PLACE LEAD: \"create a written CA for <A> at West Dodge Rd for missing the 10-15-26 woven deadline\": OFF Issue \"missing the 10-15-26 woven deadline\"; ON \"at West Dodge Rd for missing …\" (ACCOUNT_PLACE_LEAD's guard fails)."
+  },
+  "replay: nov10-twin-sf-s21-template-outline-saved [fix:TEMPLATE_OUTLINE_FIELDS_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R3 NOT-ACCOUNT TEXT IN ISSUE: the pasted outline's warning level enters the Issue: \"… this should be for <name> - verbal. 146 transactions. Below in …\" (LEVEL_STEP_NOT_ACCOUNT kept \"verbal\" out OFF)."
+  },
+  "replay: nov10-twin-sf-s21-template-outline-saved [production]": {
+    "category": "REGRESSION",
+    "reason": "R3 NOT-ACCOUNT TEXT IN ISSUE: the pasted outline's warning level enters the Issue: \"… this should be for <name> - verbal. 146 transactions. Below in …\" (LEVEL_STEP_NOT_ACCOUNT kept \"verbal\" out OFF)."
+  },
+  "replay: nov11-r25-5c-pasted-steps-keep-line-breaks [fix:TEMPLATE_OUTLINE_FIELDS_ENABLED,PASTED_OUTLINE_TO_OPEN_DRAFT_ENABLED,PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R3 NOT-ACCOUNT TEXT IN ISSUE: the pasted outline's warning level enters the Issue: \"… this should be for <name> - verbal. 146 transactions. Below in …\" (LEVEL_STEP_NOT_ACCOUNT kept \"verbal\" out OFF)."
+  },
+  "replay: nov11-r25-5c-pasted-steps-keep-line-breaks [production]": {
+    "category": "REGRESSION",
+    "reason": "R3 NOT-ACCOUNT TEXT IN ISSUE: the pasted outline's warning level enters the Issue: \"… this should be for <name> - verbal. 146 transactions. Below in …\" (LEVEL_STEP_NOT_ACCOUNT kept \"verbal\" out OFF)."
+  },
+  "replay: nov11-r25-sf-s21-pasted-template-fills-open-draft [fix:TEMPLATE_OUTLINE_FIELDS_ENABLED,PASTED_OUTLINE_TO_OPEN_DRAFT_ENABLED,PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R3 NOT-ACCOUNT TEXT IN ISSUE: the pasted outline's warning level enters the Issue: \"… this should be for <name> - verbal. 146 transactions. Below in …\" (LEVEL_STEP_NOT_ACCOUNT kept \"verbal\" out OFF)."
+  },
+  "replay: nov11-r25-sf-s21-pasted-template-fills-open-draft [production]": {
+    "category": "REGRESSION",
+    "reason": "R3 NOT-ACCOUNT TEXT IN ISSUE: the pasted outline's warning level enters the Issue: \"… this should be for <name> - verbal. 146 transactions. Below in …\" (LEVEL_STEP_NOT_ACCOUNT kept \"verbal\" out OFF)."
+  },
+  "replay: nov2-p1a-policy-turn-drops-account [production]": {
+    "category": "REGRESSION",
+    "reason": "R1 ACCOUNT LOST: the account is in its own turn (\"She had 24 tans and was below in …\", or an earlier turn before \"make a CA for <name>\" / \"Create … from this conversation\"). OFF the Issue is that account; ON the card has NO Issue."
+  },
+  "replay: nov2-p2-new-request-old-incident [fix:NEW_REQUEST_OWN_TURNS_ENABLED,DRAFT_REUSE_NEW_REQUEST_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R3: the Issue becomes the request \"i need another for failure to complete opening duties\" instead of the account turn."
+  },
+  "replay: nov2-p2-new-request-old-incident [production]": {
+    "category": "REGRESSION",
+    "reason": "R3: the Issue becomes the request \"i need another for failure to complete opening duties\" instead of the account turn."
+  },
+  "replay: nov2-p6-dm-title [fix:TITLE_NOT_SPEAKERS_MANAGER_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R1 ACCOUNT LOST: the account is in its own turn (\"She had 24 tans and was below in …\", or an earlier turn before \"make a CA for <name>\" / \"Create … from this conversation\"). OFF the Issue is that account; ON the card has NO Issue."
+  },
+  "replay: nov2-p6-dm-title [production]": {
+    "category": "REGRESSION",
+    "reason": "R1 ACCOUNT LOST: the account is in its own turn (\"She had 24 tans and was below in …\", or an earlier turn before \"make a CA for <name>\" / \"Create … from this conversation\"). OFF the Issue is that account; ON the card has NO Issue."
+  },
+  "replay: nov3-same-ask-b10 [fix:SAME_ASK_NO_REPEAT_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R4: a word is inserted into the manager's account: \"on 10-16-26 Testy was not measuring …\" becomes \"On 10-16-26 Testy was not properly measuring …\"."
+  },
+  "replay: nov3-same-ask-b10 [production]": {
+    "category": "REGRESSION",
+    "reason": "R4: a word is inserted into the manager's account: \"on 10-16-26 Testy was not measuring …\" becomes \"On 10-16-26 Testy was not properly measuring …\"."
+  },
+  "replay: nov3-stepb-payroll-as-given [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov3-stepb-payroll-as-given [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov3-stepb-true-claim-keeps-guidance [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov3-stepb-true-claim-keeps-guidance [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov4-ca-sales-low-sales [fix:CA_SALES_POLICY_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R4: half the account is lost: \"his sales are low and he is not hitting his goals\" becomes \"his sales are low\"."
+  },
+  "replay: nov4-ca-sales-low-sales [production]": {
+    "category": "REGRESSION",
+    "reason": "R4: half the account is lost: \"his sales are low and he is not hitting his goals\" becomes \"his sales are low\"."
+  },
+  "replay: nov4-cleaning-negative-named-conduct [fix:CA_SALES_POLICY_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov4-cleaning-negative-named-conduct [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov4-mgr-1-verbal-metrics [fix:CA_SALES_POLICY_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R4 MANAGER'S WORDS ALTERED: \"… Bundle Rate %, and Gift %\" becomes \"… Bundle Rate %, Gift %\" (the \"and\" is dropped from the manager's list)."
+  },
+  "replay: nov4-mgr-1-verbal-metrics [production]": {
+    "category": "REGRESSION",
+    "reason": "R4 MANAGER'S WORDS ALTERED: \"… Bundle Rate %, and Gift %\" becomes \"… Bundle Rate %, Gift %\" (the \"and\" is dropped from the manager's list)."
+  },
+  "replay: nov4-pau-metrics-not-people [fix:FORM_NAME_FROM_ROSTER_ENABLED,CA_SALES_POLICY_ENABLED,CHAT_GLOSSARY_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R4 MANAGER'S WORDS ALTERED: \"… Bundle Rate %, and Gift %\" becomes \"… Bundle Rate %, Gift %\" (the \"and\" is dropped from the manager's list)."
+  },
+  "replay: nov4-pau-metrics-not-people [production]": {
+    "category": "REGRESSION",
+    "reason": "R4 MANAGER'S WORDS ALTERED: \"… Bundle Rate %, and Gift %\" becomes \"… Bundle Rate %, Gift %\" (the \"and\" is dropped from the manager's list)."
+  },
+  "replay: nov4-pau-metrics-not-people-lowercase-first-name [fix:FORM_NAME_FROM_ROSTER_ENABLED,CA_SALES_POLICY_ENABLED,CHAT_GLOSSARY_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R4 MANAGER'S WORDS ALTERED: \"… Bundle Rate %, and Gift %\" becomes \"… Bundle Rate %, Gift %\" (the \"and\" is dropped from the manager's list)."
+  },
+  "replay: nov4-pau-metrics-not-people-lowercase-first-name [production]": {
+    "category": "REGRESSION",
+    "reason": "R4 MANAGER'S WORDS ALTERED: \"… Bundle Rate %, and Gift %\" becomes \"… Bundle Rate %, Gift %\" (the \"and\" is dropped from the manager's list)."
+  },
+  "replay: nov4-pau-metrics-not-people-unknown [fix:FORM_NAME_FROM_ROSTER_ENABLED,CA_SALES_POLICY_ENABLED,CHAT_GLOSSARY_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R4 MANAGER'S WORDS ALTERED: \"… Bundle Rate %, and Gift %\" becomes \"… Bundle Rate %, Gift %\" (the \"and\" is dropped from the manager's list)."
+  },
+  "replay: nov4-pau-metrics-not-people-unknown [production]": {
+    "category": "REGRESSION",
+    "reason": "R4 MANAGER'S WORDS ALTERED: \"… Bundle Rate %, and Gift %\" becomes \"… Bundle Rate %, Gift %\" (the \"and\" is dropped from the manager's list)."
+  },
+  "replay: nov4-pau5-1-verbal-under-performance-metrics [production]": {
+    "category": "REGRESSION",
+    "reason": "R4 MANAGER'S WORDS ALTERED: \"… Bundle Rate %, and Gift %\" becomes \"… Bundle Rate %, Gift %\" (the \"and\" is dropped from the manager's list)."
+  },
+  "replay: nov4-scan-sf-s15-opening-duties-cleaning [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov4-scan-sf-s18-standards-named-no-contradiction [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov4-scan-sf-s19-corrective-action-answer [open]": {
+    "category": "REGRESSION",
+    "reason": "R4 MANAGER'S WORDS ALTERED: \"… Bundle Rate %, and Gift %\" becomes \"… Bundle Rate %, Gift %\" (the \"and\" is dropped from the manager's list)."
+  },
+  "replay: nov5-cleaning-other-sf-s15 [fix:CA_SALES_POLICY_ENABLED,FORM_NAME_FROM_ROSTER_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov5-cleaning-other-sf-s15 [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov5-cleaning-other-sf-s15-policy-citation [fix:CA_SALES_POLICY_ENABLED,FORM_NAME_FROM_ROSTER_ENABLED,POLICY_CITATION_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov5-cleaning-other-sf-s15-policy-citation [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov5-coding3-ca-offer-yes-no-account [fix:CA_OFFER_KEEPS_ACCOUNT_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov5-coding3-ca-offer-yes-no-account [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov5-coding3-ca-offer-yes-no-account-remap [fix:CA_OFFER_KEEPS_ACCOUNT_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov5-coding3-ca-offer-yes-no-account-remap [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov5-compound-surname-word1-typo-yes [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov5-compound-surname-word1-typo-yes [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov5-metric-guard-full-name-kept [fix:METRIC_GUARD_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R4 MANAGER'S WORDS ALTERED: \"… Bundle Rate %, and Gift %\" becomes \"… Bundle Rate %, Gift %\" (the \"and\" is dropped from the manager's list)."
+  },
+  "replay: nov5-metric-guard-full-name-kept [production]": {
+    "category": "REGRESSION",
+    "reason": "R4 MANAGER'S WORDS ALTERED: \"… Bundle Rate %, and Gift %\" becomes \"… Bundle Rate %, Gift %\" (the \"and\" is dropped from the manager's list)."
+  },
+  "replay: nov5-r3-surname-one-letter-wrong [fix:ROSTER_NEAR_MISS_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R3: the action plan enters the Issue: \"… on 11/2. action plan: <name> will be on time for every opening shift\"."
+  },
+  "replay: nov5-r3-surname-one-letter-wrong [production]": {
+    "category": "REGRESSION",
+    "reason": "R3: the action plan enters the Issue: \"… on 11/2. action plan: <name> will be on time for every opening shift\"."
+  },
+  "replay: nov5-reply-card-roster-name-negative [fix:REPLY_MATCHES_CARD_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R3: the action plan enters the Issue: \"… on 11/2. action plan: <name> will be on time for every opening shift\"."
+  },
+  "replay: nov5-reply-card-roster-name-negative [production]": {
+    "category": "REGRESSION",
+    "reason": "R3: the action plan enters the Issue: \"… on 11/2. action plan: <name> will be on time for every opening shift\"."
+  },
+  "replay: nov5-reply-own-words-qa-probe [production]": {
+    "category": "REGRESSION",
+    "reason": "R4 MANAGER'S WORDS ALTERED: \"… Bundle Rate %, and Gift %\" becomes \"… Bundle Rate %, Gift %\" (the \"and\" is dropped from the manager's list)."
+  },
+  "replay: nov5-request-slot-off-roster-name [fix:FORM_NAME_FROM_ROSTER_ENABLED,CA_SALES_POLICY_ENABLED,CHAT_GLOSSARY_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R4 MANAGER'S WORDS ALTERED: \"… Bundle Rate %, and Gift %\" becomes \"… Bundle Rate %, Gift %\" (the \"and\" is dropped from the manager's list)."
+  },
+  "replay: nov5-request-slot-off-roster-name [production]": {
+    "category": "REGRESSION",
+    "reason": "R4 MANAGER'S WORDS ALTERED: \"… Bundle Rate %, and Gift %\" becomes \"… Bundle Rate %, Gift %\" (the \"and\" is dropped from the manager's list)."
+  },
+  "replay: nov5-request-slot-off-roster-name-models [fix:FORM_NAME_FROM_ROSTER_ENABLED,CA_SALES_POLICY_ENABLED,CHAT_GLOSSARY_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R4 MANAGER'S WORDS ALTERED: \"… Bundle Rate %, and Gift %\" becomes \"… Bundle Rate %, Gift %\" (the \"and\" is dropped from the manager's list)."
+  },
+  "replay: nov5-request-slot-off-roster-name-models [production]": {
+    "category": "REGRESSION",
+    "reason": "R4 MANAGER'S WORDS ALTERED: \"… Bundle Rate %, and Gift %\" becomes \"… Bundle Rate %, Gift %\" (the \"and\" is dropped from the manager's list)."
+  },
+  "replay: nov5-request-slot-on-roster-name [fix:FORM_NAME_FROM_ROSTER_ENABLED,CA_SALES_POLICY_ENABLED,CHAT_GLOSSARY_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R4 MANAGER'S WORDS ALTERED: \"… Bundle Rate %, and Gift %\" becomes \"… Bundle Rate %, Gift %\" (the \"and\" is dropped from the manager's list)."
+  },
+  "replay: nov5-request-slot-on-roster-name [production]": {
+    "category": "REGRESSION",
+    "reason": "R4 MANAGER'S WORDS ALTERED: \"… Bundle Rate %, and Gift %\" becomes \"… Bundle Rate %, Gift %\" (the \"and\" is dropped from the manager's list)."
+  },
+  "replay: nov5-roster-only-ima-off-roster [fix:FORM_NAME_FROM_ROSTER_ENABLED,CA_SALES_POLICY_ENABLED,CHAT_GLOSSARY_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov5-roster-only-ima-off-roster [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov5-roster-only-ima-on-roster [fix:FORM_NAME_FROM_ROSTER_ENABLED,CA_SALES_POLICY_ENABLED,CHAT_GLOSSARY_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov5-roster-only-ima-on-roster [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov5-roster-only-message-8-metrics [fix:FORM_NAME_FROM_ROSTER_ENABLED,CA_SALES_POLICY_ENABLED,CHAT_GLOSSARY_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R3 NOT-ACCOUNT TEXT IN ISSUE: the pasted outline's warning level enters the Issue: \"… this should be for <name> - verbal. 146 transactions. Below in …\" (LEVEL_STEP_NOT_ACCOUNT kept \"verbal\" out OFF)."
+  },
+  "replay: nov5-roster-only-message-8-metrics [production]": {
+    "category": "REGRESSION",
+    "reason": "R3 NOT-ACCOUNT TEXT IN ISSUE: the pasted outline's warning level enters the Issue: \"… this should be for <name> - verbal. 146 transactions. Below in …\" (LEVEL_STEP_NOT_ACCOUNT kept \"verbal\" out OFF)."
+  },
+  "replay: nov5-twin-gate-ima-off-roster-observation [fix:FORM_NAME_FROM_ROSTER_ENABLED,CA_SALES_POLICY_ENABLED,CHAT_GLOSSARY_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov5-twin-gate-ima-off-roster-observation [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov5-twin-sf-s21-must-see-behaviors-template [fix:TEMPLATE_OUTLINE_FIELDS_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R3 NOT-ACCOUNT TEXT IN ISSUE: the pasted outline's warning level enters the Issue: \"… this should be for <name> - verbal. 146 transactions. Below in …\" (LEVEL_STEP_NOT_ACCOUNT kept \"verbal\" out OFF)."
+  },
+  "replay: nov5-twin-sf-s21-must-see-behaviors-template [production]": {
+    "category": "REGRESSION",
+    "reason": "R3 NOT-ACCOUNT TEXT IN ISSUE: the pasted outline's warning level enters the Issue: \"… this should be for <name> - verbal. 146 transactions. Below in …\" (LEVEL_STEP_NOT_ACCOUNT kept \"verbal\" out OFF)."
+  },
+  "replay: nov5-twin-sf-s22-ca-not-coaching [open]": {
+    "category": "REGRESSION",
+    "reason": "R3 NOT-ACCOUNT TEXT IN ISSUE: the pasted outline's warning level enters the Issue: \"… this should be for <name> - verbal. 146 transactions. Below in …\" (LEVEL_STEP_NOT_ACCOUNT kept \"verbal\" out OFF)."
+  },
+  "replay: nov5-twin-sf-s24-must-see-behaviors-and-coaching-on-file [fix:AS_YOU_SAID_MANAGER_WORDS_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R3 NOT-ACCOUNT TEXT IN ISSUE: the pasted outline's warning level enters the Issue: \"… this should be for <name> - verbal. 146 transactions. Below in …\" (LEVEL_STEP_NOT_ACCOUNT kept \"verbal\" out OFF)."
+  },
+  "replay: nov5-twin-sf-s24-must-see-behaviors-and-coaching-on-file [production]": {
+    "category": "REGRESSION",
+    "reason": "R3 NOT-ACCOUNT TEXT IN ISSUE: the pasted outline's warning level enters the Issue: \"… this should be for <name> - verbal. 146 transactions. Below in …\" (LEVEL_STEP_NOT_ACCOUNT kept \"verbal\" out OFF)."
+  },
+  "replay: nov6-b1-its-name [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov6-b1-its-name [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov6-b1-my-team-member-then-name-is [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov6-b1-my-team-member-then-name-is [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov6-b1-title-then-her-name-is [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R3: the job title enters the Issue: \"Team Member, she was late opening the store on 11/2\"."
+  },
+  "replay: nov6-b1-title-then-her-name-is [production]": {
+    "category": "REGRESSION",
+    "reason": "R3: the job title enters the Issue: \"Team Member, she was late opening the store on 11/2\"."
+  },
+  "replay: nov6-coding3-request-level-not-history-dated-warning-stays-history [fix:REQUEST_LEVEL_NOT_HISTORY_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R1 ACCOUNT LOST: the account is in its own turn (\"She had 24 tans and was below in …\", or an earlier turn before \"make a CA for <name>\" / \"Create … from this conversation\"). OFF the Issue is that account; ON the card has NO Issue."
+  },
+  "replay: nov6-coding3-request-level-not-history-dated-warning-stays-history [production]": {
+    "category": "REGRESSION",
+    "reason": "R1 ACCOUNT LOST: the account is in its own turn (\"She had 24 tans and was below in …\", or an earlier turn before \"make a CA for <name>\" / \"Create … from this conversation\"). OFF the Issue is that account; ON the card has NO Issue."
+  },
+  "replay: nov6-off-roster-ca-use [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov6-off-roster-ca-use [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov6-offer-lowercase-said-back-title-case [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R3: the action plan enters the Issue: \"… on 11/2. action plan: <name> will be on time for every opening shift\"."
+  },
+  "replay: nov6-offer-lowercase-said-back-title-case [production]": {
+    "category": "REGRESSION",
+    "reason": "R3: the action plan enters the Issue: \"… on 11/2. action plan: <name> will be on time for every opening shift\"."
+  },
+  "replay: nov6-offer-never-qa-probe [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R4 MANAGER'S WORDS ALTERED: \"… Bundle Rate %, and Gift %\" becomes \"… Bundle Rate %, Gift %\" (the \"and\" is dropped from the manager's list)."
+  },
+  "replay: nov6-offer-never-qa-probe [production]": {
+    "category": "REGRESSION",
+    "reason": "R4 MANAGER'S WORDS ALTERED: \"… Bundle Rate %, and Gift %\" becomes \"… Bundle Rate %, Gift %\" (the \"and\" is dropped from the manager's list)."
+  },
+  "replay: nov6-offer-never-the-placeholder [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov6-offer-never-the-placeholder [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov6-one-question-ca [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov6-one-question-ca [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov6-place-from-cue-transferred-negative [fix:PLACE_FROM_CUE_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov6-place-from-cue-transferred-negative [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov6-roster-shape-apostrophe-exact [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov6-roster-shape-apostrophe-exact [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov6-roster-shape-apostrophe-lowercase [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov6-roster-shape-apostrophe-lowercase [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov6-roster-shape-compound-surname-exact [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov6-roster-shape-compound-surname-exact [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov6-roster-shape-compound-surname-lowercase [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov6-roster-shape-compound-surname-lowercase [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov6-roster-shape-preferred-exact [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov6-roster-shape-preferred-exact [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov6-roster-shape-preferred-lowercase [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov6-roster-shape-preferred-lowercase [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov6-roster-shape-short-surname-exact [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov6-roster-shape-short-surname-exact [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov6-roster-shape-short-surname-lowercase [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov6-roster-shape-short-surname-lowercase [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov6-roster-shape-two-word-first-exact [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov6-roster-shape-two-word-first-exact [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov6-roster-shape-two-word-first-lowercase [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov6-roster-shape-two-word-first-lowercase [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov6-under-performance-explained-asked-at-once [fix:UNDER_PERFORMANCE_EXPLAINED_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov6-under-performance-explained-asked-at-once [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov6-under-performance-explained-one-word [fix:UNDER_PERFORMANCE_EXPLAINED_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov6-under-performance-explained-one-word [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov7-a2-negative-previous-store [fix:PRIOR_STEP_PREVIOUSLY_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R3: unrelated history enters the Issue: \"…late on 11-2-26, she previously worked the register on 10-15-26\"."
+  },
+  "replay: nov7-a2-negative-previous-store [production]": {
+    "category": "REGRESSION",
+    "reason": "R3: unrelated history enters the Issue: \"…late on 11-2-26, she previously worked the register on 10-15-26\"."
+  },
+  "replay: nov7-described-attendance-late-verbal-ca [fix:DESCRIBED_ATTENDANCE_CARD_ENABLED,LEVEL_ENDS_REQUEST_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov7-described-attendance-late-verbal-ca [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov7-level-ends-request [fix:LEVEL_ENDS_REQUEST_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov7-level-ends-request [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov7-live-team-member-verbal-ca-roster [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov7-live-team-member-verbal-ca-roster [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov7-refusal-bub-phone [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R2 PLACE LEAD: \"create a written CA for <A> at West Dodge Rd for missing the 10-15-26 woven deadline\": OFF Issue \"missing the 10-15-26 woven deadline\"; ON \"at West Dodge Rd for missing …\" (ACCOUNT_PLACE_LEAD's guard fails)."
+  },
+  "replay: nov7-refusal-bub-phone [production]": {
+    "category": "REGRESSION",
+    "reason": "R2 PLACE LEAD: \"create a written CA for <A> at West Dodge Rd for missing the 10-15-26 woven deadline\": OFF Issue \"missing the 10-15-26 woven deadline\"; ON \"at West Dodge Rd for missing …\" (ACCOUNT_PLACE_LEAD's guard fails)."
+  },
+  "replay: nov7-refusal-bub-phone-trace [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R2 PLACE LEAD: \"create a written CA for <A> at West Dodge Rd for missing the 10-15-26 woven deadline\": OFF Issue \"missing the 10-15-26 woven deadline\"; ON \"at West Dodge Rd for missing …\" (ACCOUNT_PLACE_LEAD's guard fails)."
+  },
+  "replay: nov7-refusal-bub-phone-trace [production]": {
+    "category": "REGRESSION",
+    "reason": "R2 PLACE LEAD: \"create a written CA for <A> at West Dodge Rd for missing the 10-15-26 woven deadline\": OFF Issue \"missing the 10-15-26 woven deadline\"; ON \"at West Dodge Rd for missing …\" (ACCOUNT_PLACE_LEAD's guard fails)."
+  },
+  "replay: nov7-refusal-sun-msb-format [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R3 NOT-ACCOUNT TEXT IN ISSUE: the pasted outline's warning level enters the Issue: \"… this should be for <name> - verbal. 146 transactions. Below in …\" (LEVEL_STEP_NOT_ACCOUNT kept \"verbal\" out OFF)."
+  },
+  "replay: nov7-refusal-sun-msb-format [production]": {
+    "category": "REGRESSION",
+    "reason": "R3 NOT-ACCOUNT TEXT IN ISSUE: the pasted outline's warning level enters the Issue: \"… this should be for <name> - verbal. 146 transactions. Below in …\" (LEVEL_STEP_NOT_ACCOUNT kept \"verbal\" out OFF)."
+  },
+  "replay: nov7-refusal-sun-same-outline [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R3 NOT-ACCOUNT TEXT IN ISSUE: the pasted outline's warning level enters the Issue: \"… this should be for <name> - verbal. 146 transactions. Below in …\" (LEVEL_STEP_NOT_ACCOUNT kept \"verbal\" out OFF)."
+  },
+  "replay: nov7-refusal-sun-same-outline [production]": {
+    "category": "REGRESSION",
+    "reason": "R3 NOT-ACCOUNT TEXT IN ISSUE: the pasted outline's warning level enters the Issue: \"… this should be for <name> - verbal. 146 transactions. Below in …\" (LEVEL_STEP_NOT_ACCOUNT kept \"verbal\" out OFF)."
+  },
+  "replay: nov7-sales-observation-p1a [fix:SALES_SHORTFALL_OBJECT_ENABLED,SALES_OBSERVATION_ACCOUNT_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R1 ACCOUNT LOST: the account is in its own turn (\"She had 24 tans and was below in …\", or an earlier turn before \"make a CA for <name>\" / \"Create … from this conversation\"). OFF the Issue is that account; ON the card has NO Issue."
+  },
+  "replay: nov7-sales-observation-p1a [production]": {
+    "category": "REGRESSION",
+    "reason": "R1 ACCOUNT LOST: the account is in its own turn (\"She had 24 tans and was below in …\", or an earlier turn before \"make a CA for <name>\" / \"Create … from this conversation\"). OFF the Issue is that account; ON the card has NO Issue."
+  },
+  "replay: nov7-second-ca-single-request-keeps-policy-account-first [fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R1 ACCOUNT LOST: the account is in its own turn (\"She had 24 tans and was below in …\", or an earlier turn before \"make a CA for <name>\" / \"Create … from this conversation\"). OFF the Issue is that account; ON the card has NO Issue."
+  },
+  "replay: nov7-second-ca-single-request-keeps-policy-account-first [production]": {
+    "category": "REGRESSION",
+    "reason": "R1 ACCOUNT LOST: the account is in its own turn (\"She had 24 tans and was below in …\", or an earlier turn before \"make a CA for <name>\" / \"Create … from this conversation\"). OFF the Issue is that account; ON the card has NO Issue."
+  },
+  "replay: nov8-560-apostrophe-name-keeps-policy [fix:POLICY_CITATION_ENABLED,CARD_POLICY_OWN_REQUEST_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov8-560-apostrophe-name-keeps-policy [open]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov8-560-hyphen-name-keeps-policy [fix:POLICY_CITATION_ENABLED,CARD_POLICY_OWN_REQUEST_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov8-560-hyphen-name-keeps-policy [open]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov8-corrected-date-kept-prior-step-only [fix:CORRECTED_DATE_KEPT_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R3: the date correction is appended to the Issue AND garbled: \"not attending the monthly meeting on 10-20-26. sorry, the verbal ca was on 9-2-26 not 9-2-26\" (the manager wrote \"not 9-1-26\")."
+  },
+  "replay: nov8-corrected-date-kept-prior-step-only [production]": {
+    "category": "REGRESSION",
+    "reason": "R3: the date correction is appended to the Issue AND garbled: \"not attending the monthly meeting on 10-20-26. sorry, the verbal ca was on 9-2-26 not 9-2-26\" (the manager wrote \"not 9-1-26\")."
+  },
+  "replay: nov8-issue-after-request-reason-offense [fix:ISSUE_AFTER_REQUEST_REASON_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov8-issue-after-request-reason-offense [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov8-kept-request-ca-named-recently-no-notice [fix:REQUEST_KEPT_IN_WINDOW_ENABLED,NEXT_PUBLIC_REQUEST_KEPT_IN_WINDOW_ENABLED,KEPT_REQUEST_SAME_FORM_ENABLED,NEXT_PUBLIC_KEPT_REQUEST_SAME_FORM_ENABLED,CARRIED_PERSON_NOTICE_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R1 ACCOUNT LOST: the account is in its own turn (\"She had 24 tans and was below in …\", or an earlier turn before \"make a CA for <name>\" / \"Create … from this conversation\"). OFF the Issue is that account; ON the card has NO Issue."
+  },
+  "replay: nov8-kept-request-ca-named-recently-no-notice [production]": {
+    "category": "REGRESSION",
+    "reason": "R1 ACCOUNT LOST: the account is in its own turn (\"She had 24 tans and was below in …\", or an earlier turn before \"make a CA for <name>\" / \"Create … from this conversation\"). OFF the Issue is that account; ON the card has NO Issue."
+  },
+  "replay: nov8-missed-shift-plan-cites-attendance [fix:MISSED_SHIFT_NOT_LATENESS_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov8-missed-shift-plan-cites-attendance [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov8-missed-shift-plan-cites-attendance-late-negative [fix:MISSED_SHIFT_NOT_LATENESS_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov8-missed-shift-plan-cites-attendance-late-negative [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov8-near-miss-open-form-kept-sun-msb-format [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,NEAR_MISS_QUESTION_RULES_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R3 NOT-ACCOUNT TEXT IN ISSUE: the pasted outline's warning level enters the Issue: \"… this should be for <name> - verbal. 146 transactions. Below in …\" (LEVEL_STEP_NOT_ACCOUNT kept \"verbal\" out OFF)."
+  },
+  "replay: nov8-near-miss-open-form-kept-sun-msb-format [production]": {
+    "category": "REGRESSION",
+    "reason": "R3 NOT-ACCOUNT TEXT IN ISSUE: the pasted outline's warning level enters the Issue: \"… this should be for <name> - verbal. 146 transactions. Below in …\" (LEVEL_STEP_NOT_ACCOUNT kept \"verbal\" out OFF)."
+  },
+  "replay: nov8-policy-correction-not-account [fix:POLICY_CORRECTION_NOT_ACCOUNT_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R1 ACCOUNT LOST: the account is in its own turn (\"She had 24 tans and was below in …\", or an earlier turn before \"make a CA for <name>\" / \"Create … from this conversation\"). OFF the Issue is that account; ON the card has NO Issue."
+  },
+  "replay: nov8-policy-correction-not-account [production]": {
+    "category": "REGRESSION",
+    "reason": "R1 ACCOUNT LOST: the account is in its own turn (\"She had 24 tans and was below in …\", or an earlier turn before \"make a CA for <name>\" / \"Create … from this conversation\"). OFF the Issue is that account; ON the card has NO Issue."
+  },
+  "replay: nov8-policy-set-aside-ca-card [fix:PROPOSAL_POLICY_SET_ASIDE_ENABLED,TAKE_OFF_STAYS_CARD_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov8-policy-set-aside-ca-card [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov8-policy-set-aside-ca-create [fix:PROPOSAL_POLICY_SET_ASIDE_ENABLED,TAKE_OFF_STAYS_CARD_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov8-policy-set-aside-ca-create [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov8-policy-set-aside-named-again [fix:PROPOSAL_POLICY_SET_ASIDE_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov8-policy-set-aside-named-again [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov8-policy-set-aside-stays-off [fix:PROPOSAL_POLICY_SET_ASIDE_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov8-policy-set-aside-stays-off [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov8-policy-set-aside-unnamed [fix:PROPOSAL_POLICY_SET_ASIDE_ENABLED,TAKE_OFF_STAYS_CARD_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov8-policy-set-aside-unnamed [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov8-r5-prior-step-date-list [fix:PRIOR_STEP_DATE_LIST_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R3: a fragment of the prior-step dates enters the Issue: \"she is under performance for september. 9/15/2026 and 9/25/2026\"."
+  },
+  "replay: nov8-r5-prior-step-date-list [production]": {
+    "category": "REGRESSION",
+    "reason": "R3: a fragment of the prior-step dates enters the Issue: \"she is under performance for september. 9/15/2026 and 9/25/2026\"."
+  },
+  "replay: nov8-r5-step-dates-no-today [fix:STEP_DATES_NOT_FORM_DATE_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R3: a fragment of the prior-step dates enters the Issue: \"she is under performance for september. 9/15/2026 and 9/25/2026\"."
+  },
+  "replay: nov8-r5-step-dates-no-today [production]": {
+    "category": "REGRESSION",
+    "reason": "R3: a fragment of the prior-step dates enters the Issue: \"she is under performance for september. 9/15/2026 and 9/25/2026\"."
+  },
+  "replay: nov8-r5-step-dates-today-is-fine [fix:STEP_DATES_NOT_FORM_DATE_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R3: a fragment of the prior-step dates enters the Issue: \"she is under performance for september. 9/15/2026 and 9/25/2026\"."
+  },
+  "replay: nov8-r5-step-dates-today-is-fine [production]": {
+    "category": "REGRESSION",
+    "reason": "R3: a fragment of the prior-step dates enters the Issue: \"she is under performance for september. 9/15/2026 and 9/25/2026\"."
+  },
+  "replay: nov8-reopen-not-open-form-msb-format [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED,REOPEN_BY_ANY_OPEN_VERB_ENABLED,REOPEN_NOT_OPEN_FORM_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R3 NOT-ACCOUNT TEXT IN ISSUE: the pasted outline's warning level enters the Issue: \"… this should be for <name> - verbal. 146 transactions. Below in …\" (LEVEL_STEP_NOT_ACCOUNT kept \"verbal\" out OFF)."
+  },
+  "replay: nov8-reopen-not-open-form-msb-format [production]": {
+    "category": "REGRESSION",
+    "reason": "R3 NOT-ACCOUNT TEXT IN ISSUE: the pasted outline's warning level enters the Issue: \"… this should be for <name> - verbal. 146 transactions. Below in …\" (LEVEL_STEP_NOT_ACCOUNT kept \"verbal\" out OFF)."
+  },
+  "replay: nov8-request-from-month-not-a-name [fix:REQUEST_FROM_NAMES_EMPLOYEE_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R3: prior history enters the Issue: \"… she was late again for 30 mins today. she has a written warning from august\"."
+  },
+  "replay: nov8-request-from-month-not-a-name [production]": {
+    "category": "REGRESSION",
+    "reason": "R3: prior history enters the Issue: \"… she was late again for 30 mins today. she has a written warning from august\"."
+  },
+  "replay: nov8-s38-failing-first-name-in-chat [fix:ACCOUNT_VERB_NOT_A_NAME_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov8-s38-failing-first-name-in-chat [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov8-s38-keep-apostrophe [fix:ACCOUNT_VERB_NOT_A_NAME_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov8-s38-keep-apostrophe [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov8-sales-triple-place-lead [fix:SALES_SHORTFALL_OBJECT_ENABLED,SALES_OBSERVATION_ACCOUNT_ENABLED,ACCOUNT_PLACE_LEAD_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R2 PLACE LEAD: \"create a written CA for <A> at West Dodge Rd for missing the 10-15-26 woven deadline\": OFF Issue \"missing the 10-15-26 woven deadline\"; ON \"at West Dodge Rd for missing …\" (ACCOUNT_PLACE_LEAD's guard fails)."
+  },
+  "replay: nov8-sales-triple-place-lead [production]": {
+    "category": "REGRESSION",
+    "reason": "R2 PLACE LEAD: \"create a written CA for <A> at West Dodge Rd for missing the 10-15-26 woven deadline\": OFF Issue \"missing the 10-15-26 woven deadline\"; ON \"at West Dodge Rd for missing …\" (ACCOUNT_PLACE_LEAD's guard fails)."
+  },
+  "replay: nov8-woven-conduct-named-policy-wins [fix:CONDUCT_INCIDENT_CITES_PAGE_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov8-woven-conduct-named-policy-wins [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Issue wording improves or widens as designed: the request lead (\"create a ca form for <name>,\") is dropped, or the account's second sentence is kept (\"violating the attendance policy, she was 30 minutes late …\"). The case still holds."
+  },
+  "replay: nov9-missed-shift-cites-attendance-named-policy-wins [fix:MISSED_SHIFT_CITES_ATTENDANCE_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "R3: the instruction enters the Issue: \"… and wore leggings, cite the dress code policy\"."
+  },
+  "replay: nov9-missed-shift-cites-attendance-named-policy-wins [production]": {
+    "category": "REGRESSION",
+    "reason": "R3: the instruction enters the Issue: \"… and wore leggings, cite the dress code policy\"."
+  }
+}
