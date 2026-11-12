@@ -1373,6 +1373,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "DRAFT_NO_INVENTED_PLAN_ENABLED",
   // REVISION_ARCHIVED_NOT_OPEN (default off): in the list, as every flag a release flips (QA round 17l, 12 Nov 2026).
   "REVISION_ARCHIVED_NOT_OPEN_ENABLED",
+  "ADDED_DETAIL_KEPT_ENABLED",
 ] as const;
 
 /**
@@ -3120,6 +3121,16 @@ export function accountBeforeRequestEnabled(): boolean {
  */
 export function draftNoInventedPlanEnabled(): boolean {
   return envFlag("DRAFT_NO_INVENTED_PLAN_ENABLED");
+}
+
+/**
+ * ADDED_DETAIL_KEPT_ENABLED (Pau via QA, sf-b6; coding 5; same flag in both apps; default off). "can you have it include
+ * that we recieved a customer complaint …" was left out of the card's turns (it reads as a question), so neither the
+ * card nor the draft carried it. On: such a turn inside the card's span joins its turns and shows on the card
+ * (`forms/added-detail-kept.ts`). Off, as before.
+ */
+export function addedDetailKeptEnabled(): boolean {
+  return envFlag("ADDED_DETAIL_KEPT_ENABLED");
 }
 
 // --- end coding 5 flags ---
