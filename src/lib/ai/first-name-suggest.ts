@@ -1,4 +1,5 @@
 import {
+  nearMissAnswerKeepsRequestEnabled,
   rosterCompoundSurnameEnabled,
   rosterNearMissEnabled,
   firstNameAnswerKeepsAccountEnabled,
@@ -414,9 +415,53 @@ function answeredNow(request: AskRequest, aliases: Aliases): AskRequest {
   if (!chosen) return request;
   if (answerIsTheRequest(reply, chosen.name)) return request;
   const first = firstNamePattern(options, chosen.name, aliases);
-  const said = [...(request.history ?? [])].reverse().find((turn) => turn.role === "user" && first.test(turn.content));
-  const answered = said ? withAnswersAccount(replaceTyped(said.content, first, options, chosen.name), chosen).request : chosen.name + chosen.rest;
+  let said = [...(request.history ?? [])].reverse().find((turn) => turn.role === "user" && first.test(turn.content));
+  let answered = said ? withAnswersAccount(replaceTyped(said.content, first, options, chosen.name), chosen).request : chosen.name + chosen.rest;
+  // NEAR_MISS_ANSWER_KEEPS_REQUEST_ENABLED: no turn typed the chosen name ("rozline", not "Rozlyn"), so the request is
+  // the turn the question asked about, with the near-miss put right.
+  if (!said && one && nearMissAnswerKeepsRequestEnabled()) {
+    const asking = askingTurn(request);
+    const typed = asking ? typedNearMiss(asking.content, chosen.name) : null;
+    if (asking && typed) {
+      said = asking;
+      answered = `${asking.content.slice(0, typed.at)}${chosen.name}${asking.content.slice(typed.at + typed.text.length)}${chosen.rest}`;
+    }
+  }
   return { ...request, question: withAskingTurn(answered, said, request) };
+}
+
+/** NEAR_MISS_ANSWER_KEEPS_REQUEST_ENABLED: the manager's turn just before the last assistant turn (the one it asked about). */
+function askingTurn(request: AskRequest): ChatMessage | undefined {
+  const history = request.history ?? [];
+  const askedAt = history.map((turn) => turn.role).lastIndexOf("assistant");
+  const turn = askedAt > 0 ? history[askedAt - 1] : undefined;
+  return turn && turn.role === "user" && turn.content.trim() ? turn : undefined;
+}
+
+/**
+ * NEAR_MISS_ANSWER_KEEPS_REQUEST_ENABLED: where the turn typed the chosen name with a slip ("rozline quellmar" for
+ * Rozlyn Quellmar): the same number of words, the surname the same (any case) or one letter off, the first name at most
+ * two letters off, never the name itself. Null when it typed no such name.
+ */
+function typedNearMiss(text: string, name: string): { at: number; text: string } | null {
+  const want = name.toLowerCase().split(/\s+/).filter(Boolean);
+  if (want.length < 2) return null;
+  const words = [...text.matchAll(/[\p{L}'’-]+/gu)];
+  for (let index = 0; index + want.length <= words.length; index += 1) {
+    const span = words.slice(index, index + want.length);
+    const typed = span.map((word) => word[0].toLowerCase());
+    if (typed.join(" ") === want.join(" ")) return null;
+    const first = typed[0]!;
+    const last = typed[typed.length - 1]!;
+    const wantFirst = want[0]!;
+    const wantLast = want[want.length - 1]!;
+    if (Math.min(first.length, wantFirst.length) < 4 || editDistance(first, wantFirst) > 2) continue;
+    if (last !== wantLast && (Math.min(last.length, wantLast.length) < 4 || editDistance(last, wantLast) > 1)) continue;
+    const start = span[0]!.index!;
+    const end = span[span.length - 1]!.index! + span[span.length - 1]![0].length;
+    return { at: start, text: text.slice(start, end) };
+  }
+  return null;
 }
 
 /**

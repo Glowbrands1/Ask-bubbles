@@ -1,3 +1,4 @@
+import { withoutTitleWord } from "@/lib/forms/title-not-part-of-name";
 import {
   antiLoopEnabled,
   caShortcutWordsEnabled,
@@ -302,7 +303,8 @@ function gateMentions(
     formNameFromRosterEnabled() &&
     (mentions.names.some((name) => anchorsOnRoster(name, roster)) || lowercaseRosterFirstNameIn(question, roster));
 
-  for (const name of mentions.names) {
+  // TITLE_NOT_PART_OF_NAME_ENABLED: "<first> <last> TM" is read as "<first> <last>" (`forms/title-not-part-of-name.ts`).
+  for (const name of mentions.names.map(withoutTitleWord)) {
     if (isDocumentOrPolicyName(name)) continue;
     // DATE_ANSWER_APPLIED_ENABLED: "most recent" answers the date question; it is not an unknown person to strip.
     if (isDateAnswerWords(name)) continue;

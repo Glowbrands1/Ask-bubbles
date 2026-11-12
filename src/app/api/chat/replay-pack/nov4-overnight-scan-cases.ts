@@ -197,12 +197,13 @@ export const NOV4_OVERNIGHT_SCAN_CASES: readonly ReplayCase[] = [
   {
     /* Coverage (QA): step 7, but the "as you said" attribution is NOT COVERED. */
     id: "nov4-scan-sf-s15-opening-duties-cleaning",
-    title: "a CA for not completing opening/cleaning duties on 11/2/2026 — Care and Cleaning of Equipment and Facilities (p.21), not Late Opening or Attendance, and no \"as you said\"",
+    title: "a CA for not completing opening/cleaning duties on 11/2/2026 — Other (Pau's ruling), never Late Opening or Attendance, and no \"as you said\"",
     report: `${REPORT}, sf-s15: "Write me a CA for Isolde Brannock for failing to complete opening duties. Isolde did not complete daily cleaning duties. on november 2, 2026"`,
     // Run 4 Nov 2026 (production flags): fails as below.
     // The policy half is POLICY_CLEANING_INCIDENT_ENABLED (Care and Cleaning, code-chosen; policy-cleaning-incident-sf-s15.test.ts); the card half is #453 (CA_SALES_POLICY_ENABLED).
     // Checked locally with #453 merged: holds with both flags. fixFlags are added once #453 is on main.
-    status: { open: "no card at all: \"Write me a CA for Isolde Brannock … on november 2, 2026\" is answered as a policy question (the pack's stand-in answer), so nothing cites Care and Cleaning" },
+    // Changed on purpose (10 Nov 2026): with the expectation moved to Pau's ruling (Other, below), the case holds with production's flags.
+    status: "fixed",
     async run(t) {
       const thread = start(t);
       const reply = await thread.say("Write me a CA for Isolde Brannock for failing to complete opening duties. Isolde did not complete daily cleaning duties. on november 2, 2026");
@@ -210,7 +211,10 @@ export const NOV4_OVERNIGHT_SCAN_CASES: readonly ReplayCase[] = [
       expect(reply.content, "the card says \"as you said\" about a policy she never named").not.toMatch(/as you said/i);
       const policy = policyLine(reply);
       expect(policy, `the card cites Late Opening or Attendance:\n${reply.content}`).not.toMatch(/late opening|attendance/i);
-      expect(policy, `the card does not cite Care and Cleaning:\n${reply.content}`).toMatch(/care and cleaning of equipment and facilities/i);
+      // Changed on purpose (10 Nov 2026): superseded by Pau's ruling (5 Nov 2026; `nov5-cleaning-other-cases.ts`,
+      // CLEANING_OTHER_EVERY_WORDING_ENABLED on in production): cleaning left undone is Other, not Care and Cleaning p.21.
+      // QA (10 Nov): Pau's later ruling wins. The rest of the scan's case is kept.
+      expect(policy, `the card's Policy is not Other:\n${reply.content}`).toMatch(/\bOther\b/);
       t.draftWrites({ observation: "Observed:\nIsolde Brannock did not complete the daily cleaning duties at opening on November 2, 2026." });
       const id = await thread.create();
       const values = t.values(id);

@@ -36,7 +36,7 @@ export const NOV10_SF_S36_OFF_ROSTER_EXIT_CASES: ReplayCase[] = [
     // As nov7-sf-s36 here: the message is not read as a form request in replay (this app's reader stub has no
     // reader-quoted name, and "a exit for for" alone is not a form request), with and without the name set. Kept OPEN
     // as the record of the sibling's case until a live trace from this app shows the path.
-    fixStatus: { open: "the message is answered by the model, not read as an exit form request (no card), with the name set on too" },
+    // Changed on purpose (12 Nov 2026): fixStatus removed — the fix flags hold with the name set on since QA round 17h (FORM_FOR_FOR_TYPO live).
     async run(t) {
       t.directory(STAFF);
       t.as("location_manager", WEST_DODGE);
