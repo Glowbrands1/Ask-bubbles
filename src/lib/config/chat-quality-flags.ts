@@ -1359,6 +1359,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT_ENABLED",
   // coding 6: GROUP_WORDS_NOT_A_NAME (Problem 19, 11 Nov 2026; default off).
   "GROUP_WORDS_NOT_A_NAME_ENABLED",
+  "ACCOUNT_BEFORE_REQUEST_ENABLED",
 ] as const;
 
 /**
@@ -3084,6 +3085,17 @@ export function leadFullSentenceEnabled(): boolean {
  */
 export function nameLineCommaEnabled(): boolean {
   return envFlag("NAME_LINE_COMMA_ENABLED");
+}
+
+/**
+ * ACCOUNT_BEFORE_REQUEST_ENABLED (Pau's P14(a), QA 10 Nov 2026; coding 5; the same flag name as the sibling app's #776,
+ * a different mechanism here; default off). An account given over several turns before "create a coaching form for
+ * <first name>" → "yes" was not handed to the draft ("No specific incident … was described"): a turn that opens with a
+ * question was left out of the card's turns. On: the turns just before the card's first cited turn that recount an
+ * incident by this person join its turns (`forms/account-before-request.ts`). Off, as before.
+ */
+export function accountBeforeRequestEnabled(): boolean {
+  return envFlag("ACCOUNT_BEFORE_REQUEST_ENABLED");
 }
 
 // --- end coding 5 flags ---
