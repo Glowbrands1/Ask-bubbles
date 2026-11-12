@@ -1,0 +1,770 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-17l-card-plan-equals-saved-plan: 17l, the Attendance policy named: the card's Action Plan and the saved Action Plan are the same text \u2014 OPEN in production (card: \"Management will review the applicable company policy with Remy. \u2026\"; saved: Pau's attendance plan)": {
+  "category": "INTENDED",
+  "reason": "17l OPEN case holds: the card's Action Plan is the attendance plan Create saves"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-17l-card-shows-pau-attendance-plan: 17l: \"create a written CA for <B>, she was 20 minutes late on 11/9/26, no action plan\": the card's Action Plan is Pau's attendance plan, the one Create saves \u2014 OPEN in production (the card shows \"Management will review the Attendance policy with Remy. \u2026\")": {
+  "category": "INTENDED",
+  "reason": "17l OPEN case holds: the card's Action Plan is the attendance plan Create saves"
+ },
+ "src/lib/forms/card-plan-matches-create.test.ts :: CARD_PLAN_MATCHES_CREATE_ENABLED off: the card as built": {
+  "category": "INTENDED-HARNESS",
+  "reason": "unit test's flag-off half; the ON arm exports the flag"
+ },
+ "replay: nov10-draft-no-invented-plan-ca-observation [fix:DRAFT_NO_INVENTED_PLAN_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov10-draft-no-invented-plan-ca-observation [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov10-r22-sf-s4-off-roster-lowercase-surname [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov10-r22-sf-s4-off-roster-lowercase-surname [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov10-r22-sf-s4-roster-read-empty [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov10-r22-sf-s4-roster-read-empty [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov10-same-request-carries-account [fix:SAME_REQUEST_CARRIES_ACCOUNT_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov10-same-request-carries-account [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov10-same-request-carries-account-off-roster [fix:SAME_REQUEST_CARRIES_ACCOUNT_ENABLED,SAME_REQUEST_OFF_ROSTER_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov10-same-request-carries-account-off-roster [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov10-same-request-keeps-earlier-card [fix:SAME_REQUEST_KEEPS_EARLIER_CARD_ENABLED,NEXT_PUBLIC_SAME_REQUEST_KEEPS_EARLIER_CARD_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov10-same-request-keeps-earlier-card [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov10-same-request-keeps-earlier-card-off-roster [fix:SAME_REQUEST_KEEPS_EARLIER_CARD_ENABLED,NEXT_PUBLIC_SAME_REQUEST_KEEPS_EARLIER_CARD_ENABLED,SAME_REQUEST_OFF_ROSTER_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov10-same-request-keeps-earlier-card-off-roster [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov11-17i-outline-on-open-proposal [fix:OUTLINE_ON_OPEN_PROPOSAL_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov11-17i-outline-on-open-proposal [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov11-form-input-fidelity-date-ca-10-20 [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov11-form-input-fidelity-date-ca-oct-20 [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov11-form-input-fidelity-date-ca-yesterday [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov11-form-input-fidelity-title-verbal [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov11-form-input-fidelity-title-written [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov11-form-input-fidelity-title-yes [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov11-form-input-fidelity-title-yesterday [fix:FORM_INPUT_FIDELITY_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov11-form-input-fidelity-title-yesterday [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov12-17l-card-plan-equals-saved-plan [open]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov12-17l-card-shows-pau-attendance-plan [open]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov12-expectation-policy-line-no-invented-opening [fix:EXPECTATION_POLICY_LINE_KEPT_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov12-expectation-policy-line-no-invented-opening [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov12-g4-802-own-account-kept-form-labels-pronoun-subject [fix:OUTLINE_ON_OPEN_PROPOSAL_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov12-g4-802-own-account-kept-form-labels-pronoun-subject [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov12-g4-802-own-account-kept-labelled-account [fix:OUTLINE_ON_OPEN_PROPOSAL_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov12-g4-802-own-account-kept-labelled-account [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov12-g4-802-own-account-kept-this-format [fix:OUTLINE_ON_OPEN_PROPOSAL_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov12-g4-802-own-account-kept-this-format [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov12-termination-ticks-so-i-need [fix:TERMINATION_STATED_TICKS_ENABLED]": {
+  "category": "REGRESSION",
+  "reason": "Termination CA card: OFF plan 'Management will review the Attendance policy with Briony. Effective immediately, employment is terminated following the progressive corrective action plan.'; ON replaces the whole line with Pau's plan ('\u2026 is expected to arrive on time for all scheduled shifts moving forward \u2026 A follow-up meeting will be scheduled \u2026 Continued lateness will result in further disciplinary review \u2026') and drops the termination sentence, contradicting 'Type of Warning: Termination'. Create saves Pau's plan + TERMINATION_PLAN_CLOSING (required-closing.ts), so the card still does not match Create."
+ },
+ "replay: nov12-termination-ticks-so-i-need [production]": {
+  "category": "REGRESSION",
+  "reason": "Termination CA card: OFF plan 'Management will review the Attendance policy with Briony. Effective immediately, employment is terminated following the progressive corrective action plan.'; ON replaces the whole line with Pau's plan ('\u2026 is expected to arrive on time for all scheduled shifts moving forward \u2026 A follow-up meeting will be scheduled \u2026 Continued lateness will result in further disciplinary review \u2026') and drops the termination sentence, contradicting 'Type of Warning: Termination'. Create saves Pau's plan + TERMINATION_PLAN_CLOSING (required-closing.ts), so the card still does not match Create."
+ },
+ "replay: nov12-termination-ticks-term-ca-did-not-show [fix:TERMINATION_STATED_TICKS_ENABLED]": {
+  "category": "REGRESSION",
+  "reason": "Termination CA card: OFF plan 'Management will review the Attendance policy with Briony. Effective immediately, employment is terminated following the progressive corrective action plan.'; ON replaces the whole line with Pau's plan ('\u2026 is expected to arrive on time for all scheduled shifts moving forward \u2026 A follow-up meeting will be scheduled \u2026 Continued lateness will result in further disciplinary review \u2026') and drops the termination sentence, contradicting 'Type of Warning: Termination'. Create saves Pau's plan + TERMINATION_PLAN_CLOSING (required-closing.ts), so the card still does not match Create."
+ },
+ "replay: nov12-termination-ticks-term-ca-did-not-show [production]": {
+  "category": "REGRESSION",
+  "reason": "Termination CA card: OFF plan 'Management will review the Attendance policy with Briony. Effective immediately, employment is terminated following the progressive corrective action plan.'; ON replaces the whole line with Pau's plan ('\u2026 is expected to arrive on time for all scheduled shifts moving forward \u2026 A follow-up meeting will be scheduled \u2026 Continued lateness will result in further disciplinary review \u2026') and drops the termination sentence, contradicting 'Type of Warning: Termination'. Create saves Pau's plan + TERMINATION_PLAN_CLOSING (required-closing.ts), so the card still does not match Create."
+ },
+ "replay: nov12-termination-ticks-terminating-never-showed [fix:TERMINATION_STATED_TICKS_ENABLED]": {
+  "category": "REGRESSION",
+  "reason": "Termination CA card: OFF plan 'Management will review the Attendance policy with Briony. Effective immediately, employment is terminated following the progressive corrective action plan.'; ON replaces the whole line with Pau's plan ('\u2026 is expected to arrive on time for all scheduled shifts moving forward \u2026 A follow-up meeting will be scheduled \u2026 Continued lateness will result in further disciplinary review \u2026') and drops the termination sentence, contradicting 'Type of Warning: Termination'. Create saves Pau's plan + TERMINATION_PLAN_CLOSING (required-closing.ts), so the card still does not match Create."
+ },
+ "replay: nov12-termination-ticks-terminating-never-showed [production]": {
+  "category": "REGRESSION",
+  "reason": "Termination CA card: OFF plan 'Management will review the Attendance policy with Briony. Effective immediately, employment is terminated following the progressive corrective action plan.'; ON replaces the whole line with Pau's plan ('\u2026 is expected to arrive on time for all scheduled shifts moving forward \u2026 A follow-up meeting will be scheduled \u2026 Continued lateness will result in further disciplinary review \u2026') and drops the termination sentence, contradicting 'Type of Warning: Termination'. Create saves Pau's plan + TERMINATION_PLAN_CLOSING (required-closing.ts), so the card still does not match Create."
+ },
+ "replay: nov2-p2-new-request-old-incident [fix:NEW_REQUEST_OWN_TURNS_ENABLED,DRAFT_REUSE_NEW_REQUEST_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov2-p2-new-request-old-incident [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov2-p4-question-to-card [fix:QUESTION_NOT_FORM_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov2-p4-question-to-card [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov3-ca-name-from-chat [fix:CA_NAME_FROM_CHAT_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov3-ca-name-from-chat [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov3-ca-name-not-on-roster [fix:CA_NAME_FROM_CHAT_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov3-ca-name-not-on-roster [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov3-card-observation-own-request [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov3-open-draft-new-request [fix:NEW_REQUEST_OPEN_DRAFT_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov3-open-draft-new-request [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov3-stepb-date-as-given [fix:DATE_ONCE_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov3-stepb-date-as-given [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov4-ca-sales-negative-attendance [fix:CA_SALES_POLICY_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov4-ca-sales-negative-attendance [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov4-cleaning-negative-attendance [fix:CA_SALES_POLICY_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov4-cleaning-negative-attendance [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov4-offer-exit-tool-path [fix:CA_SALES_POLICY_ENABLED,CHAT_GLOSSARY_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov4-offer-exit-tool-path [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov4-rev7-described-late-opening-keeps-attendance [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov5-ca-sales-prompt-lines-off-unchanged [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov5-ca-sales-prompt-lines-on [fix:CA_SALES_POLICY_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov5-ca-sales-prompt-lines-on [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov5-roster-only-lowercase-surname [fix:FORM_NAME_FROM_ROSTER_ENABLED,CA_SALES_POLICY_ENABLED,CHAT_GLOSSARY_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov5-roster-only-lowercase-surname [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-ca-reason-at-store-then-account [fix:CA_REASON_DUE_TO_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-ca-reason-at-store-then-account [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-coding3-request-level-not-history-dated-warning-stays-history [fix:REQUEST_LEVEL_NOT_HISTORY_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-coding3-request-level-not-history-dated-warning-stays-history [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-coding3-request-level-not-history-give-a [fix:REQUEST_LEVEL_NOT_HISTORY_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-coding3-request-level-not-history-give-a [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-diffemp-distinct-after-create-caps [fix:SAME_REQUEST_OTHER_PERSON_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-diffemp-distinct-after-create-caps [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-diffemp-distinct-after-create-lower [fix:SAME_REQUEST_OTHER_PERSON_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-diffemp-distinct-after-create-lower [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-diffemp-distinct-after-create-sentence [fix:SAME_REQUEST_OTHER_PERSON_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-diffemp-distinct-after-create-sentence [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-diffemp-distinct-card-on-screen-caps [fix:SAME_REQUEST_OTHER_PERSON_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-diffemp-distinct-card-on-screen-caps [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-diffemp-distinct-card-on-screen-lower [fix:SAME_REQUEST_OTHER_PERSON_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-diffemp-distinct-card-on-screen-lower [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-diffemp-distinct-card-on-screen-sentence [fix:SAME_REQUEST_OTHER_PERSON_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-diffemp-distinct-card-on-screen-sentence [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-diffemp-distinct-read-after-create-caps [fix:SAME_REQUEST_OTHER_PERSON_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-diffemp-distinct-read-after-create-caps [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-diffemp-distinct-read-after-create-lower [fix:SAME_REQUEST_OTHER_PERSON_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-diffemp-distinct-read-after-create-lower [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-diffemp-distinct-read-after-create-sentence [fix:SAME_REQUEST_OTHER_PERSON_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-diffemp-distinct-read-after-create-sentence [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-diffemp-distinct-read-card-on-screen-caps [fix:SAME_REQUEST_OTHER_PERSON_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-diffemp-distinct-read-card-on-screen-caps [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-diffemp-distinct-read-card-on-screen-lower [fix:SAME_REQUEST_OTHER_PERSON_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-diffemp-distinct-read-card-on-screen-lower [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-diffemp-distinct-read-card-on-screen-sentence [fix:SAME_REQUEST_OTHER_PERSON_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-diffemp-distinct-read-card-on-screen-sentence [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-diffemp-qa-nostore-after-create-caps [fix:SAME_REQUEST_OTHER_PERSON_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-diffemp-qa-nostore-after-create-caps [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-diffemp-qa-nostore-after-create-lower [fix:SAME_REQUEST_OTHER_PERSON_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-diffemp-qa-nostore-after-create-lower [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-diffemp-qa-nostore-after-create-sentence [fix:SAME_REQUEST_OTHER_PERSON_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-diffemp-qa-nostore-after-create-sentence [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-diffemp-qa-nostore-card-on-screen-caps [fix:SAME_REQUEST_OTHER_PERSON_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-diffemp-qa-nostore-card-on-screen-caps [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-diffemp-qa-nostore-card-on-screen-lower [fix:SAME_REQUEST_OTHER_PERSON_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-diffemp-qa-nostore-card-on-screen-lower [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-diffemp-qa-nostore-card-on-screen-sentence [fix:SAME_REQUEST_OTHER_PERSON_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-diffemp-qa-nostore-card-on-screen-sentence [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-issue-is-the-account-lowercase [fix:ISSUE_IS_THE_ACCOUNT_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-issue-is-the-account-lowercase [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-issue-is-the-account-nickname [fix:ISSUE_IS_THE_ACCOUNT_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-issue-is-the-account-nickname [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-policy-change-relevant-remove-attendance [fix:POLICY_CHANGE_RELEVANT_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov6-policy-change-relevant-remove-attendance [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov7-a1-remove-policy-card [fix:REMOVE_POLICY_NOT_NAMED_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov7-a1-remove-policy-card [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov7-a1-remove-policy-created [fix:REMOVE_POLICY_NOT_NAMED_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov7-a1-remove-policy-created [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov7-a2-negative-previous-store [fix:PRIOR_STEP_PREVIOUSLY_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov7-a2-negative-previous-store [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov7-denial-no-account-negative-late [fix:DENIAL_NO_ACCOUNT_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov7-denial-no-account-negative-late [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov7-described-attendance-late-verbal-ca [fix:DESCRIBED_ATTENDANCE_CARD_ENABLED,LEVEL_ENDS_REQUEST_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov7-described-attendance-late-verbal-ca [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov7-level-ends-request [fix:LEVEL_ENDS_REQUEST_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov7-level-ends-request [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov7-live-team-member-verbal-ca-roster [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov7-live-team-member-verbal-ca-roster [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov7-s35-ca-not-prior-coaching [fix:CA_REQUEST_NOT_PRIOR_COACHING_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov7-s35-ca-not-prior-coaching [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov7-s35-live-draw-me-up-ca [fix:CA_REQUEST_NOT_PRIOR_COACHING_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov7-s35-live-draw-me-up-ca [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-audit-bare-not-after-request-negative-late [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-ca-shift-dates-name-and-dates [fix:FIRST_NAME_ANSWER_KEEPS_ACCOUNT_ENABLED,SHIFT_ACCOUNT_IS_INCIDENT_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-ca-shift-dates-name-and-dates [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-ca-shift-dates-name-only [fix:FIRST_NAME_ANSWER_KEEPS_ACCOUNT_ENABLED,SHIFT_ACCOUNT_IS_INCIDENT_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-ca-shift-dates-name-only [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-ca-shift-dates-request-again [fix:FIRST_NAME_ANSWER_KEEPS_ACCOUNT_ENABLED,SHIFT_ACCOUNT_IS_INCIDENT_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-ca-shift-dates-request-again [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-corrected-date-kept-two-incidents [fix:CORRECTED_DATE_KEPT_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-corrected-date-kept-two-incidents [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-form-date-said-negative [fix:FORM_DATE_SAID_SETTLES_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-form-date-said-negative [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-missed-shift-plan-cites-attendance-late-negative [fix:MISSED_SHIFT_NOT_LATENESS_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-missed-shift-plan-cites-attendance-late-negative [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-policy-set-aside-ca-card [fix:PROPOSAL_POLICY_SET_ASIDE_ENABLED,TAKE_OFF_STAYS_CARD_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-policy-set-aside-ca-card [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-policy-set-aside-ca-create [fix:PROPOSAL_POLICY_SET_ASIDE_ENABLED,TAKE_OFF_STAYS_CARD_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-policy-set-aside-ca-create [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-policy-set-aside-named-again [fix:PROPOSAL_POLICY_SET_ASIDE_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-policy-set-aside-named-again [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-policy-set-aside-stays-off [fix:PROPOSAL_POLICY_SET_ASIDE_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-policy-set-aside-stays-off [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-policy-set-aside-unnamed [fix:PROPOSAL_POLICY_SET_ASIDE_ENABLED,TAKE_OFF_STAYS_CARD_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-policy-set-aside-unnamed [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-r5-step-date-incident-kept [fix:STEP_DATES_NOT_FORM_DATE_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-r5-step-date-incident-kept [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-request-from-month-not-a-name [fix:REQUEST_FROM_NAMES_EMPLOYEE_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-request-from-month-not-a-name [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-s35-signed-coaching-is-history [fix:CA_REQUEST_NOT_PRIOR_COACHING_ENABLED,SIGNED_STEP_NOT_A_REQUEST_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-s35-signed-coaching-is-history [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-s35-two-forms-still-two [fix:SIGNED_STEP_NOT_A_REQUEST_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-s35-two-forms-still-two [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-s38-failing-full-name [fix:ACCOUNT_VERB_NOT_A_NAME_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-s38-failing-full-name [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-s38-keep-being-late [fix:ACCOUNT_VERB_NOT_A_NAME_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-s38-keep-being-late [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-s38-keep-hyphen-apostrophe [fix:ACCOUNT_VERB_NOT_A_NAME_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-s38-keep-hyphen-apostrophe [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-sales-triple-store-lead-comma [fix:SALES_SHORTFALL_OBJECT_ENABLED,SALES_OBSERVATION_ACCOUNT_ENABLED,ACCOUNT_PLACE_LEAD_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-sales-triple-store-lead-comma [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-set-aside-plan [fix:POLICY_SET_ASIDE_PLAN_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-set-aside-plan [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-set-aside-plan-other-policy [fix:POLICY_SET_ASIDE_PLAN_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-set-aside-plan-other-policy [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-woven-conduct-named-policy-wins [fix:CONDUCT_INCIDENT_CITES_PAGE_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov8-woven-conduct-named-policy-wins [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov9-ca-shift-answer-own-account-next-turn [fix:FIRST_NAME_ANSWER_KEEPS_ACCOUNT_ENABLED,SHIFT_ACCOUNT_IS_INCIDENT_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov9-ca-shift-answer-own-account-next-turn [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov9-ca-shift-answer-same-account [fix:FIRST_NAME_ANSWER_KEEPS_ACCOUNT_ENABLED,SHIFT_ACCOUNT_IS_INCIDENT_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov9-ca-shift-answer-same-account [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov9-late-reads-attendance [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov9-missed-shift-cites-attendance-late-unchanged [fix:MISSED_SHIFT_CITES_ATTENDANCE_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov9-missed-shift-cites-attendance-late-unchanged [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov9-possessive-place-person-keeps [fix:POSSESSIVE_PLACE_NOT_PERSON_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov9-possessive-place-person-keeps [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov9-work-area-absence-late-stays-attendance [fix:WORK_AREA_ABSENCE_CITES_CONDUCT_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: nov9-work-area-absence-late-stays-attendance [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: person-guard-roster-wins [fix:PERSON_GUARD_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ },
+ "replay: person-guard-roster-wins [production]": {
+  "category": "INTENDED",
+  "reason": "Attendance CA card: 'Management will review the (Attendance|applicable company) policy with <first>. Future policy violations \u2026' becomes Pau's attendance plan ('<first> is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor \u2026'), the plan Create saves (QA 17l ruling B); only that line changes; stable 3+3"
+ }
+}
