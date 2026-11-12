@@ -354,9 +354,8 @@ async function answerQuestionTraced(
   // ADDITIONAL_LOCATION_TAKEN_ENABLED: "Store: Kearney." from a manager who covers Kearney is read as the change it is.
   // FIRST_NAME_SUGGEST_ENABLED: "yes" to "Is this for **Quinn Marlowe**?" is read as that name.
   // STORE_ALIAS_ENABLED: a store named the managers' way ("dodge ne") is read as its roster name.
-  const read = withFormTypeSwitch(withAdditionalStore(withStoreAliases(withTerseSlots(withNameBeforeTitle(withTypoReadingCopy(await withFirstNameAnswerFor(request, actor), names)))), actor));
   // MANAGER_FORM_CHOICE_ENABLED: "needs CA", "write ca" are read as the form the manager chose.
-  const read = withFormTypeSwitch(withAdditionalStore(withManagerFormChoice(withTerseSlots(withNameBeforeTitle(withTypoReadingCopy(await withFirstNameAnswerFor(request, actor), names)))), actor));
+  const read = withFormTypeSwitch(withAdditionalStore(withManagerFormChoice(withStoreAliases(withTerseSlots(withNameBeforeTitle(withTypoReadingCopy(await withFirstNameAnswerFor(request, actor), names))))), actor));
   if (!chatTraceEnabled()) return answerQuestionBody(read, actor, memory);
   const draft = openChatTrace({
     conversationId: request.conversationId,
