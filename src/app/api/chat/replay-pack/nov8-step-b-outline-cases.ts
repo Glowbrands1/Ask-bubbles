@@ -1,5 +1,7 @@
 import { expect, vi } from "vitest";
 
+import { draftNoInventedPlanEnabled } from "@/lib/config/chat-quality-flags";
+
 import { WEST_DODGE, replyMatchesDiff, savedForm, type ReplayCase, type ReplayContext } from "./cases";
 import { REFUSAL_ROSTER, STEP_B_READER_FLAGS, patch } from "./nov7-step-b-refusals-scenarios";
 
@@ -48,7 +50,9 @@ function underObserved(details: string): void {
 
 function spaced(details: string): void {
   expect(details, `the sections lost their blank lines:\n${details}`).toMatch(/\n\nExpectation:/);
-  expect(details, `the sections lost their blank lines:\n${details}`).toMatch(/\n\nGoing Forward:/);
+  // Changed on purpose (12 Nov 2026): with DRAFT_NO_INVENTED_PLAN_ENABLED (QA's 26 Oct ruling) the drafted coaching "Going
+  // Forward" the manager never stated is not saved, so there is no Going Forward section to space; otherwise it is.
+  if (!draftNoInventedPlanEnabled()) expect(details, `the sections lost their blank lines:\n${details}`).toMatch(/\n\nGoing Forward:/);
 }
 
 export const NOV8_STEP_B_OUTLINE_CASES: ReplayCase[] = [
