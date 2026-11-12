@@ -1,0 +1,11 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov11-empty-reply-guard-policy-question: a policy question whose answer comes back with no prose and no card: an honest failure, never an empty bubble — OPEN in production (the reply is a 200 with content \"\" and no card: an empty bubble)": {
+    "category": "INTENDED",
+    "reason": "The OPEN pin now fails as designed. Port of the sibling app's PR #141 (QA's 11 empty assistant turns): the policy answer that comes back with no prose and no card is now an honest failure ('did not write an answer'), never a 200 with content \"\". The open case nov11-empty-reply-guard-policy-question moves from open to holding."
+  },
+  "replay: nov11-empty-reply-guard-policy-question [open]": {
+    "category": "INTENDED",
+    "twin": "replay: nov11-empty-reply-guard-policy-question [fix:EMPTY_REPLY_GUARD_ENABLED]",
+    "reason": "Port of the sibling app's PR #141 (QA's 11 empty assistant turns): the policy answer that comes back with no prose and no card is now an honest failure ('did not write an answer'), never a 200 with content \"\". The open case nov11-empty-reply-guard-policy-question moves from open to holding. OFF saved one turn with reply \"\"; ON the turn throws the honest failure, so no turn is recorded (0 turns)."
+  }
+}
