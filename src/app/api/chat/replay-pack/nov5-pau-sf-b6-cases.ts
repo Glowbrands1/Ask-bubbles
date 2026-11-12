@@ -59,6 +59,8 @@ export const NOV5_PAU_SF_B6_CASES: ReplayCase[] = [
     title: "sf-b6: the reply never ends at \"I can prepare:\"; the card after \"Create … from this conversation\" carries the detail added on turn 3",
     report: "Pau via QA, 5 Nov 2026 (this app's production, 4 Nov), sf-b6",
     status: { open: "the reply ends \"Based on what you've described, I can prepare:\" with nothing after it" },
+    // QA's backlog B7 (10 Nov 2026): the ending is fixed behind LEAD_FULL_SENTENCE_ENABLED (case nov5-sf-b6-reply-full-sentence
+    // below); with it on, this case still fails on the card, which ignores the detail added on turn 3 — not in B7, left open.
     async run(t: T) {
       vi.setSystemTime(new Date("2026-11-04T23:30:00Z"));
       t.directory([...STAFF, WYNNE]);
@@ -73,6 +75,25 @@ export const NOV5_PAU_SF_B6_CASES: ReplayCase[] = [
       const card = await thread.say("Create a Corrective Action Form from this conversation.");
       expect(thread.proposal, `no Corrective Action card:\n${card.content}`).toMatchObject({ templateKey: "dpoa", employeeName: "Wynne Sarrow" });
       expect(card.content, `the card ignores the detail added on turn 3:\n${card.content}`).toMatch(/4:56|customer complaint|told (?:them )?(?:that )?(?:we|the store) (?:were|was) closed/i);
+    },
+  },
+  {
+    id: "nov5-sf-b6-reply-full-sentence",
+    title: "sf-b6, the reply only: the turn-3 reply never ends at \"I can prepare:\"",
+    report: "Pau via QA, 5 Nov 2026 (this app's production, 4 Nov), sf-b6; QA's backlog B7 (10 Nov 2026)",
+    status: { open: "the reply ends \"Based on what you've described, I can prepare:\" with nothing after it" },
+    fixFlags: ["LEAD_FULL_SENTENCE_ENABLED"],
+    async run(t: T) {
+      vi.setSystemTime(new Date("2026-11-04T23:30:00Z"));
+      t.directory([...STAFF, WYNNE]);
+      t.as("location_manager", WEST_DODGE);
+      const thread = t.thread();
+      await thread.say("Which forms can I create here?");
+      await thread.say("I need a corrective action form for Wynne Sarrow for counting the drawer early and turning away a customer");
+      t.modelSays(LIVE_T3_ANSWER);
+      const third = await thread.say(T3);
+      t.modelSays(null);
+      expect(third.content.trim(), `the reply ends mid-sentence:\n${third.content}`).not.toMatch(/:\s*$/);
     },
   },
 ];
