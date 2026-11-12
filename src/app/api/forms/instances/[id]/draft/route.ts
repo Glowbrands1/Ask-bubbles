@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { TERMINATION_OPTION, withTerminationPlan } from "@/lib/forms/termination-stated";
 import { salesResultsOffenseLine, withCaChosenRule } from "@/lib/ai/ca-sales-prompt-lines";
 import { noteSpendUser } from "@/lib/ai/spend-meter";
 import { withSpendMeter } from "@/lib/ai/spend-meter-run";
@@ -200,6 +201,7 @@ import {
   proposalPolicySetAsideEnabled,
   dateOnceEnabled,
   sameRequestOtherPersonEnabled,
+  outlineOnOpenProposalEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { NOTHING_SET_ASIDE, policiesSetAside, setAsideAnything, valuesWithPolicySetAside, withoutPolicyTakeOff } from "@/lib/forms/policy-set-aside";
 import { notesMadeAbout } from "@/lib/ai/make-it-about";
@@ -413,7 +415,9 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
           roster: await (await import("@/lib/forms/employee-roster")).loadScopedRoster(actor.scope).catch(() => []),
         })
       : sent;
-    const asTyped = (await import("@/lib/ai/card-meta-turn")).withoutCardMetaTurns(typed);
+    // OUTLINE_ON_OPEN_PROPOSAL_ENABLED: an outline pasted for another person, and "same outline …", are no account (`lib/forms/outline-on-proposal.ts`).
+    const unoutlined = outlineOnOpenProposalEnabled() ? (await import("@/lib/forms/outline-on-proposal")).notesWithoutOutline(typed, loaded.instance.employeeName) : typed;
+    const asTyped = (await import("@/lib/ai/card-meta-turn")).withoutCardMetaTurns(unoutlined);
     // TYPO_READING_ROUTES_ENABLED: the readers below see "coahed", "notcie", "amont" as the words they can only be.
     const read = typoReadingRoutesEnabled() ? typoReadingText(asTyped, await protectedNameWords()) : asTyped;
     // PROPOSAL_MAKE_IT_ABOUT_ENABLED: "make it about showing up late …" makes "Showing up late." the account from that turn on (`ai/make-it-about.ts`).
@@ -1917,6 +1921,8 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
       ? ((loaded.values ?? []).find((row) => row.fieldKey === PAYROLL_DEDUCT_KEY)?.checked.find(isPayrollDeductAnswer) ??
         null)
       : null;
+    // TERMINATION_STATED_TICKS_ENABLED: Termination, ticked at Create from the manager's statement, closes the plan.
+    const terminationPlan = Boolean(fixedPlan) && ((loaded.values ?? []).find((row) => row.fieldKey === "warning_type")?.checked ?? []).includes(TERMINATION_OPTION);
     const draftedValues = (() => {
       const base = { ...(exit?.values ?? attributions.values) };
       if (priorActions) {
@@ -2488,6 +2494,7 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
             }),
           },
           closing: fixedPlan.closing,
+          termination: terminationPlan,
         }
       : null;
     /*
@@ -2530,12 +2537,13 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
           : correctiveActionPlan(planInput)
       : null;
     // PLAN_PAYROLL_SENTENCE_ENABLED: the deduction the manager stated is said in the plan.
+    // TERMINATION_STATED_TICKS_ENABLED: on a termination, the plan ends with the termination sentence.
     const planValue = builtPlan && planInput
-      ? withPayrollSentence(builtPlan, {
+      ? withTerminationPlan(withPayrollSentence(builtPlan, {
           answer: planInput.payroll.answer,
           amount: managerPayrollAmount(amountNotes),
           employeeName: loaded.instance.employeeName,
-        })
+        }), terminationPlan)
       : builtPlan;
     const planned =
       fixedPlan && planInput && planValue && draftedAnything && !keeps(fixedPlan.key)

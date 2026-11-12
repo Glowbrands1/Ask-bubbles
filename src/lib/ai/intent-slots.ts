@@ -21,6 +21,7 @@ import {
   formEditDateRulesEnabled,
   reportNameNotAPersonEnabled,
 } from "@/lib/config/chat-quality-flags";
+import { futureIncidentDateAskEnabled } from "@/lib/config/chat-quality-flags";
 import { isReportName } from "./report-name";
 import { typedEmployeeName } from "@/lib/forms/typed-employee-name";
 import { isNotAName, maskNotANameText, saidInReply } from "@/lib/forms/not-a-name";
@@ -200,13 +201,24 @@ export function decideIntentTurn(rawInput: IntentTurnInput): IntentTurnDecision 
    */
   const lateOpen = lateOpenOn();
   const statedNow = lateOpen && !choice?.date ? newestStatedDate(input.question, input.today) : null;
-  const date = statedNow
+  const groundedDate = statedNow
     ? { iso: statedNow, ambiguous: [] as readonly string[] }
     : groundDate(
         choice?.date ?? reading?.incidentDate ?? null,
         lateOpen ? withYearlessDatesWritten(blob, input.today) : blob,
         input.today,
       );
+  /*
+   * FUTURE_INCIDENT_DATE_ASK_ENABLED (ported from the sibling app, S#285): a
+   * date after today is never what a form records happened. It is not kept as
+   * the incident date here, so the card is not dated by it; the proposal asks
+   * once what date it happened (`decideFormDate`) and dates the form the day
+   * it is created until the manager says.
+   */
+  const date =
+    futureIncidentDateAskEnabled() && groundedDate.iso && groundedDate.iso > input.today
+      ? { ...groundedDate, iso: null }
+      : groundedDate;
   /*
    * THE MANAGER'S LEVEL ONLY (WARNING_LEVEL_MANAGER_ONLY_ENABLED; ported from
    * the sibling app, live replays 24 Oct 2026). The blob holds the assistant's own

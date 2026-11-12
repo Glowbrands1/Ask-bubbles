@@ -14,6 +14,7 @@ import { readFormRequests } from "./form-requests";
 import { stateCodePlaceContext } from "./state-code-place";
 import { detectTemplateIntent } from "./template-intent";
 import type { ChatMessage } from "@/types";
+import { sameNameAfterTitle } from "./title-before-name";
 
 /**
  * ============================================================================
@@ -199,7 +200,9 @@ export function checkProposalIsCurrent(input: {
   if (
     resolution.kind === "resolved" &&
     !samePerson(resolution.employeeName, input.employeeName) &&
-    !accepted
+    !accepted &&
+    // TITLE_BEFORE_NAME_ENABLED: "for Team Member <name>" was read as "Team Member <name>"; the card's <name> is them.
+    !sameNameAfterTitle(resolution.employeeName, input.employeeName, context.messages.map((message) => message.content))
   ) {
     return {
       current: false,

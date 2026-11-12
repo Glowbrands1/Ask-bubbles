@@ -566,4 +566,72 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov9-made-about-undated-no-reading": "MADE_ABOUT_UNDATED_TOGETHER",
   // fixed in production by MADE_ABOUT_UNDATED_TOGETHER, QA round 17n, 12 Nov 2026
   "nov9-made-about-undated-topic": "MADE_ABOUT_UNDATED_TOGETHER",
+  // fixed in production by FORMS_GUIDE, QA round 17o, 12 Nov 2026
+  "nov10-forms-guide-coaching-vs-ca-lower": "FORMS_GUIDE",
+  // fixed in production by FORMS_GUIDE, QA round 17o, 12 Nov 2026
+  "nov10-forms-guide-coaching-vs-ca-sentence": "FORMS_GUIDE",
+  // fixed in production by FORMS_GUIDE, QA round 17o, 12 Nov 2026
+  "nov10-forms-guide-generic-policy-review-lower": "FORMS_GUIDE",
+  // fixed in production by FORMS_GUIDE, QA round 17o, 12 Nov 2026
+  "nov10-forms-guide-generic-policy-review-sentence": "FORMS_GUIDE",
+  // fixed in production by FORMS_GUIDE, QA round 17o, 12 Nov 2026
+  "nov10-forms-guide-someone-who-quit-lower": "FORMS_GUIDE",
+  // fixed in production by FORMS_GUIDE, QA round 17o, 12 Nov 2026
+  "nov10-forms-guide-someone-who-quit-sentence": "FORMS_GUIDE",
+  // fixed in production by FORMS_GUIDE, QA round 17o, 12 Nov 2026
+  "nov10-forms-guide-what-is-a-ca-lower": "FORMS_GUIDE",
+  // fixed in production by FORMS_GUIDE, QA round 17o, 12 Nov 2026
+  "nov10-forms-guide-what-is-a-ca-sentence": "FORMS_GUIDE",
+  // fixed in production by FORMS_GUIDE, QA round 17o, 12 Nov 2026
+  "nov10-forms-guide-which-forms-lower": "FORMS_GUIDE",
+  // fixed in production by FORMS_GUIDE, QA round 17o, 12 Nov 2026
+  "nov10-forms-guide-which-forms-sentence": "FORMS_GUIDE",
+  // fixed in production by FUTURE_INCIDENT_DATE_ASK, QA round 17o, 12 Nov 2026
+  "nov10-future-incident-date-full-lower": "FUTURE_INCIDENT_DATE_ASK",
+  // fixed in production by FUTURE_INCIDENT_DATE_ASK, QA round 17o, 12 Nov 2026
+  "nov10-future-incident-date-full-sentence": "FUTURE_INCIDENT_DATE_ASK",
+  // fixed in production by TERMINATION_STATED_TICKS, QA round 17o, 12 Nov 2026
+  "nov10-p15-term-ca-ticks-termination": "TERMINATION_STATED_TICKS",
+  // fixed in production by NAME_CORRECTION_KEEPS_DATE, QA round 17o, 12 Nov 2026
+  "nov10-r22-s14-date-kept-after-name-correction": "NAME_CORRECTION_KEEPS_DATE",
+  // fixed in production by SAME_REQUEST_CARRIES_ACCOUNT, QA round 17o, 12 Nov 2026
+  "nov10-same-request-carries-account": "SAME_REQUEST_CARRIES_ACCOUNT",
+  // fixed in production by SAME_REQUEST_CARRIES_ACCOUNT, QA round 17o, 12 Nov 2026
+  "nov10-same-request-carries-account-off-roster": "SAME_REQUEST_CARRIES_ACCOUNT",
+  // fixed in production by SAME_REQUEST_KEEPS_EARLIER_CARD, QA round 17o, 12 Nov 2026
+  "nov10-same-request-keeps-earlier-card": "SAME_REQUEST_KEEPS_EARLIER_CARD",
+  // fixed in production by SAME_REQUEST_KEEPS_EARLIER_CARD, QA round 17o, 12 Nov 2026
+  "nov10-same-request-keeps-earlier-card-off-roster": "SAME_REQUEST_KEEPS_EARLIER_CARD",
+  // fixed in production by OUTLINE_ON_OPEN_PROPOSAL, QA round 17o, 12 Nov 2026
+  "nov11-17i-outline-on-open-proposal": "OUTLINE_ON_OPEN_PROPOSAL",
+  // fixed in production by NEAR_MISS_TURNED_DOWN_EVERYWHERE, QA round 17o, 12 Nov 2026
+  "nov11-near-miss-no-call-no-show-after-question": "NEAR_MISS_TURNED_DOWN_EVERYWHERE",
+  // fixed in production by TITLE_BEFORE_NAME, QA round 17o, 12 Nov 2026
+  "nov11-title-before-name-admin": "TITLE_BEFORE_NAME",
+  // fixed in production by TITLE_BEFORE_NAME, QA round 17o, 12 Nov 2026
+  "nov11-title-before-name-create-names-employee": "TITLE_BEFORE_NAME",
+  // fixed in production by TITLE_BEFORE_NAME, QA round 17o, 12 Nov 2026
+  "nov11-title-before-name-draft-create-team-member": "TITLE_BEFORE_NAME",
+  // fixed in production by TITLE_BEFORE_NAME, QA round 17o, 12 Nov 2026
+  "nov11-title-before-name-draft-team-member": "TITLE_BEFORE_NAME",
+  // fixed in production by TITLE_BEFORE_NAME, QA round 17o, 12 Nov 2026
+  "nov11-title-before-name-draft-tm": "TITLE_BEFORE_NAME",
+  // fixed in production by TITLE_BEFORE_NAME, QA round 17o, 12 Nov 2026
+  "nov11-title-before-name-location-manager": "TITLE_BEFORE_NAME",
+  // fixed in production by POLICY_CARRY_RETRIEVAL, QA round 17o, 12 Nov 2026
+  "nov12-180-just-make-it-searches-the-named-policy": "POLICY_CARRY_RETRIEVAL",
+  // fixed in production by TERMINATION_STATED_TICKS, QA round 17o, 12 Nov 2026
+  "nov12-termination-ticks-because-didnt-call-in": "TERMINATION_STATED_TICKS",
+  // fixed in production by TERMINATION_STATED_TICKS, QA round 17o, 12 Nov 2026
+  "nov12-termination-ticks-didnt-show-for-shift": "TERMINATION_STATED_TICKS",
+  // fixed in production by TERMINATION_STATED_TICKS, QA round 17o, 12 Nov 2026
+  "nov12-termination-ticks-so-i-need": "TERMINATION_STATED_TICKS",
+  // fixed in production by TERMINATION_STATED_TICKS, QA round 17o, 12 Nov 2026
+  "nov12-termination-ticks-term-ca-did-not-show": "TERMINATION_STATED_TICKS",
+  // fixed in production by TERMINATION_STATED_TICKS, QA round 17o, 12 Nov 2026
+  "nov12-termination-ticks-terminating-never-showed": "TERMINATION_STATED_TICKS",
+  // fixed in production by TERMINATION_STATED_TICKS, QA round 17o, 12 Nov 2026
+  "nov12-termination-ticks-termination-ca-no-call-no-show": "TERMINATION_STATED_TICKS",
+  // fixed in production by TITLE_BEFORE_NAME, QA round 17o, 12 Nov 2026
+  "nov12-title-before-name-trailing-today": "TITLE_BEFORE_NAME",
 };

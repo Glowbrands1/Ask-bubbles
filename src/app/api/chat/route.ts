@@ -51,6 +51,7 @@ import {
   offRosterConfirmEnabled,
   offRosterAskBeforeCardEnabled,
   oneFormEachPersonEnabled,
+  outlineOnOpenProposalEnabled,
   groupWordsNotANameEnabled,
   createFromConversationPointsToCardEnabled,
   cardNamesEmployeeEnabled,
@@ -67,6 +68,7 @@ import {
   leadFullSentenceEnabled,
   formsBelowNeedsFormsEnabled,
   formEditPlainWordsEnabled,
+  formsGuideEnabled,
   pastedTemplateFieldsToOpenDraftEnabled,
   payrollDeductAmountFieldEnabled,
   questionNotFormEnabled,
@@ -257,6 +259,15 @@ async function postChat(request: Request) {
           question: read(asked.question),
           history: asked.history.map((turn) => (turn.role === "user" && typeof turn.content === "string" ? { ...turn, content: read(turn.content) } : turn)),
         };
+      }
+      // OUTLINE_ON_OPEN_PROPOSAL_ENABLED: a pasted outline on an open proposal is no account (`lib/forms/outline-on-proposal.ts`).
+      let outlineOnProposal: { readonly requestId?: string } | null = null;
+      if (outlineOnOpenProposalEnabled()) {
+        const read = (await import("@/lib/forms/outline-on-proposal")).withoutOutlineTurns(asked);
+        if (read) {
+          asked = read.asked;
+          outlineOnProposal = read.outline ? { ...(read.requestId ? { requestId: read.requestId } : {}) } : null;
+        }
       }
       /*
        * PASTED_REVIEW_NOT_ACCOUNT_ENABLED (Pau's sf-s22, port): a reviewer's notes pasted into a turn ("Please make the
@@ -588,7 +599,22 @@ async function postChat(request: Request) {
       // LIST_POLICY_IS_EDIT_ENABLED: "please list the policy" with a form open is an edit (EDIT_POLICY_ASK), never a question.
       const listPolicyEdit =
         listPolicyIsEditEnabled() && (await import("@/lib/ai/list-policy-ask")).listPolicyIsEdit(parsed.question, Boolean(parsed.activeFormInstanceId));
-      const askedQuestion = !listPolicyEdit && questionNotFormEnabled() && isQuestionNotForm(parsed.question, parsed.history);
+      /*
+       * "WHAT IS A CA?", "DIFFERENCE BETWEEN COACHING AND CA", "WHICH FORMS CAN
+       * I CREATE HERE?" — answered from the published templates and the role
+       * matrix, and like any question never written into an open form. Null
+       * for every other sentence, and off unless FORMS_GUIDE_ENABLED. See
+       * `lib/forms/forms-guide.ts`.
+       */
+      const formsGuide =
+        formsGuideEnabled() && !draftAnswer
+          ? await (await import("@/lib/forms/forms-guide-answer")).answerFormsGuide({
+              question: parsed.question,
+              role: context.identity.role,
+            })
+          : null;
+      const askedQuestion =
+        Boolean(formsGuide) || (!listPolicyEdit && questionNotFormEnabled() && isQuestionNotForm(parsed.question, parsed.history));
       /*
        * STEP B (FORM_PATCH_REDUCER_ENABLED + FORM_REPLY_FROM_DIFF_ENABLED): the
        * open form as saved before this turn, so the reply about it can come
@@ -890,7 +916,7 @@ async function postChat(request: Request) {
        * See `lib/forms/chat-reopen.ts`.
        */
       const reopened =
-        !sameCopy && !draftAnswer && !correction && !policyChange && !redraft && !revision && !which && (mayAskToReopen(parsed.question, reopenByAnyOpenVerbEnabled()) || (reopenByAnyOpenVerbEnabled() && answersWhichFormOnFile(parsed.history)))
+        !sameCopy && !draftAnswer && !formsGuide && !correction && !policyChange && !redraft && !revision && !which && (mayAskToReopen(parsed.question, reopenByAnyOpenVerbEnabled()) || (reopenByAnyOpenVerbEnabled() && answersWhichFormOnFile(parsed.history)))
           ? await (await import("@/lib/forms/chat-reopen")).reopenRequestedForm({
               request,
               question: parsed.question,
@@ -916,6 +942,7 @@ async function postChat(request: Request) {
       let toolNothing: Awaited<ReturnType<typeof answerQuestion>> | null = null;
       answer =
         draftAnswer ??
+        formsGuide ??
         correction ??
         // A name correction this form does not take in chat: said plainly, never a model's "updated".
         (nameFix && !correction ? (await import("@/lib/forms/name-correction-words")).nameNotCorrectedReply(nameFix.open, nameFix.question) : null) ??
@@ -1030,6 +1057,10 @@ async function postChat(request: Request) {
       }
       // PROPOSAL_NAME_CORRECTION_ENABLED: an off-roster "change her name to …" on the card asks which, never kept silently.
       answer = withCorrectionNotDropped(answer, parsed);
+      // OUTLINE_ON_OPEN_PROPOSAL_ENABLED: the outline turn's reply says the outline is kept as her form's layout.
+      if (outlineOnProposal) {
+        answer = (await import("@/lib/forms/outline-on-proposal")).withOutlineKeptNote(answer, { outlineTurnId: parsed.questionMessageId, requestId: outlineOnProposal.requestId });
+      }
       // NEAR_MISS_QUESTION_RULES_ENABLED: "no, …" to "Is this for <name>?" never gets a card for that name, nor the question again.
       if (nearMissQuestionRulesEnabled()) answer = (await import("@/lib/forms/near-miss-question-rules")).withoutTurnedDownName(answer, asked);
       /*
