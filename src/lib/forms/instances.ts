@@ -38,7 +38,7 @@ import {
 } from "./prior-actions";
 import { applyRequiredClosings } from "./required-closing";
 import { offeredOffenseKeys } from "./offense-keys";
-import { caSalesPolicyEnabled } from "@/lib/config/chat-quality-flags";
+import { caSalesPolicyEnabled, revisionArchivedNotOpenEnabled } from "@/lib/config/chat-quality-flags";
 import { isIsoCalendarDate } from "./form-date-answer";
 import { getCurrentVersion, getVersion, type TemplateVersionRow } from "./repository";
 
@@ -1281,11 +1281,13 @@ export async function reviseInstance(
  */
 export async function findOpenRevision(instanceId: string): Promise<InstanceRow | null> {
   const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase
+  const drafts = supabase
     .from("form_instance_overview")
     .select("*")
     .eq("revises_instance_id", instanceId)
-    .eq("status", "draft")
+    .eq("status", "draft");
+  // REVISION_ARCHIVED_NOT_OPEN_ENABLED: an archived draft is not open; a new request starts afresh.
+  const { data, error } = await (revisionArchivedNotOpenEnabled() ? drafts.is("archived_at", null) : drafts)
     .order("created_at", { ascending: false })
     .limit(1);
   if (error) throw new Error(`Could not read the form's revisions: ${error.message}`);

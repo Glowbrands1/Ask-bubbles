@@ -522,4 +522,116 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov11-live-ima-employee-no-name-words-every-store": "NO_NAME_REPLY_WORDING",
   // fixed in production by NO_NAME_REPLY_WORDING, QA round 17j, 12 Nov 2026
   "nov11-live-ima-employee-no-name-words-store-manager": "NO_NAME_REPLY_WORDING",
+  // fixed in production by LETTER_GREETING_ANY_CASE, QA round 17k, 12 Nov 2026
+  "nov10-letter-greeting-your-capitalised": "LETTER_GREETING_ANY_CASE",
+  // fixed in production by COMPANY_METRIC_WORDS_NOT_NAMES, QA round 17k, 12 Nov 2026
+  "nov11-bcs-metrics-comp-sales": "COMPANY_METRIC_WORDS_NOT_NAMES",
+  // fixed in production by COMPANY_METRIC_WORDS_NOT_NAMES, QA round 17k, 12 Nov 2026
+  "nov11-bcs-metrics-discount-rate": "COMPANY_METRIC_WORDS_NOT_NAMES",
+  // fixed in production by ACCOUNT_BEFORE_REQUEST, QA round 17k, 12 Nov 2026
+  "nov10-p14a-account-opens-with-a-question": "ACCOUNT_BEFORE_REQUEST",
+  // fixed in production by DRAFT_NO_INVENTED_PLAN, QA round 17l, 12 Nov 2026
+  "nov10-draft-no-invented-plan-ca-observation": "DRAFT_NO_INVENTED_PLAN",
+  // fixed in production by EMPTY_REPLY_GUARD, QA round 17l, 12 Nov 2026
+  "nov11-empty-reply-guard-policy-question": "EMPTY_REPLY_GUARD",
+  // fixed in production by POLICY_PAGE_ON_CARD, QA round 17l, 12 Nov 2026
+  "nov11-policy-page-on-card-standards-of-conduct": "POLICY_PAGE_ON_CARD",
+  // fixed in production by WORN_CLOTHING_IS_DRESS_CODE, QA round 17m, 12 Nov 2026
+  "nov11-17i-hoodie-ca-dress-code": "WORN_CLOTHING_IS_DRESS_CODE",
+  // fixed in production by COPY_PASTE_POINTS_TO_CARD, QA round 17m, 12 Nov 2026
+  "nov11-17i-copy-paste-points-to-card": "COPY_PASTE_POINTS_TO_CARD",
+  // fixed in production by EXIT_PROSE_FACTS, QA round 17m, 12 Nov 2026
+  "nov11-exit-prose-bare-name": "EXIT_PROSE_FACTS",
+  // fixed in production by FORM_INPUT_FIDELITY, QA round 17m, 12 Nov 2026
+  "nov11-form-input-fidelity-title-yesterday": "FORM_INPUT_FIDELITY",
+  // fixed in production by PASTED_FORM_NAME_NOT_REQUEST, QA round 17n, 12 Nov 2026
+  "nov10-b4-twin-ca-not-coaching-form-type": "PASTED_FORM_NAME_NOT_REQUEST",
+  // fixed in production by EXPECTATION_POLICY_LINE_KEPT, QA round 17n, 12 Nov 2026
+  "nov10-expectation-policy-line-kept": "EXPECTATION_POLICY_LINE_KEPT",
+  // fixed in production by MADE_FOR_IS_MADE_ABOUT, QA round 17n, 12 Nov 2026
+  "nov10-made-for-is-made-about-about-missing-out": "MADE_FOR_IS_MADE_ABOUT",
+  // fixed in production by MADE_FOR_IS_MADE_ABOUT, QA round 17n, 12 Nov 2026
+  "nov10-made-for-is-made-about-reader-nothing": "MADE_FOR_IS_MADE_ABOUT",
+  // fixed in production by MADE_FOR_IS_MADE_ABOUT, QA round 17n, 12 Nov 2026
+  "nov10-made-for-is-made-about-reader-replaces": "MADE_FOR_IS_MADE_ABOUT",
+  // fixed in production by PASTED_REVIEW_NOT_ACCOUNT, QA round 17n, 12 Nov 2026
+  "nov10-twin-sf-s22-pasted-review-never-drafted": "PASTED_REVIEW_NOT_ACCOUNT",
+  // fixed in production by PASTED_REVIEW_NOT_ACCOUNT, QA round 17n, 12 Nov 2026
+  "nov5-twin-sf-s22-ca-not-coaching": "PASTED_REVIEW_NOT_ACCOUNT",
+  // fixed in production by REOPEN_CLOSE_SPELLING, QA round 17n, 12 Nov 2026
+  "nov5-twin-sf-s26-edit-misspelled-ca": "REOPEN_CLOSE_SPELLING",
+  // fixed in production by STEP_B_REPLY_KEEPS_LINES, QA round 17n, 12 Nov 2026
+  "nov8-step-b-reply-keeps-lines": "STEP_B_REPLY_KEEPS_LINES",
+  // fixed in production by MADE_ABOUT_UNDATED_TOGETHER, QA round 17n, 12 Nov 2026
+  "nov9-made-about-undated-no-reading": "MADE_ABOUT_UNDATED_TOGETHER",
+  // fixed in production by MADE_ABOUT_UNDATED_TOGETHER, QA round 17n, 12 Nov 2026
+  "nov9-made-about-undated-topic": "MADE_ABOUT_UNDATED_TOGETHER",
+  // fixed in production by FORMS_GUIDE, QA round 17o, 12 Nov 2026
+  "nov10-forms-guide-coaching-vs-ca-lower": "FORMS_GUIDE",
+  // fixed in production by FORMS_GUIDE, QA round 17o, 12 Nov 2026
+  "nov10-forms-guide-coaching-vs-ca-sentence": "FORMS_GUIDE",
+  // fixed in production by FORMS_GUIDE, QA round 17o, 12 Nov 2026
+  "nov10-forms-guide-generic-policy-review-lower": "FORMS_GUIDE",
+  // fixed in production by FORMS_GUIDE, QA round 17o, 12 Nov 2026
+  "nov10-forms-guide-generic-policy-review-sentence": "FORMS_GUIDE",
+  // fixed in production by FORMS_GUIDE, QA round 17o, 12 Nov 2026
+  "nov10-forms-guide-someone-who-quit-lower": "FORMS_GUIDE",
+  // fixed in production by FORMS_GUIDE, QA round 17o, 12 Nov 2026
+  "nov10-forms-guide-someone-who-quit-sentence": "FORMS_GUIDE",
+  // fixed in production by FORMS_GUIDE, QA round 17o, 12 Nov 2026
+  "nov10-forms-guide-what-is-a-ca-lower": "FORMS_GUIDE",
+  // fixed in production by FORMS_GUIDE, QA round 17o, 12 Nov 2026
+  "nov10-forms-guide-what-is-a-ca-sentence": "FORMS_GUIDE",
+  // fixed in production by FORMS_GUIDE, QA round 17o, 12 Nov 2026
+  "nov10-forms-guide-which-forms-lower": "FORMS_GUIDE",
+  // fixed in production by FORMS_GUIDE, QA round 17o, 12 Nov 2026
+  "nov10-forms-guide-which-forms-sentence": "FORMS_GUIDE",
+  // fixed in production by FUTURE_INCIDENT_DATE_ASK, QA round 17o, 12 Nov 2026
+  "nov10-future-incident-date-full-lower": "FUTURE_INCIDENT_DATE_ASK",
+  // fixed in production by FUTURE_INCIDENT_DATE_ASK, QA round 17o, 12 Nov 2026
+  "nov10-future-incident-date-full-sentence": "FUTURE_INCIDENT_DATE_ASK",
+  // fixed in production by TERMINATION_STATED_TICKS, QA round 17o, 12 Nov 2026
+  "nov10-p15-term-ca-ticks-termination": "TERMINATION_STATED_TICKS",
+  // fixed in production by NAME_CORRECTION_KEEPS_DATE, QA round 17o, 12 Nov 2026
+  "nov10-r22-s14-date-kept-after-name-correction": "NAME_CORRECTION_KEEPS_DATE",
+  // fixed in production by SAME_REQUEST_CARRIES_ACCOUNT, QA round 17o, 12 Nov 2026
+  "nov10-same-request-carries-account": "SAME_REQUEST_CARRIES_ACCOUNT",
+  // fixed in production by SAME_REQUEST_CARRIES_ACCOUNT, QA round 17o, 12 Nov 2026
+  "nov10-same-request-carries-account-off-roster": "SAME_REQUEST_CARRIES_ACCOUNT",
+  // fixed in production by SAME_REQUEST_KEEPS_EARLIER_CARD, QA round 17o, 12 Nov 2026
+  "nov10-same-request-keeps-earlier-card": "SAME_REQUEST_KEEPS_EARLIER_CARD",
+  // fixed in production by SAME_REQUEST_KEEPS_EARLIER_CARD, QA round 17o, 12 Nov 2026
+  "nov10-same-request-keeps-earlier-card-off-roster": "SAME_REQUEST_KEEPS_EARLIER_CARD",
+  // fixed in production by OUTLINE_ON_OPEN_PROPOSAL, QA round 17o, 12 Nov 2026
+  "nov11-17i-outline-on-open-proposal": "OUTLINE_ON_OPEN_PROPOSAL",
+  // fixed in production by NEAR_MISS_TURNED_DOWN_EVERYWHERE, QA round 17o, 12 Nov 2026
+  "nov11-near-miss-no-call-no-show-after-question": "NEAR_MISS_TURNED_DOWN_EVERYWHERE",
+  // fixed in production by TITLE_BEFORE_NAME, QA round 17o, 12 Nov 2026
+  "nov11-title-before-name-admin": "TITLE_BEFORE_NAME",
+  // fixed in production by TITLE_BEFORE_NAME, QA round 17o, 12 Nov 2026
+  "nov11-title-before-name-create-names-employee": "TITLE_BEFORE_NAME",
+  // fixed in production by TITLE_BEFORE_NAME, QA round 17o, 12 Nov 2026
+  "nov11-title-before-name-draft-create-team-member": "TITLE_BEFORE_NAME",
+  // fixed in production by TITLE_BEFORE_NAME, QA round 17o, 12 Nov 2026
+  "nov11-title-before-name-draft-team-member": "TITLE_BEFORE_NAME",
+  // fixed in production by TITLE_BEFORE_NAME, QA round 17o, 12 Nov 2026
+  "nov11-title-before-name-draft-tm": "TITLE_BEFORE_NAME",
+  // fixed in production by TITLE_BEFORE_NAME, QA round 17o, 12 Nov 2026
+  "nov11-title-before-name-location-manager": "TITLE_BEFORE_NAME",
+  // fixed in production by POLICY_CARRY_RETRIEVAL, QA round 17o, 12 Nov 2026
+  "nov12-180-just-make-it-searches-the-named-policy": "POLICY_CARRY_RETRIEVAL",
+  // fixed in production by TERMINATION_STATED_TICKS, QA round 17o, 12 Nov 2026
+  "nov12-termination-ticks-because-didnt-call-in": "TERMINATION_STATED_TICKS",
+  // fixed in production by TERMINATION_STATED_TICKS, QA round 17o, 12 Nov 2026
+  "nov12-termination-ticks-didnt-show-for-shift": "TERMINATION_STATED_TICKS",
+  // fixed in production by TERMINATION_STATED_TICKS, QA round 17o, 12 Nov 2026
+  "nov12-termination-ticks-so-i-need": "TERMINATION_STATED_TICKS",
+  // fixed in production by TERMINATION_STATED_TICKS, QA round 17o, 12 Nov 2026
+  "nov12-termination-ticks-term-ca-did-not-show": "TERMINATION_STATED_TICKS",
+  // fixed in production by TERMINATION_STATED_TICKS, QA round 17o, 12 Nov 2026
+  "nov12-termination-ticks-terminating-never-showed": "TERMINATION_STATED_TICKS",
+  // fixed in production by TERMINATION_STATED_TICKS, QA round 17o, 12 Nov 2026
+  "nov12-termination-ticks-termination-ca-no-call-no-show": "TERMINATION_STATED_TICKS",
+  // fixed in production by TITLE_BEFORE_NAME, QA round 17o, 12 Nov 2026
+  "nov12-title-before-name-trailing-today": "TITLE_BEFORE_NAME",
 };

@@ -1,6 +1,6 @@
 import { expect } from "vitest";
 
-import { STAFF, WEST_DODGE, type DirectoryRow, type ReplayAnswer, type ReplayCase } from "./cases";
+import { STAFF, WEST_DODGE, type DirectoryRow, type ReplayAnswer, type ReplayCase, onStoryClock } from "./cases";
 
 /**
  * ============================================================================
@@ -181,3 +181,7 @@ export const NOV5_NOT_FOUND_ANY_PHRASING_CASES: ReplayCase[] = [
   notFound("nov5-not-found-employee-first", "i have an employee, Zebulon Marchbanks that needs a corrective action form with a customer complaint", "the employee first"),
   notFound("nov5-not-found-name-at-end", "create a ca form for Zebulon Marchbanks", "the name at the end"),
 ];
+
+// Gate-Bubbles-5 (G5-743): these cases tell a story dated after the pack's 10/26/2026; they run on a day after it.
+onStoryClock(NOV5_COMPOUND_SURNAME_CASES);
+onStoryClock(NOV5_NOT_FOUND_ANY_PHRASING_CASES);

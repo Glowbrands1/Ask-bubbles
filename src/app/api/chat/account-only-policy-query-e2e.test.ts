@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { draftNoInventedPlanEnabled } from "@/lib/config/chat-quality-flags";
 import { continuationFor } from "@/lib/forms/proposal-continuation";
 import { createId } from "@/lib/utils/id";
 import { rosterResultFor } from "@/test/roster-result";
@@ -520,7 +521,20 @@ describe(`${AO} on`, () => {
     for (const turn of TURNS) await thread.say(turn);
     state.draft = { values: { observation: clean } };
     const id = await thread.create();
-    expect(store.form_instance_values.find((row) => row.instance_id === id && row.field_key === "observation")?.value).toBe(clean);
+    // DRAFT_NO_INVENTED_PLAN_ENABLED (intended change, QA 12 Nov 2026, before the flip): the model's "Going Forward" is
+    // dropped from the Corrective Action Form's Observation; the Observed line is kept as written. Off, all of it.
+    const kept = draftNoInventedPlanEnabled() ? "Observed:\nThe employee was late to work on October 2, 2026." : clean;
+    expect(store.form_instance_values.find((row) => row.instance_id === id && row.field_key === "observation")?.value).toBe(kept);
+  });
+
+  // Gate-Bubbles-5 (record 2f2b8517): with EXPECTATION_POLICY_LINE_KEPT on, the general "An employee assigned to open the
+  // location is expected …" was kept, the opening story nobody wrote. It is exempt only from "scheduled to", so it still goes.
+  it("EXPECTATION_POLICY_LINE_KEPT on: the same turns still save no opening nobody wrote", async () => {
+    if (!saved.has("EXPECTATION_POLICY_LINE_KEPT_ENABLED")) saved.set("EXPECTATION_POLICY_LINE_KEPT_ENABLED", process.env.EXPECTATION_POLICY_LINE_KEPT_ENABLED);
+    process.env.EXPECTATION_POLICY_LINE_KEPT_ENABLED = "true";
+    const observation = await drafted();
+    expect(observation).not.toMatch(/\bopen/i);
+    expect(observation).toBe(EXPECTED);
   });
 
   it("notes that say open keep it", async () => {
