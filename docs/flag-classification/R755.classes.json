@@ -1,0 +1,308 @@
+{
+  "src/app/api/chat/proposal-path-flags-e2e.test.ts :: FORM_EDIT_DATE_RULES off: production today (d): Attendance": {
+    "category": "INTENDED-HARNESS",
+    "reason": "Production-today wording pin /Attendance, as you said/ with no POLICY_PAGE_ON_CARD stub. ON the same reply reads \"Attendance (JBA Policy Manual p.14), as you said\", checked by running the test with the flag on; nothing else in the reply changes."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov11-policy-page-on-card-standards-of-conduct: a Standards of Conduct Corrective Action card: the policy line says p.12 — OPEN in production (**Policy:** Standards of Conduct, with no page)": {
+    "category": "INTENDED",
+    "twin": "replay: nov11-policy-page-on-card-standards-of-conduct [fix:POLICY_PAGE_ON_CARD_ENABLED]",
+    "reason": "QA, 25 Oct 2026: the Standards of Conduct card now says \"Standards of Conduct (JBA Policy Manual p.12)\". The open case moves from open to holding (the OPEN pin fails as designed)."
+  },
+  "src/lib/forms/form-edit-single-writer-flags-off.test.ts :: FORM_EDIT_SINGLE_WRITER_ENABLED off: the same chats, byte for byte (a) and (b) equal main's behaviour with the same script (replies, rows, events)": {
+    "category": "INTENDED-HARNESS",
+    "reason": "Byte-for-byte compare against the recorded main fixture (form-edit-single-writer-flags-off.main.json). The only difference is the page beside the card's policy; re-record with RECORD_MAIN_FIXTURE=1 when the flag ships."
+  },
+  "replay: nov10-not-following-dress-code-ca-policy [fix:NOT_FOLLOWING_IS_VIOLATION_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov10-not-following-dress-code-ca-policy [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov10-section-breaks-not-also-observed [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED,SECTION_BREAKS_KEPT_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov10-section-breaks-not-also-observed [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov11-policy-page-on-card-standards-of-conduct [open]": {
+    "category": "INTENDED",
+    "twin": "replay: nov11-policy-page-on-card-standards-of-conduct [fix:POLICY_PAGE_ON_CARD_ENABLED]",
+    "reason": "QA, 25 Oct 2026: the Standards of Conduct card now says \"Standards of Conduct (JBA Policy Manual p.12)\". The open case moves from open to holding (the OPEN pin fails as designed)."
+  },
+  "replay: nov3-same-ask-b10 [fix:SAME_ASK_NO_REPEAT_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov3-same-ask-b10 [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov3-stepb-payroll-as-given [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov3-stepb-payroll-as-given [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov3-stepb-true-claim-keeps-guidance [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov3-stepb-true-claim-keeps-guidance [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov4-cleaning-negative-named-conduct [fix:CA_SALES_POLICY_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov4-cleaning-negative-named-conduct [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov4-mgr-5-msb-soc [fix:CA_SALES_POLICY_ENABLED,CHAT_GLOSSARY_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov4-mgr-5-msb-soc [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov4-offer-exit-replaces-menu [fix:CA_SALES_POLICY_ENABLED,CHAT_GLOSSARY_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov4-offer-exit-replaces-menu [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov4-pau5-5-must-see-behaviors-violates-soc [fix:CA_SALES_POLICY_ENABLED,CHAT_GLOSSARY_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov4-pau5-5-must-see-behaviors-violates-soc [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov4-scan-sf-s16-standards-of-conduct-turn-2 [open]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Still OPEN for its own reason. The only change in the saved text is the page beside Standards of Conduct (p.12)."
+  },
+  "replay: nov4-scan-sf-s18-standards-named-no-contradiction [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov5-cleaning-other-negative-woven [fix:CA_SALES_POLICY_ENABLED,FORM_NAME_FROM_ROSTER_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov5-cleaning-other-negative-woven [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov5-coding3-ca-offer-yes-keeps-msb-account [fix:CA_OFFER_KEEPS_ACCOUNT_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov5-coding3-ca-offer-yes-keeps-msb-account [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov5-coding3-ca-offer-yes-keeps-msb-account-remap [fix:CA_OFFER_KEEPS_ACCOUNT_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov5-coding3-ca-offer-yes-keeps-msb-account-remap [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov5-coding3-ca-offer-yes-no-account [fix:CA_OFFER_KEEPS_ACCOUNT_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov5-coding3-ca-offer-yes-no-account [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov5-coding3-ca-offer-yes-no-account-remap [fix:CA_OFFER_KEEPS_ACCOUNT_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov5-coding3-ca-offer-yes-no-account-remap [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov5-upkeep-other-policy-citation [fix:CA_SALES_POLICY_ENABLED,FORM_NAME_FROM_ROSTER_ENABLED,POLICY_CITATION_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov5-upkeep-other-policy-citation [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov7-refusal-bub-phone [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov7-refusal-bub-phone [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov7-refusal-bub-phone-trace [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov7-refusal-bub-phone-trace [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov7-second-ca-same-employee-another [fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov7-second-ca-same-employee-another [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov7-second-ca-same-employee-another-observation [fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov7-second-ca-same-employee-another-observation [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov7-second-ca-same-employee-create [fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov7-second-ca-same-employee-create [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov7-second-ca-same-employee-create-observation [fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov7-second-ca-same-employee-create-observation [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov8-missed-shift-plan-cites-attendance [fix:MISSED_SHIFT_NOT_LATENESS_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov8-missed-shift-plan-cites-attendance [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov8-missed-shift-plan-cites-attendance-late-negative [fix:MISSED_SHIFT_NOT_LATENESS_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov8-missed-shift-plan-cites-attendance-late-negative [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov8-policy-correction-account-kept [fix:POLICY_CORRECTION_NOT_ACCOUNT_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov8-policy-correction-account-kept [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov8-policy-remark-not-account [fix:PROPOSAL_POLICY_SET_ASIDE_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov8-policy-remark-not-account [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov8-policy-set-aside-ca-card [fix:PROPOSAL_POLICY_SET_ASIDE_ENABLED,TAKE_OFF_STAYS_CARD_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov8-policy-set-aside-ca-card [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov8-policy-set-aside-ca-create [fix:PROPOSAL_POLICY_SET_ASIDE_ENABLED,TAKE_OFF_STAYS_CARD_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov8-policy-set-aside-ca-create [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov8-policy-set-aside-named-again [fix:PROPOSAL_POLICY_SET_ASIDE_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov8-policy-set-aside-named-again [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov8-policy-set-aside-stays-off [fix:PROPOSAL_POLICY_SET_ASIDE_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov8-policy-set-aside-stays-off [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov8-policy-set-aside-unnamed [fix:PROPOSAL_POLICY_SET_ASIDE_ENABLED,TAKE_OFF_STAYS_CARD_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov8-policy-set-aside-unnamed [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov8-request-from-names-employee [fix:REQUEST_FROM_NAMES_EMPLOYEE_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov8-request-from-names-employee [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov8-sales-triple-place-lead [fix:SALES_SHORTFALL_OBJECT_ENABLED,SALES_OBSERVATION_ACCOUNT_ENABLED,ACCOUNT_PLACE_LEAD_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov8-sales-triple-place-lead [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov8-woven-conduct-named-policy-wins [fix:CONDUCT_INCIDENT_CITES_PAGE_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov8-woven-conduct-named-policy-wins [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov8-woven-courses-cites-conduct [fix:CONDUCT_INCIDENT_CITES_PAGE_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov8-woven-courses-cites-conduct [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov8-woven-deadline-cites-conduct [fix:CONDUCT_INCIDENT_CITES_PAGE_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  },
+  "replay: nov8-woven-deadline-cites-conduct [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "the case still holds. The only change in the saved replies is the printed page beside the card's policy: Standards of Conduct p.12, Attendance p.14 or Dress Code p.15. With every page label removed, the ON record equals OFF byte for byte."
+  }
+}
