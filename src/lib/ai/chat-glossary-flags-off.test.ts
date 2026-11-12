@@ -202,7 +202,25 @@ const FLAG = "CHAT_GLOSSARY_ENABLED";
  * late to open" card (the Issue kept, the Late Opening quote in the manager's own words); the recording predates them,
  * so it is compared with them off.
  */
-const FLIPPED_AFTER_RECORDING = ["REQUEST_ISSUE_KEPT_ENABLED", "LATE_OPENING_OWN_WORDS_ENABLED", "FIRST_NAME_ENOUGH_ENABLED", "NO_SHOW_OPENING_IS_ATTENDANCE_ENABLED"];
+const FLIPPED_AFTER_RECORDING = [
+  "REQUEST_ISSUE_KEPT_ENABLED",
+  "LATE_OPENING_OWN_WORDS_ENABLED",
+  "FIRST_NAME_ENOUGH_ENABLED",
+  "NO_SHOW_OPENING_IS_ATTENDANCE_ENABLED",
+  // Changed on purpose (13 Nov 2026, QA round 17r): round 17r's flips change the model requests and replies this
+  // recording predates (FORM_EDIT_SOURCE_TURN's history markers, POLICY_CITATION's policy block, the name readers).
+  "TEAM_CARD_NOT_PRODUCT_ENABLED",
+  "EXIT_NOTICE_VERB_TYPOS_ENABLED",
+  "TITLE_INITIALISM_CASE_ENABLED",
+  "EXIT_NOTICE_STATED_ONLY_ENABLED",
+  "FORM_EDIT_SOURCE_TURN_ENABLED",
+  "STORE_ALIAS_ENABLED",
+  "MANAGER_FORM_CHOICE_ENABLED",
+  "TYPO_FULL_NAME_TO_ROSTER_ENABLED",
+  "POLICY_CITATION_ENABLED",
+  "ANSWER_TURN_LEVEL_ENABLED",
+  "TERMINATION_CARD_TIDY_ENABLED",
+];
 const PRODUCTION = [...PRODUCTION_FLAGS.on, ...PRODUCTION_FLAGS.assumedOn].filter((name) => name !== FLAG && !FLIPPED_AFTER_RECORDING.includes(name));
 const TOUCHED = [...new Set([FLAG, "FORM_EDIT_SINGLE_WRITER_ENABLED", "FORM_EDIT_TOOL_IN_STREAM_ENABLED", ...PRODUCTION, ...PRODUCTION_FLAGS.off])];
 const saved = new Map<string, string | undefined>();
