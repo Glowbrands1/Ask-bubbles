@@ -4601,6 +4601,17 @@ export function policyPageOnCardEnabled(): boolean {
 }
 
 /**
+ * REVISION_ARCHIVED_NOT_OPEN_ENABLED (QA's audit item 17a, 10 Nov 2026; default off; same flag in both apps).
+ * `findOpenRevision` (`forms/instances.ts`, protected) handed back a revision draft an administrator had archived, so
+ * "Edit as new draft" reopened the draft somebody had put away. On, an archived draft is not the open revision and a new
+ * request opens a new one. Needs the migration 20261110201714_form_instances_one_open_revision_not_archived.sql applied
+ * first: the one-open-revision index otherwise counts the archived draft and refuses the new one. Off, as before.
+ */
+export function revisionArchivedNotOpenEnabled(): boolean {
+  return envFlag("REVISION_ARCHIVED_NOT_OPEN_ENABLED");
+}
+
+/**
  * FORM_FOR_FOR_TYPO_ENABLED (B-C3 from QA's open-case list, 11 Nov 2026; the sibling app's Pau scan sf-s36, a real
  * manager: "I need a exit for for <name> TM. Quit without notice. …"; default off). The message was never read as an exit
  * request: "for for" is "form for" mistyped, and "exit for for" named no form. On: a form's name followed by "for for" is
