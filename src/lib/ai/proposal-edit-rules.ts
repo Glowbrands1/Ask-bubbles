@@ -47,7 +47,8 @@ const GENERIC_PLAN = /(\*\*Action plan:\*\*[^\n]*?Management will review )the ap
 
 function withPlanOnReadPolicy(response: AskResponse): AskResponse {
   if (!missedShiftCitesAttendanceEnabled() || !response.formProposal) return response;
-  const read = READ_POLICY_LINE.exec(response.content)?.[1]?.trim();
+  // Gate-Bubbles-2 on #818: the page the Policy line now carries ("Dress Code (JBA Policy Manual p.15)") is the card's, never the plan's.
+  const read = READ_POLICY_LINE.exec(response.content)?.[1]?.replace(/\s*\(JBA Policy Manual pp?\.[^)]*\)/i, "").trim();
   if (!read || !GENERIC_PLAN.test(response.content)) return response;
   return { ...response, content: response.content.replace(GENERIC_PLAN, (_all, lead: string, tail: string) => `${lead}the ${read} policy${tail}`) };
 }

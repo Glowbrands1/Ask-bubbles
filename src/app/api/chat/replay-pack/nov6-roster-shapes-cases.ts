@@ -1,6 +1,6 @@
 import { expect } from "vitest";
 
-import { STAFF, WEST_DODGE, type DirectoryRow, type ReplayCase } from "./cases";
+import { STAFF, WEST_DODGE, type DirectoryRow, type ReplayCase, onStoryClock } from "./cases";
 
 /**
  * ============================================================================
@@ -133,3 +133,6 @@ for (const shape of SHAPES) {
 }
 
 export const NOV6_ROSTER_SHAPES_CASES: ReplayCase[] = cases;
+
+// Gate-Bubbles-5 (G5-743): these cases tell a story dated after the pack's 10/26/2026; they run on a day after it.
+onStoryClock(NOV6_ROSTER_SHAPES_CASES);

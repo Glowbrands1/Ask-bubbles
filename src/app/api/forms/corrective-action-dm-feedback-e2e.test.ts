@@ -595,7 +595,13 @@ describe("a dog at work, on the saved draft, against the production manual rows"
     expect(field(form, "offense_type")!.checked).toEqual(["standards_of_conduct"]);
     expect(field(form, "other_offense")).toBeUndefined();
     expect(policy).toContain("Source: JBA Policy Manual — Animals in the Workplace, p. 30");
-    expect(policy).toContain("Source: JBA Policy Manual — Visitors in the Workplace, p. 29");
+    /*
+     * Changed on purpose (Pau, 5 Nov 2026, "I choose 1"; G464): with ANIMAL_VISITORS_ONLY_WHEN_VISITOR_ENABLED on, her
+     * own dog cites Animals in the Workplace only. Off, Visitors in the Workplace is beside it, as before.
+     */
+    const animalOnly = ["1", "true", "yes", "on"].includes((process.env.ANIMAL_VISITORS_ONLY_WHEN_VISITOR_ENABLED ?? "").trim().toLowerCase());
+    if (animalOnly) expect(policy).not.toContain("Visitors in the Workplace");
+    else expect(policy).toContain("Source: JBA Policy Manual — Visitors in the Workplace, p. 29");
     expect(policy).not.toMatch(/Standards of Conduct/);
   });
 });

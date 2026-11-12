@@ -566,4 +566,136 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov9-made-about-undated-no-reading": "MADE_ABOUT_UNDATED_TOGETHER",
   // fixed in production by MADE_ABOUT_UNDATED_TOGETHER, QA round 17n, 12 Nov 2026
   "nov9-made-about-undated-topic": "MADE_ABOUT_UNDATED_TOGETHER",
+  // fixed in production by FORMS_GUIDE, QA round 17o, 12 Nov 2026
+  "nov10-forms-guide-coaching-vs-ca-lower": "FORMS_GUIDE",
+  // fixed in production by FORMS_GUIDE, QA round 17o, 12 Nov 2026
+  "nov10-forms-guide-coaching-vs-ca-sentence": "FORMS_GUIDE",
+  // fixed in production by FORMS_GUIDE, QA round 17o, 12 Nov 2026
+  "nov10-forms-guide-generic-policy-review-lower": "FORMS_GUIDE",
+  // fixed in production by FORMS_GUIDE, QA round 17o, 12 Nov 2026
+  "nov10-forms-guide-generic-policy-review-sentence": "FORMS_GUIDE",
+  // fixed in production by FORMS_GUIDE, QA round 17o, 12 Nov 2026
+  "nov10-forms-guide-someone-who-quit-lower": "FORMS_GUIDE",
+  // fixed in production by FORMS_GUIDE, QA round 17o, 12 Nov 2026
+  "nov10-forms-guide-someone-who-quit-sentence": "FORMS_GUIDE",
+  // fixed in production by FORMS_GUIDE, QA round 17o, 12 Nov 2026
+  "nov10-forms-guide-what-is-a-ca-lower": "FORMS_GUIDE",
+  // fixed in production by FORMS_GUIDE, QA round 17o, 12 Nov 2026
+  "nov10-forms-guide-what-is-a-ca-sentence": "FORMS_GUIDE",
+  // fixed in production by FORMS_GUIDE, QA round 17o, 12 Nov 2026
+  "nov10-forms-guide-which-forms-lower": "FORMS_GUIDE",
+  // fixed in production by FORMS_GUIDE, QA round 17o, 12 Nov 2026
+  "nov10-forms-guide-which-forms-sentence": "FORMS_GUIDE",
+  // fixed in production by FUTURE_INCIDENT_DATE_ASK, QA round 17o, 12 Nov 2026
+  "nov10-future-incident-date-full-lower": "FUTURE_INCIDENT_DATE_ASK",
+  // fixed in production by FUTURE_INCIDENT_DATE_ASK, QA round 17o, 12 Nov 2026
+  "nov10-future-incident-date-full-sentence": "FUTURE_INCIDENT_DATE_ASK",
+  // fixed in production by TERMINATION_STATED_TICKS, QA round 17o, 12 Nov 2026
+  "nov10-p15-term-ca-ticks-termination": "TERMINATION_STATED_TICKS",
+  // fixed in production by NAME_CORRECTION_KEEPS_DATE, QA round 17o, 12 Nov 2026
+  "nov10-r22-s14-date-kept-after-name-correction": "NAME_CORRECTION_KEEPS_DATE",
+  // fixed in production by SAME_REQUEST_CARRIES_ACCOUNT, QA round 17o, 12 Nov 2026
+  "nov10-same-request-carries-account": "SAME_REQUEST_CARRIES_ACCOUNT",
+  // fixed in production by SAME_REQUEST_CARRIES_ACCOUNT, QA round 17o, 12 Nov 2026
+  "nov10-same-request-carries-account-off-roster": "SAME_REQUEST_CARRIES_ACCOUNT",
+  // fixed in production by SAME_REQUEST_KEEPS_EARLIER_CARD, QA round 17o, 12 Nov 2026
+  "nov10-same-request-keeps-earlier-card": "SAME_REQUEST_KEEPS_EARLIER_CARD",
+  // fixed in production by SAME_REQUEST_KEEPS_EARLIER_CARD, QA round 17o, 12 Nov 2026
+  "nov10-same-request-keeps-earlier-card-off-roster": "SAME_REQUEST_KEEPS_EARLIER_CARD",
+  // fixed in production by OUTLINE_ON_OPEN_PROPOSAL, QA round 17o, 12 Nov 2026
+  "nov11-17i-outline-on-open-proposal": "OUTLINE_ON_OPEN_PROPOSAL",
+  // fixed in production by NEAR_MISS_TURNED_DOWN_EVERYWHERE, QA round 17o, 12 Nov 2026
+  "nov11-near-miss-no-call-no-show-after-question": "NEAR_MISS_TURNED_DOWN_EVERYWHERE",
+  // fixed in production by TITLE_BEFORE_NAME, QA round 17o, 12 Nov 2026
+  "nov11-title-before-name-admin": "TITLE_BEFORE_NAME",
+  // fixed in production by TITLE_BEFORE_NAME, QA round 17o, 12 Nov 2026
+  "nov11-title-before-name-create-names-employee": "TITLE_BEFORE_NAME",
+  // fixed in production by TITLE_BEFORE_NAME, QA round 17o, 12 Nov 2026
+  "nov11-title-before-name-draft-create-team-member": "TITLE_BEFORE_NAME",
+  // fixed in production by TITLE_BEFORE_NAME, QA round 17o, 12 Nov 2026
+  "nov11-title-before-name-draft-team-member": "TITLE_BEFORE_NAME",
+  // fixed in production by TITLE_BEFORE_NAME, QA round 17o, 12 Nov 2026
+  "nov11-title-before-name-draft-tm": "TITLE_BEFORE_NAME",
+  // fixed in production by TITLE_BEFORE_NAME, QA round 17o, 12 Nov 2026
+  "nov11-title-before-name-location-manager": "TITLE_BEFORE_NAME",
+  // fixed in production by POLICY_CARRY_RETRIEVAL, QA round 17o, 12 Nov 2026
+  "nov12-180-just-make-it-searches-the-named-policy": "POLICY_CARRY_RETRIEVAL",
+  // fixed in production by TERMINATION_STATED_TICKS, QA round 17o, 12 Nov 2026
+  "nov12-termination-ticks-because-didnt-call-in": "TERMINATION_STATED_TICKS",
+  // fixed in production by TERMINATION_STATED_TICKS, QA round 17o, 12 Nov 2026
+  "nov12-termination-ticks-didnt-show-for-shift": "TERMINATION_STATED_TICKS",
+  // fixed in production by TERMINATION_STATED_TICKS, QA round 17o, 12 Nov 2026
+  "nov12-termination-ticks-so-i-need": "TERMINATION_STATED_TICKS",
+  // fixed in production by TERMINATION_STATED_TICKS, QA round 17o, 12 Nov 2026
+  "nov12-termination-ticks-term-ca-did-not-show": "TERMINATION_STATED_TICKS",
+  // fixed in production by TERMINATION_STATED_TICKS, QA round 17o, 12 Nov 2026
+  "nov12-termination-ticks-terminating-never-showed": "TERMINATION_STATED_TICKS",
+  // fixed in production by TERMINATION_STATED_TICKS, QA round 17o, 12 Nov 2026
+  "nov12-termination-ticks-termination-ca-no-call-no-show": "TERMINATION_STATED_TICKS",
+  // fixed in production by TITLE_BEFORE_NAME, QA round 17o, 12 Nov 2026
+  "nov12-title-before-name-trailing-today": "TITLE_BEFORE_NAME",
+  // fixed in production by NEGATED_LATENESS_TOPIC, QA round 17p, 12 Nov 2026
+  "oct26-negated-lateness-not-late-today": "NEGATED_LATENESS_TOPIC",
+  // fixed in production by DETAILS_FROM_EARLIER_ANSWER, QA round 17p, 12 Nov 2026
+  "nov10-chat-edits-a-details-handed-to-the-revision": "DETAILS_FROM_EARLIER_ANSWER",
+  // fixed in production by INCIDENT_FROM_EARLIER_TURN, QA round 17p, 12 Nov 2026
+  "nov5-twin-sf-s28-incident-from-previous-turn": "INCIDENT_FROM_EARLIER_TURN",
+  // fixed in production by INCIDENT_FROM_EARLIER_TURN, QA round 17p, 12 Nov 2026
+  "nov5-twin-sf-s28-incident-scope": "INCIDENT_FROM_EARLIER_TURN",
+  // fixed in production by GUEST_ATTITUDE_CONDUCT, QA round 17p, 12 Nov 2026
+  "nov10-sf-b5-guest-attitude-cites-conduct": "GUEST_ATTITUDE_CONDUCT",
+  // fixed in production by PRIOR_ACTIONS_NO_COMMA, QA round 17p, 12 Nov 2026
+  "nov10-prior-actions-no-comma-qa-lower": "PRIOR_ACTIONS_NO_COMMA",
+  // fixed in production by PRIOR_ACTIONS_NO_COMMA, QA round 17p, 12 Nov 2026
+  "nov10-prior-actions-no-comma-qa-caps": "PRIOR_ACTIONS_NO_COMMA",
+  // fixed in production by PRIOR_ACTIONS_NO_COMMA, QA round 17p, 12 Nov 2026
+  "nov10-prior-actions-no-comma-triage-lower": "PRIOR_ACTIONS_NO_COMMA",
+  // fixed in production by PRIOR_ACTIONS_NO_COMMA, QA round 17p, 12 Nov 2026
+  "nov10-prior-actions-no-comma-triage-caps": "PRIOR_ACTIONS_NO_COMMA",
+  // fixed in production by STEP_B_ADD_UNDER_OBSERVED, QA round 17p, 12 Nov 2026
+  "nov8-step-b-add-under-observed": "STEP_B_ADD_UNDER_OBSERVED",
+  // fixed in production by STEP_B_ADD_UNDER_OBSERVED, QA round 17p, 12 Nov 2026
+  "nov8-step-b-whole-text-tail": "STEP_B_ADD_UNDER_OBSERVED",
+  // fixed in production by WRITE_UP_LEAD_NOT_ACCOUNT, QA round 17p, 12 Nov 2026
+  "nov10-write-up-observation-167": "WRITE_UP_LEAD_NOT_ACCOUNT",
+  // fixed in production by BARE_COACHING_REQUEST_LEAD, QA round 17p, 12 Nov 2026
+  "nov12-r31-bare-coaching-request-lead": "BARE_COACHING_REQUEST_LEAD",
+  // fixed in production by RESENT_REQUEST_IS_YES, QA round 17p, 12 Nov 2026
+  "nov12-resent-exit-request-keeps-name": "RESENT_REQUEST_IS_YES",
+  // fixed in production by TERMINATION_INTAKE, QA round 17p, 12 Nov 2026
+  "nov12-termination-ca-bare-opens-card": "TERMINATION_INTAKE",
+  // fixed in production by TERMINATION_INTAKE, QA round 17p, 12 Nov 2026
+  "nov12-17k-termination-letter-exit-card": "TERMINATION_INTAKE",
+  // fixed in production by REGISTER_ACCURACY_CONDUCT, QA round 17q, 13 Nov 2026
+  "nov4-ca-sales-wrong-items-card": "REGISTER_ACCURACY_CONDUCT",
+  // fixed in production by ADDED_DETAIL_KEPT, QA round 17q, 13 Nov 2026
+  "nov5-sf-b6-full-sentence-and-added-detail": "ADDED_DETAIL_KEPT",
+  // fixed in production by CA_PROCEDURE_BASIS, QA round 17q, 13 Nov 2026
+  "nov5-sf-b6-policy-left-for-the-manager": "CA_PROCEDURE_BASIS",
+  // fixed in production by ADDED_DETAIL_KEPT, QA round 17q, 13 Nov 2026
+  "nov10-sf-b6-card-carries-added-detail": "ADDED_DETAIL_KEPT",
+  // fixed in production by ATTENDANCE_PLAN_NEEDS_LATENESS, QA round 17q, 13 Nov 2026
+  "nov11-attendance-plan-no-lateness-said": "ATTENDANCE_PLAN_NEEDS_LATENESS",
+  // fixed in production by CARD_PLAN_MATCHES_CREATE, QA round 17q, 13 Nov 2026
+  "nov12-17l-card-shows-pau-attendance-plan": "CARD_PLAN_MATCHES_CREATE",
+  // fixed in production by CARD_PLAN_MATCHES_CREATE, QA round 17q, 13 Nov 2026
+  "nov12-17l-card-plan-equals-saved-plan": "CARD_PLAN_MATCHES_CREATE",
+  // fixed in production by OFF_ROSTER_STORE_ANSWER_ONLY, QA round 17q, 13 Nov 2026
+  "nov12-off-roster-store-answer-only-dodge": "OFF_ROSTER_STORE_ANSWER_ONLY",
+  // fixed in production by OFF_ROSTER_STORE_ANSWER_ONLY, QA round 17q, 13 Nov 2026
+  "nov12-off-roster-store-answer-only-full-name": "OFF_ROSTER_STORE_ANSWER_ONLY",
+  // fixed in production by ANIMAL_VISITORS_ONLY_WHEN_VISITOR, QA round 17q, 13 Nov 2026
+  "nov5-animal-alone-no-visitors": "ANIMAL_VISITORS_ONLY_WHEN_VISITOR",
+  // fixed in production by ANIMAL_VISITORS_ONLY_WHEN_VISITOR, QA round 17q, 13 Nov 2026
+  "nov5-visitor-alone-control": "ANIMAL_VISITORS_ONLY_WHEN_VISITOR",
+  // fixed in production by ANIMAL_VISITORS_ONLY_WHEN_VISITOR, QA round 17q, 13 Nov 2026
+  "nov5-animal-customers-saw-it": "ANIMAL_VISITORS_ONLY_WHEN_VISITOR",
+  // fixed in production by ADD_NOT_REPEATED_SENTENCES, QA round 17q, 13 Nov 2026
+  "nov10-add-not-repeated-leading-sentence": "ADD_NOT_REPEATED_SENTENCES",
+  // fixed in production by ADD_OUT_OF_OTHER_SECTIONS, QA round 17q, 13 Nov 2026
+  "nov10-r16b-add-reminded-under-observed": "ADD_OUT_OF_OTHER_SECTIONS",
+  // fixed in production by ADD_OUT_OF_OTHER_SECTIONS, QA round 17q, 13 Nov 2026
+  "nov10-r16b-add-reminded-glued-into-expectation": "ADD_OUT_OF_OTHER_SECTIONS",
+  // fixed in production by RELATIVE_DAY_NOT_HISTORY, QA round 17q, 13 Nov 2026
+  "nov10-relative-day-keeps-written": "RELATIVE_DAY_NOT_HISTORY",
 };

@@ -215,7 +215,13 @@ const TOOL_FLAGS = ["FORM_EDIT_SINGLE_WRITER_ENABLED", "FORM_EDIT_TOOL_IN_STREAM
 const NOOP = "FORM_EDIT_NOOP_GUARD_ENABLED";
 const GUARD_FLAGS = [...TOOL_FLAGS, NOOP] as const;
 const PRODUCTION = [...PRODUCTION_FLAGS.on, ...PRODUCTION_FLAGS.assumedOn];
-const TOUCHED = [...new Set([...GUARD_FLAGS, ...PRODUCTION, ...PRODUCTION_FLAGS.off, "FORM_PATCH_REDUCER_ENABLED", "FORM_REPLY_FROM_DIFF_ENABLED"])];
+/*
+ * SAME_REQUEST_OFF_ROSTER (#727, Gate-Bubbles G727): on, sf-s11's turn is a same request for another person and no edit
+ * of the open form is attempted. The sf-s11 pins below test the guard on the edit path, so they hold it off themselves;
+ * the twin with it on checks nothing is written.
+ */
+const OFF_ROSTER = "SAME_REQUEST_OFF_ROSTER_ENABLED";
+const TOUCHED = [...new Set([...GUARD_FLAGS, ...PRODUCTION, ...PRODUCTION_FLAGS.off, "FORM_PATCH_REDUCER_ENABLED", "FORM_REPLY_FROM_DIFF_ENABLED", OFF_ROSTER])];
 const saved = new Map<string, string | undefined>();
 
 function setFlags(on: readonly string[]) {
@@ -385,6 +391,11 @@ describe("FORM_EDIT_NOOP_GUARD_ENABLED: a tool op that changes nothing", () => {
 });
 
 describe(`FORM_EDIT_NOOP_GUARD_ENABLED: the overnight scan's sf-s11, "${SF_S11_REQUEST}"`, () => {
+  // Changed on purpose (G727): the edit path, with SAME_REQUEST_OFF_ROSTER held off (see OFF_ROSTER).
+  beforeEach(() => {
+    delete process.env[OFF_ROSTER];
+  });
+
   it("the request appended to the Observation is refused as copies_message; nothing written; never Updated", async () => {
     const thread = await marnieDraft();
     const before = JSON.stringify(values(thread.id));
@@ -410,6 +421,16 @@ describe(`FORM_EDIT_NOOP_GUARD_ENABLED: the overnight scan's sf-s11, "${SF_S11_R
     expect(values(thread.id).prior_actions ?? "").toBe("");
     expect(await lastTrace()).toMatchObject({ handoff: "refused", refused: [{ key: "prior_actions", reason: "copies_message" }] });
   });
+
+  it("SAME_REQUEST_OFF_ROSTER on: a same request for another person, so nothing is written to the open form", async () => {
+    process.env[OFF_ROSTER] = "true";
+    const thread = await marnieDraft();
+    const before = JSON.stringify(values(thread.id));
+    model.next = { text: "Updated the form.", tool: { ops: [{ op: "append", field: "observation", value: SF_S11_REQUEST }] } };
+    const reply = await thread.say(SF_S11_REQUEST);
+    expect(JSON.stringify(values(thread.id))).toBe(before);
+    expect(reply.formUpdate).toBeUndefined();
+  });
 });
 
 describe("FORM_EDIT_NOOP_GUARD_ENABLED: the reply after an edit is the saved diff", () => {
@@ -426,7 +447,9 @@ describe("FORM_EDIT_NOOP_GUARD_ENABLED: the reply after an edit is the saved dif
     const thread = await marnieDraft();
     model.next = { text: "I've updated the form.", tool: { ops: [{ op: "append", field: "observation", value: "she Must Practice the sanitizing checklist every shift." }] } };
     const reply = await thread.say(CA_CHAIN[5]);
-    expect(values(thread.id).observation).toContain("she Must Practice the sanitizing checklist every shift.");
+    // Changed on purpose (12 Nov 2026, QA round 17p): STEP_B_ADD_UNDER_OBSERVED is on in production (#814). An instruction
+    // goes at the end of the Expectation with its first letter capitalised, and an account line goes under Observed.
+    expect(values(thread.id).observation).toMatch(/she must practice the sanitizing checklist every shift\.$/i);
     expect(reply.content).toBe("Updated: Observation of Offense: Observed: Marnie Quill was late to open on October 20, 2026. Expectation: An…");
     expect(reply.content).not.toMatch(/^Changed /);
     expect(reply.formUpdate).toEqual({ instanceId: thread.id, updated: ["observation"] });
@@ -456,7 +479,9 @@ describe("FORM_EDIT_NOOP_GUARD_ENABLED: the reply after an edit is the saved dif
     };
     const reply = await thread.say("tick Other for the offense and add that she was also late on Tuesday");
     // In the form's order (the saved rows, then new keys).
-    expect(reply.content).toBe("Updated: Observation of Offense: Observed: Marnie Quill was late to open on October 20, 2026. Expectation: An…\nUpdated: Type of Offense: Other");
+    // Changed on purpose (12 Nov 2026, QA round 17p): STEP_B_ADD_UNDER_OBSERVED is on in production (#814). An instruction
+    // goes at the end of the Expectation with its first letter capitalised, and an account line goes under Observed.
+    expect(reply.content).toBe("Updated: Observation of Offense: Observed: Marnie Quill was late to open on October 20, 2026. She was also late…\nUpdated: Type of Offense: Other");
   });
 
   it('a clear shows "(cleared)"', async () => {
@@ -527,6 +552,8 @@ describe("FORM_EDIT_NOOP_GUARD_ENABLED: the reply after an edit is the saved dif
 describe("FORM_EDIT_NOOP_GUARD_ENABLED needs FORM_EDIT_SINGLE_WRITER_ENABLED", () => {
   it("with the tool flags but not the guard, the old replies (pinned in the flags-off fixture)", async () => {
     setFlags(TOOL_FLAGS);
+    // Changed on purpose (G727): the edit path, with SAME_REQUEST_OFF_ROSTER held off (see OFF_ROSTER).
+    delete process.env[OFF_ROSTER];
     const thread = await marnieDraft();
     model.next = { text: "Updated the form.", tool: { ops: [{ op: "append", field: "observation", value: SF_S11_REQUEST }] } };
     const reply = await thread.say(SF_S11_REQUEST);

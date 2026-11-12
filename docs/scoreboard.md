@@ -39,6 +39,13 @@ Visitors in the Workplace. That miss stays. This round does not require
 Visitors. Animals in the Workplace p.30 is required because the manager
 names that heading.
 
+> **Superseded, 5 Nov 2026 (Pau's ruling).** A missing Visitors in the
+> Workplace on b12 is not a miss. An animal alone cites only Animals in the
+> Workplace; Visitors in the Workplace is cited beside it only when the
+> animal is a customer's, guest's, visitor's, friend's or family member's
+> (`ANIMAL_VISITORS_ONLY_WHEN_VISITOR_ENABLED`; replay
+> `nov5-animal-visitors-cases.ts`).
+
 ## Round — prompt A/B — 24 Oct 2026
 
 The last-known-good system prompt is `buildSystemPrompt` at `655a61d`,

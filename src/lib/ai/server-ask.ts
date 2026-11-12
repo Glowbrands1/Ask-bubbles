@@ -153,6 +153,7 @@ import {
 import { retrievalPlanFor } from "./retrieval-query";
 import { earlierAnsweredTurn, isReformatTurn, keepEarlierSources } from "./reformat-turn";
 import { slotOnlyRetrievalTopic } from "./slot-only-turn";
+import { carriedPolicyTopic } from "./policy-carry-retrieval";
 import { appPasswordHelpFor } from "./app-password-help";
 import { redactSensitiveDefaults, withoutSensitiveDefaults } from "./sensitive-defaults";
 import { withoutSharedSourceClaims } from "./sources-not-shared";
@@ -191,6 +192,7 @@ import { withUnreadDateAsk } from "./unread-date-ask";
 import { withUnknownNameAsk } from "./unknown-name-ask";
 import { amountTurnReply } from "./amount-turn";
 import { withPayrollTypoAnswer } from "./payroll-typo-answer";
+import { withTerminationStated } from "./termination-stated";
 import { withWarningLevelFromClause } from "./warning-level-clause";
 import { readerPropose, startFormReading, withoutStaleRosterNote } from "./reader/hook";
 
@@ -387,7 +389,8 @@ async function answerQuestionBody(
         withPayrollTypoAnswer(
           withUnknownNameAsk(
             withFirstNameAsk(
-              withWarningLevelFromClause(withFreshDateReask(withJobTitleFromWords(withCoachingWhatHappened(await answerQuestionCore(request, actor, memory), request), request), request), request),
+              // TERMINATION_STATED_TICKS_ENABLED: a termination the manager stated is the card's level, with the approval line.
+              withTerminationStated(withWarningLevelFromClause(withFreshDateReask(withJobTitleFromWords(withCoachingWhatHappened(await answerQuestionCore(request, actor, memory), request), request), request), request), request),
               request,
             ),
             request,
@@ -898,7 +901,8 @@ async function answerQuestionCore(
    * own words, which found recipe and event pages (conv_mvnljjl32xlit48).
    * See `slot-only-turn.ts`.
    */
-  const slotTopic = slotOnlyRetrievalTopic(request.question, request.history);
+  // POLICY_CARRY_RETRIEVAL_ENABLED: "just make it" is searched with the policy named earlier (QA item 10).
+  const slotTopic = slotOnlyRetrievalTopic(request.question, request.history) ?? carriedPolicyTopic(request.question, request.history);
   markStage("query_rewrite");
   const rewrittenQuestion = slotTopic
     ? slotTopic
