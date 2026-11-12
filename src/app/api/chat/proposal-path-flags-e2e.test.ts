@@ -656,7 +656,11 @@ describe("FORM_EDIT_DATE_RULES off: production today", () => {
     const thread = new Thread();
     await thread.say("create corrective action for for Tessa Ormond for Late Opening from the policy manual. It is a verbal warning", EMPLOYEE);
     await thread.say("can you add late opening policy to the direct policy section of this from", EMPLOYEE);
-    expect((await thread.say("can you reference the late opening policy INSTEAD of the attendance policy", EMPLOYEE)).content).toMatch(/Attendance, as you said/);
+    // POLICY_PAGE_ON_CARD_ENABLED (QA's #755 gate, 12 Nov 2026): the Policy line carries its printed page, "Attendance (JBA
+    // Policy Manual p.14), as you said" — the pin holds either way (changed on purpose).
+    expect((await thread.say("can you reference the late opening policy INSTEAD of the attendance policy", EMPLOYEE)).content).toMatch(
+      /Attendance(?: \(JBA Policy Manual p\.14\))?, as you said/,
+    );
   });
 });
 
