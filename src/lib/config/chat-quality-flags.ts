@@ -1435,6 +1435,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "BARE_COACHING_REQUEST_LEAD_ENABLED",
   // TERMINATION_INTAKE (default off): in the list, as every chat flag (QA, 12 Nov 2026).
   "TERMINATION_INTAKE_ENABLED",
+  // RESENT_REQUEST_IS_YES (default off; QA, 12 Nov 2026): in the list, as every chat flag.
+  "RESENT_REQUEST_IS_YES_ENABLED",
 ] as const;
 
 /**
@@ -5104,4 +5106,13 @@ export function detailsFromEarlierAnswerEnabled(): boolean {
  */
 export function terminationIntakeEnabled(): boolean {
   return envFlag("TERMINATION_INTAKE_ENABLED");
+}
+
+/**
+ * RESENT_REQUEST_IS_YES_ENABLED (coding 6, 12 Nov 2026; default off; QA). The same request (or the same pasted letter)
+ * sent again while "Is this for **<name>**?" waits was answered "Who is this … for?", losing the offered name. On: it is
+ * read as "yes" to that question. Off, as before. See `forms/resent-request-is-yes.ts`.
+ */
+export function resentRequestIsYesEnabled(): boolean {
+  return envFlag("RESENT_REQUEST_IS_YES_ENABLED");
 }
