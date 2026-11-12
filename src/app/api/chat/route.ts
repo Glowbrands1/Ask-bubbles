@@ -53,6 +53,7 @@ import {
   resentRequestIsYesEnabled,
   cardPlanMatchesCreateEnabled,
   answerTurnLevelEnabled,
+  terminationCardTidyEnabled,
   offRosterAskBeforeCardEnabled,
   oneFormEachPersonEnabled,
   outlineOnOpenProposalEnabled,
@@ -1138,6 +1139,10 @@ async function postChat(request: Request) {
           ...parsed.history.filter((turn) => turn.role === "user").map((turn) => turn.content),
           asked.question,
         ].join("\n\n"));
+      }
+      // TERMINATION_CARD_TIDY_ENABLED: an Issue that is only a hedge about terminating is the account (`lib/ai/termination-card-tidy.ts`).
+      if (terminationCardTidyEnabled()) {
+        answer = (await import("@/lib/ai/termination-card-tidy")).withIssueNotTerminationHedge(answer, asked.question);
       }
       // OUTLINE_ON_OPEN_PROPOSAL_ENABLED: the outline turn's reply says the outline is kept as her form's layout.
       if (outlineOnProposal) {

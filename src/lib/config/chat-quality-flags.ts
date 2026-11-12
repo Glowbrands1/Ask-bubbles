@@ -1441,6 +1441,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "GROUP_WORDS_NOT_A_NAME_ENABLED",
   // ANSWER_TURN_LEVEL (default off; QA, 12 Nov 2026): in the list, as every chat flag.
   "ANSWER_TURN_LEVEL_ENABLED",
+  // TERMINATION_CARD_TIDY (default off; QA's 17o live notes, 12 Nov 2026): in the list, as every chat flag.
+  "TERMINATION_CARD_TIDY_ENABLED",
   "ACCOUNT_BEFORE_REQUEST_ENABLED",
   // LETTER_GREETING_ANY_CASE (default off): in the list, as every chat flag (QA round 17k, 12 Nov 2026).
   "LETTER_GREETING_ANY_CASE_ENABLED",
@@ -5343,4 +5345,14 @@ export function cardPlanMatchesCreateEnabled(): boolean {
 export function replyQuoteLinesClientEnabled(): boolean {
   const inlined = process.env.NEXT_PUBLIC_REPLY_QUOTE_LINES_ENABLED;
   return typeof inlined === "string" && ON.has(inlined.trim().toLowerCase());
+}
+
+/**
+ * TERMINATION_CARD_TIDY_ENABLED (coding 6, 12 Nov 2026; default off; QA's 17o live notes on termination). "CA for <A>, do
+ * not terminate yet, she was late" made the Issue "do not terminate yet"; a term CA card's Action plan line ran into the
+ * next line with no blank line. On: the Issue is the account (`ai/termination-card-tidy.ts`) and the plan line keeps its
+ * line break (`ai/termination-stated.ts`). Off, as before.
+ */
+export function terminationCardTidyEnabled(): boolean {
+  return envFlag("TERMINATION_CARD_TIDY_ENABLED");
 }
