@@ -2,6 +2,7 @@ import {
   politeRequestOwnTurnsEnabled,
   priorSentenceFixEnabled,
   remapIncidentFixEnabled,
+  bareCoachingRequestLeadEnabled,
   secondRequestOwnAccountEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { correctedDates, withoutPriorStepClauses } from "@/lib/forms/form-date-answer";
@@ -60,7 +61,17 @@ const MAIN_REQUEST_LEAD = requestLeadFor(FORM_WORDS);
 const FIXED_REQUEST_LEAD = requestLeadFor(FIXED_FORM_WORDS);
 
 /** The request lead for the flag state: REMAP_INCIDENT_FIX_ENABLED adds "coaching document". */
+/*
+ * BARE_COACHING_REQUEST_LEAD_ENABLED (the sibling app's round 31 live, 11 Nov 2026; checked here): "create a coaching for
+ * <A>, she told a client …" — "coaching" followed by "for" is the request's form word. Off, as before.
+ */
+const withBareCoaching = (words: string) =>
+  words.replace(/coaching\\s\+(?:form|\(\?:form\|document\|doc\|paperwork\))/, (found) => `coaching(?:${found.slice("coaching".length)}|(?=\\s+for\\b))`);
+const BARE_MAIN_REQUEST_LEAD = requestLeadFor(withBareCoaching(FORM_WORDS));
+const BARE_FIXED_REQUEST_LEAD = requestLeadFor(withBareCoaching(FIXED_FORM_WORDS));
+
 function requestLead(): RegExp {
+  if (bareCoachingRequestLeadEnabled()) return remapIncidentFixEnabled() ? BARE_FIXED_REQUEST_LEAD : BARE_MAIN_REQUEST_LEAD;
   return remapIncidentFixEnabled() ? FIXED_REQUEST_LEAD : MAIN_REQUEST_LEAD;
 }
 

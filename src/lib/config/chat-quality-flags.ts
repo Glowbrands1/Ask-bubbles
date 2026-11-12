@@ -1431,6 +1431,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "SAME_REQUEST_OFF_ROSTER_ENABLED",
   // POLICY_CARRY_RETRIEVAL (default off; #180 rebuilt on main, 12 Nov 2026): in the list, as every chat flag.
   "POLICY_CARRY_RETRIEVAL_ENABLED",
+  // coding 6: BARE_COACHING_REQUEST_LEAD (the sibling app's round 31, 12 Nov 2026; default off).
+  "BARE_COACHING_REQUEST_LEAD_ENABLED",
 ] as const;
 
 /**
@@ -5050,4 +5052,14 @@ export function formsOnFileOrderMatchPossibleEnabled(): boolean {
  */
 export function policyCarryRetrievalEnabled(): boolean {
   return envFlag("POLICY_CARRY_RETRIEVAL_ENABLED");
+}
+
+/**
+ * BARE_COACHING_REQUEST_LEAD_ENABLED (coding 6, 12 Nov 2026; default off; ported from the sibling app's round 31 live
+ * test, reproduced here in the draft). "create a coaching for <A>, she told a client …" put the request words at the head
+ * of the drafted account: "coaching" without "form" was not read as the form. On: it is, only when "for" follows
+ * (`ai/remap-incident.ts`, `forms/draft-never-blank.ts`). Off, as before.
+ */
+export function bareCoachingRequestLeadEnabled(): boolean {
+  return envFlag("BARE_COACHING_REQUEST_LEAD_ENABLED");
 }
