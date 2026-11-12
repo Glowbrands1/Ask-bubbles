@@ -78,6 +78,55 @@ export const NOV5_PAU_SF_B6_CASES: ReplayCase[] = [
     },
   },
   {
+    id: "nov5-sf-b6-policy-left-for-the-manager",
+    title: "sf-b6: the reply said no source states a policy and it would leave that field for the manager; the saved Policy Violated and Direct policy are not AI-filled",
+    report: "Pau via QA, 5 Nov 2026 (this app's production, 4 Nov), sf-b6",
+    status: { open: "the drafting model's tick fills Policy Violated and quotes Direct policy after the reply said it would leave the policy to the manager" },
+    fixFlags: ["CA_PROCEDURE_BASIS_ENABLED"],
+    async run(t: T) {
+      vi.setSystemTime(new Date("2026-11-04T23:30:00Z"));
+      t.directory([...STAFF, WYNNE]);
+      t.as("location_manager", WEST_DODGE);
+      const thread = t.thread();
+      await thread.say("I need a corrective action form for Wynne Sarrow for counting the drawer early and turning away a customer");
+      t.modelSays(LIVE_T3_ANSWER);
+      await thread.say(T3);
+      t.modelSays(null);
+      await thread.say("Create a Corrective Action Form from this conversation.");
+      // The drafting model ticks the Standards of Conduct, as the live draft did (QA, 5 Nov 2026: offense_type
+      // standards_of_conduct, filled by ai), and names the basis a store procedure where it is asked for one.
+      t.draftWrites(
+        { observation: "Observed:\nOn Sunday, 11/1/2026, Wynne started closing the last register at 4:56pm, before the 5:00pm close, and a customer who came in at 4:59 was told the store was closed." },
+        { offense_type: ["standards_of_conduct"] },
+        { offense_basis: "store_procedure" },
+      );
+      const id = await thread.create();
+      const values = t.values(id);
+      // Pau's ruling (A), 5 Nov 2026: the tick moves to Other with no Direct policy quote, so Policy
+      // Violated reads "Other", never an AI-chosen policy.
+      expect(values.policy_language ?? "", `Direct policy was AI-filled after "I'd leave that field for you":\n${values.policy_language}`).toBe("");
+      expect(values.policy_violated ?? "", `Policy Violated was AI-filled after "I'd leave that field for you":\n${values.policy_violated}`).not.toMatch(/standards of conduct/i);
+      expect(t.checked(id).offense_type ?? [], "the model's Standards of Conduct tick stands").not.toContain("standards_of_conduct");
+    },
+  },
+  {
+    id: "nov5-sf-b6-control-rude-to-a-guest",
+    title: "sf-b6 control: \"rude to a guest\" (basis conduct) keeps the Standards of Conduct with the store-procedure rule on",
+    report: "Pau's ruling (A) via QA, 5 Nov 2026",
+    status: "fixed",
+    fixFlags: ["CA_PROCEDURE_BASIS_ENABLED"],
+    async run(t: T) {
+      vi.setSystemTime(new Date("2026-11-04T23:30:00Z"));
+      t.directory([...STAFF, WYNNE]);
+      t.as("location_manager", WEST_DODGE);
+      const thread = t.thread();
+      await thread.say("I need a corrective action form for Wynne Sarrow for being rude to a guest at the register on 11/1");
+      t.draftWrites({ observation: "Observed:\nOn 11/1/2026, Wynne was rude to a guest at the register." }, { offense_type: ["standards_of_conduct"] }, { offense_basis: "conduct" });
+      const id = await thread.create();
+      expect(t.checked(id).offense_type ?? [], "rude to a guest lost the Standards of Conduct").toContain("standards_of_conduct");
+    },
+  },
+  {
     id: "nov5-sf-b6-reply-full-sentence",
     title: "sf-b6, the reply only: the turn-3 reply never ends at \"I can prepare:\"",
     report: "Pau via QA, 5 Nov 2026 (this app's production, 4 Nov), sf-b6; QA's backlog B7 (10 Nov 2026)",
