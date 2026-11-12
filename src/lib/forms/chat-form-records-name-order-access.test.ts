@@ -152,10 +152,16 @@ describe("FORMS_ON_FILE_ORDER_MATCH_POSSIBLE: a reversed name is a possible matc
   const FLAG = "FORMS_ON_FILE_ORDER_MATCH_POSSIBLE_ENABLED";
 
   it("flag off (as on main 8ff2e3ba): \"Tallis Wren\" is listed as naming the person asked about", async () => {
-    delete process.env[FLAG];
-    wornallDrafts();
-    const block = await blockFor("admin", EVERY_STORE);
-    expect(block).toMatch(/Forms naming the person in the question \(\d+\)[\s\S]*Tallis Wren/);
+    // The off behaviour pins its own flag off, so it holds once production turns the flag on (Gate-Sunny's off-pin on the
+    // sibling app, 12 Nov 2026).
+    vi.stubEnv(FLAG, "");
+    try {
+      wornallDrafts();
+      const block = await blockFor("admin", EVERY_STORE);
+      expect(block).toMatch(/Forms naming the person in the question \(\d+\)[\s\S]*Tallis Wren/);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it("flag on: \"Tallis Wren\" is a possible match, and \"Wren Tallis\" still names them", async () => {
