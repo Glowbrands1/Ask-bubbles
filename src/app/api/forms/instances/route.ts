@@ -242,7 +242,8 @@ export async function POST(request: Request) {
       const currency = checkProposalIsCurrent({
         // FORM_TYPE_SWITCH_ENABLED: "change to coaching" is read as the chat read it, so the switched card is current.
         // SAME_REQUEST_OTHER_PERSON_ENABLED: "the same thing for <B>" is read from that turn on, as the chat read it.
-        conversation: sameRequestReadConversation(switchReadConversation(parseHistory(body.conversation))),
+        // SAME_REQUEST_KEEPS_EARLIER_CARD_ENABLED: <A>'s card is read as it stood before "the same thing for <B>".
+        conversation: sameRequestReadConversation(switchReadConversation(parseHistory(body.conversation)), body.employeeName),
         templateKey: body.templateKey,
         employeeName: body.employeeName,
         alsoCalled,
