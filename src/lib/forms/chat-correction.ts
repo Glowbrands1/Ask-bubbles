@@ -35,7 +35,7 @@ import {
   payrollAmountPrompt,
   statedPayrollDeductAmount,
 } from "./payroll-deduct-amount";
-import { formEditSingleWriterEnabled, payrollDeductAmountFieldEnabled, priorActionsNoSignedEnabled } from "@/lib/config/chat-quality-flags";
+import { formEditSingleWriterEnabled, nameLineCommaEnabled, payrollDeductAmountFieldEnabled, priorActionsNoSignedEnabled } from "@/lib/config/chat-quality-flags";
 import { syncCorrectiveActionPlan } from "./ca-action-plan-sync";
 import { extractEmployeeNames, samePerson as samePersonByName } from "./proposal";
 import { clausesOf, LEAD_IN, separateQuestions } from "./message-parts";
@@ -942,12 +942,29 @@ async function correctHeaderLines(
   const keys = Object.keys(accepted.values);
   if (keys.length === 0) return null;
 
+  /*
+   * NAME_LINE_COMMA_ENABLED (QA's ruling, 11 Nov 2026): a corrected Employee Name is followed by the account the app
+   * drafted — "Isolde Pembrook was late …" becomes "Isolde Pembrooke was late …" — so the header and the Details agree.
+   */
+  const renamed: Record<string, string> = {};
+  const newName = accepted.values.employee_name;
+  if (nameLineCommaEnabled() && newName && instance.employeeName) {
+    const { renamedInAccount } = await import("./name-correction-words");
+    for (const row of loaded.values) {
+      if (row.filledBy !== "ai" || row.fieldKey === "employee_name" || !(row.value ?? "").trim()) continue;
+      const out = renamedInAccount(row.value!, instance.employeeName, newName);
+      if (out) renamed[row.fieldKey] = out;
+    }
+  }
+  const renamedProvenance = Object.fromEntries(Object.keys(renamed).map((key) => [key, { source: "name_correction" }]));
+
   // FORM_EDIT_SINGLE_WRITER_ENABLED: through the one writer (`lib/forms/form-write.ts`).
   const writer = formEditSingleWriterEnabled()
     ? await (await import("./form-write")).correctionWrite({
         instanceId: input.instanceId,
         loaded,
         stated: { values: accepted.values, checked: {} },
+        ...(Object.keys(renamed).length > 0 ? { assistant: { values: renamed, provenance: renamedProvenance } } : {}),
         actorId: actor.id,
         said: input.question,
         today: input.today,
@@ -955,7 +972,7 @@ async function correctHeaderLines(
         readerValues: Object.values(correction.values).filter((value): value is string => typeof value === "string"),
       })
     : null;
-  const saved = formEditSingleWriterEnabled() && writer ? writer : await saveInstanceValues(input.instanceId, { values: accepted.values, checked: {} }, actor.id);
+  const saved = formEditSingleWriterEnabled() && writer ? writer : await saveInstanceValues(input.instanceId, { values: { ...accepted.values, ...renamed }, checked: {} }, actor.id);
   const refused = new Set(saved.rejected.map((entry) => entry.key));
   const written = keys.filter((key) => !refused.has(key));
   if (written.length === 0) {
@@ -979,7 +996,7 @@ async function correctHeaderLines(
    * so the manager is told to give it a read.
    */
   const drafted = loaded.values.some(
-    (row) => row.filledBy === "ai" && (row.value ?? "").trim() !== "" && !written.includes(row.fieldKey),
+    (row) => row.filledBy === "ai" && (row.value ?? "").trim() !== "" && !written.includes(row.fieldKey) && !(row.fieldKey in renamed),
   );
   if (drafted && written.includes("employee_name")) {
     lines.push("", "The drafted text was written before this change — give it a quick read to make sure it still names the right person.");
