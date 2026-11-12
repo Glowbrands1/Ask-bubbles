@@ -49,6 +49,7 @@ import {
   possessivePlaceNotPersonEnabled,
   formNameFromRosterEnabled,
   offRosterConfirmEnabled,
+  resentRequestIsYesEnabled,
   offRosterAskBeforeCardEnabled,
   oneFormEachPersonEnabled,
   groupWordsNotANameEnabled,
@@ -253,6 +254,10 @@ async function postChat(request: Request) {
           question: read(asked.question),
           history: asked.history.map((turn) => (turn.role === "user" && typeof turn.content === "string" ? { ...turn, content: read(turn.content) } : turn)),
         };
+      }
+      // RESENT_REQUEST_IS_YES_ENABLED: the same request again while "Is this for <name>?" waits is a yes (`lib/forms/resent-request-is-yes.ts`).
+      if (resentRequestIsYesEnabled()) {
+        asked = (await import("@/lib/forms/resent-request-is-yes")).withResentRequestAsYes(asked) ?? asked;
       }
       /*
        * OFF_ROSTER_CONFIRM_ENABLED: "use <name>" (or "yes") to the offer for a person not in Woven is read as the

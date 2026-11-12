@@ -1373,6 +1373,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "DRAFT_NO_INVENTED_PLAN_ENABLED",
   // REVISION_ARCHIVED_NOT_OPEN (default off): in the list, as every flag a release flips (QA round 17l, 12 Nov 2026).
   "REVISION_ARCHIVED_NOT_OPEN_ENABLED",
+  // RESENT_REQUEST_IS_YES (default off; QA, 12 Nov 2026): in the list, as every chat flag.
+  "RESENT_REQUEST_IS_YES_ENABLED",
 ] as const;
 
 /**
@@ -4725,4 +4727,13 @@ export function wornClothingIsDressCodeEnabled(): boolean {
  */
 export function copyPastePointsToCardEnabled(): boolean {
   return envFlag("COPY_PASTE_POINTS_TO_CARD_ENABLED");
+}
+
+/**
+ * RESENT_REQUEST_IS_YES_ENABLED (coding 6, 12 Nov 2026; default off; QA). The same request (or the same pasted letter)
+ * sent again while "Is this for **<name>**?" waits was answered "Who is this … for?", losing the offered name. On: it is
+ * read as "yes" to that question. Off, as before. See `forms/resent-request-is-yes.ts`.
+ */
+export function resentRequestIsYesEnabled(): boolean {
+  return envFlag("RESENT_REQUEST_IS_YES_ENABLED");
 }
