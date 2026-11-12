@@ -1,4 +1,4 @@
-import { formNameFromRosterEnabled, metricChoiceOneQuestionEnabled, metricGuardEnabled, offRosterConfirmEnabled, rosterNearMissEnabled, rosterNotFoundAnyPhrasingEnabled, nearMissQuestionRulesEnabled, formNameOffRosterAskEnabled, offRosterAskBeforeCardEnabled, possessivePlaceNotPersonEnabled } from "@/lib/config/chat-quality-flags";
+import { formNameFromRosterEnabled, metricChoiceOneQuestionEnabled, metricGuardEnabled, offRosterConfirmEnabled, rosterNearMissEnabled, rosterNotFoundAnyPhrasingEnabled, nearMissQuestionRulesEnabled, formNameOffRosterAskEnabled, offRosterAskBeforeCardEnabled, possessivePlaceNotPersonEnabled, nameLastAfterByEnabled } from "@/lib/config/chat-quality-flags";
 import { isGlossaryTerm } from "@/lib/ai/glossary";
 import { standInForName, withStandInsSaid } from "./no-name-reply-wording";
 import type { AskResponse } from "@/lib/ai/types";
@@ -668,7 +668,27 @@ export function withRosterOnlyNames(response: AskResponse): AskResponse {
   if (!formNameFromRosterEnabled()) return metricGuardEnabled() ? withoutMetricChoices(response, metricMessage(), personRosterNames() ?? []) : response;
   const names = personRosterNames();
   if (!names || names.length === 0) return response;
-  return rosterOnlyNames(response, names, requestMessage());
+  return rosterOnlyNames(withRosterNameAfterBy(response, names), names, requestMessage());
+}
+
+/**
+ * NAME_LAST_AFTER_BY_ENABLED (Gate-Bubbles-4's recovery gate on #780, 12 Nov 2026): "… AT THE FRONT DESK ON MONDAY
+ * 10/05/2026 BY CORIN BELLWEATHER" made the card "BY CORIN BELLWEATHER", which the step below read as a name not on
+ * the roster and took off the card, before the chat route's "BY <roster name>" step (`forms/name-after-by.ts`). A card
+ * name that is "by" and then one roster person's whole name is that person here too, in the card and the reply. Off,
+ * as before.
+ */
+function withRosterNameAfterBy(response: AskResponse, names: readonly string[]): AskResponse {
+  if (!nameLastAfterByEnabled()) return response;
+  const typed = response.formProposal?.employeeName?.trim();
+  const rest = typed ? /^by\s+(.+)$/i.exec(typed)?.[1] : undefined;
+  const person = rest ? rosterSpelling(rest, names) : null;
+  if (!typed || !person) return response;
+  return {
+    ...response,
+    content: response.content.split(`**${typed}**`).join(`**${person}**`),
+    formProposal: { ...response.formProposal!, employeeName: person },
+  };
 }
 
 /**
