@@ -1336,6 +1336,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "MADE_FOR_IS_MADE_ABOUT_ENABLED",
   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
   "CHAT_STAGE_TIMINGS_ENABLED",
+  "RELATIVE_DAY_NOT_HISTORY_ENABLED",
   "EXIT_TYPO_WORDS_ENABLED",
   "CA_REASON_DUE_TO_ENABLED",
   // coding 6: REQUEST_ISSUE_KEPT, LATE_OPENING_OWN_WORDS, FIRST_NAME_ENOUGH (QA round 17b, 10 Nov 2026; default off).
@@ -2990,6 +2991,17 @@ export function policyTopicIntoFieldEnabled(): boolean {
  */
 export function addThatIsAccountEnabled(): boolean {
   return envFlag("ADD_THAT_IS_ACCOUNT_ENABLED");
+}
+
+/**
+ * RELATIVE_DAY_NOT_HISTORY_ENABLED (QA, 10 Nov 2026; coding 5; same flag in both apps; default off). With
+ * RELATIVE_DATE_READER_ENABLED on (live), "need a CA for <name>. she mishandled cash at close yesterday. written warning"
+ * lost the Written level: "yesterday" became a date before today, which made the trailing level history. On: a
+ * relative day word is the incident's day, never an earlier step, for that check (`forms/warning-level.ts`). Off, as
+ * before.
+ */
+export function relativeDayNotHistoryEnabled(): boolean {
+  return envFlag("RELATIVE_DAY_NOT_HISTORY_ENABLED");
 }
 
 /**
