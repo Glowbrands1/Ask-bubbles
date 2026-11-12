@@ -980,6 +980,17 @@ export function cardNeverSilentEnabled(): boolean {
   return envFlag("CARD_NEVER_SILENT_ENABLED");
 }
 
+/**
+ * "What is a ca?", "difference between coaching and ca", "which forms can I
+ * create here?" are answered from the app's own published form templates and
+ * role matrix (`lib/forms/forms-guide.ts`), never from model memory or a
+ * knowledge-base miss. Off (the default), those turns are answered exactly as
+ * before. Same flag name as the sibling app.
+ */
+export function formsGuideEnabled(): boolean {
+  return envFlag("FORMS_GUIDE_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "NOT_FOLLOWING_IS_VIOLATION_ENABLED",
   "INCIDENT_FROM_EARLIER_TURN_ENABLED",
@@ -1372,6 +1383,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "STORE_ALIAS_ENABLED",
   "FULL_MANUAL_WIDE_GATE_ENABLED",
   "CARD_NEVER_SILENT_ENABLED",
+  // coding 6: FORMS_GUIDE (B#194 rebuilt; default off).
+  "FORMS_GUIDE_ENABLED",
   // coding 5: B3 (QA's backlog, 10 Nov 2026; default off).
   "COPY_PASTE_CLAIM_HONEST_ENABLED",
   "DATE_ONCE_ENABLED",
