@@ -1,5 +1,6 @@
 import {
   caReasonDueToEnabled,
+  terseRequestAccountEnabled,
   complaintAccountEnabled,
   decimalNotSentenceEndEnabled,
   futureIncidentDateAskEnabled,
@@ -332,8 +333,31 @@ function withoutPolicyCorrections(text: string): string {
     .join("\n");
 }
 
+/*
+ * TERSE_REQUEST_ACCOUNT_ENABLED (QA's #745 follow-up, 12 Nov 2026): "writen ca rowan kestrel not atending monthly meeting
+ * 12-20-26" — a terse request, the name, then the account with no "for" or comma. The words after the name are the
+ * Issue, as the manager typed them.
+ */
+const TERSE_REQUEST = /^\s*(?:writ(?:t)?en|write)\s+(?:up\s+)?(?:a\s+)?(?:(?:verbal|written)\s+)?(?:ca|c\/a|corrective\s+action)\b\s+/i;
+
+function terseRequestAccount(said: string, employeeName: string | null): string | null {
+  if (!employeeName) return null;
+  const first = said.split("\n").find((line) => line.trim() !== "") ?? "";
+  const lead = TERSE_REQUEST.exec(first);
+  if (!lead) return null;
+  const words = employeeName.trim().split(/\s+/).map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const named = new RegExp(`^${words.join("\\s+")}\\b[\\s,.:;-]*`, "i").exec(first.slice(lead[0].length));
+  if (!named) return null;
+  const account = first.slice(lead[0].length + named[0].length).trim().replace(/[.!]+$/, "");
+  return /\p{L}{3,}/u.test(account) ? account : null;
+}
+
 export function correctiveActionIssue(rawSaid: string, employeeName: string | null): string | null {
-  const read = issueAsRead(futureIncidentDateAskEnabled() ? withoutBareDateAnswers(rawSaid) : rawSaid, employeeName);
+  const said = futureIncidentDateAskEnabled() ? withoutBareDateAnswers(rawSaid) : rawSaid;
+  const asRead = issueAsRead(said, employeeName);
+  const terse = terseRequestAccountEnabled() ? terseRequestAccount(said, employeeName) : null;
+  // The terse account is read when nothing else is, or when what is read is the request line itself ("writen ca …").
+  const read = terse !== null && (asRead === null || TERSE_REQUEST.test(asRead)) ? terse : asRead;
   if (!caReasonDueToEnabled()) return read;
   /*
    * CA_REASON_DUE_TO_ENABLED (QA, 10 Nov 2026, the B#501 rerun on main): with production's SALES_OBSERVATION_ACCOUNT

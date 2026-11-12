@@ -17,6 +17,7 @@ import {
   removePolicyNotNamedEnabled,
   salesObservationAccountEnabled,
   salesShortfallObjectEnabled,
+  terseRequestAccountEnabled,
   wornClothingIsDressCodeEnabled,
   wovenTrainingConductEnabled,
 } from "@/lib/config/chat-quality-flags";
@@ -396,13 +397,24 @@ const MISSED_EVENT_AFTER = new RegExp(
   String.raw`\b((?:${GAP_WORD}){0,3}?${EVENT_NOUN})\b${NOT_THE_EVENT}(?:\s+(?:on|at|from)\s+\S+|\s+[\d/.-]+)?[\s,–—-]+(?:(?:which|that)\s+)?(?:(?:she|he|they|[a-z]+)\s+)?${ABSENT_AFTER}\b`,
 );
 
+/*
+ * TERSE_REQUEST_ACCOUNT_ENABLED (QA's #745 follow-up, 12 Nov 2026): "not atending monthly meeting" — the manager's typo
+ * of attending — reads as the missed event too, so the terse card cites Attendance as the full wording's does.
+ */
+const ATTEND_TYPO = String.raw`att?end(?:ing|ed|s)?`;
+const MISSED_EVENT_BEFORE_TYPO = new RegExp(
+  String.raw`\b${ABSENT_BEFORE.replace("attend(?:ing|ed|s)?", ATTEND_TYPO)}\s+((?:${GAP_WORD}){0,4}?${EVENT_NOUN})\b${NOT_THE_EVENT}`,
+);
+
 /** Leading words that place the event rather than name it: "the", "her", "last", "tuesday's". */
 const EVENT_LEAD = /^(?:(?:the|a|an|her|his|their|our|this|that|last|next|yesterday['’]?s|today['’]?s|[a-z]+day['’]?s|[a-z]+day|todays|yesterdays)\s+)+/;
 
 function missedEventIn(sentences: readonly string[]): string | null {
   for (const sentence of sentences) {
     for (const clause of sentence.split(/;|:\s|\s+(?:but|however)\s+/)) {
-      const match = MISSED_EVENT_BEFORE.exec(clause) ?? MISSED_EVENT_AFTER.exec(clause);
+      const match =
+        (terseRequestAccountEnabled() ? MISSED_EVENT_BEFORE_TYPO : MISSED_EVENT_BEFORE).exec(clause) ??
+        MISSED_EVENT_AFTER.exec(clause);
       if (match) return match[1]!.replace(EVENT_LEAD, "").trim();
     }
   }

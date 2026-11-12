@@ -38,11 +38,15 @@ export const NOV10_FUTURE_INCIDENT_DATE_CASES: ReplayCase[] = WORDINGS.flatMap((
     title: `"${text}" (written 10/25/2026) — the card is never dated 12/20/2026, and the date is asked about`,
     report: `${REPORT}; ${wording.key}, ${casing}`,
     /*
-     * The terse typo wording is not read as a form request in this app at all: "writen ca …" gets a policy answer and
-     * no card (10 Nov 2026, with and without the flag). That is its own defect, reported to QA, and stays open here.
+     * The terse typo wording is not read as a form request on production: "writen ca …" gets a policy answer and no
+     * card (10 Nov 2026). MANAGER_FORM_CHOICE gives the card; TERSE_REQUEST_ACCOUNT reads its Issue ("not atending
+     * monthly meeting …", after the name) and its Attendance policy from the typo (QA's #745 follow-up, 12 Nov 2026).
      */
     ...(wording.key === "terse-typo"
-      ? { status: { open: "\"writen ca …\" is not read as a form request: a policy answer, no card" } }
+      ? {
+          status: { open: "\"writen ca …\" is not read as a form request: a policy answer, no card" },
+          fixFlags: [FLAG, "MANAGER_FORM_CHOICE_ENABLED", "TERSE_REQUEST_ACCOUNT_ENABLED"],
+        }
       : { status: { open: "the card is dated 12/20/2026, after today, and nothing is asked" }, fixFlags: [FLAG] }),
     async run(t: ReplayContext) {
       const thread = start(t);
@@ -57,6 +61,11 @@ export const NOV10_FUTURE_INCIDENT_DATE_CASES: ReplayCase[] = WORDINGS.flatMap((
       const issue = (thread.proposal as { issue?: string | null } | null)?.issue ?? "";
       expect(issue, `the answer replaced the Issue:\n${answer.content}`).toMatch(/monthly meeting/i);
       expect(issue, `the answer is the Issue:\n${answer.content}`).not.toMatch(/^\s*it was 10-20-26/i);
+      // QA's #745 follow-up: the terse card has its Policy line too, as the full wording's does.
+      if (wording.key === "terse-typo") {
+        expect(issue, `the Issue is the request line:\n${answer.content}`).not.toMatch(/^\s*writen ca/i);
+        expect(answer.content, `the terse card has no Policy line:\n${answer.content}`).toMatch(/\*\*Policy:\*\* Attendance\b/);
+      }
     },
   })),
 );
