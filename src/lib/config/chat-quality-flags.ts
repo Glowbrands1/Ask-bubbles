@@ -1346,6 +1346,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "EXCERPT_BRAND_HEADING_DROP_ENABLED",
   "NEAR_MISS_ANSWER_KEEPS_REQUEST_ENABLED",
   "FULL_MANUAL_WIDE_GATE_ENABLED",
+  "EMPTY_REPLY_GUARD_ENABLED",
   // coding 5: B3 (QA's backlog, 10 Nov 2026; default off).
   "COPY_PASTE_CLAIM_HONEST_ENABLED",
   "DATE_ONCE_ENABLED",
@@ -4574,6 +4575,17 @@ export function titleNotPartOfNameEnabled(): boolean {
  */
 export function fullManualWideGateEnabled(): boolean {
   return envFlag("FULL_MANUAL_WIDE_GATE_ENABLED");
+}
+
+/**
+ * A turn never saves or shows a blank answer. A successful answer whose prose
+ * is empty after every post-processor, and which carries no form card, choice
+ * or update, is returned as an honest failure instead ("Bubbles could not
+ * produce an answer…"), so the thread shows an error card and the turn is
+ * closed as failed. Ported from the sibling app. Off, the answer is returned as it is.
+ */
+export function emptyReplyGuardEnabled(): boolean {
+  return envFlag("EMPTY_REPLY_GUARD_ENABLED");
 }
 
 /**
