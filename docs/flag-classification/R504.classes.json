@@ -1,0 +1,62 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov6-coding3-full-position-title-dm-line: \"District Manager Brenna Kowaldane\" on the line under the employee's name is hers: the employee's Job Title is left blank, and the read-back says so — OPEN in production (the read-back keeps a blank line, leaves Job Title off the \"Left blank\" list, and says the title on the form is the one the manager gave)": {
+    "category": "INTENDED",
+    "reason": "Open to holding: \"District Manager Brenna Kowaldane\" is the DM's line, not Isaura's title. OFF the reply claimed \"The title on the form is the one you gave (District Manager), not one from Woven.\"; ON that sentence is gone and Job Title is listed under \"Left blank for you to review\"."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov6-coding3-full-position-title-exit: An exit form typed as lines with the position \"Team Member Part Time\": the card's Position is the whole position, not \"Team Member\" — OPEN in production (with production's flags the exit card's Position is null (TITLE_ENDS_AT_LINE off), and \"Team Member\" with it on)": {
+    "category": "INTENDED",
+    "reason": "Open to holding: the typed position \"Team Member Part Time\" is the card's Job Title whole, not \"Team Member\"."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov6-coding3-full-position-title-negative: Negative: \"Team Member Weekends Only\" is not one of the company's positions, so it is never the card's Position whole; the card's Position is the company position it starts with, \"Team Member\" — OPEN in production (with production's flags the card has no Position and the saved form no Job Title)": {
+    "category": "INTENDED",
+    "reason": "Open to holding: \"Team Member Weekends Only\" is not a company position, so the card's Job Title is the company position it starts with, \"Team Member\" (OFF: no Job Title at all)."
+  },
+  "src/lib/ai/flags-off-parity.test.ts :: existing chat and form suites with every new flag off passes the suites whose expectations are already on main: src/app/api/chat/replay-pack, second half of the cases by id": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The child run of the replay pack's second half inherits FULL_POSITION_TITLE_ENABLED; its only failures are the 3 open nov6-coding3-full-position-title-* cases now holding (an open case that holds fails its pin). Not a parity break."
+  },
+  "replay: nov6-coding3-full-position-title-dm-line [open]": {
+    "category": "INTENDED",
+    "reason": "Open to holding: \"District Manager Brenna Kowaldane\" is the DM's line, not Isaura's title. OFF the reply claimed \"The title on the form is the one you gave (District Manager), not one from Woven.\"; ON that sentence is gone and Job Title is listed under \"Left blank for you to review\"."
+  },
+  "replay: nov6-coding3-full-position-title-exit [open]": {
+    "category": "INTENDED",
+    "reason": "Open to holding: the typed position \"Team Member Part Time\" is the card's Job Title whole, not \"Team Member\"."
+  },
+  "replay: nov6-coding3-full-position-title-negative [open]": {
+    "category": "INTENDED",
+    "reason": "Open to holding: \"Team Member Weekends Only\" is not a company position, so the card's Job Title is the company position it starts with, \"Team Member\" (OFF: no Job Title at all)."
+  },
+  "replay: nov6-off-roster-exit-own-line-name-again [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Same mechanism on a holding exit case: the manager typed \"Team Member Part Time\" on its own line; the card's Job Title goes from \"Team Member\" to \"Team Member Part Time\". Nothing else changes; the case still holds."
+  },
+  "replay: nov6-off-roster-exit-own-line-name-again [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Same mechanism on a holding exit case: the manager typed \"Team Member Part Time\" on its own line; the card's Job Title goes from \"Team Member\" to \"Team Member Part Time\". Nothing else changes; the case still holds."
+  },
+  "replay: nov6-off-roster-exit-own-line-use [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Same mechanism on a holding exit case: the manager typed \"Team Member Part Time\" on its own line; the card's Job Title goes from \"Team Member\" to \"Team Member Part Time\". Nothing else changes; the case still holds."
+  },
+  "replay: nov6-off-roster-exit-own-line-use [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Same mechanism on a holding exit case: the manager typed \"Team Member Part Time\" on its own line; the card's Job Title goes from \"Team Member\" to \"Team Member Part Time\". Nothing else changes; the case still holds."
+  },
+  "replay: nov6-one-question-own-line [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Same mechanism on a holding exit case: the manager typed \"Team Member Part Time\" on its own line; the card's Job Title goes from \"Team Member\" to \"Team Member Part Time\". Nothing else changes; the case still holds."
+  },
+  "replay: nov6-one-question-own-line [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Same mechanism on a holding exit case: the manager typed \"Team Member Part Time\" on its own line; the card's Job Title goes from \"Team Member\" to \"Team Member Part Time\". Nothing else changes; the case still holds."
+  },
+  "replay: nov6-title-ends-at-line-exit-s16 [fix:TITLE_ENDS_AT_LINE_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Same mechanism on a holding exit case: the manager typed \"Team Member Part Time\" on its own line; the card's Job Title goes from \"Team Member\" to \"Team Member Part Time\". Nothing else changes; the case still holds."
+  },
+  "replay: nov6-title-ends-at-line-exit-s16 [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Same mechanism on a holding exit case: the manager typed \"Team Member Part Time\" on its own line; the card's Job Title goes from \"Team Member\" to \"Team Member Part Time\". Nothing else changes; the case still holds."
+  }
+}
