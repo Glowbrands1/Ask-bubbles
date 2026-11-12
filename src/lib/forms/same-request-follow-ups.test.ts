@@ -25,6 +25,23 @@ describe("SAME_REQUEST_CARRIES_ACCOUNT_ENABLED: <A>'s account with <B>'s name", 
   it("is nothing when the request carries no account", () => {
     expect(carriedAccount("create a corrective action for Mara Quell", "Mara Quell")).toBeNull();
   });
+
+  // QA, group 4 (961ab16c), the overnight scan's sf-s11: "Odalys Frewen. Verbal Warning. Under Performance." then "Can you
+  // do the same thing for Perrin Haldane but switch it to a written" carried "Perrin Haldane Written Warning. Under
+  // Performance". A name, a level and a bare topic are not an account.
+  it.each([
+    "Odalys Frewen. Verbal Warning. Under Performance.",
+    "Perrin Haldane. Verbal Warning. Under Performance.",
+    "Verbal Warning. Under Performance.",
+    "Written Warning. Under Performance",
+    "create a corrective action for Perrin Haldane, written warning, attendance",
+  ])("sf-s11: %s carries nothing", (said) => {
+    expect(carriedAccount(said, "Perrin Haldane")).toBeNull();
+  });
+
+  it("a level word inside the account is dropped, the account kept", () => {
+    expect(carriedAccount("create a corrective action for Mara Quell, verbal warning, she was late on 11/3/26", "Mara Quell")).toBe("Mara Quell was late on 11/3/26");
+  });
 });
 
 describe("SAME_REQUEST_KEEPS_EARLIER_CARD_ENABLED: both cards stay creatable", () => {
