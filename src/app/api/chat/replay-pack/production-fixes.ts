@@ -516,4 +516,24 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov11-p19-group-words-not-a-name-as-typed": "GROUP_WORDS_NOT_A_NAME",
   // fixed in production by GROUP_WORDS_NOT_A_NAME, QA round 17i, 11 Nov 2026
   "nov11-p19-group-words-not-a-name-lower": "GROUP_WORDS_NOT_A_NAME",
+  // fixed in production by EXIT_TYPO_WORDS, QA round 17j, 12 Nov 2026
+  "nov10-p17-exit-items-and-rehire-misspelled": "EXIT_TYPO_WORDS",
+  // fixed in production by NO_NAME_REPLY_WORDING, QA round 17j, 12 Nov 2026
+  "nov11-live-ima-employee-no-name-words-every-store": "NO_NAME_REPLY_WORDING",
+  // fixed in production by NO_NAME_REPLY_WORDING, QA round 17j, 12 Nov 2026
+  "nov11-live-ima-employee-no-name-words-store-manager": "NO_NAME_REPLY_WORDING",
+  // fixed in production by LETTER_GREETING_ANY_CASE, QA round 17k, 12 Nov 2026
+  "nov10-letter-greeting-your-capitalised": "LETTER_GREETING_ANY_CASE",
+  // fixed in production by COMPANY_METRIC_WORDS_NOT_NAMES, QA round 17k, 12 Nov 2026
+  "nov11-bcs-metrics-comp-sales": "COMPANY_METRIC_WORDS_NOT_NAMES",
+  // fixed in production by COMPANY_METRIC_WORDS_NOT_NAMES, QA round 17k, 12 Nov 2026
+  "nov11-bcs-metrics-discount-rate": "COMPANY_METRIC_WORDS_NOT_NAMES",
+  // fixed in production by ACCOUNT_BEFORE_REQUEST, QA round 17k, 12 Nov 2026
+  "nov10-p14a-account-opens-with-a-question": "ACCOUNT_BEFORE_REQUEST",
+  // fixed in production by DRAFT_NO_INVENTED_PLAN, QA round 17l, 12 Nov 2026
+  "nov10-draft-no-invented-plan-ca-observation": "DRAFT_NO_INVENTED_PLAN",
+  // fixed in production by EMPTY_REPLY_GUARD, QA round 17l, 12 Nov 2026
+  "nov11-empty-reply-guard-policy-question": "EMPTY_REPLY_GUARD",
+  // fixed in production by POLICY_PAGE_ON_CARD, QA round 17l, 12 Nov 2026
+  "nov11-policy-page-on-card-standards-of-conduct": "POLICY_PAGE_ON_CARD",
 };

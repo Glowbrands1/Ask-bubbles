@@ -88,10 +88,13 @@ import {
   nearMissQuestionRulesEnabled,
   formNameOffRosterAskEnabled,
   reopenByAnyOpenVerbEnabled,
+  accountBeforeRequestEnabled,
+  emptyReplyGuardEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { streamWhenSlow } from "@/lib/api/streamed-response";
 import { finalReplyWithoutMarkers } from "@/lib/ai/source-note";
 import { LONG_MESSAGE_LIMIT } from "@/lib/chat/message-limit";
+import { emptyReplyError, isEmptyReply } from "@/lib/ai/empty-reply";
 import { isClientConversationId } from "@/lib/chat/client-ids";
 import type { AskRequest, AskResponse } from "@/lib/ai/types";
 import type { AnswerMode, ChatMessage } from "@/types";
@@ -1053,6 +1056,13 @@ async function postChat(request: Request) {
       }
       // LEAD_FULL_SENTENCE_ENABLED: a reply never ends at "I can prepare:" (`lib/forms/lead-full-sentence.ts`).
       if (leadFullSentenceEnabled()) answer = (await import("@/lib/forms/lead-full-sentence")).withLeadFullSentence(answer);
+      // ACCOUNT_BEFORE_REQUEST_ENABLED: the account given before the request is handed to the draft (`lib/forms/account-before-request.ts`).
+      if (accountBeforeRequestEnabled() && answer.formProposal) {
+        answer = (await import("@/lib/forms/account-before-request")).withAccountBeforeRequest(answer, [
+          ...parsed.history,
+          { id: parsed.questionMessageId, role: "user", content: asked.question },
+        ]);
+      }
       // OFF_ROSTER_ASK_BEFORE_CARD_ENABLED: a store manager's card for a full name not on their roster is asked about once, before the card (`lib/forms/off-roster-ask.ts`).
       if (offRosterAskBeforeCardEnabled()) {
         answer = (await import("@/lib/forms/off-roster-ask")).withOffRosterAskBeforeCard(answer, { scope: context.identity.scope, history: parsed.history, question: asked.question });
@@ -1070,6 +1080,12 @@ async function postChat(request: Request) {
       }
       // SAME_REQUEST_OTHER_PERSON_ENABLED: <B>'s card says what of the earlier request it carries.
       if (sameRequestOther) answer = (await import("@/lib/forms/same-request-other-person")).withSameRequestNote(answer, sameRequestOther);
+      /*
+       * NEVER A BLANK ANSWER (EMPTY_REPLY_GUARD_ENABLED). An answer with no
+       * prose and no card is a failure, said as one: the turn closes as failed
+       * below and the thread shows an error card, not an empty bubble.
+       */
+      if (emptyReplyGuardEnabled() && isEmptyReply(answer)) throw emptyReplyError();
     } catch (error) {
       /*
        * A FAILED ANSWER IS STILL A RECORDED TURN, closed as a failure. The row

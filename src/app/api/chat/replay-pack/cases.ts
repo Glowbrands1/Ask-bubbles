@@ -19,7 +19,7 @@ import { expect } from "vitest";
 
 export interface ReplayAnswer {
   content: string;
-  formProposal?: { templateKey?: string; employeeName?: string | null; employeeRole?: string | null; status?: string; subject?: string; locationId?: string | null; closeMatchNote?: string; formDate?: string | null };
+  formProposal?: { templateKey?: string; employeeName?: string | null; employeeRole?: string | null; status?: string; subject?: string; locationId?: string | null; closeMatchNote?: string; formDate?: string | null; supportsInlineDraft?: boolean };
   formUpdate?: { instanceId: string; updated: string[] };
   formOpened?: { instanceId: string };
   /** The answer's source cards, as the route returns them. */
