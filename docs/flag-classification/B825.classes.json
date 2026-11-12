@@ -1,0 +1,22 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-17j-resigned-date-is-not-notice-date: 17j: \"exit form for <A>, she resigned 11/8\": Resignation Date November 8, \"Date that notice was given\" left blank \u2014 OPEN in production (Date that notice was given: November 8)": {
+    "category": "INTENDED",
+    "reason": "OPEN case now holds: 'exit form for <A>, she resigned 11/8' leaves 'Date that notice was given' blank; the it.fails pin moves to fixed"
+  },
+  "src/lib/forms/exit-facts.test.ts :: the dates, each on its own line reads a date named after the fact, and ISO dates": {
+    "category": "INTENDED-HARNESS",
+    "reason": "pins the old reading: 'resigned on 09/02/2026' \u2192 noticeGiven 2026-09-02; with the flag a resignation date alone is not a notice date. Pin must move"
+  },
+  "src/lib/forms/field-label-notice-date.test.ts :: an earlier \"no notice given\" holds on the exit card off: the resignation date is also the notice date (the bug)": {
+    "category": "INTENDED-HARNESS",
+    "reason": "pins the bug with FIELD_LABEL_NOT_A_QUESTION off (resignation date = notice date); EXIT_NOTICE_STATED_ONLY on removes it on every path. Pin must move"
+  },
+  "src/lib/forms/field-label-notice-date.test.ts :: an earlier \"no notice given\" holds on the exit card on: no earlier turns entered (the draft, a test): as before": {
+    "category": "INTENDED-HARNESS",
+    "reason": "pins 'resignation date 10-26-2026' \u2192 noticeGiven 2026-10-26 when no earlier turns are installed; with the flag the stated resignation date stays the Resignation Date only. Pin must move"
+  },
+  "replay: nov12-17j-resigned-date-is-not-notice-date [open]": {
+    "category": "INTENDED",
+    "reason": "fails off, holds on: 'Date that notice was given' moves to Left blank for you to review; Resignation Date unchanged"
+  }
+}

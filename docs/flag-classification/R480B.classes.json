@@ -1,0 +1,30 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov5-coding3-copy-paste-question-told-the-truth: (b) \"i don't see the details updated in the draft card. Do i need to copy and paste it? \u2026\" is answered truthfully, and the \"make that update\" it invites writes her account \u2014 OPEN in production (the live answer \"It should update automatically \u2014 no copy-and-paste needed\" is sent unchanged with nothing written (the claim guard's phrase list misses it); past that, the \"make that update\" the honest reply invites writes nothing)": {
+    "category": "INTENDED",
+    "reason": "OPEN case now holds; the it.fails pin moves to fixed with the flag"
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov5-coding3-these-details-answered-before-the-card: (a) the coaching details the bot gave BEFORE the card: \"can you upate the draft with these details of coaching?\" \u2192 \"it didnt edit in the card\" \u2192 \"the details we just discussed!!!\" put them on Rowan's draft \u2014 OPEN in production (the Details stay empty: \"these details\" / \"the details we just discussed\" are read from the last reply (the card, then the bot's own no-change reply), never the earlier answer that held them)": {
+    "category": "INTENDED",
+    "reason": "OPEN case now holds: the details given before the card reach the revision"
+  },
+  "src/lib/forms/form-edit-single-writer-flags-off.test.ts :: FORM_EDIT_SINGLE_WRITER_ENABLED off: the same chats, byte for byte (a) and (b) equal main's behaviour with the same script (replies, rows, events)": {
+    "category": "INTENDED-HARNESS",
+    "reason": "byte-for-byte pin of main's replies; the copy-paste reply now quotes the account, so the pin moves with the flag"
+  },
+  "replay: nov10-copy-paste-claim-not-sent [fix:COPY_PASTE_CLAIM_HONEST_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "the honest reply quotes the manager's account that is missing from the form; nothing written, as before"
+  },
+  "replay: nov10-copy-paste-claim-not-sent [production]": {
+    "category": "INTENDED",
+    "reason": "the honest reply quotes the manager's account that is missing from the form; nothing written, as before"
+  },
+  "replay: nov5-coding3-copy-paste-question-told-the-truth [open]": {
+    "category": "INTENDED",
+    "reason": "fails off, holds on"
+  },
+  "replay: nov5-coding3-these-details-answered-before-the-card [open]": {
+    "category": "INTENDED",
+    "reason": "fails off, holds on"
+  }
+}
