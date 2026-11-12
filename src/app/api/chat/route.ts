@@ -50,6 +50,7 @@ import {
   writeUpLeadNotAccountEnabled,
   formNameFromRosterEnabled,
   offRosterConfirmEnabled,
+  offRosterPlaceAnswerEnabled,
   resentRequestIsYesEnabled,
   cardPlanMatchesCreateEnabled,
   offRosterAskBeforeCardEnabled,
@@ -295,6 +296,21 @@ async function postChat(request: Request) {
        * OFF_ROSTER_CONFIRM_ENABLED: "use <name>" (or "yes") to the offer for a person not in Woven is read as the
        * manager's turn that typed the name, and the name is kept on the card as typed (`forms/off-roster-confirm.ts`).
        */
+      /*
+       * OFF_ROSTER_PLACE_ANSWER_ENABLED (port from the sibling app's 37b live bug): a place-only reply to the open "use
+       * <C>" offer is never a person: the card is drafted again from the turn that typed the name, and after the turn
+       * the name is held and the offer asked again (`forms/off-roster-place-answer.ts`).
+       */
+      let placeAnswer: import("@/lib/forms/off-roster-place-answer").PlaceAnswer | null = null;
+      if (offRosterPlaceAnswerEnabled()) {
+        const places = await import("@/lib/forms/off-roster-place-answer");
+        const found = places.placeAnswerOf(asked.question, asked.history);
+        const typed = found ? places.placeAnswerTurn(found, asked.history) : null;
+        if (found && typed) {
+          placeAnswer = found;
+          asked = { ...asked, question: typed };
+        }
+      }
       if (offRosterConfirmEnabled()) {
         const taken = (await import("@/lib/forms/off-roster-confirm")).withOffRosterAnswer(asked);
         if (taken) {
@@ -1143,6 +1159,8 @@ async function postChat(request: Request) {
       if (offRosterAskBeforeCardEnabled()) {
         answer = (await import("@/lib/forms/off-roster-ask")).withOffRosterAskBeforeCard(answer, { scope: context.identity.scope, history: parsed.history, question: asked.question });
       }
+      // OFF_ROSTER_PLACE_ANSWER_ENABLED: the place answered the offer; the name is held and the offer asked again (`forms/off-roster-place-answer.ts`).
+      if (placeAnswer) answer = (await import("@/lib/forms/off-roster-place-answer")).withPlaceAnswer(answer, placeAnswer, context.identity.scope);
       // CREATE_FROM_CONVERSATION_POINTS_TO_CARD_ENABLED: "Create a form from this conversation." keeps the re-read card; only the reply points to Create (`ai/card-meta-turn.ts`).
       if (createFromConversationPointsToCardEnabled()) answer = (await import("@/lib/ai/card-meta-turn")).withPressCreateReply(answer, asked);
       // ONE_FORM_EACH_PERSON_ENABLED / CARD_NAMES_EMPLOYEE_ENABLED: the people still to do, and the card's employee named (`forms/one-form-each.ts`).
