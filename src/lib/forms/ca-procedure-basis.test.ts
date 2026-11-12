@@ -40,3 +40,14 @@ describe("the store-procedure basis", () => {
     expect(conductHasReason(readCaPolicy(B6), false, null)).toBe(true);
   });
 });
+
+describe("QA's ruling (a), 12 Nov 2026: a bare \"customer complaint\" is the app's reading", () => {
+  it("only a rude_guest topic whose match is the bare phrase counts as bare", async () => {
+    const { onlyBareComplaint } = await import("./ca-conduct-reason");
+    expect(onlyBareComplaint({ id: "rude_guest", phrase: "customer complaint" })).toBe(true);
+    expect(onlyBareComplaint({ id: "rude_guest", phrase: "Customers complained" })).toBe(true);
+    expect(onlyBareComplaint({ id: "rude_guest", phrase: "rude to a customer" })).toBe(false);
+    expect(onlyBareComplaint({ id: "animals", phrase: "customer complaint" })).toBe(false);
+    expect(onlyBareComplaint(null)).toBe(false);
+  });
+});

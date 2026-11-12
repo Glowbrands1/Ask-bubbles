@@ -55,7 +55,9 @@ export const NOV8_SET_ASIDE_PLAN_CASES: ReplayCase[] = [
       await thread.say("CA for Marnie Holloway she was late today");
       const reply = await thread.say("take the dress code policy off the form");
       const line = plan(reply.content);
-      if (line) expect(line, `the plan lost a policy nobody took off:\n${reply.content}`).toMatch(/Attendance/);
+      // Changed on purpose (CARD_PLAN_MATCHES_CREATE, QA's 17l ruling (B), 12 Nov 2026): with that flag the card shows Pau's
+      // attendance plan ("… Leadership will monitor Marnie's attendance closely …"), which reviews attendance in its own words.
+      if (line) expect(line, `the plan lost a policy nobody took off:\n${reply.content}`).toMatch(/Attendance|attendance closely/);
     },
   },
 ];

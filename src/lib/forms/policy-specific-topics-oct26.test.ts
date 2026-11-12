@@ -56,7 +56,15 @@ const SAFETY = "Safety in the Workplace p.25";
 const WET_SIGN = "Wet Floor Sign p.31";
 const SOC13 = "Standards of Conduct p.13";
 
-const EXPECTED: { name: string; incidents: string[]; cites: string[]; box?: string }[] = [
+/*
+ * Changed on purpose (Pau, 5 Nov 2026, "I choose 1"; G464): with ANIMAL_VISITORS_ONLY_WHEN_VISITOR_ENABLED on, an
+ * animal alone cites Animals in the Workplace only; Visitors in the Workplace comes beside it only with a visitor's
+ * animal. Off, the pairing as before. `animalOnly` is what an entry cites with that flag on.
+ */
+const ANIMAL_VISITORS = "ANIMAL_VISITORS_ONLY_WHEN_VISITOR_ENABLED";
+const animalVisitorsOn = () => ["1", "true", "yes", "on"].includes((process.env[ANIMAL_VISITORS] ?? "").trim().toLowerCase());
+
+const EXPECTED: { name: string; incidents: string[]; cites: string[]; animalOnly?: string[]; box?: string }[] = [
   {
     name: "no wet floor sign -> Safety in the Workplace p.25 (and the Wet Floor Sign it names p.31)",
     incidents: ["no wet floor sign", "Marisol mopped and did not put out a wet floor sign", "she left the floor wet, no wet flr sign out"],
@@ -86,6 +94,7 @@ const EXPECTED: { name: string; incidents: string[]; cites: string[]; box?: stri
     name: "a pet -> Animals in the Workplace p.30 and Visitors in the Workplace p.29",
     incidents: ["brought her puppy in", "brought her pupy to work", "she brought her dog into the store", "had her dog at work all day", "brought a pet in"],
     cites: ["Animals in the Workplace p.30", "Visitors in the Workplace p.29"],
+    animalOnly: ["Animals in the Workplace p.30"],
   },
   {
     name: "took product -> Standards of Conduct p.13 and Handling Theft p.30",
@@ -127,13 +136,16 @@ describe("flag on: every incident cites its own section, in every register", () 
     describe(entry.name, () => {
       it.each(entry.incidents.flatMap(registers))("%s", (incident) => {
         on();
+        const cites = entry.animalOnly && animalVisitorsOn() ? entry.animalOnly : entry.cites;
         if (entry.box) {
-          expect(viaBox(ask(incident), entry.box)).toEqual(entry.cites);
+          expect(viaBox(ask(incident), entry.box)).toEqual(cites);
           return;
         }
-        expect(cited(ask(incident))).toEqual(expect.arrayContaining(entry.cites));
+        expect(cited(ask(incident))).toEqual(expect.arrayContaining(cites));
+        // ANIMAL_VISITORS_ONLY_WHEN_VISITOR on: an animal alone never adds Visitors in the Workplace.
+        if (entry.animalOnly && animalVisitorsOn()) expect(cited(ask(incident))).not.toContain("Visitors in the Workplace p.29");
         // The primary citation leads, and Standards of Conduct page 12 is not cited beside it.
-        expect(cited(ask(incident))[0]).toBe(entry.cites[0]);
+        expect(cited(ask(incident))[0]).toBe(cites[0]);
         expect(cited(ask(incident))).not.toContain("Standards of Conduct p.12");
       });
     });

@@ -20,6 +20,7 @@ import {
   wornClothingIsDressCodeEnabled,
   wovenTrainingConductEnabled,
   negatedLatenessTopicEnabled,
+  registerAccuracyConductEnabled,
 } from "@/lib/config/chat-quality-flags";
 
 import { readLocationMentions } from "./location-mention";
@@ -122,7 +123,7 @@ export interface CaPolicyReading {
    * CA_SALES_POLICY_ENABLED on: the account reads as the Under Performance
    * offense type, or uses a glossary term (MSB). See `withSalesPolicy`.
    */
-  source: "stated" | "incident" | "sales_performance" | "msb" | "woven" | null;
+  source: "stated" | "incident" | "sales_performance" | "msb" | "register" | "woven" | null;
   /** WOVEN_TRAINING_CONDUCT_ENABLED: the manager's words that say the Woven work was not done ("not signing the woven policies"). */
   woven?: string;
   /** Policies to ask between, when the account reads more than one way and none was named. */
@@ -787,6 +788,14 @@ function spellsOutGlossaryTerm(sentence: string): boolean {
   return GLOSSARY_PHRASES.some((phrase) => folded.includes(phrase));
 }
 
+/*
+ * REGISTER_ACCURACY_CONDUCT_ENABLED (QA's CA sales batch, case (c), 4 Nov 2026): a NARROW word list, as QA allowed for
+ * this case (no model call at card time): ringing / rang / rung up the wrong or incorrect items, products or prices; a
+ * sale or its items rung up wrong, incorrectly or inaccurately; mis-rang.
+ */
+const REGISTER_MISTAKE =
+  /\b(?:ring(?:ing|s)?|rang|rung)\s+(?:up\s+)?(?:the\s+|a\s+|an\s+)?(?:wrong|incorrect)\s+(?:items?|products?|prices?|amounts?|totals?)\b|\b(?:ring(?:ing|s)?|rang|rung)\s+(?:up\s+)?(?:a\s+|the\s+)?(?:sale|items?|products?)\s+(?:up\s+)?(?:wrong(?:ly)?|incorrectly|inaccurately)\b|\bmis-?r(?:ang|ung|ing(?:ing|s)?)\b/;
+
 function withSalesPolicy(reading: CaPolicyReading, rawText: string): CaPolicyReading {
   if (!caSalesPolicyEnabled()) return reading;
   if (reading.stated !== null && reading.stated !== "under_performance") return reading;
@@ -805,14 +814,17 @@ function withSalesPolicy(reading: CaPolicyReading, rawText: string): CaPolicyRea
     statesMetricShortfall(rawText) ||
     performanceIsTheRequest(reading, sentences) ||
     (salesShortfallObjectEnabled() && performanceIsTheReason(rawText));
-  if (!msb && !target) return reading;
+  // REGISTER_ACCURACY_CONDUCT_ENABLED: a sale rung up inaccurately is the Standards of Conduct (Pau, 4 Nov 2026).
+  const register = registerAccuracyConductEnabled() && sentences.some((sentence) => REGISTER_MISTAKE.test(sentence));
+  if (!msb && !target && !register) return reading;
+  // NEGATED_LATENESS_TOPIC (#500): a denied lateness is no attendance account (readsAsAttendance).
   if (reading.stated === null && sentences.some(readsAsAttendance)) return reading;
   return {
     ...reading,
     stated: null,
     alternatives: reading.alternatives.filter((name) => name !== "under_performance"),
     suggestion: STANDARDS_OF_CONDUCT,
-    source: msb ? "msb" : "sales_performance",
+    source: msb ? "msb" : !target && register ? "register" : "sales_performance",
     ambiguous: null,
   };
 }
@@ -864,7 +876,7 @@ function asksForCorrectiveAction(sentence: string): boolean {
  * nothing is asked — so it counts here too; `isWovenWorkReading` tells it apart.
  */
 export function isSalesPolicyReading(reading: CaPolicyReading): boolean {
-  return reading.source === "sales_performance" || reading.source === "msb" || reading.source === "woven";
+  return reading.source === "sales_performance" || reading.source === "msb" || reading.source === "register" || reading.source === "woven";
 }
 
 function readCaPolicyFromWords(rawText: string): CaPolicyReading {
@@ -1231,7 +1243,8 @@ export function caPolicyProposalLine(reading: CaPolicyReading, named: NamedPolic
     return "**Policy:** Standards of Conduct — required Woven policy acknowledgements or training not completed. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.";
   }
   if (isSalesPolicyReading(reading)) {
-    const what = reading.source === "msb" ? "Must See Behaviors (MSB)" : "sales performance against goals";
+    const what =
+      reading.source === "msb" ? "Must See Behaviors (MSB)" : reading.source === "register" ? "ringing up a sale inaccurately" : "sales performance against goals";
     return `**Policy:** Standards of Conduct — ${what}. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.`;
   }
   /*
