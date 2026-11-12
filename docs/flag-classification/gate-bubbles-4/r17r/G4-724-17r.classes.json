@@ -1,0 +1,34 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-make-that-update-writes-her-account: \"make that update\" after the copy-and-paste question reaches the open draft's readers as her own account, and her account is written \u2014 OPEN in production (\"make that update\" reaches the patch model as those three words, with nothing to add: her account is never written)": {
+  "category": "INTENDED",
+  "reason": "#724's case (absent on main) holds in both arms with 17r on: 'make that update' \u2192 'Changed Details of Coaching to \"rowan marked an order as shipped but the customer hadn't picked up yet\".'"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-make-that-update-writes-her-account: \"make that update\" after the copy-and-paste question reaches the open draft's readers as her own account, and her account is written \u2014 holds with MAKE_THAT_UPDATE_ACCOUNT_ENABLED on": {
+  "category": "INTENDED",
+  "reason": "#724's case (absent on main) holds in both arms with 17r on: 'make that update' \u2192 'Changed Details of Coaching to \"rowan marked an order as shipped but the customer hadn't picked up yet\".'"
+ },
+ "src/lib/ai/flags-off-parity.test.ts :: existing chat and form suites with every new flag off passes the suites whose expectations are already on main: src/app/api/chat/replay-pack, first half of the cases by id": {
+  "category": "INTENDED-HARNESS",
+  "reason": "PENDING clean-env check: under the production env the parity test already fails 3/8 on main; with #724 the 'replay-pack, first half' sub-run also fails, on #724's new case nov10-make-that-update-writes-her-account (parity forces new flags off). Re-run as CI does (no production env) before release."
+ },
+ "src/lib/forms/make-that-update-account.test.ts :: makeThatUpdateWithAccount after a reply that offered nothing, \"make that update\" carries her own account": {
+  "category": "INTENDED",
+  "reason": "#724's new unit test, absent on main, passes"
+ },
+ "src/lib/forms/make-that-update-account.test.ts :: makeThatUpdateWithAccount after a reply that printed the Details, the reply's update is the one to make (unchanged)": {
+  "category": "INTENDED",
+  "reason": "#724's new unit test, absent on main, passes"
+ },
+ "src/lib/forms/make-that-update-account.test.ts :: makeThatUpdateWithAccount never a question, the copy-and-paste question included, and never another turn": {
+  "category": "INTENDED",
+  "reason": "#724's new unit test, absent on main, passes"
+ },
+ "replay: nov10-make-that-update-writes-her-account [fix:MAKE_THAT_UPDATE_ACCOUNT_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "#724's case (absent on main) holds in both arms with 17r on: 'make that update' \u2192 'Changed Details of Coaching to \"rowan marked an order as shipped but the customer hadn't picked up yet\".'"
+ },
+ "replay: nov10-make-that-update-writes-her-account [open]": {
+  "category": "INTENDED",
+  "reason": "#724's case (absent on main) holds in both arms with 17r on: 'make that update' \u2192 'Changed Details of Coaching to \"rowan marked an order as shipped but the customer hadn't picked up yet\".'"
+ }
+}
