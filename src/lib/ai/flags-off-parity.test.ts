@@ -147,6 +147,9 @@ const UI_PATHS = ["src/app/**/*.tsx", "src/components/**", "src/features/**/*.ts
  * off, it renders as before for every role.
  */
 const ALLOWED_UI = [
+  // Import's "couldn't confirm … is yours" line (QA, 12 Nov 2026, both apps): shown only for a "not_proven" decline,
+  // which only CHAT_IMPORT_PROVEN_OWN_ENABLED returns. Off, the server never declines that way, so it never shows.
+  "src/features/chat/import-local-history.tsx",
   // District Manager, 3 Nov 2026 (QA approved 5 Nov, Pau 6 Nov): the Reviews page and the admin Google Reviews
   // screen show the company's store number (Dawley Farms: 309; its Google code 338 stays the match key). Unflagged:
   // it is a data correction, identical for every store whose number is its code.
