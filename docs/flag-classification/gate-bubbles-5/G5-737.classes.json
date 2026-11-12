@@ -1,0 +1,30 @@
+{
+ "src/app/api/chat/account-only-policy-query-e2e.test.ts :: ACCOUNT_ONLY_POLICY_QUERY_ENABLED on the drafted Observed says no opening nobody wrote, dated with the form's date": {
+  "category": "REGRESSION",
+  "reason": "QA live 27 Oct ('nobody said open'): manager wrote only 'late on the 2nd'; ON keeps 'Expectation: An employee assigned to open the location is expected to arrive on time ...' in the saved Observation. GENERAL_EXPECTATION exempts the whole sentence from every invented-detail pattern, so the opening detail nobody wrote comes back."
+ },
+ "src/app/api/chat/form-edit-noop-guard-e2e.test.ts :: FORM_EDIT_NOOP_GUARD_ENABLED: the reply after an edit is the saved diff a tick shows the option's label; two changes are two lines": {
+  "category": "INTENDED",
+  "reason": "PRODUCTION DEFECT it.fails (QA 5 Nov): the Expectation is kept, the inner test now passes, so the it.fails wrapper reports failed. Holding."
+ },
+ "src/app/api/chat/form-edit-noop-guard-e2e.test.ts :: FORM_EDIT_NOOP_GUARD_ENABLED: the reply after an edit is the saved diff a tool append (\"Add that she Must Practice the sanitizing checklist every shift.\"): one \"Updated:\" line, never the old \"Changed \u2026 to\" text": {
+  "category": "INTENDED",
+  "reason": "PRODUCTION DEFECT it.fails (QA 5 Nov): now holds; the wrapper reports failed."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-expectation-policy-line-kept: \"Create a Corrective Action for Marnie Quill, she was late to open on 10-20-26\": the saved Observation keeps the policy's Expectation \u2014 OPEN in production (the Expectation sentence is dropped from the saved Observation)": {
+  "category": "INTENDED",
+  "reason": "the OPEN case holds in the production arm; expected-fail wrapper reports failed"
+ },
+ "src/lib/forms/expectation-policy-line-kept.test.ts :: EXPECTATION_POLICY_LINE_KEPT: the policy's expectation of every employee is kept flag off (as before, the defect): the Expectation sentence is dropped": {
+  "category": "INTENDED-HARNESS",
+  "reason": "flag-off unit test assumes the flag unset; the ON arm exports it"
+ },
+ "replay: nov10-expectation-policy-line-kept [open]": {
+  "category": "INTENDED",
+  "reason": "saved Observation keeps the Expectation"
+ },
+ "replay: nov4-edit-tool-ca-t6-append [production]": {
+  "category": "INTENDED",
+  "reason": "holds both arms; the reply's Observation preview now shows the kept 'Expectation: An employee scheduled to open ...' (late to open was stated)"
+ }
+}
