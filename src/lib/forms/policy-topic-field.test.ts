@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { JBA_MANUAL_CA_CHUNKS } from "@/test/fixtures/jba-manual-ca-sections";
 
-import { fieldNamedIn, pointsAtManual, policyFieldText, policyTopicAsked, sectionForTopic } from "./policy-topic-field";
+import { fieldNamedIn, pointsAtManual, policyFieldText, policyNamed, policyTopicAsked, sectionForTopic } from "./policy-topic-field";
 
 /**
  * POLICY_TOPIC_INTO_FIELD_ENABLED. QA, a manager's 1★ rating (10 Nov 2026): "I asked it to write a coaching form on our
@@ -69,5 +69,13 @@ describe("pointsAtManual", () => {
     expect(pointsAtManual("Refer to the Woven policy manual for finding a cover for your shift.")).toBe(true);
     expect(pointsAtManual("See the employee handbook for details.")).toBe(true);
     expect(pointsAtManual("Find a replacement and get your manager's approval.")).toBe(false);
+  });
+});
+
+describe("policyNamed", () => {
+  it("a heading without \"Policy\" gets it; one that ends in it is not doubled (QA, gate round 14)", () => {
+    expect(policyNamed("Shift Replacement")).toBe("Shift Replacement policy");
+    expect(policyNamed("Cell Phone/Smart Watch Policy")).toBe("Cell Phone/Smart Watch Policy");
+    expect(policyNamed("Social Media policy ")).toBe("Social Media policy");
   });
 });
