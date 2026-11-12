@@ -516,4 +516,10 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov11-p19-group-words-not-a-name-as-typed": "GROUP_WORDS_NOT_A_NAME",
   // fixed in production by GROUP_WORDS_NOT_A_NAME, QA round 17i, 11 Nov 2026
   "nov11-p19-group-words-not-a-name-lower": "GROUP_WORDS_NOT_A_NAME",
+  // fixed in production by EXIT_TYPO_WORDS, QA round 17j, 12 Nov 2026
+  "nov10-p17-exit-items-and-rehire-misspelled": "EXIT_TYPO_WORDS",
+  // fixed in production by NO_NAME_REPLY_WORDING, QA round 17j, 12 Nov 2026
+  "nov11-live-ima-employee-no-name-words-every-store": "NO_NAME_REPLY_WORDING",
+  // fixed in production by NO_NAME_REPLY_WORDING, QA round 17j, 12 Nov 2026
+  "nov11-live-ima-employee-no-name-words-store-manager": "NO_NAME_REPLY_WORDING",
 };
