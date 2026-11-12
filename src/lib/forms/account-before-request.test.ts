@@ -17,6 +17,8 @@ describe("ACCOUNT_BEFORE_REQUEST_ENABLED", () => {
   afterEach(() => vi.unstubAllEnvs());
 
   it("off: the card's turns are as built", () => {
+    // Off pins its own flag (QA's off-pins guard, 11 Nov 2026): it must hold once production turns the flag on.
+    vi.stubEnv("ACCOUNT_BEFORE_REQUEST_ENABLED", "");
     expect(withAccountBeforeRequest(CARD, turns)).toEqual(CARD);
   });
 
