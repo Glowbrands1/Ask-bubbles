@@ -1285,6 +1285,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REOPEN_NOT_OPEN_FORM_ENABLED",
   "SIGNED_STEP_NOT_A_REQUEST_ENABLED",
   "STEP_DATES_NOT_FORM_DATE_ENABLED",
+  // coding 4: STEP_SHORTHAND_OWN_DATE (QA's prod-env reading, 10 Nov 2026, D2; default off).
+  "STEP_SHORTHAND_OWN_DATE_ENABLED",
   // coding 4: FORM_FOR_FOR_TYPO (B-C3, QA, 11 Nov 2026; default off).
   "FORM_FOR_FOR_TYPO_ENABLED",
   // coding 4: TITLE_NOT_PART_OF_NAME (B-C3 part 2, QA, 11 Nov 2026; default off).
@@ -4136,6 +4138,18 @@ export function proposalPolicySetAsideEnabled(): boolean {
  */
 export function stepDatesNotFormDateEnabled(): boolean {
   return envFlag("STEP_DATES_NOT_FORM_DATE_ENABLED");
+}
+
+/**
+ * STEP_SHORTHAND_OWN_DATE_ENABLED (QA's prod-env reading, 10 Nov 2026, D2; default off; same flag in both apps). With
+ * production's flags, "<name> - CA - written - no call no show to manager meeting 10/13/26 - payroll deduction no - prior
+ * coaching 7/1/26" was dated today: the message is one sentence (no full stop), CA_SHORTCUT_WORDS' shorthand matched
+ * "coaching 7/1", and `stepSentenceDates` then set aside EVERY date in that sentence, 10/13/26 included, so
+ * STEP_DATES_NOT_FORM_DATE fell back to today. On: when only the shorthand marks a sentence, only the dates the
+ * shorthand names are a step's. Off, as before.
+ */
+export function stepShorthandOwnDateEnabled(): boolean {
+  return envFlag("STEP_SHORTHAND_OWN_DATE_ENABLED");
 }
 
 /**
