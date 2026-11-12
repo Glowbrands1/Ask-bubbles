@@ -1,0 +1,26 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov5-sf-b6-policy-left-for-the-manager: sf-b6: the reply said no source states a policy and it would leave that field for the manager; the saved Policy Violated and Direct policy are not AI-filled \u2014 OPEN in production (the drafting model's tick fills Policy Violated and quotes Direct policy after the reply said it would leave the policy to the manager)": {
+  "category": "INTENDED",
+  "reason": "OPEN case nov5-sf-b6-policy-left-for-the-manager holds: Policy Violated / Direct policy no longer AI-filled after the reply said it would leave it for the manager; replies unchanged"
+ },
+ "src/lib/forms/ca-cleaning-other.test.ts :: CA_SALES_POLICY_ENABLED: cleaning left undone is Other POLICY_CLEANING_INCIDENT_ENABLED on, CA_SALES off: the cleaning reader and the reading are as before (no Other mark)": {
+  "category": "INTENDED-HARNESS",
+  "reason": "pins CA_SALES_POLICY off (or this flag off); with CA_PROCEDURE_BASIS on, withoutUnreasonedConduct runs under either flag (by design, ca-conduct-reason.ts) \u2014 production has CA_SALES on, so no production change"
+ },
+ "src/lib/forms/ca-cleaning-other.test.ts :: CA_SALES_POLICY_ENABLED: cleaning left undone is Other off: the card reads as the Standards of Conduct, and the draft's tick stands (as before)": {
+  "category": "INTENDED-HARNESS",
+  "reason": "pins CA_SALES_POLICY off (or this flag off); with CA_PROCEDURE_BASIS on, withoutUnreasonedConduct runs under either flag (by design, ca-conduct-reason.ts) \u2014 production has CA_SALES on, so no production change"
+ },
+ "src/lib/forms/ca-conduct-reason.test.ts :: a Standards of Conduct tick needs a reason in the manager's words (CA_SALES_POLICY_ENABLED) off: nothing changes": {
+  "category": "INTENDED-HARNESS",
+  "reason": "pins CA_SALES_POLICY off (or this flag off); with CA_PROCEDURE_BASIS on, withoutUnreasonedConduct runs under either flag (by design, ca-conduct-reason.ts) \u2014 production has CA_SALES on, so no production change"
+ },
+ "src/lib/forms/ca-procedure-basis.test.ts :: the store-procedure basis off: the tool is as before and store_procedure is not read": {
+  "category": "INTENDED-HARNESS",
+  "reason": "pins CA_SALES_POLICY off (or this flag off); with CA_PROCEDURE_BASIS on, withoutUnreasonedConduct runs under either flag (by design, ca-conduct-reason.ts) \u2014 production has CA_SALES on, so no production change"
+ },
+ "replay: nov5-sf-b6-policy-left-for-the-manager [open]": {
+  "category": "INTENDED",
+  "reason": "OPEN case nov5-sf-b6-policy-left-for-the-manager holds: Policy Violated / Direct policy no longer AI-filled after the reply said it would leave it for the manager; replies unchanged"
+ }
+}

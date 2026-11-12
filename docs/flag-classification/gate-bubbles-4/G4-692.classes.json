@@ -1,0 +1,22 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-chat-edits-a-details-handed-to-the-revision: (a) \"the details we just discussed!!!\" hands the revision the coaching details the app gave before the card, never its own card or no-change reply \u2014 OPEN in production (the revision is handed the last reply (the app's own \"I haven't changed \u2026\"), never the answer that held the details)": {
+  "category": "INTENDED",
+  "reason": "OPEN case nov10-chat-edits-a-details-handed-to-the-revision holds: the revision is handed the coaching details from before the card"
+ },
+ "src/lib/forms/form-content-turn.test.ts :: DETAILS_FROM_EARLIER_ANSWER_ENABLED reads \"the details we just discussed\" from the answer before the app's own card and edit replies": {
+  "category": "INTENDED-HARNESS",
+  "reason": "unit test pins the flag-off reading; the ON arm exports the flag"
+ },
+ "replay: nov10-chat-edits-a-details-handed-to-the-revision [open]": {
+  "category": "INTENDED",
+  "reason": "OPEN case nov10-chat-edits-a-details-handed-to-the-revision holds: the revision is handed the coaching details from before the card"
+ },
+ "replay: nov7-refusal-bub-didnt-edit [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED]": {
+  "category": "REGRESSION",
+  "reason": "T5 'can you upate the draft with these details of coaching?': OFF gives the honest 'I haven't changed the Coaching Form \u2026 Tell me which part to change'; ON earlierContentAnswer skips every app reply, finds none, formContentQuestion returns null and the edit request falls to the free chat answer ('A grounded answer from the policy manual.' in the pack) \u2014 the path of the live 30 Oct bug ('Updating the draft now', nothing written). Fix: when no earlier content answer exists, keep the old behaviour / the honest not-written reply."
+ },
+ "replay: nov7-refusal-bub-didnt-edit [production]": {
+  "category": "REGRESSION",
+  "reason": "T5 'can you upate the draft with these details of coaching?': OFF gives the honest 'I haven't changed the Coaching Form \u2026 Tell me which part to change'; ON earlierContentAnswer skips every app reply, finds none, formContentQuestion returns null and the edit request falls to the free chat answer ('A grounded answer from the policy manual.' in the pack) \u2014 the path of the live 30 Oct bug ('Updating the draft now', nothing written). Fix: when no earlier content answer exists, keep the old behaviour / the honest not-written reply."
+ }
+}
