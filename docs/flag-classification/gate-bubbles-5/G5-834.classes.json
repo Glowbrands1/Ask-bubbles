@@ -1,0 +1,18 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-off-roster-store-answer-only-dodge: \"create a ca for kira dunmore, she was late today\" \u2192 \"dodge\" \u2192 \"use Kira Dunmore\": the store answer sets only the store \u2014 OPEN in production (\"dodge\" makes the card for \"kira dunmore\" at once, skipping \"use Kira Dunmore\")": {
+  "category": "INTENDED",
+  "reason": "Open-case it.fails wrapper: inner invariant now holds, so the wrapper reports failed. Holding."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-off-roster-store-answer-only-full-name: \"create a ca for kira dunmore, she was late today\" \u2192 \"Omaha, NE (West Dodge Rd)\" \u2192 \"use Kira Dunmore\": the store answer sets only the store \u2014 OPEN in production (\"Omaha, NE (West Dodge Rd)\" makes the card for \"kira dunmore\" at once, skipping \"use Kira Dunmore\")": {
+  "category": "INTENDED",
+  "reason": "Open-case it.fails wrapper: inner invariant now holds, so the wrapper reports failed. Holding."
+ },
+ "replay: nov12-off-roster-store-answer-only-dodge [open]": {
+  "category": "INTENDED",
+  "reason": "Open case now holds: the store answer sets only the store and repeats the off-roster ask (no card for 'kira dunmore'); 'use Kira Dunmore' then gives the card with '**Store:** Omaha, NE (West Dodge Rd), as you said' kept."
+ },
+ "replay: nov12-off-roster-store-answer-only-full-name [open]": {
+  "category": "INTENDED",
+  "reason": "Open case now holds: the store answer sets only the store and repeats the off-roster ask (no card for 'kira dunmore'); 'use Kira Dunmore' then gives the card with '**Store:** Omaha, NE (West Dodge Rd), as you said' kept."
+ }
+}
