@@ -1275,6 +1275,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REOPEN_NOT_OPEN_FORM_ENABLED",
   "SIGNED_STEP_NOT_A_REQUEST_ENABLED",
   "STEP_DATES_NOT_FORM_DATE_ENABLED",
+  // coding 4: METRIC_ALONE_NOT_A_NAME (QA's prod-env reading, 10 Nov 2026, D4; default off).
+  "METRIC_ALONE_NOT_A_NAME_ENABLED",
   // coding 4: FORM_FOR_FOR_TYPO (B-C3, QA, 11 Nov 2026; default off).
   "FORM_FOR_FOR_TYPO_ENABLED",
   // coding 4: TITLE_NOT_PART_OF_NAME (B-C3 part 2, QA, 11 Nov 2026; default off).
@@ -4699,6 +4701,17 @@ export function failureToOpenIsLateOpeningEnabled(): boolean {
  */
 export function payrollBareSentenceEnabled(): boolean {
   return envFlag("PAYROLL_BARE_SENTENCE_ENABLED");
+}
+
+/**
+ * METRIC_ALONE_NOT_A_NAME_ENABLED (QA's prod-env reading, 10 Nov 2026, D4; default off; same flag in both apps). With
+ * production's flags (CA_SALES_POLICY on, so a metric may ground a Corrective Action), "Their Club Close is low. Create a
+ * corrective action." drafted the form for an employee named "Club Close" and asked for Club Close's position: the metric
+ * guard (METRIC_GUARD) knew only a metric written with "%", a list item or an offense word. On: a phrase the message says
+ * is low, down, under or at a number ("<X> is low") is a metric too, so it is never the card's person. Off, as before.
+ */
+export function metricAloneNotANameEnabled(): boolean {
+  return envFlag("METRIC_ALONE_NOT_A_NAME_ENABLED");
 }
 
 /**
