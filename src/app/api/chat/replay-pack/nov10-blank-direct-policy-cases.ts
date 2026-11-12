@@ -37,8 +37,10 @@ export const NOV10_BLANK_DIRECT_POLICY_CASES: readonly ReplayCase[] = [
       const system = systems.at(-1)!;
       expect(system, "the open form was not described to the model").toMatch(/A FORM IS OPEN IN THIS CONVERSATION/);
       expect(system, "a blank Direct policy was described as quoted from the official manual").not.toMatch(/were quoted from the official manual/);
+      // QA (#756 with #719, GO): POLICY_BLANK_HONEST_REPLY says it its own way — "The Direct policy field on this draft is
+      // EMPTY: nothing from the manual is quoted on it … never say the policy on it was checked or verified." Either line.
       expect(system, "the blank Direct policy was not named as unchecked").toMatch(
-        /(Not yet checked against the official manual|Blank, so nothing on it was checked against the official manual)[^\n]*Direct policy/i,
+        /(Not yet checked against the official manual|Blank, so nothing on it was checked against the official manual)[^\n]*Direct policy|Direct policy[^\n]*EMPTY: nothing from the manual is quoted on it[^\n]*never say[^\n]*checked or verified/i,
       );
     },
   },
