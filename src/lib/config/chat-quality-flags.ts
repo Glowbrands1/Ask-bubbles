@@ -1373,6 +1373,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "DRAFT_NO_INVENTED_PLAN_ENABLED",
   // REVISION_ARCHIVED_NOT_OPEN (default off): in the list, as every flag a release flips (QA round 17l, 12 Nov 2026).
   "REVISION_ARCHIVED_NOT_OPEN_ENABLED",
+  // CARD_PLAN_MATCHES_CREATE (default off; QA's 17l, 12 Nov 2026): in the list, as every chat flag.
+  "CARD_PLAN_MATCHES_CREATE_ENABLED",
 ] as const;
 
 /**
@@ -4725,4 +4727,13 @@ export function wornClothingIsDressCodeEnabled(): boolean {
  */
 export function copyPastePointsToCardEnabled(): boolean {
   return envFlag("COPY_PASTE_POINTS_TO_CARD_ENABLED");
+}
+
+/**
+ * CARD_PLAN_MATCHES_CREATE_ENABLED (coding 6, 12 Nov 2026; default off; QA's Bubbles 17l, ruling B). An Attendance
+ * Corrective Action's card showed the general plan while Create saved Pau's attendance plan. On: the card shows the plan
+ * Create will save. Off, as before. See `forms/card-plan-matches-create.ts`.
+ */
+export function cardPlanMatchesCreateEnabled(): boolean {
+  return envFlag("CARD_PLAN_MATCHES_CREATE_ENABLED");
 }

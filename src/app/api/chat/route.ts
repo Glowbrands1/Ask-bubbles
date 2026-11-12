@@ -49,6 +49,7 @@ import {
   possessivePlaceNotPersonEnabled,
   formNameFromRosterEnabled,
   offRosterConfirmEnabled,
+  cardPlanMatchesCreateEnabled,
   offRosterAskBeforeCardEnabled,
   oneFormEachPersonEnabled,
   groupWordsNotANameEnabled,
@@ -1013,6 +1014,13 @@ async function postChat(request: Request) {
       }
       // PROPOSAL_NAME_CORRECTION_ENABLED: an off-roster "change her name to …" on the card asks which, never kept silently.
       answer = withCorrectionNotDropped(answer, parsed);
+      // CARD_PLAN_MATCHES_CREATE_ENABLED: an Attendance CA's card shows the plan Create will save (`lib/forms/card-plan-matches-create.ts`).
+      if (cardPlanMatchesCreateEnabled()) {
+        answer = (await import("@/lib/forms/card-plan-matches-create")).withCardPlanAsCreate(answer, [
+          ...parsed.history.filter((turn) => turn.role === "user").map((turn) => turn.content),
+          asked.question,
+        ].join("\n\n"));
+      }
       // NEAR_MISS_QUESTION_RULES_ENABLED: "no, …" to "Is this for <name>?" never gets a card for that name, nor the question again.
       if (nearMissQuestionRulesEnabled()) answer = (await import("@/lib/forms/near-miss-question-rules")).withoutTurnedDownName(answer, asked);
       /*
