@@ -1,0 +1,42 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-sf-b6-card-carries-added-detail: sf-b6: \"Create \u2026 from this conversation\" makes a card that shows, and drafts from, the detail added on turn 3 \u2014 OPEN in production (the card's turns are the request and \"Create \u2026\" only; the turn-3 detail is neither on the card nor handed to the draft)": {
+    "category": "INTENDED",
+    "reason": "OPEN case now holds: the turn-3 detail is on the card and handed to the draft; the it.fails pin moves to fixed with the flags"
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov5-sf-b6-full-sentence-and-added-detail: sf-b6: the reply never ends at \"I can prepare:\"; the card after \"Create \u2026 from this conversation\" carries the detail added on turn 3 \u2014 OPEN in production (the reply ends \"Based on what you've described, I can prepare:\" with nothing after it)": {
+    "category": "INTENDED",
+    "reason": "OPEN case now holds (both modes): the card after 'Create \u2026 from this conversation' carries the turn-3 detail"
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov5-sf-b6-full-sentence-and-added-detail: sf-b6: the reply never ends at \"I can prepare:\"; the card after \"Create \u2026 from this conversation\" carries the detail added on turn 3 \u2014 OPEN with NO_SELECTION_ON_OPEN_CARD_ENABLED on (the card after \"Create \u2026 from this conversation\" does not carry the turn-3 detail (4:56, customer complaint))": {
+    "category": "INTENDED",
+    "reason": "OPEN case now holds (both modes): the card after 'Create \u2026 from this conversation' carries the turn-3 detail"
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov5-sf-b6-policy-left-for-the-manager: sf-b6: the reply said no source states a policy and it would leave that field for the manager; the saved Policy Violated and Direct policy are not AI-filled \u2014 OPEN in production (the drafting model's tick fills Policy Violated and quotes Direct policy after the reply said it would leave the policy to the manager)": {
+    "category": "INTENDED",
+    "reason": "OPEN case now holds: Policy Violated and Direct policy are not AI-filled after the reply left the policy to the manager"
+  },
+  "src/lib/forms/added-detail-kept.test.ts :: ADDED_DETAIL_KEPT_ENABLED off: the card is left as it is": {
+    "category": "INTENDED-HARNESS",
+    "reason": "the test's own flag-off half runs with the harness's global flag on"
+  },
+  "replay: nov10-sf-b6-card-carries-added-detail [open]": {
+    "category": "INTENDED",
+    "reason": "fails off, holds on: 'Also on the draft:' carries the 4:56pm customer complaint"
+  },
+  "replay: nov5-sf-b6-full-sentence-and-added-detail [fix-open:NO_SELECTION_ON_OPEN_CARD_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "fails off, holds on: 'Also on the draft:' carries the turn-3 detail"
+  },
+  "replay: nov5-sf-b6-full-sentence-and-added-detail [open]": {
+    "category": "INTENDED",
+    "reason": "fails off, holds on: 'Also on the draft:' carries the turn-3 detail"
+  },
+  "replay: nov5-sf-b6-policy-left-for-the-manager [fix:CA_PROCEDURE_BASIS_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "holds (fails off in open mode); only change is the 'Also on the draft:' line with the turn-3 detail"
+  },
+  "replay: nov5-sf-b6-policy-left-for-the-manager [open]": {
+    "category": "INTENDED",
+    "reason": "holds (fails off in open mode); only change is the 'Also on the draft:' line with the turn-3 detail"
+  }
+}
