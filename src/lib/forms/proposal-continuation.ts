@@ -1,4 +1,8 @@
+import { sameRequestKeepsEarlierCardClientEnabled } from "@/lib/config/chat-quality-flags";
 import type { ChatFormInstanceRef, ChatFormProposal, ChatMessage } from "@/types";
+
+/** The sentence <B>'s card carries (`same-request-other-person.ts` withSameRequestNote): the earlier card stays as it is. */
+export const EARLIER_CARD_STAYS = "The earlier card or form stays as it is.";
 
 /**
  * ============================================================================
@@ -173,6 +177,7 @@ export function isProposalSuperseded(messages: readonly ChatMessage[], proposalI
   );
   if (index < 0) return false;
   if (instanceRefFor(messages[index]!, proposalId)) return false;
+  const own = proposalsOf(messages[index]!).find((proposal) => proposal.proposalId === proposalId)!;
   // A sibling card in the SAME message is not newer; only a later turn's card is.
   return messages
     .slice(index + 1)
@@ -180,8 +185,20 @@ export function isProposalSuperseded(messages: readonly ChatMessage[], proposalI
       (message) =>
         message.role === "assistant" &&
         !message.error &&
-        proposalsOf(message).some((proposal) => proposal.proposalId !== proposalId),
+        proposalsOf(message).some((proposal) => proposal.proposalId !== proposalId && !keepsEarlierCard(message, proposal, own.employeeName ?? null)),
     );
+}
+
+/*
+ * SAME_REQUEST_KEEPS_EARLIER_CARD_ENABLED (QA's live check on the sibling app's r19; port): <B>'s card from "the same
+ * thing for <B>" says the earlier card stays as it is, and does not supersede <A>'s card — another person's — so both
+ * stay creatable. A card for the same person, or one that does not say so, supersedes as before.
+ */
+function keepsEarlierCard(later: ChatMessage, proposal: ChatFormProposal, earlierEmployee: string | null): boolean {
+  if (!sameRequestKeepsEarlierCardClientEnabled() || !earlierEmployee) return false;
+  const laterEmployee = proposal.employeeName ?? null;
+  if (!laterEmployee || laterEmployee.trim().toLowerCase() === earlierEmployee.trim().toLowerCase()) return false;
+  return typeof later.content === "string" && later.content.includes(EARLIER_CARD_STAYS);
 }
 
 /** Every proposal a message carries: one card, or one per form it was asked for. */

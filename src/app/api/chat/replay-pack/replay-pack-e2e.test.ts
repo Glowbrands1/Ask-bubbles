@@ -83,6 +83,8 @@ vi.mock("@/lib/knowledge/full-manual-load", async (importOriginal) => {
 });
 
 const state = vi.hoisted(() => ({
+  /** POLICY_CARRY_RETRIEVAL (#180 rebuilt, 12 Nov 2026): every knowledge search's query, in order (`searches`). */
+  knowledgeQueries: [] as string[],
   /** What the slot model reads on the next turns (`slotsRead`), as a production trace shows it. */
   /** Chunks the pinned manual also has, when a case sets them (`manualAlsoHas`); none by default. */
   manualExtra: [] as Record<string, unknown>[],
@@ -384,7 +386,8 @@ vi.mock("@/lib/knowledge/providers/supabase", () => ({
     async search() {
       return [];
     }
-    async match() {
+    async match(query?: { query?: unknown }) {
+      state.knowledgeQueries.push(String(query?.query ?? ""));
       return [];
     }
     async fetchRoleGrounding(role: { id: string }) {
@@ -428,7 +431,10 @@ vi.mock("@/lib/knowledge/providers/supabase", () => ({
 /** A question that is not a form request searches the manual; nothing to embed offline. */
 vi.mock("@/lib/knowledge/recall-match", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/knowledge/recall-match")>()),
-  matchRecallKnowledge: async () => [],
+  matchRecallKnowledge: async (input?: { query?: unknown }) => {
+    state.knowledgeQueries.push(String(input?.query ?? ""));
+    return [];
+  },
 }));
 
 vi.mock("@/lib/knowledge", () => ({
@@ -590,6 +596,20 @@ class Thread {
     this.instanceId = toUuid(result.reference.instanceId);
     return this.instanceId;
   }
+
+  /** Create from the latest card for this person, as pressing Create on that card does (an earlier card still on screen). */
+  async createCard(employeeName: string): Promise<string> {
+    const message = [...this.messages].reverse().find((entry) => entry.formProposal?.employeeName === employeeName);
+    expect(message?.formProposal, `no card for ${employeeName} to create from`).toBeTruthy();
+    const result = await createInlineForm({ proposal: message!.formProposal!, messages: this.messages, call, onCreated: () => {} });
+    this.instanceId = toUuid(result.reference.instanceId);
+    return this.instanceId;
+  }
+
+  /** The chat as the browser holds it (for the browser's own readers). */
+  get conversation() {
+    return this.messages;
+  }
 }
 
 
@@ -616,6 +636,7 @@ beforeEach(async () => {
   state.remapObservation = null;
   state.slotsRead = {};
   state.manualExtra = [];
+  state.knowledgeQueries = [];
   state.reading = {};
   state.draft = { values: {} };
   state.revision = { values: {} };
@@ -715,6 +736,7 @@ function context(): ReplayContext {
     directory: (rows) => {
       state.directory = rows as never;
     },
+    searches: () => [...state.knowledgeQueries],
     fullManual: (document) => {
       fullManual.document = document;
     },

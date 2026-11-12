@@ -13,7 +13,7 @@ import {
   stepBSectionSpacingEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { madeAbout } from "@/lib/ai/make-it-about";
-import { addUnderObserved, hasSections, tailAfterLastSection, withSectionSpacing } from "./outline-sections";
+import { addUnderExpectation, addUnderObserved, hasSections, readsAsAccount, repeatsOldText, tailAfterLastSection, withSectionSpacing } from "./outline-sections";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { isGlossaryTerm } from "@/lib/ai/glossary";
 
@@ -558,11 +558,31 @@ export async function writeFormEdits(instanceId: string, ops: readonly FormEditO
       if (typeof value !== "string" || typeof current !== "string" || current.trim() === "") continue;
       let written = value;
       if (underObserved && how[key] === "add" && hasSections(current)) {
-        written = addUnderObserved(current, value);
-        how[key] = "replace";
+        /*
+         * Gate-Sunny-2 in the sibling app (12 Nov 2026) and QA's ruling (b): an add that is already the whole field (in
+         * sections, or run onto one line before the new sentence) is never inserted into the old field, and only an
+         * account (what happened) goes under Observed; an expectation or instruction keeps the writer's old append.
+         */
+        if (!hasSections(value) && !repeatsOldText(current, value) && readsAsAccount(value)) {
+          written = addUnderObserved(current, value);
+          how[key] = "replace";
+        } else if (!hasSections(value) && !repeatsOldText(current, value)) {
+          // QA's ruling (b), extended: an expectation or instruction goes under "Expectation:" as its own line.
+          const under = addUnderExpectation(current, value);
+          if (under !== null) {
+            written = under;
+            how[key] = "replace";
+          }
+        } else if (hasSections(value)) {
+          const tail = tailAfterLastSection(current, value);
+          if (tail !== null && readsAsAccount(tail)) {
+            written = addUnderObserved(current, tail);
+            how[key] = "replace";
+          }
+        }
       } else if (underObserved && how[key] === "replace") {
         const tail = tailAfterLastSection(current, value);
-        if (tail !== null) written = addUnderObserved(current, tail);
+        if (tail !== null && readsAsAccount(tail)) written = addUnderObserved(current, tail);
       }
       if (spacing && how[key] !== "add") written = withSectionSpacing(current, written);
       set[key] = written;

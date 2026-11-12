@@ -117,7 +117,9 @@ export const NOV5_PAU_SF_S21_S25_TWIN_CASES: ReplayCase[] = [
     id: "nov5-twin-sf-s22-ca-not-coaching",
     title: "sf-s22: \"It needs to be a CA, not a coaching form\" and \"Its a CA\" keep the Corrective Action; another employee's reviewer notes never go into the Observation",
     report: `${REPORT}, sf-s22`,
-    status: { open: "with this app's production flags the first request makes no Corrective Action card" },
+    status: { open: "on production flags \"Make this: <reviewer notes>\" after \"It needs to be a CA\" goes back to the Coaching Form (the first request makes the CA card since main moved on, checked 11 Nov 2026)" },
+    // Fixed under PASTED_REVIEW_NOT_ACCOUNT_ENABLED (coding 6, 10 Nov 2026; port): a pasted review is no account; open on production flags until QA flips it.
+    fixFlags: ["PASTED_REVIEW_NOT_ACCOUNT_ENABLED"],
     async run(t) {
       const thread = start(t);
       const first = await thread.say(
@@ -189,6 +191,36 @@ export const NOV5_PAU_SF_S21_S25_TWIN_CASES: ReplayCase[] = [
       const reply = await thread.say(said[2]!);
       expect(claimsUnsaid(reply, said), `"as you said" for a policy the manager never typed:\n${policyLine(reply)}`).toBeNull();
       expect(observationLine(reply), `the earlier question is in the Observation:\n${observationLine(reply)}`).not.toMatch(/What policy would it be/i);
+    },
+  },
+];
+
+/*
+ * PASTED_REVIEW_NOT_ACCOUNT_ENABLED (coding 6, 10 Nov 2026; port): sf-s22's first two turns, then Create. The draft is
+ * written from the manager's own words: Corwen's reviewer notes, and their signing date, never reach it.
+ */
+const S22_T1 =
+  "create a ca for must see behaviors for performace  this should be for wynne sarrow  - verbal\n146 transactions \nBelow in UPT, Average Sale, Conversion  but i need it to be in the format of Tamsyn ca  it needs to look exactally the same as tamsyns but wtih all of this information";
+
+export const NOV10_TWIN_PASTED_REVIEW_CASES: ReplayCase[] = [
+  {
+    id: "nov10-twin-sf-s22-pasted-review-never-drafted",
+    title: "sf-s22: \"Use this to make it: <a reviewer's notes on Corwen's form>\" → Create: Wynne's CA, drafted without Corwen's notes or their date",
+    report: `${REPORT}, sf-s22`,
+    status: { open: "the draft is handed Corwen's reviewer notes as the account" },
+    fixFlags: ["PASTED_REVIEW_NOT_ACCOUNT_ENABLED"],
+    async run(t) {
+      const thread = start(t);
+      await thread.say(S22_T1);
+      const second = await thread.say(`Use this to make it: ${REVIEWER_NOTES}`);
+      expect(thread.proposal, `the pasted review turned the card into another form:\n${second.content}`).toMatchObject({ templateKey: "dpoa", employeeName: "Wynne Sarrow" });
+      expect(second.content, `the review's signing date is on the card:\n${second.content}`).not.toMatch(/10\/16\/2026/);
+      expect(observationLine(second), `another employee's notes in the Observation:\n${observationLine(second)}`).not.toMatch(/Corwen/i);
+      const id = await thread.create();
+      const described = /WHAT THE MANAGER DESCRIBED:(?:\\n|\n)([\s\S]*?)(?:\\n|\n)FIELDS YOU MAY WRITE/.exec(t.draftPrompts().at(-1) ?? "")?.[1] ?? "";
+      expect(described, "the draft lost Wynne's own facts").toMatch(/146 transactions/);
+      expect(described, "the draft was handed Corwen's reviewer notes").not.toMatch(/Corwen|Kit Coaching Document|resubmit/i);
+      expect(t.values(id).form_date ?? "", "the review's signing date is the form's Date").not.toBe("2026-10-16");
     },
   },
 ];
