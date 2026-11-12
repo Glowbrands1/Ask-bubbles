@@ -4605,3 +4605,16 @@ export function pastedTemplateFieldsToOpenDraftEnabled(): boolean {
 export function groupWordsNotANameEnabled(): boolean {
   return envFlag("GROUP_WORDS_NOT_A_NAME_ENABLED");
 }
+
+/**
+ * LETTER_GREETING_ANY_CASE_ENABLED (coding 6, 10 Nov 2026; default off; QA's
+ * live Bubbles tester, round 11). "… Dear <A>, Your employment with … is
+ * terminated …" kept the salutation with LETTER_GREETING_NOT_NAME on: the
+ * words after the addressee's comma that show the letter has begun were read
+ * in lower case only, and the card's Name was sometimes "Dear <A>". On: they
+ * are read in any case, and "I" is one of them, for the greeting and for
+ * EXIT_LETTER_ADDRESSEE's addressee. See `ai/letter-signer.ts`. Off, as before.
+ */
+export function letterGreetingAnyCaseEnabled(): boolean {
+  return envFlag("LETTER_GREETING_ANY_CASE_ENABLED");
+}
