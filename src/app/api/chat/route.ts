@@ -51,6 +51,7 @@ import {
   formNameFromRosterEnabled,
   offRosterConfirmEnabled,
   resentRequestIsYesEnabled,
+  cardPlanMatchesCreateEnabled,
   offRosterAskBeforeCardEnabled,
   oneFormEachPersonEnabled,
   outlineOnOpenProposalEnabled,
@@ -1067,6 +1068,13 @@ async function postChat(request: Request) {
       }
       // PROPOSAL_NAME_CORRECTION_ENABLED: an off-roster "change her name to …" on the card asks which, never kept silently.
       answer = withCorrectionNotDropped(answer, parsed);
+      // CARD_PLAN_MATCHES_CREATE_ENABLED: an Attendance CA's card shows the plan Create will save (`lib/forms/card-plan-matches-create.ts`).
+      if (cardPlanMatchesCreateEnabled()) {
+        answer = (await import("@/lib/forms/card-plan-matches-create")).withCardPlanAsCreate(answer, [
+          ...parsed.history.filter((turn) => turn.role === "user").map((turn) => turn.content),
+          asked.question,
+        ].join("\n\n"));
+      }
       // OUTLINE_ON_OPEN_PROPOSAL_ENABLED: the outline turn's reply says the outline is kept as her form's layout.
       if (outlineOnProposal) {
         answer = (await import("@/lib/forms/outline-on-proposal")).withOutlineKeptNote(answer, {
