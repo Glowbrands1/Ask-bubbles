@@ -1,0 +1,294 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-future-incident-date-full-lower: \"write up rowan kestrel, written warning, for not attending the monthly meeting on 12-20-26\" (written 10/25/2026) \u2014 the card is never dated 12/20/2026, and the date is asked about \u2014 OPEN in production (the card is dated 12/20/2026, after today, and nothing is asked)": {
+  "category": "INTENDED",
+  "reason": "the OPEN case's first turn now holds (card not dated 12/20/2026, the date is asked); expected-fail wrapper reports failed. See the replay row for the answer turn."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-future-incident-date-full-sentence: \"Write up rowan kestrel, written warning, for not attending the monthly meeting on 12-20-26\" (written 10/25/2026) \u2014 the card is never dated 12/20/2026, and the date is asked about \u2014 OPEN in production (the card is dated 12/20/2026, after today, and nothing is asked)": {
+  "category": "INTENDED",
+  "reason": "the OPEN case's first turn now holds (card not dated 12/20/2026, the date is asked); expected-fail wrapper reports failed. See the replay row for the answer turn."
+ },
+ "replay: nov10-future-incident-date-full-lower [open]": {
+  "category": "REGRESSION",
+  "reason": "turn 2 (the manager's answer 'it was 10-20-26' to the flag's question): the card is rebuilt with Issue 'it was 10-20-26'; turn 1's Issue (the request, 'not attending the monthly meeting on 12-20-26') is lost. The case asserts only the date, so it 'holds'."
+ },
+ "replay: nov10-future-incident-date-full-sentence [open]": {
+  "category": "REGRESSION",
+  "reason": "turn 2 (the manager's answer 'it was 10-20-26' to the flag's question): the card is rebuilt with Issue 'it was 10-20-26'; turn 1's Issue (the request, 'not attending the monthly meeting on 12-20-26') is lost. The case asserts only the date, so it 'holds'."
+ },
+ "replay: nov4-rev7-named-late-opening-keeps-attendance [production]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov5-compound-surname-word1-typo-yes [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov5-compound-surname-word1-typo-yes [production]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov6-b1-its-name [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov6-b1-its-name [production]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov6-b1-my-team-member-then-name-is [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov6-b1-my-team-member-then-name-is [production]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov6-b1-name-with-title-then-name-is [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov6-b1-name-with-title-then-name-is [production]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov6-b1-title-then-her-name-is [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov6-b1-title-then-her-name-is [production]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov6-off-roster-ca-use [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov6-off-roster-ca-use [production]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov6-offer-lowercase-said-back-title-case [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov6-offer-lowercase-said-back-title-case [production]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov6-offer-mixed-case-surname [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov6-offer-mixed-case-surname [production]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov6-one-question-ca [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov6-one-question-ca [production]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov6-policy-change-relevant-remove-attendance [fix:POLICY_CHANGE_RELEVANT_ENABLED]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov6-policy-change-relevant-remove-attendance [production]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov6-roster-shape-apostrophe-exact [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov6-roster-shape-apostrophe-exact [production]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov6-roster-shape-apostrophe-lowercase [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov6-roster-shape-apostrophe-lowercase [production]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov6-roster-shape-compound-surname-exact [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov6-roster-shape-compound-surname-exact [production]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov6-roster-shape-compound-surname-lowercase [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov6-roster-shape-compound-surname-lowercase [production]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov6-roster-shape-preferred-exact [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov6-roster-shape-preferred-exact [production]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov6-roster-shape-preferred-lowercase [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov6-roster-shape-preferred-lowercase [production]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov6-roster-shape-short-surname-exact [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov6-roster-shape-short-surname-exact [production]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov6-roster-shape-short-surname-lowercase [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov6-roster-shape-short-surname-lowercase [production]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov6-roster-shape-two-word-first-exact [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov6-roster-shape-two-word-first-exact [production]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov6-roster-shape-two-word-first-lowercase [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov6-roster-shape-two-word-first-lowercase [production]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov7-second-ca-same-employee-another [fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov7-second-ca-same-employee-another [production]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov7-second-ca-same-employee-another-observation [fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov7-second-ca-same-employee-another-observation [production]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov7-second-ca-same-employee-create [fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov7-second-ca-same-employee-create [production]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov7-second-ca-same-employee-create-observation [fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov7-second-ca-same-employee-create-observation [production]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov7-second-ca-same-employee-not-a-request-1 [fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov7-second-ca-same-employee-not-a-request-1 [production]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov7-second-ca-same-employee-not-a-request-2 [fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov7-second-ca-same-employee-not-a-request-2 [production]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov7-second-ca-same-employee-not-a-request-3 [fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov7-second-ca-same-employee-not-a-request-3 [production]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov7-second-ca-same-employee-separate [fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov7-second-ca-same-employee-separate [production]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov7-second-ca-same-employee-separate-observation [fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov7-second-ca-same-employee-separate-observation [production]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov7-second-ca-single-request-keeps-policy-account-first [fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov7-second-ca-single-request-keeps-policy-account-first [production]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov7-second-ca-single-request-keeps-policy-closing-create [fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov7-second-ca-single-request-keeps-policy-closing-create [production]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov8-complaint-account-issue [fix:COMPLAINT_ACCOUNT_ENABLED]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov8-complaint-account-issue [production]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov8-complaint-account-level [fix:COMPLAINT_ACCOUNT_ENABLED]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov8-complaint-account-level [production]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov8-near-miss-card-kept-make-that-change [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,NEAR_MISS_DETAILS_ACCEPT_ENABLED,NEAR_MISS_QUESTION_RULES_ENABLED]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ },
+ "replay: nov8-near-miss-card-kept-make-that-change [production]": {
+  "category": "INTENDED-HARNESS",
+  "reason": "only change: the flag's question 'The date you gave, 11/2/2026 (or 10/31/2026), is after today (10/26/2026) ...' is added. The case's fixture clock (10/26/2026) predates the date its story writes; the flag reads it correctly as a future date. No other line differs."
+ }
+}
