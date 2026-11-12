@@ -480,4 +480,46 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov6-roster-shape-two-word-first-typo": "FORM_NAME_FROM_ROSTER",
   // Changed on purpose (11 Nov 2026): fixed in production by NEAR_MISS_ANSWER_KEEPS_REQUEST, QA round 16c
   "nov10-near-miss-answer-keeps-request": "NEAR_MISS_ANSWER_KEEPS_REQUEST",
+  // Changed on purpose (12 Nov 2026): fixed in production by TITLE_NOT_PART_OF_NAME, QA round 17h
+  "nov7-sf-s36-exit-surname-typo": "TITLE_NOT_PART_OF_NAME",
+  // Changed on purpose (12 Nov 2026): fixed in production by NOT_FOLLOWING_IS_VIOLATION, QA round 17h
+  "nov10-not-following-dress-code-coaching-cites": "NOT_FOLLOWING_IS_VIOLATION",
+  // Changed on purpose (12 Nov 2026): fixed in production by NOT_FOLLOWING_IS_VIOLATION, QA round 17h
+  "nov10-not-following-dress-code-ca-policy": "NOT_FOLLOWING_IS_VIOLATION",
+  // Changed on purpose (12 Nov 2026): fixed in production by FORM_FOR_FOR_TYPO, QA round 17h
+  "nov10-sf-s36-off-roster-exit": "FORM_FOR_FOR_TYPO",
+  // Changed on purpose (12 Nov 2026): fixed in production by FORM_FOR_FOR_TYPO, QA round 17h
+  "nov11-exit-for-for-is-an-exit-request": "FORM_FOR_FOR_TYPO",
+  // Changed on purpose (12 Nov 2026): fixed in production by TITLE_NOT_PART_OF_NAME, QA round 17h
+  "nov11-title-not-part-of-name": "TITLE_NOT_PART_OF_NAME",
+  // Changed on purpose (12 Nov 2026): fixed in production by TITLE_NOT_PART_OF_NAME, QA round 17h
+  "nov11-title-not-part-of-name-yes-then-card": "TITLE_NOT_PART_OF_NAME",
+  // fixed in production by NAME_LINE_COMMA, QA round 17i, 11 Nov 2026
+  "nov4-live-ca-t2-name-line-on-roster": "NAME_LINE_COMMA",
+  // fixed in production by ADDRESS_ASKS_WHO, QA round 17i, 11 Nov 2026
+  "nov4-live-street-address-not-a-person": "ADDRESS_ASKS_WHO",
+  // fixed in production by LEAD_FULL_SENTENCE, QA round 17i, 11 Nov 2026
+  "nov5-sf-b6-reply-full-sentence": "LEAD_FULL_SENTENCE",
+  // fixed in production by COPY_PASTE_CLAIM_HONEST, QA round 17i, 11 Nov 2026
+  "nov10-copy-paste-claim-not-sent": "COPY_PASTE_CLAIM_HONEST",
+  // fixed in production by TEMPLATE_OUTLINE_FIELDS, QA round 17i, 11 Nov 2026
+  "nov5-twin-sf-s21-must-see-behaviors-template": "TEMPLATE_OUTLINE_FIELDS",
+  // fixed in production by TEMPLATE_OUTLINE_FIELDS, QA round 17i, 11 Nov 2026
+  "nov10-twin-sf-s21-template-outline-saved": "TEMPLATE_OUTLINE_FIELDS",
+  // fixed in production by PASTED_OUTLINE_TO_OPEN_DRAFT, QA round 17i, 11 Nov 2026
+  "nov10-r23-sf-s21-pasted-outline-to-open-draft": "PASTED_OUTLINE_TO_OPEN_DRAFT",
+  // fixed in production by PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT, QA round 17i, 11 Nov 2026
+  "nov11-r25-sf-s21-pasted-template-fills-open-draft": "PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT",
+  // fixed in production by PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT, QA round 17i, 11 Nov 2026
+  "nov11-r25-5c-pasted-steps-keep-line-breaks": "PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT",
+  // fixed in production by GROUP_WORDS_NOT_A_NAME, QA round 17i, 11 Nov 2026
+  "nov11-p19-group-words-not-a-name-as-typed": "GROUP_WORDS_NOT_A_NAME",
+  // fixed in production by GROUP_WORDS_NOT_A_NAME, QA round 17i, 11 Nov 2026
+  "nov11-p19-group-words-not-a-name-lower": "GROUP_WORDS_NOT_A_NAME",
+  // fixed in production by EXIT_TYPO_WORDS, QA round 17j, 12 Nov 2026
+  "nov10-p17-exit-items-and-rehire-misspelled": "EXIT_TYPO_WORDS",
+  // fixed in production by NO_NAME_REPLY_WORDING, QA round 17j, 12 Nov 2026
+  "nov11-live-ima-employee-no-name-words-every-store": "NO_NAME_REPLY_WORDING",
+  // fixed in production by NO_NAME_REPLY_WORDING, QA round 17j, 12 Nov 2026
+  "nov11-live-ima-employee-no-name-words-store-manager": "NO_NAME_REPLY_WORDING",
 };
