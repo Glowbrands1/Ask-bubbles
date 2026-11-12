@@ -64,7 +64,7 @@ export const NOV5_PAU_SF_B6_CASES: ReplayCase[] = [
     // Fixed under NO_SELECTION_ON_OPEN_CARD_ENABLED (port from the sibling app, 10 Nov 2026): no form choice for the card already on screen; open on production flags until QA flips it.
     fixFlags: ["NO_SELECTION_ON_OPEN_CARD_ENABLED"],
     // With the flag the reply no longer ends at "I can prepare:", but here the next card still misses the turn-3 detail (a second defect, not this flag's).
-    fixStatus: { open: "the card after \"Create … from this conversation\" does not carry the turn-3 detail (4:56, customer complaint)" },
+    // Changed on purpose (13 Nov 2026, QA round 17q): ADDED_DETAIL_KEPT is on in production, so the fix-flag run now carries the turn-3 detail; fixStatus dropped.
     async run(t: T) {
       vi.setSystemTime(new Date("2026-11-04T23:30:00Z"));
       t.directory([...STAFF, WYNNE]);

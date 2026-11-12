@@ -30,7 +30,7 @@ import {
   caShortcutWordsEnabled,
   formChoiceStatedEnabled,
   formNameFromRosterEnabled,
-  typedNameEnabled, requestFromNamesEmployeeEnabled, pastedFormNameNotRequestEnabled, formForForTypoEnabled } from "@/lib/config/chat-quality-flags";
+  typedNameEnabled, requestFromNamesEmployeeEnabled, pastedFormNameNotRequestEnabled, formForForTypoEnabled, terminationIntakeEnabled } from "@/lib/config/chat-quality-flags";
 import { foldsToGlossaryTerm } from "@/lib/ai/glossary";
 import { NOT_A_NAME, NOT_A_TYPED_NAME, TYPED_NAME_WORD } from "./name-words";
 import { asksForTeamCoaching } from "./team-subject";
@@ -643,6 +643,11 @@ function leadsWithTheForm(q: string, original: string): boolean {
   // A level may lead: "Written CA for Tess Varga: missed the meeting" (QA, 22 Oct 2026).
   const named = /^\s*(?:please\s+)?(?:(?:verbal|written|final)\s+(?:written\s+)?)?(?:c\.?a\.?|corrective[\s-]+actions?)(?:\s+form)?\s+(?:for|on)\s+(\S+)/i.exec(original);
   if (named !== null && couldBeName(named[1])) return true;
+  // TERMINATION_INTAKE_ENABLED: "Termination CA for <A>, no call no show." — the level the manager states leads too.
+  const termination = terminationIntakeEnabled()
+    ? /^\s*(?:please\s+)?(?:a\s+)?(?:term|termination)\s+(?:c\.?a\.?|c\/a|corrective[\s-]+actions?)(?:\s+form)?\s+(?:for|on)\s+(\S+)/i.exec(original)
+    : null;
+  if (termination !== null && couldBeName(termination[1])) return true;
   /*
    * "ROSALYN CALLOWAY'S CA FOR NO CALL NO SHOW 10/18", "Wren's CA - she was
    * late" (reference platform, 21 October 2026): whose CA it is, then the
@@ -1612,6 +1617,7 @@ function pastedLead(text: string): string | null {
   if (rest.length < 80 || !rest.includes("\n") || !PASTED_LIST.test(rest)) return null;
   return lead[1]!;
 }
+const TERMINATION_LETTER = /\byour\s+employment\b[^.?!\n]{0,80}?\b(?:is|has\s+been|will\s+be|was)\s+(?:hereby\s+)?(?:terminated|ended)\b/i;
 
 export function detectTemplateIntent(rawQuestion: string): TemplateIntent {
   if (pastedFormNameNotRequestEnabled()) {
@@ -1664,6 +1670,16 @@ function readTemplateIntent(rawQuestion: string): TemplateIntent {
    * the negation around it was not.
    */
   if (declinesForm(q)) return { kind: "none" };
+
+  /*
+   * TERMINATION_INTAKE_ENABLED (QA's Bubbles 17k live test, 12 Nov 2026): a pasted termination letter ("Dear <C>, Your
+   * employment with … is terminated effective 11/10/26.") is the manager's record of a separation: the Resignation/Exit
+   * Form, as "exit form for <C>, terminated 11/10/26" is. Only the letter's own sentence — "your employment … is / has
+   * been / will be terminated / ended" — never a question about terminating.
+   */
+  if (terminationIntakeEnabled() && !question.trim().endsWith("?") && TERMINATION_LETTER.test(question)) {
+    return { kind: "explicit", templateKey: EXIT_TEMPLATE_KEY };
+  }
 
   const requested = requestedNaming(q, question);
   if (requested) {

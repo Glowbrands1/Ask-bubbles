@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import PRODUCTION_FLAGS from "@/config/production-flags.json";
 import { continuationFor } from "@/lib/forms/proposal-continuation";
@@ -447,7 +447,9 @@ describe("FORM_EDIT_NOOP_GUARD_ENABLED: the reply after an edit is the saved dif
     const thread = await marnieDraft();
     model.next = { text: "I've updated the form.", tool: { ops: [{ op: "append", field: "observation", value: "she Must Practice the sanitizing checklist every shift." }] } };
     const reply = await thread.say(CA_CHAIN[5]);
-    expect(values(thread.id).observation).toContain("she Must Practice the sanitizing checklist every shift.");
+    // Changed on purpose (12 Nov 2026, QA round 17p): STEP_B_ADD_UNDER_OBSERVED is on in production (#814). An instruction
+    // goes at the end of the Expectation with its first letter capitalised, and an account line goes under Observed.
+    expect(values(thread.id).observation).toMatch(/she must practice the sanitizing checklist every shift\.$/i);
     expect(reply.content).toBe("Updated: Observation of Offense: Observed: Marnie Quill was late to open on October 20, 2026. Expectation: An…");
     expect(reply.content).not.toMatch(/^Changed /);
     expect(reply.formUpdate).toEqual({ instanceId: thread.id, updated: ["observation"] });
@@ -477,7 +479,9 @@ describe("FORM_EDIT_NOOP_GUARD_ENABLED: the reply after an edit is the saved dif
     };
     const reply = await thread.say("tick Other for the offense and add that she was also late on Tuesday");
     // In the form's order (the saved rows, then new keys).
-    expect(reply.content).toBe("Updated: Observation of Offense: Observed: Marnie Quill was late to open on October 20, 2026. Expectation: An…\nUpdated: Type of Offense: Other");
+    // Changed on purpose (12 Nov 2026, QA round 17p): STEP_B_ADD_UNDER_OBSERVED is on in production (#814). An instruction
+    // goes at the end of the Expectation with its first letter capitalised, and an account line goes under Observed.
+    expect(reply.content).toBe("Updated: Observation of Offense: Observed: Marnie Quill was late to open on October 20, 2026. She was also late…\nUpdated: Type of Offense: Other");
   });
 
   it('a clear shows "(cleared)"', async () => {
@@ -595,3 +599,14 @@ describe("FORM_EDIT_NOOP_GUARD_ENABLED with a pure question (Pau's ruling A3)", 
   }
 });
 
+/*
+ * Off-pin (Gate-Bubbles-2's POLICY_CITATION gate, 12 Nov 2026): these expectations are main's with POLICY_CITATION off
+ * (it is off in production); with it on, the reply and the draft gain the quoted manual block. Held off here so a shell
+ * or gate with the flag on cannot change what this file compares.
+ */
+beforeEach(() => {
+  vi.stubEnv("POLICY_CITATION_ENABLED", "");
+});
+afterEach(() => {
+  vi.unstubAllEnvs();
+});

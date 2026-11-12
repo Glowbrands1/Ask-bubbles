@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import PRODUCTION_FLAGS from "@/config/production-flags.json";
 import { continuationFor } from "@/lib/forms/proposal-continuation";
@@ -230,7 +230,23 @@ const STEP_B = ["FORM_PATCH_REDUCER_ENABLED", "FORM_REPLY_FROM_DIFF_ENABLED"] as
  */
 // Changed on purpose (12 Nov 2026, QA round 17l): POLICY_PAGE_ON_CARD is on in production-flags.json now. This file pins
 // it like the Step B flags (env decides, see POLICY_PAGE_ON below), so both arms match the recording the run picks.
-const PRODUCTION = [...PRODUCTION_FLAGS.on, ...PRODUCTION_FLAGS.assumedOn].filter((name) => !([FLAG, ...STEP_B, "FORM_EDIT_TOOL_IN_STREAM_ENABLED", "POLICY_PAGE_ON_CARD_ENABLED"] as readonly string[]).includes(name));
+const FLIPPED_AFTER_FIXTURE: readonly string[] = [
+  // Changed on purpose (13 Nov 2026, QA round 17r): round 17r's flips are left out of this fixture, as each round's are.
+  // FORM_EDIT_SOURCE_TURN adds `formReply` to every reply with a form open, and POLICY_CITATION names the policy in the
+  // Action Plan; the other 17r flags are reply-changing readers the fixture predates.
+  "TEAM_CARD_NOT_PRODUCT_ENABLED",
+  "EXIT_NOTICE_VERB_TYPOS_ENABLED",
+  "TITLE_INITIALISM_CASE_ENABLED",
+  "EXIT_NOTICE_STATED_ONLY_ENABLED",
+  "FORM_EDIT_SOURCE_TURN_ENABLED",
+  "STORE_ALIAS_ENABLED",
+  "MANAGER_FORM_CHOICE_ENABLED",
+  "TYPO_FULL_NAME_TO_ROSTER_ENABLED",
+  "POLICY_CITATION_ENABLED",
+  "ANSWER_TURN_LEVEL_ENABLED",
+  "TERMINATION_CARD_TIDY_ENABLED",
+];
+const PRODUCTION = [...PRODUCTION_FLAGS.on, ...PRODUCTION_FLAGS.assumedOn].filter((name) => !([FLAG, ...STEP_B, "FORM_EDIT_TOOL_IN_STREAM_ENABLED", "POLICY_PAGE_ON_CARD_ENABLED", ...FLIPPED_AFTER_FIXTURE] as readonly string[]).includes(name));
 const TOUCHED = [...new Set([FLAG, ...STEP_B, "FORM_EDIT_TOOL_IN_STREAM_ENABLED", ...PRODUCTION, ...PRODUCTION_FLAGS.off])];
 const saved = new Map<string, string | undefined>();
 
@@ -569,4 +585,16 @@ describe("FORM_EDIT_SINGLE_WRITER_ENABLED off: the same chats, byte for byte", (
   it.runIf(process.env.DUMP_RUNS)("dump", () => {
     for (const [name, text] of Object.entries(runs)) writeFileSync(`${process.env.DUMP_RUNS}/${name}.json`, text);
   });
+});
+
+/*
+ * Off-pin (Gate-Bubbles-2's POLICY_CITATION gate, 12 Nov 2026): these expectations are main's with POLICY_CITATION off
+ * (it is off in production); with it on, the reply and the draft gain the quoted manual block. Held off here so a shell
+ * or gate with the flag on cannot change what this file compares.
+ */
+beforeEach(() => {
+  vi.stubEnv("POLICY_CITATION_ENABLED", "");
+});
+afterEach(() => {
+  vi.unstubAllEnvs();
 });

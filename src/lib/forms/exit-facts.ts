@@ -1,5 +1,5 @@
 import { shiftDays, weekdayOf } from "@/lib/business-date";
-import { exitFulfilledIsLastDayEnabled, exitLetterAddresseeEnabled, exitIntakeFixEnabled, exitShortcutWordsEnabled, exitStatedOnlyEnabled, exitTerminationStatedEnabled, fieldLabelNotAQuestionEnabled, noNoticeNoDateEnabled } from "@/lib/config/chat-quality-flags";
+import { exitFulfilledIsLastDayEnabled, exitLetterAddresseeEnabled, exitIntakeFixEnabled, exitNoticeStatedOnlyEnabled, exitNoticeVerbTyposEnabled, exitShortcutWordsEnabled, exitStatedOnlyEnabled, exitTerminationStatedEnabled, fieldLabelNotAQuestionEnabled, noNoticeNoDateEnabled } from "@/lib/config/chat-quality-flags";
 
 import {
   EXIT_DATE_FIELDS,
@@ -137,6 +137,10 @@ const WEEKDAY = WEEKDAYS.join("|");
 const NEGATED_BEFORE =
   /\b(?:did ?n[o']?t|didn't|does ?n[o']?t|never|failed to|refused to|won't|will not|wasn't|was not|weren't|were not|isn't|is not|not)\s+(?:\w+\s+){0,2}$/;
 
+/** Words that state notice itself — not a bare "resigned" (EXIT_NOTICE_STATED_ONLY_ENABLED). */
+const NOTICE_STATED =
+  /\b(?:notice|two[- ]weeks?|2[- ]weeks?|14[- ]days?|30[- ]days?|resignation\s+letter)\b|\b(?:gave|give|gives|giving|given|provided|put in|submitted|turned in|handed in|sent)\b[^.;!?\n]{0,30}?\bresignation\b/;
+
 /** What a notice period is called. Fulfilling or skipping one reads these. */
 const NOTICE_ONLY = String.raw`(?:notice|two[- ]weeks?'?(?: notice)?|2[- ]weeks?'?(?: notice)?|two[- ]week notice|14[- ]day(?: notice)?|30[- ]day(?: notice)?)`;
 /** And what GIVING notice may be called, which includes handing in a resignation. */
@@ -170,6 +174,35 @@ const BEFORE_CUES: { role: ExitDateRole; pattern: RegExp }[] = [
       /\b(?:last|final)\s+(?:day|shift|date)(?:\s+(?:worked|of work|of employment|on the schedule))?\b|\blast\s+worked\b|\bworked\s+(?:through|thru|until|till)\b/g,
   },
 ];
+
+/*
+ * EXIT_NOTICE_VERB_TYPOS_ENABLED (QA's October triage, 10 Nov 2026: "she
+ * submited her notice on 9/29/26" left the notice date blank). The way
+ * managers misspell "submitted", read as "submitted" is above, before the
+ * date and after it. Off, these cues are not read.
+ */
+const SUBMITTED_TYPO = String.raw`(?:submited|submittted|sumbitted|sumbited|subbmitted|submittd|submtted)`;
+const NOTICE_VERB_TYPO_BEFORE: { role: ExitDateRole; pattern: RegExp } = {
+  role: "noticeGiven",
+  pattern: new RegExp(
+    String.raw`\b${SUBMITTED_TYPO}\b[^.;!?\n]{0,30}?\b${NOTICE_NOUN}|\bnotice\s+(?:was\s+)?${SUBMITTED_TYPO}\b`,
+    "g",
+  ),
+};
+const NOTICE_VERB_TYPO_AFTER: { role: ExitDateRole; pattern: RegExp } = {
+  role: "noticeGiven",
+  pattern: new RegExp(
+    String.raw`^\s*,?\s*(?!(?:we|i|management|the manager|my manager|the company)\b)(?:she|he|they|[a-z][a-z'-]*(?:\s+[a-z][a-z'-]*)?)\s+${SUBMITTED_TYPO}\s+(?:her|his|their|a|an|the)?\s*(?:written\s+)?${NOTICE_NOUN}`,
+  ),
+};
+
+function beforeCues(): readonly { role: ExitDateRole; pattern: RegExp }[] {
+  return exitNoticeVerbTyposEnabled() ? [...BEFORE_CUES, NOTICE_VERB_TYPO_BEFORE] : BEFORE_CUES;
+}
+
+function afterCues(): readonly { role: ExitDateRole; pattern: RegExp }[] {
+  return exitNoticeVerbTyposEnabled() ? [...AFTER_CUES, NOTICE_VERB_TYPO_AFTER] : AFTER_CUES;
+}
 
 /**
  * THE RESIGNATION DATE'S CUE, read alongside the three above. A date is the
@@ -379,8 +412,8 @@ function roleFor(
   text: string,
   tokens: DateToken[],
   position: number,
-  cues: readonly { role: ExitDateRole; pattern: RegExp }[] = BEFORE_CUES,
-  afterCues: readonly { role: ExitDateRole; pattern: RegExp }[] = AFTER_CUES,
+  cues: readonly { role: ExitDateRole; pattern: RegExp }[] = beforeCues(),
+  afterList: readonly { role: ExitDateRole; pattern: RegExp }[] = afterCues(),
 ): ExitDateRole | null {
   const token = tokens[position]!;
   const previousEnd = position > 0 ? tokens[position - 1]!.end : 0;
@@ -401,7 +434,7 @@ function roleFor(
 
   // AFTER: only an anchored phrase, only up to the next date.
   const after = text.slice(token.end, nextStart).toLowerCase();
-  for (const cue of afterCues) {
+  for (const cue of afterList) {
     if (cue.pattern.test(after)) return cue.role;
   }
   return null;
@@ -661,8 +694,8 @@ export function readExitFacts(rawText: string, today: string): ExitFacts {
      * three lines above: "her last day was when she quit on 9/15" is still a
      * last day, and is ALSO the day she quit.
      */
-    const resigned = roleFor(text, tokens, position, [...BEFORE_CUES, RESIGNED_CUE], [
-      ...AFTER_CUES,
+    const resigned = roleFor(text, tokens, position, [...beforeCues(), RESIGNED_CUE], [
+      ...afterCues(),
       RESIGNED_AFTER,
     ]);
     if (resigned === "resigned") place(resigned, token);
@@ -697,7 +730,14 @@ export function readExitFacts(rawText: string, today: string): ExitFacts {
   const earlierNoNotice =
     fieldLabelNotAQuestionEnabled() && !/\bnotice\b/i.test(text) && (readEarlierManagerTurns() ?? []).some((turn) => NO_NOTICE.test(normalize(turn).toLowerCase()));
   const noticeDenied = noNoticeNoDateEnabled() && (NO_NOTICE.test(text.toLowerCase()) || earlierNoNotice);
-  const noticeGiven = noticeDenied ? null : noticeRead;
+  /*
+   * EXIT_NOTICE_STATED_ONLY_ENABLED (QA's Bubbles 17j live test, 12 Nov 2026: "exit form for <A>, she resigned 11/8 …"
+   * printed "Date that notice was given: November 8"): "resigned" is a notice-given cue, so a bare resignation date also
+   * dated the notice. With the flag, that line is filled only when the manager states notice ("gave notice on …", "two
+   * weeks' notice on …", "turned in her resignation letter on …"); the date still stands as the Resignation Date.
+   */
+  const noticeUnstated = exitNoticeStatedOnlyEnabled() && !NOTICE_STATED.test(text.toLowerCase());
+  const noticeGiven = noticeDenied || noticeUnstated ? null : noticeRead;
   let noticeFulfilled = settle("noticeFulfilled");
   const quitDate = settle("resigned");
   /*
