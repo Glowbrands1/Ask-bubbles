@@ -1,0 +1,6 @@
+# Gate-Bubbles-4: #824 CARD_PLAN_MATCHES_CREATE_ENABLED re-gate, head 8dade777 (Coding-6): GO
+- Base main 815ae303 (17o, 357 production flags). Clean merge, tsc clean. 1 OFF + 1 ON, as QA asked (the first head had 3+3: stable).
+- 14569 tests. Changed 195: INTENDED 194, INTENDED-HARNESS 1, REGRESSION 0. The same 192 rows as G4-824, plus the 3 new guards' production arms.
+- The termination regression is fixed. nov12-termination-ticks-{terminating-never-showed, term-ca-did-not-show, so-i-need} (both arms) and the new guards nov12-g4-824-termination-plan-kept-* (both arms) show Pau's plan ending "… further disciplinary review per company policy. Effective immediately, employment is terminated following the progressive corrective action plan.", the plan Create saves.
+- The rest is unchanged from G4-824: the Attendance CA card's plan line becomes Pau's plan. The 17l OPEN cases nov12-17l-card-shows-pau-attendance-plan and nov12-17l-card-plan-equals-saved-plan hold.
+- For QA (Create-side wording, not this PR): on a termination, the saved and now the shown plan both say "<first> is expected to arrive on time … moving forward … A follow-up meeting will be scheduled …" before "Effective immediately, employment is terminated …".
