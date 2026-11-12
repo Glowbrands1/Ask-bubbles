@@ -30,7 +30,7 @@ import {
   caShortcutWordsEnabled,
   formChoiceStatedEnabled,
   formNameFromRosterEnabled,
-  typedNameEnabled, requestFromNamesEmployeeEnabled } from "@/lib/config/chat-quality-flags";
+  typedNameEnabled, requestFromNamesEmployeeEnabled, formForForTypoEnabled } from "@/lib/config/chat-quality-flags";
 import { foldsToGlossaryTerm } from "@/lib/ai/glossary";
 import { NOT_A_NAME, NOT_A_TYPED_NAME, TYPED_NAME_WORD } from "./name-words";
 import { asksForTeamCoaching } from "./team-subject";
@@ -572,8 +572,17 @@ export function canonicalShorthand(text: string): string {
 export { canonicalWarningWording } from "./warning-wording";
 
 /** Every rewrite a form request goes through before it is read. */
+/**
+ * FORM_FOR_FOR_TYPO_ENABLED (B-C3, QA's open-case list, 11 Nov 2026; the sibling app's Pau scan sf-s36): "I need a exit
+ * for for <name> TM. Quit without notice. …" was never read as an exit request — "for for" is "form for" mistyped, and
+ * "exit for for" read as no form at all. A form's name followed by "for for" is read as "<form> form for".
+ */
+const FORM_FOR_FOR = /\b(exit|resignation|coaching|corrective action|ca|c\/a|write-?up|termination|epp|transfer|demotion)\s+for\s+for\b/gi;
+
 export function canonicalFormWording(text: string): string {
-  return canonicalCorrectiveAction(canonicalShorthand(canonicalWarningWording(text)));
+  const canonical = canonicalCorrectiveAction(canonicalShorthand(canonicalWarningWording(text)));
+  // FORM_FOR_FOR_TYPO_ENABLED: "exit for for <name>" is "exit form for <name>".
+  return formForForTypoEnabled() ? canonical.replace(FORM_FOR_FOR, "$1 form for") : canonical;
 }
 
 /** "corrective action" however it was typed; everything else unchanged. */
