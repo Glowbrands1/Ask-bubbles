@@ -1,0 +1,78 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov11-policy-blank-did-you-check: \"did you check the policy on this form?\" over a blank Direct policy: no \"section quoted on <A>'s draft\"; the field is said to be empty \u2014 OPEN in production (the answer says the section is quoted on the draft)": {
+  "category": "INTENDED",
+  "reason": "OPEN case now holds: the blank Direct policy is said to be empty and unchecked (OFF: 'That's the section quoted on Remy's draft' / 'Nothing on the form has changed yet')"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov11-policy-blank-is-it-verified: \"is the policy verified?\" over a blank Direct policy is a question, not an edit: no \"Nothing on the form has changed yet\" \u2014 OPEN in production (the question is answered as an edit (\"Nothing on the form has changed yet\"))": {
+  "category": "INTENDED",
+  "reason": "OPEN case now holds: the blank Direct policy is said to be empty and unchecked (OFF: 'That's the section quoted on Remy's draft' / 'Nothing on the form has changed yet')"
+ },
+ "src/features/chat/inline-form.dom.test.tsx :: P4. finalizing freezes the version the SERVER holds asks once when the policy dialog is the confirmation": {
+  "category": "INTENDED",
+  "twin": "coaching-lifecycle 'on' tests / inline-form 'feedback 10/7 and 10/20'",
+  "reason": "pins the blocking gate for a BLANK policy_language (flag-off behaviour); with POLICY_GATE_NONBLOCKING a blank field is not held for, on purpose. A typed unverified field is still held (policy-verification.ts filters filled)."
+ },
+ "src/lib/forms/blank-policy-fields.test.ts :: blankPolicyFields off: none": {
+  "category": "INTENDED-HARNESS",
+  "reason": "'off' unit test assumes the flag unset; the ON arm exports it"
+ },
+ "src/lib/forms/coaching-lifecycle.test.ts :: a new coaching form B. a blank policy is still worded as unverified": {
+  "category": "INTENDED",
+  "twin": "coaching-lifecycle 'on' tests / inline-form 'feedback 10/7 and 10/20'",
+  "reason": "pins the blocking gate for a BLANK policy_language (flag-off behaviour); with POLICY_GATE_NONBLOCKING a blank field is not held for, on purpose. A typed unverified field is still held (policy-verification.ts filters filled)."
+ },
+ "src/lib/forms/coaching-lifecycle.test.ts :: a new coaching form B. names the fields, so the dialog can list them": {
+  "category": "INTENDED",
+  "twin": "coaching-lifecycle 'on' tests / inline-form 'feedback 10/7 and 10/20'",
+  "reason": "pins the blocking gate for a BLANK policy_language (flag-off behaviour); with POLICY_GATE_NONBLOCKING a blank field is not held for, on purpose. A typed unverified field is still held (policy-verification.ts filters filled)."
+ },
+ "src/lib/forms/coaching-lifecycle.test.ts :: a new coaching form B. refuses an unacknowledged finalize when a policy field is unverified": {
+  "category": "INTENDED",
+  "twin": "coaching-lifecycle 'on' tests / inline-form 'feedback 10/7 and 10/20'",
+  "reason": "pins the blocking gate for a BLANK policy_language (flag-off behaviour); with POLICY_GATE_NONBLOCKING a blank field is not held for, on purpose. A typed unverified field is still held (policy-verification.ts filters filled)."
+ },
+ "src/lib/forms/coaching-lifecycle.test.ts :: a new coaching form C. leaves the form a draft when the manager does not acknowledge": {
+  "category": "INTENDED",
+  "twin": "coaching-lifecycle 'on' tests / inline-form 'feedback 10/7 and 10/20'",
+  "reason": "pins the blocking gate for a BLANK policy_language (flag-off behaviour); with POLICY_GATE_NONBLOCKING a blank field is not held for, on purpose. A typed unverified field is still held (policy-verification.ts filters filled)."
+ },
+ "src/lib/forms/coaching-lifecycle.test.ts :: a new coaching form D. finalizes on an explicit acknowledgement and records the override": {
+  "category": "INTENDED",
+  "twin": "coaching-lifecycle 'on' tests / inline-form 'feedback 10/7 and 10/20'",
+  "reason": "pins the blocking gate for a BLANK policy_language (flag-off behaviour); with POLICY_GATE_NONBLOCKING a blank field is not held for, on purpose. A typed unverified field is still held (policy-verification.ts filters filled)."
+ },
+ "src/lib/forms/coaching-lifecycle.test.ts :: a new coaching form feedback 10/7 and 10/20, off (main): \"not letting me complete it due to policy verification\"": {
+  "category": "INTENDED",
+  "twin": "coaching-lifecycle 'on' tests / inline-form 'feedback 10/7 and 10/20'",
+  "reason": "pins the blocking gate for a BLANK policy_language (flag-off behaviour); with POLICY_GATE_NONBLOCKING a blank field is not held for, on purpose. A typed unverified field is still held (policy-verification.ts filters filled)."
+ },
+ "src/lib/forms/coaching-lifecycle.test.ts :: a new coaching form off: an acknowledged finalize records the override as before, and no blank marker": {
+  "category": "INTENDED",
+  "twin": "coaching-lifecycle 'on' tests / inline-form 'feedback 10/7 and 10/20'",
+  "reason": "pins the blocking gate for a BLANK policy_language (flag-off behaviour); with POLICY_GATE_NONBLOCKING a blank field is not held for, on purpose. A typed unverified field is still held (policy-verification.ts filters filled)."
+ },
+ "src/lib/forms/form-edit-single-writer-flags-off.test.ts :: FORM_EDIT_SINGLE_WRITER_ENABLED off: the same chats, byte for byte (a) and (b) equal main's behaviour with the same script (replies, rows, events)": {
+  "category": "INTENDED-HARNESS",
+  "reason": "main fixture's finalized event: ON records policyBlankAtFinalize + blankPolicy instead of unverifiedPolicy + policyVerificationOverride (POLICY_GATE_NONBLOCKING alone; POLICY_BLANK_HONEST_REPLY alone leaves it equal). Re-record the fixture in the release head."
+ },
+ "src/lib/forms/policy-blank-honest.test.ts :: withBlankPolicyHonesty off: the answer as given": {
+  "category": "INTENDED-HARNESS",
+  "reason": "'off' unit test assumes the flag unset; the ON arm exports it"
+ },
+ "replay: nov10-blank-direct-policy-never-called-verified [fix:POLICY_GATE_NONBLOCKING_ENABLED,NEXT_PUBLIC_POLICY_GATE_NONBLOCKING_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Case fixed at 592b14b7: holds OFF and ON in both arms. ON reply to 'did you check the policy on this form?' says the Direct policy field is empty and nothing on it was checked (OFF: 'A grounded answer from the policy manual.')."
+ },
+ "replay: nov10-blank-direct-policy-never-called-verified [production]": {
+  "category": "INTENDED",
+  "reason": "Case fixed at 592b14b7: holds OFF and ON in both arms. ON reply to 'did you check the policy on this form?' says the Direct policy field is empty and nothing on it was checked (OFF: 'A grounded answer from the policy manual.')."
+ },
+ "replay: nov11-policy-blank-did-you-check [open]": {
+  "category": "INTENDED",
+  "reason": "OPEN case now holds: the blank Direct policy is said to be empty and unchecked (OFF: 'That's the section quoted on Remy's draft' / 'Nothing on the form has changed yet')"
+ },
+ "replay: nov11-policy-blank-is-it-verified [open]": {
+  "category": "INTENDED",
+  "reason": "OPEN case now holds: the blank Direct policy is said to be empty and unchecked (OFF: 'That's the section quoted on Remy's draft' / 'Nothing on the form has changed yet')"
+ }
+}
