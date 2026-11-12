@@ -1,0 +1,26 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-write-up-observation-167: \"write up Marnie Holloway for cell phone use\": the Issue is \"Cell phone use\", not the message \u2014 OPEN in production (Issue: \"write up Marnie Holloway for cell phone use\")": {
+  "category": "INTENDED",
+  "reason": "Open-case it.fails wrapper: inner invariant now holds, so the wrapper reports failed. Holding."
+ },
+ "replay: nov10-r17b-late-opening-quote-not-on-time [fix:LATE_OPENING_OWN_WORDS_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Issue lead drops 'write up <name> for' and keeps the account ('Not opening the store on time on Tuesday'); Store readback kept on the same line; case still holds."
+ },
+ "replay: nov10-r17b-late-opening-quote-not-on-time [production]": {
+  "category": "INTENDED",
+  "reason": "Issue lead drops 'write up <name> for' and keeps the account ('Not opening the store on time on Tuesday'); Store readback kept on the same line; case still holds."
+ },
+ "replay: nov10-write-up-observation-167 [open]": {
+  "category": "INTENDED",
+  "reason": "Open case now holds: **Issue:** 'Cell phone use' instead of the whole request; ' \u00b7 **Store:** \u2026 \u2014 tell me if that should change' readback kept on the Issue line (the 402ae888 regression is fixed)."
+ },
+ "replay: nov6-reopen-write-up-still-creates [fix:REOPEN_BY_ANY_OPEN_VERB_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Issue lead drops 'write up <name> for' and keeps the account ('Not opening the store on time on Tuesday'); Store readback kept on the same line; case still holds."
+ },
+ "replay: nov6-reopen-write-up-still-creates [production]": {
+  "category": "INTENDED",
+  "reason": "Issue lead drops 'write up <name> for' and keeps the account ('Not opening the store on time on Tuesday'); Store readback kept on the same line; case still holds."
+ }
+}
