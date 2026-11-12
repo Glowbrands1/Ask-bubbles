@@ -1373,6 +1373,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "DRAFT_NO_INVENTED_PLAN_ENABLED",
   // REVISION_ARCHIVED_NOT_OPEN (default off): in the list, as every flag a release flips (QA round 17l, 12 Nov 2026).
   "REVISION_ARCHIVED_NOT_OPEN_ENABLED",
+  // POLICY_CARRY_RETRIEVAL (default off; #180 rebuilt on main, 12 Nov 2026): in the list, as every chat flag.
+  "POLICY_CARRY_RETRIEVAL_ENABLED",
 ] as const;
 
 /**
@@ -4725,4 +4727,14 @@ export function wornClothingIsDressCodeEnabled(): boolean {
  */
 export function copyPastePointsToCardEnabled(): boolean {
   return envFlag("COPY_PASTE_POINTS_TO_CARD_ENABLED");
+}
+
+/**
+ * POLICY_CARRY_RETRIEVAL_ENABLED (Code 3, 26 Oct 2026; rebuilt on main by coding 6, 12 Nov 2026; default off; QA item 10,
+ * conv_mvofuq3l2jae1be; same flag in both apps). A go-ahead turn ("just make it", "create it", "yes") is searched with the
+ * policy the manager named earlier, not its own words: "Just make it" found unrelated pages, and the reply denied a
+ * policy it had cited two turns before. Off, the turn is searched as before. The search reads it in `ai/server-ask.ts`.
+ */
+export function policyCarryRetrievalEnabled(): boolean {
+  return envFlag("POLICY_CARRY_RETRIEVAL_ENABLED");
 }

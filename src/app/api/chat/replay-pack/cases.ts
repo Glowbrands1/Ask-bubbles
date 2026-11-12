@@ -38,6 +38,8 @@ export interface ReplayContext {
   thread(): ReplayThread;
   as(role: string, scope: unknown): void;
   directory(rows: readonly DirectoryRow[]): void;
+  /** Every knowledge search's query this case, in order (POLICY_CARRY_RETRIEVAL, 12 Nov 2026). */
+  searches?(): string[];
   /**
    * The full policy manual a policy question reads (`loadFullManualPlan`), as indexed chunks; this case only. Without
    * it the pack reads no manual. Used to put a source excerpt through the production path.
