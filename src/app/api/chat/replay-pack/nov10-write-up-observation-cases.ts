@@ -27,6 +27,10 @@ export const NOV10_WRITE_UP_OBSERVATION_CASES: ReplayCase[] = [
       const issue = (reply.formProposal as { issue?: string | null } | null | undefined)?.issue ?? "";
       expect(issue, `the Issue is the request:\n${reply.content}`).not.toMatch(/\bwrite\s+up\b|\bMarnie\b|\bHolloway\b/i);
       expect(issue, `the Issue lost the account:\n${reply.content}`).toMatch(/^cell phone use\.?$/i);
+      // Gate-Bubbles-5 (R768): the readbacks after the Issue on its line are kept.
+      const issueLine = reply.content.split("\n").find((line) => line.startsWith("**Issue:**")) ?? "";
+      expect(issueLine, `the Store readback was lost:\n${reply.content}`).toMatch(/ · \*\*Store:\*\* Omaha, NE \(West Dodge Rd\)[^\n]*tell me if that should change/);
+      expect(reply.formProposal, "the card's other fields changed").toMatchObject({ locationId: "loc-264" });
     },
   },
 ];

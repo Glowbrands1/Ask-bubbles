@@ -64,7 +64,9 @@ export function withWriteUpLeadNotAccount<T extends { content: string; formPropo
   if (!card?.issue || !card.employeeName) return answer;
   const issue = issueWithoutWriteUpLead(card.issue, card.employeeName);
   if (issue === card.issue) return answer;
-  const line = /^(\*\*Issue:\*\*[ \t]*)(.*)$/m;
+  // Gate-Bubbles-5 (R768): only the Issue segment, up to the first " · ". The card puts other readbacks on the same line
+  // ("**Issue:** … · **Store:** … — tell me if that should change"), and they are kept as they are.
+  const line = /^(\*\*Issue:\*\*[ \t]*)(.*?)(?=[ \t]+·[ \t]|$)/m;
   const content = issue !== null && line.test(answer.content) ? answer.content.replace(line, (_, label: string) => `${label}${issue}`) : answer.content;
   return { ...answer, content, formProposal: { ...card, issue } };
 }

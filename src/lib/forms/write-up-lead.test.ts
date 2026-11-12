@@ -53,6 +53,17 @@ describe("#167: \"write up <employee> for cell phone use\" puts the account in t
     expect(withWriteUpLeadNotAccount(answer).content).toBe("Here is the card.\n**Issue:** Cell phone use\n**Date:** 11/10/26");
   });
 
+  // Gate-Bubbles-5 (R768): the card puts other readbacks on the Issue line; only the Issue segment is replaced.
+  it("on: the Store and Type of warning readbacks on the Issue line are kept, and the other card fields too", () => {
+    const store = "**Store:** Omaha, NE (West Dodge Rd), from Woven (where the employee is assigned) — tell me if that should change";
+    const level = "**Type of warning:** Written Warning, as you said — tell me if that should change";
+    const card = { ...CARD, issue: `write up ${NAME} for cell phone use`, formDate: "2026-11-10", locationId: "loc-264" };
+    const answer = { content: `Here is the card.\n\n**Issue:** write up ${NAME} for cell phone use · ${level} · ${store}\n\nNext.`, formProposal: card };
+    const out = withWriteUpLeadNotAccount(answer);
+    expect(out.content).toBe(`Here is the card.\n\n**Issue:** Cell phone use · ${level} · ${store}\n\nNext.`);
+    expect(out.formProposal).toEqual({ ...card, issue: "Cell phone use" });
+  });
+
   it("off: the answer is the same object", () => {
     vi.stubEnv(FLAG, "");
     const answer = { content: "x", formProposal: { ...CARD, issue: `write up ${NAME} for cell phone use` } };
