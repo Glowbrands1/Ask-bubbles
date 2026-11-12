@@ -1,0 +1,14 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-180-just-make-it-searches-the-named-policy: QA item 10: after \"cite animals in the workplace policy\", T4 \"just make it\" is searched with that policy, never on its own words — OPEN in production (T4 is searched on its own words; no search names the policy)": {
+    "category": "INTENDED",
+    "reason": "QA item 10, open to holding: after \"cite animals in the workplace policy\", T4 \"just make it\" is searched with that policy, never on its own words (the replay harness records the searches)."
+  },
+  "src/lib/ai/policy-carry-retrieval.test.ts :: T4 \"just make it\" off: no carried topic (searched as before)": {
+    "category": "INTENDED-HARNESS",
+    "reason": "Unit test pinning flag-off behaviour (\"off: no carried topic\") without its own stub; with the flag in the env it carries the topic, as designed."
+  },
+  "replay: nov12-180-just-make-it-searches-the-named-policy [open]": {
+    "category": "INTENDED",
+    "reason": "QA item 10, open to holding: after \"cite animals in the workplace policy\", T4 \"just make it\" is searched with that policy, never on its own words (the replay harness records the searches)."
+  }
+}
