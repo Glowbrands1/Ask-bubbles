@@ -1292,6 +1292,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "NO_NAME_REPLY_WORDING_ENABLED",
   // coding 4: TITLE_BEFORE_NAME (Bubbles 17h live test, QA, 11 Nov 2026; default off).
   "TITLE_BEFORE_NAME_ENABLED",
+  // GO_AHEAD_ASKS_WHO_AND_FORM (ported from the sibling app, QA r37 live, 12 Nov 2026; low; default off).
+  "GO_AHEAD_ASKS_WHO_AND_FORM_ENABLED",
   // coding 4: FORMS_ON_FILE_ORDER_MATCH_POSSIBLE (Bubbles 17h live test, QA, 11 Nov 2026; default off).
   "FORMS_ON_FILE_ORDER_MATCH_POSSIBLE_ENABLED",
   "TAKE_OFF_STAYS_CARD_ENABLED",
@@ -5156,4 +5158,15 @@ export function terminationIntakeEnabled(): boolean {
  */
 export function resentRequestIsYesEnabled(): boolean {
   return envFlag("RESENT_REQUEST_IS_YES_ENABLED");
+}
+
+/**
+ * GO_AHEAD_ASKS_WHO_AND_FORM_ENABLED (ported from the sibling app; QA's r37 live check there, 12 Nov 2026; low; same flag
+ * in both apps; default off). After "cite the animals in the workplace policy", "just make it" replied "I need two
+ * things first: which employee … and you'll need to ask for it by name". On: with no card and no form request in the
+ * chat, and a policy named earlier, the reply is one short question — who it is for, and whether it should be a
+ * Corrective Action or a Coaching Form (`forms/go-ahead-ask.ts`). Off, as before.
+ */
+export function goAheadAsksWhoAndFormEnabled(): boolean {
+  return envFlag("GO_AHEAD_ASKS_WHO_AND_FORM_ENABLED");
 }

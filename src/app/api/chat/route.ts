@@ -1063,6 +1063,8 @@ async function postChat(request: Request) {
           asked.question,
         ]);
       }
+      // GO_AHEAD_ASKS_WHO_AND_FORM_ENABLED: "just make it" after a policy question asks one short question (`lib/forms/go-ahead-ask.ts`).
+      answer = (await import("@/lib/forms/go-ahead-ask")).withGoAheadAsk(answer, parsed.history, asked.question);
       // PROPOSAL_NAME_CORRECTION_ENABLED: an off-roster "change her name to …" on the card asks which, never kept silently.
       answer = withCorrectionNotDropped(answer, parsed);
       // OUTLINE_ON_OPEN_PROPOSAL_ENABLED: the outline turn's reply says the outline is kept as her form's layout.
