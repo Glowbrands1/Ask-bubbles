@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import manual151 from "@/test/fixtures/jba-manual-production-151.json";
 
@@ -115,5 +115,23 @@ describe("the card's own policy lines get the page; nothing else changes", () =>
     for (const line of unchanged) expect(withPolicyPagesOnCard(line, CHUNKS)).toBe(line);
     const card = "**Policy:** Standards of Conduct, as you said";
     expect(withPolicyPagesOnCard(card, [])).toBe(card);
+  });
+});
+
+// QA's Bubbles 17m live test (12 Nov 2026): WORN_CLOTHING's read-from-request Dress Code line had no page.
+describe("WORN_CLOTHING_IS_DRESS_CODE_ENABLED: the read-from-request policy line gets its printed page", () => {
+  const LINE = "**Policy:** Dress Code — read from this request. I'll quote that section from the current policy manual on the draft; tell me if a different policy applies.";
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("on: Dress Code is p.15, said beside the heading", () => {
+    vi.stubEnv("WORN_CLOTHING_IS_DRESS_CODE_ENABLED", "true");
+    expect(withPolicyPagesOnCard(LINE, CHUNKS)).toBe(
+      "**Policy:** Dress Code (JBA Policy Manual p.15) — read from this request. I'll quote that section from the current policy manual on the draft; tell me if a different policy applies.",
+    );
+  });
+
+  it("off: the line is left as it was (no page)", () => {
+    vi.stubEnv("WORN_CLOTHING_IS_DRESS_CODE_ENABLED", "");
+    expect(withPolicyPagesOnCard(LINE, CHUNKS)).toBe(LINE);
   });
 });
