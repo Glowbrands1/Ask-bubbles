@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { conductHasReason, OFFENSE_BASIS_PROPERTY, offenseBasisProperty, readOffenseBasis } from "./ca-conduct-reason";
 import { readCaPolicy } from "./ca-policy";
@@ -12,11 +12,14 @@ import { readCaPolicy } from "./ca-policy";
 const B6 = "I need a corrective action form for Wynne Sarrow for counting the drawer early and turning away a customer";
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   delete process.env.CA_PROCEDURE_BASIS_ENABLED;
 });
 
 describe("the store-procedure basis", () => {
   it("off: the tool is as before and store_procedure is not read", () => {
+    // Gate-Bubbles-4 (12 Nov 2026): an off test pins CA_PROCEDURE_BASIS off itself, so it holds with that flag on.
+    vi.stubEnv("CA_PROCEDURE_BASIS_ENABLED", "");
     expect(offenseBasisProperty()).toBe(OFFENSE_BASIS_PROPERTY);
     expect(readOffenseBasis({ offense_basis: "store_procedure" })).toBeNull();
     expect(conductHasReason(readCaPolicy(B6), false, "store_procedure")).toBe(true);
