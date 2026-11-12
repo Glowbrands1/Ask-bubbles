@@ -1334,6 +1334,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "CHAT_STAGE_TIMINGS_ENABLED",
   "EXIT_TYPO_WORDS_ENABLED",
   "CA_REASON_DUE_TO_ENABLED",
+  "REOPEN_IS_OPENING_ENABLED",
   "COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED",
   // coding 6: REQUEST_ISSUE_KEPT, LATE_OPENING_OWN_WORDS, FIRST_NAME_ENOUGH (QA round 17b, 10 Nov 2026; default off).
   "REQUEST_ISSUE_KEPT_ENABLED",
@@ -4855,4 +4856,14 @@ export function caProcedureBasisEnabled(): boolean {
  */
 export function noSelectionOnOpenCardEnabled(): boolean {
   return envFlag("NO_SELECTION_ON_OPEN_CARD_ENABLED");
+}
+
+/**
+ * REOPEN_IS_OPENING_ENABLED (QA's Bubbles 17n live test, 12 Nov 2026; default off; same flag in both apps). "he was late
+ * to reoepn the store on 11/9" cited Attendance p.14 from "late", not Late Opening; "late to reopen the store", spelled
+ * right, did too. On: "late to reopen" and a slip within two letters of "reopen" are a late opening
+ * (`forms/late-open.ts`). Off, as before.
+ */
+export function reopenIsOpeningEnabled(): boolean {
+  return envFlag("REOPEN_IS_OPENING_ENABLED");
 }
