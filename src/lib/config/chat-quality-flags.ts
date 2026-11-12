@@ -1335,6 +1335,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "EXIT_TYPO_WORDS_ENABLED",
   "CA_REASON_DUE_TO_ENABLED",
   "REOPEN_IS_OPENING_ENABLED",
+  "BARE_FORM_NAME_ASKS_WHAT_ENABLED",
   "COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED",
   // coding 6: REQUEST_ISSUE_KEPT, LATE_OPENING_OWN_WORDS, FIRST_NAME_ENOUGH (QA round 17b, 10 Nov 2026; default off).
   "REQUEST_ISSUE_KEPT_ENABLED",
@@ -4866,4 +4867,14 @@ export function noSelectionOnOpenCardEnabled(): boolean {
  */
 export function reopenIsOpeningEnabled(): boolean {
   return envFlag("REOPEN_IS_OPENING_ENABLED");
+}
+
+/**
+ * BARE_FORM_NAME_ASKS_WHAT_ENABLED (QA's Bubbles 17n live test, 12 Nov 2026, 4c; default off; same flag in both apps).
+ * A pasted bare "Corrective Action Form" got "Who is this form for? Tell me the employee's full name." and an empty
+ * card. On: a turn that is only a form's name, with a card naming nobody, asks what the manager needs on that form,
+ * with no card (`forms/bare-form-name.ts`). Off, as before.
+ */
+export function bareFormNameAsksWhatEnabled(): boolean {
+  return envFlag("BARE_FORM_NAME_ASKS_WHAT_ENABLED");
 }

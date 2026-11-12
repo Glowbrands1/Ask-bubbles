@@ -36,6 +36,7 @@ import { answersWhichFormOnFile, mayAskToReopen } from "@/lib/forms/reopen-cue";
 import { parseChatReportContext } from "@/lib/reporting/report-context";
 import { businessToday } from "@/lib/business-date";
 import {
+  bareFormNameAsksWhatEnabled,
   chatLongMessageEnabled,
   draftActionsEnabled,
   formEditHonestReplyEnabled,
@@ -1079,6 +1080,8 @@ async function postChat(request: Request) {
       }
       // LEAD_FULL_SENTENCE_ENABLED: a reply never ends at "I can prepare:" (`lib/forms/lead-full-sentence.ts`).
       if (leadFullSentenceEnabled()) answer = (await import("@/lib/forms/lead-full-sentence")).withLeadFullSentence(answer);
+      // BARE_FORM_NAME_ASKS_WHAT_ENABLED: a turn that is only a form's name asks what the manager needs (`lib/forms/bare-form-name.ts`).
+      if (bareFormNameAsksWhatEnabled()) answer = (await import("@/lib/forms/bare-form-name")).withBareFormNameQuestion(answer, asked.question);
       // ACCOUNT_BEFORE_REQUEST_ENABLED: the account given before the request is handed to the draft (`lib/forms/account-before-request.ts`).
       if (accountBeforeRequestEnabled() && answer.formProposal) {
         answer = (await import("@/lib/forms/account-before-request")).withAccountBeforeRequest(answer, [
