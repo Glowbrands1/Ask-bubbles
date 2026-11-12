@@ -1,4 +1,6 @@
-import { positionAnswerGuardEnabled } from "@/lib/config/chat-quality-flags";
+import { formInputFidelityEnabled, positionAnswerGuardEnabled } from "@/lib/config/chat-quality-flags";
+
+import { spokenDates } from "./relative-date";
 
 /**
  * ============================================================================
@@ -58,6 +60,23 @@ const NOT_A_POSITION = new Set([
 const ANSWERS_ANOTHER_QUESTION =
   /^(?:(?:it|this|that)(?:['’]s|\s+is|\s+will\s+be|\s+should\s+be)\s+)?(?:an?\s+)?(?:(?:verbal|written|final)(?:\s+(?:written\s+)?(?:warning|ca|corrective\s+action))?|(?:yes|no)?[\s,]*(?:payroll|pay\s*roll|payrol)\b.*|\$\s?\d+(?:\.\d{2})?|(?:i\s+)?(?:do\s*n['’]?t|dont|do\s+not)\s+know\b.*)[.!\s]*$/i;
 
+/*
+ * FORM_INPUT_FIDELITY_ENABLED (PR #92, the live replays of 24 Oct 2026; rebuilt on main 11 Nov 2026): with the
+ * position question open, a bare "yesterday" was saved as Job Title "Yesterday". A reply that is only a day — a
+ * calendar date or a spoken one — is the incident's date. Any fixed reference day reads the words; the date itself is
+ * not used here.
+ */
+const DATE_REFERENCE_DAY = "2026-06-15";
+const DATE_FILLER = /\b(?:on|it was|was|the|of)\b/gi;
+
+function saysOnlyADate(text: string): boolean {
+  const found = spokenDates(text, DATE_REFERENCE_DAY).filter((token) => token.iso);
+  if (found.length === 0) return false;
+  let rest = text;
+  for (const token of [...found].sort((a, b) => b.index - a.index)) rest = rest.slice(0, token.index) + " " + rest.slice(token.end);
+  return rest.replace(DATE_FILLER, " ").replace(/[\s.,!]+/g, "") === "";
+}
+
 function titleCase(phrase: string): string {
   return phrase
     .split(/\s+/)
@@ -83,6 +102,8 @@ export function readPositionAnswer(reply: string): string | null {
   if (text === "" || NOT_A_POSITION.has(text.toLowerCase())) return null;
   // POSITION_ANSWER_GUARD_ENABLED: "This is a verbal", "Written", "no payroll deduct" answer other questions.
   if (positionAnswerGuardEnabled() && ANSWERS_ANOTHER_QUESTION.test(String(reply).trim())) return null;
+  // FORM_INPUT_FIDELITY_ENABLED: a bare date ("yesterday", "Oct 20", "10/20") answers the date question, never the position.
+  if (formInputFidelityEnabled() && saysOnlyADate(text)) return null;
   const words = text.split(/\s+/);
   if (words.length > 5 || !/^[A-Za-z][A-Za-z&/'’.\- ]*$/.test(text)) return null;
   return titleCase(text);
