@@ -11,3 +11,5 @@ Asked of coding (non-blocking): give archived-open-revision.test.ts a flag-off p
 
 - instances.ts diff on the merged tree is byte-identical to docs/patches/revision-archived-not-open.patch (Pau, "ok revision archived", 10 Nov).
 - Open replay case ids that now hold: none (the PR adds no replay case; its cover is the forms e2e).
+
+QA, 12 Nov 03:39 UTC: migration 20261110201714 confirmed applied (index has archived_at IS NULL). Condition met: GO.
