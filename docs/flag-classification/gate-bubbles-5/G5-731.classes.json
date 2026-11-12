@@ -1,0 +1,7 @@
+{
+ "src/lib/forms/archived-open-revision.test.ts :: an archived open revision draft, and Edit as new draft again returns that draft, never a duplicate-key error": {
+  "category": "INTENDED-HARNESS",
+  "twin": "src/app/api/forms/finalized-form-revision-e2e.test.ts :: an archived revision draft (QA's audit item 17a, 10 Nov 2026) flag off (production today): the archived revision draft is still the one reopened",
+  "reason": "pins the flag-off answer (the archived draft reopened) and its fake models the OLD index from 20261025233000 (archived drafts counted). ON, findOpenRevision skips the archived draft and the old index refuses the new one: 'Could not open the revision: duplicate key ... form_instances_one_open_revision'. With 20261110201714's narrowed index the PR's e2e twin holds (new draft opened, asked again returns it). Deploy condition: migration before flag."
+ }
+}
