@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { incidentSplitFixEnabled } from "@/lib/config/chat-quality-flags";
 
 import { correctiveActionIssue } from "./incident-issue";
 import { mentionsEarlierWarning, statedWarningLevel } from "./warning-level";
@@ -25,7 +26,10 @@ afterEach(() => vi.unstubAllEnvs());
 describe("COMPLAINT_ACCOUNT: the Issue", () => {
   it("off: the date line is the Issue (the report)", () => {
     flags(false);
-    expect(correctiveActionIssue(TURNS, "Marnie Holloway")).toMatch(/^verbal warning The date she complained/);
+    // Changed on purpose (QA's October triage, 10 Nov 2026): INCIDENT_SPLIT_FIX_ENABLED on (#189) reads the request's account in whole sentences, which already leaves out what this pin reproduces; flag off unchanged.
+    expect(correctiveActionIssue(TURNS, "Marnie Holloway")).toMatch(
+      incidentSplitFixEnabled() ? /^The customer said she was giving her an attitude/ : /^verbal warning The date she complained/,
+    );
   });
 
   it("on: the Issue is the customer's complaint, never the level or the date line", () => {

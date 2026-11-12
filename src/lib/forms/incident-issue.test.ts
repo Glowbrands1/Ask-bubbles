@@ -1,6 +1,16 @@
 import { afterEach, describe, expect, it } from "vitest";
 
+import { incidentSplitFixEnabled } from "@/lib/config/chat-quality-flags";
+
 import { correctiveActionIssue } from "./incident-issue";
+
+/**
+ * Changed on purpose (QA's October triage, 10 Nov 2026): with
+ * INCIDENT_SPLIT_FIX_ENABLED on (#189), the Issue is the request's account in
+ * whole sentences, never who and where, and a later turn counts only when the
+ * request told nothing. Flag off unchanged.
+ */
+const splitFix = () => incidentSplitFixEnabled();
 
 /**
  * 24 Oct 2026 replay, the manager's own sentences. Flags off, the for-clause
@@ -32,7 +42,9 @@ describe("correctiveActionIssue keeps the for-clause when a typed name is not in
 
   it("keeps the person-and-store for-clause", () => {
     delete process.env.TYPED_NAME_ENABLED;
-    expect(correctiveActionIssue(B10, "Testy Testerson")).toBe("team member Testy Testerson at Dodge");
+    expect(correctiveActionIssue(B10, "Testy Testerson")).toBe(
+      splitFix() ? "On 10-16-26 Testy was not properly measuring and weighing product" : "team member Testy Testerson at Dodge",
+    );
   });
 });
 
@@ -41,7 +53,8 @@ describe("correctiveActionIssue reads the offense when a typed name is kept", ()
     process.env.TYPED_NAME_ENABLED = "1";
     expect(correctiveActionIssue(B10, "Testy Testerson")).toMatch(/not properly measuring and weighing product/i);
     const edited = `${B10}\n\nviolation is that on 10-16-26 Testy was not measuring and weighing product`;
-    expect(correctiveActionIssue(edited, "Testy Testerson")).toMatch(/not measuring and weighing product/i);
+    // Flag on: the request already told the account, so the later "violation is" line does not replace it.
+    expect(correctiveActionIssue(edited, "Testy Testerson")).toMatch(splitFix() ? /not properly measuring and weighing product/i : /not measuring and weighing product/i);
   });
 
   it("uses the missed-deadline sentence, not the job title", () => {
