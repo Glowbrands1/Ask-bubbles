@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { draftNoInventedPlanEnabled } from "@/lib/config/chat-quality-flags";
 import { rosterResultFor } from "@/test/roster-result";
@@ -1471,4 +1471,16 @@ describe("date corrections that are ambiguous, combined, or near other dates", (
       }
     });
   }
+});
+
+/*
+ * Off-pin (Gate-Bubbles-2's POLICY_CITATION gate, 12 Nov 2026): these expectations are main's with POLICY_CITATION off
+ * (it is off in production); with it on, the reply and the draft gain the quoted manual block. Held off here so a shell
+ * or gate with the flag on cannot change what this file compares.
+ */
+beforeEach(() => {
+  vi.stubEnv("POLICY_CITATION_ENABLED", "");
+});
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
