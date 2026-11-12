@@ -51,6 +51,7 @@ import {
   offRosterConfirmEnabled,
   offRosterAskBeforeCardEnabled,
   oneFormEachPersonEnabled,
+  nameLastAfterByEnabled,
   groupWordsNotANameEnabled,
   createFromConversationPointsToCardEnabled,
   cardNamesEmployeeEnabled,
@@ -1030,6 +1031,11 @@ async function postChat(request: Request) {
       }
       // PROPOSAL_NAME_CORRECTION_ENABLED: an off-roster "change her name to …" on the card asks which, never kept silently.
       answer = withCorrectionNotDropped(answer, parsed);
+      // NAME_LAST_AFTER_BY_ENABLED: a card name "BY <roster name>" is that roster person (`lib/forms/name-after-by.ts`).
+      if (nameLastAfterByEnabled() && /^by\s/i.test(answer.formProposal?.employeeName ?? "")) {
+        const { loadScopedRoster } = await import("@/lib/forms/employee-roster");
+        answer = (await import("@/lib/forms/name-after-by")).withNameAfterBy(answer, await loadScopedRoster(context.identity.scope).catch(() => []));
+      }
       // NEAR_MISS_QUESTION_RULES_ENABLED: "no, …" to "Is this for <name>?" never gets a card for that name, nor the question again.
       if (nearMissQuestionRulesEnabled()) answer = (await import("@/lib/forms/near-miss-question-rules")).withoutTurnedDownName(answer, asked);
       /*

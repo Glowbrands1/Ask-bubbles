@@ -427,6 +427,18 @@ const NAME_OPEN: Readonly<Record<string, string>> = Object.fromEntries([
   ),
 ]);
 
+/* The roster-name flip (16c): FORM_NAME_FROM_ROSTER with its near-miss rules (QA's audit of open cases, 11 Nov 2026). */
+const ROSTER_SET = ["FORM_NAME_FROM_ROSTER_ENABLED", "NEAR_MISS_QUESTION_RULES_ENABLED", "NEAR_MISS_DETAILS_ACCEPT_ENABLED"];
+/** The open name cases the roster-name flip fixes: every Sentence-case wording off roster, and "BY <NAME>" in caps off roster. */
+const ROSTER_SET_FIXES = /^(?:(?:first|middle|last)-(?:nodate|date)-sentence|last-date-caps)-off-/;
+
+/*
+ * NAME_LAST_AFTER_BY_ENABLED (QA's B-C1, 11 Nov 2026): "… treated rudely … by corin bellweather", lower case or caps,
+ * on roster, is a card for Corin Bellweather (`forms/name-after-by.ts`).
+ */
+const NAME_AFTER_BY = ["NAME_LAST_AFTER_BY_ENABLED"];
+const NAME_AFTER_BY_FIXES = /^last-(?:nodate|date)-(?:lower|caps)-on-/;
+
 const ASKED_WHO = /who is this\b[^?\n]*\bfor\?/i;
 const NOT_ON_TEAM = /(?:couldn'?t|could not|didn'?t|did not) find[^.\n]*(?:roster|team|directory)|not (?:on|in) (?:the|your) (?:woven )?(?:roster|team|directory)/i;
 
@@ -438,7 +450,8 @@ function nameCase(wording: NameWording, onRoster: boolean, mode: Mode): ReplayCa
     title: `"${wording.text}" — ${onRoster ? "on roster: the card is for Corin Bellweather" : "off roster: asks who, invents no one"} (${mode === "code" ? "code only" : "models read the name"})`,
     report: `QA's exact name matrix, 4 Nov 2026: "${wording.text}"`,
     status: open ? { open } : "fixed",
-    fixFlags: [],
+    // QA, 11 Nov 2026: the off-roster misses hold with the roster-name flip (16c, #716); recorded so the flip's gate runs them.
+    fixFlags: open && ROSTER_SET_FIXES.test(key) ? ROSTER_SET : open && NAME_AFTER_BY_FIXES.test(key) ? NAME_AFTER_BY : [],
     async run(t) {
       t.directory(nameRoster(onRoster));
       t.as("location_manager", WEST_DODGE);
