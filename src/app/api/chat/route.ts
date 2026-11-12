@@ -93,6 +93,7 @@ import {
   accountBeforeRequestEnabled,
   emptyReplyGuardEnabled,
   addedDetailKeptEnabled,
+  lateOpeningNeedsOpeningEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { streamWhenSlow } from "@/lib/api/streamed-response";
 import { finalReplyWithoutMarkers } from "@/lib/ai/source-note";
@@ -1067,6 +1068,14 @@ async function postChat(request: Request) {
       // NO_SELECTION_ON_OPEN_CARD_ENABLED: the card on screen is the form; no "I can prepare:" choice offering it again.
       if (noSelectionOnOpenCardEnabled()) {
         answer = (await import("@/lib/forms/no-selection-on-open-card")).withoutSelectionOnOpenCard(answer, parsed.continueProposalTemplateKey);
+      }
+      // LATE_OPENING_NEEDS_OPENING_ENABLED: a closing account is never cited as Late Opening (`lib/forms/late-opening-needs-opening.ts`).
+      if (lateOpeningNeedsOpeningEnabled() && answer.formProposal) {
+        const cited = new Set(answer.formProposal.sourceMessageIds);
+        answer = (await import("@/lib/forms/late-opening-needs-opening")).withLateOpeningNeedsOpening(answer, [
+          ...parsed.history.filter((turn) => turn.role === "user" && turn.id && cited.has(turn.id)).map((turn) => String(turn.content)),
+          asked.question,
+        ]);
       }
       // LEAD_FULL_SENTENCE_ENABLED: a reply never ends at "I can prepare:" (`lib/forms/lead-full-sentence.ts`).
       if (leadFullSentenceEnabled()) answer = (await import("@/lib/forms/lead-full-sentence")).withLeadFullSentence(answer);

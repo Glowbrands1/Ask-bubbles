@@ -1377,6 +1377,9 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // REVISION_ARCHIVED_NOT_OPEN (default off): in the list, as every flag a release flips (QA round 17l, 12 Nov 2026).
   "REVISION_ARCHIVED_NOT_OPEN_ENABLED",
   "ADDED_DETAIL_KEPT_ENABLED",
+  "REOPEN_CLOSE_SPELLING_ENABLED",
+  "PASTED_FORM_NAME_NOT_REQUEST_ENABLED",
+  "LATE_OPENING_NEEDS_OPENING_ENABLED",
 ] as const;
 
 /**
@@ -3134,6 +3137,37 @@ export function draftNoInventedPlanEnabled(): boolean {
  */
 export function addedDetailKeptEnabled(): boolean {
   return envFlag("ADDED_DETAIL_KEPT_ENABLED");
+}
+
+/**
+ * REOPEN_CLOSE_SPELLING_ENABLED (ported from the sibling app, coding 5, 10 Nov 2026; default off; Pau via QA, sf-s26,
+ * 5 Nov 2026). "Edit Thesaly Brant CA" with Thessaly Brandt's CA on file was answered "Who is this form for?". On:
+ * when a reopen request names nobody it can find, the one employee on the forms the manager may open whose every name
+ * word it spells closely (same first letter, one or two letters off) is the one meant, and that form is opened.
+ * Nothing is created or written. See `forms/reopen-close-spelling.ts`. Off, as before.
+ */
+export function reopenCloseSpellingEnabled(): boolean {
+  return envFlag("REOPEN_CLOSE_SPELLING_ENABLED");
+}
+
+/**
+ * PASTED_FORM_NAME_NOT_REQUEST_ENABLED (QA's B4; Pau via QA, sf-s22; coding 5; same flag in both apps; default off).
+ * "Make this:" + a reviewer's pasted notes naming a "Kit Coaching Document" switched the Corrective Action card back to
+ * a Coaching Form. On: a short lead ending in ":" followed by pasted list lines is read for the form from the lead only
+ * (`forms/template-intent.ts`). Off, as before.
+ */
+export function pastedFormNameNotRequestEnabled(): boolean {
+  return envFlag("PASTED_FORM_NAME_NOT_REQUEST_ENABLED");
+}
+
+/**
+ * LATE_OPENING_NEEDS_OPENING_ENABLED (QA's B4; Pau via QA, sf-s25; coding 5; same flag in both apps; default off). A
+ * closing account (scheduled until close, clocked out early, closing work done before close) was cited as Late
+ * Opening. On: a card citing Late Opening when the manager's words say closing and never opening cites no policy
+ * instead (`forms/late-opening-needs-opening.ts`). Off, as before.
+ */
+export function lateOpeningNeedsOpeningEnabled(): boolean {
+  return envFlag("LATE_OPENING_NEEDS_OPENING_ENABLED");
 }
 
 // --- end coding 5 flags ---
