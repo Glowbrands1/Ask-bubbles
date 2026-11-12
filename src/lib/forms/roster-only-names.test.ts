@@ -1,9 +1,10 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AskResponse } from "@/lib/ai/types";
 import type { ChatFormProposal } from "@/types";
 
-import { ASK_WHO, rosterOnlyNames, rosterSpelling } from "./roster-only-names";
+import { installRosterScope } from "./roster-scope";
+import { ASK_WHO, rosterOnlyNames, rosterSpelling, withoutUnseatedName } from "./roster-only-names";
 
 /**
  * Pau, 5 Nov 2026 (FORM_NAME_FROM_ROSTER_ENABLED): only roster people are ever
@@ -51,7 +52,9 @@ describe("the card's employee", () => {
 
   it("a first name that is one roster person's is asked about, never put on the card", () => {
     const out = rosterOnlyNames(reply("I'll draft a **Corrective Action Form** for **Perpetua** from what you've described.", "Perpetua"), ROSTER);
-    expect(out.formProposal?.employeeName).toBeNull();
+    // Changed on purpose (the sibling app's #741 gate, 10 Nov 2026): with ROSTER_NEAR_MISS on the card waits for the
+    // answer (no proposal at all), which is "never put on the card" too.
+    expect(out.formProposal?.employeeName ?? null).toBeNull();
     expect(out.content).toContain("Is this for **Perpetua Thornquist**?");
   });
 
@@ -152,4 +155,70 @@ describe("the gate's regressions: nothing in the reply speaks for a removed empl
     const text = IMA.replace("ima employee, opening", "Dana Lane, opening");
     expect(rosterOnlyNames(reply(text, null), ["Dana Lane"], "create a CA form for Dana Lane, for opening the store late on 9-28-26").content).toContain("Dana Lane, opening");
   });
+});
+
+/*
+ * FORM_NAME_OFF_ROSTER_ASK_ENABLED (the sibling app's #741 gate, 10 Nov 2026; here nov9-possessive-place-other-store):
+ * with the roster-name set on, the possessive-place question quoted "the employee" instead of the place's word: the
+ * unseated-name scrub took "Lee" for the typed name.
+ */
+describe("the possessive-place question keeps the place's word (FORM_NAME_OFF_ROSTER_ASK_ENABLED)", () => {
+  const question = `Who is this **Corrective Action Form** for? "Lee's" is part of a place's name, not a person — tell me the employee's full name, and I'll fill in what you've already described.`;
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("on: \"Lee's\" stays quoted", () => {
+    vi.stubEnv("FORM_NAME_OFF_ROSTER_ASK_ENABLED", "true");
+    expect(withoutUnseatedName(question, ["Lee"], ["Marnie Holloway"])).toBe(question);
+  });
+
+  it("off: scrubbed as before", () => {
+    vi.stubEnv("FORM_NAME_OFF_ROSTER_ASK_ENABLED", "false");
+    expect(withoutUnseatedName(question, ["Lee"], ["Marnie Holloway"])).not.toContain("Lee");
+  });
+});
+
+/*
+ * FORM_NAME_OFF_ROSTER_ASK_ENABLED (the sibling app's #741 eval, 10 Nov 2026): a manager who is not location-scoped keeps a
+ * full name on nobody's roster as typed — on the turn after it too ("create a coaching form for Sarah Test", then "she was
+ * out of dress code"), and typed in lower case ("evangeline pembury, team member at dodge"). A location manager is
+ * still asked. A placeholder ("Test Employee") is never kept.
+ */
+describe("a non-salon manager's typed off-roster name stays (FORM_NAME_OFF_ROSTER_ASK_ENABLED)", () => {
+  const card = (name: string) => reply(`Here is what I would put on a **Coaching Form** for **${name}**.`, name);
+  const scope = (level: string, turns: string[]) => installRosterScope(() => ({ level, managerTurns: turns }));
+  beforeEach(() => {
+    for (const flag of ["FORM_NAME_FROM_ROSTER_ENABLED", "FORM_NAME_OFF_ROSTER_ASK_ENABLED", "OFF_ROSTER_ASK_BEFORE_CARD_ENABLED", "OFF_ROSTER_CONFIRM_ENABLED", "ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED", "ROSTER_NEAR_MISS_ENABLED"]) vi.stubEnv(flag, "true");
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    installRosterScope(() => undefined);
+  });
+
+  it("the turn after the name was typed", () => {
+    scope("global", ["create a coaching form for Sarah Test", "she was out of dress code"]);
+    expect(rosterOnlyNames(card("Sarah Test"), ROSTER, "she was out of dress code").formProposal?.employeeName).toBe("Sarah Test");
+  });
+
+  it("typed in lower case", () => {
+    scope("global", ["evangeline pembury, team member at dodge"]);
+    expect(rosterOnlyNames(card("Evangeline Pembury"), ROSTER, "evangeline pembury, team member at dodge").formProposal?.employeeName).toBe("Evangeline Pembury");
+  });
+
+  it("a location manager is still asked on the turn that types the name", () => {
+    scope("location", ["create a coaching form for Sarah Test"]);
+    expect(rosterOnlyNames(card("Sarah Test"), ROSTER, "create a coaching form for Sarah Test").formProposal?.employeeName ?? null).toBeNull();
+  });
+
+  // Changed on purpose (the sibling app's #741 gate, 10 Nov 2026): after that one ask, production keeps the typed name on the
+  // turns after (OFF_ROSTER_ASK_BEFORE_CARD), so the set does too.
+  it("a location manager's card keeps the name on the turn after the ask", () => {
+    scope("location", ["create a coaching form for Sarah Test", "she was out of dress code"]);
+    expect(rosterOnlyNames(card("Sarah Test"), ROSTER, "she was out of dress code").formProposal?.employeeName).toBe("Sarah Test");
+  });
+
+  it("a placeholder is never kept", () => {
+    scope("global", ["create a coaching form for Test Employee"]);
+    expect(rosterOnlyNames(card("Test Employee"), ROSTER, "create a coaching form for Test Employee").formProposal?.employeeName ?? null).toBeNull();
+  });
+
 });
