@@ -25,9 +25,14 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  checks:
+  # THE TESTS RUN IN PARALLEL JOBS (QA, 12 Nov 2026; as the sibling app since 7 Nov). As one "npm test" step the
+  # "checks" job was cancelled at its 30-minute limit twice (runs 43220339025 and 43275152550): nothing hung —
+  # flags-off-parity.test.ts alone took 1,166 s (19.4 min) in the passing re-run, printing nothing while its six child
+  # Vitest runs went one after another, and it finished last. The "unit" and "flags-off-parity" vitest projects are
+  # exactly what "npm test" (`vitest run`, both projects) runs — nothing skipped — side by side.
+  lint-typecheck:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -39,8 +44,53 @@ jobs:
         run: npm run lint
       - name: Typecheck
         run: npx tsc --noEmit -p .
-      - name: Tests
-        run: npm test
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Tests (vitest project "unit")
+        run: npx vitest run --project unit
+
+  flags-off-parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Tests (vitest project "flags-off-parity")
+        run: npx vitest run --project flags-off-parity
+
+  # "checks" is the REQUIRED CHECK (branch protection and the merge queue name
+  # it). It passes only when every job above succeeded: a failed, cancelled or
+  # skipped job fails it (a skipped required job would otherwise count as a pass).
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [lint-typecheck, unit-tests, flags-off-parity]
+    if: always()
+    steps:
+      - name: Every job passed
+        env:
+          RESULTS: ${{ needs.lint-typecheck.result }} ${{ needs.unit-tests.result }} ${{ needs.flags-off-parity.result }}
+        run: |
+          echo "lint-typecheck, unit-tests, flags-off-parity: $RESULTS"
+          for result in $RESULTS; do
+            if [ "$result" != "success" ]; then
+              echo "::error::A job did not succeed ($result)."
+              exit 1
+            fi
+          done
 
   # The replay eval (evals/): every replay case through the real chat route,
   # flags off (must equal evals/baseline.json) and with the step's flags on

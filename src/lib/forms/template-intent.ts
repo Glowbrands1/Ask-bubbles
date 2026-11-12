@@ -30,10 +30,11 @@ import {
   caShortcutWordsEnabled,
   formChoiceStatedEnabled,
   formNameFromRosterEnabled,
-  typedNameEnabled, requestFromNamesEmployeeEnabled, formForForTypoEnabled } from "@/lib/config/chat-quality-flags";
+  typedNameEnabled, requestFromNamesEmployeeEnabled, pastedFormNameNotRequestEnabled, formForForTypoEnabled, terminationIntakeEnabled } from "@/lib/config/chat-quality-flags";
 import { foldsToGlossaryTerm } from "@/lib/ai/glossary";
 import { NOT_A_NAME, NOT_A_TYPED_NAME, TYPED_NAME_WORD } from "./name-words";
 import { asksForTeamCoaching } from "./team-subject";
+import { leadingTitleLength } from "./title-before-name";
 import { EXIT_TEMPLATE_KEY } from "./exit-library";
 import { canonicalWarningWording, editDistance } from "./warning-wording";
 // No cycle: `warning-level.ts` reaches nothing that imports this module (see `warning-wording.ts`).
@@ -642,6 +643,11 @@ function leadsWithTheForm(q: string, original: string): boolean {
   // A level may lead: "Written CA for Tess Varga: missed the meeting" (QA, 22 Oct 2026).
   const named = /^\s*(?:please\s+)?(?:(?:verbal|written|final)\s+(?:written\s+)?)?(?:c\.?a\.?|corrective[\s-]+actions?)(?:\s+form)?\s+(?:for|on)\s+(\S+)/i.exec(original);
   if (named !== null && couldBeName(named[1])) return true;
+  // TERMINATION_INTAKE_ENABLED: "Termination CA for <A>, no call no show." — the level the manager states leads too.
+  const termination = terminationIntakeEnabled()
+    ? /^\s*(?:please\s+)?(?:a\s+)?(?:term|termination)\s+(?:c\.?a\.?|c\/a|corrective[\s-]+actions?)(?:\s+form)?\s+(?:for|on)\s+(\S+)/i.exec(original)
+    : null;
+  if (termination !== null && couldBeName(termination[1])) return true;
   /*
    * "ROSALYN CALLOWAY'S CA FOR NO CALL NO SHOW 10/18", "Wren's CA - she was
    * late" (reference platform, 21 October 2026): whose CA it is, then the
@@ -1083,7 +1089,9 @@ export function leadingFormRequest(text: string): LeadingFormRequest | null {
 
   const introduced = /^(?:for|about|regarding)\s+(.+)$/i.exec(rest);
   if (introduced) {
-    const words = introduced[1]!.split(" ");
+    const all = introduced[1]!.split(" ");
+    // TITLE_BEFORE_NAME_ENABLED: "for Team Member <name>" — the title says who, the name follows it.
+    const words = all.slice(leadingTitleLength(all));
     return couldBeName(words[0]) ? found(words) : null;
   }
 
@@ -1591,7 +1599,35 @@ function withoutLeadingGlossaryTerm(question: string): string {
   return match && foldsToGlossaryTerm(match[1]!) ? question.slice(match[0].length) : question;
 }
 
+/*
+ * PASTED_FORM_NAME_NOT_REQUEST_ENABLED (QA's B4; Pau via QA, sf-s22, 5 Nov 2026): "Make this:" followed by a reviewer's
+ * pasted notes ("1. **Kit Coaching Document:** This was signed on 10/16/2026 …") switched the Corrective Action card
+ * the manager had just insisted on ("It needs to be a CA, not a coaching form") back to a Coaching Form: "coaching
+ * document" inside the paste read as a request for one. On: when a turn is a short lead ending in ":" ("Make this:",
+ * "Use this to make it:") followed by pasted lines (a numbered or bulleted list, or bold labels), the form is read from
+ * the lead only — a form named inside the paste is something the notes mention, not what the manager asked for.
+ */
+const PASTE_LEAD = /^\s*([^\n:]{1,60}):\s*/;
+const PASTED_LIST = /(?:^|\n)\s*(?:\d+[.)]|[-*•])\s+\S|\*\*[^*\n]{2,60}:?\*\*/;
+
+function pastedLead(text: string): string | null {
+  const lead = PASTE_LEAD.exec(text);
+  if (!lead) return null;
+  const rest = text.slice(lead[0].length);
+  if (rest.length < 80 || !rest.includes("\n") || !PASTED_LIST.test(rest)) return null;
+  return lead[1]!;
+}
+const TERMINATION_LETTER = /\byour\s+employment\b[^.?!\n]{0,80}?\b(?:is|has\s+been|will\s+be|was)\s+(?:hereby\s+)?(?:terminated|ended)\b/i;
+
 export function detectTemplateIntent(rawQuestion: string): TemplateIntent {
+  if (pastedFormNameNotRequestEnabled()) {
+    const lead = pastedLead(rawQuestion);
+    if (lead !== null) return readTemplateIntent(lead);
+  }
+  return readTemplateIntent(rawQuestion);
+}
+
+function readTemplateIntent(rawQuestion: string): TemplateIntent {
   const question = withoutLeadingGlossaryTerm(formChoiceStatedEnabled() ? withoutPolicyReference(rawQuestion) : rawQuestion);
   const q = canonicalFormWording(normalize(question));
   /* A question about forms — compared, explained, or when to use one — is answered, never opened. */
@@ -1634,6 +1670,16 @@ export function detectTemplateIntent(rawQuestion: string): TemplateIntent {
    * the negation around it was not.
    */
   if (declinesForm(q)) return { kind: "none" };
+
+  /*
+   * TERMINATION_INTAKE_ENABLED (QA's Bubbles 17k live test, 12 Nov 2026): a pasted termination letter ("Dear <C>, Your
+   * employment with … is terminated effective 11/10/26.") is the manager's record of a separation: the Resignation/Exit
+   * Form, as "exit form for <C>, terminated 11/10/26" is. Only the letter's own sentence — "your employment … is / has
+   * been / will be terminated / ended" — never a question about terminating.
+   */
+  if (terminationIntakeEnabled() && !question.trim().endsWith("?") && TERMINATION_LETTER.test(question)) {
+    return { kind: "explicit", templateKey: EXIT_TEMPLATE_KEY };
+  }
 
   const requested = requestedNaming(q, question);
   if (requested) {

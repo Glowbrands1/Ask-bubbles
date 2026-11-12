@@ -131,6 +131,8 @@ describe("TRUNCATION_RETRY_BUDGET: a slow first attempt starts no retry", () => 
   }
 
   it("off: a first attempt of 55 s is still retried", async () => {
+    // Pinned off: a run with TRUNCATION_RETRY_BUDGET_ENABLED set must not turn this arm on (QA, 12 Nov 2026).
+    delete process.env.TRUNCATION_RETRY_BUDGET_ENABLED;
     quiet();
     const { call, budgets } = calls(55_000);
     await expect(withTruncationRetry(2048, call, "m")).resolves.toMatchObject({ text: "whole" });

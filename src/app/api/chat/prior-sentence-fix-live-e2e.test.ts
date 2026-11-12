@@ -700,7 +700,13 @@ function withSplitIssue(key: string, expected: Record<string, unknown>): Record<
 
 describe.each(REMAP_RUNS)("%s", (_remapLabel, remap) => {
   describe.each(FIO_RUNS)("production env, flag off, %s: as main", (_fioLabel, fio) => {
-    beforeEach(() => useProfile(false, fio, remap));
+    beforeEach(() => {
+      useProfile(false, fio, remap);
+      // Changed on purpose (R734, 12 Nov 2026): these rows pin main with PRIOR_SENTENCE_FIX off. PRIOR_ACTIONS_NO_COMMA
+      // (default off) lists "I coached her on 10-16" there by design, so it is held off; the rows with the fix on above
+      // still run with whatever the environment sets, and carry R734's guards.
+      delete process.env.PRIOR_ACTIONS_NO_COMMA_ENABLED;
+    });
 
     it.each(Object.entries(PROD_MAIN))("%s", async (key, expected) => {
       const { answer, proposal } = await card(SAID[key as keyof typeof SAID]);

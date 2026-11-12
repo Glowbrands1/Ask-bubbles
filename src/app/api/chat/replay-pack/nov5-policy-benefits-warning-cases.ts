@@ -1,6 +1,6 @@
 import { expect } from "vitest";
 
-import { STAFF, WEST_DODGE, type ReplayCase } from "./cases";
+import { STAFF, WEST_DODGE, type ReplayCase, onStoryClock } from "./cases";
 
 /**
  * ============================================================================
@@ -64,3 +64,6 @@ export const NOV5_POLICY_BENEFITS_WARNING_CASES: ReplayCase[] = [
     },
   },
 ];
+
+// Gate-Bubbles-5 (G5-743): these cases tell a story dated after the pack's 10/26/2026; they run on a day after it.
+onStoryClock(NOV5_POLICY_BENEFITS_WARNING_CASES);

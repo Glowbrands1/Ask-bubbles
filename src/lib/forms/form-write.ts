@@ -11,9 +11,10 @@ import {
   stepBAddUnderObservedEnabled,
   stepBMakeItAboutAccountEnabled,
   stepBSectionSpacingEnabled,
+  addOutOfOtherSectionsEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { madeAbout } from "@/lib/ai/make-it-about";
-import { addUnderObserved, hasSections, tailAfterLastSection, withSectionSpacing } from "./outline-sections";
+import { addUnderExpectation, addUnderObserved, hasSections, insertedInOtherSection, readsAsAccount, repeatsOldText, tailAfterLastSection, withSectionSpacing } from "./outline-sections";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { isGlossaryTerm } from "@/lib/ai/glossary";
 
@@ -558,11 +559,40 @@ export async function writeFormEdits(instanceId: string, ops: readonly FormEditO
       if (typeof value !== "string" || typeof current !== "string" || current.trim() === "") continue;
       let written = value;
       if (underObserved && how[key] === "add" && hasSections(current)) {
-        written = addUnderObserved(current, value);
-        how[key] = "replace";
+        /*
+         * Gate-Sunny-2 in the sibling app (12 Nov 2026) and QA's ruling (b): an add that is already the whole field (in
+         * sections, or run onto one line before the new sentence) is never inserted into the old field, and only an
+         * account (what happened) goes under Observed; an expectation or instruction keeps the writer's old append.
+         */
+        if (!hasSections(value) && !repeatsOldText(current, value) && readsAsAccount(value)) {
+          written = addUnderObserved(current, value);
+          how[key] = "replace";
+        } else if (!hasSections(value) && !repeatsOldText(current, value)) {
+          // QA's ruling (b), extended: an expectation or instruction goes under "Expectation:" as its own line.
+          const under = addUnderExpectation(current, value);
+          if (under !== null) {
+            written = under;
+            how[key] = "replace";
+          }
+        } else if (hasSections(value)) {
+          const tail = tailAfterLastSection(current, value);
+          if (tail !== null && readsAsAccount(tail)) {
+            written = addUnderObserved(current, tail);
+            how[key] = "replace";
+          }
+        }
       } else if (underObserved && how[key] === "replace") {
         const tail = tailAfterLastSection(current, value);
-        if (tail !== null) written = addUnderObserved(current, tail);
+        if (tail !== null) {
+          // QA's ruling (b) (#814): only an account goes under Observed.
+          if (readsAsAccount(tail)) written = addUnderObserved(current, tail);
+        }
+        // ADD_OUT_OF_OTHER_SECTIONS_ENABLED (#708): a sentence glued onto Expectation / Going Forward goes under Observed,
+        // when it is an account (QA round 17q merge: the same ruling (b) as the tail above).
+        else if (addOutOfOtherSectionsEnabled()) {
+          const inserted = insertedInOtherSection(current, value);
+          if (inserted !== null && readsAsAccount(inserted)) written = addUnderObserved(current, inserted);
+        }
       }
       if (spacing && how[key] !== "add") written = withSectionSpacing(current, written);
       set[key] = written;

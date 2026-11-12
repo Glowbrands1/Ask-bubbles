@@ -47,15 +47,22 @@ import {
   personGuardEnabled,
   fieldLabelNotAQuestionEnabled,
   possessivePlaceNotPersonEnabled,
+  writeUpLeadNotAccountEnabled,
   formNameFromRosterEnabled,
   offRosterConfirmEnabled,
+  resentRequestIsYesEnabled,
+  cardPlanMatchesCreateEnabled,
+  answerTurnLevelEnabled,
+  terminationCardTidyEnabled,
   offRosterAskBeforeCardEnabled,
   oneFormEachPersonEnabled,
+  outlineOnOpenProposalEnabled,
   groupWordsNotANameEnabled,
   createFromConversationPointsToCardEnabled,
   cardNamesEmployeeEnabled,
   exitLetterAddresseeEnabled,
   letterGreetingNotNameEnabled,
+  pastedReviewNotAccountEnabled,
   templateOutlineFieldsEnabled,
   exitFormDateFromTerminationEnabled,
   metricGuardEnabled,
@@ -64,12 +71,17 @@ import {
   newRequestOwnTurnsEnabled,
   addressAsksWhoEnabled,
   leadFullSentenceEnabled,
+  formsBelowNeedsFormsEnabled,
   formEditPlainWordsEnabled,
+  formEditSourceTurnEnabled,
+  formsGuideEnabled,
   pastedTemplateFieldsToOpenDraftEnabled,
   payrollDeductAmountFieldEnabled,
   questionNotFormEnabled,
   sameFormCopyEnabled,
   sameFormCopyNewPersonEnabled,
+  teamCardNotProductEnabled,
+  noSelectionOnOpenCardEnabled,
   sameRequestOtherPersonEnabled,
   staffPickerBareAnswerEnabled,
   wholeTeamCoachingEnabled,
@@ -87,10 +99,15 @@ import {
   nearMissQuestionRulesEnabled,
   formNameOffRosterAskEnabled,
   reopenByAnyOpenVerbEnabled,
+  accountBeforeRequestEnabled,
+  emptyReplyGuardEnabled,
+  addedDetailKeptEnabled,
+  lateOpeningNeedsOpeningEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { streamWhenSlow } from "@/lib/api/streamed-response";
 import { finalReplyWithoutMarkers } from "@/lib/ai/source-note";
 import { LONG_MESSAGE_LIMIT } from "@/lib/chat/message-limit";
+import { emptyReplyError, isEmptyReply } from "@/lib/ai/empty-reply";
 import { isClientConversationId } from "@/lib/chat/client-ids";
 import type { AskRequest, AskResponse } from "@/lib/ai/types";
 import type { AnswerMode, ChatMessage } from "@/types";
@@ -249,6 +266,38 @@ async function postChat(request: Request) {
           question: read(asked.question),
           history: asked.history.map((turn) => (turn.role === "user" && typeof turn.content === "string" ? { ...turn, content: read(turn.content) } : turn)),
         };
+      }
+      // OUTLINE_ON_OPEN_PROPOSAL_ENABLED: a pasted outline on an open proposal is no account (`lib/forms/outline-on-proposal.ts`).
+      let outlineOnProposal: { readonly requestId?: string; readonly outlinePeople?: readonly string[] } | null = null;
+      if (outlineOnOpenProposalEnabled()) {
+        const read = (await import("@/lib/forms/outline-on-proposal")).withoutOutlineTurns(asked);
+        if (read) {
+          asked = read.asked;
+          outlineOnProposal = read.outline
+            ? { ...(read.requestId ? { requestId: read.requestId } : {}), ...(read.outlinePeople ? { outlinePeople: read.outlinePeople } : {}) }
+            : null;
+        }
+      }
+      /*
+       * PASTED_REVIEW_NOT_ACCOUNT_ENABLED (Pau's sf-s22, port): a reviewer's notes pasted into a turn ("Please make the
+       * following edits …") are read only for the manager's words before them, in this turn and the earlier ones, so
+       * no reader takes them as the account, the form or the date (`ai/pasted-review.ts`). The stored messages keep them.
+       */
+      if (pastedReviewNotAccountEnabled()) {
+        const { withoutPastedReview } = await import("@/lib/ai/pasted-review");
+        asked = {
+          ...asked,
+          question: withoutPastedReview(asked.question),
+          history: asked.history.map((turn) => (turn.role === "user" && typeof turn.content === "string" ? { ...turn, content: withoutPastedReview(turn.content) } : turn)),
+        };
+      }
+      // RESENT_REQUEST_IS_YES_ENABLED: the same request again while "Is this for <name>?" waits is a yes (`lib/forms/resent-request-is-yes.ts`).
+      if (resentRequestIsYesEnabled()) {
+        asked = (await import("@/lib/forms/resent-request-is-yes")).withResentRequestAsYes(asked) ?? asked;
+      }
+      // ANSWER_TURN_LEVEL_ENABLED: a level said at the end of the answer to the app's own question is this form's (`lib/forms/answer-turn-level.ts`).
+      if (answerTurnLevelEnabled()) {
+        asked = (await import("@/lib/forms/answer-turn-level")).withAnswerTurnLevel(asked) ?? asked;
       }
       /*
        * OFF_ROSTER_CONFIRM_ENABLED: "use <name>" (or "yes") to the offer for a person not in Woven is read as the
@@ -567,7 +616,22 @@ async function postChat(request: Request) {
       // LIST_POLICY_IS_EDIT_ENABLED: "please list the policy" with a form open is an edit (EDIT_POLICY_ASK), never a question.
       const listPolicyEdit =
         listPolicyIsEditEnabled() && (await import("@/lib/ai/list-policy-ask")).listPolicyIsEdit(parsed.question, Boolean(parsed.activeFormInstanceId));
-      const askedQuestion = !listPolicyEdit && questionNotFormEnabled() && isQuestionNotForm(parsed.question, parsed.history);
+      /*
+       * "WHAT IS A CA?", "DIFFERENCE BETWEEN COACHING AND CA", "WHICH FORMS CAN
+       * I CREATE HERE?" — answered from the published templates and the role
+       * matrix, and like any question never written into an open form. Null
+       * for every other sentence, and off unless FORMS_GUIDE_ENABLED. See
+       * `lib/forms/forms-guide.ts`.
+       */
+      const formsGuide =
+        formsGuideEnabled() && !draftAnswer
+          ? await (await import("@/lib/forms/forms-guide-answer")).answerFormsGuide({
+              question: parsed.question,
+              role: context.identity.role,
+            })
+          : null;
+      const askedQuestion =
+        Boolean(formsGuide) || (!listPolicyEdit && questionNotFormEnabled() && isQuestionNotForm(parsed.question, parsed.history));
       /*
        * STEP B (FORM_PATCH_REDUCER_ENABLED + FORM_REPLY_FROM_DIFF_ENABLED): the
        * open form as saved before this turn, so the reply about it can come
@@ -577,6 +641,18 @@ async function postChat(request: Request) {
         formPatchReducerEnabled() && formReplyFromDiffEnabled() && parsed.activeFormInstanceId
           ? await (await import("@/lib/forms/form-snapshot")).snapshotForm(parsed.activeFormInstanceId, request)
           : null;
+      /*
+       * FORM_EDIT_SOURCE_TURN_ENABLED: the open form as saved before this turn
+       * (a plain read), so the reply can say whether this turn changed it, and
+       * a turn of hers it did not write is carried back as `unwritten`. See
+       * `sourceTurn` in `lib/forms/form-content-turn.ts`.
+       */
+      const sourceBefore =
+        formEditSourceTurnEnabled() && parsed.activeFormInstanceId
+          ? await (await import("@/lib/forms/form-noop-reply")).formBeforeTurn(parsed.activeFormInstanceId, request)
+          : null;
+      // Which content reader answered: the manager's own words ("turn"), or a turn she referred back to ("earlier").
+      let contentRead: "turn" | "earlier" | null = null;
       // NAME_CORRECTION_WORDS_ENABLED: the open draft, for "fix her last name …". See `lib/forms/name-correction-words.ts`.
       const nameFix =
         nameCorrectionWordsEnabled() && parsed.activeFormInstanceId
@@ -807,8 +883,10 @@ async function postChat(request: Request) {
                 history: parsed.history,
                 templateName: open.templateName,
                 employeeName: open.employeeName,
+                instanceId: parsed.activeFormInstanceId,
               });
               if (!rewritten) return null;
+              contentRead = rewritten.source;
               const revised = await (await import("@/lib/forms/chat-revision")).reviseActiveForm({
                 request,
                 instanceId: parsed.activeFormInstanceId!,
@@ -869,7 +947,7 @@ async function postChat(request: Request) {
        * See `lib/forms/chat-reopen.ts`.
        */
       const reopened =
-        !sameCopy && !draftAnswer && !correction && !policyChange && !redraft && !revision && !which && (mayAskToReopen(parsed.question, reopenByAnyOpenVerbEnabled()) || (reopenByAnyOpenVerbEnabled() && answersWhichFormOnFile(parsed.history)))
+        !sameCopy && !draftAnswer && !formsGuide && !correction && !policyChange && !redraft && !revision && !which && (mayAskToReopen(parsed.question, reopenByAnyOpenVerbEnabled()) || (reopenByAnyOpenVerbEnabled() && answersWhichFormOnFile(parsed.history)))
           ? await (await import("@/lib/forms/chat-reopen")).reopenRequestedForm({
               request,
               question: parsed.question,
@@ -893,8 +971,11 @@ async function postChat(request: Request) {
           ? await (await import("@/lib/forms/open-form-summary")).describeOpenForm(request, parsed.activeFormInstanceId)
           : null;
       let toolNothing: Awaited<ReturnType<typeof answerQuestion>> | null = null;
+      // The ordinary answer, when no path above answered (FORM_EDIT_SOURCE_TURN_ENABLED reads it).
+      let ordinaryAnswer: AskResponse | null = null;
       answer =
         draftAnswer ??
+        formsGuide ??
         correction ??
         // A name correction this form does not take in chat: said plainly, never a model's "updated".
         (nameFix && !correction ? (await import("@/lib/forms/name-correction-words")).nameNotCorrectedReply(nameFix.open, nameFix.question) : null) ??
@@ -907,7 +988,7 @@ async function postChat(request: Request) {
         // FORM_EDIT_TOOL_IN_STREAM_ENABLED: the tool was called and wrote nothing — said so, never the model's text.
         (toolNothing = formEditTool?.calledWithoutEdit() ? (await import("@/lib/forms/form-edit-tool")).nothingChangedAnswer() : null) ??
         toolMain ??
-        (await answerQuestion(
+        (ordinaryAnswer = await answerQuestion(
           // FORM_EDIT_TOOL_IN_STREAM_ENABLED: a turn the tool was not offered on carries only its trace.
           { ...parsed, openForm, ...(formEditTool && !formEditTool.turn.offer ? { formEditTool: formEditTool.turn } : {}) },
           {
@@ -962,6 +1043,48 @@ async function postChat(request: Request) {
         const formAfter = await snapshot.snapshotForm(formBefore.instanceId, request);
         if (formAfter) answer = snapshot.checkedClaim(answer, formBefore, formAfter);
       }
+      /*
+       * FORM_EDIT_SOURCE_TURN_ENABLED: did this turn change the open form (read
+       * again, compared with `sourceBefore`)? If it did not, the manager's turn
+       * a content path took and did not write is `unwritten` (a turn about the
+       * form itself is not); an earlier one still pending is carried forward.
+       * And an ordinary answer, with her words still not on the draft, is
+       * replaced by a reply built from the saved state — never left to the
+       * claim guard's list of phrasings ("It should update automatically — no
+       * copy-and-paste needed").
+       */
+      let formReply: AskResponse["formReply"] | undefined;
+      let unwrittenAnswered = false;
+      if (sourceBefore && parsed.activeFormInstanceId) {
+        const content = await import("@/lib/forms/form-content-turn");
+        const after = await (await import("@/lib/forms/form-noop-reply")).formBeforeTurn(parsed.activeFormInstanceId, request);
+        const { snapshotDiff } = await import("@/lib/forms/form-snapshot");
+        const changed = !after || snapshotDiff(sourceBefore, after).length > 0;
+        const pending = content.pendingUnwritten(parsed.history, parsed.activeFormInstanceId);
+        const ownTurn = contentRead === "turn" || (!plainRevision && revision !== null);
+        const unwritten = changed ? null : ((ownTurn ? content.unwrittenTurn(parsed.question) : null) ?? pending);
+        const ordinary = answer === ordinaryAnswer || (toolMain !== null && answer === toolMain);
+        formReply = { instanceId: parsed.activeFormInstanceId, ...(unwritten ? { unwritten } : {}) };
+        // #480 gate: a question about reopening the form, or an acknowledgement, is answered as asked, never as "not on the form".
+        if (!changed && pending && ordinary && !answer.formUpdate && sourceBefore.status === "draft" && !content.notContentForTheForm(parsed.question)) {
+          const open = await (await import("@/lib/forms/open-form-summary")).describeOpenForm(request, parsed.activeFormInstanceId);
+          if (open && open.status === "draft") {
+            answer = {
+              ...answer,
+              content: content.unwrittenReply({
+                unwritten: pending,
+                templateName: open.templateName,
+                employeeName: open.employeeName,
+                canWrite: /\bcoaching\b/i.test(open.templateName),
+                citedAnswer: answer.citations.length > 0 ? answer.content : null,
+              }),
+            };
+            unwrittenAnswered = true;
+          }
+        }
+        // #480 gate: an ordinary answer that changed nothing is marked as one, so a later "these details" may mean it.
+        if (ordinary && !unwrittenAnswered && !changed && !answer.formUpdate) formReply = { ...formReply, answer: true };
+      }
       // NEW_REQUEST_OWN_TURNS_ENABLED: a new request for the same person is drafted from its own turns. See `lib/forms/new-request-turns.ts`.
       if (newRequestOwnTurnsEnabled() && answer.formProposal) {
         answer = (await import("@/lib/forms/new-request-turns")).withOwnRequestTurns(answer, [
@@ -984,6 +1107,17 @@ async function postChat(request: Request) {
         ]);
       }
       // PERSON_GUARD_ENABLED: whichever reader named the card's employee, a name that is not a person never stays on it.
+      // TEAM_CARD_NOT_PRODUCT_ENABLED: a team coaching card's "Spray Tan Kits" is the topic, not a person (`lib/forms/team-card-not-product.ts`).
+      if (teamCardNotProductEnabled() && answer.formProposal?.employeeName) {
+        const { loadScopedRoster } = await import("@/lib/forms/employee-roster");
+        answer = (await import("@/lib/forms/team-card-not-product")).withTeamCardNotProduct(answer, {
+          turns: [
+            ...parsed.history.filter((turn) => turn.role === "user").map((turn) => ({ id: turn.id, content: String(turn.content ?? "") })),
+            { id: parsed.questionMessageId, content: parsed.question },
+          ],
+          roster: await loadScopedRoster(context.identity.scope).catch(() => []),
+        });
+      }
       if (personGuardEnabled()) answer = (await import("@/lib/forms/person-guard")).withPersonOnCard(answer);
       // POSSESSIVE_PLACE_NOT_PERSON_ENABLED: "Lee's Summit Plaza" never puts "Lee" on the card (`lib/forms/possessive-place.ts`).
       if (possessivePlaceNotPersonEnabled()) {
@@ -992,6 +1126,8 @@ async function postChat(request: Request) {
           asked.question,
         ]);
       }
+      // WRITE_UP_LEAD_NOT_ACCOUNT_ENABLED: "write up <employee> for cell phone use" gives the Issue "Cell phone use" (`lib/forms/write-up-lead.ts`).
+      if (writeUpLeadNotAccountEnabled()) answer = (await import("@/lib/forms/write-up-lead")).withWriteUpLeadNotAccount(answer);
       // EXIT_FORM_DATE_FROM_TERMINATION_ENABLED: a stated "terminated, effective <date>" dates the exit card (`lib/forms/exit-form-date.ts`).
       if (exitFormDateFromTerminationEnabled()) {
         answer = (await import("@/lib/forms/exit-form-date")).withExitFormDateFromTermination(
@@ -1007,8 +1143,29 @@ async function postChat(request: Request) {
           asked.question,
         ]);
       }
+      // TYPO_FULL_NAME_TO_ROSTER_ENABLED: the level said after "Is this for <name>?" is the card's (`lib/forms/confirmed-name-level.ts`).
+      answer = (await import("@/lib/forms/confirmed-name-level")).withConfirmedNameLevel(answer, parsed.history, asked.question);
       // PROPOSAL_NAME_CORRECTION_ENABLED: an off-roster "change her name to …" on the card asks which, never kept silently.
       answer = withCorrectionNotDropped(answer, parsed);
+      // CARD_PLAN_MATCHES_CREATE_ENABLED: an Attendance CA's card shows the plan Create will save (`lib/forms/card-plan-matches-create.ts`).
+      if (cardPlanMatchesCreateEnabled()) {
+        answer = (await import("@/lib/forms/card-plan-matches-create")).withCardPlanAsCreate(answer, [
+          ...parsed.history.filter((turn) => turn.role === "user").map((turn) => turn.content),
+          asked.question,
+        ].join("\n\n"));
+      }
+      // TERMINATION_CARD_TIDY_ENABLED: an Issue that is only a hedge about terminating is the account (`lib/ai/termination-card-tidy.ts`).
+      if (terminationCardTidyEnabled()) {
+        answer = (await import("@/lib/ai/termination-card-tidy")).withIssueNotTerminationHedge(answer, asked.question);
+      }
+      // OUTLINE_ON_OPEN_PROPOSAL_ENABLED: the outline turn's reply says the outline is kept as her form's layout.
+      if (outlineOnProposal) {
+        answer = (await import("@/lib/forms/outline-on-proposal")).withOutlineKeptNote(answer, {
+          outlineTurnId: parsed.questionMessageId,
+          requestId: outlineOnProposal.requestId,
+          outlinePeople: outlineOnProposal.outlinePeople,
+        });
+      }
       // NEAR_MISS_QUESTION_RULES_ENABLED: "no, …" to "Is this for <name>?" never gets a card for that name, nor the question again.
       if (nearMissQuestionRulesEnabled()) answer = (await import("@/lib/forms/near-miss-question-rules")).withoutTurnedDownName(answer, asked);
       /*
@@ -1023,6 +1180,8 @@ async function postChat(request: Request) {
         !answer.formUpdate
         // FORM_PATCH_REDUCER_ENABLED: a patch turn's reply is already the realized diff.
         && !patchTurn
+        // FORM_EDIT_SOURCE_TURN_ENABLED: already the reply from the saved state.
+        && !unwrittenAnswered
       ) {
         const honest = (await import("@/lib/forms/form-content-turn")).honestFormReply(answer.content, formEditPlainWordsEnabled());
         if (honest) answer = { ...answer, content: honest };
@@ -1037,8 +1196,36 @@ async function postChat(request: Request) {
         void _dropped;
         answer = { ...rest, content: rest.content.replace(/\n*Based on what you've described, I can prepare:\s*$/, "").trimEnd() };
       }
+      // ADDED_DETAIL_KEPT_ENABLED: "can you have it include that …" stays in the card's turns and shows on the card (`lib/forms/added-detail-kept.ts`).
+      if (addedDetailKeptEnabled() && answer.formProposal) {
+        answer = (await import("@/lib/forms/added-detail-kept")).withAddedDetailKept(answer, [
+          ...parsed.history,
+          { id: parsed.questionMessageId, role: "user", content: asked.question },
+        ]);
+      }
+      // NO_SELECTION_ON_OPEN_CARD_ENABLED: the card on screen is the form; no "I can prepare:" choice offering it again.
+      if (noSelectionOnOpenCardEnabled()) {
+        answer = (await import("@/lib/forms/no-selection-on-open-card")).withoutSelectionOnOpenCard(answer, parsed.continueProposalTemplateKey);
+      }
+      // LATE_OPENING_NEEDS_OPENING_ENABLED: a closing account is never cited as Late Opening (`lib/forms/late-opening-needs-opening.ts`).
+      if (lateOpeningNeedsOpeningEnabled() && answer.formProposal) {
+        const cited = new Set(answer.formProposal.sourceMessageIds);
+        answer = (await import("@/lib/forms/late-opening-needs-opening")).withLateOpeningNeedsOpening(answer, [
+          ...parsed.history.filter((turn) => turn.role === "user" && turn.id && cited.has(turn.id)).map((turn) => String(turn.content)),
+          asked.question,
+        ]);
+      }
       // LEAD_FULL_SENTENCE_ENABLED: a reply never ends at "I can prepare:" (`lib/forms/lead-full-sentence.ts`).
       if (leadFullSentenceEnabled()) answer = (await import("@/lib/forms/lead-full-sentence")).withLeadFullSentence(answer);
+      // FORM_EDIT_SOURCE_TURN_ENABLED: every reply with a form open says so; the browser sends it back with the history.
+      if (formReply) answer = { ...answer, formReply };
+      // ACCOUNT_BEFORE_REQUEST_ENABLED: the account given before the request is handed to the draft (`lib/forms/account-before-request.ts`).
+      if (accountBeforeRequestEnabled() && answer.formProposal) {
+        answer = (await import("@/lib/forms/account-before-request")).withAccountBeforeRequest(answer, [
+          ...parsed.history,
+          { id: parsed.questionMessageId, role: "user", content: asked.question },
+        ]);
+      }
       // OFF_ROSTER_ASK_BEFORE_CARD_ENABLED: a store manager's card for a full name not on their roster is asked about once, before the card (`lib/forms/off-roster-ask.ts`).
       if (offRosterAskBeforeCardEnabled()) {
         answer = (await import("@/lib/forms/off-roster-ask")).withOffRosterAskBeforeCard(answer, { scope: context.identity.scope, history: parsed.history, question: asked.question });
@@ -1056,6 +1243,12 @@ async function postChat(request: Request) {
       }
       // SAME_REQUEST_OTHER_PERSON_ENABLED: <B>'s card says what of the earlier request it carries.
       if (sameRequestOther) answer = (await import("@/lib/forms/same-request-other-person")).withSameRequestNote(answer, sameRequestOther);
+      /*
+       * NEVER A BLANK ANSWER (EMPTY_REPLY_GUARD_ENABLED). An answer with no
+       * prose and no card is a failure, said as one: the turn closes as failed
+       * below and the thread shows an error card, not an empty bubble.
+       */
+      if (emptyReplyGuardEnabled() && isEmptyReply(answer)) throw emptyReplyError();
     } catch (error) {
       /*
        * A FAILED ANSWER IS STILL A RECORDED TURN, closed as a failure. The row
@@ -1120,6 +1313,8 @@ async function postChat(request: Request) {
       if (note) answer = { ...answer, content: outline.withPolicyKeptNote(answer.content, note) };
     }
     // FINAL_REPLY_MARKER_GUARD_ENABLED: no bare source tag reaches the manager, whatever path answered. See `ai/source-note.ts`.
+    // FORMS_BELOW_NEEDS_FORMS_ENABLED: "… one of the forms below." only with forms below it (`lib/forms/lead-full-sentence.ts`).
+    if (formsBelowNeedsFormsEnabled()) answer = (await import("@/lib/forms/lead-full-sentence")).withFormsBelowOnlyWithForms(answer);
     return NextResponse.json({ ...finalReplyWithoutMarkers(answer), turnId });
   } catch (error) {
     return errorResponse(error, "POST /api/chat");
@@ -1141,7 +1336,8 @@ function parseAskRequest(body: Partial<AskRequest>): AskRequest {
       ? requireChatQuestion(body.question, LONG_MESSAGE_LIMIT)
       : requireString(body.question, "A question", LIMITS.question),
     mode: optionalEnum<AnswerMode>(body.mode, MODES, "standard"),
-    history: parseHistory(body.history, { refuseOverlong: chatLongMessageEnabled() }) as ChatMessage[],
+    // FORM_EDIT_SOURCE_TURN_ENABLED: each turn keeps its `card` and `formReply` markers (`sourceTurn`).
+    history: parseHistory(body.history, { refuseOverlong: chatLongMessageEnabled(), markers: formEditSourceTurnEnabled() }) as ChatMessage[],
     questionMessageId: optionalString(body.questionMessageId, LIMITS.messageId) || undefined,
     /*
      * A TEMPLATE KEY, BOUNDED, AND NOTHING ELSE. It says which kind of form the

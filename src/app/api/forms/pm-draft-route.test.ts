@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { draftNoInventedPlanEnabled } from "@/lib/config/chat-quality-flags";
 import { parseFormDocument } from "@/lib/forms/document";
 import { TEMPLATE_SEEDS } from "@/lib/forms/library";
 
@@ -782,7 +783,9 @@ describe("the Corrective Action Form's generation behaviour", () => {
       expect(observation).not.toMatch(/not in compliance/i);
       expect(observation).not.toMatch(/dress code policy/i);
       expect(observation).toContain("Expectation:");
-      expect(observation).toContain("Going Forward:");
+      // DRAFT_NO_INVENTED_PLAN_ENABLED (intended change, QA 25-26 Oct 2026): on the Corrective Action Form the model's "Going Forward" is dropped — the plan is the manager's Action Plan. Off, it stays as before.
+      if (draftNoInventedPlanEnabled()) expect(observation).not.toContain("Going Forward:");
+      else expect(observation).toContain("Going Forward:");
       expect(payload.policyClaims).toEqual({ adjusted: ["observation"], emptied: [] });
 
       /*
@@ -1019,7 +1022,9 @@ describe("the mini-skirt case, end to end", () => {
     // The concurrent narrative shape is untouched.
     expect(observation).toContain("Observed:");
     expect(observation).toContain("Expectation:");
-    expect(observation).toContain("Going Forward:");
+    // DRAFT_NO_INVENTED_PLAN_ENABLED (intended change, QA 25-26 Oct 2026): on the Corrective Action Form the model's "Going Forward" is dropped — the plan is the manager's Action Plan. Off, it stays as before.
+    if (draftNoInventedPlanEnabled()) expect(observation).not.toContain("Going Forward:");
+    else expect(observation).toContain("Going Forward:");
   });
 
   it("fills Policy Violated from the tick and leaves the manual unnamed", async () => {
@@ -2150,4 +2155,16 @@ describe("FORM_EDIT_SINGLE_WRITER_ENABLED: the post-draft consistency check", ()
     expect(String(payload.notice ?? "")).not.toContain("left out");
     expect(check).toBeUndefined();
   });
+});
+
+/*
+ * Off-pin (Gate-Bubbles-2's POLICY_CITATION gate, 12 Nov 2026): these expectations are main's with POLICY_CITATION off
+ * (it is off in production); with it on, the reply and the draft gain the quoted manual block. Held off here so a shell
+ * or gate with the flag on cannot change what this file compares.
+ */
+beforeEach(() => {
+  vi.stubEnv("POLICY_CITATION_ENABLED", "");
+});
+afterEach(() => {
+  vi.unstubAllEnvs();
 });

@@ -76,3 +76,100 @@ export function withSectionSpacing(old: string, next: string): string {
   }
   return out.join("\n");
 }
+
+/**
+ * Gate-Sunny-2 in the sibling app (12 Nov 2026): the added text repeats a line of the old field's own text (the reader echoed the field,
+ * on one line or in sections, before the new sentence). Such an add is left to the writer's own handling
+ * (ADD_NOT_REPEATED), never moved under Observed whole.
+ */
+export function repeatsOldText(old: string, added: string): boolean {
+  const said = squash(added);
+  return lines(old)
+    .filter((line) => line.trim() !== "" && !HEADING.test(line))
+    .some((line) => {
+      const bare = squash(line);
+      return bare.length >= 12 && said.includes(bare);
+    });
+}
+
+/*
+ * QA's ruling (b), 12 Nov 2026: only an add that reads as an account (what happened) goes under Observed. An
+ * expectation or instruction ("she must practice the sanitizing checklist every shift", "needs to clock in on time",
+ * "she will set a reminder") keeps the writer's old append, and is never lower-cased into the Observed paragraph.
+ */
+const EXPECTATION_OR_INSTRUCTION =
+  /\b(?:must|needs?\s+to|should|ought\s+to|has\s+to|have\s+to|(?:is|are)\s+(?:expected|required)\s+to|going\s+forward)\b|^\s*(?:\S+\s+){0,2}will\b/i;
+
+/** The added text reads as an account of what happened, not an expectation or an instruction. */
+export function readsAsAccount(added: string): boolean {
+  return added.trim() !== "" && !EXPECTATION_OR_INSTRUCTION.test(added.trim());
+}
+
+const EXPECTATION = /^\s*Expectations?\s*:/i;
+/** The app's reference line after the sections ("Policy reference: …") ends a section too. */
+const SECTION_END = /^\s*Policy reference\s*:/i;
+
+/**
+ * QA's ruling (b), extended (12 Nov 2026, Gate-Sunny-2 on #662): an expectation or instruction added to a field written in
+ * sections goes under "Expectation:" as its own line, never glued onto the last line. Its first letter is a capital
+ * only when the field's other lines start with one; otherwise it keeps the manager's casing. Null when the field has no
+ * Expectation section (the writer appends it as before).
+ */
+export function addUnderExpectation(old: string, added: string): string | null {
+  const all = lines(old);
+  const at = all.findIndex((line) => EXPECTATION.test(line));
+  if (at < 0) return null;
+  let next = all.findIndex((line, index) => index > at && (HEADING.test(line) || SECTION_END.test(line)));
+  if (next < 0) next = all.length;
+  let end = next;
+  while (end - 1 > at && all[end - 1]!.trim() === "") end -= 1;
+  const body = all.filter((line) => line.trim() !== "" && !HEADING.test(line) && !SECTION_END.test(line));
+  const capitalised = body.length > 0 && body.every((line) => /^\s*\p{Lu}/u.test(line));
+  const text = added.trim();
+  const said = capitalised ? `${text.charAt(0).toUpperCase()}${text.slice(1)}` : text;
+  return [...all.slice(0, end), said, ...all.slice(end)].join("\n");
+}
+/*
+ * ADD_OUT_OF_OTHER_SECTIONS_ENABLED (QA's Bubbles round-16b live test, 10 Nov 2026): "can you add that she was reminded
+ * of the policy" came back as the whole text with the new sentence glued onto the end of the Expectation paragraph
+ * ("…unable to attend. <name> was reminded of the policy."). A whole-text write that is the old text with every section
+ * in place, the same except for words added to the end of ONE section other than Observed: those words are an add,
+ * and go under Observed. Anything else (a section reworded, two sections changed, Observed changed) is left as written.
+ */
+interface Section {
+  readonly heading: string;
+  readonly body: string;
+}
+
+function sectionsOf(text: string): Section[] | null {
+  const out: { heading: string; body: string[] }[] = [];
+  for (const line of lines(text)) {
+    if (HEADING.test(line)) {
+      const colon = line.indexOf(":");
+      out.push({ heading: line.slice(0, colon + 1).trim().toLowerCase(), body: [line.slice(colon + 1)] });
+    } else if (out.length > 0) out[out.length - 1]!.body.push(line);
+    else if (line.trim() !== "") return null;
+  }
+  return out.length > 1 ? out.map((section) => ({ heading: section.heading, body: section.body.join("\n").trim() })) : null;
+}
+
+/** The words a whole-text write added to the end of one non-Observed section, or null. */
+export function insertedInOtherSection(old: string, next: string): string | null {
+  if (!hasSections(old)) return null;
+  const was = sectionsOf(old);
+  const now = sectionsOf(next);
+  if (!was || !now || was.length !== now.length) return null;
+  let extra: string | null = null;
+  for (const [index, section] of was.entries()) {
+    const other = now[index]!;
+    if (other.heading !== section.heading) return null;
+    const before = squash(section.body);
+    const after = squash(other.body);
+    if (before === after) continue;
+    if (OBSERVED.test(`${section.heading}`) || extra !== null || !after.startsWith(`${before} `)) return null;
+    const words = other.body.split(/\s+/).filter(Boolean);
+    const kept = section.body.split(/\s+/).filter(Boolean).length;
+    extra = words.slice(kept).join(" ").trim();
+  }
+  return extra && /[\p{L}]/u.test(extra) ? extra : null;
+}

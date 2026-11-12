@@ -348,6 +348,19 @@ export interface ChatMessage {
    */
   formInstanceRef?: ChatFormInstanceRef;
   /**
+   * FORM_EDIT_SOURCE_TURN_ENABLED: this reply was about the form open in the
+   * chat, as the server stamped it; `unwritten` is the manager's turn it did
+   * not write onto that form. Sent back with the history so "make that
+   * update" / "the details we just discussed" find the turn they mean. See
+   * `lib/forms/form-content-turn.ts` (`sourceTurn`).
+   */
+  formReply?: ChatFormReply;
+  /**
+   * SERVER-SIDE ONLY, never stored: set by `parseHistory` on a turn that
+   * carried a form card (`formProposal(s)` / `formInstanceRef(s)`).
+   */
+  card?: true;
+  /**
    * The forms created from THIS message's cards when it carried more than one
    * (`formProposals`), one per proposal, matched by `proposalId`. Pointers,
    * like `formInstanceRef`.
@@ -414,6 +427,10 @@ export interface ChatTurnError {
   retryable: boolean;
   /** The question that failed, so the UI can offer to send it again. */
   question: string;
+  /** The server's error code, when it sent one. Diagnostic; never shown. */
+  code?: string;
+  /** The HTTP status the turn failed with, when there was one. Diagnostic. */
+  status?: number;
 }
 
 export interface ChatConversation {
@@ -980,4 +997,16 @@ export interface BrandConfig {
     locationNoun: string;
     locationNounPlural: string;
   };
+}
+
+/** FORM_EDIT_SOURCE_TURN_ENABLED: a reply about the open form, and the manager's turn it did not write. */
+export interface ChatFormReply {
+  instanceId: string;
+  /** At most 2,000 characters (`UNWRITTEN_MAX`). */
+  unwritten?: string;
+  /**
+   * #480 gate (12 Nov 2026): the reply was an ordinary answer (the model's, not the app's own line about the form), so an
+   * edit that refers back ("update the draft with these details") may take it as content.
+   */
+  answer?: true;
 }

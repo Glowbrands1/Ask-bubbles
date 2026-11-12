@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { TERMINATION_OPTION, withTerminationPlan } from "@/lib/forms/termination-stated";
 import { salesResultsOffenseLine, withCaChosenRule } from "@/lib/ai/ca-sales-prompt-lines";
 import { noteSpendUser } from "@/lib/ai/spend-meter";
 import { withSpendMeter } from "@/lib/ai/spend-meter-run";
@@ -71,6 +72,7 @@ import {
   OBSERVED_LABEL,
   PLAN_OF_ACTION,
   guardNarrativeDraft,
+  managerTypedGoingForward, withoutGoingForward,
 } from "@/lib/forms/narrative-draft";
 import {
   dropUngroundedPolicy,
@@ -178,6 +180,7 @@ import {
   hideNoPolicyMatchNoticeEnabled,
   draftEditMergeEnabled,
   draftNeverBlankEnabled,
+  draftNoInventedPlanEnabled,
   fieldAccuracyEnabled,
   frameworkUnpinEnabled,
   policyCitationEnabled,
@@ -190,13 +193,16 @@ import {
   draftWriteNeverSilentEnabled,
   formEditSingleWriterEnabled,
   formPatchReducerEnabled,
+  caProcedureBasisEnabled,
   caSalesPolicyEnabled,
   priorActionsNoSignedEnabled,
   secondRequestOwnAccountEnabled,
   proposalMakeItAboutEnabled,
   proposalPolicySetAsideEnabled,
+  negatedLatenessTopicEnabled,
   dateOnceEnabled,
   sameRequestOtherPersonEnabled,
+  outlineOnOpenProposalEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { NOTHING_SET_ASIDE, policiesSetAside, setAsideAnything, valuesWithPolicySetAside, withoutPolicyTakeOff } from "@/lib/forms/policy-set-aside";
 import { notesMadeAbout } from "@/lib/ai/make-it-about";
@@ -221,8 +227,9 @@ import {
   LANGUAGE_CLEANUP_RULES,
   guardCoachingFraming,
 } from "@/lib/forms/coaching-framing";
-import { OFFENSE_BASIS_PROPERTY, readOffenseBasis, withoutUnreasonedConduct, type OffenseBasis } from "@/lib/forms/ca-conduct-reason";
+import { offenseBasisProperty, onlyBareComplaint, PROCEDURE_BASIS, readOffenseBasis, withoutUnreasonedConduct, type OffenseBasis } from "@/lib/forms/ca-conduct-reason";
 import { guardOtherWriteIn } from "@/lib/forms/other-write-in";
+import { withoutNegatedLatenessTopic } from "@/lib/forms/negated-lateness";
 import { withoutRequestInObservation } from "@/lib/forms/request-observation";
 import {
   MANAGER_FOLLOW_UP_RULES,
@@ -267,6 +274,7 @@ import {
   resolveFormDate,
 } from "@/lib/forms/form-date-grounding";
 import { unreadDayBrief, unreadDayNotice, unreadIncidentDay } from "@/lib/forms/unread-day-date";
+import { draftDateApplies, fidelityGivenDates } from "@/lib/forms/form-input-fidelity";
 
 /**
  * POST /api/forms/instances/[id]/draft
@@ -398,7 +406,8 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
     const body = ((await request.json().catch(() => null)) ?? {}) as DraftBody;
     // CREATE_COMMAND_POINTS_TO_CARD_ENABLED / CARD_COMPLAINT_NOT_ACCOUNT_ENABLED: "create it" or "this proposal is out of
     // date" is no account (`ai/card-meta-turn.ts`).
-    const sent = String(body.notes ?? "").trim().slice(0, 4000);
+    // PASTED_REVIEW_NOT_ACCOUNT_ENABLED: a pasted reviewer's notes are no account (`ai/pasted-review.ts`).
+    const sent = (await import("@/lib/ai/pasted-review")).readWithoutPastedReview(String(body.notes ?? "").trim().slice(0, 4000)).trim();
     // SAME_REQUEST_OTHER_PERSON_ENABLED: "the same thing for <B>" is drafted from the earlier request, read with <B>'s name.
     const typed = sameRequestOtherPersonEnabled()
       ? (await import("@/lib/forms/same-request-other-person")).notesForOtherPerson({
@@ -408,7 +417,9 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
           roster: await (await import("@/lib/forms/employee-roster")).loadScopedRoster(actor.scope).catch(() => []),
         })
       : sent;
-    const asTyped = (await import("@/lib/ai/card-meta-turn")).withoutCardMetaTurns(typed);
+    // OUTLINE_ON_OPEN_PROPOSAL_ENABLED: an outline pasted for another person, and "same outline …", are no account (`lib/forms/outline-on-proposal.ts`).
+    const unoutlined = outlineOnOpenProposalEnabled() ? (await import("@/lib/forms/outline-on-proposal")).notesWithoutOutline(typed, loaded.instance.employeeName) : typed;
+    const asTyped = (await import("@/lib/ai/card-meta-turn")).withoutCardMetaTurns(unoutlined);
     // TYPO_READING_ROUTES_ENABLED: the readers below see "coahed", "notcie", "amont" as the words they can only be.
     const read = typoReadingRoutesEnabled() ? typoReadingText(asTyped, await protectedNameWords()) : asTyped;
     // PROPOSAL_MAKE_IT_ABOUT_ENABLED: "make it about showing up late …" makes "Showing up late." the account from that turn on (`ai/make-it-about.ts`).
@@ -980,7 +991,7 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
      * `form-date-grounding.ts`.
      */
     const resolvedFormDate =
-      loaded.instance.layoutFamily === "corrective"
+      draftDateApplies(loaded.instance.layoutFamily)
         ? resolveFormDate(loaded.instance.formDate)
         : null;
     /*
@@ -1127,7 +1138,7 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
         ? [
             unreadDay
               ? unreadDayBrief(resolvedFormDate, unreadDay)
-              : formDateBrief(resolvedFormDate, draftBriefDates(notes, businessToday()), notes),
+              : formDateBrief(resolvedFormDate, fidelityGivenDates(notes, businessToday(), draftBriefDates(notes, businessToday())), notes),
           ]
         : []),
       /*
@@ -1325,7 +1336,8 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
 
     const client = getAnthropicClient();
     /* CA_SALES_POLICY_ENABLED: the tool's optional offense_basis, and what the last call said (`ca-conduct-reason.ts`). */
-    const basisAsked = caSalesPolicyEnabled() && offersConductPolicy && offenseOffered.includes("other");
+    // CA_PROCEDURE_BASIS_ENABLED (sf-b6): the basis is asked with that flag too.
+    const basisAsked = (caSalesPolicyEnabled() || caProcedureBasisEnabled()) && offersConductPolicy && offenseOffered.includes("other");
     let offenseBasis: OffenseBasis | null = null;
     /*
      * CUT OFF IS NOT A DRAFT. A tool call stopped at the budget parses into
@@ -1361,7 +1373,7 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
                     description: "Checkbox group key to the option keys that apply.",
                   },
                   // CA_SALES_POLICY_ENABLED only, on a form offering Other: added, optional (`ca-conduct-reason.ts`). Off, absent.
-                  ...(basisAsked ? { offense_basis: OFFENSE_BASIS_PROPERTY } : {}),
+                  ...(basisAsked ? { offense_basis: offenseBasisProperty() } : {}),
                 },
                 required: ["values"],
               },
@@ -1481,6 +1493,31 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
     );
 
     const narrated = guardNarrativeDraft(dated.values, fields, groundingSource);
+    /*
+     * DRAFT_NO_INVENTED_PLAN_ENABLED: on the Corrective Action Form (the one
+     * with a fixed Action Plan) the Observation keeps Observed and Expectation
+     * only. What the employee does next is the manager's Action Plan, never a
+     * "Going Forward" the model wrote. See `withoutGoingForward`.
+     */
+    if (draftNoInventedPlanEnabled() && fixedPlan !== null) {
+      narrated.values = withoutGoingForward(narrated.values, fields);
+    }
+    /*
+     * And on the Coaching and Follow-up Coaching forms (QA, 26 Oct 2026): their
+     * "Going Forward" is the model's too, so it stays only when the manager
+     * stated a plan themselves ("going forward …", "action plan: …"); a negated
+     * "no going forward needed" is not one (`managerTypedGoingForward`).
+     */
+    const coachingForm =
+      loaded.instance.templateKey === "coaching" || loaded.instance.templateKey === "follow-up-coaching";
+    if (
+      draftNoInventedPlanEnabled() &&
+      coachingForm &&
+      !managerTypedGoingForward(notes) &&
+      managerTypedActionPlan(notes) === null
+    ) {
+      narrated.values = withoutGoingForward(narrated.values, fields);
+    }
 
     /*
      * THEN THE TIMEFRAME GUARD. A drafted "Next Follow-Up" survives only if the
@@ -1516,8 +1553,14 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
     const framed = isCoachingFamily
       ? guardCoachingFraming({ values: followUp.values, checked: followUp.checked }, notes)
       : { values: followUp.values, checked: followUp.checked, adjusted: [] as string[], underperformanceRefused: false };
+    /*
+     * NEGATED_LATENESS_TOPIC_ENABLED (QA, 26 Oct 2026): notes that mention lateness only to deny it ("she was
+     * not late today") do not come back ticked "Other: Punctuality". Before the write-in guard, so a cleared
+     * Other is not refilled. See `negated-lateness.ts`.
+     */
+    const topical = isCoachingFamily && negatedLatenessTopicEnabled() ? withoutNegatedLatenessTopic(framed, notes) : framed;
     // OTHER_WRITE_IN_GUARD_ENABLED: a ticked "Other" gets its write-in in the manager's words, or is unticked.
-    const framing = guardOtherWriteIn(framed, notes, new Set(fields.map((field) => field.key)));
+    const framing = guardOtherWriteIn(topical, notes, new Set(fields.map((field) => field.key)));
 
     /*
      * ========================================================================
@@ -1886,6 +1929,8 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
       ? ((loaded.values ?? []).find((row) => row.fieldKey === PAYROLL_DEDUCT_KEY)?.checked.find(isPayrollDeductAnswer) ??
         null)
       : null;
+    // TERMINATION_STATED_TICKS_ENABLED: Termination, ticked at Create from the manager's statement, closes the plan.
+    const terminationPlan = Boolean(fixedPlan) && ((loaded.values ?? []).find((row) => row.fieldKey === "warning_type")?.checked ?? []).includes(TERMINATION_OPTION);
     const draftedValues = (() => {
       const base = { ...(exit?.values ?? attributions.values) };
       if (priorActions) {
@@ -1946,10 +1991,17 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
      * which leads the model's catch-all Standards of Conduct, as Late Opening
      * leads Attendance, but never a box whose own section is specific.
      */
+    /*
+     * CA_PROCEDURE_BASIS_ENABLED (QA / Gate-Bubbles-4, 12 Nov 2026; sf-b6 with ADDED_DETAIL_KEPT on): when the drafting
+     * model names a store procedure as the basis, a section the app reads the account as describing (here "a customer
+     * complaint") is not a policy the manager stated. It never becomes the form's policy, so the reply's "I'd leave
+     * that field for you" still holds; a section the manager named, or a missed event's, still does.
+     */
+    const procedureBasis = caProcedureBasisEnabled() && offenseBasis === PROCEDURE_BASIS;
     const policySection =
       namedSection ??
       eventSection ??
-      (describedSection && !(enforced.checked.offense_type ?? []).some((key) => SPECIFIC_SECTION_BOXES.has(key))
+      (describedSection && !procedureBasis && !(enforced.checked.offense_type ?? []).some((key) => SPECIFIC_SECTION_BOXES.has(key))
         ? describedSection
         : null);
     const statedKeys = caPolicy
@@ -2053,7 +2105,8 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
         offered: offenseOffered,
         notes,
         basis: offenseBasis,
-        specific: specificTopic(notes) !== null,
+        // QA's ruling (a): under a store-procedure basis, a bare "customer complaint" topic is the app's reading, not a reason.
+        specific: specificTopic(notes) !== null && !(procedureBasis && onlyBareComplaint(specificTopic(notes))),
         writeInOffered: fields.some((field) => field.key === "other_offense"),
       }) ?? offenseApplied;
     const policyLeftForManager =
@@ -2457,6 +2510,7 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
             }),
           },
           closing: fixedPlan.closing,
+          termination: terminationPlan,
         }
       : null;
     /*
@@ -2499,12 +2553,13 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
           : correctiveActionPlan(planInput)
       : null;
     // PLAN_PAYROLL_SENTENCE_ENABLED: the deduction the manager stated is said in the plan.
+    // TERMINATION_STATED_TICKS_ENABLED: on a termination, the plan ends with the termination sentence.
     const planValue = builtPlan && planInput
-      ? withPayrollSentence(builtPlan, {
+      ? withTerminationPlan(withPayrollSentence(builtPlan, {
           answer: planInput.payroll.answer,
           amount: managerPayrollAmount(amountNotes),
           employeeName: loaded.instance.employeeName,
-        })
+        }), terminationPlan)
       : builtPlan;
     const planned =
       fixedPlan && planInput && planValue && draftedAnything && !keeps(fixedPlan.key)

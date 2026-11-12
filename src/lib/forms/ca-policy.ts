@@ -1,23 +1,26 @@
 import { withoutAppLines } from "@/lib/ai/app-sentences";
 import { CHAT_GLOSSARY, foldsToGlossaryTerm } from "@/lib/ai/glossary";
 import {
+  accountPlaceLeadEnabled,
   asYouSaidAppReadEnabled,
-  caPerformanceReasonEnabled,
   asYouSaidManagerWordsEnabled,
-  missedShiftCitesAttendanceEnabled,
-  msbPhraseSocEnabled,
+  caPerformanceReasonEnabled,
   caSalesPolicyEnabled,
   cleaningOtherEveryWordingEnabled,
+  conductIncidentCitesPageEnabled,
   describedAttendanceCardEnabled,
   formEditDateRulesEnabled,
-  removePolicyNotNamedEnabled,
+  missedShiftCitesAttendanceEnabled,
+  msbPhraseSocEnabled,
+  notFollowingIsViolationEnabled,
   policyCleaningIncidentEnabled,
+  removePolicyNotNamedEnabled,
   salesObservationAccountEnabled,
   salesShortfallObjectEnabled,
+  wornClothingIsDressCodeEnabled,
   wovenTrainingConductEnabled,
-  conductIncidentCitesPageEnabled,
-  accountPlaceLeadEnabled,
-  notFollowingIsViolationEnabled,
+  negatedLatenessTopicEnabled,
+  registerAccuracyConductEnabled,
 } from "@/lib/config/chat-quality-flags";
 
 import { readLocationMentions } from "./location-mention";
@@ -34,6 +37,7 @@ import {
   type ManualSection,
 } from "./official-policy-manual";
 import { statesMetricShortfall } from "./metric-shortfall";
+import { withoutNegatedLateness } from "./negated-lateness";
 import { CURRENT_CA_OFFENSE_KEYS, offeredOffenseKey, offeredOffenseKeys } from "./offense-keys";
 import { detectTemplateIntent } from "./template-intent";
 
@@ -119,7 +123,7 @@ export interface CaPolicyReading {
    * CA_SALES_POLICY_ENABLED on: the account reads as the Under Performance
    * offense type, or uses a glossary term (MSB). See `withSalesPolicy`.
    */
-  source: "stated" | "incident" | "sales_performance" | "msb" | "woven" | null;
+  source: "stated" | "incident" | "sales_performance" | "msb" | "register" | "woven" | null;
   /** WOVEN_TRAINING_CONDUCT_ENABLED: the manager's words that say the Woven work was not done ("not signing the woven policies"). */
   woven?: string;
   /** Policies to ask between, when the account reads more than one way and none was named. */
@@ -344,6 +348,14 @@ export function cleaningUndonePhrase(rawText: string): string | null {
 const ATTENDANCE =
   /\b(?:arrived|came in|showed up|clocked in|was|were|is|been|running)\s+(?:\S+\s+){0,2}?late\b|\b(?:tardy|tardiness|lateness|left early|leaving early|clocked out early|absent|absence|absences|absenteeism|no[- ]call|no[- ]show|called (?:out|off)|call[- ]?off|missed (?:her|his|their|a|the) shift)\b/;
 
+/**
+ * NEGATED_LATENESS_TOPIC_ENABLED (default off): "she was not late" is no attendance account; a lateness the
+ * manager denies is blanked before the pattern is read (`negated-lateness.ts`). Off, as before.
+ */
+function readsAsAttendance(sentence: string): boolean {
+  return ATTENDANCE.test(negatedLatenessTopicEnabled() ? withoutNegatedLateness(sentence) : sentence);
+}
+
 const TARGET =
   /\b(?:sales|quota|ppta|upgrades?|conversions?|close rate|closing rate|kpis?|metrics|scorecard|revenue|(?:her|his|their|the) numbers|(?:sales|membership|monthly|weekly) goals?|below (?:goal|target)|(?:hit|hitting|meet|meeting|missed|missing) (?:her|his|their|the) (?:goal|goals|target|targets))\b/;
 
@@ -436,6 +448,21 @@ const NAMED: { name: CaPolicyName; pattern: RegExp; alwaysAPolicy: boolean; enab
 ];
 const POLICY_FRAME =
   /\b(?:polic(?:y|ies)|violat\w*|falls? under|under|use|it'?s|it is|should be|applies|apply|is the|was the)\b/;
+/**
+ * WORN_CLOTHING_IS_DRESS_CODE_ENABLED (QA's Bubbles 17i live test, 11 Nov 2026): a garment the person wore, after a
+ * wearing verb ("wearing a hoodie", "wore sweatpants", "showed up in joggers"). Only clothes a dress code rules out;
+ * "uniform", "shirt" and "apron" are what an employee is meant to wear and say nothing on their own.
+ */
+const WORN_CLOTHING =
+  /(?:\b(?:wearing|wore|wears|wear)|\b(?:she|he|they|she's|he's|they're|who)\s+(?:keeps\s+|kept\s+|always\s+)?(?:showed|shows|showing|show|came|comes|coming|come)\s+(?:up\s+|in\s+)?(?:to\s+work\s+)?in|\b(?:showed|shows|showing|show|came|comes|coming|come)\s+(?:up\s+|in\s+)?to\s+work\s+in)\s+(?:a\s+|an\s+|her\s+|his\s+|their\s+|the\s+)?(?:hoodies?|hooded\s+sweatshirts?|sweatshirts?|sweatpants|sweats|joggers|yoga\s+pants|pajamas?|pyjamas?|flip[- ]?flops|crop\s+tops?)\b/;
+
+/**
+ * WORN_CLOTHING_IS_DRESS_CODE_ENABLED (Gate-Bubbles-2 on #799, 12 Nov 2026): an account that names a policy of its own
+ * ("…for wearing a hoodie, violating the cell phone policy") is that policy's, even when it is not one of the form's
+ * boxes: the garment never reads it as the Dress Code.
+ */
+const NAMES_A_POLICY = /\bpolic(?:y|ies)\b/;
+
 /* "wore jeans against dress code" — the policy broken, straight after "against" (QA, 22 Oct 2026, round 3). */
 const AGAINST_BEFORE = /\b(?:against|breaking|broke|breaks)\s+(?:the\s+|our\s+|company\s+)?$/;
 const NEGATED_BEFORE = /\b(?:not|never|isn't|is not|wasn't|was not|no)\s+(?:\S+\s+){0,2}$/;
@@ -522,7 +549,7 @@ export function policiesNamedIn(sentence: string): { name: CaPolicyName; start: 
 export function readCaPolicy(rawText: string): CaPolicyReading {
   const said = managerWords(rawText);
   // WOVEN_TRAINING_CONDUCT's reading (default off) before AS_YOU_SAID_APP_READ's fallback, on the manager's words (as the sibling app's #595).
-  return withMissedShift(withAppReading(withWovenWork(withCleaningOther(withSalesPolicy(readCaPolicyFromWords(said), said), said), said), rawText, said), said);
+  return withWornClothing(withMissedShift(withAppReading(withWovenWork(withCleaningOther(withSalesPolicy(readCaPolicyFromWords(said), said), said), said), rawText, said), said), said);
 }
 
 /*
@@ -536,6 +563,20 @@ export function readCaPolicy(rawText: string): CaPolicyReading {
  */
 const MISSED_SHIFT =
   /\b(?:(?:not|never|didn['’]?t|did\s+not|failed\s+to|failing\s+to|fails\s+to|wasn['’]?t)\s+(?:show(?:ing)?\s+up|com(?:e|ing)\s+in|(?:work(?:ing)?|complet(?:e|ing)))\s+(?:(?:to|for)\s+)?(?:\S+\s+){0,3}?shifts?|(?:missed|missing|skipped|skipping|no[- ]show(?:ed)?\s+(?:for|to)?)\s+(?:\S+\s+){0,3}?shifts?)\b/i;
+
+/**
+ * WORN_CLOTHING_IS_DRESS_CODE_ENABLED (QA's Bubbles 17i live test, 11 Nov 2026): "can you make a CA for <C> for wearing
+ * a hoodie to work?" named no policy, so the card had no Policy line and its plan said "review the applicable company
+ * policy". An account that names no policy and says the person wore clothes a dress code rules out is the Dress Code,
+ * read from the request (the card says so, never "as you said"). Off, the reading as it was.
+ */
+function withWornClothing(reading: CaPolicyReading, said: string): CaPolicyReading {
+  if (!wornClothingIsDressCodeEnabled()) return reading;
+  if (reading.stated !== null || reading.suggestion !== null || reading.ambiguous || reading.other || reading.missedEvent || reading.readFromApp) return reading;
+  const text = said.toLowerCase();
+  if (NAMES_A_POLICY.test(text)) return reading;
+  return WORN_CLOTHING.test(text) ? { ...reading, readFromApp: "dress_code" } : reading;
+}
 
 function withMissedShift(reading: CaPolicyReading, said: string): CaPolicyReading {
   if (!missedShiftCitesAttendanceEnabled()) return reading;
@@ -747,6 +788,14 @@ function spellsOutGlossaryTerm(sentence: string): boolean {
   return GLOSSARY_PHRASES.some((phrase) => folded.includes(phrase));
 }
 
+/*
+ * REGISTER_ACCURACY_CONDUCT_ENABLED (QA's CA sales batch, case (c), 4 Nov 2026): a NARROW word list, as QA allowed for
+ * this case (no model call at card time): ringing / rang / rung up the wrong or incorrect items, products or prices; a
+ * sale or its items rung up wrong, incorrectly or inaccurately; mis-rang.
+ */
+const REGISTER_MISTAKE =
+  /\b(?:ring(?:ing|s)?|rang|rung)\s+(?:up\s+)?(?:the\s+|a\s+|an\s+)?(?:wrong|incorrect)\s+(?:items?|products?|prices?|amounts?|totals?)\b|\b(?:ring(?:ing|s)?|rang|rung)\s+(?:up\s+)?(?:a\s+|the\s+)?(?:sale|items?|products?)\s+(?:up\s+)?(?:wrong(?:ly)?|incorrectly|inaccurately)\b|\bmis-?r(?:ang|ung|ing(?:ing|s)?)\b/;
+
 function withSalesPolicy(reading: CaPolicyReading, rawText: string): CaPolicyReading {
   if (!caSalesPolicyEnabled()) return reading;
   if (reading.stated !== null && reading.stated !== "under_performance") return reading;
@@ -765,14 +814,17 @@ function withSalesPolicy(reading: CaPolicyReading, rawText: string): CaPolicyRea
     statesMetricShortfall(rawText) ||
     performanceIsTheRequest(reading, sentences) ||
     (salesShortfallObjectEnabled() && performanceIsTheReason(rawText));
-  if (!msb && !target) return reading;
-  if (reading.stated === null && sentences.some((s) => ATTENDANCE.test(s))) return reading;
+  // REGISTER_ACCURACY_CONDUCT_ENABLED: a sale rung up inaccurately is the Standards of Conduct (Pau, 4 Nov 2026).
+  const register = registerAccuracyConductEnabled() && sentences.some((sentence) => REGISTER_MISTAKE.test(sentence));
+  if (!msb && !target && !register) return reading;
+  // NEGATED_LATENESS_TOPIC (#500): a denied lateness is no attendance account (readsAsAttendance).
+  if (reading.stated === null && sentences.some(readsAsAttendance)) return reading;
   return {
     ...reading,
     stated: null,
     alternatives: reading.alternatives.filter((name) => name !== "under_performance"),
     suggestion: STANDARDS_OF_CONDUCT,
-    source: msb ? "msb" : "sales_performance",
+    source: msb ? "msb" : !target && register ? "register" : "sales_performance",
     ambiguous: null,
   };
 }
@@ -824,7 +876,7 @@ function asksForCorrectiveAction(sentence: string): boolean {
  * nothing is asked — so it counts here too; `isWovenWorkReading` tells it apart.
  */
 export function isSalesPolicyReading(reading: CaPolicyReading): boolean {
-  return reading.source === "sales_performance" || reading.source === "msb" || reading.source === "woven";
+  return reading.source === "sales_performance" || reading.source === "msb" || reading.source === "register" || reading.source === "woven";
 }
 
 function readCaPolicyFromWords(rawText: string): CaPolicyReading {
@@ -866,7 +918,7 @@ function readCaPolicyFromWords(rawText: string): CaPolicyReading {
 
   const alternatives: CaPolicyReading["alternatives"] = [];
   if (topics.length > 0) {
-    if (missedEvent || sentences.some((s) => ATTENDANCE.test(s))) alternatives.push("attendance");
+    if (missedEvent || sentences.some(readsAsAttendance)) alternatives.push("attendance");
     // Revision 7: the current form has no Under Performance box (it is the Standards of Conduct), so a target is no other reading.
     if (sentences.some((s) => TARGET.test(s)) && CURRENT_CA_OFFENSE_KEYS.includes("under_performance")) alternatives.push("under_performance");
   }
@@ -1191,7 +1243,8 @@ export function caPolicyProposalLine(reading: CaPolicyReading, named: NamedPolic
     return "**Policy:** Standards of Conduct — required Woven policy acknowledgements or training not completed. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.";
   }
   if (isSalesPolicyReading(reading)) {
-    const what = reading.source === "msb" ? "Must See Behaviors (MSB)" : "sales performance against goals";
+    const what =
+      reading.source === "msb" ? "Must See Behaviors (MSB)" : reading.source === "register" ? "ringing up a sale inaccurately" : "sales performance against goals";
     return `**Policy:** Standards of Conduct — ${what}. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.`;
   }
   /*

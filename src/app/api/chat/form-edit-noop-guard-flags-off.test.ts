@@ -269,9 +269,41 @@ const FLIPPED_AFTER_FIXTURE: readonly string[] = [
   "DESCRIBED_ATTENDANCE_CARD_ENABLED",
   "PAST_FORMS_BEFORE_LIBRARY_ENABLED",
   "WOVEN_PDF_OCR_ENABLED",
+  // Changed on purpose (12 Nov 2026, QA round 17n): the same reason. These two change what an edit reply
+  // keeps (Step B's lines, the expectation's policy line), so the recorded main chats predate them.
+  "STEP_B_REPLY_KEEPS_LINES_ENABLED",
+  "EXPECTATION_POLICY_LINE_KEPT_ENABLED",
+  // Changed on purpose (12 Nov 2026, QA round 17o): the same reason. "Can you do the same thing for <B> but switch it
+  // to a written" is now <B>'s own request (SAME_REQUEST_*), and the rest of 17o's flips are left out with them.
+  "TERMINATION_STATED_TICKS_ENABLED",
+  "NAME_CORRECTION_KEEPS_DATE_ENABLED",
+  "FUTURE_INCIDENT_DATE_ASK_ENABLED",
+  "NEAR_MISS_TURNED_DOWN_EVERYWHERE_ENABLED",
+  "OUTLINE_ON_OPEN_PROPOSAL_ENABLED",
+  "TITLE_BEFORE_NAME_ENABLED",
+  "SAME_REQUEST_CARRIES_ACCOUNT_ENABLED",
+  "SAME_REQUEST_KEEPS_EARLIER_CARD_ENABLED",
+  "SAME_REQUEST_OFF_ROSTER_ENABLED",
+  "FORMS_GUIDE_ENABLED",
+  "POLICY_CARRY_RETRIEVAL_ENABLED",
+  // Changed on purpose (13 Nov 2026, QA round 17r): round 17r's flips are left out of this fixture, as each round's are.
+  // FORM_EDIT_SOURCE_TURN adds `formReply` to every reply with a form open, and POLICY_CITATION names the policy in the
+  // Action Plan; the other 17r flags are reply-changing readers the fixture predates.
+  "TEAM_CARD_NOT_PRODUCT_ENABLED",
+  "EXIT_NOTICE_VERB_TYPOS_ENABLED",
+  "TITLE_INITIALISM_CASE_ENABLED",
+  "EXIT_NOTICE_STATED_ONLY_ENABLED",
+  "FORM_EDIT_SOURCE_TURN_ENABLED",
+  "STORE_ALIAS_ENABLED",
+  "MANAGER_FORM_CHOICE_ENABLED",
+  "TYPO_FULL_NAME_TO_ROSTER_ENABLED",
+  "POLICY_CITATION_ENABLED",
+  "ANSWER_TURN_LEVEL_ENABLED",
+  "TERMINATION_CARD_TIDY_ENABLED",
 ];
 const PRODUCTION = [...PRODUCTION_FLAGS.on, ...PRODUCTION_FLAGS.assumedOn].filter((name) => name !== NOOP && !FLIPPED_AFTER_FIXTURE.includes(name));
-const TOUCHED = [...new Set([NOOP, ...TOOL_FLAGS, ...PRODUCTION, ...PRODUCTION_FLAGS.off, "FORM_PATCH_REDUCER_ENABLED", "FORM_REPLY_FROM_DIFF_ENABLED"])];
+// SAME_REQUEST_OFF_ROSTER (#727, G727) changes the sf-s11 turn by design; this fixture is main's, so it is held off.
+const TOUCHED = [...new Set([NOOP, ...TOOL_FLAGS, ...PRODUCTION, ...PRODUCTION_FLAGS.off, "FORM_PATCH_REDUCER_ENABLED", "FORM_REPLY_FROM_DIFF_ENABLED", "SAME_REQUEST_OFF_ROSTER_ENABLED"])];
 const saved = new Map<string, string | undefined>();
 
 function setFlags(on: readonly string[]) {

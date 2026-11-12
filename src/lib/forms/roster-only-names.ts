@@ -1,4 +1,4 @@
-import { formNameFromRosterEnabled, metricChoiceOneQuestionEnabled, metricGuardEnabled, offRosterConfirmEnabled, rosterNearMissEnabled, rosterNotFoundAnyPhrasingEnabled, nearMissQuestionRulesEnabled, formNameOffRosterAskEnabled, offRosterAskBeforeCardEnabled, possessivePlaceNotPersonEnabled } from "@/lib/config/chat-quality-flags";
+import { formNameFromRosterEnabled, metricChoiceOneQuestionEnabled, metricGuardEnabled, offRosterConfirmEnabled, rosterNearMissEnabled, rosterNotFoundAnyPhrasingEnabled, nearMissQuestionRulesEnabled, formNameOffRosterAskEnabled, offRosterAskBeforeCardEnabled, possessivePlaceNotPersonEnabled, titleBeforeNameEnabled, titleBeforeNameReplyLinesEnabled } from "@/lib/config/chat-quality-flags";
 import { isGlossaryTerm } from "@/lib/ai/glossary";
 import { standInForName, withStandInsSaid } from "./no-name-reply-wording";
 import type { AskResponse } from "@/lib/ai/types";
@@ -14,6 +14,7 @@ import { metricMessage, namesAMetric, requestMessage, cardOnScreen } from "./req
 import { namesAForm } from "./template-intent";
 import { onlyAsPossessivePlace, POSSESSIVE_PLACE_QUESTION_LINE, withPossessivePlaceNotPerson } from "./possessive-place";
 import { rosterScopeLevel, rosterScopeTurns } from "./roster-scope";
+import { nameAfterTitle, withoutLeadingTitle } from "./title-before-name";
 import { withoutTitleWord } from "./title-not-part-of-name";
 
 /**
@@ -106,25 +107,75 @@ function said(names: readonly string[]): string {
  * found nobody and never offered the roster's spelling. A store title written short after the name (two words or more)
  * is not part of it: it is taken off the card's name, and off the reply's bold name, before the roster is read.
  */
-function withoutTrailingTitle(response: AskResponse): AskResponse {
+function withoutTrailingTitle(response: AskResponse, names: readonly string[], message?: string): AskResponse {
   const typed = response.formProposal?.employeeName?.trim() ?? "";
-  const name = withoutTitleWord(typed);
+  /*
+   * TITLE_BEFORE_NAME_ENABLED (QA, 12 Nov 2026): "Corrective action for TM <name>" came with no name on the card. The
+   * name after the title in the request is the card's employee; the roster rules below treat it as any typed name.
+   */
+  const card = response.formProposal;
+  if (!typed && card && card.subject !== "team") {
+    /*
+     * Gate-Bubbles R795T (12 Nov 2026): only a name on the roster, or one near miss of a roster person, fills an empty
+     * card here; a name off the roster goes the normal off-roster way. And only where the reply has its "I can create a
+     * **<form>**." line to name them in: a card made ready under "Who is this … for?" lost that line and replied nothing.
+     */
+    const read = nameAfterTitle(message);
+    const named = read ? rosterSpelling(read, names) ?? oneCloseRosterPerson(read, names) : null;
+    const lead = new RegExp(String.raw`(\bI can create an? \*\*${escape(card.templateName ?? "")}\*\*)(?=\.)`);
+    if (named && lead.test(response.content)) {
+      return {
+        ...response,
+        content: titleWordToFirstName(response.content.replace(lead, `$1 for **${named}**`), message, named),
+        formProposal: { ...card, employeeName: named, status: card.status === "needs_employee" ? "ready" : card.status },
+      };
+    }
+  }
+  // TITLE_BEFORE_NAME_ENABLED: "Team Member <name>" — the store title in front is not part of the name either.
+  const untitled = withoutTitleWord(typed);
+  const name = withoutLeadingTitle(untitled);
   if (!typed || name === typed) return response;
-  return {
-    ...response,
-    // Gate-Bubbles R785 (11 Nov 2026): the exit read-back's "- **Name:** <name> TM" line (`forms/exit-intake.ts`) too.
-    content: response.content
-      .split(`**${typed}**`)
-      .join(`**${name}**`)
-      .split(`**Name:** ${typed}`)
-      .join(`**Name:** ${name}`),
-    formProposal: { ...response.formProposal!, employeeName: name },
-  };
+  // Gate-Bubbles R785 (11 Nov 2026): the exit read-back's "- **Name:** <name> TM" line (`forms/exit-intake.ts`) too.
+  let content = response.content.split(`**${typed}**`).join(`**${name}**`).split(`**Name:** ${typed}`).join(`**Name:** ${name}`);
+  /*
+   * TITLE_BEFORE_NAME_REPLY_LINES_ENABLED (QA's Bubbles 17o live test, 12 Nov 2026): "Corrective action for Team Member
+   * <B>" named <B> on the card, but the lines written from the name as first read, "Team Member <B>", kept its first
+   * word: "… review the applicable company policy with Team." and "I couldn't verify a store for **Team** from Woven".
+   * Those lines take the person's first name. Off, as before.
+   */
+  if (titleBeforeNameReplyLinesEnabled() && name !== untitled) {
+    const titleWord = escape(untitled.split(/\s+/)[0] ?? "");
+    const first = name.split(/\s+/)[0] ?? name;
+    if (titleWord) {
+      content = content
+        .replace(new RegExp(String.raw`\bwith ${titleWord}(?=[.,;])`, "g"), `with ${first}`)
+        .split(`**${untitled.split(/\s+/)[0]}**`)
+        .join(`**${first}**`);
+    }
+  }
+  return { ...response, content, formProposal: { ...response.formProposal!, employeeName: name } };
+}
+
+/**
+ * TITLE_BEFORE_NAME_REPLY_LINES_ENABLED: the lines written from "Team Member <name>" as first read ("… with Team.",
+ * "a store for **Team**") take the person's first name, when the message put a title before the name. Off, as given.
+ */
+function titleWordToFirstName(content: string, message: string | undefined, named: string): string {
+  if (!titleBeforeNameReplyLinesEnabled() || !message) return content;
+  const typed = /\bfor\s+(.+)$/im.exec(message)?.[1]?.trim() ?? "";
+  if (!typed || withoutLeadingTitle(typed) === typed) return content;
+  const titleWord = typed.split(/\s+/)[0] ?? "";
+  const first = named.split(/\s+/)[0] ?? named;
+  if (!titleWord || titleWord.toLowerCase() === first.toLowerCase()) return content;
+  return content
+    .replace(new RegExp(String.raw`\bwith ${escape(titleWord)}(?=[.,;])`, "g"), `with ${first}`)
+    .split(`**${titleWord}**`)
+    .join(`**${first}**`);
 }
 
 export function rosterOnlyNames(input: AskResponse, names: readonly string[], message?: string): AskResponse {
   if (names.length === 0) return input;
-  const response = withoutTrailingTitle(input);
+  const response = withoutTrailingTitle(input, names, message);
   let content = response.content;
   let proposal = response.formProposal;
   let ask: string | null = null;
@@ -269,13 +320,19 @@ export function rosterOnlyNames(input: AskResponse, names: readonly string[], me
       );
       if (!ask && !ASKS_WHO.test(content) && !ASKS_A_CHOICE.test(content) && !ASKS_FOR_THE_NAME.test(content)) ask = ASK_WHO;
       // OFF_ROSTER_CONFIRM_ENABLED: the cleared name, however it was typed (alone on its own line too), is said back and offered.
-      const noted = notFoundName(message, names);
+      // TITLE_BEFORE_NAME_ENABLED (Gate-Bubbles R795T): "for TM <name not on the roster>" is said back and offered as
+      // any typed name is, never seated on the card from here.
+      const afterTitle = nameAfterTitle(message);
+      const titled = afterTitle && !rosterSpelling(afterTitle, names) && !oneCloseRosterPerson(afterTitle, names) ? afterTitle : null;
+      const noted = notFoundName(message, names) ?? titled;
       /*
        * FORM_NAME_OFF_ROSTER_ASK_ENABLED (QA, 10 Nov 2026, sf-s36 with an off-roster name): when no card ever held the
        * name, the request's own "for <name> …" — the not-found note's name — is offered as typed, by the same rules.
        */
       const offered = offRosterConfirmEnabled()
-        ? (employee ? offRosterTyped(employee, message, names) : null) ?? (formNameOffRosterAskEnabled() && noted ? offRosterTyped(noted, message, names) : null)
+        ? (employee ? offRosterTyped(employee, message, names) : null) ??
+          (formNameOffRosterAskEnabled() && noted ? offRosterTyped(noted, message, names) : null) ??
+          (titled ? titleCased(titled) : null)
         : null;
       content = withNotFoundNote(content, noted ?? offered, names);
       if (offered) {
@@ -550,6 +607,8 @@ export function offRosterTyped(employee: string, message: string | undefined, na
   const placed =
     personPlaces(typed).some((place) => place.test(text.trim())) ||
     afterCompanyTitle(typed, text) ||
+    // TITLE_BEFORE_NAME_ENABLED: "for TM <name>", the title written short.
+    text.split(/\n/).some((line) => normalizeTypedName(nameAfterTitle(line) ?? "") === normalizeTypedName(typed)) ||
     text.split(/\n/).some((line) => same(line.trim().replace(USE_NAME, "")) && NAME_SHAPE.test(line.trim().replace(USE_NAME, "")));
   return placed ? titleCased(typed) : null;
 }
@@ -581,7 +640,9 @@ const NAME_SHAPE = new RegExp(String.raw`^${NAME_RUN}$`, "u");
  */
 function afterCompanyTitle(name: string, text: string): boolean {
   const spelled = name.trim().split(/\s+/).map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(String.raw`\s+`);
-  const found = new RegExp(String.raw`\bfor\s+([\p{L}][\p{L} ]{1,40}?),\s*${spelled}(?![\p{L}'’-])`, "iu").exec(text);
+  // TITLE_BEFORE_NAME_ENABLED: "for Team Member <name>", without the comma, is the same place.
+  const comma = titleBeforeNameEnabled() ? String.raw`,?\s+` : String.raw`,\s*`;
+  const found = new RegExp(String.raw`\bfor\s+([\p{L}][\p{L} ]{1,40}?)${comma}${spelled}(?![\p{L}'’-])`, "iu").exec(text);
   return Boolean(found && namesCompanyPositionTitle(found[1]!));
 }
 
