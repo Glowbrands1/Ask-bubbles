@@ -37,7 +37,8 @@ function start(t: ReplayContext) {
   return t.thread();
 }
 
-const outsideNotFound = (content: string) => content.split("\n").filter((line) => !/I couldn't find \*\*/.test(line)).join("\n");
+// Changed on purpose (10 Nov 2026, QA's roster-set ruling): with the name set on, a store manager's not-found line is OFF_ROSTER_ASK's "I can't find **<name>** on your roster — …" (the live wording), not "I couldn't find **<name>** in the Woven roster".
+const outsideNotFound = (content: string) => content.split("\n").filter((line) => !/I couldn't find \*\*|I can't find \*\*[^*]+\*\* on your roster/.test(line)).join("\n");
 
 export const NOV5_REPLY_OWN_WORDS_CASES: ReplayCase[] = [
   {
@@ -60,7 +61,7 @@ export const NOV5_REPLY_OWN_WORDS_CASES: ReplayCase[] = [
     status: "fixed",
     async run(t) {
       const thread = start(t);
-      const reply = await thread.say("I need a corrective action verbal for QA Probe XZT One. This is for Under Performance on PPTA, LPSVA, Club Average, Club Close %, and Spa %.");
+      const reply = await thread.say("I need a corrective action verbal for QA Probe XZT One. This is for Under Performance on UPT, ATV, Average Ticket, Bundle Rate %, and Gift %.");
       expect(reply.content, `the app's own words were scrubbed:\n${reply.content}`).not.toMatch(/The employee more question|the employee more question/);
     },
   },

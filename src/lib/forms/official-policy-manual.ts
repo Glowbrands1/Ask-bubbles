@@ -63,7 +63,7 @@
 
 import { headingOf, isPageFooter } from "@/lib/ingestion/extract/pdf-sections";
 
-import { describesAttendanceToo, LATE_TO_OPEN, lateOpenOn } from "./late-open";
+import { describesAttendanceToo, LATE_TO_OPEN, lateOpenOn, saysFailureToOpen } from "./late-open";
 import { OFFENSE_KEY_SUCCESSORS, offeredOffenseKey } from "./offense-keys";
 
 /* ------------------------------------------------------------- identity --- */
@@ -935,6 +935,8 @@ const LATE_OPENING = "Late Opening";
  */
 function describesRule(rule: (typeof DESCRIBED_SECTIONS)[number], notes: string): boolean {
   if (rule.describes.test(notes)) return true;
+  // "failure to open on time" (FAILURE_TO_OPEN_IS_LATE_OPENING_ENABLED). Off, false.
+  if (rule.headings.includes(LATE_OPENING) && saysFailureToOpen(notes)) return true;
   return (
     lateOpenOn() &&
     (rule.offenseKey === "tardiness" || rule.offenseKey === "attendance_policy") &&

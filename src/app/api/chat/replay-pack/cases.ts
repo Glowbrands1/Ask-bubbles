@@ -19,9 +19,11 @@ import { expect } from "vitest";
 
 export interface ReplayAnswer {
   content: string;
-  formProposal?: { templateKey?: string; employeeName?: string | null; employeeRole?: string | null; status?: string; subject?: string; locationId?: string | null; closeMatchNote?: string; formDate?: string | null };
+  formProposal?: { templateKey?: string; employeeName?: string | null; employeeRole?: string | null; status?: string; subject?: string; locationId?: string | null; closeMatchNote?: string; formDate?: string | null; supportsInlineDraft?: boolean };
   formUpdate?: { instanceId: string; updated: string[] };
   formOpened?: { instanceId: string };
+  /** The answer's source cards, as the route returns them. */
+  citations?: { documentTitle?: string; locator?: string; excerpt?: string }[];
 }
 
 export interface ReplayThread {
@@ -36,6 +38,13 @@ export interface ReplayContext {
   thread(): ReplayThread;
   as(role: string, scope: unknown): void;
   directory(rows: readonly DirectoryRow[]): void;
+  /**
+   * The full policy manual a policy question reads (`loadFullManualPlan`), as indexed chunks; this case only. Without
+   * it the pack reads no manual. Used to put a source excerpt through the production path.
+   */
+  fullManual?(document: { id: string; title: string; chunks: readonly unknown[] }): void;
+  /** Chunks the pinned policy manual also has, this case only (ported from the sibling app's pack); none by default. */
+  manualAlsoHas?(chunks: readonly Record<string, unknown>[]): void;
   /** What the drafting model writes at Create. */
   /** `extra`: other fields of the draft tool's input, e.g. `{ offense_basis: "sales" }` (CA_SALES_POLICY_ENABLED). */
   draftWrites(values: Record<string, string>, checked?: Record<string, string[]>, extra?: Record<string, unknown>): void;
@@ -59,6 +68,8 @@ export interface ReplayContext {
   patchReads?(byLatest: Readonly<Record<string, unknown>>): void;
   /** Fault injection (QA, 9 Nov 2026): from now on, a save of the form's values that includes this field fails (the save throws). */
   failSavesOf?(field: string): void;
+  /** Fault injection (DRAFT_WRITE_NEVER_SILENT_ENABLED): the draft route's next one-writer write also carries this field, once; the real writer refuses it and, all or nothing, the whole write. */
+  draftWriteCarries?(field: string): void;
   calls(): { chat: number; draft: number; revision: number; tool: number; patch: number };
   forms(): Record<string, unknown>[];
   values(instanceId: string): Record<string, string>;
@@ -66,6 +77,8 @@ export interface ReplayContext {
   checked(instanceId: string): Record<string, string[]>;
   /** What the drafting model was given, one entry per draft written. */
   draftPrompts(): string[];
+  /** What the revision model was handed (its messages), one entry per call. */
+  revisionPrompts?(): string[];
   /** The drafting model's system prompt, one entry per draft written. */
   draftSystems?(): string[];
   /** The draft call's tools as sent, one JSON string per call. */

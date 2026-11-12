@@ -28,7 +28,7 @@ import { isFrameworkAvailable } from "@/lib/knowledge/framework-availability";
 import { rowToCitation, type MatchedChunkRow } from "@/lib/knowledge/mappers";
 import { buildHandbookNote, namesHandbook, selectHandbookCoverage } from "@/lib/knowledge/named-handbook";
 import { isMultiBrandManual } from "@/lib/knowledge/brand-sections";
-import { loadFullManualPlan } from "@/lib/knowledge/full-manual-load";
+import { loadFullManualPlan, loadManualCitationPlan } from "@/lib/knowledge/full-manual-load";
 import { SupabaseKnowledgeProvider } from "@/lib/knowledge/providers/supabase";
 import type { RoleGrounding } from "@/lib/knowledge/role-grounding";
 import { recallPeople } from "@/lib/chat/person-memory-store";
@@ -43,6 +43,7 @@ import { reportById, routeReportQuestion } from "@/lib/reporting/registry";
 import { resolveScopeFor } from "@/lib/reporting/scope/server";
 import type { SourceCitation } from "@/types";
 
+import { markStage } from "./chat-stage-timings";
 import { cardPolicyTurns } from "./card-policy-request";
 import { callClaude } from "./call-claude";
 import { glossaryBlock } from "./glossary";
@@ -82,6 +83,7 @@ import {
   antiLoopEnabled,
   formFullRemapEnabled,
   fullManualContextEnabled,
+  fullManualWideGateEnabled,
   frameworkGeneralSectionsEnabled,
   reformatKeepsSourcesEnabled,
   crossChatReplyGuardEnabled,
@@ -128,6 +130,8 @@ import { assembleGrounding } from "./grounding-assembly";
 import { withManualReadingNotes } from "./manual-reading-notes";
 import {
   citePolicyAnswer,
+  citeRetrievedAnswer,
+  retrievedLocatorPages,
   fullManualGroundingNote,
   keepRestatedFallbackMarkers,
   validateManualCitations,
@@ -432,6 +436,7 @@ async function answerQuestionCore(
   const listPolicyCard = listPolicyOnCard(request);
   const askedQuestion = !takeOffOnCard && !listPolicyCard && questionNotFormEnabled() && isQuestionNotForm(request.question, request.history);
   if (intentExtractionEnabled() && !askedQuestion) {
+    markStage("intent_extraction");
     const prepared = await applyIntentExtraction({ request, actor });
     if (prepared.clarification) return prepared.clarification;
     request = prepared.request;
@@ -657,6 +662,7 @@ async function answerQuestionCore(
       priorFormsOnFile: (employeeName, locationId) => priorFormsReadingForChat(actor, employeeName, locationId),
     })),
     }));
+    markStage("form_proposal");
     let proposal = askedQuestion ? null : await proposeFrom(proposalQuestion);
     // TAKE_OFF_STAYS_CARD_ENABLED: a take-off the open intake did not carry on is proposed again from the manager's
     // last turn; this turn's words stay in the request, for the card's own readers. Off, never.
@@ -685,6 +691,7 @@ async function answerQuestionCore(
    * A tool failure returns null and this falls through to retrieval.
    */
   if (formToolsEnabled() && !formsTurn) {
+    markStage("form_understand");
     const roster = slotRetentionEnabled() ? await loadRosterQuiet(actor) : [];
     const stored = await storedFields(request, actor);
     // A question is answered, never read as a form command (`question-not-form.ts`).
@@ -761,6 +768,7 @@ async function answerQuestionCore(
    * is only a lookup, otherwise attached as verified records. Deterministic and
    * read-only; see `entity-facts.ts`.
    */
+  markStage("entities");
   const entities = await resolveChatEntities({ question: request.question, history: request.history, actor });
   if (entities.direct) return entities.direct;
 
@@ -885,6 +893,7 @@ async function answerQuestionCore(
    * See `slot-only-turn.ts`.
    */
   const slotTopic = slotOnlyRetrievalTopic(request.question, request.history);
+  markStage("query_rewrite");
   const rewrittenQuestion = slotTopic
     ? slotTopic
     : queryRewriteEnabled()
@@ -924,6 +933,7 @@ async function answerQuestionCore(
         : hybridSearchEnabled()
           ? matchHybridKnowledge({ query, scopeId: request.scopeId, limit })
           : knowledge.match({ query, scopeId: request.scopeId, limit });
+    markStage("retrieval");
     rows = await searchWithPlan(plan, search, limit);
     /*
      * A REFORMAT TURN KEEPS THE SOURCES OF THE ANSWER IT REFORMATS
@@ -955,6 +965,7 @@ async function answerQuestionCore(
     );
   }
 
+  markStage("parallel_reads");
   const pinnedResults = await pinnedPromise;
   const handbook = await handbookPromise;
 
@@ -1035,7 +1046,14 @@ async function answerQuestionCore(
   let manualPlan: FullManualPlan | null = null;
   if (fullManualContextEnabled()) {
     try {
-      manualPlan = await loadFullManualPlan(request.scopeId, request.question, policyText);
+      markStage("full_manual");
+      // FULL_MANUAL_WIDE_GATE_ENABLED: the wide gate's options only with the flag; off, the call as before.
+      manualPlan = fullManualWideGateEnabled()
+        ? await loadFullManualPlan(request.scopeId, request.question, policyText, {
+            wideGate: true,
+            topRowIsManual: rows[0] ? isMultiBrandManual(rows[0].document_title, MULTI_BRAND_MANUAL_TITLES) : false,
+          })
+        : await loadFullManualPlan(request.scopeId, request.question, policyText);
     } catch {
       manualPlan = null;
     }
@@ -1046,8 +1064,20 @@ async function answerQuestionCore(
    * after the answer, from the printed pages it cites. One card for the
    * whole manual is what showed up as JBA Policy Manual p.1.
    */
+  /*
+   * FULL_MANUAL_WIDE_GATE_ENABLED (QA parity with the sibling app, 25 Oct 2026): on a full-manual turn only a pinned
+   * role document or a named handbook rides along; a retrieved excerpt from any other document (a wiring diagram for
+   * "policy specific to uggs?") is not sent as OTHER COMPANY SOURCES. Off, as before.
+   */
+  const wideGate = fullManualWideGateEnabled();
+  const mandatoryChunkIds = wideGate
+    ? new Set([...pinned.flatMap((entry) => entry.rows), ...(handbookCoverage?.rows ?? [])].map((row) => row.chunk_id))
+    : null;
   const supplemental = useManual
-    ? used.filter((row) => !isMultiBrandManual(row.document_title, MULTI_BRAND_MANUAL_TITLES))
+    ? used.filter(
+        (row) =>
+          !isMultiBrandManual(row.document_title, MULTI_BRAND_MANUAL_TITLES) && (!mandatoryChunkIds || mandatoryChunkIds.has(row.chunk_id)),
+      )
     : used;
   const grounding: GroundingChunk[] = supplemental.map((row, index) => ({
     marker: index + 1,
@@ -1066,16 +1096,19 @@ async function answerQuestionCore(
       )
     : null;
 
+  markStage("briefing");
   const briefing = await briefingPromise;
   /*
    * GOOGLE_REVIEWS_IN_CHAT_ENABLED: the Google Reviews page's month to date,
    * goal and pace for the caller's stores, read only on a Google review
    * question and only with View reports. Null otherwise.
    */
+  markStage("google_reviews");
   const reviewBlock = googleReviewsInChatEnabled()
     ? await loadGoogleReviewsChatBlock({ question: request.question, role: actor.role, scope: actor.scope })
     : null;
 
+  markStage("summaries_memory");
   const settledSummaries = await summariesPromise;
   const personMemory = await memoryPromise;
   const formRecords = await formRecordsPromise;
@@ -1088,6 +1121,7 @@ async function answerQuestionCore(
     .filter((entry) => pinnedIds.has(entry.documentId))
     .map((entry) => entry.documentTitle);
 
+  markStage("system_prompt");
   const system = buildSystemPrompt({
     assistantName: ACTIVE_BRAND.assistantName,
     brandName: ACTIVE_BRAND.brandName,
@@ -1140,6 +1174,7 @@ async function answerQuestionCore(
       : {}),
   });
 
+  markStage("long_context");
   const longContext = longContextEnabled()
     ? await prepareLongContext({
         history: request.history,
@@ -1147,6 +1182,7 @@ async function answerQuestionCore(
         conversationId: request.conversationId ?? null,
       })
     : null;
+  markStage("chat_data");
   const dataAddition = await loadChatDataBlock({
     enabled: chatDataToolsEnabled(),
     question: request.question,
@@ -1154,6 +1190,7 @@ async function answerQuestionCore(
     breakdown: reportBreakdownEnabled(),
     reviewsHandled: reviewBlock !== null,
   });
+  markStage("cited_grounding");
   const pinnedPolicy = await citedManualGrounding(request, knowledge);
   const supplementalChunks = grounding;
   const supplementalText =
@@ -1227,6 +1264,7 @@ async function answerQuestionCore(
    */
   let answer: Awaited<ReturnType<typeof callClaude>>;
   try {
+    markStage("answer_model");
     answer = await callClaude({
       ...claudeBase,
       grounding: dataAddition.help ? `${groundingText}\n\n${dataAddition.help}` : groundingText,
@@ -1262,6 +1300,13 @@ async function answerQuestionCore(
     const checkedManual = citePolicyAnswer(answer, manualPlan, supplementalMarkers);
     if (checkedManual.ok) {
       settled = checkedManual;
+    } else if (wideGate) {
+      /*
+       * FULL_MANUAL_WIDE_GATE_ENABLED (QA parity with the sibling app, 25 Oct 2026): an answer with the manual in
+       * context is the answer, page or no page. Asked again without the manual, it could deny the manual existed
+       * ("policy specific to uggs?" came back "I only have wiring diagrams"). It stands as written, no page marked.
+       */
+      settled = { text: checkedManual.text, sources: [], ok: false };
     } else {
       /*
        * The answer named no printed page from the manual that was loaded.
@@ -1285,8 +1330,30 @@ async function answerQuestionCore(
    * restates them (see `keepRestatedFallbackMarkers`).
    */
   const manualDocuments = new Set((manualPlan?.passages ?? []).map((passage) => passage.documentId));
-  const fallbackText =
-    fellBack && manualPlan
+  /*
+   * FULL_MANUAL_WIDE_GATE_ENABLED: a reply answered from retrieved excerpts cites each manual excerpt as the printed
+   * page its sentence restates, in the sentence (see `citeRetrievedAnswer`). Only when the reply cites a manual
+   * excerpt is the manual read for this. Off, as before.
+   */
+  const manualRowPages = (marker: number): number[] | null => {
+    const row = activeRows[marker - 1];
+    if (!row || !isMultiBrandManual(row.document_title, MULTI_BRAND_MANUAL_TITLES)) return null;
+    const printed = printedPageFromRetrieval(row);
+    const pages = retrievedLocatorPages(row);
+    return printed && !pages.includes(printed) ? [printed, ...pages] : pages;
+  };
+  let retrievalCited: CitedManualAnswer | null = null;
+  if (wideGate && !settled && fullManualContextEnabled()) {
+    const citesManual = extractUsedMarkers(answer, activeMarkers).some((marker) => manualRowPages(marker) !== null);
+    if (citesManual || /\[pp?\.\s*\d/i.test(answer)) {
+      const citePlan = manualPlan?.passages.length ? manualPlan : await loadManualCitationPlan(request.scopeId);
+      const cited = citePlan ? citeRetrievedAnswer(answer, citePlan, manualRowPages) : null;
+      retrievalCited = cited?.ok ? cited : null;
+    }
+  }
+  const fallbackText = retrievalCited
+    ? retrievalCited.text
+    : fellBack && manualPlan
       ? keepRestatedFallbackMarkers(answer, manualPlan, (marker) => {
           const row = activeRows[marker - 1];
           return row && manualDocuments.has(row.document_id) ? printedPageFromRetrieval(row) : null;
@@ -1296,7 +1363,7 @@ async function answerQuestionCore(
   const guarded = settled
     ? settled.text
     : fullManualContextEnabled() && !fellBack
-      ? validateManualCitations(answer, { shownMarkers: markers, index: manualPlan?.index ?? null })
+      ? validateManualCitations(retrievalCited ? fallbackText : answer, { shownMarkers: markers, index: manualPlan?.index ?? null })
       : fallbackText;
   const toCitation = (source: FullManualSource): SourceCitation => ({
     documentId: source.documentId,
@@ -1313,7 +1380,9 @@ async function answerQuestionCore(
     });
   let citations: SourceCitation[] = settled
     ? [...settled.sources.map(toCitation), ...citedRows(markers, citationRows)]
-    : citedRows(markers, activeRows);
+    : retrievalCited
+      ? [...retrievalCited.sources.map(toCitation), ...citedRows(markers, activeRows)]
+      : citedRows(markers, activeRows);
 
   const suggested = await suggestedFormsFor({ summariesPromise, request, actor });
 
@@ -1352,7 +1421,7 @@ async function answerQuestionCore(
     } else {
       const tidy = { tidy: reformatKeepsSourcesEnabled() };
       content = suggested ? `${stripMarkers(settled.text, tidy)}\n\n${suggested.lead}` : stripMarkers(settled.text, tidy);
-      citations = settled.sources.map(toCitation);
+      citations = wideGate ? [...settled.sources.map(toCitation), ...citedRows(markers, citationRows)] : settled.sources.map(toCitation);
     }
   }
   /*
