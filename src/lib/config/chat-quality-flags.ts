@@ -1498,6 +1498,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "CARD_PLAN_MATCHES_CREATE_ENABLED",
   // coding 6: TYPO_FULL_NAME_TO_ROSTER (audit item 15.10, sf-b5, 11 Nov 2026; default off).
   "TYPO_FULL_NAME_TO_ROSTER_ENABLED",
+  // TERMINATION_TIDY_HELD_NAME (default off; QA's 17r live note, 12 Nov 2026): in the list, as every chat flag.
+  "TERMINATION_TIDY_HELD_NAME_ENABLED",
 ] as const;
 
 /**
@@ -5428,4 +5430,15 @@ export function typoFullNameToRosterEnabled(): boolean {
  */
 export function exitNoticeStatedOnlyEnabled(): boolean {
   return envFlag("EXIT_NOTICE_STATED_ONLY_ENABLED");
+}
+
+/**
+ * TERMINATION_TIDY_HELD_NAME_ENABLED (coding 6, 12 Nov 2026; default off; QA's 17r live note on #829). On the off-roster
+ * ask path, "CA for <B>, do not terminate yet, she was late" still gave the card "Issue: do not terminate yet": the name
+ * was held off the card (FORM_NAME_FROM_ROSTER), and TERMINATION_CARD_TIDY reads the account after the card's employee.
+ * On: with no employee on the card, the account is read after the name the reply says it could not find
+ * (`ai/termination-card-tidy.ts`). Off, as before.
+ */
+export function terminationTidyHeldNameEnabled(): boolean {
+  return envFlag("TERMINATION_TIDY_HELD_NAME_ENABLED");
 }
