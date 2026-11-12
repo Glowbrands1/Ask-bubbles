@@ -1,0 +1,1002 @@
+{
+  "src/app/api/chat/date-reask-fresh-e2e.test.ts :: DATE_REASK_FRESH_ENABLED off: as main the third reply is the second, byte for byte": {
+    "category": "INTENDED-HARNESS",
+    "reason": "byte-for-byte pin of main's third reply; its opener is now the one-line 'got it' opener"
+  },
+  "src/app/api/chat/question-not-form-e2e.test.ts :: QUESTION_NOT_FORM_ENABLED off: every turn is routed as before (the full remap) conv_mvnsvw4t2a3btpw: the question is still written into the card": {
+    "category": "INTENDED-HARNESS",
+    "reason": "pins main's opener wording ('Here is the \u2026 card'); with the flag the later card turn opens 'Got it \u2014 here's the card.'"
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-card-opener-once-ca-chain: a CA chain: the second turn does not repeat the opener, and the card is the same employee's \u2014 OPEN in production (every turn repeats the full opener; fixed with HUMAN_REPLIES_ENABLED)": {
+    "category": "INTENDED",
+    "reason": "OPEN case now holds: the second turn does not repeat the opener; the it.fails pin moves to fixed with the flag"
+  },
+  "src/lib/forms/form-edit-single-writer-flags-off.test.ts :: FORM_EDIT_SINGLE_WRITER_ENABLED off: the same chats, byte for byte (a) and (b) equal main's behaviour with the same script (replies, rows, events)": {
+    "category": "INTENDED-HARNESS",
+    "reason": "byte-for-byte pin of main's replies; later card turns now open with the one-line 'got it' opener, so the pin moves with the flag"
+  },
+  "replay: nov10-b4-twin-ca-not-coaching-form-type [fix:CA_SALES_POLICY_ENABLED,PASTED_FORM_NAME_NOT_REQUEST_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov10-b4-twin-ca-not-coaching-form-type [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov10-card-opener-once-ca-chain [open]": {
+    "category": "INTENDED",
+    "reason": "fails off, holds on: the second card turn opens with one line on what changed"
+  },
+  "replay: nov10-copy-paste-claim-not-sent [fix:COPY_PASTE_CLAIM_HONEST_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov10-copy-paste-claim-not-sent [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov10-create-from-conversation-after-no [fix:CREATE_FROM_CONVERSATION_POINTS_TO_CARD_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov10-create-from-conversation-after-no [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov10-create-from-conversation-coaching-keeps-policy [fix:CREATE_FROM_CONVERSATION_POINTS_TO_CARD_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov10-create-from-conversation-coaching-keeps-policy [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov10-future-incident-date-full-lower [fix:FUTURE_INCIDENT_DATE_ASK_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov10-future-incident-date-full-lower [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov10-future-incident-date-full-sentence [fix:FUTURE_INCIDENT_DATE_ASK_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov10-future-incident-date-full-sentence [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov10-made-for-is-made-about-about-missing-out [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED,MADE_ABOUT_UNDATED_TOGETHER_ENABLED,MADE_FOR_IS_MADE_ABOUT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov10-made-for-is-made-about-about-missing-out [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov10-made-for-is-made-about-reader-nothing [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED,MADE_ABOUT_UNDATED_TOGETHER_ENABLED,MADE_FOR_IS_MADE_ABOUT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov10-made-for-is-made-about-reader-nothing [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov10-made-for-is-made-about-reader-replaces [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED,MADE_ABOUT_UNDATED_TOGETHER_ENABLED,MADE_FOR_IS_MADE_ABOUT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov10-made-for-is-made-about-reader-replaces [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov10-p7-one-form-each-named [fix:ONE_FORM_EACH_PERSON_ENABLED,CARD_NAMES_EMPLOYEE_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov10-r22-s14-date-kept-after-name-correction [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,NAME_CORRECTION_KEEPS_DATE_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov10-r22-s14-date-kept-after-name-correction [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov10-sf-b6-card-carries-added-detail [fix:ADDED_DETAIL_KEPT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov10-sf-b6-card-carries-added-detail [open]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov10-twin-sf-s22-pasted-review-never-drafted [fix:PASTED_REVIEW_NOT_ACCOUNT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov10-twin-sf-s22-pasted-review-never-drafted [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov11-bcs-metrics-comp-sales [fix:COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov11-bcs-metrics-comp-sales [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov11-bcs-metrics-discount-rate [fix:COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov11-bcs-metrics-discount-rate [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov11-form-input-fidelity-title-verbal [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov11-form-input-fidelity-title-written [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov11-form-input-fidelity-title-yes [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov11-form-input-fidelity-title-yesterday [fix:FORM_INPUT_FIDELITY_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov11-form-input-fidelity-title-yesterday [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov12-details-from-earlier-answer-none-found [fix:DETAILS_FROM_EARLIER_ANSWER_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov12-details-from-earlier-answer-none-found [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov12-expectation-policy-line-no-invented-opening [fix:EXPECTATION_POLICY_LINE_KEPT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov12-expectation-policy-line-no-invented-opening [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov12-instead-of-names-late-opening [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov12-instead-of-names-late-opening-model-heading-attendance [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov2-p1a-policy-turn-drops-account [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov2-p2-new-request-old-incident [fix:NEW_REQUEST_OWN_TURNS_ENABLED,DRAFT_REUSE_NEW_REQUEST_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov2-p2-new-request-old-incident [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov2-p5-name-claims [fix:CLAIM_GUARD_ENABLED,OPEN_FORM_NO_SELECTION_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov2-p5-name-claims [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov2-p5-name-corrections [fix:NAME_CORRECTION_WORDS_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov2-p5-name-corrections [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov2-west-dodge-whole-team [fix:SAME_ASK_NO_REPEAT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov2-west-dodge-whole-team [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov3-card-observation-own-request [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov3-open-draft-new-request [fix:NEW_REQUEST_OPEN_DRAFT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov3-open-draft-new-request [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov3-same-ask-b10 [fix:SAME_ASK_NO_REPEAT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov3-same-ask-b10 [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov3-stepb-b13-rolling-rack [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov3-stepb-b13-rolling-rack [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov3-stepb-b17-write-the-observation [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov3-stepb-b17-write-the-observation [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov3-stepb-daily-stats-edit [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov3-stepb-daily-stats-edit [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov3-stepb-invented-sentence-refused [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov3-stepb-invented-sentence-refused [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov3-stepb-position-not-a-topic [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov3-stepb-position-not-a-topic [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov3-stepb-typed-add-stays-the-managers [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov3-stepb-typed-add-stays-the-managers [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov4-live-coaching-then-jane-doe [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov4-scan-sf-s13-team-coaching-blank-employee [open]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov4-scan-sf-s16-standards-of-conduct-turn-2 [open]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov5-coding3-copy-paste-question-told-the-truth [open]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov5-coding3-sfo-a-coworker-in-account-stays-a [fix:SAME_REQUEST_OTHER_PERSON_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov5-coding3-sfo-a-coworker-in-account-stays-a [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov5-coding3-sfo-b-same-draft-then-name-copies [fix:SAME_FORM_COPY_NEW_PERSON_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov5-coding3-sfo-b-same-draft-then-name-copies [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov5-r6-policy-kept-across-turns [fix:REQUEST_KEPT_IN_WINDOW_ENABLED,NEXT_PUBLIC_REQUEST_KEPT_IN_WINDOW_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov5-r6-policy-kept-across-turns [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov5-sf-b6-full-sentence-and-added-detail [fix-open:NO_SELECTION_ON_OPEN_CARD_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov5-sf-b6-full-sentence-and-added-detail [open]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov5-sf-b6-policy-left-for-the-manager [fix:CA_PROCEDURE_BASIS_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov5-sf-b6-policy-left-for-the-manager [open]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov5-twin-sf-s22-ca-not-coaching [fix:PASTED_REVIEW_NOT_ACCOUNT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov5-twin-sf-s22-ca-not-coaching [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov5-twin-sf-s24-must-see-behaviors-and-coaching-on-file [fix:AS_YOU_SAID_MANAGER_WORDS_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov5-twin-sf-s24-must-see-behaviors-and-coaching-on-file [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov5-twin-sf-s27-coaching-name-only-asks-what-happened [fix:COACHING_ASKS_WHAT_HAPPENED_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "still OPEN, but the false 'Everything I need is here' is gone (now 'Got it \u2014 it's for **<name>**.'); it still does not ask what happened, same as off"
+  },
+  "replay: nov5-twin-sf-s27-coaching-name-only-asks-what-happened [open]": {
+    "category": "INTENDED",
+    "reason": "still OPEN, but the false 'Everything I need is here' is gone (now 'Got it \u2014 it's for **<name>**.'); it still does not ask what happened, same as off"
+  },
+  "replay: nov6-coding3-prior-actions-never-signed-unsaid [fix:PRIOR_ACTIONS_NO_SIGNED_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov6-coding3-prior-actions-never-signed-unsaid [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov6-coding3-prior-actions-never-signed-unsaid-parse-off [fix:PRIOR_ACTIONS_NO_SIGNED_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov6-coding3-prior-actions-never-signed-unsaid-parse-off [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov6-coding3-prior-actions-signed-policy-manual-kept [fix:PRIOR_ACTIONS_NO_SIGNED_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov6-coding3-prior-actions-signed-policy-manual-kept [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov6-coding3-prior-actions-signed-when-said [fix:PRIOR_ACTIONS_NO_SIGNED_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov6-coding3-prior-actions-signed-when-said [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov6-diffemp-guard-coworker-in-account-card-on-screen [fix:SAME_REQUEST_OTHER_PERSON_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov6-diffemp-guard-coworker-in-account-card-on-screen [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov6-diffemp-guard-same-person-again-card-on-screen [fix:SAME_REQUEST_OTHER_PERSON_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov6-diffemp-guard-same-person-again-card-on-screen [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov6-offer-never-a-product [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov6-offer-never-a-product [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov6-under-performance-explained-tester [fix:UNDER_PERFORMANCE_EXPLAINED_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov6-under-performance-explained-tester [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-a1-remove-policy-card [fix:REMOVE_POLICY_NOT_NAMED_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-a1-remove-policy-card [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-a2-negative-previous-store [fix:PRIOR_STEP_PREVIOUSLY_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-a2-negative-previous-store [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-a2-previously-received-coaching-date [fix:PRIOR_STEP_PREVIOUSLY_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-a2-previously-received-coaching-date [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-refusal-bub-didnt-edit [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-refusal-bub-didnt-edit [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-refusal-sun-monthly-meeting [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-refusal-sun-monthly-meeting [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-refusal-sun-monthly-meeting-drift [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-refusal-sun-monthly-meeting-drift [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-refusal-sun-monthly-meeting-trace [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-refusal-sun-monthly-meeting-trace [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-refusal-sun-msb-format [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-refusal-sun-msb-format [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-s37-own-request-turns [fix:POLITE_REQUEST_OWN_TURNS_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-s37-own-request-turns [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-s37-second-card-own-policy [fix:COACHING_OBSERVED_KEPT_ENABLED,POLITE_REQUEST_OWN_TURNS_ENABLED,POLICY_CITATION_ENABLED,CARD_POLICY_OWN_REQUEST_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-s37-second-card-own-policy [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-sales-observation-p1a [fix:SALES_SHORTFALL_OBJECT_ENABLED,SALES_OBSERVATION_ACCOUNT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-sales-observation-p1a [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-second-ca-same-employee-another [fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-second-ca-same-employee-another [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-second-ca-same-employee-another-observation [fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-second-ca-same-employee-another-observation [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-second-ca-same-employee-create [fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-second-ca-same-employee-create [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-second-ca-same-employee-create-observation [fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-second-ca-same-employee-create-observation [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-second-ca-same-employee-not-a-request-1 [fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-second-ca-same-employee-not-a-request-1 [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-second-ca-same-employee-not-a-request-2 [fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-second-ca-same-employee-not-a-request-2 [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-second-ca-same-employee-not-a-request-3 [fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-second-ca-same-employee-not-a-request-3 [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-second-ca-same-employee-separate [fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-second-ca-same-employee-separate [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-second-ca-same-employee-separate-observation [fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-second-ca-same-employee-separate-observation [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-second-ca-single-request-keeps-policy-closing-create [fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov7-second-ca-single-request-keeps-policy-closing-create [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-copy-open-form-for-person [fix:COPY_OPEN_FORM_FOR_PERSON_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-copy-open-form-for-person [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-corrected-date-kept-prior-step-only [fix:CORRECTED_DATE_KEPT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-corrected-date-kept-prior-step-only [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-corrected-date-kept-q6 [fix:CORRECTED_DATE_KEPT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-corrected-date-kept-q6 [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-form-date-said-settles [fix:FORM_DATE_SAID_SETTLES_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-form-date-said-settles [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-issue-after-request-reason-policy-correction [fix:ISSUE_AFTER_REQUEST_REASON_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-issue-after-request-reason-policy-correction [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-kept-request-coaching-named-now-no-notice [fix:REQUEST_KEPT_IN_WINDOW_ENABLED,NEXT_PUBLIC_REQUEST_KEPT_IN_WINDOW_ENABLED,KEPT_REQUEST_SAME_FORM_ENABLED,NEXT_PUBLIC_KEPT_REQUEST_SAME_FORM_ENABLED,CARRIED_PERSON_NOTICE_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-kept-request-coaching-named-now-no-notice [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-kept-request-coaching-says-where-the-name-came-from [fix:REQUEST_KEPT_IN_WINDOW_ENABLED,NEXT_PUBLIC_REQUEST_KEPT_IN_WINDOW_ENABLED,KEPT_REQUEST_SAME_FORM_ENABLED,NEXT_PUBLIC_KEPT_REQUEST_SAME_FORM_ENABLED,CARRIED_PERSON_NOTICE_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-kept-request-coaching-says-where-the-name-came-from [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-list-policy-on-card-ca [fix:QUESTION_NOT_FORM_ENABLED,EDIT_POLICY_ASK_ENABLED,LIST_POLICY_IS_EDIT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-list-policy-on-card-ca [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-list-policy-on-card-coaching [fix:QUESTION_NOT_FORM_ENABLED,EDIT_POLICY_ASK_ENABLED,LIST_POLICY_IS_EDIT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-list-policy-on-card-coaching [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-list-policy-on-card-no-account [fix:QUESTION_NOT_FORM_ENABLED,EDIT_POLICY_ASK_ENABLED,LIST_POLICY_IS_EDIT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-list-policy-on-card-no-account [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-near-miss-open-form-kept-sun-msb-format [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,NEAR_MISS_QUESTION_RULES_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-near-miss-open-form-kept-sun-msb-format [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-policy-correction-account-kept [fix:POLICY_CORRECTION_NOT_ACCOUNT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-policy-correction-account-kept [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-policy-correction-not-account [fix:POLICY_CORRECTION_NOT_ACCOUNT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-policy-correction-not-account [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-policy-remark-not-account [fix:PROPOSAL_POLICY_SET_ASIDE_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-policy-remark-not-account [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-policy-set-aside-ca-card [fix:PROPOSAL_POLICY_SET_ASIDE_ENABLED,TAKE_OFF_STAYS_CARD_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-policy-set-aside-ca-card [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-policy-set-aside-ca-create [fix:PROPOSAL_POLICY_SET_ASIDE_ENABLED,TAKE_OFF_STAYS_CARD_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-policy-set-aside-ca-create [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-policy-set-aside-coaching-card [fix:PROPOSAL_POLICY_SET_ASIDE_ENABLED,TAKE_OFF_STAYS_CARD_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-policy-set-aside-coaching-card [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-policy-set-aside-coaching-create [fix:PROPOSAL_POLICY_SET_ASIDE_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-policy-set-aside-coaching-create [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-policy-set-aside-named-again [fix:PROPOSAL_POLICY_SET_ASIDE_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-policy-set-aside-named-again [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-policy-set-aside-stays-off [fix:PROPOSAL_POLICY_SET_ASIDE_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-policy-set-aside-stays-off [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-policy-set-aside-unnamed [fix:PROPOSAL_POLICY_SET_ASIDE_ENABLED,TAKE_OFF_STAYS_CARD_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-policy-set-aside-unnamed [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-polite-about-stays-card [fix:POLITE_ABOUT_STAYS_CARD_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-polite-about-stays-card [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-polite-about-stays-card-negative-1 [fix:POLITE_ABOUT_STAYS_CARD_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-polite-about-stays-card-negative-1 [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-polite-about-stays-card-negative-2 [fix:POLITE_ABOUT_STAYS_CARD_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-polite-about-stays-card-negative-2 [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-polite-about-stays-card-negative-3 [fix:POLITE_ABOUT_STAYS_CARD_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-polite-about-stays-card-negative-3 [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-proposal-make-it-about-card [fix:PROPOSAL_MAKE_IT_ABOUT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-proposal-make-it-about-card [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-proposal-make-it-about-create [fix:PROPOSAL_MAKE_IT_ABOUT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-proposal-make-it-about-create [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-proposal-make-it-about-negative [fix:PROPOSAL_MAKE_IT_ABOUT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-proposal-make-it-about-negative [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-proposal-name-correction-comma-it-is [fix:PROPOSAL_NAME_CORRECTION_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-proposal-name-correction-comma-it-is [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-proposal-name-correction-correct-way [fix:PROPOSAL_NAME_CORRECTION_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-proposal-name-correction-correct-way [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-proposal-name-correction-fix-her-last-name [fix:PROPOSAL_NAME_CORRECTION_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-proposal-name-correction-fix-her-last-name [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-proposal-name-correction-last-name-is [fix:PROPOSAL_NAME_CORRECTION_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-proposal-name-correction-last-name-is [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-proposal-name-correction-r6-t5 [fix:PROPOSAL_NAME_CORRECTION_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-proposal-name-correction-r6-t5 [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-proposal-name-correction-r6-t7 [fix:PROPOSAL_NAME_CORRECTION_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-proposal-name-correction-r6-t7 [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-proposal-name-correction-spelled [fix:PROPOSAL_NAME_CORRECTION_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-proposal-name-correction-spelled [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-proposal-name-correction-supposed-to-be [fix:PROPOSAL_NAME_CORRECTION_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-proposal-name-correction-supposed-to-be [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-questions-not-account-coaching-from-conversation [fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-questions-not-account-coaching-from-conversation [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-reopen-not-open-form-msb-format [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED,REOPEN_BY_ANY_OPEN_VERB_ENABLED,REOPEN_NOT_OPEN_FORM_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-reopen-not-open-form-msb-format [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-resend-keeps-policy-twice [fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-resend-keeps-policy-twice [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-resend-keeps-policy-typo-fixed-please [fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-resend-keeps-policy-typo-fixed-please [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-s38-failing-first-name-in-chat [fix:ACCOUNT_VERB_NOT_A_NAME_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-s38-failing-first-name-in-chat [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-s38-what-does-out-of-date-mean [fix:OUT_OF_DATE_IS_THE_PROPOSAL_ENABLED,ACCOUNT_VERB_NOT_A_NAME_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-s38-what-does-out-of-date-mean [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-second-request-prior-step-correction [fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-second-request-prior-step-correction [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-set-aside-plan [fix:POLICY_SET_ASIDE_PLAN_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-set-aside-plan [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-set-aside-plan-other-policy [fix:POLICY_SET_ASIDE_PLAN_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-set-aside-plan-other-policy [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-sf-s38-create-it [fix:CREATE_COMMAND_POINTS_TO_CARD_ENABLED,CARD_COMPLAINT_NOT_ACCOUNT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-sf-s38-create-it [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-sf-s38-out-od-fate [fix:CREATE_COMMAND_POINTS_TO_CARD_ENABLED,CARD_COMPLAINT_NOT_ACCOUNT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-sf-s38-out-od-fate [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-woven-deadline-cites-conduct [fix:CONDUCT_INCIDENT_CITES_PAGE_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov8-woven-deadline-cites-conduct [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov9-ca-shift-answer-own-account-next-turn [fix:FIRST_NAME_ANSWER_KEEPS_ACCOUNT_ENABLED,SHIFT_ACCOUNT_IS_INCIDENT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov9-ca-shift-answer-own-account-next-turn [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov9-work-area-absence-coaching-made-about [fix:WORK_AREA_ABSENCE_CITES_CONDUCT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: nov9-work-area-absence-coaching-made-about [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  },
+  "replay: oct30-do-the-same [production]": {
+    "category": "INTENDED",
+    "reason": "only the opener changes on a later card turn for the same form and employee: 'I'll draft a \u2026 from what you've described, and check the applicable company policy \u2026' / 'Here is what I would put on a \u2026 Everything I need is here' becomes one 'got it' line naming what changed; every other line, the card and the saved rows are as off (all 324 changed turns checked; every 'got it' claim matches the turn or the card)"
+  }
+}
