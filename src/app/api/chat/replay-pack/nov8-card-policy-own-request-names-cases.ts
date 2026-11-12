@@ -40,12 +40,15 @@ export const NOV8_CARD_POLICY_OWN_REQUEST_NAMES_CASES: ReplayCase[] = [
     status: { open: "POLICY_CITATION is off in production, so the card cites no policy section" },
     fixFlags: FIX,
     async run(t) {
-      // Changed on purpose (8 Nov 2026): DESCRIBED_ATTENDANCE_CARD is live (round 4) and shows the card's Late Opening
-      // policy as its own "Policy:" line, so POLICY_CITATION's bare line is not added. The case checks the
-      // POLICY_CITATION path, so it turns the live flag off.
-      vi.stubEnv("DESCRIBED_ATTENDANCE_CARD_ENABLED", "false");
+      /*
+       * Changed on purpose (Gate-Bubbles-2's POLICY_CITATION gate, 12 Nov 2026): on a card the block now quotes the
+       * policy the card cites itself, never a re-reading of the turns, so the old check (DESCRIBED_ATTENDANCE_CARD turned
+       * off, a bare line from the turns) no longer applies. With the live card, the name must not break the policy step:
+       * the card shows its Late Opening policy, and the block quotes it.
+       */
       const reply = await start(t).say(said);
-      expect(reply.content, `the policy step was skipped:\n${reply.content}`).toMatch(/Late Opening Policy, JBA Policy Manual p\.15/);
+      expect(reply.content, `the card lost its policy:\n${reply.content}`).toMatch(/^\*\*Policy:\*\* Late Opening\b/m);
+      expect(reply.content, `the policy step was skipped:\n${reply.content}`).toMatch(/Policy cited from the JBA Policy Manual\*\*\n\n(?:Late Opening Policy, JBA Policy Manual p\.15\n)?Late Opening\n/);
     },
   })),
 ];

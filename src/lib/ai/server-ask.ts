@@ -687,7 +687,8 @@ async function answerQuestionCore(
     if (proposal && coachingCardPolicyEnabled()) {
       return await quoteCardPolicy(await (await import("./coaching-card-policy-answer")).withCoachingCardPolicyOnAnswer(proposal, request, readManual), readManual);
     }
-    if (proposal) return await quoteCardPolicy(proposal, readManual);
+    if (proposal && policyCitationEnabled()) proposal = await quoteCardPolicy(proposal, readManual);
+    if (proposal) return proposal;
     // AMOUNT_TURN_STAYS_ENABLED: "i dont know the amount" with a card open is the form's, not a policy question.
     const amountReply = amountTurnReply(request);
     if (amountReply) return amountReply;
