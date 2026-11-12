@@ -1,0 +1,58 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-17o-title-before-name-reply-lines-on-roster: \"Corrective action for Team Member Marnie Holloway\" (location_manager, on the roster): no line says \"Team\" — OPEN in production (the reply's plan says \"with Team\")": {
+    "category": "INTENDED",
+    "reason": "The TITLE_BEFORE_NAME_REPLY_LINES OPEN pin: the two nov12-17o-title-before-name-reply-lines cases move from open to holding."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-17o-title-before-name-reply-lines: \"Corrective action for Team Member Wren Tallis\" (admin): the plan and the store note name Wren, never \"Team\" — OPEN in production (the reply's plan and store note say \"Team\")": {
+    "category": "INTENDED",
+    "reason": "The TITLE_BEFORE_NAME_REPLY_LINES OPEN pin: the two nov12-17o-title-before-name-reply-lines cases move from open to holding."
+  },
+  "replay: nov11-title-before-name-admin [fix:TITLE_BEFORE_NAME_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Reply lines only: the action plan and the store note name the employee (\"with Wren\", \"a store for **Wren**\") instead of the title word \"Team\". Nothing else changes."
+  },
+  "replay: nov11-title-before-name-admin [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Reply lines only: the action plan and the store note name the employee (\"with Wren\", \"a store for **Wren**\") instead of the title word \"Team\". Nothing else changes."
+  },
+  "replay: nov11-title-before-name-create-names-employee [fix:TITLE_BEFORE_NAME_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Reply lines only: the action plan and the store note name the employee (\"with Wren\", \"a store for **Wren**\") instead of the title word \"Team\". Nothing else changes."
+  },
+  "replay: nov11-title-before-name-create-names-employee [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Reply lines only: the action plan and the store note name the employee (\"with Wren\", \"a store for **Wren**\") instead of the title word \"Team\". Nothing else changes."
+  },
+  "replay: nov11-title-before-name-draft-create-team-member [fix:TITLE_BEFORE_NAME_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Reply lines only: the action plan and the store note name the employee (\"with Wren\", \"a store for **Wren**\") instead of the title word \"Team\". Nothing else changes."
+  },
+  "replay: nov11-title-before-name-draft-create-team-member [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Reply lines only: the action plan and the store note name the employee (\"with Wren\", \"a store for **Wren**\") instead of the title word \"Team\". Nothing else changes."
+  },
+  "replay: nov11-title-before-name-draft-team-member [fix:TITLE_BEFORE_NAME_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Reply lines only: the action plan and the store note name the employee (\"with Wren\", \"a store for **Wren**\") instead of the title word \"Team\". Nothing else changes."
+  },
+  "replay: nov11-title-before-name-draft-team-member [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Reply lines only: the action plan and the store note name the employee (\"with Wren\", \"a store for **Wren**\") instead of the title word \"Team\". Nothing else changes."
+  },
+  "replay: nov12-17o-title-before-name-reply-lines [open]": {
+    "category": "INTENDED",
+    "reason": "The TITLE_BEFORE_NAME_REPLY_LINES OPEN pin: the two nov12-17o-title-before-name-reply-lines cases move from open to holding."
+  },
+  "replay: nov12-17o-title-before-name-reply-lines-on-roster [open]": {
+    "category": "INTENDED",
+    "reason": "The TITLE_BEFORE_NAME_REPLY_LINES OPEN pin: the two nov12-17o-title-before-name-reply-lines cases move from open to holding."
+  },
+  "replay: nov12-title-before-name-trailing-today [fix:TITLE_BEFORE_NAME_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Reply lines only: the action plan and the store note name the employee (\"with Wren\", \"a store for **Wren**\") instead of the title word \"Team\". Nothing else changes."
+  },
+  "replay: nov12-title-before-name-trailing-today [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Reply lines only: the action plan and the store note name the employee (\"with Wren\", \"a store for **Wren**\") instead of the title word \"Team\". Nothing else changes."
+  }
+}

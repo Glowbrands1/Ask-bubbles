@@ -1,0 +1,54 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-17o-labelled-paste-not-a-new-request: \"Name: <E> / Date: 10/12/26 / Observation: <E> did not call in\" pasted on A's open card makes no card for E; \"same outline but with <A>'s info\" keeps A's card — holds with production's flags": {
+    "category": "INTENDED",
+    "reason": "New in the PR (absent on main): the 17o case and guards, the TITLE_BEFORE_NAME_REPLY_LINES cases and outline-on-proposal unit tests. nov12-17o-labelled-paste-not-a-new-request holds with production's flags on the PR, and FAILS on main 815ae303 (\"2: no card\"; the PR's replay files run against main's code)."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-17o-title-before-name-reply-lines-on-roster: \"Corrective action for Team Member Marnie Holloway\" (location_manager, on the roster): no line says \"Team\" — OPEN in production (the reply's plan says \"with Team\")": {
+    "category": "INTENDED",
+    "reason": "New in the PR (absent on main): the 17o case and guards, the TITLE_BEFORE_NAME_REPLY_LINES cases and outline-on-proposal unit tests. nov12-17o-labelled-paste-not-a-new-request holds with production's flags on the PR, and FAILS on main 815ae303 (\"2: no card\"; the PR's replay files run against main's code)."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-17o-title-before-name-reply-lines-on-roster: \"Corrective action for Team Member Marnie Holloway\" (location_manager, on the roster): no line says \"Team\" — holds with TITLE_BEFORE_NAME_REPLY_LINES_ENABLED on": {
+    "category": "INTENDED",
+    "reason": "New in the PR (absent on main): the 17o case and guards, the TITLE_BEFORE_NAME_REPLY_LINES cases and outline-on-proposal unit tests. nov12-17o-labelled-paste-not-a-new-request holds with production's flags on the PR, and FAILS on main 815ae303 (\"2: no card\"; the PR's replay files run against main's code)."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-17o-title-before-name-reply-lines: \"Corrective action for Team Member Wren Tallis\" (admin): the plan and the store note name Wren, never \"Team\" — OPEN in production (the reply's plan and store note say \"Team\")": {
+    "category": "INTENDED",
+    "reason": "New in the PR (absent on main): the 17o case and guards, the TITLE_BEFORE_NAME_REPLY_LINES cases and outline-on-proposal unit tests. nov12-17o-labelled-paste-not-a-new-request holds with production's flags on the PR, and FAILS on main 815ae303 (\"2: no card\"; the PR's replay files run against main's code)."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-17o-title-before-name-reply-lines: \"Corrective action for Team Member Wren Tallis\" (admin): the plan and the store note name Wren, never \"Team\" — holds with TITLE_BEFORE_NAME_REPLY_LINES_ENABLED on": {
+    "category": "INTENDED",
+    "reason": "New in the PR (absent on main): the 17o case and guards, the TITLE_BEFORE_NAME_REPLY_LINES cases and outline-on-proposal unit tests. nov12-17o-labelled-paste-not-a-new-request holds with production's flags on the PR, and FAILS on main 815ae303 (\"2: no card\"; the PR's replay files run against main's code)."
+  },
+  "src/lib/forms/outline-on-proposal.test.ts :: OUTLINE_ON_OPEN_PROPOSAL_ENABLED: a labelled \"Name:\" paste (17o) her own labelled account, or a paste whose Name: is hers, stays hers": {
+    "category": "INTENDED",
+    "reason": "New in the PR (absent on main): the 17o case and guards, the TITLE_BEFORE_NAME_REPLY_LINES cases and outline-on-proposal unit tests. nov12-17o-labelled-paste-not-a-new-request holds with production's flags on the PR, and FAILS on main 815ae303 (\"2: no card\"; the PR's replay files run against main's code)."
+  },
+  "src/lib/forms/outline-on-proposal.test.ts :: OUTLINE_ON_OPEN_PROPOSAL_ENABLED: a labelled \"Name:\" paste (17o) is another person's outline, never her account": {
+    "category": "INTENDED",
+    "reason": "New in the PR (absent on main): the 17o case and guards, the TITLE_BEFORE_NAME_REPLY_LINES cases and outline-on-proposal unit tests. nov12-17o-labelled-paste-not-a-new-request holds with production's flags on the PR, and FAILS on main 815ae303 (\"2: no card\"; the PR's replay files run against main's code)."
+  },
+  "src/lib/forms/outline-on-proposal.test.ts :: OUTLINE_ON_OPEN_PROPOSAL_ENABLED: a labelled \"Name:\" paste (17o) on the open proposal: left out, and the note never says the outline's person is the one kept": {
+    "category": "INTENDED",
+    "reason": "New in the PR (absent on main): the 17o case and guards, the TITLE_BEFORE_NAME_REPLY_LINES cases and outline-on-proposal unit tests. nov12-17o-labelled-paste-not-a-new-request holds with production's flags on the PR, and FAILS on main 815ae303 (\"2: no card\"; the PR's replay files run against main's code)."
+  },
+  "replay: nov12-17o-labelled-paste-not-a-new-request [production]": {
+    "category": "INTENDED",
+    "reason": "New in the PR (absent on main): the 17o case and guards, the TITLE_BEFORE_NAME_REPLY_LINES cases and outline-on-proposal unit tests. nov12-17o-labelled-paste-not-a-new-request holds with production's flags on the PR, and FAILS on main 815ae303 (\"2: no card\"; the PR's replay files run against main's code)."
+  },
+  "replay: nov12-17o-title-before-name-reply-lines [fix:TITLE_BEFORE_NAME_REPLY_LINES_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "New in the PR (absent on main): the 17o case and guards, the TITLE_BEFORE_NAME_REPLY_LINES cases and outline-on-proposal unit tests. nov12-17o-labelled-paste-not-a-new-request holds with production's flags on the PR, and FAILS on main 815ae303 (\"2: no card\"; the PR's replay files run against main's code)."
+  },
+  "replay: nov12-17o-title-before-name-reply-lines [open]": {
+    "category": "INTENDED",
+    "reason": "New in the PR (absent on main): the 17o case and guards, the TITLE_BEFORE_NAME_REPLY_LINES cases and outline-on-proposal unit tests. nov12-17o-labelled-paste-not-a-new-request holds with production's flags on the PR, and FAILS on main 815ae303 (\"2: no card\"; the PR's replay files run against main's code)."
+  },
+  "replay: nov12-17o-title-before-name-reply-lines-on-roster [fix:TITLE_BEFORE_NAME_REPLY_LINES_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "New in the PR (absent on main): the 17o case and guards, the TITLE_BEFORE_NAME_REPLY_LINES cases and outline-on-proposal unit tests. nov12-17o-labelled-paste-not-a-new-request holds with production's flags on the PR, and FAILS on main 815ae303 (\"2: no card\"; the PR's replay files run against main's code)."
+  },
+  "replay: nov12-17o-title-before-name-reply-lines-on-roster [open]": {
+    "category": "INTENDED",
+    "reason": "New in the PR (absent on main): the 17o case and guards, the TITLE_BEFORE_NAME_REPLY_LINES cases and outline-on-proposal unit tests. nov12-17o-labelled-paste-not-a-new-request holds with production's flags on the PR, and FAILS on main 815ae303 (\"2: no card\"; the PR's replay files run against main's code)."
+  }
+}
