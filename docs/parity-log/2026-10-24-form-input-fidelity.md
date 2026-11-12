@@ -15,3 +15,9 @@ production's flags the typed dates and a bare "verbal" / "written" / "yes"
 are already read correctly; a bare "yesterday" after the position question
 was still saved as Job Title "Yesterday" (replay case
 `nov11-form-input-fidelity-title-yesterday`).
+
+12 Nov 2026 (QA's #760 gate): Coaching drafts get the form date only while
+`UNREAD_DAY_NOT_INCIDENT_DATE_ENABLED` is also on, so "late last week" is
+never saved as today's incident. Not ported: Ask Sunny's `main` has no
+`draftDateApplies` or Coaching form-date path, and Ask Sunny #166 is still
+unmerged. Whoever lands #166 carries this same both-flags condition.

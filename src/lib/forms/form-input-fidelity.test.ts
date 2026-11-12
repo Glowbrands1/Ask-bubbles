@@ -86,6 +86,11 @@ describe("form input fidelity, flag on", () => {
 
   it("tells a coaching draft the form date, and counts yesterday as a date the manager gave", () => {
     setFlag(true);
+    // QA's #760 gate: Coaching is dated only alongside UNREAD_DAY_NOT_INCIDENT_DATE.
+    vi.stubEnv("UNREAD_DAY_NOT_INCIDENT_DATE_ENABLED", "");
+    expect(draftDateApplies("coaching")).toBe(false);
+    expect(draftDateApplies("corrective")).toBe(true);
+    vi.stubEnv("UNREAD_DAY_NOT_INCIDENT_DATE_ENABLED", "true");
     expect(draftDateApplies("coaching")).toBe(true);
     expect(draftDateApplies("corrective")).toBe(true);
     expect(draftDateApplies("epp")).toBe(false);

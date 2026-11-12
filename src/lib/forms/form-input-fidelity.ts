@@ -1,4 +1,4 @@
-import { formInputFidelityEnabled } from "@/lib/config/chat-quality-flags";
+import { formInputFidelityEnabled, unreadDayNotIncidentDateEnabled } from "@/lib/config/chat-quality-flags";
 
 import { datesInText, listFormDates } from "./form-date-answer";
 import { incidentDates } from "./incident-dates";
@@ -68,10 +68,14 @@ export function fidelityGivenDates(notes: string, today: string, base?: readonly
   return [...new Set([...calendar, ...relativeIncidentDates(notes, today)])];
 }
 
-/** Corrective drafts always, and Coaching drafts only when the flag is on. */
+/**
+ * Corrective drafts always. Coaching drafts only with the flag on AND UNREAD_DAY_NOT_INCIDENT_DATE_ENABLED (QA's #760
+ * gate, 12 Nov 2026): without it a day the reader could not date ("late last week") would be written as today's incident
+ * ("On October 26, 2026, <name> was late"). Safe by construction, not only because production has both on.
+ */
 export function draftDateApplies(layoutFamily: string): boolean {
   if (layoutFamily === "corrective") return true;
-  return formInputFidelityEnabled() && layoutFamily === "coaching";
+  return formInputFidelityEnabled() && unreadDayNotIncidentDateEnabled() && layoutFamily === "coaching";
 }
 
 function bareReplyIsNotATitle(reply: string): boolean {
