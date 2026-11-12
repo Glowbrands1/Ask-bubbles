@@ -1,0 +1,10 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov11-exit-notice-submited: \"\u2026 her last day will be 10/12/2026 and she submited her notice on 9/29/26\": the notice date is September 29, 2026 \u2014 OPEN in production (\"Date that notice was given\" is left blank)": {
+  "category": "INTENDED",
+  "reason": "Open-case it.fails wrapper: inner invariant now holds, so the wrapper reports failed. Holding."
+ },
+ "replay: nov11-exit-notice-submited [open]": {
+  "category": "INTENDED",
+  "reason": "Open case now holds: 'Date that notice was given: September 29, 2026' is filled (and Resignation Date 9/29, the same facts 'submitted' gives: exit-notice-verb-typos.test.ts asserts toEqual against the correctly spelled reading, passing ON); both leave the 'Left blank' list."
+ }
+}
