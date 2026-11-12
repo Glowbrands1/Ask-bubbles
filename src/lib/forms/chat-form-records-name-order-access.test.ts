@@ -175,3 +175,23 @@ describe("FORMS_ON_FILE_ORDER_MATCH_POSSIBLE: a reversed name is a possible matc
     }
   });
 });
+
+describe("R795F (QA, 12 Nov 2026): a name written \"Last, First\" is the asked order", () => {
+  const FLAG = "FORMS_ON_FILE_ORDER_MATCH_POSSIBLE_ENABLED";
+
+  it("flag on: \"CA for Calder, Remy\" names Remy Calder's forms; \"CA for Calder Remy\" (no comma) stays possible", async () => {
+    const { matchRowsToQuestion, candidateNameWords } = await import("./chat-form-records");
+    const remy = { id: "f-remy", employeeName: "Remy Calder" } as never;
+    process.env[FLAG] = "true";
+    try {
+      const comma = "CA for Calder, Remy";
+      expect(matchRowsToQuestion([remy], candidateNameWords(comma), comma).named).toHaveLength(1);
+      const bare = "CA for Calder Remy";
+      const split = matchRowsToQuestion([remy], candidateNameWords(bare), bare);
+      expect(split.named).toHaveLength(0);
+      expect(split.possible).toHaveLength(1);
+    } finally {
+      delete process.env[FLAG];
+    }
+  });
+});
