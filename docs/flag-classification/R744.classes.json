@@ -1,0 +1,110 @@
+{
+  "src/app/api/chat/question-not-form-e2e.test.ts :: P0: a question is answered (the full remap (production)) the sibling app's family, after an answer offering forms (slot reading ca)": {
+    "category": "INTENDED-HARNESS",
+    "reason": "expectAnswered() requires the scripted model answer's opening; \"difference between ca and coaching form\" (one of its 5 questions) is now answered from the templates (\"Here are the 2 forms side by side, from the templates themselves …\"): no card, no menu, no who-for question. The test needs a FORMS_GUIDE stub or to accept the template answer."
+  },
+  "src/app/api/chat/question-not-form-e2e.test.ts :: P0: a question is answered (the full remap (production)) the sibling app's family, after an answer offering forms (slot reading none)": {
+    "category": "INTENDED-HARNESS",
+    "reason": "expectAnswered() requires the scripted model answer's opening; \"difference between ca and coaching form\" (one of its 5 questions) is now answered from the templates (\"Here are the 2 forms side by side, from the templates themselves …\"): no card, no menu, no who-for question. The test needs a FORMS_GUIDE stub or to accept the template answer."
+  },
+  "src/app/api/chat/question-not-form-e2e.test.ts :: P0: a question is answered (the full remap and intent extraction) the sibling app's family, after an answer offering forms (slot reading ca)": {
+    "category": "INTENDED-HARNESS",
+    "reason": "expectAnswered() requires the scripted model answer's opening; \"difference between ca and coaching form\" (one of its 5 questions) is now answered from the templates (\"Here are the 2 forms side by side, from the templates themselves …\"): no card, no menu, no who-for question. The test needs a FORMS_GUIDE stub or to accept the template answer."
+  },
+  "src/app/api/chat/question-not-form-e2e.test.ts :: P0: a question is answered (the full remap and intent extraction) the sibling app's family, after an answer offering forms (slot reading none)": {
+    "category": "INTENDED-HARNESS",
+    "reason": "expectAnswered() requires the scripted model answer's opening; \"difference between ca and coaching form\" (one of its 5 questions) is now answered from the templates (\"Here are the 2 forms side by side, from the templates themselves …\"): no card, no menu, no who-for question. The test needs a FORMS_GUIDE stub or to accept the template answer."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-forms-guide-coaching-vs-ca-lower: \"difference between coaching and ca\" is answered from the form templates, with no card — OPEN in production (answered by the model or knowledge base (or the whole inventory), not from the templates)": {
+    "category": "INTENDED",
+    "reason": "Open to holding: the forms question (which forms / what is a ca / coaching vs ca / someone who quit / generic policy review) is answered from the published form templates, with no card."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-forms-guide-coaching-vs-ca-sentence: \"Difference between coaching and ca\" is answered from the form templates, with no card — OPEN in production (answered by the model or knowledge base (or the whole inventory), not from the templates)": {
+    "category": "INTENDED",
+    "reason": "Open to holding: the forms question (which forms / what is a ca / coaching vs ca / someone who quit / generic policy review) is answered from the published form templates, with no card."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-forms-guide-generic-policy-review-lower: \"can you make a generic policy review form that works for any employee\" is answered from the form templates, with no card — OPEN in production (answered by the model or knowledge base (or the whole inventory), not from the templates)": {
+    "category": "INTENDED",
+    "reason": "Open to holding: the forms question (which forms / what is a ca / coaching vs ca / someone who quit / generic policy review) is answered from the published form templates, with no card."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-forms-guide-generic-policy-review-sentence: \"Can you make a generic policy review form that works for any employee\" is answered from the form templates, with no card — OPEN in production (answered by the model or knowledge base (or the whole inventory), not from the templates)": {
+    "category": "INTENDED",
+    "reason": "Open to holding: the forms question (which forms / what is a ca / coaching vs ca / someone who quit / generic policy review) is answered from the published form templates, with no card."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-forms-guide-someone-who-quit-lower: \"what form do i use for someone who quit\" is answered from the form templates, with no card — OPEN in production (answered by the model or knowledge base (or the whole inventory), not from the templates)": {
+    "category": "INTENDED",
+    "reason": "Open to holding: the forms question (which forms / what is a ca / coaching vs ca / someone who quit / generic policy review) is answered from the published form templates, with no card."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-forms-guide-someone-who-quit-sentence: \"What form do i use for someone who quit\" is answered from the form templates, with no card — OPEN in production (answered by the model or knowledge base (or the whole inventory), not from the templates)": {
+    "category": "INTENDED",
+    "reason": "Open to holding: the forms question (which forms / what is a ca / coaching vs ca / someone who quit / generic policy review) is answered from the published form templates, with no card."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-forms-guide-what-is-a-ca-lower: \"what is a ca?\" is answered from the form templates, with no card — OPEN in production (answered by the model or knowledge base (or the whole inventory), not from the templates)": {
+    "category": "INTENDED",
+    "reason": "Open to holding: the forms question (which forms / what is a ca / coaching vs ca / someone who quit / generic policy review) is answered from the published form templates, with no card."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-forms-guide-what-is-a-ca-sentence: \"What is a ca?\" is answered from the form templates, with no card — OPEN in production (answered by the model or knowledge base (or the whole inventory), not from the templates)": {
+    "category": "INTENDED",
+    "reason": "Open to holding: the forms question (which forms / what is a ca / coaching vs ca / someone who quit / generic policy review) is answered from the published form templates, with no card."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-forms-guide-which-forms-lower: \"which forms can i create here?\" is answered from the form templates, with no card — OPEN in production (answered by the model or knowledge base (or the whole inventory), not from the templates)": {
+    "category": "INTENDED",
+    "reason": "Open to holding: the forms question (which forms / what is a ca / coaching vs ca / someone who quit / generic policy review) is answered from the published form templates, with no card."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-forms-guide-which-forms-sentence: \"Which forms can i create here?\" is answered from the form templates, with no card — OPEN in production (answered by the model or knowledge base (or the whole inventory), not from the templates)": {
+    "category": "INTENDED",
+    "reason": "Open to holding: the forms question (which forms / what is a ca / coaching vs ca / someone who quit / generic policy review) is answered from the published form templates, with no card."
+  },
+  "replay: nov10-forms-guide-coaching-vs-ca-lower [open]": {
+    "category": "INTENDED",
+    "reason": "Open to holding: the forms question (which forms / what is a ca / coaching vs ca / someone who quit / generic policy review) is answered from the published form templates, with no card."
+  },
+  "replay: nov10-forms-guide-coaching-vs-ca-sentence [open]": {
+    "category": "INTENDED",
+    "reason": "Open to holding: the forms question (which forms / what is a ca / coaching vs ca / someone who quit / generic policy review) is answered from the published form templates, with no card."
+  },
+  "replay: nov10-forms-guide-generic-policy-review-lower [open]": {
+    "category": "INTENDED",
+    "reason": "Open to holding: the forms question (which forms / what is a ca / coaching vs ca / someone who quit / generic policy review) is answered from the published form templates, with no card."
+  },
+  "replay: nov10-forms-guide-generic-policy-review-sentence [open]": {
+    "category": "INTENDED",
+    "reason": "Open to holding: the forms question (which forms / what is a ca / coaching vs ca / someone who quit / generic policy review) is answered from the published form templates, with no card."
+  },
+  "replay: nov10-forms-guide-someone-who-quit-lower [open]": {
+    "category": "INTENDED",
+    "reason": "Open to holding: the forms question (which forms / what is a ca / coaching vs ca / someone who quit / generic policy review) is answered from the published form templates, with no card."
+  },
+  "replay: nov10-forms-guide-someone-who-quit-sentence [open]": {
+    "category": "INTENDED",
+    "reason": "Open to holding: the forms question (which forms / what is a ca / coaching vs ca / someone who quit / generic policy review) is answered from the published form templates, with no card."
+  },
+  "replay: nov10-forms-guide-what-is-a-ca-lower [open]": {
+    "category": "INTENDED",
+    "reason": "Open to holding: the forms question (which forms / what is a ca / coaching vs ca / someone who quit / generic policy review) is answered from the published form templates, with no card."
+  },
+  "replay: nov10-forms-guide-what-is-a-ca-sentence [open]": {
+    "category": "INTENDED",
+    "reason": "Open to holding: the forms question (which forms / what is a ca / coaching vs ca / someone who quit / generic policy review) is answered from the published form templates, with no card."
+  },
+  "replay: nov10-forms-guide-which-forms-lower [open]": {
+    "category": "INTENDED",
+    "reason": "Open to holding: the forms question (which forms / what is a ca / coaching vs ca / someone who quit / generic policy review) is answered from the published form templates, with no card."
+  },
+  "replay: nov10-forms-guide-which-forms-sentence [open]": {
+    "category": "INTENDED",
+    "reason": "Open to holding: the forms question (which forms / what is a ca / coaching vs ca / someone who quit / generic policy review) is answered from the published form templates, with no card."
+  },
+  "replay: nov5-sf-b6-full-sentence-and-added-detail [open]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Turn 1 \"Which forms can I create here?\" is answered from the templates (\"As a Location Manager you can create these 8 forms …\") instead of the scripted model text; the later turns are unchanged and the case's own verdict is unchanged."
+  },
+  "replay: nov5-sf-b6-reply-full-sentence [fix:LEAD_FULL_SENTENCE_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Turn 1 \"Which forms can I create here?\" is answered from the templates (\"As a Location Manager you can create these 8 forms …\") instead of the scripted model text; the later turns are unchanged and the case's own verdict is unchanged."
+  },
+  "replay: nov5-sf-b6-reply-full-sentence [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Turn 1 \"Which forms can I create here?\" is answered from the templates (\"As a Location Manager you can create these 8 forms …\") instead of the scripted model text; the later turns are unchanged and the case's own verdict is unchanged."
+  }
+}
