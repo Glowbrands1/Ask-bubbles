@@ -52,6 +52,7 @@ import {
   offRosterConfirmEnabled,
   resentRequestIsYesEnabled,
   cardPlanMatchesCreateEnabled,
+  answerTurnLevelEnabled,
   offRosterAskBeforeCardEnabled,
   oneFormEachPersonEnabled,
   outlineOnOpenProposalEnabled,
@@ -291,6 +292,10 @@ async function postChat(request: Request) {
       // RESENT_REQUEST_IS_YES_ENABLED: the same request again while "Is this for <name>?" waits is a yes (`lib/forms/resent-request-is-yes.ts`).
       if (resentRequestIsYesEnabled()) {
         asked = (await import("@/lib/forms/resent-request-is-yes")).withResentRequestAsYes(asked) ?? asked;
+      }
+      // ANSWER_TURN_LEVEL_ENABLED: a level said at the end of the answer to the app's own question is this form's (`lib/forms/answer-turn-level.ts`).
+      if (answerTurnLevelEnabled()) {
+        asked = (await import("@/lib/forms/answer-turn-level")).withAnswerTurnLevel(asked) ?? asked;
       }
       /*
        * OFF_ROSTER_CONFIRM_ENABLED: "use <name>" (or "yes") to the offer for a person not in Woven is read as the

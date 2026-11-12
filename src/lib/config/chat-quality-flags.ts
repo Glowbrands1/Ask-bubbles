@@ -1439,6 +1439,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT_ENABLED",
   // coding 6: GROUP_WORDS_NOT_A_NAME (Problem 19, 11 Nov 2026; default off).
   "GROUP_WORDS_NOT_A_NAME_ENABLED",
+  // ANSWER_TURN_LEVEL (default off; QA, 12 Nov 2026): in the list, as every chat flag.
+  "ANSWER_TURN_LEVEL_ENABLED",
   "ACCOUNT_BEFORE_REQUEST_ENABLED",
   // LETTER_GREETING_ANY_CASE (default off): in the list, as every chat flag (QA round 17k, 12 Nov 2026).
   "LETTER_GREETING_ANY_CASE_ENABLED",
@@ -5197,6 +5199,16 @@ export function nameCorrectionKeepsDateEnabled(): boolean {
  */
 export function nearMissTurnedDownEverywhereEnabled(): boolean {
   return envFlag("NEAR_MISS_TURNED_DOWN_EVERYWHERE_ENABLED");
+}
+
+/**
+ * ANSWER_TURN_LEVEL_ENABLED (coding 6, 12 Nov 2026; default off; QA's ruling (a), from B#808's gate). After the app's own
+ * question ("Is this for <name>?", "Who is this … for?", the open level question), "no call no show on 11/3, verbal
+ * warning" read the level as history and kept it in the Issue. On: in such an answer, a trailing bare-level clause with no
+ * history words is this form's level and leaves the Issue. Off, as before. See `forms/answer-turn-level.ts`.
+ */
+export function answerTurnLevelEnabled(): boolean {
+  return envFlag("ANSWER_TURN_LEVEL_ENABLED");
 }
 
 /**

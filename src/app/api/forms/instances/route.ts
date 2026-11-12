@@ -397,7 +397,8 @@ export async function POST(request: Request) {
         isWarningLevel(card.warningLevel) &&
         card.source === "assistant" &&
         Array.isArray(card.conversation) &&
-        (warningLevelFromConversation(await readingTurns(parseHistory(card.conversation)), businessToday()) === card.warningLevel ||
+        // ANSWER_TURN_LEVEL_ENABLED: a level said at the end of the answer to the app's own question is this form's, here as on the card.
+        (warningLevelFromConversation((await import("@/lib/forms/answer-turn-level")).turnsWithAnswerTurnLevel(await readingTurns(parseHistory(card.conversation))), businessToday()) === card.warningLevel ||
           readerWarningLevel(card) === card.warningLevel)
           ? card.warningLevel
           : null;
