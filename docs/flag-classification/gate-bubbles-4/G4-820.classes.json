@@ -1,0 +1,10 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-r31-bare-coaching-request-lead: \"create a coaching for Brisa Tolland, she told a client \u2026\": the Observation starts at \"she told a client\" \u2014 OPEN in production (the drafted Details begin \"Create a coaching for Brisa Tolland, \u2026\")": {
+  "category": "INTENDED",
+  "reason": "OPEN case holds: 'create a coaching for <A>, she told a client \u2026' drafts an Observation that starts at 'she told a client' (OFF: the request words on the draft); replies identical"
+ },
+ "replay: nov12-r31-bare-coaching-request-lead [open]": {
+  "category": "INTENDED",
+  "reason": "OPEN case holds: 'create a coaching for <A>, she told a client \u2026' drafts an Observation that starts at 'she told a client' (OFF: the request words on the draft); replies identical"
+ }
+}
