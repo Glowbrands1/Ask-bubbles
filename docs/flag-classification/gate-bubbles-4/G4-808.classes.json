@@ -1,0 +1,10 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov11-near-miss-no-call-no-show-after-question: after \"Is this for **Corvina Vellacott**?\", \"no call no show on 11/3, verbal warning\": the card keeps Corvina Vellacott and \"no call no show\" \u2014 OPEN in production (the asked name is taken off and the reply asks who)": {
+  "category": "INTENDED",
+  "reason": "OPEN case holds: after 'Is this for **Corvina Vellacott**?', 'no call no show on 11/3, verbal warning' gives Corvina's CA card (Attendance p.14) instead of 'Who is this form for?'"
+ },
+ "replay: nov11-near-miss-no-call-no-show-after-question [open]": {
+  "category": "INTENDED",
+  "reason": "OPEN case holds: after 'Is this for **Corvina Vellacott**?', 'no call no show on 11/3, verbal warning' gives Corvina's CA card (Attendance p.14) instead of 'Who is this form for?'"
+ }
+}
