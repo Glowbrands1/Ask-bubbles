@@ -1,0 +1,4 @@
+# Gate-Bubbles-4: #724 MAKE_THAT_UPDATE_ACCOUNT_ENABLED, head 439f6415 (Coding-4): GO
+- Base main a12342d3 (370 production flags). Conflicts: chat-quality-flags.ts (kept both), and form-content-turn.ts (main's #692 earlierContentAnswer/referredAnswer next to #724's unwrittenAccount/makeThatUpdateWithAccount: kept both). The merged file differs from #724's head only by main's #692 lines. My first resolution dropped a comment opener (tsc failed); that run was discarded and re-run after the fix. tsc clean. 1 OFF + 1 ON.
+- 14819 tests. Changed 2: INTENDED 2, REGRESSION 0. Nothing else moved.
+- nov10-make-that-update-writes-her-account (OPEN) holds. T6 "make that update" writes her account: "Changed Details of Coaching to \"rowan marked an order as shipped but the customer hadn't picked up yet\"." OFF: "I haven't changed the **Coaching Form** …". nov5-coding3-copy-paste-question-told-the-truth stays OPEN (#688's half), unchanged.
