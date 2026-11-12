@@ -517,6 +517,7 @@ type Answer = {
   formSelection?: unknown;
   formOpened?: { instanceId: string; revisesInstanceId?: string | null };
   formUpdate?: { instanceId: string; updated: string[] };
+  formReply?: { instanceId: string; unwritten?: string };
   pendingCopy?: { fromInstanceId: string };
 };
 
@@ -532,7 +533,14 @@ class Thread {
 
   async say(question: string, reading: Record<string, unknown> = {}): Promise<Answer> {
     state.reading = reading;
-    const history = this.messages.map(({ id, role, content, formProposal }) => ({ id, role, content, ...(formProposal ? { formProposal } : {}) }));
+    // As the browser sends it: the card a message carried, and FORM_EDIT_SOURCE_TURN_ENABLED's `formReply` (`chat-screen.tsx`).
+    const history = this.messages.map(({ id, role, content, formProposal, formReply }) => ({
+      id,
+      role,
+      content,
+      ...(formProposal ? { formProposal } : {}),
+      ...(formReply ? { formReply } : {}),
+    }));
     const id = `m${(this.sequence += 1)}`;
     const pendingCopy = offeredCopyForTurn(this.offeredCopy, this.messages);
     this.offeredCopy = undefined;
@@ -574,6 +582,7 @@ class Thread {
         content: payload.content,
         createdAt: `${TODAY}T12:28:01Z`,
         ...(payload.formProposal ? { formProposal: payload.formProposal } : {}),
+        ...(payload.formReply ? { formReply: payload.formReply } : {}),
       } as ChatMessage,
     );
     if (payload.pendingCopy) this.offeredCopy = { fromInstanceId: payload.pendingCopy.fromInstanceId, answer: payload.content };
@@ -770,8 +779,10 @@ function context(): ReplayContext {
     calls: () => ({ chat: state.chatModelCalls, draft: state.draftCalls, revision: state.revisionCalls, tool: state.toolCalls, patch: patchScript.calls }),
     forms: () => store.form_instances as never,
     draftPrompts: () => [...draftAsked],
-    // What the revision model was handed, one entry per call (its messages), as in the sibling's pack.
-    revisionPrompts: () => [...revisionAsked],
+    revisionPrompts: () =>
+      revisionAsked.map((asked) =>
+        (JSON.parse(asked) as { content?: unknown }[]).map((message) => (typeof message.content === "string" ? message.content : JSON.stringify(message.content))).join("\n"),
+      ),
     draftSystems: () => [...draftSystemAsked],
     draftTools: () => [...draftToolsAsked],
     redraft: (instanceId, notes) =>
