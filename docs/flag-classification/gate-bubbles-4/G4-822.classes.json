@@ -1,0 +1,126 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-17k-termination-letter-exit-card: 17k: \"Dear <C>, Your employment with Buff City Soap is terminated effective 11/10/26.\": the Resignation/Exit Form card for her, never a refusal \u2014 OPEN in production (no exit card: the general answer (live: \"I can't act on this \u2026 Want me to start the exit form?\"))": {
+  "category": "INTENDED",
+  "reason": "#817's row, same reply as #817 alone: OPEN holds: the 'Dear <C>, Your employment \u2026 is terminated effective 11/10/26.' letter gives the Resignation/Exit Form card for her"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-resent-exit-request-keeps-name: the exit request sent again after \"Is this for **Marcus Tellefsen**?\": the exit card for Marcus Tellefsen, never \"Who is this \u2026 for?\" \u2014 OPEN in production (\"Who is this **Resignation/Exit Form** for?\")": {
+  "category": "INTENDED",
+  "reason": "#822 OPEN holds: the exit request sent again after 'Is this for **Marcus Tellefsen**?' gives his Exit card (OFF: 'Who is this Resignation/Exit Form for?')"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-termination-ca-bare-opens-card: \"Termination CA for <A>, no call no show.\": a Corrective Action card for her \u2014 OPEN in production (no card: the general answer)": {
+  "category": "INTENDED",
+  "reason": "#817's row, same reply as #817 alone: OPEN holds: 'Termination CA for <A>, no call no show.' gives a CA card (Attendance p.14) instead of the free answer"
+ },
+ "src/lib/forms/resent-request-is-yes.test.ts :: RESENT_REQUEST_IS_YES_ENABLED off: as sent": {
+  "category": "INTENDED-HARNESS",
+  "reason": "unit test's flag-off half; the ON arm exports the flag"
+ },
+ "replay: nov10-letter-greeting-your-capitalised [fix:LETTER_GREETING_ANY_CASE_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "#817's row, same reply as #817 alone: the letter at T1 now opens the Exit card (OFF: free answer); where T2 resends it, T2 is the card-already-shown path: 'Your account covers every store, so this form won't name one' instead of asking store and job title (both stay in the card's 'Left blank' list); cases hold"
+ },
+ "replay: nov10-letter-greeting-your-capitalised [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "#817's row, same reply as #817 alone: the letter at T1 now opens the Exit card (OFF: free answer); where T2 resends it, T2 is the card-already-shown path: 'Your account covers every store, so this form won't name one' instead of asking store and job title (both stay in the card's 'Left blank' list); cases hold"
+ },
+ "replay: nov12-17k-termination-letter-exit-card [open]": {
+  "category": "INTENDED",
+  "reason": "#817's row, same reply as #817 alone: OPEN holds: the 'Dear <C>, Your employment \u2026 is terminated effective 11/10/26.' letter gives the Resignation/Exit Form card for her"
+ },
+ "replay: nov12-resent-exit-request-keeps-name [open]": {
+  "category": "INTENDED",
+  "reason": "#822 OPEN holds: the exit request sent again after 'Is this for **Marcus Tellefsen**?' gives his Exit card (OFF: 'Who is this Resignation/Exit Form for?')"
+ },
+ "replay: nov12-termination-ca-bare-opens-card [open]": {
+  "category": "INTENDED",
+  "reason": "#817's row, same reply as #817 alone: OPEN holds: 'Termination CA for <A>, no call no show.' gives a CA card (Attendance p.14) instead of the free answer"
+ },
+ "replay: nov5-exit-termination-paste-no-invented-facts [fix:EXIT_STATED_ONLY_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "#817's row, same reply as #817 alone: T1 (the pasted Dorran letter alone) asks 'Who is this **Resignation/Exit Form** for?' instead of the free answer; T2 adds 'I still need to know who this is for before I can make this card.' before the same question; cases hold"
+ },
+ "replay: nov5-exit-termination-paste-no-invented-facts [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "#817's row, same reply as #817 alone: T1 (the pasted Dorran letter alone) asks 'Who is this **Resignation/Exit Form** for?' instead of the free answer; T2 adds 'I still need to know who this is for before I can make this card.' before the same question; cases hold"
+ },
+ "replay: nov6-reflip-exit-choices-one-who-question [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED,EXIT_STATED_ONLY_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "#817's row, same reply as #817 alone: T1 (the pasted Dorran letter alone) asks 'Who is this **Resignation/Exit Form** for?' instead of the free answer; T2 adds 'I still need to know who this is for before I can make this card.' before the same question; cases hold"
+ },
+ "replay: nov6-reflip-exit-choices-one-who-question [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "#817's row, same reply as #817 alone: T1 (the pasted Dorran letter alone) asks 'Who is this **Resignation/Exit Form** for?' instead of the free answer; T2 adds 'I still need to know who this is for before I can make this card.' before the same question; cases hold"
+ },
+ "replay: nov7-brand-not-a-person-termination-letter [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED,FORM_NAME_OFF_ROSTER_ASK_ENABLED,EXIT_STATED_ONLY_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "#817's row, same reply as #817 alone: T1 (the pasted Dorran letter alone) asks 'Who is this **Resignation/Exit Form** for?' instead of the free answer; T2 adds 'I still need to know who this is for before I can make this card.' before the same question; cases hold"
+ },
+ "replay: nov7-brand-not-a-person-termination-letter [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "#817's row, same reply as #817 alone: T1 (the pasted Dorran letter alone) asks 'Who is this **Resignation/Exit Form** for?' instead of the free answer; T2 adds 'I still need to know who this is for before I can make this card.' before the same question; cases hold"
+ },
+ "replay: nov8-exit-other-person-not-offered [fix:EXIT_OTHER_PERSON_NOT_SUBJECT_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "#817's row, same reply as #817 alone: T1 (the pasted Dorran letter alone) asks 'Who is this **Resignation/Exit Form** for?' instead of the free answer; T2 adds 'I still need to know who this is for before I can make this card.' before the same question; cases hold"
+ },
+ "replay: nov8-exit-other-person-not-offered [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "#817's row, same reply as #817 alone: T1 (the pasted Dorran letter alone) asks 'Who is this **Resignation/Exit Form** for?' instead of the free answer; T2 adds 'I still need to know who this is for before I can make this card.' before the same question; cases hold"
+ },
+ "replay: nov8-exit-termination-stated-facts [fix:EXIT_STATED_ONLY_ENABLED,EXIT_TERMINATION_STATED_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "#817's row, same reply as #817 alone: T1 (the pasted Dorran letter alone) asks 'Who is this **Resignation/Exit Form** for?' instead of the free answer; T2 adds 'I still need to know who this is for before I can make this card.' before the same question; cases hold"
+ },
+ "replay: nov8-exit-termination-stated-facts [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "#817's row, same reply as #817 alone: T1 (the pasted Dorran letter alone) asks 'Who is this **Resignation/Exit Form** for?' instead of the free answer; T2 adds 'I still need to know who this is for before I can make this card.' before the same question; cases hold"
+ },
+ "replay: nov9-exit-form-date-termination [fix:EXIT_FORM_DATE_FROM_TERMINATION_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "#817's row, same reply as #817 alone: the letter at T1 now opens the Exit card (OFF: free answer); where T2 resends it, T2 is the card-already-shown path: 'Your account covers every store, so this form won't name one' instead of asking store and job title (both stay in the card's 'Left blank' list); cases hold"
+ },
+ "replay: nov9-exit-form-date-termination [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "#817's row, same reply as #817 alone: the letter at T1 now opens the Exit card (OFF: free answer); where T2 resends it, T2 is the card-already-shown path: 'Your account covers every store, so this form won't name one' instead of asking store and job title (both stay in the card's 'Left blank' list); cases hold"
+ },
+ "replay: nov9-letter-greeting-dear-off-roster [fix:LETTER_GREETING_NOT_NAME_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "#817's row, same reply as #817 alone: the letter at T1 now opens the Exit card (OFF: free answer); where T2 resends it, T2 is the card-already-shown path: 'Your account covers every store, so this form won't name one' instead of asking store and job title (both stay in the card's 'Left blank' list); cases hold"
+ },
+ "replay: nov9-letter-greeting-dear-off-roster [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "#817's row, same reply as #817 alone: the letter at T1 now opens the Exit card (OFF: free answer); where T2 resends it, T2 is the card-already-shown path: 'Your account covers every store, so this form won't name one' instead of asking store and job title (both stay in the card's 'Left blank' list); cases hold"
+ },
+ "replay: nov9-letter-greeting-dear-on-roster [fix:LETTER_GREETING_NOT_NAME_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "#817's row, same reply as #817 alone: the letter at T1 now opens the Exit card (OFF: free answer); where T2 resends it, T2 is the card-already-shown path: 'Your account covers every store, so this form won't name one' instead of asking store and job title (both stay in the card's 'Left blank' list); cases hold"
+ },
+ "replay: nov9-letter-greeting-dear-on-roster [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "#817's row, same reply as #817 alone: the letter at T1 now opens the Exit card (OFF: free answer); where T2 resends it, T2 is the card-already-shown path: 'Your account covers every store, so this form won't name one' instead of asking store and job title (both stay in the card's 'Left blank' list); cases hold"
+ },
+ "replay: nov9-letter-greeting-hi-first-name [fix:LETTER_GREETING_NOT_NAME_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "with #817+#822: T1 'Is this for **Marcus Tellefsen**?', T2 (request resent) gives Marcus Tellefsen's Exit card \u2014 the #817-alone name loss is gone"
+ },
+ "replay: nov9-letter-greeting-hi-first-name [production]": {
+  "category": "INTENDED",
+  "reason": "with #817+#822: T1 'Is this for **Marcus Tellefsen**?', T2 (request resent) gives Marcus Tellefsen's Exit card \u2014 the #817-alone name loss is gone"
+ },
+ "replay: nov9-letter-title-date-off-roster [fix:EXIT_LETTER_SIGNER_NOT_SUBJECT_ENABLED,EXIT_LETTER_ADDRESSEE_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "#817's row, same reply as #817 alone: the letter at T1 now opens the Exit card (OFF: free answer); where T2 resends it, T2 is the card-already-shown path: 'Your account covers every store, so this form won't name one' instead of asking store and job title (both stay in the card's 'Left blank' list); cases hold"
+ },
+ "replay: nov9-letter-title-date-off-roster [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "#817's row, same reply as #817 alone: the letter at T1 now opens the Exit card (OFF: free answer); where T2 resends it, T2 is the card-already-shown path: 'Your account covers every store, so this form won't name one' instead of asking store and job title (both stay in the card's 'Left blank' list); cases hold"
+ },
+ "replay: nov9-letter-title-date-on-roster [fix:EXIT_LETTER_SIGNER_NOT_SUBJECT_ENABLED,EXIT_LETTER_ADDRESSEE_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "#817's row, same reply as #817 alone: the letter at T1 now opens the Exit card (OFF: free answer); where T2 resends it, T2 is the card-already-shown path: 'Your account covers every store, so this form won't name one' instead of asking store and job title (both stay in the card's 'Left blank' list); cases hold"
+ },
+ "replay: nov9-letter-title-date-on-roster [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "#817's row, same reply as #817 alone: the letter at T1 now opens the Exit card (OFF: free answer); where T2 resends it, T2 is the card-already-shown path: 'Your account covers every store, so this form won't name one' instead of asking store and job title (both stay in the card's 'Left blank' list); cases hold"
+ }
+}
