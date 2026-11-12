@@ -419,7 +419,9 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
       : sent;
     // OUTLINE_ON_OPEN_PROPOSAL_ENABLED: an outline pasted for another person, and "same outline …", are no account (`lib/forms/outline-on-proposal.ts`).
     const unoutlined = outlineOnOpenProposalEnabled() ? (await import("@/lib/forms/outline-on-proposal")).notesWithoutOutline(typed, loaded.instance.employeeName) : typed;
-    const asTyped = (await import("@/lib/ai/card-meta-turn")).withoutCardMetaTurns(unoutlined);
+    // APP_INSTRUCTIONS_NOT_ACCOUNT_ENABLED (port from the sibling app): "Please word it in a professional way. I need the policy attached as well." is no account.
+    const plain = (await import("@/lib/ai/app-instructions")).withoutAppInstructions(unoutlined);
+    const asTyped = (await import("@/lib/ai/card-meta-turn")).withoutCardMetaTurns(plain === unoutlined ? unoutlined : plain.trim());
     // TYPO_READING_ROUTES_ENABLED: the readers below see "coahed", "notcie", "amont" as the words they can only be.
     const read = typoReadingRoutesEnabled() ? typoReadingText(asTyped, await protectedNameWords()) : asTyped;
     // PROPOSAL_MAKE_IT_ABOUT_ENABLED: "make it about showing up late …" makes "Showing up late." the account from that turn on (`ai/make-it-about.ts`).

@@ -4641,6 +4641,20 @@ export function madeAboutRewriteFinishesEnabled(): boolean {
 }
 
 /**
+ * APP_INSTRUCTIONS_NOT_ACCOUNT_ENABLED (coding 6, 10 Nov 2026; default off;
+ * QA's P12 part 2, port from the sibling app). "… for not hitting her numbers
+ * for the month of October. Please word it in a professional way. I need the
+ * policy attached as well." — the drafting model was handed the last two
+ * sentences as account. On: a sentence that only asks for the wording or for
+ * the policy on the form is left out of the draft's account (this app's
+ * coaching card shows no Observation line).
+ * See `ai/app-instructions.ts`. Off, as before.
+ */
+export function appInstructionsNotAccountEnabled(): boolean {
+  return envFlag("APP_INSTRUCTIONS_NOT_ACCOUNT_ENABLED");
+}
+
+/**
  * MADE_ABOUT_TOPIC_EVIDENCE_ENABLED (QA's live Bubbles round 13, 9 Nov 2026; default off; same flag in both apps). "make it
  * about being late on 11/5/26" left Other on the old topic: the topic read from the manager's words ("Being late") came
  * with "being late" as its evidence, two words, under the reducer's floor, so it was refused. With the flag on, its
