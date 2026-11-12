@@ -1,6 +1,7 @@
 import * as React from "react";
 import Link from "next/link";
 
+import { replyQuoteLinesClientEnabled } from "@/lib/config/chat-quality-flags";
 import { CHAT_LINKABLE_PATHS } from "@/lib/reporting/registry";
 import { cn } from "@/lib/utils/cn";
 
@@ -163,6 +164,13 @@ export function RichText({
   let bullets: string[] = [];
   let ordered: string[] = [];
   let paragraph: string[] = [];
+  /*
+   * NEXT_PUBLIC_REPLY_QUOTE_LINES_ENABLED (QA's Bubbles 17p live check, 12 Nov 2026): an edit reply quoting a field line
+   * by line ("> Observed:" / "> <name> was late …" / "> Expectation: …") showed as one line with ">" between the
+   * parts. On, a run of "> " lines is a quote: each line on its own line, a bare ">" a gap between sections.
+   */
+  const quoteLines = replyQuoteLinesClientEnabled();
+  let quote: string[] = [];
 
   const flushParagraph = (key: string) => {
     if (paragraph.length === 0) return;
@@ -231,6 +239,23 @@ export function RichText({
     );
   };
 
+  const flushQuote = (key: string) => {
+    if (quote.length === 0) return;
+    const items = quote;
+    quote = [];
+    blocks.push(
+      <blockquote key={key} className="border-l-2 border-border pl-3 leading-relaxed text-foreground">
+        {items.map((item, index) =>
+          item === "" ? (
+            <div key={index} className="h-2" aria-hidden="true" />
+          ) : (
+            <div key={index}>{renderInline(item, `${key}-${index}`)}</div>
+          ),
+        )}
+      </blockquote>,
+    );
+  };
+
   const flushBullets = (key: string) => {
     if (bullets.length === 0) return;
     const items = bullets;
@@ -269,6 +294,7 @@ export function RichText({
   };
 
   const flushAll = (key: string) => {
+    flushQuote(`${key}-q`);
     flushParagraph(`${key}-p`);
     flushBullets(`${key}-u`);
     flushOrdered(`${key}-o`);
@@ -356,6 +382,17 @@ export function RichText({
 
     const line = rawLine.trimEnd();
     const key = `l${index}`;
+
+    // NEXT_PUBLIC_REPLY_QUOTE_LINES_ENABLED: "> " lines are one quote, a line each.
+    const quoted = quoteLines ? /^\s*>\s?(.*)$/.exec(line) : null;
+    if (quoted) {
+      flushParagraph(`${key}-p`);
+      flushBullets(`${key}-u`);
+      flushOrdered(`${key}-o`);
+      quote.push(quoted[1]!.trim());
+      return;
+    }
+    flushQuote(`${key}-q`);
 
     if (line.trim() === "") {
       flushAll(key);

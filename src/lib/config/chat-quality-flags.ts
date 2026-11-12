@@ -5157,3 +5157,16 @@ export function terminationIntakeEnabled(): boolean {
 export function resentRequestIsYesEnabled(): boolean {
   return envFlag("RESENT_REQUEST_IS_YES_ENABLED");
 }
+
+/**
+ * NEXT_PUBLIC_REPLY_QUOTE_LINES_ENABLED (QA's Bubbles 17p live check, 12 Nov 2026; default off). With
+ * STEP_B_REPLY_KEEPS_LINES on, an edit reply quotes the field line by line ("Changed Observation of Offense to:\n>
+ * Observed:\n> <G> was late …\n> Expectation: …"), but the chat showed it as ONE line with ">" between the parts: the
+ * renderer had no quote block, so the "> " lines were joined into a paragraph. On: a run of "> " lines renders as a
+ * quote, each line on its own line (`components/rich-text.tsx`). The chat renders in the browser, so only the public
+ * name is read, written out statically for Next to inline. Off, as before.
+ */
+export function replyQuoteLinesClientEnabled(): boolean {
+  const inlined = process.env.NEXT_PUBLIC_REPLY_QUOTE_LINES_ENABLED;
+  return typeof inlined === "string" && ON.has(inlined.trim().toLowerCase());
+}
