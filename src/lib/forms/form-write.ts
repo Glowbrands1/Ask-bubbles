@@ -7,10 +7,12 @@ import {
   formEditNoopGuardEnabled,
   formPatchReaderFixesEnabled,
   madeAboutAllOrNothingEnabled,
+  madeAboutSaidDateEnabled,
   stepBAddUnderObservedEnabled,
   stepBMakeItAboutAccountEnabled,
   stepBSectionSpacingEnabled,
 } from "@/lib/config/chat-quality-flags";
+import { madeAbout } from "@/lib/ai/make-it-about";
 import { addUnderObserved, hasSections, tailAfterLastSection, withSectionSpacing } from "./outline-sections";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { isGlossaryTerm } from "@/lib/ai/glossary";
@@ -19,6 +21,7 @@ import { syncCorrectiveActionPlan } from "./ca-action-plan-sync";
 import { checkboxGroupsForVariant, fieldsForVariant, parseFormDocument } from "./document";
 import { NOTHING_CHANGED } from "./form-diff-reply";
 import { datesInText } from "./form-date-answer";
+import { saidFormDate } from "./form-date-said";
 import { madeAboutDate, madeAboutWriteNoted } from "./made-about-date";
 import {
   applyPatch,
@@ -141,6 +144,12 @@ export interface FormEditOp {
 
 export interface FormEditRules {
   readonly path: FormEditPath;
+  /**
+   * PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT_ENABLED (QA's round-25 live 5c): the write only puts back the line breaks the
+   * manager pasted with, on a value the revision just wrote with the same words on one line (`withPastedLineBreaks`).
+   * The open-draft path's "already says this" rule (`noRepeat`) would refuse it as the same sentences again.
+   */
+  readonly lineBreaksOnly?: boolean;
   readonly actorId: string;
   /** The latest message. */
   readonly latest?: string;
@@ -297,6 +306,7 @@ function withReaderFoundNothing(
 ): { patchRules: PatchRules; writable: ReadonlySet<string> } {
   if (!formPatchReaderFixesEnabled()) return preset;
   // QA's 2x run: what the field already says is never written again, on any path that writes her edit.
+  if (rules.path === "open_draft" && rules.lineBreaksOnly) return preset;
   if (rules.path === "open_draft" || rules.path === "tool") return { ...preset, patchRules: { ...preset.patchRules, noRepeat: true } };
   if (rules.path !== "revision" && rules.path !== "patch") return preset;
   // The instruction written back as content is refused on both paths (QA's stability run: "Details about the towel.").
@@ -332,8 +342,15 @@ function basePresetRules(loaded: LoadedInstance, ops: readonly FormEditOp[], rul
    */
   // MADE_ABOUT_ALL_OR_NOTHING_ENABLED: only while Step B writes the Date and the topic with the account.
   const coordinatedWrite = !madeAboutAllOrNothingEnabled() || madeAboutWriteNoted(loaded.instance.id);
-  const aboutDate = rules.path === "revision" && stepBMakeItAboutAccountEnabled() && coordinatedWrite ? madeAboutDate(latest, today) : null;
-  const guard = aboutDate ? { ...read, formDate: aboutDate } : read;
+  // MADE_ABOUT_SAID_DATE_ENABLED (the sibling app's live round 14, 10 Nov 2026): the date said apart from the topic is that turn's incident date.
+  const aboutDate =
+    rules.path === "revision" && stepBMakeItAboutAccountEnabled() && coordinatedWrite
+      ? (madeAboutDate(latest, today) ??
+        (madeAboutSaidDateEnabled() && madeAbout(latest) !== null ? saidFormDate(latest, today) : null))
+      : null;
+  const guard = aboutDate
+    ? { ...read, formDate: aboutDate, ...(madeAboutSaidDateEnabled() && madeAboutWriteNoted(loaded.instance.id) ? { oldIncidentDates: true } : {}) }
+    : read;
   const writeIns = writeInsOf(loaded);
   const groups = groupsOf(loaded);
   const lists = new Set([PRIOR_ACTIONS_KEY]);

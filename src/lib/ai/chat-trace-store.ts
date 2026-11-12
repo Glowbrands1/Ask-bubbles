@@ -45,10 +45,24 @@ export interface ChatTraceDraft {
    * check did not run.
    */
   draftCheck?: Record<string, unknown>;
+  /**
+   * CHAT_STAGE_TIMINGS_ENABLED: how long each awaited step of the turn took, written to `slots.stages`. Names and
+   * milliseconds only (from the trace's start), never content. Absent when the flag is off.
+   */
+  stages?: ChatStageTiming[];
+  /** CHAT_STAGE_TIMINGS_ENABLED: when the trace started, which `stages` count from. */
+  stagesFrom?: number;
   errorSubtype: ErrorSubtype | null;
   errorClass: string | null;
   errorStatus: number | null;
   succeeded: boolean | null;
+}
+
+/** CHAT_STAGE_TIMINGS_ENABLED: one awaited step — its name, when it started and how long it took (-1 while open), in ms from the trace's start. */
+export interface ChatStageTiming {
+  readonly name: string;
+  readonly startMs: number;
+  readonly ms: number;
 }
 
 const storage = new AsyncLocalStorage<ChatTraceDraft>();
