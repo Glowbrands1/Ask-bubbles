@@ -1,0 +1,170 @@
+{
+ "src/app/api/chat/account-only-policy-query-e2e.test.ts :: ACCOUNT_ONLY_POLICY_QUERY_ENABLED on a draft with no invented detail is kept as written": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "exact-text expectation on a model fixture whose CA Observation ends in 'Going Forward:'; ON saves the same text minus that section (verified: 'Observed:\\nThe employee was late to work on October 2, 2026.'). Stable in 3 OFF + 3 ON. Expectation needs flag scoping like nov8 spaced()"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-draft-no-invented-plan-ca-observation: \"create a written CA for <employee>, she was 20 minutes late \u2026 no action plan\": the saved Observation has no Going Forward \u2014 OPEN in production (the model's Going Forward is saved in the Observation; fixed with DRAFT_NO_INVENTED_PLAN_ENABLED)": {
+  "category": "INTENDED",
+  "reason": "expected-fail wrapper: the OPEN production arm now holds"
+ },
+ "src/app/api/forms/draft-never-blank-oct26-e2e.test.ts :: 'lowercase with the name Capitalized, \u2026' flag on: never blank a model error (429 rate limited), then an answer: the answer is the draft, and the error is recorded": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "exact-text expectation on a model fixture whose CA Observation ends in 'Going Forward:'; ON saves the same text minus that section (verified: 'Observed:\\nThe employee was late to work on October 2, 2026.'). Stable in 3 OFF + 3 ON. Expectation needs flag scoping like nov8 spaced()"
+ },
+ "src/app/api/forms/draft-never-blank-oct26-e2e.test.ts :: 'lowercase with the name Capitalized, \u2026' flag on: never blank a model error (529 overloaded), then an answer: the answer is the draft, and the error is recorded": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "exact-text expectation on a model fixture whose CA Observation ends in 'Going Forward:'; ON saves the same text minus that section (verified: 'Observed:\\nThe employee was late to work on October 2, 2026.'). Stable in 3 OFF + 3 ON. Expectation needs flag scoping like nov8 spaced()"
+ },
+ "src/app/api/forms/draft-never-blank-oct26-e2e.test.ts :: 'lowercase with the name Capitalized, \u2026' flag on: never blank a model error (overloaded, no status), then an answer: the answer is the draft, and the error is recorded": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "exact-text expectation on a model fixture whose CA Observation ends in 'Going Forward:'; ON saves the same text minus that section (verified: 'Observed:\\nThe employee was late to work on October 2, 2026.'). Stable in 3 OFF + 3 ON. Expectation needs flag scoping like nov8 spaced()"
+ },
+ "src/app/api/forms/draft-never-blank-oct26-e2e.test.ts :: 'lowercase with the name Capitalized, \u2026' flag on: never blank a normal draft still uses the model's text, with one model call": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "exact-text expectation on a model fixture whose CA Observation ends in 'Going Forward:'; ON saves the same text minus that section (verified: 'Observed:\\nThe employee was late to work on October 2, 2026.'). Stable in 3 OFF + 3 ON. Expectation needs flag scoping like nov8 spaced()"
+ },
+ "src/app/api/forms/draft-never-blank-oct26-e2e.test.ts :: 'lowercase with the name Capitalized, \u2026' flag on: never blank an empty first call and a good retry: the retry's text is used": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "exact-text expectation on a model fixture whose CA Observation ends in 'Going Forward:'; ON saves the same text minus that section (verified: 'Observed:\\nThe employee was late to work on October 2, 2026.'). Stable in 3 OFF + 3 ON. Expectation needs flag scoping like nov8 spaced()"
+ },
+ "src/app/api/forms/draft-never-blank-oct26-e2e.test.ts :: 'lowercase, no call no show' flag on: never blank a model error (429 rate limited), then an answer: the answer is the draft, and the error is recorded": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "exact-text expectation on a model fixture whose CA Observation ends in 'Going Forward:'; ON saves the same text minus that section (verified: 'Observed:\\nThe employee was late to work on October 2, 2026.'). Stable in 3 OFF + 3 ON. Expectation needs flag scoping like nov8 spaced()"
+ },
+ "src/app/api/forms/draft-never-blank-oct26-e2e.test.ts :: 'lowercase, no call no show' flag on: never blank a model error (529 overloaded), then an answer: the answer is the draft, and the error is recorded": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "exact-text expectation on a model fixture whose CA Observation ends in 'Going Forward:'; ON saves the same text minus that section (verified: 'Observed:\\nThe employee was late to work on October 2, 2026.'). Stable in 3 OFF + 3 ON. Expectation needs flag scoping like nov8 spaced()"
+ },
+ "src/app/api/forms/draft-never-blank-oct26-e2e.test.ts :: 'lowercase, no call no show' flag on: never blank a model error (overloaded, no status), then an answer: the answer is the draft, and the error is recorded": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "exact-text expectation on a model fixture whose CA Observation ends in 'Going Forward:'; ON saves the same text minus that section (verified: 'Observed:\\nThe employee was late to work on October 2, 2026.'). Stable in 3 OFF + 3 ON. Expectation needs flag scoping like nov8 spaced()"
+ },
+ "src/app/api/forms/draft-never-blank-oct26-e2e.test.ts :: 'lowercase, no call no show' flag on: never blank a normal draft still uses the model's text, with one model call": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "exact-text expectation on a model fixture whose CA Observation ends in 'Going Forward:'; ON saves the same text minus that section (verified: 'Observed:\\nThe employee was late to work on October 2, 2026.'). Stable in 3 OFF + 3 ON. Expectation needs flag scoping like nov8 spaced()"
+ },
+ "src/app/api/forms/draft-never-blank-oct26-e2e.test.ts :: 'lowercase, no call no show' flag on: never blank an empty first call and a good retry: the retry's text is used": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "exact-text expectation on a model fixture whose CA Observation ends in 'Going Forward:'; ON saves the same text minus that section (verified: 'Observed:\\nThe employee was late to work on October 2, 2026.'). Stable in 3 OFF + 3 ON. Expectation needs flag scoping like nov8 spaced()"
+ },
+ "src/app/api/forms/draft-never-blank-oct26-e2e.test.ts :: 'lowercase, took product' flag on: never blank a model error (429 rate limited), then an answer: the answer is the draft, and the error is recorded": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "exact-text expectation on a model fixture whose CA Observation ends in 'Going Forward:'; ON saves the same text minus that section (verified: 'Observed:\\nThe employee was late to work on October 2, 2026.'). Stable in 3 OFF + 3 ON. Expectation needs flag scoping like nov8 spaced()"
+ },
+ "src/app/api/forms/draft-never-blank-oct26-e2e.test.ts :: 'lowercase, took product' flag on: never blank a model error (529 overloaded), then an answer: the answer is the draft, and the error is recorded": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "exact-text expectation on a model fixture whose CA Observation ends in 'Going Forward:'; ON saves the same text minus that section (verified: 'Observed:\\nThe employee was late to work on October 2, 2026.'). Stable in 3 OFF + 3 ON. Expectation needs flag scoping like nov8 spaced()"
+ },
+ "src/app/api/forms/draft-never-blank-oct26-e2e.test.ts :: 'lowercase, took product' flag on: never blank a model error (overloaded, no status), then an answer: the answer is the draft, and the error is recorded": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "exact-text expectation on a model fixture whose CA Observation ends in 'Going Forward:'; ON saves the same text minus that section (verified: 'Observed:\\nThe employee was late to work on October 2, 2026.'). Stable in 3 OFF + 3 ON. Expectation needs flag scoping like nov8 spaced()"
+ },
+ "src/app/api/forms/draft-never-blank-oct26-e2e.test.ts :: 'lowercase, took product' flag on: never blank a normal draft still uses the model's text, with one model call": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "exact-text expectation on a model fixture whose CA Observation ends in 'Going Forward:'; ON saves the same text minus that section (verified: 'Observed:\\nThe employee was late to work on October 2, 2026.'). Stable in 3 OFF + 3 ON. Expectation needs flag scoping like nov8 spaced()"
+ },
+ "src/app/api/forms/draft-never-blank-oct26-e2e.test.ts :: 'lowercase, took product' flag on: never blank an empty first call and a good retry: the retry's text is used": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "exact-text expectation on a model fixture whose CA Observation ends in 'Going Forward:'; ON saves the same text minus that section (verified: 'Observed:\\nThe employee was late to work on October 2, 2026.'). Stable in 3 OFF + 3 ON. Expectation needs flag scoping like nov8 spaced()"
+ },
+ "src/app/api/forms/draft-never-blank-oct26-e2e.test.ts :: 'sentence case with the name lowercase\u2026' flag on: never blank a model error (429 rate limited), then an answer: the answer is the draft, and the error is recorded": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "exact-text expectation on a model fixture whose CA Observation ends in 'Going Forward:'; ON saves the same text minus that section (verified: 'Observed:\\nThe employee was late to work on October 2, 2026.'). Stable in 3 OFF + 3 ON. Expectation needs flag scoping like nov8 spaced()"
+ },
+ "src/app/api/forms/draft-never-blank-oct26-e2e.test.ts :: 'sentence case with the name lowercase\u2026' flag on: never blank a model error (529 overloaded), then an answer: the answer is the draft, and the error is recorded": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "exact-text expectation on a model fixture whose CA Observation ends in 'Going Forward:'; ON saves the same text minus that section (verified: 'Observed:\\nThe employee was late to work on October 2, 2026.'). Stable in 3 OFF + 3 ON. Expectation needs flag scoping like nov8 spaced()"
+ },
+ "src/app/api/forms/draft-never-blank-oct26-e2e.test.ts :: 'sentence case with the name lowercase\u2026' flag on: never blank a model error (overloaded, no status), then an answer: the answer is the draft, and the error is recorded": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "exact-text expectation on a model fixture whose CA Observation ends in 'Going Forward:'; ON saves the same text minus that section (verified: 'Observed:\\nThe employee was late to work on October 2, 2026.'). Stable in 3 OFF + 3 ON. Expectation needs flag scoping like nov8 spaced()"
+ },
+ "src/app/api/forms/draft-never-blank-oct26-e2e.test.ts :: 'sentence case with the name lowercase\u2026' flag on: never blank a normal draft still uses the model's text, with one model call": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "exact-text expectation on a model fixture whose CA Observation ends in 'Going Forward:'; ON saves the same text minus that section (verified: 'Observed:\\nThe employee was late to work on October 2, 2026.'). Stable in 3 OFF + 3 ON. Expectation needs flag scoping like nov8 spaced()"
+ },
+ "src/app/api/forms/draft-never-blank-oct26-e2e.test.ts :: 'sentence case with the name lowercase\u2026' flag on: never blank an empty first call and a good retry: the retry's text is used": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "exact-text expectation on a model fixture whose CA Observation ends in 'Going Forward:'; ON saves the same text minus that section (verified: 'Observed:\\nThe employee was late to work on October 2, 2026.'). Stable in 3 OFF + 3 ON. Expectation needs flag scoping like nov8 spaced()"
+ },
+ "src/app/api/forms/draft-never-blank-oct26-e2e.test.ts :: 'sentence case, no call no show (the t\u2026' flag on: never blank a model error (429 rate limited), then an answer: the answer is the draft, and the error is recorded": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "exact-text expectation on a model fixture whose CA Observation ends in 'Going Forward:'; ON saves the same text minus that section (verified: 'Observed:\\nThe employee was late to work on October 2, 2026.'). Stable in 3 OFF + 3 ON. Expectation needs flag scoping like nov8 spaced()"
+ },
+ "src/app/api/forms/draft-never-blank-oct26-e2e.test.ts :: 'sentence case, no call no show (the t\u2026' flag on: never blank a model error (529 overloaded), then an answer: the answer is the draft, and the error is recorded": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "exact-text expectation on a model fixture whose CA Observation ends in 'Going Forward:'; ON saves the same text minus that section (verified: 'Observed:\\nThe employee was late to work on October 2, 2026.'). Stable in 3 OFF + 3 ON. Expectation needs flag scoping like nov8 spaced()"
+ },
+ "src/app/api/forms/draft-never-blank-oct26-e2e.test.ts :: 'sentence case, no call no show (the t\u2026' flag on: never blank a model error (overloaded, no status), then an answer: the answer is the draft, and the error is recorded": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "exact-text expectation on a model fixture whose CA Observation ends in 'Going Forward:'; ON saves the same text minus that section (verified: 'Observed:\\nThe employee was late to work on October 2, 2026.'). Stable in 3 OFF + 3 ON. Expectation needs flag scoping like nov8 spaced()"
+ },
+ "src/app/api/forms/draft-never-blank-oct26-e2e.test.ts :: 'sentence case, no call no show (the t\u2026' flag on: never blank a normal draft still uses the model's text, with one model call": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "exact-text expectation on a model fixture whose CA Observation ends in 'Going Forward:'; ON saves the same text minus that section (verified: 'Observed:\\nThe employee was late to work on October 2, 2026.'). Stable in 3 OFF + 3 ON. Expectation needs flag scoping like nov8 spaced()"
+ },
+ "src/app/api/forms/draft-never-blank-oct26-e2e.test.ts :: 'sentence case, no call no show (the t\u2026' flag on: never blank an empty first call and a good retry: the retry's text is used": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "exact-text expectation on a model fixture whose CA Observation ends in 'Going Forward:'; ON saves the same text minus that section (verified: 'Observed:\\nThe employee was late to work on October 2, 2026.'). Stable in 3 OFF + 3 ON. Expectation needs flag scoping like nov8 spaced()"
+ },
+ "src/app/api/forms/draft-never-blank-oct26-e2e.test.ts :: 'sentence case, took product' flag on: never blank a model error (429 rate limited), then an answer: the answer is the draft, and the error is recorded": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "exact-text expectation on a model fixture whose CA Observation ends in 'Going Forward:'; ON saves the same text minus that section (verified: 'Observed:\\nThe employee was late to work on October 2, 2026.'). Stable in 3 OFF + 3 ON. Expectation needs flag scoping like nov8 spaced()"
+ },
+ "src/app/api/forms/draft-never-blank-oct26-e2e.test.ts :: 'sentence case, took product' flag on: never blank a model error (529 overloaded), then an answer: the answer is the draft, and the error is recorded": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "exact-text expectation on a model fixture whose CA Observation ends in 'Going Forward:'; ON saves the same text minus that section (verified: 'Observed:\\nThe employee was late to work on October 2, 2026.'). Stable in 3 OFF + 3 ON. Expectation needs flag scoping like nov8 spaced()"
+ },
+ "src/app/api/forms/draft-never-blank-oct26-e2e.test.ts :: 'sentence case, took product' flag on: never blank a model error (overloaded, no status), then an answer: the answer is the draft, and the error is recorded": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "exact-text expectation on a model fixture whose CA Observation ends in 'Going Forward:'; ON saves the same text minus that section (verified: 'Observed:\\nThe employee was late to work on October 2, 2026.'). Stable in 3 OFF + 3 ON. Expectation needs flag scoping like nov8 spaced()"
+ },
+ "src/app/api/forms/draft-never-blank-oct26-e2e.test.ts :: 'sentence case, took product' flag on: never blank a normal draft still uses the model's text, with one model call": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "exact-text expectation on a model fixture whose CA Observation ends in 'Going Forward:'; ON saves the same text minus that section (verified: 'Observed:\\nThe employee was late to work on October 2, 2026.'). Stable in 3 OFF + 3 ON. Expectation needs flag scoping like nov8 spaced()"
+ },
+ "src/app/api/forms/draft-never-blank-oct26-e2e.test.ts :: 'sentence case, took product' flag on: never blank an empty first call and a good retry: the retry's text is used": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "exact-text expectation on a model fixture whose CA Observation ends in 'Going Forward:'; ON saves the same text minus that section (verified: 'Observed:\\nThe employee was late to work on October 2, 2026.'). Stable in 3 OFF + 3 ON. Expectation needs flag scoping like nov8 spaced()"
+ },
+ "src/app/api/forms/draft-never-blank-oct26-e2e.test.ts :: never-break: a draft that fills is identical with the flag on and off 'lowercase with the name Capitalized, \u2026'": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "exact-text expectation on a model fixture whose CA Observation ends in 'Going Forward:'; ON saves the same text minus that section (verified: 'Observed:\\nThe employee was late to work on October 2, 2026.'). Stable in 3 OFF + 3 ON. Expectation needs flag scoping like nov8 spaced()"
+ },
+ "src/app/api/forms/draft-never-blank-oct26-e2e.test.ts :: never-break: a draft that fills is identical with the flag on and off 'lowercase, no call no show'": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "exact-text expectation on a model fixture whose CA Observation ends in 'Going Forward:'; ON saves the same text minus that section (verified: 'Observed:\\nThe employee was late to work on October 2, 2026.'). Stable in 3 OFF + 3 ON. Expectation needs flag scoping like nov8 spaced()"
+ },
+ "src/app/api/forms/draft-never-blank-oct26-e2e.test.ts :: never-break: a draft that fills is identical with the flag on and off 'lowercase, took product'": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "exact-text expectation on a model fixture whose CA Observation ends in 'Going Forward:'; ON saves the same text minus that section (verified: 'Observed:\\nThe employee was late to work on October 2, 2026.'). Stable in 3 OFF + 3 ON. Expectation needs flag scoping like nov8 spaced()"
+ },
+ "src/app/api/forms/draft-never-blank-oct26-e2e.test.ts :: never-break: a draft that fills is identical with the flag on and off 'sentence case with the name lowercase\u2026'": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "exact-text expectation on a model fixture whose CA Observation ends in 'Going Forward:'; ON saves the same text minus that section (verified: 'Observed:\\nThe employee was late to work on October 2, 2026.'). Stable in 3 OFF + 3 ON. Expectation needs flag scoping like nov8 spaced()"
+ },
+ "src/app/api/forms/draft-never-blank-oct26-e2e.test.ts :: never-break: a draft that fills is identical with the flag on and off 'sentence case, no call no show (the t\u2026'": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "exact-text expectation on a model fixture whose CA Observation ends in 'Going Forward:'; ON saves the same text minus that section (verified: 'Observed:\\nThe employee was late to work on October 2, 2026.'). Stable in 3 OFF + 3 ON. Expectation needs flag scoping like nov8 spaced()"
+ },
+ "src/app/api/forms/draft-never-blank-oct26-e2e.test.ts :: never-break: a draft that fills is identical with the flag on and off 'sentence case, took product'": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "exact-text expectation on a model fixture whose CA Observation ends in 'Going Forward:'; ON saves the same text minus that section (verified: 'Observed:\\nThe employee was late to work on October 2, 2026.'). Stable in 3 OFF + 3 ON. Expectation needs flag scoping like nov8 spaced()"
+ },
+ "src/app/api/forms/draft-never-blank-oct26-e2e.test.ts :: six Create presses at once (the production burst) flag on: none ends blank; each fills or uses the manager's words, and every blank attempt records its reason": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "exact-text expectation on a model fixture whose CA Observation ends in 'Going Forward:'; ON saves the same text minus that section (verified: 'Observed:\\nThe employee was late to work on October 2, 2026.'). Stable in 3 OFF + 3 ON. Expectation needs flag scoping like nov8 spaced()"
+ },
+ "src/app/api/forms/draft-never-blank-oct26-e2e.test.ts :: the time budget (80 s from the request's start) control: a first call of 79 s is still retried": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "exact-text expectation on a model fixture whose CA Observation ends in 'Going Forward:'; ON saves the same text minus that section (verified: 'Observed:\\nThe employee was late to work on October 2, 2026.'). Stable in 3 OFF + 3 ON. Expectation needs flag scoping like nov8 spaced()"
+ },
+ "replay: nov10-draft-no-invented-plan-ca-observation [open]": {
+  "category": "INTENDED",
+  "reason": "OPEN case holds: saved CA Observation has no Going Forward ('plans travel and preparation' gone), Observed/Expectation kept"
+ },
+ "replay: nov8-step-b-reply-keeps-lines [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED,STEP_B_ADD_UNDER_OBSERVED_ENABLED,STEP_B_SECTION_SPACING_ENABLED,STEP_B_REPLY_KEEPS_LINES_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Coaching form, manager stated no plan: the model's 'Going Forward: Ottoline will put every scheduled meeting on the calendar.' is no longer saved/echoed (QA 26 Oct); case still holds"
+ }
+}
