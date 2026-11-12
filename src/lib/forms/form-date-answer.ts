@@ -390,13 +390,14 @@ const RANGE_AFTER = /^\s*(?:min|mins|minutes|hrs?|hours?|days?|weeks?|months?|ye
  * took the second step for the coaching too. With
  * PRIOR_ACTIONS_NO_COMMA_ENABLED on, a held coaching governs only the words
  * since the date before it, and `stepSpans` also reads the held coaching's
- * own date (`keepHeld`), so "I coached her on 10-16" is listed as an earlier
- * step on a Corrective Action. `blankYearlessStepDates` blanks it only where
- * the incident was today, and it never dates the form, as before.
+ * own date, so "I coached her on 10-16" is listed as an earlier step on a
+ * Corrective Action where PRIOR_SENTENCE_FIX does not already list it (R734).
  */
 /** "I coached her on 10-16", "we counseled him about attendance on 10/1": an earlier step the manager held. */
 const COACHED_HER_BEFORE =
   /\b(?:i|we)\s+(?:(?:verbally|formally|also|already|then|just)\s+)?(?:coached|counsel(?:ed|led))\s+(?:her|him|them|the employee)\b[^.;\n\d]{0,30}$/i;
+/** R734: "i coached her coworker, not her, on 10-16" is another person's step, never this employee's prior. */
+const ANOTHER_PERSONS_STEP = /\b(?:her|his|their)\s+(?:co-?workers?|team\s*mates?|colleagues?|friends?|managers?|trainees?)\b|\bnot\s+(?:her|him|them)\b/i;
 
 /** The end of the last date before `index` in `found`, or 0. */
 function previousDateEnd(found: readonly DateInText[], index: number): number {
@@ -810,8 +811,14 @@ function stepsAsWritten(text: string, today: string): WrittenStep[] {
 /** Each earlier step with the offset of its date. A yearless "9-15" is read too with the flag on. */
 function stepSpans(text: string, today: string, context?: string): { step: WrittenStep; index: number }[] {
   const sentenceFix = sentenceFixOn(context ?? text);
+  /*
+   * R734 (Gate-Bubbles-3, 12 Nov 2026): this flag's own reading of "I coached her on 10-16" as an earlier step runs only
+   * where PRIOR_SENTENCE_FIX does not already read held coachings (a Corrective Action it names), never on a Coaching
+   * Form (the coaching held is that form's date), and never for another person's step ("her coworker, not her").
+   */
+  const ownHeld = priorActionsNoCommaEnabled() && !sentenceFix && !NAMES_COACHING_FORM.test(context ?? text);
   const dates = priorActionsParseEnabled()
-    ? withYearlessDates(text, datesInText(text, today), today, sentenceFix || priorActionsNoCommaEnabled())
+    ? withYearlessDates(text, datesInText(text, today), today, sentenceFix || ownHeld)
     : datesInText(text, today);
   const steps = labelledSteps(text, dates, today);
   // "jba manual 11-1-25" after "previous coaching jba manual 11-1-26": the later date is that step's (flag on only).
@@ -853,10 +860,10 @@ function stepSpans(text: string, today: string, context?: string): { step: Writt
     if (owned && !ISSUES_THIS_FORM.test(owned[0]) && found.iso < today) {
       return at({ iso: found.iso, named: owned[0], ...withAbout });
     }
-    // "I coached her on 10-16" before today: an earlier step (PRIOR_ACTIONS_NO_COMMA_ENABLED).
-    if (priorActionsNoCommaEnabled() && found.iso < today) {
+    // "I coached her on 10-16" before today: an earlier step (PRIOR_ACTIONS_NO_COMMA_ENABLED; R734's scope above).
+    if (ownHeld && found.iso < today) {
       const coached = COACHED_HER_BEFORE.exec(before);
-      if (coached) return at({ iso: found.iso, named: coached[0], ...withAbout });
+      if (coached && !ANOTHER_PERSONS_STEP.test(coached[0])) return at({ iso: found.iso, named: coached[0], ...withAbout });
     }
     return [];
   });

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 import type { ChatFormProposal, ChatMessage } from "@/types";
+import PRODUCTION_FLAGS from "@/config/production-flags.json";
 
 vi.mock("@/config/company/locations", async () =>
   (await import("@/test/fixtures/reference-roster")).referenceRosterModule(),
@@ -224,6 +225,9 @@ const PRIORS = "**Prior actions:** Coaching — 10/16/2026; Verbal warning — 1
 
 beforeEach(() => {
   vi.setSystemTime(new Date(`${TODAY}T18:00:00Z`));
+  // R734 (Gate-Bubbles-3): pinned, so production's flags in the shell (the off-roster ask among them) cannot change what
+  // this plain proposal flow is compared to.
+  for (const name of [...PRODUCTION_FLAGS.on, ...(PRODUCTION_FLAGS.assumedOn ?? [])]) vi.stubEnv(name, undefined);
   vi.stubEnv("FORM_FULL_REMAP_ENABLED", "");
   vi.stubEnv("INTENT_EXTRACTION_ENABLED", "");
   vi.stubEnv("TERSE_SLOT_READ_ENABLED", "true");

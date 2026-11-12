@@ -59,7 +59,8 @@ function variants(text: string): string[] {
  * production has on is unset here, so they hold whatever the environment (QA's off-pins guard, 12 Nov 2026).
  */
 function unsetProductionFlags(): void {
-  for (const name of PRODUCTION_FLAGS.on) vi.stubEnv(name, undefined);
+  // R734: assumedOn too, so the snapshot holds under production's whole list.
+  for (const name of [...PRODUCTION_FLAGS.on, ...(PRODUCTION_FLAGS.assumedOn ?? [])]) vi.stubEnv(name, undefined);
 }
 
 function flags(parse: boolean, noComma: boolean): void {
@@ -1386,4 +1387,38 @@ describe("NEVER-BREAK: PRIOR_ACTIONS_NO_COMMA_ENABLED off, with PRIOR_ACTIONS_PA
     const changed = inputs.filter((said) => JSON.stringify(readers(said)) !== JSON.stringify(MAIN_OUTPUTS[said]));
     expect(changed.length).toBeGreaterThan(0);
   });
+});
+
+/*
+ * R734 (Gate-Bubbles-3, 12 Nov 2026), the two regressions on the production path, as guards. With the flag on, on both
+ * readings (PRIOR_SENTENCE_FIX on, as in production, and off):
+ *   1. QA-7 defect 2: another person's coaching is never this employee's prior;
+ *   2. on a Coaching Form, the coaching held is the form's date, never a prior.
+ */
+describe.each([
+  ["PRIOR_SENTENCE_FIX on (production)", "1"],
+  ["PRIOR_SENTENCE_FIX off", ""],
+])("R734 guards, flag on, %s", (_label, sentenceFix) => {
+  function on(): void {
+    flags(true, true);
+    vi.stubEnv("PRIOR_SENTENCE_FIX_ENABLED", sentenceFix);
+  }
+
+  it.each(casings("create a ca for rowan pell at kearney, she was late on 10-5. i coached her coworker, not her, on 10-16"))(
+    "%s: no Coaching 10/16 among her priors",
+    (said) => {
+      on();
+      expect(JSON.stringify(statedPriorActions(said, TODAY))).not.toMatch(/10\/16|2026-10-16/);
+    },
+  );
+
+  it.each(casings("create a coaching form for rowan pell at kearney, i coached her on 10-16"))(
+    "%s: the coaching held is no prior",
+    (said) => {
+      on();
+      expect(JSON.stringify(statedPriorActions(said, TODAY))).not.toMatch(/10\/16|2026-10-16/);
+      // The form's date (10/16 on the card and the draft) is checked on the chat path: prior-sentence-fix-live-e2e's
+      // COACHING_FORM rows; this file's `turn()` reads a Corrective Action.
+    },
+  );
 });
