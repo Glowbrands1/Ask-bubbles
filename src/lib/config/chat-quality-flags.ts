@@ -991,6 +991,16 @@ export function formsGuideEnabled(): boolean {
   return envFlag("FORMS_GUIDE_ENABLED");
 }
 
+/**
+ * The form the manager named is the form: "needs CA" and "write ca" ask for
+ * the Corrective Action Form, and a request for "a form" that names none uses
+ * the form last named in the chat (conv_mvofmpei2c50lhp, 25 Oct 2026). See
+ * `ai/manager-form-choice.ts`. Off, every turn is read as typed.
+ */
+export function managerFormChoiceEnabled(): boolean {
+  return envFlag("MANAGER_FORM_CHOICE_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "NOT_FOLLOWING_IS_VIOLATION_ENABLED",
   "INCIDENT_FROM_EARLIER_TURN_ENABLED",
@@ -1385,6 +1395,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "CARD_NEVER_SILENT_ENABLED",
   // coding 6: FORMS_GUIDE (B#194 rebuilt; default off).
   "FORMS_GUIDE_ENABLED",
+  // coding 6: MANAGER_FORM_CHOICE (B#181 rebuilt; default off; wiring awaits Coding-2).
+  "MANAGER_FORM_CHOICE_ENABLED",
   // coding 5: B3 (QA's backlog, 10 Nov 2026; default off).
   "COPY_PASTE_CLAIM_HONEST_ENABLED",
   "DATE_ONCE_ENABLED",
