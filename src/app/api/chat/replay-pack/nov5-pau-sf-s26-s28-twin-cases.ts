@@ -68,6 +68,8 @@ export const NOV5_PAU_SF_S26_S28_TWIN_CASES: ReplayCase[] = [
     title: "sf-s26: \"Edit Thesaly Brant CA\" (misspelled) opens Thessaly Brandt's existing Corrective Action; never \"Who is this form for?\"",
     report: "Pau via QA, 5 Nov 2026, sf-s26: \"Edit [misspelled Employee R] CA\" → the bot asked who the form is for",
     status: { open: "asks who the form is for instead of opening the existing Corrective Action" },
+    // QA's B4 (10 Nov 2026): the sibling app's fix, ported (`forms/reopen-close-spelling.ts`).
+    fixFlags: ["REOPEN_BY_ANY_OPEN_VERB_ENABLED", "REOPEN_CLOSE_SPELLING_ENABLED"],
     async run(t: T) {
       start(t);
       const id = await existingCa(t);

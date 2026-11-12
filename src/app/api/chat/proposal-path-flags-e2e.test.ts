@@ -645,12 +645,22 @@ describe("FORM_EDIT_DATE_RULES off: production today", () => {
     await thread.say("Tessa Ormond, General Manager", EMPLOYEE);
     expect(issue(await thread.say(`change observation of offense to: ${LITERAL}`, EMPLOYEE))).toBe("general manager");
   });
+  /*
+   * PRE-FORM_EDIT_DATE_RULES BEHAVIOUR, NOT LIVE (QA, 12 Nov 2026). `live()` deletes FORM_EDIT_DATE_RULES_ENABLED to pin
+   * production as it was on 26 Oct, when "instead of" did not yet set a policy aside, so this reply is "Attendance, as you
+   * said". Production has had FORM_EDIT_DATE_RULES on since; there the same turns read Late Opening — see the replay
+   * guard nov12-instead-of-names-late-opening. Do not read this pin as today's behaviour.
+   */
   it("(d): Attendance", async () => {
     live();
     const thread = new Thread();
     await thread.say("create corrective action for for Tessa Ormond for Late Opening from the policy manual. It is a verbal warning", EMPLOYEE);
     await thread.say("can you add late opening policy to the direct policy section of this from", EMPLOYEE);
-    expect((await thread.say("can you reference the late opening policy INSTEAD of the attendance policy", EMPLOYEE)).content).toMatch(/Attendance, as you said/);
+    // POLICY_PAGE_ON_CARD_ENABLED (QA's #755 gate, 12 Nov 2026): the Policy line carries its printed page, "Attendance (JBA
+    // Policy Manual p.14), as you said" — the pin holds either way (changed on purpose).
+    expect((await thread.say("can you reference the late opening policy INSTEAD of the attendance policy", EMPLOYEE)).content).toMatch(
+      /Attendance(?: \(JBA Policy Manual p\.14\))?, as you said/,
+    );
   });
 });
 
