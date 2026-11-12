@@ -58,7 +58,7 @@ export const NOV7_SALES_OBSERVATION_ACCOUNT_CASES: ReplayCase[] = [
     async run(t) {
       const thread = start(t);
       await thread.say("Can you make a written CA for remy calder on performance");
-      const reply = await thread.say("She had 24 transactions and was below in Below in PPTA, LPSVA, average ticket, and units per transaction");
+      const reply = await thread.say("She had 24 transactions and was below in Below in UPT, ATV, average ticket, and units per transaction");
       const line = observationLine(reply);
       noRequestWords(line);
     },
