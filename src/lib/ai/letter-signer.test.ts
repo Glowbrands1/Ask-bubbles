@@ -107,6 +107,8 @@ describe("LETTER_GREETING_ANY_CASE_ENABLED", () => {
   beforeEach(() => vi.stubEnv("LETTER_GREETING_NOT_NAME_ENABLED", "true"));
 
   it("off: \"Dear <A>, Your …\" keeps the salutation (as main)", () => {
+    // Off pins its own flag (QA's off-pins guard, 11 Nov 2026): it must hold once production turns the flag on.
+    vi.stubEnv("LETTER_GREETING_ANY_CASE_ENABLED", "");
     expect(withoutLetterGreeting(said)).toBe(said);
   });
 
