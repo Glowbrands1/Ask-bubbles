@@ -2,6 +2,7 @@ import { offRosterPlaceAnswerEnabled } from "@/lib/config/chat-quality-flags";
 import { COMPANY_LOCATIONS, locationById } from "@/lib/locations";
 import type { AccessScope } from "@/types";
 
+import { storeOnlyTurn } from "@/lib/ai/store-alias";
 import { authorizeLocation } from "./location-scope";
 import { offeredOffRosterName, offRosterOffer } from "./off-roster-confirm";
 import { offRosterQuestion, storeOnlyAnswer } from "./off-roster-ask";
@@ -79,12 +80,12 @@ type Turn = { readonly role: string; readonly content: string };
 /**
  * The open offer's name and the place, when this turn is only a place answering it. Off, or any other turn, null. A
  * store manager's store-only answer is OFF_ROSTER_STORE_ANSWER_ONLY's (`off-roster-ask.ts`), which holds the card with
- * its store as it stands; this reader leaves it there. (With #745's STORE_ALIAS on main, its `storeOnlyTurn` is added
- * here too: checked on a merge of both under 17r's flags, 12 Nov 2026.)
+ * its store as it stands, and so is a store answer STORE_ALIAS reads (`ai/store-alias.ts` storeOnlyTurn: "dodge, ne");
+ * this reader leaves them there (checked under 17r's flags, 12 Nov 2026).
  */
 export function placeAnswerOf(question: string, history: readonly Turn[], scope?: AccessScope | null): PlaceAnswer | null {
   if (!offRosterPlaceAnswerEnabled()) return null;
-  if (scope?.level === "location" && storeOnlyAnswer(question)) return null;
+  if (scope?.level === "location" && (storeOnlyAnswer(question) || storeOnlyTurn(question))) return null;
   const lastAssistant = [...history].reverse().find((turn) => turn.role === "assistant");
   const pending = offeredOffRosterName(lastAssistant?.content);
   if (!pending) return null;
