@@ -634,4 +634,36 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov12-termination-ticks-termination-ca-no-call-no-show": "TERMINATION_STATED_TICKS",
   // fixed in production by TITLE_BEFORE_NAME, QA round 17o, 12 Nov 2026
   "nov12-title-before-name-trailing-today": "TITLE_BEFORE_NAME",
+  // fixed in production by NEGATED_LATENESS_TOPIC, QA round 17p, 12 Nov 2026
+  "oct26-negated-lateness-not-late-today": "NEGATED_LATENESS_TOPIC",
+  // fixed in production by DETAILS_FROM_EARLIER_ANSWER, QA round 17p, 12 Nov 2026
+  "nov10-chat-edits-a-details-handed-to-the-revision": "DETAILS_FROM_EARLIER_ANSWER",
+  // fixed in production by INCIDENT_FROM_EARLIER_TURN, QA round 17p, 12 Nov 2026
+  "nov5-twin-sf-s28-incident-from-previous-turn": "INCIDENT_FROM_EARLIER_TURN",
+  // fixed in production by INCIDENT_FROM_EARLIER_TURN, QA round 17p, 12 Nov 2026
+  "nov5-twin-sf-s28-incident-scope": "INCIDENT_FROM_EARLIER_TURN",
+  // fixed in production by GUEST_ATTITUDE_CONDUCT, QA round 17p, 12 Nov 2026
+  "nov10-sf-b5-guest-attitude-cites-conduct": "GUEST_ATTITUDE_CONDUCT",
+  // fixed in production by PRIOR_ACTIONS_NO_COMMA, QA round 17p, 12 Nov 2026
+  "nov10-prior-actions-no-comma-qa-lower": "PRIOR_ACTIONS_NO_COMMA",
+  // fixed in production by PRIOR_ACTIONS_NO_COMMA, QA round 17p, 12 Nov 2026
+  "nov10-prior-actions-no-comma-qa-caps": "PRIOR_ACTIONS_NO_COMMA",
+  // fixed in production by PRIOR_ACTIONS_NO_COMMA, QA round 17p, 12 Nov 2026
+  "nov10-prior-actions-no-comma-triage-lower": "PRIOR_ACTIONS_NO_COMMA",
+  // fixed in production by PRIOR_ACTIONS_NO_COMMA, QA round 17p, 12 Nov 2026
+  "nov10-prior-actions-no-comma-triage-caps": "PRIOR_ACTIONS_NO_COMMA",
+  // fixed in production by STEP_B_ADD_UNDER_OBSERVED, QA round 17p, 12 Nov 2026
+  "nov8-step-b-add-under-observed": "STEP_B_ADD_UNDER_OBSERVED",
+  // fixed in production by STEP_B_ADD_UNDER_OBSERVED, QA round 17p, 12 Nov 2026
+  "nov8-step-b-whole-text-tail": "STEP_B_ADD_UNDER_OBSERVED",
+  // fixed in production by WRITE_UP_LEAD_NOT_ACCOUNT, QA round 17p, 12 Nov 2026
+  "nov10-write-up-observation-167": "WRITE_UP_LEAD_NOT_ACCOUNT",
+  // fixed in production by BARE_COACHING_REQUEST_LEAD, QA round 17p, 12 Nov 2026
+  "nov12-r31-bare-coaching-request-lead": "BARE_COACHING_REQUEST_LEAD",
+  // fixed in production by RESENT_REQUEST_IS_YES, QA round 17p, 12 Nov 2026
+  "nov12-resent-exit-request-keeps-name": "RESENT_REQUEST_IS_YES",
+  // fixed in production by TERMINATION_INTAKE, QA round 17p, 12 Nov 2026
+  "nov12-termination-ca-bare-opens-card": "TERMINATION_INTAKE",
+  // fixed in production by TERMINATION_INTAKE, QA round 17p, 12 Nov 2026
+  "nov12-17k-termination-letter-exit-card": "TERMINATION_INTAKE",
 };
