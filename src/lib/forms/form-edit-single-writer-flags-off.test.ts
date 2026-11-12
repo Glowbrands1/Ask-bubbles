@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import PRODUCTION_FLAGS from "@/config/production-flags.json";
 import { continuationFor } from "@/lib/forms/proposal-continuation";
@@ -569,4 +569,16 @@ describe("FORM_EDIT_SINGLE_WRITER_ENABLED off: the same chats, byte for byte", (
   it.runIf(process.env.DUMP_RUNS)("dump", () => {
     for (const [name, text] of Object.entries(runs)) writeFileSync(`${process.env.DUMP_RUNS}/${name}.json`, text);
   });
+});
+
+/*
+ * Off-pin (Gate-Bubbles-2's POLICY_CITATION gate, 12 Nov 2026): these expectations are main's with POLICY_CITATION off
+ * (it is off in production); with it on, the reply and the draft gain the quoted manual block. Held off here so a shell
+ * or gate with the flag on cannot change what this file compares.
+ */
+beforeEach(() => {
+  vi.stubEnv("POLICY_CITATION_ENABLED", "");
+});
+afterEach(() => {
+  vi.unstubAllEnvs();
 });

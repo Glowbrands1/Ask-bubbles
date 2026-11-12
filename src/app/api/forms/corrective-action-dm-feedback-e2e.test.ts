@@ -1793,3 +1793,15 @@ describe("STALE_PROMPT_LINES_OFF_ENABLED: the draft's lines about boxes revision
     }
   });
 });
+
+/*
+ * Off-pin (Gate-Bubbles-2's POLICY_CITATION gate, 12 Nov 2026): these expectations are main's with POLICY_CITATION off
+ * (it is off in production); with it on, the reply and the draft gain the quoted manual block. Held off here so a shell
+ * or gate with the flag on cannot change what this file compares.
+ */
+beforeEach(() => {
+  vi.stubEnv("POLICY_CITATION_ENABLED", "");
+});
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
