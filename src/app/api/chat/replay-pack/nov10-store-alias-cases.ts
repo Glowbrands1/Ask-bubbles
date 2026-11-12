@@ -55,7 +55,8 @@ export const NOV12_STORE_ALIAS_OFF_ROSTER_CASES: ReplayCase[] = (["dodge, ne", "
   id: `nov12-store-alias-off-roster-ask-${store === "dodge, ne" ? "lower" : "sentence"}`,
   title: `"create a ca for kira dunmore, she was late today" → "${store}" → "use Kira Dunmore": the store answer never confirms the name`,
   report: `Gate-Bubbles-3 R735 (12 Nov 2026), ${REPORT}`,
-  status: "fixed",
+  // Without STORE_ALIAS "dodge, ne" is not read as a store at all, so the production arm is open; the fix arm is the check.
+  status: { open: `"${store}" is not read as a store without STORE_ALIAS` },
   fixFlags: [FLAG],
   async run(t: ReplayContext) {
     const thread = start(t);
