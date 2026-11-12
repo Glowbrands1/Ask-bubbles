@@ -4,10 +4,10 @@ import { WEST_DODGE, STAFF, type DirectoryRow, type ReplayAnswer, type ReplayCas
 
 /**
  * The sibling app's round-5 live check (QA, 8 Nov 2026; first seen there 6 Nov): a manager's first message,
- *   "I need a corrective action made for under performance. <A> was below on PPTA, LPSVA, Club Average, Club Close %
- *    and Spa in the month of October."
+ *   "I need a corrective action made for under performance. <A> was below on UPT, ATV, Average Ticket, Bundle Rate %
+ *    and Gift in the month of October."
  * Here, with production's flags, the card's Issue is the whole request: "I need a corrective action made for under
- * performance. <A> was below on PPTA …", and "… made for <A> for late opening the store on 11/2" keeps "I need a
+ * performance. <A> was below on UPT …", and "… made for <A> for late opening the store on 11/2" keeps "I need a
  * corrective action made for <A> for …". REQUEST_PARTICIPLE_LEAD_ENABLED (`forms/incident-issue.ts`, the same flag as
  * the sibling's) reads "made / done / written up for" as part of the request, and a request whose reason is only a
  * sales reason leaves the Issue to the account. The manager's words (the sibling's metric names, kept as QA's case);
@@ -15,10 +15,10 @@ import { WEST_DODGE, STAFF, type DirectoryRow, type ReplayAnswer, type ReplayCas
  */
 const FLAG = "REQUEST_PARTICIPLE_LEAD_ENABLED";
 const REPORT = "The sibling app's round-5 live check (QA, 8 Nov 2026): the account began with the request; here the Issue is the whole request";
-const ACCOUNT = "Remy Calder was below on PPTA, LPSVA, Club Average, Club Close % and Spa in the month of October";
+const ACCOUNT = "Remy Calder was below on UPT, ATV, Average Ticket, Bundle Rate % and Gift in the month of October";
 /** QA's wording, the real name swapped for an invented one. */
 const REPORTED =
-  "I need a corrective action made for under performance. Wren Halloway was below on PPTA, LPSVA, Club Average, Club Close % and Spa in the month of October.";
+  "I need a corrective action made for under performance. Wren Halloway was below on UPT, ATV, Average Ticket, Bundle Rate % and Gift in the month of October.";
 const WREN: DirectoryRow = {
   id: "e-wren",
   firstName: "Wren",
@@ -43,14 +43,14 @@ async function observation(t: Parameters<ReplayCase["run"]>[0], said: string): P
 export const NOV8_OBSERVATION_MADE_FOR_CASES: ReplayCase[] = [
   {
     id: "nov8-observation-made-for-under-performance",
-    title: "\"I need a corrective action made for under performance. <A> was below on PPTA, …\": the Observation starts at the account, never \"made for\"",
+    title: "\"I need a corrective action made for under performance. <A> was below on UPT, …\": the Observation starts at the account, never \"made for\"",
     report: REPORT,
     status: { open: "the card's Issue is the whole request (\"I need a corrective action made for …\")" },
     fixFlags: [FLAG],
     async run(t) {
       const line = await observation(t, REPORTED);
       expect(line, `the request's words lead the Observation:\n${line}`).not.toMatch(/(?:Offense|Issue):\*\*\s*(?:made|done)\s+for\b/i);
-      expect(line, `the Observation does not start at the account:\n${line}`).toMatch(/(?:Offense|Issue):\*\*\s*Wren Halloway was below on PPTA/);
+      expect(line, `the Observation does not start at the account:\n${line}`).toMatch(/(?:Offense|Issue):\*\*\s*Wren Halloway was below on UPT/);
     },
   },
   {
@@ -61,7 +61,7 @@ export const NOV8_OBSERVATION_MADE_FOR_CASES: ReplayCase[] = [
     fixFlags: [FLAG],
     async run(t) {
       const line = await observation(t, `I need a corrective action done for under performance. ${ACCOUNT}`);
-      expect(line, `the Observation does not start at the account:\n${line}`).toMatch(/(?:Offense|Issue):\*\*\s*Remy Calder was below on PPTA/);
+      expect(line, `the Observation does not start at the account:\n${line}`).toMatch(/(?:Offense|Issue):\*\*\s*Remy Calder was below on UPT/);
     },
   },
   {
