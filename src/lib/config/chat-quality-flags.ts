@@ -958,6 +958,19 @@ export function nameBeforeTitleEnabled(): boolean {
 }
 
 /**
+ * A form turn always answers the manager: when the card reply would be empty
+ * or word for word the previous one, a line in front of it answers the turn
+ * (press Create draft to edit; Finalize is a button on the form), and the
+ * chatty team request ("reuse for any team member … leave the employee name
+ * blank … generic for the whole team") reads as a team coaching form. Ported
+ * from the sibling app (conv_mvoenhk42lu3cxo, conv_mvofsdg92obw8px). See
+ * `ai/card-never-silent.ts` and `forms/team-subject.ts`. Off, as before.
+ */
+export function cardNeverSilentEnabled(): boolean {
+  return envFlag("CARD_NEVER_SILENT_ENABLED");
+}
+
+/**
  * An incident date after today is asked about once, in every register, and
  * never dates the form (QA, 26 Oct 2026, U4). A deadline or a follow-up in
  * the future is not asked about. Off, a future date is dropped silently, as
@@ -1376,6 +1389,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "EXCERPT_BRAND_HEADING_DROP_ENABLED",
   "NEAR_MISS_ANSWER_KEEPS_REQUEST_ENABLED",
   "FULL_MANUAL_WIDE_GATE_ENABLED",
+  "CARD_NEVER_SILENT_ENABLED",
   "EMPTY_REPLY_GUARD_ENABLED",
   "POLICY_PAGE_ON_CARD_ENABLED",
   "FORM_INPUT_FIDELITY_ENABLED",
