@@ -1,6 +1,7 @@
 import "server-only";
 
 import { withStoreAliases } from "./store-alias";
+import { withCardNeverSilent } from "./card-never-silent";
 import { approvedManualConfirmed, manualDisplayTitle } from "@/lib/forms/official-policy-manual";
 import { describedAttendanceKeys } from "@/lib/forms/ca-policy";
 import { mayDescribeSection } from "@/lib/forms/named-policy-section";
@@ -307,7 +308,7 @@ async function answerQuestionAnyPath(
   // MANAGER_NAME_NOT_EMPLOYEE_ENABLED: last — the manager's own name is never the employee.
   // SOURCE_NOTE_GUARD_ENABLED: no note about a source ("[S1 doesn't actually cover …]") and no bare marker group ("[S12, S14]") reaches the reply on any path (`ai/source-note.ts`).
   const answer = async (turn: AskRequest) => {
-    const guarded = withManagerNameGuard(withSwitchSources(withoutSensitiveDefaults(await answerQuestionTraced(turn, actor, memory), turn.question), turn), turn);
+    const guarded = withManagerNameGuard(withSwitchSources(withoutSensitiveDefaults(withCardNeverSilent(await answerQuestionTraced(turn, actor, memory), turn), turn.question), turn), turn);
     return { ...guarded, content: withoutSourceMarkers(withoutSourceNotes(guarded.content)) };
   };
   let answered = await answer(request);

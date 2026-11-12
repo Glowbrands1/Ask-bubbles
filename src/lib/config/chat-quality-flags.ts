@@ -967,6 +967,19 @@ export function storeAliasEnabled(): boolean {
   return envFlag("STORE_ALIAS_ENABLED");
 }
 
+/**
+ * A form turn always answers the manager: when the card reply would be empty
+ * or word for word the previous one, a line in front of it answers the turn
+ * (press Create draft to edit; Finalize is a button on the form), and the
+ * chatty team request ("reuse for any team member … leave the employee name
+ * blank … generic for the whole team") reads as a team coaching form. Ported
+ * from the sibling app (conv_mvoenhk42lu3cxo, conv_mvofsdg92obw8px). See
+ * `ai/card-never-silent.ts` and `forms/team-subject.ts`. Off, as before.
+ */
+export function cardNeverSilentEnabled(): boolean {
+  return envFlag("CARD_NEVER_SILENT_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "NOT_FOLLOWING_IS_VIOLATION_ENABLED",
   "INCIDENT_FROM_EARLIER_TURN_ENABLED",
@@ -1358,6 +1371,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "PRIOR_ACTIONS_NO_COMMA_ENABLED",
   "STORE_ALIAS_ENABLED",
   "FULL_MANUAL_WIDE_GATE_ENABLED",
+  "CARD_NEVER_SILENT_ENABLED",
   // coding 5: B3 (QA's backlog, 10 Nov 2026; default off).
   "COPY_PASTE_CLAIM_HONEST_ENABLED",
   "DATE_ONCE_ENABLED",
