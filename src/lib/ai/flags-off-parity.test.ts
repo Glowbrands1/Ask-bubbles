@@ -124,8 +124,29 @@ const PROTECTED = [
  * carried as the box that replaced it, and an old Other write-in ticks Other.
  * Behind CA_SALES_POLICY_ENABLED, default off; off, every row is carried as
  * before. The filed form is never touched.
+ *
+ * The user (Pau) approved on 10 Nov 2026, via QA ("ok revision archived"), in
+ * src/lib/forms/instances.ts, both apps, exactly the lines of
+ * docs/patches/revision-archived-not-open.patch: the import
+ * `revisionArchivedNotOpenEnabled` beside `caSalesPolicyEnabled`, and in
+ * findOpenRevision the draft query split so that, behind
+ * REVISION_ARCHIVED_NOT_OPEN_ENABLED (default off), `.is("archived_at", null)`
+ * leaves archived drafts out. Off, the same query as before. instances.ts is
+ * already excluded; the narrowed index migration is applied in both DBs.
+ *
+ * The user (Pau) approved in writing on 10 Nov 2026, via QA ("ok termination
+ * closing"), behind TERMINATION_STATED_TICKS_ENABLED (default off), both apps:
+ * in src/lib/forms/required-closing.ts, `withRequiredClosing` returns a value
+ * that already ends with the termination sentence unchanged (with its
+ * `TERMINATION_PLAN_CLOSING` constant and the flag import); in
+ * src/lib/forms/ca-action-plan.ts, `ActionPlanInput.termination`, and a
+ * Termination plan's closing is the termination sentence (`planClosing`, also
+ * in `refreshedActionPlan`). Off, both are exactly as before; instances.ts is
+ * not touched.
  */
 const APPROVED_PROTECTED_EDITS = [
+  ":(exclude)src/lib/forms/required-closing.ts",
+  ":(exclude)src/lib/forms/ca-action-plan.ts",
   ":(exclude)src/lib/forms/chat-revision.ts",
   ":(exclude)src/lib/forms/instances.ts",
   ":(exclude)src/lib/forms/form-date-answer.ts",
@@ -154,6 +175,9 @@ const ALLOWED_UI = [
    * and with the flag off the server never sends one.
    */
   "src/features/chat/chat-screen.tsx",
+  // Import's "couldn't confirm … is yours" line (QA, 12 Nov 2026, both apps): shown only for a "not_proven" decline,
+  // which only CHAT_IMPORT_PROVEN_OWN_ENABLED returns. Off, the server never declines that way, so it never shows.
+  "src/features/chat/import-local-history.tsx",
   // District Manager, 3 Nov 2026 (QA approved 5 Nov, Pau 6 Nov): the Reviews page and the admin Google Reviews
   // screen show the company's store number (Dawley Farms: 309; its Google code 338 stays the match key). Unflagged:
   // it is a data correction, identical for every store whose number is its code.

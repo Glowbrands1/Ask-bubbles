@@ -1,6 +1,6 @@
 import { expect } from "vitest";
 
-import { STAFF, WEST_DODGE, type ReplayCase } from "./cases";
+import { STAFF, WEST_DODGE, type ReplayCase, onStoryClock } from "./cases";
 
 /**
  * Corrective Action revision 7 (4 Nov 2026): a Late Opening the manager names
@@ -46,3 +46,6 @@ export const NOV4_REV7_LATE_OPENING_CASES: readonly ReplayCase[] = [
     },
   },
 ];
+
+// Gate-Bubbles-5 (G5-743): these cases tell a story dated after the pack's 10/26/2026; they run on a day after it.
+onStoryClock(NOV4_REV7_LATE_OPENING_CASES);

@@ -1,4 +1,4 @@
-import { expect } from "vitest";
+import { expect, vi } from "vitest";
 
 /**
  * ============================================================================
@@ -32,6 +32,10 @@ export interface ReplayThread {
   /** `reading`: what the stand-in reading models return this turn (e.g. `{ employeeName }`, the name as typed); none by default. */
   say(text: string, reading?: Record<string, unknown>): Promise<ReplayAnswer>;
   create(): Promise<string>;
+  /** Create from the latest card for this person (an earlier card still on screen). */
+  createCard?(employeeName: string): Promise<string>;
+  /** The chat as the browser holds it. */
+  readonly conversation?: readonly import("@/types").ChatMessage[];
   readonly proposal: ReplayAnswer["formProposal"] | null;
   readonly instanceId: string | null;
 }
@@ -40,6 +44,8 @@ export interface ReplayContext {
   thread(): ReplayThread;
   as(role: string, scope: unknown): void;
   directory(rows: readonly DirectoryRow[]): void;
+  /** Every knowledge search's query this case, in order (POLICY_CARRY_RETRIEVAL, 12 Nov 2026). */
+  searches?(): string[];
   /**
    * The full policy manual a policy question reads (`loadFullManualPlan`), as indexed chunks; this case only. Without
    * it the pack reads no manual. Used to put a source excerpt through the production path.
@@ -174,3 +180,61 @@ export const STAFF: DirectoryRow[] = [
   { id: "e-4", firstName: "Rowan", lastName: "Kestrel", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-264"], positionName: "Team Member Part Time" },
   { id: "e-5", firstName: "Dodge", lastName: "Account", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-264"], positionName: "Team Member Full Time" },
 ];
+
+/*
+ * A CASE'S OWN CLOCK (Gate-Bubbles-5, G5-743, 12 Nov 2026). The pack runs every case on 10/26/2026, but some cases
+ * tell a story dated after that (11/2/26, 10/31/26): on their pack clock those dates are in the future, which no live
+ * chat could see. FUTURE_INCIDENT_DATE_ASK rightly asks about them. These cases run on a day after their own story
+ * instead; nothing else about them changes. Ids not listed keep the pack's clock.
+ */
+export const STORY_CLOCK = "2026-11-09";
+
+export const STORY_CLOCK_CASE_IDS: readonly string[] = [
+  "nov4-rev7-named-late-opening-keeps-attendance",
+  "nov5-compound-surname-word1-typo-yes",
+  "nov6-b1-its-name",
+  "nov6-b1-my-team-member-then-name-is",
+  "nov6-b1-name-with-title-then-name-is",
+  "nov6-b1-title-then-her-name-is",
+  "nov6-off-roster-ca-use",
+  "nov6-offer-lowercase-said-back-title-case",
+  "nov6-offer-mixed-case-surname",
+  "nov6-one-question-ca",
+  "nov6-policy-change-relevant-remove-attendance",
+  "nov6-roster-shape-apostrophe-exact",
+  "nov6-roster-shape-apostrophe-lowercase",
+  "nov6-roster-shape-compound-surname-exact",
+  "nov6-roster-shape-compound-surname-lowercase",
+  "nov6-roster-shape-preferred-exact",
+  "nov6-roster-shape-preferred-lowercase",
+  "nov6-roster-shape-short-surname-exact",
+  "nov6-roster-shape-short-surname-lowercase",
+  "nov6-roster-shape-two-word-first-exact",
+  "nov6-roster-shape-two-word-first-lowercase",
+  "nov7-second-ca-same-employee-another",
+  "nov7-second-ca-same-employee-another-observation",
+  "nov7-second-ca-same-employee-create",
+  "nov7-second-ca-same-employee-create-observation",
+  "nov7-second-ca-same-employee-not-a-request-1",
+  "nov7-second-ca-same-employee-not-a-request-2",
+  "nov7-second-ca-same-employee-not-a-request-3",
+  "nov7-second-ca-same-employee-separate",
+  "nov7-second-ca-same-employee-separate-observation",
+  "nov7-second-ca-single-request-keeps-policy-account-first",
+  "nov7-second-ca-single-request-keeps-policy-closing-create",
+  "nov8-complaint-account-issue",
+  "nov8-complaint-account-level",
+  "nov8-near-miss-card-kept-make-that-change",
+];
+
+export function onStoryClock<C extends readonly ReplayCase[]>(cases: C, ids: readonly string[] = STORY_CLOCK_CASE_IDS, day: string = STORY_CLOCK): C {
+  for (const replay of cases as unknown as ReplayCase[]) {
+    if (!ids.includes(replay.id)) continue;
+    const run = replay.run;
+    replay.run = async (context) => {
+      vi.setSystemTime(new Date(`${day}T15:30:00Z`));
+      return run(context);
+    };
+  }
+  return cases;
+}

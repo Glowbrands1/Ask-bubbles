@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { formsGuideEnabled } from "@/lib/config/chat-quality-flags";
+import { readFormsGuideQuestion } from "@/lib/forms/forms-guide";
 
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 import type { ChatFormProposal, ChatMessage } from "@/types";
@@ -260,11 +262,18 @@ const WHO_FOR = /Who is this (?:\*\*[^*]+\*\* )?for\?/;
 const MENU = /Which form did you mean\?|Which form should I start with\?/;
 
 /** Answered: the model's answer, no card, no menu, no form prompt. */
-function expectAnswered(reply: Reply) {
+function expectAnswered(reply: Reply, question?: string) {
   expect(reply.content).not.toMatch(A_CARD);
   expect(reply.content).not.toMatch(WHO_FOR);
   expect(reply.content).not.toMatch(MENU);
-  expect(reply.content.startsWith(ANSWER), reply.content).toBe(true);
+  /*
+   * Changed on purpose (QA, R744, 12 Nov 2026): with FORMS_GUIDE on, a question about the forms themselves ("difference
+   * between ca and coaching form") is answered from the published templates instead of the scripted model, so its
+   * reply does not open with the model's words. It is still an answer: no card, no "who is it for", no menu.
+   */
+  const fromTemplates = !!question && formsGuideEnabled() && readFormsGuideQuestion(question) !== null;
+  if (fromTemplates) expect(reply.content.trim().length, reply.content).toBeGreaterThan(0);
+  else expect(reply.content.startsWith(ANSWER), reply.content).toBe(true);
   expect(reply.formProposal).toBeUndefined();
 }
 
@@ -357,7 +366,7 @@ describe.each(PROFILES)("P0: a question is answered (%s)", (_label, flags) => {
         "how many hours is a part-time employee?",
       ]) {
         const { replies } = await replay([{ user: "What does our policy say about attendance?", recordedReply: OFFER_REPLY }, question]);
-        expectAnswered(replies[1]!);
+        expectAnswered(replies[1]!, question);
       }
     },
   );
