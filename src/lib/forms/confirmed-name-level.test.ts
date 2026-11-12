@@ -23,6 +23,15 @@ describe("TYPO_FULL_NAME_TO_ROSTER: the level said after the confirmation", () =
     expect(out.content).not.toContain(ASKED);
   });
 
+  it("on: the history notice in front of the question goes with it (QA, after G4-776b)", () => {
+    vi.stubEnv("TYPO_FULL_NAME_TO_ROSTER_ENABLED", "true");
+    const notice = "I've treated the earlier warning you mentioned as previous corrective action history — it doesn't decide this one.";
+    const card = { ...CARD, content: `I'll draft a **Corrective Action Form** for **Delphine Marlowe Ostrander**.\n\n${notice} ${ASKED}` };
+    const out = withConfirmedNameLevel(card, HISTORY, SF_B5);
+    expect(out.content).not.toContain("earlier warning you mentioned");
+    expect(out.content).toContain("**Type of warning:** Verbal Warning, as you said");
+  });
+
   it("on: \"yes\", then the level in a later turn", () => {
     vi.stubEnv("TYPO_FULL_NAME_TO_ROSTER_ENABLED", "true");
     const history = [...HISTORY, { role: "user", content: "yes" }, { role: "assistant", content: `card\n\n${ASKED}` }];

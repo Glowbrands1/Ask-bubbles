@@ -17,6 +17,8 @@ import type { WarningLevel } from "./warning-level";
  */
 const ASKED =
   "Is this new corrective action a **Verbal Warning** or a **Written Warning**? Tell me here, or tick it on the form — I won't choose it for you.";
+/** The notice the level question carries when the level was read as an earlier step (`ai/form-proposal.ts`). */
+const HISTORY_NOTICE = "I've treated the earlier warning you mentioned as previous corrective action history — it doesn't decide this one.";
 const CONFIRM = /^Is this for \*\*([^*\n]+)\*\*\?/;
 const OPENS_WITH_LEVEL = /^\s*(?:(?:ok(?:ay)?|yes|yeah|yep|correct|right)[,.!\s]+)?(verbal|written)\s+(?:warning|ca|c\/a|corrective(?:\s+action)?)\b/i;
 
@@ -46,5 +48,8 @@ export function withConfirmedNameLevel<T extends { content: string; formProposal
   if (levels.size !== 1) return answer;
   const level = [...levels][0] as WarningLevel;
   const line = `**Type of warning:** ${level === "verbal" ? "Verbal Warning" : "Written Warning"}, as you said — tell me if that should change.`;
-  return { ...answer, content: answer.content.replace(ASKED, line), formProposal: { ...card, warningLevel: level } };
+  // QA (12 Nov 2026, after G4-776b): the history notice in front of the question ("I've treated the earlier warning you
+  // mentioned as previous corrective action history …") read the level as an earlier step; with the level set, it goes.
+  const content = answer.content.replace(`${HISTORY_NOTICE} ${ASKED}`, line).replace(ASKED, line);
+  return { ...answer, content, formProposal: { ...card, warningLevel: level } };
 }
