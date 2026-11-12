@@ -189,6 +189,7 @@ import {
   typoReadingRoutesEnabled,
   teamCardWordingEnabled,
   cardPolicyToDraftEnabled,
+  draftWriteNeverSilentEnabled,
   formEditSingleWriterEnabled,
   formPatchReducerEnabled,
   caSalesPolicyEnabled,
@@ -196,6 +197,7 @@ import {
   secondRequestOwnAccountEnabled,
   proposalMakeItAboutEnabled,
   proposalPolicySetAsideEnabled,
+  dateOnceEnabled,
   sameRequestOtherPersonEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { NOTHING_SET_ASIDE, policiesSetAside, setAsideAnything, valuesWithPolicySetAside, withoutPolicyTakeOff } from "@/lib/forms/policy-set-aside";
@@ -223,6 +225,7 @@ import {
 } from "@/lib/forms/coaching-framing";
 import { OFFENSE_BASIS_PROPERTY, readOffenseBasis, withoutUnreasonedConduct, type OffenseBasis } from "@/lib/forms/ca-conduct-reason";
 import { guardOtherWriteIn } from "@/lib/forms/other-write-in";
+import { withoutRequestInObservation } from "@/lib/forms/request-observation";
 import {
   MANAGER_FOLLOW_UP_RULES,
   guardManagerFollowUp,
@@ -1932,9 +1935,18 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
       return base;
     })();
 
+    /*
+     * CA_REASON_DUE_TO_ENABLED (QA, live, 4 Nov 2026): an Observation the
+     * model began with the manager's request ("CA for <name> due to …") begins
+     * with the request's reason instead. Off, null. See `request-observation.ts`.
+     */
+    const observationNotRequest =
+      (loaded.instance.layoutFamily === "corrective"
+        ? withoutRequestInObservation(draftedValues, narrativeTargets[0], loaded.instance.employeeName ?? null)
+        : null) ?? draftedValues;
     const enforced = enforceResponsibilities(document, variantKey, {
       values: withoutPrimedTopic(
-        priorDate ? { ...draftedValues, [PREVIOUS_ACTION_DATE_KEY]: priorDate } : draftedValues,
+        priorDate ? { ...observationNotRequest, [PREVIOUS_ACTION_DATE_KEY]: priorDate } : observationNotRequest,
         `${body.topic ?? ""} ${notes}`,
       ),
       /*
@@ -2530,7 +2542,11 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
         : { values: draftValues, provenance: draftProvenance };
 
     // PROPOSAL_POLICY_SET_ASIDE_ENABLED: the policy fields and "Policy reference" lines leave a policy taken off out.
-    const plannedValues = setAsideAnything(setAside) ? valuesWithPolicySetAside(planned.values, setAside) : planned.values;
+    const setAsideValues = setAsideAnything(setAside) ? valuesWithPolicySetAside(planned.values, setAside) : planned.values;
+    // DATE_ONCE_ENABLED: the incident date is the Date field's; an account field does not say it again. See `lib/forms/date-once.ts`.
+    const plannedValues = dateOnceEnabled()
+      ? (await import("@/lib/forms/date-once")).withFormDateOnce(setAsideValues, loaded.instance.formDate, narrativeKeys)
+      : setAsideValues;
     const merged = draftEditMergeEnabled()
       ? retainFilledFields({
           question: notes,
@@ -2567,21 +2583,39 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
      * (`lib/forms/form-write.ts`, path "redraft") — all or nothing, a whole-text
      * rewrite keeps the form's protected values.
      */
-    const guarded = formEditSingleWriterEnabled() && reduced
-      ? await (await import("@/lib/forms/form-write")).draftWrite(id, reduced.write, actor.id, draftProvenanceWritten, {
-          path: "redraft",
-          notes,
-          typedExempt: new Set(derivedPolicy.derived.filter((key) => DERIVED_POLICY_FIELD_KEYS.has(key))),
-        })
-      : await applyAssistantDraft(
-          id,
-          reduced ? reduced.write : {
-            values: Object.fromEntries(Object.entries(merged.values).filter(([key]) => !keeps(key))),
-            checked: Object.fromEntries(Object.entries(merged.checked).filter(([key]) => !keeps(key))),
-          },
-          actor.id,
-          draftProvenanceWritten,
-        );
+    const redraftContext = {
+      path: "redraft" as const,
+      notes,
+      typedExempt: new Set(derivedPolicy.derived.filter((key) => DERIVED_POLICY_FIELD_KEYS.has(key))),
+    };
+    const singleWriter = formEditSingleWriterEnabled() && reduced ? await import("@/lib/forms/form-write") : null;
+    let written = singleWriter && reduced ? await singleWriter.draftWrite(id, reduced.write, actor.id, draftProvenanceWritten, redraftContext) : null;
+    /*
+     * DRAFT_WRITE_NEVER_SILENT_ENABLED (QA's live finding on the sibling app, round 17; port): the one writer refuses a
+     * write as a whole when one field is refused. Retried once without the refused fields; nothing saved is said, never
+     * a silent 200 (`lib/forms/draft-write-never-silent.ts`).
+     */
+    let draftNothingSaved = false;
+    if (draftWriteNeverSilentEnabled() && singleWriter && reduced && written?.result.handoff === "refused") {
+      const silent = await import("@/lib/forms/draft-write-never-silent");
+      const rest = silent.withoutRefused(reduced.write, written.result.refused.map((refusal) => refusal.key));
+      if (silent.fieldCount(rest) > 0) written = await singleWriter.draftWrite(id, rest, actor.id, draftProvenanceWritten, redraftContext);
+      // Refused again, or nothing written; a retry that changed nothing (the form already says it) is not "nothing saved".
+      draftNothingSaved = written.result.handoff === "refused" || (silent.fieldCount(written.accepted) === 0 && written.result.handoff !== "noop");
+    }
+    // The old writer only in the single writer's flag-off branch (form-write-one-writer.test.ts reads this shape).
+    const guarded =
+      formEditSingleWriterEnabled() && written
+        ? written
+        : await applyAssistantDraft(
+            id,
+            reduced ? reduced.write : {
+              values: Object.fromEntries(Object.entries(merged.values).filter(([key]) => !keeps(key))),
+              checked: Object.fromEntries(Object.entries(merged.checked).filter(([key]) => !keeps(key))),
+            },
+            actor.id,
+            draftProvenanceWritten,
+          );
     /*
      * NEVER A SILENT BLANK (DRAFT_NEVER_BLANK_ENABLED). Whenever an attempt
      * failed or wrote nothing, or the write itself holds no field, the reason
@@ -2715,7 +2749,8 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
           ? describedPolicyChoiceNotice(describedChoices!.map((choice) => choice.section))
           : null,
         // FORM_EDIT_SINGLE_WRITER_ENABLED: what the draft left out of the account (detected, never retried).
-        leftOut,
+        // DRAFT_WRITE_NEVER_SILENT_ENABLED: nothing saved is said instead — there is no account to have left anything out of.
+        draftNothingSaved ? (await import("@/lib/forms/draft-write-never-silent")).DRAFT_NOTHING_SAVED_NOTICE : leftOut,
       ]
         .filter((line): line is string => Boolean(line))
         .join(" ") || null,

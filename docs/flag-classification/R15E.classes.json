@@ -1,0 +1,12 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-section-breaks-kept-one-line: ported from the sibling app's live round 15: the reader returns Details on ONE line (\"Observed: \u2026 Expectation: \u2026\") over a field written in sections: the saved Details keep their sections \u2014 OPEN in production (the reader's one-line account is written as it came, over a field written in sections)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "SECTION_BREAKS_KEPT: a one-line Details over a sectioned field keeps its sections (open case now holds); the 'Also observed:' split is gone."
+ },
+ "replay: nov10-section-breaks-kept-one-line [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "SECTION_BREAKS_KEPT: a one-line Details over a sectioned field keeps its sections (open case now holds); the 'Also observed:' split is gone."
+ }
+}
