@@ -269,6 +269,10 @@ const FLIPPED_AFTER_FIXTURE: readonly string[] = [
   "DESCRIBED_ATTENDANCE_CARD_ENABLED",
   "PAST_FORMS_BEFORE_LIBRARY_ENABLED",
   "WOVEN_PDF_OCR_ENABLED",
+  // Changed on purpose (12 Nov 2026, QA round 17n): the same reason. These two change what an edit reply
+  // keeps (Step B's lines, the expectation's policy line), so the recorded main chats predate them.
+  "STEP_B_REPLY_KEEPS_LINES_ENABLED",
+  "EXPECTATION_POLICY_LINE_KEPT_ENABLED",
 ];
 const PRODUCTION = [...PRODUCTION_FLAGS.on, ...PRODUCTION_FLAGS.assumedOn].filter((name) => name !== NOOP && !FLIPPED_AFTER_FIXTURE.includes(name));
 const TOUCHED = [...new Set([NOOP, ...TOOL_FLAGS, ...PRODUCTION, ...PRODUCTION_FLAGS.off, "FORM_PATCH_REDUCER_ENABLED", "FORM_REPLY_FROM_DIFF_ENABLED"])];
