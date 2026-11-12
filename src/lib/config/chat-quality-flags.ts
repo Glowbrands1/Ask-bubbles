@@ -1367,6 +1367,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 5: WRITE_UP_LEAD_NOT_ACCOUNT (ported from the sibling app's #167, QA's October triage, 10 Nov 2026; default off).
   "WRITE_UP_LEAD_NOT_ACCOUNT_ENABLED",
   "RELATIVE_DAY_NOT_HISTORY_ENABLED",
+  "ADD_OUT_OF_OTHER_SECTIONS_ENABLED",
   "EXIT_TYPO_WORDS_ENABLED",
   "CA_REASON_DUE_TO_ENABLED",
   "COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED",
@@ -3100,6 +3101,16 @@ export function writeUpLeadNotAccountEnabled(): boolean {
  */
 export function relativeDayNotHistoryEnabled(): boolean {
   return envFlag("RELATIVE_DAY_NOT_HISTORY_ENABLED");
+}
+
+/**
+ * ADD_OUT_OF_OTHER_SECTIONS_ENABLED (QA's Bubbles round-16b live test, 10 Nov 2026; coding 5; same flag in both apps;
+ * default off; works with STEP_B_ADD_UNDER_OBSERVED_ENABLED). "can you add that she was reminded of the policy" was
+ * written glued onto the Expectation paragraph. On: a whole-text write that only adds words to the end of one section
+ * other than Observed puts them under Observed instead (`forms/outline-sections.ts`). Off, as before.
+ */
+export function addOutOfOtherSectionsEnabled(): boolean {
+  return envFlag("ADD_OUT_OF_OTHER_SECTIONS_ENABLED");
 }
 
 /**
