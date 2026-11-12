@@ -1394,6 +1394,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "EXIT_TYPO_WORDS_ENABLED",
   "CA_REASON_DUE_TO_ENABLED",
   "COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED",
+  // coding 5: EXIT_NOTICE_VERB_TYPOS (QA's October triage, 10 Nov 2026; default off).
+  "EXIT_NOTICE_VERB_TYPOS_ENABLED",
   // coding 6: REQUEST_ISSUE_KEPT, LATE_OPENING_OWN_WORDS, FIRST_NAME_ENOUGH (QA round 17b, 10 Nov 2026; default off).
   "REQUEST_ISSUE_KEPT_ENABLED",
   "LATE_OPENING_OWN_WORDS_ENABLED",
@@ -4968,6 +4970,15 @@ export function priorActionsNoCommaEnabled(): boolean {
  */
 export function attendancePlanNeedsLatenessEnabled(): boolean {
   return envFlag("ATTENDANCE_PLAN_NEEDS_LATENESS_ENABLED");
+}
+
+/**
+ * A misspelled "submitted" before the notice ("she submited her notice on
+ * 9/29/26", QA's October triage, 10 Nov 2026) names the notice date, as
+ * "submitted" does. Without it the notice date stayed blank. Off, as before.
+ */
+export function exitNoticeVerbTyposEnabled(): boolean {
+  return envFlag("EXIT_NOTICE_VERB_TYPOS_ENABLED");
 }
 
 /**
