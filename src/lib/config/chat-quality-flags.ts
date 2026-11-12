@@ -1291,6 +1291,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "NO_NAME_REPLY_WORDING_ENABLED",
   // coding 4: TITLE_BEFORE_NAME (Bubbles 17h live test, QA, 11 Nov 2026; default off).
   "TITLE_BEFORE_NAME_ENABLED",
+  // TITLE_BEFORE_NAME_REPLY_LINES (QA 17o live, 12 Nov 2026; default off).
+  "TITLE_BEFORE_NAME_REPLY_LINES_ENABLED",
   // coding 4: FORMS_ON_FILE_ORDER_MATCH_POSSIBLE (Bubbles 17h live test, QA, 11 Nov 2026; default off).
   "FORMS_ON_FILE_ORDER_MATCH_POSSIBLE_ENABLED",
   "TAKE_OFF_STAYS_CARD_ENABLED",
@@ -5037,4 +5039,14 @@ export function formsOnFileOrderMatchPossibleEnabled(): boolean {
  */
 export function policyCarryRetrievalEnabled(): boolean {
   return envFlag("POLICY_CARRY_RETRIEVAL_ENABLED");
+}
+
+/**
+ * TITLE_BEFORE_NAME_REPLY_LINES_ENABLED (QA's Bubbles 17o live test, 12 Nov 2026; default off). With TITLE_BEFORE_NAME on,
+ * "Corrective action for Team Member <B>" names <B> on the card, but the reply's lines written from the name as first
+ * read kept the title's first word: "… with Team." and "I couldn't verify a store for **Team** from Woven". On: those
+ * lines take the person's first name (`forms/roster-only-names.ts`). Off, as before.
+ */
+export function titleBeforeNameReplyLinesEnabled(): boolean {
+  return envFlag("TITLE_BEFORE_NAME_REPLY_LINES_ENABLED");
 }
