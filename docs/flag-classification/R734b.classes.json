@@ -1,0 +1,34 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-prior-actions-no-comma-qa-caps: \"CREATE A CA FOR REMY CALDER, SHE WAS LATE ON 10-20-26. PRIOR COACHING VERBAL 6/25 WRITTEN 7/28 NO DEDUCT\" — Prior actions list a verbal (06/25/2026) and a written (07/28/2026), each with only its own words — OPEN in production (the second prior action takes the first's words: \"Written warning — verbal 6/25 — 07/28/2026\")": {
+    "category": "INTENDED",
+    "reason": "Open to holding: prior actions typed with no comma keep only their own words; the stray \"verbal 6/25 — \" / \"9/1 — \" is gone from the prior line."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-prior-actions-no-comma-qa-lower: \"create a ca for remy calder, she was late on 10-20-26. prior coaching verbal 6/25 written 7/28 no deduct\" — Prior actions list a verbal (06/25/2026) and a written (07/28/2026), each with only its own words — OPEN in production (the second prior action takes the first's words: \"Written warning — verbal 6/25 — 07/28/2026\")": {
+    "category": "INTENDED",
+    "reason": "Open to holding: prior actions typed with no comma keep only their own words; the stray \"verbal 6/25 — \" / \"9/1 — \" is gone from the prior line."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-prior-actions-no-comma-triage-caps: \"CREATE A CA FOR REMY CALDER, SHE WAS LATE ON 10-20-26. PRIOR VERBAL 9/1 WRITTEN 9/15\" — Prior actions list a verbal (09/01/2026) and a written (09/15/2026), each with only its own words — OPEN in production (the second prior action takes the first's words: \"Written warning — verbal 6/25 — 07/28/2026\")": {
+    "category": "INTENDED",
+    "reason": "Open to holding: prior actions typed with no comma keep only their own words; the stray \"verbal 6/25 — \" / \"9/1 — \" is gone from the prior line."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-prior-actions-no-comma-triage-lower: \"create a ca for remy calder, she was late on 10-20-26. prior verbal 9/1 written 9/15\" — Prior actions list a verbal (09/01/2026) and a written (09/15/2026), each with only its own words — OPEN in production (the second prior action takes the first's words: \"Written warning — verbal 6/25 — 07/28/2026\")": {
+    "category": "INTENDED",
+    "reason": "Open to holding: prior actions typed with no comma keep only their own words; the stray \"verbal 6/25 — \" / \"9/1 — \" is gone from the prior line."
+  },
+  "replay: nov10-prior-actions-no-comma-qa-caps [open]": {
+    "category": "INTENDED",
+    "reason": "Open to holding: prior actions typed with no comma keep only their own words; the stray \"verbal 6/25 — \" / \"9/1 — \" is gone from the prior line."
+  },
+  "replay: nov10-prior-actions-no-comma-qa-lower [open]": {
+    "category": "INTENDED",
+    "reason": "Open to holding: prior actions typed with no comma keep only their own words; the stray \"verbal 6/25 — \" / \"9/1 — \" is gone from the prior line."
+  },
+  "replay: nov10-prior-actions-no-comma-triage-caps [open]": {
+    "category": "INTENDED",
+    "reason": "Open to holding: prior actions typed with no comma keep only their own words; the stray \"verbal 6/25 — \" / \"9/1 — \" is gone from the prior line."
+  },
+  "replay: nov10-prior-actions-no-comma-triage-lower [open]": {
+    "category": "INTENDED",
+    "reason": "Open to holding: prior actions typed with no comma keep only their own words; the stray \"verbal 6/25 — \" / \"9/1 — \" is gone from the prior line."
+  }
+}
