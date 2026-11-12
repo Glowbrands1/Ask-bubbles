@@ -1,4 +1,4 @@
-import { titleEndsAtLineEnabled } from "@/lib/config/chat-quality-flags";
+import { fullPositionTitleEnabled, titleEndsAtLineEnabled } from "@/lib/config/chat-quality-flags";
 
 import { isCompanyPositionTitle } from "./staff-picker";
 
@@ -32,7 +32,8 @@ export function titleNamesAnotherPerson(text: string, title: string, employeeNam
     const at = match.index ?? 0;
     // TITLE_ENDS_AT_LINE_ENABLED (the sibling app's gate, 6 Nov 2026, s16): the name after a title is on the title's line; the next line (the store) is not its owner.
     const after = titleEndsAtLineEnabled() && titleLine(text, at, match[0].length) ? null : nameAt(text.slice(at + match[0].length), "after", titleEndsAtLineEnabled());
-    const before = nameAt(text.slice(0, at), "before");
+    // FULL_POSITION_TITLE_ENABLED: "Position: Team Member Part Time" — the field's label before the title is no person.
+    const before = labelledField(text, at) ? null : nameAt(text.slice(0, at), "before");
     const beside = [after, before].filter((name): name is string[] => name !== null);
     const other = beside.some((name) => name.every((word) => !employee.has(word.toLowerCase())));
     if (!other) return false;
@@ -42,6 +43,19 @@ export function titleNamesAnotherPerson(text: string, title: string, employeeNam
 
 const NAME_WORD = /^\p{Lu}[\p{L}'’-]+$/u;
 
+/*
+ * FULL_POSITION_TITLE_ENABLED (ported from the sibling app: QA's round-33 live test there, 12 Nov 2026; default off):
+ * an exit form typed with labels — "Name: <A>\nPosition: Team Member Part Time\nResigned 11/8" — left the Job Title
+ * blank: the label "Position:" before the title was read as a person's name, so the title was taken as theirs (checked
+ * here: the same). Only what is on the title's own line before it counts: one to three words and a colon, nothing
+ * else ("Position:", "Job Title:", "Title:"). Off, as before.
+ */
+const FIELD_LABEL = /(?:^|\n)[^\S\n]*[\p{L}][\p{L}'’]*(?:[^\S\n]+[\p{L}][\p{L}'’]*){0,2}[^\S\n]*:[^\S\n]*$/u;
+
+function labelledField(text: string, at: number): boolean {
+  return fullPositionTitleEnabled() && FIELD_LABEL.test(text.slice(0, at));
+}
+
 /**
  * TITLE_ENDS_AT_LINE_ENABLED: the title begins its own line and the whole line is one of the
  * company's own position names ("Team Member Part Time", `staff-picker.ts`). That line is a longer
@@ -50,9 +64,11 @@ const NAME_WORD = /^\p{Lu}[\p{L}'’-]+$/u;
  */
 function titleLine(text: string, at: number, length: number): boolean {
   const start = text.lastIndexOf("\n", at - 1) + 1;
-  if (text.slice(start, at).trim() !== "") return false;
+  // FULL_POSITION_TITLE_ENABLED: "Position: Team Member Part Time" — a field label may stand before the position.
+  const labelled = text.slice(start, at).trim() !== "" && labelledField(text, at);
+  if (text.slice(start, at).trim() !== "" && !labelled) return false;
   const end = text.indexOf("\n", at + length);
-  return isCompanyPositionTitle(text.slice(start, end === -1 ? text.length : end));
+  return isCompanyPositionTitle(text.slice(labelled ? at : start, end === -1 ? text.length : end));
 }
 
 /** One to three capitalised words straight after (or before) the title, or null. */
