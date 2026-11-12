@@ -1298,6 +1298,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "NO_NAME_REPLY_WORDING_ENABLED",
   // coding 4: TITLE_BEFORE_NAME (Bubbles 17h live test, QA, 11 Nov 2026; default off).
   "TITLE_BEFORE_NAME_ENABLED",
+  // REPLY_QUOTE_WHOLE_SENTENCES (QA 17q live, 12 Nov 2026; default off).
+  "REPLY_QUOTE_WHOLE_SENTENCES_ENABLED",
   // TITLE_BEFORE_NAME_REPLY_LINES (QA 17o live, 12 Nov 2026; default off).
   "TITLE_BEFORE_NAME_REPLY_LINES_ENABLED",
   // coding 4: FORMS_ON_FILE_ORDER_MATCH_POSSIBLE (Bubbles 17h live test, QA, 11 Nov 2026; default off).
@@ -5282,4 +5284,14 @@ export function registerAccuracyConductEnabled(): boolean {
  */
 export function cardPlanMatchesCreateEnabled(): boolean {
   return envFlag("CARD_PLAN_MATCHES_CREATE_ENABLED");
+}
+
+/**
+ * REPLY_QUOTE_WHOLE_SENTENCES_ENABLED (QA's Bubbles 17q live check, 12 Nov 2026; default off). With
+ * STEP_B_REPLY_KEEPS_LINES on, an edit reply quoting a saved field cut each line at 120 characters, mid-sentence ("…and
+ * to secure the…"). On: a quoted line is kept whole (up to 600 characters; a longer one ends at its last whole sentence)
+ * (`forms/form-diff-reply.ts`). Off, as before.
+ */
+export function replyQuoteWholeSentencesEnabled(): boolean {
+  return envFlag("REPLY_QUOTE_WHOLE_SENTENCES_ENABLED");
 }

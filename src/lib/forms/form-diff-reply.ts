@@ -1,4 +1,4 @@
-import { stepBReplyKeepsLinesEnabled } from "@/lib/config/chat-quality-flags";
+import { replyQuoteWholeSentencesEnabled, stepBReplyKeepsLinesEnabled } from "@/lib/config/chat-quality-flags";
 
 import type { FieldValue, FormDiff } from "./form-reducer";
 
@@ -40,6 +40,7 @@ function quotedLines(value: FieldValue): string[] | null {
   if (lines.length < 2) return null;
   const cut = (line: string) => {
     if (line.length <= REPLY_VALUE_MAX) return line;
+    if (replyQuoteWholeSentencesEnabled()) return wholeSentences(line);
     const room = line.slice(0, REPLY_VALUE_MAX);
     const space = room.lastIndexOf(" ");
     return `${(space > REPLY_VALUE_MAX / 2 ? room.slice(0, space) : room).trimEnd()}…`;
@@ -47,6 +48,23 @@ function quotedLines(value: FieldValue): string[] | null {
   const shownLines = lines.slice(0, QUOTED_LINES_MAX).map(cut);
   if (lines.length > QUOTED_LINES_MAX) shownLines.push("…");
   return shownLines;
+}
+
+/*
+ * REPLY_QUOTE_WHOLE_SENTENCES_ENABLED (QA's Bubbles 17q live check, 12 Nov 2026): a quoted line was cut at
+ * REPLY_VALUE_MAX characters, mid-sentence ("…and to secure the…"). On: a quoted line is kept whole up to
+ * QUOTED_LINE_WHOLE_MAX characters; a longer one ends at the last sentence that fits, and only a single sentence longer
+ * than that is cut at a word.
+ */
+export const QUOTED_LINE_WHOLE_MAX = 600;
+
+function wholeSentences(line: string): string {
+  if (line.length <= QUOTED_LINE_WHOLE_MAX) return line;
+  const room = line.slice(0, QUOTED_LINE_WHOLE_MAX);
+  const end = Math.max(room.lastIndexOf(". "), room.lastIndexOf("! "), room.lastIndexOf("? "));
+  if (end > 0) return `${room.slice(0, end + 1)} …`;
+  const space = room.lastIndexOf(" ");
+  return `${(space > 0 ? room.slice(0, space) : room).trimEnd()}…`;
 }
 
 export function replyFromDiff(diff: Pick<FormDiff, "changed">, labels: Readonly<Record<string, string>>): string {

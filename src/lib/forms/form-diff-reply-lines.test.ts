@@ -23,3 +23,36 @@ describe("replyFromDiff, a multi-line field", () => {
     expect(replyFromDiff({ changed: [{ key: "other_topic", before: "", after: "Showing up late" }] } as never, LABELS)).toBe('Changed Other to "Showing up late".');
   });
 });
+
+/*
+ * REPLY_QUOTE_WHOLE_SENTENCES_ENABLED (QA's Bubbles 17q live check, 12 Nov 2026; invented names): after "add to the
+ * expectation that she was reminded twice", the quoted line was cut mid-sentence ("…and to secure the…").
+ */
+const LONG =
+  "Expectation:\nOttoline is expected to close the store on time, count the drawer with the shift lead, and to secure the back door and the stockroom before she leaves. She was reminded twice.";
+
+describe("replyFromDiff, a long quoted line", () => {
+  it("off: cut at 120 characters, as before", () => {
+    vi.stubEnv("STEP_B_REPLY_KEEPS_LINES_ENABLED", "1");
+    vi.stubEnv("REPLY_QUOTE_WHOLE_SENTENCES_ENABLED", "");
+    expect(replyFromDiff({ changed: [{ key: "coaching_details", before: "", after: LONG }] } as never, LABELS)).toMatch(/…$/);
+  });
+
+  it("on: the line is quoted whole, never cut mid-sentence", () => {
+    vi.stubEnv("STEP_B_REPLY_KEEPS_LINES_ENABLED", "1");
+    vi.stubEnv("REPLY_QUOTE_WHOLE_SENTENCES_ENABLED", "true");
+    expect(replyFromDiff({ changed: [{ key: "coaching_details", before: "", after: LONG }] } as never, LABELS)).toBe(
+      "Changed Details of Coaching to:\n> Expectation:\n> Ottoline is expected to close the store on time, count the drawer with the shift lead, and to secure the back door and the stockroom before she leaves. She was reminded twice.",
+    );
+  });
+
+  it("on: a line past 600 characters ends at its last whole sentence", () => {
+    vi.stubEnv("STEP_B_REPLY_KEEPS_LINES_ENABLED", "1");
+    vi.stubEnv("REPLY_QUOTE_WHOLE_SENTENCES_ENABLED", "true");
+    const sentence = "Ottoline is expected to close the store on time and to secure the back door before she leaves. ";
+    const reply = replyFromDiff({ changed: [{ key: "coaching_details", before: "", after: `Expectation:\n${sentence.repeat(8).trim()}` }] } as never, LABELS);
+    const quoted = reply.split("\n").at(-1)!;
+    expect(quoted).toMatch(/leaves\. …$/);
+    expect(quoted.length).toBeLessThanOrEqual(605);
+  });
+});
