@@ -1326,6 +1326,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "MADE_ABOUT_SAID_DATE_ENABLED",
   "SECTION_BREAKS_KEPT_ENABLED",
   "ADD_NOT_REPEATED_ENABLED",
+  // Ported from the sibling app (its production-flags read, 5 Nov 2026; default off).
+  "CITATION_LINE_KEPT_ON_REVISION_ENABLED",
   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
   "CHAT_STAGE_TIMINGS_ENABLED",
   "EXIT_TYPO_WORDS_ENABLED",
@@ -4450,6 +4452,18 @@ export function sectionBreaksKeptEnabled(): boolean {
  */
 export function addNotRepeatedEnabled(): boolean {
   return envFlag("ADD_NOT_REPEATED_ENABLED");
+}
+
+/**
+ * CITATION_LINE_KEPT_ON_REVISION_ENABLED (ported from the sibling app: its production-flags read and bisect, 5 Nov 2026;
+ * default off; same flag in both apps). A Coaching draft's Details can end in the app's own "Policy reference: …, JBA
+ * Policy Manual p.N" line (POLICY_CITATION_ENABLED, or EDIT_POLICY_ASK_ENABLED's "please list the policy"). A chat edit
+ * ("fix her last name, it is Laine") whose revision did not repeat that line was refused: keepsSubstance found the line's
+ * page numbers missing, so nothing was written. With the flag on, a wording or additive revision keeps the app's own
+ * trailing line (`forms/app-citation-line.ts`), so the edit lands and the citation stays. Off, as before.
+ */
+export function citationLineKeptOnRevisionEnabled(): boolean {
+  return envFlag("CITATION_LINE_KEPT_ON_REVISION_ENABLED");
 }
 
 /**
