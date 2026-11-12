@@ -530,4 +530,10 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov11-bcs-metrics-discount-rate": "COMPANY_METRIC_WORDS_NOT_NAMES",
   // fixed in production by ACCOUNT_BEFORE_REQUEST, QA round 17k, 12 Nov 2026
   "nov10-p14a-account-opens-with-a-question": "ACCOUNT_BEFORE_REQUEST",
+  // fixed in production by DRAFT_NO_INVENTED_PLAN, QA round 17l, 12 Nov 2026
+  "nov10-draft-no-invented-plan-ca-observation": "DRAFT_NO_INVENTED_PLAN",
+  // fixed in production by EMPTY_REPLY_GUARD, QA round 17l, 12 Nov 2026
+  "nov11-empty-reply-guard-policy-question": "EMPTY_REPLY_GUARD",
+  // fixed in production by POLICY_PAGE_ON_CARD, QA round 17l, 12 Nov 2026
+  "nov11-policy-page-on-card-standards-of-conduct": "POLICY_PAGE_ON_CARD",
 };

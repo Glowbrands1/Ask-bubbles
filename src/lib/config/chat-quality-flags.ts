@@ -1367,6 +1367,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "LETTER_GREETING_ANY_CASE_ENABLED",
   // coding 5: DRAFT_NO_INVENTED_PLAN (QA's October triage of #188, 10 Nov 2026; default off).
   "DRAFT_NO_INVENTED_PLAN_ENABLED",
+  // REVISION_ARCHIVED_NOT_OPEN (default off): in the list, as every flag a release flips (QA round 17l, 12 Nov 2026).
+  "REVISION_ARCHIVED_NOT_OPEN_ENABLED",
 ] as const;
 
 /**
