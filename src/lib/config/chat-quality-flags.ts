@@ -1460,6 +1460,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "RESENT_REQUEST_IS_YES_ENABLED",
   // CARD_PLAN_MATCHES_CREATE (default off; QA's 17l, 12 Nov 2026): in the list, as every chat flag.
   "CARD_PLAN_MATCHES_CREATE_ENABLED",
+  // SAME_NAME_ASKS_WHICH (default off; QA, 12 Nov 2026): in the list, as every chat flag.
+  "SAME_NAME_ASKS_WHICH_ENABLED",
 ] as const;
 
 /**
@@ -5282,4 +5284,15 @@ export function registerAccuracyConductEnabled(): boolean {
  */
 export function cardPlanMatchesCreateEnabled(): boolean {
   return envFlag("CARD_PLAN_MATCHES_CREATE_ENABLED");
+}
+
+/**
+ * SAME_NAME_ASKS_WHICH_ENABLED (coding 6, 12 Nov 2026; default off; same flag in both apps; QA, high priority). Two
+ * active people with one name at ONE store were asked "Which store is the one you mean?" — the store cannot tell them
+ * apart — and then "Who is this form for?". On: two or more roster people with the typed name are a numbered choice
+ * labelled with store and job title ("Did you mean 1. **<name>** (<store>, <title>) or 2. …?"), and the answer — the
+ * number, the job title or the store — selects that person by identity (store AND title), never by name. Off, as before.
+ */
+export function sameNameAsksWhichEnabled(): boolean {
+  return envFlag("SAME_NAME_ASKS_WHICH_ENABLED");
 }

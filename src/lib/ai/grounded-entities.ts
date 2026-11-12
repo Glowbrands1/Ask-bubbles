@@ -5,6 +5,7 @@ import {
   managerWordsOnlyEnabled,
   formNameFromRosterEnabled,
   typedNameEnabled,
+  sameNameAsksWhichEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { COMPANY_LOCATIONS } from "@/lib/locations";
 import { namesThisCompany } from "@/lib/forms/company-name";
@@ -119,6 +120,27 @@ export function prepareGroundedQuestion(input: {
 }
 
 export function readGroundedChoice(
+  history: readonly { role: string; content: string }[],
+  reply: string,
+  people: readonly GroundedPerson[],
+): { kind: "person"; id: string; name: string } | { kind: "keep"; typed: string } | null {
+  /*
+   * SAME_NAME_ASKS_WHICH_ENABLED: the question may carry the saved form state around the manager's words
+   * ("The form is …\nThe employee is …\n2", or "…\nWarning level: verbal."), so a bare "2" was never read as the
+   * answer. On, each line is tried and the first that answers the choice is the answer.
+   */
+  if (sameNameAsksWhichEnabled()) {
+    const lines = reply.split("\n").map((line) => line.trim()).filter(Boolean);
+    for (const line of lines.length > 0 ? lines : [reply]) {
+      const choice = readGroundedChoiceLine(history, line, people);
+      if (choice) return choice;
+    }
+    return null;
+  }
+  return readGroundedChoiceLine(history, reply, people);
+}
+
+function readGroundedChoiceLine(
   history: readonly { role: string; content: string }[],
   reply: string,
   people: readonly GroundedPerson[],
@@ -393,6 +415,17 @@ function personForOption(option: LabeledOption, people: readonly GroundedPerson[
   const named = people.filter((person) => displayName(person) === option.name);
   if (named.length === 1) return named[0]!;
   const store = uniqueRosterStore(option.detail);
+  /*
+   * SAME_NAME_ASKS_WHICH_ENABLED: two people with one name at ONE store share the store, so the first store match was
+   * always the first person. On, the option is the one person whose store AND title both fit its label; none or
+   * several, and nobody is chosen.
+   */
+  if (sameNameAsksWhichEnabled()) {
+    const fits = named.filter(
+      (person) => (!store || storeLabel(person) === store) && (!person.title || option.detail.includes(person.title)),
+    );
+    return fits.length === 1 ? fits[0]! : null;
+  }
   const hit = named.find((person) => {
     if (store && storeLabel(person) === store) return true;
     return Boolean(person.title && option.detail.includes(person.title));
