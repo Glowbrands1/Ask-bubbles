@@ -106,7 +106,7 @@ export const NOV4_MANAGER_MSB_CASES: ReplayCase[] = [
     id: "nov4-mgr-1-verbal-metrics",
     title: `"${byId("mgr-1-verbal-metrics").text}" — a CA card, no "what happened", cites the Standards of Conduct`,
     report: `${REPORT}, #1`,
-    // Run 4 Nov 2026 on main before #427: OPEN, the CA card and its draft cite no policy: no Standards of Conduct with heading and page (the card also says "I couldn't find **Club Close** or **Under** in the Woven roster").
+    // Run 4 Nov 2026 on main before #427: OPEN, the CA card and its draft cite no policy: no Standards of Conduct with heading and page (the card also says "I couldn't find **Bundle Rate** or **Under** in the Woven roster").
     // Holds with production's flags since #427 (d55575c9): revision 7 of the form replaces Under Performance with the Standards of Conduct, so the draft cites it.
     // production-flags.json corrected to Vercel (QA, 5 Nov 2026): GROUNDED_ENTITIES_ENABLED is off in production since 24 Oct (a deliberate rollback), so a name on no roster goes on the card. Recorded OPEN, a production defect.
     // Changed on purpose (5 Nov 2026): QA flipped CA_SALES_POLICY + REPLY_MATCHES_CARD + TITLE_OF_THE_EMPLOYEE + METRIC_GUARD on in production (production-flags.json), so this case now holds with production's flags.
