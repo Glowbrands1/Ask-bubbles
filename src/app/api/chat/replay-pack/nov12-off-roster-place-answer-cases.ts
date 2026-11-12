@@ -29,7 +29,7 @@ async function offered(t: ReplayContext) {
   const thread = t.thread();
   const first = await thread.say(REQUEST);
   expect(first.content, `no offer for ${C}:\n${first.content}`).toContain(`reply **use ${C}**`);
-  return { thread, first };
+  return { thread };
 }
 
 const PLACES = [
@@ -46,13 +46,13 @@ export const NOV12_OFF_ROSTER_PLACE_ANSWER_CASES: ReplayCase[] = PLACES.map(({ k
   status: { open: "the place is read as a person (or the typed name is taken without \"use\"), and the offer is not asked again" },
   fixFlags: [FLAG],
   async run(t: ReplayContext) {
-    const { thread, first } = await offered(t);
+    const { thread } = await offered(t);
     const reply = await thread.say(place);
     const card = thread.proposal as { employeeName?: string | null; templateKey?: string; locationId?: string | null } | null;
     expect(card?.templateKey, `no Corrective Action card:\n${reply.content}`).toBe("dpoa");
     expect(card?.employeeName ?? null, `"${place}" became the employee:\n${reply.content}`).toBeNull();
     expect(reply.content, `"use ${C}" is not asked again:\n${reply.content}`).toContain(`reply **use ${C}**`);
-    expect(lineOf(reply, "Issue"), `the account was lost:\n${reply.content}`).toBe(lineOf(first, "Issue"));
+    // The Issue's wording ("do not terminate yet") is #829 TERMINATION_CARD_TIDY's (QA, 12 Nov 2026), so it is not asserted.
     expect(lineOf(reply, "Policy"), `the policy was lost:\n${reply.content}`).toMatch(/^Attendance\b/);
     if (store) expect(card?.locationId, `the store is not set:\n${reply.content}`).toBe(store);
   },

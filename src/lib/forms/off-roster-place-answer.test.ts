@@ -57,3 +57,14 @@ describe("OFF_ROSTER_PLACE_ANSWER_ENABLED", () => {
     expect(notAllowed.content).toMatch(/I read \*\*Bellevue\*\* as the store/);
   });
 });
+
+describe("a store manager's store-only answer stays OFF_ROSTER_STORE_ANSWER_ONLY's", () => {
+  it("on: a roster store from a store manager is left to that path; from an admin it is read here", () => {
+    vi.stubEnv("OFF_ROSTER_PLACE_ANSWER_ENABLED", "true");
+    const manager = { level: "location", primaryAreaId: "loc-264", alsoCoversAreaIds: [] } as never;
+    const admin = { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] } as never;
+    expect(placeAnswerOf("Omaha, NE (West Dodge Rd)", history, manager)).toBeNull();
+    expect(placeAnswerOf("Omaha, NE (West Dodge Rd)", history, admin)).toMatchObject({ pending: C, storeId: "loc-264" });
+    expect(placeAnswerOf("Des Moines, IA", history, manager)).toMatchObject({ pending: C, storeId: null });
+  });
+});
