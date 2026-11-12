@@ -115,7 +115,7 @@ import { rewriteRetrievalQuery } from "./query-rewrite-claude";
 import { followUpOwnQuery } from "./query-rewrite";
 import { matchHybridKnowledge } from "@/lib/knowledge/hybrid-match";
 import { matchRecallKnowledge } from "@/lib/knowledge/recall-match";
-import { withMappedPolicy } from "./violation-policy";
+import { withCardPolicyQuoted, withMappedPolicy } from "./violation-policy";
 import type { RemapManual } from "./remap-incident";
 import { withPolicyPagesOnCard } from "@/lib/forms/policy-page-on-card";
 import { loadScopedRoster } from "@/lib/forms/employee-roster";
@@ -684,8 +684,10 @@ async function answerQuestionCore(
     // Flags off: decoration returns the same proposal, and the forms-library
     // answer returns here, before retrieval.
     // COACHING_CARD_POLICY_ENABLED: a Coaching card cites the policy its account falls under (`forms/coaching-card-policy.ts`).
-    if (proposal && coachingCardPolicyEnabled()) return await (await import("./coaching-card-policy-answer")).withCoachingCardPolicyOnAnswer(proposal, request, readManual);
-    if (proposal) return proposal;
+    if (proposal && coachingCardPolicyEnabled()) {
+      return await quoteCardPolicy(await (await import("./coaching-card-policy-answer")).withCoachingCardPolicyOnAnswer(proposal, request, readManual), readManual);
+    }
+    if (proposal) return await quoteCardPolicy(proposal, readManual);
     // AMOUNT_TURN_STAYS_ENABLED: "i dont know the amount" with a card open is the form's, not a policy question.
     const amountReply = amountTurnReply(request);
     if (amountReply) return amountReply;
@@ -1592,6 +1594,27 @@ async function withCardPolicyPages(response: AskResponse, read: () => Promise<Re
   return content === response.content ? response : { ...response, content };
 }
 
+/**
+ * POLICY_CITATION_ENABLED (Gate-Bubbles-2, 12 Nov 2026): once the card's own policy line is set (a Coaching card's comes
+ * after `decorateFormAnswer`), the card quotes the sections it cites (`ai/violation-policy.ts` withCardPolicyQuoted).
+ * Off, no card, a manual that cannot be read, or a block already there: the same response.
+ */
+async function quoteCardPolicy(
+  response: AskResponse,
+  readManual: () => ReturnType<SupabaseKnowledgeProvider["fetchOfficialPolicyManual"]>,
+): Promise<AskResponse> {
+  if (!policyCitationEnabled() || !response.formProposal) return response;
+  try {
+    const manual = await readManual();
+    if (!manual.ok) return response;
+    const content = withCardPolicyQuoted(response.content, manual.chunks, true);
+    return content === response.content ? response : { ...response, content };
+  } catch {
+    // A manual read that fails leaves the card as it was.
+    return response;
+  }
+}
+
 async function decorateFormAnswer(request: AskRequest, actor: ChatActor, response: AskResponse): Promise<AskResponse> {
   const coachingOn = priorCoachingOptionalEnabled();
   const policyOn = policyCitationEnabled();
@@ -1641,7 +1664,10 @@ async function decorateFormAnswer(request: AskRequest, actor: ChatActor, respons
       const policyTurns = cardPolicyOwnRequestEnabled() && response.formProposal ? cardPolicyTurns(turns, response.formProposal.employeeName) : turns;
       // POLICY_PAGE_ON_CARD_ENABLED: the card's own policy line carries its printed page.
       if (manual.ok && pageOn && response.formProposal) content = withPolicyPagesOnCard(content, manual.chunks);
-      if (manual.ok && policyOn) content = withMappedPolicy(content, policyTurns, manual.chunks, true);
+      // POLICY_CITATION_ENABLED: a card quotes the sections it cites itself, never a re-reading of the turns (Gate-Bubbles-2).
+      if (manual.ok && policyOn) {
+        content = response.formProposal ? withCardPolicyQuoted(content, manual.chunks, true) : withMappedPolicy(content, policyTurns, manual.chunks, true);
+      }
     } catch {
       // A manual read that fails leaves the proposal as the forms path wrote it.
     }
