@@ -1327,6 +1327,9 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ADD_NOT_REPEATED_ENABLED",
   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
   "CHAT_STAGE_TIMINGS_ENABLED",
+  // coding 5: POLICY_GATE_NONBLOCKING (the sibling app's, ported; QA's October triage, 10 Nov 2026; default off).
+  "POLICY_GATE_NONBLOCKING_ENABLED",
+  "NEXT_PUBLIC_POLICY_GATE_NONBLOCKING_ENABLED",
   "EXIT_TYPO_WORDS_ENABLED",
   "CA_REASON_DUE_TO_ENABLED",
   "COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED",
@@ -2985,6 +2988,36 @@ export function cardNamesEmployeeEnabled(): boolean {
  */
 export function policyTopicIntoFieldEnabled(): boolean {
   return envFlag("POLICY_TOPIC_INTO_FIELD_ENABLED");
+}
+
+/**
+ * POLICY_GATE_NONBLOCKING_ENABLED (ported from the sibling app, where it is on main; QA's October triage of #174,
+ * 10 Nov 2026; coding 5; default off). Managers' feedback, "not letting me complete it due to policy verification": a
+ * BLANK Direct policy held Corrective Action finalize. On: a blank policy-grounded field is left off the unresolved
+ * list (`forms/policy-verification.ts`), so the card and finalize are not held for a policy the manual did not match;
+ * the field stays empty. A value somebody TYPED that was never verified still asks for the acknowledgement. Off, as
+ * before.
+ *
+ * The form card is a client component, so the browser reads `NEXT_PUBLIC_POLICY_GATE_NONBLOCKING_ENABLED`, written out
+ * statically for Next to inline (a redeploy is needed after setting it). The server reads either spelling, so the card
+ * and `finalizeInstance` agree.
+ */
+export function policyGateNonblockingEnabled(): boolean {
+  const inlined = process.env.NEXT_PUBLIC_POLICY_GATE_NONBLOCKING_ENABLED;
+  return envFlag("POLICY_GATE_NONBLOCKING_ENABLED") || (typeof inlined === "string" && ON.has(inlined.trim().toLowerCase()));
+}
+
+/**
+ * POLICY_BLANK_HONEST_REPLY_ENABLED (ported from the sibling app: QA's live round-24 test there, 11 Nov 2026; coding 5;
+ * same flag in both apps; default off). A Corrective Action draft named its policy with the Direct policy field blank;
+ * "did you check the policy on this form?" got "… That's the section quoted on <A>'s draft." and "is the policy
+ * verified?" got "**Nothing on the form has changed yet.** …" (read as an edit). On: the open-form summary says the
+ * policy text field is EMPTY and names the policy the form only names; a question whether the policy was checked or
+ * verified is answered plainly from the form, never as an edit; any line claiming a section is quoted on the draft is
+ * replaced (`forms/policy-blank-honest.ts`). Off, as before.
+ */
+export function policyBlankHonestReplyEnabled(): boolean {
+  return envFlag("POLICY_BLANK_HONEST_REPLY_ENABLED");
 }
 
 /**

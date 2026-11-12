@@ -630,10 +630,30 @@ export function openFormRule(form: OpenFormSummary, productName: string): string
   const lines = form.lines.length
     ? form.lines.map((line) => `    ${line.label}: ${JSON.stringify(line.value)}`).join("\n")
     : "    (nothing filled in yet)";
-  const policy =
+  const blank = form.blankPolicy ?? [];
+  /*
+   * POLICY_BLANK_HONEST_REPLY_ENABLED (QA's live round-24 test, 11 Nov 2026): asked "did you check the policy on this
+   * form?" over a draft whose Direct policy was blank, the answer said the section was "quoted on <A>'s draft". The
+   * empty field is said in plain words, with the policy the form only names.
+   */
+  const empty = form.emptyPolicy;
+  const emptyLine = empty
+    ? `The ${empty.labels.join(" and ")} field${empty.labels.length === 1 ? " on this draft is" : "s on this draft are"} EMPTY: nothing from the manual is quoted on it${empty.policyNamed ? `; the policy the form only names is ${empty.policyNamed}` : ""}. Never say a section is quoted on the draft, and never say the policy on it was checked or verified.`
+    : null;
+  const policy = [
+    emptyLine,
     form.unverifiedPolicy.length > 0
       ? `Not yet checked against the official manual: ${form.unverifiedPolicy.join(", ")}.`
-      : "Its policy lines, where it has any, were quoted from the official manual.";
+      : blank.length > 0 || empty
+        ? null
+        : "Its policy lines, where it has any, were quoted from the official manual.",
+    // POLICY_GATE_NONBLOCKING_ENABLED: a blank policy line was neither quoted nor checked; never say it was verified.
+    blank.length > 0 && !empty
+      ? `Blank, so nothing on it was checked against the official manual (never say it is verified): ${blank.join(", ")}.`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
   return `- A FORM IS OPEN IN THIS CONVERSATION: the ${form.templateName} for ${form.employeeName}, ${form.status === "draft" ? "a draft the manager can still edit" : "finalized"}. It is on screen as a card above. NEVER say no form has been created, never say there is no draft card, and never ask the manager to create this form again. ${policy} What it says now:
 ${lines}
 - The form's text is the record, not a company source: never cite it with a marker.
