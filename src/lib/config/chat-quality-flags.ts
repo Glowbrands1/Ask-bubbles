@@ -1371,6 +1371,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT_ENABLED",
   // coding 6: GROUP_WORDS_NOT_A_NAME (Problem 19, 11 Nov 2026; default off).
   "GROUP_WORDS_NOT_A_NAME_ENABLED",
+  // HUMAN_REPLIES (default off; rebuilt from Ask Sunny's S#898, QA's ruling (b)): in the list, as every chat flag.
+  "HUMAN_REPLIES_ENABLED",
   "ACCOUNT_BEFORE_REQUEST_ENABLED",
   // LETTER_GREETING_ANY_CASE (default off): in the list, as every chat flag (QA round 17k, 12 Nov 2026).
   "LETTER_GREETING_ANY_CASE_ENABLED",
@@ -4855,4 +4857,13 @@ export function caProcedureBasisEnabled(): boolean {
  */
 export function noSelectionOnOpenCardEnabled(): boolean {
   return envFlag("NO_SELECTION_ON_OPEN_CARD_ENABLED");
+}
+
+/**
+ * HUMAN_REPLIES_ENABLED (default off; rebuilt by coding 6 from Ask Sunny's S#898, 12 Nov 2026; QA's ruling (b);
+ * supersedes this app's #200). A later card turn for the same form and employee replaces only the opener's long tail
+ * with one line on what changed; every other card line stays as built. Off, as before. See `ai/human-replies.ts`.
+ */
+export function humanRepliesEnabled(): boolean {
+  return envFlag("HUMAN_REPLIES_ENABLED");
 }
