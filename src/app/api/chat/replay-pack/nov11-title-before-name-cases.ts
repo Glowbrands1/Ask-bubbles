@@ -163,3 +163,26 @@ export const NOV11_TITLE_BEFORE_NAME_CASES: ReplayCase[] = [
     },
   },
 ];
+
+/*
+ * Ported from the sibling app (Gate-Sunny's NO-GO on #867, 12 Nov 2026; R02 from a Sunny production chat, this app's title).
+ * TITLE_BEFORE_NAME is on in production here (17o): "create a CA for store manager, test employee for violating the
+ * standards of conduct" took "store manager," as the title and stopped the name before "employee". A title closed by a
+ * comma is a label; the name after it is read as before the flag. "test employee" is on nobody's roster here.
+ * A guard: through the whole chat route this app's card already never named "test" (no employee is carded; checked on
+ * main 815ae303 before the fix). The reader-level failure is pinned in `forms/title-before-name.test.ts`, which failed
+ * before the fix.
+ */
+export const NOV12_TITLE_COMMA_LABEL_CASES: ReplayCase[] = [
+  {
+    id: "nov12-title-comma-label-name-runs",
+    title: "\"create a CA for store manager, test employee for violating the standards of conduct\": the name is never cut to \"test\"",
+    report: "Ported from the sibling app (Gate-Sunny's NO-GO on #867, 12 Nov 2026): R02 carded \"test\" with TITLE_BEFORE_NAME on",
+    status: "fixed",
+    async run(t: ReplayContext) {
+      const { reply, proposal } = await ask(t, "admin", "create a CA for store manager, test employee for violating the standards of conduct");
+      expect(proposal?.employeeName ?? null, reply.content).not.toBe("test");
+      expect(reply.content, reply.content).not.toMatch(/\*\*test\*\*/i);
+    },
+  },
+];
