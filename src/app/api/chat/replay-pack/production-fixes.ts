@@ -544,4 +544,32 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov11-exit-prose-bare-name": "EXIT_PROSE_FACTS",
   // fixed in production by FORM_INPUT_FIDELITY, QA round 17m, 12 Nov 2026
   "nov11-form-input-fidelity-title-yesterday": "FORM_INPUT_FIDELITY",
+  // fixed in production by PASTED_FORM_NAME_NOT_REQUEST, QA round 17n, 12 Nov 2026
+  "nov10-b4-twin-ca-not-coaching-form-type": "PASTED_FORM_NAME_NOT_REQUEST",
+  // fixed in production by EXPECTATION_POLICY_LINE_KEPT, QA round 17n, 12 Nov 2026
+  "nov10-expectation-policy-line-kept": "EXPECTATION_POLICY_LINE_KEPT",
+  // fixed in production by MADE_FOR_IS_MADE_ABOUT, QA round 17n, 12 Nov 2026
+  "nov10-made-for-is-made-about-about-missing-out": "MADE_FOR_IS_MADE_ABOUT",
+  // fixed in production by MADE_FOR_IS_MADE_ABOUT, QA round 17n, 12 Nov 2026
+  "nov10-made-for-is-made-about-reader-nothing": "MADE_FOR_IS_MADE_ABOUT",
+  // fixed in production by MADE_FOR_IS_MADE_ABOUT, QA round 17n, 12 Nov 2026
+  "nov10-made-for-is-made-about-reader-replaces": "MADE_FOR_IS_MADE_ABOUT",
+  // fixed in production by ADDED_DETAIL_KEPT, QA round 17n, 12 Nov 2026
+  "nov10-sf-b6-card-carries-added-detail": "ADDED_DETAIL_KEPT",
+  // fixed in production by PASTED_REVIEW_NOT_ACCOUNT, QA round 17n, 12 Nov 2026
+  "nov10-twin-sf-s22-pasted-review-never-drafted": "PASTED_REVIEW_NOT_ACCOUNT",
+  // fixed in production by ADDED_DETAIL_KEPT, QA round 17n, 12 Nov 2026
+  "nov5-sf-b6-full-sentence-and-added-detail": "ADDED_DETAIL_KEPT",
+  // fixed in production by CA_PROCEDURE_BASIS, QA round 17n, 12 Nov 2026
+  "nov5-sf-b6-policy-left-for-the-manager": "CA_PROCEDURE_BASIS",
+  // fixed in production by PASTED_REVIEW_NOT_ACCOUNT, QA round 17n, 12 Nov 2026
+  "nov5-twin-sf-s22-ca-not-coaching": "PASTED_REVIEW_NOT_ACCOUNT",
+  // fixed in production by REOPEN_CLOSE_SPELLING, QA round 17n, 12 Nov 2026
+  "nov5-twin-sf-s26-edit-misspelled-ca": "REOPEN_CLOSE_SPELLING",
+  // fixed in production by STEP_B_REPLY_KEEPS_LINES, QA round 17n, 12 Nov 2026
+  "nov8-step-b-reply-keeps-lines": "STEP_B_REPLY_KEEPS_LINES",
+  // fixed in production by MADE_ABOUT_UNDATED_TOGETHER, QA round 17n, 12 Nov 2026
+  "nov9-made-about-undated-no-reading": "MADE_ABOUT_UNDATED_TOGETHER",
+  // fixed in production by MADE_ABOUT_UNDATED_TOGETHER, QA round 17n, 12 Nov 2026
+  "nov9-made-about-undated-topic": "MADE_ABOUT_UNDATED_TOGETHER",
 };
