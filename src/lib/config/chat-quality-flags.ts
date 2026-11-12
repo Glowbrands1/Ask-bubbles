@@ -1433,6 +1433,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "POLICY_CARRY_RETRIEVAL_ENABLED",
   // coding 6: BARE_COACHING_REQUEST_LEAD (the sibling app's round 31, 12 Nov 2026; default off).
   "BARE_COACHING_REQUEST_LEAD_ENABLED",
+  // TERMINATION_INTAKE (default off): in the list, as every chat flag (QA, 12 Nov 2026).
+  "TERMINATION_INTAKE_ENABLED",
 ] as const;
 
 /**
@@ -5091,4 +5093,15 @@ export function bareCoachingRequestLeadEnabled(): boolean {
  */
 export function detailsFromEarlierAnswerEnabled(): boolean {
   return envFlag("DETAILS_FROM_EARLIER_ANSWER_ENABLED");
+}
+
+/**
+ * TERMINATION_INTAKE_ENABLED (coding 6, 12 Nov 2026; default off; QA). "Termination CA for <A>, no call no show." opened
+ * no card (the leading level read verbal / written / final only), and a pasted termination letter ("Dear <C>, Your
+ * employment with … is terminated effective 11/10/26.", the 17k live test) got the general answer — live, a refusal —
+ * instead of the Resignation/Exit Form. On: a leading "term / termination CA for <name>" asks for the Corrective Action
+ * Form, and a termination letter asks for the exit form. Off, as before. See `forms/template-intent.ts`.
+ */
+export function terminationIntakeEnabled(): boolean {
+  return envFlag("TERMINATION_INTAKE_ENABLED");
 }
