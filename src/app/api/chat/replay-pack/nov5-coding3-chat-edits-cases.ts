@@ -1,6 +1,7 @@
 import { expect } from "vitest";
 
 import { STAFF, WEST_DODGE, noClaimWithoutUpdate, replyMatchesDiff, savedForm, type ReplayAnswer, type ReplayCase, type ReplayContext, type ReplayThread } from "./cases";
+import { REFUSAL_ROSTER } from "./nov7-step-b-refusals-scenarios";
 
 /**
  * ============================================================================
@@ -88,6 +89,11 @@ export const NOV5_CODING3_CHAT_EDITS_CASES: ReplayCase[] = [
     status: {
       open: "the Details stay empty: \"these details\" / \"the details we just discussed\" are read from the last reply (the card, then the bot's own no-change reply), never the earlier answer that held them",
     },
+    // DETAILS_FROM_EARLIER_ANSWER_ENABLED (coding 6, 10 Nov 2026) hands the revision the earlier answer's details
+    // (nov10-chat-edits-a-details-handed-to-the-revision); the pack's revision stand-in writes nothing, so what is SAVED
+    // stays open here even with the fix: the live model writes what it is handed.
+    fixFlags: ["DETAILS_FROM_EARLIER_ANSWER_ENABLED"],
+    fixStatus: { open: "the pack's revision stand-in writes nothing; the fix's effect is what the revision is handed (nov10-chat-edits-a-details-handed-to-the-revision)" },
     async run(t: T) {
       start(t);
       const thread = t.thread();
@@ -167,6 +173,69 @@ export const NOV5_CODING3_CHAT_EDITS_CASES: ReplayCase[] = [
       // Her next turn in the report: what the reply invites.
       await onDraft(t, thread, id, "make that update");
       expect(t.values(id).coaching_details ?? "", 'after "make that update" the draft does not say what Rowan did').toMatch(SAID);
+    },
+  },
+];
+
+/*
+ * DETAILS_FROM_EARLIER_ANSWER_ENABLED (coding 6, 10 Nov 2026): chat-edits (a) by what the revision model is HANDED. The
+ * stand-in revision writes nothing, and a scripted write is accepted whatever the turn asked, so the invariant is the
+ * request the revision gets: "the details we just discussed!!!" hands it the coaching details of the answer before the
+ * card — never the app's own card or "I haven't changed …".
+ */
+export const NOV10_CHAT_EDITS_A_CASES: ReplayCase[] = [
+  {
+    id: "nov10-chat-edits-a-details-handed-to-the-revision",
+    title: "(a) \"the details we just discussed!!!\" hands the revision the coaching details the app gave before the card, never its own card or no-change reply",
+    report:
+      'Manager, production (relayed 5 Nov 2026, both apps): "can you upate the draft with these details of coaching?" → "it didnt edit in the card" → "the details we just discussed!!!"',
+    status: { open: "the revision is handed the last reply (the app's own \"I haven't changed …\"), never the answer that held the details" },
+    fixFlags: ["DETAILS_FROM_EARLIER_ANSWER_ENABLED"],
+    async run(t: T) {
+      start(t);
+      const thread = t.thread();
+      t.modelSays(HOW_TO_ANSWER);
+      await thread.say("how do i coach on ship from store, when to press ready for pick up and when to press mark as shipped?");
+      t.modelSays(null);
+      await thread.say("Create a coaching form for Rowan Kestrel");
+      const id = await thread.create();
+      for (const turn of ["can you upate the draft with these details of coaching?", "it didnt edit in the card"]) await onDraft(t, thread, id, turn);
+      const before = t.revisionPrompts!().length;
+      await onDraft(t, thread, id, "the details we just discussed!!!");
+      const asked = t.revisionPrompts!().slice(before).join("\n");
+      const change = /THE CHANGE THE MANAGER IS ASKING FOR NOW:([\s\S]*)/.exec(asked)?.[1] ?? "";
+      for (const step of IN_THE_ANSWER) expect(change, `the revision was not handed the details discussed before the card (${step}):\n${change.slice(0, 300)}`).toMatch(step);
+      expect(change, "the revision was handed the app's own reply").not.toMatch(BOTS_OWN_WORDS);
+    },
+  },
+  /*
+   * Gate-Bubbles-4 (12 Nov 2026, NO-GO on #692): nov7-refusal-bub-didnt-edit's turn 5 with DETAILS_FROM_EARLIER_ANSWER on.
+   * No earlier content answer is in the chat, and the turn went to the free chat model ("Updating the draft now" live, 30
+   * Oct, nothing written). It now reads as with the flag off: the revision is asked, and the reply says honestly that
+   * nothing changed. The person is the refusal roster's (invented).
+   */
+  {
+    id: "nov12-details-from-earlier-answer-none-found",
+    title: "\"can you upate the draft with these details of coaching?\" with no earlier content answer: the revision is asked, never the free chat model",
+    report: "Gate-Bubbles-4 (12 Nov 2026, NO-GO on #692): turn 5 of nov7-refusal-bub-didnt-edit went to the free chat model",
+    status: "fixed",
+    fixFlags: ["DETAILS_FROM_EARLIER_ANSWER_ENABLED"],
+    async run(t: ReplayContext) {
+      t.directory(REFUSAL_ROSTER);
+      t.as("location_manager", WEST_DODGE);
+      const thread = t.thread();
+      await thread.say("Create a coaching form.");
+      await thread.say("Oswin");
+      await thread.say("yes");
+      await thread.create();
+      await thread.say("ship from store, when to press ready for pick up and when to press mark as shipped");
+      const before = t.calls();
+      const fifth = await thread.say("can you upate the draft with these details of coaching?");
+      const after = t.calls();
+      expect(after.chat - before.chat, `turn 5 went to the free chat model:\n${fifth.content}`).toBe(0);
+      expect(after.revision - before.revision, "turn 5 never reached the revision").toBe(1);
+      expect(fifth.content, fifth.content).not.toMatch(/Updating the draft now/i);
+      expect(fifth.content, fifth.content).toMatch(/I haven't changed the \*\*Coaching Form\*\*/);
     },
   },
 ];

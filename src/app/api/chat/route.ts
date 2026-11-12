@@ -47,8 +47,11 @@ import {
   personGuardEnabled,
   fieldLabelNotAQuestionEnabled,
   possessivePlaceNotPersonEnabled,
+  writeUpLeadNotAccountEnabled,
   formNameFromRosterEnabled,
   offRosterConfirmEnabled,
+  resentRequestIsYesEnabled,
+  cardPlanMatchesCreateEnabled,
   offRosterAskBeforeCardEnabled,
   oneFormEachPersonEnabled,
   outlineOnOpenProposalEnabled,
@@ -261,12 +264,14 @@ async function postChat(request: Request) {
         };
       }
       // OUTLINE_ON_OPEN_PROPOSAL_ENABLED: a pasted outline on an open proposal is no account (`lib/forms/outline-on-proposal.ts`).
-      let outlineOnProposal: { readonly requestId?: string } | null = null;
+      let outlineOnProposal: { readonly requestId?: string; readonly outlinePeople?: readonly string[] } | null = null;
       if (outlineOnOpenProposalEnabled()) {
         const read = (await import("@/lib/forms/outline-on-proposal")).withoutOutlineTurns(asked);
         if (read) {
           asked = read.asked;
-          outlineOnProposal = read.outline ? { ...(read.requestId ? { requestId: read.requestId } : {}) } : null;
+          outlineOnProposal = read.outline
+            ? { ...(read.requestId ? { requestId: read.requestId } : {}), ...(read.outlinePeople ? { outlinePeople: read.outlinePeople } : {}) }
+            : null;
         }
       }
       /*
@@ -281,6 +286,10 @@ async function postChat(request: Request) {
           question: withoutPastedReview(asked.question),
           history: asked.history.map((turn) => (turn.role === "user" && typeof turn.content === "string" ? { ...turn, content: withoutPastedReview(turn.content) } : turn)),
         };
+      }
+      // RESENT_REQUEST_IS_YES_ENABLED: the same request again while "Is this for <name>?" waits is a yes (`lib/forms/resent-request-is-yes.ts`).
+      if (resentRequestIsYesEnabled()) {
+        asked = (await import("@/lib/forms/resent-request-is-yes")).withResentRequestAsYes(asked) ?? asked;
       }
       /*
        * OFF_ROSTER_CONFIRM_ENABLED: "use <name>" (or "yes") to the offer for a person not in Woven is read as the
@@ -1040,6 +1049,8 @@ async function postChat(request: Request) {
           asked.question,
         ]);
       }
+      // WRITE_UP_LEAD_NOT_ACCOUNT_ENABLED: "write up <employee> for cell phone use" gives the Issue "Cell phone use" (`lib/forms/write-up-lead.ts`).
+      if (writeUpLeadNotAccountEnabled()) answer = (await import("@/lib/forms/write-up-lead")).withWriteUpLeadNotAccount(answer);
       // EXIT_FORM_DATE_FROM_TERMINATION_ENABLED: a stated "terminated, effective <date>" dates the exit card (`lib/forms/exit-form-date.ts`).
       if (exitFormDateFromTerminationEnabled()) {
         answer = (await import("@/lib/forms/exit-form-date")).withExitFormDateFromTermination(
@@ -1057,9 +1068,20 @@ async function postChat(request: Request) {
       }
       // PROPOSAL_NAME_CORRECTION_ENABLED: an off-roster "change her name to …" on the card asks which, never kept silently.
       answer = withCorrectionNotDropped(answer, parsed);
+      // CARD_PLAN_MATCHES_CREATE_ENABLED: an Attendance CA's card shows the plan Create will save (`lib/forms/card-plan-matches-create.ts`).
+      if (cardPlanMatchesCreateEnabled()) {
+        answer = (await import("@/lib/forms/card-plan-matches-create")).withCardPlanAsCreate(answer, [
+          ...parsed.history.filter((turn) => turn.role === "user").map((turn) => turn.content),
+          asked.question,
+        ].join("\n\n"));
+      }
       // OUTLINE_ON_OPEN_PROPOSAL_ENABLED: the outline turn's reply says the outline is kept as her form's layout.
       if (outlineOnProposal) {
-        answer = (await import("@/lib/forms/outline-on-proposal")).withOutlineKeptNote(answer, { outlineTurnId: parsed.questionMessageId, requestId: outlineOnProposal.requestId });
+        answer = (await import("@/lib/forms/outline-on-proposal")).withOutlineKeptNote(answer, {
+          outlineTurnId: parsed.questionMessageId,
+          requestId: outlineOnProposal.requestId,
+          outlinePeople: outlineOnProposal.outlinePeople,
+        });
       }
       // NEAR_MISS_QUESTION_RULES_ENABLED: "no, …" to "Is this for <name>?" never gets a card for that name, nor the question again.
       if (nearMissQuestionRulesEnabled()) answer = (await import("@/lib/forms/near-miss-question-rules")).withoutTurnedDownName(answer, asked);

@@ -149,3 +149,15 @@ export function withoutUnreasonedConduct<T extends { values: Record<string, stri
     values: words && !written ? { ...input.draft.values, [OTHER_WRITE_IN]: words } : input.draft.values,
   };
 }
+
+/*
+ * QA's ruling (a), 12 Nov 2026 (sf-b6 with ADDED_DETAIL_KEPT on): the specific-topic reader's rude_guest rule matches a bare
+ * "customer complaint". Under CA_PROCEDURE_BASIS, with the model's basis a store procedure, that bare phrase is the app's
+ * reading, not the manager's reason; a complaint described as rude or rough treatment (the rule's other words) still is.
+ */
+const BARE_COMPLAINT = /^(?:guests?|customers?|clients?)\s+(?:complained|complaint)$/i;
+
+/** The specific topic's only match is a bare "customer complaint". */
+export function onlyBareComplaint(topic: { readonly id: string; readonly phrase: string } | null): boolean {
+  return topic !== null && topic.id === "rude_guest" && BARE_COMPLAINT.test(topic.phrase.trim());
+}

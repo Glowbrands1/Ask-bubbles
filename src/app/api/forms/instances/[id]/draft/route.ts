@@ -199,6 +199,7 @@ import {
   secondRequestOwnAccountEnabled,
   proposalMakeItAboutEnabled,
   proposalPolicySetAsideEnabled,
+  negatedLatenessTopicEnabled,
   dateOnceEnabled,
   sameRequestOtherPersonEnabled,
   outlineOnOpenProposalEnabled,
@@ -226,8 +227,9 @@ import {
   LANGUAGE_CLEANUP_RULES,
   guardCoachingFraming,
 } from "@/lib/forms/coaching-framing";
-import { offenseBasisProperty, readOffenseBasis, withoutUnreasonedConduct, type OffenseBasis } from "@/lib/forms/ca-conduct-reason";
+import { offenseBasisProperty, onlyBareComplaint, PROCEDURE_BASIS, readOffenseBasis, withoutUnreasonedConduct, type OffenseBasis } from "@/lib/forms/ca-conduct-reason";
 import { guardOtherWriteIn } from "@/lib/forms/other-write-in";
+import { withoutNegatedLatenessTopic } from "@/lib/forms/negated-lateness";
 import { withoutRequestInObservation } from "@/lib/forms/request-observation";
 import {
   MANAGER_FOLLOW_UP_RULES,
@@ -1551,8 +1553,14 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
     const framed = isCoachingFamily
       ? guardCoachingFraming({ values: followUp.values, checked: followUp.checked }, notes)
       : { values: followUp.values, checked: followUp.checked, adjusted: [] as string[], underperformanceRefused: false };
+    /*
+     * NEGATED_LATENESS_TOPIC_ENABLED (QA, 26 Oct 2026): notes that mention lateness only to deny it ("she was
+     * not late today") do not come back ticked "Other: Punctuality". Before the write-in guard, so a cleared
+     * Other is not refilled. See `negated-lateness.ts`.
+     */
+    const topical = isCoachingFamily && negatedLatenessTopicEnabled() ? withoutNegatedLatenessTopic(framed, notes) : framed;
     // OTHER_WRITE_IN_GUARD_ENABLED: a ticked "Other" gets its write-in in the manager's words, or is unticked.
-    const framing = guardOtherWriteIn(framed, notes, new Set(fields.map((field) => field.key)));
+    const framing = guardOtherWriteIn(topical, notes, new Set(fields.map((field) => field.key)));
 
     /*
      * ========================================================================
@@ -1983,10 +1991,17 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
      * which leads the model's catch-all Standards of Conduct, as Late Opening
      * leads Attendance, but never a box whose own section is specific.
      */
+    /*
+     * CA_PROCEDURE_BASIS_ENABLED (QA / Gate-Bubbles-4, 12 Nov 2026; sf-b6 with ADDED_DETAIL_KEPT on): when the drafting
+     * model names a store procedure as the basis, a section the app reads the account as describing (here "a customer
+     * complaint") is not a policy the manager stated. It never becomes the form's policy, so the reply's "I'd leave
+     * that field for you" still holds; a section the manager named, or a missed event's, still does.
+     */
+    const procedureBasis = caProcedureBasisEnabled() && offenseBasis === PROCEDURE_BASIS;
     const policySection =
       namedSection ??
       eventSection ??
-      (describedSection && !(enforced.checked.offense_type ?? []).some((key) => SPECIFIC_SECTION_BOXES.has(key))
+      (describedSection && !procedureBasis && !(enforced.checked.offense_type ?? []).some((key) => SPECIFIC_SECTION_BOXES.has(key))
         ? describedSection
         : null);
     const statedKeys = caPolicy
@@ -2090,7 +2105,8 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
         offered: offenseOffered,
         notes,
         basis: offenseBasis,
-        specific: specificTopic(notes) !== null,
+        // QA's ruling (a): under a store-procedure basis, a bare "customer complaint" topic is the app's reading, not a reason.
+        specific: specificTopic(notes) !== null && !(procedureBasis && onlyBareComplaint(specificTopic(notes))),
         writeInOffered: fields.some((field) => field.key === "other_offense"),
       }) ?? offenseApplied;
     const policyLeftForManager =

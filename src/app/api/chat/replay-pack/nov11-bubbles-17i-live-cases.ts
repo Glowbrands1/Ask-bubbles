@@ -74,6 +74,11 @@ export const NOV11_BUBBLES_17I_LIVE_CASES: ReplayCase[] = [
     async run(t) {
       const reply = await start(t).say(TURN_2);
       expect(reply.content, reply.content).toMatch(/\*\*Policy:\*\* Dress Code/);
+      // QA's Bubbles 17m live test (12 Nov 2026): the read-from-request Dress Code line carries its printed page, as a
+      // named policy's line does.
+      expect(reply.content, `the Policy line has no page:\n${reply.content}`).toMatch(/\*\*Policy:\*\* Dress Code \(JBA Policy Manual p\.15\)/);
+      // Gate-Bubbles-2 on #818: the page is the Policy line's; the Action plan names the policy bare, as on main.
+      expect(reply.content, `the Action plan carries the page:\n${reply.content}`).toMatch(/\*\*Action plan:\*\* Management will review the Dress Code policy with Marnie\./);
       expect(reply.content, reply.content).not.toMatch(/review the applicable company policy/);
     },
   },
@@ -91,6 +96,19 @@ export const NOV11_BUBBLES_17I_LIVE_CASES: ReplayCase[] = [
       expect(reply.content, reply.content).toMatch(/Create draft/);
       expect(reply.content, reply.content).not.toMatch(/form card will appear|one of the forms below/i);
       expect(reply.formProposal, "the card is no longer on the reply").toMatchObject({ templateKey: "dpoa", employeeName: "Marnie Holloway" });
+    },
+  },
+  {
+    id: "nov12-17m-dress-code-plan-saved-without-page",
+    title: "\"can you make a CA for <C> for wearing a hoodie to work?\" → Create: the saved Action plan names the Dress Code policy with no page",
+    report: "QA's Bubbles 17m live test and Gate-Bubbles-2 on #818, 12 Nov 2026",
+    status: "fixed",
+    async run(t) {
+      const thread = start(t);
+      await thread.say(TURN_2);
+      const id = await thread.create();
+      const plan = t.values(id).action_plan ?? "";
+      expect(plan, `the saved Action plan carries the page: ${plan}`).not.toMatch(/JBA Policy Manual|\bp\.\s*\d/i);
     },
   },
 ];
