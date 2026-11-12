@@ -1329,6 +1329,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "CHAT_STAGE_TIMINGS_ENABLED",
   "EXIT_TYPO_WORDS_ENABLED",
   "CA_REASON_DUE_TO_ENABLED",
+  "FULL_POSITION_TITLE_ENABLED",
   "COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED",
   // coding 6: REQUEST_ISSUE_KEPT, LATE_OPENING_OWN_WORDS, FIRST_NAME_ENOUGH (QA round 17b, 10 Nov 2026; default off).
   "REQUEST_ISSUE_KEPT_ENABLED",
@@ -4631,4 +4632,15 @@ export function letterGreetingAnyCaseEnabled(): boolean {
  */
 export function companyMetricWordsNotNamesEnabled(): boolean {
   return envFlag("COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED");
+}
+
+/**
+ * FULL_POSITION_TITLE_ENABLED (ported from the sibling app, QA's round-33 live test there, 12 Nov 2026; same flag name
+ * in both apps; default off). An exit form typed with labels, "Name: <A>\nPosition: Team Member Part Time\n…", for an
+ * employee with no roster position, left the Job Title blank: "Position:" was read as the title's owner. On: a field
+ * label before the title on its line is no person (`forms/title-of-another-person.ts`). The sibling's schedule-words
+ * part ("… Weekends Only") is not this app's: its positions are read whole. Off, as before.
+ */
+export function fullPositionTitleEnabled(): boolean {
+  return envFlag("FULL_POSITION_TITLE_ENABLED");
 }
