@@ -196,6 +196,7 @@ import {
   proposalMakeItAboutEnabled,
   proposalPolicySetAsideEnabled,
   coachingObservedSavedEnabled,
+  negatedLatenessTopicEnabled,
   dateOnceEnabled,
   sameRequestOtherPersonEnabled,
 } from "@/lib/config/chat-quality-flags";
@@ -224,6 +225,7 @@ import {
 } from "@/lib/forms/coaching-framing";
 import { OFFENSE_BASIS_PROPERTY, readOffenseBasis, withoutUnreasonedConduct, type OffenseBasis } from "@/lib/forms/ca-conduct-reason";
 import { guardOtherWriteIn } from "@/lib/forms/other-write-in";
+import { withoutNegatedLatenessTopic } from "@/lib/forms/negated-lateness";
 import { withoutRequestInObservation } from "@/lib/forms/request-observation";
 import {
   MANAGER_FOLLOW_UP_RULES,
@@ -1519,8 +1521,14 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
     const framed = isCoachingFamily
       ? guardCoachingFraming({ values: followUp.values, checked: followUp.checked }, notes)
       : { values: followUp.values, checked: followUp.checked, adjusted: [] as string[], underperformanceRefused: false };
+    /*
+     * NEGATED_LATENESS_TOPIC_ENABLED (QA, 26 Oct 2026): notes that mention lateness only to deny it ("she was
+     * not late today") do not come back ticked "Other: Punctuality". Before the write-in guard, so a cleared
+     * Other is not refilled. See `negated-lateness.ts`.
+     */
+    const topical = isCoachingFamily && negatedLatenessTopicEnabled() ? withoutNegatedLatenessTopic(framed, notes) : framed;
     // OTHER_WRITE_IN_GUARD_ENABLED: a ticked "Other" gets its write-in in the manager's words, or is unticked.
-    const framing = guardOtherWriteIn(framed, notes, new Set(fields.map((field) => field.key)));
+    const framing = guardOtherWriteIn(topical, notes, new Set(fields.map((field) => field.key)));
 
     /*
      * ========================================================================
