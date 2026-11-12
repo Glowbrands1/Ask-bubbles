@@ -47,8 +47,10 @@ import {
   personGuardEnabled,
   fieldLabelNotAQuestionEnabled,
   possessivePlaceNotPersonEnabled,
+  writeUpLeadNotAccountEnabled,
   formNameFromRosterEnabled,
   offRosterConfirmEnabled,
+  resentRequestIsYesEnabled,
   offRosterAskBeforeCardEnabled,
   oneFormEachPersonEnabled,
   outlineOnOpenProposalEnabled,
@@ -283,6 +285,10 @@ async function postChat(request: Request) {
           question: withoutPastedReview(asked.question),
           history: asked.history.map((turn) => (turn.role === "user" && typeof turn.content === "string" ? { ...turn, content: withoutPastedReview(turn.content) } : turn)),
         };
+      }
+      // RESENT_REQUEST_IS_YES_ENABLED: the same request again while "Is this for <name>?" waits is a yes (`lib/forms/resent-request-is-yes.ts`).
+      if (resentRequestIsYesEnabled()) {
+        asked = (await import("@/lib/forms/resent-request-is-yes")).withResentRequestAsYes(asked) ?? asked;
       }
       /*
        * OFF_ROSTER_CONFIRM_ENABLED: "use <name>" (or "yes") to the offer for a person not in Woven is read as the
@@ -1042,6 +1048,8 @@ async function postChat(request: Request) {
           asked.question,
         ]);
       }
+      // WRITE_UP_LEAD_NOT_ACCOUNT_ENABLED: "write up <employee> for cell phone use" gives the Issue "Cell phone use" (`lib/forms/write-up-lead.ts`).
+      if (writeUpLeadNotAccountEnabled()) answer = (await import("@/lib/forms/write-up-lead")).withWriteUpLeadNotAccount(answer);
       // EXIT_FORM_DATE_FROM_TERMINATION_ENABLED: a stated "terminated, effective <date>" dates the exit card (`lib/forms/exit-form-date.ts`).
       if (exitFormDateFromTerminationEnabled()) {
         answer = (await import("@/lib/forms/exit-form-date")).withExitFormDateFromTermination(

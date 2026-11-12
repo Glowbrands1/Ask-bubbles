@@ -431,7 +431,9 @@ describe("FORM_EDIT_TOOL_IN_STREAM_ENABLED: a tool call", () => {
     const reply = await thread.say(CA_CHAIN[5]);
     const after = values(id).observation!;
     expect(after.startsWith(before)).toBe(true);
-    expect(after).toContain("she Must Practice the sanitizing checklist every shift.");
+    // Changed on purpose (12 Nov 2026, QA round 17p): STEP_B_ADD_UNDER_OBSERVED is on in production (#814). An instruction
+    // goes at the end of the Expectation with its first letter capitalised, and an account line goes under Observed.
+    expect(after).toMatch(/she must practice the sanitizing checklist every shift\.$/i);
     expect(reply.formUpdate).toEqual({ instanceId: id, updated: ["observation"] });
     // Changed on purpose (12 Nov 2026, Gate-Sunny-2's finding on the sibling app): with STEP_B_REPLY_KEEPS_LINES on, a field
     // written on several lines is quoted line by line ("Changed Observation of Offense to:\n> …"); either way the reply

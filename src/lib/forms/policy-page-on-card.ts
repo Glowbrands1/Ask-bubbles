@@ -1,3 +1,5 @@
+import { wornClothingIsDressCodeEnabled } from "@/lib/config/chat-quality-flags";
+
 import { CA_POLICY_LABEL, type CaPolicyName } from "./ca-policy";
 import {
   findManualSection,
@@ -83,6 +85,12 @@ const HAS_PAGE = /\bpp?\.\s*\d|\bpages?\s+\d/i;
 const AS_YOU_SAID = /^(\*\*Policy:\*\* )(.+?)(, as you said\b.*)$/;
 const BARE = /^(\*\*Policy:\*\* )(.+?)(\.?)$/;
 const READS_AS = /^(\*\*Policy:\*\* this reads as \*\*)(.+?)(\*\*)( — .*)$/;
+/**
+ * WORN_CLOTHING_IS_DRESS_CODE_ENABLED (QA's Bubbles 17m live test, 12 Nov 2026): the read-from-request line —
+ * "**Policy:** Dress Code — read from this request. I'll quote that section …" — had no page, while a named policy's
+ * line gives one. It gets its printed page the same way: "Dress Code (JBA Policy Manual p.15) — read from this request.".
+ */
+const READ_FROM_REQUEST = /^(\*\*Policy:\*\* )(.+?)( — read from this request\b.*)$/;
 
 /** The card's own policy lines, each with its printed page where the manual gives one. */
 export function withPolicyPagesOnCard(content: string, chunks: readonly ManualChunk[]): string {
@@ -93,6 +101,12 @@ export function withPolicyPagesOnCard(content: string, chunks: readonly ManualCh
     if (reads) {
       const label = ownHeading(reads[2]!) ? printedPageLabel(reads[2]!, chunks) : null;
       return label ? `${reads[1]}${reads[2]}${reads[3]} (${MANUAL} ${label})${reads[4]}` : line;
+    }
+    const read = wornClothingIsDressCodeEnabled() ? READ_FROM_REQUEST.exec(line) : null;
+    if (read) {
+      if (!ownHeading(read[2]!)) return line;
+      const cited = headingWithPrintedPage(read[2]!, chunks);
+      return cited ? `${read[1]}${cited}${read[3]}` : line;
     }
     const said = AS_YOU_SAID.exec(line) ?? BARE.exec(line);
     if (!said || !ownHeading(said[2]!)) return line;

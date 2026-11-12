@@ -284,6 +284,9 @@ describe("the readers", () => {
   it("leave a range and a held coaching alone", async () => {
     const { fieldLines } = await import("@/lib/ai/intake-augment");
     vi.stubEnv(FLAG_UNDER_TEST, "true");
+    // Pinned off (10 Nov 2026): PRIOR_ACTIONS_NO_COMMA_ENABLED lists "I coached her on 10-16" as an earlier step on
+    // purpose (#187 / October rebuild 4); this test is the reading without it.
+    vi.stubEnv("PRIOR_ACTIONS_NO_COMMA_ENABLED", "");
     const range = "CA for Test Employee, she was 10-15 minutes late on 10-20";
     expect(blankYearlessStepDates(range, TODAY)).toBe(range);
     expect(fieldLines(range, TODAY)).toEqual(["It happened on 10/20/2026."]);
