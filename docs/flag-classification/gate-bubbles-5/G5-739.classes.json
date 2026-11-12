@@ -1,0 +1,18 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-surname-particles-de-la: \"create a ca for marisol de la vega, she was late on 11/3\": the card's employee is the whole name, never cut at the particle \u2014 OPEN in production (the card's employee stops at the particle (\"Marisol De\", \"Marisol Van\"))": {
+  "category": "INTENDED",
+  "reason": "Open-case it.fails wrapper: inner invariant now holds, so the wrapper reports failed. Holding."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-surname-particles-van-der: \"create a coaching form for marisol van der vega, she was late on 11/3\": the card's employee is the whole name, never cut at the particle \u2014 OPEN in production (the card's employee stops at the particle (\"Marisol De\", \"Marisol Van\"))": {
+  "category": "INTENDED",
+  "reason": "Open-case it.fails wrapper: inner invariant now holds, so the wrapper reports failed. Holding."
+ },
+ "replay: nov10-surname-particles-de-la [open]": {
+  "category": "INTENDED",
+  "reason": "Open case now holds: 'marisol de la vega' / 'marisol van der vega' match the roster whole; the card is drafted for the full name (store and position from Woven) instead of stopping at an 'Is this for \u2026?' confirmation with no card."
+ },
+ "replay: nov10-surname-particles-van-der [open]": {
+  "category": "INTENDED",
+  "reason": "Open case now holds: 'marisol de la vega' / 'marisol van der vega' match the roster whole; the card is drafted for the full name (store and position from Woven) instead of stopping at an 'Is this for \u2026?' confirmation with no card."
+ }
+}
