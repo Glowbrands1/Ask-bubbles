@@ -1,0 +1,26 @@
+{
+  "src/app/api/chat/form-edit-noop-guard-e2e.test.ts :: FORM_EDIT_NOOP_GUARD_ENABLED needs FORM_EDIT_SINGLE_WRITER_ENABLED with the tool flags but not the guard, the old replies (pinned in the flags-off fixture)": {
+    "category": "INTENDED-HARNESS",
+    "reason": "FORM_EDIT_NOOP_GUARD e2e pins the sf-s11 \"Can you do the same thing for Perrin Haldane \u2026\" turn as an edit of the open form that the guard refuses. With SAME_REQUEST_OFF_ROSTER on, the turn is a same-request for another person and no edit is attempted at all (\"expected undefined\"): nothing is written to the open form, the safer outcome. The test's premise no longer arises."
+  },
+  "src/app/api/chat/form-edit-noop-guard-e2e.test.ts :: FORM_EDIT_NOOP_GUARD_ENABLED: the overnight scan's sf-s11, \"Can you do the same thing for Perrin Haldane but switch it to a written\" the request appended to the Observation is refused as copies_message; nothing written; never Updated": {
+    "category": "INTENDED-HARNESS",
+    "reason": "FORM_EDIT_NOOP_GUARD e2e pins the sf-s11 \"Can you do the same thing for Perrin Haldane \u2026\" turn as an edit of the open form that the guard refuses. With SAME_REQUEST_OFF_ROSTER on, the turn is a same-request for another person and no edit is attempted at all (\"expected undefined\"): nothing is written to the open form, the safer outcome. The test's premise no longer arises."
+  },
+  "src/app/api/chat/form-edit-noop-guard-e2e.test.ts :: FORM_EDIT_NOOP_GUARD_ENABLED: the overnight scan's sf-s11, \"Can you do the same thing for Perrin Haldane but switch it to a written\" the request set into an empty line (Prior Actions) is refused the same way": {
+    "category": "INTENDED-HARNESS",
+    "reason": "FORM_EDIT_NOOP_GUARD e2e pins the sf-s11 \"Can you do the same thing for Perrin Haldane \u2026\" turn as an edit of the open form that the guard refuses. With SAME_REQUEST_OFF_ROSTER on, the turn is a same-request for another person and no edit is attempted at all (\"expected undefined\"): nothing is written to the open form, the safer outcome. The test's premise no longer arises."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-same-request-carries-account-off-roster: (a), off roster: \"Can you do the same thing for Mara Quell but make it a written\" \u2014 <B>'s card's Observation is <A>'s account with <B>'s name \u2014 OPEN in production (with <A> and <B> off the directory the same request is never read: <B>'s turn goes to <A>'s card)": {
+    "category": "INTENDED",
+    "reason": "(a) off roster: the OPEN pin now holds \u2014 B's card for Mara Quell carries A's account with B's name; OFF drafted for Rory Vance."
+  },
+  "replay: nov10-same-request-carries-account-off-roster [open]": {
+    "category": "INTENDED",
+    "reason": "(a) off roster: the OPEN pin now holds \u2014 B's card for Mara Quell carries A's account with B's name; OFF drafted for Rory Vance."
+  },
+  "replay: nov10-same-request-keeps-earlier-card-off-roster [open]": {
+    "category": "INTENDED",
+    "reason": "Off-roster twin of keeps-earlier-card: the reply is now B's card with A's account (OFF drafted for Rory Vance, the wrong person). The open arm still fails only on the browser-side check (NEXT_PUBLIC_SAME_REQUEST_KEEPS_EARLIER_CARD_ENABLED not set in this gate)."
+  }
+}

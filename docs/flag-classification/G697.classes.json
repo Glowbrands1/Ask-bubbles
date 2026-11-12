@@ -1,0 +1,82 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-made-for-is-made-about-about-missing-out: QA's live round-20 probe in the sibling app: \"can you make it about missing out monthly meeting\" on the same saved draft (the reader replaces Details): saved, about the monthly meeting, Other the meeting \u2014 OPEN in production (an undated made-about goes to the old path (MADE_ABOUT_UNDATED_TOGETHER is off in production))": {
+    "category": "INTENDED",
+    "reason": "QA's live round 20 (sibling app) \"can you make it for/about missing out monthly meeting\" on a saved Coaching draft: the OPEN pin now holds."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-made-for-is-made-about-reader-nothing: QA's live round 20 in the sibling app: \"can you make it for missing out monthly meeting\" on a saved Coaching draft in sections with a policy line (the reader finds nothing to write): the edit is saved, about the monthly meeting \u2014 OPEN in production (\"make it for <topic>\" is not read as a made-about, so the account is not replaced and the edit is refused)": {
+    "category": "INTENDED",
+    "reason": "QA's live round 20 (sibling app) \"can you make it for/about missing out monthly meeting\" on a saved Coaching draft: the OPEN pin now holds."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-made-for-is-made-about-reader-replaces: QA's live round 20 in the sibling app: \"can you make it for missing out monthly meeting\" on a saved Coaching draft in sections with a policy line (the reader replaces Details with the meeting account): the edit is saved, about the monthly meeting \u2014 OPEN in production (\"make it for <topic>\" is not read as a made-about, so the account is not replaced and the edit is refused)": {
+    "category": "INTENDED",
+    "reason": "QA's live round 20 (sibling app) \"can you make it for/about missing out monthly meeting\" on a saved Coaching draft: the OPEN pin now holds."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov9-made-about-undated-no-reading: the same, the reader reads nothing: the topic from the manager's words, with Details \u2014 OPEN in production (Details is rewritten and Other stays \"Missed monthly meeting\")": {
+    "category": "INTENDED",
+    "reason": "\"I need you to make it about showing up late\" (undated): the OPEN pin now holds \u2014 Details and Other change together, the Date stays and the reply says so."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov9-made-about-undated-topic: \"I need you to make it about showing up late\", the reader reads the topic: Details and Other together, the Date stays and the reply says so \u2014 OPEN in production (Details is rewritten and Other stays \"Missed monthly meeting\")": {
+    "category": "INTENDED",
+    "reason": "\"I need you to make it about showing up late\" (undated): the OPEN pin now holds \u2014 Details and Other change together, the Date stays and the reply says so."
+  },
+  "src/lib/ai/made-for-is-made-about.test.ts :: MADE_FOR_IS_MADE_ABOUT (ported from the sibling app: QA's live round 20 there, 10 Nov 2026) off, as before: the revision is given the sentence as said": {
+    "category": "INTENDED-HARNESS",
+    "reason": "Unit test pinning flag-off behaviour (the revision is given the sentence as said) under forced ON."
+  },
+  "replay: nov10-made-for-is-made-about-about-missing-out [open]": {
+    "category": "INTENDED",
+    "reason": "QA's live round 20 (sibling app) \"can you make it for/about missing out monthly meeting\" on a saved Coaching draft: the OPEN pin now holds."
+  },
+  "replay: nov10-made-for-is-made-about-reader-nothing [open]": {
+    "category": "INTENDED",
+    "reason": "QA's live round 20 (sibling app) \"can you make it for/about missing out monthly meeting\" on a saved Coaching draft: the OPEN pin now holds."
+  },
+  "replay: nov10-made-for-is-made-about-reader-replaces [open]": {
+    "category": "INTENDED",
+    "reason": "QA's live round 20 (sibling app) \"can you make it for/about missing out monthly meeting\" on a saved Coaching draft: the OPEN pin now holds."
+  },
+  "replay: nov7-refusal-sun-monthly-meeting-drift [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "\"can you make it for missing out monthly meeting\": was a no-change refusal; now Details, Other and Topic are changed together (MADE_FOR_IS_MADE_ABOUT)."
+  },
+  "replay: nov7-refusal-sun-monthly-meeting-drift [production]": {
+    "category": "INTENDED",
+    "reason": "\"can you make it for missing out monthly meeting\": was a no-change refusal; now Details, Other and Topic are changed together (MADE_FOR_IS_MADE_ABOUT)."
+  },
+  "replay: nov7-s34-edit-make-it-about [fix:EDIT_MAKE_IT_ABOUT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "Still holds; Details, Other (\"Showing up late\") and Topic change together and the reply says the Date stays 2026-10-14."
+  },
+  "replay: nov7-s34-edit-make-it-about [production]": {
+    "category": "INTENDED",
+    "reason": "Still holds; Details, Other (\"Showing up late\") and Topic change together and the reply says the Date stays 2026-10-14."
+  },
+  "replay: nov8-step-b-date-with-about-no-date [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED,EDIT_POLICY_ASK_ENABLED,STEP_B_DATE_SAID_ENABLED,STEP_B_MAKE_IT_ABOUT_ACCOUNT_ENABLED,STEP_B_DATE_WITH_ABOUT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "Still holds; the no-change reply now names the field it could not rewrite and asks."
+  },
+  "replay: nov8-step-b-date-with-about-no-date [production]": {
+    "category": "INTENDED",
+    "reason": "Still holds; the no-change reply now names the field it could not rewrite and asks."
+  },
+  "replay: nov8-step-b-make-it-about-topic-only [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED,EDIT_MAKE_IT_ABOUT_ENABLED,STEP_B_MAKE_IT_ABOUT_ACCOUNT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "Still holds; Details, Other and Topic change together; the Date stays and the reply says so."
+  },
+  "replay: nov8-step-b-make-it-about-topic-only [production]": {
+    "category": "INTENDED",
+    "reason": "Still holds; Details, Other and Topic change together; the Date stays and the reply says so."
+  },
+  "replay: nov9-made-about-undated-no-reading [open]": {
+    "category": "INTENDED",
+    "reason": "\"I need you to make it about showing up late\" (undated): the OPEN pin now holds \u2014 Details and Other change together, the Date stays and the reply says so."
+  },
+  "replay: nov9-made-about-undated-refused [production]": {
+    "category": "INTENDED",
+    "reason": "Still holds; the refusal now names the field: \"I couldn't rewrite Details of Coaching to be about showing up late, so the topic stays as they were too. What should Details of Coaching say \u2026?\" (wording slip: \"as they were\" for one topic)."
+  },
+  "replay: nov9-made-about-undated-topic [open]": {
+    "category": "INTENDED",
+    "reason": "\"I need you to make it about showing up late\" (undated): the OPEN pin now holds \u2014 Details and Other change together, the Date stays and the reply says so."
+  }
+}

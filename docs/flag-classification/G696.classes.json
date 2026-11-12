@@ -1,0 +1,50 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-same-request-carries-account: (a) \"Can you do the same thing for Mara Quell but make it a written\": <B>'s card's Observation is <A>'s account with <B>'s name \u2014 \"Mara Quell was late on 11/3/26\" \u2014 OPEN in production (<B>'s card's Observation is not \"Mara Quell was late on 11/3/26\" (live: none; here \"she was late on 11/3/26 Written Warning.\"))": {
+    "category": "INTENDED",
+    "reason": "Pau-style (a) \"Can you do the same thing for Mara Quell but make it a written\": the OPEN pin now holds \u2014 B's card's Observation is A's account with B's name."
+  },
+  "replay: nov10-same-request-carries-account [open]": {
+    "category": "INTENDED",
+    "reason": "Pau-style (a) \"Can you do the same thing for Mara Quell but make it a written\": the OPEN pin now holds \u2014 B's card's Observation is A's account with B's name."
+  },
+  "replay: nov4-scan-sf-s11-same-for-another [fix:SAME_REQUEST_OTHER_PERSON_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "\"Can you do the same thing for Perrin Haldane but switch it to a written\" after \"Odalys Frewen. Verbal Warning. Under Performance.\": B's card now carries an Observation of Offense \"Perrin Haldane Written Warning. Under Performance\" \u2014 the warning level and topic, not an account. The case's assertions still hold, but the Observation is wrong form content."
+  },
+  "replay: nov4-scan-sf-s11-same-for-another [production]": {
+    "category": "REGRESSION",
+    "reason": "\"Can you do the same thing for Perrin Haldane but switch it to a written\" after \"Odalys Frewen. Verbal Warning. Under Performance.\": B's card now carries an Observation of Offense \"Perrin Haldane Written Warning. Under Performance\" \u2014 the warning level and topic, not an account. The case's assertions still hold, but the Observation is wrong form content."
+  },
+  "replay: nov5-coding3-sfo-a-same-thing-card-on-screen [fix:SAME_REQUEST_OTHER_PERSON_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "Still holds; B's card now carries A's account with B's name (\"Caspian Drummet was late opening the store on Monday\")."
+  },
+  "replay: nov5-coding3-sfo-a-same-thing-card-on-screen [production]": {
+    "category": "INTENDED",
+    "reason": "Still holds; B's card now carries A's account with B's name (\"Caspian Drummet was late opening the store on Monday\")."
+  },
+  "replay: nov6-diffemp-guard-no-account-stays-same-form-after-create [fix:SAME_REQUEST_OTHER_PERSON_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "Still holds; B's card now carries A's account with B's name (\"Mara Quell was late opening the store on Monday\")."
+  },
+  "replay: nov6-diffemp-guard-no-account-stays-same-form-after-create [production]": {
+    "category": "INTENDED",
+    "reason": "Still holds; B's card now carries A's account with B's name (\"Mara Quell was late opening the store on Monday\")."
+  },
+  "replay: nov6-diffemp-guard-no-account-stays-same-form-card-on-screen [fix:SAME_REQUEST_OTHER_PERSON_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "Still holds; B's card now carries A's account with B's name (\"Mara Quell was late opening the store on Monday\")."
+  },
+  "replay: nov6-diffemp-guard-no-account-stays-same-form-card-on-screen [production]": {
+    "category": "INTENDED",
+    "reason": "Still holds; B's card now carries A's account with B's name (\"Mara Quell was late opening the store on Monday\")."
+  },
+  "replay: nov10-same-request-keeps-earlier-card [open]": {
+    "category": "INTENDED",
+    "reason": "Holds in fix mode with both SAME_REQUEST_KEEPS_EARLIER_CARD_ENABLED and NEXT_PUBLIC_SAME_REQUEST_KEEPS_EARLIER_CARD_ENABLED; this gate's ON arm set only the server flag, so the open arm still fails on the browser-side check. Flip both together."
+  },
+  "replay: nov10-same-request-keeps-earlier-card [fix:SAME_REQUEST_KEEPS_EARLIER_CARD_ENABLED,NEXT_PUBLIC_SAME_REQUEST_KEEPS_EARLIER_CARD_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "Fix mode: still holds; the card now carries A's account with B's name (\"Mara Quell was late on 11/3/26\")."
+  }
+}
