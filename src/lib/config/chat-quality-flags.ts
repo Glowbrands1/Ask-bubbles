@@ -1327,6 +1327,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ADD_NOT_REPEATED_ENABLED",
   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
   "CHAT_STAGE_TIMINGS_ENABLED",
+  // coding 5: INCIDENT_SPLIT_FIX (QA's October triage of #189, 10 Nov 2026; default off).
+  "INCIDENT_SPLIT_FIX_ENABLED",
   "EXIT_TYPO_WORDS_ENABLED",
   "CA_REASON_DUE_TO_ENABLED",
   // coding 6: REQUEST_ISSUE_KEPT, LATE_OPENING_OWN_WORDS, FIRST_NAME_ENOUGH (QA round 17b, 10 Nov 2026; default off).
@@ -2974,6 +2976,22 @@ export function cardNamesEmployeeEnabled(): boolean {
  */
 export function policyTopicIntoFieldEnabled(): boolean {
   return envFlag("POLICY_TOPIC_INTO_FIELD_ENABLED");
+}
+
+/**
+ * INCIDENT_SPLIT_FIX_ENABLED (QA's October triage of #189, 10 Nov 2026; default off). The card's Issue is the
+ * request's account in whole sentences. "Hi, I need a verbal corrective action for <A>, she is a team member at our
+ * Dodge, NE store. On 10-1-26 she opened the store late. She did not call ahead." gave the Issue "she is a team member
+ * at our Dodge"; "… she works at our Dodge, NE store as a team member and was late today." gave "she works at our
+ * Dodge"; "create verbal CA for <A> for violating visitors at work policy on 10-10-26. <A> spent 40 minutes talking
+ * with friend …" kept only its first sentence; and a later "Policy violated: Standards of Conduct", "not attendance,
+ * late opening" or a pasted policy paragraph replaced the account. On: the account comes from the latest request turn,
+ * in whole sentences ("Dodge, NE" ends none), without where they work, their title, the payroll and prior-coaching
+ * answers or pasted policy text; a later turn counts only when that turn told nothing, and "change what happened to:
+ * …" replaces it (`forms/incident-issue.ts`, `splitFixedIssue`). Off, the Issue is read as before.
+ */
+export function incidentSplitFixEnabled(): boolean {
+  return envFlag("INCIDENT_SPLIT_FIX_ENABLED");
 }
 
 /**

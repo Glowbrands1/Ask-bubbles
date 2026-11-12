@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { incidentSplitFixEnabled } from "@/lib/config/chat-quality-flags";
 
 import { correctiveActionIssue, managerIncidentClause } from "./incident-issue";
 
@@ -19,7 +20,8 @@ describe("ISSUE_AFTER_REQUEST_REASON_ENABLED", () => {
   afterEach(() => vi.unstubAllEnvs());
 
   it("off (as before): the request's reason is the Issue", () => {
-    expect(correctiveActionIssue(FOR, "Remy Calder")).toBe("under performance");
+    // Changed on purpose (QA's October triage, 10 Nov 2026): INCIDENT_SPLIT_FIX_ENABLED on (#189) keeps the request's account in whole sentences, so the sentence after the reason stays with it; flag off unchanged.
+    expect(correctiveActionIssue(FOR, "Remy Calder")).toBe(incidentSplitFixEnabled() ? `under performance. ${ACCOUNT.replace(/\.$/, "")}` : "under performance");
   });
 
   describe("on", () => {
@@ -83,6 +85,10 @@ describe("ISSUE_AFTER_REQUEST_REASON_ENABLED: a turn that only corrects the poli
 
   it("a turn that names a policy and says what happened is still an account", () => {
     vi.stubEnv("ISSUE_AFTER_REQUEST_REASON_ENABLED", "true");
-    expect(correctiveActionIssue(`${FOR}\n\nshe was 30 minutes late on 11/3, it should be attendance`, "Remy Calder")).toMatch(/30 minutes late/);
+    // Changed on purpose (QA's October triage, 10 Nov 2026): with INCIDENT_SPLIT_FIX_ENABLED on (#189), a later turn's account
+    // does not replace the one the request told; the later turn is still never read as only a correction. Flag off unchanged.
+    expect(correctiveActionIssue(`${FOR}\n\nshe was 30 minutes late on 11/3, it should be attendance`, "Remy Calder")).toMatch(
+      incidentSplitFixEnabled() ? /^Remy Calder was below on sales per hour/ : /30 minutes late/,
+    );
   });
 });
