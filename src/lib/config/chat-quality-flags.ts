@@ -958,6 +958,26 @@ export function nameBeforeTitleEnabled(): boolean {
 }
 
 /**
+ * The form the manager named is the form: "needs CA" and "write ca" ask for
+ * the Corrective Action Form, and a request for "a form" that names none uses
+ * the form last named in the chat (conv_mvofmpei2c50lhp, 25 Oct 2026). See
+ * `ai/manager-form-choice.ts`. Off, every turn is read as typed.
+ */
+export function managerFormChoiceEnabled(): boolean {
+  return envFlag("MANAGER_FORM_CHOICE_ENABLED");
+}
+
+/**
+ * The way managers name a store ("dodge ne", "dodge, ne", "kearney ne") is
+ * written as the roster name before any reader sees the turn; the aliases are
+ * built from the store list (25 Oct 2026, ported from the sibling app). See
+ * `ai/store-alias.ts`. Off, every turn is read as typed.
+ */
+export function storeAliasEnabled(): boolean {
+  return envFlag("STORE_ALIAS_ENABLED");
+}
+
+/**
  * An incident date after today is asked about once, in every register, and
  * never dates the form (QA, 26 Oct 2026, U4). A deadline or a follow-up in
  * the future is not asked about. Off, a future date is dropped silently, as
@@ -1391,7 +1411,10 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "NEAR_MISS_ANSWER_KEEPS_REQUEST_ENABLED",
   // coding 6: PRIOR_ACTIONS_NO_COMMA (October rebuild 4, #187 rebuilt on main; default off).
   "PRIOR_ACTIONS_NO_COMMA_ENABLED",
+  "STORE_ALIAS_ENABLED",
   "FULL_MANUAL_WIDE_GATE_ENABLED",
+  // coding 6: MANAGER_FORM_CHOICE (B#181 rebuilt; default off; wiring awaits Coding-2).
+  "MANAGER_FORM_CHOICE_ENABLED",
   "EMPTY_REPLY_GUARD_ENABLED",
   "POLICY_PAGE_ON_CARD_ENABLED",
   "FORM_INPUT_FIDELITY_ENABLED",
