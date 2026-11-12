@@ -1,4 +1,4 @@
-import { accountOnlyPolicyQueryEnabled } from "@/lib/config/chat-quality-flags";
+import { accountOnlyPolicyQueryEnabled, expectationPolicyLineKeptEnabled } from "@/lib/config/chat-quality-flags";
 
 import { EXPECTATION_LABEL, GOING_FORWARD_LABEL, OBSERVED_LABEL } from "./narrative-draft";
 
@@ -65,12 +65,13 @@ export function accountOnlyRules(): readonly string[] {
  * who noticed, or how many times. A sentence is touched only when it uses one
  * of these and the manager's own turns never did. One list, so it can grow.
  */
+const SCHEDULED_TO = /\bscheduled\s+to\b/i;
 const ANY_SECTION: readonly RegExp[] = [
   /\b(?:open|opens|opened|opening)\b/i,
   /\b(?:close|closes|closed|closing)\b/i,
   /\b(?:cashier|register|till)\b/i,
   /\b(?:morning|evening|night|overnight|mid|double)\s+shifts?\b/i,
-  /\bscheduled\s+to\b/i,
+  SCHEDULED_TO,
   /\b\d{1,2}(?::\d{2})?\s?(?:am|pm|a\.m\.|p\.m\.)(?![a-z])/i,
 ];
 const OBSERVED_ONLY: readonly RegExp[] = [
@@ -97,9 +98,19 @@ export interface InventedDetailContext {
   readonly datesIn: (text: string) => readonly { index: number; end: number }[];
 }
 
+/**
+ * EXPECTATION_POLICY_LINE_KEPT_ENABLED: "An employee scheduled to open is expected to arrive on time …" — the policy's
+ * expectation of every employee, not a fact about what this one did.
+ */
+const GENERAL_EXPECTATION =
+  /^\s*(?:an?\s+|every\s+|each\s+|all\s+)?(?:employees?|team\s+members?|associates?|staff(?:\s+members?)?)\b[^.!?]*\b(?:(?:is|are)\s+(?:expected|required)|must|should|need\s+to|needs\s+to)\b/i;
+
 function invented(sentence: string, notes: string, observed: boolean): boolean {
+  // Gate-Bubbles-5 (2f2b8517): the policy's expectation of every employee is exempt only from "scheduled to"; the other
+  // patterns still read it, so "An employee assigned to open …" goes when the manager never said open.
+  const general = !observed && expectationPolicyLineKeptEnabled() && GENERAL_EXPECTATION.test(sentence);
   const patterns = observed ? [...ANY_SECTION, ...OBSERVED_ONLY] : ANY_SECTION;
-  return patterns.some((pattern) => pattern.test(sentence) && !pattern.test(notes));
+  return patterns.some((pattern) => !(general && pattern === SCHEDULED_TO) && pattern.test(sentence) && !pattern.test(notes));
 }
 
 /**
