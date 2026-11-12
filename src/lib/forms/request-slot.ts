@@ -1,7 +1,8 @@
-import { formNameFromRosterEnabled } from "@/lib/config/chat-quality-flags";
+import { formNameFromRosterEnabled, formNameOffRosterAskEnabled } from "@/lib/config/chat-quality-flags";
 
 import { isSalesPolicyReading, readCaPolicy } from "./ca-policy";
 import { editDistance, normalizeTypedName } from "./employee-match";
+import { nameBeforeAccountVerb } from "./not-a-name";
 import { detectTemplateIntent, namesAForm } from "./template-intent";
 
 /**
@@ -221,6 +222,16 @@ export function outsideRequestSlot(candidate: string, text: string | undefined =
    */
   if (isRosterName(candidate)) return false;
   /*
+   * FORM_NAME_OFF_ROSTER_ASK_ENABLED (QA's Bubbles roster-set gate R16A, 10 Nov 2026: "make me CA for Rhea Calloway
+   * failing to complete shifts" made the card for "Rhea", Issue "Calloway failing …"): the account verb after a name is
+   * cut later (`not-a-name.ts` nameBeforeAccountVerb, in the name reader). A candidate whose words before that verb are
+   * somebody's whole roster name is that person, never ruled out here.
+   */
+  if (formNameOffRosterAskEnabled()) {
+    const cut = nameBeforeAccountVerb(candidate);
+    if (cut && cut !== candidate.trim() && isRosterName(cut)) return false;
+  }
+  /*
    * The message rules out only candidates it contains (the flip check, 5 Nov
    * 2026): a name read from another turn of the conversation — "remy calder"
    * from "Do the same coaching form for remy calder", checked while the stored
@@ -239,7 +250,26 @@ export function outsideRequestSlot(candidate: string, text: string | undefined =
     return words.every((word) => named.has(word));
   })) return true;
   const slot = requestSlotNames(text);
-  return slot !== null && !inSlot(candidate, slot);
+  if (slot === null || inSlot(candidate, slot)) return false;
+  return !typedOnAfterSlotName(candidate, slot, text);
+}
+
+/*
+ * QA's round-22 eval check (10 Nov 2026, sf-s4): "make me a CA for Odalys merriwether for being late …" — the slot reads
+ * capitalised words, so it held "Odalys", and "Odalys Merriwether" was ruled out unless somebody on the roster has that
+ * whole name; a person who is not on the roster (or a roster read that fails) lost the surname. A slot name followed,
+ * right after the request's "for", by ONE more word typed in lower case is that person's full name, when the word is no
+ * account verb ("for Rhea Calloway failing …" is still cut to Rhea Calloway).
+ */
+function typedOnAfterSlotName(candidate: string, slot: readonly string[], text: string): boolean {
+  const words = candidate.trim().split(/\s+/);
+  if (words.length < 2 || nameBeforeAccountVerb(candidate) !== candidate.trim()) return false;
+  const head = wordsOf(words.slice(0, -1).join(" ")).join(" ");
+  if (!slot.some((name) => wordsOf(name).join(" ") === head)) return false;
+  const spelled = words.map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(String.raw`\s+`);
+  const last = words.at(-1)!;
+  return new RegExp(String.raw`\bfor\s+${spelled}(?![\p{L}'’-])`, "iu").test(text) &&
+    new RegExp(String.raw`(?:^|[^\p{L}'’-])${last.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\p{L}'’-])`, "u").test(text);
 }
 
 /**
