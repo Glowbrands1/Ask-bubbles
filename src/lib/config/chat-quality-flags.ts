@@ -1401,6 +1401,9 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "STEP_B_REPLY_KEEPS_LINES_ENABLED",
   // coding 6: OUTLINE_ON_OPEN_PROPOSAL (QA's Bubbles 17i live test, 11 Nov 2026; default off).
   "OUTLINE_ON_OPEN_PROPOSAL_ENABLED",
+  // QA round 17o (12 Nov 2026): switched on in production, missing from this list.
+  "NAME_CORRECTION_KEEPS_DATE_ENABLED",
+  "NEAR_MISS_TURNED_DOWN_EVERYWHERE_ENABLED",
 ] as const;
 
 /**
