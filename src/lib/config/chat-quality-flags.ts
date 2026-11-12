@@ -1185,6 +1185,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "NEXT_PUBLIC_CARD_CHANGE_ENABLED",
   "NEXT_PUBLIC_CARD_CHANGE_FINALIZED_ENABLED",
   "ACCOUNT_ONLY_POLICY_QUERY_ENABLED",
+  // coding 4: EXPECTATION_POLICY_LINE_KEPT (QA audit, 10 Nov 2026; default off).
+  "EXPECTATION_POLICY_LINE_KEPT_ENABLED",
   "RELATIVE_DATE_READER_ENABLED",
   "UNREAD_DATE_ASK_ENABLED",
   "DECIMAL_NOT_SENTENCE_END_ENABLED",
@@ -1850,6 +1852,19 @@ export function ordinalDateInDraftEnabled(): boolean {
  */
 export function accountOnlyPolicyQueryEnabled(): boolean {
   return envFlag("ACCOUNT_ONLY_POLICY_QUERY_ENABLED");
+}
+
+/**
+ * EXPECTATION_POLICY_LINE_KEPT_ENABLED (QA's audit, 10 Nov 2026; default off; same flag in both apps). With
+ * ACCOUNT_ONLY_POLICY_QUERY on (production), `withoutInventedDetail` dropped the Expectation "An employee scheduled to
+ * open is expected to arrive on time and have the store ready to open." from the saved Observation: "scheduled to" and
+ * "open" are details of what happened when said of the employee, but this sentence states the policy's expectation of
+ * every employee, which the drafting rules ask for. On: in the Expectation and Going Forward sections, a sentence about
+ * employees in general ("An employee …", "Employees …", "All team members …") that states what is expected is kept. A
+ * sentence about the employee themself is still read as before. Off, as before.
+ */
+export function expectationPolicyLineKeptEnabled(): boolean {
+  return envFlag("EXPECTATION_POLICY_LINE_KEPT_ENABLED");
 }
 
 /**
