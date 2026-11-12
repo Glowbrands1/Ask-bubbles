@@ -427,8 +427,11 @@ const LIVE_SINCE = ["PRIOR_SENTENCE_FIX_ENABLED", "DATE_ANSWER_APPLIED_ENABLED",
 const MEETING = "MEETING_NOT_LATENESS_PLAN_ENABLED";
 const PAYROLL = "PLAN_PAYROLL_SENTENCE_ENABLED";
 
+/* G5-781: ATTENDANCE_PLAN_NEEDS_LATENESS (default off) also gives a missed meeting the general plan; held off unless asked. */
+const NEEDS_LATENESS = "ATTENDANCE_PLAN_NEEDS_LATENESS_ENABLED";
+
 function useProduction(...on: string[]) {
-  for (const name of [...ALL_FLAGS, ...LIVE_SINCE, MEETING, PAYROLL]) {
+  for (const name of [...ALL_FLAGS, ...LIVE_SINCE, MEETING, PAYROLL, NEEDS_LATENESS]) {
     if (!saved.has(name)) saved.set(name, process.env[name]);
     delete process.env[name];
   }
