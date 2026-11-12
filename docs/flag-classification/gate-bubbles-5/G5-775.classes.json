@@ -1,0 +1,6 @@
+{
+ "src/lib/ai/qa-w4-date-and-prior-coaching.test.ts :: F-03c: on a Coaching Form, the coaching the manager held is the form's date a labelled earlier coaching is never the Coaching Form's date": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "Fails on main c88676ac with production flags (formDate null, expected 2026-10-15). Same mechanism as D2: the shorthand 'previous coaching 9/1' sets aside only the date it names, so 10/15 stays the Coaching Form's date. Now passes."
+ }
+}
