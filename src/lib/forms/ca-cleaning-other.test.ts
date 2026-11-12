@@ -26,6 +26,8 @@ const guard = (notes: string, basis: "conduct" | "upkeep_or_task" | null = null)
 
 describe("CA_SALES_POLICY_ENABLED: cleaning left undone is Other", () => {
   it("off: the card reads as the Standards of Conduct, and the draft's tick stands (as before)", () => {
+    // Gate-Bubbles-4 (12 Nov 2026): an off test pins CA_PROCEDURE_BASIS off itself, so it holds with that flag on.
+    vi.stubEnv("CA_PROCEDURE_BASIS_ENABLED", "");
     const reading = readCaPolicy(SF_S15);
     expect(reading.suggestion).toBe("standards_of_conduct");
     expect(reading.other).toBeUndefined();
@@ -34,6 +36,8 @@ describe("CA_SALES_POLICY_ENABLED: cleaning left undone is Other", () => {
   });
 
   it("POLICY_CLEANING_INCIDENT_ENABLED on, CA_SALES off: the cleaning reader and the reading are as before (no Other mark)", () => {
+    // Gate-Bubbles-4 (12 Nov 2026): an off test pins CA_PROCEDURE_BASIS off itself, so it holds with that flag on.
+    vi.stubEnv("CA_PROCEDURE_BASIS_ENABLED", "");
     vi.stubEnv("POLICY_CLEANING_INCIDENT_ENABLED", "true");
     expect(cleaningIncidentPhrase(SF_S15)).toBe("did not complete daily cleaning");
     const reading = readCaPolicy(SF_S15);

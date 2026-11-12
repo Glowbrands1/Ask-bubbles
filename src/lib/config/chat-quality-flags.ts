@@ -957,7 +957,54 @@ export function nameBeforeTitleEnabled(): boolean {
   return envFlag("NAME_BEFORE_TITLE_ENABLED");
 }
 
+/**
+ * The form the manager named is the form: "needs CA" and "write ca" ask for
+ * the Corrective Action Form, and a request for "a form" that names none uses
+ * the form last named in the chat (conv_mvofmpei2c50lhp, 25 Oct 2026). See
+ * `ai/manager-form-choice.ts`. Off, every turn is read as typed.
+ */
+export function managerFormChoiceEnabled(): boolean {
+  return envFlag("MANAGER_FORM_CHOICE_ENABLED");
+}
+
+/**
+ * The way managers name a store ("dodge ne", "dodge, ne", "kearney ne") is
+ * written as the roster name before any reader sees the turn; the aliases are
+ * built from the store list (25 Oct 2026, ported from the sibling app). See
+ * `ai/store-alias.ts`. Off, every turn is read as typed.
+ */
+export function storeAliasEnabled(): boolean {
+  return envFlag("STORE_ALIAS_ENABLED");
+}
+
+/**
+ * An incident date after today is asked about once, in every register, and
+ * never dates the form (QA, 26 Oct 2026, U4). A deadline or a follow-up in
+ * the future is not asked about. Off, a future date is dropped silently, as
+ * before.
+ */
+export function futureIncidentDateAskEnabled(): boolean {
+  return envFlag("FUTURE_INCIDENT_DATE_ASK_ENABLED");
+}
+
+/**
+ * "What is a ca?", "difference between coaching and ca", "which forms can I
+ * create here?" are answered from the app's own published form templates and
+ * role matrix (`lib/forms/forms-guide.ts`), never from model memory or a
+ * knowledge-base miss. Off (the default), those turns are answered exactly as
+ * before. Same flag name as the sibling app.
+ */
+export function formsGuideEnabled(): boolean {
+  return envFlag("FORMS_GUIDE_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
+  // QA round 17r (13 Nov 2026): TEAM_CARD_NOT_PRODUCT (#668) and FORM_EDIT_SOURCE_TURN (#480) are switched on in production.
+  "TEAM_CARD_NOT_PRODUCT_ENABLED",
+  "FORM_EDIT_SOURCE_TURN_ENABLED",
+  // coding 2: OFF_ROSTER_STORE_ANSWER_ONLY (QA's #735 ruling, 12 Nov 2026; default off).
+  "OFF_ROSTER_STORE_ANSWER_ONLY_ENABLED",
+  "NOT_FOLLOWING_IS_VIOLATION_ENABLED",
   "INCIDENT_FROM_EARLIER_TURN_ENABLED",
   "LEVEL_REQUEST_DATE_ENABLED",
   "CA_SHORTCUT_WORDS_ENABLED",
@@ -1184,6 +1231,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "NEXT_PUBLIC_CARD_CHANGE_ENABLED",
   "NEXT_PUBLIC_CARD_CHANGE_FINALIZED_ENABLED",
   "ACCOUNT_ONLY_POLICY_QUERY_ENABLED",
+  // coding 4: EXPECTATION_POLICY_LINE_KEPT (QA audit, 10 Nov 2026; default off).
+  "EXPECTATION_POLICY_LINE_KEPT_ENABLED",
   "RELATIVE_DATE_READER_ENABLED",
   "UNREAD_DATE_ASK_ENABLED",
   "DECIMAL_NOT_SENTENCE_END_ENABLED",
@@ -1199,6 +1248,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "AI_READS_CODE_CHECKS_ENABLED",
   "LAST_FIRST_NAME_READ_ENABLED",
   "POLICY_CITATION_CHECK_ENABLED",
+  "NEGATED_LATENESS_TOPIC_ENABLED",
   "PRIOR_ACTIONS_NO_SIGNED_ENABLED",
   "REQUEST_LEVEL_NOT_HISTORY_ENABLED",
   // The sibling app's gate fix flags (6 Nov 2026): forced off with the others by flags-off-parity's child run.
@@ -1260,6 +1310,21 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REOPEN_NOT_OPEN_FORM_ENABLED",
   "SIGNED_STEP_NOT_A_REQUEST_ENABLED",
   "STEP_DATES_NOT_FORM_DATE_ENABLED",
+  // coding 4: STEP_SHORTHAND_OWN_DATE (QA's prod-env reading, 10 Nov 2026, D2; default off).
+  "STEP_SHORTHAND_OWN_DATE_ENABLED",
+  // coding 4: ATTENDANCE_PLAN_NEEDS_LATENESS (QA ruling, 11 Nov 2026; default off).
+  "ATTENDANCE_PLAN_NEEDS_LATENESS_ENABLED",
+  // coding 4: FORM_FOR_FOR_TYPO (B-C3, QA, 11 Nov 2026; default off).
+  "FORM_FOR_FOR_TYPO_ENABLED",
+  // coding 4: TITLE_NOT_PART_OF_NAME (B-C3 part 2, QA, 11 Nov 2026; default off).
+  "TITLE_NOT_PART_OF_NAME_ENABLED",
+  "NO_NAME_REPLY_WORDING_ENABLED",
+  // coding 4: TITLE_BEFORE_NAME (Bubbles 17h live test, QA, 11 Nov 2026; default off).
+  "TITLE_BEFORE_NAME_ENABLED",
+  // TITLE_BEFORE_NAME_REPLY_LINES (QA 17o live, 12 Nov 2026; default off).
+  "TITLE_BEFORE_NAME_REPLY_LINES_ENABLED",
+  // coding 4: FORMS_ON_FILE_ORDER_MATCH_POSSIBLE (Bubbles 17h live test, QA, 11 Nov 2026; default off).
+  "FORMS_ON_FILE_ORDER_MATCH_POSSIBLE_ENABLED",
   "TAKE_OFF_STAYS_CARD_ENABLED",
   // coding 4: ACCOUNT_PLACE_LEAD (round 6; default off): forced off with the others.
   "ACCOUNT_PLACE_LEAD_ENABLED",
@@ -1300,6 +1365,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "EXIT_LINE_ANSWERS_ADD_UP_ENABLED",
   // coding 4: MADE_ABOUT_ALL_OR_NOTHING (QA's live round-7 test, 9 Nov 2026; default off).
   "MADE_ABOUT_ALL_OR_NOTHING_ENABLED",
+  // coding 4: MADE_ABOUT_UNDATED_TOGETHER (QA, 9 Nov 2026; default off).
+  "MADE_ABOUT_UNDATED_TOGETHER_ENABLED",
   // coding 4: MADE_ABOUT_READER_ACCOUNT (QA's live round-9 test, 9 Nov 2026; default off).
   "MADE_ABOUT_READER_ACCOUNT_ENABLED",
   // coding 5: POLICY_TOPIC_INTO_FIELD (QA, a manager's 1★ rating, 10 Nov 2026; default off).
@@ -1319,12 +1386,24 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "MADE_ABOUT_SAID_DATE_ENABLED",
   "SECTION_BREAKS_KEPT_ENABLED",
   "ADD_NOT_REPEATED_ENABLED",
+  "MADE_FOR_IS_MADE_ABOUT_ENABLED",
+  "ADD_NOT_REPEATED_SENTENCES_ENABLED",
   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
   "CHAT_STAGE_TIMINGS_ENABLED",
   // coding 5: WOVEN_DOCUMENT_KEEP_OUT, WOVEN_DUPLICATE_CONTENT_HOLD (ported from the sibling app's duplicates, QA, 10 Nov 2026; default off).
   "WOVEN_DOCUMENT_KEEP_OUT_ENABLED",
   "WOVEN_DUPLICATE_CONTENT_HOLD_ENABLED",
+  // coding 5: WRITE_UP_LEAD_NOT_ACCOUNT (ported from the sibling app's #167, QA's October triage, 10 Nov 2026; default off).
+  "WRITE_UP_LEAD_NOT_ACCOUNT_ENABLED",
+  "RELATIVE_DAY_NOT_HISTORY_ENABLED",
+  "ADD_OUT_OF_OTHER_SECTIONS_ENABLED",
+  "EXIT_TYPO_WORDS_ENABLED",
   "CA_REASON_DUE_TO_ENABLED",
+  "COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED",
+  // coding 5: EXIT_NOTICE_VERB_TYPOS (QA's October triage, 10 Nov 2026; default off).
+  "EXIT_NOTICE_VERB_TYPOS_ENABLED",
+  // coding 5: TITLE_INITIALISM_CASE (QA, #207 "she is an HR assistant" read as "Hr Assistant"; default off).
+  "TITLE_INITIALISM_CASE_ENABLED",
   // coding 6: REQUEST_ISSUE_KEPT, LATE_OPENING_OWN_WORDS, FIRST_NAME_ENOUGH (QA round 17b, 10 Nov 2026; default off).
   "REQUEST_ISSUE_KEPT_ENABLED",
   "LATE_OPENING_OWN_WORDS_ENABLED",
@@ -1340,6 +1419,88 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 5: EXCERPT_BRAND_HEADING_DROP (QA's round 17c live test, 11 Nov 2026; default off).
   "EXCERPT_BRAND_HEADING_DROP_ENABLED",
   "NEAR_MISS_ANSWER_KEEPS_REQUEST_ENABLED",
+  // coding 6: PRIOR_ACTIONS_NO_COMMA (October rebuild 4, #187 rebuilt on main; default off).
+  "PRIOR_ACTIONS_NO_COMMA_ENABLED",
+  "STORE_ALIAS_ENABLED",
+  "FULL_MANUAL_WIDE_GATE_ENABLED",
+  // coding 6: MANAGER_FORM_CHOICE (B#181 rebuilt; default off; wiring awaits Coding-2).
+  "MANAGER_FORM_CHOICE_ENABLED",
+  "EMPTY_REPLY_GUARD_ENABLED",
+  "POLICY_PAGE_ON_CARD_ENABLED",
+  "FORM_INPUT_FIDELITY_ENABLED",
+  // coding 6: FUTURE_INCIDENT_DATE_ASK (S#285, B#217; default off).
+  "FUTURE_INCIDENT_DATE_ASK_ENABLED",
+  // coding 6: FORMS_GUIDE (B#194 rebuilt; default off).
+  "FORMS_GUIDE_ENABLED",
+  // coding 5: B3 (QA's backlog, 10 Nov 2026; default off).
+  "COPY_PASTE_CLAIM_HONEST_ENABLED",
+  "COPY_PASTE_POINTS_TO_CARD_ENABLED",
+  "FORMS_BELOW_NEEDS_FORMS_ENABLED",
+  "WORN_CLOTHING_IS_DRESS_CODE_ENABLED",
+  "DATE_ONCE_ENABLED",
+  "ADDRESS_ASKS_WHO_ENABLED",
+  "LEAD_FULL_SENTENCE_ENABLED",
+  "NAME_LINE_COMMA_ENABLED",
+  // TEMPLATE_OUTLINE_FIELDS (default off): in the list, as every chat flag (Gate-Bubbles-2, 11 Nov 2026).
+  "TEMPLATE_OUTLINE_FIELDS_ENABLED",
+  // PASTED_OUTLINE_TO_OPEN_DRAFT (default off): in the list, as every chat flag (Gate-Bubbles-2, 11 Nov 2026).
+  "PASTED_OUTLINE_TO_OPEN_DRAFT_ENABLED",
+  // coding 6: PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT (ported from the sibling app, 11 Nov 2026; default off).
+  "PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT_ENABLED",
+  // coding 6: GROUP_WORDS_NOT_A_NAME (Problem 19, 11 Nov 2026; default off).
+  "GROUP_WORDS_NOT_A_NAME_ENABLED",
+  // ANSWER_TURN_LEVEL (default off; QA, 12 Nov 2026): in the list, as every chat flag.
+  "ANSWER_TURN_LEVEL_ENABLED",
+  // TERMINATION_CARD_TIDY (default off; QA's 17o live notes, 12 Nov 2026): in the list, as every chat flag.
+  "TERMINATION_CARD_TIDY_ENABLED",
+  "ACCOUNT_BEFORE_REQUEST_ENABLED",
+  // LETTER_GREETING_ANY_CASE (default off): in the list, as every chat flag (QA round 17k, 12 Nov 2026).
+  "LETTER_GREETING_ANY_CASE_ENABLED",
+  // EXIT_NOTICE_STATED_ONLY (default off): in the list, as every chat flag (QA's 17j live test, 12 Nov 2026).
+  "EXIT_NOTICE_STATED_ONLY_ENABLED",
+  // coding 5: DRAFT_NO_INVENTED_PLAN (QA's October triage of #188, 10 Nov 2026; default off).
+  "DRAFT_NO_INVENTED_PLAN_ENABLED",
+  // REVISION_ARCHIVED_NOT_OPEN (default off): in the list, as every flag a release flips (QA round 17l, 12 Nov 2026).
+  "REVISION_ARCHIVED_NOT_OPEN_ENABLED",
+  "ADDED_DETAIL_KEPT_ENABLED",
+  "REOPEN_CLOSE_SPELLING_ENABLED",
+  "PASTED_FORM_NAME_NOT_REQUEST_ENABLED",
+  "LATE_OPENING_NEEDS_OPENING_ENABLED",
+  // In the list, as every flag a release flips (QA round 17n, 12 Nov 2026).
+  "CA_PROCEDURE_BASIS_ENABLED",
+  "NO_SELECTION_ON_OPEN_CARD_ENABLED",
+  "PASTED_REVIEW_NOT_ACCOUNT_ENABLED",
+  "STEP_B_REPLY_KEEPS_LINES_ENABLED",
+  // coding 6: OUTLINE_ON_OPEN_PROPOSAL (QA's Bubbles 17i live test, 11 Nov 2026; default off).
+  "OUTLINE_ON_OPEN_PROPOSAL_ENABLED",
+  // QA round 17o (12 Nov 2026): switched on in production, missing from this list.
+  "NAME_CORRECTION_KEEPS_DATE_ENABLED",
+  "NEAR_MISS_TURNED_DOWN_EVERYWHERE_ENABLED",
+  "STEP_B_ADD_UNDER_OBSERVED_ENABLED",
+  // QA round 17q (13 Nov 2026): switched on in production, missing from this list.
+  "REGISTER_ACCURACY_CONDUCT_ENABLED",
+  "ANIMAL_VISITORS_ONLY_WHEN_VISITOR_ENABLED",
+  // QA round 17p (12 Nov 2026): switched on in production, missing from this list.
+  "DETAILS_FROM_EARLIER_ANSWER_ENABLED",
+  "GUEST_ATTITUDE_CONDUCT_ENABLED",
+  // #696 (QA, group 4): the two flags and the browser twin.
+  "SAME_REQUEST_CARRIES_ACCOUNT_ENABLED",
+  "SAME_REQUEST_KEEPS_EARLIER_CARD_ENABLED",
+  "NEXT_PUBLIC_SAME_REQUEST_KEEPS_EARLIER_CARD_ENABLED",
+  // #727 (stacked on #696).
+  "SAME_REQUEST_OFF_ROSTER_ENABLED",
+  // POLICY_CARRY_RETRIEVAL (default off; #180 rebuilt on main, 12 Nov 2026): in the list, as every chat flag.
+  "POLICY_CARRY_RETRIEVAL_ENABLED",
+  // coding 6: BARE_COACHING_REQUEST_LEAD (the sibling app's round 31, 12 Nov 2026; default off).
+  "BARE_COACHING_REQUEST_LEAD_ENABLED",
+  // TERMINATION_INTAKE (default off): in the list, as every chat flag (QA, 12 Nov 2026).
+  "TERMINATION_INTAKE_ENABLED",
+  // RESENT_REQUEST_IS_YES (default off; QA, 12 Nov 2026): in the list, as every chat flag.
+  "RESENT_REQUEST_IS_YES_ENABLED",
+  // CARD_PLAN_MATCHES_CREATE (default off; QA's 17l, 12 Nov 2026): in the list, as every chat flag.
+  "CARD_PLAN_MATCHES_CREATE_ENABLED",
+  // coding 6: TYPO_FULL_NAME_TO_ROSTER (audit item 15.10, sf-b5, 11 Nov 2026; default off).
+  "TYPO_FULL_NAME_TO_ROSTER_ENABLED",
 ] as const;
 
 /**
@@ -1819,6 +1980,19 @@ export function ordinalDateInDraftEnabled(): boolean {
  */
 export function accountOnlyPolicyQueryEnabled(): boolean {
   return envFlag("ACCOUNT_ONLY_POLICY_QUERY_ENABLED");
+}
+
+/**
+ * EXPECTATION_POLICY_LINE_KEPT_ENABLED (QA's audit, 10 Nov 2026; default off; same flag in both apps). With
+ * ACCOUNT_ONLY_POLICY_QUERY on (production), `withoutInventedDetail` dropped the Expectation "An employee scheduled to
+ * open is expected to arrive on time and have the store ready to open." from the saved Observation: "scheduled to" and
+ * "open" are details of what happened when said of the employee, but this sentence states the policy's expectation of
+ * every employee, which the drafting rules ask for. On: in the Expectation and Going Forward sections, a sentence about
+ * employees in general ("An employee …", "Employees …", "All team members …") that states what is expected is kept. A
+ * sentence about the employee themself is still read as before. Off, as before.
+ */
+export function expectationPolicyLineKeptEnabled(): boolean {
+  return envFlag("EXPECTATION_POLICY_LINE_KEPT_ENABLED");
 }
 
 /**
@@ -2838,6 +3012,17 @@ export function offRosterAskBeforeCardEnabled(): boolean {
 }
 
 /**
+ * OFF_ROSTER_STORE_ANSWER_ONLY_ENABLED (Coding-2, 12 Nov 2026; default off; QA's ruling on the #735 gate, both apps).
+ * Under the off-roster ask ("I can't find **<A>** … reply **use <A>**"), a reply that is only a store set the store and
+ * made the card for <A> at once, skipping the "use <A>" confirmation. On: a store-only answer sets the store and the
+ * name still needs "use <A>": the card is held, with its store, and the ask is made again (`forms/off-roster-ask.ts`).
+ * Off, as before.
+ */
+export function offRosterStoreAnswerOnlyEnabled(): boolean {
+  return envFlag("OFF_ROSTER_STORE_ANSWER_ONLY_ENABLED");
+}
+
+/**
  * EXIT_LETTER_ADDRESSEE_ENABLED (ported from the sibling app: QA's live test there, 9 Nov 2026; coding 5; same flag in
  * both apps; default off; with EXIT_LETTER_SIGNER_NOT_SUBJECT_ENABLED). "I need an exit form with this information." and
  * a termination letter to <A> signed "Sincerely,\n<C>\nDistrict Manager" gave the exit card the signer's title, and the
@@ -2977,6 +3162,48 @@ export function wovenDuplicateContentHoldEnabled(): boolean {
 }
 
 /**
+ * WRITE_UP_LEAD_NOT_ACCOUNT_ENABLED (ported from the sibling app: QA's October triage of its #167, 10 Nov 2026; coding 5;
+ * same flag in both apps; default off). "write up <employee> for cell phone use" gave the Corrective Action card the
+ * Issue "write up <employee> for cell phone use", the raw message: the request's verb and the employee's name stayed in.
+ * On: an Issue sentence that opens "write up <employee> for …" keeps only the account after "for" ("Cell phone use")
+ * (`forms/write-up-lead.ts`, in `forms/incident-issue.ts`). Off, as before.
+ */
+export function writeUpLeadNotAccountEnabled(): boolean {
+  return envFlag("WRITE_UP_LEAD_NOT_ACCOUNT_ENABLED");
+}
+
+/**
+ * RELATIVE_DAY_NOT_HISTORY_ENABLED (QA, 10 Nov 2026; coding 5; same flag in both apps; default off). With
+ * RELATIVE_DATE_READER_ENABLED on (live), "need a CA for <name>. she mishandled cash at close yesterday. written warning"
+ * lost the Written level: "yesterday" became a date before today, which made the trailing level history. On: a
+ * relative day word is the incident's day, never an earlier step, for that check (`forms/warning-level.ts`). Off, as
+ * before.
+ */
+export function relativeDayNotHistoryEnabled(): boolean {
+  return envFlag("RELATIVE_DAY_NOT_HISTORY_ENABLED");
+}
+
+/**
+ * ADD_OUT_OF_OTHER_SECTIONS_ENABLED (QA's Bubbles round-16b live test, 10 Nov 2026; coding 5; same flag in both apps;
+ * default off; works with STEP_B_ADD_UNDER_OBSERVED_ENABLED). "can you add that she was reminded of the policy" was
+ * written glued onto the Expectation paragraph. On: a whole-text write that only adds words to the end of one section
+ * other than Observed puts them under Observed instead (`forms/outline-sections.ts`). Off, as before.
+ */
+export function addOutOfOtherSectionsEnabled(): boolean {
+  return envFlag("ADD_OUT_OF_OTHER_SECTIONS_ENABLED");
+}
+
+/**
+ * EXIT_TYPO_WORDS_ENABLED (Pau's P17, the sibling app's production, 10 Nov 2026; coding 5; same flag in both apps; default off).
+ * "store items will be returneded … they are eligiable for rehire" left Store Items Returned and Eligible for Rehire
+ * blank. On: the exit answer readers read a word one or two letters off "returned", "eligible", "rehire" and the like as
+ * that word (`forms/exit-details.ts`). Off, as before.
+ */
+export function exitTypoWordsEnabled(): boolean {
+  return envFlag("EXIT_TYPO_WORDS_ENABLED");
+}
+
+/**
  * WOVEN_TEXT_NUL_STRIP_ENABLED (ported from the sibling app: QA, 10 Nov 2026, three Woven manuals stuck "failed" there
  * since 4 Nov 2026; coding 5; same flag in both apps; default off). A PDF whose text layer holds NUL characters (U+0000)
  * failed with "Chunks could not be saved: unsupported Unicode escape sequence": Postgres text and jsonb refuse NUL. On:
@@ -3031,6 +3258,115 @@ export function wovenOcrPageBatchesEnabled(): boolean {
  */
 export function excerptBrandHeadingDropEnabled(): boolean {
   return envFlag("EXCERPT_BRAND_HEADING_DROP_ENABLED");
+}
+
+/**
+ * COPY_PASTE_CLAIM_HONEST_ENABLED (QA's backlog B3; same report; coding 5; same flag in both apps; default off). "It
+ * should update automatically — no copy-and-paste needed. The details are on the draft card." went out with nothing
+ * written. On: those are claims the honest reply drops (`forms/form-content-turn.ts`). Off, as before.
+ */
+export function copyPasteClaimHonestEnabled(): boolean {
+  return envFlag("COPY_PASTE_CLAIM_HONEST_ENABLED");
+}
+
+/**
+ * DATE_ONCE_ENABLED (QA's backlog B7; HR's report of 21 Oct 2026; coding 5; same flag in both apps; default off). The
+ * incident date was written twice: the Date field and again in the Observation ("… on 10-1-26"). On: a drafted account
+ * field drops the form's own date (`forms/date-once.ts`). Off, as before.
+ */
+export function dateOnceEnabled(): boolean {
+  return envFlag("DATE_ONCE_ENABLED");
+}
+
+/**
+ * ADDRESS_ASKS_WHO_ENABLED (QA's backlog B7; QA, 4 Nov 2026; coding 5; same flag in both apps; default off).
+ * "Corrective action for 123 Main Street" made no card and was answered as a policy question. On: it asks who the
+ * form is for (`forms/address-asks-who.ts`). Off, as before.
+ */
+export function addressAsksWhoEnabled(): boolean {
+  return envFlag("ADDRESS_ASKS_WHO_ENABLED");
+}
+
+/**
+ * LEAD_FULL_SENTENCE_ENABLED (QA's backlog B7; Pau via QA, 5 Nov 2026, sf-b6; coding 5; same flag in both apps; default
+ * off). A reply ended "Based on what you've described, I can prepare:" with nothing after it. On: the lead is a full
+ * sentence when form choices follow, and goes when none do (`forms/lead-full-sentence.ts`). Off, as before.
+ */
+export function leadFullSentenceEnabled(): boolean {
+  return envFlag("LEAD_FULL_SENTENCE_ENABLED");
+}
+
+/**
+ * NAME_LINE_COMMA_ENABLED (QA's backlog B7; QA's live CA chat, 4 Nov 2026; coding 5; same flag in both apps; default
+ * off). "fix her last name, it is Doe-Smith": the comma kept it from reading as a name correction. On: it reads as one,
+ * and a name the form does not take from the chat is named back as a question (`forms/name-correction-words.ts`).
+ * Off, as before.
+ */
+export function nameLineCommaEnabled(): boolean {
+  return envFlag("NAME_LINE_COMMA_ENABLED");
+}
+
+/**
+ * ACCOUNT_BEFORE_REQUEST_ENABLED (Pau's P14(a), QA 10 Nov 2026; coding 5; the same flag name as the sibling app's #776,
+ * a different mechanism here; default off). An account given over several turns before "create a coaching form for
+ * <first name>" → "yes" was not handed to the draft ("No specific incident … was described"): a turn that opens with a
+ * question was left out of the card's turns. On: the turns just before the card's first cited turn that recount an
+ * incident by this person join its turns (`forms/account-before-request.ts`). Off, as before.
+ */
+export function accountBeforeRequestEnabled(): boolean {
+  return envFlag("ACCOUNT_BEFORE_REQUEST_ENABLED");
+}
+
+/**
+ * DRAFT_NO_INVENTED_PLAN_ENABLED (QA's October triage of #188, 10 Nov 2026, rebuilt on main; coding 5; default off).
+ * The Corrective Action Form's Observation (and the Coaching Form) carries no AI-written "Going Forward" section (QA,
+ * 25 Oct 2026): a plan or commitment the manager never typed is not part of the HR record. What the employee does
+ * next is the Action Plan, which is the manager's own. Only a Going Forward inside an observation narrative is
+ * dropped; a negated "going forward" is no plan (`forms/narrative-draft.ts`, the draft route). Off, as before.
+ */
+export function draftNoInventedPlanEnabled(): boolean {
+  return envFlag("DRAFT_NO_INVENTED_PLAN_ENABLED");
+}
+
+/**
+ * ADDED_DETAIL_KEPT_ENABLED (Pau via QA, sf-b6; coding 5; same flag in both apps; default off). "can you have it include
+ * that we recieved a customer complaint …" was left out of the card's turns (it reads as a question), so neither the
+ * card nor the draft carried it. On: such a turn inside the card's span joins its turns and shows on the card
+ * (`forms/added-detail-kept.ts`). Off, as before.
+ */
+export function addedDetailKeptEnabled(): boolean {
+  return envFlag("ADDED_DETAIL_KEPT_ENABLED");
+}
+
+/**
+ * REOPEN_CLOSE_SPELLING_ENABLED (ported from the sibling app, coding 5, 10 Nov 2026; default off; Pau via QA, sf-s26,
+ * 5 Nov 2026). "Edit Thesaly Brant CA" with Thessaly Brandt's CA on file was answered "Who is this form for?". On:
+ * when a reopen request names nobody it can find, the one employee on the forms the manager may open whose every name
+ * word it spells closely (same first letter, one or two letters off) is the one meant, and that form is opened.
+ * Nothing is created or written. See `forms/reopen-close-spelling.ts`. Off, as before.
+ */
+export function reopenCloseSpellingEnabled(): boolean {
+  return envFlag("REOPEN_CLOSE_SPELLING_ENABLED");
+}
+
+/**
+ * PASTED_FORM_NAME_NOT_REQUEST_ENABLED (QA's B4; Pau via QA, sf-s22; coding 5; same flag in both apps; default off).
+ * "Make this:" + a reviewer's pasted notes naming a "Kit Coaching Document" switched the Corrective Action card back to
+ * a Coaching Form. On: a short lead ending in ":" followed by pasted list lines is read for the form from the lead only
+ * (`forms/template-intent.ts`). Off, as before.
+ */
+export function pastedFormNameNotRequestEnabled(): boolean {
+  return envFlag("PASTED_FORM_NAME_NOT_REQUEST_ENABLED");
+}
+
+/**
+ * LATE_OPENING_NEEDS_OPENING_ENABLED (QA's B4; Pau via QA, sf-s25; coding 5; same flag in both apps; default off). A
+ * closing account (scheduled until close, clocked out early, closing work done before close) was cited as Late
+ * Opening. On: a card citing Late Opening when the manager's words say closing and never opening cites no policy
+ * instead (`forms/late-opening-needs-opening.ts`). Off, as before.
+ */
+export function lateOpeningNeedsOpeningEnabled(): boolean {
+  return envFlag("LATE_OPENING_NEEDS_OPENING_ENABLED");
 }
 
 // --- end coding 5 flags ---
@@ -3200,6 +3536,16 @@ export function incidentFromEarlierTurnEnabled(): boolean {
 }
 
 /**
+ * An animal alone cites Animals in the Workplace only; Visitors in the
+ * Workplace is cited beside it only when the animal is a customer's, guest's,
+ * visitor's, friend's or family member's (Pau, 5 Nov 2026). Off, every
+ * animal account also cites Visitors in the Workplace, as before.
+ */
+export function animalVisitorsOnlyWhenVisitorEnabled(): boolean {
+  return envFlag("ANIMAL_VISITORS_ONLY_WHEN_VISITOR_ENABLED");
+}
+
+/**
  * TITLE_OF_THE_EMPLOYEE_ENABLED (QA, 5 Nov 2026, R2; default off). One
  * employee's story naming their district manager in passing ("When <employee>
  * spoke with District manager <name> …") gave the card Position "District
@@ -3314,6 +3660,31 @@ export function rosterNotFoundAnyPhrasingEnabled(): boolean {
  */
 export function metricGuardEnabled(): boolean {
   return envFlag("METRIC_GUARD_ENABLED");
+}
+
+/**
+ * NEGATED_LATENESS_TOPIC_ENABLED (QA tester 2, 26 Oct 2026, production; default off; rebuilds #234). "coaching
+ * form for <employee>, she was not late today" came back with Topic of Coaching "Other: Punctuality". On: a
+ * Coaching draft whose notes mention lateness only to deny it ("not late", "wasn't late", "never late", "was on
+ * time") and name no other attendance problem keeps no Punctuality "Other" topic (`forms/negated-lateness.ts`),
+ * and the Corrective Action policy reader does not read a denied lateness as attendance (`forms/ca-policy.ts`).
+ * Off, as before.
+ */
+export function negatedLatenessTopicEnabled(): boolean {
+  return envFlag("NEGATED_LATENESS_TOPIC_ENABLED");
+}
+
+/**
+ * EDITS SAID IN CHAT REACH THE CARD (coding 3, item 1; same flag in both apps).
+ * "can you upate the draft with these details of coaching?" → "it didnt edit in
+ * the card" → "the details we just discussed!!!", and "Do i need to copy and
+ * paste it?": the turn a refers-back edit means is chosen by the thread's
+ * structure — the browser's markers for the card and for replies about the open
+ * form (`formReply`), and the manager's turn a reply did not write — never "the
+ * last reply". Off, as before. See `forms/form-content-turn.ts` (`sourceTurn`).
+ */
+export function formEditSourceTurnEnabled(): boolean {
+  return envFlag("FORM_EDIT_SOURCE_TURN_ENABLED");
 }
 
 /**
@@ -3900,6 +4271,18 @@ export function stepDatesNotFormDateEnabled(): boolean {
 }
 
 /**
+ * STEP_SHORTHAND_OWN_DATE_ENABLED (QA's prod-env reading, 10 Nov 2026, D2; default off; same flag in both apps). With
+ * production's flags, "<name> - CA - written - no call no show to manager meeting 10/13/26 - payroll deduction no - prior
+ * coaching 7/1/26" was dated today: the message is one sentence (no full stop), CA_SHORTCUT_WORDS' shorthand matched
+ * "coaching 7/1", and `stepSentenceDates` then set aside EVERY date in that sentence, 10/13/26 included, so
+ * STEP_DATES_NOT_FORM_DATE fell back to today. On: when only the shorthand marks a sentence, only the dates the
+ * shorthand names are a step's. Off, as before.
+ */
+export function stepShorthandOwnDateEnabled(): boolean {
+  return envFlag("STEP_SHORTHAND_OWN_DATE_ENABLED");
+}
+
+/**
  * ISSUE_AFTER_REQUEST_REASON_ENABLED (QA's round-5 Bubbles check, 8 Nov 2026; default off). "I need a corrective
  * action for under performance. <A> was below on …" printed "Issue: under performance" — the request's reason, and
  * the account was lost; "… made for under performance. <A> was below on …" printed the whole message. With this flag
@@ -4249,6 +4632,16 @@ export function madeAboutAllOrNothingEnabled(): boolean {
 }
 
 /**
+ * MADE_ABOUT_UNDATED_TOGETHER_ENABLED (QA's Sunny round-11 gate, 9 Nov 2026; default off; same flag in both apps). "I need
+ * you to make it about showing up late" (no date) on a saved Coaching draft rewrote Details and left Other on the old
+ * topic. An undated made-about turn changes the account and the topic together, or neither; the Date stays, and the reply
+ * says so (`forms/form-patch-turn.ts`). Off, as before.
+ */
+export function madeAboutUndatedTogetherEnabled(): boolean {
+  return envFlag("MADE_ABOUT_UNDATED_TOGETHER_ENABLED");
+}
+
+/**
  * MADE_ABOUT_READER_ACCOUNT_ENABLED (QA's live Bubbles round-9 test, 9 Nov 2026; default off; same flag in both apps).
  * "make it about leaving the front desk unattended on 11/6/26" on a saved Coaching draft changed Other and Details and
  * left the Date: the reader set Details itself (the new incident added under the old one), so the made-about path that
@@ -4293,6 +4686,54 @@ export function formDateSaidAloneEnabled(): boolean {
 }
 
 /**
+ * TEMPLATE_OUTLINE_FIELDS_ENABLED (coding 6, 10 Nov 2026; default off; Pau
+ * via QA, sf-s21, 5 Nov 2026; port from the sibling app). With Wynne's Corrective Action created, the
+ * manager pasted another employee's CA ("Observation of Offense: … Action
+ * Plan: …") and asked "No this should be the same out line but with wynnes
+ * info i told you in the first chat": the revision was scoped to the
+ * Observation only, so the template's Action Plan was dropped (the CA's plan
+ * is changed only when the request names it), and the next ask was answered
+ * "I haven't changed the Corrective Action Form". On: a request for a pasted
+ * template's outline ("the same outline", "in the format of / that …",
+ * "look exactly the same as") is handed to the revision naming every field
+ * the template heads, so it may write them all; and "Must See Behaviors and
+ * not the standard of conduct" on a form citing Standards of Conduct is
+ * answered with why it stays (the manual has no Must See Behaviors section;
+ * QA's ruling). See `forms/template-outline.ts`. Off, as before.
+ */
+export function templateOutlineFieldsEnabled(): boolean {
+  return envFlag("TEMPLATE_OUTLINE_FIELDS_ENABLED");
+}
+
+/**
+ * PASTED_OUTLINE_TO_OPEN_DRAFT_ENABLED (coding 6, 10 Nov 2026; default off; QA's Sunny round-23 live test of Pau's
+ * sf-s21, conv_mwb21a4z2rxf5y1): with <A>'s Corrective Action draft open, a pasted Corrective Action of <B>
+ * ("Observation of Offense: … Action Plan: …") was read as a new request for <B> ("Is this for <B>?"), so a new card
+ * covered the draft and the outline was never saved on it (TEMPLATE_OUTLINE_FIELDS only reads the open draft). On, a
+ * turn with two or more of the open draft's field labels as headings goes to that draft as its outline, with the
+ * draft's own facts (`forms/open-draft-turn.ts`). Off, as before.
+ */
+export function pastedOutlineToOpenDraftEnabled(): boolean {
+  return envFlag("PASTED_OUTLINE_TO_OPEN_DRAFT_ENABLED");
+}
+
+/**
+ * PASTED_REVIEW_NOT_ACCOUNT_ENABLED (coding 6, 10 Nov 2026; default off; Pau via
+ * QA, sf-s22, 5 Nov 2026; port from the sibling app). "Use this to make it: Please make the following
+ * edits and resubmit: 1. **Kit Coaching Document:** … signed by <C> …" — a
+ * reviewer's notes on another employee's form, pasted to show the format —
+ * turned the Corrective Action card into a Coaching Form, put <C>'s notes in
+ * the Observation and their signing date on the card. On: a pasted review
+ * ("Please make the following edits …", or a numbered list of "**Heading:**"
+ * items) is read only for the manager's own words before it, in this turn and
+ * the earlier ones, and the draft's account leaves it out. The stored
+ * messages keep it. See `ai/pasted-review.ts`. Off, as before.
+ */
+export function pastedReviewNotAccountEnabled(): boolean {
+  return envFlag("PASTED_REVIEW_NOT_ACCOUNT_ENABLED");
+}
+
+/**
  * MADE_ABOUT_SAID_DATE_ENABLED (ported from the sibling app: QA's live round 14 there, 10 Nov 2026; default off; same flag in
  * both apps). "I need you to make it about showing up late and please list the policy make the date for 10/14/26" on a
  * saved draft already about another incident answered "I haven't changed …": the reader wrote the policy into Details,
@@ -4323,6 +4764,51 @@ export function sectionBreaksKeptEnabled(): boolean {
  */
 export function addNotRepeatedEnabled(): boolean {
   return envFlag("ADD_NOT_REPEATED_ENABLED");
+}
+
+/**
+ * MADE_FOR_IS_MADE_ABOUT_ENABLED (ported from the sibling app: QA's live round 20 there, 10 Nov 2026; default off; same flag
+ * in both apps). "can you make it for missing out monthly meeting" on a saved Coaching draft in sections was refused there.
+ * Here POLITE_ABOUT_STAYS_CARD already reads "make it for <X>" as a made-about; with this flag on too, a "for" turn keeps
+ * its reader's own account, and the made-about path's revision is given the sentence as "make it about <X>"
+ * (`ai/make-it-about.ts`, `forms/form-patch-turn.ts`). Off, as before.
+ */
+export function madeForIsMadeAboutEnabled(): boolean {
+  return envFlag("MADE_FOR_IS_MADE_ABOUT_ENABLED");
+}
+
+/**
+ * GUEST_ATTITUDE_CONDUCT_ENABLED (coding 6, 10 Nov 2026; default off; port; Pau's
+ * sf-b5, the overnight scan of 4 Nov 2026). "The customer said she was giving
+ * her an attitude when she brought up that the register was charging …" cited
+ * no policy: the rude-to-a-guest reading (Standards of Conduct, page 12, as
+ * Pau confirmed) needs "rude / attitude … to / at / with … a guest", and here
+ * the customer comes first. On: a sentence in which a guest, customer or
+ * client says the employee was giving / gave / had an attitude is that same
+ * reading (`forms/specific-policy-topics.ts`). Off, as before.
+ */
+export function guestAttitudeConductEnabled(): boolean {
+  return envFlag("GUEST_ATTITUDE_CONDUCT_ENABLED");
+}
+
+/**
+ * ADD_NOT_REPEATED_SENTENCES_ENABLED (QA's live Bubbles r15b, 10 Nov 2026; default off; same flag in both apps). With
+ * ADD_NOT_REPEATED on, "add that she was also on her phone" on a sectioned CA Observation saved the late sentence twice:
+ * the reader's add repeated the field's FIRST sentence and heading, not the whole field. With this flag on too, an add's
+ * leading sentences the field already holds word for word are dropped as well (`forms/added-tail.ts`). Off, as before.
+ */
+export function addNotRepeatedSentencesEnabled(): boolean {
+  return envFlag("ADD_NOT_REPEATED_SENTENCES_ENABLED");
+}
+
+/**
+ * NOT_FOLLOWING_IS_VIOLATION_ENABLED (QA's live Bubbles report, 10 Nov 2026; default off; same flag in both apps). "make it about not
+ * following the dress code" was read as no policy named, so no Dress Code reference was written. With the flag on, "not
+ * following / not wearing / not meeting / failed to follow <policy topic>" names that policy as broken (`forms/ca-policy.ts`,
+ * NOT_FOLLOWING_BEFORE). Off, as before.
+ */
+export function notFollowingIsViolationEnabled(): boolean {
+  return envFlag("NOT_FOLLOWING_IS_VIOLATION_ENABLED");
 }
 
 /**
@@ -4431,4 +4917,540 @@ export function firstNameEnoughEnabled(): boolean {
  */
 export function noShowOpeningIsAttendanceEnabled(): boolean {
   return envFlag("NO_SHOW_OPENING_IS_ATTENDANCE_ENABLED");
+}
+
+/**
+ * SAME_REQUEST_CARRIES_ACCOUNT_ENABLED (coding 6, 10 Nov 2026; default off;
+ * QA's live check on the sibling app's r19; port). "create a corrective action for <A>, she was
+ * late on 11/3/26" → "Can you do the same thing for <B> but make it a
+ * written": <B>'s card came with no Observation of Offense live (in replay,
+ * "she was late on 11/3/26 Written Warning."). On: <B>'s card from "the same
+ * thing for <B>" shows <A>'s account with <B>'s name as its Observation ("<B>
+ * was late on 11/3/26"), never the request lead, a pronoun for <B> or the
+ * level line (`forms/same-request-other-person.ts`). Off, as before.
+ */
+export function sameRequestCarriesAccountEnabled(): boolean {
+  return envFlag("SAME_REQUEST_CARRIES_ACCOUNT_ENABLED");
+}
+
+/**
+ * SAME_REQUEST_KEEPS_EARLIER_CARD_ENABLED (coding 6, 10 Nov 2026; default
+ * off; QA's live check on the sibling app's r19; port). After "Can you do the same thing for <B>
+ * but make it a written", <A>'s card read "Superseded — nothing created", so
+ * <A>'s form could no longer be created from this chat, though <B>'s card says
+ * "The earlier card or form stays as it is." On: that card does not supersede
+ * an earlier card for another person (the browser reads
+ * NEXT_PUBLIC_SAME_REQUEST_KEEPS_EARLIER_CARD_ENABLED), and Create checks
+ * <A>'s card against the conversation as it stood before "the same thing for
+ * <B>" (`forms/same-request-other-person.ts`). Off, as before.
+ */
+export function sameRequestKeepsEarlierCardEnabled(): boolean {
+  return envFlag("SAME_REQUEST_KEEPS_EARLIER_CARD_ENABLED");
+}
+
+/**
+ * SAME_REQUEST_OFF_ROSTER_ENABLED (coding 6, 10 Nov 2026; default off; the sibling app's round-23 live test (Sunny),
+ * conv_mwb1xng82tz2tyr): "Can you do the same thing for <B> but make it a written" after "create a corrective action
+ * for <A>, she was late on 11/3/26", with <A> and <B> not on the directory, gave <B> a card with no Observation and
+ * left <A>'s card "Superseded — nothing created": SAME_REQUEST_OTHER_PERSON read <A> and <B> from the roster only, so
+ * SAME_REQUEST_CARRIES_ACCOUNT and SAME_REQUEST_KEEPS_EARLIER_CARD never ran. On, <A> is the latest card's employee
+ * and <B> the one person typed after "for" when nobody on the roster is named. Off, as before.
+ */
+export function sameRequestOffRosterEnabled(): boolean {
+  return envFlag("SAME_REQUEST_OFF_ROSTER_ENABLED");
+}
+
+/** The browser's reading of SAME_REQUEST_KEEPS_EARLIER_CARD_ENABLED (`lib/forms/proposal-continuation.ts`). */
+export function sameRequestKeepsEarlierCardClientEnabled(): boolean {
+  // NEXT_PUBLIC_ is inlined at build time; the server and the replay pack read it from the environment.
+  const inlined = process.env.NEXT_PUBLIC_SAME_REQUEST_KEEPS_EARLIER_CARD_ENABLED;
+  return typeof inlined === "string" && ON.has(inlined.trim().toLowerCase());
+}
+
+/**
+ * Prior actions typed with no comma between them (QA, 26 Oct 2026): "prior
+ * coaching verbal 6/25 written 7/28 no deduct" read the second line as
+ * "Written warning — verbal 6/25 — 07/28/2026". On, after a labelled earlier
+ * step, an item that names a step and is set off only by spaces continues the
+ * list, as a comma or "and" does, and keeps only its own words
+ * (`lib/forms/form-date-answer.ts`). Server-only. Off (the default), prior
+ * actions read exactly as before.
+ *
+ * QA, 26 Oct 2026 (the sibling app's round 3): "… verbal prior coachings 9/8
+ * 9/15 9/25" — a label and a bare list of dates is one step per date, each
+ * with only its own date, and the "verbal" before the label is this form's
+ * level (`lib/forms/warning-level.ts`). Read as on only with
+ * PRIOR_ACTIONS_PARSE_ENABLED, which it extends.
+ *
+ * QA, 26 Oct 2026 (both apps): "… no call no show today. I coached her on
+ * 10-16 and gave a verbal on 10-21" lists both as prior actions, and neither
+ * is "it happened on" (`lib/forms/form-date-answer.ts`).
+ */
+export function priorActionsNoCommaEnabled(): boolean {
+  return envFlag("PRIOR_ACTIONS_NO_COMMA_ENABLED") && envFlag("PRIOR_ACTIONS_PARSE_ENABLED");
+}
+
+/**
+ * ATTENDANCE_PLAN_NEEDS_LATENESS_ENABLED (QA's prod-env reading and ruling, 11 Nov 2026; default off; same flag in both
+ * apps). With ATTENDANCE_ACTION_PLAN on (production), "create ca form for <name> for violating attendance policy on
+ * 10-20-26. verbal. …" saved Pau's lateness plan ("expected to arrive on time … Continued lateness …") though no lateness
+ * was described. On: an Attendance account that never states lateness (late, tardy, on time, clocked in, arrived) keeps
+ * the general plan, as a missed meeting or shift already does (`forms/attendance-action-plan.ts`); an account that states
+ * lateness keeps Pau's plan. Off, as before.
+ */
+export function attendancePlanNeedsLatenessEnabled(): boolean {
+  return envFlag("ATTENDANCE_PLAN_NEEDS_LATENESS_ENABLED");
+}
+
+/**
+ * A misspelled "submitted" before the notice ("she submited her notice on
+ * 9/29/26", QA's October triage, 10 Nov 2026) names the notice date, as
+ * "submitted" does. Without it the notice date stayed blank. Off, as before.
+ */
+export function exitNoticeVerbTyposEnabled(): boolean {
+  return envFlag("EXIT_NOTICE_VERB_TYPOS_ENABLED");
+}
+
+/**
+ * A job title the manager typed keeps an initialism upper case: "she is an HR
+ * assistant" (or "an hr assistant") is "HR Assistant" on the card, never "Hr
+ * Assistant" (QA, #207; the title casing of `job-title-from-words.ts`). Only
+ * HR, IT, DM and GM; every other word is Capitalized as before. Off, as
+ * before.
+ */
+export function titleInitialismCaseEnabled(): boolean {
+  return envFlag("TITLE_INITIALISM_CASE_ENABLED");
+}
+
+/**
+ * NO_NAME_REPLY_WORDING_ENABLED (QA, the sibling app's round 22 live test, 11 Nov 2026; port from the sibling app; default off; same
+ * flag in both apps). "create a CA for ima employee" made no card, but the reply said "for the the employee" twice and
+ * "You can create it now" with no Create button. On, the name's stand-in is never re-replaced and a card with no employee
+ * says it can be created once the name is given (`forms/no-name-reply-wording.ts`). Off, as before.
+ */
+export function noNameReplyWordingEnabled(): boolean {
+  return envFlag("NO_NAME_REPLY_WORDING_ENABLED");
+}
+
+/**
+ * TITLE_NOT_PART_OF_NAME_ENABLED (B-C3 part 2 from QA's open-case list, 11 Nov 2026; the sibling app's Pau scan sf-s36;
+ * default off; QA: the roster set goes on with Bubbles 16c). "… exit for <first> <last, one letter off> TM. Quit without
+ * notice." put "<first> <last> TM" on the card, so the roster readers found nobody and never offered the roster's
+ * spelling. On: a store title written short after a typed name of two words or more is taken off it before the roster is
+ * read (`forms/roster-only-names.ts`). Off, as before.
+ */
+export function titleNotPartOfNameEnabled(): boolean {
+  return envFlag("TITLE_NOT_PART_OF_NAME_ENABLED");
+}
+
+/**
+ * With FULL_MANUAL_CONTEXT_ENABLED on, a question the policy words do not
+ * catch ("Where should employees park?", "What is COBRA?") is still asked
+ * with the whole manual when retrieval's best excerpt is from the manual or
+ * the question names a word of a heading the manual prints. Off, only the
+ * policy words choose the manual and every other question keeps retrieval.
+ * Default off: it moves most manual questions onto the full-manual prompt.
+ */
+export function fullManualWideGateEnabled(): boolean {
+  return envFlag("FULL_MANUAL_WIDE_GATE_ENABLED");
+}
+
+/**
+ * A turn never saves or shows a blank answer. A successful answer whose prose
+ * is empty after every post-processor, and which carries no form card, choice
+ * or update, is returned as an honest failure instead ("Bubbles could not
+ * produce an answer…"), so the thread shows an error card and the turn is
+ * closed as failed. Ported from the sibling app. Off, the answer is returned as it is.
+ */
+export function emptyReplyGuardEnabled(): boolean {
+  return envFlag("EMPTY_REPLY_GUARD_ENABLED");
+}
+
+/**
+ * The form card's policy line carries the printed page from the JBA Policy
+ * Manual's chunk metadata: "**Policy:** Standards of Conduct (JBA Policy
+ * Manual p.12), as you said" (QA, 25 Oct 2026). Only a line the app wrote
+ * with one of its own policy names changes; a heading without exactly one
+ * printed page gets none. Off, the card is exactly as before.
+ */
+export function policyPageOnCardEnabled(): boolean {
+  return envFlag("POLICY_PAGE_ON_CARD_ENABLED");
+}
+
+/**
+ * REVISION_ARCHIVED_NOT_OPEN_ENABLED (QA's audit item 17a, 10 Nov 2026; default off; same flag in both apps).
+ * `findOpenRevision` (`forms/instances.ts`, protected) handed back a revision draft an administrator had archived, so
+ * "Edit as new draft" reopened the draft somebody had put away. On, an archived draft is not the open revision and a new
+ * request opens a new one. Needs the migration 20261110201714_form_instances_one_open_revision_not_archived.sql applied
+ * first: the one-open-revision index otherwise counts the archived draft and refuses the new one. Off, as before.
+ */
+export function revisionArchivedNotOpenEnabled(): boolean {
+  return envFlag("REVISION_ARCHIVED_NOT_OPEN_ENABLED");
+}
+
+/**
+ * Keep a date the manager typed, and send a one-word follow-up to the
+ * question just asked. Off, a relative day such as "yesterday" still leaves
+ * the form dated today, and a bare "verbal" can be saved as the job title.
+ */
+export function formInputFidelityEnabled(): boolean {
+  return envFlag("FORM_INPUT_FIDELITY_ENABLED");
+}
+
+/**
+ * FORM_FOR_FOR_TYPO_ENABLED (B-C3 from QA's open-case list, 11 Nov 2026; the sibling app's Pau scan sf-s36, a real
+ * manager: "I need a exit for for <name> TM. Quit without notice. …"; default off). The message was never read as an exit
+ * request: "for for" is "form for" mistyped, and "exit for for" named no form. On: a form's name followed by "for for" is
+ * read as "<form> form for" (`forms/template-intent.ts` canonicalFormWording). Off, as before.
+ */
+export function formForForTypoEnabled(): boolean {
+  return envFlag("FORM_FOR_FOR_TYPO_ENABLED");
+}
+
+/**
+ * PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT_ENABLED (coding 6, 11 Nov 2026; default off; ported from the sibling app's round-25 live test of
+ * sf-s21, dpl_E584Q17G): with <A>'s Corrective Action draft open, a pasted labelled template of <B>'s CA ("Observation
+ * of Offense: … Action Plan: …") stayed on the draft (PASTED_OUTLINE_TO_OPEN_DRAFT) but nothing was saved ("Nothing on
+ * the form has changed yet. I couldn't place that …"). On, when the revision writes nothing, each labelled section goes
+ * into the draft's field of that label, with the template's person written as the draft's employee, never a person
+ * switch (`forms/pasted-template-fields.ts`). Off, as before.
+ */
+export function pastedTemplateFieldsToOpenDraftEnabled(): boolean {
+  return envFlag("PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT_ENABLED");
+}
+
+/**
+ * GROUP_WORDS_NOT_A_NAME_ENABLED (coding 6, 11 Nov 2026; default off; Problem 19, this app's production, 10 Nov 2026):
+ * "I want the same form for multiple employees" put "multiple employees" on the coaching card as the employee, with
+ * "Everything I need is here". On, a group of people ("multiple employees", "my employees", "several team members",
+ * "the team", "everyone") is never a person's name (`forms/not-a-name.ts` isGroupOfPeople, with NOT_A_NAME_GUARD),
+ * so the bot asks who they are and the coaching topic is kept. Off, as before.
+ */
+export function groupWordsNotANameEnabled(): boolean {
+  return envFlag("GROUP_WORDS_NOT_A_NAME_ENABLED");
+}
+
+/**
+ * LETTER_GREETING_ANY_CASE_ENABLED (coding 6, 10 Nov 2026; default off; QA's
+ * live Bubbles tester, round 11). "… Dear <A>, Your employment with … is
+ * terminated …" kept the salutation with LETTER_GREETING_NOT_NAME on: the
+ * words after the addressee's comma that show the letter has begun were read
+ * in lower case only, and the card's Name was sometimes "Dear <A>". On: they
+ * are read in any case, and "I" is one of them, for the greeting and for
+ * EXIT_LETTER_ADDRESSEE's addressee. See `ai/letter-signer.ts`. Off, as before.
+ */
+export function letterGreetingAnyCaseEnabled(): boolean {
+  return envFlag("LETTER_GREETING_ANY_CASE_ENABLED");
+}
+
+/**
+ * COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED (QA, 11 Nov 2026; Coding-5's BCS-metrics probe; default off). "She was below
+ * goal in IPT, AOV and Comp Sales % for October" on a sales Corrective Action lost its Issue: the name reader took
+ * "Comp Sales" (and "Discount Rate") for a person, and the next turn's card was drawn from that turn alone. On: a
+ * candidate made only of the company's own metric words (`config/company/metric-words.ts`), measure words and percent
+ * signs is not a person (`forms/person-guard.ts`); somebody on the roster still always is. Off, as before.
+ */
+export function companyMetricWordsNotNamesEnabled(): boolean {
+  return envFlag("COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED");
+}
+
+/**
+ * FORMS_BELOW_NEEDS_FORMS_ENABLED (QA's Bubbles 17i live test, 11 Nov 2026; default off). With LEAD_FULL_SENTENCE on,
+ * "my team member keeps showing up out of uniform, wearing a hoodie, what do I do?" and "Do i need to copy and paste
+ * it?" ended "Based on what you've described, I can prepare one of the forms below." with no forms below it. On: at the
+ * turn's last exit, that sentence goes when the reply carries no form choices (`forms/lead-full-sentence.ts`). Off, as
+ * before.
+ */
+export function formsBelowNeedsFormsEnabled(): boolean {
+  return envFlag("FORMS_BELOW_NEEDS_FORMS_ENABLED");
+}
+
+/**
+ * WORN_CLOTHING_IS_DRESS_CODE_ENABLED (QA's Bubbles 17i live test, 11 Nov 2026; default off). "can you make a CA for <C>
+ * for wearing a hoodie to work?" made a Corrective Action card with no Policy line, and its plan said "review the
+ * applicable company policy". On: a garment the person wore ("wearing a hoodie", "wore sweats", "in joggers") reads as
+ * the Dress Code, as "leggings" already does (`forms/ca-policy.ts`). Off, as before.
+ */
+export function wornClothingIsDressCodeEnabled(): boolean {
+  return envFlag("WORN_CLOTHING_IS_DRESS_CODE_ENABLED");
+}
+
+/**
+ * COPY_PASTE_POINTS_TO_CARD_ENABLED (QA's Bubbles 17i live test, 11 Nov 2026; default off). With a Corrective Action
+ * card on screen, "Do i need to copy and paste it?" was answered "No — … say 'create a corrective action for <C>' and
+ * the form card will appear", as if there were no card. On: the turn is about the card on screen; the reply is one line
+ * pointing to its **Create draft** button, and the card stays attached (`ai/card-meta-turn.ts`). Off, as before.
+ */
+export function copyPastePointsToCardEnabled(): boolean {
+  return envFlag("COPY_PASTE_POINTS_TO_CARD_ENABLED");
+}
+
+/**
+ * CA_PROCEDURE_BASIS_ENABLED (Pau via QA, 5 Nov 2026, sf-b6 in this app; default
+ * off; same flag in both apps). A Corrective Action for closing a register
+ * early and turning away a customer came back with Standards of Conduct
+ * ticked and quoted, after the chat said no source states a policy for it.
+ * On, the drafting call may name the basis store_procedure, which moves an
+ * unreasoned Standards of Conduct tick to Other like upkeep does
+ * (`forms/ca-conduct-reason.ts`). Off, the tool and the tick are as before.
+ */
+export function caProcedureBasisEnabled(): boolean {
+  return envFlag("CA_PROCEDURE_BASIS_ENABLED");
+}
+
+/**
+ * NO_SELECTION_ON_OPEN_CARD_ENABLED (coding 6, 10 Nov 2026; default off;
+ * Pau's sf-b6; port from the sibling app). With a Corrective Action card on screen, a turn adding
+ * a detail ended "Based on what you've described, I can prepare:" above a
+ * choice offering the same form again. On: when the card on screen's form is
+ * among the choices, the choice and its lead are left off. See
+ * `forms/no-selection-on-open-card.ts`. Off, as before.
+ */
+export function noSelectionOnOpenCardEnabled(): boolean {
+  return envFlag("NO_SELECTION_ON_OPEN_CARD_ENABLED");
+}
+
+/**
+ * TERMINATION_STATED_TICKS_ENABLED (coding 6, 10 Nov 2026; default off;
+ * ported from the sibling app: Pau's P15 ruling "A" there). "I need a term CA for <name>. …" — the card
+ * asked "Verbal Warning or Written Warning?" and the form's Type of
+ * Warning was blank: chat never ticks Termination (`escalation-guard.ts`). On:
+ * a termination the manager STATES for this form ("term CA", "termination",
+ * "terminate her") is ticked at Create as their statement, the card says so
+ * ("**Type of Warning:** Termination, as you said …") with one line, "Termination
+ * needs your DM/HR approval before you finalize.", and the card's Action Plan
+ * line ends with the termination sentence. A hedge ("she might be terminated if
+ * this continues") states nothing. Suspension and demotion are unchanged; the
+ * guard is unchanged when off. See `forms/termination-stated.ts`. Off, as before.
+ */
+export function terminationStatedTicksEnabled(): boolean {
+  return envFlag("TERMINATION_STATED_TICKS_ENABLED");
+}
+
+/**
+ * TERMINATION_STATED_TICKS_ENABLED where the Action Plan's required closing is read: on the server and in the browser
+ * (the form on screen). The browser reads NEXT_PUBLIC_TERMINATION_STATED_TICKS_ENABLED, inlined at build time: FLIP
+ * BOTH TOGETHER, or the screen re-adds the closing the saved plan replaced. Off, false.
+ */
+export function terminationClosingEnabled(): boolean {
+  if (typeof window === "undefined") return envFlag("TERMINATION_STATED_TICKS_ENABLED");
+  const inlined = process.env.NEXT_PUBLIC_TERMINATION_STATED_TICKS_ENABLED;
+  return typeof inlined === "string" && ON.has(inlined.trim().toLowerCase());
+}
+
+/**
+ * NAME_CORRECTION_KEEPS_DATE_ENABLED (QA, 11 Nov 2026; Gate-Bubbles' probe of s14 path 1; default off). The answer to
+ * "Is this for **<name>**?" ("Oops, it's Rozlyn quellmar") is read as the request again, and its card lost the date the
+ * card already had (2026-10-01 → none), on production's flags too. On, a name correction never clears the card's date
+ * (`ai/name-correction-keeps-date.ts`). Off, as before.
+ */
+export function nameCorrectionKeepsDateEnabled(): boolean {
+  return envFlag("NAME_CORRECTION_KEEPS_DATE_ENABLED");
+}
+
+/**
+ * NEAR_MISS_TURNED_DOWN_EVERYWHERE_ENABLED (QA, 10–11 Nov 2026; default off; with NEAR_MISS_QUESTION_RULES; same flag in
+ * both apps). After "Is this for **<roster name>**?": (1) "no call no show on 11/3, verbal warning" is an account that
+ * keeps the name, not a "no" — "no"/"nope" turn it down only on their own or with their own punctuation; (2) when the
+ * name is turned down, it also leaves the reply's Action Plan line, and the "no," that turned it down leaves the
+ * account line (`forms/near-miss-question-rules.ts`). Off, as before.
+ */
+export function nearMissTurnedDownEverywhereEnabled(): boolean {
+  return envFlag("NEAR_MISS_TURNED_DOWN_EVERYWHERE_ENABLED");
+}
+
+/**
+ * ANSWER_TURN_LEVEL_ENABLED (coding 6, 12 Nov 2026; default off; QA's ruling (a), from B#808's gate). After the app's own
+ * question ("Is this for <name>?", "Who is this … for?", the open level question), "no call no show on 11/3, verbal
+ * warning" read the level as history and kept it in the Issue. On: in such an answer, a trailing bare-level clause with no
+ * history words is this form's level and leaves the Issue. Off, as before. See `forms/answer-turn-level.ts`.
+ */
+export function answerTurnLevelEnabled(): boolean {
+  return envFlag("ANSWER_TURN_LEVEL_ENABLED");
+}
+
+/**
+ * OUTLINE_ON_OPEN_PROPOSAL_ENABLED (coding 6, 11 Nov 2026; default off; QA's Bubbles 17i live test). On a proposal
+ * (Create not pressed), a pasted "Observation of Offense: … / Action Plan: …" outline for another person, then "same
+ * outline but with <A>'s info", cost the card its Issue and Policy. On: with no form open, a pasted outline and a
+ * "same outline" turn are no account — left out of the proposal's re-read, which takes the request before them — and
+ * the reply says the outline is kept as her form's layout (`forms/outline-on-proposal.ts`). Off, as before.
+ */
+export function outlineOnOpenProposalEnabled(): boolean {
+  return envFlag("OUTLINE_ON_OPEN_PROPOSAL_ENABLED");
+}
+
+/**
+ * TITLE_BEFORE_NAME_ENABLED (QA's Bubbles 17h live test, 11 Nov 2026; default off). As Admin, "Corrective action for
+ * Team Member <name>" gave no card: the form's name then "for <words>" is a request only when the first word could be a
+ * name, and "Team" cannot, so the message was read as a question about corrective action. "Create a corrective action
+ * for Team Member <name>" carded with no employee. On: a store job title (or its short form) straight after "for" and
+ * before a name is not part of the name (`forms/title-before-name.ts`). Off, as before.
+ */
+export function titleBeforeNameEnabled(): boolean {
+  return envFlag("TITLE_BEFORE_NAME_ENABLED");
+}
+
+/**
+ * FORMS_ON_FILE_ORDER_MATCH_POSSIBLE_ENABLED (QA's Bubbles 17h live test, 11 Nov 2026; default off). The FORMS ON FILE
+ * block counts a row as naming the person when every word of its employee name is in the question, in any order, so
+ * drafts filed as "<last> <first>" were listed as the asked person's own. On: a name whose words are all there but in
+ * another order is a POSSIBLE match, for the model to ask about (`forms/chat-form-records.ts`). Off, as before.
+ */
+export function formsOnFileOrderMatchPossibleEnabled(): boolean {
+  return envFlag("FORMS_ON_FILE_ORDER_MATCH_POSSIBLE_ENABLED");
+}
+
+/**
+ * POLICY_CARRY_RETRIEVAL_ENABLED (Code 3, 26 Oct 2026; rebuilt on main by coding 6, 12 Nov 2026; default off; QA item 10,
+ * conv_mvofuq3l2jae1be; same flag in both apps). A go-ahead turn ("just make it", "create it", "yes") is searched with the
+ * policy the manager named earlier, not its own words: "Just make it" found unrelated pages, and the reply denied a
+ * policy it had cited two turns before. Off, the turn is searched as before. The search reads it in `ai/server-ask.ts`.
+ */
+export function policyCarryRetrievalEnabled(): boolean {
+  return envFlag("POLICY_CARRY_RETRIEVAL_ENABLED");
+}
+
+/**
+ * BARE_COACHING_REQUEST_LEAD_ENABLED (coding 6, 12 Nov 2026; default off; ported from the sibling app's round 31 live
+ * test, reproduced here in the draft). "create a coaching for <A>, she told a client …" put the request words at the head
+ * of the drafted account: "coaching" without "form" was not read as the form. On: it is, only when "for" follows
+ * (`ai/remap-incident.ts`, `forms/draft-never-blank.ts`). Off, as before.
+ */
+export function bareCoachingRequestLeadEnabled(): boolean {
+  return envFlag("BARE_COACHING_REQUEST_LEAD_ENABLED");
+}
+
+/**
+ * DETAILS_FROM_EARLIER_ANSWER_ENABLED (coding 6, 10 Nov 2026; default off; a
+ * manager's production chat relayed by coding 3, 5 Nov 2026, both apps:
+ * chat-edits (a)). The coaching details were in the app's own answer BEFORE
+ * the card; then "can you upate the draft with these details of coaching?" →
+ * "it didnt edit in the card" → "the details we just discussed!!!" left the
+ * Details empty: "these details" and "the details we just discussed" were
+ * read from the last reply only — the card, then the app's own "I haven't
+ * changed …". On: they are read from the latest answer that is not the app's
+ * own card or edit reply (`forms/form-content-turn.ts`). Off, as before.
+ */
+export function detailsFromEarlierAnswerEnabled(): boolean {
+  return envFlag("DETAILS_FROM_EARLIER_ANSWER_ENABLED");
+}
+
+/**
+ * TERMINATION_INTAKE_ENABLED (coding 6, 12 Nov 2026; default off; QA). "Termination CA for <A>, no call no show." opened
+ * no card (the leading level read verbal / written / final only), and a pasted termination letter ("Dear <C>, Your
+ * employment with … is terminated effective 11/10/26.", the 17k live test) got the general answer — live, a refusal —
+ * instead of the Resignation/Exit Form. On: a leading "term / termination CA for <name>" asks for the Corrective Action
+ * Form, and a termination letter asks for the exit form. Off, as before. See `forms/template-intent.ts`.
+ */
+export function terminationIntakeEnabled(): boolean {
+  return envFlag("TERMINATION_INTAKE_ENABLED");
+}
+
+/**
+ * RESENT_REQUEST_IS_YES_ENABLED (coding 6, 12 Nov 2026; default off; QA). The same request (or the same pasted letter)
+ * sent again while "Is this for **<name>**?" waits was answered "Who is this … for?", losing the offered name. On: it is
+ * read as "yes" to that question. Off, as before. See `forms/resent-request-is-yes.ts`.
+ */
+export function resentRequestIsYesEnabled(): boolean {
+  return envFlag("RESENT_REQUEST_IS_YES_ENABLED");
+}
+
+/**
+ * TITLE_BEFORE_NAME_REPLY_LINES_ENABLED (QA's Bubbles 17o live test, 12 Nov 2026; default off). With TITLE_BEFORE_NAME on,
+ * "Corrective action for Team Member <B>" names <B> on the card, but the reply's lines written from the name as first
+ * read kept the title's first word: "… with Team." and "I couldn't verify a store for **Team** from Woven". On: those
+ * lines take the person's first name (`forms/roster-only-names.ts`). Off, as before.
+ */
+export function titleBeforeNameReplyLinesEnabled(): boolean {
+  return envFlag("TITLE_BEFORE_NAME_REPLY_LINES_ENABLED");
+}
+
+/**
+ * REGISTER_ACCURACY_CONDUCT_ENABLED (coding 6, 10 Nov 2026; default off; port; QA's
+ * CA sales batch, 4 Nov 2026, case (c), and Pau's ruling that a sale rung up
+ * inaccurately is the Standards of Conduct). "create a corrective action for
+ * <name> for ringing up the wrong items on a guest's sale" made a card that
+ * cited no policy: nothing at card time reads a register mistake. On: a
+ * NARROW word list in `forms/ca-policy.ts` (ringing / rang / rung up the
+ * wrong or incorrect items, products or prices; a sale rung up wrong or
+ * inaccurately; mis-rang) reads as the Standards of Conduct, said on the card
+ * as "ringing up a sale inaccurately". No model call. Off, as before.
+ */
+export function registerAccuracyConductEnabled(): boolean {
+  return envFlag("REGISTER_ACCURACY_CONDUCT_ENABLED");
+}
+
+/**
+ * CARD_PLAN_MATCHES_CREATE_ENABLED (coding 6, 12 Nov 2026; default off; QA's Bubbles 17l, ruling B). An Attendance
+ * Corrective Action's card showed the general plan while Create saved Pau's attendance plan. On: the card shows the plan
+ * Create will save. Off, as before. See `forms/card-plan-matches-create.ts`.
+ */
+export function cardPlanMatchesCreateEnabled(): boolean {
+  return envFlag("CARD_PLAN_MATCHES_CREATE_ENABLED");
+}
+
+/**
+ * NEXT_PUBLIC_REPLY_QUOTE_LINES_ENABLED (QA's Bubbles 17p live check, 12 Nov 2026; default off). With
+ * STEP_B_REPLY_KEEPS_LINES on, an edit reply quotes the field line by line ("Changed Observation of Offense to:\n>
+ * Observed:\n> <G> was late …\n> Expectation: …"), but the chat showed it as ONE line with ">" between the parts: the
+ * renderer had no quote block, so the "> " lines were joined into a paragraph. On: a run of "> " lines renders as a
+ * quote, each line on its own line (`components/rich-text.tsx`). The chat renders in the browser, so only the public
+ * name is read, written out statically for Next to inline. Off, as before.
+ */
+export function replyQuoteLinesClientEnabled(): boolean {
+  const inlined = process.env.NEXT_PUBLIC_REPLY_QUOTE_LINES_ENABLED;
+  return typeof inlined === "string" && ON.has(inlined.trim().toLowerCase());
+}
+
+/**
+ * TERMINATION_CARD_TIDY_ENABLED (coding 6, 12 Nov 2026; default off; QA's 17o live notes on termination). "CA for <A>, do
+ * not terminate yet, she was late" made the Issue "do not terminate yet"; a term CA card's Action plan line ran into the
+ * next line with no blank line. On: the Issue is the account (`ai/termination-card-tidy.ts`) and the plan line keeps its
+ * line break (`ai/termination-stated.ts`). Off, as before.
+ */
+export function terminationCardTidyEnabled(): boolean {
+  return envFlag("TERMINATION_CARD_TIDY_ENABLED");
+}
+
+/**
+ * TEAM_CARD_NOT_PRODUCT_ENABLED (coding 6, 10 Nov 2026; default off; QA's
+ * overnight scan sf-s13). "a coaching form for the team at Kearney on selling
+ * Spray Tan Kits …" made a card for "Spray Tan Kits", and "The employee needs
+ * to be left blank for now" went into its Observation. On: a coaching card
+ * whose name is nobody on the roster and was only written as the topic
+ * ("selling …", "on …"), in a request for the team (or one that leaves the
+ * employee blank), is the team card, and the blank-employee turn is no
+ * account. See `forms/team-card-not-product.ts`. Off, as before.
+ */
+export function teamCardNotProductEnabled(): boolean {
+  return envFlag("TEAM_CARD_NOT_PRODUCT_ENABLED");
+}
+
+/**
+ * TYPO_FULL_NAME_TO_ROSTER_ENABLED (coding 6, 11 Nov 2026; default off; QA's audit item 15.10, overnight scan sf-b5,
+ * invented names). "create a ca form for Delphine Marlwoe Ostrander" for the roster's Delphine Marlowe Ostrander made
+ * the card for the name as typed (TYPED_NAME keeps the typed spelling; the near-miss question rides on
+ * FORM_NAME_FROM_ROSTER, off in production), so Woven's position never reached it. On: a full name typed with the
+ * roster person's own first name and every surname word that person's, exact or one typo (two for a long word), when
+ * exactly one roster person is that close, is that person (`forms/employee-match.ts` matchEmployeeName). Off, as before.
+ *
+ * Reworked (12 Nov 2026, QA's ruling on Gate-Bubbles-4's NO-GO, G4-776): the typo is NOT matched straight to the roster
+ * person — "Is this for **<roster name>**?" is still asked first (a typo can be a different person; the confirmation
+ * costs one turn), and a preferred name stays as the roster has it. On: after that question, a turn that opens with a
+ * level ("verbal warning …") on the asked person's Corrective Action card is the card's level
+ * (`forms/confirmed-name-level.ts`). Off, as before.
+ */
+export function typoFullNameToRosterEnabled(): boolean {
+  return envFlag("TYPO_FULL_NAME_TO_ROSTER_ENABLED");
+}
+
+/**
+ * EXIT_NOTICE_STATED_ONLY_ENABLED (coding 6, 12 Nov 2026; default off; QA's Bubbles 17j live test). "exit form for <A>,
+ * she resigned 11/8 …" filled "Date that notice was given: November 8" though the manager gave only the resignation
+ * date. On: that line is filled only when the manager states notice; the date stays the Resignation Date. Off, as before.
+ * See `forms/exit-facts.ts`.
+ */
+export function exitNoticeStatedOnlyEnabled(): boolean {
+  return envFlag("EXIT_NOTICE_STATED_ONLY_ENABLED");
 }

@@ -34,11 +34,11 @@ export function pauSfB6People(): readonly DirectoryRow[] {
   return [WYNNE];
 }
 
-const T3 =
+export const T3 =
   "can you have it include that we recieved a customer complaint from Sunday 11-1, she started closing the last register at 4:56pm and we cant close until the store is closed at 5pm, we had a customer come in at 4:59 and was told them that we were closed";
 
 /** The live answer to turn 3, verbatim (without the app's trailing lead). */
-const LIVE_T3_ANSWER = `I can add that detail as the factual account on the form, but I want to flag something first: none of the sources available to me state a policy against closing a register before the store's closing time, or a requirement tied to a specific till-closing minute — so I can't cite a policy breach on this point. The Revel sources only describe the End of Day process steps, not a timing rule.
+export const LIVE_T3_ANSWER = `I can add that detail as the factual account on the form, but I want to flag something first: none of the sources available to me state a policy against closing a register before the store's closing time, or a requirement tied to a specific till-closing minute — so I can't cite a policy breach on this point. The Revel sources only describe the End of Day process steps, not a timing rule.
 
 Here's what I can put on the Corrective Action Form:
 
@@ -59,6 +59,12 @@ export const NOV5_PAU_SF_B6_CASES: ReplayCase[] = [
     title: "sf-b6: the reply never ends at \"I can prepare:\"; the card after \"Create … from this conversation\" carries the detail added on turn 3",
     report: "Pau via QA, 5 Nov 2026 (this app's production, 4 Nov), sf-b6",
     status: { open: "the reply ends \"Based on what you've described, I can prepare:\" with nothing after it" },
+    // QA's backlog B7 (10 Nov 2026): the ending is fixed behind LEAD_FULL_SENTENCE_ENABLED (case nov5-sf-b6-reply-full-sentence
+    // below); with it on, this case still fails on the card, which ignores the detail added on turn 3 — not in B7, left open.
+    // Fixed under NO_SELECTION_ON_OPEN_CARD_ENABLED (port from the sibling app, 10 Nov 2026): no form choice for the card already on screen; open on production flags until QA flips it.
+    fixFlags: ["NO_SELECTION_ON_OPEN_CARD_ENABLED"],
+    // With the flag the reply no longer ends at "I can prepare:", but here the next card still misses the turn-3 detail (a second defect, not this flag's).
+    // Changed on purpose (13 Nov 2026, QA round 17q): ADDED_DETAIL_KEPT is on in production, so the fix-flag run now carries the turn-3 detail; fixStatus dropped.
     async run(t: T) {
       vi.setSystemTime(new Date("2026-11-04T23:30:00Z"));
       t.directory([...STAFF, WYNNE]);
@@ -73,6 +79,74 @@ export const NOV5_PAU_SF_B6_CASES: ReplayCase[] = [
       const card = await thread.say("Create a Corrective Action Form from this conversation.");
       expect(thread.proposal, `no Corrective Action card:\n${card.content}`).toMatchObject({ templateKey: "dpoa", employeeName: "Wynne Sarrow" });
       expect(card.content, `the card ignores the detail added on turn 3:\n${card.content}`).toMatch(/4:56|customer complaint|told (?:them )?(?:that )?(?:we|the store) (?:were|was) closed/i);
+    },
+  },
+  {
+    id: "nov5-sf-b6-policy-left-for-the-manager",
+    title: "sf-b6: the reply said no source states a policy and it would leave that field for the manager; the saved Policy Violated and Direct policy are not AI-filled",
+    report: "Pau via QA, 5 Nov 2026 (this app's production, 4 Nov), sf-b6",
+    status: { open: "the drafting model's tick fills Policy Violated and quotes Direct policy after the reply said it would leave the policy to the manager" },
+    fixFlags: ["CA_PROCEDURE_BASIS_ENABLED"],
+    async run(t: T) {
+      vi.setSystemTime(new Date("2026-11-04T23:30:00Z"));
+      t.directory([...STAFF, WYNNE]);
+      t.as("location_manager", WEST_DODGE);
+      const thread = t.thread();
+      await thread.say("I need a corrective action form for Wynne Sarrow for counting the drawer early and turning away a customer");
+      t.modelSays(LIVE_T3_ANSWER);
+      await thread.say(T3);
+      t.modelSays(null);
+      await thread.say("Create a Corrective Action Form from this conversation.");
+      // The drafting model ticks the Standards of Conduct, as the live draft did (QA, 5 Nov 2026: offense_type
+      // standards_of_conduct, filled by ai), and names the basis a store procedure where it is asked for one.
+      t.draftWrites(
+        { observation: "Observed:\nOn Sunday, 11/1/2026, Wynne started closing the last register at 4:56pm, before the 5:00pm close, and a customer who came in at 4:59 was told the store was closed." },
+        { offense_type: ["standards_of_conduct"] },
+        { offense_basis: "store_procedure" },
+      );
+      const id = await thread.create();
+      const values = t.values(id);
+      // Pau's ruling (A), 5 Nov 2026: the tick moves to Other with no Direct policy quote, so Policy
+      // Violated reads "Other", never an AI-chosen policy.
+      expect(values.policy_language ?? "", `Direct policy was AI-filled after "I'd leave that field for you":\n${values.policy_language}`).toBe("");
+      expect(values.policy_violated ?? "", `Policy Violated was AI-filled after "I'd leave that field for you":\n${values.policy_violated}`).not.toMatch(/standards of conduct/i);
+      expect(t.checked(id).offense_type ?? [], "the model's Standards of Conduct tick stands").not.toContain("standards_of_conduct");
+    },
+  },
+  {
+    id: "nov5-sf-b6-control-rude-to-a-guest",
+    title: "sf-b6 control: \"rude to a guest\" (basis conduct) keeps the Standards of Conduct with the store-procedure rule on",
+    report: "Pau's ruling (A) via QA, 5 Nov 2026",
+    status: "fixed",
+    fixFlags: ["CA_PROCEDURE_BASIS_ENABLED"],
+    async run(t: T) {
+      vi.setSystemTime(new Date("2026-11-04T23:30:00Z"));
+      t.directory([...STAFF, WYNNE]);
+      t.as("location_manager", WEST_DODGE);
+      const thread = t.thread();
+      await thread.say("I need a corrective action form for Wynne Sarrow for being rude to a guest at the register on 11/1");
+      t.draftWrites({ observation: "Observed:\nOn 11/1/2026, Wynne was rude to a guest at the register." }, { offense_type: ["standards_of_conduct"] }, { offense_basis: "conduct" });
+      const id = await thread.create();
+      expect(t.checked(id).offense_type ?? [], "rude to a guest lost the Standards of Conduct").toContain("standards_of_conduct");
+    },
+  },
+  {
+    id: "nov5-sf-b6-reply-full-sentence",
+    title: "sf-b6, the reply only: the turn-3 reply never ends at \"I can prepare:\"",
+    report: "Pau via QA, 5 Nov 2026 (this app's production, 4 Nov), sf-b6; QA's backlog B7 (10 Nov 2026)",
+    status: { open: "the reply ends \"Based on what you've described, I can prepare:\" with nothing after it" },
+    fixFlags: ["LEAD_FULL_SENTENCE_ENABLED"],
+    async run(t: T) {
+      vi.setSystemTime(new Date("2026-11-04T23:30:00Z"));
+      t.directory([...STAFF, WYNNE]);
+      t.as("location_manager", WEST_DODGE);
+      const thread = t.thread();
+      await thread.say("Which forms can I create here?");
+      await thread.say("I need a corrective action form for Wynne Sarrow for counting the drawer early and turning away a customer");
+      t.modelSays(LIVE_T3_ANSWER);
+      const third = await thread.say(T3);
+      t.modelSays(null);
+      expect(third.content.trim(), `the reply ends mid-sentence:\n${third.content}`).not.toMatch(/:\s*$/);
     },
   },
 ];

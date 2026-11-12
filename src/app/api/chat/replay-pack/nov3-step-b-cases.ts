@@ -165,7 +165,9 @@ export const NOV3_STEP_B_CASES: readonly ReplayCase[] = [
         "i don't see the details updated in the draft card.  Do i need to copy and paste it?  or should it be automatically updating?",
         "make that update",
       ]) {
-        await turnOnDraft(t, thread, id, turn);
+        const reply = await turnOnDraft(t, thread, id, turn);
+        // #480 gate (FORM_EDIT_SOURCE_TURN): an acknowledgement is never the account to add.
+        expect(reply.content, `"this is perfect" was taken as the account:\n${reply.content}`).not.toMatch(/"this is perfect" isn't on/i);
       }
       expect(t.values(id).coaching_details ?? "", 'after "make that update" the Details do not hold the new flow').toMatch(/rolling rack/i);
       for (const turn of [
@@ -173,7 +175,10 @@ export const NOV3_STEP_B_CASES: readonly ReplayCase[] = [
         `I need to add that ${rule}`,
         "the changes weren't made in the details",
       ]) {
-        await turnOnDraft(t, thread, id, turn);
+        const reply = await turnOnDraft(t, thread, id, turn);
+        // #480 gate (FORM_EDIT_SOURCE_TURN): a question about reopening the form is not an edit, nor "not on the form".
+        if (turn.startsWith("can i reopen")) expect(reply.content, `the reopen question got the not-on-the-form reply:\n${reply.content}`).not.toMatch(/Nothing on the form has changed yet/);
+        expect(reply.content, `"this is perfect" was taken as the account:\n${reply.content}`).not.toMatch(/"this is perfect" isn't on/i);
       }
       expect(t.values(id).coaching_details ?? "", "the 15-minute rule is not in the Details").toMatch(/shipping label must not be printed until 15 minutes/i);
       expect(t.values(id).coaching_details ?? "", "adding the 15-minute rule dropped the flow").toMatch(/rolling rack/i);
@@ -465,7 +470,11 @@ export const NOV3_STEP_B_CASES: readonly ReplayCase[] = [
      * fields; it does not rewrite a sentence, and taking "on 10-1-26" out of
      * one needs a word list or a drafting-prompt change, both outside it.
      */
-    status: { open: "the incident date is written twice: the Date field and again in the Observation (\"… on 10-1-26\")" },
+    // Holds with production's flags under QA's ruling of 11 Nov 2026 (the same date twice in one field is the defect; one
+    // mention in the account is not): the pack's Observation names 10-1-26 once. DATE_ONCE drops a second mention.
+    status: "fixed",
+    // QA's backlog B7 (10 Nov 2026): the fix — an account field drops the form's own date (`forms/date-once.ts`).
+    fixFlags: ["DATE_ONCE_ENABLED"],
     async run(t) {
       // HR's report was written on 21 Oct 2026; "today" must not leak onto the form.
       vi.setSystemTime(new Date("2026-10-21T15:30:00Z"));
@@ -479,7 +488,11 @@ export const NOV3_STEP_B_CASES: readonly ReplayCase[] = [
       expect(values.form_date, "the Date is not the incident date she gave").toBe("2026-10-01");
       const dates = Object.entries(values).flatMap(([key, value]) => (value.match(DATE_SHAPES) ?? []).map((text) => ({ key, text, day: monthDay(text) })));
       expect(dates.filter((date) => date.day !== "10-01"), "a date she did not give is on the form").toEqual([]);
-      expect(dates.map((date) => `${date.key}: ${date.text}`), "the incident date is written more than once").toEqual(["form_date: 2026-10-01"]);
+      // Changed on purpose (QA's ruling, 11 Nov 2026): "repeated the date" is the same date written twice in one field;
+      // one natural mention in the account ("late to her shift on 10-1-26") stays, though the Date field holds it.
+      const perField = new Map<string, number>();
+      for (const date of dates) perField.set(date.key, (perField.get(date.key) ?? 0) + 1);
+      expect([...perField].filter(([, count]) => count > 1), "the incident date is written twice in one field").toEqual([]);
     },
   },
   {

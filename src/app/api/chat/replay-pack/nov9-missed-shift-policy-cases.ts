@@ -39,6 +39,9 @@ const reported = ([
     expect(thread.proposal?.employeeName ?? null, `the card is not for Marnie:\n${content}`).toBe("Marnie Holloway");
     expect(content, `no Attendance Policy line:\n${content}`).toMatch(POLICY);
     expect(content, `the Action plan is still on "the applicable company policy":\n${content}`).not.toMatch(/applicable company policy with/i);
+    // Gate-Bubbles-2 on #818: with the page on the Policy line ("Attendance (JBA Policy Manual p.14) — read from this
+    // request"), the Action plan still names the policy bare, as on main.
+    expect(content, `the Action plan carries the page:\n${content}`).toMatch(/Management will review the Attendance policy with/);
   },
 }));
 

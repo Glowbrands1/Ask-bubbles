@@ -1,3 +1,4 @@
+import { wornClothingIsDressCodeEnabled } from "@/lib/config/chat-quality-flags";
 import type { ChatFormProposal, ChatMessage } from "@/types";
 
 /**
@@ -19,7 +20,11 @@ export function cardPolicyHeading(content: string): string | null {
   const line = /\*\*Policy:\*\*\s*([^\n]+)/.exec(content)?.[1];
   if (!line) return null;
   const first = line.split(/;|\s—\s/)[0]!;
-  const heading = first
+  // WORN_CLOTHING_IS_DRESS_CODE_ENABLED (Gate-Bubbles-2 on #818): "Dress Code (JBA Policy Manual p.15) — read from this
+  // request" names the policy "Dress Code"; the page beside it is the card's, never part of the name (the Action plan's
+  // "Management will review the Dress Code policy" kept the page otherwise).
+  const unpaged = wornClothingIsDressCodeEnabled() ? first.replace(/\s*\(JBA Policy Manual pp?\.[^)]*\)/i, "") : first;
+  const heading = unpaged
     .replace(/,\s*JBA Policy Manual.*$/i, "")
     .replace(/,\s*as you said.*$/i, "")
     .replace(/\s+Policy$/i, "")

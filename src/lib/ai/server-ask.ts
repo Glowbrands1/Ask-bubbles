@@ -1,5 +1,7 @@
 import "server-only";
 
+import { withManagerFormChoice } from "./manager-form-choice";
+import { withStoreAliases } from "./store-alias";
 import { approvedManualConfirmed, manualDisplayTitle } from "@/lib/forms/official-policy-manual";
 import { describedAttendanceKeys } from "@/lib/forms/ca-policy";
 import { mayDescribeSection } from "@/lib/forms/named-policy-section";
@@ -28,7 +30,7 @@ import { isFrameworkAvailable } from "@/lib/knowledge/framework-availability";
 import { rowToCitation, type MatchedChunkRow } from "@/lib/knowledge/mappers";
 import { buildHandbookNote, namesHandbook, selectHandbookCoverage } from "@/lib/knowledge/named-handbook";
 import { isMultiBrandManual } from "@/lib/knowledge/brand-sections";
-import { loadFullManualPlan } from "@/lib/knowledge/full-manual-load";
+import { loadFullManualPlan, loadManualCitationPlan } from "@/lib/knowledge/full-manual-load";
 import { SupabaseKnowledgeProvider } from "@/lib/knowledge/providers/supabase";
 import type { RoleGrounding } from "@/lib/knowledge/role-grounding";
 import { recallPeople } from "@/lib/chat/person-memory-store";
@@ -44,7 +46,6 @@ import { resolveScopeFor } from "@/lib/reporting/scope/server";
 import type { SourceCitation } from "@/types";
 
 import { markStage } from "./chat-stage-timings";
-import { cardPolicyTurns } from "./card-policy-request";
 import { callClaude } from "./call-claude";
 import { glossaryBlock } from "./glossary";
 import { loadChatDataBlock } from "./chat-data-tools";
@@ -83,6 +84,7 @@ import {
   antiLoopEnabled,
   formFullRemapEnabled,
   fullManualContextEnabled,
+  fullManualWideGateEnabled,
   frameworkGeneralSectionsEnabled,
   reformatKeepsSourcesEnabled,
   crossChatReplyGuardEnabled,
@@ -93,8 +95,8 @@ import {
   caSalesPolicyEnabled,
   pastFormsBeforeLibraryEnabled,
   coachingCardPolicyEnabled,
-  cardPolicyOwnRequestEnabled,
   outOfDateIsTheProposalEnabled,
+  policyPageOnCardEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { gateTexts, searchWithPlan } from "./continuation";
 import { fieldsFromManagerText, mergeConfirmed, retainFieldsInReply } from "./form-field-state";
@@ -113,7 +115,9 @@ import { rewriteRetrievalQuery } from "./query-rewrite-claude";
 import { followUpOwnQuery } from "./query-rewrite";
 import { matchHybridKnowledge } from "@/lib/knowledge/hybrid-match";
 import { matchRecallKnowledge } from "@/lib/knowledge/recall-match";
-import { withMappedPolicy } from "./violation-policy";
+import { withCardPolicyQuoted, withMappedPolicy } from "./violation-policy";
+import type { RemapManual } from "./remap-incident";
+import { withPolicyPagesOnCard } from "@/lib/forms/policy-page-on-card";
 import { loadScopedRoster } from "@/lib/forms/employee-roster";
 import { AiError } from "./errors";
 import {
@@ -129,6 +133,8 @@ import { assembleGrounding } from "./grounding-assembly";
 import { withManualReadingNotes } from "./manual-reading-notes";
 import {
   citePolicyAnswer,
+  citeRetrievedAnswer,
+  retrievedLocatorPages,
   fullManualGroundingNote,
   keepRestatedFallbackMarkers,
   validateManualCitations,
@@ -147,6 +153,7 @@ import {
 import { retrievalPlanFor } from "./retrieval-query";
 import { earlierAnsweredTurn, isReformatTurn, keepEarlierSources } from "./reformat-turn";
 import { slotOnlyRetrievalTopic } from "./slot-only-turn";
+import { carriedPolicyTopic } from "./policy-carry-retrieval";
 import { appPasswordHelpFor } from "./app-password-help";
 import { redactSensitiveDefaults, withoutSensitiveDefaults } from "./sensitive-defaults";
 import { withoutSharedSourceClaims } from "./sources-not-shared";
@@ -185,6 +192,7 @@ import { withUnreadDateAsk } from "./unread-date-ask";
 import { withUnknownNameAsk } from "./unknown-name-ask";
 import { amountTurnReply } from "./amount-turn";
 import { withPayrollTypoAnswer } from "./payroll-typo-answer";
+import { withTerminationStated } from "./termination-stated";
 import { withWarningLevelFromClause } from "./warning-level-clause";
 import { readerPropose, startFormReading, withoutStaleRosterNote } from "./reader/hook";
 
@@ -347,7 +355,9 @@ async function answerQuestionTraced(
   // FORM_TYPE_SWITCH_ENABLED: "change to coaching" with the card open switches it to the other form.
   // ADDITIONAL_LOCATION_TAKEN_ENABLED: "Store: Kearney." from a manager who covers Kearney is read as the change it is.
   // FIRST_NAME_SUGGEST_ENABLED: "yes" to "Is this for **Quinn Marlowe**?" is read as that name.
-  const read = withFormTypeSwitch(withAdditionalStore(withTerseSlots(withNameBeforeTitle(withTypoReadingCopy(await withFirstNameAnswerFor(request, actor), names))), actor));
+  // STORE_ALIAS_ENABLED: a store named the managers' way ("dodge ne") is read as its roster name.
+  // MANAGER_FORM_CHOICE_ENABLED: "needs CA", "write ca" are read as the form the manager chose.
+  const read = withFormTypeSwitch(withAdditionalStore(withManagerFormChoice(withStoreAliases(withTerseSlots(withNameBeforeTitle(withTypoReadingCopy(await withFirstNameAnswerFor(request, actor), names))))), actor));
   if (!chatTraceEnabled()) return answerQuestionBody(read, actor, memory);
   const draft = openChatTrace({
     conversationId: request.conversationId,
@@ -381,7 +391,8 @@ async function answerQuestionBody(
         withPayrollTypoAnswer(
           withUnknownNameAsk(
             withFirstNameAsk(
-              withWarningLevelFromClause(withFreshDateReask(withJobTitleFromWords(withCoachingWhatHappened(await answerQuestionCore(request, actor, memory), request), request), request), request),
+              // TERMINATION_STATED_TICKS_ENABLED: a termination the manager stated is the card's level, with the approval line.
+              withTerminationStated(withWarningLevelFromClause(withFreshDateReask(withJobTitleFromWords(withCoachingWhatHappened(await answerQuestionCore(request, actor, memory), request), request), request), request), request),
               request,
             ),
             request,
@@ -565,6 +576,16 @@ async function answerQuestionCore(
           history = request.history;
         }
       }
+      // One manual read for the remap and the card's printed page (POLICY_PAGE_ON_CARD_ENABLED).
+      let remapManual: Promise<RemapManual | null> | null = null;
+      const readRemapManual = () =>
+        (remapManual ??= new SupabaseKnowledgeProvider()
+          .fetchOfficialPolicyManual(ACTIVE_BRAND.knowledgeScopeId)
+          .then((manual) =>
+            manual.ok
+              ? { documentId: manual.documentId, documentTitle: manual.documentTitle, documentCategory: manual.documentCategory ?? null, chunks: manual.chunks }
+              : null,
+          ));
       const remapped = await remapFormTurn({
         question: request.question,
         history,
@@ -574,20 +595,13 @@ async function answerQuestionCore(
         saved,
         unpublished,
         // Read only with REMAP_INCIDENT_FIX_ENABLED on, so the card cites the section and page.
-        policyManual: async () => {
-          const manual = await new SupabaseKnowledgeProvider().fetchOfficialPolicyManual(ACTIVE_BRAND.knowledgeScopeId);
-          return manual.ok
-            ? {
-                documentId: manual.documentId,
-                documentTitle: manual.documentTitle,
-                documentCategory: manual.documentCategory ?? null,
-                chunks: manual.chunks,
-              }
-            : null;
-        },
+        policyManual: readRemapManual,
       });
       // REMAP_DRAFT_SOURCES_ENABLED: the card names the turns its draft is written from.
-      if (remapped) return withRemapDraftSources(remapped, request);
+      if (remapped) {
+        const paged = policyPageOnCardEnabled() ? await withCardPolicyPages(remapped, readRemapManual) : remapped;
+        return withRemapDraftSources(paged, request);
+      }
     }
 
     let manualRead: ReturnType<SupabaseKnowledgeProvider["fetchOfficialPolicyManual"]> | null = null;
@@ -675,7 +689,10 @@ async function answerQuestionCore(
     // Flags off: decoration returns the same proposal, and the forms-library
     // answer returns here, before retrieval.
     // COACHING_CARD_POLICY_ENABLED: a Coaching card cites the policy its account falls under (`forms/coaching-card-policy.ts`).
-    if (proposal && coachingCardPolicyEnabled()) return await (await import("./coaching-card-policy-answer")).withCoachingCardPolicyOnAnswer(proposal, request, readManual);
+    if (proposal && coachingCardPolicyEnabled()) {
+      return await quoteCardPolicy(await (await import("./coaching-card-policy-answer")).withCoachingCardPolicyOnAnswer(proposal, request, readManual), readManual);
+    }
+    if (proposal && policyCitationEnabled()) proposal = await quoteCardPolicy(proposal, readManual);
     if (proposal) return proposal;
     // AMOUNT_TURN_STAYS_ENABLED: "i dont know the amount" with a card open is the form's, not a policy question.
     const amountReply = amountTurnReply(request);
@@ -889,7 +906,8 @@ async function answerQuestionCore(
    * own words, which found recipe and event pages (conv_mvnljjl32xlit48).
    * See `slot-only-turn.ts`.
    */
-  const slotTopic = slotOnlyRetrievalTopic(request.question, request.history);
+  // POLICY_CARRY_RETRIEVAL_ENABLED: "just make it" is searched with the policy named earlier (QA item 10).
+  const slotTopic = slotOnlyRetrievalTopic(request.question, request.history) ?? carriedPolicyTopic(request.question, request.history);
   markStage("query_rewrite");
   const rewrittenQuestion = slotTopic
     ? slotTopic
@@ -1044,7 +1062,13 @@ async function answerQuestionCore(
   if (fullManualContextEnabled()) {
     try {
       markStage("full_manual");
-      manualPlan = await loadFullManualPlan(request.scopeId, request.question, policyText);
+      // FULL_MANUAL_WIDE_GATE_ENABLED: the wide gate's options only with the flag; off, the call as before.
+      manualPlan = fullManualWideGateEnabled()
+        ? await loadFullManualPlan(request.scopeId, request.question, policyText, {
+            wideGate: true,
+            topRowIsManual: rows[0] ? isMultiBrandManual(rows[0].document_title, MULTI_BRAND_MANUAL_TITLES) : false,
+          })
+        : await loadFullManualPlan(request.scopeId, request.question, policyText);
     } catch {
       manualPlan = null;
     }
@@ -1055,8 +1079,20 @@ async function answerQuestionCore(
    * after the answer, from the printed pages it cites. One card for the
    * whole manual is what showed up as JBA Policy Manual p.1.
    */
+  /*
+   * FULL_MANUAL_WIDE_GATE_ENABLED (QA parity with the sibling app, 25 Oct 2026): on a full-manual turn only a pinned
+   * role document or a named handbook rides along; a retrieved excerpt from any other document (a wiring diagram for
+   * "policy specific to uggs?") is not sent as OTHER COMPANY SOURCES. Off, as before.
+   */
+  const wideGate = fullManualWideGateEnabled();
+  const mandatoryChunkIds = wideGate
+    ? new Set([...pinned.flatMap((entry) => entry.rows), ...(handbookCoverage?.rows ?? [])].map((row) => row.chunk_id))
+    : null;
   const supplemental = useManual
-    ? used.filter((row) => !isMultiBrandManual(row.document_title, MULTI_BRAND_MANUAL_TITLES))
+    ? used.filter(
+        (row) =>
+          !isMultiBrandManual(row.document_title, MULTI_BRAND_MANUAL_TITLES) && (!mandatoryChunkIds || mandatoryChunkIds.has(row.chunk_id)),
+      )
     : used;
   const grounding: GroundingChunk[] = supplemental.map((row, index) => ({
     marker: index + 1,
@@ -1279,6 +1315,13 @@ async function answerQuestionCore(
     const checkedManual = citePolicyAnswer(answer, manualPlan, supplementalMarkers);
     if (checkedManual.ok) {
       settled = checkedManual;
+    } else if (wideGate) {
+      /*
+       * FULL_MANUAL_WIDE_GATE_ENABLED (QA parity with the sibling app, 25 Oct 2026): an answer with the manual in
+       * context is the answer, page or no page. Asked again without the manual, it could deny the manual existed
+       * ("policy specific to uggs?" came back "I only have wiring diagrams"). It stands as written, no page marked.
+       */
+      settled = { text: checkedManual.text, sources: [], ok: false };
     } else {
       /*
        * The answer named no printed page from the manual that was loaded.
@@ -1302,8 +1345,30 @@ async function answerQuestionCore(
    * restates them (see `keepRestatedFallbackMarkers`).
    */
   const manualDocuments = new Set((manualPlan?.passages ?? []).map((passage) => passage.documentId));
-  const fallbackText =
-    fellBack && manualPlan
+  /*
+   * FULL_MANUAL_WIDE_GATE_ENABLED: a reply answered from retrieved excerpts cites each manual excerpt as the printed
+   * page its sentence restates, in the sentence (see `citeRetrievedAnswer`). Only when the reply cites a manual
+   * excerpt is the manual read for this. Off, as before.
+   */
+  const manualRowPages = (marker: number): number[] | null => {
+    const row = activeRows[marker - 1];
+    if (!row || !isMultiBrandManual(row.document_title, MULTI_BRAND_MANUAL_TITLES)) return null;
+    const printed = printedPageFromRetrieval(row);
+    const pages = retrievedLocatorPages(row);
+    return printed && !pages.includes(printed) ? [printed, ...pages] : pages;
+  };
+  let retrievalCited: CitedManualAnswer | null = null;
+  if (wideGate && !settled && fullManualContextEnabled()) {
+    const citesManual = extractUsedMarkers(answer, activeMarkers).some((marker) => manualRowPages(marker) !== null);
+    if (citesManual || /\[pp?\.\s*\d/i.test(answer)) {
+      const citePlan = manualPlan?.passages.length ? manualPlan : await loadManualCitationPlan(request.scopeId);
+      const cited = citePlan ? citeRetrievedAnswer(answer, citePlan, manualRowPages) : null;
+      retrievalCited = cited?.ok ? cited : null;
+    }
+  }
+  const fallbackText = retrievalCited
+    ? retrievalCited.text
+    : fellBack && manualPlan
       ? keepRestatedFallbackMarkers(answer, manualPlan, (marker) => {
           const row = activeRows[marker - 1];
           return row && manualDocuments.has(row.document_id) ? printedPageFromRetrieval(row) : null;
@@ -1313,7 +1378,7 @@ async function answerQuestionCore(
   const guarded = settled
     ? settled.text
     : fullManualContextEnabled() && !fellBack
-      ? validateManualCitations(answer, { shownMarkers: markers, index: manualPlan?.index ?? null })
+      ? validateManualCitations(retrievalCited ? fallbackText : answer, { shownMarkers: markers, index: manualPlan?.index ?? null })
       : fallbackText;
   const toCitation = (source: FullManualSource): SourceCitation => ({
     documentId: source.documentId,
@@ -1330,7 +1395,9 @@ async function answerQuestionCore(
     });
   let citations: SourceCitation[] = settled
     ? [...settled.sources.map(toCitation), ...citedRows(markers, citationRows)]
-    : citedRows(markers, activeRows);
+    : retrievalCited
+      ? [...retrievalCited.sources.map(toCitation), ...citedRows(markers, activeRows)]
+      : citedRows(markers, activeRows);
 
   const suggested = await suggestedFormsFor({ summariesPromise, request, actor });
 
@@ -1369,7 +1436,7 @@ async function answerQuestionCore(
     } else {
       const tidy = { tidy: reformatKeepsSourcesEnabled() };
       content = suggested ? `${stripMarkers(settled.text, tidy)}\n\n${suggested.lead}` : stripMarkers(settled.text, tidy);
-      citations = settled.sources.map(toCitation);
+      citations = wideGate ? [...settled.sources.map(toCitation), ...citedRows(markers, citationRows)] : settled.sources.map(toCitation);
     }
   }
   /*
@@ -1520,11 +1587,47 @@ async function suggestedFormsFor(input: {
   }
 }
 
+/** POLICY_PAGE_ON_CARD_ENABLED: the card's own policy line with the printed page from the manual's chunk metadata. A failed manual read leaves the card as the form path wrote it. */
+async function withCardPolicyPages(response: AskResponse, read: () => Promise<RemapManual | null>): Promise<AskResponse> {
+  if (!response.formProposal) return response;
+  let manual: RemapManual | null = null;
+  try {
+    manual = await read();
+  } catch {
+    manual = null;
+  }
+  if (!manual) return response;
+  const content = withPolicyPagesOnCard(response.content, manual.chunks);
+  return content === response.content ? response : { ...response, content };
+}
+
+/**
+ * POLICY_CITATION_ENABLED (Gate-Bubbles-2, 12 Nov 2026): once the card's own policy line is set (a Coaching card's comes
+ * after `decorateFormAnswer`), the card quotes the sections it cites (`ai/violation-policy.ts` withCardPolicyQuoted).
+ * Off, no card, a manual that cannot be read, or a block already there: the same response.
+ */
+async function quoteCardPolicy(
+  response: AskResponse,
+  readManual: () => ReturnType<SupabaseKnowledgeProvider["fetchOfficialPolicyManual"]>,
+): Promise<AskResponse> {
+  if (!policyCitationEnabled() || !response.formProposal) return response;
+  try {
+    const manual = await readManual();
+    if (!manual.ok) return response;
+    const content = withCardPolicyQuoted(response.content, manual.chunks, true);
+    return content === response.content ? response : { ...response, content };
+  } catch {
+    // A manual read that fails leaves the card as it was.
+    return response;
+  }
+}
+
 async function decorateFormAnswer(request: AskRequest, actor: ChatActor, response: AskResponse): Promise<AskResponse> {
   const coachingOn = priorCoachingOptionalEnabled();
   const policyOn = policyCitationEnabled();
   const slotsOn = slotRetentionEnabled();
-  if (!coachingOn && !policyOn && !slotsOn) return response;
+  const pageOn = policyPageOnCardEnabled();
+  if (!coachingOn && !policyOn && !slotsOn && !pageOn) return response;
   const turns = [...request.history.filter((turn) => turn.role === "user").map((turn) => turn.content), request.question];
   let content = response.content;
   if (coachingOn) {
@@ -1561,12 +1664,14 @@ async function decorateFormAnswer(request: AskRequest, actor: ChatActor, respons
     content = retainFieldsInReply(content, fields);
     await persistFields(request, actor, fields);
   }
-  if (policyOn) {
+  if (policyOn || (pageOn && response.formProposal)) {
     try {
       const manual = await new SupabaseKnowledgeProvider().fetchOfficialPolicyManual(ACTIVE_BRAND.knowledgeScopeId);
-      // CARD_POLICY_OWN_REQUEST_ENABLED: a card for <B> is not cited from <A>'s earlier request.
-      const policyTurns = cardPolicyOwnRequestEnabled() && response.formProposal ? cardPolicyTurns(turns, response.formProposal.employeeName) : turns;
-      if (manual.ok) content = withMappedPolicy(content, policyTurns, manual.chunks, true);
+      // POLICY_PAGE_ON_CARD_ENABLED: the card's own policy line carries its printed page.
+      if (manual.ok && pageOn && response.formProposal) content = withPolicyPagesOnCard(content, manual.chunks);
+      // POLICY_CITATION_ENABLED: a card quotes the sections it cites itself, never a re-reading of the turns (Gate-Bubbles-2);
+      // a forms-path reply with no card (a form menu, a question) quotes nothing (Gate-Bubbles-3, Rpcf).
+      if (manual.ok && policyOn && response.formProposal) content = withCardPolicyQuoted(content, manual.chunks, true);
     } catch {
       // A manual read that fails leaves the proposal as the forms path wrote it.
     }

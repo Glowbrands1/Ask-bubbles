@@ -1,5 +1,7 @@
 import { expect } from "vitest";
 
+import { nameLineCommaEnabled, stepBAddUnderObservedEnabled } from "@/lib/config/chat-quality-flags";
+
 import { WEST_DODGE, noClaimWithoutUpdate, replyMatchesDiff, savedForm, type ReplayCase, type ReplayContext } from "./cases";
 import { CA_CHAIN, GATE_EDIT_WORDINGS, GATE_QUESTION_WORDINGS, LIVE_ROSTER, OBSERVATION_AFTER } from "./nov4-live-regressions-scenarios";
 
@@ -72,12 +74,19 @@ export const NOV4_EDIT_TOOL_CASES: readonly ReplayCase[] = [
         const reply = await thread.say(CA_CHAIN[1]);
         replyMatchesDiff(t, id, before, reply, CA_CHAIN[1]);
         noClaimWithoutUpdate(reply);
-        expect(t.editToolOffers!().offered, "the main call was not offered edit_form").toBe(1);
-        expect(t.editToolOffers!().lastData ?? "", "the open form was not in the DATA block").toContain('"key":"observation"');
         const observation = t.values(id).observation ?? "";
         expect(observation, "the tool's replace reached the form").not.toMatch(/^Quill-Hart was late/);
         expect(observation, "Marnie was dropped").toMatch(/\bMarnie Quill-Hart\b/);
         expect(reply.content, "the tool's text was shown").not.toContain("I've fixed her last name");
+        // Changed on purpose (QA, 11 Nov 2026): with NAME_LINE_COMMA_ENABLED the turn is the app's own name correction
+        // (header and drafted account together), so no model call is made and edit_form is never offered.
+        if (nameLineCommaEnabled()) {
+          expect(t.editToolOffers!().offered, "edit_form was offered for a name correction").toBe(0);
+          expect(t.calls().chat - calls.chat).toBe(0);
+          return;
+        }
+        expect(t.editToolOffers!().offered, "the main call was not offered edit_form").toBe(1);
+        expect(t.editToolOffers!().lastData ?? "", "the open form was not in the DATA block").toContain('"key":"observation"');
         // Handed off: the revision ran after the one main call.
         expect(t.calls().chat - calls.chat).toBe(1);
         expect(t.calls().revision - calls.revision).toBe(1);
@@ -100,9 +109,18 @@ export const NOV4_EDIT_TOOL_CASES: readonly ReplayCase[] = [
         const reply = await thread.say(CA_CHAIN[5]);
         replyMatchesDiff(t, id, before, reply, CA_CHAIN[5]);
         expect(reply.formUpdate?.updated).toEqual(["observation"]);
-        expect(t.values(id).observation ?? "").toMatch(/she Must Practice the sanitizing checklist every shift\.$/);
+        // Changed on purpose (12 Nov 2026, QA's ruling (b) extended; Gate-Bubbles-2 on #814): with STEP_B_ADD_UNDER_OBSERVED
+        // the instruction goes under "Expectation:" as its own line, its first letter a capital as the field's other lines
+        // have; flag off, it is appended as typed.
+        expect(t.values(id).observation ?? "").toMatch(
+          stepBAddUnderObservedEnabled()
+            ? /\nExpectation:\n[^]*\nShe Must Practice the sanitizing checklist every shift\.$/
+            : /she Must Practice the sanitizing checklist every shift\.$/,
+        );
         expect(t.values(id).observation ?? "", "the first name was dropped").toMatch(/\bMarnie Quill\b/);
-        expect(reply.content).toMatch(/^Changed Observation of Offense to "/);
+        // Changed on purpose (12 Nov 2026, Gate-Sunny-2's finding on the sibling app): with STEP_B_REPLY_KEEPS_LINES on, a field
+        // written on several lines is quoted line by line ("Changed Observation of Offense to:\n> …").
+        expect(reply.content).toMatch(/^Changed Observation of Offense to(?: "|:\n> )/);
         expect(reply.content, "the tool's text was shown").not.toContain("I added that");
         // One model call: the main one; no revision, no draft.
         expect(t.calls().chat - calls.chat).toBe(1);

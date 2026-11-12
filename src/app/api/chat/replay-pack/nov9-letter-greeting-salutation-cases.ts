@@ -42,9 +42,9 @@ async function card(t: ReplayContext, greeting: string, onRoster: boolean) {
   t.directory(onRoster ? [...STAFF, MARCUS] : STAFF);
   t.as("district_manager", EVERY_STORE);
   const thread = t.thread();
-  await thread.say(letter(greeting));
+  const first = await thread.say(letter(greeting));
   const { content } = await thread.say(`I need an exit form with this information. ${letter(greeting)}`);
-  return { thread, content };
+  return { thread, content, first: first.content };
 }
 
 export const NOV9_LETTER_GREETING_SALUTATION_CASES: ReplayCase[] = [
@@ -83,10 +83,15 @@ export const NOV9_LETTER_GREETING_SALUTATION_CASES: ReplayCase[] = [
     status: "fixed",
     fixFlags: FIX,
     async run(t) {
-      const { thread, content } = await card(t, "Hi Marcus", true);
-      expect(content, `the salutation is read as the name:\n${content}`).not.toMatch(/\bHi Marcus/);
+      const { thread, content, first } = await card(t, "Hi Marcus", true);
+      const both = `${first}\n\n${content}`;
+      expect(both, `the salutation is read as the name:\n${both}`).not.toMatch(/\bHi Marcus/);
       expect(thread.proposal?.employeeName ?? "", `the salutation is the card's name:\n${content}`).not.toMatch(/^Hi\b/);
-      expect(content, `Marcus Tellefsen is not asked about:\n${content}`).toMatch(/\*\*Marcus Tellefsen\*\*/);
+      // Changed on purpose (coding 6, 12 Nov 2026): with TERMINATION_INTAKE_ENABLED the letter alone (turn 1) is the exit
+      // request, so "Is this for **Marcus Tellefsen**?" is asked there. The second turn — the request again, with the same
+      // letter — then loses the name ("Who is this … for?"), as it already does on production's flags whenever a request is
+      // sent again after that question (reported to QA, 12 Nov 2026). Asked as Marcus Tellefsen on either turn.
+      expect(both, `Marcus Tellefsen is not asked about:\n${both}`).toMatch(/\*\*Marcus Tellefsen\*\*/);
     },
   },
 ];

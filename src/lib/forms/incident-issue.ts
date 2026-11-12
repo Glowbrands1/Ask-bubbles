@@ -2,6 +2,7 @@ import {
   caReasonDueToEnabled,
   complaintAccountEnabled,
   decimalNotSentenceEndEnabled,
+  futureIncidentDateAskEnabled,
   issueAfterRequestReasonEnabled,
   issueIsTheAccountEnabled,
   levelRequestDateEnabled,
@@ -22,6 +23,7 @@ import { describesIncident } from "./corrective-action-intake";
 import { withoutPriorStepClauses } from "./form-date-answer";
 import { priorSentenceFixFor } from "./prior-sentence-scope";
 import { statedWarningLevel } from "./warning-level";
+import { withoutLeadingTitle } from "./title-before-name";
 
 /**
  * ============================================================================
@@ -150,6 +152,8 @@ function issueFromRequest(text: string, employeeName: string | null): string | n
       if (issue.length < 3 || issue.length > 80 || NOT_AN_ISSUE.test(issue)) continue;
       // "a CA for Jordan Testperson" names the person, not the issue.
       if (person && (lower === person || lower.startsWith(`${person} `) || lower.split(/\s+/).every((word) => personWords.has(word)))) continue;
+      // TITLE_BEFORE_NAME_ENABLED: "TM <name>" is who the form is for, not what happened.
+      if (person && withoutLeadingTitle(issue).trim().toLowerCase() === person) continue;
       found = issue;
     }
     if (found) return found;
@@ -329,7 +333,7 @@ function withoutPolicyCorrections(text: string): string {
 }
 
 export function correctiveActionIssue(rawSaid: string, employeeName: string | null): string | null {
-  const read = issueAsRead(rawSaid, employeeName);
+  const read = issueAsRead(futureIncidentDateAskEnabled() ? withoutBareDateAnswers(rawSaid) : rawSaid, employeeName);
   if (!caReasonDueToEnabled()) return read;
   /*
    * CA_REASON_DUE_TO_ENABLED (QA, 10 Nov 2026, the B#501 rerun on main): with production's SALES_OBSERVATION_ACCOUNT
@@ -341,6 +345,24 @@ export function correctiveActionIssue(rawSaid: string, employeeName: string | nu
   const reason = dueToReason(rawSaid, employeeName);
   if (reason === null) return read;
   return read === null || REASON_JOIN_LEAD.test(read) ? reason : read;
+}
+
+/*
+ * FUTURE_INCIDENT_DATE_ASK_ENABLED (Gate-Bubbles-5, G5-743): the flag asks "What date did it happen?", and the answer
+ * ("it was 10-20-26") became the card's Issue, losing the account. A turn that only gives a day is the date, never the
+ * Issue; it still dates the card through the date readers.
+ */
+const DAY = String.raw`(?:\d{1,2}[\/.-]\d{1,2}(?:[\/.-]\d{2,4})?|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s+\d{4})?|today|yesterday)`;
+const BARE_DATE_ANSWER = new RegExp(
+  String.raw`^\s*(?:(?:it|that|this|the\s+(?:incident|meeting|date|day))\s+(?:was|happened|is)\s+)?(?:on\s+)?(?:the\s+)?${DAY}\s*[.!]?\s*$`,
+  "i",
+);
+
+export function withoutBareDateAnswers(text: string): string {
+  return text
+    .split("\n")
+    .filter((line) => !BARE_DATE_ANSWER.test(line))
+    .join("\n");
 }
 
 /** CA_REASON_DUE_TO_ENABLED: the request's own reason join, left at the start of what was read. */

@@ -18,7 +18,7 @@ import { extractEmployeeNames, samePerson } from "./proposal";
 import { EDIT_VERB, SHOW_OR_OPEN_VERB, WHICH_FORM_ON_FILE } from "./reopen-cue";
 import { leadsWithReopenRequest, readReopenRequest } from "./reopen-request";
 import { getTemplateByKey } from "./repository";
-import { formEditDateRulesEnabled, formEditSingleWriterEnabled, possessiveNoApostropheEnabled, reopenByAnyOpenVerbEnabled, reopenNotOpenFormEnabled } from "@/lib/config/chat-quality-flags";
+import { formEditDateRulesEnabled, formEditSingleWriterEnabled, possessiveNoApostropheEnabled, reopenByAnyOpenVerbEnabled, reopenCloseSpellingEnabled, reopenNotOpenFormEnabled } from "@/lib/config/chat-quality-flags";
 import { privateAwareLimit } from "./private-creators";
 
 /**
@@ -184,11 +184,35 @@ export async function reopenRequestedForm(input: {
     } catch {
       return null;
     }
-    const candidates = visible
-      .filter((row) => (templateKey === null || row.templateKey === templateKey) && row.status !== "revised")
-      .filter((row) => !finalizedMeant || row.status === "finalized")
+    const onFileOf = (rows: readonly InstanceRow[]) =>
+      rows
+        .filter((row) => (templateKey === null || row.templateKey === templateKey) && row.status !== "revised")
+        .filter((row) => !finalizedMeant || row.status === "finalized");
+    const newestFirst = (a: InstanceRow, b: InstanceRow) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0);
+    let candidates = onFileOf(visible)
       .filter((row) => named(row.employeeName))
-      .sort((a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0));
+      .sort(newestFirst);
+    /*
+     * REOPEN_CLOSE_SPELLING_ENABLED (ported from the sibling app; Pau via QA, sf-s26, 5 Nov 2026): "Edit Thesaly Brant
+     * CA" — nobody named exactly; the one person on the forms the manager may open whose name the request spells
+     * closely (`forms/reopen-close-spelling.ts`). The list above is narrowed by the typed (misspelled) words, so the
+     * visible forms are read again without them.
+     */
+    if (candidates.length === 0 && reopenCloseSpellingEnabled()) {
+      let all: InstanceRow[] = [];
+      try {
+        const actor = await authorizeForms(input.request, "view_form_monitoring");
+        all = visibleInstances(actor, await listInstances("active", privateAwareLimit(200), instanceListFilterFor(actor))).slice(0, 200);
+      } catch {
+        all = [];
+      }
+      const onFile = onFileOf(all);
+      const meant = (await import("./reopen-close-spelling")).closelySpelledEmployee(question, onFile.map((row) => row.employeeName));
+      if (meant) {
+        names = [meant];
+        candidates = onFile.filter((row) => samePerson(meant, row.employeeName)).sort(newestFirst);
+      }
+    }
     /*
      * REOPEN_BY_ANY_OPEN_VERB_ENABLED (QA/Pau, 6 Nov 2026): several forms on
      * file for the person named — listed, and the manager asked which. One
