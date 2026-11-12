@@ -1348,8 +1348,12 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FULL_MANUAL_WIDE_GATE_ENABLED",
   "EMPTY_REPLY_GUARD_ENABLED",
   "POLICY_PAGE_ON_CARD_ENABLED",
+  "FORM_INPUT_FIDELITY_ENABLED",
   // coding 5: B3 (QA's backlog, 10 Nov 2026; default off).
   "COPY_PASTE_CLAIM_HONEST_ENABLED",
+  "COPY_PASTE_POINTS_TO_CARD_ENABLED",
+  "FORMS_BELOW_NEEDS_FORMS_ENABLED",
+  "WORN_CLOTHING_IS_DRESS_CODE_ENABLED",
   "DATE_ONCE_ENABLED",
   "ADDRESS_ASKS_WHO_ENABLED",
   "LEAD_FULL_SENTENCE_ENABLED",
@@ -4627,6 +4631,15 @@ export function revisionArchivedNotOpenEnabled(): boolean {
 }
 
 /**
+ * Keep a date the manager typed, and send a one-word follow-up to the
+ * question just asked. Off, a relative day such as "yesterday" still leaves
+ * the form dated today, and a bare "verbal" can be saved as the job title.
+ */
+export function formInputFidelityEnabled(): boolean {
+  return envFlag("FORM_INPUT_FIDELITY_ENABLED");
+}
+
+/**
  * FORM_FOR_FOR_TYPO_ENABLED (B-C3 from QA's open-case list, 11 Nov 2026; the sibling app's Pau scan sf-s36, a real
  * manager: "I need a exit for for <name> TM. Quit without notice. …"; default off). The message was never read as an exit
  * request: "for for" is "form for" mistyped, and "exit for for" named no form. On: a form's name followed by "for for" is
@@ -4681,4 +4694,35 @@ export function letterGreetingAnyCaseEnabled(): boolean {
  */
 export function companyMetricWordsNotNamesEnabled(): boolean {
   return envFlag("COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED");
+}
+
+/**
+ * FORMS_BELOW_NEEDS_FORMS_ENABLED (QA's Bubbles 17i live test, 11 Nov 2026; default off). With LEAD_FULL_SENTENCE on,
+ * "my team member keeps showing up out of uniform, wearing a hoodie, what do I do?" and "Do i need to copy and paste
+ * it?" ended "Based on what you've described, I can prepare one of the forms below." with no forms below it. On: at the
+ * turn's last exit, that sentence goes when the reply carries no form choices (`forms/lead-full-sentence.ts`). Off, as
+ * before.
+ */
+export function formsBelowNeedsFormsEnabled(): boolean {
+  return envFlag("FORMS_BELOW_NEEDS_FORMS_ENABLED");
+}
+
+/**
+ * WORN_CLOTHING_IS_DRESS_CODE_ENABLED (QA's Bubbles 17i live test, 11 Nov 2026; default off). "can you make a CA for <C>
+ * for wearing a hoodie to work?" made a Corrective Action card with no Policy line, and its plan said "review the
+ * applicable company policy". On: a garment the person wore ("wearing a hoodie", "wore sweats", "in joggers") reads as
+ * the Dress Code, as "leggings" already does (`forms/ca-policy.ts`). Off, as before.
+ */
+export function wornClothingIsDressCodeEnabled(): boolean {
+  return envFlag("WORN_CLOTHING_IS_DRESS_CODE_ENABLED");
+}
+
+/**
+ * COPY_PASTE_POINTS_TO_CARD_ENABLED (QA's Bubbles 17i live test, 11 Nov 2026; default off). With a Corrective Action
+ * card on screen, "Do i need to copy and paste it?" was answered "No — … say 'create a corrective action for <C>' and
+ * the form card will appear", as if there were no card. On: the turn is about the card on screen; the reply is one line
+ * pointing to its **Create draft** button, and the card stays attached (`ai/card-meta-turn.ts`). Off, as before.
+ */
+export function copyPastePointsToCardEnabled(): boolean {
+  return envFlag("COPY_PASTE_POINTS_TO_CARD_ENABLED");
 }

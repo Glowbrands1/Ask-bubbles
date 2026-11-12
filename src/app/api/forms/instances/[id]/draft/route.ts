@@ -269,6 +269,7 @@ import {
   resolveFormDate,
 } from "@/lib/forms/form-date-grounding";
 import { unreadDayBrief, unreadDayNotice, unreadIncidentDay } from "@/lib/forms/unread-day-date";
+import { draftDateApplies, fidelityGivenDates } from "@/lib/forms/form-input-fidelity";
 
 /**
  * POST /api/forms/instances/[id]/draft
@@ -982,7 +983,7 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
      * `form-date-grounding.ts`.
      */
     const resolvedFormDate =
-      loaded.instance.layoutFamily === "corrective"
+      draftDateApplies(loaded.instance.layoutFamily)
         ? resolveFormDate(loaded.instance.formDate)
         : null;
     /*
@@ -1129,7 +1130,7 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
         ? [
             unreadDay
               ? unreadDayBrief(resolvedFormDate, unreadDay)
-              : formDateBrief(resolvedFormDate, draftBriefDates(notes, businessToday()), notes),
+              : formDateBrief(resolvedFormDate, fidelityGivenDates(notes, businessToday(), draftBriefDates(notes, businessToday())), notes),
           ]
         : []),
       /*
