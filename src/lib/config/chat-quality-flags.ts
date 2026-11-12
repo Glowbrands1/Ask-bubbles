@@ -1277,6 +1277,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "STEP_DATES_NOT_FORM_DATE_ENABLED",
   // coding 4: METRIC_ALONE_NOT_A_NAME (QA's prod-env reading, 10 Nov 2026, D4; default off).
   "METRIC_ALONE_NOT_A_NAME_ENABLED",
+  // coding 4: STORE_CHOICES_NAMED (Problem 20, Bubbles production, 10 Nov 2026; default off).
+  "STORE_CHOICES_NAMED_ENABLED",
   // coding 4: FORM_FOR_FOR_TYPO (B-C3, QA, 11 Nov 2026; default off).
   "FORM_FOR_FOR_TYPO_ENABLED",
   // coding 4: TITLE_NOT_PART_OF_NAME (B-C3 part 2, QA, 11 Nov 2026; default off).
@@ -4758,6 +4760,17 @@ export function payrollBareSentenceEnabled(): boolean {
  */
 export function metricAloneNotANameEnabled(): boolean {
   return envFlag("METRIC_ALONE_NOT_A_NAME_ENABLED");
+}
+
+/**
+ * STORE_CHOICES_NAMED_ENABLED (Problem 20, Bubbles production, 10 Nov 2026; default off; same flag in both apps). A
+ * manager covering two stores named a person who works at both, was asked "Which store is this about?", sent the request
+ * again and got the same question back with no stores named, and no card was made. On: a card waiting for its store asks
+ * with the choices named — the person's own stores in Woven on the manager's assignment, or the manager's stores
+ * (`forms/store-choices-named.ts`). Off, as before.
+ */
+export function storeChoicesNamedEnabled(): boolean {
+  return envFlag("STORE_CHOICES_NAMED_ENABLED");
 }
 
 /**
