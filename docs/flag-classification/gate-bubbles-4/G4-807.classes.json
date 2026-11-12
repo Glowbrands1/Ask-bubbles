@@ -1,0 +1,10 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-r22-s14-date-kept-after-name-correction: s14: after \"Oops, it's Rozlyn quellmar\", the follow-up coaching card keeps the date given earlier \u2014 OPEN in production (the date given on turn 2 is lost after the near-miss answer and on the next request for her)": {
+  "category": "INTENDED",
+  "reason": "OPEN case holds: after 'Oops, it's Rozlyn quellmar' the follow-up coaching card keeps the turn-2 date (OFF: the date check got no string); reply text identical OFF vs ON"
+ },
+ "replay: nov10-r22-s14-date-kept-after-name-correction [open]": {
+  "category": "INTENDED",
+  "reason": "OPEN case holds: after 'Oops, it's Rozlyn quellmar' the follow-up coaching card keeps the turn-2 date (OFF: the date check got no string); reply text identical OFF vs ON"
+ }
+}
