@@ -12,6 +12,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:off-pins": "node scripts/off-pins-guard.mjs",
     "eval": "vitest run --config vitest.eval.config.mts",
     "variation-report": "VARIATION_APP=ask-bubbles vitest run --config vitest.variation.config.mts",
     "e2e": "playwright test",

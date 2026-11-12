@@ -92,6 +92,24 @@ jobs:
             fi
           done
 
+  # OFF PINS (QA, 11 Nov 2026): every test named for a flag's "off" behaviour, run
+  # with production's flags set (src/config/production-flags.json). A new one that
+  # does not set its own flag off fails here, not the day QA turns the flag on.
+  # Known failures when the guard went in: src/config/off-pins-known.json (may only
+  # shrink). See scripts/off-pins-guard.mjs. Its own job, beside "checks".
+  off-pins:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Off pins hold under production's flags
+        run: npm run test:off-pins
+
   # The replay eval (evals/): every replay case through the real chat route,
   # flags off (must equal evals/baseline.json) and with the step's flags on
   # (may break no case, at most 25% slower). Local and deterministic: an
