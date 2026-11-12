@@ -1,6 +1,12 @@
 import type { AskResponse } from "@/lib/ai/types";
 import { isQuestionNotForm } from "@/lib/ai/question-not-form";
-import { formEditSingleWriterEnabled, openDraftKeepsTurnsEnabled } from "@/lib/config/chat-quality-flags";
+import {
+  formEditSingleWriterEnabled,
+  openDraftKeepsTurnsEnabled,
+  pastedOutlineToOpenDraftEnabled,
+  pastedTemplateFieldsToOpenDraftEnabled,
+  templateOutlineFieldsEnabled,
+} from "@/lib/config/chat-quality-flags";
 import { extractEmployeeNames, samePerson } from "@/lib/forms/proposal";
 import { detectTemplateIntent } from "@/lib/forms/template-intent";
 import type { ChatMessage } from "@/types";
@@ -34,11 +40,21 @@ export async function openDraftTurn(input: {
 }): Promise<AskResponse | null> {
   if (!openDraftKeepsTurnsEnabled()) return null;
   const question = input.question.trim();
-  if (!question || /\?\s*$/.test(question) || isQuestionNotForm(question, input.history)) return null;
-  if (detectTemplateIntent(question).kind !== "none") return null;
+  /*
+   * PASTED_OUTLINE_TO_OPEN_DRAFT_ENABLED (QA's Sunny round-23 live test of sf-s21, conv_mwb21a4z2rxf5y1): with <A>'s
+   * Corrective Action draft open, the manager pasted <B>'s CA as a template ("Observation of Offense: … <B> completed
+   * 237 tanning transactions … Action Plan: The Leadership Team will coach <B> …"). It names <B>, so it was read as a
+   * new request ("Is this for <B>?") and a new card covered the draft; the outline never reached it. A pasted turn
+   * with two or more of the open form's own field labels as headings is that draft's outline, with its own facts.
+   */
+  const pasted = pastedOutlineToOpenDraftEnabled() && question ? await pastedOutline({ ...input, question }) : null;
+  if (!pasted) {
+    if (!question || /\?\s*$/.test(question) || isQuestionNotForm(question, input.history)) return null;
+    if (detectTemplateIntent(question).kind !== "none") return null;
+  }
   const open = await (await import("@/lib/forms/open-form-summary")).describeOpenForm(input.request, input.instanceId);
   if (!open || open.status !== "draft") return null;
-  if (extractEmployeeNames(question).some((name) => !samePerson(name, open.employeeName))) return null;
+  if (!pasted && extractEmployeeNames(question).some((name) => !samePerson(name, open.employeeName))) return null;
   /*
    * FORM_EDIT_SINGLE_WRITER_ENABLED: the draft before the turn, and the
    * revision's claim checked against what was saved (`lib/forms/form-write.ts`).
@@ -48,13 +64,29 @@ export async function openDraftTurn(input: {
   const before = formEditSingleWriterEnabled()
     ? await (await import("@/lib/forms/form-write")).editSnapshot(input.instanceId, "open_draft")
     : null;
+  // PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT_ENABLED: the draft's words before the revision, to see whether it placed the paste.
+  const wordsBefore = pastedTemplateFieldsToOpenDraftEnabled() && (pasted || question.includes("\n")) ? await draftWords(input.instanceId) : null;
   const revised = await (await import("@/lib/forms/chat-revision")).reviseActiveForm({
     request: input.request,
     instanceId: input.instanceId,
-    question: `Add this to the ${open.templateName}: ${question}`,
+    // TEMPLATE_OUTLINE_FIELDS_ENABLED (Pau's sf-s21, port): "the same out line" as a pasted template names the template's fields.
+    question: pasted ?? (templateOutlineFieldsEnabled() ? await outlineQuestion(input) : null) ?? `Add this to the ${open.templateName}: ${question}`,
     history: [...input.history],
     today: input.today,
   });
+  /*
+   * PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT_ENABLED (round-25 live test of sf-s21, 11 Nov 2026): the pasted template
+   * reached the open draft, but the revision placed none of it ("Nothing on the form has changed yet. I couldn't place
+   * that …", or "I haven't changed the Corrective Action Form …"). Its labelled sections go into the draft's fields of
+   * those labels, in the draft's employee's name.
+   */
+  const wordsAfter = wordsBefore ? await draftWords(input.instanceId) : null;
+  if (pasted && wordsBefore && JSON.stringify(wordsAfter) === JSON.stringify(wordsBefore)) {
+    const placed = await placePastedTemplate({ ...input, question, employeeName: open.employeeName });
+    if (placed) return placed;
+  }
+  // PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT_ENABLED (round-25 live 5c): pasted lines the revision joined onto one line get their breaks back.
+  if (wordsBefore && wordsAfter) await keepPastedLineBreaks({ ...input, question, before: wordsBefore, after: wordsAfter });
   if (revised && formEditSingleWriterEnabled() && before) {
     return (await import("@/lib/forms/form-write")).realizedClaim(revised, input.instanceId, before);
   }
@@ -67,4 +99,152 @@ export async function openDraftTurn(input: {
     citations: [],
     coverage: "not_applicable",
   };
+}
+
+/** TEMPLATE_OUTLINE_FIELDS_ENABLED: the request naming a pasted template's fields, or null (`lib/forms/template-outline.ts`). */
+async function outlineQuestion(input: { request: Request; instanceId: string; question: string; history: readonly ChatMessage[] }): Promise<string | null> {
+  const outline = await import("./template-outline");
+  if (!outline.asksForOutline(input.question)) return null;
+  const loaded = await (await import("./instance-scope"))
+    .authorizeInstance(input.request, input.instanceId, "view")
+    .then((authorized) => authorized.loaded)
+    .catch(() => null);
+  if (!loaded) return null;
+  const { fieldsForVariant, interpolate, parseFormDocument } = await import("./document");
+  const fields = fieldsForVariant(parseFormDocument(loaded.version.document), loaded.instance.variantKey).map((field) => ({
+    key: field.key,
+    label: interpolate(field.label, null),
+  }));
+  const named = outline.withTemplateFieldsNamed({ question: input.question.trim(), history: input.history, fields });
+  return named === input.question.trim() ? null : named;
+}
+
+/** The open form's fields, with their labels as printed. */
+async function openFormFields(input: { request: Request; instanceId: string }): Promise<{ key: string; label: string }[] | null> {
+  const loaded = await (await import("./instance-scope"))
+    .authorizeInstance(input.request, input.instanceId, "view")
+    .then((authorized) => authorized.loaded)
+    .catch(() => null);
+  if (!loaded) return null;
+  const { fieldsForVariant, interpolate, parseFormDocument } = await import("./document");
+  return fieldsForVariant(parseFormDocument(loaded.version.document), loaded.instance.variantKey).map((field) => ({
+    key: field.key,
+    label: interpolate(field.label, null),
+  }));
+}
+
+/**
+ * PASTED_OUTLINE_TO_OPEN_DRAFT_ENABLED: a turn that IS a pasted outline of the open form — two or more of its field
+ * labels as headings — read as the request to rewrite those fields in that outline with the draft's own facts
+ * (`template-outline.ts` withTemplateFieldsNamed). Null for any other turn.
+ */
+async function pastedOutline(input: { request: Request; instanceId: string; question: string; history: readonly ChatMessage[] }): Promise<string | null> {
+  const outline = await import("./template-outline");
+  const fields = await openFormFields(input);
+  if (!fields || outline.headedFields(input.question, fields).length < 2) return null;
+  const asked = `${input.question}\n\nThe same outline, with this form's own facts.`;
+  const named = outline.withTemplateFieldsNamed({ question: asked, history: input.history, fields });
+  return named === asked ? null : named;
+}
+
+/**
+ * PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT_ENABLED: the pasted template's labelled sections written onto the open draft
+ * (`lib/forms/pasted-template-fields.ts`) as the manager's own words, through the one writer when it is on. Null when
+ * nothing could be placed, so the caller says so.
+ */
+async function placePastedTemplate(input: {
+  request: Request;
+  instanceId: string;
+  question: string;
+  employeeName: string;
+  today: string;
+}): Promise<AskResponse | null> {
+  const authorized = await (await import("./instance-scope"))
+    .authorizeInstance(input.request, input.instanceId, "edit")
+    .catch(() => null);
+  if (!authorized) return null;
+  const { fieldsForVariant, interpolate, parseFormDocument } = await import("./document");
+  const fields = fieldsForVariant(parseFormDocument(authorized.loaded.version.document), authorized.loaded.instance.variantKey).map((field) => ({
+    key: field.key,
+    label: interpolate(field.label, null),
+  }));
+  const values = (await import("./pasted-template-fields")).pastedTemplateValues({
+    text: input.question,
+    fields,
+    employeeName: input.employeeName,
+  });
+  if (Object.keys(values).length === 0) return null;
+  let written: string[];
+  if (formEditSingleWriterEnabled()) {
+    const { opsFrom, writeFormEdits } = await import("./form-write");
+    const result = await writeFormEdits(input.instanceId, opsFrom({ values }, { by: "manager" }), {
+      path: "open_draft",
+      actorId: authorized.actor.id,
+      latest: input.question,
+      today: input.today,
+    });
+    written = result.changed.map((change) => change.key);
+  } else {
+    await (await import("./instances")).saveInstanceValues(input.instanceId, { values, checked: {} }, authorized.actor.id);
+    written = Object.keys(values);
+  }
+  if (written.length === 0) return null;
+  const labels = fields.filter((field) => written.includes(field.key)).map((field) => `**${field.label}**`);
+  return {
+    content: [
+      `Placed your pasted outline on the open form for ${input.employeeName}: ${labels.join(" and ")}, in ${input.employeeName}'s name.`,
+      "The rest of the template's wording is as you pasted it — check its numbers and dates are this employee's before you finalize.",
+    ].join("\n\n"),
+    citations: [],
+    coverage: "not_applicable",
+    formUpdate: { instanceId: input.instanceId, updated: written },
+  };
+}
+
+/** PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT_ENABLED: the open draft's text values, to see whether a turn changed them. */
+async function draftWords(instanceId: string): Promise<Record<string, string> | null> {
+  const loaded = await (await import("./instances")).loadInstance(instanceId).catch(() => null);
+  if (!loaded) return null;
+  return Object.fromEntries(loaded.values.map((row) => [row.fieldKey, String(row.value ?? "")]));
+}
+
+/**
+ * PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT_ENABLED (round-25 live 5c): a field the revision just changed that holds the
+ * manager's pasted lines joined on one line is written again with the line breaks they were pasted with
+ * (`withPastedLineBreaks`), as the manager's words. Nothing else on the form is touched.
+ */
+async function keepPastedLineBreaks(input: {
+  request: Request;
+  instanceId: string;
+  question: string;
+  today: string;
+  before: Record<string, string>;
+  after: Record<string, string>;
+}): Promise<void> {
+  const { withPastedLineBreaks } = await import("./pasted-template-fields");
+  const values: Record<string, string> = {};
+  for (const [key, value] of Object.entries(input.after)) {
+    if (value === input.before[key]) continue;
+    const restored = withPastedLineBreaks(value, input.question);
+    if (restored) values[key] = restored;
+  }
+  if (Object.keys(values).length === 0) return;
+  const authorized = await (await import("./instance-scope"))
+    .authorizeInstance(input.request, input.instanceId, "edit")
+    .catch(() => null);
+  if (!authorized) return;
+  if (formEditSingleWriterEnabled()) {
+    const { opsFrom, writeFormEdits } = await import("./form-write");
+    // A list field ("one per line") unites a set with its lines, so the joined line is cleared first, in its own write.
+    const rules = { path: "open_draft" as const, actorId: authorized.actor.id, latest: input.question, today: input.today, lineBreaksOnly: true };
+    const clears = Object.keys(values).map((field) => ({ op: "clear" as const, field, by: "manager" as const }));
+    await writeFormEdits(input.instanceId, clears, rules);
+    const written = await writeFormEdits(input.instanceId, opsFrom({ values }, { by: "manager" }), rules);
+    // Never left empty: a key the second write did not take gets the revision's own value back.
+    const kept = new Set(written.changed.map((change) => change.key));
+    const back = Object.fromEntries(Object.keys(values).filter((key) => !kept.has(key)).map((key) => [key, input.after[key] ?? ""]));
+    if (Object.keys(back).length > 0) await writeFormEdits(input.instanceId, opsFrom({ values: back }, { by: "manager" }), rules);
+  } else {
+    await (await import("./instances")).saveInstanceValues(input.instanceId, { values, checked: {} }, authorized.actor.id);
+  }
 }

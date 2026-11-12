@@ -9,7 +9,7 @@ import { STAFF, WEST_DODGE, type DirectoryRow, type ReplayCase } from "./cases";
  * ============================================================================
  *
  * mgr-1-off-roster-name: "I need a corrective action verbal for <name>. This is
- * for Under Performance on PPTA, LPSVA, Club Average, Club Close %, and Spa %."
+ * for Under Performance on UPT, ATV, Average Ticket, Bundle Rate %, and Gift %."
  * (the name on no roster; a roster near-name exists). The card had no employee
  * and the reply ended "Who is this form for? Tell me the employee's full
  * name." — it never said the typed name was not found, so a manager retypes
@@ -29,7 +29,7 @@ const near: DirectoryRow = {
 };
 
 const FLIP = ["CHAT_GLOSSARY_ENABLED", "FORM_NAME_FROM_ROSTER_ENABLED", "CA_SALES_POLICY_ENABLED", "ROSTER_NEAR_MISS_ENABLED", "ROSTER_NAME_IN_CANDIDATE_ENABLED", "TITLE_OF_THE_EMPLOYEE_ENABLED", "REPLY_MATCHES_CARD_ENABLED"];
-const TEXT = "I need a corrective action verbal for Leofric Arkwell. This is for Under Performance on PPTA, LPSVA, Club Average, Club Close %, and Spa %.";
+const TEXT = "I need a corrective action verbal for Leofric Arkwell. This is for Under Performance on UPT, ATV, Average Ticket, Bundle Rate %, and Gift %.";
 const REPORT = "QA's LIVE=1 run, 5 Nov 2026 (Bubbles main c4b4be9, the flip flags): mgr-1-off-roster-name, an empty card and \"Who is this form for?\" with no not-found note";
 
 function withFlip(run: ReplayCase["run"]): ReplayCase["run"] {
