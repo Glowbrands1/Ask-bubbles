@@ -62,6 +62,14 @@ function start(t: T) {
   return t.thread();
 }
 
+/** What the drafting model was handed as the manager's account. */
+function described(t: T): string {
+  return t
+    .draftPrompts()
+    .map((prompt) => prompt.split("WHAT THE MANAGER DESCRIBED:")[1] ?? "")
+    .join("\n");
+}
+
 /** The warning level the card carries (the pack's answer type leaves it out). */
 function warningLevel(card: ReplayAnswer["formProposal"] | null | undefined): string | null {
   return (card as { warningLevel?: string | null } | null | undefined)?.warningLevel ?? null;
@@ -94,6 +102,8 @@ export const NOV5_CODING3_SAME_FORM_OTHER_EMPLOYEE_CASES: readonly ReplayCase[] 
     report: `${REPORT_A}; the same words before Create`,
     // Run 5 Nov 2026 (production flags): the card stays Mireya Vantrell's, now Written — the switch lands on the wrong person.
     status: { open: "the card stays Mireya Vantrell's and turns Written (the switch is applied to her); no card for Caspian Drummet" },
+    // Fixed under SAME_REQUEST_OTHER_PERSON_ENABLED (port from the sibling app, 10 Nov 2026): a new request for the other person; open on production flags until QA flips it.
+    fixFlags: ["SAME_REQUEST_OTHER_PERSON_ENABLED"],
     async run(t) {
       const thread = start(t);
       await thread.say(MIREYA_VERBAL);
@@ -104,6 +114,26 @@ export const NOV5_CODING3_SAME_FORM_OTHER_EMPLOYEE_CASES: readonly ReplayCase[] 
       expect(reply.content, "Caspian's card lost the late opening").toMatch(/late opening/i);
       expect(reply.content, "Mireya is on Caspian's card").not.toMatch(/mireya|vantrell/i);
       expect(reply.content, "the request sentence is on the card").not.toMatch(/do the same thing|switch it to a written/i);
+      // QA, 6 Nov 2026 (from the unmerged branch): the level reaches the form as the card's field; the drafting notes hold only the manager's words.
+      const caspian = await thread.create();
+      expect(t.values(caspian).employee_name).toBe("Caspian Drummet");
+      expect(t.checked(caspian).warning_type, "Caspian's form is not a Written Warning").toEqual(["written"]);
+      expect(described(t), "a level sentence the manager never wrote is in the drafting notes").not.toMatch(/(?:^|\n)\s*written warning\.?\s*(?:\n|$)/i);
+      expect(described(t), "the request sentence was handed to the drafting model").not.toMatch(/do the same thing|switch it to a written/i);
+    },
+  },
+  {
+    id: "nov5-coding3-sfo-a-coworker-in-account-stays-a",
+    title: "(a) guard: with Mireya's Verbal CA card on screen, \"she was rude to Caspian Drummet when he reminded her\" is more of Mireya's account — never a card for Caspian",
+    report: `${REPORT_A}; the risk QA named for the fix: an account that mentions a coworker`,
+    status: "fixed",
+    fixFlags: ["SAME_REQUEST_OTHER_PERSON_ENABLED"],
+    async run(t) {
+      const thread = start(t);
+      await thread.say(MIREYA_VERBAL);
+      expect(thread.proposal).toMatchObject({ templateKey: "dpoa", employeeName: "Mireya Vantrell" });
+      const reply = await thread.say("she was rude to Caspian Drummet when he reminded her");
+      expect(reply.formProposal?.employeeName ?? "Mireya Vantrell", `a card for Caspian Drummet:\n${reply.content}`).not.toBe("Caspian Drummet");
     },
   },
   {
@@ -155,6 +185,8 @@ export const NOV5_CODING3_SAME_FORM_OTHER_EMPLOYEE_CASES: readonly ReplayCase[] 
     report: `${REPORT_C}; the card not created yet`,
     // Run 5 Nov 2026 (production flags): a Coaching card for Mireya Vantrell (FORM_TYPE_SWITCH_ENABLED). Open in the sibling app too (the same flag is on there).
     status: { open: "a Coaching card for Mireya Vantrell: FORM_TYPE_SWITCH_ENABLED reads the turn as \"change this to a coaching form\" and Caspian Drummet's name is dropped" },
+    // Fixed under SAME_REQUEST_OTHER_PERSON_ENABLED (port from the sibling app, 10 Nov 2026): a new request for the other person; open on production flags until QA flips it.
+    fixFlags: ["SAME_REQUEST_OTHER_PERSON_ENABLED"],
     async run(t) {
       const thread = start(t);
       await thread.say(MIREYA_CA);
@@ -174,6 +206,8 @@ export const NOV5_CODING3_SAME_FORM_OTHER_EMPLOYEE_CASES: readonly ReplayCase[] 
     report: `${REPORT_C}; after Create`,
     // Run 5 Nov 2026 (production flags): "You already have a Corrective Action draft for Mireya Vantrell. I'll start a Coaching Form too" — for Mireya. Open in the sibling app too.
     status: { open: "a Coaching card for Mireya Vantrell: FORM_TYPE_SWITCH_AFTER_CREATE_NOTE_ENABLED reads the turn as her CA request with the coaching form named, and Caspian Drummet's name is dropped" },
+    // Fixed under SAME_REQUEST_OTHER_PERSON_ENABLED (port from the sibling app, 10 Nov 2026): a new request for the other person; open on production flags until QA flips it.
+    fixFlags: ["SAME_REQUEST_OTHER_PERSON_ENABLED"],
     async run(t) {
       const thread = start(t);
       await thread.say(MIREYA_CA);
