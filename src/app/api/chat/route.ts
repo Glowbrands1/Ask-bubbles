@@ -52,16 +52,21 @@ import {
   offRosterConfirmEnabled,
   offRosterAskBeforeCardEnabled,
   oneFormEachPersonEnabled,
+  groupWordsNotANameEnabled,
   createFromConversationPointsToCardEnabled,
   cardNamesEmployeeEnabled,
   exitLetterAddresseeEnabled,
   letterGreetingNotNameEnabled,
+  templateOutlineFieldsEnabled,
   exitFormDateFromTerminationEnabled,
   metricGuardEnabled,
   refusalNoRepeatEnabled,
   titleNotSpeakersManagerEnabled,
   newRequestOwnTurnsEnabled,
+  addressAsksWhoEnabled,
+  leadFullSentenceEnabled,
   formEditPlainWordsEnabled,
+  pastedTemplateFieldsToOpenDraftEnabled,
   payrollDeductAmountFieldEnabled,
   questionNotFormEnabled,
   sameFormCopyEnabled,
@@ -81,6 +86,7 @@ import {
   formEditToolInStreamEnabled,
   formEditNoopGuardEnabled,
   nearMissQuestionRulesEnabled,
+  formNameOffRosterAskEnabled,
   reopenByAnyOpenVerbEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { streamWhenSlow } from "@/lib/api/streamed-response";
@@ -218,8 +224,11 @@ async function postChat(request: Request) {
     }
 
     let answer;
+    // TEMPLATE_OUTLINE_FIELDS_ENABLED: the parsed turn the closing note reads (never the raw body's question).
+    let outlineTurn: { question: string; instanceId: string } | null = null;
     try {
       let asked = parseAskRequest(body);
+      if (asked.activeFormInstanceId) outlineTurn = { question: asked.question, instanceId: asked.activeFormInstanceId };
       /*
        * EXIT_LETTER_ADDRESSEE_ENABLED (ported from the sibling app: QA's live test there, 9 Nov 2026): a letter to the
        * employee, signed "Sincerely,\n<C>\nDistrict Manager", is read without that sign-off in this turn and the
@@ -366,6 +375,12 @@ async function postChat(request: Request) {
           }
         }
         enterPersonRoster(names);
+        // FORM_NAME_OFF_ROSTER_ASK_ENABLED: the scope's level, so a name not on the roster is held for a store manager only (`lib/forms/roster-scope.ts`).
+        // The manager's own turns too, so a full name typed on an earlier turn is still the manager's (the sibling app's #741 eval).
+        if (formNameOffRosterAskEnabled()) {
+          const managerTurns = [...asked.history.filter((turn) => turn.role === "user").map((turn) => String(turn.content ?? "")), asked.question];
+          (await import("@/lib/forms/person-roster-store")).enterRosterScope(context.identity.scope?.level ?? "", managerTurns);
+        }
         /*
          * FORM_NAME_FROM_ROSTER_ENABLED: does this message name somebody on the
          * roster (exact or close, or a roster first name typed in lowercase)?
@@ -752,7 +767,7 @@ async function postChat(request: Request) {
         !sameCopy && !correction && !askedQuestion && !policyChange && !redraft && parsed.activeFormInstanceId
           ? await separateFormRequested(parsed.question)
           : false;
-      const askedRevision =
+      const askedRevisionRead =
         !sameCopy && !correction && !askedQuestion && !policyChange && !redraft && !separateDocument && parsed.activeFormInstanceId
           ? await (await import("@/lib/forms/chat-revision")).reviseActiveForm({
               request,
@@ -762,6 +777,18 @@ async function postChat(request: Request) {
               today: parsed.context.todayIso,
             })
           : null;
+      /*
+       * PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT_ENABLED (ported from the sibling app; its round-25 live test of sf-s21): a
+       * pasted labelled template the revision changed nothing for ("I haven't changed the … — everything on it is as
+       * it was.") goes on to the open-draft path, which places its sections (`lib/forms/open-draft-turn.ts`).
+       */
+      const askedRevision =
+        askedRevisionRead &&
+        pastedTemplateFieldsToOpenDraftEnabled() &&
+        (await import("@/lib/forms/pasted-template-fields")).looksLikePastedTemplate(parsed.question) &&
+        (await import("@/lib/forms/pasted-template-fields")).revisionChangedNothing(askedRevisionRead.content)
+          ? null
+          : askedRevisionRead;
       /*
        * FORM_EDIT_PLAIN_WORDS_ENABLED: "this is what i am wanting to coach on:
        * …", "make that update", "update the draft with these details" — said
@@ -871,7 +898,7 @@ async function postChat(request: Request) {
         draftAnswer ??
         correction ??
         // A name correction this form does not take in chat: said plainly, never a model's "updated".
-        (nameFix && !correction ? (await import("@/lib/forms/name-correction-words")).nameNotCorrectedReply(nameFix.open) : null) ??
+        (nameFix && !correction ? (await import("@/lib/forms/name-correction-words")).nameNotCorrectedReply(nameFix.open, nameFix.question) : null) ??
         policyChange ??
         redraft ??
         sameCopy ??
@@ -943,9 +970,12 @@ async function postChat(request: Request) {
           { id: parsed.questionMessageId, role: "user", content: asked.question },
         ]);
       }
-      // REFUSAL_NO_REPEAT_ENABLED, TITLE_NOT_SPEAKERS_MANAGER_ENABLED: see `lib/forms/reply-guards.ts`.
+      // ADDRESS_ASKS_WHO_ENABLED: "Corrective action for 123 Main Street" with no card asks who it is for (`lib/forms/address-asks-who.ts`).
+      if (addressAsksWhoEnabled() && !parsed.activeFormInstanceId)
+        answer = (await import("@/lib/forms/address-asks-who")).withAddressFormAsk(answer, asked.question);
       // SAME_ASK_NO_REPEAT_ENABLED: a card still waiting never repeats the last reply word for word (`lib/forms/reply-guards.ts`).
       if (sameAskNoRepeatEnabled()) answer = (await import("@/lib/forms/reply-guards")).withoutRepeatedAsk(answer, asked.history);
+      // REFUSAL_NO_REPEAT_ENABLED, TITLE_NOT_SPEAKERS_MANAGER_ENABLED: see `lib/forms/reply-guards.ts`.
       if (refusalNoRepeatEnabled() || titleNotSpeakersManagerEnabled()) {
         const guards = await import("@/lib/forms/reply-guards");
         answer = guards.withoutRepeatedRefusal(answer, parsed.history);
@@ -970,6 +1000,13 @@ async function postChat(request: Request) {
           [...parsed.history.filter((turn) => turn.role === "user").map((turn) => turn.content), asked.question],
           businessToday(),
         );
+      }
+      // GROUP_WORDS_NOT_A_NAME_ENABLED: "the same form for multiple employees" asks which employees (`lib/forms/group-words-ask.ts`).
+      if (groupWordsNotANameEnabled()) {
+        answer = (await import("@/lib/forms/group-words-ask")).withGroupWordsAsk(answer, [
+          ...parsed.history.filter((turn) => turn.role === "user").map((turn) => turn.content),
+          asked.question,
+        ]);
       }
       // PROPOSAL_NAME_CORRECTION_ENABLED: an off-roster "change her name to …" on the card asks which, never kept silently.
       answer = withCorrectionNotDropped(answer, parsed);
@@ -1013,6 +1050,8 @@ async function postChat(request: Request) {
         void _dropped;
         answer = { ...rest, content: rest.content.replace(/\n*Based on what you've described, I can prepare:\s*$/, "").trimEnd() };
       }
+      // LEAD_FULL_SENTENCE_ENABLED: a reply never ends at "I can prepare:" (`lib/forms/lead-full-sentence.ts`).
+      if (leadFullSentenceEnabled()) answer = (await import("@/lib/forms/lead-full-sentence")).withLeadFullSentence(answer);
       // OFF_ROSTER_ASK_BEFORE_CARD_ENABLED: a store manager's card for a full name not on their roster is asked about once, before the card (`lib/forms/off-roster-ask.ts`).
       if (offRosterAskBeforeCardEnabled()) {
         answer = (await import("@/lib/forms/off-roster-ask")).withOffRosterAskBeforeCard(answer, { scope: context.identity.scope, history: parsed.history, question: asked.question });
@@ -1076,6 +1115,23 @@ async function postChat(request: Request) {
       logTurnEvent("turn.answer.missing_turn", { surface, where: "api/chat" });
     }
 
+    /*
+     * TEMPLATE_OUTLINE_FIELDS_ENABLED (Pau's sf-s21, QA's ruling; port): "the Must see behaviors and not the standard of
+     * conduct" on a form that still cites Standards of Conduct is answered with why (`lib/forms/template-outline.ts`).
+     */
+    if (templateOutlineFieldsEnabled() && outlineTurn) {
+      const { question: outlineQuestion, instanceId: outlineInstanceId } = outlineTurn;
+      const outline = await import("@/lib/forms/template-outline");
+      const loaded = await (await import("@/lib/forms/instance-scope"))
+        .authorizeInstance(request, outlineInstanceId, "view")
+        .then((authorized) => authorized.loaded)
+        .catch(() => null);
+      const value = (key: string) => loaded?.values.find((row) => row.fieldKey === key)?.value ?? "";
+      const note = loaded
+        ? outline.policyKeptNote({ question: outlineQuestion, policyViolated: value("policy_violated"), policyLanguage: value("policy_language") })
+        : null;
+      if (note) answer = { ...answer, content: outline.withPolicyKeptNote(answer.content, note) };
+    }
     // FINAL_REPLY_MARKER_GUARD_ENABLED: no bare source tag reaches the manager, whatever path answered. See `ai/source-note.ts`.
     return NextResponse.json({ ...finalReplyWithoutMarkers(answer), turnId });
   } catch (error) {
