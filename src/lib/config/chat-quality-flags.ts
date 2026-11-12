@@ -1306,6 +1306,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "EXIT_LINE_ANSWERS_ADD_UP_ENABLED",
   // coding 4: MADE_ABOUT_ALL_OR_NOTHING (QA's live round-7 test, 9 Nov 2026; default off).
   "MADE_ABOUT_ALL_OR_NOTHING_ENABLED",
+  // coding 4: MADE_ABOUT_UNDATED_TOGETHER (QA, 9 Nov 2026; default off).
+  "MADE_ABOUT_UNDATED_TOGETHER_ENABLED",
   // coding 4: MADE_ABOUT_READER_ACCOUNT (QA's live round-9 test, 9 Nov 2026; default off).
   "MADE_ABOUT_READER_ACCOUNT_ENABLED",
   // coding 5: POLICY_TOPIC_INTO_FIELD (QA, a manager's 1★ rating, 10 Nov 2026; default off).
@@ -1325,6 +1327,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "MADE_ABOUT_SAID_DATE_ENABLED",
   "SECTION_BREAKS_KEPT_ENABLED",
   "ADD_NOT_REPEATED_ENABLED",
+  "MADE_FOR_IS_MADE_ABOUT_ENABLED",
   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
   "CHAT_STAGE_TIMINGS_ENABLED",
   "EXIT_TYPO_WORDS_ENABLED",
@@ -4349,6 +4352,16 @@ export function madeAboutAllOrNothingEnabled(): boolean {
 }
 
 /**
+ * MADE_ABOUT_UNDATED_TOGETHER_ENABLED (QA's Sunny round-11 gate, 9 Nov 2026; default off; same flag in both apps). "I need
+ * you to make it about showing up late" (no date) on a saved Coaching draft rewrote Details and left Other on the old
+ * topic. An undated made-about turn changes the account and the topic together, or neither; the Date stays, and the reply
+ * says so (`forms/form-patch-turn.ts`). Off, as before.
+ */
+export function madeAboutUndatedTogetherEnabled(): boolean {
+  return envFlag("MADE_ABOUT_UNDATED_TOGETHER_ENABLED");
+}
+
+/**
  * MADE_ABOUT_READER_ACCOUNT_ENABLED (QA's live Bubbles round-9 test, 9 Nov 2026; default off; same flag in both apps).
  * "make it about leaving the front desk unattended on 11/6/26" on a saved Coaching draft changed Other and Details and
  * left the Date: the reader set Details itself (the new incident added under the old one), so the made-about path that
@@ -4471,6 +4484,17 @@ export function sectionBreaksKeptEnabled(): boolean {
  */
 export function addNotRepeatedEnabled(): boolean {
   return envFlag("ADD_NOT_REPEATED_ENABLED");
+}
+
+/**
+ * MADE_FOR_IS_MADE_ABOUT_ENABLED (ported from the sibling app: QA's live round 20 there, 10 Nov 2026; default off; same flag
+ * in both apps). "can you make it for missing out monthly meeting" on a saved Coaching draft in sections was refused there.
+ * Here POLITE_ABOUT_STAYS_CARD already reads "make it for <X>" as a made-about; with this flag on too, a "for" turn keeps
+ * its reader's own account, and the made-about path's revision is given the sentence as "make it about <X>"
+ * (`ai/make-it-about.ts`, `forms/form-patch-turn.ts`). Off, as before.
+ */
+export function madeForIsMadeAboutEnabled(): boolean {
+  return envFlag("MADE_FOR_IS_MADE_ABOUT_ENABLED");
 }
 
 /**
