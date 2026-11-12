@@ -273,6 +273,19 @@ const FLIPPED_AFTER_FIXTURE: readonly string[] = [
   // keeps (Step B's lines, the expectation's policy line), so the recorded main chats predate them.
   "STEP_B_REPLY_KEEPS_LINES_ENABLED",
   "EXPECTATION_POLICY_LINE_KEPT_ENABLED",
+  // Changed on purpose (12 Nov 2026, QA round 17o): the same reason. "Can you do the same thing for <B> but switch it
+  // to a written" is now <B>'s own request (SAME_REQUEST_*), and the rest of 17o's flips are left out with them.
+  "TERMINATION_STATED_TICKS_ENABLED",
+  "NAME_CORRECTION_KEEPS_DATE_ENABLED",
+  "FUTURE_INCIDENT_DATE_ASK_ENABLED",
+  "NEAR_MISS_TURNED_DOWN_EVERYWHERE_ENABLED",
+  "OUTLINE_ON_OPEN_PROPOSAL_ENABLED",
+  "TITLE_BEFORE_NAME_ENABLED",
+  "SAME_REQUEST_CARRIES_ACCOUNT_ENABLED",
+  "SAME_REQUEST_KEEPS_EARLIER_CARD_ENABLED",
+  "SAME_REQUEST_OFF_ROSTER_ENABLED",
+  "FORMS_GUIDE_ENABLED",
+  "POLICY_CARRY_RETRIEVAL_ENABLED",
 ];
 const PRODUCTION = [...PRODUCTION_FLAGS.on, ...PRODUCTION_FLAGS.assumedOn].filter((name) => name !== NOOP && !FLIPPED_AFTER_FIXTURE.includes(name));
 // SAME_REQUEST_OFF_ROSTER (#727, G727) changes the sf-s11 turn by design; this fixture is main's, so it is held off.
