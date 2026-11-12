@@ -1336,6 +1336,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "CA_REASON_DUE_TO_ENABLED",
   "REOPEN_IS_OPENING_ENABLED",
   "BARE_FORM_NAME_ASKS_WHAT_ENABLED",
+  "THIS_FORM_IS_ABOUT_ENABLED",
   "COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED",
   // coding 6: REQUEST_ISSUE_KEPT, LATE_OPENING_OWN_WORDS, FIRST_NAME_ENOUGH (QA round 17b, 10 Nov 2026; default off).
   "REQUEST_ISSUE_KEPT_ENABLED",
@@ -4877,4 +4878,15 @@ export function reopenIsOpeningEnabled(): boolean {
  */
 export function bareFormNameAsksWhatEnabled(): boolean {
   return envFlag("BARE_FORM_NAME_ASKS_WHAT_ENABLED");
+}
+
+/**
+ * THIS_FORM_IS_ABOUT_ENABLED (QA's Bubbles 17n live test, 12 Nov 2026, item 3; default off; same flag in both apps). On
+ * an open Coaching draft, "this form is about cash handling" was answered "I haven't changed the Coaching Form …
+ * everything on it is as it was" and the topic was ignored: only "make it about <X>" was read. On: "this form is about
+ * <X>" (and "the coaching form / CA is / should be about <X>") is a made-about, read by the same chain
+ * (`ai/make-it-about.ts`, `forms/revision.ts`). Off, as before.
+ */
+export function thisFormIsAboutEnabled(): boolean {
+  return envFlag("THIS_FORM_IS_ABOUT_ENABLED");
 }

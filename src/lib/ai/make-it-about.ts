@@ -1,4 +1,4 @@
-import { madeForIsMadeAboutEnabled, politeAboutStaysCardEnabled } from "@/lib/config/chat-quality-flags";
+import { madeForIsMadeAboutEnabled, politeAboutStaysCardEnabled, thisFormIsAboutEnabled } from "@/lib/config/chat-quality-flags";
 
 /**
  * ============================================================================
@@ -39,8 +39,20 @@ const MAKE_IT_FOR =
  * `aboutOnly`: "make it about" alone (MADE_FOR_IS_MADE_ABOUT_ENABLED: where a "for" turn keeps its reader's own account,
  * `forms/form-patch-turn.ts`).
  */
+/**
+ * THIS_FORM_IS_ABOUT_ENABLED (QA's Bubbles 17n live test, 12 Nov 2026, item 3): on an open Coaching draft, "this form is
+ * about cash handling" was answered "I haven't changed the Coaching Form … everything on it is as it was": only "make it
+ * about" was read. "this form is about <X>", "the coaching form is about <X>", "this CA should be about <X>" say what
+ * the form is about, as "make it about <X>" does.
+ */
+export const FORM_IS_ABOUT =
+  /\b(?:this|the)\s+(?:form|document|coaching(?:\s+(?:form|document))?|ca|c\/a|corrective\s+action(?:\s+form)?|write-?up)\s+(?:is|should\s+be|needs\s+to\s+be|is\s+supposed\s+to\s+be)\s+about\s+/i;
+
 export function madeAbout(text: string, options: { readonly aboutOnly?: boolean } = {}): string | null {
-  const found = MAKE_IT_ABOUT.exec(text ?? "") ?? (politeAboutStaysCardEnabled() && !options.aboutOnly ? MAKE_IT_FOR.exec(text ?? "") : null);
+  const found =
+    MAKE_IT_ABOUT.exec(text ?? "") ??
+    (thisFormIsAboutEnabled() ? FORM_IS_ABOUT.exec(text ?? "") : null) ??
+    (politeAboutStaysCardEnabled() && !options.aboutOnly ? MAKE_IT_FOR.exec(text ?? "") : null);
   if (!found) return null;
   const rest = text.slice(found.index + found[0].length);
   const end = ENDS.exec(rest);
@@ -126,7 +138,13 @@ export function notesMadeAbout(notes: string): string {
  * as a rewording and refuse the new account for dropping the old one. Unchanged otherwise.
  */
 export function asMadeAboutWording(text: string): string {
-  if (MAKE_IT_ABOUT.test(text ?? "") || !madeForIsMadeAboutEnabled() || !politeAboutStaysCardEnabled()) return text;
+  if (MAKE_IT_ABOUT.test(text ?? "")) return text;
+  // THIS_FORM_IS_ABOUT_ENABLED: "this form is about <X>" reads to the revision as "make it about <X>".
+  if (thisFormIsAboutEnabled()) {
+    const said = FORM_IS_ABOUT.exec(text ?? "");
+    if (said) return `${text.slice(0, said.index)}make it about ${text.slice(said.index + said[0].length)}`;
+  }
+  if (!madeForIsMadeAboutEnabled() || !politeAboutStaysCardEnabled()) return text;
   const found = MAKE_IT_FOR.exec(text ?? "");
   if (!found) return text;
   const at = found.index + found[0].length;
