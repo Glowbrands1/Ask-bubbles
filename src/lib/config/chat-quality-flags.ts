@@ -1487,6 +1487,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "RESENT_REQUEST_IS_YES_ENABLED",
   // CARD_PLAN_MATCHES_CREATE (default off; QA's 17l, 12 Nov 2026): in the list, as every chat flag.
   "CARD_PLAN_MATCHES_CREATE_ENABLED",
+  // coding 6: TYPO_FULL_NAME_TO_ROSTER (audit item 15.10, sf-b5, 11 Nov 2026; default off).
+  "TYPO_FULL_NAME_TO_ROSTER_ENABLED",
 ] as const;
 
 /**
@@ -5369,4 +5371,22 @@ export function terminationCardTidyEnabled(): boolean {
  */
 export function teamCardNotProductEnabled(): boolean {
   return envFlag("TEAM_CARD_NOT_PRODUCT_ENABLED");
+}
+
+/**
+ * TYPO_FULL_NAME_TO_ROSTER_ENABLED (coding 6, 11 Nov 2026; default off; QA's audit item 15.10, overnight scan sf-b5,
+ * invented names). "create a ca form for Delphine Marlwoe Ostrander" for the roster's Delphine Marlowe Ostrander made
+ * the card for the name as typed (TYPED_NAME keeps the typed spelling; the near-miss question rides on
+ * FORM_NAME_FROM_ROSTER, off in production), so Woven's position never reached it. On: a full name typed with the
+ * roster person's own first name and every surname word that person's, exact or one typo (two for a long word), when
+ * exactly one roster person is that close, is that person (`forms/employee-match.ts` matchEmployeeName). Off, as before.
+ *
+ * Reworked (12 Nov 2026, QA's ruling on Gate-Bubbles-4's NO-GO, G4-776): the typo is NOT matched straight to the roster
+ * person — "Is this for **<roster name>**?" is still asked first (a typo can be a different person; the confirmation
+ * costs one turn), and a preferred name stays as the roster has it. On: after that question, a turn that opens with a
+ * level ("verbal warning …") on the asked person's Corrective Action card is the card's level
+ * (`forms/confirmed-name-level.ts`). Off, as before.
+ */
+export function typoFullNameToRosterEnabled(): boolean {
+  return envFlag("TYPO_FULL_NAME_TO_ROSTER_ENABLED");
 }
