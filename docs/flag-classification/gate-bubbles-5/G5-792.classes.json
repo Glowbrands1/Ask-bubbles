@@ -1,0 +1,18 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov11-title-initialism-hr-assistant-as-typed: \"create a coaching form for Wren Halloway at West Dodge, she is an HR assistant, for being late on 10-20-26\": the card's Job Title is \"HR Assistant\" \u2014 OPEN in production (the card's Job Title is \"Hr Assistant\")": {
+  "category": "INTENDED",
+  "reason": "Open-case it.fails wrapper: inner invariant now holds, so the wrapper reports failed. Holding."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov11-title-initialism-hr-assistant-lowercase: \"create a coaching form for wren halloway at west dodge, she is an hr assistant, for being late on 10-20-26\": the card's Job Title is \"HR Assistant\" \u2014 OPEN in production (the card's Job Title is \"Hr Assistant\")": {
+  "category": "INTENDED",
+  "reason": "Open-case it.fails wrapper: inner invariant now holds, so the wrapper reports failed. Holding."
+ },
+ "replay: nov11-title-initialism-hr-assistant-as-typed [open]": {
+  "category": "INTENDED",
+  "reason": "Open case now holds: the card's Job Title is 'HR Assistant' (was 'Hr Assistant'). Reply text identical OFF/ON; only the card's title, which the case asserts and the record does not store, differs."
+ },
+ "replay: nov11-title-initialism-hr-assistant-lowercase [open]": {
+  "category": "INTENDED",
+  "reason": "Open case now holds: the card's Job Title is 'HR Assistant' (was 'Hr Assistant'). Reply text identical OFF/ON; only the card's title, which the case asserts and the record does not store, differs."
+ }
+}
