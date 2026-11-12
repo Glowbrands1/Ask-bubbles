@@ -16,6 +16,8 @@ afterEach(() => {
 
 describe("TERSE_REQUEST_ACCOUNT_ENABLED", () => {
   it("off: as before (no Issue read from the terse request)", () => {
+    // Pinned off (QA, 12 Nov 2026): the suite also runs with production's or a gate's flags in the environment.
+    vi.stubEnv("TERSE_REQUEST_ACCOUNT_ENABLED", "");
     expect(correctiveActionIssue(TERSE, "Rowan Kestrel")).toBeNull();
     expect(JSON.stringify(readCaPolicy(TERSE))).not.toMatch(/monthly meeting/);
   });
