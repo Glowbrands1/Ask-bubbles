@@ -1,4 +1,20 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
+
+/*
+ * QA (R744, 12 Nov 2026): these tests say an Assistant Manager creates no forms, which holds only with
+ * NEXT_PUBLIC_ASSISTANT_MANAGER_CREATE_ENABLED off. It is on in production, where the answer correctly names the
+ * Assistant Manager. The permission matrix reads it when `config/company/access.ts` is imported, so it is pinned off
+ * before the imports (hoisted) and restored after.
+ */
+const amCreate = vi.hoisted(() => {
+  const saved = process.env.NEXT_PUBLIC_ASSISTANT_MANAGER_CREATE_ENABLED;
+  delete process.env.NEXT_PUBLIC_ASSISTANT_MANAGER_CREATE_ENABLED;
+  return { saved };
+});
+afterAll(() => {
+  if (amCreate.saved === undefined) delete process.env.NEXT_PUBLIC_ASSISTANT_MANAGER_CREATE_ENABLED;
+  else process.env.NEXT_PUBLIC_ASSISTANT_MANAGER_CREATE_ENABLED = amCreate.saved;
+});
 
 import { buildFormsGuideAnswer, readFormsGuideQuestion, type GuideTemplate } from "./forms-guide";
 import { guideAccess, seedTemplates, withheldTemplates } from "./forms-guide-answer";

@@ -1,4 +1,19 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+/*
+ * QA (R744, 12 Nov 2026): these tests assume an Assistant Manager creates no forms, which holds only with
+ * NEXT_PUBLIC_ASSISTANT_MANAGER_CREATE_ENABLED off (on in production). The permission matrix reads it when
+ * `config/company/access.ts` is imported, so it is pinned off before the imports (hoisted) and restored after.
+ */
+const amCreate = vi.hoisted(() => {
+  const saved = process.env.NEXT_PUBLIC_ASSISTANT_MANAGER_CREATE_ENABLED;
+  delete process.env.NEXT_PUBLIC_ASSISTANT_MANAGER_CREATE_ENABLED;
+  return { saved };
+});
+afterAll(() => {
+  if (amCreate.saved === undefined) delete process.env.NEXT_PUBLIC_ASSISTANT_MANAGER_CREATE_ENABLED;
+  else process.env.NEXT_PUBLIC_ASSISTANT_MANAGER_CREATE_ENABLED = amCreate.saved;
+});
 
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 import type { ChatFormProposal } from "@/types";
