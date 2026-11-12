@@ -1,4 +1,4 @@
-import { leadFullSentenceEnabled } from "@/lib/config/chat-quality-flags";
+import { formsBelowNeedsFormsEnabled, leadFullSentenceEnabled } from "@/lib/config/chat-quality-flags";
 
 /**
  * ============================================================================
@@ -21,4 +21,16 @@ export function withLeadFullSentence<T extends { content: string; formSelection?
     ? answer.content.replace(LEAD, (lead) => lead.replace(/I can prepare:\s*$/, "I can prepare one of the forms below."))
     : answer.content.replace(LEAD, "").trimEnd();
   return { ...answer, content };
+}
+
+const FORMS_BELOW = /\n*Based on what you've described, I can prepare one of the forms below\.\s*$/;
+
+/**
+ * FORMS_BELOW_NEEDS_FORMS_ENABLED (QA's Bubbles 17i live test, 11 Nov 2026): the turn's last step. "… I can prepare one
+ * of the forms below." stays only when the reply still carries form choices: a later step that set the choices aside
+ * (or a card shown instead) leaves no forms below it. Pure; off, as it was.
+ */
+export function withFormsBelowOnlyWithForms<T extends { content: string; formSelection?: unknown }>(answer: T): T {
+  if (!formsBelowNeedsFormsEnabled() || answer.formSelection || !FORMS_BELOW.test(answer.content)) return answer;
+  return { ...answer, content: answer.content.replace(FORMS_BELOW, "").trimEnd() };
 }

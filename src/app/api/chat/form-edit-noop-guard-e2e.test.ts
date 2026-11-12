@@ -421,7 +421,8 @@ describe("FORM_EDIT_NOOP_GUARD_ENABLED: the reply after an edit is the saved dif
    * "Updated: Observation of Offense: Observed: … 2026. she Must Practice …" instead of
    * "… Expectation: An…". Expected to fail until fixed; not re-recorded (QA's ruling).
    */
-  it.fails(`a tool append ("${CA_CHAIN[5]}"): one "Updated:" line, never the old "Changed … to" text`, async () => {
+  // Changed on purpose (12 Nov 2026, QA round 17n): EXPECTATION_POLICY_LINE_KEPT is on in production, and this defect is fixed (Gate-Bubbles-5 G5-737b).
+  it(`a tool append ("${CA_CHAIN[5]}"): one "Updated:" line, never the old "Changed … to" text`, async () => {
     const thread = await marnieDraft();
     model.next = { text: "I've updated the form.", tool: { ops: [{ op: "append", field: "observation", value: "she Must Practice the sanitizing checklist every shift." }] } };
     const reply = await thread.say(CA_CHAIN[5]);
@@ -446,7 +447,8 @@ describe("FORM_EDIT_NOOP_GUARD_ENABLED: the reply after an edit is the saved dif
    * "Updated: Observation of Offense: Observed: … 2026. she Must Practice …" instead of
    * "… Expectation: An…". Expected to fail until fixed; not re-recorded (QA's ruling).
    */
-  it.fails("a tick shows the option's label; two changes are two lines", async () => {
+  // Changed on purpose (12 Nov 2026, QA round 17n): EXPECTATION_POLICY_LINE_KEPT is on in production, and this defect is fixed (Gate-Bubbles-5 G5-737b).
+  it("a tick shows the option's label; two changes are two lines", async () => {
     const thread = await marnieDraft();
     model.next = {
       text: "Done.",
@@ -530,7 +532,10 @@ describe("FORM_EDIT_NOOP_GUARD_ENABLED needs FORM_EDIT_SINGLE_WRITER_ENABLED", (
     const reply = await thread.say(SF_S11_REQUEST);
     // Before the guard: the request reached the Observation, and the reply said so in the old words.
     expect(values(thread.id).observation).toContain(SF_S11_REQUEST);
-    expect(reply.content).toMatch(/^Changed Observation of Offense to "/);
+    // Changed on purpose (12 Nov 2026, Gate-Sunny-2's finding on the sibling app): with STEP_B_REPLY_KEEPS_LINES on, a field
+    // written on several lines is quoted line by line ("Changed Observation of Offense to:\n> …"); either way the reply
+    // names the change.
+    expect(reply.content).toMatch(/^Changed Observation of Offense to(?: "|:\n> )/);
   });
 });
 
