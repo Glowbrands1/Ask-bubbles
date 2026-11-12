@@ -173,7 +173,8 @@ export const NOV12_TITLE_BEFORE_NAME_REPLY_LINES_CASES: ReplayCase[] = [
     id: "nov12-17o-title-before-name-reply-lines",
     title: `"${SAID}" (admin): the plan and the store note name ${NAME.split(" ")[0]}, never "Team"`,
     report: "QA's Bubbles 17o live test, 12 Nov 2026: the reply said \"with Team\" and \"couldn't verify a store for Team\"",
-    status: { open: "the reply's plan and store note say \"Team\"" },
+    // Fixed (12 Nov 2026, QA): TITLE_BEFORE_NAME_REPLY_LINES is on in production with #832's merge.
+    status: "fixed",
     fixFlags: ["TITLE_BEFORE_NAME_REPLY_LINES_ENABLED"],
     async run(t: ReplayContext) {
       const { reply, proposal } = await ask(t, "admin", SAID);
@@ -187,7 +188,8 @@ export const NOV12_TITLE_BEFORE_NAME_REPLY_LINES_CASES: ReplayCase[] = [
     id: "nov12-17o-title-before-name-reply-lines-on-roster",
     title: "\"Corrective action for Team Member Marnie Holloway\" (location_manager, on the roster): no line says \"Team\"",
     report: "QA's Bubbles 17o live test, 12 Nov 2026: the reply said \"with Team\" and \"couldn't verify a store for Team\"",
-    status: { open: "the reply's plan says \"with Team\"" },
+    // Fixed (12 Nov 2026, QA): TITLE_BEFORE_NAME_REPLY_LINES is on in production with #832's merge.
+    status: "fixed",
     fixFlags: ["TITLE_BEFORE_NAME_REPLY_LINES_ENABLED"],
     async run(t: ReplayContext) {
       const { reply, proposal } = await ask(t, "location_manager", "Corrective action for Team Member Marnie Holloway");
