@@ -1,0 +1,74 @@
+{
+ "src/lib/forms/no-selection-on-open-card.test.ts :: the form choice with a card on screen is left off, with its lead, when it offers the card's own form; as before with the flag off": {
+  "category": "INTENDED-HARNESS",
+  "reason": "unit test's flag-off half; the ON arm exports the flag"
+ },
+ "replay: nov5-r6-policy-kept-across-turns [fix:REQUEST_KEPT_IN_WINDOW_ENABLED,NEXT_PUBLIC_REQUEST_KEPT_IN_WINDOW_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "with a card on screen the trailing 'Based on what you've described, I can prepare one of the forms below.' (and its choice) is left off; the case still holds; no other reply line changes"
+ },
+ "replay: nov5-r6-policy-kept-across-turns [production]": {
+  "category": "INTENDED",
+  "reason": "with a card on screen the trailing 'Based on what you've described, I can prepare one of the forms below.' (and its choice) is left off; the case still holds; no other reply line changes"
+ },
+ "replay: nov5-sf-b6-full-sentence-and-added-detail [open]": {
+  "category": "INTENDED",
+  "reason": "T3 loses the trailing form-choice lead with the card on screen; still OPEN for the turn-3 detail (second defect, #694 covers it)"
+ },
+ "replay: nov5-sf-b6-reply-full-sentence [fix:LEAD_FULL_SENTENCE_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "with a card on screen the trailing 'Based on what you've described, I can prepare one of the forms below.' (and its choice) is left off; the case still holds; no other reply line changes"
+ },
+ "replay: nov5-sf-b6-reply-full-sentence [production]": {
+  "category": "INTENDED",
+  "reason": "with a card on screen the trailing 'Based on what you've described, I can prepare one of the forms below.' (and its choice) is left off; the case still holds; no other reply line changes"
+ },
+ "replay: nov6-diffemp-guard-ruled-out-card-on-screen [fix:SAME_REQUEST_OTHER_PERSON_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "with a card on screen the trailing 'Based on what you've described, I can prepare one of the forms below.' (and its choice) is left off; the case still holds; no other reply line changes"
+ },
+ "replay: nov6-diffemp-guard-ruled-out-card-on-screen [production]": {
+  "category": "INTENDED",
+  "reason": "with a card on screen the trailing 'Based on what you've described, I can prepare one of the forms below.' (and its choice) is left off; the case still holds; no other reply line changes"
+ },
+ "replay: nov8-kept-request-coaching-named-now-no-notice [fix:REQUEST_KEPT_IN_WINDOW_ENABLED,NEXT_PUBLIC_REQUEST_KEPT_IN_WINDOW_ENABLED,KEPT_REQUEST_SAME_FORM_ENABLED,NEXT_PUBLIC_KEPT_REQUEST_SAME_FORM_ENABLED,CARRIED_PERSON_NOTICE_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "with a card on screen the trailing 'Based on what you've described, I can prepare one of the forms below.' (and its choice) is left off; the case still holds; no other reply line changes"
+ },
+ "replay: nov8-kept-request-coaching-named-now-no-notice [production]": {
+  "category": "INTENDED",
+  "reason": "with a card on screen the trailing 'Based on what you've described, I can prepare one of the forms below.' (and its choice) is left off; the case still holds; no other reply line changes"
+ },
+ "replay: nov8-kept-request-coaching-says-where-the-name-came-from [fix:REQUEST_KEPT_IN_WINDOW_ENABLED,NEXT_PUBLIC_REQUEST_KEPT_IN_WINDOW_ENABLED,KEPT_REQUEST_SAME_FORM_ENABLED,NEXT_PUBLIC_KEPT_REQUEST_SAME_FORM_ENABLED,CARRIED_PERSON_NOTICE_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "with a card on screen the trailing 'Based on what you've described, I can prepare one of the forms below.' (and its choice) is left off; the case still holds; no other reply line changes"
+ },
+ "replay: nov8-kept-request-coaching-says-where-the-name-came-from [production]": {
+  "category": "INTENDED",
+  "reason": "with a card on screen the trailing 'Based on what you've described, I can prepare one of the forms below.' (and its choice) is left off; the case still holds; no other reply line changes"
+ },
+ "replay: nov8-list-policy-on-card-question-still-answered [fix:QUESTION_NOT_FORM_ENABLED,EDIT_POLICY_ASK_ENABLED,LIST_POLICY_IS_EDIT_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "with a card on screen the trailing 'Based on what you've described, I can prepare one of the forms below.' (and its choice) is left off; the case still holds; no other reply line changes"
+ },
+ "replay: nov8-list-policy-on-card-question-still-answered [production]": {
+  "category": "INTENDED",
+  "reason": "with a card on screen the trailing 'Based on what you've described, I can prepare one of the forms below.' (and its choice) is left off; the case still holds; no other reply line changes"
+ },
+ "replay: nov8-questions-not-account-coaching-from-conversation [fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "with a card on screen the trailing 'Based on what you've described, I can prepare one of the forms below.' (and its choice) is left off; the case still holds; no other reply line changes"
+ },
+ "replay: nov8-questions-not-account-coaching-from-conversation [production]": {
+  "category": "INTENDED",
+  "reason": "with a card on screen the trailing 'Based on what you've described, I can prepare one of the forms below.' (and its choice) is left off; the case still holds; no other reply line changes"
+ },
+ "replay: nov8-take-off-stays-card-question-still-answered [fix:PROPOSAL_POLICY_SET_ASIDE_ENABLED,TAKE_OFF_STAYS_CARD_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "with a card on screen the trailing 'Based on what you've described, I can prepare one of the forms below.' (and its choice) is left off; the case still holds; no other reply line changes"
+ },
+ "replay: nov8-take-off-stays-card-question-still-answered [production]": {
+  "category": "INTENDED",
+  "reason": "with a card on screen the trailing 'Based on what you've described, I can prepare one of the forms below.' (and its choice) is left off; the case still holds; no other reply line changes"
+ }
+}

@@ -1,0 +1,18 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-twin-sf-s22-pasted-review-never-drafted: sf-s22: \"Use this to make it: <a reviewer's notes on Corwen's form>\" \u2192 Create: Wynne's CA, drafted without Corwen's notes or their date \u2014 OPEN in production (the draft is handed Corwen's reviewer notes as the account)": {
+  "category": "INTENDED",
+  "reason": "OPEN case holds: the pasted reviewer notes ('Use this to make it: \u2026' / 'Make this: \u2026') no longer turn the card into a Coaching Form; Wynne Sarrow's CA card (Standards of Conduct \u2014 MSB, Verbal Warning) is kept; 'It needs to be a CA' and 'Its a CA' keep the CA"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov5-twin-sf-s22-ca-not-coaching: sf-s22: \"It needs to be a CA, not a coaching form\" and \"Its a CA\" keep the Corrective Action; another employee's reviewer notes never go into the Observation \u2014 OPEN in production (on production flags \"Make this: <reviewer notes>\" after \"It needs to be a CA\" goes back to the Coaching Form (the first request makes the CA card since main moved on, checked 11 Nov 2026))": {
+  "category": "INTENDED",
+  "reason": "OPEN case holds: the pasted reviewer notes ('Use this to make it: \u2026' / 'Make this: \u2026') no longer turn the card into a Coaching Form; Wynne Sarrow's CA card (Standards of Conduct \u2014 MSB, Verbal Warning) is kept; 'It needs to be a CA' and 'Its a CA' keep the CA"
+ },
+ "replay: nov10-twin-sf-s22-pasted-review-never-drafted [open]": {
+  "category": "INTENDED",
+  "reason": "OPEN case holds: the pasted reviewer notes ('Use this to make it: \u2026' / 'Make this: \u2026') no longer turn the card into a Coaching Form; Wynne Sarrow's CA card (Standards of Conduct \u2014 MSB, Verbal Warning) is kept; 'It needs to be a CA' and 'Its a CA' keep the CA"
+ },
+ "replay: nov5-twin-sf-s22-ca-not-coaching [open]": {
+  "category": "INTENDED",
+  "reason": "OPEN case holds: the pasted reviewer notes ('Use this to make it: \u2026' / 'Make this: \u2026') no longer turn the card into a Coaching Form; Wynne Sarrow's CA card (Standards of Conduct \u2014 MSB, Verbal Warning) is kept; 'It needs to be a CA' and 'Its a CA' keep the CA"
+ }
+}
