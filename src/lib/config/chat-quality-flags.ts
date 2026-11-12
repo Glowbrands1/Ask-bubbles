@@ -958,6 +958,7 @@ export function nameBeforeTitleEnabled(): boolean {
 }
 
 export const CHAT_QUALITY_FLAG_NAMES = [
+  "NOT_FOLLOWING_IS_VIOLATION_ENABLED",
   "INCIDENT_FROM_EARLIER_TURN_ENABLED",
   "LEVEL_REQUEST_DATE_ENABLED",
   "CA_SHORTCUT_WORDS_ENABLED",
@@ -994,6 +995,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "PROPOSAL_NAME_CORRECTION_ENABLED",
   // Coding: NEAR_MISS_QUESTION_RULES (round 5, 8 Nov 2026; port from the sibling app; default off): forced off with the others.
   "NEAR_MISS_QUESTION_RULES_ENABLED",
+  // Coding 2: FORM_NAME_OFF_ROSTER_ASK (QA, 10 Nov 2026; port from the sibling app; default off; ships with the name set).
+  "FORM_NAME_OFF_ROSTER_ASK_ENABLED",
   "POLICY_CHANGE_REST_OF_TURN_ENABLED",
   "OPEN_FORM_NO_SELECTION_ENABLED",
   "ANGLE_PLACEHOLDER_GUARD_ENABLED",
@@ -1258,6 +1261,11 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REOPEN_NOT_OPEN_FORM_ENABLED",
   "SIGNED_STEP_NOT_A_REQUEST_ENABLED",
   "STEP_DATES_NOT_FORM_DATE_ENABLED",
+  // coding 4: FORM_FOR_FOR_TYPO (B-C3, QA, 11 Nov 2026; default off).
+  "FORM_FOR_FOR_TYPO_ENABLED",
+  // coding 4: TITLE_NOT_PART_OF_NAME (B-C3 part 2, QA, 11 Nov 2026; default off).
+  "TITLE_NOT_PART_OF_NAME_ENABLED",
+  "NO_NAME_REPLY_WORDING_ENABLED",
   "TAKE_OFF_STAYS_CARD_ENABLED",
   // coding 4: ACCOUNT_PLACE_LEAD (round 6; default off): forced off with the others.
   "ACCOUNT_PLACE_LEAD_ENABLED",
@@ -1319,6 +1327,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ADD_NOT_REPEATED_ENABLED",
   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
   "CHAT_STAGE_TIMINGS_ENABLED",
+  "EXIT_TYPO_WORDS_ENABLED",
   "CA_REASON_DUE_TO_ENABLED",
   // coding 5: EXIT_NOTICE_VERB_TYPOS (QA's October triage, 10 Nov 2026; default off).
   "EXIT_NOTICE_VERB_TYPOS_ENABLED",
@@ -1336,6 +1345,22 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "WOVEN_OCR_PAGE_BATCHES_ENABLED",
   // coding 5: EXCERPT_BRAND_HEADING_DROP (QA's round 17c live test, 11 Nov 2026; default off).
   "EXCERPT_BRAND_HEADING_DROP_ENABLED",
+  "NEAR_MISS_ANSWER_KEEPS_REQUEST_ENABLED",
+  "FULL_MANUAL_WIDE_GATE_ENABLED",
+  // coding 5: B3 (QA's backlog, 10 Nov 2026; default off).
+  "COPY_PASTE_CLAIM_HONEST_ENABLED",
+  "DATE_ONCE_ENABLED",
+  "ADDRESS_ASKS_WHO_ENABLED",
+  "LEAD_FULL_SENTENCE_ENABLED",
+  "NAME_LINE_COMMA_ENABLED",
+  // TEMPLATE_OUTLINE_FIELDS (default off): in the list, as every chat flag (Gate-Bubbles-2, 11 Nov 2026).
+  "TEMPLATE_OUTLINE_FIELDS_ENABLED",
+  // PASTED_OUTLINE_TO_OPEN_DRAFT (default off): in the list, as every chat flag (Gate-Bubbles-2, 11 Nov 2026).
+  "PASTED_OUTLINE_TO_OPEN_DRAFT_ENABLED",
+  // coding 6: PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT (ported from the sibling app, 11 Nov 2026; default off).
+  "PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT_ENABLED",
+  // coding 6: GROUP_WORDS_NOT_A_NAME (Problem 19, 11 Nov 2026; default off).
+  "GROUP_WORDS_NOT_A_NAME_ENABLED",
 ] as const;
 
 /**
@@ -2951,6 +2976,16 @@ export function policyTopicIntoFieldEnabled(): boolean {
 }
 
 /**
+ * EXIT_TYPO_WORDS_ENABLED (Pau's P17, the sibling app's production, 10 Nov 2026; coding 5; same flag in both apps; default off).
+ * "store items will be returneded … they are eligiable for rehire" left Store Items Returned and Eligible for Rehire
+ * blank. On: the exit answer readers read a word one or two letters off "returned", "eligible", "rehire" and the like as
+ * that word (`forms/exit-details.ts`). Off, as before.
+ */
+export function exitTypoWordsEnabled(): boolean {
+  return envFlag("EXIT_TYPO_WORDS_ENABLED");
+}
+
+/**
  * WOVEN_TEXT_NUL_STRIP_ENABLED (ported from the sibling app: QA, 10 Nov 2026, three Woven manuals stuck "failed" there
  * since 4 Nov 2026; coding 5; same flag in both apps; default off). A PDF whose text layer holds NUL characters (U+0000)
  * failed with "Chunks could not be saved: unsupported Unicode escape sequence": Postgres text and jsonb refuse NUL. On:
@@ -3005,6 +3040,52 @@ export function wovenOcrPageBatchesEnabled(): boolean {
  */
 export function excerptBrandHeadingDropEnabled(): boolean {
   return envFlag("EXCERPT_BRAND_HEADING_DROP_ENABLED");
+}
+
+/**
+ * COPY_PASTE_CLAIM_HONEST_ENABLED (QA's backlog B3; same report; coding 5; same flag in both apps; default off). "It
+ * should update automatically — no copy-and-paste needed. The details are on the draft card." went out with nothing
+ * written. On: those are claims the honest reply drops (`forms/form-content-turn.ts`). Off, as before.
+ */
+export function copyPasteClaimHonestEnabled(): boolean {
+  return envFlag("COPY_PASTE_CLAIM_HONEST_ENABLED");
+}
+
+/**
+ * DATE_ONCE_ENABLED (QA's backlog B7; HR's report of 21 Oct 2026; coding 5; same flag in both apps; default off). The
+ * incident date was written twice: the Date field and again in the Observation ("… on 10-1-26"). On: a drafted account
+ * field drops the form's own date (`forms/date-once.ts`). Off, as before.
+ */
+export function dateOnceEnabled(): boolean {
+  return envFlag("DATE_ONCE_ENABLED");
+}
+
+/**
+ * ADDRESS_ASKS_WHO_ENABLED (QA's backlog B7; QA, 4 Nov 2026; coding 5; same flag in both apps; default off).
+ * "Corrective action for 123 Main Street" made no card and was answered as a policy question. On: it asks who the
+ * form is for (`forms/address-asks-who.ts`). Off, as before.
+ */
+export function addressAsksWhoEnabled(): boolean {
+  return envFlag("ADDRESS_ASKS_WHO_ENABLED");
+}
+
+/**
+ * LEAD_FULL_SENTENCE_ENABLED (QA's backlog B7; Pau via QA, 5 Nov 2026, sf-b6; coding 5; same flag in both apps; default
+ * off). A reply ended "Based on what you've described, I can prepare:" with nothing after it. On: the lead is a full
+ * sentence when form choices follow, and goes when none do (`forms/lead-full-sentence.ts`). Off, as before.
+ */
+export function leadFullSentenceEnabled(): boolean {
+  return envFlag("LEAD_FULL_SENTENCE_ENABLED");
+}
+
+/**
+ * NAME_LINE_COMMA_ENABLED (QA's backlog B7; QA's live CA chat, 4 Nov 2026; coding 5; same flag in both apps; default
+ * off). "fix her last name, it is Doe-Smith": the comma kept it from reading as a name correction. On: it reads as one,
+ * and a name the form does not take from the chat is named back as a question (`forms/name-correction-words.ts`).
+ * Off, as before.
+ */
+export function nameLineCommaEnabled(): boolean {
+  return envFlag("NAME_LINE_COMMA_ENABLED");
 }
 
 // --- end coding 5 flags ---
@@ -3212,6 +3293,18 @@ export function rosterNameInCandidateEnabled(): boolean {
  * matcher's close name); (b) with no employee on the card, no reply text names
  * the person who is not on it. Off, as before.
  */
+/**
+ * NEAR_MISS_ANSWER_KEEPS_REQUEST_ENABLED (QA, 10 Nov 2026, Bubbles s14 path 1; default off). "ok, create a follow-up
+ * coaching form for rozline quellmar. i trained her …" was asked "Is this for **Rozlyn Quellmar**?"; the answer
+ * "Oops, it's Rozlyn quellmar" became the name alone, because the request was looked for by the chosen first name
+ * ("Rozlyn") and the manager had typed "rozline". The card went back to the earlier Coaching Form and lost its date.
+ * On: when no turn typed the chosen name, the turn the question asked about is the request, with the near-miss
+ * replaced by the chosen name (`ai/first-name-suggest.ts`). Off, as before.
+ */
+export function nearMissAnswerKeepsRequestEnabled(): boolean {
+  return envFlag("NEAR_MISS_ANSWER_KEEPS_REQUEST_ENABLED");
+}
+
 export function rosterNearMissEnabled(): boolean {
   return envFlag("ROSTER_NEAR_MISS_ENABLED");
 }
@@ -3790,6 +3883,24 @@ export function nearMissQuestionRulesEnabled(): boolean {
   return envFlag("NEAR_MISS_QUESTION_RULES_ENABLED");
 }
 
+// coding 2: FORM_NAME_OFF_ROSTER_ASK
+/**
+ * FORM_NAME_OFF_ROSTER_ASK_ENABLED (ported from the sibling app: QA's roster-set gate there, 10 Nov 2026; default off; ships with the name set, the
+ * eighth FORM_NAME companion). With FORM_NAME on, three replies the off-roster flow should own went another way:
+ * (a) a termination letter's own person ("Dear <name>,", a letter that opens "<name>,") was never offered as typed
+ * ("reply **use <name>**"), only asked who; (b) for a store manager, a full name not on the roster got "I couldn't find
+ * **<name>** in the Woven roster, so that name is not on the form." under an empty card, never OFF_ROSTER_ASK_BEFORE_CARD's
+ * "I can't find **<name>** on your roster — is that the right name, or are they at another store?" with the card held;
+ * (c) "create a CA for <Name>'s Crossing Plaza, …" said the place back as a name not found, never POSSESSIVE_PLACE's
+ * question. On: (a) those letter places count as a person's (`forms/roster-only-names.ts` personPlaces); (b) the
+ * not-found note and offer are OFF_ROSTER_ASK's question and offer, once per name, the card held (`forms/off-roster-
+ * ask.ts`), store managers only, as OFF_ROSTER_ASK; (c) a possessive place is asked as POSSESSIVE_PLACE asks it. Off, as
+ * before.
+ */
+export function formNameOffRosterAskEnabled(): boolean {
+  return envFlag("FORM_NAME_OFF_ROSTER_ASK_ENABLED");
+}
+
 /**
  * STALE_PROMPT_LINES_OFF_ENABLED (QA, 5 Nov 2026; default off). Two lines of
  * the Corrective Action draft's prompt describe boxes the current template no
@@ -4237,6 +4348,38 @@ export function formDateSaidAloneEnabled(): boolean {
 }
 
 /**
+ * TEMPLATE_OUTLINE_FIELDS_ENABLED (coding 6, 10 Nov 2026; default off; Pau
+ * via QA, sf-s21, 5 Nov 2026; port from the sibling app). With Wynne's Corrective Action created, the
+ * manager pasted another employee's CA ("Observation of Offense: … Action
+ * Plan: …") and asked "No this should be the same out line but with wynnes
+ * info i told you in the first chat": the revision was scoped to the
+ * Observation only, so the template's Action Plan was dropped (the CA's plan
+ * is changed only when the request names it), and the next ask was answered
+ * "I haven't changed the Corrective Action Form". On: a request for a pasted
+ * template's outline ("the same outline", "in the format of / that …",
+ * "look exactly the same as") is handed to the revision naming every field
+ * the template heads, so it may write them all; and "Must See Behaviors and
+ * not the standard of conduct" on a form citing Standards of Conduct is
+ * answered with why it stays (the manual has no Must See Behaviors section;
+ * QA's ruling). See `forms/template-outline.ts`. Off, as before.
+ */
+export function templateOutlineFieldsEnabled(): boolean {
+  return envFlag("TEMPLATE_OUTLINE_FIELDS_ENABLED");
+}
+
+/**
+ * PASTED_OUTLINE_TO_OPEN_DRAFT_ENABLED (coding 6, 10 Nov 2026; default off; QA's Sunny round-23 live test of Pau's
+ * sf-s21, conv_mwb21a4z2rxf5y1): with <A>'s Corrective Action draft open, a pasted Corrective Action of <B>
+ * ("Observation of Offense: … Action Plan: …") was read as a new request for <B> ("Is this for <B>?"), so a new card
+ * covered the draft and the outline was never saved on it (TEMPLATE_OUTLINE_FIELDS only reads the open draft). On, a
+ * turn with two or more of the open draft's field labels as headings goes to that draft as its outline, with the
+ * draft's own facts (`forms/open-draft-turn.ts`). Off, as before.
+ */
+export function pastedOutlineToOpenDraftEnabled(): boolean {
+  return envFlag("PASTED_OUTLINE_TO_OPEN_DRAFT_ENABLED");
+}
+
+/**
  * MADE_ABOUT_SAID_DATE_ENABLED (ported from the sibling app: QA's live round 14 there, 10 Nov 2026; default off; same flag in
  * both apps). "I need you to make it about showing up late and please list the policy make the date for 10/14/26" on a
  * saved draft already about another incident answered "I haven't changed …": the reader wrote the policy into Details,
@@ -4267,6 +4410,16 @@ export function sectionBreaksKeptEnabled(): boolean {
  */
 export function addNotRepeatedEnabled(): boolean {
   return envFlag("ADD_NOT_REPEATED_ENABLED");
+}
+
+/**
+ * NOT_FOLLOWING_IS_VIOLATION_ENABLED (QA's live Bubbles report, 10 Nov 2026; default off; same flag in both apps). "make it about not
+ * following the dress code" was read as no policy named, so no Dress Code reference was written. With the flag on, "not
+ * following / not wearing / not meeting / failed to follow <policy topic>" names that policy as broken (`forms/ca-policy.ts`,
+ * NOT_FOLLOWING_BEFORE). Off, as before.
+ */
+export function notFollowingIsViolationEnabled(): boolean {
+  return envFlag("NOT_FOLLOWING_IS_VIOLATION_ENABLED");
 }
 
 /**
@@ -4384,4 +4537,70 @@ export function noShowOpeningIsAttendanceEnabled(): boolean {
  */
 export function exitNoticeVerbTyposEnabled(): boolean {
   return envFlag("EXIT_NOTICE_VERB_TYPOS_ENABLED");
+}
+
+/**
+ * NO_NAME_REPLY_WORDING_ENABLED (QA, the sibling app's round 22 live test, 11 Nov 2026; port from the sibling app; default off; same
+ * flag in both apps). "create a CA for ima employee" made no card, but the reply said "for the the employee" twice and
+ * "You can create it now" with no Create button. On, the name's stand-in is never re-replaced and a card with no employee
+ * says it can be created once the name is given (`forms/no-name-reply-wording.ts`). Off, as before.
+ */
+export function noNameReplyWordingEnabled(): boolean {
+  return envFlag("NO_NAME_REPLY_WORDING_ENABLED");
+}
+
+/**
+ * TITLE_NOT_PART_OF_NAME_ENABLED (B-C3 part 2 from QA's open-case list, 11 Nov 2026; the sibling app's Pau scan sf-s36;
+ * default off; QA: the roster set goes on with Bubbles 16c). "… exit for <first> <last, one letter off> TM. Quit without
+ * notice." put "<first> <last> TM" on the card, so the roster readers found nobody and never offered the roster's
+ * spelling. On: a store title written short after a typed name of two words or more is taken off it before the roster is
+ * read (`forms/roster-only-names.ts`). Off, as before.
+ */
+export function titleNotPartOfNameEnabled(): boolean {
+  return envFlag("TITLE_NOT_PART_OF_NAME_ENABLED");
+}
+
+/**
+ * With FULL_MANUAL_CONTEXT_ENABLED on, a question the policy words do not
+ * catch ("Where should employees park?", "What is COBRA?") is still asked
+ * with the whole manual when retrieval's best excerpt is from the manual or
+ * the question names a word of a heading the manual prints. Off, only the
+ * policy words choose the manual and every other question keeps retrieval.
+ * Default off: it moves most manual questions onto the full-manual prompt.
+ */
+export function fullManualWideGateEnabled(): boolean {
+  return envFlag("FULL_MANUAL_WIDE_GATE_ENABLED");
+}
+
+/**
+ * FORM_FOR_FOR_TYPO_ENABLED (B-C3 from QA's open-case list, 11 Nov 2026; the sibling app's Pau scan sf-s36, a real
+ * manager: "I need a exit for for <name> TM. Quit without notice. …"; default off). The message was never read as an exit
+ * request: "for for" is "form for" mistyped, and "exit for for" named no form. On: a form's name followed by "for for" is
+ * read as "<form> form for" (`forms/template-intent.ts` canonicalFormWording). Off, as before.
+ */
+export function formForForTypoEnabled(): boolean {
+  return envFlag("FORM_FOR_FOR_TYPO_ENABLED");
+}
+
+/**
+ * PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT_ENABLED (coding 6, 11 Nov 2026; default off; ported from the sibling app's round-25 live test of
+ * sf-s21, dpl_E584Q17G): with <A>'s Corrective Action draft open, a pasted labelled template of <B>'s CA ("Observation
+ * of Offense: … Action Plan: …") stayed on the draft (PASTED_OUTLINE_TO_OPEN_DRAFT) but nothing was saved ("Nothing on
+ * the form has changed yet. I couldn't place that …"). On, when the revision writes nothing, each labelled section goes
+ * into the draft's field of that label, with the template's person written as the draft's employee, never a person
+ * switch (`forms/pasted-template-fields.ts`). Off, as before.
+ */
+export function pastedTemplateFieldsToOpenDraftEnabled(): boolean {
+  return envFlag("PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT_ENABLED");
+}
+
+/**
+ * GROUP_WORDS_NOT_A_NAME_ENABLED (coding 6, 11 Nov 2026; default off; Problem 19, this app's production, 10 Nov 2026):
+ * "I want the same form for multiple employees" put "multiple employees" on the coaching card as the employee, with
+ * "Everything I need is here". On, a group of people ("multiple employees", "my employees", "several team members",
+ * "the team", "everyone") is never a person's name (`forms/not-a-name.ts` isGroupOfPeople, with NOT_A_NAME_GUARD),
+ * so the bot asks who they are and the coaching topic is kept. Off, as before.
+ */
+export function groupWordsNotANameEnabled(): boolean {
+  return envFlag("GROUP_WORDS_NOT_A_NAME_ENABLED");
 }
