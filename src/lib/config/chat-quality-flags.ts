@@ -4624,6 +4624,16 @@ export function chatStageTimingsEnabled(): boolean {
 }
 
 /**
+ * BC_NOT_A_NAME_ENABLED (coding 6, October rebuild 2, 10 Nov 2026; default off; conv_mvofjlco271mr0t, found in QA's
+ * October triage): "crete a ca for <first> <last> bc she didnt do the deep clean i assignd by 9-15" put "<First>
+ * <Last> Bc" on the card. On, "bc" (b/c, bcuz, cuz, …) is "because", never a name word: a typed name ends before it,
+ * and a read name loses a trailing one (`forms/proposal.ts`). Off, as before.
+ */
+export function bcNotANameEnabled(): boolean {
+  return envFlag("BC_NOT_A_NAME_ENABLED");
+}
+
+/**
  * DRAFT_WRITE_NEVER_SILENT_ENABLED (coding 6, 10 Nov 2026; default off; QA's
  * live finding, the sibling app's round 17; port). One Create in five saved only the Name and
  * Date: the drafting model ran (chat_traces: forms_draft succeeded), the
