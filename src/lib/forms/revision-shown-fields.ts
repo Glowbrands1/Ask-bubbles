@@ -1,7 +1,7 @@
 import { revisionReplyShowsFieldsEnabled } from "@/lib/config/chat-quality-flags";
 
 /**
- * REVISION_REPLY_SHOWS_FIELDS_ENABLED (QA, the Ask Sunny sanitation report, 10 Nov 2026 18:49Z, port from Ask Sunny; default off). After Create,
+ * REVISION_REPLY_SHOWS_FIELDS_ENABLED (QA, the sibling app's sanitation report, 10 Nov 2026 18:49Z, port from the sibling app; default off). After Create,
  * "the 10 minute sanitaion in the morning" got "Updated the **Corrective Action Form** for <name>: Observation of Offense.
  * Everything else on the form is as it was." and no card: the change shows only in the open draft below, which the
  * manager may not be looking at. On: the reply shows each changed text field as it now reads. Off: no lines.

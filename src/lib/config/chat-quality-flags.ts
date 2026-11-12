@@ -4312,7 +4312,7 @@ export function noShowOpeningIsAttendanceEnabled(): boolean {
 }
 
 /**
- * REVISION_REPLY_SHOWS_FIELDS_ENABLED (QA, the Ask Sunny sanitation report, 10 Nov 2026 18:49Z; port from Ask Sunny; default
+ * REVISION_REPLY_SHOWS_FIELDS_ENABLED (QA, the sibling app's sanitation report, 10 Nov 2026 18:49Z; port from the sibling app; default
  * off; same flag in both apps). A chat edit of a created draft replied "Updated …: Observation of Offense." with no card;
  * the change showed only in the open draft. On, the reply shows each changed text field as it now reads
  * (`forms/revision-shown-fields.ts`, called from the protected `forms/chat-revision.ts`). Off, as before.
