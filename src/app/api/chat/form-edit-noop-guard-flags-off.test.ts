@@ -271,7 +271,8 @@ const FLIPPED_AFTER_FIXTURE: readonly string[] = [
   "WOVEN_PDF_OCR_ENABLED",
 ];
 const PRODUCTION = [...PRODUCTION_FLAGS.on, ...PRODUCTION_FLAGS.assumedOn].filter((name) => name !== NOOP && !FLIPPED_AFTER_FIXTURE.includes(name));
-const TOUCHED = [...new Set([NOOP, ...TOOL_FLAGS, ...PRODUCTION, ...PRODUCTION_FLAGS.off, "FORM_PATCH_REDUCER_ENABLED", "FORM_REPLY_FROM_DIFF_ENABLED"])];
+// SAME_REQUEST_OFF_ROSTER (#727, G727) changes the sf-s11 turn by design; this fixture is main's, so it is held off.
+const TOUCHED = [...new Set([NOOP, ...TOOL_FLAGS, ...PRODUCTION, ...PRODUCTION_FLAGS.off, "FORM_PATCH_REDUCER_ENABLED", "FORM_REPLY_FROM_DIFF_ENABLED", "SAME_REQUEST_OFF_ROSTER_ENABLED"])];
 const saved = new Map<string, string | undefined>();
 
 function setFlags(on: readonly string[]) {
