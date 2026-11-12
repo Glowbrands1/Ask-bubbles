@@ -4884,3 +4884,13 @@ export function terminationClosingEnabled(): boolean {
   const inlined = process.env.NEXT_PUBLIC_TERMINATION_STATED_TICKS_ENABLED;
   return typeof inlined === "string" && ON.has(inlined.trim().toLowerCase());
 }
+
+/**
+ * NAME_CORRECTION_KEEPS_DATE_ENABLED (QA, 11 Nov 2026; Gate-Bubbles' probe of s14 path 1; default off). The answer to
+ * "Is this for **<name>**?" ("Oops, it's Rozlyn quellmar") is read as the request again, and its card lost the date the
+ * card already had (2026-10-01 → none), on production's flags too. On, a name correction never clears the card's date
+ * (`ai/name-correction-keeps-date.ts`). Off, as before.
+ */
+export function nameCorrectionKeepsDateEnabled(): boolean {
+  return envFlag("NAME_CORRECTION_KEEPS_DATE_ENABLED");
+}
