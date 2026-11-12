@@ -1,4 +1,4 @@
-import { politeAboutStaysCardEnabled } from "@/lib/config/chat-quality-flags";
+import { madeForIsMadeAboutEnabled, politeAboutStaysCardEnabled } from "@/lib/config/chat-quality-flags";
 
 /**
  * ============================================================================
@@ -35,8 +35,12 @@ const ENDS =
 const MAKE_IT_FOR =
   /\bmake\s+(?:it|this|that|the\s+(?:form|document|coaching(?:\s+(?:form|document))?|ca|c\/a|corrective\s+action(?:\s+form)?|write-?up))\s+(?:be\s+)?for\s+(?=(?:[a-z]+ing|not|no|never)\b)/i;
 
-export function madeAbout(text: string): string | null {
-  const found = MAKE_IT_ABOUT.exec(text ?? "") ?? (politeAboutStaysCardEnabled() ? MAKE_IT_FOR.exec(text ?? "") : null);
+/**
+ * `aboutOnly`: "make it about" alone (MADE_FOR_IS_MADE_ABOUT_ENABLED: where a "for" turn keeps its reader's own account,
+ * `forms/form-patch-turn.ts`).
+ */
+export function madeAbout(text: string, options: { readonly aboutOnly?: boolean } = {}): string | null {
+  const found = MAKE_IT_ABOUT.exec(text ?? "") ?? (politeAboutStaysCardEnabled() && !options.aboutOnly ? MAKE_IT_FOR.exec(text ?? "") : null);
   if (!found) return null;
   const rest = text.slice(found.index + found[0].length);
   const end = ENDS.exec(rest);
@@ -113,4 +117,18 @@ export function notesMadeAbout(notes: string): string {
   const turns = (notes ?? "").split(/\n{2,}/);
   const made = turnsMadeAbout(turns);
   return made === turns ? notes : made.join("\n\n");
+}
+
+/**
+ * MADE_FOR_IS_MADE_ABOUT_ENABLED (ported from the sibling app: QA's live round 20 there, 10 Nov 2026): the manager's sentence
+ * as the old path's revision reads a made-about ("make it about <X>"), when it said "make it for <X>" (read as a made-about
+ * here by POLITE_ABOUT_STAYS_CARD). The revision (`forms/revision.ts`, protected) knows only "about": it would read the turn
+ * as a rewording and refuse the new account for dropping the old one. Unchanged otherwise.
+ */
+export function asMadeAboutWording(text: string): string {
+  if (MAKE_IT_ABOUT.test(text ?? "") || !madeForIsMadeAboutEnabled() || !politeAboutStaysCardEnabled()) return text;
+  const found = MAKE_IT_FOR.exec(text ?? "");
+  if (!found) return text;
+  const at = found.index + found[0].length;
+  return `${text.slice(0, at).replace(/\bfor\s+$/i, "about ")}${text.slice(at)}`;
 }
