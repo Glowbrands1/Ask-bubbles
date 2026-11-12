@@ -2122,6 +2122,8 @@ describe("FORM_EDIT_SINGLE_WRITER_ENABLED: the post-draft consistency check", ()
   });
 
   it('"Marnie was late": the miss is detected and reported, and the drafting call count is unchanged', async () => {
+    // FIRST_NAME_ENOUGH off, pinned here (it is on in production): the wording as the spec first gave it.
+    vi.stubEnv("FIRST_NAME_ENOUGH_ENABLED", "");
     state.toolInputs = [SHORT];
     const { payload, check } = await traced(CREATE);
 
@@ -2129,6 +2131,24 @@ describe("FORM_EDIT_SINGLE_WRITER_ENABLED: the post-draft consistency check", ()
     // Saved, and said: never silently.
     expect(state.persisted.at(-1)!.values.observation).toBe("Marnie was late.");
     expect(payload.notice).toContain("The draft left out Quill and 10-20-26 in Observation of Offense; tell me if you want it added.");
+    expect(check).toEqual({ checked: true, missing_keys: ["name", "date"] });
+  });
+
+  it('"Marnie was late", FIRST_NAME_ENOUGH on: the dropped surname is still detected; the line says she is named by first name only', async () => {
+    /*
+     * Changed on purpose (12 Nov 2026, QA's ruling (B) on the sibling app's r36 live check): "The draft left out <surname>"
+     * read as if she were missing from an Observation that names her by first name. Detection is the same (the trace
+     * still has "name"); only the wording changes. The date the draft left out is said as before.
+     */
+    vi.stubEnv("FIRST_NAME_ENOUGH_ENABLED", "true");
+    state.toolInputs = [SHORT];
+    const { payload, check } = await traced(CREATE);
+
+    expect(state.modelCalls).toBe(1);
+    expect(state.persisted.at(-1)!.values.observation).toBe("Marnie was late.");
+    expect(payload.notice).toContain("The draft left out 10-20-26 in Observation of Offense; tell me if you want it added.");
+    expect(payload.notice).toContain("The Observation of Offense names the employee as Marnie only; tell me if you want the full name there.");
+    expect(String(payload.notice)).not.toContain("left out Quill");
     expect(check).toEqual({ checked: true, missing_keys: ["name", "date"] });
   });
 

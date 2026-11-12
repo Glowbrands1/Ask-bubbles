@@ -91,3 +91,30 @@ function listed(items: readonly string[]): string {
 export function leftOutLine(missing: readonly DraftFact[], labels: readonly string[]): string {
   return `The draft left out ${listed(missing.map((fact) => fact.shown))} in ${listed(labels)}; tell me if you want it added.`;
 }
+
+/*
+ * FIRST_NAME_ENOUGH_ENABLED, the Corrective Action's wording (QA's r36 (in the sibling app) live check and ruling (B), 12 Nov 2026):
+ * "The draft left out <surname> in Observation of Offense" was shown though the Observation named the employee by first
+ * name, and reads as if she were missing. A dropped surname is still detected (the single-writer spec); when another
+ * word of the name is there, the line says what is true: "The Observation of Offense names the employee as <first>
+ * only; tell me if you want the full name there." Any other fact the draft left out is said as before. Off, as before.
+ */
+export function leftOutNotice(input: {
+  readonly missing: readonly DraftFact[];
+  readonly labels: readonly string[];
+  readonly facts: readonly DraftFact[];
+  readonly values: Readonly<Record<string, string>>;
+  readonly narrativeKeys: readonly string[];
+}): string {
+  const { missing, labels } = input;
+  const text = input.narrativeKeys.map((key) => input.values[key] ?? "").join("\n");
+  const named = input.facts.filter((fact) => fact.kind === "name" && fact.in(text));
+  const nameMissing = missing.filter((fact) => fact.kind === "name");
+  if (!firstNameEnoughEnabled() || named.length === 0 || nameMissing.length === 0) return leftOutLine(missing, labels);
+  const asNamed = named.map((fact) => fact.shown).join(" ");
+  const where = labels.length === 1 ? `The ${labels[0]} names` : `The draft names`;
+  const inFields = labels.length === 1 ? "" : ` in ${listed(labels)}`;
+  const nameLine = `${where} the employee as ${asNamed} only${inFields}; tell me if you want the full name there.`;
+  const rest = missing.filter((fact) => fact.kind !== "name");
+  return rest.length > 0 ? `${leftOutLine(rest, labels)} ${nameLine}` : nameLine;
+}
