@@ -83,6 +83,8 @@ export interface ReplayContext {
   checked(instanceId: string): Record<string, string[]>;
   /** What the drafting model was given, one entry per draft written. */
   draftPrompts(): string[];
+  /** The draft route's replies this case, in order (e.g. its `notice`). */
+  draftReplies?(): Record<string, unknown>[];
   /** What the revision model was handed (its messages), one entry per call. */
   revisionPrompts?(): string[];
   /** The drafting model's system prompt, one entry per draft written. */

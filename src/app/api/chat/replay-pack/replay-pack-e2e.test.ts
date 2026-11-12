@@ -489,9 +489,14 @@ async function call<T>(url: string, init?: RequestInit): Promise<T> {
       : null;
   if (!response) throw new Error(`no route for ${url}`);
   const body = (await response.json()) as T & { error?: string };
+  // The draft route's replies, in order, as the browser receives them (`draftReplies`; ported from the sibling app's pack).
+  if (draft) draftReplies.push(body as Record<string, unknown>);
   if (!response.ok) throw new Error(body.error ?? `HTTP ${response.status}`);
   return body;
 }
+
+/** The draft route's replies this case (their `notice`). */
+const draftReplies: Record<string, unknown>[] = [];
 
 /** The chat route only accepts a UUID for the open form; the fake numbers rows `fake-N`. */
 function toUuid(id: string): string {
@@ -640,6 +645,7 @@ beforeEach(async () => {
   state.reading = {};
   state.draft = { values: {} };
   state.revision = { values: {} };
+  draftReplies.length = 0;
   patchScript.outputs = [];
   patchScript.calls = 0;
   patchScript.byLatest = null;
@@ -778,6 +784,7 @@ function context(): ReplayContext {
     calls: () => ({ chat: state.chatModelCalls, draft: state.draftCalls, revision: state.revisionCalls, tool: state.toolCalls, patch: patchScript.calls }),
     forms: () => store.form_instances as never,
     draftPrompts: () => [...draftAsked],
+    draftReplies: () => [...draftReplies],
     // What the revision model was handed, one entry per call (its messages), as in the sibling's pack.
     revisionPrompts: () => [...revisionAsked],
     draftSystems: () => [...draftSystemAsked],
