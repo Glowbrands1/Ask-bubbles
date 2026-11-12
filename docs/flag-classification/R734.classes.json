@@ -1,0 +1,146 @@
+{
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap off (production) production env, flag off, D3 on: as main COACHING_FORM": {
+    "category": "REGRESSION",
+    "reason": "\"create a coaching form for quinn marlowe at kearney, i coached her on 10-16\": the coaching being recorded is read as a prior step, and the Coaching Form loses its date (formDate null, was 2026-10-16) on the card and the draft."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap off (production) production env, flag off, D3 unset: as main COACHING_FORM": {
+    "category": "REGRESSION",
+    "reason": "\"create a coaching form for quinn marlowe at kearney, i coached her on 10-16\": the coaching being recorded is read as a prior step, and the Coaching Form loses its date (formDate null, was 2026-10-16) on the card and the draft."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap off (production) production env, flag on, D3 on CAPS QA-7 defect 2: \"i coached her coworker, not her, on 10-16\" is no prior of Quinn's": {
+    "category": "REGRESSION",
+    "reason": "QA-7 defect 2 returns: \"create a ca for quinn marlowe at kearney, she was late on 10-5. i coached her coworker, not her, on 10-16\" now lists \"Coaching — 10/16/2026\" as QUINN's prior (expected none). Production path: PRIOR_SENTENCE_FIX is on in production."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap off (production) production env, flag on, D3 on CAPS a Coaching Form is dated by the coaching held, 10/16, on the card and the draft": {
+    "category": "REGRESSION",
+    "reason": "\"create a coaching form for quinn marlowe at kearney, i coached her on 10-16\": the coaching being recorded is read as a prior step, and the Coaching Form loses its date (formDate null, was 2026-10-16) on the card and the draft."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap off (production) production env, flag on, D3 on Sentence case QA-7 defect 2: \"i coached her coworker, not her, on 10-16\" is no prior of Quinn's": {
+    "category": "REGRESSION",
+    "reason": "QA-7 defect 2 returns: \"create a ca for quinn marlowe at kearney, she was late on 10-5. i coached her coworker, not her, on 10-16\" now lists \"Coaching — 10/16/2026\" as QUINN's prior (expected none). Production path: PRIOR_SENTENCE_FIX is on in production."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap off (production) production env, flag on, D3 on Sentence case a Coaching Form is dated by the coaching held, 10/16, on the card and the draft": {
+    "category": "REGRESSION",
+    "reason": "\"create a coaching form for quinn marlowe at kearney, i coached her on 10-16\": the coaching being recorded is read as a prior step, and the Coaching Form loses its date (formDate null, was 2026-10-16) on the card and the draft."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap off (production) production env, flag on, D3 on lowercase QA-7 defect 2: \"i coached her coworker, not her, on 10-16\" is no prior of Quinn's": {
+    "category": "REGRESSION",
+    "reason": "QA-7 defect 2 returns: \"create a ca for quinn marlowe at kearney, she was late on 10-5. i coached her coworker, not her, on 10-16\" now lists \"Coaching — 10/16/2026\" as QUINN's prior (expected none). Production path: PRIOR_SENTENCE_FIX is on in production."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap off (production) production env, flag on, D3 on lowercase a Coaching Form is dated by the coaching held, 10/16, on the card and the draft": {
+    "category": "REGRESSION",
+    "reason": "\"create a coaching form for quinn marlowe at kearney, i coached her on 10-16\": the coaching being recorded is read as a prior step, and the Coaching Form loses its date (formDate null, was 2026-10-16) on the card and the draft."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap off (production) production env, flag on, D3 unset CAPS QA-7 defect 2: \"i coached her coworker, not her, on 10-16\" is no prior of Quinn's": {
+    "category": "REGRESSION",
+    "reason": "QA-7 defect 2 returns: \"create a ca for quinn marlowe at kearney, she was late on 10-5. i coached her coworker, not her, on 10-16\" now lists \"Coaching — 10/16/2026\" as QUINN's prior (expected none). Production path: PRIOR_SENTENCE_FIX is on in production."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap off (production) production env, flag on, D3 unset CAPS a Coaching Form is dated by the coaching held, 10/16, on the card and the draft": {
+    "category": "REGRESSION",
+    "reason": "\"create a coaching form for quinn marlowe at kearney, i coached her on 10-16\": the coaching being recorded is read as a prior step, and the Coaching Form loses its date (formDate null, was 2026-10-16) on the card and the draft."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap off (production) production env, flag on, D3 unset Sentence case QA-7 defect 2: \"i coached her coworker, not her, on 10-16\" is no prior of Quinn's": {
+    "category": "REGRESSION",
+    "reason": "QA-7 defect 2 returns: \"create a ca for quinn marlowe at kearney, she was late on 10-5. i coached her coworker, not her, on 10-16\" now lists \"Coaching — 10/16/2026\" as QUINN's prior (expected none). Production path: PRIOR_SENTENCE_FIX is on in production."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap off (production) production env, flag on, D3 unset Sentence case a Coaching Form is dated by the coaching held, 10/16, on the card and the draft": {
+    "category": "REGRESSION",
+    "reason": "\"create a coaching form for quinn marlowe at kearney, i coached her on 10-16\": the coaching being recorded is read as a prior step, and the Coaching Form loses its date (formDate null, was 2026-10-16) on the card and the draft."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap off (production) production env, flag on, D3 unset lowercase QA-7 defect 2: \"i coached her coworker, not her, on 10-16\" is no prior of Quinn's": {
+    "category": "REGRESSION",
+    "reason": "QA-7 defect 2 returns: \"create a ca for quinn marlowe at kearney, she was late on 10-5. i coached her coworker, not her, on 10-16\" now lists \"Coaching — 10/16/2026\" as QUINN's prior (expected none). Production path: PRIOR_SENTENCE_FIX is on in production."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap off (production) production env, flag on, D3 unset lowercase a Coaching Form is dated by the coaching held, 10/16, on the card and the draft": {
+    "category": "REGRESSION",
+    "reason": "\"create a coaching form for quinn marlowe at kearney, i coached her on 10-16\": the coaching being recorded is read as a prior step, and the Coaching Form loses its date (formDate null, was 2026-10-16) on the card and the draft."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap on (not production, extra coverage) production env, flag off, D3 on: as main COACHING_FORM": {
+    "category": "REGRESSION",
+    "reason": "\"create a coaching form for quinn marlowe at kearney, i coached her on 10-16\": the coaching being recorded is read as a prior step, and the Coaching Form loses its date (formDate null, was 2026-10-16) on the card and the draft."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap on (not production, extra coverage) production env, flag off, D3 unset: as main COACHING_FORM": {
+    "category": "REGRESSION",
+    "reason": "\"create a coaching form for quinn marlowe at kearney, i coached her on 10-16\": the coaching being recorded is read as a prior step, and the Coaching Form loses its date (formDate null, was 2026-10-16) on the card and the draft."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap on (not production, extra coverage) production env, flag on, D3 on CAPS QA-7 defect 2: \"i coached her coworker, not her, on 10-16\" is no prior of Quinn's": {
+    "category": "REGRESSION",
+    "reason": "QA-7 defect 2 returns: \"create a ca for quinn marlowe at kearney, she was late on 10-5. i coached her coworker, not her, on 10-16\" now lists \"Coaching — 10/16/2026\" as QUINN's prior (expected none). Production path: PRIOR_SENTENCE_FIX is on in production."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap on (not production, extra coverage) production env, flag on, D3 on CAPS a Coaching Form is dated by the coaching held, 10/16, on the card and the draft": {
+    "category": "REGRESSION",
+    "reason": "\"create a coaching form for quinn marlowe at kearney, i coached her on 10-16\": the coaching being recorded is read as a prior step, and the Coaching Form loses its date (formDate null, was 2026-10-16) on the card and the draft."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap on (not production, extra coverage) production env, flag on, D3 on Sentence case QA-7 defect 2: \"i coached her coworker, not her, on 10-16\" is no prior of Quinn's": {
+    "category": "REGRESSION",
+    "reason": "QA-7 defect 2 returns: \"create a ca for quinn marlowe at kearney, she was late on 10-5. i coached her coworker, not her, on 10-16\" now lists \"Coaching — 10/16/2026\" as QUINN's prior (expected none). Production path: PRIOR_SENTENCE_FIX is on in production."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap on (not production, extra coverage) production env, flag on, D3 on Sentence case a Coaching Form is dated by the coaching held, 10/16, on the card and the draft": {
+    "category": "REGRESSION",
+    "reason": "\"create a coaching form for quinn marlowe at kearney, i coached her on 10-16\": the coaching being recorded is read as a prior step, and the Coaching Form loses its date (formDate null, was 2026-10-16) on the card and the draft."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap on (not production, extra coverage) production env, flag on, D3 on lowercase QA-7 defect 2: \"i coached her coworker, not her, on 10-16\" is no prior of Quinn's": {
+    "category": "REGRESSION",
+    "reason": "QA-7 defect 2 returns: \"create a ca for quinn marlowe at kearney, she was late on 10-5. i coached her coworker, not her, on 10-16\" now lists \"Coaching — 10/16/2026\" as QUINN's prior (expected none). Production path: PRIOR_SENTENCE_FIX is on in production."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap on (not production, extra coverage) production env, flag on, D3 on lowercase a Coaching Form is dated by the coaching held, 10/16, on the card and the draft": {
+    "category": "REGRESSION",
+    "reason": "\"create a coaching form for quinn marlowe at kearney, i coached her on 10-16\": the coaching being recorded is read as a prior step, and the Coaching Form loses its date (formDate null, was 2026-10-16) on the card and the draft."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap on (not production, extra coverage) production env, flag on, D3 unset CAPS QA-7 defect 2: \"i coached her coworker, not her, on 10-16\" is no prior of Quinn's": {
+    "category": "REGRESSION",
+    "reason": "QA-7 defect 2 returns: \"create a ca for quinn marlowe at kearney, she was late on 10-5. i coached her coworker, not her, on 10-16\" now lists \"Coaching — 10/16/2026\" as QUINN's prior (expected none). Production path: PRIOR_SENTENCE_FIX is on in production."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap on (not production, extra coverage) production env, flag on, D3 unset CAPS a Coaching Form is dated by the coaching held, 10/16, on the card and the draft": {
+    "category": "REGRESSION",
+    "reason": "\"create a coaching form for quinn marlowe at kearney, i coached her on 10-16\": the coaching being recorded is read as a prior step, and the Coaching Form loses its date (formDate null, was 2026-10-16) on the card and the draft."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap on (not production, extra coverage) production env, flag on, D3 unset Sentence case QA-7 defect 2: \"i coached her coworker, not her, on 10-16\" is no prior of Quinn's": {
+    "category": "REGRESSION",
+    "reason": "QA-7 defect 2 returns: \"create a ca for quinn marlowe at kearney, she was late on 10-5. i coached her coworker, not her, on 10-16\" now lists \"Coaching — 10/16/2026\" as QUINN's prior (expected none). Production path: PRIOR_SENTENCE_FIX is on in production."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap on (not production, extra coverage) production env, flag on, D3 unset Sentence case a Coaching Form is dated by the coaching held, 10/16, on the card and the draft": {
+    "category": "REGRESSION",
+    "reason": "\"create a coaching form for quinn marlowe at kearney, i coached her on 10-16\": the coaching being recorded is read as a prior step, and the Coaching Form loses its date (formDate null, was 2026-10-16) on the card and the draft."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap on (not production, extra coverage) production env, flag on, D3 unset lowercase QA-7 defect 2: \"i coached her coworker, not her, on 10-16\" is no prior of Quinn's": {
+    "category": "REGRESSION",
+    "reason": "QA-7 defect 2 returns: \"create a ca for quinn marlowe at kearney, she was late on 10-5. i coached her coworker, not her, on 10-16\" now lists \"Coaching — 10/16/2026\" as QUINN's prior (expected none). Production path: PRIOR_SENTENCE_FIX is on in production."
+  },
+  "src/app/api/chat/prior-sentence-fix-live-e2e.test.ts :: full remap on (not production, extra coverage) production env, flag on, D3 unset lowercase a Coaching Form is dated by the coaching held, 10/16, on the card and the draft": {
+    "category": "REGRESSION",
+    "reason": "\"create a coaching form for quinn marlowe at kearney, i coached her on 10-16\": the coaching being recorded is read as a prior step, and the Coaching Form loses its date (formDate null, was 2026-10-16) on the card and the draft."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-prior-actions-no-comma-qa-caps: \"CREATE A CA FOR REMY CALDER, SHE WAS LATE ON 10-20-26. PRIOR COACHING VERBAL 6/25 WRITTEN 7/28 NO DEDUCT\" — Prior actions list a verbal (06/25/2026) and a written (07/28/2026), each with only its own words — OPEN in production (the second prior action takes the first's words: \"Written warning — verbal 6/25 — 07/28/2026\")": {
+    "category": "INTENDED",
+    "reason": "Open to holding: prior actions typed with no comma (\"prior coaching verbal 6/25 written 7/28 no deduct\" / \"… 9/1 …\") keep only their own words; the stray \"verbal 6/25 — \" / \"9/1 — \" is gone from the prior line."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-prior-actions-no-comma-qa-lower: \"create a ca for remy calder, she was late on 10-20-26. prior coaching verbal 6/25 written 7/28 no deduct\" — Prior actions list a verbal (06/25/2026) and a written (07/28/2026), each with only its own words — OPEN in production (the second prior action takes the first's words: \"Written warning — verbal 6/25 — 07/28/2026\")": {
+    "category": "INTENDED",
+    "reason": "Open to holding: prior actions typed with no comma (\"prior coaching verbal 6/25 written 7/28 no deduct\" / \"… 9/1 …\") keep only their own words; the stray \"verbal 6/25 — \" / \"9/1 — \" is gone from the prior line."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-prior-actions-no-comma-triage-caps: \"CREATE A CA FOR REMY CALDER, SHE WAS LATE ON 10-20-26. PRIOR VERBAL 9/1 WRITTEN 9/15\" — Prior actions list a verbal (09/01/2026) and a written (09/15/2026), each with only its own words — OPEN in production (the second prior action takes the first's words: \"Written warning — verbal 6/25 — 07/28/2026\")": {
+    "category": "INTENDED",
+    "reason": "Open to holding: prior actions typed with no comma (\"prior coaching verbal 6/25 written 7/28 no deduct\" / \"… 9/1 …\") keep only their own words; the stray \"verbal 6/25 — \" / \"9/1 — \" is gone from the prior line."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-prior-actions-no-comma-triage-lower: \"create a ca for remy calder, she was late on 10-20-26. prior verbal 9/1 written 9/15\" — Prior actions list a verbal (09/01/2026) and a written (09/15/2026), each with only its own words — OPEN in production (the second prior action takes the first's words: \"Written warning — verbal 6/25 — 07/28/2026\")": {
+    "category": "INTENDED",
+    "reason": "Open to holding: prior actions typed with no comma (\"prior coaching verbal 6/25 written 7/28 no deduct\" / \"… 9/1 …\") keep only their own words; the stray \"verbal 6/25 — \" / \"9/1 — \" is gone from the prior line."
+  },
+  "replay: nov10-prior-actions-no-comma-qa-caps [open]": {
+    "category": "INTENDED",
+    "reason": "Open to holding: prior actions typed with no comma (\"prior coaching verbal 6/25 written 7/28 no deduct\" / \"… 9/1 …\") keep only their own words; the stray \"verbal 6/25 — \" / \"9/1 — \" is gone from the prior line."
+  },
+  "replay: nov10-prior-actions-no-comma-qa-lower [open]": {
+    "category": "INTENDED",
+    "reason": "Open to holding: prior actions typed with no comma (\"prior coaching verbal 6/25 written 7/28 no deduct\" / \"… 9/1 …\") keep only their own words; the stray \"verbal 6/25 — \" / \"9/1 — \" is gone from the prior line."
+  },
+  "replay: nov10-prior-actions-no-comma-triage-caps [open]": {
+    "category": "INTENDED",
+    "reason": "Open to holding: prior actions typed with no comma (\"prior coaching verbal 6/25 written 7/28 no deduct\" / \"… 9/1 …\") keep only their own words; the stray \"verbal 6/25 — \" / \"9/1 — \" is gone from the prior line."
+  },
+  "replay: nov10-prior-actions-no-comma-triage-lower [open]": {
+    "category": "INTENDED",
+    "reason": "Open to holding: prior actions typed with no comma (\"prior coaching verbal 6/25 written 7/28 no deduct\" / \"… 9/1 …\") keep only their own words; the stray \"verbal 6/25 — \" / \"9/1 — \" is gone from the prior line."
+  }
+}
