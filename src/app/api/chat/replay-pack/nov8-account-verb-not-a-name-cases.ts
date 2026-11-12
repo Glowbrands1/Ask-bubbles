@@ -41,6 +41,17 @@ async function cardAndForm(t: ReplayContext, turns: readonly string[], name: str
   let content = "";
   for (const turn of turns) content = (await thread.say(turn)).content;
   expect(thread.proposal?.employeeName ?? null, `the card is not for ${name}:\n${content}`).toBe(name);
+  /*
+   * QA's roster-set gate R16A (10 Nov 2026), with FORM_NAME_FROM_ROSTER on: "make me CA for Rhea Calloway failing to complete
+   * shifts" gave "Issue: Calloway failing to complete shifts · Store: …, your assigned store". The Issue never starts with
+   * the employee's surname, and the store read from Woven says so.
+   */
+  const surname = name.split(/\s+/).slice(1).join(" ");
+  const issue = /\*\*Issue:\*\*\s*([^·\n]*)/.exec(content)?.[1]?.trim() ?? "";
+  expect(issue.toLowerCase().startsWith(surname.toLowerCase()), `the Issue starts with the surname "${surname}":\n${content}`).toBe(false);
+  if (/\*\*Store:\*\*/.test(content)) {
+    expect(content, `the Store lost its Woven source:\n${content}`).toContain(`from Woven (where ${name} is assigned)`);
+  }
   const id = await thread.create();
   expect(t.values(id).employee_name, "the saved form's employee").toBe(name);
 }
