@@ -8,7 +8,7 @@ import { NEVER_CORRECTED, typoVocabulary } from "./typo-vocabulary";
  * THE CARD'S ACCOUNT, WITH THE OBVIOUS TYPOS MENDED
  * ============================================================================
  *
- * ACCOUNT_TYPOS_FIXED_ENABLED (QA, the Ask Sunny sanitation report, 10 Nov 2026 18:49Z, port from Ask Sunny; default off; same
+ * ACCOUNT_TYPOS_FIXED_ENABLED (QA, the sibling app's sanitation report, 10 Nov 2026 18:49Z, port from the sibling app; default off; same
  * flag in both apps). Ask Bubbles had the same slip on its card's Issue line. "please make a ca for
  * <name> for not doing th e10 minute sanitaion" put "not doing th e10 minute sanitaion" on the card
  * (here its **Issue:** line). On: the card's account keeps the manager's words with the obvious slips mended — a word broken before a number

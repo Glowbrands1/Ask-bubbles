@@ -4312,7 +4312,7 @@ export function noShowOpeningIsAttendanceEnabled(): boolean {
 }
 
 /**
- * ACCOUNT_TYPOS_FIXED_ENABLED (QA, the Ask Sunny sanitation report, 10 Nov 2026 18:49Z; port from Ask Sunny; default off;
+ * ACCOUNT_TYPOS_FIXED_ENABLED (QA, the sibling app's sanitation report, 10 Nov 2026 18:49Z; port from the sibling app; default off;
  * same flag in both apps). "not doing th e10 minute sanitaion" went onto the card's Issue line word for word. On, the card
  * shows the manager's words with obvious slips mended ("the 10-minute sanitation"; `forms/account-spelling.ts`). The stored
  * messages and the record keep what was typed. Off, as before.
