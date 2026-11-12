@@ -268,7 +268,14 @@ export const NOV10_CHAT_EDITS_A_CASES: ReplayCase[] = [
       await onDraft(t, thread, id, "the details we just discussed!!!");
       const asked = t.revisionPrompts!().slice(before).join("\n");
       const change = /THE CHANGE THE MANAGER IS ASKING FOR NOW:([\s\S]*)/.exec(asked)?.[1] ?? "";
-      for (const step of IN_THE_ANSWER) expect(change, `the revision was not handed the details discussed before the card (${step}):\n${change.slice(0, 300)}`).toMatch(step);
+      /*
+       * Changed on purpose (13 Nov 2026, QA round 17r): with FORM_EDIT_SOURCE_TURN_ENABLED (#480) on, the change is
+       * "Add the details in my last message to the Details of Coaching." and the details are handed as that last message
+       * (`formContentRevision`), not inside the change line. Either way the revision must be handed them, and never the
+       * app's own reply as the change.
+       */
+      const handed = /\bin my last message\b/i.test(change) ? asked : change;
+      for (const step of IN_THE_ANSWER) expect(handed, `the revision was not handed the details discussed before the card (${step}):\n${change.slice(0, 300)}`).toMatch(step);
       expect(change, "the revision was handed the app's own reply").not.toMatch(BOTS_OWN_WORDS);
     },
   },
