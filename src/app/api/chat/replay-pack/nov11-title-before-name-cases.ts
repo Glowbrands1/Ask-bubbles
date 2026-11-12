@@ -96,13 +96,43 @@ export const NOV11_TITLE_BEFORE_NAME_CASES: ReplayCase[] = [
       await plain.say(`Corrective action for ${NAME}`);
       const expected = t.values(await plain.create());
       const thread = t.thread();
-      await thread.say(words);
+      const first = await thread.say(words);
+      // Gate-Bubbles R795T (12 Nov 2026): a name off the roster after a title goes the normal off-roster way: it is said
+      // back with the "use <name>" offer, and taking the offer puts it on the card.
+      if (first.content.includes(`reply **use ${NAME}**`)) await thread.say(`use ${NAME}`);
       const values = t.values(await thread.create());
+      // QA's ruling (12 Nov 2026): the title the manager typed in full is the draft's Job Title.
+      if (/Team Member/.test(words)) expect(values.job_title, JSON.stringify(values)).toBe("Team Member");
       expect(values.employee_name, JSON.stringify(values)).toBe(NAME);
       expect(values.observation ?? "", JSON.stringify(values)).not.toMatch(/\b(?:Team Member|TM)\s+Wren Tallis/i);
       // The same draft as the plain-name request's, apart from a job title the manager stated.
       const rest = Object.fromEntries(Object.entries(values).filter(([field]) => field !== "job_title"));
       expect(rest, `titled: ${JSON.stringify(values)}\nplain: ${JSON.stringify(expected)}`).toEqual(expected);
+    },
+  })),
+  /*
+   * Gate-Bubbles R795T (12 Nov 2026): "Create a CA for Team Member Of The Month" gave a READY card for "Of The Month" and
+   * an empty reply. Words after a title that name an award, a time, an event or a shift are nobody: the card asks who,
+   * as it does with the flag off, and the reply is never empty.
+   */
+  ...(
+    [
+      ["of-the-month", "Create a CA for Team Member Of The Month", "Of The Month"],
+      ["of-the-year", "Create a CA for Store Manager Of The Year", "Of The Year"],
+      ["shift-lead-training", "Create a CA for Shift Lead Training", "Training"],
+      ["dm-visit", "Create a CA for DM Visit", "Visit"],
+    ] as const
+  ).map(([key, words, notAName]) => ({
+    id: `nov12-title-before-name-not-a-person-${key}`,
+    title: `NEVER-BREAK: "${words}" names nobody: no "${notAName}" on the card, and the reply is never empty`,
+    report: "Gate-Bubbles R795T (12 Nov 2026): a title before an award or event name made a person of the rest",
+    status: "fixed" as const,
+    fixFlags: FIX,
+    async run(t: ReplayContext) {
+      const { reply, proposal } = await ask(t, "admin", words);
+      expect(proposal?.employeeName ?? null, reply.content).not.toBe(notAName);
+      expect(proposal?.status === "ready" && !proposal?.employeeName, "a ready card with nobody on it").toBe(false);
+      expect(reply.content.trim(), "the reply is empty").not.toBe("");
     },
   })),
   {

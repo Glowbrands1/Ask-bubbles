@@ -106,7 +106,7 @@ function said(names: readonly string[]): string {
  * found nobody and never offered the roster's spelling. A store title written short after the name (two words or more)
  * is not part of it: it is taken off the card's name, and off the reply's bold name, before the roster is read.
  */
-function withoutTrailingTitle(response: AskResponse, message?: string): AskResponse {
+function withoutTrailingTitle(response: AskResponse, names: readonly string[], message?: string): AskResponse {
   const typed = response.formProposal?.employeeName?.trim() ?? "";
   /*
    * TITLE_BEFORE_NAME_ENABLED (QA, 12 Nov 2026): "Corrective action for TM <name>" came with no name on the card. The
@@ -114,9 +114,15 @@ function withoutTrailingTitle(response: AskResponse, message?: string): AskRespo
    */
   const card = response.formProposal;
   if (!typed && card && card.subject !== "team") {
-    const named = nameAfterTitle(message);
-    if (named) {
-      const lead = new RegExp(String.raw`(\bI can create an? \*\*${escape(card.templateName ?? "")}\*\*)(?=\.)`);
+    /*
+     * Gate-Bubbles R795T (12 Nov 2026): only a name on the roster, or one near miss of a roster person, fills an empty
+     * card here; a name off the roster goes the normal off-roster way. And only where the reply has its "I can create a
+     * **<form>**." line to name them in: a card made ready under "Who is this … for?" lost that line and replied nothing.
+     */
+    const read = nameAfterTitle(message);
+    const named = read ? rosterSpelling(read, names) ?? oneCloseRosterPerson(read, names) : null;
+    const lead = new RegExp(String.raw`(\bI can create an? \*\*${escape(card.templateName ?? "")}\*\*)(?=\.)`);
+    if (named && lead.test(response.content)) {
       return {
         ...response,
         content: response.content.replace(lead, `$1 for **${named}**`),
@@ -141,7 +147,7 @@ function withoutTrailingTitle(response: AskResponse, message?: string): AskRespo
 
 export function rosterOnlyNames(input: AskResponse, names: readonly string[], message?: string): AskResponse {
   if (names.length === 0) return input;
-  const response = withoutTrailingTitle(input, message);
+  const response = withoutTrailingTitle(input, names, message);
   let content = response.content;
   let proposal = response.formProposal;
   let ask: string | null = null;
@@ -286,13 +292,19 @@ export function rosterOnlyNames(input: AskResponse, names: readonly string[], me
       );
       if (!ask && !ASKS_WHO.test(content) && !ASKS_A_CHOICE.test(content) && !ASKS_FOR_THE_NAME.test(content)) ask = ASK_WHO;
       // OFF_ROSTER_CONFIRM_ENABLED: the cleared name, however it was typed (alone on its own line too), is said back and offered.
-      const noted = notFoundName(message, names);
+      // TITLE_BEFORE_NAME_ENABLED (Gate-Bubbles R795T): "for TM <name not on the roster>" is said back and offered as
+      // any typed name is, never seated on the card from here.
+      const afterTitle = nameAfterTitle(message);
+      const titled = afterTitle && !rosterSpelling(afterTitle, names) && !oneCloseRosterPerson(afterTitle, names) ? afterTitle : null;
+      const noted = notFoundName(message, names) ?? titled;
       /*
        * FORM_NAME_OFF_ROSTER_ASK_ENABLED (QA, 10 Nov 2026, sf-s36 with an off-roster name): when no card ever held the
        * name, the request's own "for <name> …" — the not-found note's name — is offered as typed, by the same rules.
        */
       const offered = offRosterConfirmEnabled()
-        ? (employee ? offRosterTyped(employee, message, names) : null) ?? (formNameOffRosterAskEnabled() && noted ? offRosterTyped(noted, message, names) : null)
+        ? (employee ? offRosterTyped(employee, message, names) : null) ??
+          (formNameOffRosterAskEnabled() && noted ? offRosterTyped(noted, message, names) : null) ??
+          (titled ? titleCased(titled) : null)
         : null;
       content = withNotFoundNote(content, noted ?? offered, names);
       if (offered) {
@@ -563,6 +575,8 @@ export function offRosterTyped(employee: string, message: string | undefined, na
   const placed =
     personPlaces(typed).some((place) => place.test(text.trim())) ||
     afterCompanyTitle(typed, text) ||
+    // TITLE_BEFORE_NAME_ENABLED: "for TM <name>", the title written short.
+    text.split(/\n/).some((line) => normalizeTypedName(nameAfterTitle(line) ?? "") === normalizeTypedName(typed)) ||
     text.split(/\n/).some((line) => same(line.trim().replace(USE_NAME, "")) && NAME_SHAPE.test(line.trim().replace(USE_NAME, "")));
   return placed ? titleCased(typed) : null;
 }

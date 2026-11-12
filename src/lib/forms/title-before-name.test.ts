@@ -70,3 +70,19 @@ describe("the card's name after the title, and the create check (QA, 12 Nov 2026
     expect(sameNameAfterTitle("Team Member Wren Tallis", "Wren Tallis", [SAID])).toBe(false);
   });
 });
+
+describe("Gate-Bubbles R795T (12 Nov 2026): an award, a time or an event after a title is nobody", () => {
+  it.each(["Create a CA for Team Member Of The Month", "Create a CA for Store Manager Of The Year", "Create a CA for Shift Lead Training", "Create a CA for DM Visit"])(
+    "flag on: %j gives no name",
+    (said) => {
+      process.env[FLAG] = "true";
+      expect(nameAfterTitle(said)).toBeNull();
+    },
+  );
+
+  it("flag on: \"Team Member Of The Month\" is left whole on a card, never \"Of The Month\"", () => {
+    process.env[FLAG] = "true";
+    expect(withoutLeadingTitle("Team Member Of The Month")).toBe("Team Member Of The Month");
+    expect(withoutLeadingTitle("Team Member Wren Tallis")).toBe("Wren Tallis");
+  });
+});
