@@ -1,0 +1,26 @@
+{
+ "src/app/api/chat/action-plan-fits-e2e.test.ts :: MEETING_NOT_LATENESS_PLAN_ENABLED off: as main the missed meeting gets the lateness plan": {
+  "category": "INTENDED-HARNESS",
+  "reason": "The test does not pin ATTENDANCE_PLAN_NEEDS_LATENESS_ENABLED off, so with the flag in the env it sees the new rule. 'MEETING_NOT_LATENESS_PLAN off: as main' expects the lateness plan for a missed meeting; with this flag on a missed meeting (no lateness stated) gets the general plan, which is QA's ruling. Fix: pin the flag off in useProduction() for this row."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov11-attendance-plan-no-lateness-said: B1 \"\u2026 for violating attendance policy on 10-20-26 \u2026\", then Create: the saved Action Plan states no lateness \u2014 OPEN in production (the saved Action Plan is \"Tess is expected to arrive on time \u2026 Continued lateness \u2026\")": {
+  "category": "INTENDED",
+  "reason": "Open-case it.fails wrapper: the inner invariant now holds, so the wrapper reports failed. Holding."
+ },
+ "src/app/api/forms/corrective-action-dm-feedback-e2e.test.ts :: a payroll deduction with an amount says nothing about pay when payroll deduct is No": {
+  "category": "INTENDED",
+  "reason": "QA's B1 wording: fails on main c88676ac (saved 'Tess is expected to arrive on time \u2026'); ON saves 'Management will review the Attendance policy with Tess. \u2026' as the test expects."
+ },
+ "src/lib/forms/attendance-plan-needs-lateness.test.ts :: ATTENDANCE_PLAN_NEEDS_LATENESS flag off (as production today): B1 gets Pau's lateness plan": {
+  "category": "INTENDED-HARNESS",
+  "reason": "The test does not pin ATTENDANCE_PLAN_NEEDS_LATENESS_ENABLED off, so with the flag in the env it sees the new rule. Its 'flag off (as production today)' row reads process.env; fix: delete/stub the flag false in that row."
+ },
+ "src/lib/forms/missed-shift-not-lateness.test.ts :: MISSED_SHIFT_NOT_LATENESS on, negative: she was rude to a customer at the register \u2014 keeps the attendance plan": {
+  "category": "INTENDED-HARNESS",
+  "reason": "The test does not pin ATTENDANCE_PLAN_NEEDS_LATENESS_ENABLED off, so with the flag in the env it sees the new rule. Callers (draft route, ca-action-plan-sync) only ask once the plan is Attendance; an Attendance account that states no lateness keeps the general plan by QA's 11 Nov ruling. Fix: stub the flag off in this negative row, or move the row's expectation under the flag with a comment."
+ },
+ "replay: nov11-attendance-plan-no-lateness-said [open]": {
+  "category": "INTENDED",
+  "reason": "Open case now holds: the saved Action Plan for B1 ('\u2026 for violating attendance policy on 10-20-26 \u2026') is the general plan, no 'arrive on time / Continued lateness'."
+ }
+}
