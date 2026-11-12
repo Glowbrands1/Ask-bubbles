@@ -375,6 +375,8 @@ export const NOV4_OVERNIGHT_SCAN_CASES: readonly ReplayCase[] = [
       expect(reply.content, `the typed spelling is on the card:\n${reply.content}`).not.toMatch(/\*\*Delphine Marlwoe Ostrander\*\*/);
       expect(thread.proposal?.employeeRole ?? "", "the job title is District Manager").not.toMatch(/district manager/i);
       expect(warningLevel(thread.proposal), "the card is not the Verbal Warning she said").toBe("verbal");
+      // QA (12 Nov 2026, after G4-776b): with the level set, the reply never calls it an earlier warning.
+      expect(reply.content, reply.content).not.toMatch(/treated the earlier warning you mentioned/);
       t.draftWrites({ observation: "Observed:\nOn October 31, 2026 a customer reported that Delphine was rude to her when she asked about a charge at the register." });
       const id = await thread.create();
       const values = t.values(id);
