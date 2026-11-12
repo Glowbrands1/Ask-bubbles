@@ -1,8 +1,9 @@
 import { NOT_A_NAME as BUSINESS_WORDS } from "@/lib/ai/employee-performance-gate";
 import { isReportName } from "@/lib/ai/report-name";
 import { COMPANY_METRIC_PHRASES } from "@/config/company/metric-words";
-import { companyMetricWordsNotNamesEnabled, metricGuardEnabled, personGuardEnabled } from "@/lib/config/chat-quality-flags";
+import { companyMetricWordsNotNamesEnabled, metricGuardEnabled, offeredNameAcceptedEnabled, personGuardEnabled } from "@/lib/config/chat-quality-flags";
 import { isNotAName } from "@/lib/forms/not-a-name";
+import { isAcceptedOffRoster } from "@/lib/forms/off-roster-confirm";
 import { installSlotRosterNames, namesAMetric, outsideRequestSlot } from "@/lib/forms/request-slot";
 
 /**
@@ -127,6 +128,12 @@ export function rosterFullName(candidate: string): string | null {
 export function notAPerson(candidate: string | null | undefined): boolean {
   if (!personGuardEnabled() || !candidate?.trim()) return false;
   if (onRoster(candidate)) return false;
+  /*
+   * OFFERED_NAME_ACCEPTED_ENABLED (port from the sibling app, 12 Nov 2026): the name the manager took with "use <C>"
+   * this turn is a person — the app offered it. The request's shape ("CA for <C>, do not terminate yet, …" reads "<C>,"
+   * as a list item) never rules it out again.
+   */
+  if (offeredNameAcceptedEnabled() && isAcceptedOffRoster(candidate)) return false;
   // FORM_NAME_FROM_ROSTER_ENABLED, part 2: the message's shape rules it out (`request-slot.ts`).
   if (outsideRequestSlot(candidate)) return true;
   // METRIC_GUARD_ENABLED: a list item or an offense word of the message ("Club Close") is never the card's person, with FORM_NAME off too.

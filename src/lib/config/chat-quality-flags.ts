@@ -981,6 +981,8 @@ export function formsGuideEnabled(): boolean {
 export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 2: OFF_ROSTER_STORE_ANSWER_ONLY (QA's #735 ruling, 12 Nov 2026; default off).
   "OFF_ROSTER_STORE_ANSWER_ONLY_ENABLED",
+  // coding 2: OFFERED_NAME_ACCEPTED (port from the sibling app, 12 Nov 2026; default off).
+  "OFFERED_NAME_ACCEPTED_ENABLED",
   "NOT_FOLLOWING_IS_VIOLATION_ENABLED",
   "INCIDENT_FROM_EARLIER_TURN_ENABLED",
   "LEVEL_REQUEST_DATE_ENABLED",
@@ -2979,6 +2981,18 @@ export function offRosterAskBeforeCardEnabled(): boolean {
  */
 export function offRosterStoreAnswerOnlyEnabled(): boolean {
   return envFlag("OFF_ROSTER_STORE_ANSWER_ONLY_ENABLED");
+}
+
+/**
+ * OFFERED_NAME_ACCEPTED_ENABLED (Coding-2, 12 Nov 2026; default off; port from the sibling app, QA's top priority: "an
+ * offer the bot makes must be acceptable"). "CA for <C>, do not terminate yet, she was late" → "reply use <C>" → "use
+ * <C>" was refused here too ("\"<C>\" isn't a person on your team"), for an all-location admin and a store manager
+ * alike: the request's slot reader takes "<C>," before the account as a capitalised list item, so the person guard
+ * ruled the name out on the turn that takes the offer. On: the name the manager took with "use <C>" this turn is a
+ * person (`forms/person-guard.ts`). Off, as before.
+ */
+export function offeredNameAcceptedEnabled(): boolean {
+  return envFlag("OFFERED_NAME_ACCEPTED_ENABLED");
 }
 
 /**
