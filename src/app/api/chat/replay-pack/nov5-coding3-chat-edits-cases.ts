@@ -209,4 +209,28 @@ export const NOV5_CODING3_CHAT_EDITS_CASES: ReplayCase[] = [
       expect(t.values(id).coaching_details ?? "", 'after "make that update" the draft does not say what Rowan did').toMatch(SAID);
     },
   },
+  {
+    // #480 gate (QA, 12 Nov 2026), nov7-refusal-bub-date-question: with the flag on, every reply with a form open carries
+    // `formReply`, the policy answer included, so "these details" found no source and the turn got an ordinary answer
+    // instead of an honest reply about the form. Not the harness: production's model would answer it the same way.
+    id: "nov12-480-these-details-after-a-policy-answer",
+    title: 'coaching draft open → "how do i handle a bopis order?" → "can you upate the draft with these details of coaching?": a reply about the form, never the policy answer again',
+    report: 'Ask Bubbles, 31 Oct 2026 (nov7-refusal-bub-date-question), via the #480 gate',
+    status: "fixed",
+    fixFlags: ["FORM_EDIT_SOURCE_TURN_ENABLED"],
+    async run(t: T) {
+      start(t);
+      const thread = t.thread();
+      await thread.say("Create a coaching form for Rowan Kestrel");
+      const id = await thread.create();
+      const policy = "For a BOPIS order, pick it, bag it with the receipt, and hold it on the pickup shelf until the guest arrives.";
+      t.modelSays(policy);
+      await onDraft(t, thread, id, "how do i handle a bopis order?");
+      const before = savedForm(t, id);
+      const reply = await onDraft(t, thread, id, "can you upate the draft with these details of coaching?");
+      t.modelSays(null);
+      expect(reply.content, "the edit got the policy answer again, not a reply about the form").not.toBe(policy);
+      if (savedForm(t, id) === before) expect(reply.content, `nothing changed, and the reply does not say so:\n${reply.content}`).toMatch(/I haven't changed|Nothing on the form has changed/);
+    },
+  },
 ];

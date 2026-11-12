@@ -192,7 +192,12 @@ export function sourceTurn(
         const unwritten = turn.formReply.unwritten?.trim() ? turn.formReply.unwritten.slice(0, MAX_CONTENT) : "";
         if (unwritten) return { text: unwritten, from: "unwritten" };
       }
-      continue;
+      /*
+       * #480 gate (nov7-refusal-bub-date-question): every reply with a form open carries `formReply`, the policy answer
+       * that held "these details" included, so it was skipped and the edit fell to an ordinary answer. A reply the route
+       * marked as an ordinary answer is an answer like any other.
+       */
+      if (!turn.formReply.answer) continue;
     }
     if (turn.card) continue;
     const text = typeof turn.content === "string" ? contentOf(turn.content) : "";
@@ -213,8 +218,24 @@ function refersBack(question: string): boolean {
  */
 export function unwrittenTurn(question: string): string | null {
   const text = question.trim();
-  if (!text || ABOUT_THE_FORM.test(text)) return null;
+  if (!text || ABOUT_THE_FORM.test(text) || notContentForTheForm(text)) return null;
   return text.slice(0, MAX_CONTENT);
+}
+
+/*
+ * Gate-Bubbles (#480, 12 Nov 2026), nov3-stepb-b15: "this is perfect" was kept as the account to add ("\"this is
+ * perfect\" isn't on the Coaching Form … Say make that update"), and "can i reopen this for an edit?" got the same
+ * reply. An acknowledgement is never content for the form, and a question about reopening or editing it is not an edit.
+ */
+const ACKNOWLEDGES =
+  /^(?:(?:this|that|it)(?:'s|\s+is|\s+looks|\s+sounds)?\s+)?(?:(?:really|very|so)\s+)?(?:perfect|great|good|fine|awesome|excellent|nice|cool|ok(?:ay)?|correct|right|looks\s+good|sounds\s+good|got\s+it|works(?:\s+for\s+me)?|thanks?(?:\s+you)?(?:\s+so\s+much)?|thank\s+you(?:\s+so\s+much)?|ty)(?:[,\s]+(?:thanks?|thank\s+you|ty))?[\s.!]*$/i;
+const ASKS_TO_REOPEN =
+  /^(?:(?:can|could|may|do|how\s+do|how\s+can)\s+(?:i|we)\s+)?(?:re-?open|unlock|go\s+back\s+into|edit|change)\b[^?]*\?\s*$|\bre-?open\b[^?]*\bfor\s+(?:an?\s+)?edit/i;
+
+/** An acknowledgement ("this is perfect", "thanks") or a question about reopening the form: never content for it. */
+export function notContentForTheForm(question: string): boolean {
+  const text = question.trim();
+  return ACKNOWLEDGES.test(text) || ASKS_TO_REOPEN.test(text);
 }
 
 /**

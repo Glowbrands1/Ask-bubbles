@@ -523,7 +523,7 @@ type Answer = {
   formSelection?: unknown;
   formOpened?: { instanceId: string; revisesInstanceId?: string | null };
   formUpdate?: { instanceId: string; updated: string[] };
-  formReply?: { instanceId: string; unwritten?: string };
+  formReply?: { instanceId: string; unwritten?: string; answer?: true };
   pendingCopy?: { fromInstanceId: string };
 };
 

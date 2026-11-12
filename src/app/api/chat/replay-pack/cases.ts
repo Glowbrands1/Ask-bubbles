@@ -20,7 +20,7 @@ import { expect, vi } from "vitest";
 export interface ReplayAnswer {
   content: string;
   /** FORM_EDIT_SOURCE_TURN_ENABLED: the reply was about the open form; `unwritten` is the manager's turn it did not write. */
-  formReply?: { instanceId: string; unwritten?: string };
+  formReply?: { instanceId: string; unwritten?: string; answer?: true };
   formProposal?: { templateKey?: string; employeeName?: string | null; employeeRole?: string | null; status?: string; subject?: string; locationId?: string | null; closeMatchNote?: string; formDate?: string | null; supportsInlineDraft?: boolean };
   formUpdate?: { instanceId: string; updated: string[] };
   formOpened?: { instanceId: string };

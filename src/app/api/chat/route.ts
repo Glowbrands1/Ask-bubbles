@@ -1047,9 +1047,10 @@ async function postChat(request: Request) {
         const pending = content.pendingUnwritten(parsed.history, parsed.activeFormInstanceId);
         const ownTurn = contentRead === "turn" || (!plainRevision && revision !== null);
         const unwritten = changed ? null : ((ownTurn ? content.unwrittenTurn(parsed.question) : null) ?? pending);
-        formReply = { instanceId: parsed.activeFormInstanceId, ...(unwritten ? { unwritten } : {}) };
         const ordinary = answer === ordinaryAnswer || (toolMain !== null && answer === toolMain);
-        if (!changed && pending && ordinary && !answer.formUpdate && sourceBefore.status === "draft") {
+        formReply = { instanceId: parsed.activeFormInstanceId, ...(unwritten ? { unwritten } : {}) };
+        // #480 gate: a question about reopening the form, or an acknowledgement, is answered as asked, never as "not on the form".
+        if (!changed && pending && ordinary && !answer.formUpdate && sourceBefore.status === "draft" && !content.notContentForTheForm(parsed.question)) {
           const open = await (await import("@/lib/forms/open-form-summary")).describeOpenForm(request, parsed.activeFormInstanceId);
           if (open && open.status === "draft") {
             answer = {
@@ -1065,6 +1066,8 @@ async function postChat(request: Request) {
             unwrittenAnswered = true;
           }
         }
+        // #480 gate: an ordinary answer that changed nothing is marked as one, so a later "these details" may mean it.
+        if (ordinary && !unwrittenAnswered && !changed && !answer.formUpdate) formReply = { ...formReply, answer: true };
       }
       // NEW_REQUEST_OWN_TURNS_ENABLED: a new request for the same person is drafted from its own turns. See `lib/forms/new-request-turns.ts`.
       if (newRequestOwnTurnsEnabled() && answer.formProposal) {

@@ -1004,4 +1004,9 @@ export interface ChatFormReply {
   instanceId: string;
   /** At most 2,000 characters (`UNWRITTEN_MAX`). */
   unwritten?: string;
+  /**
+   * #480 gate (12 Nov 2026): the reply was an ordinary answer (the model's, not the app's own line about the form), so an
+   * edit that refers back ("update the draft with these details") may take it as content.
+   */
+  answer?: true;
 }

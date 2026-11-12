@@ -165,7 +165,7 @@ export const UNWRITTEN_MAX = 2_000;
  */
 export interface HistoryMarkers {
   card?: true;
-  formReply?: { instanceId: string; unwritten?: string };
+  formReply?: { instanceId: string; unwritten?: string; answer?: true };
 }
 
 function historyMarkers(entry: object): HistoryMarkers {
@@ -174,12 +174,14 @@ function historyMarkers(entry: object): HistoryMarkers {
   const present = (value: unknown) => (Array.isArray(value) ? value.length > 0 : Boolean(value) && typeof value === "object");
   if (present(formProposal) || present(formProposals) || present(formInstanceRef) || present(formInstanceRefs)) markers.card = true;
   if (formReply && typeof formReply === "object") {
-    const { instanceId, unwritten } = formReply as { instanceId?: unknown; unwritten?: unknown };
+    const { instanceId, unwritten, answer } = formReply as { instanceId?: unknown; unwritten?: unknown; answer?: unknown };
     if (typeof instanceId === "string" && UUID.test(instanceId)) {
-      markers.formReply =
-        typeof unwritten === "string" && unwritten.trim() !== ""
-          ? { instanceId, unwritten: unwritten.slice(0, UNWRITTEN_MAX) }
-          : { instanceId };
+      markers.formReply = {
+        instanceId,
+        ...(typeof unwritten === "string" && unwritten.trim() !== "" ? { unwritten: unwritten.slice(0, UNWRITTEN_MAX) } : {}),
+        // #480 gate: the reply was an ordinary answer, so it may be content for "these details".
+        ...(answer === true ? { answer: true as const } : {}),
+      };
     }
   }
   return markers;

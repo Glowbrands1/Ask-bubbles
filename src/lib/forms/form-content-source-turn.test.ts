@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { parseHistory } from "@/lib/api/validation";
 import type { ChatMessage } from "@/types";
 
-import { formContentRevision, pendingUnwritten, sourceTurn, unwrittenReply, unwrittenTurn } from "./form-content-turn";
+import { formContentRevision, notContentForTheForm, pendingUnwritten, sourceTurn, unwrittenReply, unwrittenTurn } from "./form-content-turn";
 
 /**
  * FORM_EDIT_SOURCE_TURN_ENABLED (coding 3, item 1): the turn an edit refers
@@ -178,5 +178,48 @@ describe("parseHistory markers", () => {
 
   it("off: id, role and content only, as before", () => {
     expect(parseHistory(sent).every((turn) => Object.keys(turn).every((key) => ["id", "role", "content"].includes(key)))).toBe(true);
+  });
+});
+
+/*
+ * The #480 gate (QA, 12 Nov 2026): (1) nov3-stepb-b15 — "this is perfect" was kept as the account to add, and "can i
+ * reopen this for an edit?" got the same reply; (2) nov7-refusal-bub-date-question — the policy answer that held "these
+ * details" carried `formReply` like every reply with a form open, so it was never the source.
+ */
+describe("#480 gate", () => {
+  it.each(["this is perfect", "This is perfect!", "looks good", "thanks", "thank you so much", "perfect, thanks", "ok"])(
+    "an acknowledgement is never unwritten content: %s",
+    (said) => {
+      expect(notContentForTheForm(said)).toBe(true);
+      expect(unwrittenTurn(said)).toBeNull();
+    },
+  );
+
+  it.each(["can i reopen this for an edit?", "how do i reopen this?", "can I edit this?"])("a question about reopening is not content: %s", (said) => {
+    expect(notContentForTheForm(said)).toBe(true);
+  });
+
+  it("an account is still content", () => {
+    expect(notContentForTheForm(ROWAN_DID)).toBe(false);
+    expect(unwrittenTurn(ROWAN_DID)).toBe(ROWAN_DID);
+  });
+
+  it("a reply marked as an ordinary answer is the source; the app's own replies about the form are not", () => {
+    const policy = "For a BOPIS order, pick it, bag it with the receipt, and hold it on the pickup shelf.";
+    const history = [card(), user("how do i handle a bopis order?"), { ...answer(policy), formReply: { instanceId: FORM, answer: true as const } }];
+    expect(sourceTurn(history, FORM)).toEqual({ text: expect.stringContaining("pickup shelf"), from: "answer" });
+    expect(sourceTurn([card(), user("hi"), reply(NO_CHANGE)], FORM)).toBeNull();
+  });
+
+  it("parseHistory keeps the answer marker, and only `true`", () => {
+    const parsed = parseHistory(
+      [
+        { id: "a1", role: "assistant", content: "x", formReply: { instanceId: FORM, answer: true } },
+        { id: "a2", role: "assistant", content: "y", formReply: { instanceId: FORM, answer: "yes" } },
+      ],
+      { markers: true },
+    );
+    expect(parsed[0]!.formReply).toEqual({ instanceId: FORM, answer: true });
+    expect(parsed[1]!.formReply).toEqual({ instanceId: FORM });
   });
 });
