@@ -1,0 +1,4 @@
+# Gate-Bubbles-4: #691 REGISTER_ACCURACY_CONDUCT_ENABLED, head 840b85a1 (Coding-4): GO
+- Base main 815ae303 (17o, 357 production flags; moved there per QA). Conflict in chat-quality-flags.ts: kept both (verifyfns 0). tsc clean. 1 OFF + 1 ON.
+- 14556 tests. Changed 7: INTENDED 6, INTENDED-HARNESS 1, REGRESSION 0.
+- nov4-ca-sales-wrong-items-card (OPEN) holds. For "create a corrective action for <A> for ringing up the wrong items on a guest's order", the card adds "**Policy:** Standards of Conduct — ringing up a sale inaccurately. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies." The same single added line appears in nov4-ca-sales-wrong-items and nov4-cleaning-wrong-items-keeps-conduct (both arms), and both still hold. No other line changes.
