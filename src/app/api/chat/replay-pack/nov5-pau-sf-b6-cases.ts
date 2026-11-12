@@ -61,6 +61,10 @@ export const NOV5_PAU_SF_B6_CASES: ReplayCase[] = [
     status: { open: "the reply ends \"Based on what you've described, I can prepare:\" with nothing after it" },
     // QA's backlog B7 (10 Nov 2026): the ending is fixed behind LEAD_FULL_SENTENCE_ENABLED (case nov5-sf-b6-reply-full-sentence
     // below); with it on, this case still fails on the card, which ignores the detail added on turn 3 — not in B7, left open.
+    // Fixed under NO_SELECTION_ON_OPEN_CARD_ENABLED (port from the sibling app, 10 Nov 2026): no form choice for the card already on screen; open on production flags until QA flips it.
+    fixFlags: ["NO_SELECTION_ON_OPEN_CARD_ENABLED"],
+    // With the flag the reply no longer ends at "I can prepare:", but here the next card still misses the turn-3 detail (a second defect, not this flag's).
+    fixStatus: { open: "the card after \"Create … from this conversation\" does not carry the turn-3 detail (4:56, customer complaint)" },
     async run(t: T) {
       vi.setSystemTime(new Date("2026-11-04T23:30:00Z"));
       t.directory([...STAFF, WYNNE]);
