@@ -1,0 +1,46 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-same-request-carries-account: (a) \"Can you do the same thing for Mara Quell but make it a written\": <B>'s card's Observation is <A>'s account with <B>'s name \u2014 \"Mara Quell was late on 11/3/26\" \u2014 OPEN in production (<B>'s card's Observation is not \"Mara Quell was late on 11/3/26\" (live: none; here \"she was late on 11/3/26 Written Warning.\"))": {
+    "category": "INTENDED",
+    "reason": "(a): the OPEN pin now holds \u2014 B's card's Observation is A's account with B's name (\"Mara Quell was late on 11/3/26\")."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-same-request-keeps-earlier-card: (b) \"Can you do the same thing for Mara Quell but make it a written\": <A>'s card is not superseded, and <A>'s form is still created from it, for <A> \u2014 OPEN in production (<A>'s card is superseded by <B>'s, so <A> can no longer be created from this chat)": {
+    "category": "INTENDED",
+    "reason": "(b) \"Can you do the same thing for Mara Quell but make it a written\": with the browser twin on too, the OPEN pin holds \u2014 A's card is not superseded and A's form is still created; B's card carries A's account with B's name."
+  },
+  "replay: nov10-same-request-carries-account [open]": {
+    "category": "INTENDED",
+    "reason": "(a): the OPEN pin now holds \u2014 B's card's Observation is A's account with B's name (\"Mara Quell was late on 11/3/26\")."
+  },
+  "replay: nov10-same-request-keeps-earlier-card [fix:SAME_REQUEST_KEEPS_EARLIER_CARD_ENABLED,NEXT_PUBLIC_SAME_REQUEST_KEEPS_EARLIER_CARD_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "(b) \"Can you do the same thing for Mara Quell but make it a written\": with the browser twin on too, the OPEN pin holds \u2014 A's card is not superseded and A's form is still created; B's card carries A's account with B's name."
+  },
+  "replay: nov10-same-request-keeps-earlier-card [open]": {
+    "category": "INTENDED",
+    "reason": "(b) \"Can you do the same thing for Mara Quell but make it a written\": with the browser twin on too, the OPEN pin holds \u2014 A's card is not superseded and A's form is still created; B's card carries A's account with B's name."
+  },
+  "replay: nov5-coding3-sfo-a-same-thing-card-on-screen [fix:SAME_REQUEST_OTHER_PERSON_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "Still holds; B's card now carries A's account with B's name (\"Caspian Drummet was late opening the store on Monday\")."
+  },
+  "replay: nov5-coding3-sfo-a-same-thing-card-on-screen [production]": {
+    "category": "INTENDED",
+    "reason": "Still holds; B's card now carries A's account with B's name (\"Caspian Drummet was late opening the store on Monday\")."
+  },
+  "replay: nov6-diffemp-guard-no-account-stays-same-form-after-create [fix:SAME_REQUEST_OTHER_PERSON_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "Still holds; B's card now carries A's account with B's name (\"Mara Quell was late opening the store on Monday\")."
+  },
+  "replay: nov6-diffemp-guard-no-account-stays-same-form-after-create [production]": {
+    "category": "INTENDED",
+    "reason": "Still holds; B's card now carries A's account with B's name (\"Mara Quell was late opening the store on Monday\")."
+  },
+  "replay: nov6-diffemp-guard-no-account-stays-same-form-card-on-screen [fix:SAME_REQUEST_OTHER_PERSON_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "Still holds; B's card now carries A's account with B's name (\"Mara Quell was late opening the store on Monday\")."
+  },
+  "replay: nov6-diffemp-guard-no-account-stays-same-form-card-on-screen [production]": {
+    "category": "INTENDED",
+    "reason": "Still holds; B's card now carries A's account with B's name (\"Mara Quell was late opening the store on Monday\")."
+  }
+}
