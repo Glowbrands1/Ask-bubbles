@@ -81,6 +81,30 @@ export function cardCitedSections(content: string, chunks: readonly ManualChunk[
     .filter((section) => known.has(section.section.toLowerCase()) || known.has(`${section.section} policy`.toLowerCase()));
 }
 
+/**
+ * The cited block without the passages whose heading `drop` says to leave out; with none left, without its heading
+ * too, so the block is never a heading with no quote (Gate-Bubbles-3, Rpcf, 12 Nov 2026). A passage starts at its
+ * citation line ("Attendance Policy, JBA Policy Manual p.14") and runs to the next one; the block ends at the next bold
+ * paragraph. No block: unchanged.
+ */
+export function withoutCitedPassages(content: string, drop: (heading: string) => boolean): string {
+  const at = content.indexOf(CITED_BLOCK_HEADING);
+  if (at < 0) return content;
+  const before = content.slice(0, at).trimEnd();
+  const paragraphs = content.slice(at + CITED_BLOCK_HEADING.length).split(/\n{2,}/).map((part) => part.trim()).filter(Boolean);
+  const end = paragraphs.findIndex((part) => part.startsWith("**"));
+  const block = end < 0 ? paragraphs : paragraphs.slice(0, end);
+  const after = end < 0 ? [] : paragraphs.slice(end);
+  const passages: string[][] = [];
+  for (const part of block) {
+    if (/, JBA Policy Manual\b/.test(part.split("\n")[0]!) || passages.length === 0) passages.push([part]);
+    else passages.at(-1)!.push(part);
+  }
+  const kept = passages.filter((passage) => !drop(passage[0]!.split("\n")[0]!)).map((passage) => passage.join("\n\n"));
+  const rebuilt = kept.length > 0 ? [`${CITED_BLOCK_HEADING}`, ...kept] : [];
+  return [before, ...rebuilt, ...after].filter(Boolean).join("\n\n");
+}
+
 /** On a card, the quoted block of the sections the card cites (see above). Off, or nothing cited, unchanged. */
 export function withCardPolicyQuoted(content: string, chunks: readonly ManualChunk[], enabled: boolean): string {
   if (!enabled || content.includes(CITED_BLOCK_HEADING)) return content;

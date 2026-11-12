@@ -44,7 +44,6 @@ import { resolveScopeFor } from "@/lib/reporting/scope/server";
 import type { SourceCitation } from "@/types";
 
 import { markStage } from "./chat-stage-timings";
-import { cardPolicyTurns } from "./card-policy-request";
 import { callClaude } from "./call-claude";
 import { glossaryBlock } from "./glossary";
 import { loadChatDataBlock } from "./chat-data-tools";
@@ -94,7 +93,6 @@ import {
   caSalesPolicyEnabled,
   pastFormsBeforeLibraryEnabled,
   coachingCardPolicyEnabled,
-  cardPolicyOwnRequestEnabled,
   outOfDateIsTheProposalEnabled,
   policyPageOnCardEnabled,
 } from "@/lib/config/chat-quality-flags";
@@ -1661,14 +1659,11 @@ async function decorateFormAnswer(request: AskRequest, actor: ChatActor, respons
   if (policyOn || (pageOn && response.formProposal)) {
     try {
       const manual = await new SupabaseKnowledgeProvider().fetchOfficialPolicyManual(ACTIVE_BRAND.knowledgeScopeId);
-      // CARD_POLICY_OWN_REQUEST_ENABLED: a card for <B> is not cited from <A>'s earlier request.
-      const policyTurns = cardPolicyOwnRequestEnabled() && response.formProposal ? cardPolicyTurns(turns, response.formProposal.employeeName) : turns;
       // POLICY_PAGE_ON_CARD_ENABLED: the card's own policy line carries its printed page.
       if (manual.ok && pageOn && response.formProposal) content = withPolicyPagesOnCard(content, manual.chunks);
-      // POLICY_CITATION_ENABLED: a card quotes the sections it cites itself, never a re-reading of the turns (Gate-Bubbles-2).
-      if (manual.ok && policyOn) {
-        content = response.formProposal ? withCardPolicyQuoted(content, manual.chunks, true) : withMappedPolicy(content, policyTurns, manual.chunks, true);
-      }
+      // POLICY_CITATION_ENABLED: a card quotes the sections it cites itself, never a re-reading of the turns (Gate-Bubbles-2);
+      // a forms-path reply with no card (a form menu, a question) quotes nothing (Gate-Bubbles-3, Rpcf).
+      if (manual.ok && policyOn && response.formProposal) content = withCardPolicyQuoted(content, manual.chunks, true);
     } catch {
       // A manual read that fails leaves the proposal as the forms path wrote it.
     }
