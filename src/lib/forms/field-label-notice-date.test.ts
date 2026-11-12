@@ -30,8 +30,18 @@ afterEach(() => {
 
 describe("an earlier \"no notice given\" holds on the exit card", () => {
   it("off: the resignation date is also the notice date (the bug)", () => {
+    // Changed on purpose (QA, 12 Nov 2026): EXIT_NOTICE_STATED_ONLY pinned off — with it on, a resignation date never
+    // dates the notice by itself (next arm).
+    vi.stubEnv("EXIT_NOTICE_STATED_ONLY_ENABLED", "false");
     vi.stubEnv("FIELD_LABEL_NOT_A_QUESTION_ENABLED", "");
     expect(readExitFacts(SCOPED, TODAY).noticeGiven).toBe("2026-10-26");
+  });
+
+  it("off, with EXIT_NOTICE_STATED_ONLY on: no notice is stated, so no notice date", () => {
+    vi.stubEnv("EXIT_NOTICE_STATED_ONLY_ENABLED", "true");
+    vi.stubEnv("FIELD_LABEL_NOT_A_QUESTION_ENABLED", "");
+    expect(readExitFacts(SCOPED, TODAY).noticeGiven).toBeNull();
+    expect(readExitFacts(SCOPED, TODAY).resignationDate).toBe("2026-10-26");
   });
 
   it("on: no notice date; the resignation date stays", () => {
@@ -45,8 +55,17 @@ describe("an earlier \"no notice given\" holds on the exit card", () => {
   });
 
   it("on: no earlier turns entered (the draft, a test): as before", () => {
+    // Changed on purpose (QA, 12 Nov 2026): EXIT_NOTICE_STATED_ONLY pinned off; the next arm holds it on.
+    vi.stubEnv("EXIT_NOTICE_STATED_ONLY_ENABLED", "false");
     installEarlierManagerTurns(() => undefined);
     expect(readExitFacts(SCOPED, TODAY).noticeGiven).toBe("2026-10-26");
+  });
+
+  it("on, with EXIT_NOTICE_STATED_ONLY on and no earlier turns: no notice is stated, so no notice date", () => {
+    vi.stubEnv("EXIT_NOTICE_STATED_ONLY_ENABLED", "true");
+    installEarlierManagerTurns(() => undefined);
+    expect(readExitFacts(SCOPED, TODAY).noticeGiven).toBeNull();
+    expect(readExitFacts(SCOPED, TODAY).resignationDate).toBe("2026-10-26");
   });
 });
 
