@@ -1346,6 +1346,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "NEAR_MISS_ANSWER_KEEPS_REQUEST_ENABLED",
   "FULL_MANUAL_WIDE_GATE_ENABLED",
   "EMPTY_REPLY_GUARD_ENABLED",
+  "POLICY_PAGE_ON_CARD_ENABLED",
   // coding 5: B3 (QA's backlog, 10 Nov 2026; default off).
   "COPY_PASTE_CLAIM_HONEST_ENABLED",
   "DATE_ONCE_ENABLED",
@@ -4571,6 +4572,17 @@ export function fullManualWideGateEnabled(): boolean {
  */
 export function emptyReplyGuardEnabled(): boolean {
   return envFlag("EMPTY_REPLY_GUARD_ENABLED");
+}
+
+/**
+ * The form card's policy line carries the printed page from the JBA Policy
+ * Manual's chunk metadata: "**Policy:** Standards of Conduct (JBA Policy
+ * Manual p.12), as you said" (QA, 25 Oct 2026). Only a line the app wrote
+ * with one of its own policy names changes; a heading without exactly one
+ * printed page gets none. Off, the card is exactly as before.
+ */
+export function policyPageOnCardEnabled(): boolean {
+  return envFlag("POLICY_PAGE_ON_CARD_ENABLED");
 }
 
 /**
