@@ -1,0 +1,18 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov5-twin-sf-s28-incident-from-previous-turn: sf-s28: \"can i give a ca for not signing off on the cleaning check list\" \u2192 \"can you write me a ca for Thessaly Brandt from west dodge\": the card uses the earlier incident \u2014 OPEN in production (\"You haven't told me what happened yet\"; the earlier turn's incident is not used)": {
+  "category": "INTENDED",
+  "reason": "Open-case it.fails wrapper: the inner invariant now holds, so the wrapper reports failed (3/3 ON, 0/3 OFF). Holding."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov5-twin-sf-s28-incident-scope: sf-s28: \"can i give a ca for not signing off on the cleaning check list\" \u2192 \"write a ca for Thessaly Brandt from west dodge\": the question is the account \u2014 OPEN in production (\"You haven't told me what happened yet\": the question naming nobody is dropped from the form's turns)": {
+  "category": "INTENDED",
+  "reason": "Open-case it.fails wrapper: the inner invariant now holds, so the wrapper reports failed (3/3 ON, 0/3 OFF). Holding."
+ },
+ "replay: nov5-twin-sf-s28-incident-from-previous-turn [open]": {
+  "category": "INTENDED",
+  "reason": "Open case now holds, 3/3 ON: turn 2 drafts with **Issue:** from turn 1's account ('not signing off on the cleaning check list') instead of 'You haven't told me what happened yet'; the Store readback stays on the Issue line."
+ },
+ "replay: nov5-twin-sf-s28-incident-scope [open]": {
+  "category": "INTENDED",
+  "reason": "Open case now holds, 3/3 ON: turn 2 drafts with **Issue:** from turn 1's account ('not signing off on the cleaning check list') instead of 'You haven't told me what happened yet'; the Store readback stays on the Issue line."
+ }
+}

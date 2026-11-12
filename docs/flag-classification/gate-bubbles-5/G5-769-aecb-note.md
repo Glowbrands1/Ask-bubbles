@@ -1,0 +1,3 @@
+# Gate-Bubbles-5: #769 STORE_CHOICES_NAMED_ENABLED on aecb3342 (superseded by the c88676ac run)
+
+1 OFF + 1 ON on main aecb3342 (head 98ef818e): 13754 tests, OFF 759 / ON 761. Changed 6, all reading as INTENDED/INTENDED-HARNESS: the store question names the stores ("Is it **Bellevue, NE** or **Omaha, NE (West Dodge Rd)**?", "**Wren Tallis** works at **Bellevue, NE** and **Omaha, NE (West Dodge Rd)** in Woven, and both are on your assignment, so I won't pick one."), open case nov11-p20-store-question-names-the-stores holds, store-choices-named "flag off" unit test is the harness row. QA (12 Nov 11:32) asked for every remaining unit on c88676ac; #769 is re-run there and the verdict is given on that run.
