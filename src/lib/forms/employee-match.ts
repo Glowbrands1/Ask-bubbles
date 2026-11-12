@@ -1,6 +1,6 @@
 import { rosterCompoundSurnameEnabled, sharedLoginNotStaffEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 
-import { doerAfterBy } from "./name-after-by";
+import { doerAfterBy } from "./name-after-by-doer";
 
 /**
  * ============================================================================
