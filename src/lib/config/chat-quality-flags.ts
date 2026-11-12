@@ -957,6 +957,16 @@ export function nameBeforeTitleEnabled(): boolean {
   return envFlag("NAME_BEFORE_TITLE_ENABLED");
 }
 
+/**
+ * The way managers name a store ("dodge ne", "dodge, ne", "kearney ne") is
+ * written as the roster name before any reader sees the turn; the aliases are
+ * built from the store list (25 Oct 2026, ported from the sibling app). See
+ * `ai/store-alias.ts`. Off, every turn is read as typed.
+ */
+export function storeAliasEnabled(): boolean {
+  return envFlag("STORE_ALIAS_ENABLED");
+}
+
 export const CHAT_QUALITY_FLAG_NAMES = [
   "NOT_FOLLOWING_IS_VIOLATION_ENABLED",
   "INCIDENT_FROM_EARLIER_TURN_ENABLED",
@@ -1346,6 +1356,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "NEAR_MISS_ANSWER_KEEPS_REQUEST_ENABLED",
   // coding 6: PRIOR_ACTIONS_NO_COMMA (October rebuild 4, #187 rebuilt on main; default off).
   "PRIOR_ACTIONS_NO_COMMA_ENABLED",
+  "STORE_ALIAS_ENABLED",
   "FULL_MANUAL_WIDE_GATE_ENABLED",
   // coding 5: B3 (QA's backlog, 10 Nov 2026; default off).
   "COPY_PASTE_CLAIM_HONEST_ENABLED",
