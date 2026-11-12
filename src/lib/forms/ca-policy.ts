@@ -19,10 +19,7 @@ import {
   salesShortfallObjectEnabled,
   wornClothingIsDressCodeEnabled,
   wovenTrainingConductEnabled,
-  conductIncidentCitesPageEnabled,
-  accountPlaceLeadEnabled,
   negatedLatenessTopicEnabled,
-  notFollowingIsViolationEnabled,
 } from "@/lib/config/chat-quality-flags";
 
 import { readLocationMentions } from "./location-mention";

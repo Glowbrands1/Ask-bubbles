@@ -30,8 +30,7 @@ import {
   caShortcutWordsEnabled,
   formChoiceStatedEnabled,
   formNameFromRosterEnabled,
-  typedNameEnabled, requestFromNamesEmployeeEnabled, pastedFormNameNotRequestEnabled, formForForTypoEnabled } from "@/lib/config/chat-quality-flags";
-  typedNameEnabled, requestFromNamesEmployeeEnabled, formForForTypoEnabled, terminationIntakeEnabled } from "@/lib/config/chat-quality-flags";
+  typedNameEnabled, requestFromNamesEmployeeEnabled, pastedFormNameNotRequestEnabled, formForForTypoEnabled, terminationIntakeEnabled } from "@/lib/config/chat-quality-flags";
 import { foldsToGlossaryTerm } from "@/lib/ai/glossary";
 import { NOT_A_NAME, NOT_A_TYPED_NAME, TYPED_NAME_WORD } from "./name-words";
 import { asksForTeamCoaching } from "./team-subject";
