@@ -1,0 +1,13 @@
+# Gate-Bubbles-4: #776 TYPO_FULL_NAME_TO_ROSTER_ENABLED, head e616602f (Coding-4): NO-GO
+- Base main 815ae303 (17o, 357 production flags; moved there per QA). Conflict in chat-quality-flags.ts: kept both (verifyfns 0). tsc clean. 1 OFF + 1 ON.
+- 14552 tests. Changed 52: INTENDED 3, INTENDED-ADJACENT 42, INTENDED-HARNESS 1, REGRESSION 6.
+- INTENDED: nov11-sf-b5-typo-name-and-title (OPEN) holds. "create a ca form for Delphine Marlwoe Ostrander" opens Delphine Marlowe Ostrander's card, and T2's "verbal warning" sets Type of warning: Verbal Warning. nov4-scan-sf-b5-typo-name-rude-to-customer stays OPEN on its policy half only, as Coding-4 said.
+- REGRESSION, the preferred name is lost: nov6-roster-shape-preferred-{rotation, typo, swap} × 2 arms. The roster row is Bartholomew Quillfeather, preferred "Bart". For "create a ca form for Bart Qu…feather …":
+  - OFF: "Is this for **Bart Quillfeather**?"
+  - ON: "Is this for **Bartholomew Quillfeather**?", a first name the manager never typed. The cases pass because they check only that a question is asked.
+- INTENDED-ADJACENT, needs QA's decision: 21 cases × 2 arms.
+  - Cases: nov5-compound-surname-*, nov6-roster-shape-compound-surname-typo, nov7-form-name-empty-card-delphine-surname-typo, nov7-near-miss-details-delphine(-turned-down), nov8-proposal-name-correction-* (11), nov5-r6-policy-kept-across-turns.
+  - Every full-name typo of a roster person ("Odalys Perwett Vansickle", "Marisol Ortega Valdze", "Odessa Lark Penhallwo", "Delphine Marlwoe Ostrander") now opens that person's card directly. OFF asked "Is this for **<roster name>**? Tell me if that should change." The near-miss confirmation is gone for full-name typos.
+  - In nov7-near-miss-details-delphine-turned-down, the manager's "no, verbal warning …" now answers a card nobody asked about. T2 is "Who is this form for?" in both arms.
+- INTENDED-HARNESS: form-name-from-roster.test.ts "negative control: a typo of a roster person still goes to the close-match path" fails with the flag on. It needs flag-off scoping, or a deliberate change, if QA accepts the change above.
+- Ask: keep the preferred name in the question/card when the roster row has one, and add the three preferred-name cases with that check. Separately, QA to confirm that full-name typos may skip the "Is this for …?" confirmation.

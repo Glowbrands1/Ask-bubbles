@@ -1,0 +1,210 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov11-sf-b5-typo-name-and-title: sf-b5: \"Delphine Marlwoe Ostrander\" is the roster's Delphine Marlowe Ostrander, and \"spoke with District manager Tobias Wrenfield\" is never her Position \u2014 OPEN in production (the card is for \"Delphine Marlwoe Ostrander\" as typed, not the roster's Delphine Marlowe Ostrander, and has no Woven position)": {
+  "category": "INTENDED",
+  "reason": "OPEN sf-b5 holds: 'Delphine Marlwoe Ostrander' opens Delphine Marlowe Ostrander's card; T2 'verbal warning \u2026' sets Type of warning: Verbal Warning"
+ },
+ "src/lib/forms/form-name-from-roster.test.ts :: the grounding step, Pau's exact message on, negative control: a typo of a roster person still goes to the close-match path": {
+  "category": "INTENDED-HARNESS",
+  "reason": "negative control pinned the close-match path for a full-name typo; with the flag a full-name typo of a roster person reads as that person (needs scoping to flag off)"
+ },
+ "replay: nov11-sf-b5-typo-name-and-title [open]": {
+  "category": "INTENDED",
+  "reason": "OPEN sf-b5 holds: 'Delphine Marlwoe Ostrander' opens Delphine Marlowe Ostrander's card; T2 'verbal warning \u2026' sets Type of warning: Verbal Warning"
+ },
+ "replay: nov4-scan-sf-b5-typo-name-rude-to-customer [open]": {
+  "category": "INTENDED",
+  "reason": "stays OPEN on its policy half (GUEST_ATTITUDE_CONDUCT, #702), as Coding-4 said; the name half now holds"
+ },
+ "replay: nov5-compound-surname-word1-typo [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov5-compound-surname-word1-typo [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov5-compound-surname-word1-typo-yes [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov5-compound-surname-word1-typo-yes [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov5-compound-surname-word2-rotated [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov5-compound-surname-word2-rotated [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov5-compound-surname-word2-rotated-earlier-turn [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov5-compound-surname-word2-rotated-earlier-turn [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov5-compound-surname-word2-typo [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov5-compound-surname-word2-typo [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov5-r6-policy-kept-across-turns [fix:REQUEST_KEPT_IN_WINDOW_ENABLED,NEXT_PUBLIC_REQUEST_KEPT_IN_WINDOW_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov5-r6-policy-kept-across-turns [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov6-roster-shape-compound-surname-typo [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov6-roster-shape-compound-surname-typo [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov6-roster-shape-preferred-rotation [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED]": {
+  "category": "REGRESSION",
+  "reason": "preferred name lost: roster row Bartholomew Quillfeather, preferred 'Bart'; 'create a ca form for Bart Qu\u2026feather' \u2014 OFF 'Is this for **Bart Quillfeather**?', ON 'Is this for **Bartholomew Quillfeather**?' (the legal first name the manager never typed)"
+ },
+ "replay: nov6-roster-shape-preferred-rotation [production]": {
+  "category": "REGRESSION",
+  "reason": "preferred name lost: roster row Bartholomew Quillfeather, preferred 'Bart'; 'create a ca form for Bart Qu\u2026feather' \u2014 OFF 'Is this for **Bart Quillfeather**?', ON 'Is this for **Bartholomew Quillfeather**?' (the legal first name the manager never typed)"
+ },
+ "replay: nov6-roster-shape-preferred-swap [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED]": {
+  "category": "REGRESSION",
+  "reason": "preferred name lost: roster row Bartholomew Quillfeather, preferred 'Bart'; 'create a ca form for Bart Qu\u2026feather' \u2014 OFF 'Is this for **Bart Quillfeather**?', ON 'Is this for **Bartholomew Quillfeather**?' (the legal first name the manager never typed)"
+ },
+ "replay: nov6-roster-shape-preferred-swap [production]": {
+  "category": "REGRESSION",
+  "reason": "preferred name lost: roster row Bartholomew Quillfeather, preferred 'Bart'; 'create a ca form for Bart Qu\u2026feather' \u2014 OFF 'Is this for **Bart Quillfeather**?', ON 'Is this for **Bartholomew Quillfeather**?' (the legal first name the manager never typed)"
+ },
+ "replay: nov6-roster-shape-preferred-typo [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED]": {
+  "category": "REGRESSION",
+  "reason": "preferred name lost: roster row Bartholomew Quillfeather, preferred 'Bart'; 'create a ca form for Bart Qu\u2026feather' \u2014 OFF 'Is this for **Bart Quillfeather**?', ON 'Is this for **Bartholomew Quillfeather**?' (the legal first name the manager never typed)"
+ },
+ "replay: nov6-roster-shape-preferred-typo [production]": {
+  "category": "REGRESSION",
+  "reason": "preferred name lost: roster row Bartholomew Quillfeather, preferred 'Bart'; 'create a ca form for Bart Qu\u2026feather' \u2014 OFF 'Is this for **Bart Quillfeather**?', ON 'Is this for **Bartholomew Quillfeather**?' (the legal first name the manager never typed)"
+ },
+ "replay: nov7-form-name-empty-card-delphine-surname-typo [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED,NEAR_MISS_DETAILS_ACCEPT_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov7-form-name-empty-card-delphine-surname-typo [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov7-near-miss-details-delphine [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED,NEAR_MISS_DETAILS_ACCEPT_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov7-near-miss-details-delphine [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov7-near-miss-details-delphine-turned-down [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED,NEAR_MISS_DETAILS_ACCEPT_ENABLED,NEAR_MISS_QUESTION_RULES_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov7-near-miss-details-delphine-turned-down [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov8-proposal-name-correction-comma-it-is [fix:PROPOSAL_NAME_CORRECTION_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov8-proposal-name-correction-comma-it-is [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov8-proposal-name-correction-correct-way [fix:PROPOSAL_NAME_CORRECTION_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov8-proposal-name-correction-correct-way [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov8-proposal-name-correction-different-person [fix:PROPOSAL_NAME_CORRECTION_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov8-proposal-name-correction-different-person [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov8-proposal-name-correction-fix-her-last-name [fix:PROPOSAL_NAME_CORRECTION_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov8-proposal-name-correction-fix-her-last-name [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov8-proposal-name-correction-last-name-is [fix:PROPOSAL_NAME_CORRECTION_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov8-proposal-name-correction-last-name-is [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov8-proposal-name-correction-off-roster [fix:PROPOSAL_NAME_CORRECTION_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov8-proposal-name-correction-off-roster [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov8-proposal-name-correction-r6-t5 [fix:PROPOSAL_NAME_CORRECTION_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov8-proposal-name-correction-r6-t5 [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov8-proposal-name-correction-r6-t7 [fix:PROPOSAL_NAME_CORRECTION_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov8-proposal-name-correction-r6-t7 [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov8-proposal-name-correction-spelled [fix:PROPOSAL_NAME_CORRECTION_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov8-proposal-name-correction-spelled [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov8-proposal-name-correction-supposed-to-be [fix:PROPOSAL_NAME_CORRECTION_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov8-proposal-name-correction-supposed-to-be [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov8-proposal-name-correction-typed-off-roster [fix:PROPOSAL_NAME_CORRECTION_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ },
+ "replay: nov8-proposal-name-correction-typed-off-roster [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "a full-name typo of a roster person ('Odalys Perwett Vansickle', 'Marisol Ortega Valdze', 'Odessa Lark Penhallwo', 'Delphine Marlwoe Ostrander') now opens that person's card directly; OFF asked 'Is this for **<roster name>**? Tell me if that should change.' \u2014 the near-miss confirmation is skipped (QA decision); cases hold"
+ }
+}
