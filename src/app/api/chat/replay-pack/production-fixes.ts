@@ -536,4 +536,12 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov11-empty-reply-guard-policy-question": "EMPTY_REPLY_GUARD",
   // fixed in production by POLICY_PAGE_ON_CARD, QA round 17l, 12 Nov 2026
   "nov11-policy-page-on-card-standards-of-conduct": "POLICY_PAGE_ON_CARD",
+  // fixed in production by WORN_CLOTHING_IS_DRESS_CODE, QA round 17m, 12 Nov 2026
+  "nov11-17i-hoodie-ca-dress-code": "WORN_CLOTHING_IS_DRESS_CODE",
+  // fixed in production by COPY_PASTE_POINTS_TO_CARD, QA round 17m, 12 Nov 2026
+  "nov11-17i-copy-paste-points-to-card": "COPY_PASTE_POINTS_TO_CARD",
+  // fixed in production by EXIT_PROSE_FACTS, QA round 17m, 12 Nov 2026
+  "nov11-exit-prose-bare-name": "EXIT_PROSE_FACTS",
+  // fixed in production by FORM_INPUT_FIDELITY, QA round 17m, 12 Nov 2026
+  "nov11-form-input-fidelity-title-yesterday": "FORM_INPUT_FIDELITY",
 };
