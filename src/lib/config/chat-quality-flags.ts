@@ -1337,6 +1337,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REOPEN_IS_OPENING_ENABLED",
   "BARE_FORM_NAME_ASKS_WHAT_ENABLED",
   "THIS_FORM_IS_ABOUT_ENABLED",
+  "PASTED_REVIEW_ASKS_WHAT_YOU_SAW_ENABLED",
   "COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED",
   // coding 6: REQUEST_ISSUE_KEPT, LATE_OPENING_OWN_WORDS, FIRST_NAME_ENOUGH (QA round 17b, 10 Nov 2026; default off).
   "REQUEST_ISSUE_KEPT_ENABLED",
@@ -4890,3 +4891,14 @@ export function bareFormNameAsksWhatEnabled(): boolean {
 export function thisFormIsAboutEnabled(): boolean {
   return envFlag("THIS_FORM_IS_ABOUT_ENABLED");
 }
+
+/**
+ * PASTED_REVIEW_ASKS_WHAT_YOU_SAW_ENABLED (QA's Bubbles 17n live test, 12 Nov 2026, item 2; default off; same flag in both
+ * apps). A pasted customer review was rightly not taken as the account, but the reply said "Everything I need is here"
+ * and never mentioned it. On: the reply says the review is the customer's words and asks "What did you see happen?"
+ * (`forms/pasted-customer-review.ts`). Off, as before.
+ */
+export function pastedReviewAsksWhatYouSawEnabled(): boolean {
+  return envFlag("PASTED_REVIEW_ASKS_WHAT_YOU_SAW_ENABLED");
+}
+
