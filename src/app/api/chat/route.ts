@@ -87,6 +87,7 @@ import {
   nearMissQuestionRulesEnabled,
   formNameOffRosterAskEnabled,
   reopenByAnyOpenVerbEnabled,
+  whatHappenedNoCreateEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { streamWhenSlow } from "@/lib/api/streamed-response";
 import { finalReplyWithoutMarkers } from "@/lib/ai/source-note";
@@ -1037,6 +1038,8 @@ async function postChat(request: Request) {
         void _dropped;
         answer = { ...rest, content: rest.content.replace(/\n*Based on what you've described, I can prepare:\s*$/, "").trimEnd() };
       }
+      // WHAT_HAPPENED_NO_CREATE_ENABLED: while the reply asks what happened, the card offers no Create (`lib/forms/what-happened-no-create.ts`).
+      if (whatHappenedNoCreateEnabled()) answer = (await import("@/lib/forms/what-happened-no-create")).withNoCreateWhileAsking(answer);
       // LEAD_FULL_SENTENCE_ENABLED: a reply never ends at "I can prepare:" (`lib/forms/lead-full-sentence.ts`).
       if (leadFullSentenceEnabled()) answer = (await import("@/lib/forms/lead-full-sentence")).withLeadFullSentence(answer);
       // OFF_ROSTER_ASK_BEFORE_CARD_ENABLED: a store manager's card for a full name not on their roster is asked about once, before the card (`lib/forms/off-roster-ask.ts`).
