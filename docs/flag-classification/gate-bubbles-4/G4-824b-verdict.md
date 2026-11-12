@@ -4,3 +4,7 @@
 - The termination regression is fixed. nov12-termination-ticks-{terminating-never-showed, term-ca-did-not-show, so-i-need} (both arms) and the new guards nov12-g4-824-termination-plan-kept-* (both arms) show Pau's plan ending "… further disciplinary review per company policy. Effective immediately, employment is terminated following the progressive corrective action plan.", the plan Create saves.
 - The rest is unchanged from G4-824: the Attendance CA card's plan line becomes Pau's plan. The 17l OPEN cases nov12-17l-card-shows-pau-attendance-plan and nov12-17l-card-plan-equals-saved-plan hold.
 - For QA (Create-side wording, not this PR): on a termination, the saved and now the shown plan both say "<first> is expected to arrive on time … moving forward … A follow-up meeting will be scheduled …" before "Effective immediately, employment is terminated …".
+
+## Head f9d8aff14f (8dade777 plus one test-only commit): GO carries over
+- `git diff 8dade777 f9d8aff14f`: src/lib/forms/card-plan-matches-create.test.ts only (+2 lines: the "off" arm pins CARD_PLAN_MATCHES_CREATE_ENABLED=false).
+- Merged onto the gated tree. That file passes 10/10 under the production env with the flag off and with it on. Its INTENDED-HARNESS row from the 8dade777 run is now gone. No product code changed, so the 8dade777 replay and suite result stands.
