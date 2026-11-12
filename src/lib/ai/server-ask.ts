@@ -191,6 +191,7 @@ import { withUnreadDateAsk } from "./unread-date-ask";
 import { withUnknownNameAsk } from "./unknown-name-ask";
 import { amountTurnReply } from "./amount-turn";
 import { withPayrollTypoAnswer } from "./payroll-typo-answer";
+import { withTerminationStated } from "./termination-stated";
 import { withWarningLevelFromClause } from "./warning-level-clause";
 import { readerPropose, startFormReading, withoutStaleRosterNote } from "./reader/hook";
 
@@ -387,7 +388,8 @@ async function answerQuestionBody(
         withPayrollTypoAnswer(
           withUnknownNameAsk(
             withFirstNameAsk(
-              withWarningLevelFromClause(withFreshDateReask(withJobTitleFromWords(withCoachingWhatHappened(await answerQuestionCore(request, actor, memory), request), request), request), request),
+              // TERMINATION_STATED_TICKS_ENABLED: a termination the manager stated is the card's level, with the approval line.
+              withTerminationStated(withWarningLevelFromClause(withFreshDateReask(withJobTitleFromWords(withCoachingWhatHappened(await answerQuestionCore(request, actor, memory), request), request), request), request), request),
               request,
             ),
             request,
