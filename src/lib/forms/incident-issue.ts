@@ -22,6 +22,7 @@ import { describesIncident } from "./corrective-action-intake";
 import { withoutPriorStepClauses } from "./form-date-answer";
 import { priorSentenceFixFor } from "./prior-sentence-scope";
 import { statedWarningLevel } from "./warning-level";
+import { withoutLeadingTitle } from "./title-before-name";
 
 /**
  * ============================================================================
@@ -150,6 +151,8 @@ function issueFromRequest(text: string, employeeName: string | null): string | n
       if (issue.length < 3 || issue.length > 80 || NOT_AN_ISSUE.test(issue)) continue;
       // "a CA for Jordan Testperson" names the person, not the issue.
       if (person && (lower === person || lower.startsWith(`${person} `) || lower.split(/\s+/).every((word) => personWords.has(word)))) continue;
+      // TITLE_BEFORE_NAME_ENABLED: "TM <name>" is who the form is for, not what happened.
+      if (person && withoutLeadingTitle(issue).trim().toLowerCase() === person) continue;
       found = issue;
     }
     if (found) return found;

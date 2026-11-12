@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import { detectTemplateIntent, leadingFormRequest } from "./template-intent";
-import { leadingTitleLength, withoutLeadingTitle } from "./title-before-name";
+import { leadingTitleLength, nameAfterTitle, sameNameAfterTitle, withoutLeadingTitle } from "./title-before-name";
 
 /**
  * TITLE_BEFORE_NAME_ENABLED (QA's Bubbles 17h live test, 11 Nov 2026): the tester's wording, "Corrective action for
@@ -45,5 +45,26 @@ describe("TITLE_BEFORE_NAME: a store title before the name", () => {
   it("flag off: names are read as before", () => {
     expect(withoutLeadingTitle("Team Member Wren Tallis")).toBe("Team Member Wren Tallis");
     expect(detectTemplateIntent("Corrective action for Wren Tallis")).toEqual({ kind: "explicit", templateKey: "dpoa" });
+  });
+});
+
+describe("the card's name after the title, and the create check (QA, 12 Nov 2026)", () => {
+  it("flag on: the name after \"for TM\" / \"for Team Member\"", () => {
+    process.env[FLAG] = "true";
+    expect(nameAfterTitle("Corrective action for TM Wren Tallis")).toBe("Wren Tallis");
+    expect(nameAfterTitle("Create a corrective action for Team Member Wren Tallis, she was late")).toBe("Wren Tallis");
+    expect(nameAfterTitle("Corrective action for Wren Tallis")).toBeNull();
+  });
+
+  it("flag on: the create check's \"Team Member Wren Tallis\" is the card's Wren Tallis; another person is not", () => {
+    process.env[FLAG] = "true";
+    expect(sameNameAfterTitle("Team Member Wren Tallis", "Wren Tallis", [SAID])).toBe(true);
+    expect(sameNameAfterTitle("Maya Lund", "Wren Tallis", [SAID])).toBe(false);
+    expect(sameNameAfterTitle("Ronan Wren Tallis", "Wren Tallis", ["Corrective action for Ronan Wren Tallis"])).toBe(false);
+  });
+
+  it("flag off: nothing", () => {
+    expect(nameAfterTitle("Corrective action for TM Wren Tallis")).toBeNull();
+    expect(sameNameAfterTitle("Team Member Wren Tallis", "Wren Tallis", [SAID])).toBe(false);
   });
 });

@@ -39,3 +39,34 @@ export function withoutLeadingTitle(name: string): string {
   const skip = leadingTitleLength(words);
   return skip === 0 ? name : words.slice(skip).join(" ");
 }
+
+const NAME_WORD = /^\p{Lu}[\p{L}'’-]*$/u;
+
+/**
+ * The name a request gives after "for <title>", one to three capitalised words up to the end of the sentence, or null.
+ * "Corrective action for TM <name>" reached the roster step with no name on the card.
+ */
+export function nameAfterTitle(message: string | undefined): string | null {
+  if (!titleBeforeNameEnabled() || !message) return null;
+  for (const match of message.matchAll(/\bfor\s+([^.,;:!?\n]+)/giu)) {
+    const words = match[1]!.trim().split(/\s+/);
+    const skip = leadingTitleLength(words);
+    if (skip === 0) continue;
+    const name = words.slice(skip);
+    if (name.length >= 1 && name.length <= 3 && name.every((word) => NAME_WORD.test(word))) return name.join(" ");
+  }
+  return null;
+}
+
+/**
+ * The card's create check (`proposal-currency.ts`) re-reads the employee from the conversation and refused the card:
+ * "the conversation now says the form is for Team Member <name>, not <name>". The conversation's reading is the card's
+ * name with a title in front of it, and the request said "for <title> <name>": that is the same person.
+ */
+export function sameNameAfterTitle(read: string, card: string, userTurns: readonly string[]): boolean {
+  if (!titleBeforeNameEnabled()) return false;
+  const reading = read.trim().toLowerCase().replace(/\s+/g, " ");
+  const name = card.trim().toLowerCase().replace(/\s+/g, " ");
+  if (!name || reading === name || !reading.endsWith(` ${name}`)) return false;
+  return userTurns.some((turn) => (nameAfterTitle(turn) ?? "").toLowerCase() === name || withoutLeadingTitle(read).toLowerCase() === name);
+}

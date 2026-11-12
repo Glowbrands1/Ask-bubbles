@@ -70,6 +70,41 @@ export const NOV11_TITLE_BEFORE_NAME_CASES: ReplayCase[] = [
       forTheName(proposal, reply.content);
     },
   },
+  /*
+   * QA (12 Nov 2026): the created draft, not only the card. The titled card was refused at Create ("the conversation now
+   * says the form is for Team Member <name>, not <name>"), and "for TM <name>" carded with no employee. The draft is
+   * <name>'s and holds what the plain-name request's draft holds (its Action Plan included); the title is never the
+   * account.
+   */
+  ...(
+    [
+      ["team-member", `Corrective action for Team Member ${NAME}`],
+      ["create-team-member", `Create a corrective action for Team Member ${NAME}`],
+      ["tm", `Corrective action for TM ${NAME}`],
+    ] as const
+  ).map(([key, words]) => ({
+    id: `nov11-title-before-name-draft-${key}`,
+    title: `"${words}" (admin): Create makes the same draft as for "${NAME}"`,
+    report: REPORT,
+    status: { open: "Create refuses the card, or the card has no employee" } as const,
+    fixFlags: FIX,
+    async run(t: ReplayContext) {
+      vi.setSystemTime(new Date("2026-11-11T15:00:00Z"));
+      t.directory(STAFF);
+      t.as("admin", EVERY_STORE);
+      const plain = t.thread();
+      await plain.say(`Corrective action for ${NAME}`);
+      const expected = t.values(await plain.create());
+      const thread = t.thread();
+      await thread.say(words);
+      const values = t.values(await thread.create());
+      expect(values.employee_name, JSON.stringify(values)).toBe(NAME);
+      expect(values.observation ?? "", JSON.stringify(values)).not.toMatch(/\b(?:Team Member|TM)\s+Wren Tallis/i);
+      // The same draft as the plain-name request's, apart from a job title the manager stated.
+      const rest = Object.fromEntries(Object.entries(values).filter(([field]) => field !== "job_title"));
+      expect(rest, `titled: ${JSON.stringify(values)}\nplain: ${JSON.stringify(expected)}`).toEqual(expected);
+    },
+  })),
   {
     id: "nov11-title-before-name-plain-name-unchanged",
     title: `NEVER-BREAK: "Corrective action for ${NAME}" still cards for ${NAME}`,

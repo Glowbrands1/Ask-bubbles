@@ -13,7 +13,7 @@ import { metricMessage, namesAMetric, requestMessage, cardOnScreen } from "./req
 import { namesAForm } from "./template-intent";
 import { onlyAsPossessivePlace, POSSESSIVE_PLACE_QUESTION_LINE, withPossessivePlaceNotPerson } from "./possessive-place";
 import { rosterScopeLevel, rosterScopeTurns } from "./roster-scope";
-import { withoutLeadingTitle } from "./title-before-name";
+import { nameAfterTitle, withoutLeadingTitle } from "./title-before-name";
 import { withoutTitleWord } from "./title-not-part-of-name";
 
 /**
@@ -106,8 +106,24 @@ function said(names: readonly string[]): string {
  * found nobody and never offered the roster's spelling. A store title written short after the name (two words or more)
  * is not part of it: it is taken off the card's name, and off the reply's bold name, before the roster is read.
  */
-function withoutTrailingTitle(response: AskResponse): AskResponse {
+function withoutTrailingTitle(response: AskResponse, message?: string): AskResponse {
   const typed = response.formProposal?.employeeName?.trim() ?? "";
+  /*
+   * TITLE_BEFORE_NAME_ENABLED (QA, 12 Nov 2026): "Corrective action for TM <name>" came with no name on the card. The
+   * name after the title in the request is the card's employee; the roster rules below treat it as any typed name.
+   */
+  const card = response.formProposal;
+  if (!typed && card && card.subject !== "team") {
+    const named = nameAfterTitle(message);
+    if (named) {
+      const lead = new RegExp(String.raw`(\bI can create an? \*\*${escape(card.templateName ?? "")}\*\*)(?=\.)`);
+      return {
+        ...response,
+        content: response.content.replace(lead, `$1 for **${named}**`),
+        formProposal: { ...card, employeeName: named, status: card.status === "needs_employee" ? "ready" : card.status },
+      };
+    }
+  }
   // TITLE_BEFORE_NAME_ENABLED: "Team Member <name>" — the store title in front is not part of the name either.
   const name = withoutLeadingTitle(withoutTitleWord(typed));
   if (!typed || name === typed) return response;
@@ -125,7 +141,7 @@ function withoutTrailingTitle(response: AskResponse): AskResponse {
 
 export function rosterOnlyNames(input: AskResponse, names: readonly string[], message?: string): AskResponse {
   if (names.length === 0) return input;
-  const response = withoutTrailingTitle(input);
+  const response = withoutTrailingTitle(input, message);
   let content = response.content;
   let proposal = response.formProposal;
   let ask: string | null = null;
