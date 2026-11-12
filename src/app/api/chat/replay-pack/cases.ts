@@ -43,6 +43,8 @@ export interface ReplayContext {
    * it the pack reads no manual. Used to put a source excerpt through the production path.
    */
   fullManual?(document: { id: string; title: string; chunks: readonly unknown[] }): void;
+  /** Chunks the pinned policy manual also has, this case only (ported from the sibling app's pack); none by default. */
+  manualAlsoHas?(chunks: readonly Record<string, unknown>[]): void;
   /** What the drafting model writes at Create. */
   /** `extra`: other fields of the draft tool's input, e.g. `{ offense_basis: "sales" }` (CA_SALES_POLICY_ENABLED). */
   draftWrites(values: Record<string, string>, checked?: Record<string, string[]>, extra?: Record<string, unknown>): void;
@@ -75,6 +77,8 @@ export interface ReplayContext {
   checked(instanceId: string): Record<string, string[]>;
   /** What the drafting model was given, one entry per draft written. */
   draftPrompts(): string[];
+  /** What the revision model was handed (its messages), one entry per call. */
+  revisionPrompts?(): string[];
   /** The drafting model's system prompt, one entry per draft written. */
   draftSystems?(): string[];
   /** The draft call's tools as sent, one JSON string per call. */
