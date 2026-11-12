@@ -63,8 +63,29 @@ const draftAsked = vi.hoisted(() => [] as string[]);
 const draftSystemAsked = vi.hoisted(() => [] as string[]);
 /** The draft call's tools, as sent (CA_SALES_POLICY_ENABLED adds an optional property). */
 const draftToolsAsked = vi.hoisted(() => [] as string[]);
+/* `t.fullManual(...)`: the full policy manual this case's policy questions read; none unless a case gives one. */
+const fullManual = vi.hoisted(() => ({ document: null as null | { id: string; title: string; chunks: readonly unknown[] } }));
+vi.mock("@/lib/knowledge/full-manual-load", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/knowledge/full-manual-load")>();
+  const { isPolicyQuestion, planFullManualContext } = await import("@/lib/ai/full-manual-context");
+  return {
+    ...actual,
+    loadFullManualPlan: async (scopeId: string, question: string, policyText?: string) => {
+      const document = fullManual.document;
+      if (!document) return actual.loadFullManualPlan(scopeId, question, policyText);
+      const asked = policyText ?? question;
+      const documents = isPolicyQuestion(asked)
+        ? [{ id: document.id, title: document.title, category: "policies_compliance", status: "indexed", indexed: true, chunks: document.chunks.map((row) => actual.manualChunkFromRow(row as never)) }]
+        : [];
+      return planFullManualContext({ question, policyText: asked, documents: documents as never });
+    },
+  };
+});
+
 const state = vi.hoisted(() => ({
   /** What the slot model reads on the next turns (`slotsRead`), as a production trace shows it. */
+  /** Chunks the pinned manual also has, when a case sets them (`manualAlsoHas`); none by default. */
+  manualExtra: [] as Record<string, unknown>[],
   slotsRead: {} as Record<string, unknown>,
   slotReading: "none" as "none" | "ca" | "copy",
   remapObservation: null as string | null,
@@ -115,7 +136,25 @@ vi.mock("@/lib/forms/form-patch-call", () => ({
  * `t.failSavesOf` (ported from the sibling app, QA, 9 Nov 2026): a save of the form's values that includes the named
  * field returns an error, as a failed database write would, so a case can make a turn throw part-way.
  */
-const faults = vi.hoisted(() => ({ field: null as string | null }));
+const faults = vi.hoisted(() => ({ field: null as string | null, strayDraftField: null as string | null }));
+
+/*
+ * `t.draftWriteCarries` (coding 6, 10 Nov 2026; DRAFT_WRITE_NEVER_SILENT_ENABLED): the draft route's next write through
+ * the one writer also carries this field, once, as a stray value would; the REAL writer then refuses it, and with it
+ * the whole write (all or nothing). Every other call is the real `draftWrite`.
+ */
+vi.mock("@/lib/forms/form-write", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/forms/form-write")>();
+  return {
+    ...actual,
+    draftWrite: ((instanceId, draft, ...rest) => {
+      const stray = faults.strayDraftField;
+      faults.strayDraftField = null;
+      const carried = stray ? { ...draft, values: { ...(draft.values ?? {}), [stray]: "stray" } } : draft;
+      return actual.draftWrite(instanceId, carried, ...rest);
+    }) as typeof actual.draftWrite,
+  };
+});
 function withFaults<T>(client: T): T {
   return new Proxy(client as object, {
     get(target, prop, receiver) {
@@ -380,7 +419,7 @@ vi.mock("@/lib/knowledge/providers/supabase", () => ({
         documentTitle: "2025 JBA Policy Manual - Edited 5-2025",
         documentCategory: "policies_compliance",
         matchedBy: "tag",
-        chunks: JBA_MANUAL_CA_CHUNKS,
+        chunks: [...JBA_MANUAL_CA_CHUNKS, ...state.manualExtra],
       };
     }
   },
@@ -582,8 +621,10 @@ beforeEach(async () => {
   for (const key of Object.keys(store) as (keyof FakeStore)[]) store[key] = [];
   store.form_instances = new JoiningRows() as never;
   state.slotReading = "none";
+  fullManual.document = null;
   state.remapObservation = null;
   state.slotsRead = {};
+  state.manualExtra = [];
   state.reading = {};
   state.draft = { values: {} };
   state.revision = { values: {} };
@@ -591,6 +632,7 @@ beforeEach(async () => {
   patchScript.calls = 0;
   patchScript.byLatest = null;
   faults.field = null;
+  faults.strayDraftField = null;
   state.directory = [
     { id: "e-1", firstName: "Quinn", lastName: "Marlowe", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-66"], positionName: null },
     { id: "e-2", firstName: "Dale", lastName: "Ferris", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-66"], positionName: null },
@@ -682,8 +724,14 @@ function context(): ReplayContext {
     directory: (rows) => {
       state.directory = rows as never;
     },
+    fullManual: (document) => {
+      fullManual.document = document;
+    },
     draftWrites: (values, checked, extra) => {
       state.draft = { values, ...(checked ? { checked } : {}), ...(extra ?? {}) };
+    },
+    manualAlsoHas: (chunks) => {
+      state.manualExtra = [...chunks];
     },
     revisionWrites: (values) => {
       state.revision = { values };
@@ -710,6 +758,9 @@ function context(): ReplayContext {
     },
     failSavesOf: (field) => {
       faults.field = field;
+    },
+    draftWriteCarries: (field) => {
+      faults.strayDraftField = field;
     },
     calls: () => ({ chat: state.chatModelCalls, draft: state.draftCalls, revision: state.revisionCalls, tool: state.toolCalls, patch: patchScript.calls }),
     forms: () => store.form_instances as never,

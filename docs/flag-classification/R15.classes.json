@@ -1,0 +1,32 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-form-date-said-alone-first-edit: \"make the date 11/7/26\" as the first edit, the reader does not read it as this form's: the Date is written \u2014 OPEN in production (a turn the reader reads as not this form's goes to the old path, which does not write the Date)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "MADE_ABOUT_TOPIC_EVIDENCE / FORM_DATE_SAID_ALONE: an OPEN case now holds (two-word topic: Other, Date, Details together; a date said alone sets the Date)."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-made-about-short-topic-no-reading: \"make it about being late on 11/5/26\", no reading of this form: Other, the Date and Details together \u2014 OPEN in production (the topic read from the manager's words is refused: \"being late\" is under the reducer's floor)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "MADE_ABOUT_TOPIC_EVIDENCE / FORM_DATE_SAID_ALONE: an OPEN case now holds (two-word topic: Other, Date, Details together; a date said alone sets the Date)."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-made-about-short-topic-reader-other: \"make it about being late on 11/5/26\", the reader sets Other \"Being late\": Other, the Date and Details together \u2014 OPEN in production (Other \"Being late\" is refused: its evidence, \"being late\", is under the reducer's floor)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "MADE_ABOUT_TOPIC_EVIDENCE / FORM_DATE_SAID_ALONE: an OPEN case now holds (two-word topic: Other, Date, Details together; a date said alone sets the Date)."
+ },
+ "replay: nov10-form-date-said-alone-first-edit [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "MADE_ABOUT_TOPIC_EVIDENCE / FORM_DATE_SAID_ALONE: an OPEN case now holds (two-word topic: Other, Date, Details together; a date said alone sets the Date)."
+ },
+ "replay: nov10-made-about-short-topic-no-reading [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "MADE_ABOUT_TOPIC_EVIDENCE / FORM_DATE_SAID_ALONE: an OPEN case now holds (two-word topic: Other, Date, Details together; a date said alone sets the Date)."
+ },
+ "replay: nov10-made-about-short-topic-reader-other [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "MADE_ABOUT_TOPIC_EVIDENCE / FORM_DATE_SAID_ALONE: an OPEN case now holds (two-word topic: Other, Date, Details together; a date said alone sets the Date)."
+ }
+}

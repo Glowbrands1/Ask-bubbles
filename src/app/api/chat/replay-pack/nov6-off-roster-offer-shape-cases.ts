@@ -140,7 +140,7 @@ export const NOV6_OFF_ROSTER_OFFER_SHAPE_CASES: ReplayCase[] = [
   neverOffered(
     "nov6-offer-never-qa-probe",
     "\"I need a corrective action verbal for QA Probe XZT One. …\": \"QA Probe XZT One\" is never offered",
-    ["I need a corrective action verbal for QA Probe XZT One. This is for Under Performance on PPTA, LPSVA, Club Average, Club Close %, and Spa %."],
+    ["I need a corrective action verbal for QA Probe XZT One. This is for Under Performance on UPT, ATV, Average Ticket, Bundle Rate %, and Gift %."],
     "QA Probe XZT One",
   ),
   {
