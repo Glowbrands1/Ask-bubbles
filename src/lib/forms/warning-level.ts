@@ -1,8 +1,9 @@
-import { caShortcutWordsEnabled, complaintAccountEnabled, levelEndsRequestEnabled, priorActionsNoCommaEnabled, requestLevelNotHistoryEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { caShortcutWordsEnabled, complaintAccountEnabled, levelEndsRequestEnabled, priorActionsNoCommaEnabled, relativeDayNotHistoryEnabled, requestLevelNotHistoryEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { businessToday } from "@/lib/business-date";
 
 import { datesInText } from "./form-date-answer";
 import { namesIncidentTopicIn } from "./incident-topic";
+import { isRelativeDateWord } from "./relative-dates";
 // From the import-free modules, never `payroll-deduct.ts` / `template-intent.ts`:
 // `template-intent.ts` imports this one, and that closed a cycle (QA, 22 Oct 2026).
 import { statedPayrollDeduct } from "./payroll-deduct-answer";
@@ -571,7 +572,17 @@ function previousSentence(text: string, index: number): string {
 
 function pointsToThePast(textBefore: string, today: string): boolean {
   if (LISTS_EARLIER_STEPS.test(textBefore)) return true;
-  return datesInText(textBefore, today).some((found) => found.iso !== today);
+  /*
+   * RELATIVE_DAY_NOT_HISTORY_ENABLED (QA, 10 Nov 2026; owner retest "need a CA for jordan testperson. she mishandled
+   * cash at close yesterday. written warning"): with RELATIVE_DATE_READER on (live), "yesterday" is read as a date
+   * before today, so the trailing level read as history and the card lost "Written". A relative day word ("yesterday",
+   * "last tuesday") is when this incident happened, as the rule above says, never an earlier step; only a date the
+   * manager wrote as a date counts here. Off, as before.
+   */
+  const relativeIsIncident = relativeDayNotHistoryEnabled();
+  return datesInText(textBefore, today).some(
+    (found) => found.iso !== today && !(relativeIsIncident && isRelativeDateWord(textBefore.slice(found.index, found.end))),
+  );
 }
 
 /** A polite request that issues the level: "can we put tess on a written …?", "could you give her a verbal …?". */

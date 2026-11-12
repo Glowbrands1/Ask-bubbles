@@ -61,3 +61,50 @@ export const NOV11_NEAR_MISS_NO_CALL_NO_SHOW_CASES: ReplayCase[] = [
     },
   },
 ];
+
+/*
+ * ANSWER_TURN_LEVEL (QA's ruling (a), 12 Nov 2026, from B#808's gate): the same answer's ", verbal warning" was read as
+ * an earlier warning ("I've treated the earlier warning you mentioned as previous corrective action history …") and kept
+ * in the Issue. In the answer to the app's own question it is this form's level, and the Issue drops it.
+ */
+export const NOV12_ANSWER_TURN_LEVEL_CASES: ReplayCase[] = [
+  {
+    id: "nov12-near-miss-answer-level-is-this-forms",
+    title: `after "Is this for **Corvina Vellacott**?", "${NO_CALL}": Verbal Warning ticked, never asked as history; the Issue is "no call no show on 11/3"`,
+    report: "QA, 12 Nov 2026 (from B#808's gate): the level in the answer was read as history, and the Issue kept it",
+    status: { open: "\"I've treated the earlier warning you mentioned as previous corrective action history\"; Issue \"no call no show on 11/3, verbal warning\"" },
+    fixFlags: [...ON, "ANSWER_TURN_LEVEL_ENABLED"],
+    async run(t) {
+      vi.setSystemTime(new Date("2026-11-04T15:30:00Z"));
+      t.directory([...STAFF, CORVINA, DELPHINE]);
+      t.as("location_manager", WEST_DODGE);
+      const thread = t.thread();
+      await thread.say(FIRST);
+      const reply = await thread.say(NO_CALL);
+      const card = thread.proposal as Record<string, unknown> | null;
+      expect(card?.employeeName ?? null, `the asked name was taken off:\n${reply.content}`).toBe("Corvina Vellacott");
+      expect(reply.content, `the level was read as history:\n${reply.content}`).not.toMatch(/treated the earlier warning|Verbal Warning\*\* or a \*\*Written Warning/);
+      expect(card?.warningLevel ?? null, `the stated level is not on the card:\n${reply.content}`).toBe("verbal");
+      expect(String(card?.issue ?? ""), `the Issue keeps the level:\n${reply.content}`).not.toMatch(/verbal/i);
+      t.draftWrites({ observation: "Observed:\nCorvina Vellacott was a no call no show on 11/3." });
+      const id = await thread.create();
+      expect(t.checked(id).warning_type ?? [], "Create did not tick Verbal").toEqual(["verbal"]);
+    },
+  },
+  {
+    id: "nov12-near-miss-answer-level-history-stays-history",
+    title: "guard: \"she already had a verbal warning\" in the answer is still history",
+    report: "QA, 12 Nov 2026 (the 22 Oct rule stays: history words keep a level history)",
+    status: "fixed",
+    fixFlags: [...ON, "ANSWER_TURN_LEVEL_ENABLED"],
+    async run(t) {
+      vi.setSystemTime(new Date("2026-11-04T15:30:00Z"));
+      t.directory([...STAFF, CORVINA, DELPHINE]);
+      t.as("location_manager", WEST_DODGE);
+      const thread = t.thread();
+      await thread.say(FIRST);
+      const reply = await thread.say("no call no show on 11/3, she already had a verbal warning");
+      expect((thread.proposal as Record<string, unknown> | null)?.warningLevel ?? null, `an earlier warning decided this one:\n${reply.content}`).toBeNull();
+    },
+  },
+];

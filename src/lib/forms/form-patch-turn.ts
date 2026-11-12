@@ -16,6 +16,7 @@ import {
   madeForIsMadeAboutEnabled,
   sectionBreaksKeptEnabled,
   addNotRepeatedEnabled,
+  addNotRepeatedSentencesEnabled,
   formDateSaidAloneEnabled,
   madeAboutRewriteFinishesEnabled,
   stepBDateSaidEnabled,
@@ -106,7 +107,7 @@ function lastAssistant(history: readonly Pick<ChatMessage, "role" | "content" | 
 /** ADD_NOT_REPEATED_ENABLED (QA's live Bubbles round 15): an "add" that repeats the field's text adds only what follows it. */
 function notRepeated(how: string | undefined, value: FieldValue, current: FieldValue | undefined): FieldValue {
   if (!addNotRepeatedEnabled() || how !== "add" || typeof value !== "string" || typeof current !== "string") return value;
-  return addedTail(current, value) ?? value;
+  return addedTail(current, value, { sentences: addNotRepeatedSentencesEnabled() }) ?? value;
 }
 
 /** SECTION_BREAKS_KEPT_ENABLED (the sibling app's live round 15): the reader's account, run onto one line, keeps the field's sections. */

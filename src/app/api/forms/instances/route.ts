@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { teamTopicReadConversation } from "@/lib/forms/team-card-not-product";
 import { sameRequestReadConversation } from "@/lib/forms/same-request-other-person";
 import { switchReadConversation } from "@/lib/ai/form-type-switch";
 import { typoReadingText, typoReadingTurns } from "@/lib/ai/typo-reading-copy";
@@ -246,7 +247,11 @@ export async function POST(request: Request) {
         // PASTED_REVIEW_NOT_ACCOUNT_ENABLED: pasted reviewer's notes are read as the chat read them (`ai/pasted-review.ts`).
         // SAME_REQUEST_OTHER_PERSON_ENABLED: "the same thing for <B>" is read from that turn on, as the chat read it.
         // SAME_REQUEST_KEEPS_EARLIER_CARD_ENABLED: <A>'s card is read as it stood before "the same thing for <B>".
-        conversation: sameRequestReadConversation(switchReadConversation(turnsWithoutPastedReview(parseHistory(body.conversation))), body.employeeName),
+        // TEAM_CARD_NOT_PRODUCT_ENABLED: on the team card, "selling Bath Bomb Kits" is the topic, as the chat read it.
+        conversation: teamTopicReadConversation(
+          sameRequestReadConversation(switchReadConversation(turnsWithoutPastedReview(parseHistory(body.conversation))), body.employeeName),
+          body.employeeName,
+        ),
         templateKey: body.templateKey,
         employeeName: body.employeeName,
         alsoCalled,
@@ -397,7 +402,8 @@ export async function POST(request: Request) {
         isWarningLevel(card.warningLevel) &&
         card.source === "assistant" &&
         Array.isArray(card.conversation) &&
-        (warningLevelFromConversation(await readingTurns(parseHistory(card.conversation)), businessToday()) === card.warningLevel ||
+        // ANSWER_TURN_LEVEL_ENABLED: a level said at the end of the answer to the app's own question is this form's, here as on the card.
+        (warningLevelFromConversation((await import("@/lib/forms/answer-turn-level")).turnsWithAnswerTurnLevel(await readingTurns(parseHistory(card.conversation))), businessToday()) === card.warningLevel ||
           readerWarningLevel(card) === card.warningLevel)
           ? card.warningLevel
           : null;

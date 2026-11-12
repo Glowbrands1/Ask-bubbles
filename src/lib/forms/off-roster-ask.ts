@@ -1,11 +1,35 @@
-import { formNameOffRosterAskEnabled, offRosterAskBeforeCardEnabled, offRosterConfirmEnabled } from "@/lib/config/chat-quality-flags";
+import { formNameOffRosterAskEnabled, offRosterAskBeforeCardEnabled, offRosterConfirmEnabled, offRosterStoreAnswerOnlyEnabled } from "@/lib/config/chat-quality-flags";
 import type { AccessScope } from "@/types";
+import { storeOnlyTurn } from "@/lib/ai/store-alias";
 
 import { normalizeTypedName } from "./employee-match";
 import { isAcceptedOffRoster, offRosterCardNote, offRosterOffer, offRosterTakenLine } from "./off-roster-confirm";
 import { personRosterNames } from "./person-guard";
 import { offRosterTyped } from "./roster-only-names";
 import { editDistance } from "./typo-match";
+import { readLocationMentions } from "./location-mention";
+import { locationById } from "@/lib/locations";
+
+/** Words around a store that say nothing else ("at", "the store is", "she works at our …"). */
+const STORE_FILLER = /\b(?:at|the|our|store|location|is|it'?s|its|in|she|he|they|works?|from)\b/g;
+
+/**
+ * OFF_ROSTER_STORE_ANSWER_ONLY_ENABLED: the turn is only a store: one store the readers are sure of, and nothing else
+ * but filler words and a state abbreviation ("dodge, ne", "Omaha, NE (West Dodge Rd)", "at our dodge store").
+ */
+export function storeOnlyAnswer(text: string): boolean {
+  const mentions = readLocationMentions(text).filter((mention) => mention.locationIds.length === 1 && !mention.confirm);
+  if (mentions.length !== 1) return false;
+  // What the manager typed for it, and the store's own roster name ("Omaha, NE (West Dodge Rd)"), are both the store.
+  const typedAs = [mentions[0]!.matched, locationById(mentions[0]!.locationIds[0])?.name].filter((name): name is string => Boolean(name));
+  if (typedAs.length === 0) return false;
+  const rest = typedAs
+    .reduce((left, name) => left.replace(name.toLowerCase(), " "), text.toLowerCase())
+    .replace(STORE_FILLER, " ")
+    .replace(/[^\p{L}]+/gu, " ")
+    .trim();
+  return rest === "" || /^[a-z]{2}$/.test(rest);
+}
 
 /*
  * ============================================================================
@@ -113,6 +137,36 @@ export function withOffRosterAskBeforeCard<T extends { content: string; formProp
    * close to them (a near miss is asked as that person), never a product, an all-caps run or a title. Said back as it
    * would be offered (Title Case).
    */
+  /*
+   * OFF_ROSTER_STORE_ANSWER_ONLY_ENABLED (QA's #735 ruling, 12 Nov 2026): a store-only answer to this question sets the
+   * store; the name still needs "use <name>". The card is held, with its store, and the question and offer are asked
+   * again.
+   */
+  if (offRosterStoreAnswerOnlyEnabled() && !isAcceptedOffRoster(name)) {
+    const offered = [...input.history].reverse().find((turn) => turn.role === "assistant")?.content ?? "";
+    const pending = /reply \*\*use ([^*]+)\*\*/.exec(offered)?.[1]?.trim();
+    if (pending && offered.includes(offRosterQuestion(pending)) && storeOnlyAnswer(input.question)) {
+      return {
+        ...answer,
+        content: `${offRosterQuestion(pending)} ${offRosterOffer(pending)}`,
+        formProposal: { ...card, employeeName: null, employeeRole: null, status: "needs_employee", supportsInlineDraft: false },
+      };
+    }
+  }
+  /*
+   * STORE_ALIAS_ENABLED (Gate-Bubbles-3, R735, 12 Nov 2026): a store answer to this question ("dodge, ne") is only the
+   * store. The name stays unconfirmed: the card is held, with its store, and the same question and offer are asked
+   * again, so the production confirmation ("use <name>") still decides it.
+   */
+  const offered = [...input.history].reverse().find((turn) => turn.role === "assistant")?.content ?? "";
+  const pending = /reply \*\*use ([^*]+)\*\*/.exec(offered)?.[1]?.trim();
+  if (pending && offered.includes(offRosterQuestion(pending)) && storeOnlyTurn(input.question)) {
+    return {
+      ...answer,
+      content: `${offRosterQuestion(pending)} ${offRosterOffer(pending)}`,
+      formProposal: { ...card, employeeName: null, employeeRole: null, status: "needs_employee", supportsInlineDraft: false },
+    };
+  }
   const typed = offRosterTyped(name, input.question, roster);
   if (!typed) return answer;
   const question = offRosterQuestion(typed);

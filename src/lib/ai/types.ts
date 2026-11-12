@@ -289,6 +289,12 @@ export interface AskResponse {
    */
   formUpdate?: { instanceId: string; updated: string[] };
   /**
+   * FORM_EDIT_SOURCE_TURN_ENABLED: this reply was about the open form; the
+   * browser keeps it on the message and sends it back with the history. See
+   * `ChatFormReply`.
+   */
+  formReply?: { instanceId: string; unwritten?: string; answer?: true };
+  /**
    * SAME_FORM_COPY_NEW_PERSON_ENABLED: this answer asked who the copy of the
    * manager's own form (this id) is for. See `lib/forms/same-form-copy.ts`.
    */

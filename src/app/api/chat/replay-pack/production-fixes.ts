@@ -666,4 +666,86 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov12-termination-ca-bare-opens-card": "TERMINATION_INTAKE",
   // fixed in production by TERMINATION_INTAKE, QA round 17p, 12 Nov 2026
   "nov12-17k-termination-letter-exit-card": "TERMINATION_INTAKE",
+  // fixed in production by REGISTER_ACCURACY_CONDUCT, QA round 17q, 13 Nov 2026
+  "nov4-ca-sales-wrong-items-card": "REGISTER_ACCURACY_CONDUCT",
+  // fixed in production by ADDED_DETAIL_KEPT, QA round 17q, 13 Nov 2026
+  "nov5-sf-b6-full-sentence-and-added-detail": "ADDED_DETAIL_KEPT",
+  // fixed in production by CA_PROCEDURE_BASIS, QA round 17q, 13 Nov 2026
+  "nov5-sf-b6-policy-left-for-the-manager": "CA_PROCEDURE_BASIS",
+  // fixed in production by ADDED_DETAIL_KEPT, QA round 17q, 13 Nov 2026
+  "nov10-sf-b6-card-carries-added-detail": "ADDED_DETAIL_KEPT",
+  // fixed in production by ATTENDANCE_PLAN_NEEDS_LATENESS, QA round 17q, 13 Nov 2026
+  "nov11-attendance-plan-no-lateness-said": "ATTENDANCE_PLAN_NEEDS_LATENESS",
+  // fixed in production by CARD_PLAN_MATCHES_CREATE, QA round 17q, 13 Nov 2026
+  "nov12-17l-card-shows-pau-attendance-plan": "CARD_PLAN_MATCHES_CREATE",
+  // fixed in production by CARD_PLAN_MATCHES_CREATE, QA round 17q, 13 Nov 2026
+  "nov12-17l-card-plan-equals-saved-plan": "CARD_PLAN_MATCHES_CREATE",
+  // fixed in production by OFF_ROSTER_STORE_ANSWER_ONLY, QA round 17q, 13 Nov 2026
+  "nov12-off-roster-store-answer-only-dodge": "OFF_ROSTER_STORE_ANSWER_ONLY",
+  // fixed in production by OFF_ROSTER_STORE_ANSWER_ONLY, QA round 17q, 13 Nov 2026
+  "nov12-off-roster-store-answer-only-full-name": "OFF_ROSTER_STORE_ANSWER_ONLY",
+  // fixed in production by ANIMAL_VISITORS_ONLY_WHEN_VISITOR, QA round 17q, 13 Nov 2026
+  "nov5-animal-alone-no-visitors": "ANIMAL_VISITORS_ONLY_WHEN_VISITOR",
+  // fixed in production by ANIMAL_VISITORS_ONLY_WHEN_VISITOR, QA round 17q, 13 Nov 2026
+  "nov5-visitor-alone-control": "ANIMAL_VISITORS_ONLY_WHEN_VISITOR",
+  // fixed in production by ANIMAL_VISITORS_ONLY_WHEN_VISITOR, QA round 17q, 13 Nov 2026
+  "nov5-animal-customers-saw-it": "ANIMAL_VISITORS_ONLY_WHEN_VISITOR",
+  // fixed in production by ADD_NOT_REPEATED_SENTENCES, QA round 17q, 13 Nov 2026
+  "nov10-add-not-repeated-leading-sentence": "ADD_NOT_REPEATED_SENTENCES",
+  // fixed in production by ADD_OUT_OF_OTHER_SECTIONS, QA round 17q, 13 Nov 2026
+  "nov10-r16b-add-reminded-under-observed": "ADD_OUT_OF_OTHER_SECTIONS",
+  // fixed in production by ADD_OUT_OF_OTHER_SECTIONS, QA round 17q, 13 Nov 2026
+  "nov10-r16b-add-reminded-glued-into-expectation": "ADD_OUT_OF_OTHER_SECTIONS",
+  // fixed in production by RELATIVE_DAY_NOT_HISTORY, QA round 17q, 13 Nov 2026
+  "nov10-relative-day-keeps-written": "RELATIVE_DAY_NOT_HISTORY",
+  // fixed in production by MANAGER_FORM_CHOICE, QA round 17r, 13 Nov 2026
+  "nov10-manager-form-choice-needs-ca-lower": "MANAGER_FORM_CHOICE",
+  // fixed in production by MANAGER_FORM_CHOICE, QA round 17r, 13 Nov 2026
+  "nov10-manager-form-choice-needs-ca-sentence": "MANAGER_FORM_CHOICE",
+  // fixed in production by MANAGER_FORM_CHOICE, QA round 17r, 13 Nov 2026
+  "nov10-manager-form-choice-write-ca-lower": "MANAGER_FORM_CHOICE",
+  // fixed in production by MANAGER_FORM_CHOICE, QA round 17r, 13 Nov 2026
+  "nov10-manager-form-choice-write-ca-sentence": "MANAGER_FORM_CHOICE",
+  // fixed in production by STORE_ALIAS, QA round 17r, 13 Nov 2026
+  "nov10-store-alias-at-dodge-ne": "STORE_ALIAS",
+  // fixed in production by STORE_ALIAS, QA round 17r, 13 Nov 2026
+  "nov10-store-alias-bare-Dodge-comma-NE": "STORE_ALIAS",
+  // fixed in production by STORE_ALIAS, QA round 17r, 13 Nov 2026
+  "nov10-store-alias-bare-dodge-comma-ne": "STORE_ALIAS",
+  // fixed in production by STORE_ALIAS, QA round 17r, 13 Nov 2026
+  "nov10-store-alias-dodge-ne-location": "STORE_ALIAS",
+  // fixed in production by MANAGER_FORM_CHOICE, QA round 17r, 13 Nov 2026
+  "nov10-writen-ca-terse-lower": "MANAGER_FORM_CHOICE",
+  // fixed in production by MANAGER_FORM_CHOICE, QA round 17r, 13 Nov 2026
+  "nov10-writen-ca-terse-sentence": "MANAGER_FORM_CHOICE",
+  // fixed in production by EXIT_NOTICE_VERB_TYPOS, QA round 17r, 13 Nov 2026
+  "nov11-exit-notice-submited": "EXIT_NOTICE_VERB_TYPOS",
+  // fixed in production by TYPO_FULL_NAME_TO_ROSTER, QA round 17r, 13 Nov 2026
+  "nov11-sf-b5-typo-name-and-title": "TYPO_FULL_NAME_TO_ROSTER",
+  // fixed in production by TITLE_INITIALISM_CASE, QA round 17r, 13 Nov 2026
+  "nov11-title-initialism-hr-assistant-as-typed": "TITLE_INITIALISM_CASE",
+  // fixed in production by TITLE_INITIALISM_CASE, QA round 17r, 13 Nov 2026
+  "nov11-title-initialism-hr-assistant-lowercase": "TITLE_INITIALISM_CASE",
+  // fixed in production by EXIT_NOTICE_STATED_ONLY, QA round 17r, 13 Nov 2026
+  "nov12-17j-resigned-date-is-not-notice-date": "EXIT_NOTICE_STATED_ONLY",
+  // fixed in production by TERMINATION_CARD_TIDY, QA round 17r, 13 Nov 2026
+  "nov12-17o-issue-not-termination-hedge": "TERMINATION_CARD_TIDY",
+  // fixed in production by TERMINATION_CARD_TIDY, QA round 17r, 13 Nov 2026
+  "nov12-17o-term-plan-line-break": "TERMINATION_CARD_TIDY",
+  // fixed in production by ANSWER_TURN_LEVEL, QA round 17r, 13 Nov 2026
+  "nov12-near-miss-answer-level-is-this-forms": "ANSWER_TURN_LEVEL",
+  // fixed in production by STORE_ALIAS, QA round 17r, 13 Nov 2026
+  "nov12-store-alias-off-roster-ask-lower": "STORE_ALIAS",
+  // fixed in production by STORE_ALIAS, QA round 17r, 13 Nov 2026
+  "nov12-store-alias-off-roster-ask-sentence": "STORE_ALIAS",
+  // fixed in production by TEAM_CARD_NOT_PRODUCT, QA round 17r, 13 Nov 2026
+  "nov4-scan-sf-s13-team-coaching-blank-employee": "TEAM_CARD_NOT_PRODUCT",
+  // fixed in production by FORM_EDIT_SOURCE_TURN, QA round 17r, 13 Nov 2026
+  "nov5-coding3-copy-paste-question-told-the-truth": "FORM_EDIT_SOURCE_TURN",
+  // fixed in production by FORM_EDIT_SOURCE_TURN, QA round 17r, 13 Nov 2026
+  "nov5-coding3-these-details-answered-before-the-card": "FORM_EDIT_SOURCE_TURN",
+  // fixed in production by POLICY_CITATION, QA round 17r, 13 Nov 2026
+  "nov8-560-apostrophe-name-keeps-policy": "POLICY_CITATION",
+  // fixed in production by POLICY_CITATION, QA round 17r, 13 Nov 2026
+  "nov8-560-hyphen-name-keeps-policy": "POLICY_CITATION",
 };
