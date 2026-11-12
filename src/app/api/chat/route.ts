@@ -39,6 +39,7 @@ import {
   chatLongMessageEnabled,
   draftActionsEnabled,
   formEditHonestReplyEnabled,
+  policyBlankHonestReplyEnabled,
   claimGuardEnabled,
   nameCorrectionWordsEnabled,
   listPolicyIsEditEnabled,
@@ -1068,11 +1069,23 @@ async function postChat(request: Request) {
       // NEAR_MISS_QUESTION_RULES_ENABLED: "no, …" to "Is this for <name>?" never gets a card for that name, nor the question again.
       if (nearMissQuestionRulesEnabled()) answer = (await import("@/lib/forms/near-miss-question-rules")).withoutTurnedDownName(answer, asked);
       /*
+       * POLICY_BLANK_HONEST_REPLY_ENABLED (ported from the sibling app's live test, 11 Nov 2026): with the open draft's
+       * policy text EMPTY, "did you check the policy?" / "is the policy verified?" is answered plainly from the form, and
+       * no line says a section is quoted on it. A question it answered is no edit, so the honest-edit step leaves it alone.
+       */
+      let policyQuestionAnswered = false;
+      if (policyBlankHonestReplyEnabled() && openForm && !draftAnswer && !correction && !policyChange && !redraft && !revision && !which && !reopened && !answer.formUpdate) {
+        const honestPolicy = (await import("@/lib/forms/policy-blank-honest")).withBlankPolicyHonesty(answer, openForm, parsed.question);
+        answer = honestPolicy.answer;
+        policyQuestionAnswered = honestPolicy.handled;
+      }
+      /*
        * FORM_EDIT_HONEST_REPLY_ENABLED: the ordinary answer, with a form open,
        * changed nothing — so it never says it updated the form. See
        * `honestFormReply` in `lib/forms/form-content-turn.ts`.
        */
       if (
+        !policyQuestionAnswered &&
         (formEditHonestReplyEnabled() || claimGuardEnabled()) &&
         parsed.activeFormInstanceId &&
         !draftAnswer && !correction && !policyChange && !redraft && !revision && !which && !reopened &&

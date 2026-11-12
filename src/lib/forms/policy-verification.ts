@@ -1,4 +1,4 @@
-import { revisionEditNeedsEditEnabled } from "@/lib/config/chat-quality-flags";
+import { policyGateNonblockingEnabled, revisionEditNeedsEditEnabled } from "@/lib/config/chat-quality-flags";
 
 import { fieldsForVariant, type FormDocument } from "./document";
 
@@ -75,7 +75,7 @@ export function unverifiedPolicyFields(
 ): UnverifiedPolicyField[] {
   const rows = new Map(values.map((row) => [row.fieldKey, row]));
 
-  return fieldsForVariant(document, variantKey)
+  const unresolved = fieldsForVariant(document, variantKey)
     .filter((field) => field.policyGrounded)
     .filter((field) => rows.get(field.key)?.provenance?.verified !== true)
     .map((field) => ({
@@ -83,6 +83,28 @@ export function unverifiedPolicyFields(
       label: field.label,
       filled: (rows.get(field.key)?.value ?? "").trim() !== "",
     }));
+  // POLICY_GATE_NONBLOCKING_ENABLED: a blank field is not held for; a typed, unverified one still is.
+  if (!policyGateNonblockingEnabled()) return unresolved;
+  return unresolved.filter((field) => field.filled);
+}
+
+/**
+ * POLICY_GATE_NONBLOCKING_ENABLED (Gate's review, 10 Nov 2026): the policy-grounded fields left BLANK, which the gate no
+ * longer holds for. The finalized event records them (`policyBlankAtFinalize`), and the open-form summary says they are
+ * blank and were not checked against the manual. Empty with the flag off, so nothing else changes.
+ */
+export function blankPolicyFields(
+  document: FormDocument,
+  variantKey: string | null,
+  values: readonly PolicyValueRow[],
+): UnverifiedPolicyField[] {
+  if (!policyGateNonblockingEnabled()) return [];
+  const rows = new Map(values.map((row) => [row.fieldKey, row]));
+  return fieldsForVariant(document, variantKey)
+    .filter((field) => field.policyGrounded)
+    .filter((field) => rows.get(field.key)?.provenance?.verified !== true)
+    .filter((field) => (rows.get(field.key)?.value ?? "").trim() === "")
+    .map((field) => ({ key: field.key, label: field.label, filled: false }));
 }
 
 /**

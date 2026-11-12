@@ -1257,6 +1257,43 @@ describe("P4. finalizing freezes the version the SERVER holds", () => {
   });
 
   /*
+   * QA's October triage of #174 (10 Nov 2026), the sibling app's fix ported: a blank Direct policy opened the policy
+   * acknowledgement instead of the finalize confirmation. With the browser's NEXT_PUBLIC_POLICY_GATE_NONBLOCKING_ENABLED
+   * on, a blank policy field is not an unresolved item.
+   */
+  it('feedback 10/7 and 10/20: "not letting me complete it due to policy verification"', async () => {
+    vi.stubEnv("NEXT_PUBLIC_POLICY_GATE_NONBLOCKING_ENABLED", "1");
+    try {
+      const row = loadedInstance();
+      const document = {
+        ...COACHING_DOCUMENT,
+        blocks: [
+          ...COACHING_DOCUMENT.blocks,
+          {
+            kind: "field" as const,
+            field: {
+              key: "policy_language",
+              label: "Direct policy from official manual",
+              input: "long_text" as const,
+              responsibility: "ai" as const,
+              policyGrounded: true,
+            },
+          },
+        ],
+      };
+      phase4({ ...row, version: { ...row.version, document } } as typeof row);
+      mounted();
+
+      await screen.findByDisplayValue("Arrived late on three shifts this week.");
+      fireEvent.click(screen.getByRole("button", { name: /^finalize$/i }));
+      expect(await screen.findByRole("dialog", { name: "Finalize this form?" })).toBeTruthy();
+      expect(screen.queryByRole("dialog", { name: /does not see this policy/i })).toBeNull();
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  /*
    * Ported from Ask Sunny (production, 21 Oct 2026): a Verbal CA whose policy
    * the assistant had verified could not be finalized after a Save. The card
    * kept its pre-save copy, so it skipped the acknowledgement dialog, and the

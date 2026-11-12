@@ -1,10 +1,11 @@
 import "server-only";
 
 import type { OpenFormSummary } from "@/lib/ai/types";
+import { policyBlankHonestReplyEnabled } from "@/lib/config/chat-quality-flags";
 
 import { blocksForVariant, checkboxGroupsForVariant, fieldsForVariant, interpolate, parseFormDocument } from "./document";
 import { authorizeInstance } from "./instance-scope";
-import { unverifiedPolicyFields } from "./policy-verification";
+import { blankPolicyFields, unverifiedPolicyFields } from "./policy-verification";
 
 /** Enough of a long field for the model to know what it says, not the whole record. */
 const VALUE_CHARS = 600;
@@ -64,8 +65,32 @@ export async function describeOpenForm(request: Request, instanceId: string): Pr
     status: instance.status === "draft" ? "draft" : "finalized",
     lines,
     unverifiedPolicy: unverifiedPolicyFields(document, variantKey, loaded.values).map((field) => field.label),
+    ...withBlankPolicy(blankPolicyFields(document, variantKey, loaded.values).map((field) => field.label)),
     cited: citedSectionsOf(fieldsForVariant(document, variantKey), rows),
+    ...withEmptyPolicy(document, variantKey, rows),
   };
+}
+
+/**
+ * POLICY_BLANK_HONEST_REPLY_ENABLED (ported from the sibling app's live round-24 test, 11 Nov 2026): the policy text
+ * fields that are EMPTY (cleared or never filled, whatever their provenance says), and the policy the form names, so
+ * the answer can say plainly that the draft quotes nothing. Empty object with the flag off.
+ */
+function withEmptyPolicy(
+  document: ReturnType<typeof parseFormDocument>,
+  variantKey: string | null,
+  rows: ReadonlyMap<string, { value?: string | null }>,
+): Pick<OpenFormSummary, "emptyPolicy"> {
+  if (!policyBlankHonestReplyEnabled()) return {};
+  const fields = fieldsForVariant(document, variantKey);
+  const labels = fields
+    .filter((field) => field.policyGrounded)
+    // Empty is empty: a field cleared after it was quoted keeps its old "verified" provenance, and quotes nothing.
+    .filter((field) => (rows.get(field.key)?.value ?? "").trim() === "")
+    .map((field) => interpolate(field.label, null));
+  if (labels.length === 0) return {};
+  const named = (rows.get("policy_violated")?.value ?? "").trim();
+  return { emptyPolicy: { labels, policyNamed: named || null } };
 }
 
 /**
@@ -97,4 +122,9 @@ function clip(value: string): string {
 function humanize(key: string): string {
   const words = key.replace(/_/g, " ").trim();
   return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+/** POLICY_GATE_NONBLOCKING_ENABLED: the blank policy lines, only when there are any (so the summary is unchanged off). */
+function withBlankPolicy(labels: string[]): { blankPolicy?: string[] } {
+  return labels.length > 0 ? { blankPolicy: labels } : {};
 }
