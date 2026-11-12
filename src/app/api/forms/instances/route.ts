@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { teamTopicReadConversation } from "@/lib/forms/team-card-not-product";
 import { sameRequestReadConversation } from "@/lib/forms/same-request-other-person";
 import { switchReadConversation } from "@/lib/ai/form-type-switch";
 import { typoReadingText, typoReadingTurns } from "@/lib/ai/typo-reading-copy";
@@ -247,6 +248,11 @@ export async function POST(request: Request) {
         // SAME_REQUEST_OTHER_PERSON_ENABLED: "the same thing for <B>" is read from that turn on, as the chat read it.
         // SAME_REQUEST_KEEPS_EARLIER_CARD_ENABLED: <A>'s card is read as it stood before "the same thing for <B>".
         conversation: sameRequestReadConversation(switchReadConversation(turnsWithoutPastedReview(parseHistory(body.conversation))), body.employeeName),
+        // TEAM_CARD_NOT_PRODUCT_ENABLED: on the team card, "selling Bath Bomb Kits" is the topic, as the chat read it.
+        conversation: teamTopicReadConversation(
+          sameRequestReadConversation(switchReadConversation(turnsWithoutPastedReview(parseHistory(body.conversation)))),
+          body.employeeName,
+        ),
         templateKey: body.templateKey,
         employeeName: body.employeeName,
         alsoCalled,
