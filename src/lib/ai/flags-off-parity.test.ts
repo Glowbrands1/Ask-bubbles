@@ -133,8 +133,20 @@ const PROTECTED = [
  * REVISION_ARCHIVED_NOT_OPEN_ENABLED (default off), `.is("archived_at", null)`
  * leaves archived drafts out. Off, the same query as before. instances.ts is
  * already excluded; the narrowed index migration is applied in both DBs.
+ *
+ * The user (Pau) approved in writing on 10 Nov 2026, via QA ("ok termination
+ * closing"), behind TERMINATION_STATED_TICKS_ENABLED (default off), both apps:
+ * in src/lib/forms/required-closing.ts, `withRequiredClosing` returns a value
+ * that already ends with the termination sentence unchanged (with its
+ * `TERMINATION_PLAN_CLOSING` constant and the flag import); in
+ * src/lib/forms/ca-action-plan.ts, `ActionPlanInput.termination`, and a
+ * Termination plan's closing is the termination sentence (`planClosing`, also
+ * in `refreshedActionPlan`). Off, both are exactly as before; instances.ts is
+ * not touched.
  */
 const APPROVED_PROTECTED_EDITS = [
+  ":(exclude)src/lib/forms/required-closing.ts",
+  ":(exclude)src/lib/forms/ca-action-plan.ts",
   ":(exclude)src/lib/forms/chat-revision.ts",
   ":(exclude)src/lib/forms/instances.ts",
   ":(exclude)src/lib/forms/form-date-answer.ts",

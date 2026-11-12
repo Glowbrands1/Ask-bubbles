@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { TERMINATION_OPTION, withTerminationPlan } from "@/lib/forms/termination-stated";
 import { salesResultsOffenseLine, withCaChosenRule } from "@/lib/ai/ca-sales-prompt-lines";
 import { noteSpendUser } from "@/lib/ai/spend-meter";
 import { withSpendMeter } from "@/lib/ai/spend-meter-run";
@@ -192,6 +193,7 @@ import {
   draftWriteNeverSilentEnabled,
   formEditSingleWriterEnabled,
   formPatchReducerEnabled,
+  caProcedureBasisEnabled,
   caSalesPolicyEnabled,
   priorActionsNoSignedEnabled,
   secondRequestOwnAccountEnabled,
@@ -199,6 +201,7 @@ import {
   proposalPolicySetAsideEnabled,
   dateOnceEnabled,
   sameRequestOtherPersonEnabled,
+  outlineOnOpenProposalEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { NOTHING_SET_ASIDE, policiesSetAside, setAsideAnything, valuesWithPolicySetAside, withoutPolicyTakeOff } from "@/lib/forms/policy-set-aside";
 import { notesMadeAbout } from "@/lib/ai/make-it-about";
@@ -223,7 +226,7 @@ import {
   LANGUAGE_CLEANUP_RULES,
   guardCoachingFraming,
 } from "@/lib/forms/coaching-framing";
-import { OFFENSE_BASIS_PROPERTY, readOffenseBasis, withoutUnreasonedConduct, type OffenseBasis } from "@/lib/forms/ca-conduct-reason";
+import { offenseBasisProperty, readOffenseBasis, withoutUnreasonedConduct, type OffenseBasis } from "@/lib/forms/ca-conduct-reason";
 import { guardOtherWriteIn } from "@/lib/forms/other-write-in";
 import { withoutRequestInObservation } from "@/lib/forms/request-observation";
 import {
@@ -401,7 +404,8 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
     const body = ((await request.json().catch(() => null)) ?? {}) as DraftBody;
     // CREATE_COMMAND_POINTS_TO_CARD_ENABLED / CARD_COMPLAINT_NOT_ACCOUNT_ENABLED: "create it" or "this proposal is out of
     // date" is no account (`ai/card-meta-turn.ts`).
-    const sent = String(body.notes ?? "").trim().slice(0, 4000);
+    // PASTED_REVIEW_NOT_ACCOUNT_ENABLED: a pasted reviewer's notes are no account (`ai/pasted-review.ts`).
+    const sent = (await import("@/lib/ai/pasted-review")).readWithoutPastedReview(String(body.notes ?? "").trim().slice(0, 4000)).trim();
     // SAME_REQUEST_OTHER_PERSON_ENABLED: "the same thing for <B>" is drafted from the earlier request, read with <B>'s name.
     const typed = sameRequestOtherPersonEnabled()
       ? (await import("@/lib/forms/same-request-other-person")).notesForOtherPerson({
@@ -411,7 +415,9 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
           roster: await (await import("@/lib/forms/employee-roster")).loadScopedRoster(actor.scope).catch(() => []),
         })
       : sent;
-    const asTyped = (await import("@/lib/ai/card-meta-turn")).withoutCardMetaTurns(typed);
+    // OUTLINE_ON_OPEN_PROPOSAL_ENABLED: an outline pasted for another person, and "same outline …", are no account (`lib/forms/outline-on-proposal.ts`).
+    const unoutlined = outlineOnOpenProposalEnabled() ? (await import("@/lib/forms/outline-on-proposal")).notesWithoutOutline(typed, loaded.instance.employeeName) : typed;
+    const asTyped = (await import("@/lib/ai/card-meta-turn")).withoutCardMetaTurns(unoutlined);
     // TYPO_READING_ROUTES_ENABLED: the readers below see "coahed", "notcie", "amont" as the words they can only be.
     const read = typoReadingRoutesEnabled() ? typoReadingText(asTyped, await protectedNameWords()) : asTyped;
     // PROPOSAL_MAKE_IT_ABOUT_ENABLED: "make it about showing up late …" makes "Showing up late." the account from that turn on (`ai/make-it-about.ts`).
@@ -1328,7 +1334,8 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
 
     const client = getAnthropicClient();
     /* CA_SALES_POLICY_ENABLED: the tool's optional offense_basis, and what the last call said (`ca-conduct-reason.ts`). */
-    const basisAsked = caSalesPolicyEnabled() && offersConductPolicy && offenseOffered.includes("other");
+    // CA_PROCEDURE_BASIS_ENABLED (sf-b6): the basis is asked with that flag too.
+    const basisAsked = (caSalesPolicyEnabled() || caProcedureBasisEnabled()) && offersConductPolicy && offenseOffered.includes("other");
     let offenseBasis: OffenseBasis | null = null;
     /*
      * CUT OFF IS NOT A DRAFT. A tool call stopped at the budget parses into
@@ -1364,7 +1371,7 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
                     description: "Checkbox group key to the option keys that apply.",
                   },
                   // CA_SALES_POLICY_ENABLED only, on a form offering Other: added, optional (`ca-conduct-reason.ts`). Off, absent.
-                  ...(basisAsked ? { offense_basis: OFFENSE_BASIS_PROPERTY } : {}),
+                  ...(basisAsked ? { offense_basis: offenseBasisProperty() } : {}),
                 },
                 required: ["values"],
               },
@@ -1914,6 +1921,8 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
       ? ((loaded.values ?? []).find((row) => row.fieldKey === PAYROLL_DEDUCT_KEY)?.checked.find(isPayrollDeductAnswer) ??
         null)
       : null;
+    // TERMINATION_STATED_TICKS_ENABLED: Termination, ticked at Create from the manager's statement, closes the plan.
+    const terminationPlan = Boolean(fixedPlan) && ((loaded.values ?? []).find((row) => row.fieldKey === "warning_type")?.checked ?? []).includes(TERMINATION_OPTION);
     const draftedValues = (() => {
       const base = { ...(exit?.values ?? attributions.values) };
       if (priorActions) {
@@ -2485,6 +2494,7 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
             }),
           },
           closing: fixedPlan.closing,
+          termination: terminationPlan,
         }
       : null;
     /*
@@ -2527,12 +2537,13 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
           : correctiveActionPlan(planInput)
       : null;
     // PLAN_PAYROLL_SENTENCE_ENABLED: the deduction the manager stated is said in the plan.
+    // TERMINATION_STATED_TICKS_ENABLED: on a termination, the plan ends with the termination sentence.
     const planValue = builtPlan && planInput
-      ? withPayrollSentence(builtPlan, {
+      ? withTerminationPlan(withPayrollSentence(builtPlan, {
           answer: planInput.payroll.answer,
           amount: managerPayrollAmount(amountNotes),
           employeeName: loaded.instance.employeeName,
-        })
+        }), terminationPlan)
       : builtPlan;
     const planned =
       fixedPlan && planInput && planValue && draftedAnything && !keeps(fixedPlan.key)

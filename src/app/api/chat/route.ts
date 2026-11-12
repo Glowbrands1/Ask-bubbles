@@ -52,11 +52,13 @@ import {
   cardPlanMatchesCreateEnabled,
   offRosterAskBeforeCardEnabled,
   oneFormEachPersonEnabled,
+  outlineOnOpenProposalEnabled,
   groupWordsNotANameEnabled,
   createFromConversationPointsToCardEnabled,
   cardNamesEmployeeEnabled,
   exitLetterAddresseeEnabled,
   letterGreetingNotNameEnabled,
+  pastedReviewNotAccountEnabled,
   templateOutlineFieldsEnabled,
   exitFormDateFromTerminationEnabled,
   metricGuardEnabled,
@@ -67,11 +69,13 @@ import {
   leadFullSentenceEnabled,
   formsBelowNeedsFormsEnabled,
   formEditPlainWordsEnabled,
+  formsGuideEnabled,
   pastedTemplateFieldsToOpenDraftEnabled,
   payrollDeductAmountFieldEnabled,
   questionNotFormEnabled,
   sameFormCopyEnabled,
   sameFormCopyNewPersonEnabled,
+  noSelectionOnOpenCardEnabled,
   sameRequestOtherPersonEnabled,
   staffPickerBareAnswerEnabled,
   wholeTeamCoachingEnabled,
@@ -91,6 +95,8 @@ import {
   reopenByAnyOpenVerbEnabled,
   accountBeforeRequestEnabled,
   emptyReplyGuardEnabled,
+  addedDetailKeptEnabled,
+  lateOpeningNeedsOpeningEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { streamWhenSlow } from "@/lib/api/streamed-response";
 import { finalReplyWithoutMarkers } from "@/lib/ai/source-note";
@@ -253,6 +259,28 @@ async function postChat(request: Request) {
           ...asked,
           question: read(asked.question),
           history: asked.history.map((turn) => (turn.role === "user" && typeof turn.content === "string" ? { ...turn, content: read(turn.content) } : turn)),
+        };
+      }
+      // OUTLINE_ON_OPEN_PROPOSAL_ENABLED: a pasted outline on an open proposal is no account (`lib/forms/outline-on-proposal.ts`).
+      let outlineOnProposal: { readonly requestId?: string } | null = null;
+      if (outlineOnOpenProposalEnabled()) {
+        const read = (await import("@/lib/forms/outline-on-proposal")).withoutOutlineTurns(asked);
+        if (read) {
+          asked = read.asked;
+          outlineOnProposal = read.outline ? { ...(read.requestId ? { requestId: read.requestId } : {}) } : null;
+        }
+      }
+      /*
+       * PASTED_REVIEW_NOT_ACCOUNT_ENABLED (Pau's sf-s22, port): a reviewer's notes pasted into a turn ("Please make the
+       * following edits …") are read only for the manager's words before them, in this turn and the earlier ones, so
+       * no reader takes them as the account, the form or the date (`ai/pasted-review.ts`). The stored messages keep them.
+       */
+      if (pastedReviewNotAccountEnabled()) {
+        const { withoutPastedReview } = await import("@/lib/ai/pasted-review");
+        asked = {
+          ...asked,
+          question: withoutPastedReview(asked.question),
+          history: asked.history.map((turn) => (turn.role === "user" && typeof turn.content === "string" ? { ...turn, content: withoutPastedReview(turn.content) } : turn)),
         };
       }
       /*
@@ -572,7 +600,22 @@ async function postChat(request: Request) {
       // LIST_POLICY_IS_EDIT_ENABLED: "please list the policy" with a form open is an edit (EDIT_POLICY_ASK), never a question.
       const listPolicyEdit =
         listPolicyIsEditEnabled() && (await import("@/lib/ai/list-policy-ask")).listPolicyIsEdit(parsed.question, Boolean(parsed.activeFormInstanceId));
-      const askedQuestion = !listPolicyEdit && questionNotFormEnabled() && isQuestionNotForm(parsed.question, parsed.history);
+      /*
+       * "WHAT IS A CA?", "DIFFERENCE BETWEEN COACHING AND CA", "WHICH FORMS CAN
+       * I CREATE HERE?" — answered from the published templates and the role
+       * matrix, and like any question never written into an open form. Null
+       * for every other sentence, and off unless FORMS_GUIDE_ENABLED. See
+       * `lib/forms/forms-guide.ts`.
+       */
+      const formsGuide =
+        formsGuideEnabled() && !draftAnswer
+          ? await (await import("@/lib/forms/forms-guide-answer")).answerFormsGuide({
+              question: parsed.question,
+              role: context.identity.role,
+            })
+          : null;
+      const askedQuestion =
+        Boolean(formsGuide) || (!listPolicyEdit && questionNotFormEnabled() && isQuestionNotForm(parsed.question, parsed.history));
       /*
        * STEP B (FORM_PATCH_REDUCER_ENABLED + FORM_REPLY_FROM_DIFF_ENABLED): the
        * open form as saved before this turn, so the reply about it can come
@@ -874,7 +917,7 @@ async function postChat(request: Request) {
        * See `lib/forms/chat-reopen.ts`.
        */
       const reopened =
-        !sameCopy && !draftAnswer && !correction && !policyChange && !redraft && !revision && !which && (mayAskToReopen(parsed.question, reopenByAnyOpenVerbEnabled()) || (reopenByAnyOpenVerbEnabled() && answersWhichFormOnFile(parsed.history)))
+        !sameCopy && !draftAnswer && !formsGuide && !correction && !policyChange && !redraft && !revision && !which && (mayAskToReopen(parsed.question, reopenByAnyOpenVerbEnabled()) || (reopenByAnyOpenVerbEnabled() && answersWhichFormOnFile(parsed.history)))
           ? await (await import("@/lib/forms/chat-reopen")).reopenRequestedForm({
               request,
               question: parsed.question,
@@ -900,6 +943,7 @@ async function postChat(request: Request) {
       let toolNothing: Awaited<ReturnType<typeof answerQuestion>> | null = null;
       answer =
         draftAnswer ??
+        formsGuide ??
         correction ??
         // A name correction this form does not take in chat: said plainly, never a model's "updated".
         (nameFix && !correction ? (await import("@/lib/forms/name-correction-words")).nameNotCorrectedReply(nameFix.open, nameFix.question) : null) ??
@@ -1021,6 +1065,10 @@ async function postChat(request: Request) {
           asked.question,
         ].join("\n\n"));
       }
+      // OUTLINE_ON_OPEN_PROPOSAL_ENABLED: the outline turn's reply says the outline is kept as her form's layout.
+      if (outlineOnProposal) {
+        answer = (await import("@/lib/forms/outline-on-proposal")).withOutlineKeptNote(answer, { outlineTurnId: parsed.questionMessageId, requestId: outlineOnProposal.requestId });
+      }
       // NEAR_MISS_QUESTION_RULES_ENABLED: "no, …" to "Is this for <name>?" never gets a card for that name, nor the question again.
       if (nearMissQuestionRulesEnabled()) answer = (await import("@/lib/forms/near-miss-question-rules")).withoutTurnedDownName(answer, asked);
       /*
@@ -1048,6 +1096,25 @@ async function postChat(request: Request) {
         const { formSelection: _dropped, ...rest } = answer;
         void _dropped;
         answer = { ...rest, content: rest.content.replace(/\n*Based on what you've described, I can prepare:\s*$/, "").trimEnd() };
+      }
+      // ADDED_DETAIL_KEPT_ENABLED: "can you have it include that …" stays in the card's turns and shows on the card (`lib/forms/added-detail-kept.ts`).
+      if (addedDetailKeptEnabled() && answer.formProposal) {
+        answer = (await import("@/lib/forms/added-detail-kept")).withAddedDetailKept(answer, [
+          ...parsed.history,
+          { id: parsed.questionMessageId, role: "user", content: asked.question },
+        ]);
+      }
+      // NO_SELECTION_ON_OPEN_CARD_ENABLED: the card on screen is the form; no "I can prepare:" choice offering it again.
+      if (noSelectionOnOpenCardEnabled()) {
+        answer = (await import("@/lib/forms/no-selection-on-open-card")).withoutSelectionOnOpenCard(answer, parsed.continueProposalTemplateKey);
+      }
+      // LATE_OPENING_NEEDS_OPENING_ENABLED: a closing account is never cited as Late Opening (`lib/forms/late-opening-needs-opening.ts`).
+      if (lateOpeningNeedsOpeningEnabled() && answer.formProposal) {
+        const cited = new Set(answer.formProposal.sourceMessageIds);
+        answer = (await import("@/lib/forms/late-opening-needs-opening")).withLateOpeningNeedsOpening(answer, [
+          ...parsed.history.filter((turn) => turn.role === "user" && turn.id && cited.has(turn.id)).map((turn) => String(turn.content)),
+          asked.question,
+        ]);
       }
       // LEAD_FULL_SENTENCE_ENABLED: a reply never ends at "I can prepare:" (`lib/forms/lead-full-sentence.ts`).
       if (leadFullSentenceEnabled()) answer = (await import("@/lib/forms/lead-full-sentence")).withLeadFullSentence(answer);
