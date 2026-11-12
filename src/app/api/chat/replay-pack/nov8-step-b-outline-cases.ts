@@ -120,7 +120,8 @@ export const NOV12_STEP_B_INSTRUCTION_STARTS_EXPECTATION_CASES: ReplayCase[] = [
     id: "nov12-step-b-instruction-starts-expectation",
     title: "Details with only an Observed section, then \"add that she must …\": an Expectation section is started for it, never the line under Observed",
     report: "QA, 12 Nov 2026 (from Gate-Bubbles-2 on #814): an instruction landed under Observed when there was no Expectation section",
-    status: { open: "the instruction is appended under Observed" },
+    // Fixed in production by #830 under STEP_B_ADD_UNDER_OBSERVED_ENABLED, already on (round 17p), so live at merge (QA and Gate-Bubbles, 12 Nov 2026; record docs/flag-classification/B830.md).
+    status: "fixed",
     fixFlags: FIX,
     async run(t) {
       vi.setSystemTime(new Date("2026-11-07T19:40:00Z"));
