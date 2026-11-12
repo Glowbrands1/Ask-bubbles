@@ -71,6 +71,7 @@ import {
   OBSERVED_LABEL,
   PLAN_OF_ACTION,
   guardNarrativeDraft,
+  managerTypedGoingForward, withoutGoingForward,
 } from "@/lib/forms/narrative-draft";
 import {
   dropUngroundedPolicy,
@@ -178,6 +179,7 @@ import {
   hideNoPolicyMatchNoticeEnabled,
   draftEditMergeEnabled,
   draftNeverBlankEnabled,
+  draftNoInventedPlanEnabled,
   fieldAccuracyEnabled,
   frameworkUnpinEnabled,
   policyCitationEnabled,
@@ -190,6 +192,7 @@ import {
   draftWriteNeverSilentEnabled,
   formEditSingleWriterEnabled,
   formPatchReducerEnabled,
+  caProcedureBasisEnabled,
   caSalesPolicyEnabled,
   priorActionsNoSignedEnabled,
   secondRequestOwnAccountEnabled,
@@ -221,7 +224,7 @@ import {
   LANGUAGE_CLEANUP_RULES,
   guardCoachingFraming,
 } from "@/lib/forms/coaching-framing";
-import { OFFENSE_BASIS_PROPERTY, readOffenseBasis, withoutUnreasonedConduct, type OffenseBasis } from "@/lib/forms/ca-conduct-reason";
+import { offenseBasisProperty, readOffenseBasis, withoutUnreasonedConduct, type OffenseBasis } from "@/lib/forms/ca-conduct-reason";
 import { guardOtherWriteIn } from "@/lib/forms/other-write-in";
 import { withoutRequestInObservation } from "@/lib/forms/request-observation";
 import {
@@ -267,6 +270,7 @@ import {
   resolveFormDate,
 } from "@/lib/forms/form-date-grounding";
 import { unreadDayBrief, unreadDayNotice, unreadIncidentDay } from "@/lib/forms/unread-day-date";
+import { draftDateApplies, fidelityGivenDates } from "@/lib/forms/form-input-fidelity";
 
 /**
  * POST /api/forms/instances/[id]/draft
@@ -398,7 +402,8 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
     const body = ((await request.json().catch(() => null)) ?? {}) as DraftBody;
     // CREATE_COMMAND_POINTS_TO_CARD_ENABLED / CARD_COMPLAINT_NOT_ACCOUNT_ENABLED: "create it" or "this proposal is out of
     // date" is no account (`ai/card-meta-turn.ts`).
-    const sent = String(body.notes ?? "").trim().slice(0, 4000);
+    // PASTED_REVIEW_NOT_ACCOUNT_ENABLED: a pasted reviewer's notes are no account (`ai/pasted-review.ts`).
+    const sent = (await import("@/lib/ai/pasted-review")).readWithoutPastedReview(String(body.notes ?? "").trim().slice(0, 4000)).trim();
     // SAME_REQUEST_OTHER_PERSON_ENABLED: "the same thing for <B>" is drafted from the earlier request, read with <B>'s name.
     const typed = sameRequestOtherPersonEnabled()
       ? (await import("@/lib/forms/same-request-other-person")).notesForOtherPerson({
@@ -980,7 +985,7 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
      * `form-date-grounding.ts`.
      */
     const resolvedFormDate =
-      loaded.instance.layoutFamily === "corrective"
+      draftDateApplies(loaded.instance.layoutFamily)
         ? resolveFormDate(loaded.instance.formDate)
         : null;
     /*
@@ -1127,7 +1132,7 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
         ? [
             unreadDay
               ? unreadDayBrief(resolvedFormDate, unreadDay)
-              : formDateBrief(resolvedFormDate, draftBriefDates(notes, businessToday()), notes),
+              : formDateBrief(resolvedFormDate, fidelityGivenDates(notes, businessToday(), draftBriefDates(notes, businessToday())), notes),
           ]
         : []),
       /*
@@ -1325,7 +1330,8 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
 
     const client = getAnthropicClient();
     /* CA_SALES_POLICY_ENABLED: the tool's optional offense_basis, and what the last call said (`ca-conduct-reason.ts`). */
-    const basisAsked = caSalesPolicyEnabled() && offersConductPolicy && offenseOffered.includes("other");
+    // CA_PROCEDURE_BASIS_ENABLED (sf-b6): the basis is asked with that flag too.
+    const basisAsked = (caSalesPolicyEnabled() || caProcedureBasisEnabled()) && offersConductPolicy && offenseOffered.includes("other");
     let offenseBasis: OffenseBasis | null = null;
     /*
      * CUT OFF IS NOT A DRAFT. A tool call stopped at the budget parses into
@@ -1361,7 +1367,7 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
                     description: "Checkbox group key to the option keys that apply.",
                   },
                   // CA_SALES_POLICY_ENABLED only, on a form offering Other: added, optional (`ca-conduct-reason.ts`). Off, absent.
-                  ...(basisAsked ? { offense_basis: OFFENSE_BASIS_PROPERTY } : {}),
+                  ...(basisAsked ? { offense_basis: offenseBasisProperty() } : {}),
                 },
                 required: ["values"],
               },
@@ -1481,6 +1487,31 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
     );
 
     const narrated = guardNarrativeDraft(dated.values, fields, groundingSource);
+    /*
+     * DRAFT_NO_INVENTED_PLAN_ENABLED: on the Corrective Action Form (the one
+     * with a fixed Action Plan) the Observation keeps Observed and Expectation
+     * only. What the employee does next is the manager's Action Plan, never a
+     * "Going Forward" the model wrote. See `withoutGoingForward`.
+     */
+    if (draftNoInventedPlanEnabled() && fixedPlan !== null) {
+      narrated.values = withoutGoingForward(narrated.values, fields);
+    }
+    /*
+     * And on the Coaching and Follow-up Coaching forms (QA, 26 Oct 2026): their
+     * "Going Forward" is the model's too, so it stays only when the manager
+     * stated a plan themselves ("going forward …", "action plan: …"); a negated
+     * "no going forward needed" is not one (`managerTypedGoingForward`).
+     */
+    const coachingForm =
+      loaded.instance.templateKey === "coaching" || loaded.instance.templateKey === "follow-up-coaching";
+    if (
+      draftNoInventedPlanEnabled() &&
+      coachingForm &&
+      !managerTypedGoingForward(notes) &&
+      managerTypedActionPlan(notes) === null
+    ) {
+      narrated.values = withoutGoingForward(narrated.values, fields);
+    }
 
     /*
      * THEN THE TIMEFRAME GUARD. A drafted "Next Follow-Up" survives only if the
