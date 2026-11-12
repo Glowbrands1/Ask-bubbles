@@ -57,3 +57,38 @@ export const NOV12_OFF_ROSTER_PLACE_ANSWER_CASES: ReplayCase[] = PLACES.map(({ k
     if (store) expect(card?.locationId, `the store is not set:\n${reply.content}`).toBe(store);
   },
 }));
+
+/**
+ * QA's 17r live finding (12 Nov 2026, on 6d862bbe; the Bubbles tester's exact wording, as an all-location admin):
+ * T1 "CA for <B>, do not terminate yet, she was late" → the "use <B>" ask; T2, only "Omaha, NE (West Dodge Rd)" → no
+ * re-ask, <B> on the card, the store set, and the Issue / What happened became "Omaha, NE (West Dodge Rd)" — the store
+ * string replaced the account. With OFF_ROSTER_PLACE_ANSWER on: "use <B>" is asked again, the store is set, and the
+ * Issue is the account as T1 read it, never the store. (T1's Issue itself is read as "do not terminate yet" on these
+ * flags; that reading is reported to QA separately and is not this case's.)
+ */
+export const NOV12_OFF_ROSTER_PLACE_ANSWER_LIVE_CASES: ReplayCase[] = [
+  {
+    id: "nov12-off-roster-place-answer-17r-live-west-dodge",
+    title: `Admin: "${REQUEST}" → offer → "Omaha, NE (West Dodge Rd)": "use ${C}" asked again, the store set, and the store is never the Issue`,
+    report: "QA, 17r live (12 Nov 2026, 6d862bbe): the store string replaced the account and <B> went on the card without \"use <B>\"",
+    status: { open: "<B> goes on the card without \"use <B>\", and the store string becomes the Issue" },
+    fixFlags: [FLAG],
+    async run(t: ReplayContext) {
+      vi.setSystemTime(new Date("2026-11-12T15:00:00Z"));
+      t.directory([...STAFF]);
+      t.as("admin", ADMIN);
+      const thread = t.thread();
+      const first = await thread.say(REQUEST);
+      const issueBefore = (thread.proposal as { issue?: string | null } | null)?.issue ?? null;
+      expect(first.content, `no offer for ${C}:\n${first.content}`).toContain(`reply **use ${C}**`);
+      const reply = await thread.say("Omaha, NE (West Dodge Rd)");
+      const card = thread.proposal as { employeeName?: string | null; locationId?: string | null; issue?: string | null } | null;
+      expect(reply.content, `"use ${C}" is not asked again:\n${reply.content}`).toContain(`reply **use ${C}**`);
+      expect(card?.employeeName ?? null, `${C} went on the card without "use ${C}":\n${reply.content}`).toBeNull();
+      expect(card?.locationId, `the store is not set:\n${reply.content}`).toBe("loc-264");
+      expect(card?.issue ?? "", `the store string is the Issue:\n${reply.content}`).not.toMatch(/West Dodge|Omaha, NE/i);
+      expect(lineOf(reply, "Issue"), `the store string is the Issue line:\n${reply.content}`).not.toMatch(/West Dodge|Omaha, NE/i);
+      expect(card?.issue ?? null, `the account changed:\n${reply.content}`).toBe(issueBefore);
+    },
+  },
+];
