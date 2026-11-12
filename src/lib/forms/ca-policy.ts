@@ -814,12 +814,11 @@ function withSalesPolicy(reading: CaPolicyReading, rawText: string): CaPolicyRea
     statesMetricShortfall(rawText) ||
     performanceIsTheRequest(reading, sentences) ||
     (salesShortfallObjectEnabled() && performanceIsTheReason(rawText));
-  if (!msb && !target) return reading;
-  if (reading.stated === null && sentences.some(readsAsAttendance)) return reading;
   // REGISTER_ACCURACY_CONDUCT_ENABLED: a sale rung up inaccurately is the Standards of Conduct (Pau, 4 Nov 2026).
   const register = registerAccuracyConductEnabled() && sentences.some((sentence) => REGISTER_MISTAKE.test(sentence));
   if (!msb && !target && !register) return reading;
-  if (reading.stated === null && sentences.some((s) => ATTENDANCE.test(s))) return reading;
+  // NEGATED_LATENESS_TOPIC (#500): a denied lateness is no attendance account (readsAsAttendance).
+  if (reading.stated === null && sentences.some(readsAsAttendance)) return reading;
   return {
     ...reading,
     stated: null,
