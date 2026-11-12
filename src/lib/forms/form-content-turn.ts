@@ -1,4 +1,4 @@
-import { claimGuardEnabled, copyPasteClaimHonestEnabled, formEditRefersBackEnabled } from "@/lib/config/chat-quality-flags";
+import { claimGuardEnabled, copyPasteClaimHonestEnabled, detailsFromEarlierAnswerEnabled, formEditRefersBackEnabled } from "@/lib/config/chat-quality-flags";
 import { extractEmployeeNames, samePerson } from "@/lib/forms/proposal";
 import type { ChatMessage } from "@/types";
 
@@ -129,6 +129,37 @@ function previousAnswer(history: readonly Pick<ChatMessage, "role" | "content">[
   return null;
 }
 
+/*
+ * DETAILS_FROM_EARLIER_ANSWER_ENABLED (chat-edits (a), 5 Nov 2026): the app's own card, and its own replies to an edit
+ * ("I haven't changed …", "Nothing on the form has changed yet", "Updated the …"), hold no details to add. "these
+ * details" and "the details we just discussed" are the latest answer that is none of those.
+ */
+const APPS_OWN_REPLY =
+  /^\s*(?:Here is what I would put on|I'll draft an? \*\*|I haven'?t changed the|I didn'?t change anything|\*\*Nothing on the form has changed yet|Nothing on the form has changed|Updated the \*\*|Is this for \*\*|To create it, press|Who is this (?:form|\*\*[^*]+\*\*) for|Which of them is this)/i;
+// Gate-Bubbles-4 (12 Nov 2026): "Who is this **Coaching Form** for?" and "Which of them is this …" are the app's own
+// questions, never the details a manager means by "these details".
+
+function earlierContentAnswer(history: readonly Pick<ChatMessage, "role" | "content">[]): string | null {
+  for (let index = history.length - 1; index >= 0; index -= 1) {
+    const turn = history[index]!;
+    if (turn.role !== "assistant" || !turn.content?.trim()) continue;
+    if (APPS_OWN_REPLY.test(turn.content)) continue;
+    return turn.content;
+  }
+  return null;
+}
+
+/** The answer "these details" / "the details we just discussed" refer to. */
+function referredAnswer(history: readonly Pick<ChatMessage, "role" | "content">[]): string | null {
+  /*
+   * Gate-Bubbles-4 (12 Nov 2026, NO-GO on #692): with no earlier content answer in the chat, the flag sent "upate the
+   * draft with these details of coaching" to the free chat model, which replied "Updating the draft now" and wrote
+   * nothing (the live 30 Oct defect). Then the reading is the flag-off one: the previous answer.
+   */
+  if (!detailsFromEarlierAnswerEnabled()) return previousAnswer(history);
+  return earlierContentAnswer(history) ?? previousAnswer(history);
+}
+
 export function formContentQuestion(input: {
   question: string;
   history: readonly Pick<ChatMessage, "role" | "content">[];
@@ -165,7 +196,9 @@ export function formContentQuestion(input: {
   if (formEditRefersBackEnabled()) {
     const earlier = previousAnswer(input.history);
     if (DO_THAT.test(question) || DISCUSSED.test(question)) {
-      const content = earlier ? oneLine(contentOf(earlier)) : "";
+      // DETAILS_FROM_EARLIER_ANSWER_ENABLED: "the details we just discussed" past the app's own card and edit replies.
+      const referred = DISCUSSED.test(question) ? referredAnswer(input.history) : earlier;
+      const content = referred ? oneLine(contentOf(referred)) : "";
       if (content) return `${into}: ${content}`;
     }
     const named = INCLUDE_DETAILS_OF.exec(question)?.[1]?.replace(/[.!]+$/, "").trim();
@@ -173,7 +206,8 @@ export function formContentQuestion(input: {
   }
 
   if (MAKE_THAT.test(question) || WITH_THESE.test(question)) {
-    const earlier = previousAnswer(input.history);
+    // DETAILS_FROM_EARLIER_ANSWER_ENABLED: "these details" past the app's own card and edit replies; "make that update" as before.
+    const earlier = WITH_THESE.test(question) ? referredAnswer(input.history) : previousAnswer(input.history);
     /*
      * "MAKE THAT UPDATE" NEEDS AN UPDATE TO MAKE. Live, 31 Oct 2026, it followed
      * "It should update automatically — no copy-and-paste needed…", which is
