@@ -44,3 +44,30 @@ export const NOV10_STORE_ALIAS_CASES: ReplayCase[] = WORDINGS.map((wording) => (
     expect((thread.proposal as { locationId?: string | null } | null)?.locationId ?? null, `the card's store:\n${reply}`).toBe(DODGE);
   },
 }));
+
+/*
+ * Gate-Bubbles-3 (R735, 12 Nov 2026): turn 1 is the off-roster ask ("I can't find **Kira Dunmore** … reply **use Kira
+ * Dunmore**"); "dodge, ne" made a card for "kira dunmore" in lowercase, skipping the confirmation. A store answer to that
+ * ask is only the store: the name stays unconfirmed and the ask is made again; "use Kira Dunmore" then confirms it, with
+ * the store kept.
+ */
+export const NOV12_STORE_ALIAS_OFF_ROSTER_CASES: ReplayCase[] = (["dodge, ne", "Dodge, NE"] as const).map((store) => ({
+  id: `nov12-store-alias-off-roster-ask-${store === "dodge, ne" ? "lower" : "sentence"}`,
+  title: `"create a ca for kira dunmore, she was late today" → "${store}" → "use Kira Dunmore": the store answer never confirms the name`,
+  report: `Gate-Bubbles-3 R735 (12 Nov 2026), ${REPORT}`,
+  // Without STORE_ALIAS "dodge, ne" is not read as a store at all, so the production arm is open; the fix arm is the check.
+  status: { open: `"${store}" is not read as a store without STORE_ALIAS` },
+  fixFlags: [FLAG],
+  async run(t: ReplayContext) {
+    const thread = start(t);
+    const asked = await thread.say("create a ca for kira dunmore, she was late today");
+    expect(asked.content, "no off-roster ask").toMatch(/reply \*\*use Kira Dunmore\*\*/);
+    const answered = await thread.say(store);
+    expect(answered.content, `the store answer skipped the "use <name>" confirmation:\n${answered.content}`).toMatch(/reply \*\*use Kira Dunmore\*\*/);
+    expect(answered.content, `a card for the lowercase name:\n${answered.content}`).not.toMatch(/\*\*kira dunmore\*\*/);
+    expect((thread.proposal as { employeeName?: string | null } | null)?.employeeName ?? null, "the name was confirmed by a store answer").toBeNull();
+    const confirmed = await thread.say("use Kira Dunmore");
+    expect((thread.proposal as { employeeName?: string | null } | null)?.employeeName ?? null, `"use Kira Dunmore" did not confirm:\n${confirmed.content}`).toBe("Kira Dunmore");
+    expect((thread.proposal as { locationId?: string | null } | null)?.locationId ?? null, `the store was lost:\n${confirmed.content}`).toBe(DODGE);
+  },
+}));

@@ -111,7 +111,9 @@ export const NOV4_EDIT_TOOL_CASES: readonly ReplayCase[] = [
         expect(reply.formUpdate?.updated).toEqual(["observation"]);
         expect(t.values(id).observation ?? "").toMatch(/she Must Practice the sanitizing checklist every shift\.$/);
         expect(t.values(id).observation ?? "", "the first name was dropped").toMatch(/\bMarnie Quill\b/);
-        expect(reply.content).toMatch(/^Changed Observation of Offense to "/);
+        // Changed on purpose (12 Nov 2026, Gate-Sunny-2's finding on the sibling app): with STEP_B_REPLY_KEEPS_LINES on, a field
+        // written on several lines is quoted line by line ("Changed Observation of Offense to:\n> …").
+        expect(reply.content).toMatch(/^Changed Observation of Offense to(?: "|:\n> )/);
         expect(reply.content, "the tool's text was shown").not.toContain("I added that");
         // One model call: the main one; no revision, no draft.
         expect(t.calls().chat - calls.chat).toBe(1);

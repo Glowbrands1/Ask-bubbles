@@ -180,6 +180,19 @@ export function withStoreAliases(request: AskRequest): AskRequest {
   return changed ? { ...request, question, history } : request;
 }
 
+/*
+ * Gate-Bubbles-3 (R735, 12 Nov 2026): under the off-roster ask ("I can't find **<A>** … reply **use <A>**"), "dodge,
+ * ne" made a card for the name as typed, in lowercase, skipping the "use <name>" confirmation. A turn that is only a
+ * store says only the store (`forms/off-roster-ask.ts` holds the card and asks again). Off, false.
+ */
+export function storeOnlyTurn(text: string): boolean {
+  if (!storeAliasEnabled() || !text?.trim()) return false;
+  const flat = (value: string) => value.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  const said = flat(text);
+  if (READERS.places().some((place) => flat(place.name) === said)) return true;
+  return rosterNames(text, true).startsWith("the store is ");
+}
+
 /** The app asked which store: a one-word reply may be a place. */
 const ADDRESS = /\baddress\b[:\s]+[^.;\n]+|\b\d{1,6}\s+[A-Za-z][^,.;\n]*(?:,\s*[^,.;\n]+){0,3},?\s+[A-Za-z]{2}\.?\s+\d{5}(?:-\d{4})?\b/gi;
 
