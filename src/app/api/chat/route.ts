@@ -49,6 +49,7 @@ import {
   possessivePlaceNotPersonEnabled,
   formNameFromRosterEnabled,
   offRosterConfirmEnabled,
+  answerTurnLevelEnabled,
   offRosterAskBeforeCardEnabled,
   oneFormEachPersonEnabled,
   outlineOnOpenProposalEnabled,
@@ -281,6 +282,10 @@ async function postChat(request: Request) {
           question: withoutPastedReview(asked.question),
           history: asked.history.map((turn) => (turn.role === "user" && typeof turn.content === "string" ? { ...turn, content: withoutPastedReview(turn.content) } : turn)),
         };
+      }
+      // ANSWER_TURN_LEVEL_ENABLED: a level said at the end of the answer to the app's own question is this form's (`lib/forms/answer-turn-level.ts`).
+      if (answerTurnLevelEnabled()) {
+        asked = (await import("@/lib/forms/answer-turn-level")).withAnswerTurnLevel(asked) ?? asked;
       }
       /*
        * OFF_ROSTER_CONFIRM_ENABLED: "use <name>" (or "yes") to the offer for a person not in Woven is read as the
