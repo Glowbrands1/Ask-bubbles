@@ -1,0 +1,34 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-b4-twin-ca-not-coaching-form-type: sf-s22, the form type: pasted reviewer notes naming a \"Kit Coaching Document\" never turn the Corrective Action card into a Coaching Form \u2014 OPEN in production (with this app's production flags the first request makes no Corrective Action card; with it, the pasted notes make a Coaching Form card)": {
+  "category": "INTENDED",
+  "reason": "OPEN case holds on form type: the pasted 'Kit Coaching Document' notes no longer make a Coaching Form card. Turns 2-5 ask 'Who is this form for?' although T1 named Wynne Sarrow \u2014 that name loss is already in OFF at T2 and is fixed by #686 PASTED_REVIEW_NOT_ACCOUNT; ship together"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov5-twin-sf-s22-ca-not-coaching: sf-s22: \"It needs to be a CA, not a coaching form\" and \"Its a CA\" keep the Corrective Action; another employee's reviewer notes never go into the Observation \u2014 OPEN in production (with this app's production flags the first request makes no Corrective Action card)": {
+  "category": "INTENDED",
+  "reason": "OPEN case holds on form type: the pasted 'Kit Coaching Document' notes no longer make a Coaching Form card. Turns 2-5 ask 'Who is this form for?' although T1 named Wynne Sarrow \u2014 that name loss is already in OFF at T2 and is fixed by #686 PASTED_REVIEW_NOT_ACCOUNT; ship together"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov5-twin-sf-s26-edit-misspelled-ca: sf-s26: \"Edit Thesaly Brant CA\" (misspelled) opens Thessaly Brandt's existing Corrective Action; never \"Who is this form for?\" \u2014 OPEN in production (asks who the form is for instead of opening the existing Corrective Action)": {
+  "category": "INTENDED",
+  "reason": "OPEN case holds: 'Edit Thesaly Brant CA' opens Thessaly Brandt's draft CA ('still a draft, so it's open to edit') instead of the free answer"
+ },
+ "src/lib/forms/late-opening-needs-opening.test.ts :: LATE_OPENING_NEEDS_OPENING_ENABLED off: the card is left as it is": {
+  "category": "INTENDED-HARNESS",
+  "reason": "unit test's flag-off half; the ON arm exports the flags"
+ },
+ "src/lib/forms/pasted-form-name.test.ts :: PASTED_FORM_NAME_NOT_REQUEST_ENABLED off: \"Kit Coaching Document\" inside the paste reads as a Coaching Form request (the bug)": {
+  "category": "INTENDED-HARNESS",
+  "reason": "unit test's flag-off half; the ON arm exports the flags"
+ },
+ "replay: nov10-b4-twin-ca-not-coaching-form-type [open]": {
+  "category": "INTENDED",
+  "reason": "OPEN case holds on form type: the pasted 'Kit Coaching Document' notes no longer make a Coaching Form card. Turns 2-5 ask 'Who is this form for?' although T1 named Wynne Sarrow \u2014 that name loss is already in OFF at T2 and is fixed by #686 PASTED_REVIEW_NOT_ACCOUNT; ship together"
+ },
+ "replay: nov5-twin-sf-s22-ca-not-coaching [open]": {
+  "category": "INTENDED",
+  "reason": "OPEN case holds on form type: the pasted 'Kit Coaching Document' notes no longer make a Coaching Form card. Turns 2-5 ask 'Who is this form for?' although T1 named Wynne Sarrow \u2014 that name loss is already in OFF at T2 and is fixed by #686 PASTED_REVIEW_NOT_ACCOUNT; ship together"
+ },
+ "replay: nov5-twin-sf-s26-edit-misspelled-ca [open]": {
+  "category": "INTENDED",
+  "reason": "OPEN case holds: 'Edit Thesaly Brant CA' opens Thessaly Brandt's draft CA ('still a draft, so it's open to edit') instead of the free answer"
+ }
+}
