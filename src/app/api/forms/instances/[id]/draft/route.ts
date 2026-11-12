@@ -195,6 +195,7 @@ import {
   secondRequestOwnAccountEnabled,
   proposalMakeItAboutEnabled,
   proposalPolicySetAsideEnabled,
+  dateOnceEnabled,
   sameRequestOtherPersonEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { NOTHING_SET_ASIDE, policiesSetAside, setAsideAnything, valuesWithPolicySetAside, withoutPolicyTakeOff } from "@/lib/forms/policy-set-aside";
@@ -2515,7 +2516,11 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
         : { values: draftValues, provenance: draftProvenance };
 
     // PROPOSAL_POLICY_SET_ASIDE_ENABLED: the policy fields and "Policy reference" lines leave a policy taken off out.
-    const plannedValues = setAsideAnything(setAside) ? valuesWithPolicySetAside(planned.values, setAside) : planned.values;
+    const setAsideValues = setAsideAnything(setAside) ? valuesWithPolicySetAside(planned.values, setAside) : planned.values;
+    // DATE_ONCE_ENABLED: the incident date is the Date field's; an account field does not say it again. See `lib/forms/date-once.ts`.
+    const plannedValues = dateOnceEnabled()
+      ? (await import("@/lib/forms/date-once")).withFormDateOnce(setAsideValues, loaded.instance.formDate, narrativeKeys)
+      : setAsideValues;
     const merged = draftEditMergeEnabled()
       ? retainFilledFields({
           question: notes,

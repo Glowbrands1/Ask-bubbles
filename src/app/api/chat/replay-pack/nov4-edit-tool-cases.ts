@@ -1,5 +1,7 @@
 import { expect } from "vitest";
 
+import { nameLineCommaEnabled } from "@/lib/config/chat-quality-flags";
+
 import { WEST_DODGE, noClaimWithoutUpdate, replyMatchesDiff, savedForm, type ReplayCase, type ReplayContext } from "./cases";
 import { CA_CHAIN, GATE_EDIT_WORDINGS, GATE_QUESTION_WORDINGS, LIVE_ROSTER, OBSERVATION_AFTER } from "./nov4-live-regressions-scenarios";
 
@@ -72,12 +74,19 @@ export const NOV4_EDIT_TOOL_CASES: readonly ReplayCase[] = [
         const reply = await thread.say(CA_CHAIN[1]);
         replyMatchesDiff(t, id, before, reply, CA_CHAIN[1]);
         noClaimWithoutUpdate(reply);
-        expect(t.editToolOffers!().offered, "the main call was not offered edit_form").toBe(1);
-        expect(t.editToolOffers!().lastData ?? "", "the open form was not in the DATA block").toContain('"key":"observation"');
         const observation = t.values(id).observation ?? "";
         expect(observation, "the tool's replace reached the form").not.toMatch(/^Quill-Hart was late/);
         expect(observation, "Marnie was dropped").toMatch(/\bMarnie Quill-Hart\b/);
         expect(reply.content, "the tool's text was shown").not.toContain("I've fixed her last name");
+        // Changed on purpose (QA, 11 Nov 2026): with NAME_LINE_COMMA_ENABLED the turn is the app's own name correction
+        // (header and drafted account together), so no model call is made and edit_form is never offered.
+        if (nameLineCommaEnabled()) {
+          expect(t.editToolOffers!().offered, "edit_form was offered for a name correction").toBe(0);
+          expect(t.calls().chat - calls.chat).toBe(0);
+          return;
+        }
+        expect(t.editToolOffers!().offered, "the main call was not offered edit_form").toBe(1);
+        expect(t.editToolOffers!().lastData ?? "", "the open form was not in the DATA block").toContain('"key":"observation"');
         // Handed off: the revision ran after the one main call.
         expect(t.calls().chat - calls.chat).toBe(1);
         expect(t.calls().revision - calls.revision).toBe(1);
