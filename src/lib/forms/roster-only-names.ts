@@ -1,4 +1,4 @@
-import { formNameFromRosterEnabled, metricChoiceOneQuestionEnabled, metricGuardEnabled, offRosterConfirmEnabled, rosterNearMissEnabled, rosterNotFoundAnyPhrasingEnabled, nearMissQuestionRulesEnabled, formNameOffRosterAskEnabled, offRosterAskBeforeCardEnabled, possessivePlaceNotPersonEnabled, titleBeforeNameEnabled } from "@/lib/config/chat-quality-flags";
+import { formNameFromRosterEnabled, metricChoiceOneQuestionEnabled, metricGuardEnabled, offRosterConfirmEnabled, rosterNearMissEnabled, rosterNotFoundAnyPhrasingEnabled, nearMissQuestionRulesEnabled, formNameOffRosterAskEnabled, offRosterAskBeforeCardEnabled, possessivePlaceNotPersonEnabled, titleBeforeNameEnabled, titleBeforeNameReplyLinesEnabled } from "@/lib/config/chat-quality-flags";
 import { isGlossaryTerm } from "@/lib/ai/glossary";
 import { standInForName, withStandInsSaid } from "./no-name-reply-wording";
 import type { AskResponse } from "@/lib/ai/types";
@@ -126,24 +126,51 @@ function withoutTrailingTitle(response: AskResponse, names: readonly string[], m
     if (named && lead.test(response.content)) {
       return {
         ...response,
-        content: response.content.replace(lead, `$1 for **${named}**`),
+        content: titleWordToFirstName(response.content.replace(lead, `$1 for **${named}**`), message, named),
         formProposal: { ...card, employeeName: named, status: card.status === "needs_employee" ? "ready" : card.status },
       };
     }
   }
   // TITLE_BEFORE_NAME_ENABLED: "Team Member <name>" — the store title in front is not part of the name either.
-  const name = withoutLeadingTitle(withoutTitleWord(typed));
+  const untitled = withoutTitleWord(typed);
+  const name = withoutLeadingTitle(untitled);
   if (!typed || name === typed) return response;
-  return {
-    ...response,
-    // Gate-Bubbles R785 (11 Nov 2026): the exit read-back's "- **Name:** <name> TM" line (`forms/exit-intake.ts`) too.
-    content: response.content
-      .split(`**${typed}**`)
-      .join(`**${name}**`)
-      .split(`**Name:** ${typed}`)
-      .join(`**Name:** ${name}`),
-    formProposal: { ...response.formProposal!, employeeName: name },
-  };
+  // Gate-Bubbles R785 (11 Nov 2026): the exit read-back's "- **Name:** <name> TM" line (`forms/exit-intake.ts`) too.
+  let content = response.content.split(`**${typed}**`).join(`**${name}**`).split(`**Name:** ${typed}`).join(`**Name:** ${name}`);
+  /*
+   * TITLE_BEFORE_NAME_REPLY_LINES_ENABLED (QA's Bubbles 17o live test, 12 Nov 2026): "Corrective action for Team Member
+   * <B>" named <B> on the card, but the lines written from the name as first read, "Team Member <B>", kept its first
+   * word: "… review the applicable company policy with Team." and "I couldn't verify a store for **Team** from Woven".
+   * Those lines take the person's first name. Off, as before.
+   */
+  if (titleBeforeNameReplyLinesEnabled() && name !== untitled) {
+    const titleWord = escape(untitled.split(/\s+/)[0] ?? "");
+    const first = name.split(/\s+/)[0] ?? name;
+    if (titleWord) {
+      content = content
+        .replace(new RegExp(String.raw`\bwith ${titleWord}(?=[.,;])`, "g"), `with ${first}`)
+        .split(`**${untitled.split(/\s+/)[0]}**`)
+        .join(`**${first}**`);
+    }
+  }
+  return { ...response, content, formProposal: { ...response.formProposal!, employeeName: name } };
+}
+
+/**
+ * TITLE_BEFORE_NAME_REPLY_LINES_ENABLED: the lines written from "Team Member <name>" as first read ("… with Team.",
+ * "a store for **Team**") take the person's first name, when the message put a title before the name. Off, as given.
+ */
+function titleWordToFirstName(content: string, message: string | undefined, named: string): string {
+  if (!titleBeforeNameReplyLinesEnabled() || !message) return content;
+  const typed = /\bfor\s+(.+)$/im.exec(message)?.[1]?.trim() ?? "";
+  if (!typed || withoutLeadingTitle(typed) === typed) return content;
+  const titleWord = typed.split(/\s+/)[0] ?? "";
+  const first = named.split(/\s+/)[0] ?? named;
+  if (!titleWord || titleWord.toLowerCase() === first.toLowerCase()) return content;
+  return content
+    .replace(new RegExp(String.raw`\bwith ${escape(titleWord)}(?=[.,;])`, "g"), `with ${first}`)
+    .split(`**${titleWord}**`)
+    .join(`**${first}**`);
 }
 
 export function rosterOnlyNames(input: AskResponse, names: readonly string[], message?: string): AskResponse {
