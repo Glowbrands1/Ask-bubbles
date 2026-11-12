@@ -64,6 +64,7 @@ import {
   newRequestOwnTurnsEnabled,
   addressAsksWhoEnabled,
   leadFullSentenceEnabled,
+  formsBelowNeedsFormsEnabled,
   formEditPlainWordsEnabled,
   pastedTemplateFieldsToOpenDraftEnabled,
   payrollDeductAmountFieldEnabled,
@@ -88,10 +89,12 @@ import {
   formNameOffRosterAskEnabled,
   reopenByAnyOpenVerbEnabled,
   accountBeforeRequestEnabled,
+  emptyReplyGuardEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { streamWhenSlow } from "@/lib/api/streamed-response";
 import { finalReplyWithoutMarkers } from "@/lib/ai/source-note";
 import { LONG_MESSAGE_LIMIT } from "@/lib/chat/message-limit";
+import { emptyReplyError, isEmptyReply } from "@/lib/ai/empty-reply";
 import { isClientConversationId } from "@/lib/chat/client-ids";
 import type { AskRequest, AskResponse } from "@/lib/ai/types";
 import type { AnswerMode, ChatMessage } from "@/types";
@@ -1064,6 +1067,12 @@ async function postChat(request: Request) {
       }
       // SAME_REQUEST_OTHER_PERSON_ENABLED: <B>'s card says what of the earlier request it carries.
       if (sameRequestOther) answer = (await import("@/lib/forms/same-request-other-person")).withSameRequestNote(answer, sameRequestOther);
+      /*
+       * NEVER A BLANK ANSWER (EMPTY_REPLY_GUARD_ENABLED). An answer with no
+       * prose and no card is a failure, said as one: the turn closes as failed
+       * below and the thread shows an error card, not an empty bubble.
+       */
+      if (emptyReplyGuardEnabled() && isEmptyReply(answer)) throw emptyReplyError();
     } catch (error) {
       /*
        * A FAILED ANSWER IS STILL A RECORDED TURN, closed as a failure. The row
@@ -1128,6 +1137,8 @@ async function postChat(request: Request) {
       if (note) answer = { ...answer, content: outline.withPolicyKeptNote(answer.content, note) };
     }
     // FINAL_REPLY_MARKER_GUARD_ENABLED: no bare source tag reaches the manager, whatever path answered. See `ai/source-note.ts`.
+    // FORMS_BELOW_NEEDS_FORMS_ENABLED: "… one of the forms below." only with forms below it (`lib/forms/lead-full-sentence.ts`).
+    if (formsBelowNeedsFormsEnabled()) answer = (await import("@/lib/forms/lead-full-sentence")).withFormsBelowOnlyWithForms(answer);
     return NextResponse.json({ ...finalReplyWithoutMarkers(answer), turnId });
   } catch (error) {
     return errorResponse(error, "POST /api/chat");

@@ -483,16 +483,23 @@ function modelDated(key: string, when = `On ${TODAY_LONG}`) {
   };
 }
 
-async function created(on: boolean, said: string, key = "observation", when?: string) {
+const FLAG_FIDELITY = "FORM_INPUT_FIDELITY_ENABLED";
+
+/** `fidelity` given: FORM_INPUT_FIDELITY_ENABLED is set to it, not left to whatever production's list says. */
+async function created(on: boolean, said: string, key = "observation", when?: string, fidelity?: boolean) {
   // Each run is its own manager's first form: the store starts empty, as in `beforeEach`.
   for (const table of Object.keys(store) as (keyof FakeStore)[]) store[table] = [];
   store.form_instances = new JoiningRows() as never;
   await ensureTemplateLibrary("system");
-  for (const name of [FLAG_UD, "UNREAD_DATE_ASK_ENABLED"]) if (!saved.has(name)) saved.set(name, process.env[name]);
+  for (const name of [FLAG_UD, "UNREAD_DATE_ASK_ENABLED", FLAG_FIDELITY]) if (!saved.has(name)) saved.set(name, process.env[name]);
   setProduction(true);
   process.env.UNREAD_DATE_ASK_ENABLED = "true";
   delete process.env[FLAG_UD];
   if (on) process.env[FLAG_UD] = "true";
+  if (fidelity !== undefined) {
+    delete process.env[FLAG_FIDELITY];
+    if (fidelity) process.env[FLAG_FIDELITY] = "true";
+  }
   state.directory = [
     { id: "e-1", firstName: "Tessa", lastName: "Ormond", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-66"], positionName: null },
   ];
@@ -548,12 +555,35 @@ describe('"she was late last week", Create without answering the date question',
     expect(on.notices).toBe(off.notices);
   });
 
+  // Stubs its own flags (QA, #760 gate): FORM_INPUT_FIDELITY gives Coaching drafts a form date, so this pin holds it off
+  // rather than relying on production's list. The both-on case is the guard below.
   it("on, the Coaching Form: unaffected (it is never told a form date)", async () => {
     const said = "create a coaching form for Tessa Ormond at Kearney, she was late last week";
-    const off = await created(false, said, "coaching_details");
-    const on = await created(true, said, "coaching_details");
+    const off = await created(false, said, "coaching_details", undefined, false);
+    const on = await created(true, said, "coaching_details", undefined, false);
     expect(on.prompt).not.toContain("FORM DATE:");
     expect(on.value("coaching_details")).toBe(off.value("coaching_details"));
     expect(on.notices).toBe(off.notices);
+  });
+
+  // QA's #760 gate: FORM_INPUT_FIDELITY dates Coaching drafts only alongside UNREAD_DAY_NOT_INCIDENT_DATE, so "late last
+  // week" is never saved as today's incident.
+  it("FORM_INPUT_FIDELITY and UNREAD_DAY both on, the Coaching Form: the saved Coaching Details hold no today-date", async () => {
+    const said = "create a coaching form for Tessa Ormond at Kearney, she was late last week";
+    const both = await created(true, said, "coaching_details", undefined, true);
+    const unreadDayOnly = await created(true, said, "coaching_details", undefined, false);
+    // The model's today-dated sentence is not kept: the saved Details read as they do with UNREAD_DAY alone.
+    expect(both.prompt).toContain(`never write ${TODAY_LONG}`);
+    expect(both.value("coaching_details")).toContain("Going Forward:");
+    expect(both.value("coaching_details")).not.toContain(TODAY_LONG);
+    expect(both.value("coaching_details")).toBe(unreadDayOnly.value("coaching_details"));
+  });
+
+  it("FORM_INPUT_FIDELITY on, UNREAD_DAY off, the Coaching Form: never told a form date", async () => {
+    const said = "create a coaching form for Tessa Ormond at Kearney, she was late last week";
+    const fidelityOnly = await created(false, said, "coaching_details", undefined, true);
+    const neither = await created(false, said, "coaching_details", undefined, false);
+    expect(fidelityOnly.prompt).not.toContain("FORM DATE:");
+    expect(fidelityOnly.value("coaching_details")).toBe(neither.value("coaching_details"));
   });
 });

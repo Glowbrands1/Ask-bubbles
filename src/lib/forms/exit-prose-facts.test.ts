@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { ChatFormProposal } from "@/types";
@@ -164,8 +166,75 @@ describe.each(REGISTERS)("EXIT_PROSE_FACTS_ENABLED in the managers' register: %s
     expect(guardExitDetails(own, as("ava gave and worked 2 week notice"), TODAY).removed).toEqual([]);
   });
 
+  // Dispatcher, 26 Oct 2026: notes that say it did NOT happen do not let a sentence say it did.
+  it("on, a sentence saying the opposite of the notes is dropped; the notes' own negation stays", () => {
+    withFlag(true);
+    const drafted = "Ava resigned. Ava worked her two weeks notice. Ava called in to resign.";
+    expect(guardExitDetails(drafted, as("exit for ava pellmore she never worked her notice"), TODAY).removed).toContain(
+      "Ava worked her two weeks notice.",
+    );
+    expect(guardExitDetails(drafted, as("exit for ava pellmore she did not call in"), TODAY).removed).toContain(
+      "Ava called in to resign.",
+    );
+    expect(guardExitDetails(drafted, as("exit for ava pellmore no 2 wk notice worked"), TODAY).value).toBe("Ava resigned.");
+    const negated = "Ava did not work her notice. Ava never called in.";
+    expect(guardExitDetails(negated, as("exit for ava pellmore she never worked her notice, did not call in"), TODAY).removed).toEqual([]);
+  });
+
+  // QA-3, 26 Oct 2026: "no call" is itself a negation; a negation stops at "but" or a comma.
+  it('on, "no call no show" notes never keep "called in"; a negation does not reach past "but" or a comma', () => {
+    withFlag(true);
+    const called = "Ava resigned. Ava called in to resign.";
+    for (const notes of ["exit for ava pellmore no call no show", "exit for ava pellmore, no call"]) {
+      expect(guardExitDetails(called, as(notes), TODAY).removed, notes).toContain("Ava called in to resign.");
+    }
+    const worked = "Ava resigned. Ava worked her two weeks notice.";
+    for (const notes of [
+      "exit for ava pellmore she did not give notice but worked it",
+      "exit for ava pellmore she never worked her notice but she did work through it",
+      "exit for ava pellmore, never late, worked her notice",
+    ]) {
+      expect(guardExitDetails(worked, as(notes), TODAY).removed, notes).toEqual([]);
+    }
+  });
+
   it("flag off, the prose is main's", () => {
     withFlag(false);
     expect(prose(as(BARE_NAME))).toContain("a short account drafted from what you've described");
+  });
+});
+
+/*
+ * QA's October triage of #195 (10 Nov 2026): still failing on main with production's flags. guardExitDetails keeps
+ * "Ava gave notice and worked through it." beside notes that say "did not call in", and after a bare name exitReady
+ * still says "a short account drafted…". Pinned with those flags, so the fix is checked on the path production takes.
+ */
+describe("with production's flags (QA's October triage of #195)", () => {
+  const stubbed: string[] = [];
+  function production(on: boolean): void {
+    const flags = (JSON.parse(readFileSync("src/config/production-flags.json", "utf8")) as { on: string[] }).on;
+    for (const name of flags) {
+      if (process.env[name] === undefined) stubbed.push(name);
+      process.env[name] = "true";
+    }
+    withFlag(on);
+  }
+  afterEach(() => {
+    for (const name of stubbed.splice(0)) delete process.env[name];
+  });
+  const notes = "ava pellmore did not call in for her last two shifts";
+  const drafted = "Ava gave notice and worked through it. Ava did not call in for the last two shifts.";
+
+  it("off: \"worked through it\" stays beside \"did not call in\", and a bare name promises a drafted account (the bug)", () => {
+    production(false);
+    expect(guardExitDetails(drafted, notes, TODAY).value).toBe(drafted);
+    expect(prose(BARE_NAME)).toContain("a short account drafted");
+  });
+
+  it("on: \"worked through it\" is dropped, and a bare name leaves Additional Details blank", () => {
+    production(true);
+    expect(guardExitDetails(drafted, notes, TODAY).value).toBe("Ava did not call in for the last two shifts.");
+    expect(prose(BARE_NAME)).not.toContain("a short account drafted");
+    expect(prose(BARE_NAME)).toMatch(/\*\*Left blank for you to review:\*\*[^\n]*Additional Details/);
   });
 });
