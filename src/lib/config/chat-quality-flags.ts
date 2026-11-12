@@ -4866,6 +4866,12 @@ export function noSelectionOnOpenCardEnabled(): boolean {
  * FORM_NAME_FROM_ROSTER, off in production), so Woven's position never reached it. On: a full name typed with the
  * roster person's own first name and every surname word that person's, exact or one typo (two for a long word), when
  * exactly one roster person is that close, is that person (`forms/employee-match.ts` matchEmployeeName). Off, as before.
+ *
+ * Reworked (12 Nov 2026, QA's ruling on Gate-Bubbles-4's NO-GO, G4-776): the typo is NOT matched straight to the roster
+ * person — "Is this for **<roster name>**?" is still asked first (a typo can be a different person; the confirmation
+ * costs one turn), and a preferred name stays as the roster has it. On: after that question, a turn that opens with a
+ * level ("verbal warning …") on the asked person's Corrective Action card is the card's level
+ * (`forms/confirmed-name-level.ts`). Off, as before.
  */
 export function typoFullNameToRosterEnabled(): boolean {
   return envFlag("TYPO_FULL_NAME_TO_ROSTER_ENABLED");

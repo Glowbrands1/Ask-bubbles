@@ -355,8 +355,10 @@ export const NOV4_OVERNIGHT_SCAN_CASES: readonly ReplayCase[] = [
     /*
      * QA's audit item 15.10 (11 Nov 2026): sf-b5's name and job-title halves, without the policy half (that is
      * GUEST_ATTITUDE_CONDUCT, its own pull request). On production flags the card is for "Delphine Marlwoe Ostrander"
-     * as typed, so Woven's position never reaches it. TYPO_FULL_NAME_TO_ROSTER_ENABLED: the typed full name is the
-     * roster's one Delphine Marlowe Ostrander, and "spoke with District manager <name>" is never her Position.
+     * as typed, so Woven's position never reaches it. Changed on purpose (12 Nov 2026, QA's ruling on #776): the typo is
+     * still asked about first; the details turn opens her card (NEAR_MISS_DETAILS_ACCEPT), and with
+     * TYPO_FULL_NAME_TO_ROSTER_ENABLED the "verbal warning" that opens it is the card's level. "spoke with District
+     * manager <name>" is never her Position.
      */
     id: "nov11-sf-b5-typo-name-and-title",
     title: "sf-b5: \"Delphine Marlwoe Ostrander\" is the roster's Delphine Marlowe Ostrander, and \"spoke with District manager Tobias Wrenfield\" is never her Position",
@@ -380,6 +382,30 @@ export const NOV4_OVERNIGHT_SCAN_CASES: readonly ReplayCase[] = [
       expect(values.job_title ?? "", "the job title is District Manager").not.toMatch(/district manager/i);
       expect(values.job_title ?? "", "the job title is not the roster's").toBe("Team Member Part Time");
       expect(values.form_date, "the Date is not 10/31/2026").toBe("2026-10-31");
+    },
+  },
+  {
+    /*
+     * QA's ruling on #776 (12 Nov 2026): a full-name typo of a roster person is still asked "Is this for **<roster
+     * name>**?" first; a "yes" opens that person's card, and the level said in a later turn is kept.
+     */
+    id: "nov12-sf-b5-typo-name-yes-then-level",
+    title: "sf-b5 through the confirmation: \"Is this for Delphine Marlowe Ostrander?\" → \"yes\" → \"verbal warning …\": her card, Verbal Warning",
+    report: `${REPORT}, sf-b5; QA's ruling on #776, 12 Nov 2026`,
+    // A guard: after an explicit "yes", the level in the next turn is already kept on production flags (12 Nov 2026).
+    // The gap was the details turn straight after the question (nov11-sf-b5-typo-name-and-title).
+    status: "fixed",
+    fixFlags: ["TYPO_FULL_NAME_TO_ROSTER_ENABLED"],
+    async run(t) {
+      const thread = start(t);
+      const asked = await thread.say("create a ca form for Delphine Marlwoe Ostrander");
+      expect(asked.content, `the typo is not asked about first:\n${asked.content}`).toMatch(/Is this for \*\*Delphine Marlowe Ostrander\*\*\?/);
+      await thread.say("yes");
+      const reply = await thread.say(
+        "verbal warning The date she complained was Oct 31st . The customer said she was giving her an attitude when she brought up that the register was charging for scent in her laundry refills and it has never done that before.",
+      );
+      expect(thread.proposal, `no CA card for Delphine Marlowe Ostrander:\n${reply.content}`).toMatchObject({ templateKey: "dpoa", employeeName: "Delphine Marlowe Ostrander" });
+      expect(warningLevel(thread.proposal), `the card is not the Verbal Warning she said:\n${reply.content}`).toBe("verbal");
     },
   },
   /*

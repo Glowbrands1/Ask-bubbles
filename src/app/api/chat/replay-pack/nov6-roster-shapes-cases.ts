@@ -127,6 +127,14 @@ for (const shape of SHAPES) {
         const card = thread.proposal?.employeeName ?? null;
         const offered = [name, preferred].some((n) => n !== null && reply.content.includes(`**${n}**`));
         expect(card === name || (preferred !== null && card === preferred) || offered, `${name} is neither on the card (${JSON.stringify(card)}) nor offered:\n${reply.content}`).toBe(true);
+        /*
+         * Gate-Bubbles-4's NO-GO on #776 (12 Nov 2026, G4-776): "Bart Qu…feather" was asked "Is this for **Bartholomew
+         * Quillfeather**?". A person who goes by a preferred name is asked about, and carded, by it.
+         */
+        if (preferred !== null && (variant.key === "typo" || variant.key === "swap" || variant.key === "rotation")) {
+          expect(reply.content, `the preferred name is lost:\n${reply.content}`).not.toContain(`**${name}**`);
+          expect(card === null || card === preferred, `the card is not ${preferred}: ${JSON.stringify(card)}`).toBe(true);
+        }
       },
     });
   }
