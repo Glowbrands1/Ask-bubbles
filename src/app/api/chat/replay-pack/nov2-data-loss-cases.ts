@@ -16,7 +16,7 @@ export const NOV2_DATA_LOSS_CASES: readonly ReplayCase[] = [
       t.as("location_manager", WEST_DODGE);
       const thread = t.thread();
       await thread.say("Can you make a written CA for remy calder on performance");
-      await thread.say("She had 24 transactions and was below in Below in PPTA, LPSVA, average ticket, and units per transaction");
+      await thread.say("She had 24 transactions and was below in Below in UPT, ATV, average ticket, and units per transaction");
       await thread.say("the policy would be must see behaviors on woven");
       expect(thread.proposal?.employeeName).toBe("Remy Calder");
       t.draftWrites({});

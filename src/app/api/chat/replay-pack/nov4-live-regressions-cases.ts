@@ -1,5 +1,7 @@
 import { expect } from "vitest";
 
+import { nameLineCommaEnabled } from "@/lib/config/chat-quality-flags";
+
 import { WEST_DODGE, claimsFormChange, noClaimWithoutUpdate, replyMatchesDiff, savedForm, type ReplayAnswer, type ReplayCase, type ReplayContext, type ReplayThread } from "./cases";
 import {
   CA_CHAIN,
@@ -254,7 +256,10 @@ const STEP_B_CASES: readonly ReplayCase[] = [
     async run(t) {
       await withStepB(async () => {
         // T2–T5 have no patch scripted (they fall back to the old path); T6's patch is the live "add".
-        t.patchWrites([null, null, null, null, { turn: "this_form", set: [{ field: "observation", value: "she Must Practice the sanitizing checklist every shift.", how: "add", evidence: CA_CHAIN[5] }], clear: [] }]);
+        // Changed on purpose (QA, 11 Nov 2026): with NAME_LINE_COMMA_ENABLED, T2 ("fix her last name, it is Quill-Hart") is the
+        // app's own name correction and reads no patch, so T6's patch is the fourth read, not the fifth.
+        const add = { turn: "this_form", set: [{ field: "observation", value: "she Must Practice the sanitizing checklist every shift.", how: "add", evidence: CA_CHAIN[5] }], clear: [] } as const;
+        t.patchWrites(nameLineCommaEnabled() ? [null, null, null, add] : [null, null, null, null, add]);
         await caChat(t, 6);
         /*
          * INFORMATIONAL (4 Nov 2026): the add lands as the LAST line of the Observation, after the Expectation,
@@ -316,7 +321,8 @@ const QA_EXTRA_CASES: readonly ReplayCase[] = [
     report: `${REPORT}: "fix her last name, it is Quill-Hart" never corrects the header Employee Name today (flags off); QA: the comma defeats both name readers (name-correction-words.ts, chat-correction.ts)`,
     // Step 5's target: the corrected name is confirmed against the roster.
     status: { open: "the comma in 'name, it is' defeats both name readers; step 5 (names via the tool + roster) fixes it" },
-    fixFlags: [],
+    // QA's backlog B7 (10 Nov 2026): the fix — the comma no longer hides the correction (`forms/name-correction-words.ts`).
+    fixFlags: ["NAME_LINE_COMMA_ENABLED"],
     async run(t) {
       const roster = [...LIVE_ROSTER, at("r1-marnie-quill-hart", "Marnie", "Quill-Hart")];
       t.directory(roster);
@@ -338,7 +344,8 @@ const QA_EXTRA_CASES: readonly ReplayCase[] = [
     title: "\"Corrective action for 123 Main Street\" — no card for an address, and the reply asks who it is for instead of looking an address up as a person",
     report: 'QA, 4 Nov 2026: "Corrective action for 123 Main Street" — refused today as a name not in the Woven roster',
     status: { open: "no card and no question: in the pack it is answered as a policy question (QA saw it refused live as a name not in the Woven roster); it never asks who the form is for" },
-    fixFlags: [],
+    // QA's backlog B7 (10 Nov 2026): the fix — the turn with no card asks who the form is for (`forms/address-asks-who.ts`).
+    fixFlags: ["ADDRESS_ASKS_WHO_ENABLED"],
     async run(t) {
       t.directory(LIVE_ROSTER);
       t.as("location_manager", WEST_DODGE);
