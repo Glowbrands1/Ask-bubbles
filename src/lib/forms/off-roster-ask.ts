@@ -6,6 +6,7 @@ import { isAcceptedOffRoster, offRosterCardNote, offRosterOffer, offRosterTakenL
 import { personRosterNames } from "./person-guard";
 import { offRosterTyped } from "./roster-only-names";
 import { editDistance } from "./typo-match";
+import { storeOnlyTurn } from "@/lib/ai/store-alias";
 
 /*
  * ============================================================================
@@ -113,6 +114,20 @@ export function withOffRosterAskBeforeCard<T extends { content: string; formProp
    * close to them (a near miss is asked as that person), never a product, an all-caps run or a title. Said back as it
    * would be offered (Title Case).
    */
+  /*
+   * STORE_ALIAS_ENABLED (Gate-Bubbles-3, R735, 12 Nov 2026): a store answer to this question ("dodge, ne") is only the
+   * store. The name stays unconfirmed: the card is held, with its store, and the same question and offer are asked
+   * again, so the production confirmation ("use <name>") still decides it.
+   */
+  const offered = [...input.history].reverse().find((turn) => turn.role === "assistant")?.content ?? "";
+  const pending = /reply \*\*use ([^*]+)\*\*/.exec(offered)?.[1]?.trim();
+  if (pending && offered.includes(offRosterQuestion(pending)) && storeOnlyTurn(input.question)) {
+    return {
+      ...answer,
+      content: `${offRosterQuestion(pending)} ${offRosterOffer(pending)}`,
+      formProposal: { ...card, employeeName: null, employeeRole: null, status: "needs_employee", supportsInlineDraft: false },
+    };
+  }
   const typed = offRosterTyped(name, input.question, roster);
   if (!typed) return answer;
   const question = offRosterQuestion(typed);
