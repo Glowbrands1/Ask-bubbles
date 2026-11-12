@@ -17,6 +17,8 @@ afterEach(() => {
 
 describe("ATTENDANCE_PLAN_NEEDS_LATENESS", () => {
   it("flag off (as production today): B1 gets Pau's lateness plan", () => {
+    // Pinned off (Gate-Bubbles-5, G5-781): a shell or gate with the flag on cannot change this arm.
+    delete process.env[FLAG];
     expect(missedMeetingNotLateness(B1)).toBe(false);
   });
 
