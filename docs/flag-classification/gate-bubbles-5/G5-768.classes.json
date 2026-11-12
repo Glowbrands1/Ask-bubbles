@@ -1,0 +1,26 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-write-up-observation-167: \"write up Marnie Holloway for cell phone use\": the Issue is \"Cell phone use\", not the message \u2014 OPEN in production (Issue: \"write up Marnie Holloway for cell phone use\")": {
+  "category": "REGRESSION",
+  "reason": "the Issue is fixed ('Cell phone use' / 'Not opening the store on time on Tuesday') but the whole '**Issue:**' reply line is replaced, so the ' \u00b7 **Store:** Omaha, NE (West Dodge Rd), from Woven (where <A> is assigned) \u2014 tell me if that should change' readback on the same line is gone from the reply (write-up-lead.ts: /^(\\*\\*Issue:\\*\\*[ \\t]*)(.*)$/m replaces to end of line)."
+ },
+ "replay: nov10-r17b-late-opening-quote-not-on-time [fix:LATE_OPENING_OWN_WORDS_ENABLED]": {
+  "category": "REGRESSION",
+  "reason": "the Issue is fixed ('Cell phone use' / 'Not opening the store on time on Tuesday') but the whole '**Issue:**' reply line is replaced, so the ' \u00b7 **Store:** Omaha, NE (West Dodge Rd), from Woven (where <A> is assigned) \u2014 tell me if that should change' readback on the same line is gone from the reply (write-up-lead.ts: /^(\\*\\*Issue:\\*\\*[ \\t]*)(.*)$/m replaces to end of line)."
+ },
+ "replay: nov10-r17b-late-opening-quote-not-on-time [production]": {
+  "category": "REGRESSION",
+  "reason": "the Issue is fixed ('Cell phone use' / 'Not opening the store on time on Tuesday') but the whole '**Issue:**' reply line is replaced, so the ' \u00b7 **Store:** Omaha, NE (West Dodge Rd), from Woven (where <A> is assigned) \u2014 tell me if that should change' readback on the same line is gone from the reply (write-up-lead.ts: /^(\\*\\*Issue:\\*\\*[ \\t]*)(.*)$/m replaces to end of line)."
+ },
+ "replay: nov10-write-up-observation-167 [open]": {
+  "category": "REGRESSION",
+  "reason": "the Issue is fixed ('Cell phone use' / 'Not opening the store on time on Tuesday') but the whole '**Issue:**' reply line is replaced, so the ' \u00b7 **Store:** Omaha, NE (West Dodge Rd), from Woven (where <A> is assigned) \u2014 tell me if that should change' readback on the same line is gone from the reply (write-up-lead.ts: /^(\\*\\*Issue:\\*\\*[ \\t]*)(.*)$/m replaces to end of line)."
+ },
+ "replay: nov6-reopen-write-up-still-creates [fix:REOPEN_BY_ANY_OPEN_VERB_ENABLED]": {
+  "category": "REGRESSION",
+  "reason": "the Issue is fixed ('Cell phone use' / 'Not opening the store on time on Tuesday') but the whole '**Issue:**' reply line is replaced, so the ' \u00b7 **Store:** Omaha, NE (West Dodge Rd), from Woven (where <A> is assigned) \u2014 tell me if that should change' readback on the same line is gone from the reply (write-up-lead.ts: /^(\\*\\*Issue:\\*\\*[ \\t]*)(.*)$/m replaces to end of line)."
+ },
+ "replay: nov6-reopen-write-up-still-creates [production]": {
+  "category": "REGRESSION",
+  "reason": "the Issue is fixed ('Cell phone use' / 'Not opening the store on time on Tuesday') but the whole '**Issue:**' reply line is replaced, so the ' \u00b7 **Store:** Omaha, NE (West Dodge Rd), from Woven (where <A> is assigned) \u2014 tell me if that should change' readback on the same line is gone from the reply (write-up-lead.ts: /^(\\*\\*Issue:\\*\\*[ \\t]*)(.*)$/m replaces to end of line)."
+ }
+}
