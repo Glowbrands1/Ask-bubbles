@@ -135,3 +135,33 @@ describe("WORN_CLOTHING_IS_DRESS_CODE_ENABLED: the read-from-request policy line
     expect(withPolicyPagesOnCard(LINE, CHUNKS)).toBe(LINE);
   });
 });
+
+// QA's Bubbles 17q live test (12 Nov 2026): "create a CA for <B>, she rang up the wrong items on 11/9" had no page.
+describe("POLICY_DASH_LINE_PAGE_ENABLED: a '<policy> — <what>' line gets its printed page", () => {
+  const LINE =
+    "**Policy:** Standards of Conduct — ringing up a sale inaccurately. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.";
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("on: the register-accuracy line says p.12 beside the heading", () => {
+    vi.stubEnv("POLICY_DASH_LINE_PAGE_ENABLED", "true");
+    expect(withPolicyPagesOnCard(LINE, CHUNKS)).toBe(
+      "**Policy:** Standards of Conduct (JBA Policy Manual p.12) — ringing up a sale inaccurately. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.",
+    );
+  });
+
+  it("on: a phrase that is not one of the app's own policy names, or a line with a page, is left as it is", () => {
+    vi.stubEnv("POLICY_DASH_LINE_PAGE_ENABLED", "true");
+    for (const line of [
+      '**Policy:** "visitors at work" — as you said.',
+      "**Policy:** Other — cleaning duties left undone are recorded under Other on the Corrective Action Form, not the Standards of Conduct. Tell me if a different policy applies.",
+      "**Policy:** Attendance, from what you described (\"late\") — the policy manual's section on page 14.",
+    ]) {
+      expect(withPolicyPagesOnCard(line, CHUNKS)).toBe(line);
+    }
+  });
+
+  it("off: the line is left as it was (no page)", () => {
+    vi.stubEnv("POLICY_DASH_LINE_PAGE_ENABLED", "");
+    expect(withPolicyPagesOnCard(LINE, CHUNKS)).toBe(LINE);
+  });
+});
