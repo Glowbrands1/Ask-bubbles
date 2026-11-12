@@ -1329,6 +1329,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "CHAT_STAGE_TIMINGS_ENABLED",
   "EXIT_TYPO_WORDS_ENABLED",
   "CA_REASON_DUE_TO_ENABLED",
+  "COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED",
   // coding 6: REQUEST_ISSUE_KEPT, LATE_OPENING_OWN_WORDS, FIRST_NAME_ENOUGH (QA round 17b, 10 Nov 2026; default off).
   "REQUEST_ISSUE_KEPT_ENABLED",
   "LATE_OPENING_OWN_WORDS_ENABLED",
@@ -1359,6 +1360,9 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT_ENABLED",
   // coding 6: GROUP_WORDS_NOT_A_NAME (Problem 19, 11 Nov 2026; default off).
   "GROUP_WORDS_NOT_A_NAME_ENABLED",
+  "ACCOUNT_BEFORE_REQUEST_ENABLED",
+  // LETTER_GREETING_ANY_CASE (default off): in the list, as every chat flag (QA round 17k, 12 Nov 2026).
+  "LETTER_GREETING_ANY_CASE_ENABLED",
 ] as const;
 
 /**
@@ -3086,6 +3090,17 @@ export function nameLineCommaEnabled(): boolean {
   return envFlag("NAME_LINE_COMMA_ENABLED");
 }
 
+/**
+ * ACCOUNT_BEFORE_REQUEST_ENABLED (Pau's P14(a), QA 10 Nov 2026; coding 5; the same flag name as the sibling app's #776,
+ * a different mechanism here; default off). An account given over several turns before "create a coaching form for
+ * <first name>" → "yes" was not handed to the draft ("No specific incident … was described"): a turn that opens with a
+ * question was left out of the card's turns. On: the turns just before the card's first cited turn that recount an
+ * incident by this person join its turns (`forms/account-before-request.ts`). Off, as before.
+ */
+export function accountBeforeRequestEnabled(): boolean {
+  return envFlag("ACCOUNT_BEFORE_REQUEST_ENABLED");
+}
+
 // --- end coding 5 flags ---
 
 /**
@@ -4592,4 +4607,28 @@ export function pastedTemplateFieldsToOpenDraftEnabled(): boolean {
  */
 export function groupWordsNotANameEnabled(): boolean {
   return envFlag("GROUP_WORDS_NOT_A_NAME_ENABLED");
+}
+
+/**
+ * LETTER_GREETING_ANY_CASE_ENABLED (coding 6, 10 Nov 2026; default off; QA's
+ * live Bubbles tester, round 11). "… Dear <A>, Your employment with … is
+ * terminated …" kept the salutation with LETTER_GREETING_NOT_NAME on: the
+ * words after the addressee's comma that show the letter has begun were read
+ * in lower case only, and the card's Name was sometimes "Dear <A>". On: they
+ * are read in any case, and "I" is one of them, for the greeting and for
+ * EXIT_LETTER_ADDRESSEE's addressee. See `ai/letter-signer.ts`. Off, as before.
+ */
+export function letterGreetingAnyCaseEnabled(): boolean {
+  return envFlag("LETTER_GREETING_ANY_CASE_ENABLED");
+}
+
+/**
+ * COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED (QA, 11 Nov 2026; Coding-5's BCS-metrics probe; default off). "She was below
+ * goal in IPT, AOV and Comp Sales % for October" on a sales Corrective Action lost its Issue: the name reader took
+ * "Comp Sales" (and "Discount Rate") for a person, and the next turn's card was drawn from that turn alone. On: a
+ * candidate made only of the company's own metric words (`config/company/metric-words.ts`), measure words and percent
+ * signs is not a person (`forms/person-guard.ts`); somebody on the roster still always is. Off, as before.
+ */
+export function companyMetricWordsNotNamesEnabled(): boolean {
+  return envFlag("COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED");
 }
