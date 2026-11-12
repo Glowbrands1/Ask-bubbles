@@ -54,6 +54,9 @@ interface CardLike {
   supportsInlineDraft?: boolean;
 }
 
+/** The line `withPossessivePlaceNotPerson` writes: its quoted word is the place's, never a name to take out of the reply. */
+export const POSSESSIVE_PLACE_QUESTION_LINE = /is part of a place['’]s name, not a person/;
+
 export function withPossessivePlaceNotPerson<T extends { content: string; formProposal?: CardLike | null }>(
   answer: T,
   managerTurns: readonly string[],
