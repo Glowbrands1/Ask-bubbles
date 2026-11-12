@@ -1265,6 +1265,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FORM_FOR_FOR_TYPO_ENABLED",
   // coding 4: TITLE_NOT_PART_OF_NAME (B-C3 part 2, QA, 11 Nov 2026; default off).
   "TITLE_NOT_PART_OF_NAME_ENABLED",
+  "NO_NAME_REPLY_WORDING_ENABLED",
   "TAKE_OFF_STAYS_CARD_ENABLED",
   // coding 4: ACCOUNT_PLACE_LEAD (round 6; default off): forced off with the others.
   "ACCOUNT_PLACE_LEAD_ENABLED",
@@ -1327,6 +1328,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "WHAT_HAPPENED_NO_CREATE_ENABLED",
   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
   "CHAT_STAGE_TIMINGS_ENABLED",
+  "EXIT_TYPO_WORDS_ENABLED",
   "CA_REASON_DUE_TO_ENABLED",
   // coding 6: REQUEST_ISSUE_KEPT, LATE_OPENING_OWN_WORDS, FIRST_NAME_ENOUGH (QA round 17b, 10 Nov 2026; default off).
   "REQUEST_ISSUE_KEPT_ENABLED",
@@ -2973,6 +2975,16 @@ export function policyTopicIntoFieldEnabled(): boolean {
 }
 
 /**
+ * EXIT_TYPO_WORDS_ENABLED (Pau's P17, the sibling app's production, 10 Nov 2026; coding 5; same flag in both apps; default off).
+ * "store items will be returneded … they are eligiable for rehire" left Store Items Returned and Eligible for Rehire
+ * blank. On: the exit answer readers read a word one or two letters off "returned", "eligible", "rehire" and the like as
+ * that word (`forms/exit-details.ts`). Off, as before.
+ */
+export function exitTypoWordsEnabled(): boolean {
+  return envFlag("EXIT_TYPO_WORDS_ENABLED");
+}
+
+/**
  * WHAT_HAPPENED_NO_CREATE_ENABLED (QA, live r19, 10 Nov 2026; coding 5; same flag in both apps; default off). With
  * COACHING_ASKS_WHAT_HAPPENED on, the reply asked "You haven't told me what happened yet…" while the card beside it
  * offered an active Create draft. On: while the reply asks what happened, the card shows but offers no Create
@@ -4525,6 +4537,16 @@ export function firstNameEnoughEnabled(): boolean {
  */
 export function noShowOpeningIsAttendanceEnabled(): boolean {
   return envFlag("NO_SHOW_OPENING_IS_ATTENDANCE_ENABLED");
+}
+
+/**
+ * NO_NAME_REPLY_WORDING_ENABLED (QA, the sibling app's round 22 live test, 11 Nov 2026; port from the sibling app; default off; same
+ * flag in both apps). "create a CA for ima employee" made no card, but the reply said "for the the employee" twice and
+ * "You can create it now" with no Create button. On, the name's stand-in is never re-replaced and a card with no employee
+ * says it can be created once the name is given (`forms/no-name-reply-wording.ts`). Off, as before.
+ */
+export function noNameReplyWordingEnabled(): boolean {
+  return envFlag("NO_NAME_REPLY_WORDING_ENABLED");
 }
 
 /**
