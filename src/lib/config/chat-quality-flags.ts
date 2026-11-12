@@ -3635,6 +3635,19 @@ export function negatedLatenessTopicEnabled(): boolean {
 }
 
 /**
+ * EDITS SAID IN CHAT REACH THE CARD (coding 3, item 1; same flag in both apps).
+ * "can you upate the draft with these details of coaching?" → "it didnt edit in
+ * the card" → "the details we just discussed!!!", and "Do i need to copy and
+ * paste it?": the turn a refers-back edit means is chosen by the thread's
+ * structure — the browser's markers for the card and for replies about the open
+ * form (`formReply`), and the manager's turn a reply did not write — never "the
+ * last reply". Off, as before. See `forms/form-content-turn.ts` (`sourceTurn`).
+ */
+export function formEditSourceTurnEnabled(): boolean {
+  return envFlag("FORM_EDIT_SOURCE_TURN_ENABLED");
+}
+
+/**
  * CA_REASON_DUE_TO_ENABLED (QA, live, 4 Nov 2026; rebuilds #454; default off). With CA_SALES_POLICY on in
  * production, "CA for <name> due to under performance in salon metrics" put the whole request on the card's
  * Issue, and the draft's Observation of Offense was the request as the model copied it. On: "due to" and

@@ -44,8 +44,17 @@ import { REFUSAL_ROSTER } from "./nov7-step-b-refusals-scenarios";
  *
  * The drafting and revision models are the pack's stand-ins (they write
  * nothing) unless a case says otherwise, as in production's reports.
- * Invariants only: what is SAVED, what is CLAIMED, and what the drafting
- * model is HANDED.
+ * Invariants only: what is SAVED, what is CLAIMED, and what the drafting and
+ * revision models are HANDED.
+ *
+ * WHAT THE REVISION IS HANDED IS THE CHECK (5 Nov 2026). The revision stand-in
+ * writes whatever `revisionWrites` scripts, whatever it was handed, so a case
+ * that scripts it and asserts only the saved form passes with any source. The
+ * two item-1 cases assert on `revisionPrompts()`: the live model can write the
+ * details only when it is handed them. Fixed behind
+ * FORM_EDIT_SOURCE_TURN_ENABLED (`form-content-turn.ts` `sourceTurn`; the route
+ * stamps `formReply` on replies about the open form, and the manager's turn
+ * a reply did not write as `unwritten`).
  */
 
 type T = ReplayContext;
@@ -63,6 +72,19 @@ const SAID = /rowan marked an order as shipped but the customer hadn't picked up
 
 /** The bot's own lines — the card, a no-change reply, an honest reply — are never the form's content. */
 const BOTS_OWN_WORDS = /Here is what I would put|I haven't changed|Nothing on the form has changed|Tell me which part to change|Create the draft here/i;
+
+/**
+ * What a revision call was handed for THIS turn: the change it was asked for,
+ * and the manager message just before it (the one "the details in my last
+ * message" points to). Not the whole conversation, which the revision always
+ * reads: her account, said earlier, is in every later prompt.
+ */
+function handedNow(prompt: string): string {
+  const [said = "", change = ""] = prompt.split("THE CHANGE THE MANAGER IS ASKING FOR NOW:");
+  const turns = (said.split("WHAT THE MANAGER HAS SAID IN THIS CONVERSATION:")[1] ?? "").trim().split("\n\n");
+  return [turns.at(-2) ?? "", change.trim()].join("\n");
+}
+
 
 function start(t: T) {
   t.directory(STAFF);
@@ -94,6 +116,7 @@ export const NOV5_CODING3_CHAT_EDITS_CASES: ReplayCase[] = [
     // stays open here even with the fix: the live model writes what it is handed.
     fixFlags: ["DETAILS_FROM_EARLIER_ANSWER_ENABLED"],
     fixStatus: { open: "the pack's revision stand-in writes nothing; the fix's effect is what the revision is handed (nov10-chat-edits-a-details-handed-to-the-revision)" },
+    fixFlags: ["FORM_EDIT_SOURCE_TURN_ENABLED"],
     async run(t: T) {
       start(t);
       const thread = t.thread();
@@ -103,12 +126,23 @@ export const NOV5_CODING3_CHAT_EDITS_CASES: ReplayCase[] = [
       await thread.say("Create a coaching form for Rowan Kestrel");
       expect(thread.proposal, "no Coaching Form card for Rowan Kestrel").toMatchObject({ templateKey: "coaching", employeeName: "Rowan Kestrel" });
       const id = await thread.create();
+      /*
+       * The stand-in writes nothing on any turn — the worst case, as in her
+       * report — so "the details we just discussed!!!" must still be handed the
+       * answer, never "it didnt edit in the card". This replaces the case's
+       * first check (the saved Details hold the answer), which a scripted
+       * stand-in passes whatever it is handed (5 Nov 2026).
+       */
       for (const turn of ["can you upate the draft with these details of coaching?", "it didnt edit in the card", "the details we just discussed!!!"]) {
+        const calls = t.revisionPrompts().length;
         await onDraft(t, thread, id, turn);
-      }
-      const details = t.values(id).coaching_details ?? "";
-      for (const step of IN_THE_ANSWER) {
-        expect(details, `after "the details we just discussed!!!" the Details do not hold the coaching details discussed before the card (${step})`).toMatch(step);
+        if (turn === "it didnt edit in the card") continue;
+        const handed = t.revisionPrompts().slice(calls).join("\n");
+        for (const step of IN_THE_ANSWER) {
+          expect(handed, `"${turn}": the revision was not handed the coaching details discussed before the card (${step})`).toMatch(step);
+        }
+        // Verbatim: the answer's own lines, not rewritten onto one line.
+        expect(handed, `"${turn}": the answer was not handed verbatim`).toMatch(/Press \*\*Ready for Pick Up\*\*/);
       }
     },
   },
@@ -149,6 +183,7 @@ export const NOV5_CODING3_CHAT_EDITS_CASES: ReplayCase[] = [
     status: {
       open: "the live answer \"It should update automatically — no copy-and-paste needed\" is sent unchanged with nothing written (the claim guard's phrase list misses it); past that, the \"make that update\" the honest reply invites writes nothing",
     },
+    fixFlags: ["FORM_EDIT_SOURCE_TURN_ENABLED"],
     async run(t: T) {
       start(t);
       const thread = t.thread();
@@ -171,8 +206,37 @@ export const NOV5_CODING3_CHAT_EDITS_CASES: ReplayCase[] = [
         /no copy[- ]?(?:and[- ])?paste needed|updates? automatically|details are on the draft/i,
       );
       // Her next turn in the report: what the reply invites.
+      const calls = t.revisionPrompts().length;
+      // The live model writes what it is handed; the stand-in writes her account. The check is what it was handed.
+      t.revisionWrites({ coaching_details: ROWAN_DID });
       await onDraft(t, thread, id, "make that update");
+      const handed = t.revisionPrompts().slice(calls).map(handedNow).join("\n");
+      expect(handed, '"make that update" did not hand the revision her account').toMatch(SAID);
       expect(t.values(id).coaching_details ?? "", 'after "make that update" the draft does not say what Rowan did').toMatch(SAID);
+    },
+  },
+  {
+    // #480 gate (QA, 12 Nov 2026), nov7-refusal-bub-date-question: with the flag on, every reply with a form open carries
+    // `formReply`, the policy answer included, so "these details" found no source and the turn got an ordinary answer
+    // instead of an honest reply about the form. Not the harness: production's model would answer it the same way.
+    id: "nov12-480-these-details-after-a-policy-answer",
+    title: 'coaching draft open → "how do i handle a bopis order?" → "can you upate the draft with these details of coaching?": a reply about the form, never the policy answer again',
+    report: 'Ask Bubbles, 31 Oct 2026 (nov7-refusal-bub-date-question), via the #480 gate',
+    status: "fixed",
+    fixFlags: ["FORM_EDIT_SOURCE_TURN_ENABLED"],
+    async run(t: T) {
+      start(t);
+      const thread = t.thread();
+      await thread.say("Create a coaching form for Rowan Kestrel");
+      const id = await thread.create();
+      const policy = "For a BOPIS order, pick it, bag it with the receipt, and hold it on the pickup shelf until the guest arrives.";
+      t.modelSays(policy);
+      await onDraft(t, thread, id, "how do i handle a bopis order?");
+      const before = savedForm(t, id);
+      const reply = await onDraft(t, thread, id, "can you upate the draft with these details of coaching?");
+      t.modelSays(null);
+      expect(reply.content, "the edit got the policy answer again, not a reply about the form").not.toBe(policy);
+      if (savedForm(t, id) === before) expect(reply.content, `nothing changed, and the reply does not say so:\n${reply.content}`).toMatch(/I haven't changed|Nothing on the form has changed/);
     },
   },
 ];

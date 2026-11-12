@@ -168,6 +168,13 @@ const UI_PATHS = ["src/app/**/*.tsx", "src/components/**", "src/features/**/*.ts
  * off, it renders as before for every role.
  */
 const ALLOWED_UI = [
+  /*
+   * FORM_EDIT_SOURCE_TURN_ENABLED (coding 3, item 1, accepted design 5 Nov
+   * 2026): the answer's `formReply` is kept on the message it already builds,
+   * so it goes back with the history. Data only: nothing renders differently,
+   * and with the flag off the server never sends one.
+   */
+  "src/features/chat/chat-screen.tsx",
   // Import's "couldn't confirm … is yours" line (QA, 12 Nov 2026, both apps): shown only for a "not_proven" decline,
   // which only CHAT_IMPORT_PROVEN_OWN_ENABLED returns. Off, the server never declines that way, so it never shows.
   "src/features/chat/import-local-history.tsx",
