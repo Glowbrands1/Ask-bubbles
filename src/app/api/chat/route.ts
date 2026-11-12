@@ -48,6 +48,7 @@ import {
   personGuardEnabled,
   fieldLabelNotAQuestionEnabled,
   possessivePlaceNotPersonEnabled,
+  writeUpLeadNotAccountEnabled,
   formNameFromRosterEnabled,
   offRosterConfirmEnabled,
   offRosterAskBeforeCardEnabled,
@@ -1049,6 +1050,8 @@ async function postChat(request: Request) {
           asked.question,
         ]);
       }
+      // WRITE_UP_LEAD_NOT_ACCOUNT_ENABLED: "write up <employee> for cell phone use" gives the Issue "Cell phone use" (`lib/forms/write-up-lead.ts`).
+      if (writeUpLeadNotAccountEnabled()) answer = (await import("@/lib/forms/write-up-lead")).withWriteUpLeadNotAccount(answer);
       // EXIT_FORM_DATE_FROM_TERMINATION_ENABLED: a stated "terminated, effective <date>" dates the exit card (`lib/forms/exit-form-date.ts`).
       if (exitFormDateFromTerminationEnabled()) {
         answer = (await import("@/lib/forms/exit-form-date")).withExitFormDateFromTermination(
