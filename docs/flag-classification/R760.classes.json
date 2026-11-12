@@ -1,0 +1,15 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov11-form-input-fidelity-title-yesterday: a Corrective Action card asking the warning, payroll and job title, then a bare \"yesterday\": never the Job Title — OPEN in production (the card's job title is \"Yesterday\")": {
+    "category": "INTENDED",
+    "reason": "The OPEN pin fails as designed: a bare \"yesterday\" after the position question is no longer saved as Job Title \"Yesterday\"."
+  },
+  "replay: nov11-form-input-fidelity-title-yesterday [open]": {
+    "category": "INTENDED",
+    "twin": "replay: nov11-form-input-fidelity-title-yesterday [fix:FORM_INPUT_FIDELITY_ENABLED]",
+    "reason": "Open to holding. The reply text is unchanged; the saved Job Title is no longer \"Yesterday\"."
+  },
+  "src/app/api/chat/unread-day-date-e2e.test.ts :: \"she was late last week\", Create without answering the date question on, the Coaching Form: unaffected (it is never told a form date)": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "draftDateApplies() deliberately gives Coaching drafts the form date when the flag is on, so this test's prompt pin (never told a form date) fails. With production's UNREAD_DAY_NOT_INCIDENT_DATE on, the Coaching prompt gets the unread-day rule (\"never write October 26, 2026 … as the date of the incident\") and the SAVED coaching_details equal flag-off byte for byte (checked by running the test with prints). CONDITIONAL: with UNREAD_DAY off, fidelity on saves \"On October 26, 2026, Tessa Ormond was late\" for \"late last week\"; the flag must not ship without UNREAD_DAY on. The pin needs updating with a stub."
+  }
+}
