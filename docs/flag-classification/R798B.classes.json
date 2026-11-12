@@ -1,0 +1,66 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-p15-term-ca-ticks-termination: P15: \"I need a term CA for <name>. \u2026 Payroll deduction.\": Termination as said, the approval line once, the termination plan, payroll Yes with no question; Create ticks Termination \u2014 OPEN in production (the card asks Verbal or Written, asks the payroll question, plans on \"Future policy violations \u2026\", and Create leaves Type of Warning blank)": {
+    "category": "INTENDED",
+    "reason": "P15 (Pau's ruling \"A\"): the OPEN pin now holds \u2014 Termination as said, approval line once, termination plan, Create ticks Termination."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-termination-ticks-because-didnt-call-in: \"I need a term CA for Briony Halvorsen because she didn't call in.\": Termination as said, the approval line; Create ticks Termination \u2014 OPEN in production (the card leaves the level to the manager and Create leaves Type of Warning blank)": {
+    "category": "INTENDED",
+    "reason": "Must-tick case (Coding-6, after R798): a stated termination with a she/he incident clause or \"no call no show\" \u2014 the OPEN pin now holds: Termination as said, the approval line, Create ticks Termination."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-termination-ticks-didnt-show-for-shift: \"I need a term CA for Briony Halvorsen, didn't show for her shift.\": Termination as said, the approval line; Create ticks Termination \u2014 OPEN in production (the card leaves the level to the manager and Create leaves Type of Warning blank)": {
+    "category": "INTENDED",
+    "reason": "Must-tick case (Coding-6, after R798): a stated termination with a she/he incident clause or \"no call no show\" \u2014 the OPEN pin now holds: Termination as said, the approval line, Create ticks Termination."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-termination-ticks-so-i-need: \"CA for Briony Halvorsen. She didn't show up, so I need a term CA.\": Termination as said, the approval line; Create ticks Termination \u2014 OPEN in production (the card leaves the level to the manager and Create leaves Type of Warning blank)": {
+    "category": "INTENDED",
+    "reason": "Must-tick case (Coding-6, after R798): a stated termination with a she/he incident clause or \"no call no show\" \u2014 the OPEN pin now holds: Termination as said, the approval line, Create ticks Termination."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-termination-ticks-term-ca-did-not-show: \"I need a term CA for Briony Halvorsen, she did not show up.\": Termination as said, the approval line; Create ticks Termination \u2014 OPEN in production (the card leaves the level to the manager and Create leaves Type of Warning blank)": {
+    "category": "INTENDED",
+    "reason": "Must-tick case (Coding-6, after R798): a stated termination with a she/he incident clause or \"no call no show\" \u2014 the OPEN pin now holds: Termination as said, the approval line, Create ticks Termination."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-termination-ticks-terminating-never-showed: \"CA for Briony Halvorsen. We are terminating her, she never showed.\": Termination as said, the approval line; Create ticks Termination \u2014 OPEN in production (the card leaves the level to the manager and Create leaves Type of Warning blank)": {
+    "category": "INTENDED",
+    "reason": "Must-tick case (Coding-6, after R798): a stated termination with a she/he incident clause or \"no call no show\" \u2014 the OPEN pin now holds: Termination as said, the approval line, Create ticks Termination."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-termination-ticks-termination-ca-no-call-no-show: \"I need a termination CA for Briony Halvorsen, no call no show.\": Termination as said, the approval line; Create ticks Termination \u2014 OPEN in production (the card leaves the level to the manager and Create leaves Type of Warning blank)": {
+    "category": "INTENDED",
+    "reason": "Must-tick case (Coding-6, after R798): a stated termination with a she/he incident clause or \"no call no show\" \u2014 the OPEN pin now holds: Termination as said, the approval line, Create ticks Termination."
+  },
+  "replay: nov10-p15-payroll-deduction-sentence-is-yes [fix:PAYROLL_BARE_SENTENCE_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "Same P15 wording: still holds; the reply now says Type of Warning: Termination, the approval line and the termination plan sentence instead of asking Verbal/Written and \"Future policy violations \u2026\"."
+  },
+  "replay: nov10-p15-payroll-deduction-sentence-is-yes [production]": {
+    "category": "INTENDED",
+    "reason": "Same P15 wording: still holds; the reply now says Type of Warning: Termination, the approval line and the termination plan sentence instead of asking Verbal/Written and \"Future policy violations \u2026\"."
+  },
+  "replay: nov10-p15-term-ca-ticks-termination [open]": {
+    "category": "INTENDED",
+    "reason": "P15 (Pau's ruling \"A\"): the OPEN pin now holds \u2014 Termination as said, approval line once, termination plan, Create ticks Termination."
+  },
+  "replay: nov12-termination-ticks-because-didnt-call-in [open]": {
+    "category": "INTENDED",
+    "reason": "Must-tick case (Coding-6, after R798): a stated termination with a she/he incident clause or \"no call no show\" \u2014 the OPEN pin now holds: Termination as said, the approval line, Create ticks Termination."
+  },
+  "replay: nov12-termination-ticks-didnt-show-for-shift [open]": {
+    "category": "INTENDED",
+    "reason": "Must-tick case (Coding-6, after R798): a stated termination with a she/he incident clause or \"no call no show\" \u2014 the OPEN pin now holds: Termination as said, the approval line, Create ticks Termination."
+  },
+  "replay: nov12-termination-ticks-so-i-need [open]": {
+    "category": "INTENDED",
+    "reason": "Must-tick case (Coding-6, after R798): a stated termination with a she/he incident clause or \"no call no show\" \u2014 the OPEN pin now holds: Termination as said, the approval line, Create ticks Termination."
+  },
+  "replay: nov12-termination-ticks-term-ca-did-not-show [open]": {
+    "category": "INTENDED",
+    "reason": "Must-tick case (Coding-6, after R798): a stated termination with a she/he incident clause or \"no call no show\" \u2014 the OPEN pin now holds: Termination as said, the approval line, Create ticks Termination."
+  },
+  "replay: nov12-termination-ticks-terminating-never-showed [open]": {
+    "category": "INTENDED",
+    "reason": "Must-tick case (Coding-6, after R798): a stated termination with a she/he incident clause or \"no call no show\" \u2014 the OPEN pin now holds: Termination as said, the approval line, Create ticks Termination."
+  },
+  "replay: nov12-termination-ticks-termination-ca-no-call-no-show [open]": {
+    "category": "INTENDED",
+    "reason": "Must-tick case (Coding-6, after R798): a stated termination with a she/he incident clause or \"no call no show\" \u2014 the OPEN pin now holds: Termination as said, the approval line, Create ticks Termination."
+  }
+}
