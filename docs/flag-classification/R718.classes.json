@@ -1,0 +1,14 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-letter-greeting-your-capitalised: \"Dear <name>, Your employment \u2026 \" on one line: the exit card is for Orla Penhallow, never \"Dear Orla Penhallow\" \u2014 OPEN in production (Name: Dear Orla Penhallow; no Job Title; no store)": {
+    "category": "INTENDED",
+    "reason": "QA's live Bubbles tester wording (\"Dear <name>, Your employment \u2026 is terminated\" on one line): the OPEN pin now holds \u2014 the exit card is for the employee with Job Title and Store, never \"Dear <name>\"."
+  },
+  "src/lib/ai/letter-signer.test.ts :: LETTER_GREETING_ANY_CASE_ENABLED off: \"Dear <A>, Your \u2026\" keeps the salutation (as main)": {
+    "category": "INTENDED-HARNESS",
+    "reason": "Unit test pinning flag-off behaviour (\"Dear <A>, Your \u2026\" keeps the salutation); with the flag forced on the salutation is dropped, as designed."
+  },
+  "replay: nov10-letter-greeting-your-capitalised [open]": {
+    "category": "INTENDED",
+    "reason": "QA's live Bubbles tester wording (\"Dear <name>, Your employment \u2026 is terminated\" on one line): the OPEN pin now holds \u2014 the exit card is for the employee with Job Title and Store, never \"Dear <name>\"."
+  }
+}
