@@ -1446,6 +1446,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ACCOUNT_BEFORE_REQUEST_ENABLED",
   // LETTER_GREETING_ANY_CASE (default off): in the list, as every chat flag (QA round 17k, 12 Nov 2026).
   "LETTER_GREETING_ANY_CASE_ENABLED",
+  // EXIT_NOTICE_STATED_ONLY (default off): in the list, as every chat flag (QA's 17j live test, 12 Nov 2026).
+  "EXIT_NOTICE_STATED_ONLY_ENABLED",
   // coding 5: DRAFT_NO_INVENTED_PLAN (QA's October triage of #188, 10 Nov 2026; default off).
   "DRAFT_NO_INVENTED_PLAN_ENABLED",
   // REVISION_ARCHIVED_NOT_OPEN (default off): in the list, as every flag a release flips (QA round 17l, 12 Nov 2026).
@@ -5389,4 +5391,14 @@ export function teamCardNotProductEnabled(): boolean {
  */
 export function typoFullNameToRosterEnabled(): boolean {
   return envFlag("TYPO_FULL_NAME_TO_ROSTER_ENABLED");
+}
+
+/**
+ * EXIT_NOTICE_STATED_ONLY_ENABLED (coding 6, 12 Nov 2026; default off; QA's Bubbles 17j live test). "exit form for <A>,
+ * she resigned 11/8 …" filled "Date that notice was given: November 8" though the manager gave only the resignation
+ * date. On: that line is filled only when the manager states notice; the date stays the Resignation Date. Off, as before.
+ * See `forms/exit-facts.ts`.
+ */
+export function exitNoticeStatedOnlyEnabled(): boolean {
+  return envFlag("EXIT_NOTICE_STATED_ONLY_ENABLED");
 }
