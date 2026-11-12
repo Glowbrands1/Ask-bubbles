@@ -4610,6 +4610,20 @@ export function madeForIsMadeAboutEnabled(): boolean {
 }
 
 /**
+ * GUEST_ATTITUDE_CONDUCT_ENABLED (coding 6, 10 Nov 2026; default off; port; Pau's
+ * sf-b5, the overnight scan of 4 Nov 2026). "The customer said she was giving
+ * her an attitude when she brought up that the register was charging …" cited
+ * no policy: the rude-to-a-guest reading (Standards of Conduct, page 12, as
+ * Pau confirmed) needs "rude / attitude … to / at / with … a guest", and here
+ * the customer comes first. On: a sentence in which a guest, customer or
+ * client says the employee was giving / gave / had an attitude is that same
+ * reading (`forms/specific-policy-topics.ts`). Off, as before.
+ */
+export function guestAttitudeConductEnabled(): boolean {
+  return envFlag("GUEST_ATTITUDE_CONDUCT_ENABLED");
+}
+
+/**
  * NOT_FOLLOWING_IS_VIOLATION_ENABLED (QA's live Bubbles report, 10 Nov 2026; default off; same flag in both apps). "make it about not
  * following the dress code" was read as no policy named, so no Dress Code reference was written. With the flag on, "not
  * following / not wearing / not meeting / failed to follow <policy topic>" names that policy as broken (`forms/ca-policy.ts`,
