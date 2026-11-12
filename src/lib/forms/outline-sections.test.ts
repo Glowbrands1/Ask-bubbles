@@ -70,3 +70,22 @@ describe("QA's ruling (b), extended (12 Nov 2026): an instruction goes under Exp
     expect(addUnderExpectation("Observed:\nJane was late.", "she must clock in.")).toBeNull();
   });
 });
+
+/* QA's r37 live check in the sibling app (ported) (12 Nov 2026; names invented): "make that update: he also ignored a second client". */
+describe("withSectionSpacing: labels stay on their own line, and Policy reference keeps its blank line (r37)", () => {
+  const OLD =
+    "Observed:\nOn 11/9, Dorian Vell was rude to a client.\n\nExpectation:\nDorian Vell is expected to greet every client politely.\n\nPolicy reference: Standards of Conduct Policy, JBA Policy Manual p.12";
+  const SAVED_LIVE =
+    "Observed: On 11/9, Dorian Vell was rude to a client and ignored a second client.\n\nExpectation: Dorian Vell is expected to greet every client politely.\nPolicy reference: Standards of Conduct Policy, JBA Policy Manual p.12";
+
+  it("the live write is put back in the field's own layout", () => {
+    expect(withSectionSpacing(OLD, SAVED_LIVE)).toBe(
+      "Observed:\nOn 11/9, Dorian Vell was rude to a client and ignored a second client.\n\nExpectation:\nDorian Vell is expected to greet every client politely.\n\nPolicy reference: Standards of Conduct Policy, JBA Policy Manual p.12",
+    );
+  });
+
+  it("a field whose labels were inline keeps them inline, and one with no blank before Policy reference gets none", () => {
+    const inline = "Observed: On 11/9, Dorian Vell was rude to a client.\n\nExpectation: Dorian Vell is expected to greet every client politely.\nPolicy reference: Standards of Conduct Policy, JBA Policy Manual p.12";
+    expect(withSectionSpacing(inline, SAVED_LIVE)).toBe(SAVED_LIVE);
+  });
+});
