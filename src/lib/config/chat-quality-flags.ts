@@ -1404,6 +1404,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // QA round 17o (12 Nov 2026): switched on in production, missing from this list.
   "NAME_CORRECTION_KEEPS_DATE_ENABLED",
   "NEAR_MISS_TURNED_DOWN_EVERYWHERE_ENABLED",
+  "STEP_B_ADD_UNDER_OBSERVED_ENABLED",
 ] as const;
 
 /**
