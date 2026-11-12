@@ -554,14 +554,8 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov10-made-for-is-made-about-reader-nothing": "MADE_FOR_IS_MADE_ABOUT",
   // fixed in production by MADE_FOR_IS_MADE_ABOUT, QA round 17n, 12 Nov 2026
   "nov10-made-for-is-made-about-reader-replaces": "MADE_FOR_IS_MADE_ABOUT",
-  // fixed in production by ADDED_DETAIL_KEPT, QA round 17n, 12 Nov 2026
-  "nov10-sf-b6-card-carries-added-detail": "ADDED_DETAIL_KEPT",
   // fixed in production by PASTED_REVIEW_NOT_ACCOUNT, QA round 17n, 12 Nov 2026
   "nov10-twin-sf-s22-pasted-review-never-drafted": "PASTED_REVIEW_NOT_ACCOUNT",
-  // fixed in production by ADDED_DETAIL_KEPT, QA round 17n, 12 Nov 2026
-  "nov5-sf-b6-full-sentence-and-added-detail": "ADDED_DETAIL_KEPT",
-  // fixed in production by CA_PROCEDURE_BASIS, QA round 17n, 12 Nov 2026
-  "nov5-sf-b6-policy-left-for-the-manager": "CA_PROCEDURE_BASIS",
   // fixed in production by PASTED_REVIEW_NOT_ACCOUNT, QA round 17n, 12 Nov 2026
   "nov5-twin-sf-s22-ca-not-coaching": "PASTED_REVIEW_NOT_ACCOUNT",
   // fixed in production by REOPEN_CLOSE_SPELLING, QA round 17n, 12 Nov 2026
