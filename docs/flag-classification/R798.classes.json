@@ -1,0 +1,22 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-p15-term-ca-ticks-termination: P15: \"I need a term CA for <name>. \u2026 Payroll deduction.\": Termination as said, the approval line once, the termination plan, payroll Yes with no question; Create ticks Termination \u2014 OPEN in production (the card asks Verbal or Written, asks the payroll question, plans on \"Future policy violations \u2026\", and Create leaves Type of Warning blank)": {
+    "category": "INTENDED",
+    "reason": "P15 (Pau's ruling \"A\"): the OPEN pin now holds \u2014 Termination as said, approval line once, termination plan, Create ticks Termination."
+  },
+  "src/lib/forms/termination-stated.test.ts :: TERMINATION_STATED_TICKS_ENABLED off: nothing is stated": {
+    "category": "INTENDED-HARNESS",
+    "reason": "Unit test pinning flag-off behaviour under forced ON (bf989419 makes it delete its own flag; test-only)."
+  },
+  "replay: nov10-p15-payroll-deduction-sentence-is-yes [fix:PAYROLL_BARE_SENTENCE_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "Same P15 wording (\"I need a term CA for <name>. \u2026 Payroll deduction.\"): still holds; the reply now says Type of Warning: Termination, the approval line, and the termination plan sentence instead of asking Verbal/Written and \"Future policy violations \u2026\"."
+  },
+  "replay: nov10-p15-payroll-deduction-sentence-is-yes [production]": {
+    "category": "INTENDED",
+    "reason": "Same P15 wording (\"I need a term CA for <name>. \u2026 Payroll deduction.\"): still holds; the reply now says Type of Warning: Termination, the approval line, and the termination plan sentence instead of asking Verbal/Written and \"Future policy violations \u2026\"."
+  },
+  "replay: nov10-p15-term-ca-ticks-termination [open]": {
+    "category": "INTENDED",
+    "reason": "P15 (Pau's ruling \"A\"): the OPEN pin now holds \u2014 Termination as said, approval line once, termination plan, Create ticks Termination."
+  }
+}
