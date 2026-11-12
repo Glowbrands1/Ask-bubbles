@@ -1,0 +1,334 @@
+{
+  "src/app/api/chat/date-reask-fresh-e2e.test.ts :: DATE_REASK_FRESH_ENABLED off: as main the third reply is the second, byte for byte": {
+    "category": "INTENDED-HARNESS",
+    "reason": "Off-pin of DATE_REASK_FRESH (\"the third reply is the second, byte for byte\") with no CARD_NEVER_SILENT stub; the flag exists to stop exactly that word-for-word repeat."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-card-never-silent-create-from-conversation: on a CA card, \"Create a Corrective Action Form from this conversation.\" is answered — never the previous card reply word for word, never added to the Issue — OPEN in production (the previous card reply comes back word for word)": {
+    "category": "INTENDED",
+    "reason": "Open to holding: on a CA card, \"Create a Corrective Action Form from this conversation.\" is answered (\"Press **Create draft** on the card below …\"), never the previous card reply word for word."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov8-near-miss-card-kept-make-that-change: with the name set on: a card for Remy Calder, then \"make that change to Remy Caldre\": the card stays, for Remy Calder, never the bare question — holds with FORM_NAME_FROM_ROSTER_ENABLED, ROSTER_NEAR_MISS_ENABLED, ROSTER_COMPOUND_SURNAME_ENABLED, NEAR_MISS_DETAILS_ACCEPT_ENABLED, NEAR_MISS_QUESTION_RULES_ENABLED on": {
+    "category": "REGRESSION",
+    "reason": "Production-fixed guard (PROPOSAL_NAME_CORRECTION). \"make that change to Remy Caldre\": the kept card was led only by its roster notice; ON a second lead (\"To edit it, press **Create draft** on the card below …\") is stacked between the notice and the card, which the guard forbids. It also misreads the turn: the manager asked for a name change, not how to edit."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov8-near-miss-card-kept-make-that-change: with the name set on: a card for Remy Calder, then \"make that change to Remy Caldre\": the card stays, for Remy Calder, never the bare question — holds with production's flags": {
+    "category": "REGRESSION",
+    "reason": "Production-fixed guard (PROPOSAL_NAME_CORRECTION). \"make that change to Remy Caldre\": the kept card was led only by its roster notice; ON a second lead (\"To edit it, press **Create draft** on the card below …\") is stacked between the notice and the card, which the guard forbids. It also misreads the turn: the manager asked for a name change, not how to edit."
+  },
+  "replay: nov10-card-never-silent-create-from-conversation [open]": {
+    "category": "INTENDED",
+    "reason": "Open to holding: on a CA card, \"Create a Corrective Action Form from this conversation.\" is answered (\"Press **Create draft** on the card below …\"), never the previous card reply word for word."
+  },
+  "replay: nov10-create-from-conversation-after-no [fix:CREATE_FROM_CONVERSATION_POINTS_TO_CARD_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov10-create-from-conversation-after-no [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov10-create-from-conversation-exit-keeps-date [fix:CREATE_FROM_CONVERSATION_POINTS_TO_CARD_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov10-create-from-conversation-exit-keeps-date [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov10-create-from-conversation-payroll-asked [fix:CREATE_FROM_CONVERSATION_POINTS_TO_CARD_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov10-create-from-conversation-payroll-asked [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov10-near-miss-answer-keeps-request [fix:NEAR_MISS_ANSWER_KEEPS_REQUEST_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "WORDING NOTE: \"I still need to know who this is for before I can make this card.\" is replaced by the generic \"The card below still needs what it asks for before the draft can be created. Tell me here, and I'll fill it in.\" The who-for question still follows and the case holds, but the specific ask becomes vaguer."
+  },
+  "replay: nov10-near-miss-answer-keeps-request [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "WORDING NOTE: \"I still need to know who this is for before I can make this card.\" is replaced by the generic \"The card below still needs what it asks for before the draft can be created. Tell me here, and I'll fill it in.\" The who-for question still follows and the case holds, but the specific ask becomes vaguer."
+  },
+  "replay: nov10-observation-own-person-p7 [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov10-p7-unanswered-which-tamsin-asked-again [open]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov10-r22-s14-date-kept-after-name-correction [fix-open:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "WORDING NOTE: \"I still need to know who this is for before I can make this card.\" is replaced by the generic \"The card below still needs what it asks for before the draft can be created. Tell me here, and I'll fill it in.\" The who-for question still follows and the case holds, but the specific ask becomes vaguer."
+  },
+  "replay: nov10-r22-s14-date-kept-after-name-correction [open]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "WORDING NOTE: \"I still need to know who this is for before I can make this card.\" is replaced by the generic \"The card below still needs what it asks for before the draft can be created. Tell me here, and I'll fill it in.\" The who-for question still follows and the case holds, but the specific ask becomes vaguer."
+  },
+  "replay: nov3-same-ask-b10 [fix:SAME_ASK_NO_REPEAT_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov3-same-ask-b10 [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov5-coding3-sfo-a-coworker-in-account-stays-a [fix:SAME_REQUEST_OTHER_PERSON_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov5-coding3-sfo-a-coworker-in-account-stays-a [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov5-r6-policy-kept-across-turns [fix:REQUEST_KEPT_IN_WINDOW_ENABLED,NEXT_PUBLIC_REQUEST_KEPT_IN_WINDOW_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov5-r6-policy-kept-across-turns [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov6-coding3-prior-actions-signed-policy-manual-kept [fix:PRIOR_ACTIONS_NO_SIGNED_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov6-coding3-prior-actions-signed-policy-manual-kept [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov6-diffemp-guard-coworker-in-account-card-on-screen [fix:SAME_REQUEST_OTHER_PERSON_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov6-diffemp-guard-coworker-in-account-card-on-screen [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov6-under-performance-explained-tester [fix:UNDER_PERFORMANCE_EXPLAINED_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov6-under-performance-explained-tester [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov7-second-ca-same-employee-not-a-request-2 [fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov7-second-ca-same-employee-not-a-request-2 [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov7-second-ca-same-employee-not-a-request-3 [fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov7-second-ca-same-employee-not-a-request-3 [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-exit-answer-not-a-correction [fix:EXIT_ANSWER_NOT_A_CORRECTION_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-exit-answer-not-a-correction [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-exit-field-label-keeps-no-notice [fix:FIELD_LABEL_NOT_A_QUESTION_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-exit-field-label-keeps-no-notice [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-field-label-not-a-question [fix:FIELD_LABEL_NOT_A_QUESTION_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-field-label-not-a-question [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-issue-after-request-reason-policy-correction [fix:ISSUE_AFTER_REQUEST_REASON_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-issue-after-request-reason-policy-correction [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-kept-request-coaching-named-now-no-notice [fix:REQUEST_KEPT_IN_WINDOW_ENABLED,NEXT_PUBLIC_REQUEST_KEPT_IN_WINDOW_ENABLED,KEPT_REQUEST_SAME_FORM_ENABLED,NEXT_PUBLIC_KEPT_REQUEST_SAME_FORM_ENABLED,CARRIED_PERSON_NOTICE_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-kept-request-coaching-named-now-no-notice [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-kept-request-coaching-says-where-the-name-came-from [fix:REQUEST_KEPT_IN_WINDOW_ENABLED,NEXT_PUBLIC_REQUEST_KEPT_IN_WINDOW_ENABLED,KEPT_REQUEST_SAME_FORM_ENABLED,NEXT_PUBLIC_KEPT_REQUEST_SAME_FORM_ENABLED,CARRIED_PERSON_NOTICE_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-kept-request-coaching-says-where-the-name-came-from [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-near-miss-card-kept-make-that-change [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,NEAR_MISS_DETAILS_ACCEPT_ENABLED,NEAR_MISS_QUESTION_RULES_ENABLED]": {
+    "category": "REGRESSION",
+    "reason": "Production-fixed guard (PROPOSAL_NAME_CORRECTION). \"make that change to Remy Caldre\": the kept card was led only by its roster notice; ON a second lead (\"To edit it, press **Create draft** on the card below …\") is stacked between the notice and the card, which the guard forbids. It also misreads the turn: the manager asked for a name change, not how to edit."
+  },
+  "replay: nov8-near-miss-card-kept-make-that-change [production]": {
+    "category": "REGRESSION",
+    "reason": "Production-fixed guard (PROPOSAL_NAME_CORRECTION). \"make that change to Remy Caldre\": the kept card was led only by its roster notice; ON a second lead (\"To edit it, press **Create draft** on the card below …\") is stacked between the notice and the card, which the guard forbids. It also misreads the turn: the manager asked for a name change, not how to edit."
+  },
+  "replay: nov8-policy-correction-account-kept [fix:POLICY_CORRECTION_NOT_ACCOUNT_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-policy-correction-account-kept [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-policy-set-aside-stays-off [fix:PROPOSAL_POLICY_SET_ASIDE_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-policy-set-aside-stays-off [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-proposal-name-correction-comma-it-is [fix:PROPOSAL_NAME_CORRECTION_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-proposal-name-correction-comma-it-is [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-proposal-name-correction-correct-way [fix:PROPOSAL_NAME_CORRECTION_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-proposal-name-correction-correct-way [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-proposal-name-correction-fix-her-last-name [fix:PROPOSAL_NAME_CORRECTION_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-proposal-name-correction-fix-her-last-name [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-proposal-name-correction-last-name-is [fix:PROPOSAL_NAME_CORRECTION_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-proposal-name-correction-last-name-is [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-proposal-name-correction-off-roster [fix:PROPOSAL_NAME_CORRECTION_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-proposal-name-correction-off-roster [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-proposal-name-correction-r6-t5 [fix:PROPOSAL_NAME_CORRECTION_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-proposal-name-correction-r6-t5 [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-proposal-name-correction-r6-t7 [fix:PROPOSAL_NAME_CORRECTION_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-proposal-name-correction-r6-t7 [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-proposal-name-correction-spelled [fix:PROPOSAL_NAME_CORRECTION_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-proposal-name-correction-spelled [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-proposal-name-correction-supposed-to-be [fix:PROPOSAL_NAME_CORRECTION_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-proposal-name-correction-supposed-to-be [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-proposal-name-correction-typed-off-roster [fix:PROPOSAL_NAME_CORRECTION_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-proposal-name-correction-typed-off-roster [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-questions-not-account-coaching-from-conversation [fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-questions-not-account-coaching-from-conversation [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-resend-keeps-policy-twice [fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-resend-keeps-policy-twice [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-s38-failing-first-name-in-chat [fix:ACCOUNT_VERB_NOT_A_NAME_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-s38-failing-first-name-in-chat [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-s38-what-does-out-of-date-mean [fix:OUT_OF_DATE_IS_THE_PROPOSAL_ENABLED,ACCOUNT_VERB_NOT_A_NAME_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-s38-what-does-out-of-date-mean [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-sf-s38-create-it [fix:CREATE_COMMAND_POINTS_TO_CARD_ENABLED,CARD_COMPLAINT_NOT_ACCOUNT_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-sf-s38-create-it [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-sf-s38-out-od-fate [fix:CREATE_COMMAND_POINTS_TO_CARD_ENABLED,CARD_COMPLAINT_NOT_ACCOUNT_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  },
+  "replay: nov8-sf-s38-out-od-fate [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "A repeated card reply now gets one lead line instead of being shown word for word: \"Nothing on the card changed with that message. …\" (checked: the card body equals the previous turn's in every such turn), \"Press **Create draft** on the card below …\", \"To edit it, press **Create draft** …\" or \"The card below still needs what it asks for …\". The card itself is unchanged."
+  }
+}
