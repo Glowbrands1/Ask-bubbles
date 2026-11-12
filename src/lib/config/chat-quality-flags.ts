@@ -1362,6 +1362,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "SECTION_BREAKS_KEPT_ENABLED",
   "ADD_NOT_REPEATED_ENABLED",
   "MADE_FOR_IS_MADE_ABOUT_ENABLED",
+  "ADD_NOT_REPEATED_SENTENCES_ENABLED",
   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
   "CHAT_STAGE_TIMINGS_ENABLED",
   // coding 5: WRITE_UP_LEAD_NOT_ACCOUNT (ported from the sibling app's #167, QA's October triage, 10 Nov 2026; default off).
@@ -4696,6 +4697,16 @@ export function madeForIsMadeAboutEnabled(): boolean {
  */
 export function guestAttitudeConductEnabled(): boolean {
   return envFlag("GUEST_ATTITUDE_CONDUCT_ENABLED");
+}
+
+/**
+ * ADD_NOT_REPEATED_SENTENCES_ENABLED (QA's live Bubbles r15b, 10 Nov 2026; default off; same flag in both apps). With
+ * ADD_NOT_REPEATED on, "add that she was also on her phone" on a sectioned CA Observation saved the late sentence twice:
+ * the reader's add repeated the field's FIRST sentence and heading, not the whole field. With this flag on too, an add's
+ * leading sentences the field already holds word for word are dropped as well (`forms/added-tail.ts`). Off, as before.
+ */
+export function addNotRepeatedSentencesEnabled(): boolean {
+  return envFlag("ADD_NOT_REPEATED_SENTENCES_ENABLED");
 }
 
 /**
