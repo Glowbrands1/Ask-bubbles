@@ -86,3 +86,19 @@ describe("Gate-Bubbles R795T (12 Nov 2026): an award, a time or an event after a
     expect(withoutLeadingTitle("Team Member Wren Tallis")).toBe("Wren Tallis");
   });
 });
+
+describe("Gate-Sunny's probe on the sibling app (12 Nov 2026)", () => {
+  it.each(["Create a CA for Shift Lead Training Day", "Create a CA for TM Monday", "Create a CA for DM Approval", "Create a CA for Team Member The New Girl"])(
+    "flag on: %j gives no name",
+    (said) => {
+      process.env[FLAG] = "true";
+      expect(nameAfterTitle(said)).toBeNull();
+    },
+  );
+
+  it("flag on: a time word after the name never joins it", () => {
+    process.env[FLAG] = "true";
+    expect(nameAfterTitle("Corrective action for Team Member Wren Tallis Today")).toBe("Wren Tallis");
+    expect(withoutLeadingTitle("Team Member Wren Tallis Today")).toBe("Wren Tallis");
+  });
+});

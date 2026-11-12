@@ -121,6 +121,11 @@ export const NOV11_TITLE_BEFORE_NAME_CASES: ReplayCase[] = [
       ["of-the-year", "Create a CA for Store Manager Of The Year", "Of The Year"],
       ["shift-lead-training", "Create a CA for Shift Lead Training", "Training"],
       ["dm-visit", "Create a CA for DM Visit", "Visit"],
+      // Gate-Sunny's probe on the sibling app (12 Nov 2026), with this app's titles.
+      ["training-day", "Create a CA for Shift Lead Training Day", "Training Day"],
+      ["tm-monday", "Create a CA for TM Monday", "Monday"],
+      ["dm-approval", "Create a CA for DM Approval", "Approval"],
+      ["the-new-girl", "Create a CA for Team Member The New Girl", "The New Girl"],
     ] as const
   ).map(([key, words, notAName]) => ({
     id: `nov12-title-before-name-not-a-person-${key}`,
@@ -135,6 +140,17 @@ export const NOV11_TITLE_BEFORE_NAME_CASES: ReplayCase[] = [
       expect(reply.content.trim(), "the reply is empty").not.toBe("");
     },
   })),
+  {
+    id: "nov12-title-before-name-trailing-today",
+    title: `"Corrective action for Team Member ${NAME} Today": the card is ${NAME}'s, never "${NAME} Today"`,
+    report: "Gate-Sunny's probe on the sibling app (12 Nov 2026): a time word after the name joined it",
+    status: { open: "no card: the message is read as a question about corrective action" },
+    fixFlags: FIX,
+    async run(t: ReplayContext) {
+      const { reply, proposal } = await ask(t, "admin", `Corrective action for Team Member ${NAME} Today`);
+      forTheName(proposal, reply.content);
+    },
+  },
   {
     id: "nov11-title-before-name-plain-name-unchanged",
     title: `NEVER-BREAK: "Corrective action for ${NAME}" still cards for ${NAME}`,
