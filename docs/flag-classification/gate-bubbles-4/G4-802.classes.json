@@ -1,0 +1,18 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov11-17i-outline-on-open-proposal: a proposal, an outline for another person pasted, then \"same outline but with Ilsa's info\": step (a)'s Issue, date and Attendance policy are kept \u2014 OPEN in production (\"same outline but with Ilsa's info\" re-reads the outline as her account: the Issue takes the outline's date 10/12/26 (live: no Issue, no Policy))": {
+  "category": "INTENDED",
+  "reason": "the OPEN case now holds in the production arm (expected-fail wrapper reports failed); fix arm holds in both modes"
+ },
+ "src/lib/forms/outline-on-proposal.test.ts :: OUTLINE_ON_OPEN_PROPOSAL_ENABLED off: the request is as sent": {
+  "category": "INTENDED-HARNESS",
+  "reason": "the 'off' unit test assumes the flag unset; the ON arm exports it in the env"
+ },
+ "src/lib/forms/outline-on-proposal.test.ts :: OUTLINE_ON_OPEN_PROPOSAL_ENABLED the draft's notes leave the outline turns out; off, as sent": {
+  "category": "INTENDED-HARNESS",
+  "reason": "its first expectation is the flag-off one; the ON arm exports the flag"
+ },
+ "replay: nov11-17i-outline-on-open-proposal [open]": {
+  "category": "INTENDED",
+  "reason": "turn c keeps Issue 'late on 11/3/26' and Attendance p.14 (OFF: 10/12/26, policy 'as you said'); outline-kept note added on b and c"
+ }
+}
