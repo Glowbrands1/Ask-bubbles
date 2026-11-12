@@ -1,4 +1,4 @@
-import { terminationStatedTicksEnabled } from "@/lib/config/chat-quality-flags";
+import { terminationCardTidyEnabled, terminationStatedTicksEnabled } from "@/lib/config/chat-quality-flags";
 import {
   TERMINATION_APPROVAL_LINE,
   TERMINATION_PLAN_SENTENCE,
@@ -36,8 +36,15 @@ export function withTerminationStated(response: AskResponse, request: AskRequest
     content = lines.join("\n");
   }
   // The card's Action plan line: the termination sentence, not the closing for a future violation.
+  /*
+   * TERMINATION_CARD_TIDY_ENABLED (QA's 17o live notes, 12 Nov 2026): the trailing "\s*" before "$" (multiline) also ate the
+   * line break after the plan, so the next line ran on with no blank line between. With the flag, only spaces are taken.
+   */
+  const planLine = terminationCardTidyEnabled()
+    ? /^(\*\*Action plan:\*\*[^\n]*?)\s*Future policy violations may result in additional corrective action up to and including termination of employment\.[ \t]*$/im
+    : /^(\*\*Action plan:\*\*[^\n]*?)\s*Future policy violations may result in additional corrective action up to and including termination of employment\.\s*$/im;
   content = content.replace(
-    /^(\*\*Action plan:\*\*[^\n]*?)\s*Future policy violations may result in additional corrective action up to and including termination of employment\.\s*$/im,
+    planLine,
     (_line, lead: string) => `${lead.trimEnd()} ${TERMINATION_PLAN_SENTENCE}`,
   );
   return { ...response, content: content.replace(/\n{3,}/g, "\n\n").trim() };

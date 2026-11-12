@@ -1,4 +1,9 @@
-import { exitReadbackJobTitleEnabled, jobTitleAppositionEnabled, jobTitleFromWordsEnabled } from "@/lib/config/chat-quality-flags";
+import {
+  exitReadbackJobTitleEnabled,
+  jobTitleAppositionEnabled,
+  jobTitleFromWordsEnabled,
+  titleInitialismCaseEnabled,
+} from "@/lib/config/chat-quality-flags";
 import { POSITION_QUESTION_TAG, positionAlreadyAsked, positionAnsweredIn, positionQuestion } from "@/lib/forms/employee-position";
 
 import type { AskRequest, AskResponse } from "./types";
@@ -32,10 +37,17 @@ const STOP_AFTER = /\s+(?:at|in|for|from|on|and|who|that|with|since)\b.*$/i;
 /** Templates whose card asks for the position here; the others ask in the proposal flow. */
 const ASKS_HERE = new Set(["resignation-exit"]);
 
+/**
+ * TITLE_INITIALISM_CASE_ENABLED (QA, #207): an initialism in a typed title reads the same however it was typed, so
+ * "an hr assistant" and "an HR assistant" are both "HR Assistant". Off, every word is Capitalized ("Hr Assistant").
+ */
+const TITLE_INITIALISM = /^(?:hr|it|dm|gm)$/i;
+
 function titleCase(phrase: string): string {
+  const initialisms = titleInitialismCaseEnabled();
   return phrase
     .split(/\s+/)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .map((word) => (initialisms && TITLE_INITIALISM.test(word) ? word.toUpperCase() : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()))
     .join(" ");
 }
 

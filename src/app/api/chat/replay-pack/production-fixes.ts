@@ -698,4 +698,54 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov10-r16b-add-reminded-glued-into-expectation": "ADD_OUT_OF_OTHER_SECTIONS",
   // fixed in production by RELATIVE_DAY_NOT_HISTORY, QA round 17q, 13 Nov 2026
   "nov10-relative-day-keeps-written": "RELATIVE_DAY_NOT_HISTORY",
+  // fixed in production by MANAGER_FORM_CHOICE, QA round 17r, 13 Nov 2026
+  "nov10-manager-form-choice-needs-ca-lower": "MANAGER_FORM_CHOICE",
+  // fixed in production by MANAGER_FORM_CHOICE, QA round 17r, 13 Nov 2026
+  "nov10-manager-form-choice-needs-ca-sentence": "MANAGER_FORM_CHOICE",
+  // fixed in production by MANAGER_FORM_CHOICE, QA round 17r, 13 Nov 2026
+  "nov10-manager-form-choice-write-ca-lower": "MANAGER_FORM_CHOICE",
+  // fixed in production by MANAGER_FORM_CHOICE, QA round 17r, 13 Nov 2026
+  "nov10-manager-form-choice-write-ca-sentence": "MANAGER_FORM_CHOICE",
+  // fixed in production by STORE_ALIAS, QA round 17r, 13 Nov 2026
+  "nov10-store-alias-at-dodge-ne": "STORE_ALIAS",
+  // fixed in production by STORE_ALIAS, QA round 17r, 13 Nov 2026
+  "nov10-store-alias-bare-Dodge-comma-NE": "STORE_ALIAS",
+  // fixed in production by STORE_ALIAS, QA round 17r, 13 Nov 2026
+  "nov10-store-alias-bare-dodge-comma-ne": "STORE_ALIAS",
+  // fixed in production by STORE_ALIAS, QA round 17r, 13 Nov 2026
+  "nov10-store-alias-dodge-ne-location": "STORE_ALIAS",
+  // fixed in production by MANAGER_FORM_CHOICE, QA round 17r, 13 Nov 2026
+  "nov10-writen-ca-terse-lower": "MANAGER_FORM_CHOICE",
+  // fixed in production by MANAGER_FORM_CHOICE, QA round 17r, 13 Nov 2026
+  "nov10-writen-ca-terse-sentence": "MANAGER_FORM_CHOICE",
+  // fixed in production by EXIT_NOTICE_VERB_TYPOS, QA round 17r, 13 Nov 2026
+  "nov11-exit-notice-submited": "EXIT_NOTICE_VERB_TYPOS",
+  // fixed in production by TYPO_FULL_NAME_TO_ROSTER, QA round 17r, 13 Nov 2026
+  "nov11-sf-b5-typo-name-and-title": "TYPO_FULL_NAME_TO_ROSTER",
+  // fixed in production by TITLE_INITIALISM_CASE, QA round 17r, 13 Nov 2026
+  "nov11-title-initialism-hr-assistant-as-typed": "TITLE_INITIALISM_CASE",
+  // fixed in production by TITLE_INITIALISM_CASE, QA round 17r, 13 Nov 2026
+  "nov11-title-initialism-hr-assistant-lowercase": "TITLE_INITIALISM_CASE",
+  // fixed in production by EXIT_NOTICE_STATED_ONLY, QA round 17r, 13 Nov 2026
+  "nov12-17j-resigned-date-is-not-notice-date": "EXIT_NOTICE_STATED_ONLY",
+  // fixed in production by TERMINATION_CARD_TIDY, QA round 17r, 13 Nov 2026
+  "nov12-17o-issue-not-termination-hedge": "TERMINATION_CARD_TIDY",
+  // fixed in production by TERMINATION_CARD_TIDY, QA round 17r, 13 Nov 2026
+  "nov12-17o-term-plan-line-break": "TERMINATION_CARD_TIDY",
+  // fixed in production by ANSWER_TURN_LEVEL, QA round 17r, 13 Nov 2026
+  "nov12-near-miss-answer-level-is-this-forms": "ANSWER_TURN_LEVEL",
+  // fixed in production by STORE_ALIAS, QA round 17r, 13 Nov 2026
+  "nov12-store-alias-off-roster-ask-lower": "STORE_ALIAS",
+  // fixed in production by STORE_ALIAS, QA round 17r, 13 Nov 2026
+  "nov12-store-alias-off-roster-ask-sentence": "STORE_ALIAS",
+  // fixed in production by TEAM_CARD_NOT_PRODUCT, QA round 17r, 13 Nov 2026
+  "nov4-scan-sf-s13-team-coaching-blank-employee": "TEAM_CARD_NOT_PRODUCT",
+  // fixed in production by FORM_EDIT_SOURCE_TURN, QA round 17r, 13 Nov 2026
+  "nov5-coding3-copy-paste-question-told-the-truth": "FORM_EDIT_SOURCE_TURN",
+  // fixed in production by FORM_EDIT_SOURCE_TURN, QA round 17r, 13 Nov 2026
+  "nov5-coding3-these-details-answered-before-the-card": "FORM_EDIT_SOURCE_TURN",
+  // fixed in production by POLICY_CITATION, QA round 17r, 13 Nov 2026
+  "nov8-560-apostrophe-name-keeps-policy": "POLICY_CITATION",
+  // fixed in production by POLICY_CITATION, QA round 17r, 13 Nov 2026
+  "nov8-560-hyphen-name-keeps-policy": "POLICY_CITATION",
 };
