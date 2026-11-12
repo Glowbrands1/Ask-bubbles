@@ -1,0 +1,34 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-store-alias-at-dodge-ne: \"create a ca for kira dunmore at dodge ne, she was late today\" — the card's store is Omaha NE (West Dodge Rd) — OPEN in production (the store the manager named is not read: no store on the card)": {
+    "category": "INTENDED",
+    "reason": "Open to holding: \"dodge ne\" / \"Dodge, NE\" / \"dodge ne location\" is read as the roster store Omaha, NE (West Dodge Rd), \"as you said\"."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-store-alias-bare-Dodge-comma-NE: \"create a ca for kira dunmore, she was late today\" → \"Dodge, NE\" — the card's store is Omaha NE (West Dodge Rd) — OPEN in production (the store the manager named is not read: no store on the card)": {
+    "category": "INTENDED",
+    "reason": "Open to holding: \"dodge ne\" / \"Dodge, NE\" / \"dodge ne location\" is read as the roster store Omaha, NE (West Dodge Rd), \"as you said\"."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-store-alias-bare-dodge-comma-ne: \"create a ca for kira dunmore, she was late today\" → \"dodge, ne\" — the card's store is Omaha NE (West Dodge Rd) — OPEN in production (the store the manager named is not read: no store on the card)": {
+    "category": "INTENDED",
+    "reason": "Open to holding: \"dodge ne\" / \"Dodge, NE\" / \"dodge ne location\" is read as the roster store Omaha, NE (West Dodge Rd), \"as you said\"."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-store-alias-dodge-ne-location: \"create a ca for kira dunmore, dodge ne location, she was late today\" — the card's store is Omaha NE (West Dodge Rd) — OPEN in production (the store the manager named is not read: no store on the card)": {
+    "category": "INTENDED",
+    "reason": "Open to holding: \"dodge ne\" / \"Dodge, NE\" / \"dodge ne location\" is read as the roster store Omaha, NE (West Dodge Rd), \"as you said\"."
+  },
+  "replay: nov10-store-alias-at-dodge-ne [open]": {
+    "category": "INTENDED",
+    "reason": "Open to holding: \"dodge ne\" / \"Dodge, NE\" / \"dodge ne location\" is read as the roster store Omaha, NE (West Dodge Rd), \"as you said\"."
+  },
+  "replay: nov10-store-alias-bare-Dodge-comma-NE [open]": {
+    "category": "INTENDED",
+    "reason": "Open to holding: \"dodge ne\" / \"Dodge, NE\" / \"dodge ne location\" is read as the roster store Omaha, NE (West Dodge Rd), \"as you said\"."
+  },
+  "replay: nov10-store-alias-bare-dodge-comma-ne [open]": {
+    "category": "INTENDED",
+    "reason": "Open to holding: \"dodge ne\" / \"Dodge, NE\" / \"dodge ne location\" is read as the roster store Omaha, NE (West Dodge Rd), \"as you said\"."
+  },
+  "replay: nov10-store-alias-dodge-ne-location [open]": {
+    "category": "INTENDED",
+    "reason": "Open to holding: \"dodge ne\" / \"Dodge, NE\" / \"dodge ne location\" is read as the roster store Omaha, NE (West Dodge Rd), \"as you said\"."
+  }
+}
