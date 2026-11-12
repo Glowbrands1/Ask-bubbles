@@ -1,0 +1,74 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-sf-b5-guest-attitude-cites-conduct: sf-b5's account (\"The customer said she was giving her an attitude \u2026\"): the CA card cites the Standards of Conduct \u2014 OPEN in production (the card cites no policy (\"the applicable company policy\"))": {
+    "category": "INTENDED",
+    "reason": "OPEN case now holds: the card cites the Standards of Conduct; the it.fails pin moves to fixed with the flag"
+  },
+  "src/lib/forms/guest-attitude-conduct.test.ts :: a guest who says the employee gave her an attitude is a guest treated rudely, the Standards of Conduct, with the flag on; as before off": {
+    "category": "INTENDED-HARNESS",
+    "reason": "the test's own flag-off half (line 18) runs with the harness's global flag on"
+  },
+  "replay: nov10-sf-b5-guest-attitude-cites-conduct [open]": {
+    "category": "INTENDED",
+    "reason": "fails off, holds on: Policy line cites Standards of Conduct p.12, action plan names it"
+  },
+  "replay: nov4-scan-sf-b5-typo-name-rude-to-customer [open]": {
+    "category": "INTENDED",
+    "reason": "still fails for the same unrelated reason both ways (no Verbal Warning level); the only change is the Standards of Conduct citation"
+  },
+  "replay: nov5-r2-dm-in-passing-account [production]": {
+    "category": "INTENDED",
+    "reason": "same sf-b5 sentence: Policy line cites Standards of Conduct p.12 and the action plan names it instead of 'the applicable company policy'"
+  },
+  "replay: nov5-r2-dm-in-passing-account-with-the-flip [production]": {
+    "category": "INTENDED",
+    "reason": "same sf-b5 sentence: Policy line cites Standards of Conduct p.12 and the action plan names it instead of 'the applicable company policy'"
+  },
+  "replay: nov5-r2-dm-in-passing-position [fix:TITLE_OF_THE_EMPLOYEE_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "same sf-b5 sentence: Policy line cites Standards of Conduct p.12 and the action plan names it instead of 'the applicable company policy'"
+  },
+  "replay: nov5-r2-dm-in-passing-position [production]": {
+    "category": "INTENDED",
+    "reason": "same sf-b5 sentence: Policy line cites Standards of Conduct p.12 and the action plan names it instead of 'the applicable company policy'"
+  },
+  "replay: nov5-r2-dm-in-passing-position-with-the-flip [fix:TITLE_OF_THE_EMPLOYEE_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "same sf-b5 sentence: Policy line cites Standards of Conduct p.12 and the action plan names it instead of 'the applicable company policy'"
+  },
+  "replay: nov5-r2-dm-in-passing-position-with-the-flip [production]": {
+    "category": "INTENDED",
+    "reason": "same sf-b5 sentence: Policy line cites Standards of Conduct p.12 and the action plan names it instead of 'the applicable company policy'"
+  },
+  "replay: nov7-form-name-empty-card-delphine-surname-typo [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED,NEAR_MISS_DETAILS_ACCEPT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "same sf-b5 sentence: Standards of Conduct citation added"
+  },
+  "replay: nov7-form-name-empty-card-delphine-surname-typo [production]": {
+    "category": "INTENDED",
+    "reason": "same sf-b5 sentence: Standards of Conduct citation added"
+  },
+  "replay: nov7-near-miss-details-delphine [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED,NEAR_MISS_DETAILS_ACCEPT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "same sf-b5 sentence: Standards of Conduct citation added"
+  },
+  "replay: nov7-near-miss-details-delphine [production]": {
+    "category": "INTENDED",
+    "reason": "same sf-b5 sentence: Standards of Conduct citation added"
+  },
+  "replay: nov8-complaint-account-issue [fix:COMPLAINT_ACCOUNT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "same sf-b5 sentence: Standards of Conduct citation added"
+  },
+  "replay: nov8-complaint-account-issue [production]": {
+    "category": "INTENDED",
+    "reason": "same sf-b5 sentence: Standards of Conduct citation added"
+  },
+  "replay: nov8-complaint-account-level [fix:COMPLAINT_ACCOUNT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "same sf-b5 sentence: Standards of Conduct citation added"
+  },
+  "replay: nov8-complaint-account-level [production]": {
+    "category": "INTENDED",
+    "reason": "same sf-b5 sentence: Standards of Conduct citation added"
+  }
+}
