@@ -197,7 +197,13 @@ const FLAG = "CHAT_GLOSSARY_ENABLED";
  * 4 Nov 2026 production-flags.json lists CHAT_GLOSSARY_ENABLED on (QA's flip).
  * The recorded fixture is main before the glossary, so the base must leave it off.
  */
-const PRODUCTION = [...PRODUCTION_FLAGS.on, ...PRODUCTION_FLAGS.assumedOn].filter((name) => name !== FLAG);
+/*
+ * Changed on purpose (11 Nov 2026): QA round 17d turned these on in production. They change the "Pat Rivera, she was
+ * late to open" card (the Issue kept, the Late Opening quote in the manager's own words); the recording predates them,
+ * so it is compared with them off.
+ */
+const FLIPPED_AFTER_RECORDING = ["REQUEST_ISSUE_KEPT_ENABLED", "LATE_OPENING_OWN_WORDS_ENABLED", "FIRST_NAME_ENOUGH_ENABLED", "NO_SHOW_OPENING_IS_ATTENDANCE_ENABLED"];
+const PRODUCTION = [...PRODUCTION_FLAGS.on, ...PRODUCTION_FLAGS.assumedOn].filter((name) => name !== FLAG && !FLIPPED_AFTER_RECORDING.includes(name));
 const TOUCHED = [...new Set([FLAG, "FORM_EDIT_SINGLE_WRITER_ENABLED", "FORM_EDIT_TOOL_IN_STREAM_ENABLED", ...PRODUCTION, ...PRODUCTION_FLAGS.off])];
 const saved = new Map<string, string | undefined>();
 
