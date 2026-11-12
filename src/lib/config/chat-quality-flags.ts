@@ -1338,6 +1338,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "BARE_FORM_NAME_ASKS_WHAT_ENABLED",
   "THIS_FORM_IS_ABOUT_ENABLED",
   "PASTED_REVIEW_ASKS_WHAT_YOU_SAW_ENABLED",
+  "CA_NO_POLICY_ASKS_WHICH_ENABLED",
   "COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED",
   // coding 6: REQUEST_ISSUE_KEPT, LATE_OPENING_OWN_WORDS, FIRST_NAME_ENOUGH (QA round 17b, 10 Nov 2026; default off).
   "REQUEST_ISSUE_KEPT_ENABLED",
@@ -4900,5 +4901,15 @@ export function thisFormIsAboutEnabled(): boolean {
  */
 export function pastedReviewAsksWhatYouSawEnabled(): boolean {
   return envFlag("PASTED_REVIEW_ASKS_WHAT_YOU_SAW_ENABLED");
+}
+
+/**
+ * CA_NO_POLICY_ASKS_WHICH_ENABLED (QA's Bubbles 17n live test, 12 Nov 2026, 4a; QA's ruling; default off; same flag in
+ * both apps). "he forgot to clsoe the register at night" gave a Corrective Action card with no Policy line and no
+ * question. On: such a card asks "**Which policy applies?**" and picks none (`forms/no-policy-asks-which.ts`). Off, as
+ * before.
+ */
+export function caNoPolicyAsksWhichEnabled(): boolean {
+  return envFlag("CA_NO_POLICY_ASKS_WHICH_ENABLED");
 }
 

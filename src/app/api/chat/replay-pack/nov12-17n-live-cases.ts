@@ -29,6 +29,8 @@ const WYNNE: DirectoryRow = {
   locationIds: ["loc-264"],
   positionName: "Team Member Part Time",
 };
+// 4a, the manager's words (the employee invented).
+const CLOSE_REGISTER = "create a corrective action for Remy Calder, he forgot to clsoe the register at night on 11/10";
 const REVIEW_TURN =
   "create a coaching form for Wynne Larkspur. Here is a customer review: 'Went in on Saturday and the girl at the counter ignored me for 10 minutes and was rude when I finally asked for help. One star.'";
 
@@ -95,6 +97,24 @@ export const NOV12_17N_LIVE_CASES: ReplayCase[] = [
       expect(reply.content, reply.content).toMatch(/review/i);
       expect(reply.content, reply.content).toMatch(/What did you see happen\?/);
       expect(reply.content, reply.content).not.toMatch(/Everything I need is here/i);
+    },
+  },
+  {
+    id: "nov12-17n-4a-close-register-asks-which-policy",
+    title: "4a: \"he forgot to clsoe the register at night on 11/10\" cites no policy and asks which applies; the Issue keeps \"clsoe\"",
+    report: REPORT,
+    status: { open: "no Policy line and no question: the Action plan says \"the applicable company policy\"" },
+    fixFlags: ["CA_NO_POLICY_ASKS_WHICH_ENABLED"],
+    async run(t) {
+      const thread = start(t);
+      const reply = await thread.say(CLOSE_REGISTER);
+      // QA's ruling: the Issue keeps the manager's words as typed, and no policy is picked for them.
+      expect(reply.content, reply.content).toContain("**Issue:** he forgot to clsoe the register at night on 11/10");
+      expect(reply.content, reply.content).not.toMatch(/\*\*Policy:\*\*/);
+      expect(reply.content, reply.content).toMatch(/\*\*Which policy applies\?\*\*/);
+      // The question's marker makes the next reply, naming a policy, its answer.
+      const answered = await thread.say("standards of conduct");
+      expect(answered.content, answered.content).toMatch(/\*\*Policy:\*\* Standards of Conduct\b/);
     },
   },
 ];
