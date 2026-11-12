@@ -1,0 +1,10 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack oct26-negated-lateness-not-late-today: \"coaching form for marnie holloway, she was not late today\": no Other: Punctuality topic, the Details stay \u2014 OPEN in production (the draft keeps the model's Other: Punctuality; NEGATED_LATENESS_TOPIC_ENABLED (default off) clears it)": {
+    "category": "INTENDED",
+    "reason": "\"coaching form for marnie holloway, she was not late today\": the OPEN pin now holds \u2014 no Other: Punctuality topic from a denied lateness, the Details stay."
+  },
+  "replay: oct26-negated-lateness-not-late-today [open]": {
+    "category": "INTENDED",
+    "reason": "\"coaching form for marnie holloway, she was not late today\": the OPEN pin now holds \u2014 no Other: Punctuality topic from a denied lateness, the Details stay."
+  }
+}
