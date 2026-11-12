@@ -159,6 +159,16 @@ export const NOV4_OVERNIGHT_SCAN_CASES: readonly ReplayCase[] = [
       expect(card, `no coaching card:\n${reply.content}`).toMatchObject({ templateKey: "coaching" });
       expect(card?.employeeName ?? "", "a product or the instruction is the employee").not.toMatch(/bath bomb|kits|left blank|employee needs/i);
       expect(card?.locationId ?? WEST_DODGE_STORE, "the card is not at West Dodge Rd").toBe(WEST_DODGE_STORE);
+      /*
+       * Changed on purpose (QA's roster-set gate R16A, 10 Nov 2026): with FORM_NAME_FROM_ROSTER on the product is never the
+       * employee and the card asks who it is for; Create refuses a card with no employee ("A form type and an employee are
+       * required."), so with no employee on the card the question is the answer, and nothing is created. The team card
+       * itself is TEAM_CARD_NOT_PRODUCT's (not yet on here).
+       */
+      if (!card?.employeeName) {
+        expect(reply.content, `a card with no employee and no question:\n${reply.content}`).toMatch(/Who is this \*\*?[^?]*\*?\*? for\?|Who is this form for\?/);
+        return;
+      }
       t.draftWrites({ coaching_details: "Observed:\nThe team is not selling kits and is not writing proper rainchecks, so inventory is not correct.\nExpectation:\nEvery raincheck is written in full." });
       const id = await thread.create();
       const values = t.values(id);

@@ -13,10 +13,10 @@ import { answerOffRosterAsk } from "./off-roster-answer";
  * failed (QA for Pau): Pau's message 1 named somebody NOT on the roster, so
  * nothing anchored the message and part 1's middle ground never fired. The
  * reply was a nameless card and "Which of them is this Corrective Action Form
- * for — Remy Fenn, Club Close or Under?".
+ * for — Remy Fenn, Bundle Rate or Under?".
  *
  *   "I need a corrective action verbal for <name>. This is for Under
- *    Performance on PPTA, LPSVA, Club Average, Club Close %, and Spa %."
+ *    Performance on UPT, ATV, Average Ticket, Bundle Rate %, and Gift %."
  *
  * With the flag on: when the first sentence asks for a form "… for <Name>",
  * that name is the message's only employee candidate (capitalised phrases in
@@ -56,7 +56,7 @@ const GLOSSARY = "CHAT_GLOSSARY_ENABLED";
 
 /** Pau's message 1, word for word. */
 const say = (name: string) =>
-  `I need a corrective action verbal for ${name}. This is for Under Performance on PPTA, LPSVA, Club Average, Club Close %, and Spa %.`;
+  `I need a corrective action verbal for ${name}. This is for Under Performance on UPT, ATV, Average Ticket, Bundle Rate %, and Gift %.`;
 
 function start(t: T, roster: readonly DirectoryRow[] = ROSTER) {
   vi.setSystemTime(new Date("2026-11-05T15:30:00Z"));
@@ -69,7 +69,7 @@ function policyLine(reply: ReplayAnswer): string {
   return reply.content.split("\n").find((line) => /\*\*Policy:?\*\*/i.test(line)) ?? "";
 }
 
-const METRIC_AS_PERSON = /\*\*(?:Club Close|Club Average|Under|PPTA|LPSVA|Spa)\*\*|(?:—|-|,)\s*(?:Club Close|Under)\b(?:,| or|\?)/;
+const METRIC_AS_PERSON = /\*\*(?:Bundle Rate|Average Ticket|Under|UPT|ATV|Gift)\*\*|(?:—|-|,)\s*(?:Bundle Rate|Under)\b(?:,| or|\?)/;
 
 /** Never a card, a question or a note for "Under Performance" or "Under"; with a card or a reply that asks, it asks who. */
 function noUnderAsPerson(thread: { proposal: ReplayAnswer["formProposal"] | null }, reply: ReplayAnswer): void {
@@ -82,7 +82,7 @@ export const NOV5_REQUEST_SLOT_CASES: ReplayCase[] = [
   {
     id: "nov5-request-slot-off-roster-name",
     title: "Pau's message 1 for \"Remy Fenn\", not on the roster (Remy Calder is): no metric named as a person, no \"Which of them\", never Remy Calder",
-    report: `${REPORT}: "Which of them is this Corrective Action Form for — Remy Fenn, Club Close or Under?"`,
+    report: `${REPORT}: "Which of them is this Corrective Action Form for — Remy Fenn, Bundle Rate or Under?"`,
     // Changed on purpose (5 Nov 2026): QA flipped CA_SALES_POLICY + REPLY_MATCHES_CARD + TITLE_OF_THE_EMPLOYEE + METRIC_GUARD on in production (production-flags.json), so this case now holds with production's flags.
     status: "fixed",
     // The fix-flag run: fails with production's real flags (QA Vercel read 5 Nov); tracked: GROUNDED_ENTITIES_ENABLED (off in production since 24 Oct, a deliberate rollback) — neither a card for Remy Fenn nor the note naming only Remy Fenn.
@@ -142,15 +142,15 @@ export const NOV5_REQUEST_SLOT_CASES: ReplayCase[] = [
   },
   {
     id: "nov5-request-slot-metrics-only",
-    title: "metrics only (\"CA for under performance on Club Close % and Spa %\"): no card for \"under\" or \"Club Close\"; it asks who",
+    title: "metrics only (\"CA for under performance on Bundle Rate % and Gift %\"): no card for \"under\" or \"Bundle Rate\"; it asks who",
     report: `${REPORT}: metrics only`,
     status: "fixed",
     fixFlags: [FLAG, SALES, GLOSSARY],
     async run(t) {
       const thread = start(t);
-      const reply = await thread.say("CA for under performance on Club Close % and Spa %");
-      expect(reply.content, `a metric is named as a person:\n${reply.content}`).not.toMatch(/\*\*(?:under|Club Close)\*\*/i);
-      expect(thread.proposal?.employeeName ?? "", "a metric is on the card").not.toMatch(/under|club close/i);
+      const reply = await thread.say("CA for under performance on Bundle Rate % and Gift %");
+      expect(reply.content, `a metric is named as a person:\n${reply.content}`).not.toMatch(/\*\*(?:under|Bundle Rate)\*\*/i);
+      expect(thread.proposal?.employeeName ?? "", "a metric is on the card").not.toMatch(/under|bundle rate/i);
       if (thread.proposal) {
         expect(reply.content, `a card with no employee does not ask who it is for:\n${reply.content}`).toMatch(/Who is this (?:\*\*[^*]+\*\* |form )?for\?|Employee's full name/);
       }
@@ -179,7 +179,7 @@ export const NOV5_REQUEST_SLOT_CASES: ReplayCase[] = [
     fixFlags: [FLAG, SALES, GLOSSARY],
     async run(t) {
       const thread = start(t);
-      const reply = await thread.say("I need a corrective action verbal. This is for Under Performance on PPTA, LPSVA, Club Average, Club Close %, and Spa %.");
+      const reply = await thread.say("I need a corrective action verbal. This is for Under Performance on UPT, ATV, Average Ticket, Bundle Rate %, and Gift %.");
       noUnderAsPerson(thread, reply);
     },
   },
@@ -192,7 +192,7 @@ export const NOV5_REQUEST_SLOT_CASES: ReplayCase[] = [
     fixFlags: [FLAG, SALES, GLOSSARY],
     async run(t) {
       const thread = start(t);
-      const reply = await thread.say("I need a CA for Under Performance on PPTA, LPSVA, Club Average, Club Close %, and Spa %.");
+      const reply = await thread.say("I need a CA for Under Performance on UPT, ATV, Average Ticket, Bundle Rate %, and Gift %.");
       noUnderAsPerson(thread, reply);
     },
   },
@@ -269,13 +269,13 @@ export const NOV5_REQUEST_SLOT_CASES: ReplayCase[] = [
         },
       },
       {
-        // The sibling app's message 8 (invented name). Live with the flags on: "Which of them is this Corrective Action Form for — Dana Lane, LPSVA or Average Club?"
+        // The sibling app's message 8 (invented name). Live with the flags on: "Which of them is this Corrective Action Form for — Dana Lane, ATV or Average Tiub?"
         key: "message-8-metrics",
-        text: "Can you write me a performace ca for an employee who did not meet their numbers for the month of october Dana Lane  - verbal\n146 tans \nBelow in PPTA, LPSVA, Average Club, CC%, Spa%",
+        text: "Can you write me a performace ca for an employee who did not meet their numbers for the month of october Dana Lane  - verbal\n146 transactions \nBelow in UPT, ATV, Average Tiub, BR%, Gift%",
         roster: [...ROSTER, person("e-dana-lane", "Dana", "Lane")],
         check: (card: string | null, reply: string) => {
           // The Observation may quote the metrics; a metric is never a choice or a name.
-          expect(reply, "a metric is offered as a person").not.toMatch(/(?:Which of them|Is this for|draft[^\n]*? for|couldn't find)[^\n?]*(?:LPSVA|Average Club|PPTA)|\*\*(?:LPSVA|Average Club|PPTA)\*\*/);
+          expect(reply, "a metric is offered as a person").not.toMatch(/(?:Which of them|Is this for|draft[^\n]*? for|couldn't find)[^\n?]*(?:ATV|Average Tiub|UPT)|\*\*(?:ATV|Average Tiub|UPT)\*\*/);
           if (card) expect(card).toBe("Dana Lane");
         },
       },
