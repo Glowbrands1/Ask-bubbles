@@ -1365,6 +1365,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ACCOUNT_BEFORE_REQUEST_ENABLED",
   // LETTER_GREETING_ANY_CASE (default off): in the list, as every chat flag (QA round 17k, 12 Nov 2026).
   "LETTER_GREETING_ANY_CASE_ENABLED",
+  // coding 5: DRAFT_NO_INVENTED_PLAN (QA's October triage of #188, 10 Nov 2026; default off).
+  "DRAFT_NO_INVENTED_PLAN_ENABLED",
 ] as const;
 
 /**
@@ -3101,6 +3103,17 @@ export function nameLineCommaEnabled(): boolean {
  */
 export function accountBeforeRequestEnabled(): boolean {
   return envFlag("ACCOUNT_BEFORE_REQUEST_ENABLED");
+}
+
+/**
+ * DRAFT_NO_INVENTED_PLAN_ENABLED (QA's October triage of #188, 10 Nov 2026, rebuilt on main; coding 5; default off).
+ * The Corrective Action Form's Observation (and the Coaching Form) carries no AI-written "Going Forward" section (QA,
+ * 25 Oct 2026): a plan or commitment the manager never typed is not part of the HR record. What the employee does
+ * next is the Action Plan, which is the manager's own. Only a Going Forward inside an observation narrative is
+ * dropped; a negated "going forward" is no plan (`forms/narrative-draft.ts`, the draft route). Off, as before.
+ */
+export function draftNoInventedPlanEnabled(): boolean {
+  return envFlag("DRAFT_NO_INVENTED_PLAN_ENABLED");
 }
 
 // --- end coding 5 flags ---
