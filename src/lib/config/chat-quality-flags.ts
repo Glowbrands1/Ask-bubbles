@@ -4906,3 +4906,14 @@ export function terminationClosingEnabled(): boolean {
 export function nameCorrectionKeepsDateEnabled(): boolean {
   return envFlag("NAME_CORRECTION_KEEPS_DATE_ENABLED");
 }
+
+/**
+ * NEAR_MISS_TURNED_DOWN_EVERYWHERE_ENABLED (QA, 10–11 Nov 2026; default off; with NEAR_MISS_QUESTION_RULES; same flag in
+ * both apps). After "Is this for **<roster name>**?": (1) "no call no show on 11/3, verbal warning" is an account that
+ * keeps the name, not a "no" — "no"/"nope" turn it down only on their own or with their own punctuation; (2) when the
+ * name is turned down, it also leaves the reply's Action Plan line, and the "no," that turned it down leaves the
+ * account line (`forms/near-miss-question-rules.ts`). Off, as before.
+ */
+export function nearMissTurnedDownEverywhereEnabled(): boolean {
+  return envFlag("NEAR_MISS_TURNED_DOWN_EVERYWHERE_ENABLED");
+}
