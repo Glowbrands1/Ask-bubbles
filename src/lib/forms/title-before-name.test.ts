@@ -16,6 +16,8 @@ afterEach(() => {
 
 describe("TITLE_BEFORE_NAME: a store title before the name", () => {
   it("flag off (as on main 8ff2e3ba): the tester's wording is read as a question about corrective action", () => {
+    // Off pins its own flag (QA's off-pins guard, 11 Nov 2026): it must hold once production turns the flag on.
+    delete process.env[FLAG];
     expect(detectTemplateIntent(SAID)).toEqual({ kind: "corrective_action", requestedCreation: false });
   });
 
