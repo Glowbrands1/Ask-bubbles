@@ -522,4 +522,26 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov11-live-ima-employee-no-name-words-every-store": "NO_NAME_REPLY_WORDING",
   // fixed in production by NO_NAME_REPLY_WORDING, QA round 17j, 12 Nov 2026
   "nov11-live-ima-employee-no-name-words-store-manager": "NO_NAME_REPLY_WORDING",
+  // fixed in production by LETTER_GREETING_ANY_CASE, QA round 17k, 12 Nov 2026
+  "nov10-letter-greeting-your-capitalised": "LETTER_GREETING_ANY_CASE",
+  // fixed in production by COMPANY_METRIC_WORDS_NOT_NAMES, QA round 17k, 12 Nov 2026
+  "nov11-bcs-metrics-comp-sales": "COMPANY_METRIC_WORDS_NOT_NAMES",
+  // fixed in production by COMPANY_METRIC_WORDS_NOT_NAMES, QA round 17k, 12 Nov 2026
+  "nov11-bcs-metrics-discount-rate": "COMPANY_METRIC_WORDS_NOT_NAMES",
+  // fixed in production by ACCOUNT_BEFORE_REQUEST, QA round 17k, 12 Nov 2026
+  "nov10-p14a-account-opens-with-a-question": "ACCOUNT_BEFORE_REQUEST",
+  // fixed in production by DRAFT_NO_INVENTED_PLAN, QA round 17l, 12 Nov 2026
+  "nov10-draft-no-invented-plan-ca-observation": "DRAFT_NO_INVENTED_PLAN",
+  // fixed in production by EMPTY_REPLY_GUARD, QA round 17l, 12 Nov 2026
+  "nov11-empty-reply-guard-policy-question": "EMPTY_REPLY_GUARD",
+  // fixed in production by POLICY_PAGE_ON_CARD, QA round 17l, 12 Nov 2026
+  "nov11-policy-page-on-card-standards-of-conduct": "POLICY_PAGE_ON_CARD",
+  // fixed in production by WORN_CLOTHING_IS_DRESS_CODE, QA round 17m, 12 Nov 2026
+  "nov11-17i-hoodie-ca-dress-code": "WORN_CLOTHING_IS_DRESS_CODE",
+  // fixed in production by COPY_PASTE_POINTS_TO_CARD, QA round 17m, 12 Nov 2026
+  "nov11-17i-copy-paste-points-to-card": "COPY_PASTE_POINTS_TO_CARD",
+  // fixed in production by EXIT_PROSE_FACTS, QA round 17m, 12 Nov 2026
+  "nov11-exit-prose-bare-name": "EXIT_PROSE_FACTS",
+  // fixed in production by FORM_INPUT_FIDELITY, QA round 17m, 12 Nov 2026
+  "nov11-form-input-fidelity-title-yesterday": "FORM_INPUT_FIDELITY",
 };
