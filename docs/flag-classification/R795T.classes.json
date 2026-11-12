@@ -1,0 +1,50 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov11-title-before-name-admin: \"Corrective action for Team Member Wren Tallis\" (admin): the Corrective Action card, for Wren Tallis \u2014 OPEN in production (no card: the message is read as a question about corrective action)": {
+    "category": "INTENDED",
+    "reason": "QA's 17h live test (\"Corrective action for Team Member <name>\" / \"TM <name>\"): the OPEN pin now holds \u2014 the card is for <name>, the title is never part of it, and Create makes <name>'s draft."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov11-title-before-name-create-names-employee: \"Create a corrective action for Team Member Wren Tallis\": the card names Wren Tallis \u2014 OPEN in production (the card has no employee and asks who it is for)": {
+    "category": "INTENDED",
+    "reason": "QA's 17h live test (\"Corrective action for Team Member <name>\" / \"TM <name>\"): the OPEN pin now holds \u2014 the card is for <name>, the title is never part of it, and Create makes <name>'s draft."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov11-title-before-name-draft-create-team-member: \"Create a corrective action for Team Member Wren Tallis\" (admin): Create makes the same draft as for \"Wren Tallis\" \u2014 OPEN in production (Create refuses the card, or the card has no employee)": {
+    "category": "INTENDED",
+    "reason": "QA's 17h live test (\"Corrective action for Team Member <name>\" / \"TM <name>\"): the OPEN pin now holds \u2014 the card is for <name>, the title is never part of it, and Create makes <name>'s draft."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov11-title-before-name-draft-team-member: \"Corrective action for Team Member Wren Tallis\" (admin): Create makes the same draft as for \"Wren Tallis\" \u2014 OPEN in production (Create refuses the card, or the card has no employee)": {
+    "category": "INTENDED",
+    "reason": "QA's 17h live test (\"Corrective action for Team Member <name>\" / \"TM <name>\"): the OPEN pin now holds \u2014 the card is for <name>, the title is never part of it, and Create makes <name>'s draft."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov11-title-before-name-draft-tm: \"Corrective action for TM Wren Tallis\" (admin): Create makes the same draft as for \"Wren Tallis\" \u2014 OPEN in production (Create refuses the card, or the card has no employee)": {
+    "category": "INTENDED",
+    "reason": "QA's 17h live test (\"Corrective action for Team Member <name>\" / \"TM <name>\"): the OPEN pin now holds \u2014 the card is for <name>, the title is never part of it, and Create makes <name>'s draft."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov11-title-before-name-location-manager: \"Corrective action for Team Member Wren Tallis\" (location_manager): asked about Wren Tallis as the plain name is, never about \"Team Member Wren Tallis\" \u2014 OPEN in production (no card and no question about the name: the message is read as a question about corrective action)": {
+    "category": "INTENDED",
+    "reason": "QA's 17h live test (\"Corrective action for Team Member <name>\" / \"TM <name>\"): the OPEN pin now holds \u2014 the card is for <name>, the title is never part of it, and Create makes <name>'s draft."
+  },
+  "replay: nov11-title-before-name-admin [open]": {
+    "category": "INTENDED",
+    "reason": "QA's 17h live test (\"Corrective action for Team Member <name>\" / \"TM <name>\"): the OPEN pin now holds \u2014 the card is for <name>, the title is never part of it, and Create makes <name>'s draft."
+  },
+  "replay: nov11-title-before-name-create-names-employee [open]": {
+    "category": "INTENDED",
+    "reason": "QA's 17h live test (\"Corrective action for Team Member <name>\" / \"TM <name>\"): the OPEN pin now holds \u2014 the card is for <name>, the title is never part of it, and Create makes <name>'s draft."
+  },
+  "replay: nov11-title-before-name-draft-create-team-member [open]": {
+    "category": "INTENDED",
+    "reason": "QA's 17h live test (\"Corrective action for Team Member <name>\" / \"TM <name>\"): the OPEN pin now holds \u2014 the card is for <name>, the title is never part of it, and Create makes <name>'s draft."
+  },
+  "replay: nov11-title-before-name-draft-team-member [open]": {
+    "category": "INTENDED",
+    "reason": "QA's 17h live test (\"Corrective action for Team Member <name>\" / \"TM <name>\"): the OPEN pin now holds \u2014 the card is for <name>, the title is never part of it, and Create makes <name>'s draft."
+  },
+  "replay: nov11-title-before-name-draft-tm [open]": {
+    "category": "INTENDED",
+    "reason": "QA's 17h live test (\"Corrective action for Team Member <name>\" / \"TM <name>\"): the OPEN pin now holds \u2014 the card is for <name>, the title is never part of it, and Create makes <name>'s draft."
+  },
+  "replay: nov11-title-before-name-location-manager [open]": {
+    "category": "INTENDED",
+    "reason": "QA's 17h live test (\"Corrective action for Team Member <name>\" / \"TM <name>\"): the OPEN pin now holds \u2014 the card is for <name>, the title is never part of it, and Create makes <name>'s draft."
+  }
+}
