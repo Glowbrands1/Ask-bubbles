@@ -3272,6 +3272,16 @@ export function incidentFromEarlierTurnEnabled(): boolean {
 }
 
 /**
+ * An animal alone cites Animals in the Workplace only; Visitors in the
+ * Workplace is cited beside it only when the animal is a customer's, guest's,
+ * visitor's, friend's or family member's (Pau, 5 Nov 2026). Off, every
+ * animal account also cites Visitors in the Workplace, as before.
+ */
+export function animalVisitorsOnlyWhenVisitorEnabled(): boolean {
+  return envFlag("ANIMAL_VISITORS_ONLY_WHEN_VISITOR_ENABLED");
+}
+
+/**
  * TITLE_OF_THE_EMPLOYEE_ENABLED (QA, 5 Nov 2026, R2; default off). One
  * employee's story naming their district manager in passing ("When <employee>
  * spoke with District manager <name> …") gave the card Position "District
