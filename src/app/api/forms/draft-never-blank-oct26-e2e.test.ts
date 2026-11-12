@@ -3,6 +3,7 @@ import { APIError } from "@anthropic-ai/sdk";
 import { rosterResultFor } from "@/test/roster-result";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { draftNoInventedPlanEnabled } from "@/lib/config/chat-quality-flags";
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 import type { AccessScope, ChatFormProposal, ChatMessage } from "@/types";
 
@@ -462,6 +463,15 @@ const MODEL_OBSERVATION = {
     `Observed:\n${first} took product without paying on 10/22.\n\nExpectation:\nAll product is expected to be paid for before it leaves the store.\n\nGoing Forward:\n${first} should pay for any product before taking it.`,
 };
 const TICK = { ncns: ["absenteeism"], product: ["standards_of_conduct"] };
+/*
+ * The Observation as saved. DRAFT_NO_INVENTED_PLAN_ENABLED (intended change, QA 12 Nov 2026, before the flip): on the
+ * Corrective Action Form the model's "Going Forward" section is dropped — the plan is the manager's Action Plan. Off, as
+ * the model wrote it.
+ */
+const SAVED_OBSERVATION = (incident: keyof typeof MODEL_OBSERVATION, first: string): string => {
+  const written = MODEL_OBSERVATION[incident](first);
+  return draftNoInventedPlanEnabled() ? written.replace(/\n\nGoing Forward:[\s\S]*$/, "") : written;
+};
 
 /* The model errors a shared quota answers with under load, as the SDK throws them. */
 const MODEL_ERRORS: Record<string, { error: () => unknown; reason: string }> = {
@@ -595,7 +605,7 @@ describe.each(CASES)("$label", (c) => {
       expect(created.draftWarning).toBeNull();
       expect(state.calls).toBe(2);
       expect(state.pauses).toEqual([1000]);
-      expect(value("observation")).toBe(MODEL_OBSERVATION[c.incident](c.person.first));
+      expect(value("observation")).toBe(SAVED_OBSERVATION(c.incident, c.person.first));
       expect(value("policy_violated")).not.toBe("");
       expect(outcome).toMatchObject({ attempts: 2, reasons: [MODEL_ERRORS[name]!.reason] });
     });
@@ -616,7 +626,7 @@ describe.each(CASES)("$label", (c) => {
       state.drafts = [{ values: {} }, { values: { observation: MODEL_OBSERVATION[c.incident](c.person.first) }, checked: { offense_type: TICK[c.incident] } }];
       const { value, draft } = await createFromTurn(c.turn, c.person.cap);
       expect(state.calls).toBe(2);
-      expect(value("observation")).toBe(MODEL_OBSERVATION[c.incident](c.person.first));
+      expect(value("observation")).toBe(SAVED_OBSERVATION(c.incident, c.person.first));
       expect(draft?.fallback).toBeUndefined();
       expect(draft?.retried).toBe(true);
     });
@@ -644,7 +654,7 @@ describe.each(CASES)("$label", (c) => {
       const { value, draft, outcome } = await createFromTurn(c.turn, c.person.cap);
       expect(state.calls).toBe(1);
       expect(state.pauses).toEqual([]);
-      expect(value("observation")).toBe(MODEL_OBSERVATION[c.incident](c.person.first));
+      expect(value("observation")).toBe(SAVED_OBSERVATION(c.incident, c.person.first));
       expect(draft?.fallback).toBeUndefined();
       expect(draft?.retried).toBeUndefined();
       expect(outcome).toBeNull();
@@ -702,7 +712,7 @@ describe("never-break: a draft that fills is identical with the flag on and off"
     const on = await snapshot(c, true);
     expect(on).toBe(off);
     expect(JSON.parse(off).values.find((row: { fieldKey: string }) => row.fieldKey === "observation").value).toBe(
-      MODEL_OBSERVATION[c.incident](c.person.first),
+      SAVED_OBSERVATION(c.incident, c.person.first),
     );
   });
 });
@@ -773,7 +783,7 @@ describe("the time budget (80 s from the request's start)", () => {
     state.drafts = [{ takesMs: 79_000, then: { values: {} } }, GOOD];
     const { value } = await createFromTurn(c.turn, c.person.cap);
     expect(state.calls).toBe(2);
-    expect(value("observation")).toBe(MODEL_OBSERVATION.ncns(c.person.first));
+    expect(value("observation")).toBe(SAVED_OBSERVATION("ncns", c.person.first));
   });
 
   it("a framework read that fails after 81 s is not read again", async () => {
@@ -886,10 +896,10 @@ describe("six Create presses at once (the production burst)", () => {
       expect(result.observation, person.first).not.toBe("");
       const blankAttempts = Math.min(state.scriptCalls[`${person.first} ${person.last}`]!, index === 3 || index === 4 ? 3 : 1);
       if (index === 2 || index === 5) {
-        expect(result.observation).toBe(MODEL_OBSERVATION.ncns(person.first));
+        expect(result.observation).toBe(SAVED_OBSERVATION("ncns", person.first));
         expect(result.outcome).toBeNull();
       } else if (index === 0 || index === 1) {
-        expect(result.observation).toBe(MODEL_OBSERVATION.ncns(person.first));
+        expect(result.observation).toBe(SAVED_OBSERVATION("ncns", person.first));
       } else {
         expect(result.observation).toBe(`Observed:\n${person.first} was a no call no show on 10/22.`);
         expect(result.outcome).toMatchObject({ fallback: "manager_words", attempts: 3 });
@@ -910,7 +920,7 @@ describe("six Create presses at once (the production burst)", () => {
         expect(result.observation, person.first).toBe("");
         expect(result.events, person.first).toContainEqual({ fields: [], rejected: [] });
       } else {
-        expect(result.observation, person.first).toBe(MODEL_OBSERVATION.ncns(person.first));
+        expect(result.observation, person.first).toBe(SAVED_OBSERVATION("ncns", person.first));
       }
       expect(result.outcome).toBeNull();
     });
@@ -1086,6 +1096,9 @@ describe("flag off is byte-identical to main", () => {
       (await import("node:fs")).appendFileSync(process.env.NB_CAPTURE_GOLDEN, `${JSON.stringify([name, snapshot])}\n`);
       return;
     }
-    expect(snapshot).toBe(GOLDEN[name]);
+    // DRAFT_NO_INVENTED_PLAN_ENABLED (intended change, QA 12 Nov 2026, before the flip): the saved Observation has no
+    // "Going Forward" section; the rest of main's snapshot is unchanged.
+    const golden = draftNoInventedPlanEnabled() ? GOLDEN[name]!.replace(/\\n\\nGoing Forward:\\n[^"\\]*(?:\\.[^"\\]*)*?(?=")/g, "") : GOLDEN[name];
+    expect(snapshot).toBe(golden);
   });
 });
