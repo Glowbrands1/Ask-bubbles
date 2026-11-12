@@ -74,6 +74,9 @@ export const NOV11_BUBBLES_17I_LIVE_CASES: ReplayCase[] = [
     async run(t) {
       const reply = await start(t).say(TURN_2);
       expect(reply.content, reply.content).toMatch(/\*\*Policy:\*\* Dress Code/);
+      // QA's Bubbles 17m live test (12 Nov 2026): the read-from-request Dress Code line carries its printed page, as a
+      // named policy's line does.
+      expect(reply.content, `the Policy line has no page:\n${reply.content}`).toMatch(/\*\*Policy:\*\* Dress Code \(JBA Policy Manual p\.15\)/);
       expect(reply.content, reply.content).not.toMatch(/review the applicable company policy/);
     },
   },
