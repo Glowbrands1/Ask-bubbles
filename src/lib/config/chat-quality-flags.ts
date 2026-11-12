@@ -1348,6 +1348,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FULL_MANUAL_WIDE_GATE_ENABLED",
   "EMPTY_REPLY_GUARD_ENABLED",
   "POLICY_PAGE_ON_CARD_ENABLED",
+  "FORM_INPUT_FIDELITY_ENABLED",
   // coding 5: B3 (QA's backlog, 10 Nov 2026; default off).
   "COPY_PASTE_CLAIM_HONEST_ENABLED",
   "DATE_ONCE_ENABLED",
@@ -4624,6 +4625,15 @@ export function policyPageOnCardEnabled(): boolean {
  */
 export function revisionArchivedNotOpenEnabled(): boolean {
   return envFlag("REVISION_ARCHIVED_NOT_OPEN_ENABLED");
+}
+
+/**
+ * Keep a date the manager typed, and send a one-word follow-up to the
+ * question just asked. Off, a relative day such as "yesterday" still leaves
+ * the form dated today, and a bare "verbal" can be saved as the job title.
+ */
+export function formInputFidelityEnabled(): boolean {
+  return envFlag("FORM_INPUT_FIDELITY_ENABLED");
 }
 
 /**
