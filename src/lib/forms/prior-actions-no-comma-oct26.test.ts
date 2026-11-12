@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import PRODUCTION_FLAGS from "@/config/production-flags.json";
+
 import { fieldLines } from "@/lib/ai/intake-augment";
 import { decideIntentTurn, type IntentTurnInput } from "@/lib/ai/intent-slots";
 import {
@@ -52,7 +54,16 @@ function variants(text: string): string[] {
   return [...new Set([lower, sentence, capitalized])];
 }
 
+/**
+ * This file's expectations were written, and MAIN_OUTPUTS captured, with only the flags each test sets: every other flag
+ * production has on is unset here, so they hold whatever the environment (QA's off-pins guard, 12 Nov 2026).
+ */
+function unsetProductionFlags(): void {
+  for (const name of PRODUCTION_FLAGS.on) vi.stubEnv(name, undefined);
+}
+
 function flags(parse: boolean, noComma: boolean): void {
+  unsetProductionFlags();
   vi.stubEnv("PRIOR_ACTIONS_PARSE_ENABLED", parse ? "1" : "");
   vi.stubEnv("PRIOR_ACTIONS_NO_COMMA_ENABLED", noComma ? "1" : "");
 }
@@ -1339,6 +1350,7 @@ describe("NEVER-BREAK: PRIOR_ACTIONS_NO_COMMA_ENABLED off, with PRIOR_ACTIONS_PA
   const inputs = NEVER_BREAK_CASES.flatMap(casings);
 
   function productionFlags(noComma: boolean): void {
+    unsetProductionFlags();
     vi.stubEnv("PRIOR_ACTIONS_PARSE_ENABLED", "1");
     vi.stubEnv("REOPEN_VERB_GUARD_ENABLED", "1");
     vi.stubEnv("PRIOR_ACTIONS_NO_COMMA_ENABLED", noComma ? "1" : "");
