@@ -60,16 +60,21 @@ export const NOV11_OUTLINE_ON_OPEN_PROPOSAL_CASES: ReplayCase[] = [
 ];
 
 /*
+ * Changed on purpose (12 Nov 2026, QA round 17o): these guards dated her account 11/3/26, after the pack's TODAY
+ * (2026-10-26). With FUTURE_INCIDENT_DATE_ASK on in production a future incident date is asked, never put on the card,
+ * so the date check failed for a reason the guards are not about. They now use 10/3/26, before TODAY; every assertion
+ * is the same.
+ *
  * Gate-Bubbles-4's NO-GO on B#802 (G4-802, 12 Nov 2026): the manager's own account, labelled or asking for "this format",
  * was read as an outline and lost. Guards: production keeps it, and so does the flag (an outline names another person).
  */
 const OWN_ACCOUNT = [
-  ["labelled-account", "create a corrective action for Ilsa Varnholt", "Date: 11/3/26\nWhat happened: Ilsa Varnholt arrived 40 minutes late and did not call in.", /40 minutes late/],
-  ["this-format", "create a corrective action for Ilsa Varnholt", "Ilsa Varnholt was late on 11/3/26. Use this format for the action plan.", /late on 11\/3\/26/],
+  ["labelled-account", "create a corrective action for Ilsa Varnholt", "Date: 10/3/26\nWhat happened: Ilsa Varnholt arrived 40 minutes late and did not call in.", /40 minutes late/],
+  ["this-format", "create a corrective action for Ilsa Varnholt", "Ilsa Varnholt was late on 10/3/26. Use this format for the action plan.", /late on 10\/3\/26/],
   // Gate-Sunny-3's NO-GO on the sibling's S#875 (12 Nov 2026): her account names a coworker who covered.
-  ["coworker-named", "create a corrective action for Ilsa Varnholt", "Date: 11/3/26\nWhat happened: Ilsa was 40 minutes late to her opening shift. Jordan had to cover the front desk until she arrived", /40 minutes late/],
+  ["coworker-named", "create a corrective action for Ilsa Varnholt", "Date: 10/3/26\nWhat happened: Ilsa was 40 minutes late to her opening shift. Jordan had to cover the front desk until she arrived", /40 minutes late/],
   // Gate-Sunny-3's round 3 (12 Nov 2026): her account in the form's own labels, a pronoun subject and a coworker named.
-  ["form-labels-pronoun-subject", "create a corrective action for Ilsa Varnholt", "Observation of Offense: she arrived 40 minutes late to her opening shift on 11/3/26. Jordan had to open the store.\nAction Plan: Leadership will review the attendance policy with her", /40 minutes late/],
+  ["form-labels-pronoun-subject", "create a corrective action for Ilsa Varnholt", "Observation of Offense: she arrived 40 minutes late to her opening shift on 10/3/26. Jordan had to open the store.\nAction Plan: Leadership will review the attendance policy with her", /40 minutes late/],
 ] as const;
 
 export const NOV12_OUTLINE_OWN_ACCOUNT_CASES: ReplayCase[] = OWN_ACCOUNT.map(([key, request, account, kept]) => ({
@@ -85,7 +90,7 @@ export const NOV12_OUTLINE_OWN_ACCOUNT_CASES: ReplayCase[] = OWN_ACCOUNT.map(([k
     expect(thread.proposal, `no card for Ilsa Varnholt:\n${reply.content}`).toMatchObject({ employeeName: "Ilsa Varnholt" });
     expect(reply.content, `her account was read as an outline:\n${reply.content}`).not.toMatch(/pasted example/);
     // Gate-Sunny-3 (round 3): the card keeps the date she gave.
-    if (/11\/3\/26/.test(account)) expect((thread.proposal as { formDate?: string | null } | null)?.formDate ?? null, `the card lost the date:\n${reply.content}`).toBe("2026-11-03");
+    if (/10\/3\/26/.test(account)) expect((thread.proposal as { formDate?: string | null } | null)?.formDate ?? null, `the card lost the date:\n${reply.content}`).toBe("2026-10-03");
     t.draftWrites({ observation: "Observed:\nIlsa Varnholt was late." });
     await thread.create();
     const described = t.draftPrompts().map((prompt) => prompt.split("WHAT THE MANAGER DESCRIBED:")[1] ?? "").join("\n");
