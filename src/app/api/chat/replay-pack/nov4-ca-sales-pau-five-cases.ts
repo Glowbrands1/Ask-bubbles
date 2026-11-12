@@ -73,11 +73,11 @@ async function draftCitesConduct(t: T, thread: ReturnType<T["thread"]>, observat
 export const NOV4_PAU_FIVE_CASES: ReplayCase[] = [
   {
     id: "nov4-pau5-1-verbal-under-performance-metrics",
-    title: "1. \"I need a corrective action verbal for … This is for Under Performance on PPTA, LPSVA, Club Average, Club Close %, and Spa %.\"",
+    title: "1. \"I need a corrective action verbal for … This is for Under Performance on UPT, ATV, Average Ticket, Bundle Rate %, and Gift %.\"",
     report: `${REPORT}, #1`,
     /*
-     * NO fixFlags YET. The name reader takes "Club Close" and "Under" for people
-     * ("I couldn't find **Club Close** or **Under** in the Woven roster") and
+     * NO fixFlags YET. The name reader takes "Bundle Rate" and "Under" for people
+     * ("I couldn't find **Bundle Rate** or **Under** in the Woven roster") and
      * drops them from the text the policy is read from, so the stated shortfall
      * is gone and no policy is cited. Same root cause as nov4-scan-sf-s19
      * (metrics read as people), queued for the Success session's names step.
@@ -87,9 +87,9 @@ export const NOV4_PAU_FIVE_CASES: ReplayCase[] = [
     status: "fixed",
     async run(t) {
       const thread = start(t);
-      const reply = await thread.say("I need a corrective action verbal for Ysolde Marrowick. This is for Under Performance on PPTA, LPSVA, Club Average, Club Close %, and Spa %.");
+      const reply = await thread.say("I need a corrective action verbal for Ysolde Marrowick. This is for Under Performance on UPT, ATV, Average Ticket, Bundle Rate %, and Gift %.");
       citesConduct(thread, reply, "Ysolde Marrowick");
-      await draftCitesConduct(t, thread, "Ysolde Marrowick was below target on PPTA, LPSVA, Club Average, Club Close % and Spa %.");
+      await draftCitesConduct(t, thread, "Ysolde Marrowick was below target on UPT, ATV, Average Ticket, Bundle Rate % and Gift %.");
     },
   },
   {

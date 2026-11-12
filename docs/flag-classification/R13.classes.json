@@ -1,0 +1,32 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov9-made-about-rewrite-finishes-details-only: the reader sets Details only (set aside): Other is read from the manager's words, with the Date \u2014 OPEN in production (a dated made-about turn whose reader set only Details leaves Other on the old topic)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "MADE_ABOUT_REWRITE_FINISHES: an OPEN case now holds (Other, Date and Details written together; after a failure the reply says exactly what was and was not saved). Read."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov9-made-about-rewrite-finishes-error-after-rewrite: a save fails after Details is rewritten: the old path never runs again, and the reply says Other and the Date were not saved \u2014 OPEN in production (an error after the rewrite returns null: the old path's revision runs again and the reply is its own)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "MADE_ABOUT_REWRITE_FINISHES: an OPEN case now holds (Other, Date and Details written together; after a failure the reply says exactly what was and was not saved). Read."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov9-made-about-rewrite-finishes-reader-refused: the live shape: Details rewritten, then the reader's own edit refused \u2014 Other and the Date still written, one revision \u2014 OPEN in production (the refused reader edit hands the turn to the old path after the rewrite: only Details changes)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "MADE_ABOUT_REWRITE_FINISHES: an OPEN case now holds (Other, Date and Details written together; after a failure the reply says exactly what was and was not saved). Read."
+ },
+ "replay: nov9-made-about-rewrite-finishes-details-only [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "MADE_ABOUT_REWRITE_FINISHES: an OPEN case now holds (Other, Date and Details written together; after a failure the reply says exactly what was and was not saved). Read."
+ },
+ "replay: nov9-made-about-rewrite-finishes-error-after-rewrite [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "MADE_ABOUT_REWRITE_FINISHES: an OPEN case now holds (Other, Date and Details written together; after a failure the reply says exactly what was and was not saved). Read."
+ },
+ "replay: nov9-made-about-rewrite-finishes-reader-refused [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "MADE_ABOUT_REWRITE_FINISHES: an OPEN case now holds (Other, Date and Details written together; after a failure the reply says exactly what was and was not saved). Read."
+ }
+}
