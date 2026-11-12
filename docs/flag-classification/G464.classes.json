@@ -1,0 +1,90 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov5-animal-alone-no-visitors: (a) \"he brought his new kitten to the store\": Animals in the Workplace only \u2014 no Visitors in the Workplace on the card, in Direct policy or in the Action Plan \u2014 OPEN in production (with production's flags the draft quotes Visitors in the Workplace in Direct policy and its Action Plan reviews \"the Animals in the Workplace and Visitors in the Workplace policies\")": {
+    "category": "INTENDED",
+    "reason": "OPEN case now holds: 'he brought his new kitten to the store' cites Animals in the Workplace only"
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov5-animal-customers-saw-it: negative: \"brought his kitten to the store, customers saw it\" \u2014 customers only present: Animals in the Workplace only \u2014 OPEN in production (with production's flags the draft quotes Visitors in the Workplace beside Animals in the Workplace)": {
+    "category": "INTENDED",
+    "reason": "OPEN case now holds: customers merely present are not visitors; Animals only"
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov5-visitor-alone-control: (c) a visitor in the back room, no animal \u2014 Visitors in the Workplace only \u2014 OPEN in production (with production's flags nothing cites Visitors in the Workplace for \"had a visitor in the back room\")": {
+    "category": "INTENDED",
+    "reason": "OPEN case now holds: a visitor with no animal cites Visitors in the Workplace p.29"
+  },
+  "src/app/api/forms/corrective-action-dm-feedback-e2e.test.ts :: a dog at work, on the saved draft, against the production manual rows POLICY_SPECIFIC_TOPICS_ENABLED on: Animals in the Workplace p.30, with Visitors p.29 beside it": {
+    "category": "INTENDED-HARNESS",
+    "reason": "pins the old pair (Animals p.30 with Visitors p.29 beside it) for a dog at work; the flag drops Visitors when no visitor is named, so this pin must move when the flag is turned on"
+  },
+  "src/lib/forms/policy-specific-topics-oct26.test.ts :: flag on: every incident cites its own section, in every register a pet -> Animals in the Workplace p.30 and Visitors in the Workplace p.29 BROUGHT A PET IN": {
+    "category": "INTENDED-HARNESS",
+    "reason": "15 register variants pin 'a pet -> Animals p.30 and Visitors p.29'; with the flag a pet alone cites Animals only, so these pins must move when the flag is turned on"
+  },
+  "src/lib/forms/policy-specific-topics-oct26.test.ts :: flag on: every incident cites its own section, in every register a pet -> Animals in the Workplace p.30 and Visitors in the Workplace p.29 BROUGHT HER PUPPY IN": {
+    "category": "INTENDED-HARNESS",
+    "reason": "15 register variants pin 'a pet -> Animals p.30 and Visitors p.29'; with the flag a pet alone cites Animals only, so these pins must move when the flag is turned on"
+  },
+  "src/lib/forms/policy-specific-topics-oct26.test.ts :: flag on: every incident cites its own section, in every register a pet -> Animals in the Workplace p.30 and Visitors in the Workplace p.29 BROUGHT HER PUPY TO WORK": {
+    "category": "INTENDED-HARNESS",
+    "reason": "15 register variants pin 'a pet -> Animals p.30 and Visitors p.29'; with the flag a pet alone cites Animals only, so these pins must move when the flag is turned on"
+  },
+  "src/lib/forms/policy-specific-topics-oct26.test.ts :: flag on: every incident cites its own section, in every register a pet -> Animals in the Workplace p.30 and Visitors in the Workplace p.29 Brought a pet in": {
+    "category": "INTENDED-HARNESS",
+    "reason": "15 register variants pin 'a pet -> Animals p.30 and Visitors p.29'; with the flag a pet alone cites Animals only, so these pins must move when the flag is turned on"
+  },
+  "src/lib/forms/policy-specific-topics-oct26.test.ts :: flag on: every incident cites its own section, in every register a pet -> Animals in the Workplace p.30 and Visitors in the Workplace p.29 Brought her puppy in": {
+    "category": "INTENDED-HARNESS",
+    "reason": "15 register variants pin 'a pet -> Animals p.30 and Visitors p.29'; with the flag a pet alone cites Animals only, so these pins must move when the flag is turned on"
+  },
+  "src/lib/forms/policy-specific-topics-oct26.test.ts :: flag on: every incident cites its own section, in every register a pet -> Animals in the Workplace p.30 and Visitors in the Workplace p.29 Brought her pupy to work": {
+    "category": "INTENDED-HARNESS",
+    "reason": "15 register variants pin 'a pet -> Animals p.30 and Visitors p.29'; with the flag a pet alone cites Animals only, so these pins must move when the flag is turned on"
+  },
+  "src/lib/forms/policy-specific-topics-oct26.test.ts :: flag on: every incident cites its own section, in every register a pet -> Animals in the Workplace p.30 and Visitors in the Workplace p.29 HAD HER DOG AT WORK ALL DAY": {
+    "category": "INTENDED-HARNESS",
+    "reason": "15 register variants pin 'a pet -> Animals p.30 and Visitors p.29'; with the flag a pet alone cites Animals only, so these pins must move when the flag is turned on"
+  },
+  "src/lib/forms/policy-specific-topics-oct26.test.ts :: flag on: every incident cites its own section, in every register a pet -> Animals in the Workplace p.30 and Visitors in the Workplace p.29 Had her dog at work all day": {
+    "category": "INTENDED-HARNESS",
+    "reason": "15 register variants pin 'a pet -> Animals p.30 and Visitors p.29'; with the flag a pet alone cites Animals only, so these pins must move when the flag is turned on"
+  },
+  "src/lib/forms/policy-specific-topics-oct26.test.ts :: flag on: every incident cites its own section, in every register a pet -> Animals in the Workplace p.30 and Visitors in the Workplace p.29 SHE BROUGHT HER DOG INTO THE STORE": {
+    "category": "INTENDED-HARNESS",
+    "reason": "15 register variants pin 'a pet -> Animals p.30 and Visitors p.29'; with the flag a pet alone cites Animals only, so these pins must move when the flag is turned on"
+  },
+  "src/lib/forms/policy-specific-topics-oct26.test.ts :: flag on: every incident cites its own section, in every register a pet -> Animals in the Workplace p.30 and Visitors in the Workplace p.29 She brought her dog into the store": {
+    "category": "INTENDED-HARNESS",
+    "reason": "15 register variants pin 'a pet -> Animals p.30 and Visitors p.29'; with the flag a pet alone cites Animals only, so these pins must move when the flag is turned on"
+  },
+  "src/lib/forms/policy-specific-topics-oct26.test.ts :: flag on: every incident cites its own section, in every register a pet -> Animals in the Workplace p.30 and Visitors in the Workplace p.29 brought a pet in": {
+    "category": "INTENDED-HARNESS",
+    "reason": "15 register variants pin 'a pet -> Animals p.30 and Visitors p.29'; with the flag a pet alone cites Animals only, so these pins must move when the flag is turned on"
+  },
+  "src/lib/forms/policy-specific-topics-oct26.test.ts :: flag on: every incident cites its own section, in every register a pet -> Animals in the Workplace p.30 and Visitors in the Workplace p.29 brought her puppy in": {
+    "category": "INTENDED-HARNESS",
+    "reason": "15 register variants pin 'a pet -> Animals p.30 and Visitors p.29'; with the flag a pet alone cites Animals only, so these pins must move when the flag is turned on"
+  },
+  "src/lib/forms/policy-specific-topics-oct26.test.ts :: flag on: every incident cites its own section, in every register a pet -> Animals in the Workplace p.30 and Visitors in the Workplace p.29 brought her pupy to work": {
+    "category": "INTENDED-HARNESS",
+    "reason": "15 register variants pin 'a pet -> Animals p.30 and Visitors p.29'; with the flag a pet alone cites Animals only, so these pins must move when the flag is turned on"
+  },
+  "src/lib/forms/policy-specific-topics-oct26.test.ts :: flag on: every incident cites its own section, in every register a pet -> Animals in the Workplace p.30 and Visitors in the Workplace p.29 had her dog at work all day": {
+    "category": "INTENDED-HARNESS",
+    "reason": "15 register variants pin 'a pet -> Animals p.30 and Visitors p.29'; with the flag a pet alone cites Animals only, so these pins must move when the flag is turned on"
+  },
+  "src/lib/forms/policy-specific-topics-oct26.test.ts :: flag on: every incident cites its own section, in every register a pet -> Animals in the Workplace p.30 and Visitors in the Workplace p.29 she brought her dog into the store": {
+    "category": "INTENDED-HARNESS",
+    "reason": "15 register variants pin 'a pet -> Animals p.30 and Visitors p.29'; with the flag a pet alone cites Animals only, so these pins must move when the flag is turned on"
+  },
+  "replay: nov5-animal-alone-no-visitors [open]": {
+    "category": "INTENDED",
+    "reason": "fails off, holds on (saved draft: no Visitors in the Workplace)"
+  },
+  "replay: nov5-animal-customers-saw-it [open]": {
+    "category": "INTENDED",
+    "reason": "fails off, holds on"
+  },
+  "replay: nov5-visitor-alone-control [open]": {
+    "category": "INTENDED",
+    "reason": "fails off, holds on: Policy line cites Visitors in the Workplace p.29 and the action plan names it"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-add-not-repeated-leading-sentence: QA's live Bubbles r15b: \"add that she was also on her phone\" on a sectioned CA Observation, the reader's add repeating the Observed sentence: the late sentence is saved once, and the phone \u2014 OPEN in production (the reader's add repeats the field's first sentence, not the whole field, so it is added whole)": {
+    "category": "INTENDED",
+    "reason": "OPEN case now holds: the late sentence is saved once and the phone line added; the it.fails pin moves to fixed"
+  },
+  "replay: nov10-add-not-repeated-leading-sentence [open]": {
+    "category": "INTENDED",
+    "reason": "fails off (Observed block saved twice), holds on (saved once + phone)"
+  }
+}
