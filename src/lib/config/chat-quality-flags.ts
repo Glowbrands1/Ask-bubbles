@@ -1226,6 +1226,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "LAST_FIRST_NAME_READ_ENABLED",
   "POLICY_CITATION_CHECK_ENABLED",
   "NEGATED_LATENESS_TOPIC_ENABLED",
+  "FULL_POSITION_TITLE_ENABLED",
   "PRIOR_ACTIONS_NO_SIGNED_ENABLED",
   "REQUEST_LEVEL_NOT_HISTORY_ENABLED",
   // The sibling app's gate fix flags (6 Nov 2026): forced off with the others by flags-off-parity's child run.
@@ -3791,6 +3792,20 @@ export function placeFromCueEnabled(): boolean {
  */
 export function titleEndsAtLineEnabled(): boolean {
   return envFlag("TITLE_ENDS_AT_LINE_ENABLED");
+}
+
+/**
+ * FULL_POSITION_TITLE_ENABLED (QA task A, 6 Nov 2026; default off). An exit
+ * form typed as lines with the position "Team Member Part Time" got the
+ * Position "Team Member": the title reader (`config/company/job-titles.ts`)
+ * reads the shorter title inside it. With this flag on, when the whole typed
+ * title (a line of its own, or a "Position: …" line) is one of the company's
+ * position names (`forms/staff-picker.ts`, `isCompanyPositionTitle`) and holds
+ * the title the card read, the card keeps the whole position
+ * (`ai/full-position-title.ts`). Off, as before.
+ */
+export function fullPositionTitleEnabled(): boolean {
+  return envFlag("FULL_POSITION_TITLE_ENABLED");
 }
 
 /**
