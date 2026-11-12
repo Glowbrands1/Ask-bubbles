@@ -1292,6 +1292,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "NO_NAME_REPLY_WORDING_ENABLED",
   // coding 4: TITLE_BEFORE_NAME (Bubbles 17h live test, QA, 11 Nov 2026; default off).
   "TITLE_BEFORE_NAME_ENABLED",
+  // COACHING_TYPE_STATED_TICKS (QA 17p live, 12 Nov 2026; default off).
+  "COACHING_TYPE_STATED_TICKS_ENABLED",
   // coding 4: FORMS_ON_FILE_ORDER_MATCH_POSSIBLE (Bubbles 17h live test, QA, 11 Nov 2026; default off).
   "FORMS_ON_FILE_ORDER_MATCH_POSSIBLE_ENABLED",
   "TAKE_OFF_STAYS_CARD_ENABLED",
@@ -5156,4 +5158,15 @@ export function terminationIntakeEnabled(): boolean {
  */
 export function resentRequestIsYesEnabled(): boolean {
   return envFlag("RESENT_REQUEST_IS_YES_ENABLED");
+}
+
+/**
+ * COACHING_TYPE_STATED_TICKS_ENABLED (QA's Bubbles 17p live check, 12 Nov 2026; default off). A coaching request that
+ * named its type ("… coaching on under performance") was drafted with no Coaching Type ticked: the tick was the drafting
+ * model's, and it sometimes left it empty. On: exactly one coaching type the manager names is ticked as their statement
+ * before the model drafts, and the model's tick never replaces it; topics stay with the model
+ * (`forms/coaching-type-stated.ts`). Off, as before.
+ */
+export function coachingTypeStatedTicksEnabled(): boolean {
+  return envFlag("COACHING_TYPE_STATED_TICKS_ENABLED");
 }
