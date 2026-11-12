@@ -228,7 +228,9 @@ const STEP_B = ["FORM_PATCH_REDUCER_ENABLED", "FORM_REPLY_FROM_DIFF_ENABLED"] as
  * itself where a case asks for them, so the production base leaves them off, as it did before the flip. Every
  * assertion is unchanged.
  */
-const PRODUCTION = [...PRODUCTION_FLAGS.on, ...PRODUCTION_FLAGS.assumedOn].filter((name) => !([FLAG, ...STEP_B, "FORM_EDIT_TOOL_IN_STREAM_ENABLED"] as readonly string[]).includes(name));
+// Changed on purpose (12 Nov 2026, QA round 17l): POLICY_PAGE_ON_CARD is on in production-flags.json now. This file pins
+// it like the Step B flags (env decides, see POLICY_PAGE_ON below), so both arms match the recording the run picks.
+const PRODUCTION = [...PRODUCTION_FLAGS.on, ...PRODUCTION_FLAGS.assumedOn].filter((name) => !([FLAG, ...STEP_B, "FORM_EDIT_TOOL_IN_STREAM_ENABLED", "POLICY_PAGE_ON_CARD_ENABLED"] as readonly string[]).includes(name));
 const TOUCHED = [...new Set([FLAG, ...STEP_B, "FORM_EDIT_TOOL_IN_STREAM_ENABLED", ...PRODUCTION, ...PRODUCTION_FLAGS.off])];
 const saved = new Map<string, string | undefined>();
 
@@ -480,7 +482,13 @@ function numbered(value: unknown): string {
 
 /* ---------------------------------------------------------------- tests --- */
 
-const FIXTURE = join("src", "lib", "forms", "form-edit-single-writer-flags-off.main.json");
+/*
+ * POLICY_PAGE_ON_CARD_ENABLED (QA's #755 gate, 12 Nov 2026): with it on, the CA card's Policy line carries its printed page
+ * ("**Standards of Conduct** (JBA Policy Manual p.12)"), so main's replies are recorded twice — flag off and flag on
+ * (`RECORD_MAIN_FIXTURE=1`, with and without POLICY_PAGE_ON_CARD_ENABLED=true) — and compared with the one the run uses.
+ */
+const POLICY_PAGE_ON = ["1", "true", "on", "yes"].includes((process.env.POLICY_PAGE_ON_CARD_ENABLED ?? "").toLowerCase());
+const FIXTURE = join("src", "lib", "forms", POLICY_PAGE_ON ? "form-edit-single-writer-flags-off.main.policy-page.json" : "form-edit-single-writer-flags-off.main.json");
 const RECORDING = process.env.RECORD_MAIN_FIXTURE === "1";
 
 describe("FORM_EDIT_SINGLE_WRITER_ENABLED off: the same chats, byte for byte", () => {

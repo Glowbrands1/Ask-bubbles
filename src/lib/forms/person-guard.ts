@@ -1,6 +1,7 @@
 import { NOT_A_NAME as BUSINESS_WORDS } from "@/lib/ai/employee-performance-gate";
 import { isReportName } from "@/lib/ai/report-name";
-import { metricGuardEnabled, personGuardEnabled } from "@/lib/config/chat-quality-flags";
+import { COMPANY_METRIC_PHRASES } from "@/config/company/metric-words";
+import { companyMetricWordsNotNamesEnabled, metricGuardEnabled, personGuardEnabled } from "@/lib/config/chat-quality-flags";
 import { isNotAName } from "@/lib/forms/not-a-name";
 import { installSlotRosterNames, namesAMetric, outsideRequestSlot } from "@/lib/forms/request-slot";
 
@@ -59,6 +60,16 @@ function wordsOf(text: string): string[] {
     .toLowerCase()
     .split(/[^a-z0-9%]+/)
     .filter(Boolean);
+}
+
+/** COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED: every word of the company's own metric phrases (`config/company/metric-words.ts`). */
+const COMPANY_METRIC_WORDS = new Set(COMPANY_METRIC_PHRASES.flatMap((phrase) => wordsOf(phrase)).filter((word) => word !== "%"));
+
+/** COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED: "Comp Sales", "Discount Rate", "IPT" — the company's metric words, measure words and percents only. */
+function companyMetric(words: readonly string[]): boolean {
+  if (!companyMetricWordsNotNamesEnabled()) return false;
+  if (!words.some((word) => COMPANY_METRIC_WORDS.has(word))) return false;
+  return words.every((word) => COMPANY_METRIC_WORDS.has(word) || MEASURE_WORDS.has(word) || /^%$|%$/.test(word));
 }
 
 /* ---------------------------------------------------------- the roster -- */
@@ -124,6 +135,8 @@ export function notAPerson(candidate: string | null | undefined): boolean {
   if (words.length === 0) return false;
   if (words.some((word) => THING_WORDS.has(word))) return true;
   if (PRACTICE_WORDS.has(words[0]!)) return true;
+  // COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED: after the roster, so a person whose surname is a metric word still matches.
+  if (companyMetric(words)) return true;
   if (words.every((word) => MEASURE_WORDS.has(word) || business(word) || /%$/.test(word))) return true;
   // "Avg <metric>": a measure word with business words or short metric labels only.
   if (words.some((word) => MEASURE_WORDS.has(word)) && words.every((word) => MEASURE_WORDS.has(word) || business(word) || word.length <= 4)) return true;

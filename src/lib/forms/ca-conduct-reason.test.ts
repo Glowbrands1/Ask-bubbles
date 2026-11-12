@@ -60,6 +60,8 @@ describe("a Standards of Conduct tick needs a reason in the manager's words (CA_
   });
 
   it("off: nothing changes", () => {
+    // Gate-Bubbles-4 (12 Nov 2026): an off test pins CA_PROCEDURE_BASIS off itself, so it holds with that flag on.
+    vi.stubEnv("CA_PROCEDURE_BASIS_ENABLED", "");
     flag(false);
     expect(withoutUnreasonedConduct({ draft: ticked(["standards_of_conduct"]), reading: readCaPolicy(BATHROOMS), stated: false, offered: OFFERED, notes: BATHROOMS, basis: "upkeep_or_task" })).toBeNull();
   });

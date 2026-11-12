@@ -2,10 +2,8 @@
   "cases": [
     {
       "id": "b9",
-      "pass": false,
-      "misses": [
-        "policy"
-      ],
+      "pass": true,
+      "misses": [],
       "card": {
         "employee": "Test Employee",
         "salon": null,
@@ -15,10 +13,8 @@
     },
     {
       "id": "b10",
-      "pass": false,
-      "misses": [
-        "policy"
-      ],
+      "pass": true,
+      "misses": [],
       "card": {
         "employee": "Testy Testerson",
         "salon": "loc-264",
@@ -28,10 +24,8 @@
     },
     {
       "id": "b11",
-      "pass": false,
-      "misses": [
-        "policy"
-      ],
+      "pass": true,
+      "misses": [],
       "card": {
         "employee": "Testy Testerson",
         "salon": "loc-264",
