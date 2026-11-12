@@ -1,6 +1,7 @@
 import { expect } from "vitest";
 
 import { STAFF, WEST_DODGE, noClaimWithoutUpdate, replyMatchesDiff, savedForm, type ReplayAnswer, type ReplayCase, type ReplayContext, type ReplayThread } from "./cases";
+import { REFUSAL_ROSTER } from "./nov7-step-b-refusals-scenarios";
 
 /**
  * ============================================================================
@@ -207,5 +208,34 @@ export const NOV10_CHAT_EDITS_A_CASES: ReplayCase[] = [
       expect(change, "the revision was handed the app's own reply").not.toMatch(BOTS_OWN_WORDS);
     },
   },
+  /*
+   * Gate-Bubbles-4 (12 Nov 2026, NO-GO on #692): nov7-refusal-bub-didnt-edit's turn 5 with DETAILS_FROM_EARLIER_ANSWER on.
+   * No earlier content answer is in the chat, and the turn went to the free chat model ("Updating the draft now" live, 30
+   * Oct, nothing written). It now reads as with the flag off: the revision is asked, and the reply says honestly that
+   * nothing changed. The person is the refusal roster's (invented).
+   */
+  {
+    id: "nov12-details-from-earlier-answer-none-found",
+    title: "\"can you upate the draft with these details of coaching?\" with no earlier content answer: the revision is asked, never the free chat model",
+    report: "Gate-Bubbles-4 (12 Nov 2026, NO-GO on #692): turn 5 of nov7-refusal-bub-didnt-edit went to the free chat model",
+    status: "fixed",
+    fixFlags: ["DETAILS_FROM_EARLIER_ANSWER_ENABLED"],
+    async run(t: ReplayContext) {
+      t.directory(REFUSAL_ROSTER);
+      t.as("location_manager", WEST_DODGE);
+      const thread = t.thread();
+      await thread.say("Create a coaching form.");
+      await thread.say("Oswin");
+      await thread.say("yes");
+      await thread.create();
+      await thread.say("ship from store, when to press ready for pick up and when to press mark as shipped");
+      const before = t.calls();
+      const fifth = await thread.say("can you upate the draft with these details of coaching?");
+      const after = t.calls();
+      expect(after.chat - before.chat, `turn 5 went to the free chat model:\n${fifth.content}`).toBe(0);
+      expect(after.revision - before.revision, "turn 5 never reached the revision").toBe(1);
+      expect(fifth.content, fifth.content).not.toMatch(/Updating the draft now/i);
+      expect(fifth.content, fifth.content).toMatch(/I haven't changed the \*\*Coaching Form\*\*/);
+    },
+  },
 ];
-
