@@ -114,9 +114,9 @@ export const NOV5_CODING3_CHAT_EDITS_CASES: ReplayCase[] = [
     // DETAILS_FROM_EARLIER_ANSWER_ENABLED (coding 6, 10 Nov 2026) hands the revision the earlier answer's details
     // (nov10-chat-edits-a-details-handed-to-the-revision); the pack's revision stand-in writes nothing, so what is SAVED
     // stays open here even with the fix: the live model writes what it is handed.
-    fixFlags: ["DETAILS_FROM_EARLIER_ANSWER_ENABLED"],
-    fixStatus: { open: "the pack's revision stand-in writes nothing; the fix's effect is what the revision is handed (nov10-chat-edits-a-details-handed-to-the-revision)" },
-    fixFlags: ["FORM_EDIT_SOURCE_TURN_ENABLED"],
+    // QA round 17r merge (13 Nov 2026): FORM_EDIT_SOURCE_TURN_ENABLED (#480) hands the revision the turn it means and
+    // holds the case; with DETAILS_FROM_EARLIER_ANSWER_ENABLED alone it stayed open (the stand-in wrote nothing).
+    fixFlags: ["DETAILS_FROM_EARLIER_ANSWER_ENABLED", "FORM_EDIT_SOURCE_TURN_ENABLED"],
     async run(t: T) {
       start(t);
       const thread = t.thread();

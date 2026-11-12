@@ -1,5 +1,4 @@
-import { claimGuardEnabled, copyPasteClaimHonestEnabled, detailsFromEarlierAnswerEnabled, formEditRefersBackEnabled } from "@/lib/config/chat-quality-flags";
-import { claimGuardEnabled, copyPasteClaimHonestEnabled, formEditRefersBackEnabled, formEditSourceTurnEnabled } from "@/lib/config/chat-quality-flags";
+import { claimGuardEnabled, copyPasteClaimHonestEnabled, detailsFromEarlierAnswerEnabled, formEditRefersBackEnabled, formEditSourceTurnEnabled } from "@/lib/config/chat-quality-flags";
 import { extractEmployeeNames, samePerson } from "@/lib/forms/proposal";
 import type { ChatMessage } from "@/types";
 
@@ -146,8 +145,10 @@ function earlierContentAnswer(history: readonly Pick<ChatMessage, "role" | "cont
     if (turn.role !== "assistant" || !turn.content?.trim()) continue;
     if (APPS_OWN_REPLY.test(turn.content)) continue;
     return turn.content;
+  }
+  return null;
 }
-}
+
 /**
  * ============================================================================
  * THE TURN AN EDIT REFERS BACK TO, CHOSEN BY THE THREAD'S STRUCTURE

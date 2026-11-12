@@ -1,5 +1,6 @@
 import { formNameOffRosterAskEnabled, offRosterAskBeforeCardEnabled, offRosterConfirmEnabled, offRosterStoreAnswerOnlyEnabled } from "@/lib/config/chat-quality-flags";
 import type { AccessScope } from "@/types";
+import { storeOnlyTurn } from "@/lib/ai/store-alias";
 
 import { normalizeTypedName } from "./employee-match";
 import { isAcceptedOffRoster, offRosterCardNote, offRosterOffer, offRosterTakenLine } from "./off-roster-confirm";
@@ -29,7 +30,6 @@ export function storeOnlyAnswer(text: string): boolean {
     .trim();
   return rest === "" || /^[a-z]{2}$/.test(rest);
 }
-import { storeOnlyTurn } from "@/lib/ai/store-alias";
 
 /*
  * ============================================================================
@@ -152,9 +152,8 @@ export function withOffRosterAskBeforeCard<T extends { content: string; formProp
         formProposal: { ...card, employeeName: null, employeeRole: null, status: "needs_employee", supportsInlineDraft: false },
       };
     }
-}
-
-/**
+  }
+  /*
    * STORE_ALIAS_ENABLED (Gate-Bubbles-3, R735, 12 Nov 2026): a store answer to this question ("dodge, ne") is only the
    * store. The name stays unconfirmed: the card is held, with its store, and the same question and offer are asked
    * again, so the production confirmation ("use <name>") still decides it.

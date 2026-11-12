@@ -247,10 +247,9 @@ export async function POST(request: Request) {
         // PASTED_REVIEW_NOT_ACCOUNT_ENABLED: pasted reviewer's notes are read as the chat read them (`ai/pasted-review.ts`).
         // SAME_REQUEST_OTHER_PERSON_ENABLED: "the same thing for <B>" is read from that turn on, as the chat read it.
         // SAME_REQUEST_KEEPS_EARLIER_CARD_ENABLED: <A>'s card is read as it stood before "the same thing for <B>".
-        conversation: sameRequestReadConversation(switchReadConversation(turnsWithoutPastedReview(parseHistory(body.conversation))), body.employeeName),
         // TEAM_CARD_NOT_PRODUCT_ENABLED: on the team card, "selling Bath Bomb Kits" is the topic, as the chat read it.
         conversation: teamTopicReadConversation(
-          sameRequestReadConversation(switchReadConversation(turnsWithoutPastedReview(parseHistory(body.conversation)))),
+          sameRequestReadConversation(switchReadConversation(turnsWithoutPastedReview(parseHistory(body.conversation))), body.employeeName),
           body.employeeName,
         ),
         templateKey: body.templateKey,

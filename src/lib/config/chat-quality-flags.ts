@@ -999,6 +999,9 @@ export function formsGuideEnabled(): boolean {
 }
 
 export const CHAT_QUALITY_FLAG_NAMES = [
+  // QA round 17r (13 Nov 2026): TEAM_CARD_NOT_PRODUCT (#668) and FORM_EDIT_SOURCE_TURN (#480) are switched on in production.
+  "TEAM_CARD_NOT_PRODUCT_ENABLED",
+  "FORM_EDIT_SOURCE_TURN_ENABLED",
   // coding 2: OFF_ROSTER_STORE_ANSWER_ONLY (QA's #735 ruling, 12 Nov 2026; default off).
   "OFF_ROSTER_STORE_ANSWER_ONLY_ENABLED",
   "NOT_FOLLOWING_IS_VIOLATION_ENABLED",
