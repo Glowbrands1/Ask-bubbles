@@ -1,0 +1,250 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov11-exit-prose-bare-name: \"exit form\" then a bare name: Additional Details is listed as left blank, never \"a short account drafted from what you've described\" — OPEN in production (the reply says Additional Details is \"a short account drafted from what you've described\")": {
+    "category": "INTENDED",
+    "reason": "Open to holding: after \"exit form\" and a bare name, Additional Details is listed as left blank, never \"a short account drafted from what you've described\"."
+  },
+  "replay: nov10-create-from-conversation-exit-keeps-date [fix:CREATE_FROM_CONVERSATION_POINTS_TO_CARD_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov10-create-from-conversation-exit-keeps-date [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov10-p17-exit-items-and-rehire-misspelled [fix:EXIT_TYPO_WORDS_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov10-p17-exit-items-and-rehire-misspelled [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov10-sf-s36-off-roster-exit [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,NEAR_MISS_QUESTION_RULES_ENABLED,NEAR_MISS_DETAILS_ACCEPT_ENABLED,FORM_NAME_OFF_ROSTER_ASK_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov10-sf-s36-off-roster-exit [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov11-exit-for-for-is-an-exit-request [fix:FORM_FOR_FOR_TYPO_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov11-exit-for-for-is-an-exit-request [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov11-exit-prose-bare-name [open]": {
+    "category": "INTENDED",
+    "reason": "Open to holding: after \"exit form\" and a bare name, Additional Details is listed as left blank, never \"a short account drafted from what you've described\"."
+  },
+  "replay: nov11-r713-not-required-back [fix:EXIT_TYPO_WORDS_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov11-r713-not-required-back [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov11-title-not-part-of-name-yes-then-card [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED,TITLE_NOT_PART_OF_NAME_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov11-title-not-part-of-name-yes-then-card [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov5-exit-termination-paste-no-invented-facts [fix:EXIT_STATED_ONLY_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov5-exit-termination-paste-no-invented-facts [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov6-no-notice-no-date-resigned [fix:NO_NOTICE_NO_DATE_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov6-no-notice-no-date-resigned [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov6-off-roster-exit-for-name-yes [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov6-off-roster-exit-for-name-yes [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov6-off-roster-exit-own-line-name-again [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov6-off-roster-exit-own-line-name-again [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov6-off-roster-exit-own-line-use [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov6-off-roster-exit-own-line-use [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov6-offer-apostrophe-surname [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov6-offer-apostrophe-surname [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov6-one-question-for-name [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov6-one-question-for-name [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov6-one-question-own-line [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov6-one-question-own-line [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov6-title-ends-at-line-exit-s16 [fix:TITLE_ENDS_AT_LINE_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov6-title-ends-at-line-exit-s16 [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov7-brand-not-a-person-termination-letter [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED,FORM_NAME_OFF_ROSTER_ASK_ENABLED,EXIT_STATED_ONLY_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov7-brand-not-a-person-termination-letter [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov8-exit-answer-not-a-correction [fix:EXIT_ANSWER_NOT_A_CORRECTION_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov8-exit-answer-not-a-correction [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov8-exit-field-label-keeps-no-notice [fix:FIELD_LABEL_NOT_A_QUESTION_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov8-exit-field-label-keeps-no-notice [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov8-exit-other-person-not-offered [fix:EXIT_OTHER_PERSON_NOT_SUBJECT_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov8-exit-other-person-not-offered [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov8-exit-termination-stated-facts [fix:EXIT_STATED_ONLY_ENABLED,EXIT_TERMINATION_STATED_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov8-exit-termination-stated-facts [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov8-field-label-not-a-question [fix:FIELD_LABEL_NOT_A_QUESTION_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov8-field-label-not-a-question [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov9-exit-form-date-termination [fix:EXIT_FORM_DATE_FROM_TERMINATION_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov9-exit-form-date-termination [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov9-exit-letter-signed-by-the-employee [fix:EXIT_LETTER_SIGNER_NOT_SUBJECT_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov9-exit-letter-signed-by-the-employee [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov9-exit-letter-signer-off-roster [fix:EXIT_LETTER_SIGNER_NOT_SUBJECT_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov9-exit-letter-signer-off-roster [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov9-exit-letter-signer-on-roster [fix:EXIT_LETTER_SIGNER_NOT_SUBJECT_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov9-exit-letter-signer-on-roster [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov9-exit-lines-keep-method [fix:EXIT_LINE_ANSWERS_ADD_UP_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov9-exit-lines-keep-method [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov9-letter-greeting-dear-off-roster [fix:LETTER_GREETING_NOT_NAME_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov9-letter-greeting-dear-off-roster [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov9-letter-greeting-dear-on-roster [fix:LETTER_GREETING_NOT_NAME_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov9-letter-greeting-dear-on-roster [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov9-letter-title-date-off-roster [fix:EXIT_LETTER_SIGNER_NOT_SUBJECT_ENABLED,EXIT_LETTER_ADDRESSEE_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov9-letter-title-date-off-roster [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov9-letter-title-date-on-roster [fix:EXIT_LETTER_SIGNER_NOT_SUBJECT_ENABLED,EXIT_LETTER_ADDRESSEE_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  },
+  "replay: nov9-letter-title-date-on-roster [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The Exit card's Additional Details line only: \"a short account drafted from what you've described\" becomes \"only the facts you've given about the departure — nothing added\", or, when nothing was described, Additional Details moves into \"Left blank for you to review\". No other text changes."
+  }
+}
