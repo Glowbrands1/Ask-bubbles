@@ -527,6 +527,16 @@ describe(`${AO} on`, () => {
     expect(store.form_instance_values.find((row) => row.instance_id === id && row.field_key === "observation")?.value).toBe(kept);
   });
 
+  // Gate-Bubbles-5 (record 2f2b8517): with EXPECTATION_POLICY_LINE_KEPT on, the general "An employee assigned to open the
+  // location is expected …" was kept, the opening story nobody wrote. It is exempt only from "scheduled to", so it still goes.
+  it("EXPECTATION_POLICY_LINE_KEPT on: the same turns still save no opening nobody wrote", async () => {
+    if (!saved.has("EXPECTATION_POLICY_LINE_KEPT_ENABLED")) saved.set("EXPECTATION_POLICY_LINE_KEPT_ENABLED", process.env.EXPECTATION_POLICY_LINE_KEPT_ENABLED);
+    process.env.EXPECTATION_POLICY_LINE_KEPT_ENABLED = "true";
+    const observation = await drafted();
+    expect(observation).not.toMatch(/\bopen/i);
+    expect(observation).toBe(EXPECTED);
+  });
+
   it("notes that say open keep it", async () => {
     TURNS[0] = TURNS[0] + " and the store was opened late";
     try {
