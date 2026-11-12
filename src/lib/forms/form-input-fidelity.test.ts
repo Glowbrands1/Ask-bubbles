@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { readPositionAnswer } from "./employee-position";
 import { listFormDates } from "./form-date-answer";
@@ -20,6 +20,7 @@ function setFlag(on: boolean) {
 }
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   const value = saved.get(FLAG);
   if (value === undefined) delete process.env[FLAG];
   else process.env[FLAG] = value;
@@ -34,6 +35,9 @@ const POSITION = {
 describe("form input fidelity, flag off", () => {
   it("leaves yesterday unset and still reads a bare warning as a job title", () => {
     setFlag(false);
+    // This flag's off path alone: POSITION_ANSWER_GUARD (on in production) also stops "verbal" being a title, so it is
+    // pinned off here (QA's off-pins guard, 12 Nov 2026).
+    vi.stubEnv("POSITION_ANSWER_GUARD_ENABLED", "");
     expect(fidelityFormDate("She was late yesterday.", TODAY, null)).toBeNull();
     expect(fidelityFormDate("She was late on Oct 20.", TODAY, "2026-10-20")).toBe("2026-10-20");
     expect(
