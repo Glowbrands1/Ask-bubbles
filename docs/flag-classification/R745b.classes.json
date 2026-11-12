@@ -1,0 +1,106 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-manager-form-choice-needs-ca-lower: \"an employee opened the store 15 min late and needs CA\" gives the Corrective Action card; \"Create a form from this conversation.\" keeps it — OPEN in production (a process answer with no card, then \"Which form do you need?\")": {
+    "category": "INTENDED",
+    "reason": "MANAGER_FORM_CHOICE: \"…needs CA\" with no name asks \"Who is this **Corrective Action Form** for?\" instead of a policy answer. Open to holding."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-manager-form-choice-needs-ca-sentence: \"An employee opened the store 15 min late and needs CA\" gives the Corrective Action card; \"Create a form from this conversation.\" keeps it — OPEN in production (a process answer with no card, then \"Which form do you need?\")": {
+    "category": "INTENDED",
+    "reason": "MANAGER_FORM_CHOICE: \"…needs CA\" with no name asks \"Who is this **Corrective Action Form** for?\" instead of a policy answer. Open to holding."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-manager-form-choice-write-ca-lower: \"write ca\" gives the Corrective Action card; \"Create a form from this conversation.\" keeps it — OPEN in production (a process answer with no card, then \"Which form do you need?\")": {
+    "category": "INTENDED",
+    "reason": "MANAGER_FORM_CHOICE: \"write ca\" asks \"Who is this form for?\" instead of a policy answer. Open to holding. Wording note: the \"Create a form from this conversation.\" turn says \"press **Create draft** on the card\" though no card is shown yet."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-manager-form-choice-write-ca-sentence: \"Write ca\" gives the Corrective Action card; \"Create a form from this conversation.\" keeps it — OPEN in production (a process answer with no card, then \"Which form do you need?\")": {
+    "category": "INTENDED",
+    "reason": "MANAGER_FORM_CHOICE: \"write ca\" asks \"Who is this form for?\" instead of a policy answer. Open to holding. Wording note: the \"Create a form from this conversation.\" turn says \"press **Create draft** on the card\" though no card is shown yet."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-store-alias-at-dodge-ne: \"create a ca for kira dunmore at dodge ne, she was late today\" — the card's store is Omaha NE (West Dodge Rd) — OPEN in production (the store the manager named is not read: no store on the card)": {
+    "category": "INTENDED",
+    "reason": "STORE_ALIAS, same as R735b: \"dodge ne\" / \"Dodge, NE\" / \"dodge ne location\" is read as the roster store Omaha, NE (West Dodge Rd)."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-store-alias-bare-Dodge-comma-NE: \"create a ca for kira dunmore, she was late today\" → \"Dodge, NE\" — the card's store is Omaha NE (West Dodge Rd) — OPEN in production (the store the manager named is not read: no store on the card)": {
+    "category": "INTENDED",
+    "reason": "STORE_ALIAS, same as R735b: \"dodge ne\" / \"Dodge, NE\" / \"dodge ne location\" is read as the roster store Omaha, NE (West Dodge Rd)."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-store-alias-bare-dodge-comma-ne: \"create a ca for kira dunmore, she was late today\" → \"dodge, ne\" — the card's store is Omaha NE (West Dodge Rd) — OPEN in production (the store the manager named is not read: no store on the card)": {
+    "category": "INTENDED",
+    "reason": "STORE_ALIAS, same as R735b: \"dodge ne\" / \"Dodge, NE\" / \"dodge ne location\" is read as the roster store Omaha, NE (West Dodge Rd)."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-store-alias-dodge-ne-location: \"create a ca for kira dunmore, dodge ne location, she was late today\" — the card's store is Omaha NE (West Dodge Rd) — OPEN in production (the store the manager named is not read: no store on the card)": {
+    "category": "INTENDED",
+    "reason": "STORE_ALIAS, same as R735b: \"dodge ne\" / \"Dodge, NE\" / \"dodge ne location\" is read as the roster store Omaha, NE (West Dodge Rd)."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-writen-ca-terse-lower: \"writen ca rowan kestrel not atending monthly meeting 12-20-26\" gives the Corrective Action card for Rowan Kestrel — OPEN in production (a policy answer, no card)": {
+    "category": "INTENDED",
+    "reason": "MANAGER_FORM_CHOICE: \"writen ca rowan kestrel …\" gives the Corrective Action card for Rowan Kestrel (open to holding). Note: the card has no Issue and no Policy line, so \"not atending monthly meeting\" is dropped (see future-date terse)."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-writen-ca-terse-sentence: \"Writen ca rowan kestrel not atending monthly meeting 12-20-26\" gives the Corrective Action card for Rowan Kestrel — OPEN in production (a policy answer, no card)": {
+    "category": "INTENDED",
+    "reason": "MANAGER_FORM_CHOICE: \"writen ca rowan kestrel …\" gives the Corrective Action card for Rowan Kestrel (open to holding). Note: the card has no Issue and no Policy line, so \"not atending monthly meeting\" is dropped (see future-date terse)."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-store-alias-off-roster-ask-lower: \"create a ca for kira dunmore, she was late today\" → \"dodge, ne\" → \"use Kira Dunmore\": the store answer never confirms the name — OPEN in production (\"dodge, ne\" is not read as a store without STORE_ALIAS)": {
+    "category": "INTENDED",
+    "reason": "STORE_ALIAS, same as R735b: a store-only answer to the off-roster ask re-asks; \"use Kira Dunmore\" confirms; Store: Omaha, NE (West Dodge Rd), as you said."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-store-alias-off-roster-ask-sentence: \"create a ca for kira dunmore, she was late today\" → \"Dodge, NE\" → \"use Kira Dunmore\": the store answer never confirms the name — OPEN in production (\"Dodge, NE\" is not read as a store without STORE_ALIAS)": {
+    "category": "INTENDED",
+    "reason": "STORE_ALIAS, same as R735b: a store-only answer to the off-roster ask re-asks; \"use Kira Dunmore\" confirms; Store: Omaha, NE (West Dodge Rd), as you said."
+  },
+  "replay: nov10-future-incident-date-terse-typo-lower [open]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Stays open, fails at a later step: OFF, no card (\"the future date is not asked about\"). ON, the card exists and the 12/20/2026 date is asked about, but the check fails with \"the answer replaced the Issue\": the terse card never carries \"monthly meeting\" as its Issue. A follow-up defect, not a regression of a holding case."
+  },
+  "replay: nov10-future-incident-date-terse-typo-sentence [open]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "Stays open, fails at a later step: OFF, no card (\"the future date is not asked about\"). ON, the card exists and the 12/20/2026 date is asked about, but the check fails with \"the answer replaced the Issue\": the terse card never carries \"monthly meeting\" as its Issue. A follow-up defect, not a regression of a holding case."
+  },
+  "replay: nov10-manager-form-choice-needs-ca-lower [open]": {
+    "category": "INTENDED",
+    "reason": "MANAGER_FORM_CHOICE: \"…needs CA\" with no name asks \"Who is this **Corrective Action Form** for?\" instead of a policy answer. Open to holding."
+  },
+  "replay: nov10-manager-form-choice-needs-ca-sentence [open]": {
+    "category": "INTENDED",
+    "reason": "MANAGER_FORM_CHOICE: \"…needs CA\" with no name asks \"Who is this **Corrective Action Form** for?\" instead of a policy answer. Open to holding."
+  },
+  "replay: nov10-manager-form-choice-write-ca-lower [open]": {
+    "category": "INTENDED",
+    "reason": "MANAGER_FORM_CHOICE: \"write ca\" asks \"Who is this form for?\" instead of a policy answer. Open to holding. Wording note: the \"Create a form from this conversation.\" turn says \"press **Create draft** on the card\" though no card is shown yet."
+  },
+  "replay: nov10-manager-form-choice-write-ca-sentence [open]": {
+    "category": "INTENDED",
+    "reason": "MANAGER_FORM_CHOICE: \"write ca\" asks \"Who is this form for?\" instead of a policy answer. Open to holding. Wording note: the \"Create a form from this conversation.\" turn says \"press **Create draft** on the card\" though no card is shown yet."
+  },
+  "replay: nov10-store-alias-at-dodge-ne [open]": {
+    "category": "INTENDED",
+    "reason": "STORE_ALIAS, same as R735b: \"dodge ne\" / \"Dodge, NE\" / \"dodge ne location\" is read as the roster store Omaha, NE (West Dodge Rd)."
+  },
+  "replay: nov10-store-alias-bare-Dodge-comma-NE [open]": {
+    "category": "INTENDED",
+    "reason": "STORE_ALIAS, same as R735b: \"dodge ne\" / \"Dodge, NE\" / \"dodge ne location\" is read as the roster store Omaha, NE (West Dodge Rd)."
+  },
+  "replay: nov10-store-alias-bare-dodge-comma-ne [open]": {
+    "category": "INTENDED",
+    "reason": "STORE_ALIAS, same as R735b: \"dodge ne\" / \"Dodge, NE\" / \"dodge ne location\" is read as the roster store Omaha, NE (West Dodge Rd)."
+  },
+  "replay: nov10-store-alias-dodge-ne-location [open]": {
+    "category": "INTENDED",
+    "reason": "STORE_ALIAS, same as R735b: \"dodge ne\" / \"Dodge, NE\" / \"dodge ne location\" is read as the roster store Omaha, NE (West Dodge Rd)."
+  },
+  "replay: nov10-writen-ca-terse-lower [open]": {
+    "category": "INTENDED",
+    "reason": "MANAGER_FORM_CHOICE: \"writen ca rowan kestrel …\" gives the Corrective Action card for Rowan Kestrel (open to holding). Note: the card has no Issue and no Policy line, so \"not atending monthly meeting\" is dropped (see future-date terse)."
+  },
+  "replay: nov10-writen-ca-terse-sentence [open]": {
+    "category": "INTENDED",
+    "reason": "MANAGER_FORM_CHOICE: \"writen ca rowan kestrel …\" gives the Corrective Action card for Rowan Kestrel (open to holding). Note: the card has no Issue and no Policy line, so \"not atending monthly meeting\" is dropped (see future-date terse)."
+  },
+  "replay: nov12-store-alias-off-roster-ask-lower [open]": {
+    "category": "INTENDED",
+    "reason": "STORE_ALIAS, same as R735b: a store-only answer to the off-roster ask re-asks; \"use Kira Dunmore\" confirms; Store: Omaha, NE (West Dodge Rd), as you said."
+  },
+  "replay: nov12-store-alias-off-roster-ask-sentence [open]": {
+    "category": "INTENDED",
+    "reason": "STORE_ALIAS, same as R735b: a store-only answer to the off-roster ask re-asks; \"use Kira Dunmore\" confirms; Store: Omaha, NE (West Dodge Rd), as you said."
+  }
+}
