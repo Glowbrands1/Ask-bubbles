@@ -666,4 +666,36 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov12-termination-ca-bare-opens-card": "TERMINATION_INTAKE",
   // fixed in production by TERMINATION_INTAKE, QA round 17p, 12 Nov 2026
   "nov12-17k-termination-letter-exit-card": "TERMINATION_INTAKE",
+  // fixed in production by REGISTER_ACCURACY_CONDUCT, QA round 17q, 13 Nov 2026
+  "nov4-ca-sales-wrong-items-card": "REGISTER_ACCURACY_CONDUCT",
+  // fixed in production by ADDED_DETAIL_KEPT, QA round 17q, 13 Nov 2026
+  "nov5-sf-b6-full-sentence-and-added-detail": "ADDED_DETAIL_KEPT",
+  // fixed in production by CA_PROCEDURE_BASIS, QA round 17q, 13 Nov 2026
+  "nov5-sf-b6-policy-left-for-the-manager": "CA_PROCEDURE_BASIS",
+  // fixed in production by ADDED_DETAIL_KEPT, QA round 17q, 13 Nov 2026
+  "nov10-sf-b6-card-carries-added-detail": "ADDED_DETAIL_KEPT",
+  // fixed in production by ATTENDANCE_PLAN_NEEDS_LATENESS, QA round 17q, 13 Nov 2026
+  "nov11-attendance-plan-no-lateness-said": "ATTENDANCE_PLAN_NEEDS_LATENESS",
+  // fixed in production by CARD_PLAN_MATCHES_CREATE, QA round 17q, 13 Nov 2026
+  "nov12-17l-card-shows-pau-attendance-plan": "CARD_PLAN_MATCHES_CREATE",
+  // fixed in production by CARD_PLAN_MATCHES_CREATE, QA round 17q, 13 Nov 2026
+  "nov12-17l-card-plan-equals-saved-plan": "CARD_PLAN_MATCHES_CREATE",
+  // fixed in production by OFF_ROSTER_STORE_ANSWER_ONLY, QA round 17q, 13 Nov 2026
+  "nov12-off-roster-store-answer-only-dodge": "OFF_ROSTER_STORE_ANSWER_ONLY",
+  // fixed in production by OFF_ROSTER_STORE_ANSWER_ONLY, QA round 17q, 13 Nov 2026
+  "nov12-off-roster-store-answer-only-full-name": "OFF_ROSTER_STORE_ANSWER_ONLY",
+  // fixed in production by ANIMAL_VISITORS_ONLY_WHEN_VISITOR, QA round 17q, 13 Nov 2026
+  "nov5-animal-alone-no-visitors": "ANIMAL_VISITORS_ONLY_WHEN_VISITOR",
+  // fixed in production by ANIMAL_VISITORS_ONLY_WHEN_VISITOR, QA round 17q, 13 Nov 2026
+  "nov5-visitor-alone-control": "ANIMAL_VISITORS_ONLY_WHEN_VISITOR",
+  // fixed in production by ANIMAL_VISITORS_ONLY_WHEN_VISITOR, QA round 17q, 13 Nov 2026
+  "nov5-animal-customers-saw-it": "ANIMAL_VISITORS_ONLY_WHEN_VISITOR",
+  // fixed in production by ADD_NOT_REPEATED_SENTENCES, QA round 17q, 13 Nov 2026
+  "nov10-add-not-repeated-leading-sentence": "ADD_NOT_REPEATED_SENTENCES",
+  // fixed in production by ADD_OUT_OF_OTHER_SECTIONS, QA round 17q, 13 Nov 2026
+  "nov10-r16b-add-reminded-under-observed": "ADD_OUT_OF_OTHER_SECTIONS",
+  // fixed in production by ADD_OUT_OF_OTHER_SECTIONS, QA round 17q, 13 Nov 2026
+  "nov10-r16b-add-reminded-glued-into-expectation": "ADD_OUT_OF_OTHER_SECTIONS",
+  // fixed in production by RELATIVE_DAY_NOT_HISTORY, QA round 17q, 13 Nov 2026
+  "nov10-relative-day-keeps-written": "RELATIVE_DAY_NOT_HISTORY",
 };
