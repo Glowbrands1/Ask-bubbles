@@ -1,0 +1,18 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-future-incident-date-full-lower: \"write up rowan kestrel, written warning, for not attending the monthly meeting on 12-20-26\" (written 10/25/2026) \u2014 the card is never dated 12/20/2026, and the date is asked about \u2014 OPEN in production (the card is dated 12/20/2026, after today, and nothing is asked)": {
+  "category": "INTENDED",
+  "reason": "OPEN case holds: the card is not dated 12/20/2026, the question is asked once; after 'it was 10-20-26' the card is dated 10/20 and the Issue stays the request (its date reads 10-20-26), never 'it was 10-20-26'"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-future-incident-date-full-sentence: \"Write up rowan kestrel, written warning, for not attending the monthly meeting on 12-20-26\" (written 10/25/2026) \u2014 the card is never dated 12/20/2026, and the date is asked about \u2014 OPEN in production (the card is dated 12/20/2026, after today, and nothing is asked)": {
+  "category": "INTENDED",
+  "reason": "OPEN case holds: the card is not dated 12/20/2026, the question is asked once; after 'it was 10-20-26' the card is dated 10/20 and the Issue stays the request (its date reads 10-20-26), never 'it was 10-20-26'"
+ },
+ "replay: nov10-future-incident-date-full-lower [open]": {
+  "category": "INTENDED",
+  "reason": "OPEN case holds: the card is not dated 12/20/2026, the question is asked once; after 'it was 10-20-26' the card is dated 10/20 and the Issue stays the request (its date reads 10-20-26), never 'it was 10-20-26'"
+ },
+ "replay: nov10-future-incident-date-full-sentence [open]": {
+  "category": "INTENDED",
+  "reason": "OPEN case holds: the card is not dated 12/20/2026, the question is asked once; after 'it was 10-20-26' the card is dated 10/20 and the Issue stays the request (its date reads 10-20-26), never 'it was 10-20-26'"
+ }
+}
