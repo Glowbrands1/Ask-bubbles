@@ -1,0 +1,14 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-chat-edits-a-details-handed-to-the-revision: (a) \"the details we just discussed!!!\" hands the revision the coaching details the app gave before the card, never its own card or no-change reply \u2014 OPEN in production (the revision is handed the last reply (the app's own \"I haven't changed \u2026\"), never the answer that held the details)": {
+  "category": "INTENDED",
+  "reason": "OPEN case holds: the revision is handed the coaching details discussed before the card"
+ },
+ "src/lib/forms/form-content-turn.test.ts :: DETAILS_FROM_EARLIER_ANSWER_ENABLED reads \"the details we just discussed\" from the answer before the app's own card and edit replies": {
+  "category": "INTENDED-HARNESS",
+  "reason": "unit test pins the flag-off reading; the ON arm exports the flag"
+ },
+ "replay: nov10-chat-edits-a-details-handed-to-the-revision [open]": {
+  "category": "INTENDED",
+  "reason": "OPEN case holds: the revision is handed the coaching details discussed before the card"
+ }
+}
