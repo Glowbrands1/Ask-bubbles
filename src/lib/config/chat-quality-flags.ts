@@ -1361,6 +1361,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 6: GROUP_WORDS_NOT_A_NAME (Problem 19, 11 Nov 2026; default off).
   "GROUP_WORDS_NOT_A_NAME_ENABLED",
   "ACCOUNT_BEFORE_REQUEST_ENABLED",
+  // LETTER_GREETING_ANY_CASE (default off): in the list, as every chat flag (QA round 17k, 12 Nov 2026).
+  "LETTER_GREETING_ANY_CASE_ENABLED",
 ] as const;
 
 /**
