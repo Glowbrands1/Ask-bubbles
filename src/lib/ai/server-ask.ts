@@ -1,5 +1,7 @@
 import "server-only";
 
+import { withManagerFormChoice } from "./manager-form-choice";
+import { withStoreAliases } from "./store-alias";
 import { approvedManualConfirmed, manualDisplayTitle } from "@/lib/forms/official-policy-manual";
 import { describedAttendanceKeys } from "@/lib/forms/ca-policy";
 import { mayDescribeSection } from "@/lib/forms/named-policy-section";
@@ -44,7 +46,6 @@ import { resolveScopeFor } from "@/lib/reporting/scope/server";
 import type { SourceCitation } from "@/types";
 
 import { markStage } from "./chat-stage-timings";
-import { cardPolicyTurns } from "./card-policy-request";
 import { callClaude } from "./call-claude";
 import { glossaryBlock } from "./glossary";
 import { loadChatDataBlock } from "./chat-data-tools";
@@ -94,7 +95,6 @@ import {
   caSalesPolicyEnabled,
   pastFormsBeforeLibraryEnabled,
   coachingCardPolicyEnabled,
-  cardPolicyOwnRequestEnabled,
   outOfDateIsTheProposalEnabled,
   policyPageOnCardEnabled,
 } from "@/lib/config/chat-quality-flags";
@@ -115,7 +115,7 @@ import { rewriteRetrievalQuery } from "./query-rewrite-claude";
 import { followUpOwnQuery } from "./query-rewrite";
 import { matchHybridKnowledge } from "@/lib/knowledge/hybrid-match";
 import { matchRecallKnowledge } from "@/lib/knowledge/recall-match";
-import { withMappedPolicy } from "./violation-policy";
+import { withCardPolicyQuoted, withMappedPolicy } from "./violation-policy";
 import type { RemapManual } from "./remap-incident";
 import { withPolicyPagesOnCard } from "@/lib/forms/policy-page-on-card";
 import { loadScopedRoster } from "@/lib/forms/employee-roster";
@@ -355,7 +355,9 @@ async function answerQuestionTraced(
   // FORM_TYPE_SWITCH_ENABLED: "change to coaching" with the card open switches it to the other form.
   // ADDITIONAL_LOCATION_TAKEN_ENABLED: "Store: Kearney." from a manager who covers Kearney is read as the change it is.
   // FIRST_NAME_SUGGEST_ENABLED: "yes" to "Is this for **Quinn Marlowe**?" is read as that name.
-  const read = withFormTypeSwitch(withAdditionalStore(withTerseSlots(withNameBeforeTitle(withTypoReadingCopy(await withFirstNameAnswerFor(request, actor), names))), actor));
+  // STORE_ALIAS_ENABLED: a store named the managers' way ("dodge ne") is read as its roster name.
+  // MANAGER_FORM_CHOICE_ENABLED: "needs CA", "write ca" are read as the form the manager chose.
+  const read = withFormTypeSwitch(withAdditionalStore(withManagerFormChoice(withStoreAliases(withTerseSlots(withNameBeforeTitle(withTypoReadingCopy(await withFirstNameAnswerFor(request, actor), names))))), actor));
   if (!chatTraceEnabled()) return answerQuestionBody(read, actor, memory);
   const draft = openChatTrace({
     conversationId: request.conversationId,
@@ -687,7 +689,10 @@ async function answerQuestionCore(
     // Flags off: decoration returns the same proposal, and the forms-library
     // answer returns here, before retrieval.
     // COACHING_CARD_POLICY_ENABLED: a Coaching card cites the policy its account falls under (`forms/coaching-card-policy.ts`).
-    if (proposal && coachingCardPolicyEnabled()) return await (await import("./coaching-card-policy-answer")).withCoachingCardPolicyOnAnswer(proposal, request, readManual);
+    if (proposal && coachingCardPolicyEnabled()) {
+      return await quoteCardPolicy(await (await import("./coaching-card-policy-answer")).withCoachingCardPolicyOnAnswer(proposal, request, readManual), readManual);
+    }
+    if (proposal && policyCitationEnabled()) proposal = await quoteCardPolicy(proposal, readManual);
     if (proposal) return proposal;
     // AMOUNT_TURN_STAYS_ENABLED: "i dont know the amount" with a card open is the form's, not a policy question.
     const amountReply = amountTurnReply(request);
@@ -1596,6 +1601,27 @@ async function withCardPolicyPages(response: AskResponse, read: () => Promise<Re
   return content === response.content ? response : { ...response, content };
 }
 
+/**
+ * POLICY_CITATION_ENABLED (Gate-Bubbles-2, 12 Nov 2026): once the card's own policy line is set (a Coaching card's comes
+ * after `decorateFormAnswer`), the card quotes the sections it cites (`ai/violation-policy.ts` withCardPolicyQuoted).
+ * Off, no card, a manual that cannot be read, or a block already there: the same response.
+ */
+async function quoteCardPolicy(
+  response: AskResponse,
+  readManual: () => ReturnType<SupabaseKnowledgeProvider["fetchOfficialPolicyManual"]>,
+): Promise<AskResponse> {
+  if (!policyCitationEnabled() || !response.formProposal) return response;
+  try {
+    const manual = await readManual();
+    if (!manual.ok) return response;
+    const content = withCardPolicyQuoted(response.content, manual.chunks, true);
+    return content === response.content ? response : { ...response, content };
+  } catch {
+    // A manual read that fails leaves the card as it was.
+    return response;
+  }
+}
+
 async function decorateFormAnswer(request: AskRequest, actor: ChatActor, response: AskResponse): Promise<AskResponse> {
   const coachingOn = priorCoachingOptionalEnabled();
   const policyOn = policyCitationEnabled();
@@ -1641,11 +1667,11 @@ async function decorateFormAnswer(request: AskRequest, actor: ChatActor, respons
   if (policyOn || (pageOn && response.formProposal)) {
     try {
       const manual = await new SupabaseKnowledgeProvider().fetchOfficialPolicyManual(ACTIVE_BRAND.knowledgeScopeId);
-      // CARD_POLICY_OWN_REQUEST_ENABLED: a card for <B> is not cited from <A>'s earlier request.
-      const policyTurns = cardPolicyOwnRequestEnabled() && response.formProposal ? cardPolicyTurns(turns, response.formProposal.employeeName) : turns;
       // POLICY_PAGE_ON_CARD_ENABLED: the card's own policy line carries its printed page.
       if (manual.ok && pageOn && response.formProposal) content = withPolicyPagesOnCard(content, manual.chunks);
-      if (manual.ok && policyOn) content = withMappedPolicy(content, policyTurns, manual.chunks, true);
+      // POLICY_CITATION_ENABLED: a card quotes the sections it cites itself, never a re-reading of the turns (Gate-Bubbles-2);
+      // a forms-path reply with no card (a form menu, a question) quotes nothing (Gate-Bubbles-3, Rpcf).
+      if (manual.ok && policyOn && response.formProposal) content = withCardPolicyQuoted(content, manual.chunks, true);
     } catch {
       // A manual read that fails leaves the proposal as the forms path wrote it.
     }

@@ -1267,3 +1267,11 @@ Action's "Policy violated" is named on its line — "Verbal corrective action
 (Attendance) — signed 11/02/2026" — in the chat read-back and on the drafted
 form alike. Coaching lines are unchanged. Ported from the sibling app
 (8754989), same flag.
+## 26 Oct 2026: store aliases (STORE_ALIAS_ENABLED), "empire, sd" not mapped
+
+"dodge ne", "dodge, ne", "dodge ne location" and a bare "dodge, ne" reply
+are the West Dodge Rd store with `STORE_ALIAS_ENABLED` on (aliases built from
+`COMPANY_LOCATION_ENTRIES`). "empire, sd" / "empire" is **not** mapped: Empire
+is not on the seven-store list or in Woven, and reading it as a Sioux Falls
+store would be a guess. `COMPANY_LOCATION_NICKNAMES` stays empty until the
+business (Pau) confirms which store managers mean by it.

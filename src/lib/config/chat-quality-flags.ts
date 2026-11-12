@@ -958,6 +958,26 @@ export function nameBeforeTitleEnabled(): boolean {
 }
 
 /**
+ * The form the manager named is the form: "needs CA" and "write ca" ask for
+ * the Corrective Action Form, and a request for "a form" that names none uses
+ * the form last named in the chat (conv_mvofmpei2c50lhp, 25 Oct 2026). See
+ * `ai/manager-form-choice.ts`. Off, every turn is read as typed.
+ */
+export function managerFormChoiceEnabled(): boolean {
+  return envFlag("MANAGER_FORM_CHOICE_ENABLED");
+}
+
+/**
+ * The way managers name a store ("dodge ne", "dodge, ne", "kearney ne") is
+ * written as the roster name before any reader sees the turn; the aliases are
+ * built from the store list (25 Oct 2026, ported from the sibling app). See
+ * `ai/store-alias.ts`. Off, every turn is read as typed.
+ */
+export function storeAliasEnabled(): boolean {
+  return envFlag("STORE_ALIAS_ENABLED");
+}
+
+/**
  * An incident date after today is asked about once, in every register, and
  * never dates the form (QA, 26 Oct 2026, U4). A deadline or a follow-up in
  * the future is not asked about. Off, a future date is dropped silently, as
@@ -979,6 +999,9 @@ export function formsGuideEnabled(): boolean {
 }
 
 export const CHAT_QUALITY_FLAG_NAMES = [
+  // QA round 17r (13 Nov 2026): TEAM_CARD_NOT_PRODUCT (#668) and FORM_EDIT_SOURCE_TURN (#480) are switched on in production.
+  "TEAM_CARD_NOT_PRODUCT_ENABLED",
+  "FORM_EDIT_SOURCE_TURN_ENABLED",
   // coding 2: OFF_ROSTER_STORE_ANSWER_ONLY (QA's #735 ruling, 12 Nov 2026; default off).
   "OFF_ROSTER_STORE_ANSWER_ONLY_ENABLED",
   // coding 2: OFF_ROSTER_PLACE_ANSWER (port from the sibling app's 37b live bug, 12 Nov 2026; default off).
@@ -1376,6 +1399,10 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "EXIT_TYPO_WORDS_ENABLED",
   "CA_REASON_DUE_TO_ENABLED",
   "COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED",
+  // coding 5: EXIT_NOTICE_VERB_TYPOS (QA's October triage, 10 Nov 2026; default off).
+  "EXIT_NOTICE_VERB_TYPOS_ENABLED",
+  // coding 5: TITLE_INITIALISM_CASE (QA, #207 "she is an HR assistant" read as "Hr Assistant"; default off).
+  "TITLE_INITIALISM_CASE_ENABLED",
   // coding 6: REQUEST_ISSUE_KEPT, LATE_OPENING_OWN_WORDS, FIRST_NAME_ENOUGH (QA round 17b, 10 Nov 2026; default off).
   "REQUEST_ISSUE_KEPT_ENABLED",
   "LATE_OPENING_OWN_WORDS_ENABLED",
@@ -1393,7 +1420,10 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "NEAR_MISS_ANSWER_KEEPS_REQUEST_ENABLED",
   // coding 6: PRIOR_ACTIONS_NO_COMMA (October rebuild 4, #187 rebuilt on main; default off).
   "PRIOR_ACTIONS_NO_COMMA_ENABLED",
+  "STORE_ALIAS_ENABLED",
   "FULL_MANUAL_WIDE_GATE_ENABLED",
+  // coding 6: MANAGER_FORM_CHOICE (B#181 rebuilt; default off; wiring awaits Coding-2).
+  "MANAGER_FORM_CHOICE_ENABLED",
   "EMPTY_REPLY_GUARD_ENABLED",
   "POLICY_PAGE_ON_CARD_ENABLED",
   "FORM_INPUT_FIDELITY_ENABLED",
@@ -1418,9 +1448,15 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT_ENABLED",
   // coding 6: GROUP_WORDS_NOT_A_NAME (Problem 19, 11 Nov 2026; default off).
   "GROUP_WORDS_NOT_A_NAME_ENABLED",
+  // ANSWER_TURN_LEVEL (default off; QA, 12 Nov 2026): in the list, as every chat flag.
+  "ANSWER_TURN_LEVEL_ENABLED",
+  // TERMINATION_CARD_TIDY (default off; QA's 17o live notes, 12 Nov 2026): in the list, as every chat flag.
+  "TERMINATION_CARD_TIDY_ENABLED",
   "ACCOUNT_BEFORE_REQUEST_ENABLED",
   // LETTER_GREETING_ANY_CASE (default off): in the list, as every chat flag (QA round 17k, 12 Nov 2026).
   "LETTER_GREETING_ANY_CASE_ENABLED",
+  // EXIT_NOTICE_STATED_ONLY (default off): in the list, as every chat flag (QA's 17j live test, 12 Nov 2026).
+  "EXIT_NOTICE_STATED_ONLY_ENABLED",
   // coding 5: DRAFT_NO_INVENTED_PLAN (QA's October triage of #188, 10 Nov 2026; default off).
   "DRAFT_NO_INVENTED_PLAN_ENABLED",
   // REVISION_ARCHIVED_NOT_OPEN (default off): in the list, as every flag a release flips (QA round 17l, 12 Nov 2026).
@@ -1462,6 +1498,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "RESENT_REQUEST_IS_YES_ENABLED",
   // CARD_PLAN_MATCHES_CREATE (default off; QA's 17l, 12 Nov 2026): in the list, as every chat flag.
   "CARD_PLAN_MATCHES_CREATE_ENABLED",
+  // coding 6: TYPO_FULL_NAME_TO_ROSTER (audit item 15.10, sf-b5, 11 Nov 2026; default off).
+  "TYPO_FULL_NAME_TO_ROSTER_ENABLED",
 ] as const;
 
 /**
@@ -3627,6 +3665,19 @@ export function negatedLatenessTopicEnabled(): boolean {
 }
 
 /**
+ * EDITS SAID IN CHAT REACH THE CARD (coding 3, item 1; same flag in both apps).
+ * "can you upate the draft with these details of coaching?" → "it didnt edit in
+ * the card" → "the details we just discussed!!!", and "Do i need to copy and
+ * paste it?": the turn a refers-back edit means is chosen by the thread's
+ * structure — the browser's markers for the card and for replies about the open
+ * form (`formReply`), and the manager's turn a reply did not write — never "the
+ * last reply". Off, as before. See `forms/form-content-turn.ts` (`sourceTurn`).
+ */
+export function formEditSourceTurnEnabled(): boolean {
+  return envFlag("FORM_EDIT_SOURCE_TURN_ENABLED");
+}
+
+/**
  * CA_REASON_DUE_TO_ENABLED (QA, live, 4 Nov 2026; rebuilds #454; default off). With CA_SALES_POLICY on in
  * production, "CA for <name> due to under performance in salon metrics" put the whole request on the card's
  * Issue, and the draft's Observation of Offense was the request as the model copied it. On: "due to" and
@@ -4942,6 +4993,26 @@ export function attendancePlanNeedsLatenessEnabled(): boolean {
 }
 
 /**
+ * A misspelled "submitted" before the notice ("she submited her notice on
+ * 9/29/26", QA's October triage, 10 Nov 2026) names the notice date, as
+ * "submitted" does. Without it the notice date stayed blank. Off, as before.
+ */
+export function exitNoticeVerbTyposEnabled(): boolean {
+  return envFlag("EXIT_NOTICE_VERB_TYPOS_ENABLED");
+}
+
+/**
+ * A job title the manager typed keeps an initialism upper case: "she is an HR
+ * assistant" (or "an hr assistant") is "HR Assistant" on the card, never "Hr
+ * Assistant" (QA, #207; the title casing of `job-title-from-words.ts`). Only
+ * HR, IT, DM and GM; every other word is Capitalized as before. Off, as
+ * before.
+ */
+export function titleInitialismCaseEnabled(): boolean {
+  return envFlag("TITLE_INITIALISM_CASE_ENABLED");
+}
+
+/**
  * NO_NAME_REPLY_WORDING_ENABLED (QA, the sibling app's round 22 live test, 11 Nov 2026; port from the sibling app; default off; same
  * flag in both apps). "create a CA for ima employee" made no card, but the reply said "for the the employee" twice and
  * "You can create it now" with no Create button. On, the name's stand-in is never re-replaced and a card with no employee
@@ -5179,6 +5250,16 @@ export function nearMissTurnedDownEverywhereEnabled(): boolean {
 }
 
 /**
+ * ANSWER_TURN_LEVEL_ENABLED (coding 6, 12 Nov 2026; default off; QA's ruling (a), from B#808's gate). After the app's own
+ * question ("Is this for <name>?", "Who is this … for?", the open level question), "no call no show on 11/3, verbal
+ * warning" read the level as history and kept it in the Issue. On: in such an answer, a trailing bare-level clause with no
+ * history words is this form's level and leaves the Issue. Off, as before. See `forms/answer-turn-level.ts`.
+ */
+export function answerTurnLevelEnabled(): boolean {
+  return envFlag("ANSWER_TURN_LEVEL_ENABLED");
+}
+
+/**
  * OUTLINE_ON_OPEN_PROPOSAL_ENABLED (coding 6, 11 Nov 2026; default off; QA's Bubbles 17i live test). On a proposal
  * (Create not pressed), a pasted "Observation of Offense: … / Action Plan: …" outline for another person, then "same
  * outline but with <A>'s info", cost the card its Issue and Policy. On: with no form open, a pasted outline and a
@@ -5297,4 +5378,69 @@ export function registerAccuracyConductEnabled(): boolean {
  */
 export function cardPlanMatchesCreateEnabled(): boolean {
   return envFlag("CARD_PLAN_MATCHES_CREATE_ENABLED");
+}
+
+/**
+ * NEXT_PUBLIC_REPLY_QUOTE_LINES_ENABLED (QA's Bubbles 17p live check, 12 Nov 2026; default off). With
+ * STEP_B_REPLY_KEEPS_LINES on, an edit reply quotes the field line by line ("Changed Observation of Offense to:\n>
+ * Observed:\n> <G> was late …\n> Expectation: …"), but the chat showed it as ONE line with ">" between the parts: the
+ * renderer had no quote block, so the "> " lines were joined into a paragraph. On: a run of "> " lines renders as a
+ * quote, each line on its own line (`components/rich-text.tsx`). The chat renders in the browser, so only the public
+ * name is read, written out statically for Next to inline. Off, as before.
+ */
+export function replyQuoteLinesClientEnabled(): boolean {
+  const inlined = process.env.NEXT_PUBLIC_REPLY_QUOTE_LINES_ENABLED;
+  return typeof inlined === "string" && ON.has(inlined.trim().toLowerCase());
+}
+
+/**
+ * TERMINATION_CARD_TIDY_ENABLED (coding 6, 12 Nov 2026; default off; QA's 17o live notes on termination). "CA for <A>, do
+ * not terminate yet, she was late" made the Issue "do not terminate yet"; a term CA card's Action plan line ran into the
+ * next line with no blank line. On: the Issue is the account (`ai/termination-card-tidy.ts`) and the plan line keeps its
+ * line break (`ai/termination-stated.ts`). Off, as before.
+ */
+export function terminationCardTidyEnabled(): boolean {
+  return envFlag("TERMINATION_CARD_TIDY_ENABLED");
+}
+
+/**
+ * TEAM_CARD_NOT_PRODUCT_ENABLED (coding 6, 10 Nov 2026; default off; QA's
+ * overnight scan sf-s13). "a coaching form for the team at Kearney on selling
+ * Spray Tan Kits …" made a card for "Spray Tan Kits", and "The employee needs
+ * to be left blank for now" went into its Observation. On: a coaching card
+ * whose name is nobody on the roster and was only written as the topic
+ * ("selling …", "on …"), in a request for the team (or one that leaves the
+ * employee blank), is the team card, and the blank-employee turn is no
+ * account. See `forms/team-card-not-product.ts`. Off, as before.
+ */
+export function teamCardNotProductEnabled(): boolean {
+  return envFlag("TEAM_CARD_NOT_PRODUCT_ENABLED");
+}
+
+/**
+ * TYPO_FULL_NAME_TO_ROSTER_ENABLED (coding 6, 11 Nov 2026; default off; QA's audit item 15.10, overnight scan sf-b5,
+ * invented names). "create a ca form for Delphine Marlwoe Ostrander" for the roster's Delphine Marlowe Ostrander made
+ * the card for the name as typed (TYPED_NAME keeps the typed spelling; the near-miss question rides on
+ * FORM_NAME_FROM_ROSTER, off in production), so Woven's position never reached it. On: a full name typed with the
+ * roster person's own first name and every surname word that person's, exact or one typo (two for a long word), when
+ * exactly one roster person is that close, is that person (`forms/employee-match.ts` matchEmployeeName). Off, as before.
+ *
+ * Reworked (12 Nov 2026, QA's ruling on Gate-Bubbles-4's NO-GO, G4-776): the typo is NOT matched straight to the roster
+ * person — "Is this for **<roster name>**?" is still asked first (a typo can be a different person; the confirmation
+ * costs one turn), and a preferred name stays as the roster has it. On: after that question, a turn that opens with a
+ * level ("verbal warning …") on the asked person's Corrective Action card is the card's level
+ * (`forms/confirmed-name-level.ts`). Off, as before.
+ */
+export function typoFullNameToRosterEnabled(): boolean {
+  return envFlag("TYPO_FULL_NAME_TO_ROSTER_ENABLED");
+}
+
+/**
+ * EXIT_NOTICE_STATED_ONLY_ENABLED (coding 6, 12 Nov 2026; default off; QA's Bubbles 17j live test). "exit form for <A>,
+ * she resigned 11/8 …" filled "Date that notice was given: November 8" though the manager gave only the resignation
+ * date. On: that line is filled only when the manager states notice; the date stays the Resignation Date. Off, as before.
+ * See `forms/exit-facts.ts`.
+ */
+export function exitNoticeStatedOnlyEnabled(): boolean {
+  return envFlag("EXIT_NOTICE_STATED_ONLY_ENABLED");
 }

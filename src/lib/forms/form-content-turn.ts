@@ -1,4 +1,4 @@
-import { claimGuardEnabled, copyPasteClaimHonestEnabled, detailsFromEarlierAnswerEnabled, formEditRefersBackEnabled } from "@/lib/config/chat-quality-flags";
+import { claimGuardEnabled, copyPasteClaimHonestEnabled, detailsFromEarlierAnswerEnabled, formEditRefersBackEnabled, formEditSourceTurnEnabled } from "@/lib/config/chat-quality-flags";
 import { extractEmployeeNames, samePerson } from "@/lib/forms/proposal";
 import type { ChatMessage } from "@/types";
 
@@ -149,6 +149,54 @@ function earlierContentAnswer(history: readonly Pick<ChatMessage, "role" | "cont
   return null;
 }
 
+/**
+ * ============================================================================
+ * THE TURN AN EDIT REFERS BACK TO, CHOSEN BY THE THREAD'S STRUCTURE
+ * ============================================================================
+ *
+ * FORM_EDIT_SOURCE_TURN_ENABLED (coding 3, item 1; same flag in both apps). A
+ * manager's production chat: the bot answered how to coach on a procedure,
+ * she asked for the card, created it, then "can you upate the draft
+ * with these details of coaching?" → "it didnt edit in the card" → "the
+ * details we just discussed!!!". Each read "the last reply" (`previousAnswer`):
+ * the card, then the bot's own "I haven't changed …" — never the answer that
+ * held the details. And "Do i need to copy and paste it?" was answered "It
+ * should update automatically", with her own account never written.
+ *
+ * The source is chosen by structure, not wording. Each turn carries two markers
+ * from the browser (`parseHistory`): `card` (it carried a form card) and
+ * `formReply` (the route's reply about the open form, with `unwritten`, the
+ * manager's turn it did not write). The source is the most recent of:
+ *
+ *   - an assistant answer that is neither a card nor a reply about the open
+ *     form, before or after the card (the bot's own lines about the form are
+ *     never content); or
+ *   - the `unwritten` turn still pending: the one the latest reply about this
+ *     form carries (the route carries it forward while the form is unchanged,
+ *     and drops it once the form changes).
+ *
+ * A thread saved before the markers existed (no `formReply`, and its last
+ * reply is not the card) falls back to the last reply, as before.
+ */
+type MarkedTurn = Pick<ChatMessage, "role" | "content" | "card" | "formReply">;
+
+/** The thread carries the markers this reads (or its last reply is the card, which the browser always marked). */
+function structured(history: readonly MarkedTurn[]): boolean {
+  if (history.some((turn) => turn.formReply)) return true;
+  const last = [...history].reverse().find((turn) => turn.role === "assistant");
+  return Boolean(last?.card);
+}
+
+/** The manager's turn the latest reply about this form did not write, or null. */
+export function pendingUnwritten(history: readonly MarkedTurn[], instanceId: string): string | null {
+  for (let index = history.length - 1; index >= 0; index -= 1) {
+    const reply = history[index]!.formReply;
+    if (history[index]!.role !== "assistant" || !reply || reply.instanceId !== instanceId) continue;
+    return reply.unwritten?.trim() ? reply.unwritten.slice(0, MAX_CONTENT) : null;
+  }
+  return null;
+}
+
 /** The answer "these details" / "the details we just discussed" refer to. */
 function referredAnswer(history: readonly Pick<ChatMessage, "role" | "content">[]): string | null {
   /*
@@ -158,6 +206,102 @@ function referredAnswer(history: readonly Pick<ChatMessage, "role" | "content">[
    */
   if (!detailsFromEarlierAnswerEnabled()) return previousAnswer(history);
   return earlierContentAnswer(history) ?? previousAnswer(history);
+}
+/** The turn an edit that refers back means, by structure (see above); null when the thread has none. */
+export function sourceTurn(
+  history: readonly MarkedTurn[],
+  instanceId: string | null,
+): { text: string; from: "answer" | "unwritten" } | null {
+  let latestReply = true;
+  for (let index = history.length - 1; index >= 0; index -= 1) {
+    const turn = history[index]!;
+    if (turn.role !== "assistant") continue;
+    if (turn.formReply) {
+      if (latestReply && (!instanceId || turn.formReply.instanceId === instanceId)) {
+        latestReply = false;
+        const unwritten = turn.formReply.unwritten?.trim() ? turn.formReply.unwritten.slice(0, MAX_CONTENT) : "";
+        if (unwritten) return { text: unwritten, from: "unwritten" };
+      }
+      /*
+       * #480 gate (nov7-refusal-bub-date-question): every reply with a form open carries `formReply`, the policy answer
+       * that held "these details" included, so it was skipped and the edit fell to an ordinary answer. A reply the route
+       * marked as an ordinary answer is an answer like any other.
+       */
+      if (!turn.formReply.answer) continue;
+    }
+    if (turn.card) continue;
+    const text = typeof turn.content === "string" ? contentOf(turn.content) : "";
+    if (text) return { text, from: "answer" };
+  }
+  return null;
+}
+
+/** The turn refers back to something said earlier ("make that update", "the details we just discussed"), in the existing readers. */
+function refersBack(question: string): boolean {
+  return MAKE_THAT.test(question) || WITH_THESE.test(question) || (formEditRefersBackEnabled() && (DO_THAT.test(question) || DISCUSSED.test(question)));
+}
+
+/**
+ * The manager's turn as `unwritten`, or null when it speaks about the form
+ * itself ("it didnt edit in the card") rather than giving content for it —
+ * read with the claim guard's own `ABOUT_THE_FORM`.
+ */
+export function unwrittenTurn(question: string): string | null {
+  const text = question.trim();
+  if (!text || ABOUT_THE_FORM.test(text) || notContentForTheForm(text)) return null;
+  return text.slice(0, MAX_CONTENT);
+}
+
+/*
+ * Gate-Bubbles (#480, 12 Nov 2026), nov3-stepb-b15: "this is perfect" was kept as the account to add ("\"this is
+ * perfect\" isn't on the Coaching Form … Say make that update"), and "can i reopen this for an edit?" got the same
+ * reply. An acknowledgement is never content for the form, and a question about reopening or editing it is not an edit.
+ */
+const ACKNOWLEDGES =
+  /^(?:(?:this|that|it)(?:'s|\s+is|\s+looks|\s+sounds)?\s+)?(?:(?:really|very|so)\s+)?(?:perfect|great|good|fine|awesome|excellent|nice|cool|ok(?:ay)?|correct|right|looks\s+good|sounds\s+good|got\s+it|works(?:\s+for\s+me)?|thanks?(?:\s+you)?(?:\s+so\s+much)?|thank\s+you(?:\s+so\s+much)?|ty)(?:[,\s]+(?:thanks?|thank\s+you|ty))?[\s.!]*$/i;
+const ASKS_TO_REOPEN =
+  /^(?:(?:can|could|may|do|how\s+do|how\s+can)\s+(?:i|we)\s+)?(?:re-?open|unlock|go\s+back\s+into|edit|change)\b[^?]*\?\s*$|\bre-?open\b[^?]*\bfor\s+(?:an?\s+)?edit/i;
+
+/** An acknowledgement ("this is perfect", "thanks") or a question about reopening the form: never content for it. */
+export function notContentForTheForm(question: string): boolean {
+  const text = question.trim();
+  return ACKNOWLEDGES.test(text) || ASKS_TO_REOPEN.test(text);
+}
+
+/**
+ * The reply when an ordinary answer changed nothing and the manager's own
+ * words are still not on the draft (FORM_EDIT_SOURCE_TURN_ENABLED): built
+ * from the saved state, never from the answer's wording. A cited manual
+ * answer is kept below it, its claim lines dropped as `honestFormReply` does.
+ */
+export function unwrittenReply(input: {
+  unwritten: string;
+  templateName: string;
+  employeeName: string;
+  /** The open form takes "make that update" (a Coaching Form). */
+  canWrite: boolean;
+  /** The ordinary answer, when it cited the manual; null otherwise. */
+  citedAnswer: string | null;
+}): string {
+  const said = input.unwritten.replace(/\s+/g, " ").trim();
+  const quoted = said.length > 160 ? `${said.slice(0, 157).trimEnd()}…` : said;
+  const how = input.canWrite
+    ? "Say **make that update** and I'll write it into the draft, or type it on the card and press **Save changes**."
+    : "Type it on the card and press **Save changes**, or tell me which part it belongs in — for example \"add to the observation: …\".";
+  const kept = input.citedAnswer
+    ? input.citedAnswer
+        .split("\n")
+        .filter((line) => !claims(line))
+        .join("\n")
+        .trim()
+    : "";
+  return [
+    `**Nothing on the form has changed yet.** "${quoted}" isn't on the ${input.templateName} for ${input.employeeName}.`,
+    how,
+    kept,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 export function formContentQuestion(input: {
@@ -274,18 +418,38 @@ const FROM_ANSWER = "Add the details in my last message to the Details of Coachi
 
 export function formContentRevision(input: {
   question: string;
-  history: readonly Turn[];
+  history: readonly (Turn & Pick<ChatMessage, "card" | "formReply">)[];
   templateName: string;
   employeeName: string;
-}): { question: string; history: Turn[] } | null {
+  /** FORM_EDIT_SOURCE_TURN_ENABLED: the open form, whose pending `unwritten` turn counts. */
+  instanceId?: string | null;
+}): { question: string; history: Turn[]; source: "turn" | "earlier" } | null {
+  const question = input.question.trim();
+  /*
+   * FORM_EDIT_SOURCE_TURN_ENABLED: an edit that refers back is handed the turn
+   * it means (`sourceTurn`), verbatim — not run through `oneLine`, whose
+   * start → begin rewrite turned a button named "Start …" into "begin …" — as
+   * the manager's latest message under FROM_ANSWER. Coaching Forms only, as
+   * the rest of this module.
+   */
+  if (formEditSourceTurnEnabled() && /\bcoaching\b/i.test(input.templateName) && question && refersBack(question) && structured(input.history)) {
+    const source = sourceTurn(input.history, input.instanceId ?? null);
+    if (!source) return null;
+    return {
+      question: FROM_ANSWER,
+      history: [...input.history, { id: "form-content-answer", role: "user", content: source.text }],
+      source: "earlier",
+    };
+  }
   const rewritten = formContentQuestion(input);
   if (!rewritten) return null;
+  const source = refersBack(question) || INCLUDE_DETAILS_OF.test(question) ? ("earlier" as const) : ("turn" as const);
   const history = [...input.history];
   const fromAnswer = MAKE_THAT.test(input.question.trim()) || WITH_THESE.test(input.question.trim());
   const somebodyElse = extractEmployeeNames(rewritten).some((name) => !samePerson(name, input.employeeName));
-  if (!fromAnswer || !somebodyElse) return { question: rewritten, history };
+  if (!fromAnswer || !somebodyElse) return { question: rewritten, history, source };
   const content = rewritten.slice(rewritten.indexOf(":") + 1).trim();
-  return { question: FROM_ANSWER, history: [...history, { id: "form-content-answer", role: "user", content }] };
+  return { question: FROM_ANSWER, history: [...history, { id: "form-content-answer", role: "user", content }], source };
 }
 
 /**

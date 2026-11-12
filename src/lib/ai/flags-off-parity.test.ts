@@ -168,6 +168,16 @@ const UI_PATHS = ["src/app/**/*.tsx", "src/components/**", "src/features/**/*.ts
  * off, it renders as before for every role.
  */
 const ALLOWED_UI = [
+  // NEXT_PUBLIC_REPLY_QUOTE_LINES_ENABLED (#839, QA's Bubbles 17p live check; QA round 17r, 13 Nov 2026): a run of "> "
+  // lines in a reply is shown as a quote, a line each. Off, the renderer is unchanged.
+  "src/components/rich-text.tsx",
+  /*
+   * FORM_EDIT_SOURCE_TURN_ENABLED (coding 3, item 1, accepted design 5 Nov
+   * 2026): the answer's `formReply` is kept on the message it already builds,
+   * so it goes back with the history. Data only: nothing renders differently,
+   * and with the flag off the server never sends one.
+   */
+  "src/features/chat/chat-screen.tsx",
   // Import's "couldn't confirm … is yours" line (QA, 12 Nov 2026, both apps): shown only for a "not_proven" decline,
   // which only CHAT_IMPORT_PROVEN_OWN_ENABLED returns. Off, the server never declines that way, so it never shows.
   "src/features/chat/import-local-history.tsx",
