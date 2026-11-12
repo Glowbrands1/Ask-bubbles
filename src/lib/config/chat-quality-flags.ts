@@ -979,6 +979,8 @@ export function formsGuideEnabled(): boolean {
 }
 
 export const CHAT_QUALITY_FLAG_NAMES = [
+  // coding 2: OFF_ROSTER_STORE_ANSWER_ONLY (QA's #735 ruling, 12 Nov 2026; default off).
+  "OFF_ROSTER_STORE_ANSWER_ONLY_ENABLED",
   "NOT_FOLLOWING_IS_VIOLATION_ENABLED",
   "INCIDENT_FROM_EARLIER_TURN_ENABLED",
   "LEVEL_REQUEST_DATE_ENABLED",
@@ -2966,6 +2968,17 @@ export function possessivePlaceNotPersonEnabled(): boolean {
  */
 export function offRosterAskBeforeCardEnabled(): boolean {
   return envFlag("OFF_ROSTER_ASK_BEFORE_CARD_ENABLED");
+}
+
+/**
+ * OFF_ROSTER_STORE_ANSWER_ONLY_ENABLED (Coding-2, 12 Nov 2026; default off; QA's ruling on the #735 gate, both apps).
+ * Under the off-roster ask ("I can't find **<A>** … reply **use <A>**"), a reply that is only a store set the store and
+ * made the card for <A> at once, skipping the "use <A>" confirmation. On: a store-only answer sets the store and the
+ * name still needs "use <A>": the card is held, with its store, and the ask is made again (`forms/off-roster-ask.ts`).
+ * Off, as before.
+ */
+export function offRosterStoreAnswerOnlyEnabled(): boolean {
+  return envFlag("OFF_ROSTER_STORE_ANSWER_ONLY_ENABLED");
 }
 
 /**
