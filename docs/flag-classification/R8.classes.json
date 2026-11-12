@@ -1,0 +1,177 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov9-exit-lines-keep-method: an exit form answered one field per turn: How Employee Resigned, filled on turn 3, stays on turns 4 and 5 \u2014 OPEN in production (How Employee Resigned blank again on turns 4 and 5)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with EXIT_LINE_ANSWERS_ADD_UP_ENABLED"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov9-letter-title-date-off-roster: the same, Marcus off the roster (the live chat): the signer is never offered, no Job Title \"District Manager\", Resignation Date November 8, 2026 \u2014 OPEN in production (\"Which of them is this Resignation/Exit Form for \u2014 Marcus Tellefsen or Dolores Whitcombe District Manager?\")": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with EXIT_LETTER_ADDRESSEE_ENABLED"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov9-letter-title-date-on-roster: the letter, then \"I need an exit form with this information.\" + the letter (Marcus on the roster): no Job Title \"District Manager\", Resignation Date November 8, 2026 \u2014 OPEN in production (Job Title: District Manager; Resignation Date: November 3, 2026)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with EXIT_LETTER_ADDRESSEE_ENABLED"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov9-missed-shift-cites-attendance-after-first-name: after \"make me CA for <first name> failing to complete shifts\": \"\u2026 not showing up to her shifts on 11/7 and 11/8\" cites Attendance \u2014 OPEN in production (no Policy line; the Action plan on \"the applicable company policy\")": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with MISSED_SHIFT_CITES_ATTENDANCE_ENAB"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov9-missed-shift-cites-attendance-single: the single request: \"\u2026 not showing up to her shifts on 11/7 and 11/8\" cites Attendance \u2014 OPEN in production (no Policy line; the Action plan on \"the applicable company policy\")": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with MISSED_SHIFT_CITES_ATTENDANCE_ENAB"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov9-possessive-place-what-happened: the ask-who card for QA's wording: \"What happened\" is \"she was late on 10-20-26\" or blank, never the place name \u2014 OPEN in production (What happened: Lee's Summit Plaza)": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "An OPEN case now holds with POSSESSIVE_PLACE_ACCOUNT_ENABLED"
+ },
+ "src/lib/forms/possessive-place.test.ts :: POSSESSIVE_PLACE_ACCOUNT_ENABLED: the ask-who card's What happened (QA, the Bubbles round-7 live test, 9 Nov 2026) off: What happened stays the place name (the bug)": {
+  "category": "INTENDED-HARNESS",
+  "twin": "itself, flag unset (CI default)",
+  "reason": "The flag's own off-pin: asserts today's What happened ('Lee's Summit Plaza'); with POSSESSIVE_PLACE_ACCOUNT on it is the account."
+ },
+ "replay: nov8-ca-shift-dates-name-and-dates [fix:FIRST_NAME_ANSWER_KEEPS_ACCOUNT_ENABLED,SHIFT_ACCOUNT_IS_INCIDENT_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: MISSED_SHIFT_CITES_ATTENDANCE_ENAB \u2014 Attendance cited for missed/failed shifts; How Employee Resigned kept; letter addressee title/effective date; Lee's Summit Plaza What happened"
+ },
+ "replay: nov8-ca-shift-dates-name-and-dates [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: MISSED_SHIFT_CITES_ATTENDANCE_ENAB \u2014 Attendance cited for missed/failed shifts; How Employee Resigned kept; letter addressee title/effective date; Lee's Summit Plaza What happened"
+ },
+ "replay: nov8-ca-shift-dates-name-only [fix:FIRST_NAME_ANSWER_KEEPS_ACCOUNT_ENABLED,SHIFT_ACCOUNT_IS_INCIDENT_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: MISSED_SHIFT_CITES_ATTENDANCE_ENAB \u2014 Attendance cited for missed/failed shifts; How Employee Resigned kept; letter addressee title/effective date; Lee's Summit Plaza What happened"
+ },
+ "replay: nov8-ca-shift-dates-name-only [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: MISSED_SHIFT_CITES_ATTENDANCE_ENAB \u2014 Attendance cited for missed/failed shifts; How Employee Resigned kept; letter addressee title/effective date; Lee's Summit Plaza What happened"
+ },
+ "replay: nov8-ca-shift-dates-not-showing-up [fix:FIRST_NAME_ANSWER_KEEPS_ACCOUNT_ENABLED,SHIFT_ACCOUNT_IS_INCIDENT_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: MISSED_SHIFT_CITES_ATTENDANCE_ENAB \u2014 Attendance cited for missed/failed shifts; How Employee Resigned kept; letter addressee title/effective date; Lee's Summit Plaza What happened"
+ },
+ "replay: nov8-ca-shift-dates-not-showing-up [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: MISSED_SHIFT_CITES_ATTENDANCE_ENAB \u2014 Attendance cited for missed/failed shifts; How Employee Resigned kept; letter addressee title/effective date; Lee's Summit Plaza What happened"
+ },
+ "replay: nov8-ca-shift-dates-request-again [fix:FIRST_NAME_ANSWER_KEEPS_ACCOUNT_ENABLED,SHIFT_ACCOUNT_IS_INCIDENT_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: MISSED_SHIFT_CITES_ATTENDANCE_ENAB \u2014 Attendance cited for missed/failed shifts; How Employee Resigned kept; letter addressee title/effective date; Lee's Summit Plaza What happened"
+ },
+ "replay: nov8-ca-shift-dates-request-again [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: MISSED_SHIFT_CITES_ATTENDANCE_ENAB \u2014 Attendance cited for missed/failed shifts; How Employee Resigned kept; letter addressee title/effective date; Lee's Summit Plaza What happened"
+ },
+ "replay: nov8-s38-failing-first-name-in-chat [fix:ACCOUNT_VERB_NOT_A_NAME_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: MISSED_SHIFT_CITES_ATTENDANCE_ENAB \u2014 Attendance cited for missed/failed shifts; How Employee Resigned kept; letter addressee title/effective date; Lee's Summit Plaza What happened"
+ },
+ "replay: nov8-s38-failing-first-name-in-chat [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: MISSED_SHIFT_CITES_ATTENDANCE_ENAB \u2014 Attendance cited for missed/failed shifts; How Employee Resigned kept; letter addressee title/effective date; Lee's Summit Plaza What happened"
+ },
+ "replay: nov8-s38-failing-full-name [fix:ACCOUNT_VERB_NOT_A_NAME_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: MISSED_SHIFT_CITES_ATTENDANCE_ENAB \u2014 Attendance cited for missed/failed shifts; How Employee Resigned kept; letter addressee title/effective date; Lee's Summit Plaza What happened"
+ },
+ "replay: nov8-s38-failing-full-name [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: MISSED_SHIFT_CITES_ATTENDANCE_ENAB \u2014 Attendance cited for missed/failed shifts; How Employee Resigned kept; letter addressee title/effective date; Lee's Summit Plaza What happened"
+ },
+ "replay: nov8-s38-keep-not-showing-up [fix:ACCOUNT_VERB_NOT_A_NAME_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: MISSED_SHIFT_CITES_ATTENDANCE_ENAB \u2014 Attendance cited for missed/failed shifts; How Employee Resigned kept; letter addressee title/effective date; Lee's Summit Plaza What happened"
+ },
+ "replay: nov8-s38-keep-not-showing-up [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: MISSED_SHIFT_CITES_ATTENDANCE_ENAB \u2014 Attendance cited for missed/failed shifts; How Employee Resigned kept; letter addressee title/effective date; Lee's Summit Plaza What happened"
+ },
+ "replay: nov8-s38-missing-hyphenated [fix:ACCOUNT_VERB_NOT_A_NAME_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: MISSED_SHIFT_CITES_ATTENDANCE_ENAB \u2014 Attendance cited for missed/failed shifts; How Employee Resigned kept; letter addressee title/effective date; Lee's Summit Plaza What happened"
+ },
+ "replay: nov8-s38-missing-hyphenated [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: MISSED_SHIFT_CITES_ATTENDANCE_ENAB \u2014 Attendance cited for missed/failed shifts; How Employee Resigned kept; letter addressee title/effective date; Lee's Summit Plaza What happened"
+ },
+ "replay: nov9-ca-shift-answer-other-account [fix:FIRST_NAME_ANSWER_KEEPS_ACCOUNT_ENABLED,SHIFT_ACCOUNT_IS_INCIDENT_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: MISSED_SHIFT_CITES_ATTENDANCE_ENAB \u2014 Attendance cited for missed/failed shifts; How Employee Resigned kept; letter addressee title/effective date; Lee's Summit Plaza What happened"
+ },
+ "replay: nov9-ca-shift-answer-other-account [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: MISSED_SHIFT_CITES_ATTENDANCE_ENAB \u2014 Attendance cited for missed/failed shifts; How Employee Resigned kept; letter addressee title/effective date; Lee's Summit Plaza What happened"
+ },
+ "replay: nov9-ca-shift-answer-own-account-next-turn [fix:FIRST_NAME_ANSWER_KEEPS_ACCOUNT_ENABLED,SHIFT_ACCOUNT_IS_INCIDENT_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: MISSED_SHIFT_CITES_ATTENDANCE_ENAB \u2014 Attendance cited for missed/failed shifts; How Employee Resigned kept; letter addressee title/effective date; Lee's Summit Plaza What happened"
+ },
+ "replay: nov9-ca-shift-answer-own-account-next-turn [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: MISSED_SHIFT_CITES_ATTENDANCE_ENAB \u2014 Attendance cited for missed/failed shifts; How Employee Resigned kept; letter addressee title/effective date; Lee's Summit Plaza What happened"
+ },
+ "replay: nov9-ca-shift-answer-same-account [fix:FIRST_NAME_ANSWER_KEEPS_ACCOUNT_ENABLED,SHIFT_ACCOUNT_IS_INCIDENT_ENABLED]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: MISSED_SHIFT_CITES_ATTENDANCE_ENAB \u2014 Attendance cited for missed/failed shifts; How Employee Resigned kept; letter addressee title/effective date; Lee's Summit Plaza What happened"
+ },
+ "replay: nov9-ca-shift-answer-same-account [production]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: MISSED_SHIFT_CITES_ATTENDANCE_ENAB \u2014 Attendance cited for missed/failed shifts; How Employee Resigned kept; letter addressee title/effective date; Lee's Summit Plaza What happened"
+ },
+ "replay: nov9-exit-lines-keep-method [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: EXIT_LINE_ANSWERS_ADD_UP_ENABLED \u2014 Attendance cited for missed/failed shifts; How Employee Resigned kept; letter addressee title/effective date; Lee's Summit Plaza What happened"
+ },
+ "replay: nov9-letter-title-date-off-roster [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: EXIT_LETTER_ADDRESSEE_ENABLED \u2014 Attendance cited for missed/failed shifts; How Employee Resigned kept; letter addressee title/effective date; Lee's Summit Plaza What happened"
+ },
+ "replay: nov9-letter-title-date-on-roster [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: EXIT_LETTER_ADDRESSEE_ENABLED \u2014 Attendance cited for missed/failed shifts; How Employee Resigned kept; letter addressee title/effective date; Lee's Summit Plaza What happened"
+ },
+ "replay: nov9-missed-shift-cites-attendance-after-first-name [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: MISSED_SHIFT_CITES_ATTENDANCE_ENAB \u2014 Attendance cited for missed/failed shifts; How Employee Resigned kept; letter addressee title/effective date; Lee's Summit Plaza What happened"
+ },
+ "replay: nov9-missed-shift-cites-attendance-single [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: MISSED_SHIFT_CITES_ATTENDANCE_ENAB \u2014 Attendance cited for missed/failed shifts; How Employee Resigned kept; letter addressee title/effective date; Lee's Summit Plaza What happened"
+ },
+ "replay: nov9-possessive-place-what-happened [open]": {
+  "category": "INTENDED",
+  "twin": "itself",
+  "reason": "Reply read: POSSESSIVE_PLACE_ACCOUNT_ENABLED \u2014 Attendance cited for missed/failed shifts; How Employee Resigned kept; letter addressee title/effective date; Lee's Summit Plaza What happened"
+ }
+}
