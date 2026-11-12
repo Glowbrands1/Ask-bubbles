@@ -18,7 +18,7 @@ import { attendanceActionPlan, isAttendancePlan, missedMeetingNotLateness } from
  */
 
 /** The card's general plan line ("Management will review … with <first>. …"). */
-const PLAN_LINE = /^\*\*Action plan:\*\*\s*Management will review [^\n]*$/im;
+const PLAN_LINE = /^(\*\*Action plan:\*\*)\s*Management will review [^\n]*$/im;
 /** The policy the card cites: its Policy line's name, before the page, the source or "as you said". */
 const POLICY_LINE = /^\*\*Policy:\*\*\s*([^(\n,—]+?)(?:\s*\(|\s*,|\s+—|\s*$)/im;
 
@@ -38,5 +38,5 @@ export function withCardPlanAsCreate<T extends { content: string; formProposal?:
   const citedPolicies = policy.split(/\s*(?:,|&|\band\b)\s*/).map((name) => name.trim()).filter(Boolean);
   const input = { citedPolicies, employeeName: card.employeeName ?? null, payroll: { answer: null, amount: null } };
   if (!isAttendancePlan(input) || missedMeetingNotLateness(account)) return answer;
-  return { ...answer, content: answer.content.replace(line[0], `**Action plan:** ${attendanceActionPlan(input)}`) };
+  return { ...answer, content: answer.content.replace(line[0], `${line[1]} ${attendanceActionPlan(input)}`) };
 }
