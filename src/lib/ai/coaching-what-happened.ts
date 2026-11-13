@@ -25,7 +25,7 @@ export const SAYS_READY = /^Everything I need is here[^\n]*$/i;
 // "I have the employee and the store (**<store>**)." — the store's name is optional.
 export const HAS_EMPLOYEE_AND_PLACE = /I have the employee and the store(?: \(\*\*[^*]+\*\*\))?\.\s*/gi;
 
-interface Turn {
+export interface Turn {
   readonly role: string;
   readonly content: string;
   readonly formProposal?: ChatFormProposal | null;
@@ -35,12 +35,12 @@ interface Turn {
 const STATE_LEAD =
   /^\s*(?:(?:The form is the|The employee is|Job title:|It happened at|It happened on|Warning level:|Payroll amount:|Policy reference:|Incident:|The account continues)[^\n]*?\.(?=\s|$)\s*|(?:Payroll deduct applies|No payroll deduction)\.\s*)+/i;
 
-function withoutStateLead(turn: string): string {
+export function withoutStateLead(turn: string): string {
   return turn.replace(STATE_LEAD, "");
 }
 
 /** The manager's turns for this form: after the last card for a different form. */
-function turnsForThisForm(history: readonly Turn[], templateKey: string): readonly Turn[] {
+export function turnsForThisForm(history: readonly Turn[], templateKey: string): readonly Turn[] {
   let start = 0;
   for (const [index, turn] of history.entries()) {
     const key = turn.role === "assistant" ? turn.formProposal?.templateKey : null;
@@ -55,7 +55,7 @@ const NEGATED = /\b(?:not|never|nothing|no\s+(?:incident|issue|problems?|concern
 const NOT_A_PERSON = new Set(["she", "he", "they", "the", "a", "an", "her", "his", "their", "our", "my", "this", "that", "it", "i", "we", "you", "and", "also", "then"]);
 
 /** "rory vance was late today": somebody else did it. */
-function aboutSomebodyElse(clause: string, name: string): boolean {
+export function aboutSomebodyElse(clause: string, name: string): boolean {
   const said = /^([a-z'’-]+)\s+([a-z'’-]+)\s+(?:was|is|were|did|didn['’]?t|has|had|left|came|showed|missed|skipped|forgot|called|got|took|clocked)\b/i.exec(clause.trim());
   if (!said) return false;
   const own = new Set(name.toLowerCase().split(/\s+/));
