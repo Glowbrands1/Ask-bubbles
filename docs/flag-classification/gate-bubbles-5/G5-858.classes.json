@@ -1,0 +1,6 @@
+{
+ "src/lib/business-today.test.ts :: FORM_DATE_BUSINESS_TODAY: an evening 'today' is today, not tomorrow flag off: the UTC date, as before (the bug)": {
+  "category": "INTENDED-HARNESS",
+  "reason": "'flag off' row (7:30 PM Central = 01:30Z 13 Nov reads 2026-11-13) does not pin the flag off, so with the flag exported it reads the business date 2026-11-12. Pin with vi.stubEnv(FLAG, '') before the flag goes on."
+ }
+}
