@@ -1004,6 +1004,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FORM_EDIT_SOURCE_TURN_ENABLED",
   // coding 2: OFF_ROSTER_STORE_ANSWER_ONLY (QA's #735 ruling, 12 Nov 2026; default off).
   "OFF_ROSTER_STORE_ANSWER_ONLY_ENABLED",
+  // coding 2: OFF_ROSTER_PLACE_ANSWER (port from the sibling app's 37b live bug, 12 Nov 2026; default off).
+  "OFF_ROSTER_PLACE_ANSWER_ENABLED",
   "NOT_FOLLOWING_IS_VIOLATION_ENABLED",
   "INCIDENT_FROM_EARLIER_TURN_ENABLED",
   "LEVEL_REQUEST_DATE_ENABLED",
@@ -3017,6 +3019,19 @@ export function offRosterAskBeforeCardEnabled(): boolean {
  */
 export function offRosterStoreAnswerOnlyEnabled(): boolean {
   return envFlag("OFF_ROSTER_STORE_ANSWER_ONLY_ENABLED");
+}
+
+/**
+ * OFF_ROSTER_PLACE_ANSWER_ENABLED (Coding-2, 12 Nov 2026; default off; port from the sibling app's 37b live bug, a gap
+ * in OFF_ROSTER_STORE_ANSWER_ONLY). An all-store admin, "CA for <C>, do not terminate yet, she was late" → the "reply
+ * use <C>" offer → a store alone: there, the store became the employee, the Observation and date were lost and "use
+ * <C>" was not asked again. On, for any scope: while the offer is open, a reply that is only a place ("<City>, <ST>",
+ * "<ST> <City>", or a roster store) is never a person. The card is drafted again from the turn that typed the name (its
+ * account, date and policy kept), the store is set where the roster knows it and the scope allows, and the question
+ * and offer are asked again (`forms/off-roster-place-answer.ts`). Off, as before.
+ */
+export function offRosterPlaceAnswerEnabled(): boolean {
+  return envFlag("OFF_ROSTER_PLACE_ANSWER_ENABLED");
 }
 
 /**

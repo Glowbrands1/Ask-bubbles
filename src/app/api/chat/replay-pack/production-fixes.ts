@@ -748,4 +748,14 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov8-560-apostrophe-name-keeps-policy": "POLICY_CITATION",
   // fixed in production by POLICY_CITATION, QA round 17r, 13 Nov 2026
   "nov8-560-hyphen-name-keeps-policy": "POLICY_CITATION",
+  // fixed in production by OFF_ROSTER_PLACE_ANSWER, QA hotfix 17r-b, 13 Nov 2026
+  "nov12-off-roster-place-answer-roster-name": "OFF_ROSTER_PLACE_ANSWER",
+  // fixed in production by OFF_ROSTER_PLACE_ANSWER, QA hotfix 17r-b, 13 Nov 2026
+  "nov12-off-roster-place-answer-city-only": "OFF_ROSTER_PLACE_ANSWER",
+  // fixed in production by OFF_ROSTER_PLACE_ANSWER, QA hotfix 17r-b, 13 Nov 2026
+  "nov12-off-roster-place-answer-state-first": "OFF_ROSTER_PLACE_ANSWER",
+  // fixed in production by OFF_ROSTER_PLACE_ANSWER, QA hotfix 17r-b, 13 Nov 2026
+  "nov12-off-roster-place-answer-city-state-unlisted": "OFF_ROSTER_PLACE_ANSWER",
+  // fixed in production by OFF_ROSTER_PLACE_ANSWER, QA hotfix 17r-b, 13 Nov 2026
+  "nov12-off-roster-place-answer-17r-live-west-dodge": "OFF_ROSTER_PLACE_ANSWER",
 };
