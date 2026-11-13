@@ -9,6 +9,7 @@ INTENDED-HARNESS / REGRESSION / FLAKY), probe the real chat route where it matte
 Never merge, deploy, set Vercel envs or call the Vercel API. Never use real employee names (invented names only).
 
 ## In flight now
+**UPDATE 13 Nov 21:37: IN FLIGHT: the #869 compass-only "of" delta, head `0f0a5a2b` on main `86abc8f0` (probes + store-alias.test.ts both ways). The text below predates it.**
 Nothing is running. #869 (PLACE_STRIP_WHOLE_PHRASE_ONLY) head `3c900125` is GO and ships in release 17v, per QA.
 The next #869 delta is the compass-only "of" follow-up PR, which has **not landed yet**. When it lands, delta it with:
 - "…because she was at kearney high of all places", "…kearney high school of all places",
