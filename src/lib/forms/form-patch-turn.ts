@@ -3,6 +3,7 @@ import "server-only";
 import type { AskResponse } from "@/lib/ai/types";
 import {
   accountChangeRederivesPolicyEnabled,
+  accountReplacedCloseSentenceKeptEnabled,
   accountWipeGuardEnabled,
   editPolicyAskEnabled,
   formEditSingleWriterEnabled,
@@ -27,6 +28,7 @@ import {
 import { asMadeAboutWording, madeAbout } from "@/lib/ai/make-it-about";
 import { saidFormDate } from "./form-date-said";
 import { withSectionBreaks } from "./section-breaks";
+import { closeSentence } from "./close-sentence";
 import { addedTail } from "./added-tail";
 import { endMadeAboutWrite, madeAboutDate, madeAboutTopic, noteMadeAboutWrite } from "./made-about-date";
 import { syncCorrectiveActionPlan } from "./ca-action-plan-sync";
@@ -1137,5 +1139,7 @@ function accountReplaced(before: string, after: string): boolean {
   const next = sentences(after);
   if (old.length === 0 || next.length === 0) return false;
   // A sentence a new one still holds ("… sanitaion" → "… sanitaion in the morning") is kept: an addition, not a new account.
-  return old.every((sentence) => !next.some((kept) => kept.includes(sentence)));
+  // ACCOUNT_REPLACED_CLOSE_SENTENCE_KEPT_ENABLED: so is one with only a typo or a date changed (`close-sentence.ts`).
+  const close = accountReplacedCloseSentenceKeptEnabled();
+  return old.every((sentence) => !next.some((kept) => kept.includes(sentence) || (close && closeSentence(sentence, kept))));
 }

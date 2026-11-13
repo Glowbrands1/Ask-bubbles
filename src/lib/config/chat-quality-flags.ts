@@ -1004,6 +1004,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "WHAT_HAPPENED_NO_CREATE_ENABLED",
   // coding 2: ACCOUNT_CHANGE_REDERIVES_POLICY (QA's Bubbles 17u, 13 Nov 2026; default off).
   "ACCOUNT_CHANGE_REDERIVES_POLICY_ENABLED",
+  // coding 2: ACCOUNT_REPLACED_CLOSE_SENTENCE_KEPT (QA's follow-up to it, 13 Nov 2026; default off).
+  "ACCOUNT_REPLACED_CLOSE_SENTENCE_KEPT_ENABLED",
   // QA round 17r (13 Nov 2026): TEAM_CARD_NOT_PRODUCT (#668) and FORM_EDIT_SOURCE_TURN (#480) are switched on in production.
   "TEAM_CARD_NOT_PRODUCT_ENABLED",
   "FORM_EDIT_SOURCE_TURN_ENABLED",
@@ -3571,6 +3573,17 @@ export function whatHappenedNoCreateEnabled(): boolean {
  */
 export function accountChangeRederivesPolicyEnabled(): boolean {
   return envFlag("ACCOUNT_CHANGE_REDERIVES_POLICY_ENABLED");
+}
+
+/**
+ * ACCOUNT_REPLACED_CLOSE_SENTENCE_KEPT_ENABLED (Coding-2, 13 Nov 2026; default off; QA's follow-up to
+ * ACCOUNT_CHANGE_REDERIVES_POLICY). With that flag on, an Observation edit counted as a new account unless each old
+ * sentence was still there word for word, so fixing a typo ("the whole shfit" → "the whole shift") or a date re-derived
+ * the policy: an Attendance Corrective Action moved to Cell Phone. On: a sentence with only a typo or a date changed
+ * is the same sentence (`forms/close-sentence.ts`), so such an edit keeps the policy. Off, as before.
+ */
+export function accountReplacedCloseSentenceKeptEnabled(): boolean {
+  return envFlag("ACCOUNT_REPLACED_CLOSE_SENTENCE_KEPT_ENABLED");
 }
 
 /**
