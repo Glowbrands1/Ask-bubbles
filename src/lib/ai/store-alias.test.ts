@@ -136,6 +136,9 @@ describe("PLACE_STRIP_WHOLE_PHRASE_ONLY (QA, 13 Nov 2026)", () => {
     expect(rosterNames("verbal ca for avery at kearney ne 11/1/26 she was late")).toBe("verbal ca for avery at Kearney NE 11/1/26 she was late");
     expect(rosterNames("verbal ca for avery at kearney ne - no call no show")).toBe("verbal ca for avery at Kearney NE - no call no show");
     expect(rosterNames("verbal ca for avery at kearney ne Monday she was late")).toBe("verbal ca for avery at Kearney NE Monday she was late");
-    expect(rosterNames("she was at kearney ne Mall all day")).toBe("she was at kearney ne Mall all day");
+    expect(rosterNames("she was at kearney ne mall all day")).toBe("she was at kearney ne mall all day");
+    // QA's ruling (Gate-Sunny's probes): a capitalised word does not block it.
+    expect(rosterNames("late at kearney ne Today")).toBe("late at Kearney NE Today");
+    expect(rosterNames("late at kearney ne NCNS")).toBe("late at Kearney NE NCNS");
   });
 });

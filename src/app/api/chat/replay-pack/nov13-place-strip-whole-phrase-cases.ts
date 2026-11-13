@@ -50,6 +50,12 @@ const MUST_READ: readonly { key: string; turn: string; store: string }[] = [
   { key: "kearney-monday", turn: "verbal ca for marnie holloway at kearney monday she was late", store: "loc-66" },
   { key: "kearney-not-wearing", turn: "verbal ca for marnie holloway at kearney not wearing her apron", store: "loc-66" },
   { key: "kearney-paren", turn: "verbal ca for marnie holloway at kearney (late on 11/1/26)", store: "loc-66" },
+  // QA's ruling on the sibling gate's probes: a capitalised word after the store does not make it a longer name.
+  { key: "kearney-today-caps", turn: "verbal ca for marnie holloway, she was late at Kearney Today", store: "loc-66" },
+  { key: "kearney-nov-1-caps", turn: "verbal ca for marnie holloway, she was late at Kearney Nov 1", store: "loc-66" },
+  { key: "kearney-sat-caps", turn: "verbal ca for marnie holloway, she was late at Kearney Sat", store: "loc-66" },
+  { key: "kearney-ncns-caps", turn: "verbal ca for marnie holloway, she was at Kearney NCNS", store: "loc-66" },
+  { key: "kearney-then-name", turn: "verbal ca for marnie holloway, she was late at kearney Marnie skipped her closing duties", store: "loc-66" },
 ];
 
 export const NOV13_PLACE_STRIP_MUST_READ_CASES: ReplayCase[] = MUST_READ.map((wording) => ({

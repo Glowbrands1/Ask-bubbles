@@ -81,22 +81,17 @@ const CUE_AFTER = /^\s*(?:location|salon|store)\b/i;
 /*
  * PLACE_STRIP_WHOLE_PHRASE_ONLY_ENABLED (QA, 13 Nov 2026; found by the sibling app's gate, checked here): "she was late
  * because she was at kearney high" was written "… at Kearney NE high", a store inside a longer name. A store is NOT
- * written only when the next word continues a proper noun: a word from this short list, or a capitalised word in the
- * middle of a sentence (not a weekday, a month or a pronoun). Anything else — a date, a dash, a weekday, the rest of
- * the account — is read as before (Gate-Bubbles-3, #869: an allow-list stopped "at kearney 11/1/26" being read). Off,
- * as before.
+ * written only when the next word is on this short list of words that continue a proper noun. Anything else — a date,
+ * a dash, a weekday, a capitalised word ("at Kearney Today", "at Kearney NCNS"), the rest of the account — is read as
+ * before (Gate-Bubbles-3, #869; QA's ruling on Gate-Sunny's probes). Off, as before.
  */
 const CONTINUES_NAME =
   /^(?:high|middle|elementary|school|central|west|east|north|south|state|university|college|mall|road|street|st|ave|construction|park|hospital)$/i;
-const NOT_A_NAME_WORD =
-  /^(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|january|february|march|april|may|june|july|august|september|october|november|december|i|she|he|they|we|her|his|their|the|and|but|or|on|at|in)$/i;
 
-/** Whether the text after a store continues a longer proper noun ("high", "West", "Mall"), so the store is not one. */
+/** Whether the text after a store continues a longer proper noun ("high", "west", "mall"), so the store is not one. */
 function continuesProperNoun(after: string): boolean {
   const word = /^\s+([A-Za-z][A-Za-z'’-]*)/.exec(after)?.[1];
-  if (!word) return false;
-  if (CONTINUES_NAME.test(word)) return true;
-  return /^[A-Z]/.test(word) && !NOT_A_NAME_WORD.test(word);
+  return Boolean(word && CONTINUES_NAME.test(word));
 }
 const SUFFIXES: readonly [string, string][] = [
   ["street", "st"],
