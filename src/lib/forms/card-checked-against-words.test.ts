@@ -167,3 +167,11 @@ describe("CARD_CHECKED_AGAINST_WORDS_ENABLED: every and/but part through the ful
     expect(addedFacts("she left the register open on 11/3/26", "Marnie Holloway", after(said))).toEqual([fact]);
   });
 });
+
+describe("CARD_CHECKED_AGAINST_WORDS_ENABLED: Gate-Bubbles-5's must-split list (13 Nov 2026)", () => {
+  const after = (said: string) => ({ turns: ["create a CA for Marnie Holloway, she was late on 11/3/26", said], roster: ROSTER });
+  it.each([["she yelled at a customer and gets a verbal warning", "she yelled at a customer"], ["she left the store dirty and might have forgotten", "she left the store dirty"], ["she yelled at a customer and she is a key holder", "she yelled at a customer"], ["she left the store dirty, she is a TITLE", "she left the store dirty"], ["she left the store dirty and she had a verbal warning on 10/1", "she left the store dirty"], ["she yelled at a customer and then she walked out", "she yelled at a customer and then she walked out"]])("%s → %s", (said, fact) => {
+    const title = ROSTER[0]!.positionName!;
+    expect(addedFacts("she was late on 11/3/26", "Marnie Holloway", after(said.replace("TITLE", title)))).toEqual([fact]);
+  });
+});
