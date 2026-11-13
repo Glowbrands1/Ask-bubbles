@@ -2,7 +2,7 @@
 # Approval: QA records it under Pau's standing approval (13 Nov 2026). Behind the flag; with it off the module runs as on main.
 # The gate checks that the diff below equals: git diff origin/main -- src/lib/forms/chat-revision.ts
 diff --git a/src/lib/forms/chat-revision.ts b/src/lib/forms/chat-revision.ts
-index bdc97ce837..d20cb0c300 100644
+index bdc97ce837..d73a7f8f34 100644
 --- a/src/lib/forms/chat-revision.ts
 +++ b/src/lib/forms/chat-revision.ts
 @@ -3,7 +3,7 @@ import "server-only";
@@ -14,7 +14,7 @@ index bdc97ce837..d20cb0c300 100644
  import { CLAUDE_MAX_TOKENS, CLAUDE_MODEL } from "@/lib/config/models";
  import type { ChatMessage } from "@/types";
  
-@@ -593,6 +593,20 @@ export async function reviseActiveForm(input: {
+@@ -593,6 +593,24 @@ export async function reviseActiveForm(input: {
    if (fixedPlan && !written.includes(fixedPlan.key)) {
      written.push(...(await syncCorrectiveActionPlan(input.instanceId, actor.id)));
    }
@@ -30,6 +30,10 @@ index bdc97ce837..d20cb0c300 100644
 +      written,
 +      actor.id,
 +    );
++    // Written, and the saved form is as it was: it already said that. Never "Updated", never "I haven't changed it".
++    if (changedKeys.length === 0 && dateLines.length === 0) {
++      return reply(`The ${who} already says that: I checked the saved form, and nothing on it needed to change. Give it a read below.`);
++    }
 +    written.splice(0, written.length, ...changedKeys.filter((key) => key !== FOLLOW_UP_DATE_KEY));
 +  }
    if (written.length === 0) {
