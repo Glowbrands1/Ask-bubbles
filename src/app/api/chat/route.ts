@@ -54,6 +54,7 @@ import {
   resentRequestIsYesEnabled,
   cardPlanMatchesCreateEnabled,
   answerTurnLevelEnabled,
+  cardCheckedAgainstWordsEnabled,
   terminationCardTidyEnabled,
   humanRepliesEnabled,
   closeSpellingMatchEnabled,
@@ -1185,6 +1186,19 @@ async function postChat(request: Request) {
       // TERMINATION_CARD_TIDY_ENABLED: an Issue that is only a hedge about terminating is the account (`lib/ai/termination-card-tidy.ts`).
       if (terminationCardTidyEnabled()) {
         answer = (await import("@/lib/ai/termination-card-tidy")).withIssueNotTerminationHedge(answer, asked.question);
+      }
+      // CARD_CHECKED_AGAINST_WORDS_ENABLED: the card is checked against the manager's own words before it is shown (`lib/forms/card-checked-against-words.ts`).
+      if (cardCheckedAgainstWordsEnabled() && answer.formProposal) {
+        const { loadScopedRoster } = await import("@/lib/forms/employee-roster");
+        const { callFormPatchModel } = await import("@/lib/forms/form-patch-call");
+        answer = await (await import("@/lib/forms/card-checked-against-words")).withCardCheckedAgainstWords(
+          answer,
+          {
+            turns: [...parsed.history.filter((turn) => turn.role === "user").map((turn) => String(turn.content ?? "")), asked.question],
+            roster: await loadScopedRoster(context.identity.scope).catch(() => []),
+          },
+          callFormPatchModel,
+        );
       }
       // OUTLINE_ON_OPEN_PROPOSAL_ENABLED: the outline turn's reply says the outline is kept as her form's layout.
       if (outlineOnProposal) {
