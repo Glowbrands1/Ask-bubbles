@@ -1,0 +1,42 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-p12-team-card-no-request-lead-or-blank-employee: P12 part 2 (team card): \"make me a coaching form for the team at West Dodge on selling lotion bottles\" \u2192 \"the employee needs to be left blank\" \u2192 Create: the request lead and the instruction are never the account, never saved \u2014 OPEN in production (the drafting model is handed \"the employee needs to be left blank\" as the account, and the saved Details are \"Observed: The employee needs to be left blank.\")": {
+    "category": "INTENDED",
+    "reason": "P12 part 2: with the flag on, the instructions to the app (\"Please word it in a professional way. I need the policy attached as well.\", the request lead, \"the employee needs to be left blank\") are no longer handed to the drafting model as the account. The open pin now fails because the case holds. The chat replies are unchanged apart from the case setup."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-p12-three-requests-t1: P12 part 2, T1 of three back-to-back requests: Brisa Talvenor's card and saved Details are her own account only, without the instructions to the app \u2014 OPEN in production (the Observation keeps \"Please word it in a professional way. I need the policy attached as well.\")": {
+    "category": "INTENDED",
+    "reason": "P12 part 2: with the flag on, the instructions to the app (\"Please word it in a professional way. I need the policy attached as well.\", the request lead, \"the employee needs to be left blank\") are no longer handed to the drafting model as the account. The open pin now fails because the case holds. The chat replies are unchanged apart from the case setup."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-p12-three-requests-t2: P12 part 2, T2 of three back-to-back requests: Odette Quillane's card and saved Details are her own account only, without the instructions to the app \u2014 OPEN in production (T2's Observation carries T1's request and the instructions)": {
+    "category": "INTENDED",
+    "reason": "P12 part 2: with the flag on, the instructions to the app (\"Please word it in a professional way. I need the policy attached as well.\", the request lead, \"the employee needs to be left blank\") are no longer handed to the drafting model as the account. The open pin now fails because the case holds. The chat replies are unchanged apart from the case setup."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-p12-three-requests-t3: P12 part 2, T3 of three back-to-back requests: Liesl Varnham's card and saved Details are her own account only, without the instructions to the app \u2014 OPEN in production (the Observation keeps \"Please word it in a professional way. I need the policy attached as well.\")": {
+    "category": "INTENDED",
+    "reason": "P12 part 2: with the flag on, the instructions to the app (\"Please word it in a professional way. I need the policy attached as well.\", the request lead, \"the employee needs to be left blank\") are no longer handed to the drafting model as the account. The open pin now fails because the case holds. The chat replies are unchanged apart from the case setup."
+  },
+  "src/app/api/forms/corrective-action-dm-feedback-e2e.test.ts :: the warning level in the request is read, not asked \"create verbal CA for \u2026\" reads back Verbal Warning, and the form is ticked Verbal": {
+    "category": "FLAKY",
+    "reason": "Timeout, not a behaviour change: the test ran 5016 ms against the 5000 ms default (4389 ms OFF), with a second gate run loading the machine. Re-run alone with the flag on 3 times: passed 3/3 (4706, 4686, 4715 ms). The test runs close to the default limit either way."
+  },
+  "src/lib/ai/flags-off-parity.test.ts :: existing chat and form suites with every new flag off passes the suites whose expectations are already on main: src/app/api/chat/replay-pack, first half of the cases by id": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The child run of the replay pack (first half) inherits the ON flag; its only failures are the 4 P12 part 2 open cases now holding."
+  },
+  "replay: nov10-p12-team-card-no-request-lead-or-blank-employee [open]": {
+    "category": "INTENDED",
+    "reason": "P12 part 2: with the flag on, the instructions to the app (\"Please word it in a professional way. I need the policy attached as well.\", the request lead, \"the employee needs to be left blank\") are no longer handed to the drafting model as the account. The open pin now fails because the case holds. The chat replies are unchanged apart from the case setup."
+  },
+  "replay: nov10-p12-three-requests-t1 [open]": {
+    "category": "INTENDED",
+    "reason": "P12 part 2: with the flag on, the instructions to the app (\"Please word it in a professional way. I need the policy attached as well.\", the request lead, \"the employee needs to be left blank\") are no longer handed to the drafting model as the account. The open pin now fails because the case holds. The chat replies are unchanged apart from the case setup."
+  },
+  "replay: nov10-p12-three-requests-t2 [open]": {
+    "category": "INTENDED",
+    "reason": "P12 part 2: with the flag on, the instructions to the app (\"Please word it in a professional way. I need the policy attached as well.\", the request lead, \"the employee needs to be left blank\") are no longer handed to the drafting model as the account. The open pin now fails because the case holds. The chat replies are unchanged apart from the case setup."
+  },
+  "replay: nov10-p12-three-requests-t3 [open]": {
+    "category": "INTENDED",
+    "reason": "P12 part 2: with the flag on, the instructions to the app (\"Please word it in a professional way. I need the policy attached as well.\", the request lead, \"the employee needs to be left blank\") are no longer handed to the drafting model as the account. The open pin now fails because the case holds. The chat replies are unchanged apart from the case setup."
+  }
+}
