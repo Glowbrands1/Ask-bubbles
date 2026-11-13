@@ -1500,6 +1500,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "CARD_PLAN_MATCHES_CREATE_ENABLED",
   // coding 6: TYPO_FULL_NAME_TO_ROSTER (audit item 15.10, sf-b5, 11 Nov 2026; default off).
   "TYPO_FULL_NAME_TO_ROSTER_ENABLED",
+  // coding 5: COMPANY_METRICS_SHORTFALL (QA ruling (a) on CA_NO_POLICY_ASKS_WHICH, 13 Nov 2026; default off).
+  "COMPANY_METRICS_SHORTFALL_ENABLED",
 ] as const;
 
 /**
@@ -5443,4 +5445,14 @@ export function typoFullNameToRosterEnabled(): boolean {
  */
 export function exitNoticeStatedOnlyEnabled(): boolean {
   return envFlag("EXIT_NOTICE_STATED_ONLY_ENABLED");
+}
+
+/**
+ * COMPANY_METRICS_SHORTFALL_ENABLED (coding 5, 13 Nov 2026; default off; QA's ruling (a) on CA_NO_POLICY_ASKS_WHICH).
+ * "She was below goal in IPT, AOV and Comp Sales % for October" made a Corrective Action card with no Policy line. On,
+ * with CA_SALES_POLICY: this company's KPIs (`config/company/metric-words.ts`) named and judged are the sales part of
+ * the Standards of Conduct at card time (`forms/metric-shortfall.ts`, `forms/ca-policy.ts`). Off, as before.
+ */
+export function companyMetricsShortfallEnabled(): boolean {
+  return envFlag("COMPANY_METRICS_SHORTFALL_ENABLED");
 }

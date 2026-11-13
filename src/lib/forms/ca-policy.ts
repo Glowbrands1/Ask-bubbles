@@ -6,6 +6,7 @@ import {
   asYouSaidManagerWordsEnabled,
   caPerformanceReasonEnabled,
   caSalesPolicyEnabled,
+  companyMetricsShortfallEnabled,
   cleaningOtherEveryWordingEnabled,
   conductIncidentCitesPageEnabled,
   describedAttendanceCardEnabled,
@@ -36,7 +37,7 @@ import {
   type ManualChunk,
   type ManualSection,
 } from "./official-policy-manual";
-import { statesMetricShortfall } from "./metric-shortfall";
+import { statesCompanyMetricShortfall, statesMetricShortfall } from "./metric-shortfall";
 import { withoutNegatedLateness } from "./negated-lateness";
 import { CURRENT_CA_OFFENSE_KEYS, offeredOffenseKey, offeredOffenseKeys } from "./offense-keys";
 import { detectTemplateIntent } from "./template-intent";
@@ -812,6 +813,8 @@ function withSalesPolicy(reading: CaPolicyReading, rawText: string): CaPolicyRea
   const target =
     reading.stated === "under_performance" ||
     statesMetricShortfall(rawText) ||
+    // COMPANY_METRICS_SHORTFALL_ENABLED: this company's own KPIs (IPT, AOV, Comp Sales %, Discount Rate) named and judged.
+    (companyMetricsShortfallEnabled() && statesCompanyMetricShortfall(rawText)) ||
     performanceIsTheRequest(reading, sentences) ||
     (salesShortfallObjectEnabled() && performanceIsTheReason(rawText));
   // REGISTER_ACCURACY_CONDUCT_ENABLED: a sale rung up inaccurately is the Standards of Conduct (Pau, 4 Nov 2026).

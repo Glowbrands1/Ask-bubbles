@@ -1,3 +1,4 @@
+import { COMPANY_METRIC_PHRASES } from "@/config/company/metric-words";
 import { salesShortfallObjectEnabled } from "@/lib/config/chat-quality-flags";
 
 /**
@@ -62,4 +63,23 @@ export function statesMetricShortfall(text: string): boolean {
   const normalized = normalize(text);
   if (salesShortfallObjectEnabled() && SALES_GOVERNED.test(normalized.replace(/[‘’]/g, "'"))) return true;
   return METRIC_NAMED.some((pattern) => pattern.test(normalized)) && METRIC_JUDGED.some((pattern) => pattern.test(normalized));
+}
+
+/*
+ * COMPANY_METRICS_SHORTFALL_ENABLED (QA's ruling (a) on CA_NO_POLICY_ASKS_WHICH, 13 Nov 2026): "She was below goal in
+ * IPT, AOV and Comp Sales % for October" and "… below in IPT, AOV, and Discount Rate" made Corrective Action cards with
+ * no Policy line: this company's own KPIs were not among the metrics named above. The company's metric phrases
+ * (`config/company/metric-words.ts`, the same list COMPANY_METRIC_WORDS_NOT_NAMES reads), with a judgement of them, are a
+ * stated shortfall. The bare "comp" is left out: alone it is too many other words. Read only by the card's policy reader.
+ */
+const COMPANY_METRIC_NAMED = new RegExp(
+  String.raw`(?:^|[^a-z0-9])(?:${COMPANY_METRIC_PHRASES.filter((phrase) => phrase.toLowerCase() !== "comp")
+    .map((phrase) => phrase.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+"))
+    .join("|")})(?![a-z0-9])`,
+);
+
+/** A company metric (IPT, AOV, Comp Sales %, Discount Rate …) named and judged. */
+export function statesCompanyMetricShortfall(text: string): boolean {
+  const normalized = normalize(text);
+  return COMPANY_METRIC_NAMED.test(normalized) && METRIC_JUDGED.some((pattern) => pattern.test(normalized));
 }
