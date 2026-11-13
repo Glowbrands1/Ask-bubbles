@@ -1,0 +1,54 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-17r-termination-tidy-off-roster-ask: \"CA for Corwin Ashdale, do not terminate yet, she was late\" (not on the roster): the held card's Issue is \"she was late\", never \"do not terminate yet\" \u2014 OPEN in production (the held card's Issue is \"do not terminate yet\")": {
+    "category": "INTENDED",
+    "reason": "OPEN case now holds: the held card's Issue is 'she was late', not 'do not terminate yet'; the it.fails pin moves to fixed"
+  },
+  "src/lib/ai/flags-off-parity.test.ts :: existing chat and form suites with every new flag off passes the suites whose expectations are already on main: src/app/api/chat/replay-pack, first half of the cases by id": {
+    "category": "INTENDED-HARNESS",
+    "reason": "the child suite 'with every new flag off' inherits the harness's global flags"
+  },
+  "replay: nov12-17r-termination-tidy-off-roster-ask [open]": {
+    "category": "INTENDED",
+    "reason": "fails off, holds on"
+  },
+  "replay: nov12-off-roster-place-answer-17r-live-west-dodge [fix:OFF_ROSTER_PLACE_ANSWER_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "the off-roster ask's Issue reads 'she was late' instead of 'do not terminate yet' (turn 1 and the place-answer turn); nothing else changes"
+  },
+  "replay: nov12-off-roster-place-answer-17r-live-west-dodge [production]": {
+    "category": "INTENDED",
+    "reason": "the off-roster ask's Issue reads 'she was late' instead of 'do not terminate yet' (turn 1 and the place-answer turn); nothing else changes"
+  },
+  "replay: nov12-off-roster-place-answer-city-only [fix:OFF_ROSTER_PLACE_ANSWER_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "the off-roster ask's Issue reads 'she was late' instead of 'do not terminate yet' (turn 1 and the place-answer turn); nothing else changes"
+  },
+  "replay: nov12-off-roster-place-answer-city-only [production]": {
+    "category": "INTENDED",
+    "reason": "the off-roster ask's Issue reads 'she was late' instead of 'do not terminate yet' (turn 1 and the place-answer turn); nothing else changes"
+  },
+  "replay: nov12-off-roster-place-answer-city-state-unlisted [fix:OFF_ROSTER_PLACE_ANSWER_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "the off-roster ask's Issue reads 'she was late' instead of 'do not terminate yet' (turn 1 and the place-answer turn); nothing else changes"
+  },
+  "replay: nov12-off-roster-place-answer-city-state-unlisted [production]": {
+    "category": "INTENDED",
+    "reason": "the off-roster ask's Issue reads 'she was late' instead of 'do not terminate yet' (turn 1 and the place-answer turn); nothing else changes"
+  },
+  "replay: nov12-off-roster-place-answer-roster-name [fix:OFF_ROSTER_PLACE_ANSWER_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "the off-roster ask's Issue reads 'she was late' instead of 'do not terminate yet' (turn 1 and the place-answer turn); nothing else changes"
+  },
+  "replay: nov12-off-roster-place-answer-roster-name [production]": {
+    "category": "INTENDED",
+    "reason": "the off-roster ask's Issue reads 'she was late' instead of 'do not terminate yet' (turn 1 and the place-answer turn); nothing else changes"
+  },
+  "replay: nov12-off-roster-place-answer-state-first [fix:OFF_ROSTER_PLACE_ANSWER_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "the off-roster ask's Issue reads 'she was late' instead of 'do not terminate yet' (turn 1 and the place-answer turn); nothing else changes"
+  },
+  "replay: nov12-off-roster-place-answer-state-first [production]": {
+    "category": "INTENDED",
+    "reason": "the off-roster ask's Issue reads 'she was late' instead of 'do not terminate yet' (turn 1 and the place-answer turn); nothing else changes"
+  }
+}
