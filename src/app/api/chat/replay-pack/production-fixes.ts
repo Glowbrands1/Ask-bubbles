@@ -788,4 +788,16 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov13-close-spelling-policy-not-confident-asks": "CLOSE_SPELLING_MATCH",
   // fixed in production by CLOSE_SPELLING_MATCH, QA round 17s, 13 Nov 2026
   "nov13-close-spelling-policy-two-headings-asks-which": "CLOSE_SPELLING_MATCH",
+  // fixed in production by CA_ASKS_WHAT_HAPPENED + WHAT_HAPPENED_NO_CREATE, QA round 17t, 13 Nov 2026
+  "nov13-ca-asks-what-happened-title-team-member": "CA_ASKS_WHAT_HAPPENED",
+  // fixed in production by CA_ASKS_WHAT_HAPPENED + WHAT_HAPPENED_NO_CREATE, QA round 17t, 13 Nov 2026
+  "nov13-ca-asks-what-happened-title-agm": "CA_ASKS_WHAT_HAPPENED",
+  // fixed in production by CA_ASKS_WHAT_HAPPENED + WHAT_HAPPENED_NO_CREATE, QA round 17t, 13 Nov 2026
+  "nov13-what-happened-no-create-name-only": "CA_ASKS_WHAT_HAPPENED",
+  // fixed in production by CA_ASKS_WHAT_HAPPENED + WHAT_HAPPENED_NO_CREATE, QA round 17t, 13 Nov 2026
+  "nov13-what-happened-no-create-not-late": "CA_ASKS_WHAT_HAPPENED",
+  // fixed in production by CA_ASKS_WHAT_HAPPENED + WHAT_HAPPENED_NO_CREATE, QA round 17t, 13 Nov 2026
+  "nov13-what-happened-no-create-nothing-wrong": "CA_ASKS_WHAT_HAPPENED",
+  // fixed in production by CA_ASKS_WHAT_HAPPENED + WHAT_HAPPENED_NO_CREATE, QA round 17t, 13 Nov 2026
+  "nov13-what-happened-no-create-name-after-request": "CA_ASKS_WHAT_HAPPENED",
 };

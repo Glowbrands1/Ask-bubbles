@@ -674,6 +674,15 @@ const PROD_MAIN: Record<string, Record<string, unknown>> = {
   COWORKER: { formDate: "2026-10-16", observation: "create a ca for Quinn Marlowe at kearney, she was late on 10-5", priorLine: null, asks: false },
   COACHING_FORM: { formDate: "2026-10-16", observation: "", priorLine: null, asks: false },
 };
+/*
+ * Changed on purpose (Gate-Bubbles on #857, 13 Nov 2026): with CA_ASKS_WHAT_HAPPENED on, D1 ("coached her 10-16, written
+ * warning on 10-20") states only prior actions, no account, so "coached her 10-16" is no Issue and the card asks what
+ * happened. Off (production today), the row is main's, as pinned.
+ */
+function withCaAsks(key: string, expected: Record<string, unknown>): Record<string, unknown> {
+  return key === "D1" && process.env.CA_ASKS_WHAT_HAPPENED_ENABLED === "true" ? { ...expected, observation: "" } : expected;
+}
+
 /** Where D3 (FORM_DATE_INCIDENT_ONLY_ENABLED) on changes it. */
 const PROD_FIO_MAIN: Record<string, Record<string, unknown>> = {
   TWO: { formDate: "2026-10-15", observation: "create a ca for Quinn Marlowe at kearney, she was late on 10-5 and 10-15", priorLine: null, asks: false },
@@ -696,7 +705,7 @@ describe.each(REMAP_RUNS)("%s", (_remapLabel, remap) => {
         observation: observation(answer.content),
         priorLine: priorLine(answer.content),
         asks: ASKS.test(answer.content),
-      }).toEqual(fio && PROD_FIO_MAIN[key] ? PROD_FIO_MAIN[key] : expected);
+      }).toEqual(withCaAsks(key, fio && PROD_FIO_MAIN[key] ? PROD_FIO_MAIN[key] : expected));
     });
   });
 });
