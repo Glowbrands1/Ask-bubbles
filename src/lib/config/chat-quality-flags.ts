@@ -999,6 +999,9 @@ export function formsGuideEnabled(): boolean {
 }
 
 export const CHAT_QUALITY_FLAG_NAMES = [
+  // coding 2: the sibling app's "what happened" check (Pau's direction, 13 Nov 2026; default off).
+  "CA_ASKS_WHAT_HAPPENED_ENABLED",
+  "WHAT_HAPPENED_NO_CREATE_ENABLED",
   // QA round 17r (13 Nov 2026): TEAM_CARD_NOT_PRODUCT (#668) and FORM_EDIT_SOURCE_TURN (#480) are switched on in production.
   "TEAM_CARD_NOT_PRODUCT_ENABLED",
   "FORM_EDIT_SOURCE_TURN_ENABLED",
@@ -1425,6 +1428,10 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "STORE_ALIAS_ENABLED",
   // coding 4: POLICY_NOT_FOUND_PLAIN_WORDING (QA, 13 Nov 2026; default off).
   "POLICY_NOT_FOUND_PLAIN_WORDING_ENABLED",
+  // coding 4: HEADING_DISTINCTIVE_WORDS (QA, 13 Nov 2026; default off).
+  "HEADING_DISTINCTIVE_WORDS_ENABLED",
+  // coding 4: PLACE_STRIP_WHOLE_PHRASE_ONLY (QA, 13 Nov 2026; default off).
+  "PLACE_STRIP_WHOLE_PHRASE_ONLY_ENABLED",
   // coding 4: FORM_DATE_BUSINESS_TODAY (live bug, QA, 13 Nov 2026; default off).
   "FORM_DATE_BUSINESS_TODAY_ENABLED",
   // coding 4: CLOSE_SPELLING_MATCH (Pau via QA, 13 Nov 2026; default off).
@@ -1514,6 +1521,10 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "TERMINATION_TIDY_HELD_NAME_ENABLED",
   // SAME_NAME_ASKS_WHICH (default off; QA, 12 Nov 2026): in the list, as every chat flag.
   "SAME_NAME_ASKS_WHICH_ENABLED",
+  // EDIT_SEES_SAVED_FORM (default off; Pau's direction via QA, 13 Nov 2026): in the list, as every chat flag.
+  "EDIT_SEES_SAVED_FORM_ENABLED",
+  // CARD_CHECKED_AGAINST_WORDS (default off; Pau's direction via QA, 13 Nov 2026): in the list, as every chat flag.
+  "CARD_CHECKED_AGAINST_WORDS_ENABLED",
 ] as const;
 
 /**
@@ -3529,6 +3540,31 @@ export function pastFormsBeforeLibraryEnabled(): boolean {
 }
 
 /**
+ * CA_ASKS_WHAT_HAPPENED_ENABLED (Coding-2, 13 Nov 2026; default off; ported from the sibling app's #331 at Pau's
+ * direction: "the one fix that clearly worked"). "create corrective action form for <name>, Team Member Part Time" gave
+ * a Corrective Action card that asked nothing: the protected proposal reader counts the job title (or a store) as the
+ * account. On: a Corrective Action card for a named person with no account in the manager's turns for it carries the
+ * intake's own "You haven't told me what happened yet" note, once per card. The account test is the Coaching card's
+ * (`ai/coaching-what-happened.ts`) with the sibling's refinements: a duty not done ("not signing off on the cleaning
+ * check list") is an account, a denied fault ("not late", "didn't do anything wrong") is not (`ai/ca-what-happened.ts`).
+ * After the reply is built; no field of the card changes. Off, as before.
+ */
+export function caAsksWhatHappenedEnabled(): boolean {
+  return envFlag("CA_ASKS_WHAT_HAPPENED_ENABLED");
+}
+
+/**
+ * WHAT_HAPPENED_NO_CREATE_ENABLED (Coding-2, 13 Nov 2026; default off; ported from the sibling app's round 23). A card
+ * whose reply asks "You haven't told me what happened yet" still offered an active **Create draft** and "Create the draft
+ * here when you're ready": the ask and the button contradicted each other. On: while the reply asks what happened, the
+ * card offers no Create and that line goes; the next card, built from the manager's answer, offers it as before
+ * (`forms/what-happened-no-create.ts`). Off, as before.
+ */
+export function whatHappenedNoCreateEnabled(): boolean {
+  return envFlag("WHAT_HAPPENED_NO_CREATE_ENABLED");
+}
+
+/**
  * COACHING_ASKS_WHAT_HAPPENED_ENABLED (Pau, 5 Nov 2026, sf-s27; default off).
  * "Create a coaching form." → "<name>" answered "Everything I need is here …
  * I have the employee and the store." with no incident and no draft. On: a
@@ -5483,6 +5519,30 @@ export function exitNoticeStatedOnlyEnabled(): boolean {
 }
 
 /**
+ * EDIT_SEES_SAVED_FORM_ENABLED (coding 6, 13 Nov 2026; default off; Pau's direction via QA). The form edit read the turn
+ * once as a patch and the code guessed what was written: an "Updated" that did not match the form, reasons that never
+ * landed. On: after the turn's writes on the patch path (`forms/form-patch-turn.ts`), the stored form is read back and
+ * handed to the patch model with the manager's ask ("SAVED AFTER YOUR LAST PATCH"); it confirms (an empty patch) or sends
+ * a correction, written by the same writer. At most 3 patches a turn. The reply is always the stored form's diff. Off, as
+ * before.
+ */
+export function editSeesSavedFormEnabled(): boolean {
+  return envFlag("EDIT_SEES_SAVED_FORM_ENABLED");
+}
+
+/**
+ * CARD_CHECKED_AGAINST_WORDS_ENABLED (coding 6, 13 Nov 2026; default off; Pau's direction via QA). Cards showed an Issue
+ * that was a hedge ("do not terminate yet"), a job title, a store label or a name, and a person who was a title. On:
+ * before a card is shown it is checked against the manager's own words (`forms/card-checked-against-words.ts`): code
+ * checks on every card, a repair from the manager's clauses, and only then one structured model call (at most two) whose
+ * corrections must quote the manager. Nothing is invented: an Issue nothing repairs is blank and the card asks "What
+ * happened?". Off, as before.
+ */
+export function cardCheckedAgainstWordsEnabled(): boolean {
+  return envFlag("CARD_CHECKED_AGAINST_WORDS_ENABLED");
+}
+
+/**
  * HUMAN_REPLIES_ENABLED (default off; rebuilt by coding 6 from the sibling app's S#898, 12 Nov 2026; QA's ruling (b);
  * supersedes this app's #200). A later card turn for the same form and employee replaces only the opener's long tail
  * with one line on what changed; every other card line stays as built. Off, as before. See `ai/human-replies.ts`.
@@ -5531,4 +5591,23 @@ export function closeSpellingMatchEnabled(): boolean {
  */
 export function policyNotFoundPlainWordingEnabled(): boolean {
   return envFlag("POLICY_NOT_FOUND_PLAIN_WORDING_ENABLED");
+}
+
+/**
+ * HEADING_DISTINCTIVE_WORDS (QA, 13 Nov 2026; default off): a manual heading is named by its distinctive words; the
+ * generic heading words "is", "are", "prohibited" and "requirement" may be left off, as "policy" and "guidelines"
+ * already may. "violating the retaliation policy" names "Retaliation is Prohibited". See
+ * `forms/named-policy-section.ts`. Off, every heading word but the optional ones must be said, as before.
+ */
+export function headingDistinctiveWordsEnabled(): boolean {
+  return envFlag("HEADING_DISTINCTIVE_WORDS_ENABLED");
+}
+
+/**
+ * PLACE_STRIP_WHOLE_PHRASE_ONLY (QA, 13 Nov 2026; default off; from the sibling app's gate): a store named the managers'
+ * way is written as the roster name only where its phrase ends, so "at kearney high" is never "at Kearney NE high". See
+ * `ai/store-alias.ts`. Off, as before.
+ */
+export function placeStripWholePhraseOnlyEnabled(): boolean {
+  return envFlag("PLACE_STRIP_WHOLE_PHRASE_ONLY_ENABLED");
 }

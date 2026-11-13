@@ -54,10 +54,12 @@ import {
   resentRequestIsYesEnabled,
   cardPlanMatchesCreateEnabled,
   answerTurnLevelEnabled,
+  cardCheckedAgainstWordsEnabled,
   terminationCardTidyEnabled,
   humanRepliesEnabled,
   closeSpellingMatchEnabled,
   offRosterAskBeforeCardEnabled,
+  whatHappenedNoCreateEnabled,
   oneFormEachPersonEnabled,
   outlineOnOpenProposalEnabled,
   groupWordsNotANameEnabled,
@@ -1185,6 +1187,19 @@ async function postChat(request: Request) {
       if (terminationCardTidyEnabled()) {
         answer = (await import("@/lib/ai/termination-card-tidy")).withIssueNotTerminationHedge(answer, asked.question);
       }
+      // CARD_CHECKED_AGAINST_WORDS_ENABLED: the card is checked against the manager's own words before it is shown (`lib/forms/card-checked-against-words.ts`).
+      if (cardCheckedAgainstWordsEnabled() && answer.formProposal) {
+        const { loadScopedRoster } = await import("@/lib/forms/employee-roster");
+        const { callFormPatchModel } = await import("@/lib/forms/form-patch-call");
+        answer = await (await import("@/lib/forms/card-checked-against-words")).withCardCheckedAgainstWords(
+          answer,
+          {
+            turns: [...parsed.history.filter((turn) => turn.role === "user").map((turn) => String(turn.content ?? "")), asked.question],
+            roster: await loadScopedRoster(context.identity.scope).catch(() => []),
+          },
+          callFormPatchModel,
+        );
+      }
       // OUTLINE_ON_OPEN_PROPOSAL_ENABLED: the outline turn's reply says the outline is kept as her form's layout.
       if (outlineOnProposal) {
         answer = (await import("@/lib/forms/outline-on-proposal")).withOutlineKeptNote(answer, {
@@ -1254,6 +1269,8 @@ async function postChat(request: Request) {
         ]);
       }
       // OFF_ROSTER_ASK_BEFORE_CARD_ENABLED: a store manager's card for a full name not on their roster is asked about once, before the card (`lib/forms/off-roster-ask.ts`).
+      // WHAT_HAPPENED_NO_CREATE_ENABLED: while the reply asks what happened, the card offers no Create (`lib/forms/what-happened-no-create.ts`).
+      if (whatHappenedNoCreateEnabled()) answer = (await import("@/lib/forms/what-happened-no-create")).withNoCreateWhileAsking(answer, { question: asked.question, history: parsed.history });
       if (offRosterAskBeforeCardEnabled()) {
         answer = (await import("@/lib/forms/off-roster-ask")).withOffRosterAskBeforeCard(answer, { scope: context.identity.scope, history: parsed.history, question: asked.question });
       }

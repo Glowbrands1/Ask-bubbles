@@ -167,6 +167,7 @@ import { withoutSourceMarkers, withoutSourceNotes } from "./source-note";
 import { asksWhatOutOfDateMeans, cardTurn, outOfDateAnswer } from "./out-of-date-is-the-proposal";
 import { withManagerNameGuard } from "./manager-name-guard";
 import { withJobTitleFromWords } from "./job-title-from-words";
+import { withCaWhatHappened } from "./ca-what-happened";
 import { withCoachingWhatHappened } from "./coaching-what-happened";
 import { withFreshDateReask } from "./date-reask-fresh";
 import { withFirstNameAsk } from "./first-name-ask";
@@ -378,6 +379,7 @@ async function answerQuestionBody(
   memory: { memoryOwnerId?: string } = {},
 ): Promise<AskResponse> {
   // UNREAD_DATE_ASK_ENABLED: "last tuesday" the reader could not read is asked about, never dated today in silence.
+  // CA_ASKS_WHAT_HAPPENED_ENABLED: a Corrective Action card with no account asks what happened (`ca-what-happened.ts`).
   // AMOUNT_UNKNOWN_ACK_ENABLED: "i dont know the amount" is answered, not met with the card alone.
   // OUT_OF_SCOPE_PLACE_SAID_ENABLED: "Store: Kearney." from a manager not assigned there is told so.
   // FORM_TYPE_SWITCH_AFTER_CREATE_NOTE_ENABLED: the form already created is said to stay as it is.
@@ -392,7 +394,7 @@ async function answerQuestionBody(
           withUnknownNameAsk(
             withFirstNameAsk(
               // TERMINATION_STATED_TICKS_ENABLED: a termination the manager stated is the card's level, with the approval line.
-              withTerminationStated(withWarningLevelFromClause(withFreshDateReask(withJobTitleFromWords(withCoachingWhatHappened(await answerQuestionCore(request, actor, memory), request), request), request), request), request),
+              withTerminationStated(withWarningLevelFromClause(withFreshDateReask(withJobTitleFromWords(withCoachingWhatHappened(withCaWhatHappened(await answerQuestionCore(request, actor, memory), request), request), request), request), request), request),
               request,
             ),
             request,
