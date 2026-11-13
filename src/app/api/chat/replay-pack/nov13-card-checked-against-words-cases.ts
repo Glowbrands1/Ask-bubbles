@@ -21,7 +21,9 @@ export const NOV13_CARD_CHECKED_AGAINST_WORDS_CASES: ReplayCase[] = [
     id: "nov13-card-checked-off-roster-hedge-not-issue",
     title: "QA's 17r note, \"CA for Corwin Ashdale, do not terminate yet, she was late\" (not on the roster): the held card's Issue is the account, never the hedge",
     report: `${REPORT} (QA's 17r live note: on the off-roster ask path the card still says Issue: do not terminate yet)`,
-    status: { open: "the held card's Issue is \"do not terminate yet\"" },
+    // Changed on purpose (13 Nov 2026, main d5e5ea22): 17r-c made TERMINATION_TIDY_HELD_NAME live (#852), which fixes this
+    // turn on production; the card check holds it as well (with that flag off: FLAG_CLASSIFY_OFF, in #861's notes).
+    status: "fixed",
     fixFlags: FIX,
     async run(t) {
       vi.setSystemTime(new Date("2026-11-13T16:00:00Z"));
