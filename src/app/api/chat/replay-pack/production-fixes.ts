@@ -776,4 +776,16 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov12-same-name-title-reply-selects": "SAME_NAME_ASKS_WHICH",
   // fixed in production by SAME_NAME_ASKS_WHICH, QA hotfix 17r-c, 13 Nov 2026
   "nov12-same-name-store-reply-selects": "SAME_NAME_ASKS_WHICH",
+  // fixed in production by CLOSE_SPELLING_MATCH, QA round 17s, 13 Nov 2026
+  "nov13-close-spelling-policy-anmals-in-the-workplace": "CLOSE_SPELLING_MATCH",
+  // fixed in production by CLOSE_SPELLING_MATCH, QA round 17s, 13 Nov 2026
+  "nov13-close-spelling-policy-vistors-at-work": "CLOSE_SPELLING_MATCH",
+  // fixed in production by CLOSE_SPELLING_MATCH, QA round 17s, 13 Nov 2026
+  "nov13-close-spelling-policy-care-and-clening": "CLOSE_SPELLING_MATCH",
+  // fixed in production by CLOSE_SPELLING_MATCH, QA round 17s, 13 Nov 2026
+  "nov13-close-spelling-policy-cleaning-not-confident-keeps-other-asks": "CLOSE_SPELLING_MATCH",
+  // fixed in production by CLOSE_SPELLING_MATCH, QA round 17s, 13 Nov 2026
+  "nov13-close-spelling-policy-not-confident-asks": "CLOSE_SPELLING_MATCH",
+  // fixed in production by CLOSE_SPELLING_MATCH, QA round 17s, 13 Nov 2026
+  "nov13-close-spelling-policy-two-headings-asks-which": "CLOSE_SPELLING_MATCH",
 };
