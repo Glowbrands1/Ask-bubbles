@@ -1444,6 +1444,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FUTURE_INCIDENT_DATE_ASK_ENABLED",
   // coding 6: FORMS_GUIDE (B#194 rebuilt; default off).
   "FORMS_GUIDE_ENABLED",
+  // SURNAME_PARTICLES (default off): in the list, as every chat flag.
+  "SURNAME_PARTICLES_ENABLED",
   // coding 5: B3 (QA's backlog, 10 Nov 2026; default off).
   "COPY_PASTE_CLAIM_HONEST_ENABLED",
   "COPY_PASTE_POINTS_TO_CARD_ENABLED",
@@ -5145,6 +5147,16 @@ export function revisionArchivedNotOpenEnabled(): boolean {
  */
 export function formInputFidelityEnabled(): boolean {
   return envFlag("FORM_INPUT_FIDELITY_ENABLED");
+}
+
+/**
+ * SURNAME_PARTICLES_ENABLED (QA's audit item 17b, 10 Nov 2026; default off; same flag in both apps). A typed surname
+ * that opens with a particle was cut at it ("maria de la cruz" → "maria de"). On, a first name followed by particles
+ * ("de la", "van der", "von", …) and a surname word reads the whole surname (`forms/surname-particles.ts`, used by the
+ * protected `forms/proposal.ts` reader). Off, as before.
+ */
+export function surnameParticlesEnabled(): boolean {
+  return envFlag("SURNAME_PARTICLES_ENABLED");
 }
 
 /**

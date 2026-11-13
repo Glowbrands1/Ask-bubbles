@@ -20,6 +20,7 @@ import {
 import { proposeLocationWithSource, type LocationProposal } from "./location-scope";
 import { ROSTER_STORE_INDEX, rosterLocationName } from "./location-mention";
 import { isExitTerms, namesSomebody, notInStreetAddress } from "./answer-not-a-name";
+import { particleSurname } from "./surname-particles";
 import { nameBeforeAccountVerb } from "./not-a-name";
 import { isStoreName, type StoreIndex } from "@/lib/stores/resolver";
 import type { AccessScope, ChatFormProposal, ChatMessage, EmployeeVerification } from "@/types";
@@ -155,13 +156,30 @@ const COUNTS_PEOPLE = new Set(["both", "either", "neither", "each", "all", "ever
 function readTypedName(words: readonly string[], whole: boolean): string | null {
   const parts: string[] = [];
   let endedOnPunctuation = false;
+  // SURNAME_PARTICLES_ENABLED: the words a particle surname took beyond its first ("de la vega" takes two more).
+  let joined = 0;
+  let skip = 0;
   for (const [index, raw] of words.entries()) {
+    if (skip > 0) {
+      skip -= 1;
+      continue;
+    }
     if (parts.length === 0 && GERUND.test(raw) && GERUND_OBJECT.test((words[index + 1] ?? "").replace(WRAPPER_AFTER, "").toLowerCase())) {
       if (whole) return null;
       break;
     }
     // A third part only where a name position was read — see below.
     if (parts.length === (whole ? 2 : 3)) break;
+    // SURNAME_PARTICLES_ENABLED: after a first name, "de la vega" / "van der berg" is one surname (`surname-particles.ts`).
+    const particled = parts.length > 0 ? particleSurname(words, index) : null;
+    if (particled) {
+      parts.push(particled.surname);
+      joined += particled.used - 1;
+      skip = particled.used - 1;
+      endedOnPunctuation = particled.ends;
+      if (particled.ends) break;
+      continue;
+    }
     // An opening wrapper can only precede the name, so only the first word loses one.
     const opened = parts.length === 0 ? raw.replace(WRAPPER_BEFORE, "") : raw;
     const unwrapped = opened.replace(WRAPPER_AFTER, "");
@@ -209,7 +227,7 @@ function readTypedName(words: readonly string[], whole: boolean): string | null 
    * or is followed by a word that cannot be part of a name.
    */
   if (parts.length === 3 && !endedOnPunctuation) {
-    const next = words[3]?.replace(WRAPPER_AFTER, "").toLowerCase();
+    const next = words[3 + joined]?.replace(WRAPPER_AFTER, "").toLowerCase();
     /*
      * "for avery testperson sept 28" is a name and a date, not a three-part
      * name: a month followed by a day number starts the form's date.
@@ -227,7 +245,7 @@ function readTypedName(words: readonly string[], whole: boolean): string | null 
     if (!boundary) parts.pop();
   }
   if (parts.length === 0) return null;
-  if (whole && parts.length !== words.length) return null;
+  if (whole && parts.length + joined !== words.length) return null;
   return finishedName(parts.join(" "));
 }
 
