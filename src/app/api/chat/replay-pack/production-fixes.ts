@@ -800,4 +800,8 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov13-what-happened-no-create-nothing-wrong": "CA_ASKS_WHAT_HAPPENED",
   // fixed in production by CA_ASKS_WHAT_HAPPENED + WHAT_HAPPENED_NO_CREATE, QA round 17t, 13 Nov 2026
   "nov13-what-happened-no-create-name-after-request": "CA_ASKS_WHAT_HAPPENED",
+  // fixed in production by EDIT_SEES_SAVED_FORM, QA round 17u, 13 Nov 2026
+  "nov13-edit-sees-saved-form-corrects-missed-part": "EDIT_SEES_SAVED_FORM",
+  // fixed in production by EDIT_SEES_SAVED_FORM, QA round 17u, 13 Nov 2026
+  "nov13-edit-sees-saved-form-hand-off-revision-corrects": "EDIT_SEES_SAVED_FORM",
 };
