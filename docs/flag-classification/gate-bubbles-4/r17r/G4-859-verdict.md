@@ -22,3 +22,10 @@
   - new nov13-close-spelling-policy-cleaning-not-confident-keeps-other-asks ("care and clneaing"): it keeps "**Policy:** Other — cleaning duties left undone …" and adds "Did you mean **Care and Cleaning of Equipment and Facilities** (page 21)? … I won't pick one for you." The plan stays generic.
 - Every other nov13 case is byte-identical to the first head (anmals/vistors cited; key holdr asks between the two; anmals in the wrkplace asks), and the store, shared-word and exact cases are unchanged.
 - Pending as before: a clean-env flags-off-parity run.
+
+## Clean-env flags-off-parity, #859 at 825f0bf2 on main d5e5ea22: GO
+- `git diff ab75b8da 825f0bf2 -- src ':!*.test.ts'` is empty; 825f0bf2 adds 4 lines to close-spelling.test.ts only.
+- #859 (ab75b8da) merged onto d5e5ea22. Conflicts in the flags file and the route.ts imports (HUMAN_REPLIES next to CLOSE_SPELLING_MATCH): kept both. tsc clean.
+- `npx vitest run --project flags-off-parity` in a clean env (no flag env), as CI's flags-off-parity job runs it: exit 0, 8/8 passed (src/lib/ai + forms; chat without the pack, both halves; forms; replay pack, both halves; flags default off; protected modules / UI diffs).
+- The parity failures in my earlier gate runs came from running it under the exported production env; they are not CI failures.
+- 825f0bf2 merged on top: close-spelling.test.ts passes with the flag unset and with CLOSE_SPELLING_MATCH_ENABLED=true.
