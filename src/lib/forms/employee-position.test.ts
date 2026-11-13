@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   POSITION_QUESTION_TAG,
@@ -75,5 +75,32 @@ describe("over a conversation", () => {
   it("compares titles the way a person does", () => {
     expect(samePosition("Shift Lead", "shift  lead")).toBe(true);
     expect(samePosition("Shift Lead", "Store Manager")).toBe(false);
+  });
+});
+
+describe("POSITION_ANSWER_NOT_A_SENTENCE_ENABLED: QA's live 17w test (13 Nov 2026)", () => {
+  it.each([
+    "she gets a verbal warning",
+    "she had a verbal warning on 10/1",
+    "she owes $25",
+    "he got written up last week",
+    "they were late again",
+  ])("on: %j is never a position", (reply) => {
+    vi.stubEnv("POSITION_ANSWER_NOT_A_SENTENCE_ENABLED", "true");
+    expect(readPositionAnswer(reply)).toBeNull();
+  });
+  it.each([
+    ["Team Member Part Time", "Team Member Part Time"],
+    ["keyholder", "Keyholder"],
+    ["assistant manager", "Assistant Manager"],
+    ["she's a shift lead.", "Shift Lead"],
+    ["she's a key holder", "Key Holder"],
+  ])("on: a real title %j is still read", (reply, expected) => {
+    vi.stubEnv("POSITION_ANSWER_NOT_A_SENTENCE_ENABLED", "true");
+    expect(readPositionAnswer(reply)).toBe(expected);
+  });
+  it("off: as before, the sentence is read as a title", () => {
+    vi.stubEnv("POSITION_ANSWER_NOT_A_SENTENCE_ENABLED", "");
+    expect(readPositionAnswer("she gets a verbal warning")).toBe("She Gets A Verbal Warning");
   });
 });

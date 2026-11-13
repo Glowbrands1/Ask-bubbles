@@ -1,4 +1,4 @@
-import { formInputFidelityEnabled, positionAnswerGuardEnabled } from "@/lib/config/chat-quality-flags";
+import { formInputFidelityEnabled, positionAnswerGuardEnabled, positionAnswerNotASentenceEnabled } from "@/lib/config/chat-quality-flags";
 
 import { spokenDates } from "./relative-date";
 
@@ -77,6 +77,21 @@ function saysOnlyADate(text: string): boolean {
   return rest.replace(DATE_FILLER, " ").replace(/[\s.,!]+/g, "") === "";
 }
 
+/*
+ * POSITION_ANSWER_NOT_A_SENTENCE_ENABLED (QA's live Bubbles 17w test, 13 Nov 2026): a card for someone with no Woven
+ * position asked for it, and the manager's next turn, "she gets a verbal warning", became Position "She Gets A Verbal
+ * Warning". A reply that is a sentence about her (a pronoun and a verb other than "is/was/'s") or that names a level,
+ * a warning, an earlier step or a payment is never a position answer. "she's a shift lead", "Team Member Part Time",
+ * "keyholder" still are.
+ */
+const SENTENCE_ABOUT_HER = /^(?:she|he|they)\s+(?!(?:is|was|are|were)\b)[a-z]+/i;
+const NOT_A_TITLE_WORD =
+  /(?:\$\s?\d|\b\d|\b(?:warning|warnings|write[- ]?ups?|verbal|written|final|coach(?:ed|ing)?|owes?|owed|owing|pay|paid|payroll|deduct\w*|late|tardy|no[- ]?show|absent|fired|terminat\w*|suspend\w*|signed|corrective|ca)\b)/i;
+
+function notAPositionSentence(reply: string): boolean {
+  return SENTENCE_ABOUT_HER.test(reply) || NOT_A_TITLE_WORD.test(reply);
+}
+
 function titleCase(phrase: string): string {
   return phrase
     .split(/\s+/)
@@ -104,6 +119,8 @@ export function readPositionAnswer(reply: string): string | null {
   if (positionAnswerGuardEnabled() && ANSWERS_ANOTHER_QUESTION.test(String(reply).trim())) return null;
   // FORM_INPUT_FIDELITY_ENABLED: a bare date ("yesterday", "Oct 20", "10/20") answers the date question, never the position.
   if (formInputFidelityEnabled() && saysOnlyADate(text)) return null;
+  // POSITION_ANSWER_NOT_A_SENTENCE_ENABLED: "she gets a verbal warning" is about the incident, never her title.
+  if (positionAnswerNotASentenceEnabled() && notAPositionSentence(String(reply).trim())) return null;
   const words = text.split(/\s+/);
   if (words.length > 5 || !/^[A-Za-z][A-Za-z&/'’.\- ]*$/.test(text)) return null;
   return titleCase(text);

@@ -1523,6 +1523,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "EDIT_SEES_SAVED_FORM_ENABLED",
   // CARD_CHECKED_AGAINST_WORDS (default off; Pau's direction via QA, 13 Nov 2026): in the list, as every chat flag.
   "CARD_CHECKED_AGAINST_WORDS_ENABLED",
+  // POSITION_ANSWER_NOT_A_SENTENCE (default off; QA's live 17w test, 13 Nov 2026): in the list, as every chat flag.
+  "POSITION_ANSWER_NOT_A_SENTENCE_ENABLED",
 ] as const;
 
 /**
@@ -4713,6 +4715,16 @@ export function madeAboutReaderAccountEnabled(): boolean {
  */
 export function madeAboutRewriteFinishesEnabled(): boolean {
   return envFlag("MADE_ABOUT_REWRITE_FINISHES_ENABLED");
+}
+
+/**
+ * POSITION_ANSWER_NOT_A_SENTENCE_ENABLED (coding 6; QA's live Bubbles 17w test, 13 Nov 2026; default off). With the
+ * position question open, "she gets a verbal warning" became the card's Position ("She Gets A Verbal Warning"). On, a
+ * reply that is a sentence about her, or names a level, warning, earlier step or payment, is never a position answer
+ * (`forms/employee-position.ts`). Off, as before.
+ */
+export function positionAnswerNotASentenceEnabled(): boolean {
+  return envFlag("POSITION_ANSWER_NOT_A_SENTENCE_ENABLED");
 }
 
 /**
