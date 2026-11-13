@@ -3,7 +3,7 @@ import type { AskResponse } from "@/lib/ai/types";
 import type { ChatFormProposal } from "@/types";
 
 /**
- * HUMAN_REPLIES_ENABLED: a form chat says the long opener once. (Rebuilt from Ask Sunny's S#898, QA's ruling (b),
+ * HUMAN_REPLIES_ENABLED: a form chat says the long opener once. (Rebuilt from the sibling app's S#898, QA's ruling (b),
  * 12 Nov 2026; supersedes this app's #200.)
  *
  * The owner's rule, 26 Oct 2026: "humanize it". In a ten-turn Corrective

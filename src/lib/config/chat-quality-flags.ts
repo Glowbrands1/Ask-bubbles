@@ -1456,7 +1456,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ANSWER_TURN_LEVEL_ENABLED",
   // TERMINATION_CARD_TIDY (default off; QA's 17o live notes, 12 Nov 2026): in the list, as every chat flag.
   "TERMINATION_CARD_TIDY_ENABLED",
-  // HUMAN_REPLIES (default off; rebuilt from Ask Sunny's S#898, QA's ruling (b)): in the list, as every chat flag.
+  // HUMAN_REPLIES (default off; rebuilt from the sibling app's S#898, QA's ruling (b)): in the list, as every chat flag.
   "HUMAN_REPLIES_ENABLED",
   "ACCOUNT_BEFORE_REQUEST_ENABLED",
   // LETTER_GREETING_ANY_CASE (default off): in the list, as every chat flag (QA round 17k, 12 Nov 2026).
@@ -5479,7 +5479,7 @@ export function exitNoticeStatedOnlyEnabled(): boolean {
 }
 
 /**
- * HUMAN_REPLIES_ENABLED (default off; rebuilt by coding 6 from Ask Sunny's S#898, 12 Nov 2026; QA's ruling (b);
+ * HUMAN_REPLIES_ENABLED (default off; rebuilt by coding 6 from the sibling app's S#898, 12 Nov 2026; QA's ruling (b);
  * supersedes this app's #200). A later card turn for the same form and employee replaces only the opener's long tail
  * with one line on what changed; every other card line stays as built. Off, as before. See `ai/human-replies.ts`.
  */
