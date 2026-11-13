@@ -1,5 +1,6 @@
 import "server-only";
 
+import { recordToday } from "@/lib/business-today";
 import { createLinkedAccount, MANUAL_ROLES } from "@/lib/admin/woven-account";
 import { DirectoryError, type DirectoryActor } from "@/lib/admin/user-directory";
 import { loadAccessPlan, type AccessPlan } from "@/lib/employees/woven/access/load";
@@ -66,7 +67,7 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const on = (raw: string | undefined) => ["1", "true", "yes", "on"].includes((raw ?? "").trim().toLowerCase());
 
 export function readNewHireConfig(env: Record<string, string | undefined> = process.env, now: Date = new Date()): NewHireConfig {
-  const today = now.toISOString().slice(0, 10);
+  const today = recordToday(now);
   const off = (problem: string | null): NewHireConfig => ({ enabled: false, since: null, roles: [], perHour: 1, actorEmail: null, today, problem });
   if (!on(env[NEW_HIRE_INVITES_ENABLED_ENV])) return off(null);
   const since = (env[NEW_HIRE_INVITE_SINCE_ENV] ?? "").trim();

@@ -35,7 +35,7 @@ async function offered(t: ReplayContext) {
 const PLACES = [
   { key: "roster-name", place: "Omaha, NE (West Dodge Rd)", store: "loc-264" },
   { key: "city-only", place: "Bellevue", store: "loc-67" },
-  { key: "state-first", place: "NE Omaha", store: null },
+  { key: "state-first", place: "NE Omaha", store: "loc-264" },
   { key: "city-state-unlisted", place: "Des Moines, IA", store: null },
 ] as const;
 
@@ -54,7 +54,11 @@ export const NOV12_OFF_ROSTER_PLACE_ANSWER_CASES: ReplayCase[] = PLACES.map(({ k
     expect(reply.content, `"use ${C}" is not asked again:\n${reply.content}`).toContain(`reply **use ${C}**`);
     // The Issue's wording ("do not terminate yet") is #829 TERMINATION_CARD_TIDY's (QA, 12 Nov 2026), so it is not asserted.
     expect(lineOf(reply, "Policy"), `the policy was lost:\n${reply.content}`).toMatch(/^Attendance\b/);
-    if (store) expect(card?.locationId, `the store is not set:\n${reply.content}`).toBe(store);
+    if (store) {
+      expect(card?.locationId, `the store is not set:\n${reply.content}`).toBe(store);
+      // Gate-Bubbles-5 (12 Nov 2026): the store was set, so the reply never says the form won't name one.
+      expect(reply.content, `the reply contradicts the store it set:\n${reply.content}`).not.toMatch(/covers every store/);
+    }
   },
 }));
 
@@ -86,6 +90,7 @@ export const NOV12_OFF_ROSTER_PLACE_ANSWER_LIVE_CASES: ReplayCase[] = [
       expect(reply.content, `"use ${C}" is not asked again:\n${reply.content}`).toContain(`reply **use ${C}**`);
       expect(card?.employeeName ?? null, `${C} went on the card without "use ${C}":\n${reply.content}`).toBeNull();
       expect(card?.locationId, `the store is not set:\n${reply.content}`).toBe("loc-264");
+      expect(reply.content, `the reply contradicts the store it set:\n${reply.content}`).not.toMatch(/covers every store/);
       expect(card?.issue ?? "", `the store string is the Issue:\n${reply.content}`).not.toMatch(/West Dodge|Omaha, NE/i);
       expect(lineOf(reply, "Issue"), `the store string is the Issue line:\n${reply.content}`).not.toMatch(/West Dodge|Omaha, NE/i);
       expect(card?.issue ?? null, `the account changed:\n${reply.content}`).toBe(issueBefore);

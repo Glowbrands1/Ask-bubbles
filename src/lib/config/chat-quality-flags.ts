@@ -1004,6 +1004,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FORM_EDIT_SOURCE_TURN_ENABLED",
   // coding 2: OFF_ROSTER_STORE_ANSWER_ONLY (QA's #735 ruling, 12 Nov 2026; default off).
   "OFF_ROSTER_STORE_ANSWER_ONLY_ENABLED",
+  // coding 2: OFFERED_NAME_ACCEPTED (port from the sibling app, 12 Nov 2026; default off).
+  "OFFERED_NAME_ACCEPTED_ENABLED",
   // coding 2: OFF_ROSTER_PLACE_ANSWER (port from the sibling app's 37b live bug, 12 Nov 2026; default off).
   "OFF_ROSTER_PLACE_ANSWER_ENABLED",
   "NOT_FOLLOWING_IS_VIOLATION_ENABLED",
@@ -1421,6 +1423,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 6: PRIOR_ACTIONS_NO_COMMA (October rebuild 4, #187 rebuilt on main; default off).
   "PRIOR_ACTIONS_NO_COMMA_ENABLED",
   "STORE_ALIAS_ENABLED",
+  // coding 4: FORM_DATE_BUSINESS_TODAY (live bug, QA, 13 Nov 2026; default off).
+  "FORM_DATE_BUSINESS_TODAY_ENABLED",
   "FULL_MANUAL_WIDE_GATE_ENABLED",
   // coding 6: MANAGER_FORM_CHOICE (B#181 rebuilt; default off; wiring awaits Coding-2).
   "MANAGER_FORM_CHOICE_ENABLED",
@@ -1452,6 +1456,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ANSWER_TURN_LEVEL_ENABLED",
   // TERMINATION_CARD_TIDY (default off; QA's 17o live notes, 12 Nov 2026): in the list, as every chat flag.
   "TERMINATION_CARD_TIDY_ENABLED",
+  // HUMAN_REPLIES (default off; rebuilt from the sibling app's S#898, QA's ruling (b)): in the list, as every chat flag.
+  "HUMAN_REPLIES_ENABLED",
   "ACCOUNT_BEFORE_REQUEST_ENABLED",
   // LETTER_GREETING_ANY_CASE (default off): in the list, as every chat flag (QA round 17k, 12 Nov 2026).
   "LETTER_GREETING_ANY_CASE_ENABLED",
@@ -1502,6 +1508,10 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "TYPO_FULL_NAME_TO_ROSTER_ENABLED",
   // coding 5: SPELLING_CLEANUP (Pau via QA, 13 Nov 2026; default off; same flag in both apps).
   "SPELLING_CLEANUP_ENABLED",
+  // TERMINATION_TIDY_HELD_NAME (default off; QA's 17r live note, 12 Nov 2026): in the list, as every chat flag.
+  "TERMINATION_TIDY_HELD_NAME_ENABLED",
+  // SAME_NAME_ASKS_WHICH (default off; QA, 12 Nov 2026): in the list, as every chat flag.
+  "SAME_NAME_ASKS_WHICH_ENABLED",
 ] as const;
 
 /**
@@ -3021,6 +3031,18 @@ export function offRosterAskBeforeCardEnabled(): boolean {
  */
 export function offRosterStoreAnswerOnlyEnabled(): boolean {
   return envFlag("OFF_ROSTER_STORE_ANSWER_ONLY_ENABLED");
+}
+
+/**
+ * OFFERED_NAME_ACCEPTED_ENABLED (Coding-2, 12 Nov 2026; default off; port from the sibling app, QA's top priority: "an
+ * offer the bot makes must be acceptable"). "CA for <C>, do not terminate yet, she was late" → "reply use <C>" → "use
+ * <C>" was refused here too ("\"<C>\" isn't a person on your team"), for an all-location admin and a store manager
+ * alike: the request's slot reader takes "<C>," before the account as a capitalised list item, so the person guard
+ * ruled the name out on the turn that takes the offer. On: the name the manager took with "use <C>" this turn is a
+ * person (`forms/person-guard.ts`). Off, as before.
+ */
+export function offeredNameAcceptedEnabled(): boolean {
+  return envFlag("OFFERED_NAME_ACCEPTED_ENABLED");
 }
 
 /**
@@ -5383,6 +5405,17 @@ export function cardPlanMatchesCreateEnabled(): boolean {
 }
 
 /**
+ * SAME_NAME_ASKS_WHICH_ENABLED (coding 6, 12 Nov 2026; default off; same flag in both apps; QA, high priority). Two
+ * active people with one name at ONE store were asked "Which store is the one you mean?" — the store cannot tell them
+ * apart — and then "Who is this form for?". On: two or more roster people with the typed name are a numbered choice
+ * labelled with store and job title ("Did you mean 1. **<name>** (<store>, <title>) or 2. …?"), and the answer — the
+ * number, the job title or the store — selects that person by identity (store AND title), never by name. Off, as before.
+ */
+export function sameNameAsksWhichEnabled(): boolean {
+  return envFlag("SAME_NAME_ASKS_WHICH_ENABLED");
+}
+
+/**
  * NEXT_PUBLIC_REPLY_QUOTE_LINES_ENABLED (QA's Bubbles 17p live check, 12 Nov 2026; default off). With
  * STEP_B_REPLY_KEEPS_LINES on, an edit reply quotes the field line by line ("Changed Observation of Offense to:\n>
  * Observed:\n> <G> was late …\n> Expectation: …"), but the chat showed it as ONE line with ">" between the parts: the
@@ -5456,4 +5489,34 @@ export function exitNoticeStatedOnlyEnabled(): boolean {
  */
 export function spellingCleanupEnabled(): boolean {
   return envFlag("SPELLING_CLEANUP_ENABLED");
+}
+
+/**
+ * HUMAN_REPLIES_ENABLED (default off; rebuilt by coding 6 from the sibling app's S#898, 12 Nov 2026; QA's ruling (b);
+ * supersedes this app's #200). A later card turn for the same form and employee replaces only the opener's long tail
+ * with one line on what changed; every other card line stays as built. Off, as before. See `ai/human-replies.ts`.
+ */
+export function humanRepliesEnabled(): boolean {
+  return envFlag("HUMAN_REPLIES_ENABLED");
+}
+
+/**
+ * TERMINATION_TIDY_HELD_NAME_ENABLED (coding 6, 12 Nov 2026; default off; QA's 17r live note on #829). On the off-roster
+ * ask path, "CA for <B>, do not terminate yet, she was late" still gave the card "Issue: do not terminate yet": the name
+ * was held off the card (FORM_NAME_FROM_ROSTER), and TERMINATION_CARD_TIDY reads the account after the card's employee.
+ * On: with no employee on the card, the account is read after the name the reply says it could not find
+ * (`ai/termination-card-tidy.ts`). Off, as before.
+ */
+export function terminationTidyHeldNameEnabled(): boolean {
+  return envFlag("TERMINATION_TIDY_HELD_NAME_ENABLED");
+}
+
+/**
+ * FORM_DATE_BUSINESS_TODAY (live bug, QA, 13 Nov 2026; ported from the sibling app): every "today" used as a business
+ * date (here, the day Woven's termination and new-hire dates are read against) is the business date in
+ * BUSINESS_TIMEZONE, not the UTC date, which is already tomorrow in the evening. See `lib/business-today.ts`. Off, the
+ * UTC date, as before.
+ */
+export function formDateBusinessTodayEnabled(): boolean {
+  return envFlag("FORM_DATE_BUSINESS_TODAY_ENABLED");
 }

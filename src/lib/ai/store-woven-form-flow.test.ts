@@ -233,12 +233,32 @@ describe("8. two employees share a name", () => {
     person("e2", "Sarah", "Smith", ["loc-67"], "Store Manager"),
   ];
 
+  // Changed on purpose (SAME_NAME_ASKS_WHICH_ENABLED, 12 Nov 2026): pinned off, since with the flag on the question is
+  // the numbered "Did you mean 1. … or 2. …?" below. Off, the wording on main is unchanged.
   it("asks which store, naming both, rather than choosing", async () => {
-    const { formProposal: p, content } = await ask("Create a coaching form for Sarah Smith", ALL_STORES, TWO);
-    expect(p!.employeeName).toBeNull();
-    expect(content).toContain("More than one **Sarah Smith** works at your stores");
-    expect(content).toContain("Grand Island, NE (Store 236)");
-    expect(content).toContain("Bellevue, NE (Store 67)");
+    vi.stubEnv("SAME_NAME_ASKS_WHICH_ENABLED", "false");
+    try {
+      const { formProposal: p, content } = await ask("Create a coaching form for Sarah Smith", ALL_STORES, TWO);
+      expect(p!.employeeName).toBeNull();
+      expect(content).toContain("More than one **Sarah Smith** works at your stores");
+      expect(content).toContain("Grand Island, NE (Store 236)");
+      expect(content).toContain("Bellevue, NE (Store 67)");
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("with SAME_NAME_ASKS_WHICH on, asks which one by number, naming both stores and titles", async () => {
+    vi.stubEnv("SAME_NAME_ASKS_WHICH_ENABLED", "true");
+    try {
+      const { formProposal: p, content } = await ask("Create a coaching form for Sarah Smith", ALL_STORES, TWO);
+      expect(p!.employeeName).toBeNull();
+      expect(content).toContain("Did you mean 1. **Sarah Smith** (");
+      expect(content).toContain("Grand Island, NE (Store 236), Production Associate");
+      expect(content).toContain("Bellevue, NE (Store 67), Store Manager");
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it("is settled by the store the manager names, and takes that person's title", async () => {
