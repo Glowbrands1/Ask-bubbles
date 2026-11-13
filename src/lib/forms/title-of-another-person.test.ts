@@ -63,6 +63,8 @@ describe("TITLE_ENDS_AT_LINE_ENABLED: a title line of capitalised words is one t
   });
   it("off: as before, \"Part Time\" beside \"Team Member\" reads as another person", () => {
     vi.stubEnv("TITLE_ENDS_AT_LINE_ENABLED", "");
+    // FULL_POSITION_TITLE_ENABLED reads "Part Time" as a schedule word (QA, 10 Nov 2026): off here, as this case was written.
+    vi.stubEnv("FULL_POSITION_TITLE_ENABLED", "");
     expect(titleNamesAnotherPerson(S16, "Team Member", "Thessaly Varrow")).toBe(true);
   });
 });
@@ -76,5 +78,41 @@ describe("TITLE_ENDS_AT_LINE_ENABLED: a title line is a company position name, n
   it("(b) \"Team Member Part Time\" on its own line is still the employee's", () => {
     vi.stubEnv("TITLE_ENDS_AT_LINE_ENABLED", "true");
     expect(titleNamesAnotherPerson("Thessaly Varrow\nTeam Member Part Time\nNE Omaha Dodge\nGave notice", "Team Member", "Thessaly Varrow")).toBe(false);
+  });
+});
+
+/*
+ * FULL_POSITION_TITLE_ENABLED (QA, 10 Nov 2026): an exit form typed as lines, "<name>\nTeam Member Weekends Only\n<place>",
+ * for an employee with no roster position, left the Job Title blank: "Weekends Only" on the title's line was read as
+ * the title's owner. Schedule and status words after the title are no person; a name after it still is (ruling (a)).
+ */
+describe("schedule and status words after a title are no person (FULL_POSITION_TITLE_ENABLED)", () => {
+  const typed = (line: string) => `Isaura Corvadine\n${line} \nNE Omaha Dodge\nGave notice - fulfilled notice`;
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("off: \"Weekends Only\" is read as the title's owner, as before (TITLE_ENDS_AT_LINE on)", () => {
+    vi.stubEnv("TITLE_ENDS_AT_LINE_ENABLED", "true");
+    vi.stubEnv("FULL_POSITION_TITLE_ENABLED", "");
+    expect(titleNamesAnotherPerson(typed("Team Member Weekends Only"), "Team Member", "Isaura Corvadine")).toBe(true);
+  });
+
+  for (const line of ["Team Member Weekends Only", "Team Member Part-Time", "Team Member - On Call", "Team Member Nights", "Team Member (Seasonal)", "Team Member Closing Shift Only"]) {
+    it(`on: "${line}" is the employee's`, () => {
+      vi.stubEnv("TITLE_ENDS_AT_LINE_ENABLED", "true");
+      vi.stubEnv("FULL_POSITION_TITLE_ENABLED", "true");
+      expect(titleNamesAnotherPerson(typed(line), "Team Member", "Isaura Corvadine")).toBe(false);
+    });
+  }
+
+  it("on: ruling (a) is kept, \"District Manager Brenna Kowaldane\" is hers", () => {
+    vi.stubEnv("TITLE_ENDS_AT_LINE_ENABLED", "true");
+    vi.stubEnv("FULL_POSITION_TITLE_ENABLED", "true");
+    expect(titleNamesAnotherPerson(typed("District Manager Brenna Kowaldane"), "District Manager", "Isaura Corvadine")).toBe(true);
+  });
+
+  it("on: a qualifier word inside a name line is still a name (\"Team Member Only Vance\")", () => {
+    vi.stubEnv("TITLE_ENDS_AT_LINE_ENABLED", "true");
+    vi.stubEnv("FULL_POSITION_TITLE_ENABLED", "true");
+    expect(titleNamesAnotherPerson(typed("Team Member Only Vance"), "Team Member", "Isaura Corvadine")).toBe(true);
   });
 });
