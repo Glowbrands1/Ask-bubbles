@@ -2,7 +2,7 @@ import "server-only";
 
 import { createHash, randomUUID } from "node:crypto";
 
-import { editionSupersessionEnabled, ingestFailureKeepsLastGoodEnabled } from "@/lib/config/chat-quality-flags";
+import { editionSupersessionEnabled, ingestFailureKeepsLastGoodEnabled, wovenDuplicateContentHoldEnabled } from "@/lib/config/chat-quality-flags";
 import { EMBEDDING_DIMENSIONS } from "@/lib/config/models";
 import { MissingConfigurationError } from "@/lib/config/server-env";
 import { getEmbeddingProvider } from "@/lib/embeddings";
@@ -238,6 +238,16 @@ export async function ingestDocument(input: IngestInput): Promise<IngestResult> 
     const contentHash = hashChunks(chunks);
 
     /*
+     * WOVEN_DUPLICATE_CONTENT_HOLD_ENABLED (ported from the sibling app, QA, 10 Nov 2026): a Woven file whose text is
+     * the same as another live document with a different title is not indexed a second time. The first one indexed
+     * stays; this one fails, naming it, and the sync lists it under Needs attention for a person to resolve in Woven.
+     */
+    if (input.source === "woven" && wovenDuplicateContentHoldEnabled()) {
+      const same = await liveDocumentWithSameContent(input.scopeId, documentId, contentHash, title);
+      if (same) throw new IngestionError("duplicate_content", `Same file as "${same}"; not indexed a second time.`, 409);
+    }
+
+    /*
      * A new Woven record whose extracted text matches a superseded document
      * is a re-filed old copy. Remove the uploading placeholder and leave
      * search as it was. The live document (an update of a current row) is
@@ -421,7 +431,10 @@ export async function ingestDocument(input: IngestInput): Promise<IngestResult> 
     const reason =
       error instanceof IngestionError ? error.message : "Processing failed unexpectedly.";
     // INGEST_FAILURE_KEEPS_LAST_GOOD_ENABLED: a document that answered before keeps answering from that version.
-    const kept = ingestFailureKeepsLastGoodEnabled() && existing ? await keepLastGoodVersion(existing, version, reason) : false;
+    // With WOVEN_DUPLICATE_CONTENT_HOLD_ENABLED too, a held duplicate was read: it is "not indexed", never "could not be read".
+    const lead =
+      error instanceof IngestionError && error.code === "duplicate_content" ? "The newer file was not indexed" : "The newer file could not be read";
+    const kept = ingestFailureKeepsLastGoodEnabled() && existing ? await keepLastGoodVersion(existing, version, reason, lead) : false;
     if (!kept) await setStatus(documentId, "failed", reason);
     throw error instanceof IngestionError
       ? error
@@ -430,6 +443,21 @@ export async function ingestDocument(input: IngestInput): Promise<IngestResult> 
 }
 
 /* ------------------------------------------------------------- helpers --- */
+
+/** WOVEN_DUPLICATE_CONTENT_HOLD_ENABLED: the title of another live document with this content and a different title. */
+async function liveDocumentWithSameContent(scopeId: string, documentId: string, contentHash: string, title: string): Promise<string | null> {
+  const { data, error } = await getSupabaseAdmin()
+    .from("knowledge_documents")
+    .select("id, title")
+    .eq("knowledge_scope_id", scopeId)
+    .eq("content_hash", contentHash)
+    .eq("status", "indexed")
+    .neq("id", documentId)
+    .limit(5);
+  if (error || !Array.isArray(data)) return null;
+  const other = (data as { id: string; title: string }[]).find((row) => String(row.title ?? "").trim().toLowerCase() !== title.trim().toLowerCase());
+  return other ? String(other.title) : null;
+}
 
 /**
  * ============================================================================
@@ -446,7 +474,12 @@ export async function ingestDocument(input: IngestInput): Promise<IngestResult> 
  * `c.version = d.version`, so the old chunks answer again. Nothing stored is deleted. A document with no earlier
  * chunks (a first ingest) fails as before. Returns false when there was nothing to keep.
  */
-async function keepLastGoodVersion(existing: KnowledgeDocumentRow, failedVersion: number, reason: string): Promise<boolean> {
+async function keepLastGoodVersion(
+  existing: KnowledgeDocumentRow,
+  failedVersion: number,
+  reason: string,
+  lead = "The newer file could not be read",
+): Promise<boolean> {
   if (!existing.indexed_at) return false;
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
@@ -470,7 +503,7 @@ async function keepLastGoodVersion(existing: KnowledgeDocumentRow, failedVersion
         ? existing.storage_path
         : buildStoragePath({ scopeId: existing.knowledge_scope_id, documentId: existing.id, version: good, fileName: existing.original_filename }),
       size_bytes: same ? existing.size_bytes : Number(earlier?.sizeBytes ?? existing.size_bytes),
-      failure_reason: `The newer file could not be read, so the last good version (v${good}) is still in use. ${reason}`.slice(0, 500),
+      failure_reason: `${lead}, so the last good version (v${good}) is still in use. ${reason}`.slice(0, 500),
     })
     .eq("id", existing.id);
   return !updateError;

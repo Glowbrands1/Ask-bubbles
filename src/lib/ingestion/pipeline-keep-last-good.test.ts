@@ -37,14 +37,17 @@ const EXISTING = {
   source: "woven",
 };
 
-async function load(options: { existing?: Record<string, unknown> | null; chunkVersions?: number[]; uploadErrorFor?: string } = {}) {
+async function load(
+  options: { existing?: Record<string, unknown> | null; chunkVersions?: number[]; uploadErrorFor?: string; failWith?: [code: string, message: string] } = {},
+) {
   vi.resetModules();
   const ops: Op[] = [];
   const uploads: string[] = [];
   const { IngestionError } = await import("./errors");
   vi.doMock("./extract", () => ({
     extractDocument: async () => {
-      throw new IngestionError("ocr_too_many_pages", TOO_MANY, 422);
+      const [code, message] = options.failWith ?? ["ocr_too_many_pages", TOO_MANY];
+      throw new IngestionError(code as never, message, 422);
     },
   }));
   vi.doMock("@/lib/embeddings", () => ({
@@ -176,4 +179,31 @@ describe("a failed newer file never hides the recipe book's last good version", 
     await expect(ingestDocument(sync())).rejects.toMatchObject({ code: "ocr_too_many_pages" });
     expect(verdict(ops)).toMatchObject({ status: "failed" });
   });
+});
+
+/*
+ * Merged with WOVEN_DUPLICATE_CONTENT_HOLD_ENABLED (QA, 11 Nov 2026, #750 on main ffa571ea): a newer file held as a
+ * duplicate of another live document fails with "duplicate_content" inside the same try. The row that answered before
+ * keeps its last good version, and its reason says the newer file was not indexed, never that it could not be read.
+ * (The hold itself is faked here as the failure; pipeline-duplicate-content.test.ts reads the content hash.)
+ */
+describe("with WOVEN_DUPLICATE_CONTENT_HOLD_ENABLED too", () => {
+  const SAME = 'Same file as "Everyday Auxiliary Recipe Book v072726 (copy)"; not indexed a second time.';
+  for (const [keep, hold] of [[false, false], [false, true], [true, false], [true, true]] as const) {
+    it(`keep-last-good ${keep ? "on" : "off"}, duplicate hold ${hold ? "on" : "off"}: a held newer file`, async () => {
+      process.env[FLAG] = keep ? "true" : "";
+      process.env.WOVEN_DUPLICATE_CONTENT_HOLD_ENABLED = hold ? "true" : "";
+      const { ops, ingestDocument } = await load({ failWith: ["duplicate_content", SAME] });
+      await expect(ingestDocument(sync())).rejects.toMatchObject({ code: "duplicate_content" });
+      const final = verdict(ops);
+      if (keep) {
+        expect(final).toMatchObject({ status: "indexed", indexed: true, version: 1 });
+        expect(String(final.failure_reason)).toMatch(/^The newer file was not indexed, so the last good version \(v1\) is still in use\./);
+        expect(String(final.failure_reason)).toContain(SAME);
+        expect(String(final.failure_reason)).not.toContain("could not be read");
+      } else {
+        expect(final).toMatchObject({ status: "failed", indexed: false, failure_reason: SAME });
+      }
+    });
+  }
 });
