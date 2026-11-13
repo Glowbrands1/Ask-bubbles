@@ -260,3 +260,15 @@ describe("CARD_CHECKED_AGAINST_WORDS_ENABLED: payment phrasings are payroll too 
     expect(addedFacts("she was late on 11/3/26", "Marnie Holloway", after(said))).toEqual([said]);
   });
 });
+
+describe("CARD_CHECKED_AGAINST_WORDS_ENABLED: a place one letter off is still only a place (QA, CLOSE_SPELLING_MATCH live, 13 Nov 2026)", () => {
+  const after = (said: string) => ({ turns: ["create a CA for Marnie Holloway, she was late on 11/3/26", said], roster: ROSTER });
+  it.each(["she is at West Dodg", "she is at the Omah store", "she works at West Dodg"])("with CLOSE_SPELLING_MATCH on, stays out: %s", (said) => {
+    vi.stubEnv("CLOSE_SPELLING_MATCH_ENABLED", "true");
+    expect(addedFacts("she was late on 11/3/26", "Marnie Holloway", after(said))).toEqual([]);
+  });
+  it("with CLOSE_SPELLING_MATCH on, an action at a place one letter off still joins", () => {
+    vi.stubEnv("CLOSE_SPELLING_MATCH_ENABLED", "true");
+    expect(addedFacts("she was late on 11/3/26", "Marnie Holloway", after("she was rude to a customer at the Omah store"))).toEqual(["she was rude to a customer at the Omah store"]);
+  });
+});

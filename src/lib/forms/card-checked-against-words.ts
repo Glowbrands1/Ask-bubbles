@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import type { AskResponse } from "@/lib/ai/types";
 import { updateChatTrace } from "@/lib/ai/chat-trace-store";
-import { cardCheckedAgainstWordsEnabled } from "@/lib/config/chat-quality-flags";
+import { cardCheckedAgainstWordsEnabled, envFlag } from "@/lib/config/chat-quality-flags";
 import { COMPANY_LOCATIONS } from "@/lib/locations";
 
 import type { RosterEmployee } from "./employee-match";
@@ -202,7 +202,34 @@ function onlyPlace(text: string): boolean {
   let rest = ` ${plain(text)} `;
   for (const word of placeWords()) rest = rest.replace(` ${word} `, " ");
   rest = rest.replace(/\b(?:the|our|my|a|store|salon|location|shop|ne|ks|mo|ia|co)\b/g, " ").trim();
+  /*
+   * CLOSE_SPELLING_MATCH_ENABLED (the sibling app's QA, 13 Nov 2026): "she is at <store one letter off>" is still only a
+   * place. The words left are matched one or two letters off (this branch predates main's close-spelling.ts; the same
+   * reader replaces this when main is merged).
+   */
+  if (rest !== "" && envFlag("CLOSE_SPELLING_MATCH_ENABLED")) {
+    const known = [...new Set(placeWords().flatMap((place) => place.split(" ")).filter((word) => word.length >= 4))];
+    rest = rest
+      .split(/\s+/)
+      .filter((word) => !(word.length >= 4 && known.some((place) => withinEdits(word, place, word.length >= 7 ? 2 : 1))))
+      .join(" ")
+      .trim();
+  }
   return rest === "" && plain(text) !== "";
+}
+
+/** Whether two words are at most `limit` single-letter edits apart. */
+function withinEdits(a: string, b: string, limit: number): boolean {
+  if (Math.abs(a.length - b.length) > limit) return false;
+  let previous = Array.from({ length: b.length + 1 }, (_, index) => index);
+  for (let i = 1; i <= a.length; i += 1) {
+    const current = [i];
+    for (let j = 1; j <= b.length; j += 1) {
+      current[j] = Math.min(previous[j]! + 1, current[j - 1]! + 1, previous[j - 1]! + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+    previous = current;
+  }
+  return previous[b.length]! <= limit;
 }
 
 /** Who she is: a role word, a roster title, or a role with a modifier ("closing lead"), and nothing else. */
