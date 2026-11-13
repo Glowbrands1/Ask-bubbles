@@ -640,6 +640,11 @@ describe("FORM_EDIT_DATE_RULES off: production today", () => {
   });
   it("S22: the Issue keeps \"general manager\"", async () => {
     live();
+    // Changed on purpose (Gate-Bubbles B866, 13 Nov 2026): this pins the pre-FORM_EDIT_DATE_RULES path, where the edit is
+    // not applied. ANSWER_IS_THE_ISSUE_ENABLED is held off here so the pin stays that old path; on production's path
+    // (FORM_EDIT_DATE_RULES on) the S22 edit sets the Issue to the manager's text with the flag on or off.
+    if (!saved.has("ANSWER_IS_THE_ISSUE_ENABLED")) saved.set("ANSWER_IS_THE_ISSUE_ENABLED", process.env.ANSWER_IS_THE_ISSUE_ENABLED);
+    process.env.ANSWER_IS_THE_ISSUE_ENABLED = "";
     const thread = new Thread();
     await thread.say("create a CA for general manager, tessa ormond for violating the standards of conduct", { employeeName: "tessa ormond" });
     await thread.say("Tessa Ormond, General Manager", EMPLOYEE);
