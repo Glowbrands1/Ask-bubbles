@@ -115,3 +115,22 @@ describe("STORE_ALIAS_ENABLED on: addresses and later place words", () => {
     expect(ids(out.question)).toContain(DODGE);
   });
 });
+
+describe("PLACE_STRIP_WHOLE_PHRASE_ONLY (QA, 13 Nov 2026)", () => {
+  afterEach(() => {
+    delete process.env.PLACE_STRIP_WHOLE_PHRASE_ONLY_ENABLED;
+  });
+
+  it("off: a store inside a longer name is written (as on main)", () => {
+    process.env[FLAG] = "true";
+    expect(rosterNames("she was late because she was at kearney high")).toBe("she was late because she was at Kearney NE high");
+  });
+
+  it("on: a store is written only where its phrase ends", () => {
+    process.env[FLAG] = "true";
+    process.env.PLACE_STRIP_WHOLE_PHRASE_ONLY_ENABLED = "true";
+    expect(rosterNames("she was late because she was at kearney high")).toBe("she was late because she was at kearney high");
+    expect(rosterNames("she was late at kearney ne today")).toBe("she was late at Kearney NE today");
+    expect(rosterNames("ca for kira dunmore at dodge ne, she was late")).toBe("ca for kira dunmore at Omaha NE (West Dodge Rd), she was late");
+  });
+});

@@ -1,4 +1,4 @@
-import { storeAliasEnabled } from "@/lib/config/chat-quality-flags";
+import { placeStripWholePhraseOnlyEnabled, storeAliasEnabled } from "@/lib/config/chat-quality-flags";
 import { COMPANY_LOCATION_ENTRIES } from "@/config/company/locations";
 import { readLocationMentions } from "@/lib/forms/location-mention";
 
@@ -78,6 +78,14 @@ const ONE_WORD_CUE_BEFORE = /\b(?:at|our|location|salon|store)\s+(?:the\s+)?$|\b
  */
 const RULED_OUT = /\b(?:not|never|no|isn['’]?t|wasn['’]?t|aren['’]?t|weren['’]?t|doesn['’]?t|didn['’]?t|except|without)\b[^,.;!?\n]{0,30}$/i;
 const CUE_AFTER = /^\s*(?:location|salon|store)\b/i;
+/*
+ * PLACE_STRIP_WHOLE_PHRASE_ONLY_ENABLED (QA, 13 Nov 2026; found by the sibling app's gate, checked here): "she was late
+ * because she was at kearney high" was written "… at Kearney NE high", a store inside a longer name. A store is written
+ * only where its phrase ends: the end of the turn, punctuation, a store word, or a word that carries the sentence on.
+ * Off, as before.
+ */
+const CARRIES_ON_AFTER =
+  /^\s*(?:$|[,.;:!?)]|(?:location|salon|store|and|but|or|on|today|yesterday|tonight|this|last|at|she|he|they|i|we|for|with|where|when|while|because|so|again|during|after|before|around|since|until|was|is|has|had|about|regarding|concerning|re|who|that|then|every|her|his|their|need|needs|out)\b)/i;
 const SUFFIXES: readonly [string, string][] = [
   ["street", "st"],
   ["road", "rd"],
@@ -231,6 +239,7 @@ export function rosterNames(text: string, placeAsked = false): string {
       if (RULED_OUT.test(before)) return found;
       const cue = alias.phrase.includes(" ") ? CUE_BEFORE : ONE_WORD_CUE_BEFORE;
       if (alias.cued && !cue.test(before) && !CUE_AFTER.test(all.slice(offset + found.length))) return found;
+      if (placeStripWholePhraseOnlyEnabled() && !CARRIES_ON_AFTER.test(all.slice(offset + found.length))) return found;
       return `\u0000${kept.push(READERS.written(alias.name)) - 1}\u0000`;
     });
   }

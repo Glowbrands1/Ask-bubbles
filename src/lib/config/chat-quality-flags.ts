@@ -1426,6 +1426,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 6: PRIOR_ACTIONS_NO_COMMA (October rebuild 4, #187 rebuilt on main; default off).
   "PRIOR_ACTIONS_NO_COMMA_ENABLED",
   "STORE_ALIAS_ENABLED",
+  // coding 4: PLACE_STRIP_WHOLE_PHRASE_ONLY (QA, 13 Nov 2026; default off).
+  "PLACE_STRIP_WHOLE_PHRASE_ONLY_ENABLED",
   // coding 4: FORM_DATE_BUSINESS_TODAY (live bug, QA, 13 Nov 2026; default off).
   "FORM_DATE_BUSINESS_TODAY_ENABLED",
   // coding 4: CLOSE_SPELLING_MATCH (Pau via QA, 13 Nov 2026; default off).
@@ -5547,4 +5549,13 @@ export function formDateBusinessTodayEnabled(): boolean {
  */
 export function closeSpellingMatchEnabled(): boolean {
   return envFlag("CLOSE_SPELLING_MATCH_ENABLED");
+}
+
+/**
+ * PLACE_STRIP_WHOLE_PHRASE_ONLY (QA, 13 Nov 2026; default off; from the sibling app's gate): a store named the managers'
+ * way is written as the roster name only where its phrase ends, so "at kearney high" is never "at Kearney NE high". See
+ * `ai/store-alias.ts`. Off, as before.
+ */
+export function placeStripWholePhraseOnlyEnabled(): boolean {
+  return envFlag("PLACE_STRIP_WHOLE_PHRASE_ONLY_ENABLED");
 }
