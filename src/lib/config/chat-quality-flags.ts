@@ -999,6 +999,10 @@ export function formsGuideEnabled(): boolean {
 }
 
 export const CHAT_QUALITY_FLAG_NAMES = [
+  // QA round 17s (13 Nov 2026): switched on in production.
+  "MAKE_THAT_UPDATE_ACCOUNT_ENABLED",
+  "COACHING_OBSERVED_SAVED_ENABLED",
+  "COACHING_ASKS_WHAT_HAPPENED_ENABLED",
   // QA round 17r (13 Nov 2026): TEAM_CARD_NOT_PRODUCT (#668) and FORM_EDIT_SOURCE_TURN (#480) are switched on in production.
   "TEAM_CARD_NOT_PRODUCT_ENABLED",
   "FORM_EDIT_SOURCE_TURN_ENABLED",
