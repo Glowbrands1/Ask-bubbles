@@ -2,6 +2,7 @@ import { offRosterPlaceAnswerEnabled } from "@/lib/config/chat-quality-flags";
 import { COMPANY_LOCATIONS, locationById } from "@/lib/locations";
 import type { AccessScope } from "@/types";
 
+import { storeOnlyTurn } from "@/lib/ai/store-alias";
 import { authorizeLocation } from "./location-scope";
 import { offeredOffRosterName, offRosterOffer } from "./off-roster-confirm";
 import { offRosterQuestion, storeOnlyAnswer } from "./off-roster-ask";
@@ -76,9 +77,14 @@ export function placeOnly(text: string): { storeId: string | null } | null {
 
 type Turn = { readonly role: string; readonly content: string };
 
-/** The open offer's name and the place, when this turn is only a place answering it. Off, or any other turn, null. */
-export function placeAnswerOf(question: string, history: readonly Turn[]): PlaceAnswer | null {
+/**
+ * The open offer's name and the place, when this turn is only a place answering it. Off, or any other turn, null. A
+ * store manager's store-only answer is OFF_ROSTER_STORE_ANSWER_ONLY's (`off-roster-ask.ts`), which holds the card with
+ * its store as it stands; this reader leaves it there.
+ */
+export function placeAnswerOf(question: string, history: readonly Turn[], scope?: AccessScope | null): PlaceAnswer | null {
   if (!offRosterPlaceAnswerEnabled()) return null;
+  if (scope?.level === "location" && (storeOnlyAnswer(question) || storeOnlyTurn(question))) return null;
   const lastAssistant = [...history].reverse().find((turn) => turn.role === "assistant");
   const pending = offeredOffRosterName(lastAssistant?.content);
   if (!pending) return null;
@@ -119,7 +125,8 @@ export function withPlaceAnswer<T extends { content: string; formProposal?: Card
   const allowed = store && authorizeLocation(scope ?? null, store.id).kind === "authorized";
   const account = answer.content
     .split(/\n{2,}/)
-    .filter((paragraph) => !LEAD.test(paragraph.trim()))
+    // The lead, and any line that names the person still unconfirmed ("What is **<c>**'s position …"), are not the account.
+    .filter((paragraph) => !LEAD.test(paragraph.trim()) && !paragraph.toLowerCase().includes(place.pending.toLowerCase()))
     .join("\n\n")
     .trim();
   const noted = allowed

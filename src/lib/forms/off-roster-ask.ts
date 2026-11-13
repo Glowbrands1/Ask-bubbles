@@ -29,6 +29,7 @@ export function storeOnlyAnswer(text: string): boolean {
     .trim();
   return rest === "" || /^[a-z]{2}$/.test(rest);
 }
+import { storeOnlyTurn } from "@/lib/ai/store-alias";
 
 /*
  * ============================================================================
@@ -145,6 +146,22 @@ export function withOffRosterAskBeforeCard<T extends { content: string; formProp
     const offered = [...input.history].reverse().find((turn) => turn.role === "assistant")?.content ?? "";
     const pending = /reply \*\*use ([^*]+)\*\*/.exec(offered)?.[1]?.trim();
     if (pending && offered.includes(offRosterQuestion(pending)) && storeOnlyAnswer(input.question)) {
+      return {
+        ...answer,
+        content: `${offRosterQuestion(pending)} ${offRosterOffer(pending)}`,
+        formProposal: { ...card, employeeName: null, employeeRole: null, status: "needs_employee", supportsInlineDraft: false },
+      };
+    }
+  }
+  /*
+   * STORE_ALIAS_ENABLED (Gate-Bubbles-3, R735, 12 Nov 2026): a store answer to this question ("dodge, ne") is only the
+   * store. The name stays unconfirmed: the card is held, with its store, and the same question and offer are asked
+   * again, so the production confirmation ("use <name>") still decides it.
+   */
+  {
+    const offered = [...input.history].reverse().find((turn) => turn.role === "assistant")?.content ?? "";
+    const pending = /reply \*\*use ([^*]+)\*\*/.exec(offered)?.[1]?.trim();
+    if (pending && offered.includes(offRosterQuestion(pending)) && storeOnlyTurn(input.question)) {
       return {
         ...answer,
         content: `${offRosterQuestion(pending)} ${offRosterOffer(pending)}`,
