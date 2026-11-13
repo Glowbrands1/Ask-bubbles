@@ -121,3 +121,7 @@ None set by this session.
   <prodenv> ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED` (full OFF+ON, ~1.5 h, if the checkpoint is gone), then classify the
   rows (expect: the two nov13 OPEN cases + the new small-word-left-out arm hold; parity row = harness).
 - Provisional: both flags GO. Main is now b9720947 (17w); re-check the merge before the verdict.
+
+## FREEZE 23:25Z
+- #871 is DONE: both flags GO on e411007060, sent to QA (record r18/G4-871-verdict.md, f2f41a5f). No gate run in flight.
+- Nothing unpushed. Scratch worktrees (gate-<n>, t<n>, g871*) exist only as patches in r18/scratch-patches/.
