@@ -99,12 +99,15 @@ async function persistChatTrace(draft: ChatTraceDraft): Promise<void> {
       extraction_output_tokens: draft.formExtraction?.outputTokens ?? null,
       slots: withStages(
         withSpend(
-          withDraftCheck(
-            withFormEdit(
-              draft.reader ? { ...(draft.formExtraction?.slots ?? {}), reader: draft.reader } : (draft.formExtraction?.slots ?? null),
-              draft.formEdit,
+          withCardCheck(
+            withDraftCheck(
+              withFormEdit(
+                draft.reader ? { ...(draft.formExtraction?.slots ?? {}), reader: draft.reader } : (draft.formExtraction?.slots ?? null),
+                draft.formEdit,
+              ),
+              draft.draftCheck,
             ),
-            draft.draftCheck,
+            draft.cardCheck,
           ),
           metered,
         ),
@@ -136,6 +139,11 @@ function withFormEdit(slots: Record<string, unknown> | null, formEdit: Record<st
 }
 
 /** FORM_EDIT_SINGLE_WRITER_ENABLED: the post-draft check's keys, when it ran; otherwise the slots as they were. */
+/** CARD_CHECKED_AGAINST_WORDS_ENABLED: `slots.card_check`. Absent (the flag off, or no card), the slots as before. */
+function withCardCheck(slots: Record<string, unknown> | null, check: Record<string, unknown> | undefined): Record<string, unknown> | null {
+  return check ? { ...(slots ?? {}), card_check: check } : slots;
+}
+
 function withDraftCheck(slots: Record<string, unknown> | null, check: Record<string, unknown> | undefined): Record<string, unknown> | null {
   return check ? { ...(slots ?? {}), draft_check: check } : slots;
 }

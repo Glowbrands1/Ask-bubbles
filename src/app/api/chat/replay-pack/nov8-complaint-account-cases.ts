@@ -73,6 +73,8 @@ export const NOV8_COMPLAINT_ACCOUNT_CASES: ReplayCase[] = [
       await thread.say("create a ca form for Marnie Holloway");
       const reply = await thread.say("she had a verbal warning on 10/1. The customer said she was rude to her at the register today");
       expect(reply.content, `a dated earlier warning became this form's level:\n${reply.content}`).not.toMatch(/\*\*Type of warning:\*\* Verbal Warning, as you said/i);
+      // Gate-Bubbles-5 (13 Nov 2026): the dated earlier warning is history, never this incident's Issue.
+      expect(String((thread.proposal as Record<string, unknown> | null)?.issue ?? ""), `prior history joined the Issue:\n${reply.content}`).not.toMatch(/had a verbal warning/i);
     },
   },
 ];
