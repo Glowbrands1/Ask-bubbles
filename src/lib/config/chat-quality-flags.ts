@@ -1500,6 +1500,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "CARD_PLAN_MATCHES_CREATE_ENABLED",
   // coding 6: TYPO_FULL_NAME_TO_ROSTER (audit item 15.10, sf-b5, 11 Nov 2026; default off).
   "TYPO_FULL_NAME_TO_ROSTER_ENABLED",
+  // coding 5: SPELLING_CLEANUP (Pau via QA, 13 Nov 2026; default off; same flag in both apps).
+  "SPELLING_CLEANUP_ENABLED",
 ] as const;
 
 /**
@@ -5443,4 +5445,15 @@ export function typoFullNameToRosterEnabled(): boolean {
  */
 export function exitNoticeStatedOnlyEnabled(): boolean {
   return envFlag("EXIT_NOTICE_STATED_ONLY_ENABLED");
+}
+
+/**
+ * SPELLING_CLEANUP_ENABLED (coding 5, 13 Nov 2026; default off; Pau via QA; same flag in both apps). "please make a ca for
+ * <name> for not doing th e10 minute sanitaion" put the typo on the form: only coaching drafts clean up as they write.
+ * On: the Corrective Action draft and the chat's form edits (Step B) use the manager's words and meaning with spelling,
+ * spacing and capitals fixed, never a name, date, number or quote changed; a code check compares those before and after
+ * and falls back to the manager's own text when any differ (`forms/spelling-cleanup.ts`). Off, as before.
+ */
+export function spellingCleanupEnabled(): boolean {
+  return envFlag("SPELLING_CLEANUP_ENABLED");
 }
