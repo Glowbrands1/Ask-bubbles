@@ -1,0 +1,62 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov13-answer-is-the-issue-request-turn-title-and-account: \"ca for Rowan Kestrel, Team Member Part Time, she was late on 11/2\": the Issue is the account clause alone, never the request sentence, the name or the title \u2014 OPEN in production (the job title is the card's Issue)": {
+    "category": "INTENDED",
+    "reason": "ANSWER_IS_THE_ISSUE: title and account in the request turn; the Issue is the account clause alone, \"she was late on 11/2\" (was \"Team Member Part Time\"), never the request sentence"
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov13-answer-is-the-issue-request-turn-title-before-name: \"create a CA for general manager, rowan kestrel for violating the standards of conduct\": the Issue is the account clause alone, never the request sentence, the name or the title \u2014 OPEN in production (the job title is the card's Issue)": {
+    "category": "INTENDED",
+    "reason": "ANSWER_IS_THE_ISSUE: the Issue is \"violating the standards of conduct\" (was \"general manager\"), never the request sentence"
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov13-answer-is-the-issue-with-card-check-answer: \"create corrective action form for Rowan Kestrel, Team Member Part Time\" \u2192 \"she skipped the closing checklist on her shift last night\" with CARD_CHECKED_AGAINST_WORDS too: the Issue is the account, never blank or the title \u2014 OPEN in production (the Issue is the job title (or blank), not the account)": {
+    "category": "INTENDED",
+    "reason": "ANSWER_IS_THE_ISSUE with CARD_CHECKED_AGAINST_WORDS: the turn-2 Issue is the manager's answer (was the job title)"
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov13-answer-is-the-issue-with-card-check-title-and-account: \"ca for Rowan Kestrel, Team Member Part Time, she was late on 11/2\" with CARD_CHECKED_AGAINST_WORDS too: the Issue is the account, never blank or the title \u2014 OPEN in production (the Issue is the job title (or blank), not the account)": {
+    "category": "INTENDED",
+    "reason": "ANSWER_IS_THE_ISSUE with CARD_CHECKED_AGAINST_WORDS: the Issue is \"she was late on 11/2\" (was the job title)"
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov13-answer-is-the-issue-with-card-check-title-before-name: \"create a CA for general manager, rowan kestrel for violating the standards of conduct\" with CARD_CHECKED_AGAINST_WORDS too: the Issue is the account, never blank or the title \u2014 OPEN in production (the Issue is the job title (or blank), not the account)": {
+    "category": "INTENDED",
+    "reason": "ANSWER_IS_THE_ISSUE with CARD_CHECKED_AGAINST_WORDS: the Issue is \"violating the standards of conduct\" (was \"general manager\")"
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov13-ca-asks-what-happened-answer-is-the-issue: \"create corrective action form for Rowan Kestrel, Team Member Part Time\" \u2192 \"she skipped the closing checklist on her shift last night\": the Issue is the account, never the job title \u2014 OPEN in production (the turn-2 Issue (What happened) is the turn-1 job title, not the account)": {
+    "category": "INTENDED",
+    "reason": "ANSWER_IS_THE_ISSUE: the turn-2 Issue is \"she skipped the closing checklist on her shift last night\" (was \"Team Member Part Time\")"
+  },
+  "src/lib/ai/flags-off-parity.test.ts :: existing chat and form suites with every new flag off passes the suites whose expectations are already on main: src/app/api/chat/replay-pack, first half of the cases by id": {
+    "category": "INTENDED-HARNESS",
+    "reason": "flags-off-parity's child replay-pack run inherits FLAG_CLASSIFY_ON, so the open ANSWER_IS_THE_ISSUE cases hold and their open status fails; not a production path"
+  },
+  "replay: nov13-answer-is-the-issue-request-turn-title-and-account [open]": {
+    "category": "INTENDED",
+    "reason": "ANSWER_IS_THE_ISSUE: title and account in the request turn; the Issue is the account clause alone, \"she was late on 11/2\" (was \"Team Member Part Time\"), never the request sentence"
+  },
+  "replay: nov13-answer-is-the-issue-request-turn-title-before-name [open]": {
+    "category": "INTENDED",
+    "reason": "ANSWER_IS_THE_ISSUE: the Issue is \"violating the standards of conduct\" (was \"general manager\"), never the request sentence"
+  },
+  "replay: nov13-answer-is-the-issue-with-card-check-answer [open]": {
+    "category": "INTENDED",
+    "reason": "ANSWER_IS_THE_ISSUE with CARD_CHECKED_AGAINST_WORDS: the turn-2 Issue is the manager's answer (was the job title)"
+  },
+  "replay: nov13-answer-is-the-issue-with-card-check-title-and-account [open]": {
+    "category": "INTENDED",
+    "reason": "ANSWER_IS_THE_ISSUE with CARD_CHECKED_AGAINST_WORDS: the Issue is \"she was late on 11/2\" (was the job title)"
+  },
+  "replay: nov13-answer-is-the-issue-with-card-check-title-before-name [open]": {
+    "category": "INTENDED",
+    "reason": "ANSWER_IS_THE_ISSUE with CARD_CHECKED_AGAINST_WORDS: the Issue is \"violating the standards of conduct\" (was \"general manager\")"
+  },
+  "replay: nov13-ca-asks-what-happened-answer-is-the-issue [open]": {
+    "category": "INTENDED",
+    "reason": "ANSWER_IS_THE_ISSUE: the turn-2 Issue is \"she skipped the closing checklist on her shift last night\" (was \"Team Member Part Time\")"
+  },
+  "replay: nov13-ca-asks-what-happened-negative-answer-to-the-ask [fix:CA_ASKS_WHAT_HAPPENED_ENABLED,WHAT_HAPPENED_NO_CREATE_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "ANSWER_IS_THE_ISSUE: the title-only Issue becomes the manager's answer; only the Issue line changes"
+  },
+  "replay: nov13-ca-asks-what-happened-negative-answer-to-the-ask [production]": {
+    "category": "INTENDED",
+    "reason": "ANSWER_IS_THE_ISSUE: the title-only Issue becomes the manager's answer; only the Issue line changes"
+  }
+}
