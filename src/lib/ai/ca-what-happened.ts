@@ -146,7 +146,8 @@ export function askCaWhatHappened(response: AskResponse, question: string, histo
   const turns = turnsForThisForm(history, proposal.templateKey);
   const said = [...turns.filter((turn) => turn.role === "user").map((turn) => turn.content), question].map(withoutStateLead).join("\n");
   const ignore = [name, proposal.employeeRole ?? "", proposal.locationName ?? ""];
-  if (hasAccount(said, name, ignore)) return response;
+  // The manager gave an account: never asked. A card whose Issue is still only who and where takes the account.
+  if (hasAccount(said, name, ignore)) return withAccountAsIssue(response, proposal, turns, question, name, ignore);
   if (answeredWhatHappened([...history, { role: "user", content: question }])) return response;
   // The card's Issue, when it is only who and where ("Team Member Part Time"), is no account: it goes, with its line,
   // also when the card already asks (else the Issue line reads as the account and the ask is taken back).
@@ -164,6 +165,33 @@ export function askCaWhatHappened(response: AskResponse, question: string, histo
 }
 
 /** "**Issue:** Team Member Part Time · **Store:** …" → "**Store:** …"; a line that is only the Issue goes. */
+/*
+ * THE ANSWER IS THE ISSUE (QA's 17t live finding, 13 Nov 2026, item 4): "create corrective action form for <A>, Team
+ * Member Part Time" asked what happened; the answer "she skipped the closing checklist on her shift last night" left
+ * "Issue: Team Member Part Time" — the protected reader rebuilds the Issue from the request turn. A job title (or the
+ * store, or the name) is never the Issue: when the card's Issue is only who and where and the manager's turns give an
+ * account, the Issue is the latest turn that gives one, as the manager wrote it.
+ */
+function withAccountAsIssue(
+  response: AskResponse,
+  proposal: NonNullable<AskResponse["formProposal"]>,
+  turns: readonly Turn[],
+  question: string,
+  name: string,
+  ignore: readonly string[],
+): AskResponse {
+  const issue = proposal.issue?.trim() ?? "";
+  if (issue === "" || hasAccount(issue, name, ignore)) return response;
+  const said = [question, ...turns.filter((turn) => turn.role === "user").map((turn) => turn.content).reverse()].map(withoutStateLead);
+  const account = said.find((text) => !/\?\s*$/.test(text.trim()) && hasAccount(text, name, ignore))?.trim().replace(/[.!]+$/, "");
+  if (!account) return response;
+  const content = response.content
+    .split("\n")
+    .map((line) => line.replace(/^(\s*\*\*Issue:\*\*[ \t]*)[^\n·]*?([ \t]+·[ \t]+|[ \t]*$)/, (_all, lead: string, tail: string) => `${lead}${account}${tail}`))
+    .join("\n");
+  return { ...response, content, formProposal: { ...proposal, issue: account } };
+}
+
 function withoutIssueLine(content: string): string {
   return content
     .split("\n")

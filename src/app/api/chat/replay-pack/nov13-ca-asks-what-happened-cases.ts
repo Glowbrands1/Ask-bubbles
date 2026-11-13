@@ -107,3 +107,29 @@ export const NOV13_CA_ASKS_WHAT_HAPPENED_CASES: ReplayCase[] = [
     },
   })),
 ];
+
+/**
+ * QA's 17t live finding (13 Nov 2026, main 7d5b7bb2; item 4): turn 1 "create corrective action form for <A>, Team
+ * Member Part Time" asks what happened, no Create — right. Turn 2, the answer "she skipped the closing checklist on her
+ * shift last night", gave "Issue: team member part time" (the card's What happened); the account only fed the policy
+ * pick and the date question. The job title is never the Issue: the answer to "what happened" is. Before 17t (main
+ * d5e5ea22) both turns had the title as the Issue, so this is not worse than before — the turn-2 half was never fixed.
+ */
+export const NOV13_ANSWER_IS_THE_ISSUE_CASES: ReplayCase[] = [
+  {
+    id: "nov13-ca-asks-what-happened-answer-is-the-issue",
+    title: `"create corrective action form for Rowan Kestrel, Team Member Part Time" → "she skipped the closing checklist on her shift last night": the Issue is the account, never the job title`,
+    report: "QA, 17t live (13 Nov 2026, main 7d5b7bb2), item 4",
+    // Fixed under CA_ASKS_WHAT_HAPPENED, which is on in production (QA, 13 Nov 2026): on main 7d5b7bb2 it failed with
+    // "the Issue is not the account"; this PR's change to `ai/ca-what-happened.ts` makes it hold there.
+    status: "fixed" as const,
+    fixFlags: [ASKS, NO_CREATE],
+    async run(t) {
+      const { last, card } = await chat(t, ACCOUNTS.find((row) => row.key === "answer-to-the-ask")!.turns);
+      expect(card?.issue ?? "", `the Issue is not the account:\n${last.content}`).toMatch(/skipped the closing checklist/i);
+      expect(card?.issue ?? "", `the job title is the Issue:\n${last.content}`).not.toMatch(/team member|part time/i);
+      expect(last.content, `the Issue line is the job title:\n${last.content}`).not.toMatch(/\*\*Issue:\*\*[^\n]*(?:Team Member|Part Time)/i);
+      expect(card?.supportsInlineDraft, `no Create after the account:\n${last.content}`).toBe(true);
+    },
+  },
+];

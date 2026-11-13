@@ -69,6 +69,21 @@ describe("CA_ASKS_WHAT_HAPPENED_ENABLED", () => {
     expect(askCaWhatHappened(card() as never, "Team Member Part Time", asked as never).content).not.toMatch(NOTE);
   });
 
+  it("the answer to the ask is the Issue; a job title never is (QA's 17t, item 4)", () => {
+    vi.stubEnv("CA_ASKS_WHAT_HAPPENED_ENABLED", "true");
+    const asked = [
+      { role: "user", content: "create corrective action form for Rowan Kestrel, Team Member Part Time" },
+      { role: "assistant", content: "**You haven't told me what happened yet**, so I can't cite the policy manual." },
+    ];
+    const out = withCaWhatHappened(card("Team Member Part Time") as never, { question: "she skipped the closing checklist on her shift last night", history: asked } as never);
+    expect((out.formProposal as { issue?: string }).issue).toBe("she skipped the closing checklist on her shift last night");
+    expect(out.content).toMatch(/\*\*Issue:\*\* she skipped the closing checklist on her shift last night · \*\*Store:\*\*/);
+    expect(out.content).not.toMatch(/Team Member Part Time/);
+    // An Issue that is already the account is left as it is.
+    const kept = card("she was late on 11/2");
+    expect(withCaWhatHappened(kept as never, { question: "ca for Rowan Kestrel she was late on 11/2", history: [] } as never)).toBe(kept);
+  });
+
   it("another form, the team card or no employee: untouched", () => {
     const coaching = { ...card(), formProposal: { templateKey: "coaching", employeeName: "Rowan Kestrel" } as never };
     expect(askCaWhatHappened(coaching as never, "create a coaching form for Rowan Kestrel", [])).toBe(coaching);
