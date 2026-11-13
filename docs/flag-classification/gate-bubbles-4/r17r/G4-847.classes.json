@@ -1,0 +1,66 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-r37-dm-approves-not-the-title: \"CA for <A>, probably termination once the DM approves\": the card's title is never District Manager \u2014 OPEN in production (the card's title is District Manager, \"the one you gave\")": {
+  "category": "INTENDED",
+  "reason": "OPEN case (new) holds: 'CA for <A>, probably termination once the DM approves' \u2014 card says 'Woven has no job title on record for <A>, so I couldn't verify one.' and no longer 'the one you gave (District Manager)'"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-r37-dm-approves-not-the-title: \"CA for <A>, probably termination once the DM approves\": the card's title is never District Manager \u2014 holds with APPROVER_TITLE_NOT_EMPLOYEE_ENABLED on": {
+  "category": "INTENDED",
+  "reason": "OPEN case (new) holds: 'CA for <A>, probably termination once the DM approves' \u2014 card says 'Woven has no job title on record for <A>, so I couldn't verify one.' and no longer 'the one you gave (District Manager)'"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-r37-stated-title-kept: \"CA for <A>, she is a district manager, she missed the meeting\": the title the manager stated for her stays \u2014 holds with APPROVER_TITLE_NOT_EMPLOYEE_ENABLED on": {
+  "category": "INTENDED",
+  "reason": "guard (new) holds: 'she is a district manager' keeps 'The title on the form is the one you gave (District Manager)'"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-r37-stated-title-kept: \"CA for <A>, she is a district manager, she missed the meeting\": the title the manager stated for her stays \u2014 holds with production's flags": {
+  "category": "INTENDED",
+  "reason": "guard (new) holds: 'she is a district manager' keeps 'The title on the form is the one you gave (District Manager)'"
+ },
+ "src/lib/ai/flags-off-parity.test.ts :: existing chat and form suites with every new flag off passes the suites whose expectations are already on main: src/app/api/chat/replay-pack, first half of the cases by id": {
+  "category": "INTENDED-HARNESS",
+  "reason": "PENDING clean-env check (as #724): under production env the parity test fails 3/8 on main; with #847 its 'replay-pack, first half' sub-run also fails. Re-run as CI does before release."
+ },
+ "src/lib/forms/approver-title.test.ts :: APPROVER_TITLE_NOT_EMPLOYEE off: the text as given": {
+  "category": "INTENDED",
+  "reason": "#847's new unit tests (absent on main) pass"
+ },
+ "src/lib/forms/approver-title.test.ts :: APPROVER_TITLE_NOT_EMPLOYEE on: \"CA for Odalys Pemberley, needs DM approval\" states no title for the employee": {
+  "category": "INTENDED",
+  "reason": "#847's new unit tests (absent on main) pass"
+ },
+ "src/lib/forms/approver-title.test.ts :: APPROVER_TITLE_NOT_EMPLOYEE on: \"CA for Odalys Pemberley, pending the DM's approval\" states no title for the employee": {
+  "category": "INTENDED",
+  "reason": "#847's new unit tests (absent on main) pass"
+ },
+ "src/lib/forms/approver-title.test.ts :: APPROVER_TITLE_NOT_EMPLOYEE on: \"CA for Odalys Pemberley, probably termination once the DM approves\" states no title for the employee": {
+  "category": "INTENDED",
+  "reason": "#847's new unit tests (absent on main) pass"
+ },
+ "src/lib/forms/approver-title.test.ts :: APPROVER_TITLE_NOT_EMPLOYEE on: \"CA for Odalys Pemberley, termination after my district manager signs off\" states no title for the employee": {
+  "category": "INTENDED",
+  "reason": "#847's new unit tests (absent on main) pass"
+ },
+ "src/lib/forms/approver-title.test.ts :: APPROVER_TITLE_NOT_EMPLOYEE on: \"CA for Odalys Pemberley, waiting on the DM\" states no title for the employee": {
+  "category": "INTENDED",
+  "reason": "#847's new unit tests (absent on main) pass"
+ },
+ "src/lib/forms/approver-title.test.ts :: APPROVER_TITLE_NOT_EMPLOYEE on: a title stated for her stays": {
+  "category": "INTENDED",
+  "reason": "#847's new unit tests (absent on main) pass"
+ },
+ "replay: nov12-r37-dm-approves-not-the-title [fix:APPROVER_TITLE_NOT_EMPLOYEE_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "OPEN case (new) holds: 'CA for <A>, probably termination once the DM approves' \u2014 card says 'Woven has no job title on record for <A>, so I couldn't verify one.' and no longer 'the one you gave (District Manager)'"
+ },
+ "replay: nov12-r37-dm-approves-not-the-title [open]": {
+  "category": "INTENDED",
+  "reason": "OPEN case (new) holds: 'CA for <A>, probably termination once the DM approves' \u2014 card says 'Woven has no job title on record for <A>, so I couldn't verify one.' and no longer 'the one you gave (District Manager)'"
+ },
+ "replay: nov12-r37-stated-title-kept [fix:APPROVER_TITLE_NOT_EMPLOYEE_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "guard (new) holds: 'she is a district manager' keeps 'The title on the form is the one you gave (District Manager)'"
+ },
+ "replay: nov12-r37-stated-title-kept [production]": {
+  "category": "INTENDED",
+  "reason": "guard (new) holds: 'she is a district manager' keeps 'The title on the form is the one you gave (District Manager)'"
+ }
+}
