@@ -1428,6 +1428,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "STORE_ALIAS_ENABLED",
   // coding 4: HEADING_DISTINCTIVE_WORDS (QA, 13 Nov 2026; default off).
   "HEADING_DISTINCTIVE_WORDS_ENABLED",
+  // coding 4: PLACE_STRIP_WHOLE_PHRASE_ONLY (QA, 13 Nov 2026; default off).
+  "PLACE_STRIP_WHOLE_PHRASE_ONLY_ENABLED",
   // coding 4: FORM_DATE_BUSINESS_TODAY (live bug, QA, 13 Nov 2026; default off).
   "FORM_DATE_BUSINESS_TODAY_ENABLED",
   // coding 4: CLOSE_SPELLING_MATCH (Pau via QA, 13 Nov 2026; default off).
@@ -5587,4 +5589,13 @@ export function closeSpellingMatchEnabled(): boolean {
  */
 export function headingDistinctiveWordsEnabled(): boolean {
   return envFlag("HEADING_DISTINCTIVE_WORDS_ENABLED");
+}
+
+/**
+ * PLACE_STRIP_WHOLE_PHRASE_ONLY (QA, 13 Nov 2026; default off; from the sibling app's gate): a store named the managers'
+ * way is written as the roster name only where its phrase ends, so "at kearney high" is never "at Kearney NE high". See
+ * `ai/store-alias.ts`. Off, as before.
+ */
+export function placeStripWholePhraseOnlyEnabled(): boolean {
+  return envFlag("PLACE_STRIP_WHOLE_PHRASE_ONLY_ENABLED");
 }
