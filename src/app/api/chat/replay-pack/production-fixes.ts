@@ -760,4 +760,6 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov12-off-roster-place-answer-17r-live-west-dodge": "OFF_ROSTER_PLACE_ANSWER",
   // fixed in production by HUMAN_REPLIES, QA hotfix 17r-c, 13 Nov 2026
   "nov10-card-opener-once-ca-chain": "HUMAN_REPLIES",
+  // fixed in production by TERMINATION_TIDY_HELD_NAME, QA hotfix 17r-c, 13 Nov 2026
+  "nov12-17r-termination-tidy-off-roster-ask": "TERMINATION_TIDY_HELD_NAME",
 };
