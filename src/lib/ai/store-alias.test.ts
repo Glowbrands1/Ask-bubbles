@@ -132,5 +132,10 @@ describe("PLACE_STRIP_WHOLE_PHRASE_ONLY (QA, 13 Nov 2026)", () => {
     expect(rosterNames("she was late because she was at kearney high")).toBe("she was late because she was at kearney high");
     expect(rosterNames("she was late at kearney ne today")).toBe("she was late at Kearney NE today");
     expect(rosterNames("ca for kira dunmore at dodge ne, she was late")).toBe("ca for kira dunmore at Omaha NE (West Dodge Rd), she was late");
+    // Gate-Bubbles-3 (#869): only a word that continues a proper noun blocks it; a date, a dash or a weekday does not.
+    expect(rosterNames("verbal ca for avery at kearney ne 11/1/26 she was late")).toBe("verbal ca for avery at Kearney NE 11/1/26 she was late");
+    expect(rosterNames("verbal ca for avery at kearney ne - no call no show")).toBe("verbal ca for avery at Kearney NE - no call no show");
+    expect(rosterNames("verbal ca for avery at kearney ne Monday she was late")).toBe("verbal ca for avery at Kearney NE Monday she was late");
+    expect(rosterNames("she was at kearney ne Mall all day")).toBe("she was at kearney ne Mall all day");
   });
 });

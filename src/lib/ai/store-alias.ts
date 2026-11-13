@@ -80,12 +80,24 @@ const RULED_OUT = /\b(?:not|never|no|isn['’]?t|wasn['’]?t|aren['’]?t|weren
 const CUE_AFTER = /^\s*(?:location|salon|store)\b/i;
 /*
  * PLACE_STRIP_WHOLE_PHRASE_ONLY_ENABLED (QA, 13 Nov 2026; found by the sibling app's gate, checked here): "she was late
- * because she was at kearney high" was written "… at Kearney NE high", a store inside a longer name. A store is written
- * only where its phrase ends: the end of the turn, punctuation, a store word, or a word that carries the sentence on.
- * Off, as before.
+ * because she was at kearney high" was written "… at Kearney NE high", a store inside a longer name. A store is NOT
+ * written only when the next word continues a proper noun: a word from this short list, or a capitalised word in the
+ * middle of a sentence (not a weekday, a month or a pronoun). Anything else — a date, a dash, a weekday, the rest of
+ * the account — is read as before (Gate-Bubbles-3, #869: an allow-list stopped "at kearney 11/1/26" being read). Off,
+ * as before.
  */
-const CARRIES_ON_AFTER =
-  /^\s*(?:$|[,.;:!?)]|(?:location|salon|store|and|but|or|on|today|yesterday|tonight|this|last|at|she|he|they|i|we|for|with|where|when|while|because|so|again|during|after|before|around|since|until|was|is|has|had|about|regarding|concerning|re|who|that|then|every|her|his|their|need|needs|out)\b)/i;
+const CONTINUES_NAME =
+  /^(?:high|middle|elementary|school|central|west|east|north|south|state|university|college|mall|road|street|st|ave|construction|park|hospital)$/i;
+const NOT_A_NAME_WORD =
+  /^(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|january|february|march|april|may|june|july|august|september|october|november|december|i|she|he|they|we|her|his|their|the|and|but|or|on|at|in)$/i;
+
+/** Whether the text after a store continues a longer proper noun ("high", "West", "Mall"), so the store is not one. */
+function continuesProperNoun(after: string): boolean {
+  const word = /^\s+([A-Za-z][A-Za-z'’-]*)/.exec(after)?.[1];
+  if (!word) return false;
+  if (CONTINUES_NAME.test(word)) return true;
+  return /^[A-Z]/.test(word) && !NOT_A_NAME_WORD.test(word);
+}
 const SUFFIXES: readonly [string, string][] = [
   ["street", "st"],
   ["road", "rd"],
@@ -239,7 +251,10 @@ export function rosterNames(text: string, placeAsked = false): string {
       if (RULED_OUT.test(before)) return found;
       const cue = alias.phrase.includes(" ") ? CUE_BEFORE : ONE_WORD_CUE_BEFORE;
       if (alias.cued && !cue.test(before) && !CUE_AFTER.test(all.slice(offset + found.length))) return found;
-      if (placeStripWholePhraseOnlyEnabled() && !CARRIES_ON_AFTER.test(all.slice(offset + found.length))) return found;
+      // Kept as typed, and held back so no shorter alias inside it ("kearney" in "kearney ne Mall") is written either.
+      if (placeStripWholePhraseOnlyEnabled() && continuesProperNoun(all.slice(offset + found.length))) {
+        return `\u0000${kept.push(found) - 1}\u0000`;
+      }
       return `\u0000${kept.push(READERS.written(alias.name)) - 1}\u0000`;
     });
   }

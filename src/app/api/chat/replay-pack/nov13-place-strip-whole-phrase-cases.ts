@@ -37,3 +37,32 @@ export const NOV13_PLACE_STRIP_WHOLE_PHRASE_CASES: ReplayCase[] = [
     },
   },
 ];
+
+/*
+ * Gate-Bubbles-3 (#869, 13 Nov 2026): with the first version of the flag (an allow-list of words that may follow a
+ * store), a real store followed by anything else was no longer read, and the chat asked "Which store?". These were
+ * all read with the flag off; they must be read with it on. Guards: they hold on production's flags and with the flag.
+ */
+const MUST_READ: readonly { key: string; turn: string; store: string }[] = [
+  { key: "kearney-date", turn: "verbal ca for marnie holloway at kearney 11/1/26 she was late", store: "loc-66" },
+  { key: "west-dodge-date", turn: "verbal ca for marnie holloway at west dodge 11/1/26 she was late", store: "loc-264" },
+  { key: "kearney-dash", turn: "verbal ca for marnie holloway at kearney - no call no show", store: "loc-66" },
+  { key: "kearney-monday", turn: "verbal ca for marnie holloway at kearney monday she was late", store: "loc-66" },
+  { key: "kearney-not-wearing", turn: "verbal ca for marnie holloway at kearney not wearing her apron", store: "loc-66" },
+  { key: "kearney-paren", turn: "verbal ca for marnie holloway at kearney (late on 11/1/26)", store: "loc-66" },
+];
+
+export const NOV13_PLACE_STRIP_MUST_READ_CASES: ReplayCase[] = MUST_READ.map((wording) => ({
+  id: `nov13-place-strip-must-read-${wording.key}`,
+  title: `"${wording.turn}" — the store is still read`,
+  report: "Gate-Bubbles-3 on #869 (13 Nov 2026), QA: a real store mention is never lost; invented person",
+  status: "fixed",
+  async run(t: ReplayContext) {
+    vi.setSystemTime(new Date("2026-11-13T15:00:00Z"));
+    t.directory([...STAFF]);
+    t.as("admin", { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] } as never);
+    const thread = t.thread();
+    const reply = (await thread.say(wording.turn)).content;
+    expect((thread.proposal as { locationId?: string | null } | null)?.locationId ?? null, `the store was not read:\n${reply}`).toBe(wording.store);
+  },
+}));
