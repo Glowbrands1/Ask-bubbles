@@ -1500,6 +1500,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "CARD_PLAN_MATCHES_CREATE_ENABLED",
   // coding 6: TYPO_FULL_NAME_TO_ROSTER (audit item 15.10, sf-b5, 11 Nov 2026; default off).
   "TYPO_FULL_NAME_TO_ROSTER_ENABLED",
+  // coding 5: SHIFT_ABSENCE_WIDER (QA ruling (a) on CA_NO_POLICY_ASKS_WHICH, 13 Nov 2026; default off).
+  "SHIFT_ABSENCE_WIDER_ENABLED",
 ] as const;
 
 /**
@@ -5443,4 +5445,14 @@ export function typoFullNameToRosterEnabled(): boolean {
  */
 export function exitNoticeStatedOnlyEnabled(): boolean {
   return envFlag("EXIT_NOTICE_STATED_ONLY_ENABLED");
+}
+
+/**
+ * SHIFT_ABSENCE_WIDER_ENABLED (coding 5, 13 Nov 2026; default off; QA's ruling (a) on CA_NO_POLICY_ASKS_WHICH). "missing
+ * her saturday and sunday shifts" and "she didn't call in" made Corrective Action cards with no Policy line. On, with
+ * MISSED_SHIFT_CITES_ATTENDANCE: up to six words between "missed / missing / skipped" and "shift(s)", and not calling in,
+ * read as Attendance from the request (`forms/ca-policy.ts`). Off, as before.
+ */
+export function shiftAbsenceWiderEnabled(): boolean {
+  return envFlag("SHIFT_ABSENCE_WIDER_ENABLED");
 }
