@@ -1,0 +1,50 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov13-17rc-added-detail-kept-on-card: QA's 17r-c live test: \"create a CA for Marnie Holloway, she was late on 11/3/26\", then \"she also didn't call to say she'd be late\" on the open card: What happened keeps both facts, and the reply names the change \u2014 OPEN in production (What happened is still only \"she was late on 11/3/26\", and the reply does not say what changed)": {
+  "category": "INTENDED",
+  "reason": "Open-case it.fails wrapper: inner invariant now holds. Holding."
+ },
+ "src/lib/ai/flags-off-parity.test.ts :: existing chat and form suites with every new flag off passes the suites whose expectations are already on main: src/app/api/chat/replay-pack, first half of the cases by id": {
+  "category": "INTENDED-HARNESS",
+  "reason": "Parity sub-run inherits the exported flag; its only failure is the 17rc-added-detail open-case wrapper (now holding)."
+ },
+ "replay: nov13-17rc-added-detail-kept-on-card [open]": {
+  "category": "INTENDED",
+  "reason": "Open case now holds: What happened keeps both facts; 'Added to What happened: she didn't call to say she'd be late'."
+ },
+ "replay: nov13-ca-asks-what-happened-negative-answer-to-the-ask [fix:CA_ASKS_WHAT_HAPPENED_ENABLED,WHAT_HAPPENED_NO_CREATE_ENABLED]": {
+  "category": "REGRESSION",
+  "reason": "Turn 2 'she skipped the closing checklist on her shift last night' IS the account (the answer to the ask). ON: CARD removes the title Issue 'Team Member Part Time' but accountFromWords reads only the turn that names the employee (returns null), so the Issue is blank and the reply ends 'What happened? Tell me in a sentence\u2026' right after the manager said it, beside 'Create the draft here'. The case still holds only because its MARKER is the other wording ('You haven't told me what happened yet')."
+ },
+ "replay: nov13-ca-asks-what-happened-negative-answer-to-the-ask [production]": {
+  "category": "REGRESSION",
+  "reason": "Turn 2 'she skipped the closing checklist on her shift last night' IS the account (the answer to the ask). ON: CARD removes the title Issue 'Team Member Part Time' but accountFromWords reads only the turn that names the employee (returns null), so the Issue is blank and the reply ends 'What happened? Tell me in a sentence\u2026' right after the manager said it, beside 'Create the draft here'. The case still holds only because its MARKER is the other wording ('You haven't told me what happened yet')."
+ },
+ "replay: nov2-p1a-policy-turn-drops-account [production]": {
+  "category": "INTENDED",
+  "reason": "Correct added detail joins What happened with 'Added to What happened: \u2026' (rude to <coworker> when \u2026 reminded her / left 10 minutes early that day / the 24-transactions sales line); case holds both ways."
+ },
+ "replay: nov5-coding3-sfo-a-coworker-in-account-stays-a [fix:SAME_REQUEST_OTHER_PERSON_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Correct added detail joins What happened with 'Added to What happened: \u2026' (rude to <coworker> when \u2026 reminded her / left 10 minutes early that day / the 24-transactions sales line); case holds both ways."
+ },
+ "replay: nov5-coding3-sfo-a-coworker-in-account-stays-a [production]": {
+  "category": "INTENDED",
+  "reason": "Correct added detail joins What happened with 'Added to What happened: \u2026' (rude to <coworker> when \u2026 reminded her / left 10 minutes early that day / the 24-transactions sales line); case holds both ways."
+ },
+ "replay: nov6-diffemp-guard-coworker-in-account-card-on-screen [fix:SAME_REQUEST_OTHER_PERSON_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Correct added detail joins What happened with 'Added to What happened: \u2026' (rude to <coworker> when \u2026 reminded her / left 10 minutes early that day / the 24-transactions sales line); case holds both ways."
+ },
+ "replay: nov6-diffemp-guard-coworker-in-account-card-on-screen [production]": {
+  "category": "INTENDED",
+  "reason": "Correct added detail joins What happened with 'Added to What happened: \u2026' (rude to <coworker> when \u2026 reminded her / left 10 minutes early that day / the 24-transactions sales line); case holds both ways."
+ },
+ "replay: nov8-policy-set-aside-stays-off [fix:PROPOSAL_POLICY_SET_ASIDE_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Correct added detail joins What happened with 'Added to What happened: \u2026' (rude to <coworker> when \u2026 reminded her / left 10 minutes early that day / the 24-transactions sales line); case holds both ways."
+ },
+ "replay: nov8-policy-set-aside-stays-off [production]": {
+  "category": "INTENDED",
+  "reason": "Correct added detail joins What happened with 'Added to What happened: \u2026' (rude to <coworker> when \u2026 reminded her / left 10 minutes early that day / the 24-transactions sales line); case holds both ways."
+ }
+}
