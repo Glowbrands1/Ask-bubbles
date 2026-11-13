@@ -120,10 +120,8 @@ export const NOV13_ANSWER_IS_THE_ISSUE_CASES: ReplayCase[] = [
     id: "nov13-ca-asks-what-happened-answer-is-the-issue",
     title: `"create corrective action form for Rowan Kestrel, Team Member Part Time" → "she skipped the closing checklist on her shift last night": the Issue is the account, never the job title`,
     report: "QA, 17t live (13 Nov 2026, main 7d5b7bb2), item 4",
-    // Fixed under CA_ASKS_WHAT_HAPPENED, which is on in production (QA, 13 Nov 2026): on main 7d5b7bb2 it failed with
-    // "the Issue is not the account"; this PR's change to `ai/ca-what-happened.ts` makes it hold there.
-    status: "fixed" as const,
-    fixFlags: [ASKS, NO_CREATE],
+    status: { open: "the turn-2 Issue (What happened) is the turn-1 job title, not the account" },
+    fixFlags: [ASKS, NO_CREATE, "ANSWER_IS_THE_ISSUE_ENABLED"],
     async run(t) {
       const { last, card } = await chat(t, ACCOUNTS.find((row) => row.key === "answer-to-the-ask")!.turns);
       expect(card?.issue ?? "", `the Issue is not the account:\n${last.content}`).toMatch(/skipped the closing checklist/i);

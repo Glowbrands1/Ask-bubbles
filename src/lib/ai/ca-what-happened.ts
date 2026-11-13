@@ -1,5 +1,5 @@
 import { COMPANY_JOB_TITLES } from "@/config/company/job-titles";
-import { caAsksWhatHappenedEnabled } from "@/lib/config/chat-quality-flags";
+import { answerIsTheIssueEnabled, caAsksWhatHappenedEnabled } from "@/lib/config/chat-quality-flags";
 import {
   NO_INCIDENT_NOTE,
   answeredWhatHappened,
@@ -170,7 +170,8 @@ export function askCaWhatHappened(response: AskResponse, question: string, histo
  * Member Part Time" asked what happened; the answer "she skipped the closing checklist on her shift last night" left
  * "Issue: Team Member Part Time" — the protected reader rebuilds the Issue from the request turn. A job title (or the
  * store, or the name) is never the Issue: when the card's Issue is only who and where and the manager's turns give an
- * account, the Issue is the latest turn that gives one, as the manager wrote it.
+ * account, the Issue is the latest turn that gives one, as the manager wrote it. Behind ANSWER_IS_THE_ISSUE_ENABLED
+ * (QA: its own switch, default off). Off, as before.
  */
 function withAccountAsIssue(
   response: AskResponse,
@@ -180,6 +181,7 @@ function withAccountAsIssue(
   name: string,
   ignore: readonly string[],
 ): AskResponse {
+  if (!answerIsTheIssueEnabled()) return response;
   const issue = proposal.issue?.trim() ?? "";
   if (issue === "" || hasAccount(issue, name, ignore)) return response;
   const said = [question, ...turns.filter((turn) => turn.role === "user").map((turn) => turn.content).reverse()].map(withoutStateLead);

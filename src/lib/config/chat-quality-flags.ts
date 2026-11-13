@@ -1002,6 +1002,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 2: the sibling app's "what happened" check (Pau's direction, 13 Nov 2026; default off).
   "CA_ASKS_WHAT_HAPPENED_ENABLED",
   "WHAT_HAPPENED_NO_CREATE_ENABLED",
+  // coding 2: ANSWER_IS_THE_ISSUE (QA's 17t item 4, 13 Nov 2026; default off).
+  "ANSWER_IS_THE_ISSUE_ENABLED",
   // QA round 17r (13 Nov 2026): TEAM_CARD_NOT_PRODUCT (#668) and FORM_EDIT_SOURCE_TURN (#480) are switched on in production.
   "TEAM_CARD_NOT_PRODUCT_ENABLED",
   "FORM_EDIT_SOURCE_TURN_ENABLED",
@@ -3552,6 +3554,18 @@ export function caAsksWhatHappenedEnabled(): boolean {
  */
 export function whatHappenedNoCreateEnabled(): boolean {
   return envFlag("WHAT_HAPPENED_NO_CREATE_ENABLED");
+}
+
+/**
+ * ANSWER_IS_THE_ISSUE_ENABLED (Coding-2, 13 Nov 2026; default off; QA's 17t live finding, item 4). "create corrective
+ * action form for <A>, Team Member Part Time" asks what happened (CA_ASKS_WHAT_HAPPENED, on); the answer "she skipped the
+ * closing checklist on her shift last night" left "Issue: team member part time" (the protected reader rebuilds it from
+ * the request turn; main d5e5ea22 already did). On, with CA_ASKS_WHAT_HAPPENED: when the manager's turns give an account
+ * and the card's Issue is only who and where, the Issue is the latest turn that gives one (`ai/ca-what-happened.ts`).
+ * Its own switch, so CA_ASKS_WHAT_HAPPENED's 17t behaviour is never rolled back with it. Off, as before.
+ */
+export function answerIsTheIssueEnabled(): boolean {
+  return envFlag("ANSWER_IS_THE_ISSUE_ENABLED");
 }
 
 /**

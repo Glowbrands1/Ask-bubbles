@@ -71,6 +71,7 @@ describe("CA_ASKS_WHAT_HAPPENED_ENABLED", () => {
 
   it("the answer to the ask is the Issue; a job title never is (QA's 17t, item 4)", () => {
     vi.stubEnv("CA_ASKS_WHAT_HAPPENED_ENABLED", "true");
+    vi.stubEnv("ANSWER_IS_THE_ISSUE_ENABLED", "true");
     const asked = [
       { role: "user", content: "create corrective action form for Rowan Kestrel, Team Member Part Time" },
       { role: "assistant", content: "**You haven't told me what happened yet**, so I can't cite the policy manual." },
@@ -82,6 +83,10 @@ describe("CA_ASKS_WHAT_HAPPENED_ENABLED", () => {
     // An Issue that is already the account is left as it is.
     const kept = card("she was late on 11/2");
     expect(withCaWhatHappened(kept as never, { question: "ca for Rowan Kestrel she was late on 11/2", history: [] } as never)).toBe(kept);
+    // ANSWER_IS_THE_ISSUE off: as before (the title stays).
+    vi.stubEnv("ANSWER_IS_THE_ISSUE_ENABLED", "");
+    const before = card("Team Member Part Time");
+    expect(withCaWhatHappened(before as never, { question: "she skipped the closing checklist on her shift last night", history: asked } as never)).toBe(before);
   });
 
   it("another form, the team card or no employee: untouched", () => {
