@@ -999,6 +999,9 @@ export function formsGuideEnabled(): boolean {
 }
 
 export const CHAT_QUALITY_FLAG_NAMES = [
+  // coding 2: the sibling app's "what happened" check (Pau's direction, 13 Nov 2026; default off).
+  "CA_ASKS_WHAT_HAPPENED_ENABLED",
+  "WHAT_HAPPENED_NO_CREATE_ENABLED",
   // QA round 17r (13 Nov 2026): TEAM_CARD_NOT_PRODUCT (#668) and FORM_EDIT_SOURCE_TURN (#480) are switched on in production.
   "TEAM_CARD_NOT_PRODUCT_ENABLED",
   "FORM_EDIT_SOURCE_TURN_ENABLED",
@@ -1425,6 +1428,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "STORE_ALIAS_ENABLED",
   // coding 4: FORM_DATE_BUSINESS_TODAY (live bug, QA, 13 Nov 2026; default off).
   "FORM_DATE_BUSINESS_TODAY_ENABLED",
+  // coding 4: CLOSE_SPELLING_MATCH (Pau via QA, 13 Nov 2026; default off).
+  "CLOSE_SPELLING_MATCH_ENABLED",
   "FULL_MANUAL_WIDE_GATE_ENABLED",
   // coding 6: MANAGER_FORM_CHOICE (B#181 rebuilt; default off; wiring awaits Coding-2).
   "MANAGER_FORM_CHOICE_ENABLED",
@@ -3529,6 +3534,31 @@ export function pastFormsBeforeLibraryEnabled(): boolean {
 }
 
 /**
+ * CA_ASKS_WHAT_HAPPENED_ENABLED (Coding-2, 13 Nov 2026; default off; ported from the sibling app's #331 at Pau's
+ * direction: "the one fix that clearly worked"). "create corrective action form for <name>, Team Member Part Time" gave
+ * a Corrective Action card that asked nothing: the protected proposal reader counts the job title (or a store) as the
+ * account. On: a Corrective Action card for a named person with no account in the manager's turns for it carries the
+ * intake's own "You haven't told me what happened yet" note, once per card. The account test is the Coaching card's
+ * (`ai/coaching-what-happened.ts`) with the sibling's refinements: a duty not done ("not signing off on the cleaning
+ * check list") is an account, a denied fault ("not late", "didn't do anything wrong") is not (`ai/ca-what-happened.ts`).
+ * After the reply is built; no field of the card changes. Off, as before.
+ */
+export function caAsksWhatHappenedEnabled(): boolean {
+  return envFlag("CA_ASKS_WHAT_HAPPENED_ENABLED");
+}
+
+/**
+ * WHAT_HAPPENED_NO_CREATE_ENABLED (Coding-2, 13 Nov 2026; default off; ported from the sibling app's round 23). A card
+ * whose reply asks "You haven't told me what happened yet" still offered an active **Create draft** and "Create the draft
+ * here when you're ready": the ask and the button contradicted each other. On: while the reply asks what happened, the
+ * card offers no Create and that line goes; the next card, built from the manager's answer, offers it as before
+ * (`forms/what-happened-no-create.ts`). Off, as before.
+ */
+export function whatHappenedNoCreateEnabled(): boolean {
+  return envFlag("WHAT_HAPPENED_NO_CREATE_ENABLED");
+}
+
+/**
  * COACHING_ASKS_WHAT_HAPPENED_ENABLED (Pau, 5 Nov 2026, sf-s27; default off).
  * "Create a coaching form." → "<name>" answered "Everything I need is here …
  * I have the employee and the store." with no incident and no draft. On: a
@@ -5534,4 +5564,15 @@ export function terminationTidyHeldNameEnabled(): boolean {
  */
 export function formDateBusinessTodayEnabled(): boolean {
   return envFlag("FORM_DATE_BUSINESS_TODAY_ENABLED");
+}
+
+/**
+ * CLOSE_SPELLING_MATCH (Pau, via QA, 13 Nov 2026): the manager's words are matched against the app's own lists by
+ * close spelling, not only exact spelling. A policy named "Care and Clening" cites the manual's "Care and Cleaning"
+ * section; a store typed one letter off is read as the roster store. Two close matches, or one that is not confident,
+ * are asked about ("Did you mean …?"), never taken. Names keep going through the roster readers. See
+ * `forms/close-spelling.ts`. Off, only exact spellings match, as before.
+ */
+export function closeSpellingMatchEnabled(): boolean {
+  return envFlag("CLOSE_SPELLING_MATCH_ENABLED");
 }
