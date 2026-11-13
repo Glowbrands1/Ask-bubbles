@@ -110,3 +110,33 @@ export const NOV13_CLOSE_SPELLING_POLICY_ASK_CASES: ReplayCase[] = [
     },
   },
 ];
+
+/*
+ * GUARD: a store typed a letter off is already read on production flags, by the store resolver's typo reading
+ * (`lib/stores/resolver.ts`: a typo of one of the manager's own stores is used; any other is flagged `confirm` and
+ * asked). CLOSE_SPELLING_MATCH adds no second store reading; these hold on production flags and with the flag.
+ * A manager who covers Bellevue, NE (their primary) and Kearney, NE types "kearny ne".
+ */
+const KEARNEY = "loc-66";
+const BELLEVUE_AND_KEARNEY = { level: "location", primaryAreaId: "loc-67", alsoCoversAreaIds: ["loc-66"] };
+
+export const NOV13_CLOSE_SPELLING_STORE_CASES: ReplayCase[] = (
+  [
+    { key: "at-kearny-ne", turns: ["create a ca for kira dunmore at kearny ne, she was late today"] },
+    { key: "bare-kearny-comma-ne", turns: ["create a ca for kira dunmore, she was late today", "kearny, ne"] },
+  ] as const
+).map((wording) => ({
+  id: `nov13-close-spelling-store-${wording.key}`,
+  title: `${wording.turns.map((turn) => `"${turn}"`).join(" → ")} — the card's store is Kearney, NE`,
+  report: `${REPORT}; a store a letter off (${wording.key})`,
+  status: "fixed",
+  async run(t: ReplayContext) {
+    vi.setSystemTime(new Date("2026-11-13T15:00:00Z"));
+    t.directory([...STAFF]);
+    t.as("location_manager", BELLEVUE_AND_KEARNEY);
+    const thread = t.thread();
+    let reply = "";
+    for (const turn of wording.turns) reply = (await thread.say(turn)).content;
+    expect((thread.proposal as { locationId?: string | null } | null)?.locationId ?? null, `the card's store:\n${reply}`).toBe(KEARNEY);
+  },
+}));
