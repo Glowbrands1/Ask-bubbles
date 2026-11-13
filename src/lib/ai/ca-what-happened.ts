@@ -183,7 +183,7 @@ function withAccountAsIssue(
 ): AskResponse {
   if (!answerIsTheIssueEnabled()) return response;
   const issue = proposal.issue?.trim() ?? "";
-  if (issue === "" || hasAccount(issue, name, ignore)) return response;
+  if (issue === "" || !onlyWhoAndWhere(issue, ignore)) return response;
   const said = [question, ...turns.filter((turn) => turn.role === "user").map((turn) => turn.content).reverse()].map(withoutStateLead);
   const account = said.find((text) => !/\?\s*$/.test(text.trim()) && hasAccount(text, name, ignore))?.trim().replace(/[.!]+$/, "");
   if (!account) return response;
@@ -192,6 +192,17 @@ function withAccountAsIssue(
     .map((line) => line.replace(/^(\s*\*\*Issue:\*\*[ \t]*)[^\n·]*?([ \t]+·[ \t]+|[ \t]*$)/, (_all, lead: string, tail: string) => `${lead}${account}${tail}`))
     .join("\n");
   return { ...response, content, formProposal: { ...proposal, issue: account } };
+}
+
+/*
+ * ONLY WHO AND WHERE: nothing is left of the Issue once the company's job titles, this roster's positions, the
+ * employee's name and the store are taken out ("Team Member Part Time", "Rowan Kestrel, Assistant General Manager").
+ * Anything else the manager wrote ("performance for october", "do not terminate yet") is theirs and stays (the whole-pack
+ * ON run, 13 Nov 2026: a broader "not an account" test replaced those with the request line).
+ */
+function onlyWhoAndWhere(issue: string, ignore: readonly string[]): boolean {
+  const rest = withoutTitles(issue, ignore).replace(/\b(?:the|a|an|at|for|and|of|from|in)\b/gi, " ").replace(/[^\p{L}]+/gu, " ").trim();
+  return rest === "";
 }
 
 function withoutIssueLine(content: string): string {
