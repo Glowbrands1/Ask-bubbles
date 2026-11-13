@@ -13,3 +13,12 @@
   - (d) nov13-close-spelling-store-{at-kearny-ne, bare-kearny-comma-ne}: "**Store:** Kearney, NE, as you said". The store reading is the existing resolver; #859 adds no store code. An ambiguous store typo has no case in #859; the existing store suites are unchanged.
 - (e) No name or roster case or test changed.
 - INTENDED-HARNESS: close-spelling.test.ts "flag off: only the exact spelling names a heading" (the ON arm exports the flag); flags-off-parity "replay-pack, first half" (pending a clean-env run, as for #724 and #847).
+
+## Delta on head ab75b8da (QA's ruling: a named policy wins over cleaning-is-Other): GO (flags-off-parity check pending)
+- Merged ab75b8da onto the same tree. Every new hunk (ca-policy.ts, reply-matches-card.ts, close-policy-ask.ts, route.ts) runs only with CLOSE_SPELLING_MATCH on, so the first OFF arm still holds. New ON arm, tsc clean.
+- Changed 23: INTENDED 20, INTENDED-HARNESS 3, REGRESSION 0. Every row is a nov13-close-spelling case or a close-spelling unit test, plus flags-off-parity.
+- Compared with the first head's ON run, only nov13-close-spelling-policy-care-and-clening changed, and one case is new:
+  - care-and-clening: "**Policy:** Care and Cleaning of Equipment and Facilities, as you said — the policy manual's section on page 21", cited "Care and Cleaning of Equipment and Facilities Policy, JBA Policy Manual p.21". The plan reads "Management will review the Care and Cleaning of Equipment and Facilities policy with Marnie". The Policy line and plan now agree.
+  - new nov13-close-spelling-policy-cleaning-not-confident-keeps-other-asks ("care and clneaing"): it keeps "**Policy:** Other — cleaning duties left undone …" and adds "Did you mean **Care and Cleaning of Equipment and Facilities** (page 21)? … I won't pick one for you." The plan stays generic.
+- Every other nov13 case is byte-identical to the first head (anmals/vistors cited; key holdr asks between the two; anmals in the wrkplace asks), and the store, shared-word and exact cases are unchanged.
+- Pending as before: a clean-env flags-off-parity run.
