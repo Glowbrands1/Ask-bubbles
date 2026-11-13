@@ -2,6 +2,7 @@ import "server-only";
 
 import type { AskResponse } from "@/lib/ai/types";
 import {
+  accountChangeRederivesPolicyEnabled,
   accountWipeGuardEnabled,
   editPolicyAskEnabled,
   formEditSingleWriterEnabled,
@@ -18,6 +19,7 @@ import {
   addNotRepeatedEnabled,
   addNotRepeatedSentencesEnabled,
   formDateSaidAloneEnabled,
+  madeAboutEmptyPatchAnswersSavedEnabled,
   madeAboutRewriteFinishesEnabled,
   stepBDateSaidEnabled,
   stepBDateWithAboutEnabled,
@@ -558,6 +560,16 @@ export async function patchActiveForm(input: PatchTurnInput): Promise<AskRespons
      */
     // A date to write goes on below even with no patch (STEP_B_DATE_SAID); the policy is then answered after it.
     if (Object.keys(reading.patch.set).length === 0 && reading.patch.clear.length === 0 && dateToWrite === null) {
+      /*
+       * MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED_ENABLED (QA's live 17u test, 13 Nov 2026): the account is already rewritten
+       * (above) and nothing else is left to write. The turn answers here, from the saved form; handed on, the old path's
+       * revision ran a second time and denied the change it found ("I haven't changed …").
+       */
+      if (!policyAsk && rewroteFrom && madeAboutEmptyPatchAnswersSavedEnabled()) {
+        noteMadeAboutExit(input, "rewritten_only", true);
+        const saved = await replyFromSaved(input.instanceId, rewroteFrom, []).catch(() => null);
+        if (saved) return saved;
+      }
       if (!policyAsk) return handOff("nothing");
       const outcome = await answerPolicy();
       if (!outcome) return handOff("nothing");
@@ -864,6 +876,19 @@ export async function patchActiveForm(input: PatchTurnInput): Promise<AskRespons
     if (editSeesSavedFormEnabled() && formEditSingleWriterEnabled() && patchOps > 0) {
       await checkSavedForm(input, loaded, (await import("./edit-sees-saved-form")).touchedKeys(reading.patch), actor.id, offered, reading.patch);
     }
+    /*
+     * ACCOUNT_CHANGE_REDERIVES_POLICY_ENABLED (QA's Bubbles 17u, 13 Nov 2026): the edit replaced the whole account (none
+     * of the old account's sentences is left), so the offense, Direct policy, Policy Violated and the plan follow the new
+     * one (`chat-policy-change.ts` rederivePolicyFromAccount). The diff reply below then says what moved.
+     */
+    if (accountChangeRederivesPolicyEnabled()) {
+      const afterEdit = await loadInstance(input.instanceId);
+      const oldAccount = typeof before.observation?.value === "string" ? before.observation.value : "";
+      const newAccount = afterEdit?.values.find((value) => value.fieldKey === "observation")?.value ?? "";
+      if (accountReplaced(oldAccount, newAccount)) {
+        await (await import("./chat-policy-change")).rederivePolicyFromAccount({ request: input.request, instanceId: input.instanceId, account: newAccount, question: input.question });
+      }
+    }
     const reloaded = await loadInstance(input.instanceId);
     if (!reloaded) return null;
     const changed = snapshotDiff(snapshotOf(loaded), snapshotOf(reloaded));
@@ -1109,4 +1134,19 @@ function madeAboutReading(
     evidence[box.key] = said;
   }
   return { ok: true, turn: "this_form", patch: { set, clear: [], evidence } };
+}
+
+/** ACCOUNT_CHANGE_REDERIVES_POLICY_ENABLED: none of the old account's sentences is left in the new one. */
+function accountReplaced(before: string, after: string): boolean {
+  const sentences = (text: string) =>
+    text
+      .replace(/^\s*Observed:\s*/i, "")
+      .split(/(?<=[.!?])\s+|\n+/)
+      .map((sentence) => sentence.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim())
+      .filter((sentence) => sentence.split(" ").length >= 3);
+  const old = sentences(before);
+  const next = sentences(after);
+  if (old.length === 0 || next.length === 0) return false;
+  // A sentence a new one still holds ("… sanitaion" → "… sanitaion in the morning") is kept: an addition, not a new account.
+  return old.every((sentence) => !next.some((kept) => kept.includes(sentence)));
 }
