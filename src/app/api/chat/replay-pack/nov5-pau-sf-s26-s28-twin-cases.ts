@@ -114,6 +114,8 @@ export const NOV5_PAU_SF_S26_S28_TWIN_CASES: ReplayCase[] = [
     report:
       "Pau via QA, 5 Nov 2026, sf-s28 (twin): \"can i give a ca for not signing off on the cleaning check list\" → \"can you write me a ca for Employee R from <store>\" → \"You haven't told me what happened yet\", the Observation was the question",
     status: { open: "\"You haven't told me what happened yet\"; the earlier turn's incident is not used" },
+    // QA's audit of open cases (11 Nov 2026): holds with INCIDENT_FROM_EARLIER_TURN (merged, off in production), as its twin s28-incident-scope.
+    fixFlags: ["INCIDENT_FROM_EARLIER_TURN_ENABLED"],
     async run(t: T) {
       // This app writes "You haven't told me what happened yet" with no flag.
       try {
