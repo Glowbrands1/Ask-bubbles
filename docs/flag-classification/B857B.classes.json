@@ -1,0 +1,402 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov13-ca-asks-what-happened-title-agm: \"create corrective action form for Rowan Kestrel, Assistant General Manager\" \u2014 the job title is no account: the card asks what happened, with no Create \u2014 OPEN in production (the job title is the card's Issue and nothing is asked)": {
+    "category": "INTENDED",
+    "reason": "CA_ASKS_WHAT_HAPPENED: job title only; the title-only Issue goes, the card asks what happened, no Create"
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov13-ca-asks-what-happened-title-team-member: \"create corrective action form for Rowan Kestrel, Team Member Part Time\" \u2014 the job title is no account: the card asks what happened, with no Create \u2014 OPEN in production (the job title is the card's Issue and nothing is asked)": {
+    "category": "INTENDED",
+    "reason": "CA_ASKS_WHAT_HAPPENED: job title only; the title-only Issue goes, the card asks what happened, no Create"
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov13-what-happened-no-create-name-after-request: \"Create a corrective action.\" \u2192 \"Rowan Kestrel, Team Member Part Time\" \u2014 the card asks what happened and offers no Create while it asks \u2014 OPEN in production (the card asks what happened beside an active Create draft and \"Create the draft here\")": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: the open case flips; no Create while the card asks"
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov13-what-happened-no-create-name-only: \"create a corrective action for Rowan Kestrel\" \u2014 the card asks what happened and offers no Create while it asks \u2014 OPEN in production (the card asks what happened beside an active Create draft and \"Create the draft here\")": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: the open case flips; no Create while the card asks"
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov13-what-happened-no-create-not-late: \"ca for Rowan Kestrel not late\" \u2014 the card asks what happened and offers no Create while it asks \u2014 OPEN in production (the card asks what happened beside an active Create draft and \"Create the draft here\")": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: the open case flips; no Create while the card asks"
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov13-what-happened-no-create-nothing-wrong: \"create a corrective action for Rowan Kestrel, she didn't do anything wrong\" \u2014 the card asks what happened and offers no Create while it asks \u2014 OPEN in production (the card asks what happened beside an active Create draft and \"Create the draft here\")": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: the open case flips; no Create while the card asks"
+  },
+  "src/lib/ai/flags-off-parity.test.ts :: existing chat and form suites with every new flag off passes the suites whose expectations are already on main: src/app/api/chat/replay-pack, first half of the cases by id": {
+    "category": "INTENDED-HARNESS",
+    "reason": "the child suite runs the replay pack with the harness's global flags on; the 6 new cases are pinned OPEN on main"
+  },
+  "replay: nov10-failure-to-open-control-name-only [fix:FAILURE_TO_OPEN_IS_LATE_OPENING_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov10-failure-to-open-control-name-only [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov10-sf-b5-guest-attitude-cites-conduct [fix:GUEST_ATTITUDE_CONDUCT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov10-sf-b5-guest-attitude-cites-conduct [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov11-bcs-metrics-comp-sales [fix:COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov11-bcs-metrics-comp-sales [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov11-bcs-metrics-discount-rate [fix:COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov11-bcs-metrics-discount-rate [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov11-title-before-name-admin [fix:TITLE_BEFORE_NAME_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov11-title-before-name-admin [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov11-title-before-name-create-names-employee [fix:TITLE_BEFORE_NAME_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov11-title-before-name-create-names-employee [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov11-title-before-name-draft-create-team-member [fix:TITLE_BEFORE_NAME_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov11-title-before-name-draft-create-team-member [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov11-title-before-name-draft-team-member [fix:TITLE_BEFORE_NAME_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov11-title-before-name-draft-team-member [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov11-title-before-name-draft-tm [fix:TITLE_BEFORE_NAME_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov11-title-before-name-draft-tm [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov11-title-before-name-plain-name-unchanged [fix:TITLE_BEFORE_NAME_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov11-title-before-name-plain-name-unchanged [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov12-17o-title-before-name-reply-lines [fix:TITLE_BEFORE_NAME_REPLY_LINES_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov12-17o-title-before-name-reply-lines [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov12-17o-title-before-name-reply-lines-on-roster [fix:TITLE_BEFORE_NAME_REPLY_LINES_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov12-17o-title-before-name-reply-lines-on-roster [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov12-g4-802-own-account-kept-coworker-named [fix:OUTLINE_ON_OPEN_PROPOSAL_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov12-g4-802-own-account-kept-coworker-named [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov12-g4-802-own-account-kept-form-labels-pronoun-subject [fix:OUTLINE_ON_OPEN_PROPOSAL_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov12-g4-802-own-account-kept-form-labels-pronoun-subject [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov12-g4-802-own-account-kept-labelled-account [fix:OUTLINE_ON_OPEN_PROPOSAL_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov12-g4-802-own-account-kept-labelled-account [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov12-g4-802-own-account-kept-this-format [fix:OUTLINE_ON_OPEN_PROPOSAL_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov12-g4-802-own-account-kept-this-format [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov12-sf-b5-typo-name-yes-then-level [fix:TYPO_FULL_NAME_TO_ROSTER_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov12-sf-b5-typo-name-yes-then-level [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov12-title-before-name-trailing-today [fix:TITLE_BEFORE_NAME_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov12-title-before-name-trailing-today [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov13-ca-asks-what-happened-negative-answer-to-the-ask [production]": {
+    "category": "INTENDED",
+    "reason": "CA_ASKS_WHAT_HAPPENED: job title only; turn 1 now asks (title Issue dropped)"
+  },
+  "replay: nov13-ca-asks-what-happened-title-agm [open]": {
+    "category": "INTENDED",
+    "reason": "CA_ASKS_WHAT_HAPPENED: job title only; the title-only Issue goes, the card asks what happened, no Create"
+  },
+  "replay: nov13-ca-asks-what-happened-title-team-member [open]": {
+    "category": "INTENDED",
+    "reason": "CA_ASKS_WHAT_HAPPENED: job title only; the title-only Issue goes, the card asks what happened, no Create"
+  },
+  "replay: nov13-what-happened-no-create-name-after-request [open]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: the open case flips; no Create while the card asks"
+  },
+  "replay: nov13-what-happened-no-create-name-only [open]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: the open case flips; no Create while the card asks"
+  },
+  "replay: nov13-what-happened-no-create-not-late [open]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: the open case flips; no Create while the card asks"
+  },
+  "replay: nov13-what-happened-no-create-nothing-wrong [open]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: the open case flips; no Create while the card asks"
+  },
+  "replay: nov2-p1b-next-message-new-draft [fix:OPEN_DRAFT_KEEPS_TURNS_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov2-p1b-next-message-new-draft [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov4-ca-sales-negative-no-reason [fix:CA_SALES_POLICY_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov4-ca-sales-negative-no-reason [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov5-ca-sales-open-draft-reply-not-empty [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov5-compound-surname-exact [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov5-compound-surname-exact [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov5-policy-benefits-warning-revision [fix:POLICY_CHANGE_RELEVANT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov5-policy-benefits-warning-revision [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov5-r2-dm-in-passing-account [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov5-r2-dm-in-passing-account-with-the-flip [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov5-r2-dm-in-passing-position [fix:TITLE_OF_THE_EMPLOYEE_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov5-r2-dm-in-passing-position [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov5-r2-dm-in-passing-position-with-the-flip [fix:TITLE_OF_THE_EMPLOYEE_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov5-r2-dm-in-passing-position-with-the-flip [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov5-twin-sf-s27-coaching-name-only-asks-what-happened [fix:COACHING_ASKS_WHAT_HAPPENED_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov5-twin-sf-s28-control-policy-question [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov6-policy-change-relevant-remove-attendance [fix:POLICY_CHANGE_RELEVANT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov6-policy-change-relevant-remove-attendance [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov7-a1-remove-policy-card [fix:REMOVE_POLICY_NOT_NAMED_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov7-a1-remove-policy-card [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov7-a1-remove-policy-created [fix:REMOVE_POLICY_NOT_NAMED_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov7-a1-remove-policy-created [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov7-a2-previously-received-coaching-date [fix:PRIOR_STEP_PREVIOUSLY_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov7-a2-previously-received-coaching-date [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov7-denial-no-account-asks-ca-for-not-late [fix:DENIAL_NO_ACCOUNT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov7-denial-no-account-asks-ca-for-not-late [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov7-denial-no-account-asks-comma-not-late [fix:DENIAL_NO_ACCOUNT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov7-denial-no-account-asks-comma-not-late [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov7-denial-no-account-ca-for-not-late [fix:DENIAL_NO_ACCOUNT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov7-denial-no-account-ca-for-not-late [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov7-denial-no-account-comma-not-late [fix:DENIAL_NO_ACCOUNT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov7-denial-no-account-comma-not-late [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov7-described-attendance-denied-ca-for-not-late [fix:DESCRIBED_ATTENDANCE_CARD_ENABLED,DENIAL_NO_ACCOUNT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov7-described-attendance-denied-ca-for-not-late [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov7-described-attendance-denied-comma-not-late [fix:DESCRIBED_ATTENDANCE_CARD_ENABLED,DENIAL_NO_ACCOUNT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov7-described-attendance-denied-comma-not-late [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov8-audit-bare-not-after-request-ca-for-not-late [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov8-complaint-account-issue [fix:COMPLAINT_ACCOUNT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov8-complaint-account-issue [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov8-complaint-account-level [fix:COMPLAINT_ACCOUNT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov8-complaint-account-level [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov8-complaint-account-negative-dated-history [fix:COMPLAINT_ACCOUNT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov8-complaint-account-negative-dated-history [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov8-guard-ca-for-not-late-no-app-policy [fix:DENIAL_NO_ACCOUNT_ENABLED,AS_YOU_SAID_APP_READ_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov8-guard-ca-for-not-late-no-app-policy [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov8-policy-correction-not-account [fix:POLICY_CORRECTION_NOT_ACCOUNT_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov8-policy-correction-not-account [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov8-s38-keep-lowercase-two-words [fix:ACCOUNT_VERB_NOT_A_NAME_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  },
+  "replay: nov8-s38-keep-lowercase-two-words [production]": {
+    "category": "INTENDED",
+    "reason": "WHAT_HAPPENED_NO_CREATE: no account given (request + name, a denial, or a question to the app); main's ask stays, the note drops \"create it now\", and the Create line and button go"
+  }
+}
