@@ -14,7 +14,7 @@ import {
   addOutOfOtherSectionsEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { madeAbout } from "@/lib/ai/make-it-about";
-import { addUnderExpectation, addUnderObserved, hasSections, insertedInOtherSection, readsAsAccount, repeatsOldText, tailAfterLastSection, withSectionSpacing } from "./outline-sections";
+import { addUnderExpectation, addUnderObserved, hasObserved, hasSections, insertedInOtherSection, readsAsAccount, repeatsOldText, tailAfterLastSection, withSectionSpacing } from "./outline-sections";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { isGlossaryTerm } from "@/lib/ai/glossary";
 
@@ -552,6 +552,8 @@ export async function writeFormEdits(instanceId: string, ops: readonly FormEditO
    */
   const underObserved = stepBAddUnderObservedEnabled();
   const spacing = stepBSectionSpacingEnabled();
+  // The add as the op had it, for each field given its first "Expectation:" below (see step 3).
+  const startedExpectation: Record<string, FieldValue> = {};
   if (underObserved || spacing) {
     for (const key of Object.keys(set)) {
       const value = set[key];
@@ -581,6 +583,15 @@ export async function writeFormEdits(instanceId: string, ops: readonly FormEditO
             how[key] = "replace";
           }
         }
+      } else if (underObserved && how[key] === "add" && hasObserved(current) && !hasSections(value) && !repeatsOldText(current, value) && !readsAsAccount(value)) {
+        // QA (12 Nov 2026, Gate-Bubbles-2 on #814): a field with only its Observed section gets its first "Expectation:"
+        // for an instruction, never the instruction under Observed.
+        const under = addUnderExpectation(current, value);
+        if (under !== null) {
+          startedExpectation[key] = value;
+          written = under;
+          how[key] = "replace";
+        }
       } else if (underObserved && how[key] === "replace") {
         const tail = tailAfterLastSection(current, value);
         if (tail !== null) {
@@ -601,7 +612,20 @@ export async function writeFormEdits(instanceId: string, ops: readonly FormEditO
   const patch: FormPatch = { set, clear, how, evidence };
 
   /* 3. applyPatch */
-  const { draft: next, diff } = applyPatch(before, patch, patchRules);
+  let { draft: next, diff } = applyPatch(before, patch, patchRules);
+  /*
+   * QA (13 Nov 2026, B#830 out of 17s): on the tool path (FORM_EDIT_TOOL_IN_STREAM) the whole new field is checked
+   * against the manager's words, so the started "Expectation:" (the old account and the heading are not her words) was
+   * refused and nothing was written. A field whose new Expectation section is refused keeps the writer's old append.
+   */
+  const startedBack = Object.keys(startedExpectation).filter((key) => diff.refused.some((entry) => entry.key === key));
+  if (startedBack.length > 0) {
+    for (const key of startedBack) {
+      set[key] = startedExpectation[key]!;
+      how[key] = "add";
+    }
+    ({ draft: next, diff } = applyPatch(before, patch, patchRules));
+  }
   refused.push(...diff.refused);
 
   /* Code's own values: as computed, never over a typed line (unless exempt), never blanking one. */
