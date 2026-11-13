@@ -126,3 +126,25 @@ describe("CARD_CHECKED_AGAINST_WORDS_ENABLED: a fact added on the open card (QA'
     expect(out.content).toMatch(/\*\*Added to What happened:\*\* she didn't call to say she'd be late/);
   });
 });
+
+describe("CARD_CHECKED_AGAINST_WORDS_ENABLED: never a fact (Gate-Bubbles-5 / Gate-Sunny-2 probes on the 17r-c fix)", () => {
+  const after = (said: string) => ({ turns: ["create a CA for Marnie Holloway, she was late on 11/3/26", said], roster: ROSTER });
+  it.each([
+    "she gets a verbal warning",
+    "Marnie gets a verbal warning",
+    "she's a key holder",
+    "she is a key holder",
+    "she works at West Dodge",
+    "she is at Omaha, NE (West Dodge Rd)",
+    "she maybe forgot",
+    "she is a TITLE",
+    "she's our closing lead",
+    "she might have forgotten",
+  ])("%s: never joined to the card", (said) => {
+    expect(addedFacts("she was late on 11/3/26", "Marnie Holloway", after(said.replace("TITLE", ROSTER[0]!.positionName!)))).toEqual([]);
+  });
+
+  it("the control still joins: \"she also didn't call to say she'd be late\"", () => {
+    expect(addedFacts("she was late on 11/3/26", "Marnie Holloway", after("she also didn't call to say she'd be late"))).toEqual(["she didn't call to say she'd be late"]);
+  });
+});

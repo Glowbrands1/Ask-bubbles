@@ -148,6 +148,37 @@ export function accountFromWords(employee: string | null, input: CardCheckInput)
  * not a question, a level, a title, a store or a hedge — must be on the card. The facts the Issue does not already hold,
  * in her words ("also" dropped). An answer to the card's question ("verbal warning") is never one.
  */
+/*
+ * NOT A FACT (Gate-Bubbles-5 and Gate-Sunny-2 on the 17r-c fix, 13 Nov 2026): a sentence that starts like an account is
+ * still not one when its CONTENT is a level ("she gets a verbal warning"), who she is ("she's a key holder", "she is a
+ * <title>", "she's our closing lead"), where she works ("she works at <store>", "she is at <store label>"), or a hedge
+ * ("she maybe forgot", "she might have forgotten"). Never joined to the card.
+ */
+const LEVEL_IN = /\b(?:(?:verbal|written|final|first|second|last)\s+(?:written\s+)?(?:warning|ca|c\/a|write[- ]?up|corrective action)|write[- ]?up|warning)s?\b/i;
+const IDENTITY = /\b(?:is|was|'s|’s|are)\s+(?:a|an|our|the|my|their)\s+\w+/i;
+const ROLE = /\b(?:key\s*holders?|keyholders?|managers?|leads?|supervisors?|assistant managers?)\b/i;
+const WORKS_AT = /\b(?:works?|worked|working|is|was|'s|’s|stationed|based|assigned)\s+(?:at|in|out of)\b/i;
+const HEDGE_WORD = /\b(?:maybe|might|may have|probably|possibly|perhaps|i think|i guess|not sure|guess)\b/i;
+const STREET_SUFFIX = /\b(?:rd|road|st|street|ave|avenue|blvd|boulevard|dr|drive|pkwy|parkway|ln|lane|hwy|highway)\.?$/i;
+
+function placeWords(): string[] {
+  const out = new Set<string>();
+  for (const label of storeLabels()) {
+    for (const part of label.split(/[,()]/)) {
+      const word = plain(part).replace(STREET_SUFFIX, "").trim();
+      if (word.length >= 4 && !/^[a-z]{2}$/.test(word)) out.add(word);
+    }
+  }
+  return [...out];
+}
+
+export function notAFact(clause: string, input: CardCheckInput): boolean {
+  if (LEVEL_IN.test(clause) || IDENTITY.test(clause) || ROLE.test(clause) || WORKS_AT.test(clause) || HEDGE_WORD.test(clause)) return true;
+  const said = ` ${plain(clause)} `;
+  for (const title of titles(input.roster)) if (title !== "" && said.includes(` ${title} `)) return true;
+  return placeWords().some((word) => said.includes(` ${word} `));
+}
+
 const ACCOUNT_START = /^(?:and\s+|but\s+|plus\s+)?(?:she|he|they)\b/i;
 export function addedFacts(issue: string, employee: string | null, input: CardCheckInput): string[] {
   if (!employee) return [];
@@ -162,7 +193,7 @@ export function addedFacts(issue: string, employee: string | null, input: CardCh
     for (const sentence of turn.split(/(?<=[.!?])\s+|\n+/)) {
       const clause = sentence.trim().replace(/[.!]+$/, "");
       if (clause === "" || !(ACCOUNT_START.test(clause) || (first !== "" && starts.test(clause)))) continue;
-      if (issueProblem(clause, employee, input) !== null) continue;
+      if (issueProblem(clause, employee, input) !== null || notAFact(clause, input)) continue;
       const fact = clause.replace(/^(?:and|but|plus)\s+/i, "").replace(/\b(also|too)\b\s*/gi, "").replace(/\s+/g, " ").trim();
       const words = contentWords(fact);
       if (words.length === 0 || words.every((word) => have.has(word))) continue;
