@@ -51,6 +51,13 @@ export function turnsForThisForm(history: readonly Turn[], templateKey: string):
 
 /** Only what did not happen: "she was not late", "nothing happened", "no incident", "she didn't do anything wrong". */
 const NEGATED = /\b(?:not|never|nothing|no\s+(?:incident|issue|problems?|concerns?))\b|n['’]t\b/i;
+/*
+ * "for not closing duties correctly", "never following the closing checklist": a duty not done is the account
+ * (QA, 11 Nov 2026: with ONE_FORM_EACH_PERSON, "a coaching form for <A>, <B>, and <C> for not closing duties
+ * correctly" asked what happened on every card, and dropped the "I have the employee" line CARD_NAMES_EMPLOYEE names).
+ * "not doing anything wrong" is still nothing.
+ */
+const DUTY_NOT_DONE = /\b(?:not|never)\s+[a-z]+ing\b(?!\s+(?:anything|nothing)\b)/i;
 
 const NOT_A_PERSON = new Set(["she", "he", "they", "the", "a", "an", "her", "his", "their", "our", "my", "this", "that", "it", "i", "we", "you", "and", "also", "then"]);
 
@@ -71,7 +78,7 @@ function hasAccount(said: string, name: string, ignore: readonly string[]): bool
     .filter(Boolean)
     .some(
       (clause) =>
-        !NEGATED.test(clause) &&
+        (!NEGATED.test(clause) || DUTY_NOT_DONE.test(clause)) &&
         !aboutSomebodyElse(clause, name) &&
         (describesIncident(clause) || describesMoreThanTheRequest(clause, { ignore })),
     );

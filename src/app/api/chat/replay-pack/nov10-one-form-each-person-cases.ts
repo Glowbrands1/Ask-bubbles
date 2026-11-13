@@ -70,4 +70,29 @@ export const NOV10_ONE_FORM_EACH_PERSON_CASES: ReplayCase[] = [
       }
     },
   },
+  {
+    id: "nov10-p7-one-form-each-named-with-coaching-asks",
+    title: "with COACHING_ASKS_WHAT_HAPPENED too (they ship together; QA, 11 Nov 2026): T1 → \"Tamsin Ashby\" → \"yes\" → \"yes\": one Coaching card each for Tamsin Ashby, Corwin Halsey and Ione Marchetti, each reply naming them",
+    report: REPORT,
+    status: { open: "one card, for one person; the other two never handled" },
+    // The flip blocker (QA, 11 Nov 2026): "for not closing duties correctly" was no account to COACHING_ASKS_WHAT_HAPPENED, so each
+    // card asked what happened and lost the "I have the employee" line CARD_NAMES_EMPLOYEE names (`ai/coaching-what-happened.ts`).
+    fixFlags: [...FIX, "COACHING_ASKS_WHAT_HAPPENED_ENABLED"],
+    async run(t) {
+      const thread = start(t);
+      await thread.say(T1);
+      for (const [said, person, next] of [
+        ["Tamsin Ashby", "Tamsin Ashby", "Corwin Halsey"],
+        ["yes", "Corwin Halsey", "Ione Marchetti"],
+        ["yes", "Ione Marchetti", null],
+      ] as const) {
+        const reply = await thread.say(said);
+        expect(thread.proposal, `"${said}": no Coaching card for ${person}:\n${reply.content}`).toMatchObject({ templateKey: "coaching", employeeName: person });
+        expect(reply.content, `"${said}": the reply does not name ${person}:\n${reply.content}`).toMatch(new RegExp(`I have \\*\\*${person}\\*\\*`));
+        expect(reply.content, `"${said}": "I have the employee":\n${reply.content}`).not.toMatch(/I have the employee\b/);
+        if (next) expect(reply.content, `"${said}": ${next} is not offered next:\n${reply.content}`).toMatch(new RegExp(`\\*\\*Next:\\*\\* a Coaching Form each for \\*\\*${next}\\*\\*`));
+        else expect(reply.content, `"${said}": a Next line after the last person:\n${reply.content}`).not.toMatch(/\*\*Next:\*\*/);
+      }
+    },
+  },
 ];

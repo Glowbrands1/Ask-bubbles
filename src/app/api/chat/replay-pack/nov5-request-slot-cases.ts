@@ -1,5 +1,7 @@
 import { expect, vi } from "vitest";
 
+import { oneFormEachPersonEnabled } from "@/lib/config/chat-quality-flags";
+
 import { STAFF, WEST_DODGE, type DirectoryRow, type ReplayAnswer, type ReplayCase, type ReplayContext } from "./cases";
 import { answerOffRosterAsk } from "./off-roster-answer";
 
@@ -167,6 +169,13 @@ export const NOV5_REQUEST_SLOT_CASES: ReplayCase[] = [
       const reply = await thread.say("CA for Wilhelmina Corvina and Peregrine Varnholt for being late");
       expect(reply.content, `does not ask which of the two:\n${reply.content}`).toMatch(/Wilhelmina Corvina/);
       expect(reply.content, `does not ask which of the two:\n${reply.content}`).toMatch(/Peregrine Varnholt/);
+      // Changed on purpose (11 Nov 2026): QA's ruling for ONE_FORM_EACH_PERSON (P7, 10 Nov) is one form each, so with
+      // that flag on the first person's card comes now and the "**Next:**" line names the second. Off, it still asks.
+      if (oneFormEachPersonEnabled()) {
+        expect(thread.proposal?.employeeName ?? null, `one form each: no card for the first person:\n${reply.content}`).toBe("Wilhelmina Corvina");
+        expect(reply.content, `one form each: the second person is not next:\n${reply.content}`).toMatch(/\*\*Next:\*\*[^\n]*\*\*Peregrine Varnholt\*\*/);
+        return;
+      }
       expect(thread.proposal?.employeeName ?? null, "a card was made for one of them without asking").toBeNull();
     },
   },
