@@ -572,7 +572,10 @@ export async function rederivePolicyFromAccount(input: {
 
   const row = (key: string) => loaded.values.find((value) => value.fieldKey === key);
   const managers = (key: string) => row(key)?.filledBy === "manager" && ((row(key)?.value ?? "").trim() !== "" || (row(key)?.checked ?? []).length > 0);
-  const writer = await import("./form-write");
+  // Already behind formEditSingleWriterEnabled() (the early return above); the guard is repeated here so the
+  // one-writer static check (form-write-one-writer.test.ts) sees the import on the flag-on side.
+  const writer = formEditSingleWriterEnabled() ? await import("./form-write") : null;
+  if (!writer) return [];
   const written: string[] = [];
   const offered = group?.options.map((option) => option.key) ?? [];
   const reading = readCaPolicy(input.account);
