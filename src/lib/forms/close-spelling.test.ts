@@ -102,3 +102,26 @@ describe("close-spelling: QA's proof cases (13 Nov 2026)", () => {
     expect(closeHeadingReading("texting as general comunications", [heading]).confident).toBeNull();
   });
 });
+
+describe("close-spelling: a policy the manager names wins over cleaning-is-Other (QA's ruling, 13 Nov 2026)", () => {
+  // The reading `withCleaningOther` gives a cleaning account ("she left her station a mess at close today").
+  const cleaning = async () => ({ ...(await import("./ca-policy")).readCaPolicy("she left her station a mess"), suggestion: null, source: null, other: "cleaning" as const });
+  const FOUND = { phrase: "care and clening", lookup: "found", heading: "Care and Cleaning of Equipment and Facilities", page: 21, offenseKey: "other" } as const;
+
+  it("flag off: the cleaning account is Other, whatever was named (as on main)", async () => {
+    const { caPolicyProposalLine } = await import("./ca-policy");
+    expect(caPolicyProposalLine(await cleaning(), FOUND)).toMatch(/^\*\*Policy:\*\* Other — cleaning duties left undone/);
+  });
+
+  it("flag on: a named policy the manual answers is the Policy line", async () => {
+    vi.stubEnv("CLOSE_SPELLING_MATCH_ENABLED", "true");
+    const { caPolicyProposalLine } = await import("./ca-policy");
+    expect(caPolicyProposalLine(await cleaning(), FOUND)).toMatch(/^\*\*Policy:\*\* Care and Cleaning of Equipment and Facilities, as you said/);
+  });
+
+  it("flag on: a name the manual does not answer keeps Other", async () => {
+    vi.stubEnv("CLOSE_SPELLING_MATCH_ENABLED", "true");
+    const { caPolicyProposalLine } = await import("./ca-policy");
+    expect(caPolicyProposalLine(await cleaning(), { phrase: "care and clneaing", lookup: "missing" })).toMatch(/^\*\*Policy:\*\* Other — cleaning duties left undone/);
+  });
+});

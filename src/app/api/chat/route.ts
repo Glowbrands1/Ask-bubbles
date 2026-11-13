@@ -1171,7 +1171,7 @@ async function postChat(request: Request) {
           const { ACTIVE_BRAND } = await import("@/lib/brand");
           const manual = await new SupabaseKnowledgeProvider().fetchOfficialPolicyManual(ACTIVE_BRAND.knowledgeScopeId);
           return manual.ok ? manual.chunks : null;
-        });
+        }, [...parsed.history.filter((turn) => turn.role === "user").map((turn) => turn.content), asked.question].join("\n"));
       }
       // CARD_PLAN_MATCHES_CREATE_ENABLED: an Attendance CA's card shows the plan Create will save (`lib/forms/card-plan-matches-create.ts`).
       if (cardPlanMatchesCreateEnabled()) {

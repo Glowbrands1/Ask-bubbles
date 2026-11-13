@@ -54,25 +54,48 @@ export const NOV13_CLOSE_SPELLING_POLICY_CASES: ReplayCase[] = CONFIDENT.map((wo
 }));
 
 /*
- * QA's own example. A station left a mess is a cleaning duty, which the card records under Other (sf-s15, an earlier
- * ruling, unchanged); the policy the manager named is the one the plan reviews. On production flags "care and clening"
- * names no section, so the plan says "the applicable company policy"; with the flag the plan names the manual's
- * section, spelled as the manual spells it.
+ * QA's own example, and QA's ruling on it (13 Nov 2026, Gate-Bubbles-4): "A policy the manager NAMES wins, as
+ * everywhere else ... Pau's cleaning ruling (cleaning left undone → Other) applies when the manager only DESCRIBES
+ * cleaning." A station left a mess is a cleaning account, so on production flags the card says Other and the plan
+ * reviews "the applicable company policy". With the flag the manager's "care and clening" names Care and Cleaning of
+ * Equipment and Facilities confidently: the Policy line cites it, as said, and the plan reviews the same policy.
+ * Not confident ("clneaing", two letters off): Other stays, and the manager is asked "Did you mean …?".
  */
+const CARE = "Care and Cleaning of Equipment and Facilities";
+
 export const NOV13_CLOSE_SPELLING_QA_EXAMPLE_CASES: ReplayCase[] = [
   {
     id: "nov13-close-spelling-policy-care-and-clening",
-    title: `"… violating the care and clening policy …" — the card names Care and Cleaning of Equipment and Facilities`,
-    report: `${REPORT}; QA's example "Care and Clening"`,
-    status: { open: `"care and clening" names no section: the plan reviews "the applicable company policy"` },
+    title: `"… violating the care and clening policy, she left her station a mess …" — the Policy line cites ${CARE}, and the plan agrees`,
+    report: `${REPORT}; QA's example "Care and Clening", and QA's ruling: a named policy wins over cleaning-is-Other`,
+    status: { open: `"care and clening" names no section: the Policy line is Other and the plan reviews "the applicable company policy"` },
     fixFlags: [FLAG],
     async run(t: ReplayContext) {
       const thread = start(t);
       const reply = (
         await thread.say("create a verbal ca for marnie holloway for violating the care and clening policy, she left her station a mess at close today")
       ).content;
-      expect(reply, `the manual's spelling is not on the card:\n${reply}`).toContain("Care and Cleaning of Equipment and Facilities");
-      expect(reply, `the card says no section was found:\n${reply}`).not.toMatch(/see a section of the current policy manual for/);
+      const policy = /^\*\*Policy:\*\*[^\n]*/m.exec(reply)?.[0] ?? "";
+      expect(policy, `the Policy line:\n${reply}`).toMatch(new RegExp(`^\\*\\*Policy:\\*\\* ${CARE}, as you said — the policy manual's section on page \\d+`));
+      expect(reply, `the card still says Other:\n${reply}`).not.toMatch(/\*\*Policy:\*\* Other/);
+      const plan = /\*\*Action plan:\*\*[^\n]*/i.exec(reply)?.[0] ?? "";
+      expect(plan, `the plan does not review the same policy:\n${reply}`).toContain(`review the ${CARE} policy`);
+    },
+  },
+  {
+    id: "nov13-close-spelling-policy-cleaning-not-confident-keeps-other-asks",
+    title: `"… violating the care and clneaing policy, she left her station a mess …" — Other stays; "Did you mean **${CARE}**?"`,
+    report: `${REPORT}; QA's ruling: not confident keeps Other and asks`,
+    status: { open: "no question: the card says Other and nothing more" },
+    fixFlags: [FLAG],
+    async run(t: ReplayContext) {
+      const thread = start(t);
+      const reply = (
+        await thread.say("create a verbal ca for marnie holloway for violating the care and clneaing policy, she left her station a mess at close today")
+      ).content;
+      expect(reply, `Other is gone:\n${reply}`).toMatch(/\*\*Policy:\*\* Other — cleaning duties left undone/);
+      expect(reply, `no "Did you mean":\n${reply}`).toMatch(new RegExp(`Did you mean \\*\\*${CARE}\\*\\* \\(page \\d+\\)\\?`));
+      expect(reply, `cited without asking:\n${reply}`).not.toMatch(new RegExp(`\\*\\*Policy:\\*\\* ${CARE}, as you said`));
     },
   },
 ];
