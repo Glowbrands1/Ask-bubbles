@@ -4,9 +4,10 @@ import { z } from "zod";
 
 import type { AskResponse } from "@/lib/ai/types";
 import { updateChatTrace } from "@/lib/ai/chat-trace-store";
-import { cardCheckedAgainstWordsEnabled } from "@/lib/config/chat-quality-flags";
+import { cardCheckedAgainstWordsEnabled, closeSpellingMatchEnabled } from "@/lib/config/chat-quality-flags";
 import { COMPANY_LOCATIONS } from "@/lib/locations";
 
+import { editDistance } from "./close-spelling";
 import type { RosterEmployee } from "./employee-match";
 import { fold } from "./form-reducer";
 
@@ -139,6 +140,28 @@ export function accountFromWords(employee: string | null, input: CardCheckInput)
   const turn = naming ?? turns[0] ?? "";
   const at = employee ? fold(turn).indexOf(fold(employee)) : -1;
   const after = at >= 0 ? turn.slice(at + employee!.length) : turn.replace(REQUEST_LEAD, "");
+  const own = accountIn(after, employee, input);
+  if (own !== null || naming === undefined) return own;
+  /*
+   * Gate-Bubbles-5 (13 Nov 2026, nov13-ca-asks-what-happened-negative-answer-to-the-ask): "create corrective action form
+   * for Rowan Kestrel, Team Member Part Time", then "she skipped the closing checklist on her shift last night". The
+   * naming turn holds no account; the turns after it do. Read them in order, the first with an account wins.
+   */
+  const later = input.turns.slice(input.turns.lastIndexOf(naming) + 1);
+  for (const said of later) {
+    // A question to the app ("what level should this be?") is never her account.
+    if (/\?\s*$/.test(said) || /^\s*(?:what|which|who|how|why|when|where|should|can|could|do|does|is|are|will|would)\b/i.test(said)) continue;
+    const account = accountIn(said, employee, input);
+    if (account !== null) return account;
+  }
+  return null;
+}
+
+/** How long or how often she works, after a title ("Team Member Part Time"). */
+const EMPLOYMENT_TYPE = /\s*\b(?:part|full)[- ]?time\b|\s*\b(?:pt|ft|seasonal|temp)\b/gi;
+
+/** The account in one stretch of the manager's words: its clauses that are facts, joined; null when none. */
+function accountIn(after: string, employee: string | null, input: CardCheckInput): string | null {
   /*
    * Gate-Bubbles-5 / Gate-Sunny-2 (13 Nov 2026): the same split and filter as an added fact. "ca for <A>, coached her
    * 10-16, she was late again 10-20" repairs to "she was late again 10-20"; "…, signed the manual 10/1, late on 10/20"
@@ -150,6 +173,8 @@ export function accountFromWords(employee: string | null, input: CardCheckInput)
     .filter((clause) => {
       if (clause === "" || issueProblem(clause, employee, input) !== null || REQUEST_LEAD.test(clause) || REQUEST_FOR.test(clause)) return false;
       if (SUBJECTLESS_HISTORY.test(clause) || LEVEL_START.test(clause)) return false;
+      // Gate-Bubbles-5 (13 Nov 2026): "<title> Part Time" is the title, never an account.
+      if (onlyRole(clause.replace(EMPLOYMENT_TYPE, "").trim(), input)) return false;
       const subjected = /^(?:she|he|they)\b/i.test(clause) ? clause : `she ${clause}`;
       return !isHistory(subjected) && !notAFact(subjected, input);
     });
@@ -201,7 +226,20 @@ function onlyPlace(text: string): boolean {
   if (isPlace(text)) return true;
   let rest = ` ${plain(text)} `;
   for (const word of placeWords()) rest = rest.replace(` ${word} `, " ");
-  rest = rest.replace(/\b(?:the|our|my|a|store|salon|location|shop|ne|ks|mo|ia|co)\b/g, " ").trim();
+  rest = rest.replace(/\b(?:the|our|my|a|store|salon|location|shop|ne|ks|mo|ia|co|rd|road|st|street|ave|avenue|blvd|dr|drive|ln|lane|hwy|pkwy)\b/g, " ").trim();
+  /*
+   * CLOSE_SPELLING_MATCH_ENABLED (the sibling app's QA, 13 Nov 2026): "she is at <store one letter off>" is still only a
+   * place. The words left are matched one letter off, two from seven letters, with main's `editDistance`. Not
+   * `closeWordDistance`: its five-letter floor would let "the Omah store" and "West Doge" (Gate-Bubbles-5) join.
+   */
+  if (rest !== "" && closeSpellingMatchEnabled()) {
+    const known = [...new Set(placeWords().flatMap((place) => place.split(" ")).filter((word) => word.length >= 4))];
+    rest = rest
+      .split(/\s+/)
+      .filter((word) => !(word.length >= 4 && known.some((place) => editDistance(word, place, word.length >= 7 ? 2 : 1) <= (word.length >= 7 ? 2 : 1))))
+      .join(" ")
+      .trim();
+  }
   return rest === "" && plain(text) !== "";
 }
 
@@ -233,8 +271,20 @@ export function isHistory(text: string): boolean {
   return PRIOR_STEP.test(text) || WAS_DISCIPLINED.test(text) || DATED_GIVEN.test(text);
 }
 
+/*
+ * A PAYROLL OR DEDUCTION AMOUNT (Gate-Sunny-2, 13 Nov 2026): "she owes $25 for the late opening", "deduct $40 from her
+ * check", "she'll pay back $20", "payroll deduct yes, $15" is the form's payroll answer, never what she did. "she took
+ * $20 from the drawer" and "she was short $20" are what she did, and join.
+ */
+const MONEY = /(?:\$\s?\d|\b\d+(?:\.\d{2})?\s*(?:dollars?|bucks)\b)/i;
+/** "she needs to pay for the bulb", "she will be charged for the bulb": paying is the payroll answer even with no amount. Never "charged by". */
+const PAY_FOR = /^(?:she|he|they|[\p{L}'’-]+)\s+(?:(?:has|have|had|needs?|must|will\s+have|is\s+going)\s+to\s+pay(?!\s+attention)(?:\s+back)?|must\s+pay(?!\s+attention)(?:\s+back)?|(?:will|is|was|'s|’s)\s+(?:be(?:ing)?\s+)?charged(?!\s+by))\b/iu;
+const OWED = /\b(?:(?:has|have|had|needs?|must|got|gotta)\s+(?:to\s+)?pay(?:\s+back)?|must\s+pay|(?:will|is|was|'s|’s)\s+(?:be(?:ing)?\s+)?charged|(?:we|we're|we’re|we\s+are|i'm|i’m|i\s+am)\s+(?:charging|charge)\s+(?:her|him|them)|charging\s+(?:her|him|them)|take\s+(?:it|that|this)\s+out\s+of\s+(?:her|his|their)\s+(?:check|pay(?:check)?)|owes?|owed|owing|pay(?:s|ing)?\s+(?:it\s+)?back|paid\s+back|repay|reimburse|deduct(?:ed|ion|ing)?|payroll|charge(?:d)?\s+(?:her|him|them)|(?:take|taken|took)\s+(?:it\s+)?out\s+of\s+(?:her|his|their)\s+(?:check|pay))\b/i;
+
 export function notAFact(clause: string, input: CardCheckInput): boolean {
   const text = clause.trim();
+  if (MONEY.test(text) && OWED.test(text)) return true;
+  if (PAY_FOR.test(text)) return true;
   if (isHistory(text)) return true;
   if (GETS_LEVEL.test(text) || GIVE_LEVEL.test(text) || HEDGED_VERB.test(text)) return true;
   const identity = IDENTITY_OF.exec(text)?.[1];
