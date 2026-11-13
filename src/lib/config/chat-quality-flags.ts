@@ -1500,6 +1500,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "CARD_PLAN_MATCHES_CREATE_ENABLED",
   // coding 6: TYPO_FULL_NAME_TO_ROSTER (audit item 15.10, sf-b5, 11 Nov 2026; default off).
   "TYPO_FULL_NAME_TO_ROSTER_ENABLED",
+  // EDIT_SEES_SAVED_FORM (default off; Pau's direction via QA, 13 Nov 2026): in the list, as every chat flag.
+  "EDIT_SEES_SAVED_FORM_ENABLED",
 ] as const;
 
 /**
@@ -5443,4 +5445,16 @@ export function typoFullNameToRosterEnabled(): boolean {
  */
 export function exitNoticeStatedOnlyEnabled(): boolean {
   return envFlag("EXIT_NOTICE_STATED_ONLY_ENABLED");
+}
+
+/**
+ * EDIT_SEES_SAVED_FORM_ENABLED (coding 6, 13 Nov 2026; default off; Pau's direction via QA). The form edit read the turn
+ * once as a patch and the code guessed what was written: an "Updated" that did not match the form, reasons that never
+ * landed. On: after the turn's writes on the patch path (`forms/form-patch-turn.ts`), the stored form is read back and
+ * handed to the patch model with the manager's ask ("SAVED AFTER YOUR LAST PATCH"); it confirms (an empty patch) or sends
+ * a correction, written by the same writer. At most 3 patches a turn. The reply is always the stored form's diff. Off, as
+ * before.
+ */
+export function editSeesSavedFormEnabled(): boolean {
+  return envFlag("EDIT_SEES_SAVED_FORM_ENABLED");
 }
