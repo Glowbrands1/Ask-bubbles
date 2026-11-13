@@ -1,0 +1,18 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov13-place-strip-kearney-high-kept: \"\u2026 she was late because she was at kearney high\" \u2014 never \"Kearney NE high\"; the words are kept \u2014 OPEN in production (the account reads \"\u2026 at Kearney NE high\")": {
+    "category": "INTENDED",
+    "reason": "\"create a ca for marnie holloway, she was late because she was at kearney high\": ON keeps \"kearney high\" in the account, takes the Store from Woven (Omaha, NE (West Dodge Rd)), and drops the false \"Woven has Marnie Holloway at \u2026 not Kearney\" note. OFF wrote \"at Kearney NE high\" and set the Store to Kearney. The open pin now fails because the case holds."
+  },
+  "src/lib/ai/flags-off-parity.test.ts :: existing chat and form suites with every new flag off passes the suites whose expectations are already on main: src/app/api/chat/replay-pack, first half of the cases by id": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The child run of the replay pack (first half) inherits the ON flag; its only failure is the kearney-high open case now holding."
+  },
+  "src/lib/ai/store-alias.test.ts :: PLACE_STRIP_WHOLE_PHRASE_ONLY (QA, 13 Nov 2026) off: a store inside a longer name is written (as on main)": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The \"off\" twin sets only STORE_ALIAS_ENABLED and relies on PLACE_STRIP_WHOLE_PHRASE_ONLY_ENABLED being unset; it is deleted only in afterEach. The ON run sets the flag for the whole process, so the \"off\" twin runs with it on. Follow-up: stub the flag \"false\" (or delete it) at the start of that test, or it fails wherever the flag is in the test env (e.g. after a flip)."
+  },
+  "replay: nov13-place-strip-kearney-high-kept [open]": {
+    "category": "INTENDED",
+    "reason": "\"create a ca for marnie holloway, she was late because she was at kearney high\": ON keeps \"kearney high\" in the account, takes the Store from Woven (Omaha, NE (West Dodge Rd)), and drops the false \"Woven has Marnie Holloway at \u2026 not Kearney\" note. OFF wrote \"at Kearney NE high\" and set the Store to Kearney. The open pin now fails because the case holds."
+  }
+}
