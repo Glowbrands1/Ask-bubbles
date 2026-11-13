@@ -65,6 +65,9 @@ export const NOV10_FUTURE_INCIDENT_DATE_CASES: ReplayCase[] = WORDINGS.flatMap((
       if (wording.key === "terse-typo") {
         expect(issue, `the Issue is the request line:\n${answer.content}`).not.toMatch(/^\s*writen ca/i);
         expect(answer.content, `the terse card has no Policy line:\n${answer.content}`).toMatch(/\*\*Policy:\*\* Attendance\b/);
+        // QA's #910 follow-up: the Policy line quotes the manager's own words, never the app's paraphrase.
+        expect(answer.content, `the Policy line quotes words the manager did not write:\n${answer.content}`).not.toMatch(/"missed the monthly meeting"/);
+        expect(answer.content, `the Policy line does not quote the manager's words:\n${answer.content}`).toMatch(/\*\*Policy:\*\*[^\n]*"not atending monthly meeting"/);
       }
     },
   })),

@@ -132,6 +132,11 @@ export interface CaPolicyReading {
   /** A scheduled meeting, seminar or training session the account says was not attended: "the monthly meeting". */
   missedEvent: string | null;
   /**
+   * TERSE_REQUEST_ACCOUNT_ENABLED: the manager's own words for the missed event, when only the typo reading found it
+   * ("not atending monthly meeting"). The card quotes these, never the app's "missed the monthly meeting". Absent off.
+   */
+  missedEventTyped?: string;
+  /**
    * CA_SALES_POLICY_ENABLED: cleaning left undone is the form's Other box, not
    * the Standards of Conduct (Pau's ruling; `withCleaningOther`). Absent off.
    */
@@ -419,6 +424,22 @@ const MISSED_EVENT_BEFORE_TYPO = new RegExp(
 
 /** Leading words that place the event rather than name it: "the", "her", "last", "tuesday's". */
 const EVENT_LEAD = /^(?:(?:the|a|an|her|his|their|our|this|that|last|next|yesterday['’]?s|today['’]?s|[a-z]+day['’]?s|[a-z]+day|todays|yesterdays)\s+)+/;
+
+/*
+ * TERSE_REQUEST_ACCOUNT_ENABLED (QA's #910 follow-up, 12 Nov 2026): a Policy line quotes the manager's own words. When
+ * only the typo reading finds the missed event, those words are what the manager typed ("not atending monthly meeting").
+ */
+function typedMissedEvent(sentences: readonly string[]): string | null {
+  if (!terseRequestAccountEnabled()) return null;
+  for (const sentence of sentences) {
+    for (const clause of sentence.split(/;|:\s|\s+(?:but|however)\s+/)) {
+      if (MISSED_EVENT_BEFORE.exec(clause) || MISSED_EVENT_AFTER.exec(clause)) return null;
+      const typed = MISSED_EVENT_BEFORE_TYPO.exec(clause);
+      if (typed) return typed[0].trim();
+    }
+  }
+  return null;
+}
 
 function missedEventIn(sentences: readonly string[]): string | null {
   for (const sentence of sentences) {
@@ -897,6 +918,8 @@ function readCaPolicyFromWords(rawText: string): CaPolicyReading {
 
   const sentences = statements(text);
   const missedEvent = missedEventIn(sentences);
+  const typedEvent = missedEvent !== null ? typedMissedEvent(sentences) : null;
+  const typed = typedEvent ? { missedEventTyped: typedEvent } : {};
 
   let stated: CaPolicyName | null = null;
   for (const turn of turns) stated = statedIn(turn) ?? stated;
@@ -944,10 +967,11 @@ function readCaPolicyFromWords(rawText: string): CaPolicyReading {
       source: stated === STANDARDS_OF_CONDUCT ? "stated" : null,
       ambiguous: null,
       missedEvent,
+      ...typed,
     };
   }
   if (topics.length === 0) {
-    return { stated, topics, alternatives, suggestion: null, source: null, ambiguous: null, missedEvent };
+    return { stated, topics, alternatives, suggestion: null, source: null, ambiguous: null, missedEvent, ...typed };
   }
   if (alternatives.length > 0) {
     return {
@@ -958,6 +982,7 @@ function readCaPolicyFromWords(rawText: string): CaPolicyReading {
       source: null,
       ambiguous: [STANDARDS_OF_CONDUCT, ...alternatives],
       missedEvent,
+      ...typed,
     };
   }
   return {
@@ -968,6 +993,7 @@ function readCaPolicyFromWords(rawText: string): CaPolicyReading {
     source: "incident",
     ambiguous: null,
     missedEvent,
+    ...typed,
   };
 }
 
