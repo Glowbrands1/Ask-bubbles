@@ -1,0 +1,213 @@
+# branch gate-776 head d529cad8 ; diff from main-line base 815ae303
+# d529cad8 keep both
+# e616602f Merge remote-tracking branch 'origin/main' into rec-776
+# f813639c Merge remote-tracking branch 'origin/main' into rec-776
+# 21ba782e Merge commit 'c6063f2c' into rec-776
+# 4ce21325 sf-b5: nov8 name-correction cases' opening card is the roster's Odessa with TYPO_FULL_NAME_TO_ROSTER on
+# 54cb6034 sf-b5: a typed full name one typo from one roster person is that person (TYPO_FULL_NAME_TO_ROSTER_ENABLED)
+diff --git a/src/app/api/chat/replay-pack/nov4-overnight-scan-cases.ts b/src/app/api/chat/replay-pack/nov4-overnight-scan-cases.ts
+index 063a564b..71b5bb37 100644
+--- a/src/app/api/chat/replay-pack/nov4-overnight-scan-cases.ts
++++ b/src/app/api/chat/replay-pack/nov4-overnight-scan-cases.ts
+@@ -328,7 +328,7 @@ export const NOV4_OVERNIGHT_SCAN_CASES: readonly ReplayCase[] = [
+     title: "a Verbal CA for \"Delphine Marlwoe Ostrander\" (Delphine Marlowe Ostrander) — dated 10/31/2026, payroll deduct No, Standards of Conduct, her own job title (never \"District Manager\")",
+     report: `${REPORT}, sf-b5: "create a ca form for Delphine Marlwoe Ostrander" → "verbal warning The date she complained was Oct 31st . The customer said she was giving her an attitude …"`,
+     // Run 4 Nov 2026 (production flags): fails as below.
+-    status: { open: "\"Delphine Marlwoe Ostrander\" is not matched to the roster's Delphine Marlowe Ostrander (\"I couldn't find … in the Woven roster\"); turn 2's card is for the name as typed, reads \"When Delphine\" and \"Tobias Wrenfield\" as names, asks Verbal or Written though she said verbal warning, and its Position is \"District Manager\"" },
++    status: { open: "on production flags the card is for \"Delphine Marlwoe Ostrander\" as typed (fixed with TYPO_FULL_NAME_TO_ROSTER_ENABLED, see nov11-sf-b5-typo-name-and-title); with that, it still cites no Standards of Conduct (GUEST_ATTITUDE_CONDUCT, its own pull request)" },
+     async run(t) {
+       const thread = start(t);
+       await thread.say("create a ca form for Delphine Marlwoe Ostrander");
+@@ -351,6 +351,37 @@ export const NOV4_OVERNIGHT_SCAN_CASES: readonly ReplayCase[] = [
+       expect(values.policy_violated ?? "", "Policy Violated is not Standards of Conduct").toMatch(/standards of conduct/i);
+     },
+   },
++  {
++    /*
++     * QA's audit item 15.10 (11 Nov 2026): sf-b5's name and job-title halves, without the policy half (that is
++     * GUEST_ATTITUDE_CONDUCT, its own pull request). On production flags the card is for "Delphine Marlwoe Ostrander"
++     * as typed, so Woven's position never reaches it. TYPO_FULL_NAME_TO_ROSTER_ENABLED: the typed full name is the
++     * roster's one Delphine Marlowe Ostrander, and "spoke with District manager <name>" is never her Position.
++     */
++    id: "nov11-sf-b5-typo-name-and-title",
++    title: "sf-b5: \"Delphine Marlwoe Ostrander\" is the roster's Delphine Marlowe Ostrander, and \"spoke with District manager Tobias Wrenfield\" is never her Position",
++    report: `${REPORT}, sf-b5; QA's audit item 15.10, 11 Nov 2026`,
++    status: { open: "the card is for \"Delphine Marlwoe Ostrander\" as typed, not the roster's Delphine Marlowe Ostrander, and has no Woven position" },
++    fixFlags: ["TYPO_FULL_NAME_TO_ROSTER_ENABLED"],
++    async run(t) {
++      const thread = start(t);
++      await thread.say("create a ca form for Delphine Marlwoe Ostrander");
++      const reply = await thread.say(
++        "verbal warning The date she complained was Oct 31st . The customer said she was giving her an attitude when she brought up that the register was charging for scent in her laundry refills and it has never done that before. When Delphine spoke with District manager Tobias Wrenfield she said the customer had raised her voice first and she only explained the price.",
++      );
++      expect(thread.proposal, `no CA card for Delphine Marlowe Ostrander:\n${reply.content}`).toMatchObject({ templateKey: "dpoa", employeeName: "Delphine Marlowe Ostrander" });
++      expect(reply.content, `the typed spelling is on the card:\n${reply.content}`).not.toMatch(/\*\*Delphine Marlwoe Ostrander\*\*/);
++      expect(thread.proposal?.employeeRole ?? "", "the job title is District Manager").not.toMatch(/district manager/i);
++      expect(warningLevel(thread.proposal), "the card is not the Verbal Warning she said").toBe("verbal");
++      t.draftWrites({ observation: "Observed:\nOn October 31, 2026 a customer reported that Delphine was rude to her when she asked about a charge at the register." });
++      const id = await thread.create();
++      const values = t.values(id);
++      expect(values.employee_name).toBe("Delphine Marlowe Ostrander");
++      expect(values.job_title ?? "", "the job title is District Manager").not.toMatch(/district manager/i);
++      expect(values.job_title ?? "", "the job title is not the roster's").toBe("Team Member Part Time");
++      expect(values.form_date, "the Date is not 10/31/2026").toBe("2026-10-31");
++    },
++  },
+   /*
+    * Pau, 5 Nov 2026 (overnight scan sf-s29, PAST_FORMS_BEFORE_LIBRARY_ENABLED):
+    * "are there any coaching and ca's for <name>" was answered from the forms
+diff --git a/src/app/api/chat/replay-pack/nov8-proposal-name-correction-cases.ts b/src/app/api/chat/replay-pack/nov8-proposal-name-correction-cases.ts
+index 8b3e183a..3336fc5a 100644
+--- a/src/app/api/chat/replay-pack/nov8-proposal-name-correction-cases.ts
++++ b/src/app/api/chat/replay-pack/nov8-proposal-name-correction-cases.ts
+@@ -1,6 +1,6 @@
+ import { expect, vi } from "vitest";
+ 
+-import { formNameFromRosterEnabled } from "@/lib/config/chat-quality-flags";
++import { formNameFromRosterEnabled, typoFullNameToRosterEnabled } from "@/lib/config/chat-quality-flags";
+ 
+ import { STAFF, WEST_DODGE, type DirectoryRow, type ReplayAnswer, type ReplayCase, type ReplayContext } from "./cases";
+ 
+@@ -50,8 +50,10 @@ async function cardAfter(t: ReplayContext, correction: string): Promise<{ before
+    * Changed on purpose (10 Nov 2026, QA's roster-set gate): with the name set on (FORM_NAME_FROM_ROSTER and its
+    * companions), the first turn asks "Is this for **Odessa Lark Penhallow**?" and the details turn seats the roster's
+    * spelling (NEAR_MISS_DETAILS_ACCEPT), so the opening card is already hers; the correction must still keep it so.
++   * Changed on purpose (11 Nov 2026): with TYPO_FULL_NAME_TO_ROSTER_ENABLED (sf-b5) the opening card is also the
++   * roster's Odessa Lark Penhallow (one swap in a surname word).
+    */
+-  const opening = formNameFromRosterEnabled() ? "Odessa Lark Penhallow" : "Odessa Lark Penhallwo";
++  const opening = formNameFromRosterEnabled() || typoFullNameToRosterEnabled() ? "Odessa Lark Penhallow" : "Odessa Lark Penhallwo";
+   expect(before?.employeeName, "the opening card does not carry the typed name").toBe(opening);
+   return { before, after: await thread.say(correction), thread };
+ }
+diff --git a/src/lib/config/chat-quality-flags.ts b/src/lib/config/chat-quality-flags.ts
+index 7d6e10d9..33475df5 100644
+--- a/src/lib/config/chat-quality-flags.ts
++++ b/src/lib/config/chat-quality-flags.ts
+@@ -1430,6 +1430,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
+   "SAME_REQUEST_OFF_ROSTER_ENABLED",
+   // POLICY_CARRY_RETRIEVAL (default off; #180 rebuilt on main, 12 Nov 2026): in the list, as every chat flag.
+   "POLICY_CARRY_RETRIEVAL_ENABLED",
++  // coding 6: TYPO_FULL_NAME_TO_ROSTER (audit item 15.10, sf-b5, 11 Nov 2026; default off).
++  "TYPO_FULL_NAME_TO_ROSTER_ENABLED",
+ ] as const;
+ 
+ /**
+@@ -5038,3 +5040,15 @@ export function formsOnFileOrderMatchPossibleEnabled(): boolean {
+ export function policyCarryRetrievalEnabled(): boolean {
+   return envFlag("POLICY_CARRY_RETRIEVAL_ENABLED");
+ }
++
++/**
++ * TYPO_FULL_NAME_TO_ROSTER_ENABLED (coding 6, 11 Nov 2026; default off; QA's audit item 15.10, overnight scan sf-b5,
++ * invented names). "create a ca form for Delphine Marlwoe Ostrander" for the roster's Delphine Marlowe Ostrander made
++ * the card for the name as typed (TYPED_NAME keeps the typed spelling; the near-miss question rides on
++ * FORM_NAME_FROM_ROSTER, off in production), so Woven's position never reached it. On: a full name typed with the
++ * roster person's own first name and every surname word that person's, exact or one typo (two for a long word), when
++ * exactly one roster person is that close, is that person (`forms/employee-match.ts` matchEmployeeName). Off, as before.
++ */
++export function typoFullNameToRosterEnabled(): boolean {
++  return envFlag("TYPO_FULL_NAME_TO_ROSTER_ENABLED");
++}
+diff --git a/src/lib/forms/employee-match.ts b/src/lib/forms/employee-match.ts
+index 801a8558..a77ea33d 100644
+--- a/src/lib/forms/employee-match.ts
++++ b/src/lib/forms/employee-match.ts
+@@ -1,4 +1,4 @@
+-import { rosterCompoundSurnameEnabled, sharedLoginNotStaffEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
++import { rosterCompoundSurnameEnabled, sharedLoginNotStaffEnabled, typedNameEnabled, typoFullNameToRosterEnabled } from "@/lib/config/chat-quality-flags";
+ 
+ /**
+  * ============================================================================
+@@ -251,6 +251,24 @@ export function compoundSurnameScore(typed: readonly string[], lastName: string)
+   return scores.length > 0 ? Math.max(1, Math.min(...scores)) : null;
+ }
+ 
++/**
++ * TYPO_FULL_NAME_TO_ROSTER_ENABLED: the typed words are this person's whole name — their own first name, then every
++ * word of their surname in order, each exact or a typo of it, at least one surname word longer than three letters
++ * mistyped at most once (twice for eight letters or more). A first name alone, an initial or a missing word is never it.
++ */
++function typoOfFullName(words: readonly string[], employee: RosterEmployee): boolean {
++  if (!firstNames(employee).includes(words[0] ?? "")) return false;
++  const parts = normalize(employee.lastName).split(/[\s-]+/).filter(Boolean);
++  const rest = words.slice(1);
++  if (rest.length === 0 || rest.length !== parts.length) return false;
++  return rest.every((word, index) => {
++    const part = parts[index]!;
++    if (word === part) return true;
++    if (word.length <= 3 || part.length <= 3) return false;
++    return editDistance(word, part) <= (Math.min(word.length, part.length) >= 8 ? 2 : 1);
++  });
++}
++
+ function firstNames(employee: RosterEmployee): string[] {
+   return [employee.firstName, employee.preferredFirstName ?? ""]
+     .map(normalize)
+@@ -357,6 +375,11 @@ export function matchEmployeeName(typed: string, roster: readonly RosterEmployee
+     }
+   }
+ 
++  // TYPO_FULL_NAME_TO_ROSTER_ENABLED: "Delphine Marlwoe Ostrander" is the roster's one Delphine Marlowe Ostrander.
++  if (typoFullNameToRosterEnabled() && exact.length === 0 && typedLast !== null && !readKeptTypedNames()?.has(normalize(typed))) {
++    const typos = roster.filter((employee) => typoOfFullName(words, employee));
++    if (typos.length === 1) return { kind: "exact", employee: typos[0]!, name: displayName(typos[0]!) };
++  }
+   if (exact.length === 1 && typedLast !== null && typedLast.length > 1) {
+     return { kind: "exact", employee: exact[0]!, name: displayName(exact[0]!) };
+   }
+diff --git a/src/lib/forms/typo-full-name-to-roster.test.ts b/src/lib/forms/typo-full-name-to-roster.test.ts
+new file mode 100644
+index 00000000..6bd4cc3b
+--- /dev/null
++++ b/src/lib/forms/typo-full-name-to-roster.test.ts
+@@ -0,0 +1,49 @@
++import { afterEach, describe, expect, it, vi } from "vitest";
++
++import { matchEmployeeName, type RosterEmployee } from "./employee-match";
++
++/*
++ * TYPO_FULL_NAME_TO_ROSTER_ENABLED (QA's audit item 15.10, overnight scan sf-b5, 11 Nov 2026; invented names). The
++ * manager typed "create a ca form for Delphine Marlwoe Ostrander" for the roster's Delphine Marlowe Ostrander.
++ */
++const person = (id: string, firstName: string, lastName: string) =>
++  ({ id, firstName, lastName, preferredFirstName: null, locationIds: [] }) as unknown as RosterEmployee;
++const ROSTER = [
++  person("1", "Delphine", "Marlowe Ostrander"),
++  person("2", "Tess", "Varga"),
++  person("3", "Remy", "Calder"),
++  person("4", "Corvin", "Ashby"),
++  person("5", "Corvin", "Ashley"),
++];
++
++const on = () => {
++  vi.stubEnv("TYPED_NAME_ENABLED", "true");
++  vi.stubEnv("ROSTER_COMPOUND_SURNAME_ENABLED", "true");
++  vi.stubEnv("TYPO_FULL_NAME_TO_ROSTER_ENABLED", "true");
++};
++
++afterEach(() => vi.unstubAllEnvs());
++
++describe("TYPO_FULL_NAME_TO_ROSTER_ENABLED", () => {
++  it("off: \"Delphine Marlwoe Ostrander\" keeps the typed spelling, with the roster name as a note", () => {
++    on();
++    vi.stubEnv("TYPO_FULL_NAME_TO_ROSTER_ENABLED", "false");
++    expect(matchEmployeeName("Delphine Marlwoe Ostrander", ROSTER)).toEqual({ kind: "unchecked", closeName: "Delphine Marlowe Ostrander" });
++  });
++
++  it("on: \"Delphine Marlwoe Ostrander\" is the roster's Delphine Marlowe Ostrander", () => {
++    on();
++    expect(matchEmployeeName("Delphine Marlwoe Ostrander", ROSTER)).toMatchObject({ kind: "exact", name: "Delphine Marlowe Ostrander" });
++    expect(matchEmployeeName("delphine marlowe ostrandr", ROSTER)).toMatchObject({ kind: "exact", name: "Delphine Marlowe Ostrander" });
++    expect(matchEmployeeName("Tess Vagra", ROSTER)).toMatchObject({ kind: "exact", name: "Tess Varga" });
++  });
++
++  it("on, never: a different first name, a missing surname word, a surname too far off, or two close people", () => {
++    on();
++    expect(matchEmployeeName("Delphina Marlowe Ostrander", ROSTER).kind).not.toBe("exact");
++    expect(matchEmployeeName("Delphine Ostrandr", ROSTER).kind).not.toBe("exact");
++    expect(matchEmployeeName("Remy Caldwell", ROSTER).kind).not.toBe("exact");
++    expect(matchEmployeeName("Remy Caldr", ROSTER)).toMatchObject({ kind: "exact", name: "Remy Calder" });
++    expect(matchEmployeeName("Corvin Ashly", ROSTER).kind).not.toBe("exact");
++  });
++});

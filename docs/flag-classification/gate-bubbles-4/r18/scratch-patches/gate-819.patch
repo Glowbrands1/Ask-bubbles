@@ -1,0 +1,325 @@
+# branch gate-819 head 8ed3a36d ; diff from main-line base c88676ac
+# 8ed3a36d keep both
+# 3668af5f policy-carry-retrieval.test: the T4 off arm stubs POLICY_CARRY_RETRIEVAL off itself
+# e05809df POLICY_CARRY_RETRIEVAL: "just make it" is searched with the policy named earlier (server-ask search lines)
+# e5f4a204 POLICY_CARRY_RETRIEVAL_ENABLED rebuilt on main (#180 split): the reader, the flag, tests and replay; the search hunk is Coding-2's
+diff --git a/src/app/api/chat/replay-pack/cases.ts b/src/app/api/chat/replay-pack/cases.ts
+index 0cbf3ff0..b75eb192 100644
+--- a/src/app/api/chat/replay-pack/cases.ts
++++ b/src/app/api/chat/replay-pack/cases.ts
+@@ -38,6 +38,8 @@ export interface ReplayContext {
+   thread(): ReplayThread;
+   as(role: string, scope: unknown): void;
+   directory(rows: readonly DirectoryRow[]): void;
++  /** Every knowledge search's query this case, in order (POLICY_CARRY_RETRIEVAL, 12 Nov 2026). */
++  searches?(): string[];
+   /**
+    * The full policy manual a policy question reads (`loadFullManualPlan`), as indexed chunks; this case only. Without
+    * it the pack reads no manual. Used to put a source excerpt through the production path.
+diff --git a/src/app/api/chat/replay-pack/nov12-policy-carry-retrieval-cases.ts b/src/app/api/chat/replay-pack/nov12-policy-carry-retrieval-cases.ts
+new file mode 100644
+index 00000000..a9f78cb3
+--- /dev/null
++++ b/src/app/api/chat/replay-pack/nov12-policy-carry-retrieval-cases.ts
+@@ -0,0 +1,42 @@
++import { expect } from "vitest";
++
++import { STAFF, WEST_DODGE, type ReplayCase } from "./cases";
++
++/**
++ * ============================================================================
++ * "JUST MAKE IT" IS SEARCHED WITH THE POLICY NAMED EARLIER (QA item 10; #180 rebuilt on main, 12 Nov 2026)
++ * ============================================================================
++ *
++ * Production, 25 Oct 2026 (conv_mvofuq3l2jae1be). T2 "cite animals in the
++ * workplace policy" was answered from Animals in the Workplace p.30; T4 "just make it" was searched on its own words,
++ * the excerpts were unrelated pages, and the reply denied the policy. POLICY_CARRY_RETRIEVAL_ENABLED: the search
++ * (`ai/server-ask.ts`, Coding-2's file) uses `carriedPolicyTopic`. The manager's turns; people invented.
++ */
++const TURNS = [
++  "do verbl for Marnie Holloway at West Dodge. no payrol deduct. prev coachng jba manual 11-1-25. on 10-22-26 Marnie wasnt scheduled and came in to show her puppy 45 min",
++  "cite animals in the workplace policy",
++  "I already told you the store is West Dodge",
++];
++const T4 = "just make it";
++
++export const NOV12_POLICY_CARRY_RETRIEVAL_CASES: ReplayCase[] = [
++  {
++    id: "nov12-180-just-make-it-searches-the-named-policy",
++    title: "QA item 10: after \"cite animals in the workplace policy\", T4 \"just make it\" is searched with that policy, never on its own words",
++    report: "QA item 10 (production, 25 Oct 2026; conv_mvofuq3l2jae1be): T4 \"just make it\" denied the Animals in the Workplace policy cited at T2",
++    status: { open: "T4 is searched on its own words; no search names the policy" },
++    fixFlags: ["POLICY_CARRY_RETRIEVAL_ENABLED"],
++    // Until Coding-2 applies the search hunk in `ai/server-ask.ts` (the flag's reader is on main from this branch).
++    async run(t) {
++      t.directory(STAFF);
++      t.as("location_manager", WEST_DODGE);
++      const thread = t.thread();
++      for (const turn of TURNS) await thread.say(turn);
++      const before = t.searches?.().length ?? 0;
++      await thread.say(T4);
++      const searched = (t.searches?.() ?? []).slice(before);
++      expect(searched.length, "T4 made no knowledge search").toBeGreaterThan(0);
++      expect(searched.every((query) => /animals in the workplace/i.test(query)), `T4's searches:\n${searched.join("\n")}`).toBe(true);
++    },
++  },
++];
+diff --git a/src/app/api/chat/replay-pack/replay-pack-e2e.test.ts b/src/app/api/chat/replay-pack/replay-pack-e2e.test.ts
+index 01c47be9..c2c06419 100644
+--- a/src/app/api/chat/replay-pack/replay-pack-e2e.test.ts
++++ b/src/app/api/chat/replay-pack/replay-pack-e2e.test.ts
+@@ -83,6 +83,8 @@ vi.mock("@/lib/knowledge/full-manual-load", async (importOriginal) => {
+ });
+ 
+ const state = vi.hoisted(() => ({
++  /** POLICY_CARRY_RETRIEVAL (#180 rebuilt, 12 Nov 2026): every knowledge search's query, in order (`searches`). */
++  knowledgeQueries: [] as string[],
+   /** What the slot model reads on the next turns (`slotsRead`), as a production trace shows it. */
+   /** Chunks the pinned manual also has, when a case sets them (`manualAlsoHas`); none by default. */
+   manualExtra: [] as Record<string, unknown>[],
+@@ -384,7 +386,8 @@ vi.mock("@/lib/knowledge/providers/supabase", () => ({
+     async search() {
+       return [];
+     }
+-    async match() {
++    async match(query?: { query?: unknown }) {
++      state.knowledgeQueries.push(String(query?.query ?? ""));
+       return [];
+     }
+     async fetchRoleGrounding(role: { id: string }) {
+@@ -428,7 +431,10 @@ vi.mock("@/lib/knowledge/providers/supabase", () => ({
+ /** A question that is not a form request searches the manual; nothing to embed offline. */
+ vi.mock("@/lib/knowledge/recall-match", async (importOriginal) => ({
+   ...(await importOriginal<typeof import("@/lib/knowledge/recall-match")>()),
+-  matchRecallKnowledge: async () => [],
++  matchRecallKnowledge: async (input?: { query?: unknown }) => {
++    state.knowledgeQueries.push(String(input?.query ?? ""));
++    return [];
++  },
+ }));
+ 
+ vi.mock("@/lib/knowledge", () => ({
+@@ -616,6 +622,7 @@ beforeEach(async () => {
+   state.remapObservation = null;
+   state.slotsRead = {};
+   state.manualExtra = [];
++  state.knowledgeQueries = [];
+   state.reading = {};
+   state.draft = { values: {} };
+   state.revision = { values: {} };
+@@ -715,6 +722,7 @@ function context(): ReplayContext {
+     directory: (rows) => {
+       state.directory = rows as never;
+     },
++    searches: () => [...state.knowledgeQueries],
+     fullManual: (document) => {
+       fullManual.document = document;
+     },
+diff --git a/src/lib/ai/policy-carry-retrieval.test.ts b/src/lib/ai/policy-carry-retrieval.test.ts
+new file mode 100644
+index 00000000..64ad5882
+--- /dev/null
++++ b/src/lib/ai/policy-carry-retrieval.test.ts
+@@ -0,0 +1,78 @@
++import { afterEach, describe, expect, it, vi } from "vitest";
++
++import { carriedPolicyTopic, isGoAheadTurn } from "./policy-carry-retrieval";
++
++/**
++ * POLICY_CARRY_RETRIEVAL_ENABLED (QA item 10; production, 25 Oct 2026, conv_mvofuq3l2jae1be; #180 rebuilt on main, 12 Nov
++ * 2026). The manager's turns, names invented: T2 "cite animals in the workplace policy" was answered from
++ * Animals in the Workplace p.30; T4 "just make it" was searched on its own words and the reply denied the policy. The
++ * search itself (`ai/server-ask.ts`, Coding-2's file) reads `carriedPolicyTopic`; these are the reader's own cases.
++ */
++const T1 =
++  "do verbl for Wren Okafor at Larkfield. no payrol deduct. prev coachng jba manual 11-1-25. on 10-22-26 Wren wasnt scheduled and came in to show her puppy 45 min";
++const T2 = "cite animals in the workplace policy";
++const T3 = "I already told you the store is Larkfield";
++const HISTORY = [
++  { role: "user", content: T1 },
++  { role: "assistant", content: "Which store is this actually for? I won't guess." },
++  { role: "user", content: T2 },
++  { role: "assistant", content: "Animals in the Workplace: The Company doesn't allow pets in the workplace [p.30]." },
++  { role: "user", content: T3 },
++  { role: "assistant", content: "Got it. Say \"create a coaching form for Wren Okafor\" and I'll bring up the draft." },
++];
++
++afterEach(() => vi.unstubAllEnvs());
++
++describe("T4 \"just make it\"", () => {
++  it("off: no carried topic (searched as before)", () => {
++    // R819 (QA, 12 Nov 2026): the off arm stubs its own flag, so a shell or gate with the flag on cannot change it.
++    vi.stubEnv("POLICY_CARRY_RETRIEVAL_ENABLED", "");
++    expect(carriedPolicyTopic("just make it", HISTORY)).toBeNull();
++  });
++
++  it("on: the turn that named the policy is the topic", () => {
++    vi.stubEnv("POLICY_CARRY_RETRIEVAL_ENABLED", "true");
++    expect(carriedPolicyTopic("just make it", HISTORY)).toBe(T2);
++  });
++
++  it("on: a turn with its own topic carries nothing", () => {
++    vi.stubEnv("POLICY_CARRY_RETRIEVAL_ENABLED", "true");
++    expect(carriedPolicyTopic("what is the dress code policy?", HISTORY)).toBeNull();
++  });
++});
++
++describe("which turns only say to go ahead", () => {
++  it.each(["just make it", "make it", "create it", "do it", "yes", "ok go ahead", "just make the form", "create the draft now", "please do it"])(
++    "%s",
++    (turn) => expect(isGoAheadTurn(turn)).toBe(true),
++  );
++
++  it.each([
++    "make it a written warning",
++    "create a coaching form for Wren Okafor",
++    "just make it say she was late",
++    "what is the dress code policy?",
++    T3,
++  ])("%s carries its own topic", (turn) => expect(isGoAheadTurn(turn)).toBe(false));
++
++  it("with no policy named earlier, the latest topic turn is searched; never an assistant turn", () => {
++    vi.stubEnv("POLICY_CARRY_RETRIEVAL_ENABLED", "true");
++    expect(carriedPolicyTopic("do it", [{ role: "user", content: "Wren was rude to a guest" }])).toBe("Wren was rude to a guest");
++    expect(carriedPolicyTopic("do it", [{ role: "assistant", content: "the visitors policy" }])).toBeNull();
++  });
++});
++
++/* HOW MANAGERS TYPE (Pau, 26 Oct 2026): the same reading in all lowercase and in sentence case. */
++const lower = (text: string) => text.toLowerCase();
++const sentence = (text: string) => text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
++
++describe("every register of a go-ahead", () => {
++  it.each(["just make it", "Just make it", "JUST MAKE IT", "do it", "Do it", "make it already", "Ok go ahead"])("%s", (turn) => {
++    expect(isGoAheadTurn(turn)).toBe(true);
++  });
++
++  it.each([T2, lower(T2), sentence(T2)])("on: the policy turn in any case is the topic (%s)", (policyTurn) => {
++    vi.stubEnv("POLICY_CARRY_RETRIEVAL_ENABLED", "true");
++    expect(carriedPolicyTopic("just make it", [{ role: "user", content: policyTurn }])).toBe(policyTurn);
++  });
++});
+diff --git a/src/lib/ai/policy-carry-retrieval.ts b/src/lib/ai/policy-carry-retrieval.ts
+new file mode 100644
+index 00000000..7d4c657b
+--- /dev/null
++++ b/src/lib/ai/policy-carry-retrieval.ts
+@@ -0,0 +1,69 @@
++import { policyCarryRetrievalEnabled } from "@/lib/config/chat-quality-flags";
++import { namedPolicies } from "@/lib/forms/named-policy-section";
++
++/**
++ * ============================================================================
++ * "JUST MAKE IT" IS NOT A NEW TOPIC: THE POLICY ALREADY CITED IS SEARCHED
++ * (POLICY_CARRY_RETRIEVAL_ENABLED)
++ * ============================================================================
++ *
++ * Production, 25 Oct 2026 (conv_mvofuq3l2jae1be). Turn 2, "cite animals in
++ * the workplace policy", was answered from Animals in the Workplace p.30. Turn
++ * 4, "just make it", was searched on its own words; the excerpts that came
++ * back were soap and body-wash production recipes, and the reply said "the
++ * knowledge base doesn't have anything about an 'animals in the workplace'
++ * policy". A policy cited earlier in the chat was denied.
++ *
++ * A turn that only says to go ahead (make it, create it, do it, yes, ok, go
++ * ahead) asks nothing new. Its retrieval query is the manager's most recent
++ * turn that named a policy, or else the most recent turn with a topic of its
++ * own. Only the manager's words are used, never an assistant turn, and the
++ * model is still given the turn as typed. A turn with any topic of its own is
++ * searched as before. Off, null.
++ */
++
++const MAX_WORDS = 8;
++const MAX_HOPS = 8;
++
++const LEAD = String.raw`(?:(?:ok(?:ay)?|yes|yeah|yep|sure|please|pls|just|go\s+ahead\s+and|then|now|so|and|great|perfect|thanks|thank\s+you|cool|alright|all\s+right)[,.!\s]+)*`;
++const VERB = String.raw`(?:make|create|do|draft|build|write|start|generate|finish|send|submit|prepare|put\s+together|open|bring\s+up|pull\s+up|fill(?:\s+out)?)`;
++const OBJECT = String.raw`(?:it|this|that|one|them|the\s+(?:form|draft|card|ca|write[- ]?up|coaching(?:\s+form)?|corrective\s+action(?:\s+form)?|document|thing))`;
++const TAIL = String.raw`(?:\s+(?:now|please|pls|already|for\s+me|then|thanks|ok))*`;
++
++const GO_AHEAD = new RegExp(
++  String.raw`^\s*${LEAD}(?:${VERB}(?:\s+${OBJECT})?${TAIL}|go\s+ahead|do\s+it|yes|yeah|yep|ok(?:ay)?|sure|sounds\s+good|that'?s\s+(?:fine|right|correct)|proceed|continue)\s*[.!]*\s*$`,
++  "i",
++);
++
++/** Whether a turn only says to go ahead, with no topic of its own. */
++export function isGoAheadTurn(question: string): boolean {
++  const text = (question ?? "").trim();
++  if (text === "" || text.split(/\s+/).length > MAX_WORDS) return false;
++  return GO_AHEAD.test(text);
++}
++
++const NAMES_A_POLICY = /\bpolic(?:y|ies)\b|\bstandards? of conduct\b|\bdress code\b/i;
++
++/**
++ * The retrieval query for a go-ahead turn: the latest manager turn that named
++ * a policy, else the latest with a topic of its own. Null when the turn has a
++ * topic of its own, when nothing earlier does, or with the flag off.
++ */
++export function carriedPolicyTopic(
++  question: string,
++  history: readonly { role: string; content: string; error?: unknown }[],
++): string | null {
++  if (!policyCarryRetrievalEnabled() || !isGoAheadTurn(question)) return null;
++  let topic: string | null = null;
++  let hops = 0;
++  for (let index = history.length - 1; index >= 0 && hops <= MAX_HOPS; index -= 1) {
++    const turn = history[index]!;
++    if (turn.role !== "user" || turn.error || typeof turn.content !== "string") continue;
++    hops += 1;
++    const text = turn.content.trim();
++    if (text === "" || isGoAheadTurn(text)) continue;
++    if (NAMES_A_POLICY.test(text) || namedPolicies(text).length > 0) return text;
++    topic ??= text;
++  }
++  return topic;
++}
+diff --git a/src/lib/ai/server-ask.ts b/src/lib/ai/server-ask.ts
+index 58da08d8..9f0a39e3 100644
+--- a/src/lib/ai/server-ask.ts
++++ b/src/lib/ai/server-ask.ts
+@@ -153,6 +153,7 @@ import {
+ import { retrievalPlanFor } from "./retrieval-query";
+ import { earlierAnsweredTurn, isReformatTurn, keepEarlierSources } from "./reformat-turn";
+ import { slotOnlyRetrievalTopic } from "./slot-only-turn";
++import { carriedPolicyTopic } from "./policy-carry-retrieval";
+ import { appPasswordHelpFor } from "./app-password-help";
+ import { redactSensitiveDefaults, withoutSensitiveDefaults } from "./sensitive-defaults";
+ import { withoutSharedSourceClaims } from "./sources-not-shared";
+@@ -898,7 +899,8 @@ async function answerQuestionCore(
+    * own words, which found recipe and event pages (conv_mvnljjl32xlit48).
+    * See `slot-only-turn.ts`.
+    */
+-  const slotTopic = slotOnlyRetrievalTopic(request.question, request.history);
++  // POLICY_CARRY_RETRIEVAL_ENABLED: "just make it" is searched with the policy named earlier (QA item 10).
++  const slotTopic = slotOnlyRetrievalTopic(request.question, request.history) ?? carriedPolicyTopic(request.question, request.history);
+   markStage("query_rewrite");
+   const rewrittenQuestion = slotTopic
+     ? slotTopic
+diff --git a/src/lib/config/chat-quality-flags.ts b/src/lib/config/chat-quality-flags.ts
+index 873e5c81..556630d4 100644
+--- a/src/lib/config/chat-quality-flags.ts
++++ b/src/lib/config/chat-quality-flags.ts
+@@ -1387,6 +1387,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
+   "NO_SELECTION_ON_OPEN_CARD_ENABLED",
+   "PASTED_REVIEW_NOT_ACCOUNT_ENABLED",
+   "STEP_B_REPLY_KEEPS_LINES_ENABLED",
++  // POLICY_CARRY_RETRIEVAL (default off; #180 rebuilt on main, 12 Nov 2026): in the list, as every chat flag.
++  "POLICY_CARRY_RETRIEVAL_ENABLED",
+ ] as const;
+ 
+ /**
+@@ -4856,3 +4858,13 @@ export function caProcedureBasisEnabled(): boolean {
+ export function noSelectionOnOpenCardEnabled(): boolean {
+   return envFlag("NO_SELECTION_ON_OPEN_CARD_ENABLED");
+ }
++
++/**
++ * POLICY_CARRY_RETRIEVAL_ENABLED (Code 3, 26 Oct 2026; rebuilt on main by coding 6, 12 Nov 2026; default off; QA item 10,
++ * conv_mvofuq3l2jae1be; same flag in both apps). A go-ahead turn ("just make it", "create it", "yes") is searched with the
++ * policy the manager named earlier, not its own words: "Just make it" found unrelated pages, and the reply denied a
++ * policy it had cited two turns before. Off, the turn is searched as before. The search reads it in `ai/server-ask.ts`.
++ */
++export function policyCarryRetrievalEnabled(): boolean {
++  return envFlag("POLICY_CARRY_RETRIEVAL_ENABLED");
++}

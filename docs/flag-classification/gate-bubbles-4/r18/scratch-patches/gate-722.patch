@@ -1,0 +1,123 @@
+# branch gate-722 head f83d3f03 ; diff from main-line base 6d862bbe
+# f83d3f03 keep both
+# 45778b94 Merge remote-tracking branch 'origin/main' into rec-722
+# c35448db Merge remote-tracking branch 'origin/main' into rec-722
+# b9df1f23 Merge commit 'c6063f2c' into rec-722
+# bbafd7b9 Merge main (ffa571ea) into claude/caps-preposition-not-name (#722): flag list conflicts kept both sides
+# 578f5cdf Port from Ask Sunny (653bc712): "… ON MONDAY 10/05/2026 BY CORIN BELLWEATHER" in capitals names Corin Bellweather, never "BY CORIN BELLWEATHER" (CAPS_PREPOSITION_NOT_NAME_ENABLED, default off)
+diff --git a/src/app/api/chat/replay-pack/nov4-live-regressions-cases.ts b/src/app/api/chat/replay-pack/nov4-live-regressions-cases.ts
+index 43602dab..1f07ae25 100644
+--- a/src/app/api/chat/replay-pack/nov4-live-regressions-cases.ts
++++ b/src/app/api/chat/replay-pack/nov4-live-regressions-cases.ts
+@@ -438,7 +438,12 @@ function nameCase(wording: NameWording, onRoster: boolean, mode: Mode): ReplayCa
+     title: `"${wording.text}" — ${onRoster ? "on roster: the card is for Corin Bellweather" : "off roster: asks who, invents no one"} (${mode === "code" ? "code only" : "models read the name"})`,
+     report: `QA's exact name matrix, 4 Nov 2026: "${wording.text}"`,
+     status: open ? { open } : "fixed",
+-    fixFlags: [],
++    /*
++     * CAPS_PREPOSITION_NOT_NAME_ENABLED (10 Nov 2026): "… BY CORIN BELLWEATHER" in capitals is read without "BY", on
++     * roster the card is Corin Bellweather's. Off roster the name then goes on the card like the Sentence-case
++     * wordings above (GROUNDED_ENTITIES is off in production), so the off-roster twins keep no fix flag.
++     */
++    fixFlags: open && onRoster && wording.id === "last-date-caps" ? ["CAPS_PREPOSITION_NOT_NAME_ENABLED"] : [],
+     async run(t) {
+       t.directory(nameRoster(onRoster));
+       t.as("location_manager", WEST_DODGE);
+diff --git a/src/lib/config/chat-quality-flags.ts b/src/lib/config/chat-quality-flags.ts
+index d86fac01..3fc17489 100644
+--- a/src/lib/config/chat-quality-flags.ts
++++ b/src/lib/config/chat-quality-flags.ts
+@@ -5429,3 +5429,13 @@ export function typoFullNameToRosterEnabled(): boolean {
+ export function exitNoticeStatedOnlyEnabled(): boolean {
+   return envFlag("EXIT_NOTICE_STATED_ONLY_ENABLED");
+ }
++
++/**
++ * CAPS_PREPOSITION_NOT_NAME_ENABLED (coding 6, 10 Nov 2026; default off; QA's exact name matrix, 4 Nov 2026,
++ * last-date-caps): "CORRECTIVE ACTION: A GUEST WAS TREATED RUDELY AT THE FRONT DESK ON MONDAY 10/05/2026 BY CORIN
++ * BELLWEATHER" looked up "BY CORIN BELLWEATHER" as the name. On, a capitalised run of three or more words led by a
++ * preposition ("BY", "FROM", …) is read without it (`forms/proposal.ts` readEmployeeMentions). Off, as before.
++ */
++export function capsPrepositionNotNameEnabled(): boolean {
++  return envFlag("CAPS_PREPOSITION_NOT_NAME_ENABLED");
++}
+diff --git a/src/lib/forms/caps-preposition-not-name.test.ts b/src/lib/forms/caps-preposition-not-name.test.ts
+new file mode 100644
+index 00000000..08afeddb
+--- /dev/null
++++ b/src/lib/forms/caps-preposition-not-name.test.ts
+@@ -0,0 +1,33 @@
++import { afterEach, describe, expect, it } from "vitest";
++
++import { readEmployeeMentions } from "./proposal";
++
++/*
++ * CAPS_PREPOSITION_NOT_NAME_ENABLED. QA's exact name matrix (4 Nov 2026), "last-date-caps", word for word with the
++ * invented name of the replay pack (`nov4-live-regressions-cases.ts`).
++ */
++const CAPS = "CORRECTIVE ACTION: A GUEST WAS TREATED RUDELY AT THE FRONT DESK ON MONDAY 10/05/2026 BY CORIN BELLWEATHER";
++const FLAG = "CAPS_PREPOSITION_NOT_NAME_ENABLED";
++
++afterEach(() => {
++  delete process.env[FLAG];
++});
++
++describe("CAPS_PREPOSITION_NOT_NAME_ENABLED", () => {
++  it("off: as before, the preposition is part of the name", () => {
++    process.env[FLAG] = "false";
++    expect(readEmployeeMentions(CAPS).names).toEqual(["BY CORIN BELLWEATHER"]);
++  });
++
++  it("on: the name is read without the preposition, in capitals", () => {
++    process.env[FLAG] = "true";
++    expect(readEmployeeMentions(CAPS).names).toEqual(["CORIN BELLWEATHER"]);
++    expect(readEmployeeMentions("COACHING FORM: SHE GOT A COMPLAINT FROM DARA QUINLEY TODAY").names).not.toContain("FROM DARA QUINLEY");
++  });
++
++  it("on: sentence case and a two-word run are unchanged", () => {
++    process.env[FLAG] = "true";
++    expect(readEmployeeMentions(CAPS.replace(/BY CORIN BELLWEATHER$/, "by Corin Bellweather")).names).toEqual(["Corin Bellweather"]);
++    expect(readEmployeeMentions("Coaching form for Per Lindqvist").names).toContain("Per Lindqvist");
++  });
++});
+diff --git a/src/lib/forms/proposal.ts b/src/lib/forms/proposal.ts
+index 6b5aded1..55c34761 100644
+--- a/src/lib/forms/proposal.ts
++++ b/src/lib/forms/proposal.ts
+@@ -6,7 +6,7 @@ import { COMPANY_LOCATIONS, locationByCode, locationById, locationNameKey } from
+ 
+ import { extractFormDate } from "./form-date-answer";
+ import { FORM_NAME_PATTERN, canonicalShorthand, canonicalWarningWording, isFormVocabulary, leadingFormRequest } from "./template-intent";
+-import { antiLoopEnabled, exitAnswerNotACorrectionEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
++import { antiLoopEnabled, capsPrepositionNotNameEnabled, exitAnswerNotACorrectionEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+ import { companyNameStops } from "./name-stops";
+ import { isTypedStopSpan, isTypedStopWord, NAME_LABEL_WORDS, NOT_A_NAME, NOT_A_NAME_LEAD, NOT_A_TYPED_NAME, TYPED_NAME_WORD, isNameLabelPhrase, lowercaseMonths, nameAfterNameLabel, stripTrailingJobOrTitle } from "./name-words";
+ import { keepTypedPerson } from "./typed-name";
+@@ -449,6 +449,18 @@ export interface EmployeeMentions {
+   negated: string[];
+ }
+ 
++/**
++ * CAPS_PREPOSITION_NOT_NAME_ENABLED (coding 6, 10 Nov 2026; default off; QA's name matrix, 4 Nov 2026):
++ * "… ON MONDAY 10/05/2026 BY CORIN BELLWEATHER" — in capitals, the preposition before the name is a capitalised word
++ * too, so the run was "BY CORIN BELLWEATHER" and the card's employee was nobody. A run of three or more words led by
++ * a preposition is read without it. Off, as before.
++ */
++const CAPS_LEAD_PREPOSITION = /^(?:by|from|to|of|on|with)\s+(?=\S+\s+\S)/i;
++function withoutCapsPreposition(run: string | null): string | null {
++  if (run === null) return null;
++  return capsPrepositionNotNameEnabled() ? run.replace(CAPS_LEAD_PREPOSITION, "") : run;
++}
++
+ export function readEmployeeMentions(typed: string): EmployeeMentions {
+   // "pls", "u", "frm" are never names and never end one; read them as words.
+   // "general training", "team-wide", "everyone at the salon" describe the team,
+@@ -736,7 +748,7 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
+       words.pop();
+     }
+     // "Wren Halvorsen's coaching form": the name ends at the possessive.
+-    const run = nameBeforeRole(beforePossessive(words.join(" ")));
++    const run = withoutCapsPreposition(nameBeforeRole(beforePossessive(words.join(" "))));
+     if (run === null || !run.includes(" ") || places.has(run)) continue;
+     /*
+      * "It's Avery Testperson", "Sorry Avery Testperson": the capitalised run

@@ -1,0 +1,316 @@
+# branch gate-780 head 251a2473 ; diff from main-line base 6d862bbe
+# 251a2473 resolve (keep both)
+# 3df3517b NAME_LAST_AFTER_BY: doerAfterBy in its own module (no import cycle with employee-match)
+# 0ec1e55f NAME_LAST_AFTER_BY: a card "BY <roster name>" is that person before the roster-only step too
+# 6e6e0494 Merge branch 'rec-778' into rec-780
+# 24ba1d7f Merge remote-tracking branch 'origin/main' into rec-778
+# 70bb8e66 Merge remote-tracking branch 'origin/main' into rec-780
+# 94a8a4c8 Merge remote-tracking branch 'origin/main' into rec-778
+# b19bf7d1 Merge commit 'c6063f2c' into rec-780
+# 852c52e4 Merge commit 'c6063f2c' into rec-778
+# bf3688f1 B-C1: a roster name after "by" at the end of a passive sentence is the doer (NAME_LAST_AFTER_BY_ENABLED)
+# 9ce91e56 Replay: record the fix flags of 15 open Bubbles cases that hold with merged flags (test-only)
+diff --git a/docs/parity-log/2026-11-11-name-last-after-by.md b/docs/parity-log/2026-11-11-name-last-after-by.md
+new file mode 100644
+index 00000000..61ede590
+--- /dev/null
++++ b/docs/parity-log/2026-11-11-name-last-after-by.md
+@@ -0,0 +1,13 @@
++## 11 Nov 2026: a name after "by" at the end of a passive sentence is the doer — Ask Bubbles only (NAME_LAST_AFTER_BY_ENABLED, default off)
++
++QA's B-C1, from the open-cases audit: QA's name matrix of 4 Nov 2026, "corrective action: a guest was treated rudely at the front desk on monday by corin bellweather" (and the same with a date), in lower case or capitals, made no card for the roster's Corin Bellweather.
++
++- In lower case, `rosterNameNamedIn` skips a name after "by" as a reporter.
++- In capitals, the name reader took "BY CORIN BELLWEATHER" as the name.
++
++With the flag on:
++- A full roster name after "by" at the end of a passive sentence is the doer, unless the "by" follows a reporting word ("reported / signed / seen by").
++- A card name "BY <roster name>" is that roster person (`lib/forms/name-after-by.ts`).
++- No protected file is touched.
++
++Not needed in Ask Sunny. The same four wordings run there as a replay probe on production flags (Corin Bellweather on the roster). Lower case and capitals without a date, and lower case with a date, already make the card for Corin Bellweather. The dated capitals wording is the "BY <NAME>" shape that ask-sunny#802 (CAPS_PREPOSITION_NOT_NAME) fixes.
+diff --git a/src/app/api/chat/replay-pack/nov4-live-regressions-cases.ts b/src/app/api/chat/replay-pack/nov4-live-regressions-cases.ts
+index 43602dab..0626c17e 100644
+--- a/src/app/api/chat/replay-pack/nov4-live-regressions-cases.ts
++++ b/src/app/api/chat/replay-pack/nov4-live-regressions-cases.ts
+@@ -427,6 +427,18 @@ const NAME_OPEN: Readonly<Record<string, string>> = Object.fromEntries([
+   ),
+ ]);
+ 
++/* The roster-name flip (16c): FORM_NAME_FROM_ROSTER with its near-miss rules (QA's audit of open cases, 11 Nov 2026). */
++const ROSTER_SET = ["FORM_NAME_FROM_ROSTER_ENABLED", "NEAR_MISS_QUESTION_RULES_ENABLED", "NEAR_MISS_DETAILS_ACCEPT_ENABLED"];
++/** The open name cases the roster-name flip fixes: every Sentence-case wording off roster, and "BY <NAME>" in caps off roster. */
++const ROSTER_SET_FIXES = /^(?:(?:first|middle|last)-(?:nodate|date)-sentence|last-date-caps)-off-/;
++
++/*
++ * NAME_LAST_AFTER_BY_ENABLED (QA's B-C1, 11 Nov 2026): "… treated rudely … by corin bellweather", lower case or caps,
++ * on roster, is a card for Corin Bellweather (`forms/name-after-by.ts`).
++ */
++const NAME_AFTER_BY = ["NAME_LAST_AFTER_BY_ENABLED"];
++const NAME_AFTER_BY_FIXES = /^last-(?:nodate|date)-(?:lower|caps)-on-/;
++
+ const ASKED_WHO = /who is this\b[^?\n]*\bfor\?/i;
+ const NOT_ON_TEAM = /(?:couldn'?t|could not|didn'?t|did not) find[^.\n]*(?:roster|team|directory)|not (?:on|in) (?:the|your) (?:woven )?(?:roster|team|directory)/i;
+ 
+@@ -438,7 +450,8 @@ function nameCase(wording: NameWording, onRoster: boolean, mode: Mode): ReplayCa
+     title: `"${wording.text}" — ${onRoster ? "on roster: the card is for Corin Bellweather" : "off roster: asks who, invents no one"} (${mode === "code" ? "code only" : "models read the name"})`,
+     report: `QA's exact name matrix, 4 Nov 2026: "${wording.text}"`,
+     status: open ? { open } : "fixed",
+-    fixFlags: [],
++    // QA, 11 Nov 2026: the off-roster misses hold with the roster-name flip (16c, #716); recorded so the flip's gate runs them.
++    fixFlags: open && ROSTER_SET_FIXES.test(key) ? ROSTER_SET : open && NAME_AFTER_BY_FIXES.test(key) ? NAME_AFTER_BY : [],
+     async run(t) {
+       t.directory(nameRoster(onRoster));
+       t.as("location_manager", WEST_DODGE);
+diff --git a/src/app/api/chat/replay-pack/nov5-pau-sf-s26-s28-twin-cases.ts b/src/app/api/chat/replay-pack/nov5-pau-sf-s26-s28-twin-cases.ts
+index eb8783be..e5c47723 100644
+--- a/src/app/api/chat/replay-pack/nov5-pau-sf-s26-s28-twin-cases.ts
++++ b/src/app/api/chat/replay-pack/nov5-pau-sf-s26-s28-twin-cases.ts
+@@ -114,6 +114,8 @@ export const NOV5_PAU_SF_S26_S28_TWIN_CASES: ReplayCase[] = [
+     report:
+       "Pau via QA, 5 Nov 2026, sf-s28 (twin): \"can i give a ca for not signing off on the cleaning check list\" → \"can you write me a ca for Employee R from <store>\" → \"You haven't told me what happened yet\", the Observation was the question",
+     status: { open: "\"You haven't told me what happened yet\"; the earlier turn's incident is not used" },
++    // QA's audit of open cases (11 Nov 2026): holds with INCIDENT_FROM_EARLIER_TURN (merged, off in production), as its twin s28-incident-scope.
++    fixFlags: ["INCIDENT_FROM_EARLIER_TURN_ENABLED"],
+     async run(t: T) {
+       // This app writes "You haven't told me what happened yet" with no flag.
+       try {
+diff --git a/src/app/api/chat/route.ts b/src/app/api/chat/route.ts
+index c1768a1d..e25483d9 100644
+--- a/src/app/api/chat/route.ts
++++ b/src/app/api/chat/route.ts
+@@ -57,6 +57,7 @@ import {
+   offRosterAskBeforeCardEnabled,
+   oneFormEachPersonEnabled,
+   outlineOnOpenProposalEnabled,
++  nameLastAfterByEnabled,
+   groupWordsNotANameEnabled,
+   createFromConversationPointsToCardEnabled,
+   cardNamesEmployeeEnabled,
+@@ -1166,6 +1167,11 @@ async function postChat(request: Request) {
+           outlinePeople: outlineOnProposal.outlinePeople,
+         });
+       }
++      // NAME_LAST_AFTER_BY_ENABLED: a card name "BY <roster name>" is that roster person (`lib/forms/name-after-by.ts`).
++      if (nameLastAfterByEnabled() && /^by\s/i.test(answer.formProposal?.employeeName ?? "")) {
++        const { loadScopedRoster } = await import("@/lib/forms/employee-roster");
++        answer = (await import("@/lib/forms/name-after-by")).withNameAfterBy(answer, await loadScopedRoster(context.identity.scope).catch(() => []));
++      }
+       // NEAR_MISS_QUESTION_RULES_ENABLED: "no, …" to "Is this for <name>?" never gets a card for that name, nor the question again.
+       if (nearMissQuestionRulesEnabled()) answer = (await import("@/lib/forms/near-miss-question-rules")).withoutTurnedDownName(answer, asked);
+       /*
+diff --git a/src/lib/config/chat-quality-flags.ts b/src/lib/config/chat-quality-flags.ts
+index d86fac01..649f5703 100644
+--- a/src/lib/config/chat-quality-flags.ts
++++ b/src/lib/config/chat-quality-flags.ts
+@@ -1498,6 +1498,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
+   "CARD_PLAN_MATCHES_CREATE_ENABLED",
+   // coding 6: TYPO_FULL_NAME_TO_ROSTER (audit item 15.10, sf-b5, 11 Nov 2026; default off).
+   "TYPO_FULL_NAME_TO_ROSTER_ENABLED",
++  // coding 6: NAME_LAST_AFTER_BY (QA's B-C1, 11 Nov 2026; default off).
++  "NAME_LAST_AFTER_BY_ENABLED",
+ ] as const;
+ 
+ /**
+@@ -5429,3 +5431,14 @@ export function typoFullNameToRosterEnabled(): boolean {
+ export function exitNoticeStatedOnlyEnabled(): boolean {
+   return envFlag("EXIT_NOTICE_STATED_ONLY_ENABLED");
+ }
++
++/**
++ * NAME_LAST_AFTER_BY_ENABLED (coding 6, 11 Nov 2026; default off; QA's B-C1 from the open-cases audit, QA's name
++ * matrix of 4 Nov 2026). "corrective action: a guest was treated rudely at the front desk on monday by corin
++ * bellweather" (lower case or capitals) made no card for the roster's Corin Bellweather. On: a full roster name after
++ * "by" at the end of a passive sentence is the doer, not a reporter (unless "reported / signed / seen … by"), and a
++ * card name "BY <roster name>" is that roster person (`forms/name-after-by.ts`). Off, as before.
++ */
++export function nameLastAfterByEnabled(): boolean {
++  return envFlag("NAME_LAST_AFTER_BY_ENABLED");
++}
+diff --git a/src/lib/forms/employee-match.ts b/src/lib/forms/employee-match.ts
+index 801a8558..e495f0b1 100644
+--- a/src/lib/forms/employee-match.ts
++++ b/src/lib/forms/employee-match.ts
+@@ -1,5 +1,7 @@
+ import { rosterCompoundSurnameEnabled, sharedLoginNotStaffEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+ 
++import { doerAfterBy } from "./name-after-by-doer";
++
+ /**
+  * ============================================================================
+  * IS THE NAME THE MANAGER TYPED SOMEBODY ON THEIR TEAM?
+@@ -170,7 +172,8 @@ export function rosterNameNamedIn(text: string, roster: readonly RosterEmployee[
+         // Somebody else in the account: "her coworker remy calder", "remy calder told me".
+         const before = said.slice(Math.max(0, at - 40), at);
+         const after = said.slice(at + full.length, at + full.length + 30);
+-        if (!OTHER_PARTY_BEFORE.test(before) && !OTHER_PARTY_AFTER.test(after)) {
++        // NAME_LAST_AFTER_BY_ENABLED: "… was treated rudely … by corin bellweather" names the doer (`forms/name-after-by.ts`).
++        if ((!OTHER_PARTY_BEFORE.test(before) || doerAfterBy(said.slice(0, at), said.slice(at + full.length))) && !OTHER_PARTY_AFTER.test(after)) {
+           names.add(displayName(employee));
+           break;
+         }
+diff --git a/src/lib/forms/name-after-by-doer.ts b/src/lib/forms/name-after-by-doer.ts
+new file mode 100644
+index 00000000..ef62ff36
+--- /dev/null
++++ b/src/lib/forms/name-after-by-doer.ts
+@@ -0,0 +1,23 @@
++import { nameLastAfterByEnabled } from "@/lib/config/chat-quality-flags";
++
++/*
++ * NAME_LAST_AFTER_BY_ENABLED: the roster reader's half of `name-after-by.ts`, on its own so that `employee-match.ts`
++ * can read it without importing `name-after-by.ts`, which imports `employee-match.ts` (the import-cycle test).
++ */
++
++/** The words before "by" that make the name a reporter, signer or witness. */
++const REPORTED_BY = /\b(?:reported|written|signed|submitted|approved|observed|witnessed|seen|noticed|heard|told|sent|called|emailed|texted|hired|trained|coached|supervised|managed|scheduled|covered|replaced|relieved|helped|assisted|referred|brought)\s+by\s*$/;
++/** A passive clause before "by": "was treated rudely at the front desk on monday by". */
++const PASSIVE = /\b(?:was|were|been|being|got|gets|is|are)\s+(?:not\s+)?[a-z]+(?:ed|en|t)\b[^.!?\n]*\bby\s*$/;
++
++/**
++ * Whether the name at this place in the normalised text (" <first> <last> ", with "before" the words in front of it
++ * and "after" the words behind it) is the doer named after "by" at the end of a passive sentence.
++ */
++export function doerAfterBy(before: string, after: string): boolean {
++  if (!nameLastAfterByEnabled()) return false;
++  if (!/\bby\s*$/.test(before) || REPORTED_BY.test(before)) return false;
++  if (!PASSIVE.test(before)) return false;
++  // The end of the sentence: nothing but space after the name in the normalised text (punctuation is already gone).
++  return after.trim() === "";
++}
+diff --git a/src/lib/forms/name-after-by.test.ts b/src/lib/forms/name-after-by.test.ts
+new file mode 100644
+index 00000000..add09ef9
+--- /dev/null
++++ b/src/lib/forms/name-after-by.test.ts
+@@ -0,0 +1,47 @@
++import { afterEach, describe, expect, it, vi } from "vitest";
++
++import { rosterNameNamedIn, type RosterEmployee } from "./employee-match";
++import { withNameAfterBy } from "./name-after-by";
++
++/* NAME_LAST_AFTER_BY_ENABLED (QA's B-C1, 11 Nov 2026; QA's name matrix, 4 Nov 2026, exact wording; invented people). */
++const person = (id: string, firstName: string, lastName: string) =>
++  ({ id, firstName, lastName, preferredFirstName: null, locationIds: [] }) as unknown as RosterEmployee;
++const ROSTER = [person("1", "Corin", "Bellweather"), person("2", "Remy", "Calder")];
++const LOWER = "corrective action: a guest was treated rudely at the front desk on monday by corin bellweather";
++const LOWER_DATED = "corrective action: a guest was treated rudely at the front desk on monday 10/05/2026 by corin bellweather";
++
++afterEach(() => vi.unstubAllEnvs());
++
++describe("NAME_LAST_AFTER_BY_ENABLED", () => {
++  it("off: the name after \"by\" is read as a reporter, as before", () => {
++    expect(rosterNameNamedIn(LOWER, ROSTER)).toBeNull();
++  });
++
++  it("on: QA's wordings name the doer after \"by\"", () => {
++    vi.stubEnv("NAME_LAST_AFTER_BY_ENABLED", "true");
++    expect(rosterNameNamedIn(LOWER, ROSTER)).toBe("Corin Bellweather");
++    expect(rosterNameNamedIn(LOWER_DATED, ROSTER)).toBe("Corin Bellweather");
++    expect(rosterNameNamedIn(LOWER.toUpperCase(), ROSTER)).toBe("Corin Bellweather");
++  });
++
++  it("on, never: a reporter, signer or witness after \"by\", a name that is not last, or no passive clause", () => {
++    vi.stubEnv("NAME_LAST_AFTER_BY_ENABLED", "true");
++    for (const said of [
++      "write up for being late, it was reported by corin bellweather",
++      "the complaint was signed by corin bellweather",
++      "a guest was treated rudely by corin bellweather and remy calder saw it",
++      "ca for a guest complaint, stop by corin bellweather",
++    ]) {
++      expect(rosterNameNamedIn(said, ROSTER), said).toBeNull();
++    }
++  });
++
++  it("a card name \"BY <roster name>\" is that roster person; anything else is kept", () => {
++    const card = (employeeName: string) => ({ content: `I'll draft a **Corrective Action Form** for **${employeeName}** from what you've described.`, formProposal: { employeeName } });
++    expect(withNameAfterBy(card("BY CORIN BELLWEATHER"), ROSTER)).toEqual(card("BY CORIN BELLWEATHER"));
++    vi.stubEnv("NAME_LAST_AFTER_BY_ENABLED", "true");
++    expect(withNameAfterBy(card("BY CORIN BELLWEATHER"), ROSTER)).toEqual(card("Corin Bellweather"));
++    expect(withNameAfterBy(card("BY ZELDA QUINN"), ROSTER)).toEqual(card("BY ZELDA QUINN"));
++    expect(withNameAfterBy(card("Remy Calder"), ROSTER)).toEqual(card("Remy Calder"));
++  });
++});
+diff --git a/src/lib/forms/name-after-by.ts b/src/lib/forms/name-after-by.ts
+new file mode 100644
+index 00000000..acdeae5a
+--- /dev/null
++++ b/src/lib/forms/name-after-by.ts
+@@ -0,0 +1,38 @@
++import { nameLastAfterByEnabled } from "@/lib/config/chat-quality-flags";
++
++import { matchEmployeeName, type RosterEmployee } from "./employee-match";
++
++/*
++ * ============================================================================
++ * "… TREATED RUDELY … BY <NAME>": THE DOER, NOT A WITNESS (NAME_LAST_AFTER_BY_ENABLED; QA's name matrix, 4 Nov 2026)
++ * ============================================================================
++ *
++ * QA's exact wordings "corrective action: a guest was treated rudely at the front desk on monday by corin bellweather"
++ * (lower case) and the same in capitals made no card for the roster's Corin Bellweather. Lower case: the roster
++ * reader (`rosterNameNamedIn`) skips a name after "by" as a reporter or witness ("reported by …"). Capitals: the name
++ * reader took "BY CORIN BELLWEATHER" as the name. With the flag on, a full roster name after "by" at the end of the
++ * sentence, after a passive clause ("was treated … by", "were left … by"), is the person who did it, unless the "by"
++ * follows a reporting word ("reported by", "signed by", "seen by"); and a card name "BY <roster name>" is that roster
++ * person. Off, as before. Invented people.
++ */
++
++export { doerAfterBy } from "./name-after-by-doer";
++
++interface CardLike {
++  employeeName: string | null;
++}
++
++/** A card name "BY <roster name>" ("BY CORIN BELLWEATHER") is that roster person, and the reply names them so. */
++export function withNameAfterBy<T extends { content: string; formProposal?: CardLike | null }>(answer: T, roster: readonly RosterEmployee[]): T {
++  if (!nameLastAfterByEnabled()) return answer;
++  const typed = answer.formProposal?.employeeName?.trim();
++  const rest = typed ? /^by\s+(.+)$/i.exec(typed)?.[1] : undefined;
++  if (!typed || !rest) return answer;
++  const match = matchEmployeeName(rest, roster);
++  if (match.kind !== "exact") return answer;
++  return {
++    ...answer,
++    content: answer.content.split(`**${typed}**`).join(`**${match.name}**`),
++    formProposal: { ...answer.formProposal!, employeeName: match.name },
++  };
++}
+diff --git a/src/lib/forms/roster-only-names.ts b/src/lib/forms/roster-only-names.ts
+index 083cb0cb..0defde54 100644
+--- a/src/lib/forms/roster-only-names.ts
++++ b/src/lib/forms/roster-only-names.ts
+@@ -1,4 +1,4 @@
+-import { formNameFromRosterEnabled, metricChoiceOneQuestionEnabled, metricGuardEnabled, offRosterConfirmEnabled, rosterNearMissEnabled, rosterNotFoundAnyPhrasingEnabled, nearMissQuestionRulesEnabled, formNameOffRosterAskEnabled, offRosterAskBeforeCardEnabled, possessivePlaceNotPersonEnabled, titleBeforeNameEnabled, titleBeforeNameReplyLinesEnabled } from "@/lib/config/chat-quality-flags";
++import { formNameFromRosterEnabled, metricChoiceOneQuestionEnabled, metricGuardEnabled, offRosterConfirmEnabled, rosterNearMissEnabled, rosterNotFoundAnyPhrasingEnabled, nearMissQuestionRulesEnabled, formNameOffRosterAskEnabled, offRosterAskBeforeCardEnabled, possessivePlaceNotPersonEnabled, titleBeforeNameEnabled, titleBeforeNameReplyLinesEnabled, nameLastAfterByEnabled } from "@/lib/config/chat-quality-flags";
+ import { isGlossaryTerm } from "@/lib/ai/glossary";
+ import { standInForName, withStandInsSaid } from "./no-name-reply-wording";
+ import type { AskResponse } from "@/lib/ai/types";
+@@ -729,7 +729,27 @@ export function withRosterOnlyNames(response: AskResponse): AskResponse {
+   if (!formNameFromRosterEnabled()) return metricGuardEnabled() ? withoutMetricChoices(response, metricMessage(), personRosterNames() ?? []) : response;
+   const names = personRosterNames();
+   if (!names || names.length === 0) return response;
+-  return rosterOnlyNames(response, names, requestMessage());
++  return rosterOnlyNames(withRosterNameAfterBy(response, names), names, requestMessage());
++}
++
++/**
++ * NAME_LAST_AFTER_BY_ENABLED (Gate-Bubbles-4's recovery gate on #780, 12 Nov 2026): "… AT THE FRONT DESK ON MONDAY
++ * 10/05/2026 BY CORIN BELLWEATHER" made the card "BY CORIN BELLWEATHER", which the step below read as a name not on
++ * the roster and took off the card, before the chat route's "BY <roster name>" step (`forms/name-after-by.ts`). A card
++ * name that is "by" and then one roster person's whole name is that person here too, in the card and the reply. Off,
++ * as before.
++ */
++function withRosterNameAfterBy(response: AskResponse, names: readonly string[]): AskResponse {
++  if (!nameLastAfterByEnabled()) return response;
++  const typed = response.formProposal?.employeeName?.trim();
++  const rest = typed ? /^by\s+(.+)$/i.exec(typed)?.[1] : undefined;
++  const person = rest ? rosterSpelling(rest, names) : null;
++  if (!typed || !person) return response;
++  return {
++    ...response,
++    content: response.content.split(`**${typed}**`).join(`**${person}**`),
++    formProposal: { ...response.formProposal!, employeeName: person },
++  };
+ }
+ 
+ /**

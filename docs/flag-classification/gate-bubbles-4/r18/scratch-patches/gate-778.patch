@@ -1,0 +1,45 @@
+# branch gate-778 head c431ab56 ; diff from main-line base 6d862bbe
+# c431ab56 Merge branch 'pr778' into gate-778
+# 24ba1d7f Merge remote-tracking branch 'origin/main' into rec-778
+# 94a8a4c8 Merge remote-tracking branch 'origin/main' into rec-778
+# 852c52e4 Merge commit 'c6063f2c' into rec-778
+# 9ce91e56 Replay: record the fix flags of 15 open Bubbles cases that hold with merged flags (test-only)
+diff --git a/src/app/api/chat/replay-pack/nov4-live-regressions-cases.ts b/src/app/api/chat/replay-pack/nov4-live-regressions-cases.ts
+index 43602dab..00d98aa2 100644
+--- a/src/app/api/chat/replay-pack/nov4-live-regressions-cases.ts
++++ b/src/app/api/chat/replay-pack/nov4-live-regressions-cases.ts
+@@ -427,6 +427,11 @@ const NAME_OPEN: Readonly<Record<string, string>> = Object.fromEntries([
+   ),
+ ]);
+ 
++/* The roster-name flip (16c): FORM_NAME_FROM_ROSTER with its near-miss rules (QA's audit of open cases, 11 Nov 2026). */
++const ROSTER_SET = ["FORM_NAME_FROM_ROSTER_ENABLED", "NEAR_MISS_QUESTION_RULES_ENABLED", "NEAR_MISS_DETAILS_ACCEPT_ENABLED"];
++/** The open name cases the roster-name flip fixes: every Sentence-case wording off roster, and "BY <NAME>" in caps off roster. */
++const ROSTER_SET_FIXES = /^(?:(?:first|middle|last)-(?:nodate|date)-sentence|last-date-caps)-off-/;
++
+ const ASKED_WHO = /who is this\b[^?\n]*\bfor\?/i;
+ const NOT_ON_TEAM = /(?:couldn'?t|could not|didn'?t|did not) find[^.\n]*(?:roster|team|directory)|not (?:on|in) (?:the|your) (?:woven )?(?:roster|team|directory)/i;
+ 
+@@ -438,7 +443,8 @@ function nameCase(wording: NameWording, onRoster: boolean, mode: Mode): ReplayCa
+     title: `"${wording.text}" — ${onRoster ? "on roster: the card is for Corin Bellweather" : "off roster: asks who, invents no one"} (${mode === "code" ? "code only" : "models read the name"})`,
+     report: `QA's exact name matrix, 4 Nov 2026: "${wording.text}"`,
+     status: open ? { open } : "fixed",
+-    fixFlags: [],
++    // QA, 11 Nov 2026: the off-roster misses hold with the roster-name flip (16c, #716); recorded so the flip's gate runs them.
++    fixFlags: open && ROSTER_SET_FIXES.test(key) ? ROSTER_SET : [],
+     async run(t) {
+       t.directory(nameRoster(onRoster));
+       t.as("location_manager", WEST_DODGE);
+diff --git a/src/app/api/chat/replay-pack/nov5-pau-sf-s26-s28-twin-cases.ts b/src/app/api/chat/replay-pack/nov5-pau-sf-s26-s28-twin-cases.ts
+index eb8783be..e5c47723 100644
+--- a/src/app/api/chat/replay-pack/nov5-pau-sf-s26-s28-twin-cases.ts
++++ b/src/app/api/chat/replay-pack/nov5-pau-sf-s26-s28-twin-cases.ts
+@@ -114,6 +114,8 @@ export const NOV5_PAU_SF_S26_S28_TWIN_CASES: ReplayCase[] = [
+     report:
+       "Pau via QA, 5 Nov 2026, sf-s28 (twin): \"can i give a ca for not signing off on the cleaning check list\" → \"can you write me a ca for Employee R from <store>\" → \"You haven't told me what happened yet\", the Observation was the question",
+     status: { open: "\"You haven't told me what happened yet\"; the earlier turn's incident is not used" },
++    // QA's audit of open cases (11 Nov 2026): holds with INCIDENT_FROM_EARLIER_TURN (merged, off in production), as its twin s28-incident-scope.
++    fixFlags: ["INCIDENT_FROM_EARLIER_TURN_ENABLED"],
+     async run(t: T) {
+       // This app writes "You haven't told me what happened yet" with no flag.
+       try {

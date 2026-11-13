@@ -1,0 +1,261 @@
+# branch gate-692b head 23bb8030 ; diff from main-line base c88676ac
+# 23bb8030 keep both
+# 630030f9 Merge remote-tracking branch 'origin/main' into rec-692
+# c270793f DETAILS_FROM_EARLIER_ANSWER: with no earlier content answer, the turn reads as with the flag off (Gate-Bubbles-4 NO-GO)
+# 6720a3ce Merge remote-tracking branch 'origin/main' into rec-692
+# 9c090d60 Merge commit 'c6063f2c' into rec-692
+# be67b7dd Merge main (ffa571ea) into claude/details-from-earlier-answer (#692): flag list conflicts kept both sides
+# 7d8ed26b Merge main into claude/details-from-earlier-answer (#692): keep both appended flag functions
+# 3b498d11 Port from Ask Sunny (9053a68a): "the details we just discussed" are the app's earlier answer, not its own card or edit reply (DETAILS_FROM_EARLIER_ANSWER_ENABLED)
+diff --git a/src/app/api/chat/replay-pack/nov5-coding3-chat-edits-cases.ts b/src/app/api/chat/replay-pack/nov5-coding3-chat-edits-cases.ts
+index 94292281..6a6e8fd6 100644
+--- a/src/app/api/chat/replay-pack/nov5-coding3-chat-edits-cases.ts
++++ b/src/app/api/chat/replay-pack/nov5-coding3-chat-edits-cases.ts
+@@ -1,6 +1,7 @@
+ import { expect } from "vitest";
+ 
+ import { STAFF, WEST_DODGE, noClaimWithoutUpdate, replyMatchesDiff, savedForm, type ReplayAnswer, type ReplayCase, type ReplayContext, type ReplayThread } from "./cases";
++import { REFUSAL_ROSTER } from "./nov7-step-b-refusals-scenarios";
+ 
+ /**
+  * ============================================================================
+@@ -88,6 +89,11 @@ export const NOV5_CODING3_CHAT_EDITS_CASES: ReplayCase[] = [
+     status: {
+       open: "the Details stay empty: \"these details\" / \"the details we just discussed\" are read from the last reply (the card, then the bot's own no-change reply), never the earlier answer that held them",
+     },
++    // DETAILS_FROM_EARLIER_ANSWER_ENABLED (coding 6, 10 Nov 2026) hands the revision the earlier answer's details
++    // (nov10-chat-edits-a-details-handed-to-the-revision); the pack's revision stand-in writes nothing, so what is SAVED
++    // stays open here even with the fix: the live model writes what it is handed.
++    fixFlags: ["DETAILS_FROM_EARLIER_ANSWER_ENABLED"],
++    fixStatus: { open: "the pack's revision stand-in writes nothing; the fix's effect is what the revision is handed (nov10-chat-edits-a-details-handed-to-the-revision)" },
+     async run(t: T) {
+       start(t);
+       const thread = t.thread();
+@@ -170,3 +176,66 @@ export const NOV5_CODING3_CHAT_EDITS_CASES: ReplayCase[] = [
+     },
+   },
+ ];
++
++/*
++ * DETAILS_FROM_EARLIER_ANSWER_ENABLED (coding 6, 10 Nov 2026): chat-edits (a) by what the revision model is HANDED. The
++ * stand-in revision writes nothing, and a scripted write is accepted whatever the turn asked, so the invariant is the
++ * request the revision gets: "the details we just discussed!!!" hands it the coaching details of the answer before the
++ * card — never the app's own card or "I haven't changed …".
++ */
++export const NOV10_CHAT_EDITS_A_CASES: ReplayCase[] = [
++  {
++    id: "nov10-chat-edits-a-details-handed-to-the-revision",
++    title: "(a) \"the details we just discussed!!!\" hands the revision the coaching details the app gave before the card, never its own card or no-change reply",
++    report:
++      'Manager, production (relayed 5 Nov 2026, both apps): "can you upate the draft with these details of coaching?" → "it didnt edit in the card" → "the details we just discussed!!!"',
++    status: { open: "the revision is handed the last reply (the app's own \"I haven't changed …\"), never the answer that held the details" },
++    fixFlags: ["DETAILS_FROM_EARLIER_ANSWER_ENABLED"],
++    async run(t: T) {
++      start(t);
++      const thread = t.thread();
++      t.modelSays(HOW_TO_ANSWER);
++      await thread.say("how do i coach on ship from store, when to press ready for pick up and when to press mark as shipped?");
++      t.modelSays(null);
++      await thread.say("Create a coaching form for Rowan Kestrel");
++      const id = await thread.create();
++      for (const turn of ["can you upate the draft with these details of coaching?", "it didnt edit in the card"]) await onDraft(t, thread, id, turn);
++      const before = t.revisionPrompts!().length;
++      await onDraft(t, thread, id, "the details we just discussed!!!");
++      const asked = t.revisionPrompts!().slice(before).join("\n");
++      const change = /THE CHANGE THE MANAGER IS ASKING FOR NOW:([\s\S]*)/.exec(asked)?.[1] ?? "";
++      for (const step of IN_THE_ANSWER) expect(change, `the revision was not handed the details discussed before the card (${step}):\n${change.slice(0, 300)}`).toMatch(step);
++      expect(change, "the revision was handed the app's own reply").not.toMatch(BOTS_OWN_WORDS);
++    },
++  },
++  /*
++   * Gate-Bubbles-4 (12 Nov 2026, NO-GO on #692): nov7-refusal-bub-didnt-edit's turn 5 with DETAILS_FROM_EARLIER_ANSWER on.
++   * No earlier content answer is in the chat, and the turn went to the free chat model ("Updating the draft now" live, 30
++   * Oct, nothing written). It now reads as with the flag off: the revision is asked, and the reply says honestly that
++   * nothing changed. The person is the refusal roster's (invented).
++   */
++  {
++    id: "nov12-details-from-earlier-answer-none-found",
++    title: "\"can you upate the draft with these details of coaching?\" with no earlier content answer: the revision is asked, never the free chat model",
++    report: "Gate-Bubbles-4 (12 Nov 2026, NO-GO on #692): turn 5 of nov7-refusal-bub-didnt-edit went to the free chat model",
++    status: "fixed",
++    fixFlags: ["DETAILS_FROM_EARLIER_ANSWER_ENABLED"],
++    async run(t: ReplayContext) {
++      t.directory(REFUSAL_ROSTER);
++      t.as("location_manager", WEST_DODGE);
++      const thread = t.thread();
++      await thread.say("Create a coaching form.");
++      await thread.say("Oswin");
++      await thread.say("yes");
++      await thread.create();
++      await thread.say("ship from store, when to press ready for pick up and when to press mark as shipped");
++      const before = t.calls();
++      const fifth = await thread.say("can you upate the draft with these details of coaching?");
++      const after = t.calls();
++      expect(after.chat - before.chat, `turn 5 went to the free chat model:\n${fifth.content}`).toBe(0);
++      expect(after.revision - before.revision, "turn 5 never reached the revision").toBe(1);
++      expect(fifth.content, fifth.content).not.toMatch(/Updating the draft now/i);
++      expect(fifth.content, fifth.content).toMatch(/I haven't changed the \*\*Coaching Form\*\*/);
++    },
++  },
++];
+diff --git a/src/lib/config/chat-quality-flags.ts b/src/lib/config/chat-quality-flags.ts
+index 873e5c81..4a346212 100644
+--- a/src/lib/config/chat-quality-flags.ts
++++ b/src/lib/config/chat-quality-flags.ts
+@@ -4856,3 +4856,18 @@ export function caProcedureBasisEnabled(): boolean {
+ export function noSelectionOnOpenCardEnabled(): boolean {
+   return envFlag("NO_SELECTION_ON_OPEN_CARD_ENABLED");
+ }
++
++/**
++ * DETAILS_FROM_EARLIER_ANSWER_ENABLED (coding 6, 10 Nov 2026; default off; a
++ * manager's production chat relayed by coding 3, 5 Nov 2026, both apps:
++ * chat-edits (a)). The coaching details were in the app's own answer BEFORE
++ * the card; then "can you upate the draft with these details of coaching?" →
++ * "it didnt edit in the card" → "the details we just discussed!!!" left the
++ * Details empty: "these details" and "the details we just discussed" were
++ * read from the last reply only — the card, then the app's own "I haven't
++ * changed …". On: they are read from the latest answer that is not the app's
++ * own card or edit reply (`forms/form-content-turn.ts`). Off, as before.
++ */
++export function detailsFromEarlierAnswerEnabled(): boolean {
++  return envFlag("DETAILS_FROM_EARLIER_ANSWER_ENABLED");
++}
+diff --git a/src/lib/forms/form-content-turn.test.ts b/src/lib/forms/form-content-turn.test.ts
+index 80ff959e..a154ea40 100644
+--- a/src/lib/forms/form-content-turn.test.ts
++++ b/src/lib/forms/form-content-turn.test.ts
+@@ -129,3 +129,64 @@ describe("independent review item 12, 31 Oct 2026", () => {
+     expect(formContentQuestion({ ...OPEN, question: said, history: [PRINTED] })).toBeNull();
+   });
+ });
++
++/*
++ * DETAILS_FROM_EARLIER_ANSWER_ENABLED (chat-edits (a), relayed 5 Nov 2026): the details were the app's answer BEFORE the
++ * card; then the card and the app's own "I haven't changed …" came after it. The person is invented (Rowan Kestrel).
++ */
++describe("DETAILS_FROM_EARLIER_ANSWER_ENABLED", () => {
++  const history: { role: "user" | "assistant"; content: string }[] = [
++    { role: "user", content: "how do i coach on ship from store?" },
++    { role: "assistant", content: "Here's how to coach on ship from store:\n\n**Details of Coaching:** Press **Ready for Pick Up** only once the order is packed and on the pickup shelf." },
++    { role: "user", content: "Create a coaching form for Rowan Kestrel" },
++    { role: "assistant", content: "Here is what I would put on a **Coaching Form**.\n\nCreate the draft here when you're ready." },
++    { role: "user", content: "it didnt edit in the card" },
++    { role: "assistant", content: "I haven't changed the **Coaching Form** for **Rowan Kestrel** — everything on it is as it was.\n\nTell me which part to change and what it should say, and I'll update just that." },
++  ];
++  const ask = (question: string) => formContentQuestion({ question, history, templateName: "Coaching Form", employeeName: "Rowan Kestrel" });
++
++  it("reads \"the details we just discussed\" from the answer before the app's own card and edit replies", () => {
++    process.env.FORM_EDIT_REFERS_BACK_ENABLED = "true";
++    try {
++      expect(ask("the details we just discussed!!!") ?? "").not.toMatch(/packed and on the pickup shelf/);
++      process.env.DETAILS_FROM_EARLIER_ANSWER_ENABLED = "true";
++      expect(ask("the details we just discussed!!!")).toMatch(/^Add this to the Details of Coaching: Press \*\*Ready for Pick Up\*\* only once the order is packed and on the pickup shelf/);
++      // "make that update" keeps its rule: the last reply offered nothing.
++      expect(ask("make that update")).toBeNull();
++    } finally {
++      delete process.env.FORM_EDIT_REFERS_BACK_ENABLED;
++      delete process.env.DETAILS_FROM_EARLIER_ANSWER_ENABLED;
++    }
++  });
++});
++
++/*
++ * Gate-Bubbles-4 (12 Nov 2026, NO-GO on #692): nov7-refusal-bub-didnt-edit turn 5, "can you upate the draft with these
++ * details of coaching?", with no earlier content answer in the chat. The flag-on reading must be the flag-off one, never
++ * nothing (which sent the turn to the free chat model: "Updating the draft now", nothing written). Invented person.
++ */
++describe("DETAILS_FROM_EARLIER_ANSWER_ENABLED, no earlier content answer", () => {
++  const history: { role: "user" | "assistant"; content: string }[] = [
++    { role: "user", content: "Create a coaching form." },
++    { role: "assistant", content: "Who is this **Coaching Form** for?" },
++    { role: "user", content: "Oswin" },
++    { role: "assistant", content: "Is this for **Oswin Marchbank**?" },
++    { role: "user", content: "yes" },
++    { role: "assistant", content: "Here is what I would put on a **Coaching Form**.\n\nCreate the draft here when you're ready." },
++    { role: "user", content: "ship from store, when to press ready for pick up and when to press mark as shipped" },
++    { role: "assistant", content: "I haven't changed the **Coaching Form** for **Oswin Marchbank** — everything on it is as it was." },
++  ];
++  const ask = () =>
++    formContentQuestion({ question: "can you upate the draft with these details of coaching?", history, templateName: "Coaching Form", employeeName: "Oswin Marchbank" });
++
++  it("flag on reads the turn as the flag-off reading does", () => {
++    const off = ask();
++    process.env.DETAILS_FROM_EARLIER_ANSWER_ENABLED = "true";
++    try {
++      expect(ask()).toEqual(off);
++    } finally {
++      delete process.env.DETAILS_FROM_EARLIER_ANSWER_ENABLED;
++    }
++  });
++});
++
+diff --git a/src/lib/forms/form-content-turn.ts b/src/lib/forms/form-content-turn.ts
+index b36daef0..424bd998 100644
+--- a/src/lib/forms/form-content-turn.ts
++++ b/src/lib/forms/form-content-turn.ts
+@@ -1,4 +1,4 @@
+-import { claimGuardEnabled, copyPasteClaimHonestEnabled, formEditRefersBackEnabled } from "@/lib/config/chat-quality-flags";
++import { claimGuardEnabled, copyPasteClaimHonestEnabled, detailsFromEarlierAnswerEnabled, formEditRefersBackEnabled } from "@/lib/config/chat-quality-flags";
+ import { extractEmployeeNames, samePerson } from "@/lib/forms/proposal";
+ import type { ChatMessage } from "@/types";
+ 
+@@ -129,6 +129,37 @@ function previousAnswer(history: readonly Pick<ChatMessage, "role" | "content">[
+   return null;
+ }
+ 
++/*
++ * DETAILS_FROM_EARLIER_ANSWER_ENABLED (chat-edits (a), 5 Nov 2026): the app's own card, and its own replies to an edit
++ * ("I haven't changed …", "Nothing on the form has changed yet", "Updated the …"), hold no details to add. "these
++ * details" and "the details we just discussed" are the latest answer that is none of those.
++ */
++const APPS_OWN_REPLY =
++  /^\s*(?:Here is what I would put on|I'll draft an? \*\*|I haven'?t changed the|I didn'?t change anything|\*\*Nothing on the form has changed yet|Nothing on the form has changed|Updated the \*\*|Is this for \*\*|To create it, press|Who is this (?:form|\*\*[^*]+\*\*) for|Which of them is this)/i;
++// Gate-Bubbles-4 (12 Nov 2026): "Who is this **Coaching Form** for?" and "Which of them is this …" are the app's own
++// questions, never the details a manager means by "these details".
++
++function earlierContentAnswer(history: readonly Pick<ChatMessage, "role" | "content">[]): string | null {
++  for (let index = history.length - 1; index >= 0; index -= 1) {
++    const turn = history[index]!;
++    if (turn.role !== "assistant" || !turn.content?.trim()) continue;
++    if (APPS_OWN_REPLY.test(turn.content)) continue;
++    return turn.content;
++  }
++  return null;
++}
++
++/** The answer "these details" / "the details we just discussed" refer to. */
++function referredAnswer(history: readonly Pick<ChatMessage, "role" | "content">[]): string | null {
++  /*
++   * Gate-Bubbles-4 (12 Nov 2026, NO-GO on #692): with no earlier content answer in the chat, the flag sent "upate the
++   * draft with these details of coaching" to the free chat model, which replied "Updating the draft now" and wrote
++   * nothing (the live 30 Oct defect). Then the reading is the flag-off one: the previous answer.
++   */
++  if (!detailsFromEarlierAnswerEnabled()) return previousAnswer(history);
++  return earlierContentAnswer(history) ?? previousAnswer(history);
++}
++
+ export function formContentQuestion(input: {
+   question: string;
+   history: readonly Pick<ChatMessage, "role" | "content">[];
+@@ -165,7 +196,9 @@ export function formContentQuestion(input: {
+   if (formEditRefersBackEnabled()) {
+     const earlier = previousAnswer(input.history);
+     if (DO_THAT.test(question) || DISCUSSED.test(question)) {
+-      const content = earlier ? oneLine(contentOf(earlier)) : "";
++      // DETAILS_FROM_EARLIER_ANSWER_ENABLED: "the details we just discussed" past the app's own card and edit replies.
++      const referred = DISCUSSED.test(question) ? referredAnswer(input.history) : earlier;
++      const content = referred ? oneLine(contentOf(referred)) : "";
+       if (content) return `${into}: ${content}`;
+     }
+     const named = INCLUDE_DETAILS_OF.exec(question)?.[1]?.replace(/[.!]+$/, "").trim();
+@@ -173,7 +206,8 @@ export function formContentQuestion(input: {
+   }
+ 
+   if (MAKE_THAT.test(question) || WITH_THESE.test(question)) {
+-    const earlier = previousAnswer(input.history);
++    // DETAILS_FROM_EARLIER_ANSWER_ENABLED: "these details" past the app's own card and edit replies; "make that update" as before.
++    const earlier = WITH_THESE.test(question) ? referredAnswer(input.history) : previousAnswer(input.history);
+     /*
+      * "MAKE THAT UPDATE" NEEDS AN UPDATE TO MAKE. Live, 31 Oct 2026, it followed
+      * "It should update automatically — no copy-and-paste needed…", which is

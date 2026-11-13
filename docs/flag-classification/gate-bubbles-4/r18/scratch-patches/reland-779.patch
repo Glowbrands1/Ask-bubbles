@@ -1,0 +1,129 @@
+# triage worktree t779 (detached) head 7b60eaaa ; diff vs main 6081b825
+# 7b60eaaa gate: re-apply #779
+diff --git a/docs/parity-log/2026-11-11-coaching-duty-not-done-is-account.md b/docs/parity-log/2026-11-11-coaching-duty-not-done-is-account.md
+new file mode 100644
+index 00000000..d43d2912
+--- /dev/null
++++ b/docs/parity-log/2026-11-11-coaching-duty-not-done-is-account.md
+@@ -0,0 +1,5 @@
++## 11 Nov 2026: a duty not done is a coaching card's account — Ask Bubbles only (COACHING_ASKS_WHAT_HAPPENED_ENABLED, default off)
++
++QA, 11 Nov 2026: the flip blocker for ONE_FORM_EACH_PERSON and COACHING_ASKS_WHAT_HAPPENED, which ship together. With both flags on, `nov10-p7-one-form-each-named` failed. "Make me a coaching form for Tamsin, Corwin, and Ione for not closing duties correctly" read as no account, because `ai/coaching-what-happened.ts` took any "not" as "only what did not happen". So every card asked what happened and dropped the "I have the employee" line that CARD_NAMES_EMPLOYEE turns into "I have **<name>**". Now "not / never <verb>ing" ("not closing", "never following") is an account. "Not late", "nothing happened" and "not doing anything wrong" are still no account. The change sits behind COACHING_ASKS_WHAT_HAPPENED, which is off in production. New replay case `nov10-p7-one-form-each-named-with-coaching-asks` runs with all three flags.
++
++Not needed in Ask Sunny. There, the coaching and CA "what happened" reading (`ai/ca-what-happened.ts`, CA_SALES_POLICY, on in production) already reads "a 'not' before what the employee failed to do" as the account. Only a denied fault or "nothing happened" counts as no account.
+diff --git a/src/app/api/chat/replay-pack/nov10-one-form-each-person-cases.ts b/src/app/api/chat/replay-pack/nov10-one-form-each-person-cases.ts
+index 5c094b4b..5662da36 100644
+--- a/src/app/api/chat/replay-pack/nov10-one-form-each-person-cases.ts
++++ b/src/app/api/chat/replay-pack/nov10-one-form-each-person-cases.ts
+@@ -70,4 +70,29 @@ export const NOV10_ONE_FORM_EACH_PERSON_CASES: ReplayCase[] = [
+       }
+     },
+   },
++  {
++    id: "nov10-p7-one-form-each-named-with-coaching-asks",
++    title: "with COACHING_ASKS_WHAT_HAPPENED too (they ship together; QA, 11 Nov 2026): T1 → \"Tamsin Ashby\" → \"yes\" → \"yes\": one Coaching card each for Tamsin Ashby, Corwin Halsey and Ione Marchetti, each reply naming them",
++    report: REPORT,
++    status: { open: "one card, for one person; the other two never handled" },
++    // The flip blocker (QA, 11 Nov 2026): "for not closing duties correctly" was no account to COACHING_ASKS_WHAT_HAPPENED, so each
++    // card asked what happened and lost the "I have the employee" line CARD_NAMES_EMPLOYEE names (`ai/coaching-what-happened.ts`).
++    fixFlags: [...FIX, "COACHING_ASKS_WHAT_HAPPENED_ENABLED"],
++    async run(t) {
++      const thread = start(t);
++      await thread.say(T1);
++      for (const [said, person, next] of [
++        ["Tamsin Ashby", "Tamsin Ashby", "Corwin Halsey"],
++        ["yes", "Corwin Halsey", "Ione Marchetti"],
++        ["yes", "Ione Marchetti", null],
++      ] as const) {
++        const reply = await thread.say(said);
++        expect(thread.proposal, `"${said}": no Coaching card for ${person}:\n${reply.content}`).toMatchObject({ templateKey: "coaching", employeeName: person });
++        expect(reply.content, `"${said}": the reply does not name ${person}:\n${reply.content}`).toMatch(new RegExp(`I have \\*\\*${person}\\*\\*`));
++        expect(reply.content, `"${said}": "I have the employee":\n${reply.content}`).not.toMatch(/I have the employee\b/);
++        if (next) expect(reply.content, `"${said}": ${next} is not offered next:\n${reply.content}`).toMatch(new RegExp(`\\*\\*Next:\\*\\* a Coaching Form each for \\*\\*${next}\\*\\*`));
++        else expect(reply.content, `"${said}": a Next line after the last person:\n${reply.content}`).not.toMatch(/\*\*Next:\*\*/);
++      }
++    },
++  },
+ ];
+diff --git a/src/app/api/chat/replay-pack/nov5-request-slot-cases.ts b/src/app/api/chat/replay-pack/nov5-request-slot-cases.ts
+index 1a095891..dc48329b 100644
+--- a/src/app/api/chat/replay-pack/nov5-request-slot-cases.ts
++++ b/src/app/api/chat/replay-pack/nov5-request-slot-cases.ts
+@@ -1,5 +1,7 @@
+ import { expect, vi } from "vitest";
+ 
++import { oneFormEachPersonEnabled } from "@/lib/config/chat-quality-flags";
++
+ import { STAFF, WEST_DODGE, type DirectoryRow, type ReplayAnswer, type ReplayCase, type ReplayContext } from "./cases";
+ import { answerOffRosterAsk } from "./off-roster-answer";
+ 
+@@ -167,6 +169,13 @@ export const NOV5_REQUEST_SLOT_CASES: ReplayCase[] = [
+       const reply = await thread.say("CA for Wilhelmina Corvina and Peregrine Varnholt for being late");
+       expect(reply.content, `does not ask which of the two:\n${reply.content}`).toMatch(/Wilhelmina Corvina/);
+       expect(reply.content, `does not ask which of the two:\n${reply.content}`).toMatch(/Peregrine Varnholt/);
++      // Changed on purpose (11 Nov 2026): QA's ruling for ONE_FORM_EACH_PERSON (P7, 10 Nov) is one form each, so with
++      // that flag on the first person's card comes now and the "**Next:**" line names the second. Off, it still asks.
++      if (oneFormEachPersonEnabled()) {
++        expect(thread.proposal?.employeeName ?? null, `one form each: no card for the first person:\n${reply.content}`).toBe("Wilhelmina Corvina");
++        expect(reply.content, `one form each: the second person is not next:\n${reply.content}`).toMatch(/\*\*Next:\*\*[^\n]*\*\*Peregrine Varnholt\*\*/);
++        return;
++      }
+       expect(thread.proposal?.employeeName ?? null, "a card was made for one of them without asking").toBeNull();
+     },
+   },
+diff --git a/src/lib/ai/coaching-what-happened.test.ts b/src/lib/ai/coaching-what-happened.test.ts
+index fab47b82..62fa9b72 100644
+--- a/src/lib/ai/coaching-what-happened.test.ts
++++ b/src/lib/ai/coaching-what-happened.test.ts
+@@ -68,3 +68,24 @@ describe("controls: the card as built", () => {
+     expect(askCoachingWhatHappened(reply(LIVE, ca), "Thessaly Brandt", HISTORY).content).toBe(LIVE);
+   });
+ });
++
++/*
++ * QA, 11 Nov 2026 (the ONE_FORM_EACH_PERSON + COACHING_ASKS_WHAT_HAPPENED flip blocker, nov10-p7-one-form-each-named):
++ * "Make me a coaching form for Tamsin, Corwin, and Ione for not closing duties correctly" — a duty not done is the
++ * account, so the card is as built (and keeps the "I have the employee" line CARD_NAMES_EMPLOYEE names). Invented people.
++ */
++describe("a duty not done is an account", () => {
++  const P7 = [{ role: "user", content: "Make me a coaching form for Tamsin, Corwin, and Ione for not closing duties correctly" }];
++
++  it("\"for not closing duties correctly\": the card as built", () => {
++    expect(askCoachingWhatHappened(reply(LIVE, coaching("Tamsin Ashby")), "Tamsin Ashby", P7).content).toBe(LIVE);
++    expect(askCoachingWhatHappened(reply(LIVE, coaching("Corwin Halsey")), "a coaching form for Corwin Halsey for not closing duties correctly", HISTORY).content).toBe(LIVE);
++    expect(askCoachingWhatHappened(reply(LIVE, coaching("Thessaly Brandt")), "she keeps never following the closing checklist", HISTORY).content).toBe(LIVE);
++  });
++
++  it("negative: what did not happen is still no account", () => {
++    for (const said of ["she was not late", "nothing happened", "she is not doing anything wrong"]) {
++      expect(askCoachingWhatHappened(reply(LIVE, coaching("Thessaly Brandt")), said, HISTORY).content, said).toContain(COACHING_WHAT_HAPPENED_NOTE);
++    }
++  });
++});
+diff --git a/src/lib/ai/coaching-what-happened.ts b/src/lib/ai/coaching-what-happened.ts
+index c8f2da58..93aa0a0c 100644
+--- a/src/lib/ai/coaching-what-happened.ts
++++ b/src/lib/ai/coaching-what-happened.ts
+@@ -51,6 +51,13 @@ export function turnsForThisForm(history: readonly Turn[], templateKey: string):
+ 
+ /** Only what did not happen: "she was not late", "nothing happened", "no incident", "she didn't do anything wrong". */
+ const NEGATED = /\b(?:not|never|nothing|no\s+(?:incident|issue|problems?|concerns?))\b|n['’]t\b/i;
++/*
++ * "for not closing duties correctly", "never following the closing checklist": a duty not done is the account
++ * (QA, 11 Nov 2026: with ONE_FORM_EACH_PERSON, "a coaching form for <A>, <B>, and <C> for not closing duties
++ * correctly" asked what happened on every card, and dropped the "I have the employee" line CARD_NAMES_EMPLOYEE names).
++ * "not doing anything wrong" is still nothing.
++ */
++const DUTY_NOT_DONE = /\b(?:not|never)\s+[a-z]+ing\b(?!\s+(?:anything|nothing)\b)/i;
+ 
+ const NOT_A_PERSON = new Set(["she", "he", "they", "the", "a", "an", "her", "his", "their", "our", "my", "this", "that", "it", "i", "we", "you", "and", "also", "then"]);
+ 
+@@ -71,7 +78,7 @@ function hasAccount(said: string, name: string, ignore: readonly string[]): bool
+     .filter(Boolean)
+     .some(
+       (clause) =>
+-        !NEGATED.test(clause) &&
++        (!NEGATED.test(clause) || DUTY_NOT_DONE.test(clause)) &&
+         !aboutSomebodyElse(clause, name) &&
+         (describesIncident(clause) || describesMoreThanTheRequest(clause, { ignore })),
+     );

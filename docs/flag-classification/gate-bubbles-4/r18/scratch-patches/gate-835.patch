@@ -1,0 +1,127 @@
+# branch gate-835 head 7582d691 ; diff from main-line base 6d862bbe
+# 7582d691 resolve (keep both)
+# dfc85c46 Port from Ask Sunny (f449c635): TITLE_BEFORE_NAME — a title closed by a comma is a label; "Trainee" is no name; four-word names with a particle
+diff --git a/src/app/api/chat/replay-pack/nov11-title-before-name-cases.ts b/src/app/api/chat/replay-pack/nov11-title-before-name-cases.ts
+index ada2d7a4..e97d40f0 100644
+--- a/src/app/api/chat/replay-pack/nov11-title-before-name-cases.ts
++++ b/src/app/api/chat/replay-pack/nov11-title-before-name-cases.ts
+@@ -198,3 +198,26 @@ export const NOV12_TITLE_BEFORE_NAME_REPLY_LINES_CASES: ReplayCase[] = [
+     },
+   },
+ ];
++
++/*
++ * Ported from the sibling app (Gate-Sunny's NO-GO on #867, 12 Nov 2026; R02 from a Sunny production chat, this app's title).
++ * TITLE_BEFORE_NAME is on in production here (17o): "create a CA for store manager, test employee for violating the
++ * standards of conduct" took "store manager," as the title and stopped the name before "employee". A title closed by a
++ * comma is a label; the name after it is read as before the flag. "test employee" is on nobody's roster here.
++ * A guard: through the whole chat route this app's card already never named "test" (no employee is carded; checked on
++ * main 815ae303 before the fix). The reader-level failure is pinned in `forms/title-before-name.test.ts`, which failed
++ * before the fix.
++ */
++export const NOV12_TITLE_COMMA_LABEL_CASES: ReplayCase[] = [
++  {
++    id: "nov12-title-comma-label-name-runs",
++    title: "\"create a CA for store manager, test employee for violating the standards of conduct\": the name is never cut to \"test\"",
++    report: "Ported from the sibling app (Gate-Sunny's NO-GO on #867, 12 Nov 2026): R02 carded \"test\" with TITLE_BEFORE_NAME on",
++    status: "fixed",
++    async run(t: ReplayContext) {
++      const { reply, proposal } = await ask(t, "admin", "create a CA for store manager, test employee for violating the standards of conduct");
++      expect(proposal?.employeeName ?? null, reply.content).not.toBe("test");
++      expect(reply.content, reply.content).not.toMatch(/\*\*test\*\*/i);
++    },
++  },
++];
+diff --git a/src/lib/forms/title-before-name.test.ts b/src/lib/forms/title-before-name.test.ts
+index e6259313..e087c15d 100644
+--- a/src/lib/forms/title-before-name.test.ts
++++ b/src/lib/forms/title-before-name.test.ts
+@@ -102,3 +102,33 @@ describe("Gate-Sunny's probe on the sibling app (12 Nov 2026)", () => {
+     expect(withoutLeadingTitle("Team Member Wren Tallis Today")).toBe("Wren Tallis");
+   });
+ });
++
++/*
++ * Ported from the sibling app (Gate-Sunny's NO-GO on #867, 12 Nov 2026; R02 from a Sunny production chat, this app's title):
++ * "create a CA for store manager, test employee for violating the standards of conduct" — a title closed by a comma is
++ * a label, and the name after it is read as before the flag. And the gate's notes. Invented people.
++ */
++describe("TITLE_BEFORE_NAME: a title closed by a comma, trainees, four-word names (ported from the sibling app)", () => {
++  const R02 = "create a CA for store manager, test employee for violating the standards of conduct";
++
++  it("flag on: the request reads as it did with the flag off", () => {
++    delete process.env.TITLE_BEFORE_NAME_ENABLED;
++    const off = leadingFormRequest(R02);
++    process.env.TITLE_BEFORE_NAME_ENABLED = "true";
++    expect(leadingTitleLength(["store", "manager,", "test", "employee"])).toBe(0);
++    expect(leadingFormRequest(R02)).toEqual(off);
++  });
++
++  it("flag on: \"Shift Lead Trainee\" is a title, never a person called Trainee", () => {
++    process.env.TITLE_BEFORE_NAME_ENABLED = "true";
++    expect(withoutLeadingTitle("Shift Lead Trainee")).toBe("Shift Lead Trainee");
++    expect(nameAfterTitle("Corrective action for Team Member Trainee")).toBeNull();
++  });
++
++  it("flag on: \"Team Member Wren Van Der Berg\" is Wren Van Der Berg (a surname particle lets the name run to four words)", () => {
++    process.env.TITLE_BEFORE_NAME_ENABLED = "true";
++    expect(withoutLeadingTitle("Team Member Wren Van Der Berg")).toBe("Wren Van Der Berg");
++    expect(nameAfterTitle("Corrective action for Team Member Wren van der Berg")).toBe("Wren van der Berg");
++    expect(nameAfterTitle("Corrective action for Team Member Wren Tallis Marsh Pike")).toBeNull();
++  });
++});
+diff --git a/src/lib/forms/title-before-name.ts b/src/lib/forms/title-before-name.ts
+index d8716385..e1f6687c 100644
+--- a/src/lib/forms/title-before-name.ts
++++ b/src/lib/forms/title-before-name.ts
+@@ -28,7 +28,14 @@ function isWholeTitle(phrase: string): boolean {
+ export function leadingTitleLength(words: readonly string[]): number {
+   if (!titleBeforeNameEnabled()) return 0;
+   for (let length = Math.min(4, words.length - 1); length >= 1; length -= 1) {
+-    if (isWholeTitle(words.slice(0, length).join(" "))) return length;
++    if (!isWholeTitle(words.slice(0, length).join(" "))) continue;
++    /*
++     * Ported from the sibling app (Gate-Sunny's NO-GO on #867, 12 Nov 2026; R02 from a production chat): "create a CA for salon
++     * director, test employee for violating the standards of conduct" carded "test" (expected "test employee"). A title
++     * closed by a comma is a label before the name, and the name after it is read as it was before this flag.
++     */
++    if (/,$/.test(words[length - 1]!)) return 0;
++    return length;
+   }
+   return 0;
+ }
+@@ -57,7 +64,9 @@ const NOT_A_NAME_WORD = new Set(
+     "monday mondays tuesday tuesdays wednesday wednesdays thursday thursdays friday fridays saturday saturdays sunday sundays weekend weekends " +
+     "training trainings visit visits meeting meetings shift shifts review reviews evaluation evaluations award awards party parties " +
+     "orientation onboarding schedule schedules huddle huddles inventory audit audits " +
+-    "approval approvals request requests check checks call calls walk walkthrough coverage deadline deadlines report reports"
++    "approval approvals request requests check checks call calls walk walkthrough coverage deadline deadlines report reports " +
++    // Ported from the sibling app (Gate-Sunny's note on #867, 12 Nov 2026): "<title> Trainee" is a title, never a person called "Trainee".
++    "trainee trainees hire hires"
+   ).split(" "),
+ );
+ 
+@@ -77,11 +86,21 @@ function withoutTrailingTime(words: readonly string[]): string[] {
+ }
+ 
+ /** One to three words, each shaped like a name and none of them a joining, time, event or shift word. */
++/*
++ * Ported from the sibling app (Gate-Sunny's note on #867, 12 Nov 2026): "<title> Wren Van Der Berg" read no name — four words. A
++ * surname particle (van, der, de, la …) lets the name run to four words.
++ */
++const PARTICLE = /^(?:van|von|der|den|de|del|della|da|di|la|le|du|st\.?|mac|bin|ibn)$/i;
++
+ function personLike(words: readonly string[]): boolean {
++  const most = words.some((word, at) => at > 0 && PARTICLE.test(word)) ? 4 : 3;
+   return (
+     words.length >= 1 &&
+-    words.length <= 3 &&
+-    words.every((word) => NAME_WORD.test(word) && !NOT_A_NAME_WORD.has(word.toLowerCase().replace(/[.,;:!?]+$/, "")))
++    words.length <= most &&
++    words.every(
++      (word, at) =>
++        (NAME_WORD.test(word) || (at > 0 && PARTICLE.test(word))) && !NOT_A_NAME_WORD.has(word.toLowerCase().replace(/[.,;:!?]+$/, "")),
++    )
+   );
+ }
+ 

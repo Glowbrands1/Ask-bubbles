@@ -1,0 +1,243 @@
+# branch gate-838 head 646caa15 ; diff from main-line base 6d862bbe
+# 646caa15 resolve: keep main revisionPrompts, add draftReplies
+# e1e44ae5 FIRST_NAME_ENOUGH: a CA Observation that names her by first name says so, never "left out <surname>"
+diff --git a/src/app/api/chat/replay-pack/cases.ts b/src/app/api/chat/replay-pack/cases.ts
+index 4181b429..0e730040 100644
+--- a/src/app/api/chat/replay-pack/cases.ts
++++ b/src/app/api/chat/replay-pack/cases.ts
+@@ -85,6 +85,8 @@ export interface ReplayContext {
+   checked(instanceId: string): Record<string, string[]>;
+   /** What the drafting model was given, one entry per draft written. */
+   draftPrompts(): string[];
++  /** The draft route's replies this case, in order (e.g. its `notice`). */
++  draftReplies?(): Record<string, unknown>[];
+   /**
+    * What the revision model was HANDED, one prompt per revision call (its user message, as text).
+    * Assert on this, not only on the saved form: the stand-in writes whatever `revisionWrites` scripts,
+diff --git a/src/app/api/chat/replay-pack/nov12-r36-first-name-only-cases.ts b/src/app/api/chat/replay-pack/nov12-r36-first-name-only-cases.ts
+new file mode 100644
+index 00000000..ba7eaa84
+--- /dev/null
++++ b/src/app/api/chat/replay-pack/nov12-r36-first-name-only-cases.ts
+@@ -0,0 +1,38 @@
++import { expect, vi } from "vitest";
++
++import { STAFF, WEST_DODGE, type DirectoryRow, type ReplayCase } from "./cases";
++
++/**
++ * ============================================================================
++ * A CA OBSERVATION THAT NAMES HER BY FIRST NAME SAYS SO (QA's r36 (in the sibling app) live check and ruling (B), 12 Nov 2026)
++ * ============================================================================
++ *
++ * QA's wording, names invented: "create a written CA for <A>, she was 20 minutes late on 11/10, no action plan". After
++ * Create, with the Observation "On November 10, 2026, <first name> arrived 20 minutes late", the notice said "The draft
++ * left out <surname> in Observation of Offense", which reads as if she were missing. The dropped surname is still
++ * detected (the single-writer spec); with FIRST_NAME_ENOUGH (on in production) the line says she is named by first name
++ * only.
++ */
++const ODALYS: DirectoryRow = { id: "e-r36-odalys-pemberley", firstName: "Odalys", lastName: "Pemberley", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-264"], positionName: "Team Member Part Time" };
++const notices = (replies: readonly Record<string, unknown>[]) => replies.map((reply) => String(reply.notice ?? "")).join("\n");
++
++export const NOV12_R36_FIRST_NAME_ONLY_CASES: ReplayCase[] = [
++  {
++    id: "nov12-r36-ca-first-name-only-wording",
++    title: "a written CA whose Observation names her by first name: the notice says so, never \"left out <surname>\"",
++    report: "QA's r36 (in the sibling app) live check (12 Nov 2026), ruling (B): \"The draft left out <surname> in Observation of Offense\" with her first name there",
++    status: "fixed",
++    async run(t) {
++      vi.setSystemTime(new Date("2026-11-12T14:00:00Z"));
++      t.directory([...STAFF, ODALYS]);
++      t.as("location_manager", WEST_DODGE);
++      const thread = t.thread();
++      await thread.say("create a written CA for Odalys Pemberley, she was 20 minutes late on 11/10, no action plan");
++      t.draftWrites({ observation: "On November 10, 2026, Odalys arrived 20 minutes late for her scheduled shift." });
++      await thread.create();
++      const said = notices(t.draftReplies!());
++      expect(said, said).not.toMatch(/left out Pemberley/);
++      expect(said, said).toMatch(/names the employee as Odalys only; tell me if you want the full name there\./);
++    },
++  },
++];
+diff --git a/src/app/api/chat/replay-pack/replay-pack-e2e.test.ts b/src/app/api/chat/replay-pack/replay-pack-e2e.test.ts
+index a482089b..b9e57184 100644
+--- a/src/app/api/chat/replay-pack/replay-pack-e2e.test.ts
++++ b/src/app/api/chat/replay-pack/replay-pack-e2e.test.ts
+@@ -489,10 +489,15 @@ async function call<T>(url: string, init?: RequestInit): Promise<T> {
+       : null;
+   if (!response) throw new Error(`no route for ${url}`);
+   const body = (await response.json()) as T & { error?: string };
++  // The draft route's replies, in order, as the browser receives them (`draftReplies`; ported from the sibling app's pack).
++  if (draft) draftReplies.push(body as Record<string, unknown>);
+   if (!response.ok) throw new Error(body.error ?? `HTTP ${response.status}`);
+   return body;
+ }
+ 
++/** The draft route's replies this case (their `notice`). */
++const draftReplies: Record<string, unknown>[] = [];
++
+ /** The chat route only accepts a UUID for the open form; the fake numbers rows `fake-N`. */
+ function toUuid(id: string): string {
+   if (/^[0-9a-f-]{36}$/.test(id)) return id;
+@@ -649,6 +654,7 @@ beforeEach(async () => {
+   state.reading = {};
+   state.draft = { values: {} };
+   state.revision = { values: {} };
++  draftReplies.length = 0;
+   patchScript.outputs = [];
+   patchScript.calls = 0;
+   patchScript.byLatest = null;
+@@ -787,6 +793,7 @@ function context(): ReplayContext {
+     calls: () => ({ chat: state.chatModelCalls, draft: state.draftCalls, revision: state.revisionCalls, tool: state.toolCalls, patch: patchScript.calls }),
+     forms: () => store.form_instances as never,
+     draftPrompts: () => [...draftAsked],
++    draftReplies: () => [...draftReplies],
+     revisionPrompts: () =>
+       revisionAsked.map((asked) =>
+         (JSON.parse(asked) as { content?: unknown }[]).map((message) => (typeof message.content === "string" ? message.content : JSON.stringify(message.content))).join("\n"),
+diff --git a/src/app/api/forms/instances/[id]/draft/route.ts b/src/app/api/forms/instances/[id]/draft/route.ts
+index 51ce24d1..1a88fcb3 100644
+--- a/src/app/api/forms/instances/[id]/draft/route.ts
++++ b/src/app/api/forms/instances/[id]/draft/route.ts
+@@ -1781,7 +1781,8 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
+       const facts = consistency.draftFacts({ employeeName: loaded.instance.employeeName, notes, today: businessToday() });
+       const labels = narrativeTargets.map((key) => promptFields.find((field) => field.key === key)?.label ?? key);
+       const missing = consistency.missingFacts(prose.attributions.values, narrativeTargets, facts);
+-      if (missing.length > 0) leftOut = consistency.leftOutLine(missing, labels);
++      // FIRST_NAME_ENOUGH_ENABLED: a CA Observation that names her by first name says so (`leftOutNotice`).
++      if (missing.length > 0) leftOut = consistency.leftOutNotice({ missing, labels, facts, values: prose.attributions.values, narrativeKeys: narrativeTargets });
+       updateChatTrace({ draftCheck: { checked: true, missing_keys: [...new Set(missing.map((fact) => fact.kind))] } });
+     }
+     const { cleaned, dated, narrated, evidence, timeframe, followUp, framing, claims, requirements, attributions } = prose;
+diff --git a/src/app/api/forms/pm-draft-route.test.ts b/src/app/api/forms/pm-draft-route.test.ts
+index e5f23340..06cf4878 100644
+--- a/src/app/api/forms/pm-draft-route.test.ts
++++ b/src/app/api/forms/pm-draft-route.test.ts
+@@ -2122,6 +2122,8 @@ describe("FORM_EDIT_SINGLE_WRITER_ENABLED: the post-draft consistency check", ()
+   });
+ 
+   it('"Marnie was late": the miss is detected and reported, and the drafting call count is unchanged', async () => {
++    // FIRST_NAME_ENOUGH off, pinned here (it is on in production): the wording as the spec first gave it.
++    vi.stubEnv("FIRST_NAME_ENOUGH_ENABLED", "");
+     state.toolInputs = [SHORT];
+     const { payload, check } = await traced(CREATE);
+ 
+@@ -2132,6 +2134,24 @@ describe("FORM_EDIT_SINGLE_WRITER_ENABLED: the post-draft consistency check", ()
+     expect(check).toEqual({ checked: true, missing_keys: ["name", "date"] });
+   });
+ 
++  it('"Marnie was late", FIRST_NAME_ENOUGH on: the dropped surname is still detected; the line says she is named by first name only', async () => {
++    /*
++     * Changed on purpose (12 Nov 2026, QA's ruling (B) on the sibling app's r36 live check): "The draft left out <surname>"
++     * read as if she were missing from an Observation that names her by first name. Detection is the same (the trace
++     * still has "name"); only the wording changes. The date the draft left out is said as before.
++     */
++    vi.stubEnv("FIRST_NAME_ENOUGH_ENABLED", "true");
++    state.toolInputs = [SHORT];
++    const { payload, check } = await traced(CREATE);
++
++    expect(state.modelCalls).toBe(1);
++    expect(state.persisted.at(-1)!.values.observation).toBe("Marnie was late.");
++    expect(payload.notice).toContain("The draft left out 10-20-26 in Observation of Offense; tell me if you want it added.");
++    expect(payload.notice).toContain("The Observation of Offense names the employee as Marnie only; tell me if you want the full name there.");
++    expect(String(payload.notice)).not.toContain("left out Quill");
++    expect(check).toEqual({ checked: true, missing_keys: ["name", "date"] });
++  });
++
+   it("a clean draft: no note is added, and no extra call", async () => {
+     state.toolInputs = [WHOLE];
+     const { payload, check } = await traced(CREATE);
+diff --git a/src/lib/forms/draft-consistency.ts b/src/lib/forms/draft-consistency.ts
+index c2ad40fb..d1990c84 100644
+--- a/src/lib/forms/draft-consistency.ts
++++ b/src/lib/forms/draft-consistency.ts
+@@ -91,3 +91,30 @@ function listed(items: readonly string[]): string {
+ export function leftOutLine(missing: readonly DraftFact[], labels: readonly string[]): string {
+   return `The draft left out ${listed(missing.map((fact) => fact.shown))} in ${listed(labels)}; tell me if you want it added.`;
+ }
++
++/*
++ * FIRST_NAME_ENOUGH_ENABLED, the Corrective Action's wording (QA's r36 (in the sibling app) live check and ruling (B), 12 Nov 2026):
++ * "The draft left out <surname> in Observation of Offense" was shown though the Observation named the employee by first
++ * name, and reads as if she were missing. A dropped surname is still detected (the single-writer spec); when another
++ * word of the name is there, the line says what is true: "The Observation of Offense names the employee as <first>
++ * only; tell me if you want the full name there." Any other fact the draft left out is said as before. Off, as before.
++ */
++export function leftOutNotice(input: {
++  readonly missing: readonly DraftFact[];
++  readonly labels: readonly string[];
++  readonly facts: readonly DraftFact[];
++  readonly values: Readonly<Record<string, string>>;
++  readonly narrativeKeys: readonly string[];
++}): string {
++  const { missing, labels } = input;
++  const text = input.narrativeKeys.map((key) => input.values[key] ?? "").join("\n");
++  const named = input.facts.filter((fact) => fact.kind === "name" && fact.in(text));
++  const nameMissing = missing.filter((fact) => fact.kind === "name");
++  if (!firstNameEnoughEnabled() || named.length === 0 || nameMissing.length === 0) return leftOutLine(missing, labels);
++  const asNamed = named.map((fact) => fact.shown).join(" ");
++  const where = labels.length === 1 ? `The ${labels[0]} names` : `The draft names`;
++  const inFields = labels.length === 1 ? "" : ` in ${listed(labels)}`;
++  const nameLine = `${where} the employee as ${asNamed} only${inFields}; tell me if you want the full name there.`;
++  const rest = missing.filter((fact) => fact.kind !== "name");
++  return rest.length > 0 ? `${leftOutLine(rest, labels)} ${nameLine}` : nameLine;
++}
+diff --git a/src/lib/forms/first-name-only-wording.test.ts b/src/lib/forms/first-name-only-wording.test.ts
+new file mode 100644
+index 00000000..f8e9b27f
+--- /dev/null
++++ b/src/lib/forms/first-name-only-wording.test.ts
+@@ -0,0 +1,54 @@
++import { afterEach, describe, expect, it, vi } from "vitest";
++
++import { draftFacts, leftOutNotice, missingFacts } from "./draft-consistency";
++
++/*
++ * FIRST_NAME_ENOUGH_ENABLED, the Corrective Action's wording (QA's r36 (in the sibling app) live check and ruling (B), 12 Nov 2026;
++ * names invented): "create a written CA for Odalys Pemberley, she was 20 minutes late on 11/10, no action plan".
++ */
++const NOTES = "create a written CA for Odalys Pemberley, she was 20 minutes late on 11/10, no action plan";
++function notice(values: Record<string, string>, labels = ["Observation of Offense"]) {
++  const keys = Object.keys(values);
++  const facts = draftFacts({ employeeName: "Odalys Pemberley", notes: NOTES, today: "2026-11-12" });
++  const missing = missingFacts(values, keys, facts);
++  return missing.length === 0 ? null : leftOutNotice({ missing, labels, facts, values, narrativeKeys: keys });
++}
++
++describe("FIRST_NAME_ENOUGH: a CA Observation that names her by first name", () => {
++  afterEach(() => vi.unstubAllEnvs());
++
++  it("on: says she is named by first name only, never \"left out <surname>\"", () => {
++    vi.stubEnv("FIRST_NAME_ENOUGH_ENABLED", "true");
++    expect(notice({ observation: "On November 10, 2026, Odalys arrived 20 minutes late." })).toBe(
++      "The Observation of Offense names the employee as Odalys only; tell me if you want the full name there.",
++    );
++  });
++
++  it("on: a date also left out is said as before, then the name line", () => {
++    vi.stubEnv("FIRST_NAME_ENOUGH_ENABLED", "true");
++    expect(notice({ observation: "Odalys arrived 20 minutes late." })).toBe(
++      "The draft left out 11/10 in Observation of Offense; tell me if you want it added. The Observation of Offense names the employee as Odalys only; tell me if you want the full name there.",
++    );
++  });
++
++  it("on: no word of her name at all is still \"left out\"", () => {
++    vi.stubEnv("FIRST_NAME_ENOUGH_ENABLED", "true");
++    expect(notice({ observation: "On November 10, 2026, the employee arrived 20 minutes late." })).toBe(
++      "The draft left out Odalys and Pemberley in Observation of Offense; tell me if you want it added.",
++    );
++  });
++
++  it("on: two fields", () => {
++    vi.stubEnv("FIRST_NAME_ENOUGH_ENABLED", "true");
++    expect(notice({ observation: "On November 10, 2026, Odalys arrived 20 minutes late.", action_plan: "Leadership will coach." }, ["Observation of Offense", "Action Plan"])).toBe(
++      "The draft names the employee as Odalys only in Observation of Offense and Action Plan; tell me if you want the full name there.",
++    );
++  });
++
++  it("off: as before", () => {
++    vi.stubEnv("FIRST_NAME_ENOUGH_ENABLED", "");
++    expect(notice({ observation: "On November 10, 2026, Odalys arrived 20 minutes late." })).toBe(
++      "The draft left out Pemberley in Observation of Offense; tell me if you want it added.",
++    );
++  });
++});

@@ -1,0 +1,2432 @@
+# branch gate-802d head 037e0b5f ; diff from main-line base 26fbb76d
+# 037e0b5f keep both
+# 2593987e Merge pull request #816 from Glowbrands1/claude/new-session-vq9ob8
+# 083c5c03 Merge remote-tracking branch 'origin/main' into claude/new-session-vq9ob8
+# 957e65d0 QA round 17m: FORM_INPUT_FIDELITY, EXIT_PROSE_FACTS, CHAT_IMPORT_PROVEN_OWN, WORN_CLOTHING_IS_DRESS_CODE, COPY_PASTE_POINTS_TO_CARD, FORMS_BELOW_NEEDS_FORMS on; 4 cases fixed
+# 96f604ee Merge pull request #813 from Glowbrands1/claude/step-b-reply-lines-pin-t6
+# a7b0d07d Merge remote-tracking branch 'origin/claude/17i-live-fixes' into claude/new-session-vq9ob8
+# 40fb28fb Merge remote-tracking branch 'origin/claude/import-proven-own-tests' into claude/new-session-vq9ob8
+# e2731ea2 Merge remote-tracking branch 'origin/claude/exit-prose-facts-rebuild' into claude/new-session-vq9ob8
+# 2f1af075 Merge remote-tracking branch 'origin/claude/form-input-fidelity-v2' into claude/new-session-vq9ob8
+# 527d04bb STEP_B_REPLY_KEEPS_LINES: nov4-edit-tool-ca-t6-append's reply accepts the multi-line form (test-only)
+# 124fb048 import-own-only: the off test holds CHAT_IMPORT_PROVEN_OWN off too
+# 2c620bed WORN_CLOTHING_IS_DRESS_CODE: a named policy wins; "comes in" is wearing only for a person (Gate-Bubbles-2's two notes on #799)
+# 8dbc3053 FORM_INPUT_FIDELITY: date Coaching drafts only with UNREAD_DAY_NOT_INCIDENT_DATE on
+# be17b6f1 Port from Ask Sunny (e0796647): CHAT_IMPORT_PROVEN_OWN — a chat not proven yours is "not_proven", never "another account"; the import tests run with the flag on too
+# becb64b8 form-input-fidelity off test pins POSITION_ANSWER_GUARD off too: it holds under production's flags (test-only)
+# f23d4407 Merge remote-tracking branch 'origin/main' into HEAD
+# 61a9d99b Merge remote-tracking branch 'origin/main' into HEAD
+# cf9e1aa8 Bubbles 17i live test: forms-below line, hoodie CA policy, copy-paste with the card on screen (three flags, default off)
+# c0297a1a Merge main (6ce4ba95) into claude/form-input-fidelity-v2 (#760): flag list conflicts kept both sides
+# 4318248b EXIT_PROSE_FACTS completed on current main: production-flags pins and a replay case (QA's October triage of #195)
+diff --git a/docs/parity-log/2026-10-24-form-input-fidelity.md b/docs/parity-log/2026-10-24-form-input-fidelity.md
+new file mode 100644
+index 00000000..db85751e
+--- /dev/null
++++ b/docs/parity-log/2026-10-24-form-input-fidelity.md
+@@ -0,0 +1,23 @@
++## 24 Oct 2026: typed dates and one-word follow-ups
++
++`FORM_INPUT_FIDELITY_ENABLED` is Bubbles-only in this change. A matching
++Ask Sunny fix is being built separately (its twin is Ask Sunny #166), so this
++one is not ported here. No store or salon wording was copied. The JBA Policy
++Manual titles stay.
++
++Off, a manager who types "yesterday" still gets a draft dated today, and a
++one-word "verbal" or "written" can still be saved as Job Title. On, the
++typed or resolved day is the form date, and today is used only when no date
++was given. A bare follow-up goes to the question just asked.
++
++Rebuilt on main on 11 Nov 2026 (QA's stale-PR cleanup of #92). On main with
++production's flags the typed dates and a bare "verbal" / "written" / "yes"
++are already read correctly; a bare "yesterday" after the position question
++was still saved as Job Title "Yesterday" (replay case
++`nov11-form-input-fidelity-title-yesterday`).
++
++12 Nov 2026 (QA's #760 gate): Coaching drafts get the form date only while
++`UNREAD_DAY_NOT_INCIDENT_DATE_ENABLED` is also on, so "late last week" is
++never saved as today's incident. Not ported: Ask Sunny's `main` has no
++`draftDateApplies` or Coaching form-date path, and Ask Sunny #166 is still
++unmerged. Whoever lands #166 carries this same both-flags condition.
+diff --git a/src/app/api/chat/conversations/import/import-every-role.test.ts b/src/app/api/chat/conversations/import/import-every-role.test.ts
+index c63f7cdf..ae0b0e51 100644
+--- a/src/app/api/chat/conversations/import/import-every-role.test.ts
++++ b/src/app/api/chat/conversations/import/import-every-role.test.ts
+@@ -43,13 +43,27 @@ function subjectFor(role: Role): string {
+   return `${index}${index}${index}${index}-1111-4111-8111-111111111111`;
+ }
+ 
++/** A stable answered-turn id per role (an activity_events row id). */
++function turnFor(role: Role): string {
++  const index = ROLES.indexOf(role).toString(16).padStart(2, "0");
++  return `${index}${index}${index}${index}-2222-4222-8222-222222222222`;
++}
++
++/**
++ * CHAT_IMPORT_PROVEN_OWN_ENABLED (QA, 12 Nov 2026): an import must prove itself the importer's, every answered turn on
++ * record as theirs. Each role's answered turn is recorded for that role, so these tests hold with the flag on too.
++ */
++function activityForEveryRole() {
++  return ROLES.map((role) => ({ id: turnFor(role), actor_user_id: subjectFor(role), occurred_at: "2026-08-01T09:00:01.000Z" }));
++}
++
+ /** Every permission a route asked for, in order. */
+ const requested: Permission[] = [];
+ 
+ /** Who the next request is from. Changed between requests within a test. */
+ let signedInAs: Role = "district_manager";
+ 
+-async function load(db = fakeChatSupabase()) {
++async function load(db = fakeChatSupabase({ activity_events: activityForEveryRole() })) {
+   vi.resetModules();
+ 
+   vi.doMock("@/lib/auth/server", () => ({
+@@ -109,6 +123,7 @@ function conversationFor(role: Role) {
+         content: `answer for ${role}`,
+         createdAt: "2026-08-01T09:00:01.000Z",
+         mode: "standard",
++        turnId: turnFor(role),
+       },
+     ],
+   };
+@@ -148,157 +163,171 @@ afterEach(() => {
+   vi.resetModules();
+ });
+ 
+-describe("every role that can open History can import", () => {
+-  it("History and Import are gated on the same single permission", async () => {
+-    const { importRoute, listRoute } = await load();
+-
+-    requested.length = 0;
+-    await listRoute.GET(listRequest());
+-    const historyPermissions = [...requested];
+-
+-    requested.length = 0;
+-    await importRoute.GET(probe());
+-    await importRoute.POST(importRequest([conversationFor("district_manager")]));
+-    const importPermissions = [...new Set(requested)];
+-
+-    expect(historyPermissions).toEqual(["ask_questions"]);
+-    expect(importPermissions).toEqual(["ask_questions"]);
++/*
++ * QA (12 Nov 2026): every test below runs with CHAT_IMPORT_PROVEN_OWN_ENABLED off and on, so the proven-own path is
++ * exercised, not only the path without it.
++ */
++describe.each([["off", ""], ["on", "true"]])("CHAT_IMPORT_PROVEN_OWN %s", (_label, provenOwn) => {
++  beforeEach(() => {
++    process.env.CHAT_IMPORT_PROVEN_OWN_ENABLED = provenOwn;
+   });
+ 
+-  it.each(ROLES)("%s holds the permission Import needs", (role) => {
+-    expect(hasPermission(DEFAULT_PERMISSION_MATRIX, role, "ask_questions")).toBe(true);
++  describe("every role that can open History can import", () => {
++    it("History and Import are gated on the same single permission", async () => {
++      const { importRoute, listRoute } = await load();
++
++      requested.length = 0;
++      await listRoute.GET(listRequest());
++      const historyPermissions = [...requested];
++
++      requested.length = 0;
++      await importRoute.GET(probe());
++      await importRoute.POST(importRequest([conversationFor("district_manager")]));
++      const importPermissions = [...new Set(requested)];
++
++      expect(historyPermissions).toEqual(["ask_questions"]);
++      expect(importPermissions).toEqual(["ask_questions"]);
++    });
++
++    it.each(ROLES)("%s holds the permission Import needs", (role) => {
++      expect(hasPermission(DEFAULT_PERMISSION_MATRIX, role, "ask_questions")).toBe(true);
++    });
++
++    it.each(ROLES)(
++      "%s imports through the same route and gets the thread back in History",
++      async (role) => {
++        const { importRoute, listRoute, db } = await load();
++        signedInAs = role;
++        const local = conversationFor(role);
++
++        const probed = await importRoute.GET(probe());
++        expect(probed.status).toBe(200);
++
++        const response = await importRoute.POST(importRequest([local]));
++        expect(response.status).toBe(200);
++        const payload = (await response.json()) as { imported: string[]; declined: unknown[] };
++        expect(payload.imported).toEqual([local.id]);
++        expect(payload.declined).toEqual([]);
++
++        /* Owned by the person who pressed Import, and by nobody else. */
++        expect(db.tables.chat_conversations).toHaveLength(1);
++        expect(db.tables.chat_conversations[0]!.user_id).toBe(subjectFor(role));
++        for (const row of db.tables.chat_messages) {
++          expect(row.user_id).toBe(subjectFor(role));
++        }
++
++        /* And it is in their History exactly as it was on the device. */
++        const listed = await listRoute.GET(listRequest());
++        expect(listed.status).toBe(200);
++        const history = (await listed.json()) as {
++          conversations: { id: string; title: string; messages: { content: string }[] }[];
++        };
++        expect(history.conversations.map((entry) => entry.id)).toEqual([local.id]);
++        expect(history.conversations[0]!.title).toBe(local.title);
++        expect(history.conversations[0]!.messages.map((entry) => entry.content)).toEqual([
++          `question from ${role}`,
++          `answer for ${role}`,
++        ]);
++      },
++    );
+   });
+ 
+-  it.each(ROLES)(
+-    "%s imports through the same route and gets the thread back in History",
+-    async (role) => {
+-      const { importRoute, listRoute, db } = await load();
+-      signedInAs = role;
+-      const local = conversationFor(role);
+-
+-      const probed = await importRoute.GET(probe());
+-      expect(probed.status).toBe(200);
+-
+-      const response = await importRoute.POST(importRequest([local]));
+-      expect(response.status).toBe(200);
+-      const payload = (await response.json()) as { imported: string[]; declined: unknown[] };
+-      expect(payload.imported).toEqual([local.id]);
+-      expect(payload.declined).toEqual([]);
+-
+-      /* Owned by the person who pressed Import, and by nobody else. */
+-      expect(db.tables.chat_conversations).toHaveLength(1);
+-      expect(db.tables.chat_conversations[0]!.user_id).toBe(subjectFor(role));
+-      for (const row of db.tables.chat_messages) {
+-        expect(row.user_id).toBe(subjectFor(role));
+-      }
++  describe("importing widens nobody's access", () => {
++    it("each role sees only its own imported history, never another role's", async () => {
++      const { importRoute, listRoute } = await load();
+ 
+-      /* And it is in their History exactly as it was on the device. */
+-      const listed = await listRoute.GET(listRequest());
+-      expect(listed.status).toBe(200);
+-      const history = (await listed.json()) as {
+-        conversations: { id: string; title: string; messages: { content: string }[] }[];
+-      };
+-      expect(history.conversations.map((entry) => entry.id)).toEqual([local.id]);
+-      expect(history.conversations[0]!.title).toBe(local.title);
+-      expect(history.conversations[0]!.messages.map((entry) => entry.content)).toEqual([
+-        `question from ${role}`,
+-        `answer for ${role}`,
+-      ]);
+-    },
+-  );
+-});
+-
+-describe("importing widens nobody's access", () => {
+-  it("each role sees only its own imported history, never another role's", async () => {
+-    const { importRoute, listRoute } = await load();
++      for (const role of ROLES) {
++        signedInAs = role;
++        const response = await importRoute.POST(importRequest([conversationFor(role)]));
++        expect(response.status).toBe(200);
++      }
+ 
+-    for (const role of ROLES) {
+-      signedInAs = role;
+-      const response = await importRoute.POST(importRequest([conversationFor(role)]));
+-      expect(response.status).toBe(200);
+-    }
++      for (const role of ROLES) {
++        signedInAs = role;
+ 
+-    for (const role of ROLES) {
+-      signedInAs = role;
++        const listed = await listRoute.GET(listRequest());
++        const history = (await listed.json()) as { conversations: { id: string }[] };
++        expect(history.conversations.map((entry) => entry.id)).toEqual([
++          conversationFor(role).id,
++        ]);
+ 
+-      const listed = await listRoute.GET(listRequest());
+-      const history = (await listed.json()) as { conversations: { id: string }[] };
+-      expect(history.conversations.map((entry) => entry.id)).toEqual([
+-        conversationFor(role).id,
+-      ]);
+-
+-      /* The probe is scoped the same way: ids of your own threads only. */
+-      const probed = await importRoute.GET(probe());
+-      const state = (await probed.json()) as { stored: { id: string }[] };
+-      expect(state.stored.map((entry) => entry.id)).toEqual([conversationFor(role).id]);
+-    }
+-  });
+-
+-  it("an admin importing does not pull a District Manager's threads into admin history, or the reverse", async () => {
+-    const { importRoute, listRoute } = await load();
+-
+-    signedInAs = "district_manager";
+-    await importRoute.POST(importRequest([conversationFor("district_manager")]));
+-
+-    signedInAs = "admin";
+-    await importRoute.POST(importRequest([conversationFor("admin")]));
+-    const adminHistory = (await (await listRoute.GET(listRequest())).json()) as {
+-      conversations: { id: string }[];
+-    };
+-    expect(adminHistory.conversations.map((entry) => entry.id)).toEqual([
+-      conversationFor("admin").id,
+-    ]);
+-
+-    signedInAs = "district_manager";
+-    const dmHistory = (await (await listRoute.GET(listRequest())).json()) as {
+-      conversations: { id: string }[];
+-    };
+-    expect(dmHistory.conversations.map((entry) => entry.id)).toEqual([
+-      conversationFor("district_manager").id,
+-    ]);
+-  });
++        /* The probe is scoped the same way: ids of your own threads only. */
++        const probed = await importRoute.GET(probe());
++        const state = (await probed.json()) as { stored: { id: string }[] };
++        expect(state.stored.map((entry) => entry.id)).toEqual([conversationFor(role).id]);
++      }
++    });
+ 
+-  it("re-importing another person's conversation id creates a separate, private copy rather than joining theirs", async () => {
+-    const { importRoute, listRoute, db } = await load();
+-    const shared = conversationFor("district_manager");
++    it("an admin importing does not pull a District Manager's threads into admin history, or the reverse", async () => {
++      const { importRoute, listRoute } = await load();
+ 
+-    signedInAs = "district_manager";
+-    await importRoute.POST(importRequest([shared]));
+-    signedInAs = "regional_manager";
+-    await importRoute.POST(importRequest([{ ...shared, title: "RM copy" }]));
++      signedInAs = "district_manager";
++      await importRoute.POST(importRequest([conversationFor("district_manager")]));
+ 
+-    expect(db.tables.chat_conversations).toHaveLength(2);
+-    const owners = db.tables.chat_conversations.map((row) => row.user_id).sort();
+-    expect(owners).toEqual(
+-      [subjectFor("district_manager"), subjectFor("regional_manager")].sort(),
+-    );
++      signedInAs = "admin";
++      await importRoute.POST(importRequest([conversationFor("admin")]));
++      const adminHistory = (await (await listRoute.GET(listRequest())).json()) as {
++        conversations: { id: string }[];
++      };
++      expect(adminHistory.conversations.map((entry) => entry.id)).toEqual([
++        conversationFor("admin").id,
++      ]);
+ 
+-    signedInAs = "district_manager";
+-    const dmHistory = (await (await listRoute.GET(listRequest())).json()) as {
+-      conversations: { title: string }[];
+-    };
+-    expect(dmHistory.conversations.map((entry) => entry.title)).toEqual([shared.title]);
+-  });
++      signedInAs = "district_manager";
++      const dmHistory = (await (await listRoute.GET(listRequest())).json()) as {
++        conversations: { id: string }[];
++      };
++      expect(dmHistory.conversations.map((entry) => entry.id)).toEqual([
++        conversationFor("district_manager").id,
++      ]);
++    });
+ 
+-  it("a role without the Ask Bubbles permission is still refused, and nothing is stored", async () => {
+-    /*
+-     * No shipped role lacks `ask_questions`. This is the guard that Import did
+-     * not become a way round the matrix: take the permission away and the
+-     * route refuses, exactly as History does.
+-     */
+-    const matrix = DEFAULT_PERMISSION_MATRIX.employee;
+-    DEFAULT_PERMISSION_MATRIX.employee = matrix.filter((entry) => entry !== "ask_questions");
+-    try {
++    it("re-importing another person's conversation id creates a separate, private copy rather than joining theirs", async () => {
+       const { importRoute, listRoute, db } = await load();
+-      signedInAs = "employee";
+-
+-      const response = await importRoute.POST(importRequest([conversationFor("employee")]));
+-      expect(response.status).toBe(403);
+-      expect((await listRoute.GET(listRequest())).status).toBe(403);
+-      expect(db.tables.chat_conversations).toHaveLength(0);
+-      expect(db.tables.chat_messages).toHaveLength(0);
+-    } finally {
+-      DEFAULT_PERMISSION_MATRIX.employee = matrix;
+-    }
++      const shared = conversationFor("district_manager");
++
++      signedInAs = "district_manager";
++      await importRoute.POST(importRequest([shared]));
++      signedInAs = "regional_manager";
++      // The Regional Manager's copy was answered for them: its turn is on record as theirs (CHAT_IMPORT_PROVEN_OWN).
++      const rmTurn = conversationFor("regional_manager").messages[1]!.turnId;
++      await importRoute.POST(
++        importRequest([{ ...shared, title: "RM copy", messages: shared.messages.map((message) => ("turnId" in message ? { ...message, turnId: rmTurn } : message)) }]),
++      );
++
++      expect(db.tables.chat_conversations).toHaveLength(2);
++      const owners = db.tables.chat_conversations.map((row) => row.user_id).sort();
++      expect(owners).toEqual(
++        [subjectFor("district_manager"), subjectFor("regional_manager")].sort(),
++      );
++
++      signedInAs = "district_manager";
++      const dmHistory = (await (await listRoute.GET(listRequest())).json()) as {
++        conversations: { title: string }[];
++      };
++      expect(dmHistory.conversations.map((entry) => entry.title)).toEqual([shared.title]);
++    });
++
++    it("a role without the Ask Bubbles permission is still refused, and nothing is stored", async () => {
++      /*
++       * No shipped role lacks `ask_questions`. This is the guard that Import did
++       * not become a way round the matrix: take the permission away and the
++       * route refuses, exactly as History does.
++       */
++      const matrix = DEFAULT_PERMISSION_MATRIX.employee;
++      DEFAULT_PERMISSION_MATRIX.employee = matrix.filter((entry) => entry !== "ask_questions");
++      try {
++        const { importRoute, listRoute, db } = await load();
++        signedInAs = "employee";
++
++        const response = await importRoute.POST(importRequest([conversationFor("employee")]));
++        expect(response.status).toBe(403);
++        expect((await listRoute.GET(listRequest())).status).toBe(403);
++        expect(db.tables.chat_conversations).toHaveLength(0);
++        expect(db.tables.chat_messages).toHaveLength(0);
++      } finally {
++        DEFAULT_PERMISSION_MATRIX.employee = matrix;
++      }
++    });
+   });
+ });
+diff --git a/src/app/api/chat/conversations/import/import-own-only.test.ts b/src/app/api/chat/conversations/import/import-own-only.test.ts
+index ab76a1dc..53dd15b3 100644
+--- a/src/app/api/chat/conversations/import/import-own-only.test.ts
++++ b/src/app/api/chat/conversations/import/import-own-only.test.ts
+@@ -123,6 +123,9 @@ afterEach(() => {
+ 
+ describe("the assistant manager presses Import on the manager's browser", () => {
+   it("off, as reported: the manager's chat is copied into the assistant manager's account", async () => {
++    // Off-pin (QA, 12 Nov 2026): CHAT_IMPORT_PROVEN_OWN would also decline this import, so it is held off here too.
++    // afterEach restores process.env.
++    process.env.CHAT_IMPORT_PROVEN_OWN_ENABLED = "";
+     const { payload, held } = await importAs(ASSISTANT, false);
+     expect(payload.imported).toEqual([MANAGERS_CHAT.id]);
+     expect(held(ASSISTANT)).toHaveLength(1);
+@@ -200,7 +203,9 @@ describe("CHAT_IMPORT_PROVEN_OWN_ENABLED: an import with no proof of whose it is
+   ] as const)("on: declined — %s", async (_case, chat, activity) => {
+     const payload = await importChat(chat, [...activity], true);
+     expect(payload.imported).toEqual([]);
+-    expect(payload.declined).toEqual([{ id: MANAGERS_CHAT.id, reason: "another_account" }]);
++    // "not_proven", not "another_account" (changed on purpose, QA 12 Nov 2026): nothing shows another account wrote it —
++    // it could not be confirmed as this account's, and the reason shown says that, not "belongs to another account".
++    expect(payload.declined).toEqual([{ id: MANAGERS_CHAT.id, reason: "not_proven" }]);
+   });
+ 
+   it("on: a chat whose every answered turn is this account's is imported", async () => {
+diff --git a/src/app/api/chat/conversations/import/import-safety.test.ts b/src/app/api/chat/conversations/import/import-safety.test.ts
+index 4565db89..642053ca 100644
+--- a/src/app/api/chat/conversations/import/import-safety.test.ts
++++ b/src/app/api/chat/conversations/import/import-safety.test.ts
+@@ -21,8 +21,23 @@ const ORIGINAL = { ...process.env };
+ 
+ const ME = "11111111-1111-4111-8111-111111111111";
+ const THEM = "22222222-2222-4222-8222-222222222222";
++const REAL_TURN = "33333333-3333-4333-8333-333333333333";
++const SECOND_TURN = "44444444-4444-4444-8444-444444444444";
+ 
+-async function load(subject: string | null, db = fakeChatSupabase()) {
++/**
++ * CHAT_IMPORT_PROVEN_OWN_ENABLED (QA, 12 Nov 2026): an import must prove itself the importer's — every answered turn on
++ * record as theirs. REAL's and SECOND's answered turns are recorded for ME, as the service records a turn it answered.
++ */
++function myTurns() {
++  return fakeChatSupabase({
++    activity_events: [
++      { id: REAL_TURN, actor_user_id: ME, occurred_at: "2026-08-01T09:00:00.000Z" },
++      { id: SECOND_TURN, actor_user_id: ME, occurred_at: "2026-08-02T09:00:01.000Z" },
++    ],
++  });
++}
++
++async function load(subject: string | null, db = myTurns()) {
+   vi.resetModules();
+ 
+   vi.doMock("@/lib/auth/server", () => ({
+@@ -81,7 +96,7 @@ const REAL = {
+       createdAt: "2026-08-01T09:00:00.000Z",
+       mode: "standard",
+       coverage: "grounded",
+-      turnId: "33333333-3333-4333-8333-333333333333",
++      turnId: REAL_TURN,
+       citations: [{ documentId: "kb_1", title: "Scheduling", page: 2 }],
+       feedback: { id: "fb_1", turnId: "t", rating: 5, comment: "" },
+     },
+@@ -105,6 +120,15 @@ const SECOND = {
+       content: "When does the next soap delivery arrive?",
+       createdAt: "2026-08-02T09:00:00.000Z",
+     },
++    {
++      id: "msg_mfx9z8y7x6w52",
++      role: "assistant",
++      content: "The next delivery is due on Thursday.",
++      createdAt: "2026-08-02T09:00:01.000Z",
++      mode: "standard",
++      // CHAT_IMPORT_PROVEN_OWN: an answered turn, on record as ME's (myTurns), so the chat can be proven ME's.
++      turnId: SECOND_TURN,
++    },
+   ],
+ };
+ 
+@@ -154,301 +178,313 @@ afterEach(() => {
+ 
+ /* ------------------------------------------------------------- the seeds -- */
+ 
+-describe("seeded demo conversations never enter Supabase", () => {
+-  it("declines all of them and stores nothing", async () => {
+-    const { route, db } = await load(ME);
+-    const response = await route.POST(post({ conversations: [...DEMO_CONVERSATIONS] }));
++/*
++ * QA (12 Nov 2026): every test below runs with CHAT_IMPORT_PROVEN_OWN_ENABLED off and on, so the proven-own path is
++ * exercised, not only the path without it.
++ */
++describe.each([["off", ""], ["on", "true"]])("CHAT_IMPORT_PROVEN_OWN %s", (_label, provenOwn) => {
++  beforeEach(() => {
++    process.env.CHAT_IMPORT_PROVEN_OWN_ENABLED = provenOwn;
++  });
+ 
+-    expect(response.status).toBe(200);
+-    const payload = (await response.json()) as {
+-      imported: string[];
+-      declined: { id: string | null; reason: string }[];
+-    };
++  describe("seeded demo conversations never enter Supabase", () => {
++    it("declines all of them and stores nothing", async () => {
++      const { route, db } = await load(ME);
++      const response = await route.POST(post({ conversations: [...DEMO_CONVERSATIONS] }));
+ 
+-    expect(payload.imported).toEqual([]);
+-    expect(payload.declined).toHaveLength(6);
+-    for (const entry of payload.declined) expect(entry.reason).toBe("demo_seed");
++      expect(response.status).toBe(200);
++      const payload = (await response.json()) as {
++        imported: string[];
++        declined: { id: string | null; reason: string }[];
++      };
+ 
+-    expect(db.tables.chat_conversations).toHaveLength(0);
+-    expect(db.tables.chat_messages).toHaveLength(0);
+-  });
++      expect(payload.imported).toEqual([]);
++      expect(payload.declined).toHaveLength(6);
++      for (const entry of payload.declined) expect(entry.reason).toBe("demo_seed");
+ 
+-  it("stores the real one and declines the seeds in the same batch", async () => {
+-    const { route, db } = await load(ME);
+-    const response = await route.POST(
+-      post({ conversations: [DEMO_CONVERSATIONS[0], REAL, DEMO_CONVERSATIONS[1]] }),
+-    );
+-
+-    const payload = (await response.json()) as {
+-      imported: string[];
+-      declined: { reason: string }[];
+-    };
+-
+-    expect(payload.imported).toEqual([REAL.id]);
+-    expect(payload.declined.map((entry) => entry.reason)).toEqual([
+-      "demo_seed",
+-      "demo_seed",
+-    ]);
+-    expect(db.tables.chat_conversations).toHaveLength(1);
+-  });
++      expect(db.tables.chat_conversations).toHaveLength(0);
++      expect(db.tables.chat_messages).toHaveLength(0);
++    });
+ 
+-  it("never stores a seeded MESSAGE id, even smuggled into a real thread", async () => {
+-    const { route, db } = await load(ME);
+-    const response = await route.POST(
+-      post({
+-        conversations: [
+-          { ...REAL, messages: [...REAL.messages, DEMO_CONVERSATIONS[0].messages[0]] },
+-        ],
+-      }),
+-    );
++    it("stores the real one and declines the seeds in the same batch", async () => {
++      const { route, db } = await load(ME);
++      const response = await route.POST(
++        post({ conversations: [DEMO_CONVERSATIONS[0], REAL, DEMO_CONVERSATIONS[1]] }),
++      );
++
++      const payload = (await response.json()) as {
++        imported: string[];
++        declined: { reason: string }[];
++      };
+ 
+-    const payload = (await response.json()) as { declined: { reason: string }[] };
+-    expect(payload.declined[0]?.reason).toBe("malformed_message_id");
+-    expect(db.tables.chat_messages).toHaveLength(0);
++      expect(payload.imported).toEqual([REAL.id]);
++      expect(payload.declined.map((entry) => entry.reason)).toEqual([
++        "demo_seed",
++        "demo_seed",
++      ]);
++      expect(db.tables.chat_conversations).toHaveLength(1);
++    });
+ 
+-    const stored = JSON.stringify(db.tables.chat_messages);
+-    expect(stored).not.toContain("msg-s");
++    it("never stores a seeded MESSAGE id, even smuggled into a real thread", async () => {
++      const { route, db } = await load(ME);
++      const response = await route.POST(
++        post({
++          conversations: [
++            { ...REAL, messages: [...REAL.messages, DEMO_CONVERSATIONS[0].messages[0]] },
++          ],
++        }),
++      );
++
++      const payload = (await response.json()) as { declined: { reason: string }[] };
++      expect(payload.declined[0]?.reason).toBe("malformed_message_id");
++      expect(db.tables.chat_messages).toHaveLength(0);
++
++      const stored = JSON.stringify(db.tables.chat_messages);
++      expect(stored).not.toContain("msg-s");
++    });
+   });
+-});
+ 
+-/* ------------------------------------------------------------- fidelity -- */
++  /* ------------------------------------------------------------- fidelity -- */
+ 
+-describe("what is imported is what was there", () => {
+-  it("stores it under the AUTHENTICATED user, not anyone named in the payload", async () => {
+-    const { route, db } = await load(ME);
+-    await route.POST(
+-      post({
+-        conversations: [{ ...REAL, user_id: THEM, userId: THEM, email: "them@x.test" }],
+-      }),
+-    );
++  describe("what is imported is what was there", () => {
++    it("stores it under the AUTHENTICATED user, not anyone named in the payload", async () => {
++      const { route, db } = await load(ME);
++      await route.POST(
++        post({
++          conversations: [{ ...REAL, user_id: THEM, userId: THEM, email: "them@x.test" }],
++        }),
++      );
+ 
+-    expect(db.tables.chat_conversations[0].user_id).toBe(ME);
+-    for (const message of db.tables.chat_messages) expect(message.user_id).toBe(ME);
+-  });
++      expect(db.tables.chat_conversations[0].user_id).toBe(ME);
++      for (const message of db.tables.chat_messages) expect(message.user_id).toBe(ME);
++    });
+ 
+-  it("preserves the title and both timestamps", async () => {
+-    const { route, db } = await load(ME);
+-    await route.POST(post({ conversations: [REAL] }));
++    it("preserves the title and both timestamps", async () => {
++      const { route, db } = await load(ME);
++      await route.POST(post({ conversations: [REAL] }));
+ 
+-    const row = db.tables.chat_conversations[0];
+-    expect(row.title).toBe("Saturday coverage");
+-    expect(row.created_at).toBe("2026-08-01T09:00:00.000Z");
+-    expect(row.updated_at).toBe("2026-08-01T09:30:00.000Z");
+-  });
++      const row = db.tables.chat_conversations[0];
++      expect(row.title).toBe("Saturday coverage");
++      expect(row.created_at).toBe("2026-08-01T09:00:00.000Z");
++      expect(row.updated_at).toBe("2026-08-01T09:30:00.000Z");
++    });
+ 
+-  it("marks it as imported rather than as a conversation the service recorded", async () => {
+-    const { route, db } = await load(ME);
+-    await route.POST(post({ conversations: [REAL] }));
+-    expect(db.tables.chat_conversations[0].imported_at).toBeTruthy();
+-  });
++    it("marks it as imported rather than as a conversation the service recorded", async () => {
++      const { route, db } = await load(ME);
++      await route.POST(post({ conversations: [REAL] }));
++      expect(db.tables.chat_conversations[0].imported_at).toBeTruthy();
++    });
+ 
+-  it("preserves order with an explicit position, not by timestamp", async () => {
+-    const { route, db } = await load(ME);
+-    await route.POST(post({ conversations: [REAL] }));
+-
+-    const ordered = [...db.tables.chat_messages].sort(
+-      (a, b) => (a.position as number) - (b.position as number),
+-    );
+-    expect(ordered.map((row) => row.client_message_id)).toEqual([
+-      "msg_mfx1a2b3c4d51",
+-      "msg_mfx1a2b3c4d52",
+-      "msg_mfx1a2b3c4d53",
+-    ]);
+-    expect(ordered.map((row) => row.position)).toEqual([0, 1, 2]);
+-
+-    /* The first two share a millisecond, so time alone could not have done it. */
+-    expect(ordered[0].created_at).toBe(ordered[1].created_at);
+-  });
++    it("preserves order with an explicit position, not by timestamp", async () => {
++      const { route, db } = await load(ME);
++      await route.POST(post({ conversations: [REAL] }));
++
++      const ordered = [...db.tables.chat_messages].sort(
++        (a, b) => (a.position as number) - (b.position as number),
++      );
++      expect(ordered.map((row) => row.client_message_id)).toEqual([
++        "msg_mfx1a2b3c4d51",
++        "msg_mfx1a2b3c4d52",
++        "msg_mfx1a2b3c4d53",
++      ]);
++      expect(ordered.map((row) => row.position)).toEqual([0, 1, 2]);
++
++      /* The first two share a millisecond, so time alone could not have done it. */
++      expect(ordered[0].created_at).toBe(ordered[1].created_at);
++    });
+ 
+-  it("preserves each turn's own timestamp, role and content", async () => {
+-    const { route, db } = await load(ME);
+-    await route.POST(post({ conversations: [REAL] }));
++    it("preserves each turn's own timestamp, role and content", async () => {
++      const { route, db } = await load(ME);
++      await route.POST(post({ conversations: [REAL] }));
+ 
+-    const first = db.tables.chat_messages.find(
+-      (row) => row.client_message_id === "msg_mfx1a2b3c4d51",
+-    );
+-    expect(first?.role).toBe("user");
+-    expect(first?.content).toBe("Who covers Saturday?");
+-    expect(first?.created_at).toBe("2026-08-01T09:00:00.000Z");
+-  });
++      const first = db.tables.chat_messages.find(
++        (row) => row.client_message_id === "msg_mfx1a2b3c4d51",
++      );
++      expect(first?.role).toBe("user");
++      expect(first?.content).toBe("Who covers Saturday?");
++      expect(first?.created_at).toBe("2026-08-01T09:00:00.000Z");
++    });
+ 
+-  it("preserves the server turn id and the safe metadata", async () => {
+-    const { route, db } = await load(ME);
+-    await route.POST(post({ conversations: [REAL] }));
++    it("preserves the server turn id and the safe metadata", async () => {
++      const { route, db } = await load(ME);
++      await route.POST(post({ conversations: [REAL] }));
+ 
+-    const answer = db.tables.chat_messages.find(
+-      (row) => row.client_message_id === "msg_mfx1a2b3c4d52",
+-    );
+-    expect(answer?.turn_id).toBe("33333333-3333-4333-8333-333333333333");
++      const answer = db.tables.chat_messages.find(
++        (row) => row.client_message_id === "msg_mfx1a2b3c4d52",
++      );
++      expect(answer?.turn_id).toBe("33333333-3333-4333-8333-333333333333");
+ 
+-    const metadata = answer?.metadata as Record<string, unknown>;
+-    expect(metadata.mode).toBe("standard");
+-    expect(metadata.coverage).toBe("grounded");
+-    expect(metadata.citations).toHaveLength(1);
+-    expect(metadata.feedback).toBeDefined();
++      const metadata = answer?.metadata as Record<string, unknown>;
++      expect(metadata.mode).toBe("standard");
++      expect(metadata.coverage).toBe("grounded");
++      expect(metadata.citations).toHaveLength(1);
++      expect(metadata.feedback).toBeDefined();
++    });
+   });
+-});
+ 
+-/* ---------------------------------------------------------- idempotency -- */
++  /* ---------------------------------------------------------- idempotency -- */
+ 
+-describe("importing twice is importing once", () => {
+-  it("creates no duplicate conversation or message on a rerun", async () => {
+-    const { route, db } = await load(ME);
++  describe("importing twice is importing once", () => {
++    it("creates no duplicate conversation or message on a rerun", async () => {
++      const { route, db } = await load(ME);
+ 
+-    await route.POST(post({ conversations: [REAL, SECOND] }));
+-    await route.POST(post({ conversations: [REAL, SECOND] }));
+-    await route.POST(post({ conversations: [REAL, SECOND] }));
++      await route.POST(post({ conversations: [REAL, SECOND] }));
++      await route.POST(post({ conversations: [REAL, SECOND] }));
++      await route.POST(post({ conversations: [REAL, SECOND] }));
+ 
+-    expect(db.tables.chat_conversations).toHaveLength(2);
+-    expect(db.tables.chat_messages).toHaveLength(4);
+-  });
++      expect(db.tables.chat_conversations).toHaveLength(2);
++      // 5, not 4 (changed on purpose, 12 Nov 2026): SECOND now carries its answered turn (CHAT_IMPORT_PROVEN_OWN).
++      expect(db.tables.chat_messages).toHaveLength(5);
++    });
+ 
+-  it("survives two requests racing on the same new conversation", async () => {
+-    /*
+-     * A double-click sends two requests that both find no existing row and both
+-     * insert. The second hits the unique constraint, and the store re-reads the
+-     * row the first one created rather than failing — which is what makes a
+-     * double-click produce one conversation instead of an error.
+-     */
+-    const { route, db } = await load(ME);
+-
+-    const [first, second] = await Promise.all([
+-      route.POST(post({ conversations: [REAL] })),
+-      route.POST(post({ conversations: [REAL] })),
+-    ]);
+-
+-    expect(first.status).toBe(200);
+-    expect(second.status).toBe(200);
+-    expect(db.tables.chat_conversations).toHaveLength(1);
+-    expect(db.tables.chat_messages).toHaveLength(3);
+-  });
++    it("survives two requests racing on the same new conversation", async () => {
++      /*
++       * A double-click sends two requests that both find no existing row and both
++       * insert. The second hits the unique constraint, and the store re-reads the
++       * row the first one created rather than failing — which is what makes a
++       * double-click produce one conversation instead of an error.
++       */
++      const { route, db } = await load(ME);
++
++      const [first, second] = await Promise.all([
++        route.POST(post({ conversations: [REAL] })),
++        route.POST(post({ conversations: [REAL] })),
++      ]);
++
++      expect(first.status).toBe(200);
++      expect(second.status).toBe(200);
++      expect(db.tables.chat_conversations).toHaveLength(1);
++      expect(db.tables.chat_messages).toHaveLength(3);
++    });
+ 
+-  it("resumes after an interruption without duplicating what landed", async () => {
+-    const db = fakeChatSupabase();
+-    const { route } = await load(ME, db);
++    it("resumes after an interruption without duplicating what landed", async () => {
++      const db = myTurns();
++      const { route } = await load(ME, db);
+ 
+-    /* First run: the first conversation lands, then the database goes away. */
+-    await route.POST(post({ conversations: [REAL] }));
+-    expect(db.tables.chat_conversations).toHaveLength(1);
++      /* First run: the first conversation lands, then the database goes away. */
++      await route.POST(post({ conversations: [REAL] }));
++      expect(db.tables.chat_conversations).toHaveLength(1);
+ 
+-    db.failOn("chat_conversations");
+-    const interrupted = await route.POST(post({ conversations: [SECOND] }));
+-    expect(interrupted.status).toBe(503);
+-    expect(db.tables.chat_conversations).toHaveLength(1);
++      db.failOn("chat_conversations");
++      const interrupted = await route.POST(post({ conversations: [SECOND] }));
++      expect(interrupted.status).toBe(503);
++      expect(db.tables.chat_conversations).toHaveLength(1);
+ 
+-    /* Second run: everything again, which is exactly what pressing Import does. */
+-    db.failOn(null);
+-    const resumed = await route.POST(post({ conversations: [REAL, SECOND] }));
+-    expect(resumed.status).toBe(200);
++      /* Second run: everything again, which is exactly what pressing Import does. */
++      db.failOn(null);
++      const resumed = await route.POST(post({ conversations: [REAL, SECOND] }));
++      expect(resumed.status).toBe(200);
+ 
+-    expect(db.tables.chat_conversations).toHaveLength(2);
+-    expect(db.tables.chat_messages).toHaveLength(4);
+-  });
++      expect(db.tables.chat_conversations).toHaveLength(2);
++      // 5, not 4 (changed on purpose, 12 Nov 2026): SECOND now carries its answered turn (CHAT_IMPORT_PROVEN_OWN).
++      expect(db.tables.chat_messages).toHaveLength(5);
++    });
+ 
+-  it("does not duplicate a conversation that arrived through ordinary chat first", async () => {
+-    const { route, db } = await load(ME);
+-    const list = await import("../route");
+-
+-    await list.POST(
+-      new Request("https://app.test/api/chat/conversations", {
+-        method: "POST",
+-        headers: { "content-type": "application/json" },
+-        body: JSON.stringify({ conversation: REAL }),
+-      }),
+-    );
+-    await route.POST(post({ conversations: [REAL] }));
+-
+-    expect(db.tables.chat_conversations).toHaveLength(1);
+-    expect(db.tables.chat_messages).toHaveLength(3);
++    it("does not duplicate a conversation that arrived through ordinary chat first", async () => {
++      const { route, db } = await load(ME);
++      const list = await import("../route");
++
++      await list.POST(
++        new Request("https://app.test/api/chat/conversations", {
++          method: "POST",
++          headers: { "content-type": "application/json" },
++          body: JSON.stringify({ conversation: REAL }),
++        }),
++      );
++      await route.POST(post({ conversations: [REAL] }));
++
++      expect(db.tables.chat_conversations).toHaveLength(1);
++      expect(db.tables.chat_messages).toHaveLength(3);
++    });
+   });
+-});
+ 
+-/* ----------------------------------------------------------- the bounds -- */
++  /* ----------------------------------------------------------- the bounds -- */
+ 
+-describe("the endpoint bounds and refuses what it should", () => {
+-  it("accepts an empty list without writing anything", async () => {
+-    const { route, db } = await load(ME);
+-    const response = await route.POST(post({ conversations: [] }));
++  describe("the endpoint bounds and refuses what it should", () => {
++    it("accepts an empty list without writing anything", async () => {
++      const { route, db } = await load(ME);
++      const response = await route.POST(post({ conversations: [] }));
+ 
+-    expect(response.status).toBe(200);
+-    expect(db.tables.chat_conversations).toHaveLength(0);
+-  });
++      expect(response.status).toBe(200);
++      expect(db.tables.chat_conversations).toHaveLength(0);
++    });
+ 
+-  it("refuses a body that is not a list", async () => {
+-    const { route } = await load(ME);
+-    expect((await route.POST(post({ conversations: "all" }))).status).toBe(400);
+-  });
++    it("refuses a body that is not a list", async () => {
++      const { route } = await load(ME);
++      expect((await route.POST(post({ conversations: "all" }))).status).toBe(400);
++    });
+ 
+-  it("refuses more than one batch at a time", async () => {
+-    const { route, db } = await load(ME);
+-    const many = Array.from({ length: 11 }, (_unused, index) => ({
+-      ...REAL,
+-      id: `conv_mfx1a2b3c4d${index.toString(36)}z`,
+-    }));
++    it("refuses more than one batch at a time", async () => {
++      const { route, db } = await load(ME);
++      const many = Array.from({ length: 11 }, (_unused, index) => ({
++        ...REAL,
++        id: `conv_mfx1a2b3c4d${index.toString(36)}z`,
++      }));
+ 
+-    expect((await route.POST(post({ conversations: many }))).status).toBe(400);
+-    expect(db.tables.chat_conversations).toHaveLength(0);
+-  });
++      expect((await route.POST(post({ conversations: many }))).status).toBe(400);
++      expect(db.tables.chat_conversations).toHaveLength(0);
++    });
+ 
+-  it("refuses an unauthenticated import and writes nothing", async () => {
+-    const { route, db } = await load(null);
+-    const response = await route.POST(post({ conversations: [REAL] }));
++    it("refuses an unauthenticated import and writes nothing", async () => {
++      const { route, db } = await load(null);
++      const response = await route.POST(post({ conversations: [REAL] }));
+ 
+-    expect(response.status).toBe(401);
+-    expect(db.tables.chat_conversations).toHaveLength(0);
++      expect(response.status).toBe(401);
++      expect(db.tables.chat_conversations).toHaveLength(0);
++    });
+   });
+-});
+ 
+-/* ------------------------------------------------------------ the diff --- */
+-
+-describe("the already-stored check carries ids and nothing else", () => {
+-  it("returns only the caller's own ids, with counts and no content", async () => {
+-    const db = fakeChatSupabase({
+-      chat_conversations: [
+-        {
+-          id: "a",
+-          user_id: ME,
+-          client_conversation_id: REAL.id,
+-          title: "Mine",
+-          deleted_at: null,
+-        },
+-        {
+-          id: "b",
+-          user_id: THEM,
+-          client_conversation_id: SECOND.id,
+-          title: "Theirs",
+-          deleted_at: null,
+-        },
+-      ],
+-      chat_messages: [
+-        { id: "m1", conversation_id: "a", user_id: ME, client_message_id: "msg_a" },
+-        { id: "m2", conversation_id: "a", user_id: ME, client_message_id: "msg_b" },
+-        { id: "m3", conversation_id: "b", user_id: THEM, client_message_id: "msg_c" },
+-      ],
++  /* ------------------------------------------------------------ the diff --- */
++
++  describe("the already-stored check carries ids and nothing else", () => {
++    it("returns only the caller's own ids, with counts and no content", async () => {
++      const db = fakeChatSupabase({
++        chat_conversations: [
++          {
++            id: "a",
++            user_id: ME,
++            client_conversation_id: REAL.id,
++            title: "Mine",
++            deleted_at: null,
++          },
++          {
++            id: "b",
++            user_id: THEM,
++            client_conversation_id: SECOND.id,
++            title: "Theirs",
++            deleted_at: null,
++          },
++        ],
++        chat_messages: [
++          { id: "m1", conversation_id: "a", user_id: ME, client_message_id: "msg_a" },
++          { id: "m2", conversation_id: "a", user_id: ME, client_message_id: "msg_b" },
++          { id: "m3", conversation_id: "b", user_id: THEM, client_message_id: "msg_c" },
++        ],
++      });
++      const { route } = await load(ME, db);
++
++      const response = await route.GET(
++        new Request("https://app.test/api/chat/conversations/import"),
++      );
++      const payload = (await response.json()) as {
++        stored: { id: string; messages: number }[];
++        deleted: string[];
++        clearedAt: string | null;
++      };
++
++      expect(payload.stored).toEqual([{ id: REAL.id, messages: 2 }]);
++      expect(payload.deleted).toEqual([]);
++      expect(payload.clearedAt).toBeNull();
++      expect(JSON.stringify(payload)).not.toContain("Theirs");
++      expect(JSON.stringify(payload)).not.toContain("Mine");
+     });
+-    const { route } = await load(ME, db);
+-
+-    const response = await route.GET(
+-      new Request("https://app.test/api/chat/conversations/import"),
+-    );
+-    const payload = (await response.json()) as {
+-      stored: { id: string; messages: number }[];
+-      deleted: string[];
+-      clearedAt: string | null;
+-    };
+-
+-    expect(payload.stored).toEqual([{ id: REAL.id, messages: 2 }]);
+-    expect(payload.deleted).toEqual([]);
+-    expect(payload.clearedAt).toBeNull();
+-    expect(JSON.stringify(payload)).not.toContain("Theirs");
+-    expect(JSON.stringify(payload)).not.toContain("Mine");
+-  });
+ 
+-  it("refuses an unauthenticated caller", async () => {
+-    const { route } = await load(null);
+-    const response = await route.GET(
+-      new Request("https://app.test/api/chat/conversations/import"),
+-    );
+-    expect(response.status).toBe(401);
++    it("refuses an unauthenticated caller", async () => {
++      const { route } = await load(null);
++      const response = await route.GET(
++        new Request("https://app.test/api/chat/conversations/import"),
++      );
++      expect(response.status).toBe(401);
++    });
+   });
+ });
+diff --git a/src/app/api/chat/conversations/import/route.ts b/src/app/api/chat/conversations/import/route.ts
+index 545bac2a..57fe7d72 100644
+--- a/src/app/api/chat/conversations/import/route.ts
++++ b/src/app/api/chat/conversations/import/route.ts
+@@ -188,6 +188,11 @@ export async function POST(request: Request) {
+         declined.push({ id: payload.clientConversationId, reason: "another_account" });
+         continue;
+       }
++      // CHAT_IMPORT_PROVEN_OWN_ENABLED: could not be proven this account's — its own reason, never "another account".
++      if (outcome === "not_proven") {
++        declined.push({ id: payload.clientConversationId, reason: "not_proven" });
++        continue;
++      }
+ 
+       imported.push(payload.clientConversationId);
+     }
+diff --git a/src/app/api/chat/conversations/route.ts b/src/app/api/chat/conversations/route.ts
+index 6c8bab73..c4711ebb 100644
+--- a/src/app/api/chat/conversations/route.ts
++++ b/src/app/api/chat/conversations/route.ts
+@@ -116,7 +116,7 @@ export async function POST(request: Request) {
+      * that is not yours gets — from this side both mean "that is not yours to
+      * write", and distinguishing them would say which ids were once real.
+      */
+-    if (outcome === "suppressed" || outcome === "another_account") {
++    if (outcome === "suppressed" || outcome === "another_account" || outcome === "not_proven") {
+       throw new AuthError("forbidden", CONVERSATION_REFUSED);
+     }
+ 
+diff --git a/src/app/api/chat/replay-pack/nov11-bubbles-17i-live-cases.ts b/src/app/api/chat/replay-pack/nov11-bubbles-17i-live-cases.ts
+new file mode 100644
+index 00000000..171b211d
+--- /dev/null
++++ b/src/app/api/chat/replay-pack/nov11-bubbles-17i-live-cases.ts
+@@ -0,0 +1,96 @@
++import { expect, vi } from "vitest";
++
++import { WEST_DODGE, type ReplayCase, type ReplayContext, type ReplayThread } from "./cases";
++import { REFUSAL_ROSTER } from "./nov7-step-b-refusals-scenarios";
++
++/**
++ * ============================================================================
++ * QA's BUBBLES 17i LIVE TEST (main c6063f2c, 11 Nov 2026)
++ * ============================================================================
++ *
++ * One chat, the manager's turns as typed (chat_traces, 23:37Z; the employee invented, on the pack's roster):
++ *   1. "my team member keeps showing up out of uniform, wearing a hoodie, what do I do?" — ended "… I can prepare one of
++ *      the forms below." with no forms below it (FORMS_BELOW_NEEDS_FORMS_ENABLED, the turn's last step);
++ *   2. "can you make a CA for <C> for wearing a hoodie to work?" — a Corrective Action card with no Policy line, its plan
++ *      on "the applicable company policy" (WORN_CLOTHING_IS_DRESS_CODE_ENABLED);
++ *   3. "Do i need to copy and paste it?" — answered as if there were no card: "say 'create a corrective action for <C>'
++ *      and the form card will appear" (COPY_PASTE_POINTS_TO_CARD_ENABLED).
++ */
++const REPORT = "QA's Bubbles 17i live test, 11 Nov 2026";
++
++/** The manual's Dress Code section, as `nov10-not-following-dress-code-cases.ts` has it. */
++const DRESS_CODE_CHUNK = {
++  chunkIndex: 44,
++  chunkId: "jba-44",
++  locator: "Page 15 — Dress Code for The Company",
++  page: 16,
++  content:
++    "Dress Code for The Company\nThe Company Employees are to keep a neat, clean, professional appearance at all times. Anyone\nviolating their Brand’s Dress code policy will be sent home to change into proper work attire.",
++  section: "Dress Code for The Company",
++  printedPage: 15,
++  sections: [
++    { heading: "Dress Code for The Company", page: 15 },
++    { heading: "All Locations Dress Code", page: 15 },
++  ],
++};
++
++const TURN_1 = "my team member keeps showing up out of uniform, wearing a hoodie, what do I do?";
++const TURN_2 = "can you make a CA for Marnie Holloway for wearing a hoodie to work?";
++const TURN_3 = "Do i need to copy and paste it?";
++
++function start(t: ReplayContext): ReplayThread {
++  vi.setSystemTime(new Date("2026-11-11T23:37:00Z"));
++  t.directory(REFUSAL_ROSTER);
++  t.as("location_manager", WEST_DODGE);
++  t.manualAlsoHas?.([DRESS_CODE_CHUNK]);
++  return t.thread();
++}
++
++/** "… one of the forms below." only with forms below it. */
++function formsBelowHasForms(answer: { content: string }): void {
++  const offered = Boolean((answer as { formSelection?: unknown }).formSelection);
++  if (/one of the forms below/.test(answer.content)) expect(offered, `"the forms below" with no forms:\n${answer.content}`).toBe(true);
++}
++
++export const NOV11_BUBBLES_17I_LIVE_CASES: ReplayCase[] = [
++  {
++    id: "nov11-17i-forms-below-has-forms",
++    title: "the hoodie chat: a reply that says \"one of the forms below\" carries forms",
++    report: REPORT,
++    // The pack's turns carry their forms today; the live gap was not reproduced here. The guard holds it either way.
++    status: "fixed",
++    fixFlags: ["FORMS_BELOW_NEEDS_FORMS_ENABLED"],
++    async run(t) {
++      const thread = start(t);
++      for (const turn of [TURN_1, TURN_2, TURN_3]) formsBelowHasForms(await thread.say(turn));
++    },
++  },
++  {
++    id: "nov11-17i-hoodie-ca-dress-code",
++    title: "\"can you make a CA for <C> for wearing a hoodie to work?\": the card's Policy is the Dress Code",
++    report: REPORT,
++    status: { open: "the card has no Policy line; the plan says \"the applicable company policy\"" },
++    fixFlags: ["WORN_CLOTHING_IS_DRESS_CODE_ENABLED"],
++    async run(t) {
++      const reply = await start(t).say(TURN_2);
++      expect(reply.content, reply.content).toMatch(/\*\*Policy:\*\* Dress Code/);
++      expect(reply.content, reply.content).not.toMatch(/review the applicable company policy/);
++    },
++  },
++  {
++    id: "nov11-17i-copy-paste-points-to-card",
++    title: "\"Do i need to copy and paste it?\" with the card on screen: the reply points to the card's Create draft",
++    report: REPORT,
++    status: { open: "the reply answers as if there were no card, with a form menu under it" },
++    fixFlags: ["COPY_PASTE_POINTS_TO_CARD_ENABLED"],
++    async run(t) {
++      const thread = start(t);
++      await thread.say(TURN_2);
++      expect(thread.proposal, "no Corrective Action card for Marnie Holloway").toMatchObject({ templateKey: "dpoa", employeeName: "Marnie Holloway" });
++      const reply = await thread.say(TURN_3);
++      expect(reply.content, reply.content).toMatch(/Create draft/);
++      expect(reply.content, reply.content).not.toMatch(/form card will appear|one of the forms below/i);
++      expect(reply.formProposal, "the card is no longer on the reply").toMatchObject({ templateKey: "dpoa", employeeName: "Marnie Holloway" });
++    },
++  },
++];
+diff --git a/src/app/api/chat/replay-pack/nov11-exit-prose-facts-cases.ts b/src/app/api/chat/replay-pack/nov11-exit-prose-facts-cases.ts
+new file mode 100644
+index 00000000..48a1e010
+--- /dev/null
++++ b/src/app/api/chat/replay-pack/nov11-exit-prose-facts-cases.ts
+@@ -0,0 +1,33 @@
++import { expect, vi } from "vitest";
++
++import { STAFF, WEST_DODGE, type ReplayCase } from "./cases";
++
++/**
++ * ============================================================================
++ * AN EXIT FORM ASKED FOR WITH ONLY A NAME: ADDITIONAL DETAILS IS LEFT BLANK, NEVER PROMISED AS "A SHORT ACCOUNT
++ * DRAFTED…" (QA's October triage of #195, 10 Nov 2026; EXIT_PROSE_FACTS_ENABLED)
++ * ============================================================================
++ *
++ * The managers' wording (a bare name after "exit form"), the person from the pack's STAFF: with production's flags
++ * the reply promises "a short account drafted from what you've described" when nothing was described.
++ */
++export const NOV11_EXIT_PROSE_FACTS_CASES: readonly ReplayCase[] = [
++  {
++    id: "nov11-exit-prose-bare-name",
++    title: '"exit form" then a bare name: Additional Details is listed as left blank, never "a short account drafted from what you\'ve described"',
++    report: "#195 (QA's October triage, 10 Nov 2026): after a bare name the reply still promised a drafted account",
++    status: { open: "the reply says Additional Details is \"a short account drafted from what you've described\"" },
++    fixFlags: ["EXIT_PROSE_FACTS_ENABLED"],
++    async run(t) {
++      vi.setSystemTime(new Date("2026-10-25T15:00:00Z"));
++      t.directory(STAFF);
++      t.as("location_manager", WEST_DODGE);
++      const thread = t.thread();
++      await thread.say("exit form");
++      const reply = await thread.say("remy calder");
++      expect(reply.formProposal, `no exit card:\n${reply.content}`).toMatchObject({ employeeName: "Remy Calder" });
++      expect(reply.content, `a drafted account promised:\n${reply.content}`).not.toMatch(/a short account drafted/i);
++      expect(reply.content, `Additional Details not left blank:\n${reply.content}`).toMatch(/\*\*Left blank for you to review:\*\*[^\n]*Additional Details/);
++    },
++  },
++];
+diff --git a/src/app/api/chat/replay-pack/nov11-form-input-fidelity-cases.ts b/src/app/api/chat/replay-pack/nov11-form-input-fidelity-cases.ts
+new file mode 100644
+index 00000000..a8c4ae21
+--- /dev/null
++++ b/src/app/api/chat/replay-pack/nov11-form-input-fidelity-cases.ts
+@@ -0,0 +1,88 @@
++import { expect } from "vitest";
++
++import { STAFF, WEST_DODGE, type DirectoryRow, type ReplayCase } from "./cases";
++
++/**
++ * ============================================================================
++ * A TYPED DATE STAYS THE FORM'S DATE; A ONE-WORD ANSWER IS NEVER THE JOB TITLE (the live replays of 24 Oct 2026;
++ * PR #92 rebuilt on main in QA's stale-PR cleanup, 11 Nov 2026; FORM_INPUT_FIDELITY_ENABLED)
++ * ============================================================================
++ *
++ * The reporter's wording ("Oct 20", "10/20", "yesterday", "verbal", "written", "yes"), the person invented (Tamsin
++ * Orrell, on this store's directory with no position in Woven, so the card asks for the job title). Reported: a
++ * draft dated today when the manager typed "yesterday", and a bare "verbal" / "written" / "yes" / "yesterday" after
++ * the card's question saved as the Job Title.
++ */
++const TAMSIN: DirectoryRow = {
++  id: "e-fi-tamsin-orrell",
++  firstName: "Tamsin",
++  lastName: "Orrell",
++  preferredFirstName: null,
++  employmentStatus: "active",
++  locationIds: ["loc-264"],
++  positionName: null,
++};
++
++/** The invented person of this file (a function: the registry reads exported arrays as cases). */
++export function formInputFidelityPeople(): readonly DirectoryRow[] {
++  return [TAMSIN];
++}
++
++/** The harness's today is 2026-10-26, so "yesterday" is 2026-10-25. */
++const YESTERDAY = "2026-10-25";
++
++/*
++ * Checked on main with production's flags, 11 Nov 2026: every typed date already dates the card, and a bare "verbal",
++ * "written" or "yes" is already read as the warning or the payroll answer, never the Job Title (those cases are fixed).
++ * A bare "yesterday" after the position question is still saved as Job Title "Yesterday": open.
++ */
++function dateCase(slug: string, said: string, date: string, templateKey: string): ReplayCase {
++  return {
++    id: `nov11-form-input-fidelity-date-${slug}`,
++    title: `"${said}": the card is dated ${date}`,
++    report: `PR #92 (live replays, 24 Oct 2026): a typed incident day ("Oct 20", "10/20", "yesterday") did not stay the form's date; "${said}"`,
++    status: "fixed",
++    async run(t) {
++      t.directory([...STAFF, TAMSIN]);
++      t.as("location_manager", WEST_DODGE);
++      const thread = t.thread();
++      const reply = await thread.say(said, { employeeName: "Tamsin Orrell" });
++      expect(thread.proposal, `no card:\n${reply.content}`).toMatchObject({ templateKey });
++      expect(thread.proposal?.formDate ?? null, `the card's date:\n${reply.content}`).toBe(date);
++    },
++  };
++}
++
++function titleCase(answer: string, open: boolean): ReplayCase {
++  return {
++    id: `nov11-form-input-fidelity-title-${answer}`,
++    title: `a Corrective Action card asking the warning, payroll and job title, then a bare "${answer}": never the Job Title`,
++    report: `PR #92 (live replays, 24 Oct 2026): a bare "${answer}" after the card's questions was saved as the Job Title`,
++    ...(open
++      ? { status: { open: `the card's job title is "${answer[0]!.toUpperCase()}${answer.slice(1)}"` }, fixFlags: ["FORM_INPUT_FIDELITY_ENABLED"] }
++      : { status: "fixed" as const }),
++    async run(t) {
++      t.directory([...STAFF, TAMSIN]);
++      t.as("location_manager", WEST_DODGE);
++      const thread = t.thread();
++      const first = await thread.say("create a corrective action for Tamsin Orrell. She was late on Oct 20.", { employeeName: "Tamsin Orrell" });
++      expect(thread.proposal, `no Corrective Action card:\n${first.content}`).toMatchObject({ templateKey: "dpoa" });
++      const reply = await thread.say(answer);
++      const role = thread.proposal?.employeeRole ?? "";
++      expect(role.toLowerCase(), `"${answer}" became the job title:\n${reply.content}`).not.toBe(answer.toLowerCase());
++      expect(reply.content, `the card shows "${answer}" as the position:\n${reply.content}`).not.toMatch(new RegExp(String.raw`\*\*Position:\*\*\s*${answer}\b`, "i"));
++    },
++  };
++}
++
++export const NOV11_FORM_INPUT_FIDELITY_CASES: ReplayCase[] = [
++  dateCase("ca-oct-20", "create a corrective action for Tamsin Orrell. She was late on Oct 20.", "2026-10-20", "dpoa"),
++  dateCase("ca-10-20", "create a corrective action for Tamsin Orrell. She was late on 10/20.", "2026-10-20", "dpoa"),
++  dateCase("ca-yesterday", "create a corrective action for Tamsin Orrell. She was late yesterday.", YESTERDAY, "dpoa"),
++  dateCase("coaching-10-20", "create a coaching form for Tamsin Orrell. She was late on 10/20.", "2026-10-20", "coaching"),
++  dateCase("coaching-yesterday", "create a coaching form for Tamsin Orrell. She was late yesterday.", YESTERDAY, "coaching"),
++  titleCase("verbal", false),
++  titleCase("written", false),
++  titleCase("yes", false),
++  titleCase("yesterday", true),
++];
+diff --git a/src/app/api/chat/replay-pack/nov4-edit-tool-cases.ts b/src/app/api/chat/replay-pack/nov4-edit-tool-cases.ts
+index d7d69b9c..848aea96 100644
+--- a/src/app/api/chat/replay-pack/nov4-edit-tool-cases.ts
++++ b/src/app/api/chat/replay-pack/nov4-edit-tool-cases.ts
+@@ -111,7 +111,9 @@ export const NOV4_EDIT_TOOL_CASES: readonly ReplayCase[] = [
+         expect(reply.formUpdate?.updated).toEqual(["observation"]);
+         expect(t.values(id).observation ?? "").toMatch(/she Must Practice the sanitizing checklist every shift\.$/);
+         expect(t.values(id).observation ?? "", "the first name was dropped").toMatch(/\bMarnie Quill\b/);
+-        expect(reply.content).toMatch(/^Changed Observation of Offense to "/);
++        // Changed on purpose (12 Nov 2026, Gate-Sunny-2's finding on the sibling app): with STEP_B_REPLY_KEEPS_LINES on, a field
++        // written on several lines is quoted line by line ("Changed Observation of Offense to:\n> …").
++        expect(reply.content).toMatch(/^Changed Observation of Offense to(?: "|:\n> )/);
+         expect(reply.content, "the tool's text was shown").not.toContain("I added that");
+         // One model call: the main one; no revision, no draft.
+         expect(t.calls().chat - calls.chat).toBe(1);
+diff --git a/src/app/api/chat/replay-pack/production-fixes.ts b/src/app/api/chat/replay-pack/production-fixes.ts
+index 71e84ebe..eb673b7c 100644
+--- a/src/app/api/chat/replay-pack/production-fixes.ts
++++ b/src/app/api/chat/replay-pack/production-fixes.ts
+@@ -536,4 +536,12 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
+   "nov11-empty-reply-guard-policy-question": "EMPTY_REPLY_GUARD",
+   // fixed in production by POLICY_PAGE_ON_CARD, QA round 17l, 12 Nov 2026
+   "nov11-policy-page-on-card-standards-of-conduct": "POLICY_PAGE_ON_CARD",
++  // fixed in production by WORN_CLOTHING_IS_DRESS_CODE, QA round 17m, 12 Nov 2026
++  "nov11-17i-hoodie-ca-dress-code": "WORN_CLOTHING_IS_DRESS_CODE",
++  // fixed in production by COPY_PASTE_POINTS_TO_CARD, QA round 17m, 12 Nov 2026
++  "nov11-17i-copy-paste-points-to-card": "COPY_PASTE_POINTS_TO_CARD",
++  // fixed in production by EXIT_PROSE_FACTS, QA round 17m, 12 Nov 2026
++  "nov11-exit-prose-bare-name": "EXIT_PROSE_FACTS",
++  // fixed in production by FORM_INPUT_FIDELITY, QA round 17m, 12 Nov 2026
++  "nov11-form-input-fidelity-title-yesterday": "FORM_INPUT_FIDELITY",
+ };
+diff --git a/src/app/api/chat/route.ts b/src/app/api/chat/route.ts
+index c71d6720..739cc88a 100644
+--- a/src/app/api/chat/route.ts
++++ b/src/app/api/chat/route.ts
+@@ -65,6 +65,7 @@ import {
+   newRequestOwnTurnsEnabled,
+   addressAsksWhoEnabled,
+   leadFullSentenceEnabled,
++  formsBelowNeedsFormsEnabled,
+   formEditPlainWordsEnabled,
+   pastedTemplateFieldsToOpenDraftEnabled,
+   payrollDeductAmountFieldEnabled,
+@@ -1150,6 +1151,8 @@ async function postChat(request: Request) {
+       if (note) answer = { ...answer, content: outline.withPolicyKeptNote(answer.content, note) };
+     }
+     // FINAL_REPLY_MARKER_GUARD_ENABLED: no bare source tag reaches the manager, whatever path answered. See `ai/source-note.ts`.
++    // FORMS_BELOW_NEEDS_FORMS_ENABLED: "… one of the forms below." only with forms below it (`lib/forms/lead-full-sentence.ts`).
++    if (formsBelowNeedsFormsEnabled()) answer = (await import("@/lib/forms/lead-full-sentence")).withFormsBelowOnlyWithForms(answer);
+     return NextResponse.json({ ...finalReplyWithoutMarkers(answer), turnId });
+   } catch (error) {
+     return errorResponse(error, "POST /api/chat");
+diff --git a/src/app/api/chat/unread-day-date-e2e.test.ts b/src/app/api/chat/unread-day-date-e2e.test.ts
+index 8d24c153..566dfc7d 100644
+--- a/src/app/api/chat/unread-day-date-e2e.test.ts
++++ b/src/app/api/chat/unread-day-date-e2e.test.ts
+@@ -483,16 +483,23 @@ function modelDated(key: string, when = `On ${TODAY_LONG}`) {
+   };
+ }
+ 
+-async function created(on: boolean, said: string, key = "observation", when?: string) {
++const FLAG_FIDELITY = "FORM_INPUT_FIDELITY_ENABLED";
++
++/** `fidelity` given: FORM_INPUT_FIDELITY_ENABLED is set to it, not left to whatever production's list says. */
++async function created(on: boolean, said: string, key = "observation", when?: string, fidelity?: boolean) {
+   // Each run is its own manager's first form: the store starts empty, as in `beforeEach`.
+   for (const table of Object.keys(store) as (keyof FakeStore)[]) store[table] = [];
+   store.form_instances = new JoiningRows() as never;
+   await ensureTemplateLibrary("system");
+-  for (const name of [FLAG_UD, "UNREAD_DATE_ASK_ENABLED"]) if (!saved.has(name)) saved.set(name, process.env[name]);
++  for (const name of [FLAG_UD, "UNREAD_DATE_ASK_ENABLED", FLAG_FIDELITY]) if (!saved.has(name)) saved.set(name, process.env[name]);
+   setProduction(true);
+   process.env.UNREAD_DATE_ASK_ENABLED = "true";
+   delete process.env[FLAG_UD];
+   if (on) process.env[FLAG_UD] = "true";
++  if (fidelity !== undefined) {
++    delete process.env[FLAG_FIDELITY];
++    if (fidelity) process.env[FLAG_FIDELITY] = "true";
++  }
+   state.directory = [
+     { id: "e-1", firstName: "Tessa", lastName: "Ormond", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-66"], positionName: null },
+   ];
+@@ -548,12 +555,35 @@ describe('"she was late last week", Create without answering the date question',
+     expect(on.notices).toBe(off.notices);
+   });
+ 
++  // Stubs its own flags (QA, #760 gate): FORM_INPUT_FIDELITY gives Coaching drafts a form date, so this pin holds it off
++  // rather than relying on production's list. The both-on case is the guard below.
+   it("on, the Coaching Form: unaffected (it is never told a form date)", async () => {
+     const said = "create a coaching form for Tessa Ormond at Kearney, she was late last week";
+-    const off = await created(false, said, "coaching_details");
+-    const on = await created(true, said, "coaching_details");
++    const off = await created(false, said, "coaching_details", undefined, false);
++    const on = await created(true, said, "coaching_details", undefined, false);
+     expect(on.prompt).not.toContain("FORM DATE:");
+     expect(on.value("coaching_details")).toBe(off.value("coaching_details"));
+     expect(on.notices).toBe(off.notices);
+   });
++
++  // QA's #760 gate: FORM_INPUT_FIDELITY dates Coaching drafts only alongside UNREAD_DAY_NOT_INCIDENT_DATE, so "late last
++  // week" is never saved as today's incident.
++  it("FORM_INPUT_FIDELITY and UNREAD_DAY both on, the Coaching Form: the saved Coaching Details hold no today-date", async () => {
++    const said = "create a coaching form for Tessa Ormond at Kearney, she was late last week";
++    const both = await created(true, said, "coaching_details", undefined, true);
++    const unreadDayOnly = await created(true, said, "coaching_details", undefined, false);
++    // The model's today-dated sentence is not kept: the saved Details read as they do with UNREAD_DAY alone.
++    expect(both.prompt).toContain(`never write ${TODAY_LONG}`);
++    expect(both.value("coaching_details")).toContain("Going Forward:");
++    expect(both.value("coaching_details")).not.toContain(TODAY_LONG);
++    expect(both.value("coaching_details")).toBe(unreadDayOnly.value("coaching_details"));
++  });
++
++  it("FORM_INPUT_FIDELITY on, UNREAD_DAY off, the Coaching Form: never told a form date", async () => {
++    const said = "create a coaching form for Tessa Ormond at Kearney, she was late last week";
++    const fidelityOnly = await created(false, said, "coaching_details", undefined, true);
++    const neither = await created(false, said, "coaching_details", undefined, false);
++    expect(fidelityOnly.prompt).not.toContain("FORM DATE:");
++    expect(fidelityOnly.value("coaching_details")).toBe(neither.value("coaching_details"));
++  });
+ });
+diff --git a/src/app/api/forms/instances/[id]/draft/route.ts b/src/app/api/forms/instances/[id]/draft/route.ts
+index 65ad52e8..1a0f08b8 100644
+--- a/src/app/api/forms/instances/[id]/draft/route.ts
++++ b/src/app/api/forms/instances/[id]/draft/route.ts
+@@ -270,6 +270,7 @@ import {
+   resolveFormDate,
+ } from "@/lib/forms/form-date-grounding";
+ import { unreadDayBrief, unreadDayNotice, unreadIncidentDay } from "@/lib/forms/unread-day-date";
++import { draftDateApplies, fidelityGivenDates } from "@/lib/forms/form-input-fidelity";
+ 
+ /**
+  * POST /api/forms/instances/[id]/draft
+@@ -985,7 +986,7 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
+      * `form-date-grounding.ts`.
+      */
+     const resolvedFormDate =
+-      loaded.instance.layoutFamily === "corrective"
++      draftDateApplies(loaded.instance.layoutFamily)
+         ? resolveFormDate(loaded.instance.formDate)
+         : null;
+     /*
+@@ -1132,7 +1133,7 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
+         ? [
+             unreadDay
+               ? unreadDayBrief(resolvedFormDate, unreadDay)
+-              : formDateBrief(resolvedFormDate, draftBriefDates(notes, businessToday()), notes),
++              : formDateBrief(resolvedFormDate, fidelityGivenDates(notes, businessToday(), draftBriefDates(notes, businessToday())), notes),
+           ]
+         : []),
+       /*
+diff --git a/src/config/production-flags.json b/src/config/production-flags.json
+index eef7b072..5382311a 100644
+--- a/src/config/production-flags.json
++++ b/src/config/production-flags.json
+@@ -1,5 +1,5 @@
+ {
+-  "_about": "This app's PRODUCTION chat flags, for the replay pack (src/app/api/chat/replay-pack). 'on': read as on in Vercel production. 'assumedOn': encrypted or not visible to the Vercel reader (it lists 100 of 181 entries), taken as on from QA's 26 Oct decrypted reading and the replays that match production. 'off': known off. QA messages every flag flipped; update this file in the same pull request as the change it tests. Only *_ENABLED chat flags; integrations (Woven, Google reviews) are left out. 5 Nov 2026 (QA; Pau's Vercel Agent read, 179 *_ENABLED rows, 49/49 plain values cross-checked against QA's API read): corrected to production — 5 assumedOn are OFF (CONVERSATION_DRAFT_REUSE, DRAFT_ACTIONS, GROUNDED_ENTITIES, PROMPT_CACHE, REMAP_DRAFT_SOURCES), 2 'off' are ON (ANSWER_NOT_A_NAME, STORE_WORD_NOT_A_NAME), 48 ON flags were missing; the explicit OFF values are listed in 'off'. SELF_CHECK_ENABLED is unset in Vercel (= off) and stays in 'off'. WOVEN_SYNC_WRITES is left out (sensitive). Why the (a) flags are off (Vercel comments, QA's read-only reader): GROUNDED_ENTITIES was set back to 0 on 24 Oct ~9:38 PM Manila, a deliberate rollback (it dropped non-roster names while ANTI_LOOP was off); CONVERSATION_DRAFT_REUSE and DRAFT_ACTIONS were rolled back 25 Oct (B18/B19: they reopened or overwrote another chat's draft); PROMPT_CACHE was off 25 Oct (no speed gain); SLOT_RETENTION was rolled back 24 Oct (Job Title bug). 5 Nov 2026, the smaller flip (QA; read from Vercel at 06:52 PHT): CA_SALES_POLICY_ENABLED, REPLY_MATCHES_CARD_ENABLED, TITLE_OF_THE_EMPLOYEE_ENABLED and METRIC_GUARD_ENABLED are ON; the name flags (FORM_NAME_FROM_ROSTER, ROSTER_NEAR_MISS, ROSTER_NAME_IN_CANDIDATE, ROSTER_COMPOUND_SURNAME, ROSTER_NOT_FOUND_ANY_PHRASING) stay off. 6 Nov 2026, flip 3 (QA; on a clean gate rerun 4 on 87c08239, docs/flag-classification/FLIP3D.md): FORM_NAME_FROM_ROSTER, ROSTER_NEAR_MISS, ROSTER_NAME_IN_CANDIDATE, ROSTER_COMPOUND_SURNAME, ROSTER_NOT_FOUND_ANY_PHRASING, POLICY_CHANGE_RELEVANT, EXIT_STATED_ONLY, CA_OFFER_KEEPS_ACCOUNT, REPLY_MATCHES_CARD_EACH_CARD and OFF_ROSTER_CONFIRM are ON; FORM_NAME_FROM_ROSTER ships only with OFF_ROSTER_CONFIRM. 7 Nov 2026, 04:13 PHT (QA): FORM_NAME_FROM_ROSTER is OFF again in production (the flip-3 tester's B1: a job title read as a name, and \"name is <name>\" looped on \"Who is this form for?\"); the other 9 flip-3 flags stay on. It comes back on after a gate with it added to production and a live tester re-run. 7 Nov 2026 08:58 PHT (QA): AS_YOU_SAID_MANAGER_WORDS ON after a clean gate on 30bb67db; off 09:03–09:09 for a false alarm; tester 4/4 at 09:10. 7 Nov 2026 20:50 PHT (QA): flip 6, 18 flags ON after gate FLIP5D clean on 4d42c342 and live tester. 8 Nov 2026 00:05 PHT (QA): flip 8, DENIAL_NO_ACCOUNT, REMOVE_POLICY_NOT_NAMED, SOURCE_NOTE_GUARD and EDIT_MAKE_IT_ABOUT ON. CA_REQUEST_NOT_PRIOR_COACHING was on briefly and rolled back to 0 at 00:22 (s35 \"draw me up a CA\" gave no card); it is not listed as on. Round 4 (8 Nov 2026, 11:32 PHT): QA switched on CARD_POLICY_OWN_REQUEST, EDIT_POLICY_ASK, OWN_BRAND_PARENT, PRIOR_COACHING_DENIAL, REQUEST_LEVEL_NOT_HISTORY, WRITE_ME_THE_FORM, SAME_FORM_COPY_NEW_PERSON, PAYROLL_AMOUNT_SAME_MESSAGE, PRIOR_ACTIONS_NO_SIGNED, WOVEN_TRAINING_CONDUCT, CA_REQUEST_NOT_PRIOR_COACHING (was 0), STALE_PROMPT_LINES_OFF, DESCRIBED_ATTENDANCE_CARD and PAST_FORMS_BEFORE_LIBRARY (deploy dpl_HUZosyd1, main e7a7ba9c). POLICY_CITATION stays off until the card-policy name fix is ported. Round 6 (9 Nov 2026): QA switched on ACCOUNT_PLACE_LEAD, CARRIED_PERSON_NOTICE, CA_PERFORMANCE_REASON, COMPLAINT_ACCOUNT, COPY_OPEN_FORM_FOR_PERSON, CORRECTED_DATE_KEPT, EXIT_OTHER_PERSON_NOT_SUBJECT, EXIT_TERMINATION_STATED, FIELD_LABEL_NOT_A_QUESTION, KEPT_REQUEST_SAME_FORM, MISSED_SHIFT_NOT_LATENESS, POLICY_CORRECTION_NOT_ACCOUNT, POLICY_SET_ASIDE_PLAN, POLITE_ABOUT_STAYS_CARD, POSSESSIVE_NO_APOSTROPHE, PROPOSAL_NAME_CORRECTION, REQUEST_FROM_NAMES_EMPLOYEE, REQUEST_KEPT_IN_WINDOW, REQUEST_PARTICIPLE_LEAD, REVISION_EDIT_NEEDS_EDIT, SALES_OBSERVATION_ACCOUNT, SALES_SHORTFALL_OBJECT, STEP_B_DATE_WITH_ABOUT, STEP_B_MAKE_IT_ABOUT_ACCOUNT, UNDATED_ACCOUNT_BRIEF, UNKNOWN_NAME_ASK_WHO_FOR (and the NEXT_PUBLIC_ pairs of REQUEST_KEPT_IN_WINDOW, KEPT_REQUEST_SAME_FORM, REVISION_EDIT_NEEDS_EDIT). EXIT_ANSWER_NOT_A_CORRECTION, SECOND_REQUEST_OWN_ACCOUNT and NEAR_MISS_QUESTION_RULES stay off. Round 6 re-flip (9 Nov 2026, QA): FIELD_LABEL_NOT_A_QUESTION is OFF again in production. On a six-turn exit chat whose first turn says \"no notice given\", turn 5 (\"resignation date … how employee resigned - …\") filled \"Date that notice was given\" and added a stray \"You also asked …\" line; round 5 left both out. The other 28 round-6 switches stay on. Round 7 (9 Nov 2026, QA): EXIT_LETTER_SIGNER_NOT_SUBJECT, FIRST_NAME_ANSWER_KEEPS_ACCOUNT, POSSESSIVE_PLACE_NOT_PERSON, SHIFT_ACCOUNT_IS_INCIDENT, WORK_AREA_ABSENCE_CITES_CONDUCT, EXIT_ANSWER_NOT_A_CORRECTION, FIELD_LABEL_NOT_A_QUESTION ON. OFF_ROSTER_ASK_BEFORE_CARD and SECOND_REQUEST_OWN_ACCOUNT stay off (the first is pending Pau; the second broke Sunny live). Round 8 (9 Nov 2026, QA): EXIT_LETTER_ADDRESSEE, EXIT_LINE_ANSWERS_ADD_UP, MISSED_SHIFT_CITES_ATTENDANCE, POSSESSIVE_PLACE_ACCOUNT ON. Round 9 (9 Nov 2026, QA): MADE_ABOUT_ALL_OR_NOTHING ON. Off-roster ask (9 Nov 2026; Pau: \"on\", ~13:10Z, via QA): OFF_ROSTER_ASK_BEFORE_CARD is ON (OFF_ROSTER_CONFIRM already was). Round 11 (9 Nov 2026, QA): LETTER_GREETING_NOT_NAME, MADE_ABOUT_READER_ACCOUNT ON. Round 12 (9 Nov 2026, QA): EXIT_FORM_DATE_FROM_TERMINATION ON. Round 13 (10 Nov 2026, QA): MADE_ABOUT_REWRITE_FINISHES ON. Round 14 (10 Nov 2026, QA): POLICY_TOPIC_INTO_FIELD ON. Round 15 (10 Nov 2026, QA): MADE_ABOUT_TOPIC_EVIDENCE, FORM_DATE_SAID_ALONE ON. Round 15 re-release (10 Nov 2026, QA): MADE_ABOUT_SAID_DATE, ADD_NOT_REPEATED ON (MADE_ABOUT_TOPIC_EVIDENCE and FORM_DATE_SAID_ALONE stay as in round 15); SECTION_BREAKS_KEPT stays off. Round 15 re-release 2 (10 Nov 2026, QA): SECTION_BREAKS_KEPT ON (the 'Also observed:' split is fixed); #679 policy wording. Round 16b (10 Nov 2026, QA): ACCOUNT_WIPE_GUARD, CREATE_FROM_CONVERSATION_POINTS_TO_CARD, CARD_NAMES_EMPLOYEE, SAME_REQUEST_OTHER_PERSON, CHAT_STAGE_TIMINGS. ONE_FORM_EACH_PERSON and COACHING_ASKS_WHAT_HAPPENED stay off (they ship together). Round 17b (10 Nov 2026, QA): DRAFT_WRITE_NEVER_SILENT, CA_REASON_DUE_TO, FAILURE_TO_OPEN_IS_LATE_OPENING, PAYROLL_BARE_SENTENCE. Round 17c (11 Nov 2026, QA): EXCERPT_BRAND_FILTER ON (source excerpts drop the sibling brand's lines; gate EBF, 0 changed rows). Round 17d (11 Nov 2026, QA): REQUEST_ISSUE_KEPT + LATE_OPENING_OWN_WORDS + FIRST_NAME_ENOUGH + NO_SHOW_OPENING_IS_ATTENDANCE ON (#742 + #746; Gate-Bubbles-2 3+3, 0 regressions). Round 17e (11 Nov 2026, QA): Woven sync INGEST_FAILURE_KEEPS_LAST_GOOD + WOVEN_OCR_PAGE_BATCHES + WOVEN_TEXT_NUL_STRIP + WOVEN_FAILED_RETRY ON (#736 + #749; Gate-Bubbles-2 3+3, chat replay byte-identical). Round 17f (11 Nov 2026, QA): EXCERPT_BRAND_HEADING_DROP ON (#764: no source card labelled with the sibling brand or with an empty/heading-only excerpt; the leading \": \" trimmed; Gate-Bubbles-2 GO, 2 intended rows). Round 16c (10 Nov 2026, QA): the roster-name set (#665): FORM_NAME_FROM_ROSTER, FORM_NAME_OFF_ROSTER_ASK, NEAR_MISS_DETAILS_ACCEPT, NEAR_MISS_QUESTION_RULES. Round 17i (11 Nov 2026, QA): COPY_PASTE_CLAIM_HONEST + DATE_ONCE + ADDRESS_ASKS_WHO + LEAD_FULL_SENTENCE + NAME_LINE_COMMA ON (#688, Gate-Bubbles-2 3+3 GO, 0 regressions); TEMPLATE_OUTLINE_FIELDS + PASTED_OUTLINE_TO_OPEN_DRAFT + PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT ON (#765, gate GO); GROUP_WORDS_NOT_A_NAME ON (#770, Problem 19, gate GO). Round 17j (12 Nov 2026, QA): EXIT_TYPO_WORDS ON (#713, P17: misspelled exit answers read; only misspellings rewritten; Gate-Bubbles 1+1 GO) and NO_NAME_REPLY_WORDING ON (#773: an empty-employee card says nothing name-derived, 'with the employee', no Create; Gate-Bubbles-2 3+3 GO, 0 regressions). Round 17k (12 Nov 2026, QA): ACCOUNT_BEFORE_REQUEST ON (#714, P14(a): the account given before the request reaches the draft; the walk-back stops at an earlier form request; Gate-Bubbles 1+1 GO after the fix), LETTER_GREETING_ANY_CASE ON (#718: 'Dear <Name>,' letters read the name without 'Dear'; Gate-Bubbles 3+3 GO) and COMPANY_METRIC_WORDS_NOT_NAMES ON (#796: Buff City Soap KPIs such as Comp Sales / Discount Rate are never a person's name; Gate-Bubbles-2 3+3 GO). Round 17l (12 Nov 2026, QA; recovered from the 10 Nov queue/October rebuilds): EMPTY_REPLY_GUARD ON (#754: a turn never saves or shows an empty reply; Gate-Bubbles-3 GO), POLICY_PAGE_ON_CARD ON (#755: the CA card's policy line carries its printed page; GO), REVISION_ARCHIVED_NOT_OPEN ON (#731: an archived revision draft never blocks 'Edit as new draft'; migration 20261110201714 confirmed applied; Gate-Bubbles-5 GO) and DRAFT_NO_INVENTED_PLAN ON (#805: the model's invented 'Going Forward' is never saved; Gate-Bubbles-4 GO).",
++  "_about": "This app's PRODUCTION chat flags, for the replay pack (src/app/api/chat/replay-pack). 'on': read as on in Vercel production. 'assumedOn': encrypted or not visible to the Vercel reader (it lists 100 of 181 entries), taken as on from QA's 26 Oct decrypted reading and the replays that match production. 'off': known off. QA messages every flag flipped; update this file in the same pull request as the change it tests. Only *_ENABLED chat flags; integrations (Woven, Google reviews) are left out. 5 Nov 2026 (QA; Pau's Vercel Agent read, 179 *_ENABLED rows, 49/49 plain values cross-checked against QA's API read): corrected to production — 5 assumedOn are OFF (CONVERSATION_DRAFT_REUSE, DRAFT_ACTIONS, GROUNDED_ENTITIES, PROMPT_CACHE, REMAP_DRAFT_SOURCES), 2 'off' are ON (ANSWER_NOT_A_NAME, STORE_WORD_NOT_A_NAME), 48 ON flags were missing; the explicit OFF values are listed in 'off'. SELF_CHECK_ENABLED is unset in Vercel (= off) and stays in 'off'. WOVEN_SYNC_WRITES is left out (sensitive). Why the (a) flags are off (Vercel comments, QA's read-only reader): GROUNDED_ENTITIES was set back to 0 on 24 Oct ~9:38 PM Manila, a deliberate rollback (it dropped non-roster names while ANTI_LOOP was off); CONVERSATION_DRAFT_REUSE and DRAFT_ACTIONS were rolled back 25 Oct (B18/B19: they reopened or overwrote another chat's draft); PROMPT_CACHE was off 25 Oct (no speed gain); SLOT_RETENTION was rolled back 24 Oct (Job Title bug). 5 Nov 2026, the smaller flip (QA; read from Vercel at 06:52 PHT): CA_SALES_POLICY_ENABLED, REPLY_MATCHES_CARD_ENABLED, TITLE_OF_THE_EMPLOYEE_ENABLED and METRIC_GUARD_ENABLED are ON; the name flags (FORM_NAME_FROM_ROSTER, ROSTER_NEAR_MISS, ROSTER_NAME_IN_CANDIDATE, ROSTER_COMPOUND_SURNAME, ROSTER_NOT_FOUND_ANY_PHRASING) stay off. 6 Nov 2026, flip 3 (QA; on a clean gate rerun 4 on 87c08239, docs/flag-classification/FLIP3D.md): FORM_NAME_FROM_ROSTER, ROSTER_NEAR_MISS, ROSTER_NAME_IN_CANDIDATE, ROSTER_COMPOUND_SURNAME, ROSTER_NOT_FOUND_ANY_PHRASING, POLICY_CHANGE_RELEVANT, EXIT_STATED_ONLY, CA_OFFER_KEEPS_ACCOUNT, REPLY_MATCHES_CARD_EACH_CARD and OFF_ROSTER_CONFIRM are ON; FORM_NAME_FROM_ROSTER ships only with OFF_ROSTER_CONFIRM. 7 Nov 2026, 04:13 PHT (QA): FORM_NAME_FROM_ROSTER is OFF again in production (the flip-3 tester's B1: a job title read as a name, and \"name is <name>\" looped on \"Who is this form for?\"); the other 9 flip-3 flags stay on. It comes back on after a gate with it added to production and a live tester re-run. 7 Nov 2026 08:58 PHT (QA): AS_YOU_SAID_MANAGER_WORDS ON after a clean gate on 30bb67db; off 09:03–09:09 for a false alarm; tester 4/4 at 09:10. 7 Nov 2026 20:50 PHT (QA): flip 6, 18 flags ON after gate FLIP5D clean on 4d42c342 and live tester. 8 Nov 2026 00:05 PHT (QA): flip 8, DENIAL_NO_ACCOUNT, REMOVE_POLICY_NOT_NAMED, SOURCE_NOTE_GUARD and EDIT_MAKE_IT_ABOUT ON. CA_REQUEST_NOT_PRIOR_COACHING was on briefly and rolled back to 0 at 00:22 (s35 \"draw me up a CA\" gave no card); it is not listed as on. Round 4 (8 Nov 2026, 11:32 PHT): QA switched on CARD_POLICY_OWN_REQUEST, EDIT_POLICY_ASK, OWN_BRAND_PARENT, PRIOR_COACHING_DENIAL, REQUEST_LEVEL_NOT_HISTORY, WRITE_ME_THE_FORM, SAME_FORM_COPY_NEW_PERSON, PAYROLL_AMOUNT_SAME_MESSAGE, PRIOR_ACTIONS_NO_SIGNED, WOVEN_TRAINING_CONDUCT, CA_REQUEST_NOT_PRIOR_COACHING (was 0), STALE_PROMPT_LINES_OFF, DESCRIBED_ATTENDANCE_CARD and PAST_FORMS_BEFORE_LIBRARY (deploy dpl_HUZosyd1, main e7a7ba9c). POLICY_CITATION stays off until the card-policy name fix is ported. Round 6 (9 Nov 2026): QA switched on ACCOUNT_PLACE_LEAD, CARRIED_PERSON_NOTICE, CA_PERFORMANCE_REASON, COMPLAINT_ACCOUNT, COPY_OPEN_FORM_FOR_PERSON, CORRECTED_DATE_KEPT, EXIT_OTHER_PERSON_NOT_SUBJECT, EXIT_TERMINATION_STATED, FIELD_LABEL_NOT_A_QUESTION, KEPT_REQUEST_SAME_FORM, MISSED_SHIFT_NOT_LATENESS, POLICY_CORRECTION_NOT_ACCOUNT, POLICY_SET_ASIDE_PLAN, POLITE_ABOUT_STAYS_CARD, POSSESSIVE_NO_APOSTROPHE, PROPOSAL_NAME_CORRECTION, REQUEST_FROM_NAMES_EMPLOYEE, REQUEST_KEPT_IN_WINDOW, REQUEST_PARTICIPLE_LEAD, REVISION_EDIT_NEEDS_EDIT, SALES_OBSERVATION_ACCOUNT, SALES_SHORTFALL_OBJECT, STEP_B_DATE_WITH_ABOUT, STEP_B_MAKE_IT_ABOUT_ACCOUNT, UNDATED_ACCOUNT_BRIEF, UNKNOWN_NAME_ASK_WHO_FOR (and the NEXT_PUBLIC_ pairs of REQUEST_KEPT_IN_WINDOW, KEPT_REQUEST_SAME_FORM, REVISION_EDIT_NEEDS_EDIT). EXIT_ANSWER_NOT_A_CORRECTION, SECOND_REQUEST_OWN_ACCOUNT and NEAR_MISS_QUESTION_RULES stay off. Round 6 re-flip (9 Nov 2026, QA): FIELD_LABEL_NOT_A_QUESTION is OFF again in production. On a six-turn exit chat whose first turn says \"no notice given\", turn 5 (\"resignation date … how employee resigned - …\") filled \"Date that notice was given\" and added a stray \"You also asked …\" line; round 5 left both out. The other 28 round-6 switches stay on. Round 7 (9 Nov 2026, QA): EXIT_LETTER_SIGNER_NOT_SUBJECT, FIRST_NAME_ANSWER_KEEPS_ACCOUNT, POSSESSIVE_PLACE_NOT_PERSON, SHIFT_ACCOUNT_IS_INCIDENT, WORK_AREA_ABSENCE_CITES_CONDUCT, EXIT_ANSWER_NOT_A_CORRECTION, FIELD_LABEL_NOT_A_QUESTION ON. OFF_ROSTER_ASK_BEFORE_CARD and SECOND_REQUEST_OWN_ACCOUNT stay off (the first is pending Pau; the second broke Sunny live). Round 8 (9 Nov 2026, QA): EXIT_LETTER_ADDRESSEE, EXIT_LINE_ANSWERS_ADD_UP, MISSED_SHIFT_CITES_ATTENDANCE, POSSESSIVE_PLACE_ACCOUNT ON. Round 9 (9 Nov 2026, QA): MADE_ABOUT_ALL_OR_NOTHING ON. Off-roster ask (9 Nov 2026; Pau: \"on\", ~13:10Z, via QA): OFF_ROSTER_ASK_BEFORE_CARD is ON (OFF_ROSTER_CONFIRM already was). Round 11 (9 Nov 2026, QA): LETTER_GREETING_NOT_NAME, MADE_ABOUT_READER_ACCOUNT ON. Round 12 (9 Nov 2026, QA): EXIT_FORM_DATE_FROM_TERMINATION ON. Round 13 (10 Nov 2026, QA): MADE_ABOUT_REWRITE_FINISHES ON. Round 14 (10 Nov 2026, QA): POLICY_TOPIC_INTO_FIELD ON. Round 15 (10 Nov 2026, QA): MADE_ABOUT_TOPIC_EVIDENCE, FORM_DATE_SAID_ALONE ON. Round 15 re-release (10 Nov 2026, QA): MADE_ABOUT_SAID_DATE, ADD_NOT_REPEATED ON (MADE_ABOUT_TOPIC_EVIDENCE and FORM_DATE_SAID_ALONE stay as in round 15); SECTION_BREAKS_KEPT stays off. Round 15 re-release 2 (10 Nov 2026, QA): SECTION_BREAKS_KEPT ON (the 'Also observed:' split is fixed); #679 policy wording. Round 16b (10 Nov 2026, QA): ACCOUNT_WIPE_GUARD, CREATE_FROM_CONVERSATION_POINTS_TO_CARD, CARD_NAMES_EMPLOYEE, SAME_REQUEST_OTHER_PERSON, CHAT_STAGE_TIMINGS. ONE_FORM_EACH_PERSON and COACHING_ASKS_WHAT_HAPPENED stay off (they ship together). Round 17b (10 Nov 2026, QA): DRAFT_WRITE_NEVER_SILENT, CA_REASON_DUE_TO, FAILURE_TO_OPEN_IS_LATE_OPENING, PAYROLL_BARE_SENTENCE. Round 17c (11 Nov 2026, QA): EXCERPT_BRAND_FILTER ON (source excerpts drop the sibling brand's lines; gate EBF, 0 changed rows). Round 17d (11 Nov 2026, QA): REQUEST_ISSUE_KEPT + LATE_OPENING_OWN_WORDS + FIRST_NAME_ENOUGH + NO_SHOW_OPENING_IS_ATTENDANCE ON (#742 + #746; Gate-Bubbles-2 3+3, 0 regressions). Round 17e (11 Nov 2026, QA): Woven sync INGEST_FAILURE_KEEPS_LAST_GOOD + WOVEN_OCR_PAGE_BATCHES + WOVEN_TEXT_NUL_STRIP + WOVEN_FAILED_RETRY ON (#736 + #749; Gate-Bubbles-2 3+3, chat replay byte-identical). Round 17f (11 Nov 2026, QA): EXCERPT_BRAND_HEADING_DROP ON (#764: no source card labelled with the sibling brand or with an empty/heading-only excerpt; the leading \": \" trimmed; Gate-Bubbles-2 GO, 2 intended rows). Round 16c (10 Nov 2026, QA): the roster-name set (#665): FORM_NAME_FROM_ROSTER, FORM_NAME_OFF_ROSTER_ASK, NEAR_MISS_DETAILS_ACCEPT, NEAR_MISS_QUESTION_RULES. Round 17i (11 Nov 2026, QA): COPY_PASTE_CLAIM_HONEST + DATE_ONCE + ADDRESS_ASKS_WHO + LEAD_FULL_SENTENCE + NAME_LINE_COMMA ON (#688, Gate-Bubbles-2 3+3 GO, 0 regressions); TEMPLATE_OUTLINE_FIELDS + PASTED_OUTLINE_TO_OPEN_DRAFT + PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT ON (#765, gate GO); GROUP_WORDS_NOT_A_NAME ON (#770, Problem 19, gate GO). Round 17j (12 Nov 2026, QA): EXIT_TYPO_WORDS ON (#713, P17: misspelled exit answers read; only misspellings rewritten; Gate-Bubbles 1+1 GO) and NO_NAME_REPLY_WORDING ON (#773: an empty-employee card says nothing name-derived, 'with the employee', no Create; Gate-Bubbles-2 3+3 GO, 0 regressions). Round 17k (12 Nov 2026, QA): ACCOUNT_BEFORE_REQUEST ON (#714, P14(a): the account given before the request reaches the draft; the walk-back stops at an earlier form request; Gate-Bubbles 1+1 GO after the fix), LETTER_GREETING_ANY_CASE ON (#718: 'Dear <Name>,' letters read the name without 'Dear'; Gate-Bubbles 3+3 GO) and COMPANY_METRIC_WORDS_NOT_NAMES ON (#796: Buff City Soap KPIs such as Comp Sales / Discount Rate are never a person's name; Gate-Bubbles-2 3+3 GO). Round 17l (12 Nov 2026, QA; recovered from the 10 Nov queue/October rebuilds): EMPTY_REPLY_GUARD ON (#754: a turn never saves or shows an empty reply; Gate-Bubbles-3 GO), POLICY_PAGE_ON_CARD ON (#755: the CA card's policy line carries its printed page; GO), REVISION_ARCHIVED_NOT_OPEN ON (#731: an archived revision draft never blocks 'Edit as new draft'; migration 20261110201714 confirmed applied; Gate-Bubbles-5 GO) and DRAFT_NO_INVENTED_PLAN ON (#805: the model's invented 'Going Forward' is never saved; Gate-Bubbles-4 GO). Round 17m (12 Nov 2026, QA): FORM_INPUT_FIDELITY ON (#760: a bare 'yesterday' is never the Job Title; Coaching form-date only with UNREAD_DAY on; Gate-Bubbles-3 GO), EXIT_PROSE_FACTS ON (#790: the exit card's Additional Details are only the facts given; GO), CHAT_IMPORT_PROVEN_OWN ON (#809, security: a chat is imported only when its answered turns are proven this account's; 'not_proven' says so, never 'another account'; Gate-Bubbles-2 GO) and WORN_CLOTHING_IS_DRESS_CODE + COPY_PASTE_POINTS_TO_CARD + FORMS_BELOW_NEEDS_FORMS ON (#799, 17i live fixes; GO).",
+   "updated": "2026-11-12",
+   "on": [
+     "ADDITIONAL_LOCATION_TAKEN_ENABLED",
+@@ -296,7 +296,13 @@
+     "EMPTY_REPLY_GUARD_ENABLED",
+     "POLICY_PAGE_ON_CARD_ENABLED",
+     "REVISION_ARCHIVED_NOT_OPEN_ENABLED",
+-    "DRAFT_NO_INVENTED_PLAN_ENABLED"
++    "DRAFT_NO_INVENTED_PLAN_ENABLED",
++    "FORM_INPUT_FIDELITY_ENABLED",
++    "EXIT_PROSE_FACTS_ENABLED",
++    "CHAT_IMPORT_PROVEN_OWN_ENABLED",
++    "WORN_CLOTHING_IS_DRESS_CODE_ENABLED",
++    "COPY_PASTE_POINTS_TO_CARD_ENABLED",
++    "FORMS_BELOW_NEEDS_FORMS_ENABLED"
+   ],
+   "assumedOn": [
+     "ACTION_PLAN_SENTENCES_ENABLED",
+diff --git a/src/features/chat/import-local-history.tsx b/src/features/chat/import-local-history.tsx
+index 89b1c82e..df55e0c8 100644
+--- a/src/features/chat/import-local-history.tsx
++++ b/src/features/chat/import-local-history.tsx
+@@ -67,7 +67,7 @@ function useLocalHistoryImport() {
+     useAppStore();
+ 
+   const [busy, setBusy] = useState(false);
+-  const [result, setResult] = useState<{ imported: number; error: string | null; anotherAccount?: number } | null>(
++  const [result, setResult] = useState<{ imported: number; error: string | null; anotherAccount?: number; notProven?: number } | null>(
+     null,
+   );
+ 
+@@ -81,6 +81,8 @@ function useLocalHistoryImport() {
+         error: summary.error,
+         // CHAT_IMPORT_OWN_ONLY: chats the server declined as another account's are said, not silently left.
+         anotherAccount: summary.declined.filter((entry) => entry.reason === "another_account").length,
++        // CHAT_IMPORT_PROVEN_OWN: chats that could not be proven this account's are said as that, never "another account".
++        notProven: summary.declined.filter((entry) => entry.reason === "not_proven").length,
+       });
+     } catch (error) {
+       setResult({
+@@ -115,6 +117,25 @@ function anotherAccountSentence(count: number): string {
+     : `${count} chats on this device belong to another account and were not imported. They stay on this device.`;
+ }
+ 
++/**
++ * CHAT_IMPORT_PROVEN_OWN (QA, 12 Nov 2026): a chat with no answered turn on record for this account could not be
++ * confirmed as theirs. That is not another account's chat, so it is not said that way.
++ */
++function notProvenSentence(count: number): string {
++  return count === 1
++    ? "Ask Bubbles couldn't confirm 1 chat on this device is yours, so it wasn't copied. It stays on this device."
++    : `Ask Bubbles couldn't confirm ${count} chats on this device are yours, so they weren't copied. They stay on this device.`;
++}
++
++function NotProvenNote({ count }: { count?: number }) {
++  if (!count) return null;
++  return (
++    <p role="status" className="mt-2 text-[11.5px] leading-relaxed text-muted-foreground">
++      {notProvenSentence(count)}
++    </p>
++  );
++}
++
+ function AnotherAccountNote({ count }: { count?: number }) {
+   if (!count) return null;
+   return (
+@@ -175,6 +196,7 @@ export function ImportLocalHistoryPrompt() {
+         </p>
+       ) : null}
+       <AnotherAccountNote count={result?.anotherAccount} />
++      <NotProvenNote count={result?.notProven} />
+ 
+       <div className="mt-2.5 flex items-center gap-2">
+         <Button
+@@ -305,6 +327,7 @@ export function HistoryImportButton() {
+               </p>
+             ) : null}
+             <AnotherAccountNote count={result?.anotherAccount} />
++            <NotProvenNote count={result?.notProven} />
+           </div>
+ 
+           <DialogActions>
+diff --git a/src/features/chat/import-not-proven.dom.test.tsx b/src/features/chat/import-not-proven.dom.test.tsx
+new file mode 100644
+index 00000000..0a4016e6
+--- /dev/null
++++ b/src/features/chat/import-not-proven.dom.test.tsx
+@@ -0,0 +1,16 @@
++// @vitest-environment jsdom
++import { describe, expect, it } from "vitest";
++
++/**
++ * CHAT_IMPORT_PROVEN_OWN (QA, 12 Nov 2026): a chat declined because it could not be proven this account's is said as
++ * that, never as "belongs to another account". The sentence is read from the panel's source, as rendered text.
++ */
++describe("Import's note for a chat that could not be proven yours", () => {
++  it("never says another account", async () => {
++    const source = (await import("node:fs")).readFileSync("src/features/chat/import-local-history.tsx", "utf8");
++    const sentence = /function notProvenSentence[\s\S]*?\n}/.exec(source)?.[0] ?? "";
++    expect(sentence).toMatch(/couldn't confirm 1 chat on this device is yours, so it wasn't copied/);
++    expect(sentence).toMatch(/couldn't confirm \$\{count\} chats on this device are yours, so they weren't copied/);
++    expect(sentence).not.toMatch(/another account/);
++  });
++});
+diff --git a/src/lib/ai/card-meta-turn.ts b/src/lib/ai/card-meta-turn.ts
+index ea2dad67..3107e4d6 100644
+--- a/src/lib/ai/card-meta-turn.ts
++++ b/src/lib/ai/card-meta-turn.ts
+@@ -1,4 +1,9 @@
+-import { cardComplaintNotAccountEnabled, createCommandPointsToCardEnabled, createFromConversationPointsToCardEnabled } from "@/lib/config/chat-quality-flags";
++import {
++  cardComplaintNotAccountEnabled,
++  copyPastePointsToCardEnabled,
++  createCommandPointsToCardEnabled,
++  createFromConversationPointsToCardEnabled,
++} from "@/lib/config/chat-quality-flags";
+ 
+ import type { AskRequest, AskResponse } from "./types";
+ 
+@@ -22,6 +27,9 @@ import type { AskRequest, AskResponse } from "./types";
+ 
+ export const PRESS_CREATE =
+   "To create it, press **Create draft** on the card — I can't create the draft from a chat message. Nothing is saved to anyone's file until you press it.";
++/** COPY_PASTE_POINTS_TO_CARD_ENABLED: "Do i need to copy and paste it?" with the card on screen. */
++export const NOTHING_TO_COPY =
++  "No — there's nothing to copy or paste. The card above already has it: press **Create draft** on it, and the draft opens here for you to edit. Nothing is saved to anyone's file until you press it.";
+ export const WHAT_IS_OUT_OF_DATE = "What on the proposal is out of date? Tell me what to change and I'll update the card.";
+ export const WHAT_IS_WRONG = "What on the proposal is wrong? Tell me what to change and I'll update the card.";
+ 
+@@ -47,12 +55,21 @@ const CREATE_FROM_CONVERSATION = new RegExp(
+ const COMPLAINT =
+   /^(?:(?:but|hmm|um|uh|ok(?:ay)?)[,\s]+)?(?:this|that|the|your)\s+(?:proposal|card|form|draft)\s+(?:is|looks|seems|was)\s+(?:(?:all|still|kind\s+of|completely)\s+)?(out\s+o[fd]\s+[dfs]ate|outdated|old|wrong|incorrect|not\s+right|off)\s*[.!?]*$/i;
+ 
++/**
++ * COPY_PASTE_POINTS_TO_CARD_ENABLED (QA's Bubbles 17i live test, 11 Nov 2026): "Do i need to copy and paste it?", "do I
++ * have to copy it", "should I copy paste this into the form?", "where do I paste it?" — a question about moving the card's
++ * text by hand.
++ */
++const COPY_QUESTION =
++  /^(?:(?:so|ok(?:ay)?|and|wait)[,\s]+)?(?:(?:do|should|must|would|will)\s+i\s+(?:(?:need|have)\s+to\s+)?|(?:how|where)\s+do\s+i\s+|can\s+i\s+(?:just\s+)?)(?:copy(?:\s*(?:and|&|n|\/)?\s*paste)?|paste)\b[^?]{0,60}\??$/i;
++
+ function squeezed(question: string): string {
+   return (question ?? "").replace(/\s+/g, " ").trim();
+ }
+ 
+-function kindOf(question: string): "create" | "outdated" | "wrong" | null {
++function kindOf(question: string): "create" | "copy" | "outdated" | "wrong" | null {
+   const text = squeezed(question);
++  if (copyPastePointsToCardEnabled() && COPY_QUESTION.test(text)) return "copy";
+   if (createCommandPointsToCardEnabled() && CREATE_COMMAND.test(text)) return "create";
+   // CREATE_FROM_CONVERSATION_POINTS_TO_CARD_ENABLED: "Create a form from this conversation." (the sibling app's P6).
+   if (createCommandPointsToCardEnabled() && createFromConversationPointsToCardEnabled() && CREATE_FROM_CONVERSATION.test(text)) return "create";
+@@ -95,7 +112,7 @@ export function cardMetaTurn(
+     .find((turn) => turn.role === "user" && typeof turn.content === "string" && kindOf(turn.content) === null);
+   const from = fromTurn?.content;
+   if (!from) return null;
+-  const line = kind === "create" ? PRESS_CREATE : kind === "outdated" ? WHAT_IS_OUT_OF_DATE : WHAT_IS_WRONG;
++  const line = kind === "create" ? PRESS_CREATE : kind === "copy" ? NOTHING_TO_COPY : kind === "outdated" ? WHAT_IS_OUT_OF_DATE : WHAT_IS_WRONG;
+   /*
+    * The card as it was: its own source turns, so Create drafts from the account, never from "create it" or the
+    * complaint (proposing it again from `from` would point the card at this turn).
+diff --git a/src/lib/ai/flags-off-parity.test.ts b/src/lib/ai/flags-off-parity.test.ts
+index 9733c80d..8039c99a 100644
+--- a/src/lib/ai/flags-off-parity.test.ts
++++ b/src/lib/ai/flags-off-parity.test.ts
+@@ -156,6 +156,9 @@ const UI_PATHS = ["src/app/**/*.tsx", "src/components/**", "src/features/**/*.ts
+  * off, it renders as before for every role.
+  */
+ const ALLOWED_UI = [
++  // Import's "couldn't confirm … is yours" line (QA, 12 Nov 2026, both apps): shown only for a "not_proven" decline,
++  // which only CHAT_IMPORT_PROVEN_OWN_ENABLED returns. Off, the server never declines that way, so it never shows.
++  "src/features/chat/import-local-history.tsx",
+   // District Manager, 3 Nov 2026 (QA approved 5 Nov, Pau 6 Nov): the Reviews page and the admin Google Reviews
+   // screen show the company's store number (Dawley Farms: 309; its Google code 338 stays the match key). Unflagged:
+   // it is a data correction, identical for every store whose number is its code.
+diff --git a/src/lib/chat/client-ids.ts b/src/lib/chat/client-ids.ts
+index 72206bb4..aaf6a787 100644
+--- a/src/lib/chat/client-ids.ts
++++ b/src/lib/chat/client-ids.ts
+@@ -167,4 +167,9 @@ export type IneligibleReason =
+    */
+   | "deleted"
+   /** Another account wrote it, on a browser they shared (CHAT_IMPORT_OWN_ONLY_ENABLED). */
+-  | "another_account";
++  | "another_account"
++  /**
++   * No answered turn of it is on record as this account's, so it could not be proven this account's
++   * (CHAT_IMPORT_PROVEN_OWN_ENABLED). Not "another account": nothing shows anyone else wrote it.
++   */
++  | "not_proven";
+diff --git a/src/lib/chat/store.ts b/src/lib/chat/store.ts
+index 85439378..1ef8f091 100644
+--- a/src/lib/chat/store.ts
++++ b/src/lib/chat/store.ts
+@@ -425,7 +425,13 @@ export type SaveOutcome =
+    * browser's store is not keyed by account, so a chat one person had on a
+    * shared browser was offered to the next person who signed in there.
+    */
+-  | "another_account";
++  | "another_account"
++  /**
++   * Refused because an IMPORT could not be proven this account's: an answered turn of it has no activity row recorded
++   * for this account (CHAT_IMPORT_PROVEN_OWN_ENABLED). Distinct from "another_account": no other account is shown to
++   * have written it, so the reason given never says so.
++   */
++  | "not_proven";
+ 
+ export async function saveOwnConversation(
+   userId: string,
+@@ -465,7 +471,7 @@ export async function saveOwnConversation(
+    * row, a turn with no actor) is not proof; it is declined (independent
+    * review, 31 Oct 2026: the check above passed such a chat).
+    */
+-  if (options.imported && !row && chatImportProvenOwnEnabled() && !(await provenOwn(userId, payload))) return "another_account";
++  if (options.imported && !row && chatImportProvenOwnEnabled() && !(await provenOwn(userId, payload))) return "not_proven";
+ 
+   /*
+    * AND NOTHING FROM BEFORE A CLEAR COMES BACK EITHER. Clear History removes
+diff --git a/src/lib/config/chat-quality-flags.ts b/src/lib/config/chat-quality-flags.ts
+index ac2561d9..42926dda 100644
+--- a/src/lib/config/chat-quality-flags.ts
++++ b/src/lib/config/chat-quality-flags.ts
+@@ -1348,8 +1348,12 @@ export const CHAT_QUALITY_FLAG_NAMES = [
+   "FULL_MANUAL_WIDE_GATE_ENABLED",
+   "EMPTY_REPLY_GUARD_ENABLED",
+   "POLICY_PAGE_ON_CARD_ENABLED",
++  "FORM_INPUT_FIDELITY_ENABLED",
+   // coding 5: B3 (QA's backlog, 10 Nov 2026; default off).
+   "COPY_PASTE_CLAIM_HONEST_ENABLED",
++  "COPY_PASTE_POINTS_TO_CARD_ENABLED",
++  "FORMS_BELOW_NEEDS_FORMS_ENABLED",
++  "WORN_CLOTHING_IS_DRESS_CODE_ENABLED",
+   "DATE_ONCE_ENABLED",
+   "ADDRESS_ASKS_WHO_ENABLED",
+   "LEAD_FULL_SENTENCE_ENABLED",
+@@ -4628,6 +4632,15 @@ export function revisionArchivedNotOpenEnabled(): boolean {
+   return envFlag("REVISION_ARCHIVED_NOT_OPEN_ENABLED");
+ }
+ 
++/**
++ * Keep a date the manager typed, and send a one-word follow-up to the
++ * question just asked. Off, a relative day such as "yesterday" still leaves
++ * the form dated today, and a bare "verbal" can be saved as the job title.
++ */
++export function formInputFidelityEnabled(): boolean {
++  return envFlag("FORM_INPUT_FIDELITY_ENABLED");
++}
++
+ /**
+  * FORM_FOR_FOR_TYPO_ENABLED (B-C3 from QA's open-case list, 11 Nov 2026; the sibling app's Pau scan sf-s36, a real
+  * manager: "I need a exit for for <name> TM. Quit without notice. …"; default off). The message was never read as an exit
+@@ -4685,6 +4698,37 @@ export function companyMetricWordsNotNamesEnabled(): boolean {
+   return envFlag("COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED");
+ }
+ 
++/**
++ * FORMS_BELOW_NEEDS_FORMS_ENABLED (QA's Bubbles 17i live test, 11 Nov 2026; default off). With LEAD_FULL_SENTENCE on,
++ * "my team member keeps showing up out of uniform, wearing a hoodie, what do I do?" and "Do i need to copy and paste
++ * it?" ended "Based on what you've described, I can prepare one of the forms below." with no forms below it. On: at the
++ * turn's last exit, that sentence goes when the reply carries no form choices (`forms/lead-full-sentence.ts`). Off, as
++ * before.
++ */
++export function formsBelowNeedsFormsEnabled(): boolean {
++  return envFlag("FORMS_BELOW_NEEDS_FORMS_ENABLED");
++}
++
++/**
++ * WORN_CLOTHING_IS_DRESS_CODE_ENABLED (QA's Bubbles 17i live test, 11 Nov 2026; default off). "can you make a CA for <C>
++ * for wearing a hoodie to work?" made a Corrective Action card with no Policy line, and its plan said "review the
++ * applicable company policy". On: a garment the person wore ("wearing a hoodie", "wore sweats", "in joggers") reads as
++ * the Dress Code, as "leggings" already does (`forms/ca-policy.ts`). Off, as before.
++ */
++export function wornClothingIsDressCodeEnabled(): boolean {
++  return envFlag("WORN_CLOTHING_IS_DRESS_CODE_ENABLED");
++}
++
++/**
++ * COPY_PASTE_POINTS_TO_CARD_ENABLED (QA's Bubbles 17i live test, 11 Nov 2026; default off). With a Corrective Action
++ * card on screen, "Do i need to copy and paste it?" was answered "No — … say 'create a corrective action for <C>' and
++ * the form card will appear", as if there were no card. On: the turn is about the card on screen; the reply is one line
++ * pointing to its **Create draft** button, and the card stays attached (`ai/card-meta-turn.ts`). Off, as before.
++ */
++export function copyPastePointsToCardEnabled(): boolean {
++  return envFlag("COPY_PASTE_POINTS_TO_CARD_ENABLED");
++}
++
+ /**
+  * OUTLINE_ON_OPEN_PROPOSAL_ENABLED (coding 6, 11 Nov 2026; default off; QA's Bubbles 17i live test). On a proposal
+  * (Create not pressed), a pasted "Observation of Offense: … / Action Plan: …" outline for another person, then "same
+diff --git a/src/lib/forms/bubbles-17i-live.test.ts b/src/lib/forms/bubbles-17i-live.test.ts
+new file mode 100644
+index 00000000..b1acfdde
+--- /dev/null
++++ b/src/lib/forms/bubbles-17i-live.test.ts
+@@ -0,0 +1,131 @@
++import { afterEach, describe, expect, it, vi } from "vitest";
++
++import { cardMetaTurn, NOTHING_TO_COPY } from "@/lib/ai/card-meta-turn";
++
++import { caPolicyProposalLine, readCaPolicy } from "./ca-policy";
++import { withFormsBelowOnlyWithForms } from "./lead-full-sentence";
++
++/*
++ * QA's Bubbles 17i live test (main c6063f2c, 11 Nov 2026), the manager's words as typed (the employee is invented):
++ *   1. "my team member keeps showing up out of uniform, wearing a hoodie, what do I do?" ended "… I can prepare one of
++ *      the forms below." with no forms below it;
++ *   2. "can you make a CA for <C> for wearing a hoodie to work?" made a card with no Policy line;
++ *   3. "Do i need to copy and paste it?", with that card on screen, was told how to make a card.
++ */
++const HOODIE_CA = "can you make a CA for Marnie Holloway for wearing a hoodie to work?";
++
++afterEach(() => vi.unstubAllEnvs());
++
++describe("WORN_CLOTHING_IS_DRESS_CODE_ENABLED", () => {
++  it("off (production today): \"for wearing a hoodie to work\" names no policy (the bug)", () => {
++    vi.stubEnv("WORN_CLOTHING_IS_DRESS_CODE_ENABLED", "");
++    const reading = readCaPolicy(HOODIE_CA);
++    expect(reading.readFromApp).toBeUndefined();
++    expect(caPolicyProposalLine(reading) ?? "").not.toMatch(/Dress Code/);
++  });
++
++  it("on: the hoodie is the Dress Code, read from the request (never \"as you said\")", () => {
++    vi.stubEnv("WORN_CLOTHING_IS_DRESS_CODE_ENABLED", "true");
++    const line = caPolicyProposalLine(readCaPolicy(HOODIE_CA)) ?? "";
++    expect(line).toMatch(/\*\*Policy:\*\* Dress Code — read from this request/);
++    expect(line).not.toMatch(/as you said/);
++  });
++
++  it.each(["she wore sweatpants on her shift", "he showed up in joggers again", "she came to work in pajamas"])("on: %s is the Dress Code", (text) => {
++    vi.stubEnv("WORN_CLOTHING_IS_DRESS_CODE_ENABLED", "true");
++    expect(readCaPolicy(`create a CA for Marnie Holloway, ${text}`).readFromApp).toBe("dress_code");
++  });
++
++  it.each([
++    "she sold three hoodies and missed her goal",
++    "we ran out of hoodies so she restocked late",
++    "she was wearing her uniform but was rude to a guest",
++  ])("on: %s is not read as the Dress Code", (text) => {
++    vi.stubEnv("WORN_CLOTHING_IS_DRESS_CODE_ENABLED", "true");
++    expect(readCaPolicy(`create a CA for Marnie Holloway, ${text}`).readFromApp).not.toBe("dress_code");
++  });
++
++  it("on: a policy the manager names still wins", () => {
++    vi.stubEnv("WORN_CLOTHING_IS_DRESS_CODE_ENABLED", "true");
++    const reading = readCaPolicy("create a CA for Marnie Holloway under the attendance policy, she was late again wearing a hoodie");
++    expect(reading.readFromApp).toBeUndefined();
++  });
++});
++
++// Gate-Bubbles-2 on #799 (12 Nov 2026): QA's two negatives, word for word (the employee invented).
++describe("WORN_CLOTHING_IS_DRESS_CODE_ENABLED: Gate-Bubbles-2's negatives", () => {
++  it("a policy the account names, even one that is not a form box, wins: never the Dress Code", () => {
++    vi.stubEnv("WORN_CLOTHING_IS_DRESS_CODE_ENABLED", "true");
++    expect(readCaPolicy("CA for Marnie Holloway for wearing a hoodie, violating the cell phone policy").readFromApp).not.toBe("dress_code");
++  });
++
++  it("\"comes in\" with no person wearing it is not the Dress Code", () => {
++    vi.stubEnv("WORN_CLOTHING_IS_DRESS_CODE_ENABLED", "true");
++    expect(readCaPolicy("create a CA for Marnie Holloway, the order comes in hoodies and joggers and she stocked it late").readFromApp).not.toBe("dress_code");
++  });
++
++  it.each(["she keeps coming in hoodies", "he came to work in sweats", "she comes in to work in pajamas", "they showed up in joggers"])(
++    "a person coming or showing up in the garment still is: %s",
++    (text) => {
++      vi.stubEnv("WORN_CLOTHING_IS_DRESS_CODE_ENABLED", "true");
++      expect(readCaPolicy(`create a CA for Marnie Holloway, ${text}`).readFromApp).toBe("dress_code");
++    },
++  );
++});
++
++describe("COPY_PASTE_POINTS_TO_CARD_ENABLED", () => {
++  const CARD = { templateKey: "dpoa", templateName: "Corrective Action Form", employeeName: "Marnie Holloway" };
++  const request = {
++    question: "Do i need to copy and paste it?",
++    continueProposalTemplateKey: "dpoa",
++    activeFormInstanceId: undefined,
++    questionMessageId: "m-3",
++    history: [
++      { id: "m-1", role: "user", content: HOODIE_CA },
++      { id: "m-2", role: "assistant", content: "I'll draft a **Corrective Action Form** …", formProposal: CARD },
++    ],
++  } as unknown as Parameters<typeof cardMetaTurn>[0];
++
++  it("off (production today): not a turn about the card (the model answered it as if there were none)", () => {
++    vi.stubEnv("COPY_PASTE_POINTS_TO_CARD_ENABLED", "");
++    vi.stubEnv("CREATE_COMMAND_POINTS_TO_CARD_ENABLED", "true");
++    expect(cardMetaTurn(request)).toBeNull();
++  });
++
++  it("on: the reply points to the card's Create draft, and the card stays on it", () => {
++    vi.stubEnv("COPY_PASTE_POINTS_TO_CARD_ENABLED", "true");
++    const turn = cardMetaTurn(request);
++    expect(turn?.card?.content).toBe(NOTHING_TO_COPY);
++    expect(turn?.card?.formProposal).toMatchObject({ templateKey: "dpoa", employeeName: "Marnie Holloway" });
++    expect(NOTHING_TO_COPY).toMatch(/Create draft/);
++  });
++
++  it.each(["do I have to copy it?", "should i copy paste this into the form?", "where do I paste it", "so do i need to copy and paste it?"])(
++    "on: %s is a copy question",
++    (question) => {
++      vi.stubEnv("COPY_PASTE_POINTS_TO_CARD_ENABLED", "true");
++      expect(cardMetaTurn({ ...request, question })?.card?.content).toBe(NOTHING_TO_COPY);
++    },
++  );
++
++  it("on: with no card on screen, nothing changes", () => {
++    vi.stubEnv("COPY_PASTE_POINTS_TO_CARD_ENABLED", "true");
++    expect(cardMetaTurn({ ...request, continueProposalTemplateKey: undefined })).toBeNull();
++  });
++});
++
++describe("FORMS_BELOW_NEEDS_FORMS_ENABLED", () => {
++  const TEXT = "A grounded answer.\n\nBased on what you've described, I can prepare one of the forms below.";
++  const SELECTION = { primary: { templateKey: "coaching" }, additional: [] };
++
++  it("off: the sentence stays with no forms (the bug)", () => {
++    vi.stubEnv("FORMS_BELOW_NEEDS_FORMS_ENABLED", "");
++    expect(withFormsBelowOnlyWithForms({ content: TEXT }).content).toBe(TEXT);
++  });
++
++  it("on: no forms below, no sentence; with forms, it stays", () => {
++    vi.stubEnv("FORMS_BELOW_NEEDS_FORMS_ENABLED", "true");
++    expect(withFormsBelowOnlyWithForms({ content: TEXT }).content).toBe("A grounded answer.");
++    expect(withFormsBelowOnlyWithForms({ content: TEXT, formSelection: SELECTION }).content).toBe(TEXT);
++  });
++});
+diff --git a/src/lib/forms/ca-policy.ts b/src/lib/forms/ca-policy.ts
+index 1c0f80e3..ecd96ef4 100644
+--- a/src/lib/forms/ca-policy.ts
++++ b/src/lib/forms/ca-policy.ts
+@@ -1,23 +1,24 @@
+ import { withoutAppLines } from "@/lib/ai/app-sentences";
+ import { CHAT_GLOSSARY, foldsToGlossaryTerm } from "@/lib/ai/glossary";
+ import {
++  accountPlaceLeadEnabled,
+   asYouSaidAppReadEnabled,
+-  caPerformanceReasonEnabled,
+   asYouSaidManagerWordsEnabled,
+-  missedShiftCitesAttendanceEnabled,
+-  msbPhraseSocEnabled,
++  caPerformanceReasonEnabled,
+   caSalesPolicyEnabled,
+   cleaningOtherEveryWordingEnabled,
++  conductIncidentCitesPageEnabled,
+   describedAttendanceCardEnabled,
+   formEditDateRulesEnabled,
+-  removePolicyNotNamedEnabled,
++  missedShiftCitesAttendanceEnabled,
++  msbPhraseSocEnabled,
++  notFollowingIsViolationEnabled,
+   policyCleaningIncidentEnabled,
++  removePolicyNotNamedEnabled,
+   salesObservationAccountEnabled,
+   salesShortfallObjectEnabled,
++  wornClothingIsDressCodeEnabled,
+   wovenTrainingConductEnabled,
+-  conductIncidentCitesPageEnabled,
+-  accountPlaceLeadEnabled,
+-  notFollowingIsViolationEnabled,
+ } from "@/lib/config/chat-quality-flags";
+ 
+ import { readLocationMentions } from "./location-mention";
+@@ -436,6 +437,21 @@ const NAMED: { name: CaPolicyName; pattern: RegExp; alwaysAPolicy: boolean; enab
+ ];
+ const POLICY_FRAME =
+   /\b(?:polic(?:y|ies)|violat\w*|falls? under|under|use|it'?s|it is|should be|applies|apply|is the|was the)\b/;
++/**
++ * WORN_CLOTHING_IS_DRESS_CODE_ENABLED (QA's Bubbles 17i live test, 11 Nov 2026): a garment the person wore, after a
++ * wearing verb ("wearing a hoodie", "wore sweatpants", "showed up in joggers"). Only clothes a dress code rules out;
++ * "uniform", "shirt" and "apron" are what an employee is meant to wear and say nothing on their own.
++ */
++const WORN_CLOTHING =
++  /(?:\b(?:wearing|wore|wears|wear)|\b(?:she|he|they|she's|he's|they're|who)\s+(?:keeps\s+|kept\s+|always\s+)?(?:showed|shows|showing|show|came|comes|coming|come)\s+(?:up\s+|in\s+)?(?:to\s+work\s+)?in|\b(?:showed|shows|showing|show|came|comes|coming|come)\s+(?:up\s+|in\s+)?to\s+work\s+in)\s+(?:a\s+|an\s+|her\s+|his\s+|their\s+|the\s+)?(?:hoodies?|hooded\s+sweatshirts?|sweatshirts?|sweatpants|sweats|joggers|yoga\s+pants|pajamas?|pyjamas?|flip[- ]?flops|crop\s+tops?)\b/;
++
++/**
++ * WORN_CLOTHING_IS_DRESS_CODE_ENABLED (Gate-Bubbles-2 on #799, 12 Nov 2026): an account that names a policy of its own
++ * ("…for wearing a hoodie, violating the cell phone policy") is that policy's, even when it is not one of the form's
++ * boxes: the garment never reads it as the Dress Code.
++ */
++const NAMES_A_POLICY = /\bpolic(?:y|ies)\b/;
++
+ /* "wore jeans against dress code" — the policy broken, straight after "against" (QA, 22 Oct 2026, round 3). */
+ const AGAINST_BEFORE = /\b(?:against|breaking|broke|breaks)\s+(?:the\s+|our\s+|company\s+)?$/;
+ const NEGATED_BEFORE = /\b(?:not|never|isn't|is not|wasn't|was not|no)\s+(?:\S+\s+){0,2}$/;
+@@ -522,7 +538,7 @@ export function policiesNamedIn(sentence: string): { name: CaPolicyName; start:
+ export function readCaPolicy(rawText: string): CaPolicyReading {
+   const said = managerWords(rawText);
+   // WOVEN_TRAINING_CONDUCT's reading (default off) before AS_YOU_SAID_APP_READ's fallback, on the manager's words (as the sibling app's #595).
+-  return withMissedShift(withAppReading(withWovenWork(withCleaningOther(withSalesPolicy(readCaPolicyFromWords(said), said), said), said), rawText, said), said);
++  return withWornClothing(withMissedShift(withAppReading(withWovenWork(withCleaningOther(withSalesPolicy(readCaPolicyFromWords(said), said), said), said), rawText, said), said), said);
+ }
+ 
+ /*
+@@ -537,6 +553,20 @@ export function readCaPolicy(rawText: string): CaPolicyReading {
+ const MISSED_SHIFT =
+   /\b(?:(?:not|never|didn['’]?t|did\s+not|failed\s+to|failing\s+to|fails\s+to|wasn['’]?t)\s+(?:show(?:ing)?\s+up|com(?:e|ing)\s+in|(?:work(?:ing)?|complet(?:e|ing)))\s+(?:(?:to|for)\s+)?(?:\S+\s+){0,3}?shifts?|(?:missed|missing|skipped|skipping|no[- ]show(?:ed)?\s+(?:for|to)?)\s+(?:\S+\s+){0,3}?shifts?)\b/i;
+ 
++/**
++ * WORN_CLOTHING_IS_DRESS_CODE_ENABLED (QA's Bubbles 17i live test, 11 Nov 2026): "can you make a CA for <C> for wearing
++ * a hoodie to work?" named no policy, so the card had no Policy line and its plan said "review the applicable company
++ * policy". An account that names no policy and says the person wore clothes a dress code rules out is the Dress Code,
++ * read from the request (the card says so, never "as you said"). Off, the reading as it was.
++ */
++function withWornClothing(reading: CaPolicyReading, said: string): CaPolicyReading {
++  if (!wornClothingIsDressCodeEnabled()) return reading;
++  if (reading.stated !== null || reading.suggestion !== null || reading.ambiguous || reading.other || reading.missedEvent || reading.readFromApp) return reading;
++  const text = said.toLowerCase();
++  if (NAMES_A_POLICY.test(text)) return reading;
++  return WORN_CLOTHING.test(text) ? { ...reading, readFromApp: "dress_code" } : reading;
++}
++
+ function withMissedShift(reading: CaPolicyReading, said: string): CaPolicyReading {
+   if (!missedShiftCitesAttendanceEnabled()) return reading;
+   if (reading.stated !== null || reading.suggestion !== null || reading.ambiguous || reading.other || reading.missedEvent || reading.readFromApp) return reading;
+diff --git a/src/lib/forms/employee-position.ts b/src/lib/forms/employee-position.ts
+index 528ad9eb..0c115033 100644
+--- a/src/lib/forms/employee-position.ts
++++ b/src/lib/forms/employee-position.ts
+@@ -1,4 +1,6 @@
+-import { positionAnswerGuardEnabled } from "@/lib/config/chat-quality-flags";
++import { formInputFidelityEnabled, positionAnswerGuardEnabled } from "@/lib/config/chat-quality-flags";
++
++import { spokenDates } from "./relative-date";
+ 
+ /**
+  * ============================================================================
+@@ -58,6 +60,23 @@ const NOT_A_POSITION = new Set([
+ const ANSWERS_ANOTHER_QUESTION =
+   /^(?:(?:it|this|that)(?:['’]s|\s+is|\s+will\s+be|\s+should\s+be)\s+)?(?:an?\s+)?(?:(?:verbal|written|final)(?:\s+(?:written\s+)?(?:warning|ca|corrective\s+action))?|(?:yes|no)?[\s,]*(?:payroll|pay\s*roll|payrol)\b.*|\$\s?\d+(?:\.\d{2})?|(?:i\s+)?(?:do\s*n['’]?t|dont|do\s+not)\s+know\b.*)[.!\s]*$/i;
+ 
++/*
++ * FORM_INPUT_FIDELITY_ENABLED (PR #92, the live replays of 24 Oct 2026; rebuilt on main 11 Nov 2026): with the
++ * position question open, a bare "yesterday" was saved as Job Title "Yesterday". A reply that is only a day — a
++ * calendar date or a spoken one — is the incident's date. Any fixed reference day reads the words; the date itself is
++ * not used here.
++ */
++const DATE_REFERENCE_DAY = "2026-06-15";
++const DATE_FILLER = /\b(?:on|it was|was|the|of)\b/gi;
++
++function saysOnlyADate(text: string): boolean {
++  const found = spokenDates(text, DATE_REFERENCE_DAY).filter((token) => token.iso);
++  if (found.length === 0) return false;
++  let rest = text;
++  for (const token of [...found].sort((a, b) => b.index - a.index)) rest = rest.slice(0, token.index) + " " + rest.slice(token.end);
++  return rest.replace(DATE_FILLER, " ").replace(/[\s.,!]+/g, "") === "";
++}
++
+ function titleCase(phrase: string): string {
+   return phrase
+     .split(/\s+/)
+@@ -83,6 +102,8 @@ export function readPositionAnswer(reply: string): string | null {
+   if (text === "" || NOT_A_POSITION.has(text.toLowerCase())) return null;
+   // POSITION_ANSWER_GUARD_ENABLED: "This is a verbal", "Written", "no payroll deduct" answer other questions.
+   if (positionAnswerGuardEnabled() && ANSWERS_ANOTHER_QUESTION.test(String(reply).trim())) return null;
++  // FORM_INPUT_FIDELITY_ENABLED: a bare date ("yesterday", "Oct 20", "10/20") answers the date question, never the position.
++  if (formInputFidelityEnabled() && saysOnlyADate(text)) return null;
+   const words = text.split(/\s+/);
+   if (words.length > 5 || !/^[A-Za-z][A-Za-z&/'’.\- ]*$/.test(text)) return null;
+   return titleCase(text);
+diff --git a/src/lib/forms/exit-draft.ts b/src/lib/forms/exit-draft.ts
+index e8f595df..d8a6fbb5 100644
+--- a/src/lib/forms/exit-draft.ts
++++ b/src/lib/forms/exit-draft.ts
+@@ -80,10 +80,43 @@ const DECISION_TOPICS: RegExp[] = [
+  * showing up are subjects a Details sentence may raise only when the notes did.
+  */
+ const ACCOUNT_TOPICS: RegExp[] = [
+-  /\bworked\s+(?:(?:through|thru|out)\s+)?(?:it|(?:her|his|their|the|a)\s+(?:full\s+|entire\s+)?(?:notice|two weeks|2 weeks)|(?:two|2)[- ]weeks?'?\s+notice)\b|\bfulfill(?:s|ed|ing)?\b|\bserved\s+(?:her|his|their|the|a)\s+(?:notice|two weeks)\b/i,
++  /\bwork(?:ed|s|ing)?\s+(?:(?:through|thru|out)\s+)?(?:it|(?:her|his|their|the|a)\s+(?:full\s+|entire\s+)?(?:notice|two weeks|2 weeks)|(?:two|2)[- ]weeks?'?\s+notice)\b|\bfulfill(?:s|ed|ing)?\b|\bserved\s+(?:her|his|their|the|a)\s+(?:notice|two weeks)\b/i,
+   /\bcall(?:s|ed|ing)?\s+(?:in|out|off)\b|\bno[\s-]*call\b|\bshow(?:s|ed)?\s+up\b|\bno[\s-]*show\b|\bncns\b/i,
+ ];
+ 
++/*
++ * And the notes' own polarity (QA / dispatcher, 26 Oct 2026): "she never worked
++ * her notice" or "she did not call in" raises the subject but says it did not
++ * happen, so a sentence saying it did is still not the manager's.
++ */
++const ACCOUNT_NEGATED_BEFORE = /\b(?:no|not|never|didn't|didnt|did not|wasn't|was not|hasn't|has not)\s+(?:[\w'-]+\s+){0,3}$/i;
++
++/*
++ * The negation is read in the match's own clause: "she did not give notice
++ * but worked it" affirms the second half (QA-3, 26 Oct 2026). And "no call",
++ * "no show" and "ncns" are themselves the negation: notes saying "no call no
++ * show" never affirm that she called in.
++ */
++const CLAUSE_BREAK = /,|;|\bbut\b/gi;
++const SELF_NEGATED = /^(?:no\b|ncns\b)/i;
++
++function affirms(text: string, topic: RegExp): boolean {
++  for (const match of text.matchAll(new RegExp(topic.source, "gi"))) {
++    if (SELF_NEGATED.test(match[0])) continue;
++    const before = text.slice(0, match.index ?? 0);
++    const breaks = [...before.matchAll(CLAUSE_BREAK)];
++    const last = breaks[breaks.length - 1];
++    const clause = last ? before.slice((last.index ?? 0) + last[0].length) : before;
++    if (!ACCOUNT_NEGATED_BEFORE.test(clause)) return true;
++  }
++  return false;
++}
++
++/** The sentence says it happened; the notes only ever say it did not. */
++function affirmedAgainstNotes(sentence: string, notes: string): boolean {
++  return exitProseFactsEnabled() && ACCOUNT_TOPICS.some((topic) => affirms(sentence, topic) && !affirms(notes, topic));
++}
++
+ function guardedTopics(): RegExp[] {
+   return exitProseFactsEnabled() ? [...DECISION_TOPICS, ...ACCOUNT_TOPICS] : DECISION_TOPICS;
+ }
+@@ -115,9 +148,9 @@ export function guardExitDetails(value: string, notes: string, today: string): E
+   const kept: string[] = [];
+   const removed: string[] = [];
+   for (const sentence of sentences) {
+-    const unraised = guardedTopics().some(
+-      (topic) => topic.test(sentence) && !topic.test(notes),
+-    );
++    const unraised =
++      guardedTopics().some((topic) => topic.test(sentence) && !topic.test(notes)) ||
++      affirmedAgainstNotes(sentence, notes);
+     const undated = datesInText(sentence, today).some((found) => !allowedDates.has(found.iso));
+     if (unraised || undated) removed.push(sentence);
+     else kept.push(sentence);
+diff --git a/src/lib/forms/exit-prose-facts.test.ts b/src/lib/forms/exit-prose-facts.test.ts
+index d72efc52..ff5acc8c 100644
+--- a/src/lib/forms/exit-prose-facts.test.ts
++++ b/src/lib/forms/exit-prose-facts.test.ts
+@@ -1,3 +1,5 @@
++import { readFileSync } from "node:fs";
++
+ import { afterEach, describe, expect, it } from "vitest";
+ 
+ import type { ChatFormProposal } from "@/types";
+@@ -164,8 +166,75 @@ describe.each(REGISTERS)("EXIT_PROSE_FACTS_ENABLED in the managers' register: %s
+     expect(guardExitDetails(own, as("ava gave and worked 2 week notice"), TODAY).removed).toEqual([]);
+   });
+ 
++  // Dispatcher, 26 Oct 2026: notes that say it did NOT happen do not let a sentence say it did.
++  it("on, a sentence saying the opposite of the notes is dropped; the notes' own negation stays", () => {
++    withFlag(true);
++    const drafted = "Ava resigned. Ava worked her two weeks notice. Ava called in to resign.";
++    expect(guardExitDetails(drafted, as("exit for ava pellmore she never worked her notice"), TODAY).removed).toContain(
++      "Ava worked her two weeks notice.",
++    );
++    expect(guardExitDetails(drafted, as("exit for ava pellmore she did not call in"), TODAY).removed).toContain(
++      "Ava called in to resign.",
++    );
++    expect(guardExitDetails(drafted, as("exit for ava pellmore no 2 wk notice worked"), TODAY).value).toBe("Ava resigned.");
++    const negated = "Ava did not work her notice. Ava never called in.";
++    expect(guardExitDetails(negated, as("exit for ava pellmore she never worked her notice, did not call in"), TODAY).removed).toEqual([]);
++  });
++
++  // QA-3, 26 Oct 2026: "no call" is itself a negation; a negation stops at "but" or a comma.
++  it('on, "no call no show" notes never keep "called in"; a negation does not reach past "but" or a comma', () => {
++    withFlag(true);
++    const called = "Ava resigned. Ava called in to resign.";
++    for (const notes of ["exit for ava pellmore no call no show", "exit for ava pellmore, no call"]) {
++      expect(guardExitDetails(called, as(notes), TODAY).removed, notes).toContain("Ava called in to resign.");
++    }
++    const worked = "Ava resigned. Ava worked her two weeks notice.";
++    for (const notes of [
++      "exit for ava pellmore she did not give notice but worked it",
++      "exit for ava pellmore she never worked her notice but she did work through it",
++      "exit for ava pellmore, never late, worked her notice",
++    ]) {
++      expect(guardExitDetails(worked, as(notes), TODAY).removed, notes).toEqual([]);
++    }
++  });
++
+   it("flag off, the prose is main's", () => {
+     withFlag(false);
+     expect(prose(as(BARE_NAME))).toContain("a short account drafted from what you've described");
+   });
+ });
++
++/*
++ * QA's October triage of #195 (10 Nov 2026): still failing on main with production's flags. guardExitDetails keeps
++ * "Ava gave notice and worked through it." beside notes that say "did not call in", and after a bare name exitReady
++ * still says "a short account drafted…". Pinned with those flags, so the fix is checked on the path production takes.
++ */
++describe("with production's flags (QA's October triage of #195)", () => {
++  const stubbed: string[] = [];
++  function production(on: boolean): void {
++    const flags = (JSON.parse(readFileSync("src/config/production-flags.json", "utf8")) as { on: string[] }).on;
++    for (const name of flags) {
++      if (process.env[name] === undefined) stubbed.push(name);
++      process.env[name] = "true";
++    }
++    withFlag(on);
++  }
++  afterEach(() => {
++    for (const name of stubbed.splice(0)) delete process.env[name];
++  });
++  const notes = "ava pellmore did not call in for her last two shifts";
++  const drafted = "Ava gave notice and worked through it. Ava did not call in for the last two shifts.";
++
++  it("off: \"worked through it\" stays beside \"did not call in\", and a bare name promises a drafted account (the bug)", () => {
++    production(false);
++    expect(guardExitDetails(drafted, notes, TODAY).value).toBe(drafted);
++    expect(prose(BARE_NAME)).toContain("a short account drafted");
++  });
++
++  it("on: \"worked through it\" is dropped, and a bare name leaves Additional Details blank", () => {
++    production(true);
++    expect(guardExitDetails(drafted, notes, TODAY).value).toBe("Ava did not call in for the last two shifts.");
++    expect(prose(BARE_NAME)).not.toContain("a short account drafted");
++    expect(prose(BARE_NAME)).toMatch(/\*\*Left blank for you to review:\*\*[^\n]*Additional Details/);
++  });
++});
+diff --git a/src/lib/forms/form-input-fidelity.test.ts b/src/lib/forms/form-input-fidelity.test.ts
+new file mode 100644
+index 00000000..4841594a
+--- /dev/null
++++ b/src/lib/forms/form-input-fidelity.test.ts
+@@ -0,0 +1,116 @@
++import { afterEach, describe, expect, it, vi } from "vitest";
++
++import { readPositionAnswer } from "./employee-position";
++import { listFormDates } from "./form-date-answer";
++import {
++  draftDateApplies,
++  fidelityAwareTitle,
++  fidelityFormDate,
++  fidelityGivenDates,
++} from "./form-input-fidelity";
++
++const TODAY = "2026-10-24";
++const FLAG = "FORM_INPUT_FIDELITY_ENABLED";
++const saved = new Map<string, string | undefined>();
++
++function setFlag(on: boolean) {
++  if (!saved.has(FLAG)) saved.set(FLAG, process.env[FLAG]);
++  if (on) process.env[FLAG] = "1";
++  else delete process.env[FLAG];
++}
++
++afterEach(() => {
++  vi.unstubAllEnvs();
++  const value = saved.get(FLAG);
++  if (value === undefined) delete process.env[FLAG];
++  else process.env[FLAG] = value;
++});
++
++const POSITION = {
++  role: "assistant",
++  content:
++    "Is this new corrective action a **Verbal Warning** or a **Written Warning**?\n\nWhat is **Pat Rivera**'s position (job title)?",
++};
++
++describe("form input fidelity, flag off", () => {
++  it("leaves yesterday unset and still reads a bare warning as a job title", () => {
++    setFlag(false);
++    // This flag's off path alone: POSITION_ANSWER_GUARD (on in production) also stops "verbal" being a title, so it is
++    // pinned off here (QA's off-pins guard, 12 Nov 2026).
++    vi.stubEnv("POSITION_ANSWER_GUARD_ENABLED", "");
++    expect(fidelityFormDate("She was late yesterday.", TODAY, null)).toBeNull();
++    expect(fidelityFormDate("She was late on Oct 20.", TODAY, "2026-10-20")).toBe("2026-10-20");
++    expect(
++      fidelityAwareTitle("verbal", [
++        POSITION,
++        { role: "user", content: "verbal" },
++      ]),
++    ).toBe("Verbal");
++    expect(draftDateApplies("coaching")).toBe(false);
++    expect(draftDateApplies("corrective")).toBe(true);
++    expect(fidelityGivenDates("She was late yesterday.", TODAY)).toEqual(
++      listFormDates("She was late yesterday.", TODAY).map((found) => found.iso),
++    );
++  });
++});
++
++describe("form input fidelity, flag on", () => {
++  it("keeps Oct 20, 10/20, and yesterday, and leaves a missing date unset", () => {
++    setFlag(true);
++    expect(fidelityFormDate("She was late on Oct 20.", TODAY, null)).toBe("2026-10-20");
++    expect(fidelityFormDate("She was late on 10/20.", TODAY, null)).toBe("2026-10-20");
++    expect(fidelityFormDate("Date of Occurrence: Oct 20. She was late.", TODAY, null)).toBe("2026-10-20");
++    expect(fidelityFormDate("She was late yesterday.", TODAY, null)).toBe("2026-10-23");
++    expect(
++      fidelityFormDate("create a corrective action for Pat Rivera. She was late yesterday.", TODAY, null),
++    ).toBe("2026-10-23");
++    expect(fidelityFormDate("Previous warning yesterday.", TODAY, null)).toBeNull();
++    expect(fidelityFormDate("Date of Occurrence yesterday. She was late.", TODAY, null)).toBe("2026-10-23");
++    expect(fidelityFormDate("She was late.", TODAY, null)).toBeNull();
++    expect(fidelityFormDate("She was late on Oct 20 and again on 10/22.", TODAY, null)).toBeNull();
++    expect(fidelityFormDate("She was late yesterday.", TODAY, "2026-10-20")).toBe("2026-10-20");
++  });
++
++  it("does not save verbal, written, yes, or yesterday as the job title", () => {
++    setFlag(true);
++    const title = (reply: string) =>
++      fidelityAwareTitle(reply, [POSITION, { role: "user", content: reply }]);
++    expect(title("verbal")).toBeNull();
++    expect(title("written")).toBeNull();
++    expect(title("yes")).toBeNull();
++    expect(title("yesterday")).toBeNull();
++    expect(title("Oct 20")).toBeNull();
++    expect(title("10/20")).toBeNull();
++    expect(title("operator")).toBe("Operator");
++  });
++
++  it("tells a coaching draft the form date, and counts yesterday as a date the manager gave", () => {
++    setFlag(true);
++    // QA's #760 gate: Coaching is dated only alongside UNREAD_DAY_NOT_INCIDENT_DATE.
++    vi.stubEnv("UNREAD_DAY_NOT_INCIDENT_DATE_ENABLED", "");
++    expect(draftDateApplies("coaching")).toBe(false);
++    expect(draftDateApplies("corrective")).toBe(true);
++    vi.stubEnv("UNREAD_DAY_NOT_INCIDENT_DATE_ENABLED", "true");
++    expect(draftDateApplies("coaching")).toBe(true);
++    expect(draftDateApplies("corrective")).toBe(true);
++    expect(draftDateApplies("epp")).toBe(false);
++    expect(fidelityGivenDates("She was late yesterday.", TODAY)).toEqual(["2026-10-23"]);
++    expect(fidelityGivenDates("She was late on Oct 20.", TODAY)).toEqual(["2026-10-20"]);
++  });
++
++  /*
++   * Rebuilt on main (11 Nov 2026): the card's live title readers (`positionAnsweredIn`, `job-title-from-words.ts`)
++   * read the position answer through `readPositionAnswer`, so the bare-date rule sits there. The PR's reporter words.
++   */
++  it("a bare day answers the date, never the position question; a real title still does", () => {
++    setFlag(false);
++    expect(readPositionAnswer("yesterday")).toBe("Yesterday");
++    setFlag(true);
++    expect(readPositionAnswer("yesterday")).toBeNull();
++    expect(readPositionAnswer("Oct 20")).toBeNull();
++    expect(readPositionAnswer("10/20")).toBeNull();
++    expect(readPositionAnswer("on 10/20.")).toBeNull();
++    expect(readPositionAnswer("operator")).toBe("Operator");
++    expect(readPositionAnswer("shift lead")).toBe("Shift Lead");
++  });
++});
+diff --git a/src/lib/forms/form-input-fidelity.ts b/src/lib/forms/form-input-fidelity.ts
+new file mode 100644
+index 00000000..1079bc8a
+--- /dev/null
++++ b/src/lib/forms/form-input-fidelity.ts
+@@ -0,0 +1,103 @@
++import { formInputFidelityEnabled, unreadDayNotIncidentDateEnabled } from "@/lib/config/chat-quality-flags";
++
++import { datesInText, listFormDates } from "./form-date-answer";
++import { incidentDates } from "./incident-dates";
++import { askedForPosition, positionAnsweredIn, readPositionAnswer } from "./employee-position";
++import { statedJobTitle } from "./proposal";
++import { spokenDates } from "./relative-date";
++import { statedWarningLevel } from "./warning-level";
++
++/**
++ * A typed incident date, and a one-word follow-up, kept as the manager said them.
++ *
++ * Off, both helpers return the same value the callers already used:
++ * `statedJobTitle ?? positionAnsweredIn`, and the form date already on the card.
++ * "yesterday" is not a calendar date (`form-date-answer.ts`), so the draft is
++ * dated today (`instances.ts`). A reply of "verbal" is also a short title
++ * (`employee-position.ts`) when the position question shares the assistant's
++ * last message with the warning question (`form-proposal.ts`).
++ */
++
++const PRIOR_STEP_NEAR =
++  /\b(?:previous(?:ly)?|prior|already|coached|coaching|warned|warning|write[- ]?ups?|corrective action)\b/i;
++
++const YES_NO = /^(?:yes|no|yeah|yep|nope|ok|okay)[\s.!]*$/i;
++
++type Turn = { readonly role: string; readonly content: string };
++
++/** The job title for the card. A bare warning, date, or yes/no is not one when the flag is on. */
++export function fidelityAwareTitle(text: string, conversation: readonly Turn[]): string | null {
++  const stated = statedJobTitle(text) ?? positionAnsweredIn(conversation);
++  if (!formInputFidelityEnabled()) return stated;
++  const company = statedJobTitle(text);
++  if (company) return company;
++  let answer: string | null = null;
++  for (let index = 1; index < conversation.length; index += 1) {
++    const turn = conversation[index]!;
++    const before = conversation[index - 1]!;
++    if (turn.role !== "user" || before.role !== "assistant" || !askedForPosition(before.content)) continue;
++    if (bareReplyIsNotATitle(turn.content)) continue;
++    const read = readPositionAnswer(turn.content);
++    if (read) answer = read;
++  }
++  return answer;
++}
++
++/**
++ * The form date when the card does not have one yet.
++ *
++ * One incident day the manager typed — "Oct 20", "10/20", "yesterday" — is
++ * that day. Several incident days stay unset, so the existing "which date?"
++ * question still dates the form today until they choose. No date at all stays
++ * unset, and the draft defaults to today.
++ */
++export function fidelityFormDate(text: string, today: string, current: string | null | undefined): string | null {
++  if (!formInputFidelityEnabled()) return current ?? null;
++  if (current) return current;
++  const incidents = incidentDates(text, today);
++  if (incidents.length === 1) return incidents[0]!;
++  if (incidents.length > 1) return null;
++  const relative = relativeIncidentDates(text, today);
++  return relative.length === 1 ? relative[0]! : null;
++}
++
++/** Calendar dates, plus a relative day when the flag is on. Off, the calendar list alone. */
++export function fidelityGivenDates(notes: string, today: string, base?: readonly string[]): string[] {
++  const calendar = base ? [...base] : listFormDates(notes, today).map((found) => found.iso);
++  if (!formInputFidelityEnabled()) return calendar;
++  return [...new Set([...calendar, ...relativeIncidentDates(notes, today)])];
++}
++
++/**
++ * Corrective drafts always. Coaching drafts only with the flag on AND UNREAD_DAY_NOT_INCIDENT_DATE_ENABLED (QA's #760
++ * gate, 12 Nov 2026): without it a day the reader could not date ("late last week") would be written as today's incident
++ * ("On October 26, 2026, <name> was late"). Safe by construction, not only because production has both on.
++ */
++export function draftDateApplies(layoutFamily: string): boolean {
++  if (layoutFamily === "corrective") return true;
++  return formInputFidelityEnabled() && unreadDayNotIncidentDateEnabled() && layoutFamily === "coaching";
++}
++
++function bareReplyIsNotATitle(reply: string): boolean {
++  const text = reply.trim();
++  if (text === "") return false;
++  if (YES_NO.test(text)) return true;
++  if (statedWarningLevel(text)) return true;
++  if (datesInText(text, "2026-06-15").length > 0) return true;
++  return relativeIncidentDates(text, "2026-06-15").length > 0;
++}
++
++function relativeIncidentDates(text: string, today: string): string[] {
++  if (!/^\d{4}-\d{2}-\d{2}$/.test(today)) return [];
++  const calendar = datesInText(text, today);
++  const found: string[] = [];
++  for (const token of spokenDates(text, today)) {
++    if (!token.iso) continue;
++    if (calendar.some((item) => token.index < item.end && token.end > item.index)) continue;
++    const before = text.slice(Math.max(0, token.index - 80), token.index);
++    const sameClause = before.split(/[.;\n]/).pop() ?? before;
++    if (PRIOR_STEP_NEAR.test(sameClause)) continue;
++    found.push(token.iso);
++  }
++  return [...new Set(found)];
++}
+diff --git a/src/lib/forms/lead-full-sentence.ts b/src/lib/forms/lead-full-sentence.ts
+index da16e500..f3a89337 100644
+--- a/src/lib/forms/lead-full-sentence.ts
++++ b/src/lib/forms/lead-full-sentence.ts
+@@ -1,4 +1,4 @@
+-import { leadFullSentenceEnabled } from "@/lib/config/chat-quality-flags";
++import { formsBelowNeedsFormsEnabled, leadFullSentenceEnabled } from "@/lib/config/chat-quality-flags";
+ 
+ /**
+  * ============================================================================
+@@ -22,3 +22,15 @@ export function withLeadFullSentence<T extends { content: string; formSelection?
+     : answer.content.replace(LEAD, "").trimEnd();
+   return { ...answer, content };
+ }
++
++const FORMS_BELOW = /\n*Based on what you've described, I can prepare one of the forms below\.\s*$/;
++
++/**
++ * FORMS_BELOW_NEEDS_FORMS_ENABLED (QA's Bubbles 17i live test, 11 Nov 2026): the turn's last step. "… I can prepare one
++ * of the forms below." stays only when the reply still carries form choices: a later step that set the choices aside
++ * (or a card shown instead) leaves no forms below it. Pure; off, as it was.
++ */
++export function withFormsBelowOnlyWithForms<T extends { content: string; formSelection?: unknown }>(answer: T): T {
++  if (!formsBelowNeedsFormsEnabled() || answer.formSelection || !FORMS_BELOW.test(answer.content)) return answer;
++  return { ...answer, content: answer.content.replace(FORMS_BELOW, "").trimEnd() };
++}

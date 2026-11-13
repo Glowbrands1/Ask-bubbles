@@ -1,0 +1,533 @@
+# branch gate-828 head e5a9c698 ; diff from main-line base 815ae303
+# e5a9c698 keep both
+# 442ab114 HUMAN_REPLIES_ENABLED (default off): a form chat says its long opener once; every card line stays (rebuilt from Ask Sunny's S#898, QA's ruling (b))
+diff --git a/src/app/api/chat/replay-pack/nov10-card-opener-once-cases.ts b/src/app/api/chat/replay-pack/nov10-card-opener-once-cases.ts
+new file mode 100644
+index 00000000..381f5623
+--- /dev/null
++++ b/src/app/api/chat/replay-pack/nov10-card-opener-once-cases.ts
+@@ -0,0 +1,39 @@
++import { expect } from "vitest";
++
++import { STAFF, WEST_DODGE, type ReplayCase } from "./cases";
++
++/**
++ * ============================================================================
++ * A FORM CHAT SAYS ITS LONG OPENER ONCE (QA's October triage, 10 Nov 2026; the sibling's #200)
++ * ============================================================================
++ *
++ * On main with production's flags, every turn of a Corrective Action chain repeated "I'll draft a **Corrective Action
++ * Form** for **<employee>** from what you've described, and check the applicable company policy …" Fixed with HUMAN_REPLIES_ENABLED (`ai/human-replies.ts`).
++ */
++const NAME = "Remy Calder";
++const OPENER = /from what you've described, and check the applicable company policy/;
++
++export const NOV10_CARD_OPENER_ONCE_CASES: ReplayCase[] = [
++  {
++    id: "nov10-card-opener-once-ca-chain",
++    title: "a CA chain: the second turn does not repeat the opener, and the card is the same employee's",
++    report: "QA's October triage (10 Nov 2026) of the sibling's #200; the same here on main with production's flags",
++    status: { open: "every turn repeats the full opener; fixed with HUMAN_REPLIES_ENABLED" },
++    fixFlags: ["HUMAN_REPLIES_ENABLED"],
++    async run(t) {
++      t.directory(STAFF);
++      t.as("location_manager", WEST_DODGE);
++      const thread = t.thread();
++      const first = await thread.say(`create a ca for ${NAME}, she was late today`);
++      expect(first.content, first.content).toMatch(OPENER);
++      const second = await thread.say("verbal");
++      expect(thread.proposal, second.content).toMatchObject({ templateKey: "dpoa", employeeName: NAME });
++      expect(second.content, `the opener again:\n${second.content}`).not.toMatch(OPENER);
++      // Changed on purpose (QA's ruling (b), 12 Nov 2026): only the opener goes. The card's Policy line and the full save
++      // notice stay on every turn (the replay pack's multi-turn cases read them).
++      const policyLine = (content: string) => content.split("\n").find((line) => /^\*\*Policy:\*\*/.test(line)) ?? null;
++      expect(policyLine(second.content), `the Policy line left the card:\n${second.content}`).toBe(policyLine(first.content));
++      expect(second.content, `the save notice left the card:\n${second.content}`).toMatch(/nothing is saved to anyone's file until you do/);
++    },
++  },
++];
+diff --git a/src/app/api/chat/route.ts b/src/app/api/chat/route.ts
+index d320f406..0043202e 100644
+--- a/src/app/api/chat/route.ts
++++ b/src/app/api/chat/route.ts
+@@ -49,6 +49,7 @@ import {
+   possessivePlaceNotPersonEnabled,
+   formNameFromRosterEnabled,
+   offRosterConfirmEnabled,
++  humanRepliesEnabled,
+   offRosterAskBeforeCardEnabled,
+   oneFormEachPersonEnabled,
+   outlineOnOpenProposalEnabled,
+@@ -1134,6 +1135,18 @@ async function postChat(request: Request) {
+       }
+       // SAME_REQUEST_OTHER_PERSON_ENABLED: <B>'s card says what of the earlier request it carries.
+       if (sameRequestOther) answer = (await import("@/lib/forms/same-request-other-person")).withSameRequestNote(answer, sameRequestOther);
++      /*
++       * HUMAN_REPLIES_ENABLED (QA's ruling (b), 12 Nov 2026; rebuilt from Ask Sunny's S#898): a later card turn for the
++       * same form and employee says what changed instead of the opener's long tail; every other card line and the card
++       * are untouched. Last, so it reads the reply every step above built. Off, unchanged.
++       */
++      if (humanRepliesEnabled()) {
++        answer = (await import("@/lib/ai/human-replies")).humanizeFormReply(answer, {
++          history: parsed.history,
++          question: parsed.question,
++          today: parsed.context.todayIso,
++        });
++      }
+       /*
+        * NEVER A BLANK ANSWER (EMPTY_REPLY_GUARD_ENABLED). An answer with no
+        * prose and no card is a failure, said as one: the turn closes as failed
+diff --git a/src/lib/ai/human-replies.test.ts b/src/lib/ai/human-replies.test.ts
+new file mode 100644
+index 00000000..af9d1067
+--- /dev/null
++++ b/src/lib/ai/human-replies.test.ts
+@@ -0,0 +1,219 @@
++import { afterEach, beforeEach, describe, expect, it } from "vitest";
++
++import type { AskResponse } from "@/lib/ai/types";
++import type { ChatFormProposal } from "@/types";
++
++import { humanizeFormReply } from "./human-replies";
++
++/**
++ * HUMAN_REPLIES_ENABLED — rebuilt from the sibling app's tests (its tester's chats, 26 Oct 2026 (production,
++ * real register, invented names). The owner: "humanize it". Each reply below
++ * is the text main builds, word for word; each manager turn is tried in all
++ * lowercase and in sentence case, the way managers type.
++ *
++ * Changed on purpose (QA's ruling (b), 12 Nov 2026): a later turn replaces the
++ * opener ONLY. These tests used to expect read-backs left out, a short save
++ * notice and the "·" parts trimmed; with those the replay pack's 54 multi-turn
++ * cases lost the card's Policy line and read-backs. Now every line after the
++ * opener is the card as built, word for word.
++ */
++
++const FLAG = "HUMAN_REPLIES_ENABLED";
++const TODAY = "2026-10-26";
++
++const CA_OPENER =
++  "I'll draft a **Corrective Action Form** for **Avery Testperson** from what you've described, and check the applicable company policy before anything policy-related goes on it.";
++const POLICY = "**Policy:** Late Opening, as you said. I'll quote that section from the current policy manual on the draft.";
++const VERBAL = "**Type of Warning:** Verbal Warning, as you said — I'll tick it on the form. Tell me if that should change.";
++const WRITTEN = "**Type of Warning:** Written Warning, as you said — I'll tick it on the form. Tell me if that should change.";
++const PRIOR = "You'll set any prior coaching or corrective action on the form — I won't guess at it.";
++const PAYROLL_ASK =
++  "One more question: **Is payroll deduct applicable?** Yes or No? Tell me here, or tick it on the form — I won't answer it for you.";
++const PAYROLL_NO = "Is payroll deduct applicable? **No** — tell me if that should change.";
++const GLOBAL_NOTICE =
++  "Your account covers every store, so this form won't name one. Create the draft here when you're ready and edit it below — nothing is saved to anyone's file until you do.";
++const SALON_NOTICE =
++  "Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.";
++
++const COACHING_OPENER = "Here is what I would put on a **Coaching Form**.";
++const COACHING_NOTICE =
++  "I have the employee and the store. Create the draft here when you're ready, and edit it below — nothing is saved to anyone's file until you do.";
++
++function ca(...middle: string[]): string {
++  return [CA_OPENER, POLICY, ...middle, GLOBAL_NOTICE].join("\n\n");
++}
++
++function coaching(messages: "message" | "messages"): string {
++  return [COACHING_OPENER, `Everything I need is here, drawn from your ${messages} above.`, COACHING_NOTICE].join("\n\n");
++}
++
++function proposal(extra: Partial<ChatFormProposal> = {}): ChatFormProposal {
++  return {
++    proposalId: "p-1",
++    templateKey: "dpoa",
++    templateName: "Corrective Action Form",
++    status: "ready",
++    supportsInlineDraft: true,
++    variantKey: null,
++    employeeName: "Avery Testperson",
++    employeeRole: null,
++    locationId: null,
++    locationName: null,
++    locationResolution: "not_applicable",
++    ...extra,
++  } as ChatFormProposal;
++}
++
++function answer(content: string, card: ChatFormProposal = proposal()): AskResponse {
++  return { content, citations: [], formProposal: card };
++}
++
++type Turn = { role: "user" | "assistant"; content: string };
++
++const FIRST_CA: Turn[] = [
++  { role: "user", content: "create verbal CA for Avery Testperson, late opening the store today" },
++  { role: "assistant", content: ca(VERBAL, PRIOR, PAYROLL_ASK) },
++];
++
++let saved: string | undefined;
++beforeEach(() => {
++  saved = process.env[FLAG];
++  process.env[FLAG] = "true";
++});
++afterEach(() => {
++  if (saved === undefined) delete process.env[FLAG];
++  else process.env[FLAG] = saved;
++});
++
++function cases(words: string): [string][] {
++  return [[words.toLowerCase()], [words.charAt(0).toUpperCase() + words.slice(1).toLowerCase()]];
++}
++
++/** The reply a later turn gets: the acknowledgement, then the built reply without its opener, word for word. */
++const CA_LEAD = "I'll draft a **Corrective Action Form** for **Avery Testperson**";
++
++/** A Corrective Action card keeps its lead ("I'll draft a **<form>** for **<name>** — got it, …"); the turn readers need it. */
++function lead(ack: string, built: string): string {
++  return built.startsWith(CA_LEAD) ? `${CA_LEAD} — ${ack.replace(/^Got it — /, "got it, ")}` : ack;
++}
++
++function later(ack: string, built: string): string {
++  const rest = built.split("\n").slice(1);
++  while (rest.length > 0 && (rest[0]!.trim() === "" || /^Everything I need is here/.test(rest[0]!.trim()))) rest.shift();
++  return [lead(ack, built), rest.join("\n")].join("\n\n");
++}
++
++describe("(1) the opener is said once; a later turn says what changed, and nothing else changes", () => {
++  it.each(cases("no deduct"))("%s", (question) => {
++    const built = answer(ca(VERBAL, PRIOR, PAYROLL_NO), proposal({ warningLevel: "verbal", payrollDeduct: "no" }));
++    const reply = humanizeFormReply(built, { history: FIRST_CA, question, today: TODAY });
++    expect(reply.content).toBe(later("Got it — no payroll deduct.", built.content));
++    expect(reply.formProposal).toBe(built.formProposal);
++  });
++
++  it.each(cases("date is 10/14"))("%s", (question) => {
++    const card = proposal({ warningLevel: "verbal", payrollDeduct: "no", formDate: "2026-10-14" });
++    const built = answer(ca(VERBAL, PRIOR, PAYROLL_NO), card);
++    const reply = humanizeFormReply(built, { history: FIRST_CA, question, today: TODAY });
++    expect(reply.content).toBe(later("Got it — the date's 10/14.", built.content));
++  });
++
++  it.each(cases("change it to written"))("%s", (question) => {
++    const card = proposal({ warningLevel: "written", payrollDeduct: "no", formDate: "2026-10-14" });
++    const built = answer(ca(WRITTEN, PRIOR, PAYROLL_NO), card);
++    const reply = humanizeFormReply(built, { history: FIRST_CA, question, today: TODAY });
++    expect(reply.content).toBe(later("Got it — it's a written warning.", built.content));
++  });
++
++  it.each(cases("date 10/14"))("coaching: %s", (question) => {
++    const history: Turn[] = [
++      { role: "user", content: "coaching form for avery testperson, skipped a tour today" },
++      { role: "assistant", content: coaching("message") },
++    ];
++    const card = proposal({ templateKey: "coaching", templateName: "Coaching Form", formDate: "2026-10-14", locationResolution: "resolved", locationId: "loc-1", locationName: "Omaha, NE (West Dodge Rd)" });
++    const built = answer(coaching("messages"), card);
++    const reply = humanizeFormReply(built, { history, question, today: TODAY });
++    expect(reply.content).toBe(`Got it — the date's 10/14.\n\n${COACHING_NOTICE}`);
++  });
++
++  it.each(cases("date is 10/14 and make it written"))("two changes at once: %s", (question) => {
++    const built = answer(ca(WRITTEN, PRIOR, PAYROLL_ASK), proposal({ warningLevel: "written", formDate: "2026-10-14" }));
++    const reply = humanizeFormReply(built, { history: FIRST_CA, question, today: TODAY });
++    expect(reply.content).toBe(later("Got it — the date's 10/14 and it's a written warning.", built.content));
++  });
++
++  it.each(cases("she was also on her phone"))("a turn the card has no field for: %s", (question) => {
++    const built = answer(ca(VERBAL, PRIOR, PAYROLL_ASK), proposal({ warningLevel: "verbal" }));
++    const reply = humanizeFormReply(built, { history: FIRST_CA, question, today: TODAY });
++    expect(reply.content).toBe(later("Got it — here's the card.", built.content));
++  });
++
++  it("a date from another year keeps its year", () => {
++    const card = proposal({ warningLevel: "verbal", formDate: "2025-12-30" });
++    const reply = humanizeFormReply(answer(ca(VERBAL, PRIOR, PAYROLL_ASK), card), {
++      history: FIRST_CA,
++      question: "date is 12/30/25",
++      today: TODAY,
++    });
++    expect(reply.content.split("\n")[0]).toBe(`${CA_LEAD} — got it, the date's 12/30/2025.`);
++  });
++});
++
++describe("(2) every card line after the opener stays (QA's ruling (b))", () => {
++  it.each([[GLOBAL_NOTICE], [SALON_NOTICE], [COACHING_NOTICE]])("the Policy line, the read-back and the full save notice: %s", (notice) => {
++    const content = [CA_OPENER, POLICY, VERBAL, PAYROLL_NO, notice].join("\n\n");
++    const history: Turn[] = [FIRST_CA[0]!, { role: "assistant", content }];
++    const reply = humanizeFormReply(answer(content, proposal({ warningLevel: "verbal", payrollDeduct: "no" })), { history, question: "ok", today: TODAY });
++    expect(reply.content).toBe([`${CA_LEAD} — got it, here's the card.`, POLICY, VERBAL, PAYROLL_NO, notice].join("\n\n"));
++  });
++
++  it("read-backs side by side on one line stay whole", () => {
++    const line = "**Issue:** opened late · **Type of warning:** Written Warning, as you said — tell me if that should change";
++    const built = answer([CA_OPENER, line, SALON_NOTICE].join("\n\n"), proposal({ warningLevel: "written" }));
++    const reply = humanizeFormReply(built, { history: FIRST_CA, question: "change it to written", today: TODAY });
++    expect(reply.content).toBe([`${CA_LEAD} — got it, it's a written warning.`, line, SALON_NOTICE].join("\n\n"));
++  });
++});
++
++describe("what is never changed", () => {
++  it("the first card turn", () => {
++    const built = answer(ca(VERBAL, PRIOR, PAYROLL_ASK), proposal({ warningLevel: "verbal" }));
++    const reply = humanizeFormReply(built, { history: [], question: FIRST_CA[0]!.content, today: TODAY });
++    expect(reply).toBe(built);
++  });
++
++  it("a card for another employee starts again in full", () => {
++    const built = answer(ca(VERBAL, PRIOR, PAYROLL_ASK).replace("Avery Testperson", "Jordan Testperson"), proposal({ employeeName: "Jordan Testperson" }));
++    const reply = humanizeFormReply(built, { history: FIRST_CA, question: "actually it's for jordan testperson", today: TODAY });
++    expect(reply).toBe(built);
++  });
++
++  it("a card for another form starts again in full", () => {
++    const card = proposal({ templateKey: "coaching", templateName: "Coaching Form" });
++    const built = answer(coaching("messages"), card);
++    const reply = humanizeFormReply(built, { history: FIRST_CA, question: "make it a coaching form instead", today: TODAY });
++    expect(reply).toBe(built);
++  });
++
++  it("\"Nothing has been created\" and \"You haven't told me what happened yet\" stay", () => {
++    const notCreated = "**Nothing has been created.** This is a proposal, not a form — I can't create this one in chat yet.";
++    const noIncident = "**You haven't told me what happened yet**, so I can't cite the policy manual.";
++    const content = [CA_OPENER, noIncident, notCreated].join("\n\n");
++    const history: Turn[] = [FIRST_CA[0]!, { role: "assistant", content }];
++    const reply = humanizeFormReply(answer(content), { history, question: "ok", today: TODAY });
++    expect(reply.content).toBe(`${CA_LEAD} — got it, here's the card.\n\n${noIncident}\n\n${notCreated}`);
++  });
++
++  it("a reply without a card, or one that asks who it is for", () => {
++    const plain: AskResponse = { content: CA_OPENER, citations: [] };
++    expect(humanizeFormReply(plain, { history: FIRST_CA, question: "ok", today: TODAY })).toBe(plain);
++    const who = answer("Who is this **Corrective Action Form** for?", proposal({ status: "needs_employee", employeeName: null }));
++    expect(humanizeFormReply(who, { history: FIRST_CA, question: "ok", today: TODAY })).toBe(who);
++  });
++
++  it("flag off: the reply is as built", () => {
++    delete process.env[FLAG];
++    const built = answer(ca(VERBAL, PRIOR, PAYROLL_NO), proposal({ warningLevel: "verbal", payrollDeduct: "no" }));
++    expect(humanizeFormReply(built, { history: FIRST_CA, question: "no deduct", today: TODAY })).toBe(built);
++  });
++});
+diff --git a/src/lib/ai/human-replies.ts b/src/lib/ai/human-replies.ts
+new file mode 100644
+index 00000000..2e26a190
+--- /dev/null
++++ b/src/lib/ai/human-replies.ts
+@@ -0,0 +1,197 @@
++import { humanRepliesEnabled } from "@/lib/config/chat-quality-flags";
++import type { AskResponse } from "@/lib/ai/types";
++import type { ChatFormProposal } from "@/types";
++
++/**
++ * HUMAN_REPLIES_ENABLED: a form chat says the long opener once. (Rebuilt from Ask Sunny's S#898, QA's ruling (b),
++ * 12 Nov 2026; supersedes this app's #200.)
++ *
++ * The owner's rule, 26 Oct 2026: "humanize it". In a ten-turn Corrective
++ * Action chat the manager read "I'll draft a Corrective Action Form for … from
++ * what you've described, and check the applicable company policy …" ten
++ * times.
++ *
++ * The first card turn for a form and employee is returned as built. On a later
++ * turn for the same form and employee the opener (and the coaching opener's
++ * "Everything I need is here …" line) becomes one line on what this turn
++ * changed — on a Corrective Action card after the card's lead, "I'll draft a
++ * **<form>** for **<name>** — got it, …", which the turn readers need — read from the card's own fields ("Got it — the date's 10/14."),
++ * never from guesswork. NOTHING ELSE CHANGES (QA's ruling (b), 12 Nov 2026):
++ * the Policy line, the warning read-back, the payroll question or read-back,
++ * the save notice and every card line stay on every turn, word for word — the
++ * replay pack's multi-turn cases read them, and so do the readers of the last
++ * assistant turn (payroll, store, policy, question-not-form). The card
++ * (`formProposal`) is returned exactly as built. Off, the answer is returned
++ * unchanged.
++ */
++
++interface Turn {
++  readonly role: string;
++  readonly content: string;
++  readonly error?: unknown;
++}
++
++interface Opener {
++  readonly form: string;
++  readonly employee: string | null;
++}
++
++/** The first line of a card turn: the form, then the employee where it names one. Both apps build the same ones. */
++const OPENERS: readonly RegExp[] = [
++  /^I'll draft a \*\*([^*]+)\*\* for \*\*([^*]+)\*\* from what you've described, and check the applicable .+ before anything policy-related goes on it\.$/,
++  /^Here is what I would put on a \*\*([^*]+)\*\*\.$/,
++  /^Here is the ([^*.]+)\.$/,
++];
++
++/** Said under the coaching opener. Leaves with it. */
++const AFTER_OPENER = /^Everything I need is here, drawn from your messages? above\.$/;
++
++const PAYROLL_READBACK = /^Is payroll deduct applicable\? \*\*(?:Yes|No)\*\* — tell me if that should change\.$/;
++
++const DATE_WORDS =
++  /\b\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?\b|\b(?:today|yesterday|tomorrow|(?:mon|tues|wednes|thurs|fri|satur|sun)day)\b|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+\d{1,2}(?:st|nd|rd|th)?\b/i;
++const WARNING_WORDS = /\b(?:verbal|written)\b/i;
++const PAYROLL_WORDS = /\b(?:deduct\w*|payroll)\b/i;
++const BARE_ANSWER = /^\s*(?:yes|yep|yeah|no|nope|n\/a|not applicable)\b[\s.!]*$/i;
++
++/** One fact on the card: how the acknowledgement says it, the read-back lines it stands for, and whether this turn named it. */
++interface Fact {
++  readonly says: string;
++  readonly replaces: readonly RegExp[];
++  readonly named: boolean;
++}
++
++export function humanizeFormReply(
++  answer: AskResponse,
++  input: { readonly history: readonly Turn[]; readonly question: string; readonly today: string },
++): AskResponse {
++  if (!humanRepliesEnabled()) return answer;
++  const proposal = answer.formProposal;
++  if (!proposal || proposal.status === "needs_employee") return answer;
++  if (!proposal.employeeName && proposal.subject !== "team") return answer;
++
++  const lines = answer.content.split("\n");
++  const opener = openerOf(lines[0] ?? "");
++  if (!opener || !sameForm(opener.form, proposal.templateName)) return answer;
++
++  const earlier = earlierCardTurns(input.history, proposal);
++  if (earlier.length === 0) return answer;
++
++  const lastAssistant = earlier[earlier.length - 1]!.content;
++  const changes = factsOf(proposal, input.question, lastAssistant, input.today).filter((fact) => fact.named);
++
++  // Only the opener goes (and the line said under the coaching opener); every other line is the card as built.
++  const rest = lines.slice(1);
++  while (rest.length > 0 && (rest[0]!.trim() === "" || AFTER_OPENER.test(rest[0]!.trim()))) rest.shift();
++  const kept = rest.length > 0 ? [rest.join("\n")] : [];
++  const content = [withCardLead(acknowledgement(changes), lines[0] ?? ""), ...kept].join("\n\n");
++  return { ...answer, content };
++}
++
++function openerOf(line: string): Opener | null {
++  for (const pattern of OPENERS) {
++    const match = pattern.exec(line.trim());
++    if (match?.[1]) return { form: match[1], employee: match[2] ?? null };
++  }
++  return null;
++}
++
++function sameForm(left: string, right: string): boolean {
++  return left.trim().toLowerCase() === right.trim().toLowerCase();
++}
++
++/**
++ * The assistant turns of this card so far, oldest first: from the most recent
++ * opener on, when that opener is this form for this employee. A card for
++ * another form or another person starts again with the full explanation.
++ */
++function earlierCardTurns(history: readonly Turn[], proposal: ChatFormProposal): Turn[] {
++  const replies = history.filter((turn) => turn.role === "assistant" && !turn.error && typeof turn.content === "string");
++  for (let index = replies.length - 1; index >= 0; index -= 1) {
++    const opener = openerOf(replies[index]!.content.split("\n")[0] ?? "");
++    if (!opener) continue;
++    if (!sameForm(opener.form, proposal.templateName)) return [];
++    if (opener.employee && proposal.employeeName && !sameForm(opener.employee, proposal.employeeName)) return [];
++    return replies.slice(index);
++  }
++  return [];
++}
++
++/** The card's own fields, each marked with whether the manager's turn names its topic. */
++function factsOf(proposal: ChatFormProposal, question: string, lastAssistant: string, today: string): Fact[] {
++  const said = question.toLowerCase();
++  const facts: Fact[] = [];
++  if (proposal.employeeName) {
++    facts.push({
++      says: `it's for **${proposal.employeeName}**`,
++      replaces: [/^\*\*Employee:\*\*/],
++      named: said.includes(proposal.employeeName.toLowerCase()),
++    });
++  }
++  const date = proposal.formDate ? shortDate(proposal.formDate, today) : null;
++  if (date) facts.push({ says: `the date's ${date}`, replaces: [/^\*\*Date:\*\*/], named: DATE_WORDS.test(question) });
++  if (proposal.warningLevel) {
++    facts.push({
++      says: `it's a ${proposal.warningLevel} warning`,
++      replaces: [/^\*\*Type of warning:\*\*/i],
++      named: WARNING_WORDS.test(question),
++    });
++  }
++  if (proposal.payrollDeduct === "yes" || proposal.payrollDeduct === "no") {
++    const payrollAsked = lastAssistant.includes("Is payroll deduct applicable?");
++    facts.push({
++      says: proposal.payrollDeduct === "yes" ? "payroll deduct is a yes" : "no payroll deduct",
++      replaces: [PAYROLL_READBACK, /^\*\*Payroll deduct:\*\*/],
++      named: PAYROLL_WORDS.test(question) || (payrollAsked && BARE_ANSWER.test(question)),
++    });
++  }
++  // This app's card carries no payroll amount of its own (the amount is a form field), so no amount fact.
++  if (proposal.locationName && proposal.locationResolution === "resolved") {
++    facts.push({
++      says: `it's at **${proposal.locationName}**`,
++      replaces: [/^\*\*Store:\*\*/],
++      named: namesPlace(said, proposal.locationName),
++    });
++  }
++  return facts;
++}
++
++/*
++ * THE CARD'S LEAD STAYS (QA's ruling (b), 12 Nov 2026): the readers of the last assistant turn find the card's form and
++ * employee in "I'll draft a **<form>** for **<name>**" (name correction, near-miss rules, roster names, card slots). A
++ * later turn keeps that lead and drops only the opener's long tail ("from what you've described, and check the
++ * applicable … before anything policy-related goes on it."): "I'll draft a **<form>** for **<name>** — got it, the
++ * date's 10/14."
++ */
++const CARD_LEAD = /^(I'll draft an? \*\*[^*]+\*\* for \*\*[^*]+\*\*) from what you've described\b/;
++
++function withCardLead(ack: string, opener: string): string {
++  const lead = CARD_LEAD.exec(opener.trim())?.[1];
++  if (!lead) return ack;
++  return `${lead} — ${ack.replace(/^Got it — /, "got it, ")}`;
++}
++
++function acknowledgement(changes: readonly Fact[]): string {
++  if (changes.length === 0) return "Got it — here's the card.";
++  const parts = changes.map((change) => change.says);
++  const joined = parts.length === 1 ? parts[0]! : `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
++  return `Got it — ${joined}.`;
++}
++
++/** "2026-10-14" → "10/14" this year, "10/14/2025" another. */
++function shortDate(iso: string, today: string): string | null {
++  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
++  if (!match) return null;
++  const [, year, month, day] = match;
++  const short = `${Number(month)}/${Number(day)}`;
++  return today.startsWith(`${year}-`) ? short : `${short}/${year}`;
++}
++
++/** A word of the location's name (four letters or more) in the manager's turn. */
++function namesPlace(said: string, name: string): boolean {
++  return name
++    .toLowerCase()
++    .split(/[^a-z0-9]+/)
++    .filter((word) => word.length >= 4)
++    .some((word) => new RegExp(`\\b${word}\\b`).test(said));
++}
+diff --git a/src/lib/config/chat-quality-flags.ts b/src/lib/config/chat-quality-flags.ts
+index 7d6e10d9..2f5de28e 100644
+--- a/src/lib/config/chat-quality-flags.ts
++++ b/src/lib/config/chat-quality-flags.ts
+@@ -1400,6 +1400,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
+   "PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT_ENABLED",
+   // coding 6: GROUP_WORDS_NOT_A_NAME (Problem 19, 11 Nov 2026; default off).
+   "GROUP_WORDS_NOT_A_NAME_ENABLED",
++  // HUMAN_REPLIES (default off; rebuilt from Ask Sunny's S#898, QA's ruling (b)): in the list, as every chat flag.
++  "HUMAN_REPLIES_ENABLED",
+   "ACCOUNT_BEFORE_REQUEST_ENABLED",
+   // LETTER_GREETING_ANY_CASE (default off): in the list, as every chat flag (QA round 17k, 12 Nov 2026).
+   "LETTER_GREETING_ANY_CASE_ENABLED",
+@@ -5038,3 +5040,12 @@ export function formsOnFileOrderMatchPossibleEnabled(): boolean {
+ export function policyCarryRetrievalEnabled(): boolean {
+   return envFlag("POLICY_CARRY_RETRIEVAL_ENABLED");
+ }
++
++/**
++ * HUMAN_REPLIES_ENABLED (default off; rebuilt by coding 6 from Ask Sunny's S#898, 12 Nov 2026; QA's ruling (b);
++ * supersedes this app's #200). A later card turn for the same form and employee replaces only the opener's long tail
++ * with one line on what changed; every other card line stays as built. Off, as before. See `ai/human-replies.ts`.
++ */
++export function humanRepliesEnabled(): boolean {
++  return envFlag("HUMAN_REPLIES_ENABLED");
++}

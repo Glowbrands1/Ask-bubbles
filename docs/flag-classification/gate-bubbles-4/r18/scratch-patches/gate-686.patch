@@ -1,0 +1,268 @@
+# branch gate-686 head 1182f930 ; diff from main-line base c6e0b7db
+# 1182f930 Merge branch 'pr686' into gate-686
+# 74b2b157 Merge remote-tracking branch 'origin/main' into rec-686
+# 7bf5d620 Merge commit 'c6063f2c' into rec-686
+# 8c3c7b26 Merge origin/main into claude/pasted-review-not-account; sf-s22 twin's open reason is the Coaching Form turn
+# 50dabf29 Port from Ask Sunny (adc276ce): a pasted review is no account: sf-s22 keeps the Corrective Action (PASTED_REVIEW_NOT_ACCOUNT_ENABLED)
+diff --git a/src/app/api/chat/replay-pack/nov5-pau-sf-s21-s25-twin-cases.ts b/src/app/api/chat/replay-pack/nov5-pau-sf-s21-s25-twin-cases.ts
+index e04524e7..ff2bf29d 100644
+--- a/src/app/api/chat/replay-pack/nov5-pau-sf-s21-s25-twin-cases.ts
++++ b/src/app/api/chat/replay-pack/nov5-pau-sf-s21-s25-twin-cases.ts
+@@ -117,7 +117,9 @@ export const NOV5_PAU_SF_S21_S25_TWIN_CASES: ReplayCase[] = [
+     id: "nov5-twin-sf-s22-ca-not-coaching",
+     title: "sf-s22: \"It needs to be a CA, not a coaching form\" and \"Its a CA\" keep the Corrective Action; another employee's reviewer notes never go into the Observation",
+     report: `${REPORT}, sf-s22`,
+-    status: { open: "with this app's production flags the first request makes no Corrective Action card" },
++    status: { open: "on production flags \"Make this: <reviewer notes>\" after \"It needs to be a CA\" goes back to the Coaching Form (the first request makes the CA card since main moved on, checked 11 Nov 2026)" },
++    // Fixed under PASTED_REVIEW_NOT_ACCOUNT_ENABLED (coding 6, 10 Nov 2026; port): a pasted review is no account; open on production flags until QA flips it.
++    fixFlags: ["PASTED_REVIEW_NOT_ACCOUNT_ENABLED"],
+     async run(t) {
+       const thread = start(t);
+       const first = await thread.say(
+@@ -193,6 +195,36 @@ export const NOV5_PAU_SF_S21_S25_TWIN_CASES: ReplayCase[] = [
+   },
+ ];
+ 
++/*
++ * PASTED_REVIEW_NOT_ACCOUNT_ENABLED (coding 6, 10 Nov 2026; port): sf-s22's first two turns, then Create. The draft is
++ * written from the manager's own words: Corwen's reviewer notes, and their signing date, never reach it.
++ */
++const S22_T1 =
++  "create a ca for must see behaviors for performace  this should be for wynne sarrow  - verbal\n146 transactions \nBelow in UPT, Average Sale, Conversion  but i need it to be in the format of Tamsyn ca  it needs to look exactally the same as tamsyns but wtih all of this information";
++
++export const NOV10_TWIN_PASTED_REVIEW_CASES: ReplayCase[] = [
++  {
++    id: "nov10-twin-sf-s22-pasted-review-never-drafted",
++    title: "sf-s22: \"Use this to make it: <a reviewer's notes on Corwen's form>\" → Create: Wynne's CA, drafted without Corwen's notes or their date",
++    report: `${REPORT}, sf-s22`,
++    status: { open: "the draft is handed Corwen's reviewer notes as the account" },
++    fixFlags: ["PASTED_REVIEW_NOT_ACCOUNT_ENABLED"],
++    async run(t) {
++      const thread = start(t);
++      await thread.say(S22_T1);
++      const second = await thread.say(`Use this to make it: ${REVIEWER_NOTES}`);
++      expect(thread.proposal, `the pasted review turned the card into another form:\n${second.content}`).toMatchObject({ templateKey: "dpoa", employeeName: "Wynne Sarrow" });
++      expect(second.content, `the review's signing date is on the card:\n${second.content}`).not.toMatch(/10\/16\/2026/);
++      expect(observationLine(second), `another employee's notes in the Observation:\n${observationLine(second)}`).not.toMatch(/Corwen/i);
++      const id = await thread.create();
++      const described = /WHAT THE MANAGER DESCRIBED:(?:\\n|\n)([\s\S]*?)(?:\\n|\n)FIELDS YOU MAY WRITE/.exec(t.draftPrompts().at(-1) ?? "")?.[1] ?? "";
++      expect(described, "the draft lost Wynne's own facts").toMatch(/146 transactions/);
++      expect(described, "the draft was handed Corwen's reviewer notes").not.toMatch(/Corwen|Kit Coaching Document|resubmit/i);
++      expect(t.values(id).form_date ?? "", "the review's signing date is the form's Date").not.toBe("2026-10-16");
++    },
++  },
++];
++
+ /*
+  * TEMPLATE_OUTLINE_FIELDS_ENABLED (coding 6, 10 Nov 2026; port): sf-s21 with what is SAVED. "the same out line" writes the
+  * template's Observation AND Action Plan with Wynne's facts; "the Must see behaviors and not the standard of conduct"
+diff --git a/src/app/api/chat/route.ts b/src/app/api/chat/route.ts
+index ff842db3..c235bb01 100644
+--- a/src/app/api/chat/route.ts
++++ b/src/app/api/chat/route.ts
+@@ -56,6 +56,7 @@ import {
+   cardNamesEmployeeEnabled,
+   exitLetterAddresseeEnabled,
+   letterGreetingNotNameEnabled,
++  pastedReviewNotAccountEnabled,
+   templateOutlineFieldsEnabled,
+   exitFormDateFromTerminationEnabled,
+   metricGuardEnabled,
+@@ -251,6 +252,19 @@ async function postChat(request: Request) {
+           history: asked.history.map((turn) => (turn.role === "user" && typeof turn.content === "string" ? { ...turn, content: read(turn.content) } : turn)),
+         };
+       }
++      /*
++       * PASTED_REVIEW_NOT_ACCOUNT_ENABLED (Pau's sf-s22, port): a reviewer's notes pasted into a turn ("Please make the
++       * following edits …") are read only for the manager's words before them, in this turn and the earlier ones, so
++       * no reader takes them as the account, the form or the date (`ai/pasted-review.ts`). The stored messages keep them.
++       */
++      if (pastedReviewNotAccountEnabled()) {
++        const { withoutPastedReview } = await import("@/lib/ai/pasted-review");
++        asked = {
++          ...asked,
++          question: withoutPastedReview(asked.question),
++          history: asked.history.map((turn) => (turn.role === "user" && typeof turn.content === "string" ? { ...turn, content: withoutPastedReview(turn.content) } : turn)),
++        };
++      }
+       /*
+        * OFF_ROSTER_CONFIRM_ENABLED: "use <name>" (or "yes") to the offer for a person not in Woven is read as the
+        * manager's turn that typed the name, and the name is kept on the card as typed (`forms/off-roster-confirm.ts`).
+diff --git a/src/app/api/forms/instances/[id]/draft/route.ts b/src/app/api/forms/instances/[id]/draft/route.ts
+index 15296fd9..81f31963 100644
+--- a/src/app/api/forms/instances/[id]/draft/route.ts
++++ b/src/app/api/forms/instances/[id]/draft/route.ts
+@@ -398,7 +398,8 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
+     const body = ((await request.json().catch(() => null)) ?? {}) as DraftBody;
+     // CREATE_COMMAND_POINTS_TO_CARD_ENABLED / CARD_COMPLAINT_NOT_ACCOUNT_ENABLED: "create it" or "this proposal is out of
+     // date" is no account (`ai/card-meta-turn.ts`).
+-    const sent = String(body.notes ?? "").trim().slice(0, 4000);
++    // PASTED_REVIEW_NOT_ACCOUNT_ENABLED: a pasted reviewer's notes are no account (`ai/pasted-review.ts`).
++    const sent = (await import("@/lib/ai/pasted-review")).readWithoutPastedReview(String(body.notes ?? "").trim().slice(0, 4000)).trim();
+     // SAME_REQUEST_OTHER_PERSON_ENABLED: "the same thing for <B>" is drafted from the earlier request, read with <B>'s name.
+     const typed = sameRequestOtherPersonEnabled()
+       ? (await import("@/lib/forms/same-request-other-person")).notesForOtherPerson({
+diff --git a/src/app/api/forms/instances/route.ts b/src/app/api/forms/instances/route.ts
+index 5f694035..ca939d34 100644
+--- a/src/app/api/forms/instances/route.ts
++++ b/src/app/api/forms/instances/route.ts
+@@ -8,6 +8,7 @@ import { isHiddenTemplate } from "@/config/company/forms/hidden";
+ import { locationById as salonById } from "@/lib/locations";
+ 
+ import { errorResponse } from "@/lib/api/respond";
++import { turnsWithoutPastedReview } from "@/lib/ai/pasted-review";
+ import { parseHistory } from "@/lib/api/validation";
+ import { authorizeForms } from "@/lib/forms/access";
+ import { isIsoCalendarDate } from "@/lib/forms/form-date-answer";
+@@ -241,8 +242,9 @@ export async function POST(request: Request) {
+       const alsoCalled = await preferredNamesOf(actor.scope, body.employeeName);
+       const currency = checkProposalIsCurrent({
+         // FORM_TYPE_SWITCH_ENABLED: "change to coaching" is read as the chat read it, so the switched card is current.
++        // PASTED_REVIEW_NOT_ACCOUNT_ENABLED: pasted reviewer's notes are read as the chat read them (`ai/pasted-review.ts`).
+         // SAME_REQUEST_OTHER_PERSON_ENABLED: "the same thing for <B>" is read from that turn on, as the chat read it.
+-        conversation: sameRequestReadConversation(switchReadConversation(parseHistory(body.conversation))),
++        conversation: sameRequestReadConversation(switchReadConversation(turnsWithoutPastedReview(parseHistory(body.conversation)))),
+         templateKey: body.templateKey,
+         employeeName: body.employeeName,
+         alsoCalled,
+diff --git a/src/lib/ai/pasted-review.test.ts b/src/lib/ai/pasted-review.test.ts
+new file mode 100644
+index 00000000..44dfa38c
+--- /dev/null
++++ b/src/lib/ai/pasted-review.test.ts
+@@ -0,0 +1,46 @@
++import { afterEach, describe, expect, it } from "vitest";
++
++import { pastedReviewStart, readWithoutPastedReview, withoutPastedReview } from "./pasted-review";
++
++/*
++ * PASTED_REVIEW_NOT_ACCOUNT_ENABLED. Pau's sf-s22 (the sibling app's production, 4 Nov 2026; port), the manager's words verbatim; the
++ * people are invented (Corwen Pell). The replay cases `nov5-twin-sf-s22-ca-not-coaching` and
++ * `nov10-twin-sf-s22-pasted-review-never-drafted` run the chat.
++ */
++const REVIEW =
++  "Please make the following edits and resubmit:\n\n1. **Kit Coaching Document:** This was signed on 10/16/2026. I do not see a date showing that Spa/EFT was signed by Corwen. Please make sure all coaching documents are signed and dated (mm/dd/yyyy format) before uploading.\n\n2. **Details – Observed:** Please reword this section to:\n   \n   For the month of October 2026, Corwen completed 24 tans and was below expectations in PPTA, LPSVA, Avg Club, CC%, and Spa%.\n\n3. **Policy Violated:** Please change this from **Under Performance** to **Standards of Conduct**, as the second bullet under that policy is lack of sales performance. You may need to manually add this bullet.";
++
++afterEach(() => {
++  delete process.env.PASTED_REVIEW_NOT_ACCOUNT_ENABLED;
++});
++
++describe("a pasted review", () => {
++  it("is read only for the manager's words around it", () => {
++    expect(withoutPastedReview(`Use this to make it: ${REVIEW}`)).toBe("Use this to make it");
++    expect(withoutPastedReview(`Make this:${REVIEW}`)).toBe("Make this");
++    // In the draft's notes, the turns after it are kept.
++    expect(withoutPastedReview(`146 tans\n\nUse this to make it: ${REVIEW}\n\nIt needs to be a CA, not a coaching form`)).toBe(
++      "146 tans\n\nUse this to make it\n\nIt needs to be a CA, not a coaching form",
++    );
++  });
++
++  it("starts at two numbered \"**Heading:**\" items without the lead sentence", () => {
++    const items = REVIEW.slice(REVIEW.indexOf("1. **"));
++    const turn = `Use this: ${items}`;
++    expect(turn.slice(pastedReviewStart(turn)).trim().startsWith("1. **Kit Coaching Document:**")).toBe(true);
++    expect(withoutPastedReview(`Use this: ${items}`)).toBe("Use this");
++  });
++
++  it("leaves an account alone, a single numbered item included", () => {
++    const account = "Wynne Sarrow - verbal\n146 tans\nBelow in PPTA, LPSVA, Average Club, CC%, Spa%";
++    expect(withoutPastedReview(account)).toBe(account);
++    expect(withoutPastedReview("1. **Late:** she clocked in at 9:20")).toBe("1. **Late:** she clocked in at 9:20");
++  });
++
++  it("is read only with the flag on", () => {
++    const turn = `Use this to make it: ${REVIEW}`;
++    expect(readWithoutPastedReview(turn)).toBe(turn);
++    process.env.PASTED_REVIEW_NOT_ACCOUNT_ENABLED = "true";
++    expect(readWithoutPastedReview(turn)).toBe("Use this to make it");
++  });
++});
+diff --git a/src/lib/ai/pasted-review.ts b/src/lib/ai/pasted-review.ts
+new file mode 100644
+index 00000000..9e1ee1e0
+--- /dev/null
++++ b/src/lib/ai/pasted-review.ts
+@@ -0,0 +1,56 @@
++import { pastedReviewNotAccountEnabled } from "@/lib/config/chat-quality-flags";
++
++/*
++ * ============================================================================
++ * A PASTED REVIEW IS NO ACCOUNT (PASTED_REVIEW_NOT_ACCOUNT_ENABLED)
++ * ============================================================================
++ *
++ * Pau's sf-s22 (the sibling app's production, 4 Nov 2026; port): with <A>'s Corrective Action card on screen, "Use this to make it:
++ * Please make the following edits and resubmit:\n\n1. **Kit Coaching Document:** This was signed on 10/16/2026. I do
++ * not see a date showing that Spa/EFT was signed by <C>. …\n\n2. **Details – Observed:** Please reword this section to:
++ * … <C> completed 24 tans …" — a reviewer's notes on <C>'s form, pasted to show the format. The card became a Coaching
++ * Form ("Kit Coaching Document"), its Observation took <C>'s notes and its Date their signing date; "It needs to be a
++ * CA, not a coaching form" kept both.
++ *
++ * With the flag on, a turn holding a pasted review — from "Please make the following edits / changes / corrections",
++ * or else from the first of two or more numbered "**Heading:**" items — is read only for the manager's words before
++ * it ("Use this to make it"). Pure.
++ */
++
++const REVIEW_LEAD = /\bplease\s+make\s+the\s+following\s+(?:edits|changes|corrections|updates)\b/i;
++// At a line's start, or straight after a colon ("Use this: 1. **Kit Coaching Document:** …").
++const HEADING_ITEM = /(?<=^|:[ \t]*)[ \t]*\d+[.)][ \t]+\*\*[^*\n]{2,80}\*\*/gm;
++
++/** Where the pasted review starts, or -1. */
++export function pastedReviewStart(text: string): number {
++  const lead = REVIEW_LEAD.exec(text);
++  if (lead) return lead.index;
++  const items = [...text.matchAll(HEADING_ITEM)];
++  return items.length >= 2 ? items[0]!.index! : -1;
++}
++
++/**
++ * The text without a pasted review: the manager's words before it ("Use this to make it"), and any after it — the
++ * review is its lead paragraph, its numbered items and their indented lines. The text as it is without one.
++ */
++export function withoutPastedReview(text: string): string {
++  const start = pastedReviewStart(text);
++  if (start < 0) return text;
++  const before = text.slice(0, start).replace(/[\s:;,\-–—]+$/, "").trim();
++  const paragraphs = text.slice(start).split(/\n[ \t]*\n/);
++  let end = 1;
++  while (end < paragraphs.length && (/^[ \t]*\d+[.)][ \t]+/.test(paragraphs[end]!) || /^[ \t]+\S/.test(paragraphs[end]!) || paragraphs[end]!.trim() === "")) end += 1;
++  const after = paragraphs.slice(end).join("\n\n").trim();
++  return [before, after].filter(Boolean).join("\n\n");
++}
++
++/** As `withoutPastedReview`, only with the flag on. */
++export function readWithoutPastedReview(text: string): string {
++  return pastedReviewNotAccountEnabled() ? withoutPastedReview(text) : text;
++}
++
++/** The manager's turns without a pasted review, the others as they are; only with the flag on. */
++export function turnsWithoutPastedReview<T extends { role: string; content: string }>(turns: T[]): T[] {
++  if (!pastedReviewNotAccountEnabled()) return turns;
++  return turns.map((turn) => (turn.role === "user" ? { ...turn, content: withoutPastedReview(turn.content) } : turn));
++}
+diff --git a/src/lib/config/chat-quality-flags.ts b/src/lib/config/chat-quality-flags.ts
+index 6da53817..459963d4 100644
+--- a/src/lib/config/chat-quality-flags.ts
++++ b/src/lib/config/chat-quality-flags.ts
+@@ -4392,6 +4392,22 @@ export function pastedOutlineToOpenDraftEnabled(): boolean {
+   return envFlag("PASTED_OUTLINE_TO_OPEN_DRAFT_ENABLED");
+ }
+ 
++/**
++ * PASTED_REVIEW_NOT_ACCOUNT_ENABLED (coding 6, 10 Nov 2026; default off; Pau via
++ * QA, sf-s22, 5 Nov 2026; port from the sibling app). "Use this to make it: Please make the following
++ * edits and resubmit: 1. **Kit Coaching Document:** … signed by <C> …" — a
++ * reviewer's notes on another employee's form, pasted to show the format —
++ * turned the Corrective Action card into a Coaching Form, put <C>'s notes in
++ * the Observation and their signing date on the card. On: a pasted review
++ * ("Please make the following edits …", or a numbered list of "**Heading:**"
++ * items) is read only for the manager's own words before it, in this turn and
++ * the earlier ones, and the draft's account leaves it out. The stored
++ * messages keep it. See `ai/pasted-review.ts`. Off, as before.
++ */
++export function pastedReviewNotAccountEnabled(): boolean {
++  return envFlag("PASTED_REVIEW_NOT_ACCOUNT_ENABLED");
++}
++
+ /**
+  * MADE_ABOUT_SAID_DATE_ENABLED (ported from the sibling app: QA's live round 14 there, 10 Nov 2026; default off; same flag in
+  * both apps). "I need you to make it about showing up late and please list the policy make the date for 10/14/26" on a

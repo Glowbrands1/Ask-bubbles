@@ -1,0 +1,179 @@
+# branch gate-850 head e091c7fa ; diff from main-line base 6d862bbe
+# e091c7fa keep both (flags, route hooks)
+# 603a8dcf Port from Ask Sunny (1dc30de2): GO_AHEAD_ASKS_WHO_AND_FORM — "just make it" after a policy question asks one short question (default off)
+diff --git a/src/app/api/chat/replay-pack/nov12-r37-go-ahead-ask-cases.ts b/src/app/api/chat/replay-pack/nov12-r37-go-ahead-ask-cases.ts
+new file mode 100644
+index 00000000..e4640ead
+--- /dev/null
++++ b/src/app/api/chat/replay-pack/nov12-r37-go-ahead-ask-cases.ts
+@@ -0,0 +1,48 @@
++import { expect } from "vitest";
++
++import { STAFF, WEST_DODGE, type ReplayCase } from "./cases";
++
++/**
++ * ============================================================================
++ * "JUST MAKE IT" AFTER A POLICY QUESTION ASKS ONE SHORT QUESTION (QA's r37 live check in the sibling app, 12 Nov 2026; ported; low;
++ * GO_AHEAD_ASKS_WHO_AND_FORM_ENABLED)
++ * ============================================================================
++ *
++ * QA's turns there: "cite the animals in the workplace policy", then "just make it", which replied "I need two
++ * things first: which employee … and you'll need to ask for it by name" (the model's words). QA's ruling: one short
++ * question, who and which form, assuming nothing.
++ */
++export const NOV12_R37_GO_AHEAD_ASK_CASES: ReplayCase[] = [
++  {
++    id: "nov12-r37-just-make-it-asks-who-and-which-form",
++    title: "\"cite the animals in the workplace policy\", then \"just make it\": one short question, who and which form",
++    report: "QA's r37 live check in the sibling app (12 Nov 2026), ported: \"just make it\" replied \"I need two things first … ask for it by name\"",
++    status: { open: "the reply is the model's, not the one short question" },
++    fixFlags: ["GO_AHEAD_ASKS_WHO_AND_FORM_ENABLED"],
++    async run(t) {
++      t.directory(STAFF);
++      t.as("location_manager", WEST_DODGE);
++      const thread = t.thread();
++      await thread.say("cite the animals in the workplace policy");
++      const reply = await thread.say("just make it");
++      expect(thread.proposal ?? null, reply.content).toBeNull();
++      expect(reply.content, reply.content).toBe("Who is it for, and should it be a **Corrective Action** or a **Coaching Form**?");
++      expect(reply.content, reply.content).not.toMatch(/two things|by name/i);
++    },
++  },
++  {
++    id: "nov12-r37-just-make-it-after-a-request-unchanged",
++    title: "\"create a CA for <name> …\", then \"just make it\": never the one short question (the request is there)",
++    report: "Guard for QA's r37 live check (12 Nov 2026)",
++    status: "fixed",
++    fixFlags: ["GO_AHEAD_ASKS_WHO_AND_FORM_ENABLED"],
++    async run(t) {
++      t.directory(STAFF);
++      t.as("location_manager", WEST_DODGE);
++      const thread = t.thread();
++      await thread.say("create a corrective action, cite the animals in the workplace policy");
++      const reply = await thread.say("just make it");
++      expect(reply.content, reply.content).not.toMatch(/should it be a \*\*Corrective Action\*\* or a \*\*Coaching Form\*\*/);
++    },
++  },
++];
+diff --git a/src/app/api/chat/route.ts b/src/app/api/chat/route.ts
+index c1768a1d..511fd4bf 100644
+--- a/src/app/api/chat/route.ts
++++ b/src/app/api/chat/route.ts
+@@ -1145,6 +1145,8 @@ async function postChat(request: Request) {
+       }
+       // TYPO_FULL_NAME_TO_ROSTER_ENABLED: the level said after "Is this for <name>?" is the card's (`lib/forms/confirmed-name-level.ts`).
+       answer = (await import("@/lib/forms/confirmed-name-level")).withConfirmedNameLevel(answer, parsed.history, asked.question);
++      // GO_AHEAD_ASKS_WHO_AND_FORM_ENABLED: "just make it" after a policy question asks one short question (`lib/forms/go-ahead-ask.ts`).
++      answer = (await import("@/lib/forms/go-ahead-ask")).withGoAheadAsk(answer, parsed.history, asked.question);
+       // PROPOSAL_NAME_CORRECTION_ENABLED: an off-roster "change her name to …" on the card asks which, never kept silently.
+       answer = withCorrectionNotDropped(answer, parsed);
+       // CARD_PLAN_MATCHES_CREATE_ENABLED: an Attendance CA's card shows the plan Create will save (`lib/forms/card-plan-matches-create.ts`).
+diff --git a/src/lib/config/chat-quality-flags.ts b/src/lib/config/chat-quality-flags.ts
+index d86fac01..e697c281 100644
+--- a/src/lib/config/chat-quality-flags.ts
++++ b/src/lib/config/chat-quality-flags.ts
+@@ -1323,6 +1323,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
+   "TITLE_BEFORE_NAME_ENABLED",
+   // TITLE_BEFORE_NAME_REPLY_LINES (QA 17o live, 12 Nov 2026; default off).
+   "TITLE_BEFORE_NAME_REPLY_LINES_ENABLED",
++  // GO_AHEAD_ASKS_WHO_AND_FORM (ported from the sibling app, QA r37 live, 12 Nov 2026; low; default off).
++  "GO_AHEAD_ASKS_WHO_AND_FORM_ENABLED",
+   // coding 4: FORMS_ON_FILE_ORDER_MATCH_POSSIBLE (Bubbles 17h live test, QA, 11 Nov 2026; default off).
+   "FORMS_ON_FILE_ORDER_MATCH_POSSIBLE_ENABLED",
+   "TAKE_OFF_STAYS_CARD_ENABLED",
+@@ -5429,3 +5431,14 @@ export function typoFullNameToRosterEnabled(): boolean {
+ export function exitNoticeStatedOnlyEnabled(): boolean {
+   return envFlag("EXIT_NOTICE_STATED_ONLY_ENABLED");
+ }
++
++/**
++ * GO_AHEAD_ASKS_WHO_AND_FORM_ENABLED (ported from the sibling app; QA's r37 live check there, 12 Nov 2026; low; same flag
++ * in both apps; default off). After "cite the animals in the workplace policy", "just make it" replied "I need two
++ * things first: which employee … and you'll need to ask for it by name". On: with no card and no form request in the
++ * chat, and a policy named earlier, the reply is one short question — who it is for, and whether it should be a
++ * Corrective Action or a Coaching Form (`forms/go-ahead-ask.ts`). Off, as before.
++ */
++export function goAheadAsksWhoAndFormEnabled(): boolean {
++  return envFlag("GO_AHEAD_ASKS_WHO_AND_FORM_ENABLED");
++}
+diff --git a/src/lib/forms/go-ahead-ask.test.ts b/src/lib/forms/go-ahead-ask.test.ts
+new file mode 100644
+index 00000000..aa46bf05
+--- /dev/null
++++ b/src/lib/forms/go-ahead-ask.test.ts
+@@ -0,0 +1,31 @@
++import { afterEach, describe, expect, it, vi } from "vitest";
++
++import { GO_AHEAD_ASK, withGoAheadAsk } from "./go-ahead-ask";
++
++/* GO_AHEAD_ASKS_WHO_AND_FORM_ENABLED (QA's r37 live check, 12 Nov 2026; low): QA's turns. */
++const POLICY = [{ role: "user", content: "cite the animals in the workplace policy" }, { role: "assistant", content: "A grounded answer." }];
++const ANSWER = { content: "I need two things first: which employee this is for, and you'll need to ask for it by name." };
++
++describe("GO_AHEAD_ASKS_WHO_AND_FORM", () => {
++  afterEach(() => vi.unstubAllEnvs());
++
++  it("on: \"just make it\" after a policy question is one short question", () => {
++    vi.stubEnv("GO_AHEAD_ASKS_WHO_AND_FORM_ENABLED", "true");
++    expect(withGoAheadAsk(ANSWER, POLICY, "just make it").content).toBe(GO_AHEAD_ASK);
++    expect(withGoAheadAsk(ANSWER, POLICY, "ok make it").content).toBe(GO_AHEAD_ASK);
++  });
++
++  it("on: a card or a form request in the chat, no policy named, or not a go-ahead: as given", () => {
++    vi.stubEnv("GO_AHEAD_ASKS_WHO_AND_FORM_ENABLED", "true");
++    expect(withGoAheadAsk(ANSWER, [...POLICY, { role: "assistant", content: "card", formProposal: {} }], "just make it")).toBe(ANSWER);
++    expect(withGoAheadAsk(ANSWER, [{ role: "user", content: "create a coaching form for Wren Tallis, cite the dress code policy" }], "just make it")).toBe(ANSWER);
++    expect(withGoAheadAsk(ANSWER, [{ role: "user", content: "what are the store hours" }], "just make it")).toBe(ANSWER);
++    expect(withGoAheadAsk(ANSWER, POLICY, "what does it say about service dogs")).toBe(ANSWER);
++    expect(withGoAheadAsk({ ...ANSWER, formProposal: { employeeName: null } }, POLICY, "just make it").content).toBe(ANSWER.content);
++  });
++
++  it("off: as given", () => {
++    vi.stubEnv("GO_AHEAD_ASKS_WHO_AND_FORM_ENABLED", "");
++    expect(withGoAheadAsk(ANSWER, POLICY, "just make it")).toBe(ANSWER);
++  });
++});
+diff --git a/src/lib/forms/go-ahead-ask.ts b/src/lib/forms/go-ahead-ask.ts
+new file mode 100644
+index 00000000..00db19df
+--- /dev/null
++++ b/src/lib/forms/go-ahead-ask.ts
+@@ -0,0 +1,38 @@
++import { isGoAheadTurn } from "@/lib/ai/policy-carry-retrieval";
++import { goAheadAsksWhoAndFormEnabled } from "@/lib/config/chat-quality-flags";
++
++import { detectTemplateIntent } from "./template-intent";
++
++/*
++ * ============================================================================
++ * "JUST MAKE IT" AFTER A POLICY QUESTION ASKS ONE SHORT QUESTION (GO_AHEAD_ASKS_WHO_AND_FORM_ENABLED)
++ * ============================================================================
++ *
++ * QA's r37 live check in the sibling app (12 Nov 2026; ported; low): after "cite the animals in the workplace policy", "just make
++ * it" replied "I need two things first: which employee … and you'll need to ask for it by name". QA's ruling: nothing is
++ * assumed — not a Corrective Action — and the reply is ONE short question, who it is for and which of the forms the app
++ * makes for a policy. Only when the chat has no card and no form request yet, and an earlier turn named a policy. Off,
++ * the answer as given.
++ */
++export const GO_AHEAD_ASK = "Who is it for, and should it be a **Corrective Action** or a **Coaching Form**?";
++
++const NAMES_A_POLICY = /\bpolic(?:y|ies)\b|\bstandards? of conduct\b|\bdress code\b/i;
++
++interface Turn {
++  readonly role: string;
++  readonly content: string;
++  readonly formProposal?: unknown;
++}
++
++function asksForAForm(text: string): boolean {
++  const intent = detectTemplateIntent(text);
++  return intent.kind !== "none" && !(intent.kind === "corrective_action" && !intent.requestedCreation);
++}
++
++export function withGoAheadAsk<T extends { content: string; formProposal?: unknown }>(answer: T, history: readonly Turn[], question: string): T {
++  if (!goAheadAsksWhoAndFormEnabled() || answer.formProposal || !isGoAheadTurn(question)) return answer;
++  if (history.some((turn) => turn.role === "assistant" && turn.formProposal)) return answer;
++  const said = history.filter((turn) => turn.role === "user").map((turn) => String(turn.content ?? ""));
++  if (said.some(asksForAForm) || !said.some((turn) => NAMES_A_POLICY.test(turn))) return answer;
++  return { ...answer, content: GO_AHEAD_ASK };
++}

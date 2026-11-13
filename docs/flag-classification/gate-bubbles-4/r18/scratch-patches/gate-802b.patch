@@ -1,0 +1,1462 @@
+# branch gate-802b head 4f590d1a ; diff from main-line base 7bfbae15
+# 4f590d1a gate merge pr802b (keep both)
+# c6e0b7db Merge pull request #806 from Glowbrands1/claude/step-b-reply-lines-pins
+# aecb3342 Merge pull request #803 from Glowbrands1/claude/new-session-vq9ob8
+# ba71e056 STEP_B_REPLY_KEEPS_LINES: the one-line reply tests pin the flag off; two e2e replies accept the multi-line form (test-only)
+# f4db56e6 Merge pull request #804 from Glowbrands1/claude/name-ends-at-its-line
+# f27bd0f0 Parity log: SLOT_NAME_ON_FORM_REQUEST waits in Ask Bubbles (inert while INTENT_EXTRACTION is off; the live symptom is B-C2)
+# fcd4882e QA round 17k: ACCOUNT_BEFORE_REQUEST, LETTER_GREETING_ANY_CASE, COMPANY_METRIC_WORDS_NOT_NAMES on in production-flags; 4 cases fixed; LETTER_GREETING_ANY_CASE added to the flag list
+# 430b1588 Replay guard: an exit form typed as lines never reads the name across the newline (test-only)
+# edf489ab Merge remote-tracking branch 'origin/claude/company-metric-words-not-names' into claude/new-session-vq9ob8
+# d7297a74 Merge remote-tracking branch 'origin/claude/letter-greeting-any-case' into claude/new-session-vq9ob8
+# 92325813 Merge remote-tracking branch 'origin/claude/account-before-request' into claude/new-session-vq9ob8
+# 1471dab3 Merge pull request #801 from Glowbrands1/claude/new-session-vq9ob8
+# 075478e2 Name the sibling app, not the other company, in #773's comments (tenant-isolation rule 12; Bubbles 17j CI)
+# 0064d783 Off test pins its own flag: COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED off holds once production turns it on (test-only)
+# 6270aadb Off test pins its own flag: ACCOUNT_BEFORE_REQUEST_ENABLED off holds once production turns it on (test-only)
+# d1ff5a03 Off test pins its own flag: LETTER_GREETING_ANY_CASE_ENABLED off holds once production turns it on (test-only)
+# 00d25830 QA round 17j: EXIT_TYPO_WORDS and NO_NAME_REPLY_WORDING on in production-flags; 3 cases fixed
+# bef14f19 Merge remote-tracking branch 'origin/claude/no-name-reply-wording' into claude/new-session-vq9ob8
+# 880b43cc Merge remote-tracking branch 'origin/claude/exit-typo-words' into claude/new-session-vq9ob8
+# fee165cf Merge origin/main (93b1a73b) into claude/exit-typo-words
+diff --git a/docs/parity-log/2026-11-10-account-before-request-p14a.md b/docs/parity-log/2026-11-10-account-before-request-p14a.md
+new file mode 100644
+index 00000000..33398a2e
+--- /dev/null
++++ b/docs/parity-log/2026-11-10-account-before-request-p14a.md
+@@ -0,0 +1,14 @@
++# Bubbles mechanism for ACCOUNT_BEFORE_REQUEST_ENABLED (P14(a)); the sibling app has its own (#776)
++
++Pau's P14(a) (QA, 10 Nov 2026): an account given over several turns, then "create a coaching form for <first name>",
++then "yes" — the draft saved "No specific incident … was described". The flag has the same name in both apps, with a
++different mechanism in each:
++
++- The sibling app (Glowbrands1/ask-sunny#776, coding 6): a turn before the card's first cited turn whose words the
++  card's Observation line shows is cited (`ai/account-turn-sources.ts`).
++- Here: this app's Coaching card has no Observation line, so the turns themselves are read — the manager turns just
++  before the card's first cited turn that recount an incident by this person, read without a leading question, are
++  cited (`forms/account-before-request.ts`). The replay shows the gap here only when the account's turn opens with a
++  question (this app's card turns leave such turns out).
++
++No port of this mechanism to the sibling app: #776 covers the report there.
+diff --git a/docs/parity-log/2026-11-11-company-metric-words-not-names.md b/docs/parity-log/2026-11-11-company-metric-words-not-names.md
+new file mode 100644
+index 00000000..da60ae7f
+--- /dev/null
++++ b/docs/parity-log/2026-11-11-company-metric-words-not-names.md
+@@ -0,0 +1,24 @@
++# 2026-11-11 — COMPANY_METRIC_WORDS_NOT_NAMES (Bubbles-only)
++
++**What:** a sales Corrective Action written in Buff City Soap's own KPI words lost its Issue.
++For example: "She was below goal in IPT, AOV and Comp Sales % for October", or "She had 40 transactions and was
++below in IPT, AOV, and Discount Rate".
++
++The name reader took "Comp Sales" and "Discount Rate" for a person, and the person guard let them through. The guard's
++business vocabulary held only the sibling app's metric words. The next turn's card was then drawn from that turn alone.
++
++With `COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED` on, a candidate made only of the company's metric words is not a person.
++The metric words live in `src/config/company/metric-words.ts`, taken from the Domo KPI deck: IPT, AOV, Comp Sales, SSSG,
++Net Sales, Discount Rate, Product Mix, Laundry %, AUV, items per transaction and average order value. Measure words
++and percent signs may sit beside them. Somebody on the roster is still always a person ("Delphine Sales").
++
++**Why not ported to Ask Sunny:** checked on Ask Sunny main 2805f4f1 with production flags. Sunny's own metric words are
++already in the shared business vocabulary (PPTA, LPSVA, UPTA, Spa, Club). In a chat, Sunny keeps the account as the
++Observation of Offense for its own phrasings:
++- "She had 40 tans and was below in UPTA, LPSVA, and Club Close %"
++- "She was below in Unique PPTA, Average Club Dollar and Spa %"
++- the round-5 PPTA list
++
++The name reader still offers "Club Close" and "Average Club Dollar" there, but the card keeps its account. Sunny also
++has no `src/config/company/` folder to hold a list. If Sunny ever needs one, port the mechanism: a company list read by
++`person-guard.ts`, never these words.
+diff --git a/docs/parity-log/2026-11-12-slot-name-on-form-request-waits.md b/docs/parity-log/2026-11-12-slot-name-on-form-request-waits.md
+new file mode 100644
+index 00000000..55c77629
+--- /dev/null
++++ b/docs/parity-log/2026-11-12-slot-name-on-form-request-waits.md
+@@ -0,0 +1,8 @@
++## 12 Nov 2026: SLOT_NAME_ON_FORM_REQUEST waits in Ask Bubbles — the port would be inert (follow-up to 2026-11-03)
++
++The 3 Nov entry (`2026-11-03-slot-name-on-form-request.md`) said to port Ask Sunny's mechanism if FORM_STATE were ever turned off here. FORM_STATE is now off in this app's production. The port still waits, on QA's ruling of 12 Nov 2026.
++
++- Sunny's mechanism (`withSlotEmployeeLine`) lives in `ai/intent-slots.ts`. That step runs only under INTENT_EXTRACTION_ENABLED, which is on in Ask Sunny and off in this app's production, so a port would change nothing live.
++- The live symptom here, "Corrective action for the primary salon manager: …" with a lower-case name not on the roster answered as a policy question, is tracked as B-C2 (`nov4-name-pau-2-*`, assigned to Coding-4).
++
++Port the mechanism when INTENT_EXTRACTION_ENABLED is turned on in this app.
+diff --git a/src/app/api/chat/form-edit-noop-guard-e2e.test.ts b/src/app/api/chat/form-edit-noop-guard-e2e.test.ts
+index 632aa59a..303aef2c 100644
+--- a/src/app/api/chat/form-edit-noop-guard-e2e.test.ts
++++ b/src/app/api/chat/form-edit-noop-guard-e2e.test.ts
+@@ -530,7 +530,10 @@ describe("FORM_EDIT_NOOP_GUARD_ENABLED needs FORM_EDIT_SINGLE_WRITER_ENABLED", (
+     const reply = await thread.say(SF_S11_REQUEST);
+     // Before the guard: the request reached the Observation, and the reply said so in the old words.
+     expect(values(thread.id).observation).toContain(SF_S11_REQUEST);
+-    expect(reply.content).toMatch(/^Changed Observation of Offense to "/);
++    // Changed on purpose (12 Nov 2026, Gate-Sunny-2's finding on the sibling app): with STEP_B_REPLY_KEEPS_LINES on, a field
++    // written on several lines is quoted line by line ("Changed Observation of Offense to:\n> …"); either way the reply
++    // names the change.
++    expect(reply.content).toMatch(/^Changed Observation of Offense to(?: "|:\n> )/);
+   });
+ });
+ 
+diff --git a/src/app/api/chat/form-edit-tool-in-stream-e2e.test.ts b/src/app/api/chat/form-edit-tool-in-stream-e2e.test.ts
+index 62bff19b..d7b5aed2 100644
+--- a/src/app/api/chat/form-edit-tool-in-stream-e2e.test.ts
++++ b/src/app/api/chat/form-edit-tool-in-stream-e2e.test.ts
+@@ -433,7 +433,10 @@ describe("FORM_EDIT_TOOL_IN_STREAM_ENABLED: a tool call", () => {
+     expect(after.startsWith(before)).toBe(true);
+     expect(after).toContain("she Must Practice the sanitizing checklist every shift.");
+     expect(reply.formUpdate).toEqual({ instanceId: id, updated: ["observation"] });
+-    expect(reply.content).toMatch(/^Changed Observation of Offense to "/);
++    // Changed on purpose (12 Nov 2026, Gate-Sunny-2's finding on the sibling app): with STEP_B_REPLY_KEEPS_LINES on, a field
++    // written on several lines is quoted line by line ("Changed Observation of Offense to:\n> …"); either way the reply
++    // names the change.
++    expect(reply.content).toMatch(/^Changed Observation of Offense to(?: "|:\n> )/);
+     expect(reply.content).not.toContain("I've updated the form");
+     // Exactly one model call this turn: the main one. No revision, no draft, nothing sent back.
+     expect(model.main.length).toBe(1);
+diff --git a/src/app/api/chat/replay-pack/cases.ts b/src/app/api/chat/replay-pack/cases.ts
+index 70276071..0cbf3ff0 100644
+--- a/src/app/api/chat/replay-pack/cases.ts
++++ b/src/app/api/chat/replay-pack/cases.ts
+@@ -19,7 +19,7 @@ import { expect } from "vitest";
+ 
+ export interface ReplayAnswer {
+   content: string;
+-  formProposal?: { templateKey?: string; employeeName?: string | null; employeeRole?: string | null; status?: string; subject?: string; locationId?: string | null; closeMatchNote?: string; formDate?: string | null };
++  formProposal?: { templateKey?: string; employeeName?: string | null; employeeRole?: string | null; status?: string; subject?: string; locationId?: string | null; closeMatchNote?: string; formDate?: string | null; supportsInlineDraft?: boolean };
+   formUpdate?: { instanceId: string; updated: string[] };
+   formOpened?: { instanceId: string };
+   /** The answer's source cards, as the route returns them. */
+diff --git a/src/app/api/chat/replay-pack/nov10-letter-greeting-any-case-cases.ts b/src/app/api/chat/replay-pack/nov10-letter-greeting-any-case-cases.ts
+new file mode 100644
+index 00000000..91cdd7bb
+--- /dev/null
++++ b/src/app/api/chat/replay-pack/nov10-letter-greeting-any-case-cases.ts
+@@ -0,0 +1,60 @@
++import { expect, vi } from "vitest";
++
++import { STAFF, type DirectoryRow, type ReplayCase, type ReplayContext } from "./cases";
++
++/**
++ * ============================================================================
++ * "DEAR <NAME>, YOUR EMPLOYMENT …" ON ONE LINE: NEVER THE EMPLOYEE "DEAR <NAME>" (QA's live tester, round 11, 9 Nov 2026)
++ * ============================================================================
++ *
++ * The tester's letter, verbatim except the people (invented: Orla Penhallow, the employee; Thessaly Wrenfield, the
++ * signer): turn 1 the letter alone, turn 2 "I need an exit form with this information. " and the same letter, all on
++ * one line, "Your" capitalised after the salutation's comma. With LETTER_GREETING_NOT_NAME on, the salutation was kept
++ * (the letter's next word was read in lower case only), and the card's Name was "Dear Orla Penhallow" — live,
++ * intermittently, as the reading model sometimes read past the salutation; here, with the stand-in models, every time.
++ * LETTER_GREETING_ANY_CASE_ENABLED.
++ */
++const LETTER =
++  "Dear Orla Penhallow, Your employment with Buff City Soap is terminated, effective 11/08/2026, because you did not show up for your scheduled shifts on 11/3, 11/5 and 11/7 and did not call. Please return your store key. Sincerely, Thessaly Wrenfield, District Manager";
++
++const ORLA: DirectoryRow = {
++  id: "e-lg-orla-penhallow",
++  firstName: "Orla",
++  lastName: "Penhallow",
++  preferredFirstName: null,
++  employmentStatus: "active",
++  locationIds: ["loc-264"],
++  positionName: "Team Member Part Time",
++};
++
++/** The invented person of this file (a function: the registry reads exported arrays as cases). */
++export function letterGreetingAnyCasePeople(): readonly DirectoryRow[] {
++  return [ORLA];
++}
++
++const EVERY_STORE = { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] };
++
++async function exitCard(t: ReplayContext) {
++  vi.setSystemTime(new Date("2026-11-09T22:08:00Z"));
++  t.directory([...STAFF, ORLA]);
++  t.as("district_manager", EVERY_STORE);
++  const thread = t.thread();
++  await thread.say(LETTER);
++  const { content } = await thread.say(`I need an exit form with this information. ${LETTER}`);
++  return { thread, content };
++}
++
++export const NOV10_LETTER_GREETING_ANY_CASE_CASES: ReplayCase[] = [
++  {
++    id: "nov10-letter-greeting-your-capitalised",
++    title: "\"Dear <name>, Your employment … \" on one line: the exit card is for Orla Penhallow, never \"Dear Orla Penhallow\"",
++    report: "QA, 10 Nov 2026 (the Bubbles tester's round-11 handoff): a pasted letter's \"Dear <name>\" is intermittently part of the employee name, with LETTER_GREETING_NOT_NAME on",
++    status: { open: "Name: Dear Orla Penhallow; no Job Title; no store" },
++    fixFlags: ["LETTER_GREETING_ANY_CASE_ENABLED"],
++    async run(t) {
++      const { thread, content } = await exitCard(t);
++      expect(content, `the salutation is read as the name:\n${content}`).not.toMatch(/\bDear Orla/);
++      expect(thread.proposal?.employeeName ?? null, `the card is not for Orla Penhallow:\n${content}`).toBe("Orla Penhallow");
++    },
++  },
++];
+diff --git a/src/app/api/chat/replay-pack/nov10-p14a-account-before-request-cases.ts b/src/app/api/chat/replay-pack/nov10-p14a-account-before-request-cases.ts
+new file mode 100644
+index 00000000..99ba80e3
+--- /dev/null
++++ b/src/app/api/chat/replay-pack/nov10-p14a-account-before-request-cases.ts
+@@ -0,0 +1,57 @@
++import { expect } from "vitest";
++
++import { STAFF, WEST_DODGE, type ReplayCase, type ReplayContext } from "./cases";
++
++/**
++ * Pau's P14(a) (QA, 10 Nov 2026; the sibling app's #776 is the same report there): the manager describes the incident
++ * over several turns, then "create a coaching form for <first name>", then "yes" to "Is this for <full name>?" — and the
++ * draft saved "No specific incident … was described": the drafting model was not handed the account. Here an account
++ * in plain statements reaches the draft already (guard); one whose first turn opens with a question ("can you help me
++ * with rowan? she marked …") does not — the card's turns leave out turns that read as questions. The person invented
++ * (on STAFF).
++ */
++const SAID = /marked an order as shipped but the customer hadn't picked up yet/i;
++const REPORT = "Pau's P14(a), 10 Nov 2026: the draft saved \"No specific incident … was described\"";
++
++async function drafted(t: ReplayContext, turns: readonly string[]): Promise<string> {
++  t.directory(STAFF);
++  t.as("location_manager", WEST_DODGE);
++  const thread = t.thread();
++  for (const turn of turns) await thread.say(turn);
++  const asked = await thread.say("create a coaching form for rowan");
++  if (!thread.proposal?.employeeName) await thread.say("yes");
++  expect(thread.proposal, `no Coaching card for Rowan Kestrel:\n${asked.content}`).toMatchObject({ templateKey: "coaching", employeeName: "Rowan Kestrel" });
++  t.draftWrites({});
++  await thread.create();
++  return t.draftPrompts().at(-1) ?? "";
++}
++
++export const NOV10_P14A_ACCOUNT_BEFORE_REQUEST_CASES: ReplayCase[] = [
++  {
++    id: "nov10-p14a-account-over-turns",
++    title: "guard: an account over two turns, then \"create a coaching form for rowan\", then \"yes\": the draft is handed the account",
++    report: REPORT,
++    status: "fixed",
++    async run(t) {
++      const prompt = await drafted(t, [
++        "rowan marked an order as shipped but the customer hadn't picked up yet",
++        "she also didn't tell anyone on the next shift about the order",
++      ]);
++      expect(prompt, "the drafting model was not handed the account").toMatch(SAID);
++    },
++  },
++  {
++    id: "nov10-p14a-account-opens-with-a-question",
++    title: "the account's first turn opens with a question (\"can you help me with rowan? she marked …\"), then the request and \"yes\": the draft is handed the account",
++    report: REPORT,
++    status: { open: "the turn that opens with a question is left out of the card's turns, so the draft is written without the account" },
++    fixFlags: ["ACCOUNT_BEFORE_REQUEST_ENABLED"],
++    async run(t) {
++      const prompt = await drafted(t, [
++        "can you help me with rowan? she marked an order as shipped but the customer hadn't picked up yet",
++        "she also didn't tell anyone on the next shift about the order",
++      ]);
++      expect(prompt, "the drafting model was not handed the account").toMatch(SAID);
++    },
++  },
++];
+diff --git a/src/app/api/chat/replay-pack/nov10-p17-exit-typo-words-cases.ts b/src/app/api/chat/replay-pack/nov10-p17-exit-typo-words-cases.ts
+new file mode 100644
+index 00000000..6ad2de21
+--- /dev/null
++++ b/src/app/api/chat/replay-pack/nov10-p17-exit-typo-words-cases.ts
+@@ -0,0 +1,76 @@
++import { expect, vi } from "vitest";
++
++import { STAFF, WEST_DODGE, type DirectoryRow, type ReplayCase } from "./cases";
++
++/**
++ * Pau's P17 (the sibling app's production, 10 Nov 2026; coding 6's triage; checked here): an exit form whose details said "store items will be
++ * returneded … they are eligiable for rehire" listed Store Items Returned and Eligible for Rehire under "Left blank";
++ * payroll "not deducted" was read. The manager's words for those answers verbatim; the person invented.
++ */
++const MARISOL: DirectoryRow = {
++  id: "e-marisol-quenby",
++  firstName: "Marisol",
++  lastName: "Quenby",
++  preferredFirstName: null,
++  employmentStatus: "active",
++  locationIds: ["loc-264"],
++  positionName: "Team Member Part Time",
++};
++
++/** QA's R713 sentence is about "he"; an invented person. */
++const DORIAN: DirectoryRow = {
++  id: "e-dorian-vallow",
++  firstName: "Dorian",
++  lastName: "Vallow",
++  preferredFirstName: null,
++  employmentStatus: "active",
++  locationIds: ["loc-264"],
++  positionName: "Team Member Part Time",
++};
++
++/** A function, not an array: the registry reads exported arrays as cases. */
++export function p17ExitPeople(): readonly DirectoryRow[] {
++  return [MARISOL, DORIAN];
++}
++
++const LEFT_BLANK = (content: string) => /\*\*Left blank[^:]*:\*\*\s*([^\n]+)/i.exec(content)?.[1] ?? "";
++
++export const NOV10_P17_EXIT_TYPO_WORDS_CASES: ReplayCase[] = [
++  {
++    id: "nov10-p17-exit-items-and-rehire-misspelled",
++    title: "an exit form, \"store items will be returneded … they are eligiable for rehire\": Store Items Returned and Eligible for Rehire are read, never left blank",
++    report: "Pau's P17, the sibling app's production, 10 Nov 2026",
++    status: { open: "Store Items Returned and Eligible for Rehire are listed under \"Left blank\"" },
++    fixFlags: ["EXIT_TYPO_WORDS_ENABLED"],
++    async run(t) {
++      vi.setSystemTime(new Date("2026-11-10T15:00:00Z"));
++      t.directory([...STAFF, MARISOL]);
++      t.as("location_manager", WEST_DODGE);
++      const thread = t.thread();
++      await thread.say("I need an exit form for Marisol Quenby");
++      const reply = await thread.say(
++        "she quit by text on 11/8/26, store items will be returneded and they are eligiable for rehire. payroll not deducted",
++      );
++      expect(thread.proposal, `no exit card for Marisol Quenby:\n${reply.content}`).toMatchObject({ employeeName: "Marisol Quenby" });
++      expect(LEFT_BLANK(reply.content), `the answers she gave are left blank:\n${reply.content}`).not.toMatch(/items returned|rehire/i);
++    },
++  },
++  {
++    id: "nov11-r713-not-required-back",
++    title: "an exit form, \"he is not required back\": never read as \"not rehired\" (Eligible for Rehire stays blank)",
++    report: "QA, R713 (Gate-Bubbles, 11 Nov 2026): \"he is not required back\" gave eligible_for_rehire: no with EXIT_TYPO_WORDS on",
++    status: "fixed",
++    fixFlags: ["EXIT_TYPO_WORDS_ENABLED"],
++    async run(t) {
++      vi.setSystemTime(new Date("2026-11-11T15:00:00Z"));
++      t.directory([...STAFF, DORIAN]);
++      t.as("location_manager", WEST_DODGE);
++      const thread = t.thread();
++      await thread.say("I need an exit form for Dorian Vallow");
++      const reply = await thread.say("he quit on 11/8/26. he is not required back. payroll not deducted");
++      expect(thread.proposal, `no exit card for Dorian Vallow:\n${reply.content}`).toMatchObject({ employeeName: "Dorian Vallow" });
++      expect(reply.content, `"not required back" was read as "not rehired":\n${reply.content}`).not.toMatch(/not eligible for rehire/i);
++      expect(LEFT_BLANK(reply.content), `Eligible for Rehire is filled:\n${reply.content}`).toMatch(/Eligible for Rehire/);
++    },
++  },
++];
+diff --git a/src/app/api/chat/replay-pack/nov11-company-metric-words-not-names-cases.ts b/src/app/api/chat/replay-pack/nov11-company-metric-words-not-names-cases.ts
+new file mode 100644
+index 00000000..39e1b571
+--- /dev/null
++++ b/src/app/api/chat/replay-pack/nov11-company-metric-words-not-names-cases.ts
+@@ -0,0 +1,46 @@
++import { expect, vi } from "vitest";
++
++import { STAFF, WEST_DODGE, type ReplayCase, type ReplayContext } from "./cases";
++
++/**
++ * QA, 11 Nov 2026 (Coding-5's BCS-metrics probe): a sales Corrective Action written in Buff City Soap's own KPI words
++ * (the Domo KPI deck: IPT, AOV, Comp Sales %, Discount Rate) lost its Issue. The name reader took "Comp Sales" and
++ * "Discount Rate" for a person, and the next turn's card was drawn from that turn alone ("no payroll deduct"). The
++ * account turns word for word; the employee is invented (on the replay roster).
++ */
++const FIX = ["COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED"];
++const REPORT = "QA, 11 Nov 2026: a sales CA in Buff City Soap's KPI words has no Issue";
++
++/** The card's Issue, without the summary items after it. */
++function issue(content: string): string {
++  const line = content.split("\n").find((text) => /\*\*Issue:\*\*/.test(text)) ?? "";
++  return line.replace(/^.*?\*\*Issue:\*\*\s*/, "").split(" · ")[0] ?? "";
++}
++
++async function chat(t: ReplayContext, account: string): Promise<string> {
++  vi.setSystemTime(new Date("2026-11-11T15:00:00Z"));
++  t.directory(STAFF);
++  t.as("location_manager", WEST_DODGE);
++  const thread = t.thread();
++  let content = "";
++  for (const turn of ["Can you make a written CA for remy calder", account, "no payroll deduct"]) content = (await thread.say(turn)).content;
++  expect(thread.proposal, `no Corrective Action card for Remy Calder:\n${content}`).toMatchObject({ templateKey: "dpoa", employeeName: "Remy Calder" });
++  return content;
++}
++
++const CASES: [id: string, account: string, kept: RegExp][] = [
++  ["nov11-bcs-metrics-comp-sales", "She was below goal in IPT, AOV and Comp Sales % for October", /IPT, AOV and Comp Sales %/],
++  ["nov11-bcs-metrics-discount-rate", "She had 40 transactions and was below in IPT, AOV, and Discount Rate", /40 transactions .* Discount Rate/],
++];
++
++export const NOV11_COMPANY_METRIC_WORDS_NOT_NAMES_CASES: ReplayCase[] = CASES.map(([id, account, kept]) => ({
++  id,
++  title: `"${account}" on a sales CA: the Issue keeps the account`,
++  report: REPORT,
++  status: { open: "the card has no Issue: the account is lost on the next turn" },
++  fixFlags: FIX,
++  async run(t) {
++    const content = await chat(t, account);
++    expect(issue(content), `the account is lost:\n${content}`).toMatch(kept);
++  },
++}));
+diff --git a/src/app/api/chat/replay-pack/nov11-live-no-name-cases.ts b/src/app/api/chat/replay-pack/nov11-live-no-name-cases.ts
+new file mode 100644
+index 00000000..e5ee08e2
+--- /dev/null
++++ b/src/app/api/chat/replay-pack/nov11-live-no-name-cases.ts
+@@ -0,0 +1,48 @@
++import { expect } from "vitest";
++
++import { STAFF, WEST_DODGE, type ReplayCase } from "./cases";
++
++/**
++ * ============================================================================
++ * A REPLY WITH NO NAME ON THE CARD READS CLEANLY (NO_NAME_REPLY_WORDING_ENABLED)
++ * ============================================================================
++ *
++ * Port from the sibling app (its round 22 live test, QA, 11 Nov 2026): "create a CA for ima employee" rightly made no card, but
++ * the reply said "for the the employee" and "You can create it now" with no Create button.
++ *
++ * Bubbles 16c live (QA, main ffa571ea, 11 Nov 2026), the tester's words "create a CA for ima employee": no card, but the
++ * reply still read "ima" as a name — "Action plan: … with Ima", "I couldn't verify a store for ima from Woven" — and the
++ * empty-employee card still offered "Create draft" (`supportsInlineDraft`). The slot model reads the employee as "ima
++ * employee", as live. With the flag, no name-derived words and no Create button while the card has no employee.
++ */
++const EVERY_STORE = { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] };
++const IMA = "create a CA for ima employee";
++const REPORT = "Bubbles 16c live test (QA, 11 Nov 2026, main ffa571ea); the sibling app's round 22 live test";
++
++export const NOV11_LIVE_NO_NAME_CASES: ReplayCase[] = (
++  [
++    ["every-store", "admin", EVERY_STORE],
++    ["store-manager", "location_manager", WEST_DODGE],
++  ] as const
++).map(
++  ([id, role, scope]): ReplayCase => ({
++    id: `nov11-live-ima-employee-no-name-words-${id}`,
++    title: `"${IMA}" (${id}): no card, no "Ima" in the plan or a store note, no Create button, never "the the employee"`,
++    report: REPORT,
++    status: { open: "\"… with Ima\" in the Action plan, the store note for **ima** (every store), and a Create button on an empty card" },
++    fixFlags: ["NO_NAME_REPLY_WORDING_ENABLED"],
++    async run(t) {
++      t.directory(STAFF);
++      t.as(role as never, scope as never);
++      t.slotsRead({ employee: "ima employee", formType: "Corrective Action Form", formTurn: true });
++      const thread = t.thread();
++      const reply = await thread.say(IMA);
++      expect(thread.proposal?.employeeName ?? null, "no card for the words").toBeNull();
++      expect(thread.proposal?.supportsInlineDraft ?? false, "no Create button on an empty card").toBe(false);
++      expect(reply.content, reply.content).not.toMatch(/\bIma\b|\*\*ima\*\*/);
++      expect(reply.content, reply.content).not.toMatch(/\bthe the\b/i);
++      expect(reply.content, reply.content).not.toMatch(/You can create it now/);
++      expect(reply.content, reply.content).toMatch(/Who is this form for\?/);
++    },
++  }),
++);
+diff --git a/src/app/api/chat/replay-pack/nov6-name-across-newline-cases.ts b/src/app/api/chat/replay-pack/nov6-name-across-newline-cases.ts
+new file mode 100644
+index 00000000..d0d56a25
+--- /dev/null
++++ b/src/app/api/chat/replay-pack/nov6-name-across-newline-cases.ts
+@@ -0,0 +1,38 @@
++import { expect } from "vitest";
++
++import { STAFF, WEST_DODGE, type ReplayCase } from "./cases";
++
++/**
++ * ============================================================================
++ * A NAME ENDS AT ITS LINE (tracked, OPEN; found in the sibling app porting this app's
++ * flip-3 gate fix, QA, 6 Nov 2026)
++ * ============================================================================
++ *
++ * An exit form typed as lines, the name alone on the first: "<name>\nGave
++ * notice - fulfilled notice\n…". The name reader runs across the newline and
++ * reads "<name> Gave", so the card and the reply name "Thessaly Varrow Gave".
++ * With a title line between them the name is read correctly. QA (6 Nov 2026):
++ * tracked with this case. Holds with production's flags on main 6ce4ba95+
++ * (checked 12 Nov 2026, QA's recovery item 4): later name-reading fixes cover
++ * it. Kept as a guard. The name is invented and on no directory.
++ */
++export const NOV6_NAME_ACROSS_NEWLINE_CASES: ReplayCase[] = [
++  {
++    id: "nov6-name-across-newline-exit-lines",
++    title: "an exit form typed as lines, \"Thessaly Varrow\\nGave notice - …\": the name is never read across the newline as \"Thessaly Varrow Gave\"",
++    report: "Found 6 Nov 2026 in the sibling app, checked here: the exit card read \"Thessaly Varrow Gave\"",
++    // Holds with production's flags (12 Nov 2026): a guard, not a fix of its own.
++    status: "fixed",
++    async run(t) {
++      t.directory(STAFF);
++      t.as("location_manager", WEST_DODGE);
++      const thread = t.thread();
++      await thread.say("Can you create an exit form for me?");
++      const reply = await thread.say(
++        "Thessaly Varrow\nGave notice - fulfilled notice\nGave notice 9/25/26 - date notice fulfilled 10/9/26\nResigning to pursue other career options\neligible for rehire",
++      );
++      expect(reply.content, `the name is read across the newline:\n${reply.content}`).not.toMatch(/Thessaly Varrow Gave/);
++      expect(thread.proposal?.employeeName ?? "", "the card's name runs across the newline").not.toMatch(/Gave/);
++    },
++  },
++];
+diff --git a/src/app/api/chat/replay-pack/production-fixes.ts b/src/app/api/chat/replay-pack/production-fixes.ts
+index 1aa6350b..72c01db7 100644
+--- a/src/app/api/chat/replay-pack/production-fixes.ts
++++ b/src/app/api/chat/replay-pack/production-fixes.ts
+@@ -516,4 +516,18 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
+   "nov11-p19-group-words-not-a-name-as-typed": "GROUP_WORDS_NOT_A_NAME",
+   // fixed in production by GROUP_WORDS_NOT_A_NAME, QA round 17i, 11 Nov 2026
+   "nov11-p19-group-words-not-a-name-lower": "GROUP_WORDS_NOT_A_NAME",
++  // fixed in production by EXIT_TYPO_WORDS, QA round 17j, 12 Nov 2026
++  "nov10-p17-exit-items-and-rehire-misspelled": "EXIT_TYPO_WORDS",
++  // fixed in production by NO_NAME_REPLY_WORDING, QA round 17j, 12 Nov 2026
++  "nov11-live-ima-employee-no-name-words-every-store": "NO_NAME_REPLY_WORDING",
++  // fixed in production by NO_NAME_REPLY_WORDING, QA round 17j, 12 Nov 2026
++  "nov11-live-ima-employee-no-name-words-store-manager": "NO_NAME_REPLY_WORDING",
++  // fixed in production by LETTER_GREETING_ANY_CASE, QA round 17k, 12 Nov 2026
++  "nov10-letter-greeting-your-capitalised": "LETTER_GREETING_ANY_CASE",
++  // fixed in production by COMPANY_METRIC_WORDS_NOT_NAMES, QA round 17k, 12 Nov 2026
++  "nov11-bcs-metrics-comp-sales": "COMPANY_METRIC_WORDS_NOT_NAMES",
++  // fixed in production by COMPANY_METRIC_WORDS_NOT_NAMES, QA round 17k, 12 Nov 2026
++  "nov11-bcs-metrics-discount-rate": "COMPANY_METRIC_WORDS_NOT_NAMES",
++  // fixed in production by ACCOUNT_BEFORE_REQUEST, QA round 17k, 12 Nov 2026
++  "nov10-p14a-account-opens-with-a-question": "ACCOUNT_BEFORE_REQUEST",
+ };
+diff --git a/src/app/api/chat/route.ts b/src/app/api/chat/route.ts
+index 7881febf..867e940d 100644
+--- a/src/app/api/chat/route.ts
++++ b/src/app/api/chat/route.ts
+@@ -88,6 +88,7 @@ import {
+   nearMissQuestionRulesEnabled,
+   formNameOffRosterAskEnabled,
+   reopenByAnyOpenVerbEnabled,
++  accountBeforeRequestEnabled,
+ } from "@/lib/config/chat-quality-flags";
+ import { streamWhenSlow } from "@/lib/api/streamed-response";
+ import { finalReplyWithoutMarkers } from "@/lib/ai/source-note";
+@@ -1053,6 +1054,13 @@ async function postChat(request: Request) {
+       }
+       // LEAD_FULL_SENTENCE_ENABLED: a reply never ends at "I can prepare:" (`lib/forms/lead-full-sentence.ts`).
+       if (leadFullSentenceEnabled()) answer = (await import("@/lib/forms/lead-full-sentence")).withLeadFullSentence(answer);
++      // ACCOUNT_BEFORE_REQUEST_ENABLED: the account given before the request is handed to the draft (`lib/forms/account-before-request.ts`).
++      if (accountBeforeRequestEnabled() && answer.formProposal) {
++        answer = (await import("@/lib/forms/account-before-request")).withAccountBeforeRequest(answer, [
++          ...parsed.history,
++          { id: parsed.questionMessageId, role: "user", content: asked.question },
++        ]);
++      }
+       // OFF_ROSTER_ASK_BEFORE_CARD_ENABLED: a store manager's card for a full name not on their roster is asked about once, before the card (`lib/forms/off-roster-ask.ts`).
+       if (offRosterAskBeforeCardEnabled()) {
+         answer = (await import("@/lib/forms/off-roster-ask")).withOffRosterAskBeforeCard(answer, { scope: context.identity.scope, history: parsed.history, question: asked.question });
+diff --git a/src/config/company/metric-words.ts b/src/config/company/metric-words.ts
+new file mode 100644
+index 00000000..01def4d5
+--- /dev/null
++++ b/src/config/company/metric-words.ts
+@@ -0,0 +1,34 @@
++/**
++ * ============================================================================
++ * THE COMPANY'S OWN SALES METRICS (COMPANY CONFIGURATION)
++ * ============================================================================
++ *
++ * COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED (QA, 11 Nov 2026). A capitalised
++ * phrase made only of these words, with measure words ("avg", "rate") and
++ * percent signs, is a metric, never a person: "She was below goal in IPT, AOV
++ * and Comp Sales % for October" named nobody, but "Comp Sales" was read as a
++ * person and the Corrective Action lost its Issue.
++ *
++ * Buff City Soap's KPIs, as its Domo reporting deck names them (Daily and
++ * Weekly FZ Operations Sales KPI dashboards): Net Sales, Comp Sales % (SSSG),
++ * Items per Transaction (IPT), Average Order Value (AOV), Discount Rate %,
++ * Product Mix and Laundry % of sales, and AUV cohorts.
++ *
++ * Somebody on the manager's roster is always a person, whatever this list
++ * says (`forms/person-guard.ts`): "Delphine Sales" is still Delphine Sales.
++ * The sibling app keeps its own words in its own configuration.
++ */
++export const COMPANY_METRIC_PHRASES: readonly string[] = [
++  "IPT",
++  "AOV",
++  "Comp",
++  "Comp Sales",
++  "SSSG",
++  "Net Sales",
++  "Discount Rate",
++  "Product Mix",
++  "Laundry %",
++  "AUV",
++  "items per transaction",
++  "average order value",
++];
+diff --git a/src/config/production-flags.json b/src/config/production-flags.json
+index fa31a540..7f626442 100644
+--- a/src/config/production-flags.json
++++ b/src/config/production-flags.json
+@@ -1,6 +1,6 @@
+ {
+-  "_about": "This app's PRODUCTION chat flags, for the replay pack (src/app/api/chat/replay-pack). 'on': read as on in Vercel production. 'assumedOn': encrypted or not visible to the Vercel reader (it lists 100 of 181 entries), taken as on from QA's 26 Oct decrypted reading and the replays that match production. 'off': known off. QA messages every flag flipped; update this file in the same pull request as the change it tests. Only *_ENABLED chat flags; integrations (Woven, Google reviews) are left out. 5 Nov 2026 (QA; Pau's Vercel Agent read, 179 *_ENABLED rows, 49/49 plain values cross-checked against QA's API read): corrected to production — 5 assumedOn are OFF (CONVERSATION_DRAFT_REUSE, DRAFT_ACTIONS, GROUNDED_ENTITIES, PROMPT_CACHE, REMAP_DRAFT_SOURCES), 2 'off' are ON (ANSWER_NOT_A_NAME, STORE_WORD_NOT_A_NAME), 48 ON flags were missing; the explicit OFF values are listed in 'off'. SELF_CHECK_ENABLED is unset in Vercel (= off) and stays in 'off'. WOVEN_SYNC_WRITES is left out (sensitive). Why the (a) flags are off (Vercel comments, QA's read-only reader): GROUNDED_ENTITIES was set back to 0 on 24 Oct ~9:38 PM Manila, a deliberate rollback (it dropped non-roster names while ANTI_LOOP was off); CONVERSATION_DRAFT_REUSE and DRAFT_ACTIONS were rolled back 25 Oct (B18/B19: they reopened or overwrote another chat's draft); PROMPT_CACHE was off 25 Oct (no speed gain); SLOT_RETENTION was rolled back 24 Oct (Job Title bug). 5 Nov 2026, the smaller flip (QA; read from Vercel at 06:52 PHT): CA_SALES_POLICY_ENABLED, REPLY_MATCHES_CARD_ENABLED, TITLE_OF_THE_EMPLOYEE_ENABLED and METRIC_GUARD_ENABLED are ON; the name flags (FORM_NAME_FROM_ROSTER, ROSTER_NEAR_MISS, ROSTER_NAME_IN_CANDIDATE, ROSTER_COMPOUND_SURNAME, ROSTER_NOT_FOUND_ANY_PHRASING) stay off. 6 Nov 2026, flip 3 (QA; on a clean gate rerun 4 on 87c08239, docs/flag-classification/FLIP3D.md): FORM_NAME_FROM_ROSTER, ROSTER_NEAR_MISS, ROSTER_NAME_IN_CANDIDATE, ROSTER_COMPOUND_SURNAME, ROSTER_NOT_FOUND_ANY_PHRASING, POLICY_CHANGE_RELEVANT, EXIT_STATED_ONLY, CA_OFFER_KEEPS_ACCOUNT, REPLY_MATCHES_CARD_EACH_CARD and OFF_ROSTER_CONFIRM are ON; FORM_NAME_FROM_ROSTER ships only with OFF_ROSTER_CONFIRM. 7 Nov 2026, 04:13 PHT (QA): FORM_NAME_FROM_ROSTER is OFF again in production (the flip-3 tester's B1: a job title read as a name, and \"name is <name>\" looped on \"Who is this form for?\"); the other 9 flip-3 flags stay on. It comes back on after a gate with it added to production and a live tester re-run. 7 Nov 2026 08:58 PHT (QA): AS_YOU_SAID_MANAGER_WORDS ON after a clean gate on 30bb67db; off 09:03–09:09 for a false alarm; tester 4/4 at 09:10. 7 Nov 2026 20:50 PHT (QA): flip 6, 18 flags ON after gate FLIP5D clean on 4d42c342 and live tester. 8 Nov 2026 00:05 PHT (QA): flip 8, DENIAL_NO_ACCOUNT, REMOVE_POLICY_NOT_NAMED, SOURCE_NOTE_GUARD and EDIT_MAKE_IT_ABOUT ON. CA_REQUEST_NOT_PRIOR_COACHING was on briefly and rolled back to 0 at 00:22 (s35 \"draw me up a CA\" gave no card); it is not listed as on. Round 4 (8 Nov 2026, 11:32 PHT): QA switched on CARD_POLICY_OWN_REQUEST, EDIT_POLICY_ASK, OWN_BRAND_PARENT, PRIOR_COACHING_DENIAL, REQUEST_LEVEL_NOT_HISTORY, WRITE_ME_THE_FORM, SAME_FORM_COPY_NEW_PERSON, PAYROLL_AMOUNT_SAME_MESSAGE, PRIOR_ACTIONS_NO_SIGNED, WOVEN_TRAINING_CONDUCT, CA_REQUEST_NOT_PRIOR_COACHING (was 0), STALE_PROMPT_LINES_OFF, DESCRIBED_ATTENDANCE_CARD and PAST_FORMS_BEFORE_LIBRARY (deploy dpl_HUZosyd1, main e7a7ba9c). POLICY_CITATION stays off until the card-policy name fix is ported. Round 6 (9 Nov 2026): QA switched on ACCOUNT_PLACE_LEAD, CARRIED_PERSON_NOTICE, CA_PERFORMANCE_REASON, COMPLAINT_ACCOUNT, COPY_OPEN_FORM_FOR_PERSON, CORRECTED_DATE_KEPT, EXIT_OTHER_PERSON_NOT_SUBJECT, EXIT_TERMINATION_STATED, FIELD_LABEL_NOT_A_QUESTION, KEPT_REQUEST_SAME_FORM, MISSED_SHIFT_NOT_LATENESS, POLICY_CORRECTION_NOT_ACCOUNT, POLICY_SET_ASIDE_PLAN, POLITE_ABOUT_STAYS_CARD, POSSESSIVE_NO_APOSTROPHE, PROPOSAL_NAME_CORRECTION, REQUEST_FROM_NAMES_EMPLOYEE, REQUEST_KEPT_IN_WINDOW, REQUEST_PARTICIPLE_LEAD, REVISION_EDIT_NEEDS_EDIT, SALES_OBSERVATION_ACCOUNT, SALES_SHORTFALL_OBJECT, STEP_B_DATE_WITH_ABOUT, STEP_B_MAKE_IT_ABOUT_ACCOUNT, UNDATED_ACCOUNT_BRIEF, UNKNOWN_NAME_ASK_WHO_FOR (and the NEXT_PUBLIC_ pairs of REQUEST_KEPT_IN_WINDOW, KEPT_REQUEST_SAME_FORM, REVISION_EDIT_NEEDS_EDIT). EXIT_ANSWER_NOT_A_CORRECTION, SECOND_REQUEST_OWN_ACCOUNT and NEAR_MISS_QUESTION_RULES stay off. Round 6 re-flip (9 Nov 2026, QA): FIELD_LABEL_NOT_A_QUESTION is OFF again in production. On a six-turn exit chat whose first turn says \"no notice given\", turn 5 (\"resignation date … how employee resigned - …\") filled \"Date that notice was given\" and added a stray \"You also asked …\" line; round 5 left both out. The other 28 round-6 switches stay on. Round 7 (9 Nov 2026, QA): EXIT_LETTER_SIGNER_NOT_SUBJECT, FIRST_NAME_ANSWER_KEEPS_ACCOUNT, POSSESSIVE_PLACE_NOT_PERSON, SHIFT_ACCOUNT_IS_INCIDENT, WORK_AREA_ABSENCE_CITES_CONDUCT, EXIT_ANSWER_NOT_A_CORRECTION, FIELD_LABEL_NOT_A_QUESTION ON. OFF_ROSTER_ASK_BEFORE_CARD and SECOND_REQUEST_OWN_ACCOUNT stay off (the first is pending Pau; the second broke Sunny live). Round 8 (9 Nov 2026, QA): EXIT_LETTER_ADDRESSEE, EXIT_LINE_ANSWERS_ADD_UP, MISSED_SHIFT_CITES_ATTENDANCE, POSSESSIVE_PLACE_ACCOUNT ON. Round 9 (9 Nov 2026, QA): MADE_ABOUT_ALL_OR_NOTHING ON. Off-roster ask (9 Nov 2026; Pau: \"on\", ~13:10Z, via QA): OFF_ROSTER_ASK_BEFORE_CARD is ON (OFF_ROSTER_CONFIRM already was). Round 11 (9 Nov 2026, QA): LETTER_GREETING_NOT_NAME, MADE_ABOUT_READER_ACCOUNT ON. Round 12 (9 Nov 2026, QA): EXIT_FORM_DATE_FROM_TERMINATION ON. Round 13 (10 Nov 2026, QA): MADE_ABOUT_REWRITE_FINISHES ON. Round 14 (10 Nov 2026, QA): POLICY_TOPIC_INTO_FIELD ON. Round 15 (10 Nov 2026, QA): MADE_ABOUT_TOPIC_EVIDENCE, FORM_DATE_SAID_ALONE ON. Round 15 re-release (10 Nov 2026, QA): MADE_ABOUT_SAID_DATE, ADD_NOT_REPEATED ON (MADE_ABOUT_TOPIC_EVIDENCE and FORM_DATE_SAID_ALONE stay as in round 15); SECTION_BREAKS_KEPT stays off. Round 15 re-release 2 (10 Nov 2026, QA): SECTION_BREAKS_KEPT ON (the 'Also observed:' split is fixed); #679 policy wording. Round 16b (10 Nov 2026, QA): ACCOUNT_WIPE_GUARD, CREATE_FROM_CONVERSATION_POINTS_TO_CARD, CARD_NAMES_EMPLOYEE, SAME_REQUEST_OTHER_PERSON, CHAT_STAGE_TIMINGS. ONE_FORM_EACH_PERSON and COACHING_ASKS_WHAT_HAPPENED stay off (they ship together). Round 17b (10 Nov 2026, QA): DRAFT_WRITE_NEVER_SILENT, CA_REASON_DUE_TO, FAILURE_TO_OPEN_IS_LATE_OPENING, PAYROLL_BARE_SENTENCE. Round 17c (11 Nov 2026, QA): EXCERPT_BRAND_FILTER ON (source excerpts drop the sibling brand's lines; gate EBF, 0 changed rows). Round 17d (11 Nov 2026, QA): REQUEST_ISSUE_KEPT + LATE_OPENING_OWN_WORDS + FIRST_NAME_ENOUGH + NO_SHOW_OPENING_IS_ATTENDANCE ON (#742 + #746; Gate-Bubbles-2 3+3, 0 regressions). Round 17e (11 Nov 2026, QA): Woven sync INGEST_FAILURE_KEEPS_LAST_GOOD + WOVEN_OCR_PAGE_BATCHES + WOVEN_TEXT_NUL_STRIP + WOVEN_FAILED_RETRY ON (#736 + #749; Gate-Bubbles-2 3+3, chat replay byte-identical). Round 17f (11 Nov 2026, QA): EXCERPT_BRAND_HEADING_DROP ON (#764: no source card labelled with the sibling brand or with an empty/heading-only excerpt; the leading \": \" trimmed; Gate-Bubbles-2 GO, 2 intended rows). Round 16c (10 Nov 2026, QA): the roster-name set (#665): FORM_NAME_FROM_ROSTER, FORM_NAME_OFF_ROSTER_ASK, NEAR_MISS_DETAILS_ACCEPT, NEAR_MISS_QUESTION_RULES. Round 17i (11 Nov 2026, QA): COPY_PASTE_CLAIM_HONEST + DATE_ONCE + ADDRESS_ASKS_WHO + LEAD_FULL_SENTENCE + NAME_LINE_COMMA ON (#688, Gate-Bubbles-2 3+3 GO, 0 regressions); TEMPLATE_OUTLINE_FIELDS + PASTED_OUTLINE_TO_OPEN_DRAFT + PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT ON (#765, gate GO); GROUP_WORDS_NOT_A_NAME ON (#770, Problem 19, gate GO).",
+-  "updated": "2026-11-11",
++  "_about": "This app's PRODUCTION chat flags, for the replay pack (src/app/api/chat/replay-pack). 'on': read as on in Vercel production. 'assumedOn': encrypted or not visible to the Vercel reader (it lists 100 of 181 entries), taken as on from QA's 26 Oct decrypted reading and the replays that match production. 'off': known off. QA messages every flag flipped; update this file in the same pull request as the change it tests. Only *_ENABLED chat flags; integrations (Woven, Google reviews) are left out. 5 Nov 2026 (QA; Pau's Vercel Agent read, 179 *_ENABLED rows, 49/49 plain values cross-checked against QA's API read): corrected to production — 5 assumedOn are OFF (CONVERSATION_DRAFT_REUSE, DRAFT_ACTIONS, GROUNDED_ENTITIES, PROMPT_CACHE, REMAP_DRAFT_SOURCES), 2 'off' are ON (ANSWER_NOT_A_NAME, STORE_WORD_NOT_A_NAME), 48 ON flags were missing; the explicit OFF values are listed in 'off'. SELF_CHECK_ENABLED is unset in Vercel (= off) and stays in 'off'. WOVEN_SYNC_WRITES is left out (sensitive). Why the (a) flags are off (Vercel comments, QA's read-only reader): GROUNDED_ENTITIES was set back to 0 on 24 Oct ~9:38 PM Manila, a deliberate rollback (it dropped non-roster names while ANTI_LOOP was off); CONVERSATION_DRAFT_REUSE and DRAFT_ACTIONS were rolled back 25 Oct (B18/B19: they reopened or overwrote another chat's draft); PROMPT_CACHE was off 25 Oct (no speed gain); SLOT_RETENTION was rolled back 24 Oct (Job Title bug). 5 Nov 2026, the smaller flip (QA; read from Vercel at 06:52 PHT): CA_SALES_POLICY_ENABLED, REPLY_MATCHES_CARD_ENABLED, TITLE_OF_THE_EMPLOYEE_ENABLED and METRIC_GUARD_ENABLED are ON; the name flags (FORM_NAME_FROM_ROSTER, ROSTER_NEAR_MISS, ROSTER_NAME_IN_CANDIDATE, ROSTER_COMPOUND_SURNAME, ROSTER_NOT_FOUND_ANY_PHRASING) stay off. 6 Nov 2026, flip 3 (QA; on a clean gate rerun 4 on 87c08239, docs/flag-classification/FLIP3D.md): FORM_NAME_FROM_ROSTER, ROSTER_NEAR_MISS, ROSTER_NAME_IN_CANDIDATE, ROSTER_COMPOUND_SURNAME, ROSTER_NOT_FOUND_ANY_PHRASING, POLICY_CHANGE_RELEVANT, EXIT_STATED_ONLY, CA_OFFER_KEEPS_ACCOUNT, REPLY_MATCHES_CARD_EACH_CARD and OFF_ROSTER_CONFIRM are ON; FORM_NAME_FROM_ROSTER ships only with OFF_ROSTER_CONFIRM. 7 Nov 2026, 04:13 PHT (QA): FORM_NAME_FROM_ROSTER is OFF again in production (the flip-3 tester's B1: a job title read as a name, and \"name is <name>\" looped on \"Who is this form for?\"); the other 9 flip-3 flags stay on. It comes back on after a gate with it added to production and a live tester re-run. 7 Nov 2026 08:58 PHT (QA): AS_YOU_SAID_MANAGER_WORDS ON after a clean gate on 30bb67db; off 09:03–09:09 for a false alarm; tester 4/4 at 09:10. 7 Nov 2026 20:50 PHT (QA): flip 6, 18 flags ON after gate FLIP5D clean on 4d42c342 and live tester. 8 Nov 2026 00:05 PHT (QA): flip 8, DENIAL_NO_ACCOUNT, REMOVE_POLICY_NOT_NAMED, SOURCE_NOTE_GUARD and EDIT_MAKE_IT_ABOUT ON. CA_REQUEST_NOT_PRIOR_COACHING was on briefly and rolled back to 0 at 00:22 (s35 \"draw me up a CA\" gave no card); it is not listed as on. Round 4 (8 Nov 2026, 11:32 PHT): QA switched on CARD_POLICY_OWN_REQUEST, EDIT_POLICY_ASK, OWN_BRAND_PARENT, PRIOR_COACHING_DENIAL, REQUEST_LEVEL_NOT_HISTORY, WRITE_ME_THE_FORM, SAME_FORM_COPY_NEW_PERSON, PAYROLL_AMOUNT_SAME_MESSAGE, PRIOR_ACTIONS_NO_SIGNED, WOVEN_TRAINING_CONDUCT, CA_REQUEST_NOT_PRIOR_COACHING (was 0), STALE_PROMPT_LINES_OFF, DESCRIBED_ATTENDANCE_CARD and PAST_FORMS_BEFORE_LIBRARY (deploy dpl_HUZosyd1, main e7a7ba9c). POLICY_CITATION stays off until the card-policy name fix is ported. Round 6 (9 Nov 2026): QA switched on ACCOUNT_PLACE_LEAD, CARRIED_PERSON_NOTICE, CA_PERFORMANCE_REASON, COMPLAINT_ACCOUNT, COPY_OPEN_FORM_FOR_PERSON, CORRECTED_DATE_KEPT, EXIT_OTHER_PERSON_NOT_SUBJECT, EXIT_TERMINATION_STATED, FIELD_LABEL_NOT_A_QUESTION, KEPT_REQUEST_SAME_FORM, MISSED_SHIFT_NOT_LATENESS, POLICY_CORRECTION_NOT_ACCOUNT, POLICY_SET_ASIDE_PLAN, POLITE_ABOUT_STAYS_CARD, POSSESSIVE_NO_APOSTROPHE, PROPOSAL_NAME_CORRECTION, REQUEST_FROM_NAMES_EMPLOYEE, REQUEST_KEPT_IN_WINDOW, REQUEST_PARTICIPLE_LEAD, REVISION_EDIT_NEEDS_EDIT, SALES_OBSERVATION_ACCOUNT, SALES_SHORTFALL_OBJECT, STEP_B_DATE_WITH_ABOUT, STEP_B_MAKE_IT_ABOUT_ACCOUNT, UNDATED_ACCOUNT_BRIEF, UNKNOWN_NAME_ASK_WHO_FOR (and the NEXT_PUBLIC_ pairs of REQUEST_KEPT_IN_WINDOW, KEPT_REQUEST_SAME_FORM, REVISION_EDIT_NEEDS_EDIT). EXIT_ANSWER_NOT_A_CORRECTION, SECOND_REQUEST_OWN_ACCOUNT and NEAR_MISS_QUESTION_RULES stay off. Round 6 re-flip (9 Nov 2026, QA): FIELD_LABEL_NOT_A_QUESTION is OFF again in production. On a six-turn exit chat whose first turn says \"no notice given\", turn 5 (\"resignation date … how employee resigned - …\") filled \"Date that notice was given\" and added a stray \"You also asked …\" line; round 5 left both out. The other 28 round-6 switches stay on. Round 7 (9 Nov 2026, QA): EXIT_LETTER_SIGNER_NOT_SUBJECT, FIRST_NAME_ANSWER_KEEPS_ACCOUNT, POSSESSIVE_PLACE_NOT_PERSON, SHIFT_ACCOUNT_IS_INCIDENT, WORK_AREA_ABSENCE_CITES_CONDUCT, EXIT_ANSWER_NOT_A_CORRECTION, FIELD_LABEL_NOT_A_QUESTION ON. OFF_ROSTER_ASK_BEFORE_CARD and SECOND_REQUEST_OWN_ACCOUNT stay off (the first is pending Pau; the second broke Sunny live). Round 8 (9 Nov 2026, QA): EXIT_LETTER_ADDRESSEE, EXIT_LINE_ANSWERS_ADD_UP, MISSED_SHIFT_CITES_ATTENDANCE, POSSESSIVE_PLACE_ACCOUNT ON. Round 9 (9 Nov 2026, QA): MADE_ABOUT_ALL_OR_NOTHING ON. Off-roster ask (9 Nov 2026; Pau: \"on\", ~13:10Z, via QA): OFF_ROSTER_ASK_BEFORE_CARD is ON (OFF_ROSTER_CONFIRM already was). Round 11 (9 Nov 2026, QA): LETTER_GREETING_NOT_NAME, MADE_ABOUT_READER_ACCOUNT ON. Round 12 (9 Nov 2026, QA): EXIT_FORM_DATE_FROM_TERMINATION ON. Round 13 (10 Nov 2026, QA): MADE_ABOUT_REWRITE_FINISHES ON. Round 14 (10 Nov 2026, QA): POLICY_TOPIC_INTO_FIELD ON. Round 15 (10 Nov 2026, QA): MADE_ABOUT_TOPIC_EVIDENCE, FORM_DATE_SAID_ALONE ON. Round 15 re-release (10 Nov 2026, QA): MADE_ABOUT_SAID_DATE, ADD_NOT_REPEATED ON (MADE_ABOUT_TOPIC_EVIDENCE and FORM_DATE_SAID_ALONE stay as in round 15); SECTION_BREAKS_KEPT stays off. Round 15 re-release 2 (10 Nov 2026, QA): SECTION_BREAKS_KEPT ON (the 'Also observed:' split is fixed); #679 policy wording. Round 16b (10 Nov 2026, QA): ACCOUNT_WIPE_GUARD, CREATE_FROM_CONVERSATION_POINTS_TO_CARD, CARD_NAMES_EMPLOYEE, SAME_REQUEST_OTHER_PERSON, CHAT_STAGE_TIMINGS. ONE_FORM_EACH_PERSON and COACHING_ASKS_WHAT_HAPPENED stay off (they ship together). Round 17b (10 Nov 2026, QA): DRAFT_WRITE_NEVER_SILENT, CA_REASON_DUE_TO, FAILURE_TO_OPEN_IS_LATE_OPENING, PAYROLL_BARE_SENTENCE. Round 17c (11 Nov 2026, QA): EXCERPT_BRAND_FILTER ON (source excerpts drop the sibling brand's lines; gate EBF, 0 changed rows). Round 17d (11 Nov 2026, QA): REQUEST_ISSUE_KEPT + LATE_OPENING_OWN_WORDS + FIRST_NAME_ENOUGH + NO_SHOW_OPENING_IS_ATTENDANCE ON (#742 + #746; Gate-Bubbles-2 3+3, 0 regressions). Round 17e (11 Nov 2026, QA): Woven sync INGEST_FAILURE_KEEPS_LAST_GOOD + WOVEN_OCR_PAGE_BATCHES + WOVEN_TEXT_NUL_STRIP + WOVEN_FAILED_RETRY ON (#736 + #749; Gate-Bubbles-2 3+3, chat replay byte-identical). Round 17f (11 Nov 2026, QA): EXCERPT_BRAND_HEADING_DROP ON (#764: no source card labelled with the sibling brand or with an empty/heading-only excerpt; the leading \": \" trimmed; Gate-Bubbles-2 GO, 2 intended rows). Round 16c (10 Nov 2026, QA): the roster-name set (#665): FORM_NAME_FROM_ROSTER, FORM_NAME_OFF_ROSTER_ASK, NEAR_MISS_DETAILS_ACCEPT, NEAR_MISS_QUESTION_RULES. Round 17i (11 Nov 2026, QA): COPY_PASTE_CLAIM_HONEST + DATE_ONCE + ADDRESS_ASKS_WHO + LEAD_FULL_SENTENCE + NAME_LINE_COMMA ON (#688, Gate-Bubbles-2 3+3 GO, 0 regressions); TEMPLATE_OUTLINE_FIELDS + PASTED_OUTLINE_TO_OPEN_DRAFT + PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT ON (#765, gate GO); GROUP_WORDS_NOT_A_NAME ON (#770, Problem 19, gate GO). Round 17j (12 Nov 2026, QA): EXIT_TYPO_WORDS ON (#713, P17: misspelled exit answers read; only misspellings rewritten; Gate-Bubbles 1+1 GO) and NO_NAME_REPLY_WORDING ON (#773: an empty-employee card says nothing name-derived, 'with the employee', no Create; Gate-Bubbles-2 3+3 GO, 0 regressions). Round 17k (12 Nov 2026, QA): ACCOUNT_BEFORE_REQUEST ON (#714, P14(a): the account given before the request reaches the draft; the walk-back stops at an earlier form request; Gate-Bubbles 1+1 GO after the fix), LETTER_GREETING_ANY_CASE ON (#718: 'Dear <Name>,' letters read the name without 'Dear'; Gate-Bubbles 3+3 GO) and COMPANY_METRIC_WORDS_NOT_NAMES ON (#796: Buff City Soap KPIs such as Comp Sales / Discount Rate are never a person's name; Gate-Bubbles-2 3+3 GO).",
++  "updated": "2026-11-12",
+   "on": [
+     "ADDITIONAL_LOCATION_TAKEN_ENABLED",
+     "AI_READS_CODE_CHECKS_ENABLED",
+@@ -287,7 +287,12 @@
+     "TEMPLATE_OUTLINE_FIELDS_ENABLED",
+     "PASTED_OUTLINE_TO_OPEN_DRAFT_ENABLED",
+     "PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT_ENABLED",
+-    "GROUP_WORDS_NOT_A_NAME_ENABLED"
++    "GROUP_WORDS_NOT_A_NAME_ENABLED",
++    "EXIT_TYPO_WORDS_ENABLED",
++    "NO_NAME_REPLY_WORDING_ENABLED",
++    "ACCOUNT_BEFORE_REQUEST_ENABLED",
++    "LETTER_GREETING_ANY_CASE_ENABLED",
++    "COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED"
+   ],
+   "assumedOn": [
+     "ACTION_PLAN_SENTENCES_ENABLED",
+diff --git a/src/lib/ai/letter-signer.test.ts b/src/lib/ai/letter-signer.test.ts
+index 752dba3d..854564ac 100644
+--- a/src/lib/ai/letter-signer.test.ts
++++ b/src/lib/ai/letter-signer.test.ts
+@@ -99,3 +99,30 @@ describe("withoutLetterGreeting (LETTER_GREETING_NOT_NAME_ENABLED)", () => {
+     for (const text of plain) expect(withoutLetterGreeting(text)).toBe(text);
+   });
+ });
++
++describe("LETTER_GREETING_ANY_CASE_ENABLED", () => {
++  /** QA's Bubbles tester (round 11, 9 Nov 2026): the letter on one line, "Your" capitalised. The people invented. */
++  const said =
++    "I need an exit form with this information. Dear Orla Penhallow, Your employment with Buff City Soap is terminated, effective 11/08/2026. Sincerely, Thessaly Wrenfield, District Manager";
++  beforeEach(() => vi.stubEnv("LETTER_GREETING_NOT_NAME_ENABLED", "true"));
++
++  it("off: \"Dear <A>, Your …\" keeps the salutation (as main)", () => {
++    // Off pins its own flag (QA's off-pins guard, 11 Nov 2026): it must hold once production turns the flag on.
++    vi.stubEnv("LETTER_GREETING_ANY_CASE_ENABLED", "");
++    expect(withoutLetterGreeting(said)).toBe(said);
++  });
++
++  it("on: the salutation goes before a capitalised next word, and before \"I\"", () => {
++    vi.stubEnv("LETTER_GREETING_ANY_CASE_ENABLED", "true");
++    expect(withoutLetterGreeting(said)).toBe(said.replace("Dear Orla Penhallow,", "Orla Penhallow,"));
++    expect(withoutLetterGreeting("Dear Orla Penhallow, I am writing to confirm your termination.")).toBe(
++      "Orla Penhallow, I am writing to confirm your termination.",
++    );
++    expect(withoutLetterGreeting("Dear Orla Penhallow, THIS LETTER confirms it.")).toBe("Orla Penhallow, THIS LETTER confirms it.");
++  });
++
++  it("on: not a letter — a name followed by anything else keeps its words", () => {
++    vi.stubEnv("LETTER_GREETING_ANY_CASE_ENABLED", "true");
++    expect(withoutLetterGreeting("Hi Orla Penhallow, Thessaly and I talked.")).toBe("Hi Orla Penhallow, Thessaly and I talked.");
++  });
++});
+diff --git a/src/lib/ai/letter-signer.ts b/src/lib/ai/letter-signer.ts
+index 6ddd246b..01d3fb35 100644
+--- a/src/lib/ai/letter-signer.ts
++++ b/src/lib/ai/letter-signer.ts
+@@ -1,4 +1,4 @@
+-import { exitLetterAddresseeEnabled, exitLetterSignerNotSubjectEnabled, letterGreetingNotNameEnabled } from "@/lib/config/chat-quality-flags";
++import { exitLetterAddresseeEnabled, exitLetterSignerNotSubjectEnabled, letterGreetingAnyCaseEnabled, letterGreetingNotNameEnabled } from "@/lib/config/chat-quality-flags";
+ 
+ import type { AskRequest } from "./types";
+ 
+@@ -53,10 +53,31 @@ const GREETING = new RegExp(
+   "gu",
+ );
+ 
++/*
++ * LETTER_GREETING_ANY_CASE_ENABLED (QA's Bubbles tester, round 11 live, 9 Nov 2026; default off): "I need an exit form
++ * with this information. Dear <A>, Your employment with … is terminated …" — the letter on one line, its next word
++ * capitalised — kept "Dear <A>", because the words that show the letter has begun after the addressee's comma ("your",
++ * "this", …) were read in lower case only. Intermittently the card's Name was "Dear <A>": the reading model sometimes
++ * quoted the salutation too. With this flag on, those words are read in any case ("Your", "This", "YOUR"), and "I"
++ * ("Dear <A>, I am writing …") is one of them, both here and where EXIT_LETTER_ADDRESSEE reads the addressee. Off, as
++ * before.
++ */
++const LETTER_BEGINS_ANY_CASE = String.raw`(?=\n|(?:[Yy][Oo][Uu][Rr]|[Tt][Hh][Ii][Ss]|[Ww][Ee]|[Yy][Oo][Uu]|[Ii][Tt]|[Aa][Ff][Tt][Ee][Rr]|[Ff][Oo][Ll][Ll][Oo][Ww][Ii][Nn][Gg]|[Oo][Nn]|I)\b)`;
++const GREETING_ANY_CASE = new RegExp(
++  String.raw`(^|\n[ \t]*|[.!?]\s+|[:'"“‘]\s*)${SALUTATION}(${NAME})(\s*,\s*)${LETTER_BEGINS_ANY_CASE}`,
++  "gu",
++);
++const ADDRESSEE_ANY_CASE = new RegExp(String.raw`(?:^|\n|[.!?]\s+|[:'"“‘]\s*)(${NAME})\s*,\s*${LETTER_BEGINS_ANY_CASE}`, "u");
++
++/** The letter's addressee, as EXIT_LETTER_ADDRESSEE reads it; with LETTER_GREETING_ANY_CASE, after any-case words. */
++function addresseeIn(question: string): string | undefined {
++  return (letterGreetingAnyCaseEnabled() ? ADDRESSEE_ANY_CASE : ADDRESSEE).exec(question)?.[1];
++}
++
+ /** The turn with a letter's salutation word left out before the addressee: "Dear <A>," is read as "<A>,". */
+ export function withoutLetterGreeting(text: string): string {
+   if (!letterGreetingNotNameEnabled()) return text;
+-  return text.replace(GREETING, (_match, lead: string, name: string, comma: string) => `${lead}${name}${comma}`);
++  return text.replace(letterGreetingAnyCaseEnabled() ? GREETING_ANY_CASE : GREETING, (_match, lead: string, name: string, comma: string) => `${lead}${name}${comma}`);
+ }
+ 
+ function samePersonWords(a: string, b: string): boolean {
+@@ -68,7 +89,7 @@ function samePersonWords(a: string, b: string): boolean {
+ export function withoutLetterSigner(request: Pick<AskRequest, "question">): string {
+   const question = request.question;
+   if (!exitLetterSignerNotSubjectEnabled()) return question;
+-  const subject = FORM_FOR.exec(question)?.[1] ?? (exitLetterAddresseeEnabled() ? ADDRESSEE.exec(question)?.[1] : undefined);
++  const subject = FORM_FOR.exec(question)?.[1] ?? (exitLetterAddresseeEnabled() ? addresseeIn(question) : undefined);
+   const end = question.trimEnd();
+   const signOff = SIGN_OFF.exec(end);
+   if (signOff) {
+diff --git a/src/lib/ai/reply-matches-card.ts b/src/lib/ai/reply-matches-card.ts
+index 349a998b..a5797857 100644
+--- a/src/lib/ai/reply-matches-card.ts
++++ b/src/lib/ai/reply-matches-card.ts
+@@ -1,3 +1,4 @@
++import { withNoEmployeeCard, withoutCreateNowWhenNoEmployee } from "@/lib/forms/no-name-reply-wording";
+ import { cleaningOtherEveryWordingEnabled, conductIncidentCitesPageEnabled, replyMatchesCardEachCardEnabled, replyMatchesCardEnabled } from "@/lib/config/chat-quality-flags";
+ import { offeredOffRosterName } from "@/lib/forms/off-roster-confirm";
+ import { caPolicyProposalLine, readCaPolicy, removedOffenseLabels } from "@/lib/forms/ca-policy";
+@@ -218,6 +219,11 @@ export function withReplyMatchesCard(response: AskResponse): AskResponse {
+   const cleaned = withCleaningOtherPolicy(response, requestMessage());
+   // OWN_BRAND_ONLY_ENABLED, gated on its own: only this company's brand is named (`ai/own-brand-only.ts`).
+   const branded = withOwnBrandOnly(cleaned);
+-  if (!replyMatchesCardEnabled()) return branded;
+-  return replyMatchesCard(branded, personRosterNames() ?? [], requestMessage());
++  const matched = replyMatchesCardEnabled() ? replyMatchesCard(branded, personRosterNames() ?? [], requestMessage()) : branded;
++  // NO_NAME_REPLY_WORDING_ENABLED: no employee on the card, no Create button — never "You can create it now".
++  const card = matched.formProposal;
++  if (!card?.templateKey) return matched;
++  const content = withoutCreateNowWhenNoEmployee(matched.content, card.employeeName);
++  // NO_NAME_REPLY_WORDING_ENABLED (Bubbles 16c live): no name-derived plan or store note, no Create button.
++  return withNoEmployeeCard(content === matched.content ? matched : { ...matched, content });
+ }
+diff --git a/src/lib/config/chat-quality-flags.ts b/src/lib/config/chat-quality-flags.ts
+index 264cc91e..3f5c9b7d 100644
+--- a/src/lib/config/chat-quality-flags.ts
++++ b/src/lib/config/chat-quality-flags.ts
+@@ -1265,6 +1265,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
+   "FORM_FOR_FOR_TYPO_ENABLED",
+   // coding 4: TITLE_NOT_PART_OF_NAME (B-C3 part 2, QA, 11 Nov 2026; default off).
+   "TITLE_NOT_PART_OF_NAME_ENABLED",
++  "NO_NAME_REPLY_WORDING_ENABLED",
+   "TAKE_OFF_STAYS_CARD_ENABLED",
+   // coding 4: ACCOUNT_PLACE_LEAD (round 6; default off): forced off with the others.
+   "ACCOUNT_PLACE_LEAD_ENABLED",
+@@ -1326,7 +1327,9 @@ export const CHAT_QUALITY_FLAG_NAMES = [
+   "ADD_NOT_REPEATED_ENABLED",
+   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
+   "CHAT_STAGE_TIMINGS_ENABLED",
++  "EXIT_TYPO_WORDS_ENABLED",
+   "CA_REASON_DUE_TO_ENABLED",
++  "COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED",
+   // coding 6: REQUEST_ISSUE_KEPT, LATE_OPENING_OWN_WORDS, FIRST_NAME_ENOUGH (QA round 17b, 10 Nov 2026; default off).
+   "REQUEST_ISSUE_KEPT_ENABLED",
+   "LATE_OPENING_OWN_WORDS_ENABLED",
+@@ -1357,6 +1360,9 @@ export const CHAT_QUALITY_FLAG_NAMES = [
+   "PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT_ENABLED",
+   // coding 6: GROUP_WORDS_NOT_A_NAME (Problem 19, 11 Nov 2026; default off).
+   "GROUP_WORDS_NOT_A_NAME_ENABLED",
++  "ACCOUNT_BEFORE_REQUEST_ENABLED",
++  // LETTER_GREETING_ANY_CASE (default off): in the list, as every chat flag (QA round 17k, 12 Nov 2026).
++  "LETTER_GREETING_ANY_CASE_ENABLED",
+   // coding 6: OUTLINE_ON_OPEN_PROPOSAL (QA's Bubbles 17i live test, 11 Nov 2026; default off).
+   "OUTLINE_ON_OPEN_PROPOSAL_ENABLED",
+ ] as const;
+@@ -2973,6 +2979,16 @@ export function policyTopicIntoFieldEnabled(): boolean {
+   return envFlag("POLICY_TOPIC_INTO_FIELD_ENABLED");
+ }
+ 
++/**
++ * EXIT_TYPO_WORDS_ENABLED (Pau's P17, the sibling app's production, 10 Nov 2026; coding 5; same flag in both apps; default off).
++ * "store items will be returneded … they are eligiable for rehire" left Store Items Returned and Eligible for Rehire
++ * blank. On: the exit answer readers read a word one or two letters off "returned", "eligible", "rehire" and the like as
++ * that word (`forms/exit-details.ts`). Off, as before.
++ */
++export function exitTypoWordsEnabled(): boolean {
++  return envFlag("EXIT_TYPO_WORDS_ENABLED");
++}
++
+ /**
+  * WOVEN_TEXT_NUL_STRIP_ENABLED (ported from the sibling app: QA, 10 Nov 2026, three Woven manuals stuck "failed" there
+  * since 4 Nov 2026; coding 5; same flag in both apps; default off). A PDF whose text layer holds NUL characters (U+0000)
+@@ -3076,6 +3092,17 @@ export function nameLineCommaEnabled(): boolean {
+   return envFlag("NAME_LINE_COMMA_ENABLED");
+ }
+ 
++/**
++ * ACCOUNT_BEFORE_REQUEST_ENABLED (Pau's P14(a), QA 10 Nov 2026; coding 5; the same flag name as the sibling app's #776,
++ * a different mechanism here; default off). An account given over several turns before "create a coaching form for
++ * <first name>" → "yes" was not handed to the draft ("No specific incident … was described"): a turn that opens with a
++ * question was left out of the card's turns. On: the turns just before the card's first cited turn that recount an
++ * incident by this person join its turns (`forms/account-before-request.ts`). Off, as before.
++ */
++export function accountBeforeRequestEnabled(): boolean {
++  return envFlag("ACCOUNT_BEFORE_REQUEST_ENABLED");
++}
++
+ // --- end coding 5 flags ---
+ 
+ /**
+@@ -4518,6 +4545,16 @@ export function noShowOpeningIsAttendanceEnabled(): boolean {
+   return envFlag("NO_SHOW_OPENING_IS_ATTENDANCE_ENABLED");
+ }
+ 
++/**
++ * NO_NAME_REPLY_WORDING_ENABLED (QA, the sibling app's round 22 live test, 11 Nov 2026; port from the sibling app; default off; same
++ * flag in both apps). "create a CA for ima employee" made no card, but the reply said "for the the employee" twice and
++ * "You can create it now" with no Create button. On, the name's stand-in is never re-replaced and a card with no employee
++ * says it can be created once the name is given (`forms/no-name-reply-wording.ts`). Off, as before.
++ */
++export function noNameReplyWordingEnabled(): boolean {
++  return envFlag("NO_NAME_REPLY_WORDING_ENABLED");
++}
++
+ /**
+  * TITLE_NOT_PART_OF_NAME_ENABLED (B-C3 part 2 from QA's open-case list, 11 Nov 2026; the sibling app's Pau scan sf-s36;
+  * default off; QA: the roster set goes on with Bubbles 16c). "… exit for <first> <last, one letter off> TM. Quit without
+@@ -4574,6 +4611,30 @@ export function groupWordsNotANameEnabled(): boolean {
+   return envFlag("GROUP_WORDS_NOT_A_NAME_ENABLED");
+ }
+ 
++/**
++ * LETTER_GREETING_ANY_CASE_ENABLED (coding 6, 10 Nov 2026; default off; QA's
++ * live Bubbles tester, round 11). "… Dear <A>, Your employment with … is
++ * terminated …" kept the salutation with LETTER_GREETING_NOT_NAME on: the
++ * words after the addressee's comma that show the letter has begun were read
++ * in lower case only, and the card's Name was sometimes "Dear <A>". On: they
++ * are read in any case, and "I" is one of them, for the greeting and for
++ * EXIT_LETTER_ADDRESSEE's addressee. See `ai/letter-signer.ts`. Off, as before.
++ */
++export function letterGreetingAnyCaseEnabled(): boolean {
++  return envFlag("LETTER_GREETING_ANY_CASE_ENABLED");
++}
++
++/**
++ * COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED (QA, 11 Nov 2026; Coding-5's BCS-metrics probe; default off). "She was below
++ * goal in IPT, AOV and Comp Sales % for October" on a sales Corrective Action lost its Issue: the name reader took
++ * "Comp Sales" (and "Discount Rate") for a person, and the next turn's card was drawn from that turn alone. On: a
++ * candidate made only of the company's own metric words (`config/company/metric-words.ts`), measure words and percent
++ * signs is not a person (`forms/person-guard.ts`); somebody on the roster still always is. Off, as before.
++ */
++export function companyMetricWordsNotNamesEnabled(): boolean {
++  return envFlag("COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED");
++}
++
+ /**
+  * OUTLINE_ON_OPEN_PROPOSAL_ENABLED (coding 6, 11 Nov 2026; default off; QA's Bubbles 17i live test). On a proposal
+  * (Create not pressed), a pasted "Observation of Offense: … / Action Plan: …" outline for another person, then "same
+diff --git a/src/lib/forms/account-before-request.test.ts b/src/lib/forms/account-before-request.test.ts
+new file mode 100644
+index 00000000..f5bd9dd4
+--- /dev/null
++++ b/src/lib/forms/account-before-request.test.ts
+@@ -0,0 +1,55 @@
++import { afterEach, describe, expect, it, vi } from "vitest";
++
++import { withAccountBeforeRequest } from "./account-before-request";
++
++// Pau's P14(a) (QA, 10 Nov 2026), in the manager's shape; the person invented.
++const turns = [
++  { id: "m1", role: "user", content: "can you help me with rowan? she marked an order as shipped but the customer hadn't picked up yet" },
++  { id: "a1", role: "assistant", content: "That sounds like a coaching moment." },
++  { id: "m2", role: "user", content: "she also didn't tell anyone on the next shift about the order" },
++  { id: "m3", role: "user", content: "create a coaching form for rowan" },
++  { id: "a3", role: "assistant", content: "Is this for **Rowan Kestrel**?" },
++  { id: "m4", role: "user", content: "yes" },
++];
++const CARD = { content: "card", formProposal: { templateKey: "coaching", employeeName: "Rowan Kestrel", sourceMessageIds: ["m2", "m3", "m4"] } };
++
++describe("ACCOUNT_BEFORE_REQUEST_ENABLED", () => {
++  afterEach(() => vi.unstubAllEnvs());
++
++  it("off: the card's turns are as built", () => {
++    // Off pins its own flag (QA's off-pins guard, 11 Nov 2026): it must hold once production turns the flag on.
++    vi.stubEnv("ACCOUNT_BEFORE_REQUEST_ENABLED", "");
++    expect(withAccountBeforeRequest(CARD, turns)).toEqual(CARD);
++  });
++
++  it("on: the account turn that opens with a question joins the card's turns", () => {
++    vi.stubEnv("ACCOUNT_BEFORE_REQUEST_ENABLED", "true");
++    expect(withAccountBeforeRequest(CARD, turns).formProposal.sourceMessageIds).toEqual(["m1", "m2", "m3", "m4"]);
++  });
++
++  it("on: a turn about somebody else, or a plain question, stops the walk", () => {
++    vi.stubEnv("ACCOUNT_BEFORE_REQUEST_ENABLED", "true");
++    const other = turns.map((turn) => (turn.id === "m1" ? { ...turn, content: "Marnie Holloway marked an order as shipped too early yesterday" } : turn));
++    expect(withAccountBeforeRequest(CARD, other)).toEqual(CARD);
++    const question = turns.map((turn) => (turn.id === "m1" ? { ...turn, content: "what is the policy on shipping orders?" } : turn));
++    expect(withAccountBeforeRequest(CARD, question)).toEqual(CARD);
++  });
++
++  // Gate-Bubbles' NO-GO (R714, 11 Nov 2026), its exact turns; Remy Calder is a fixture name.
++  it("on: the first card's request is never the second card's account", () => {
++    vi.stubEnv("ACCOUNT_BEFORE_REQUEST_ENABLED", "true");
++    const two = [
++      { id: "r1", role: "user", content: "create a corrective action for Remy Calder, he was late opening the store on 11/2" },
++      { id: "a1", role: "assistant", content: "I'll draft a **Corrective Action Form** for **Remy Calder** …" },
++      { id: "r2", role: "user", content: "now make a separate CA for Remy Calder for his cash drawer being short $20 on 11/3" },
++    ];
++    const second = { content: "card", formProposal: { templateKey: "dpoa", employeeName: "Remy Calder", sourceMessageIds: ["r2"] } };
++    expect(withAccountBeforeRequest(second, two)).toEqual(second);
++  });
++
++  it("on: a turn an earlier card already cited stops the walk", () => {
++    vi.stubEnv("ACCOUNT_BEFORE_REQUEST_ENABLED", "true");
++    const cited = turns.map((turn) => (turn.id === "a1" ? { ...turn, formProposal: { sourceMessageIds: ["m1"] } } : turn));
++    expect(withAccountBeforeRequest(CARD, cited).formProposal.sourceMessageIds).toEqual(["m2", "m3", "m4"]);
++  });
++});
+diff --git a/src/lib/forms/account-before-request.ts b/src/lib/forms/account-before-request.ts
+new file mode 100644
+index 00000000..444d4ef1
+--- /dev/null
++++ b/src/lib/forms/account-before-request.ts
+@@ -0,0 +1,96 @@
++import { accountBeforeRequestEnabled } from "@/lib/config/chat-quality-flags";
++import { describesIncident } from "@/lib/forms/incident-reading";
++import { extractEmployeeNames, samePerson } from "@/lib/forms/proposal";
++import { detectTemplateIntent } from "@/lib/forms/template-intent";
++
++/**
++ * ============================================================================
++ * THE ACCOUNT GIVEN BEFORE THE REQUEST IS HANDED TO THE DRAFT (ACCOUNT_BEFORE_REQUEST_ENABLED)
++ * ============================================================================
++ *
++ * Pau's P14(a) (QA, 10 Nov 2026; the sibling app's #776 is the same report there): the manager describes the incident
++ * over several turns, then "create a coaching form for <first name>", then "yes" — and the draft saved "No specific
++ * incident … was described". In this app the card's turns leave out every manager turn that reads as a question unless
++ * it names the employee in full, so an account that opens "can you help me with rowan? she marked an order as shipped
++ * …" never reached the draft. (The sibling app's mechanism matches the account against the card's Observation line;
++ * this app's Coaching card shows none, so the account is recognised by what it says instead.)
++ *
++ * On: walking back from the card's first cited turn, each manager turn just before it that recounts an incident by this
++ * person — naming them by first name or opening with she / he / they, and describing what happened in the past tense (read
++ * without a leading question) — joins the card's turns; the walk stops at the first turn that does not, at a turn that is
++ * itself a form request, at a turn an earlier card cited, or at a turn naming somebody else. After the reply is built; outside the proposal flow. Pure.
++ */
++
++interface Turn {
++  readonly id?: string;
++  readonly role: string;
++  readonly content: string;
++  /** An earlier card in the chat, when the turn carries it: the turns it already cited are its account, not this one's. */
++  readonly formProposal?: { readonly sourceMessageIds?: readonly string[] } | null;
++}
++
++/*
++ * Gate-Bubbles' NO-GO on #714 (11 Nov 2026, R714): "create a corrective action for Remy Calder, he was late opening the
++ * store on 11/2", then "now make a separate CA for Remy Calder for his cash drawer being short $20 on 11/3" — the walk
++ * back took the FIRST card's request as the second card's account, and the cash drawer was lost. A turn that is itself
++ * a form request belongs to its own card: the walk stops there.
++ */
++const FORM_REQUEST = /\b(?:create|make|write|draw\s+up|start|need|do|give|draft|prepare)\b[^.?!\n]{0,40}\b(?:ca|c\/a|corrective\s+action|coaching(?:\s+form)?|write[- ]?up|warning|form|dpoa)\b/i;
++
++function isFormRequest(text: string): boolean {
++  return detectTemplateIntent(text).kind === "explicit" || FORM_REQUEST.test(text);
++}
++
++interface Card {
++  readonly templateKey?: string;
++  readonly employeeName: string | null;
++  readonly sourceMessageIds: readonly string[];
++}
++
++const PRONOUN_LEAD = /^\s*(?:and\s+|also\s+|then\s+)?(?:she|he|they)\b/i;
++/** "can you help me with rowan?", "what should I do about her?" — a lead that asks, before the account. */
++const QUESTION_LEAD = /^[^.?!]*\?\s*/;
++
++function aboutThisPerson(text: string, employeeName: string): boolean {
++  const first = employeeName.trim().split(/\s+/)[0]?.toLowerCase() ?? "";
++  if (first.length >= 2 && new RegExp(`\\b${first.replace(/[^a-z0-9]/g, "")}\\b`, "i").test(text)) return true;
++  return PRONOUN_LEAD.test(text.replace(QUESTION_LEAD, ""));
++}
++
++/** "she marked …", "he didn't …", "rowan left …": the subject, then a past-tense verb within a word or two. */
++function pastClause(account: string, employeeName: string): boolean {
++  const first = (employeeName.trim().split(/\s+/)[0] ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
++  const subject = first.length >= 2 ? `(?:she|he|they|${first})` : "(?:she|he|they)";
++  return new RegExp(
++    `\\b${subject}\\s+(?:also\\s+|then\\s+|just\\s+|never\\s+)?(?:[a-z]+ed|didn'?t|did\\s+not|wasn'?t|was|weren'?t|left|took|gave|told|said|came|went|forgot|lost|broke|made|ran|sold|rang|let|put|kept|got|had|did)\\b`,
++    "i",
++  ).test(account);
++}
++
++function accountTurn(text: string, card: Card): boolean {
++  const account = text.replace(QUESTION_LEAD, "").trim();
++  if (account.split(/\s+/).length < 5) return false;
++  if (extractEmployeeNames(text).some((name) => !samePerson(name, card.employeeName!))) return false;
++  const intent = detectTemplateIntent(text);
++  if (intent.kind === "explicit" && intent.templateKey !== card.templateKey) return false;
++  return aboutThisPerson(text, card.employeeName!) && (describesIncident(account) || pastClause(account, card.employeeName!));
++}
++
++export function withAccountBeforeRequest<T extends { content: string; formProposal?: Card | null }>(answer: T, turns: readonly Turn[]): T {
++  const card = answer.formProposal;
++  if (!accountBeforeRequestEnabled() || !card?.employeeName || card.sourceMessageIds.length === 0) return answer;
++  const manager = turns.filter((turn) => turn.role === "user" && turn.id);
++  const cited = new Set(card.sourceMessageIds);
++  // Turns an earlier card in the chat already cited (when the turns carry it).
++  const earlier = new Set(turns.flatMap((turn) => (turn.role === "assistant" ? (turn.formProposal?.sourceMessageIds ?? []) : [])));
++  const firstAt = manager.findIndex((turn) => cited.has(turn.id!));
++  if (firstAt <= 0) return answer;
++  const added: string[] = [];
++  for (let index = firstAt - 1; index >= 0; index -= 1) {
++    const turn = manager[index]!;
++    if (cited.has(turn.id!) || earlier.has(turn.id!) || isFormRequest(turn.content) || !accountTurn(turn.content, card)) break;
++    added.unshift(turn.id!);
++  }
++  if (added.length === 0) return answer;
++  return { ...answer, formProposal: { ...card, sourceMessageIds: [...added, ...card.sourceMessageIds] } };
++}
+diff --git a/src/lib/forms/company-metric-words-not-names.test.ts b/src/lib/forms/company-metric-words-not-names.test.ts
+new file mode 100644
+index 00000000..6212b425
+--- /dev/null
++++ b/src/lib/forms/company-metric-words-not-names.test.ts
+@@ -0,0 +1,62 @@
++import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
++
++import { installPersonRoster, notAPerson } from "./person-guard";
++import { extractEmployeeNames } from "./proposal";
++
++/*
++ * COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED (QA, 11 Nov 2026, Coding-5's BCS-metrics probe). A sales Corrective Action
++ * written in Buff City Soap's own KPI words lost its Issue: the name reader took "Comp Sales" and "Discount Rate" for
++ * a person, the person guard let them through (only the sibling app's metric words were business vocabulary), and the
++ * next turn's card was drawn from that turn alone. The account turns, word for word:
++ */
++const LOST = [
++  "She was below goal in IPT, AOV and Comp Sales % for October",
++  "She had 40 transactions and was below in IPT, AOV, and Discount Rate",
++];
++
++/** The candidates the name reader offers that the person guard lets through. */
++const people = (text: string) => extractEmployeeNames(text).filter((name) => !notAPerson(name));
++
++describe("COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED", () => {
++  beforeEach(() => vi.stubEnv("PERSON_GUARD_ENABLED", "true"));
++  afterEach(() => {
++    vi.unstubAllEnvs();
++    installPersonRoster(() => undefined);
++  });
++
++  it.each(LOST)("off (production today): %s names a person (the bug)", (text) => {
++    // Off pins its own flag (QA's off-pins guard, 11 Nov 2026): it must hold once production turns the flag on.
++    vi.stubEnv("COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED", "");
++    expect(people(text)).not.toEqual([]);
++  });
++
++  it.each(LOST)("on: %s names nobody", (text) => {
++    vi.stubEnv("COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED", "true");
++    expect(people(text)).toEqual([]);
++  });
++
++  it.each(["Comp Sales", "Discount Rate", "Net Sales", "Product Mix", "Laundry %", "SSSG", "AUV", "IPT", "AOV", "Items Per Transaction", "Average Order Value"])(
++    "on: %s is not a person",
++    (metric) => {
++      vi.stubEnv("COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED", "true");
++      expect(notAPerson(metric)).toBe(true);
++    },
++  );
++
++  it("on: a person whose surname is a metric word is still a person — on the roster and off it", () => {
++    vi.stubEnv("COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED", "true");
++    // Off the roster, a first name keeps the candidate a person: only a phrase made wholly of metric words is ruled out.
++    expect(notAPerson("Delphine Sales")).toBe(false);
++    installPersonRoster(() => ["Delphine Sales", "Odile Mix"]);
++    expect(notAPerson("Delphine Sales")).toBe(false);
++    expect(notAPerson("Sales")).toBe(false);
++    expect(notAPerson("Odile Mix")).toBe(false);
++    expect(people("Delphine Sales was below goal in IPT and AOV")).toEqual(["Delphine Sales"]);
++  });
++
++  it("the sibling app's words are still recognised, on and off", () => {
++    expect(people("She had 24 tans and was below in PPTA, LPSVA, Avg Club, CC%, and Spa%")).toEqual([]);
++    vi.stubEnv("COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED", "true");
++    expect(people("She had 24 tans and was below in PPTA, LPSVA, Avg Club, CC%, and Spa%")).toEqual([]);
++  });
++});
+diff --git a/src/lib/forms/exit-details.ts b/src/lib/forms/exit-details.ts
+index b59c9895..8f6ea54a 100644
+--- a/src/lib/forms/exit-details.ts
++++ b/src/lib/forms/exit-details.ts
+@@ -1,6 +1,7 @@
+-import { exitIntakeFixEnabled, exitShortcutWordsEnabled, exitStatedOnlyEnabled, exitTerminationStatedEnabled, fieldLabelNotAQuestionEnabled, resignMethodFollowupEnabled } from "@/lib/config/chat-quality-flags";
++import { exitIntakeFixEnabled, exitShortcutWordsEnabled, exitStatedOnlyEnabled, exitTerminationStatedEnabled, fieldLabelNotAQuestionEnabled, resignMethodFollowupEnabled, exitTypoWordsEnabled } from "@/lib/config/chat-quality-flags";
+ 
+ import { JOIN } from "./turn-join";
++import { editDistance } from "./typo-match";
+ import { isQuestion } from "./employment-change";
+ import { EXIT_DETAIL_FIELDS, EXIT_NOTICE_GROUP, EXIT_TYPE_GROUP } from "./exit-library";
+ import { EXIT_DERIVED_KEYS, exitFactValues, JOB_ABANDONED, NO_CALL_FOR_SHIFT, readExitFacts, type ExitFacts } from "./exit-facts";
+@@ -720,6 +721,57 @@ function labelledMethod(turn: string): string | null {
+   return sentence(raw);
+ }
+ 
++/*
++ * EXIT_TYPO_WORDS_ENABLED (Pau's P17, the sibling app's production, 10 Nov 2026): "store items will be returneded … they are
++ * eligiable for rehire" left Store Items Returned and Eligible for Rehire blank — the readers match "returned" and
++ * "eligible", and the typed words were one or two letters off. With the flag on, the words the answer readers key on
++ * are read through a close-spelling check first: a word the reader does not know, with the same first letter and one
++ * letter off (two from seven letters), is read as that word. Only for reading the answers; what the manager wrote is
++ * quoted as written.
++ */
++const EXIT_WORDS = ["returned", "returning", "return", "returns", "eligible", "ineligible", "eligibility", "rehire", "rehired", "rehirable", "deducted", "deduction", "forfeited", "forfeit", "minimum"];
++const KNOWN = new Set(EXIT_WORDS);
++/**
++ * Real words one or two letters from a target: never "corrected" ("she retired" is not "she rehired").
++ * QA, R713 (11 Nov 2026): "he is not required back" read as "not rehired" — every word on an English word list that
++ * the check would change is here, except plain forms of the readers' own words ("deducts", "rehires", "forfeits").
++ */
++const REAL_WORDS = new Set([
++  "retired", "retire", "retires", "retiring", "reliable", "related", "retained", "retain", "retains", "retuned",
++  "minimal", "deduced", "deduce", "regained", "relined", "remained", "refunded", "reported", "rehired", "elegant",
++  "debuted", "decocted", "decoction", "dedicated", "dedication", "deduces", "deductive", "defect", "defected",
++  "defecting", "defection", "defects", "defunction", "degusted", "dejected", "dejection", "depicted", "depiction",
++  "deputed", "detect", "detected", "detecting", "detection", "detects", "elidible", "eligibly", "eludible",
++  "exigible", "forefeet", "forefelt", "forest", "forested", "foresting", "forests", "forfair", "forfaired",
++  "forfaiter", "forfend", "forfended", "forhent", "forlent", "fornent", "forwent", "ineligibly", "ineludible",
++  "intelligible", "maximum", "minibus", "minicam", "minicom", "minimax", "minimism", "minimus", "minium", "miniums",
++  "rebored", "reburied", "reburying", "recitable", "recited", "recured", "recures", "recuring", "recurred",
++  "recurring", "recursed", "recursing", "recurved", "recurving", "redshire", "reearned", "reearning", "reearns",
++  "referable", "refiled", "refinable", "refined", "refire", "refired", "refires", "refixed", "rehinge", "rehinged",
++  "rehomed", "rejourn", "rejourned", "rejourning", "rejourns", "relivable", "relived", "remised", "remixed",
++  "reoiled", "repair", "repairable", "repaired", "repairing", "repairs", "reparable", "repined", "repugned",
++  "repugning", "repugns", "repured", "repures", "repuring", "requins", "requirable", "require", "required",
++  "requires", "requiring", "rerunning", "reshine", "reshined", "resided", "resiled", "resined", "resited", "resized",
++  "respirable", "respire", "respired", "resurged", "resurging", "retaining", "retarded", "retarding", "retards",
++  "retiled", "retimed", "retiree", "retirer", "retorn", "retorted", "retorting", "retorts", "retoured", "retouring",
++  "retours", "retried", "retrying", "retunded", "retunding", "retunds", "retunes", "retuning", "returf", "returfed",
++  "returfing", "returfs", "returnee", "returnees", "returner", "returners", "returnik", "returniks", "reurged",
++  "reurging", "reverable", "revered", "reviled", "revisable", "revised", "revivable", "revive", "revived", "revives",
++  "reviving", "rewirable", "rewire", "rewired", "rewires", "rewiring",
++]);
++
++export function withExitWordsSpelled(turn: string): string {
++  return turn.replace(/[A-Za-z]{5,}/g, (word) => {
++    const lower = word.toLowerCase();
++    if (KNOWN.has(lower) || REAL_WORDS.has(lower)) return word;
++    const limit = lower.length >= 7 ? 2 : 1;
++    const close = EXIT_WORDS.filter((target) => target[0] === lower[0] && Math.abs(target.length - lower.length) <= limit && editDistance(lower, target) <= limit);
++    if (close.length === 0) return word;
++    const best = close.reduce((a, b) => (editDistance(lower, a) <= editDistance(lower, b) ? a : b));
++    return best;
++  });
++}
++
+ /* ------------------------------------------------------------ reading -- */
+ 
+ function readAnswers(turn: string): Partial<Record<ExitAnswerKey, Reading>> {
+@@ -770,7 +822,7 @@ export function readExitDetails(rawText: string, today: string, facts?: ExitFact
+   const settled: Partial<Record<ExitAnswerKey, Reading>> = {};
+   for (const turn of turns) {
+     // THE LATER TURN WINS: a turn that answers a question replaces the answer.
+-    for (const [key, reading] of Object.entries(readAnswers(turn)) as [ExitAnswerKey, Reading][]) {
++    for (const [key, reading] of Object.entries(readAnswers(exitTypoWordsEnabled() ? withExitWordsSpelled(turn) : turn)) as [ExitAnswerKey, Reading][]) {
+       if (reading !== undefined) settled[key] = reading;
+     }
+     // FIELD_LABEL_NOT_A_QUESTION_ENABLED: "how employee resigned - told management" is the manager's own answer for that line.
+diff --git a/src/lib/forms/exit-typo-words.test.ts b/src/lib/forms/exit-typo-words.test.ts
+new file mode 100644
+index 00000000..0e799a4b
+--- /dev/null
++++ b/src/lib/forms/exit-typo-words.test.ts
+@@ -0,0 +1,64 @@
++import { afterEach, describe, expect, it, vi } from "vitest";
++
++import { readExitDetails, withExitWordsSpelled } from "./exit-details";
++
++// Pau's P17 (the sibling app's production, 10 Nov 2026), the manager's words (store for salon); the employee is not named.
++const SAID = "store items will be returneded and they are eligiable for rehire. payroll not deducted";
++
++const answers = (text: string) => {
++  const read = readExitDetails(text, "2026-11-10").answers;
++  return { items: read.store_items_returned, rehire: read.eligible_for_rehire, payroll: read.payroll_deduction_applicable };
++};
++
++describe("EXIT_TYPO_WORDS_ENABLED", () => {
++  afterEach(() => vi.unstubAllEnvs());
++
++  it("off: the misspelled answers are left blank (the bug); payroll is read", () => {
++    // The off case sets the flag itself, so it holds whatever the environment has on (QA, Gate-Sunny on #793).
++    vi.stubEnv("EXIT_TYPO_WORDS_ENABLED", "");
++    expect(answers(SAID)).toEqual({ items: undefined, rehire: undefined, payroll: "no" });
++  });
++
++  it("on: \"returneded\" and \"eligiable\" are read as returned and eligible", () => {
++    vi.stubEnv("EXIT_TYPO_WORDS_ENABLED", "true");
++    expect(answers(SAID)).toEqual({ items: "yes", rehire: "yes", payroll: "no" });
++  });
++
++  it("real words are never corrected; a correctly spelled turn is unchanged", () => {
++    expect(withExitWordsSpelled("she retired and is reliable")).toBe("she retired and is reliable");
++    expect(withExitWordsSpelled("items returned, eligible for rehire")).toBe("items returned, eligible for rehire");
++    expect(withExitWordsSpelled("not elegible for rehre")).toBe("not eligible for rehire");
++  });
++});
++
++// QA, R713 (Gate-Bubbles, 11 Nov 2026): real words missing from REAL_WORDS were "corrected" into the readers' words —
++// required, repaired, revived and rewired became "rehired"; detected and defected "deducted"; forested "forfeited".
++describe("EXIT_TYPO_WORDS_ENABLED: real words stay as written (QA, R713)", () => {
++  afterEach(() => vi.unstubAllEnvs());
++
++  const QA_SAID = "he quit on 11/8/26. he is not required back. payroll not deducted";
++
++  it("\"he is not required back\" is not read as \"not rehired\": Eligible for Rehire is read the same as with the flag off", () => {
++    vi.stubEnv("EXIT_TYPO_WORDS_ENABLED", "");
++    const off = answers(QA_SAID);
++    vi.stubEnv("EXIT_TYPO_WORDS_ENABLED", "true");
++    const on = answers(QA_SAID);
++    expect(on.rehire).not.toBe("no");
++    expect(on).toEqual(off);
++    expect(on.payroll).toBe("no");
++  });
++
++  it.each([
++    "require", "requires", "requiring", "required",
++    "repair", "repairs", "repairing", "repaired",
++    "revive", "revives", "reviving", "revived",
++    "rewire", "rewires", "rewiring", "rewired",
++    "detect", "detects", "detecting", "detected",
++    "defect", "defects", "defecting", "defected",
++    "forest", "forests", "foresting", "forested",
++    // The same check over an English word list found these too (one or two letters from a reader's word).
++    "maximum", "dedicated", "retaining", "revised", "retried", "resized", "depicted", "dejected", "recited", "refined",
++  ])("%s is never changed", (word) => {
++    expect(withExitWordsSpelled(`he ${word} it`)).toBe(`he ${word} it`);
++  });
++});
+diff --git a/src/lib/forms/form-diff-reply-lines.test.ts b/src/lib/forms/form-diff-reply-lines.test.ts
+index 4a82b377..82bae0d0 100644
+--- a/src/lib/forms/form-diff-reply-lines.test.ts
++++ b/src/lib/forms/form-diff-reply-lines.test.ts
+@@ -11,6 +11,7 @@ afterEach(() => vi.unstubAllEnvs());
+ 
+ describe("replyFromDiff, a multi-line field", () => {
+   it("is joined with \"; \" with the flag off (as before)", () => {
++    vi.stubEnv("STEP_B_REPLY_KEEPS_LINES_ENABLED", "");
+     expect(replyFromDiff({ changed: [{ key: "coaching_details", before: "", after: DETAILS }] } as never, LABELS)).toContain("Observed:; Ottoline missed");
+   });
+ 
+diff --git a/src/lib/forms/form-diff-reply.test.ts b/src/lib/forms/form-diff-reply.test.ts
+index 0fc639ef..23f54b90 100644
+--- a/src/lib/forms/form-diff-reply.test.ts
++++ b/src/lib/forms/form-diff-reply.test.ts
+@@ -1,4 +1,4 @@
+-import { describe, expect, it } from "vitest";
++import { afterEach, describe, expect, it, vi } from "vitest";
+ 
+ import { NOTHING_CHANGED, REPLY_VALUE_MAX, replyFromDiff } from "./form-diff-reply";
+ 
+@@ -7,12 +7,17 @@ import { NOTHING_CHANGED, REPLY_VALUE_MAX, replyFromDiff } from "./form-diff-rep
+ const LABELS = { observation: "Observation", payroll_amount: "Amount", level: "Level", prior_actions: "Prior Actions" };
+ 
+ describe("replyFromDiff", () => {
++  afterEach(() => vi.unstubAllEnvs());
++
+   it("an empty diff says nothing changed", () => {
+     expect(replyFromDiff({ changed: [] }, LABELS)).toBe("I didn't change anything on the form.");
+     expect(NOTHING_CHANGED).toBe("I didn't change anything on the form.");
+   });
+ 
+   it("says Changed <Label> to <value> per change, never Updated", () => {
++    // The one-line format is STEP_B_REPLY_KEEPS_LINES' off behaviour (`form-diff-reply-lines.test.ts` has the on one); pinned
++    // here so it holds once production turns the flag on (Gate-Sunny-2's finding on the sibling app, 12 Nov 2026).
++    vi.stubEnv("STEP_B_REPLY_KEEPS_LINES_ENABLED", "");
+     const reply = replyFromDiff(
+       {
+         changed: [
+diff --git a/src/lib/forms/no-name-reply-wording.test.ts b/src/lib/forms/no-name-reply-wording.test.ts
+new file mode 100644
+index 00000000..26e76ab9
+--- /dev/null
++++ b/src/lib/forms/no-name-reply-wording.test.ts
+@@ -0,0 +1,66 @@
++import { afterEach, describe, expect, it, vi } from "vitest";
++
++import { withoutUnseatedName } from "./roster-only-names";
++import { withNoEmployeeCard, withoutCreateNowWhenNoEmployee } from "./no-name-reply-wording";
++
++/*
++ * NO_NAME_REPLY_WORDING_ENABLED (QA, Ask Sunny's round 22 live test, 11 Nov 2026; port from Ask Sunny): "create a CA for ima employee" made no card,
++ * but the reply said "for the the employee" twice and "You can create it now" with no Create button.
++ */
++const LINE = "I can create a **Corrective Action Form** for **ima employee**.\n\nManagement will review the applicable company policy with ima employee.";
++const NOTE = "You can create it now and fill it in yourself, or tell me here what happened.";
++
++describe("NO_NAME_REPLY_WORDING_ENABLED", () => {
++  afterEach(() => vi.unstubAllEnvs());
++
++  it("on: the name's own word never matches inside its stand-in", () => {
++    vi.stubEnv("NO_NAME_REPLY_WORDING_ENABLED", "true");
++    const out = withoutUnseatedName(LINE, ["ima employee"], [], ["ima employee"]);
++    expect(out).not.toMatch(/the the/i);
++    expect(out).toContain("policy with the employee.");
++  });
++
++  it("off: as before (the doubled word this flag fixes)", () => {
++    vi.stubEnv("NO_NAME_REPLY_WORDING_ENABLED", "");
++    expect(withoutUnseatedName(LINE, ["ima employee"], [], ["ima employee"])).toMatch(/the the employee/);
++  });
++
++  it("no employee on the card: never \"You can create it now\"; with one, unchanged; off, unchanged", () => {
++    vi.stubEnv("NO_NAME_REPLY_WORDING_ENABLED", "true");
++    expect(withoutCreateNowWhenNoEmployee(NOTE, null)).toBe("Once you tell me who it's for, you can create it and fill it in yourself, or tell me here what happened.");
++    expect(withoutCreateNowWhenNoEmployee(NOTE, "Brisa Talmadge")).toBe(NOTE);
++    vi.stubEnv("NO_NAME_REPLY_WORDING_ENABLED", "");
++    expect(withoutCreateNowWhenNoEmployee(NOTE, null)).toBe(NOTE);
++  });
++});
++
++describe("NO_NAME_REPLY_WORDING_ENABLED: a card with no employee (Bubbles 16c live, 11 Nov 2026)", () => {
++  afterEach(() => vi.unstubAllEnvs());
++  const card = { templateKey: "dpoa", employeeName: null, supportsInlineDraft: true };
++  const reply = [
++    "**Action plan:** Management will review the applicable company policy with Ima. Future policy violations may result in additional corrective action up to and including termination of employment.",
++    "",
++    "I couldn't verify a store for **ima** from Woven, so I haven't put one on the form. Tell me which store they work at, or leave Store blank on the form.",
++    "",
++    "Who is this form for? Tell me the employee's full name.",
++  ].join("\n");
++
++  it("on: the plan says the employee, the store note goes, no Create button", () => {
++    vi.stubEnv("NO_NAME_REPLY_WORDING_ENABLED", "true");
++    const out = withNoEmployeeCard({ content: reply, formProposal: card });
++    expect(out.content).toContain("policy with the employee.");
++    expect(out.content).not.toMatch(/Ima\b|\*\*ima\*\*/);
++    expect(out.formProposal?.supportsInlineDraft).toBe(false);
++  });
++
++  it("a team-wide card, a card with its employee, and off: unchanged", () => {
++    vi.stubEnv("NO_NAME_REPLY_WORDING_ENABLED", "true");
++    const team = { content: "This one is for the whole team. **Action plan:** review with Ima.", formProposal: card };
++    expect(withNoEmployeeCard(team)).toBe(team);
++    const named = { content: reply, formProposal: { ...card, employeeName: "Marnie Holloway" } };
++    expect(withNoEmployeeCard(named)).toBe(named);
++    vi.stubEnv("NO_NAME_REPLY_WORDING_ENABLED", "");
++    const off = { content: reply, formProposal: card };
++    expect(withNoEmployeeCard(off)).toBe(off);
++  });
++});
+diff --git a/src/lib/forms/no-name-reply-wording.ts b/src/lib/forms/no-name-reply-wording.ts
+new file mode 100644
+index 00000000..3d59bd00
+--- /dev/null
++++ b/src/lib/forms/no-name-reply-wording.ts
+@@ -0,0 +1,66 @@
++import { noNameReplyWordingEnabled } from "@/lib/config/chat-quality-flags";
++
++/**
++ * ============================================================================
++ * A REPLY WITH NO NAME ON THE CARD READS CLEANLY (NO_NAME_REPLY_WORDING_ENABLED)
++ * ============================================================================
++ *
++ * The sibling app's round 22 live test (QA, 11 Nov 2026; port from the sibling app, same flag in both apps): "create a CA for ima employee" rightly made no card, but the reply said
++ * "… Corrective Action Form for the the employee." and "… policy with the the employee.", and "You can create it now"
++ * over a card with no Create button. The name "ima employee" was taken off the reply as "the employee", and its word
++ * "employee" was then taken off again inside the words just put in (`roster-only-names.ts`, withoutUnseatedName). With
++ * the flag on, what was put in is held aside until every word of the name is done, and a card with no employee says the
++ * draft can be created once the name is given. Off, as before.
++ */
++
++const HELD = "\u0001";
++
++/** What the name is replaced with: held aside with the flag on, so the name's own words never match inside it. */
++export function standInForName(): string {
++  return noNameReplyWordingEnabled() ? HELD : "the employee";
++}
++
++/** The held stand-ins, as the reply says them. */
++export function withStandInsSaid(line: string): string {
++  return line.includes(HELD) ? line.split(HELD).join("the employee") : line;
++}
++
++const CREATE_NOW = /\bYou can create it now and fill it in yourself\b/g;
++
++/** With no employee on the card there is no Create button: the note says it can be created once the name is given. */
++export function withoutCreateNowWhenNoEmployee(content: string, employeeName: string | null | undefined): string {
++  if (!noNameReplyWordingEnabled() || employeeName?.trim()) return content;
++  return content.replace(CREATE_NOW, "Once you tell me who it's for, you can create it and fill it in yourself");
++}
++
++/*
++ * The same flag, extended (QA, Bubbles 16c live, main ffa571ea, 11 Nov 2026): "create a CA for ima employee" made no card,
++ * but its reply still read "ima" as a name — "Action plan: … with Ima." and "I couldn't verify a store for **ima** from
++ * Woven" — and the empty-employee card still offered "Create draft". With no employee on the card: the plan says "the
++ * employee", the store note about a person who is not there goes, and the card does not offer the inline draft
++ * (`supportsInlineDraft`, which shows the Create button).
++ */
++const PLAN_WITH_NAME = /^(\*\*Action [Pp]lan:\*\*[^\n]*?\bwith )(?!the\b)([A-Z][\p{L}'’-]*)(?=\.)/gmu;
++const ASKS_WHO_FOR = /Who is this (?:\*\*[^*\n]+\*\* |form )?for\?/i;
++const STORE_NOT_VERIFIED = /^I couldn['’]t verify an? (?:store|salon) for \*\*[^*\n]+\*\* from Woven[^\n]*\n?/gm;
++
++interface NoEmployeeCard {
++  readonly templateKey?: string | null;
++  readonly employeeName?: string | null;
++  readonly supportsInlineDraft?: boolean;
++}
++
++/** With no employee on the card: no name-derived words in the plan or the store note, and no Create button. Off, as given. */
++export function withNoEmployeeCard<T extends { content: string; formProposal?: NoEmployeeCard | null }>(response: T): T {
++  const card = response.formProposal;
++  if (!noNameReplyWordingEnabled() || !card?.templateKey || card.employeeName?.trim()) return response;
++  // Only a card still waiting for its person (the reply asks who it is for); a team-wide form has no employee by design.
++  if (!ASKS_WHO_FOR.test(response.content)) return response;
++  const content = response.content
++    .replace(PLAN_WITH_NAME, (_all, lead: string) => `${lead}the employee`)
++    .replace(STORE_NOT_VERIFIED, "")
++    .replace(/\n{3,}/g, "\n\n");
++  const offersDraft = card.supportsInlineDraft === true;
++  if (content === response.content && !offersDraft) return response;
++  return { ...response, content, formProposal: offersDraft ? { ...card, supportsInlineDraft: false } : card };
++}
+diff --git a/src/lib/forms/person-guard.ts b/src/lib/forms/person-guard.ts
+index f673d1ed..ed7d213b 100644
+--- a/src/lib/forms/person-guard.ts
++++ b/src/lib/forms/person-guard.ts
+@@ -1,6 +1,7 @@
+ import { NOT_A_NAME as BUSINESS_WORDS } from "@/lib/ai/employee-performance-gate";
+ import { isReportName } from "@/lib/ai/report-name";
+-import { metricGuardEnabled, personGuardEnabled } from "@/lib/config/chat-quality-flags";
++import { COMPANY_METRIC_PHRASES } from "@/config/company/metric-words";
++import { companyMetricWordsNotNamesEnabled, metricGuardEnabled, personGuardEnabled } from "@/lib/config/chat-quality-flags";
+ import { isNotAName } from "@/lib/forms/not-a-name";
+ import { installSlotRosterNames, namesAMetric, outsideRequestSlot } from "@/lib/forms/request-slot";
+ 
+@@ -61,6 +62,16 @@ function wordsOf(text: string): string[] {
+     .filter(Boolean);
+ }
+ 
++/** COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED: every word of the company's own metric phrases (`config/company/metric-words.ts`). */
++const COMPANY_METRIC_WORDS = new Set(COMPANY_METRIC_PHRASES.flatMap((phrase) => wordsOf(phrase)).filter((word) => word !== "%"));
++
++/** COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED: "Comp Sales", "Discount Rate", "IPT" — the company's metric words, measure words and percents only. */
++function companyMetric(words: readonly string[]): boolean {
++  if (!companyMetricWordsNotNamesEnabled()) return false;
++  if (!words.some((word) => COMPANY_METRIC_WORDS.has(word))) return false;
++  return words.every((word) => COMPANY_METRIC_WORDS.has(word) || MEASURE_WORDS.has(word) || /^%$|%$/.test(word));
++}
++
+ /* ---------------------------------------------------------- the roster -- */
+ 
+ type RosterRead = () => readonly string[] | undefined;
+@@ -124,6 +135,8 @@ export function notAPerson(candidate: string | null | undefined): boolean {
+   if (words.length === 0) return false;
+   if (words.some((word) => THING_WORDS.has(word))) return true;
+   if (PRACTICE_WORDS.has(words[0]!)) return true;
++  // COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED: after the roster, so a person whose surname is a metric word still matches.
++  if (companyMetric(words)) return true;
+   if (words.every((word) => MEASURE_WORDS.has(word) || business(word) || /%$/.test(word))) return true;
+   // "Avg <metric>": a measure word with business words or short metric labels only.
+   if (words.some((word) => MEASURE_WORDS.has(word)) && words.every((word) => MEASURE_WORDS.has(word) || business(word) || word.length <= 4)) return true;
+diff --git a/src/lib/forms/roster-only-names.ts b/src/lib/forms/roster-only-names.ts
+index 1cb753b3..3397d286 100644
+--- a/src/lib/forms/roster-only-names.ts
++++ b/src/lib/forms/roster-only-names.ts
+@@ -1,5 +1,6 @@
+ import { formNameFromRosterEnabled, metricChoiceOneQuestionEnabled, metricGuardEnabled, offRosterConfirmEnabled, rosterNearMissEnabled, rosterNotFoundAnyPhrasingEnabled, nearMissQuestionRulesEnabled, formNameOffRosterAskEnabled, offRosterAskBeforeCardEnabled, possessivePlaceNotPersonEnabled } from "@/lib/config/chat-quality-flags";
+ import { isGlossaryTerm } from "@/lib/ai/glossary";
++import { standInForName, withStandInsSaid } from "./no-name-reply-wording";
+ import type { AskResponse } from "@/lib/ai/types";
+ 
+ import { HAS_EMPLOYEE_AND_PLACE, SAYS_READY } from "@/lib/ai/coaching-what-happened";
+@@ -433,8 +434,12 @@ export function withoutUnseatedName(
+       for (const roster of names) {
+         next = next.replace(new RegExp(String.raw`\b${escape(roster)}\b`, "gi"), (found) => `\u0000${kept.push(found) - 1}\u0000`);
+       }
+-      for (const pattern of whole) next = next.replace(pattern, "the employee");
+-      for (const pattern of single) next = next.replace(pattern, (found: string, at: number, line: string) => (ownWord(line, found, at) ? found : "the employee"));
++      // NO_NAME_REPLY_WORDING_ENABLED: the stand-in is held aside until every word of the name is done ("ima employee"
++      // never becomes "the the employee"; `no-name-reply-wording.ts`). Off, "the employee" as before.
++      const standIn = standInForName();
++      for (const pattern of whole) next = next.replace(pattern, standIn);
++      for (const pattern of single) next = next.replace(pattern, (found: string, at: number, line: string) => (ownWord(line, found, at) ? found : standIn));
++      next = withStandInsSaid(next);
+       next = next.replace(/(^|[.!?]\s+|\*\*\s*)the employee/g, (_all, lead: string) => `${lead}The employee`);
+       return next.replace(/\u0000(\d+)\u0000/g, (_all, index: string) => kept[Number(index)]!);
+     })

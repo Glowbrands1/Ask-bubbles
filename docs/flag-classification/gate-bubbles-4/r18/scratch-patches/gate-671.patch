@@ -1,0 +1,141 @@
+# branch gate-671 head bfb6affc ; diff from main-line base c6e0b7db
+# bfb6affc gate merge pr671 (keep both)
+# 19902772 Merge remote-tracking branch 'origin/main' into rec-671
+# 927af741 Merge commit 'c6063f2c' into rec-671
+# 1cf67ca2 Port from Ask Sunny (52d39dd9): with a card on screen, no "I can prepare:" choice offering the same form (NO_SELECTION_ON_OPEN_CARD_ENABLED)
+diff --git a/src/app/api/chat/replay-pack/nov5-pau-sf-b6-cases.ts b/src/app/api/chat/replay-pack/nov5-pau-sf-b6-cases.ts
+index 8d42e4b0..1b0115b7 100644
+--- a/src/app/api/chat/replay-pack/nov5-pau-sf-b6-cases.ts
++++ b/src/app/api/chat/replay-pack/nov5-pau-sf-b6-cases.ts
+@@ -61,6 +61,10 @@ export const NOV5_PAU_SF_B6_CASES: ReplayCase[] = [
+     status: { open: "the reply ends \"Based on what you've described, I can prepare:\" with nothing after it" },
+     // QA's backlog B7 (10 Nov 2026): the ending is fixed behind LEAD_FULL_SENTENCE_ENABLED (case nov5-sf-b6-reply-full-sentence
+     // below); with it on, this case still fails on the card, which ignores the detail added on turn 3 — not in B7, left open.
++    // Fixed under NO_SELECTION_ON_OPEN_CARD_ENABLED (port from the sibling app, 10 Nov 2026): no form choice for the card already on screen; open on production flags until QA flips it.
++    fixFlags: ["NO_SELECTION_ON_OPEN_CARD_ENABLED"],
++    // With the flag the reply no longer ends at "I can prepare:", but here the next card still misses the turn-3 detail (a second defect, not this flag's).
++    fixStatus: { open: "the card after \"Create … from this conversation\" does not carry the turn-3 detail (4:56, customer complaint)" },
+     async run(t: T) {
+       vi.setSystemTime(new Date("2026-11-04T23:30:00Z"));
+       t.directory([...STAFF, WYNNE]);
+diff --git a/src/app/api/chat/route.ts b/src/app/api/chat/route.ts
+index ff842db3..0bc3ef6b 100644
+--- a/src/app/api/chat/route.ts
++++ b/src/app/api/chat/route.ts
+@@ -70,6 +70,7 @@ import {
+   questionNotFormEnabled,
+   sameFormCopyEnabled,
+   sameFormCopyNewPersonEnabled,
++  noSelectionOnOpenCardEnabled,
+   sameRequestOtherPersonEnabled,
+   staffPickerBareAnswerEnabled,
+   wholeTeamCoachingEnabled,
+@@ -1038,6 +1039,10 @@ async function postChat(request: Request) {
+         void _dropped;
+         answer = { ...rest, content: rest.content.replace(/\n*Based on what you've described, I can prepare:\s*$/, "").trimEnd() };
+       }
++      // NO_SELECTION_ON_OPEN_CARD_ENABLED: the card on screen is the form; no "I can prepare:" choice offering it again.
++      if (noSelectionOnOpenCardEnabled()) {
++        answer = (await import("@/lib/forms/no-selection-on-open-card")).withoutSelectionOnOpenCard(answer, parsed.continueProposalTemplateKey);
++      }
+       // LEAD_FULL_SENTENCE_ENABLED: a reply never ends at "I can prepare:" (`lib/forms/lead-full-sentence.ts`).
+       if (leadFullSentenceEnabled()) answer = (await import("@/lib/forms/lead-full-sentence")).withLeadFullSentence(answer);
+       // ACCOUNT_BEFORE_REQUEST_ENABLED: the account given before the request is handed to the draft (`lib/forms/account-before-request.ts`).
+diff --git a/src/lib/config/chat-quality-flags.ts b/src/lib/config/chat-quality-flags.ts
+index 6da53817..4639ad43 100644
+--- a/src/lib/config/chat-quality-flags.ts
++++ b/src/lib/config/chat-quality-flags.ts
+@@ -4632,3 +4632,15 @@ export function letterGreetingAnyCaseEnabled(): boolean {
+ export function companyMetricWordsNotNamesEnabled(): boolean {
+   return envFlag("COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED");
+ }
++
++/**
++ * NO_SELECTION_ON_OPEN_CARD_ENABLED (coding 6, 10 Nov 2026; default off;
++ * Pau's sf-b6; port from the sibling app). With a Corrective Action card on screen, a turn adding
++ * a detail ended "Based on what you've described, I can prepare:" above a
++ * choice offering the same form again. On: when the card on screen's form is
++ * among the choices, the choice and its lead are left off. See
++ * `forms/no-selection-on-open-card.ts`. Off, as before.
++ */
++export function noSelectionOnOpenCardEnabled(): boolean {
++  return envFlag("NO_SELECTION_ON_OPEN_CARD_ENABLED");
++}
+diff --git a/src/lib/forms/no-selection-on-open-card.test.ts b/src/lib/forms/no-selection-on-open-card.test.ts
+new file mode 100644
+index 00000000..7dccb43d
+--- /dev/null
++++ b/src/lib/forms/no-selection-on-open-card.test.ts
+@@ -0,0 +1,38 @@
++import { afterEach, describe, expect, it } from "vitest";
++
++import type { AskResponse } from "@/lib/ai/types";
++
++import { withoutSelectionOnOpenCard } from "./no-selection-on-open-card";
++
++/*
++ * NO_SELECTION_ON_OPEN_CARD_ENABLED (Pau's sf-b6). The replay pack runs the chat with the manager's words:
++ * `nov5-pau-sf-b6-cases.ts`.
++ */
++const choice = (templateKey: string) => ({ templateKey, templateName: templateKey, description: "" });
++const answer = {
++  content: "I can add that detail as the factual account on the form.\n\nBased on what you've described, I can prepare:",
++  citations: [],
++  coverage: "not_applicable",
++  recommendedVideoIds: [],
++  formSelection: { primary: choice("dpoa"), additional: [choice("coaching")] },
++} as unknown as AskResponse;
++
++afterEach(() => {
++  delete process.env.NO_SELECTION_ON_OPEN_CARD_ENABLED;
++});
++
++describe("the form choice with a card on screen", () => {
++  it("is left off, with its lead, when it offers the card's own form; as before with the flag off", () => {
++    expect(withoutSelectionOnOpenCard(answer, "dpoa")).toBe(answer);
++    process.env.NO_SELECTION_ON_OPEN_CARD_ENABLED = "true";
++    const read = withoutSelectionOnOpenCard(answer, "dpoa");
++    expect(read.formSelection).toBeUndefined();
++    expect(read.content).toBe("I can add that detail as the factual account on the form.");
++  });
++
++  it("stays with no card on screen, or a card of a form it does not offer", () => {
++    process.env.NO_SELECTION_ON_OPEN_CARD_ENABLED = "true";
++    expect(withoutSelectionOnOpenCard(answer, undefined)).toBe(answer);
++    expect(withoutSelectionOnOpenCard(answer, "exit")).toBe(answer);
++  });
++});
+diff --git a/src/lib/forms/no-selection-on-open-card.ts b/src/lib/forms/no-selection-on-open-card.ts
+new file mode 100644
+index 00000000..ca55c5fb
+--- /dev/null
++++ b/src/lib/forms/no-selection-on-open-card.ts
+@@ -0,0 +1,28 @@
++import { noSelectionOnOpenCardEnabled } from "@/lib/config/chat-quality-flags";
++import { formOpportunityLead } from "@/lib/forms/form-opportunity";
++import type { AskResponse } from "@/lib/ai/types";
++
++/**
++ * ============================================================================
++ * WITH A CARD ON SCREEN, NO "I CAN PREPARE:" FOR THE SAME FORM (NO_SELECTION_ON_OPEN_CARD_ENABLED)
++ * ============================================================================
++ *
++ * Pau's sf-b6 (this app's production, 4 Nov 2026; port from the sibling app): with <A>'s Corrective Action card on screen,
++ * "can you have it include that we recieved a customer complaint from Sunday 11-1, …" was answered by the model, and
++ * then the app added the form choice again — "Based on what you've described, I can prepare:" with the Corrective
++ * Action Form first — so the reply ended at a colon above a choice of the form already being written.
++ *
++ * With the flag on, when the browser says a card of one form is on screen (`continueProposalTemplateKey`) and the
++ * answer's form choice offers that same form, the choice and its lead are left off: the card on screen is the form. Any
++ * other answer is left as it is. Pure.
++ */
++export function withoutSelectionOnOpenCard(answer: AskResponse, continueTemplateKey: string | undefined): AskResponse {
++  const selection = answer.formSelection;
++  if (!noSelectionOnOpenCardEnabled() || !continueTemplateKey || !selection) return answer;
++  const offered = [selection.primary, ...(selection.additional ?? [])].map((choice) => choice.templateKey);
++  if (!offered.includes(continueTemplateKey)) return answer;
++  const { formSelection: _dropped, ...rest } = answer;
++  void _dropped;
++  const lead = formOpportunityLead().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
++  return { ...rest, content: rest.content.replace(new RegExp(`\\n*${lead}\\s*$`), "").trimEnd() };
++}

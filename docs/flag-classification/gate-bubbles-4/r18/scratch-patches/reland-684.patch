@@ -1,0 +1,385 @@
+# triage worktree t684 (detached) head e77ab13c ; diff vs main 6081b825
+# e77ab13c Merge branch 'pr684' into HEAD
+# 2346fc0b Merge remote-tracking branch 'origin/main' into HEAD
+# b2e3726e Port from Ask Sunny (7e870e6): APP_INSTRUCTIONS_NOT_ACCOUNT: the team card's request lead and "the employee needs to be left blank" are no account
+# 751097ed Port from Ask Sunny (e6685c22): instructions to the app are no account (APP_INSTRUCTIONS_NOT_ACCOUNT_ENABLED), and the P12 part 2 guards
+diff --git a/src/app/api/chat/replay-pack/nov10-p12-second-person-cases.ts b/src/app/api/chat/replay-pack/nov10-p12-second-person-cases.ts
+new file mode 100644
+index 00000000..3efecc80
+--- /dev/null
++++ b/src/app/api/chat/replay-pack/nov10-p12-second-person-cases.ts
+@@ -0,0 +1,66 @@
++import { expect, vi } from "vitest";
++
++import { STAFF, WEST_DODGE, type DirectoryRow, type ReplayCase, type ReplayContext } from "./cases";
++
++/**
++ * ============================================================================
++ * P12, PART 2 (QA, 10 Nov 2026; the sibling app's live chat of 7 Nov; port): THE SAME REQUEST FOR A SECOND PERSON NEVER MIXES IN THE FIRST
++ * ============================================================================
++ *
++ * "make me a coaching form for <A> not hitting October numbers" → Create → the same words for <B>: the second reply
++ * mixed in the first person ("<A> for not hitting her numbers… <B> for not hitting her numbers…"). The managers' words
++ * are verbatim; both people are invented (Brisa Talvenor, Odette Quillane).
++ */
++
++type T = ReplayContext;
++
++const person = (id: string, firstName: string, lastName: string): DirectoryRow => ({
++  id,
++  firstName,
++  lastName,
++  preferredFirstName: null,
++  employmentStatus: "active",
++  locationIds: ["loc-264"],
++  positionName: "Team Member Part Time",
++});
++const BRISA = person("e-brisa-talvenor-2", "Brisa", "Talvenor");
++const ODETTE = person("e-odette-quillane", "Odette", "Quillane");
++
++/** The invented people of this file (a function: the registry reads exported arrays as cases). */
++export function p12SecondPersonPeople(): readonly DirectoryRow[] {
++  return [BRISA, ODETTE];
++}
++
++const ASK = (name: string) => `make me a coaching form for ${name} not hitting October numbers`;
++const REPORT = "QA, 10 Nov 2026 (P12 part 2; the live chat of 7 Nov 2026): the same request made for a second person mixed in the first";
++
++/** The answering model's reply shape from the report (QA): both people, the first one first. */
++const BOTH = "I can start a coaching form for Brisa Talvenor for not hitting her numbers in October, and one for Odette Quillane for not hitting her numbers in October. Odette's is below.";
++
++export const NOV10_P12_SECOND_PERSON_CASES: ReplayCase[] = [
++  ...([false, true] as const).map((scripted): ReplayCase => ({
++    id: `nov10-p12-second-person-never-mixes-in-the-first${scripted ? "-model-names-both" : ""}`,
++    title: `P12 part 2${scripted ? " (the answering model names both, as live)" : ""}: "${ASK("<A>")}" → Create → "${ASK("<B>")}": B's reply and B's saved Details never mention A`,
++    report: REPORT,
++    status: "fixed",
++    async run(t: T) {
++      vi.setSystemTime(new Date("2026-11-10T15:30:00Z"));
++      t.directory([...STAFF, BRISA, ODETTE]);
++      t.as("location_manager", WEST_DODGE);
++      const thread = t.thread();
++      await thread.say(ASK("Brisa Talvenor"));
++      expect(thread.proposal, "no Coaching card for Brisa").toMatchObject({ templateKey: "coaching", employeeName: "Brisa Talvenor" });
++      const brisa = await thread.create();
++      if (scripted) t.modelSays(BOTH);
++      const reply = await thread.say(ASK("Odette Quillane"));
++      t.modelSays(null);
++      expect(reply.formProposal, `no Coaching card for Odette:\n${reply.content}`).toMatchObject({ templateKey: "coaching", employeeName: "Odette Quillane" });
++      expect(reply.content, `Brisa is in Odette's reply:\n${reply.content}`).not.toMatch(/brisa|talvenor/i);
++      const odette = await thread.create();
++      expect(odette, "Odette's card reopened Brisa's form").not.toBe(brisa);
++      const saved = JSON.stringify(t.values(odette));
++      expect(saved, `Brisa is on Odette's saved form:\n${saved}`).not.toMatch(/brisa|talvenor/i);
++      expect(t.draftPrompts().at(-1) ?? "", "Brisa's turn was handed to Odette's drafting model").not.toMatch(/brisa|talvenor/i);
++    },
++  })),
++];
+diff --git a/src/app/api/chat/replay-pack/nov10-p12-team-card-instructions-cases.ts b/src/app/api/chat/replay-pack/nov10-p12-team-card-instructions-cases.ts
+new file mode 100644
+index 00000000..f2fa7c23
+--- /dev/null
++++ b/src/app/api/chat/replay-pack/nov10-p12-team-card-instructions-cases.ts
+@@ -0,0 +1,44 @@
++import { expect, vi } from "vitest";
++
++import { STAFF, WEST_DODGE, type ReplayCase } from "./cases";
++
++/**
++ * ============================================================================
++ * P12, PART 2 — THE TEAM CARD (QA's live finding on the sibling app's round 17, 10 Nov 2026; port)
++ * ============================================================================
++ *
++ * "make me a coaching form for the team at <store> on selling lotion bottles" → "the employee needs to be left blank":
++ * the sibling app's team card carried the request lead and the instruction in its Observation. This app's card shows
++ * no Observation; the same words reached the drafting model as the account, and with the model writing nothing the
++ * never-blank fallback SAVED "Observed: The employee needs to be left blank." QA's turns are verbatim, with this app's
++ * store for the sibling's salon; no person is named.
++ */
++
++const TURNS = ["make me a coaching form for the team at West Dodge on selling lotion bottles", "the employee needs to be left blank"] as const;
++
++export const NOV10_P12_TEAM_CARD_INSTRUCTIONS_CASES: ReplayCase[] = [
++  {
++    id: "nov10-p12-team-card-no-request-lead-or-blank-employee",
++    title: `P12 part 2 (team card): "${TURNS[0]}" → "${TURNS[1]}" → Create: the request lead and the instruction are never the account, never saved`,
++    report: `QA, 10 Nov 2026 (the sibling app's round 17, live): "make me a coaching form for the team at <store> on selling lotion bottles" → "${TURNS[1]}": the team card's Observation carried both`,
++    status: { open: "the drafting model is handed \"the employee needs to be left blank\" as the account, and the saved Details are \"Observed: The employee needs to be left blank.\"" },
++    fixFlags: ["APP_INSTRUCTIONS_NOT_ACCOUNT_ENABLED"],
++    async run(t) {
++      vi.setSystemTime(new Date("2026-11-10T06:30:00Z"));
++      t.directory([...STAFF]);
++      t.as("location_manager", WEST_DODGE);
++      const thread = t.thread();
++      for (const said of TURNS) {
++        const reply = await thread.say(said);
++        expect(thread.proposal, `no team Coaching card after "${said}":\n${reply.content}`).toMatchObject({ templateKey: "coaching", subject: "team" });
++      }
++      const id = await thread.create();
++      // The draft prompt carries the notes JSON-escaped ("\\n" between turns).
++      const described = /WHAT THE MANAGER DESCRIBED:(?:\\n|\n)([\s\S]*?)(?:\\n|\n)FIELDS YOU MAY WRITE/.exec(t.draftPrompts().at(-1) ?? "")?.[1] ?? "";
++      expect(described, "the account handed to the drafting model lost the topic").toMatch(/selling lotion bottles/i);
++      expect(described, "the request lead was handed over as the account").not.toMatch(/\bmake\s+me\b|coaching form/i);
++      expect(described, "the Employee-field instruction was handed over as the account").not.toMatch(/left blank|employee needs/i);
++      expect(t.values(id).coaching_details ?? "", "the Employee-field instruction was saved in Details").not.toMatch(/left blank|employee needs/i);
++    },
++  },
++];
+diff --git a/src/app/api/chat/replay-pack/nov10-p12-three-requests-cases.ts b/src/app/api/chat/replay-pack/nov10-p12-three-requests-cases.ts
+new file mode 100644
+index 00000000..e5dc8836
+--- /dev/null
++++ b/src/app/api/chat/replay-pack/nov10-p12-three-requests-cases.ts
+@@ -0,0 +1,84 @@
++import { expect, vi } from "vitest";
++
++import { STAFF, WEST_DODGE, type DirectoryRow, type ReplayAnswer, type ReplayCase, type ReplayContext } from "./cases";
++
++/**
++ * ============================================================================
++ * P12, PART 2 — THE LIVE SHAPE (QA, 10 Nov 2026; the sibling app's production, 6 Nov 18:01Z; port)
++ * ============================================================================
++ *
++ * Three requests back to back in one chat, no Create between, each for another person:
++ *   "Can you create me a coaching document for <A> for not hitting her numbers for the month of October. Please word it
++ *    in a professional way. I need the policy attached as well." — then the same text for <B>, then for <C>.
++ * Two bugs, both on the CARD's Observation and so on the draft:
++ *   (a) <B>'s Observation carried <A>'s request ("<A> for not hitting her numbers … <B> for not hitting …");
++ *   (b) every Observation kept the manager's instructions to the app ("Please word it in a professional way. I need the
++ *       policy attached as well.").
++ * The manager's words are verbatim; the people are invented (Brisa Talvenor, Odette Quillane, Liesl Varnham).
++ */
++
++type T = ReplayContext;
++
++const person = (id: string, firstName: string, lastName: string): DirectoryRow => ({
++  id,
++  firstName,
++  lastName,
++  preferredFirstName: null,
++  employmentStatus: "active",
++  locationIds: ["loc-264"],
++  positionName: "Team Member Part Time",
++});
++const PEOPLE = [person("e-p12-brisa", "Brisa", "Talvenor"), person("e-p12-odette", "Odette", "Quillane"), person("e-p12-liesl", "Liesl", "Varnham")];
++const NAMES = PEOPLE.map((p) => `${p.firstName} ${p.lastName}`);
++
++/** The invented people of this file (a function: the registry reads exported arrays as cases). */
++export function p12ThreeRequestsPeople(): readonly DirectoryRow[] {
++  return PEOPLE;
++}
++
++const ASK = (name: string) =>
++  `Can you create me a coaching document for ${name} for not hitting her numbers for the month of October. Please word it in a professional way. I need the policy attached as well.`;
++const INSTRUCTIONS = /word it in a professional way|policy attached/i;
++const REPORT = "QA, 10 Nov 2026 (P12 part 2; the sibling app's production, 6 Nov 18:01Z): three requests back to back; (a) B's Observation carried A's request, (b) every Observation kept the manager's instructions";
++export const P12_THREE_FIX = "APP_INSTRUCTIONS_NOT_ACCOUNT_ENABLED";
++
++const observationLine = (reply: ReplayAnswer) => reply.content.split("\n").find((line) => /\*\*Observation of Offense:\*\*/.test(line)) ?? "";
++
++function others(index: number): RegExp {
++  const words = NAMES.filter((_n, i) => i !== index).flatMap((name) => name.split(" "));
++  return new RegExp(`\\b(?:${words.join("|")})\\b`, "i");
++}
++
++export const NOV10_P12_THREE_REQUESTS_CASES: ReplayCase[] = [0, 1, 2].map(
++  (index): ReplayCase => ({
++    id: `nov10-p12-three-requests-t${index + 1}`,
++    title: `P12 part 2, T${index + 1} of three back-to-back requests: ${NAMES[index]}'s card and saved Details are her own account only, without the instructions to the app`,
++    report: REPORT,
++    status: { open: index === 1 ? "T2's Observation carries T1's request and the instructions" : "the Observation keeps \"Please word it in a professional way. I need the policy attached as well.\"" },
++    fixFlags: [P12_THREE_FIX],
++    async run(t: T) {
++      vi.setSystemTime(new Date("2026-11-06T18:01:00Z"));
++      t.directory([...STAFF, ...PEOPLE]);
++      t.as("location_manager", WEST_DODGE);
++      const thread = t.thread();
++      let reply: ReplayAnswer | null = null;
++      for (let turn = 0; turn <= index; turn += 1) reply = await thread.say(ASK(NAMES[turn]!));
++      expect(thread.proposal, `no Coaching card for ${NAMES[index]}:\n${reply!.content}`).toMatchObject({ templateKey: "coaching", employeeName: NAMES[index] });
++      // This app's coaching card shows no Observation line (the sibling's does); when one is shown, it is the person's own account.
++      const observed = observationLine(reply!);
++      if (observed) {
++        expect(observed, `the card's Observation names somebody else:\n${observed}`).not.toMatch(others(index));
++        expect(observed, `the card's Observation keeps the instructions to the app:\n${observed}`).not.toMatch(INSTRUCTIONS);
++        expect(observed, `the card's Observation lost the account:\n${observed}`).toMatch(/not hitting her numbers/i);
++      }
++      expect(reply!.content, `the card names somebody else:\n${reply!.content}`).not.toMatch(others(index));
++      const id = await thread.create();
++      const saved = t.values(id).coaching_details ?? "";
++      expect(saved, `the saved Details name somebody else:\n${saved}`).not.toMatch(others(index));
++      expect(saved, `the saved Details keep the instructions to the app:\n${saved}`).not.toMatch(INSTRUCTIONS);
++      const described = (t.draftPrompts().at(-1) ?? "").split("WHAT THE MANAGER DESCRIBED:")[1] ?? "";
++      expect(described, "another person's request was handed to the drafting model").not.toMatch(others(index));
++      expect(described, "the instructions to the app were handed to the drafting model as the account").not.toMatch(INSTRUCTIONS);
++    },
++  }),
++);
+diff --git a/src/app/api/forms/instances/[id]/draft/route.ts b/src/app/api/forms/instances/[id]/draft/route.ts
+index 51ce24d1..92bd398a 100644
+--- a/src/app/api/forms/instances/[id]/draft/route.ts
++++ b/src/app/api/forms/instances/[id]/draft/route.ts
+@@ -419,7 +419,9 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
+       : sent;
+     // OUTLINE_ON_OPEN_PROPOSAL_ENABLED: an outline pasted for another person, and "same outline …", are no account (`lib/forms/outline-on-proposal.ts`).
+     const unoutlined = outlineOnOpenProposalEnabled() ? (await import("@/lib/forms/outline-on-proposal")).notesWithoutOutline(typed, loaded.instance.employeeName) : typed;
+-    const asTyped = (await import("@/lib/ai/card-meta-turn")).withoutCardMetaTurns(unoutlined);
++    // APP_INSTRUCTIONS_NOT_ACCOUNT_ENABLED (port from the sibling app): "Please word it in a professional way. I need the policy attached as well." is no account.
++    const plain = (await import("@/lib/ai/app-instructions")).withoutAppInstructions(unoutlined);
++    const asTyped = (await import("@/lib/ai/card-meta-turn")).withoutCardMetaTurns(plain === unoutlined ? unoutlined : plain.trim());
+     // TYPO_READING_ROUTES_ENABLED: the readers below see "coahed", "notcie", "amont" as the words they can only be.
+     const read = typoReadingRoutesEnabled() ? typoReadingText(asTyped, await protectedNameWords()) : asTyped;
+     // PROPOSAL_MAKE_IT_ABOUT_ENABLED: "make it about showing up late …" makes "Showing up late." the account from that turn on (`ai/make-it-about.ts`).
+diff --git a/src/lib/ai/app-instructions.test.ts b/src/lib/ai/app-instructions.test.ts
+new file mode 100644
+index 00000000..c6ea60c4
+--- /dev/null
++++ b/src/lib/ai/app-instructions.test.ts
+@@ -0,0 +1,47 @@
++import { afterEach, describe, expect, it } from "vitest";
++
++import { isAppInstruction, withoutAppInstructions } from "./app-instructions";
++
++/*
++ * APP_INSTRUCTIONS_NOT_ACCOUNT_ENABLED. The manager's words are verbatim (QA's P12 part 2, the sibling app's production, 6 Nov
++ * 2026); the person is invented. The replay cases `nov10-p12-three-requests-t1…t3` run the chat.
++ */
++const SAID =
++  "Can you create me a coaching document for Brisa Talvenor for not hitting her numbers for the month of October. Please word it in a professional way. I need the policy attached as well.";
++
++afterEach(() => {
++  delete process.env.APP_INSTRUCTIONS_NOT_ACCOUNT_ENABLED;
++});
++
++describe("instructions to the app", () => {
++  it("read the wording and policy asks, never an account", () => {
++    expect(isAppInstruction("Please word it in a professional way.")).toBe(true);
++    expect(isAppInstruction("I need the policy attached as well.")).toBe(true);
++    expect(isAppInstruction("please include the attendance policy")).toBe(true);
++    expect(isAppInstruction("She violated the attendance policy twice.")).toBe(false);
++    expect(isAppInstruction("She was not professional with a guest.")).toBe(false);
++  });
++
++  it("are left out with the flag on, the account kept; as before off", () => {
++    expect(withoutAppInstructions(SAID)).toBe(SAID);
++    process.env.APP_INSTRUCTIONS_NOT_ACCOUNT_ENABLED = "true";
++    expect(withoutAppInstructions(SAID)).toBe(
++      "Can you create me a coaching document for Brisa Talvenor for not hitting her numbers for the month of October.",
++    );
++  });
++
++  it("a team card's turn: the marker, the request lead and the Employee-field instruction are no account (QA, round 17)", () => {
++    const team = "make me a coaching form for the team at West Dodge on selling lotion bottles";
++    const marked = `Coaching Form for the whole team at Omaha, NE (West Dodge Rd): ${team}`;
++    expect(withoutAppInstructions(marked)).toBe(marked);
++    expect(withoutAppInstructions("the employee needs to be left blank")).toBe("the employee needs to be left blank");
++    process.env.APP_INSTRUCTIONS_NOT_ACCOUNT_ENABLED = "true";
++    expect(withoutAppInstructions(marked)).toBe("The team at West Dodge on selling lotion bottles");
++    expect(withoutAppInstructions(team)).toBe("The team at West Dodge on selling lotion bottles");
++    expect(withoutAppInstructions("the employee needs to be left blank").trim()).toBe("");
++    // One person's request keeps its lead: the account is read after the name, as before.
++    expect(withoutAppInstructions("make me a coaching form for Brisa Talvenor not hitting October numbers")).toBe(
++      "make me a coaching form for Brisa Talvenor not hitting October numbers",
++    );
++  });
++});
+diff --git a/src/lib/ai/app-instructions.ts b/src/lib/ai/app-instructions.ts
+new file mode 100644
+index 00000000..cc88a7a3
+--- /dev/null
++++ b/src/lib/ai/app-instructions.ts
+@@ -0,0 +1,69 @@
++import { appInstructionsNotAccountEnabled } from "@/lib/config/chat-quality-flags";
++import { readsAsTeamSubject } from "@/lib/forms/team-subject";
++
++/*
++ * ============================================================================
++ * "PLEASE WORD IT IN A PROFESSIONAL WAY. I NEED THE POLICY ATTACHED AS WELL." IS NO ACCOUNT
++ * (APP_INSTRUCTIONS_NOT_ACCOUNT_ENABLED)
++ * ============================================================================
++ *
++ * QA's P12 part 2 (the sibling app's production, 6 Nov 2026; port): "Can you create me a coaching document for <A> for not hitting her
++ * numbers for the month of October. Please word it in a professional way. I need the policy attached as well." — every
++ * card's Observation read "not hitting her numbers for the month of October. Please word it in a professional way. I
++ * need the policy attached as well." The last two sentences tell the app how to write the form and what to put on it;
++ * they say nothing that happened. GRAMMAR_ASK_NOT_ACCOUNT reads only grammar requests and instructions asked as a
++ * question. With this flag on, a sentence that only asks for the wording ("word it professionally", "make it sound
++ * professional") or for the policy on the form ("I need the policy attached", "please include the policy") is left out
++ * of the card's Observation and the draft's account. Pure.
++ *
++ * QA's live finding on the sibling app's round 17 (10 Nov 2026; port), the team card: "make me a coaching form for the team at <store>
++ * on selling lotion bottles" → Observation "the whole team: make me a coaching form for the team on selling lotion
++ * bottles"; then "the employee needs to be left blank" → "the team on selling lotion bottles the employee needs to be
++ * left blank". On a team card's turn (the intake's "Coaching Form for the whole team …:" marker) the marker and the
++ * request lead ("make me a coaching form for") are no account either, and neither is a sentence that only says the
++ * Employee field is to be left blank.
++ */
++
++const WORDING =
++  /^\s*(?:please\s+|can\s+you\s+|could\s+you\s+)?(?:word|write|phrase|reword|make|keep)\s+(?:it|this|that|them|the\s+(?:form|document|wording|details|observation))\b[^.!?]{0,40}\b(?:professional(?:ly)?|formal(?:ly)?|polite(?:ly)?|clear(?:ly)?|nice(?:ly)?|neutral(?:ly)?)\b(?:\s+(?:way|tone|manner))?/i;
++const POLICY_ON_FORM =
++  /^\s*(?:please\s+|can\s+you\s+|could\s+you\s+|and\s+)?(?:(?:i|we)\s+(?:need|want|would\s+like)|(?:attach|include|add|put))\s+(?:the|a|our)\s+(?:\w+\s+){0,2}?polic(?:y|ies)\b(?:\s+(?:attached|included|on\s+(?:it|the\s+form)|cited|quoted|in))?(?:\s+as\s+well|\s+too|\s+also)?\s*[.!]?\s*$/i;
++
++/** "The employee needs to be left blank for now" (the same reading as TEAM_CARD_NOT_PRODUCT's, `forms/team-card-not-product.ts`). */
++const BLANK_EMPLOYEE =
++  /\b(?:employee(?:'s)?(?:\s+name)?|name)\b[^.!?\n]{0,30}\b(?:left\s+blank|leave\s+(?:it\s+)?blank|blank|empty|no\s+one|nobody)\b|\bleave\s+(?:the\s+)?(?:employee|name)(?:\s+name)?\s+(?:field\s+)?blank\b/i;
++
++/** Whether a sentence only tells the app how to word the form or to put the policy on it. */
++export function isAppInstruction(sentence: string): boolean {
++  const said = sentence.trim();
++  if (said === "" || said.split(/\s+/).length > 16) return false;
++  return WORDING.test(said) || POLICY_ON_FORM.test(said) || BLANK_EMPLOYEE.test(said);
++}
++
++/** The intake's team-card marker (`forms/whole-team-coaching.ts` wholeTeamRequest), with its salon. */
++const TEAM_MARKER = /^\s*Coaching Form for the whole team(?:\s+at\s+[^:\n]+)?:\s*/i;
++/** "make me a coaching form for", "can you create a coaching form for", "I need to make a coaching form for". */
++const REQUEST_LEAD =
++  /^\s*(?:(?:hi|hey|please)\s*,?\s+)?(?:(?:can|could|would|will)\s+you\s+)?(?:please\s+)?(?:make|create|write|do|start|draft|put\s+together|(?:i|we)\s+(?:need|want|would\s+like)(?:\s+to\s+(?:make|create|do|write))?)\s+(?:me\s+|us\s+)?(?:a\s+|an\s+)?(?:new\s+)?c(?:oa|ao|oah)ch(?:ing)?\s+(?:form|document|doc|card)\b\s*(?:for\s+)?/i;
++
++/** A team card's turn without the intake's marker and the request lead: "the team at <store> on selling lotion bottles". */
++function teamTurnAccount(text: string): string {
++  // The marker on the turn the card is made; the manager's own turn, read back on later turns.
++  if (!TEAM_MARKER.test(text) && !(REQUEST_LEAD.test(text) && readsAsTeamSubject(text))) return text;
++  const words = text.replace(TEAM_MARKER, "").replace(REQUEST_LEAD, "").trim();
++  return words ? `${words.charAt(0).toUpperCase()}${words.slice(1)}` : "";
++}
++
++/** The text without its instructions to the app; line breaks kept. Off: as it is. */
++export function withoutAppInstructions(text: string): string {
++  if (!appInstructionsNotAccountEnabled()) return text;
++  return text
++    .split("\n")
++    .map((line) =>
++      teamTurnAccount(line)
++        .split(/(?<=[.!?])\s+/)
++        .filter((sentence) => !isAppInstruction(sentence))
++        .join(" "),
++    )
++    .join("\n");
++}
+diff --git a/src/lib/config/chat-quality-flags.ts b/src/lib/config/chat-quality-flags.ts
+index b53ff9c4..e51c84c0 100644
+--- a/src/lib/config/chat-quality-flags.ts
++++ b/src/lib/config/chat-quality-flags.ts
+@@ -4711,6 +4711,20 @@ export function madeAboutRewriteFinishesEnabled(): boolean {
+   return envFlag("MADE_ABOUT_REWRITE_FINISHES_ENABLED");
+ }
+ 
++/**
++ * APP_INSTRUCTIONS_NOT_ACCOUNT_ENABLED (coding 6, 10 Nov 2026; default off;
++ * QA's P12 part 2, port from the sibling app). "… for not hitting her numbers
++ * for the month of October. Please word it in a professional way. I need the
++ * policy attached as well." — the drafting model was handed the last two
++ * sentences as account. On: a sentence that only asks for the wording or for
++ * the policy on the form is left out of the draft's account (this app's
++ * coaching card shows no Observation line).
++ * See `ai/app-instructions.ts`. Off, as before.
++ */
++export function appInstructionsNotAccountEnabled(): boolean {
++  return envFlag("APP_INSTRUCTIONS_NOT_ACCOUNT_ENABLED");
++}
++
+ /**
+  * MADE_ABOUT_TOPIC_EVIDENCE_ENABLED (QA's live Bubbles round 13, 9 Nov 2026; default off; same flag in both apps). "make it
+  * about being late on 11/5/26" left Other on the old topic: the topic read from the manager's words ("Being late") came

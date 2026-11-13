@@ -1,0 +1,281 @@
+# triage worktree t757 (detached) head 2245903c ; diff vs main 6081b825
+# 2245903c fixflags
+# 2bb17750 Merge branch 'pr757' into HEAD
+# 7dfcc8bb Merge main (6ce4ba95) into claude/woven-larger-files-cap (#757): flag list conflicts kept both sides
+# 6eb2b338 Synced Woven files may be up to 200 MB, and OCR refuses a scan too big for one request (WOVEN_LARGER_FILES_ENABLED, default off)
+diff --git a/src/lib/config/chat-quality-flags.ts b/src/lib/config/chat-quality-flags.ts
+index b53ff9c4..a3ca289c 100644
+--- a/src/lib/config/chat-quality-flags.ts
++++ b/src/lib/config/chat-quality-flags.ts
+@@ -1519,6 +1519,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
+   "EDIT_SEES_SAVED_FORM_ENABLED",
+   // CARD_CHECKED_AGAINST_WORDS (default off; Pau's direction via QA, 13 Nov 2026): in the list, as every chat flag.
+   "CARD_CHECKED_AGAINST_WORDS_ENABLED",
++  // coding 5: WOVEN_LARGER_FILES (QA, the two Woven files over the upload limit, 10 Nov 2026; default off).
++  "WOVEN_LARGER_FILES_ENABLED",
+ ] as const;
+ 
+ /**
+@@ -3390,6 +3392,18 @@ export function lateOpeningNeedsOpeningEnabled(): boolean {
+   return envFlag("LATE_OPENING_NEEDS_OPENING_ENABLED");
+ }
+ 
++/**
++ * WOVEN_LARGER_FILES_ENABLED (QA, 10 Nov 2026: two Woven PDFs, "Local Grassroots Marketing Playbook" and "Soap
++ * Troubleshooting & Quality Control", stop every sync as larger than the 50 MB upload limit; coding 5; same flag in both
++ * apps; default off). On: a file the sync downloads may be up to 200 MB (a manager's upload keeps 50 MB), a file still
++ * over the cap is reported with its size, and OCR refuses a scan too big for one request before sending it
++ * (`ingestion/synced-file-limit.ts`, `knowledge-sync/woven/http.ts`, `ingestion/extract/pdf-ocr.ts`). The storage
++ * bucket's file_size_limit must be raised to 200 MB first (QA's release step). Off, as before.
++ */
++export function wovenLargerFilesEnabled(): boolean {
++  return envFlag("WOVEN_LARGER_FILES_ENABLED");
++}
++
+ // --- end coding 5 flags ---
+ 
+ /**
+diff --git a/src/lib/ingestion/extract/pdf.ts b/src/lib/ingestion/extract/pdf.ts
+index 3d850471..87eaeb88 100644
+--- a/src/lib/ingestion/extract/pdf.ts
++++ b/src/lib/ingestion/extract/pdf.ts
+@@ -1,9 +1,16 @@
+ import "server-only";
+ 
+-import { wovenPdfOcrEnabled } from "@/lib/config/chat-quality-flags";
++import { wovenLargerFilesEnabled, wovenPdfOcrEnabled } from "@/lib/config/chat-quality-flags";
+ 
+ import { IngestionError } from "../errors";
++import { megabytes } from "../synced-file-limit";
+ import { OCR_MODEL, ocrPdfPages, type OcrBudget } from "./pdf-ocr";
++
++/**
++ * WOVEN_LARGER_FILES_ENABLED: the largest scan OCR can send. The transcription request carries the PDF as base64 (4/3
++ * of its size) inside the API's 32 MB request limit, so a larger scan is refused before any request.
++ */
++export const OCR_MAX_BYTES = 23 * 1024 * 1024;
+ import { pdfSegments } from "./pdf-sections";
+ import { summarize, type ExtractedDocument } from "./types";
+ 
+@@ -56,6 +63,13 @@ export async function extractPdf(buffer: Uint8Array, options: { ocr?: OcrBudget
+      * read means today's answer. Off, as before.
+      */
+     if (options.ocr && wovenPdfOcrEnabled()) {
++      if (wovenLargerFilesEnabled() && buffer.byteLength > OCR_MAX_BYTES) {
++        throw new IngestionError(
++          "too_large",
++          `This scanned PDF is ${megabytes(buffer.byteLength)} MB; a scan can be read automatically up to ${megabytes(OCR_MAX_BYTES)} MB.`,
++          422,
++        );
++      }
+       const read = summarize(pdfSegments(await ocrPdfPages(buffer, totalPages, options.ocr)), totalPages);
+       if (read.characterCount > 0) return { ...read, ocr: { model: OCR_MODEL } };
+     }
+diff --git a/src/lib/ingestion/pipeline.ts b/src/lib/ingestion/pipeline.ts
+index e3b30187..7c4d4576 100644
+--- a/src/lib/ingestion/pipeline.ts
++++ b/src/lib/ingestion/pipeline.ts
+@@ -16,6 +16,7 @@ import type { OcrBudget } from "./extract/pdf-ocr";
+ import { IngestionError } from "./errors";
+ import { extractDocument } from "./extract";
+ import { buildStoragePath, sanitizeFileName } from "./paths";
++import { syncedFileMaxBytes } from "./synced-file-limit";
+ import { validateUpload } from "./validation";
+ 
+ /**
+@@ -100,6 +101,8 @@ export async function ingestDocument(input: IngestInput): Promise<IngestResult>
+     fileName: input.fileName,
+     mimeType: input.mimeType,
+     sizeBytes: input.file.size,
++    // WOVEN_LARGER_FILES_ENABLED: a Woven-synced file has the sync's cap (`synced-file-limit.ts`); an upload keeps 50 MB.
++    ...(input.source === "woven" ? { maxBytes: syncedFileMaxBytes() } : {}),
+   });
+ 
+   const title = input.title.trim();
+diff --git a/src/lib/ingestion/synced-file-limit.test.ts b/src/lib/ingestion/synced-file-limit.test.ts
+new file mode 100644
+index 00000000..23f5afbf
+--- /dev/null
++++ b/src/lib/ingestion/synced-file-limit.test.ts
+@@ -0,0 +1,99 @@
++import { afterEach, describe, expect, it, vi } from "vitest";
++
++vi.mock("server-only", () => ({}));
++
++/**
++ * WOVEN_LARGER_FILES_ENABLED. QA, 10 Nov 2026: "Local Grassroots Marketing Playbook" and "Soap Troubleshooting &
++ * Quality Control" stop every sync with "The file is larger than Ask Bubbles' upload limit." (woven_too_large); their
++ * real sizes were recorded nowhere. With the flag on a synced file may be up to 200 MB, a file over it is reported with
++ * its size, an upload keeps 50 MB, and OCR refuses a scan too big for one request.
++ */
++const { WovenTeamClient } = await import("@/lib/knowledge-sync/woven/http");
++const { validateUpload } = await import("./validation");
++const { LARGER_SYNCED_FILE_MAX_BYTES, megabytes, syncedFileMaxBytes } = await import("./synced-file-limit");
++const { extractPdf, OCR_MAX_BYTES } = await import("./extract/pdf");
++const { OcrBudget } = await import("./extract/pdf-ocr");
++
++const FLAG = "WOVEN_LARGER_FILES_ENABLED";
++const MB = 1024 * 1024;
++
++/** A signed download whose response declares `declared` bytes and sends a few. */
++function client(declared: number) {
++  const fetch = (async () =>
++    new Response(new Uint8Array([37, 80, 68, 70]), { status: 200, headers: { "content-length": String(declared), "content-type": "application/pdf" } })) as typeof globalThis.fetch;
++  return new WovenTeamClient({ baseUrl: "https://app.woven.team", fetch, sleep: async () => {}, transport: { minIntervalMs: 0, baseBackoffMs: 0 } });
++}
++const SIGNED = "https://bcsfiles.blob.core.windows.net/library/Soap-Troubleshooting.pdf?sig=x";
++
++afterEach(() => vi.unstubAllEnvs());
++
++describe("a synced file over the cap", () => {
++  it("off (production today): the cap is 50 MB, so a 73 MB file is refused (its size is in the message)", async () => {
++    expect(syncedFileMaxBytes()).toBe(50 * MB);
++    await expect(client(76_960_000).downloadSigned(SIGNED, syncedFileMaxBytes())).rejects.toMatchObject({
++      code: "too_large",
++      message: "The file is 73.4 MB; Ask Bubbles' limit is 50 MB.",
++    });
++  });
++
++  it("on: the cap is 200 MB, so a 73 MB file downloads", async () => {
++    vi.stubEnv(FLAG, "true");
++    expect(syncedFileMaxBytes()).toBe(LARGER_SYNCED_FILE_MAX_BYTES);
++    await expect(client(76_960_000).downloadSigned(SIGNED, syncedFileMaxBytes())).resolves.toMatchObject({ contentType: "application/pdf" });
++  });
++
++  it("on: a file still over the cap is reported with its declared size and the limit", async () => {
++    vi.stubEnv(FLAG, "true");
++    await expect(client(260 * MB).downloadSigned(SIGNED, syncedFileMaxBytes())).rejects.toMatchObject({
++      code: "too_large",
++      message: "The file is 260 MB; Ask Bubbles' limit is 200 MB.",
++    });
++  });
++
++  it("megabytes: one decimal, none when whole", () => {
++    expect(megabytes(76_960_000)).toBe("73.4");
++    expect(megabytes(200 * MB)).toBe("200");
++  });
++});
++
++describe("the pipeline's own size check", () => {
++  const pdf = (sizeBytes: number, maxBytes?: number) => validateUpload({ fileName: "Playbook.pdf", mimeType: "application/pdf", sizeBytes, ...(maxBytes ? { maxBytes } : {}) });
++
++  it("an upload keeps the 50 MB limit, flag or not", () => {
++    vi.stubEnv(FLAG, "true");
++    expect(() => pdf(60 * MB)).toThrow('"Playbook.pdf" is larger than the 50 MB limit.');
++  });
++
++  it("a synced file is checked against the cap it is given", () => {
++    expect(pdf(60 * MB, LARGER_SYNCED_FILE_MAX_BYTES).fileType).toBe("pdf");
++    expect(() => pdf(210 * MB, LARGER_SYNCED_FILE_MAX_BYTES)).toThrow('"Playbook.pdf" is larger than the 200 MB limit.');
++  });
++});
++
++/** A valid PDF of one page with no text, padded with a comment so it is `bytes` long. */
++function paddedScan(bytes: number): Uint8Array {
++  const objects = ["<< /Type /Catalog /Pages 2 0 R >>", "<< /Type /Pages /Kids [3 0 R] /Count 1 >>", "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>"];
++  let body = `%PDF-1.4\n%${" ".repeat(Math.max(0, bytes - 600))}\n`;
++  const offsets: number[] = [];
++  objects.forEach((object, index) => {
++    offsets.push(body.length);
++    body += `${index + 1} 0 obj\n${object}\nendobj\n`;
++  });
++  const xref = body.length;
++  body += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
++  for (const offset of offsets) body += `${String(offset).padStart(10, "0")} 00000 n \n`;
++  body += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
++  return new TextEncoder().encode(body);
++}
++
++describe("OCR's request size", () => {
++  it("on: a scan over 23 MB is refused before any request, naming its size", async () => {
++    vi.stubEnv(FLAG, "true");
++    vi.stubEnv("WOVEN_PDF_OCR_ENABLED", "true");
++    const scan = paddedScan(OCR_MAX_BYTES + MB);
++    await expect(extractPdf(scan, { ocr: new OcrBudget() })).rejects.toMatchObject({
++      code: "too_large",
++      message: `This scanned PDF is ${megabytes(scan.byteLength)} MB; a scan can be read automatically up to 23 MB.`,
++    });
++  });
++});
+diff --git a/src/lib/ingestion/synced-file-limit.ts b/src/lib/ingestion/synced-file-limit.ts
+new file mode 100644
+index 00000000..7f29b8f7
+--- /dev/null
++++ b/src/lib/ingestion/synced-file-limit.ts
+@@ -0,0 +1,28 @@
++import { UPLOAD_LIMITS } from "@/lib/config/models";
++import { wovenLargerFilesEnabled } from "@/lib/config/chat-quality-flags";
++
++/**
++ * ============================================================================
++ * LARGER FILES FROM THE WOVEN SYNC (WOVEN_LARGER_FILES_ENABLED, default off)
++ * ============================================================================
++ *
++ * QA, 10 Nov 2026: "Local Grassroots Marketing Playbook" and "Soap Troubleshooting & Quality Control" stop every sync
++ * with "The file is larger than Ask Bubbles' upload limit." (woven_too_large): Woven declares them over the 50 MB upload
++ * cap, and their real sizes were recorded nowhere. Pau's project is on a plan whose storage can take larger files.
++ *
++ * With the flag on, a file the SYNC downloads may be up to `LARGER_SYNCED_FILE_MAX_BYTES` (a manager's upload keeps the
++ * 50 MB cap), and a file still over it reports its size like any too-large file (`woven/http.ts` tooLargeMessage). The storage bucket's own `file_size_limit` must be raised to the same number before the flag is
++ * switched on (QA's release step), or the store refuses the file. Extraction needs the whole file in memory, so a
++ * larger cap needs that memory in the sync's function; 200 MB fits the default.
++ */
++export const LARGER_SYNCED_FILE_MAX_BYTES = 200 * 1024 * 1024;
++
++/** The most a Woven-synced file may be: the larger cap with the flag on, the upload cap otherwise. */
++export function syncedFileMaxBytes(): number {
++  return wovenLargerFilesEnabled() ? LARGER_SYNCED_FILE_MAX_BYTES : UPLOAD_LIMITS.maxBytes;
++}
++
++/** "73.4" for 76,960,000 bytes: megabytes to one decimal. */
++export function megabytes(bytes: number): string {
++  return (bytes / (1024 * 1024)).toFixed(1).replace(/\.0$/, "");
++}
+diff --git a/src/lib/ingestion/validation.ts b/src/lib/ingestion/validation.ts
+index e7c9bd37..e9b25c01 100644
+--- a/src/lib/ingestion/validation.ts
++++ b/src/lib/ingestion/validation.ts
+@@ -73,6 +73,8 @@ export interface UploadCandidate {
+   fileName: string;
+   mimeType: string;
+   sizeBytes: number;
++  /** WOVEN_LARGER_FILES_ENABLED: a synced file's own cap; the upload cap when absent. */
++  maxBytes?: number;
+ }
+ 
+ /**
+@@ -127,8 +129,10 @@ export function validateUpload(candidate: UploadCandidate): ValidatedUpload {
+     );
+   }
+ 
+-  if (candidate.sizeBytes > UPLOAD_LIMITS.maxBytes) {
+-    const limitMb = Math.round(UPLOAD_LIMITS.maxBytes / (1024 * 1024));
++  // WOVEN_LARGER_FILES_ENABLED: a synced file may have its own, larger cap (`synced-file-limit.ts`).
++  const maxBytes = candidate.maxBytes ?? UPLOAD_LIMITS.maxBytes;
++  if (candidate.sizeBytes > maxBytes) {
++    const limitMb = Math.round(maxBytes / (1024 * 1024));
+     throw new IngestionError(
+       "too_large",
+       `"${candidate.fileName}" is larger than the ${limitMb} MB limit.`,
+diff --git a/src/lib/knowledge-sync/woven/bcs/connector.ts b/src/lib/knowledge-sync/woven/bcs/connector.ts
+index 9ac01bbb..7d480cab 100644
+--- a/src/lib/knowledge-sync/woven/bcs/connector.ts
++++ b/src/lib/knowledge-sync/woven/bcs/connector.ts
+@@ -1,6 +1,6 @@
+ import "server-only";
+ 
+-import { UPLOAD_LIMITS } from "@/lib/config/models";
++import { syncedFileMaxBytes } from "@/lib/ingestion/synced-file-limit";
+ import {
+   PartFetchError,
+   type ConnectionInfo,
+@@ -263,7 +263,8 @@ export class BuffCitySoapWovenConnector implements KnowledgeSourceConnector {
+   }
+ 
+   private maxBytes(): number {
+-    return this.options.maxBytes ?? UPLOAD_LIMITS.maxBytes;
++    // WOVEN_LARGER_FILES_ENABLED: the sync's own cap (`ingestion/synced-file-limit.ts`); the upload cap when off.
++    return this.options.maxBytes ?? syncedFileMaxBytes();
+   }
+ 
+   private textFile(contentType: ContentType, entityId: string, title: string, body: string | null): FetchedFile {

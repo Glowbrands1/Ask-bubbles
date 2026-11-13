@@ -1,0 +1,164 @@
+# branch gate-867 head 5184d72b ; diff from main-line base 7d5b7bb2
+# 5184d72b Merge branch 'pr867' into gate-867
+# 3bb6a3bd HEADING_DISTINCTIVE_WORDS: a manual heading is named by its distinctive words — "retaliation" names Retaliation is Prohibited (default off)
+diff --git a/src/app/api/chat/replay-pack/nov13-close-spelling-cases.ts b/src/app/api/chat/replay-pack/nov13-close-spelling-cases.ts
+index 8686c14c..5b2c2482 100644
+--- a/src/app/api/chat/replay-pack/nov13-close-spelling-cases.ts
++++ b/src/app/api/chat/replay-pack/nov13-close-spelling-cases.ts
+@@ -219,3 +219,33 @@ export const NOV13_CLOSE_SPELLING_PROOF_CASES: ReplayCase[] = [
+     },
+   },
+ ];
++
++/*
++ * HEADING_DISTINCTIVE_WORDS (QA, 13 Nov 2026, from the 17s live check): "ca for <A> for violating the retaliaton policy"
++ * gave "Woven does not see a section … for "retaliaton"", and "retaliation" spelled right did the same: "Retaliation is
++ * Prohibited" (in the live manual and this pack's fixture) wanted "is prohibited" said too. With the flag, a heading is
++ * named by its distinctive words; with CLOSE_SPELLING_MATCH (on in production) "retaliaton" is one letter off. Invented
++ * people.
++ */
++const DISTINCTIVE = "HEADING_DISTINCTIVE_WORDS_ENABLED";
++
++export const NOV13_HEADING_DISTINCTIVE_WORDS_CASES: ReplayCase[] = (
++  [
++    { key: "retaliation", said: "retaliation" },
++    { key: "retaliaton", said: "retaliaton" },
++  ] as const
++).map((wording) => ({
++  id: `nov13-heading-distinctive-words-${wording.key}-policy`,
++  title: `"… violating the ${wording.said} policy …" — the Policy line cites Retaliation is Prohibited`,
++  report: `QA, 13 Nov 2026 (HEADING_DISTINCTIVE_WORDS; 17s live check: "retaliaton"); invented people`,
++  status: { open: `"${wording.said}" names no section: the card says none was found` },
++  fixFlags: [DISTINCTIVE],
++  async run(t: ReplayContext) {
++    const thread = start(t);
++    const reply = (
++      await thread.say(`create a verbal ca for juno paxton for violating the ${wording.said} policy, she cut a coworker's hours after he reported her`)
++    ).content;
++    expect(reply, `the Policy line:\n${reply}`).toMatch(/\*\*Policy:\*\* Retaliation is Prohibited, as you said — the policy manual's section on page \d+/);
++    expect(reply, `the card still says no section was found:\n${reply}`).not.toMatch(/see a section of the current policy manual for/);
++  },
++}));
+diff --git a/src/lib/config/chat-quality-flags.ts b/src/lib/config/chat-quality-flags.ts
+index 3d00f4c9..236045d0 100644
+--- a/src/lib/config/chat-quality-flags.ts
++++ b/src/lib/config/chat-quality-flags.ts
+@@ -1426,6 +1426,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
+   // coding 6: PRIOR_ACTIONS_NO_COMMA (October rebuild 4, #187 rebuilt on main; default off).
+   "PRIOR_ACTIONS_NO_COMMA_ENABLED",
+   "STORE_ALIAS_ENABLED",
++  // coding 4: HEADING_DISTINCTIVE_WORDS (QA, 13 Nov 2026; default off).
++  "HEADING_DISTINCTIVE_WORDS_ENABLED",
+   // coding 4: FORM_DATE_BUSINESS_TODAY (live bug, QA, 13 Nov 2026; default off).
+   "FORM_DATE_BUSINESS_TODAY_ENABLED",
+   // coding 4: CLOSE_SPELLING_MATCH (Pau via QA, 13 Nov 2026; default off).
+@@ -5548,3 +5550,13 @@ export function formDateBusinessTodayEnabled(): boolean {
+ export function closeSpellingMatchEnabled(): boolean {
+   return envFlag("CLOSE_SPELLING_MATCH_ENABLED");
+ }
++
++/**
++ * HEADING_DISTINCTIVE_WORDS (QA, 13 Nov 2026; default off): a manual heading is named by its distinctive words; the
++ * generic heading words "is", "are", "prohibited" and "requirement" may be left off, as "policy" and "guidelines"
++ * already may. "violating the retaliation policy" names "Retaliation is Prohibited". See
++ * `forms/named-policy-section.ts`. Off, every heading word but the optional ones must be said, as before.
++ */
++export function headingDistinctiveWordsEnabled(): boolean {
++  return envFlag("HEADING_DISTINCTIVE_WORDS_ENABLED");
++}
+diff --git a/src/lib/forms/heading-distinctive-words.test.ts b/src/lib/forms/heading-distinctive-words.test.ts
+new file mode 100644
+index 00000000..a7817abc
+--- /dev/null
++++ b/src/lib/forms/heading-distinctive-words.test.ts
+@@ -0,0 +1,38 @@
++import { afterEach, describe, expect, it, vi } from "vitest";
++
++import { JBA_MANUAL_CA_CHUNKS } from "@/test/fixtures/jba-manual-ca-sections";
++
++import { namesHeading, manualSectionNamedBy } from "./named-policy-section";
++
++/*
++ * HEADING_DISTINCTIVE_WORDS (QA, 13 Nov 2026, from the 17s live check): "ca for <A> for violating the retaliaton policy"
++ * named no section, and neither did "retaliation", because "Retaliation is Prohibited" wanted "is prohibited" said too.
++ */
++afterEach(() => vi.unstubAllEnvs());
++
++describe("HEADING_DISTINCTIVE_WORDS", () => {
++  it("flag off: \"retaliation\" names no heading (as on main)", () => {
++    vi.stubEnv("HEADING_DISTINCTIVE_WORDS_ENABLED", "");
++    vi.stubEnv("CLOSE_SPELLING_MATCH_ENABLED", "");
++    expect(manualSectionNamedBy("retaliation", JBA_MANUAL_CA_CHUNKS)).toBeNull();
++  });
++
++  it("flag on: \"retaliation\" names Retaliation is Prohibited; with close spelling, \"retaliaton\" too", () => {
++    vi.stubEnv("HEADING_DISTINCTIVE_WORDS_ENABLED", "true");
++    expect(manualSectionNamedBy("retaliation", JBA_MANUAL_CA_CHUNKS)?.heading).toBe("Retaliation is Prohibited");
++    vi.stubEnv("CLOSE_SPELLING_MATCH_ENABLED", "true");
++    expect(manualSectionNamedBy("retaliaton", JBA_MANUAL_CA_CHUNKS)?.heading).toBe("Retaliation is Prohibited");
++  });
++
++  it("flag on: the singular \"requirement\" may be left off; \"standards\" may not (Standards of Conduct stays with ca-policy)", () => {
++    vi.stubEnv("HEADING_DISTINCTIVE_WORDS_ENABLED", "true");
++    expect(namesHeading("emergency situation notification", "Emergency Situation Notification Requirement")).toBe(true);
++    expect(namesHeading("conduct", "Standards of Conduct")).toBe(false);
++  });
++
++  it("flag on: a distinctive word two headings share names neither", () => {
++    vi.stubEnv("HEADING_DISTINCTIVE_WORDS_ENABLED", "true");
++    expect(namesHeading("retaliation", "Retaliation is Prohibited")).toBe(true);
++    expect(namesHeading("retaliation", "Retaliation Reporting is Required")).toBe(false);
++  });
++});
+diff --git a/src/lib/forms/named-policy-section.ts b/src/lib/forms/named-policy-section.ts
+index 2ff8d14c..13da03b6 100644
+--- a/src/lib/forms/named-policy-section.ts
++++ b/src/lib/forms/named-policy-section.ts
+@@ -1,4 +1,4 @@
+-import { animalAnywhereEnabled, closeSpellingMatchEnabled, wovenTrainingConductEnabled } from "@/lib/config/chat-quality-flags";
++import { animalAnywhereEnabled, closeSpellingMatchEnabled, headingDistinctiveWordsEnabled, wovenTrainingConductEnabled } from "@/lib/config/chat-quality-flags";
+ 
+ import { closeWordDistance } from "./close-spelling";
+ 
+@@ -91,6 +91,23 @@ const OPTIONAL_HEADING_WORDS = new Set([
+   "usage", "use", "procedure", "procedures", "guidelines", "requirements", "expectations", "workplace",
+ ]);
+ 
++/*
++ * HEADING_DISTINCTIVE_WORDS_ENABLED (QA, 13 Nov 2026, from the 17s live check: "violating the retaliaton policy", and even
++ * "retaliation policy", named no section, because "Retaliation is Prohibited" wanted "is prohibited" said too). A
++ * heading is named by its distinctive words; these generic heading words may be left off as well ("policy", "rules",
++ * "procedures", "guidelines", "requirements" already may). Of the live manual's headings this changes three:
++ * "Retaliation is Prohibited" (→ "retaliation"), "Emergency Situation Notification Requirement" (→ "emergency
++ * situation notification") and the FLSA heading ("Fair Labor Standard Act … Safe Harbor"). "standards" is deliberately
++ * not here (QA): Standards of Conduct stays with `ca-policy.ts`'s own reading. A distinctive word two headings share
++ * still names neither (`manualSectionNamedBy`). Off, as before.
++ */
++const GENERIC_HEADING_WORDS = new Set(["is", "are", "prohibited", "requirement"]);
++
++/** A heading word the manager may leave off. */
++function optionalHeadingWord(word: string): boolean {
++  return OPTIONAL_HEADING_WORDS.has(word) || (headingDistinctiveWordsEnabled() && GENERIC_HEADING_WORDS.has(word));
++}
++
+ function words(text: string): string[] {
+   return text
+     .toLowerCase()
+@@ -136,7 +153,7 @@ function namesWholeHeading(phrase: string, heading: string): boolean {
+   return (
+     said.every((word) => printed.some((other) => sameWord(word, other))) &&
+     printed.every(
+-      (word) => OPTIONAL_HEADING_WORDS.has(word) || said.some((other) => sameWord(word, other)),
++      (word) => optionalHeadingWord(word) || said.some((other) => sameWord(word, other)),
+     )
+   );
+ }
+@@ -323,7 +340,7 @@ function closeHeadingScore(phrase: string, heading: string): { off: number; far:
+     }
+   }
+   const covered = printed.every(
+-    (word) => OPTIONAL_HEADING_WORDS.has(word) || said.some((other) => distance(other, word) !== null),
++    (word) => optionalHeadingWord(word) || said.some((other) => distance(other, word) !== null),
+   );
+   return covered ? { off, far } : null;
+ }

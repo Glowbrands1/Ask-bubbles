@@ -1,0 +1,139 @@
+# branch gate-782 head 38a077ad ; diff from main-line base 6d862bbe
+# 38a077ad resolve imports
+# ad876614 Merge remote-tracking branch 'origin/main' into rec-782
+# 7584fca7 Merge remote-tracking branch 'origin/main' into rec-782
+# 4e3026b4 Merge commit 'c6063f2c' into rec-782
+# 3f5a46c0 Parity log: REQUEST_FOR_LABEL stays Ask Bubbles only (Sunny's pau-2 cases hold on its production flags)
+# e8177d2c REQUEST_FOR_LABEL: "Corrective action for <a role>: <account>" is a request (B-C2; default off)
+diff --git a/docs/parity-log/2026-11-11-request-for-label.md b/docs/parity-log/2026-11-11-request-for-label.md
+new file mode 100644
+index 00000000..d8e63dd6
+--- /dev/null
++++ b/docs/parity-log/2026-11-11-request-for-label.md
+@@ -0,0 +1,14 @@
++## 11 Nov 2026: REQUEST_FOR_LABEL_ENABLED — Ask Bubbles only (B-C2)
++
++**Not needed in Ask Sunny: it already reads this request.**
++
++Pau's wording from QA's name matrix: "Corrective action for the primary salon manager: on Monday 10/05/2026 corin
++bellweather was working a shift at the front desk and was rude to a guest". In this app it was answered as a policy
++question: no card on the roster, and no "who is this for" off it. `leadingFormRequest` (`forms/template-intent.ts`) only
++took "for <name>", and "the" is not a name. With REQUEST_FOR_LABEL_ENABLED, a short "for …" that ends at a colon labels
++the request.
++
++Ask Sunny has the same `leadingFormRequest` branch, but its replay cases `nov4-name-pau-2-{on,off}-{code,models}` all
++hold on its production flags: the card is for the person on the roster, and off the roster the reply asks who it is for
++(checked 11 Nov 2026). Its request is read by its grounded readers (INTENT_EXTRACTION / GROUNDED_ENTITIES, on there and
++off here), so the label reading is not needed there.
+diff --git a/src/app/api/chat/replay-pack/nov4-live-regressions-cases.ts b/src/app/api/chat/replay-pack/nov4-live-regressions-cases.ts
+index 43602dab..293f5f87 100644
+--- a/src/app/api/chat/replay-pack/nov4-live-regressions-cases.ts
++++ b/src/app/api/chat/replay-pack/nov4-live-regressions-cases.ts
+@@ -438,7 +438,8 @@ function nameCase(wording: NameWording, onRoster: boolean, mode: Mode): ReplayCa
+     title: `"${wording.text}" — ${onRoster ? "on roster: the card is for Corin Bellweather" : "off roster: asks who, invents no one"} (${mode === "code" ? "code only" : "models read the name"})`,
+     report: `QA's exact name matrix, 4 Nov 2026: "${wording.text}"`,
+     status: open ? { open } : "fixed",
+-    fixFlags: [],
++    // REQUEST_FOR_LABEL_ENABLED (B-C2, 11 Nov 2026): Pau's "Corrective action for the primary salon manager: …" is a request.
++    fixFlags: wording.id === "pau-2" ? ["REQUEST_FOR_LABEL_ENABLED"] : [],
+     async run(t) {
+       t.directory(nameRoster(onRoster));
+       t.as("location_manager", WEST_DODGE);
+diff --git a/src/lib/config/chat-quality-flags.ts b/src/lib/config/chat-quality-flags.ts
+index d86fac01..f50df349 100644
+--- a/src/lib/config/chat-quality-flags.ts
++++ b/src/lib/config/chat-quality-flags.ts
+@@ -1325,6 +1325,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
+   "TITLE_BEFORE_NAME_REPLY_LINES_ENABLED",
+   // coding 4: FORMS_ON_FILE_ORDER_MATCH_POSSIBLE (Bubbles 17h live test, QA, 11 Nov 2026; default off).
+   "FORMS_ON_FILE_ORDER_MATCH_POSSIBLE_ENABLED",
++  // coding 4: REQUEST_FOR_LABEL (B-C2, QA, 11 Nov 2026; default off).
++  "REQUEST_FOR_LABEL_ENABLED",
+   "TAKE_OFF_STAYS_CARD_ENABLED",
+   // coding 4: ACCOUNT_PLACE_LEAD (round 6; default off): forced off with the others.
+   "ACCOUNT_PLACE_LEAD_ENABLED",
+@@ -5429,3 +5431,15 @@ export function typoFullNameToRosterEnabled(): boolean {
+ export function exitNoticeStatedOnlyEnabled(): boolean {
+   return envFlag("EXIT_NOTICE_STATED_ONLY_ENABLED");
+ }
++
++/**
++ * REQUEST_FOR_LABEL_ENABLED (B-C2 from QA's open-case list, 11 Nov 2026; Pau's wording in QA's name matrix, 4 Nov 2026;
++ * default off). "Corrective action for the primary salon manager: on Monday 10/05/2026 <name> was working a shift at the
++ * front desk and was rude to a guest" was answered as a policy question: no card, and no "who is this for". The words
++ * after "for" were not a name, so the form's name leading the message was not read as the request. On: a short "for …"
++ * that ends at a colon labels the request (`forms/template-intent.ts` leadingFormRequest), and the account after the
++ * colon is read for the person. Off, as before.
++ */
++export function requestForLabelEnabled(): boolean {
++  return envFlag("REQUEST_FOR_LABEL_ENABLED");
++}
+diff --git a/src/lib/forms/request-for-label.test.ts b/src/lib/forms/request-for-label.test.ts
+new file mode 100644
+index 00000000..65d535d9
+--- /dev/null
++++ b/src/lib/forms/request-for-label.test.ts
+@@ -0,0 +1,34 @@
++import { afterEach, describe, expect, it } from "vitest";
++
++import { detectTemplateIntent, leadingFormRequest } from "./template-intent";
++
++/**
++ * REQUEST_FOR_LABEL_ENABLED (B-C2, QA's open-case list, 11 Nov 2026). Pau's wording from QA's name matrix (4 Nov 2026),
++ * the person invented there: "Corrective action for the primary salon manager: …" was answered as a policy question.
++ */
++const FLAG = "REQUEST_FOR_LABEL_ENABLED";
++const PAU_2 =
++  "Corrective action for the primary salon manager: on Monday 10/05/2026 corin bellweather was working a shift at the front desk and was rude to a guest";
++
++afterEach(() => {
++  delete process.env[FLAG];
++});
++
++describe("REQUEST_FOR_LABEL", () => {
++  it("flag off (as production today): not read as a request", () => {
++    expect(detectTemplateIntent(PAU_2)).toEqual({ kind: "corrective_action", requestedCreation: false });
++  });
++
++  it("flag on: the request for the Corrective Action Form, with the account after the colon", () => {
++    process.env[FLAG] = "true";
++    expect(detectTemplateIntent(PAU_2)).toEqual({ kind: "explicit", templateKey: "dpoa" });
++    expect(leadingFormRequest(PAU_2)?.templateKey).toBe("dpoa");
++  });
++
++  it("flag on, NEVER-BREAK: a 'for …' with no colon is read as before", () => {
++    process.env[FLAG] = "true";
++    const on = detectTemplateIntent("coaching for the new hires on the register");
++    delete process.env[FLAG];
++    expect(on).toEqual(detectTemplateIntent("coaching for the new hires on the register"));
++  });
++});
+diff --git a/src/lib/forms/template-intent.ts b/src/lib/forms/template-intent.ts
+index 223f0076..36e5f3ef 100644
+--- a/src/lib/forms/template-intent.ts
++++ b/src/lib/forms/template-intent.ts
+@@ -30,7 +30,7 @@ import {
+   caShortcutWordsEnabled,
+   formChoiceStatedEnabled,
+   formNameFromRosterEnabled,
+-  typedNameEnabled, requestFromNamesEmployeeEnabled, pastedFormNameNotRequestEnabled, formForForTypoEnabled, terminationIntakeEnabled } from "@/lib/config/chat-quality-flags";
++  typedNameEnabled, requestFromNamesEmployeeEnabled, pastedFormNameNotRequestEnabled, formForForTypoEnabled, terminationIntakeEnabled, requestForLabelEnabled } from "@/lib/config/chat-quality-flags";
+ import { foldsToGlossaryTerm } from "@/lib/ai/glossary";
+ import { NOT_A_NAME, NOT_A_TYPED_NAME, TYPED_NAME_WORD } from "./name-words";
+ import { asksForTeamCoaching } from "./team-subject";
+@@ -1092,7 +1092,14 @@ export function leadingFormRequest(text: string): LeadingFormRequest | null {
+     const all = introduced[1]!.split(" ");
+     // TITLE_BEFORE_NAME_ENABLED: "for Team Member <name>" — the title says who, the name follows it.
+     const words = all.slice(leadingTitleLength(all));
+-    return couldBeName(words[0]) ? found(words) : null;
++    if (couldBeName(words[0])) return found(words);
++    /*
++     * REQUEST_FOR_LABEL_ENABLED (B-C2, Pau's wording, QA's matrix 4 Nov 2026): "Corrective action for the primary salon
++     * manager: on Monday 10/05/2026 <name> was … rude to a guest" was answered as a policy question. A short "for …"
++     * that ends at a colon labels the request; what follows the colon is the account, and the person is read from it.
++     */
++    const labelled = requestForLabelEnabled() ? /^[^:]{1,60}:\s*(.+)$/.exec(introduced[1]!) : null;
++    return labelled ? found(nameAfterSeparator(labelled[1]!)) : null;
+   }
+ 
+   /*

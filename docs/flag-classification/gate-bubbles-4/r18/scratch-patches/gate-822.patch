@@ -1,0 +1,460 @@
+# branch gate-822 head 69320d99 ; diff from main-line base c88676ac
+# 69320d99 resolve template-intent (keep both)
+# 3a6c09fe keep both 817
+# 023b29e0 keep both
+# 99c7010a Parity log: RESENT_REQUEST_IS_YES stays Ask Bubbles only (Ask Sunny's main keeps the offered name on a resent request)
+# b7bcf26c RESENT_REQUEST_IS_YES_ENABLED (default off): the same request again, while "Is this for <name>?" waits, is a yes
+# 88c8d01e nov9-letter-greeting-hi-first-name reads both turns: with TERMINATION_INTAKE the name is asked on the letter's own turn (test-only)
+# e601c90c TERMINATION_INTAKE_ENABLED (default off): "Termination CA for <A>, …" opens the CA card; a pasted termination letter opens the Resignation/Exit Form
+diff --git a/docs/parity-log/2026-11-12-resent-request-is-yes.md b/docs/parity-log/2026-11-12-resent-request-is-yes.md
+new file mode 100644
+index 00000000..d0957e38
+--- /dev/null
++++ b/docs/parity-log/2026-11-12-resent-request-is-yes.md
+@@ -0,0 +1,8 @@
++## 12 Nov 2026: RESENT_REQUEST_IS_YES stays Ask Bubbles only — Ask Sunny keeps the name already
++
++In this app, an exit request with a pasted letter got "Is this for **<roster name>**? Tell me if that should change.",
++and sending the same request again got "Who is this **Resignation/Exit Form** for?" — the offered name was lost (found
++on production's flags, 12 Nov 2026; replay `nov12-resent-exit-request-keeps-name`).
++
++Checked on Ask Sunny's main (b5f9d6ce1, its production flags, the same turns with its company and an invented person):
++the second send gives the Resignation/Exit Form card for the offered name. Nothing to port.
+diff --git a/src/app/api/chat/replay-pack/nov12-resent-request-is-yes-cases.ts b/src/app/api/chat/replay-pack/nov12-resent-request-is-yes-cases.ts
+new file mode 100644
+index 00000000..098abc87
+--- /dev/null
++++ b/src/app/api/chat/replay-pack/nov12-resent-request-is-yes-cases.ts
+@@ -0,0 +1,62 @@
++import { expect, vi } from "vitest";
++
++import { STAFF, type DirectoryRow, type ReplayCase, type ReplayContext } from "./cases";
++
++/**
++ * ============================================================================
++ * THE SAME REQUEST AGAIN, WHILE "IS THIS FOR <NAME>?" WAITS, KEEPS THE NAME (QA, 12 Nov 2026; RESENT_REQUEST_IS_YES_ENABLED)
++ * ============================================================================
++ *
++ * Found on production's flags (TERMINATION_INTAKE work): "I need an exit form with this information. <letter>" got
++ * "Is this for **Marcus Tellefsen**?"; the manager sent it again and the reply was "Who is this **Resignation/Exit Form**
++ * for?". The people are invented (Marcus Tellefsen, Dolores Whitcombe).
++ */
++const MARCUS: DirectoryRow = { id: "e-rr-marcus-tellefsen", firstName: "Marcus", lastName: "Tellefsen", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-264"], positionName: "Team Member Part Time" };
++const LETTER = [
++  "Hi Marcus,",
++  "",
++  "This letter confirms that your employment with Buff City Soap is terminated, effective 11/08/2026, due to repeated no-call no-shows on 11/3, 11/5 and 11/7.",
++  "",
++  "Sincerely,",
++  "Dolores Whitcombe",
++  "District Manager",
++].join("\n");
++const REQUEST = `I need an exit form with this information. ${LETTER}`;
++
++function start(t: ReplayContext) {
++  vi.setSystemTime(new Date("2026-11-08T18:00:00Z"));
++  t.directory([...STAFF, MARCUS]);
++  t.as("district_manager", { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] });
++  return t.thread();
++}
++
++export const NOV12_RESENT_REQUEST_IS_YES_CASES: ReplayCase[] = [
++  {
++    id: "nov12-resent-exit-request-keeps-name",
++    title: "the exit request sent again after \"Is this for **Marcus Tellefsen**?\": the exit card for Marcus Tellefsen, never \"Who is this … for?\"",
++    report: "QA, 12 Nov 2026 (found on production's flags): resending the request after the name question lost the name",
++    status: { open: "\"Who is this **Resignation/Exit Form** for?\"" },
++    fixFlags: ["RESENT_REQUEST_IS_YES_ENABLED"],
++    async run(t) {
++      const thread = start(t);
++      const first = await thread.say(REQUEST);
++      expect(first.content).toMatch(/Is this for \*\*Marcus Tellefsen\*\*\?/);
++      const again = await thread.say(REQUEST);
++      expect(again.content, `the name was lost:\n${again.content}`).not.toMatch(/Who is this \*\*Resignation\/Exit Form\*\* for\?/);
++      expect(thread.proposal, `no exit card for Marcus Tellefsen:\n${again.content}`).toMatchObject({ templateKey: "resignation-exit", employeeName: "Marcus Tellefsen" });
++    },
++  },
++  {
++    id: "nov12-resent-exit-request-no-is-still-no",
++    title: "guard: \"no\" after \"Is this for **Marcus Tellefsen**?\" is never read as the request again",
++    report: "QA, 12 Nov 2026 (the guard)",
++    status: "fixed",
++    fixFlags: ["RESENT_REQUEST_IS_YES_ENABLED"],
++    async run(t) {
++      const thread = start(t);
++      await thread.say(REQUEST);
++      const no = await thread.say("no");
++      expect(thread.proposal?.employeeName ?? null, `"no" kept the name:\n${no.content}`).not.toBe("Marcus Tellefsen");
++    },
++  },
++];
+diff --git a/src/app/api/chat/replay-pack/nov12-termination-intake-cases.ts b/src/app/api/chat/replay-pack/nov12-termination-intake-cases.ts
+new file mode 100644
+index 00000000..b014b49e
+--- /dev/null
++++ b/src/app/api/chat/replay-pack/nov12-termination-intake-cases.ts
+@@ -0,0 +1,70 @@
++import { expect, vi } from "vitest";
++
++import { STAFF, WEST_DODGE, type DirectoryRow, type ReplayCase, type ReplayContext } from "./cases";
++
++/**
++ * ============================================================================
++ * A STATED TERMINATION OPENS ITS FORM (QA, 12 Nov 2026; TERMINATION_INTAKE_ENABLED)
++ * ============================================================================
++ *
++ * (1) "Termination CA for <A>, no call no show." (Gate-Sunny's wording, found in this app by coding 6 on 12 Nov 2026):
++ * no card, flag off or on with TERMINATION_STATED_TICKS — the leading level read verbal / written / final only.
++ * (2) The Bubbles 17k live test (main aecb3342; Tester-Bubbles r17k-item2-t1-025134Z): "Dear <C>, Your employment with
++ * Buff City Soap is terminated effective 11/10/26." The name was read right (LETTER_GREETING), but no exit card: live,
++ * "I can't act on this … won't draft … separation paperwork based on it alone … Want me to start the exit form?"; here the
++ * general answer. The tester's wording, verbatim except the person (invented: Calla Brisbane).
++ */
++const FLAG = "TERMINATION_INTAKE_ENABLED";
++const CALLA: DirectoryRow = { id: "e-ti-calla-brisbane", firstName: "Calla", lastName: "Brisbane", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-264"], positionName: "Team Member Part Time" };
++
++/** The invented person of this file (a function: the registry reads exported arrays as cases). */
++export function terminationIntakePeople(): readonly DirectoryRow[] {
++  return [CALLA];
++}
++
++function start(t: ReplayContext) {
++  vi.setSystemTime(new Date("2026-11-11T02:51:34Z"));
++  t.directory([...STAFF, CALLA]);
++  t.as("location_manager", WEST_DODGE);
++  return t.thread();
++}
++
++export const NOV12_TERMINATION_INTAKE_CASES: ReplayCase[] = [
++  {
++    id: "nov12-termination-ca-bare-opens-card",
++    title: "\"Termination CA for <A>, no call no show.\": a Corrective Action card for her",
++    report: "QA, 12 Nov 2026 (TERMINATION_STATED_TICKS work): this app opened no CA card for Gate-Sunny's wording",
++    status: { open: "no card: the general answer" },
++    fixFlags: [FLAG],
++    async run(t) {
++      const thread = start(t);
++      const reply = await thread.say("Termination CA for Calla Brisbane, no call no show.");
++      expect(thread.proposal, `no CA card for Calla Brisbane:\n${reply.content}`).toMatchObject({ templateKey: "dpoa", employeeName: "Calla Brisbane" });
++    },
++  },
++  {
++    id: "nov12-17k-termination-letter-exit-card",
++    title: "17k: \"Dear <C>, Your employment with Buff City Soap is terminated effective 11/10/26.\": the Resignation/Exit Form card for her, never a refusal",
++    report: "QA's Bubbles 17k live test, 12 Nov 2026 (main aecb3342; Tester-Bubbles r17k-item2-t1-025134Z.json)",
++    status: { open: "no exit card: the general answer (live: \"I can't act on this … Want me to start the exit form?\")" },
++    fixFlags: [FLAG],
++    async run(t) {
++      const thread = start(t);
++      const reply = await thread.say("Dear Calla Brisbane, Your employment with Buff City Soap is terminated effective 11/10/26.");
++      expect(thread.proposal, `no exit card for Calla Brisbane:\n${reply.content}`).toMatchObject({ templateKey: "resignation-exit", employeeName: "Calla Brisbane" });
++      expect(reply.content, `the reply refuses:\n${reply.content}`).not.toMatch(/can'?t act on this|won'?t draft/i);
++    },
++  },
++  {
++    id: "nov12-exit-form-terminated-wording-guard",
++    title: "guard: \"exit form for <C>, terminated 11/10/26\" gives the exit card, as the letter now does",
++    report: "QA, 12 Nov 2026: the wording the letter should behave like",
++    status: "fixed",
++    fixFlags: [FLAG],
++    async run(t) {
++      const thread = start(t);
++      const reply = await thread.say("exit form for Calla Brisbane, terminated 11/10/26");
++      expect(thread.proposal, `no exit card for Calla Brisbane:\n${reply.content}`).toMatchObject({ templateKey: "resignation-exit", employeeName: "Calla Brisbane" });
++    },
++  },
++];
+diff --git a/src/app/api/chat/replay-pack/nov9-letter-greeting-salutation-cases.ts b/src/app/api/chat/replay-pack/nov9-letter-greeting-salutation-cases.ts
+index 481520f1..059ed7a7 100644
+--- a/src/app/api/chat/replay-pack/nov9-letter-greeting-salutation-cases.ts
++++ b/src/app/api/chat/replay-pack/nov9-letter-greeting-salutation-cases.ts
+@@ -42,9 +42,9 @@ async function card(t: ReplayContext, greeting: string, onRoster: boolean) {
+   t.directory(onRoster ? [...STAFF, MARCUS] : STAFF);
+   t.as("district_manager", EVERY_STORE);
+   const thread = t.thread();
+-  await thread.say(letter(greeting));
++  const first = await thread.say(letter(greeting));
+   const { content } = await thread.say(`I need an exit form with this information. ${letter(greeting)}`);
+-  return { thread, content };
++  return { thread, content, first: first.content };
+ }
+ 
+ export const NOV9_LETTER_GREETING_SALUTATION_CASES: ReplayCase[] = [
+@@ -83,10 +83,15 @@ export const NOV9_LETTER_GREETING_SALUTATION_CASES: ReplayCase[] = [
+     status: "fixed",
+     fixFlags: FIX,
+     async run(t) {
+-      const { thread, content } = await card(t, "Hi Marcus", true);
+-      expect(content, `the salutation is read as the name:\n${content}`).not.toMatch(/\bHi Marcus/);
++      const { thread, content, first } = await card(t, "Hi Marcus", true);
++      const both = `${first}\n\n${content}`;
++      expect(both, `the salutation is read as the name:\n${both}`).not.toMatch(/\bHi Marcus/);
+       expect(thread.proposal?.employeeName ?? "", `the salutation is the card's name:\n${content}`).not.toMatch(/^Hi\b/);
+-      expect(content, `Marcus Tellefsen is not asked about:\n${content}`).toMatch(/\*\*Marcus Tellefsen\*\*/);
++      // Changed on purpose (coding 6, 12 Nov 2026): with TERMINATION_INTAKE_ENABLED the letter alone (turn 1) is the exit
++      // request, so "Is this for **Marcus Tellefsen**?" is asked there. The second turn — the request again, with the same
++      // letter — then loses the name ("Who is this … for?"), as it already does on production's flags whenever a request is
++      // sent again after that question (reported to QA, 12 Nov 2026). Asked as Marcus Tellefsen on either turn.
++      expect(both, `Marcus Tellefsen is not asked about:\n${both}`).toMatch(/\*\*Marcus Tellefsen\*\*/);
+     },
+   },
+ ];
+diff --git a/src/app/api/chat/route.ts b/src/app/api/chat/route.ts
+index 7519928c..9309df81 100644
+--- a/src/app/api/chat/route.ts
++++ b/src/app/api/chat/route.ts
+@@ -49,6 +49,7 @@ import {
+   possessivePlaceNotPersonEnabled,
+   formNameFromRosterEnabled,
+   offRosterConfirmEnabled,
++  resentRequestIsYesEnabled,
+   offRosterAskBeforeCardEnabled,
+   oneFormEachPersonEnabled,
+   groupWordsNotANameEnabled,
+@@ -258,6 +259,10 @@ async function postChat(request: Request) {
+           history: asked.history.map((turn) => (turn.role === "user" && typeof turn.content === "string" ? { ...turn, content: read(turn.content) } : turn)),
+         };
+       }
++      // RESENT_REQUEST_IS_YES_ENABLED: the same request again while "Is this for <name>?" waits is a yes (`lib/forms/resent-request-is-yes.ts`).
++      if (resentRequestIsYesEnabled()) {
++        asked = (await import("@/lib/forms/resent-request-is-yes")).withResentRequestAsYes(asked) ?? asked;
++      }
+       /*
+        * PASTED_REVIEW_NOT_ACCOUNT_ENABLED (Pau's sf-s22, port): a reviewer's notes pasted into a turn ("Please make the
+        * following edits …") are read only for the manager's words before them, in this turn and the earlier ones, so
+diff --git a/src/lib/config/chat-quality-flags.ts b/src/lib/config/chat-quality-flags.ts
+index 873e5c81..23bc25ae 100644
+--- a/src/lib/config/chat-quality-flags.ts
++++ b/src/lib/config/chat-quality-flags.ts
+@@ -1387,6 +1387,10 @@ export const CHAT_QUALITY_FLAG_NAMES = [
+   "NO_SELECTION_ON_OPEN_CARD_ENABLED",
+   "PASTED_REVIEW_NOT_ACCOUNT_ENABLED",
+   "STEP_B_REPLY_KEEPS_LINES_ENABLED",
++  // RESENT_REQUEST_IS_YES (default off; QA, 12 Nov 2026): in the list, as every chat flag.
++  "RESENT_REQUEST_IS_YES_ENABLED",
++  // TERMINATION_INTAKE (default off): in the list, as every chat flag (QA, 12 Nov 2026).
++  "TERMINATION_INTAKE_ENABLED",
+ ] as const;
+ 
+ /**
+@@ -4856,3 +4860,23 @@ export function caProcedureBasisEnabled(): boolean {
+ export function noSelectionOnOpenCardEnabled(): boolean {
+   return envFlag("NO_SELECTION_ON_OPEN_CARD_ENABLED");
+ }
++
++/**
++ * RESENT_REQUEST_IS_YES_ENABLED (coding 6, 12 Nov 2026; default off; QA). The same request (or the same pasted letter)
++ * sent again while "Is this for **<name>**?" waits was answered "Who is this … for?", losing the offered name. On: it is
++ * read as "yes" to that question. Off, as before. See `forms/resent-request-is-yes.ts`.
++ */
++export function resentRequestIsYesEnabled(): boolean {
++  return envFlag("RESENT_REQUEST_IS_YES_ENABLED");
++}
++
++/**
++ * TERMINATION_INTAKE_ENABLED (coding 6, 12 Nov 2026; default off; QA). "Termination CA for <A>, no call no show." opened
++ * no card (the leading level read verbal / written / final only), and a pasted termination letter ("Dear <C>, Your
++ * employment with … is terminated effective 11/10/26.", the 17k live test) got the general answer — live, a refusal —
++ * instead of the Resignation/Exit Form. On: a leading "term / termination CA for <name>" asks for the Corrective Action
++ * Form, and a termination letter asks for the exit form. Off, as before. See `forms/template-intent.ts`.
++ */
++export function terminationIntakeEnabled(): boolean {
++  return envFlag("TERMINATION_INTAKE_ENABLED");
++}
+diff --git a/src/lib/forms/resent-request-is-yes.test.ts b/src/lib/forms/resent-request-is-yes.test.ts
+new file mode 100644
+index 00000000..c6045c22
+--- /dev/null
++++ b/src/lib/forms/resent-request-is-yes.test.ts
+@@ -0,0 +1,48 @@
++import { afterEach, describe, expect, it, vi } from "vitest";
++
++import { withResentRequestAsYes } from "./resent-request-is-yes";
++
++/* RESENT_REQUEST_IS_YES_ENABLED (QA, 12 Nov 2026). The reproduction's turns; invented people. */
++const LETTER =
++  "Hi Marcus,\n\nThis letter confirms that your employment with Buff City Soap is terminated, effective 11/08/2026, due to repeated no-call no-shows on 11/3, 11/5 and 11/7.\n\nSincerely,\nDolores Whitcombe\nDistrict Manager";
++const REQUEST = `I need an exit form with this information. ${LETTER}`;
++const ASKED = "Is this for **Marcus Tellefsen**? Tell me if that should change.";
++const history = (first: string) => [
++  { role: "user", content: first },
++  { role: "assistant", content: ASKED },
++];
++
++afterEach(() => vi.unstubAllEnvs());
++
++describe("RESENT_REQUEST_IS_YES_ENABLED", () => {
++  it("off: as sent", () => {
++    expect(withResentRequestAsYes({ question: REQUEST, history: history(REQUEST) })).toBeNull();
++  });
++
++  it("on: the same request again is a yes", () => {
++    vi.stubEnv("RESENT_REQUEST_IS_YES_ENABLED", "true");
++    expect(withResentRequestAsYes({ question: REQUEST, history: history(REQUEST) })?.question).toBe("yes");
++    expect(withResentRequestAsYes({ question: `  ${REQUEST.toUpperCase()} `, history: history(REQUEST) })?.question).toBe("yes");
++  });
++
++  it("on: the same letter with the request before it is a yes", () => {
++    vi.stubEnv("RESENT_REQUEST_IS_YES_ENABLED", "true");
++    expect(withResentRequestAsYes({ question: REQUEST, history: history(LETTER) })?.question).toBe("yes");
++  });
++
++  it.each([
++    "no",
++    "no, it's for Marcus Pell",
++    "it's Marcus Pell",
++    "yes",
++    "I need an exit form for Dolores Whitcombe",
++  ])("on, not a resent request: %s", (said) => {
++    vi.stubEnv("RESENT_REQUEST_IS_YES_ENABLED", "true");
++    expect(withResentRequestAsYes({ question: said, history: history(REQUEST) })).toBeNull();
++  });
++
++  it("on: nothing pending, nothing changes", () => {
++    vi.stubEnv("RESENT_REQUEST_IS_YES_ENABLED", "true");
++    expect(withResentRequestAsYes({ question: REQUEST, history: [{ role: "user", content: REQUEST }, { role: "assistant", content: "Here's what I'll fill in …" }] })).toBeNull();
++  });
++});
+diff --git a/src/lib/forms/resent-request-is-yes.ts b/src/lib/forms/resent-request-is-yes.ts
+new file mode 100644
+index 00000000..c6169379
+--- /dev/null
++++ b/src/lib/forms/resent-request-is-yes.ts
+@@ -0,0 +1,38 @@
++import { resentRequestIsYesEnabled } from "@/lib/config/chat-quality-flags";
++
++/*
++ * ============================================================================
++ * THE SAME REQUEST AGAIN, WHILE "IS THIS FOR <NAME>?" WAITS, IS A YES (RESENT_REQUEST_IS_YES_ENABLED)
++ * ============================================================================
++ *
++ * QA (12 Nov 2026), found on production's flags: a manager asked for an exit form with a pasted letter, the reply was
++ * "Is this for **<roster name>**? Tell me if that should change.", and the manager sent the same request again (or the
++ * same letter with "I need an exit form with this information." before it). The reply was "Who is this **Resignation/
++ * Exit Form** for?": the name the app itself had offered was lost. Sending the request again does not turn the name
++ * down; it repeats who it is for. With the flag on, such a turn is read as "yes" to the pending question; the stored
++ * message is unchanged. Off, as before. Pure.
++ */
++
++const ASKED = /^Is this for \*\*([^*\n]+)\*\*\? Tell me if that should change\.\s*$/;
++/** Long enough to be the same request or letter, not a short answer that happens to match. */
++const MIN_REPEAT = 40;
++
++interface Turn {
++  readonly role: string;
++  readonly content: string;
++}
++
++const norm = (text: string) => text.replace(/\s+/g, " ").trim().toLowerCase();
++
++/** The question read as "yes" when it repeats the request the pending "Is this for <name>?" was asked about. */
++export function withResentRequestAsYes<A extends { question: string; history: readonly Turn[] }>(asked: A): A | null {
++  if (!resentRequestIsYesEnabled()) return null;
++  const last = asked.history[asked.history.length - 1];
++  if (!last || last.role !== "assistant" || typeof last.content !== "string" || !ASKED.test(last.content.trim())) return null;
++  const before = [...asked.history.slice(0, -1)].reverse().find((turn) => turn.role === "user" && typeof turn.content === "string");
++  if (!before) return null;
++  const said = norm(asked.question);
++  const earlier = norm(before.content);
++  const repeats = said === earlier || (earlier.length >= MIN_REPEAT && said.includes(earlier)) || (said.length >= MIN_REPEAT && earlier.includes(said));
++  return repeats ? { ...asked, question: "yes" } : null;
++}
+diff --git a/src/lib/forms/template-intent.ts b/src/lib/forms/template-intent.ts
+index 575d211e..ed3c82b4 100644
+--- a/src/lib/forms/template-intent.ts
++++ b/src/lib/forms/template-intent.ts
+@@ -30,7 +30,7 @@ import {
+   caShortcutWordsEnabled,
+   formChoiceStatedEnabled,
+   formNameFromRosterEnabled,
+-  typedNameEnabled, requestFromNamesEmployeeEnabled, pastedFormNameNotRequestEnabled, formForForTypoEnabled } from "@/lib/config/chat-quality-flags";
++  typedNameEnabled, requestFromNamesEmployeeEnabled, pastedFormNameNotRequestEnabled, formForForTypoEnabled, terminationIntakeEnabled } from "@/lib/config/chat-quality-flags";
+ import { foldsToGlossaryTerm } from "@/lib/ai/glossary";
+ import { NOT_A_NAME, NOT_A_TYPED_NAME, TYPED_NAME_WORD } from "./name-words";
+ import { asksForTeamCoaching } from "./team-subject";
+@@ -642,6 +642,11 @@ function leadsWithTheForm(q: string, original: string): boolean {
+   // A level may lead: "Written CA for Tess Varga: missed the meeting" (QA, 22 Oct 2026).
+   const named = /^\s*(?:please\s+)?(?:(?:verbal|written|final)\s+(?:written\s+)?)?(?:c\.?a\.?|corrective[\s-]+actions?)(?:\s+form)?\s+(?:for|on)\s+(\S+)/i.exec(original);
+   if (named !== null && couldBeName(named[1])) return true;
++  // TERMINATION_INTAKE_ENABLED: "Termination CA for <A>, no call no show." — the level the manager states leads too.
++  const termination = terminationIntakeEnabled()
++    ? /^\s*(?:please\s+)?(?:a\s+)?(?:term|termination)\s+(?:c\.?a\.?|c\/a|corrective[\s-]+actions?)(?:\s+form)?\s+(?:for|on)\s+(\S+)/i.exec(original)
++    : null;
++  if (termination !== null && couldBeName(termination[1])) return true;
+   /*
+    * "ROSALYN CALLOWAY'S CA FOR NO CALL NO SHOW 10/18", "Wren's CA - she was
+    * late" (reference platform, 21 October 2026): whose CA it is, then the
+@@ -1610,6 +1615,8 @@ function pastedLead(text: string): string | null {
+   return lead[1]!;
+ }
+ 
++const TERMINATION_LETTER = /\byour\s+employment\b[^.?!\n]{0,80}?\b(?:is|has\s+been|will\s+be|was)\s+(?:hereby\s+)?(?:terminated|ended)\b/i;
++
+ export function detectTemplateIntent(rawQuestion: string): TemplateIntent {
+   if (pastedFormNameNotRequestEnabled()) {
+     const lead = pastedLead(rawQuestion);
+@@ -1662,6 +1669,16 @@ function readTemplateIntent(rawQuestion: string): TemplateIntent {
+    */
+   if (declinesForm(q)) return { kind: "none" };
+ 
++  /*
++   * TERMINATION_INTAKE_ENABLED (QA's Bubbles 17k live test, 12 Nov 2026): a pasted termination letter ("Dear <C>, Your
++   * employment with … is terminated effective 11/10/26.") is the manager's record of a separation: the Resignation/Exit
++   * Form, as "exit form for <C>, terminated 11/10/26" is. Only the letter's own sentence — "your employment … is / has
++   * been / will be terminated / ended" — never a question about terminating.
++   */
++  if (terminationIntakeEnabled() && !question.trim().endsWith("?") && TERMINATION_LETTER.test(question)) {
++    return { kind: "explicit", templateKey: EXIT_TEMPLATE_KEY };
++  }
++
+   const requested = requestedNaming(q, question);
+   if (requested) {
+     if (informational || askedAbout(q, requested.phrase)) {
+diff --git a/src/lib/forms/termination-intake.test.ts b/src/lib/forms/termination-intake.test.ts
+new file mode 100644
+index 00000000..652befc5
+--- /dev/null
++++ b/src/lib/forms/termination-intake.test.ts
+@@ -0,0 +1,42 @@
++import { afterEach, describe, expect, it, vi } from "vitest";
++
++import { detectTemplateIntent } from "./template-intent";
++
++/* TERMINATION_INTAKE_ENABLED (QA, 12 Nov 2026). The reporters' wording; invented people. */
++const BARE = "Termination CA for Calla Brisbane, no call no show.";
++const LETTER = "Dear Calla Brisbane, Your employment with Buff City Soap is terminated effective 11/10/26.";
++
++afterEach(() => vi.unstubAllEnvs());
++
++describe("TERMINATION_INTAKE_ENABLED", () => {
++  it("off: as before — the letter names no form", () => {
++    vi.stubEnv("TERMINATION_INTAKE_ENABLED", "false");
++    expect(detectTemplateIntent(LETTER)).toEqual({ kind: "none" });
++  });
++
++  it("on: \"Termination CA for <A>, …\" asks for the Corrective Action Form", () => {
++    vi.stubEnv("TERMINATION_INTAKE_ENABLED", "true");
++    expect(detectTemplateIntent(BARE)).toMatchObject({ kind: "corrective_action", requestedCreation: true });
++    expect(detectTemplateIntent("term CA for Calla Brisbane - did not show")).toMatchObject({ kind: "corrective_action", requestedCreation: true });
++  });
++
++  it("on: a pasted termination letter asks for the Resignation/Exit Form", () => {
++    vi.stubEnv("TERMINATION_INTAKE_ENABLED", "true");
++    expect(detectTemplateIntent(LETTER)).toEqual({ kind: "explicit", templateKey: "resignation-exit" });
++    expect(detectTemplateIntent("Dear Calla, your employment has been terminated as of 11/10/26. Please return your key.")).toEqual({
++      kind: "explicit",
++      templateKey: "resignation-exit",
++    });
++  });
++
++  it.each([
++    "what's the termination policy?",
++    "should Calla be terminated?",
++    "is your employment terminated if you miss two shifts?",
++    "termination CA policy for no call no show",
++  ])("on, still not a request: %s", (said) => {
++    vi.stubEnv("TERMINATION_INTAKE_ENABLED", "true");
++    const intent = detectTemplateIntent(said);
++    expect(intent.kind === "explicit" || (intent.kind === "corrective_action" && intent.requestedCreation)).toBe(false);
++  });
++});

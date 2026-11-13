@@ -1,0 +1,494 @@
+# branch gate-802c head 2881b1df ; diff from main-line base 2593987e
+# 2881b1df keep both
+# 2d481537 Merge origin/main into claude/outline-on-open-proposal (chat-quality-flags: keep both sides)
+# 33d97642 OUTLINE_ON_OPEN_PROPOSAL: another person's outline must be laid out as a filled form and never mention her (Gate-Sunny-3's NO-GO)
+# 7bfbae15 OUTLINE_ON_OPEN_PROPOSAL: an outline is no account only when it names another person; "same outline …" only with nothing but her name (G4-802)
+# 3a1b7823 OUTLINE_ON_OPEN_PROPOSAL: a form request is never an outline turn; "same / this / that outline" only
+# 5dfbde6e OUTLINE_ON_OPEN_PROPOSAL: the outline's person, date and events never reach the draft (QA)
+# 627c937e 17i: an outline pasted on an open proposal never costs it its facts (OUTLINE_ON_OPEN_PROPOSAL_ENABLED)
+diff --git a/src/app/api/chat/replay-pack/nov11-outline-on-open-proposal-cases.ts b/src/app/api/chat/replay-pack/nov11-outline-on-open-proposal-cases.ts
+new file mode 100644
+index 00000000..5fbb10d7
+--- /dev/null
++++ b/src/app/api/chat/replay-pack/nov11-outline-on-open-proposal-cases.ts
+@@ -0,0 +1,90 @@
++import { expect } from "vitest";
++
++import { STAFF, WEST_DODGE, type DirectoryRow, type ReplayCase, type ReplayContext } from "./cases";
++
++/**
++ * ============================================================================
++ * AN OUTLINE PASTED ON AN OPEN PROPOSAL NEVER COSTS THE PROPOSAL ITS FACTS (QA's Bubbles 17i live test, 11 Nov 2026)
++ * ============================================================================
++ *
++ * Admin, Create never pressed: (a) "create a corrective action for <A>, she was late on 11/3/26" → the card (Issue,
++ * Attendance p.14); (b) an Observation / Action Plan outline written for another person → ignored; (c) "same outline but
++ * with <A first>'s info" → no Issue, no Policy, a generic plan (live). In the pack, (c)'s Issue takes the outline's date.
++ * OUTLINE_ON_OPEN_PROPOSAL_ENABLED. The tester's turns; the people are invented (B is on no roster).
++ */
++const FLAG = "OUTLINE_ON_OPEN_PROPOSAL_ENABLED";
++const ILSA: DirectoryRow = { id: "e-oop-ilsa-varnholt", firstName: "Ilsa", lastName: "Varnholt", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-264"], positionName: "Team Member Part Time" };
++const A = "create a corrective action for Ilsa Varnholt, she was late on 11/3/26";
++const OUTLINE =
++  "Observation of Offense: Corisande Velt arrived 20 minutes late to her opening shift on 10/12/26 and did not call the manager on duty.\nAction Plan: The Leadership Team will coach Corisande on the Attendance policy and review call-in expectations. Further late arrivals may result in additional corrective action up to and including termination.";
++const C = "same outline but with Ilsa's info";
++
++function start(t: ReplayContext) {
++  t.directory([...STAFF, ILSA]);
++  t.as("location_manager", WEST_DODGE);
++  return t.thread();
++}
++
++function keepsStepA(reply: { content: string }, card: Record<string, unknown> | null, step: string) {
++  expect(card, `${step}: no card:\n${reply.content}`).toMatchObject({ templateKey: "dpoa", employeeName: "Ilsa Varnholt" });
++  expect(String(card?.issue ?? ""), `${step}: the Issue is not step (a)'s:\n${reply.content}`).toMatch(/late on 11\/3\/26/);
++  expect(reply.content, `${step}: the outline's person or date is on the card:\n${reply.content}`).not.toMatch(/Corisande|10\/12\/26/);
++  expect(reply.content, `${step}: the Attendance policy is lost:\n${reply.content}`).toMatch(/\*\*Policy:\*\*[^\n]*Attendance/);
++}
++
++export const NOV11_OUTLINE_ON_OPEN_PROPOSAL_CASES: ReplayCase[] = [
++  {
++    id: "nov11-17i-outline-on-open-proposal",
++    title: "a proposal, an outline for another person pasted, then \"same outline but with Ilsa's info\": step (a)'s Issue, date and Attendance policy are kept",
++    report: "QA's Bubbles 17i live test, 11 Nov 2026 (admin; Create never pressed)",
++    status: { open: "\"same outline but with Ilsa's info\" re-reads the outline as her account: the Issue takes the outline's date 10/12/26 (live: no Issue, no Policy)" },
++    fixFlags: [FLAG],
++    async run(t) {
++      const thread = start(t);
++      const a = await thread.say(A);
++      keepsStepA(a, thread.proposal as Record<string, unknown> | null, "a");
++      const b = await thread.say(OUTLINE);
++      keepsStepA(b, thread.proposal as Record<string, unknown> | null, "b");
++      const c = await thread.say(C);
++      keepsStepA(c, thread.proposal as Record<string, unknown> | null, "c");
++      // QA (11 Nov 2026): Create after the three turns — the outline's person, date and events never reach the draft.
++      t.draftWrites({ observation: "Observed:\nIlsa Varnholt was late on 11/3/26." });
++      const id = await thread.create();
++      const described = t.draftPrompts().map((prompt) => prompt.split("WHAT THE MANAGER DESCRIBED:")[1] ?? "").join("\n");
++      expect(described, `the outline reached the drafting model:\n${described}`).not.toMatch(/Corisande|10\/12\/26|did not call the manager/i);
++      expect(described, `step (a)'s account did not reach the drafting model:\n${described}`).toMatch(/late on 11\/3\/26/);
++      const saved = Object.values(t.values(id)).join("\n");
++      expect(saved, `the outline's person or date is on the draft:\n${saved}`).not.toMatch(/Corisande|10\/12\/26/);
++    },
++  },
++];
++
++/*
++ * Gate-Bubbles-4's NO-GO on B#802 (G4-802, 12 Nov 2026): the manager's own account, labelled or asking for "this format",
++ * was read as an outline and lost. Guards: production keeps it, and so does the flag (an outline names another person).
++ */
++const OWN_ACCOUNT = [
++  ["labelled-account", "create a corrective action for Ilsa Varnholt", "Date: 11/3/26\nWhat happened: Ilsa Varnholt arrived 40 minutes late and did not call in.", /40 minutes late/],
++  ["this-format", "create a corrective action for Ilsa Varnholt", "Ilsa Varnholt was late on 11/3/26. Use this format for the action plan.", /late on 11\/3\/26/],
++  // Gate-Sunny-3's NO-GO on the sibling's S#875 (12 Nov 2026): her account names a coworker who covered.
++  ["coworker-named", "create a corrective action for Ilsa Varnholt", "Date: 11/3/26\nWhat happened: Ilsa was 40 minutes late to her opening shift. Jordan had to cover the front desk until she arrived", /40 minutes late/],
++] as const;
++
++export const NOV12_OUTLINE_OWN_ACCOUNT_CASES: ReplayCase[] = OWN_ACCOUNT.map(([key, request, account, kept]) => ({
++  id: `nov12-g4-802-own-account-kept-${key}`,
++  title: `"${request}", then "${account.replace(/\n/g, " / ")}": her own account reaches the card and the draft`,
++  report: "Gate-Bubbles-4's NO-GO on OUTLINE_ON_OPEN_PROPOSAL (G4-802, 12 Nov 2026)",
++  status: "fixed",
++  fixFlags: [FLAG],
++  async run(t) {
++    const thread = start(t);
++    await thread.say(request);
++    const reply = await thread.say(account);
++    expect(thread.proposal, `no card for Ilsa Varnholt:\n${reply.content}`).toMatchObject({ employeeName: "Ilsa Varnholt" });
++    expect(reply.content, `her account was read as an outline:\n${reply.content}`).not.toMatch(/pasted example/);
++    t.draftWrites({ observation: "Observed:\nIlsa Varnholt was late." });
++    await thread.create();
++    const described = t.draftPrompts().map((prompt) => prompt.split("WHAT THE MANAGER DESCRIBED:")[1] ?? "").join("\n");
++    expect(described, `her account did not reach the drafting model:\n${described}`).toMatch(kept);
++  },
++}));
+diff --git a/src/app/api/chat/route.ts b/src/app/api/chat/route.ts
+index 8cefafeb..739cc88a 100644
+--- a/src/app/api/chat/route.ts
++++ b/src/app/api/chat/route.ts
+@@ -51,6 +51,7 @@ import {
+   offRosterConfirmEnabled,
+   offRosterAskBeforeCardEnabled,
+   oneFormEachPersonEnabled,
++  outlineOnOpenProposalEnabled,
+   groupWordsNotANameEnabled,
+   createFromConversationPointsToCardEnabled,
+   cardNamesEmployeeEnabled,
+@@ -254,6 +255,15 @@ async function postChat(request: Request) {
+           history: asked.history.map((turn) => (turn.role === "user" && typeof turn.content === "string" ? { ...turn, content: read(turn.content) } : turn)),
+         };
+       }
++      // OUTLINE_ON_OPEN_PROPOSAL_ENABLED: a pasted outline on an open proposal is no account (`lib/forms/outline-on-proposal.ts`).
++      let outlineOnProposal: { readonly requestId?: string } | null = null;
++      if (outlineOnOpenProposalEnabled()) {
++        const read = (await import("@/lib/forms/outline-on-proposal")).withoutOutlineTurns(asked);
++        if (read) {
++          asked = read.asked;
++          outlineOnProposal = read.outline ? { ...(read.requestId ? { requestId: read.requestId } : {}) } : null;
++        }
++      }
+       /*
+        * OFF_ROSTER_CONFIRM_ENABLED: "use <name>" (or "yes") to the offer for a person not in Woven is read as the
+        * manager's turn that typed the name, and the name is kept on the card as typed (`forms/off-roster-confirm.ts`).
+@@ -1013,6 +1023,10 @@ async function postChat(request: Request) {
+       }
+       // PROPOSAL_NAME_CORRECTION_ENABLED: an off-roster "change her name to …" on the card asks which, never kept silently.
+       answer = withCorrectionNotDropped(answer, parsed);
++      // OUTLINE_ON_OPEN_PROPOSAL_ENABLED: the outline turn's reply says the outline is kept as her form's layout.
++      if (outlineOnProposal) {
++        answer = (await import("@/lib/forms/outline-on-proposal")).withOutlineKeptNote(answer, { outlineTurnId: parsed.questionMessageId, requestId: outlineOnProposal.requestId });
++      }
+       // NEAR_MISS_QUESTION_RULES_ENABLED: "no, …" to "Is this for <name>?" never gets a card for that name, nor the question again.
+       if (nearMissQuestionRulesEnabled()) answer = (await import("@/lib/forms/near-miss-question-rules")).withoutTurnedDownName(answer, asked);
+       /*
+diff --git a/src/app/api/forms/instances/[id]/draft/route.ts b/src/app/api/forms/instances/[id]/draft/route.ts
+index 48d495ef..1a0f08b8 100644
+--- a/src/app/api/forms/instances/[id]/draft/route.ts
++++ b/src/app/api/forms/instances/[id]/draft/route.ts
+@@ -199,6 +199,7 @@ import {
+   proposalPolicySetAsideEnabled,
+   dateOnceEnabled,
+   sameRequestOtherPersonEnabled,
++  outlineOnOpenProposalEnabled,
+ } from "@/lib/config/chat-quality-flags";
+ import { NOTHING_SET_ASIDE, policiesSetAside, setAsideAnything, valuesWithPolicySetAside, withoutPolicyTakeOff } from "@/lib/forms/policy-set-aside";
+ import { notesMadeAbout } from "@/lib/ai/make-it-about";
+@@ -411,7 +412,9 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
+           roster: await (await import("@/lib/forms/employee-roster")).loadScopedRoster(actor.scope).catch(() => []),
+         })
+       : sent;
+-    const asTyped = (await import("@/lib/ai/card-meta-turn")).withoutCardMetaTurns(typed);
++    // OUTLINE_ON_OPEN_PROPOSAL_ENABLED: an outline pasted for another person, and "same outline …", are no account (`lib/forms/outline-on-proposal.ts`).
++    const unoutlined = outlineOnOpenProposalEnabled() ? (await import("@/lib/forms/outline-on-proposal")).notesWithoutOutline(typed, loaded.instance.employeeName) : typed;
++    const asTyped = (await import("@/lib/ai/card-meta-turn")).withoutCardMetaTurns(unoutlined);
+     // TYPO_READING_ROUTES_ENABLED: the readers below see "coahed", "notcie", "amont" as the words they can only be.
+     const read = typoReadingRoutesEnabled() ? typoReadingText(asTyped, await protectedNameWords()) : asTyped;
+     // PROPOSAL_MAKE_IT_ABOUT_ENABLED: "make it about showing up late …" makes "Showing up late." the account from that turn on (`ai/make-it-about.ts`).
+diff --git a/src/lib/config/chat-quality-flags.ts b/src/lib/config/chat-quality-flags.ts
+index e0b1b5ff..42926dda 100644
+--- a/src/lib/config/chat-quality-flags.ts
++++ b/src/lib/config/chat-quality-flags.ts
+@@ -1373,6 +1373,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
+   "DRAFT_NO_INVENTED_PLAN_ENABLED",
+   // REVISION_ARCHIVED_NOT_OPEN (default off): in the list, as every flag a release flips (QA round 17l, 12 Nov 2026).
+   "REVISION_ARCHIVED_NOT_OPEN_ENABLED",
++  // coding 6: OUTLINE_ON_OPEN_PROPOSAL (QA's Bubbles 17i live test, 11 Nov 2026; default off).
++  "OUTLINE_ON_OPEN_PROPOSAL_ENABLED",
+ ] as const;
+ 
+ /**
+@@ -4726,3 +4728,14 @@ export function wornClothingIsDressCodeEnabled(): boolean {
+ export function copyPastePointsToCardEnabled(): boolean {
+   return envFlag("COPY_PASTE_POINTS_TO_CARD_ENABLED");
+ }
++
++/**
++ * OUTLINE_ON_OPEN_PROPOSAL_ENABLED (coding 6, 11 Nov 2026; default off; QA's Bubbles 17i live test). On a proposal
++ * (Create not pressed), a pasted "Observation of Offense: … / Action Plan: …" outline for another person, then "same
++ * outline but with <A>'s info", cost the card its Issue and Policy. On: with no form open, a pasted outline and a
++ * "same outline" turn are no account — left out of the proposal's re-read, which takes the request before them — and
++ * the reply says the outline is kept as her form's layout (`forms/outline-on-proposal.ts`). Off, as before.
++ */
++export function outlineOnOpenProposalEnabled(): boolean {
++  return envFlag("OUTLINE_ON_OPEN_PROPOSAL_ENABLED");
++}
+diff --git a/src/lib/forms/outline-on-proposal.test.ts b/src/lib/forms/outline-on-proposal.test.ts
+new file mode 100644
+index 00000000..cdc64ffe
+--- /dev/null
++++ b/src/lib/forms/outline-on-proposal.test.ts
+@@ -0,0 +1,96 @@
++import { afterEach, describe, expect, it, vi } from "vitest";
++
++import { isOutlineTurn, notesWithoutOutline, withOutlineKeptNote, withoutOutlineTurns } from "./outline-on-proposal";
++
++/* OUTLINE_ON_OPEN_PROPOSAL_ENABLED (QA's Bubbles 17i live test, 11 Nov 2026). The tester's turns; invented people. */
++const A = "create a corrective action for Ilsa Varnholt, she was late on 11/3/26";
++const OUTLINE = "Observation of Offense: Corisande Velt arrived 20 minutes late on 10/12/26.\nAction Plan: The Leadership Team will coach Corisande.";
++const C = "same outline but with Ilsa's info";
++const history = [
++  { role: "user", content: A },
++  { role: "assistant", content: "I'll draft a **Corrective Action Form** for **Ilsa Varnholt** …" },
++  { role: "user", content: OUTLINE },
++  { role: "assistant", content: "I'll draft a **Corrective Action Form** for **Ilsa Varnholt** …" },
++];
++
++afterEach(() => vi.unstubAllEnvs());
++
++describe("OUTLINE_ON_OPEN_PROPOSAL_ENABLED", () => {
++  const ILSA = "Ilsa Varnholt";
++  it("reads outline turns", () => {
++    expect(isOutlineTurn(OUTLINE, ILSA)).toBe(true);
++    expect(isOutlineTurn(C, ILSA)).toBe(true);
++    expect(isOutlineTurn(A, ILSA)).toBe(false);
++    // A request that mentions a format is the request, never an outline turn (the s22 replay case, 12 Nov 2026).
++    expect(isOutlineTurn("create a ca for must see behaviors for wynne sarrow but i need it to be in the format of Tamsyn ca", "Wynne Sarrow")).toBe(false);
++  });
++
++  // Gate-Bubbles-4's NO-GO (G4-802) and Gate-Sunny-3's probe of S#875 (12 Nov 2026): the manager's own account is never an outline.
++  it.each([
++    "Date: 11/3/26\nWhat happened: Ilsa Varnholt arrived 40 minutes late and did not call in.",
++    "Ilsa Varnholt was late on 11/3/26. Use this format for the action plan.",
++    "Time: 9am\nShift: opening\nshe was late",
++    "use this format for her",
++    "make it look like this template",
++    "Date: 11/3/26\nWhat happened: Ilsa arrived 40 minutes late and did not call in.",
++    "same outline but with Ilsa's info, she was late on 11/3/26",
++    // Gate-Sunny-3's NO-GO on S#875 (12 Nov 2026): her account names a coworker, a witness or a nickname.
++    "Date: 11/3/26\nWhat happened: Ilsa was 40 minutes late to her opening shift. Jordan had to cover the front desk until she arrived",
++    "Date: 11/3/26\nWhat happened: Marco called to say Ilsa would be late.\nWitness: Marco",
++    "Observation of Offense: Ilsa was 40 minutes late. Jordan had to cover the front desk.\nAction Plan: coach Ilsa on arriving on time.",
++    "Observation of Offense: Ilsa Varnholt was late on 11/3/26.\nAction Plan: Management will coach her.",
++  ])("never an outline turn: %s", (said) => {
++    expect(isOutlineTurn(said, ILSA)).toBe(false);
++  });
++
++  it("a nickname the manager typed in the request is hers (Gate-Sunny-3)", () => {
++    const liz = "Observation of Offense: Liz was 40 minutes late.\nAction Plan: The Leadership Team will coach Liz.";
++    expect(isOutlineTurn(liz, ["Elizabeth Varnholt", "liz varnholt"])).toBe(false);
++    vi.stubEnv("OUTLINE_ON_OPEN_PROPOSAL_ENABLED", "true");
++    expect(notesWithoutOutline(["create a corrective action for liz varnholt", liz].join("\n\n"), "Elizabeth Varnholt")).toContain("Liz was 40 minutes late");
++  });
++
++  it("a lower-case outline for another person is one (Gate-Sunny-3)", () => {
++    expect(isOutlineTurn("observation of offense: corisande arrived 20 minutes late.\naction plan: the leadership team will coach corisande.", ILSA)).toBe(true);
++  });
++
++  it("an outline naming another person is one; with no card's employee nothing is", () => {
++    expect(isOutlineTurn("Observation of Offense: Tamsyn completed 237 transactions.\nAction Plan: The Leadership Team will coach Tamsyn.", "Wynne Sarrow")).toBe(true);
++    expect(isOutlineTurn(OUTLINE, null)).toBe(true);
++    expect(isOutlineTurn(C, null)).toBe(false);
++  });
++
++  it("off: the request is as sent", () => {
++    expect(withoutOutlineTurns({ question: C, history })).toBeNull();
++  });
++
++  it("on, no form open: the outline turns are left out and \"same outline …\" is read as step (a)'s request", () => {
++    vi.stubEnv("OUTLINE_ON_OPEN_PROPOSAL_ENABLED", "true");
++    const read = withoutOutlineTurns({ question: C, history })!;
++    // The card's employee is read from the assistant turns ("… for **Ilsa Varnholt** …").
++    expect(read.outline).toBe(true);
++    expect(read.asked.question).toBe(A);
++    expect(read.asked.history.map((turn) => turn.content)).not.toContain(OUTLINE);
++  });
++
++  it("on, a form open (an open draft): untouched — the open-draft path places the outline", () => {
++    vi.stubEnv("OUTLINE_ON_OPEN_PROPOSAL_ENABLED", "true");
++    expect(withoutOutlineTurns({ question: C, history, activeFormInstanceId: "f-1" })).toBeNull();
++  });
++
++  it("the outline turn's reply says what is true: her own details are kept (QA, 12 Nov 2026)", () => {
++    const out = withOutlineKeptNote({ content: "card", formProposal: { employeeName: "Ilsa Varnholt", templateName: "Corrective Action Form" } });
++    expect(out.content).toMatch(/^I've kept \*\*Ilsa Varnholt\*\*'s own details; nothing from the person in the pasted example goes on this card\./);
++    expect(out.content).not.toMatch(/as the layout/);
++  });
++
++  it("the draft's notes leave the outline turns out; off, as sent", () => {
++    const notes = [A, OUTLINE, C].join("\n\n");
++    expect(notesWithoutOutline(notes, ILSA)).toBe(notes);
++    vi.stubEnv("OUTLINE_ON_OPEN_PROPOSAL_ENABLED", "true");
++    expect(notesWithoutOutline(notes, ILSA)).toBe(A);
++    // Her own labelled account stays in the notes (G4-802).
++    const own = [A, "Date: 11/3/26\nWhat happened: Ilsa Varnholt arrived 40 minutes late and did not call in."].join("\n\n");
++    expect(notesWithoutOutline(own, ILSA)).toBe(own);
++  });
++});
+diff --git a/src/lib/forms/outline-on-proposal.ts b/src/lib/forms/outline-on-proposal.ts
+new file mode 100644
+index 00000000..9683506d
+--- /dev/null
++++ b/src/lib/forms/outline-on-proposal.ts
+@@ -0,0 +1,192 @@
++import { outlineOnOpenProposalEnabled } from "@/lib/config/chat-quality-flags";
++
++import { looksLikePastedTemplate } from "./pasted-template-fields";
++
++/*
++ * ============================================================================
++ * AN OUTLINE PASTED ON AN OPEN PROPOSAL NEVER COSTS THE PROPOSAL ITS FACTS (OUTLINE_ON_OPEN_PROPOSAL_ENABLED)
++ * ============================================================================
++ *
++ * QA's Bubbles 17i live test (11 Nov 2026), on a proposal (Create never pressed): (a) "create a corrective action for
++ * <A>, she was late on 11/3/26" made the card (Issue, Attendance p.14); (b) an "Observation of Offense: … / Action
++ * Plan: …" outline written for another person, pasted next, was ignored; (c) "same outline but with <A first>'s info"
++ * left the card with no Issue, no Policy and a generic plan (in the replay pack, the outline's date became <A>'s). The
++ * card is re-read from the manager's turns every time, and the outline — another person's account — was read as hers.
++ *
++ * With the flag on and no form open, a pasted labelled outline and a turn asking for "the same outline" are no account:
++ * they are left out of the re-read, and such a turn is read as the request before it, so step (a)'s Issue, date, Policy
++ * and plan are kept. The reply says her own details are kept and nothing from the pasted example's person goes on the
++ * card. Pure.
++ */
++
++const SAME_OUTLINE = /\b(?:same|this|that)\s+(?:outline|template|format|layout)\b/i;
++/* A turn that asks for a form ("create a ca for …", "… in the format of <B>") is the request: never left out (the sibling's s22 case). */
++const FORM_REQUEST = /\b(?:create|make|write|draw\s+up|need|draft|prepare|start)\b[^.?!\n]{0,40}\b(?:ca|c\/a|corrective\s+action|coaching|write[- ]?up|warning|form)\b/i;
++
++/*
++ * Gate-Bubbles-4's NO-GO (G4-802, 12 Nov 2026) and Gate-Sunny-3's probe of S#875: the manager's own account, labelled
++ * ("Date: 11/3/26\nWhat happened: <A> arrived 40 minutes late …", "Time: 9am\nShift: opening\nshe was late") or asking for
++ * a format with her facts ("<A> was late on 11/3/26. Use this format for the action plan."), is never left out. A pasted
++ * outline is no account only when it names a person other than the card's employee; a "same outline …" turn only when it
++ * adds nothing but her name.
++ */
++const NOT_A_PERSON = new Set(
++  "the she he they it this that these those we i you management leadership team manager employee associate everyone nobody someone client guest store salon shift".split(" "),
++);
++/** A capitalised name as the subject of a reported act ("Corisande arrived …", "Tamsyn completed …"). */
++const ACTS = String.raw`(?:was|is|has|had|did|didn['’]?t|arrived|completed|failed|left|came|called|took|refused|walked|clocked|showed|missed|will|must|should)`;
++const NAMED_ACT = new RegExp(String.raw`\b([A-Z][a-z'’]+)(?:\s+[A-Z][a-z'’]+)?\s+${ACTS}\b`, "g");
++const NAMED_ACT_ANY_CASE = new RegExp(String.raw`\b([a-z][a-z'’]{2,})\s+${ACTS}\b`, "gi");
++/** Filler a "same outline …" turn may carry beside her name: nothing of an account. */
++const SAME_OUTLINE_FILLER =
++  /\b(?:same|this|that|the|a|an|outline|template|format|layout|but|with|use|using|for|her|his|their|info|information|details|please|pls|it|make|do|apply|to|on|and|just|instead|of|s)\b|['’]s?\b|[^\p{L}\p{N}]+/giu;
++
++/** Her names: the card's employee, and the name the manager typed in the request ("for liz varnholt"). */
++type Her = string | readonly string[] | null | undefined;
++function nameWords(her: Her): string[] {
++  const names = typeof her === "string" ? [her] : (her ?? []);
++  return names.flatMap((name) => name.toLowerCase().split(/[^\p{L}'’-]+/u)).filter((word) => word.length >= 2);
++}
++
++const REQUEST_NAME = /\b(?:for|on)\s+([a-z][a-z'’-]*)(?:\s+([a-z][a-z'’-]*))?/i;
++/** The name typed after "for" in a form request, when the request has one. */
++export function requestedName(turn: string): string | null {
++  if (!FORM_REQUEST.test(turn)) return null;
++  const typed = REQUEST_NAME.exec(turn);
++  return typed ? [typed[1], typed[2]].filter(Boolean).join(" ") : null;
++}
++
++/*
++ * Gate-Sunny-3's NO-GO on S#875 (12 Nov 2026): the manager's own labelled account names coworkers, witnesses and
++ * nicknames ("What happened: Ilsa was 40 minutes late … Jordan had to cover the front desk"). So an outline is another
++ * person's only when (1) it never mentions the card's employee, (2) it names someone, and (3) it is laid out as a filled
++ * form — its labels are the form's own sections (Observation of Offense, Action Plan …), not an account's (Date, What
++ * happened, Time, Shift). Any doubt keeps the turn as her account.
++ */
++const FORM_SECTION_LABEL =
++  /(?:^|\n)[ \t]*(?:observation\s+of\s+offense|action\s+plan|going\s+forward|expectations?|policy\s+violated|policy\s+language|prior\s+actions?|details\s*[–—-]\s*observed)[ \t]*:/i;
++const ARTICLE_BEFORE = /\b(?:the|a|an|her|his|their|my|our|your|this|that)\s+$/i;
++
++/** Whether the text mentions the card's employee: a word of her name, in any case, possessive or not. */
++function mentionsEmployee(text: string, employeeName: Her): boolean {
++  const own = nameWords(employeeName);
++  const words = text.toLowerCase().split(/[^\p{L}'’-]+/u).map((word) => word.replace(/['’]s?$/, ""));
++  return own.some((part) => words.includes(part));
++}
++
++/** Whether the text names someone as the subject of an act: "Corisande arrived …", or lower case when the name recurs. */
++function namesSomeone(text: string): boolean {
++  for (const match of text.matchAll(NAMED_ACT)) {
++    if (!NOT_A_PERSON.has(match[1]!.toLowerCase())) return true;
++  }
++  // "corisande arrived … coach corisande": a lower-case name counts only when it recurs and no article owns it.
++  for (const match of text.matchAll(NAMED_ACT_ANY_CASE)) {
++    const name = match[1]!.toLowerCase();
++    if (NOT_A_PERSON.has(name) || ARTICLE_BEFORE.test(text.slice(0, match.index))) continue;
++    if ((text.toLowerCase().match(new RegExp(`\\b${name}\\b`, "g")) ?? []).length >= 2) return true;
++  }
++  return false;
++}
++
++/** A pasted outline for another person: laid out as a filled form, naming someone, never the card's employee. */
++function outlineForAnotherPerson(text: string, employeeName: Her): boolean {
++  return FORM_SECTION_LABEL.test(text) && !mentionsEmployee(text, employeeName) && namesSomeone(text);
++}
++
++/** Whether a "same outline …" turn says nothing but the employee's name. */
++function addsOnlyTheName(text: string, employeeName: Her): boolean {
++  const own = nameWords(employeeName);
++  if (own.length === 0) return false;
++  const words = text.replace(SAME_OUTLINE_FILLER, " ").toLowerCase().split(/\s+/).filter(Boolean);
++  const named = words.filter((word) => own.some((part) => word === part || word.replace(/s$/, "") === part));
++  return named.length > 0 && named.length === words.length;
++}
++
++/** A pasted filled-form outline for another person, or a turn asking for "the same outline …" with only her name. */
++export function isOutlineTurn(text: string, employeeName?: Her): boolean {
++  if (FORM_REQUEST.test(text)) return false;
++  // A lower-case outline ("observation of offense: …") has the form's own labels even when no label is capitalised.
++  if (looksLikePastedTemplate(text) || FORM_SECTION_LABEL.test(text)) return outlineForAnotherPerson(text, employeeName);
++  return SAME_OUTLINE.test(text) && addsOnlyTheName(text, employeeName);
++}
++
++interface Turn {
++  readonly id?: string;
++  readonly role: string;
++  readonly content: string;
++  readonly formProposal?: { readonly employeeName?: string | null } | null;
++}
++
++/** The card's employee: the latest card's name in the history ("… for **<A>** …" when the turn carries no card). */
++function cardEmployee(history: readonly Turn[]): string | null {
++  for (const turn of [...history].reverse()) {
++    if (turn.role !== "assistant") continue;
++    const name = turn.formProposal?.employeeName ?? /\bfor \*\*([^*\n]+)\*\*/.exec(turn.content)?.[1];
++    if (name) return name;
++  }
++  return null;
++}
++
++interface Asked<T extends Turn> {
++  readonly question: string;
++  readonly history: readonly T[];
++  readonly activeFormInstanceId?: string | null;
++}
++
++/**
++ * The request as the proposal re-read takes it: outline turns left out of the history, and an outline turn read as the
++ * manager's last request before it. `outline` is true when this turn was an outline turn. Null when nothing changes.
++ */
++export function withoutOutlineTurns<T extends Turn, A extends Asked<T>>(asked: A): { asked: A; outline: boolean; requestId?: string } | null {
++  if (!outlineOnOpenProposalEnabled() || asked.activeFormInstanceId) return null;
++  const card = cardEmployee(asked.history);
++  if (!card) return null;
++  const typed = asked.history.filter((turn) => turn.role === "user").map((turn) => requestedName(turn.content));
++  const employee = [card, ...typed.filter((name): name is string => name !== null)];
++  const outline = isOutlineTurn(asked.question, employee);
++  const kept = asked.history.filter((turn) => !(turn.role === "user" && isOutlineTurn(turn.content, employee)));
++  if (!outline && kept.length === asked.history.length) return null;
++  if (!outline) return { asked: { ...asked, history: kept }, outline: false };
++  const request = [...kept].reverse().find((turn) => turn.role === "user" && turn.content.trim() !== "");
++  if (!request) return null;
++  return { asked: { ...asked, history: kept, question: request.content }, outline: true, ...(request.id ? { requestId: request.id } : {}) };
++}
++
++interface CardLike {
++  readonly employeeName: string | null;
++  readonly templateName?: string;
++  readonly sourceMessageIds?: readonly string[];
++}
++
++/** On the outline turn, the reply says her own details are kept, and nothing from the pasted example's person. */
++export function withOutlineKeptNote<T extends { content: string; formProposal?: CardLike | null }>(
++  answer: T,
++  cited?: { readonly outlineTurnId?: string; readonly requestId?: string },
++): T {
++  const card = answer.formProposal;
++  if (!card?.employeeName) return answer;
++  // The card cites the request it was read from, never the outline turn, so Create's notes are her account.
++  const ids = card.sourceMessageIds;
++  const sourceMessageIds =
++    ids && cited?.outlineTurnId && cited.requestId
++      ? [...new Set(ids.map((id) => (id === cited.outlineTurnId ? cited.requestId! : id)))]
++      : ids;
++  // QA (12 Nov 2026): say what is true — nothing keeps the outline as a layout.
++  const note = `I've kept **${card.employeeName}**'s own details; nothing from the person in the pasted example goes on this card.`;
++  return { ...answer, content: `${note}\n\n${answer.content}`, formProposal: { ...card, ...(sourceMessageIds ? { sourceMessageIds } : {}) } };
++}
++
++/**
++ * The draft's notes (the manager's turns, a blank line between them) without the outline turns: the pasted outline is
++ * another person's account, and "same outline but with <A>'s info" is no account, so neither person's name, date or
++ * events from the outline reach <A>'s draft (QA, 11 Nov 2026). The form's own fields give the layout (Observation of
++ * Offense, Action Plan …); the content comes only from <A>'s turns. Unchanged with the flag off, or when every turn is
++ * an outline turn.
++ */
++export function notesWithoutOutline(notes: string, employeeName: string | null): string {
++  if (!outlineOnOpenProposalEnabled() || !employeeName) return notes;
++  const turns = notes.split(/\n{2,}/);
++  const her = [employeeName, ...turns.map(requestedName).filter((name): name is string => name !== null)];
++  const kept = turns.filter((turn) => !isOutlineTurn(turn, her));
++  return kept.length === turns.length || kept.length === 0 ? notes : kept.join("\n\n");
++}

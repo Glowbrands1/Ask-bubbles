@@ -1,0 +1,215 @@
+# branch gate-808 head 174533c8 ; diff from main-line base c6e0b7db
+# 174533c8 gate merge pr808 (keep both)
+# 7eff60af Merge remote-tracking branch 'origin/main' into b-near-miss-turned-down-plan
+# 263df52c Port from Ask Sunny (claude/near-miss-turned-down-plan): NEAR_MISS_TURNED_DOWN_EVERYWHERE_ENABLED (default off) — "no call no show …" after the near-miss question keeps the asked name
+diff --git a/src/app/api/chat/replay-pack/nov11-near-miss-no-call-no-show-cases.ts b/src/app/api/chat/replay-pack/nov11-near-miss-no-call-no-show-cases.ts
+new file mode 100644
+index 00000000..23be6b98
+--- /dev/null
++++ b/src/app/api/chat/replay-pack/nov11-near-miss-no-call-no-show-cases.ts
+@@ -0,0 +1,63 @@
++import { expect, vi } from "vitest";
++
++import { STAFF, WEST_DODGE, type ReplayCase } from "./cases";
++import { at } from "./nov4-live-regressions-scenarios";
++
++/**
++ * NEAR_MISS_TURNED_DOWN_EVERYWHERE (QA, 11 Nov 2026; port of the sibling app's). After "Is this for **<roster name>**?",
++ * "no call no show on 11/3, verbal warning" was read as turning the name down (any turn opening with "no"): the name
++ * left the card, the details were dropped, and the reply asked who. It is an account: the name stays. Only "no"/"nope"
++ * on their own or with their own punctuation turn it down. The same chat as nov7-near-miss-details (invented people).
++ */
++const ON = [
++  "FORM_NAME_FROM_ROSTER_ENABLED",
++  "ROSTER_NEAR_MISS_ENABLED",
++  "ROSTER_NAME_IN_CANDIDATE_ENABLED",
++  "ROSTER_COMPOUND_SURNAME_ENABLED",
++  "ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED",
++  "OFF_ROSTER_CONFIRM_ENABLED",
++  "NEAR_MISS_DETAILS_ACCEPT_ENABLED",
++  "NEAR_MISS_QUESTION_RULES_ENABLED",
++  "NEAR_MISS_TURNED_DOWN_EVERYWHERE_ENABLED",
++];
++const CORVINA = at("nm-corvina", "Corvina", "Vellacott");
++const DELPHINE = at("nm-delphine", "Delphine", "Marlowe Ostrander");
++const ASKED = /Is this for \*\*[^*]+\*\*\? Tell me if that should change\./;
++const FIRST = "i have an employee, Corvina Ashdown Vellacot that needs a corrective action form with a customer complaint";
++const NO_CALL = "no call no show on 11/3, verbal warning";
++const REPORT = "QA, 11 Nov 2026: \"no call no show …\" after the near-miss question is read as turning the name down";
++
++export const NOV11_NEAR_MISS_NO_CALL_NO_SHOW_CASES: ReplayCase[] = [
++  {
++    id: "nov11-near-miss-no-call-no-show-after-question",
++    title: `after "Is this for **Corvina Vellacott**?", "${NO_CALL}": the card keeps Corvina Vellacott and "no call no show"`,
++    report: REPORT,
++    status: { open: "the asked name is taken off and the reply asks who" },
++    fixFlags: ON,
++    async run(t) {
++      vi.setSystemTime(new Date("2026-11-04T15:30:00Z"));
++      t.directory([...STAFF, CORVINA, DELPHINE]);
++      t.as("location_manager", WEST_DODGE);
++      const thread = t.thread();
++      const asked = await thread.say(FIRST);
++      expect(asked.content, "the near-miss question was not asked").toMatch(ASKED);
++      const reply = await thread.say(NO_CALL);
++      expect(thread.proposal?.employeeName ?? null, `the asked name was taken off:\n${reply.content}`).toBe("Corvina Vellacott");
++      expect(reply.content, reply.content).not.toMatch(/^\*\*(?:Observation of Offense|Issue|What happened):\*\*\s*call no show/im);
++    },
++  },
++  {
++    id: "nov11-near-miss-no-call-no-show-fresh",
++    title: `"create a ca for Corvina Vellacott, ${NO_CALL}": the account keeps "no call no show"`,
++    report: REPORT,
++    status: "fixed",
++    fixFlags: ON,
++    async run(t) {
++      vi.setSystemTime(new Date("2026-11-04T15:30:00Z"));
++      t.directory([...STAFF, CORVINA, DELPHINE]);
++      t.as("location_manager", WEST_DODGE);
++      const reply = await t.thread().say(`create a ca for Corvina Vellacott, ${NO_CALL}`);
++      expect(reply.content, reply.content).not.toMatch(/^\*\*(?:Observation of Offense|Issue|What happened):\*\*\s*call no show/im);
++    },
++  },
++];
+diff --git a/src/lib/config/chat-quality-flags.ts b/src/lib/config/chat-quality-flags.ts
+index 6da53817..f869bc44 100644
+--- a/src/lib/config/chat-quality-flags.ts
++++ b/src/lib/config/chat-quality-flags.ts
+@@ -4632,3 +4632,14 @@ export function letterGreetingAnyCaseEnabled(): boolean {
+ export function companyMetricWordsNotNamesEnabled(): boolean {
+   return envFlag("COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED");
+ }
++
++/**
++ * NEAR_MISS_TURNED_DOWN_EVERYWHERE_ENABLED (QA, 10–11 Nov 2026; default off; with NEAR_MISS_QUESTION_RULES; same flag in
++ * both apps). After "Is this for **<roster name>**?": (1) "no call no show on 11/3, verbal warning" is an account that
++ * keeps the name, not a "no" — "no"/"nope" turn it down only on their own or with their own punctuation; (2) when the
++ * name is turned down, it also leaves the reply's Action Plan line, and the "no," that turned it down leaves the
++ * account line (`forms/near-miss-question-rules.ts`). Off, as before.
++ */
++export function nearMissTurnedDownEverywhereEnabled(): boolean {
++  return envFlag("NEAR_MISS_TURNED_DOWN_EVERYWHERE_ENABLED");
++}
+diff --git a/src/lib/forms/near-miss-answer.ts b/src/lib/forms/near-miss-answer.ts
+index d5821e79..f9e92384 100644
+--- a/src/lib/forms/near-miss-answer.ts
++++ b/src/lib/forms/near-miss-answer.ts
+@@ -1,5 +1,5 @@
+ import { businessToday } from "@/lib/business-date";
+-import { nearMissDetailsAcceptEnabled } from "@/lib/config/chat-quality-flags";
++import { nearMissDetailsAcceptEnabled, nearMissTurnedDownEverywhereEnabled } from "@/lib/config/chat-quality-flags";
+ 
+ import { editDistance } from "./employee-match";
+ import { statedPayrollDeduct } from "./payroll-deduct-answer";
+@@ -36,7 +36,9 @@ export function acceptsNearMissWithDetails(reply: string, asked: string, typedTu
+   const typed = new Set(typedTurns.flatMap(words));
+   if (!typed.has(first)) return false;
+   if (![...typed].some((word) => word !== first && word.length >= 4 && editDistance(word, last) <= 2)) return false;
+-  if (/^(?:no|nope|wrong|not)\b/i.test(text) && statedPayrollDeduct(text.split(/[,.;!\n]/)[0] ?? "") === null) return false;
++  // NEAR_MISS_TURNED_DOWN_EVERYWHERE_ENABLED (QA, 11 Nov 2026): "no call no show on 11/3, …" is an account, not a "no".
++  const noThenWords = nearMissTurnedDownEverywhereEnabled() && /^(?:no|nope)\b(?![,.;:!]|\s*$)/i.test(text);
++  if (!noThenWords && /^(?:no|nope|wrong|not)\b/i.test(text) && statedPayrollDeduct(text.split(/[,.;!\n]/)[0] ?? "") === null) return false;
+   return warningMentions(text, businessToday()).length > 0 || statedPayrollDeduct(text) !== null;
+ }
+ 
+diff --git a/src/lib/forms/near-miss-question-rules.test.ts b/src/lib/forms/near-miss-question-rules.test.ts
+index ca4c5caa..c34f3855 100644
+--- a/src/lib/forms/near-miss-question-rules.test.ts
++++ b/src/lib/forms/near-miss-question-rules.test.ts
+@@ -56,3 +56,30 @@ describe("NEAR_MISS_QUESTION_RULES_ENABLED", () => {
+     expect(withoutTurnedDownName(given, request("no, verbal warning"))).toBe(given);
+   });
+ });
++
++describe("NEAR_MISS_TURNED_DOWN_EVERYWHERE_ENABLED (QA, 11 Nov 2026)", () => {
++  beforeEach(() => vi.stubEnv("NEAR_MISS_QUESTION_RULES_ENABLED", "true"));
++  afterEach(() => vi.unstubAllEnvs());
++  const everywhere = (on: boolean) => vi.stubEnv("NEAR_MISS_TURNED_DOWN_EVERYWHERE_ENABLED", on ? "true" : "");
++
++  it("\"no call no show on 11/3, verbal warning\" keeps the asked name; \"no\", \"no,\", \"no.\", \"nope\" still turn it down", () => {
++    everywhere(true);
++    expect(turnedDownName(request("no call no show on 11/3, verbal warning"))).toBeNull();
++    for (const said of ["no", "no, verbal warning", "no. verbal warning", "nope", "nope, it's someone else", "wrong", "not her"]) {
++      expect(turnedDownName(request(said)), said).toBe("Corvina Vellacott");
++    }
++  });
++
++  it("off: \"no call no show …\" is read as before", () => {
++    everywhere(false);
++    expect(turnedDownName(request("no call no show on 11/3, verbal warning"))).toBe("Corvina Vellacott");
++  });
++
++  it("the plan and account lines: the turned-down name leaves the Action Plan; the \"no,\" leaves the account", () => {
++    everywhere(true);
++    const content = `${CARD}\n\n**Observation of Offense:** no, verbal warning the customer complained\n\n**Action Plan:** Management will review the Standards of Conduct policy with Corvina. Corvina will reread it.`;
++    const out = withoutTurnedDownName({ ...answer("Corvina Vellacott"), content }, request("no, verbal warning the customer complained")).content;
++    expect(out).toContain("**Action Plan:** Management will review the Standards of Conduct policy with the employee. The employee will reread it.");
++    expect(out).toContain("**Observation of Offense:** verbal warning the customer complained");
++  });
++});
+diff --git a/src/lib/forms/near-miss-question-rules.ts b/src/lib/forms/near-miss-question-rules.ts
+index 357d7b12..e1ff1c27 100644
+--- a/src/lib/forms/near-miss-question-rules.ts
++++ b/src/lib/forms/near-miss-question-rules.ts
+@@ -1,5 +1,5 @@
+ import type { AskRequest, AskResponse } from "@/lib/ai/types";
+-import { nearMissQuestionRulesEnabled } from "@/lib/config/chat-quality-flags";
++import { nearMissQuestionRulesEnabled, nearMissTurnedDownEverywhereEnabled } from "@/lib/config/chat-quality-flags";
+ 
+ import { statedPayrollDeduct } from "./payroll-deduct-answer";
+ import { ASK_WHO } from "./roster-only-names";
+@@ -47,9 +47,17 @@ export function cardEmployee(request: Pick<AskRequest, "history" | "activeFormIn
+ }
+ 
+ /** (a) The name the reply before this turn asked about, when this turn turns it down; null otherwise. */
++/*
++ * NEAR_MISS_TURNED_DOWN_EVERYWHERE_ENABLED (QA, 11 Nov 2026): "no call no show on 11/3, verbal warning" answering "Is this
++ * for **<name>**?" is an account that keeps the name, not a "no". With the flag, "no"/"nope" turn the name down only on
++ * their own or with their own punctuation ("no", "no,", "no."); "wrong" and "not" read as before.
++ */
++const NO_THEN_WORDS = /^\s*(?:no|nope)\b(?![,.;:!]|\s*$)/i;
++
+ export function turnedDownName(request: Pick<AskRequest, "history" | "question">): string | null {
+   const asked = ASKED.exec(lastReply(request))?.[1]?.trim();
+   if (!asked || !TURNS_DOWN.test(request.question)) return null;
++  if (nearMissTurnedDownEverywhereEnabled() && NO_THEN_WORDS.test(request.question)) return null;
+   const opening = request.question.trim().split(/[,.;!\n]/)[0] ?? "";
+   return statedPayrollDeduct(opening) === null ? asked : null;
+ }
+@@ -70,13 +78,35 @@ export function withoutTurnedDownName(answer: AskResponse, request: Pick<AskRequ
+     .replace(/^Create the draft here when you're ready[^\n]*$/m, "")
+     .replace(/\n{3,}/g, "\n\n")
+     .trim();
++  const cleared = nearMissTurnedDownEverywhereEnabled() ? withoutNameInPlan(withoutTurnDownLead(content), name) : content;
+   return {
+     ...answer,
+-    content: content.includes(ASK_WHO) ? content : `${content}\n\n${ASK_WHO}`,
++    content: cleared.includes(ASK_WHO) ? cleared : `${cleared}\n\n${ASK_WHO}`,
+     formProposal: { ...card, employeeName: null, status: "needs_employee", supportsInlineDraft: false },
+   };
+ }
+ 
++/*
++ * NEAR_MISS_TURNED_DOWN_EVERYWHERE_ENABLED (QA, 10 Nov 2026): the name turned down also leaves the Action Plan line
++ * ("Management will review … with Corvina." → "… with the employee."), which names the person by first name, and the
++ * "no," that turned it down is not the account ("**Observation of Offense:** no, verbal warning …"). Only inside
++ * withoutTurnedDownName, so only right after the near-miss question, and only "no" with its own punctuation: "no call
++ * no show" is an account and is never touched. "not" stays: "not following the dress code" is an account.
++ */
++const ACCOUNT_LEAD = /^(\*\*(?:Observation of Offense|Issue|What happened):\*\*[ \t]*)(?:no|nope|wrong)[,.;:!][ \t]*/gim;
++
++function withoutTurnDownLead(content: string): string {
++  return content.replace(ACCOUNT_LEAD, (_line, label: string) => label);
++}
++
++function withoutNameInPlan(content: string, name: string): string {
++  const first = name.split(/\s+/)[0] ?? name;
++  const who = new RegExp(String.raw`\b(?:${escape(name)}|${escape(first)})\b`, "g");
++  return content.replace(/^\*\*Action Plan:\*\*[^\n]*$/gim, (line) =>
++    line.replace(who, (_match, at: number, whole: string) => (/(?:^|[.!?]\s+|:\*\*\s*)$/.test(whole.slice(0, at)) ? "The employee" : "the employee")),
++  );
++}
++
+ function escape(text: string): string {
+   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+ }

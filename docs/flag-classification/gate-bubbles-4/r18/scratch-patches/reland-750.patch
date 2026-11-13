@@ -1,0 +1,848 @@
+# triage worktree t750 (detached) head 90adb098 ; diff vs main 6081b825
+# 90adb098 gate: re-apply #750
+diff --git a/src/app/api/admin/knowledge-sync/woven/content/route.ts b/src/app/api/admin/knowledge-sync/woven/content/route.ts
+index 689d10a9..ed96d5cf 100644
+--- a/src/app/api/admin/knowledge-sync/woven/content/route.ts
++++ b/src/app/api/admin/knowledge-sync/woven/content/route.ts
+@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
+ 
+ import { assertLiveMode, errorResponse } from "@/lib/api/respond";
+ import { authorizeRequest } from "@/lib/auth/server";
++import { wovenDocumentKeepOutEnabled } from "@/lib/config/chat-quality-flags";
+ import { KnowledgeSyncStoreError } from "@/lib/knowledge-sync/store";
+ import { readWovenKnowledgeContent } from "@/lib/knowledge-sync/woven/status";
+ import { getSupabaseAdmin } from "@/lib/supabase/server";
+@@ -45,7 +46,9 @@ export async function GET(request: Request) {
+   try {
+     assertLiveMode();
+     await authorizeRequest(request, "manage_integrations");
+-    return NextResponse.json({ status: "ok", content: await readWovenKnowledgeContent({ documentTitles, supersededUploads }) }, { headers: NO_STORE });
++    const content = await readWovenKnowledgeContent({ documentTitles, supersededUploads });
++    // WOVEN_DOCUMENT_KEEP_OUT_ENABLED: the screen offers "Keep out of Ask Bubbles" per document only when on.
++    return NextResponse.json({ status: "ok", content, ...(wovenDocumentKeepOutEnabled() ? { keepOut: true } : {}) }, { headers: NO_STORE });
+   } catch (error) {
+     if (error instanceof KnowledgeSyncStoreError) {
+       return NextResponse.json({ status: "failed", code: error.code, reason: error.message }, { status: 503, headers: NO_STORE });
+diff --git a/src/app/api/admin/knowledge-sync/woven/documents/route.ts b/src/app/api/admin/knowledge-sync/woven/documents/route.ts
+new file mode 100644
+index 00000000..17217728
+--- /dev/null
++++ b/src/app/api/admin/knowledge-sync/woven/documents/route.ts
+@@ -0,0 +1,66 @@
++import { NextResponse } from "next/server";
++
++import { assertLiveMode, assertNoConfigurationProblems, assertWithinRateLimit, errorResponse } from "@/lib/api/respond";
++import { parseJsonBody } from "@/lib/api/validation";
++import { authorizeRequest } from "@/lib/auth/server";
++import { wovenDocumentKeepOutEnabled } from "@/lib/config/chat-quality-flags";
++import { keepOutKey, partRef } from "@/lib/knowledge-sync/inventory";
++import { createSupabaseKnowledgeSyncStore, KnowledgeSyncStoreError } from "@/lib/knowledge-sync/store";
++import { readWovenKnowledgeStatus } from "@/lib/knowledge-sync/woven/status";
++
++/**
++ * PUT /api/admin/knowledge-sync/woven/documents — an administrator keeps ONE Woven document out of Ask Bubbles, or undoes
++ * that (WOVEN_DOCUMENT_KEEP_OUT_ENABLED; QA, 10 Nov 2026).
++ *
++ *   `{ "ref": "<the part's ref from the Content view>", "keepOut": true }`   keep out of Ask Bubbles
++ *   `{ "ref": "...", "keepOut": false }`                                      undo
++ *
++ * Stored beside the audience decisions (`document:<ref>`, decision "excluded"). It takes effect on the next sync, which
++ * retires the document if it is live and never ingests it again while the choice stands. The ref must name a part the
++ * sync knows; nothing else can be stored.
++ */
++export const runtime = "nodejs";
++export const dynamic = "force-dynamic";
++
++const NO_STORE = { "Cache-Control": "no-store" };
++
++export async function PUT(request: Request) {
++  try {
++    assertLiveMode();
++    assertNoConfigurationProblems();
++    const context = await authorizeRequest(request, "manage_integrations");
++    assertWithinRateLimit(request, "mutate");
++    if (!wovenDocumentKeepOutEnabled()) {
++      return NextResponse.json({ status: "disabled", reason: "Keeping one document out is not switched on." }, { status: 404, headers: NO_STORE });
++    }
++
++    const body = await parseJsonBody<{ ref?: unknown; keepOut?: unknown }>(request);
++    const ref = typeof body.ref === "string" ? body.ref.trim() : "";
++    if (!/^[0-9a-f]{16}$/.test(ref) || typeof body.keepOut !== "boolean") {
++      return NextResponse.json({ status: "invalid", reason: "Send a document ref and keepOut true or false." }, { status: 400, headers: NO_STORE });
++    }
++
++    const store = createSupabaseKnowledgeSyncStore();
++    const item = (await store.loadManifest("woven")).find((entry) => partRef(entry) === ref);
++    if (!item) {
++      return NextResponse.json({ status: "not_found", reason: "No Woven document has that reference." }, { status: 404, headers: NO_STORE });
++    }
++    if (body.keepOut) {
++      await store.saveDecision({
++        source: "woven",
++        audienceKey: keepOutKey(item),
++        decision: "excluded",
++        decidedBy: `admin:${context.identity.email || context.identity.subject}`.slice(0, 120),
++        decidedAt: new Date().toISOString(),
++      });
++    } else {
++      await store.removeDecision("woven", keepOutKey(item));
++    }
++    return NextResponse.json({ status: "ok", sync: await readWovenKnowledgeStatus({ store }) }, { headers: NO_STORE });
++  } catch (error) {
++    if (error instanceof KnowledgeSyncStoreError) {
++      return NextResponse.json({ status: "failed", code: error.code, reason: error.message }, { status: 503, headers: NO_STORE });
++    }
++    return errorResponse(error, "admin/knowledge-sync/woven/documents");
++  }
++}
+diff --git a/src/features/admin/woven-knowledge/woven-knowledge-content.tsx b/src/features/admin/woven-knowledge/woven-knowledge-content.tsx
+index 89725b0d..e5c6beed 100644
+--- a/src/features/admin/woven-knowledge/woven-knowledge-content.tsx
++++ b/src/features/admin/woven-knowledge/woven-knowledge-content.tsx
+@@ -98,19 +98,37 @@ export function ContentTab({ active, focus }: { active: boolean; focus?: Content
+   const [decision, setDecision] = useState<DecisionFilter>("all");
+   const [open, setOpen] = useState<Set<string>>(new Set());
+   const [shown, setShown] = useState(PAGE);
++  /* WOVEN_DOCUMENT_KEEP_OUT_ENABLED: the server says whether "Keep out of Ask Bubbles" is offered per document. */
++  const [keepOutOffered, setKeepOutOffered] = useState(false);
+ 
+-  /* Loaded the first time the tab is opened, once. */
+-  useEffect(() => {
+-    if (!active || requested.current) return;
+-    requested.current = true;
++  const load = () =>
+     fetch("/api/admin/knowledge-sync/woven/content", { headers: { "Content-Type": "application/json" } })
+       .then(async (response) => {
+-        const body = (await response.json().catch(() => null)) as { content?: WovenKnowledgeContent; reason?: string } | null;
++        const body = (await response.json().catch(() => null)) as { content?: WovenKnowledgeContent; keepOut?: boolean; reason?: string } | null;
+         if (!response.ok || !body?.content) throw new Error(body?.reason ?? "The content list could not be loaded.");
+         setContent(body.content);
++        setKeepOutOffered(body.keepOut === true);
+       })
+       .catch((e: unknown) => setError(e instanceof Error ? e.message : "The content list could not be loaded."));
++
++  /* Loaded the first time the tab is opened, once. */
++  useEffect(() => {
++    if (!active || requested.current) return;
++    requested.current = true;
++    void load();
+   }, [active]);
++
++  /* WOVEN_DOCUMENT_KEEP_OUT_ENABLED: keep one document out, or undo; the list is read again so its state shows. */
++  const setKeptOut = async (ref: string, keepOut: boolean) => {
++    const response = await fetch("/api/admin/knowledge-sync/woven/documents", {
++      method: "PUT",
++      headers: { "Content-Type": "application/json" },
++      body: JSON.stringify({ ref, keepOut }),
++    });
++    const body = (await response.json().catch(() => null)) as { reason?: string } | null;
++    if (!response.ok) throw new Error(body?.reason ?? "The choice could not be saved.");
++    await load();
++  };
+   const loading = active && content === null && error === null;
+ 
+   const rows = useMemo(() => {
+@@ -225,7 +243,7 @@ export function ContentTab({ active, focus }: { active: boolean; focus?: Content
+             {rows.slice(0, shown).map((row) => {
+               const expanded = open.has(row.key);
+               return (
+-                <ContentRowView key={row.key} row={row} expanded={expanded} onToggle={() => toggle(row.key)} />
++                <ContentRowView key={row.key} row={row} expanded={expanded} onToggle={() => toggle(row.key)} keepOut={keepOutOffered ? setKeptOut : null} />
+               );
+             })}
+           </tbody>
+@@ -240,7 +258,40 @@ export function ContentTab({ active, focus }: { active: boolean; focus?: Content
+   );
+ }
+ 
+-function ContentRowView({ row, expanded, onToggle }: { row: ContentRow; expanded: boolean; onToggle: () => void }) {
++type SetKeptOut = (ref: string, keepOut: boolean) => Promise<void>;
++
++/**
++ * WOVEN_DOCUMENT_KEEP_OUT_ENABLED: "Keep out of Ask Bubbles" for one document, or "Undo keep out". Takes effect on the
++ * next sync, which retires it if live and never ingests it again while the choice stands.
++ */
++function KeepOutButton({ part, onSet }: { part: ContentRow["parts"][number]; onSet: SetKeptOut }) {
++  const [busy, setBusy] = useState(false);
++  const [failed, setFailed] = useState<string | null>(null);
++  if (part.kind === "superseded_copy") return null;
++  const keptOut = part.keptOut === true;
++  return (
++    <span className="inline-flex items-center gap-1">
++      <Button
++        size="sm"
++        variant="outline"
++        disabled={busy}
++        onClick={() => {
++          setBusy(true);
++          setFailed(null);
++          onSet(part.ref, !keptOut)
++            .catch((e: unknown) => setFailed(e instanceof Error ? e.message : "The choice could not be saved."))
++            .finally(() => setBusy(false));
++        }}
++      >
++        {keptOut ? "Undo keep out" : "Keep out of Ask Bubbles"}
++      </Button>
++      {keptOut ? <span className="text-[12px] text-muted-foreground">Applies on the next sync</span> : null}
++      {failed ? <span className="text-[12px] text-destructive">{failed}</span> : null}
++    </span>
++  );
++}
++
++function ContentRowView({ row, expanded, onToggle, keepOut }: { row: ContentRow; expanded: boolean; onToggle: () => void; keepOut: SetKeptOut | null }) {
+   const multi = row.parts.length > 1;
+   return (
+     <>
+@@ -258,6 +309,7 @@ function ContentRowView({ row, expanded, onToggle }: { row: ContentRow; expanded
+           {!multi && row.parts[0] ? (
+             <span className="block">
+               <PartPreviewButton part={row.parts[0]} />
++              {keepOut ? <KeepOutButton part={row.parts[0]} onSet={keepOut} /> : null}
+             </span>
+           ) : null}
+         </td>
+@@ -311,6 +363,7 @@ function ContentRowView({ row, expanded, onToggle }: { row: ContentRow; expanded
+                   )}
+                   <Badge tone={SYNC_STATE_TONE[part.syncState]}>{CONTENT_SYNC_STATE_LABEL[part.syncState]}</Badge>
+                   <PartPreviewButton part={part} />
++                  {keepOut ? <KeepOutButton part={part} onSet={keepOut} /> : null}
+                 </li>
+               ))}
+             </ul>
+diff --git a/src/lib/ai/flags-off-parity.test.ts b/src/lib/ai/flags-off-parity.test.ts
+index c76f01c8..df22c73a 100644
+--- a/src/lib/ai/flags-off-parity.test.ts
++++ b/src/lib/ai/flags-off-parity.test.ts
+@@ -168,6 +168,9 @@ const UI_PATHS = ["src/app/**/*.tsx", "src/components/**", "src/features/**/*.ts
+  * off, it renders as before for every role.
+  */
+ const ALLOWED_UI = [
++  // WOVEN_DOCUMENT_KEEP_OUT_ENABLED (QA, 10 Nov 2026): the Content tab's per-document "Keep out" button, rendered only
++  // when the content route says the flag is on; off, the tab renders exactly as before.
++  "src/features/admin/woven-knowledge/woven-knowledge-content.tsx",
+   // NEXT_PUBLIC_REPLY_QUOTE_LINES_ENABLED (#839, QA's Bubbles 17p live check; QA round 17r, 13 Nov 2026): a run of "> "
+   // lines in a reply is shown as a quote, a line each. Off, the renderer is unchanged.
+   "src/components/rich-text.tsx",
+diff --git a/src/lib/config/chat-quality-flags.ts b/src/lib/config/chat-quality-flags.ts
+index b53ff9c4..da611502 100644
+--- a/src/lib/config/chat-quality-flags.ts
++++ b/src/lib/config/chat-quality-flags.ts
+@@ -1397,6 +1397,9 @@ export const CHAT_QUALITY_FLAG_NAMES = [
+   "ADD_NOT_REPEATED_SENTENCES_ENABLED",
+   // coding 4: CHAT_STAGE_TIMINGS (QA, 9 Nov 2026; default off).
+   "CHAT_STAGE_TIMINGS_ENABLED",
++  // coding 5: WOVEN_DOCUMENT_KEEP_OUT, WOVEN_DUPLICATE_CONTENT_HOLD (ported from the sibling app's duplicates, QA, 10 Nov 2026; default off).
++  "WOVEN_DOCUMENT_KEEP_OUT_ENABLED",
++  "WOVEN_DUPLICATE_CONTENT_HOLD_ENABLED",
+   // coding 5: WRITE_UP_LEAD_NOT_ACCOUNT (ported from the sibling app's #167, QA's October triage, 10 Nov 2026; default off).
+   "WRITE_UP_LEAD_NOT_ACCOUNT_ENABLED",
+   "RELATIVE_DAY_NOT_HISTORY_ENABLED",
+@@ -3182,6 +3185,28 @@ export function policyTopicIntoFieldEnabled(): boolean {
+   return envFlag("POLICY_TOPIC_INTO_FIELD_ENABLED");
+ }
+ 
++/**
++ * WOVEN_DOCUMENT_KEEP_OUT_ENABLED (ported from the sibling app: QA, 10 Nov 2026, duplicate titles there that Pau
++ * wanted hidden; coding 5; same flag in both apps; default off). An administrator could keep out only a whole Woven
++ * audience, not one document. On: the Content view offers "Keep out" per document, stored beside the audience
++ * decisions (`document:<ref>`); every sync retires it if live and never ingests it while the choice stands; "Undo"
++ * removes the choice (`knowledge-sync/reconcile.ts`, `/api/admin/knowledge-sync/woven/documents`). Off, as before.
++ */
++export function wovenDocumentKeepOutEnabled(): boolean {
++  return envFlag("WOVEN_DOCUMENT_KEEP_OUT_ENABLED");
++}
++
++/**
++ * WOVEN_DUPLICATE_CONTENT_HOLD_ENABLED (ported from the sibling app: QA, 10 Nov 2026, different Woven titles with
++ * identical text all indexed there; coding 5; same flag in both apps; default off). On: a Woven file whose extracted
++ * text matches another live document with a different title is not indexed; it fails with "Same file as <title>" and
++ * the sync lists it under Needs attention, not retried (`ingestion/pipeline.ts`, `knowledge-sync/sink.ts`,
++ * `engine.ts`). The first one indexed stays. Off, as before.
++ */
++export function wovenDuplicateContentHoldEnabled(): boolean {
++  return envFlag("WOVEN_DUPLICATE_CONTENT_HOLD_ENABLED");
++}
++
+ /**
+  * WRITE_UP_LEAD_NOT_ACCOUNT_ENABLED (ported from the sibling app: QA's October triage of its #167, 10 Nov 2026; coding 5;
+  * same flag in both apps; default off). "write up <employee> for cell phone use" gave the Corrective Action card the
+diff --git a/src/lib/ingestion/errors.ts b/src/lib/ingestion/errors.ts
+index 85924c85..68842f1c 100644
+--- a/src/lib/ingestion/errors.ts
++++ b/src/lib/ingestion/errors.ts
+@@ -12,7 +12,9 @@ export type IngestionErrorCode =
+   /* WOVEN_PDF_OCR_ENABLED: a scanned PDF over a cap, or the transcription request failed (`extract/pdf-ocr.ts`). */
+   | "ocr_too_many_pages"
+   | "ocr_budget_spent"
+-  | "ocr_failed";
++  | "ocr_failed"
++  /* WOVEN_DUPLICATE_CONTENT_HOLD_ENABLED: a Woven file with the same text as another live document of a different title. */
++  | "duplicate_content";
+ 
+ export class IngestionError extends Error {
+   readonly code: IngestionErrorCode;
+diff --git a/src/lib/ingestion/pipeline-duplicate-content.test.ts b/src/lib/ingestion/pipeline-duplicate-content.test.ts
+new file mode 100644
+index 00000000..9f468b05
+--- /dev/null
++++ b/src/lib/ingestion/pipeline-duplicate-content.test.ts
+@@ -0,0 +1,138 @@
++import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
++
++import { EMBEDDING_DIMENSIONS } from "@/lib/config/models";
++
++/**
++ * WOVEN_DUPLICATE_CONTENT_HOLD_ENABLED. Ported from the sibling app (QA, 10 Nov 2026): two live Woven documents with
++ * different titles had identical content, all indexed, so a question about one got the other's answer. A Woven file
++ * whose text matches another live document with a different title is not indexed; the first one stays. The titles here
++ * are invented. Supabase, extraction and embeddings are faked.
++ */
++const ORIGINAL = { ...process.env };
++const FLAG = "WOVEN_DUPLICATE_CONTENT_HOLD_ENABLED";
++
++interface Op {
++  table: string;
++  verb: string;
++  payload: unknown;
++}
++
++async function load(options: { sameContent?: { id: string; title: string }[] } = {}) {
++  vi.resetModules();
++  const ops: Op[] = [];
++  const inserted: unknown[] = [];
++  vi.doMock("./extract", () => ({
++    extractDocument: async () => ({ segments: [{ text: "Shift Checklist. Count the drawer before opening. ".repeat(20), locator: "Page 1", page: 1, section: null }], characterCount: 1000, pageCount: 1 }),
++  }));
++  vi.doMock("@/lib/embeddings", () => ({
++    getEmbeddingProvider: () => ({
++      name: "fake",
++      model: "gte-small",
++      dimensions: EMBEDDING_DIMENSIONS,
++      configured: true,
++      embedDocuments: async (texts: string[]) => texts.map(() => Array.from({ length: EMBEDDING_DIMENSIONS }, () => 0)),
++      embedQuery: async () => [],
++    }),
++  }));
++  vi.doMock("@/lib/supabase/server", () => ({
++    KNOWLEDGE_BUCKET: "knowledge-documents",
++    getSupabaseAdmin: () => ({
++      from(table: string) {
++        let verb = "select";
++        let payload: unknown = null;
++        let filteredByHash = false;
++        const settle = async () => {
++          ops.push({ table, verb, payload });
++          if (table === "knowledge_chunks" && verb === "insert") inserted.push(...(payload as unknown[]));
++          if (verb === "select" && table === "knowledge_documents") return { data: filteredByHash ? (options.sameContent ?? []) : null, error: null };
++          return { data: verb === "update" ? { id: "doc-copy", ...(payload as object) } : null, error: null };
++        };
++        const builder: Record<string, unknown> = {};
++        Object.assign(builder, {
++          select: () => builder,
++          eq: (column: string) => ((filteredByHash ||= column === "content_hash"), builder),
++          neq: () => builder,
++          ilike: () => builder,
++          order: () => builder,
++          limit: () => builder,
++          upsert: (values: unknown) => ((verb = "upsert"), (payload = values), builder),
++          update: (values: unknown) => ((verb = "update"), (payload = values), builder),
++          insert: (values: unknown) => ((verb = "insert"), (payload = values), builder),
++          delete: () => ((verb = "delete"), builder),
++          single: () => settle(),
++          maybeSingle: () => settle(),
++          then: (resolve: (v: unknown) => unknown, reject: (e: unknown) => unknown) => settle().then(resolve, reject),
++        });
++        return builder;
++      },
++      storage: { from: () => ({ upload: async (path: string) => ({ data: { path }, error: null }) }) },
++    }),
++  }));
++  vi.doMock("@/lib/knowledge/mappers", () => ({ rowToDocument: (row: unknown) => row }));
++  const { ingestDocument } = await import("./pipeline");
++  return { ops, inserted, ingestDocument };
++}
++
++const woven = (title: string) => ({
++  file: new Blob(["%PDF-1.4"], { type: "application/pdf" }),
++  fileName: `${title}.pdf`,
++  mimeType: "application/pdf",
++  title,
++  category: "operations" as never,
++  scopeId: "bcs-core",
++  uploadedByName: "Woven sync",
++  source: "woven" as const,
++  documentId: "doc-copy",
++});
++
++const verdict = (ops: Op[]) =>
++  ops.filter((op) => op.table === "knowledge_documents" && op.verb === "update" && typeof (op.payload as { status?: unknown }).status === "string").at(-1)
++    ?.payload as Record<string, unknown>;
++
++beforeEach(() => {
++  process.env.NEXT_PUBLIC_DEMO_MODE = "false";
++  process.env.NEXT_PUBLIC_SUPABASE_URL = "https://project.supabase.co";
++  process.env.SUPABASE_SECRET_KEY = ["sb", "secret", "TESTFIXTURE"].join("_");
++});
++afterEach(() => {
++  process.env = { ...ORIGINAL };
++  for (const name of ["./extract", "@/lib/embeddings", "@/lib/supabase/server", "@/lib/knowledge/mappers"]) vi.doUnmock(name);
++  vi.resetModules();
++});
++
++describe('"Opening Checklist Copy" with the same content as the live "Shift Checklist"', () => {
++  const SAME = [{ id: "doc-shift", title: "Shift Checklist" }];
++
++  it("off (production today): indexed a second time (the bug)", async () => {
++    process.env[FLAG] = "";
++    const { ops, inserted, ingestDocument } = await load({ sameContent: SAME });
++    await ingestDocument(woven("Opening Checklist Copy"));
++    expect(verdict(ops)).toMatchObject({ status: "indexed" });
++    expect(inserted.length).toBeGreaterThan(0);
++  });
++
++  it("on: not indexed; fails naming the live document, with no chunk written", async () => {
++    process.env[FLAG] = "true";
++    const { ops, inserted, ingestDocument } = await load({ sameContent: SAME });
++    await expect(ingestDocument(woven("Opening Checklist Copy"))).rejects.toMatchObject({
++      code: "duplicate_content",
++      message: 'Same file as "Shift Checklist"; not indexed a second time.',
++    });
++    expect(inserted).toEqual([]);
++    expect(verdict(ops)).toMatchObject({ status: "failed", indexed: false });
++  });
++
++  it("on: the same content under the SAME title (an edition of itself) is indexed as before", async () => {
++    process.env[FLAG] = "true";
++    const { ops, ingestDocument } = await load({ sameContent: [{ id: "doc-other", title: "Opening Checklist Copy" }] });
++    await ingestDocument(woven("Opening Checklist Copy"));
++    expect(verdict(ops)).toMatchObject({ status: "indexed" });
++  });
++
++  it("on: an upload is never held", async () => {
++    process.env[FLAG] = "true";
++    const { ops, ingestDocument } = await load({ sameContent: SAME });
++    await ingestDocument({ ...woven("Opening Checklist Copy"), source: "upload" as const, documentId: undefined });
++    expect(verdict(ops)).toMatchObject({ status: "indexed" });
++  });
++});
+diff --git a/src/lib/ingestion/pipeline-keep-last-good.test.ts b/src/lib/ingestion/pipeline-keep-last-good.test.ts
+index bafe14e5..b7e4c8a9 100644
+--- a/src/lib/ingestion/pipeline-keep-last-good.test.ts
++++ b/src/lib/ingestion/pipeline-keep-last-good.test.ts
+@@ -37,14 +37,17 @@ const EXISTING = {
+   source: "woven",
+ };
+ 
+-async function load(options: { existing?: Record<string, unknown> | null; chunkVersions?: number[]; uploadErrorFor?: string } = {}) {
++async function load(
++  options: { existing?: Record<string, unknown> | null; chunkVersions?: number[]; uploadErrorFor?: string; failWith?: [code: string, message: string] } = {},
++) {
+   vi.resetModules();
+   const ops: Op[] = [];
+   const uploads: string[] = [];
+   const { IngestionError } = await import("./errors");
+   vi.doMock("./extract", () => ({
+     extractDocument: async () => {
+-      throw new IngestionError("ocr_too_many_pages", TOO_MANY, 422);
++      const [code, message] = options.failWith ?? ["ocr_too_many_pages", TOO_MANY];
++      throw new IngestionError(code as never, message, 422);
+     },
+   }));
+   vi.doMock("@/lib/embeddings", () => ({
+@@ -177,3 +180,30 @@ describe("a failed newer file never hides the recipe book's last good version",
+     expect(verdict(ops)).toMatchObject({ status: "failed" });
+   });
+ });
++
++/*
++ * Merged with WOVEN_DUPLICATE_CONTENT_HOLD_ENABLED (QA, 11 Nov 2026, #750 on main ffa571ea): a newer file held as a
++ * duplicate of another live document fails with "duplicate_content" inside the same try. The row that answered before
++ * keeps its last good version, and its reason says the newer file was not indexed, never that it could not be read.
++ * (The hold itself is faked here as the failure; pipeline-duplicate-content.test.ts reads the content hash.)
++ */
++describe("with WOVEN_DUPLICATE_CONTENT_HOLD_ENABLED too", () => {
++  const SAME = 'Same file as "Everyday Auxiliary Recipe Book v072726 (copy)"; not indexed a second time.';
++  for (const [keep, hold] of [[false, false], [false, true], [true, false], [true, true]] as const) {
++    it(`keep-last-good ${keep ? "on" : "off"}, duplicate hold ${hold ? "on" : "off"}: a held newer file`, async () => {
++      process.env[FLAG] = keep ? "true" : "";
++      process.env.WOVEN_DUPLICATE_CONTENT_HOLD_ENABLED = hold ? "true" : "";
++      const { ops, ingestDocument } = await load({ failWith: ["duplicate_content", SAME] });
++      await expect(ingestDocument(sync())).rejects.toMatchObject({ code: "duplicate_content" });
++      const final = verdict(ops);
++      if (keep) {
++        expect(final).toMatchObject({ status: "indexed", indexed: true, version: 1 });
++        expect(String(final.failure_reason)).toMatch(/^The newer file was not indexed, so the last good version \(v1\) is still in use\./);
++        expect(String(final.failure_reason)).toContain(SAME);
++        expect(String(final.failure_reason)).not.toContain("could not be read");
++      } else {
++        expect(final).toMatchObject({ status: "failed", indexed: false, failure_reason: SAME });
++      }
++    });
++  }
++});
+diff --git a/src/lib/ingestion/pipeline.ts b/src/lib/ingestion/pipeline.ts
+index e3b30187..44a9300b 100644
+--- a/src/lib/ingestion/pipeline.ts
++++ b/src/lib/ingestion/pipeline.ts
+@@ -2,7 +2,7 @@ import "server-only";
+ 
+ import { createHash, randomUUID } from "node:crypto";
+ 
+-import { editionSupersessionEnabled, ingestFailureKeepsLastGoodEnabled } from "@/lib/config/chat-quality-flags";
++import { editionSupersessionEnabled, ingestFailureKeepsLastGoodEnabled, wovenDuplicateContentHoldEnabled } from "@/lib/config/chat-quality-flags";
+ import { EMBEDDING_DIMENSIONS } from "@/lib/config/models";
+ import { MissingConfigurationError } from "@/lib/config/server-env";
+ import { getEmbeddingProvider } from "@/lib/embeddings";
+@@ -237,6 +237,16 @@ export async function ingestDocument(input: IngestInput): Promise<IngestResult>
+ 
+     const contentHash = hashChunks(chunks);
+ 
++    /*
++     * WOVEN_DUPLICATE_CONTENT_HOLD_ENABLED (ported from the sibling app, QA, 10 Nov 2026): a Woven file whose text is
++     * the same as another live document with a different title is not indexed a second time. The first one indexed
++     * stays; this one fails, naming it, and the sync lists it under Needs attention for a person to resolve in Woven.
++     */
++    if (input.source === "woven" && wovenDuplicateContentHoldEnabled()) {
++      const same = await liveDocumentWithSameContent(input.scopeId, documentId, contentHash, title);
++      if (same) throw new IngestionError("duplicate_content", `Same file as "${same}"; not indexed a second time.`, 409);
++    }
++
+     /*
+      * A new Woven record whose extracted text matches a superseded document
+      * is a re-filed old copy. Remove the uploading placeholder and leave
+@@ -421,7 +431,10 @@ export async function ingestDocument(input: IngestInput): Promise<IngestResult>
+     const reason =
+       error instanceof IngestionError ? error.message : "Processing failed unexpectedly.";
+     // INGEST_FAILURE_KEEPS_LAST_GOOD_ENABLED: a document that answered before keeps answering from that version.
+-    const kept = ingestFailureKeepsLastGoodEnabled() && existing ? await keepLastGoodVersion(existing, version, reason) : false;
++    // With WOVEN_DUPLICATE_CONTENT_HOLD_ENABLED too, a held duplicate was read: it is "not indexed", never "could not be read".
++    const lead =
++      error instanceof IngestionError && error.code === "duplicate_content" ? "The newer file was not indexed" : "The newer file could not be read";
++    const kept = ingestFailureKeepsLastGoodEnabled() && existing ? await keepLastGoodVersion(existing, version, reason, lead) : false;
+     if (!kept) await setStatus(documentId, "failed", reason);
+     throw error instanceof IngestionError
+       ? error
+@@ -431,6 +444,21 @@ export async function ingestDocument(input: IngestInput): Promise<IngestResult>
+ 
+ /* ------------------------------------------------------------- helpers --- */
+ 
++/** WOVEN_DUPLICATE_CONTENT_HOLD_ENABLED: the title of another live document with this content and a different title. */
++async function liveDocumentWithSameContent(scopeId: string, documentId: string, contentHash: string, title: string): Promise<string | null> {
++  const { data, error } = await getSupabaseAdmin()
++    .from("knowledge_documents")
++    .select("id, title")
++    .eq("knowledge_scope_id", scopeId)
++    .eq("content_hash", contentHash)
++    .eq("status", "indexed")
++    .neq("id", documentId)
++    .limit(5);
++  if (error || !Array.isArray(data)) return null;
++  const other = (data as { id: string; title: string }[]).find((row) => String(row.title ?? "").trim().toLowerCase() !== title.trim().toLowerCase());
++  return other ? String(other.title) : null;
++}
++
+ /**
+  * ============================================================================
+  * A FAILED NEW VERSION NEVER HIDES THE LAST GOOD ONE (INGEST_FAILURE_KEEPS_LAST_GOOD_ENABLED)
+@@ -446,7 +474,12 @@ export async function ingestDocument(input: IngestInput): Promise<IngestResult>
+  * `c.version = d.version`, so the old chunks answer again. Nothing stored is deleted. A document with no earlier
+  * chunks (a first ingest) fails as before. Returns false when there was nothing to keep.
+  */
+-async function keepLastGoodVersion(existing: KnowledgeDocumentRow, failedVersion: number, reason: string): Promise<boolean> {
++async function keepLastGoodVersion(
++  existing: KnowledgeDocumentRow,
++  failedVersion: number,
++  reason: string,
++  lead = "The newer file could not be read",
++): Promise<boolean> {
+   if (!existing.indexed_at) return false;
+   const supabase = getSupabaseAdmin();
+   const { data, error } = await supabase
+@@ -470,7 +503,7 @@ async function keepLastGoodVersion(existing: KnowledgeDocumentRow, failedVersion
+         ? existing.storage_path
+         : buildStoragePath({ scopeId: existing.knowledge_scope_id, documentId: existing.id, version: good, fileName: existing.original_filename }),
+       size_bytes: same ? existing.size_bytes : Number(earlier?.sizeBytes ?? existing.size_bytes),
+-      failure_reason: `The newer file could not be read, so the last good version (v${good}) is still in use. ${reason}`.slice(0, 500),
++      failure_reason: `${lead}, so the last good version (v${good}) is still in use. ${reason}`.slice(0, 500),
+     })
+     .eq("id", existing.id);
+   return !updateError;
+diff --git a/src/lib/knowledge-sync/engine.ts b/src/lib/knowledge-sync/engine.ts
+index 8e28564c..7b211b62 100644
+--- a/src/lib/knowledge-sync/engine.ts
++++ b/src/lib/knowledge-sync/engine.ts
+@@ -733,6 +733,16 @@ function tally(report: SyncReport, items: ManifestItem[], scanned: Set<string> |
+           };
+     report.attention.push(attention);
+   }
++  // WOVEN_DUPLICATE_CONTENT_HOLD_ENABLED: each held duplicate, by name, for a person to resolve in Woven.
++  const duplicates = items.filter((i) => i.state === "ERROR" && i.errorCategory === "ingest_duplicate_content");
++  if (duplicates.length > 0) {
++    const named = duplicates.slice(0, 5).map((i) => `"${i.title}": ${(i.lastError ?? "same file as another document").replace(/; not indexed a second time\.$/, "")}`);
++    report.attention.push({
++      code: "duplicate_content",
++      message: `${duplicates.length} Woven document${duplicates.length === 1 ? " is" : "s are"} the same file as another live document and ${duplicates.length === 1 ? "was" : "were"} not added again (${named.join("; ")}${duplicates.length > 5 ? "; …" : ""}). Resolve in Woven, or keep one out on the Content tab.`,
++      count: duplicates.length,
++    });
++  }
+   if (t.deferred > 0) {
+     report.attention.push({
+       code: "work_continues",
+diff --git a/src/lib/knowledge-sync/error-reasons.ts b/src/lib/knowledge-sync/error-reasons.ts
+index 692ae9b0..3bdc0a21 100644
+--- a/src/lib/knowledge-sync/error-reasons.ts
++++ b/src/lib/knowledge-sync/error-reasons.ts
+@@ -7,6 +7,8 @@ const REASONS: [RegExp, string][] = [
+   [/ocr_budget_spent$/, "This scanned file will be read on a later sync."],
+   [/ocr_failed$/, "Reading this scanned file failed this time; the next sync tries again."],
+   [/no_text$/, "No text could be read from this file — it looks like a scanned image. A searchable PDF (or a text version) in Woven would fix it."],
++  /* WOVEN_DUPLICATE_CONTENT_HOLD_ENABLED: held because another live document has the same text. */
++  [/duplicate_content$/, "This file has the same text as another document already in Ask Bubbles, so it was not added twice. Resolve it in Woven, or keep one of them out."],
+   [/not_a_file$/, "Woven sent back a page instead of the file."],
+   [/not_found$/, "Woven no longer has the file for this item."],
+   [/forbidden$/, "The Woven integration account is not allowed to download this file."],
+diff --git a/src/lib/knowledge-sync/inventory.ts b/src/lib/knowledge-sync/inventory.ts
+index 95cba19f..638a92a0 100644
+--- a/src/lib/knowledge-sync/inventory.ts
++++ b/src/lib/knowledge-sync/inventory.ts
+@@ -87,6 +87,8 @@ export interface ContentPart {
+   previewable: boolean;
+   /** The searchable Ask Bubbles document for this part, when there is one: the existing document preview. */
+   knowledgeDocumentIdInBase: string | null;
++  /** WOVEN_DOCUMENT_KEEP_OUT_ENABLED: an administrator kept this one document out of Ask Bubbles (undoable). */
++  keptOut?: boolean;
+ }
+ 
+ export interface ContentRow {
+@@ -114,6 +116,21 @@ export interface ContentRow {
+ /* The manifest identity, inline: this module is imported by the screen, so it must not pull in node:crypto via reconcile. */
+ const partIdentity = (item: Pick<InventoryItem, "contentType" | "entityId" | "partKey">) => `${item.contentType}\u0000${item.entityId}\u0000${item.partKey}`;
+ 
++/**
++ * WOVEN_DOCUMENT_KEEP_OUT_ENABLED (QA, 10 Nov 2026): an administrator's "keep this one document out of Ask Bubbles",
++ * stored beside the audience decisions under this key (no new table; removing the row undoes it). The part's opaque
++ * reference, so the key carries no title or file name.
++ */
++export const KEEP_OUT_PREFIX = "document:";
++export function keepOutKey(item: Pick<InventoryItem, "contentType" | "entityId" | "partKey">): string {
++  return `${KEEP_OUT_PREFIX}${partRef(item)}`;
++}
++
++/** True when an administrator kept this part out of Ask Bubbles. */
++export function keptOut(item: Pick<InventoryItem, "contentType" | "entityId" | "partKey">, decisions: ReadonlyMap<string, AudienceDecision>): boolean {
++  return decisions.get(keepOutKey(item))?.decision === "excluded";
++}
++
+ /**
+  * An opaque, stable reference to a part: two 32-bit FNV-1a hashes of its
+  * identity. It lets the screen ask for one part's preview without the page
+@@ -188,6 +205,8 @@ export function effectiveInventory(manifest: InventoryItem[], preview: Inventory
+ 
+ /** The plain state of one part, under the audience choices as they stand now. */
+ export function partSyncState(item: InventoryItem, decisions: ReadonlyMap<string, AudienceDecision>): ContentSyncState {
++  // WOVEN_DOCUMENT_KEEP_OUT_ENABLED: kept out by an administrator, whatever Woven says (`keptOut`, the decision).
++  if (item.reason === "kept_out" || keptOut(item, decisions)) return "kept_out";
+   if (item.state === "ERROR") return "error";
+   if (item.state === "REMOVED") return "retired";
+   if (item.state === "BLOCKED") return item.inKnowledgeBase ? "up_to_date" : "not_supported";
+@@ -301,6 +320,7 @@ export function contentRows(
+           ref: partRef(p),
+           previewable: p.state !== "BLOCKED" && p.reason !== "unsupported_format" && p.state !== "REMOVED",
+           knowledgeDocumentIdInBase: p.inKnowledgeBase ? p.knowledgeDocumentId : null,
++          ...(keptOut(p, decisions) ? { keptOut: true } : {}),
+         })),
+         /* Informational: the row's own state is its Woven parts'. */
+         ...parts
+diff --git a/src/lib/knowledge-sync/reconcile.ts b/src/lib/knowledge-sync/reconcile.ts
+index 133b3800..57235d94 100644
+--- a/src/lib/knowledge-sync/reconcile.ts
++++ b/src/lib/knowledge-sync/reconcile.ts
+@@ -1,6 +1,9 @@
+ import { createHash } from "node:crypto";
+ 
++import { wovenDocumentKeepOutEnabled } from "@/lib/config/chat-quality-flags";
++
+ import { audienceKey, audienceLabel, decideAccess } from "./access";
++import { keptOut } from "./inventory";
+ import type {
+   AttentionItem,
+   AudienceDecision,
+@@ -180,6 +183,14 @@ function plan(
+   previous: ManifestItem | undefined,
+ ): { state: SyncState; pendingAction: PendingAction; reason: string | null } {
+   const live = previous?.inKnowledgeBase === true;
++  /*
++   * WOVEN_DOCUMENT_KEEP_OUT_ENABLED (ported from the sibling app, QA, 10 Nov 2026): an administrator kept this one
++   * document out of Ask Bubbles. It is retired if live and never ingested again while the choice stands, whatever Woven
++   * says about it; removing the choice plans it as new again.
++   */
++  if (wovenDocumentKeepOutEnabled() && keptOut({ contentType: record.contentType, entityId: record.entityId, partKey: part.partKey }, input.decisions)) {
++    return { state: "EXCLUDED", pendingAction: live ? "retire" : "none", reason: "kept_out" };
++  }
+   const retire = (state: SyncState, reason: string) => ({
+     state: live ? state : state === "UNPUBLISHED" ? "EXCLUDED" : state,
+     pendingAction: (live ? "retire" : "none") as PendingAction,
+@@ -288,7 +299,7 @@ function count(report: TypeReport, state: SyncState, reason: string | null): voi
+       break;
+     case "EXCLUDED":
+       if (reason === "unsupported_format") report.excludedUnsupported += 1;
+-      else if (reason === "audience_excluded") report.excludedByDecision += 1;
++      else if (reason === "audience_excluded" || reason === "kept_out") report.excludedByDecision += 1;
+       else if (reason !== null && RESTRICTED_REASONS.has(reason)) report.excludedRestricted += 1;
+       else report.excludedUnpublished += 1;
+       break;
+diff --git a/src/lib/knowledge-sync/sink.ts b/src/lib/knowledge-sync/sink.ts
+index 4c4660a9..d62a3c46 100644
+--- a/src/lib/knowledge-sync/sink.ts
++++ b/src/lib/knowledge-sync/sink.ts
+@@ -64,7 +64,8 @@ async function supersededRefs(
+ function asSinkError(error: unknown, fallback: string): SinkError {
+   if (error instanceof IngestionError) {
+     /* Not retryable: the file itself is the problem, and trying again tomorrow changes nothing. */
+-    const permanent = ["unsupported_type", "too_large", "empty_file", "no_text"].includes(error.code) &&
++    // WOVEN_DUPLICATE_CONTENT_HOLD_ENABLED: a duplicate waits for a person to resolve it in Woven; retrying changes nothing.
++    const permanent = ["unsupported_type", "too_large", "empty_file", "no_text", "duplicate_content"].includes(error.code) &&
+       // WOVEN_FAILED_RETRY_ENABLED: with OCR on, a PDF with no text layer can be read by a later run, so it is retried.
+       !(error.code === "no_text" && wovenFailedRetryEnabled() && wovenPdfOcrEnabled());
+     return new SinkError(`ingest_${error.code}`, error.message.slice(0, 300), !permanent);
+diff --git a/src/lib/knowledge-sync/woven/bcs/keep-out-duplicates.test.ts b/src/lib/knowledge-sync/woven/bcs/keep-out-duplicates.test.ts
+new file mode 100644
+index 00000000..77f0d2fd
+--- /dev/null
++++ b/src/lib/knowledge-sync/woven/bcs/keep-out-duplicates.test.ts
+@@ -0,0 +1,135 @@
++import { afterEach, describe, expect, it, vi } from "vitest";
++
++import { audienceKey } from "../../access";
++import { plainErrorReason } from "../../error-reasons";
++import { contentRows, keepOutKey } from "../../inventory";
++import { MemoryKnowledgeSink, MemoryKnowledgeSyncStore } from "../../memory-store";
++import { SinkError } from "../../ports";
++import type { ManifestItem } from "../../types";
++import type { WovenKnowledgeConfig } from "../config";
++import { WovenTeamClient } from "../http";
++import { createWovenKnowledgeConnector, runWovenKnowledgeSync } from "../sync";
++import { FakeBcsWoven, PASSWORD, USERNAME, noSleep } from "./test-support";
++
++/**
++ * Ported from the sibling app (QA, 10 Nov 2026; Pau: the sync must never create duplicate live sources). There, one
++ * live title held another product's sheet and three titles were one file; an administrator could only keep out a
++ * whole audience. The fake Woven here is this app's own sanitized fixture.
++ *
++ *   WOVEN_DOCUMENT_KEEP_OUT_ENABLED       one document kept out, by the Content view's ref; undoable.
++ *   WOVEN_DUPLICATE_CONTENT_HOLD_ENABLED  a file the pipeline refuses as "Same file as <title>" is listed by name under
++ *                                         Needs attention and not retried (the pipeline check: pipeline-duplicate test).
++ */
++const BASE = "https://app.woven.team";
++const CONFIG: WovenKnowledgeConfig = {
++  enabled: true,
++  baseUrl: BASE,
++  tenantProblem: null,
++  downloads: { fileLibrary: false },
++  credentials: { username: USERNAME, password: PASSWORD },
++  missingCredentials: [],
++  problems: [],
++  previewTestModeAllowed: false,
++};
++
++class Harness {
++  readonly fake = new FakeBcsWoven();
++  readonly store: MemoryKnowledgeSyncStore;
++  readonly sink = new MemoryKnowledgeSink();
++  clock = new Date("2026-10-06T12:00:00Z");
++
++  constructor() {
++    this.store = new MemoryKnowledgeSyncStore({ now: () => this.clock });
++  }
++
++  run(mode: "preview" | "sync") {
++    const client = new WovenTeamClient({ baseUrl: BASE, fetch: this.fake.fetch, sleep: noSleep, transport: { minIntervalMs: 0, baseBackoffMs: 0 } });
++    return runWovenKnowledgeSync(
++      { mode, trigger: "manual", requestedBy: "admin:test" },
++      { config: CONFIG, store: this.store, sink: this.sink, connector: createWovenKnowledgeConnector(CONFIG, client), now: () => this.clock },
++    );
++  }
++
++  live(): ManifestItem[] {
++    return [...this.store.items.values()].filter((item) => item.inKnowledgeBase && item.knowledgeDocumentId);
++  }
++
++  keepOut(item: ManifestItem) {
++    return this.store.saveDecision({ source: "woven", audienceKey: keepOutKey(item), decision: "excluded", decidedBy: "admin:test", decidedAt: this.clock.toISOString() });
++  }
++
++  advanceDays(days: number) {
++    this.clock = new Date(this.clock.getTime() + days * 86_400_000);
++  }
++}
++
++async function synced() {
++  const h = new Harness();
++  expect((await h.run("preview")).status).toMatch(/^succeeded/);
++  await h.store.saveDecision({ source: "woven", audienceKey: audienceKey(["All Positions"]), decision: "company_wide", decidedBy: "admin:test", decidedAt: h.clock.toISOString() });
++  expect((await h.run("sync")).status).toMatch(/^succeeded/);
++  return h;
++}
++
++afterEach(() => vi.unstubAllEnvs());
++
++describe("keep one document out of Ask Bubbles", () => {
++  it("off (production today): a stored choice is ignored; the document stays live", async () => {
++    vi.stubEnv("WOVEN_DOCUMENT_KEEP_OUT_ENABLED", "");
++    const h = await synced();
++    const target = h.live()[0]!;
++    await h.keepOut(target);
++    h.advanceDays(1);
++    await h.run("sync");
++    expect(h.store.items.get(`woven\u0000${target.contentType}\u0000${target.entityId}\u0000${target.partKey}`)!.inKnowledgeBase).toBe(true);
++  });
++
++  it("on: the next sync retires it; later syncs leave it out; undo brings it back", async () => {
++    vi.stubEnv("WOVEN_DOCUMENT_KEEP_OUT_ENABLED", "true");
++    const h = await synced();
++    const target = h.live()[0]!;
++    const key = `woven\u0000${target.contentType}\u0000${target.entityId}\u0000${target.partKey}`;
++    const others = h.live().length - 1;
++    await h.keepOut(target);
++
++    h.advanceDays(1);
++    await h.run("sync");
++    expect(h.store.items.get(key)).toMatchObject({ state: "EXCLUDED", reason: "kept_out", inKnowledgeBase: false, pendingAction: "none" });
++    expect(h.sink.documents.get(target.knowledgeDocumentId!)!.retired).toBe(true);
++    expect(h.live()).toHaveLength(others);
++
++    const ingests = h.sink.ingestCalls;
++    h.advanceDays(1);
++    await h.run("sync");
++    expect(h.store.items.get(key)).toMatchObject({ state: "EXCLUDED", reason: "kept_out", inKnowledgeBase: false });
++    expect(h.sink.ingestCalls).toBe(ingests);
++
++    const rows = contentRows([...h.store.items.values()] as never, await h.store.loadDecisions("woven"));
++    const part = rows.flatMap((row) => row.parts).find((p) => p.keptOut);
++    expect(part).toMatchObject({ syncState: "kept_out", keptOut: true });
++
++    await h.store.removeDecision("woven", keepOutKey(target));
++    h.advanceDays(1);
++    await h.run("sync");
++    expect(h.store.items.get(key)).toMatchObject({ inKnowledgeBase: true });
++    expect(h.sink.documents.get(target.knowledgeDocumentId!)!.retired).toBe(false);
++  });
++});
++
++describe("a file with the same content as another live document", () => {
++  it("on: listed by name under Needs attention, and not retried", async () => {
++    vi.stubEnv("WOVEN_DUPLICATE_CONTENT_HOLD_ENABLED", "true");
++    const h = new Harness();
++    await h.run("preview");
++    await h.store.saveDecision({ source: "woven", audienceKey: audienceKey(["All Positions"]), decision: "company_wide", decidedBy: "admin:test", decidedAt: h.clock.toISOString() });
++    h.sink.failNextIngest = new SinkError("ingest_duplicate_content", 'Same file as "Shift Checklist"; not indexed a second time.', false);
++    const outcome = await h.run("sync");
++    const report = (outcome as { report: { attention: { code: string; message: string }[] } }).report;
++    const held = [...h.store.items.values()].find((item) => item.errorCategory === "ingest_duplicate_content")!;
++    expect(held).toMatchObject({ state: "ERROR", nextRetryAt: null });
++    const attention = report.attention.find((a) => a.code === "duplicate_content")!;
++    expect(attention.message).toContain(`"${held.title}": Same file as "Shift Checklist"`);
++    expect(attention.message).toContain("Resolve in Woven, or keep one out on the Content tab.");
++    expect(plainErrorReason(held.errorCategory)).toBe("This file has the same text as another document already in Ask Bubbles, so it was not added twice. Resolve it in Woven, or keep one of them out.");
++  });
++});

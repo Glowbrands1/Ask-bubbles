@@ -1,0 +1,451 @@
+# branch gate-698 head 7959c6a6 ; diff from main-line base c6e0b7db
+# 7959c6a6 gate merge pr698 (keep both)
+# b9bfbf43 Merge remote-tracking branch 'origin/main' into rec-698
+# 1492c27e Merge commit 'c6063f2c' into rec-698
+# 9eb1429d Port from Ask Sunny (fcc19075, de201d57): B4 — "Edit <misspelled name> CA" opens that CA; pasted notes never switch the CA to a Coaching Form; a closing account is never cited as Late Opening
+diff --git a/src/app/api/chat/replay-pack/nov10-b4-twin-cases.ts b/src/app/api/chat/replay-pack/nov10-b4-twin-cases.ts
+new file mode 100644
+index 00000000..7fef9f29
+--- /dev/null
++++ b/src/app/api/chat/replay-pack/nov10-b4-twin-cases.ts
+@@ -0,0 +1,63 @@
++import { expect, vi } from "vitest";
++
++import { STAFF, WEST_DODGE, type ReplayCase } from "./cases";
++import { pauSfS21TwinPeople } from "./nov5-pau-sf-s21-s25-twin-cases";
++
++/**
++ * QA's B4 (10 Nov 2026), Pau's sf-s22 and sf-s25 (5 Nov 2026, the sibling app's production), this app's twins of the
++ * sibling app's nov10-b4 cases; the turns are the twin cases' (`nov5-pau-sf-s21-s25-twin-cases.ts`), the people
++ * invented.
++ */
++const S22_T1 =
++  "create a ca for must see behaviors for performace  this should be for wynne sarrow  - verbal\n146 transactions \nBelow in UPT, Average Sale, Conversion  but i need it to be in the format of Tamsyn ca  it needs to look exactally the same as tamsyns but wtih all of this information";
++const REVIEWER_NOTES =
++  "Please make the following edits and resubmit:\n\n1. **Kit Coaching Document:** This was signed on 10/16/2026. I do not see a date showing that Bundles was signed by Corwen. Please make sure all coaching documents are signed and dated (mm/dd/yyyy format) before uploading.\n\n2. **Details – Observed:** Please reword this section to:\n   \n   For the month of October 2026, Corwen completed 24 transactions and was below expectations in UPT, Average Sale, and Conversion.\n\n3. **Policy Violated:** Please change this from **Under Performance** to **Standards of Conduct**, as the second bullet under that policy is lack of sales performance. You may need to manually add this bullet.";
++
++function start(t: Parameters<ReplayCase["run"]>[0]) {
++  vi.setSystemTime(new Date("2026-11-04T23:30:00Z"));
++  t.directory([...STAFF, ...pauSfS21TwinPeople()]);
++  t.as("location_manager", WEST_DODGE);
++  return t.thread();
++}
++
++export const NOV10_B4_TWIN_CASES: ReplayCase[] = [
++  {
++    id: "nov10-b4-twin-ca-not-coaching-form-type",
++    title: "sf-s22, the form type: pasted reviewer notes naming a \"Kit Coaching Document\" never turn the Corrective Action card into a Coaching Form",
++    report: "Pau via QA, 5 Nov 2026, sf-s22 (the sibling app): \"It needs to be a CA, not a coaching form\" → \"Make this: …\" → back to a Coaching Form",
++    // With this app's production flags the first request makes no Corrective Action card (CA_SALES_POLICY rolled back here).
++    status: { open: "with this app's production flags the first request makes no Corrective Action card; with it, the pasted notes make a Coaching Form card" },
++    fixFlags: ["CA_SALES_POLICY_ENABLED", "PASTED_FORM_NAME_NOT_REQUEST_ENABLED"],
++    async run(t) {
++      const thread = start(t);
++      await thread.say(S22_T1);
++      expect(thread.proposal, "no Corrective Action card for the request").toMatchObject({ templateKey: "dpoa" });
++      const pasted = await thread.say(`Use this to make it: ${REVIEWER_NOTES}`);
++      expect(pasted.content, `the pasted notes made a Coaching Form card:\n${pasted.content}`).not.toMatch(/what I would put on a \*\*Coaching Form\*\*/);
++      await thread.say("It needs to be a CA, not a coaching form");
++      expect(thread.proposal, "\"It needs to be a CA\" is not a Corrective Action").toMatchObject({ templateKey: "dpoa" });
++      const again = await thread.say(`Make this:${REVIEWER_NOTES}`);
++      expect(again.content, `back to the Coaching Form after "It needs to be a CA":\n${again.content}`).not.toMatch(/what I would put on a \*\*Coaching Form\*\*/);
++      await thread.say("Its a CA");
++      expect(thread.proposal, "\"Its a CA\" is still a Coaching Form").toMatchObject({ templateKey: "dpoa" });
++    },
++  },
++  {
++    id: "nov10-b4-twin-closing-not-late-opening",
++    title: "sf-s25: a closing account (clocked out early, the registers taken down before close) is never cited as Late Opening",
++    report: "Pau via QA, 5 Nov 2026, sf-s25 (the sibling app): closing duties read as Late Opening",
++    status: "fixed",
++    fixFlags: ["LATE_OPENING_NEEDS_OPENING_ENABLED"],
++    async run(t) {
++      const thread = start(t);
++      await thread.say("closing policy");
++      await thread.say("What policy would it be if a team member did not complete the closing correctly and i have already talked to her about it");
++      // The sibling app's live trace (5 Nov 2026): the intent read returned policyHeading "Late Opening" for this turn.
++      t.slotsRead({ policyHeading: "Late Opening" });
++      const reply = await thread.say(
++        "Write a CA for Wynne Sarrow she is a team member works at West Dodge and on 11/3/26 she was scheduled until 9:15PM and clocked out at 9:01. She also took down the registers at 8:11 PM before the Store was closed.",
++      );
++      expect(reply.content, `a closing account is cited as Late Opening:\n${reply.content}`).not.toMatch(/Late Opening/i);
++    },
++  },
++];
+diff --git a/src/app/api/chat/replay-pack/nov5-pau-sf-s26-s28-twin-cases.ts b/src/app/api/chat/replay-pack/nov5-pau-sf-s26-s28-twin-cases.ts
+index 2bbde52b..eb8783be 100644
+--- a/src/app/api/chat/replay-pack/nov5-pau-sf-s26-s28-twin-cases.ts
++++ b/src/app/api/chat/replay-pack/nov5-pau-sf-s26-s28-twin-cases.ts
+@@ -68,6 +68,8 @@ export const NOV5_PAU_SF_S26_S28_TWIN_CASES: ReplayCase[] = [
+     title: "sf-s26: \"Edit Thesaly Brant CA\" (misspelled) opens Thessaly Brandt's existing Corrective Action; never \"Who is this form for?\"",
+     report: "Pau via QA, 5 Nov 2026, sf-s26: \"Edit [misspelled Employee R] CA\" → the bot asked who the form is for",
+     status: { open: "asks who the form is for instead of opening the existing Corrective Action" },
++    // QA's B4 (10 Nov 2026): the sibling app's fix, ported (`forms/reopen-close-spelling.ts`).
++    fixFlags: ["REOPEN_BY_ANY_OPEN_VERB_ENABLED", "REOPEN_CLOSE_SPELLING_ENABLED"],
+     async run(t: T) {
+       start(t);
+       const id = await existingCa(t);
+diff --git a/src/app/api/chat/route.ts b/src/app/api/chat/route.ts
+index ff842db3..395c5cf7 100644
+--- a/src/app/api/chat/route.ts
++++ b/src/app/api/chat/route.ts
+@@ -88,6 +88,7 @@ import {
+   formNameOffRosterAskEnabled,
+   reopenByAnyOpenVerbEnabled,
+   accountBeforeRequestEnabled,
++  lateOpeningNeedsOpeningEnabled,
+ } from "@/lib/config/chat-quality-flags";
+ import { streamWhenSlow } from "@/lib/api/streamed-response";
+ import { finalReplyWithoutMarkers } from "@/lib/ai/source-note";
+@@ -1038,6 +1039,14 @@ async function postChat(request: Request) {
+         void _dropped;
+         answer = { ...rest, content: rest.content.replace(/\n*Based on what you've described, I can prepare:\s*$/, "").trimEnd() };
+       }
++      // LATE_OPENING_NEEDS_OPENING_ENABLED: a closing account is never cited as Late Opening (`lib/forms/late-opening-needs-opening.ts`).
++      if (lateOpeningNeedsOpeningEnabled() && answer.formProposal) {
++        const cited = new Set(answer.formProposal.sourceMessageIds);
++        answer = (await import("@/lib/forms/late-opening-needs-opening")).withLateOpeningNeedsOpening(answer, [
++          ...parsed.history.filter((turn) => turn.role === "user" && turn.id && cited.has(turn.id)).map((turn) => String(turn.content)),
++          asked.question,
++        ]);
++      }
+       // LEAD_FULL_SENTENCE_ENABLED: a reply never ends at "I can prepare:" (`lib/forms/lead-full-sentence.ts`).
+       if (leadFullSentenceEnabled()) answer = (await import("@/lib/forms/lead-full-sentence")).withLeadFullSentence(answer);
+       // ACCOUNT_BEFORE_REQUEST_ENABLED: the account given before the request is handed to the draft (`lib/forms/account-before-request.ts`).
+diff --git a/src/lib/config/chat-quality-flags.ts b/src/lib/config/chat-quality-flags.ts
+index 6da53817..f2bda653 100644
+--- a/src/lib/config/chat-quality-flags.ts
++++ b/src/lib/config/chat-quality-flags.ts
+@@ -1363,6 +1363,9 @@ export const CHAT_QUALITY_FLAG_NAMES = [
+   "ACCOUNT_BEFORE_REQUEST_ENABLED",
+   // LETTER_GREETING_ANY_CASE (default off): in the list, as every chat flag (QA round 17k, 12 Nov 2026).
+   "LETTER_GREETING_ANY_CASE_ENABLED",
++  "REOPEN_CLOSE_SPELLING_ENABLED",
++  "PASTED_FORM_NAME_NOT_REQUEST_ENABLED",
++  "LATE_OPENING_NEEDS_OPENING_ENABLED",
+ ] as const;
+ 
+ /**
+@@ -3101,6 +3104,37 @@ export function accountBeforeRequestEnabled(): boolean {
+   return envFlag("ACCOUNT_BEFORE_REQUEST_ENABLED");
+ }
+ 
++/**
++ * REOPEN_CLOSE_SPELLING_ENABLED (ported from the sibling app, coding 5, 10 Nov 2026; default off; Pau via QA, sf-s26,
++ * 5 Nov 2026). "Edit Thesaly Brant CA" with Thessaly Brandt's CA on file was answered "Who is this form for?". On:
++ * when a reopen request names nobody it can find, the one employee on the forms the manager may open whose every name
++ * word it spells closely (same first letter, one or two letters off) is the one meant, and that form is opened.
++ * Nothing is created or written. See `forms/reopen-close-spelling.ts`. Off, as before.
++ */
++export function reopenCloseSpellingEnabled(): boolean {
++  return envFlag("REOPEN_CLOSE_SPELLING_ENABLED");
++}
++
++/**
++ * PASTED_FORM_NAME_NOT_REQUEST_ENABLED (QA's B4; Pau via QA, sf-s22; coding 5; same flag in both apps; default off).
++ * "Make this:" + a reviewer's pasted notes naming a "Kit Coaching Document" switched the Corrective Action card back to
++ * a Coaching Form. On: a short lead ending in ":" followed by pasted list lines is read for the form from the lead only
++ * (`forms/template-intent.ts`). Off, as before.
++ */
++export function pastedFormNameNotRequestEnabled(): boolean {
++  return envFlag("PASTED_FORM_NAME_NOT_REQUEST_ENABLED");
++}
++
++/**
++ * LATE_OPENING_NEEDS_OPENING_ENABLED (QA's B4; Pau via QA, sf-s25; coding 5; same flag in both apps; default off). A
++ * closing account (scheduled until close, clocked out early, closing work done before close) was cited as Late
++ * Opening. On: a card citing Late Opening when the manager's words say closing and never opening cites no policy
++ * instead (`forms/late-opening-needs-opening.ts`). Off, as before.
++ */
++export function lateOpeningNeedsOpeningEnabled(): boolean {
++  return envFlag("LATE_OPENING_NEEDS_OPENING_ENABLED");
++}
++
+ // --- end coding 5 flags ---
+ 
+ /**
+diff --git a/src/lib/forms/chat-reopen.ts b/src/lib/forms/chat-reopen.ts
+index 620bada1..cf5dfb68 100644
+--- a/src/lib/forms/chat-reopen.ts
++++ b/src/lib/forms/chat-reopen.ts
+@@ -18,7 +18,7 @@ import { extractEmployeeNames, samePerson } from "./proposal";
+ import { EDIT_VERB, SHOW_OR_OPEN_VERB, WHICH_FORM_ON_FILE } from "./reopen-cue";
+ import { leadsWithReopenRequest, readReopenRequest } from "./reopen-request";
+ import { getTemplateByKey } from "./repository";
+-import { formEditDateRulesEnabled, formEditSingleWriterEnabled, possessiveNoApostropheEnabled, reopenByAnyOpenVerbEnabled, reopenNotOpenFormEnabled } from "@/lib/config/chat-quality-flags";
++import { formEditDateRulesEnabled, formEditSingleWriterEnabled, possessiveNoApostropheEnabled, reopenByAnyOpenVerbEnabled, reopenCloseSpellingEnabled, reopenNotOpenFormEnabled } from "@/lib/config/chat-quality-flags";
+ import { privateAwareLimit } from "./private-creators";
+ 
+ /**
+@@ -184,11 +184,35 @@ export async function reopenRequestedForm(input: {
+     } catch {
+       return null;
+     }
+-    const candidates = visible
+-      .filter((row) => (templateKey === null || row.templateKey === templateKey) && row.status !== "revised")
+-      .filter((row) => !finalizedMeant || row.status === "finalized")
++    const onFileOf = (rows: readonly InstanceRow[]) =>
++      rows
++        .filter((row) => (templateKey === null || row.templateKey === templateKey) && row.status !== "revised")
++        .filter((row) => !finalizedMeant || row.status === "finalized");
++    const newestFirst = (a: InstanceRow, b: InstanceRow) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0);
++    let candidates = onFileOf(visible)
+       .filter((row) => named(row.employeeName))
+-      .sort((a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0));
++      .sort(newestFirst);
++    /*
++     * REOPEN_CLOSE_SPELLING_ENABLED (ported from the sibling app; Pau via QA, sf-s26, 5 Nov 2026): "Edit Thesaly Brant
++     * CA" — nobody named exactly; the one person on the forms the manager may open whose name the request spells
++     * closely (`forms/reopen-close-spelling.ts`). The list above is narrowed by the typed (misspelled) words, so the
++     * visible forms are read again without them.
++     */
++    if (candidates.length === 0 && reopenCloseSpellingEnabled()) {
++      let all: InstanceRow[] = [];
++      try {
++        const actor = await authorizeForms(input.request, "view_form_monitoring");
++        all = visibleInstances(actor, await listInstances("active", privateAwareLimit(200), instanceListFilterFor(actor))).slice(0, 200);
++      } catch {
++        all = [];
++      }
++      const onFile = onFileOf(all);
++      const meant = (await import("./reopen-close-spelling")).closelySpelledEmployee(question, onFile.map((row) => row.employeeName));
++      if (meant) {
++        names = [meant];
++        candidates = onFile.filter((row) => samePerson(meant, row.employeeName)).sort(newestFirst);
++      }
++    }
+     /*
+      * REOPEN_BY_ANY_OPEN_VERB_ENABLED (QA/Pau, 6 Nov 2026): several forms on
+      * file for the person named — listed, and the manager asked which. One
+diff --git a/src/lib/forms/late-opening-needs-opening.test.ts b/src/lib/forms/late-opening-needs-opening.test.ts
+new file mode 100644
+index 00000000..b4c1abde
+--- /dev/null
++++ b/src/lib/forms/late-opening-needs-opening.test.ts
+@@ -0,0 +1,33 @@
++import { afterEach, describe, expect, it, vi } from "vitest";
++
++import { withLateOpeningNeedsOpening } from "./late-opening-needs-opening";
++
++// Pau via QA, sf-s25 (5 Nov 2026), the manager's words; the person invented.
++const SAID =
++  "Write a CA for Wynne Sarrow she is a team member works at West Dodge and on 11/3/26 she was scheduled until 9:15PM and clocked out at 9:01. She also took down the registers at 8:11 PM before the Store was closed.";
++const CARD = {
++  content:
++    "Here is what I would put on a **Corrective Action Form**.\n\nLate Opening Policy, JBA Policy Manual p.15\n\n**Date:** 11/3/2026\n\n**Action Plan:** Management will review the Late Opening policy with Wynne. Future policy violations may result in additional corrective action.",
++  formProposal: { templateKey: "dpoa" },
++};
++
++describe("LATE_OPENING_NEEDS_OPENING_ENABLED", () => {
++  afterEach(() => vi.unstubAllEnvs());
++
++  it("off: the card is left as it is", () => {
++    expect(withLateOpeningNeedsOpening(CARD, [SAID])).toEqual(CARD);
++  });
++
++  it("on: a closing account cites no Late Opening; the Action Plan reviews the applicable company policy", () => {
++    vi.stubEnv("LATE_OPENING_NEEDS_OPENING_ENABLED", "true");
++    const out = withLateOpeningNeedsOpening(CARD, [SAID]);
++    expect(out.content).not.toMatch(/Late Opening/);
++    expect(out.content).toMatch(/review the applicable company policy with Wynne/);
++    expect(out.content).toMatch(/\*\*Date:\*\* 11\/3\/2026/);
++  });
++
++  it("on: an account that says opening keeps Late Opening", () => {
++    vi.stubEnv("LATE_OPENING_NEEDS_OPENING_ENABLED", "true");
++    expect(withLateOpeningNeedsOpening(CARD, ["make me a CA for Wynne Sarrow for being late to opening this morning, the store was closed until 9:20"])).toEqual(CARD);
++  });
++});
+diff --git a/src/lib/forms/late-opening-needs-opening.ts b/src/lib/forms/late-opening-needs-opening.ts
+new file mode 100644
+index 00000000..ae22a818
+--- /dev/null
++++ b/src/lib/forms/late-opening-needs-opening.ts
+@@ -0,0 +1,37 @@
++import { lateOpeningNeedsOpeningEnabled } from "@/lib/config/chat-quality-flags";
++
++/**
++ * ============================================================================
++ * A CLOSING ACCOUNT IS NEVER CITED AS LATE OPENING
++ * ============================================================================
++ *
++ * LATE_OPENING_NEEDS_OPENING_ENABLED (QA's B4 (b); Pau via QA, sf-s25, 5 Nov 2026). "Write a CA for <name> … on
++ * 11/3/26 she was scheduled until 9:15PM and clocked out at 9:01. …" — a closing account — came back citing "Late Opening Policy, JBA Policy Manual p.15"
++ * with an Action Plan to review the Late Opening policy: the intent read returned the Late Opening heading (the live
++ * trace). On: a card that cites Late Opening when nothing the manager typed for it says opening ("open", "opened",
++ * "opening") and something says closing ("close", "closed", "closing") cites no policy instead — its Late Opening
++ * lines go and the Action Plan reviews "the applicable company policy", as a card with no policy does — so neither the
++ * card nor the draft made from it (which reads the card's policy line) says Late Opening. Any other card, or a closing
++ * account that also says opening, is left as it is. Pure.
++ */
++
++const OPENING = /\bopen(?:s|ed|ing)?\b/i;
++const CLOSING = /\bclos(?:e|ed|es|ing)\b/i;
++const CITES = /\bLate Opening\b/i;
++
++export function withLateOpeningNeedsOpening<T extends { content: string; formProposal?: { templateKey: string } | null }>(
++  answer: T,
++  managerTurns: readonly string[],
++): T {
++  if (!lateOpeningNeedsOpeningEnabled() || !answer.formProposal || !CITES.test(answer.content)) return answer;
++  const said = managerTurns.join("\n");
++  if (OPENING.test(said) || !CLOSING.test(said)) return answer;
++  const content = answer.content
++    .split("\n")
++    .filter((line) => !(CITES.test(line) && (/\*\*Policy:?\*\*/i.test(line) || /^\s*Late Opening Policy\b/i.test(line))))
++    .map((line) => line.replace(/\bthe Late Opening policy\b/gi, "the applicable company policy").replace(/\bLate Opening policy\b/gi, "applicable company policy"))
++    .join("\n")
++    .replace(/\n{3,}/g, "\n\n")
++    .trim();
++  return content === answer.content ? answer : { ...answer, content };
++}
+diff --git a/src/lib/forms/pasted-form-name.test.ts b/src/lib/forms/pasted-form-name.test.ts
+new file mode 100644
+index 00000000..3a20085a
+--- /dev/null
++++ b/src/lib/forms/pasted-form-name.test.ts
+@@ -0,0 +1,27 @@
++import { afterEach, describe, expect, it, vi } from "vitest";
++
++import { detectTemplateIntent } from "./template-intent";
++
++// Pau via QA, sf-s22 (5 Nov 2026): the reviewer's notes pasted after "Make this:"; the person invented.
++const NOTES =
++  "Please make the following edits and resubmit:\n\n1. **Kit Coaching Document:** This was signed on 10/16/2026. Please make sure all coaching documents are signed and dated (mm/dd/yyyy format) before uploading.\n\n2. **Details – Observed:** Please reword this section.";
++
++describe("PASTED_FORM_NAME_NOT_REQUEST_ENABLED", () => {
++  afterEach(() => vi.unstubAllEnvs());
++
++  it("off: \"Kit Coaching Document\" inside the paste reads as a Coaching Form request (the bug)", () => {
++    expect(detectTemplateIntent(`Make this:${NOTES}`)).toEqual({ kind: "explicit", templateKey: "coaching" });
++  });
++
++  it("on: the form is read from the lead only", () => {
++    vi.stubEnv("PASTED_FORM_NAME_NOT_REQUEST_ENABLED", "true");
++    expect(detectTemplateIntent(`Make this:${NOTES}`).kind).toBe("none");
++    expect(detectTemplateIntent(`Use this to make it: ${NOTES}`).kind).toBe("none");
++  });
++
++  it("on: a lead that names the form still asks for it; a turn with no paste is read as before", () => {
++    vi.stubEnv("PASTED_FORM_NAME_NOT_REQUEST_ENABLED", "true");
++    expect(detectTemplateIntent(`Make a coaching form from this:${NOTES}`)).toEqual({ kind: "explicit", templateKey: "coaching" });
++    expect(detectTemplateIntent("create a coaching form for Rowan Kestrel")).toEqual({ kind: "explicit", templateKey: "coaching" });
++  });
++});
+diff --git a/src/lib/forms/reopen-close-spelling.test.ts b/src/lib/forms/reopen-close-spelling.test.ts
+new file mode 100644
+index 00000000..910fc6f4
+--- /dev/null
++++ b/src/lib/forms/reopen-close-spelling.test.ts
+@@ -0,0 +1,21 @@
++import { describe, expect, it } from "vitest";
++
++import { closelySpelledEmployee } from "./reopen-close-spelling";
++
++/*
++ * REOPEN_CLOSE_SPELLING_ENABLED. The manager's words are verbatim in shape (Pau via QA, sf-s26, 5 Nov 2026: "Edit
++ * <misspelled first and last name> CA"); the person is invented, misspelt the same way in the replay case
++ * (`nov5-pau-sf-s26-s28-twin-cases.ts`).
++ */
++describe("closelySpelledEmployee", () => {
++  it("\"Edit Thesaly Brant CA\" is Thessaly Brandt, the one person on file it spells closely", () => {
++    expect(closelySpelledEmployee("Edit Thesaly Brant CA", ["Thessaly Brandt", "Odalys Frewen"])).toBe("Thessaly Brandt");
++  });
++
++  it("never two people, never a first name alone, never a name already exact", () => {
++    expect(closelySpelledEmployee("Edit Thesaly Brant CA", ["Thessaly Brandt", "Thessaly Brand"])).toBeNull();
++    expect(closelySpelledEmployee("Edit Thesaly CA", ["Thessaly Brandt"])).toBeNull();
++    expect(closelySpelledEmployee("Edit Thessaly Brandt CA", ["Thessaly Brandt"])).toBeNull();
++    expect(closelySpelledEmployee("Edit Marisol Brant CA", ["Thessaly Brandt"])).toBeNull();
++  });
++});
+diff --git a/src/lib/forms/reopen-close-spelling.ts b/src/lib/forms/reopen-close-spelling.ts
+new file mode 100644
+index 00000000..def6b122
+--- /dev/null
++++ b/src/lib/forms/reopen-close-spelling.ts
+@@ -0,0 +1,36 @@
++import { candidateNameWords } from "./chat-form-records";
++import { editDistance } from "./typo-match";
++
++/**
++ * ============================================================================
++ * "EDIT THESALY BRANT CA" OPENS THESSALY BRANDT'S CA (REOPEN_CLOSE_SPELLING_ENABLED)
++ * ============================================================================
++ *
++ * Pau via QA, 5 Nov 2026 (sf-s26): "Edit <misspelled first and last name> CA" with that person's Corrective Action on
++ * file was answered "Who is this form for?": the reopen reader found nobody named. With the flag on, when the request
++ * names nobody it can find, the forms the manager may already open are read for an employee whose every name word the
++ * request spells closely (the same first letter, one or two letters off) — and only when exactly one person on those
++ * forms fits. Nothing new is created and nothing is written: the existing form is opened, and the reply names the
++ * person as the form spells them. Pure.
++ */
++
++function wordsOf(name: string): string[] {
++  return name.toLowerCase().split(/[^a-z]+/).filter((word) => word.length >= 2);
++}
++
++function close(typed: string, word: string): boolean {
++  if (typed[0] !== word[0] || Math.abs(typed.length - word.length) > 2) return false;
++  return editDistance(typed, word) <= (word.length >= 6 ? 2 : 1);
++}
++
++/** The one employee on these forms whose name the request spells closely, or null. Exact names are not this reader's. */
++export function closelySpelledEmployee(question: string, employeeNames: readonly string[]): string | null {
++  const typed = candidateNameWords(question);
++  const fits = [...new Set(employeeNames)].filter((name) => {
++    const words = wordsOf(name);
++    if (words.length < 2) return false;
++    if (words.every((word) => typed.includes(word))) return false;
++    return words.every((word) => typed.some((said) => close(said, word)));
++  });
++  return fits.length === 1 ? fits[0]! : null;
++}
+diff --git a/src/lib/forms/template-intent.ts b/src/lib/forms/template-intent.ts
+index 18175b48..575d211e 100644
+--- a/src/lib/forms/template-intent.ts
++++ b/src/lib/forms/template-intent.ts
+@@ -30,7 +30,7 @@ import {
+   caShortcutWordsEnabled,
+   formChoiceStatedEnabled,
+   formNameFromRosterEnabled,
+-  typedNameEnabled, requestFromNamesEmployeeEnabled, formForForTypoEnabled } from "@/lib/config/chat-quality-flags";
++  typedNameEnabled, requestFromNamesEmployeeEnabled, pastedFormNameNotRequestEnabled, formForForTypoEnabled } from "@/lib/config/chat-quality-flags";
+ import { foldsToGlossaryTerm } from "@/lib/ai/glossary";
+ import { NOT_A_NAME, NOT_A_TYPED_NAME, TYPED_NAME_WORD } from "./name-words";
+ import { asksForTeamCoaching } from "./team-subject";
+@@ -1591,7 +1591,34 @@ function withoutLeadingGlossaryTerm(question: string): string {
+   return match && foldsToGlossaryTerm(match[1]!) ? question.slice(match[0].length) : question;
+ }
+ 
++/*
++ * PASTED_FORM_NAME_NOT_REQUEST_ENABLED (QA's B4; Pau via QA, sf-s22, 5 Nov 2026): "Make this:" followed by a reviewer's
++ * pasted notes ("1. **Kit Coaching Document:** This was signed on 10/16/2026 …") switched the Corrective Action card
++ * the manager had just insisted on ("It needs to be a CA, not a coaching form") back to a Coaching Form: "coaching
++ * document" inside the paste read as a request for one. On: when a turn is a short lead ending in ":" ("Make this:",
++ * "Use this to make it:") followed by pasted lines (a numbered or bulleted list, or bold labels), the form is read from
++ * the lead only — a form named inside the paste is something the notes mention, not what the manager asked for.
++ */
++const PASTE_LEAD = /^\s*([^\n:]{1,60}):\s*/;
++const PASTED_LIST = /(?:^|\n)\s*(?:\d+[.)]|[-*•])\s+\S|\*\*[^*\n]{2,60}:?\*\*/;
++
++function pastedLead(text: string): string | null {
++  const lead = PASTE_LEAD.exec(text);
++  if (!lead) return null;
++  const rest = text.slice(lead[0].length);
++  if (rest.length < 80 || !rest.includes("\n") || !PASTED_LIST.test(rest)) return null;
++  return lead[1]!;
++}
++
+ export function detectTemplateIntent(rawQuestion: string): TemplateIntent {
++  if (pastedFormNameNotRequestEnabled()) {
++    const lead = pastedLead(rawQuestion);
++    if (lead !== null) return readTemplateIntent(lead);
++  }
++  return readTemplateIntent(rawQuestion);
++}
++
++function readTemplateIntent(rawQuestion: string): TemplateIntent {
+   const question = withoutLeadingGlossaryTerm(formChoiceStatedEnabled() ? withoutPolicyReference(rawQuestion) : rawQuestion);
+   const q = canonicalFormWording(normalize(question));
+   /* A question about forms — compared, explained, or when to use one — is answered, never opened. */

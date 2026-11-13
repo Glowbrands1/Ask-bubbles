@@ -1,0 +1,189 @@
+# branch gate-807 head 11e8689f ; diff from main-line base c6e0b7db
+# 11e8689f gate merge pr807 (keep both)
+# be3fcb57 Merge remote-tracking branch 'origin/main' into b-name-correction-keeps-date
+# 41464a9d Parity log: NAME_CORRECTION_KEEPS_DATE stays Ask Bubbles only (Ask Sunny's stored form state keeps the date; checked on r22 ee7e373f)
+# 13b4177a NAME_CORRECTION_KEEPS_DATE_ENABLED (default off): a name correction never clears the card's date (s14 path 1)
+diff --git a/docs/parity-log/2026-11-11-name-correction-keeps-date.md b/docs/parity-log/2026-11-11-name-correction-keeps-date.md
+new file mode 100644
+index 00000000..47c23206
+--- /dev/null
++++ b/docs/parity-log/2026-11-11-name-correction-keeps-date.md
+@@ -0,0 +1,11 @@
++## 11 Nov 2026: NAME_CORRECTION_KEEPS_DATE_ENABLED stays Ask Bubbles only
++
++s14 path 1 (QA, from Gate-Bubbles' probe): after "Is this for **Rozlyn Quellmar**?" → "Oops, it's Rozlyn quellmar", the card
++lost the date given earlier ("October 1st"), and every later card for her lost it too, on production's flags. Here the
++answer is read as the request again and the card's date is not carried in the conversation's history.
++NAME_CORRECTION_KEEPS_DATE_ENABLED re-reads the date the manager gave before the name question
++(`ai/name-correction-keeps-date.ts`).
++
++Not needed in Ask Sunny: checked on its r22 head (ee7e373f) through the real chat route with the same six turns and
++production's flags — the card keeps 2026-10-01 on turns 2–6, because Ask Sunny's stored form state carries the date
++across the name correction (the same reason its s14 path-2 case is a guard there).
+diff --git a/src/app/api/chat/replay-pack/nov10-r22-eval-losses-cases.ts b/src/app/api/chat/replay-pack/nov10-r22-eval-losses-cases.ts
+index a9c5b962..fed4e13e 100644
+--- a/src/app/api/chat/replay-pack/nov10-r22-eval-losses-cases.ts
++++ b/src/app/api/chat/replay-pack/nov10-r22-eval-losses-cases.ts
+@@ -90,8 +90,9 @@ export const NOV10_R22_EVAL_LOSSES_CASES: ReplayCase[] = [
+      * roster set off, the later "create a follow-up coaching form for rozlyn quellmar" drops it. Reported to QA.
+      */
+     status: { open: "the date given on turn 2 is lost after the near-miss answer and on the next request for her" },
+-    fixFlags: SET,
+-    fixStatus: { open: "the same with the roster set on: the fix for these two paths is pending" },
++    // NAME_CORRECTION_KEEPS_DATE_ENABLED (QA, 11 Nov 2026; coding 2): a name correction never clears the card's date; with
++    // it, the case holds on every turn after the answer, with the roster set on or off. The fixStatus goes.
++    fixFlags: [...SET, "NAME_CORRECTION_KEEPS_DATE_ENABLED"],
+     async run(t) {
+       t.directory([...STAFF, ROZLYN]);
+       t.as("location_manager", GLOBAL);
+diff --git a/src/lib/ai/first-name-suggest.ts b/src/lib/ai/first-name-suggest.ts
+index cb70c566..445ec15c 100644
+--- a/src/lib/ai/first-name-suggest.ts
++++ b/src/lib/ai/first-name-suggest.ts
+@@ -17,6 +17,7 @@ import { acceptsNearMissWithDetails, nearMissTypedRest } from "@/lib/forms/near-
+ import { typedWithOtherSurname, cardOnScreen } from "@/lib/forms/request-slot";
+ 
+ import type { ChatActor } from "./form-proposal";
++import { withNameCorrectionDate } from "./name-correction-keeps-date";
+ import type { AskRequest, AskResponse } from "./types";
+ import type { ChatMessage } from "@/types";
+ 
+@@ -584,6 +585,8 @@ export async function withFirstNameSuggestFor(
+   actor: ChatActor,
+ ): Promise<AskResponse> {
+   if (!firstNameSuggestEnabled()) return response;
++  // NAME_CORRECTION_KEEPS_DATE_ENABLED: the answer to the name question keeps the card's date (`name-correction-keeps-date.ts`).
++  response = withNameCorrectionDate(response, request);
+   const card = response.formProposal;
+   const oneWordCard = Boolean(card?.employeeName && !/\s/.test(card.employeeName.trim()));
+   const maybeFilled = cardNameNotTypedInFull(card?.employeeName, request);
+diff --git a/src/lib/ai/name-correction-keeps-date.test.ts b/src/lib/ai/name-correction-keeps-date.test.ts
+new file mode 100644
+index 00000000..61633eea
+--- /dev/null
++++ b/src/lib/ai/name-correction-keeps-date.test.ts
+@@ -0,0 +1,49 @@
++import { afterEach, describe, expect, it, vi } from "vitest";
++
++import type { AskRequest, AskResponse } from "./types";
++import { withNameCorrectionDate } from "./name-correction-keeps-date";
++
++/* NAME_CORRECTION_KEEPS_DATE_ENABLED (QA, 11 Nov 2026; s14 path 1). The manager's wording; the person is invented. */
++const ASK = "Is this for **Rozlyn Quellmar**? Tell me if that should change.";
++const history = [
++  { id: "u1", role: "user", content: "help me create a coaching form" },
++  { id: "a1", role: "assistant", content: "Here is what I would put on a **Coaching Form**." },
++  { id: "u2", role: "user", content: "October 1st" },
++  { id: "a2", role: "assistant", content: "I still need to know who this is for before I can make this card." },
++  { id: "u3", role: "user", content: "ok, create a follow-up coaching form for rozline quellmar. i trained her on the new promo" },
++  { id: "a3", role: "assistant", content: ASK },
++] as AskRequest["history"];
++const request = (turns = history) => ({ history: turns, context: { todayIso: "2026-11-10" } }) as unknown as Pick<AskRequest, "history" | "context">;
++const card = (employeeName: string | null, formDate: string | null = null) =>
++  ({ content: "Here is what I would put on a **Coaching Form**.", citations: [], formProposal: { templateKey: "coaching", employeeName, formDate } }) as unknown as AskResponse;
++
++describe("NAME_CORRECTION_KEEPS_DATE_ENABLED", () => {
++  afterEach(() => vi.unstubAllEnvs());
++  const on = (value: boolean) => vi.stubEnv("NAME_CORRECTION_KEEPS_DATE_ENABLED", value ? "true" : "");
++
++  it("the answer's card for Rozlyn Quellmar keeps the date given before the question", () => {
++    on(true);
++    expect(withNameCorrectionDate(card("Rozlyn Quellmar"), request()).formProposal?.formDate).toBe("2026-10-01");
++  });
++
++  it("a later card for her (no date of its own) keeps it too", () => {
++    on(true);
++    const later = [...history, { id: "u4", role: "user", content: "Oops, it's Rozlyn quellmar" }, { id: "a4", role: "assistant", content: "Here is what I would put on a **Coaching Form**." }] as AskRequest["history"];
++    expect(withNameCorrectionDate(card("Rozlyn Quellmar"), request(later)).formProposal?.formDate).toBe("2026-10-01");
++  });
++
++  it("a date the card already has is the card's; another person's card is untouched; off, as built", () => {
++    on(true);
++    expect(withNameCorrectionDate(card("Rozlyn Quellmar", "2026-11-03"), request()).formProposal?.formDate).toBe("2026-11-03");
++    expect(withNameCorrectionDate(card("Tess Varga"), request()).formProposal?.formDate ?? null).toBeNull();
++    on(false);
++    const built = card("Rozlyn Quellmar");
++    expect(withNameCorrectionDate(built, request())).toBe(built);
++  });
++
++  it("no name question in the conversation: nothing is filled", () => {
++    on(true);
++    const plain = history.slice(0, 5) as AskRequest["history"];
++    expect(withNameCorrectionDate(card("Rozlyn Quellmar"), request(plain)).formProposal?.formDate ?? null).toBeNull();
++  });
++});
+diff --git a/src/lib/ai/name-correction-keeps-date.ts b/src/lib/ai/name-correction-keeps-date.ts
+new file mode 100644
+index 00000000..4958f49e
+--- /dev/null
++++ b/src/lib/ai/name-correction-keeps-date.ts
+@@ -0,0 +1,51 @@
++import { nameCorrectionKeepsDateEnabled } from "@/lib/config/chat-quality-flags";
++import { extractFormDate } from "@/lib/forms/form-date-answer";
++
++import type { AskRequest, AskResponse } from "./types";
++
++/**
++ * ============================================================================
++ * A NAME CORRECTION NEVER CLEARS THE CARD'S DATE
++ * ============================================================================
++ *
++ * NAME_CORRECTION_KEEPS_DATE_ENABLED (QA, 11 Nov 2026; Gate-Bubbles' probe of s14 path 1; default off). "help me create a
++ * coaching form" → "October 1st" → "ok, create a follow-up coaching form for rozline quellmar. …" → "Is this for **Rozlyn
++ * Quellmar**?" → "Oops, it's Rozlyn quellmar": the card held 2026-10-01 until the answer, then lost it, on production's
++ * flags too. The answer is read as the request again with the name in full (`first-name-suggest.ts`), a fresh request's
++ * turns start at it, and the card's date is not carried in the conversation's history; every later card for her lost it
++ * too. On: a card for the person whose name the manager corrected in answer to "Is this for …?" / "Did you mean …?" that
++ * has no date of its own takes the date the manager gave before that question (their latest turn that names one, at most
++ * four turns back). Only a missing date is filled; a date the turn gives is the turn's. Off: the response as built.
++ */
++const ASKED = /^(?:Is this for \*\*([^*]+)\*\*\? Tell me if that should change\.|Did you mean (.+?)\? Tell me which, or give the full name\.)/;
++const LOOK_BACK = 4;
++
++type Turn = { readonly role: string; readonly content: unknown };
++
++/** The date the manager gave before the latest name question answered about `employee`, or null. */
++function dateBeforeCorrection(history: readonly Turn[], employee: string, today: string): string | null {
++  const name = employee.trim().toLowerCase();
++  for (let at = history.length - 1; at >= 0; at -= 1) {
++    const turn = history[at]!;
++    if (turn.role !== "assistant") continue;
++    const asked = ASKED.exec(String(turn.content).trim());
++    if (!asked) continue;
++    const options = asked[1] ? [asked[1]] : [...(asked[2] ?? "").matchAll(/\*\*([^*]+)\*\*/g)].map((match) => match[1]!);
++    if (!options.some((option) => option.trim().toLowerCase() === name)) continue;
++    const said = history.slice(0, at).filter((earlier) => earlier.role === "user").slice(-LOOK_BACK).reverse();
++    for (const earlier of said) {
++      const date = extractFormDate(String(earlier.content), today);
++      if (date) return date;
++    }
++    return null;
++  }
++  return null;
++}
++
++export function withNameCorrectionDate(response: AskResponse, request: Pick<AskRequest, "history" | "context">): AskResponse {
++  if (!nameCorrectionKeepsDateEnabled()) return response;
++  const card = response.formProposal;
++  if (!card || card.formDate || !card.employeeName) return response;
++  const formDate = dateBeforeCorrection(request.history ?? [], card.employeeName, request.context.todayIso);
++  return formDate ? { ...response, formProposal: { ...card, formDate } } : response;
++}
+diff --git a/src/lib/config/chat-quality-flags.ts b/src/lib/config/chat-quality-flags.ts
+index 6da53817..ad6ff3bb 100644
+--- a/src/lib/config/chat-quality-flags.ts
++++ b/src/lib/config/chat-quality-flags.ts
+@@ -4632,3 +4632,13 @@ export function letterGreetingAnyCaseEnabled(): boolean {
+ export function companyMetricWordsNotNamesEnabled(): boolean {
+   return envFlag("COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED");
+ }
++
++/**
++ * NAME_CORRECTION_KEEPS_DATE_ENABLED (QA, 11 Nov 2026; Gate-Bubbles' probe of s14 path 1; default off). The answer to
++ * "Is this for **<name>**?" ("Oops, it's Rozlyn quellmar") is read as the request again, and its card lost the date the
++ * card already had (2026-10-01 → none), on production's flags too. On, a name correction never clears the card's date
++ * (`ai/name-correction-keeps-date.ts`). Off, as before.
++ */
++export function nameCorrectionKeepsDateEnabled(): boolean {
++  return envFlag("NAME_CORRECTION_KEEPS_DATE_ENABLED");
++}

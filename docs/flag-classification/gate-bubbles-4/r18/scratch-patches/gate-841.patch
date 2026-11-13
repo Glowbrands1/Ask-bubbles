@@ -1,0 +1,130 @@
+# branch gate-841 head c0aab68e ; diff from main-line base 6d862bbe
+# c0aab68e Merge branch 'pr841' into gate-841
+# 76520de4 Port from Ask Sunny (79fa176d): STEP_B_SECTION_SPACING — a label that stood on its own line stays there, and Policy reference keeps its blank line
+diff --git a/src/app/api/chat/replay-pack/nov12-r37-section-labels-cases.ts b/src/app/api/chat/replay-pack/nov12-r37-section-labels-cases.ts
+new file mode 100644
+index 00000000..5ac2a42c
+--- /dev/null
++++ b/src/app/api/chat/replay-pack/nov12-r37-section-labels-cases.ts
+@@ -0,0 +1,46 @@
++import { expect, vi } from "vitest";
++
++import { WEST_DODGE, type ReplayCase } from "./cases";
++import { REFUSAL_ROSTER, patch } from "./nov7-step-b-refusals-scenarios";
++
++/**
++ * ============================================================================
++ * LABELS STAY ON THEIR OWN LINES, AND POLICY REFERENCE KEEPS ITS BLANK LINE (QA's r37 live check in the sibling app,
++ * 12 Nov 2026; ported; STEP_B_SECTION_SPACING_ENABLED, on in production here)
++ * ============================================================================
++ *
++ * On coaching Details "Observed:\n…\n\nExpectation:\n…\n\nPolicy reference: …", the turn "make that update: he also
++ * ignored a second client" saved the labels pulled onto the text line and no blank line before "Policy reference:".
++ * The reader writes the field back in that shape, as live there. The person is invented.
++ */
++const REQUEST = "create a coaching form for Ottoline Ormsworth, on 11/9 she was rude to a guest";
++const DETAILS =
++  "Observed:\nOn 11/9, Ottoline Ormsworth was rude to a guest.\n\nExpectation:\nOttoline Ormsworth is expected to greet every guest politely.\n\nPolicy reference: Standards of Conduct, JBA Policy Manual p.12";
++const SAID = "make that update: he also ignored a second client";
++const WRITTEN =
++  "Observed: On 11/9, Ottoline Ormsworth was rude to a guest and ignored a second client.\n\nExpectation: Ottoline Ormsworth is expected to greet every guest politely.\nPolicy reference: Standards of Conduct, JBA Policy Manual p.12";
++
++export const NOV12_R37_SECTION_LABELS_CASES: ReplayCase[] = [
++  {
++    id: "nov12-r37-section-labels-and-policy-line-kept",
++    title: "\"make that update: he also ignored a second client\": the labels stay on their own lines and Policy reference keeps its blank line",
++    report: "QA's r37 live check in the sibling app (12 Nov 2026), ported: the labels were pulled onto the text line and the blank line before Policy reference was lost",
++    status: "fixed",
++    async run(t) {
++      vi.setSystemTime(new Date("2026-11-12T16:00:00Z"));
++      t.directory(REFUSAL_ROSTER);
++      t.as("location_manager", WEST_DODGE);
++      const thread = t.thread();
++      await thread.say(REQUEST);
++      t.draftWrites({ coaching_details: DETAILS });
++      const id = await thread.create();
++      t.patchReads!({ [SAID]: patch("this_form", [{ field: "coaching_details", value: WRITTEN, how: "replace", evidence: "ignored a second client" }]) });
++      await thread.say(SAID);
++      const details = t.values(id).coaching_details ?? "";
++      expect(details, details).toMatch(/ignored a second client/);
++      expect(details, `a label was pulled onto the text line:\n${details}`).toMatch(/^Observed:\nOn 11\/9/);
++      expect(details, `a label was pulled onto the text line:\n${details}`).toMatch(/\n\nExpectation:\nOttoline/);
++      expect(details, `the blank line before Policy reference was lost:\n${details}`).toMatch(/\n\nPolicy reference:/);
++    },
++  },
++];
+diff --git a/src/lib/forms/outline-sections.test.ts b/src/lib/forms/outline-sections.test.ts
+index a4a3b95c..6ab17dd7 100644
+--- a/src/lib/forms/outline-sections.test.ts
++++ b/src/lib/forms/outline-sections.test.ts
+@@ -70,3 +70,22 @@ describe("QA's ruling (b), extended (12 Nov 2026): an instruction goes under Exp
+     expect(addUnderExpectation("Observed:\nJane was late.", "she must clock in.")).toBeNull();
+   });
+ });
++
++/* QA's r37 live check in the sibling app (ported) (12 Nov 2026; names invented): "make that update: he also ignored a second client". */
++describe("withSectionSpacing: labels stay on their own line, and Policy reference keeps its blank line (r37)", () => {
++  const OLD =
++    "Observed:\nOn 11/9, Dorian Vell was rude to a client.\n\nExpectation:\nDorian Vell is expected to greet every client politely.\n\nPolicy reference: Standards of Conduct Policy, JBA Policy Manual p.12";
++  const SAVED_LIVE =
++    "Observed: On 11/9, Dorian Vell was rude to a client and ignored a second client.\n\nExpectation: Dorian Vell is expected to greet every client politely.\nPolicy reference: Standards of Conduct Policy, JBA Policy Manual p.12";
++
++  it("the live write is put back in the field's own layout", () => {
++    expect(withSectionSpacing(OLD, SAVED_LIVE)).toBe(
++      "Observed:\nOn 11/9, Dorian Vell was rude to a client and ignored a second client.\n\nExpectation:\nDorian Vell is expected to greet every client politely.\n\nPolicy reference: Standards of Conduct Policy, JBA Policy Manual p.12",
++    );
++  });
++
++  it("a field whose labels were inline keeps them inline, and one with no blank before Policy reference gets none", () => {
++    const inline = "Observed: On 11/9, Dorian Vell was rude to a client.\n\nExpectation: Dorian Vell is expected to greet every client politely.\nPolicy reference: Standards of Conduct Policy, JBA Policy Manual p.12";
++    expect(withSectionSpacing(inline, SAVED_LIVE)).toBe(SAVED_LIVE);
++  });
++});
+diff --git a/src/lib/forms/outline-sections.ts b/src/lib/forms/outline-sections.ts
+index 46bd333e..9e338b5c 100644
+--- a/src/lib/forms/outline-sections.ts
++++ b/src/lib/forms/outline-sections.ts
+@@ -62,10 +62,42 @@ export function tailAfterLastSection(old: string, next: string): string | null {
+   return tail === "" || HEADING.test(tail) ? null : tail;
+ }
+ 
++/** A heading's label, as typed ("Expectation"), when the line is the label alone. */
++const LABEL_ALONE = /^\s*(Observed|Observation|Expectations?|Going Forward|Plan|Follow[- ]?up)\s*:\s*$/i;
++/** A heading line with text after its colon: "Expectation: <D> is expected …". */
++const LABEL_WITH_TEXT = /^(\s*(?:Observed|Observation|Expectations?|Going Forward|Plan|Follow[- ]?up)\s*:)[ \t]*(\S.*)$/i;
++const POLICY_REFERENCE = /^\s*Policy reference\s*:/i;
++
++/*
++ * QA's r37 live check in the sibling app (ported) (12 Nov 2026, main 7e8dcdb6; names invented): on Details written "Observed:\nOn 11/9,
++ * <D> was rude to a client.\n\nExpectation:\n<D> is expected …\n\nPolicy reference: …", the turn "make that update: he also
++ * ignored a second client" saved "Observed: On 11/9, … and ignored a second client.\n\nExpectation: <D> is expected …
++ * \nPolicy reference: …" — the labels pulled onto the text line, and the blank line before "Policy reference:" lost.
++ * When the field had them: a label that stood on its own line stays on its own line, and "Policy reference:" keeps
++ * its blank line.
++ */
++function withLabelsAsBefore(old: string, next: string): string {
++  const before = lines(old);
++  const alone = new Set(before.map((line) => LABEL_ALONE.exec(line)?.[1]?.toLowerCase()).filter((label): label is string => Boolean(label)));
++  const policyApart = before.some((line, at) => POLICY_REFERENCE.test(line) && at > 0 && before[at - 1]!.trim() === "");
++  const out: string[] = [];
++  for (const line of lines(next)) {
++    const labelled = LABEL_WITH_TEXT.exec(line);
++    const label = labelled?.[1]?.replace(/:\s*$/, "").trim().toLowerCase();
++    if (labelled && label && alone.has(label)) {
++      out.push(labelled[1]!.trimEnd(), labelled[2]!);
++      continue;
++    }
++    if (policyApart && POLICY_REFERENCE.test(line) && out.length > 0 && out[out.length - 1]!.trim() !== "") out.push("");
++    out.push(line);
++  }
++  return out.join("\n");
++}
++
+ /** One blank line before each section heading (but the first), when the field had them. */
+ export function withSectionSpacing(old: string, next: string): string {
+   if (!/\n\s*\n\s*(?:Expectations?|Going Forward|Plan|Follow[- ]?up)\s*:/i.test(old ?? "")) return next;
+-  const all = lines(next);
++  const all = lines(withLabelsAsBefore(old, next));
+   const out: string[] = [];
+   for (const [index, line] of all.entries()) {
+     if (index > 0 && HEADING.test(line) && !OBSERVED.test(line)) {

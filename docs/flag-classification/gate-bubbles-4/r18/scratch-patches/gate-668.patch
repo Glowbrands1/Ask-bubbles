@@ -1,0 +1,257 @@
+# branch gate-668 head e1ae7e3f ; diff from main-line base 815ae303
+# e1ae7e3f resolve instances route (compose both)
+# e77d80ae Merge remote-tracking branch 'origin/main' into rec-668
+# 4a19861e Merge remote-tracking branch 'origin/main' into rec-668
+# 9e85869a Merge commit 'c6063f2c' into rec-668
+# 6540292b Port from Ask Sunny (d807fb3f): a team coaching card's product is the topic, not a person (TEAM_CARD_NOT_PRODUCT_ENABLED)
+diff --git a/src/app/api/chat/replay-pack/nov4-overnight-scan-cases.ts b/src/app/api/chat/replay-pack/nov4-overnight-scan-cases.ts
+index 063a564b..2bcd86df 100644
+--- a/src/app/api/chat/replay-pack/nov4-overnight-scan-cases.ts
++++ b/src/app/api/chat/replay-pack/nov4-overnight-scan-cases.ts
+@@ -149,6 +149,8 @@ export const NOV4_OVERNIGHT_SCAN_CASES: readonly ReplayCase[] = [
+     report: `${REPORT}, sf-s13: "I need to make a coaching form for the team at West Dodge Rd on selling Bath Bomb Kits, not writing proper rainchecks which results in inventory not being correct." → "The employee needs to be left blank for now"`,
+     // Run 4 Nov 2026 (production flags): fails as below.
+     status: { open: "turn 1 makes the team card but says \"I couldn't find **Bath Bomb Kits** in the Woven roster\"; turn 2 \"The employee needs to be left blank for now\" makes the card for \"Bath Bomb Kits\" (\"I have the employee\") and asks for Bath Bomb Kits's job title" },
++    // Fixed under TEAM_CARD_NOT_PRODUCT_ENABLED (port from the sibling app, 10 Nov 2026): the team card, the product is the topic; open on production flags until QA flips it.
++    fixFlags: ["TEAM_CARD_NOT_PRODUCT_ENABLED"],
+     async run(t) {
+       const thread = start(t);
+       await thread.say(
+diff --git a/src/app/api/chat/route.ts b/src/app/api/chat/route.ts
+index d320f406..edce748e 100644
+--- a/src/app/api/chat/route.ts
++++ b/src/app/api/chat/route.ts
+@@ -74,6 +74,7 @@ import {
+   questionNotFormEnabled,
+   sameFormCopyEnabled,
+   sameFormCopyNewPersonEnabled,
++  teamCardNotProductEnabled,
+   noSelectionOnOpenCardEnabled,
+   sameRequestOtherPersonEnabled,
+   staffPickerBareAnswerEnabled,
+@@ -1032,6 +1033,17 @@ async function postChat(request: Request) {
+         ]);
+       }
+       // PERSON_GUARD_ENABLED: whichever reader named the card's employee, a name that is not a person never stays on it.
++      // TEAM_CARD_NOT_PRODUCT_ENABLED: a team coaching card's "Spray Tan Kits" is the topic, not a person (`lib/forms/team-card-not-product.ts`).
++      if (teamCardNotProductEnabled() && answer.formProposal?.employeeName) {
++        const { loadScopedRoster } = await import("@/lib/forms/employee-roster");
++        answer = (await import("@/lib/forms/team-card-not-product")).withTeamCardNotProduct(answer, {
++          turns: [
++            ...parsed.history.filter((turn) => turn.role === "user").map((turn) => ({ id: turn.id, content: String(turn.content ?? "") })),
++            { id: parsed.questionMessageId, content: parsed.question },
++          ],
++          roster: await loadScopedRoster(context.identity.scope).catch(() => []),
++        });
++      }
+       if (personGuardEnabled()) answer = (await import("@/lib/forms/person-guard")).withPersonOnCard(answer);
+       // POSSESSIVE_PLACE_NOT_PERSON_ENABLED: "Lee's Summit Plaza" never puts "Lee" on the card (`lib/forms/possessive-place.ts`).
+       if (possessivePlaceNotPersonEnabled()) {
+diff --git a/src/app/api/forms/instances/route.ts b/src/app/api/forms/instances/route.ts
+index 86d67521..b1a6f1ea 100644
+--- a/src/app/api/forms/instances/route.ts
++++ b/src/app/api/forms/instances/route.ts
+@@ -1,5 +1,6 @@
+ import { NextResponse } from "next/server";
+ 
++import { teamTopicReadConversation } from "@/lib/forms/team-card-not-product";
+ import { sameRequestReadConversation } from "@/lib/forms/same-request-other-person";
+ import { switchReadConversation } from "@/lib/ai/form-type-switch";
+ import { typoReadingText, typoReadingTurns } from "@/lib/ai/typo-reading-copy";
+@@ -246,7 +247,11 @@ export async function POST(request: Request) {
+         // PASTED_REVIEW_NOT_ACCOUNT_ENABLED: pasted reviewer's notes are read as the chat read them (`ai/pasted-review.ts`).
+         // SAME_REQUEST_OTHER_PERSON_ENABLED: "the same thing for <B>" is read from that turn on, as the chat read it.
+         // SAME_REQUEST_KEEPS_EARLIER_CARD_ENABLED: <A>'s card is read as it stood before "the same thing for <B>".
+-        conversation: sameRequestReadConversation(switchReadConversation(turnsWithoutPastedReview(parseHistory(body.conversation))), body.employeeName),
++        // TEAM_CARD_NOT_PRODUCT_ENABLED: on the team card, "selling Bath Bomb Kits" is the topic, as the chat read it.
++        conversation: teamTopicReadConversation(
++          sameRequestReadConversation(switchReadConversation(turnsWithoutPastedReview(parseHistory(body.conversation))), body.employeeName),
++          body.employeeName,
++        ),
+         templateKey: body.templateKey,
+         employeeName: body.employeeName,
+         alsoCalled,
+diff --git a/src/lib/config/chat-quality-flags.ts b/src/lib/config/chat-quality-flags.ts
+index 7d6e10d9..c6fe8fa2 100644
+--- a/src/lib/config/chat-quality-flags.ts
++++ b/src/lib/config/chat-quality-flags.ts
+@@ -5038,3 +5038,17 @@ export function formsOnFileOrderMatchPossibleEnabled(): boolean {
+ export function policyCarryRetrievalEnabled(): boolean {
+   return envFlag("POLICY_CARRY_RETRIEVAL_ENABLED");
+ }
++
++/**
++ * TEAM_CARD_NOT_PRODUCT_ENABLED (coding 6, 10 Nov 2026; default off; QA's
++ * overnight scan sf-s13). "a coaching form for the team at Kearney on selling
++ * Spray Tan Kits …" made a card for "Spray Tan Kits", and "The employee needs
++ * to be left blank for now" went into its Observation. On: a coaching card
++ * whose name is nobody on the roster and was only written as the topic
++ * ("selling …", "on …"), in a request for the team (or one that leaves the
++ * employee blank), is the team card, and the blank-employee turn is no
++ * account. See `forms/team-card-not-product.ts`. Off, as before.
++ */
++export function teamCardNotProductEnabled(): boolean {
++  return envFlag("TEAM_CARD_NOT_PRODUCT_ENABLED");
++}
+diff --git a/src/lib/forms/team-card-not-product.test.ts b/src/lib/forms/team-card-not-product.test.ts
+new file mode 100644
+index 00000000..f1f705e0
+--- /dev/null
++++ b/src/lib/forms/team-card-not-product.test.ts
+@@ -0,0 +1,52 @@
++import { afterEach, describe, expect, it } from "vitest";
++
++import type { ChatFormProposal } from "@/types";
++
++import { saysEmployeeBlank, teamTopicReadConversation, withTeamCardNotProduct, writtenAsTopic } from "./team-card-not-product";
++
++/*
++ * TEAM_CARD_NOT_PRODUCT_ENABLED. The manager's words are verbatim (QA's overnight scan sf-s13, 4 Nov 2026). The replay
++ * pack runs the chat: `nov4-overnight-scan-cases.ts` (sf-s13).
++ */
++const S13 = "I need to make a coaching form for the team at West Dodge Rd on selling Bath Bomb Kits, not writing proper rainchecks which results in inventory not being correct.";
++const BLANK = "The employee needs to be left blank for now";
++const ROSTER = [{ id: "e-1", firstName: "Odalys", lastName: "Frewen", preferredFirstName: null, locationIds: ["loc-0309"] }];
++
++const card = (employeeName: string) =>
++  ({ templateKey: "coaching", templateName: "Coaching Form", employeeName, employeeRole: null, sourceMessageIds: ["m1", "m2"] }) as unknown as ChatFormProposal;
++
++afterEach(() => {
++  delete process.env.TEAM_CARD_NOT_PRODUCT_ENABLED;
++});
++
++describe("the product on a team coaching card", () => {
++  it("reads the topic and the blank-employee turn", () => {
++    expect(writtenAsTopic("Bath Bomb Kits", [S13])).toBe(true);
++    expect(writtenAsTopic("Odalys Frewen", ["make a coaching form for Odalys Frewen on selling kits"])).toBe(false);
++    expect(saysEmployeeBlank(BLANK)).toBe(true);
++    expect(saysEmployeeBlank(S13)).toBe(false);
++  });
++
++  it("is the team card with the flag on; the blank-employee turn leaves the sources; off, as before", () => {
++    const answer = { content: "I have the employee and the store.", formProposal: card("Bath Bomb Kits") };
++    const input = { turns: [{ id: "m1", content: S13 }, { id: "m2", content: BLANK }], roster: ROSTER };
++    expect(withTeamCardNotProduct(answer, input)).toBe(answer);
++    process.env.TEAM_CARD_NOT_PRODUCT_ENABLED = "true";
++    const read = withTeamCardNotProduct(answer, input);
++    expect(read.formProposal).toMatchObject({ employeeName: "All team members", subject: "team", sourceMessageIds: ["m1"] });
++    expect(read.content).toMatch(/whole team/);
++  });
++
++  it("a person named for the form is never made the team", () => {
++    process.env.TEAM_CARD_NOT_PRODUCT_ENABLED = "true";
++    const answer = { content: "", formProposal: card("Odalys Frewen") };
++    expect(withTeamCardNotProduct(answer, { turns: [{ id: "m1", content: "coaching form for the team, mostly Odalys Frewen" }], roster: ROSTER })).toBe(answer);
++  });
++
++  it("Create reads \"selling Bath Bomb Kits\" in lower case on the team card", () => {
++    process.env.TEAM_CARD_NOT_PRODUCT_ENABLED = "true";
++    const turns = [{ role: "user", content: S13 }];
++    expect(teamTopicReadConversation(turns, "All team members")[0]!.content).toMatch(/selling bath bomb kits/);
++    expect(teamTopicReadConversation(turns, "Odalys Frewen")).toBe(turns);
++  });
++});
+diff --git a/src/lib/forms/team-card-not-product.ts b/src/lib/forms/team-card-not-product.ts
+new file mode 100644
+index 00000000..fa8545e0
+--- /dev/null
++++ b/src/lib/forms/team-card-not-product.ts
+@@ -0,0 +1,98 @@
++import { teamCardNotProductEnabled } from "@/lib/config/chat-quality-flags";
++import { displayName, rosterNameNamedIn, type RosterEmployee } from "@/lib/forms/employee-match";
++import { allowsTeamSubject, readsAsTeamSubject, TEAM_SUBJECT_LABEL } from "@/lib/forms/team-subject";
++import type { ChatFormProposal } from "@/types";
++
++/**
++ * ============================================================================
++ * "A COACHING FORM FOR THE TEAM … ON SELLING SPRAY TAN KITS" IS THE TEAM'S CARD
++ * (TEAM_CARD_NOT_PRODUCT_ENABLED)
++ * ============================================================================
++ *
++ * QA's overnight scan sf-s13, 4 Nov 2026: "I need to make a coaching form for
++ * the team at West Dodge Rd on selling Bath Bomb Kits, not writing proper rainchecks
++ * which results in inventory not being correct." → "The employee needs to be
++ * left blank for now". Both cards were for "Bath Bomb Kits" ("I have the
++ * employee and the store"): the capitalised product was read as a person, and
++ * a named person beats the team. The instruction about the employee field was
++ * appended to the card's Observation and handed to the drafting model.
++ *
++ * With the flag on, a coaching card whose name nobody on the manager's roster
++ * answers to, in a request that puts the team as the subject (or says the
++ * employee is to be left blank), and whose name the manager only ever wrote
++ * after a topic word ("selling …", "on …", "about …") — never "for <name>" — is
++ * the team card. A turn that only says the employee field is to be left blank
++ * is no account: it leaves the card's sources. Pure.
++ */
++
++const TOPIC_LEAD = String.raw`(?:selling|sell|sells|sold|offering|pushing|on|about|regarding|with|of|the)`;
++const BLANK_EMPLOYEE =
++  /\b(?:employee(?:'s)?(?:\s+name)?|name)\b[^.!?\n]{0,30}\b(?:left\s+blank|leave\s+(?:it\s+)?blank|blank|empty|no\s+one|nobody)\b|\bleave\s+(?:the\s+)?(?:employee|name)(?:\s+name)?\s+(?:field\s+)?blank\b/i;
++
++function escaped(text: string): string {
++  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
++}
++
++/** "The employee needs to be left blank for now": about the form's Employee field, not what happened. */
++export function saysEmployeeBlank(turn: string): boolean {
++  return BLANK_EMPLOYEE.test(turn) && turn.trim().split(/\s+/).length <= 16;
++}
++
++/** The name was only ever written as the topic ("selling Bath Bomb Kits"), never as who the form is for. */
++export function writtenAsTopic(name: string, turns: readonly string[]): boolean {
++  const said = new RegExp(`\\b${escaped(name).replace(/\s+/g, "\\s+")}\\b`, "i");
++  const asTopic = new RegExp(`\\b${TOPIC_LEAD}\\s+${escaped(name).replace(/\s+/g, "\\s+")}\\b`, "i");
++  const asSubject = new RegExp(`\\b(?:for|to)\\s+${escaped(name).replace(/\s+/g, "\\s+")}\\b`, "i");
++  const naming = turns.filter((turn) => said.test(turn));
++  return naming.length > 0 && naming.every((turn) => asTopic.test(turn) && !asSubject.test(turn));
++}
++
++export function withTeamCardNotProduct<T extends { content: string; formProposal?: ChatFormProposal | null }>(
++  answer: T,
++  input: {
++    turns: readonly { id?: string; content: string }[];
++    roster: readonly RosterEmployee[];
++  },
++): T {
++  const card = answer.formProposal;
++  if (!teamCardNotProductEnabled() || !card?.employeeName || card.subject === "team" || !allowsTeamSubject(card.templateKey)) return answer;
++  const texts = input.turns.map((turn) => turn.content);
++  const team = texts.some((turn) => readsAsTeamSubject(turn)) || texts.some(saysEmployeeBlank);
++  if (!team) return answer;
++  const name = card.employeeName;
++  if (input.roster.some((person) => rosterNameNamedIn(name, [person]) !== null || displayName(person).toLowerCase() === name.toLowerCase())) return answer;
++  if (!writtenAsTopic(name, texts)) return answer;
++  const blankIds = new Set(input.turns.filter((turn) => turn.id && saysEmployeeBlank(turn.content)).map((turn) => turn.id!));
++  const sources = card.sourceMessageIds.filter((id) => !blankIds.has(id));
++  const named = new RegExp(`\\*\\*${escaped(name)}\\*\\*`, "g");
++  return {
++    ...answer,
++    content: answer.content
++      .replace(named, `**${TEAM_SUBJECT_LABEL}**`)
++      .replace(/\bI have the employee and the store\b/, "This one is for the whole team, and I have the store")
++      .replace(/\s*\bThe employee needs to be left blank[^\n]*/i, ""),
++    formProposal: {
++      ...card,
++      employeeName: TEAM_SUBJECT_LABEL,
++      employeeRole: null,
++      subject: "team" as const,
++      sourceMessageIds: sources.length > 0 ? sources : card.sourceMessageIds,
++    },
++  };
++}
++
++/**
++ * THE CONVERSATION CREATE CHECKS, READ AS THE CHAT READ IT: on the team card,
++ * a capitalised run written as the topic ("selling Bath Bomb Kits") is read in
++ * lower case, so no name reader takes it for a person. Any other card, or
++ * flag off: as sent.
++ */
++export function teamTopicReadConversation<T extends { readonly role: string; readonly content: string }>(turns: T[], employeeName: string): T[] {
++  if (!teamCardNotProductEnabled() || employeeName.trim() !== TEAM_SUBJECT_LABEL) return turns;
++  const users = turns.filter((turn) => turn.role === "user").map((turn) => turn.content);
++  if (!users.some((turn) => readsAsTeamSubject(turn)) && !users.some(saysEmployeeBlank)) return turns;
++  const topic = new RegExp(String.raw`\b(${TOPIC_LEAD})\s+((?:[A-Z][\w'-]*)(?:\s+[A-Z][\w'-]*){0,3})`, "g");
++  return turns.map((turn) =>
++    turn.role !== "user" ? turn : { ...turn, content: turn.content.replace(topic, (_all, lead: string, run: string) => `${lead} ${run.toLowerCase()}`) },
++  );
++}

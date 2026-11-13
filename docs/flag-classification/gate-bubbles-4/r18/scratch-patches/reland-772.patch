@@ -1,0 +1,226 @@
+# triage worktree t772 (detached) head b9a547a3 ; diff vs main 6081b825
+# b9a547a3 fixflags
+# 8a386f82 Merge branch 'pr772' into HEAD
+# 40041a20 Name the sibling app, not the other company, in production files (tenant-isolation rule 12; comments only)
+# 2b3bd819 ACCOUNT_TYPOS_FIXED_ENABLED in CHAT_QUALITY_FLAG_NAMES (flags-off-parity forces it off with the others)
+# 03cf77ce Port from Ask Sunny (b206494f): ACCOUNT_TYPOS_FIXED_ENABLED (default off) — the card's Issue keeps the manager's words with obvious slips mended
+diff --git a/src/app/api/chat/replay-pack/nov11-account-typos-cases.ts b/src/app/api/chat/replay-pack/nov11-account-typos-cases.ts
+new file mode 100644
+index 00000000..2cbd63ee
+--- /dev/null
++++ b/src/app/api/chat/replay-pack/nov11-account-typos-cases.ts
+@@ -0,0 +1,40 @@
++import { expect, vi } from "vitest";
++
++import { STAFF, WEST_DODGE, type DirectoryRow, type ReplayCase } from "./cases";
++
++/**
++ * ============================================================================
++ * THE CARD'S ISSUE KEEPS THE MANAGER'S WORDS, OBVIOUS SLIPS MENDED (port from the sibling app; QA, 11 Nov 2026)
++ * ============================================================================
++ *
++ * The sibling app's sanitation report (10 Nov 2026 18:49Z, 1 star): "please make a ca for <name> for not doing th e10 minute
++ * sanitaion" put the account on the card word for word. Here the same wording gives "**Issue:** not doing th e10 minute
++ * sanitaion". ACCOUNT_TYPOS_FIXED_ENABLED mends it on the card; the record keeps what was typed. The person is invented.
++ */
++const BRISA: DirectoryRow = {
++  id: "e-brisa-talmadge",
++  firstName: "Brisa",
++  lastName: "Talmadge",
++  preferredFirstName: null,
++  employmentStatus: "active",
++  locationIds: ["loc-264"],
++  positionName: "Team Member Part Time",
++};
++const SAID = "please make a ca for Brisa Talmadge for not doing th e10 minute sanitaion";
++
++export const NOV11_ACCOUNT_TYPOS_CASES: ReplayCase[] = [
++  {
++    id: "nov11-account-typos-issue-mended",
++    title: `"${SAID}": the card's Issue reads "not doing the 10-minute sanitation" (the manager's words, slips mended)`,
++    report: "Sibling-app production (10 Nov 2026 18:49Z, 1 star), via QA (C: typos on the card); same wording checked here",
++    status: { open: "the card's Issue is \"not doing th e10 minute sanitaion\"" },
++    fixFlags: ["ACCOUNT_TYPOS_FIXED_ENABLED"],
++    async run(t) {
++      vi.setSystemTime(new Date("2026-11-10T18:49:00Z"));
++      t.directory([...STAFF, BRISA]);
++      t.as("location_manager", WEST_DODGE);
++      const card = (await t.thread().say(SAID)).content;
++      expect(card, card).toMatch(/^\*\*Issue:\*\* not doing the 10-minute sanitation · /m);
++    },
++  },
++];
+diff --git a/src/lib/ai/flags-off-parity.test.ts b/src/lib/ai/flags-off-parity.test.ts
+index c76f01c8..b3bc2761 100644
+--- a/src/lib/ai/flags-off-parity.test.ts
++++ b/src/lib/ai/flags-off-parity.test.ts
+@@ -143,6 +143,14 @@ const PROTECTED = [
+  * Termination plan's closing is the termination sentence (`planClosing`, also
+  * in `refreshedActionPlan`). Off, both are exactly as before; instances.ts is
+  * not touched.
++ * The user (Pau) approved, under Pau's standing approval via QA, 11 Nov 2026, in
++ * src/lib/ai/form-proposal.ts, exactly: the import
++ * `import { cardAccountText } from "@/lib/forms/account-spelling";` and the
++ * card's Issue line wrapped as
++ * `stated.push(`**Issue:** ${cardAccountText(proposal.issue, proposal.employeeName)}`)`
++ * with its comment (port from Ask Sunny b206494f: the card's account keeps the
++ * manager's words with obvious slips mended). Behind ACCOUNT_TYPOS_FIXED_ENABLED,
++ * default off; off, cardAccountText returns its input and the card is as before.
+  */
+ const APPROVED_PROTECTED_EDITS = [
+   ":(exclude)src/lib/forms/required-closing.ts",
+diff --git a/src/lib/ai/form-proposal.ts b/src/lib/ai/form-proposal.ts
+index 6e5d0e65..1c40a215 100644
+--- a/src/lib/ai/form-proposal.ts
++++ b/src/lib/ai/form-proposal.ts
+@@ -188,6 +188,7 @@ import { currentFormRequestText } from "@/lib/forms/current-request";
+ import { managerWords } from "./edit-date-rules";
+ import { groundEmployeeResolution } from "./employee-candidate-grounding";
+ import { readFormRequests, type FormRequest } from "@/lib/forms/form-requests";
++import { cardAccountText } from "@/lib/forms/account-spelling";
+ import { answerCorrectiveAction } from "./form-answers";
+ import type { AskResponse } from "./types";
+ 
+@@ -3157,7 +3158,8 @@ function correctiveActionReady(
+    * became the employee's name and the stated level was left unticked.
+    */
+   const stated: string[] = [];
+-  if (proposal.issue) stated.push(`**Issue:** ${proposal.issue}`);
++  // ACCOUNT_TYPOS_FIXED_ENABLED: the obvious slips mended, the manager's words kept (`forms/account-spelling.ts`).
++  if (proposal.issue) stated.push(`**Issue:** ${cardAccountText(proposal.issue, proposal.employeeName)}`);
+   if (warning.offersLevel && proposal.warningLevel) {
+     stated.push(`**Type of warning:** ${warningLevelLabel(proposal.warningLevel as WarningLevel)}, as you said — tell me if that should change`);
+   }
+diff --git a/src/lib/ai/proposal-edit-rules.ts b/src/lib/ai/proposal-edit-rules.ts
+index 6bc3b212..6a1a5065 100644
+--- a/src/lib/ai/proposal-edit-rules.ts
++++ b/src/lib/ai/proposal-edit-rules.ts
+@@ -7,6 +7,7 @@ import {
+ import { correctiveActionIssue } from "@/lib/forms/incident-issue";
+ import { asksAboutPolicy, citationSetAside, policiesSetAside, setAsideAnything, withPolicySetAside } from "@/lib/forms/policy-set-aside";
+ 
++import { cardAccountText } from "@/lib/forms/account-spelling";
+ import { managerWords, readSentenceEdit, readTurnEdit, remapEditLine, remapObservation } from "./edit-date-rules";
+ import type { AskRequest, AskResponse } from "./types";
+ 
+@@ -102,8 +103,10 @@ function withEditRules(response: AskResponse, request: AskRequest): AskResponse
+   if (issue === (card.issue ?? null) && !editLine) return response;
+   let content = response.content;
+   if (issue !== (card.issue ?? null)) {
+-    const before = card.issue ? `**Issue:** ${card.issue}` : null;
+-    content = before && content.includes(before) ? content.replace(before, `**Issue:** ${issue ?? ""}`) : content;
++    // ACCOUNT_TYPOS_FIXED_ENABLED: the card shows the Issue as `form-proposal.ts` prints it (`forms/account-spelling.ts`).
++    const shown = (text: string) => cardAccountText(text, card.employeeName ?? null);
++    const before = card.issue ? `**Issue:** ${shown(card.issue)}` : null;
++    content = before && content.includes(before) ? content.replace(before, `**Issue:** ${shown(issue ?? "")}`) : content;
+   }
+   if (editLine && !content.includes(editLine)) content = `${content}\n\n${editLine}`;
+   return { ...response, content, formProposal: { ...card, issue } };
+diff --git a/src/lib/config/chat-quality-flags.ts b/src/lib/config/chat-quality-flags.ts
+index b53ff9c4..02e51516 100644
+--- a/src/lib/config/chat-quality-flags.ts
++++ b/src/lib/config/chat-quality-flags.ts
+@@ -1332,6 +1332,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
+   "TITLE_BEFORE_NAME_REPLY_LINES_ENABLED",
+   // coding 4: FORMS_ON_FILE_ORDER_MATCH_POSSIBLE (Bubbles 17h live test, QA, 11 Nov 2026; default off).
+   "FORMS_ON_FILE_ORDER_MATCH_POSSIBLE_ENABLED",
++  "ACCOUNT_TYPOS_FIXED_ENABLED",
+   "TAKE_OFF_STAYS_CARD_ENABLED",
+   // coding 4: ACCOUNT_PLACE_LEAD (round 6; default off): forced off with the others.
+   "ACCOUNT_PLACE_LEAD_ENABLED",
+@@ -5576,3 +5577,13 @@ export function formDateBusinessTodayEnabled(): boolean {
+ export function closeSpellingMatchEnabled(): boolean {
+   return envFlag("CLOSE_SPELLING_MATCH_ENABLED");
+ }
++
++/**
++ * ACCOUNT_TYPOS_FIXED_ENABLED (QA, the sibling app's sanitation report, 10 Nov 2026 18:49Z; port from the sibling app; default off;
++ * same flag in both apps). "not doing th e10 minute sanitaion" went onto the card's Issue line word for word. On, the card
++ * shows the manager's words with obvious slips mended ("the 10-minute sanitation"; `forms/account-spelling.ts`). The stored
++ * messages and the record keep what was typed. Off, as before.
++ */
++export function accountTyposFixedEnabled(): boolean {
++  return envFlag("ACCOUNT_TYPOS_FIXED_ENABLED");
++}
+diff --git a/src/lib/forms/account-spelling.test.ts b/src/lib/forms/account-spelling.test.ts
+new file mode 100644
+index 00000000..dd8c561c
+--- /dev/null
++++ b/src/lib/forms/account-spelling.test.ts
+@@ -0,0 +1,25 @@
++import { afterEach, describe, expect, it, vi } from "vitest";
++
++import { cardAccountText } from "./account-spelling";
++
++/* ACCOUNT_TYPOS_FIXED_ENABLED (QA, the Sunny sanitation report, 10 Nov 2026 18:49Z). The manager's words; the person invented. */
++describe("ACCOUNT_TYPOS_FIXED_ENABLED", () => {
++  afterEach(() => vi.unstubAllEnvs());
++  const on = (value: boolean) => vi.stubEnv("ACCOUNT_TYPOS_FIXED_ENABLED", value ? "true" : "");
++
++  it(`"not doing th e10 minute sanitaion" reads "not doing the 10-minute sanitation"`, () => {
++    on(true);
++    expect(cardAccountText("not doing th e10 minute sanitaion", "Brisa Talmadge")).toBe("not doing the 10-minute sanitation");
++  });
++
++  it("the manager's words are kept: nothing reworded, a name never corrected, dates left as typed", () => {
++    on(true);
++    expect(cardAccountText("Brisa was late on 10/20 and did not clean the beds", "Brisa Talmadge")).toBe("Brisa was late on 10/20 and did not clean the beds");
++    expect(cardAccountText("she left at 5 minutes to close", null)).toBe("she left at 5 minutes to close");
++  });
++
++  it("off: as written", () => {
++    on(false);
++    expect(cardAccountText("not doing th e10 minute sanitaion", "Brisa Talmadge")).toBe("not doing th e10 minute sanitaion");
++  });
++});
+diff --git a/src/lib/forms/account-spelling.ts b/src/lib/forms/account-spelling.ts
+new file mode 100644
+index 00000000..a6e6316d
+--- /dev/null
++++ b/src/lib/forms/account-spelling.ts
+@@ -0,0 +1,45 @@
++import { accountTyposFixedEnabled } from "@/lib/config/chat-quality-flags";
++
++import { correctedText } from "./typo-match";
++import { NEVER_CORRECTED, typoVocabulary } from "./typo-vocabulary";
++
++/**
++ * ============================================================================
++ * THE CARD'S ACCOUNT, WITH THE OBVIOUS TYPOS MENDED
++ * ============================================================================
++ *
++ * ACCOUNT_TYPOS_FIXED_ENABLED (QA, the sibling app's sanitation report, 10 Nov 2026 18:49Z, port from the sibling app; default off; same
++ * flag in both apps). Ask Bubbles had the same slip on its card's Issue line. "please make a ca for
++ * <name> for not doing th e10 minute sanitaion" put "not doing th e10 minute sanitaion" on the card
++ * (here its **Issue:** line). On: the card's account keeps the manager's words with the obvious slips mended — a word broken before a number
++ * ("th e10" → "the 10"), a misspelling one edit from a known word ("sanitaion" → "sanitation"; `typo-match.ts`'s rules: same
++ * first letter, no tie, never a name or a listed real word), and "10 minute sanitation" → "10-minute sanitation". Nothing
++ * is reworded, and dates, numbers and titles are left as typed (FORM_INPUT_FIDELITY, S#166, is about those; it is untouched).
++ * Off: the text as written.
++ */
++const ACCOUNT_WORDS = [
++  "sanitation", "sanitize", "sanitized", "cleaning", "cleaned", "minute", "minutes", "morning", "evening", "closing",
++  "opening", "register", "drawer", "shift", "lotion", "towels", "customer", "complaint", "schedule", "completed",
++];
++const SHORT_WORDS = new Set(["the", "a", "an", "to", "of", "in", "on", "at", "for", "and", "her", "his", "my", "our"]);
++
++/** "th e10" → "the 10": a short word whose last letter slipped onto the number after it. */
++function withWordBreaksMended(text: string): string {
++  return text.replace(/\b([a-z]{1,4}) ([a-z])(\d)/gi, (whole, head: string, tail: string, digit: string) =>
++    SHORT_WORDS.has(`${head}${tail}`.toLowerCase()) && !SHORT_WORDS.has(head.toLowerCase()) ? `${head}${tail} ${digit}` : whole,
++  );
++}
++
++/** "10 minute sanitation" → "10-minute sanitation": a number and a unit before the noun they describe. */
++function withUnitHyphen(text: string): string {
++  return text.replace(/\b(\d+) (minute|hour|day|week)\b(?=\s+[a-z])/gi, "$1-$2");
++}
++
++/** The account as the card shows it. `name` words (the employee's) are never corrected. */
++export function cardAccountText(text: string, name: string | null | undefined): string {
++  if (!accountTyposFixedEnabled()) return text;
++  const protectedWords = new Set((name ?? "").toLowerCase().split(/\s+/).filter(Boolean));
++  const list = [...new Set([...typoVocabulary(), ...ACCOUNT_WORDS])];
++  const spelled = correctedText(withWordBreaksMended(text), list, (word) => protectedWords.has(word.toLowerCase()) || NEVER_CORRECTED.has(word)).text;
++  return withUnitHyphen(spelled);
++}
