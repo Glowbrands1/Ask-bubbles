@@ -693,12 +693,10 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
       (field) => !EXIT_DERIVED_KEYS.has(field.key) && field.key !== fixedPlan?.key,
     );
     const promptGroups = groups.filter(
-      (group) =>
-        !EXIT_DERIVED_KEYS.has(group.key) &&
-        group.key !== warningGroup?.key &&
-        // COACHING_TYPE_STATED_TICKS_ENABLED: a type the manager named is theirs, not the model's.
-        !(statedCoachingType && group.key === coachingTypeGroup?.key),
-    );
+      (group) => !EXIT_DERIVED_KEYS.has(group.key) && group.key !== warningGroup?.key,
+    )
+      // COACHING_TYPE_STATED_TICKS_ENABLED: a type the manager named is theirs, not the model's.
+      .filter((group) => !(statedCoachingType && group.key === coachingTypeGroup?.key));
 
     /*
      * THE EXIT FORM'S DETAILS LINES, FROM THE MANAGER'S OWN WORDS — the
