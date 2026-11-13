@@ -1,0 +1,22 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov13-account-change-rederives-policy-phone: \"create ca form for tess varga for violating attendance policy, she was late on 10/20/26. verbal. no payroll deduct.\" then \"change the issue to she was on her phone the whole shift\": the policy lines and plan follow the phone account \u2014 OPEN in production (the Observation is the phone use, the offense, policy lines and plan stay Attendance)": {
+  "category": "INTENDED",
+  "reason": "Open-case it.fails wrapper: inner invariant now holds. Holding."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov13-account-change-rederives-policy-sanitation: \"create ca form for tess varga for violating attendance policy, she was late on 10/20/26. verbal. no payroll deduct.\" then \"change the issue to not doing the 10-minute sanitation\": the offense, Policy Violated, Direct policy and plan leave Attendance \u2014 OPEN in production (the Observation is the sanitation, the offense, policy lines and plan stay Attendance)": {
+  "category": "INTENDED",
+  "reason": "Open-case it.fails wrapper: inner invariant now holds. Holding."
+ },
+ "src/lib/ai/flags-off-parity.test.ts :: existing chat and form suites with every new flag off passes the suites whose expectations are already on main: src/app/api/chat/replay-pack, first half of the cases by id": {
+  "category": "INTENDED-HARNESS",
+  "reason": "Parity sub-run inherits the exported flag; its failures are the 2 account-change open-case wrappers (now holding)."
+ },
+ "replay: nov13-account-change-rederives-policy-phone [open]": {
+  "category": "INTENDED",
+  "reason": "Open case holds: after 'change the issue to she was on her phone the whole shift' the offense, Policy Violated ('Standards of Conduct \u2014 Cell Phone/Smart Watch Policy'), Direct policy (p. 19) and plan ('\u2026review the Cell Phone/Smart Watch policy\u2026') follow; OFF they stayed Attendance."
+ },
+ "replay: nov13-account-change-rederives-policy-sanitation [open]": {
+  "category": "INTENDED",
+  "reason": "Open case holds: after 'change the issue to not doing the 10-minute sanitation' the offense and Policy Violated are 'Other', Direct policy cleared, plan '\u2026review the applicable company policy\u2026' (never 'the Other policy'); OFF they stayed Attendance."
+ }
+}
