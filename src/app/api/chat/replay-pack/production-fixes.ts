@@ -758,4 +758,44 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov12-off-roster-place-answer-city-state-unlisted": "OFF_ROSTER_PLACE_ANSWER",
   // fixed in production by OFF_ROSTER_PLACE_ANSWER, QA hotfix 17r-b, 13 Nov 2026
   "nov12-off-roster-place-answer-17r-live-west-dodge": "OFF_ROSTER_PLACE_ANSWER",
+  // fixed in production by HUMAN_REPLIES, QA round 17s, 13 Nov 2026
+  "nov10-card-opener-once-ca-chain": "HUMAN_REPLIES",
+  // fixed in production by MAKE_THAT_UPDATE_ACCOUNT, QA round 17s, 13 Nov 2026
+  "nov10-make-that-update-writes-her-account": "MAKE_THAT_UPDATE_ACCOUNT",
+  // fixed in production by COACHING_OBSERVED_SAVED, QA round 17s, 13 Nov 2026
+  "nov10-p12-coaching-observed-saved-empty-heading": "COACHING_OBSERVED_SAVED",
+  // fixed in production by COACHING_OBSERVED_SAVED, QA round 17s, 13 Nov 2026
+  "nov10-p12-coaching-observed-saved-model-writes-nothing": "COACHING_OBSERVED_SAVED",
+  // fixed in production by COACHING_OBSERVED_SAVED, QA round 17s, 13 Nov 2026
+  "nov10-p12-coaching-observed-saved-no-heading": "COACHING_OBSERVED_SAVED",
+  // fixed in production by ONE_FORM_EACH_PERSON, QA round 17s, 13 Nov 2026
+  "nov10-p7-one-form-each-named": "ONE_FORM_EACH_PERSON",
+  // fixed in production by ONE_FORM_EACH_PERSON, QA round 17s, 13 Nov 2026
+  "nov10-p7-one-form-each-named-with-coaching-asks": "ONE_FORM_EACH_PERSON",
+  // fixed in production by ONE_FORM_EACH_PERSON, QA round 17s, 13 Nov 2026
+  "nov10-p7-unanswered-which-tamsin-asked-again": "ONE_FORM_EACH_PERSON",
+  // fixed in production by SURNAME_PARTICLES, QA round 17s, 13 Nov 2026
+  "nov10-surname-particles-de-la": "SURNAME_PARTICLES",
+  // fixed in production by SURNAME_PARTICLES, QA round 17s, 13 Nov 2026
+  "nov10-surname-particles-van-der": "SURNAME_PARTICLES",
+  // fixed in production by PASTED_REVIEW_ASKS_WHAT_YOU_SAW, QA round 17s, 13 Nov 2026
+  "nov12-17n-2-pasted-customer-review-asks-what-you-saw": "PASTED_REVIEW_ASKS_WHAT_YOU_SAW",
+  // fixed in production by THIS_FORM_IS_ABOUT, QA round 17s, 13 Nov 2026
+  "nov12-17n-3-this-form-is-about-cash-handling": "THIS_FORM_IS_ABOUT",
+  // fixed in production by REOPEN_IS_OPENING, QA round 17s, 13 Nov 2026
+  "nov12-17n-4b-late-to-reoepn-is-late-opening": "REOPEN_IS_OPENING",
+  // fixed in production by BARE_FORM_NAME_ASKS_WHAT, QA round 17s, 13 Nov 2026
+  "nov12-17n-4c-bare-form-name-asks-what": "BARE_FORM_NAME_ASKS_WHAT",
+  // fixed in production by PAYROLL_AMOUNT_AFTER_PAYROLL, QA round 17s, 13 Nov 2026
+  "nov12-payroll-amount-after-payroll": "PAYROLL_AMOUNT_AFTER_PAYROLL",
+  // fixed in production by PAYROLL_AMOUNT_AFTER_PAYROLL, QA round 17s, 13 Nov 2026
+  "nov12-payroll-amount-after-payroll-manager-only": "PAYROLL_AMOUNT_AFTER_PAYROLL",
+  // fixed in production by COACHING_ASKS_WHAT_HAPPENED, QA round 17s, 13 Nov 2026
+  "nov5-twin-sf-s27-coaching-name-only-asks-what-happened": "COACHING_ASKS_WHAT_HAPPENED",
+  // fixed in production by FULL_POSITION_TITLE, QA round 17s, 13 Nov 2026
+  "nov6-coding3-full-position-title-dm-line": "FULL_POSITION_TITLE",
+  // fixed in production by FULL_POSITION_TITLE, QA round 17s, 13 Nov 2026
+  "nov6-coding3-full-position-title-exit": "FULL_POSITION_TITLE",
+  // fixed in production by FULL_POSITION_TITLE, QA round 17s, 13 Nov 2026
+  "nov6-coding3-full-position-title-negative": "FULL_POSITION_TITLE",
 };
