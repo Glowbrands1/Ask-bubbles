@@ -1421,6 +1421,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 6: PRIOR_ACTIONS_NO_COMMA (October rebuild 4, #187 rebuilt on main; default off).
   "PRIOR_ACTIONS_NO_COMMA_ENABLED",
   "STORE_ALIAS_ENABLED",
+  // coding 4: CLOSE_SPELLING_MATCH (Pau via QA, 13 Nov 2026; default off).
+  "CLOSE_SPELLING_MATCH_ENABLED",
   "FULL_MANUAL_WIDE_GATE_ENABLED",
   // coding 6: MANAGER_FORM_CHOICE (B#181 rebuilt; default off; wiring awaits Coding-2).
   "MANAGER_FORM_CHOICE_ENABLED",
@@ -5443,4 +5445,15 @@ export function typoFullNameToRosterEnabled(): boolean {
  */
 export function exitNoticeStatedOnlyEnabled(): boolean {
   return envFlag("EXIT_NOTICE_STATED_ONLY_ENABLED");
+}
+
+/**
+ * CLOSE_SPELLING_MATCH (Pau, via QA, 13 Nov 2026): the manager's words are matched against the app's own lists by
+ * close spelling, not only exact spelling. A policy named "Care and Clening" cites the manual's "Care and Cleaning"
+ * section; a store typed one letter off is read as the roster store. Two close matches, or one that is not confident,
+ * are asked about ("Did you mean …?"), never taken. Names keep going through the roster readers. See
+ * `forms/close-spelling.ts`. Off, only exact spellings match, as before.
+ */
+export function closeSpellingMatchEnabled(): boolean {
+  return envFlag("CLOSE_SPELLING_MATCH_ENABLED");
 }
