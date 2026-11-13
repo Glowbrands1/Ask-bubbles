@@ -9,6 +9,7 @@ Vercel API, and never use real employee names. Records go to branch `claude/gate
 (docs/flag-classification/gate-bubbles-5/).
 
 ## In flight now
+- FREEZE 23:25Z (Pau): nothing running. B#872 FINISHED after this file was first written: GO (G5-872.md, a18f6e4a; base main 86abc8f0; a re-check on 17w main b9720947 would be a 1+1 re-run). The #872 notes below are kept for history.
 - **B#872 ACCOUNT_CHANGE_REDERIVES_POLICY_ENABLED**, head **88409387** (Coding-2), merged on main **86abc8f0** in worktree
   `/home/user/gate/p872` (clean merge, tsc clean, no protected file touched).
   - Arm: 1 OFF + 1 ON, queue id `#872`, started 21:30Z, ETA ~22:20Z. Output: `$S/rec/872/run.log` + `.md` (S = scratchpad, below).
