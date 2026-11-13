@@ -1,0 +1,38 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov13-edit-sees-saved-form-corrects-missed-part: a saved draft, \"add that she must attend every monthly meeting, and the other topic is missed monthly meeting\": the reading misses the topic; checking the saved form, the model adds it, and the reply names both \u2014 OPEN in production (the topic is never written: the reading missed it and nothing looked at the saved form)": {
+  "category": "INTENDED",
+  "reason": "Open-case it.fails wrapper: inner invariant now holds, so the wrapper reports failed. Holding."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov13-edit-sees-saved-form-hand-off-revision-corrects: the same turn handed off (the patch reader falls back) to the old path's revision, which writes the expectation only: the check adds the missed topic, and the reply names what is stored \u2014 OPEN in production (the topic is never written: the revision missed it and nothing looked at the saved form)": {
+  "category": "INTENDED",
+  "reason": "Open-case it.fails wrapper: inner invariant now holds, so the wrapper reports failed. Holding."
+ },
+ "src/lib/ai/flags-off-parity.test.ts :: existing chat and form suites with every new flag off passes the suites whose expectations are already on main: src/app/api/chat/replay-pack, first half of the cases by id": {
+  "category": "INTENDED-HARNESS",
+  "reason": "Parity sub-run inherits the exported flag; its only 2 failures are the 2 edit-sees open-case wrappers (now holding)."
+ },
+ "replay: nov10-twin-sf-s21-template-outline-saved [fix:TEMPLATE_OUTLINE_FIELDS_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "A repeated rewrite that leaves storage unchanged now says 'already says that: I checked the saved form, and nothing on it needed to change' instead of 'I didn't change anything on the form' (PR 3519e3db's design); the case holds both ways."
+ },
+ "replay: nov10-twin-sf-s21-template-outline-saved [production]": {
+  "category": "INTENDED",
+  "reason": "A repeated rewrite that leaves storage unchanged now says 'already says that: I checked the saved form, and nothing on it needed to change' instead of 'I didn't change anything on the form' (PR 3519e3db's design); the case holds both ways."
+ },
+ "replay: nov13-edit-sees-saved-form-corrects-missed-part [open]": {
+  "category": "INTENDED",
+  "reason": "Open case now holds (scripted check rounds): the check sees the stored form missing the topic and writes it; the reply names Other 'Missed monthly meeting' and Topic 'other'. Mechanism proven; real-model behaviour untested."
+ },
+ "replay: nov13-edit-sees-saved-form-hand-off-revision-corrects [open]": {
+  "category": "INTENDED",
+  "reason": "Open case now holds (scripted check rounds): the check sees the stored form missing the topic and writes it; the reply names Other 'Missed monthly meeting' and Topic 'other'. Mechanism proven; real-model behaviour untested."
+ },
+ "replay: nov5-twin-sf-s21-must-see-behaviors-template [fix:TEMPLATE_OUTLINE_FIELDS_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "A repeated rewrite that leaves storage unchanged now says 'already says that: I checked the saved form, and nothing on it needed to change' instead of 'I didn't change anything on the form' (PR 3519e3db's design); the case holds both ways."
+ },
+ "replay: nov5-twin-sf-s21-must-see-behaviors-template [production]": {
+  "category": "INTENDED",
+  "reason": "A repeated rewrite that leaves storage unchanged now says 'already says that: I checked the saved form, and nothing on it needed to change' instead of 'I didn't change anything on the form' (PR 3519e3db's design); the case holds both ways."
+ }
+}
