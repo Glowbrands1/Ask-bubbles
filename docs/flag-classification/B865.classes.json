@@ -1,0 +1,38 @@
+{
+  "src/app/api/forms/corrective-action-dm-feedback-e2e.test.ts :: \"violating visitors at work policy\" is the manual's Visitors in the Workplace fails closed: a named policy no heading answers cites nothing, and the reply says so": {
+    "category": "INTENDED-HARNESS",
+    "reason": "Pin of the old \"Woven does not see \u2026\" string. The harness sets the flag for every test, so it leaks into this pin. The pin should hold the flag off (save and restore), as #866 did for S22. Not a production path (the expected string is \"Woven does not see a section \u2026\")"
+  },
+  "src/lib/forms/woven-training-conduct.test.ts :: WOVEN_TRAINING_CONDUCT_ENABLED off: the card line for a section the manual lacks is today's, byte for byte pins the old string": {
+    "category": "INTENDED-HARNESS",
+    "reason": "Pin of the old \"Woven does not see \u2026\" string. The harness sets the flag for every test, so it leaks into this pin. The pin should hold the flag off (save and restore), as #866 did for S22. Not a production path"
+  },
+  "src/lib/forms/woven-training-conduct.test.ts :: WOVEN_TRAINING_CONDUCT_ENABLED off: the three live behaviours \"not signing the woven policies\" is read as a policy named \"the woven\"": {
+    "category": "INTENDED-HARNESS",
+    "reason": "Pin of the old \"Woven does not see \u2026\" string. The harness sets the flag for every test, so it leaks into this pin. The pin should hold the flag off (save and restore), as #866 did for S22. Not a production path"
+  },
+  "src/lib/forms/woven-training-conduct.test.ts :: WOVEN_TRAINING_CONDUCT_ENABLED on a Woven phrase the manual lacks is said in the app's own voice; any other phrase keeps the fail-closed line": {
+    "category": "INTENDED-HARNESS",
+    "reason": "Pin of the old \"Woven does not see \u2026\" string. The harness sets the flag for every test, so it leaks into this pin. The pin should hold the flag off (save and restore), as #866 did for S22. Not a production path"
+  },
+  "replay: nov10-b4-twin-closing-not-late-opening [fix:LATE_OPENING_NEEDS_OPENING_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "POLICY_NOT_FOUND_PLAIN_WORDING: the card's no-section line reads \"I don't see a section of the current policy manual for \\\"<phrase>\\\" \u2026\" instead of \"Woven does not see \u2026\"; nothing else in the reply changes"
+  },
+  "replay: nov10-b4-twin-closing-not-late-opening [production]": {
+    "category": "INTENDED",
+    "reason": "POLICY_NOT_FOUND_PLAIN_WORDING: the card's no-section line reads \"I don't see a section of the current policy manual for \\\"<phrase>\\\" \u2026\" instead of \"Woven does not see \u2026\"; nothing else in the reply changes"
+  },
+  "replay: nov13-close-spelling-policy-shared-word-never-confident [production]": {
+    "category": "INTENDED",
+    "reason": "POLICY_NOT_FOUND_PLAIN_WORDING: the card's no-section line reads \"I don't see a section of the current policy manual for \\\"<phrase>\\\" \u2026\" instead of \"Woven does not see \u2026\"; nothing else in the reply changes"
+  },
+  "replay: nov5-twin-sf-s25-closing-no-late-opening-claim [fix:AS_YOU_SAID_MANAGER_WORDS_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "POLICY_NOT_FOUND_PLAIN_WORDING: the card's no-section line reads \"I don't see a section of the current policy manual for \\\"<phrase>\\\" \u2026\" instead of \"Woven does not see \u2026\"; nothing else in the reply changes"
+  },
+  "replay: nov5-twin-sf-s25-closing-no-late-opening-claim [production]": {
+    "category": "INTENDED",
+    "reason": "POLICY_NOT_FOUND_PLAIN_WORDING: the card's no-section line reads \"I don't see a section of the current policy manual for \\\"<phrase>\\\" \u2026\" instead of \"Woven does not see \u2026\"; nothing else in the reply changes"
+  }
+}
