@@ -1,0 +1,52 @@
+import { appendFileSync } from "node:fs";
+import { vi } from "vitest";
+
+import { STAFF, WEST_DODGE, type ReplayCase } from "./cases";
+
+const PROBES: { key: string; turns: string[] }[] = [
+  { key: "r1-performance-october", turns: ["create corrective action form for Rowan Kestrel, performance for october"] },
+  { key: "r2-do-not-terminate", turns: ["CA for Rowan Kestrel, do not terminate yet, she was late"] },
+  { key: "r3-sales-shortfall", turns: ["I need a verbal corrective action made for Rowan Kestrel. Not meeting sales requirements for the month of October"] },
+  { key: "r3b-sales-then-more", turns: ["I need a verbal corrective action made for Rowan Kestrel. Not meeting sales requirements for the month of October", "she also left the register drawer open"] },
+  { key: "r4-two-turn-account", turns: ["ca for Rowan Kestrel she was late on 11/2", "she also skipped the closing checklist that night"] },
+  { key: "r4b-title-and-account-same-turn", turns: ["ca for Rowan Kestrel, Team Member Part Time, she was late on 11/2", "she also skipped the closing checklist that night"] },
+  { key: "r5-coaching-title-then-account", turns: ["coaching form for Rowan Kestrel, Team Member Part Time", "she skipped the closing checklist on her shift last night"] },
+  { key: "r5b-coaching-account", turns: ["coaching form for Rowan Kestrel, she was late on 11/2"] },
+  { key: "r6-account-before-request", turns: ["can i give a ca for not signing off on the cleaning check list", "can you write me a ca for Rowan Kestrel"] },
+  { key: "t1-agm-safe", turns: ["create corrective action form for Rowan Kestrel, Assistant General Manager", "she left the safe open"] },
+  { key: "t2-flow-tm", turns: ["corrective action", "Rowan Kestrel, Team Member Part Time", "she left the safe open"] },
+  { key: "t2b-flow-agm", turns: ["Create a corrective action.", "Rowan Kestrel, Assistant General Manager", "she skipped the closing checklist on her shift last night"] },
+  { key: "t3-tm-question-then-account", turns: ["create corrective action form for Rowan Kestrel, Team Member Part Time", "what policy covers that?", "she left the safe open"] },
+  { key: "t4-tm-two-accounts", turns: ["create corrective action form for Rowan Kestrel, Team Member Part Time", "she left the safe open", "she was also late on 11/2"] },
+  { key: "t5-tm-question-only", turns: ["create corrective action form for Rowan Kestrel, Team Member Part Time", "what policy covers leaving the safe open?"] },
+  { key: "e1-edit-observation", turns: ["create a CA for general manager, rowan kestrel for violating the standards of conduct", "Rowan Kestrel, General Manager", "change observation of offense to: Rowan left the safe open overnight on 11/2/26."] },
+  { key: "e2-change-what-happened", turns: ["create corrective action form for Rowan Kestrel, Team Member Part Time", "change what happened to she left the safe open"] },
+  { key: "e3-make-it-about", turns: ["create corrective action form for Rowan Kestrel, Team Member Part Time", "make it about leaving the safe open"] },
+  { key: "e4-change-date", turns: ["create corrective action form for Rowan Kestrel, Team Member Part Time", "change the date to 11/2/26"] },
+  { key: "e5-make-written", turns: ["create corrective action form for Rowan Kestrel, Team Member Part Time", "make it a written warning"] },
+  { key: "q1-write-up-for", turns: ["write up Rowan Kestrel, Assistant General Manager, for leaving the safe open"] },
+  { key: "q2-store-and-title", turns: ["ca for Rowan Kestrel at west dodge, Team Member Part Time, she was late on 11/2 and didnt call"] },
+  { key: "q3-verbal-level", turns: ["verbal warning CA for Rowan Kestrel, Team Member Part Time. she left the register drawer open on 11/3"] },
+
+];
+
+export const PROBE_B866_CASES: ReplayCase[] = PROBES.map(({ key, turns }) => ({
+  id: `zz-probe-b866-${key}`,
+  title: turns.join(" → "),
+  report: "Gate-Bubbles probe (scratch, never committed)",
+  status: "fixed",
+  async run(t) {
+    vi.setSystemTime(new Date("2026-11-12T15:00:00Z"));
+    t.directory([...STAFF]);
+    t.as("location_manager", WEST_DODGE);
+    const thread = t.thread();
+    const out: unknown[] = [];
+    for (const turn of turns) {
+      const last = await thread.say(turn);
+      const card = thread.proposal as { templateKey?: string; issue?: string | null; supportsInlineDraft?: boolean } | null;
+      const issueLine = last.content.split("\n").find((line) => line.includes("**Issue:**")) ?? null;
+      out.push({ said: turn, template: card?.templateKey ?? null, issue: card?.issue ?? null, issueLine, create: card?.supportsInlineDraft ?? null, asks: /You haven't told me what happened yet/.test(last.content) });
+    }
+    appendFileSync(process.env.OUT!, JSON.stringify({ key, turns: out }) + "\n");
+  },
+}));
