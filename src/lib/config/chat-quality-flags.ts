@@ -1421,6 +1421,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 6: PRIOR_ACTIONS_NO_COMMA (October rebuild 4, #187 rebuilt on main; default off).
   "PRIOR_ACTIONS_NO_COMMA_ENABLED",
   "STORE_ALIAS_ENABLED",
+  // coding 4: FORM_DATE_BUSINESS_TODAY (live bug, QA, 13 Nov 2026; default off).
+  "FORM_DATE_BUSINESS_TODAY_ENABLED",
   "FULL_MANUAL_WIDE_GATE_ENABLED",
   // coding 6: MANAGER_FORM_CHOICE (B#181 rebuilt; default off; wiring awaits Coding-2).
   "MANAGER_FORM_CHOICE_ENABLED",
@@ -5443,4 +5445,14 @@ export function typoFullNameToRosterEnabled(): boolean {
  */
 export function exitNoticeStatedOnlyEnabled(): boolean {
   return envFlag("EXIT_NOTICE_STATED_ONLY_ENABLED");
+}
+
+/**
+ * FORM_DATE_BUSINESS_TODAY (live bug, QA, 13 Nov 2026; ported from the sibling app): every "today" used as a business
+ * date (here, the day Woven's termination and new-hire dates are read against) is the business date in
+ * BUSINESS_TIMEZONE, not the UTC date, which is already tomorrow in the evening. See `lib/business-today.ts`. Off, the
+ * UTC date, as before.
+ */
+export function formDateBusinessTodayEnabled(): boolean {
+  return envFlag("FORM_DATE_BUSINESS_TODAY_ENABLED");
 }
