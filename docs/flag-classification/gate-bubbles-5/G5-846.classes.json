@@ -1,0 +1,38 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-offered-name-accepted-admin: admin: \"CA for Brisa Talmadge, do not terminate yet, she was late\" \u2192 \"reply use Brisa Talmadge\" \u2192 \"use Brisa Talmadge\": the card is for Brisa Talmadge, with the account \u2014 OPEN in production (\"use Brisa Talmadge\" is refused: \"\\\"Brisa Talmadge\\\" isn't a person on your team\")": {
+  "category": "INTENDED",
+  "reason": "Open-case it.fails wrapper: inner invariant now holds, so the wrapper reports failed. Holding."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-offered-name-accepted-store-manager: store-manager: \"CA for Brisa Talmadge, do not terminate yet, she was late\" \u2192 \"reply use Brisa Talmadge\" \u2192 \"use Brisa Talmadge\": the card is for Brisa Talmadge, with the account \u2014 OPEN in production (\"use Brisa Talmadge\" is refused: \"\\\"Brisa Talmadge\\\" isn't a person on your team\")": {
+  "category": "INTENDED",
+  "reason": "Open-case it.fails wrapper: inner invariant now holds, so the wrapper reports failed. Holding."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov13-gate5-offered-name-after-place-answer: Admin: \"CA for Brisa Talmadge, do not terminate yet, she was late\" \u2192 \"Omaha, NE (West Dodge Rd)\" \u2192 \"use Brisa Talmadge\": the card is for Brisa Talmadge, at loc-264, Issue kept \u2014 OPEN in production (\"use Brisa Talmadge\" is refused after the place answer)": {
+  "category": "INTENDED",
+  "reason": "Open-case it.fails wrapper: inner invariant now holds, so the wrapper reports failed. Holding."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov13-offered-name-accepted-after-store-answer-admin: admin: \"CA for Brisa Talmadge, do not terminate yet, she was late\" \u2192 \"Omaha, NE (West Dodge Rd)\" \u2192 \"use Brisa Talmadge\": the card is for Brisa Talmadge, with its store \u2014 OPEN in production (\"use Brisa Talmadge\" after the store answer is refused: \"\\\"Brisa Talmadge\\\" isn't a person on your team\")": {
+  "category": "INTENDED",
+  "reason": "Open-case it.fails wrapper: inner invariant now holds, so the wrapper reports failed. Holding."
+ },
+ "src/lib/ai/flags-off-parity.test.ts :: existing chat and form suites with every new flag off passes the suites whose expectations are already on main: src/app/api/chat/replay-pack, first half of the cases by id": {
+  "category": "INTENDED-HARNESS",
+  "reason": "The parity sub-run inherits the exported flag; its only failures are the same 4 open-case wrappers (now holding)."
+ },
+ "replay: nov12-offered-name-accepted-admin [open]": {
+  "category": "INTENDED",
+  "reason": "Open case now holds: 'use Brisa Talmadge' is accepted (OFF: 'Who is this CA for? \"Brisa Talmadge\" isn't a person on your team \u2026'); the card is for the typed name with 'isn't in the Woven roster, so the form uses the name as you typed it', Issue 'she was late', Policy Attendance; after a store answer the store is kept ('Omaha, NE (West Dodge Rd), as you said')."
+ },
+ "replay: nov12-offered-name-accepted-store-manager [open]": {
+  "category": "INTENDED",
+  "reason": "Open case now holds: 'use Brisa Talmadge' is accepted (OFF: 'Who is this CA for? \"Brisa Talmadge\" isn't a person on your team \u2026'); the card is for the typed name with 'isn't in the Woven roster, so the form uses the name as you typed it', Issue 'she was late', Policy Attendance; after a store answer the store is kept ('Omaha, NE (West Dodge Rd), as you said')."
+ },
+ "replay: nov13-gate5-offered-name-after-place-answer [open]": {
+  "category": "INTENDED",
+  "reason": "Open case now holds: 'use Brisa Talmadge' is accepted (OFF: 'Who is this CA for? \"Brisa Talmadge\" isn't a person on your team \u2026'); the card is for the typed name with 'isn't in the Woven roster, so the form uses the name as you typed it', Issue 'she was late', Policy Attendance; after a store answer the store is kept ('Omaha, NE (West Dodge Rd), as you said')."
+ },
+ "replay: nov13-offered-name-accepted-after-store-answer-admin [open]": {
+  "category": "INTENDED",
+  "reason": "Open case now holds: 'use Brisa Talmadge' is accepted (OFF: 'Who is this CA for? \"Brisa Talmadge\" isn't a person on your team \u2026'); the card is for the typed name with 'isn't in the Woven roster, so the form uses the name as you typed it', Issue 'she was late', Policy Attendance; after a store answer the store is kept ('Omaha, NE (West Dodge Rd), as you said')."
+ }
+}
