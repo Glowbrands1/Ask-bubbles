@@ -63,6 +63,8 @@ export const NOV13_PLACE_STRIP_MUST_READ_CASES: ReplayCase[] = MUST_READ.map((wo
   title: `"${wording.turn}" — the store is still read`,
   report: "Gate-Bubbles-3 on #869 (13 Nov 2026), QA: a real store mention is never lost; invented person",
   status: "fixed",
+  // Run with the flag too (the sibling gate's note): a guard the flag could break must be checked with it on.
+  fixFlags: [FLAG],
   async run(t: ReplayContext) {
     vi.setSystemTime(new Date("2026-11-13T15:00:00Z"));
     t.directory([...STAFF]);
