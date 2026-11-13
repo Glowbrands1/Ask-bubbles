@@ -762,4 +762,10 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov10-card-opener-once-ca-chain": "HUMAN_REPLIES",
   // fixed in production by TERMINATION_TIDY_HELD_NAME, QA hotfix 17r-c, 13 Nov 2026
   "nov12-17r-termination-tidy-off-roster-ask": "TERMINATION_TIDY_HELD_NAME",
+  // fixed in production by OFFERED_NAME_ACCEPTED, QA hotfix 17r-c, 13 Nov 2026
+  "nov12-offered-name-accepted-admin": "OFFERED_NAME_ACCEPTED",
+  // fixed in production by OFFERED_NAME_ACCEPTED, QA hotfix 17r-c, 13 Nov 2026
+  "nov12-offered-name-accepted-store-manager": "OFFERED_NAME_ACCEPTED",
+  // fixed in production by OFFERED_NAME_ACCEPTED, QA hotfix 17r-c, 13 Nov 2026
+  "nov13-offered-name-accepted-after-store-answer-admin": "OFFERED_NAME_ACCEPTED",
 };
