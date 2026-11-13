@@ -143,6 +143,17 @@ const PROTECTED = [
  * Termination plan's closing is the termination sentence (`planClosing`, also
  * in `refreshedActionPlan`). Off, both are exactly as before; instances.ts is
  * not touched.
+}
+
+/**
+ * The user (Pau) approved on 10 Nov 2026, via QA ("ok surname particles"), in
+ * src/lib/forms/proposal.ts, both apps, exactly the lines of
+ * docs/patches/surname-particles.patch: the import of `particleSurname`
+ * ("./surname-particles"), and in readTypedName a particle surname after a
+ * first name ("de la vega") taken as one part, its extra words skipped and
+ * counted in the middle-name and whole-reply checks. Behind
+ * SURNAME_PARTICLES_ENABLED, default off; off, particleSurname is null and
+ * the reader is as before. proposal.ts is already excluded.
  */
 const APPROVED_PROTECTED_EDITS = [
   ":(exclude)src/lib/forms/required-closing.ts",
