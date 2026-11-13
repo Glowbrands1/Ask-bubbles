@@ -1401,6 +1401,11 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ADD_OUT_OF_OTHER_SECTIONS_ENABLED",
   "EXIT_TYPO_WORDS_ENABLED",
   "CA_REASON_DUE_TO_ENABLED",
+  "REOPEN_IS_OPENING_ENABLED",
+  "BARE_FORM_NAME_ASKS_WHAT_ENABLED",
+  "THIS_FORM_IS_ABOUT_ENABLED",
+  "PASTED_REVIEW_ASKS_WHAT_YOU_SAW_ENABLED",
+  "CA_NO_POLICY_ASKS_WHICH_ENABLED",
   "COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED",
   // coding 5: EXIT_NOTICE_VERB_TYPOS (QA's October triage, 10 Nov 2026; default off).
   "EXIT_NOTICE_VERB_TYPOS_ENABLED",
@@ -5225,6 +5230,57 @@ export function caProcedureBasisEnabled(): boolean {
  */
 export function noSelectionOnOpenCardEnabled(): boolean {
   return envFlag("NO_SELECTION_ON_OPEN_CARD_ENABLED");
+}
+
+/**
+ * REOPEN_IS_OPENING_ENABLED (QA's Bubbles 17n live test, 12 Nov 2026; default off; same flag in both apps). "he was late
+ * to reoepn the store on 11/9" cited Attendance p.14 from "late", not Late Opening; "late to reopen the store", spelled
+ * right, did too. On: "late to reopen" and a slip within two letters of "reopen" are a late opening
+ * (`forms/late-open.ts`). Off, as before.
+ */
+export function reopenIsOpeningEnabled(): boolean {
+  return envFlag("REOPEN_IS_OPENING_ENABLED");
+}
+
+/**
+ * BARE_FORM_NAME_ASKS_WHAT_ENABLED (QA's Bubbles 17n live test, 12 Nov 2026, 4c; default off; same flag in both apps).
+ * A pasted bare "Corrective Action Form" got "Who is this form for? Tell me the employee's full name." and an empty
+ * card. On: a turn that is only a form's name, with a card naming nobody, asks what the manager needs on that form,
+ * with no card (`forms/bare-form-name.ts`). Off, as before.
+ */
+export function bareFormNameAsksWhatEnabled(): boolean {
+  return envFlag("BARE_FORM_NAME_ASKS_WHAT_ENABLED");
+}
+
+/**
+ * THIS_FORM_IS_ABOUT_ENABLED (QA's Bubbles 17n live test, 12 Nov 2026, item 3; default off; same flag in both apps). On
+ * an open Coaching draft, "this form is about cash handling" was answered "I haven't changed the Coaching Form …
+ * everything on it is as it was" and the topic was ignored: only "make it about <X>" was read. On: "this form is about
+ * <X>" (and "the coaching form / CA is / should be about <X>") is a made-about, read by the same chain
+ * (`ai/make-it-about.ts`, `forms/revision.ts`). Off, as before.
+ */
+export function thisFormIsAboutEnabled(): boolean {
+  return envFlag("THIS_FORM_IS_ABOUT_ENABLED");
+}
+
+/**
+ * PASTED_REVIEW_ASKS_WHAT_YOU_SAW_ENABLED (QA's Bubbles 17n live test, 12 Nov 2026, item 2; default off; same flag in both
+ * apps). A pasted customer review was rightly not taken as the account, but the reply said "Everything I need is here"
+ * and never mentioned it. On: the reply says the review is the customer's words and asks "What did you see happen?"
+ * (`forms/pasted-customer-review.ts`). Off, as before.
+ */
+export function pastedReviewAsksWhatYouSawEnabled(): boolean {
+  return envFlag("PASTED_REVIEW_ASKS_WHAT_YOU_SAW_ENABLED");
+}
+
+/**
+ * CA_NO_POLICY_ASKS_WHICH_ENABLED (QA's Bubbles 17n live test, 12 Nov 2026, 4a; QA's ruling; default off; same flag in
+ * both apps). "he forgot to clsoe the register at night" gave a Corrective Action card with no Policy line and no
+ * question. On: such a card asks "**Which policy applies?**" and picks none (`forms/no-policy-asks-which.ts`). Off, as
+ * before.
+ */
+export function caNoPolicyAsksWhichEnabled(): boolean {
+  return envFlag("CA_NO_POLICY_ASKS_WHICH_ENABLED");
 }
 
 /**
