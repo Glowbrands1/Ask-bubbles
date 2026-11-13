@@ -1,0 +1,42 @@
+
+> ask-bubbles@0.1.0 eval
+> vitest run --config vitest.eval.config.mts
+
+
+ RUN  v4.1.11 /home/user/gate/g867
+
+
+Replay eval — flags on: HEADING_DISTINCTIVE_WORDS_ENABLED
+| Case | Flags off | Flags on |
+|---|---|---|
+| b9 | PASS 161ms | PASS 169ms |
+| b10 | PASS 401ms | PASS 377ms |
+| b11 | PASS 82ms | PASS 76ms |
+| b12 | FAIL (policy) 176ms | FAIL (policy) 174ms |
+| b18a | PASS 82ms | PASS 71ms |
+| b18b | PASS 41ms | PASS 42ms |
+| r1 | PASS 7ms | PASS 5ms |
+| b0 | PASS 238ms | PASS 214ms |
+| b1 | PASS 158ms | PASS 172ms |
+| b2 | PASS 78ms | PASS 77ms |
+| b3 | PASS 47ms | PASS 47ms |
+| b4 | PASS 163ms | PASS 147ms |
+| b5 | PASS 115ms | PASS 128ms |
+| b6 | PASS 245ms | PASS 194ms |
+| b7 | PASS 76ms | PASS 75ms |
+| b8 | PASS 34ms | PASS 34ms |
+| b13 | PASS 321ms | PASS 335ms |
+| b14 | PASS 19ms | PASS 18ms |
+| b15 | PASS 366ms | PASS 355ms |
+| b16 | PASS 15ms | PASS 15ms |
+| b17 | PASS 318ms | PASS 322ms |
+| sf-b1 | PASS 420ms | PASS 434ms |
+| sf-b3 | PASS 128ms | PASS 125ms |
+| sf-b4 | PASS 15ms | PASS 15ms |
+Latency p50/p95 off 115/401 ms, on 125/377 ms; total off 3706 ms, on 3621 ms.
+
+ Test Files  2 passed (2)
+      Tests  35 passed (35)
+   Start at  17:54:28
+   Duration  28.28s (transform 3.73s, setup 0ms, import 4.23s, tests 23.77s, environment 0ms)
+
