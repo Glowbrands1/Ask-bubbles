@@ -81,6 +81,10 @@ export interface ReplayContext {
   patchChecks?(outputs: readonly unknown[]): void;
   /** EDIT_SEES_SAVED_FORM_ENABLED: how many check rounds the patch model was asked this case. */
   patchCheckCalls?(): number;
+  /** CARD_CHECKED_AGAINST_WORDS_ENABLED: the card check's model outputs, in order; past the end it falls back. */
+  cardChecks?(outputs: readonly unknown[]): void;
+  /** CARD_CHECKED_AGAINST_WORDS_ENABLED: how many card-check model calls this case made. */
+  cardCheckCalls?(): number;
   /** Fault injection (QA, 9 Nov 2026): from now on, a save of the form's values that includes this field fails (the save throws). */
   failSavesOf?(field: string): void;
   /** Fault injection (DRAFT_WRITE_NEVER_SILENT_ENABLED): the draft route's next one-writer write also carries this field, once; the real writer refuses it and, all or nothing, the whole write. */

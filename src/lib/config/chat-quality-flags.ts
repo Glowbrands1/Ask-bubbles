@@ -1502,6 +1502,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "TYPO_FULL_NAME_TO_ROSTER_ENABLED",
   // EDIT_SEES_SAVED_FORM (default off; Pau's direction via QA, 13 Nov 2026): in the list, as every chat flag.
   "EDIT_SEES_SAVED_FORM_ENABLED",
+  // CARD_CHECKED_AGAINST_WORDS (default off; Pau's direction via QA, 13 Nov 2026): in the list, as every chat flag.
+  "CARD_CHECKED_AGAINST_WORDS_ENABLED",
 ] as const;
 
 /**
@@ -5457,4 +5459,16 @@ export function exitNoticeStatedOnlyEnabled(): boolean {
  */
 export function editSeesSavedFormEnabled(): boolean {
   return envFlag("EDIT_SEES_SAVED_FORM_ENABLED");
+}
+
+/**
+ * CARD_CHECKED_AGAINST_WORDS_ENABLED (coding 6, 13 Nov 2026; default off; Pau's direction via QA). Cards showed an Issue
+ * that was a hedge ("do not terminate yet"), a job title, a store label or a name, and a person who was a title. On:
+ * before a card is shown it is checked against the manager's own words (`forms/card-checked-against-words.ts`): code
+ * checks on every card, a repair from the manager's clauses, and only then one structured model call (at most two) whose
+ * corrections must quote the manager. Nothing is invented: an Issue nothing repairs is blank and the card asks "What
+ * happened?". Off, as before.
+ */
+export function cardCheckedAgainstWordsEnabled(): boolean {
+  return envFlag("CARD_CHECKED_AGAINST_WORDS_ENABLED");
 }
