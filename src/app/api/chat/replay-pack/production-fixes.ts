@@ -810,4 +810,6 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov13-heading-distinctive-words-retaliaton-policy": "HEADING_DISTINCTIVE_WORDS",
   // fixed in production by PLACE_STRIP_WHOLE_PHRASE_ONLY, QA round 17v, 13 Nov 2026
   "nov13-place-strip-kearney-high-kept": "PLACE_STRIP_WHOLE_PHRASE_ONLY",
+  // fixed in production by CARD_CHECKED_AGAINST_WORDS, QA round 17w, 13 Nov 2026
+  "nov13-17rc-added-detail-kept-on-card": "CARD_CHECKED_AGAINST_WORDS",
 };
