@@ -123,7 +123,12 @@ export function managerGaveAccount(
   const name = card.employeeName?.trim();
   if (!name || !card.templateKey) return false;
   const turns = turnsForThisForm(history, card.templateKey);
-  const said = [...turns.filter((turn) => turn.role === "user").map((turn) => turn.content), question].map(withoutStateLead).join("\n");
+  // A question to the app ("what does the manual say about shirts?") is no account of what the employee did.
+  const asked = (text: string) => /\?\s*$/.test(text.trim());
+  const said = [...turns.filter((turn) => turn.role === "user").map((turn) => turn.content), question]
+    .filter((text) => !asked(text))
+    .map(withoutStateLead)
+    .join("\n");
   return hasAccount(said, name, [name, card.employeeRole ?? "", card.locationName ?? ""]);
 }
 

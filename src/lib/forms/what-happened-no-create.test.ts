@@ -38,6 +38,12 @@ describe("WHAT_HAPPENED_NO_CREATE_ENABLED", () => {
       expect(withNoCreateWhileAsking(ASKING, { question, history }), question).toEqual(ASKING);
     }
     expect(withNoCreateWhileAsking(ASKING, { question: "create a corrective action for Rowan Kestrel", history: [] }).formProposal.supportsInlineDraft).toBe(false);
+    // Gate re-check (13 Nov 2026, sf-s28's control): an earlier question to the app is no account.
+    const afterQuestion = withNoCreateWhileAsking(ASKING, {
+      question: "write a ca for Rowan Kestrel from west dodge",
+      history: [{ role: "user", content: "what does the manual say about shirts?" }],
+    });
+    expect(afterQuestion.formProposal.supportsInlineDraft).toBe(false);
   });
 
   it("on: a reply that does not ask is left as it is", () => {
