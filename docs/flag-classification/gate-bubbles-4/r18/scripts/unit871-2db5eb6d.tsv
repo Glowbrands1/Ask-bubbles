@@ -1,0 +1,16 @@
+a exact	true	add that she was on the phone for the entire shift
+b NOT	false	add that she was not on the phone for the entire shift
+c wasn't	false	add that she wasn't on the phone for the entire shift
+d whole	true	add that she was on the phone for the whole shift
+e her phone	true	add that she was on her phone for the whole shift
+f reordered	false	add that the entire shift she was on the phone
+g name subject	true	add that Ottoline was on the phone for the entire shift
+h trailing too	false	add that she was on the phone for the entire shift too
+i prefix only	true	add that she was on the phone
+j no subject	true	add phone use
+k pos vs negated form	false	add that she was on the phone during her break
+l neg vs negated form	true	add that she was not on the phone during her break
+m new	false	add that she was warned last week
+n not allowed	false	add that phone use is not allowed on the floor
+o allowed (opposite)	false	add that phone use is allowed on the floor
+p limited (opposite?)	false	add that phone use is not limited to breaks

@@ -1,0 +1,16 @@
+a exact	true
+b NOT	false
+c wasn't	false
+d whole no for	true
+e her phone	true
+f reordered	false
+g name subject	true
+i prefix only	true
+j no subject	true
+k pos vs negated form	false
+l neg vs negated form	true
+m new	false
+o allowed (opposite)	false
+q filler changes meaning	false
+r of vs for	true
+s on vs off?	false

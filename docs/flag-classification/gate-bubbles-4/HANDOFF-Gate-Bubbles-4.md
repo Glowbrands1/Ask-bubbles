@@ -110,3 +110,14 @@ None set by this session.
    (provisional: MADE GO, ADD NO-GO on negation; re-run probe "add that she was not on the phone …").
 2. Ask QA how to re-land the 8 not-on-main PRs and #830 (method above), then gate each re-land 1+1.
 3. Keep the pause: start nothing from the held list until QA sends it; ignore #869 deltas (Gate-Bubbles-3's).
+
+## UPDATE 21:50Z — #871
+- Head is now e411007060 (Coding-6 deltas: 2db5eb6daa = in-order phrase match, negation in place; e411007060 = filler
+  words skipped). ADD negation NO-GO is FIXED: "add that she was not/wasn't on the phone …" no longer says "already says
+  that" (unit probes r18/scripts/unit871-*.tsv; replay probes probe871-2db5eb6d.jsonl). Minor: "add phone use" matches
+  an Expectation line; "of the entire shift" == "for the entire shift" (harmless).
+- Gate step: ON run (both flags) on e411007060 in /home/user/gate/g871c, reusing the OFF checkpoint (the delta is
+  flag-gated). ETA ~22:40Z. Resume: worktree of pr871 head + `one.sh <n> MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED_ENABLED
+  <prodenv> ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED` (full OFF+ON, ~1.5 h, if the checkpoint is gone), then classify the
+  rows (expect: the two nov13 OPEN cases + the new small-word-left-out arm hold; parity row = harness).
+- Provisional: both flags GO. Main is now b9720947 (17w); re-check the merge before the verdict.
