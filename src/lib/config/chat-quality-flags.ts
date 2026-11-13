@@ -1002,6 +1002,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 2: the sibling app's "what happened" check (Pau's direction, 13 Nov 2026; default off).
   "CA_ASKS_WHAT_HAPPENED_ENABLED",
   "WHAT_HAPPENED_NO_CREATE_ENABLED",
+  // coding 2: ACCOUNT_CHANGE_REDERIVES_POLICY (QA's Bubbles 17u, 13 Nov 2026; default off).
+  "ACCOUNT_CHANGE_REDERIVES_POLICY_ENABLED",
   // QA round 17r (13 Nov 2026): TEAM_CARD_NOT_PRODUCT (#668) and FORM_EDIT_SOURCE_TURN (#480) are switched on in production.
   "TEAM_CARD_NOT_PRODUCT_ENABLED",
   "FORM_EDIT_SOURCE_TURN_ENABLED",
@@ -3556,6 +3558,19 @@ export function caAsksWhatHappenedEnabled(): boolean {
  */
 export function whatHappenedNoCreateEnabled(): boolean {
   return envFlag("WHAT_HAPPENED_NO_CREATE_ENABLED");
+}
+
+/**
+ * ACCOUNT_CHANGE_REDERIVES_POLICY_ENABLED (Coding-2, 13 Nov 2026; default off; QA's Bubbles 17u live test). On a
+ * Corrective Action draft about lateness, "make it about her phone use instead, she was on her phone the whole shift"
+ * and "change the issue to not doing the 10-minute sanitation" rewrote the Observation, but Type of Offense, Policy
+ * Violated, Direct policy and the synced Action Plan stayed on the old topic (Attendance). On: when an edit replaces the
+ * whole account, the offense is read again from the new account and those lines and the plan follow it
+ * (`forms/chat-policy-change.ts` rederivePolicyFromAccount). A policy the manager names in that edit is kept, and a line
+ * or tick the manager wrote is never touched. Off, as before.
+ */
+export function accountChangeRederivesPolicyEnabled(): boolean {
+  return envFlag("ACCOUNT_CHANGE_REDERIVES_POLICY_ENABLED");
 }
 
 /**
