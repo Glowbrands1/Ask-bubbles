@@ -329,16 +329,19 @@ export function cleaningIncidentPhrase(rawText: string): string | null {
  * patterns and no others.
  */
 export function cleaningUndonePhrase(rawText: string): string | null {
-  // SPELLING_CLEANUP_ENABLED: "sanitation", the spelling a cleaned draft writes, is the sanitizing it names.
-  const text = spellingCleanupEnabled() ? (rawText ?? "").replace(/\bsanitation\b/gi, "sanitizing") : rawText;
+  // SPELLING_CLEANUP_ENABLED: "sanitation" reads as the sanitizing it names. A same-length stand-in the cleaning words
+  // match ("sanitzation") is read, and the phrase returned says "sanitation" again: it is quoted as the manager's words.
+  const cleanup = spellingCleanupEnabled();
+  const text = cleanup ? (rawText ?? "").replace(/\bsanitation\b/gi, "sanitzation") : rawText;
+  const said = (phrase: string) => (cleanup ? phrase.replace(/\bsanitzation\b/g, "sanitation") : phrase);
   for (const sentence of statements(normalize(text))) {
     for (const [index, pattern] of CLEANING_UNDONE.entries()) {
       const match = pattern.exec(sentence);
-      if (match && readsAsIncident(sentence, match, index)) return match[0].trim();
+      if (match && readsAsIncident(sentence, match, index)) return said(match[0].trim());
     }
     if (cleaningOtherEveryWordingEnabled()) {
       const match = CLEANING_UNDONE_GERUND.exec(sentence);
-      if (match && readsAsIncident(sentence, match, 1)) return match[0].trim();
+      if (match && readsAsIncident(sentence, match, 1)) return said(match[0].trim());
     }
   }
   return null;
