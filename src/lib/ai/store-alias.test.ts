@@ -115,3 +115,35 @@ describe("STORE_ALIAS_ENABLED on: addresses and later place words", () => {
     expect(ids(out.question)).toContain(DODGE);
   });
 });
+
+describe("PLACE_STRIP_WHOLE_PHRASE_ONLY (QA, 13 Nov 2026)", () => {
+  afterEach(() => {
+    delete process.env.PLACE_STRIP_WHOLE_PHRASE_ONLY_ENABLED;
+  });
+
+  it("off: a store inside a longer name is written (as on main)", () => {
+    // Pinned off (Gate-Bubbles-3): a PLACE_STRIP_WHOLE_PHRASE_ONLY_ENABLED set in the environment must not turn it on.
+    delete process.env.PLACE_STRIP_WHOLE_PHRASE_ONLY_ENABLED;
+    process.env[FLAG] = "true";
+    expect(rosterNames("she was late because she was at kearney high")).toBe("she was late because she was at Kearney NE high");
+  });
+
+  it("on: a store is written only where its phrase ends", () => {
+    process.env[FLAG] = "true";
+    process.env.PLACE_STRIP_WHOLE_PHRASE_ONLY_ENABLED = "true";
+    expect(rosterNames("she was late because she was at kearney high")).toBe("she was late because she was at kearney high");
+    expect(rosterNames("she was late at kearney ne today")).toBe("she was late at Kearney NE today");
+    expect(rosterNames("ca for kira dunmore at dodge ne, she was late")).toBe("ca for kira dunmore at Omaha NE (West Dodge Rd), she was late");
+    // Gate-Bubbles-3 (#869): only a word that continues a proper noun blocks it; a date, a dash or a weekday does not.
+    expect(rosterNames("verbal ca for avery at kearney ne 11/1/26 she was late")).toBe("verbal ca for avery at Kearney NE 11/1/26 she was late");
+    expect(rosterNames("verbal ca for avery at kearney ne - no call no show")).toBe("verbal ca for avery at Kearney NE - no call no show");
+    expect(rosterNames("verbal ca for avery at kearney ne Monday she was late")).toBe("verbal ca for avery at Kearney NE Monday she was late");
+    expect(rosterNames("she was at kearney ne mall all day")).toBe("she was at kearney ne mall all day");
+    // QA's ruling (Gate-Sunny's probes): a capitalised word does not block it.
+    expect(rosterNames("late at kearney ne Today")).toBe("late at Kearney NE Today");
+    expect(rosterNames("late at kearney ne NCNS")).toBe("late at Kearney NE NCNS");
+    // Gate-Bubbles-3 (#869): a continuation word that is the store's own label, or is followed by "of", does not block it.
+    expect(rosterNames("ca for avery at west dodge st late on 11/1")).toBe("ca for avery at Omaha NE (West Dodge Rd) st late on 11/1");
+    expect(rosterNames("she was at kearney ne west of the register")).toBe("she was at Kearney NE west of the register");
+  });
+});

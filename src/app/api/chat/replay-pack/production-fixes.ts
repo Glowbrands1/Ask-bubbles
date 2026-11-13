@@ -804,4 +804,10 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov13-edit-sees-saved-form-corrects-missed-part": "EDIT_SEES_SAVED_FORM",
   // fixed in production by EDIT_SEES_SAVED_FORM, QA round 17u, 13 Nov 2026
   "nov13-edit-sees-saved-form-hand-off-revision-corrects": "EDIT_SEES_SAVED_FORM",
+  // fixed in production by HEADING_DISTINCTIVE_WORDS, QA round 17v, 13 Nov 2026
+  "nov13-heading-distinctive-words-retaliation-policy": "HEADING_DISTINCTIVE_WORDS",
+  // fixed in production by HEADING_DISTINCTIVE_WORDS, QA round 17v, 13 Nov 2026
+  "nov13-heading-distinctive-words-retaliaton-policy": "HEADING_DISTINCTIVE_WORDS",
+  // fixed in production by PLACE_STRIP_WHOLE_PHRASE_ONLY, QA round 17v, 13 Nov 2026
+  "nov13-place-strip-kearney-high-kept": "PLACE_STRIP_WHOLE_PHRASE_ONLY",
 };
