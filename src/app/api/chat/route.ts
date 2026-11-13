@@ -56,6 +56,7 @@ import {
   answerTurnLevelEnabled,
   terminationCardTidyEnabled,
   humanRepliesEnabled,
+  closeSpellingMatchEnabled,
   offRosterAskBeforeCardEnabled,
   oneFormEachPersonEnabled,
   outlineOnOpenProposalEnabled,
@@ -1164,6 +1165,15 @@ async function postChat(request: Request) {
       answer = (await import("@/lib/forms/confirmed-name-level")).withConfirmedNameLevel(answer, parsed.history, asked.question);
       // PROPOSAL_NAME_CORRECTION_ENABLED: an off-roster "change her name to …" on the card asks which, never kept silently.
       answer = withCorrectionNotDropped(answer, parsed);
+      // CLOSE_SPELLING_MATCH_ENABLED: a policy named close to a manual heading, not confidently, is asked "Did you mean …?" (`lib/forms/close-policy-ask.ts`).
+      if (closeSpellingMatchEnabled()) {
+        answer = await (await import("@/lib/forms/close-policy-ask")).withClosePolicyQuestion(answer, async () => {
+          const { SupabaseKnowledgeProvider } = await import("@/lib/knowledge/providers/supabase");
+          const { ACTIVE_BRAND } = await import("@/lib/brand");
+          const manual = await new SupabaseKnowledgeProvider().fetchOfficialPolicyManual(ACTIVE_BRAND.knowledgeScopeId);
+          return manual.ok ? manual.chunks : null;
+        }, [...parsed.history.filter((turn) => turn.role === "user").map((turn) => turn.content), asked.question].join("\n"));
+      }
       // CARD_PLAN_MATCHES_CREATE_ENABLED: an Attendance CA's card shows the plan Create will save (`lib/forms/card-plan-matches-create.ts`).
       if (cardPlanMatchesCreateEnabled()) {
         answer = (await import("@/lib/forms/card-plan-matches-create")).withCardPlanAsCreate(answer, [

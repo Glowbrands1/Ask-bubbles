@@ -1425,6 +1425,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "STORE_ALIAS_ENABLED",
   // coding 4: FORM_DATE_BUSINESS_TODAY (live bug, QA, 13 Nov 2026; default off).
   "FORM_DATE_BUSINESS_TODAY_ENABLED",
+  // coding 4: CLOSE_SPELLING_MATCH (Pau via QA, 13 Nov 2026; default off).
+  "CLOSE_SPELLING_MATCH_ENABLED",
   "FULL_MANUAL_WIDE_GATE_ENABLED",
   // coding 6: MANAGER_FORM_CHOICE (B#181 rebuilt; default off; wiring awaits Coding-2).
   "MANAGER_FORM_CHOICE_ENABLED",
@@ -5506,4 +5508,15 @@ export function terminationTidyHeldNameEnabled(): boolean {
  */
 export function formDateBusinessTodayEnabled(): boolean {
   return envFlag("FORM_DATE_BUSINESS_TODAY_ENABLED");
+}
+
+/**
+ * CLOSE_SPELLING_MATCH (Pau, via QA, 13 Nov 2026): the manager's words are matched against the app's own lists by
+ * close spelling, not only exact spelling. A policy named "Care and Clening" cites the manual's "Care and Cleaning"
+ * section; a store typed one letter off is read as the roster store. Two close matches, or one that is not confident,
+ * are asked about ("Did you mean …?"), never taken. Names keep going through the roster readers. See
+ * `forms/close-spelling.ts`. Off, only exact spellings match, as before.
+ */
+export function closeSpellingMatchEnabled(): boolean {
+  return envFlag("CLOSE_SPELLING_MATCH_ENABLED");
 }
