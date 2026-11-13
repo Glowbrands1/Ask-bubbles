@@ -186,7 +186,7 @@ function manualChunk(index: number, page: number, heading: string, body: string)
 export const NOV13_CLOSE_SPELLING_PROOF_CASES: ReplayCase[] = [
   {
     id: "nov13-close-spelling-policy-two-headings-asks-which",
-    title: `"… violating the key holdr policy …", with Key Holder Guidelines and Key Holder Requirements — "Did you mean A or B?"`,
+    title: `MECHANISM TEST, TWO INVENTED HEADINGS ADDED FOR THE TEST (not in the live manual): "… violating the key holdr policy …" with "Key Holder Guidelines" and "Key Holder Requirements" — "Did you mean A or B?"`,
     report: `${REPORT}; QA's proof: one letter off from two headings`,
     status: { open: `no question: the card says no section was found for "key holdr"` },
     fixFlags: [FLAG],
