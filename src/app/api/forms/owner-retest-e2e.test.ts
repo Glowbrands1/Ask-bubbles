@@ -170,6 +170,14 @@ vi.mock("@/lib/reporting/read/employee-facts", () => ({
   EMPLOYEE_DATA_HEADING: "CURRENT EMPLOYEE PERFORMANCE DATA",
 }));
 
+// RETRIEVAL_RECALL_ENABLED (test harness only, QA 11 Nov 2026): recall reads the same rows as this file's knowledge
+// double, so the flag can be gated here without reaching the live search. Off, recall is never called.
+vi.mock("@/lib/knowledge/recall-match", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/knowledge/recall-match")>()),
+  // This file's knowledge double does not reach a dynamic import here, so recall finds nothing, as other harnesses stub it.
+  matchRecallKnowledge: async () => [],
+}));
+
 vi.mock("@/lib/knowledge/providers/supabase", () => ({
   SupabaseKnowledgeProvider: class {
     readonly name = "test double";

@@ -53,6 +53,16 @@ vi.mock("./form-proposal", async (importOriginal) => ({
 vi.mock("@/lib/forms/repository", () => ({ listTemplateSummaries: async () => [] }));
 vi.mock("@/lib/ai/entity-facts", () => ({ resolveChatEntities: async () => ({ block: null, direct: null }) }));
 vi.mock("@/lib/chat/person-memory-store", () => ({ recallPeople: async () => null }));
+// RETRIEVAL_RECALL_ENABLED (test harness only, QA 11 Nov 2026): recall reads the same rows as this file's knowledge
+// double, so the flag can be gated here without reaching the live search. Off, recall is never called.
+vi.mock("@/lib/knowledge/recall-match", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/knowledge/recall-match")>()),
+  matchRecallKnowledge: async (input: { query: string; scopeId: string; limit?: number }) => {
+    const { SupabaseKnowledgeProvider } = await import("@/lib/knowledge/providers/supabase");
+    return (await new SupabaseKnowledgeProvider().match(input as never)) as never;
+  },
+}));
+
 vi.mock("@/lib/knowledge/providers/supabase", () => ({
   SupabaseKnowledgeProvider: class {
     readonly name = "test double";
