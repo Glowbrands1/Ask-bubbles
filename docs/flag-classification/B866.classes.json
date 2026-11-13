@@ -1,0 +1,26 @@
+{
+  "src/app/api/chat/proposal-path-flags-e2e.test.ts :: FORM_EDIT_DATE_RULES off: production today S22: the Issue keeps \"general manager\"": {
+    "category": "INTENDED-HARNESS",
+    "reason": "Pin of the pre-FORM_EDIT_DATE_RULES path (live() removes that flag; production has it on). There the edit is not applied, so the flag copies the whole edit command into the Issue: \"change observation of offense to: \u2026\". On production's path S22 (EDIT_DATES) holds OFF and ON. The pin must be moved on merge. The verbatim copy is the defect in the verdict"
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov13-ca-asks-what-happened-answer-is-the-issue: \"create corrective action form for Rowan Kestrel, Team Member Part Time\" \u2192 \"she skipped the closing checklist on her shift last night\": the Issue is the account, never the job title \u2014 OPEN in production (the turn-2 Issue (What happened) is the turn-1 job title, not the account)": {
+    "category": "INTENDED",
+    "reason": "The new open case holds with the flag on: ANSWER_IS_THE_ISSUE: the title-only Issue (\"Team Member Part Time\") becomes the manager's answer to the ask, \"she skipped the closing checklist on her shift last night\""
+  },
+  "src/lib/ai/flags-off-parity.test.ts :: existing chat and form suites with every new flag off passes the suites whose expectations are already on main: src/app/api/chat/replay-pack, first half of the cases by id": {
+    "category": "INTENDED-HARNESS",
+    "reason": "flags-off-parity's child replay-pack run inherits FLAG_CLASSIFY_ON, so the new open case holds and its open status fails; not a production path"
+  },
+  "replay: nov13-ca-asks-what-happened-answer-is-the-issue [open]": {
+    "category": "INTENDED",
+    "reason": "The new open case holds with the flag on: ANSWER_IS_THE_ISSUE: the title-only Issue (\"Team Member Part Time\") becomes the manager's answer to the ask, \"she skipped the closing checklist on her shift last night\""
+  },
+  "replay: nov13-ca-asks-what-happened-negative-answer-to-the-ask [fix:CA_ASKS_WHAT_HAPPENED_ENABLED,WHAT_HAPPENED_NO_CREATE_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "ANSWER_IS_THE_ISSUE: the title-only Issue (\"Team Member Part Time\") becomes the manager's answer to the ask, \"she skipped the closing checklist on her shift last night\"; only the Issue line changes"
+  },
+  "replay: nov13-ca-asks-what-happened-negative-answer-to-the-ask [production]": {
+    "category": "INTENDED",
+    "reason": "ANSWER_IS_THE_ISSUE: the title-only Issue (\"Team Member Part Time\") becomes the manager's answer to the ask, \"she skipped the closing checklist on her shift last night\"; only the Issue line changes"
+  }
+}
