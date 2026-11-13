@@ -1,0 +1,54 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-same-name-asks-which: \"verbal CA for marnie holloway, she was late on 11/1/26\" with two Marnie Holloways at one store: a numbered choice with both titles, not \"Which store?\" \u2014 OPEN in production (two Marnie Holloways at one store are asked \"Which store is the one you mean?\")": {
+    "category": "INTENDED",
+    "reason": "SAME_NAME_ASKS_WHICH: two Marnie Holloways (one store, or two stores) get the numbered \"Did you mean 1. \u2026 or 2. \u2026?\" with store and title; \"2\", \"the assistant general manager\" or the store name picks that person by identity. The open pin now fails because the case holds."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-same-name-numbered-reply-selects: \"verbal CA for marnie holloway, she was late on 11/1/26\" with two Marnie Holloways at one store, then the Assistant General Manager's number: that person's card \u2014 OPEN in production (two Marnie Holloways at one store get no numbered choice to answer)": {
+    "category": "INTENDED",
+    "reason": "SAME_NAME_ASKS_WHICH: two Marnie Holloways (one store, or two stores) get the numbered \"Did you mean 1. \u2026 or 2. \u2026?\" with store and title; \"2\", \"the assistant general manager\" or the store name picks that person by identity. The open pin now fails because the case holds."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-same-name-store-reply-selects: two Team Members named Marnie Holloway at two stores, then the other store's name: that person's card \u2014 OPEN in production (two Marnie Holloways at two stores get the store question, not the numbered choice)": {
+    "category": "INTENDED",
+    "reason": "SAME_NAME_ASKS_WHICH: two Marnie Holloways (one store, or two stores) get the numbered \"Did you mean 1. \u2026 or 2. \u2026?\" with store and title; \"2\", \"the assistant general manager\" or the store name picks that person by identity. The open pin now fails because the case holds."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-same-name-title-reply-selects: \"verbal CA for marnie holloway, she was late on 11/1/26\" with two Marnie Holloways at one store, then \"the assistant general manager\": that person's card \u2014 OPEN in production (two Marnie Holloways at one store get no numbered choice to answer)": {
+    "category": "INTENDED",
+    "reason": "SAME_NAME_ASKS_WHICH: two Marnie Holloways (one store, or two stores) get the numbered \"Did you mean 1. \u2026 or 2. \u2026?\" with store and title; \"2\", \"the assistant general manager\" or the store name picks that person by identity. The open pin now fails because the case holds."
+  },
+  "src/lib/ai/flags-off-parity.test.ts :: existing chat and form suites with every new flag off passes the suites whose expectations are already on main: src/app/api/chat/replay-pack, first half of the cases by id": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The child run of the replay pack (first half) inherits the ON flag; its only failures are the 4 nov12-same-name open cases now holding."
+  },
+  "replay: nov10-step-shorthand-own-date [fix:STEP_SHORTHAND_OWN_DATE_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The case directory has two different people (e-2 from STAFF and e-remy-calder-d2) both Remy Calder, Store 264, Team Member Part Time. OFF asked \"Which store?\" naming the one store; ON asks the numbered question. The case still holds (date 10/13/26). Follow-up: when name, store and title all match, the two options read identically, so only the number tells them apart."
+  },
+  "replay: nov10-step-shorthand-own-date [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The case directory has two different people (e-2 from STAFF and e-remy-calder-d2) both Remy Calder, Store 264, Team Member Part Time. OFF asked \"Which store?\" naming the one store; ON asks the numbered question. The case still holds (date 10/13/26). Follow-up: when name, store and title all match, the two options read identically, so only the number tells them apart."
+  },
+  "replay: nov10-step-shorthand-own-date-direct [fix:STEP_SHORTHAND_OWN_DATE_ENABLED]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The case directory has two different people (e-2 from STAFF and e-remy-calder-d2) both Remy Calder, Store 264, Team Member Part Time. OFF asked \"Which store?\" naming the one store; ON asks the numbered question. The case still holds (date 10/13/26). Follow-up: when name, store and title all match, the two options read identically, so only the number tells them apart."
+  },
+  "replay: nov10-step-shorthand-own-date-direct [production]": {
+    "category": "INTENDED-ADJACENT",
+    "reason": "The case directory has two different people (e-2 from STAFF and e-remy-calder-d2) both Remy Calder, Store 264, Team Member Part Time. OFF asked \"Which store?\" naming the one store; ON asks the numbered question. The case still holds (date 10/13/26). Follow-up: when name, store and title all match, the two options read identically, so only the number tells them apart."
+  },
+  "replay: nov12-same-name-asks-which [open]": {
+    "category": "INTENDED",
+    "reason": "SAME_NAME_ASKS_WHICH: two Marnie Holloways (one store, or two stores) get the numbered \"Did you mean 1. \u2026 or 2. \u2026?\" with store and title; \"2\", \"the assistant general manager\" or the store name picks that person by identity. The open pin now fails because the case holds."
+  },
+  "replay: nov12-same-name-numbered-reply-selects [open]": {
+    "category": "INTENDED",
+    "reason": "SAME_NAME_ASKS_WHICH: two Marnie Holloways (one store, or two stores) get the numbered \"Did you mean 1. \u2026 or 2. \u2026?\" with store and title; \"2\", \"the assistant general manager\" or the store name picks that person by identity. The open pin now fails because the case holds."
+  },
+  "replay: nov12-same-name-store-reply-selects [open]": {
+    "category": "INTENDED",
+    "reason": "SAME_NAME_ASKS_WHICH: two Marnie Holloways (one store, or two stores) get the numbered \"Did you mean 1. \u2026 or 2. \u2026?\" with store and title; \"2\", \"the assistant general manager\" or the store name picks that person by identity. The open pin now fails because the case holds."
+  },
+  "replay: nov12-same-name-title-reply-selects [open]": {
+    "category": "INTENDED",
+    "reason": "SAME_NAME_ASKS_WHICH: two Marnie Holloways (one store, or two stores) get the numbered \"Did you mean 1. \u2026 or 2. \u2026?\" with store and title; \"2\", \"the assistant general manager\" or the store name picks that person by identity. The open pin now fails because the case holds."
+  }
+}
