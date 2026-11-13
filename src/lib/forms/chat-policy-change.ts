@@ -639,11 +639,17 @@ export async function rederivePolicyFromAccount(input: {
 
   // Policy Violated follows the boxes (never a line the manager typed).
   const violated = row(VIOLATED_KEY);
-  if (moved && !managers(VIOLATED_KEY) && fields.some((field) => field.key === VIOLATED_KEY)) {
+  /*
+   * Also when only Direct policy moved (the gate on the sibling port, 13 Nov 2026): two sections can share one Type of
+   * Offense box, so a new account re-cited Direct policy and the plan but left Policy Violated on the old section. The
+   * line names the section now cited, under the same box.
+   */
+  const recited = written.includes(POLICY_KEY) && sections.length > 0;
+  if ((moved || recited) && !managers(VIOLATED_KEY) && fields.some((field) => field.key === VIOLATED_KEY)) {
     const derived = offenseCategoryValue({
       document,
       variantKey: loaded.instance.variantKey,
-      checked: { [OFFENSE_KEY]: moved.keys },
+      checked: { [OFFENSE_KEY]: moved?.keys ?? keys },
       values: Object.fromEntries(loaded.values.map((value) => [value.fieldKey, value.value ?? ""])),
       sectionNames: boxSectionNames(sections.map((section) => section.heading)),
     });

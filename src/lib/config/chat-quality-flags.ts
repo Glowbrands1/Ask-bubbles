@@ -1004,6 +1004,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "WHAT_HAPPENED_NO_CREATE_ENABLED",
   // coding 2: ACCOUNT_CHANGE_REDERIVES_POLICY (QA's Bubbles 17u, 13 Nov 2026; default off).
   "ACCOUNT_CHANGE_REDERIVES_POLICY_ENABLED",
+  // coding 2: ACCOUNT_CHANGE_CLOSE_KEPT (the gate's note on the sibling's port, 13 Nov 2026; default off).
+  "ACCOUNT_CHANGE_CLOSE_KEPT_ENABLED",
   // QA round 17r (13 Nov 2026): TEAM_CARD_NOT_PRODUCT (#668) and FORM_EDIT_SOURCE_TURN (#480) are switched on in production.
   "TEAM_CARD_NOT_PRODUCT_ENABLED",
   "FORM_EDIT_SOURCE_TURN_ENABLED",
@@ -3571,6 +3573,17 @@ export function whatHappenedNoCreateEnabled(): boolean {
  */
 export function accountChangeRederivesPolicyEnabled(): boolean {
   return envFlag("ACCOUNT_CHANGE_REDERIVES_POLICY_ENABLED");
+}
+
+/**
+ * ACCOUNT_CHANGE_CLOSE_KEPT_ENABLED (Coding-2, 13 Nov 2026; default off; the gate's note on the sibling's port, via QA).
+ * With ACCOUNT_CHANGE_REDERIVES_POLICY on, a small edit to the same account (a typo fixed, a date corrected, a word
+ * inserted or a few reworded) also counted as a new account and re-read its policy. On: an old sentence a new one repeats
+ * with a small word-level edit counts as kept (`forms/form-patch-turn.ts` accountReplaced), so only a new account
+ * re-derives the policy. Off, as before.
+ */
+export function accountChangeCloseKeptEnabled(): boolean {
+  return envFlag("ACCOUNT_CHANGE_CLOSE_KEPT_ENABLED");
 }
 
 /**
