@@ -1,0 +1,42 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-off-roster-place-answer-17r-live-west-dodge: Admin: \"CA for Brisa Talmadge, do not terminate yet, she was late\" \u2192 offer \u2192 \"Omaha, NE (West Dodge Rd)\": \"use Brisa Talmadge\" asked again, the store set, and the store is never the Issue \u2014 OPEN in production (<B> goes on the card without \"use <B>\", and the store string becomes the Issue)": {
+  "category": "INTENDED",
+  "reason": "Open-case it.fails wrapper: inner invariant now holds, so the wrapper reports failed. Holding."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-off-roster-place-answer-city-only: Admin: \"CA for Brisa Talmadge, do not terminate yet, she was late\" \u2192 offer \u2192 \"Bellevue\": never a person; the account is kept, the store set, and \"use Brisa Talmadge\" asked again \u2014 OPEN in production (the place is read as a person (or the typed name is taken without \"use\"), and the offer is not asked again)": {
+  "category": "INTENDED",
+  "reason": "Open-case it.fails wrapper: inner invariant now holds, so the wrapper reports failed. Holding."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-off-roster-place-answer-city-state-unlisted: Admin: \"CA for Brisa Talmadge, do not terminate yet, she was late\" \u2192 offer \u2192 \"Des Moines, IA\": never a person; the account is kept and \"use Brisa Talmadge\" asked again \u2014 OPEN in production (the place is read as a person (or the typed name is taken without \"use\"), and the offer is not asked again)": {
+  "category": "INTENDED",
+  "reason": "Open-case it.fails wrapper: inner invariant now holds, so the wrapper reports failed. Holding."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-off-roster-place-answer-roster-name: Admin: \"CA for Brisa Talmadge, do not terminate yet, she was late\" \u2192 offer \u2192 \"Omaha, NE (West Dodge Rd)\": never a person; the account is kept, the store set, and \"use Brisa Talmadge\" asked again \u2014 OPEN in production (the place is read as a person (or the typed name is taken without \"use\"), and the offer is not asked again)": {
+  "category": "INTENDED",
+  "reason": "Open-case it.fails wrapper: inner invariant now holds, so the wrapper reports failed. Holding."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-off-roster-place-answer-state-first: Admin: \"CA for Brisa Talmadge, do not terminate yet, she was late\" \u2192 offer \u2192 \"NE Omaha\": never a person; the account is kept and \"use Brisa Talmadge\" asked again \u2014 OPEN in production (the place is read as a person (or the typed name is taken without \"use\"), and the offer is not asked again)": {
+  "category": "INTENDED",
+  "reason": "Open-case it.fails wrapper: inner invariant now holds, so the wrapper reports failed. Holding."
+ },
+ "replay: nov12-off-roster-place-answer-17r-live-west-dodge [open]": {
+  "category": "INTENDED",
+  "reason": "Open case now holds (store never the Issue; Issue stays turn 1's; 'use Brisa Talmadge' asked again). DEFECT in the ON reply: it says \"I've set the store to \u2026\" and also ends \"Your account covers every store, so this form won't name one.\" (false: the card's store is set)."
+ },
+ "replay: nov12-off-roster-place-answer-city-only [open]": {
+  "category": "INTENDED",
+  "reason": "Open case now holds (store never the Issue; Issue stays turn 1's; 'use Brisa Talmadge' asked again). DEFECT in the ON reply: it says \"I've set the store to \u2026\" and also ends \"Your account covers every store, so this form won't name one.\" (false: the card's store is set)."
+ },
+ "replay: nov12-off-roster-place-answer-city-state-unlisted [open]": {
+  "category": "INTENDED",
+  "reason": "Open case now holds (store never the Issue; Issue stays turn 1's; 'use Brisa Talmadge' asked again). DEFECT in the ON reply: it says \"I've set the store to \u2026\" and also ends \"Your account covers every store, so this form won't name one.\" (false: the card's store is set)."
+ },
+ "replay: nov12-off-roster-place-answer-roster-name [open]": {
+  "category": "INTENDED",
+  "reason": "Open case now holds (store never the Issue; Issue stays turn 1's; 'use Brisa Talmadge' asked again). DEFECT in the ON reply: it says \"I've set the store to \u2026\" and also ends \"Your account covers every store, so this form won't name one.\" (false: the card's store is set)."
+ },
+ "replay: nov12-off-roster-place-answer-state-first [open]": {
+  "category": "INTENDED",
+  "reason": "Open case now holds (store never the Issue; Issue stays turn 1's; 'use Brisa Talmadge' asked again). DEFECT in the ON reply: it says \"I've set the store to \u2026\" and also ends \"Your account covers every store, so this form won't name one.\" (false: the card's store is set)."
+ }
+}
