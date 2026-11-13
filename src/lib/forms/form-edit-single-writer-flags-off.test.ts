@@ -245,6 +245,8 @@ const FLIPPED_AFTER_FIXTURE: readonly string[] = [
   "POLICY_CITATION_ENABLED",
   "ANSWER_TURN_LEVEL_ENABLED",
   "TERMINATION_CARD_TIDY_ENABLED",
+  // Changed on purpose (13 Nov 2026, QA hotfix 17r-c): HUMAN_REPLIES shortens later card-turn openers.
+  "HUMAN_REPLIES_ENABLED",
 ];
 const PRODUCTION = [...PRODUCTION_FLAGS.on, ...PRODUCTION_FLAGS.assumedOn].filter((name) => !([FLAG, ...STEP_B, "FORM_EDIT_TOOL_IN_STREAM_ENABLED", "POLICY_PAGE_ON_CARD_ENABLED", ...FLIPPED_AFTER_FIXTURE] as readonly string[]).includes(name));
 const TOUCHED = [...new Set([FLAG, ...STEP_B, "FORM_EDIT_TOOL_IN_STREAM_ENABLED", ...PRODUCTION, ...PRODUCTION_FLAGS.off])];
