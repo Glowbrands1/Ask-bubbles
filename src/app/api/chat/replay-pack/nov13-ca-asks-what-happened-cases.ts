@@ -45,6 +45,8 @@ function asksWithoutCreate(last: ReplayAnswer, card: Card) {
   expect(last.content, `the card does not ask what happened:\n${last.content}`).toMatch(MARKER);
   expect(card?.supportsInlineDraft, `the card offers Create while it asks:\n${last.content}`).toBe(false);
   expect(last.content, `"Create the draft here" beside the ask:\n${last.content}`).not.toMatch(CREATE_LINE);
+  // Gate-Bubbles on #857: with no Create button, the note never offers to "create it now".
+  expect(last.content, `the note offers a Create there is no button for:\n${last.content}`).not.toMatch(/create it now/i);
 }
 
 const WHO_AND_WHERE = [

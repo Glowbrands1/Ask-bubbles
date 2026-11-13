@@ -88,8 +88,14 @@ function withoutTitles(clause: string, ignore: readonly string[]): string {
   return rest.replace(POSITION_WORDS, " ").replace(/\s{2,}/g, " ").trim();
 }
 
+/*
+ * A FIGURE IS AN ACCOUNT (Gate-Bubbles on #857, 13 Nov 2026): "Odalys Fenmarrow 131 tans verbal" states a shortfall
+ * by its count. A number followed by a word (not a time or an ordinal) says what the employee did or did not reach.
+ */
+const FIGURE = /\b\d+(?:\.\d+)?%?\s+(?!(?:am|pm|st|nd|rd|th)\b)[a-z]{3,}\b/i;
+
 /** A clause that says what this employee did. */
-function hasAccount(said: string, name: string, ignore: readonly string[]): boolean {
+export function hasAccount(said: string, name: string, ignore: readonly string[]): boolean {
   return said
     // "not late but left the register open": the part after "but" is its own clause, and says what happened.
     .split(/[\n.;,]+|\s+(?:and|but)\s+/i)
@@ -100,8 +106,25 @@ function hasAccount(said: string, name: string, ignore: readonly string[]): bool
         !onlyWhatDidNotHappen(clause) &&
         !onlyADenialAfterRequest(clause, name) &&
         !aboutSomebodyElse(clause, name) &&
-        (describesIncident(clause) || describesMoreThanTheRequest(clause, { ignore })),
+        (describesIncident(clause) || FIGURE.test(clause) || describesMoreThanTheRequest(clause, { ignore })),
     );
+}
+
+/**
+ * WHAT_HAPPENED_NO_CREATE_ENABLED reads this (Gate-Bubbles on #857, 13 Nov 2026): the manager's turns for the card
+ * already say what happened, though the reply asks — "Didn't show up for her opening shift", "she was late on
+ * 10-20-26" in an earlier turn, "131 tans". Then Create stays.
+ */
+export function managerGaveAccount(
+  card: { templateKey?: string; employeeName?: string | null; employeeRole?: string | null; locationName?: string | null },
+  question: string,
+  history: readonly Turn[],
+): boolean {
+  const name = card.employeeName?.trim();
+  if (!name || !card.templateKey) return false;
+  const turns = turnsForThisForm(history, card.templateKey);
+  const said = [...turns.filter((turn) => turn.role === "user").map((turn) => turn.content), question].map(withoutStateLead).join("\n");
+  return hasAccount(said, name, [name, card.employeeRole ?? "", card.locationName ?? ""]);
 }
 
 export function withCaWhatHappened(response: AskResponse, request: AskRequest): AskResponse {
