@@ -1512,6 +1512,9 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "TERMINATION_TIDY_HELD_NAME_ENABLED",
   // SAME_NAME_ASKS_WHICH (default off; QA, 12 Nov 2026): in the list, as every chat flag.
   "SAME_NAME_ASKS_WHICH_ENABLED",
+  // SAME_NAME_UNMAPPED_NOTE and PLACEHOLDER_TITLE_IS_NONE (default off; the sibling app's 38b live check, 13 Nov 2026).
+  "SAME_NAME_UNMAPPED_NOTE_ENABLED",
+  "PLACEHOLDER_TITLE_IS_NONE_ENABLED",
 ] as const;
 
 /**
@@ -5519,4 +5522,25 @@ export function formDateBusinessTodayEnabled(): boolean {
  */
 export function closeSpellingMatchEnabled(): boolean {
   return envFlag("CLOSE_SPELLING_MATCH_ENABLED");
+}
+
+/**
+ * SAME_NAME_UNMAPPED_NOTE_ENABLED (coding 6, 13 Nov 2026; default off; QA's ruling (a) on the sibling app's 38b live check). The
+ * one real same-name pair was never asked about: the second person's only location is a Woven location not mapped to a
+ * store ('ignored'), so the chat's roster holds one of them, and the card went to the other without a word. On: a card
+ * for a name another ACTIVE person also has, who is at no store in Ask Bubbles, says so in one plain line; Create stays
+ * (`forms/same-name-unmapped.ts`). Off, as before.
+ */
+export function sameNameUnmappedNoteEnabled(): boolean {
+  return envFlag("SAME_NAME_UNMAPPED_NOTE_ENABLED");
+}
+
+/**
+ * PLACEHOLDER_TITLE_IS_NONE_ENABLED (coding 6, 13 Nov 2026; default off; QA's ruling (c) on the sibling app's 38b live check). The
+ * card showed "Job title: No": the person's Woven position is the placeholder "No Position Set". On: a Woven
+ * placeholder ("No Position Set", "No Position", "None", "N/A", "Unknown", "TBD", "-") is no title
+ * (`forms/employee-roster.ts`, `directoryTitle`). Off, as before.
+ */
+export function placeholderTitleIsNoneEnabled(): boolean {
+  return envFlag("PLACEHOLDER_TITLE_IS_NONE_ENABLED");
 }

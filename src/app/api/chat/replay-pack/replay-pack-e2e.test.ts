@@ -451,16 +451,40 @@ vi.mock("@/lib/reporting/read/employee-facts", () => ({
   EMPLOYEE_DATA_HEADING: "CURRENT EMPLOYEE PERFORMANCE DATA",
 }));
 
+/** The directory rows the roster reads see: not one marked `unmapped` (at no store Ask Bubbles maps). */
+function rostered(): unknown[] {
+  return (state.directory as { unmapped?: boolean; positionName?: string | null }[])
+    .filter((row) => row.unmapped !== true)
+    // Every roster read takes the Woven position through production's `directoryTitle` (PLACEHOLDER_TITLE_IS_NONE_ENABLED).
+    .map((row) => (row.positionName === undefined ? row : { ...row, positionName: titleOf(row.positionName) }));
+}
+
+/** Set by the roster mock below: production's `directoryTitle`. */
+let titleOf: (raw: unknown) => string | null = (raw) => (raw == null ? null : String(raw));
+
 vi.mock("@/lib/forms/employee-roster", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/forms/employee-roster")>();
+  titleOf = actual.directoryTitle;
   return {
     ...actual,
     readDirectoryFacts: async (scope: AccessScope | null) =>
-      // No position on record unless the case gives one: the title is the manager's or asked.
-      actual.scopeRoster(state.directory as never, scope).map((person) => ({ ...person, title: (person as { positionName?: string | null }).positionName ?? null, primaryLocationName: "Kearney, NE" })),
+      // No position on record unless the case gives one: the title is the manager's or asked (through production's `directoryTitle`).
+      actual.scopeRoster(rostered() as never, scope).map((person) => {
+        const title = actual.directoryTitle((person as { positionName?: string | null }).positionName ?? null);
+        return { ...person, positionName: title, title, primaryLocationName: "Kearney, NE" };
+      }),
     // The turn's roster limit (`withRosterLimit`), as production's loadScopedRoster applies it.
-    loadScopedRoster: async (scope: AccessScope | null) => actual.withinRosterLimit(actual.scopeRoster(state.directory as never, scope)),
-    loadScopedRosterResult: async (scope: AccessScope | null) => rosterResultFor(actual.scopeRoster, state.directory as never, scope),
+    loadScopedRoster: async (scope: AccessScope | null) => actual.withinRosterLimit(actual.scopeRoster(rostered() as never, scope)),
+    loadScopedRosterResult: async (scope: AccessScope | null) => rosterResultFor(actual.scopeRoster, rostered() as never, scope),
+    /*
+     * SAME_NAME_UNMAPPED_NOTE_ENABLED (coding 6, 13 Nov 2026): every active directory row with the name, wherever it works.
+     * A row marked `unmapped: true` (a Woven location that is not a store) is here but in no roster read above.
+     */
+    activeIdsNamed: async (first: string, last: string) =>
+      (state.directory as { id: string; firstName: string; lastName: string; preferredFirstName?: string | null; employmentStatus?: string }[])
+        .filter((row) => (row.employmentStatus ?? "active") === "active" && row.lastName.toLowerCase() === last.trim().toLowerCase())
+        .filter((row) => [row.firstName, row.preferredFirstName ?? ""].some((name) => name.toLowerCase() === first.trim().toLowerCase()))
+        .map((row) => row.id),
   };
 });
 

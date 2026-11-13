@@ -5,7 +5,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import type { AccessScope } from "@/types";
 
-import { rosterStoreScopedEnabled } from "@/lib/config/chat-quality-flags";
+import { placeholderTitleIsNoneEnabled, rosterStoreScopedEnabled } from "@/lib/config/chat-quality-flags";
 
 import { isServiceAccountName, type RosterEmployee } from "./employee-match";
 import { authorizedLocationIds } from "./location-scope";
@@ -161,7 +161,7 @@ export async function readDirectoryRoster(): Promise<DirectoryRosterRow[]> {
     lastName: (row.last_name as string | null) ?? null,
     preferredFirstName: (row.preferred_first_name as string | null) ?? null,
     employmentStatus: (row.employment_status as string | null) ?? null,
-    positionName: (row.position_name as string | null) ?? null,
+    positionName: directoryTitle(row.position_name),
     lastSyncedAt: (row.last_synced_at as string | null) ?? null,
     locationIds: [...(locationsByEmployee.get(String(row.id)) ?? [])].sort(),
   }));
@@ -289,8 +289,8 @@ export async function readDirectoryFacts(scope: AccessScope | null): Promise<Dir
         lastName: last,
         preferredFirstName: String(row.preferred_first_name ?? "").trim() || null,
         locationIds: [...inScope].sort(),
-        positionName: String(row.position_name ?? "").trim() || null,
-        title: String(row.position_name ?? "").trim() || null,
+        positionName: directoryTitle(row.position_name),
+        title: directoryTitle(row.position_name),
         primaryLocationName: String(row.primary_location_name ?? "").trim() || null,
       });
     }
@@ -428,7 +428,7 @@ export async function readStoreRoster(scope: AccessScope | null): Promise<Direct
     if (row.employment_status !== "active") continue;
     if (isServiceAccountName(first, last)) continue;
     if (isNonPersonWovenId(text(row.external_employee_id))) continue;
-    const position = text(row.position_name) || null;
+    const position = directoryTitle(row.position_name);
     facts.push({
       id: text(row.id),
       firstName: first,
@@ -457,4 +457,38 @@ function rosterEmployeeOf(fact: DirectoryFact): RosterEmployee {
     employmentStatus: fact.employmentStatus ?? "active",
     lastSyncedAt: fact.lastSyncedAt ?? null,
   };
+}
+
+/** Woven's placeholders for "no position": never a job title. */
+const PLACEHOLDER_TITLE = /^(?:no\s+position(?:\s+set)?|none|n\/?a|unknown|tbd|-+)$/i;
+
+/**
+ * A person's Woven position as the job title, or null. PLACEHOLDER_TITLE_IS_NONE_ENABLED (QA's ruling (c), the sibling app's 38b
+ * live check, 13 Nov 2026): a placeholder ("No Position Set") is no title, so a card never shows it. Off, the text as read.
+ */
+export function directoryTitle(raw: unknown): string | null {
+  const title = String(raw ?? "").trim();
+  if (title === "") return null;
+  return placeholderTitleIsNoneEnabled() && PLACEHOLDER_TITLE.test(title) ? null : title;
+}
+
+/**
+ * SAME_NAME_UNMAPPED_NOTE_ENABLED: the ids of every ACTIVE directory person with this first and last name (or preferred
+ * first name), wherever they work — the roster reads keep only people at a mapped store. Ids only; never throws.
+ */
+export async function activeIdsNamed(firstName: string, lastName: string): Promise<string[]> {
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data } = await supabase
+      .from("employee_access_directory")
+      .select("id, first_name, last_name, preferred_first_name")
+      .eq("employment_status", "active")
+      .ilike("last_name", lastName.trim());
+    const first = firstName.trim().toLowerCase();
+    return (data ?? [])
+      .filter((row) => [row.first_name, row.preferred_first_name].some((name) => String(name ?? "").trim().toLowerCase() === first))
+      .map((row) => String(row.id));
+  } catch {
+    return [];
+  }
 }

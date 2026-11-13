@@ -99,6 +99,7 @@ import {
   formReplyFromDiffEnabled,
   formEditToolInStreamEnabled,
   formEditNoopGuardEnabled,
+  sameNameUnmappedNoteEnabled,
   nearMissQuestionRulesEnabled,
   formNameOffRosterAskEnabled,
   reopenByAnyOpenVerbEnabled,
@@ -1195,6 +1196,20 @@ async function postChat(request: Request) {
       }
       // NEAR_MISS_QUESTION_RULES_ENABLED: "no, …" to "Is this for <name>?" never gets a card for that name, nor the question again.
       if (nearMissQuestionRulesEnabled()) answer = (await import("@/lib/forms/near-miss-question-rules")).withoutTurnedDownName(answer, asked);
+      // SAME_NAME_UNMAPPED_NOTE_ENABLED: another active person with the card's name, at no store, is said (`lib/forms/same-name-unmapped.ts`).
+      if (sameNameUnmappedNoteEnabled() && answer.formProposal?.employeeName) {
+        const roster = await import("@/lib/forms/employee-roster");
+        const parts = answer.formProposal.employeeName.trim().split(/\s+/);
+        if (parts.length >= 2) {
+          const [first, last] = [parts[0]!.toLowerCase(), parts.slice(1).join(" ").toLowerCase()];
+          const scoped = await roster.loadScopedRoster(context.identity.scope).catch(() => []);
+          const rosterIds = scoped
+            .filter((person) => person.lastName.trim().toLowerCase() === last && [person.firstName, person.preferredFirstName ?? ""].some((name) => name.trim().toLowerCase() === first))
+            .map((person) => person.id);
+          const activeIds = await roster.activeIdsNamed(parts[0]!, parts.slice(1).join(" "));
+          answer = (await import("@/lib/forms/same-name-unmapped")).withUnmappedSameNameNote(answer, { rosterIds, activeIds });
+        }
+      }
       /*
        * FORM_EDIT_HONEST_REPLY_ENABLED: the ordinary answer, with a form open,
        * changed nothing — so it never says it updated the form. See
