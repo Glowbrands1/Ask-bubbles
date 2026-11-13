@@ -1519,6 +1519,10 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "EDIT_SEES_SAVED_FORM_ENABLED",
   // CARD_CHECKED_AGAINST_WORDS (default off; Pau's direction via QA, 13 Nov 2026): in the list, as every chat flag.
   "CARD_CHECKED_AGAINST_WORDS_ENABLED",
+  // MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED (default off; QA's live 17u test, 13 Nov 2026): in the list, as every chat flag.
+  "MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED_ENABLED",
+  // ADD_ALREADY_ON_FORM_SAYS_SO (default off; QA's live 17u test, item 5, 13 Nov 2026): in the list, as every chat flag.
+  "ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED",
 ] as const;
 
 /**
@@ -4709,6 +4713,28 @@ export function madeAboutReaderAccountEnabled(): boolean {
  */
 export function madeAboutRewriteFinishesEnabled(): boolean {
   return envFlag("MADE_ABOUT_REWRITE_FINISHES_ENABLED");
+}
+
+/**
+ * MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED_ENABLED (coding 6; QA's live 17u test, Ask Bubbles production, 13 Nov 2026;
+ * default off). On a saved CA draft, "make it about her phone use instead, she was on her phone the whole shift" rewrote
+ * the observation by the old path's revision, then had nothing else to write (a CA has no Other topic, no date was said)
+ * and handed the turn on: the route ran the revision a second time, which found the new account already saved and
+ * replied "I haven't changed the Corrective Action Form … everything on it is as it was." With the flag on, a turn whose
+ * account was rewritten answers from the saved form ("Changed Observation of Offense …"). Off, as before.
+ */
+export function madeAboutEmptyPatchAnswersSavedEnabled(): boolean {
+  return envFlag("MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED_ENABLED");
+}
+
+/**
+ * ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED (coding 6; QA's live 17u test, item 5, 13 Nov 2026; default off). "add that she was
+ * on the phone for the entire shift" on a draft that already says it got the old path's generic "I haven't changed the
+ * Corrective Action Form … everything on it is as it was." With the flag on, an add whose words are all on the saved form
+ * and that changed nothing says the form already says that (`forms/add-already-on-form.ts`). Off, as before.
+ */
+export function addAlreadyOnFormSaysSoEnabled(): boolean {
+  return envFlag("ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED");
 }
 
 /**
