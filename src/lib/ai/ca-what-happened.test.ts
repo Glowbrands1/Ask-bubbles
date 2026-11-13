@@ -89,6 +89,18 @@ describe("CA_ASKS_WHAT_HAPPENED_ENABLED", () => {
     expect(withCaWhatHappened(before as never, { question: "she skipped the closing checklist on her shift last night", history: asked } as never)).toBe(before);
   });
 
+  it("a request turn with the title and the account: only the account clause is the Issue (Gate-Bubbles B866)", () => {
+    vi.stubEnv("CA_ASKS_WHAT_HAPPENED_ENABLED", "true");
+    vi.stubEnv("ANSWER_IS_THE_ISSUE_ENABLED", "true");
+    for (const [said, expected] of [
+      ["ca for Rowan Kestrel, Team Member Part Time, she was late on 11/2", "she was late on 11/2"],
+      ["create a CA for general manager, rowan kestrel for violating the standards of conduct", "violating the standards of conduct"],
+    ] as const) {
+      const out = withCaWhatHappened(card("Team Member Part Time") as never, { question: said, history: [] } as never);
+      expect((out.formProposal as { issue?: string }).issue, said).toBe(expected);
+    }
+  });
+
   it("another form, the team card or no employee: untouched", () => {
     const coaching = { ...card(), formProposal: { templateKey: "coaching", employeeName: "Rowan Kestrel" } as never };
     expect(askCaWhatHappened(coaching as never, "create a coaching form for Rowan Kestrel", [])).toBe(coaching);

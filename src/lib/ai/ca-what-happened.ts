@@ -185,13 +185,39 @@ function withAccountAsIssue(
   const issue = proposal.issue?.trim() ?? "";
   if (issue === "" || !onlyWhoAndWhere(issue, ignore)) return response;
   const said = [question, ...turns.filter((turn) => turn.role === "user").map((turn) => turn.content).reverse()].map(withoutStateLead);
-  const account = said.find((text) => !/\?\s*$/.test(text.trim()) && hasAccount(text, name, ignore))?.trim().replace(/[.!]+$/, "");
+  const turn = said.find((text) => !/\?\s*$/.test(text.trim()) && hasAccount(text, name, ignore));
+  const account = turn ? accountClauses(turn, name, ignore) : "";
   if (!account) return response;
   const content = response.content
     .split("\n")
     .map((line) => line.replace(/^(\s*\*\*Issue:\*\*[ \t]*)[^\n·]*?([ \t]+·[ \t]+|[ \t]*$)/, (_all, lead: string, tail: string) => `${lead}${account}${tail}`))
     .join("\n");
   return { ...response, content, formProposal: { ...proposal, issue: account } };
+}
+
+/*
+ * THE ACCOUNT, NOT THE SENTENCE (Gate-Bubbles B866, 13 Nov 2026): "ca for Rowan Kestrel, Team Member Part Time, she was
+ * late on 11/2" made the whole request sentence the Issue. Of the turn, only its account clauses are kept: each clause
+ * without the request's lead ("ca for", "create a CA for"), an edit's lead ("make it about", "change observation of
+ * offense to:"), the employee's name and a leading "for"; a clause that is then only who and where is dropped.
+ * "create a CA for general manager, rowan kestrel for violating the standards of conduct" → "violating the standards of
+ * conduct".
+ */
+const REQUEST_LEAD = /^.*?\b(?:corrective\s+action(?:\s+form)?|ca|c\/a|write[- ]?up|warning|dpoa)\s+(?:for|to|on)\s+/i;
+const EDIT_LEAD =
+  /^(?:(?:ok(?:ay)?|please|and)[,\s]+)*(?:make|change|set|update)\s+(?:it|the\s+(?:issue|observation(?:\s+of\s+offense)?|what\s+happened)|issue|observation(?:\s+of\s+offense)?|what\s+happened)\s*(?:to\s+be|to|about|for)?\s*:?\s*/i;
+
+function accountClauses(text: string, name: string, ignore: readonly string[]): string {
+  const own = new Set(name.toLowerCase().split(/\s+/).filter(Boolean));
+  const kept: string[] = [];
+  for (const raw of text.split(/[\n.;,]+/)) {
+    const words = raw.trim().replace(EDIT_LEAD, "").replace(REQUEST_LEAD, "").split(/\s+/).filter(Boolean);
+    while (words.length > 0 && own.has(words[0]!.toLowerCase().replace(/[^\p{L}'’-]/gu, ""))) words.shift();
+    const clause = words.join(" ").replace(/^for\s+/i, "").trim();
+    if (!clause || onlyWhoAndWhere(clause, ignore)) continue;
+    if (hasAccount(clause, name, ignore)) kept.push(clause);
+  }
+  return kept.join(", ").replace(/[.!]+$/, "");
 }
 
 /*

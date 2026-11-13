@@ -131,3 +131,33 @@ export const NOV13_ANSWER_IS_THE_ISSUE_CASES: ReplayCase[] = [
     },
   },
 ];
+
+/**
+ * Gate-Bubbles B866 (13 Nov 2026): with ANSWER_IS_THE_ISSUE on, a request turn that carries both the job title and the
+ * account made the WHOLE request sentence the Issue. The Issue is the account clause alone: never the request's lead,
+ * the employee's name or the title.
+ */
+export const NOV13_ANSWER_IS_THE_ISSUE_REQUEST_TURN_CASES: ReplayCase[] = [
+  {
+    key: "title-and-account",
+    said: "ca for Rowan Kestrel, Team Member Part Time, she was late on 11/2",
+    expected: /^she was late on 11\/2$/,
+  },
+  {
+    key: "title-before-name",
+    said: "create a CA for general manager, rowan kestrel for violating the standards of conduct",
+    expected: /^violating the standards of conduct$/,
+  },
+].map(({ key, said, expected }): ReplayCase => ({
+  id: `nov13-answer-is-the-issue-request-turn-${key}`,
+  title: `"${said}": the Issue is the account clause alone, never the request sentence, the name or the title`,
+  report: "Gate-Bubbles B866 (13 Nov 2026)",
+  status: { open: "the job title is the card's Issue" },
+  fixFlags: [ASKS, NO_CREATE, "ANSWER_IS_THE_ISSUE_ENABLED"],
+  async run(t) {
+    const { last, card } = await chat(t, [said]);
+    const issue = card?.issue ?? "";
+    expect(issue, `the Issue is not the account clause:\n${last.content}`).toMatch(expected);
+    expect(issue, `the Issue carries the request or the name:\n${last.content}`).not.toMatch(/\b(?:ca|create)\b|rowan|kestrel/i);
+  },
+}));
