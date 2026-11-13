@@ -76,3 +76,31 @@ export const NOV10_WRITEN_CA_CASES: ReplayCase[] = ([
     expect(reply.formProposal?.employeeName, `not for Rowan Kestrel:\n${reply.content}`).toBe("Rowan Kestrel");
   },
 }));
+
+/**
+ * QA's #745 follow-up (12 Nov 2026): with MANAGER_FORM_CHOICE on, "write ca" / "an employee opened the store 15 min late
+ * and needs CA", then "Create a form from this conversation.", the reply said "To create it, press **Create draft** on
+ * the card" while the card only asked "Who is this … for?" — no Create button on screen. QA: "Don't point to a card that
+ * isn't there." CREATE_POINTS_TO_SHOWN_CARD (default off) says the line only when the card shows the button.
+ */
+export const NOV12_CREATE_POINTS_TO_SHOWN_CARD_CASES: ReplayCase[] = TURNS.flatMap((turn) =>
+  ([
+    ["lower", turn.text],
+    ["sentence", turn.text[0]!.toUpperCase() + turn.text.slice(1)],
+  ] as const).map(([casing, text]) => ({
+    id: `nov12-create-points-to-shown-card-${turn.key}-${casing}`,
+    title: `"${text}", then "Create a form from this conversation." — no "press Create draft" while the card asks who it is for`,
+    report: `QA's #745 follow-up, 12 Nov 2026 (${REPORT}); ${turn.key}, ${casing}`,
+    status: { open: "a process answer with no card; with MANAGER_FORM_CHOICE, \"press **Create draft** on the card\" with no button" },
+    fixFlags: [FLAG, "CREATE_POINTS_TO_SHOWN_CARD_ENABLED"],
+    async run(t: ReplayContext) {
+      const thread = start(t);
+      await thread.say(text);
+      const again = await thread.say("Create a form from this conversation.");
+      expect(isCa(again.formProposal?.templateKey), `no Corrective Action card:\n${again.content}`).toBe(true);
+      expect(again.formProposal?.employeeName ?? null, `the card has an employee:\n${again.content}`).toBeNull();
+      expect(again.content, `points to a Create button that isn't there:\n${again.content}`).not.toMatch(/press \*\*Create draft\*\*/i);
+      expect(again.content, `the employee is not asked for:\n${again.content}`).toMatch(/who is this[^\n]*for\?/i);
+    },
+  })),
+);

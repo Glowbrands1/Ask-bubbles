@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PRESS_CREATE, WHAT_IS_OUT_OF_DATE, WHAT_IS_WRONG, cardMetaTurn, withPressCreateReply, withoutCardMetaTurns } from "./card-meta-turn";
 import type { AskResponse } from "./types";
@@ -13,6 +13,12 @@ const onCard = (question: string) => ({ question, history, continueProposalTempl
 
 afterEach(() => {
   vi.unstubAllEnvs();
+});
+
+// CREATE_POINTS_TO_SHOWN_CARD_ENABLED pinned off (QA, 12 Nov 2026): these cards carry no Create button state, and the
+// suite also runs with a gate's flags in the environment; its own tests below turn it on.
+beforeEach(() => {
+  vi.stubEnv("CREATE_POINTS_TO_SHOWN_CARD_ENABLED", "");
 });
 
 function bothOn() {
@@ -115,5 +121,47 @@ describe("CREATE_FROM_CONVERSATION_POINTS_TO_CARD_ENABLED (the sibling app's P6,
     for (const question of ["create a coaching form from this conversation", "create a form for Rowan Kestrel", "make a form from this conversation for being late on 11/2"]) {
       expect(cardMetaTurn(onCard(question)), question).toBeNull();
     }
+  });
+});
+
+/**
+ * CREATE_POINTS_TO_SHOWN_CARD_ENABLED — QA's #745 follow-up (12 Nov 2026): "Create a form from this conversation." after
+ * "write ca" said "press **Create draft** on the card" while the card only asked "Who is this … for?" (no button).
+ */
+describe("CREATE_POINTS_TO_SHOWN_CARD_ENABLED", () => {
+  const asksWho = { templateKey: "dpoa", employeeName: null, status: "needs_employee", supportsInlineDraft: false };
+  const ready = { templateKey: "dpoa", employeeName: "Rowan Kestrel", status: "ready", supportsInlineDraft: true };
+  const reply = (formProposal: object) => ({ content: "Who is this **Corrective Action Form** for?", formProposal });
+  const request = { question: "Create a form from this conversation.", continueProposalTemplateKey: "dpoa" };
+
+  function createOn() {
+    vi.stubEnv("CREATE_COMMAND_POINTS_TO_CARD_ENABLED", "true");
+    vi.stubEnv("CREATE_FROM_CONVERSATION_POINTS_TO_CARD_ENABLED", "true");
+  }
+
+  it("off: the line leads even when the card asks who it is for (as before)", () => {
+    // Pinned off (QA, 12 Nov 2026): the suite also runs with production's or a gate's flags in the environment.
+    vi.stubEnv("CREATE_POINTS_TO_SHOWN_CARD_ENABLED", "");
+    createOn();
+    expect(withPressCreateReply(reply(asksWho), request).content.startsWith(PRESS_CREATE)).toBe(true);
+  });
+
+  it("on: no line pointing to a Create button the card does not show", () => {
+    createOn();
+    vi.stubEnv("CREATE_POINTS_TO_SHOWN_CARD_ENABLED", "true");
+    expect(withPressCreateReply(reply(asksWho), request).content).toBe("Who is this **Corrective Action Form** for?");
+    expect(withPressCreateReply(reply(ready), request).content.startsWith(PRESS_CREATE)).toBe(true);
+  });
+
+  it("on: \"create it\" with a who-is-it-for card on screen is not answered as a card turn", () => {
+    createOn();
+    const withCard = [
+      { id: "m1", role: "user", content: "write ca" },
+      { id: "a1", role: "assistant", content: "Who is this for?", formProposal: asksWho },
+    ] as never;
+    const turn = { question: "create it", history: withCard, continueProposalTemplateKey: "dpoa", questionMessageId: "m9" };
+    expect(cardMetaTurn(turn)).not.toBeNull();
+    vi.stubEnv("CREATE_POINTS_TO_SHOWN_CARD_ENABLED", "true");
+    expect(cardMetaTurn(turn)).toBeNull();
   });
 });

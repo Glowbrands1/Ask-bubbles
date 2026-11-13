@@ -968,6 +968,25 @@ export function managerFormChoiceEnabled(): boolean {
 }
 
 /**
+ * TERSE_REQUEST_ACCOUNT_ENABLED (Coding-2, 12 Nov 2026; default off; QA's follow-up to #745). "writen ca rowan kestrel
+ * not atending monthly meeting 12-20-26" gave a card with no Issue: the account after the name has no "for" or comma to
+ * read it by. On: when nothing else reads an Issue, the words after a terse "write(n) ca <name>" request are the Issue
+ * (`forms/incident-issue.ts`). Off, as before.
+ */
+export function terseRequestAccountEnabled(): boolean {
+  return envFlag("TERSE_REQUEST_ACCOUNT_ENABLED");
+}
+
+/**
+ * CREATE_POINTS_TO_SHOWN_CARD_ENABLED (Coding-2, 12 Nov 2026; default off; QA's follow-up to #745). On "Create a form
+ * from this conversation." with no card on screen yet (the app is still asking who it is for), the reply said "press
+ * **Create draft** on the card". On: that line is said only when a card is shown. Off, as before.
+ */
+export function createPointsToShownCardEnabled(): boolean {
+  return envFlag("CREATE_POINTS_TO_SHOWN_CARD_ENABLED");
+}
+
+/**
  * The way managers name a store ("dodge ne", "dodge, ne", "kearney ne") is
  * written as the roster name before any reader sees the turn; the aliases are
  * built from the store list (25 Oct 2026, ported from the sibling app). See
@@ -999,6 +1018,9 @@ export function formsGuideEnabled(): boolean {
 }
 
 export const CHAT_QUALITY_FLAG_NAMES = [
+  // coding 2: QA's #745 follow-ups (12 Nov 2026; default off).
+  "TERSE_REQUEST_ACCOUNT_ENABLED",
+  "CREATE_POINTS_TO_SHOWN_CARD_ENABLED",
   // QA round 17r (13 Nov 2026): TEAM_CARD_NOT_PRODUCT (#668) and FORM_EDIT_SOURCE_TURN (#480) are switched on in production.
   "TEAM_CARD_NOT_PRODUCT_ENABLED",
   "FORM_EDIT_SOURCE_TURN_ENABLED",

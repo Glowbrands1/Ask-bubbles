@@ -3,6 +3,7 @@ import {
   copyPastePointsToCardEnabled,
   createCommandPointsToCardEnabled,
   createFromConversationPointsToCardEnabled,
+  createPointsToShownCardEnabled,
 } from "@/lib/config/chat-quality-flags";
 
 import type { AskRequest, AskResponse } from "./types";
@@ -63,6 +64,18 @@ const COMPLAINT =
 const COPY_QUESTION =
   /^(?:(?:so|ok(?:ay)?|and|wait)[,\s]+)?(?:(?:do|should|must|would|will)\s+i\s+(?:(?:need|have)\s+to\s+)?|(?:how|where)\s+do\s+i\s+|can\s+i\s+(?:just\s+)?)(?:copy(?:\s*(?:and|&|n|\/)?\s*paste)?|paste)\b[^?]{0,60}\??$/i;
 
+/*
+ * CREATE_POINTS_TO_SHOWN_CARD_ENABLED (QA's #745 follow-up, 12 Nov 2026): "write ca", then "Create a form from this
+ * conversation." — the card only asks "Who is this … for?" and has no **Create draft** button, yet the reply said to
+ * press it. The button is there when the chat shows it (`features/chat/message-bubble.tsx`): an inline draft, or a
+ * card that only needs its store chosen. Off, every card counts as shown.
+ */
+function showsCreate(proposal: unknown): boolean {
+  if (!createPointsToShownCardEnabled()) return true;
+  const card = proposal as { supportsInlineDraft?: boolean; status?: string } | null | undefined;
+  return !!card && (card.supportsInlineDraft === true || card.status === "needs_location");
+}
+
 function squeezed(question: string): string {
   return (question ?? "").replace(/\s+/g, " ").trim();
 }
@@ -122,6 +135,8 @@ export function cardMetaTurn(
     .find((turn) => turn.role === "assistant" && (turn as { formProposal?: AskResponse["formProposal"] }).formProposal?.templateKey === request.continueProposalTemplateKey) as
     | { formProposal?: AskResponse["formProposal"] }
     | undefined;
+  // CREATE_POINTS_TO_SHOWN_CARD_ENABLED: "create it" with no Create button on screen is answered as before this module.
+  if (kind === "create" && onScreen?.formProposal && !showsCreate(onScreen.formProposal)) return null;
   const card: AskResponse | null = onScreen?.formProposal
     ? { content: line, citations: [], coverage: "not_applicable", formProposal: onScreen.formProposal }
     : null;
@@ -134,6 +149,7 @@ export function cardMetaTurn(
      */
     answer: (again) => {
       if (!again.formProposal) return again;
+      if (kind === "create" && !showsCreate(again.formProposal)) return again;
       const ids = (again.formProposal.sourceMessageIds ?? []).filter((id) => id !== request.questionMessageId);
       const sourceMessageIds = fromTurn?.id && !ids.includes(fromTurn.id) ? [...ids, fromTurn.id] : ids;
       return { ...again, content: line, formProposal: { ...again.formProposal, sourceMessageIds } };
@@ -153,6 +169,8 @@ export function withPressCreateReply<T extends { content: string; formProposal?:
 ): T {
   if (!createCommandPointsToCardEnabled() || !request.continueProposalTemplateKey || request.activeFormInstanceId) return answer;
   if (!rereadsCard(request.question) || !answer.formProposal || answer.content.startsWith(PRESS_CREATE)) return answer;
+  // CREATE_POINTS_TO_SHOWN_CARD_ENABLED: no Create button on the card (it asks who the form is for), no line pointing to one.
+  if (!showsCreate(answer.formProposal)) return answer;
   // The line leads; the card's own read-back (its fields, the policy it cites) stays under it, as the re-read wrote it.
   return { ...answer, content: `${PRESS_CREATE}\n\n${answer.content.trim()}` };
 }

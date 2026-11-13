@@ -17,6 +17,7 @@ import {
   removePolicyNotNamedEnabled,
   salesObservationAccountEnabled,
   salesShortfallObjectEnabled,
+  terseRequestAccountEnabled,
   wornClothingIsDressCodeEnabled,
   wovenTrainingConductEnabled,
   negatedLatenessTopicEnabled,
@@ -130,6 +131,11 @@ export interface CaPolicyReading {
   ambiguous: CaPolicyName[] | null;
   /** A scheduled meeting, seminar or training session the account says was not attended: "the monthly meeting". */
   missedEvent: string | null;
+  /**
+   * TERSE_REQUEST_ACCOUNT_ENABLED: the manager's own words for the missed event, when only the typo reading found it
+   * ("not atending monthly meeting"). The card quotes these, never the app's "missed the monthly meeting". Absent off.
+   */
+  missedEventTyped?: string;
   /**
    * CA_SALES_POLICY_ENABLED: cleaning left undone is the form's Other box, not
    * the Standards of Conduct (Pau's ruling; `withCleaningOther`). Absent off.
@@ -407,13 +413,40 @@ const MISSED_EVENT_AFTER = new RegExp(
   String.raw`\b((?:${GAP_WORD}){0,3}?${EVENT_NOUN})\b${NOT_THE_EVENT}(?:\s+(?:on|at|from)\s+\S+|\s+[\d/.-]+)?[\s,–—-]+(?:(?:which|that)\s+)?(?:(?:she|he|they|[a-z]+)\s+)?${ABSENT_AFTER}\b`,
 );
 
+/*
+ * TERSE_REQUEST_ACCOUNT_ENABLED (QA's #745 follow-up, 12 Nov 2026): "not atending monthly meeting" — the manager's typo
+ * of attending — reads as the missed event too, so the terse card cites Attendance as the full wording's does.
+ */
+const ATTEND_TYPO = String.raw`att?end(?:ing|ed|s)?`;
+const MISSED_EVENT_BEFORE_TYPO = new RegExp(
+  String.raw`\b${ABSENT_BEFORE.replace("attend(?:ing|ed|s)?", ATTEND_TYPO)}\s+((?:${GAP_WORD}){0,4}?${EVENT_NOUN})\b${NOT_THE_EVENT}`,
+);
+
 /** Leading words that place the event rather than name it: "the", "her", "last", "tuesday's". */
 const EVENT_LEAD = /^(?:(?:the|a|an|her|his|their|our|this|that|last|next|yesterday['’]?s|today['’]?s|[a-z]+day['’]?s|[a-z]+day|todays|yesterdays)\s+)+/;
+
+/*
+ * TERSE_REQUEST_ACCOUNT_ENABLED (QA's #910 follow-up, 12 Nov 2026): a Policy line quotes the manager's own words. When
+ * only the typo reading finds the missed event, those words are what the manager typed ("not atending monthly meeting").
+ */
+function typedMissedEvent(sentences: readonly string[]): string | null {
+  if (!terseRequestAccountEnabled()) return null;
+  for (const sentence of sentences) {
+    for (const clause of sentence.split(/;|:\s|\s+(?:but|however)\s+/)) {
+      if (MISSED_EVENT_BEFORE.exec(clause) || MISSED_EVENT_AFTER.exec(clause)) return null;
+      const typed = MISSED_EVENT_BEFORE_TYPO.exec(clause);
+      if (typed) return typed[0].trim();
+    }
+  }
+  return null;
+}
 
 function missedEventIn(sentences: readonly string[]): string | null {
   for (const sentence of sentences) {
     for (const clause of sentence.split(/;|:\s|\s+(?:but|however)\s+/)) {
-      const match = MISSED_EVENT_BEFORE.exec(clause) ?? MISSED_EVENT_AFTER.exec(clause);
+      const match =
+        (terseRequestAccountEnabled() ? MISSED_EVENT_BEFORE_TYPO : MISSED_EVENT_BEFORE).exec(clause) ??
+        MISSED_EVENT_AFTER.exec(clause);
       if (match) return match[1]!.replace(EVENT_LEAD, "").trim();
     }
   }
@@ -885,6 +918,8 @@ function readCaPolicyFromWords(rawText: string): CaPolicyReading {
 
   const sentences = statements(text);
   const missedEvent = missedEventIn(sentences);
+  const typedEvent = missedEvent !== null ? typedMissedEvent(sentences) : null;
+  const typed = typedEvent ? { missedEventTyped: typedEvent } : {};
 
   let stated: CaPolicyName | null = null;
   for (const turn of turns) stated = statedIn(turn) ?? stated;
@@ -932,10 +967,11 @@ function readCaPolicyFromWords(rawText: string): CaPolicyReading {
       source: stated === STANDARDS_OF_CONDUCT ? "stated" : null,
       ambiguous: null,
       missedEvent,
+      ...typed,
     };
   }
   if (topics.length === 0) {
-    return { stated, topics, alternatives, suggestion: null, source: null, ambiguous: null, missedEvent };
+    return { stated, topics, alternatives, suggestion: null, source: null, ambiguous: null, missedEvent, ...typed };
   }
   if (alternatives.length > 0) {
     return {
@@ -946,6 +982,7 @@ function readCaPolicyFromWords(rawText: string): CaPolicyReading {
       source: null,
       ambiguous: [STANDARDS_OF_CONDUCT, ...alternatives],
       missedEvent,
+      ...typed,
     };
   }
   return {
@@ -956,6 +993,7 @@ function readCaPolicyFromWords(rawText: string): CaPolicyReading {
     source: "incident",
     ambiguous: null,
     missedEvent,
+    ...typed,
   };
 }
 
