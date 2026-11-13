@@ -15,6 +15,8 @@ afterEach(() => vi.unstubAllEnvs());
 
 describe("TERMINATION_CARD_TIDY_ENABLED: the Issue is never a hedge about terminating", () => {
   it("off: the card as built", () => {
+    // Pinned off (test only): a run with the flag on in the environment no longer fails this arm.
+    vi.stubEnv("TERMINATION_CARD_TIDY_ENABLED", "false");
     const built = card("do not terminate yet");
     expect(withIssueNotTerminationHedge(built, "CA for Marnie Holloway, do not terminate yet, she was late")).toBe(built);
   });
