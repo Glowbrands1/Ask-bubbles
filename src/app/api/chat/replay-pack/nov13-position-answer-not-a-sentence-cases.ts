@@ -65,4 +65,33 @@ export const NOV13_POSITION_ANSWER_NOT_A_SENTENCE_CASES: ReplayCase[] = [
       expect(String(card?.employeeRole ?? ""), reply.content).toMatch(/^Team Member/);
     },
   },
+  {
+    id: "nov13-position-answer-key-holder-said",
+    title: "QA's 17w report: the same card, then \"she's a key holder\": the Position is Key Holder, and the reply says so",
+    report: `${REPORT} (follow-up: the Position changed and the reply said only "got it, here's the card")`,
+    status: { open: "the Position is Key Holder and the reply does not say so" },
+    fixFlags: [FLAG],
+    async run(t) {
+      const { reply, card } = await afterCard(t, "she's a key holder");
+      expect(String(card?.employeeRole ?? ""), reply.content).toBe("Key Holder");
+      expect(reply.content, `the reply never says the Position changed:\n${reply.content}`).toMatch(/Job title set to \*\*Key Holder\*\*/);
+    },
+  },
+  {
+    id: "nov13-position-answer-title-on-the-request-kept",
+    title: "QA's 17w report: \"create corrective action form for Marnie Holloway, Team Member Part Time\" then the account: the title from the request stays the card's Position",
+    report: `${REPORT} (follow-up: the Position stayed Not set, the title on line 1 lost)`,
+    status: { open: "the Position is empty: \"Part Time\" was read as another person's name, so the title was dropped as theirs" },
+    fixFlags: [FLAG],
+    async run(t) {
+      vi.setSystemTime(new Date("2026-11-13T16:00:00Z"));
+      t.directory(NO_POSITION);
+      t.as("location_manager", WEST_DODGE);
+      const thread = t.thread();
+      await thread.say("create corrective action form for Marnie Holloway, Team Member Part Time");
+      const reply = await thread.say("she skipped the closing checklist on her shift last night");
+      const card = thread.proposal as Record<string, unknown> | null;
+      expect(String(card?.employeeRole ?? ""), `the title on the request is lost:\n${reply.content}`).toMatch(/^Team Member/);
+    },
+  },
 ];

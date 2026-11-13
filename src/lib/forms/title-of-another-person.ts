@@ -1,4 +1,4 @@
-import { titleEndsAtLineEnabled } from "@/lib/config/chat-quality-flags";
+import { positionAnswerNotASentenceEnabled, titleEndsAtLineEnabled } from "@/lib/config/chat-quality-flags";
 
 import { isCompanyPositionTitle } from "./staff-picker";
 
@@ -33,7 +33,9 @@ export function titleNamesAnotherPerson(text: string, title: string, employeeNam
     // TITLE_ENDS_AT_LINE_ENABLED (the sibling app's gate, 6 Nov 2026, s16): the name after a title is on the title's line; the next line (the store) is not its owner.
     const after = titleEndsAtLineEnabled() && titleLine(text, at, match[0].length) ? null : nameAt(text.slice(at + match[0].length), "after", titleEndsAtLineEnabled());
     const before = nameAt(text.slice(0, at), "before");
-    const beside = [after, before].filter((name): name is string[] => name !== null);
+    // POSITION_ANSWER_NOT_A_SENTENCE_ENABLED (QA's live 17w report): "Team Member Part Time" — "Part Time" is the hours, not a name.
+    const hours = (name: string[] | null) => name !== null && positionAnswerNotASentenceEnabled() && name.every((word) => EMPLOYMENT_WORD.test(word));
+    const beside = [after, before].filter((name): name is string[] => name !== null && !hours(name));
     const other = beside.some((name) => name.every((word) => !employee.has(word.toLowerCase())));
     if (!other) return false;
   }
@@ -41,6 +43,8 @@ export function titleNamesAnotherPerson(text: string, title: string, employeeNam
 }
 
 const NAME_WORD = /^\p{Lu}[\p{L}'’-]+$/u;
+/** How long or how often she works: never a person's name ("Team Member Part Time"). */
+const EMPLOYMENT_WORD = /^(?:part|full|time|part-time|full-time|pt|ft|seasonal|temp)$/i;
 
 /**
  * TITLE_ENDS_AT_LINE_ENABLED: the title begins its own line and the whole line is one of the
