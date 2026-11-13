@@ -1,0 +1,86 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov13-add-already-on-form-says-so-small-word-left-out: the same draft, \"add that she was on the phone the whole shift\" (the gate's wording: \"the whole shift\", no \"for\"): the reply says the form already says that \u2014 OPEN in production (the reply is the generic \"I haven't changed the Corrective Action Form \u2026 everything on it is as it was.\")": {
+  "category": "INTENDED",
+  "reason": "new arm (delta): 'add that she was on the phone the whole shift' -> 'already says that'"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov13-add-already-on-form-says-so-small-word-left-out: the same draft, \"add that she was on the phone the whole shift\" (the gate's wording: \"the whole shift\", no \"for\"): the reply says the form already says that \u2014 holds with MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED_ENABLED, ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED on": {
+  "category": "INTENDED",
+  "reason": "new arm (delta): 'add that she was on the phone the whole shift' -> 'already says that'"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov13-add-already-on-form-says-so: item 5, the same draft: \"add that she was on the phone for the entire shift\", which it already says: the reply says the form already says that (never \"I haven't changed \u2026 everything on it is as it was\") \u2014 OPEN in production (the reply is the generic \"I haven't changed the Corrective Action Form \u2026 everything on it is as it was.\")": {
+  "category": "INTENDED",
+  "reason": "OPEN -> holds: 'add that she was on the phone for the entire shift' -> 'The Corrective Action Form \u2026 already says that'"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov13-made-about-empty-patch-answers-saved: a CA draft, \"make it about her phone use instead, she was on her phone the whole shift\": the observation is rewritten and saved, and the reply names the change (never \"I haven't changed\") \u2014 OPEN in production (the saved observation changed, and the reply says \"I haven't changed the Corrective Action Form \u2026 everything on it is as it was.\")": {
+  "category": "INTENDED",
+  "reason": "OPEN -> holds: 'make it about her phone use instead \u2026' replies 'Changed Observation of Offense to: \u2026', never 'I haven't changed'; one revision call"
+ },
+ "src/lib/ai/flags-off-parity.test.ts :: existing chat and form suites with every new flag off passes the suites whose expectations are already on main: src/app/api/chat/replay-pack, first half of the cases by id": {
+  "category": "INTENDED-HARNESS",
+  "reason": "parity child inherits FLAG_CLASSIFY_ON; the nov13 OPEN cases hold and their expect-fail wrappers flip; clean-env parity is the CI check"
+ },
+ "src/lib/forms/add-already-on-form.test.ts :: ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED: a small word left out (Gate-Sunny-3, 13 Nov 2026) already on the form: add that she was on her phone for the entire shift": {
+  "category": "INTENDED-HARNESS",
+  "reason": "new unit test from the e411007060 delta; absent OFF only because the OFF baseline ran on ca5ae744 (the delta is flag-gated); passes ON"
+ },
+ "src/lib/forms/add-already-on-form.test.ts :: ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED: a small word left out (Gate-Sunny-3, 13 Nov 2026) already on the form: add that she was on her phone the whole shift": {
+  "category": "INTENDED-HARNESS",
+  "reason": "new unit test from the e411007060 delta; absent OFF only because the OFF baseline ran on ca5ae744 (the delta is flag-gated); passes ON"
+ },
+ "src/lib/forms/add-already-on-form.test.ts :: ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED: a small word left out (Gate-Sunny-3, 13 Nov 2026) already on the form: add that she was on the phone": {
+  "category": "INTENDED-HARNESS",
+  "reason": "new unit test from the e411007060 delta; absent OFF only because the OFF baseline ran on ca5ae744 (the delta is flag-gated); passes ON"
+ },
+ "src/lib/forms/add-already-on-form.test.ts :: ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED: a small word left out (Gate-Sunny-3, 13 Nov 2026) already on the form: add that she was on the phone for the whole shift": {
+  "category": "INTENDED-HARNESS",
+  "reason": "new unit test from the e411007060 delta; absent OFF only because the OFF baseline ran on ca5ae744 (the delta is flag-gated); passes ON"
+ },
+ "src/lib/forms/add-already-on-form.test.ts :: ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED: a small word left out (Gate-Sunny-3, 13 Nov 2026) already on the form: add that she was on the phone the whole shift": {
+  "category": "INTENDED-HARNESS",
+  "reason": "new unit test from the e411007060 delta; absent OFF only because the OFF baseline ran on ca5ae744 (the delta is flag-gated); passes ON"
+ },
+ "src/lib/forms/add-already-on-form.test.ts :: ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED: a small word left out (Gate-Sunny-3, 13 Nov 2026) not already on the form: add that she was not on the phone for the entire shift": {
+  "category": "INTENDED-HARNESS",
+  "reason": "new unit test from the e411007060 delta; absent OFF only because the OFF baseline ran on ca5ae744 (the delta is flag-gated); passes ON"
+ },
+ "src/lib/forms/add-already-on-form.test.ts :: ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED: a small word left out (Gate-Sunny-3, 13 Nov 2026) not already on the form: add that she was on the phone for the entire shift and ignored a guest": {
+  "category": "INTENDED-HARNESS",
+  "reason": "new unit test from the e411007060 delta; absent OFF only because the OFF baseline ran on ca5ae744 (the delta is flag-gated); passes ON"
+ },
+ "src/lib/forms/add-already-on-form.test.ts :: ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED: a small word left out (Gate-Sunny-3, 13 Nov 2026) not already on the form: add that she was on the phone for the entire shift of 11/4": {
+  "category": "INTENDED-HARNESS",
+  "reason": "new unit test from the e411007060 delta; absent OFF only because the OFF baseline ran on ca5ae744 (the delta is flag-gated); passes ON"
+ },
+ "src/lib/forms/add-already-on-form.test.ts :: ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED: the gates' findings (Gate-Bubbles-4, Gate-Sunny-3, 13 Nov 2026) \"the whole shift\" is \"the entire shift\"": {
+  "category": "INTENDED-HARNESS",
+  "reason": "new unit test from the e411007060 delta; absent OFF only because the OFF baseline ran on ca5ae744 (the delta is flag-gated); passes ON"
+ },
+ "src/lib/forms/add-already-on-form.test.ts :: ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED: the gates' findings (Gate-Bubbles-4, Gate-Sunny-3, 13 Nov 2026) a negation must match in place: \"add that she was NOT on the phone for the entire shift\" is not already on the form": {
+  "category": "INTENDED-HARNESS",
+  "reason": "new unit test from the e411007060 delta; absent OFF only because the OFF baseline ran on ca5ae744 (the delta is flag-gated); passes ON"
+ },
+ "src/lib/forms/add-already-on-form.test.ts :: ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED: the gates' findings (Gate-Bubbles-4, Gate-Sunny-3, 13 Nov 2026) a negation the form also holds is already there": {
+  "category": "INTENDED-HARNESS",
+  "reason": "new unit test from the e411007060 delta; absent OFF only because the OFF baseline ran on ca5ae744 (the delta is flag-gated); passes ON"
+ },
+ "src/lib/forms/add-already-on-form.test.ts :: ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED: the gates' findings (Gate-Bubbles-4, Gate-Sunny-3, 13 Nov 2026) the words in another order, or split across sentences, are not already there": {
+  "category": "INTENDED-HARNESS",
+  "reason": "new unit test from the e411007060 delta; absent OFF only because the OFF baseline ran on ca5ae744 (the delta is flag-gated); passes ON"
+ },
+ "replay: nov13-add-already-on-form-says-so [open]": {
+  "category": "INTENDED",
+  "reason": "OPEN -> holds: 'add that she was on the phone for the entire shift' -> 'The Corrective Action Form \u2026 already says that'"
+ },
+ "replay: nov13-add-already-on-form-says-so-small-word-left-out [fix:MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED_ENABLED,ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "new arm (delta): 'add that she was on the phone the whole shift' -> 'already says that'"
+ },
+ "replay: nov13-add-already-on-form-says-so-small-word-left-out [open]": {
+  "category": "INTENDED",
+  "reason": "new arm (delta): 'add that she was on the phone the whole shift' -> 'already says that'"
+ },
+ "replay: nov13-made-about-empty-patch-answers-saved [open]": {
+  "category": "INTENDED",
+  "reason": "OPEN -> holds: 'make it about her phone use instead \u2026' replies 'Changed Observation of Offense to: \u2026', never 'I haven't changed'; one revision call"
+ }
+}

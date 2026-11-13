@@ -1,0 +1,42 @@
+
+> ask-bubbles@0.1.0 eval
+> vitest run --config vitest.eval.config.mts
+
+
+ RUN  v4.1.11 /home/user/gate/g871p
+
+
+Replay eval — flags on: MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED_ENABLED, ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED
+| Case | Flags off | Flags on |
+|---|---|---|
+| b9 | PASS 173ms | PASS 169ms |
+| b10 | PASS 370ms | PASS 369ms |
+| b11 | PASS 86ms | PASS 78ms |
+| b12 | FAIL (policy) 142ms | FAIL (policy) 144ms |
+| b18a | PASS 54ms | PASS 55ms |
+| b18b | PASS 43ms | PASS 43ms |
+| r1 | PASS 5ms | PASS 5ms |
+| b0 | PASS 218ms | PASS 196ms |
+| b1 | PASS 164ms | PASS 158ms |
+| b2 | PASS 77ms | PASS 84ms |
+| b3 | PASS 47ms | PASS 47ms |
+| b4 | PASS 166ms | PASS 163ms |
+| b5 | PASS 129ms | PASS 129ms |
+| b6 | PASS 186ms | PASS 195ms |
+| b7 | PASS 83ms | PASS 77ms |
+| b8 | PASS 33ms | PASS 35ms |
+| b13 | PASS 354ms | PASS 323ms |
+| b14 | PASS 18ms | PASS 18ms |
+| b15 | PASS 366ms | PASS 388ms |
+| b16 | PASS 14ms | PASS 13ms |
+| b17 | PASS 304ms | PASS 298ms |
+| sf-b1 | PASS 433ms | PASS 406ms |
+| sf-b3 | PASS 133ms | PASS 109ms |
+| sf-b4 | PASS 17ms | PASS 15ms |
+Latency p50/p95 off 129/370 ms, on 109/388 ms; total off 3615 ms, on 3517 ms.
+
+ Test Files  2 passed (2)
+      Tests  35 passed (35)
+   Start at  20:39:48
+   Duration  27.75s (transform 3.65s, setup 0ms, import 4.16s, tests 23.26s, environment 0ms)
+
