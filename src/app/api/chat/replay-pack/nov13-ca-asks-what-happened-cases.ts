@@ -103,6 +103,8 @@ export const NOV13_CA_ASKS_WHAT_HAPPENED_CASES: ReplayCase[] = [
       const { last, card } = await chat(t, turns);
       expect(card?.employeeName, `not for Rowan Kestrel:\n${last.content}`).toBe("Rowan Kestrel");
       expect(last.content, `asked what happened after an account:\n${last.content}`).not.toMatch(MARKER);
+      // Gate-Bubbles-5 (13 Nov 2026): the card check's own ask is worded "What happened? …"; never after an account either.
+      expect(last.content, `the card check asked what happened after an account:\n${last.content}`).not.toMatch(/What happened\?/);
       expect(card?.supportsInlineDraft, `no Create after an account:\n${last.content}`).toBe(true);
     },
   })),
