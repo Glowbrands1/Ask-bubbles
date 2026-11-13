@@ -132,7 +132,7 @@ describe("CARD_CHECKED_AGAINST_WORDS_ENABLED: added details stick AND nothing wr
   it.each(["she was at the register on her phone for 20 minutes", "she was in the back room on her phone", "she yelled at the manager in front of customers", "she gave the keys to a non key holder", "she told the lead she might not come in and then did not come in", "she was at the front desk on her phone the whole shift", "she was a no-show on Saturday", "she ignored the posted warning about the wet floor", "she said maybe and walked out of the store", "she left the store unlocked", "she is always late on weekends", "she was rude to a customer", "Marnie left her shift early without telling anyone"])("must join: %s", (said) => {
     expect(addedFacts("she was late on 11/3/26", "Marnie Holloway", after(said)).length).toBe(1);
   });
-  it.each(["she gets a verbal warning", "Marnie gets a verbal warning", "she's a key holder", "she is a key holder", "she maybe forgot", "she is a TITLE", "she's our closing lead", "she might have forgotten", "she works at West Dodge", "she is at Omaha, NE (West Dodge Rd)"])("must stay out: %s", (said) => {
+  it.each(["Marnie signed the jba policy manual on 10-15-26","he already had a CA on 10/14 for being late","she had a verbal warning on 10/1","she gets a verbal warning", "Marnie gets a verbal warning", "she's a key holder", "she is a key holder", "she maybe forgot", "she is a TITLE", "she's our closing lead", "she might have forgotten", "she works at West Dodge", "she is at Omaha, NE (West Dodge Rd)"])("must stay out: %s", (said) => {
     expect(addedFacts("she was late on 11/3/26", "Marnie Holloway", after(said.replace("TITLE", ROSTER[0]!.positionName!)))).toEqual([]);
   });
 });

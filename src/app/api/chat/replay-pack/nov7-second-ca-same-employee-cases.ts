@@ -96,6 +96,8 @@ export const NOV7_SECOND_CA_SAME_EMPLOYEE_CASES: ReplayCase[] = Object.entries(S
         const thread = await firstRequest(t);
         const reply = await thread.say(said);
         expect(line(reply.content, "Issue"), `the request's account is lost:\n${reply.content}`).toMatch(/late opening the store/i);
+        // Gate-Bubbles-5 (13 Nov 2026): prior history ("already had a CA …") never joins this incident's Issue.
+        expect(line(reply.content, "Issue"), `prior history joined the Issue:\n${reply.content}`).not.toMatch(/already had/i);
       },
     }),
   ),  // QA's Sunny round-3 gate (7 Nov 2026; ported from the sibling app): with the flag on, ordinary single-request cards
