@@ -5,7 +5,7 @@ vi.mock("@/lib/ai/chat-trace-store", () => ({ updateChatTrace: vi.fn() }));
 
 import type { AskResponse } from "@/lib/ai/types";
 
-import { CARD_CHECK_MAX_CALLS, accountFromWords, issueProblem, personProblem, withCardCheckedAgainstWords, type CardCheckModel } from "./card-checked-against-words";
+import { CARD_CHECK_MAX_CALLS, accountFromWords, addedFacts, issueProblem, personProblem, withCardCheckedAgainstWords, type CardCheckModel } from "./card-checked-against-words";
 import type { RosterEmployee } from "./employee-match";
 
 const ROSTER: RosterEmployee[] = [
@@ -100,5 +100,29 @@ describe("CARD_CHECKED_AGAINST_WORDS_ENABLED: the card", () => {
     const out = await withCardCheckedAgainstWords(built, input, model);
     expect(out).toEqual(built);
     expect(model).not.toHaveBeenCalled();
+  });
+});
+
+describe("CARD_CHECKED_AGAINST_WORDS_ENABLED: a fact added on the open card (QA's 17r-c live test)", () => {
+  const live = { turns: ["create a CA for Marnie Holloway, she was late on 11/3/26", "she also didn't call to say she'd be late"], roster: ROSTER };
+
+  it("the added detail is a fact the Issue does not hold, in her words without \"also\"", () => {
+    expect(addedFacts("she was late on 11/3/26", "Marnie Holloway", live)).toEqual(["she didn't call to say she'd be late"]);
+  });
+
+  it("guards: an answer to the card's question, a question, or a fact already on the card is never added", () => {
+    const answer = { turns: ["create a CA for Marnie Holloway, she was late on 11/3/26", "verbal warning"], roster: ROSTER };
+    expect(addedFacts("she was late on 11/3/26", "Marnie Holloway", answer)).toEqual([]);
+    const asked = { turns: ["create a CA for Marnie Holloway, she was late on 11/3/26", "she also left early, should I add that?"], roster: ROSTER };
+    expect(addedFacts("she was late on 11/3/26", "Marnie Holloway", asked)).toEqual([]);
+    const again = { turns: ["create a CA for Marnie Holloway, she was late on 11/3/26", "she was late on 11/3/26"], roster: ROSTER };
+    expect(addedFacts("she was late on 11/3/26", "Marnie Holloway", again)).toEqual([]);
+  });
+
+  it("on: the card's What happened keeps both facts, and the reply names the change", async () => {
+    vi.stubEnv("CARD_CHECKED_AGAINST_WORDS_ENABLED", "true");
+    const out = await withCardCheckedAgainstWords(card("she was late on 11/3/26"), live, NO_MODEL);
+    expect(out.formProposal?.issue).toBe("she was late on 11/3/26; she didn't call to say she'd be late");
+    expect(out.content).toMatch(/\*\*Added to What happened:\*\* she didn't call to say she'd be late/);
   });
 });

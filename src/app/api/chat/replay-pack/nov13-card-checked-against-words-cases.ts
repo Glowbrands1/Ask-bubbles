@@ -53,4 +53,23 @@ export const NOV13_CARD_CHECKED_AGAINST_WORDS_CASES: ReplayCase[] = [
       expect(t.cardCheckCalls?.() ?? 0).toBe(0);
     },
   },
+  {
+    id: "nov13-17rc-added-detail-kept-on-card",
+    title: "QA's 17r-c live test: \"create a CA for Marnie Holloway, she was late on 11/3/26\", then \"she also didn't call to say she'd be late\" on the open card: What happened keeps both facts, and the reply names the change",
+    report: "QA's Bubbles 17r-c live test, 13 Nov 2026 (main d5e5ea22): the added detail was lost from What happened and the reply repeated the whole draft",
+    status: { open: "What happened is still only \"she was late on 11/3/26\", and the reply does not say what changed" },
+    fixFlags: FIX,
+    async run(t) {
+      vi.setSystemTime(new Date("2026-11-13T16:00:00Z"));
+      t.directory(STAFF);
+      t.as("location_manager", WEST_DODGE);
+      const thread = t.thread();
+      await thread.say("create a CA for Marnie Holloway, she was late on 11/3/26");
+      const reply = await thread.say("she also didn't call to say she'd be late");
+      const issue = String((thread.proposal as Record<string, unknown> | null)?.issue ?? "");
+      expect(issue, `What happened lost the first fact:\n${reply.content}`).toMatch(/late on 11\/3\/26/i);
+      expect(issue, `What happened lost the added detail:\n${reply.content}`).toMatch(/didn'?t call/i);
+      expect(reply.content, `the reply does not name the change:\n${reply.content}`).toMatch(/(?:added|changed|updated)[^\n]*(?:what happened|issue)|(?:what happened|issue)[^\n]*(?:added|changed|updated|now)/i);
+    },
+  },
 ];
