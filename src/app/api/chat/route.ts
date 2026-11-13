@@ -54,9 +54,12 @@ import {
   resentRequestIsYesEnabled,
   cardPlanMatchesCreateEnabled,
   answerTurnLevelEnabled,
+  cardCheckedAgainstWordsEnabled,
   terminationCardTidyEnabled,
   humanRepliesEnabled,
+  closeSpellingMatchEnabled,
   offRosterAskBeforeCardEnabled,
+  whatHappenedNoCreateEnabled,
   oneFormEachPersonEnabled,
   outlineOnOpenProposalEnabled,
   groupWordsNotANameEnabled,
@@ -1164,6 +1167,15 @@ async function postChat(request: Request) {
       answer = (await import("@/lib/forms/confirmed-name-level")).withConfirmedNameLevel(answer, parsed.history, asked.question);
       // PROPOSAL_NAME_CORRECTION_ENABLED: an off-roster "change her name to …" on the card asks which, never kept silently.
       answer = withCorrectionNotDropped(answer, parsed);
+      // CLOSE_SPELLING_MATCH_ENABLED: a policy named close to a manual heading, not confidently, is asked "Did you mean …?" (`lib/forms/close-policy-ask.ts`).
+      if (closeSpellingMatchEnabled()) {
+        answer = await (await import("@/lib/forms/close-policy-ask")).withClosePolicyQuestion(answer, async () => {
+          const { SupabaseKnowledgeProvider } = await import("@/lib/knowledge/providers/supabase");
+          const { ACTIVE_BRAND } = await import("@/lib/brand");
+          const manual = await new SupabaseKnowledgeProvider().fetchOfficialPolicyManual(ACTIVE_BRAND.knowledgeScopeId);
+          return manual.ok ? manual.chunks : null;
+        }, [...parsed.history.filter((turn) => turn.role === "user").map((turn) => turn.content), asked.question].join("\n"));
+      }
       // CARD_PLAN_MATCHES_CREATE_ENABLED: an Attendance CA's card shows the plan Create will save (`lib/forms/card-plan-matches-create.ts`).
       if (cardPlanMatchesCreateEnabled()) {
         answer = (await import("@/lib/forms/card-plan-matches-create")).withCardPlanAsCreate(answer, [
@@ -1174,6 +1186,19 @@ async function postChat(request: Request) {
       // TERMINATION_CARD_TIDY_ENABLED: an Issue that is only a hedge about terminating is the account (`lib/ai/termination-card-tidy.ts`).
       if (terminationCardTidyEnabled()) {
         answer = (await import("@/lib/ai/termination-card-tidy")).withIssueNotTerminationHedge(answer, asked.question);
+      }
+      // CARD_CHECKED_AGAINST_WORDS_ENABLED: the card is checked against the manager's own words before it is shown (`lib/forms/card-checked-against-words.ts`).
+      if (cardCheckedAgainstWordsEnabled() && answer.formProposal) {
+        const { loadScopedRoster } = await import("@/lib/forms/employee-roster");
+        const { callFormPatchModel } = await import("@/lib/forms/form-patch-call");
+        answer = await (await import("@/lib/forms/card-checked-against-words")).withCardCheckedAgainstWords(
+          answer,
+          {
+            turns: [...parsed.history.filter((turn) => turn.role === "user").map((turn) => String(turn.content ?? "")), asked.question],
+            roster: await loadScopedRoster(context.identity.scope).catch(() => []),
+          },
+          callFormPatchModel,
+        );
       }
       // OUTLINE_ON_OPEN_PROPOSAL_ENABLED: the outline turn's reply says the outline is kept as her form's layout.
       if (outlineOnProposal) {
@@ -1244,6 +1269,8 @@ async function postChat(request: Request) {
         ]);
       }
       // OFF_ROSTER_ASK_BEFORE_CARD_ENABLED: a store manager's card for a full name not on their roster is asked about once, before the card (`lib/forms/off-roster-ask.ts`).
+      // WHAT_HAPPENED_NO_CREATE_ENABLED: while the reply asks what happened, the card offers no Create (`lib/forms/what-happened-no-create.ts`).
+      if (whatHappenedNoCreateEnabled()) answer = (await import("@/lib/forms/what-happened-no-create")).withNoCreateWhileAsking(answer, { question: asked.question, history: parsed.history });
       if (offRosterAskBeforeCardEnabled()) {
         answer = (await import("@/lib/forms/off-roster-ask")).withOffRosterAskBeforeCard(answer, { scope: context.identity.scope, history: parsed.history, question: asked.question });
       }

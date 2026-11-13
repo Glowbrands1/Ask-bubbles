@@ -199,7 +199,7 @@ const PROFILES: readonly (readonly [string, readonly string[]])[] = [
 ];
 /** This fix's flag, default off. The exact-turn cases run with it on. */
 const FLAG = "QUESTION_NOT_FORM_ENABLED";
-const ALL_FLAGS = [...PRODUCTION, "INTENT_EXTRACTION_ENABLED", FLAG];
+const ALL_FLAGS = [...PRODUCTION, "INTENT_EXTRACTION_ENABLED", FLAG, "EDIT_SEES_SAVED_FORM_ENABLED", "CARD_CHECKED_AGAINST_WORDS_ENABLED"];
 const saved = new Map<string, string | undefined>();
 
 let sequence = 0;

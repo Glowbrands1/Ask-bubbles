@@ -7,6 +7,7 @@ import {
   caPerformanceReasonEnabled,
   caSalesPolicyEnabled,
   cleaningOtherEveryWordingEnabled,
+  closeSpellingMatchEnabled,
   conductIncidentCitesPageEnabled,
   describedAttendanceCardEnabled,
   formEditDateRulesEnabled,
@@ -1233,7 +1234,13 @@ export function unconfirmedManualLine(named: NamedPolicyReading | null): string 
 
 export function caPolicyProposalLine(reading: CaPolicyReading, named: NamedPolicyReading | null = null): string | null {
   // CA_SALES_POLICY_ENABLED (`withCleaningOther`): cleaning left undone is the form's Other box. Off, never set.
-  if (reading.other === "cleaning") {
+  /*
+   * CLOSE_SPELLING_MATCH_ENABLED (QA's ruling, 13 Nov 2026): a policy the manager NAMES, which the manual answers, wins
+   * over a cleaning account — Pau's cleaning-is-Other ruling is for a manager who only DESCRIBES cleaning. "violating
+   * the care and clening policy, she left her station a mess" cites Care and Cleaning of Equipment and Facilities.
+   * A name the manual does not answer keeps Other (`close-policy-ask.ts` then asks "Did you mean …?"). Off, as before.
+   */
+  if (reading.other === "cleaning" && !(closeSpellingMatchEnabled() && named?.lookup === "found")) {
     return "**Policy:** Other — cleaning duties left undone are recorded under Other on the Corrective Action Form, not the Standards of Conduct. Tell me if a different policy applies.";
   }
   // CA_SALES_POLICY_ENABLED: a sales or MSB account. Off, the source is never set and this line is never said.
