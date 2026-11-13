@@ -179,8 +179,10 @@ import {
   typedNameEnabled,
   secondRequestOwnAccountEnabled,
   describedAttendanceCardEnabled,
+  sameNameAsksWhichEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { lateOpeningOwnWordsEnabled } from "@/lib/config/chat-quality-flags";
+import { sameNameChoice, sameNameQuestion } from "@/lib/forms/same-name-choice";
 import { lateOpeningWords, noShowWords } from "@/lib/forms/late-open";
 import { currentFormRequestText } from "@/lib/forms/current-request";
 import { managerWords } from "./edit-date-rules";
@@ -1575,6 +1577,18 @@ async function checkTypedEmployee(
 
   // TWO PEOPLE, ONE NAME: asking "Sarah Smith or Sarah Smith?" is no question. Ask for the store.
   const duplicated = names.find((name, index) => names.findIndex((other) => same(other, name)) !== index);
+  // SAME_NAME_ASKS_WHICH_ENABLED: the store cannot tell two people at ONE store apart. Ask the numbered choice instead —
+  // labelled with store and job title — and read the answer by identity (`forms/same-name-choice.ts`).
+  if (duplicated && sameNameAsksWhichEnabled()) {
+    const chosen = sameNameChoice([...input.history, { role: "user", content: input.question }], result.candidates, storeLabel);
+    if (chosen === "keep") return {};
+    if (chosen) return verified(chosen.employee);
+    return {
+      resolution: { kind: "ambiguous", candidates: names },
+      verification: out.verification,
+      question: sameNameQuestion(typed.employeeName, result.candidates, storeLabel),
+    };
+  }
   if (duplicated) {
     const stores = [...new Set(result.candidates.flatMap((candidate) => candidate.employee.locationIds))].map(storeLabel);
     const where = stores.length > 0 ? ` — ${stores.join(" or ")}` : "";

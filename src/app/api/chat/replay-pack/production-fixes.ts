@@ -758,4 +758,22 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov12-off-roster-place-answer-city-state-unlisted": "OFF_ROSTER_PLACE_ANSWER",
   // fixed in production by OFF_ROSTER_PLACE_ANSWER, QA hotfix 17r-b, 13 Nov 2026
   "nov12-off-roster-place-answer-17r-live-west-dodge": "OFF_ROSTER_PLACE_ANSWER",
+  // fixed in production by HUMAN_REPLIES, QA hotfix 17r-c, 13 Nov 2026
+  "nov10-card-opener-once-ca-chain": "HUMAN_REPLIES",
+  // fixed in production by TERMINATION_TIDY_HELD_NAME, QA hotfix 17r-c, 13 Nov 2026
+  "nov12-17r-termination-tidy-off-roster-ask": "TERMINATION_TIDY_HELD_NAME",
+  // fixed in production by OFFERED_NAME_ACCEPTED, QA hotfix 17r-c, 13 Nov 2026
+  "nov12-offered-name-accepted-admin": "OFFERED_NAME_ACCEPTED",
+  // fixed in production by OFFERED_NAME_ACCEPTED, QA hotfix 17r-c, 13 Nov 2026
+  "nov12-offered-name-accepted-store-manager": "OFFERED_NAME_ACCEPTED",
+  // fixed in production by OFFERED_NAME_ACCEPTED, QA hotfix 17r-c, 13 Nov 2026
+  "nov13-offered-name-accepted-after-store-answer-admin": "OFFERED_NAME_ACCEPTED",
+  // fixed in production by SAME_NAME_ASKS_WHICH, QA hotfix 17r-c, 13 Nov 2026
+  "nov12-same-name-asks-which": "SAME_NAME_ASKS_WHICH",
+  // fixed in production by SAME_NAME_ASKS_WHICH, QA hotfix 17r-c, 13 Nov 2026
+  "nov12-same-name-numbered-reply-selects": "SAME_NAME_ASKS_WHICH",
+  // fixed in production by SAME_NAME_ASKS_WHICH, QA hotfix 17r-c, 13 Nov 2026
+  "nov12-same-name-title-reply-selects": "SAME_NAME_ASKS_WHICH",
+  // fixed in production by SAME_NAME_ASKS_WHICH, QA hotfix 17r-c, 13 Nov 2026
+  "nov12-same-name-store-reply-selects": "SAME_NAME_ASKS_WHICH",
 };

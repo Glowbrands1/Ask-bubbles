@@ -1,4 +1,4 @@
-import { terminationCardTidyEnabled } from "@/lib/config/chat-quality-flags";
+import { terminationCardTidyEnabled, terminationTidyHeldNameEnabled } from "@/lib/config/chat-quality-flags";
 
 import type { AskResponse } from "./types";
 
@@ -17,6 +17,8 @@ import type { AskResponse } from "./types";
  */
 
 const ABOUT_TERMINATING = /\bterminat|\bterm\s+(?:ca|c\/a)\b|\btermination\b/i;
+/** The name the reply says is not on the roster (FORM_NAME_FROM_ROSTER / the off-roster ask). */
+const HELD_NAME = /I couldn['’]t find \*\*([^*]+)\*\* in the Woven roster/;
 const ISSUE_SEGMENT = /(\*\*Issue:\*\*\s*)([^·\n]+?)(\s*(?:·|\n|$))/;
 
 /** The request's clauses after the employee's name that do not talk about terminating: the account. */
@@ -35,10 +37,17 @@ export function withIssueNotTerminationHedge(answer: AskResponse, question: stri
   if (!terminationCardTidyEnabled()) return answer;
   const card = answer.formProposal;
   const issue = card?.issue?.trim();
-  if (!card || !issue || !card.employeeName || !ABOUT_TERMINATING.test(issue)) return answer;
+  /*
+   * TERMINATION_TIDY_HELD_NAME_ENABLED (QA's 17r live note): on the off-roster ask path the name is held off the card,
+   * and the reply says "I couldn't find **<name>** in the Woven roster"; the account is read after that name.
+   */
+  const employee =
+    card?.employeeName?.trim() ||
+    (terminationTidyHeldNameEnabled() ? (HELD_NAME.exec(answer.content)?.[1]?.trim() ?? null) : null);
+  if (!card || !issue || !employee || !ABOUT_TERMINATING.test(issue)) return answer;
   // Only a clause about terminating, nothing else: "do not terminate yet", "might terminate".
   if (issue.split(/[,;]/).some((clause) => clause.trim() !== "" && !ABOUT_TERMINATING.test(clause))) return answer;
-  const account = accountClauses(question, card.employeeName);
+  const account = accountClauses(question, employee);
   if (!account) return answer;
   const content = answer.content.replace(ISSUE_SEGMENT, (_all, lead: string, _old: string, tail: string) => `${lead}${account}${tail}`);
   return { ...answer, content, formProposal: { ...card, issue: account } };

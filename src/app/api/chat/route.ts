@@ -56,6 +56,7 @@ import {
   answerTurnLevelEnabled,
   cardCheckedAgainstWordsEnabled,
   terminationCardTidyEnabled,
+  humanRepliesEnabled,
   offRosterAskBeforeCardEnabled,
   oneFormEachPersonEnabled,
   outlineOnOpenProposalEnabled,
@@ -1275,6 +1276,18 @@ async function postChat(request: Request) {
       }
       // SAME_REQUEST_OTHER_PERSON_ENABLED: <B>'s card says what of the earlier request it carries.
       if (sameRequestOther) answer = (await import("@/lib/forms/same-request-other-person")).withSameRequestNote(answer, sameRequestOther);
+      /*
+       * HUMAN_REPLIES_ENABLED (QA's ruling (b), 12 Nov 2026; rebuilt from the sibling app's S#898): a later card turn for the
+       * same form and employee says what changed instead of the opener's long tail; every other card line and the card
+       * are untouched. Last, so it reads the reply every step above built. Off, unchanged.
+       */
+      if (humanRepliesEnabled()) {
+        answer = (await import("@/lib/ai/human-replies")).humanizeFormReply(answer, {
+          history: parsed.history,
+          question: parsed.question,
+          today: parsed.context.todayIso,
+        });
+      }
       /*
        * NEVER A BLANK ANSWER (EMPTY_REPLY_GUARD_ENABLED). An answer with no
        * prose and no card is a failure, said as one: the turn closes as failed

@@ -487,7 +487,8 @@ vi.mock("@/lib/forms/employee-roster", async (importOriginal) => {
     readDirectoryFacts: async (scope: AccessScope | null) =>
       // No position on record unless the case gives one: the title is the manager's or asked.
       actual.scopeRoster(state.directory as never, scope).map((person) => ({ ...person, title: (person as { positionName?: string | null }).positionName ?? null, primaryLocationName: "Kearney, NE" })),
-    loadScopedRoster: async (scope: AccessScope | null) => actual.scopeRoster(state.directory as never, scope),
+    // The turn's roster limit (`withRosterLimit`), as production's loadScopedRoster applies it.
+    loadScopedRoster: async (scope: AccessScope | null) => actual.withinRosterLimit(actual.scopeRoster(state.directory as never, scope)),
     loadScopedRosterResult: async (scope: AccessScope | null) => rosterResultFor(actual.scopeRoster, state.directory as never, scope),
   };
 });
