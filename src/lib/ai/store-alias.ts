@@ -88,10 +88,23 @@ const CUE_AFTER = /^\s*(?:location|salon|store)\b/i;
 const CONTINUES_NAME =
   /^(?:high|middle|elementary|school|central|west|east|north|south|state|university|college|mall|road|street|st|ave|construction|park|hospital)$/i;
 
-/** Whether the text after a store continues a longer proper noun ("high", "west", "mall"), so the store is not one. */
-function continuesProperNoun(after: string): boolean {
-  const word = /^\s+([A-Za-z][A-Za-z'’-]*)/.exec(after)?.[1];
-  return Boolean(word && CONTINUES_NAME.test(word));
+/** Street words that belong to a store's own label ("West Dodge St", "… Rd"). */
+const STREET_WORDS = new Set(["st", "street", "rd", "road", "ave", "avenue", "pkwy", "parkway", "blvd", "boulevard"]);
+
+/**
+ * Whether the text after a store continues a longer proper noun ("high", "west", "mall"), so the store is not one.
+ * Not when the word is part of the store's own label ("west dodge st": the store's street; "West" of "West Dodge"),
+ * nor when "of" follows it ("at kearney west of the register" — a direction, not a name) (Gate-Bubbles-3, #869).
+ */
+function continuesProperNoun(after: string, storeName: string): boolean {
+  const match = /^\s+([A-Za-z][A-Za-z'’-]*)(?:\s+([A-Za-z]+))?/.exec(after);
+  const word = match?.[1]?.toLowerCase();
+  if (!word || !CONTINUES_NAME.test(word)) return false;
+  if (match?.[2]?.toLowerCase() === "of") return false;
+  const label = new Set(storeName.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean));
+  if (label.has(word)) return false;
+  if (STREET_WORDS.has(word) && /\(/.test(storeName)) return false;
+  return true;
 }
 const SUFFIXES: readonly [string, string][] = [
   ["street", "st"],
@@ -247,7 +260,7 @@ export function rosterNames(text: string, placeAsked = false): string {
       const cue = alias.phrase.includes(" ") ? CUE_BEFORE : ONE_WORD_CUE_BEFORE;
       if (alias.cued && !cue.test(before) && !CUE_AFTER.test(all.slice(offset + found.length))) return found;
       // Kept as typed, and held back so no shorter alias inside it ("kearney" in "kearney ne Mall") is written either.
-      if (placeStripWholePhraseOnlyEnabled() && continuesProperNoun(all.slice(offset + found.length))) {
+      if (placeStripWholePhraseOnlyEnabled() && continuesProperNoun(all.slice(offset + found.length), alias.name)) {
         return `\u0000${kept.push(found) - 1}\u0000`;
       }
       return `\u0000${kept.push(READERS.written(alias.name)) - 1}\u0000`;

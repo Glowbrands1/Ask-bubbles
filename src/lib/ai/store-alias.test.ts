@@ -122,6 +122,8 @@ describe("PLACE_STRIP_WHOLE_PHRASE_ONLY (QA, 13 Nov 2026)", () => {
   });
 
   it("off: a store inside a longer name is written (as on main)", () => {
+    // Pinned off (Gate-Bubbles-3): a PLACE_STRIP_WHOLE_PHRASE_ONLY_ENABLED set in the environment must not turn it on.
+    delete process.env.PLACE_STRIP_WHOLE_PHRASE_ONLY_ENABLED;
     process.env[FLAG] = "true";
     expect(rosterNames("she was late because she was at kearney high")).toBe("she was late because she was at Kearney NE high");
   });
@@ -140,5 +142,8 @@ describe("PLACE_STRIP_WHOLE_PHRASE_ONLY (QA, 13 Nov 2026)", () => {
     // QA's ruling (Gate-Sunny's probes): a capitalised word does not block it.
     expect(rosterNames("late at kearney ne Today")).toBe("late at Kearney NE Today");
     expect(rosterNames("late at kearney ne NCNS")).toBe("late at Kearney NE NCNS");
+    // Gate-Bubbles-3 (#869): a continuation word that is the store's own label, or is followed by "of", does not block it.
+    expect(rosterNames("ca for avery at west dodge st late on 11/1")).toBe("ca for avery at Omaha NE (West Dodge Rd) st late on 11/1");
+    expect(rosterNames("she was at kearney ne west of the register")).toBe("she was at Kearney NE west of the register");
   });
 });
