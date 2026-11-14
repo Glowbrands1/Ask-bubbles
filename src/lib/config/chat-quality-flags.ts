@@ -1005,6 +1005,9 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "POLICY_LINE_COVERS_EVERY_SECTION_ENABLED",
   // coding 2: NAMED_POLICIES_ALL_KEPT (QA's two-offense Create check, 13 Nov 2026; default off).
   "NAMED_POLICIES_ALL_KEPT_ENABLED",
+  // coding 2: OTHER_POLICY_AGREES and OTHER_NOT_A_POLICY_NAME (ported from the sibling app at QA's direction, 14 Nov 2026; default off).
+  "OTHER_POLICY_AGREES_ENABLED",
+  "OTHER_NOT_A_POLICY_NAME_ENABLED",
   // coding 2: the sibling app's "what happened" check (Pau's direction, 13 Nov 2026; default off).
   "CA_ASKS_WHAT_HAPPENED_ENABLED",
   "WHAT_HAPPENED_NO_CREATE_ENABLED",
@@ -1440,6 +1443,12 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "STORE_ALIAS_ENABLED",
   // coding 4: POLICY_NOT_FOUND_PLAIN_WORDING (QA, 13 Nov 2026; default off).
   "POLICY_NOT_FOUND_PLAIN_WORDING_ENABLED",
+  // coding 4: REASON_PLACE_NOT_STORE (Gate-Bubbles-3 on #869, 13 Nov 2026; default off).
+  "REASON_PLACE_NOT_STORE_ENABLED",
+  // coding 4: FUZZY_STORE_ASKS (QA's ruling on Gate-Bubbles-3's #869 probes, 14 Nov 2026; default off).
+  "FUZZY_STORE_ASKS_ENABLED",
+  // coding 4: REQUEST_LINE_TITLE_KEPT (QA's Bubbles 17x live test, 14 Nov 2026; default off).
+  "REQUEST_LINE_TITLE_KEPT_ENABLED",
   // coding 4: HEADING_DISTINCTIVE_WORDS (QA, 13 Nov 2026; default off).
   "HEADING_DISTINCTIVE_WORDS_ENABLED",
   // coding 4: PLACE_STRIP_WHOLE_PHRASE_ONLY (QA, 13 Nov 2026; default off).
@@ -5528,6 +5537,17 @@ export function sameNameAsksWhichEnabled(): boolean {
 }
 
 /**
+ * POLICY_DASH_LINE_PAGE_ENABLED (coding 5, 12 Nov 2026; default off; QA's Bubbles 17q live test). "create a CA for <B>,
+ * she rang up the wrong items on 11/9" cited "**Policy:** Standards of Conduct — ringing up a sale inaccurately. I'll
+ * cite that section … with its page, on the draft" with no page, while Attendance and Animals gave theirs. On: a card
+ * Policy line that opens with one of the app's own policy names and a dash carries that section's printed page, as the
+ * Dress Code read-from-request line does (`forms/policy-page-on-card.ts`). Off, as before.
+ */
+export function policyDashLinePageEnabled(): boolean {
+  return envFlag("POLICY_DASH_LINE_PAGE_ENABLED");
+}
+
+/**
  * NEXT_PUBLIC_REPLY_QUOTE_LINES_ENABLED (QA's Bubbles 17p live check, 12 Nov 2026; default off). With
  * STEP_B_REPLY_KEEPS_LINES on, an edit reply quotes the field line by line ("Changed Observation of Offense to:\n>
  * Observed:\n> <G> was late …\n> Expectation: …"), but the chat showed it as ONE line with ">" between the parts: the
@@ -5668,6 +5688,20 @@ export function policyNotFoundPlainWordingEnabled(): boolean {
 }
 
 /**
+ * POLICY_NOT_FOUND_PLAIN_WORDING for the notices outside the card (QA, 14 Nov 2026; default off): the Finalize
+ * dialog's title and message (`forms/policy-verification.ts`) and the form card's policy notes (`features/chat/
+ * inline-form.tsx`) say "I don't see this policy in the knowledge base …", not "Woven does not see …". The dialog
+ * wording is also the server's refusal, and the notes are drawn in the browser, so there are two variables: FLIP BOTH
+ * TOGETHER (POLICY_NOT_FOUND_PLAIN_WORDING_ENABLED and NEXT_PUBLIC_POLICY_NOT_FOUND_PLAIN_WORDING_ENABLED; NEXT_PUBLIC_
+ * is inlined at build time). Off, as before.
+ */
+export function policyNotFoundPlainNoticesEnabled(): boolean {
+  if (typeof window === "undefined") return envFlag("POLICY_NOT_FOUND_PLAIN_WORDING_ENABLED");
+  const inlined = process.env.NEXT_PUBLIC_POLICY_NOT_FOUND_PLAIN_WORDING_ENABLED;
+  return typeof inlined === "string" && ON.has(inlined.trim().toLowerCase());
+}
+
+/**
  * HEADING_DISTINCTIVE_WORDS (QA, 13 Nov 2026; default off): a manual heading is named by its distinctive words; the
  * generic heading words "is", "are", "prohibited" and "requirement" may be left off, as "policy" and "guidelines"
  * already may. "violating the retaliation policy" names "Retaliation is Prohibited". See
@@ -5717,4 +5751,54 @@ export function policyLineCoversEverySectionEnabled(): boolean {
  */
 export function mixedPolicyPlanEnabled(): boolean {
   return envFlag("MIXED_POLICY_PLAN_ENABLED");
+}
+
+/**
+ * REASON_PLACE_NOT_STORE (Gate-Bubbles-3's #869 probes, 13 Nov 2026; default off): "she was late because she was at
+ * sioux falls west" — where she was is why she was late, not the store the form is for. With the flag, a place in a
+ * "because <she> was at/in …" clause is not read as a store: the store comes from Woven or is asked. The account keeps
+ * the words. See `stores/resolver.ts` readStoreMentions. Off, as before.
+ */
+export function reasonPlaceNotStoreEnabled(): boolean {
+  return envFlag("REASON_PLACE_NOT_STORE_ENABLED");
+}
+
+/**
+ * FUZZY_STORE_ASKS (QA's ruling on Gate-Bubbles-3's #869 probes, 14 Nov 2026; default off): GLOBAL_STORE_ASK takes a
+ * single misspelt store silently. That stays for a one-letter typo or an initialism; a close spelling further off
+ * ("sioux falls west" read as Sioux Falls, SD (W 41st St)) is asked, never written "as you said". See
+ * `stores/resolver.ts` (loose) and `forms/location-scope.ts` fromNamedLocations. Off, as before.
+ */
+export function fuzzyStoreAsksEnabled(): boolean {
+  return envFlag("FUZZY_STORE_ASKS_ENABLED");
+}
+
+/**
+ * REQUEST_LINE_TITLE_KEPT (QA's Bubbles 17x live test, 14 Nov 2026; default off): "create corrective action form for
+ * <A>, Team Member Part Time" left the card with no Position: TITLE_OF_THE_EMPLOYEE read "Part Time" as another
+ * person's name beside the title. With the flag, words that complete a company position name are the title. See
+ * `forms/title-of-another-person.ts`. Off, as before.
+ */
+export function requestLineTitleKeptEnabled(): boolean {
+  return envFlag("REQUEST_LINE_TITLE_KEPT_ENABLED");
+}
+
+/**
+ * OTHER_POLICY_AGREES_ENABLED (Coding-2, 14 Nov 2026; default off; ported from the sibling app, QA's ruling on its
+ * sanitation report). Cleaning or sanitation left undone is Other (Pau's rule): the cleaning reader reads the sanitation
+ * family ("sanitaion", "sanitation"), the draft ticks Other, the card cites no manual section for it, and with only Other
+ * ticked Direct policy is left blank rather than filled from whatever passage scored best. A manager naming Care and
+ * Cleaning keeps that policy. Off, as before.
+ */
+export function otherPolicyAgreesEnabled(): boolean {
+  return envFlag("OTHER_POLICY_AGREES_ENABLED");
+}
+
+/**
+ * OTHER_NOT_A_POLICY_NAME_ENABLED (Coding-2, 14 Nov 2026; default off; ported from the sibling app). "Other" is a Type
+ * of Offense box, never a policy name: a plan built from Policy Violated "Other" says "review the applicable company
+ * policy", never "review the Other policy" (`forms/ca-action-plan.ts` policyNamesFromViolated). Off, as before.
+ */
+export function otherNotAPolicyNameEnabled(): boolean {
+  return envFlag("OTHER_NOT_A_POLICY_NAME_ENABLED");
 }

@@ -1,4 +1,4 @@
-import { wornClothingIsDressCodeEnabled } from "@/lib/config/chat-quality-flags";
+import { policyDashLinePageEnabled, wornClothingIsDressCodeEnabled } from "@/lib/config/chat-quality-flags";
 
 import { CA_POLICY_LABEL, type CaPolicyName } from "./ca-policy";
 import {
@@ -91,6 +91,12 @@ const READS_AS = /^(\*\*Policy:\*\* this reads as \*\*)(.+?)(\*\*)( — .*)$/;
  * line gives one. It gets its printed page the same way: "Dress Code (JBA Policy Manual p.15) — read from this request.".
  */
 const READ_FROM_REQUEST = /^(\*\*Policy:\*\* )(.+?)( — read from this request\b.*)$/;
+/**
+ * POLICY_DASH_LINE_PAGE_ENABLED (QA's Bubbles 17q live test, 12 Nov 2026): "**Policy:** Standards of Conduct — ringing
+ * up a sale inaccurately. I'll cite that section …" (and every line that opens with the app's own policy name and a
+ * dash) gets its printed page the same way: "Standards of Conduct (JBA Policy Manual p.12) — ringing up …".
+ */
+const DASH = /^(\*\*Policy:\*\* )([^—"*\n]+?)( — .*)$/;
 
 /** The card's own policy lines, each with its printed page where the manual gives one. */
 export function withPolicyPagesOnCard(content: string, chunks: readonly ManualChunk[]): string {
@@ -107,6 +113,11 @@ export function withPolicyPagesOnCard(content: string, chunks: readonly ManualCh
       if (!ownHeading(read[2]!)) return line;
       const cited = headingWithPrintedPage(read[2]!, chunks);
       return cited ? `${read[1]}${cited}${read[3]}` : line;
+    }
+    const dash = policyDashLinePageEnabled() ? DASH.exec(line) : null;
+    if (dash && ownHeading(dash[2]!)) {
+      const cited = headingWithPrintedPage(dash[2]!, chunks);
+      return cited ? `${dash[1]}${cited}${dash[3]}` : line;
     }
     const said = AS_YOU_SAID.exec(line) ?? BARE.exec(line);
     if (!said || !ownHeading(said[2]!)) return line;

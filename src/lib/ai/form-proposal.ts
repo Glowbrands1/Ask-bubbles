@@ -43,6 +43,7 @@ import {
   caPolicyProposalLine,
   unconfirmedManualLine,
   describedAttendanceKeys,
+  withoutCleaningDuty,
   groundMissedEvent,
   LATE_OPENING_OFFENSE,
   MISSED_EVENT_OFFENSE,
@@ -2627,6 +2628,16 @@ async function withManualIdentity(named: NamedPolicyReading | null, input: Propo
 }
 
 async function namedPolicyFor(text: string, input: ProposalTurn): Promise<NamedPolicyReading | null> {
+  /*
+   * OTHER_POLICY_AGREES_ENABLED (QA's ruling (b) on Gate-Bubbles-5's #892 probes, 14 Nov 2026): a cleaning duty left
+   * undone beside a second offense the account describes. The second offense is read from the account without the
+   * cleaning duty and leads the card, with Other said beside it (`caPolicyProposalLine`). Alone, Other as before.
+   */
+  const rest = withoutCleaningDuty(secondRequestOwnAccountEnabled() ? currentFormRequestText(text) : text);
+  if (rest !== null) {
+    const beside = await namedPolicyFor(rest, input);
+    if (beside && beside.lookup === "described") return { ...beside, besideOther: true };
+  }
   const policyReading = readCaPolicy(secondRequestOwnAccountEnabled() ? currentFormRequestText(text) : text);
   // A missed meeting reads as Attendance; the manual still says where (see `groundMissedEvent` below).
   if (policyReading.stated !== null && !(policyReading.stated === "attendance" && policyReading.missedEvent)) return null;

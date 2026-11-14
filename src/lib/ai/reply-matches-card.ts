@@ -1,7 +1,7 @@
 import { withNoEmployeeCard, withoutCreateNowWhenNoEmployee } from "@/lib/forms/no-name-reply-wording";
-import { cleaningOtherEveryWordingEnabled, closeSpellingMatchEnabled, conductIncidentCitesPageEnabled, policyLineCoversEverySectionEnabled, replyMatchesCardEachCardEnabled, replyMatchesCardEnabled } from "@/lib/config/chat-quality-flags";
+import { cleaningOtherEveryWordingEnabled, closeSpellingMatchEnabled, conductIncidentCitesPageEnabled, policyLineCoversEverySectionEnabled, replyMatchesCardEachCardEnabled, replyMatchesCardEnabled, otherPolicyAgreesEnabled } from "@/lib/config/chat-quality-flags";
 import { offeredOffRosterName } from "@/lib/forms/off-roster-confirm";
-import { caPolicyProposalLine, readCaPolicy, removedOffenseLabels } from "@/lib/forms/ca-policy";
+import { OTHER_BESIDE_NOTE, caPolicyProposalLine, readCaPolicy, removedOffenseLabels } from "@/lib/forms/ca-policy";
 import { cardPolicyHeading } from "@/lib/forms/card-policy";
 import { personRosterNames } from "@/lib/forms/person-guard";
 import { requestMessage } from "@/lib/forms/request-slot";
@@ -181,6 +181,9 @@ export function withCleaningOtherPolicy(response: AskResponse, message?: string)
   // CLOSE_SPELLING_MATCH_ENABLED (QA, 13 Nov 2026): a policy the manager named and the manual answers, already on the
   // card's Policy line, wins over cleaning-is-Other (`caPolicyProposalLine`). Off, as before.
   if (closeSpellingMatchEnabled() && NAMED_FOUND_LINE.test(response.content)) return response;
+  // OTHER_POLICY_AGREES_ENABLED (QA's ruling (b), 14 Nov 2026): a section described beside the cleaning duty, with Other
+  // said beside it, is already the card's line (`caPolicyProposalLine`). Off, as before.
+  if (otherPolicyAgreesEnabled() && response.content.includes(OTHER_BESIDE_NOTE)) return response;
   const other = caPolicyProposalLine(reading);
   if (!other) return response;
   let placed = false;
