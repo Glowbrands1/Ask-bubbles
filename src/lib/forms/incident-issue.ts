@@ -5,6 +5,7 @@ import {
   futureIncidentDateAskEnabled,
   issueAfterRequestReasonEnabled,
   issueIsTheAccountEnabled,
+  issueKeepsWorkAreaEnabled,
   levelRequestDateEnabled,
   levelStepNotAccountEnabled,
   policyCorrectionNotAccountEnabled,
@@ -24,6 +25,7 @@ import { withoutPriorStepClauses } from "./form-date-answer";
 import { priorSentenceFixFor } from "./prior-sentence-scope";
 import { statedWarningLevel } from "./warning-level";
 import { withoutLeadingTitle } from "./title-before-name";
+import { workAreaPhrase } from "./work-area";
 
 /**
  * ============================================================================
@@ -411,7 +413,36 @@ function issueAsRead(rawSaid: string, employeeName: string | null): string | nul
   }
   if (!typedNameEnabled()) return accountOnly(fromRequest, employeeName);
   if (fromRequest && !titleAndPlaceOnly(fromRequest, employeeName)) return accountOnly(fromRequest, employeeName);
-  return accountOnly(accountIssue(text), employeeName);
+  return withWorkArea(accountOnly(accountIssue(text), employeeName), text, employeeName);
+}
+
+/**
+ * ISSUE_KEEPS_WORK_AREA_ENABLED (QA, 13 Nov 2026): the request named who and where ("a ca for <A> at the front desk"),
+ * so the account is the Issue; a work area said there stays on it ("she was rude to a guest at the front desk"). Only
+ * a work area (`forms/work-area.ts`), never a store; and not when the account already says it. Off, as before.
+ */
+function withWorkArea(issue: string | null, text: string, employeeName: string | null): string | null {
+  if (!issueKeepsWorkAreaEnabled() || issue === null) return issue;
+  const area = requestWorkArea(text, employeeName);
+  if (!area) return issue;
+  const areaWords = area.toLowerCase().replace(/^at\s+(?:the\s+)?/, "");
+  if (issue.toLowerCase().includes(areaWords)) return issue;
+  return `${issue.replace(/[\s.!?,;:]+$/, "")} ${area}`;
+}
+
+/**
+ * The work area of the latest request whose first clause is only who and where ("a ca for <A> at the front desk, …"
+ * → "at the front desk"); null when there is none, or the clause says more than the person, a title and the place.
+ */
+function requestWorkArea(text: string, employeeName: string | null): string | null {
+  for (const turn of [...turnsOf(text)].reverse()) {
+    for (const match of [...turn.matchAll(requestPattern())].reverse()) {
+      const clause = match[1]!.split(CUT)[0]!.trim();
+      const area = workAreaPhrase(clause);
+      if (area && titleAndPlaceOnly(clause, employeeName)) return area;
+    }
+  }
+  return null;
 }
 
 /**
@@ -461,7 +492,7 @@ export function managerIncidentClause(rawText: string, employeeName: string | nu
   const reasonFirst = reasonThenAccount(fromRequest, text, employeeName);
   if (reasonFirst) return reasonFirst;
   if (fromRequest && !titleAndPlaceOnly(fromRequest, employeeName)) return accountOnly(fromRequest, employeeName);
-  return accountOnly(accountIssue(text), employeeName);
+  return withWorkArea(accountOnly(accountIssue(text), employeeName), text, employeeName);
 }
 
 /**
