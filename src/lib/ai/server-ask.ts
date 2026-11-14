@@ -179,6 +179,7 @@ import { withFirstNameAnswerFor, withFirstNameSuggestFor } from "./first-name-su
 import { withManagerStatedTitle } from "./manager-title";
 import { withReplyMatchesCard } from "./reply-matches-card";
 import { withTitleOfTheEmployee } from "./title-of-the-employee";
+import { withFullPositionTitle } from "./full-position-title";
 import { withUnderPerformanceExplained } from "./under-performance-explained";
 import { withProposalEditRules } from "./proposal-edit-rules";
 import { cardTurnQuestion, takeOffStaysCard } from "./take-off-stays-card";
@@ -256,10 +257,12 @@ export async function answerQuestion(
   if (aboutTheCard) return aboutTheCard.card ?? aboutTheCard.answer(await answerQuestion({ ...asked, question: aboutTheCard.from }, actor, memory));
   // TITLE_OF_THE_EMPLOYEE_ENABLED: a title the manager attached to another named person is never the card's Position (`ai/title-of-the-employee.ts`).
   // UNDER_PERFORMANCE_EXPLAINED_ENABLED: Under Performance asked for, the Standards of Conduct cited: the reply says why (`ai/under-performance-explained.ts`).
-  const answered = withUnderPerformanceExplained(
+  const titled = withUnderPerformanceExplained(
     await withTitleOfTheEmployee(await answerQuestionAnyPath(asked, actor, memory), asked, () => loadRosterQuiet(actor)),
     asked,
   );
+  // FULL_POSITION_TITLE_ENABLED: a whole typed company position ("Team Member Part Time") is the card's Position, not the shorter title inside it (`ai/full-position-title.ts`).
+  const answered = withFullPositionTitle(titled, asked);
   // CARRIED_PERSON_NOTICE_ENABLED: a card whose person the manager last named before their last six turns says so (`ai/carried-person-notice.ts`).
   const noticed = withCarriedPersonNotice(answered, asked);
   // FORM_NAME_FROM_ROSTER_ENABLED, last: only roster people are the employee or a choice (`forms/roster-only-names.ts`).
