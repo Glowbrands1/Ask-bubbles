@@ -1544,6 +1544,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED_ENABLED",
   // ADD_ALREADY_ON_FORM_SAYS_SO (default off; QA's live 17u test, item 5, 13 Nov 2026): in the list, as every chat flag.
   "ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED",
+  // DIFF_REPLY_OPTION_LABELS (default off; Gate-Sunny-2 / QA, 14 Nov 2026): in the list, as every chat flag.
+  "DIFF_REPLY_OPTION_LABELS_ENABLED",
 ] as const;
 
 /**
@@ -5712,6 +5714,16 @@ export function headingDistinctiveWordsEnabled(): boolean {
  */
 export function placeStripWholePhraseOnlyEnabled(): boolean {
   return envFlag("PLACE_STRIP_WHOLE_PHRASE_ONLY_ENABLED");
+}
+
+/**
+ * DIFF_REPLY_OPTION_LABELS_ENABLED (coding 6; v2-Gate-Sunny-2's nit and QA, 14 Nov 2026: live in Bubbles production since
+ * 17y; default off). A form edit's reply from the saved diff named a checkbox group's option by its key: `Changed Type of
+ * Offense to "standards_of_conduct"`. On, the option's label is shown ("Standards of Conduct"), as the "Updated:" lines
+ * already do (`forms/form-diff-reply.ts`). Off, as before.
+ */
+export function diffReplyOptionLabelsEnabled(): boolean {
+  return envFlag("DIFF_REPLY_OPTION_LABELS_ENABLED");
 }
 
 /**
