@@ -74,3 +74,26 @@ export const NOV13_PLACE_STRIP_MUST_READ_CASES: ReplayCase[] = MUST_READ.map((wo
     expect((thread.proposal as { locationId?: string | null } | null)?.locationId ?? null, `the store was not read:\n${reply}`).toBe(wording.store);
   },
 }));
+
+/*
+ * QA, blocking (13 Nov 2026; the sibling gate found it on the mirrored rule): the "… of" exception reached every
+ * block-list word. Only a compass word before "of" is a direction; "kearney high of all places" and "the kearney mall of
+ * all places" are longer names, never a store. Open on main (the store is written inside the name); hold with the flag.
+ */
+const MUST_KEEP_OF: readonly { key: string; turn: string; kept: RegExp }[] = [
+  { key: "kearney-high-of-all-places", turn: "create a ca for marnie holloway, she was late because she was at kearney high of all places", kept: /kearney high of all places/i },
+  { key: "kearney-mall-of-all-places", turn: "create a ca for marnie holloway, she was late because she was at the kearney mall of all places", kept: /kearney mall of all places/i },
+];
+
+export const NOV13_PLACE_STRIP_MUST_KEEP_OF_CASES: ReplayCase[] = MUST_KEEP_OF.map((wording) => ({
+  id: `nov13-place-strip-must-keep-${wording.key}`,
+  title: `"${wording.turn}" — never "Kearney NE high/mall"; the words are kept`,
+  report: "QA, blocking (13 Nov 2026): only a compass word before \"of\" is a direction; invented person",
+  status: { open: `the account reads "… Kearney NE high/mall of all …"` },
+  fixFlags: [FLAG],
+  async run(t: ReplayContext) {
+    const { said, reply } = await observationOf(t, wording.turn);
+    expect(said, `a store was written inside the longer name:\n${reply}`).not.toMatch(/Kearney NE (?:high|mall)/i);
+    expect(said, `the words were lost:\n${reply}`).toMatch(wording.kept);
+  },
+}));

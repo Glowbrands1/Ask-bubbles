@@ -145,5 +145,8 @@ describe("PLACE_STRIP_WHOLE_PHRASE_ONLY (QA, 13 Nov 2026)", () => {
     // Gate-Bubbles-3 (#869): a continuation word that is the store's own label, or is followed by "of", does not block it.
     expect(rosterNames("ca for avery at west dodge st late on 11/1")).toBe("ca for avery at Omaha NE (West Dodge Rd) st late on 11/1");
     expect(rosterNames("she was at kearney ne west of the register")).toBe("she was at Kearney NE west of the register");
+    // QA, blocking: only a compass word before "of" is a direction; any other block-list word keeps the longer name.
+    expect(rosterNames("she was at kearney ne high of all places")).toBe("she was at kearney ne high of all places");
+    expect(rosterNames("she was at the kearney ne mall of all places")).toBe("she was at the kearney ne mall of all places");
   });
 });

@@ -109,3 +109,78 @@ export const NOV13_CA_ASKS_WHAT_HAPPENED_CASES: ReplayCase[] = [
     },
   })),
 ];
+
+/**
+ * QA's 17t live finding (13 Nov 2026, main 7d5b7bb2; item 4): turn 1 "create corrective action form for <A>, Team
+ * Member Part Time" asks what happened, no Create — right. Turn 2, the answer "she skipped the closing checklist on her
+ * shift last night", gave "Issue: team member part time" (the card's What happened); the account only fed the policy
+ * pick and the date question. The job title is never the Issue: the answer to "what happened" is. Before 17t (main
+ * d5e5ea22) both turns had the title as the Issue, so this is not worse than before — the turn-2 half was never fixed.
+ */
+export const NOV13_ANSWER_IS_THE_ISSUE_CASES: ReplayCase[] = [
+  {
+    id: "nov13-ca-asks-what-happened-answer-is-the-issue",
+    title: `"create corrective action form for Rowan Kestrel, Team Member Part Time" → "she skipped the closing checklist on her shift last night": the Issue is the account, never the job title`,
+    report: "QA, 17t live (13 Nov 2026, main 7d5b7bb2), item 4",
+    status: { open: "the turn-2 Issue (What happened) is the turn-1 job title, not the account" },
+    fixFlags: [ASKS, NO_CREATE, "ANSWER_IS_THE_ISSUE_ENABLED"],
+    async run(t) {
+      const { last, card } = await chat(t, ACCOUNTS.find((row) => row.key === "answer-to-the-ask")!.turns);
+      expect(card?.issue ?? "", `the Issue is not the account:\n${last.content}`).toMatch(/skipped the closing checklist/i);
+      expect(card?.issue ?? "", `the job title is the Issue:\n${last.content}`).not.toMatch(/team member|part time/i);
+      expect(last.content, `the Issue line is the job title:\n${last.content}`).not.toMatch(/\*\*Issue:\*\*[^\n]*(?:Team Member|Part Time)/i);
+      expect(card?.supportsInlineDraft, `no Create after the account:\n${last.content}`).toBe(true);
+    },
+  },
+];
+
+/**
+ * Gate-Bubbles B866 (13 Nov 2026): with ANSWER_IS_THE_ISSUE on, a request turn that carries both the job title and the
+ * account made the WHOLE request sentence the Issue. The Issue is the account clause alone: never the request's lead,
+ * the employee's name or the title.
+ */
+export const NOV13_ANSWER_IS_THE_ISSUE_REQUEST_TURN_CASES: ReplayCase[] = [
+  {
+    key: "title-and-account",
+    said: "ca for Rowan Kestrel, Team Member Part Time, she was late on 11/2",
+    expected: /^she was late on 11\/2$/,
+  },
+  {
+    key: "title-before-name",
+    said: "create a CA for general manager, rowan kestrel for violating the standards of conduct",
+    expected: /^violating the standards of conduct$/,
+  },
+].map(({ key, said, expected }): ReplayCase => ({
+  id: `nov13-answer-is-the-issue-request-turn-${key}`,
+  title: `"${said}": the Issue is the account clause alone, never the request sentence, the name or the title`,
+  report: "Gate-Bubbles B866 (13 Nov 2026)",
+  status: { open: "the job title is the card's Issue" },
+  fixFlags: [ASKS, NO_CREATE, "ANSWER_IS_THE_ISSUE_ENABLED"],
+  async run(t) {
+    const { last, card } = await chat(t, [said]);
+    const issue = card?.issue ?? "";
+    expect(issue, `the Issue is not the account clause:\n${last.content}`).toMatch(expected);
+    expect(issue, `the Issue carries the request or the name:\n${last.content}`).not.toMatch(/\b(?:ca|create)\b|rowan|kestrel/i);
+  },
+}));
+
+/**
+ * With Coding-6's CARD_CHECKED_AGAINST_WORDS too (QA, 13 Nov 2026; Ask-bubbles#861): that flag blanks a title-only Issue
+ * on the same turn. With both flags on, the Issue is the account — never blank, never the title. Checked on a merge of
+ * this PR, main 6081b825 and #861 (e47fcff8): both on gives the account on all three turns below.
+ */
+export const NOV13_ANSWER_IS_THE_ISSUE_WITH_CARD_CHECK_CASES: ReplayCase[] = [
+  { key: "answer", turns: ["create corrective action form for Rowan Kestrel, Team Member Part Time", "she skipped the closing checklist on her shift last night"], expected: /^she skipped the closing checklist on her shift last night$/ },
+  { key: "title-and-account", turns: ["ca for Rowan Kestrel, Team Member Part Time, she was late on 11/2"], expected: /^she was late on 11\/2$/ },
+  { key: "title-before-name", turns: ["create a CA for general manager, rowan kestrel for violating the standards of conduct"], expected: /^violating the standards of conduct$/ },
+].map(({ key, turns, expected }): ReplayCase => ({
+  id: `nov13-answer-is-the-issue-with-card-check-${key}`,
+  title: `"${turns.join('" → "')}" with CARD_CHECKED_AGAINST_WORDS too: the Issue is the account, never blank or the title`,
+  report: "QA, 13 Nov 2026: ANSWER_IS_THE_ISSUE with CARD_CHECKED_AGAINST_WORDS (#861)",
+  status: { open: "the Issue is the job title (or blank), not the account" },
+  fixFlags: [ASKS, NO_CREATE, "ANSWER_IS_THE_ISSUE_ENABLED", "CARD_CHECKED_AGAINST_WORDS_ENABLED"],
+  async run(t) {
+    const { last, card } = await chat(t, turns);
+    expect(card?.issue ?? "", `the Issue is not the account:\n${last.content}`).toMatch(expected);
+  },
+}));

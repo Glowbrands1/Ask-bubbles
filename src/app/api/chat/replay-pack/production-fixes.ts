@@ -812,4 +812,30 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov13-place-strip-kearney-high-kept": "PLACE_STRIP_WHOLE_PHRASE_ONLY",
   // fixed in production by CARD_CHECKED_AGAINST_WORDS, QA round 17w, 13 Nov 2026
   "nov13-17rc-added-detail-kept-on-card": "CARD_CHECKED_AGAINST_WORDS",
+  // fixed in production by ANSWER_IS_THE_ISSUE, QA round 17x, 13 Nov 2026
+  "nov13-ca-asks-what-happened-answer-is-the-issue": "ANSWER_IS_THE_ISSUE",
+  // fixed in production by ANSWER_IS_THE_ISSUE, QA round 17x, 13 Nov 2026
+  "nov13-answer-is-the-issue-request-turn-title-and-account": "ANSWER_IS_THE_ISSUE",
+  // fixed in production by ANSWER_IS_THE_ISSUE, QA round 17x, 13 Nov 2026
+  "nov13-answer-is-the-issue-request-turn-title-before-name": "ANSWER_IS_THE_ISSUE",
+  // fixed in production by ANSWER_IS_THE_ISSUE, QA round 17x, 13 Nov 2026
+  "nov13-answer-is-the-issue-with-card-check-answer": "ANSWER_IS_THE_ISSUE",
+  // fixed in production by ANSWER_IS_THE_ISSUE, QA round 17x, 13 Nov 2026
+  "nov13-answer-is-the-issue-with-card-check-title-and-account": "ANSWER_IS_THE_ISSUE",
+  // fixed in production by ANSWER_IS_THE_ISSUE, QA round 17x, 13 Nov 2026
+  "nov13-answer-is-the-issue-with-card-check-title-before-name": "ANSWER_IS_THE_ISSUE",
+  // fixed in production by MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED, QA round 17x, 13 Nov 2026
+  "nov13-made-about-empty-patch-answers-saved": "MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED",
+  // fixed in production by ADD_ALREADY_ON_FORM_SAYS_SO, QA round 17x, 13 Nov 2026
+  "nov13-add-already-on-form-says-so": "ADD_ALREADY_ON_FORM_SAYS_SO",
+  // fixed in production by ADD_ALREADY_ON_FORM_SAYS_SO, QA round 17x, 13 Nov 2026
+  "nov13-add-already-on-form-says-so-small-word-left-out": "ADD_ALREADY_ON_FORM_SAYS_SO",
+  // fixed in production by ACCOUNT_CHANGE_REDERIVES_POLICY, QA round 17x, 13 Nov 2026
+  "nov13-account-change-rederives-policy-sanitation": "ACCOUNT_CHANGE_REDERIVES_POLICY",
+  // fixed in production by ACCOUNT_CHANGE_REDERIVES_POLICY, QA round 17x, 13 Nov 2026
+  "nov13-account-change-rederives-policy-phone": "ACCOUNT_CHANGE_REDERIVES_POLICY",
+  // fixed in production by PLACE_STRIP_WHOLE_PHRASE_ONLY (on since 17v) with the #869 follow-up code, QA round 17x, 13 Nov 2026
+  "nov13-place-strip-must-keep-kearney-high-of-all-places": "PLACE_STRIP_WHOLE_PHRASE_ONLY",
+  // fixed in production by PLACE_STRIP_WHOLE_PHRASE_ONLY (on since 17v) with the #869 follow-up code, QA round 17x, 13 Nov 2026
+  "nov13-place-strip-must-keep-kearney-mall-of-all-places": "PLACE_STRIP_WHOLE_PHRASE_ONLY",
 };
