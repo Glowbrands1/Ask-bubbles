@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { draftNoInventedPlanEnabled } from "@/lib/config/chat-quality-flags";
+import { draftNoInventedPlanEnabled, spellingCleanupEnabled } from "@/lib/config/chat-quality-flags";
 import { rosterResultFor } from "@/test/roster-result";
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 import { JBA_MANUAL_CA_CHUNKS } from "@/test/fixtures/jba-manual-ca-sections";
@@ -1217,7 +1217,10 @@ describe("workflow: corrections change only what was asked; finalized forms are 
     const second = await createInlineForm({ proposal: thread.proposal!, messages: thread.messages, call, onCreated: () => {} });
     expect(second.reused).toBe(true);
     expect((store.form_instances ?? []).length).toBe(1);
-    expect(state.draftCalls).toBe(1);
+    // Changed on purpose (14 Nov 2026, QA): with SPELLING_CLEANUP_ENABLED on, the cleanup's safety net re-drafts once
+    // when the model changes a fact. ISSUE_1_MODEL writes "October 21, 2026" where the manager typed 10-1-26, so the
+    // one Create is two draft calls; the second press still drafts nothing.
+    expect(state.draftCalls).toBe(spellingCleanupEnabled() ? 2 : 1);
   });
 
   it("finalizing twice is refused the second time and changes nothing", async () => {

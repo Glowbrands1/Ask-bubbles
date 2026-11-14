@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { spellingCleanupEnabled } from "@/lib/config/chat-quality-flags";
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 import type { ChatMessage, ChatFormProposal } from "@/types";
 
@@ -343,7 +344,10 @@ describe("the owner's acceptance list for PR #10", () => {
     expect(answer.content).toContain("Verbal Warning, as you said");
     const form = await values(await thread.create());
     expect(checked(form, "warning_type")).toEqual(["verbal"]);
-    expect(state.modelCalls).toBe(1);
+    // Changed on purpose (14 Nov 2026, QA): with SPELLING_CLEANUP_ENABLED on, the cleanup's safety net re-drafts once
+    // when the model changes a fact. The mocked draft writes "30 minutes" where the manager said 20, so the draft is
+    // two model calls; the stated Verbal is kept either way.
+    expect(state.modelCalls).toBe(spellingCleanupEnabled() ? 2 : 1);
   });
 
   it("4. historical warnings are recorded as history, oldest first, not as the current level", async () => {
