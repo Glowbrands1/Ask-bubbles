@@ -149,6 +149,13 @@ const PROTECTED = [
  * `otherNotAPolicyNameEnabled`, and in policyNamesFromViolated a Policy Violated label "Other" names no policy. Behind
  * OTHER_NOT_A_POLICY_NAME_ENABLED (default off); off, the names are read as before. ca-action-plan.ts is already
  * excluded below.
+ *
+ * Under Pau's standing approval for protected-file edits (relayed by QA, 14 Nov 2026, for Gate-Bubbles-5's #892
+ * probes, QA's ruling (b)), in src/lib/ai/form-proposal.ts, exactly the lines of
+ * docs/patches/other-beside-described-form-proposal.patch: the import `withoutCleaningDuty`, and at the start of
+ * namedPolicyFor a cleaning duty beside a second described offense reads that offense from the account without the duty
+ * (marked `besideOther`). Behind OTHER_POLICY_AGREES_ENABLED (default off here); off, as before. form-proposal.ts is
+ * already excluded below.
  */
 const APPROVED_PROTECTED_EDITS = [
   ":(exclude)src/lib/forms/required-closing.ts",
