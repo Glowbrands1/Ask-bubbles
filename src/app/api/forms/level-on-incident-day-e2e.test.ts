@@ -5,15 +5,14 @@ import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 import type { AccessScope } from "@/types";
 /**
  * ============================================================================
- * A LEVEL LEADING INTO "FOR <NAME>" IS THE REQUEST (LEVEL_ON_INCIDENT_DAY_ENABLED, ported from Ask Sunny)
+ * A DATED LEVEL IS WEIGHED AGAINST THE INCIDENT'S DAY, AND AN EARLIER ONE IS LISTED (LEVEL_ON_INCIDENT_DAY_ENABLED,
+ * HISTORY_LEVEL_PRIOR_ROW_ENABLED, ported from Ask Sunny #970)
  * ============================================================================
  *
- * Gate-Sunny-3's probe, via QA (14 Nov 2026), the wording as given (name invented):
- *   "second verbal for <A>, she was late on 11/12/26"
- * got no card at all: no form word ("CA", "warning") and no issuing verb, so it was not read as a request. QA also
- * asked for "another verbal for …" and "2nd written for …". On: each is a Corrective Action request, and the level it
- * opens with is the card's level ("second", "another", "2nd" count the steps). The word after "for" must be able to
- * be a name. The harness is `hr-feedback-oct21-e2e.test.ts`'s (real proposal flow).
+ * Gate-Sunny-3's findings on Ask Sunny #970, as QA ruled them (14 Nov 2026), in this app; the person invented.
+ * F1: "verbal warning on 11/12/26 for <W>, she was late that day", filed the next day, is a Verbal. F2: "ca for <W>,
+ * verbal warning on 9/21. late again for 30 mins today" lists the verbal under Prior actions with its date. The harness
+ * is `hr-feedback-oct21-e2e.test.ts`'s (real proposal flow).
  */
 const store: FakeStore = {
   form_instances: [],
