@@ -46,8 +46,9 @@ function withUnitHyphen(text: string): string {
  *     one ("Manuel saw her", "manuel saw her" stay);
  *   - a store name: store words are not in its list, and a word a letter from one is left ("kearny store", "Bellvue").
  */
-// A quote left open to the end of the text (the Issue reader can drop a closing quote mark) is quoted to the end.
-const QUOTED = /"[^"\n]*(?:"|$)|“[^”\n]*(?:”|$)|‘[^’\n]*(?:’|$)|(?<![A-Za-z0-9])'[^'\n]+(?:'(?![A-Za-z0-9])|$)/g;
+// A quote left open to the end of the text (the Issue reader can drop a closing quote mark) is quoted to the end; an
+// apostrophe between two letters ("isn't") is part of the quote, not its end (Gate-Sunny-2, #983).
+const QUOTED = /"[^"\n]*(?:"|$)|“[^”\n]*(?:”|$)|‘(?:[^’\n]|(?<=[A-Za-z])’(?=[A-Za-z]))*(?:’|$)|(?<![A-Za-z0-9])'(?:[^'\n]|(?<=[A-Za-z])'(?=[A-Za-z]))+(?:'(?![A-Za-z0-9])|$)/g;
 
 function storeWords(): ReadonlySet<string> {
   return new Set(COMPANY_LOCATION_ENTRIES.flatMap((store) => store.name.toLowerCase().split(/[^a-z]+/)).filter((word) => word.length >= 3));
