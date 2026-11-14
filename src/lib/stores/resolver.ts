@@ -563,14 +563,14 @@ function isDocumentPhrase(span: string): boolean {
 }
 
 /*
- * REASON_PLACE_NOT_STORE_ENABLED (Gate-Bubbles-3's #869 probes, 13 Nov 2026): "she was late because she was at sioux
+ * REASON_PLACE_NOT_STORE_ENABLED (Gate-Bubbles-3's #869 probes, 13 Nov 2026; and its #879 probes: "bc", "since" too): "she was late because she was at sioux
  * falls west" — the place says why she was late, not where the form is filed. The place in a "because <she|he|they|I|
  * we|a name> was/were at|in …" clause, up to the clause's end ("," "." ";" "and" "but"), is blanked (same length, so
  * every other offset is unchanged) before the stores are read. "at kearney, she was late" and "late at kearney" are
  * not reasons and are still read. Only for reading the store: the account keeps the words.
  */
 const REASON_PLACE =
-  /(\bbecause\s+(?:she|he|they|i|we|[a-z][a-z'’-]*)\s+(?:was|were|had\s+been)\s+)((?:at|in)\s+[^,.;:!?()\n]*?)(?=\s*(?:[,.;:!?()\n]|$)|\s+(?:and|but)\b)/gi;
+  /(\b(?:because|bc|b\/c|cause|'cause|cuz|since)\s+(?:she|he|they|i|we|[a-z][a-z'’-]*)\s+(?:was|were|had\s+been)\s+)((?:at|in)\s+[^,.;:!?()\n]*?)(?=\s*(?:[,.;:!?()\n]|$)|\s+(?:and|but)\b)/gi;
 
 function withoutReasonPlaces(text: string): string {
   return text.replace(REASON_PLACE, (_, lead: string, place: string) => `${lead}${" ".repeat(place.length)}`);

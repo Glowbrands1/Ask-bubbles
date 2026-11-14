@@ -55,6 +55,18 @@ export const NOV13_REASON_PLACE_NOT_STORE_CASES: ReplayCase[] = [
       expect(reply, `the account lost the words:\n${reply}`).toMatch(/because she was at sioux falls west/i);
     },
   },
+  // Gate-Bubbles-3's #879 probes: the same reason said "bc" or "since" (QA: one commit on #879).
+  ...(["bc", "since"] as const).map((why): ReplayCase => ({
+    id: `nov13-reason-place-not-store-sioux-falls-west-${why}`,
+    title: `"ca for tessaly varn, she was late on 11/1/26 ${why} she was at sioux falls west" — no Sioux Falls store`,
+    report: `${REPORT}; Gate-Bubbles-3's #879 probes`,
+    status: { open: "the reason's place is read as the Sioux Falls (W 41st St) store" },
+    fixFlags: [FLAG],
+    async run(t: ReplayContext) {
+      const { reply, locationId } = await cardFor(t, `ca for tessaly varn, she was late on 11/1/26 ${why} she was at sioux falls west`);
+      expect(locationId, `a store was read from the reason:\n${reply}`).not.toBe("loc-225");
+    },
+  })),
 ];
 
 /** Guards, flag off and on: a store said as the store is still read; the reason flag leaves them alone. */
