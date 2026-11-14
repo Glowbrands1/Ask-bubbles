@@ -1434,6 +1434,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "STORE_ALIAS_ENABLED",
   // coding 4: POLICY_NOT_FOUND_PLAIN_WORDING (QA, 13 Nov 2026; default off).
   "POLICY_NOT_FOUND_PLAIN_WORDING_ENABLED",
+  // coding 4: REASON_PLACE_NOT_STORE (Gate-Bubbles-3 on #869, 13 Nov 2026; default off).
+  "REASON_PLACE_NOT_STORE_ENABLED",
   // coding 4: HEADING_DISTINCTIVE_WORDS (QA, 13 Nov 2026; default off).
   "HEADING_DISTINCTIVE_WORDS_ENABLED",
   // coding 4: PLACE_STRIP_WHOLE_PHRASE_ONLY (QA, 13 Nov 2026; default off).
@@ -5678,4 +5680,14 @@ export function headingDistinctiveWordsEnabled(): boolean {
  */
 export function placeStripWholePhraseOnlyEnabled(): boolean {
   return envFlag("PLACE_STRIP_WHOLE_PHRASE_ONLY_ENABLED");
+}
+
+/**
+ * REASON_PLACE_NOT_STORE (Gate-Bubbles-3's #869 probes, 13 Nov 2026; default off): "she was late because she was at
+ * sioux falls west" — where she was is why she was late, not the store the form is for. With the flag, a place in a
+ * "because <she> was at/in …" clause is not read as a store: the store comes from Woven or is asked. The account keeps
+ * the words. See `stores/resolver.ts` readStoreMentions. Off, as before.
+ */
+export function reasonPlaceNotStoreEnabled(): boolean {
+  return envFlag("REASON_PLACE_NOT_STORE_ENABLED");
 }

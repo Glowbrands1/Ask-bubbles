@@ -1,5 +1,5 @@
 import { isJobTitleAbbreviation } from "@/config/company/job-titles";
-import { placeSpanGuardEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { placeSpanGuardEnabled, reasonPlaceNotStoreEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { editDistance } from "@/lib/forms/employee-match";
 import { companyNameStops } from "@/lib/forms/name-stops";
 import { isTypedStopSpan } from "@/lib/forms/name-words";
@@ -562,6 +562,20 @@ function isDocumentPhrase(span: string): boolean {
   return DOCUMENT_WORDS.test(span);
 }
 
+/*
+ * REASON_PLACE_NOT_STORE_ENABLED (Gate-Bubbles-3's #869 probes, 13 Nov 2026; and its #879 probes: "bc", "since" too): "she was late because she was at sioux
+ * falls west" — the place says why she was late, not where the form is filed. The place in a "because <she|he|they|I|
+ * we|a name> was/were at|in …" clause, up to the clause's end ("," "." ";" "and" "but"), is blanked (same length, so
+ * every other offset is unchanged) before the stores are read. "at kearney, she was late" and "late at kearney" are
+ * not reasons and are still read. Only for reading the store: the account keeps the words.
+ */
+const REASON_PLACE =
+  /(\b(?:because|bc|b\/c|cause|'cause|cuz|since)\s+(?:she|he|they|i|we|[a-z][a-z'’-]*)\s+(?:was|were|had\s+been)\s+)((?:at|in)\s+[^,.;:!?()\n]*?)(?=\s*(?:[,.;:!?()\n]|$)|\s+(?:and|but)\b)/gi;
+
+function withoutReasonPlaces(text: string): string {
+  return text.replace(REASON_PLACE, (_, lead: string, place: string) => `${lead}${" ".repeat(place.length)}`);
+}
+
 /**
  * Every store a piece of text names, and every store-shaped reference it makes
  * that no registered store answers to.
@@ -572,7 +586,8 @@ function isDocumentPhrase(span: string): boolean {
  * "store"/"location" ("the Kearney store"), or after "at"/"in" when the
  * sentence then ends or carries on ("at Kearney today"). "From" is not a cue.
  */
-export function readStoreMentions(text: string, index: StoreIndex = defaultStoreIndex()): StoreReading {
+export function readStoreMentions(said: string, index: StoreIndex = defaultStoreIndex()): StoreReading {
+  const text = reasonPlaceNotStoreEnabled() ? withoutReasonPlaces(said) : said;
   const mentions: StoreMention[] = [];
   const unmatched: string[] = [];
 
