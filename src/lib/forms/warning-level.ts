@@ -850,7 +850,8 @@ const WHOLE_TURN_MAX = 80;
  * states this form's level. The count words say which step it is, not a different level. History ("she had a verbal
  * for being late") never opens the message, so it is not read here.
  */
-const LEVEL_LEADS = /^\s*(?:please\s+)?(?:an?\s+)?(?:(?:another|one\s+more|first|1st|second|2nd|third|3rd|next)\s+)?(verbal|written)\s+for\s+(?!(?:the|that|this|it|same|being|a|an|her|his|their|them|him|not|no|missing|\d)\b)[a-z][a-z'’-]*/i;
+const LEVEL_LEADS = new RegExp(String.raw`^\s*(?:please\s+)?(?:an?\s+)?(?:(?:another|one\s+more|first|1st|second|2nd|third|3rd|next)\s+)?(verbal|written)\s+for\s+(?!(?:the|that|this|it|same|being|a|an|her|his|their|them|him|not|no|missing|\d)\b)([a-z][a-z'’-]*(?:\s+[a-z][a-z'’-]*){0,2}?)(?=\s*$|\s*[,:;—–-]\s*(?!(?:it|that|this|which)?\s*(?:went|was|were|is|got|has\s+been|signed)\b)|\s+for\s+\S|\s+(?:she|he|they)\s+\S)`, "i");
+const LEADING_GROUP = /\b(?:team|staff|crew|everyone|everybody|employees|people|members|associates|workers)$/i;
 
 export function statedWarningLevel(raw: string, today: string = businessToday()): WarningLevel | null {
   // CA_SHORTCUT_WORDS_ENABLED: "1st written", "first written" — the same level as "written";
@@ -859,11 +860,15 @@ export function statedWarningLevel(raw: string, today: string = businessToday())
   // A change of mind is a few words; testing only a short turn keeps a long one linear.
   const whole = (text ?? "").length <= WHOLE_TURN_MAX ? WHOLE_TURN_LEVEL.exec(text ?? "") : null;
   if (whole) return whole[1]!.toLowerCase() as WarningLevel;
-  // LEVEL_LEADS_REQUEST_ENABLED: the message opens with the level ("second verbal for <A>, …"); see `LEVEL_LEADS`.
-  const leads = levelLeadsRequestEnabled() ? LEVEL_LEADS.exec(raw ?? "") : null;
-  if (leads) return leads[1]!.toLowerCase() as WarningLevel;
   const current = warningMentions(text, today).filter((mention) => mention.kind === "current");
-  return current.length > 0 ? current[current.length - 1]!.level : null;
+  if (current.length > 0) return current[current.length - 1]!.level;
+  // LEVEL_LEADS_REQUEST_ENABLED: the message opens with the level ("second verbal for <A>, …"); see `LEVEL_LEADS`.
+  // Only when nothing else in it states a level: a later stated level wins (QA, 14 Nov 2026).
+  if (levelLeadsRequestEnabled() && !(raw ?? "").trim().endsWith("?")) {
+    const leads = LEVEL_LEADS.exec(raw ?? "");
+    if (leads && !LEADING_GROUP.test(leads[2]!)) return leads[1]!.toLowerCase() as WarningLevel;
+  }
+  return null;
 }
 
 /** Whether the text names a warning at all that was NOT read as this form's level. */
