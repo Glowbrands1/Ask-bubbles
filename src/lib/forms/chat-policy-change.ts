@@ -667,14 +667,14 @@ export async function rederivePolicyFromAccount(input: {
   /*
    * Other is a box, not a policy: the plan built from it says "review the Other policy". This app has no fix for that
    * wording yet (the sibling's OTHER_NOT_A_POLICY_NAME), so the plan this step re-synced is corrected here, as Ask
-   * Bubbles wrote it (never a plan a person wrote).
+   * Bubbles wrote it (never a plan a person wrote), with the plan's own no-policy wording (`policyPhrase([])`).
    */
   if (keys.includes("other")) {
     const { loadInstance } = await import("./instances");
     const plan = (await loadInstance(input.instanceId))?.values.find((value) => value.fieldKey === PLAN_KEY);
     const text = plan?.value ?? "";
     if (plan && plan.filledBy !== "manager" && /\bthe Other polic(?:y|ies)\b/.test(text)) {
-      const fixed = text.replace(/\bthe Other polic(?:y|ies)\b/g, "the applicable company policy");
+      const fixed = text.replace(/\bthe Other polic(?:y|ies)\b/g, policyPhrase([]));
       const saved = await writer.draftWrite(input.instanceId, { values: { [PLAN_KEY]: fixed }, checked: {} }, actor.id, plan.provenance ? { [PLAN_KEY]: plan.provenance } : {}, { path: "policy" });
       if (PLAN_KEY in saved.accepted.values && !written.includes(PLAN_KEY)) written.push(PLAN_KEY);
     }
