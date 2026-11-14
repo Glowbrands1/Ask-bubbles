@@ -1,5 +1,6 @@
 import {
   caReasonDueToEnabled,
+  unfoundPolicyGivesWayToAccountEnabled,
   complaintAccountEnabled,
   decimalNotSentenceEndEnabled,
   futureIncidentDateAskEnabled,
@@ -404,6 +405,9 @@ function issueAsRead(rawSaid: string, employeeName: string | null): string | nul
   const fromRequest = issueFromRequest(text, employeeName);
   const reasonFirst = reasonThenAccount(fromRequest, text, employeeName);
   if (reasonFirst) return reasonFirst;
+  // UNFOUND_POLICY_GIVES_WAY_TO_ACCOUNT_ENABLED: "for violating the pet grooming policy, she was late" — the account.
+  const accountOverUnknownPolicy = unknownPolicyGivesWay(fromRequest, text, employeeName);
+  if (accountOverUnknownPolicy) return accountOverUnknownPolicy;
   // REQUEST_PARTICIPLE_LEAD_ENABLED: a for-clause that is only a sales reason ("under performance") gives way to the account.
   if (requestParticipleLeadEnabled() && fromRequest && salesReasonOnly(fromRequest)) {
     const account = accountIssue(text);
@@ -412,6 +416,27 @@ function issueAsRead(rawSaid: string, employeeName: string | null): string | nul
   if (!typedNameEnabled()) return accountOnly(fromRequest, employeeName);
   if (fromRequest && !titleAndPlaceOnly(fromRequest, employeeName)) return accountOnly(fromRequest, employeeName);
   return accountOnly(accountIssue(text), employeeName);
+}
+
+/*
+ * UNFOUND_POLICY_GIVES_WAY_TO_ACCOUNT_ENABLED (QA's Bubbles 17y live test, 14 Nov 2026): "create a CA for <A> for violating
+ * the pet grooming policy, she was late on 11/3/26" — the Issue was "violating the pet grooming policy" and the lateness
+ * she stated was gone. A for-clause that only names a policy (violating / breaking / not following the <X> policy) that
+ * this app's policy words do not read (`readCaPolicy`: nothing stated) gives way to the account the turn states, when it
+ * states one. A policy it reads keeps the for-clause, as before. Null otherwise.
+ */
+const NAMES_ONLY_A_POLICY =
+  /^(?:(?:for\s+)?(?:violat(?:ing|ed|ion\s+of)|breaking|broke|breach(?:ing|ed)?(?:\s+of)?|not\s+following|going\s+against|against))\s+(?:the\s+|our\s+|a\s+|company['’]?s?\s+)*(.+?)\s+polic(?:y|ies)\s*$/i;
+
+function unknownPolicyGivesWay(fromRequest: string | null, text: string, employeeName: string | null): string | null {
+  if (!unfoundPolicyGivesWayToAccountEnabled() || !fromRequest) return null;
+  const named = NAMES_ONLY_A_POLICY.exec(fromRequest.trim());
+  if (!named || readCaPolicy(fromRequest).stated !== null) return null;
+  // The account: what the turn says once the request and its policy clause are set aside.
+  const rest = text.replace(fromRequest, " ").replace(/^[^,;.]*?\b(?:ca|c\/a|corrective\s+action(?:\s+form)?|write[- ]?up|warning)\s+(?:for|on)\s+[^,;.]*?(?=[,;.]|$)/im, " ");
+  const account = accountOnly(accountIssue(rest), employeeName);
+  if (!account || NAMES_ONLY_A_POLICY.test(account.trim())) return null;
+  return account;
 }
 
 /**
