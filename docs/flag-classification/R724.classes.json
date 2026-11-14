@@ -1,0 +1,14 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov10-make-that-update-writes-her-account: \"make that update\" after the copy-and-paste question reaches the open draft's readers as her own account, and her account is written \u2014 OPEN in production (\"make that update\" reaches the patch model as those three words, with nothing to add: her account is never written)": {
+    "category": "INTENDED-HARNESS",
+    "reason": "P12 OPEN marker: with the flag on the case now holds, so the open-mode expectation fails; the marker must flip to fixed when the flag ships (record diff: turn 6 writes coaching_details with her account)"
+  },
+  "src/lib/ai/flags-off-parity.test.ts :: existing chat and form suites with every new flag off passes the suites whose expectations are already on main: src/app/api/chat/replay-pack, first half of the cases by id": {
+    "category": "INTENDED-HARNESS",
+    "reason": "the only new failure inside this parity child is the same nov10-make-that-update OPEN marker; the other parity failures are identical off and on"
+  },
+  "replay: nov10-make-that-update-writes-her-account [open]": {
+    "category": "INTENDED",
+    "reason": "off: turn 6 'make that update' changes nothing; on: 'Changed Details of Coaching to \"rowan marked an order as shipped\u2026\"', updated [coaching_details]; turns 1-5 byte-identical"
+  }
+}
