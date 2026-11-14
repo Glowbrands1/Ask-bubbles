@@ -82,7 +82,9 @@ describe("CARD_CHECKED_AGAINST_WORDS_ENABLED: the card", () => {
     const turns = { turns: ["write up Marnie Holloway", "verbal warning. she left the register unlocked overnight"], roster: ROSTER };
     const model: CardCheckModel = async () => ({ ok: true, output: { issue: { value: "left the register unlocked overnight", quote: "she left the register unlocked overnight" } } });
     const out = await withCardCheckedAgainstWords(card("verbal warning"), turns, model);
-    expect(out.formProposal?.issue).toBe("left the register unlocked overnight");
+    // Changed on purpose (Gate-Bubbles-5, 13 Nov 2026): the code now reads the account from the turn after the naming
+    // turn, so it repairs this card itself, in her words, before any model call.
+    expect(out.formProposal?.issue).toBe("she left the register unlocked overnight");
   });
 
   it("on: a person who is a job title is taken off the card, and it asks who it is for", async () => {
@@ -232,3 +234,81 @@ describe("CARD_CHECKED_AGAINST_WORDS_ENABLED: Gate-Bubbles-5's name-answer and r
     expect(addedFacts("cash handling", "Jordan Testperson", { turns, roster: ROSTER })).toEqual([]);
   });
 });
+
+describe("CARD_CHECKED_AGAINST_WORDS_ENABLED: a payroll or deduction amount is not what she did (Gate-Sunny-2, 13 Nov 2026)", () => {
+  const after = (said: string) => ({ turns: ["create a CA for Marnie Holloway, she was late on 11/3/26", said], roster: ROSTER });
+  it.each(["she owes $25 for the late opening", "deduct $40 from her check", "she'll pay back $20", "payroll deduct yes, $15", "she owes 25 dollars"])("stays out: %s", (said) => {
+    expect(addedFacts("she was late on 11/3/26", "Marnie Holloway", after(said))).toEqual([]);
+  });
+  it.each(["she took $20 from the drawer", "she was short $20", "she gave a customer a $10 discount without asking"])("still joins: %s", (said) => {
+    expect(addedFacts("she was late on 11/3/26", "Marnie Holloway", after(said))).toEqual([said]);
+  });
+});
+
+describe("CARD_CHECKED_AGAINST_WORDS_ENABLED: payment phrasings are payroll too (Gate-Sunny-2, 13 Nov 2026)", () => {
+  const after = (said: string) => ({ turns: ["create a CA for Marnie Holloway, she was late on 11/3/26", said], roster: ROSTER });
+  it.each([
+    "she has to pay $15 for the broken bulb",
+    "she needs to pay $15 for the broken bulb",
+    "she must pay back $15",
+    "she will be charged $15",
+    "she is being charged $15 for it",
+    "we're charging her $15",
+    "she said take it out of her check, $15",
+  ])("stays out: %s", (said) => {
+    expect(addedFacts("she was late on 11/3/26", "Marnie Holloway", after(said))).toEqual([]);
+  });
+  it.each(["she broke a $15 bulb", "she has to pay attention to the schedule and skipped her break"])("still joins: %s", (said) => {
+    expect(addedFacts("she was late on 11/3/26", "Marnie Holloway", after(said))).toEqual([said]);
+  });
+});
+
+describe("CARD_CHECKED_AGAINST_WORDS_ENABLED: a place one letter off is still only a place (QA, CLOSE_SPELLING_MATCH live, 13 Nov 2026)", () => {
+  const after = (said: string) => ({ turns: ["create a CA for Marnie Holloway, she was late on 11/3/26", said], roster: ROSTER });
+  it.each(["she is at West Dodg", "she is at the Omah store", "she works at West Dodg"])("with CLOSE_SPELLING_MATCH on, stays out: %s", (said) => {
+    vi.stubEnv("CLOSE_SPELLING_MATCH_ENABLED", "true");
+    expect(addedFacts("she was late on 11/3/26", "Marnie Holloway", after(said))).toEqual([]);
+  });
+  it("with CLOSE_SPELLING_MATCH on, an action at a place one letter off still joins", () => {
+    vi.stubEnv("CLOSE_SPELLING_MATCH_ENABLED", "true");
+    expect(addedFacts("she was late on 11/3/26", "Marnie Holloway", after("she was rude to a customer at the Omah store"))).toEqual(["she was rude to a customer at the Omah store"]);
+  });
+});
+
+describe("CARD_CHECKED_AGAINST_WORDS_ENABLED: paying with no amount is payroll too (Gate-Bubbles-5, 13 Nov 2026)", () => {
+  const after = (said: string) => ({ turns: ["create a CA for Marnie Holloway, she was late on 11/3/26", said], roster: ROSTER });
+  it.each(["she needs to pay for the bulb", "she will be charged for the bulb", "she has to pay it back"])("stays out: %s", (said) => {
+    expect(addedFacts("she was late on 11/3/26", "Marnie Holloway", after(said))).toEqual([]);
+  });
+  it.each(["she broke a $15 bulb", "she had to stay late to recount the drawer", "she needs to be told twice before she cleans", "she was charged by a customer for the wrong item and argued"])("still joins: %s", (said) => {
+    expect(addedFacts("she was late on 11/3/26", "Marnie Holloway", after(said))).toEqual([said]);
+  });
+});
+
+describe("CARD_CHECKED_AGAINST_WORDS_ENABLED: the gates' place-typo list (13 Nov 2026)", () => {
+  const after = (said: string) => ({ turns: ["create a CA for Marnie Holloway, she was late on 11/3/26", said], roster: ROSTER });
+  it.each(["she is at West Dodgr", "she is at West Doge", "she is at Bellvue", "she is at Belevue", "she is at Omaha, NE (West Dodg Rd)", "she works at Wst Dodge", "she works at Omah"])("with CLOSE_SPELLING_MATCH on, stays out: %s", (said) => {
+    vi.stubEnv("CLOSE_SPELLING_MATCH_ENABLED", "true");
+    expect(addedFacts("she was late on 11/3/26", "Marnie Holloway", after(said))).toEqual([]);
+  });
+  it("with CLOSE_SPELLING_MATCH on, a typo'd thing in the store plus an action still joins", () => {
+    vi.stubEnv("CLOSE_SPELLING_MATCH_ENABLED", "true");
+    expect(addedFacts("she was late on 11/3/26", "Marnie Holloway", after("she was at the regster on her phone"))).toEqual(["she was at the regster on her phone"]);
+  });
+});
+
+describe("CARD_CHECKED_AGAINST_WORDS_ENABLED: an account in the turn after the naming turn (Gate-Bubbles-5, 13 Nov 2026)", () => {
+  const naming = "create corrective action form for Marnie Holloway, Team Member Part Time";
+  const answer = "she skipped the closing checklist on her shift last night";
+  it("the naming turn holds only a title; the next turn's account repairs the Issue, and nothing asks what happened", () => {
+    expect(accountFromWords("Marnie Holloway", { turns: [naming, answer], roster: ROSTER })).toBe(answer);
+  });
+  it("the naming turn's own account still wins over a later turn", () => {
+    expect(accountFromWords("Marnie Holloway", { turns: ["create a CA for Marnie Holloway, she was late", answer], roster: ROSTER })).toBe("she was late");
+  });
+  it("a later turn that is no account (a level, a question) repairs nothing", () => {
+    expect(accountFromWords("Marnie Holloway", { turns: [naming, "verbal warning"], roster: ROSTER })).toBeNull();
+    expect(accountFromWords("Marnie Holloway", { turns: [naming, "what level should this be?"], roster: ROSTER })).toBeNull();
+  });
+});
+

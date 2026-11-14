@@ -14,7 +14,8 @@ import { patch } from "./nov7-step-b-refusals-scenarios";
  * the Attendance policy, with an Observation about cell phone use, moves to Cell Phone when "shfit" becomes "shift" (the
  * saved Observation says "the cell phone" where the manager retypes "her cell phone"). On: the
  * fixed sentence is the same sentence and the policy stays. An account that really changed still re-derives (the
- * second case). The person is invented (on no directory).
+ * second case). ACCOUNT_CHANGE_REDERIVES_POLICY is on in production since 17x (13 Nov 2026), so the typo case is open
+ * in production. The person is invented (on no directory).
  *
  * WHAT THIS REPLAY SHOWS, AND DOES NOT: the edit's reading is scripted (the manager's own corrected sentence). A date
  * said in the edit goes through the date path, which moves the Observation's date without this step; the date arm of
@@ -26,7 +27,6 @@ const REQUEST = "create ca form for nell orrin for violating the attendance poli
 const TYPO_FIX = "change the observation to: Nell Orrin was on her cell phone the whole shift.";
 const NEW_ACCOUNT = "change the observation to: Nell Orrin was rude to a customer at the register.";
 const REPORT = "QA, 13 Nov 2026 (follow-up to ACCOUNT_CHANGE_REDERIVES_POLICY): \"accountReplaced() counts a close sentence as kept, so small date or typo edits do not re-derive\"";
-const REDERIVE = "ACCOUNT_CHANGE_REDERIVES_POLICY_ENABLED";
 const FLAG = "ACCOUNT_REPLACED_CLOSE_SENTENCE_KEPT_ENABLED";
 
 async function attendanceCa(t: ReplayContext) {
@@ -57,28 +57,21 @@ async function typoFix(t: ReplayContext) {
 
 export const NOV13_ACCOUNT_REPLACED_CLOSE_SENTENCE_CASES: ReplayCase[] = [
   {
-    id: "nov13-account-replaced-close-sentence-typo-rederives-before-fix",
-    title: `"${REQUEST}" then "${TYPO_FIX}" (a one-letter fix), ACCOUNT_CHANGE_REDERIVES_POLICY alone: the policy moves`,
-    report: REPORT,
-    status: "fixed",
-    fixFlags: [REDERIVE],
-    fixStatus: { open: "the typo fix re-derives the policy: Attendance moves to Cell Phone" },
-    run: typoFix,
-  },
-  {
     id: "nov13-account-replaced-close-sentence-typo-keeps-policy",
     title: `"${REQUEST}" then "${TYPO_FIX}" (a one-letter fix): the Attendance policy, its lines and plan stay`,
     report: REPORT,
-    status: "fixed",
-    fixFlags: [REDERIVE, FLAG],
+    // ACCOUNT_CHANGE_REDERIVES_POLICY is on in production (QA, 17x, 13 Nov 2026): the typo fix moves the policy there.
+    status: { open: "the typo fix re-derives the policy: Attendance moves to Cell Phone" },
+    fixFlags: [FLAG],
     run: typoFix,
   },
   {
     id: "nov13-account-replaced-close-sentence-new-account-still-rederives",
     title: `"${REQUEST}" then "${NEW_ACCOUNT}": a changed account still leaves Attendance with both flags on`,
     report: `${REPORT}; negative (a real account change still re-derives)`,
-    status: { open: "production has ACCOUNT_CHANGE_REDERIVES_POLICY off: a changed account keeps Attendance" },
-    fixFlags: [REDERIVE, FLAG],
+    // Changed on purpose (QA, 17x, 13 Nov 2026): ACCOUNT_CHANGE_REDERIVES_POLICY is on in production. Was OPEN.
+    status: "fixed",
+    fixFlags: [FLAG],
     async run(t) {
       const { thread, id } = await attendanceCa(t);
       t.patchReads!({

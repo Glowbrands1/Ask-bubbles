@@ -1002,6 +1002,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 2: the sibling app's "what happened" check (Pau's direction, 13 Nov 2026; default off).
   "CA_ASKS_WHAT_HAPPENED_ENABLED",
   "WHAT_HAPPENED_NO_CREATE_ENABLED",
+  // coding 2: ANSWER_IS_THE_ISSUE (QA's 17t item 4, 13 Nov 2026; default off).
+  "ANSWER_IS_THE_ISSUE_ENABLED",
   // coding 2: ACCOUNT_CHANGE_REDERIVES_POLICY (QA's Bubbles 17u, 13 Nov 2026; default off).
   "ACCOUNT_CHANGE_REDERIVES_POLICY_ENABLED",
   // coding 2: ACCOUNT_REPLACED_CLOSE_SENTENCE_KEPT (QA's follow-up to it, 13 Nov 2026; default off).
@@ -1430,6 +1432,10 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 6: PRIOR_ACTIONS_NO_COMMA (October rebuild 4, #187 rebuilt on main; default off).
   "PRIOR_ACTIONS_NO_COMMA_ENABLED",
   "STORE_ALIAS_ENABLED",
+  // coding 4: HEADING_DISTINCTIVE_WORDS (QA, 13 Nov 2026; default off).
+  "HEADING_DISTINCTIVE_WORDS_ENABLED",
+  // coding 4: PLACE_STRIP_WHOLE_PHRASE_ONLY (QA, 13 Nov 2026; default off).
+  "PLACE_STRIP_WHOLE_PHRASE_ONLY_ENABLED",
   // coding 4: FORM_DATE_BUSINESS_TODAY (live bug, QA, 13 Nov 2026; default off).
   "FORM_DATE_BUSINESS_TODAY_ENABLED",
   // coding 4: CLOSE_SPELLING_MATCH (Pau via QA, 13 Nov 2026; default off).
@@ -1523,6 +1529,10 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "EDIT_SEES_SAVED_FORM_ENABLED",
   // CARD_CHECKED_AGAINST_WORDS (default off; Pau's direction via QA, 13 Nov 2026): in the list, as every chat flag.
   "CARD_CHECKED_AGAINST_WORDS_ENABLED",
+  // MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED (default off; QA's live 17u test, 13 Nov 2026): in the list, as every chat flag.
+  "MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED_ENABLED",
+  // ADD_ALREADY_ON_FORM_SAYS_SO (default off; QA's live 17u test, item 5, 13 Nov 2026): in the list, as every chat flag.
+  "ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED",
 ] as const;
 
 /**
@@ -3563,6 +3573,18 @@ export function whatHappenedNoCreateEnabled(): boolean {
 }
 
 /**
+ * ANSWER_IS_THE_ISSUE_ENABLED (Coding-2, 13 Nov 2026; default off; QA's 17t live finding, item 4). "create corrective
+ * action form for <A>, Team Member Part Time" asks what happened (CA_ASKS_WHAT_HAPPENED, on); the answer "she skipped the
+ * closing checklist on her shift last night" left "Issue: team member part time" (the protected reader rebuilds it from
+ * the request turn; main d5e5ea22 already did). On, with CA_ASKS_WHAT_HAPPENED: when the manager's turns give an account
+ * and the card's Issue is only who and where, the Issue is the latest turn that gives one (`ai/ca-what-happened.ts`).
+ * Its own switch, so CA_ASKS_WHAT_HAPPENED's 17t behaviour is never rolled back with it. Off, as before.
+ */
+export function answerIsTheIssueEnabled(): boolean {
+  return envFlag("ANSWER_IS_THE_ISSUE_ENABLED");
+}
+
+/**
  * ACCOUNT_CHANGE_REDERIVES_POLICY_ENABLED (Coding-2, 13 Nov 2026; default off; QA's Bubbles 17u live test). On a
  * Corrective Action draft about lateness, "make it about her phone use instead, she was on her phone the whole shift"
  * and "change the issue to not doing the 10-minute sanitation" rewrote the Observation, but Type of Offense, Policy
@@ -4740,6 +4762,28 @@ export function madeAboutRewriteFinishesEnabled(): boolean {
 }
 
 /**
+ * MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED_ENABLED (coding 6; QA's live 17u test, Ask Bubbles production, 13 Nov 2026;
+ * default off). On a saved CA draft, "make it about her phone use instead, she was on her phone the whole shift" rewrote
+ * the observation by the old path's revision, then had nothing else to write (a CA has no Other topic, no date was said)
+ * and handed the turn on: the route ran the revision a second time, which found the new account already saved and
+ * replied "I haven't changed the Corrective Action Form … everything on it is as it was." With the flag on, a turn whose
+ * account was rewritten answers from the saved form ("Changed Observation of Offense …"). Off, as before.
+ */
+export function madeAboutEmptyPatchAnswersSavedEnabled(): boolean {
+  return envFlag("MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED_ENABLED");
+}
+
+/**
+ * ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED (coding 6; QA's live 17u test, item 5, 13 Nov 2026; default off). "add that she was
+ * on the phone for the entire shift" on a draft that already says it got the old path's generic "I haven't changed the
+ * Corrective Action Form … everything on it is as it was." With the flag on, an add whose words are all on the saved form
+ * and that changed nothing says the form already says that (`forms/add-already-on-form.ts`). Off, as before.
+ */
+export function addAlreadyOnFormSaysSoEnabled(): boolean {
+  return envFlag("ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED");
+}
+
+/**
  * MADE_ABOUT_TOPIC_EVIDENCE_ENABLED (QA's live Bubbles round 13, 9 Nov 2026; default off; same flag in both apps). "make it
  * about being late on 11/5/26" left Other on the old topic: the topic read from the manager's words ("Being late") came
  * with "being late" as its evidence, two words, under the reducer's floor, so it was refused. With the flag on, its
@@ -5603,4 +5647,23 @@ export function formDateBusinessTodayEnabled(): boolean {
  */
 export function closeSpellingMatchEnabled(): boolean {
   return envFlag("CLOSE_SPELLING_MATCH_ENABLED");
+}
+
+/**
+ * HEADING_DISTINCTIVE_WORDS (QA, 13 Nov 2026; default off): a manual heading is named by its distinctive words; the
+ * generic heading words "is", "are", "prohibited" and "requirement" may be left off, as "policy" and "guidelines"
+ * already may. "violating the retaliation policy" names "Retaliation is Prohibited". See
+ * `forms/named-policy-section.ts`. Off, every heading word but the optional ones must be said, as before.
+ */
+export function headingDistinctiveWordsEnabled(): boolean {
+  return envFlag("HEADING_DISTINCTIVE_WORDS_ENABLED");
+}
+
+/**
+ * PLACE_STRIP_WHOLE_PHRASE_ONLY (QA, 13 Nov 2026; default off; from the sibling app's gate): a store named the managers'
+ * way is written as the roster name only where its phrase ends, so "at kearney high" is never "at Kearney NE high". See
+ * `ai/store-alias.ts`. Off, as before.
+ */
+export function placeStripWholePhraseOnlyEnabled(): boolean {
+  return envFlag("PLACE_STRIP_WHOLE_PHRASE_ONLY_ENABLED");
 }
