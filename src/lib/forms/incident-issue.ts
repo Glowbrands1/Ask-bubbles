@@ -343,42 +343,59 @@ export function correctiveActionIssue(rawSaid: string, employeeName: string | nu
 
 /*
  * ============================================================================
- * THE ISSUE IS EVERY FACT THE ACCOUNT TURNS GAVE (CARD_ACCOUNT_DROPS_NON_FACTS_ENABLED)
+ * THE ISSUE KEEPS ONLY ITS FACTS (CARD_ACCOUNT_DROPS_NON_FACTS_ENABLED)
  * ============================================================================
  *
  * QA's Bubbles 17w live chat (14 Nov 2026): "<A> was late on 11/3/26" (no card), "she yelled at a customer and she maybe
- * forgot" (no card), "corrective action form" (the first card). The Issue was the latest account turn whole: "she yelled
- * at a customer and she maybe forgot" — the lateness dropped, the hedge kept. When the request turn gives no account of
- * its own, the account turns just before it (walking back while each gives one, never past a turn that names somebody
- * else) give their fact clauses, oldest first, joined with "; ". A hedge ("she maybe forgot"), a level, history, a
- * denial or a payment is no fact (`factOfClause`, and the card check's `notAFact`). Nothing read: the Issue as before.
+ * forgot" (no card), "corrective action form" (the first card). The Issue was "she yelled at a customer and she maybe
+ * forgot": the lateness dropped, the hedge kept.
+ *
+ * Gate-Bubbles-4's bar (G4-893, 14 Nov 2026): the Issue starts from the Issue as read and only drops from it. A clause
+ * of it that starts with her subject and states no fact (a hedge, history, a denial, a level: `factOfClause`) is cut
+ * out, with the "and"/comma before it; every other word stays as the manager wrote it. Nothing is re-split or reworded.
+ *
+ * The one addition: when the request turn gives no account and the Issue is the turn just before it, whole, the account
+ * turns before that one (walking back while each gives one, never past a turn naming somebody else) come first, joined
+ * with "; ", each only when it is already one clean fact in the manager's words ("Marnie Holloway was late on 11/3/26").
  */
-const CLAUSE_SPLIT = /\s+(?:and|but)\s+(?:then\s+)?(?=(?:she|he|they)\b)|,\s+(?=(?:she|he|they)\b)|(?<=[.!])\s+/i;
+const FACT_CLAUSE = /(\s+(?:and|but)\s+(?:then\s+)?|,\s+)(?=(?:she|he|they)\b)/i;
+
+function withoutNonFactClauses(issue: string): string {
+  const pieces = issue.split(new RegExp(FACT_CLAUSE.source, "gi"));
+  // pieces: clause, separator, clause, separator, …
+  let kept = pieces[0]!;
+  for (let index = 1; index + 1 < pieces.length; index += 2) {
+    const clause = pieces[index + 1]!;
+    if (hedgedAccount(clause) || factOfClause(clause, factContext({ turns: [], roster: [] })) === null) continue;
+    kept += pieces[index]! + clause;
+  }
+  return kept;
+}
+
+function cleanFact(account: string): boolean {
+  const said = account.trim().replace(/[.!]+$/, "");
+  return !hedgedAccount(said) && factOfClause(said, factContext({ turns: [], roster: [] })) === said && !notAFact(said, { turns: [], roster: [] });
+}
 
 function issueAcrossTurns(read: string | null, rawSaid: string, employeeName: string | null): string | null {
+  if (read === null) return read;
+  const issue = withoutNonFactClauses(read);
   const turns = turnsOf(rawSaid);
-  if (turns.length < 2 || !employeeName) return read;
+  if (turns.length < 3 || !employeeName) return issue;
   const own = (turn: string) => accountOnly(accountIssue(turn), employeeName);
-  if (own(turns.at(-1)!) !== null || issueFromRequest(turns.at(-1)!, employeeName) !== null) return read;
-  const accounts: string[] = [];
-  for (let index = turns.length - 2; index >= 0; index -= 1) {
+  if (own(turns.at(-1)!) !== null || issueFromRequest(turns.at(-1)!, employeeName) !== null) return issue;
+  const before = own(turns.at(-2)!);
+  if (before === null || before.trim().toLowerCase() !== read.trim().toLowerCase()) return issue;
+  const earlier: string[] = [];
+  for (let index = turns.length - 3; index >= 0; index -= 1) {
     const turn = turns[index]!;
     if (extractEmployeeNames(turn).some((name) => !samePerson(name, employeeName))) break;
     const account = own(turn);
-    if (account === null) break;
-    accounts.unshift(account);
+    if (account === null || !cleanFact(account)) break;
+    const said = account.trim().replace(/[.!]+$/, "");
+    if (!repeatsAFact(said, [...earlier, issue])) earlier.unshift(said);
   }
-  if (accounts.length === 0) return read;
-  const facts: string[] = [];
-  for (const account of accounts) {
-    if (hedgedAccount(account)) continue;
-    for (const part of account.split(CLAUSE_SPLIT)) {
-      const clause = factOfClause(part, factContext({ turns: [], roster: [] }));
-      if (clause === null || notAFact(clause, { turns: [], roster: [] })) continue;
-      if (!repeatsAFact(clause, facts)) facts.push(clause);
-    }
-  }
-  return facts.length > 0 ? facts.join("; ") : read;
+  return earlier.length > 0 ? [...earlier, issue].join("; ") : issue;
 }
 
 function correctiveActionIssueRead(rawSaid: string, employeeName: string | null): string | null {
