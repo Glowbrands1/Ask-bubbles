@@ -257,3 +257,33 @@ export const EVIDENCE_REMOVED_NOTICE =
 /** Said when the notes relay only a report and the draft does not say it was reported. */
 export const UNATTRIBUTED_REPORT_NOTICE =
   "Your notes describe something reported to you, not something you saw. Check that the draft says it was reported, and does not state it as established.";
+
+/*
+ * ============================================================================
+ * A STATEMENT WITH NO STATED SOURCE IS WRITTEN AS SHE STATED IT (REPORTED_NOT_OBSERVED_ENABLED)
+ * ============================================================================
+ *
+ * QA's Bubbles Create check (14 Nov 2026, Pau-approved): "she was late on 11/3/26" + "she yelled at a customer and she
+ * maybe forgot" was saved as "… Employee A was also observed yelling at a customer." The manager never said she saw
+ * it; the record now says someone did. The rules ask for the plain statement; the guard turns "was (also) observed /
+ * seen / witnessed <doing>" into "was (also) <doing>" and drops "It was observed that", unless the manager's own words
+ * say she saw it (`FIRST_HAND`). The "Observed:" section label is the form's layout and stays. Pure; the caller gates it.
+ */
+
+/** The rule the drafting prompt adds with REPORTED_NOT_OBSERVED_ENABLED. */
+export const STATED_NOT_OBSERVED_RULE =
+  "Something the manager states without saying how they know it is written plainly, as they stated it (\"<Name> yelled at a customer\"): never as observed, seen, witnessed, noticed or confirmed by anyone.";
+
+const OBSERVED_DOING = /\b(was|were)(\s+also)?\s+(?:observed|seen|witnessed|noticed|caught)\s+(?=[a-z]+ing\b)/gi;
+const OBSERVED_TO_BE = /\b(was|were)(\s+also)?\s+(?:observed|seen|witnessed|noticed)\s+to\s+be\b/gi;
+const IT_WAS_OBSERVED = /\b(?:it\s+was|it\s+has\s+been)\s+(?:observed|seen|witnessed|noticed)\s+that\s+/gi;
+
+/** The text without an observation the manager never claimed; unchanged when her words say she saw it. */
+export function withoutUnstatedObservation(text: string, source: string): string {
+  if (FIRST_HAND.some((pattern) => pattern.test(source))) return text;
+  return text
+    .replace(OBSERVED_DOING, (_match, verb: string, also: string | undefined) => `${verb}${also ?? ""} `)
+    .replace(OBSERVED_TO_BE, (_match, verb: string, also: string | undefined) => `${verb}${also ?? ""}`)
+    .replace(IT_WAS_OBSERVED, "")
+    .replace(/(^|[.!?]\s+|\n)([a-z])/g, (_match, lead: string, letter: string) => `${lead}${letter.toUpperCase()}`);
+}

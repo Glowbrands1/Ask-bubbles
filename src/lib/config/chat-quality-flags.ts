@@ -1535,6 +1535,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED_ENABLED",
   // ADD_ALREADY_ON_FORM_SAYS_SO (default off; QA's live 17u test, item 5, 13 Nov 2026): in the list, as every chat flag.
   "ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED",
+  // REPORTED_NOT_OBSERVED (default off; QA's Bubbles Create check, 14 Nov 2026): in the list, as every chat flag.
+  "REPORTED_NOT_OBSERVED_ENABLED",
 ] as const;
 
 /**
@@ -5678,4 +5680,15 @@ export function headingDistinctiveWordsEnabled(): boolean {
  */
 export function placeStripWholePhraseOnlyEnabled(): boolean {
   return envFlag("PLACE_STRIP_WHOLE_PHRASE_ONLY_ENABLED");
+}
+
+/**
+ * REPORTED_NOT_OBSERVED_ENABLED (coding 6; QA's Bubbles Create check, 14 Nov 2026, Pau-approved; default off). "she was late
+ * on 11/3/26" + "she yelled at a customer and she maybe forgot" was drafted "Employee A was also observed yelling at a
+ * customer.": a fact she stated became something someone observed. On, the draft prompt asks for a statement with no
+ * stated source to be written as she stated it, and the draft's "was observed <doing>" becomes "was <doing>" unless her
+ * words say she saw it (`forms/evidence-basis.ts`). Off, as before.
+ */
+export function reportedNotObservedEnabled(): boolean {
+  return envFlag("REPORTED_NOT_OBSERVED_ENABLED");
 }
