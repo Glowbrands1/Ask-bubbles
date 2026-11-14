@@ -1,7 +1,7 @@
 import { caReasonDueToEnabled } from "@/lib/config/chat-quality-flags";
 
 import { asksForTheForm } from "./draft-never-blank";
-import { requestIssueClause, withoutFormRequestLead } from "./incident-issue";
+import { opensWithLevelLedRequest, requestIssueClause, withoutFormRequestLead } from "./incident-issue";
 
 /**
  * ============================================================================
@@ -43,7 +43,8 @@ export function withoutRequestInObservation(
   const label = LABEL.exec(value)?.[1] ?? "";
   const body = value.slice(label.length);
   const first = /^[^\n]*?(?:[.!?](?=\s|$)|$)/m.exec(body)?.[0] ?? "";
-  if (!first.trim() || !asksForTheForm(first)) return null;
+  // LEVEL_LEADS_REQUEST_ENABLED: "second verbal for <A>, she was late …" asks for the form too (QA, 14 Nov 2026).
+  if (!first.trim() || !(asksForTheForm(first) || opensWithLevelLedRequest(first))) return null;
   const issue = reasonOf(first, employeeName);
   if (!issue) return null;
   const sentence = `${issue.charAt(0).toUpperCase()}${issue.slice(1)}${/[.!?]$/.test(issue) ? "" : "."}`;

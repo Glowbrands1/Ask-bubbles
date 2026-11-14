@@ -47,5 +47,36 @@ export const NOV14_LEVEL_LEADS_REQUEST_CASES: ReplayCase[] = (
     expect(answer.formProposal?.templateKey, "the form").toBe("dpoa");
     expect(answer.formProposal?.employeeName, "the employee").toBe("Quilla Farrowmere");
     expect((answer.formProposal as { warningLevel?: string | null } | undefined)?.warningLevel ?? null, "the level").toBe(level);
+    // QA's live test, 14 Nov 2026 (the 17z-b rollback): the request line stayed in the Issue and the saved Observation.
+    await expectAccountOnly(t, thread, answer.content, said);
   },
 }));
+
+/** The card's Issue and the saved Observation are the account, never the request line before its comma. */
+async function expectAccountOnly(t: ReplayContext, thread: ReplayThread, content: string, said: string) {
+  const issue = /\*\*Issue:\*\* ([^·\n]*)/.exec(content)?.[1]?.trim() ?? null;
+  expect(issue, `the Issue:\n${content}`).toBe("she was late on 11/12/26");
+  // The drafting model copies the manager's request line, the worst case the guards are for.
+  t.draftWrites({ observation: `Observed:\n${said}` });
+  const id = await thread.create();
+  const observation = t.values(id).observation ?? "";
+  expect(observation, `the saved Observation:\n${observation}`).toMatch(/late on 11\/12\/26/);
+  expect(observation, `the request line was saved:\n${observation}`).not.toMatch(/\b(?:verbal|written|CA)\s+for\b/i);
+}
+
+/* The guard QA named: the plain request lead was already stripped, and stays so. */
+export const NOV14_LEVEL_LEADS_PLAIN_LEAD_CASES: ReplayCase[] = [
+  {
+    id: "nov14-level-leads-request-plain-lead-guard",
+    title: '"can you make a CA for Quilla Farrowmere, she was late on 11/12/26": the Issue and Observation are the account',
+    report: "QA's live test, 14 Nov 2026: the guard for the level-led lead",
+    status: "fixed",
+    async run(t) {
+      const thread = start(t);
+      const said = "can you make a CA for Quilla Farrowmere, she was late on 11/12/26";
+      const answer = await thread.say(said);
+      expect(answer.formProposal, "no card").toBeTruthy();
+      await expectAccountOnly(t, thread, answer.content, said);
+    },
+  },
+];

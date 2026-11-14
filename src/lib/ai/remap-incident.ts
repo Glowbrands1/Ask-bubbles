@@ -1,4 +1,5 @@
 import {
+  levelLeadsRequestEnabled,
   politeRequestOwnTurnsEnabled,
   priorSentenceFixEnabled,
   remapIncidentFixEnabled,
@@ -226,7 +227,7 @@ function turnIncident(
   for (const raw of withoutPriorList(incidentTurn(turn, employeeName, { subjectless: true })).split(/[.!?;]+(?=\s|$)/)) {
     const sentence = raw.trim();
     if (!sentence || isEditTurn(sentence) || TALKS_TO_THE_APP.test(sentence) || ASKS_FOR_HELP.test(sentence)) continue;
-    const requested = requestLead().test(sentence) || LEVEL_REQUEST.test(sentence);
+    const requested = requestLead().test(sentence) || levelRequest().test(sentence);
     let kept = false;
     for (const clause of keepDates ? withDateListsJoined(sentence.split(",")) : sentence.split(",")) {
       const text = clause.trim();
@@ -246,7 +247,7 @@ function turnIncident(
       if (fix && isPriorStep(text)) continue;
       // "create a CA form for test employee at kearney", "team member Test
       // Employee at bellevue": who and where, never the incident (QA, 25 Oct 2026).
-      if (fix && onlyWhoOrWhere(text.replace(requestLead(), " ").replace(LEVEL_REQUEST, " ").trim(), employeeName)) continue;
+      if (fix && onlyWhoOrWhere(text.replace(requestLead(), " ").replace(levelRequest(), " ").trim(), employeeName)) continue;
       kept = true;
       const offense = clauseOffense(text, employeeName, keepDates);
       if (offense) found = offense;
@@ -286,9 +287,9 @@ function managerSentence(sentence: string, employeeName: string | null, slotClau
   for (const clause of sentence.split(",")) {
     let text = clause.trim();
     if (!text || slotClause(text) || STORE_CLAUSE.test(text) || PAYROLL_STATEMENT.test(text) || POLICY_ASK.test(text)) continue;
-    if (requestLead().test(text) || LEVEL_REQUEST.test(text)) {
+    if (requestLead().test(text) || levelRequest().test(text)) {
       requested = true;
-      text = text.replace(requestLead(), " ").replace(LEVEL_REQUEST, " ").replace(/\s+/g, " ").trim();
+      text = text.replace(requestLead(), " ").replace(levelRequest(), " ").replace(/\s+/g, " ").trim();
       if (!text || /^(?:so|to|with|from|because|now)\b/i.test(text)) continue;
       if (onlyNamesThem(text, employeeName) || /^[A-Z][\w'-]*(?:\s+[A-Z][\w'-]*){0,2}$/.test(text)) continue;
     }
@@ -378,8 +379,21 @@ function withoutStore(clause: string): string {
 }
 
 /** "do verbal for team member …": a level and "for" is a request too. */
-const LEVEL_REQUEST =
+const PLAIN_LEVEL_REQUEST =
   /^\s*(?:please\s+)?(?:create|make|start|open|do|file|write|draft)\s+(?:a\s+|an\s+)?(?:verbal|written|final)(?:\s+warning)?\s+for\b/i;
+
+/*
+ * LEVEL_LEADS_REQUEST_ENABLED (QA's live test, 14 Nov 2026): "second verbal / another verbal / 2nd written for <A>, she
+ * was late on 11/12/26" is the request as "create a verbal for <A>" is, so the saved Observation keeps only what
+ * follows. A level "for the same thing" / "for that" points back at an earlier one and is not a request.
+ */
+const LEVEL_LED_REQUEST =
+  /^\s*(?:please\s+)?(?:create|make|start|open|do|file|write|draft)\s+(?:a\s+|an\s+)?(?:verbal|written|final)(?:\s+warning)?\s+for\b|^\s*(?:please\s+)?(?:(?:a|an|her|his|their)\s+)?(?:(?:second|2nd|third|3rd|another|new|first|1st)\s+)?(?:verbal|written)(?:\s+warning)?\s+for\b(?!\s+(?:the\s+same|this\s+same|same|that|it|this)\b)/i;
+
+/** The level-and-"for" request for the flag state. */
+function levelRequest(): RegExp {
+  return levelLeadsRequestEnabled() ? LEVEL_LED_REQUEST : PLAIN_LEVEL_REQUEST;
+}
 
 /** "I need to coach an employee": the manager asking for help, not the account. */
 const ASKS_FOR_HELP = /^(?:i\s+)?(?:need|want|have|would\s+like)\s+to\s+(?:coach|write\s+up|discipline|document|create|make|do)\b/i;
@@ -601,7 +615,7 @@ function withDateListsJoined(clauses: readonly string[]): string[] {
 }
 
 function clauseOffense(clause: string, employeeName: string | null, keepDates = false): string | null {
-  let text = clause.replace(requestLead(), " ").replace(LEVEL_REQUEST, " ");
+  let text = clause.replace(requestLead(), " ").replace(levelRequest(), " ");
   // "violation is that on 10-16-26 Testy was not measuring and weighing product"
   text = text.replace(/^\s*(?:the\s+)?(?:violation|incident|issue|offen[cs]e|what\s+happened|reason)\s+(?:is|was)(?:\s+that)?\s*[:-]?\s*/i, "");
   // "She was on her cell phone for 30+ minutes at the front desk"
@@ -635,7 +649,7 @@ function clauseOffense(clause: string, employeeName: string | null, keepDates = 
   if (/^(?:for|a|an|the|form|location|store|draft)$/i.test(text)) return null;
   // "create a coaching document for Test Employee": a repeat request names the
   // person, it is no new incident (QA, 25 Oct 2026, conv_mvnt95q52gmu047).
-  if (remapIncidentFixEnabled() && (requestLead().test(clause) || LEVEL_REQUEST.test(clause)) && /^[A-Z][\w'-]*(?:\s+[A-Z][\w'-]*){0,2}$/.test(text)) return null;
+  if (remapIncidentFixEnabled() && (requestLead().test(clause) || levelRequest().test(clause)) && /^[A-Z][\w'-]*(?:\s+[A-Z][\w'-]*){0,2}$/.test(text)) return null;
   // "jba manual 11-1-25" answers the prior-coaching question.
   if (/^(?:the\s+)?(?:jba\s+)?(?:policy\s+)?manual(?:\s+ack\w*)?$/i.test(text)) return null;
   if (/\b(?:she|he|they|i|we)\b/i.test(text)) return null;

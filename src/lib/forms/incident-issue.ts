@@ -1,4 +1,5 @@
 import {
+  levelLeadsRequestEnabled,
   caReasonDueToEnabled,
   complaintAccountEnabled,
   decimalNotSentenceEndEnabled,
@@ -233,8 +234,24 @@ function withoutLevelRequestLead(sentence: string): string {
 
 /** "create a ca for <name> at <store>, she was late …" → "she was late …" (CA_REASON_DUE_TO_ENABLED); unchanged when nothing follows the comma. */
 export function withoutFormRequestLead(sentence: string): string {
-  return sentence.replace(FORM_REQUEST_LEAD, "");
+  const read = sentence.replace(FORM_REQUEST_LEAD, "");
+  // LEVEL_LEADS_REQUEST_ENABLED: "second verbal for <name>, she was late …" is the request too (QA, 14 Nov 2026).
+  return levelLeadsRequestEnabled() ? read.replace(LEVEL_LEADS_LEAD, "") : read;
 }
+
+/*
+ * LEVEL_LEADS_REQUEST_ENABLED (QA's live test, 14 Nov 2026): "second verbal for <A>, she was late on 11/12/26" was read
+ * as the request (its level the card's), but the request clause stayed in the card's Issue and the saved Observation.
+ * The level-led clause up to its comma is the request, as "can you make a CA for <A>," is; what follows is the account.
+ * A level "for the same thing" / "for that" points back at an earlier one and is not a request.
+ */
+/** LEVEL_LEADS_REQUEST_ENABLED: the sentence opens with a level-led request ("second verbal for <A>, …"). */
+export function opensWithLevelLedRequest(sentence: string): boolean {
+  return levelLeadsRequestEnabled() && LEVEL_LEADS_LEAD.test(sentence);
+}
+
+const LEVEL_LEADS_LEAD =
+  /^\s*(?:please\s+)?(?:(?:a|an|her|his|their)\s+)?(?:(?:second|2nd|third|3rd|another|new|first|1st)\s+)?(?:verbal|written)(?:\s+warning)?\s+for\s+(?!(?:the\s+same|this\s+same|same|that|it|this)\b)[^,]*,\s*(?=\S)/i;
 
 /*
  * COMPLAINT_ACCOUNT_ENABLED (QA's audit, 7 Nov 2026, a real manager's chat here on 3 Nov 2026): "verbal warning The
