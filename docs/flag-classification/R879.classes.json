@@ -1,0 +1,22 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov13-reason-place-not-store-sioux-falls-west-one-store: \"create a ca for marnie holloway, she was late because she was at sioux falls west\" \u2014 her one Woven store \u2014 OPEN in production (the reason's place is read as the Sioux Falls (W 41st St) store)": {
+  "category": "INTENDED-HARNESS",
+  "reason": "'OPEN in production' pin: with the fix flag in the env the open case holds, so the pin that it still fails in production fails. Expected whenever the fix flag is on; production (flag unset) passes."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov13-reason-place-not-store-sioux-falls-west-two-stores: \"ca for tessaly varn, she was late on 11/1/26 because she was at sioux falls west\" \u2014 no Sioux Falls store; her two Woven stores are asked \u2014 OPEN in production (the reason's place is read as the Sioux Falls (W 41st St) store)": {
+  "category": "INTENDED-HARNESS",
+  "reason": "'OPEN in production' pin: with the fix flag in the env the open case holds, so the pin that it still fails in production fails. Expected whenever the fix flag is on; production (flag unset) passes."
+ },
+ "src/lib/ai/flags-off-parity.test.ts :: existing chat and form suites with every new flag off passes the suites whose expectations are already on main: src/app/api/chat/replay-pack, first half of the cases by id": {
+  "category": "INTENDED-HARNESS",
+  "reason": "The parity child inherits process.env (flags-off-parity.test.ts:384), so with REASON_PLACE_NOT_STORE_ENABLED=true in the ON env it runs the pack with the flag on; its only 2 failures are the PR's two open pins below, the same effect. OFF: passes."
+ },
+ "replay: nov13-reason-place-not-store-sioux-falls-west-one-store [open]": {
+  "category": "INTENDED",
+  "reason": "The PR's open case: OFF reads the reason's place as Sioux Falls (W 41st St); ON the store comes from Woven (Marnie, one store) or is asked (Tessaly, two). Confirmed by the gate's chat-route probes."
+ },
+ "replay: nov13-reason-place-not-store-sioux-falls-west-two-stores [open]": {
+  "category": "INTENDED",
+  "reason": "The PR's open case: OFF reads the reason's place as Sioux Falls (W 41st St); ON the store comes from Woven (Marnie, one store) or is asked (Tessaly, two). Confirmed by the gate's chat-route probes."
+ }
+}
