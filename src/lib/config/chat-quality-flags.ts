@@ -5679,3 +5679,16 @@ export function headingDistinctiveWordsEnabled(): boolean {
 export function placeStripWholePhraseOnlyEnabled(): boolean {
   return envFlag("PLACE_STRIP_WHOLE_PHRASE_ONLY_ENABLED");
 }
+
+/**
+ * CLEANING_POLICY_IS_CARE_AND_CLEANING_ENABLED (coding 5, 14 Nov 2026; default off; QA, from Gate-Bubbles-5's side note;
+ * same flag in both apps; ported from Ask Sunny). "for violating the cleaning policy, she did not do the sanitation" ticked no box and the card
+ * said the manual had no section for "cleaning": the named phrase set Pau's cleaning-is-Other rule aside, then matched no
+ * heading. On (QA's ruling): "the cleaning policy", "cleaning duties", "cleaning procedures" name the manual's heading
+ * with "cleaning" in it (Care and Cleaning of Equipment and Facilities, p.21), as "care and cleaning policy" does; "the
+ * sanitation policy" (not the heading's word) keeps the Other line and asks "Did you mean … (page 21)?"
+ * (`forms/named-policy-section.ts`). Off, as before.
+ */
+export function cleaningPolicyIsCareAndCleaningEnabled(): boolean {
+  return envFlag("CLEANING_POLICY_IS_CARE_AND_CLEANING_ENABLED");
+}
