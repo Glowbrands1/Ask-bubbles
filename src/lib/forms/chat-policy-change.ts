@@ -8,10 +8,10 @@ import {
   type OfficialPolicyManualResult,
 } from "@/lib/knowledge/providers/supabase";
 import type { ChatMessage } from "@/types";
-import { accountChangeRederivesPolicyEnabled, formEditSingleWriterEnabled, policyChangeRelevantEnabled } from "@/lib/config/chat-quality-flags";
+import { accountChangeOtherBesideEnabled, accountChangeRederivesPolicyEnabled, formEditSingleWriterEnabled, policyChangeRelevantEnabled } from "@/lib/config/chat-quality-flags";
 
 import { syncCorrectiveActionPlan } from "./ca-action-plan-sync";
-import { CA_POLICY_QUESTION, readCaPolicy, statedOffenseKeys } from "./ca-policy";
+import { CA_POLICY_QUESTION, describedAttendanceKeys, readCaPolicy, statedOffenseKeys, withoutCleaningDuty } from "./ca-policy";
 import { offeredOffenseKeys } from "./offense-keys";
 import { describedManualSection } from "./named-policy-section";
 import { checkboxGroupsForVariant, fieldsForVariant, parseFormDocument } from "./document";
@@ -25,6 +25,7 @@ import {
   findManualSection,
   headingKey,
   manualDisplayTitle,
+  manualSectionsFor,
   manualSectionHeadings,
   officialManualProvenance,
   offenseKeyForManualHeading,
@@ -586,7 +587,18 @@ export async function rederivePolicyFromAccount(input: {
   // Pau's rule: a cleaning duty described is Other. This app's cleaning reader has no "sanitation" yet (the sibling's
   // OTHER_POLICY_AGREES added it there), so an undone sanitation counts here too.
   const sanitationUndone = /\bsani?ta?t?i?a?on\w*/i.test(input.account) && /\b(?:not|never|didn['’]?t|did\s+not|skip\w*|fail\w*|miss\w*)\b/i.test(input.account);
-  if ((reading.other === "cleaning" || sanitationUndone) && offered.includes("other")) {
+  /*
+   * ACCOUNT_CHANGE_OTHER_BESIDE_ENABLED (Gate-Bubbles-5's finding, 14 Nov 2026): a cleaning duty beside a second offense
+   * the new account describes ("she was on her phone and did not do the sanitation") ticks both, as Create does (QA's
+   * ruling (b)): the offense is read from the account without the cleaning duty, and Other is added. Off, or a cleaning
+   * duty alone: Other alone, as before.
+   */
+  const beside =
+    (reading.other === "cleaning" || sanitationUndone) && offered.includes("other") && accountChangeOtherBesideEnabled() ? besideOtherReading(input.account, chunks) : null;
+  if (beside) {
+    sections = beside.sections;
+    keys = offeredOffenseKeys([...new Set([...beside.keys, "other"])], offered);
+  } else if ((reading.other === "cleaning" || sanitationUndone) && offered.includes("other")) {
     keys = ["other"];
   } else {
     /*
@@ -696,6 +708,28 @@ export async function rederivePolicyFromAccount(input: {
     }
   }
   return written;
+}
+
+/**
+ * ACCOUNT_CHANGE_OTHER_BESIDE_ENABLED: the offense an account describes beside its cleaning duty, read as Create reads it
+ * (`withoutCleaningDuty`, then the described manual section or the attendance boxes); null when the cleaning duty is
+ * the only offense.
+ */
+function besideOtherReading(account: string, chunks: Parameters<typeof describedManualSection>[0]["chunks"]): { keys: string[]; sections: ManualSection[] } | null {
+  const rest = withoutCleaningDuty(account);
+  if (rest === null) return null;
+  const described = describedManualSection({ text: rest, chunks });
+  const attendance = describedAttendanceKeys(rest);
+  if (!described && !attendance) return null;
+  const stated = statedOffenseKeys(readCaPolicy(rest), rest) ?? attendance ?? (described ? [offenseKeyForManualHeading(described.section.heading)] : []);
+  if (stated.length === 0) return null;
+  /*
+   * Gate-Bubbles-5 on #912 (14 Nov 2026): "she was late to her shift and did not do the sanitation" read the lateness
+   * through the attendance boxes, which carry no section, so Direct policy was cleared. The section is the boxes' own,
+   * as Create cites it (`manualSectionsFor`).
+   */
+  const sections = described ? [described.section] : manualSectionsFor({ chunks: chunks ?? [], offenseKeys: stated, notes: rest });
+  return { keys: stated, sections };
 }
 
 /** The pinned manual, or a reason — a knowledge-base outage never fails the turn. */

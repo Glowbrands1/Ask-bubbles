@@ -1011,6 +1011,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ACCOUNT_CHANGE_REDERIVES_POLICY_ENABLED",
   // coding 2: ACCOUNT_REPLACED_CLOSE_SENTENCE_KEPT (QA's follow-up to it, 13 Nov 2026; default off).
   "ACCOUNT_REPLACED_CLOSE_SENTENCE_KEPT_ENABLED",
+  // coding 2: ACCOUNT_CHANGE_OTHER_BESIDE (Gate-Bubbles-5's finding, 14 Nov 2026; default off).
+  "ACCOUNT_CHANGE_OTHER_BESIDE_ENABLED",
   // QA round 17r (13 Nov 2026): TEAM_CARD_NOT_PRODUCT (#668) and FORM_EDIT_SOURCE_TURN (#480) are switched on in production.
   "TEAM_CARD_NOT_PRODUCT_ENABLED",
   "FORM_EDIT_SOURCE_TURN_ENABLED",
@@ -5785,4 +5787,17 @@ export function levelLeadsRequestEnabled(): boolean {
  */
 export function revisedFormPointsToNewerEnabled(): boolean {
   return envFlag("REVISED_FORM_POINTS_TO_NEWER_ENABLED");
+}
+
+/**
+ * ACCOUNT_CHANGE_OTHER_BESIDE_ENABLED (Coding-2, 14 Nov 2026; default off; Gate-Bubbles-5's finding on main 8ed206fb, via
+ * QA). With ACCOUNT_CHANGE_REDERIVES_POLICY on, "change the issue to she was on her phone and did not do the sanitation"
+ * on a lateness draft re-derived to Other alone (Policy Violated "Other", the plan "applicable company policy", the phone
+ * dropped): the cleaning duty was read first, while a Create from the same words ticks Cell Phone and Other (QA's ruling
+ * (b), OTHER_POLICY_AGREES). On: the re-derive reads the account without the cleaning duty, as Create does, and ticks
+ * the described offense and Other; a cleaning duty that is the only offense stays Other alone
+ * (`forms/chat-policy-change.ts` rederivePolicyFromAccount). Off, as before.
+ */
+export function accountChangeOtherBesideEnabled(): boolean {
+  return envFlag("ACCOUNT_CHANGE_OTHER_BESIDE_ENABLED");
 }
