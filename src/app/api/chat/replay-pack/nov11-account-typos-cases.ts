@@ -38,3 +38,40 @@ export const NOV11_ACCOUNT_TYPOS_CASES: ReplayCase[] = [
     },
   },
 ];
+
+/*
+ * QA's bar for #772 (Gate-Bubbles-2's x772 probe, 14 Nov 2026): the card's Issue never edits a coworker on the roster,
+ * a store name, a capitalised word or a quoted span. Guards with the flag (they hold flag off: nothing is edited).
+ * The people are invented: Manuel Quellby is a coworker one letter from "manual".
+ */
+const MANUEL: DirectoryRow = {
+  id: "e-manuel-quellby",
+  firstName: "Manuel",
+  lastName: "Quellby",
+  preferredFirstName: null,
+  employmentStatus: "active",
+  locationIds: ["loc-264"],
+  positionName: "Team Member Part Time",
+};
+const KEPT: readonly { key: string; said: string; issue: string }[] = [
+  { key: "coworker", said: "please make a ca for Brisa Talmadge, manuel saw her leave the drawer open", issue: "manuel saw her leave the drawer open" },
+  { key: "store", said: "please make a ca for Brisa Talmadge, she was sent to Kearny and never showed", issue: "she was sent to Kearny and never showed" },
+  // The Issue reader drops a closing quote mark (as on main, flag off too); what matters is "registr" is not edited.
+  { key: "quoted", said: "please make a ca for Brisa Talmadge, she told a guest 'that is not my registr'", issue: "she told a guest 'that is not my registr" },
+];
+
+export const NOV14_ACCOUNT_TYPOS_BAR_GUARDS: ReplayCase[] = KEPT.map((wording) => ({
+  id: `nov14-account-typos-bar-${wording.key}`,
+  title: `"${wording.said}": the card's Issue keeps it as typed`,
+  report: "QA's #772 bar, Gate-Bubbles-2's x772 probe (14 Nov 2026); invented people",
+  status: "fixed",
+  fixFlags: ["ACCOUNT_TYPOS_FIXED_ENABLED"],
+  async run(t) {
+    vi.setSystemTime(new Date("2026-11-14T15:00:00Z"));
+    t.directory([...STAFF, BRISA, MANUEL]);
+    t.as("location_manager", WEST_DODGE);
+    const card = (await t.thread().say(wording.said)).content;
+    const issue = /^\*\*Issue:\*\* ([^\n]*?)(?: · |$)/m.exec(card)?.[1] ?? "";
+    expect(issue, card).toBe(wording.issue);
+  },
+}));
