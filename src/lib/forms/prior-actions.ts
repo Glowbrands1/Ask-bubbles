@@ -462,8 +462,9 @@ function managerStepLine(step: { iso: string; named: string; topic?: string; abo
 }
 
 /** Whether the manager's own words for a step say it was signed ("verbal ca signed 9-1-26"). */
-function saidSigned(step: { named: string; topic?: string }): boolean {
-  return /\bsign(?:ed|ing)?\b/i.test(`${step.named} ${step.topic ?? ""}`);
+function saidSigned(step: { named: string; topic?: string; signed?: boolean }): boolean {
+  // HISTORY_LEVEL_PRIOR_ROW_ENABLED: "verbal warning signed 9/1/26" read by the level reader carries `signed`.
+  return step.signed === true || /\bsign(?:ed|ing)?\b/i.test(`${step.named} ${step.topic ?? ""}`);
 }
 
 /**
