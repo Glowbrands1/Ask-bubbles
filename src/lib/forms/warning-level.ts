@@ -1,4 +1,4 @@
-import { caShortcutWordsEnabled, complaintAccountEnabled, levelEndsRequestEnabled, priorActionsNoCommaEnabled, relativeDayNotHistoryEnabled, requestLevelNotHistoryEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { caShortcutWordsEnabled, complaintAccountEnabled, levelEndsRequestEnabled, levelOnIncidentDayEnabled, priorActionsNoCommaEnabled, relativeDayNotHistoryEnabled, requestLevelNotHistoryEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { businessToday } from "@/lib/business-date";
 
 import { datesInText } from "./form-date-answer";
@@ -424,12 +424,17 @@ function nearestCue(before: string): "history" | "past" | null {
  * day ("other" — a date after today, which beside a warning already named is
  * a year the manager left off: "12/20" read in January), or not at all.
  */
-function timing(after: string, today: string): "earlier" | "today" | "other" | null {
+function timing(after: string, today: string, text = "", end = -1): "earlier" | "today" | "other" | null {
   const window = after.slice(0, 40);
   const dated = datesInText(window, today)[0];
   if (dated && dated.index <= 30) {
     // A date across a comma is another clause's ("written warning, late again on 10/9").
     if (dated.iso === today && /,/.test(window.slice(0, dated.index))) return null;
+    // LEVEL_ON_INCIDENT_DAY_ENABLED: on the incident's own day, it is this form's ("today" here is that day).
+    if (dated.iso < today && levelOnIncidentDayEnabled() && end >= 0 && !/,/.test(window.slice(0, dated.index))) {
+      const incident = incidentDay(text, end + dated.index, end + dated.end, today);
+      if (!incident || dated.iso >= incident) return "today";
+    }
     return dated.iso < today ? "earlier" : dated.iso === today ? "today" : "other";
   }
   if (EARLIER_AFTER.test(after) || RELATIVE_EARLIER_AFTER.test(after)) return "earlier";
@@ -437,6 +442,28 @@ function timing(after: string, today: string): "earlier" | "today" | "other" | n
   if (day) return Number(day[1]) === Number(today.slice(8, 10)) ? "today" : "earlier";
   if (TODAY_AFTER.test(after)) return "today";
   return null;
+}
+
+const SAID_TODAY = /\b(?:today|tonight|this\s+(?:morning|afternoon|evening))\b/i;
+const SAID_YESTERDAY = /\b(?:yesterday|last\s+night)\b/i;
+
+function dayBefore(iso: string): string {
+  const date = new Date(`${iso}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() - 1);
+  return date.toISOString().slice(0, 10);
+}
+
+/**
+ * LEVEL_ON_INCIDENT_DAY_ENABLED: the day of the incident the turn describes, other than the level's own date (from
+ * `start` to `stop`) — another date in the turn, or "today" / "yesterday". The latest wins; null when there is none.
+ */
+function incidentDay(text: string, start: number, stop: number, today: string): string | null {
+  const days = datesInText(text, today)
+    .filter((found) => !(found.index < stop && found.end > start) && found.iso <= today)
+    .map((found) => found.iso);
+  if (SAID_TODAY.test(text)) days.push(today);
+  if (SAID_YESTERDAY.test(text)) days.push(dayBefore(today));
+  return days.sort().at(-1) ?? null;
 }
 
 /** A date written right before the mention — "10/1 she gets a written warning". */
@@ -470,7 +497,8 @@ function classify(text: string, start: number, end: number, today: string, cued:
    */
   if (complaintAccountEnabled() && opensTurn && OPENING.test(before) && RUN_ON_SENTENCE.test(text.slice(end, end + 40))) return "current";
 
-  const when = timing(after, today);
+  // LEVEL_ON_INCIDENT_DAY_ENABLED: only a level that opens the turn ("verbal warning on 11/12/26 for …") is dated by the incident's day.
+  const when = opensTurn && OPENING.test(before) ? timing(after, today, text, end) : timing(after, today);
   /*
    * "GAVE / GIVEN / GIVE" + THE LEVEL TICKS IT — the owner's rule, 9 Oct 2026,
    * after seeing "given verbal warning on 9/21" asked about. The manager who

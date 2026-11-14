@@ -2740,6 +2740,17 @@ export function requestLevelNotHistoryEnabled(): boolean {
 }
 
 /**
+ * LEVEL_ON_INCIDENT_DAY_ENABLED (port of Ask Sunny #970, QA's ruling F1 on Gate-Sunny-3's findings, 14 Nov 2026;
+ * default off). "verbal warning on 11/12/26 for <W>, she was late that day", filed the next day, was read as an earlier
+ * warning: its date was compared with today's, not the incident's. On: a level with its own date is history only when
+ * that date is before the incident's day — another date in the turn, or "today" / "yesterday"; with none, the level's
+ * day is the incident's. Off, as before.
+ */
+export function levelOnIncidentDayEnabled(): boolean {
+  return envFlag("LEVEL_ON_INCIDENT_DAY_ENABLED");
+}
+
+/**
  * The exit form's shortcuts fill their fields: "drop wage" the minimum-wage
  * line, "deducted for store key" the key line, "called to quit" How Employee
  * Resigned, "immediate voluntary term" / "quit, no notice given" the
