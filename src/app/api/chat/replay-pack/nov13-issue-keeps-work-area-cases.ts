@@ -94,6 +94,23 @@ export const NOV13_ISSUE_KEEPS_WORK_AREA_GUARDS: ReplayCase[] = [
       expect(issueLine(reply), `a second work area was added:\n${reply}`).not.toMatch(/register/i);
     },
   },
+  // Gate-Bubbles' #880 re-gate (p19, p24): the account names its area after "in" / "near", not "at".
+  ...([
+    { key: "p19-in-the-back-room", turn: "create a ca for remy calder at the register, she was rude to a guest in the back room", issue: "she was rude to a guest in the back room", added: /register/i },
+    { key: "p24-near-the-register", turn: "create a ca for remy calder at the front desk, she was rude to a guest near the register", issue: "she was rude to a guest near the register", added: /front desk/i },
+  ] as const).map(({ key, turn, issue, added }): ReplayCase => ({
+    id: `nov13-issue-keeps-work-area-guard-${key}`,
+    title: `"${turn}" — no second work area`,
+    report: `${REPORT}; Gate-Bubbles' #880 re-gate`,
+    status: "fixed",
+    fixFlags: [FLAG],
+    async run(t: ReplayContext) {
+      const thread = start(t);
+      const reply = (await thread.say(turn)).content;
+      expect(issueLine(reply), `the Issue line:\n${reply}`).toMatch(new RegExp(String.raw`\*\*Issue:\*\* ${issue}\s*(?:·|$)`, "i"));
+      expect(issueLine(reply), `a second work area was added:\n${reply}`).not.toMatch(added);
+    },
+  })),
   {
     id: "nov13-issue-keeps-work-area-guard-store-left-off",
     title: `"create a ca for remy calder at west dodge, she was rude to a guest" — a store is not a work area; the Issue is the account`,

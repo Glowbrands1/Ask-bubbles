@@ -18,3 +18,18 @@ export function workAreaPhrase(text: string): string | null {
   }
   return null;
 }
+
+/**
+ * Whether `text` names a work area after any place word ("in the back room", "near the register", "behind the counter",
+ * "by the front desk", "on the sales floor", "at the register"): the account already says where (Gate-Bubbles, #880
+ * p19/p24).
+ */
+export function namesWorkArea(text: string): boolean {
+  for (const match of text.matchAll(/\b(?:at|in|inside|near|by|behind|beside|next\s+to|on|around|outside)\s+((?:the\s+)?[a-z#0-9]+(?:\s+[a-z#0-9]+){0,2})\b/gi)) {
+    const words = match[1]!.split(/\s+/);
+    for (let length = words.length; length >= 1; length -= 1) {
+      if (WORK_AREA.test(words.slice(0, length).join(" "))) return true;
+    }
+  }
+  return false;
+}

@@ -25,7 +25,7 @@ import { withoutPriorStepClauses } from "./form-date-answer";
 import { priorSentenceFixFor } from "./prior-sentence-scope";
 import { statedWarningLevel } from "./warning-level";
 import { withoutLeadingTitle } from "./title-before-name";
-import { workAreaPhrase } from "./work-area";
+import { namesWorkArea, workAreaPhrase } from "./work-area";
 
 /**
  * ============================================================================
@@ -427,8 +427,9 @@ function withWorkArea(issue: string | null, text: string, employeeName: string |
   if (!area) return issue;
   const areaWords = area.toLowerCase().replace(/^at\s+(?:the\s+)?/, "");
   if (issue.toLowerCase().includes(areaWords)) return issue;
-  // The account already says where (another work area): it is not given a second one (Gate-Bubbles, #880).
-  if (workAreaPhrase(issue)) return issue;
+  // The account already says where (another work area, after any place word: "in the back room", "near the register"):
+  // it is not given a second one (Gate-Bubbles, #880 p19/p24).
+  if (namesWorkArea(issue)) return issue;
   // Written as a phrase of the account ("at the front desk"), not with the typed capitals ("At The Front Desk").
   return `${issue.replace(/[\s.!?,;:]+$/, "")} ${area.toLowerCase()}`;
 }
