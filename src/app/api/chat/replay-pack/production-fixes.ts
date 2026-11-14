@@ -837,4 +837,14 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov13-place-strip-must-keep-kearney-high-of-all-places": "PLACE_STRIP_WHOLE_PHRASE_ONLY",
   // fixed in production by PLACE_STRIP_WHOLE_PHRASE_ONLY (on since 17v) with the #869 follow-up code, QA round 17x, 13 Nov 2026
   "nov13-place-strip-must-keep-kearney-mall-of-all-places": "PLACE_STRIP_WHOLE_PHRASE_ONLY",
+  // fixed in production by ACCOUNT_CHANGE_REDERIVES_POLICY, QA round 17y, 14 Nov 2026
+  "nov13-account-change-rederives-policy-sanitation": "ACCOUNT_CHANGE_REDERIVES_POLICY",
+  // fixed in production by ACCOUNT_CHANGE_REDERIVES_POLICY, QA round 17y, 14 Nov 2026
+  "nov13-account-change-rederives-policy-phone": "ACCOUNT_CHANGE_REDERIVES_POLICY",
+  // fixed in production by ACCOUNT_CHANGE_REDERIVES_POLICY, QA round 17y, 14 Nov 2026
+  "nov13-account-replaced-close-sentence-new-account-still-rederives": "ACCOUNT_CHANGE_REDERIVES_POLICY",
+  // fixed in production by ACCOUNT_CHANGE_REDERIVES_POLICY, QA round 17y, 14 Nov 2026
+  "nov14-account-change-box-already-moved-policy-follows": "ACCOUNT_CHANGE_REDERIVES_POLICY",
+  // fixed in production by ACCOUNT_CHANGE_REDERIVES_POLICY, QA round 17y, 14 Nov 2026
+  "nov14-account-change-made-about-all-four-agree": "ACCOUNT_CHANGE_REDERIVES_POLICY",
 };

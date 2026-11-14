@@ -95,7 +95,8 @@ export const NOV13_ACCOUNT_REPLACED_CLOSE_SENTENCE_CASES: ReplayCase[] = [
     // Changed on purpose (QA's 17x rollback, 14 Nov 2026): ACCOUNT_CHANGE_REDERIVES_POLICY is off in production again.
     status: "fixed",
     fixFlags: [REDERIVE],
-    fixStatus: { open: "the typo fix re-derives the policy: Attendance moves to Cell Phone" },
+    // Changed on purpose (14 Nov 2026, QA round 17y): fixStatus dropped. Production now has ACCOUNT_REPLACED_CLOSE_SENTENCE_KEPT on
+    // with ACCOUNT_CHANGE_REDERIVES_POLICY (they ship together), so the fix-flag run holds: the policy no longer moves on this fix.
     run: typoFix,
   },
   {
@@ -136,7 +137,8 @@ export const NOV13_ACCOUNT_REPLACED_CLOSE_SENTENCE_CASES: ReplayCase[] = [
     report: DATE_REPORT,
     status: "fixed",
     fixFlags: [REDERIVE],
-    fixStatus: { open: "the date fix re-derives the policy: Attendance moves to Cell Phone" },
+    // Changed on purpose (14 Nov 2026, QA round 17y): fixStatus dropped. Production now has ACCOUNT_REPLACED_CLOSE_SENTENCE_KEPT on
+    // with ACCOUNT_CHANGE_REDERIVES_POLICY (they ship together), so the fix-flag run holds: the policy no longer moves on this fix.
     run: dateFix,
   },
 ];
