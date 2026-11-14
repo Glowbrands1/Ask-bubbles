@@ -1,0 +1,66 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov13-account-change-rederives-policy-phone: \"create ca form for tess varga for violating attendance policy, she was late on 10/20/26. verbal. no payroll deduct.\" then \"change the issue to she was on her phone the whole shift\": the policy lines and plan follow the phone account \u2014 OPEN in production (the Observation is the phone use, the offense, policy lines and plan stay Attendance)": {
+  "category": "INTENDED",
+  "reason": "Open-case it.fails wrapper: the inner invariant now holds with the flag on (the case moves to fixed when the flag goes on)."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov13-account-change-rederives-policy-sanitation: \"create ca form for tess varga for violating attendance policy, she was late on 10/20/26. verbal. no payroll deduct.\" then \"change the issue to not doing the 10-minute sanitation\": the offense, Policy Violated, Direct policy and plan leave Attendance \u2014 OPEN in production (the Observation is the sanitation, the offense, policy lines and plan stay Attendance)": {
+  "category": "INTENDED",
+  "reason": "Open-case it.fails wrapper: the inner invariant now holds with the flag on (the case moves to fixed when the flag goes on)."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov13-account-replaced-close-sentence-new-account-still-rederives: \"create ca form for nell orrin for violating the attendance policy, she was late on 10/20/26 because she was on her phone. verbal. no payroll deduct.\" then \"change the observation to: Nell Orrin was rude to a customer at the register.\": a changed account still leaves Attendance with both flags on \u2014 OPEN in production (production has ACCOUNT_CHANGE_REDERIVES_POLICY off: a changed account keeps Attendance)": {
+  "category": "INTENDED",
+  "reason": "Open-case it.fails wrapper: the inner invariant now holds with the flag on (the case moves to fixed when the flag goes on)."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-account-change-box-already-moved-policy-follows: a lateness CA draft, then \"change the issue to she was on her phone the whole shift\": the box moves to Standards of Conduct in the same turn as the account, and Policy Violated, Direct policy and the plan follow it \u2014 OPEN in production (with ACCOUNT_CHANGE_REDERIVES_POLICY off nothing follows the new account)": {
+  "category": "INTENDED",
+  "reason": "Open-case it.fails wrapper: the inner invariant now holds with the flag on (the case moves to fixed when the flag goes on)."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-account-change-made-about-all-four-agree: a lateness CA draft, then the exact \"make it about her phone use instead, she was on her phone the whole shift\": the offense, Policy Violated, Direct policy and the plan all follow the phone account \u2014 OPEN in production (with ACCOUNT_CHANGE_REDERIVES_POLICY off nothing follows the new account)": {
+  "category": "INTENDED",
+  "reason": "Open-case it.fails wrapper: the inner invariant now holds with the flag on (the case moves to fixed when the flag goes on)."
+ },
+ "replay: nov13-account-change-rederives-policy-phone [open]": {
+  "category": "INTENDED",
+  "reason": "Open case holds with the flag on: the offense, Policy Violated, Direct policy and plan follow the replaced account (Cell Phone / Other / conduct); OFF they stayed Attendance."
+ },
+ "replay: nov13-account-change-rederives-policy-sanitation [open]": {
+  "category": "INTENDED",
+  "reason": "Open case holds with the flag on: the offense, Policy Violated, Direct policy and plan follow the replaced account (Cell Phone / Other / conduct); OFF they stayed Attendance."
+ },
+ "replay: nov13-account-replaced-close-sentence-new-account-still-rederives [open]": {
+  "category": "INTENDED",
+  "reason": "Open case holds with the flag on: the offense, Policy Violated, Direct policy and plan follow the replaced account (Cell Phone / Other / conduct); OFF they stayed Attendance."
+ },
+ "replay: nov13-add-already-on-form-says-so [fix:MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED_ENABLED,ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; turns 1-2 replace the account ('change the issue to not doing the 10-minute sanitation', then the exact made-about phone sentence). ON the policy lines and plan follow (Other, then Cell Phone p.19); OFF turn 2 writes 'review the Attendance policy' under a phone account (item 2a). Later add turns are unchanged."
+ },
+ "replay: nov13-add-already-on-form-says-so [production]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; turns 1-2 replace the account ('change the issue to not doing the 10-minute sanitation', then the exact made-about phone sentence). ON the policy lines and plan follow (Other, then Cell Phone p.19); OFF turn 2 writes 'review the Attendance policy' under a phone account (item 2a). Later add turns are unchanged."
+ },
+ "replay: nov13-add-already-on-form-says-so-small-word-left-out [fix:MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED_ENABLED,ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; turns 1-2 replace the account ('change the issue to not doing the 10-minute sanitation', then the exact made-about phone sentence). ON the policy lines and plan follow (Other, then Cell Phone p.19); OFF turn 2 writes 'review the Attendance policy' under a phone account (item 2a). Later add turns are unchanged."
+ },
+ "replay: nov13-add-already-on-form-says-so-small-word-left-out [production]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; turns 1-2 replace the account ('change the issue to not doing the 10-minute sanitation', then the exact made-about phone sentence). ON the policy lines and plan follow (Other, then Cell Phone p.19); OFF turn 2 writes 'review the Attendance policy' under a phone account (item 2a). Later add turns are unchanged."
+ },
+ "replay: nov13-made-about-empty-patch-answers-saved [fix:MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; turns 1-2 replace the account ('change the issue to not doing the 10-minute sanitation', then the exact made-about phone sentence). ON the policy lines and plan follow (Other, then Cell Phone p.19); OFF turn 2 writes 'review the Attendance policy' under a phone account (item 2a). Later add turns are unchanged."
+ },
+ "replay: nov13-made-about-empty-patch-answers-saved [production]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; turns 1-2 replace the account ('change the issue to not doing the 10-minute sanitation', then the exact made-about phone sentence). ON the policy lines and plan follow (Other, then Cell Phone p.19); OFF turn 2 writes 'review the Attendance policy' under a phone account (item 2a). Later add turns are unchanged."
+ },
+ "replay: nov14-account-change-box-already-moved-policy-follows [open]": {
+  "category": "INTENDED",
+  "reason": "Open case holds with the flag on: the offense, Policy Violated, Direct policy and plan follow the replaced account (Cell Phone / Other / conduct); OFF they stayed Attendance."
+ },
+ "replay: nov14-account-change-made-about-all-four-agree [open]": {
+  "category": "INTENDED",
+  "reason": "Open case holds with the flag on: the offense, Policy Violated, Direct policy and plan follow the replaced account (Cell Phone / Other / conduct); OFF they stayed Attendance."
+ }
+}
