@@ -58,6 +58,10 @@ const KEPT: readonly { key: string; said: string; issue: string }[] = [
   { key: "store", said: "please make a ca for Brisa Talmadge, she was sent to Kearny and never showed", issue: "she was sent to Kearny and never showed" },
   // The Issue reader drops a closing quote mark (as on main, flag off too); what matters is "registr" is not edited.
   { key: "quoted", said: "please make a ca for Brisa Talmadge, she told a guest 'that is not my registr'", issue: "she told a guest 'that is not my registr" },
+  // QA (14 Nov 2026), ported from the sibling gate's #983 wordings: a real word is never mended ("complained" is not
+  // "complaint"). "she complained to a guest" alone is no incident; its unit test is word for word.
+  { key: "complained-to-a-guest", said: "please make a ca for Brisa Talmadge, she was rude and complained to a guest", issue: "she was rude and complained to a guest" },
+  { key: "the-guest-complained", said: "please make a ca for Brisa Talmadge, she was rude to a guest who complained", issue: "she was rude to a guest who complained" },
 ];
 
 export const NOV14_ACCOUNT_TYPOS_BAR_GUARDS: ReplayCase[] = KEPT.map((wording) => ({
