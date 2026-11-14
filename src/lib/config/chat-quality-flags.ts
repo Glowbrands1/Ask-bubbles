@@ -1439,6 +1439,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "POLICY_NOT_FOUND_PLAIN_WORDING_ENABLED",
   // coding 4: REASON_PLACE_NOT_STORE (Gate-Bubbles-3 on #869, 13 Nov 2026; default off).
   "REASON_PLACE_NOT_STORE_ENABLED",
+  // coding 4: HISTORY_DENIAL_NOT_RECORDS (Gate-Bubbles-3's #888 follow-up, QA 14 Nov 2026; default off).
+  "HISTORY_DENIAL_NOT_RECORDS_ENABLED",
   // coding 4: FUZZY_STORE_ASKS (QA's ruling on Gate-Bubbles-3's #869 probes, 14 Nov 2026; default off).
   "FUZZY_STORE_ASKS_ENABLED",
   // coding 4: REQUEST_LINE_TITLE_KEPT (QA's Bubbles 17x live test, 14 Nov 2026; default off).
@@ -5762,4 +5764,15 @@ export function otherPolicyAgreesEnabled(): boolean {
  */
 export function otherNotAPolicyNameEnabled(): boolean {
   return envFlag("OTHER_NOT_A_POLICY_NAME_ENABLED");
+}
+
+/**
+ * HISTORY_DENIAL_NOT_RECORDS (Gate-Bubbles-3's #888 follow-up, QA 14 Nov 2026; default off): "verbal ca for <A>, she was
+ * late on 11/3/26. no payroll deduct. never been written up" was answered from the forms register with no card — "been
+ * written up" / "prior coaching" read as a question about forms on file. With the flag an on-file cue said with a
+ * negation before it ("never been written up", "no prior coaching") denies a history and is no such question. See
+ * `forms/chat-form-records.ts` asksOnlyAboutFormsOnFile. Off, as before.
+ */
+export function historyDenialNotRecordsEnabled(): boolean {
+  return envFlag("HISTORY_DENIAL_NOT_RECORDS_ENABLED");
 }

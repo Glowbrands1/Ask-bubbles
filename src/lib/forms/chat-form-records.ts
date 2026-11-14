@@ -3,7 +3,7 @@ import "server-only";
 import { promptLabel } from "@/lib/ai/prompts";
 import { ACTIVE_BRAND } from "@/lib/brand";
 import { businessToday } from "@/lib/business-date";
-import { formRecordsNoJudgementEnabled, formsOnFileOrderMatchPossibleEnabled, priorRecordFinalOnlyEnabled } from "@/lib/config/chat-quality-flags";
+import { formRecordsNoJudgementEnabled, formsOnFileOrderMatchPossibleEnabled, historyDenialNotRecordsEnabled, priorRecordFinalOnlyEnabled } from "@/lib/config/chat-quality-flags";
 import { locationById } from "@/lib/locations";
 import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
 import type { AccessScope, Role } from "@/types";
@@ -155,8 +155,27 @@ export function splitRecordDrafts<T extends { status: string }>(
 
 export function asksOnlyAboutFormsOnFile(question: string): boolean {
   const text = question.toLowerCase().replace(/\s+/g, " ");
-  if (!ON_FILE_PATTERNS.some((pattern) => pattern.test(text))) return false;
+  const cued = historyDenialNotRecordsEnabled()
+    ? ON_FILE_PATTERNS.some((pattern) => unnegatedMatch(text, pattern))
+    : ON_FILE_PATTERNS.some((pattern) => pattern.test(text));
+  if (!cued) return false;
   return !ASKS_FOR_A_NEW_FORM.test(text);
+}
+
+/*
+ * HISTORY_DENIAL_NOT_RECORDS_ENABLED (Gate-Bubbles-3's #888 follow-up, QA 14 Nov 2026): "verbal ca for <A>, she was late
+ * on 11/3/26. no payroll deduct. never been written up" (or "… no prior coaching") was answered from the register with
+ * no card: "been written up" and "prior coaching" are on-file cues. Said with a negation just before them ("no", "never",
+ * "not", "hasn't" …) they deny a history; they do not ask about forms on file. Off, as before.
+ */
+const NEGATION_BEFORE = /\b(?:no|never|not|nothing|none|without|hasn['’]?t|haven['’]?t|wasn['’]?t|isn['’]?t|hadn['’]?t)\s+(?:\S+\s+){0,2}$/;
+
+function unnegatedMatch(text: string, pattern: RegExp): boolean {
+  const global = new RegExp(pattern.source, pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`);
+  for (const match of text.matchAll(global)) {
+    if (!NEGATION_BEFORE.test(text.slice(0, match.index))) return true;
+  }
+  return false;
 }
 
 /* ----------------------------------------------------------------- names --- */
