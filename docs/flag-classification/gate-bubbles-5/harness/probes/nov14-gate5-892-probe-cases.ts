@@ -42,6 +42,20 @@ function agree(s: Snap) {
     expect(s.violated, `Attendance box, Policy Violated disagrees ${where}`).toMatch(/attendance/i);
     expect(s.plan, `Attendance box, the plan names another policy ${where}`).not.toMatch(/cell phone|\bother polic/i);
   }
+  // Two boxes (QA's ruling (b)): Other beside a described offense; the described offense leads every line.
+  if (s.offense.length === 2 && s.offense.includes("other")) {
+    const lead = s.offense.find((key) => key !== "other")!;
+    if (lead === "standards_of_conduct" && /cell phone/i.test(s.violated + s.lang)) {
+      expect(s.violated, `Other + phone, Policy Violated is not the phone policy ${where}`).toMatch(/cell phone/i);
+      expect(s.lang, `Other + phone, Direct policy is not the Cell Phone section ${where}`).toMatch(/cell phone/i);
+      expect(s.plan, `Other + phone, the plan is not the phone policy ${where}`).toMatch(/cell phone/i);
+    }
+    if (lead === "attendance_policy") {
+      expect(s.violated, `Other + late, Policy Violated is not Attendance ${where}`).toMatch(/attendance/i);
+      expect(s.lang, `Other + late, Direct policy is not Attendance ${where}`).toMatch(/attendance|arrives on time|punctual/i);
+      expect(s.plan, `Other + late, the plan names another policy ${where}`).not.toMatch(/cell phone/i);
+    }
+  }
   if (only("standards_of_conduct") && /cell phone/i.test(s.violated)) {
     expect(s.lang, `phone box, Direct policy disagrees ${where}`).toMatch(/cell phone/i);
     expect(s.plan, `phone box, the plan disagrees ${where}`).not.toMatch(/attendance policy|\bother polic|applicable company policy/i);
@@ -70,6 +84,11 @@ const READS: [string, string, string, boolean | undefined][] = [
   ["cleaning-policy-named", "make a ca for Pia Wexcombe for violating the cleaning policy, she did not do the sanitation", "Observed:\nPia Wexcombe did not do the sanitation.", false],
   ["phone-and-sanitation", "make a ca for Pia Wexcombe, she was on her phone and did not do the 10 minute sanitation", "Observed:\nPia Wexcombe was on the phone and did not do the 10 minute sanitation.", undefined],
   ["late-and-sanitation", "make a ca for Pia Wexcombe, she was late on 11/3/26 and did not do the sanitation", "Observed:\nPia Wexcombe was late on 11/3/26 and did not do the sanitation.", undefined],
+  // Ruling (b) edges: order swapped, sanitation typo, three things, rude beside cleaning, a cleaning duty denied beside a phone account.
+  ["sanitation-then-phone", "make a ca for Pia Wexcombe, she skipped the sanitaion and was texting on her phone", "Observed:\nPia Wexcombe skipped the sanitation and was texting on the cell phone.", undefined],
+  ["late-phone-sanitation", "make a ca for Pia Wexcombe, she was late on 11/3/26, on her phone, and did not do the sanitation", "Observed:\nPia Wexcombe was late on 11/3/26, on the phone, and did not do the sanitation.", undefined],
+  ["rude-and-sanitation", "make a ca for Pia Wexcombe, she was rude to a customer and did not do the 10 minute sanitation", "Observed:\nPia Wexcombe was rude to a customer and did not do the 10 minute sanitation.", undefined],
+  ["phone-sanitation-denied", "make a ca for Pia Wexcombe, she was on her phone the whole shift but she did do the sanitation", "Observed:\nPia Wexcombe was on the phone the whole shift.", false],
 ];
 
 export const GATE5_892_PROBE_CASES: ReplayCase[] = [
