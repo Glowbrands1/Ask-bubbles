@@ -1438,6 +1438,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REASON_PLACE_NOT_STORE_ENABLED",
   // coding 4: FUZZY_STORE_ASKS (QA's ruling on Gate-Bubbles-3's #869 probes, 14 Nov 2026; default off).
   "FUZZY_STORE_ASKS_ENABLED",
+  // coding 4: REQUEST_LINE_TITLE_KEPT (QA's Bubbles 17x live test, 14 Nov 2026; default off).
+  "REQUEST_LINE_TITLE_KEPT_ENABLED",
   // coding 4: HEADING_DISTINCTIVE_WORDS (QA, 13 Nov 2026; default off).
   "HEADING_DISTINCTIVE_WORDS_ENABLED",
   // coding 4: PLACE_STRIP_WHOLE_PHRASE_ONLY (QA, 13 Nov 2026; default off).
@@ -5716,4 +5718,14 @@ export function reasonPlaceNotStoreEnabled(): boolean {
  */
 export function fuzzyStoreAsksEnabled(): boolean {
   return envFlag("FUZZY_STORE_ASKS_ENABLED");
+}
+
+/**
+ * REQUEST_LINE_TITLE_KEPT (QA's Bubbles 17x live test, 14 Nov 2026; default off): "create corrective action form for
+ * <A>, Team Member Part Time" left the card with no Position: TITLE_OF_THE_EMPLOYEE read "Part Time" as another
+ * person's name beside the title. With the flag, words that complete a company position name are the title. See
+ * `forms/title-of-another-person.ts`. Off, as before.
+ */
+export function requestLineTitleKeptEnabled(): boolean {
+  return envFlag("REQUEST_LINE_TITLE_KEPT_ENABLED");
 }

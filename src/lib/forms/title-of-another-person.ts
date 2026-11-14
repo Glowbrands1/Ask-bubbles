@@ -1,4 +1,4 @@
-import { titleEndsAtLineEnabled } from "@/lib/config/chat-quality-flags";
+import { requestLineTitleKeptEnabled, titleEndsAtLineEnabled } from "@/lib/config/chat-quality-flags";
 
 import { isCompanyPositionTitle } from "./staff-picker";
 
@@ -31,13 +31,31 @@ export function titleNamesAnotherPerson(text: string, title: string, employeeNam
     seen += 1;
     const at = match.index ?? 0;
     // TITLE_ENDS_AT_LINE_ENABLED (the sibling app's gate, 6 Nov 2026, s16): the name after a title is on the title's line; the next line (the store) is not its owner.
-    const after = titleEndsAtLineEnabled() && titleLine(text, at, match[0].length) ? null : nameAt(text.slice(at + match[0].length), "after", titleEndsAtLineEnabled());
+    const after =
+      (titleEndsAtLineEnabled() && titleLine(text, at, match[0].length)) ||
+      (requestLineTitleKeptEnabled() && longerPositionAt(text, at, match[0].length))
+        ? null
+        : nameAt(text.slice(at + match[0].length), "after", titleEndsAtLineEnabled());
     const before = nameAt(text.slice(0, at), "before");
     const beside = [after, before].filter((name): name is string[] => name !== null);
     const other = beside.some((name) => name.every((word) => !employee.has(word.toLowerCase())));
     if (!other) return false;
   }
   return seen > 0;
+}
+
+/**
+ * REQUEST_LINE_TITLE_KEPT_ENABLED (QA's Bubbles 17x live test, 14 Nov 2026): "create corrective action form for <A>,
+ * Team Member Part Time" — "Part Time" after "Team Member" was read as another person's name, so the title was taken
+ * off the card. Words straight after the title that complete one of the company's position names ("Team Member Part
+ * Time", `staff-picker.ts`) are the title, not a name. Off, as before.
+ */
+function longerPositionAt(text: string, at: number, length: number): boolean {
+  const rest = text.slice(at + length).split(/[,.;:!?\n]/)[0]!.trim().split(/\s+/).filter(Boolean);
+  for (let count = Math.min(3, rest.length); count >= 1; count -= 1) {
+    if (isCompanyPositionTitle(`${text.slice(at, at + length)} ${rest.slice(0, count).join(" ")}`)) return true;
+  }
+  return false;
 }
 
 const NAME_WORD = /^\p{Lu}[\p{L}'’-]+$/u;
