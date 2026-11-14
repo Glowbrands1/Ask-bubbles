@@ -17,21 +17,26 @@ const FLAG = "REQUEST_LINE_TITLE_KEPT_ENABLED";
 const REPORT = "QA's Bubbles 17x live test (14 Nov 2026); invented person";
 const ILSA = { id: "e-ilsa", firstName: "Ilsa", lastName: "Varnholt", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-264"], positionName: null };
 
-export const NOV14_REQUEST_LINE_TITLE_KEPT_CASES: ReplayCase[] = [
-  {
-    id: "nov14-request-line-title-kept-team-member-part-time",
-    title: `"create corrective action form for Ilsa Varnholt, Team Member Part Time" — the card keeps the title`,
-    report: REPORT,
-    status: { open: "the title given in the request line is taken off the card (employeeRole null)" },
-    fixFlags: [FLAG],
-    async run(t: ReplayContext) {
-      vi.setSystemTime(new Date("2026-11-13T15:00:00Z"));
-      t.directory([...STAFF, ILSA as never]);
-      t.as("location_manager", { level: "location", primaryAreaId: "loc-264", alsoCoversAreaIds: [] });
-      const thread = t.thread();
-      const reply = (await thread.say("create corrective action form for Ilsa Varnholt, Team Member Part Time")).content;
-      const role = (thread.proposal as { employeeRole?: string | null } | null)?.employeeRole ?? null;
-      expect(role, `the title is not kept:\n${reply}`).toMatch(/^Team Member/);
-    },
-  },
+/** QA's case and the company's other multi-word positions (QA, 14 Nov 2026: keep the "Part Time" variants here). */
+const POSITIONS: readonly { key: string; said: string; role: RegExp }[] = [
+  { key: "team-member-part-time", said: "Team Member Part Time", role: /^Team Member/ },
+  { key: "team-member-full-time", said: "Team Member Full Time", role: /^Team Member/ },
+  { key: "seasonal-team-member-part-time", said: "Seasonal Team Member Part Time", role: /Team Member/ },
 ];
+
+export const NOV14_REQUEST_LINE_TITLE_KEPT_CASES: ReplayCase[] = POSITIONS.map((position) => ({
+  id: `nov14-request-line-title-kept-${position.key}`,
+  title: `"create corrective action form for Ilsa Varnholt, ${position.said}" — the card keeps the title`,
+  report: REPORT,
+  status: { open: "the title given in the request line is taken off the card (employeeRole null)" },
+  fixFlags: [FLAG],
+  async run(t: ReplayContext) {
+    vi.setSystemTime(new Date("2026-11-13T15:00:00Z"));
+    t.directory([...STAFF, ILSA as never]);
+    t.as("location_manager", { level: "location", primaryAreaId: "loc-264", alsoCoversAreaIds: [] });
+    const thread = t.thread();
+    const reply = (await thread.say(`create corrective action form for Ilsa Varnholt, ${position.said}`)).content;
+    const role = (thread.proposal as { employeeRole?: string | null } | null)?.employeeRole ?? null;
+    expect(role, `the title is not kept:\n${reply}`).toMatch(position.role);
+  },
+}));
