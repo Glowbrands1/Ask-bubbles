@@ -27,6 +27,8 @@ async function issueOf(t: ReplayContext, turn: string) {
 
 const OPEN: readonly { key: string; turn: string; issue: string }[] = [
   { key: "write-up-title-for", turn: "write up Ilsa Varnholt, Assistant General Manager, for leaving the safe open", issue: "leaving the safe open" },
+  // The whole-pack diff's nov10 rows: the level said as its own clause is request matter too.
+  { key: "write-up-level-for", turn: "write up Ilsa Varnholt, written warning, for not attending the monthly meeting on 11/3/26", issue: "not attending the monthly meeting on 11/3/26" },
   { key: "ca-store-title-account", turn: "ca for Ilsa Varnholt at west dodge, Team Member Part Time, she was late on 11/3/26", issue: "she was late on 11/3/26" },
 ];
 
