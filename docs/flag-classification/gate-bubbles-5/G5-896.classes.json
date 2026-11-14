@@ -1,0 +1,30 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-cleaning-policy-cleaning-duties-policy: \"create a ca for Odalys Brackwen for violating the cleaning duties policy, she did not do the sanitation\": cites Care and Cleaning of Equipment and Facilities p.21, as \"care and cleaning policy\" does \u2014 OPEN in production (the card says the manual has no section for \"cleaning\")": {
+  "category": "INTENDED",
+  "reason": "Open-case wrapper: the cleaning / cleaning-duties policy now cites Care and Cleaning p.21; the sanitation policy asks 'Did you mean Care and Cleaning\u2026'."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-cleaning-policy-cleaning-policy: \"create a ca for Odalys Brackwen for violating the cleaning policy, she did not do the sanitation\": cites Care and Cleaning of Equipment and Facilities p.21, as \"care and cleaning policy\" does \u2014 OPEN in production (the card says the manual has no section for \"cleaning\")": {
+  "category": "INTENDED",
+  "reason": "Open-case wrapper: the cleaning / cleaning-duties policy now cites Care and Cleaning p.21; the sanitation policy asks 'Did you mean Care and Cleaning\u2026'."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-cleaning-policy-sanitation-asks: \"\u2026violating the sanitation policy, she did not do the sanitation\": asked \"Did you mean Care and Cleaning \u2026 (page 21)?\", never \"no section for sanitation\" \u2014 OPEN in production (the card says there is no section for \"sanitation\")": {
+  "category": "INTENDED",
+  "reason": "Open-case wrapper: the cleaning / cleaning-duties policy now cites Care and Cleaning p.21; the sanitation policy asks 'Did you mean Care and Cleaning\u2026'."
+ },
+ "src/lib/ai/flags-off-parity.test.ts :: existing chat and form suites with every new flag off passes the suites whose expectations are already on main: src/app/api/chat/replay-pack, first half of the cases by id": {
+  "category": "INTENDED-HARNESS",
+  "reason": "Parity sub-run inherits the exported flag; its failures are the 3 cleaning-policy open-case wrappers."
+ },
+ "replay: nov14-cleaning-policy-cleaning-duties-policy [open]": {
+  "category": "INTENDED",
+  "reason": "Open case holds ON (Care and Cleaning p.21 cited, or asked about for 'sanitation')."
+ },
+ "replay: nov14-cleaning-policy-cleaning-policy [open]": {
+  "category": "INTENDED",
+  "reason": "Open case holds ON (Care and Cleaning p.21 cited, or asked about for 'sanitation')."
+ },
+ "replay: nov14-cleaning-policy-sanitation-asks [open]": {
+  "category": "INTENDED",
+  "reason": "Open case holds ON (Care and Cleaning p.21 cited, or asked about for 'sanitation')."
+ }
+}
