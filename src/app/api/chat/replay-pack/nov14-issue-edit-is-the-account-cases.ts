@@ -85,4 +85,26 @@ export const NOV14_ISSUE_EDIT_IS_THE_ACCOUNT_CASES: ReplayCase[] = [
       expect(reply.content, "the reply does not name the account change").toMatch(/Observation of Offense/i);
     },
   },
+  {
+    id: "nov14-issue-edit-is-the-account-policy-follows",
+    title: `"${LATE}" then "${NEW_DATE}", with the account-change flags on: the offense, Policy Violated, Direct policy and plan move to Cell Phone, and the Date is 11/04`,
+    report: `${REPORT}; QA (14 Nov 2026): with ACCOUNT_CHANGE_REDERIVES_POLICY and ACCOUNT_REPLACED_CLOSE_SENTENCE_KEPT, the policy follows the new account`,
+    status: { open: "the texting account is dropped and only the date changes; the policy lines and plan stay Attendance" },
+    // ACCOUNT_REPLACED_CLOSE_SENTENCE_KEPT is #876's (not on main yet); named so this case runs with it once it lands.
+    fixFlags: [FLAG, "ACCOUNT_CHANGE_REDERIVES_POLICY_ENABLED", "ACCOUNT_REPLACED_CLOSE_SENTENCE_KEPT_ENABLED"],
+    async run(t) {
+      const { thread, id } = await lateCa(t);
+      t.patchReads!({ [NEW_DATE]: TEXTING("November 4, 2026") });
+      const reply = await thread.say(NEW_DATE);
+      const values = t.values(id);
+      expect(values.observation ?? "", `the account was not replaced:\n${reply.content}`).toMatch(/texting on her cell phone the whole shift/i);
+      expect(values.form_date ?? "", "the form's date did not follow the new date").toBe("2026-11-04");
+      expect(t.checked(id).offense_type ?? [], "the offense stayed Attendance").not.toContain("attendance_policy");
+      expect(values.policy_violated ?? "", "Policy Violated is not the cell phone policy").toMatch(/cell phone/i);
+      expect(values.policy_language ?? "", "Direct policy stayed the Attendance text").not.toMatch(/arrives on time|punctuality/i);
+      expect(values.policy_language ?? "", "Direct policy is not the cell phone section").toMatch(/phone/i);
+      expect(values.action_plan ?? "", "the plan stayed the lateness plan").not.toMatch(/arrive on time|attendance/i);
+      expect(values.action_plan ?? "", "the plan is not the cell phone policy's").toMatch(/cell phone/i);
+    },
+  },
 ];
