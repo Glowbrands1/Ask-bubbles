@@ -17,15 +17,23 @@ type Expect = { card: boolean | null; level?: string | null };
 // [key, message, expected with the flag ON] — card null: record only.
 const PROBES: [string, string, Expect][] = [
   ["verbal-for-name", "verbal for Pia Wexcombe, she was late on 11/12/26", { card: true, level: "verbal" }],
-  ["first-name-only", "second verbal for Pia, she was late on 11/12/26", { card: true, level: "verbal" }],
+  ["first-name-only", "second verbal for Pia, she was late on 11/12/26", { card: null }],
   ["lowercase-name", "2nd written for pia wexcombe she was late again", { card: true, level: "written" }],
   ["please-a", "please a written for Pia Wexcombe for being late on 11/12/26", { card: true, level: "written" }],
   ["history-then-new-level", "verbal for Pia Wexcombe was on 10/1/26, now she needs a written for being late on 11/12/26", { card: null, level: "written" }],
+  ["history-was-signed", "verbal for Pia Wexcombe was signed yesterday", { card: false }],
+  ["history-last-week", "written for Pia Wexcombe was given last week", { card: false }],
+  ["because-reason", "verbal for Pia Wexcombe because she was late on 11/12/26", { card: true, level: "verbal" }],
+  ["on-date", "written for Pia Wexcombe on 11/12/26, she was late", { card: true, level: "written" }],
+  ["name-only-end", "second verbal for Pia Wexcombe", { card: true, level: "verbal" }],
+  ["she-clause", "verbal for Pia Wexcombe she keeps coming in late", { card: true, level: "verbal" }],
+  ["went-home-early", "verbal for Pia Wexcombe, she went home early on 11/12/26", { card: true, level: "verbal" }],
+  ["later-level-wins", "verbal for Pia Wexcombe, actually make it a written, she was late on 11/12/26", { card: null, level: "written" }],
   ["topic-not-name", "verbal for lateness, how many do we give before a written?", { card: false }],
-  ["question", "second verbal for Pia Wexcombe?", { card: null }],
-  ["statement-not-request", "verbal for Pia Wexcombe went fine today, she signed it", { card: null }],
+  ["question", "second verbal for Pia Wexcombe?", { card: false }],
+  ["statement-not-request", "verbal for Pia Wexcombe went fine today, she signed it", { card: false }],
   ["day-word", "written for Monday's no call no show", { card: false }],
-  ["store-word", "verbal for West Dodge team, everyone was late", { card: null }],
+  ["store-word", "verbal for West Dodge team, everyone was late", { card: false }],
   ["final-written", "final written for Pia Wexcombe, she was late on 11/12/26", { card: null }],
 ];
 export const GATE5_894_PROBE_CASES: ReplayCase[] = PROBES.map(([key, said, want]): ReplayCase => ({
