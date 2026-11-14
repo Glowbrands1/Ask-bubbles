@@ -57,7 +57,8 @@ export interface ReplayContext {
   /** `extra`: other fields of the draft tool's input, e.g. `{ offense_basis: "sales" }` (CA_SALES_POLICY_ENABLED). */
   draftWrites(values: Record<string, string>, checked?: Record<string, string[]>, extra?: Record<string, unknown>): void;
   /** What the revision model writes on the next revision. */
-  revisionWrites(values: Record<string, string>): void;
+  /** `checked`: boxes the revision ticks too, e.g. `{ offense_type: ["standards_of_conduct"] }` (Coding-2, 14 Nov 2026). */
+  revisionWrites(values: Record<string, string>, checked?: Record<string, string[]>): void;
   /** What the answering model says on its next turns (null: the default answer). */
   modelSays(text: string | null): void;
   /** What the slot model reads on the next turns (record_intent_slots), as a production trace shows it. */

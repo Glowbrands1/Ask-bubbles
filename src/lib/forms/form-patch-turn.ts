@@ -510,6 +510,25 @@ export async function patchActiveForm(input: PatchTurnInput): Promise<AskRespons
      * by the made-about path below and, with MADE_ABOUT_SAID_DATE_ENABLED, when a reader's account edit was refused on a
      * turn that says the form's date.
      */
+    /*
+     * ACCOUNT_CHANGE_REDERIVES_POLICY_ENABLED (QA's Bubbles 17u, 13 Nov 2026): the edit replaced the whole account (none
+     * of the old account's sentences is left), so the offense, Direct policy, Policy Violated and the plan follow the new
+     * one (`chat-policy-change.ts` rederivePolicyFromAccount). Run once per turn, after the account is on the form: on the
+     * made-about path too, which answers from the saved form before the reader's edits (QA's live 17x item 2a, 14 Nov
+     * 2026: "make it about her phone use instead, …" rewrote the account and left the policy lines and plan on
+     * Attendance, because that path returned before this step ran).
+     */
+    let rederived = false;
+    const rederiveIfReplaced = async (): Promise<void> => {
+      if (rederived || !accountChangeRederivesPolicyEnabled()) return;
+      rederived = true;
+      const afterEdit = await loadInstance(input.instanceId);
+      const oldAccount = typeof before.observation?.value === "string" ? before.observation.value : "";
+      const newAccount = afterEdit?.values.find((value) => value.fieldKey === "observation")?.value ?? "";
+      if (accountReplaced(oldAccount, newAccount)) {
+        await (await import("./chat-policy-change")).rederivePolicyFromAccount({ request: input.request, instanceId: input.instanceId, account: newAccount, question: input.question });
+      }
+    };
     const rewriteAccountByRevision = async (accountKey: string): Promise<boolean> => {
       const coordinate = madeAboutAllOrNothingEnabled();
       if (coordinate) noteMadeAboutWrite(input.instanceId);
@@ -569,6 +588,7 @@ export async function patchActiveForm(input: PatchTurnInput): Promise<AskRespons
        */
       if (!policyAsk && rewroteFrom && madeAboutEmptyPatchAnswersSavedEnabled()) {
         noteMadeAboutExit(input, "rewritten_only", true);
+        await rederiveIfReplaced();
         const saved = await replyFromSaved(input.instanceId, rewroteFrom, []).catch(() => null);
         if (saved) return saved;
       }
@@ -878,19 +898,8 @@ export async function patchActiveForm(input: PatchTurnInput): Promise<AskRespons
     if (editSeesSavedFormEnabled() && formEditSingleWriterEnabled() && patchOps > 0) {
       await checkSavedForm(input, loaded, (await import("./edit-sees-saved-form")).touchedKeys(reading.patch), actor.id, offered, reading.patch);
     }
-    /*
-     * ACCOUNT_CHANGE_REDERIVES_POLICY_ENABLED (QA's Bubbles 17u, 13 Nov 2026): the edit replaced the whole account (none
-     * of the old account's sentences is left), so the offense, Direct policy, Policy Violated and the plan follow the new
-     * one (`chat-policy-change.ts` rederivePolicyFromAccount). The diff reply below then says what moved.
-     */
-    if (accountChangeRederivesPolicyEnabled()) {
-      const afterEdit = await loadInstance(input.instanceId);
-      const oldAccount = typeof before.observation?.value === "string" ? before.observation.value : "";
-      const newAccount = afterEdit?.values.find((value) => value.fieldKey === "observation")?.value ?? "";
-      if (accountReplaced(oldAccount, newAccount)) {
-        await (await import("./chat-policy-change")).rederivePolicyFromAccount({ request: input.request, instanceId: input.instanceId, account: newAccount, question: input.question });
-      }
-    }
+    // ACCOUNT_CHANGE_REDERIVES_POLICY_ENABLED: the account on the form now; the diff reply below then says what moved.
+    await rederiveIfReplaced();
     const reloaded = await loadInstance(input.instanceId);
     if (!reloaded) return null;
     const changed = snapshotDiff(snapshotOf(loaded), snapshotOf(reloaded));
