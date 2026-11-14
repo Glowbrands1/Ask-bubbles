@@ -1432,6 +1432,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "STORE_ALIAS_ENABLED",
   // coding 4: PRIOR_ACTIONS_UNSAID_BLANK (QA's Bubbles 17x live test, 14 Nov 2026; default off).
   "PRIOR_ACTIONS_UNSAID_BLANK_ENABLED",
+  // coding 4: PRIOR_ACTIONS_NONE_WORDINGS (Gate-Bubbles-3's #888 follow-up, QA 14 Nov 2026; default off).
+  "PRIOR_ACTIONS_NONE_WORDINGS_ENABLED",
   // coding 4: HEADING_DISTINCTIVE_WORDS (QA, 13 Nov 2026; default off).
   "HEADING_DISTINCTIVE_WORDS_ENABLED",
   // coding 4: PLACE_STRIP_WHOLE_PHRASE_ONLY (QA, 13 Nov 2026; default off).
@@ -5665,4 +5667,13 @@ export function placeStripWholePhraseOnlyEnabled(): boolean {
  */
 export function priorActionsUnsaidBlankEnabled(): boolean {
   return envFlag("PRIOR_ACTIONS_UNSAID_BLANK_ENABLED");
+}
+
+/**
+ * PRIOR_ACTIONS_NONE_WORDINGS (Gate-Bubbles-3's #888 follow-up, QA 14 Nov 2026; default off; with
+ * PRIOR_ACTIONS_UNSAID_BLANK): a drafted "N/A" or "No prior corrective action" is taken out like "None" when the manager
+ * said nothing about history. See `forms/prior-actions.ts`. Off, as before.
+ */
+export function priorActionsNoneWordingsEnabled(): boolean {
+  return envFlag("PRIOR_ACTIONS_NONE_WORDINGS_ENABLED");
 }
