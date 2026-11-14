@@ -1432,6 +1432,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 6: PRIOR_ACTIONS_NO_COMMA (October rebuild 4, #187 rebuilt on main; default off).
   "PRIOR_ACTIONS_NO_COMMA_ENABLED",
   "STORE_ALIAS_ENABLED",
+  // coding 4: POLICY_NOT_FOUND_PLAIN_WORDING (QA, 13 Nov 2026; default off).
+  "POLICY_NOT_FOUND_PLAIN_WORDING_ENABLED",
   // coding 4: HEADING_DISTINCTIVE_WORDS (QA, 13 Nov 2026; default off).
   "HEADING_DISTINCTIVE_WORDS_ENABLED",
   // coding 4: PLACE_STRIP_WHOLE_PHRASE_ONLY (QA, 13 Nov 2026; default off).
@@ -5647,6 +5649,16 @@ export function formDateBusinessTodayEnabled(): boolean {
  */
 export function closeSpellingMatchEnabled(): boolean {
   return envFlag("CLOSE_SPELLING_MATCH_ENABLED");
+}
+
+/**
+ * POLICY_NOT_FOUND_PLAIN_WORDING (QA, 13 Nov 2026; default off): the card's line for a policy the manual has no section
+ * for says "I don't see a section of the current policy manual for "<phrase>" …" for every phrase, not "Woven does not
+ * see …", which reads oddly to a manager. See `forms/ca-policy.ts` namedPolicyLine. Off, only a phrase about Woven
+ * (WOVEN_TRAINING_CONDUCT) gets the plain wording, as before.
+ */
+export function policyNotFoundPlainWordingEnabled(): boolean {
+  return envFlag("POLICY_NOT_FOUND_PLAIN_WORDING_ENABLED");
 }
 
 /**
