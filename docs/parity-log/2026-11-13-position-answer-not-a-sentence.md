@@ -17,9 +17,11 @@ QA's two follow-up items, same flag:
   lead" always was) and now says so in the reply ("Job title set to **Key Holder**, as you said."). Ask Sunny asks no
   position question; there "she's a key holder" after a card leaves the job title as it was, with nothing claimed. Not
   needed there.
-- "create corrective action form for <A>, Team Member Part Time" then the account: the title was dropped because
-  "Part Time" after "Team Member" was read as another person's name (`forms/title-of-another-person.ts`). The hours
-  words are no name now. Ask Sunny keeps "<title> Part Time" from the request (checked on its main fea1faf1: Job title
-  stays the title through the next turn). Not needed there.
+- "create corrective action form for <A>, Team Member Part Time": moved to Coding-4's REQUEST_LINE_TITLE_KEPT (#884),
+  which owns `forms/title-of-another-person.ts` (QA's ruling, 14 Nov 2026). Not in this flag.
+- v2-Gate-Bubbles-3's probes (14 Nov 2026): "it's her second time", "she's a team lead i think", "she's in training"
+  and "she's new" were read as the title, and with the flag announced. Now: "it's / it is …" is a sentence; a hedge,
+  ordinal, "again" or "second time" is never a title word; after "she's / she is" the rest must name a role. Ask
+  Sunny asks no position question, so the same holds: not needed there.
 - Left for ANSWER_IS_THE_ISSUE (Coding-2, #866): on that second turn the card's Issue still reads "Team Member Part
   Time; she skipped …" with this flag alone.

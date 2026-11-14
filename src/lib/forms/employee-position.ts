@@ -84,12 +84,23 @@ function saysOnlyADate(text: string): boolean {
  * a warning, an earlier step or a payment is never a position answer. "she's a shift lead", "Team Member Part Time",
  * "keyholder" still are.
  */
-const SENTENCE_ABOUT_HER = /^(?:she|he|they)\s+(?!(?:is|was|are|were)\b)[a-z]+/i;
+const SENTENCE_ABOUT_HER = /^(?:(?:she|he|they)\s+(?!(?:is|was|are|were)\b)[a-z]+|(?:it|this|that)(?:['’]s|\s+is|\s+was)\b)/i;
+/*
+ * v2-Gate-Bubbles-3's probes on #889 (14 Nov 2026): with the flag on, "it's her second time", "she's a team lead i think",
+ * "she's in training" and "she's new" were still read, and now announced ("Job title set to **It's Her Second Time**").
+ * A hedge, an ordinal, "again" or "time(s)" is never part of a title.
+ */
 const NOT_A_TITLE_WORD =
-  /(?:\$\s?\d|\b\d|\b(?:warning|warnings|write[- ]?ups?|verbal|written|final|coach(?:ed|ing)?|owes?|owed|owing|pay|paid|payroll|deduct\w*|late|tardy|no[- ]?show|absent|fired|terminat\w*|suspend\w*|signed|corrective|ca)\b)/i;
+  /(?:\$\s?\d|\b\d|\b(?:warning|warnings|write[- ]?ups?|verbal|written|final|coach(?:ed|ing)?|owes?|owed|owing|pay|paid|payroll|deduct\w*|late|tardy|no[- ]?show|absent|fired|terminat\w*|suspend\w*|signed|corrective|ca|again|(?:first|second|third|fourth|fifth|last|another|\d+(?:st|nd|rd|th)?)\s+times?|before|i\s+think|i\s+guess|i\s+believe|maybe|probably|not\s+sure)\b)/i;
+/** "she's …" / "she is …": a title only when the rest names a role ("she's a shift lead"), never "she's new" or "she's in training". */
+const PRONOUN_IS = /^(?:she|he|they)(?:['’]s|\s+is|\s+was|['’]re|\s+are)\s+(.+)$/i;
+const ROLE_WORD =
+  /\b(?:lead|leader|manager|member|holder|keyholder|key-holder|supervisor|director|associate|assistant|consultant|operator|cashier|trainer|maker|crew|staff|specialist|coordinator|attendant|clerk|owner|captain|agm|gm|asm|sm|tm|kh)\b/i;
 
 function notAPositionSentence(reply: string): boolean {
-  return SENTENCE_ABOUT_HER.test(reply) || NOT_A_TITLE_WORD.test(reply);
+  if (SENTENCE_ABOUT_HER.test(reply) || NOT_A_TITLE_WORD.test(reply)) return true;
+  const said = PRONOUN_IS.exec(reply.trim().replace(/[.!\s]+$/g, ""));
+  return said !== null && !ROLE_WORD.test(said[1]!);
 }
 
 function titleCase(phrase: string): string {

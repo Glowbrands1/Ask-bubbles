@@ -39,6 +39,14 @@ const SENTENCES = [
   { said: "she owes $25", open: false },
 ] as const;
 
+/* v2-Gate-Bubbles-3's probes on #889 (14 Nov 2026): still read with the flag on, and announced. */
+const GATE_MISSES = [
+  { said: "it's her second time", open: true },
+  { said: "she's a team lead i think", open: true },
+  { said: "she's in training", open: true },
+  { said: "she's new", open: true },
+] as const;
+
 export const NOV13_POSITION_ANSWER_NOT_A_SENTENCE_CASES: ReplayCase[] = [
   ...SENTENCES.map(({ said, open }): ReplayCase => ({
     id: `nov13-position-answer-not-a-sentence-${said.replace(/[^a-z0-9]+/gi, "-").replace(/-+$/, "")}`,
@@ -77,21 +85,24 @@ export const NOV13_POSITION_ANSWER_NOT_A_SENTENCE_CASES: ReplayCase[] = [
       expect(reply.content, `the reply never says the Position changed:\n${reply.content}`).toMatch(/Job title set to \*\*Key Holder\*\*/);
     },
   },
-  {
-    id: "nov13-position-answer-title-on-the-request-kept",
-    title: "QA's 17w report: \"create corrective action form for Marnie Holloway, Team Member Part Time\" then the account: the title from the request stays the card's Position",
-    report: `${REPORT} (follow-up: the Position stayed Not set, the title on line 1 lost)`,
-    status: { open: "the Position is empty: \"Part Time\" was read as another person's name, so the title was dropped as theirs" },
+  /*
+   * QA's 17x "create corrective action form for <A>, Team Member Part Time" (the title on the request dropped as another
+   * person's name) moved to Coding-4's #884, REQUEST_LINE_TITLE_KEPT, which owns title-of-another-person.ts and carries
+   * that case (QA's ruling on #889, 14 Nov 2026). This flag no longer touches it.
+   */
+  ...GATE_MISSES.map(({ said, open }): ReplayCase => ({
+    id: `nov14-position-answer-gate-miss-${said.replace(/[^a-z0-9]+/gi, "-").replace(/-+$/, "")}`,
+    title: `v2-Gate-Bubbles-3's probe: the same card → "${said}": the Position is never set from it, and nothing is announced`,
+    report: "v2-Gate-Bubbles-3's probes on #889 (14 Nov 2026): read OFF and ON, and announced ON (\"Job title set to …\")",
+    status: open ? { open: `the card's Position is "${said}", title-cased` } : "fixed",
     fixFlags: [FLAG],
     async run(t) {
-      vi.setSystemTime(new Date("2026-11-13T16:00:00Z"));
-      t.directory(NO_POSITION);
-      t.as("location_manager", WEST_DODGE);
-      const thread = t.thread();
-      await thread.say("create corrective action form for Marnie Holloway, Team Member Part Time");
-      const reply = await thread.say("she skipped the closing checklist on her shift last night");
-      const card = thread.proposal as Record<string, unknown> | null;
-      expect(String(card?.employeeRole ?? ""), `the title on the request is lost:\n${reply.content}`).toMatch(/^Team Member/);
+      const { reply, card } = await afterCard(t, said);
+      const role = String(card?.employeeRole ?? "");
+      expect(role.toLowerCase(), `the Position is the manager's words:\n${reply.content}`).not.toBe(said.toLowerCase().replace(/^(?:she['’]s|she is)\s+(?:a\s+)?/, ""));
+      expect(role, `a non-title on the card:\n${reply.content}`).not.toMatch(/second|think|training|new/i);
+      expect(reply.content, "a non-title announced").not.toMatch(/Job title set to/);
     },
-  },
+  })),
+
 ];

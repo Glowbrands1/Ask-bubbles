@@ -85,6 +85,13 @@ describe("POSITION_ANSWER_NOT_A_SENTENCE_ENABLED: QA's live 17w test (13 Nov 202
     "she owes $25",
     "he got written up last week",
     "they were late again",
+    // v2-Gate-Bubbles-3's probes on #889 (14 Nov 2026): read, and announced, with the flag on.
+    "it's her second time",
+    "she's a team lead i think",
+    "she's in training",
+    "she's new",
+    "she was late again",
+    "she has been coached before",
   ])("on: %j is never a position", (reply) => {
     vi.stubEnv("POSITION_ANSWER_NOT_A_SENTENCE_ENABLED", "true");
     expect(readPositionAnswer(reply)).toBeNull();
@@ -95,6 +102,13 @@ describe("POSITION_ANSWER_NOT_A_SENTENCE_ENABLED: QA's live 17w test (13 Nov 202
     ["assistant manager", "Assistant Manager"],
     ["she's a shift lead.", "Shift Lead"],
     ["she's a key holder", "Key Holder"],
+    // v2-Gate-Bubbles-3's probes: still read with the flag on.
+    ["shift lead", "Shift Lead"],
+    ["team member pt", "Team Member Pt"],
+    ["she is a team member", "Team Member"],
+    ["she is the store manager", "Store Manager"],
+    // A title the role words do not know, said bare, reads as before.
+    ["makery artisan", "Makery Artisan"],
   ])("on: a real title %j is still read", (reply, expected) => {
     vi.stubEnv("POSITION_ANSWER_NOT_A_SENTENCE_ENABLED", "true");
     expect(readPositionAnswer(reply)).toBe(expected);
