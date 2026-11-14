@@ -2603,6 +2603,8 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
           coaching: isCoachingFamily,
           notes,
           employeeName: loaded.instance.employeeName,
+          // R678: only Details drafted this turn get the heading, never the form's saved (carried or kept) text.
+          saved: Object.fromEntries((loaded.values ?? []).map((row) => [row.fieldKey, row.value ?? ""])),
         }) as typeof setAsideValues)
       : datedOnce;
     const merged = draftEditMergeEnabled()

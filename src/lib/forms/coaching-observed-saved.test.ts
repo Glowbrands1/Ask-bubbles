@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { requestAccount, withCoachingObservedSaved } from "./coaching-observed-saved";
 
@@ -41,3 +41,39 @@ describe("the saved coaching Details", () => {
     expect(withCoachingObservedSaved({ ...base(), coaching: false })).toEqual({});
   });
 });
+
+/* Gate-Bubbles' R678 / QA (14 Nov 2026), the re-land's two findings. The person is invented. */
+describe("COACHING_OBSERVED_SAVED_ENABLED: R678", () => {
+  afterEach(() => vi.unstubAllEnvs());
+  const run = (value: string, saved?: Record<string, string>) => {
+    vi.stubEnv("COACHING_OBSERVED_SAVED_ENABLED", "true");
+    return withCoachingObservedSaved({
+      values: { coaching_details: value },
+      narrativeKeys: ["coaching_details"],
+      coaching: true,
+      notes: "I need a coaching form for Odalys Penwarden, she left the register drawer open",
+      employeeName: "Odalys Penwarden",
+      ...(saved ? { saved } : {}),
+    }).coaching_details;
+  };
+
+  it.each([
+    "**Observed:** Odalys Penwarden left the register drawer open.",
+    "**Observed:**\nOdalys Penwarden left the register drawer open.",
+    "Observed - Odalys Penwarden left the register drawer open.",
+    "**Observed** - Odalys Penwarden left the register drawer open.",
+  ])("a bold or dash heading is a heading: %j gets no second \"Observed:\"", (value) => {
+    expect(run(value)).toBe(value);
+  });
+
+  it("the form's saved Details (a reopened form's carry) never get a heading", () => {
+    const saved = "Odalys Penwarden left the register drawer open on 10/15/26. We reviewed the cash handling policy.";
+    expect(run(saved, { coaching_details: saved })).toBe(saved);
+  });
+
+  it("Details drafted this turn still get it", () => {
+    const drafted = "Odalys Penwarden left the register drawer open.";
+    expect(run(drafted, { coaching_details: "" })).toBe(`Observed:\n${drafted}`);
+  });
+});
+

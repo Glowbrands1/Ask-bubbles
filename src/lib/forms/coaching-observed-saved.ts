@@ -24,8 +24,13 @@ import { OBSERVED_LABEL } from "@/lib/forms/narrative-draft";
  * A field that already has an "Observed:" with text is left as it is. Pure.
  */
 
-const HEADING = /^\s*(Observed|Expectation|Going Forward):/im;
-const OBSERVED = /(^|\n)\s*Observed:[ \t]*\n?([\s\S]*?)(?=\n\s*(?:Expectation|Going Forward):|$)/i;
+/*
+ * Gate-Bubbles' R678 / QA (14 Nov 2026): a heading the model wrote in bold or with a dash ("**Observed:** …", "Observed -
+ * …") is a heading; the flag added a second plain "Observed:" over it.
+ */
+const MARK = String.raw`[ \t]*(?:\*\*)?[ \t]*(?::|-|–|—)[ \t]*(?:\*\*)?`;
+const HEADING = new RegExp(String.raw`^\s*(?:\*\*)?(Observed|Expectation|Going Forward)${MARK}`, "im");
+const OBSERVED = new RegExp(String.raw`(^|\n)\s*(?:\*\*)?Observed${MARK}[ \t]*\n?([\s\S]*?)(?=\n\s*(?:\*\*)?(?:Expectation|Going Forward)${MARK}|$)`, "i");
 
 const POLICY_LINE = /^\s*Policy reference:[^\n]*$/i;
 
@@ -85,10 +90,17 @@ export function withCoachingObservedSaved(input: {
   coaching: boolean;
   notes: string;
   employeeName: string | null;
+  /**
+   * What the form already holds, by field (R678): a field whose text is the saved one (a reopened form's carried
+   * Details, a value kept from the form) was not drafted this turn and is never given a heading.
+   */
+  saved?: Readonly<Record<string, string>>;
 }): Record<string, unknown> {
   if (!coachingObservedSavedEnabled() || !input.coaching || input.narrativeKeys.length === 0) return input.values;
   const key = input.narrativeKeys[0]!;
   const current = typeof input.values[key] === "string" ? (input.values[key] as string) : "";
+  const saved = input.saved?.[key];
+  if (saved !== undefined && saved.trim() !== "" && saved.trim() === current.trim()) return input.values;
   const observed = OBSERVED.exec(current);
   if (observed && observed[2]!.trim() !== "") return input.values;
   // The policy set-aside line ("Policy reference: …") is the app's, never the account: it stays after, and is never put
