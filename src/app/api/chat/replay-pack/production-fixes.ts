@@ -812,8 +812,6 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov13-place-strip-kearney-high-kept": "PLACE_STRIP_WHOLE_PHRASE_ONLY",
   // fixed in production by CARD_CHECKED_AGAINST_WORDS, QA round 17w, 13 Nov 2026
   "nov13-17rc-added-detail-kept-on-card": "CARD_CHECKED_AGAINST_WORDS",
-  // fixed in production by CARD_CHECKED_AGAINST_WORDS_ENABLED (bce91f8), QA, 14 Nov 2026
-  "nov12-17q-7-also-left-register-unlocked-on-card": "CARD_CHECKED_AGAINST_WORDS",
   // fixed in production by ANSWER_IS_THE_ISSUE, QA round 17x, 13 Nov 2026
   "nov13-ca-asks-what-happened-answer-is-the-issue": "ANSWER_IS_THE_ISSUE",
   // fixed in production by ANSWER_IS_THE_ISSUE, QA round 17x, 13 Nov 2026

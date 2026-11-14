@@ -9,8 +9,8 @@ QA's Bubbles 17q live test, two low-priority misses, both behind default-off fla
   gives the page on its own citation line instead ("Standards of Conduct
   Policy, JBA Policy Manual p.12"), checked with the same wording in Sunny's
   replay pack. The gap rides on POLICY_PAGE_ON_CARD, if that is ever ported.
-- **ADDED_ACCOUNT_ON_CARD_ENABLED** (item 7: "she also left the register
-  unlocked" reached the saved Observation, not the card's What happened).
-  **Not needed in Ask Sunny.** Sunny's proposal carries no Issue, so its card
-  has no What happened row to fall behind the draft. Checked on Sunny `main`
-  (0bbf0c901) with the same two turns.
+- **Item 7** ("she also left the register unlocked" reached the saved Observation,
+  not the card's What happened): fixed in production by CARD_CHECKED_AGAINST_WORDS
+  (bce91f8, live in both apps). This PR's ADDED_ACCOUNT_ON_CARD flag was dropped
+  (QA, 14 Nov 2026): on top of that fix it added the fact a second time. The two
+  replay cases stay as guards, one of them against the doubled fact.

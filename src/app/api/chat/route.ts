@@ -108,7 +108,6 @@ import {
   accountBeforeRequestEnabled,
   emptyReplyGuardEnabled,
   addedDetailKeptEnabled,
-  addedAccountOnCardEnabled,
   lateOpeningNeedsOpeningEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { streamWhenSlow } from "@/lib/api/streamed-response";
@@ -1251,13 +1250,6 @@ async function postChat(request: Request) {
       // ADDED_DETAIL_KEPT_ENABLED: "can you have it include that …" stays in the card's turns and shows on the card (`lib/forms/added-detail-kept.ts`).
       if (addedDetailKeptEnabled() && answer.formProposal) {
         answer = (await import("@/lib/forms/added-detail-kept")).withAddedDetailKept(answer, [
-          ...parsed.history,
-          { id: parsed.questionMessageId, role: "user", content: asked.question },
-        ]);
-      }
-      // ADDED_ACCOUNT_ON_CARD_ENABLED: "she also …" reaches the card's "What happened" as well as the draft (`lib/forms/added-account-on-card.ts`).
-      if (addedAccountOnCardEnabled() && answer.formProposal) {
-        answer = (await import("@/lib/forms/added-account-on-card")).withAddedAccountOnCard(answer, [
           ...parsed.history,
           { id: parsed.questionMessageId, role: "user", content: asked.question },
         ]);

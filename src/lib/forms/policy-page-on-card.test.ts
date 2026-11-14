@@ -108,7 +108,6 @@ describe("the card's own policy lines get the page; nothing else changes", () =>
       "**Policy:** Standards of Conduct Policy, JBA Policy Manual p.12, as you said",
       '**Policy:** "cell phone" reads as the policy manual\'s **Cell Phone/Smart Watch Policy** (page 19).',
       "**Policy:** Violation of Company Policies, as you said. The policy manual has no single section to quote for it.",
-      "**Policy:** Attendance — missing the monthly meeting is an absence from a scheduled shift.",
       "**What happened:** Standards of Conduct, as you said",
       "Policy: Standards of Conduct, as you said",
     ];
@@ -163,5 +162,8 @@ describe("POLICY_DASH_LINE_PAGE_ENABLED: a '<policy> — <what>' line gets its p
   it("off: the line is left as it was (no page)", () => {
     vi.stubEnv("POLICY_DASH_LINE_PAGE_ENABLED", "");
     expect(withPolicyPagesOnCard(LINE, CHUNKS)).toBe(LINE);
+    // Moved here from the "never alters" guard (QA, 14 Nov 2026): with the flag on, this dash line gets p.14.
+    const attendance = "**Policy:** Attendance — missing the monthly meeting is an absence from a scheduled shift.";
+    expect(withPolicyPagesOnCard(attendance, CHUNKS)).toBe(attendance);
   });
 });

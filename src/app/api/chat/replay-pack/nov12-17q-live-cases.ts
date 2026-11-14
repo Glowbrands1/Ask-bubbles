@@ -13,8 +13,9 @@ import { STAFF, WEST_DODGE, type ReplayCase, type ReplayContext, type ReplayThre
  *       (REGISTER_ACCURACY_CONDUCT) but its Policy line gives no page, while Attendance and Animals give theirs
  *       (POLICY_DASH_LINE_PAGE_ENABLED, `forms/policy-page-on-card.ts`).
  *   (2) Item 7: after "she was late on 11/3/26", "she also left the register unlocked" reached the saved Observation,
- *       but the card's "What happened" still showed only the lateness (ADDED_ACCOUNT_ON_CARD_ENABLED,
- *       `forms/added-account-on-card.ts`).
+ *       but the card's "What happened" still showed only the lateness. Fixed in production by
+ *       CARD_CHECKED_AGAINST_WORDS_ENABLED (bce91f8); QA, 14 Nov 2026, dropped this PR's ADDED_ACCOUNT_ON_CARD flag,
+ *       which added the fact a second time. Both item 7 cases stay as guards on that fix.
  */
 const REPORT = "QA's Bubbles 17q live test, 12 Nov 2026";
 
@@ -49,8 +50,8 @@ export const NOV12_17Q_LIVE_CASES: ReplayCase[] = [
     id: "nov12-17q-7-also-left-register-unlocked-on-card",
     title: "(2) item 7: \"she also left the register unlocked\" shows in the card's What happened, as in the saved Observation",
     report: `${REPORT}: item 7, the card's What happened shows only "she was late on 11/3/26"`,
-    status: { open: "the card's What happened is only \"she was late on 11/3/26\"" },
-    fixFlags: ["ADDED_ACCOUNT_ON_CARD_ENABLED"],
+    status: "fixed",
+    fixFlags: ["CARD_CHECKED_AGAINST_WORDS_ENABLED"],
     async run(t) {
       const thread = start(t);
       await thread.say("create a CA for Marnie Holloway, she was late on 11/3/26");
@@ -60,6 +61,7 @@ export const NOV12_17Q_LIVE_CASES: ReplayCase[] = [
       expect(issue, `the card's What happened:\n${issue}`).toMatch(/late on 11\/3\/26/);
       expect(issue, `the card's What happened leaves out the register:\n${issue}`).toMatch(/left the register unlocked/i);
       expect(reply.content, `the reply's Issue line leaves out the register:\n${reply.content}`).toMatch(/\*\*Issue:\*\*[^\n]*late on 11\/3\/26[^\n]*left the register unlocked/i);
+      expect(issue.match(/left the register unlocked/gi)?.length, `the register is on the card twice:\n${issue}`).toBe(1);
     },
   },
   {
@@ -67,7 +69,7 @@ export const NOV12_17Q_LIVE_CASES: ReplayCase[] = [
     title: "(2) guard: an answer to the card's question (\"verbal warning\") is never added to What happened",
     report: `${REPORT}: item 7, guard`,
     status: "fixed",
-    fixFlags: ["ADDED_ACCOUNT_ON_CARD_ENABLED"],
+    fixFlags: ["CARD_CHECKED_AGAINST_WORDS_ENABLED"],
     async run(t) {
       const thread = start(t);
       await thread.say("create a CA for Marnie Holloway, she was late on 11/3/26");
