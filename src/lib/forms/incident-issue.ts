@@ -15,7 +15,8 @@ import {
 import { COMPANY_JOB_TITLES } from "@/config/company/job-titles";
 import { isPolicyCorrection } from "@/lib/ai/policy-correction-turn";
 import { businessToday } from "@/lib/business-date";
-import { notAFact } from "./card-checked-against-words";
+import { factOfClause } from "./account-facts";
+import { factContext, notAFact } from "./card-checked-against-words";
 import { extractEmployeeNames, samePerson } from "./proposal";
 
 import { withoutLevelAndStepClauses } from "./account-clauses";
@@ -349,8 +350,8 @@ export function correctiveActionIssue(rawSaid: string, employeeName: string | nu
  * forgot" (no card), "corrective action form" (the first card). The Issue was the latest account turn whole: "she yelled
  * at a customer and she maybe forgot" — the lateness dropped, the hedge kept. When the request turn gives no account of
  * its own, the account turns just before it (walking back while each gives one, never past a turn that names somebody
- * else) give their fact clauses, oldest first, joined with "; ". A hedge ("she maybe forgot"), a level, history or a
- * payment is no fact (`notAFact`, the card check's own rules). Nothing read: the Issue as before.
+ * else) give their fact clauses, oldest first, joined with "; ". A hedge ("she maybe forgot"), a level, history, a
+ * denial or a payment is no fact (`factOfClause`, and the card check's `notAFact`). Nothing read: the Issue as before.
  */
 const CLAUSE_SPLIT = /\s+(?:and|but)\s+(?:then\s+)?(?=(?:she|he|they)\b)|,\s+(?=(?:she|he|they)\b)|(?<=[.!])\s+/i;
 
@@ -371,8 +372,8 @@ function issueAcrossTurns(read: string | null, rawSaid: string, employeeName: st
   const facts: string[] = [];
   for (const account of accounts) {
     for (const part of account.split(CLAUSE_SPLIT)) {
-      const clause = part.trim().replace(/[.!]+$/, "");
-      if (clause === "" || notAFact(clause, { turns: [], roster: [] })) continue;
+      const clause = factOfClause(part, factContext({ turns: [], roster: [] }));
+      if (clause === null || notAFact(clause, { turns: [], roster: [] })) continue;
       if (!facts.some((fact) => fact.toLowerCase() === clause.toLowerCase())) facts.push(clause);
     }
   }
