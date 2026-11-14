@@ -246,7 +246,7 @@ export function namedManualSection(input: {
 }
 
 /*
- * CLEANING_POLICY_IS_CARE_AND_CLEANING_ENABLED (ported from Ask Sunny; QA's ruling, 14 Nov 2026). "The cleaning policy",
+ * CLEANING_POLICY_IS_CARE_AND_CLEANING_ENABLED (ported from the sibling app; QA's ruling, 14 Nov 2026). "The cleaning policy",
  * "cleaning duties", "cleaning procedures": "cleaning" is the heading's own word, so the phrase names the one heading
  * that has it (Care and Cleaning of Equipment and Facilities). "The sanitation policy" is not the heading's word: it is
  * asked about (`closePolicyQuestion`), never cited outright.

@@ -30,7 +30,7 @@ interface Card {
 }
 
 /**
- * Whether the card-time policy readers find a policy in the manager's words (Gate-Sunny-2 on Ask Sunny #914: "she was
+ * Whether the card-time policy readers find a policy in the manager's words (Gate-Sunny-2 on the sibling app #914: "she was
  * 20 minutes late … on her phone" reads as Attendance with no Policy line shown, and must not be asked about). Any
  * reading — named, suggested, ambiguous, a missed event, cleaning, sales, Woven, or a described lateness or absence —
  * means the reader settled something, so the question is not asked.
@@ -54,7 +54,7 @@ export function withNoPolicyQuestion<T extends { content: string; formProposal?:
   // A built card only: ready, for a named employee, with its Issue shown (Gate-Bubbles on #848).
   if (card.status !== "ready" || !card.employeeName?.trim() || !/\*\*Issue:\*\*/.test(answer.content)) return answer;
   if (/\*\*Policy:\*\*/.test(answer.content) || answer.content.includes(CA_POLICY_QUESTION)) return answer;
-  // Only after the policy reader ran and found nothing (Gate-Sunny-2 on Ask Sunny #914).
+  // Only after the policy reader ran and found nothing (Gate-Sunny-2 on the sibling app #914).
   if (CITES_MANUAL_PAGE.test(answer.content) || readerFindsPolicy(managerText)) return answer;
   const parts = answer.content.split(/\n{2,}/);
   const issue = parts.findIndex((part) => /\*\*Issue:\*\*/.test(part));

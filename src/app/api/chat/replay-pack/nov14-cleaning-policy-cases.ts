@@ -4,7 +4,7 @@ import { STAFF, WEST_DODGE, type DirectoryRow, type ReplayCase, type ReplayConte
 
 /**
  * ============================================================================
- * "THE CLEANING POLICY" IS CARE AND CLEANING (ported from Ask Sunny; QA's ruling, 14 Nov 2026; CLEANING_POLICY_IS_CARE_AND_CLEANING)
+ * "THE CLEANING POLICY" IS CARE AND CLEANING (ported from the sibling app; QA's ruling, 14 Nov 2026; CLEANING_POLICY_IS_CARE_AND_CLEANING)
  * ============================================================================
  *
  * Gate-Bubbles-5's side note, the same in both apps, flags off and on: "for violating the cleaning policy, she did not
@@ -58,7 +58,7 @@ export const NOV14_CLEANING_POLICY_CASES: ReplayCase[] = [
     id: "nov14-cleaning-policy-sanitation-asks",
     title: '"…violating the sanitation policy, she did not do the sanitation": asked "Did you mean Care and Cleaning … (page 21)?", never "no section for sanitation"',
     report: `${REPORT}: QA's ruling (b) for a word that is not the heading's`,
-    // This app's card says "I don't see a section … for "sanitation"" here (Ask Sunny's shows Pau's Other line).
+    // This app's card says "I don't see a section … for "sanitation"" here (the sibling app's shows Pau's Other line).
     status: { open: 'the card says there is no section for "sanitation"' },
     fixFlags: [FLAG],
     async run(t) {

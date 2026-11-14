@@ -117,7 +117,7 @@ export const NOV12_17N_LIVE_CASES: ReplayCase[] = [
       expect(answered.content, answered.content).toMatch(/\*\*Policy:\*\* Standards of Conduct\b/);
     },
   },
-  // Gate-Bubbles on Ask Bubbles #848 and Gate-Sunny-2 on Ask Sunny #914 (NO-GO, 12 Nov 2026): CA_NO_POLICY_ASKS_WHICH
+  // Gate-Bubbles on Ask Bubbles #848 and Gate-Sunny-2 on the sibling app #914 (NO-GO, 12 Nov 2026): CA_NO_POLICY_ASKS_WHICH
   // asked on replies with no built card, and on a card whose policy the reader had read. QA asked for these guards.
   ...[
     { id: "write-ca", say: "write ca" },
