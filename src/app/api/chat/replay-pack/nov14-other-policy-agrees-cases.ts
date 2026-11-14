@@ -80,3 +80,60 @@ export const NOV14_OTHER_POLICY_AGREES_CASES: ReplayCase[] = [
     },
   },
 ];
+
+/*
+ * Gate-Bubbles-5's #892 probes (14 Nov 2026; QA's ruling (b)): a cleaning duty beside a second offense the account
+ * describes. With the flags on, only Other was ticked while Direct policy quoted the phone section (row 1), and the
+ * lateness lost Attendance (row 2). QA: tick both; Direct policy and the plan follow the described offense; a cleaning
+ * duty that is the only offense stays Other alone. The gate's words; Pia Wexcombe is the gate's invented person.
+ */
+const PIA: DirectoryRow = { id: "e-pia-opa", firstName: "Pia", lastName: "Wexcombe", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-264"], positionName: "Team Member Part Time" };
+const flagsOn = () => FLAGS.every((flag) => process.env[flag] === "true");
+const BESIDE: [string, string, string, RegExp, RegExp][] = [
+  [
+    "phone",
+    "make a ca for Pia Wexcombe, she was on her phone and did not do the 10 minute sanitation",
+    "Observed:\nPia Wexcombe was on the phone and did not do the 10 minute sanitation.",
+    /cell phone/i,
+    /standards_of_conduct/,
+  ],
+  [
+    "late",
+    "make a ca for Pia Wexcombe, she was late on 11/3/26 and did not do the sanitation",
+    "Observed:\nPia Wexcombe was late on 11/3/26 and did not do the sanitation.",
+    /attendance/i,
+    /tardiness|attendance/,
+  ],
+];
+
+export const NOV14_OTHER_BESIDE_DESCRIBED_CASES: ReplayCase[] = BESIDE.map(([key, ask, observation, policy, box]): ReplayCase => ({
+  id: `nov14-other-policy-agrees-beside-${key}`,
+  title: `"${ask}": the described offense keeps its box, Direct policy and plan; Other is ticked beside it`,
+  report: "Gate-Bubbles-5's probes on #892 (14 Nov 2026), QA's ruling (b): tick both, the described section leads",
+  status: "fixed",
+  fixFlags: FLAGS,
+  async run(t) {
+    vi.setSystemTime(new Date("2026-11-13T15:00:00Z"));
+    t.directory([...STAFF, PIA]);
+    t.as("location_manager", WEST_DODGE);
+    const thread = t.thread();
+    const card = await thread.say(ask);
+    t.draftWrites({ observation });
+    const id = await thread.create();
+    const values = t.values(id);
+    const offense = t.checked(id).offense_type ?? [];
+    const where = JSON.stringify({ offense, violated: values.policy_violated, lang: (values.policy_language ?? "").slice(0, 60), plan: (values.action_plan ?? "").slice(0, 90) });
+    expect(values.action_plan ?? "", `the plan names Other as a policy ${where}`).not.toMatch(/\bthe Other polic/i);
+    // With the flags off the sanitation is not read at all, and this pack's stand-in model ticks no box for lateness
+    // (live, the drafting model does), so the rest is the flags-on contract.
+    if (flagsOn()) {
+      expect(card.content, `the card's policy is not the described one:\n${card.content}`).toMatch(new RegExp(String.raw`\*\*Policy:\*\*[^\n]*${policy.source}`, "i"));
+      expect(card.content, `the card does not say the cleaning duty is recorded under Other:\n${card.content}`).toMatch(/recorded under \*\*Other\*\*/);
+      expect(offense.some((k) => box.test(k)), `the described offense lost its box ${where}`).toBe(true);
+      expect(offense, `Other is not ticked beside the described offense ${where}`).toContain("other");
+      expect(values.policy_violated ?? "", `Policy Violated lost the described policy ${where}`).toMatch(policy);
+      expect(values.policy_language ?? "", `Direct policy is not the described section ${where}`).toMatch(policy);
+      expect(values.action_plan ?? "", `the plan does not follow the described offense ${where}`).toMatch(policy);
+    }
+  },
+}));

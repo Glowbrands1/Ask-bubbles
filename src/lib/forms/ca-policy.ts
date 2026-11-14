@@ -655,6 +655,26 @@ export function namesCareAndCleaning(rawText: string): boolean {
   return NAMES_CARE_AND_CLEANING.test(rawText ?? "");
 }
 
+/**
+ * OTHER_POLICY_AGREES_ENABLED (QA's ruling (b), 14 Nov 2026): the account without its cleaning duty left undone, to read
+ * whether a second offense is described beside it ("she was on her phone and did not do the 10 minute sanitation" →
+ * "she was on her phone and"). Null when the flag is off, the account is not read as cleaning left undone, or nothing is
+ * left once the duty is taken out. The caller reads the rest with the manual (`describedManualSection`) or as attendance
+ * (`describedAttendanceKeys`); a cleaning duty that is the only offense stays Other alone (Pau's rule).
+ */
+/** The sentence the card adds after a section described beside a cleaning duty (OTHER_POLICY_AGREES_ENABLED, ruling (b)). */
+export const OTHER_BESIDE_NOTE = "The cleaning duty left undone is recorded under **Other** on the form too.";
+
+export function withoutCleaningDuty(rawText: string): string | null {
+  if (!otherPolicyAgreesEnabled() || readCaPolicy(rawText).other !== "cleaning") return null;
+  const phrase = cleaningUndonePhrase(rawText);
+  if (!phrase) return null;
+  const at = (rawText ?? "").toLowerCase().replace(/[‘’‛]/g, "'").indexOf(phrase);
+  if (at < 0) return null;
+  const rest = `${rawText.slice(0, at)} ${rawText.slice(at + phrase.length)}`.replace(/\s+/g, " ").trim();
+  return rest === "" ? null : rest;
+}
+
 function withCleaningOther(reading: CaPolicyReading, rawText: string): CaPolicyReading {
   if (!caSalesPolicyEnabled()) return reading;
   if (reading.stated !== null || reading.ambiguous) return reading;
@@ -1140,6 +1160,12 @@ export type NamedPolicyReading =
        * Ask Bubbles' approved manual. Absent when confirmed or not known.
        */
       unconfirmedManual?: string;
+      /**
+       * OTHER_POLICY_AGREES_ENABLED (QA's ruling (b) on Gate-Bubbles-5's #892 probes, 14 Nov 2026): the section the
+       * account describes BESIDE a cleaning duty left undone ("on her phone and did not do the 10 minute sanitation").
+       * It leads the card and the draft; the cleaning duty is ticked Other beside it.
+       */
+      besideOther?: true;
     }
   | { phrase: string; lookup: "missing" | "unknown" }
   /** The account describes more than one section the manual titles a Policy: the manager chooses. */
@@ -1269,6 +1295,11 @@ export function caPolicyProposalLine(reading: CaPolicyReading, named: NamedPolic
    * the care and clening policy, she left her station a mess" cites Care and Cleaning of Equipment and Facilities.
    * A name the manual does not answer keeps Other (`close-policy-ask.ts` then asks "Did you mean …?"). Off, as before.
    */
+  // OTHER_POLICY_AGREES_ENABLED (QA's ruling (b)): a section described beside the cleaning duty leads; Other is said beside it.
+  if (otherPolicyAgreesEnabled() && reading.other === "cleaning" && named?.lookup === "described" && named.besideOther) {
+    const line = namedPolicyLine(named);
+    if (line) return `${line} ${OTHER_BESIDE_NOTE}`;
+  }
   if (reading.other === "cleaning" && !(closeSpellingMatchEnabled() && named?.lookup === "found")) {
     return "**Policy:** Other — cleaning duties left undone are recorded under Other on the Corrective Action Form, not the Standards of Conduct. Tell me if a different policy applies.";
   }
