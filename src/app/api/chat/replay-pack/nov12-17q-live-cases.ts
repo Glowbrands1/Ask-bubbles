@@ -13,8 +13,9 @@ import { STAFF, WEST_DODGE, type ReplayCase, type ReplayContext, type ReplayThre
  *       (REGISTER_ACCURACY_CONDUCT) but its Policy line gives no page, while Attendance and Animals give theirs
  *       (POLICY_DASH_LINE_PAGE_ENABLED, `forms/policy-page-on-card.ts`).
  *   (2) Item 7: after "she was late on 11/3/26", "she also left the register unlocked" reached the saved Observation,
- *       but the card's "What happened" still showed only the lateness (ADDED_ACCOUNT_ON_CARD_ENABLED,
- *       `forms/added-account-on-card.ts`).
+ *       but the card's "What happened" still showed only the lateness. Fixed in production by CARD_CHECKED_AGAINST_WORDS
+ *       (QA round 17w); its own fix, ADDED_ACCOUNT_ON_CARD, was dropped (14 Nov 2026): with CARD_CHECKED on it only
+ *       repeated the added fact ("…; she left the register unlocked. She also left the register unlocked").
  */
 const REPORT = "QA's Bubbles 17q live test, 12 Nov 2026";
 
@@ -49,8 +50,9 @@ export const NOV12_17Q_LIVE_CASES: ReplayCase[] = [
     id: "nov12-17q-7-also-left-register-unlocked-on-card",
     title: "(2) item 7: \"she also left the register unlocked\" shows in the card's What happened, as in the saved Observation",
     report: `${REPORT}: item 7, the card's What happened shows only "she was late on 11/3/26"`,
-    status: { open: "the card's What happened is only \"she was late on 11/3/26\"" },
-    fixFlags: ["ADDED_ACCOUNT_ON_CARD_ENABLED"],
+    // Changed on purpose (14 Nov 2026, QA): fixed in production by CARD_CHECKED_AGAINST_WORDS (round 17w); its own fix
+    // flag ADDED_ACCOUNT_ON_CARD was dropped. Was OPEN.
+    status: "fixed",
     async run(t) {
       const thread = start(t);
       await thread.say("create a CA for Marnie Holloway, she was late on 11/3/26");
@@ -66,8 +68,8 @@ export const NOV12_17Q_LIVE_CASES: ReplayCase[] = [
     id: "nov12-17q-7-answer-not-added-to-card",
     title: "(2) guard: an answer to the card's question (\"verbal warning\") is never added to What happened",
     report: `${REPORT}: item 7, guard`,
+    // Changed on purpose (14 Nov 2026): the guard now holds on production's own path (ADDED_ACCOUNT_ON_CARD dropped).
     status: "fixed",
-    fixFlags: ["ADDED_ACCOUNT_ON_CARD_ENABLED"],
     async run(t) {
       const thread = start(t);
       await thread.say("create a CA for Marnie Holloway, she was late on 11/3/26");
