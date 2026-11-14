@@ -63,3 +63,21 @@ describe("cleanupChanges: Gate-Sunny-2's #983 probes", () => {
     expect(changes("she was sent to kerny", "She was sent to Kearney.")).toContainEqual(expect.stringMatching(/^name kerny/));
   });
 });
+
+describe("cleanupChanges: a store word is matched only exactly (QA, Gate-Bubbles-2's x772b NO-GO, 14 Nov 2026)", () => {
+  it("a West Dodge draft saying \"she was late\" is not a changed name (\"west\" is not a respelled \"was\")", () => {
+    expect(changes("create a ca for remy calder at west dodge, late again today", "Observed:\nRemy Calder was late again today, she was late.")).toEqual([]);
+  });
+
+  it("\"falls\" of Sioux Falls is not a respelled \"fails\" or \"calls\"", () => {
+    expect(changes("create a ca for remy calder at sioux falls, did not clock in", "Remy Calder fails to clock in and calls off.")).toEqual([]);
+  });
+
+  it("a near miss written as the store word is still a changed name; a roster name still is", () => {
+    expect(changes("she was sent to Kearny", "She was sent to kearney.")).toContainEqual(expect.stringMatching(/^name kearny/));
+    withAccountNames(() => {
+      noteAccountNames([{ firstName: "Manuel", lastName: "Quellby" }]);
+      expect(changes("manuel saw her leave the drawer open", "Manual saw her leave the drawer open.")).toContainEqual(expect.stringMatching(/^name manuel/));
+    });
+  });
+});
