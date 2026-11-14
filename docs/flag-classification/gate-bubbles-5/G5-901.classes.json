@@ -1,0 +1,174 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-diff-reply-option-labels-offense: \"create ca form for odile brannagh for violating attendance policy, she was late on 10/20/26. verbal. no payroll deduct.\" then \"change the issue to she was on her phone the whole shift\": the reply names the new Type of Offense by its label \u2014 OPEN in production (the reply shows the option's key, \"standards_of_conduct\")": {
+  "category": "INTENDED",
+  "reason": "Open-case wrapper: the reply now names the box by its label."
+ },
+ "src/lib/ai/flags-off-parity.test.ts :: existing chat and form suites with every new flag off passes the suites whose expectations are already on main: src/app/api/chat/replay-pack, first half of the cases by id": {
+  "category": "INTENDED-HARNESS",
+  "reason": "Parity sub-run inherits the exported flag; its failure is the open-case wrapper."
+ },
+ "replay: nov10-made-about-said-date-vague-draft-live [fix:MADE_ABOUT_READER_ACCOUNT_ENABLED,MADE_ABOUT_REWRITE_FINISHES_ENABLED,EDIT_POLICY_ASK_ENABLED,MADE_ABOUT_SAID_DATE_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the option key \u2192 its label in 'Changed Type of Offense to \"\u2026\"' (other \u2192 Other, standards_of_conduct \u2192 Standards of Conduct); checked mechanically over all 41 differing records, 0 other differences."
+ },
+ "replay: nov10-made-about-said-date-vague-draft-live [production]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the option key \u2192 its label in 'Changed Type of Offense to \"\u2026\"' (other \u2192 Other, standards_of_conduct \u2192 Standards of Conduct); checked mechanically over all 41 differing records, 0 other differences."
+ },
+ "replay: nov10-made-for-is-made-about-about-missing-out [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED,MADE_ABOUT_UNDATED_TOGETHER_ENABLED,MADE_FOR_IS_MADE_ABOUT_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the option key \u2192 its label in 'Changed Type of Offense to \"\u2026\"' (other \u2192 Other, standards_of_conduct \u2192 Standards of Conduct); checked mechanically over all 41 differing records, 0 other differences."
+ },
+ "replay: nov10-made-for-is-made-about-about-missing-out [production]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the option key \u2192 its label in 'Changed Type of Offense to \"\u2026\"' (other \u2192 Other, standards_of_conduct \u2192 Standards of Conduct); checked mechanically over all 41 differing records, 0 other differences."
+ },
+ "replay: nov10-made-for-is-made-about-reader-nothing [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED,MADE_ABOUT_UNDATED_TOGETHER_ENABLED,MADE_FOR_IS_MADE_ABOUT_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the option key \u2192 its label in 'Changed Type of Offense to \"\u2026\"' (other \u2192 Other, standards_of_conduct \u2192 Standards of Conduct); checked mechanically over all 41 differing records, 0 other differences."
+ },
+ "replay: nov10-made-for-is-made-about-reader-nothing [production]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the option key \u2192 its label in 'Changed Type of Offense to \"\u2026\"' (other \u2192 Other, standards_of_conduct \u2192 Standards of Conduct); checked mechanically over all 41 differing records, 0 other differences."
+ },
+ "replay: nov10-made-for-is-made-about-reader-replaces [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED,MADE_ABOUT_UNDATED_TOGETHER_ENABLED,MADE_FOR_IS_MADE_ABOUT_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the option key \u2192 its label in 'Changed Type of Offense to \"\u2026\"' (other \u2192 Other, standards_of_conduct \u2192 Standards of Conduct); checked mechanically over all 41 differing records, 0 other differences."
+ },
+ "replay: nov10-made-for-is-made-about-reader-replaces [production]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the option key \u2192 its label in 'Changed Type of Offense to \"\u2026\"' (other \u2192 Other, standards_of_conduct \u2192 Standards of Conduct); checked mechanically over all 41 differing records, 0 other differences."
+ },
+ "replay: nov13-account-change-rederives-policy-phone [fix:ACCOUNT_CHANGE_REDERIVES_POLICY_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the option key \u2192 its label in 'Changed Type of Offense to \"\u2026\"' (other \u2192 Other, standards_of_conduct \u2192 Standards of Conduct); checked mechanically over all 41 differing records, 0 other differences."
+ },
+ "replay: nov13-account-change-rederives-policy-phone [production]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the option key \u2192 its label in 'Changed Type of Offense to \"\u2026\"' (other \u2192 Other, standards_of_conduct \u2192 Standards of Conduct); checked mechanically over all 41 differing records, 0 other differences."
+ },
+ "replay: nov13-account-change-rederives-policy-sanitation [fix:ACCOUNT_CHANGE_REDERIVES_POLICY_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the option key \u2192 its label in 'Changed Type of Offense to \"\u2026\"' (other \u2192 Other, standards_of_conduct \u2192 Standards of Conduct); checked mechanically over all 41 differing records, 0 other differences."
+ },
+ "replay: nov13-account-change-rederives-policy-sanitation [production]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the option key \u2192 its label in 'Changed Type of Offense to \"\u2026\"' (other \u2192 Other, standards_of_conduct \u2192 Standards of Conduct); checked mechanically over all 41 differing records, 0 other differences."
+ },
+ "replay: nov13-account-replaced-close-sentence-new-account-still-rederives [fix:ACCOUNT_CHANGE_REDERIVES_POLICY_ENABLED,ACCOUNT_REPLACED_CLOSE_SENTENCE_KEPT_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the option key \u2192 its label in 'Changed Type of Offense to \"\u2026\"' (other \u2192 Other, standards_of_conduct \u2192 Standards of Conduct); checked mechanically over all 41 differing records, 0 other differences."
+ },
+ "replay: nov13-account-replaced-close-sentence-new-account-still-rederives [production]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the option key \u2192 its label in 'Changed Type of Offense to \"\u2026\"' (other \u2192 Other, standards_of_conduct \u2192 Standards of Conduct); checked mechanically over all 41 differing records, 0 other differences."
+ },
+ "replay: nov13-add-already-on-form-says-so [fix:MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED_ENABLED,ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the option key \u2192 its label in 'Changed Type of Offense to \"\u2026\"' (other \u2192 Other, standards_of_conduct \u2192 Standards of Conduct); checked mechanically over all 41 differing records, 0 other differences."
+ },
+ "replay: nov13-add-already-on-form-says-so [production]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the option key \u2192 its label in 'Changed Type of Offense to \"\u2026\"' (other \u2192 Other, standards_of_conduct \u2192 Standards of Conduct); checked mechanically over all 41 differing records, 0 other differences."
+ },
+ "replay: nov13-add-already-on-form-says-so-small-word-left-out [fix:MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED_ENABLED,ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the option key \u2192 its label in 'Changed Type of Offense to \"\u2026\"' (other \u2192 Other, standards_of_conduct \u2192 Standards of Conduct); checked mechanically over all 41 differing records, 0 other differences."
+ },
+ "replay: nov13-add-already-on-form-says-so-small-word-left-out [production]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the option key \u2192 its label in 'Changed Type of Offense to \"\u2026\"' (other \u2192 Other, standards_of_conduct \u2192 Standards of Conduct); checked mechanically over all 41 differing records, 0 other differences."
+ },
+ "replay: nov13-edit-sees-saved-form-corrects-missed-part [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED,EDIT_SEES_SAVED_FORM_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the option key \u2192 its label in 'Changed Type of Offense to \"\u2026\"' (other \u2192 Other, standards_of_conduct \u2192 Standards of Conduct); checked mechanically over all 41 differing records, 0 other differences."
+ },
+ "replay: nov13-edit-sees-saved-form-corrects-missed-part [production]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the option key \u2192 its label in 'Changed Type of Offense to \"\u2026\"' (other \u2192 Other, standards_of_conduct \u2192 Standards of Conduct); checked mechanically over all 41 differing records, 0 other differences."
+ },
+ "replay: nov13-made-about-empty-patch-answers-saved [fix:MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the option key \u2192 its label in 'Changed Type of Offense to \"\u2026\"' (other \u2192 Other, standards_of_conduct \u2192 Standards of Conduct); checked mechanically over all 41 differing records, 0 other differences."
+ },
+ "replay: nov13-made-about-empty-patch-answers-saved [production]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the option key \u2192 its label in 'Changed Type of Offense to \"\u2026\"' (other \u2192 Other, standards_of_conduct \u2192 Standards of Conduct); checked mechanically over all 41 differing records, 0 other differences."
+ },
+ "replay: nov14-account-change-box-already-moved-policy-follows [fix:ACCOUNT_CHANGE_REDERIVES_POLICY_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the option key \u2192 its label in 'Changed Type of Offense to \"\u2026\"' (other \u2192 Other, standards_of_conduct \u2192 Standards of Conduct); checked mechanically over all 41 differing records, 0 other differences."
+ },
+ "replay: nov14-account-change-box-already-moved-policy-follows [production]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the option key \u2192 its label in 'Changed Type of Offense to \"\u2026\"' (other \u2192 Other, standards_of_conduct \u2192 Standards of Conduct); checked mechanically over all 41 differing records, 0 other differences."
+ },
+ "replay: nov14-account-change-made-about-all-four-agree [fix:ACCOUNT_CHANGE_REDERIVES_POLICY_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the option key \u2192 its label in 'Changed Type of Offense to \"\u2026\"' (other \u2192 Other, standards_of_conduct \u2192 Standards of Conduct); checked mechanically over all 41 differing records, 0 other differences."
+ },
+ "replay: nov14-account-change-made-about-all-four-agree [production]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the option key \u2192 its label in 'Changed Type of Offense to \"\u2026\"' (other \u2192 Other, standards_of_conduct \u2192 Standards of Conduct); checked mechanically over all 41 differing records, 0 other differences."
+ },
+ "replay: nov14-diff-reply-option-labels-offense [open]": {
+  "category": "INTENDED",
+  "reason": "Open case holds ON: Changed Type of Offense to \"Standards of Conduct\"."
+ },
+ "replay: nov7-refusal-sun-late-date-drift [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the option key \u2192 its label in 'Changed Type of Offense to \"\u2026\"' (other \u2192 Other, standards_of_conduct \u2192 Standards of Conduct); checked mechanically over all 41 differing records, 0 other differences."
+ },
+ "replay: nov7-refusal-sun-late-date-drift [production]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the option key \u2192 its label in 'Changed Type of Offense to \"\u2026\"' (other \u2192 Other, standards_of_conduct \u2192 Standards of Conduct); checked mechanically over all 41 differing records, 0 other differences."
+ },
+ "replay: nov7-refusal-sun-monthly-meeting-drift [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the option key \u2192 its label in 'Changed Type of Offense to \"\u2026\"' (other \u2192 Other, standards_of_conduct \u2192 Standards of Conduct); checked mechanically over all 41 differing records, 0 other differences."
+ },
+ "replay: nov7-refusal-sun-monthly-meeting-drift [production]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the option key \u2192 its label in 'Changed Type of Offense to \"\u2026\"' (other \u2192 Other, standards_of_conduct \u2192 Standards of Conduct); checked mechanically over all 41 differing records, 0 other differences."
+ },
+ "replay: nov7-s34-edit-make-it-about [fix:EDIT_MAKE_IT_ABOUT_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the option key \u2192 its label in 'Changed Type of Offense to \"\u2026\"' (other \u2192 Other, standards_of_conduct \u2192 Standards of Conduct); checked mechanically over all 41 differing records, 0 other differences."
+ },
+ "replay: nov7-s34-edit-make-it-about [production]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the option key \u2192 its label in 'Changed Type of Offense to \"\u2026\"' (other \u2192 Other, standards_of_conduct \u2192 Standards of Conduct); checked mechanically over all 41 differing records, 0 other differences."
+ },
+ "replay: nov8-step-b-date-said [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED,EDIT_POLICY_ASK_ENABLED,STEP_B_DATE_SAID_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the option key \u2192 its label in 'Changed Type of Offense to \"\u2026\"' (other \u2192 Other, standards_of_conduct \u2192 Standards of Conduct); checked mechanically over all 41 differing records, 0 other differences."
+ },
+ "replay: nov8-step-b-date-said [production]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the option key \u2192 its label in 'Changed Type of Offense to \"\u2026\"' (other \u2192 Other, standards_of_conduct \u2192 Standards of Conduct); checked mechanically over all 41 differing records, 0 other differences."
+ },
+ "replay: nov8-step-b-date-with-about [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED,EDIT_POLICY_ASK_ENABLED,STEP_B_DATE_SAID_ENABLED,STEP_B_MAKE_IT_ABOUT_ACCOUNT_ENABLED,STEP_B_DATE_WITH_ABOUT_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the option key \u2192 its label in 'Changed Type of Offense to \"\u2026\"' (other \u2192 Other, standards_of_conduct \u2192 Standards of Conduct); checked mechanically over all 41 differing records, 0 other differences."
+ },
+ "replay: nov8-step-b-date-with-about [production]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the option key \u2192 its label in 'Changed Type of Offense to \"\u2026\"' (other \u2192 Other, standards_of_conduct \u2192 Standards of Conduct); checked mechanically over all 41 differing records, 0 other differences."
+ },
+ "replay: nov8-step-b-make-it-about-topic-only [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED,EDIT_MAKE_IT_ABOUT_ENABLED,STEP_B_MAKE_IT_ABOUT_ACCOUNT_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the option key \u2192 its label in 'Changed Type of Offense to \"\u2026\"' (other \u2192 Other, standards_of_conduct \u2192 Standards of Conduct); checked mechanically over all 41 differing records, 0 other differences."
+ },
+ "replay: nov8-step-b-make-it-about-topic-only [production]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the option key \u2192 its label in 'Changed Type of Offense to \"\u2026\"' (other \u2192 Other, standards_of_conduct \u2192 Standards of Conduct); checked mechanically over all 41 differing records, 0 other differences."
+ },
+ "replay: nov9-step-b-make-it-about-dated-incident [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED,EDIT_MAKE_IT_ABOUT_ENABLED,STEP_B_MAKE_IT_ABOUT_ACCOUNT_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the option key \u2192 its label in 'Changed Type of Offense to \"\u2026\"' (other \u2192 Other, standards_of_conduct \u2192 Standards of Conduct); checked mechanically over all 41 differing records, 0 other differences."
+ },
+ "replay: nov9-step-b-make-it-about-dated-incident [production]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the option key \u2192 its label in 'Changed Type of Offense to \"\u2026\"' (other \u2192 Other, standards_of_conduct \u2192 Standards of Conduct); checked mechanically over all 41 differing records, 0 other differences."
+ }
+}
