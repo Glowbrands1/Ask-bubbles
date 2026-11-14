@@ -999,6 +999,8 @@ export function formsGuideEnabled(): boolean {
 }
 
 export const CHAT_QUALITY_FLAG_NAMES = [
+  // coding 2: MIXED_POLICY_PLAN (Pau's option A, 13 Nov 2026; default off).
+  "MIXED_POLICY_PLAN_ENABLED",
   // coding 2: POLICY_LINE_COVERS_EVERY_SECTION (QA's two-offense Create check, 14 Nov 2026; default off).
   "POLICY_LINE_COVERS_EVERY_SECTION_ENABLED",
   // coding 2: NAMED_POLICIES_ALL_KEPT (QA's two-offense Create check, 13 Nov 2026; default off).
@@ -5679,4 +5681,15 @@ export function namedPoliciesAllKeptEnabled(): boolean {
  */
 export function policyLineCoversEverySectionEnabled(): boolean {
   return envFlag("POLICY_LINE_COVERS_EVERY_SECTION_ENABLED");
+}
+
+/**
+ * MIXED_POLICY_PLAN_ENABLED (Coding-2, 14 Nov 2026; default off; Pau's option A, 13 Nov 2026). A Corrective Action on
+ * Attendance and another policy saved Pau's attendance plan alone, dropping the other policy. On: the attendance plan is
+ * kept exactly, with one line per other policy before the closing, "Management will review the <Policy> policy with
+ * <employee>." (`forms/attendance-action-plan.ts`), on the card and the draft alike. An Attendance-only CA is unchanged.
+ * Off, as before.
+ */
+export function mixedPolicyPlanEnabled(): boolean {
+  return envFlag("MIXED_POLICY_PLAN_ENABLED");
 }
