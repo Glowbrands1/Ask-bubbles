@@ -1,0 +1,34 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-request-line-title-kept-seasonal-team-member-part-time: \"create corrective action form for Ilsa Varnholt, Seasonal Team Member Part Time\" \u2014 the card keeps the title \u2014 OPEN in production (the title given in the request line is taken off the card (employeeRole null))": {
+  "category": "INTENDED-HARNESS",
+  "reason": "'OPEN in production' pin: with the fix flag in the env the open case holds, so the pin fails. Production (flag unset) passes."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-request-line-title-kept-team-member-full-time: \"create corrective action form for Ilsa Varnholt, Team Member Full Time\" \u2014 the card keeps the title \u2014 OPEN in production (the title given in the request line is taken off the card (employeeRole null))": {
+  "category": "INTENDED-HARNESS",
+  "reason": "'OPEN in production' pin: with the fix flag in the env the open case holds, so the pin fails. Production (flag unset) passes."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-request-line-title-kept-team-member-part-time: \"create corrective action form for Ilsa Varnholt, Team Member Part Time\" \u2014 the card keeps the title \u2014 OPEN in production (the title given in the request line is taken off the card (employeeRole null))": {
+  "category": "INTENDED-HARNESS",
+  "reason": "'OPEN in production' pin: with the fix flag in the env the open case holds, so the pin fails. Production (flag unset) passes."
+ },
+ "src/lib/ai/flags-off-parity.test.ts :: existing chat and form suites with every new flag off passes the suites whose expectations are already on main: src/app/api/chat/replay-pack, first half of the cases by id": {
+  "category": "INTENDED-HARNESS",
+  "reason": "The parity child inherits process.env (flags-off-parity.test.ts:384) and runs with the flag on; its only failures are the PR's 3 open pins. OFF: passes."
+ },
+ "src/lib/forms/title-of-another-person.test.ts :: TITLE_ENDS_AT_LINE_ENABLED: a title line of capitalised words is one title off: as before, \"Part Time\" beside \"Team Member\" reads as another person": {
+  "category": "INTENDED",
+  "reason": "Stale pin: it pins the pre-fix reading ('Part Time' beside 'Team Member' is another person) and stubs only TITLE_ENDS_AT_LINE_ENABLED, so with REQUEST_LINE_TITLE_KEPT_ENABLED in the env it gets the fixed reading. Needs vi.stubEnv('REQUEST_LINE_TITLE_KEPT_ENABLED', '') (in #884 or the flip PR). OFF: passes."
+ },
+ "replay: nov14-request-line-title-kept-seasonal-team-member-part-time [open]": {
+  "category": "INTENDED",
+  "reason": "QA's 17x open case: OFF the request line's title is taken off the card (employeeRole null); ON employeeRole is Team Member. Confirmed by the gate's chat-route probes."
+ },
+ "replay: nov14-request-line-title-kept-team-member-full-time [open]": {
+  "category": "INTENDED",
+  "reason": "QA's 17x open case: OFF the request line's title is taken off the card (employeeRole null); ON employeeRole is Team Member. Confirmed by the gate's chat-route probes."
+ },
+ "replay: nov14-request-line-title-kept-team-member-part-time [open]": {
+  "category": "INTENDED",
+  "reason": "QA's 17x open case: OFF the request line's title is taken off the card (employeeRole null); ON employeeRole is Team Member. Confirmed by the gate's chat-route probes."
+ }
+}
