@@ -77,3 +77,27 @@ export const NOV14_REASON_PLACE_NEVER_STORE_GUARDS: ReplayCase[] = [
     expect(locationId, `the store was not filed:\n${reply}`).toBe(KEARNEY);
   },
 }));
+
+/*
+ * QA's ruling (14 Nov 2026): a two-store reason is unchanged — #879 already reads no store from it, and with the reader
+ * reading the place too it is still not filed. A guard, flag off and on.
+ */
+export const NOV14_REASON_PLACE_NEVER_STORE_TWO_STORE_GUARD: ReplayCase[] = [
+  {
+    id: "nov14-reason-place-never-store-guard-two-store-reason",
+    title: `Admin: "write a CA for tavia quellan, she was late because she was at sioux falls west" — no Sioux Falls store filed`,
+    report: REPORT,
+    status: "fixed",
+    fixFlags: [FLAG],
+    async run(t: ReplayContext) {
+      vi.setSystemTime(new Date("2026-11-14T15:00:00Z"));
+      t.directory([...STAFF]);
+      t.as("admin", { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] });
+      t.readerReads({ location: "sioux falls west" });
+      const thread = t.thread();
+      const reply = (await thread.say("write a CA for tavia quellan, she was late because she was at sioux falls west")).content;
+      const locationId = (thread.proposal as { locationId?: string | null } | null)?.locationId ?? null;
+      expect(["loc-225", "loc-338"], `a Sioux Falls store was filed from the reason:\n${reply}`).not.toContain(locationId);
+    },
+  },
+];
