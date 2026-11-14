@@ -1,4 +1,4 @@
-import { formInputFidelityEnabled, positionAnswerGuardEnabled } from "@/lib/config/chat-quality-flags";
+import { formInputFidelityEnabled, positionAnswerGuardEnabled, positionAnswerNotASentenceEnabled } from "@/lib/config/chat-quality-flags";
 
 import { spokenDates } from "./relative-date";
 
@@ -77,6 +77,45 @@ function saysOnlyADate(text: string): boolean {
   return rest.replace(DATE_FILLER, " ").replace(/[\s.,!]+/g, "") === "";
 }
 
+/*
+ * POSITION_ANSWER_NOT_A_SENTENCE_ENABLED (QA's live Bubbles 17w test, 13 Nov 2026): a card for someone with no Woven
+ * position asked for it, and the manager's next turn, "she gets a verbal warning", became Position "She Gets A Verbal
+ * Warning". A reply that is a sentence about her (a pronoun and a verb other than "is/was/'s") or that names a level,
+ * a warning, an earlier step or a payment is never a position answer. "she's a shift lead", "Team Member Part Time",
+ * "keyholder" still are.
+ */
+const SENTENCE_ABOUT_HER = /^(?:(?:she|he|they)\s+(?!(?:is|was|are|were)\b)[a-z]+|(?:it|this|that)(?:['’]s|\s+is|\s+was)\b)/i;
+/*
+ * v2-Gate-Bubbles-3's probes on #889 (14 Nov 2026): with the flag on, "it's her second time", "she's a team lead i think",
+ * "she's in training" and "she's new" were still read, and now announced ("Job title set to **It's Her Second Time**").
+ * A hedge, an ordinal, "again" or "time(s)" is never part of a title.
+ */
+const NOT_A_TITLE_WORD =
+  /(?:\$\s?\d|\b\d|\b(?:warning|warnings|write[- ]?ups?|verbal|written|final|coach(?:ed|ing)?|owes?|owed|owing|pay|paid|payroll|deduct\w*|late|tardy|no[- ]?show|absent|fired|terminat\w*|suspend\w*|signed|corrective|ca|again|(?:first|second|third|fourth|fifth|last|another|\d+(?:st|nd|rd|th)?)\s+times?|before|i\s+think|i\s+guess|i\s+believe|maybe|probably|not\s+sure)\b)/i;
+/**
+ * "she's …" / "she is …": a title only when the rest names a role ("she's a shift lead") or starts with a/an/the/our
+ * ("she is a barista", v2-Gate-Bubbles-3's R889, 14 Nov 2026), never "she's new" or "she's in training".
+ */
+const PRONOUN_IS = /^(?:she|he|they)(?:['’]s|\s+is|\s+was|['’]re|\s+are)\s+(.+)$/i;
+const ROLE_WORD =
+  /\b(?:lead|leader|manager|member|holder|keyholder|key-holder|supervisor|director|associate|assistant|consultant|operator|cashier|trainer|maker|crew|staff|specialist|coordinator|attendant|clerk|owner|captain|agm|gm|asm|sm|tm|kh)\b/i;
+
+const ARTICLE_LEAD = /^(?:a|an|the|our)\s+\S/i;
+/*
+ * v2-Gate-Bubbles-3 / QA on #889 (14 Nov 2026): after "she's a/an", a remark about her character is never a title:
+ * "she's a mess", "a good worker", "a hard worker", "a problem", "a minor" were announced "Job title set to **Mess**". An
+ * evaluative word, or a noun that judges or describes her rather than naming a job, means no title, whatever follows.
+ */
+const CHARACTER_REMARK =
+  /^(?:a|an|the|our)\s+(?:(?:really|very|real|total|complete|bit\s+of\s+a|little)\s+)*(?:(?:good|great|hard|bad|lazy|nice|terrible|awful|amazing|awesome|excellent|poor|strong|weak|slow|fast|quick|sweet|rude|difficult|reliable|unreliable|solid|decent|okay|ok|fine|horrible|wonderful|hard-working|hardworking|new|young|old|problem|trouble)\b|(?:mess|problem|minor|pain|nightmare|handful|liability|joke|disaster|sweetheart|star|rockstar|keeper|asset|worker|person|kid|teen|teenager|student|natural|issue|headache|gem)\b)/i;
+
+function notAPositionSentence(reply: string): boolean {
+  if (SENTENCE_ABOUT_HER.test(reply) || NOT_A_TITLE_WORD.test(reply)) return true;
+  const said = PRONOUN_IS.exec(reply.trim().replace(/[.!\s]+$/g, ""));
+  if (said !== null && CHARACTER_REMARK.test(said[1]!)) return true;
+  return said !== null && !ARTICLE_LEAD.test(said[1]!) && !ROLE_WORD.test(said[1]!);
+}
+
 function titleCase(phrase: string): string {
   return phrase
     .split(/\s+/)
@@ -104,6 +143,8 @@ export function readPositionAnswer(reply: string): string | null {
   if (positionAnswerGuardEnabled() && ANSWERS_ANOTHER_QUESTION.test(String(reply).trim())) return null;
   // FORM_INPUT_FIDELITY_ENABLED: a bare date ("yesterday", "Oct 20", "10/20") answers the date question, never the position.
   if (formInputFidelityEnabled() && saysOnlyADate(text)) return null;
+  // POSITION_ANSWER_NOT_A_SENTENCE_ENABLED: "she gets a verbal warning" is about the incident, never her title.
+  if (positionAnswerNotASentenceEnabled() && notAPositionSentence(String(reply).trim())) return null;
   const words = text.split(/\s+/);
   if (words.length > 5 || !/^[A-Za-z][A-Za-z&/'’.\- ]*$/.test(text)) return null;
   return titleCase(text);

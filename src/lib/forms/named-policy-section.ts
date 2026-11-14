@@ -1,4 +1,4 @@
-import { animalAnywhereEnabled, closeSpellingMatchEnabled, headingDistinctiveWordsEnabled, wovenTrainingConductEnabled } from "@/lib/config/chat-quality-flags";
+import { animalAnywhereEnabled, cleaningPolicyIsCareAndCleaningEnabled, closeSpellingMatchEnabled, headingDistinctiveWordsEnabled, wovenTrainingConductEnabled } from "@/lib/config/chat-quality-flags";
 
 import { closeWordDistance } from "./close-spelling";
 
@@ -245,6 +245,22 @@ export function namedManualSection(input: {
   return null;
 }
 
+/*
+ * CLEANING_POLICY_IS_CARE_AND_CLEANING_ENABLED (ported from the sibling app; QA's ruling, 14 Nov 2026). "The cleaning policy",
+ * "cleaning duties", "cleaning procedures": "cleaning" is the heading's own word, so the phrase names the one heading
+ * that has it (Care and Cleaning of Equipment and Facilities). "The sanitation policy" is not the heading's word: it is
+ * asked about (`closePolicyQuestion`), never cited outright.
+ */
+const CLEANING_POLICY_PHRASE = /^(?:the\s+|our\s+|a\s+)?cleaning(?:\s+(?:duties|duty|procedures?|checklists?|standards?|rules?))?$/i;
+const SANITATION_POLICY_PHRASE = /^(?:the\s+|our\s+|a\s+)?sanit(?:ation|izing|ize|izer)(?:\s+(?:duties|duty|procedures?|checklists?|standards?|rules?))?$/i;
+const CLEANING_HEADING = /\bcleaning\b/i;
+
+/** The one manual heading with "cleaning" in it, or null (none, or more than one). */
+function cleaningHeading(headings: readonly string[]): string | null {
+  const found = [...new Set(headings.filter((heading) => CLEANING_HEADING.test(heading)))];
+  return found.length === 1 ? found[0]! : null;
+}
+
 /**
  * The one section of the manual these words name, by the reading above —
  * every word said in the heading, every heading word said — or null when no
@@ -261,6 +277,11 @@ export function manualSectionNamedBy(phrase: string, chunks: readonly ManualChun
   if (matches.length === 0 && closeSpellingMatchEnabled()) {
     const close = closeHeadingReading(phrase, headings);
     if (close.confident) return findManualSection(chunks, [close.confident]);
+  }
+  // CLEANING_POLICY_IS_CARE_AND_CLEANING_ENABLED: "the cleaning policy" names the heading with "cleaning" in it.
+  if (matches.length === 0 && cleaningPolicyIsCareAndCleaningEnabled() && CLEANING_POLICY_PHRASE.test(phrase.trim())) {
+    const heading = cleaningHeading(headings);
+    if (heading) return findManualSection(chunks, [heading]);
   }
   return null;
 }
@@ -353,7 +374,10 @@ export function closePolicyQuestion(phrase: string, chunks: readonly ManualChunk
   if (!closeSpellingMatchEnabled() || !chunks || chunks.length === 0 || words(phrase).length === 0) return null;
   const headings = manualSheetHeadings(chunks);
   if (headings.some((heading) => namesHeading(phrase, heading))) return null;
-  const close = closeHeadingReading(phrase, headings);
+  const read = closeHeadingReading(phrase, headings);
+  // CLEANING_POLICY_IS_CARE_AND_CLEANING_ENABLED: "the sanitation policy" is asked about the heading with "cleaning" in it.
+  const sanitation = cleaningPolicyIsCareAndCleaningEnabled() && SANITATION_POLICY_PHRASE.test(phrase.trim()) ? cleaningHeading(headings) : null;
+  const close = sanitation && !read.confident && read.candidates.length === 0 ? { confident: null, candidates: [sanitation] } : read;
   if (close.confident || close.candidates.length === 0) return null;
   const listed = close.candidates.slice(0, 3).flatMap((heading) => {
     const section = findManualSection(chunks, [heading]);

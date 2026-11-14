@@ -416,6 +416,7 @@ afterEach(() => {
     if (value === undefined) delete process.env[name];
     else process.env[name] = value;
   }
+  vi.unstubAllEnvs();
   vi.useRealTimers();
 });
 
@@ -516,6 +517,8 @@ describe("the open card switches form and keeps the employee, the date and the s
 describe("flag off, as main", () => {
   it("Pau's wording keeps the old form or drops the card", async () => {
     production(false);
+    // POSITION_ANSWER_NOT_A_SENTENCE (#889) is pinned off for this flag's off path.
+    vi.stubEnv("POSITION_ANSWER_NOT_A_SENTENCE_ENABLED", "");
     expect((await switched(CA, "change to coaching")).after?.templateKey).toBe("dpoa");
     expect((await switched(COACHING, "change to ca")).after).toBeUndefined();
   });

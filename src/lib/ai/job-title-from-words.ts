@@ -2,9 +2,10 @@ import {
   exitReadbackJobTitleEnabled,
   jobTitleAppositionEnabled,
   jobTitleFromWordsEnabled,
+  positionAnswerNotASentenceEnabled,
   titleInitialismCaseEnabled,
 } from "@/lib/config/chat-quality-flags";
-import { POSITION_QUESTION_TAG, positionAlreadyAsked, positionAnsweredIn, positionQuestion } from "@/lib/forms/employee-position";
+import { POSITION_QUESTION_TAG, answersPositionQuestion, positionAlreadyAsked, positionAnsweredIn, positionQuestion, readPositionAnswer, samePosition } from "@/lib/forms/employee-position";
 
 import type { AskRequest, AskResponse } from "./types";
 
@@ -33,6 +34,8 @@ const APPOSITION = (who: string) =>
   new RegExp(`\\b(?:${who}),\\s+((?:[a-z][a-z'’-]*\\s+){0,3}[a-z][a-z'’-]*)`, "gi");
 const LABELED = /\b(?:job\s+title|position|title|role)\s*(?:is|was|:|-)\s*(?:an?\s+|the\s+)?((?:[a-z][a-z'’-]*\s+){0,3}[a-z][a-z'’-]*)/gi;
 const STOP_AFTER = /\s+(?:at|in|for|from|on|and|who|that|with|since)\b.*$/i;
+/** How long or how often she works, after a title ("Team Member Part Time"). */
+const EMPLOYMENT_TYPE = /\s+(?:(?:part|full)[- ]?time|pt|ft|seasonal|temp)$/i;
 
 /** Templates whose card asks for the position here; the others ask in the proposal flow. */
 const ASKS_HERE = new Set(["resignation-exit"]);
@@ -64,7 +67,9 @@ export function typedJobTitle(turns: readonly string[], name: string): string | 
     for (const pattern of [IS_A(who), ...(jobTitleAppositionEnabled() ? [APPOSITION(who)] : []), LABELED]) {
       for (const match of turn.matchAll(pattern)) {
         const phrase = match[1]!.replace(STOP_AFTER, "").trim();
-        if (ROLE_NOUN.test(phrase)) found = titleCase(phrase);
+        // POSITION_ANSWER_NOT_A_SENTENCE_ENABLED: "Team Member Part Time" is a title; the hours after it are part of it.
+        const role = positionAnswerNotASentenceEnabled() ? phrase.replace(EMPLOYMENT_TYPE, "").trim() : phrase;
+        if (ROLE_NOUN.test(role)) found = titleCase(phrase);
       }
     }
   }
@@ -89,6 +94,7 @@ type Turn = { readonly role: string; readonly content: string };
 export function withJobTitleFromWords(response: AskResponse, request: AskRequest): AskResponse {
   if (!jobTitleFromWordsEnabled()) return response;
   const proposal = response.formProposal;
+  if (proposal?.employeeRole && positionAnswerNotASentenceEnabled()) return withPositionAnswerSaid(response, request);
   if (!proposal?.employeeName || proposal.subject === "team" || proposal.employeeRole) return response;
   const history = (request.history ?? []) as readonly Turn[];
   const managerTurns = [...history.filter((turn) => turn.role === "user").map((turn) => turn.content), request.question];
@@ -110,3 +116,22 @@ export function withJobTitleFromWords(response: AskResponse, request: AskRequest
   if (!ASKS_HERE.has(proposal.templateKey) || positionAlreadyAsked(history) || response.content.includes(POSITION_QUESTION_TAG)) return response;
   return { ...response, content: `${response.content.trim()}\n\n${positionQuestion(proposal.employeeName)}` };
 }
+
+/**
+ * POSITION_ANSWER_NOT_A_SENTENCE_ENABLED (QA's live Bubbles 17w report, 13 Nov 2026): "she's a key holder" answered
+ * the card's position question and the card's Position became "Key Holder", but the reply said only "got it, here's the
+ * card." A title taken from this turn's answer is said in the reply, once.
+ */
+function withPositionAnswerSaid(response: AskResponse, request: AskRequest): AskResponse {
+  const role = response.formProposal?.employeeRole?.trim();
+  if (!role || response.formProposal?.employeeRoleSource !== "manager") return response;
+  const history = (request.history ?? []) as readonly Turn[];
+  if (!answersPositionQuestion(history, request.question)) return response;
+  const answered = readPositionAnswer(request.question);
+  if (!answered || !samePosition(answered, role)) return response;
+  if (response.content.toLowerCase().includes(role.toLowerCase())) return response;
+  const paragraphs = response.content.split("\n\n");
+  paragraphs.splice(Math.min(1, paragraphs.length), 0, `Job title set to **${role}**, as you said.`);
+  return { ...response, content: paragraphs.join("\n\n") };
+}
+

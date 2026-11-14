@@ -868,4 +868,56 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov14-other-policy-agrees-sanitation-typed": "OTHER_POLICY_AGREES",
   // fixed in production by OTHER_POLICY_AGREES, QA round 17z, 14 Nov 2026
   "nov14-other-policy-agrees-sanitation-spelled": "OTHER_POLICY_AGREES",
+  // fixed in production by REOPEN_IS_OPENING, QA round 17z-c, 14 Nov 2026
+  "nov12-17n-4b-late-to-reoepn-is-late-opening": "REOPEN_IS_OPENING",
+  // fixed in production by BARE_FORM_NAME_ASKS_WHAT, QA round 17z-c, 14 Nov 2026
+  "nov12-17n-4c-bare-form-name-asks-what": "BARE_FORM_NAME_ASKS_WHAT",
+  // fixed in production by THIS_FORM_IS_ABOUT, QA round 17z-c, 14 Nov 2026
+  "nov12-17n-3-this-form-is-about-cash-handling": "THIS_FORM_IS_ABOUT",
+  // fixed in production by PASTED_REVIEW_ASKS_WHAT_YOU_SAW, QA round 17z-c, 14 Nov 2026
+  "nov12-17n-2-pasted-customer-review-asks-what-you-saw": "PASTED_REVIEW_ASKS_WHAT_YOU_SAW",
+  // fixed in production by CA_NO_POLICY_ASKS_WHICH, QA round 17z-c, 14 Nov 2026
+  "nov12-17n-4a-close-register-asks-which-policy": "CA_NO_POLICY_ASKS_WHICH",
+  // fixed in production by ISSUE_KEEPS_WORK_AREA, QA round 17z-c, 14 Nov 2026
+  "nov13-issue-keeps-work-area-front-desk": "ISSUE_KEEPS_WORK_AREA",
+  // fixed in production by ISSUE_KEEPS_WORK_AREA, QA round 17z-c, 14 Nov 2026
+  "nov13-issue-keeps-work-area-register": "ISSUE_KEEPS_WORK_AREA",
+  // fixed in production by POSITION_ANSWER_NOT_A_SENTENCE, QA round 17z-c, 14 Nov 2026
+  "nov13-position-answer-not-a-sentence-she-gets-a-verbal-warning": "POSITION_ANSWER_NOT_A_SENTENCE",
+  // fixed in production by POSITION_ANSWER_NOT_A_SENTENCE, QA round 17z-c, 14 Nov 2026
+  "nov13-position-answer-key-holder-said": "POSITION_ANSWER_NOT_A_SENTENCE",
+  // fixed in production by POSITION_ANSWER_NOT_A_SENTENCE, QA round 17z-c, 14 Nov 2026
+  "nov14-position-answer-gate-miss-it-s-her-second-time": "POSITION_ANSWER_NOT_A_SENTENCE",
+  // fixed in production by POSITION_ANSWER_NOT_A_SENTENCE, QA round 17z-c, 14 Nov 2026
+  "nov14-position-answer-gate-miss-she-s-a-team-lead-i-think": "POSITION_ANSWER_NOT_A_SENTENCE",
+  // fixed in production by POSITION_ANSWER_NOT_A_SENTENCE, QA round 17z-c, 14 Nov 2026
+  "nov14-position-answer-gate-miss-she-s-in-training": "POSITION_ANSWER_NOT_A_SENTENCE",
+  // fixed in production by POSITION_ANSWER_NOT_A_SENTENCE, QA round 17z-c, 14 Nov 2026
+  "nov14-position-answer-gate-miss-she-s-new": "POSITION_ANSWER_NOT_A_SENTENCE",
+  // fixed in production by POSITION_ANSWER_NOT_A_SENTENCE, QA round 17z-c, 14 Nov 2026
+  "nov14-position-answer-character-she-s-a-mess": "POSITION_ANSWER_NOT_A_SENTENCE",
+  // fixed in production by POSITION_ANSWER_NOT_A_SENTENCE, QA round 17z-c, 14 Nov 2026
+  "nov14-position-answer-character-she-s-a-good-worker": "POSITION_ANSWER_NOT_A_SENTENCE",
+  // fixed in production by POSITION_ANSWER_NOT_A_SENTENCE, QA round 17z-c, 14 Nov 2026
+  "nov14-position-answer-character-she-s-a-hard-worker": "POSITION_ANSWER_NOT_A_SENTENCE",
+  // fixed in production by POSITION_ANSWER_NOT_A_SENTENCE, QA round 17z-c, 14 Nov 2026
+  "nov14-position-answer-character-she-s-a-problem": "POSITION_ANSWER_NOT_A_SENTENCE",
+  // fixed in production by POSITION_ANSWER_NOT_A_SENTENCE, QA round 17z-c, 14 Nov 2026
+  "nov14-position-answer-character-she-s-a-minor": "POSITION_ANSWER_NOT_A_SENTENCE",
+  // fixed in production by CLEANING_POLICY_IS_CARE_AND_CLEANING, QA round 17z-c, 14 Nov 2026
+  "nov14-cleaning-policy-cleaning-policy": "CLEANING_POLICY_IS_CARE_AND_CLEANING",
+  // fixed in production by CLEANING_POLICY_IS_CARE_AND_CLEANING, QA round 17z-c, 14 Nov 2026
+  "nov14-cleaning-policy-cleaning-duties-policy": "CLEANING_POLICY_IS_CARE_AND_CLEANING",
+  // fixed in production by CLEANING_POLICY_IS_CARE_AND_CLEANING, QA round 17z-c, 14 Nov 2026
+  "nov14-cleaning-policy-sanitation-asks": "CLEANING_POLICY_IS_CARE_AND_CLEANING",
+  // fixed in production by PRIOR_ACTIONS_UNSAID_BLANK, QA round 17z-c, 14 Nov 2026
+  "nov14-prior-actions-unsaid-blank-at-create": "PRIOR_ACTIONS_UNSAID_BLANK",
+  // fixed in production by RELATIVE_DAY_PART_WORDS, QA round 17z-c, 14 Nov 2026
+  "nov14-relative-day-part-words-tonight": "RELATIVE_DAY_PART_WORDS",
+  // fixed in production by RELATIVE_DAY_PART_WORDS, QA round 17z-c, 14 Nov 2026
+  "nov14-relative-day-part-words-this-evening": "RELATIVE_DAY_PART_WORDS",
+  // fixed in production by RELATIVE_DAY_PART_WORDS, QA round 17z-c, 14 Nov 2026
+  "nov14-relative-day-part-words-this-morning": "RELATIVE_DAY_PART_WORDS",
+  // fixed in production by RELATIVE_DAY_PART_WORDS, QA round 17z-c, 14 Nov 2026
+  "nov14-relative-day-part-words-last-night": "RELATIVE_DAY_PART_WORDS",
 };

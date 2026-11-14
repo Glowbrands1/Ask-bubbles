@@ -36,6 +36,9 @@ import { answersWhichFormOnFile, mayAskToReopen } from "@/lib/forms/reopen-cue";
 import { parseChatReportContext } from "@/lib/reporting/report-context";
 import { businessToday } from "@/lib/business-date";
 import {
+  bareFormNameAsksWhatEnabled,
+  caNoPolicyAsksWhichEnabled,
+  pastedReviewAsksWhatYouSawEnabled,
   chatLongMessageEnabled,
   draftActionsEnabled,
   formEditHonestReplyEnabled,
@@ -1268,6 +1271,18 @@ async function postChat(request: Request) {
       }
       // LEAD_FULL_SENTENCE_ENABLED: a reply never ends at "I can prepare:" (`lib/forms/lead-full-sentence.ts`).
       if (leadFullSentenceEnabled()) answer = (await import("@/lib/forms/lead-full-sentence")).withLeadFullSentence(answer);
+      // BARE_FORM_NAME_ASKS_WHAT_ENABLED: a turn that is only a form's name asks what the manager needs (`lib/forms/bare-form-name.ts`).
+      if (bareFormNameAsksWhatEnabled()) answer = (await import("@/lib/forms/bare-form-name")).withBareFormNameQuestion(answer, asked.question);
+      // PASTED_REVIEW_ASKS_WHAT_YOU_SAW_ENABLED: a pasted customer review is the customer's words; ask what the manager saw (`lib/forms/pasted-customer-review.ts`).
+      if (pastedReviewAsksWhatYouSawEnabled()) answer = (await import("@/lib/forms/pasted-customer-review")).withPastedReviewAsk(answer, asked.question);
+      // CA_NO_POLICY_ASKS_WHICH_ENABLED: a Corrective Action card that cites no policy asks which applies (`lib/forms/no-policy-asks-which.ts`).
+      if (caNoPolicyAsksWhichEnabled() && answer.formProposal) {
+        // The card's own turns are what its policy reader read.
+        const cited = new Set(answer.formProposal.sourceMessageIds ?? []);
+        const turns = parsed.history.filter((turn) => turn.role === "user" && (cited.size === 0 || (turn.id && cited.has(turn.id))));
+        const managerText = [...turns.map((turn) => String(turn.content)), asked.question].join("\n");
+        answer = (await import("@/lib/forms/no-policy-asks-which")).withNoPolicyQuestion(answer, managerText);
+      }
       // FORM_EDIT_SOURCE_TURN_ENABLED: every reply with a form open says so; the browser sends it back with the history.
       if (formReply) answer = { ...answer, formReply };
       // ACCOUNT_BEFORE_REQUEST_ENABLED: the account given before the request is handed to the draft (`lib/forms/account-before-request.ts`).

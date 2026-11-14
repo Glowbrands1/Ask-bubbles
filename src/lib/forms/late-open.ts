@@ -1,5 +1,6 @@
 import {
   failureToOpenIsLateOpeningEnabled,
+  reopenIsOpeningEnabled,
   formDateIncidentOnlyEnabled,
   lateOpenDateEnabled,
   noShowOpeningIsAttendanceEnabled,
@@ -51,7 +52,41 @@ export const FAILURE_TO_OPEN = new RegExp(
 
 /** FAILURE_TO_OPEN_IS_LATE_OPENING_ENABLED: whether the words say the employee failed to open. Off, false. */
 export function saysFailureToOpen(text: string): boolean {
+  if (reopenIsOpeningEnabled() && lateToReopen(text) !== null) return true;
   return failureToOpenIsLateOpeningEnabled() && FAILURE_TO_OPEN.test(text);
+}
+
+/*
+ * REOPEN_IS_OPENING_ENABLED (QA's Bubbles 17n live test, 12 Nov 2026): "he was late to reoepn the store on 11/9" was
+ * Attendance (p.14, from "late"), not Late Opening; so was "late to reopen the store", spelled right. Reopening the
+ * store is opening it. "late to <word>" where the word is "reopen" or within two letters of it ("reoepn", "re-open"),
+ * with "the store" (or the like) after it or nothing at all, is a late opening. Off, null.
+ */
+const LATE_TO_RE = /\blate\s+to\s+(re-?[a-z]{3,6})\b((?:\s+(?:the\s+)?(?:store|location|shop|makery))?)/gi;
+
+/** REOPEN_IS_OPENING_ENABLED: the manager's "late to reopen (the store)" span as typed, or null. */
+export function lateToReopen(text: string): string | null {
+  for (const match of (text ?? "").matchAll(LATE_TO_RE)) {
+    const word = match[1]!.toLowerCase().replace("-", "");
+    if (word === "reopen" || closeTo(word, "reopen")) return match[0];
+  }
+  return null;
+}
+
+/** Levenshtein distance of at most two, on a short word. */
+function closeTo(word: string, target: string): boolean {
+  const rows = Array.from({ length: word.length + 1 }, (_, index) => [index]);
+  for (let column = 1; column <= target.length; column += 1) rows[0]![column] = column;
+  for (let row = 1; row <= word.length; row += 1) {
+    for (let column = 1; column <= target.length; column += 1) {
+      rows[row]![column] = Math.min(
+        rows[row - 1]![column]! + 1,
+        rows[row]![column - 1]! + 1,
+        rows[row - 1]![column - 1]! + (word[row - 1] === target[column - 1] ? 0 : 1),
+      );
+    }
+  }
+  return rows[word.length]![target.length]! <= 2;
 }
 
 /*
@@ -84,6 +119,9 @@ const NEGATION_BEFORE = /\b(?:not|never|did\s*n['’]?t|did\s+not|didnt|failed\s
 /** LATE_OPENING_OWN_WORDS_ENABLED: the manager's own words that read as a late opening, as typed, or null. */
 export function lateOpeningWords(text: string): string | null {
   const said = text ?? "";
+  // REOPEN_IS_OPENING_ENABLED: "late to reoepn the store", as typed.
+  const reopened = reopenIsOpeningEnabled() ? lateToReopen(said) : null;
+  if (reopened) return reopened.replace(/\s+/g, " ").trim();
   for (const pattern of OWN_LATE_OPENING) {
     const found = pattern.exec(said);
     if (!found) continue;

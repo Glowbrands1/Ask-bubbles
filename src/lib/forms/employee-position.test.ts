@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   POSITION_QUESTION_TAG,
@@ -75,5 +75,55 @@ describe("over a conversation", () => {
   it("compares titles the way a person does", () => {
     expect(samePosition("Shift Lead", "shift  lead")).toBe(true);
     expect(samePosition("Shift Lead", "Store Manager")).toBe(false);
+  });
+});
+
+describe("POSITION_ANSWER_NOT_A_SENTENCE_ENABLED: QA's live 17w test (13 Nov 2026)", () => {
+  it.each([
+    "she gets a verbal warning",
+    "she had a verbal warning on 10/1",
+    "she owes $25",
+    "he got written up last week",
+    "they were late again",
+    // v2-Gate-Bubbles-3's probes on #889 (14 Nov 2026): read, and announced, with the flag on.
+    "it's her second time",
+    "she's a team lead i think",
+    "she's in training",
+    "she's new",
+    "she was late again",
+    "she has been coached before",
+    // v2-Gate-Bubbles-3 / QA on #889 (14 Nov 2026): a remark about her character is never a title ("Job title set to **Mess**").
+    "she's a mess",
+    "she's a good worker",
+    "she's a hard worker",
+    "she's a problem",
+    "she's a minor",
+  ])("on: %j is never a position", (reply) => {
+    vi.stubEnv("POSITION_ANSWER_NOT_A_SENTENCE_ENABLED", "true");
+    expect(readPositionAnswer(reply)).toBeNull();
+  });
+  it.each([
+    ["Team Member Part Time", "Team Member Part Time"],
+    ["keyholder", "Keyholder"],
+    ["assistant manager", "Assistant Manager"],
+    ["she's a shift lead.", "Shift Lead"],
+    ["she's a key holder", "Key Holder"],
+    // v2-Gate-Bubbles-3's probes: still read with the flag on.
+    ["shift lead", "Shift Lead"],
+    ["team member pt", "Team Member Pt"],
+    ["she is a team member", "Team Member"],
+    ["she is the store manager", "Store Manager"],
+    // v2-Gate-Bubbles-3's R889 (14 Nov 2026): a title the role words do not know, after "she is a/an/the/our".
+    ["she is a barista", "Barista"],
+    ["she's an artisan", "Artisan"],
+    // A title the role words do not know, said bare, reads as before.
+    ["makery artisan", "Makery Artisan"],
+  ])("on: a real title %j is still read", (reply, expected) => {
+    vi.stubEnv("POSITION_ANSWER_NOT_A_SENTENCE_ENABLED", "true");
+    expect(readPositionAnswer(reply)).toBe(expected);
+  });
+  it("off: as before, the sentence is read as a title", () => {
+    vi.stubEnv("POSITION_ANSWER_NOT_A_SENTENCE_ENABLED", "");
+    expect(readPositionAnswer("she gets a verbal warning")).toBe("She Gets A Verbal Warning");
   });
 });

@@ -1,4 +1,8 @@
-import { editMakeItAboutEnabled } from "@/lib/config/chat-quality-flags";
+import { FORM_IS_ABOUT } from "@/lib/ai/make-it-about";
+import {
+  editMakeItAboutEnabled,
+  thisFormIsAboutEnabled,
+} from "@/lib/config/chat-quality-flags";
 
 /**
  * ============================================================================
@@ -404,7 +408,8 @@ export function scopeRevision(
 ): RevisionScope {
   const { protectedKeys } = readFieldMentions(question, fields);
   const instructed = instructedFieldsIn(question, fields);
-  if (editMakeItAboutEnabled() && MAKE_IT_ABOUT.test(question ?? "")) {
+  // THIS_FORM_IS_ABOUT_ENABLED: "this form is about cash handling" says it as "make it about" does.
+  if (editMakeItAboutEnabled() && (MAKE_IT_ABOUT.test(question ?? "") || (thisFormIsAboutEnabled() && FORM_IS_ABOUT.test(question ?? "")))) {
     for (const key of ACCOUNT_KEYS) if (fields.some((field) => field.key === key)) instructed.add(key);
   }
   for (const key of protectedKeys) instructed.delete(key);

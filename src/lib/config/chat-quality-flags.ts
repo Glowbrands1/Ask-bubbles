@@ -1412,6 +1412,11 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ADD_OUT_OF_OTHER_SECTIONS_ENABLED",
   "EXIT_TYPO_WORDS_ENABLED",
   "CA_REASON_DUE_TO_ENABLED",
+  "REOPEN_IS_OPENING_ENABLED",
+  "BARE_FORM_NAME_ASKS_WHAT_ENABLED",
+  "THIS_FORM_IS_ABOUT_ENABLED",
+  "PASTED_REVIEW_ASKS_WHAT_YOU_SAW_ENABLED",
+  "CA_NO_POLICY_ASKS_WHICH_ENABLED",
   "COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED",
   // coding 5: EXIT_NOTICE_VERB_TYPOS (QA's October triage, 10 Nov 2026; default off).
   "EXIT_NOTICE_VERB_TYPOS_ENABLED",
@@ -1443,6 +1448,12 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FUZZY_STORE_ASKS_ENABLED",
   // coding 4: REQUEST_LINE_TITLE_KEPT (QA's Bubbles 17x live test, 14 Nov 2026; default off).
   "REQUEST_LINE_TITLE_KEPT_ENABLED",
+  // coding 4: ISSUE_KEEPS_WORK_AREA (QA, 13 Nov 2026; default off).
+  "ISSUE_KEEPS_WORK_AREA_ENABLED",
+  // coding 4: RELATIVE_DAY_PART_WORDS (ported from the sibling app, QA 13 Nov 2026; default off).
+  "RELATIVE_DAY_PART_WORDS_ENABLED",
+  // coding 4: PRIOR_ACTIONS_UNSAID_BLANK (QA's Bubbles 17x live test, 14 Nov 2026; default off).
+  "PRIOR_ACTIONS_UNSAID_BLANK_ENABLED",
   // coding 4: HEADING_DISTINCTIVE_WORDS (QA, 13 Nov 2026; default off).
   "HEADING_DISTINCTIVE_WORDS_ENABLED",
   // coding 4: PLACE_STRIP_WHOLE_PHRASE_ONLY (QA, 13 Nov 2026; default off).
@@ -1540,6 +1551,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "EDIT_SEES_SAVED_FORM_ENABLED",
   // CARD_CHECKED_AGAINST_WORDS (default off; Pau's direction via QA, 13 Nov 2026): in the list, as every chat flag.
   "CARD_CHECKED_AGAINST_WORDS_ENABLED",
+  // POSITION_ANSWER_NOT_A_SENTENCE (default off; QA's live 17w test, 13 Nov 2026): in the list, as every chat flag.
+  "POSITION_ANSWER_NOT_A_SENTENCE_ENABLED",
   // MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED (default off; QA's live 17u test, 13 Nov 2026): in the list, as every chat flag.
   "MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED_ENABLED",
   // ADD_ALREADY_ON_FORM_SAYS_SO (default off; QA's live 17u test, item 5, 13 Nov 2026): in the list, as every chat flag.
@@ -4773,6 +4786,16 @@ export function madeAboutRewriteFinishesEnabled(): boolean {
 }
 
 /**
+ * POSITION_ANSWER_NOT_A_SENTENCE_ENABLED (coding 6; QA's live Bubbles 17w test, 13 Nov 2026; default off). With the
+ * position question open, "she gets a verbal warning" became the card's Position ("She Gets A Verbal Warning"). On, a
+ * reply that is a sentence about her, or names a level, warning, earlier step or payment, is never a position answer
+ * (`forms/employee-position.ts`). Off, as before.
+ */
+export function positionAnswerNotASentenceEnabled(): boolean {
+  return envFlag("POSITION_ANSWER_NOT_A_SENTENCE_ENABLED");
+}
+
+/**
  * MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED_ENABLED (coding 6; QA's live 17u test, Ask Bubbles production, 13 Nov 2026;
  * default off). On a saved CA draft, "make it about her phone use instead, she was on her phone the whole shift" rewrote
  * the observation by the old path's revision, then had nothing else to write (a CA has no Other topic, no date was said)
@@ -5340,6 +5363,57 @@ export function noSelectionOnOpenCardEnabled(): boolean {
 }
 
 /**
+ * REOPEN_IS_OPENING_ENABLED (QA's Bubbles 17n live test, 12 Nov 2026; default off; same flag in both apps). "he was late
+ * to reoepn the store on 11/9" cited Attendance p.14 from "late", not Late Opening; "late to reopen the store", spelled
+ * right, did too. On: "late to reopen" and a slip within two letters of "reopen" are a late opening
+ * (`forms/late-open.ts`). Off, as before.
+ */
+export function reopenIsOpeningEnabled(): boolean {
+  return envFlag("REOPEN_IS_OPENING_ENABLED");
+}
+
+/**
+ * BARE_FORM_NAME_ASKS_WHAT_ENABLED (QA's Bubbles 17n live test, 12 Nov 2026, 4c; default off; same flag in both apps).
+ * A pasted bare "Corrective Action Form" got "Who is this form for? Tell me the employee's full name." and an empty
+ * card. On: a turn that is only a form's name, with a card naming nobody, asks what the manager needs on that form,
+ * with no card (`forms/bare-form-name.ts`). Off, as before.
+ */
+export function bareFormNameAsksWhatEnabled(): boolean {
+  return envFlag("BARE_FORM_NAME_ASKS_WHAT_ENABLED");
+}
+
+/**
+ * THIS_FORM_IS_ABOUT_ENABLED (QA's Bubbles 17n live test, 12 Nov 2026, item 3; default off; same flag in both apps). On
+ * an open Coaching draft, "this form is about cash handling" was answered "I haven't changed the Coaching Form …
+ * everything on it is as it was" and the topic was ignored: only "make it about <X>" was read. On: "this form is about
+ * <X>" (and "the coaching form / CA is / should be about <X>") is a made-about, read by the same chain
+ * (`ai/make-it-about.ts`, `forms/revision.ts`). Off, as before.
+ */
+export function thisFormIsAboutEnabled(): boolean {
+  return envFlag("THIS_FORM_IS_ABOUT_ENABLED");
+}
+
+/**
+ * PASTED_REVIEW_ASKS_WHAT_YOU_SAW_ENABLED (QA's Bubbles 17n live test, 12 Nov 2026, item 2; default off; same flag in both
+ * apps). A pasted customer review was rightly not taken as the account, but the reply said "Everything I need is here"
+ * and never mentioned it. On: the reply says the review is the customer's words and asks "What did you see happen?"
+ * (`forms/pasted-customer-review.ts`). Off, as before.
+ */
+export function pastedReviewAsksWhatYouSawEnabled(): boolean {
+  return envFlag("PASTED_REVIEW_ASKS_WHAT_YOU_SAW_ENABLED");
+}
+
+/**
+ * CA_NO_POLICY_ASKS_WHICH_ENABLED (QA's Bubbles 17n live test, 12 Nov 2026, 4a; QA's ruling; default off; same flag in
+ * both apps). "he forgot to clsoe the register at night" gave a Corrective Action card with no Policy line and no
+ * question. On: such a card asks "**Which policy applies?**" and picks none (`forms/no-policy-asks-which.ts`). Off, as
+ * before.
+ */
+export function caNoPolicyAsksWhichEnabled(): boolean {
+  return envFlag("CA_NO_POLICY_ASKS_WHICH_ENABLED");
+}
+
+/**
  * TERMINATION_STATED_TICKS_ENABLED (coding 6, 10 Nov 2026; default off;
  * ported from the sibling app: Pau's P15 ruling "A" there). "I need a term CA for <name>. …" — the card
  * asked "Verbal Warning or Written Warning?" and the form's Type of
@@ -5785,4 +5859,48 @@ export function levelLeadsRequestEnabled(): boolean {
  */
 export function revisedFormPointsToNewerEnabled(): boolean {
   return envFlag("REVISED_FORM_POINTS_TO_NEWER_ENABLED");
+}
+
+/**
+ * ISSUE_KEEPS_WORK_AREA (QA, 13 Nov 2026; default off): "a ca for <A> at the front desk, she was rude to a guest" — the
+ * request names who and where, and the card's Issue was only the account ("she was rude to a guest"): the work area
+ * was lost. With the flag, a work area said with the person ("front desk", "register", "back room"; `forms/work-area.ts`)
+ * stays on the Issue: "she was rude to a guest at the front desk". A store is still left off. See
+ * `forms/incident-issue.ts`. Off, as before.
+ */
+export function issueKeepsWorkAreaEnabled(): boolean {
+  return envFlag("ISSUE_KEEPS_WORK_AREA_ENABLED");
+}
+
+/**
+ * RELATIVE_DAY_PART_WORDS (ported from the sibling app: QA's live check there, 13 Nov 2026; default off): "she
+ * no-call no-showed tonight" gave a card with no Date. With the flag "tonight", "this morning", "this afternoon" and
+ * "this evening" read as the business today and "last night" as the business yesterday (`forms/relative-dates.ts`,
+ * with RELATIVE_DATE_READER). Off, as before.
+ */
+export function relativeDayPartWordsEnabled(): boolean {
+  return envFlag("RELATIVE_DAY_PART_WORDS_ENABLED");
+}
+
+/**
+ * CLEANING_POLICY_IS_CARE_AND_CLEANING_ENABLED (coding 5, 14 Nov 2026; default off; QA, from Gate-Bubbles-5's side note;
+ * same flag in both apps; ported from the sibling app). "for violating the cleaning policy, she did not do the sanitation" ticked no box and the card
+ * said the manual had no section for "cleaning": the named phrase set Pau's cleaning-is-Other rule aside, then matched no
+ * heading. On (QA's ruling): "the cleaning policy", "cleaning duties", "cleaning procedures" name the manual's heading
+ * with "cleaning" in it (Care and Cleaning of Equipment and Facilities, p.21), as "care and cleaning policy" does; "the
+ * sanitation policy" (not the heading's word) keeps the Other line and asks "Did you mean … (page 21)?"
+ * (`forms/named-policy-section.ts`). Off, as before.
+ */
+export function cleaningPolicyIsCareAndCleaningEnabled(): boolean {
+  return envFlag("CLEANING_POLICY_IS_CARE_AND_CLEANING_ENABLED");
+}
+
+/**
+ * PRIOR_ACTIONS_UNSAID_BLANK (QA's Bubbles 17x live test, 14 Nov 2026; default off): at Create, prior_actions was
+ * AI-filled "None — first occurrence" though the manager said nothing about history and the card said it would not
+ * guess. With the flag a "None" line is kept only where the manager said this is the first occurrence; otherwise the
+ * field stays blank. See `forms/prior-actions.ts` groundPriorActions. Off, as before.
+ */
+export function priorActionsUnsaidBlankEnabled(): boolean {
+  return envFlag("PRIOR_ACTIONS_UNSAID_BLANK_ENABLED");
 }
