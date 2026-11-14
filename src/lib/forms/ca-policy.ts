@@ -631,9 +631,47 @@ export function readCaPolicy(rawText: string): CaPolicyReading {
 const CONDUCT_INCIDENT =
   /\b(?:was\s+|were\s+|got\s+|being\s+)?(?:rude|unprofessional|argued|arguing|shouted|yelled|yelling|swore|swearing|cursed|cursing|disrespect\w*)\b(?:\s+(?:at|to|with)\s+(?:a|an|the|her|his|their|our)?\s*\w+)?/;
 
+/**
+ * POLICY_LINE_COVERS_EVERY_SECTION_ENABLED (Gate-Bubbles-4's NO-GO probe, 14 Nov 2026): a two-offense account ("she was
+ * late on 11/3/26 and she yelled at a customer") with one of its policies taken off ("take the attendance policy off the
+ * form", `policy-set-aside.ts`) is read for its policy without that offense's clause, so the other policy keeps its
+ * box, section, Policy Violated and plan. Only the text the policy is read from; the account itself is untouched.
+ * Unchanged when the flag is off, nothing of these two is taken off, or the account does not describe both.
+ */
+export function withoutSetAsideOffense(text: string, names: ReadonlySet<CaPolicyName>): string {
+  if (!policyLineCoversEverySectionEnabled()) return text;
+  const offAttendance = names.has("attendance");
+  const offConduct = names.has(STANDARDS_OF_CONDUCT);
+  if (offAttendance === offConduct) return text;
+  const conduct = (part: string) => CONDUCT_INCIDENT.test(normalize(part));
+  const late = (part: string) => describedAttendanceKeys(part) !== null;
+  if (!late(text) || !conduct(text)) return text;
+  const read = (text ?? "")
+    .split("\n")
+    .map((line) =>
+      line
+        .split(/\s*,\s*(?:and\s+)?|\s+and\s+/i)
+        .filter((part) => !(offAttendance ? late(part) && !conduct(part) : conduct(part) && !late(part)))
+        .join(" and "),
+    )
+    .join("\n");
+  return read.trim() === "" ? text : read;
+}
+
+/** POLICY_LINE_COVERS_EVERY_SECTION_ENABLED: the card line for the described section and the conduct incident beside it. */
+function bothSectionsLine(named: { readonly heading: string; readonly phrase: string; readonly page: number; readonly offenseKey: string }, conduct: string): string {
+  const box = currentBoxLabel(named.offenseKey);
+  return `**Policy:** ${named.heading} and Standards of Conduct, from what you described ("${named.phrase}"; "${conduct}") — the policy manual's ${named.heading} section on page ${named.page} and its Standards of Conduct section. I'll quote both on the draft${box ? ` under **${box}**` : ""} and **Standards of Conduct**; tell me if a different policy applies.`;
+}
+
 function withConductBesideLateness(reading: CaPolicyReading, said: string): CaPolicyReading {
   if (!policyLineCoversEverySectionEnabled()) return reading;
-  if (reading.stated !== null || reading.other || reading.ambiguous) return reading;
+  /*
+   * Gate-Bubbles-4's NO-GO probe on the chain (14 Nov 2026): "she was late on 11/3/26 and yelled at a customer, and
+   * didn't do the sanitation" read as cleaning (Other), so the conduct beside the lateness was never read and the card
+   * named Attendance only. A cleaning duty beside them is read past (OTHER_POLICY_AGREES's ruling (b) says Other beside).
+   */
+  if (reading.stated !== null || (reading.other && reading.other !== "cleaning") || reading.ambiguous) return reading;
   if (reading.suggestion === STANDARDS_OF_CONDUCT) return reading;
   if (describedAttendanceKeys(said) === null) return reading;
   const text = normalize(said);
@@ -1396,7 +1434,9 @@ export function caPolicyProposalLine(reading: CaPolicyReading, named: NamedPolic
    */
   // OTHER_POLICY_AGREES_ENABLED (QA's ruling (b)): a section described beside the cleaning duty leads; Other is said beside it.
   if (otherPolicyAgreesEnabled() && reading.other === "cleaning" && named?.lookup === "described" && named.besideOther) {
-    const line = namedPolicyLine(named);
+    // POLICY_LINE_COVERS_EVERY_SECTION_ENABLED (Gate-Bubbles-4's probe): a conduct incident beside the lateness is said too.
+    const line =
+      policyLineCoversEverySectionEnabled() && reading.alsoDescribed ? bothSectionsLine(named, reading.alsoDescribed.phrase) : namedPolicyLine(named);
     if (line) return `${line} ${OTHER_BESIDE_NOTE}`;
   }
   if (reading.other === "cleaning" && !(closeSpellingMatchEnabled() && named?.lookup === "found")) {
@@ -1433,8 +1473,7 @@ export function caPolicyProposalLine(reading: CaPolicyReading, named: NamedPolic
     return `**Policy:** ${joinedPolicies(labels)}, as you said. I'll quote each section from the current policy manual on the draft.`;
   }
   if (policyLineCoversEverySectionEnabled() && !reading.stated && reading.alsoDescribed && named?.lookup === "described") {
-    const box = currentBoxLabel(named.offenseKey);
-    return `**Policy:** ${named.heading} and Standards of Conduct, from what you described ("${named.phrase}"; "${reading.alsoDescribed.phrase}") — the policy manual's ${named.heading} section on page ${named.page} and its Standards of Conduct section. I'll quote both on the draft${box ? ` under **${box}**` : ""} and **Standards of Conduct**; tell me if a different policy applies.`;
+    return bothSectionsLine(named, reading.alsoDescribed.phrase);
   }
   if ((!reading.stated || readAsAttendance) && named && (named.lookup !== "missing" || (!reading.ambiguous && !reading.suggestion))) {
     return namedPolicyLine(named);

@@ -222,6 +222,7 @@ import {
   withConductOffense,
   withStatedOffense,
   withoutCleaningDuty,
+  withoutSetAsideOffense,
 } from "@/lib/forms/ca-policy";
 import { CA_SALES_POLICY_RULE, withSalesOffense } from "@/lib/forms/ca-sales-policy";
 import { ATTENDANCE_POLICY, CA_REVISION_7_OFFENSE_RULE, offeredOffenseKey, withOfferedOffense } from "@/lib/forms/offense-keys";
@@ -838,7 +839,8 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
      * this form is for, never the whole chat. Only the policy reads use it; payroll, exit and every other reader keep
      * the notes as sent.
      */
-    const policyNotes = secondRequestOwnAccountEnabled() ? currentFormRequestText(notes) : notes;
+    // POLICY_LINE_COVERS_EVERY_SECTION_ENABLED: a policy taken off a two-offense account is read without its clause (`withoutSetAsideOffense`).
+    const policyNotes = withoutSetAsideOffense(secondRequestOwnAccountEnabled() ? currentFormRequestText(notes) : notes, setAside.names);
     const wantsEppPolicy = fields.some((field) => field.key === EPP_POLICY_REFERENCE_KEY);
     const needsPolicy = fields.some(
       (field) => field.policyGrounded && field.key !== EPP_POLICY_REFERENCE_KEY,
