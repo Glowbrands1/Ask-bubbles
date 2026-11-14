@@ -1,0 +1,42 @@
+
+> ask-bubbles@0.1.0 eval
+> vitest run --config vitest.eval.config.mts
+
+
+ RUN  v4.1.11 /home/user/gate/r849
+
+
+Replay eval — flags on: POLICY_DASH_LINE_PAGE_ENABLED, ADDED_ACCOUNT_ON_CARD_ENABLED
+| Case | Flags off | Flags on |
+|---|---|---|
+| b9 | PASS 139ms | PASS 144ms |
+| b10 | PASS 352ms | PASS 362ms |
+| b11 | PASS 73ms | PASS 72ms |
+| b12 | FAIL (policy) 129ms | FAIL (policy) 129ms |
+| b18a | PASS 51ms | PASS 51ms |
+| b18b | PASS 40ms | PASS 41ms |
+| r1 | PASS 5ms | PASS 5ms |
+| b0 | PASS 189ms | PASS 162ms |
+| b1 | PASS 150ms | PASS 144ms |
+| b2 | PASS 78ms | PASS 70ms |
+| b3 | PASS 46ms | PASS 45ms |
+| b4 | PASS 134ms | PASS 140ms |
+| b5 | PASS 108ms | PASS 118ms |
+| b6 | PASS 162ms | PASS 163ms |
+| b7 | PASS 65ms | PASS 65ms |
+| b8 | PASS 25ms | PASS 26ms |
+| b13 | PASS 295ms | PASS 289ms |
+| b14 | PASS 18ms | PASS 18ms |
+| b15 | PASS 337ms | PASS 342ms |
+| b16 | PASS 13ms | PASS 15ms |
+| b17 | PASS 300ms | PASS 322ms |
+| sf-b1 | PASS 341ms | PASS 387ms |
+| sf-b3 | PASS 103ms | PASS 101ms |
+| sf-b4 | PASS 14ms | PASS 15ms |
+Latency p50/p95 off 103/341 ms, on 101/362 ms; total off 3167 ms, on 3226 ms.
+
+ Test Files  2 passed (2)
+      Tests  35 passed (35)
+   Start at  04:53:56
+   Duration  24.75s (transform 3.46s, setup 0ms, import 3.88s, tests 20.59s, environment 0ms)
+

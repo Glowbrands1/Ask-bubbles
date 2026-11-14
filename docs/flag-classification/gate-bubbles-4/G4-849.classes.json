@@ -1,0 +1,646 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-17q-1-wrong-items-policy-page: (1) \"she rang up the wrong items on 11/9\": the Standards of Conduct Policy line carries its printed page (p.12) \u2014 OPEN in production (**Policy:** Standards of Conduct \u2014 ringing up a sale inaccurately, with no page)": {
+  "category": "INTENDED",
+  "reason": "OPEN case holds with the flag on (page on the dash line)"
+ },
+ "src/lib/ai/flags-off-parity.test.ts :: existing chat and form suites with every new flag off passes the suites whose expectations are already on main: src/app/api/chat/replay-pack, first half of the cases by id": {
+  "category": "INTENDED-HARNESS",
+  "reason": "parity suite expects OPEN cases to fail; nov12-17q-1 holds under ON"
+ },
+ "src/lib/forms/added-account-on-card.test.ts :: ADDED_ACCOUNT_ON_CARD_ENABLED off: the card is as the forms path wrote it": {
+  "category": "INTENDED-HARNESS",
+  "reason": "flag-off unit test fails when the harness forces the flag on"
+ },
+ "src/lib/forms/policy-page-on-card.test.ts :: WORN_CLOTHING_IS_DRESS_CODE_ENABLED: the read-from-request policy line gets its printed page off: the line is left as it was (no page)": {
+  "category": "INTENDED-HARNESS",
+  "reason": "WORN_CLOTHING off-test: with POLICY_DASH_LINE_PAGE forced on, the \"Dress Code \u2014 read from this request\" line is a dash line and gets its page anyway (WORN_CLOTHING is on in production)"
+ },
+ "src/lib/forms/policy-page-on-card.test.ts :: the card's own policy lines get the page; nothing else changes never alters the manager's words, a line that already has a page, or a name without one page": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "main guard lists \"**Policy:** Attendance \u2014 missing the monthly meeting \u2026\" as unchanged; with POLICY_DASH_LINE_PAGE on it is a dash line and gets p.14, which is what the flag is for. The PR should move that line to its flag-off case before the flip"
+ },
+ "replay: nov10-b4-twin-ca-not-coaching-form-type [fix:CA_SALES_POLICY_ENABLED,PASTED_FORM_NAME_NOT_REQUEST_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov10-b4-twin-ca-not-coaching-form-type [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov10-r23-sf-s21-pasted-outline-to-open-draft [fix:TEMPLATE_OUTLINE_FIELDS_ENABLED,PASTED_OUTLINE_TO_OPEN_DRAFT_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov10-r23-sf-s21-pasted-outline-to-open-draft [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov10-twin-sf-s21-template-outline-saved [fix:TEMPLATE_OUTLINE_FIELDS_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov10-twin-sf-s21-template-outline-saved [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov10-twin-sf-s22-pasted-review-never-drafted [fix:PASTED_REVIEW_NOT_ACCOUNT_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov10-twin-sf-s22-pasted-review-never-drafted [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov11-r25-5c-pasted-steps-keep-line-breaks [fix:TEMPLATE_OUTLINE_FIELDS_ENABLED,PASTED_OUTLINE_TO_OPEN_DRAFT_ENABLED,PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov11-r25-5c-pasted-steps-keep-line-breaks [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov11-r25-sf-s21-pasted-template-fills-open-draft [fix:TEMPLATE_OUTLINE_FIELDS_ENABLED,PASTED_OUTLINE_TO_OPEN_DRAFT_ENABLED,PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov11-r25-sf-s21-pasted-template-fills-open-draft [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov12-17q-1-wrong-items-policy-page [open]": {
+  "category": "INTENDED",
+  "reason": "OPEN case holds: the dash policy line gets its printed page (Standards of Conduct (JBA Policy Manual p.12) \u2014 ringing up a sale inaccurately)"
+ },
+ "replay: nov12-17q-7-also-left-register-unlocked-on-card [production]": {
+  "category": "REGRESSION",
+  "reason": "ADDED_ACCOUNT_ON_CARD: the added fact is already on the card (CARD_CHECKED_AGAINST_WORDS, on main/production) and is added a second time: \"\u2026; she left the register unlocked. She also left the register unlocked\""
+ },
+ "replay: nov12-same-request-carries-no-level-or-topic [fix:SAME_REQUEST_CARRIES_ACCOUNT_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov12-same-request-carries-no-level-or-topic [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov13-17rc-added-detail-kept-on-card [fix:CARD_CHECKED_AGAINST_WORDS_ENABLED]": {
+  "category": "REGRESSION",
+  "reason": "ADDED_ACCOUNT_ON_CARD: the added fact is already on the card (CARD_CHECKED_AGAINST_WORDS, on main/production) and is added a second time: \"\u2026; she left the register unlocked. She also left the register unlocked\""
+ },
+ "replay: nov13-17rc-added-detail-kept-on-card [production]": {
+  "category": "REGRESSION",
+  "reason": "ADDED_ACCOUNT_ON_CARD: the added fact is already on the card (CARD_CHECKED_AGAINST_WORDS, on main/production) and is added a second time: \"\u2026; she left the register unlocked. She also left the register unlocked\""
+ },
+ "replay: nov13-ca-asks-what-happened-negative-sales-shortfall [fix:CA_ASKS_WHAT_HAPPENED_ENABLED,WHAT_HAPPENED_NO_CREATE_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov13-ca-asks-what-happened-negative-sales-shortfall [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov2-p1a-policy-turn-drops-account [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov2-p3-policy-and-prior-coaching [fix:POLICY_CHANGE_REST_OF_TURN_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov2-p3-policy-and-prior-coaching [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov2-p6-dm-title [fix:TITLE_NOT_SPEAKERS_MANAGER_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov2-p6-dm-title [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov3-stepb-prior-coaching-kept [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov3-stepb-prior-coaching-kept [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov4-ca-sales-low-sales [fix:CA_SALES_POLICY_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov4-ca-sales-low-sales [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov4-ca-sales-msb [fix:CA_SALES_POLICY_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov4-ca-sales-msb [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov4-ca-sales-wrong-items [fix:CA_SALES_POLICY_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov4-ca-sales-wrong-items [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov4-ca-sales-wrong-items-card [fix:REGISTER_ACCURACY_CONDUCT_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov4-ca-sales-wrong-items-card [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov4-cleaning-negative-msb [fix:CA_SALES_POLICY_ENABLED,CHAT_GLOSSARY_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov4-cleaning-negative-msb [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov4-cleaning-wrong-items-keeps-conduct [fix:CA_SALES_POLICY_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov4-cleaning-wrong-items-keeps-conduct [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov4-mgr-1-verbal-metrics [fix:CA_SALES_POLICY_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov4-mgr-1-verbal-metrics [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov4-mgr-3-salon-metrics [fix:CA_SALES_POLICY_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov4-mgr-3-salon-metrics [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov4-mgr-4-msb-october [fix:CA_SALES_POLICY_ENABLED,CHAT_GLOSSARY_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov4-mgr-4-msb-october [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov4-pau-metrics-not-people [fix:FORM_NAME_FROM_ROSTER_ENABLED,CA_SALES_POLICY_ENABLED,CHAT_GLOSSARY_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov4-pau-metrics-not-people [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov4-pau-metrics-not-people-lowercase-first-name [fix:FORM_NAME_FROM_ROSTER_ENABLED,CA_SALES_POLICY_ENABLED,CHAT_GLOSSARY_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov4-pau-metrics-not-people-lowercase-first-name [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov4-pau-metrics-not-people-unknown [fix:FORM_NAME_FROM_ROSTER_ENABLED,CA_SALES_POLICY_ENABLED,CHAT_GLOSSARY_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov4-pau-metrics-not-people-unknown [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov4-pau5-1-verbal-under-performance-metrics [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov4-pau5-2-ca-for-msb [fix:CA_SALES_POLICY_ENABLED,CHAT_GLOSSARY_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov4-pau5-2-ca-for-msb [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov4-pau5-3-under-performance-salon-metrics [fix:CA_SALES_POLICY_ENABLED,CHAT_GLOSSARY_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov4-pau5-3-under-performance-salon-metrics [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov4-pau5-4-msb-ca-underperformance-october [fix:CA_SALES_POLICY_ENABLED,CHAT_GLOSSARY_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov4-pau5-4-msb-ca-underperformance-october [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov4-scan-sf-s11-same-for-another [fix:SAME_REQUEST_OTHER_PERSON_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov4-scan-sf-s11-same-for-another [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov4-scan-sf-s16-standards-of-conduct-turn-2 [open]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov4-scan-sf-s19-corrective-action-answer [open]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov5-coding3-twin-ca-for-performance-is-an-account [fix:CA_SALES_POLICY_ENABLED,WRITE_ME_THE_FORM_ENABLED,CA_PERFORMANCE_REASON_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov5-coding3-twin-ca-for-performance-is-an-account [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov5-metric-guard-full-name-kept [fix:METRIC_GUARD_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov5-metric-guard-full-name-kept [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov5-reply-own-words-qa-probe [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov5-request-slot-off-roster-name [fix:FORM_NAME_FROM_ROSTER_ENABLED,CA_SALES_POLICY_ENABLED,CHAT_GLOSSARY_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov5-request-slot-off-roster-name [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov5-request-slot-off-roster-name-models [fix:FORM_NAME_FROM_ROSTER_ENABLED,CA_SALES_POLICY_ENABLED,CHAT_GLOSSARY_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov5-request-slot-off-roster-name-models [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov5-request-slot-on-roster-name [fix:FORM_NAME_FROM_ROSTER_ENABLED,CA_SALES_POLICY_ENABLED,CHAT_GLOSSARY_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov5-request-slot-on-roster-name [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov5-roster-only-message-8-metrics [fix:FORM_NAME_FROM_ROSTER_ENABLED,CA_SALES_POLICY_ENABLED,CHAT_GLOSSARY_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov5-roster-only-message-8-metrics [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov5-stale-prompt-lines-sales-other-write-in [fix:CA_SALES_POLICY_ENABLED,FORM_NAME_FROM_ROSTER_ENABLED,STALE_PROMPT_LINES_OFF_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov5-stale-prompt-lines-sales-other-write-in [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov5-stale-prompt-lines-sales-ticks-conduct [fix:CA_SALES_POLICY_ENABLED,FORM_NAME_FROM_ROSTER_ENABLED,STALE_PROMPT_LINES_OFF_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov5-stale-prompt-lines-sales-ticks-conduct [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov5-stale-prompt-lines-sales-under-performance [fix:CA_SALES_POLICY_ENABLED,FORM_NAME_FROM_ROSTER_ENABLED,STALE_PROMPT_LINES_OFF_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov5-stale-prompt-lines-sales-under-performance [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov5-twin-sf-s21-must-see-behaviors-template [fix:TEMPLATE_OUTLINE_FIELDS_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov5-twin-sf-s21-must-see-behaviors-template [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov5-twin-sf-s22-ca-not-coaching [fix:PASTED_REVIEW_NOT_ACCOUNT_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov5-twin-sf-s22-ca-not-coaching [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov5-twin-sf-s23-payroll-answer-and-policy-change [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov5-twin-sf-s24-must-see-behaviors-and-coaching-on-file [fix:AS_YOU_SAID_MANAGER_WORDS_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov5-twin-sf-s24-must-see-behaviors-and-coaching-on-file [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov6-ca-reason-because-of-draft-observation [fix:CA_REASON_DUE_TO_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov6-ca-reason-because-of-draft-observation [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov6-ca-reason-due-to-card-issue [fix:CA_REASON_DUE_TO_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov6-ca-reason-due-to-card-issue [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov6-ca-reason-due-to-draft-observation [fix:CA_REASON_DUE_TO_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov6-ca-reason-due-to-draft-observation [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov6-ca-reason-negative-account [fix:CA_REASON_DUE_TO_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov6-ca-reason-negative-account [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov6-offer-never-qa-probe [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov6-offer-never-qa-probe [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov6-sales-shortfall-object-performance-h01 [fix:SALES_SHORTFALL_OBJECT_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov6-sales-shortfall-object-performance-h01 [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov6-sales-shortfall-object-performance-h13 [fix:SALES_SHORTFALL_OBJECT_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov6-sales-shortfall-object-performance-h13 [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov6-sales-shortfall-object-requirements [fix:SALES_SHORTFALL_OBJECT_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov6-sales-shortfall-object-requirements [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov6-under-performance-explained-asked-at-once [fix:UNDER_PERFORMANCE_EXPLAINED_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov6-under-performance-explained-asked-at-once [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov6-under-performance-explained-negative [fix:UNDER_PERFORMANCE_EXPLAINED_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov6-under-performance-explained-negative [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov6-under-performance-explained-one-word [fix:UNDER_PERFORMANCE_EXPLAINED_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov6-under-performance-explained-one-word [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov6-under-performance-explained-tester [fix:UNDER_PERFORMANCE_EXPLAINED_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov6-under-performance-explained-tester [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov7-msb-phrase-soc [fix:MSB_PHRASE_SOC_ENABLED,CA_SALES_POLICY_ENABLED,AS_YOU_SAID_MANAGER_WORDS_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov7-msb-phrase-soc [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov7-refusal-sun-msb-format [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov7-refusal-sun-msb-format [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov7-refusal-sun-same-outline [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov7-refusal-sun-same-outline [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov7-sales-observation-h01 [fix:SALES_SHORTFALL_OBJECT_ENABLED,SALES_OBSERVATION_ACCOUNT_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov7-sales-observation-h01 [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov7-sales-observation-p1a [fix:SALES_SHORTFALL_OBJECT_ENABLED,SALES_OBSERVATION_ACCOUNT_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov7-sales-observation-p1a [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov7-sales-observation-sf-s23 [fix:SALES_SHORTFALL_OBJECT_ENABLED,SALES_OBSERVATION_ACCOUNT_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov7-sales-observation-sf-s23 [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov8-issue-after-request-reason-alone [fix:ISSUE_AFTER_REQUEST_REASON_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov8-issue-after-request-reason-alone [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov8-issue-after-request-reason-for [fix:ISSUE_AFTER_REQUEST_REASON_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov8-issue-after-request-reason-for [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov8-issue-after-request-reason-made-for [fix:ISSUE_AFTER_REQUEST_REASON_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov8-issue-after-request-reason-made-for [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov8-issue-after-request-reason-policy-correction [fix:ISSUE_AFTER_REQUEST_REASON_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov8-issue-after-request-reason-policy-correction [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov8-near-miss-open-form-kept-sun-msb-format [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,NEAR_MISS_QUESTION_RULES_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov8-near-miss-open-form-kept-sun-msb-format [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov8-observation-done-for-under-performance [fix:REQUEST_PARTICIPLE_LEAD_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov8-observation-done-for-under-performance [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov8-observation-made-for-under-performance [fix:REQUEST_PARTICIPLE_LEAD_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov8-observation-made-for-under-performance [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov8-policy-correction-not-account [fix:POLICY_CORRECTION_NOT_ACCOUNT_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov8-policy-correction-not-account [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov8-policy-remark-not-account [fix:PROPOSAL_POLICY_SET_ASIDE_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov8-policy-remark-not-account [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov8-policy-set-aside-stays-off [fix:PROPOSAL_POLICY_SET_ASIDE_ENABLED]": {
+  "category": "REGRESSION",
+  "reason": "ADDED_ACCOUNT_ON_CARD: the added fact is already on the card (CARD_CHECKED_AGAINST_WORDS, on main/production) and is added a second time: \"\u2026; she left the register unlocked. She also left the register unlocked\""
+ },
+ "replay: nov8-policy-set-aside-stays-off [production]": {
+  "category": "REGRESSION",
+  "reason": "ADDED_ACCOUNT_ON_CARD: the added fact is already on the card (CARD_CHECKED_AGAINST_WORDS, on main/production) and is added a second time: \"\u2026; she left the register unlocked. She also left the register unlocked\""
+ },
+ "replay: nov8-r5-prior-step-date-list [fix:PRIOR_STEP_DATE_LIST_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov8-r5-prior-step-date-list [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov8-r5-step-dates-no-today [fix:STEP_DATES_NOT_FORM_DATE_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov8-r5-step-dates-no-today [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov8-r5-step-dates-today-is-fine [fix:STEP_DATES_NOT_FORM_DATE_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov8-r5-step-dates-today-is-fine [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov8-reopen-not-open-form-msb-format [fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPLY_FROM_DIFF_ENABLED,FORM_EDIT_SINGLE_WRITER_ENABLED,FORM_EDIT_SAID_REPLACEMENT_ENABLED,FORM_PATCH_READER_FIXES_ENABLED,REOPEN_BY_ANY_OPEN_VERB_ENABLED,REOPEN_NOT_OPEN_FORM_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov8-reopen-not-open-form-msb-format [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov8-sales-triple-reason-alone-is-the-issue [fix:SALES_SHORTFALL_OBJECT_ENABLED,SALES_OBSERVATION_ACCOUNT_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov8-sales-triple-reason-alone-is-the-issue [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov8-sales-triple-this-is-for-under-performance [fix:SALES_SHORTFALL_OBJECT_ENABLED,SALES_OBSERVATION_ACCOUNT_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ },
+ "replay: nov8-sales-triple-this-is-for-under-performance [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "POLICY_DASH_LINE_PAGE: the \"**Policy:** Standards of Conduct \u2014 <what>\" line gets \"(JBA Policy Manual p.12)\"; the card then names a known section, so POLICY_CITATION (production) appends the Standards of Conduct excerpt block, as it already does for \"\u2026, as you said\" lines. Case still holds/fails as before"
+ }
+}

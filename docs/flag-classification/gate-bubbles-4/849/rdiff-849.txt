@@ -1,0 +1,2581 @@
+===== nov10-b4-twin-ca-not-coaching-form-type | fix:CA_SALES_POLICY_ENABLED,PASTED_FORM_ | off ok True | on ok True
+ T1 Q: create a ca for must see behaviors for performace  this should be for wynne sarrow  - verbal / 146 transactions  / Below in UPT, Average Sale, Conversion  but i nee
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+ T2 Q: Use this to make it: Please make the following edits and resubmit: /  / 1. **Kit Coaching Document:** This was signed on 10/16/2026. I do not see a date showing tha
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+ T3 Q: It needs to be a CA, not a coaching form
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+ T5 Q: Its a CA
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov10-b4-twin-ca-not-coaching-form-type | production | off ok True | on ok True
+ T1 Q: create a ca for must see behaviors for performace  this should be for wynne sarrow  - verbal / 146 transactions  / Below in UPT, Average Sale, Conversion  but i nee
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+ T2 Q: Use this to make it: Please make the following edits and resubmit: /  / 1. **Kit Coaching Document:** This was signed on 10/16/2026. I do not see a date showing tha
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+ T3 Q: It needs to be a CA, not a coaching form
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+ T5 Q: Its a CA
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov10-r23-sf-s21-pasted-outline-to-open-draft | fix:TEMPLATE_OUTLINE_FIELDS_ENABLED,PAST | off ok True | on ok True
+ T1 Q: create a ca for must see behaviors for performace  this should be for wynne sarrow  - verbal / 146 transactions  / Below in UPT, Average Sale, Conversion
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov10-r23-sf-s21-pasted-outline-to-open-draft | production | off ok True | on ok True
+ T1 Q: create a ca for must see behaviors for performace  this should be for wynne sarrow  - verbal / 146 transactions  / Below in UPT, Average Sale, Conversion
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov10-twin-sf-s21-template-outline-saved | fix:TEMPLATE_OUTLINE_FIELDS_ENABLED | off ok True | on ok True
+ T1 Q: create a ca for must see behaviors for performace  this should be for wynne sarrow  - verbal / 146 transactions  / Below in UPT, Average Sale, Conversion
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov10-twin-sf-s21-template-outline-saved | production | off ok True | on ok True
+ T1 Q: create a ca for must see behaviors for performace  this should be for wynne sarrow  - verbal / 146 transactions  / Below in UPT, Average Sale, Conversion
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov10-twin-sf-s22-pasted-review-never-drafted | fix:PASTED_REVIEW_NOT_ACCOUNT_ENABLED | off ok True | on ok True
+ T1 Q: create a ca for must see behaviors for performace  this should be for wynne sarrow  - verbal / 146 transactions  / Below in UPT, Average Sale, Conversion  but i nee
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+ T2 Q: Use this to make it: Please make the following edits and resubmit: /  / 1. **Kit Coaching Document:** This was signed on 10/16/2026. I do not see a date showing tha
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov10-twin-sf-s22-pasted-review-never-drafted | production | off ok True | on ok True
+ T1 Q: create a ca for must see behaviors for performace  this should be for wynne sarrow  - verbal / 146 transactions  / Below in UPT, Average Sale, Conversion  but i nee
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+ T2 Q: Use this to make it: Please make the following edits and resubmit: /  / 1. **Kit Coaching Document:** This was signed on 10/16/2026. I do not see a date showing tha
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov11-r25-5c-pasted-steps-keep-line-breaks | fix:TEMPLATE_OUTLINE_FIELDS_ENABLED,PAST | off ok True | on ok True
+ T1 Q: create a ca for must see behaviors for performace  this should be for wynne sarrow  - verbal / 146 transactions  / Below in UPT, Average Sale, Conversion
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov11-r25-5c-pasted-steps-keep-line-breaks | production | off ok True | on ok True
+ T1 Q: create a ca for must see behaviors for performace  this should be for wynne sarrow  - verbal / 146 transactions  / Below in UPT, Average Sale, Conversion
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov11-r25-sf-s21-pasted-template-fills-open-draft | fix:TEMPLATE_OUTLINE_FIELDS_ENABLED,PAST | off ok True | on ok True
+ T1 Q: create a ca for must see behaviors for performace  this should be for wynne sarrow  - verbal / 146 transactions  / Below in UPT, Average Sale, Conversion
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov11-r25-sf-s21-pasted-template-fills-open-draft | production | off ok True | on ok True
+ T1 Q: create a ca for must see behaviors for performace  this should be for wynne sarrow  - verbal / 146 transactions  / Below in UPT, Average Sale, Conversion
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov12-17q-1-wrong-items-policy-page | open | off ok False | on ok True
+  off err: the Policy line has no printed page:
+ T1 Q: create a CA for Marnie Holloway, she rang up the wrong items on 11/9
+    -**Policy:** Standards of Conduct — ringing up a sale inaccurately. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — ringing up a sale inaccurately. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov12-17q-7-also-left-register-unlocked-on-card | production | off ok True | on ok True
+ T2 Q: she also left the register unlocked
+    -**Issue:** she was late on 11/3/26; she left the register unlocked · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Marnie Holloway is assigned) — tell me if that should change
+    +**Issue:** she was late on 11/3/26; she left the register unlocked. She also left the register unlocked · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Marnie Holloway is assigned) — tell me if that should change
+===== nov12-same-request-carries-no-level-or-topic | fix:SAME_REQUEST_CARRIES_ACCOUNT_ENABLED | off ok True | on ok True
+ T2 Q: Odalys Frewen. Verbal Warning. Under Performance.
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+ T3 Q: Can you do the same thing for Perrin Haldane but switch it to a written
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov12-same-request-carries-no-level-or-topic | production | off ok True | on ok True
+ T2 Q: Odalys Frewen. Verbal Warning. Under Performance.
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+ T3 Q: Can you do the same thing for Perrin Haldane but switch it to a written
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov13-17rc-added-detail-kept-on-card | fix:CARD_CHECKED_AGAINST_WORDS_ENABLED | off ok True | on ok True
+ T2 Q: she also didn't call to say she'd be late
+    -**Issue:** she was late on 11/3/26; she didn't call to say she'd be late · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Marnie Holloway is assigned) — tell me if that should change
+    +**Issue:** she was late on 11/3/26; she didn't call to say she'd be late. She also didn't call to say she'd be late · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Marnie Holloway is assigned) — tell me if that should change
+===== nov13-17rc-added-detail-kept-on-card | production | off ok True | on ok True
+ T2 Q: she also didn't call to say she'd be late
+    -**Issue:** she was late on 11/3/26; she didn't call to say she'd be late · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Marnie Holloway is assigned) — tell me if that should change
+    +**Issue:** she was late on 11/3/26; she didn't call to say she'd be late. She also didn't call to say she'd be late · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Marnie Holloway is assigned) — tell me if that should change
+===== nov13-ca-asks-what-happened-negative-sales-shortfall | fix:CA_ASKS_WHAT_HAPPENED_ENABLED,WHAT_H | off ok True | on ok True
+ T1 Q: I need a verbal corrective action made for Rowan Kestrel. Not meeting sales requirements for the month of October
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov13-ca-asks-what-happened-negative-sales-shortfall | production | off ok True | on ok True
+ T1 Q: I need a verbal corrective action made for Rowan Kestrel. Not meeting sales requirements for the month of October
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov2-p1a-policy-turn-drops-account | production | off ok True | on ok True
+ T1 Q: Can you make a written CA for remy calder on performance
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+ T2 Q: She had 24 transactions and was below in Below in UPT, ATV, average ticket, and units per transaction
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+ T3 Q: the policy would be must see behaviors on woven
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+    +
+===== nov2-p3-policy-and-prior-coaching | fix:POLICY_CHANGE_REST_OF_TURN_ENABLED | off ok True | on ok True
+ T1 Q: CA for Remy Calder for underperformance in the month of October
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov2-p3-policy-and-prior-coaching | production | off ok True | on ok True
+ T1 Q: CA for Remy Calder for underperformance in the month of October
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov2-p6-dm-title | fix:TITLE_NOT_SPEAKERS_MANAGER_ENABLED | off ok True | on ok True
+ T2 Q: can you make a verbal warning Ca
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov2-p6-dm-title | production | off ok True | on ok True
+ T2 Q: can you make a verbal warning Ca
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov3-stepb-prior-coaching-kept | fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPL | off ok True | on ok True
+ T1 Q: CA for Remy Calder for underperformance in the month of October
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov3-stepb-prior-coaching-kept | production | off ok True | on ok True
+ T1 Q: CA for Remy Calder for underperformance in the month of October
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov4-ca-sales-low-sales | fix:CA_SALES_POLICY_ENABLED | off ok True | on ok True
+ T1 Q: write a corrective action for Bramwell Ostick, his sales are low and he is not hitting his goals
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov4-ca-sales-low-sales | production | off ok True | on ok True
+ T1 Q: write a corrective action for Bramwell Ostick, his sales are low and he is not hitting his goals
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov4-ca-sales-msb | fix:CA_SALES_POLICY_ENABLED | off ok True | on ok True
+ T1 Q: I need a corrective action for Thessaly Granfort for MSB
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov4-ca-sales-msb | production | off ok True | on ok True
+ T1 Q: I need a corrective action for Thessaly Granfort for MSB
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov4-ca-sales-wrong-items | fix:CA_SALES_POLICY_ENABLED | off ok True | on ok True
+ T1 Q: create a corrective action for Coralie Vantreese for ringing up the wrong items on a guest's order
+    -**Policy:** Standards of Conduct — ringing up a sale inaccurately. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — ringing up a sale inaccurately. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov4-ca-sales-wrong-items | production | off ok True | on ok True
+ T1 Q: create a corrective action for Coralie Vantreese for ringing up the wrong items on a guest's order
+    -**Policy:** Standards of Conduct — ringing up a sale inaccurately. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — ringing up a sale inaccurately. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov4-ca-sales-wrong-items-card | fix:REGISTER_ACCURACY_CONDUCT_ENABLED | off ok True | on ok True
+ T1 Q: create a corrective action for Coralie Vantreese for ringing up the wrong items on a guest's order
+    -**Policy:** Standards of Conduct — ringing up a sale inaccurately. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — ringing up a sale inaccurately. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov4-ca-sales-wrong-items-card | production | off ok True | on ok True
+ T1 Q: create a corrective action for Coralie Vantreese for ringing up the wrong items on a guest's order
+    -**Policy:** Standards of Conduct — ringing up a sale inaccurately. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — ringing up a sale inaccurately. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov4-cleaning-negative-msb | fix:CA_SALES_POLICY_ENABLED,CHAT_GLOSSAR | off ok True | on ok True
+ T1 Q: MSB CA for Mireille Duskwater for underperformance in the month of October
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov4-cleaning-negative-msb | production | off ok True | on ok True
+ T1 Q: MSB CA for Mireille Duskwater for underperformance in the month of October
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov4-cleaning-wrong-items-keeps-conduct | fix:CA_SALES_POLICY_ENABLED | off ok True | on ok True
+ T1 Q: create a corrective action for Halloran Sweetbriar for ringing up the wrong items on a guest's order
+    -**Policy:** Standards of Conduct — ringing up a sale inaccurately. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — ringing up a sale inaccurately. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov4-cleaning-wrong-items-keeps-conduct | production | off ok True | on ok True
+ T1 Q: create a corrective action for Halloran Sweetbriar for ringing up the wrong items on a guest's order
+    -**Policy:** Standards of Conduct — ringing up a sale inaccurately. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — ringing up a sale inaccurately. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov4-mgr-1-verbal-metrics | fix:CA_SALES_POLICY_ENABLED | off ok True | on ok True
+ T1 Q: I need a corrective action verbal for Eustace Merriweld. This is for Under Performance on UPT, ATV, Average Ticket, Bundle Rate %, and Gift %.
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov4-mgr-1-verbal-metrics | production | off ok True | on ok True
+ T1 Q: I need a corrective action verbal for Eustace Merriweld. This is for Under Performance on UPT, ATV, Average Ticket, Bundle Rate %, and Gift %.
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov4-mgr-3-salon-metrics | fix:CA_SALES_POLICY_ENABLED | off ok True | on ok True
+ T1 Q: CA for Tobiah Ellerslie due to under performance in salon metrics
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov4-mgr-3-salon-metrics | production | off ok True | on ok True
+ T1 Q: CA for Tobiah Ellerslie due to under performance in salon metrics
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov4-mgr-4-msb-october | fix:CA_SALES_POLICY_ENABLED,CHAT_GLOSSAR | off ok True | on ok True
+ T1 Q: MSB CA for Galen Thackeray for underperformance in the month of October
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov4-mgr-4-msb-october | production | off ok True | on ok True
+ T1 Q: MSB CA for Galen Thackeray for underperformance in the month of October
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov4-pau-metrics-not-people | fix:FORM_NAME_FROM_ROSTER_ENABLED,CA_SAL | off ok True | on ok True
+ T1 Q: I need a corrective action verbal for Perpetua Thornquist. This is for Under Performance on UPT, ATV, Average Ticket, Bundle Rate %, and Gift %.
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov4-pau-metrics-not-people | production | off ok True | on ok True
+ T1 Q: I need a corrective action verbal for Perpetua Thornquist. This is for Under Performance on UPT, ATV, Average Ticket, Bundle Rate %, and Gift %.
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov4-pau-metrics-not-people-lowercase-first-name | fix:FORM_NAME_FROM_ROSTER_ENABLED,CA_SAL | off ok True | on ok True
+ T2 Q: yes
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov4-pau-metrics-not-people-lowercase-first-name | production | off ok True | on ok True
+ T2 Q: yes
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov4-pau-metrics-not-people-unknown | fix:FORM_NAME_FROM_ROSTER_ENABLED,CA_SAL | off ok True | on ok True
+ T2 Q: Zuleika Brightwell
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov4-pau-metrics-not-people-unknown | production | off ok True | on ok True
+ T2 Q: Zuleika Brightwell
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov4-pau5-1-verbal-under-performance-metrics | production | off ok True | on ok True
+ T1 Q: I need a corrective action verbal for Ysolde Marrowick. This is for Under Performance on UPT, ATV, Average Ticket, Bundle Rate %, and Gift %.
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov4-pau5-2-ca-for-msb | fix:CA_SALES_POLICY_ENABLED,CHAT_GLOSSAR | off ok True | on ok True
+ T2 Q: Thaddeus Quillane
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov4-pau5-2-ca-for-msb | production | off ok True | on ok True
+ T2 Q: Thaddeus Quillane
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov4-pau5-3-under-performance-salon-metrics | fix:CA_SALES_POLICY_ENABLED,CHAT_GLOSSAR | off ok True | on ok True
+ T1 Q: CA for Briony Fellwater due to under performance in salon metrics
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov4-pau5-3-under-performance-salon-metrics | production | off ok True | on ok True
+ T1 Q: CA for Briony Fellwater due to under performance in salon metrics
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov4-pau5-4-msb-ca-underperformance-october | fix:CA_SALES_POLICY_ENABLED,CHAT_GLOSSAR | off ok True | on ok True
+ T1 Q: MSB CA for Osric Vantablade for underperformance in the month of October
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov4-pau5-4-msb-ca-underperformance-october | production | off ok True | on ok True
+ T1 Q: MSB CA for Osric Vantablade for underperformance in the month of October
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov4-scan-sf-s11-same-for-another | fix:SAME_REQUEST_OTHER_PERSON_ENABLED | off ok True | on ok True
+ T2 Q: Odalys Frewen. Verbal Warning. Under Performance.
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+ T3 Q: Can you do the same thing for Perrin Haldane but switch it to a written
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov4-scan-sf-s11-same-for-another | production | off ok True | on ok True
+ T2 Q: Odalys Frewen. Verbal Warning. Under Performance.
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+ T3 Q: Can you do the same thing for Perrin Haldane but switch it to a written
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov4-scan-sf-s16-standards-of-conduct-turn-2 | open | off ok False | on ok False
+  off err: the policy instruction was handed over as the account: expected '\nput together a corrective action fo…' not to match /in the past we have quoted/i
+  on err: the policy instruction was handed over as the account: expected '\nput together a corrective action fo…' not to match /in the past we have quoted/i
+ T1 Q: put together a corrective action for Calista Venn due to under performance in store metrics for the month of october
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov4-scan-sf-s19-corrective-action-answer | open | off ok False | on ok False
+  off err: the card is not the Verbal Warning she chose: expected null to be 'verbal' // Object.is equality
+  on err: the card is not the Verbal Warning she chose: expected null to be 'verbal' // Object.is equality
+ T1 Q: I need a corrective action verbal for Odalys Frewen. This is for Under Performance on Average Ticket, Units Per Transaction, Store Average, Store Close %, and A
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov5-coding3-twin-ca-for-performance-is-an-account | fix:CA_SALES_POLICY_ENABLED,WRITE_ME_THE | off ok True | on ok True
+ T1 Q: can you write me a Ca for Oswin Larchfield for performance for october
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov5-coding3-twin-ca-for-performance-is-an-account | production | off ok True | on ok True
+ T1 Q: can you write me a Ca for Oswin Larchfield for performance for october
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov5-metric-guard-full-name-kept | fix:METRIC_GUARD_ENABLED | off ok True | on ok True
+ T1 Q: I need a corrective action verbal for Perpetua Thornquist. This is for Under Performance on UPT, ATV, Average Ticket, Bundle Rate %, and Gift %.
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov5-metric-guard-full-name-kept | production | off ok True | on ok True
+ T1 Q: I need a corrective action verbal for Perpetua Thornquist. This is for Under Performance on UPT, ATV, Average Ticket, Bundle Rate %, and Gift %.
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov5-reply-own-words-qa-probe | production | off ok True | on ok True
+ T1 Q: I need a corrective action verbal for QA Probe XZT One. This is for Under Performance on UPT, ATV, Average Ticket, Bundle Rate %, and Gift %.
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+    +
+===== nov5-request-slot-off-roster-name | fix:FORM_NAME_FROM_ROSTER_ENABLED,CA_SAL | off ok True | on ok True
+ T2 Q: use Remy Fenn
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov5-request-slot-off-roster-name | production | off ok True | on ok True
+ T2 Q: use Remy Fenn
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov5-request-slot-off-roster-name-models | fix:FORM_NAME_FROM_ROSTER_ENABLED,CA_SAL | off ok True | on ok True
+ T2 Q: use Remy Fenn
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov5-request-slot-off-roster-name-models | production | off ok True | on ok True
+ T2 Q: use Remy Fenn
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov5-request-slot-on-roster-name | fix:FORM_NAME_FROM_ROSTER_ENABLED,CA_SAL | off ok True | on ok True
+ T1 Q: I need a corrective action verbal for Remy Fenn. This is for Under Performance on UPT, ATV, Average Ticket, Bundle Rate %, and Gift %.
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov5-request-slot-on-roster-name | production | off ok True | on ok True
+ T1 Q: I need a corrective action verbal for Remy Fenn. This is for Under Performance on UPT, ATV, Average Ticket, Bundle Rate %, and Gift %.
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov5-roster-only-message-8-metrics | fix:FORM_NAME_FROM_ROSTER_ENABLED,CA_SAL | off ok True | on ok True
+ T1 Q: Can you write me a performace ca for an employee who did not meet their numbers for the month of october Dana Lane  - verbal / 146 transactions  / Below in UPT, ATV
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov5-roster-only-message-8-metrics | production | off ok True | on ok True
+ T1 Q: Can you write me a performace ca for an employee who did not meet their numbers for the month of october Dana Lane  - verbal / 146 transactions  / Below in UPT, ATV
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov5-stale-prompt-lines-sales-other-write-in | fix:CA_SALES_POLICY_ENABLED,FORM_NAME_FR | off ok True | on ok True
+ T1 Q: I need a verbal corrective action for Marisol Quenby. Not meeting sales requirements for the month of October
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov5-stale-prompt-lines-sales-other-write-in | production | off ok True | on ok True
+ T1 Q: I need a verbal corrective action for Marisol Quenby. Not meeting sales requirements for the month of October
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov5-stale-prompt-lines-sales-ticks-conduct | fix:CA_SALES_POLICY_ENABLED,FORM_NAME_FR | off ok True | on ok True
+ T1 Q: I need a verbal corrective action for Marisol Quenby. Not meeting sales requirements for the month of October
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov5-stale-prompt-lines-sales-ticks-conduct | production | off ok True | on ok True
+ T1 Q: I need a verbal corrective action for Marisol Quenby. Not meeting sales requirements for the month of October
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov5-stale-prompt-lines-sales-under-performance | fix:CA_SALES_POLICY_ENABLED,FORM_NAME_FR | off ok True | on ok True
+ T1 Q: I need a verbal corrective action for Marisol Quenby. Not meeting sales requirements for the month of October
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov5-stale-prompt-lines-sales-under-performance | production | off ok True | on ok True
+ T1 Q: I need a verbal corrective action for Marisol Quenby. Not meeting sales requirements for the month of October
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov5-twin-sf-s21-must-see-behaviors-template | fix:TEMPLATE_OUTLINE_FIELDS_ENABLED | off ok True | on ok True
+ T1 Q: create a ca for must see behaviors for performace  this should be for wynne sarrow  - verbal / 146 transactions  / Below in UPT, Average Sale, Conversion
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov5-twin-sf-s21-must-see-behaviors-template | production | off ok True | on ok True
+ T1 Q: create a ca for must see behaviors for performace  this should be for wynne sarrow  - verbal / 146 transactions  / Below in UPT, Average Sale, Conversion
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov5-twin-sf-s22-ca-not-coaching | fix:PASTED_REVIEW_NOT_ACCOUNT_ENABLED | off ok True | on ok True
+ T1 Q: create a ca for must see behaviors for performace  this should be for wynne sarrow  - verbal / 146 transactions  / Below in UPT, Average Sale, Conversion  but i nee
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+ T2 Q: Use this to make it: Please make the following edits and resubmit: /  / 1. **Kit Coaching Document:** This was signed on 10/16/2026. I do not see a date showing tha
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+ T3 Q: It needs to be a CA, not a coaching form
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+ T5 Q: Its a CA
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov5-twin-sf-s22-ca-not-coaching | production | off ok True | on ok True
+ T1 Q: create a ca for must see behaviors for performace  this should be for wynne sarrow  - verbal / 146 transactions  / Below in UPT, Average Sale, Conversion  but i nee
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+ T2 Q: Use this to make it: Please make the following edits and resubmit: /  / 1. **Kit Coaching Document:** This was signed on 10/16/2026. I do not see a date showing tha
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+ T3 Q: It needs to be a CA, not a coaching form
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+ T5 Q: Its a CA
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov5-twin-sf-s23-payroll-answer-and-policy-change | production | off ok True | on ok True
+ T1 Q: can you write me a Ca for wynne sarrow for performance for october
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov5-twin-sf-s24-must-see-behaviors-and-coaching-on-file | fix:AS_YOU_SAID_MANAGER_WORDS_ENABLED | off ok True | on ok True
+ T1 Q: Can you write me a performace ca for an employee who did not meet their numbers for the month of october Wynne Sarrow  - verbal / 146 transactions  / Below in UPT, 
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+ T2 Q: it should be must see behaviors and she also had coaching on file for open ended questions coahing done one 10/22 and bundle coachings done 10/15
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov5-twin-sf-s24-must-see-behaviors-and-coaching-on-file | production | off ok True | on ok True
+ T1 Q: Can you write me a performace ca for an employee who did not meet their numbers for the month of october Wynne Sarrow  - verbal / 146 transactions  / Below in UPT, 
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+ T2 Q: it should be must see behaviors and she also had coaching on file for open ended questions coahing done one 10/22 and bundle coachings done 10/15
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov6-ca-reason-because-of-draft-observation | fix:CA_REASON_DUE_TO_ENABLED | off ok True | on ok True
+ T1 Q: CA for Briony Fellwater because of under performance in salon metrics
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov6-ca-reason-because-of-draft-observation | production | off ok True | on ok True
+ T1 Q: CA for Briony Fellwater because of under performance in salon metrics
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov6-ca-reason-due-to-card-issue | fix:CA_REASON_DUE_TO_ENABLED | off ok True | on ok True
+ T1 Q: CA for Briony Fellwater due to under performance in salon metrics
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov6-ca-reason-due-to-card-issue | production | off ok True | on ok True
+ T1 Q: CA for Briony Fellwater due to under performance in salon metrics
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov6-ca-reason-due-to-draft-observation | fix:CA_REASON_DUE_TO_ENABLED | off ok True | on ok True
+ T1 Q: CA for Briony Fellwater due to under performance in salon metrics
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov6-ca-reason-due-to-draft-observation | production | off ok True | on ok True
+ T1 Q: CA for Briony Fellwater due to under performance in salon metrics
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov6-ca-reason-negative-account | fix:CA_REASON_DUE_TO_ENABLED | off ok True | on ok True
+ T1 Q: CA for Briony Fellwater due to under performance in salon metrics
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov6-ca-reason-negative-account | production | off ok True | on ok True
+ T1 Q: CA for Briony Fellwater due to under performance in salon metrics
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov6-offer-never-qa-probe | fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER | off ok True | on ok True
+ T1 Q: I need a corrective action verbal for QA Probe XZT One. This is for Under Performance on UPT, ATV, Average Ticket, Bundle Rate %, and Gift %.
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+    +
+===== nov6-offer-never-qa-probe | production | off ok True | on ok True
+ T1 Q: I need a corrective action verbal for QA Probe XZT One. This is for Under Performance on UPT, ATV, Average Ticket, Bundle Rate %, and Gift %.
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+    +
+===== nov6-sales-shortfall-object-performance-h01 | fix:SALES_SHORTFALL_OBJECT_ENABLED | off ok True | on ok True
+ T1 Q: written CA for Odalys Fenmarrow on performance
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov6-sales-shortfall-object-performance-h01 | production | off ok True | on ok True
+ T1 Q: written CA for Odalys Fenmarrow on performance
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov6-sales-shortfall-object-performance-h13 | fix:SALES_SHORTFALL_OBJECT_ENABLED | off ok True | on ok True
+ T1 Q: CA for Odalys Fenmarrow for performance for october
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov6-sales-shortfall-object-performance-h13 | production | off ok True | on ok True
+ T1 Q: CA for Odalys Fenmarrow for performance for october
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov6-sales-shortfall-object-requirements | fix:SALES_SHORTFALL_OBJECT_ENABLED | off ok True | on ok True
+ T1 Q: I need a verbal corrective action for Odalys Fenmarrow. Not meeting sales requirements for the month of October
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov6-sales-shortfall-object-requirements | production | off ok True | on ok True
+ T1 Q: I need a verbal corrective action for Odalys Fenmarrow. Not meeting sales requirements for the month of October
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov6-under-performance-explained-asked-at-once | fix:UNDER_PERFORMANCE_EXPLAINED_ENABLED | off ok True | on ok True
+ T1 Q: CA for Odalys Fenmarrow for under performance for october
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov6-under-performance-explained-asked-at-once | production | off ok True | on ok True
+ T1 Q: CA for Odalys Fenmarrow for under performance for october
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov6-under-performance-explained-negative | fix:UNDER_PERFORMANCE_EXPLAINED_ENABLED | off ok True | on ok True
+ T1 Q: CA for Odalys Fenmarrow, her sales are low
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov6-under-performance-explained-negative | production | off ok True | on ok True
+ T1 Q: CA for Odalys Fenmarrow, her sales are low
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov6-under-performance-explained-one-word | fix:UNDER_PERFORMANCE_EXPLAINED_ENABLED | off ok True | on ok True
+ T1 Q: CA for Odalys Fenmarrow for underperformance for october
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov6-under-performance-explained-one-word | production | off ok True | on ok True
+ T1 Q: CA for Odalys Fenmarrow for underperformance for october
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov6-under-performance-explained-tester | fix:UNDER_PERFORMANCE_EXPLAINED_ENABLED | off ok True | on ok True
+ T1 Q: CA for Odalys Fenmarrow, her sales are low
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+ T2 Q: it should be under performance not standard of conduct
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov6-under-performance-explained-tester | production | off ok True | on ok True
+ T1 Q: CA for Odalys Fenmarrow, her sales are low
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+ T2 Q: it should be under performance not standard of conduct
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov7-msb-phrase-soc | fix:MSB_PHRASE_SOC_ENABLED,CA_SALES_POLI | off ok True | on ok True
+ T1 Q: create a ca for must see behaviors for Wrenna Calloway
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov7-msb-phrase-soc | production | off ok True | on ok True
+ T1 Q: create a ca for must see behaviors for Wrenna Calloway
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov7-refusal-sun-msb-format | fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPL | off ok True | on ok True
+ T1 Q: create a ca for must see behaviors for performace  this should be for sabeline delacourt  - verbal / 146 transactions  / Below in UPT, ADS, Conversion %
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+ T3 Q: I need the CA for the Must see behaviors and not the standard of conduct. Make it in the format that I explained above in the first chat for Sabeline.
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+    +
+===== nov7-refusal-sun-msb-format | production | off ok True | on ok True
+ T1 Q: create a ca for must see behaviors for performace  this should be for sabeline delacourt  - verbal / 146 transactions  / Below in UPT, ADS, Conversion %
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+ T3 Q: I need the CA for the Must see behaviors and not the standard of conduct. Make it in the format that I explained above in the first chat for Sabeline.
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+    +
+===== nov7-refusal-sun-same-outline | fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPL | off ok True | on ok True
+ T1 Q: create a ca for must see behaviors for performace  this should be for sabeline delacourt  - verbal / 146 transactions  / Below in UPT, ADS, Conversion %
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov7-refusal-sun-same-outline | production | off ok True | on ok True
+ T1 Q: create a ca for must see behaviors for performace  this should be for sabeline delacourt  - verbal / 146 transactions  / Below in UPT, ADS, Conversion %
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov7-sales-observation-h01 | fix:SALES_SHORTFALL_OBJECT_ENABLED,SALES | off ok True | on ok True
+ T1 Q: written CA for Remy Calder on performance
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov7-sales-observation-h01 | production | off ok True | on ok True
+ T1 Q: written CA for Remy Calder on performance
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov7-sales-observation-p1a | fix:SALES_SHORTFALL_OBJECT_ENABLED,SALES | off ok True | on ok True
+ T1 Q: Can you make a written CA for remy calder on performance
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+ T2 Q: She had 24 transactions and was below in Below in UPT, ATV, average ticket, and units per transaction
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov7-sales-observation-p1a | production | off ok True | on ok True
+ T1 Q: Can you make a written CA for remy calder on performance
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+ T2 Q: She had 24 transactions and was below in Below in UPT, ATV, average ticket, and units per transaction
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov7-sales-observation-sf-s23 | fix:SALES_SHORTFALL_OBJECT_ENABLED,SALES | off ok True | on ok True
+ T1 Q: can you write me a Ca for remy calder for performance for october
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov7-sales-observation-sf-s23 | production | off ok True | on ok True
+ T1 Q: can you write me a Ca for remy calder for performance for october
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov8-issue-after-request-reason-alone | fix:ISSUE_AFTER_REQUEST_REASON_ENABLED | off ok True | on ok True
+ T1 Q: I need a corrective action for Remy Calder for under performance
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov8-issue-after-request-reason-alone | production | off ok True | on ok True
+ T1 Q: I need a corrective action for Remy Calder for under performance
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov8-issue-after-request-reason-for | fix:ISSUE_AFTER_REQUEST_REASON_ENABLED | off ok True | on ok True
+ T1 Q: I need a corrective action for under performance. Remy Calder was below on sales per hour, add-on sales and conversion in the month of October.
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov8-issue-after-request-reason-for | production | off ok True | on ok True
+ T1 Q: I need a corrective action for under performance. Remy Calder was below on sales per hour, add-on sales and conversion in the month of October.
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov8-issue-after-request-reason-made-for | fix:ISSUE_AFTER_REQUEST_REASON_ENABLED | off ok True | on ok True
+ T1 Q: I need a corrective action made for under performance. Remy Calder was below on sales per hour, add-on sales and conversion in the month of October.
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov8-issue-after-request-reason-made-for | production | off ok True | on ok True
+ T1 Q: I need a corrective action made for under performance. Remy Calder was below on sales per hour, add-on sales and conversion in the month of October.
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov8-issue-after-request-reason-policy-correction | fix:ISSUE_AFTER_REQUEST_REASON_ENABLED | off ok True | on ok True
+ T1 Q: CA for Odalys Fenmarrow, her sales are low
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+ T2 Q: it should be under performance not standard of conduct
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov8-issue-after-request-reason-policy-correction | production | off ok True | on ok True
+ T1 Q: CA for Odalys Fenmarrow, her sales are low
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+ T2 Q: it should be under performance not standard of conduct
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov8-near-miss-open-form-kept-sun-msb-format | fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER | off ok True | on ok True
+ T1 Q: create a ca for must see behaviors for performace  this should be for sabeline delacourt  - verbal / 146 transactions  / Below in UPT, ADS, Conversion %
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+ T3 Q: I need the CA for the Must see behaviors and not the standard of conduct. Make it in the format that I explained above in the first chat for Sabeline.
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+    +
+===== nov8-near-miss-open-form-kept-sun-msb-format | production | off ok True | on ok True
+ T1 Q: create a ca for must see behaviors for performace  this should be for sabeline delacourt  - verbal / 146 transactions  / Below in UPT, ADS, Conversion %
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+ T3 Q: I need the CA for the Must see behaviors and not the standard of conduct. Make it in the format that I explained above in the first chat for Sabeline.
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+    +
+===== nov8-observation-done-for-under-performance | fix:REQUEST_PARTICIPLE_LEAD_ENABLED | off ok True | on ok True
+ T1 Q: I need a corrective action done for under performance. Remy Calder was below on UPT, ATV, Average Ticket, Bundle Rate % and Gift in the month of October
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov8-observation-done-for-under-performance | production | off ok True | on ok True
+ T1 Q: I need a corrective action done for under performance. Remy Calder was below on UPT, ATV, Average Ticket, Bundle Rate % and Gift in the month of October
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov8-observation-made-for-under-performance | fix:REQUEST_PARTICIPLE_LEAD_ENABLED | off ok True | on ok True
+ T1 Q: I need a corrective action made for under performance. Wren Halloway was below on UPT, ATV, Average Ticket, Bundle Rate % and Gift in the month of October.
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov8-observation-made-for-under-performance | production | off ok True | on ok True
+ T1 Q: I need a corrective action made for under performance. Wren Halloway was below on UPT, ATV, Average Ticket, Bundle Rate % and Gift in the month of October.
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov8-policy-correction-not-account | fix:POLICY_CORRECTION_NOT_ACCOUNT_ENABLE | off ok True | on ok True
+ T4 Q: it should be under performance not standard of conduct
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov8-policy-correction-not-account | production | off ok True | on ok True
+ T4 Q: it should be under performance not standard of conduct
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov8-policy-remark-not-account | fix:PROPOSAL_POLICY_SET_ASIDE_ENABLED | off ok True | on ok True
+ T1 Q: put together a corrective action for marnie holloway due to under performance in store metrics for the month of october
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov8-policy-remark-not-account | production | off ok True | on ok True
+ T1 Q: put together a corrective action for marnie holloway due to under performance in store metrics for the month of october
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov8-policy-set-aside-stays-off | fix:PROPOSAL_POLICY_SET_ASIDE_ENABLED | off ok True | on ok True
+ T3 Q: she also left 10 minutes early that day
+    -**Issue:** violating the attendance policy; she left 10 minutes early that day · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Marnie Holloway is assigned) — tell me if that should change
+    +**Issue:** violating the attendance policy; she left 10 minutes early that day. She also left 10 minutes early that day · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Marnie Holloway is assigned) — tell me if that should change
+===== nov8-policy-set-aside-stays-off | production | off ok True | on ok True
+ T3 Q: she also left 10 minutes early that day
+    -**Issue:** violating the attendance policy; she left 10 minutes early that day · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Marnie Holloway is assigned) — tell me if that should change
+    +**Issue:** violating the attendance policy; she left 10 minutes early that day. She also left 10 minutes early that day · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Marnie Holloway is assigned) — tell me if that should change
+===== nov8-r5-prior-step-date-list | fix:PRIOR_STEP_DATE_LIST_ENABLED | off ok True | on ok True
+ T1 Q: hi, i need a performance corrective action for tamsin vale, a team member. she is under performance for september. she already received a verbal warning and coa
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov8-r5-prior-step-date-list | production | off ok True | on ok True
+ T1 Q: hi, i need a performance corrective action for tamsin vale, a team member. she is under performance for september. she already received a verbal warning and coa
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov8-r5-step-dates-no-today | fix:STEP_DATES_NOT_FORM_DATE_ENABLED | off ok True | on ok True
+ T1 Q: hi, i need a performance corrective action for tamsin vale, a team member. she is under performance for september. she already received a verbal warning and coa
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov8-r5-step-dates-no-today | production | off ok True | on ok True
+ T1 Q: hi, i need a performance corrective action for tamsin vale, a team member. she is under performance for september. she already received a verbal warning and coa
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov8-r5-step-dates-today-is-fine | fix:STEP_DATES_NOT_FORM_DATE_ENABLED | off ok True | on ok True
+ T1 Q: hi, i need a performance corrective action for tamsin vale, a team member. she is under performance for september. she already received a verbal warning and coa
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov8-r5-step-dates-today-is-fine | production | off ok True | on ok True
+ T1 Q: hi, i need a performance corrective action for tamsin vale, a team member. she is under performance for september. she already received a verbal warning and coa
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov8-reopen-not-open-form-msb-format | fix:FORM_PATCH_REDUCER_ENABLED,FORM_REPL | off ok True | on ok True
+ T1 Q: create a ca for must see behaviors for performace  this should be for sabeline delacourt  - verbal / 146 transactions  / Below in UPT, ADS, Conversion %
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+ T3 Q: I need the CA for the Must see behaviors and not the standard of conduct. Make it in the format that I explained above in the first chat for Sabeline.
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+    +
+===== nov8-reopen-not-open-form-msb-format | production | off ok True | on ok True
+ T1 Q: create a ca for must see behaviors for performace  this should be for sabeline delacourt  - verbal / 146 transactions  / Below in UPT, ADS, Conversion %
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+ T3 Q: I need the CA for the Must see behaviors and not the standard of conduct. Make it in the format that I explained above in the first chat for Sabeline.
+    -**Policy:** Standards of Conduct — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — Must See Behaviors (MSB). I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+    +
+===== nov8-sales-triple-reason-alone-is-the-issue | fix:SALES_SHORTFALL_OBJECT_ENABLED,SALES | off ok True | on ok True
+ T1 Q: I need a corrective action for Remy Calder for under performance
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov8-sales-triple-reason-alone-is-the-issue | production | off ok True | on ok True
+ T1 Q: I need a corrective action for Remy Calder for under performance
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov8-sales-triple-this-is-for-under-performance | fix:SALES_SHORTFALL_OBJECT_ENABLED,SALES | off ok True | on ok True
+ T1 Q: I need a corrective action verbal for Remy Calder. This is for Under Performance on her sales goals for October.
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov8-sales-triple-this-is-for-under-performance | production | off ok True | on ok True
+ T1 Q: I need a corrective action verbal for Remy Calder. This is for Under Performance on her sales goals for October.
+    -**Policy:** Standards of Conduct — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +**Policy:** Standards of Conduct (JBA Policy Manual p.12) — sales performance against goals. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.
+    +
+    +**Policy cited from the JBA Policy Manual**
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
