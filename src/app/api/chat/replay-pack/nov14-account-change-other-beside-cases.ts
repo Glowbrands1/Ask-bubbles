@@ -83,6 +83,8 @@ export const NOV14_ACCOUNT_CHANGE_OTHER_BESIDE_CASES: ReplayCase[] = [
       expect(boxes, "Other is not ticked").toContain("other");
       expect(boxes, "the lateness was dropped").not.toEqual(["other"]);
       expect(t.values(id).policy_violated ?? "", "Policy Violated lost Attendance").toMatch(/attendance|tardiness/i);
+      // Gate-Bubbles-5 on #912 (14 Nov 2026): the lateness read through the attendance boxes cleared Direct policy.
+      expect(t.values(id).policy_language ?? "", `Direct policy is not the Attendance section:\n${reply.content}`).toMatch(/arrives? on time|punctual/i);
       expect(t.values(id).action_plan ?? "", "the plan names Other as a policy").not.toMatch(/\bthe Other polic/i);
     },
   },
