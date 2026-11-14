@@ -1,4 +1,5 @@
 import { formInputFidelityEnabled, positionAnswerGuardEnabled, positionAnswerNotASentenceEnabled } from "@/lib/config/chat-quality-flags";
+import { resolveStoreText } from "@/lib/stores/resolver";
 
 import { spokenDates } from "./relative-date";
 
@@ -116,6 +117,17 @@ function notAPositionSentence(reply: string): boolean {
   return said !== null && !ARTICLE_LEAD.test(said[1]!) && !ROLE_WORD.test(said[1]!);
 }
 
+/**
+ * The answer is a store: the store resolver reads the whole answer as one store, or as a city several stores share
+ * ("Omaha"). A close spelling alone is not enough (it would catch real titles), and an answer that names a role
+ * ("store manager") is a title.
+ */
+function namesAStore(answer: string): boolean {
+  if (ROLE_WORD.test(answer)) return false;
+  const read = resolveStoreText(answer);
+  return read.kind === "ambiguous" || (read.kind === "resolved" && read.via !== "fuzzy");
+}
+
 function titleCase(phrase: string): string {
   return phrase
     .split(/\s+/)
@@ -145,6 +157,9 @@ export function readPositionAnswer(reply: string): string | null {
   if (formInputFidelityEnabled() && saysOnlyADate(text)) return null;
   // POSITION_ANSWER_NOT_A_SENTENCE_ENABLED: "she gets a verbal warning" is about the incident, never her title.
   if (positionAnswerNotASentenceEnabled() && notAPositionSentence(String(reply).trim())) return null;
+  // POSITION_ANSWER_NOT_A_SENTENCE_ENABLED (QA's live rollback, 14 Nov 2026): "Kearney" answered the store question and was
+  // also saved as her Position. An answer that names a store or its city is the store, never the title.
+  if (positionAnswerNotASentenceEnabled() && namesAStore(text)) return null;
   const words = text.split(/\s+/);
   if (words.length > 5 || !/^[A-Za-z][A-Za-z&/'’.\- ]*$/.test(text)) return null;
   return titleCase(text);

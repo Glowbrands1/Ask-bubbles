@@ -98,6 +98,10 @@ describe("POSITION_ANSWER_NOT_A_SENTENCE_ENABLED: QA's live 17w test (13 Nov 202
     "she's a hard worker",
     "she's a problem",
     "she's a minor",
+    // QA's live rollback (14 Nov 2026, Bubbles): the store answer "Kearney" was also saved as her Position. A store or its
+    // city is never a title.
+    "Kearney",
+    "Omaha West",
   ])("on: %j is never a position", (reply) => {
     vi.stubEnv("POSITION_ANSWER_NOT_A_SENTENCE_ENABLED", "true");
     expect(readPositionAnswer(reply)).toBeNull();
