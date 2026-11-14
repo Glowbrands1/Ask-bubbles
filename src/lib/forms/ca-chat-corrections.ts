@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { AskResponse } from "@/lib/ai/types";
-import { formEditSingleWriterEnabled } from "@/lib/config/chat-quality-flags";
+import { formEditSingleWriterEnabled, issueEditIsTheAccountEnabled } from "@/lib/config/chat-quality-flags";
 
 import { caDateQuestion, readCaDateEdit, rewriteDate, type CaDateEdit } from "./ca-chat-dates";
 import { checkboxGroupsForVariant, displayDate, fieldsForVariant, parseFormDocument } from "./document";
@@ -9,6 +9,7 @@ import { changeOnEditableDraft } from "./editable-draft";
 import { payrollDeductCorrection, payrollDeductUnclear } from "./payroll-deduct";
 import { warningLevelCorrection } from "./warning-level";
 import { authorizeInstance } from "./instance-scope";
+import { replacedAccount } from "./issue-edit-account";
 import { recordChatCorrection, saveInstanceValues } from "./instances";
 import { extractEmployeeNames, samePerson } from "./proposal";
 import { enforcePersonEdit } from "./responsibility";
@@ -44,6 +45,12 @@ export async function correctCaFromChat(input: {
 }): Promise<AskResponse | null> {
   const question = (input.question ?? "").trim();
   if (!mayCorrectDates(question)) return null;
+  /*
+   * ISSUE_EDIT_IS_THE_ACCOUNT_ENABLED (v2-Gate-Bubbles-5's probes, 14 Nov 2026): "change the issue to she was texting on
+   * her cell phone the whole shift on Nov 4th" is a new account with its date, not a date correction. It is the form's
+   * edit reader's, which writes the account and the date it says; answered here, only the date changed.
+   */
+  if (issueEditIsTheAccountEnabled() && replacedAccount(question) !== null) return null;
   /*
    * A DATE BESIDE ANOTHER ANSWER — "no payroll deduct and change the date to
    * 10-2-26", "make it verbal and the date is 10-2" — is the form's readers'
