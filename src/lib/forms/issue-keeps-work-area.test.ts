@@ -61,6 +61,18 @@ describe("ISSUE_KEEPS_WORK_AREA", () => {
     expect(correctiveActionIssue(`${SAID} at the front desk`, "Remy Calder")).toBe("she was rude to a guest at the front desk");
   });
 
+  it("on: a work area said after the store stays on the Issue (QA's 17z-c live check, 14 Nov 2026)", () => {
+    production(true);
+    expect(correctiveActionIssue("write a CA for Remy Calder at Kearney at the front desk, she was rude to a guest", "Remy Calder")).toBe(
+      "she was rude to a guest at the front desk",
+    );
+    expect(correctiveActionIssue("write a CA for Remy Calder at the front desk at Kearney, she was rude to a guest", "Remy Calder")).toBe(
+      "she was rude to a guest at the front desk",
+    );
+    // A store with no work area still gives the account only.
+    expect(correctiveActionIssue("write a CA for Remy Calder at Kearney at noon, she was rude to a guest", "Remy Calder")).toBe("she was rude to a guest");
+  });
+
   it("on: an account that already names a work area gets no second one (Gate-Bubbles, #880)", () => {
     production(true);
     expect(correctiveActionIssue("create a ca for remy calder at the register, she was rude to a guest at the front desk", "Remy Calder")).toBe(

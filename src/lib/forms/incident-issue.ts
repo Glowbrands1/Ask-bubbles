@@ -438,12 +438,20 @@ function withWorkArea(issue: string | null, text: string, employeeName: string |
  * The work area of the latest request whose first clause is only who and where ("a ca for <A> at the front desk, …"
  * → "at the front desk"); null when there is none, or the clause says more than the person, a title and the place.
  */
+/** `clause` with one "at <work area>" phrase (any case) taken out. */
+function withoutPhrase(clause: string, area: string): string {
+  const at = clause.toLowerCase().indexOf(area.toLowerCase());
+  return at < 0 ? clause : `${clause.slice(0, at)} ${clause.slice(at + area.length)}`.replace(/\s+/g, " ").trim();
+}
+
 function requestWorkArea(text: string, employeeName: string | null): string | null {
   for (const turn of [...turnsOf(text)].reverse()) {
     for (const match of [...turn.matchAll(requestPattern())].reverse()) {
       const clause = match[1]!.split(CUT)[0]!.trim();
       const area = workAreaPhrase(clause);
-      if (area && titleAndPlaceOnly(clause, employeeName)) return area;
+      // "<A> at Kearney at the front desk": the store's place strip took "at Kearney at the front" and left "desk", so
+      // the clause read as more than who and where. The work area is taken out first (QA's 17z-c live check, 14 Nov 2026).
+      if (area && (titleAndPlaceOnly(clause, employeeName) || titleAndPlaceOnly(withoutPhrase(clause, area), employeeName))) return area;
     }
   }
   return null;

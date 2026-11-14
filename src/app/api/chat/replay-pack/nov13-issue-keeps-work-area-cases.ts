@@ -132,3 +132,30 @@ export const NOV13_ISSUE_KEEPS_WORK_AREA_GUARDS: ReplayCase[] = [
     },
   },
 ];
+
+/**
+ * QA's 17z-c live check (14 Nov 2026): "write a CA for <A> at Kearney at the front desk, she was rude to a guest" filed
+ * Kearney, NE but the Issue was "she was rude to a guest": the store's place strip took "at Kearney at the front" and
+ * left "desk", so the request's for-clause no longer read as who and where. The store is still filed, and the work area
+ * stays on the Issue, in either order. ISSUE_KEEPS_WORK_AREA is on in production since 17z-c. Invented person.
+ */
+const AFTER_STORE: readonly { key: string; turn: string }[] = [
+  { key: "store-then-work-area", turn: "write a CA for remy calder at Kearney at the front desk, she was rude to a guest" },
+  { key: "work-area-then-store", turn: "write a CA for remy calder at the front desk at Kearney, she was rude to a guest" },
+];
+export const NOV14_ISSUE_KEEPS_WORK_AREA_AFTER_STORE: ReplayCase[] = AFTER_STORE.map(({ key, turn }) => ({
+  id: `nov14-issue-keeps-work-area-after-store-${key}`,
+  title: `Admin: "${turn}" — filed at Kearney, NE; the Issue keeps "at the front desk"`,
+  report: "QA's 17z-c live check (14 Nov 2026), ISSUE_KEEPS_WORK_AREA; invented person",
+  status: "fixed",
+  fixFlags: [FLAG],
+  async run(t: ReplayContext) {
+    vi.setSystemTime(new Date("2026-11-14T15:00:00Z"));
+    t.directory([...STAFF]);
+    t.as("admin", { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] });
+    const thread = t.thread();
+    const reply = (await thread.say(turn)).content;
+    expect((thread.proposal as { locationId?: string | null } | null)?.locationId ?? null, reply).toBe("loc-66");
+    expect(issueLine(reply), `the Issue line:\n${reply}`).toMatch(/\*\*Issue:\*\* she was rude to a guest at the front desk\s*(?:·|$)/i);
+  },
+}));
