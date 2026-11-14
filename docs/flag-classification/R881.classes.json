@@ -1,0 +1,14 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-fuzzy-store-asks-sioux-falls-west: \"ca for tessaly varn at sioux falls west, she was late on 11/1/26\" \u2014 asked about Sioux Falls (W 41st St), never \"as you said\" \u2014 OPEN in production (a store two letters off is taken silently, as you said)": {
+  "category": "INTENDED-HARNESS",
+  "reason": "'OPEN in production' pin: with the fix flag in the env the open case holds, so the pin fails. Production (flag unset) passes."
+ },
+ "src/lib/ai/flags-off-parity.test.ts :: existing chat and form suites with every new flag off passes the suites whose expectations are already on main: src/app/api/chat/replay-pack, first half of the cases by id": {
+  "category": "INTENDED-HARNESS",
+  "reason": "The parity child inherits process.env (flags-off-parity.test.ts:384), so it runs with FUZZY_STORE_ASKS_ENABLED=true; its only failure is the PR's open pin. OFF: passes."
+ },
+ "replay: nov14-fuzzy-store-asks-sioux-falls-west [open]": {
+  "category": "INTENDED",
+  "reason": "The PR's open case: OFF files Sioux Falls (W 41st St) 'as you said'; ON asks 'I read sioux falls west as Sioux Falls, SD (W 41st St) (Store 225) \u2014 is that the store?'. Confirmed by the gate's chat-route probes."
+ }
+}
