@@ -107,6 +107,9 @@ describe("POSITION_ANSWER_NOT_A_SENTENCE_ENABLED: QA's live 17w test (13 Nov 202
     ["team member pt", "Team Member Pt"],
     ["she is a team member", "Team Member"],
     ["she is the store manager", "Store Manager"],
+    // v2-Gate-Bubbles-3's R889 (14 Nov 2026): a title the role words do not know, after "she is a/an/the/our".
+    ["she is a barista", "Barista"],
+    ["she's an artisan", "Artisan"],
     // A title the role words do not know, said bare, reads as before.
     ["makery artisan", "Makery Artisan"],
   ])("on: a real title %j is still read", (reply, expected) => {

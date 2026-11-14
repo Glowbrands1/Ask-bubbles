@@ -74,6 +74,17 @@ export const NOV13_POSITION_ANSWER_NOT_A_SENTENCE_CASES: ReplayCase[] = [
     },
   },
   {
+    id: "nov14-position-answer-she-is-a-barista",
+    title: "v2-Gate-Bubbles-3's R889: the same card, then \"she is a barista\": a title the role words do not know is still the Position",
+    report: `${REPORT} (v2-Gate-Bubbles-3, R889, 14 Nov 2026: "she is a barista" no longer set the Position with the flag on)`,
+    status: "fixed",
+    fixFlags: [FLAG],
+    async run(t) {
+      const { reply, card } = await afterCard(t, "she is a barista");
+      expect(String(card?.employeeRole ?? ""), reply.content).toBe("Barista");
+    },
+  },
+  {
     id: "nov13-position-answer-key-holder-said",
     title: "QA's 17w report: the same card, then \"she's a key holder\": the Position is Key Holder, and the reply says so",
     report: `${REPORT} (follow-up: the Position changed and the reply said only "got it, here's the card")`,

@@ -38,6 +38,7 @@ describe("form input fidelity, flag off", () => {
     // This flag's off path alone: POSITION_ANSWER_GUARD (on in production) also stops "verbal" being a title, so it is
     // pinned off here (QA's off-pins guard, 12 Nov 2026).
     vi.stubEnv("POSITION_ANSWER_GUARD_ENABLED", "");
+    vi.stubEnv("POSITION_ANSWER_NOT_A_SENTENCE_ENABLED", "");
     expect(fidelityFormDate("She was late yesterday.", TODAY, null)).toBeNull();
     expect(fidelityFormDate("She was late on Oct 20.", TODAY, "2026-10-20")).toBe("2026-10-20");
     expect(

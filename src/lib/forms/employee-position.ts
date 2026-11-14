@@ -92,15 +92,20 @@ const SENTENCE_ABOUT_HER = /^(?:(?:she|he|they)\s+(?!(?:is|was|are|were)\b)[a-z]
  */
 const NOT_A_TITLE_WORD =
   /(?:\$\s?\d|\b\d|\b(?:warning|warnings|write[- ]?ups?|verbal|written|final|coach(?:ed|ing)?|owes?|owed|owing|pay|paid|payroll|deduct\w*|late|tardy|no[- ]?show|absent|fired|terminat\w*|suspend\w*|signed|corrective|ca|again|(?:first|second|third|fourth|fifth|last|another|\d+(?:st|nd|rd|th)?)\s+times?|before|i\s+think|i\s+guess|i\s+believe|maybe|probably|not\s+sure)\b)/i;
-/** "she's …" / "she is …": a title only when the rest names a role ("she's a shift lead"), never "she's new" or "she's in training". */
+/**
+ * "she's …" / "she is …": a title only when the rest names a role ("she's a shift lead") or starts with a/an/the/our
+ * ("she is a barista", v2-Gate-Bubbles-3's R889, 14 Nov 2026), never "she's new" or "she's in training".
+ */
 const PRONOUN_IS = /^(?:she|he|they)(?:['’]s|\s+is|\s+was|['’]re|\s+are)\s+(.+)$/i;
 const ROLE_WORD =
   /\b(?:lead|leader|manager|member|holder|keyholder|key-holder|supervisor|director|associate|assistant|consultant|operator|cashier|trainer|maker|crew|staff|specialist|coordinator|attendant|clerk|owner|captain|agm|gm|asm|sm|tm|kh)\b/i;
 
+const ARTICLE_LEAD = /^(?:a|an|the|our)\s+\S/i;
+
 function notAPositionSentence(reply: string): boolean {
   if (SENTENCE_ABOUT_HER.test(reply) || NOT_A_TITLE_WORD.test(reply)) return true;
   const said = PRONOUN_IS.exec(reply.trim().replace(/[.!\s]+$/g, ""));
-  return said !== null && !ROLE_WORD.test(said[1]!);
+  return said !== null && !ARTICLE_LEAD.test(said[1]!) && !ROLE_WORD.test(said[1]!);
 }
 
 function titleCase(phrase: string): string {
