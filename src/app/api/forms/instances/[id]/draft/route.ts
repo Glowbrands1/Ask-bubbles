@@ -13,6 +13,8 @@ import {
   EVIDENCE_BASIS_RULES,
   EVIDENCE_REMOVED_NOTICE,
   guardEvidenceBasis,
+  STATED_NOT_OBSERVED_RULE,
+  withoutUnstatedObservation,
   UNATTRIBUTED_REPORT_NOTICE,
 } from "@/lib/forms/evidence-basis";
 import {
@@ -203,6 +205,7 @@ import {
   dateOnceEnabled,
   sameRequestOtherPersonEnabled,
   outlineOnOpenProposalEnabled,
+  reportedNotObservedEnabled,
 } from "@/lib/config/chat-quality-flags";
 import { NOTHING_SET_ASIDE, policiesSetAside, setAsideAnything, valuesWithPolicySetAside, withoutPolicyTakeOff } from "@/lib/forms/policy-set-aside";
 import { notesMadeAbout } from "@/lib/ai/make-it-about";
@@ -1121,6 +1124,8 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
       "If you cannot support a field from what you were given, return it empty.",
       // Reported vs observed vs documented vs confirmed — see `evidence-basis.ts`.
       ...EVIDENCE_BASIS_RULES,
+      // REPORTED_NOT_OBSERVED_ENABLED: a statement with no stated source is written as she stated it.
+      ...(reportedNotObservedEnabled() ? [STATED_NOT_OBSERVED_RULE] : []),
       "Return only the fields you were asked for.",
       /*
        * THE OBSERVED / EXPECTATION SHAPE, asked for only by the fields whose
@@ -1548,6 +1553,15 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
      * relayed is flagged to them. See `lib/forms/evidence-basis.ts`.
      */
     const evidence = guardEvidenceBasis(narrated.values, groundingSource, notes);
+    /*
+     * REPORTED_NOT_OBSERVED_ENABLED (QA's Bubbles Create check, 14 Nov 2026): "Employee A was also observed yelling at a
+     * customer" from "she yelled at a customer": a statement with no stated source is written as she stated it.
+     */
+    if (reportedNotObservedEnabled()) {
+      for (const [key, value] of Object.entries(evidence.values)) {
+        if (typeof value === "string" && value !== "") evidence.values[key] = withoutUnstatedObservation(value, notes);
+      }
+    }
 
     const timeframe = guardFollowUpTimeframe(evidence.values, fields, notes);
 
