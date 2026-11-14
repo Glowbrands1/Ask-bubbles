@@ -325,6 +325,8 @@ const FLIPPED_AFTER_FIXTURE: readonly string[] = [
   "NEXT_PUBLIC_POLICY_NOT_FOUND_PLAIN_WORDING_ENABLED",
   "OTHER_POLICY_AGREES_ENABLED",
   "OTHER_NOT_A_POLICY_NAME_ENABLED",
+  "LEVEL_LEADS_REQUEST_ENABLED",
+  "REVISED_FORM_POINTS_TO_NEWER_ENABLED",
 ];
 const PRODUCTION = [...PRODUCTION_FLAGS.on, ...PRODUCTION_FLAGS.assumedOn].filter((name) => name !== NOOP && !FLIPPED_AFTER_FIXTURE.includes(name));
 // SAME_REQUEST_OFF_ROSTER (#727, G727) changes the sf-s11 turn by design; this fixture is main's, so it is held off.
