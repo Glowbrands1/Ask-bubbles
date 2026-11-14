@@ -1,0 +1,182 @@
+===== nov13-named-policies-all-kept-both | fix:NAMED_POLICIES_ALL_KEPT_ENABLED | off ok True | on ok True
+ T1 Q: create ca form for nell orrin for violating the attendance policy and standards of conduct, she was late on 11/3/26 and yelled at a customer. verbal. no payroll
+    -**Policy:** Standards of Conduct (JBA Policy Manual p.12), as you said. I'll quote that section from the current policy manual on the draft.
+    +**Policy:** Attendance and Standards of Conduct, as you said. I'll quote each section from the current policy manual on the draft.
+    -**Action plan:** Management will review the applicable company policy with Nell. Future policy violations may result in additional corrective action up to and including termination of employment.
+    +**Action plan:** Nell is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor Nell's attendance closely and provide coaching as needed. A follow-up meeting will be scheduled to review progress. Continued lateness will re
+    +
+    +Attendance Policy, JBA Policy Manual
+    +Attendance
+    +Each employee knows their schedule and arrives on time. Poor punctuality and absences hurt the
+    +team and the client. An employee who cannot work a scheduled shift finds a coworker to cover it
+    +(See Shift Replacement). A no call or no show for a scheduled shift may lead to termination.
+    +o An employee who will be tardy or absent calls their manager on duty at least 2 hours before
+    +the shift, unless an emergency makes that impossible. …
+===== nov13-named-policies-all-kept-both | open | off ok False | on ok True
+  off err: Attendance left the offense: standards_of_conduct: expected false to be true // Object.is equality
+ T1 Q: create ca form for nell orrin for violating the attendance policy and standards of conduct, she was late on 11/3/26 and yelled at a customer. verbal. no payroll
+    -**Policy:** Standards of Conduct (JBA Policy Manual p.12), as you said. I'll quote that section from the current policy manual on the draft.
+    +**Policy:** Attendance and Standards of Conduct, as you said. I'll quote each section from the current policy manual on the draft.
+    -**Action plan:** Management will review the applicable company policy with Nell. Future policy violations may result in additional corrective action up to and including termination of employment.
+    +**Action plan:** Nell is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor Nell's attendance closely and provide coaching as needed. A follow-up meeting will be scheduled to review progress. Continued lateness will re
+    +
+    +Attendance Policy, JBA Policy Manual
+    +Attendance
+    +Each employee knows their schedule and arrives on time. Poor punctuality and absences hurt the
+    +team and the client. An employee who cannot work a scheduled shift finds a coworker to cover it
+    +(See Shift Replacement). A no call or no show for a scheduled shift may lead to termination.
+    +o An employee who will be tardy or absent calls their manager on duty at least 2 hours before
+    +the shift, unless an emergency makes that impossible. …
+===== nov14-mixed-policy-plan-described | open | off ok False | on ok True
+  off err: the lateness plan is not kept as it is:
+ T1 Q: create a ca for Nell Orrin, she was late on 11/3/26 and she yelled at a customer. verbal. no payroll deduct.
+    -**Policy:** Attendance, from what you described ("late") — the policy manual's section on page 14. I'll quote it on the draft under **Attendance Policy**; tell me if a different policy applies.
+    +**Policy:** Attendance and Standards of Conduct, from what you described ("late"; "yelled at a customer") — the policy manual's Attendance section on page 14 and its Standards of Conduct section. I'll quote both on the draft under **Attendance Policy** and **
+    -**Action plan:** Nell is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor Nell's attendance closely and provide coaching as needed. A follow-up meeting will be scheduled to review progress. Continued lateness will re
+    +**Action plan:** Nell is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor Nell's attendance closely and provide coaching as needed. A follow-up meeting will be scheduled to review progress. Continued lateness will re
+    +Attendance Policy, JBA Policy Manual p.14
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov14-mixed-policy-plan-named | open | off ok False | on ok True
+  off err: the lateness plan is not kept as it is:
+ T1 Q: create a ca for Nell Orrin for violating the attendance policy and standards of conduct, she was late on 11/3/26 and she yelled at a customer. verbal. no payrol
+    -**Policy:** Standards of Conduct (JBA Policy Manual p.12), as you said. I'll quote that section from the current policy manual on the draft.
+    +**Policy:** Attendance and Standards of Conduct, as you said. I'll quote each section from the current policy manual on the draft.
+    -**Action plan:** Management will review the applicable company policy with Nell. Future policy violations may result in additional corrective action up to and including termination of employment.
+    +**Action plan:** Nell is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor Nell's attendance closely and provide coaching as needed. A follow-up meeting will be scheduled to review progress. Continued lateness will re
+    +
+    +Attendance Policy, JBA Policy Manual
+    +Attendance
+    +Each employee knows their schedule and arrives on time. Poor punctuality and absences hurt the
+    +team and the client. An employee who cannot work a scheduled shift finds a coworker to cover it
+    +(See Shift Replacement). A no call or no show for a scheduled shift may lead to termination.
+    +o An employee who will be tardy or absent calls their manager on duty at least 2 hours before
+    +the shift, unless an emergency makes that impossible. …
+===== nov14-mixed-policy-plan-two-offenses-and-cleaning | open | off ok False | on ok True
+  off err: Standards of Conduct is not ticked {"offense":["attendance_policy","other"],"violated":"Attendance Policy, Other","plan":"ss. Continued lateness will result in further disciplinary review per company policy. Future policy violations may result in additional corrective action up to and including term
+===== nov14-named-policies-all-kept-reversed-order | fix:NAMED_POLICIES_ALL_KEPT_ENABLED | off ok True | on ok True
+ T1 Q: create a ca for nell orrin for violating standards of conduct and the attendance policy, she yelled at a customer and was late on 11/3/26. verbal. no payroll de
+    -**Policy:** Attendance (JBA Policy Manual p.14), as you said. I'll quote that section from the current policy manual on the draft.
+    +**Policy:** Standards of Conduct and Attendance, as you said. I'll quote each section from the current policy manual on the draft.
+    -**Action plan:** Nell is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor Nell's attendance closely and provide coaching as needed. A follow-up meeting will be scheduled to review progress. Continued lateness will re
+    +**Action plan:** Nell is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor Nell's attendance closely and provide coaching as needed. A follow-up meeting will be scheduled to review progress. Continued lateness will re
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov14-named-policies-all-kept-reversed-order | open | off ok False | on ok True
+  off err: Standards of Conduct left the offense: expected [ 'attendance_policy' ] to include 'standards_of_conduct'
+ T1 Q: create a ca for nell orrin for violating standards of conduct and the attendance policy, she yelled at a customer and was late on 11/3/26. verbal. no payroll de
+    -**Policy:** Attendance (JBA Policy Manual p.14), as you said. I'll quote that section from the current policy manual on the draft.
+    +**Policy:** Standards of Conduct and Attendance, as you said. I'll quote each section from the current policy manual on the draft.
+    -**Action plan:** Nell is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor Nell's attendance closely and provide coaching as needed. A follow-up meeting will be scheduled to review progress. Continued lateness will re
+    +**Action plan:** Nell is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor Nell's attendance closely and provide coaching as needed. A follow-up meeting will be scheduled to review progress. Continued lateness will re
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov14-policy-line-covers-every-section-described | fix:POLICY_LINE_COVERS_EVERY_SECTION_ENA | off ok True | on ok True
+ T1 Q: create ca form for nell orrin, she was late on 11/3/26 and yelled at a customer. verbal. no payroll deduct.
+    -**Action plan:** Nell is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor Nell's attendance closely and provide coaching as needed. A follow-up meeting will be scheduled to review progress. Continued lateness will re
+    +**Action plan:** Nell is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor Nell's attendance closely and provide coaching as needed. A follow-up meeting will be scheduled to review progress. Continued lateness will re
+===== nov14-policy-line-covers-every-section-described | open | off ok False | on ok True
+  off err: the card's Policy line does not name Standards of Conduct:
+ T1 Q: create ca form for nell orrin, she was late on 11/3/26 and yelled at a customer. verbal. no payroll deduct.
+    -**Policy:** Attendance, from what you described ("late") — the policy manual's section on page 14. I'll quote it on the draft under **Attendance Policy**; tell me if a different policy applies.
+    +**Policy:** Attendance and Standards of Conduct, from what you described ("late"; "yelled at a customer") — the policy manual's Attendance section on page 14 and its Standards of Conduct section. I'll quote both on the draft under **Attendance Policy** and **
+    -**Action plan:** Nell is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor Nell's attendance closely and provide coaching as needed. A follow-up meeting will be scheduled to review progress. Continued lateness will re
+    +**Action plan:** Nell is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor Nell's attendance closely and provide coaching as needed. A follow-up meeting will be scheduled to review progress. Continued lateness will re
+    +Attendance Policy, JBA Policy Manual p.14
+    +
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+===== nov14-policy-line-covers-every-section-named | fix:NAMED_POLICIES_ALL_KEPT_ENABLED,POLI | off ok True | on ok True
+ T1 Q: create ca form for nell orrin for violating the attendance policy and standards of conduct, she was late on 11/3/26 and yelled at a customer. verbal. no payroll
+    -**Action plan:** Nell is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor Nell's attendance closely and provide coaching as needed. A follow-up meeting will be scheduled to review progress. Continued lateness will re
+    +**Action plan:** Nell is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor Nell's attendance closely and provide coaching as needed. A follow-up meeting will be scheduled to review progress. Continued lateness will re
+===== nov14-policy-line-covers-every-section-named | open | off ok False | on ok True
+  off err: the card's Policy line does not name Attendance:
+ T1 Q: create ca form for nell orrin for violating the attendance policy and standards of conduct, she was late on 11/3/26 and yelled at a customer. verbal. no payroll
+    -**Policy:** Standards of Conduct (JBA Policy Manual p.12), as you said. I'll quote that section from the current policy manual on the draft.
+    +**Policy:** Attendance and Standards of Conduct, as you said. I'll quote each section from the current policy manual on the draft.
+    -**Action plan:** Management will review the applicable company policy with Nell. Future policy violations may result in additional corrective action up to and including termination of employment.
+    +**Action plan:** Nell is expected to arrive on time for all scheduled shifts moving forward. Leadership will monitor Nell's attendance closely and provide coaching as needed. A follow-up meeting will be scheduled to review progress. Continued lateness will re
+    +
+    +Attendance Policy, JBA Policy Manual
+    +Attendance
+    +Each employee knows their schedule and arrives on time. Poor punctuality and absences hurt the
+    +team and the client. An employee who cannot work a scheduled shift finds a coworker to cover it
+    +(See Shift Replacement). A no call or no show for a scheduled shift may lead to termination.
+    +o An employee who will be tardy or absent calls their manager on duty at least 2 hours before
+    +the shift, unless an emergency makes that impossible. …
+===== nov5-coding3-sfo-a-coworker-in-account-stays-a | fix:SAME_REQUEST_OTHER_PERSON_ENABLED | off ok True | on ok True
+ T2 Q: she was rude to Caspian Drummet when he reminded her
+    -**Policy:** Late Opening, from what you described ("late opening") — the policy manual's section on page 15. I'll quote it on the draft under **Attendance Policy**; tell me if a different policy applies.
+    +**Policy:** Late Opening and Standards of Conduct, from what you described ("late opening"; "was rude to caspian") — the policy manual's Late Opening section on page 15 and its Standards of Conduct section. I'll quote both on the draft under **Attendance Poli
+    +Late Opening Policy, JBA Policy Manual p.15
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+    +
+===== nov5-coding3-sfo-a-coworker-in-account-stays-a | production | off ok True | on ok True
+ T2 Q: she was rude to Caspian Drummet when he reminded her
+    -**Policy:** Late Opening, from what you described ("late opening") — the policy manual's section on page 15. I'll quote it on the draft under **Attendance Policy**; tell me if a different policy applies.
+    +**Policy:** Late Opening and Standards of Conduct, from what you described ("late opening"; "was rude to caspian") — the policy manual's Late Opening section on page 15 and its Standards of Conduct section. I'll quote both on the draft under **Attendance Poli
+    +Late Opening Policy, JBA Policy Manual p.15
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+    +
+===== nov6-diffemp-guard-coworker-in-account-card-on-screen | fix:SAME_REQUEST_OTHER_PERSON_ENABLED | off ok True | on ok True
+ T2 Q: she was rude to Mara Quell when she reminded her
+    -**Policy:** Late Opening, from what you described ("late opening") — the policy manual's section on page 15. I'll quote it on the draft under **Attendance Policy**; tell me if a different policy applies.
+    +**Policy:** Late Opening and Standards of Conduct, from what you described ("late opening"; "was rude to mara") — the policy manual's Late Opening section on page 15 and its Standards of Conduct section. I'll quote both on the draft under **Attendance Policy*
+    +Late Opening Policy, JBA Policy Manual p.15
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+    +
+===== nov6-diffemp-guard-coworker-in-account-card-on-screen | production | off ok True | on ok True
+ T2 Q: she was rude to Mara Quell when she reminded her
+    -**Policy:** Late Opening, from what you described ("late opening") — the policy manual's section on page 15. I'll quote it on the draft under **Attendance Policy**; tell me if a different policy applies.
+    +**Policy:** Late Opening and Standards of Conduct, from what you described ("late opening"; "was rude to mara") — the policy manual's Late Opening section on page 15 and its Standards of Conduct section. I'll quote both on the draft under **Attendance Policy*
+    +Late Opening Policy, JBA Policy Manual p.15
+    +Standards of Conduct Policy, JBA Policy Manual
+    +Standards of Conduct
+    +The Company asks every Employee to act in a way that keeps customers, coworkers and The
+    +Company safe.
+    +Examples (not a complete list) of conduct that may lead to disciplinary action, up to and
+    +including termination:
+    +o Not following The Company's policies and procedures
+    +

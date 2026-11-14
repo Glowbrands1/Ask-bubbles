@@ -1,0 +1,42 @@
+
+> ask-bubbles@0.1.0 eval
+> vitest run --config vitest.eval.config.mts
+
+
+ RUN  v4.1.11 /home/user/gate/gchain
+
+
+Replay eval — flags on: NAMED_POLICIES_ALL_KEPT_ENABLED, POLICY_LINE_COVERS_EVERY_SECTION_ENABLED, MIXED_POLICY_PLAN_ENABLED
+| Case | Flags off | Flags on |
+|---|---|---|
+| b9 | PASS 167ms | PASS 177ms |
+| b10 | PASS 410ms | PASS 416ms |
+| b11 | PASS 89ms | PASS 83ms |
+| b12 | FAIL (policy) 167ms | FAIL (policy) 150ms |
+| b18a | PASS 66ms | PASS 58ms |
+| b18b | PASS 42ms | PASS 45ms |
+| r1 | PASS 5ms | PASS 5ms |
+| b0 | PASS 245ms | PASS 212ms |
+| b1 | PASS 173ms | PASS 168ms |
+| b2 | PASS 88ms | PASS 81ms |
+| b3 | PASS 76ms | PASS 74ms |
+| b4 | PASS 149ms | PASS 168ms |
+| b5 | PASS 179ms | PASS 175ms |
+| b6 | PASS 183ms | PASS 176ms |
+| b7 | PASS 82ms | PASS 82ms |
+| b8 | PASS 35ms | PASS 40ms |
+| b13 | PASS 311ms | PASS 381ms |
+| b14 | PASS 17ms | PASS 17ms |
+| b15 | PASS 354ms | PASS 352ms |
+| b16 | PASS 16ms | PASS 15ms |
+| b17 | PASS 381ms | PASS 295ms |
+| sf-b1 | PASS 416ms | PASS 403ms |
+| sf-b3 | PASS 108ms | PASS 108ms |
+| sf-b4 | PASS 15ms | PASS 16ms |
+Latency p50/p95 off 108/410 ms, on 108/403 ms; total off 3774 ms, on 3697 ms.
+
+ Test Files  2 passed (2)
+      Tests  35 passed (35)
+   Start at  10:09:28
+   Duration  29.46s (transform 4.20s, setup 0ms, import 4.76s, tests 24.37s, environment 0ms)
+

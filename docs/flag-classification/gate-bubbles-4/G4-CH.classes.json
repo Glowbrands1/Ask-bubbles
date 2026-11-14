@@ -1,0 +1,106 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov13-named-policies-all-kept-both: \"create ca form for nell orrin for violating the attendance policy and standards of conduct, she was late on 11/3/26 and yelled at a customer. verbal. no payroll deduct.\": the offense, Policy Violated, Direct policy and plan keep Attendance and Standards of Conduct \u2014 OPEN in production (only Standards of Conduct is kept: Attendance leaves the offense, Policy Violated and the plan)": {
+  "category": "INTENDED",
+  "reason": "chain open case holds, or its fix arm gains the second section / plan line"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-mixed-policy-plan-described: \"create a ca for Nell Orrin, she was late on 11/3/26 and she yelled at a customer. verbal. no payroll deduct.\": Pau's attendance plan plus \"Management will review the Standards of Conduct policy with Nell.\", the same on the card and the draft \u2014 OPEN in production (the plan covers lateness only)": {
+  "category": "INTENDED",
+  "reason": "chain open case holds, or its fix arm gains the second section / plan line"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-mixed-policy-plan-named: \"create a ca for Nell Orrin for violating the attendance policy and standards of conduct, she was late on 11/3/26 and she yelled at a customer. verbal. no payroll deduct.\": the same with both policies named \u2014 OPEN in production (the plan covers one policy only)": {
+  "category": "INTENDED",
+  "reason": "chain open case holds, or its fix arm gains the second section / plan line"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-mixed-policy-plan-two-offenses-and-cleaning: \"create a ca for Nell Orrin, she was late on 11/3/26 and yelled at a customer, and didn't do the sanitation. verbal. no payroll deduct.\": Attendance, Standards of Conduct and Other ticked; Policy Violated lists all three; Pau's plan plus the conduct line \u2014 OPEN in production (with the chain off, Standards of Conduct is not kept beside lateness and the cleaning duty)": {
+  "category": "INTENDED",
+  "reason": "chain open case holds, or its fix arm gains the second section / plan line"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-named-policies-all-kept-reversed-order: \"create a ca for nell orrin for violating standards of conduct and the attendance policy, she yelled at a customer and was late on 11/3/26. verbal. no payroll deduct.\" (the attendance policy named last): both policies are kept \u2014 OPEN in production (only Attendance is kept: Standards of Conduct leaves the offense, Policy Violated and Direct policy)": {
+  "category": "INTENDED",
+  "reason": "chain open case holds, or its fix arm gains the second section / plan line"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-policy-line-covers-every-section-described: \"create ca form for nell orrin, she was late on 11/3/26 and yelled at a customer. verbal. no payroll deduct.\": the card names Attendance and Standards of Conduct, and the draft ticks and cites both \u2014 OPEN in production (the card says Attendance only, and the draft cites Attendance only)": {
+  "category": "INTENDED",
+  "reason": "chain open case holds, or its fix arm gains the second section / plan line"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-policy-line-covers-every-section-named: \"create ca form for nell orrin for violating the attendance policy and standards of conduct, she was late on 11/3/26 and yelled at a customer. verbal. no payroll deduct.\" (NAMED_POLICIES_ALL_KEPT on): the card names both policies \u2014 OPEN in production (the card says one policy while the draft keeps two)": {
+  "category": "INTENDED",
+  "reason": "chain open case holds, or its fix arm gains the second section / plan line"
+ },
+ "src/lib/ai/flags-off-parity.test.ts :: existing chat and form suites with every new flag off passes the suites whose expectations are already on main: src/app/api/chat/replay-pack, first half of the cases by id": {
+  "category": "INTENDED-HARNESS",
+  "reason": "flag-off test / parity under forced ON"
+ },
+ "src/lib/forms/mixed-policy-plan.test.ts :: MIXED_POLICY_PLAN_ENABLED off: Attendance and another policy get the attendance plan alone (as before)": {
+  "category": "INTENDED-HARNESS",
+  "reason": "flag-off test / parity under forced ON"
+ },
+ "src/lib/forms/named-policies-all-kept.test.ts :: NAMED_POLICIES_ALL_KEPT_ENABLED off: only the last policy named is kept (as before)": {
+  "category": "INTENDED-HARNESS",
+  "reason": "flag-off test / parity under forced ON"
+ },
+ "src/lib/forms/policy-line-covers-every-section.test.ts :: POLICY_LINE_COVERS_EVERY_SECTION_ENABLED off: the conduct beside the lateness is not read (as before)": {
+  "category": "INTENDED-HARNESS",
+  "reason": "flag-off test / parity under forced ON"
+ },
+ "replay: nov13-named-policies-all-kept-both [fix:NAMED_POLICIES_ALL_KEPT_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "chain open case holds, or its fix arm gains the second section / plan line"
+ },
+ "replay: nov13-named-policies-all-kept-both [open]": {
+  "category": "INTENDED",
+  "reason": "chain open case holds, or its fix arm gains the second section / plan line"
+ },
+ "replay: nov14-mixed-policy-plan-described [open]": {
+  "category": "INTENDED",
+  "reason": "chain open case holds, or its fix arm gains the second section / plan line"
+ },
+ "replay: nov14-mixed-policy-plan-named [open]": {
+  "category": "INTENDED",
+  "reason": "chain open case holds, or its fix arm gains the second section / plan line"
+ },
+ "replay: nov14-mixed-policy-plan-two-offenses-and-cleaning [open]": {
+  "category": "INTENDED",
+  "reason": "chain open case holds, or its fix arm gains the second section / plan line"
+ },
+ "replay: nov14-named-policies-all-kept-reversed-order [fix:NAMED_POLICIES_ALL_KEPT_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "chain open case holds, or its fix arm gains the second section / plan line"
+ },
+ "replay: nov14-named-policies-all-kept-reversed-order [open]": {
+  "category": "INTENDED",
+  "reason": "chain open case holds, or its fix arm gains the second section / plan line"
+ },
+ "replay: nov14-policy-line-covers-every-section-described [fix:POLICY_LINE_COVERS_EVERY_SECTION_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "chain open case holds, or its fix arm gains the second section / plan line"
+ },
+ "replay: nov14-policy-line-covers-every-section-described [open]": {
+  "category": "INTENDED",
+  "reason": "chain open case holds, or its fix arm gains the second section / plan line"
+ },
+ "replay: nov14-policy-line-covers-every-section-named [fix:NAMED_POLICIES_ALL_KEPT_ENABLED,POLICY_LINE_COVERS_EVERY_SECTION_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "chain open case holds, or its fix arm gains the second section / plan line"
+ },
+ "replay: nov14-policy-line-covers-every-section-named [open]": {
+  "category": "INTENDED",
+  "reason": "chain open case holds, or its fix arm gains the second section / plan line"
+ },
+ "replay: nov5-coding3-sfo-a-coworker-in-account-stays-a [fix:SAME_REQUEST_OTHER_PERSON_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "late opening + \"was rude to <coworker>\" now names Late Opening and Standards of Conduct and quotes both (POLICY_LINE_COVERS_EVERY_SECTION); case still holds"
+ },
+ "replay: nov5-coding3-sfo-a-coworker-in-account-stays-a [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "late opening + \"was rude to <coworker>\" now names Late Opening and Standards of Conduct and quotes both (POLICY_LINE_COVERS_EVERY_SECTION); case still holds"
+ },
+ "replay: nov6-diffemp-guard-coworker-in-account-card-on-screen [fix:SAME_REQUEST_OTHER_PERSON_ENABLED]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "late opening + \"was rude to <coworker>\" now names Late Opening and Standards of Conduct and quotes both (POLICY_LINE_COVERS_EVERY_SECTION); case still holds"
+ },
+ "replay: nov6-diffemp-guard-coworker-in-account-card-on-screen [production]": {
+  "category": "INTENDED-ADJACENT",
+  "reason": "late opening + \"was rude to <coworker>\" now names Late Opening and Standards of Conduct and quotes both (POLICY_LINE_COVERS_EVERY_SECTION); case still holds"
+ }
+}
