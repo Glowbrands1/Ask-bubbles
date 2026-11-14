@@ -19,6 +19,9 @@ describe("REASON_PLACE_NOT_STORE", () => {
     vi.stubEnv("REASON_PLACE_NOT_STORE_ENABLED", "true");
     expect(ids("she was late because she was at sioux falls west")).toEqual([]);
     expect(ids("she was late on 11/1/26 because tessaly was in sioux falls west, then she left")).toEqual([]);
+    // Gate-Bubbles-3's #879 probes: the same reason, said "bc" or "since".
+    expect(ids("she was late bc she was at sioux falls west")).toEqual([]);
+    expect(ids("she was late since she was at sioux falls west")).toEqual([]);
   });
 
   it("on: a store said as the store is still read, also beside a reason", () => {
