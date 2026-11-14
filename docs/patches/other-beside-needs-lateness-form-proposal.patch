@@ -1,0 +1,33 @@
+diff --git a/src/lib/ai/form-proposal.ts b/src/lib/ai/form-proposal.ts
+index 721a394c..6708dbf5 100644
+--- a/src/lib/ai/form-proposal.ts
++++ b/src/lib/ai/form-proposal.ts
+@@ -44,6 +44,7 @@ import {
+   unconfirmedManualLine,
+   describedAttendanceKeys,
+   withoutCleaningDuty,
++  besideReadsAttendance,
+   groundMissedEvent,
+   LATE_OPENING_OFFENSE,
+   MISSED_EVENT_OFFENSE,
+@@ -2627,6 +2628,9 @@ async function withManualIdentity(named: NamedPolicyReading | null, input: Propo
+   return identity && !identity.confirmed ? { ...named, unconfirmedManual: identity.title } : named;
+ }
+ 
++/** The offense boxes the Attendance policy is cited under (OTHER_BESIDE_NEEDS_LATENESS_ENABLED). */
++const ATTENDANCE_OFFENSE_KEYS = /^(?:attendance_policy|tardiness|absenteeism|late_opening|attendance)$/;
++
+ async function namedPolicyFor(text: string, input: ProposalTurn): Promise<NamedPolicyReading | null> {
+   /*
+    * OTHER_POLICY_AGREES_ENABLED (QA's ruling (b) on Gate-Bubbles-5's #892 probes, 14 Nov 2026): a cleaning duty left
+@@ -2636,7 +2640,9 @@ async function namedPolicyFor(text: string, input: ProposalTurn): Promise<NamedP
+   const rest = withoutCleaningDuty(secondRequestOwnAccountEnabled() ? currentFormRequestText(text) : text);
+   if (rest !== null) {
+     const beside = await namedPolicyFor(rest, input);
+-    if (beside && beside.lookup === "described") return { ...beside, besideOther: true };
++    // OTHER_BESIDE_NEEDS_LATENESS_ENABLED: attendance beside a cleaning duty needs a lateness or absence word ("opening duties" are not one).
++    const attendance = beside?.lookup === "described" && ATTENDANCE_OFFENSE_KEYS.test(beside.offenseKey);
++    if (beside && beside.lookup === "described" && (!attendance || besideReadsAttendance(rest))) return { ...beside, besideOther: true };
+   }
+   const policyReading = readCaPolicy(secondRequestOwnAccountEnabled() ? currentFormRequestText(text) : text);
+   // A missed meeting reads as Attendance; the manual still says where (see `groundMissedEvent` below).

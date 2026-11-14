@@ -161,6 +161,13 @@ const PROTECTED = [
  * namedPolicyFor a cleaning duty beside a second described offense reads that offense from the account without the duty
  * (marked `besideOther`). Behind OTHER_POLICY_AGREES_ENABLED (default off here); off, as before. form-proposal.ts is
  * already excluded below.
+ *
+ * Under Pau's standing approval for protected-file edits (relayed by QA, 14 Nov 2026: "add OTHER_BESIDE_NEEDS_LATENESS to
+ * Bubbles as its own default-off flag", parity with the sibling app's #971), in src/lib/ai/form-proposal.ts, exactly
+ * the lines of docs/patches/other-beside-needs-lateness-form-proposal.patch: the import `besideReadsAttendance`, the
+ * constant `ATTENDANCE_OFFENSE_KEYS`, and in namedPolicyFor an attendance reading beside a cleaning duty is kept only
+ * with a lateness or absence word. Behind OTHER_BESIDE_NEEDS_LATENESS_ENABLED (default off); off, as before.
+ * form-proposal.ts is already excluded below.
  */
 const APPROVED_PROTECTED_EDITS = [
   ":(exclude)src/lib/forms/location-scope.ts",
