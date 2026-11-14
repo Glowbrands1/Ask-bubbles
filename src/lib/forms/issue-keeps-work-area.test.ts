@@ -34,6 +34,18 @@ describe("namesWorkArea: one place word's words never swallow the next (Gate-Bub
     ["she was rude on a call in the back room", true],
     ["she was rude to a guest in the back room", true],
     ["she yelled at a guest in front of everyone", false],
+    // Gate-Bubbles' third #880 re-gate (p34, p37) and the other "<x> of" idioms.
+    ["she was rude to a guest in front of the register", true],
+    ["she was rude to a guest out front", true],
+    ["she left her drink on top of the counter", true],
+    ["she was on her phone in back of the stock room", true],
+    ["she smoked outside of the back room", true],
+    ["she was on top of her tasks", false],
+    ["she argued in front of the team", false],
+    ["she was out of line with a guest", false],
+    ["she was on her phone in the middle of the sales floor", true],
+    ["she sat in the corner of the stock room", true],
+    ["she left by the end of her shift", false],
   ])("%s → %s", (text, names) => expect(namesWorkArea(text)).toBe(names));
 });
 
