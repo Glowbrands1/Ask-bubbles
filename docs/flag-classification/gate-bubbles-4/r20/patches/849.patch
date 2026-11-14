@@ -1,0 +1,369 @@
+diff --git a/docs/parity-log/2026-11-12-17q-live-misses.md b/docs/parity-log/2026-11-12-17q-live-misses.md
+new file mode 100644
+index 00000000..42216ce0
+--- /dev/null
++++ b/docs/parity-log/2026-11-12-17q-live-misses.md
+@@ -0,0 +1,16 @@
++# 17q live misses — Bubbles-only (12 Nov 2026, coding 5)
++
++QA's Bubbles 17q live test, two low-priority misses, both behind default-off flags here:
++
++- **POLICY_DASH_LINE_PAGE_ENABLED** ("she rang up the wrong items on 11/9": the
++  Standards of Conduct Policy line had no page). **Not needed in Ask Sunny.**
++  Sunny has no POLICY_PAGE_ON_CARD mechanism: no Policy line on its card carries
++  a page, Attendance included. On Sunny `main` (0bbf0c901) the same request's card
++  gives the page on its own citation line instead ("Standards of Conduct
++  Policy, JBA Policy Manual p.12"), checked with the same wording in Sunny's
++  replay pack. The gap rides on POLICY_PAGE_ON_CARD, if that is ever ported.
++- **ADDED_ACCOUNT_ON_CARD_ENABLED** (item 7: "she also left the register
++  unlocked" reached the saved Observation, not the card's What happened).
++  **Not needed in Ask Sunny.** Sunny's proposal carries no Issue, so its card
++  has no What happened row to fall behind the draft. Checked on Sunny `main`
++  (0bbf0c901) with the same two turns.
+diff --git a/src/app/api/chat/replay-pack/nov12-17q-live-cases.ts b/src/app/api/chat/replay-pack/nov12-17q-live-cases.ts
+new file mode 100644
+index 00000000..b6940790
+--- /dev/null
++++ b/src/app/api/chat/replay-pack/nov12-17q-live-cases.ts
+@@ -0,0 +1,79 @@
++import { expect, vi } from "vitest";
++
++import { STAFF, WEST_DODGE, type ReplayCase, type ReplayContext, type ReplayThread } from "./cases";
++
++/**
++ * ============================================================================
++ * QA's BUBBLES 17q LIVE TEST (12 Nov 2026) — two misses, no rollback
++ * ============================================================================
++ *
++ * The managers' wording, the employee invented (on the pack's roster).
++ *
++ *   (1) "create a CA for <B>, she rang up the wrong items on 11/9" cites the Standards of Conduct
++ *       (REGISTER_ACCURACY_CONDUCT) but its Policy line gives no page, while Attendance and Animals give theirs
++ *       (POLICY_DASH_LINE_PAGE_ENABLED, `forms/policy-page-on-card.ts`).
++ *   (2) Item 7: after "she was late on 11/3/26", "she also left the register unlocked" reached the saved Observation,
++ *       but the card's "What happened" still showed only the lateness (ADDED_ACCOUNT_ON_CARD_ENABLED,
++ *       `forms/added-account-on-card.ts`).
++ */
++const REPORT = "QA's Bubbles 17q live test, 12 Nov 2026";
++
++function start(t: ReplayContext): ReplayThread {
++  vi.setSystemTime(new Date("2026-11-12T10:00:00Z"));
++  t.directory(STAFF);
++  t.as("location_manager", WEST_DODGE);
++  return t.thread();
++}
++
++function policyLine(content: string): string {
++  return content.split("\n").find((line) => line.startsWith("**Policy:**")) ?? "";
++}
++
++export const NOV12_17Q_LIVE_CASES: ReplayCase[] = [
++  {
++    id: "nov12-17q-1-wrong-items-policy-page",
++    title: "(1) \"she rang up the wrong items on 11/9\": the Standards of Conduct Policy line carries its printed page (p.12)",
++    report: `${REPORT}: (1) the register-accuracy Policy line has no page`,
++    status: { open: "**Policy:** Standards of Conduct — ringing up a sale inaccurately, with no page" },
++    fixFlags: ["POLICY_DASH_LINE_PAGE_ENABLED"],
++    async run(t) {
++      const thread = start(t);
++      const reply = await thread.say("create a CA for Marnie Holloway, she rang up the wrong items on 11/9");
++      expect(thread.proposal, `no CA card:\n${reply.content}`).toMatchObject({ templateKey: "dpoa", employeeName: "Marnie Holloway" });
++      const line = policyLine(reply.content);
++      expect(line, `the card does not cite the Standards of Conduct:\n${reply.content}`).toMatch(/Standards of Conduct/);
++      expect(line, `the Policy line has no printed page:\n${line}`).toMatch(/Standards of Conduct \(JBA Policy Manual p\.12\) — ringing up a sale inaccurately/);
++    },
++  },
++  {
++    id: "nov12-17q-7-also-left-register-unlocked-on-card",
++    title: "(2) item 7: \"she also left the register unlocked\" shows in the card's What happened, as in the saved Observation",
++    report: `${REPORT}: item 7, the card's What happened shows only "she was late on 11/3/26"`,
++    status: { open: "the card's What happened is only \"she was late on 11/3/26\"" },
++    fixFlags: ["ADDED_ACCOUNT_ON_CARD_ENABLED"],
++    async run(t) {
++      const thread = start(t);
++      await thread.say("create a CA for Marnie Holloway, she was late on 11/3/26");
++      const reply = await thread.say("she also left the register unlocked");
++      expect(thread.proposal, `no CA card:\n${reply.content}`).toMatchObject({ templateKey: "dpoa", employeeName: "Marnie Holloway" });
++      const issue = (reply.formProposal as { issue?: string | null } | undefined)?.issue ?? "";
++      expect(issue, `the card's What happened:\n${issue}`).toMatch(/late on 11\/3\/26/);
++      expect(issue, `the card's What happened leaves out the register:\n${issue}`).toMatch(/left the register unlocked/i);
++      expect(reply.content, `the reply's Issue line leaves out the register:\n${reply.content}`).toMatch(/\*\*Issue:\*\*[^\n]*late on 11\/3\/26[^\n]*left the register unlocked/i);
++    },
++  },
++  {
++    id: "nov12-17q-7-answer-not-added-to-card",
++    title: "(2) guard: an answer to the card's question (\"verbal warning\") is never added to What happened",
++    report: `${REPORT}: item 7, guard`,
++    status: "fixed",
++    fixFlags: ["ADDED_ACCOUNT_ON_CARD_ENABLED"],
++    async run(t) {
++      const thread = start(t);
++      await thread.say("create a CA for Marnie Holloway, she was late on 11/3/26");
++      const reply = await thread.say("verbal warning");
++      const issue = (reply.formProposal as { issue?: string | null } | undefined)?.issue ?? "";
++      expect(issue, `the answer joined What happened:\n${issue}`).not.toMatch(/verbal/i);
++    },
++  },
++];
+diff --git a/src/app/api/chat/route.ts b/src/app/api/chat/route.ts
+index c684e28b..f9f1bc23 100644
+--- a/src/app/api/chat/route.ts
++++ b/src/app/api/chat/route.ts
+@@ -107,6 +107,7 @@ import {
+   accountBeforeRequestEnabled,
+   emptyReplyGuardEnabled,
+   addedDetailKeptEnabled,
++  addedAccountOnCardEnabled,
+   lateOpeningNeedsOpeningEnabled,
+ } from "@/lib/config/chat-quality-flags";
+ import { streamWhenSlow } from "@/lib/api/streamed-response";
+@@ -1245,6 +1246,13 @@ async function postChat(request: Request) {
+           { id: parsed.questionMessageId, role: "user", content: asked.question },
+         ]);
+       }
++      // ADDED_ACCOUNT_ON_CARD_ENABLED: "she also …" reaches the card's "What happened" as well as the draft (`lib/forms/added-account-on-card.ts`).
++      if (addedAccountOnCardEnabled() && answer.formProposal) {
++        answer = (await import("@/lib/forms/added-account-on-card")).withAddedAccountOnCard(answer, [
++          ...parsed.history,
++          { id: parsed.questionMessageId, role: "user", content: asked.question },
++        ]);
++      }
+       // NO_SELECTION_ON_OPEN_CARD_ENABLED: the card on screen is the form; no "I can prepare:" choice offering it again.
+       if (noSelectionOnOpenCardEnabled()) {
+         answer = (await import("@/lib/forms/no-selection-on-open-card")).withoutSelectionOnOpenCard(answer, parsed.continueProposalTemplateKey);
+diff --git a/src/lib/config/chat-quality-flags.ts b/src/lib/config/chat-quality-flags.ts
+index c5befbf3..894beaea 100644
+--- a/src/lib/config/chat-quality-flags.ts
++++ b/src/lib/config/chat-quality-flags.ts
+@@ -5451,6 +5451,27 @@ export function sameNameAsksWhichEnabled(): boolean {
+   return envFlag("SAME_NAME_ASKS_WHICH_ENABLED");
+ }
+ 
++/**
++ * POLICY_DASH_LINE_PAGE_ENABLED (coding 5, 12 Nov 2026; default off; QA's Bubbles 17q live test). "create a CA for <B>,
++ * she rang up the wrong items on 11/9" cited "**Policy:** Standards of Conduct — ringing up a sale inaccurately. I'll
++ * cite that section … with its page, on the draft" with no page, while Attendance and Animals gave theirs. On: a card
++ * Policy line that opens with one of the app's own policy names and a dash carries that section's printed page, as the
++ * Dress Code read-from-request line does (`forms/policy-page-on-card.ts`). Off, as before.
++ */
++export function policyDashLinePageEnabled(): boolean {
++  return envFlag("POLICY_DASH_LINE_PAGE_ENABLED");
++}
++
++/**
++ * ADDED_ACCOUNT_ON_CARD_ENABLED (coding 5, 12 Nov 2026; default off; QA's Bubbles 17q live test, item 7). After "she was
++ * late on 11/3/26", "she also left the register unlocked" reached the saved Observation but the card's "What happened"
++ * still showed only the lateness. On: a later turn the card cites that adds to the account ("she also …") is added to
++ * the card's Issue, so the card and the saved draft agree (`forms/added-account-on-card.ts`). Off, as before.
++ */
++export function addedAccountOnCardEnabled(): boolean {
++  return envFlag("ADDED_ACCOUNT_ON_CARD_ENABLED");
++}
++
+ /**
+  * NEXT_PUBLIC_REPLY_QUOTE_LINES_ENABLED (QA's Bubbles 17p live check, 12 Nov 2026; default off). With
+  * STEP_B_REPLY_KEEPS_LINES on, an edit reply quotes the field line by line ("Changed Observation of Offense to:\n>
+diff --git a/src/lib/forms/added-account-on-card.test.ts b/src/lib/forms/added-account-on-card.test.ts
+new file mode 100644
+index 00000000..764b37bb
+--- /dev/null
++++ b/src/lib/forms/added-account-on-card.test.ts
+@@ -0,0 +1,54 @@
++import { afterEach, describe, expect, it } from "vitest";
++
++import { addedAccount, withAddedAccountOnCard } from "./added-account-on-card";
++
++/** ADDED_ACCOUNT_ON_CARD_ENABLED: QA's Bubbles 17q live test, item 7 (12 Nov 2026), the manager's words; the person invented. */
++const CARD = { employeeName: "Marnie Holloway", sourceMessageIds: ["m1", "m2"], issue: "she was late on 11/3/26" };
++const CONTENT = "I'll draft a **Corrective Action Form** for **Marnie Holloway**.\n\n**Issue:** she was late on 11/3/26 · **Store:** West Dodge";
++const TURNS = [
++  { id: "m1", role: "user", content: "create a CA for Marnie Holloway, she was late on 11/3/26" },
++  { id: "a1", role: "assistant", content: "…" },
++  { id: "m2", role: "user", content: "she also left the register unlocked" },
++];
++
++afterEach(() => {
++  delete process.env.ADDED_ACCOUNT_ON_CARD_ENABLED;
++});
++
++describe("ADDED_ACCOUNT_ON_CARD_ENABLED", () => {
++  it("off: the card is as the forms path wrote it", () => {
++    const answer = { content: CONTENT, formProposal: CARD };
++    expect(withAddedAccountOnCard(answer, TURNS)).toBe(answer);
++  });
++
++  it("on: \"she also left the register unlocked\" joins the card's What happened and its Issue line", () => {
++    process.env.ADDED_ACCOUNT_ON_CARD_ENABLED = "true";
++    const next = withAddedAccountOnCard({ content: CONTENT, formProposal: CARD }, TURNS);
++    expect(next.formProposal?.issue).toBe("she was late on 11/3/26. She also left the register unlocked");
++    expect(next.content).toContain("**Issue:** she was late on 11/3/26. She also left the register unlocked · **Store:**");
++  });
++
++  it("reads only an addition to the account", () => {
++    expect(addedAccount("she also left the register unlocked")).toBe("she also left the register unlocked");
++    expect(addedAccount("Also, she was on her phone.")).toBe("Also, she was on her phone");
++    expect(addedAccount("verbal warning")).toBeNull();
++    expect(addedAccount("no")).toBeNull();
++    expect(addedAccount("can she also sign it?")).toBeNull();
++    expect(addedAccount("she was late again")).toBeNull();
++  });
++
++  it("on: a turn the card does not cite, the card's first turn, or words already there change nothing", () => {
++    process.env.ADDED_ACCOUNT_ON_CARD_ENABLED = "true";
++    const uncited = { content: CONTENT, formProposal: { ...CARD, sourceMessageIds: ["m1"] } };
++    expect(withAddedAccountOnCard(uncited, TURNS)).toBe(uncited);
++    const there = { content: CONTENT, formProposal: { ...CARD, issue: "she was late on 11/3/26. She also left the register unlocked" } };
++    expect(withAddedAccountOnCard(there, TURNS)).toBe(there);
++  });
++
++  it("on: another person named in the addition is left off this card", () => {
++    process.env.ADDED_ACCOUNT_ON_CARD_ENABLED = "true";
++    const turns = [TURNS[0]!, { id: "m2", role: "user", content: "Rowan Kestrel also left the register unlocked" }];
++    const answer = { content: CONTENT, formProposal: CARD };
++    expect(withAddedAccountOnCard(answer, turns)).toBe(answer);
++  });
++});
+diff --git a/src/lib/forms/added-account-on-card.ts b/src/lib/forms/added-account-on-card.ts
+new file mode 100644
+index 00000000..f1bed30b
+--- /dev/null
++++ b/src/lib/forms/added-account-on-card.ts
+@@ -0,0 +1,65 @@
++import { addedAccountOnCardEnabled } from "@/lib/config/chat-quality-flags";
++import { readTurnEdit } from "@/lib/ai/edit-date-rules";
++import { extractEmployeeNames, samePerson } from "@/lib/forms/proposal";
++import { detectTemplateIntent } from "@/lib/forms/template-intent";
++
++/**
++ * ============================================================================
++ * "SHE ALSO …" SHOWS ON THE CARD
++ * ============================================================================
++ *
++ * ADDED_ACCOUNT_ON_CARD_ENABLED (QA's Bubbles 17q live test, item 7, 12 Nov 2026). "create a CA for <B>, she was late
++ * on 11/3/26", then "she also left the register unlocked": the card cited both turns and Create saved both in the
++ * Observation, but the card's "What happened" (its Issue) still showed only "she was late on 11/3/26". The card and the
++ * saved draft disagreed.
++ *
++ * On: when the latest manager turn is one the card cites, after its first, and it adds to the account — "she also …",
++ * "he also …", "<name> also …", "also, …", "and she …" — in plain account (no question, no edit instruction, no new
++ * form request, nobody else named), it is added to the card's Issue in the manager's words, and the reply's
++ * "**Issue:**" line says the same. A turn whose words are already in the Issue is left as it is. Pure; after the reply
++ * is built. Off, nothing here runs.
++ */
++
++interface Turn {
++  readonly id?: string;
++  readonly role: string;
++  readonly content: string;
++}
++
++interface Card {
++  readonly employeeName: string | null;
++  readonly sourceMessageIds: readonly string[];
++  readonly issue?: string | null;
++}
++
++const ADDS_TO_ACCOUNT =
++  /^\s*(?:(?:and|plus)\s+)?(?:(?:she|he|they|[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s+(?:also|additionally)\s+\S|also[,\s]+\S|(?:and|plus)\s+(?:she|he|they)\s+\S)/i;
++
++const norm = (value: string) => value.toLowerCase().replace(/[^a-z0-9/ ]+/g, " ").replace(/\s+/g, " ").trim();
++
++/** The account a turn adds, as typed (no trailing stop); null when the turn adds none. */
++export function addedAccount(text: string): string | null {
++  const said = text.trim();
++  if (!said || said.length > 300 || /\?\s*$/.test(said) || said.includes("\n")) return null;
++  if (!ADDS_TO_ACCOUNT.test(said)) return null;
++  if (readTurnEdit(said) !== null) return null;
++  if (detectTemplateIntent(said).kind !== "none") return null;
++  return said.replace(/[.!\s]+$/, "");
++}
++
++export function withAddedAccountOnCard<T extends { content: string; formProposal?: Card | null }>(answer: T, turns: readonly Turn[]): T {
++  const card = answer.formProposal;
++  if (!addedAccountOnCardEnabled() || !card?.employeeName || !card.issue?.trim()) return answer;
++  const manager = turns.filter((turn) => turn.role === "user" && turn.id);
++  const latest = manager.at(-1);
++  if (!latest?.id || !card.sourceMessageIds.includes(latest.id) || card.sourceMessageIds[0] === latest.id) return answer;
++  const added = addedAccount(latest.content);
++  if (!added) return answer;
++  if (extractEmployeeNames(added).some((name) => !samePerson(name, card.employeeName!))) return answer;
++  const issue = card.issue.trim();
++  if (norm(issue).includes(norm(added))) return answer;
++  const next = `${issue}${/[.!?]$/.test(issue) ? "" : "."} ${added[0]!.toUpperCase()}${added.slice(1)}`;
++  const before = `**Issue:** ${issue}`;
++  const content = answer.content.includes(before) ? answer.content.replace(before, `**Issue:** ${next}`) : answer.content;
++  return { ...answer, content, formProposal: { ...card, issue: next } };
++}
+diff --git a/src/lib/forms/policy-page-on-card.test.ts b/src/lib/forms/policy-page-on-card.test.ts
+index 405cff0a..dc775700 100644
+--- a/src/lib/forms/policy-page-on-card.test.ts
++++ b/src/lib/forms/policy-page-on-card.test.ts
+@@ -135,3 +135,33 @@ describe("WORN_CLOTHING_IS_DRESS_CODE_ENABLED: the read-from-request policy line
+     expect(withPolicyPagesOnCard(LINE, CHUNKS)).toBe(LINE);
+   });
+ });
++
++// QA's Bubbles 17q live test (12 Nov 2026): "create a CA for <B>, she rang up the wrong items on 11/9" had no page.
++describe("POLICY_DASH_LINE_PAGE_ENABLED: a '<policy> — <what>' line gets its printed page", () => {
++  const LINE =
++    "**Policy:** Standards of Conduct — ringing up a sale inaccurately. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.";
++  afterEach(() => vi.unstubAllEnvs());
++
++  it("on: the register-accuracy line says p.12 beside the heading", () => {
++    vi.stubEnv("POLICY_DASH_LINE_PAGE_ENABLED", "true");
++    expect(withPolicyPagesOnCard(LINE, CHUNKS)).toBe(
++      "**Policy:** Standards of Conduct (JBA Policy Manual p.12) — ringing up a sale inaccurately. I'll cite that section of the current policy manual, with its page, on the draft; tell me if a different policy applies.",
++    );
++  });
++
++  it("on: a phrase that is not one of the app's own policy names, or a line with a page, is left as it is", () => {
++    vi.stubEnv("POLICY_DASH_LINE_PAGE_ENABLED", "true");
++    for (const line of [
++      '**Policy:** "visitors at work" — as you said.',
++      "**Policy:** Other — cleaning duties left undone are recorded under Other on the Corrective Action Form, not the Standards of Conduct. Tell me if a different policy applies.",
++      "**Policy:** Attendance, from what you described (\"late\") — the policy manual's section on page 14.",
++    ]) {
++      expect(withPolicyPagesOnCard(line, CHUNKS)).toBe(line);
++    }
++  });
++
++  it("off: the line is left as it was (no page)", () => {
++    vi.stubEnv("POLICY_DASH_LINE_PAGE_ENABLED", "");
++    expect(withPolicyPagesOnCard(LINE, CHUNKS)).toBe(LINE);
++  });
++});
+diff --git a/src/lib/forms/policy-page-on-card.ts b/src/lib/forms/policy-page-on-card.ts
+index fbbe2a16..9f50d4a7 100644
+--- a/src/lib/forms/policy-page-on-card.ts
++++ b/src/lib/forms/policy-page-on-card.ts
+@@ -1,4 +1,4 @@
+-import { wornClothingIsDressCodeEnabled } from "@/lib/config/chat-quality-flags";
++import { policyDashLinePageEnabled, wornClothingIsDressCodeEnabled } from "@/lib/config/chat-quality-flags";
+ 
+ import { CA_POLICY_LABEL, type CaPolicyName } from "./ca-policy";
+ import {
+@@ -91,6 +91,12 @@ const READS_AS = /^(\*\*Policy:\*\* this reads as \*\*)(.+?)(\*\*)( — .*)$/;
+  * line gives one. It gets its printed page the same way: "Dress Code (JBA Policy Manual p.15) — read from this request.".
+  */
+ const READ_FROM_REQUEST = /^(\*\*Policy:\*\* )(.+?)( — read from this request\b.*)$/;
++/**
++ * POLICY_DASH_LINE_PAGE_ENABLED (QA's Bubbles 17q live test, 12 Nov 2026): "**Policy:** Standards of Conduct — ringing
++ * up a sale inaccurately. I'll cite that section …" (and every line that opens with the app's own policy name and a
++ * dash) gets its printed page the same way: "Standards of Conduct (JBA Policy Manual p.12) — ringing up …".
++ */
++const DASH = /^(\*\*Policy:\*\* )([^—"*\n]+?)( — .*)$/;
+ 
+ /** The card's own policy lines, each with its printed page where the manual gives one. */
+ export function withPolicyPagesOnCard(content: string, chunks: readonly ManualChunk[]): string {
+@@ -108,6 +114,11 @@ export function withPolicyPagesOnCard(content: string, chunks: readonly ManualCh
+       const cited = headingWithPrintedPage(read[2]!, chunks);
+       return cited ? `${read[1]}${cited}${read[3]}` : line;
+     }
++    const dash = policyDashLinePageEnabled() ? DASH.exec(line) : null;
++    if (dash && ownHeading(dash[2]!)) {
++      const cited = headingWithPrintedPage(dash[2]!, chunks);
++      return cited ? `${dash[1]}${cited}${dash[3]}` : line;
++    }
+     const said = AS_YOU_SAID.exec(line) ?? BARE.exec(line);
+     if (!said || !ownHeading(said[2]!)) return line;
+     const cited = headingWithPrintedPage(said[2]!, chunks);

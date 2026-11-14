@@ -1,0 +1,201 @@
+diff --git a/src/app/api/chat/replay-pack/nov12-r37-approver-title-cases.ts b/src/app/api/chat/replay-pack/nov12-r37-approver-title-cases.ts
+new file mode 100644
+index 00000000..47cb4dea
+--- /dev/null
++++ b/src/app/api/chat/replay-pack/nov12-r37-approver-title-cases.ts
+@@ -0,0 +1,50 @@
++import { expect, vi } from "vitest";
++
++import { STAFF, WEST_DODGE, type DirectoryRow, type ReplayCase } from "./cases";
++
++/**
++ * ============================================================================
++ * "ONCE THE DM APPROVES" IS NOT THE EMPLOYEE'S TITLE (QA's r37 live check in the sibling app, 12 Nov 2026; ported;
++ * APPROVER_TITLE_NOT_EMPLOYEE_ENABLED)
++ * ============================================================================
++ *
++ * QA's wording, the person invented (on the roster, no Woven position): "CA for <A>, probably termination once the DM
++ * approves" put District Manager on the card here as "the one you gave".
++ */
++const ODALYS: DirectoryRow = { id: "e-r37-odalys-pemberley", firstName: "Odalys", lastName: "Pemberley", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-264"], positionName: null as unknown as string };
++const FIX = ["APPROVER_TITLE_NOT_EMPLOYEE_ENABLED"];
++
++export const NOV12_R37_APPROVER_TITLE_CASES: ReplayCase[] = [
++  {
++    id: "nov12-r37-dm-approves-not-the-title",
++    title: "\"CA for <A>, probably termination once the DM approves\": the card's title is never District Manager",
++    report: "QA's r37 live check in the sibling app (12 Nov 2026), ported: \"once the DM approves\" put District Manager on the card",
++    status: { open: "the card's title is District Manager, \"the one you gave\"" },
++    fixFlags: FIX,
++    async run(t) {
++      vi.setSystemTime(new Date("2026-11-12T16:00:00Z"));
++      t.directory([...STAFF, ODALYS]);
++      t.as("location_manager", WEST_DODGE);
++      const thread = t.thread();
++      const reply = await thread.say("CA for Odalys Pemberley, probably termination once the DM approves");
++      expect(thread.proposal?.employeeName ?? null, reply.content).toBe("Odalys Pemberley");
++      expect(thread.proposal?.employeeRole ?? null, reply.content).not.toBe("District Manager");
++      expect(reply.content, reply.content).not.toMatch(/District Manager/);
++    },
++  },
++  {
++    id: "nov12-r37-stated-title-kept",
++    title: "\"CA for <A>, she is a district manager, she missed the meeting\": the title the manager stated for her stays",
++    report: "Guard for QA's r37 live check in the sibling app (12 Nov 2026), ported",
++    status: "fixed",
++    fixFlags: FIX,
++    async run(t) {
++      vi.setSystemTime(new Date("2026-11-12T16:00:00Z"));
++      t.directory([...STAFF, ODALYS]);
++      t.as("location_manager", WEST_DODGE);
++      const thread = t.thread();
++      const reply = await thread.say("CA for Odalys Pemberley, she is a district manager, she missed the meeting");
++      expect(thread.proposal?.employeeRole ?? null, reply.content).toBe("District Manager");
++    },
++  },
++];
+diff --git a/src/lib/ai/title-of-the-employee.ts b/src/lib/ai/title-of-the-employee.ts
+index edb095be..f766d9f6 100644
+--- a/src/lib/ai/title-of-the-employee.ts
++++ b/src/lib/ai/title-of-the-employee.ts
+@@ -1,4 +1,6 @@
+-import { exitLetterAddresseeEnabled, exitStatedOnlyEnabled, titleOfTheEmployeeEnabled } from "@/lib/config/chat-quality-flags";
++import { approverTitleNotEmployeeEnabled, exitLetterAddresseeEnabled, exitStatedOnlyEnabled, titleOfTheEmployeeEnabled } from "@/lib/config/chat-quality-flags";
++import { withoutApproverClauses } from "@/lib/forms/approver-title";
++import { extractJobTitle } from "@/lib/forms/proposal";
+ import { displayName, normalizeTypedName, type RosterEmployee } from "@/lib/forms/employee-match";
+ import { EXIT_TEMPLATE_KEY } from "@/lib/forms/exit-library";
+ import { titleNamesAnotherPerson } from "@/lib/forms/title-of-another-person";
+@@ -28,7 +30,8 @@ export async function withTitleOfTheEmployee(
+   roster: () => Promise<readonly RosterEmployee[]>,
+ ): Promise<AskResponse> {
+   const exitOwned = exitStatedOnlyEnabled();
+-  if (!titleOfTheEmployeeEnabled() && !exitOwned) return response;
++  const approverOn = approverTitleNotEmployeeEnabled();
++  if (!titleOfTheEmployeeEnabled() && !exitOwned && !approverOn) return response;
+   const card = response.formProposal;
+   const role = card?.employeeRole?.trim();
+   if (!card || !role || !card.employeeName || card.subject === "team") return response;
+@@ -37,12 +40,18 @@ export async function withTitleOfTheEmployee(
+   // EXIT_STATED_ONLY_ENABLED (ported from the sibling app, QA 5 Nov 2026): on an exit card, a title the manager only ever
+   // wrote as someone's ("your General Manager", "our General Managers") is that person's, never the employee's.
+   const owned = exitOwned && card.templateKey === EXIT_TEMPLATE_KEY && onlyAsSomeonesTitle(said, role);
+-  if (!another && !owned) return response;
++  // APPROVER_TITLE_NOT_EMPLOYEE_ENABLED (ported from the sibling app, QA's r37 live check): "once the DM approves" names
++  // who approves; with those clauses out, the manager stated no title for the employee (`forms/approver-title.ts`).
++  const approver = approverOn && extractJobTitle(said) === role && extractJobTitle(withoutApproverClauses(said)) === null;
++  if (!another && !owned && !approver) return response;
+   const wanted = normalizeTypedName(card.employeeName);
+   const own = (await roster()).find((person) => normalizeTypedName(displayName(person)) === wanted)?.positionName?.trim() || null;
+   let content = own
+     ? response.content.split(`**Position:** ${role}`).join(`**Position:** ${own}`)
+     : response.content;
++  // APPROVER_TITLE_NOT_EMPLOYEE_ENABLED: the verification line's "The title on the form is the one you gave (<role>)" was
++  // about the approver's title; with the card's title gone, it goes too.
++  if (approver) content = content.split(` The title on the form is the one you gave (${role}), not one from Woven.`).join(own ? ` The title on the form is ${own}, from Woven.` : "");
+   /*
+    * EXIT_LETTER_ADDRESSEE_ENABLED (ported from the sibling app: QA's live test there, 9 Nov 2026): a termination letter
+    * signed "<C>, District Manager" left "- **Job Title:** District Manager" on the exit card's read-back: the card's role
+diff --git a/src/lib/config/chat-quality-flags.ts b/src/lib/config/chat-quality-flags.ts
+index c5befbf3..8e90517a 100644
+--- a/src/lib/config/chat-quality-flags.ts
++++ b/src/lib/config/chat-quality-flags.ts
+@@ -1330,6 +1330,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
+   "TITLE_BEFORE_NAME_ENABLED",
+   // TITLE_BEFORE_NAME_REPLY_LINES (QA 17o live, 12 Nov 2026; default off).
+   "TITLE_BEFORE_NAME_REPLY_LINES_ENABLED",
++  // APPROVER_TITLE_NOT_EMPLOYEE (ported from the sibling app, QA r37 live, 12 Nov 2026; default off).
++  "APPROVER_TITLE_NOT_EMPLOYEE_ENABLED",
+   // coding 4: FORMS_ON_FILE_ORDER_MATCH_POSSIBLE (Bubbles 17h live test, QA, 11 Nov 2026; default off).
+   "FORMS_ON_FILE_ORDER_MATCH_POSSIBLE_ENABLED",
+   "TAKE_OFF_STAYS_CARD_ENABLED",
+@@ -5599,3 +5601,15 @@ export function headingDistinctiveWordsEnabled(): boolean {
+ export function placeStripWholePhraseOnlyEnabled(): boolean {
+   return envFlag("PLACE_STRIP_WHOLE_PHRASE_ONLY_ENABLED");
+ }
++
++/**
++ * APPROVER_TITLE_NOT_EMPLOYEE_ENABLED (ported from the sibling app; QA's r37 live check there, 12 Nov 2026; same flag in
++ * both apps; default off). "CA for <A>, probably termination once the DM approves" put District Manager on the card as
++ * the title the manager gave: "DM" there names who approves. On: a title the manager wrote only in a clause about who
++ * approves, signs off or is waited on is not the employee's; the card takes the roster's own position or none, and the
++ * reply's line about the title the manager gave goes (`forms/approver-title.ts`, `ai/title-of-the-employee.ts`). Off,
++ * as before.
++ */
++export function approverTitleNotEmployeeEnabled(): boolean {
++  return envFlag("APPROVER_TITLE_NOT_EMPLOYEE_ENABLED");
++}
+diff --git a/src/lib/forms/approver-title.test.ts b/src/lib/forms/approver-title.test.ts
+new file mode 100644
+index 00000000..d09c3439
+--- /dev/null
++++ b/src/lib/forms/approver-title.test.ts
+@@ -0,0 +1,33 @@
++import { afterEach, describe, expect, it, vi } from "vitest";
++
++import { withoutApproverClauses } from "./approver-title";
++import { extractJobTitle } from "./proposal";
++
++/* APPROVER_TITLE_NOT_EMPLOYEE_ENABLED (QA's r37 live check in the sibling app, 12 Nov 2026; ported; names invented). */
++const titleOf = (text: string) => extractJobTitle(withoutApproverClauses(text));
++
++describe("APPROVER_TITLE_NOT_EMPLOYEE", () => {
++  afterEach(() => vi.unstubAllEnvs());
++
++  it.each([
++    "CA for Odalys Pemberley, probably termination once the DM approves",
++    "CA for Odalys Pemberley, termination after my district manager signs off",
++    "CA for Odalys Pemberley, pending the DM's approval",
++    "CA for Odalys Pemberley, waiting on the DM",
++    "CA for Odalys Pemberley, needs DM approval",
++  ])("on: %j states no title for the employee", (text) => {
++    vi.stubEnv("APPROVER_TITLE_NOT_EMPLOYEE_ENABLED", "true");
++    expect(titleOf(text)).toBeNull();
++  });
++
++  it("on: a title stated for her stays", () => {
++    vi.stubEnv("APPROVER_TITLE_NOT_EMPLOYEE_ENABLED", "true");
++    expect(titleOf("CA for Odalys Pemberley, she is a district manager, she missed the meeting")).toBe("District Manager");
++    expect(titleOf("CA for Odalys Pemberley, our store manager, termination once the DM approves")).toBe("Store Manager");
++  });
++
++  it("off: the text as given", () => {
++    vi.stubEnv("APPROVER_TITLE_NOT_EMPLOYEE_ENABLED", "");
++    expect(titleOf("CA for Odalys Pemberley, probably termination once the DM approves")).toBe("District Manager");
++  });
++});
+diff --git a/src/lib/forms/approver-title.ts b/src/lib/forms/approver-title.ts
+new file mode 100644
+index 00000000..f20afb38
+--- /dev/null
++++ b/src/lib/forms/approver-title.ts
+@@ -0,0 +1,29 @@
++import { approverTitleNotEmployeeEnabled } from "@/lib/config/chat-quality-flags";
++
++/*
++ * ============================================================================
++ * "ONCE THE DM APPROVES" NAMES WHO APPROVES, NOT THE EMPLOYEE'S TITLE (APPROVER_TITLE_NOT_EMPLOYEE_ENABLED)
++ * ============================================================================
++ *
++ * QA's r37 live check in the sibling app (12 Nov 2026; ported; names invented): "CA for <A>, probably termination once the
++ * DM approves" put "Job title: District Manager" on the card. A title in a clause about who approves, signs off or is
++ * waited on is that approver's. These clauses are taken out before the title is read again (`ai/title-of-the-employee.ts`).
++ * Pure; off, the text as given.
++ */
++const WHO = String.raw`(?:the|my|our|your|a|an)\s+(?:[\p{L}/&.-]+\s+){0,2}?[\p{L}/&.-]+`;
++const APPROVER_CLAUSES: readonly RegExp[] = [
++  // "once the DM approves", "after my district manager signs off", "until the DM okays it", "when the SD reviews it"
++  new RegExp(String.raw`\b(?:once|after|when|until|till|unless|if|before|pending)\s+${WHO}\s+(?:approves?|approved|signs?\s+off|signed\s+off|ok(?:ay)?s|ok(?:ay)?ed|agrees?|reviews?|confirms?|decides?|gives\s+(?:the\s+)?(?:ok|okay|go[- ]ahead))\b`, "giu"),
++  // "the DM's approval", "my district manager's sign-off"
++  new RegExp(String.raw`\b${WHO}['’]s\s+(?:approval|sign[- ]?off|ok(?:ay)?|go[- ]ahead|decision|review)\b`, "giu"),
++  // "waiting on the DM", "pending the DM", "needs the DM to approve", "with the DM's approval"
++  new RegExp(String.raw`\b(?:waiting\s+(?:on|for)|pending|needs?|need\s+to\s+get|run\s+(?:it\s+)?by|check\s+with)\s+${WHO}(?:\s+to\s+(?:approve|sign\s+off|ok(?:ay)?|review))?\b`, "giu"),
++  // "DM approval", "GM sign-off"
++  /\b(?:dm|gm|sm|district\s+manager|general\s+manager|store\s+(?:manager|director))\s+(?:approval|sign[- ]?off)\b/giu,
++];
++
++/** The text with every approver clause taken out (flag on); as given otherwise. */
++export function withoutApproverClauses(text: string): string {
++  if (!approverTitleNotEmployeeEnabled()) return text;
++  return APPROVER_CLAUSES.reduce((rest, clause) => rest.replace(clause, " "), text ?? "");
++}

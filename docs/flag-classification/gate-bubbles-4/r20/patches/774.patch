@@ -1,0 +1,182 @@
+diff --git a/src/app/api/forms/corrective-action-chat-edits-e2e.test.ts b/src/app/api/forms/corrective-action-chat-edits-e2e.test.ts
+index 94c368b9..77f19bb6 100644
+--- a/src/app/api/forms/corrective-action-chat-edits-e2e.test.ts
++++ b/src/app/api/forms/corrective-action-chat-edits-e2e.test.ts
+@@ -590,6 +590,33 @@ describe("any other change to the open Corrective Action Form is made in place",
+     expect((await row(id, "action_plan"))?.value).toMatch(/^Pat will retake the attendance training this week\./);
+   });
+ 
++  it("REVISION_REPLY_SHOWS_FIELDS_ENABLED: the reply shows the changed field as it now reads; off, as before", async () => {
++    /*
++     * Port from Ask Sunny (QA, the Ask Sunny sanitation report, D, 10 Nov 2026 18:49Z): after Create, the manager's
++     * follow-up got "Updated the **Corrective Action Form** for <name>: Observation of Offense. Everything else on the form
++     * is as it was." and no refreshed card. With the flag, the changed field is printed under that line.
++     */
++    for (const on of [true, false]) {
++      vi.stubEnv("REVISION_REPLY_SHOWS_FIELDS_ENABLED", on ? "true" : "");
++      try {
++        const { id, history } = await createdForm();
++        state.draft = { values: { action_plan: "Pat will retake the attendance training this week." }, checked: {} };
++        const answer = await reviseActiveForm({
++          request: chat(),
++          instanceId: id,
++          question: "change the action plan to say Pat will retake the attendance training this week",
++          history,
++          today: "2026-10-20",
++        });
++        expect(answer?.content).toMatch(/Everything else on the form is as it was\./);
++        if (on) expect(answer?.content).toContain("**Action Plan:** Pat will retake the attendance training this week.");
++        else expect(answer?.content).not.toContain("**Action Plan:**");
++      } finally {
++        vi.unstubAllEnvs();
++      }
++    }
++  });
++
+   it("is not a revision when the manager asks for another Corrective Action", async () => {
+     const { id, history } = await createdForm();
+     expect(
+diff --git a/src/lib/ai/flags-off-parity.test.ts b/src/lib/ai/flags-off-parity.test.ts
+index c76f01c8..aabfd647 100644
+--- a/src/lib/ai/flags-off-parity.test.ts
++++ b/src/lib/ai/flags-off-parity.test.ts
+@@ -143,6 +143,14 @@ const PROTECTED = [
+  * Termination plan's closing is the termination sentence (`planClosing`, also
+  * in `refreshedActionPlan`). Off, both are exactly as before; instances.ts is
+  * not touched.
++ * The user (Pau) approved, under Pau's standing approval via QA, 11 Nov 2026, in
++ * src/lib/forms/chat-revision.ts, exactly: the import
++ * `import { shownFieldLines, updatedKeysShown } from "./revision-shown-fields";`
++ * and, after the "Updated the …" line, the comment and
++ * `lines.push(...shownFieldLines(updatedKeysShown(written, saved.cleared), saved.accepted.values, labelOf));`
++ * (port from Ask Sunny 436570f3: each changed text field as it now reads, capped
++ * at 600 characters). Behind REVISION_REPLY_SHOWS_FIELDS_ENABLED, default off;
++ * off, shownFieldLines returns [] and the reply is as before.
+  */
+ const APPROVED_PROTECTED_EDITS = [
+   ":(exclude)src/lib/forms/required-closing.ts",
+diff --git a/src/lib/config/chat-quality-flags.ts b/src/lib/config/chat-quality-flags.ts
+index c5befbf3..1e5c6d53 100644
+--- a/src/lib/config/chat-quality-flags.ts
++++ b/src/lib/config/chat-quality-flags.ts
+@@ -1332,6 +1332,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
+   "TITLE_BEFORE_NAME_REPLY_LINES_ENABLED",
+   // coding 4: FORMS_ON_FILE_ORDER_MATCH_POSSIBLE (Bubbles 17h live test, QA, 11 Nov 2026; default off).
+   "FORMS_ON_FILE_ORDER_MATCH_POSSIBLE_ENABLED",
++  "REVISION_REPLY_SHOWS_FIELDS_ENABLED",
+   "TAKE_OFF_STAYS_CARD_ENABLED",
+   // coding 4: ACCOUNT_PLACE_LEAD (round 6; default off): forced off with the others.
+   "ACCOUNT_PLACE_LEAD_ENABLED",
+@@ -5599,3 +5600,13 @@ export function headingDistinctiveWordsEnabled(): boolean {
+ export function placeStripWholePhraseOnlyEnabled(): boolean {
+   return envFlag("PLACE_STRIP_WHOLE_PHRASE_ONLY_ENABLED");
+ }
++
++/**
++ * REVISION_REPLY_SHOWS_FIELDS_ENABLED (QA, the sibling app's sanitation report, 10 Nov 2026 18:49Z; port from the sibling app; default
++ * off; same flag in both apps). A chat edit of a created draft replied "Updated …: Observation of Offense." with no card;
++ * the change showed only in the open draft. On, the reply shows each changed text field as it now reads
++ * (`forms/revision-shown-fields.ts`, called from the protected `forms/chat-revision.ts`). Off, as before.
++ */
++export function revisionReplyShowsFieldsEnabled(): boolean {
++  return envFlag("REVISION_REPLY_SHOWS_FIELDS_ENABLED");
++}
+diff --git a/src/lib/forms/chat-revision.ts b/src/lib/forms/chat-revision.ts
+index d73a7f8f..62e7d777 100644
+--- a/src/lib/forms/chat-revision.ts
++++ b/src/lib/forms/chat-revision.ts
+@@ -1,5 +1,6 @@
+ import "server-only";
+ 
++import { shownFieldLines, updatedKeysShown } from "./revision-shown-fields";
+ import { getAnthropicClient } from "@/lib/ai/anthropic";
+ import type { AskResponse } from "@/lib/ai/types";
+ import { ACTIVE_BRAND } from "@/lib/brand";
+@@ -622,6 +623,8 @@ export async function reviseActiveForm(input: {
+     ...(dateLines.length ? [""] : []),
+     `Updated the ${who}${updated.length ? `: ${updated.join(", ")}` : ""}.${saved.cleared.length ? ` Removed ${saved.cleared.map(labelOf).join(", ")}.` : ""} Everything else on the form is as it was.`,
+   ];
++  // REVISION_REPLY_SHOWS_FIELDS_ENABLED: each changed text field as it now reads (`revision-shown-fields.ts`).
++  lines.push(...shownFieldLines(updatedKeysShown(written, saved.cleared), saved.accepted.values, labelOf));
+   if (refusedFindings.length > 0) lines.push("", followUpNote(refusedFindings, labelled));
+   if (sensitive.anyRefused) {
+     lines.push("", "I didn't tick a termination, demotion or suspension — that decision stays with leadership.");
+diff --git a/src/lib/forms/revision-shown-fields.test.ts b/src/lib/forms/revision-shown-fields.test.ts
+new file mode 100644
+index 00000000..50d43605
+--- /dev/null
++++ b/src/lib/forms/revision-shown-fields.test.ts
+@@ -0,0 +1,37 @@
++import { afterEach, describe, expect, it, vi } from "vitest";
++
++import { shownFieldLines, updatedKeysShown } from "./revision-shown-fields";
++
++/*
++ * REVISION_REPLY_SHOWS_FIELDS_ENABLED (QA, the Ask Sunny sanitation report, 10 Nov 2026 18:49Z, port from Ask Sunny). After Create, "the 10 minute
++ * sanitaion in the morning" got "Updated the **Corrective Action Form** for <name>: Observation of Offense. Everything else
++ * on the form is as it was." and no card. The person is invented.
++ */
++const LABELS: Record<string, string> = { observation: "Observation of Offense", action_plan: "Action Plan" };
++const label = (key: string) => LABELS[key] ?? key;
++
++describe("REVISION_REPLY_SHOWS_FIELDS_ENABLED", () => {
++  afterEach(() => vi.unstubAllEnvs());
++
++  it("on: each changed text field as it now reads", () => {
++    vi.stubEnv("REVISION_REPLY_SHOWS_FIELDS_ENABLED", "true");
++    const values = { observation: "Observed:\nBrisa did not complete the 10-minute sanitation in the morning." };
++    expect(shownFieldLines(["observation"], values, label)).toEqual([
++      "",
++      "**Observation of Offense:** Observed:\nBrisa did not complete the 10-minute sanitation in the morning.",
++    ]);
++  });
++
++  it("a cleared field or one with no value shows nothing; a long value is cut", () => {
++    vi.stubEnv("REVISION_REPLY_SHOWS_FIELDS_ENABLED", "true");
++    expect(updatedKeysShown(["observation", "action_plan"], ["action_plan"])).toEqual(["observation"]);
++    expect(shownFieldLines(["observation"], {}, label)).toEqual([]);
++    const long = shownFieldLines(["observation"], { observation: "x".repeat(700) }, label)[1]!;
++    expect(long.endsWith("…")).toBe(true);
++  });
++
++  it("off: no lines", () => {
++    vi.stubEnv("REVISION_REPLY_SHOWS_FIELDS_ENABLED", "");
++    expect(shownFieldLines(["observation"], { observation: "Observed:\nx" }, label)).toEqual([]);
++  });
++});
+diff --git a/src/lib/forms/revision-shown-fields.ts b/src/lib/forms/revision-shown-fields.ts
+new file mode 100644
+index 00000000..a15041f2
+--- /dev/null
++++ b/src/lib/forms/revision-shown-fields.ts
+@@ -0,0 +1,30 @@
++import { revisionReplyShowsFieldsEnabled } from "@/lib/config/chat-quality-flags";
++
++/**
++ * REVISION_REPLY_SHOWS_FIELDS_ENABLED (QA, the sibling app's sanitation report, 10 Nov 2026 18:49Z, port from the sibling app; default off). After Create,
++ * "the 10 minute sanitaion in the morning" got "Updated the **Corrective Action Form** for <name>: Observation of Offense.
++ * Everything else on the form is as it was." and no card: the change shows only in the open draft below, which the
++ * manager may not be looking at. On: the reply shows each changed text field as it now reads. Off: no lines.
++ */
++const LONGEST = 600;
++
++export function shownFieldLines(
++  keys: readonly string[],
++  values: Readonly<Record<string, string | undefined>>,
++  labelOf: (key: string) => string,
++): string[] {
++  if (!revisionReplyShowsFieldsEnabled()) return [];
++  const lines = keys.flatMap((key) => {
++    const value = (values[key] ?? "").trim();
++    const label = labelOf(key).trim();
++    if (!value || !label) return [];
++    const shown = value.length > LONGEST ? `${value.slice(0, LONGEST).trimEnd()}…` : value;
++    return [`**${label}:** ${shown}`];
++  });
++  return lines.length > 0 ? ["", ...lines] : [];
++}
++
++/** The keys this turn wrote and did not clear. */
++export function updatedKeysShown(written: readonly string[], cleared: readonly string[]): string[] {
++  return written.filter((key) => !cleared.includes(key));
++}

@@ -1,0 +1,818 @@
+diff --git a/docs/parity-log/2026-11-12-17n-live-fixes.md b/docs/parity-log/2026-11-12-17n-live-fixes.md
+new file mode 100644
+index 00000000..d36abbee
+--- /dev/null
++++ b/docs/parity-log/2026-11-12-17n-live-fixes.md
+@@ -0,0 +1,11 @@
++# 17n live fixes (QA's Bubbles 17n live test, 12 Nov 2026)
++
++Branch `claude/17n-live-fixes` in both apps.
++
++| Item | Bubbles | Ask Sunny |
++|---|---|---|
++| 4b "late to reoepn the store" is a late opening | `REOPEN_IS_OPENING_ENABLED` (f497a5d9) | Ported (a950851c0). Sunny's card policy is read by `ca-policy.ts` NAMED, so the reading is a NAMED rule there too. |
++| 4c a pasted bare "Corrective Action Form" asks what is needed | `BARE_FORM_NAME_ASKS_WHAT_ENABLED` (b0d99d10) | Ported (a5e749cbe). |
++| 3 "this form is about cash handling" on an open Coaching draft | `THIS_FORM_IS_ABOUT_ENABLED` (5c0428a6) | **Not needed.** The bug does not reproduce there: the old path's revision rewrites the Details from that wording, with or without the reader's own edit. Sunny keeps the same replay case as a guard (`status: "fixed"`, 70cdb2c73). |
++| 2 a pasted customer review: say it is the customer's words, ask what the manager saw | `PASTED_REVIEW_ASKS_WHAT_YOU_SAW_ENABLED` (2fb49114) | Ported (e081da7d1). Same bug there. |
++| 4a a Corrective Action card that cites no policy asks which applies (QA's ruling: none picked, the Issue as typed) | `CA_NO_POLICY_ASKS_WHICH_ENABLED` (c51d293e) | Ported on the same branch. |
+diff --git a/src/app/api/chat/replay-pack/nov12-17n-live-cases.ts b/src/app/api/chat/replay-pack/nov12-17n-live-cases.ts
+new file mode 100644
+index 00000000..bb9c1160
+--- /dev/null
++++ b/src/app/api/chat/replay-pack/nov12-17n-live-cases.ts
+@@ -0,0 +1,140 @@
++import { expect, vi } from "vitest";
++
++import { STAFF, WEST_DODGE, noClaimWithoutUpdate, type DirectoryRow, type ReplayCase, type ReplayContext, type ReplayThread } from "./cases";
++import { patch } from "./nov7-step-b-refusals-scenarios";
++
++/**
++ * ============================================================================
++ * QA's BUBBLES 17n LIVE TEST (main c88676ac, 12 Nov 2026)
++ * ============================================================================
++ *
++ * The managers' wording, the employee invented (on the pack's roster).
++ */
++const REPORT = "QA's Bubbles 17n live test, 12 Nov 2026";
++
++function start(t: ReplayContext): ReplayThread {
++  vi.setSystemTime(new Date("2026-11-12T10:00:00Z"));
++  t.directory(STAFF);
++  t.as("location_manager", WEST_DODGE);
++  return t.thread();
++}
++
++// Item 2, QA's own test wording (the name invented).
++const WYNNE: DirectoryRow = {
++  id: "e-wynne-larkspur-17n",
++  firstName: "Wynne",
++  lastName: "Larkspur",
++  preferredFirstName: null,
++  employmentStatus: "active",
++  locationIds: ["loc-264"],
++  positionName: "Team Member Part Time",
++};
++// 4a, the manager's words (the employee invented).
++const CLOSE_REGISTER = "create a corrective action for Remy Calder, he forgot to clsoe the register at night on 11/10";
++const REVIEW_TURN =
++  "create a coaching form for Wynne Larkspur. Here is a customer review: 'Went in on Saturday and the girl at the counter ignored me for 10 minutes and was rude when I finally asked for help. One star.'";
++
++export const NOV12_17N_LIVE_CASES: ReplayCase[] = [
++  {
++    id: "nov12-17n-4b-late-to-reoepn-is-late-opening",
++    title: "4b: \"he was late to reoepn the store on 11/9\" cites Late Opening (p.15), not Attendance from \"late\"",
++    report: REPORT,
++    status: { open: "the card cites Attendance p.14 from \"late\"" },
++    fixFlags: ["REOPEN_IS_OPENING_ENABLED"],
++    async run(t) {
++      const reply = await start(t).say("create a corrective action for Remy Calder, he was late to reoepn the store on 11/9");
++      expect(reply.content, reply.content).toMatch(/\*\*Policy:\*\* Late Opening\b/);
++      expect(reply.content, reply.content).not.toMatch(/\*\*Policy:\*\* Attendance\b/);
++    },
++  },
++  {
++    id: "nov12-17n-4c-bare-form-name-asks-what",
++    title: "4c: a pasted bare \"Corrective Action Form\" asks what the manager needs, with no empty card",
++    report: REPORT,
++    status: { open: "\"Who is this form for? Tell me the employee's full name.\" over an empty card" },
++    fixFlags: ["BARE_FORM_NAME_ASKS_WHAT_ENABLED"],
++    async run(t) {
++      const thread = start(t);
++      const reply = await thread.say("Corrective Action Form");
++      expect(reply.content, reply.content).toMatch(/What do you need on the \*\*Corrective Action Form\*\*/);
++      expect(reply.formProposal, "an empty card is shown").toBeUndefined();
++    },
++  },
++  {
++    id: "nov12-17n-3-this-form-is-about-cash-handling",
++    title: "item 3: \"this form is about cash handling\" on an open Coaching draft rewrites its Details, not \"I haven't changed …\"",
++    report: REPORT,
++    status: { open: "\"I haven't changed the Coaching Form … everything on it is as it was\": only \"make it about\" was read" },
++    fixFlags: ["THIS_FORM_IS_ABOUT_ENABLED"],
++    async run(t) {
++      const thread = start(t);
++      await thread.say("create a coaching form for Remy Calder, he was on his phone on the floor on 11/10");
++      t.draftWrites({ coaching_details: "Observed:\nRemy Calder was on his phone on the sales floor." });
++      const id = await thread.create();
++      const CASH = "Observed:\nRemy Calder did not follow cash handling procedures.\n\nExpectation:\nRemy is expected to follow cash handling procedures.";
++      t.patchReads!({
++        "this form is about cash handling": patch("this_form", [
++          { field: "coaching_details", value: CASH, how: "replace", evidence: "cash handling" },
++        ]) as never,
++      });
++      t.revisionWrites({ coaching_details: CASH });
++      const reply = await thread.say("this form is about cash handling");
++      noClaimWithoutUpdate(reply);
++      expect(reply.content, reply.content).not.toMatch(/haven'?t changed/i);
++      expect(t.values(id).coaching_details, "the Details are now about cash handling").toMatch(/cash handling/i);
++    },
++  },
++  {
++    id: "nov12-17n-2-pasted-customer-review-asks-what-you-saw",
++    title: "item 2: a pasted customer review is not the account, and the reply says so and asks what the manager saw",
++    report: REPORT,
++    status: { open: "the review is dropped silently: the card has no Observation and nothing asks what the manager saw" },
++    fixFlags: ["PASTED_REVIEW_ASKS_WHAT_YOU_SAW_ENABLED"],
++    async run(t) {
++      const thread = start(t);
++      t.directory([...STAFF, WYNNE]);
++      const reply = await thread.say(REVIEW_TURN);
++      expect(reply.content, reply.content).toMatch(/review/i);
++      expect(reply.content, reply.content).toMatch(/What did you see happen\?/);
++      expect(reply.content, reply.content).not.toMatch(/Everything I need is here/i);
++    },
++  },
++  {
++    id: "nov12-17n-4a-close-register-asks-which-policy",
++    title: "4a: \"he forgot to clsoe the register at night on 11/10\" cites no policy and asks which applies; the Issue keeps \"clsoe\"",
++    report: REPORT,
++    status: { open: "no Policy line and no question: the Action plan says \"the applicable company policy\"" },
++    fixFlags: ["CA_NO_POLICY_ASKS_WHICH_ENABLED"],
++    async run(t) {
++      const thread = start(t);
++      const reply = await thread.say(CLOSE_REGISTER);
++      // QA's ruling: the Issue keeps the manager's words as typed, and no policy is picked for them.
++      expect(reply.content, reply.content).toContain("**Issue:** he forgot to clsoe the register at night on 11/10");
++      expect(reply.content, reply.content).not.toMatch(/\*\*Policy:\*\*/);
++      expect(reply.content, reply.content).toMatch(/\*\*Which policy applies\?\*\*/);
++      // The question's marker makes the next reply, naming a policy, its answer.
++      const answered = await thread.say("standards of conduct");
++      expect(answered.content, answered.content).toMatch(/\*\*Policy:\*\* Standards of Conduct\b/);
++    },
++  },
++  // Gate-Bubbles on Ask Bubbles #848 and Gate-Sunny-2 on Ask Sunny #914 (NO-GO, 12 Nov 2026): CA_NO_POLICY_ASKS_WHICH
++  // asked on replies with no built card, and on a card whose policy the reader had read. QA asked for these guards.
++  ...[
++    { id: "write-ca", say: "write ca" },
++    { id: "msb", say: "I need to make a corrective action for msb" },
++    { id: "two-people", say: "CA for Marnie Holloway and Remy Calder for being late" },
++    { id: "late-on-phone", say: "create verbal ca for Marnie Holloway, she was 20 minutes late on 11/9 because she was on social media on her phone. no payroll deduct" },
++  ].map(
++    (guard): ReplayCase => ({
++      id: `nov12-17n-4a-guard-${guard.id}`,
++      title: `4a guard: "${guard.say}" never asks "Which policy applies?" (no built card, or the reader read a policy)`,
++      report: `${REPORT}: Gate NO-GO on CA_NO_POLICY_ASKS_WHICH`,
++      status: "fixed",
++      fixFlags: ["CA_NO_POLICY_ASKS_WHICH_ENABLED"],
++      async run(t) {
++        const reply = await start(t).say(guard.say);
++        expect(reply.content, reply.content).not.toMatch(/Which policy applies\?\*\* I didn't find a section/);
++      },
++    }),
++  ),
++];
+diff --git a/src/app/api/chat/route.ts b/src/app/api/chat/route.ts
+index c684e28b..efface5f 100644
+--- a/src/app/api/chat/route.ts
++++ b/src/app/api/chat/route.ts
+@@ -36,6 +36,9 @@ import { answersWhichFormOnFile, mayAskToReopen } from "@/lib/forms/reopen-cue";
+ import { parseChatReportContext } from "@/lib/reporting/report-context";
+ import { businessToday } from "@/lib/business-date";
+ import {
++  bareFormNameAsksWhatEnabled,
++  caNoPolicyAsksWhichEnabled,
++  pastedReviewAsksWhatYouSawEnabled,
+   chatLongMessageEnabled,
+   draftActionsEnabled,
+   formEditHonestReplyEnabled,
+@@ -1259,6 +1262,18 @@ async function postChat(request: Request) {
+       }
+       // LEAD_FULL_SENTENCE_ENABLED: a reply never ends at "I can prepare:" (`lib/forms/lead-full-sentence.ts`).
+       if (leadFullSentenceEnabled()) answer = (await import("@/lib/forms/lead-full-sentence")).withLeadFullSentence(answer);
++      // BARE_FORM_NAME_ASKS_WHAT_ENABLED: a turn that is only a form's name asks what the manager needs (`lib/forms/bare-form-name.ts`).
++      if (bareFormNameAsksWhatEnabled()) answer = (await import("@/lib/forms/bare-form-name")).withBareFormNameQuestion(answer, asked.question);
++      // PASTED_REVIEW_ASKS_WHAT_YOU_SAW_ENABLED: a pasted customer review is the customer's words; ask what the manager saw (`lib/forms/pasted-customer-review.ts`).
++      if (pastedReviewAsksWhatYouSawEnabled()) answer = (await import("@/lib/forms/pasted-customer-review")).withPastedReviewAsk(answer, asked.question);
++      // CA_NO_POLICY_ASKS_WHICH_ENABLED: a Corrective Action card that cites no policy asks which applies (`lib/forms/no-policy-asks-which.ts`).
++      if (caNoPolicyAsksWhichEnabled() && answer.formProposal) {
++        // The card's own turns are what its policy reader read.
++        const cited = new Set(answer.formProposal.sourceMessageIds ?? []);
++        const turns = parsed.history.filter((turn) => turn.role === "user" && (cited.size === 0 || (turn.id && cited.has(turn.id))));
++        const managerText = [...turns.map((turn) => String(turn.content)), asked.question].join("\n");
++        answer = (await import("@/lib/forms/no-policy-asks-which")).withNoPolicyQuestion(answer, managerText);
++      }
+       // FORM_EDIT_SOURCE_TURN_ENABLED: every reply with a form open says so; the browser sends it back with the history.
+       if (formReply) answer = { ...answer, formReply };
+       // ACCOUNT_BEFORE_REQUEST_ENABLED: the account given before the request is handed to the draft (`lib/forms/account-before-request.ts`).
+diff --git a/src/lib/ai/make-it-about.ts b/src/lib/ai/make-it-about.ts
+index 09cbe6f8..641c712b 100644
+--- a/src/lib/ai/make-it-about.ts
++++ b/src/lib/ai/make-it-about.ts
+@@ -1,4 +1,4 @@
+-import { madeForIsMadeAboutEnabled, politeAboutStaysCardEnabled } from "@/lib/config/chat-quality-flags";
++import { madeForIsMadeAboutEnabled, politeAboutStaysCardEnabled, thisFormIsAboutEnabled } from "@/lib/config/chat-quality-flags";
+ 
+ /**
+  * ============================================================================
+@@ -39,8 +39,20 @@ const MAKE_IT_FOR =
+  * `aboutOnly`: "make it about" alone (MADE_FOR_IS_MADE_ABOUT_ENABLED: where a "for" turn keeps its reader's own account,
+  * `forms/form-patch-turn.ts`).
+  */
++/**
++ * THIS_FORM_IS_ABOUT_ENABLED (QA's Bubbles 17n live test, 12 Nov 2026, item 3): on an open Coaching draft, "this form is
++ * about cash handling" was answered "I haven't changed the Coaching Form … everything on it is as it was": only "make it
++ * about" was read. "this form is about <X>", "the coaching form is about <X>", "this CA should be about <X>" say what
++ * the form is about, as "make it about <X>" does.
++ */
++export const FORM_IS_ABOUT =
++  /\b(?:this|the)\s+(?:form|document|coaching(?:\s+(?:form|document))?|ca|c\/a|corrective\s+action(?:\s+form)?|write-?up)\s+(?:is|should\s+be|needs\s+to\s+be|is\s+supposed\s+to\s+be)\s+about\s+/i;
++
+ export function madeAbout(text: string, options: { readonly aboutOnly?: boolean } = {}): string | null {
+-  const found = MAKE_IT_ABOUT.exec(text ?? "") ?? (politeAboutStaysCardEnabled() && !options.aboutOnly ? MAKE_IT_FOR.exec(text ?? "") : null);
++  const found =
++    MAKE_IT_ABOUT.exec(text ?? "") ??
++    (thisFormIsAboutEnabled() ? FORM_IS_ABOUT.exec(text ?? "") : null) ??
++    (politeAboutStaysCardEnabled() && !options.aboutOnly ? MAKE_IT_FOR.exec(text ?? "") : null);
+   if (!found) return null;
+   const rest = text.slice(found.index + found[0].length);
+   const end = ENDS.exec(rest);
+@@ -126,7 +138,13 @@ export function notesMadeAbout(notes: string): string {
+  * as a rewording and refuse the new account for dropping the old one. Unchanged otherwise.
+  */
+ export function asMadeAboutWording(text: string): string {
+-  if (MAKE_IT_ABOUT.test(text ?? "") || !madeForIsMadeAboutEnabled() || !politeAboutStaysCardEnabled()) return text;
++  if (MAKE_IT_ABOUT.test(text ?? "")) return text;
++  // THIS_FORM_IS_ABOUT_ENABLED: "this form is about <X>" reads to the revision as "make it about <X>".
++  if (thisFormIsAboutEnabled()) {
++    const said = FORM_IS_ABOUT.exec(text ?? "");
++    if (said) return `${text.slice(0, said.index)}make it about ${text.slice(said.index + said[0].length)}`;
++  }
++  if (!madeForIsMadeAboutEnabled() || !politeAboutStaysCardEnabled()) return text;
+   const found = MAKE_IT_FOR.exec(text ?? "");
+   if (!found) return text;
+   const at = found.index + found[0].length;
+diff --git a/src/lib/ai/this-form-is-about.test.ts b/src/lib/ai/this-form-is-about.test.ts
+new file mode 100644
+index 00000000..bfee53ff
+--- /dev/null
++++ b/src/lib/ai/this-form-is-about.test.ts
+@@ -0,0 +1,46 @@
++import { afterEach, describe, expect, it, vi } from "vitest";
++
++import { scopeRevision } from "@/lib/forms/revision";
++
++import { asMadeAboutWording, madeAbout } from "./make-it-about";
++
++/** QA's Bubbles 17n live test, 12 Nov 2026, item 3 — the manager's wording. THIS_FORM_IS_ABOUT_ENABLED. */
++const SAID = "this form is about cash handling";
++
++afterEach(() => vi.unstubAllEnvs());
++
++describe("THIS_FORM_IS_ABOUT_ENABLED", () => {
++  it("off: \"this form is about <X>\" is not a made-about (as before)", () => {
++    expect(madeAbout(SAID)).toBeNull();
++  });
++
++  it("on: reads <X> from \"this form is about <X>\" and its variants", () => {
++    vi.stubEnv("THIS_FORM_IS_ABOUT_ENABLED", "true");
++    expect(madeAbout(SAID)).toMatch(/^cash handling/);
++    expect(madeAbout("the coaching form should be about being late")).toMatch(/^being late/);
++    expect(madeAbout("This CA is about the register")).toMatch(/^the register/);
++  });
++
++  it("on: the revision reads it as \"make it about <X>\"", () => {
++    expect(asMadeAboutWording(SAID)).toBe(SAID);
++    vi.stubEnv("THIS_FORM_IS_ABOUT_ENABLED", "true");
++    expect(asMadeAboutWording(SAID)).toBe("make it about cash handling");
++  });
++
++  it("on: a sentence that says what something else is about is not one", () => {
++    vi.stubEnv("THIS_FORM_IS_ABOUT_ENABLED", "true");
++    expect(madeAbout("this policy is about cash handling")).toBeNull();
++    expect(madeAbout("what is this form about?")).toBeNull();
++  });
++
++  it("on, with EDIT_MAKE_IT_ABOUT: the revision covers the account fields", () => {
++    vi.stubEnv("EDIT_MAKE_IT_ABOUT_ENABLED", "true");
++    const fields = [{ key: "coaching_details", label: "Details" }] as unknown as Parameters<typeof scopeRevision>[1];
++    const off = scopeRevision(SAID, fields);
++    vi.stubEnv("THIS_FORM_IS_ABOUT_ENABLED", "true");
++    const on = scopeRevision(SAID, fields);
++    expect(on.mode).toBe("fields");
++    expect(off.keys.has("coaching_details")).toBe(false);
++    expect(on.keys.has("coaching_details")).toBe(true);
++  });
++});
+diff --git a/src/lib/config/chat-quality-flags.ts b/src/lib/config/chat-quality-flags.ts
+index c5befbf3..9b2c6be8 100644
+--- a/src/lib/config/chat-quality-flags.ts
++++ b/src/lib/config/chat-quality-flags.ts
+@@ -1403,6 +1403,11 @@ export const CHAT_QUALITY_FLAG_NAMES = [
+   "ADD_OUT_OF_OTHER_SECTIONS_ENABLED",
+   "EXIT_TYPO_WORDS_ENABLED",
+   "CA_REASON_DUE_TO_ENABLED",
++  "REOPEN_IS_OPENING_ENABLED",
++  "BARE_FORM_NAME_ASKS_WHAT_ENABLED",
++  "THIS_FORM_IS_ABOUT_ENABLED",
++  "PASTED_REVIEW_ASKS_WHAT_YOU_SAW_ENABLED",
++  "CA_NO_POLICY_ASKS_WHICH_ENABLED",
+   "COMPANY_METRIC_WORDS_NOT_NAMES_ENABLED",
+   // coding 5: EXIT_NOTICE_VERB_TYPOS (QA's October triage, 10 Nov 2026; default off).
+   "EXIT_NOTICE_VERB_TYPOS_ENABLED",
+@@ -5260,6 +5265,57 @@ export function noSelectionOnOpenCardEnabled(): boolean {
+   return envFlag("NO_SELECTION_ON_OPEN_CARD_ENABLED");
+ }
+ 
++/**
++ * REOPEN_IS_OPENING_ENABLED (QA's Bubbles 17n live test, 12 Nov 2026; default off; same flag in both apps). "he was late
++ * to reoepn the store on 11/9" cited Attendance p.14 from "late", not Late Opening; "late to reopen the store", spelled
++ * right, did too. On: "late to reopen" and a slip within two letters of "reopen" are a late opening
++ * (`forms/late-open.ts`). Off, as before.
++ */
++export function reopenIsOpeningEnabled(): boolean {
++  return envFlag("REOPEN_IS_OPENING_ENABLED");
++}
++
++/**
++ * BARE_FORM_NAME_ASKS_WHAT_ENABLED (QA's Bubbles 17n live test, 12 Nov 2026, 4c; default off; same flag in both apps).
++ * A pasted bare "Corrective Action Form" got "Who is this form for? Tell me the employee's full name." and an empty
++ * card. On: a turn that is only a form's name, with a card naming nobody, asks what the manager needs on that form,
++ * with no card (`forms/bare-form-name.ts`). Off, as before.
++ */
++export function bareFormNameAsksWhatEnabled(): boolean {
++  return envFlag("BARE_FORM_NAME_ASKS_WHAT_ENABLED");
++}
++
++/**
++ * THIS_FORM_IS_ABOUT_ENABLED (QA's Bubbles 17n live test, 12 Nov 2026, item 3; default off; same flag in both apps). On
++ * an open Coaching draft, "this form is about cash handling" was answered "I haven't changed the Coaching Form …
++ * everything on it is as it was" and the topic was ignored: only "make it about <X>" was read. On: "this form is about
++ * <X>" (and "the coaching form / CA is / should be about <X>") is a made-about, read by the same chain
++ * (`ai/make-it-about.ts`, `forms/revision.ts`). Off, as before.
++ */
++export function thisFormIsAboutEnabled(): boolean {
++  return envFlag("THIS_FORM_IS_ABOUT_ENABLED");
++}
++
++/**
++ * PASTED_REVIEW_ASKS_WHAT_YOU_SAW_ENABLED (QA's Bubbles 17n live test, 12 Nov 2026, item 2; default off; same flag in both
++ * apps). A pasted customer review was rightly not taken as the account, but the reply said "Everything I need is here"
++ * and never mentioned it. On: the reply says the review is the customer's words and asks "What did you see happen?"
++ * (`forms/pasted-customer-review.ts`). Off, as before.
++ */
++export function pastedReviewAsksWhatYouSawEnabled(): boolean {
++  return envFlag("PASTED_REVIEW_ASKS_WHAT_YOU_SAW_ENABLED");
++}
++
++/**
++ * CA_NO_POLICY_ASKS_WHICH_ENABLED (QA's Bubbles 17n live test, 12 Nov 2026, 4a; QA's ruling; default off; same flag in
++ * both apps). "he forgot to clsoe the register at night" gave a Corrective Action card with no Policy line and no
++ * question. On: such a card asks "**Which policy applies?**" and picks none (`forms/no-policy-asks-which.ts`). Off, as
++ * before.
++ */
++export function caNoPolicyAsksWhichEnabled(): boolean {
++  return envFlag("CA_NO_POLICY_ASKS_WHICH_ENABLED");
++}
++
+ /**
+  * TERMINATION_STATED_TICKS_ENABLED (coding 6, 10 Nov 2026; default off;
+  * ported from the sibling app: Pau's P15 ruling "A" there). "I need a term CA for <name>. …" — the card
+diff --git a/src/lib/forms/bare-form-name.test.ts b/src/lib/forms/bare-form-name.test.ts
+new file mode 100644
+index 00000000..77564b99
+--- /dev/null
++++ b/src/lib/forms/bare-form-name.test.ts
+@@ -0,0 +1,24 @@
++import { describe, expect, it } from "vitest";
++
++import { withBareFormNameQuestion } from "./bare-form-name";
++
++// QA's Bubbles 17n live test (12 Nov 2026, 4c): a pasted bare "Corrective Action Form".
++const EMPTY_CARD = { content: "Who is this form for? Tell me the employee's full name.", formProposal: { employeeName: null, templateName: "Corrective Action Form" } };
++
++describe("BARE_FORM_NAME_ASKS_WHAT (the step itself; the route asks it only with the flag on)", () => {
++  it.each(["Corrective Action Form", "Corrective Action Form."])("%j asks what the manager needs, with no card", (question) => {
++    const out = withBareFormNameQuestion(EMPTY_CARD, question);
++    expect(out.content).toBe("What do you need on the **Corrective Action Form**? Tell me who it's for and what happened, and I'll put the card together.");
++    expect(out.formProposal).toBeUndefined();
++  });
++
++  it("a turn that says more, or names the person, is as before", () => {
++    expect(withBareFormNameQuestion(EMPTY_CARD, "Corrective Action Form for Remy Calder")).toBe(EMPTY_CARD);
++    const named = { ...EMPTY_CARD, formProposal: { employeeName: "Remy Calder", templateName: "Corrective Action Form" } };
++    expect(withBareFormNameQuestion(named, "Corrective Action Form")).toBe(named);
++  });
++
++  it.each(["coaching form", "exit form", "corrective action form"])("a form asked for in words (%j) still starts its card", (question) => {
++    expect(withBareFormNameQuestion(EMPTY_CARD, question)).toBe(EMPTY_CARD);
++  });
++});
+diff --git a/src/lib/forms/bare-form-name.ts b/src/lib/forms/bare-form-name.ts
+new file mode 100644
+index 00000000..c4708944
+--- /dev/null
++++ b/src/lib/forms/bare-form-name.ts
+@@ -0,0 +1,36 @@
++import { namesAForm } from "@/lib/forms/template-intent";
++
++/**
++ * ============================================================================
++ * A TURN THAT IS ONLY A FORM'S NAME ASKS WHAT THE MANAGER NEEDS
++ * ============================================================================
++ *
++ * BARE_FORM_NAME_ASKS_WHAT_ENABLED (QA's Bubbles 17n live test, 12 Nov 2026, 4c): a pasted bare "Corrective Action
++ * Form" was answered "Who is this form for? Tell me the employee's full name." over an empty card. PASTED_FORM_NAME_
++ * NOT_REQUEST reads only a lead ending in ":" before pasted lines, so it never saw this turn. On: when the manager's
++ * whole turn is a form's printed title, pasted (every word capitalised) and nothing else, and the card that came back
++ * names nobody, the reply asks what they need on that form, and no empty card is shown. A turn that names the person,
++ * says anything more, or asks for the form in words ("coaching form", "exit form"), is as before.
++ */
++/**
++ * A form's printed title, pasted: every word capitalised ("Corrective Action Form"). A request typed as words — "coaching
++ * form", "exit form" — still starts that form's card and asks who it is for, as before (replay oct30-am-role,
++ * nov11-exit-prose-bare-name).
++ */
++const PASTED_TITLE = /^\p{Lu}[\p{L}'’/-]*(?:\s+\p{Lu}[\p{L}'’/-]*)*$/u;
++
++export function withBareFormNameQuestion<T extends { content: string; formProposal?: { employeeName?: string | null; templateName?: string } | null }>(
++  answer: T,
++  question: string,
++): T {
++  const card = answer.formProposal;
++  const typed = question.trim().replace(/[.!?:]+$/, "");
++  if (!card || card.employeeName || !PASTED_TITLE.test(typed) || !namesAForm(typed)) return answer;
++  const form = card.templateName ?? "form";
++  const { formProposal: _dropped, ...rest } = answer;
++  void _dropped;
++  return {
++    ...rest,
++    content: `What do you need on the **${form}**? Tell me who it's for and what happened, and I'll put the card together.`,
++  } as T;
++}
+diff --git a/src/lib/forms/late-open.ts b/src/lib/forms/late-open.ts
+index a9bd3b7b..4ea95820 100644
+--- a/src/lib/forms/late-open.ts
++++ b/src/lib/forms/late-open.ts
+@@ -1,5 +1,6 @@
+ import {
+   failureToOpenIsLateOpeningEnabled,
++  reopenIsOpeningEnabled,
+   formDateIncidentOnlyEnabled,
+   lateOpenDateEnabled,
+   noShowOpeningIsAttendanceEnabled,
+@@ -51,9 +52,43 @@ export const FAILURE_TO_OPEN = new RegExp(
+ 
+ /** FAILURE_TO_OPEN_IS_LATE_OPENING_ENABLED: whether the words say the employee failed to open. Off, false. */
+ export function saysFailureToOpen(text: string): boolean {
++  if (reopenIsOpeningEnabled() && lateToReopen(text) !== null) return true;
+   return failureToOpenIsLateOpeningEnabled() && FAILURE_TO_OPEN.test(text);
+ }
+ 
++/*
++ * REOPEN_IS_OPENING_ENABLED (QA's Bubbles 17n live test, 12 Nov 2026): "he was late to reoepn the store on 11/9" was
++ * Attendance (p.14, from "late"), not Late Opening; so was "late to reopen the store", spelled right. Reopening the
++ * store is opening it. "late to <word>" where the word is "reopen" or within two letters of it ("reoepn", "re-open"),
++ * with "the store" (or the like) after it or nothing at all, is a late opening. Off, null.
++ */
++const LATE_TO_RE = /\blate\s+to\s+(re-?[a-z]{3,6})\b((?:\s+(?:the\s+)?(?:store|location|shop|makery))?)/gi;
++
++/** REOPEN_IS_OPENING_ENABLED: the manager's "late to reopen (the store)" span as typed, or null. */
++export function lateToReopen(text: string): string | null {
++  for (const match of (text ?? "").matchAll(LATE_TO_RE)) {
++    const word = match[1]!.toLowerCase().replace("-", "");
++    if (word === "reopen" || closeTo(word, "reopen")) return match[0];
++  }
++  return null;
++}
++
++/** Levenshtein distance of at most two, on a short word. */
++function closeTo(word: string, target: string): boolean {
++  const rows = Array.from({ length: word.length + 1 }, (_, index) => [index]);
++  for (let column = 1; column <= target.length; column += 1) rows[0]![column] = column;
++  for (let row = 1; row <= word.length; row += 1) {
++    for (let column = 1; column <= target.length; column += 1) {
++      rows[row]![column] = Math.min(
++        rows[row - 1]![column]! + 1,
++        rows[row]![column - 1]! + 1,
++        rows[row - 1]![column - 1]! + (word[row - 1] === target[column - 1] ? 0 : 1),
++      );
++    }
++  }
++  return rows[word.length]![target.length]! <= 2;
++}
++
+ /*
+  * LATE_OPENING_OWN_WORDS_ENABLED (QA's live Bubbles round 17b, 10 Nov 2026): the words the manager typed that read as
+  * a late opening, for the card's 'from what you described ("…")'. It used to be the app's own "opening late", which
+@@ -84,6 +119,9 @@ const NEGATION_BEFORE = /\b(?:not|never|did\s*n['’]?t|did\s+not|didnt|failed\s
+ /** LATE_OPENING_OWN_WORDS_ENABLED: the manager's own words that read as a late opening, as typed, or null. */
+ export function lateOpeningWords(text: string): string | null {
+   const said = text ?? "";
++  // REOPEN_IS_OPENING_ENABLED: "late to reoepn the store", as typed.
++  const reopened = reopenIsOpeningEnabled() ? lateToReopen(said) : null;
++  if (reopened) return reopened.replace(/\s+/g, " ").trim();
+   for (const pattern of OWN_LATE_OPENING) {
+     const found = pattern.exec(said);
+     if (!found) continue;
+diff --git a/src/lib/forms/no-policy-asks-which.test.ts b/src/lib/forms/no-policy-asks-which.test.ts
+new file mode 100644
+index 00000000..8eae4990
+--- /dev/null
++++ b/src/lib/forms/no-policy-asks-which.test.ts
+@@ -0,0 +1,61 @@
++import { describe, expect, it } from "vitest";
++
++import { NO_POLICY_NOTE, readerFindsPolicy, withNoPolicyQuestion } from "./no-policy-asks-which";
++
++// QA's Bubbles 17n live test (12 Nov 2026, 4a), the manager's words (the employee invented).
++const ISSUE = "**Issue:** he forgot to clsoe the register at night on 11/10 · **Store:** the store";
++const CARD = {
++  content: `I'll draft a **Corrective Action Form** for **Remy Calder**.\n\n${ISSUE}\n\nIs this a **Verbal Warning** or a **Written Warning**?`,
++  formProposal: { templateName: "Corrective Action Form", status: "ready", employeeName: "Remy Calder" },
++};
++
++describe("CA_NO_POLICY_ASKS_WHICH (the step itself; the route asks it only with the flag on)", () => {
++  it("asks which policy applies, after the Issue, and keeps the Issue as typed", () => {
++    const out = withNoPolicyQuestion(CARD);
++    const parts = out.content.split("\n\n");
++    expect(parts[1]).toBe(ISSUE);
++    expect(parts[2]).toBe(NO_POLICY_NOTE);
++    expect(out.content).toMatch(/^\*\*Which policy applies\?\*\*/m);
++  });
++
++  it("a card that cites a policy, or already asks, is as before", () => {
++    const cited = { ...CARD, content: `${CARD.content}\n\n**Policy:** Late Opening — read from this request.` };
++    expect(withNoPolicyQuestion(cited)).toBe(cited);
++    const asks = { ...CARD, content: `${CARD.content}\n\n**Which policy applies?** Tell me which.` };
++    expect(withNoPolicyQuestion(asks)).toBe(asks);
++  });
++
++  it("a Coaching card, or no card, is as before", () => {
++    const coaching = { ...CARD, formProposal: { templateName: "Coaching Form" } };
++    expect(withNoPolicyQuestion(coaching)).toBe(coaching);
++    const none = { content: "Which form?" };
++    expect(withNoPolicyQuestion(none)).toBe(none);
++  });
++
++  it("Gate-Bubbles on #848: a reply with no card built yet never asks (name asks, a card still needing its employee)", () => {
++    const nameAsk = {
++      content: "Who is this Corrective Action Form for? I still need to know who this is for before I can make this card.",
++      formProposal: { templateName: "Corrective Action Form", status: "needs_employee", employeeName: null },
++    };
++    expect(withNoPolicyQuestion(nameAsk)).toBe(nameAsk);
++    const noIssue = { ...CARD, content: "I'll draft a **Corrective Action Form** for **Remy Calder**." };
++    expect(withNoPolicyQuestion(noIssue)).toBe(noIssue);
++    const notReady = { ...CARD, formProposal: { ...CARD.formProposal, status: "needs_location" } };
++    expect(withNoPolicyQuestion(notReady)).toBe(notReady);
++  });
++
++  it("Gate-Sunny-2 on Ask Sunny #914: a card whose policy the reader read never asks; the close-register account still does", () => {
++    const late = "create verbal ca for marlo quist, she was 20 minutes late on 10-20-26 because she was on social media on her phone. no payroll deduct";
++    expect(readerFindsPolicy(late)).toBe(true);
++    expect(withNoPolicyQuestion(CARD, late)).toBe(CARD);
++    const close = "create a corrective action for Remy Calder, he forgot to clsoe the register at night on 11/10";
++    expect(readerFindsPolicy(close)).toBe(false);
++    expect(withNoPolicyQuestion(CARD, close).content).toContain(NO_POLICY_NOTE);
++    expect(readerFindsPolicy("create a corrective action for Remy Calder for violating the attendance policy")).toBe(true);
++  });
++
++  it("a reply that already cites a manual page has a policy", () => {
++    const cited = { ...CARD, content: `${CARD.content}\n\nCell Phone/Smart Watch Policy, JBA Policy Manual p.19` };
++    expect(withNoPolicyQuestion(cited)).toBe(cited);
++  });
++});
+diff --git a/src/lib/forms/no-policy-asks-which.ts b/src/lib/forms/no-policy-asks-which.ts
+new file mode 100644
+index 00000000..48d7a747
+--- /dev/null
++++ b/src/lib/forms/no-policy-asks-which.ts
+@@ -0,0 +1,63 @@
++import { CA_POLICY_QUESTION, describedAttendanceKeys, policiesNamedIn, readCaPolicy } from "@/lib/forms/ca-policy";
++
++/**
++ * ============================================================================
++ * A CORRECTIVE ACTION CARD THAT CITES NO POLICY ASKS WHICH ONE APPLIES
++ * ============================================================================
++ *
++ * CA_NO_POLICY_ASKS_WHICH_ENABLED (QA's Bubbles 17n live test, 12 Nov 2026, 4a; QA's ruling). "create a corrective
++ * action for <D>, he forgot to clsoe the register at night on 11/10" gave a card with no Policy line, and nothing said
++ * so: the Action plan read "the applicable company policy" and no question asked which. The manual has no section for
++ * forgetting to close the register, so no policy is picked (no AI-chosen Standards of Conduct: only a policy the
++ * manager named or was shown keeps a tick), and the Issue keeps the manager's words as typed ("clsoe" stays).
++ *
++ * On: a Corrective Action card whose reply has no "**Policy:**" line and asks no policy question gets one paragraph,
++ * after the Issue, opening with the policy question's marker ("Which policy applies?"), so the manager's next reply
++ * naming a policy is read as its answer (`ai/form-proposal.ts`, `forms/chat-policy-change.ts`). Pure.
++ *
++ * Gate-Bubbles on #848 (NO-GO, 12 Nov 2026): the note was also added to replies with no card built yet, where no policy
++ * search had run — the name asks ("write ca", "a CA"), near-miss and compound-surname asks, "CA for <A> and <B>" — 205
++ * turns in 83 replay cases, and it displaced "I still need to know who this is for …". Only a BUILT card asks: status
++ * "ready", an employee named, and its "**Issue:**" line shown.
++ */
++
++export const NO_POLICY_NOTE = `**${CA_POLICY_QUESTION}** I didn't find a section of the policy manual for what you described, so I haven't picked one. Tell me which policy applies, or tick Type of Offense on the form — I won't pick one for you.`;
++
++interface Card {
++  readonly templateName?: string;
++  readonly status?: string;
++  readonly employeeName?: string | null;
++}
++
++/**
++ * Whether the card-time policy readers find a policy in the manager's words (Gate-Sunny-2 on Ask Sunny #914: "she was
++ * 20 minutes late … on her phone" reads as Attendance with no Policy line shown, and must not be asked about). Any
++ * reading — named, suggested, ambiguous, a missed event, cleaning, sales, Woven, or a described lateness or absence —
++ * means the reader settled something, so the question is not asked.
++ */
++export function readerFindsPolicy(managerText: string): boolean {
++  const text = managerText.trim();
++  if (!text) return false;
++  const reading = readCaPolicy(text);
++  if (reading.stated || reading.suggestion || reading.ambiguous || reading.missedEvent || reading.other || reading.source) return true;
++  if ((reading as { readFromApp?: unknown }).readFromApp) return true;
++  if (describedAttendanceKeys(text)) return true;
++  return text.split(/(?<=[.!?])\s+|\n+/).some((sentence) => policiesNamedIn(sentence.toLowerCase()).length > 0);
++}
++
++/** A reply that already cites a manual page for the card has a policy. */
++const CITES_MANUAL_PAGE = /JBA Policy Manual,?\s+pp?\.\s*\d/i;
++
++export function withNoPolicyQuestion<T extends { content: string; formProposal?: Card | null }>(answer: T, managerText = ""): T {
++  const card = answer.formProposal;
++  if (!card || !/\bcorrective\s+action\b/i.test(card.templateName ?? "")) return answer;
++  // A built card only: ready, for a named employee, with its Issue shown (Gate-Bubbles on #848).
++  if (card.status !== "ready" || !card.employeeName?.trim() || !/\*\*Issue:\*\*/.test(answer.content)) return answer;
++  if (/\*\*Policy:\*\*/.test(answer.content) || answer.content.includes(CA_POLICY_QUESTION)) return answer;
++  // Only after the policy reader ran and found nothing (Gate-Sunny-2 on Ask Sunny #914).
++  if (CITES_MANUAL_PAGE.test(answer.content) || readerFindsPolicy(managerText)) return answer;
++  const parts = answer.content.split(/\n{2,}/);
++  const issue = parts.findIndex((part) => /\*\*Issue:\*\*/.test(part));
++  const at = issue >= 0 ? issue + 1 : Math.min(1, parts.length);
++  return { ...answer, content: [...parts.slice(0, at), NO_POLICY_NOTE, ...parts.slice(at)].join("\n\n") };
++}
+diff --git a/src/lib/forms/pasted-customer-review.test.ts b/src/lib/forms/pasted-customer-review.test.ts
+new file mode 100644
+index 00000000..105a9f2b
+--- /dev/null
++++ b/src/lib/forms/pasted-customer-review.test.ts
+@@ -0,0 +1,42 @@
++import { describe, expect, it } from "vitest";
++
++import { REVIEW_NOT_ACCOUNT_NOTE, pastedCustomerReviewStart, withPastedReviewAsk } from "./pasted-customer-review";
++
++// QA's Bubbles 17n live test (12 Nov 2026, item 2), QA's own wording (the name invented).
++const SAID =
++  "create a coaching form for Wynne Larkspur. Here is a customer review: 'Went in on Saturday and the girl at the counter ignored me for 10 minutes and was rude when I finally asked for help. One star.'";
++const READY = {
++  content:
++    "Here is what I would put on a **Coaching Form**.\n\nEverything I need is here, drawn from your message above.\n\nI have **Wynne Larkspur** and the store. Create the draft here when you're ready.",
++  formProposal: { templateKey: "coaching" },
++};
++
++describe("PASTED_REVIEW_ASKS_WHAT_YOU_SAW (the step itself; the route asks it only with the flag on)", () => {
++  it("says the review is the customer's words and asks what the manager saw", () => {
++    const out = withPastedReviewAsk(READY, SAID);
++    expect(out.content).not.toMatch(/Everything I need is here/);
++    expect(out.content).toContain(REVIEW_NOT_ACCOUNT_NOTE);
++    expect(out.content).toMatch(/What did you see happen\?/);
++    expect(out.content.startsWith("Here is what I would put on a **Coaching Form**.")).toBe(true);
++    expect(out.formProposal).toBe(READY.formProposal);
++  });
++
++  it.each(["Google review: rude at the register", "I got a customer complaint - she was rude", "this yelp review: one star"])("reads %j as a pasted review", (text) => {
++    expect(pastedCustomerReviewStart(text)).toBeGreaterThanOrEqual(0);
++  });
++
++  it("a manager who also says what happened is as before", () => {
++    const own = "create a coaching form for Wynne Larkspur, she was rude to a customer at the counter on 11/7. Here is a customer review: 'One star.'";
++    expect(withPastedReviewAsk(READY, own)).toBe(READY);
++  });
++
++  it("no review, or no card, is as before", () => {
++    expect(withPastedReviewAsk(READY, "create a coaching form for Wynne Larkspur")).toBe(READY);
++    const noCard = { content: "Which form?" };
++    expect(withPastedReviewAsk(noCard, SAID)).toBe(noCard);
++  });
++
++  it("\"review the policy with her\" is no pasted review", () => {
++    expect(pastedCustomerReviewStart("please review the policy with her: attendance")).toBe(-1);
++  });
++});
+diff --git a/src/lib/forms/pasted-customer-review.ts b/src/lib/forms/pasted-customer-review.ts
+new file mode 100644
+index 00000000..338b80ea
+--- /dev/null
++++ b/src/lib/forms/pasted-customer-review.ts
+@@ -0,0 +1,52 @@
++import { describesIncident } from "@/lib/forms/corrective-action-intake";
++
++/**
++ * ============================================================================
++ * A PASTED CUSTOMER REVIEW IS THE CUSTOMER'S WORDS: SAY SO, AND ASK WHAT THE MANAGER SAW
++ * ============================================================================
++ *
++ * PASTED_REVIEW_ASKS_WHAT_YOU_SAW_ENABLED (QA's Bubbles 17n live test, 12 Nov 2026, item 2). QA's turn (the name
++ * invented): "create a coaching form for Wynne Larkspur. Here is a customer review: 'Went in on Saturday and the girl at
++ * the counter ignored me for 10 minutes and was rude when I finally asked for help. One star.'" The review was rightly
++ * not taken as her account (the card had no Observation), but the reply said "Everything I need is here, drawn from
++ * your message above." and never mentioned the review or asked what the manager saw.
++ *
++ * On: when the manager's turn holds a pasted customer review ("Here is a customer review: '…'", "Google review: …") and
++ * their own words outside it say nothing that happened, a card's reply drops "Everything I need is here" and says, with
++ * the "what happened" marker the intake reads the next reply by (`answeredWhatHappened`), that the review is the
++ * customer's words and asks "What did you see happen?". Pure.
++ */
++
++/** "Here is a customer review:", "customer review -", "a google review:", "this yelp review:". */
++const REVIEW_LEAD =
++  /\b(?:(?:here(?:'s|\s+is|\s+are)|this\s+is|i\s+(?:got|have|received))\s+)?(?:a|an|the|this|our|my)?\s*(?:customer|guest|client|google|yelp|facebook|online)\s+(?:review|complaint|comment)s?\b\s*(?:from\s+[^:\n]{1,40})?\s*[:\-–—]\s*/i;
++
++/** Where the pasted review starts (its lead), or -1. */
++export function pastedCustomerReviewStart(text: string): number {
++  const lead = REVIEW_LEAD.exec(text ?? "");
++  return lead ? lead.index : -1;
++}
++
++/** The manager's own words: the turn up to the review's lead. */
++export function wordsBeforeReview(text: string): string {
++  const start = pastedCustomerReviewStart(text);
++  return start < 0 ? text : text.slice(0, start).trim();
++}
++
++const SAYS_READY = /^Everything I need is here[^\n]*\n*/im;
++
++export const REVIEW_NOT_ACCOUNT_NOTE =
++  "**You haven't told me what happened yet.** The customer review is the customer's words, not your own account, so I haven't put it on the card. What did you see happen? Tell me here and I'll draft it from your words.";
++
++export function withPastedReviewAsk<T extends { content: string; formProposal?: unknown }>(answer: T, question: string): T {
++  if (!answer.formProposal) return answer;
++  const start = pastedCustomerReviewStart(question);
++  if (start < 0) return answer;
++  if (describesIncident(question.slice(0, start))) return answer;
++  if (/You haven't told me what happened yet/i.test(answer.content)) return answer;
++  const without = answer.content.replace(SAYS_READY, "").trim();
++  const parts = without.split(/\n{2,}/);
++  // The note goes after the card's lead ("Here is what I would put on a **Coaching Form**.").
++  const content = [parts[0], REVIEW_NOT_ACCOUNT_NOTE, ...parts.slice(1)].filter(Boolean).join("\n\n");
++  return { ...answer, content };
++}
+diff --git a/src/lib/forms/reopen-is-opening.test.ts b/src/lib/forms/reopen-is-opening.test.ts
+new file mode 100644
+index 00000000..4741324b
+--- /dev/null
++++ b/src/lib/forms/reopen-is-opening.test.ts
+@@ -0,0 +1,40 @@
++import { afterEach, describe, expect, it, vi } from "vitest";
++
++import { readCaPolicy } from "./ca-policy";
++import { lateOpeningWords, lateToReopen, saysFailureToOpen } from "./late-open";
++
++// QA's Bubbles 17n live test (12 Nov 2026), the manager's words (the employee invented).
++const SAID = "create a corrective action for Remy Calder, he was late to reoepn the store on 11/9";
++
++describe("REOPEN_IS_OPENING_ENABLED", () => {
++  afterEach(() => vi.unstubAllEnvs());
++
++  it("off (production today): \"late to reoepn\" is no late opening (the bug)", () => {
++    vi.stubEnv("REOPEN_IS_OPENING_ENABLED", "");
++    expect(saysFailureToOpen(SAID)).toBe(false);
++  });
++
++  it.each([SAID, "he was late to reopen the store on 11/9", "she was late to re-open the store", "late to reopne"])("on: %s is a late opening", (text) => {
++    vi.stubEnv("REOPEN_IS_OPENING_ENABLED", "true");
++    expect(saysFailureToOpen(text)).toBe(true);
++  });
++
++  it("on: the card quotes the manager's own words", () => {
++    vi.stubEnv("REOPEN_IS_OPENING_ENABLED", "true");
++    expect(lateOpeningWords(SAID)).toBe("late to reoepn the store");
++  });
++
++  it.each(["he was late to report his hours", "she was late to return from break", "late to reply to the district manager", "late to restock the shelves"])(
++    "on: %s is not a late opening",
++    (text) => {
++      vi.stubEnv("REOPEN_IS_OPENING_ENABLED", "true");
++      expect(lateToReopen(text)).toBeNull();
++    },
++  );
++
++  it("on: the reading is no longer Attendance from \"late\" alone", () => {
++    vi.stubEnv("REOPEN_IS_OPENING_ENABLED", "true");
++    vi.stubEnv("LATE_OPEN_DATE_ENABLED", "true");
++    expect(readCaPolicy(SAID).stated).not.toBe("attendance");
++  });
++});
+diff --git a/src/lib/forms/revision.ts b/src/lib/forms/revision.ts
+index 3e863986..30bff59f 100644
+--- a/src/lib/forms/revision.ts
++++ b/src/lib/forms/revision.ts
+@@ -1,4 +1,8 @@
+-import { editMakeItAboutEnabled } from "@/lib/config/chat-quality-flags";
++import { FORM_IS_ABOUT } from "@/lib/ai/make-it-about";
++import {
++  editMakeItAboutEnabled,
++  thisFormIsAboutEnabled,
++} from "@/lib/config/chat-quality-flags";
+ 
+ /**
+  * ============================================================================
+@@ -404,7 +408,8 @@ export function scopeRevision(
+ ): RevisionScope {
+   const { protectedKeys } = readFieldMentions(question, fields);
+   const instructed = instructedFieldsIn(question, fields);
+-  if (editMakeItAboutEnabled() && MAKE_IT_ABOUT.test(question ?? "")) {
++  // THIS_FORM_IS_ABOUT_ENABLED: "this form is about cash handling" says it as "make it about" does.
++  if (editMakeItAboutEnabled() && (MAKE_IT_ABOUT.test(question ?? "") || (thisFormIsAboutEnabled() && FORM_IS_ABOUT.test(question ?? "")))) {
+     for (const key of ACCOUNT_KEYS) if (fields.some((field) => field.key === key)) instructed.add(key);
+   }
+   for (const key of protectedKeys) instructed.delete(key);

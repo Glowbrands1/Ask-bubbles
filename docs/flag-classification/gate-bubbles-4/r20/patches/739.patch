@@ -1,0 +1,375 @@
+diff --git a/docs/patches/surname-particles.patch b/docs/patches/surname-particles.patch
+new file mode 100644
+index 00000000..bb43ec0f
+--- /dev/null
++++ b/docs/patches/surname-particles.patch
+@@ -0,0 +1,61 @@
++diff --git a/src/lib/forms/proposal.ts b/src/lib/forms/proposal.ts
++index 6b5aded..e20bdbe 100644
++--- a/src/lib/forms/proposal.ts
+++++ b/src/lib/forms/proposal.ts
++@@ -20,6 +20,7 @@ import {
++ import { proposeLocationWithSource, type LocationProposal } from "./location-scope";
++ import { ROSTER_STORE_INDEX, rosterLocationName } from "./location-mention";
++ import { isExitTerms, namesSomebody, notInStreetAddress } from "./answer-not-a-name";
+++import { particleSurname } from "./surname-particles";
++ import { nameBeforeAccountVerb } from "./not-a-name";
++ import { isStoreName, type StoreIndex } from "@/lib/stores/resolver";
++ import type { AccessScope, ChatFormProposal, ChatMessage, EmployeeVerification } from "@/types";
++@@ -155,13 +156,30 @@ const COUNTS_PEOPLE = new Set(["both", "either", "neither", "each", "all", "ever
++ function readTypedName(words: readonly string[], whole: boolean): string | null {
++   const parts: string[] = [];
++   let endedOnPunctuation = false;
+++  // SURNAME_PARTICLES_ENABLED: the words a particle surname took beyond its first ("de la vega" takes two more).
+++  let joined = 0;
+++  let skip = 0;
++   for (const [index, raw] of words.entries()) {
+++    if (skip > 0) {
+++      skip -= 1;
+++      continue;
+++    }
++     if (parts.length === 0 && GERUND.test(raw) && GERUND_OBJECT.test((words[index + 1] ?? "").replace(WRAPPER_AFTER, "").toLowerCase())) {
++       if (whole) return null;
++       break;
++     }
++     // A third part only where a name position was read — see below.
++     if (parts.length === (whole ? 2 : 3)) break;
+++    // SURNAME_PARTICLES_ENABLED: after a first name, "de la vega" / "van der berg" is one surname (`surname-particles.ts`).
+++    const particled = parts.length > 0 ? particleSurname(words, index) : null;
+++    if (particled) {
+++      parts.push(particled.surname);
+++      joined += particled.used - 1;
+++      skip = particled.used - 1;
+++      endedOnPunctuation = particled.ends;
+++      if (particled.ends) break;
+++      continue;
+++    }
++     // An opening wrapper can only precede the name, so only the first word loses one.
++     const opened = parts.length === 0 ? raw.replace(WRAPPER_BEFORE, "") : raw;
++     const unwrapped = opened.replace(WRAPPER_AFTER, "");
++@@ -209,7 +227,7 @@ function readTypedName(words: readonly string[], whole: boolean): string | null
++    * or is followed by a word that cannot be part of a name.
++    */
++   if (parts.length === 3 && !endedOnPunctuation) {
++-    const next = words[3]?.replace(WRAPPER_AFTER, "").toLowerCase();
+++    const next = words[3 + joined]?.replace(WRAPPER_AFTER, "").toLowerCase();
++     /*
++      * "for avery testperson sept 28" is a name and a date, not a three-part
++      * name: a month followed by a day number starts the form's date.
++@@ -227,7 +245,7 @@ function readTypedName(words: readonly string[], whole: boolean): string | null
++     if (!boundary) parts.pop();
++   }
++   if (parts.length === 0) return null;
++-  if (whole && parts.length !== words.length) return null;
+++  if (whole && parts.length + joined !== words.length) return null;
++   return finishedName(parts.join(" "));
++ }
++ 
+diff --git a/src/app/api/chat/replay-pack/nov10-surname-particles-cases.ts b/src/app/api/chat/replay-pack/nov10-surname-particles-cases.ts
+new file mode 100644
+index 00000000..264db910
+--- /dev/null
++++ b/src/app/api/chat/replay-pack/nov10-surname-particles-cases.ts
+@@ -0,0 +1,69 @@
++import { expect, vi } from "vitest";
++
++import { STAFF, WEST_DODGE, type DirectoryRow, type ReplayCase } from "./cases";
++
++/**
++ * SURNAME_PARTICLES (QA's audit item 17b, 10 Nov 2026): a typed surname that opens with a particle was cut at it —
++ * "maria de la cruz" became "maria de". With production's flags, "create a ca for marisol de la vega, she was late on
++ * 11/3" (someone not on the roster) put **Marisol De** on the card. SURNAME_PARTICLES_ENABLED (default off) reads the
++ * whole surname; its reader lines are in the protected forms/proposal.ts (Pau, "ok surname particles", 10 Nov 2026).
++ * Invented person.
++ */
++const FIX = ["SURNAME_PARTICLES_ENABLED"];
++
++/** The invented person, on the roster with the surname as typed ("de la Vega", "van der Vega"). */
++function marisol(said: string): DirectoryRow {
++  return {
++    id: "e-sp-marisol",
++    firstName: "Marisol",
++    lastName: said.includes("van der") ? "van der Vega" : "de la Vega",
++    preferredFirstName: null,
++    employmentStatus: "active",
++    locationIds: ["loc-264"],
++    positionName: "Team Member Part Time",
++  };
++}
++
++export const NOV10_SURNAME_PARTICLES_CASES: ReplayCase[] = [
++  ["de-la", "create a ca for marisol de la vega, she was late on 11/3", /^marisol de la vega$/i],
++  ["van-der", "create a coaching form for marisol van der vega, she was late on 11/3", /^marisol van der vega$/i],
++].map(
++  ([id, said, name]): ReplayCase => ({
++    id: `nov10-surname-particles-${id as string}`,
++    title: `"${said as string}": the card's employee is the whole name, never cut at the particle`,
++    report: "QA's audit item 17b (10 Nov 2026): \"maria de la cruz\" → \"maria de\"",
++    status: { open: "the card's employee stops at the particle (\"Marisol De\", \"Marisol Van\")" },
++    fixFlags: FIX,
++    // Pau's forms/proposal.ts lines are in ("ok surname particles", 10 Nov 2026): it holds with the fix flag, so the
++    // fixStatus goes.
++    // Open with the flag too until Pau's forms/proposal.ts lines land (docs/patches/surname-particles.patch).
++    async run(t) {
++      vi.setSystemTime(new Date("2026-11-09T09:00:00Z"));
++      // Changed on purpose (11 Nov 2026, merging main after 16c): with the roster-name set on, a name on no roster is
++      // asked about before any card, so the person is on the roster here; the off-roster guard is below.
++      t.directory([...STAFF, marisol(said as string)]);
++      t.as("location_manager", WEST_DODGE);
++      const reply = await t.thread().say(said as string);
++      expect(reply.formProposal?.employeeName ?? null, reply.content).toMatch(name as RegExp);
++    },
++  }),
++);
++
++/* Off the roster (16c): the card never names a person cut at the particle; the name is asked for instead. */
++export const NOV10_SURNAME_PARTICLES_OFF_ROSTER_CASES: ReplayCase[] = [
++  {
++    id: "nov10-surname-particles-off-roster-guard",
++    title: "\"create a ca for marisol de la vega, she was late on 11/3\", nobody of that name on the roster: never \"Marisol De\" on a card",
++    report: "QA's audit item 17b (10 Nov 2026), off the roster after 16c",
++    status: "fixed",
++    fixFlags: FIX,
++    async run(t) {
++      vi.setSystemTime(new Date("2026-11-09T09:00:00Z"));
++      t.directory([...STAFF]);
++      t.as("location_manager", WEST_DODGE);
++      const reply = await t.thread().say("create a ca for marisol de la vega, she was late on 11/3");
++      expect(reply.formProposal?.employeeName ?? "", reply.content).not.toMatch(/^marisol (?:de|van)$/i);
++      expect(reply.content).not.toMatch(/\*\*Marisol De\*\*/i);
++    },
++  },
++];
+diff --git a/src/lib/ai/flags-off-parity.test.ts b/src/lib/ai/flags-off-parity.test.ts
+index c76f01c8..2686cebc 100644
+--- a/src/lib/ai/flags-off-parity.test.ts
++++ b/src/lib/ai/flags-off-parity.test.ts
+@@ -143,6 +143,14 @@ const PROTECTED = [
+  * Termination plan's closing is the termination sentence (`planClosing`, also
+  * in `refreshedActionPlan`). Off, both are exactly as before; instances.ts is
+  * not touched.
++ * The user (Pau) approved on 10 Nov 2026, via QA ("ok surname particles"), in
++ * src/lib/forms/proposal.ts, both apps, exactly the lines of
++ * docs/patches/surname-particles.patch: the import of `particleSurname`
++ * ("./surname-particles"), and in readTypedName a particle surname after a
++ * first name ("de la vega") taken as one part, its extra words skipped and
++ * counted in the middle-name and whole-reply checks. Behind
++ * SURNAME_PARTICLES_ENABLED, default off; off, particleSurname is null and
++ * the reader is as before. proposal.ts is already excluded.
+  */
+ const APPROVED_PROTECTED_EDITS = [
+   ":(exclude)src/lib/forms/required-closing.ts",
+diff --git a/src/lib/config/chat-quality-flags.ts b/src/lib/config/chat-quality-flags.ts
+index c5befbf3..8578023c 100644
+--- a/src/lib/config/chat-quality-flags.ts
++++ b/src/lib/config/chat-quality-flags.ts
+@@ -1444,6 +1444,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
+   "FUTURE_INCIDENT_DATE_ASK_ENABLED",
+   // coding 6: FORMS_GUIDE (B#194 rebuilt; default off).
+   "FORMS_GUIDE_ENABLED",
++  // SURNAME_PARTICLES (default off): in the list, as every chat flag.
++  "SURNAME_PARTICLES_ENABLED",
+   // coding 5: B3 (QA's backlog, 10 Nov 2026; default off).
+   "COPY_PASTE_CLAIM_HONEST_ENABLED",
+   "COPY_PASTE_POINTS_TO_CARD_ENABLED",
+@@ -5147,6 +5149,16 @@ export function formInputFidelityEnabled(): boolean {
+   return envFlag("FORM_INPUT_FIDELITY_ENABLED");
+ }
+ 
++/**
++ * SURNAME_PARTICLES_ENABLED (QA's audit item 17b, 10 Nov 2026; default off; same flag in both apps). A typed surname
++ * that opens with a particle was cut at it ("maria de la cruz" → "maria de"). On, a first name followed by particles
++ * ("de la", "van der", "von", …) and a surname word reads the whole surname (`forms/surname-particles.ts`, used by the
++ * protected `forms/proposal.ts` reader). Off, as before.
++ */
++export function surnameParticlesEnabled(): boolean {
++  return envFlag("SURNAME_PARTICLES_ENABLED");
++}
++
+ /**
+  * FORM_FOR_FOR_TYPO_ENABLED (B-C3 from QA's open-case list, 11 Nov 2026; the sibling app's Pau scan sf-s36, a real
+  * manager: "I need a exit for for <name> TM. Quit without notice. …"; default off). The message was never read as an exit
+diff --git a/src/lib/forms/proposal.ts b/src/lib/forms/proposal.ts
+index 6b5aded1..e20bdbec 100644
+--- a/src/lib/forms/proposal.ts
++++ b/src/lib/forms/proposal.ts
+@@ -20,6 +20,7 @@ import {
+ import { proposeLocationWithSource, type LocationProposal } from "./location-scope";
+ import { ROSTER_STORE_INDEX, rosterLocationName } from "./location-mention";
+ import { isExitTerms, namesSomebody, notInStreetAddress } from "./answer-not-a-name";
++import { particleSurname } from "./surname-particles";
+ import { nameBeforeAccountVerb } from "./not-a-name";
+ import { isStoreName, type StoreIndex } from "@/lib/stores/resolver";
+ import type { AccessScope, ChatFormProposal, ChatMessage, EmployeeVerification } from "@/types";
+@@ -155,13 +156,30 @@ const COUNTS_PEOPLE = new Set(["both", "either", "neither", "each", "all", "ever
+ function readTypedName(words: readonly string[], whole: boolean): string | null {
+   const parts: string[] = [];
+   let endedOnPunctuation = false;
++  // SURNAME_PARTICLES_ENABLED: the words a particle surname took beyond its first ("de la vega" takes two more).
++  let joined = 0;
++  let skip = 0;
+   for (const [index, raw] of words.entries()) {
++    if (skip > 0) {
++      skip -= 1;
++      continue;
++    }
+     if (parts.length === 0 && GERUND.test(raw) && GERUND_OBJECT.test((words[index + 1] ?? "").replace(WRAPPER_AFTER, "").toLowerCase())) {
+       if (whole) return null;
+       break;
+     }
+     // A third part only where a name position was read — see below.
+     if (parts.length === (whole ? 2 : 3)) break;
++    // SURNAME_PARTICLES_ENABLED: after a first name, "de la vega" / "van der berg" is one surname (`surname-particles.ts`).
++    const particled = parts.length > 0 ? particleSurname(words, index) : null;
++    if (particled) {
++      parts.push(particled.surname);
++      joined += particled.used - 1;
++      skip = particled.used - 1;
++      endedOnPunctuation = particled.ends;
++      if (particled.ends) break;
++      continue;
++    }
+     // An opening wrapper can only precede the name, so only the first word loses one.
+     const opened = parts.length === 0 ? raw.replace(WRAPPER_BEFORE, "") : raw;
+     const unwrapped = opened.replace(WRAPPER_AFTER, "");
+@@ -209,7 +227,7 @@ function readTypedName(words: readonly string[], whole: boolean): string | null
+    * or is followed by a word that cannot be part of a name.
+    */
+   if (parts.length === 3 && !endedOnPunctuation) {
+-    const next = words[3]?.replace(WRAPPER_AFTER, "").toLowerCase();
++    const next = words[3 + joined]?.replace(WRAPPER_AFTER, "").toLowerCase();
+     /*
+      * "for avery testperson sept 28" is a name and a date, not a three-part
+      * name: a month followed by a day number starts the form's date.
+@@ -227,7 +245,7 @@ function readTypedName(words: readonly string[], whole: boolean): string | null
+     if (!boundary) parts.pop();
+   }
+   if (parts.length === 0) return null;
+-  if (whole && parts.length !== words.length) return null;
++  if (whole && parts.length + joined !== words.length) return null;
+   return finishedName(parts.join(" "));
+ }
+ 
+diff --git a/src/lib/forms/surname-particles.test.ts b/src/lib/forms/surname-particles.test.ts
+new file mode 100644
+index 00000000..824ba40c
+--- /dev/null
++++ b/src/lib/forms/surname-particles.test.ts
+@@ -0,0 +1,57 @@
++import { afterEach, describe, expect, it, vi } from "vitest";
++
++import { extractEmployeeNames } from "./proposal";
++
++/*
++ * SURNAME_PARTICLES_ENABLED (QA's audit item 17b, 10 Nov 2026): a typed surname that opens with a particle was cut
++ * at it ("maria de la cruz" → "maria de"). The people here are invented. The reader's own lines are in the protected
++ * forms/proposal.ts (Pau, "ok surname particles", 10 Nov 2026; docs/patches/surname-particles.patch).
++ */
++describe("SURNAME_PARTICLES_ENABLED", () => {
++  afterEach(() => vi.unstubAllEnvs());
++  const on = (value: boolean) => vi.stubEnv("SURNAME_PARTICLES_ENABLED", value ? "true" : "");
++
++  it.each([
++    ["create a ca for marisol de la vega, she was late on 11/3", "marisol de la vega"],
++    ["I need a CA for marisol de la vega", "marisol de la vega"],
++    ["create a coaching form for marisol van der vega, she was late", "marisol van der vega"],
++  ])("on: %s → %s", (said, name) => {
++    on(true);
++    expect(extractEmployeeNames(said)).toEqual([name]);
++  });
++
++  // A one-particle surname is three words, which the reader already keeps whole; flag on, it still is.
++  it.each([
++    ["create a coaching form for teodor von halle, he was late 11/3", "teodor von halle"],
++    ["create a ca for renata del prado she was late", "renata del prado"],
++  ])("on and off: %s → %s", (said, name) => {
++    on(false);
++    expect(extractEmployeeNames(said)).toEqual([name]);
++    on(true);
++    expect(extractEmployeeNames(said)).toEqual([name]);
++  });
++
++  it.each([
++    "create a ca for marisol de la vega, she was late on 11/3",
++    "create a coaching form for marisol van der vega, she was late",
++  ])("off: %s is read as before", (said) => {
++    on(false);
++    expect(extractEmployeeNames(said)[0]).toMatch(/^marisol (?:de|van)$/);
++  });
++
++  it.each([
++    // No surname word after the particle: nothing is joined.
++    ["create a ca for marisol de, she was late", "marisol de"],
++    // A form word after the particle is not a surname.
++    ["create a ca for marisol de la salon", null],
++    // Ordinary names are untouched.
++    ["create a ca for tess varga, she was late on 11/3", "tess varga"],
++  ])("on, unchanged: %s", (said, name) => {
++    on(true);
++    const off = (on(false), extractEmployeeNames(said));
++    on(true);
++    const read = extractEmployeeNames(said);
++    expect(read).toEqual(off);
++    if (name) expect(read[0]).toBe(name);
++  });
++});
+diff --git a/src/lib/forms/surname-particles.ts b/src/lib/forms/surname-particles.ts
+new file mode 100644
+index 00000000..619a9b3e
+--- /dev/null
++++ b/src/lib/forms/surname-particles.ts
+@@ -0,0 +1,54 @@
++import { surnameParticlesEnabled } from "@/lib/config/chat-quality-flags";
++
++import { NOT_A_NAME, TYPED_NAME_WORD } from "./name-words";
++import { isFormVocabulary } from "./template-intent";
++
++/**
++ * ============================================================================
++ * "MARISOL DE LA VEGA" IS ONE SURNAME AFTER A FIRST NAME
++ * ============================================================================
++ *
++ * SURNAME_PARTICLES_ENABLED (QA's audit item 17b, 10 Nov 2026; default off). A typed name whose surname opens with
++ * a particle was cut at the particle: "create a ca for marisol de la vega, she was late on 11/3" put "Marisol De" on
++ * the card, and "marisol van der vega" put "Marisol Van". The lower-case name reader (`forms/proposal.ts`, protected)
++ * reads at most a first name and a surname word, and the particles are not name words to it. Here, after a first name,
++ * a run of particles ("de", "de la", "van der", "von", "del", "da", …) followed by a word that can end a name is read
++ * as one surname, as typed ("de la vega"). Off, nothing is read here.
++ */
++const PARTICLES = new Set(["de", "del", "della", "di", "da", "das", "do", "dos", "du", "la", "le", "van", "von", "der", "den", "ter", "ten"]);
++/** The particles a surname can open with ("la" and "der" only follow another one: "de la", "van der"). */
++const OPENS = new Set(["de", "del", "della", "di", "da", "das", "do", "dos", "du", "le", "van", "von", "ter", "ten"]);
++const WRAPPER_AFTER = /[)\]}"”’'»,.;:!?]+$/;
++const MAX_PARTICLES = 3;
++
++export interface ParticleSurname {
++  /** The surname as typed, particles included: "de la vega". */
++  readonly surname: string;
++  /** How many words of `words` it takes, from `index`. */
++  readonly used: number;
++  /** Whether its last word carried the punctuation that ends a name ("vega,"). */
++  readonly ends: boolean;
++}
++
++/** The particle surname that starts at `words[index]`, or null (always null with the flag off). */
++export function particleSurname(words: readonly string[], index: number): ParticleSurname | null {
++  if (!surnameParticlesEnabled()) return null;
++  const first = words[index];
++  if (!first || !OPENS.has(first.toLowerCase())) return null;
++  const parts = [first];
++  for (let at = index + 1; at < words.length && at <= index + MAX_PARTICLES; at += 1) {
++    const raw = words[at]!;
++    const bare = raw.replace(WRAPPER_AFTER, "");
++    const lower = bare.toLowerCase();
++    // A particle with punctuation after it ("de,") ends no name.
++    if (PARTICLES.has(lower)) {
++      if (bare !== raw) return null;
++      parts.push(raw);
++      continue;
++    }
++    if (bare.length < 2 || !TYPED_NAME_WORD.test(bare) || NOT_A_NAME.has(lower) || isFormVocabulary(lower)) return null;
++    parts.push(bare);
++    return { surname: parts.join(" "), used: parts.length, ends: bare !== raw };
++  }
++  return null;
++}

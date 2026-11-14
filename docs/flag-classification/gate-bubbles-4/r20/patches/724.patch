@@ -1,0 +1,180 @@
+diff --git a/src/app/api/chat/replay-pack/nov5-coding3-chat-edits-cases.ts b/src/app/api/chat/replay-pack/nov5-coding3-chat-edits-cases.ts
+index bdf6b837..059c600b 100644
+--- a/src/app/api/chat/replay-pack/nov5-coding3-chat-edits-cases.ts
++++ b/src/app/api/chat/replay-pack/nov5-coding3-chat-edits-cases.ts
+@@ -102,6 +102,37 @@ async function onDraft(t: T, thread: ReplayThread, id: string, text: string): Pr
+ }
+ 
+ export const NOV5_CODING3_CHAT_EDITS_CASES: ReplayCase[] = [
++  {
++    /*
++     * MAKE_THAT_UPDATE_ACCOUNT_ENABLED (QA's audit, 10 Nov 2026): the "make that update" half of the case below, on
++     * production's path. With FORM_PATCH_REDUCER on, the turn is read by Step B's patch model, the pack's stand-in,
++     * scripted by the latest message as it is HANDED: "make that update" alone reads as nothing to add (the live
++     * outcome); handed her account with it, the read writes it. The invariant is what the patch model is handed.
++     */
++    id: "nov10-make-that-update-writes-her-account",
++    title: "\"make that update\" after the copy-and-paste question reaches the open draft's readers as her own account, and her account is written",
++    report:
++      'Manager, production (relayed 5 Nov 2026, both apps): "i don\'t see the details updated in the draft card.  Do i need to copy and paste it?  or should it be automatically updating?" → "make that update" wrote nothing',
++    status: { open: "\"make that update\" reaches the patch model as those three words, with nothing to add: her account is never written" },
++    fixFlags: ["MAKE_THAT_UPDATE_ACCOUNT_ENABLED"],
++    async run(t: T) {
++      start(t);
++      const thread = t.thread();
++      for (const turn of ["Create a coaching form.", "Rowan", "yes"]) await thread.say(turn);
++      expect(thread.proposal, "no Coaching Form card for Rowan Kestrel").toMatchObject({ templateKey: "coaching", employeeName: "Rowan Kestrel" });
++      const id = await thread.create();
++      t.patchReads?.({
++        [`make that update: ${ROWAN_DID}`]: { turn: "this_form", set: [{ field: "coaching_details", value: ROWAN_DID, how: "add", evidence: ROWAN_DID }], clear: [] },
++      });
++      await onDraft(t, thread, id, ROWAN_DID);
++      t.modelSays("It should update automatically — no copy-and-paste needed. The details are on the draft card.");
++      await onDraft(t, thread, id, "i don't see the details updated in the draft card.  Do i need to copy and paste it?  or should it be automatically updating?");
++      t.modelSays(null);
++      expect(t.values(id).coaching_details ?? "", "her account was already written; this case needs it unwritten").not.toMatch(SAID);
++      await onDraft(t, thread, id, "make that update");
++      expect(t.values(id).coaching_details ?? "", 'after "make that update" the draft does not say what Rowan did').toMatch(SAID);
++    },
++  },
+   {
+     id: "nov5-coding3-these-details-answered-before-the-card",
+     title:
+diff --git a/src/app/api/chat/route.ts b/src/app/api/chat/route.ts
+index c684e28b..24b65690 100644
+--- a/src/app/api/chat/route.ts
++++ b/src/app/api/chat/route.ts
+@@ -36,6 +36,7 @@ import { answersWhichFormOnFile, mayAskToReopen } from "@/lib/forms/reopen-cue";
+ import { parseChatReportContext } from "@/lib/reporting/report-context";
+ import { businessToday } from "@/lib/business-date";
+ import {
++  makeThatUpdateAccountEnabled,
+   chatLongMessageEnabled,
+   draftActionsEnabled,
+   formEditHonestReplyEnabled,
+@@ -597,6 +598,16 @@ async function postChat(request: Request) {
+             })()
+           : null;
+       // PROPOSAL_NAME_CORRECTION_ENABLED: "fix her last name …" on a card not yet created. See `lib/forms/proposal-name-correction.ts`.
++      /*
++       * MAKE_THAT_UPDATE_ACCOUNT_ENABLED: "make that update" after a reply that offered nothing is her own account, as
++       * every reader of the open draft (Step B's patch reading included) reads it. See `lib/forms/form-content-turn.ts`.
++       */
++      if (makeThatUpdateAccountEnabled() && asked.activeFormInstanceId) {
++        const content = await import("@/lib/forms/form-content-turn");
++        const open = await (await import("@/lib/forms/open-form-summary")).describeOpenForm(request, asked.activeFormInstanceId).catch(() => null);
++        const withAccount = open ? content.makeThatUpdateWithAccount({ question: asked.question, history: asked.history, employeeName: open.employeeName }) : null;
++        if (withAccount) asked = { ...asked, question: withAccount };
++      }
+       const parsed = withProposalNameCorrection(withSwitchAfterCreate(
+         draftAction || staffPick || newRequestOpen || copyFor
+           ? {
+diff --git a/src/lib/config/chat-quality-flags.ts b/src/lib/config/chat-quality-flags.ts
+index c5befbf3..2d26892c 100644
+--- a/src/lib/config/chat-quality-flags.ts
++++ b/src/lib/config/chat-quality-flags.ts
+@@ -5599,3 +5599,15 @@ export function headingDistinctiveWordsEnabled(): boolean {
+ export function placeStripWholePhraseOnlyEnabled(): boolean {
+   return envFlag("PLACE_STRIP_WHOLE_PHRASE_ONLY_ENABLED");
+ }
++
++/**
++ * MAKE_THAT_UPDATE_ACCOUNT_ENABLED (coding 6, 10 Nov 2026; default off; a manager's production wording relayed 5 Nov
++ * 2026, no fix flag until QA's audit of 10 Nov): on the open coaching draft, after her account, "i don't see the
++ * details updated in the draft card. Do i need to copy and paste it? or should it be automatically updating?" and
++ * then "make that update" wrote nothing: the reply before it printed nothing to add. On, that "make that update" is
++ * read by every reader of the open draft (Step B's patch reading included) as "make that update: <her latest account
++ * of the employee>" (`forms/form-content-turn.ts`). Off, as before.
++ */
++export function makeThatUpdateAccountEnabled(): boolean {
++  return envFlag("MAKE_THAT_UPDATE_ACCOUNT_ENABLED");
++}
+diff --git a/src/lib/forms/form-content-turn.ts b/src/lib/forms/form-content-turn.ts
+index 517deea1..b17cf564 100644
+--- a/src/lib/forms/form-content-turn.ts
++++ b/src/lib/forms/form-content-turn.ts
+@@ -304,6 +304,45 @@ export function unwrittenReply(input: {
+     .join("\n\n");
+ }
+ 
++/*
++ * MAKE_THAT_UPDATE_ACCOUNT_ENABLED (coding 6, 10 Nov 2026; a manager's production wording relayed 5 Nov 2026, no fix
++ * flag until QA's audit of 10 Nov): on the open coaching draft she gave her account ("rowan marked a session as
++ * complete …"), asked "Do i need to copy and paste it? or should it be automatically updating?", then said "make that
++ * update" to a reply that printed nothing to add — so no reader had an update to make. The update she means is her own
++ * account: the latest of her recent turns that names the employee, asks nothing and reads as an account.
++ */
++const ACCOUNT_LOOKBACK = 6;
++function unwrittenAccount(history: readonly Pick<ChatMessage, "role" | "content">[], employeeName: string): string | null {
++  const first = employeeName.trim().split(/\s+/)[0] ?? "";
++  if (first.length < 2) return null;
++  const names = new RegExp(`\\b${first.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i");
++  for (const turn of history.slice(-ACCOUNT_LOOKBACK).reverse()) {
++    if (turn.role !== "user") continue;
++    const text = (turn.content ?? "").trim();
++    if (!text || /\?/.test(text) || QUESTION_START.test(text) || ASKS_SOMETHING.test(text) || MAKE_THAT.test(text)) continue;
++    if (names.test(text) && PAST_ACCOUNT.test(text) && text.split(/\s+/).length >= 6) return text;
++  }
++  return null;
++}
++
++/**
++ * "make that update" after a reply that offered nothing to add, with her account named: the turn as every reader of the
++ * open draft reads it — "make that update: <her account>". Null for any other turn, or with no account to make.
++ */
++export function makeThatUpdateWithAccount(input: {
++  question: string;
++  history: readonly Pick<ChatMessage, "role" | "content">[];
++  employeeName: string;
++}): string | null {
++  const question = input.question.trim();
++  if (!MAKE_THAT.test(question)) return null;
++  const earlier = previousAnswer(input.history);
++  const offered = earlier ? PRINTED_DETAILS.test(earlier) || earlier.split("\n").some((line) => CLAIM_LINE.test(line.trim().replace(/^[*_]+/, ""))) : false;
++  if (offered) return null;
++  const account = unwrittenAccount(input.history, input.employeeName);
++  return account ? `${question.replace(/[.!]+$/, "")}: ${account}` : null;
++}
++
+ export function formContentQuestion(input: {
+   question: string;
+   history: readonly Pick<ChatMessage, "role" | "content">[];
+diff --git a/src/lib/forms/make-that-update-account.test.ts b/src/lib/forms/make-that-update-account.test.ts
+new file mode 100644
+index 00000000..6df59441
+--- /dev/null
++++ b/src/lib/forms/make-that-update-account.test.ts
+@@ -0,0 +1,33 @@
++import { describe, expect, it } from "vitest";
++
++import { makeThatUpdateWithAccount } from "./form-content-turn";
++
++/*
++ * MAKE_THAT_UPDATE_ACCOUNT_ENABLED: the manager's production wording (relayed 5 Nov 2026), the person invented as in
++ * the replay pack (`nov5-coding3-chat-edits-cases.ts`).
++ */
++const ROWAN_DID = "rowan marked a session as complete but the guest hadn't been sprayed yet";
++const COPY_PASTE = "i don't see the details updated in the draft card.  Do i need to copy and paste it?  or should it be automatically updating?";
++const history = (reply: string) => [
++  { role: "user" as const, content: ROWAN_DID },
++  { role: "assistant" as const, content: "I haven't changed the **Coaching Form** for **Rowan Kestrel** — everything on it is as it was." },
++  { role: "user" as const, content: COPY_PASTE },
++  { role: "assistant" as const, content: reply },
++];
++
++describe("makeThatUpdateWithAccount", () => {
++  it("after a reply that offered nothing, \"make that update\" carries her own account", () => {
++    expect(makeThatUpdateWithAccount({ question: "make that update", history: history("It should update automatically — no copy-and-paste needed."), employeeName: "Rowan Kestrel" })).toBe(
++      `make that update: ${ROWAN_DID}`,
++    );
++  });
++
++  it("after a reply that printed the Details, the reply's update is the one to make (unchanged)", () => {
++    expect(makeThatUpdateWithAccount({ question: "make that update", history: history("**Details of Coaching:** Press Start Session only once the guest is in the booth."), employeeName: "Rowan Kestrel" })).toBeNull();
++  });
++
++  it("never a question, the copy-and-paste question included, and never another turn", () => {
++    expect(makeThatUpdateWithAccount({ question: "make that update", history: [{ role: "user" as const, content: COPY_PASTE }, { role: "assistant" as const, content: "Okay." }], employeeName: "Rowan Kestrel" })).toBeNull();
++    expect(makeThatUpdateWithAccount({ question: "what does the policy say?", history: history("Okay."), employeeName: "Rowan Kestrel" })).toBeNull();
++  });
++});

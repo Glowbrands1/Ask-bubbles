@@ -1,0 +1,505 @@
+diff --git a/docs/parity-log/2026-11-10-exit-readback-no-title-left.md b/docs/parity-log/2026-11-10-exit-readback-no-title-left.md
+new file mode 100644
+index 00000000..852f8f17
+--- /dev/null
++++ b/docs/parity-log/2026-11-10-exit-readback-no-title-left.md
+@@ -0,0 +1,11 @@
++# Bubbles-only: the exit read-back with no title left (part of FULL_POSITION_TITLE_ENABLED)
++
++QA (10 Nov 2026): when the exit card's title is taken off as another person's ("Isaura Corvadine\nDistrict Manager
++Brenna Kowaldane\n…", QA's ruling (a)), this app's read-back kept a blank line where its Job Title line was removed,
++left Job Title off the "Left blank" list, and still said "The title on the form is the one you gave (District
++Manager)" with no title saved. With the flag the read-back says what was saved.
++
++Not needed in the sibling app (checked on its claude/coding3-full-position-title, merged with main ed18d1fc): its
++twin case nov6-coding3-full-position-title-dm-line passes with production's flags. Its read-back filters the line out,
++lists Job Title as left blank, and has no "the one you gave" sentence. The other half of the fix (schedule and status
++words after a title are no person, `forms/title-of-another-person.ts`) is in both apps under the same flag.
+diff --git a/src/app/api/chat/replay-pack/nov6-coding3-full-position-title-cases.ts b/src/app/api/chat/replay-pack/nov6-coding3-full-position-title-cases.ts
+new file mode 100644
+index 00000000..2b3bd50e
+--- /dev/null
++++ b/src/app/api/chat/replay-pack/nov6-coding3-full-position-title-cases.ts
+@@ -0,0 +1,123 @@
++import { expect, vi } from "vitest";
++
++import { STAFF, WEST_DODGE, type DirectoryRow, type ReplayCase } from "./cases";
++
++/**
++ * ============================================================================
++ * THE WHOLE TYPED POSITION IS THE CARD'S POSITION (QA task A, 6 Nov 2026;
++ * FULL_POSITION_TITLE_ENABLED)
++ * ============================================================================
++ *
++ * An exit form typed as lines, "<name>\nTeam Member Part Time \n<store>\n…":
++ * the card's Position was "Team Member". "Team Member Part Time" is one of this
++ * company's positions (`forms/staff-picker.ts`, `isCompanyPositionTitle`), so
++ * the whole of it is the Position. The negative: a title followed by words that
++ * are not part of a position ("Team Member Weekends Only") is never written
++ * whole; the card keeps what TITLE_ENDS_AT_LINE reads (since #497's 1266248c a
++ * line that is not a company position is no title line, so no Position).
++ *
++ * The employee is off the roster (not in Woven): the typed title is the only
++ * one there is. TITLE_ENDS_AT_LINE_ENABLED (#497) is on in the fix run too:
++ * without it the store on the next line is read as another person and the card
++ * has no Position at all. Names are invented and not on the directory.
++ */
++const EXIT_ASK = "Can you create an exit form for me?";
++const FULL_TITLE =
++  "Isaura Corvadine\nTeam Member Part Time \nNE Omaha Dodge\nGave notice - fulfilled notice\nGave notice 10/20/26 - date notice fulfilled 11/3/26\nResigning to pursue other career options\nStore items returned payroll deduction does not apply eligible for rehire";
++const TITLE_AND_MORE =
++  "Isaura Corvadine\nTeam Member Weekends Only \nNE Omaha Dodge\nGave notice - fulfilled notice\nGave notice 10/20/26 - date notice fulfilled 11/3/26\nResigning to pursue other career options\nStore items returned payroll deduction does not apply eligible for rehire";
++
++/*
++ * Changed on purpose (10 Nov 2026, QA's open-PR audit): since 9 Nov OFF_ROSTER_ASK_BEFORE_CARD (production) holds a store
++ * manager's card for a name not on the roster and asks about it first, so the exit card never came. She is on the
++ * roster here, with no position of her own, so the card's Position is still only what the manager typed.
++ */
++const ISAURA: DirectoryRow = {
++  id: "e-isaura-corvadine",
++  firstName: "Isaura",
++  lastName: "Corvadine",
++  preferredFirstName: null,
++  employmentStatus: "active",
++  locationIds: ["loc-264"],
++  positionName: null,
++};
++
++/*
++ * QA's ruling (a), 6 Nov 2026, kept under FULL_POSITION_TITLE (QA, 10 Nov 2026): "District Manager <name>" on the line
++ * under the employee's name is the district manager's title, never the employee's. With production's flags the
++ * read-back then kept a blank line where its Job Title line was taken out, left the Job Title off the "Left blank"
++ * list, and still said "The title on the form is the one you gave (District Manager)" with no title saved.
++ */
++const DM_LINE = "Isaura Corvadine\nDistrict Manager Brenna Kowaldane \nNE Omaha Dodge\nGave notice - fulfilled notice\nGave notice 10/20/26 - date notice fulfilled 11/3/26\nResigning to pursue other career options\nStore items returned payroll deduction does not apply eligible for rehire";
++
++const DM_CASE: ReplayCase = {
++  id: "nov6-coding3-full-position-title-dm-line",
++  title: "\"District Manager Brenna Kowaldane\" on the line under the employee's name is hers: the employee's Job Title is left blank, and the read-back says so",
++  report: "QA's ruling (a), 6 Nov 2026, kept by the FULL_POSITION_TITLE fix (QA, 10 Nov 2026); the read-back must never claim a value that was not saved",
++  status: { open: "the read-back keeps a blank line, leaves Job Title off the \"Left blank\" list, and says the title on the form is the one the manager gave" },
++  fixFlags: ["TITLE_ENDS_AT_LINE_ENABLED", "FULL_POSITION_TITLE_ENABLED"],
++  async run(t) {
++    vi.setSystemTime(new Date("2026-11-06T02:00:00Z"));
++    t.directory([...STAFF, ISAURA]);
++    t.as("location_manager", WEST_DODGE);
++    const thread = t.thread();
++    await thread.say(EXIT_ASK);
++    const reply = await thread.say(DM_LINE);
++    expect(thread.proposal, `no exit card:\n${reply.content}`).toMatchObject({ employeeName: "Isaura Corvadine" });
++    expect(thread.proposal?.employeeRole ?? null, `the card's Position:\n${reply.content}`).toBeNull();
++    expect(reply.content, `the read-back claims a Job Title:\n${reply.content}`).not.toMatch(/\*\*Job Title:\*\*/i);
++    expect(reply.content, `a blank line inside the read-back:\n${reply.content}`).not.toMatch(/^- \*\*Name:\*\* [^\n]*\n\n- \*\*/m);
++    expect(reply.content, `the read-back says a title is on the form:\n${reply.content}`).not.toMatch(/the title on the form is the one you gave/i);
++    expect(reply.content, `Job Title is not on the "Left blank" list:\n${reply.content}`).toMatch(/\*\*Left blank for you to review:\*\* Job Title\b/);
++    const id = await thread.create();
++    expect(t.values(id).job_title ?? null, "the saved form's Job Title").toBeNull();
++  },
++};
++
++export const NOV6_CODING3_FULL_POSITION_TITLE_CASES: ReplayCase[] = [
++  DM_CASE,
++  {
++    id: "nov6-coding3-full-position-title-exit",
++    title: "An exit form typed as lines with the position \"Team Member Part Time\": the card's Position is the whole position, not \"Team Member\"",
++    report: "QA task A, 6 Nov 2026: the manager typed the position \"Team Member Part Time\" on an exit form and the card's Position became \"Team Member\"",
++    status: { open: "with production's flags the exit card's Position is null (TITLE_ENDS_AT_LINE off), and \"Team Member\" with it on" },
++    fixFlags: ["TITLE_ENDS_AT_LINE_ENABLED", "FULL_POSITION_TITLE_ENABLED"],
++    async run(t) {
++      vi.setSystemTime(new Date("2026-11-06T02:00:00Z"));
++      t.directory([...STAFF, ISAURA]);
++      t.as("location_manager", WEST_DODGE);
++      const thread = t.thread();
++      await thread.say(EXIT_ASK);
++      const reply = await thread.say(FULL_TITLE);
++      expect(thread.proposal, `no exit card:\n${reply.content}`).toMatchObject({ employeeName: "Isaura Corvadine" });
++      expect(thread.proposal?.employeeRole ?? null, `the card's Position:\n${reply.content}`).toBe("Team Member Part Time");
++      // The read-back says the same title as the card.
++      expect(reply.content).toMatch(/^- \*\*Job Title:\*\* Team Member Part Time$/m);
++    },
++  },
++  {
++    id: "nov6-coding3-full-position-title-negative",
++    title: "Negative: \"Team Member Weekends Only\" is not one of the company's positions, so it is never the card's Position whole; the card's Position is the company position it starts with, \"Team Member\"",
++    report: "QA task A, 6 Nov 2026: only a whole typed title that is a company position is kept whole",
++    // Changed on purpose (QA, 10 Nov 2026): since TITLE_ENDS_AT_LINE (on) "Weekends Only" is read as the title's owner, so
++    // an employee with no roster position got no Job Title at all (the reply still said "the one you gave (Team Member)").
++    // QA ruled that a regression: under FULL_POSITION_TITLE the title under her name line is hers.
++    status: { open: "with production's flags the card has no Position and the saved form no Job Title" },
++    fixFlags: ["TITLE_ENDS_AT_LINE_ENABLED", "FULL_POSITION_TITLE_ENABLED"],
++    async run(t) {
++      vi.setSystemTime(new Date("2026-11-06T02:00:00Z"));
++      t.directory([...STAFF, ISAURA]);
++      t.as("location_manager", WEST_DODGE);
++      const thread = t.thread();
++      await thread.say(EXIT_ASK);
++      const reply = await thread.say(TITLE_AND_MORE);
++      expect(thread.proposal, `no exit card:\n${reply.content}`).toMatchObject({ employeeName: "Isaura Corvadine" });
++      expect(thread.proposal?.employeeRole ?? "", `the card's Position:\n${reply.content}`).not.toMatch(/weekends only/i);
++      expect(thread.proposal?.employeeRole ?? null, `the card's Position:\n${reply.content}`).toBe("Team Member");
++      expect(reply.content).toMatch(/^- \*\*Job Title:\*\* Team Member$/m);
++      expect(reply.content, `a blank line inside the read-back:\n${reply.content}`).not.toMatch(/^- \*\*Name:\*\* [^\n]*\n\n- \*\*/m);
++      const id = await thread.create();
++      expect(t.values(id).job_title ?? null, "the saved form's Job Title").toBe("Team Member");
++    },
++  },
++];
+diff --git a/src/lib/ai/full-position-title.test.ts b/src/lib/ai/full-position-title.test.ts
+new file mode 100644
+index 00000000..a6a25e85
+--- /dev/null
++++ b/src/lib/ai/full-position-title.test.ts
+@@ -0,0 +1,85 @@
++import { afterEach, describe, expect, it, vi } from "vitest";
++
++import { isCompanyPositionTitle } from "@/lib/forms/staff-picker";
++
++import { fullPositionTitle, withFullPositionTitle } from "./full-position-title";
++import type { AskResponse } from "./types";
++
++/**
++ * QA task A, 6 Nov 2026: an exit form typed as lines with the position "Team
++ * Member Part Time" got the Position "Team Member". The manager's wording, an
++ * invented name (not on the directory).
++ */
++const TYPED =
++  "Isaura Corvadine\nTeam Member Part Time \nNE Omaha Dodge\nGave notice - fulfilled notice\nGave notice 10/20/26 - date notice fulfilled 11/3/26\nResigning to pursue other career options\nStore items returned payroll deduction does not apply eligible for rehire";
++const REQUEST = {
++  question: TYPED,
++  history: [{ id: "m-1", role: "user" as const, content: "Can you create an exit form for me?", createdAt: "2026-11-06T02:00:00Z" }],
++};
++
++function exitCard(role: string | null, source: "manager" | "woven" | null = "manager"): AskResponse {
++  return {
++    content: `Here's what I'll fill in on the **Resignation/Exit Form** for **Isaura Corvadine**:\n\n- **Name:** Isaura Corvadine\n- **Job Title:** ${role}\n- **Store:** Omaha, NE`,
++    sources: [],
++    formProposal: { templateKey: "resignation-exit", employeeName: "Isaura Corvadine", employeeRole: role, employeeRoleSource: source },
++  } as unknown as AskResponse;
++}
++
++afterEach(() => vi.unstubAllEnvs());
++
++describe("isCompanyPositionTitle: the company's own position names, whole", () => {
++  it("knows the whole position, in any case or spacing", () => {
++    expect(isCompanyPositionTitle("Team Member Part Time")).toBe(true);
++    expect(isCompanyPositionTitle("  team member   part time ")).toBe(true);
++    expect(isCompanyPositionTitle("Assistant General Manager")).toBe(true);
++  });
++  it("a part of one, or one with other words, is not a position name", () => {
++    expect(isCompanyPositionTitle("Team Member")).toBe(false);
++    expect(isCompanyPositionTitle("Team Member Weekends Only")).toBe(false);
++    expect(isCompanyPositionTitle("Team Member Part Time NE Omaha Dodge")).toBe(false);
++  });
++});
++
++describe("FULL_POSITION_TITLE_ENABLED: the whole typed position is the card's Position", () => {
++  it("the defect, flag off: the card keeps \"Team Member\" (unchanged)", () => {
++    vi.stubEnv("FULL_POSITION_TITLE_ENABLED", "");
++    const card = exitCard("Team Member");
++    expect(withFullPositionTitle(card, REQUEST)).toBe(card);
++  });
++
++  it("flag on: \"Team Member Part Time\" typed on its own line is the Position, on the card and in the read-back", () => {
++    vi.stubEnv("FULL_POSITION_TITLE_ENABLED", "true");
++    const out = withFullPositionTitle(exitCard("Team Member"), REQUEST);
++    expect(out.formProposal?.employeeRole).toBe("Team Member Part Time");
++    expect(out.formProposal?.employeeRoleSource).toBe("manager");
++    expect(out.content).toMatch(/^- \*\*Job Title:\*\* Team Member Part Time$/m);
++  });
++
++  it("flag on: a \"Position:\" line in the request, typed in lower case, is the company's position", () => {
++    vi.stubEnv("FULL_POSITION_TITLE_ENABLED", "true");
++    const out = withFullPositionTitle(exitCard("Team Member"), { question: "exit form for Isaura Corvadine\nposition: team member part time\nlast day 11/3/26", history: [] });
++    expect(out.formProposal?.employeeRole).toBe("Team Member Part Time");
++  });
++
++  it("negative, flag on: a title with other words after it that are not a position stays as read", () => {
++    vi.stubEnv("FULL_POSITION_TITLE_ENABLED", "true");
++    const card = exitCard("Team Member");
++    expect(withFullPositionTitle(card, { question: TYPED.replace("Team Member Part Time", "Team Member Weekends Only"), history: [] })).toBe(card);
++    expect(withFullPositionTitle(card, { question: "Isaura Corvadine Team Member Part Time NE Omaha Dodge gave notice", history: [] })).toBe(card);
++  });
++
++  it("flag on: a position that does not hold the card's title, or Woven's title, is left alone", () => {
++    vi.stubEnv("FULL_POSITION_TITLE_ENABLED", "true");
++    const manager = exitCard("Store Manager");
++    expect(withFullPositionTitle(manager, REQUEST)).toBe(manager);
++    const woven = exitCard("Team Member", "woven");
++    expect(withFullPositionTitle(woven, REQUEST)).toBe(woven);
++    const none = exitCard(null, null);
++    expect(withFullPositionTitle(none, REQUEST)).toBe(none);
++  });
++
++  it("the title already whole is not lengthened again", () => {
++    expect(fullPositionTitle([TYPED], "Team Member Part Time")).toBeNull();
++    expect(fullPositionTitle([TYPED], "Team Member")).toBe("Team Member Part Time");
++  });
++});
+diff --git a/src/lib/ai/full-position-title.ts b/src/lib/ai/full-position-title.ts
+new file mode 100644
+index 00000000..3bb5f2a7
+--- /dev/null
++++ b/src/lib/ai/full-position-title.ts
+@@ -0,0 +1,77 @@
++import { fullPositionTitleEnabled } from "@/lib/config/chat-quality-flags";
++import { isCompanyPositionTitle } from "@/lib/forms/staff-picker";
++
++import { titleInWords } from "./title-in-words";
++import type { AskRequest, AskResponse } from "./types";
++
++/**
++ * ============================================================================
++ * THE WHOLE TYPED POSITION — FULL_POSITION_TITLE_ENABLED
++ * ============================================================================
++ *
++ * QA task A, 6 Nov 2026: an exit form typed as lines, "<name>\nTeam Member
++ * Part Time \n<store>\n…", made the card's Position "Team Member". The title
++ * reader matches the shorter title inside the longer one (a protected step);
++ * this runs after it, on the finished card.
++ *
++ * With the flag on, when the whole of a line the manager typed — or the rest
++ * of a "Position: …" line — is one of the company's position names
++ * (`forms/staff-picker.ts`, `isCompanyPositionTitle`) and holds the title the
++ * card read, the card's Position is that whole position, and the reply's
++ * "**Position:**" / "**Job Title:**" line follows. A title with other words
++ * after it ("Team Member Weekends Only") is not a position name and stays as
++ * read. Only a title the manager stated is changed, never Woven's. Default
++ * off: the response as built.
++ */
++
++const LABEL = /^(?:job\s+title|position|title|role)\s*(?:is|was|:|-)\s*/i;
++
++function escaped(text: string): string {
++  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
++}
++
++/** "team member part time" → "Team Member Part Time"; a typed capital stays. */
++function capitalised(title: string): string {
++  return title.replace(/(^|\s)(\p{Ll})/gu, (_, space: string, letter: string) => `${space}${letter.toUpperCase()}`);
++}
++
++/** The typed lines whose whole text (or the rest after a "Position:" label) is one of the company's positions. */
++export function typedPositionTitles(turns: readonly string[]): string[] {
++  const found: string[] = [];
++  for (const turn of turns) {
++    for (const raw of turn.split("\n")) {
++      const line = raw
++        .replace(/^\s*[-*•]\s+/, "")
++        .trim()
++        .replace(/[.,;:!?]+$/, "")
++        .trim()
++        .replace(/\s+/g, " ");
++      const title = line.replace(LABEL, "");
++      if (title !== "" && isCompanyPositionTitle(title)) found.push(capitalised(title));
++    }
++  }
++  return found;
++}
++
++/** The whole company position the manager typed that holds `role` and is longer than it, or null. */
++export function fullPositionTitle(turns: readonly string[], role: string): string | null {
++  const longer = typedPositionTitles(turns).filter((title) => title.toLowerCase() !== role.trim().toLowerCase() && titleInWords(role, title));
++  return longer.at(-1) ?? null;
++}
++
++export function withFullPositionTitle(response: AskResponse, request: Pick<AskRequest, "question" | "history">): AskResponse {
++  if (!fullPositionTitleEnabled()) return response;
++  const card = response.formProposal;
++  const role = card?.employeeRole?.trim();
++  if (!card || !role || !card.employeeName || card.subject === "team" || card.employeeRoleSource === "woven") return response;
++  const said = [...(request.history ?? []).filter((turn) => turn.role === "user").map((turn) => turn.content), request.question];
++  const full = fullPositionTitle(said, role);
++  if (!full) return response;
++  // The reply's own line for the title, as the card had it ("**Job Title:** Team Member"), not a longer title already there.
++  const line = new RegExp(`(\\*\\*(?:Position|Job Title):\\*\\* )${escaped(role)}(?![\\p{L}'’-]|[^\\S\\n]+\\p{Lu})`, "gu");
++  return {
++    ...response,
++    content: response.content.replace(line, `$1${full}`),
++    formProposal: { ...card, employeeRole: full, employeeRoleSource: "manager" },
++  };
++}
+diff --git a/src/lib/ai/server-ask.ts b/src/lib/ai/server-ask.ts
+index 6570add1..26b2dd13 100644
+--- a/src/lib/ai/server-ask.ts
++++ b/src/lib/ai/server-ask.ts
+@@ -179,6 +179,7 @@ import { withFirstNameAnswerFor, withFirstNameSuggestFor } from "./first-name-su
+ import { withManagerStatedTitle } from "./manager-title";
+ import { withReplyMatchesCard } from "./reply-matches-card";
+ import { withTitleOfTheEmployee } from "./title-of-the-employee";
++import { withFullPositionTitle } from "./full-position-title";
+ import { withUnderPerformanceExplained } from "./under-performance-explained";
+ import { withProposalEditRules } from "./proposal-edit-rules";
+ import { cardTurnQuestion, takeOffStaysCard } from "./take-off-stays-card";
+@@ -256,10 +257,12 @@ export async function answerQuestion(
+   if (aboutTheCard) return aboutTheCard.card ?? aboutTheCard.answer(await answerQuestion({ ...asked, question: aboutTheCard.from }, actor, memory));
+   // TITLE_OF_THE_EMPLOYEE_ENABLED: a title the manager attached to another named person is never the card's Position (`ai/title-of-the-employee.ts`).
+   // UNDER_PERFORMANCE_EXPLAINED_ENABLED: Under Performance asked for, the Standards of Conduct cited: the reply says why (`ai/under-performance-explained.ts`).
+-  const answered = withUnderPerformanceExplained(
++  const titled = withUnderPerformanceExplained(
+     await withTitleOfTheEmployee(await answerQuestionAnyPath(asked, actor, memory), asked, () => loadRosterQuiet(actor)),
+     asked,
+   );
++  // FULL_POSITION_TITLE_ENABLED: a whole typed company position ("Team Member Part Time") is the card's Position, not the shorter title inside it (`ai/full-position-title.ts`).
++  const answered = withFullPositionTitle(titled, asked);
+   // CARRIED_PERSON_NOTICE_ENABLED: a card whose person the manager last named before their last six turns says so (`ai/carried-person-notice.ts`).
+   const noticed = withCarriedPersonNotice(answered, asked);
+   // FORM_NAME_FROM_ROSTER_ENABLED, last: only roster people are the employee or a choice (`forms/roster-only-names.ts`).
+diff --git a/src/lib/ai/title-of-the-employee.ts b/src/lib/ai/title-of-the-employee.ts
+index edb095be..299bff2e 100644
+--- a/src/lib/ai/title-of-the-employee.ts
++++ b/src/lib/ai/title-of-the-employee.ts
+@@ -1,4 +1,4 @@
+-import { exitLetterAddresseeEnabled, exitStatedOnlyEnabled, titleOfTheEmployeeEnabled } from "@/lib/config/chat-quality-flags";
++import { exitLetterAddresseeEnabled, exitStatedOnlyEnabled, fullPositionTitleEnabled, titleOfTheEmployeeEnabled } from "@/lib/config/chat-quality-flags";
+ import { displayName, normalizeTypedName, type RosterEmployee } from "@/lib/forms/employee-match";
+ import { EXIT_TEMPLATE_KEY } from "@/lib/forms/exit-library";
+ import { titleNamesAnotherPerson } from "@/lib/forms/title-of-another-person";
+@@ -54,6 +54,17 @@ export async function withTitleOfTheEmployee(
+     const line = new RegExp(String.raw`^(\s*(?:-\s*)?\*\*Job title:\*\*\s*)${escape(role)}\s*$`, "im");
+     content = own ? content.replace(line, (_all, lead: string) => `${lead}${own}`) : content.replace(line, "").replace(/\n{3,}/g, "\n\n");
+   }
++  /*
++   * FULL_POSITION_TITLE_ENABLED (QA, 10 Nov 2026): with no title left on the card, the read-back says so. The removed
++   * line leaves no blank line in the list, the Job Title is on the "Left blank" list, and no sentence says the form
++   * carries the title the manager gave.
++   */
++  if (!own && fullPositionTitleEnabled() && card.templateKey === EXIT_TEMPLATE_KEY) {
++    content = content
++      .replace(/^(- \*\*Name:\*\* [^\n]*)\n\n(?=- \*\*)/m, "$1\n")
++      .replace(new RegExp(String.raw` ?The title on the form is the one you gave \(${escape(role)}\), not one from Woven\.`, "g"), "")
++      .replace(/^(\*\*Left blank for you to review:\*\* )(?!Job Title\b)/m, "$1Job Title, ");
++  }
+   return {
+     ...response,
+     content,
+diff --git a/src/lib/config/chat-quality-flags.ts b/src/lib/config/chat-quality-flags.ts
+index c5befbf3..2cc63ef6 100644
+--- a/src/lib/config/chat-quality-flags.ts
++++ b/src/lib/config/chat-quality-flags.ts
+@@ -1256,6 +1256,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
+   "LAST_FIRST_NAME_READ_ENABLED",
+   "POLICY_CITATION_CHECK_ENABLED",
+   "NEGATED_LATENESS_TOPIC_ENABLED",
++  "FULL_POSITION_TITLE_ENABLED",
+   "PRIOR_ACTIONS_NO_SIGNED_ENABLED",
+   "REQUEST_LEVEL_NOT_HISTORY_ENABLED",
+   // The sibling app's gate fix flags (6 Nov 2026): forced off with the others by flags-off-parity's child run.
+@@ -3919,6 +3920,20 @@ export function titleEndsAtLineEnabled(): boolean {
+   return envFlag("TITLE_ENDS_AT_LINE_ENABLED");
+ }
+ 
++/**
++ * FULL_POSITION_TITLE_ENABLED (QA task A, 6 Nov 2026; default off). An exit
++ * form typed as lines with the position "Team Member Part Time" got the
++ * Position "Team Member": the title reader (`config/company/job-titles.ts`)
++ * reads the shorter title inside it. With this flag on, when the whole typed
++ * title (a line of its own, or a "Position: …" line) is one of the company's
++ * position names (`forms/staff-picker.ts`, `isCompanyPositionTitle`) and holds
++ * the title the card read, the card keeps the whole position
++ * (`ai/full-position-title.ts`). Off, as before.
++ */
++export function fullPositionTitleEnabled(): boolean {
++  return envFlag("FULL_POSITION_TITLE_ENABLED");
++}
++
+ /**
+  * POLICY_CHANGE_RELEVANT_ENABLED (QA, 5 Nov 2026, severe; default off). A location manager's revision of a
+  * Corrective Action ("in the previously recieved coaching include that <name> signed the jba policy manual on
+diff --git a/src/lib/forms/title-of-another-person.test.ts b/src/lib/forms/title-of-another-person.test.ts
+index 273ebbc2..b17ae155 100644
+--- a/src/lib/forms/title-of-another-person.test.ts
++++ b/src/lib/forms/title-of-another-person.test.ts
+@@ -63,6 +63,8 @@ describe("TITLE_ENDS_AT_LINE_ENABLED: a title line of capitalised words is one t
+   });
+   it("off: as before, \"Part Time\" beside \"Team Member\" reads as another person", () => {
+     vi.stubEnv("TITLE_ENDS_AT_LINE_ENABLED", "");
++    // FULL_POSITION_TITLE_ENABLED reads "Part Time" as a schedule word (QA, 10 Nov 2026): off here, as this case was written.
++    vi.stubEnv("FULL_POSITION_TITLE_ENABLED", "");
+     expect(titleNamesAnotherPerson(S16, "Team Member", "Thessaly Varrow")).toBe(true);
+   });
+ });
+@@ -78,3 +80,39 @@ describe("TITLE_ENDS_AT_LINE_ENABLED: a title line is a company position name, n
+     expect(titleNamesAnotherPerson("Thessaly Varrow\nTeam Member Part Time\nNE Omaha Dodge\nGave notice", "Team Member", "Thessaly Varrow")).toBe(false);
+   });
+ });
++
++/*
++ * FULL_POSITION_TITLE_ENABLED (QA, 10 Nov 2026): an exit form typed as lines, "<name>\nTeam Member Weekends Only\n<place>",
++ * for an employee with no roster position, left the Job Title blank: "Weekends Only" on the title's line was read as
++ * the title's owner. Schedule and status words after the title are no person; a name after it still is (ruling (a)).
++ */
++describe("schedule and status words after a title are no person (FULL_POSITION_TITLE_ENABLED)", () => {
++  const typed = (line: string) => `Isaura Corvadine\n${line} \nNE Omaha Dodge\nGave notice - fulfilled notice`;
++  afterEach(() => vi.unstubAllEnvs());
++
++  it("off: \"Weekends Only\" is read as the title's owner, as before (TITLE_ENDS_AT_LINE on)", () => {
++    vi.stubEnv("TITLE_ENDS_AT_LINE_ENABLED", "true");
++    vi.stubEnv("FULL_POSITION_TITLE_ENABLED", "");
++    expect(titleNamesAnotherPerson(typed("Team Member Weekends Only"), "Team Member", "Isaura Corvadine")).toBe(true);
++  });
++
++  for (const line of ["Team Member Weekends Only", "Team Member Part-Time", "Team Member - On Call", "Team Member Nights", "Team Member (Seasonal)", "Team Member Closing Shift Only"]) {
++    it(`on: "${line}" is the employee's`, () => {
++      vi.stubEnv("TITLE_ENDS_AT_LINE_ENABLED", "true");
++      vi.stubEnv("FULL_POSITION_TITLE_ENABLED", "true");
++      expect(titleNamesAnotherPerson(typed(line), "Team Member", "Isaura Corvadine")).toBe(false);
++    });
++  }
++
++  it("on: ruling (a) is kept, \"District Manager Brenna Kowaldane\" is hers", () => {
++    vi.stubEnv("TITLE_ENDS_AT_LINE_ENABLED", "true");
++    vi.stubEnv("FULL_POSITION_TITLE_ENABLED", "true");
++    expect(titleNamesAnotherPerson(typed("District Manager Brenna Kowaldane"), "District Manager", "Isaura Corvadine")).toBe(true);
++  });
++
++  it("on: a qualifier word inside a name line is still a name (\"Team Member Only Vance\")", () => {
++    vi.stubEnv("TITLE_ENDS_AT_LINE_ENABLED", "true");
++    vi.stubEnv("FULL_POSITION_TITLE_ENABLED", "true");
++    expect(titleNamesAnotherPerson(typed("Team Member Only Vance"), "Team Member", "Isaura Corvadine")).toBe(true);
++  });
++});
+diff --git a/src/lib/forms/title-of-another-person.ts b/src/lib/forms/title-of-another-person.ts
+index 6b6e0b61..b2b8207a 100644
+--- a/src/lib/forms/title-of-another-person.ts
++++ b/src/lib/forms/title-of-another-person.ts
+@@ -1,4 +1,4 @@
+-import { titleEndsAtLineEnabled } from "@/lib/config/chat-quality-flags";
++import { fullPositionTitleEnabled, titleEndsAtLineEnabled } from "@/lib/config/chat-quality-flags";
+ 
+ import { isCompanyPositionTitle } from "./staff-picker";
+ 
+@@ -31,7 +31,10 @@ export function titleNamesAnotherPerson(text: string, title: string, employeeNam
+     seen += 1;
+     const at = match.index ?? 0;
+     // TITLE_ENDS_AT_LINE_ENABLED (the sibling app's gate, 6 Nov 2026, s16): the name after a title is on the title's line; the next line (the store) is not its owner.
+-    const after = titleEndsAtLineEnabled() && titleLine(text, at, match[0].length) ? null : nameAt(text.slice(at + match[0].length), "after", titleEndsAtLineEnabled());
++    const after =
++      (titleEndsAtLineEnabled() && titleLine(text, at, match[0].length)) || qualifiedTitle(text, at + match[0].length)
++        ? null
++        : nameAt(text.slice(at + match[0].length), "after", titleEndsAtLineEnabled());
+     const before = nameAt(text.slice(0, at), "before");
+     const beside = [after, before].filter((name): name is string[] => name !== null);
+     const other = beside.some((name) => name.every((word) => !employee.has(word.toLowerCase())));
+@@ -40,6 +43,22 @@ export function titleNamesAnotherPerson(text: string, title: string, employeeNam
+   return seen > 0;
+ }
+ 
++/*
++ * FULL_POSITION_TITLE_ENABLED (QA, 10 Nov 2026): "<name>\nTeam Member Weekends Only\n<place>" for an employee with no
++ * roster position left the Job Title blank: "Weekends Only" was read as the title's owner. Words after the title on its
++ * line that only say when or how the employee works (QA's list) are no person; the title is the employee's. Anything
++ * else ("District Manager Brenna Kowaldane") is read as before. Off, as before.
++ */
++const QUALIFIER = String.raw`(?:weekends?|weekdays?|part[\s-]?time|full[\s-]?time|pt|ft|seasonal|temp|temporary|nights?|evenings?|mornings?|closing|opening|shifts?|only|on[\s-]?call|trainee|in\s+training)`;
++const QUALIFIERS_ONLY = new RegExp(String.raw`^[^\S\n]*(?:\(?${QUALIFIER}\)?[^\S\n]*[,/&+-]?[^\S\n]*)+[.!]?[^\S\n]*(?:\n|$)`, "i");
++
++/** FULL_POSITION_TITLE_ENABLED: the rest of the title's line, from `end`, is only schedule or status words. */
++function qualifiedTitle(text: string, end: number): boolean {
++  if (!fullPositionTitleEnabled()) return false;
++  const rest = text.slice(end);
++  return /^[^\S\n]+\S/.test(rest) && QUALIFIERS_ONLY.test(rest);
++}
++
+ const NAME_WORD = /^\p{Lu}[\p{L}'’-]+$/u;
+ 
+ /**

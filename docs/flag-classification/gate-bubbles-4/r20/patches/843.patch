@@ -1,0 +1,243 @@
+diff --git a/src/app/api/chat/replay-pack/nov12-payroll-amount-after-payroll-cases.ts b/src/app/api/chat/replay-pack/nov12-payroll-amount-after-payroll-cases.ts
+new file mode 100644
+index 00000000..af20ab57
+--- /dev/null
++++ b/src/app/api/chat/replay-pack/nov12-payroll-amount-after-payroll-cases.ts
+@@ -0,0 +1,63 @@
++import { expect, vi } from "vitest";
++
++import { STAFF, WEST_DODGE, type ReplayCase } from "./cases";
++
++/**
++ * ============================================================================
++ * "PAYROLL $25." IS THE STATED AMOUNT (QA, Gate-Bubbles-2, 12 Nov 2026)
++ * ============================================================================
++ *
++ * INTENT_PAYROLL_MANAGER_ONLY (on in the sibling app, off here) was NO-GO:
++ * with it on, an amount the manager typed was dropped — "…showed up late on
++ * october 1, 2026. payroll $25." kept no payroll amount, because the manager's
++ * amount reader read only "deduct(ion) $N" and "$N … deducted". QA's exact
++ * wording, "payroll $25.", ends the request here (the employee is the replay
++ * directory's invented one). PAYROLL_AMOUNT_AFTER_PAYROLL_ENABLED reads it.
++ */
++
++const SAID = "verbal corrective action for marnie holloway at west dodge. she showed up late on november 1, 2026. payroll $25.";
++
++export const NOV12_PAYROLL_AMOUNT_AFTER_PAYROLL_CASES: ReplayCase[] = [
++  {
++    id: "nov12-payroll-amount-after-payroll",
++    title: `"…showed up late on november 1, 2026. payroll $25.": the $25 is the card's amount, not asked again`,
++    report: "QA, 12 Nov 2026 (Gate-Bubbles-2 NO-GO on INTENT_PAYROLL_MANAGER_ONLY): \"payroll $25.\" gave payrollAmount null",
++    status: { open: "\"payroll $25.\" is not read as the deduction amount; the card asks for it" },
++    fixFlags: ["PAYROLL_AMOUNT_AFTER_PAYROLL_ENABLED"],
++    async run(t) {
++      vi.setSystemTime(new Date("2026-11-03T15:00:00Z"));
++      t.directory(STAFF);
++      t.as("location_manager", WEST_DODGE);
++      const thread = t.thread();
++      await thread.say(SAID);
++      expect(thread.proposal, "no CA card for Marnie Holloway").toMatchObject({ employeeName: "Marnie Holloway" });
++      const reply = await thread.say("yes");
++      expect(reply.content, `the amount was asked again:\n${reply.content}`).not.toMatch(/Payroll deduction amount\?/);
++      expect(reply.content, `the $25 is not on the card:\n${reply.content}`).toMatch(/Payroll deduction amount:\*\*\s*\$25\b/);
++      t.draftWrites({ observation: "Observed:\nOn 11/01/2026 Marnie Holloway showed up late." });
++      const id = await thread.create();
++      expect(t.values(id).payroll_deduct_amount ?? "", "the draft's Payroll deduction amount").toBe("$25");
++    },
++  },
++  {
++    id: "nov12-payroll-amount-after-payroll-manager-only",
++    title: `with INTENT_PAYROLL_MANAGER_ONLY on, "payroll $25." still reaches the card and the draft`,
++    report: "QA, 12 Nov 2026: the gate's NO-GO arm (intent-extraction.test.ts:136)",
++    status: { open: "with INTENT_PAYROLL_MANAGER_ONLY on, \"payroll $25.\" is dropped" },
++    fixFlags: ["PAYROLL_AMOUNT_AFTER_PAYROLL_ENABLED"],
++    async run(t) {
++      vi.stubEnv("INTENT_PAYROLL_MANAGER_ONLY_ENABLED", "true");
++      vi.setSystemTime(new Date("2026-11-03T15:00:00Z"));
++      t.directory(STAFF);
++      t.as("location_manager", WEST_DODGE);
++      const thread = t.thread();
++      await thread.say(SAID);
++      expect(thread.proposal, "no CA card for Marnie Holloway").toMatchObject({ employeeName: "Marnie Holloway" });
++      const reply = await thread.say("yes");
++      expect(reply.content, `the $25 is not on the card:\n${reply.content}`).toMatch(/Payroll deduction amount:\*\*\s*\$25\b/);
++      t.draftWrites({ observation: "Observed:\nOn 11/01/2026 Marnie Holloway showed up late." });
++      const id = await thread.create();
++      expect(t.values(id).payroll_deduct_amount ?? "", "the draft's Payroll deduction amount").toBe("$25");
++    },
++  },
++];
+diff --git a/src/lib/ai/payroll-amount-after-payroll.test.ts b/src/lib/ai/payroll-amount-after-payroll.test.ts
+new file mode 100644
+index 00000000..d1cb20ec
+--- /dev/null
++++ b/src/lib/ai/payroll-amount-after-payroll.test.ts
+@@ -0,0 +1,97 @@
++import { afterEach, describe, expect, it, vi } from "vitest";
++
++import { managerPayrollAmount } from "@/lib/forms/payroll-deduct-amount";
++
++import { decideIntentTurn, type IntentTurnInput } from "./intent-slots";
++import type { GroundedPerson } from "./grounded-entities";
++
++/**
++ * PAYROLL_AMOUNT_AFTER_PAYROLL_ENABLED (QA, Gate-Bubbles-2, 12 Nov 2026). With
++ * INTENT_PAYROLL_MANAGER_ONLY on, "…payroll $25." and "…payroll of 25.00
++ * dollars" kept payrollAmount null (intent-extraction.test.ts). The exact
++ * wording of those two turns is used here. People are synthetic.
++ */
++
++const STORES = [{ id: "loc-66", name: "Kearney, NE" }] as const;
++const TEMPLATES = [{ key: "dpoa", name: "Corrective Action Form" }] as const;
++
++const MARISSA: GroundedPerson = {
++  id: "emp-marissa",
++  firstName: "Marissa",
++  lastName: "Lempka",
++  preferredFirstName: null,
++  locationIds: ["loc-66"],
++  title: "Store Manager",
++  primaryLocationName: "Kearney, NE",
++};
++
++function turn(overrides: Partial<IntentTurnInput>): IntentTurnInput {
++  return {
++    question: "",
++    history: [],
++    today: "2026-10-23",
++    saved: null,
++    raw: null,
++    people: [MARISSA],
++    stores: STORES,
++    headings: ["Attendance", "Late Opening"],
++    templates: TEMPLATES,
++    formInProgress: false,
++    ...overrides,
++  };
++}
++
++const DOLLAR_SIGN = "verbal corrective action for marissa lempka at kearney. she showed up late on october 1, 2026. payroll $25.";
++const DOLLARS_WORD =
++  "verbal corrective action for marissa lempka at kearney on 1 October 2026, showed up late, payroll of 25.00 dollars";
++
++function decide(question: string, payrollAmount: string) {
++  return decideIntentTurn(
++    turn({
++      question,
++      raw: {
++        employee: "Marissa Lempka",
++        store: "Kearney",
++        incidentType: "showed up late",
++        incidentDate: "1 October 2026",
++        payrollAmount,
++        warningLevel: "verbal",
++        formType: "corrective action",
++        formTurn: true,
++      },
++    }),
++  );
++}
++
++function flags(on: boolean) {
++  vi.stubEnv("INTENT_PAYROLL_MANAGER_ONLY_ENABLED", "true");
++  vi.stubEnv("PAYROLL_AMOUNT_AFTER_PAYROLL_ENABLED", on ? "true" : "false");
++}
++
++afterEach(() => vi.unstubAllEnvs());
++
++describe("an amount right after \"payroll\" is the manager's stated amount", () => {
++  it("off, with INTENT_PAYROLL_MANAGER_ONLY on, the typed amount is dropped (the reported bug)", () => {
++    flags(false);
++    expect(decide(DOLLAR_SIGN, "$25").state.payrollAmount).toBeNull();
++    expect(decide(DOLLARS_WORD, "25.00 dollars").state.payrollAmount).toBeNull();
++  });
++
++  it("on, \"payroll $25.\" and \"payroll of 25.00 dollars\" keep the amount", () => {
++    flags(true);
++    expect(decide(DOLLAR_SIGN, "$25").state.payrollAmount).toBe("25");
++    expect(decide(DOLLARS_WORD, "25.00 dollars").state.payrollAmount).toBe("25.00");
++  });
++
++  it("on, nothing new is read as money", () => {
++    flags(true);
++    expect(managerPayrollAmount("payroll $25.")).toBe("$25");
++    expect(managerPayrollAmount("payroll is $3.25")).toBe("$3.25");
++    expect(managerPayrollAmount("payroll: $12")).toBe("$12");
++    expect(managerPayrollAmount("payroll 25")).toBeNull();
++    expect(managerPayrollAmount("payroll 10/1/2026")).toBeNull();
++    expect(managerPayrollAmount("no payroll, $25 short in the drawer")).toBeNull();
++    expect(managerPayrollAmount("payroll $0")).toBeNull();
++    expect(managerPayrollAmount("payroll deduction of $25")).toBe("$25");
++  });
++});
+diff --git a/src/lib/config/chat-quality-flags.ts b/src/lib/config/chat-quality-flags.ts
+index c5befbf3..8e882fc2 100644
+--- a/src/lib/config/chat-quality-flags.ts
++++ b/src/lib/config/chat-quality-flags.ts
+@@ -1523,6 +1523,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
+   "EDIT_SEES_SAVED_FORM_ENABLED",
+   // CARD_CHECKED_AGAINST_WORDS (default off; Pau's direction via QA, 13 Nov 2026): in the list, as every chat flag.
+   "CARD_CHECKED_AGAINST_WORDS_ENABLED",
++  // PAYROLL_AMOUNT_AFTER_PAYROLL (default off; QA, 12 Nov 2026): in the list, as every chat flag.
++  "PAYROLL_AMOUNT_AFTER_PAYROLL_ENABLED",
+ ] as const;
+ 
+ /**
+@@ -5406,6 +5408,17 @@ export function resentRequestIsYesEnabled(): boolean {
+   return envFlag("RESENT_REQUEST_IS_YES_ENABLED");
+ }
+ 
++/**
++ * PAYROLL_AMOUNT_AFTER_PAYROLL_ENABLED (coding 6, 12 Nov 2026; default off; QA, Gate-Bubbles-2 on
++ * INTENT_PAYROLL_MANAGER_ONLY). With INTENT_PAYROLL_MANAGER_ONLY on, "…showed up late on october 1, 2026. payroll $25."
++ * and "…payroll of 25.00 dollars" kept no payroll amount: the manager's amount reader read only "deduct(ion) $N" and
++ * "$N … deducted". On: "payroll $N", "payroll of N dollars", "payroll is $N", "payroll: $N" are the stated amount too
++ * (`forms/payroll-deduct-amount.ts`). Off, as before.
++ */
++export function payrollAmountAfterPayrollEnabled(): boolean {
++  return envFlag("PAYROLL_AMOUNT_AFTER_PAYROLL_ENABLED");
++}
++
+ /**
+  * TITLE_BEFORE_NAME_REPLY_LINES_ENABLED (QA's Bubbles 17o live test, 12 Nov 2026; default off). With TITLE_BEFORE_NAME on,
+  * "Corrective action for Team Member <B>" names <B> on the card, but the reply's lines written from the name as first
+diff --git a/src/lib/forms/payroll-deduct-amount.ts b/src/lib/forms/payroll-deduct-amount.ts
+index 94943f75..ab499951 100644
+--- a/src/lib/forms/payroll-deduct-amount.ts
++++ b/src/lib/forms/payroll-deduct-amount.ts
+@@ -1,4 +1,8 @@
+-import { payrollAmountSameMessageEnabled, payrollDeductAmountFieldEnabled } from "@/lib/config/chat-quality-flags";
++import {
++  payrollAmountAfterPayrollEnabled,
++  payrollAmountSameMessageEnabled,
++  payrollDeductAmountFieldEnabled,
++} from "@/lib/config/chat-quality-flags";
+ 
+ import { field } from "./catalog";
+ import type { FormBlock, FormDocument } from "./document";
+@@ -50,7 +54,24 @@ function dollars(written: string): string | null {
+  * outside the protected payroll reader goes through here.
+  */
+ export function managerPayrollAmount(text: string): string | null {
+-  return payrollDeductAmount(payrollAmountSameMessageEnabled() ? joinReferredAmount(text) : text);
++  const joined = payrollAmountSameMessageEnabled() ? joinReferredAmount(text) : text;
++  return payrollDeductAmount(payrollAmountAfterPayrollEnabled() ? payrollAsDeduction(joined) : joined);
++}
++
++/*
++ * PAYROLL_AMOUNT_AFTER_PAYROLL_ENABLED (QA, 12 Nov 2026): "…showed up late on
++ * october 1, 2026. payroll $25." and "…payroll of 25.00 dollars" — a figure
++ * right after "payroll" (", of", "is", "amount (of)", ":") is the deduction.
++ * Nothing new is read as money: "payroll" becomes "payroll deduction of" and the
++ * same reader decides whether what follows is an amount ("$25", "25.00 dollars",
++ * "3.25"; never a bare "25" or a date). A comma or a word in between ("no
++ * payroll, $25 short") is not joined.
++ */
++const PAYROLL_THEN_FIGURE =
++  /\bpayroll(?:\s+(?:of|is|amount(?:\s+(?:of|is))?))?\s*:?\s*(?=\$|\d)/gi;
++
++function payrollAsDeduction(text: string): string {
++  return (text ?? "").replace(PAYROLL_THEN_FIGURE, "payroll deduction of ");
+ }
+ 
+ /**
