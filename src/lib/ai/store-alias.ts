@@ -94,13 +94,15 @@ const STREET_WORDS = new Set(["st", "street", "rd", "road", "ave", "avenue", "pk
 /**
  * Whether the text after a store continues a longer proper noun ("high", "west", "mall"), so the store is not one.
  * Not when the word is part of the store's own label ("west dodge st": the store's street; "West" of "West Dodge"),
- * nor when "of" follows it ("at kearney west of the register" — a direction, not a name) (Gate-Bubbles-3, #869).
+ * nor when it is a compass word with "of" after it ("at kearney west of the register" — a direction) (Gate-Bubbles-3,
+ * #869). Any other block-list word before "of" stays a longer name ("kearney high of all places"; QA, blocking).
  */
 function continuesProperNoun(after: string, storeName: string): boolean {
   const match = /^\s+([A-Za-z][A-Za-z'’-]*)(?:\s+([A-Za-z]+))?/.exec(after);
   const word = match?.[1]?.toLowerCase();
   if (!word || !CONTINUES_NAME.test(word)) return false;
-  if (match?.[2]?.toLowerCase() === "of") return false;
+  // Only a compass word before "of" is a direction (QA, blocking): "kearney high of all places" is a longer name.
+  if (/^(?:west|east|north|south)$/.test(word) && match?.[2]?.toLowerCase() === "of") return false;
   const label = new Set(storeName.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean));
   if (label.has(word)) return false;
   if (STREET_WORDS.has(word) && /\(/.test(storeName)) return false;

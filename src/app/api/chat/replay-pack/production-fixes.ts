@@ -812,4 +812,39 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov13-place-strip-kearney-high-kept": "PLACE_STRIP_WHOLE_PHRASE_ONLY",
   // fixed in production by CARD_CHECKED_AGAINST_WORDS, QA round 17w, 13 Nov 2026
   "nov13-17rc-added-detail-kept-on-card": "CARD_CHECKED_AGAINST_WORDS",
+  // fixed in production by ANSWER_IS_THE_ISSUE, QA round 17x, 13 Nov 2026
+  "nov13-ca-asks-what-happened-answer-is-the-issue": "ANSWER_IS_THE_ISSUE",
+  // fixed in production by ANSWER_IS_THE_ISSUE, QA round 17x, 13 Nov 2026
+  "nov13-answer-is-the-issue-request-turn-title-and-account": "ANSWER_IS_THE_ISSUE",
+  // fixed in production by ANSWER_IS_THE_ISSUE, QA round 17x, 13 Nov 2026
+  "nov13-answer-is-the-issue-request-turn-title-before-name": "ANSWER_IS_THE_ISSUE",
+  // fixed in production by ANSWER_IS_THE_ISSUE, QA round 17x, 13 Nov 2026
+  "nov13-answer-is-the-issue-with-card-check-answer": "ANSWER_IS_THE_ISSUE",
+  // fixed in production by ANSWER_IS_THE_ISSUE, QA round 17x, 13 Nov 2026
+  "nov13-answer-is-the-issue-with-card-check-title-and-account": "ANSWER_IS_THE_ISSUE",
+  // fixed in production by ANSWER_IS_THE_ISSUE, QA round 17x, 13 Nov 2026
+  "nov13-answer-is-the-issue-with-card-check-title-before-name": "ANSWER_IS_THE_ISSUE",
+  // fixed in production by MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED, QA round 17x, 13 Nov 2026
+  "nov13-made-about-empty-patch-answers-saved": "MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED",
+  // fixed in production by ADD_ALREADY_ON_FORM_SAYS_SO, QA round 17x, 13 Nov 2026
+  "nov13-add-already-on-form-says-so": "ADD_ALREADY_ON_FORM_SAYS_SO",
+  // fixed in production by ADD_ALREADY_ON_FORM_SAYS_SO, QA round 17x, 13 Nov 2026
+  "nov13-add-already-on-form-says-so-small-word-left-out": "ADD_ALREADY_ON_FORM_SAYS_SO",
+  // Changed on purpose (14 Nov 2026): nov13-account-change-rederives-policy-sanitation and -phone are OPEN again.
+  // ACCOUNT_CHANGE_REDERIVES_POLICY was rolled back in production at 00:09Z after the 17x live test (Policy
+  // Violated, policy text and plan stayed on Attendance; a one-letter typo fix re-derived the policy). Was: fixed in 17x.
+  // fixed in production by PLACE_STRIP_WHOLE_PHRASE_ONLY (on since 17v) with the #869 follow-up code, QA round 17x, 13 Nov 2026
+  "nov13-place-strip-must-keep-kearney-high-of-all-places": "PLACE_STRIP_WHOLE_PHRASE_ONLY",
+  // fixed in production by PLACE_STRIP_WHOLE_PHRASE_ONLY (on since 17v) with the #869 follow-up code, QA round 17x, 13 Nov 2026
+  "nov13-place-strip-must-keep-kearney-mall-of-all-places": "PLACE_STRIP_WHOLE_PHRASE_ONLY",
+  // fixed in production by ACCOUNT_CHANGE_REDERIVES_POLICY, QA round 17y, 14 Nov 2026
+  "nov13-account-change-rederives-policy-sanitation": "ACCOUNT_CHANGE_REDERIVES_POLICY",
+  // fixed in production by ACCOUNT_CHANGE_REDERIVES_POLICY, QA round 17y, 14 Nov 2026
+  "nov13-account-change-rederives-policy-phone": "ACCOUNT_CHANGE_REDERIVES_POLICY",
+  // fixed in production by ACCOUNT_CHANGE_REDERIVES_POLICY, QA round 17y, 14 Nov 2026
+  "nov13-account-replaced-close-sentence-new-account-still-rederives": "ACCOUNT_CHANGE_REDERIVES_POLICY",
+  // fixed in production by ACCOUNT_CHANGE_REDERIVES_POLICY, QA round 17y, 14 Nov 2026
+  "nov14-account-change-box-already-moved-policy-follows": "ACCOUNT_CHANGE_REDERIVES_POLICY",
+  // fixed in production by ACCOUNT_CHANGE_REDERIVES_POLICY, QA round 17y, 14 Nov 2026
+  "nov14-account-change-made-about-all-four-agree": "ACCOUNT_CHANGE_REDERIVES_POLICY",
 };

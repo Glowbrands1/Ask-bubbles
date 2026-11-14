@@ -1002,6 +1002,12 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 2: the sibling app's "what happened" check (Pau's direction, 13 Nov 2026; default off).
   "CA_ASKS_WHAT_HAPPENED_ENABLED",
   "WHAT_HAPPENED_NO_CREATE_ENABLED",
+  // coding 2: ANSWER_IS_THE_ISSUE (QA's 17t item 4, 13 Nov 2026; default off).
+  "ANSWER_IS_THE_ISSUE_ENABLED",
+  // coding 2: ACCOUNT_CHANGE_REDERIVES_POLICY (QA's Bubbles 17u, 13 Nov 2026; default off).
+  "ACCOUNT_CHANGE_REDERIVES_POLICY_ENABLED",
+  // coding 2: ACCOUNT_REPLACED_CLOSE_SENTENCE_KEPT (QA's follow-up to it, 13 Nov 2026; default off).
+  "ACCOUNT_REPLACED_CLOSE_SENTENCE_KEPT_ENABLED",
   // QA round 17r (13 Nov 2026): TEAM_CARD_NOT_PRODUCT (#668) and FORM_EDIT_SOURCE_TURN (#480) are switched on in production.
   "TEAM_CARD_NOT_PRODUCT_ENABLED",
   "FORM_EDIT_SOURCE_TURN_ENABLED",
@@ -1426,6 +1432,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 6: PRIOR_ACTIONS_NO_COMMA (October rebuild 4, #187 rebuilt on main; default off).
   "PRIOR_ACTIONS_NO_COMMA_ENABLED",
   "STORE_ALIAS_ENABLED",
+  // coding 4: POLICY_NOT_FOUND_PLAIN_WORDING (QA, 13 Nov 2026; default off).
+  "POLICY_NOT_FOUND_PLAIN_WORDING_ENABLED",
   // coding 4: HEADING_DISTINCTIVE_WORDS (QA, 13 Nov 2026; default off).
   "HEADING_DISTINCTIVE_WORDS_ENABLED",
   // coding 4: PLACE_STRIP_WHOLE_PHRASE_ONLY (QA, 13 Nov 2026; default off).
@@ -1525,6 +1533,10 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "EDIT_SEES_SAVED_FORM_ENABLED",
   // CARD_CHECKED_AGAINST_WORDS (default off; Pau's direction via QA, 13 Nov 2026): in the list, as every chat flag.
   "CARD_CHECKED_AGAINST_WORDS_ENABLED",
+  // MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED (default off; QA's live 17u test, 13 Nov 2026): in the list, as every chat flag.
+  "MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED_ENABLED",
+  // ADD_ALREADY_ON_FORM_SAYS_SO (default off; QA's live 17u test, item 5, 13 Nov 2026): in the list, as every chat flag.
+  "ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED",
 ] as const;
 
 /**
@@ -3565,6 +3577,42 @@ export function whatHappenedNoCreateEnabled(): boolean {
 }
 
 /**
+ * ANSWER_IS_THE_ISSUE_ENABLED (Coding-2, 13 Nov 2026; default off; QA's 17t live finding, item 4). "create corrective
+ * action form for <A>, Team Member Part Time" asks what happened (CA_ASKS_WHAT_HAPPENED, on); the answer "she skipped the
+ * closing checklist on her shift last night" left "Issue: team member part time" (the protected reader rebuilds it from
+ * the request turn; main d5e5ea22 already did). On, with CA_ASKS_WHAT_HAPPENED: when the manager's turns give an account
+ * and the card's Issue is only who and where, the Issue is the latest turn that gives one (`ai/ca-what-happened.ts`).
+ * Its own switch, so CA_ASKS_WHAT_HAPPENED's 17t behaviour is never rolled back with it. Off, as before.
+ */
+export function answerIsTheIssueEnabled(): boolean {
+  return envFlag("ANSWER_IS_THE_ISSUE_ENABLED");
+}
+
+/**
+ * ACCOUNT_CHANGE_REDERIVES_POLICY_ENABLED (Coding-2, 13 Nov 2026; default off; QA's Bubbles 17u live test). On a
+ * Corrective Action draft about lateness, "make it about her phone use instead, she was on her phone the whole shift"
+ * and "change the issue to not doing the 10-minute sanitation" rewrote the Observation, but Type of Offense, Policy
+ * Violated, Direct policy and the synced Action Plan stayed on the old topic (Attendance). On: when an edit replaces the
+ * whole account, the offense is read again from the new account and those lines and the plan follow it
+ * (`forms/chat-policy-change.ts` rederivePolicyFromAccount). A policy the manager names in that edit is kept, and a line
+ * or tick the manager wrote is never touched. Off, as before.
+ */
+export function accountChangeRederivesPolicyEnabled(): boolean {
+  return envFlag("ACCOUNT_CHANGE_REDERIVES_POLICY_ENABLED");
+}
+
+/**
+ * ACCOUNT_REPLACED_CLOSE_SENTENCE_KEPT_ENABLED (Coding-2, 13 Nov 2026; default off; QA's follow-up to
+ * ACCOUNT_CHANGE_REDERIVES_POLICY). With that flag on, an Observation edit counted as a new account unless each old
+ * sentence was still there word for word, so fixing a typo ("the whole shfit" → "the whole shift") or a date re-derived
+ * the policy: an Attendance Corrective Action moved to Cell Phone. On: a sentence with only a typo or a date changed
+ * is the same sentence (`forms/close-sentence.ts`), so such an edit keeps the policy. Off, as before.
+ */
+export function accountReplacedCloseSentenceKeptEnabled(): boolean {
+  return envFlag("ACCOUNT_REPLACED_CLOSE_SENTENCE_KEPT_ENABLED");
+}
+
+/**
  * COACHING_ASKS_WHAT_HAPPENED_ENABLED (Pau, 5 Nov 2026, sf-s27; default off).
  * "Create a coaching form." → "<name>" answered "Everything I need is here …
  * I have the employee and the store." with no incident and no draft. On: a
@@ -4718,6 +4766,28 @@ export function madeAboutRewriteFinishesEnabled(): boolean {
 }
 
 /**
+ * MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED_ENABLED (coding 6; QA's live 17u test, Ask Bubbles production, 13 Nov 2026;
+ * default off). On a saved CA draft, "make it about her phone use instead, she was on her phone the whole shift" rewrote
+ * the observation by the old path's revision, then had nothing else to write (a CA has no Other topic, no date was said)
+ * and handed the turn on: the route ran the revision a second time, which found the new account already saved and
+ * replied "I haven't changed the Corrective Action Form … everything on it is as it was." With the flag on, a turn whose
+ * account was rewritten answers from the saved form ("Changed Observation of Offense …"). Off, as before.
+ */
+export function madeAboutEmptyPatchAnswersSavedEnabled(): boolean {
+  return envFlag("MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED_ENABLED");
+}
+
+/**
+ * ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED (coding 6; QA's live 17u test, item 5, 13 Nov 2026; default off). "add that she was
+ * on the phone for the entire shift" on a draft that already says it got the old path's generic "I haven't changed the
+ * Corrective Action Form … everything on it is as it was." With the flag on, an add whose words are all on the saved form
+ * and that changed nothing says the form already says that (`forms/add-already-on-form.ts`). Off, as before.
+ */
+export function addAlreadyOnFormSaysSoEnabled(): boolean {
+  return envFlag("ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED");
+}
+
+/**
  * MADE_ABOUT_TOPIC_EVIDENCE_ENABLED (QA's live Bubbles round 13, 9 Nov 2026; default off; same flag in both apps). "make it
  * about being late on 11/5/26" left Other on the old topic: the topic read from the manager's words ("Being late") came
  * with "being late" as its evidence, two words, under the reducer's floor, so it was refused. With the flag on, its
@@ -5592,6 +5662,16 @@ export function formDateBusinessTodayEnabled(): boolean {
  */
 export function closeSpellingMatchEnabled(): boolean {
   return envFlag("CLOSE_SPELLING_MATCH_ENABLED");
+}
+
+/**
+ * POLICY_NOT_FOUND_PLAIN_WORDING (QA, 13 Nov 2026; default off): the card's line for a policy the manual has no section
+ * for says "I don't see a section of the current policy manual for "<phrase>" …" for every phrase, not "Woven does not
+ * see …", which reads oddly to a manager. See `forms/ca-policy.ts` namedPolicyLine. Off, only a phrase about Woven
+ * (WOVEN_TRAINING_CONDUCT) gets the plain wording, as before.
+ */
+export function policyNotFoundPlainWordingEnabled(): boolean {
+  return envFlag("POLICY_NOT_FOUND_PLAIN_WORDING_ENABLED");
 }
 
 /**
