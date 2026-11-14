@@ -115,5 +115,23 @@ export const NOV13_POSITION_ANSWER_NOT_A_SENTENCE_CASES: ReplayCase[] = [
       expect(reply.content, "a non-title announced").not.toMatch(/Job title set to/);
     },
   })),
-
+  /*
+   * v2-Gate-Bubbles-3's R889 follow-up / QA (14 Nov 2026): after "she's a/an", a remark about her character was set as the
+   * title and announced ("Job title set to **Mess**"). A character remark is never a title.
+   */
+  ...["she's a mess", "she's a good worker", "she's a hard worker", "she's a problem", "she's a minor"].map(
+    (said): ReplayCase => ({
+      id: `nov14-position-answer-character-${said.replace(/[^a-z0-9]+/gi, "-").replace(/-+$/, "")}`,
+      title: `v2-Gate-Bubbles-3's R889 follow-up: the same card → "${said}": a remark about her is never the Position, and nothing is announced`,
+      report: "v2-Gate-Bubbles-3's R889 follow-up and QA (14 Nov 2026): \"Job title set to **Mess**\"",
+      status: { open: "the remark is read as the card's Position, title-cased (as every short answer is on main)" },
+      fixFlags: [FLAG],
+      async run(t) {
+        const { reply, card } = await afterCard(t, said);
+        const role = String(card?.employeeRole ?? "");
+        expect(role, `a remark on the card:\n${reply.content}`).not.toMatch(/mess|worker|problem|minor/i);
+        expect(reply.content, "a remark announced as the title").not.toMatch(/Job title set to/);
+      },
+    }),
+  ),
 ];

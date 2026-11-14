@@ -101,10 +101,18 @@ const ROLE_WORD =
   /\b(?:lead|leader|manager|member|holder|keyholder|key-holder|supervisor|director|associate|assistant|consultant|operator|cashier|trainer|maker|crew|staff|specialist|coordinator|attendant|clerk|owner|captain|agm|gm|asm|sm|tm|kh)\b/i;
 
 const ARTICLE_LEAD = /^(?:a|an|the|our)\s+\S/i;
+/*
+ * v2-Gate-Bubbles-3 / QA on #889 (14 Nov 2026): after "she's a/an", a remark about her character is never a title:
+ * "she's a mess", "a good worker", "a hard worker", "a problem", "a minor" were announced "Job title set to **Mess**". An
+ * evaluative word, or a noun that judges or describes her rather than naming a job, means no title, whatever follows.
+ */
+const CHARACTER_REMARK =
+  /^(?:a|an|the|our)\s+(?:(?:really|very|real|total|complete|bit\s+of\s+a|little)\s+)*(?:(?:good|great|hard|bad|lazy|nice|terrible|awful|amazing|awesome|excellent|poor|strong|weak|slow|fast|quick|sweet|rude|difficult|reliable|unreliable|solid|decent|okay|ok|fine|horrible|wonderful|hard-working|hardworking|new|young|old|problem|trouble)\b|(?:mess|problem|minor|pain|nightmare|handful|liability|joke|disaster|sweetheart|star|rockstar|keeper|asset|worker|person|kid|teen|teenager|student|natural|issue|headache|gem)\b)/i;
 
 function notAPositionSentence(reply: string): boolean {
   if (SENTENCE_ABOUT_HER.test(reply) || NOT_A_TITLE_WORD.test(reply)) return true;
   const said = PRONOUN_IS.exec(reply.trim().replace(/[.!\s]+$/g, ""));
+  if (said !== null && CHARACTER_REMARK.test(said[1]!)) return true;
   return said !== null && !ARTICLE_LEAD.test(said[1]!) && !ROLE_WORD.test(said[1]!);
 }
 

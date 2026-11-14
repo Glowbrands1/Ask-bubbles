@@ -92,6 +92,12 @@ describe("POSITION_ANSWER_NOT_A_SENTENCE_ENABLED: QA's live 17w test (13 Nov 202
     "she's new",
     "she was late again",
     "she has been coached before",
+    // v2-Gate-Bubbles-3 / QA on #889 (14 Nov 2026): a remark about her character is never a title ("Job title set to **Mess**").
+    "she's a mess",
+    "she's a good worker",
+    "she's a hard worker",
+    "she's a problem",
+    "she's a minor",
   ])("on: %j is never a position", (reply) => {
     vi.stubEnv("POSITION_ANSWER_NOT_A_SENTENCE_ENABLED", "true");
     expect(readPositionAnswer(reply)).toBeNull();
