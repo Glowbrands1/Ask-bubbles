@@ -940,10 +940,10 @@ const LEVEL_THEN_DATE =
  * HISTORY_LEVEL_PRIOR_ROW_ENABLED: the earlier warnings the text dates right after naming them — "verbal warning on
  * 9/21" — read as history, with their day: the Prior actions rows they become. Off, none.
  */
-export function datedHistoryLevels(text: string, today: string): { named: string; iso: string }[] {
+export function datedHistoryLevels(text: string, today: string): { named: string; iso: string; signed?: boolean }[] {
   if (!historyLevelPriorRowEnabled()) return [];
   const source = canonicalWarningWording((text ?? "").slice(0, MAX_TEXT).replace(/[’‘‛]/g, "'"));
-  const out: { named: string; iso: string }[] = [];
+  const out: { named: string; iso: string; signed?: boolean }[] = [];
   for (const mention of warningMentions(text, today)) {
     if (mention.kind !== "historical") continue;
     const lead = LEVEL_THEN_DATE.exec(source.slice(mention.index));
@@ -955,7 +955,9 @@ export function datedHistoryLevels(text: string, today: string): { named: string
     const at = mention.index + lead[0].length;
     const undated = source.slice(0, at) + " ".repeat(dated.end) + source.slice(at + dated.end);
     if (warningMentions(undated, today).find((other) => other.index === mention.index)?.kind === "historical") continue;
-    out.push({ named: lead[0].replace(/\s+(?:(?:was|were)\s+)?(?:given|issued|signed|on|dated|the)\b.*$/i, "").trim(), iso: dated.iso });
+    const named = lead[0].replace(/\s+(?:(?:was|were)\s+)?(?:given|issued|signed|on|dated|the)\b.*$/i, "").trim();
+    // "verbal warning signed 9/1/26": the manager said signed, so the row says so (`prior-actions.ts` saidSigned).
+    out.push({ named, iso: dated.iso, ...(/\bsigned\b/i.test(lead[0]) ? { signed: true } : {}) });
   }
   return out;
 }
