@@ -1,0 +1,22 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-negated-first-time-1: \"verbal ca for remy calder, she was late on 11/3/26. no payroll deduct. this isn't the first time she's been late\" \u2014 Prior Actions is never \"None \u2014 first occurrence\" \u2014 OPEN in production (Create saves \"None \u2014 first occurrence\" for a history the manager denied)": {
+    "category": "INTENDED-HARNESS",
+    "reason": "OPEN-in-production pin; fails by design with the fix flag on."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-negated-first-time-2: \"verbal ca for remy calder, she was late on 11/3/26. no payroll deduct. not her first time\" \u2014 Prior Actions is never \"None \u2014 first occurrence\" \u2014 OPEN in production (Create saves \"None \u2014 first occurrence\" for a history the manager denied)": {
+    "category": "INTENDED-HARNESS",
+    "reason": "OPEN-in-production pin; fails by design with the fix flag on."
+  },
+  "src/lib/ai/flags-off-parity.test.ts :: existing chat and form suites with every new flag off passes the suites whose expectations are already on main: src/app/api/chat/replay-pack, first half of the cases by id": {
+    "category": "INTENDED-HARNESS",
+    "reason": "Child inherits the flag; its replay child fails only on nov14-negated-first-time-1/-2 (this PR's OPEN pins). The other parity children fail identically off and on (baseline)."
+  },
+  "replay: nov14-negated-first-time-1 [open]": {
+    "category": "INTENDED",
+    "reason": "Open case holds with the flag on: a denied history ('not/isn't her first time') never saves \"None \u2014 first occurrence\"; replies differ only by that line."
+  },
+  "replay: nov14-negated-first-time-2 [open]": {
+    "category": "INTENDED",
+    "reason": "Open case holds with the flag on: a denied history ('not/isn't her first time') never saves \"None \u2014 first occurrence\"; replies differ only by that line."
+  }
+}
