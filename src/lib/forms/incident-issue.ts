@@ -419,7 +419,7 @@ function issueAsRead(rawSaid: string, employeeName: string | null): string | nul
 /**
  * ISSUE_KEEPS_WORK_AREA_ENABLED (QA, 13 Nov 2026): the request named who and where ("a ca for <A> at the front desk"),
  * so the account is the Issue; a work area said there stays on it ("she was rude to a guest at the front desk"). Only
- * a work area (`forms/work-area.ts`), never a store; and not when the account already says it. Off, as before.
+ * a work area (`forms/work-area.ts`), never a store; and not when the account already names a work area. Off, as before.
  */
 function withWorkArea(issue: string | null, text: string, employeeName: string | null): string | null {
   if (!issueKeepsWorkAreaEnabled() || issue === null) return issue;
@@ -427,7 +427,10 @@ function withWorkArea(issue: string | null, text: string, employeeName: string |
   if (!area) return issue;
   const areaWords = area.toLowerCase().replace(/^at\s+(?:the\s+)?/, "");
   if (issue.toLowerCase().includes(areaWords)) return issue;
-  return `${issue.replace(/[\s.!?,;:]+$/, "")} ${area}`;
+  // The account already says where (another work area): it is not given a second one (Gate-Bubbles, #880).
+  if (workAreaPhrase(issue)) return issue;
+  // Written as a phrase of the account ("at the front desk"), not with the typed capitals ("At The Front Desk").
+  return `${issue.replace(/[\s.!?,;:]+$/, "")} ${area.toLowerCase()}`;
 }
 
 /**

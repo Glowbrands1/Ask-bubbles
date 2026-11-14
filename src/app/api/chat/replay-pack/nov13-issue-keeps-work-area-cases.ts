@@ -82,6 +82,19 @@ export const NOV13_ISSUE_KEEPS_WORK_AREA_GUARDS: ReplayCase[] = [
     },
   },
   {
+    id: "nov13-issue-keeps-work-area-guard-account-names-another-area",
+    title: `"create a ca for remy calder at the register, she was rude to a guest at the front desk" — no second work area`,
+    report: `${REPORT}; Gate-Bubbles' #880 probe`,
+    status: "fixed",
+    fixFlags: [FLAG],
+    async run(t: ReplayContext) {
+      const thread = start(t);
+      const reply = (await thread.say("create a ca for remy calder at the register, she was rude to a guest at the front desk")).content;
+      expect(issueLine(reply), `the Issue line:\n${reply}`).toMatch(/\*\*Issue:\*\* she was rude to a guest at the front desk\s*(?:·|$)/i);
+      expect(issueLine(reply), `a second work area was added:\n${reply}`).not.toMatch(/register/i);
+    },
+  },
+  {
     id: "nov13-issue-keeps-work-area-guard-store-left-off",
     title: `"create a ca for remy calder at west dodge, she was rude to a guest" — a store is not a work area; the Issue is the account`,
     report: REPORT,

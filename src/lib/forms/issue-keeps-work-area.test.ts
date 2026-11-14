@@ -37,6 +37,20 @@ describe("ISSUE_KEEPS_WORK_AREA", () => {
     expect(correctiveActionIssue(`${SAID} at the front desk`, "Remy Calder")).toBe("she was rude to a guest at the front desk");
   });
 
+  it("on: an account that already names a work area gets no second one (Gate-Bubbles, #880)", () => {
+    production(true);
+    expect(correctiveActionIssue("create a ca for remy calder at the register, she was rude to a guest at the front desk", "Remy Calder")).toBe(
+      "she was rude to a guest at the front desk",
+    );
+  });
+
+  it("on: the work area is written in the account's case, not the typed capitals (Gate-Bubbles, #880)", () => {
+    production(true);
+    expect(correctiveActionIssue("create a ca for remy calder At The Front Desk, she was rude to a guest", "Remy Calder")).toBe(
+      "she was rude to a guest at the front desk",
+    );
+  });
+
   it("on: a store said with the person is still left off", () => {
     production(true);
     expect(correctiveActionIssue("create a ca for remy calder at west dodge, she was rude to a guest", "Remy Calder")).toBe("she was rude to a guest");
