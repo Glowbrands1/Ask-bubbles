@@ -99,7 +99,14 @@ export const NOV14_MIXED_POLICY_PLAN_BESIDE_OTHER_CASES: ReplayCase[] = [
     status: { open: "with the chain off, Standards of Conduct is not kept beside lateness and the cleaning duty" },
     fixFlags: [...KEEP_BOTH, FLAG],
     async run(t) {
-      const { id } = await create(t, THREE, "Observed:\nNell Orrin was late on November 3, 2026, yelled at a customer, and did not do the sanitation.");
+      const { id, card, cardPlan } = await create(t, THREE, "Observed:\nNell Orrin was late on November 3, 2026, yelled at a customer, and did not do the sanitation.");
+      // Gate-Bubbles-4's NO-GO probe (14 Nov 2026): the saved form was right, the card was not. The card's Policy line
+      // covers Attendance and Standards of Conduct with the Other note, and the card's plan carries the conduct line.
+      const policyLine = /^\*\*Policy:\*\*.*$/im.exec(card)?.[0] ?? "";
+      expect(policyLine, `the card's Policy line drops Attendance:\n${card}`).toMatch(/attendance/i);
+      expect(policyLine, `the card's Policy line drops Standards of Conduct:\n${card}`).toMatch(/standards of conduct/i);
+      expect(card, `the card does not note Other:\n${card}`).toContain("recorded under **Other** on the form too");
+      expect(cardPlan, `the card's plan has no conduct line:\n${card}`).toContain(SOC_LINE);
       const offense = t.checked(id).offense_type ?? [];
       const values = t.values(id);
       const where = JSON.stringify({ offense, violated: values.policy_violated, plan: (values.action_plan ?? "").slice(-200) });
