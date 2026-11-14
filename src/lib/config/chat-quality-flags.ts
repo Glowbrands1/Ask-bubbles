@@ -1430,6 +1430,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 6: PRIOR_ACTIONS_NO_COMMA (October rebuild 4, #187 rebuilt on main; default off).
   "PRIOR_ACTIONS_NO_COMMA_ENABLED",
   "STORE_ALIAS_ENABLED",
+  // coding 4: REQUEST_LINE_TITLE_KEPT (QA's Bubbles 17x live test, 14 Nov 2026; default off).
+  "REQUEST_LINE_TITLE_KEPT_ENABLED",
   // coding 4: HEADING_DISTINCTIVE_WORDS (QA, 13 Nov 2026; default off).
   "HEADING_DISTINCTIVE_WORDS_ENABLED",
   // coding 4: PLACE_STRIP_WHOLE_PHRASE_ONLY (QA, 13 Nov 2026; default off).
@@ -5653,4 +5655,14 @@ export function headingDistinctiveWordsEnabled(): boolean {
  */
 export function placeStripWholePhraseOnlyEnabled(): boolean {
   return envFlag("PLACE_STRIP_WHOLE_PHRASE_ONLY_ENABLED");
+}
+
+/**
+ * REQUEST_LINE_TITLE_KEPT (QA's Bubbles 17x live test, 14 Nov 2026; default off): "create corrective action form for
+ * <A>, Team Member Part Time" left the card with no Position: TITLE_OF_THE_EMPLOYEE read "Part Time" as another
+ * person's name beside the title. With the flag, words that complete a company position name are the title. See
+ * `forms/title-of-another-person.ts`. Off, as before.
+ */
+export function requestLineTitleKeptEnabled(): boolean {
+  return envFlag("REQUEST_LINE_TITLE_KEPT_ENABLED");
 }
