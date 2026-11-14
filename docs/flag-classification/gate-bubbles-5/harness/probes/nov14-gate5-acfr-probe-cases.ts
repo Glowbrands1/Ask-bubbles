@@ -121,6 +121,16 @@ export const GATE5_ACFR_PROBE_CASES: ReplayCase[] = [
   fixProbe("phone-account-date-named-field", ODA, LATE_ODA, "Observed:\nOdalys Quenby was texting on her cell phone the whole shift on 11/3/26.", "in the observation change 11/3/26 to 11/4/26", [["11/3/26", "11/4/26"]], "change 11/3/26 to 11/4/26", DRAFT_PLAN),
   // Edge: a date rewritten in another format (3 words differ, past #876's limit of 2).
   fixProbe("phone-account-date-other-format-named-field", ODA, LATE_ODA, "Observed:\nOdalys Quenby was texting on her cell phone the whole shift on 11/3/26.", "in the observation change 11/3/26 to November 4, 2026", [["11/3/26", "November 4, 2026"]], "change 11/3/26 to November 4, 2026", DRAFT_PLAN),
+  // More date shapes (v2-QA, 14 Nov): each is a date-only fix on the cell-phone account and must move nothing.
+  ...([
+    ["nov-4th", "Observed:\nOdalys Quenby was texting on her cell phone the whole shift on 11/3/26.", "11/3/26", "Nov 4th"],
+    ["year-dropped", "Observed:\nOdalys Quenby was texting on her cell phone the whole shift on 11/3/26.", "11/3/26", "11/4"],
+    ["weekday", "Observed:\nOdalys Quenby was texting on her cell phone the whole shift on Tuesday.", "Tuesday", "Wednesday"],
+    ["the-3rd", "Observed:\nOdalys Quenby was texting on her cell phone the whole shift on the 3rd.", "3rd", "4th"],
+    ["weekday-and-date", "Observed:\nOdalys Quenby was texting on her cell phone the whole shift on Tuesday, 11/3/26.", "Tuesday, 11/3/26", "Wednesday, November 4th"],
+  ] as const).map(([key, account, from, to]) =>
+    fixProbe(`phone-account-date-${key}-named-field`, ODA, LATE_ODA, account, `in the observation change ${from} to ${to}`, [[from, to]], `change ${from} to ${to}`, DRAFT_PLAN),
+  ),
   // The exact made-about sentence: the revision rewrites the account (with and without ticking the box itself).
   ...([["made-about-exact", undefined], ["made-about-exact-revision-ticks", { offense_type: ["standards_of_conduct"] }]] as const).map(([key, checked]): ReplayCase => ({
     id: `gate5-acfr-${key}`,
