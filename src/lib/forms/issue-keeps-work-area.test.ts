@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { correctiveActionIssue } from "./incident-issue";
-import { workAreaPhrase } from "./work-area";
+import { namesWorkArea, workAreaPhrase } from "./work-area";
 import PRODUCTION from "@/config/production-flags.json";
 
 /* ISSUE_KEEPS_WORK_AREA (QA, 13 Nov 2026). Invented people and wording. */
@@ -22,7 +22,19 @@ describe("workAreaPhrase", () => {
     ["remy calder at the back room", "at the back room"],
     ["remy calder at west dodge", null],
     ["remy calder at close", null],
+    // "at" right after another "at" is still read (Gate-Bubbles, #880 p31–p33).
+    ["remy calder at noon at the register", "at the register"],
   ])("%s → %s", (text, area) => expect(workAreaPhrase(text)).toBe(area));
+});
+
+describe("namesWorkArea: one place word's words never swallow the next (Gate-Bubbles, #880 p31–p33)", () => {
+  it.each([
+    ["she yelled at a guest in the back room", true],
+    ["she cursed at guests near the register", true],
+    ["she was rude on a call in the back room", true],
+    ["she was rude to a guest in the back room", true],
+    ["she yelled at a guest in front of everyone", false],
+  ])("%s → %s", (text, names) => expect(namesWorkArea(text)).toBe(names));
 });
 
 describe("ISSUE_KEEPS_WORK_AREA", () => {

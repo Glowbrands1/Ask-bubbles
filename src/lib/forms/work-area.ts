@@ -8,7 +8,8 @@ export const WORK_AREA =
 
 /** "at the front desk" in `text`, as said, when what follows "at" is a work area; null otherwise. */
 export function workAreaPhrase(text: string): string | null {
-  for (const match of text.matchAll(/\bat\s+((?:the\s+)?[a-z#0-9]+(?:\s+[a-z#0-9]+){0,2})\b/gi)) {
+  // The words are read in a lookahead, so "at" right after another "at" is still read (Gate-Bubbles, #880 p31–p33).
+  for (const match of text.matchAll(/\bat(?=\s+((?:the\s+)?[a-z#0-9]+(?:\s+[a-z#0-9]+){0,2})\b)/gi)) {
     const words = match[1]!.split(/\s+/);
     // The longest work area from the start of the phrase: "at the front desk today" reads "the front desk".
     for (let length = words.length; length >= 1; length -= 1) {
@@ -25,7 +26,11 @@ export function workAreaPhrase(text: string): string | null {
  * p19/p24).
  */
 export function namesWorkArea(text: string): boolean {
-  for (const match of text.matchAll(/\b(?:at|in|inside|near|by|behind|beside|next\s+to|on|around|outside)\s+((?:the\s+)?[a-z#0-9]+(?:\s+[a-z#0-9]+){0,2})\b/gi)) {
+  // The words after each place word are read in a lookahead, so one place word's words never swallow the next place word
+  // ("at a guest in the back room" still reads "in the back room"; Gate-Bubbles, #880 p31–p33).
+  for (const match of text.matchAll(/\b(?:at|in|inside|near|by|behind|beside|next\s+to|on|around|outside)(?=\s+((?:the\s+)?[a-z#0-9]+(?:\s+[a-z#0-9]+){0,2})\b)/gi)) {
+    // "in front of everyone" is not the front: the idiom names no work area.
+    if (/^front\s+of\b/i.test(match[1]!)) continue;
     const words = match[1]!.split(/\s+/);
     for (let length = words.length; length >= 1; length -= 1) {
       if (WORK_AREA.test(words.slice(0, length).join(" "))) return true;

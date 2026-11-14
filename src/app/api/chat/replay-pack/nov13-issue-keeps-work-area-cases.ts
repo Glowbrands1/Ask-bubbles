@@ -98,6 +98,11 @@ export const NOV13_ISSUE_KEEPS_WORK_AREA_GUARDS: ReplayCase[] = [
   ...([
     { key: "p19-in-the-back-room", turn: "create a ca for remy calder at the register, she was rude to a guest in the back room", issue: "she was rude to a guest in the back room", added: /register/i },
     { key: "p24-near-the-register", turn: "create a ca for remy calder at the front desk, she was rude to a guest near the register", issue: "she was rude to a guest near the register", added: /front desk/i },
+    // Gate-Bubbles' second #880 re-gate (p31–p33): an earlier place word ("at a guest", "on a call") must not swallow the
+    // place word that names the area.
+    { key: "p31-yelled-at-a-guest-in-the-back-room", turn: "create a ca for remy calder at the register, she yelled at a guest in the back room", issue: "she yelled at a guest in the back room", added: /register/i },
+    { key: "p32-cursed-at-guests-near-the-register", turn: "create a ca for remy calder at the front desk, she cursed at guests near the register", issue: "she cursed at guests near the register", added: /front desk/i },
+    { key: "p33-rude-on-a-call-in-the-back-room", turn: "create a ca for remy calder at the register, she was rude on a call in the back room", issue: "she was rude on a call in the back room", added: /register/i },
   ] as const).map(({ key, turn, issue, added }): ReplayCase => ({
     id: `nov13-issue-keeps-work-area-guard-${key}`,
     title: `"${turn}" — no second work area`,
