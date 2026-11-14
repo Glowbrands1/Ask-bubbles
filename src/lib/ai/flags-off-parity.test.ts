@@ -143,8 +143,27 @@ const PROTECTED = [
  * Termination plan's closing is the termination sentence (`planClosing`, also
  * in `refreshedActionPlan`). Off, both are exactly as before; instances.ts is
  * not touched.
+ *
+ * The user (Pau), under the standing approval, via QA on 14 Nov 2026, behind FUZZY_STORE_ASKS_ENABLED (default off):
+ * in src/lib/forms/location-scope.ts, fromNamedLocations does not take a single store read by a close spelling more
+ * than one letter off (a `loose` mention) silently under GLOBAL_STORE_ASK; it is asked. The flag import and that one
+ * condition; docs/patches/fuzzy-store-asks.patch. Off, exactly as before.
+ *
+ * Under Pau's standing approval for protected-file edits (relayed by QA, 14 Nov 2026, for the OTHER_* port to this
+ * app), in src/lib/forms/ca-action-plan.ts, exactly the lines of docs/patches/other-not-a-policy-name.patch: the import
+ * `otherNotAPolicyNameEnabled`, and in policyNamesFromViolated a Policy Violated label "Other" names no policy. Behind
+ * OTHER_NOT_A_POLICY_NAME_ENABLED (default off); off, the names are read as before. ca-action-plan.ts is already
+ * excluded below.
+ *
+ * Under Pau's standing approval for protected-file edits (relayed by QA, 14 Nov 2026, for Gate-Bubbles-5's #892
+ * probes, QA's ruling (b)), in src/lib/ai/form-proposal.ts, exactly the lines of
+ * docs/patches/other-beside-described-form-proposal.patch: the import `withoutCleaningDuty`, and at the start of
+ * namedPolicyFor a cleaning duty beside a second described offense reads that offense from the account without the duty
+ * (marked `besideOther`). Behind OTHER_POLICY_AGREES_ENABLED (default off here); off, as before. form-proposal.ts is
+ * already excluded below.
  */
 const APPROVED_PROTECTED_EDITS = [
+  ":(exclude)src/lib/forms/location-scope.ts",
   ":(exclude)src/lib/forms/required-closing.ts",
   ":(exclude)src/lib/forms/ca-action-plan.ts",
   ":(exclude)src/lib/forms/chat-revision.ts",
