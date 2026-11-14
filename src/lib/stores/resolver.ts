@@ -1,5 +1,5 @@
 import { isJobTitleAbbreviation } from "@/config/company/job-titles";
-import { placeSpanGuardEnabled, reasonPlaceNotStoreEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { placeSpanGuardEnabled, reasonPlaceNotStoreEnabled, reasonSubjectAnyNounPhraseEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { editDistance } from "@/lib/forms/employee-match";
 import { companyNameStops } from "@/lib/forms/name-stops";
 import { isTypedStopSpan } from "@/lib/forms/name-words";
@@ -582,8 +582,22 @@ function isDocumentPhrase(span: string): boolean {
 const REASON_PLACE =
   /(\b(?:because|bc|b\/c|cause|'cause|cuz|since)\s+(?:she|he|they|i|we|[a-z][a-z'’-]*)\s+(?:was|were|had\s+been)\s+)((?:at|in)\s+[^,.;:!?()\n]*?)(?=\s*(?:[,.;:!?()\n]|$)|\s+(?:and|but)\b)/gi;
 
+/*
+ * REASON_SUBJECT_ANY_NOUN_PHRASE_ENABLED: the reason's subject may be a noun phrase ("her kid", "her car"), its verb
+ * "got" / "went" / "stayed" / "broke down" / "had to be" (the sibling gate's #989 probe: "because she had to be in
+ * <place>"), and up to two words may stand before the place ("was sick in …", "was stuck in …"), never a
+ * work word: "because she was late at kearney" says where she was late, and is still read.
+ */
+const REASON_WORK_WORD = String.raw`(?!(?:late|early|tardy|working|scheduled|absent|on|off|rude|caught|written|clocked|work|shift)\b)`;
+const REASON_PLACE_WIDE = new RegExp(
+  String.raw`(\b(?:because|bc|b\/c|cause|'cause|cuz|since)\s+(?:[a-z][a-z'’-]*\s+){0,3}?[a-z][a-z'’-]*\s+(?:was|were|had\s+been|got|went|stayed|broke\s+down|(?:had|has|needed)\s+to\s+be)\s+(?:${REASON_WORK_WORD}[a-z][a-z'’-]*\s+){0,2}?)((?:at|in)\s+[^,.;:!?()\n]*?)(?=\s*(?:[,.;:!?()\n]|$)|\s+(?:and|but)\b)`,
+  "gi",
+);
+
 function withoutReasonPlaces(text: string): string {
-  return text.replace(REASON_PLACE, (_, lead: string, place: string) => `${lead}${" ".repeat(place.length)}`);
+  const blanked = text.replace(REASON_PLACE, (_, lead: string, place: string) => `${lead}${" ".repeat(place.length)}`);
+  if (!reasonSubjectAnyNounPhraseEnabled()) return blanked;
+  return blanked.replace(REASON_PLACE_WIDE, (_, lead: string, place: string) => `${lead}${" ".repeat(place.length)}`);
 }
 
 /**

@@ -1439,6 +1439,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "POLICY_NOT_FOUND_PLAIN_WORDING_ENABLED",
   // coding 4: REASON_PLACE_NOT_STORE (Gate-Bubbles-3 on #869, 13 Nov 2026; default off).
   "REASON_PLACE_NOT_STORE_ENABLED",
+  // coding 4: REASON_SUBJECT_ANY_NOUN_PHRASE (Gate-Sunny's #975 follow-up, QA 14 Nov 2026; default off).
+  "REASON_SUBJECT_ANY_NOUN_PHRASE_ENABLED",
   // coding 4: FUZZY_STORE_ASKS (QA's ruling on Gate-Bubbles-3's #869 probes, 14 Nov 2026; default off).
   "FUZZY_STORE_ASKS_ENABLED",
   // coding 4: REQUEST_LINE_TITLE_KEPT (QA's Bubbles 17x live test, 14 Nov 2026; default off).
@@ -5722,6 +5724,18 @@ export function placeStripWholePhraseOnlyEnabled(): boolean {
  */
 export function reasonPlaceNotStoreEnabled(): boolean {
   return envFlag("REASON_PLACE_NOT_STORE_ENABLED");
+}
+
+/**
+ * REASON_SUBJECT_ANY_NOUN_PHRASE (Gate-Sunny's #975 follow-up, QA 14 Nov 2026; default off; with REASON_PLACE_NOT_STORE):
+ * "she left early because her kid was sick in kearney" and "because her car broke down in kearney" filed Kearney: the
+ * reason's subject was one word, and nothing could stand between "was" and the place. With the flag the subject may be
+ * a noun phrase of up to four words, the verb may be "got", "went", "stayed" or "broke down", and up to two words
+ * ("sick", "stuck there") may come before "at"/"in" — never a work word ("late", "early", "working", "scheduled" …), so
+ * "because she was late at kearney" is still read. See `stores/resolver.ts`. Off, as before.
+ */
+export function reasonSubjectAnyNounPhraseEnabled(): boolean {
+  return envFlag("REASON_SUBJECT_ANY_NOUN_PHRASE_ENABLED");
 }
 
 /**
