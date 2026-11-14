@@ -671,7 +671,8 @@ export function withoutCleaningDuty(rawText: string): string | null {
   if (!phrase) return null;
   const at = (rawText ?? "").toLowerCase().replace(/[‘’‛]/g, "'").indexOf(phrase);
   if (at < 0) return null;
-  const rest = `${rawText.slice(0, at)} ${rawText.slice(at + phrase.length)}`.replace(/\s+/g, " ").trim();
+  // Line breaks are kept: the app's own lines are read line by line (`withoutAppLines`), never as the manager's words.
+  const rest = `${rawText.slice(0, at)} ${rawText.slice(at + phrase.length)}`.replace(/[ \t]{2,}/g, " ").trim();
   return rest === "" ? null : rest;
 }
 
