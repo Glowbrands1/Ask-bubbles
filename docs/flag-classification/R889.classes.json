@@ -1,74 +1,58 @@
 {
-  "src/app/api/chat/form-type-switch-e2e.test.ts :: flag off, as main Pau's wording keeps the old form or drops the card": {
-    "category": "INTENDED-HARNESS",
-    "reason": "Flag-off arm of FORM_TYPE_SWITCH (on in production). With FORM_TYPE_SWITCH off, main kept the card only because \"change to coaching\" was eaten as the job title; with #889 it is not a title. Production path (switch on) passes. Follow-up: stub POSITION_ANSWER_NOT_A_SENTENCE_ENABLED off in this arm."
-  },
-  "src/app/api/chat/position-answer-guard-e2e.test.ts :: POSITION_ANSWER_GUARD_ENABLED off: as main, the answer is saved as the job title Sentence case": {
-    "category": "INTENDED-HARNESS",
-    "reason": "Stale off-pin: pins main's behaviour with only its own flag stubbed off; with POSITION_ANSWER_NOT_A_SENTENCE_ENABLED on the reply is (rightly) no longer a title. Follow-up: vi.stubEnv(\"POSITION_ANSWER_NOT_A_SENTENCE_ENABLED\", \"\") in this arm."
-  },
-  "src/app/api/chat/position-answer-guard-e2e.test.ts :: POSITION_ANSWER_GUARD_ENABLED off: as main, the answer is saved as the job title lowercase": {
-    "category": "INTENDED-HARNESS",
-    "reason": "Stale off-pin: pins main's behaviour with only its own flag stubbed off; with POSITION_ANSWER_NOT_A_SENTENCE_ENABLED on the reply is (rightly) no longer a title. Follow-up: vi.stubEnv(\"POSITION_ANSWER_NOT_A_SENTENCE_ENABLED\", \"\") in this arm."
-  },
   "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov13-position-answer-key-holder-said: QA's 17w report: the same card, then \"she's a key holder\": the Position is Key Holder, and the reply says so \u2014 OPEN in production (the Position is Key Holder and the reply does not say so)": {
     "category": "INTENDED-HARNESS",
-    "reason": "OPEN-in-production pin; fails by design when the fix flag is on."
+    "reason": "OPEN-in-production pin; fails by design with the fix flag on."
   },
   "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov13-position-answer-not-a-sentence-she-gets-a-verbal-warning: \"create a CA for Marnie Holloway, she was late on 11/3/26\" (no Woven position) \u2192 \"she gets a verbal warning\": the card's Position is never that sentence \u2014 OPEN in production (the card's Position is the sentence (\"she gets a verbal warning\", title-cased))": {
     "category": "INTENDED-HARNESS",
-    "reason": "OPEN-in-production pin; fails by design when the fix flag is on."
+    "reason": "OPEN-in-production pin; fails by design with the fix flag on."
   },
   "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-position-answer-gate-miss-it-s-her-second-time: v2-Gate-Bubbles-3's probe: the same card \u2192 \"it's her second time\": the Position is never set from it, and nothing is announced \u2014 OPEN in production (the card's Position is \"it's her second time\", title-cased)": {
     "category": "INTENDED-HARNESS",
-    "reason": "OPEN-in-production pin; fails by design when the fix flag is on."
+    "reason": "OPEN-in-production pin; fails by design with the fix flag on."
   },
   "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-position-answer-gate-miss-she-s-a-team-lead-i-think: v2-Gate-Bubbles-3's probe: the same card \u2192 \"she's a team lead i think\": the Position is never set from it, and nothing is announced \u2014 OPEN in production (the card's Position is \"she's a team lead i think\", title-cased)": {
     "category": "INTENDED-HARNESS",
-    "reason": "OPEN-in-production pin; fails by design when the fix flag is on."
+    "reason": "OPEN-in-production pin; fails by design with the fix flag on."
   },
   "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-position-answer-gate-miss-she-s-in-training: v2-Gate-Bubbles-3's probe: the same card \u2192 \"she's in training\": the Position is never set from it, and nothing is announced \u2014 OPEN in production (the card's Position is \"she's in training\", title-cased)": {
     "category": "INTENDED-HARNESS",
-    "reason": "OPEN-in-production pin; fails by design when the fix flag is on."
+    "reason": "OPEN-in-production pin; fails by design with the fix flag on."
   },
   "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-position-answer-gate-miss-she-s-new: v2-Gate-Bubbles-3's probe: the same card \u2192 \"she's new\": the Position is never set from it, and nothing is announced \u2014 OPEN in production (the card's Position is \"she's new\", title-cased)": {
     "category": "INTENDED-HARNESS",
-    "reason": "OPEN-in-production pin; fails by design when the fix flag is on."
-  },
-  "src/app/api/forms/admin-feedback-oct16-e2e.test.ts :: Issue 2 \u2014 the employee's position asks once when there is no position anywhere, then uses the answer and stops asking": {
-    "category": "REGRESSION",
-    "reason": "Admin report (Oct 16): \"she is a barista\" answering the position question must set Position Barista. ON it is null: PRONOUN_IS requires a ROLE_WORD after \"she is\" and \"barista\" is not in the list. Any off-list title said as \"she's a \u2026\" is dropped."
+    "reason": "OPEN-in-production pin; fails by design with the fix flag on."
   },
   "src/lib/ai/flags-off-parity.test.ts :: existing chat and form suites with every new flag off passes the suites whose expectations are already on main: src/app/api/chat/replay-pack, first half of the cases by id": {
     "category": "INTENDED-HARNESS",
-    "reason": "Child inherits the flag; its replay child fails only on this PR's 6 OPEN pins (checked in the ON replay records)."
-  },
-  "src/lib/forms/form-input-fidelity.test.ts :: form input fidelity, flag off leaves yesterday unset and still reads a bare warning as a job title": {
-    "category": "INTENDED-HARNESS",
-    "reason": "Stale off-pin: pins main's behaviour with only its own flag stubbed off; with POSITION_ANSWER_NOT_A_SENTENCE_ENABLED on the reply is (rightly) no longer a title. Follow-up: vi.stubEnv(\"POSITION_ANSWER_NOT_A_SENTENCE_ENABLED\", \"\") in this arm."
+    "reason": "Child inherits the flag; its replay child fails only on this PR's 6 OPEN pins (checked)."
   },
   "replay: nov13-position-answer-key-holder-said [open]": {
     "category": "INTENDED",
-    "reason": "Open case now holds with the flag on (fix)."
+    "reason": "Open case holds with the flag on (fix)."
   },
   "replay: nov13-position-answer-not-a-sentence-she-gets-a-verbal-warning [open]": {
     "category": "INTENDED",
-    "reason": "Open case now holds with the flag on (fix)."
+    "reason": "Open case holds with the flag on (fix)."
   },
   "replay: nov14-position-answer-gate-miss-it-s-her-second-time [open]": {
     "category": "INTENDED",
-    "reason": "Open case now holds with the flag on (fix)."
+    "reason": "Open case holds with the flag on (fix)."
   },
   "replay: nov14-position-answer-gate-miss-she-s-a-team-lead-i-think [open]": {
     "category": "INTENDED",
-    "reason": "Open case now holds with the flag on (fix)."
+    "reason": "Open case holds with the flag on (fix)."
   },
   "replay: nov14-position-answer-gate-miss-she-s-in-training [open]": {
     "category": "INTENDED",
-    "reason": "Open case now holds with the flag on (fix)."
+    "reason": "Open case holds with the flag on (fix)."
   },
   "replay: nov14-position-answer-gate-miss-she-s-new [open]": {
     "category": "INTENDED",
-    "reason": "Open case now holds with the flag on (fix)."
+    "reason": "Open case holds with the flag on (fix)."
+  },
+  "replay: nov14-position-answer-she-is-a-barista [production]": {
+    "category": "INTENDED",
+    "reason": "Guard holds OFF and ON (Position Barista); ON the reply adds \"Job title set to **Barista**, as you said.\" (this PR's announcement); nothing else differs."
   }
 }
