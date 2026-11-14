@@ -1,6 +1,7 @@
-import { policySetAsidePlanEnabled } from "@/lib/config/chat-quality-flags";
+import { policyLineCoversEverySectionEnabled, policySetAsidePlanEnabled } from "@/lib/config/chat-quality-flags";
 import { withoutCitedPassages } from "@/lib/ai/violation-policy";
 
+import { policyPhrase } from "./ca-action-plan";
 import { CA_POLICY_LABEL, policiesNamedIn, type CaPolicyName } from "./ca-policy";
 
 /**
@@ -179,6 +180,8 @@ function planWithoutSetAside(line: string, setAside: PolicySetAside): string {
 
 export function withPolicySetAside(rawContent: string, setAside: PolicySetAside): string {
   if (!setAsideAnything(setAside)) return rawContent;
+  const otherKept = policyLineCoversEverySectionEnabled() ? withOtherPolicyKept(rawContent, setAside) : null;
+  if (otherKept !== null) return otherKept;
   /*
    * POLICY_CITATION_ENABLED (Gate-Bubbles-3, Rpcf, 12 Nov 2026): the card below says "**Policy:** none — you took … off"
    * (`policySetAsideLine`), so it quotes nothing: the block is taken out whole. Without the block (the flag off),
@@ -220,7 +223,14 @@ export function valuesWithPolicySetAside(values: Record<string, string>, setAsid
   const out: Record<string, string> = {};
   for (const [key, value] of Object.entries(values)) {
     if (POLICY_FIELD_KEYS.has(key)) {
-      out[key] = citesSetAside(value, setAside) ? "" : value;
+      /*
+       * POLICY_LINE_COVERS_EVERY_SECTION_ENABLED (Gate-Bubbles-4's probe): the policy left after one was taken off keeps
+       * its quoted section, which may mention the other ("… attendance …" in the Standards of Conduct): Direct policy
+       * follows Policy Violated, which names only the policy left.
+       */
+      const violated = (values.policy_violated ?? "").trim();
+      const keepsLeft = policyLineCoversEverySectionEnabled() && key === "policy_language" && violated !== "" && !citesSetAside(violated, setAside);
+      out[key] = !keepsLeft && citesSetAside(value, setAside) ? "" : value;
       continue;
     }
     if (typeof value !== "string" || !POLICY_REFERENCE_LINE.test(value.split("\n").find((line) => POLICY_REFERENCE_LINE.test(line)) ?? "")) {
@@ -235,4 +245,34 @@ export function valuesWithPolicySetAside(values: Record<string, string>, setAsid
       .trim();
   }
   return out;
+}
+
+/*
+ * POLICY_LINE_COVERS_EVERY_SECTION_ENABLED (Gate-Bubbles-4's NO-GO probe on the chain, 14 Nov 2026): on a card citing two
+ * policies ("Attendance and Standards of Conduct"), "take the attendance policy off the form" said "Policy: none — you
+ * took the Attendance policy off" with a generic plan. One taken off, the other stays: the Policy line names it, its
+ * quoted section stays, and the plan reviews it (the card's plan step then shows the plan Create saves; Create reads
+ * the account without the offense taken off, `ca-policy.ts` withoutSetAsideOffense). Null when the card does not cite a
+ * policy that stays, so the line says "none" as before.
+ */
+function withOtherPolicyKept(rawContent: string, setAside: PolicySetAside): string | null {
+  if (setAside.any) return null;
+  const lines = rawContent.split("\n");
+  const at = lines.findIndex((line) => POLICY_ROW.test(line.trim()));
+  if (at < 0) return null;
+  const cited = [...new Set(policiesNamedIn(lines[at]!.toLowerCase()).map((found) => found.name))];
+  const left = cited.filter((name) => !setAside.names.has(name));
+  if (left.length === 0 || left.length === cited.length) return null;
+  const leftLabels = left.map((name) => CA_POLICY_LABEL[name]);
+  const gone = labelsOf(setAside);
+  const joined = leftLabels.length === 1 ? leftLabels[0]! : `${leftLabels.slice(0, -1).join(", ")} and ${leftLabels.at(-1)}`;
+  lines[at] = `**Policy:** ${joined} — you took the ${gone.join(" and ")} policy off, so I'll cite only ${joined} on the draft. Tell me if a different policy applies.`;
+  const out = lines.map((line) => {
+    const plan = /^(\*\*Action plan:\*\*)\s*(.*)$/i.exec(line.trim());
+    if (!plan) return line;
+    const first = /\bwith ([A-Z][\w'-]*)\./.exec(plan[2]!)?.[1] ?? "the employee";
+    const closing = /Future policy violations[^\n]*$/.exec(plan[2]!)?.[0] ?? "";
+    return `${plan[1]} Management will review ${policyPhrase(leftLabels)} with ${first}.${closing ? ` ${closing}` : ""}`;
+  });
+  return withoutCitedPassages(out.join("\n"), (heading) => citesSetAside(heading, setAside));
 }

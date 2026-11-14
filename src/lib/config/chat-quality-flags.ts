@@ -999,6 +999,10 @@ export function formsGuideEnabled(): boolean {
 }
 
 export const CHAT_QUALITY_FLAG_NAMES = [
+  // coding 2: POLICY_LINE_COVERS_EVERY_SECTION (QA's two-offense Create check, 14 Nov 2026; default off).
+  "POLICY_LINE_COVERS_EVERY_SECTION_ENABLED",
+  // coding 2: NAMED_POLICIES_ALL_KEPT (QA's two-offense Create check, 13 Nov 2026; default off).
+  "NAMED_POLICIES_ALL_KEPT_ENABLED",
   // coding 2: OTHER_POLICY_AGREES and OTHER_NOT_A_POLICY_NAME (ported from the sibling app at QA's direction, 14 Nov 2026; default off).
   "OTHER_POLICY_AGREES_ENABLED",
   "OTHER_NOT_A_POLICY_NAME_ENABLED",
@@ -5712,6 +5716,28 @@ export function headingDistinctiveWordsEnabled(): boolean {
  */
 export function placeStripWholePhraseOnlyEnabled(): boolean {
   return envFlag("PLACE_STRIP_WHOLE_PHRASE_ONLY_ENABLED");
+}
+
+/**
+ * NAMED_POLICIES_ALL_KEPT_ENABLED (Coding-2, 13 Nov 2026; default off; QA's two-offense Create check). "create ca form
+ * for <B> for violating the attendance policy and standards of conduct, she was late on 11/3/26 and yelled at a
+ * customer" kept only the last policy named (Standards of Conduct): Attendance left Type of Offense, Policy Violated and
+ * the plan. On: policies named together in one list are all kept (`forms/ca-policy.ts` statedTogetherIn); a later name
+ * that corrects an earlier one still wins alone. Off, as before.
+ */
+export function namedPoliciesAllKeptEnabled(): boolean {
+  return envFlag("NAMED_POLICIES_ALL_KEPT_ENABLED");
+}
+
+/**
+ * POLICY_LINE_COVERS_EVERY_SECTION_ENABLED (Coding-2, 14 Nov 2026; default off; QA's two-offense Create check). The
+ * card's Policy line and the draft named one policy where the CA carried two: "she was late on 11/3/26 and yelled at a
+ * customer" was read as Attendance only, and naming "the attendance policy and standards of conduct" was said as one.
+ * On: a conduct incident described beside lateness is read too (`forms/ca-policy.ts` withConductBesideLateness), the
+ * card line names every policy (named or described), and the draft ticks and cites each. Off, as before.
+ */
+export function policyLineCoversEverySectionEnabled(): boolean {
+  return envFlag("POLICY_LINE_COVERS_EVERY_SECTION_ENABLED");
 }
 
 /**

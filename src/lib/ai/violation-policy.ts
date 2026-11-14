@@ -1,4 +1,5 @@
 import type { ManualChunk } from "@/lib/forms/official-policy-manual";
+import { policyLineCoversEverySectionEnabled } from "@/lib/config/chat-quality-flags";
 
 import { accountManualSections } from "./account-manual-sections";
 import { formatManualCitation } from "./policy-citation-fields";
@@ -70,12 +71,22 @@ export function cardCitedSections(content: string, chunks: readonly ManualChunk[
   const headings = new Map<string, number | null>();
   for (const match of card.matchAll(CARD_CITATION)) headings.set(match[1]!.trim(), match[2] ? Number(match[2]) : null);
   const line = CARD_POLICY_LINE.exec(card);
+  const known = new Set(chunks.map((chunk) => (chunk.section ?? "").trim().toLowerCase()).filter(Boolean));
+  const isKnown = (name: string) => known.has(name.replace(/\s+Policy$/i, "").toLowerCase()) || known.has(`${name.replace(/\s+Policy$/i, "")} policy`.toLowerCase());
   if (line) {
     const page = /\bpage\s+(\d+)\b/i.exec(line[0])?.[1];
     const name = line[1]!.trim();
-    if (!headings.has(name)) headings.set(name, page ? Number(page) : null);
+    /*
+     * POLICY_LINE_COVERS_EVERY_SECTION_ENABLED (14 Nov 2026): a Policy line that names every section the account reads
+     * ("Late Opening and Standards of Conduct, from what you described …") quotes each of them; a joined name is never
+     * one heading. A heading that itself has "and" in it is read whole first. Off, as before.
+     */
+    const parts = policyLineCoversEverySectionEnabled() && !isKnown(name) ? name.split(/\s*(?:,|&|\band\b)\s*/).map((part) => part.trim()).filter(Boolean) : [name];
+    for (const [index, part] of parts.entries()) {
+      // The line's page is the first section's ("… Late Opening section on page 15 and its Standards of Conduct section").
+      if (!headings.has(part)) headings.set(part, page && index === 0 ? Number(page) : null);
+    }
   }
-  const known = new Set(chunks.map((chunk) => (chunk.section ?? "").trim().toLowerCase()).filter(Boolean));
   return [...headings]
     .map(([heading, page]) => ({ section: heading.replace(/\s+Policy$/i, ""), page }))
     .filter((section) => known.has(section.section.toLowerCase()) || known.has(`${section.section} policy`.toLowerCase()));
