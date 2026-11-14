@@ -127,10 +127,71 @@ export const GATE5_ACFR_PROBE_CASES: ReplayCase[] = [
     ["year-dropped", "Observed:\nOdalys Quenby was texting on her cell phone the whole shift on 11/3/26.", "11/3/26", "11/4"],
     ["weekday", "Observed:\nOdalys Quenby was texting on her cell phone the whole shift on Tuesday.", "Tuesday", "Wednesday"],
     ["the-3rd", "Observed:\nOdalys Quenby was texting on her cell phone the whole shift on the 3rd.", "3rd", "4th"],
+    ["the-4th", "Observed:\nOdalys Quenby was texting on her cell phone the whole shift on 11/3/26.", "11/3/26", "the 4th"],
+    ["month-word-to-numeric", "Observed:\nOdalys Quenby was texting on her cell phone the whole shift on November 3, 2026.", "November 3, 2026", "11/4/26"],
     ["weekday-and-date", "Observed:\nOdalys Quenby was texting on her cell phone the whole shift on Tuesday, 11/3/26.", "Tuesday, 11/3/26", "Wednesday, November 4th"],
   ] as const).map(([key, account, from, to]) =>
     fixProbe(`phone-account-date-${key}-named-field`, ODA, LATE_ODA, account, `in the observation change ${from} to ${to}`, [[from, to]], `change ${from} to ${to}`, DRAFT_PLAN),
   ),
+  // Controls (v2-QA): the account itself changes AND the date is rewritten, so the policy must still follow the new account.
+  ...([
+    ["control-new-account-date-words", "Observed:\nOdalys Quenby arrived late for her shift on 11/3/26.", "change the issue to she was texting on her cell phone the whole shift", "Observed:\nOdalys Quenby was texting on the cell phone the whole shift on November 4, 2026."],
+    ["control-new-account-nov-4th", "Observed:\nOdalys Quenby arrived late for her shift on 11/3/26.", "change the issue to she was texting on her cell phone the whole shift", "Observed:\nOdalys Quenby was texting on the cell phone the whole shift on Nov 4th."],
+    ["control-new-account-same-date", "Observed:\nOdalys Quenby arrived late for her shift on 11/3/26.", "change the issue to she was texting on her cell phone the whole shift", "Observed:\nOdalys Quenby was texting on the cell phone the whole shift on 11/3/26."],
+  ] as const).map(([key, account, said, newObs]): ReplayCase => ({
+    id: `gate5-acfr-${key}`,
+    title: `gate-only control: "${said}" on an Attendance draft: the account changes, so the four follow it to Cell Phone`,
+    report: "gate-only",
+    status: "fixed",
+    fixFlags: [REDERIVE],
+    async run(t) {
+      const { thread, id } = await draft(t, ODA, LATE_ODA, account, DRAFT_PLAN);
+      const before = snap(t, id);
+      t.patchReads!({ [said]: patch("this_form", [{ field: "observation", value: newObs, how: "replace", evidence: said.replace(/^change the issue to /, "") }]) });
+      await thread.say(said);
+      const after = snap(t, id);
+      log(key, before, after);
+      expect(after.obs, `the edit did not land ${JSON.stringify(short(after))}`).toBe(newObs);
+      agree(after);
+      if (process.env[REDERIVE] === "true") {
+        expect(after.offense, `the offense did not follow the new account ${JSON.stringify(short(after))}`).toEqual(["standards_of_conduct"]);
+        expect(after.violated, `Policy Violated did not follow ${JSON.stringify(short(after))}`).toMatch(/cell phone/i);
+        expect(after.lang, `Direct policy did not follow ${JSON.stringify(short(after))}`).toMatch(/cell phone/i);
+      } else {
+        expect(after.offense, `the offense moved with the flag off`).toEqual(before.offense);
+      }
+    },
+  })),
+  {
+    id: "gate5-acfr-control-date-then-new-account",
+    title: "gate-only control: the date rewritten as words (nothing moves), then the issue changed: the four follow it to Cell Phone",
+    report: "gate-only", status: "fixed", fixFlags: [REDERIVE],
+    async run(t) {
+      const { thread, id } = await draft(t, ODA, LATE_ODA, "Observed:\nOdalys Quenby arrived late for her shift on 11/3/26.", DRAFT_PLAN);
+      const before = snap(t, id);
+      const DATE = "in the observation change 11/3/26 to November 4, 2026";
+      const ISSUE = "change the issue to she was texting on her cell phone the whole shift";
+      t.patchReads!({ [DATE]: patch("this_form", [{ field: "observation", value: before.obs.replace("11/3/26", "November 4, 2026"), how: "replace", evidence: "change 11/3/26 to November 4, 2026" }]) });
+      await thread.say(DATE);
+      const mid = snap(t, id);
+      expect(mid.obs, "the date fix did not land").toContain("November 4, 2026");
+      expect(mid.offense, "the date fix moved the offense").toEqual(before.offense);
+      expect(mid.violated, "the date fix moved Policy Violated").toBe(before.violated);
+      expect(mid.plan, "the date fix moved the plan").toBe(before.plan);
+      const newObs = "Observed:\nOdalys Quenby was texting on the cell phone the whole shift on November 4, 2026.";
+      t.patchReads!({ [ISSUE]: patch("this_form", [{ field: "observation", value: newObs, how: "replace", evidence: "she was texting on her cell phone the whole shift" }]) });
+      await thread.say(ISSUE);
+      const after = snap(t, id);
+      log("control-date-then-new-account", before, after);
+      expect(after.obs, `the issue change did not land ${JSON.stringify(short(after))}`).toBe(newObs);
+      agree(after);
+      if (process.env[REDERIVE] === "true") {
+        expect(after.offense, `the offense did not follow ${JSON.stringify(short(after))}`).toEqual(["standards_of_conduct"]);
+        expect(after.violated).toMatch(/cell phone/i);
+        expect(after.lang).toMatch(/cell phone/i);
+      } else expect(after.offense).toEqual(before.offense);
+    },
+  },
   // The exact made-about sentence: the revision rewrites the account (with and without ticking the box itself).
   ...([["made-about-exact", undefined], ["made-about-exact-revision-ticks", { offense_type: ["standards_of_conduct"] }]] as const).map(([key, checked]): ReplayCase => ({
     id: `gate5-acfr-${key}`,
