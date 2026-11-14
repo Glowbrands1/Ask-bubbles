@@ -845,7 +845,7 @@ const WHOLE_TURN_LEVEL =
 const WHOLE_TURN_MAX = 80;
 
 /*
- * LEVEL_LEADS_REQUEST_ENABLED (ported from Ask Sunny, QA 14 Nov 2026): a message that OPENS with a level and "for" /
+ * LEVEL_LEADS_REQUEST_ENABLED (ported from the sibling app, QA 14 Nov 2026): a message that OPENS with a level and "for" /
  * "on" — "second verbal for <A>, she was late", "2nd written for <A>", "another verbal for <A>", "verbal for <A>" —
  * states this form's level. The count words say which step it is, not a different level. History ("she had a verbal
  * for being late") never opens the message, so it is not read here.

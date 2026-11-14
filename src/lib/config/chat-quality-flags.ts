@@ -5765,7 +5765,7 @@ export function otherNotAPolicyNameEnabled(): boolean {
 }
 
 /**
- * LEVEL_LEADS_REQUEST_ENABLED (coding 5, 14 Nov 2026; default off; QA, from Gate-Sunny-3's probe; ported from Ask Sunny). "second verbal for
+ * LEVEL_LEADS_REQUEST_ENABLED (coding 5, 14 Nov 2026; default off; QA, from Gate-Sunny-3's probe; ported from the sibling app). "second verbal for
  * <A>, she was late on 11/12/26" got no card at all: a level leading straight into "for <name>", with no form word
  * ("CA", "corrective action", "warning") and no issuing verb, was not read as a request. On: "verbal for <A>", "second
  * verbal for <A>", "another verbal for <A>", "2nd written for <A>" ask for the Corrective Action Form, the same as "a
@@ -5777,7 +5777,7 @@ export function levelLeadsRequestEnabled(): boolean {
 
 /**
  * REVISED_FORM_POINTS_TO_NEWER_ENABLED (coding 5, 14 Nov 2026; default off; QA, from a live runtime error; same flag in
- * both apps; ported from Ask Sunny). "Edit as new draft" (or the change panel, or the reason dialog) pressed on a card loaded while its form
+ * both apps; ported from the sibling app). "Edit as new draft" (or the change panel, or the reason dialog) pressed on a card loaded while its form
  * was finalized, after a revision of it was finalized elsewhere, threw "That form has already been revised." as a 500:
  * the manager saw "Something went wrong" and a card that still looked editable. On: the refusal is a 409 with
  * `form_already_revised` and a line pointing to the newer version (`forms/revision-chain.ts`); the card reloads and shows

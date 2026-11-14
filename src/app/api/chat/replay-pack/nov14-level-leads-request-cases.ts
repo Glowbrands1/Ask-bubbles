@@ -4,7 +4,7 @@ import { STAFF, WEST_DODGE, type DirectoryRow, type ReplayCase, type ReplayConte
 
 /**
  * ============================================================================
- * A LEVEL LEADING INTO "FOR <NAME>" IS THE REQUEST (ported from Ask Sunny, Gate-Sunny-3 via QA, 14 Nov 2026; LEVEL_LEADS_REQUEST)
+ * A LEVEL LEADING INTO "FOR <NAME>" IS THE REQUEST (ported from the sibling app, Gate-Sunny-3 via QA, 14 Nov 2026; LEVEL_LEADS_REQUEST)
  * ============================================================================
  *
  * "second verbal for <A>, she was late on 11/12/26" got no card at all: no form word and no issuing verb. QA also asked
