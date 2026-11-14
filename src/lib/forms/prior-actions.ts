@@ -1,4 +1,5 @@
 import {
+  priorActionsUnsaidBlankEnabled,
   futurePriorRowDropEnabled,
   priorActionsNoSignedEnabled,
   priorActionsParseEnabled,
@@ -508,6 +509,16 @@ export function groundPriorActions(input: {
     .map((line) => line.trim())
     .filter((line) => {
       if (line === "") return false;
+      /*
+       * PRIOR_ACTIONS_UNSAID_BLANK_ENABLED (QA's Bubbles 17x live test, 14 Nov 2026): at Create the drafter wrote "None —
+       * first occurrence" though the manager said nothing about history, and the card had said it would not guess. A
+       * "None" line stands only where the manager said this is the first occurrence; otherwise the field is left
+       * blank for them. Off, as before.
+       */
+      if (priorActionsUnsaidBlankEnabled() && /^none\b/i.test(line) && !statesFirstOccurrence(input.notes)) {
+        removed.push(line);
+        return false;
+      }
       const dates = datesInText(line, input.today);
       if (dates.some((found) => !stated.has(found.iso))) {
         removed.push(line);
