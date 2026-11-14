@@ -1,0 +1,78 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-unfound-policy-gives-way-for-clause: \"create a CA for Marnie Holloway for violating the pet grooming policy, she was late on 11/3/26\": the Issue is the lateness \u2014 OPEN in production (Issue \"violating the pet grooming policy\"; \"she was late\" dropped)": {
+  "category": "INTENDED",
+  "reason": "Open-case wrapper: the Issue is now the lateness."
+ },
+ "src/lib/ai/flags-off-parity.test.ts :: existing chat and form suites with every new flag off passes the suites whose expectations are already on main: src/app/api/chat/replay-pack, first half of the cases by id": {
+  "category": "INTENDED-HARNESS",
+  "reason": "Parity sub-run inherits the exported flag; its failure is the open-case wrapper."
+ },
+ "replay: nov13-close-spelling-policy-care-and-clening [fix:CLOSE_SPELLING_MATCH_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the card's Issue: the 'violating the <X> policy' for-clause gives way to the account the manager stated (QA's ruling: found policies too). Checked mechanically: 0 non-Issue differences."
+ },
+ "replay: nov13-close-spelling-policy-care-and-clening [production]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the card's Issue: the 'violating the <X> policy' for-clause gives way to the account the manager stated (QA's ruling: found policies too). Checked mechanically: 0 non-Issue differences."
+ },
+ "replay: nov13-close-spelling-policy-cleaning-not-confident-keeps-other-asks [fix:CLOSE_SPELLING_MATCH_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the card's Issue: the 'violating the <X> policy' for-clause gives way to the account the manager stated (QA's ruling: found policies too). Checked mechanically: 0 non-Issue differences."
+ },
+ "replay: nov13-close-spelling-policy-cleaning-not-confident-keeps-other-asks [production]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the card's Issue: the 'violating the <X> policy' for-clause gives way to the account the manager stated (QA's ruling: found policies too). Checked mechanically: 0 non-Issue differences."
+ },
+ "replay: nov13-close-spelling-policy-key-holdr-no-heading-in-manual [production]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the card's Issue: the 'violating the <X> policy' for-clause gives way to the account the manager stated (QA's ruling: found policies too). Checked mechanically: 0 non-Issue differences."
+ },
+ "replay: nov13-close-spelling-policy-shared-word-never-confident [production]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the card's Issue: the 'violating the <X> policy' for-clause gives way to the account the manager stated (QA's ruling: found policies too). Checked mechanically: 0 non-Issue differences."
+ },
+ "replay: nov13-close-spelling-policy-two-headings-asks-which [fix:CLOSE_SPELLING_MATCH_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the card's Issue: the 'violating the <X> policy' for-clause gives way to the account the manager stated (QA's ruling: found policies too). Checked mechanically: 0 non-Issue differences."
+ },
+ "replay: nov13-close-spelling-policy-two-headings-asks-which [production]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the card's Issue: the 'violating the <X> policy' for-clause gives way to the account the manager stated (QA's ruling: found policies too). Checked mechanically: 0 non-Issue differences."
+ },
+ "replay: nov14-cleaning-policy-cleaning-duties-policy [fix:CLEANING_POLICY_IS_CARE_AND_CLEANING_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the card's Issue: the 'violating the <X> policy' for-clause gives way to the account the manager stated (QA's ruling: found policies too). Checked mechanically: 0 non-Issue differences."
+ },
+ "replay: nov14-cleaning-policy-cleaning-duties-policy [production]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the card's Issue: the 'violating the <X> policy' for-clause gives way to the account the manager stated (QA's ruling: found policies too). Checked mechanically: 0 non-Issue differences."
+ },
+ "replay: nov14-cleaning-policy-cleaning-policy [fix:CLEANING_POLICY_IS_CARE_AND_CLEANING_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the card's Issue: the 'violating the <X> policy' for-clause gives way to the account the manager stated (QA's ruling: found policies too). Checked mechanically: 0 non-Issue differences."
+ },
+ "replay: nov14-cleaning-policy-cleaning-policy [production]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the card's Issue: the 'violating the <X> policy' for-clause gives way to the account the manager stated (QA's ruling: found policies too). Checked mechanically: 0 non-Issue differences."
+ },
+ "replay: nov14-cleaning-policy-sanitation-asks [fix:CLEANING_POLICY_IS_CARE_AND_CLEANING_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the card's Issue: the 'violating the <X> policy' for-clause gives way to the account the manager stated (QA's ruling: found policies too). Checked mechanically: 0 non-Issue differences."
+ },
+ "replay: nov14-cleaning-policy-sanitation-asks [production]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the card's Issue: the 'violating the <X> policy' for-clause gives way to the account the manager stated (QA's ruling: found policies too). Checked mechanically: 0 non-Issue differences."
+ },
+ "replay: nov14-other-policy-agrees-care-and-cleaning-named [fix:OTHER_POLICY_AGREES_ENABLED,OTHER_NOT_A_POLICY_NAME_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the card's Issue: the 'violating the <X> policy' for-clause gives way to the account the manager stated (QA's ruling: found policies too). Checked mechanically: 0 non-Issue differences."
+ },
+ "replay: nov14-other-policy-agrees-care-and-cleaning-named [production]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; the only reply difference is the card's Issue: the 'violating the <X> policy' for-clause gives way to the account the manager stated (QA's ruling: found policies too). Checked mechanically: 0 non-Issue differences."
+ },
+ "replay: nov14-unfound-policy-gives-way-for-clause [open]": {
+  "category": "INTENDED",
+  "reason": "Open case holds ON: Issue 'violating the pet grooming policy' \u2192 'she was late on 11/3/26'."
+ }
+}
