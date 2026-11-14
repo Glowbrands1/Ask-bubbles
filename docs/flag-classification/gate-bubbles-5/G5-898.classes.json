@@ -1,0 +1,50 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-history-level-prior-row: \"ca for Marnie Holloway, verbal warning on 9/21. late again for 30 mins today\" lists the verbal under Prior actions \u2014 OPEN in production (no Prior actions row for the earlier verbal)": {
+  "category": "INTENDED",
+  "reason": "Open-case wrapper: the fix holds."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-level-on-incident-day: \"verbal warning on 11/12/26 for Marnie Holloway, she was late that day\", filed the next day, is a Verbal \u2014 OPEN in production (the level's date is compared with today's, so the card asks Verbal or Written)": {
+  "category": "INTENDED",
+  "reason": "Open-case wrapper: the fix holds."
+ },
+ "src/app/api/forms/corrective-action-warning-level-e2e.test.ts :: 4. multiple previous warnings with different dates asks when the several prior warnings come with no level for this one": {
+  "category": "REGRESSION",
+  "reason": "'Create a CA for Jessica Moss, late again today. She got a verbal warning on 9/2 and a written warning on 9/21.' ON: warningLevel 'written' (expected null + the level question). The 9/21 written is before today's incident: history, not this form's level."
+ },
+ "src/app/api/forms/corrective-action-warning-level-e2e.test.ts :: review: a level said about another form, or as history, never lands on this one a reply opening with past history, then the new incident: written warning on the 21st, now late again": {
+  "category": "REGRESSION",
+  "reason": "Reply 'written warning on the 21st, now late again' (after 'late again today'): ON warningLevel 'written', expected null. 'now late again' is today's incident; the 21st is history."
+ },
+ "src/lib/ai/flags-off-parity.test.ts :: existing chat and form suites with every new flag off passes the suites whose expectations are already on main: src/app/api/chat/replay-pack, first half of the cases by id": {
+  "category": "INTENDED-HARNESS",
+  "reason": "Parity sub-run inherits the exported flags; its failures are the 2 open-case wrappers."
+ },
+ "src/lib/forms/warning-level.test.ts :: history phrasings found in review never become this form's level verbal warning on 21 September": {
+  "category": "REGRESSION",
+  "reason": "statedWarningLevel('verbal warning on 21 September') ON: 'verbal', expected null (pinned history phrasing). With no other date the level's day is taken as the incident's, so a past-dated history phrase becomes this form's level."
+ },
+ "src/lib/forms/warning-level.test.ts :: history phrasings found in review never become this form's level written warning on the 21st": {
+  "category": "REGRESSION",
+  "reason": "statedWarningLevel('written warning on the 21st') ON: 'written', expected null (pinned history phrasing)."
+ },
+ "src/lib/forms/warning-level.test.ts :: history phrasings found in review never become this form's level written warning on the 21st, now late again": {
+  "category": "REGRESSION",
+  "reason": "statedWarningLevel('written warning on the 21st, now late again') ON: 'written', expected null (pinned history phrasing, PR #10 review)."
+ },
+ "replay: nov14-history-level-prior-row [open]": {
+  "category": "INTENDED",
+  "reason": "Open case holds ON (Verbal on the incident's day / the Prior actions row for the 9/21 verbal)."
+ },
+ "replay: nov14-level-on-incident-day [open]": {
+  "category": "INTENDED",
+  "reason": "Open case holds ON (Verbal on the incident's day / the Prior actions row for the 9/21 verbal)."
+ },
+ "replay: nov6-coding3-prior-actions-signed-when-said [fix:PRIOR_ACTIONS_NO_SIGNED_ENABLED]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; ON 'verbal warning signed 9/1/26' gains 'Prior actions: Verbal warning \u2014 09/01/2026' (the word 'signed' is not kept in the row: observation)."
+ },
+ "replay: nov6-coding3-prior-actions-signed-when-said [production]": {
+  "category": "INTENDED",
+  "reason": "Holds both ways; ON 'verbal warning signed 9/1/26' gains 'Prior actions: Verbal warning \u2014 09/01/2026' (the word 'signed' is not kept in the row: observation)."
+ }
+}
