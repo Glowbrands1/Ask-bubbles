@@ -1544,6 +1544,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED_ENABLED",
   // ADD_ALREADY_ON_FORM_SAYS_SO (default off; QA's live 17u test, item 5, 13 Nov 2026): in the list, as every chat flag.
   "ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED",
+  // UNFOUND_POLICY_GIVES_WAY_TO_ACCOUNT (default off; QA's Bubbles 17y live test, 14 Nov 2026): in the list, as every chat flag.
+  "UNFOUND_POLICY_GIVES_WAY_TO_ACCOUNT_ENABLED",
 ] as const;
 
 /**
@@ -5712,6 +5714,19 @@ export function headingDistinctiveWordsEnabled(): boolean {
  */
 export function placeStripWholePhraseOnlyEnabled(): boolean {
   return envFlag("PLACE_STRIP_WHOLE_PHRASE_ONLY_ENABLED");
+}
+
+/**
+ * UNFOUND_POLICY_GIVES_WAY_TO_ACCOUNT_ENABLED (coding 6; QA's Bubbles 17y live test, 14 Nov 2026; default off). "create a
+ * CA for <A> for violating the pet grooming policy, she was late on 11/3/26" gave Issue "violating the pet grooming
+ * policy": the request's for-clause, naming a policy the manual has no section for, pushed out the account she gave.
+ * On, a for-clause that only names a policy ("violating the <X> policy") gives way to the account the turn states
+ * (`forms/incident-issue.ts`), whether or not the manual has a section for it ("for violating the cell phone policy,
+ * she was texting the whole shift" → Issue "she was texting the whole shift"; QA accepted this, 14 Nov 2026, on
+ * Gate-Bubbles-5's #909 probes). The card's Policy line is read as before. No account stated: as before. Off, as before.
+ */
+export function unfoundPolicyGivesWayToAccountEnabled(): boolean {
+  return envFlag("UNFOUND_POLICY_GIVES_WAY_TO_ACCOUNT_ENABLED");
 }
 
 /**
