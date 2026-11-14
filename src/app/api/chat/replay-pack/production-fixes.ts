@@ -830,10 +830,9 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov13-add-already-on-form-says-so": "ADD_ALREADY_ON_FORM_SAYS_SO",
   // fixed in production by ADD_ALREADY_ON_FORM_SAYS_SO, QA round 17x, 13 Nov 2026
   "nov13-add-already-on-form-says-so-small-word-left-out": "ADD_ALREADY_ON_FORM_SAYS_SO",
-  // fixed in production by ACCOUNT_CHANGE_REDERIVES_POLICY, QA round 17x, 13 Nov 2026
-  "nov13-account-change-rederives-policy-sanitation": "ACCOUNT_CHANGE_REDERIVES_POLICY",
-  // fixed in production by ACCOUNT_CHANGE_REDERIVES_POLICY, QA round 17x, 13 Nov 2026
-  "nov13-account-change-rederives-policy-phone": "ACCOUNT_CHANGE_REDERIVES_POLICY",
+  // Changed on purpose (14 Nov 2026): nov13-account-change-rederives-policy-sanitation and -phone are OPEN again.
+  // ACCOUNT_CHANGE_REDERIVES_POLICY was rolled back in production at 00:09Z after the 17x live test (Policy
+  // Violated, policy text and plan stayed on Attendance; a one-letter typo fix re-derived the policy). Was: fixed in 17x.
   // fixed in production by PLACE_STRIP_WHOLE_PHRASE_ONLY (on since 17v) with the #869 follow-up code, QA round 17x, 13 Nov 2026
   "nov13-place-strip-must-keep-kearney-high-of-all-places": "PLACE_STRIP_WHOLE_PHRASE_ONLY",
   // fixed in production by PLACE_STRIP_WHOLE_PHRASE_ONLY (on since 17v) with the #869 follow-up code, QA round 17x, 13 Nov 2026
