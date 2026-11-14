@@ -2762,6 +2762,21 @@ export function historyLevelPriorRowEnabled(): boolean {
 }
 
 /**
+ * HISTORY_LEVEL_ROWS_ENABLED (port of Ask Sunny's, QA's follow-ups to the gates on Ask Sunny #970 / #898, 14 Nov 2026;
+ * same flag in both apps; default off; builds on LEVEL_ON_INCIDENT_DAY and HISTORY_LEVEL_PRIOR_ROW). The Prior actions
+ * rows a manager's dated history gives:
+ * - every dated earlier level is a row ("verbal warning on 9/21, written warning on 10/15. late again today": both);
+ * - "her first verbal was 9/21" — a level, then "was (on) <date>" — gets its row;
+ * - identical rows ("she had a verbal on 9/21, verbal warning on 9/21") are listed once;
+ * - a level dated on the incident's own day, another date in the turn, is this form's level wherever it is said, and
+ *   never a Prior row as well ("<W> was late on 11/12/26, verbal warning 11/12/26").
+ * See `forms/warning-level.ts` and `forms/prior-actions.ts`. Off, as before.
+ */
+export function historyLevelRowsEnabled(): boolean {
+  return envFlag("HISTORY_LEVEL_ROWS_ENABLED");
+}
+
+/**
  * The exit form's shortcuts fill their fields: "drop wage" the minimum-wage
  * line, "deducted for store key" the key line, "called to quit" How Employee
  * Resigned, "immediate voluntary term" / "quit, no notice given" the

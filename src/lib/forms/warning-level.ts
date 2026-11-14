@@ -1,4 +1,4 @@
-import { caShortcutWordsEnabled, complaintAccountEnabled, historyLevelPriorRowEnabled, levelEndsRequestEnabled, levelOnIncidentDayEnabled, priorActionsNoCommaEnabled, relativeDayNotHistoryEnabled, requestLevelNotHistoryEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { caShortcutWordsEnabled, complaintAccountEnabled, historyLevelPriorRowEnabled, historyLevelRowsEnabled, levelEndsRequestEnabled, levelOnIncidentDayEnabled, priorActionsNoCommaEnabled, relativeDayNotHistoryEnabled, requestLevelNotHistoryEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { businessToday } from "@/lib/business-date";
 
 import { datesInText } from "./form-date-answer";
@@ -424,16 +424,18 @@ function nearestCue(before: string): "history" | "past" | null {
  * day ("other" — a date after today, which beside a warning already named is
  * a year the manager left off: "12/20" read in January), or not at all.
  */
-function timing(after: string, today: string, text = "", end = -1): "earlier" | "today" | "other" | null {
+function timing(after: string, today: string, text = "", end = -1, opening = true): "earlier" | "today" | "other" | null {
   const window = after.slice(0, 40);
   const dated = datesInText(window, today)[0];
   if (dated && dated.index <= 30) {
     // A date across a comma is another clause's ("written warning, late again on 10/9").
     if (dated.iso === today && /,/.test(window.slice(0, dated.index))) return null;
     // LEVEL_ON_INCIDENT_DAY_ENABLED: on the incident's own day, it is this form's ("today" here is that day).
-    if (dated.iso < today && levelOnIncidentDayEnabled() && end >= 0 && !/,/.test(window.slice(0, dated.index))) {
+    // HISTORY_LEVEL_ROWS_ENABLED: dated on the incident's own day (another date in the turn), wherever it is said.
+    const anywhere = historyLevelRowsEnabled();
+    if (dated.iso < today && ((levelOnIncidentDayEnabled() && opening) || anywhere) && end >= 0 && !/,/.test(window.slice(0, dated.index))) {
       const incident = incidentDay(text, end + dated.index, end + dated.end, today);
-      if (!incident || dated.iso >= incident) return "today";
+      if (incident ? dated.iso >= incident : opening && levelOnIncidentDayEnabled()) return "today";
     }
     return dated.iso < today ? "earlier" : dated.iso === today ? "today" : "other";
   }
@@ -464,6 +466,20 @@ function incidentDay(text: string, start: number, stop: number, today: string): 
   if (SAID_TODAY.test(text)) days.push(today);
   if (SAID_YESTERDAY.test(text)) days.push(dayBefore(today));
   return days.sort().at(-1) ?? null;
+}
+
+/** HISTORY_LEVEL_ROWS_ENABLED: the level's own date, right after it, is another date the turn gives for the incident. */
+function onIncidentDay(after: string, text: string, end: number, today: string): boolean {
+  const lead = /^\s*(?:(?:was\s+)?(?:given|issued)\s+)?(?:on\s+|dated\s+)?/i.exec(after)![0].length;
+  const dated = datesInText(after.slice(lead, lead + 16), today)[0];
+  if (!dated || dated.index !== 0) return false;
+  // Another warning's date ("she had a verbal on 9/21") is not the incident's.
+  const others = datesInText(text, today).filter(
+    (found) =>
+      !(found.index < end + lead + dated.end && found.end > end + lead) &&
+      !/\b(?:verbal|written)\b[^.;!?\n,]{0,24}$/i.test(text.slice(Math.max(0, found.index - 40), found.index)),
+  );
+  return others.some((found) => found.iso === dated.iso) && others.every((found) => found.iso <= dated.iso);
 }
 
 /** A date written right before the mention — "10/1 she gets a written warning". */
@@ -498,7 +514,8 @@ function classify(text: string, start: number, end: number, today: string, cued:
   if (complaintAccountEnabled() && opensTurn && OPENING.test(before) && RUN_ON_SENTENCE.test(text.slice(end, end + 40))) return "current";
 
   // LEVEL_ON_INCIDENT_DAY_ENABLED: only a level that opens the turn ("verbal warning on 11/12/26 for …") is dated by the incident's day.
-  const when = opensTurn && OPENING.test(before) ? timing(after, today, text, end) : timing(after, today);
+  const opening = opensTurn && OPENING.test(before);
+  const when = opening ? timing(after, today, text, end) : historyLevelRowsEnabled() ? timing(after, today, text, end, false) : timing(after, today);
   /*
    * "GAVE / GIVEN / GIVE" + THE LEVEL TICKS IT — the owner's rule, 9 Oct 2026,
    * after seeing "given verbal warning on 9/21" asked about. The manager who
@@ -508,6 +525,9 @@ function classify(text: string, start: number, end: number, today: string, cued:
    * higher one. "Given her previous verbal warning…" names an older one and
    * is still history.
    */
+  // HISTORY_LEVEL_ROWS_ENABLED: "<W> was late on 11/12/26, verbal warning 11/12/26" — the level's own date is the
+  // incident's, so it is this form's, whatever past tense the account before it uses.
+  if (historyLevelRowsEnabled() && onIncidentDay(after, text, end, today)) return "current";
   if (RECIPIENT.test(before) || GIVEN_LEVEL.test(before)) return "current";
   if (POSSESSIVE.test(before) || ADJACENT_HISTORY.test(before)) return "historical";
   if (PAST_OR_HABITUAL.test(before.slice(-60))) return "historical";
@@ -905,7 +925,9 @@ export function datedHistoryLevels(text: string, today: string): { named: string
     // listed by the prior-actions readers, with the manager's corrections, and is not added again here.
     const at = mention.index + lead[0].length;
     const undated = source.slice(0, at) + " ".repeat(dated.end) + source.slice(at + dated.end);
-    if (warningMentions(undated, today).find((other) => other.index === mention.index)?.kind === "historical") continue;
+    // HISTORY_LEVEL_ROWS_ENABLED: every dated earlier level is a row; a date the manager corrected is left to
+    // `prior-actions.ts`, which drops it.
+    if (!historyLevelRowsEnabled() && warningMentions(undated, today).find((other) => other.index === mention.index)?.kind === "historical") continue;
     out.push({ named: lead[0].replace(/\s+(?:(?:was|were)\s+)?(?:given|issued|signed|on|dated|the)\b.*$/i, "").trim(), iso: dated.iso });
   }
   return out;
