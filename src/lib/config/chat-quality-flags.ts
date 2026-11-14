@@ -1445,6 +1445,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "REQUEST_LINE_TITLE_KEPT_ENABLED",
   // coding 4: ISSUE_KEEPS_WORK_AREA (QA, 13 Nov 2026; default off).
   "ISSUE_KEEPS_WORK_AREA_ENABLED",
+  // coding 4: RELATIVE_DAY_PART_WORDS (ported from the sibling app, QA 13 Nov 2026; default off).
+  "RELATIVE_DAY_PART_WORDS_ENABLED",
   // coding 4: HEADING_DISTINCTIVE_WORDS (QA, 13 Nov 2026; default off).
   "HEADING_DISTINCTIVE_WORDS_ENABLED",
   // coding 4: PLACE_STRIP_WHOLE_PHRASE_ONLY (QA, 13 Nov 2026; default off).
@@ -5810,4 +5812,14 @@ export function revisedFormPointsToNewerEnabled(): boolean {
  */
 export function issueKeepsWorkAreaEnabled(): boolean {
   return envFlag("ISSUE_KEEPS_WORK_AREA_ENABLED");
+}
+
+/**
+ * RELATIVE_DAY_PART_WORDS (ported from the sibling app: QA's live check there, 13 Nov 2026; default off): "she
+ * no-call no-showed tonight" gave a card with no Date. With the flag "tonight", "this morning", "this afternoon" and
+ * "this evening" read as the business today and "last night" as the business yesterday (`forms/relative-dates.ts`,
+ * with RELATIVE_DATE_READER). Off, as before.
+ */
+export function relativeDayPartWordsEnabled(): boolean {
+  return envFlag("RELATIVE_DAY_PART_WORDS_ENABLED");
 }

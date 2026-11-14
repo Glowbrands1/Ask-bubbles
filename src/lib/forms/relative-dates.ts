@@ -1,4 +1,4 @@
-import { dayWordTyposEnabled, relativeDateReaderEnabled } from "@/lib/config/chat-quality-flags";
+import { dayWordTyposEnabled, relativeDateReaderEnabled, relativeDayPartWordsEnabled } from "@/lib/config/chat-quality-flags";
 import { shiftDays, weekdayOf } from "@/lib/business-date";
 
 import { correctedText } from "./typo-match";
@@ -26,6 +26,13 @@ const NO_DATE_AFTER = String.raw`(?!\s*,?\s*(?:the\s+)?\d)`;
 const PAST_WEEKDAY = new RegExp(String.raw`\b(?:last|this\s+past|past)\s+${DAY}\b${NO_DATE_AFTER}`, "gi");
 const ON_WEEKDAY = new RegExp(String.raw`\bon\s+${DAY}\b${NO_DATE_AFTER}`, "gi");
 const DAY_WORD = /\b(today|yesterday)\b/gi;
+/*
+ * RELATIVE_DAY_PART_WORDS_ENABLED (QA's Sunny live check, 13 Nov 2026, 6:20 PM Central: "verbal ca for <B>, she
+ * no-call no-showed tonight" gave a card with no Date; "today" worked): a part of today is today — "tonight", "this
+ * morning", "this afternoon", "this evening" — and "last night" is the business day before. From the business date
+ * this reader is given, never the host's clock. Off, not read.
+ */
+const DAY_PART_WORD = /\b(?:tonight|this\s+(?:morning|afternoon|evening)|last\s+night)\b/gi;
 
 /** Every relative date word this reader reads, for callers that must re-read them against the real day. */
 export const RELATIVE_DATE_WORD = new RegExp(
@@ -60,8 +67,15 @@ function readingCopy(text: string): { text: string; original: (index: number) =>
 
 /** True when `said` is a relative date word, typos included when that flag is on. */
 export function isRelativeDateWord(said: string): boolean {
-  return RELATIVE_DATE_WORD.test(readingCopy(said).text.trim());
+  const word = readingCopy(said).text.trim();
+  // RELATIVE_DAY_PART_WORDS_ENABLED: "last night", "tonight", "this morning" are relative words too, so a caller that
+  // re-reads relative words against the real day ("last night. written warning" is the incident, not an earlier step)
+  // treats them alike (Gate-Bubbles, #891).
+  if (relativeDayPartWordsEnabled() && DAY_PART_ONLY.test(word)) return true;
+  return RELATIVE_DATE_WORD.test(word);
 }
+
+const DAY_PART_ONLY = /^(?:tonight|this\s+(?:morning|afternoon|evening)|last\s+night)$/i;
 
 export function relativeDates(typed: string, today: string): FoundDate[] {
   if (!relativeDateReaderEnabled() || !typed || !/^\d{4}-\d{2}-\d{2}$/.test(today)) return [];
@@ -81,6 +95,11 @@ export function relativeDates(typed: string, today: string): FoundDate[] {
   }
   for (const match of text.matchAll(DAY_WORD)) {
     push(match[1]!.toLowerCase() === "today" ? today : shiftDays(today, -1), match.index!, match[0].length);
+  }
+  if (relativeDayPartWordsEnabled()) {
+    for (const match of text.matchAll(DAY_PART_WORD)) {
+      push(/^last\s+night$/i.test(match[0]) ? shiftDays(today, -1) : today, match.index!, match[0].length);
+    }
   }
   return out;
 }
