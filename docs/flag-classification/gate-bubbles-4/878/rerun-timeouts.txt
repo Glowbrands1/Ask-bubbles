@@ -1,0 +1,33 @@
+drafts the new history list, names the employee, ends the plan with the closing, and prints all three
+asks the intake question the new field answers
+keeps the closing through a manager's edit, a chat correction and a redraft
+keeps the original exactly, and carries its two old lines into the new list on the revision
+with the deployment's flags (production: CA_SALES_POLICY_ENABLED off), an old Tardiness tick is carried as is
+ticks Verbal from "given verbal warning", records the 9/21 history, and never Written
+an answer after the draft exists updates that draft, not a new one
+ticks Verbal only, as the manager's statement, and keeps the history
+ticks Written, because the manager said so
+lists every step oldest first and sets only the level stated for this form
+updates the same draft, unticks Written, and leaves every other line as it was
+before the draft exists, the latest stated level wins on the same proposal
+does not treat more history, or a question, as a change
+a December warning, mentioned in January, is dated last December
+===ON
+⎯⎯⎯⎯⎯⎯ Failed Tests 14 ⎯⎯⎯⎯⎯⎯⎯
+drafts the new history list, names the employee, ends the plan with the closing, and prints all three
+asks the intake question the new field answers
+keeps the closing through a manager's edit, a chat correction and a redraft
+keeps the original exactly, and carries its two old lines into the new list on the revision
+with the deployment's flags (production: CA_SALES_POLICY_ENABLED off), an old Tardiness tick is carried as is
+ticks Verbal from "given verbal warning", records the 9/21 history, and never Written
+an answer after the draft exists updates that draft, not a new one
+ticks Verbal only, as the manager's statement, and keeps the history
+ticks Written, because the manager said so
+lists every step oldest first and sets only the level stated for this form
+updates the same draft, unticks Written, and leaves every other line as it was
+before the draft exists, the latest stated level wins on the same proposal
+does not treat more history, or a question, as a change
+a December warning, mentioned in January, is dated last December
+      Tests  14 failed | 104 passed (118)
+
+[exited with code 0]

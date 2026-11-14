@@ -1,0 +1,74 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov13-named-policies-all-kept-both: \"create ca form for nell orrin for violating the attendance policy and standards of conduct, she was late on 11/3/26 and yelled at a customer. verbal. no payroll deduct.\": the offense, Policy Violated, Direct policy and plan keep Attendance and Standards of Conduct \u2014 OPEN in production (only Standards of Conduct is kept: Attendance leaves the offense, Policy Violated and the plan)": {
+  "category": "INTENDED",
+  "reason": "OPEN case holds with the flag on: a joined list ('X and Y', either order) keeps both policies in Type of Offense, Policy Violated and Direct policy; probes P1-P3 confirm. Plan stays Attendance by design until MIXED_POLICY_PLAN."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-named-policies-all-kept-reversed-order: \"create a ca for nell orrin for violating standards of conduct and the attendance policy, she yelled at a customer and was late on 11/3/26. verbal. no payroll deduct.\" (the attendance policy named last): both policies are kept \u2014 OPEN in production (only Attendance is kept: Standards of Conduct leaves the offense, Policy Violated and Direct policy)": {
+  "category": "INTENDED",
+  "reason": "OPEN case holds with the flag on: a joined list ('X and Y', either order) keeps both policies in Type of Offense, Policy Violated and Direct policy; probes P1-P3 confirm. Plan stays Attendance by design until MIXED_POLICY_PLAN."
+ },
+ "src/app/api/forms/corrective-action-revision-5-e2e.test.ts :: a Corrective Action filed on revision 6, revised after revision 7 (Type of Offense, 4 Nov 2026) flag on: an old Other write-in ticks Other on the revision; the filed write-in stays": {
+  "category": "INTENDED-HARNESS",
+  "reason": "not flag-related: failed in the OFF run only with vitest STACK_TRACE_ERROR (5000 ms timeout) under full-suite load (OFF 2258 s); rerun of both files alone, flag off and flag on, passes all of these (only the 14 failures shared with main remain)"
+ },
+ "src/app/api/forms/corrective-action-revision-5-e2e.test.ts :: a Corrective Action filed on revision 6, revised after revision 7 (Type of Offense, 4 Nov 2026) flag on: an old [\"absenteeism\"] tick is carried as [\"attendance_policy\"] on the revision; the filed form is untouched": {
+  "category": "INTENDED-HARNESS",
+  "reason": "not flag-related: failed in the OFF run only with vitest STACK_TRACE_ERROR (5000 ms timeout) under full-suite load (OFF 2258 s); rerun of both files alone, flag off and flag on, passes all of these (only the 14 failures shared with main remain)"
+ },
+ "src/app/api/forms/corrective-action-revision-5-e2e.test.ts :: a Corrective Action filed on revision 6, revised after revision 7 (Type of Offense, 4 Nov 2026) flag on: an old [\"company_policies\"] tick is carried as [\"standards_of_conduct\"] on the revision; the filed form is untouched": {
+  "category": "INTENDED-HARNESS",
+  "reason": "not flag-related: failed in the OFF run only with vitest STACK_TRACE_ERROR (5000 ms timeout) under full-suite load (OFF 2258 s); rerun of both files alone, flag off and flag on, passes all of these (only the 14 failures shared with main remain)"
+ },
+ "src/app/api/forms/corrective-action-revision-5-e2e.test.ts :: a Corrective Action filed on revision 6, revised after revision 7 (Type of Offense, 4 Nov 2026) flag on: an old [\"dress_code\",\"under_performance\"] tick is carried as [\"dress_code\",\"standards_of_conduct\"] on the revision; the filed form is untouched": {
+  "category": "INTENDED-HARNESS",
+  "reason": "not flag-related: failed in the OFF run only with vitest STACK_TRACE_ERROR (5000 ms timeout) under full-suite load (OFF 2258 s); rerun of both files alone, flag off and flag on, passes all of these (only the 14 failures shared with main remain)"
+ },
+ "src/app/api/forms/corrective-action-revision-5-e2e.test.ts :: a Corrective Action filed on revision 6, revised after revision 7 (Type of Offense, 4 Nov 2026) flag on: an old [\"tardiness\",\"absenteeism\"] tick is carried as [\"attendance_policy\"] on the revision; the filed form is untouched": {
+  "category": "INTENDED-HARNESS",
+  "reason": "not flag-related: failed in the OFF run only with vitest STACK_TRACE_ERROR (5000 ms timeout) under full-suite load (OFF 2258 s); rerun of both files alone, flag off and flag on, passes all of these (only the 14 failures shared with main remain)"
+ },
+ "src/app/api/forms/corrective-action-revision-5-e2e.test.ts :: a Corrective Action filed on revision 6, revised after revision 7 (Type of Offense, 4 Nov 2026) flag on: an old [\"under_performance\"] tick is carried as [\"standards_of_conduct\"] on the revision; the filed form is untouched": {
+  "category": "INTENDED-HARNESS",
+  "reason": "not flag-related: failed in the OFF run only with vitest STACK_TRACE_ERROR (5000 ms timeout) under full-suite load (OFF 2258 s); rerun of both files alone, flag off and flag on, passes all of these (only the 14 failures shared with main remain)"
+ },
+ "src/app/api/forms/corrective-action-warning-level-e2e.test.ts :: review: corrections apply only to this form, and never from history Jordan Smith was late. Change it to written leaves the draft's Verbal tick alone": {
+  "category": "INTENDED-HARNESS",
+  "reason": "not flag-related: failed in the OFF run only with vitest STACK_TRACE_ERROR (5000 ms timeout) under full-suite load (OFF 2258 s); rerun of both files alone, flag off and flag on, passes all of these (only the 14 failures shared with main remain)"
+ },
+ "src/app/api/forms/corrective-action-warning-level-e2e.test.ts :: review: corrections apply only to this form, and never from history also change it to written for sarah leaves the draft's Verbal tick alone": {
+  "category": "INTENDED-HARNESS",
+  "reason": "not flag-related: failed in the OFF run only with vitest STACK_TRACE_ERROR (5000 ms timeout) under full-suite load (OFF 2258 s); rerun of both files alone, flag off and flag on, passes all of these (only the 14 failures shared with main remain)"
+ },
+ "src/app/api/forms/corrective-action-warning-level-e2e.test.ts :: review: corrections apply only to this form, and never from history change it to written for kim leaves the draft's Verbal tick alone": {
+  "category": "INTENDED-HARNESS",
+  "reason": "not flag-related: failed in the OFF run only with vitest STACK_TRACE_ERROR (5000 ms timeout) under full-suite load (OFF 2258 s); rerun of both files alone, flag off and flag on, passes all of these (only the 14 failures shared with main remain)"
+ },
+ "src/app/api/forms/corrective-action-warning-level-e2e.test.ts :: review: corrections apply only to this form, and never from history kim was late too. change it to written leaves the draft's Verbal tick alone": {
+  "category": "INTENDED-HARNESS",
+  "reason": "not flag-related: failed in the OFF run only with vitest STACK_TRACE_ERROR (5000 ms timeout) under full-suite load (OFF 2258 s); rerun of both files alone, flag off and flag on, passes all of these (only the 14 failures shared with main remain)"
+ },
+ "src/app/api/forms/corrective-action-warning-level-e2e.test.ts :: review: corrections apply only to this form, and never from history kim was rude. change it to written leaves the draft's Verbal tick alone": {
+  "category": "INTENDED-HARNESS",
+  "reason": "not flag-related: failed in the OFF run only with vitest STACK_TRACE_ERROR (5000 ms timeout) under full-suite load (OFF 2258 s); rerun of both files alone, flag off and flag on, passes all of these (only the 14 failures shared with main remain)"
+ },
+ "src/app/api/forms/corrective-action-warning-level-e2e.test.ts :: review: corrections apply only to this form, and never from history update it, last month written warning leaves the draft's Verbal tick alone": {
+  "category": "INTENDED-HARNESS",
+  "reason": "not flag-related: failed in the OFF run only with vitest STACK_TRACE_ERROR (5000 ms timeout) under full-suite load (OFF 2258 s); rerun of both files alone, flag off and flag on, passes all of these (only the 14 failures shared with main remain)"
+ },
+ "src/lib/ai/flags-off-parity.test.ts :: existing chat and form suites with every new flag off passes the suites whose expectations are already on main: src/app/api/chat/replay-pack, first half of the cases by id": {
+  "category": "INTENDED-HARNESS",
+  "reason": "parity suite runs the replay pack expecting OPEN cases to fail; under the ON run the two #878 OPEN cases hold, so the expected-fail flips"
+ },
+ "src/lib/forms/named-policies-all-kept.test.ts :: NAMED_POLICIES_ALL_KEPT_ENABLED off: only the last policy named is kept (as before)": {
+  "category": "INTENDED-HARNESS",
+  "reason": "the flag-off unit test fails when the harness forces the flag on in every test"
+ },
+ "replay: nov13-named-policies-all-kept-both [open]": {
+  "category": "INTENDED",
+  "reason": "OPEN case holds with the flag on: a joined list ('X and Y', either order) keeps both policies in Type of Offense, Policy Violated and Direct policy; probes P1-P3 confirm. Plan stays Attendance by design until MIXED_POLICY_PLAN."
+ },
+ "replay: nov14-named-policies-all-kept-reversed-order [open]": {
+  "category": "INTENDED",
+  "reason": "OPEN case holds with the flag on: a joined list ('X and Y', either order) keeps both policies in Type of Offense, Policy Violated and Direct policy; probes P1-P3 confirm. Plan stays Attendance by design until MIXED_POLICY_PLAN."
+ }
+}

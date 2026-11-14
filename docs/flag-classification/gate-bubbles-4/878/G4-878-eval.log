@@ -1,0 +1,42 @@
+
+> ask-bubbles@0.1.0 eval
+> vitest run --config vitest.eval.config.mts
+
+
+ RUN  v4.1.11 /home/user/gate/g878p
+
+
+Replay eval — flags on: NAMED_POLICIES_ALL_KEPT_ENABLED
+| Case | Flags off | Flags on |
+|---|---|---|
+| b9 | PASS 147ms | PASS 145ms |
+| b10 | PASS 380ms | PASS 331ms |
+| b11 | PASS 71ms | PASS 74ms |
+| b12 | FAIL (policy) 140ms | FAIL (policy) 134ms |
+| b18a | PASS 57ms | PASS 54ms |
+| b18b | PASS 45ms | PASS 42ms |
+| r1 | PASS 5ms | PASS 5ms |
+| b0 | PASS 183ms | PASS 182ms |
+| b1 | PASS 146ms | PASS 127ms |
+| b2 | PASS 80ms | PASS 83ms |
+| b3 | PASS 51ms | PASS 46ms |
+| b4 | PASS 130ms | PASS 128ms |
+| b5 | PASS 98ms | PASS 106ms |
+| b6 | PASS 171ms | PASS 173ms |
+| b7 | PASS 72ms | PASS 95ms |
+| b8 | PASS 31ms | PASS 32ms |
+| b13 | PASS 307ms | PASS 312ms |
+| b14 | PASS 19ms | PASS 20ms |
+| b15 | PASS 348ms | PASS 350ms |
+| b16 | PASS 15ms | PASS 14ms |
+| b17 | PASS 300ms | PASS 303ms |
+| sf-b1 | PASS 426ms | PASS 388ms |
+| sf-b3 | PASS 103ms | PASS 106ms |
+| sf-b4 | PASS 15ms | PASS 14ms |
+Latency p50/p95 off 98/380 ms, on 106/350 ms; total off 3340 ms, on 3264 ms.
+
+ Test Files  2 passed (2)
+      Tests  35 passed (35)
+   Start at  00:46:47
+   Duration  26.21s (transform 4.01s, setup 0ms, import 4.42s, tests 21.48s, environment 0ms)
+
