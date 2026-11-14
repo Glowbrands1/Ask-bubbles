@@ -4818,6 +4818,19 @@ export function addAlreadyOnFormSaysSoEnabled(): boolean {
 }
 
 /**
+ * COACHING_OBSERVED_SAVED_ENABLED (coding 6, 10 Nov 2026; default off; QA's
+ * P12, live in both apps). "make me a coaching form for <name> not hitting
+ * October numbers" → Create saved Details of Coaching with no "Observed:", or
+ * an empty one. On: a coaching narrative about to be saved with text but no
+ * heading gets "Observed:" over it; one with no Observed text gets
+ * "Observed:" first, with the manager's own words. An Observed with text is
+ * left as it is. See `forms/coaching-observed-saved.ts`. Off, as before.
+ */
+export function coachingObservedSavedEnabled(): boolean {
+  return envFlag("COACHING_OBSERVED_SAVED_ENABLED");
+}
+
+/**
  * MADE_ABOUT_TOPIC_EVIDENCE_ENABLED (QA's live Bubbles round 13, 9 Nov 2026; default off; same flag in both apps). "make it
  * about being late on 11/5/26" left Other on the old topic: the topic read from the manager's words ("Being late") came
  * with "being late" as its evidence, two words, under the reducer's floor, so it was refused. With the flag on, its
