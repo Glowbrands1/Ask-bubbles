@@ -256,7 +256,7 @@ export function statedPriorActions(notes: string, today: string): string[] {
 }
 
 /*
- * HISTORY_LEVEL_ROWS_ENABLED (port of Ask Sunny's, QA's follow-ups, 14 Nov 2026). "her first verbal was 9/21", "the
+ * HISTORY_LEVEL_ROWS_ENABLED (the sibling app's, QA's follow-ups, 14 Nov 2026). "her first verbal was 9/21", "the
  * written was on 10/15": a level named and then dated with "was (on)" is a step on file, its row the level's. A level
  * dated on the incident's own day, when it is the level this form states, is this form's — never a Prior row as well.
  */

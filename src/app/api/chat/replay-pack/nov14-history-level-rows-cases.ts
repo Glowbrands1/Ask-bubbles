@@ -3,10 +3,10 @@ import { expect, vi } from "vitest";
 import { STAFF, WEST_DODGE, type ReplayCase } from "./cases";
 
 /**
- * QA's follow-ups to both gates on Ask Sunny #970 / this app's #898 (14 Nov 2026), in QA's wordings, the person
+ * QA's follow-ups to both gates on the sibling app's #970 / this app's #898 (14 Nov 2026), in QA's wordings, the person
  * invented: the Prior actions rows a manager's dated history gives (HISTORY_LEVEL_ROWS, on top of #898's flags).
  */
-const REPORT = "QA, 14 Nov 2026: follow-ups to the gates on Ask Sunny #970 / #898";
+const REPORT = "QA, 14 Nov 2026: follow-ups to the gates on the sibling app's #970 / #898";
 const FIX = ["LEVEL_ON_INCIDENT_DAY_ENABLED", "HISTORY_LEVEL_PRIOR_ROW_ENABLED", "HISTORY_LEVEL_ROWS_ENABLED"];
 
 function start(t: Parameters<ReplayCase["run"]>[0]) {
