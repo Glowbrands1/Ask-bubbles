@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 
+import { priorActionsNoSignedEnabled, priorActionsParseEnabled } from "@/lib/config/chat-quality-flags";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
@@ -176,6 +177,13 @@ vi.mock("@/lib/reporting/read/employee-facts", () => ({
 
 process.env.NEXT_PUBLIC_DEMO_MODE = "false";
 
+/*
+ * Changed on purpose (QA via Gate-Bubbles-2, 14 Nov 2026): with PRIOR_ACTIONS_PARSE (QA, 25 Oct 2026) or
+ * PRIOR_ACTIONS_NO_SIGNED (Pau / QA, 5 Nov 2026) on — both on in production — a step the manager dated without saying it
+ * was signed reads "Written warning — 09/15/2026": "signed" only when they wrote it. Off, "— signed 09/15/2026" as before.
+ */
+const SIGNED = () => (priorActionsParseEnabled() || priorActionsNoSignedEnabled() ? "" : "signed ");
+
 const { ensureTemplateLibrary } = await import("@/lib/forms/repository");
 const { createInlineForm } = await import("@/features/chat/create-inline-form");
 const chatRoute = await import("./route");
@@ -333,7 +341,7 @@ describe("the owner's acceptance list for PR #10", () => {
     const form = await values(await thread.create());
     expect(checked(form, "warning_type")).not.toContain("termination");
     expect(checked(form, "warning_type")).toEqual([]);
-    expect(form.prior_actions?.value).toMatch(/Written warning — signed 09\/15\/2026/);
+    expect(form.prior_actions?.value).toContain(`Written warning — ${SIGNED()}09/15/2026`);
   });
 
   it("3. a stated current level is preserved over the model's escalation", async () => {
@@ -352,7 +360,7 @@ describe("the owner's acceptance list for PR #10", () => {
       "create a corrective action for jordan testperson, late again today. she got a verbal warning on 8/4 and a written warning on 9/15",
     );
     const form = await values(await thread.create());
-    expect(form.prior_actions?.value).toBe("Verbal warning — signed 08/04/2026\nWritten warning — signed 09/15/2026");
+    expect(form.prior_actions?.value).toBe(`Verbal warning — ${SIGNED()}08/04/2026\nWritten warning — ${SIGNED()}09/15/2026`);
     expect(checked(form, "warning_type")).toEqual([]);
   });
 
@@ -364,7 +372,7 @@ describe("the owner's acceptance list for PR #10", () => {
     expect(answer.formProposal?.warningLevel).toBe("verbal");
     const form = await values(await thread.create());
     expect(checked(form, "warning_type")).toEqual(["verbal"]);
-    expect(form.prior_actions?.value).toMatch(/Written warning — signed 09\/15\/2026/);
+    expect(form.prior_actions?.value).toContain(`Written warning — ${SIGNED()}09/15/2026`);
   });
 
   it.each([
