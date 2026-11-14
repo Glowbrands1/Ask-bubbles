@@ -5594,6 +5594,20 @@ export function policyNotFoundPlainWordingEnabled(): boolean {
 }
 
 /**
+ * POLICY_NOT_FOUND_PLAIN_WORDING for the notices outside the card (QA, 14 Nov 2026; default off): the Finalize
+ * dialog's title and message (`forms/policy-verification.ts`) and the form card's policy notes (`features/chat/
+ * inline-form.tsx`) say "I don't see this policy in the knowledge base …", not "Woven does not see …". The dialog
+ * wording is also the server's refusal, and the notes are drawn in the browser, so there are two variables: FLIP BOTH
+ * TOGETHER (POLICY_NOT_FOUND_PLAIN_WORDING_ENABLED and NEXT_PUBLIC_POLICY_NOT_FOUND_PLAIN_WORDING_ENABLED; NEXT_PUBLIC_
+ * is inlined at build time). Off, as before.
+ */
+export function policyNotFoundPlainNoticesEnabled(): boolean {
+  if (typeof window === "undefined") return envFlag("POLICY_NOT_FOUND_PLAIN_WORDING_ENABLED");
+  const inlined = process.env.NEXT_PUBLIC_POLICY_NOT_FOUND_PLAIN_WORDING_ENABLED;
+  return typeof inlined === "string" && ON.has(inlined.trim().toLowerCase());
+}
+
+/**
  * HEADING_DISTINCTIVE_WORDS (QA, 13 Nov 2026; default off): a manual heading is named by its distinctive words; the
  * generic heading words "is", "are", "prohibited" and "requirement" may be left off, as "policy" and "guidelines"
  * already may. "violating the retaliation policy" names "Retaliation is Prohibited". See
