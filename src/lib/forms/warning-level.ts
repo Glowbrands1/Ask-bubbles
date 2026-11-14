@@ -1,4 +1,4 @@
-import { caShortcutWordsEnabled, complaintAccountEnabled, levelEndsRequestEnabled, levelOnIncidentDayEnabled, priorActionsNoCommaEnabled, relativeDayNotHistoryEnabled, requestLevelNotHistoryEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { caShortcutWordsEnabled, complaintAccountEnabled, historyLevelPriorRowEnabled, levelEndsRequestEnabled, levelOnIncidentDayEnabled, priorActionsNoCommaEnabled, relativeDayNotHistoryEnabled, requestLevelNotHistoryEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { businessToday } from "@/lib/business-date";
 
 import { datesInText } from "./form-date-answer";
@@ -881,6 +881,29 @@ export function statedWarningLevel(raw: string, today: string = businessToday())
   if (whole) return whole[1]!.toLowerCase() as WarningLevel;
   const current = warningMentions(text, today).filter((mention) => mention.kind === "current");
   return current.length > 0 ? current[current.length - 1]!.level : null;
+}
+
+/** The level, its noun and the words that lead to its own date: "verbal warning on ", "written ca dated ". */
+const LEVEL_THEN_DATE =
+  /^(?:verbal|written)\s+(?:warning|ca|c\/a|corrective(?:\s+action)?)\b\s*(?:(?:was\s+|were\s+)?(?:given|issued|signed)\s+)?(?:on\s+|dated\s+)?(?:the\s+)?/i;
+
+/**
+ * HISTORY_LEVEL_PRIOR_ROW_ENABLED: the earlier warnings the text dates right after naming them — "verbal warning on
+ * 9/21" — read as history, with their day: the Prior actions rows they become. Off, none.
+ */
+export function datedHistoryLevels(text: string, today: string): { named: string; iso: string }[] {
+  if (!historyLevelPriorRowEnabled()) return [];
+  const source = canonicalWarningWording((text ?? "").slice(0, MAX_TEXT).replace(/[’‘‛]/g, "'"));
+  const out: { named: string; iso: string }[] = [];
+  for (const mention of warningMentions(text, today)) {
+    if (mention.kind !== "historical") continue;
+    const lead = LEVEL_THEN_DATE.exec(source.slice(mention.index));
+    if (!lead) continue;
+    const dated = datesInText(source.slice(mention.index + lead[0].length, mention.index + lead[0].length + 16), today)[0];
+    if (!dated || dated.index !== 0 || dated.iso > today) continue;
+    out.push({ named: lead[0].replace(/\s+(?:(?:was|were)\s+)?(?:given|issued|signed|on|dated|the)\b.*$/i, "").trim(), iso: dated.iso });
+  }
+  return out;
 }
 
 /** Whether the text names a warning at all that was NOT read as this form's level. */
