@@ -1,0 +1,290 @@
+{
+ "src/app/api/chat/job-title-from-words-e2e.test.ts :: LEVEL_STEP_NOT_ACCOUNT_ENABLED off: as main, the level and step are the Issue": {
+  "category": "INTENDED-HARNESS",
+  "reason": "another flag's off-test under forced ON; checked: the Issue is rebuilt by the new flag, see REGRESSION rows"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-card-account-three-turns-both-facts-no-hedge: \"Marnie Holloway was late on 11/3/26\" \u2192 \"she yelled at a customer and she maybe forgot\" \u2192 \"corrective action form\": the card's Issue holds both facts, the lateness first, and no hedge \u2014 OPEN in production (the Issue is \"she yelled at a customer and she maybe forgot\": the lateness dropped, the hedge kept)": {
+  "category": "INTENDED",
+  "reason": "#893 open case holds with the flag on (hedge/denial/history/role/store dropped; the fact kept)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-card-added-facts-probe-10: \"create a CA for Marnie Holloway, she was late on 11/3/26\" then \"she was not late, she yelled at a customer\": the card adds \"she yelled at a customer\" \u2014 OPEN in production (Added keeps \"she was not late\")": {
+  "category": "INTENDED",
+  "reason": "#893 open case holds with the flag on (hedge/denial/history/role/store dropped; the fact kept)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-card-added-facts-probe-11: \"create a CA for Marnie Holloway, she was late on 11/3/26\" then \"she didn't yell at a customer\": nothing is added \u2014 OPEN in production (a denial added as a fact)": {
+  "category": "INTENDED",
+  "reason": "#893 open case holds with the flag on (hedge/denial/history/role/store dropped; the fact kept)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-card-added-facts-probe-12: \"create a CA for Marnie Holloway, she was late on 11/3/26\" then \"also she didn't clean\": the card adds \"she didn't clean\" \u2014 OPEN in production (the fact is lost)": {
+  "category": "INTENDED",
+  "reason": "#893 open case holds with the flag on (hedge/denial/history/role/store dropped; the fact kept)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-card-added-facts-probe-13: \"create a CA for Marnie Holloway, she was late on 11/3/26\" then \"make it a written warning, she yelled at a customer\": the card adds \"she yelled at a customer\" \u2014 OPEN in production (the fact is lost)": {
+  "category": "INTENDED",
+  "reason": "#893 open case holds with the flag on (hedge/denial/history/role/store dropped; the fact kept)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-card-added-facts-probe-14: \"create a CA for Marnie Holloway, she was late on 11/3/26\" then \"this is a final warning she yelled at a customer\": the card adds \"she yelled at a customer\" \u2014 OPEN in production (the fact is lost)": {
+  "category": "INTENDED",
+  "reason": "#893 open case holds with the flag on (hedge/denial/history/role/store dropped; the fact kept)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-card-added-facts-probe-1: \"create a CA for Marnie Holloway, she was late on 11/3/26\" then \"she yelled at a customer i guess\": the card adds \"she yelled at a customer\" \u2014 OPEN in production (Added keeps \"i guess\")": {
+  "category": "INTENDED",
+  "reason": "#893 open case holds with the flag on (hedge/denial/history/role/store dropped; the fact kept)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-card-added-facts-probe-2: \"create a CA for Marnie Holloway, she was late on 11/3/26\" then \"she yelled at a customer, maybe twice\": the card adds \"she yelled at a customer\" \u2014 OPEN in production (Added keeps \", maybe twice\")": {
+  "category": "INTENDED",
+  "reason": "#893 open case holds with the flag on (hedge/denial/history/role/store dropped; the fact kept)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-card-added-facts-probe-3: \"create a CA for Marnie Holloway, she was late on 11/3/26\" then \"she yelled at a customer as a TM\": the card adds \"she yelled at a customer\" \u2014 OPEN in production (Added keeps \"as a TM\")": {
+  "category": "INTENDED",
+  "reason": "#893 open case holds with the flag on (hedge/denial/history/role/store dropped; the fact kept)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-card-added-facts-probe-4: \"create a CA for Marnie Holloway, she was late on 11/3/26\" then \"she works as a team member and yelled at a customer\": the card adds \"she yelled at a customer\" \u2014 OPEN in production (Added keeps \"she works as a team member\")": {
+  "category": "INTENDED",
+  "reason": "#893 open case holds with the flag on (hedge/denial/history/role/store dropped; the fact kept)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-card-added-facts-probe-5: \"create a CA for Marnie Holloway, she was late on 11/3/26\" then \"she yelled at a customer at west dodge\": the card adds \"she yelled at a customer\" \u2014 OPEN in production (Added keeps the store)": {
+  "category": "INTENDED",
+  "reason": "#893 open case holds with the flag on (hedge/denial/history/role/store dropped; the fact kept)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-card-added-facts-probe-6: \"create a CA for Marnie Holloway, she was late on 11/3/26\" then \"she had a verbal last month\": nothing is added \u2014 OPEN in production (history added as a fact)": {
+  "category": "INTENDED",
+  "reason": "#893 open case holds with the flag on (hedge/denial/history/role/store dropped; the fact kept)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-card-added-facts-probe-7: \"create a CA for Marnie Holloway, she was late on 11/3/26\" then \"she has been late 3 times this month\": nothing is added \u2014 OPEN in production (history added as a fact)": {
+  "category": "INTENDED",
+  "reason": "#893 open case holds with the flag on (hedge/denial/history/role/store dropped; the fact kept)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-card-added-facts-probe-8: \"create a CA for Marnie Holloway, she was late on 11/3/26\" then \"she was previously warned about her phone\": nothing is added \u2014 OPEN in production (history added as a fact)": {
+  "category": "INTENDED",
+  "reason": "#893 open case holds with the flag on (hedge/denial/history/role/store dropped; the fact kept)"
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-card-added-facts-probe-9: \"create a CA for Marnie Holloway, she was late on 11/3/26\" then \"she was late at the west dodge store\": nothing is added \u2014 OPEN in production (Added repeats the lateness with the store)": {
+  "category": "INTENDED",
+  "reason": "#893 open case holds with the flag on (hedge/denial/history/role/store dropped; the fact kept)"
+ },
+ "src/app/api/forms/corrective-action-dm-feedback-e2e.test.ts :: the account survives the short answers after it \"no payroll deduct\" keeps the Issue line, the level and the account": {
+  "category": "REGRESSION",
+  "reason": "the Issue line changes on a live path (\"for violating visitors at work policy\" instead of \"violating visitors at work policy on\u2026\"; the corrected-name account differs)"
+ },
+ "src/app/api/forms/owner-retest-e2e.test.ts :: conversation history a person correction keeps the account \u2014 the warning and the issue \u2014 under the corrected name": {
+  "category": "REGRESSION",
+  "reason": "the Issue line changes on a live path (\"for violating visitors at work policy\" instead of \"violating visitors at work policy on\u2026\"; the corrected-name account differs)"
+ },
+ "src/lib/ai/flags-off-parity.test.ts :: existing chat and form suites with every new flag off passes the suites whose expectations are already on main: src/app/api/chat/replay-pack, first half of the cases by id": {
+  "category": "INTENDED-HARNESS",
+  "reason": "parity: #893 open cases hold under ON"
+ },
+ "src/lib/forms/card-checked-against-words.test.ts :: CARD_CHECKED_AGAINST_WORDS_ENABLED: Gate-Bubbles-5's history list (13 Nov 2026) joins: she was given the closing checklist and skipped half of it": {
+  "category": "REGRESSION",
+  "reason": "live CARD_CHECKED guard broken: \"she works at West Dodge\"/\"West Dodg\"/\"Omah\" now add \"she works\" as a fact; \"then she walked out\" loses \"then\"; joined facts are rewritten (\"and left\" -> \"and she left\"), so the card no longer keeps the manager's words"
+ },
+ "src/lib/forms/card-checked-against-words.test.ts :: CARD_CHECKED_AGAINST_WORDS_ENABLED: Gate-Bubbles-5's must-split list (13 Nov 2026) she yelled at a customer and then she walked out \u2192 she yelled at a customer and then she walked out": {
+  "category": "REGRESSION",
+  "reason": "live CARD_CHECKED guard broken: \"she works at West Dodge\"/\"West Dodg\"/\"Omah\" now add \"she works\" as a fact; \"then she walked out\" loses \"then\"; joined facts are rewritten (\"and left\" -> \"and she left\"), so the card no longer keeps the manager's words"
+ },
+ "src/lib/forms/card-checked-against-words.test.ts :: CARD_CHECKED_AGAINST_WORDS_ENABLED: a leading time or place phrase (QA, 13 Nov 2026) joins, phrase kept: then she walked out": {
+  "category": "REGRESSION",
+  "reason": "live CARD_CHECKED guard broken: \"she works at West Dodge\"/\"West Dodg\"/\"Omah\" now add \"she works\" as a fact; \"then she walked out\" loses \"then\"; joined facts are rewritten (\"and left\" -> \"and she left\"), so the card no longer keeps the manager's words"
+ },
+ "src/lib/forms/card-checked-against-words.test.ts :: CARD_CHECKED_AGAINST_WORDS_ENABLED: a name answer or a new request is never an added detail (gates, 13 Nov 2026) still joins: she needed a ride and left early": {
+  "category": "REGRESSION",
+  "reason": "live CARD_CHECKED guard broken: \"she works at West Dodge\"/\"West Dodg\"/\"Omah\" now add \"she works\" as a fact; \"then she walked out\" loses \"then\"; joined facts are rewritten (\"and left\" -> \"and she left\"), so the card no longer keeps the manager's words"
+ },
+ "src/lib/forms/card-checked-against-words.test.ts :: CARD_CHECKED_AGAINST_WORDS_ENABLED: a place one letter off is still only a place (QA, CLOSE_SPELLING_MATCH live, 13 Nov 2026) with CLOSE_SPELLING_MATCH on, an action at a place one letter off still joins": {
+  "category": "REGRESSION",
+  "reason": "live CARD_CHECKED guard broken: \"she works at West Dodge\"/\"West Dodg\"/\"Omah\" now add \"she works\" as a fact; \"then she walked out\" loses \"then\"; joined facts are rewritten (\"and left\" -> \"and she left\"), so the card no longer keeps the manager's words"
+ },
+ "src/lib/forms/card-checked-against-words.test.ts :: CARD_CHECKED_AGAINST_WORDS_ENABLED: a place one letter off is still only a place (QA, CLOSE_SPELLING_MATCH live, 13 Nov 2026) with CLOSE_SPELLING_MATCH on, stays out: she works at West Dodg": {
+  "category": "REGRESSION",
+  "reason": "live CARD_CHECKED guard broken: \"she works at West Dodge\"/\"West Dodg\"/\"Omah\" now add \"she works\" as a fact; \"then she walked out\" loses \"then\"; joined facts are rewritten (\"and left\" -> \"and she left\"), so the card no longer keeps the manager's words"
+ },
+ "src/lib/forms/card-checked-against-words.test.ts :: CARD_CHECKED_AGAINST_WORDS_ENABLED: added details stick AND nothing wrong joins (gates, 13 Nov 2026) must stay out: she works at West Dodge": {
+  "category": "REGRESSION",
+  "reason": "live CARD_CHECKED guard broken: \"she works at West Dodge\"/\"West Dodg\"/\"Omah\" now add \"she works\" as a fact; \"then she walked out\" loses \"then\"; joined facts are rewritten (\"and left\" -> \"and she left\"), so the card no longer keeps the manager's words"
+ },
+ "src/lib/forms/card-checked-against-words.test.ts :: CARD_CHECKED_AGAINST_WORDS_ENABLED: history words inside a current fact (Gate-Sunny-2, 13 Nov 2026) \"signed\" is history only when what she signed is a policy, manual or form: \"she signed out of the register early and left\" joins": {
+  "category": "REGRESSION",
+  "reason": "live CARD_CHECKED guard broken: \"she works at West Dodge\"/\"West Dodg\"/\"Omah\" now add \"she works\" as a fact; \"then she walked out\" loses \"then\"; joined facts are rewritten (\"and left\" -> \"and she left\"), so the card no longer keeps the manager's words"
+ },
+ "src/lib/forms/card-checked-against-words.test.ts :: CARD_CHECKED_AGAINST_WORDS_ENABLED: paying with no amount is payroll too (Gate-Bubbles-5, 13 Nov 2026) still joins: she was charged by a customer for the wrong item and argued": {
+  "category": "REGRESSION",
+  "reason": "live CARD_CHECKED guard broken: \"she works at West Dodge\"/\"West Dodg\"/\"Omah\" now add \"she works\" as a fact; \"then she walked out\" loses \"then\"; joined facts are rewritten (\"and left\" -> \"and she left\"), so the card no longer keeps the manager's words"
+ },
+ "src/lib/forms/card-checked-against-words.test.ts :: CARD_CHECKED_AGAINST_WORDS_ENABLED: payment phrasings are payroll too (Gate-Sunny-2, 13 Nov 2026) still joins: she has to pay attention to the schedule and skipped her break": {
+  "category": "REGRESSION",
+  "reason": "live CARD_CHECKED guard broken: \"she works at West Dodge\"/\"West Dodg\"/\"Omah\" now add \"she works\" as a fact; \"then she walked out\" loses \"then\"; joined facts are rewritten (\"and left\" -> \"and she left\"), so the card no longer keeps the manager's words"
+ },
+ "src/lib/forms/card-checked-against-words.test.ts :: CARD_CHECKED_AGAINST_WORDS_ENABLED: the gates' place-typo list (13 Nov 2026) with CLOSE_SPELLING_MATCH on, stays out: she works at Omah": {
+  "category": "REGRESSION",
+  "reason": "live CARD_CHECKED guard broken: \"she works at West Dodge\"/\"West Dodg\"/\"Omah\" now add \"she works\" as a fact; \"then she walked out\" loses \"then\"; joined facts are rewritten (\"and left\" -> \"and she left\"), so the card no longer keeps the manager's words"
+ },
+ "replay: nov10-b4-twin-ca-not-coaching-form-type [fix:CA_SALES_POLICY_ENABLED,PASTED_FORM_NAME_NOT_REQUEST_ENABLED]": {
+  "category": "REGRESSION",
+  "reason": "holding case, Issue rewritten on production's path: request text, pasted review text or a correction becomes the Issue (\"I need a corrective action form for Wynne Sarrow for \u2026\", \"Below in UPT \u2026 in the format of Tamsyn ca \u2026\", \"the meeting was actually on 10-19-26; sorry, \u2026\"), a leading \"for\", or garbled joins (\"and She units per transaction\"); see 893/rdiff-893.txt"
+ },
+ "replay: nov10-b4-twin-ca-not-coaching-form-type [production]": {
+  "category": "REGRESSION",
+  "reason": "holding case, Issue rewritten on production's path: request text, pasted review text or a correction becomes the Issue (\"I need a corrective action form for Wynne Sarrow for \u2026\", \"Below in UPT \u2026 in the format of Tamsyn ca \u2026\", \"the meeting was actually on 10-19-26; sorry, \u2026\"), a leading \"for\", or garbled joins (\"and She units per transaction\"); see 893/rdiff-893.txt"
+ },
+ "replay: nov10-sf-b6-card-carries-added-detail [fix:ADDED_DETAIL_KEPT_ENABLED]": {
+  "category": "REGRESSION",
+  "reason": "holding case, Issue rewritten on production's path: request text, pasted review text or a correction becomes the Issue (\"I need a corrective action form for Wynne Sarrow for \u2026\", \"Below in UPT \u2026 in the format of Tamsyn ca \u2026\", \"the meeting was actually on 10-19-26; sorry, \u2026\"), a leading \"for\", or garbled joins (\"and She units per transaction\"); see 893/rdiff-893.txt"
+ },
+ "replay: nov10-sf-b6-card-carries-added-detail [production]": {
+  "category": "REGRESSION",
+  "reason": "holding case, Issue rewritten on production's path: request text, pasted review text or a correction becomes the Issue (\"I need a corrective action form for Wynne Sarrow for \u2026\", \"Below in UPT \u2026 in the format of Tamsyn ca \u2026\", \"the meeting was actually on 10-19-26; sorry, \u2026\"), a leading \"for\", or garbled joins (\"and She units per transaction\"); see 893/rdiff-893.txt"
+ },
+ "replay: nov10-twin-sf-s22-pasted-review-never-drafted [fix:PASTED_REVIEW_NOT_ACCOUNT_ENABLED]": {
+  "category": "REGRESSION",
+  "reason": "holding case, Issue rewritten on production's path: request text, pasted review text or a correction becomes the Issue (\"I need a corrective action form for Wynne Sarrow for \u2026\", \"Below in UPT \u2026 in the format of Tamsyn ca \u2026\", \"the meeting was actually on 10-19-26; sorry, \u2026\"), a leading \"for\", or garbled joins (\"and She units per transaction\"); see 893/rdiff-893.txt"
+ },
+ "replay: nov10-twin-sf-s22-pasted-review-never-drafted [production]": {
+  "category": "REGRESSION",
+  "reason": "holding case, Issue rewritten on production's path: request text, pasted review text or a correction becomes the Issue (\"I need a corrective action form for Wynne Sarrow for \u2026\", \"Below in UPT \u2026 in the format of Tamsyn ca \u2026\", \"the meeting was actually on 10-19-26; sorry, \u2026\"), a leading \"for\", or garbled joins (\"and She units per transaction\"); see 893/rdiff-893.txt"
+ },
+ "replay: nov14-card-account-three-turns-both-facts-no-hedge [open]": {
+  "category": "INTENDED",
+  "reason": "#893 open case holds with the flag on (hedge/denial/history/role/store dropped; the fact kept)"
+ },
+ "replay: nov14-card-added-facts-probe-1 [open]": {
+  "category": "INTENDED",
+  "reason": "#893 open case holds with the flag on (hedge/denial/history/role/store dropped; the fact kept)"
+ },
+ "replay: nov14-card-added-facts-probe-10 [open]": {
+  "category": "INTENDED",
+  "reason": "#893 open case holds with the flag on (hedge/denial/history/role/store dropped; the fact kept)"
+ },
+ "replay: nov14-card-added-facts-probe-11 [open]": {
+  "category": "INTENDED",
+  "reason": "#893 open case holds with the flag on (hedge/denial/history/role/store dropped; the fact kept)"
+ },
+ "replay: nov14-card-added-facts-probe-12 [open]": {
+  "category": "INTENDED",
+  "reason": "#893 open case holds with the flag on (hedge/denial/history/role/store dropped; the fact kept)"
+ },
+ "replay: nov14-card-added-facts-probe-13 [open]": {
+  "category": "INTENDED",
+  "reason": "#893 open case holds with the flag on (hedge/denial/history/role/store dropped; the fact kept)"
+ },
+ "replay: nov14-card-added-facts-probe-14 [open]": {
+  "category": "INTENDED",
+  "reason": "#893 open case holds with the flag on (hedge/denial/history/role/store dropped; the fact kept)"
+ },
+ "replay: nov14-card-added-facts-probe-2 [open]": {
+  "category": "INTENDED",
+  "reason": "#893 open case holds with the flag on (hedge/denial/history/role/store dropped; the fact kept)"
+ },
+ "replay: nov14-card-added-facts-probe-3 [open]": {
+  "category": "INTENDED",
+  "reason": "#893 open case holds with the flag on (hedge/denial/history/role/store dropped; the fact kept)"
+ },
+ "replay: nov14-card-added-facts-probe-4 [open]": {
+  "category": "INTENDED",
+  "reason": "#893 open case holds with the flag on (hedge/denial/history/role/store dropped; the fact kept)"
+ },
+ "replay: nov14-card-added-facts-probe-5 [open]": {
+  "category": "INTENDED",
+  "reason": "#893 open case holds with the flag on (hedge/denial/history/role/store dropped; the fact kept)"
+ },
+ "replay: nov14-card-added-facts-probe-6 [open]": {
+  "category": "INTENDED",
+  "reason": "#893 open case holds with the flag on (hedge/denial/history/role/store dropped; the fact kept)"
+ },
+ "replay: nov14-card-added-facts-probe-7 [open]": {
+  "category": "INTENDED",
+  "reason": "#893 open case holds with the flag on (hedge/denial/history/role/store dropped; the fact kept)"
+ },
+ "replay: nov14-card-added-facts-probe-8 [open]": {
+  "category": "INTENDED",
+  "reason": "#893 open case holds with the flag on (hedge/denial/history/role/store dropped; the fact kept)"
+ },
+ "replay: nov14-card-added-facts-probe-9 [open]": {
+  "category": "INTENDED",
+  "reason": "#893 open case holds with the flag on (hedge/denial/history/role/store dropped; the fact kept)"
+ },
+ "replay: nov2-p1a-policy-turn-drops-account [production]": {
+  "category": "REGRESSION",
+  "reason": "holding case, Issue rewritten on production's path: request text, pasted review text or a correction becomes the Issue (\"I need a corrective action form for Wynne Sarrow for \u2026\", \"Below in UPT \u2026 in the format of Tamsyn ca \u2026\", \"the meeting was actually on 10-19-26; sorry, \u2026\"), a leading \"for\", or garbled joins (\"and She units per transaction\"); see 893/rdiff-893.txt"
+ },
+ "replay: nov5-sf-b6-full-sentence-and-added-detail [fix:NO_SELECTION_ON_OPEN_CARD_ENABLED]": {
+  "category": "REGRESSION",
+  "reason": "holding case, Issue rewritten on production's path: request text, pasted review text or a correction becomes the Issue (\"I need a corrective action form for Wynne Sarrow for \u2026\", \"Below in UPT \u2026 in the format of Tamsyn ca \u2026\", \"the meeting was actually on 10-19-26; sorry, \u2026\"), a leading \"for\", or garbled joins (\"and She units per transaction\"); see 893/rdiff-893.txt"
+ },
+ "replay: nov5-sf-b6-full-sentence-and-added-detail [production]": {
+  "category": "REGRESSION",
+  "reason": "holding case, Issue rewritten on production's path: request text, pasted review text or a correction becomes the Issue (\"I need a corrective action form for Wynne Sarrow for \u2026\", \"Below in UPT \u2026 in the format of Tamsyn ca \u2026\", \"the meeting was actually on 10-19-26; sorry, \u2026\"), a leading \"for\", or garbled joins (\"and She units per transaction\"); see 893/rdiff-893.txt"
+ },
+ "replay: nov5-sf-b6-policy-left-for-the-manager [fix:CA_PROCEDURE_BASIS_ENABLED]": {
+  "category": "REGRESSION",
+  "reason": "holding case, Issue rewritten on production's path: request text, pasted review text or a correction becomes the Issue (\"I need a corrective action form for Wynne Sarrow for \u2026\", \"Below in UPT \u2026 in the format of Tamsyn ca \u2026\", \"the meeting was actually on 10-19-26; sorry, \u2026\"), a leading \"for\", or garbled joins (\"and She units per transaction\"); see 893/rdiff-893.txt"
+ },
+ "replay: nov5-sf-b6-policy-left-for-the-manager [production]": {
+  "category": "REGRESSION",
+  "reason": "holding case, Issue rewritten on production's path: request text, pasted review text or a correction becomes the Issue (\"I need a corrective action form for Wynne Sarrow for \u2026\", \"Below in UPT \u2026 in the format of Tamsyn ca \u2026\", \"the meeting was actually on 10-19-26; sorry, \u2026\"), a leading \"for\", or garbled joins (\"and She units per transaction\"); see 893/rdiff-893.txt"
+ },
+ "replay: nov5-twin-sf-s22-ca-not-coaching [fix:PASTED_REVIEW_NOT_ACCOUNT_ENABLED]": {
+  "category": "REGRESSION",
+  "reason": "holding case, Issue rewritten on production's path: request text, pasted review text or a correction becomes the Issue (\"I need a corrective action form for Wynne Sarrow for \u2026\", \"Below in UPT \u2026 in the format of Tamsyn ca \u2026\", \"the meeting was actually on 10-19-26; sorry, \u2026\"), a leading \"for\", or garbled joins (\"and She units per transaction\"); see 893/rdiff-893.txt"
+ },
+ "replay: nov5-twin-sf-s22-ca-not-coaching [production]": {
+  "category": "REGRESSION",
+  "reason": "holding case, Issue rewritten on production's path: request text, pasted review text or a correction becomes the Issue (\"I need a corrective action form for Wynne Sarrow for \u2026\", \"Below in UPT \u2026 in the format of Tamsyn ca \u2026\", \"the meeting was actually on 10-19-26; sorry, \u2026\"), a leading \"for\", or garbled joins (\"and She units per transaction\"); see 893/rdiff-893.txt"
+ },
+ "replay: nov6-b1-name-with-title-then-name-is [fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER_NEAR_MISS_ENABLED,ROSTER_NAME_IN_CANDIDATE_ENABLED,ROSTER_COMPOUND_SURNAME_ENABLED,ROSTER_NOT_FOUND_ANY_PHRASING_ENABLED,OFF_ROSTER_CONFIRM_ENABLED]": {
+  "category": "REGRESSION",
+  "reason": "holding case, Issue rewritten on production's path: request text, pasted review text or a correction becomes the Issue (\"I need a corrective action form for Wynne Sarrow for \u2026\", \"Below in UPT \u2026 in the format of Tamsyn ca \u2026\", \"the meeting was actually on 10-19-26; sorry, \u2026\"), a leading \"for\", or garbled joins (\"and She units per transaction\"); see 893/rdiff-893.txt"
+ },
+ "replay: nov6-b1-name-with-title-then-name-is [production]": {
+  "category": "REGRESSION",
+  "reason": "holding case, Issue rewritten on production's path: request text, pasted review text or a correction becomes the Issue (\"I need a corrective action form for Wynne Sarrow for \u2026\", \"Below in UPT \u2026 in the format of Tamsyn ca \u2026\", \"the meeting was actually on 10-19-26; sorry, \u2026\"), a leading \"for\", or garbled joins (\"and She units per transaction\"); see 893/rdiff-893.txt"
+ },
+ "replay: nov8-corrected-date-kept-q6 [fix:CORRECTED_DATE_KEPT_ENABLED]": {
+  "category": "REGRESSION",
+  "reason": "holding case, Issue rewritten on production's path: request text, pasted review text or a correction becomes the Issue (\"I need a corrective action form for Wynne Sarrow for \u2026\", \"Below in UPT \u2026 in the format of Tamsyn ca \u2026\", \"the meeting was actually on 10-19-26; sorry, \u2026\"), a leading \"for\", or garbled joins (\"and She units per transaction\"); see 893/rdiff-893.txt"
+ },
+ "replay: nov8-corrected-date-kept-q6 [production]": {
+  "category": "REGRESSION",
+  "reason": "holding case, Issue rewritten on production's path: request text, pasted review text or a correction becomes the Issue (\"I need a corrective action form for Wynne Sarrow for \u2026\", \"Below in UPT \u2026 in the format of Tamsyn ca \u2026\", \"the meeting was actually on 10-19-26; sorry, \u2026\"), a leading \"for\", or garbled joins (\"and She units per transaction\"); see 893/rdiff-893.txt"
+ },
+ "replay: nov8-kept-request-coaching-named-now-no-notice [fix:REQUEST_KEPT_IN_WINDOW_ENABLED,NEXT_PUBLIC_REQUEST_KEPT_IN_WINDOW_ENABLED,KEPT_REQUEST_SAME_FORM_ENABLED,NEXT_PUBLIC_KEPT_REQUEST_SAME_FORM_ENABLED,CARRIED_PERSON_NOTICE_ENABLED]": {
+  "category": "REGRESSION",
+  "reason": "holding case, Issue rewritten on production's path: request text, pasted review text or a correction becomes the Issue (\"I need a corrective action form for Wynne Sarrow for \u2026\", \"Below in UPT \u2026 in the format of Tamsyn ca \u2026\", \"the meeting was actually on 10-19-26; sorry, \u2026\"), a leading \"for\", or garbled joins (\"and She units per transaction\"); see 893/rdiff-893.txt"
+ },
+ "replay: nov8-kept-request-coaching-named-now-no-notice [production]": {
+  "category": "REGRESSION",
+  "reason": "holding case, Issue rewritten on production's path: request text, pasted review text or a correction becomes the Issue (\"I need a corrective action form for Wynne Sarrow for \u2026\", \"Below in UPT \u2026 in the format of Tamsyn ca \u2026\", \"the meeting was actually on 10-19-26; sorry, \u2026\"), a leading \"for\", or garbled joins (\"and She units per transaction\"); see 893/rdiff-893.txt"
+ },
+ "replay: nov8-kept-request-coaching-says-where-the-name-came-from [fix:REQUEST_KEPT_IN_WINDOW_ENABLED,NEXT_PUBLIC_REQUEST_KEPT_IN_WINDOW_ENABLED,KEPT_REQUEST_SAME_FORM_ENABLED,NEXT_PUBLIC_KEPT_REQUEST_SAME_FORM_ENABLED,CARRIED_PERSON_NOTICE_ENABLED]": {
+  "category": "REGRESSION",
+  "reason": "holding case, Issue rewritten on production's path: request text, pasted review text or a correction becomes the Issue (\"I need a corrective action form for Wynne Sarrow for \u2026\", \"Below in UPT \u2026 in the format of Tamsyn ca \u2026\", \"the meeting was actually on 10-19-26; sorry, \u2026\"), a leading \"for\", or garbled joins (\"and She units per transaction\"); see 893/rdiff-893.txt"
+ },
+ "replay: nov8-kept-request-coaching-says-where-the-name-came-from [production]": {
+  "category": "REGRESSION",
+  "reason": "holding case, Issue rewritten on production's path: request text, pasted review text or a correction becomes the Issue (\"I need a corrective action form for Wynne Sarrow for \u2026\", \"Below in UPT \u2026 in the format of Tamsyn ca \u2026\", \"the meeting was actually on 10-19-26; sorry, \u2026\"), a leading \"for\", or garbled joins (\"and She units per transaction\"); see 893/rdiff-893.txt"
+ },
+ "replay: nov8-questions-not-account-coaching-from-conversation [fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED]": {
+  "category": "REGRESSION",
+  "reason": "holding case, Issue rewritten on production's path: request text, pasted review text or a correction becomes the Issue (\"I need a corrective action form for Wynne Sarrow for \u2026\", \"Below in UPT \u2026 in the format of Tamsyn ca \u2026\", \"the meeting was actually on 10-19-26; sorry, \u2026\"), a leading \"for\", or garbled joins (\"and She units per transaction\"); see 893/rdiff-893.txt"
+ },
+ "replay: nov8-questions-not-account-coaching-from-conversation [production]": {
+  "category": "REGRESSION",
+  "reason": "holding case, Issue rewritten on production's path: request text, pasted review text or a correction becomes the Issue (\"I need a corrective action form for Wynne Sarrow for \u2026\", \"Below in UPT \u2026 in the format of Tamsyn ca \u2026\", \"the meeting was actually on 10-19-26; sorry, \u2026\"), a leading \"for\", or garbled joins (\"and She units per transaction\"); see 893/rdiff-893.txt"
+ },
+ "replay: nov8-second-request-prior-step-correction [fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED]": {
+  "category": "REGRESSION",
+  "reason": "holding case, Issue rewritten on production's path: request text, pasted review text or a correction becomes the Issue (\"I need a corrective action form for Wynne Sarrow for \u2026\", \"Below in UPT \u2026 in the format of Tamsyn ca \u2026\", \"the meeting was actually on 10-19-26; sorry, \u2026\"), a leading \"for\", or garbled joins (\"and She units per transaction\"); see 893/rdiff-893.txt"
+ },
+ "replay: nov8-second-request-prior-step-correction [production]": {
+  "category": "REGRESSION",
+  "reason": "holding case, Issue rewritten on production's path: request text, pasted review text or a correction becomes the Issue (\"I need a corrective action form for Wynne Sarrow for \u2026\", \"Below in UPT \u2026 in the format of Tamsyn ca \u2026\", \"the meeting was actually on 10-19-26; sorry, \u2026\"), a leading \"for\", or garbled joins (\"and She units per transaction\"); see 893/rdiff-893.txt"
+ },
+ "replay: nov8-woven-deadline-cites-conduct [fix:CONDUCT_INCIDENT_CITES_PAGE_ENABLED]": {
+  "category": "REGRESSION",
+  "reason": "holding case, Issue rewritten on production's path: request text, pasted review text or a correction becomes the Issue (\"I need a corrective action form for Wynne Sarrow for \u2026\", \"Below in UPT \u2026 in the format of Tamsyn ca \u2026\", \"the meeting was actually on 10-19-26; sorry, \u2026\"), a leading \"for\", or garbled joins (\"and She units per transaction\"); see 893/rdiff-893.txt"
+ },
+ "replay: nov8-woven-deadline-cites-conduct [production]": {
+  "category": "REGRESSION",
+  "reason": "holding case, Issue rewritten on production's path: request text, pasted review text or a correction becomes the Issue (\"I need a corrective action form for Wynne Sarrow for \u2026\", \"Below in UPT \u2026 in the format of Tamsyn ca \u2026\", \"the meeting was actually on 10-19-26; sorry, \u2026\"), a leading \"for\", or garbled joins (\"and She units per transaction\"); see 893/rdiff-893.txt"
+ }
+}

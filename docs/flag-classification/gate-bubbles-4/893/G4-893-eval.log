@@ -1,0 +1,42 @@
+
+> ask-bubbles@0.1.0 eval
+> vitest run --config vitest.eval.config.mts
+
+
+ RUN  v4.1.11 /home/user/gate/g893
+
+
+Replay eval — flags on: CARD_ACCOUNT_DROPS_NON_FACTS_ENABLED
+| Case | Flags off | Flags on |
+|---|---|---|
+| b9 | PASS 170ms | PASS 184ms |
+| b10 | PASS 536ms | PASS 370ms |
+| b11 | PASS 81ms | PASS 77ms |
+| b12 | FAIL (policy) 210ms | FAIL (policy) 187ms |
+| b18a | PASS 55ms | PASS 57ms |
+| b18b | PASS 44ms | PASS 46ms |
+| r1 | PASS 5ms | PASS 5ms |
+| b0 | PASS 223ms | PASS 214ms |
+| b1 | PASS 148ms | PASS 181ms |
+| b2 | PASS 87ms | PASS 79ms |
+| b3 | PASS 79ms | PASS 73ms |
+| b4 | PASS 149ms | PASS 148ms |
+| b5 | PASS 119ms | PASS 118ms |
+| b6 | PASS 188ms | PASS 176ms |
+| b7 | PASS 75ms | PASS 93ms |
+| b8 | PASS 34ms | PASS 33ms |
+| b13 | PASS 376ms | PASS 322ms |
+| b14 | PASS 29ms | PASS 28ms |
+| b15 | PASS 442ms | PASS 481ms |
+| b16 | PASS 19ms | PASS 20ms |
+| b17 | PASS 283ms | PASS 280ms |
+| sf-b1 | PASS 471ms | PASS 435ms |
+| sf-b3 | PASS 126ms | PASS 122ms |
+| sf-b4 | PASS 17ms | PASS 17ms |
+Latency p50/p95 off 119/471 ms, on 118/435 ms; total off 3966 ms, on 3746 ms.
+
+ Test Files  2 passed (2)
+      Tests  35 passed (35)
+   Start at  08:44:19
+   Duration  29.92s (transform 3.85s, setup 0ms, import 4.38s, tests 25.25s, environment 0ms)
+

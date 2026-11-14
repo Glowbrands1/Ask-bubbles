@@ -1,0 +1,225 @@
+===== nov10-b4-twin-ca-not-coaching-form-type | fix:CA_SALES_POLICY_ENABLED,PASTED_FORM_ | off ok True | on ok True
+ T2 Q: Use this to make it: Please make the following edits and resubmit: /  / 1. **Kit Coaching Document:** This was signed on 10/16/2026. I do not see a date showing tha
+    -**Issue:** must see behaviors for performace this should be for wynne sarrow · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Wynne Sarrow is assigned) — tell me if th
+    +**Issue:** Below in UPT, Average Sale, Conversion but i need it to be in the format of Tamsyn ca it needs to look exactally the same as tamsyns but wtih all of this information · **Type of warning:** Verbal Warning, as you said — tell me if that should change
+===== nov10-b4-twin-ca-not-coaching-form-type | production | off ok True | on ok True
+ T2 Q: Use this to make it: Please make the following edits and resubmit: /  / 1. **Kit Coaching Document:** This was signed on 10/16/2026. I do not see a date showing tha
+    -**Issue:** must see behaviors for performace this should be for wynne sarrow · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Wynne Sarrow is assigned) — tell me if th
+    +**Issue:** Below in UPT, Average Sale, Conversion but i need it to be in the format of Tamsyn ca it needs to look exactally the same as tamsyns but wtih all of this information · **Type of warning:** Verbal Warning, as you said — tell me if that should change
+===== nov10-sf-b6-card-carries-added-detail | fix:ADDED_DETAIL_KEPT_ENABLED | off ok True | on ok True
+ T4 Q: Create a Corrective Action Form from this conversation.
+    -**Issue:** counting the drawer early and turning away a customer · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Wynne Sarrow is assigned) — tell me if that should change
+    +**Issue:** I need a corrective action form for Wynne Sarrow for counting the drawer early and turning away a customer · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Wynne Sarrow is assigned) — tell me if that should change
+===== nov10-sf-b6-card-carries-added-detail | production | off ok True | on ok True
+ T4 Q: Create a Corrective Action Form from this conversation.
+    -**Issue:** counting the drawer early and turning away a customer · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Wynne Sarrow is assigned) — tell me if that should change
+    +**Issue:** I need a corrective action form for Wynne Sarrow for counting the drawer early and turning away a customer · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Wynne Sarrow is assigned) — tell me if that should change
+===== nov10-twin-sf-s22-pasted-review-never-drafted | fix:PASTED_REVIEW_NOT_ACCOUNT_ENABLED | off ok True | on ok True
+ T2 Q: Use this to make it: Please make the following edits and resubmit: /  / 1. **Kit Coaching Document:** This was signed on 10/16/2026. I do not see a date showing tha
+    -**Issue:** must see behaviors for performace this should be for wynne sarrow · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Wynne Sarrow is assigned) — tell me if th
+    +**Issue:** Below in UPT, Average Sale, Conversion but i need it to be in the format of Tamsyn ca it needs to look exactally the same as tamsyns but wtih all of this information · **Type of warning:** Verbal Warning, as you said — tell me if that should change
+===== nov10-twin-sf-s22-pasted-review-never-drafted | production | off ok True | on ok True
+ T2 Q: Use this to make it: Please make the following edits and resubmit: /  / 1. **Kit Coaching Document:** This was signed on 10/16/2026. I do not see a date showing tha
+    -**Issue:** must see behaviors for performace this should be for wynne sarrow · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Wynne Sarrow is assigned) — tell me if th
+    +**Issue:** Below in UPT, Average Sale, Conversion but i need it to be in the format of Tamsyn ca it needs to look exactally the same as tamsyns but wtih all of this information · **Type of warning:** Verbal Warning, as you said — tell me if that should change
+===== nov14-card-account-three-turns-both-facts-no-hedge | open | off ok False | on ok True
+  off err: the lateness was dropped:
+ T3 Q: corrective action form
+    -**Issue:** she yelled at a customer and she maybe forgot · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Marnie Holloway is assigned) — tell me if that should change
+    +**Issue:** Marnie Holloway was late on 11/3/26; she yelled at a customer · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Marnie Holloway is assigned) — tell me if that should change
+===== nov14-card-added-facts-probe-1 | open | off ok False | on ok True
+  off err: the Added note:
+ T2 Q: she yelled at a customer i guess
+    -**Issue:** she was late on 11/3/26; she yelled at a customer i guess · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Marnie Holloway is assigned) — tell me if that should change
+    +**Issue:** she was late on 11/3/26; she yelled at a customer · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Marnie Holloway is assigned) — tell me if that should change
+    -**Added to What happened:** she yelled at a customer i guess
+    +**Added to What happened:** she yelled at a customer
+===== nov14-card-added-facts-probe-10 | open | off ok False | on ok True
+  off err: the Added note:
+ T2 Q: she was not late, she yelled at a customer
+    -**Issue:** she was late on 11/3/26; she was not late, she yelled at a customer · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Marnie Holloway is assigned) — tell me if that should change
+    +**Issue:** she was late on 11/3/26; she yelled at a customer · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Marnie Holloway is assigned) — tell me if that should change
+    -**Added to What happened:** she was not late, she yelled at a customer
+    +**Added to What happened:** she yelled at a customer
+===== nov14-card-added-facts-probe-11 | open | off ok False | on ok True
+  off err: the Added note:
+ T2 Q: she didn't yell at a customer
+    -**Issue:** she was late on 11/3/26; she didn't yell at a customer · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Marnie Holloway is assigned) — tell me if that should change
+    +**Issue:** she was late on 11/3/26 · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Marnie Holloway is assigned) — tell me if that should change
+    -
+    -**Added to What happened:** she didn't yell at a customer
+===== nov14-card-added-facts-probe-12 | open | off ok False | on ok True
+  off err: the Added note:
+ T2 Q: also she didn't clean
+    -**Issue:** she was late on 11/3/26 · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Marnie Holloway is assigned) — tell me if that should change
+    +**Issue:** she was late on 11/3/26; she didn't clean · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Marnie Holloway is assigned) — tell me if that should change
+    +
+    +**Added to What happened:** she didn't clean
+===== nov14-card-added-facts-probe-13 | open | off ok False | on ok True
+  off err: the Added note:
+ T2 Q: make it a written warning, she yelled at a customer
+    -**Issue:** she was late on 11/3/26 · **Type of warning:** Written Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Marnie Holloway is assigned) — tell me if that should change
+    +**Issue:** she was late on 11/3/26; she yelled at a customer · **Type of warning:** Written Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Marnie Holloway is assigned) — tell me if that should ch
+    +
+    +**Added to What happened:** she yelled at a customer
+===== nov14-card-added-facts-probe-14 | open | off ok False | on ok True
+  off err: the Added note:
+ T2 Q: this is a final warning she yelled at a customer
+    -**Issue:** she was late on 11/3/26 · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Marnie Holloway is assigned) — tell me if that should change
+    +**Issue:** she was late on 11/3/26; she yelled at a customer · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Marnie Holloway is assigned) — tell me if that should change
+    +
+    +**Added to What happened:** she yelled at a customer
+===== nov14-card-added-facts-probe-2 | open | off ok False | on ok True
+  off err: the Added note:
+ T2 Q: she yelled at a customer, maybe twice
+    -**Issue:** she was late on 11/3/26; she yelled at a customer, maybe twice · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Marnie Holloway is assigned) — tell me if that should change
+    +**Issue:** she was late on 11/3/26; she yelled at a customer · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Marnie Holloway is assigned) — tell me if that should change
+    -**Added to What happened:** she yelled at a customer, maybe twice
+    +**Added to What happened:** she yelled at a customer
+===== nov14-card-added-facts-probe-3 | open | off ok False | on ok True
+  off err: the Added note:
+ T2 Q: she yelled at a customer as a TM
+    -**Issue:** she was late on 11/3/26; she yelled at a customer as a TM · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Marnie Holloway is assigned) — tell me if that should change
+    +**Issue:** she was late on 11/3/26; she yelled at a customer · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Marnie Holloway is assigned) — tell me if that should change
+    -**Added to What happened:** she yelled at a customer as a TM
+    +**Added to What happened:** she yelled at a customer
+===== nov14-card-added-facts-probe-4 | open | off ok False | on ok True
+  off err: the Added note:
+ T2 Q: she works as a team member and yelled at a customer
+    -**Issue:** she was late on 11/3/26; she works as a team member and yelled at a customer · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Marnie Holloway is assigned) — tell me if that should change
+    +**Issue:** she was late on 11/3/26; she yelled at a customer · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Marnie Holloway is assigned) — tell me if that should change
+    -**Added to What happened:** she works as a team member and yelled at a customer
+    +**Added to What happened:** she yelled at a customer
+===== nov14-card-added-facts-probe-5 | open | off ok False | on ok True
+  off err: the Added note:
+ T2 Q: she yelled at a customer at west dodge
+    -**Issue:** she was late on 11/3/26; she yelled at a customer at west dodge · **Store:** Omaha, NE (West Dodge Rd), as you said — tell me if that should change
+    +**Issue:** she was late on 11/3/26; she yelled at a customer · **Store:** Omaha, NE (West Dodge Rd), as you said — tell me if that should change
+    -**Added to What happened:** she yelled at a customer at west dodge
+    +**Added to What happened:** she yelled at a customer
+===== nov14-card-added-facts-probe-6 | open | off ok False | on ok True
+  off err: the Added note:
+ T2 Q: she had a verbal last month
+    -**Issue:** she was late on 11/3/26; she had a verbal last month · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Marnie Holloway is assigned) — tell me if that should change
+    +**Issue:** she was late on 11/3/26 · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Marnie Holloway is assigned) — tell me if that should change
+    -
+    -**Added to What happened:** she had a verbal last month
+===== nov14-card-added-facts-probe-7 | open | off ok False | on ok True
+  off err: the Added note:
+ T2 Q: she has been late 3 times this month
+    -**Issue:** she was late on 11/3/26; she has been late 3 times this month · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Marnie Holloway is assigned) — tell me if that should change
+    +**Issue:** she was late on 11/3/26 · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Marnie Holloway is assigned) — tell me if that should change
+    -
+    -**Added to What happened:** she has been late 3 times this month
+===== nov14-card-added-facts-probe-8 | open | off ok False | on ok True
+  off err: the Added note:
+ T2 Q: she was previously warned about her phone
+    -**Issue:** she was late on 11/3/26; she was previously warned about her phone · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Marnie Holloway is assigned) — tell me if that should change
+    +**Issue:** she was late on 11/3/26 · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Marnie Holloway is assigned) — tell me if that should change
+    -
+    -**Added to What happened:** she was previously warned about her phone
+===== nov14-card-added-facts-probe-9 | open | off ok False | on ok True
+  off err: the Added note:
+ T2 Q: she was late at the west dodge store
+    -**Issue:** she was late on 11/3/26; she was late at the west dodge store · **Store:** Omaha, NE (West Dodge Rd), as you said — tell me if that should change
+    +**Issue:** she was late on 11/3/26 · **Store:** Omaha, NE (West Dodge Rd), as you said — tell me if that should change
+    -
+    -**Added to What happened:** she was late at the west dodge store
+===== nov2-p1a-policy-turn-drops-account | production | off ok True | on ok True
+ T3 Q: the policy would be must see behaviors on woven
+    -**Issue:** the policy would be must see behaviors on woven; She had 24 transactions and was below in Below in UPT, ATV, average ticket, and units per transaction · **Type of warning:** Written Warning, as you said — tell me if that should change · **Store:** 
+    +**Issue:** the policy would be must see behaviors on woven; She had 24 transactions and She was below in Below in UPT, ATV, average ticket and She units per transaction · **Type of warning:** Written Warning, as you said — tell me if that should change · **St
+    -**Added to What happened:** She had 24 transactions and was below in Below in UPT, ATV, average ticket, and units per transaction
+    +**Added to What happened:** She had 24 transactions and She was below in Below in UPT, ATV, average ticket and She units per transaction
+===== nov5-sf-b6-full-sentence-and-added-detail | fix:NO_SELECTION_ON_OPEN_CARD_ENABLED | off ok True | on ok True
+ T4 Q: Create a Corrective Action Form from this conversation.
+    -**Issue:** counting the drawer early and turning away a customer · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Wynne Sarrow is assigned) — tell me if that should change
+    +**Issue:** I need a corrective action form for Wynne Sarrow for counting the drawer early and turning away a customer · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Wynne Sarrow is assigned) — tell me if that should change
+===== nov5-sf-b6-full-sentence-and-added-detail | production | off ok True | on ok True
+ T4 Q: Create a Corrective Action Form from this conversation.
+    -**Issue:** counting the drawer early and turning away a customer · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Wynne Sarrow is assigned) — tell me if that should change
+    +**Issue:** I need a corrective action form for Wynne Sarrow for counting the drawer early and turning away a customer · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Wynne Sarrow is assigned) — tell me if that should change
+===== nov5-sf-b6-policy-left-for-the-manager | fix:CA_PROCEDURE_BASIS_ENABLED | off ok True | on ok True
+ T3 Q: Create a Corrective Action Form from this conversation.
+    -**Issue:** counting the drawer early and turning away a customer · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Wynne Sarrow is assigned) — tell me if that should change
+    +**Issue:** I need a corrective action form for Wynne Sarrow for counting the drawer early and turning away a customer · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Wynne Sarrow is assigned) — tell me if that should change
+===== nov5-sf-b6-policy-left-for-the-manager | production | off ok True | on ok True
+ T3 Q: Create a Corrective Action Form from this conversation.
+    -**Issue:** counting the drawer early and turning away a customer · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Wynne Sarrow is assigned) — tell me if that should change
+    +**Issue:** I need a corrective action form for Wynne Sarrow for counting the drawer early and turning away a customer · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Wynne Sarrow is assigned) — tell me if that should change
+===== nov5-twin-sf-s22-ca-not-coaching | fix:PASTED_REVIEW_NOT_ACCOUNT_ENABLED | off ok True | on ok True
+ T2 Q: Use this to make it: Please make the following edits and resubmit: /  / 1. **Kit Coaching Document:** This was signed on 10/16/2026. I do not see a date showing tha
+    -**Issue:** must see behaviors for performace this should be for wynne sarrow · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Wynne Sarrow is assigned) — tell me if th
+    +**Issue:** Below in UPT, Average Sale, Conversion but i need it to be in the format of Tamsyn ca it needs to look exactally the same as tamsyns but wtih all of this information · **Type of warning:** Verbal Warning, as you said — tell me if that should change
+===== nov5-twin-sf-s22-ca-not-coaching | production | off ok True | on ok True
+ T2 Q: Use this to make it: Please make the following edits and resubmit: /  / 1. **Kit Coaching Document:** This was signed on 10/16/2026. I do not see a date showing tha
+    -**Issue:** must see behaviors for performace this should be for wynne sarrow · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Wynne Sarrow is assigned) — tell me if th
+    +**Issue:** Below in UPT, Average Sale, Conversion but i need it to be in the format of Tamsyn ca it needs to look exactally the same as tamsyns but wtih all of this information · **Type of warning:** Verbal Warning, as you said — tell me if that should change
+===== nov6-b1-name-with-title-then-name-is | fix:FORM_NAME_FROM_ROSTER_ENABLED,ROSTER | off ok True | on ok True
+ T2 Q: name is Zebulon Marchbanks
+    -**Issue:** Team Member, he was late opening the store on 11/2 · **Store:** Omaha, NE (West Dodge Rd), your assigned store — tell me if that should change
+    +**Issue:** Team Member; he was late opening the store on 11/2 · **Store:** Omaha, NE (West Dodge Rd), your assigned store — tell me if that should change
+===== nov6-b1-name-with-title-then-name-is | production | off ok True | on ok True
+ T2 Q: name is Zebulon Marchbanks
+    -**Issue:** Team Member, he was late opening the store on 11/2 · **Store:** Omaha, NE (West Dodge Rd), your assigned store — tell me if that should change
+    +**Issue:** Team Member; he was late opening the store on 11/2 · **Store:** Omaha, NE (West Dodge Rd), your assigned store — tell me if that should change
+===== nov8-corrected-date-kept-q6 | fix:CORRECTED_DATE_KEPT_ENABLED | off ok True | on ok True
+ T2 Q: actually make it verbal
+    -**Issue:** not attending the monthly meeting on 10-20-26 · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Tess Varga is assigned) — tell me if that should change
+    +**Issue:** for not attending the monthly meeting on 10-20-26 · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Tess Varga is assigned) — tell me if that should change
+ T5 Q: no payroll deduct
+    -**Issue:** not attending the monthly meeting on 10-19-26 · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Tess Varga is assigned) — tell me if that should change
+    +**Issue:** the meeting was actually on 10-19-26; sorry, the verbal ca was on 9-2-26 not 9-2-26 · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Tess Varga is assigned)
+===== nov8-corrected-date-kept-q6 | production | off ok True | on ok True
+ T2 Q: actually make it verbal
+    -**Issue:** not attending the monthly meeting on 10-20-26 · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Tess Varga is assigned) — tell me if that should change
+    +**Issue:** for not attending the monthly meeting on 10-20-26 · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Tess Varga is assigned) — tell me if that should change
+ T5 Q: no payroll deduct
+    -**Issue:** not attending the monthly meeting on 10-19-26 · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Tess Varga is assigned) — tell me if that should change
+    +**Issue:** the meeting was actually on 10-19-26; sorry, the verbal ca was on 9-2-26 not 9-2-26 · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Tess Varga is assigned)
+===== nov8-kept-request-coaching-named-now-no-notice | fix:REQUEST_KEPT_IN_WINDOW_ENABLED,NEXT_ | off ok True | on ok True
+ T3 Q: I have independently verified and the policy is correct
+    -**Issue:** Late Opening from the policy manual · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Briar Castellane is assigned) — tell me if that should change
+    +**Issue:** for Late Opening from the policy manual · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Briar Castellane is assigned) — tell me if that should change
+===== nov8-kept-request-coaching-named-now-no-notice | production | off ok True | on ok True
+ T3 Q: I have independently verified and the policy is correct
+    -**Issue:** Late Opening from the policy manual · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Briar Castellane is assigned) — tell me if that should change
+    +**Issue:** for Late Opening from the policy manual · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Briar Castellane is assigned) — tell me if that should change
+===== nov8-kept-request-coaching-says-where-the-name-came-from | fix:REQUEST_KEPT_IN_WINDOW_ENABLED,NEXT_ | off ok True | on ok True
+ T3 Q: I have independently verified and the policy is correct
+    -**Issue:** Late Opening from the policy manual · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Briar Castellane is assigned) — tell me if that should change
+    +**Issue:** for Late Opening from the policy manual · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Briar Castellane is assigned) — tell me if that should change
+===== nov8-kept-request-coaching-says-where-the-name-came-from | production | off ok True | on ok True
+ T3 Q: I have independently verified and the policy is correct
+    -**Issue:** Late Opening from the policy manual · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Briar Castellane is assigned) — tell me if that should change
+    +**Issue:** for Late Opening from the policy manual · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Briar Castellane is assigned) — tell me if that should change
+===== nov8-questions-not-account-coaching-from-conversation | fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED | off ok True | on ok True
+ T3 Q: I have independently verified and the policy is correct
+    -**Issue:** Late Opening from the policy manual · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Remy Calder is assigned) — tell me if that should change
+    +**Issue:** for Late Opening from the policy manual · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Remy Calder is assigned) — tell me if that should change
+===== nov8-questions-not-account-coaching-from-conversation | production | off ok True | on ok True
+ T3 Q: I have independently verified and the policy is correct
+    -**Issue:** Late Opening from the policy manual · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Remy Calder is assigned) — tell me if that should change
+    +**Issue:** for Late Opening from the policy manual · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Remy Calder is assigned) — tell me if that should change
+===== nov8-second-request-prior-step-correction | fix:SECOND_REQUEST_OWN_ACCOUNT_ENABLED | off ok True | on ok True
+ T2 Q: actually make it verbal
+    -**Issue:** not attending the monthly meeting on 10-20-26 · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Tess Varga is assigned) — tell me if that should change
+    +**Issue:** for not attending the monthly meeting on 10-20-26 · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Tess Varga is assigned) — tell me if that should change
+ T5 Q: no payroll deduct
+    -**Issue:** not attending the monthly meeting on 10-19-26 · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Tess Varga is assigned) — tell me if that should change
+    +**Issue:** the meeting was actually on 10-19-26; sorry, the verbal ca was on 9-2-26 not 9-2-26 · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Tess Varga is assigned)
+===== nov8-second-request-prior-step-correction | production | off ok True | on ok True
+ T2 Q: actually make it verbal
+    -**Issue:** not attending the monthly meeting on 10-20-26 · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Tess Varga is assigned) — tell me if that should change
+    +**Issue:** for not attending the monthly meeting on 10-20-26 · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Tess Varga is assigned) — tell me if that should change
+ T5 Q: no payroll deduct
+    -**Issue:** not attending the monthly meeting on 10-19-26 · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Tess Varga is assigned) — tell me if that should change
+    +**Issue:** the meeting was actually on 10-19-26; sorry, the verbal ca was on 9-2-26 not 9-2-26 · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Tess Varga is assigned)
+===== nov8-woven-deadline-cites-conduct | fix:CONDUCT_INCIDENT_CITES_PAGE_ENABLED | off ok True | on ok True
+ T2 Q: prior coaching JBA Policy Manual 7-29-26
+    -**Issue:** missing the 10-15-26 woven deadline · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Marnie Holloway is assigned) — tell me if that should change
+    +**Issue:** for missing the 10-15-26 woven deadline · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Marnie Holloway is assigned) — tell me if that should change
+===== nov8-woven-deadline-cites-conduct | production | off ok True | on ok True
+ T2 Q: prior coaching JBA Policy Manual 7-29-26
+    -**Issue:** missing the 10-15-26 woven deadline · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Marnie Holloway is assigned) — tell me if that should change
+    +**Issue:** for missing the 10-15-26 woven deadline · **Type of warning:** Verbal Warning, as you said — tell me if that should change · **Store:** Omaha, NE (West Dodge Rd), from Woven (where Marnie Holloway is assigned) — tell me if that should change
