@@ -60,6 +60,10 @@ export const NOV14_POLICY_LINE_COVERS_EVERY_SECTION_CASES: ReplayCase[] = [
       expect(policyLine, `the card's Policy line does not name Attendance:\n${card}`).toMatch(/attendance/i);
       expect(policyLine, `the card's Policy line does not name Standards of Conduct:\n${card}`).toMatch(/standards of conduct/i);
       expect(policyLine, "the card does not quote the manager's words for the conduct").toMatch(/yelled at a customer/);
+      // The pack's own diff (14 Nov 2026): the joined line lost the card's quoted block. It quotes both sections.
+      const quoted = card.split("**Policy cited from the JBA Policy Manual**")[1] ?? "";
+      expect(quoted, `the card's quoted block lost Attendance:\n${card}`).toMatch(/attendance/i);
+      expect(quoted, `the card's quoted block lost Standards of Conduct:\n${card}`).toMatch(/standards of conduct/i);
       bothOnDraft(t, id);
     },
   },
