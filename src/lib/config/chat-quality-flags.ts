@@ -1002,6 +1002,10 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 2: the sibling app's "what happened" check (Pau's direction, 13 Nov 2026; default off).
   "CA_ASKS_WHAT_HAPPENED_ENABLED",
   "WHAT_HAPPENED_NO_CREATE_ENABLED",
+  // coding 2: ANSWER_IS_THE_ISSUE (QA's 17t item 4, 13 Nov 2026; default off).
+  "ANSWER_IS_THE_ISSUE_ENABLED",
+  // coding 2: ACCOUNT_CHANGE_REDERIVES_POLICY (QA's Bubbles 17u, 13 Nov 2026; default off).
+  "ACCOUNT_CHANGE_REDERIVES_POLICY_ENABLED",
   // QA round 17r (13 Nov 2026): TEAM_CARD_NOT_PRODUCT (#668) and FORM_EDIT_SOURCE_TURN (#480) are switched on in production.
   "TEAM_CARD_NOT_PRODUCT_ENABLED",
   "FORM_EDIT_SOURCE_TURN_ENABLED",
@@ -1525,6 +1529,10 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "CARD_CHECKED_AGAINST_WORDS_ENABLED",
   // POSITION_ANSWER_NOT_A_SENTENCE (default off; QA's live 17w test, 13 Nov 2026): in the list, as every chat flag.
   "POSITION_ANSWER_NOT_A_SENTENCE_ENABLED",
+  // MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED (default off; QA's live 17u test, 13 Nov 2026): in the list, as every chat flag.
+  "MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED_ENABLED",
+  // ADD_ALREADY_ON_FORM_SAYS_SO (default off; QA's live 17u test, item 5, 13 Nov 2026): in the list, as every chat flag.
+  "ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED",
 ] as const;
 
 /**
@@ -3565,6 +3573,31 @@ export function whatHappenedNoCreateEnabled(): boolean {
 }
 
 /**
+ * ANSWER_IS_THE_ISSUE_ENABLED (Coding-2, 13 Nov 2026; default off; QA's 17t live finding, item 4). "create corrective
+ * action form for <A>, Team Member Part Time" asks what happened (CA_ASKS_WHAT_HAPPENED, on); the answer "she skipped the
+ * closing checklist on her shift last night" left "Issue: team member part time" (the protected reader rebuilds it from
+ * the request turn; main d5e5ea22 already did). On, with CA_ASKS_WHAT_HAPPENED: when the manager's turns give an account
+ * and the card's Issue is only who and where, the Issue is the latest turn that gives one (`ai/ca-what-happened.ts`).
+ * Its own switch, so CA_ASKS_WHAT_HAPPENED's 17t behaviour is never rolled back with it. Off, as before.
+ */
+export function answerIsTheIssueEnabled(): boolean {
+  return envFlag("ANSWER_IS_THE_ISSUE_ENABLED");
+}
+
+/**
+ * ACCOUNT_CHANGE_REDERIVES_POLICY_ENABLED (Coding-2, 13 Nov 2026; default off; QA's Bubbles 17u live test). On a
+ * Corrective Action draft about lateness, "make it about her phone use instead, she was on her phone the whole shift"
+ * and "change the issue to not doing the 10-minute sanitation" rewrote the Observation, but Type of Offense, Policy
+ * Violated, Direct policy and the synced Action Plan stayed on the old topic (Attendance). On: when an edit replaces the
+ * whole account, the offense is read again from the new account and those lines and the plan follow it
+ * (`forms/chat-policy-change.ts` rederivePolicyFromAccount). A policy the manager names in that edit is kept, and a line
+ * or tick the manager wrote is never touched. Off, as before.
+ */
+export function accountChangeRederivesPolicyEnabled(): boolean {
+  return envFlag("ACCOUNT_CHANGE_REDERIVES_POLICY_ENABLED");
+}
+
+/**
  * COACHING_ASKS_WHAT_HAPPENED_ENABLED (Pau, 5 Nov 2026, sf-s27; default off).
  * "Create a coaching form." → "<name>" answered "Everything I need is here …
  * I have the employee and the store." with no incident and no draft. On: a
@@ -4725,6 +4758,28 @@ export function madeAboutRewriteFinishesEnabled(): boolean {
  */
 export function positionAnswerNotASentenceEnabled(): boolean {
   return envFlag("POSITION_ANSWER_NOT_A_SENTENCE_ENABLED");
+}
+
+/**
+ * MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED_ENABLED (coding 6; QA's live 17u test, Ask Bubbles production, 13 Nov 2026;
+ * default off). On a saved CA draft, "make it about her phone use instead, she was on her phone the whole shift" rewrote
+ * the observation by the old path's revision, then had nothing else to write (a CA has no Other topic, no date was said)
+ * and handed the turn on: the route ran the revision a second time, which found the new account already saved and
+ * replied "I haven't changed the Corrective Action Form … everything on it is as it was." With the flag on, a turn whose
+ * account was rewritten answers from the saved form ("Changed Observation of Offense …"). Off, as before.
+ */
+export function madeAboutEmptyPatchAnswersSavedEnabled(): boolean {
+  return envFlag("MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED_ENABLED");
+}
+
+/**
+ * ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED (coding 6; QA's live 17u test, item 5, 13 Nov 2026; default off). "add that she was
+ * on the phone for the entire shift" on a draft that already says it got the old path's generic "I haven't changed the
+ * Corrective Action Form … everything on it is as it was." With the flag on, an add whose words are all on the saved form
+ * and that changed nothing says the form already says that (`forms/add-already-on-form.ts`). Off, as before.
+ */
+export function addAlreadyOnFormSaysSoEnabled(): boolean {
+  return envFlag("ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED");
 }
 
 /**
