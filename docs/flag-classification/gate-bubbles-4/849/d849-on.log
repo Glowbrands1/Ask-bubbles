@@ -1,0 +1,27 @@
+
+ RUN  v4.1.11 /home/user/gate/r849
+
+stdout | src/app/api/chat/replay-pack/replay-pack-e2e.test.ts > the replay pack > nov12-17q-1-wrong-items-policy-page: (1) "she rang up the wrong items on 11/9": the Standards of Conduct Policy line carries its printed page (p.12) — OPEN in production (**Policy:** Standards of Conduct — ringing up a sale inaccurately, with no page)
+{"event":"forms.template_sync.completed","level":"info","created":["coaching","dpoa","policy-review","sdit-epp","tsd-epp","asd-sdit-epp","fttc-epp","dmit-epp-tsd","dmit-epp-dmit","follow-up-coaching","resignation-exit","demotion","position-transfer","prescreen-phone-interview","tanning-consultant-interview","management-interview-round-1","management-interview-round-2"],"revised":[],"renamed":[],"heldBack":[],"failed":[],"repaired":[],"retired":[]}
+
+stderr | src/app/api/chat/replay-pack/replay-pack-e2e.test.ts > the replay pack > nov12-17q-1-wrong-items-policy-page: (1) "she rang up the wrong items on 11/9": the Standards of Conduct Policy line carries its printed page (p.12) — OPEN in production (**Policy:** Standards of Conduct — ringing up a sale inaccurately, with no page)
+spend.guard: reader-aware usage read failed, counting answering calls only: fake-supabase: or(model.not.is.null) unsupported
+
+stderr | src/app/api/chat/replay-pack/replay-pack-e2e.test.ts > the replay pack > nov12-17q-1-wrong-items-policy-page: (1) "she rang up the wrong items on 11/9": the Standards of Conduct Policy line carries its printed page (p.12) — OPEN in production (**Policy:** Standards of Conduct — ringing up a sale inaccurately, with no page)
+spend.guard: read failed, question let through: fake-supabase: or(model.not.is.null) unsupported
+
+ ❯ |unit| src/app/api/chat/replay-pack/replay-pack-e2e.test.ts (1957 tests | 1 failed) 871479ms
+     × nov12-17q-1-wrong-items-policy-page: (1) "she rang up the wrong items on 11/9": the Standards of Conduct Policy line carries its printed page (p.12) — OPEN in production (**Policy:** Standards of Conduct — ringing up a sale inaccurately, with no page) 37ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| src/app/api/chat/replay-pack/replay-pack-e2e.test.ts > the replay pack > nov12-17q-1-wrong-items-policy-page: (1) "she rang up the wrong items on 11/9": the Standards of Conduct Policy line carries its printed page (p.12) — OPEN in production (**Policy:** Standards of Conduct — ringing up a sale inaccurately, with no page)
+Error: Expect test to fail
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1933 passed | 23 expected fail (1957)
+   Start at  05:12:12
+   Duration  877.26s (transform 5.17s, setup 0ms, import 5.63s, tests 871.48s, environment 0ms)
+

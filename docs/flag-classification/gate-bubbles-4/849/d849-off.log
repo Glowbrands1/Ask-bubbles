@@ -1,0 +1,9 @@
+
+ RUN  v4.1.11 /home/user/gate/r849
+
+
+ Test Files  1 passed (1)
+      Tests  1933 passed | 24 expected fail (1957)
+   Start at  04:57:29
+   Duration  882.54s (transform 5.27s, setup 0ms, import 5.84s, tests 876.56s, environment 0ms)
+
