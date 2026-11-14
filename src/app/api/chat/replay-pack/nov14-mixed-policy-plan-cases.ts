@@ -82,3 +82,38 @@ export const NOV14_MIXED_POLICY_PLAN_CASES: ReplayCase[] = [
     },
   },
 ];
+
+/*
+ * QA, 14 Nov 2026 (the chain on 17z, where OTHER_POLICY_AGREES is live): two described offenses and a cleaning duty
+ * beside them. Attendance, Standards of Conduct and Other are all ticked; Policy Violated lists all three; the plan is
+ * Pau's attendance plan plus the Standards of Conduct line, and Other adds no plan line (QA's F2: Other is never a policy
+ * name in the plan).
+ */
+const THREE = "create a ca for Nell Orrin, she was late on 11/3/26 and yelled at a customer, and didn't do the sanitation. verbal. no payroll deduct.";
+
+export const NOV14_MIXED_POLICY_PLAN_BESIDE_OTHER_CASES: ReplayCase[] = [
+  {
+    id: "nov14-mixed-policy-plan-two-offenses-and-cleaning",
+    title: `"${THREE}": Attendance, Standards of Conduct and Other ticked; Policy Violated lists all three; Pau's plan plus the conduct line`,
+    report: "QA, 14 Nov 2026: the two-offense chain beside a cleaning duty (OTHER_POLICY_AGREES on in 17z)",
+    status: { open: "with the chain off, Standards of Conduct is not kept beside lateness and the cleaning duty" },
+    fixFlags: [...KEEP_BOTH, FLAG],
+    async run(t) {
+      const { id } = await create(t, THREE, "Observed:\nNell Orrin was late on November 3, 2026, yelled at a customer, and did not do the sanitation.");
+      const offense = t.checked(id).offense_type ?? [];
+      const values = t.values(id);
+      const where = JSON.stringify({ offense, violated: values.policy_violated, plan: (values.action_plan ?? "").slice(-200) });
+      expect(offense.some((key) => /attendance|tardiness/.test(key)), `Attendance is not ticked ${where}`).toBe(true);
+      expect(offense, `Standards of Conduct is not ticked ${where}`).toContain("standards_of_conduct");
+      expect(offense, `Other is not ticked ${where}`).toContain("other");
+      expect(values.policy_violated ?? "", `Policy Violated dropped Attendance ${where}`).toMatch(/attendance/i);
+      expect(values.policy_violated ?? "", `Policy Violated dropped Standards of Conduct ${where}`).toMatch(/standards of conduct/i);
+      expect(values.policy_violated ?? "", `Policy Violated dropped Other ${where}`).toMatch(/\bOther\b/);
+      const plan = values.action_plan ?? "";
+      expect(plan, `the lateness plan is not kept as it is ${where}`).toMatch(LATENESS_PLAN);
+      expect(plan, `no line for the Standards of Conduct ${where}`).toContain(SOC_LINE);
+      expect(plan, `the plan names Other as a policy ${where}`).not.toMatch(/\bthe Other polic/i);
+      expect(plan.match(/Management will review/g)?.length ?? 0, `more than one review line ${where}`).toBe(1);
+    },
+  },
+];
