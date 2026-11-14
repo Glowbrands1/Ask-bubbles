@@ -1,0 +1,20 @@
+diff --git a/src/lib/forms/location-scope.ts b/src/lib/forms/location-scope.ts
+index 0fafe219..8345259d 100644
+--- a/src/lib/forms/location-scope.ts
++++ b/src/lib/forms/location-scope.ts
+@@ -1,4 +1,4 @@
+-import { antiLoopEnabled, globalStoreAskEnabled } from "@/lib/config/chat-quality-flags";
++import { antiLoopEnabled, fuzzyStoreAsksEnabled, globalStoreAskEnabled } from "@/lib/config/chat-quality-flags";
+ import { COMPANY_LOCATIONS, locationIdsInArea } from "@/lib/locations";
+ import type { AccessScope } from "@/types";
+ 
+@@ -330,7 +330,8 @@ function fromNamedLocations(
+    * not asked, and the draft stays ready. Off, that reading is still a
+    * confirmation, as before.
+    */
+-  if (globalStoreAskEnabled() && soft && inScope.length === 1) {
++  // FUZZY_STORE_ASKS_ENABLED (QA, 14 Nov 2026): not a close spelling more than one letter off; that is asked.
++  if (globalStoreAskEnabled() && soft && inScope.length === 1 && !(fuzzyStoreAsksEnabled() && reading.some((mention) => mention.loose))) {
+     return { resolution: "resolved", locationId: inScope[0]!, source: "manager" };
+   }
+   if (inScope.length >= 1) {

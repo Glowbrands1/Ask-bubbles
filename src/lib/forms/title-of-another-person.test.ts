@@ -63,6 +63,8 @@ describe("TITLE_ENDS_AT_LINE_ENABLED: a title line of capitalised words is one t
   });
   it("off: as before, \"Part Time\" beside \"Team Member\" reads as another person", () => {
     vi.stubEnv("TITLE_ENDS_AT_LINE_ENABLED", "");
+    // Gate-Bubbles-3 (#884): REQUEST_LINE_TITLE_KEPT keeps a longer company position whole, so this off-path pins it off too.
+    vi.stubEnv("REQUEST_LINE_TITLE_KEPT_ENABLED", "");
     expect(titleNamesAnotherPerson(S16, "Team Member", "Thessaly Varrow")).toBe(true);
   });
 });
