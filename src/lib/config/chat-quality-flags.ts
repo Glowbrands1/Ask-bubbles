@@ -2749,6 +2749,28 @@ export function requestLevelNotHistoryEnabled(): boolean {
 }
 
 /**
+ * LEVEL_ON_INCIDENT_DAY_ENABLED (port of Ask Sunny #970, QA's ruling F1 on Gate-Sunny-3's findings, 14 Nov 2026;
+ * default off). "verbal warning on 11/12/26 for <W>, she was late that day", filed the next day, was read as an earlier
+ * warning: its date was compared with today's, not the incident's. On: a level with its own date is history only when
+ * that date is before the incident's day — another date in the turn, or "today" / "yesterday"; with none, the level's
+ * day is the incident's. Off, as before.
+ */
+export function levelOnIncidentDayEnabled(): boolean {
+  return envFlag("LEVEL_ON_INCIDENT_DAY_ENABLED");
+}
+
+/**
+ * HISTORY_LEVEL_PRIOR_ROW_ENABLED (port of Ask Sunny #970, QA's ruling F2 on Gate-Sunny-3's findings, 14 Nov 2026;
+ * default off). "ca for <W>, verbal warning on 9/21. late again for 30 mins today" was answered "I've treated the
+ * earlier warning you mentioned as previous corrective action history", and no Prior actions row was listed for it.
+ * On: a level read as an earlier warning by its own date goes under Prior actions with that date, as "she had a verbal
+ * on 10/30" already does. Off, as before.
+ */
+export function historyLevelPriorRowEnabled(): boolean {
+  return envFlag("HISTORY_LEVEL_PRIOR_ROW_ENABLED");
+}
+
+/**
  * The exit form's shortcuts fill their fields: "drop wage" the minimum-wage
  * line, "deducted for store key" the key line, "called to quit" How Employee
  * Resigned, "immediate voluntary term" / "quit, no notice given" the

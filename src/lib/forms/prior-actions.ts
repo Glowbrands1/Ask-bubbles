@@ -1,4 +1,5 @@
 import {
+  historyLevelPriorRowEnabled,
   futurePriorRowDropEnabled,
   priorActionsNoSignedEnabled,
   priorActionsParseEnabled,
@@ -9,6 +10,7 @@ import {
 } from "@/lib/config/chat-quality-flags";
 
 import { statesFirstOccurrence } from "./corrective-action-intake";
+import { datedHistoryLevels } from "./warning-level";
 import { correctedDates, datesInText, managerDatesForDraft, priorSteps } from "./form-date-answer";
 import { incidentDates } from "./incident-dates";
 import { priorSentenceFixFor } from "./prior-sentence-scope";
@@ -317,7 +319,11 @@ function sentenceSteps(notes: string, today: string): { iso: string; named: stri
 function stepsSaid(notes: string, today: string): { iso: string; named: string; topic?: string; about?: string }[] {
   const steps = priorSteps(notes, today);
   const have = new Set(steps.map((step) => step.iso));
-  const told = priorStepSentenceEnabled() ? [...steps, ...sentenceSteps(notes, today).filter((step) => !have.has(step.iso) && have.add(step.iso))] : steps;
+  const sentences = priorStepSentenceEnabled() ? [...steps, ...sentenceSteps(notes, today).filter((step) => !have.has(step.iso) && have.add(step.iso))] : steps;
+  // HISTORY_LEVEL_PRIOR_ROW_ENABLED: "verbal warning on 9/21. late again … today" — the earlier warning, with its date.
+  const told = historyLevelPriorRowEnabled()
+    ? [...sentences, ...datedHistoryLevels(notes, today).filter((step) => !have.has(step.iso) && have.add(step.iso))]
+    : sentences;
   // PRIOR_STEP_DATE_LIST_ENABLED: "coaching on 9/8/2026, 9/15/2026 and 9/25/2026" is a row per date.
   if (!priorStepDateListEnabled()) return told;
   return [...told, ...dateListSteps(notes, today).dated.filter((step) => !have.has(step.iso) && have.add(step.iso))];

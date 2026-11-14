@@ -73,6 +73,15 @@ describe(`${FLAG} on`, () => {
 });
 
 describe(`${FLAG} off: as main`, () => {
+  /*
+   * Changed on purpose (port of Ask Sunny #970, 14 Nov 2026): "as main" also means HISTORY_LEVEL_PRIOR_ROW off. With it
+   * on, an earlier warning dated before the incident is a step on file and gets its row (QA's F2).
+   */
+  beforeEach(() => {
+    saved.set("HISTORY_LEVEL_PRIOR_ROW_ENABLED", process.env.HISTORY_LEVEL_PRIOR_ROW_ENABLED);
+    delete process.env.HISTORY_LEVEL_PRIOR_ROW_ENABLED;
+  });
+
   it.each([[P3], [MA]])("no row", (turns) => {
     expect(statedPriorActions(turns.join("\n\n"), TODAY)).toEqual([]);
   });
