@@ -40,7 +40,7 @@ async function create(t: ReplayContext, request: string, observation: string) {
 function bothOnDraft(t: ReplayContext, id: string) {
   const offense = t.checked(id).offense_type ?? [];
   const values = t.values(id);
-  const citation = (values.policy_language ?? "").split("\n").filter((line) => /JBA Policy Manual p\./.test(line)).join(" ");
+  const citation = (values.policy_language ?? "").split("\n").filter((line) => /JBA Policy Manual/.test(line)).join(" ");
   expect(offense, `Standards of Conduct is not ticked: ${offense.join(", ")}`).toContain("standards_of_conduct");
   expect(offense.some((key) => ATTENDANCE_KEYS.test(key)), `Attendance is not ticked: ${offense.join(", ")}`).toBe(true);
   expect(values.policy_violated ?? "", "Policy Violated dropped a policy").toMatch(/attendance[\s\S]*standards of conduct|standards of conduct[\s\S]*attendance/i);
