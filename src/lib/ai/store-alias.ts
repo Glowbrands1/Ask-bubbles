@@ -1,6 +1,7 @@
 import { placeStripWholePhraseOnlyEnabled, storeAliasEnabled } from "@/lib/config/chat-quality-flags";
 import { COMPANY_LOCATION_ENTRIES } from "@/config/company/locations";
 import { readLocationMentions } from "@/lib/forms/location-mention";
+import { reasonPlaceSpans } from "@/lib/stores/resolver";
 
 import type { AskRequest } from "./types";
 
@@ -245,6 +246,11 @@ export function rosterNames(text: string, placeAsked = false): string {
   // An address ("permanent address 123 Main St, Kearney, NE 68847") is the
   // address reader's, never a store.
   out = out.replace(ADDRESS, (found) => `\u0000${kept.push(found) - 1}\u0000`);
+  // REASON_PLACE_NEVER_STORE_ENABLED (QA's Bubbles 17z live bug): a reason's place ("because she was at kearney") is kept
+  // as typed — it is not the store, and the Issue keeps the manager's words ("kearney", never "Kearney NE").
+  for (const place of reasonPlaceSpans(out)) {
+    out = out.replace(place, (found) => `\u0000${kept.push(found) - 1}\u0000`);
+  }
   const whole = out.trim().replace(/[.!?]+$/, "").trim().toLowerCase();
   // A roster name typed alone under "Which store?" is the store answer too.
   if (placeAsked && /^\u0000\d+\u0000$/.test(whole) && READERS.places().some((place) => place.name === kept[Number(whole.slice(1, -1))])) {

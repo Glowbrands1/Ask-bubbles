@@ -1,5 +1,5 @@
 import { isJobTitleAbbreviation } from "@/config/company/job-titles";
-import { placeSpanGuardEnabled, reasonPlaceNotStoreEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { placeSpanGuardEnabled, reasonPlaceNeverStoreEnabled, reasonPlaceNotStoreEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { editDistance } from "@/lib/forms/employee-match";
 import { companyNameStops } from "@/lib/forms/name-stops";
 import { isTypedStopSpan } from "@/lib/forms/name-words";
@@ -582,8 +582,18 @@ function isDocumentPhrase(span: string): boolean {
 const REASON_PLACE =
   /(\b(?:because|bc|b\/c|cause|'cause|cuz|since)\s+(?:she|he|they|i|we|[a-z][a-z'’-]*)\s+(?:was|were|had\s+been)\s+)((?:at|in)\s+[^,.;:!?()\n]*?)(?=\s*(?:[,.;:!?()\n]|$)|\s+(?:and|but)\b)/gi;
 
-function withoutReasonPlaces(text: string): string {
+export function withoutReasonPlaces(text: string): string {
   return text.replace(REASON_PLACE, (_, lead: string, place: string) => `${lead}${" ".repeat(place.length)}`);
+}
+
+/**
+ * REASON_PLACE_NEVER_STORE_ENABLED (QA's Bubbles 17z live bug, 14 Nov 2026): the places said inside a reason
+ * ("because she was at kearney" → "at kearney"), as typed, for the readers that would otherwise take them as the store
+ * (the AI reader's location, the store-alias pass). Empty unless REASON_PLACE_NOT_STORE and this flag are on.
+ */
+export function reasonPlaceSpans(text: string): string[] {
+  if (!reasonPlaceNotStoreEnabled() || !reasonPlaceNeverStoreEnabled()) return [];
+  return [...text.matchAll(REASON_PLACE)].map((match) => match[2]!);
 }
 
 /**
