@@ -1001,6 +1001,8 @@ export function formsGuideEnabled(): boolean {
 export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 2: OTHER_POLICY_AGREES and OTHER_NOT_A_POLICY_NAME (ported from the sibling app at QA's direction, 14 Nov 2026; default off).
   "OTHER_POLICY_AGREES_ENABLED",
+  // coding 2: OTHER_BESIDE_NEEDS_LATENESS (parity with the sibling app's #971, QA 14 Nov 2026; default off).
+  "OTHER_BESIDE_NEEDS_LATENESS_ENABLED",
   "OTHER_NOT_A_POLICY_NAME_ENABLED",
   // coding 2: the sibling app's "what happened" check (Pau's direction, 13 Nov 2026; default off).
   "CA_ASKS_WHAT_HAPPENED_ENABLED",
@@ -5903,4 +5905,17 @@ export function cleaningPolicyIsCareAndCleaningEnabled(): boolean {
  */
 export function priorActionsUnsaidBlankEnabled(): boolean {
   return envFlag("PRIOR_ACTIONS_UNSAID_BLANK_ENABLED");
+}
+
+/**
+ * OTHER_BESIDE_NEEDS_LATENESS_ENABLED (Coding-2, 14 Nov 2026; default off; parity with the sibling app's #971, QA's
+ * ruling on Gate-Sunny-3's finding there). With OTHER_POLICY_AGREES on, a cleaning duty beside a second described
+ * offense ticks both (ruling (b)). There, "Write me a CA for <R> for failing to complete opening duties. <R> did not
+ * complete daily cleaning duties." became Attendance and Other: the opening duties read as attendance. On: duties and
+ * checklists ("opening duties", "closing checklist", "side work") are the cleaning duty's own kind of work, never a
+ * second offense, and attendance beside a cleaning duty needs a word for lateness or an absence
+ * (`forms/ca-policy.ts` besideAttendanceKeys). Off, as before.
+ */
+export function otherBesideNeedsLatenessEnabled(): boolean {
+  return envFlag("OTHER_BESIDE_NEEDS_LATENESS_ENABLED");
 }

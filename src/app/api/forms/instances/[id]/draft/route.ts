@@ -214,12 +214,12 @@ import {
   groundMissedEvent,
   MISSED_EVENT_OFFENSE,
   missedEventPhrase,
-  describedAttendanceKeys,
   readCaPolicy,
   statedOffenseKeys,
   withConductOffense,
   withStatedOffense,
   withoutCleaningDuty,
+  besideAttendanceKeys,
 } from "@/lib/forms/ca-policy";
 import { CA_SALES_POLICY_RULE, withSalesOffense } from "@/lib/forms/ca-sales-policy";
 import { ATTENDANCE_POLICY, CA_REVISION_7_OFFENSE_RULE, offeredOffenseKey, withOfferedOffense } from "@/lib/forms/offense-keys";
@@ -891,7 +891,8 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
     const besideOther = ((): string | null => {
       const rest = offersConductPolicy ? withoutCleaningDuty(policyNotes) : null;
       if (rest === null) return null;
-      const described = describedAttendanceKeys(rest) !== null || (manual.ok && describedManualSection({ text: rest, chunks: manual.chunks }) !== null);
+      // OTHER_BESIDE_NEEDS_LATENESS_ENABLED: attendance beside the cleaning duty needs a lateness or absence word (`besideAttendanceKeys`).
+      const described = besideAttendanceKeys(rest) !== null || (manual.ok && describedManualSection({ text: rest, chunks: manual.chunks }) !== null);
       return described ? rest : null;
     })();
     const policyText = besideOther ?? policyNotes;
@@ -2026,7 +2027,7 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
         (policySection ? [policySection.offenseKey] : null))
       : null;
     // OTHER_POLICY_AGREES_ENABLED (QA's ruling (b)): the cleaning duty beside the described offense is ticked Other too.
-    const besideKeys = besideOther !== null ? (ownStatedKeys ?? describedAttendanceKeys(besideOther)) : null;
+    const besideKeys = besideOther !== null ? (ownStatedKeys ?? besideAttendanceKeys(besideOther)) : null;
     const statedKeys = besideKeys ? [...besideKeys.filter((key) => key !== "other"), "other"] : ownStatedKeys;
     const statedOffense = statedKeys
       ? withStatedOffense({
