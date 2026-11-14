@@ -999,6 +999,9 @@ export function formsGuideEnabled(): boolean {
 }
 
 export const CHAT_QUALITY_FLAG_NAMES = [
+  // coding 2: OTHER_POLICY_AGREES and OTHER_NOT_A_POLICY_NAME (ported from the sibling app at QA's direction, 14 Nov 2026; default off).
+  "OTHER_POLICY_AGREES_ENABLED",
+  "OTHER_NOT_A_POLICY_NAME_ENABLED",
   // coding 2: the sibling app's "what happened" check (Pau's direction, 13 Nov 2026; default off).
   "CA_ASKS_WHAT_HAPPENED_ENABLED",
   "WHAT_HAPPENED_NO_CREATE_ENABLED",
@@ -5739,4 +5742,24 @@ export function fuzzyStoreAsksEnabled(): boolean {
  */
 export function requestLineTitleKeptEnabled(): boolean {
   return envFlag("REQUEST_LINE_TITLE_KEPT_ENABLED");
+}
+
+/**
+ * OTHER_POLICY_AGREES_ENABLED (Coding-2, 14 Nov 2026; default off; ported from the sibling app, QA's ruling on its
+ * sanitation report). Cleaning or sanitation left undone is Other (Pau's rule): the cleaning reader reads the sanitation
+ * family ("sanitaion", "sanitation"), the draft ticks Other, the card cites no manual section for it, and with only Other
+ * ticked Direct policy is left blank rather than filled from whatever passage scored best. A manager naming Care and
+ * Cleaning keeps that policy. Off, as before.
+ */
+export function otherPolicyAgreesEnabled(): boolean {
+  return envFlag("OTHER_POLICY_AGREES_ENABLED");
+}
+
+/**
+ * OTHER_NOT_A_POLICY_NAME_ENABLED (Coding-2, 14 Nov 2026; default off; ported from the sibling app). "Other" is a Type
+ * of Offense box, never a policy name: a plan built from Policy Violated "Other" says "review the applicable company
+ * policy", never "review the Other policy" (`forms/ca-action-plan.ts` policyNamesFromViolated). Off, as before.
+ */
+export function otherNotAPolicyNameEnabled(): boolean {
+  return envFlag("OTHER_NOT_A_POLICY_NAME_ENABLED");
 }
