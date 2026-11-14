@@ -143,6 +143,14 @@ const PROTECTED = [
  * Termination plan's closing is the termination sentence (`planClosing`, also
  * in `refreshedActionPlan`). Off, both are exactly as before; instances.ts is
  * not touched.
+ * The user (Pau) approved, under Pau's standing approval via QA, 11 Nov 2026, in
+ * src/lib/ai/form-proposal.ts, exactly: the import
+ * `import { cardAccountText } from "@/lib/forms/account-spelling";` and the
+ * card's Issue line wrapped as
+ * `stated.push(`**Issue:** ${cardAccountText(proposal.issue, proposal.employeeName)}`)`
+ * with its comment (port from Ask Sunny b206494f: the card's account keeps the
+ * manager's words with obvious slips mended). Behind ACCOUNT_TYPOS_FIXED_ENABLED,
+ * default off; off, cardAccountText returns its input and the card is as before.
  */
 const APPROVED_PROTECTED_EDITS = [
   ":(exclude)src/lib/forms/required-closing.ts",
