@@ -460,6 +460,8 @@ describe(`${FLAG}: "i dont know the amount" is no position`, () => {
 describe(`${FLAG} off: as main, the answer is saved as the job title`, () => {
   it.each(Object.keys(CHATS) as (keyof typeof CHATS)[])("%s", async (casing) => {
     vi.stubEnv(FLAG, "");
+    // POSITION_ANSWER_NOT_A_SENTENCE (#889) also stops this answer being a title; pinned off for this flag's off path.
+    vi.stubEnv("POSITION_ANSWER_NOT_A_SENTENCE_ENABLED", "");
     const { seen, jobTitle } = await roles(CHATS[casing]);
     expect(seen).toContain(LIVE_ROLE[casing]);
     expect(jobTitle).toBe(LIVE_ROLE[casing]);
