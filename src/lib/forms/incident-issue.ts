@@ -15,7 +15,7 @@ import {
 import { COMPANY_JOB_TITLES } from "@/config/company/job-titles";
 import { isPolicyCorrection } from "@/lib/ai/policy-correction-turn";
 import { businessToday } from "@/lib/business-date";
-import { factOfClause } from "./account-facts";
+import { factOfClause, hedgedAccount, repeatsAFact } from "./account-facts";
 import { factContext, notAFact } from "./card-checked-against-words";
 import { extractEmployeeNames, samePerson } from "./proposal";
 
@@ -371,10 +371,11 @@ function issueAcrossTurns(read: string | null, rawSaid: string, employeeName: st
   if (accounts.length === 0) return read;
   const facts: string[] = [];
   for (const account of accounts) {
+    if (hedgedAccount(account)) continue;
     for (const part of account.split(CLAUSE_SPLIT)) {
       const clause = factOfClause(part, factContext({ turns: [], roster: [] }));
       if (clause === null || notAFact(clause, { turns: [], roster: [] })) continue;
-      if (!facts.some((fact) => fact.toLowerCase() === clause.toLowerCase())) facts.push(clause);
+      if (!repeatsAFact(clause, facts)) facts.push(clause);
     }
   }
   return facts.length > 0 ? facts.join("; ") : read;

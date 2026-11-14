@@ -92,6 +92,22 @@ export function withoutLeads(clause: string): string {
   return text;
 }
 
+/** The whole sentence is hedged ("not sure but she …", "i think she …"): never established, so no part of it is a fact. */
+export function hedgedAccount(sentence: string): boolean {
+  const text = withoutLeads(sentence.trim());
+  return HEDGE_LEAD.test(text) || HEDGED_VERB.test(text);
+}
+
+/** A fact that says nothing an earlier one does not: every word of it is in one of them ("she was late" after "she was late on 11/3/26"). */
+export function repeatsAFact(fact: string, earlier: readonly string[]): boolean {
+  const words = (text: string) => text.toLowerCase().split(/[^\p{L}\p{N}'’]+/u).filter((word) => word.length > 0);
+  const mine = words(fact);
+  return earlier.some((kept) => {
+    const have = new Set(words(kept));
+    return mine.every((word) => have.has(word));
+  });
+}
+
 /** The fact the clause states, cleaned of level, hedge, title and place; null when it states none. */
 export function factOfClause(clause: string, context: FactContext): string | null {
   let text = withoutLeads(clause.trim().replace(/[.!]+$/, ""));
