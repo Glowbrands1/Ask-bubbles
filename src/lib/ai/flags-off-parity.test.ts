@@ -168,6 +168,9 @@ const UI_PATHS = ["src/app/**/*.tsx", "src/components/**", "src/features/**/*.ts
  * off, it renders as before for every role.
  */
 const ALLOWED_UI = [
+  // WOVEN_DOCUMENT_KEEP_OUT_ENABLED (QA, 10 Nov 2026): the Content tab's per-document "Keep out" button, rendered only
+  // when the content route says the flag is on; off, the tab renders exactly as before.
+  "src/features/admin/woven-knowledge/woven-knowledge-content.tsx",
   // NEXT_PUBLIC_REPLY_QUOTE_LINES_ENABLED (#839, QA's Bubbles 17p live check; QA round 17r, 13 Nov 2026): a run of "> "
   // lines in a reply is shown as a quote, a line each. Off, the renderer is unchanged.
   "src/components/rich-text.tsx",
