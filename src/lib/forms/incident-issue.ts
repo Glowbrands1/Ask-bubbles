@@ -1,5 +1,6 @@
 import {
   caReasonDueToEnabled,
+  cardAccountDropsNonFactsEnabled,
   complaintAccountEnabled,
   decimalNotSentenceEndEnabled,
   futureIncidentDateAskEnabled,
@@ -14,6 +15,8 @@ import {
 import { COMPANY_JOB_TITLES } from "@/config/company/job-titles";
 import { isPolicyCorrection } from "@/lib/ai/policy-correction-turn";
 import { businessToday } from "@/lib/business-date";
+import { notAFact } from "./card-checked-against-words";
+import { extractEmployeeNames, samePerson } from "./proposal";
 
 import { withoutLevelAndStepClauses } from "./account-clauses";
 import { isSalesPolicyReading, observationAccount, readCaPolicy } from "./ca-policy";
@@ -333,6 +336,50 @@ function withoutPolicyCorrections(text: string): string {
 }
 
 export function correctiveActionIssue(rawSaid: string, employeeName: string | null): string | null {
+  const read = correctiveActionIssueRead(rawSaid, employeeName);
+  return cardAccountDropsNonFactsEnabled() ? issueAcrossTurns(read, rawSaid, employeeName) : read;
+}
+
+/*
+ * ============================================================================
+ * THE ISSUE IS EVERY FACT THE ACCOUNT TURNS GAVE (CARD_ACCOUNT_DROPS_NON_FACTS_ENABLED)
+ * ============================================================================
+ *
+ * QA's Bubbles 17w live chat (14 Nov 2026): "<A> was late on 11/3/26" (no card), "she yelled at a customer and she maybe
+ * forgot" (no card), "corrective action form" (the first card). The Issue was the latest account turn whole: "she yelled
+ * at a customer and she maybe forgot" — the lateness dropped, the hedge kept. When the request turn gives no account of
+ * its own, the account turns just before it (walking back while each gives one, never past a turn that names somebody
+ * else) give their fact clauses, oldest first, joined with "; ". A hedge ("she maybe forgot"), a level, history or a
+ * payment is no fact (`notAFact`, the card check's own rules). Nothing read: the Issue as before.
+ */
+const CLAUSE_SPLIT = /\s+(?:and|but)\s+(?:then\s+)?(?=(?:she|he|they)\b)|,\s+(?=(?:she|he|they)\b)|(?<=[.!])\s+/i;
+
+function issueAcrossTurns(read: string | null, rawSaid: string, employeeName: string | null): string | null {
+  const turns = turnsOf(rawSaid);
+  if (turns.length < 2 || !employeeName) return read;
+  const own = (turn: string) => accountOnly(accountIssue(turn), employeeName);
+  if (own(turns.at(-1)!) !== null || issueFromRequest(turns.at(-1)!, employeeName) !== null) return read;
+  const accounts: string[] = [];
+  for (let index = turns.length - 2; index >= 0; index -= 1) {
+    const turn = turns[index]!;
+    if (extractEmployeeNames(turn).some((name) => !samePerson(name, employeeName))) break;
+    const account = own(turn);
+    if (account === null) break;
+    accounts.unshift(account);
+  }
+  if (accounts.length === 0) return read;
+  const facts: string[] = [];
+  for (const account of accounts) {
+    for (const part of account.split(CLAUSE_SPLIT)) {
+      const clause = part.trim().replace(/[.!]+$/, "");
+      if (clause === "" || notAFact(clause, { turns: [], roster: [] })) continue;
+      if (!facts.some((fact) => fact.toLowerCase() === clause.toLowerCase())) facts.push(clause);
+    }
+  }
+  return facts.length > 0 ? facts.join("; ") : read;
+}
+
+function correctiveActionIssueRead(rawSaid: string, employeeName: string | null): string | null {
   const read = issueAsRead(futureIncidentDateAskEnabled() ? withoutBareDateAnswers(rawSaid) : rawSaid, employeeName);
   if (!caReasonDueToEnabled()) return read;
   /*
