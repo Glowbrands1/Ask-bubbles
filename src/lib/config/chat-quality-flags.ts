@@ -1435,6 +1435,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 6: PRIOR_ACTIONS_NO_COMMA (October rebuild 4, #187 rebuilt on main; default off).
   "PRIOR_ACTIONS_NO_COMMA_ENABLED",
   "STORE_ALIAS_ENABLED",
+  // coding 4: ISSUE_KEEPS_WORK_AREA (QA, 13 Nov 2026; default off).
+  "ISSUE_KEEPS_WORK_AREA_ENABLED",
   // coding 4: POLICY_NOT_FOUND_PLAIN_WORDING (QA, 13 Nov 2026; default off).
   "POLICY_NOT_FOUND_PLAIN_WORDING_ENABLED",
   // coding 4: REASON_PLACE_NOT_STORE (Gate-Bubbles-3 on #869, 13 Nov 2026; default off).
@@ -5712,6 +5714,17 @@ export function headingDistinctiveWordsEnabled(): boolean {
  */
 export function placeStripWholePhraseOnlyEnabled(): boolean {
   return envFlag("PLACE_STRIP_WHOLE_PHRASE_ONLY_ENABLED");
+}
+
+/**
+ * ISSUE_KEEPS_WORK_AREA (QA, 13 Nov 2026; default off): "a ca for <A> at the front desk, she was rude to a guest" — the
+ * request names who and where, and the card's Issue was only the account ("she was rude to a guest"): the work area
+ * was lost. With the flag, a work area said with the person ("front desk", "register", "back room"; `forms/work-area.ts`)
+ * stays on the Issue: "she was rude to a guest at the front desk". A store is still left off. See
+ * `forms/incident-issue.ts`. Off, as before.
+ */
+export function issueKeepsWorkAreaEnabled(): boolean {
+  return envFlag("ISSUE_KEEPS_WORK_AREA_ENABLED");
 }
 
 /**
