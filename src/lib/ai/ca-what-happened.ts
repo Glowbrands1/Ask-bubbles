@@ -1,5 +1,5 @@
 import { COMPANY_JOB_TITLES } from "@/config/company/job-titles";
-import { caAsksWhatHappenedEnabled } from "@/lib/config/chat-quality-flags";
+import { answerIsTheIssueEnabled, caAsksWhatHappenedEnabled } from "@/lib/config/chat-quality-flags";
 import {
   NO_INCIDENT_NOTE,
   answeredWhatHappened,
@@ -146,7 +146,8 @@ export function askCaWhatHappened(response: AskResponse, question: string, histo
   const turns = turnsForThisForm(history, proposal.templateKey);
   const said = [...turns.filter((turn) => turn.role === "user").map((turn) => turn.content), question].map(withoutStateLead).join("\n");
   const ignore = [name, proposal.employeeRole ?? "", proposal.locationName ?? ""];
-  if (hasAccount(said, name, ignore)) return response;
+  // The manager gave an account: never asked. A card whose Issue is still only who and where takes the account.
+  if (hasAccount(said, name, ignore)) return withAccountAsIssue(response, proposal, turns, question, name, ignore);
   if (answeredWhatHappened([...history, { role: "user", content: question }])) return response;
   // The card's Issue, when it is only who and where ("Team Member Part Time"), is no account: it goes, with its line,
   // also when the card already asks (else the Issue line reads as the account and the ask is taken back).
@@ -164,6 +165,72 @@ export function askCaWhatHappened(response: AskResponse, question: string, histo
 }
 
 /** "**Issue:** Team Member Part Time · **Store:** …" → "**Store:** …"; a line that is only the Issue goes. */
+/*
+ * THE ANSWER IS THE ISSUE (QA's 17t live finding, 13 Nov 2026, item 4): "create corrective action form for <A>, Team
+ * Member Part Time" asked what happened; the answer "she skipped the closing checklist on her shift last night" left
+ * "Issue: Team Member Part Time" — the protected reader rebuilds the Issue from the request turn. A job title (or the
+ * store, or the name) is never the Issue: when the card's Issue is only who and where and the manager's turns give an
+ * account, the Issue is the latest turn that gives one, as the manager wrote it. Behind ANSWER_IS_THE_ISSUE_ENABLED
+ * (QA: its own switch, default off). Off, as before.
+ */
+function withAccountAsIssue(
+  response: AskResponse,
+  proposal: NonNullable<AskResponse["formProposal"]>,
+  turns: readonly Turn[],
+  question: string,
+  name: string,
+  ignore: readonly string[],
+): AskResponse {
+  if (!answerIsTheIssueEnabled()) return response;
+  const issue = proposal.issue?.trim() ?? "";
+  if (issue === "" || !onlyWhoAndWhere(issue, ignore)) return response;
+  const said = [question, ...turns.filter((turn) => turn.role === "user").map((turn) => turn.content).reverse()].map(withoutStateLead);
+  const turn = said.find((text) => !/\?\s*$/.test(text.trim()) && hasAccount(text, name, ignore));
+  const account = turn ? accountClauses(turn, name, ignore) : "";
+  if (!account) return response;
+  const content = response.content
+    .split("\n")
+    .map((line) => line.replace(/^(\s*\*\*Issue:\*\*[ \t]*)[^\n·]*?([ \t]+·[ \t]+|[ \t]*$)/, (_all, lead: string, tail: string) => `${lead}${account}${tail}`))
+    .join("\n");
+  return { ...response, content, formProposal: { ...proposal, issue: account } };
+}
+
+/*
+ * THE ACCOUNT, NOT THE SENTENCE (Gate-Bubbles B866, 13 Nov 2026): "ca for Rowan Kestrel, Team Member Part Time, she was
+ * late on 11/2" made the whole request sentence the Issue. Of the turn, only its account clauses are kept: each clause
+ * without the request's lead ("ca for", "create a CA for"), an edit's lead ("make it about", "change observation of
+ * offense to:"), the employee's name and a leading "for"; a clause that is then only who and where is dropped.
+ * "create a CA for general manager, rowan kestrel for violating the standards of conduct" → "violating the standards of
+ * conduct".
+ */
+const REQUEST_LEAD = /^.*?\b(?:corrective\s+action(?:\s+form)?|ca|c\/a|write[- ]?up|warning|dpoa)\s+(?:for|to|on)\s+/i;
+const EDIT_LEAD =
+  /^(?:(?:ok(?:ay)?|please|and)[,\s]+)*(?:make|change|set|update)\s+(?:it|the\s+(?:issue|observation(?:\s+of\s+offense)?|what\s+happened)|issue|observation(?:\s+of\s+offense)?|what\s+happened)\s*(?:to\s+be|to|about|for)?\s*:?\s*/i;
+
+function accountClauses(text: string, name: string, ignore: readonly string[]): string {
+  const own = new Set(name.toLowerCase().split(/\s+/).filter(Boolean));
+  const kept: string[] = [];
+  for (const raw of text.split(/[\n.;,]+/)) {
+    const words = raw.trim().replace(EDIT_LEAD, "").replace(REQUEST_LEAD, "").split(/\s+/).filter(Boolean);
+    while (words.length > 0 && own.has(words[0]!.toLowerCase().replace(/[^\p{L}'’-]/gu, ""))) words.shift();
+    const clause = words.join(" ").replace(/^for\s+/i, "").trim();
+    if (!clause || onlyWhoAndWhere(clause, ignore)) continue;
+    if (hasAccount(clause, name, ignore)) kept.push(clause);
+  }
+  return kept.join(", ").replace(/[.!]+$/, "");
+}
+
+/*
+ * ONLY WHO AND WHERE: nothing is left of the Issue once the company's job titles, this roster's positions, the
+ * employee's name and the store are taken out ("Team Member Part Time", "Rowan Kestrel, Assistant General Manager").
+ * Anything else the manager wrote ("performance for october", "do not terminate yet") is theirs and stays (the whole-pack
+ * ON run, 13 Nov 2026: a broader "not an account" test replaced those with the request line).
+ */
+function onlyWhoAndWhere(issue: string, ignore: readonly string[]): boolean {
+  const rest = withoutTitles(issue, ignore).replace(/\b(?:the|a|an|at|for|and|of|from|in)\b/gi, " ").replace(/[^\p{L}]+/gu, " ").trim();
+  return rest === "";
+}
+
 function withoutIssueLine(content: string): string {
   return content
     .split("\n")

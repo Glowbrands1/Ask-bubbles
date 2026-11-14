@@ -55,6 +55,7 @@ import {
   cardPlanMatchesCreateEnabled,
   answerTurnLevelEnabled,
   cardCheckedAgainstWordsEnabled,
+  addAlreadyOnFormSaysSoEnabled,
   terminationCardTidyEnabled,
   humanRepliesEnabled,
   closeSpellingMatchEnabled,
@@ -862,7 +863,7 @@ async function postChat(request: Request) {
         !sameCopy && !correction && !askedQuestion && !policyChange && !redraft && parsed.activeFormInstanceId
           ? await separateFormRequested(parsed.question)
           : false;
-      const askedRevisionRead =
+      const askedRevisionFirst =
         !sameCopy && !correction && !askedQuestion && !policyChange && !redraft && !separateDocument && parsed.activeFormInstanceId
           ? await (await import("@/lib/forms/chat-revision")).reviseActiveForm({
               request,
@@ -872,6 +873,14 @@ async function postChat(request: Request) {
               today: parsed.context.todayIso,
             })
           : null;
+      /*
+       * ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED (QA's live 17u test, item 5, 13 Nov 2026): an add the saved form already holds,
+       * which the revision answered with its generic "I haven't changed …", says the form already says that.
+       */
+      const askedRevisionRead =
+        askedRevisionFirst && parsed.activeFormInstanceId && addAlreadyOnFormSaysSoEnabled()
+          ? ((await (await import("@/lib/forms/add-already-on-form")).alreadyOnFormReply(request, parsed.activeFormInstanceId, parsed.question, askedRevisionFirst)) ?? askedRevisionFirst)
+          : askedRevisionFirst;
       /*
        * PASTED_TEMPLATE_FIELDS_TO_OPEN_DRAFT_ENABLED (ported from the sibling app; its round-25 live test of sf-s21): a
        * pasted labelled template the revision changed nothing for ("I haven't changed the … — everything on it is as

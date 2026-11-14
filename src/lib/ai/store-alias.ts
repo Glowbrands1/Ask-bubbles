@@ -1,4 +1,4 @@
-import { storeAliasEnabled } from "@/lib/config/chat-quality-flags";
+import { placeStripWholePhraseOnlyEnabled, storeAliasEnabled } from "@/lib/config/chat-quality-flags";
 import { COMPANY_LOCATION_ENTRIES } from "@/config/company/locations";
 import { readLocationMentions } from "@/lib/forms/location-mention";
 
@@ -78,6 +78,36 @@ const ONE_WORD_CUE_BEFORE = /\b(?:at|our|location|salon|store)\s+(?:the\s+)?$|\b
  */
 const RULED_OUT = /\b(?:not|never|no|isn['’]?t|wasn['’]?t|aren['’]?t|weren['’]?t|doesn['’]?t|didn['’]?t|except|without)\b[^,.;!?\n]{0,30}$/i;
 const CUE_AFTER = /^\s*(?:location|salon|store)\b/i;
+/*
+ * PLACE_STRIP_WHOLE_PHRASE_ONLY_ENABLED (QA, 13 Nov 2026; found by the sibling app's gate, checked here): "she was late
+ * because she was at kearney high" was written "… at Kearney NE high", a store inside a longer name. A store is NOT
+ * written only when the next word is on this short list of words that continue a proper noun. Anything else — a date,
+ * a dash, a weekday, a capitalised word ("at Kearney Today", "at Kearney NCNS"), the rest of the account — is read as
+ * before (Gate-Bubbles-3, #869; QA's ruling on Gate-Sunny's probes). Off, as before.
+ */
+const CONTINUES_NAME =
+  /^(?:high|middle|elementary|school|central|west|east|north|south|state|university|college|mall|road|street|st|ave|construction|park|hospital)$/i;
+
+/** Street words that belong to a store's own label ("West Dodge St", "… Rd"). */
+const STREET_WORDS = new Set(["st", "street", "rd", "road", "ave", "avenue", "pkwy", "parkway", "blvd", "boulevard"]);
+
+/**
+ * Whether the text after a store continues a longer proper noun ("high", "west", "mall"), so the store is not one.
+ * Not when the word is part of the store's own label ("west dodge st": the store's street; "West" of "West Dodge"),
+ * nor when it is a compass word with "of" after it ("at kearney west of the register" — a direction) (Gate-Bubbles-3,
+ * #869). Any other block-list word before "of" stays a longer name ("kearney high of all places"; QA, blocking).
+ */
+function continuesProperNoun(after: string, storeName: string): boolean {
+  const match = /^\s+([A-Za-z][A-Za-z'’-]*)(?:\s+([A-Za-z]+))?/.exec(after);
+  const word = match?.[1]?.toLowerCase();
+  if (!word || !CONTINUES_NAME.test(word)) return false;
+  // Only a compass word before "of" is a direction (QA, blocking): "kearney high of all places" is a longer name.
+  if (/^(?:west|east|north|south)$/.test(word) && match?.[2]?.toLowerCase() === "of") return false;
+  const label = new Set(storeName.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean));
+  if (label.has(word)) return false;
+  if (STREET_WORDS.has(word) && /\(/.test(storeName)) return false;
+  return true;
+}
 const SUFFIXES: readonly [string, string][] = [
   ["street", "st"],
   ["road", "rd"],
@@ -231,6 +261,10 @@ export function rosterNames(text: string, placeAsked = false): string {
       if (RULED_OUT.test(before)) return found;
       const cue = alias.phrase.includes(" ") ? CUE_BEFORE : ONE_WORD_CUE_BEFORE;
       if (alias.cued && !cue.test(before) && !CUE_AFTER.test(all.slice(offset + found.length))) return found;
+      // Kept as typed, and held back so no shorter alias inside it ("kearney" in "kearney ne Mall") is written either.
+      if (placeStripWholePhraseOnlyEnabled() && continuesProperNoun(all.slice(offset + found.length), alias.name)) {
+        return `\u0000${kept.push(found) - 1}\u0000`;
+      }
       return `\u0000${kept.push(READERS.written(alias.name)) - 1}\u0000`;
     });
   }
