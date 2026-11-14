@@ -21,6 +21,9 @@ const REASONS = [
   "she was late because her car broke down in kearney",
   "she left early because her son got hurt at kearney",
   "she was late bc her mom was stuck in kearney",
+  // Ported from the sibling gate's probe of its #989 (14 Nov 2026).
+  "she was late because she was stuck in kearney",
+  "she left early because she had to be in kearney",
 ];
 
 describe("REASON_SUBJECT_ANY_NOUN_PHRASE", () => {
@@ -46,5 +49,7 @@ describe("REASON_SUBJECT_ANY_NOUN_PHRASE", () => {
     ]) {
       expect(ids(said), said).toEqual(["loc-66"]);
     }
+    // "had to be" outside a "because" reason is still read (twice, as on main: "at kearney" and "kearney").
+    expect(new Set(ids("she had to be at kearney and was late"))).toEqual(new Set(["loc-66"]));
   });
 });

@@ -29,6 +29,9 @@ async function cardFor(t: ReplayContext, turn: string) {
 const OPEN: readonly { key: string; turn: string }[] = [
   { key: "kid-sick", turn: "create a ca for tavia quellan, she left early because her kid was sick in kearney" },
   { key: "car-broke-down", turn: "create a ca for tavia quellan, she was late because her car broke down in kearney" },
+  // Ported from the sibling gate's probe of its #989 (14 Nov 2026): a reason with a verb before the place.
+  { key: "stuck-in", turn: "write a CA for tavia quellan, she was late because she was stuck in kearney" },
+  { key: "had-to-be-in", turn: "write a CA for tavia quellan, she left early because she had to be in kearney" },
 ];
 
 export const NOV14_REASON_SUBJECT_ANY_NOUN_PHRASE_CASES: ReplayCase[] = OPEN.map((wording) => ({
@@ -47,6 +50,8 @@ export const NOV14_REASON_SUBJECT_ANY_NOUN_PHRASE_CASES: ReplayCase[] = OPEN.map
 const STILL_READ: readonly { key: string; turn: string }[] = [
   { key: "at-kearney-then-reason", turn: "create a ca for tavia quellan at kearney, she left early because her kid was sick" },
   { key: "late-at-kearney-reason", turn: "create a ca for tavia quellan, she was written up because she was late at kearney" },
+  // "had to be" is a reason verb only in a "because" reason.
+  { key: "had-to-be-at-kearney", turn: "create a ca for tavia quellan, she had to be at kearney by 9 and was late" },
 ];
 
 export const NOV14_REASON_SUBJECT_ANY_NOUN_PHRASE_GUARDS: ReplayCase[] = STILL_READ.map((wording) => ({
