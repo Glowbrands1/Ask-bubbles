@@ -1447,6 +1447,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ISSUE_KEEPS_WORK_AREA_ENABLED",
   // coding 4: RELATIVE_DAY_PART_WORDS (ported from the sibling app, QA 13 Nov 2026; default off).
   "RELATIVE_DAY_PART_WORDS_ENABLED",
+  // coding 4: PRIOR_ACTIONS_UNSAID_BLANK (QA's Bubbles 17x live test, 14 Nov 2026; default off).
+  "PRIOR_ACTIONS_UNSAID_BLANK_ENABLED",
   // coding 4: HEADING_DISTINCTIVE_WORDS (QA, 13 Nov 2026; default off).
   "HEADING_DISTINCTIVE_WORDS_ENABLED",
   // coding 4: PLACE_STRIP_WHOLE_PHRASE_ONLY (QA, 13 Nov 2026; default off).
@@ -5835,4 +5837,14 @@ export function relativeDayPartWordsEnabled(): boolean {
  */
 export function cleaningPolicyIsCareAndCleaningEnabled(): boolean {
   return envFlag("CLEANING_POLICY_IS_CARE_AND_CLEANING_ENABLED");
+}
+
+/**
+ * PRIOR_ACTIONS_UNSAID_BLANK (QA's Bubbles 17x live test, 14 Nov 2026; default off): at Create, prior_actions was
+ * AI-filled "None — first occurrence" though the manager said nothing about history and the card said it would not
+ * guess. With the flag a "None" line is kept only where the manager said this is the first occurrence; otherwise the
+ * field stays blank. See `forms/prior-actions.ts` groundPriorActions. Off, as before.
+ */
+export function priorActionsUnsaidBlankEnabled(): boolean {
+  return envFlag("PRIOR_ACTIONS_UNSAID_BLANK_ENABLED");
 }
