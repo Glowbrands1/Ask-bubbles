@@ -1,0 +1,42 @@
+
+> ask-bubbles@0.1.0 eval
+> vitest run --config vitest.eval.config.mts
+
+
+ RUN  v4.1.11 /home/user/gate/g847
+
+
+Replay eval — flags on: APPROVER_TITLE_NOT_EMPLOYEE_ENABLED
+| Case | Flags off | Flags on |
+|---|---|---|
+| b9 | PASS 203ms | PASS 175ms |
+| b10 | PASS 371ms | PASS 385ms |
+| b11 | PASS 79ms | PASS 73ms |
+| b12 | FAIL (policy) 143ms | FAIL (policy) 147ms |
+| b18a | PASS 59ms | PASS 58ms |
+| b18b | PASS 47ms | PASS 45ms |
+| r1 | PASS 5ms | PASS 6ms |
+| b0 | PASS 200ms | PASS 209ms |
+| b1 | PASS 162ms | PASS 167ms |
+| b2 | PASS 88ms | PASS 78ms |
+| b3 | PASS 49ms | PASS 49ms |
+| b4 | PASS 173ms | PASS 144ms |
+| b5 | PASS 117ms | PASS 120ms |
+| b6 | PASS 174ms | PASS 179ms |
+| b7 | PASS 74ms | PASS 73ms |
+| b8 | PASS 33ms | PASS 34ms |
+| b13 | PASS 360ms | PASS 335ms |
+| b14 | PASS 18ms | PASS 19ms |
+| b15 | PASS 437ms | PASS 404ms |
+| b16 | PASS 21ms | PASS 22ms |
+| b17 | PASS 316ms | PASS 299ms |
+| sf-b1 | PASS 425ms | PASS 438ms |
+| sf-b3 | PASS 148ms | PASS 145ms |
+| sf-b4 | PASS 16ms | PASS 15ms |
+Latency p50/p95 off 117/425 ms, on 120/404 ms; total off 3718 ms, on 3619 ms.
+
+ Test Files  2 passed (2)
+      Tests  35 passed (35)
+   Start at  11:45:01
+   Duration  29.04s (transform 3.95s, setup 0ms, import 4.43s, tests 24.27s, environment 0ms)
+

@@ -1,0 +1,14 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov12-r37-dm-approves-not-the-title: \"CA for <A>, probably termination once the DM approves\": the card's title is never District Manager \u2014 OPEN in production (the card's title is District Manager, \"the one you gave\")": {
+  "category": "INTENDED",
+  "reason": "open case holds: \"once the DM approves\" no longer puts District Manager on the card as her title"
+ },
+ "src/lib/ai/flags-off-parity.test.ts :: existing chat and form suites with every new flag off passes the suites whose expectations are already on main: src/app/api/chat/replay-pack, first half of the cases by id": {
+  "category": "INTENDED-HARNESS",
+  "reason": "parity: the open case holds under ON"
+ },
+ "replay: nov12-r37-dm-approves-not-the-title [open]": {
+  "category": "INTENDED",
+  "reason": "open case holds: \"once the DM approves\" no longer puts District Manager on the card as her title"
+ }
+}
