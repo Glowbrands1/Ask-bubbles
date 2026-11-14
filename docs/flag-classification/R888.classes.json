@@ -1,0 +1,14 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-prior-actions-unsaid-blank-at-create: \"verbal ca for remy calder, she was late on 11/3/26. no payroll deduct\" \u2014 Create leaves Prior Actions blank \u2014 OPEN in production (Prior Actions is saved as \"None \u2014 first occurrence\" though nothing was said about history)": {
+    "category": "INTENDED-HARNESS",
+    "reason": "OPEN-in-production pin; fails by design with the fix flag on."
+  },
+  "src/lib/ai/flags-off-parity.test.ts :: existing chat and form suites with every new flag off passes the suites whose expectations are already on main: src/app/api/chat/replay-pack, first half of the cases by id": {
+    "category": "INTENDED-HARNESS",
+    "reason": "Child inherits the flag; its replay child fails only on nov14-prior-actions-unsaid-blank-at-create (this PR's OPEN pin)."
+  },
+  "replay: nov14-prior-actions-unsaid-blank-at-create [open]": {
+    "category": "INTENDED",
+    "reason": "QA's 17x open case holds with the flag on: Prior Actions left blank at Create."
+  }
+}
