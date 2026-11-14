@@ -5720,8 +5720,9 @@ export function placeStripWholePhraseOnlyEnabled(): boolean {
  * REPORTED_NOT_OBSERVED_ENABLED (coding 6; QA's Bubbles Create check, 14 Nov 2026, Pau-approved; default off). "she was late
  * on 11/3/26" + "she yelled at a customer and she maybe forgot" was drafted "Employee A was also observed yelling at a
  * customer.": a fact she stated became something someone observed. On, the draft prompt asks for a statement with no
- * stated source to be written as she stated it, and the draft's "was observed <doing>" becomes "was <doing>" unless her
- * words say she saw it (`forms/evidence-basis.ts`). Off, as before.
+ * stated source to be written as she stated it, and the draft's "was observed / seen / witnessed …" loses that word
+ * unless a clause of her words gives a source for the same action: she saw it, a camera showed it, or she herself said
+ * it was observed (QA's rulings on Gate-Bubbles-5's #911 probes; `forms/evidence-basis.ts`). Off, as before.
  */
 export function reportedNotObservedEnabled(): boolean {
   return envFlag("REPORTED_NOT_OBSERVED_ENABLED");

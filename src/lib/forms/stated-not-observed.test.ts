@@ -27,3 +27,33 @@ describe("withoutUnstatedObservation", () => {
     expect(withoutUnstatedObservation("A customer reported that Marnie Holloway yelled.", notes)).toBe("A customer reported that Marnie Holloway yelled.");
   });
 });
+
+/*
+ * QA's rulings on v2-Gate-Bubbles-5's #911 probes (14 Nov 2026), in the gate's wordings (its invented person). The
+ * manager's request, then what the draft model wrote, then what is saved.
+ */
+describe("withoutUnstatedObservation: Gate-Bubbles-5's #911 probes", () => {
+  const P = "Pia Wexcombe";
+  it.each([
+    // 1. the manager's own word is kept
+    ["manager-said-observed", `create a CA for ${P}, she was observed sleeping in the back room on 11/3/26`, `Observed:\n${P} was observed sleeping in the back room on November 3, 2026.`, `Observed:\n${P} was observed sleeping in the back room on November 3, 2026.`],
+    // 2. "seen" and "witnessed" get the same guard, with or without "-ing"
+    ["seen-word", `create a CA for ${P}, she was on her phone on 11/3/26`, `Observed:\n${P} was seen on her phone on November 3, 2026.`, `Observed:\n${P} was on her phone on November 3, 2026.`],
+    ["witnessed-word", `create a CA for ${P}, she yelled at a customer on 11/3/26`, `Observed:\n${P} was witnessed yelling at a customer on November 3, 2026.`, `Observed:\n${P} was yelling at a customer on November 3, 2026.`],
+    // 3. per clause: the yelling she saw keeps "observed", the lateness she only stated does not
+    ["two-sentences-mixed", `create a CA for ${P}, I saw her yelling at a customer on 11/3/26 and she was also late`, `Observed:\n${P} was observed yelling at a customer on November 3, 2026. ${P} was also observed arriving late.`, `Observed:\n${P} was observed yelling at a customer on November 3, 2026. ${P} was also arriving late.`],
+    // as before
+    ["stated-plain", `create a CA for ${P}, she yelled at a customer on 11/3/26`, `Observed:\n${P} was observed yelling at a customer on November 3, 2026.`, `Observed:\n${P} was yelling at a customer on November 3, 2026.`],
+    ["first-hand-i-saw", `create a CA for ${P}, I saw her yelling at a customer on 11/3/26`, `Observed:\n${P} was observed yelling at a customer on November 3, 2026.`, `Observed:\n${P} was observed yelling at a customer on November 3, 2026.`],
+    ["first-hand-i-witnessed", `create a CA for ${P}, I witnessed her on her phone the whole shift on 11/3/26`, `Observed:\n${P} was observed on the phone the whole shift on November 3, 2026.`, `Observed:\n${P} was observed on the phone the whole shift on November 3, 2026.`],
+    ["camera", `create a CA for ${P}, the camera showed her taking cash from the drawer on 11/3/26`, `Observed:\n${P} was observed on camera taking cash from the drawer on November 3, 2026.`, `Observed:\n${P} was observed on camera taking cash from the drawer on November 3, 2026.`],
+    ["observed-heading-only", `create a CA for ${P}, she was late on 11/3/26`, `Observed:\n${P} arrived late on November 3, 2026.`, `Observed:\n${P} arrived late on November 3, 2026.`],
+  ])("%s", (_key, said, written, saved) => {
+    expect(withoutUnstatedObservation(written, said)).toBe(saved);
+  });
+
+  it("\"seen by\" names who saw it and stays", () => {
+    expect(withoutUnstatedObservation(`${P} was seen by a customer leaving early.`, "she left early")).toBe(`${P} was seen by a customer leaving early.`);
+  });
+});
+
