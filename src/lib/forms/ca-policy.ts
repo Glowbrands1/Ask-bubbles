@@ -15,15 +15,16 @@ import {
   formEditDateRulesEnabled,
   missedShiftCitesAttendanceEnabled,
   msbPhraseSocEnabled,
+  negatedLatenessTopicEnabled,
   notFollowingIsViolationEnabled,
   policyCleaningIncidentEnabled,
+  policyNotFoundPlainWordingEnabled,
+  registerAccuracyConductEnabled,
   removePolicyNotNamedEnabled,
   salesObservationAccountEnabled,
   salesShortfallObjectEnabled,
   wornClothingIsDressCodeEnabled,
   wovenTrainingConductEnabled,
-  negatedLatenessTopicEnabled,
-  registerAccuracyConductEnabled,
 } from "@/lib/config/chat-quality-flags";
 
 import { readLocationMentions } from "./location-mention";
@@ -1274,7 +1275,9 @@ function namedPolicyLine(named: NamedPolicyReading): string | null {
     // WOVEN_TRAINING_CONDUCT_ENABLED: the app says what it did not find; "Woven" is the product, not the one looking.
     // Narrowed (QA's round-3 gate): only for a phrase that is about Woven ("not signing the woven"), where "Woven
     // does not see … for 'not signing the woven'" reads as the product looking. Every other phrase keeps the line.
-    if (wovenTrainingConductEnabled() && WOVEN.test(named.phrase.toLowerCase())) {
+    // POLICY_NOT_FOUND_PLAIN_WORDING_ENABLED (QA, 13 Nov 2026): "Woven does not see …" reads oddly to a manager; the app
+    // says what it did not find, for every phrase. Off, only a phrase about Woven gets this wording, as before.
+    if (policyNotFoundPlainWordingEnabled() || (wovenTrainingConductEnabled() && WOVEN.test(named.phrase.toLowerCase()))) {
       return `**Policy:** I don't see a section of the current policy manual for "${named.phrase}" in the knowledge base, so I won't cite one. Tell me the policy as the manual names it, or tick Type of Offense and complete Direct policy on the form.`;
     }
     return `**Policy:** Woven does not see a section of the current policy manual for "${named.phrase}" in the knowledge base, so I won't cite one. Tell me the policy as the manual names it, or tick Type of Offense and complete Direct policy on the form.`;
