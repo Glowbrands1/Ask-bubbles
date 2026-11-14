@@ -837,4 +837,35 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov13-place-strip-must-keep-kearney-high-of-all-places": "PLACE_STRIP_WHOLE_PHRASE_ONLY",
   // fixed in production by PLACE_STRIP_WHOLE_PHRASE_ONLY (on since 17v) with the #869 follow-up code, QA round 17x, 13 Nov 2026
   "nov13-place-strip-must-keep-kearney-mall-of-all-places": "PLACE_STRIP_WHOLE_PHRASE_ONLY",
+  // fixed in production by ACCOUNT_CHANGE_REDERIVES_POLICY, QA round 17y, 14 Nov 2026
+  "nov13-account-change-rederives-policy-sanitation": "ACCOUNT_CHANGE_REDERIVES_POLICY",
+  // fixed in production by ACCOUNT_CHANGE_REDERIVES_POLICY, QA round 17y, 14 Nov 2026
+  "nov13-account-change-rederives-policy-phone": "ACCOUNT_CHANGE_REDERIVES_POLICY",
+  // fixed in production by ACCOUNT_CHANGE_REDERIVES_POLICY, QA round 17y, 14 Nov 2026
+  "nov13-account-replaced-close-sentence-new-account-still-rederives": "ACCOUNT_CHANGE_REDERIVES_POLICY",
+  // fixed in production by ACCOUNT_CHANGE_REDERIVES_POLICY, QA round 17y, 14 Nov 2026
+  "nov14-account-change-box-already-moved-policy-follows": "ACCOUNT_CHANGE_REDERIVES_POLICY",
+  // fixed in production by ACCOUNT_CHANGE_REDERIVES_POLICY, QA round 17y, 14 Nov 2026
+  "nov14-account-change-made-about-all-four-agree": "ACCOUNT_CHANGE_REDERIVES_POLICY",  // fixed in production by REASON_PLACE_NOT_STORE, QA round 17z, 14 Nov 2026
+  "nov13-reason-place-not-store-sioux-falls-west-two-stores": "REASON_PLACE_NOT_STORE",
+  // fixed in production by REASON_PLACE_NOT_STORE, QA round 17z, 14 Nov 2026
+  "nov13-reason-place-not-store-sioux-falls-west-one-store": "REASON_PLACE_NOT_STORE",
+  // fixed in production by REASON_PLACE_NOT_STORE, QA round 17z, 14 Nov 2026
+  "nov13-reason-place-not-store-sioux-falls-west-bc": "REASON_PLACE_NOT_STORE",
+  // fixed in production by REASON_PLACE_NOT_STORE, QA round 17z, 14 Nov 2026
+  "nov13-reason-place-not-store-sioux-falls-west-since": "REASON_PLACE_NOT_STORE",
+  // fixed in production by FUZZY_STORE_ASKS, QA round 17z, 14 Nov 2026
+  "nov14-fuzzy-store-asks-sioux-falls-west": "FUZZY_STORE_ASKS",
+  // fixed in production by REQUEST_LINE_TITLE_KEPT, QA round 17z, 14 Nov 2026
+  "nov14-request-line-title-kept-team-member-part-time": "REQUEST_LINE_TITLE_KEPT",
+  // fixed in production by REQUEST_LINE_TITLE_KEPT, QA round 17z, 14 Nov 2026
+  "nov14-request-line-title-kept-team-member-full-time": "REQUEST_LINE_TITLE_KEPT",
+  // fixed in production by REQUEST_LINE_TITLE_KEPT, QA round 17z, 14 Nov 2026
+  "nov14-request-line-title-kept-seasonal-team-member-part-time": "REQUEST_LINE_TITLE_KEPT",
+  // fixed in production by POLICY_DASH_LINE_PAGE, QA round 17z, 14 Nov 2026
+  "nov12-17q-1-wrong-items-policy-page": "POLICY_DASH_LINE_PAGE",
+  // fixed in production by OTHER_POLICY_AGREES, QA round 17z, 14 Nov 2026
+  "nov14-other-policy-agrees-sanitation-typed": "OTHER_POLICY_AGREES",
+  // fixed in production by OTHER_POLICY_AGREES, QA round 17z, 14 Nov 2026
+  "nov14-other-policy-agrees-sanitation-spelled": "OTHER_POLICY_AGREES",
 };

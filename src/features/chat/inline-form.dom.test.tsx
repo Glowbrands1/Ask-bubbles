@@ -12,7 +12,16 @@ import {
 } from "./inline-form";
 import { parseFormDocument } from "@/lib/forms/document";
 import { TEMPLATE_SEEDS } from "@/lib/forms/library";
+import { FORM_ALREADY_REVISED, FORM_ALREADY_REVISED_MESSAGE } from "@/lib/forms/revision-history";
 import type { ChatFormInstanceRef, ChatFormProposal, ChatMessage } from "@/types";
+
+// POLICY_NOT_FOUND_PLAIN_WORDING (14 Nov 2026) rewords the "Woven does not see this policy" notices; pinned off here so
+// a flag-on run still checks the wording these tests assert. The plain wording: policy-not-found-plain-notices.test.ts.
+beforeEach(() => {
+  vi.stubEnv("POLICY_NOT_FOUND_PLAIN_WORDING_ENABLED", "");
+  vi.stubEnv("NEXT_PUBLIC_POLICY_NOT_FOUND_PLAIN_WORDING_ENABLED", "");
+});
+
 
 vi.mock("@/config/company/locations", async () =>
   (await import("@/test/fixtures/reference-roster")).referenceRosterModule(),
@@ -1668,6 +1677,66 @@ describe("a finalized form is edited as a new draft of it", () => {
   });
 });
 
+/**
+ * REVISED_FORM_POINTS_TO_NEWER_ENABLED (live runtime error, 14 Nov 2026: "That form has already been revised."). The card
+ * loaded while its form was finalized; a revision of it was finalized elsewhere; "Edit as new draft" is pressed on the
+ * stale card. The server's two answers are faked here (the route's side is in
+ * `app/api/forms/revised-form-points-to-newer-e2e.test.ts`).
+ */
+describe("Edit as new draft on a card whose form was replaced elsewhere", () => {
+  function replacedElsewhere(refusal: { error: string; code: string; newerId?: string }) {
+    const card = { replaced: false };
+    const original = loadedInstance({ status: "finalized" });
+    fakeFetch((url, init) => {
+      if (url === "/api/forms/instances/inst-42" && init.method === "POST") return { ok: false, payload: refusal };
+      return {
+        payload: {
+          ...original,
+          instance: { ...original.instance, status: card.replaced ? "revised" : "finalized" },
+          events: [
+            ...original.events,
+            ...(card.replaced
+              ? [{ kind: "revised", actor: "user-2", createdAt: "2026-10-20T12:00:00Z", detail: { revisionId: "inst-43" } }]
+              : []),
+          ],
+        },
+      };
+    });
+    return card;
+  }
+
+  it("flag on (the server answers form_already_revised): the line, then the card re-reads and shows Revised with its link", async () => {
+    const card = replacedElsewhere({ error: FORM_ALREADY_REVISED_MESSAGE, code: FORM_ALREADY_REVISED, newerId: "inst-43" });
+    const { container } = mounted();
+    const edit = await screen.findByRole("button", { name: /edit as new draft/i });
+    card.replaced = true; // finalized elsewhere after this card loaded
+    fireEvent.click(edit);
+
+    // The card's own Revised banner is the line here (the refusal's wording is what the reason dialog shows).
+    await waitFor(() => expect(container.textContent).toMatch(/This form was revised: a newer version replaces it/));
+    expect(container.textContent).not.toContain("Something went wrong");
+    expect(screen.getByRole("button", { name: /open newer version/i })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /edit as new draft/i })).toBeNull();
+    // One refused revise and nothing else written; no draft opened, the message's pointer unchanged.
+    expect(recorded.filter((made) => made.method !== "GET")).toEqual([
+      { url: "/api/forms/instances/inst-42", method: "POST", body: { action: "revise" } },
+    ]);
+    expect(onFormCreated).not.toHaveBeenCalled();
+  });
+
+  it("flag off (the server's generic 500): the generic line, and the card stays as it loaded", async () => {
+    const card = replacedElsewhere({ error: "Something went wrong. Nothing was answered or saved.", code: "internal" });
+    const { container } = mounted();
+    const edit = await screen.findByRole("button", { name: /edit as new draft/i });
+    card.replaced = true;
+    fireEvent.click(edit);
+
+    await waitFor(() => expect(container.textContent).toContain("Something went wrong. Nothing was answered or saved."));
+    expect(container.textContent).not.toMatch(/a newer version replaces it/i);
+    expect(recorded.filter((made) => made.method === "GET" && made.url === "/api/forms/instances/inst-42")).toHaveLength(1);
+  });
+});
+
 /* ==================================================================== */
 /*  A DRAFT WITH NO POLICY ON IT MUST NOT READ AS A FINISHED ONE        */
 /* ==================================================================== */
@@ -1771,6 +1840,24 @@ describe("the policy-verification notice", () => {
     expect(notice).toContain("Policy Violated");
     expect(notice).toContain("Direct policy from official manual");
     expect(notice).toMatch(/before you issue this form/i);
+  });
+
+  it("POLICY_NOT_FOUND_PLAIN_WORDING: says \"I don't see …\" with the browser flag on, \"Woven does not see …\" off", () => {
+    const blankPolicy = () =>
+      policyVerificationNoticeFor(
+        correctiveInstance([
+          { fieldKey: "observation", value: "Sarah was observed wearing a mini skirt." },
+          { fieldKey: "policy_violated", value: null },
+          { fieldKey: "policy_language", value: null },
+        ]),
+        false,
+      ) ?? "";
+    expect(blankPolicy()).toMatch(/blank because Woven does not see a matching policy/);
+    expect(blankPolicy()).toMatch(/Woven does not see this policy in the knowledge base, so it cannot be verified/);
+    vi.stubEnv("NEXT_PUBLIC_POLICY_NOT_FOUND_PLAIN_WORDING_ENABLED", "true");
+    expect(blankPolicy()).toMatch(/blank because I don't see a matching policy in the knowledge base/);
+    expect(blankPolicy()).toMatch(/I don't see this policy in the knowledge base, so it cannot be verified — confirm/);
+    expect(blankPolicy()).not.toMatch(/Woven does not see/);
   });
 
   it("goes when the values carry verified provenance", () => {

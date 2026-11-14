@@ -11,6 +11,7 @@ import { Notice } from "@/components/ui/feedback";
 import { Dialog, DialogActions, DialogContent } from "@/components/ui/overlays";
 import { FinalizedChangePanel } from "./finalized-change-panel";
 import { downloadFormPdf, formsFetch, FormsFetchError } from "@/features/forms/forms-fetch";
+import { reloadIfAlreadyRevised } from "@/form-revisions/already-revised";
 import { onFormUpdate } from "./form-update-events";
 import {
   ResponsiveForm,
@@ -22,6 +23,7 @@ import { asdNoFormMonitoringEnabled } from "@/lib/permissions";
 import { checkboxGroupsForVariant, fieldsForVariant } from "@/lib/forms/document";
 import { planSummary } from "@/lib/forms/plan-summary";
 import { manualStandingNotice } from "@/lib/forms/standing-notices";
+import { policyNotFoundPlainNoticesEnabled } from "@/lib/config/chat-quality-flags";
 import {
   POLICY_ACKNOWLEDGEMENT_REQUIRED,
   policyAcknowledgementWording,
@@ -588,6 +590,8 @@ export function InlineForm({
       setAction({ kind: "idle" });
       showRecord(result.instance.id, result.instance.templateName || loaded.instance.templateName);
     } catch (error) {
+      // REVISED_FORM_POINTS_TO_NEWER_ENABLED: replaced elsewhere since this card loaded; it re-reads and shows the link.
+      reloadIfAlreadyRevised(error, instanceId);
       setAction({ kind: "error", message: (error as Error).message });
     }
   }
@@ -1236,16 +1240,18 @@ export function policyVerificationNoticeFor(
     return `You edited the policy wording: ${quote(byHand)} ${byHand.length === 1 ? "was" : "were"} changed by hand, so Ask Bubbles can't confirm ${byHand.length === 1 ? "it matches" : "they match"} the policy manual. Check the wording against the official manual before you issue this form.`;
   }
 
+  // POLICY_NOT_FOUND_PLAIN_WORDING (QA, 14 Nov 2026): "I don't see …", not "Woven does not see …". Off, as before.
+  const plain = policyNotFoundPlainNoticesEnabled();
   const parts = [
     blank.length > 0
-      ? `${quote(blank)} ${blank.length === 1 ? "is" : "are"} blank because Woven does not see a matching policy in the knowledge base`
+      ? `${quote(blank)} ${blank.length === 1 ? "is" : "are"} blank because ${plain ? "I don't" : "Woven does not"} see a matching policy in the knowledge base`
       : null,
     byHand.length > 0
       ? `${quote(byHand)} ${byHand.length === 1 ? "was" : "were"} entered by hand and ${byHand.length === 1 ? "has" : "have"} not been checked against the manual`
       : null,
   ].filter((part): part is string => part !== null);
 
-  return `Policy verification is still required: ${parts.join(", and ")}. Woven does not see this policy in the knowledge base, so it cannot be verified — confirm the exact policy in the official manual before you issue this form.`;
+  return `Policy verification is still required: ${parts.join(", and ")}. ${plain ? "I don't" : "Woven does not"} see this policy in the knowledge base, so it cannot be verified — confirm the exact policy in the official manual before you issue this form.`;
 }
 
 /**

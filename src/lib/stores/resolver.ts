@@ -1,5 +1,5 @@
 import { isJobTitleAbbreviation } from "@/config/company/job-titles";
-import { placeSpanGuardEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
+import { placeSpanGuardEnabled, reasonPlaceNotStoreEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { editDistance } from "@/lib/forms/employee-match";
 import { companyNameStops } from "@/lib/forms/name-stops";
 import { isTypedStopSpan } from "@/lib/forms/name-words";
@@ -66,6 +66,8 @@ export type StoreResolution =
       /** True when the match was inferred (typo, initialism): ask before using it. */
       confirm: boolean;
       matched: string;
+      /** A close spelling more than one letter off ("sioux falls west" → "sioux falls 41st"); FUZZY_STORE_ASKS. */
+      loose?: boolean;
     }
   | {
       kind: "ambiguous";
@@ -99,6 +101,11 @@ export interface StoreMention {
   readonly numbering?: StoreNumbering;
   /** What the manager typed for it. */
   readonly matched?: string;
+  /**
+   * FUZZY_STORE_ASKS: a close spelling more than one letter off ("sioux falls west" read as the W 41st St store).
+   * Asked, never taken silently; a one-letter typo or an initialism is not loose.
+   */
+  readonly loose?: boolean;
 }
 
 export interface StoreReading {
@@ -371,7 +378,7 @@ function idsForNumber(
 
 const NUMBERED = /^(?:(?:salon|store|location|loc|shop|makery|studio)\s*)?#?\s*([A-Za-z0-9][A-Za-z0-9-]{0,15})$/i;
 
-function fuzzy(query: string, index: StoreIndex): { ids: string[]; phrase: string } | null {
+function fuzzy(query: string, index: StoreIndex): { ids: string[]; phrase: string; distance: number } | null {
   if (query.length < 5) return null;
   let best = Infinity;
   let hits: IndexedAlias[] = [];
@@ -388,7 +395,7 @@ function fuzzy(query: string, index: StoreIndex): { ids: string[]; phrase: strin
     } else if (distance === best) hits.push(alias);
   }
   if (hits.length === 0) return null;
-  return { ids: [...new Set(hits.flatMap((alias) => alias.locationIds))], phrase: hits[0]!.phrase };
+  return { ids: [...new Set(hits.flatMap((alias) => alias.locationIds))], phrase: hits[0]!.phrase, distance: best };
 }
 
 function partial(query: string, index: StoreIndex): string[] {
@@ -448,7 +455,10 @@ export function resolveStoreText(query: string, index: StoreIndex = defaultStore
   if (parts.length > 0) return settle(parts, "partial", false, typed);
 
   const close = fuzzy(key, index);
-  if (close) return settle(close.ids, "fuzzy", true, typed);
+  if (close) {
+    const settled = settle(close.ids, "fuzzy", true, typed);
+    return settled.kind === "resolved" && close.distance > 1 ? { ...settled, loose: true } : settled;
+  }
 
   return { kind: "not_found", query };
 }
@@ -562,6 +572,20 @@ function isDocumentPhrase(span: string): boolean {
   return DOCUMENT_WORDS.test(span);
 }
 
+/*
+ * REASON_PLACE_NOT_STORE_ENABLED (Gate-Bubbles-3's #869 probes, 13 Nov 2026; and its #879 probes: "bc", "since" too): "she was late because she was at sioux
+ * falls west" — the place says why she was late, not where the form is filed. The place in a "because <she|he|they|I|
+ * we|a name> was/were at|in …" clause, up to the clause's end ("," "." ";" "and" "but"), is blanked (same length, so
+ * every other offset is unchanged) before the stores are read. "at kearney, she was late" and "late at kearney" are
+ * not reasons and are still read. Only for reading the store: the account keeps the words.
+ */
+const REASON_PLACE =
+  /(\b(?:because|bc|b\/c|cause|'cause|cuz|since)\s+(?:she|he|they|i|we|[a-z][a-z'’-]*)\s+(?:was|were|had\s+been)\s+)((?:at|in)\s+[^,.;:!?()\n]*?)(?=\s*(?:[,.;:!?()\n]|$)|\s+(?:and|but)\b)/gi;
+
+function withoutReasonPlaces(text: string): string {
+  return text.replace(REASON_PLACE, (_, lead: string, place: string) => `${lead}${" ".repeat(place.length)}`);
+}
+
 /**
  * Every store a piece of text names, and every store-shaped reference it makes
  * that no registered store answers to.
@@ -572,7 +596,8 @@ function isDocumentPhrase(span: string): boolean {
  * "store"/"location" ("the Kearney store"), or after "at"/"in" when the
  * sentence then ends or carries on ("at Kearney today"). "From" is not a cue.
  */
-export function readStoreMentions(text: string, index: StoreIndex = defaultStoreIndex()): StoreReading {
+export function readStoreMentions(said: string, index: StoreIndex = defaultStoreIndex()): StoreReading {
+  const text = reasonPlaceNotStoreEnabled() ? withoutReasonPlaces(said) : said;
   const mentions: StoreMention[] = [];
   const unmatched: string[] = [];
 
@@ -674,7 +699,7 @@ export function readStoreMentions(text: string, index: StoreIndex = defaultStore
       const resolution = resolveStoreText(span, index);
       if (resolution.kind === "resolved") {
         if (!covered.has(resolution.store.id) || resolution.confirm) {
-          mentions.push({ locationIds: [resolution.store.id], confirm: resolution.confirm, matched: span });
+          mentions.push({ locationIds: [resolution.store.id], confirm: resolution.confirm, matched: span, ...(resolution.loose ? { loose: true } : {}) });
         }
       } else if (resolution.kind === "ambiguous") {
         mentions.push({

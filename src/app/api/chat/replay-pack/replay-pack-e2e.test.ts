@@ -799,8 +799,8 @@ function context(): ReplayContext {
     manualAlsoHas: (chunks) => {
       state.manualExtra = [...chunks];
     },
-    revisionWrites: (values) => {
-      state.revision = { values };
+    revisionWrites: (values, checked) => {
+      state.revision = checked ? { values, checked } : { values };
     },
     modelSays: (text) => {
       said.answer = text;
