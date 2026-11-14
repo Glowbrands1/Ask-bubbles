@@ -901,6 +901,11 @@ export function datedHistoryLevels(text: string, today: string): { named: string
     if (!lead) continue;
     const dated = datesInText(source.slice(mention.index + lead[0].length, mention.index + lead[0].length + 16), today)[0];
     if (!dated || dated.index !== 0 || dated.iso > today) continue;
+    // History by its date alone: a list the older readers already read ("previous coaching: … verbal ca 9-1-26") is
+    // listed by the prior-actions readers, with the manager's corrections, and is not added again here.
+    const at = mention.index + lead[0].length;
+    const undated = source.slice(0, at) + " ".repeat(dated.end) + source.slice(at + dated.end);
+    if (warningMentions(undated, today).find((other) => other.index === mention.index)?.kind === "historical") continue;
     out.push({ named: lead[0].replace(/\s+(?:(?:was|were)\s+)?(?:given|issued|signed|on|dated|the)\b.*$/i, "").trim(), iso: dated.iso });
   }
   return out;
