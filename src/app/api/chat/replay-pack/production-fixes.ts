@@ -868,10 +868,4 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov14-other-policy-agrees-sanitation-typed": "OTHER_POLICY_AGREES",
   // fixed in production by OTHER_POLICY_AGREES, QA round 17z, 14 Nov 2026
   "nov14-other-policy-agrees-sanitation-spelled": "OTHER_POLICY_AGREES",
-  // fixed in production by LEVEL_LEADS_REQUEST, QA round 17z-b, 14 Nov 2026
-  "nov14-level-leads-request-second-verbal": "LEVEL_LEADS_REQUEST",
-  // fixed in production by LEVEL_LEADS_REQUEST, QA round 17z-b, 14 Nov 2026
-  "nov14-level-leads-request-another-verbal": "LEVEL_LEADS_REQUEST",
-  // fixed in production by LEVEL_LEADS_REQUEST, QA round 17z-b, 14 Nov 2026
-  "nov14-level-leads-request-2nd-written": "LEVEL_LEADS_REQUEST",
 };
