@@ -1,0 +1,22 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov13-issue-keeps-work-area-front-desk: \"create a ca for remy calder at the front desk, she was rude to a guest\" \u2014 the card's Issue keeps where it happened \u2014 OPEN in production (the Issue line is only the account; the work area said with the person is lost)": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The open case's pin now holds with the flag on, so its 'still OPEN' assertion fails, as an open case should. The record shows the Issue reading \"she was rude to a guest at the front desk\" where it was \"she was rude to a guest\". The Store line is unchanged. The pin moves to closed when QA flips the flag."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov13-issue-keeps-work-area-register: \"create a ca for rowan kestrel at the register, he was on his phone with a line of guests\" \u2014 the card's Issue keeps where it happened \u2014 OPEN in production (the Issue line is only the account; the work area said with the person is lost)": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The open case's pin now holds with the flag on, so its 'still OPEN' assertion fails. The record shows the Issue reading \"he was on his phone with a line of guests at the register\". The Store line is unchanged."
+  },
+  "src/lib/ai/flags-off-parity.test.ts :: existing chat and form suites with every new flag off passes the suites whose expectations are already on main: src/app/api/chat/replay-pack, first half of the cases by id": {
+    "category": "INTENDED-HARNESS",
+    "reason": "flags-off-parity's child replay-pack run inherits FLAG_CLASSIFY_ON, so the 2 new open ISSUE_KEEPS_WORK_AREA cases hold and their open status fails. This is not a production path."
+  },
+  "replay: nov13-issue-keeps-work-area-front-desk [open]": {
+    "category": "INTENDED",
+    "reason": "The Issue keeps the work area said with the person: \"she was rude to a guest at the front desk\". This is the only line that changed in the record."
+  },
+  "replay: nov13-issue-keeps-work-area-register [open]": {
+    "category": "INTENDED",
+    "reason": "The Issue keeps the work area: \"he was on his phone with a line of guests at the register\". This is the only line that changed in the record."
+  }
+}
