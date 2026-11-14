@@ -1430,6 +1430,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 6: PRIOR_ACTIONS_NO_COMMA (October rebuild 4, #187 rebuilt on main; default off).
   "PRIOR_ACTIONS_NO_COMMA_ENABLED",
   "STORE_ALIAS_ENABLED",
+  // coding 4: ISSUE_ACCOUNT_ONLY (QA's Bubbles 17x live test, 14 Nov 2026; default off).
+  "ISSUE_ACCOUNT_ONLY_ENABLED",
   // coding 4: HEADING_DISTINCTIVE_WORDS (QA, 13 Nov 2026; default off).
   "HEADING_DISTINCTIVE_WORDS_ENABLED",
   // coding 4: PLACE_STRIP_WHOLE_PHRASE_ONLY (QA, 13 Nov 2026; default off).
@@ -5653,4 +5655,14 @@ export function headingDistinctiveWordsEnabled(): boolean {
  */
 export function placeStripWholePhraseOnlyEnabled(): boolean {
   return envFlag("PLACE_STRIP_WHOLE_PHRASE_ONLY_ENABLED");
+}
+
+/**
+ * ISSUE_ACCOUNT_ONLY (QA's Bubbles 17x live test, 14 Nov 2026; default off): the card's Issue carried the request and
+ * the job title ("write up <A>, Assistant General Manager, for leaving the safe open"; "Team Member Part Time, she was
+ * late on 11/3/26"). With the flag the leading who-clauses go and the Issue is the account. See
+ * `forms/incident-issue.ts` withoutWhoClauses. Off, as before.
+ */
+export function issueAccountOnlyEnabled(): boolean {
+  return envFlag("ISSUE_ACCOUNT_ONLY_ENABLED");
 }

@@ -3,6 +3,7 @@ import {
   complaintAccountEnabled,
   decimalNotSentenceEndEnabled,
   futureIncidentDateAskEnabled,
+  issueAccountOnlyEnabled,
   issueAfterRequestReasonEnabled,
   issueIsTheAccountEnabled,
   levelRequestDateEnabled,
@@ -24,6 +25,7 @@ import { withoutPriorStepClauses } from "./form-date-answer";
 import { priorSentenceFixFor } from "./prior-sentence-scope";
 import { statedWarningLevel } from "./warning-level";
 import { withoutLeadingTitle } from "./title-before-name";
+import { namesCompanyPositionTitle } from "./staff-picker";
 
 /**
  * ============================================================================
@@ -333,6 +335,40 @@ function withoutPolicyCorrections(text: string): string {
 }
 
 export function correctiveActionIssue(rawSaid: string, employeeName: string | null): string | null {
+  const issue = issueBeforeAccountOnly(rawSaid, employeeName);
+  return issueAccountOnlyEnabled() ? withoutWhoClauses(issue, employeeName) : issue;
+}
+
+/*
+ * ISSUE_ACCOUNT_ONLY_ENABLED (QA's Bubbles 17x live test, 14 Nov 2026): "write up <A>, Assistant General Manager, for
+ * leaving the safe open" gave the Issue as the whole command, and "ca for <A> at west dodge, Team Member Part Time, she
+ * was late on 11/3/26" gave "Team Member Part Time, she was late on 11/3/26". The Issue is the account only: leading
+ * clauses that are only the request and the person ("write up <A>"), the person, or a job title (the company's titles
+ * and positions) are dropped, and so is a "for" that only joined them to the account. Off, as before.
+ */
+function withoutWhoClauses(issue: string | null, employeeName: string | null): string | null {
+  if (issue === null) return null;
+  const person = new Set((employeeName ?? "").toLowerCase().split(/\s+/).filter(Boolean));
+  const clauses = issue.split(/\s*,\s*/);
+  let start = 0;
+  while (start < clauses.length - 1 && onlyWho(clauses[start]!, person)) start += 1;
+  if (start === 0) return issue;
+  const rest = clauses.slice(start).join(", ").replace(/^(?:for|about|over|regarding)\s+/i, "").trim();
+  return rest || issue;
+}
+
+function onlyWho(clause: string, person: ReadonlySet<string>): boolean {
+  const words = clause.trim().toLowerCase().replace(/[^a-z0-9'’ -]+/g, " ").split(/\s+/).filter(Boolean);
+  if (words.length === 0) return true;
+  if (namesCompanyPositionTitle(clause)) return true;
+  if (COMPANY_JOB_TITLES.some((entry) => clause.trim().replace(new RegExp(entry.pattern.source, "i"), "").trim() === "")) return true;
+  // "<A>", "write up <A>", "a ca for <A>": the request and the person.
+  const lead = /^(?:(?:please\s+)?(?:write[- ]?up|(?:create|make|start|do|need|i\s+need)(?:\s+(?:a|an))?(?:\s+(?:verbal|written|final))?\s+(?:ca|c\/a|corrective\s+action(?:\s+form)?|write[- ]?up|warning)(?:\s+(?:for|on))?|(?:a\s+)?(?:ca|c\/a)\s+(?:for|on)))\s+/;
+  const rest = words.join(" ").replace(lead, "").split(" ").filter(Boolean);
+  return rest.length > 0 && rest.every((word) => person.has(word));
+}
+
+function issueBeforeAccountOnly(rawSaid: string, employeeName: string | null): string | null {
   const read = issueAsRead(futureIncidentDateAskEnabled() ? withoutBareDateAnswers(rawSaid) : rawSaid, employeeName);
   if (!caReasonDueToEnabled()) return read;
   /*
