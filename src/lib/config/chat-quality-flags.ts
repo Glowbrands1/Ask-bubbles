@@ -1439,6 +1439,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "POLICY_NOT_FOUND_PLAIN_WORDING_ENABLED",
   // coding 4: REASON_PLACE_NOT_STORE (Gate-Bubbles-3 on #869, 13 Nov 2026; default off).
   "REASON_PLACE_NOT_STORE_ENABLED",
+  // coding 4: REASON_PLACE_NEVER_STORE (QA's Bubbles 17z live bug, 14 Nov 2026; default off).
+  "REASON_PLACE_NEVER_STORE_ENABLED",
   // coding 4: FUZZY_STORE_ASKS (QA's ruling on Gate-Bubbles-3's #869 probes, 14 Nov 2026; default off).
   "FUZZY_STORE_ASKS_ENABLED",
   // coding 4: REQUEST_LINE_TITLE_KEPT (QA's Bubbles 17x live test, 14 Nov 2026; default off).
@@ -5785,4 +5787,15 @@ export function levelLeadsRequestEnabled(): boolean {
  */
 export function revisedFormPointsToNewerEnabled(): boolean {
   return envFlag("REVISED_FORM_POINTS_TO_NEWER_ENABLED");
+}
+
+/**
+ * REASON_PLACE_NEVER_STORE (QA's Bubbles 17z live bug, 14 Nov 2026; default off; with REASON_PLACE_NOT_STORE): "write a
+ * CA for <A>, she was late because she was at kearney" was filed at Kearney, NE ("as you said") — the AI reader's
+ * location took the reason's place — and its Issue read "… at Kearney NE": the store-alias pass rewrote the manager's
+ * word once the mention reader no longer saw a store there. With the flag a reason's place is never the store for the
+ * AI reader either (`ai/reader/check.ts`), and the alias pass leaves it as typed (`ai/store-alias.ts`). Off, as before.
+ */
+export function reasonPlaceNeverStoreEnabled(): boolean {
+  return envFlag("REASON_PLACE_NEVER_STORE_ENABLED");
 }

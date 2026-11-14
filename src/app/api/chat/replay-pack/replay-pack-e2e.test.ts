@@ -89,6 +89,8 @@ const state = vi.hoisted(() => ({
   /** Chunks the pinned manual also has, when a case sets them (`manualAlsoHas`); none by default. */
   manualExtra: [] as Record<string, unknown>[],
   slotsRead: {} as Record<string, unknown>,
+  /** What the AI reader (AI_READS_CODE_CHECKS) reads besides the name, as the live model does (`readerReads`). */
+  readerReads: {} as Record<string, unknown>,
   slotReading: "none" as "none" | "ca" | "copy",
   remapObservation: null as string | null,
   /** What the form-reading model returns for this turn (extract_form_fields). */
@@ -284,6 +286,8 @@ vi.mock("@/lib/ai/call-claude", () => ({
       input: {
         employee: name ? { value: name, evidence: manager } : null,
         incident: /late/.test(manager) ? { value: "late", evidence: manager } : null,
+        // A case's own reading, with its sentence as evidence (QA's Bubbles 17z live bug: the live reader reads the place).
+        ...Object.fromEntries(Object.entries(state.readerReads).map(([key, value]) => [key, { value, evidence: manager }])),
         incidentDate: /10\/20/.test(manager) ? { value: "2026-10-20", evidence: "10/20" } : null,
       },
       usage: { inputTokens: 10, outputTokens: 5, cacheReadTokens: 0, cacheWriteTokens: 0 },
@@ -674,6 +678,7 @@ beforeEach(async () => {
   fullManual.document = null;
   state.remapObservation = null;
   state.slotsRead = {};
+  state.readerReads = {};
   state.manualExtra = [];
   state.knowledgeQueries = [];
   state.reading = {};
@@ -804,6 +809,9 @@ function context(): ReplayContext {
     },
     modelSays: (text) => {
       said.answer = text;
+    },
+    readerReads: (fields) => {
+      state.readerReads = fields;
     },
     slotsRead: (slots) => {
       state.slotsRead = slots;
