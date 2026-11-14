@@ -1,0 +1,30 @@
+{
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-level-leads-request-2nd-written: \"2nd written for Quilla Farrowmere, she was late on 11/12/26\": a Corrective Action card for Quilla Farrowmere, written \u2014 OPEN in production (no card: the turn is not read as a form request)": {
+  "category": "INTENDED",
+  "reason": "Open-case it.fails wrapper: the turn is now a Corrective Action card with its level."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-level-leads-request-another-verbal: \"another verbal for Quilla Farrowmere, she was late on 11/12/26\": a Corrective Action card for Quilla Farrowmere, verbal \u2014 OPEN in production (no card: the turn is not read as a form request)": {
+  "category": "INTENDED",
+  "reason": "Open-case it.fails wrapper: the turn is now a Corrective Action card with its level."
+ },
+ "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-level-leads-request-second-verbal: \"second verbal for Quilla Farrowmere, she was late on 11/12/26\": a Corrective Action card for Quilla Farrowmere, verbal \u2014 OPEN in production (no card: the turn is not read as a form request)": {
+  "category": "INTENDED",
+  "reason": "Open-case it.fails wrapper: the turn is now a Corrective Action card with its level."
+ },
+ "src/lib/ai/flags-off-parity.test.ts :: existing chat and form suites with every new flag off passes the suites whose expectations are already on main: src/app/api/chat/replay-pack, first half of the cases by id": {
+  "category": "INTENDED-HARNESS",
+  "reason": "Parity sub-run inherits the exported flag; its failures are the 3 level-leads open-case wrappers (now holding)."
+ },
+ "replay: nov14-level-leads-request-2nd-written [open]": {
+  "category": "INTENDED",
+  "reason": "Open case holds ON: a CA card for the person, with the stated level (verbal / written)."
+ },
+ "replay: nov14-level-leads-request-another-verbal [open]": {
+  "category": "INTENDED",
+  "reason": "Open case holds ON: a CA card for the person, with the stated level (verbal / written)."
+ },
+ "replay: nov14-level-leads-request-second-verbal [open]": {
+  "category": "INTENDED",
+  "reason": "Open case holds ON: a CA card for the person, with the stated level (verbal / written)."
+ }
+}
