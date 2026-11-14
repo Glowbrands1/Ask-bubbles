@@ -1,0 +1,22 @@
+{
+  "replay: nov10-b4-twin-closing-not-late-opening [fix:LATE_OPENING_NEEDS_OPENING_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "Only change is the Policy line's opener: 'Woven does not see a section of the current policy manual for \"X\"' becomes 'I don't see a section of the current policy manual for \"X\"'. The rest of the reply is unchanged and the case invariants hold in both arms. This is the PR's purpose."
+  },
+  "replay: nov10-b4-twin-closing-not-late-opening [production]": {
+    "category": "INTENDED",
+    "reason": "Only change is the Policy line's opener: 'Woven does not see a section of the current policy manual for \"X\"' becomes 'I don't see a section of the current policy manual for \"X\"'. The rest of the reply is unchanged and the case invariants hold in both arms. This is the PR's purpose."
+  },
+  "replay: nov13-close-spelling-policy-shared-word-never-confident [production]": {
+    "category": "INTENDED",
+    "reason": "Only change is the Policy line's opener: 'Woven does not see a section of the current policy manual for \"X\"' becomes 'I don't see a section of the current policy manual for \"X\"'. The rest of the reply is unchanged and the case invariants hold in both arms. This is the PR's purpose."
+  },
+  "replay: nov5-twin-sf-s25-closing-no-late-opening-claim [fix:AS_YOU_SAID_MANAGER_WORDS_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "Only change is the Policy line's opener: 'Woven does not see a section of the current policy manual for \"X\"' becomes 'I don't see a section of the current policy manual for \"X\"'. The rest of the reply is unchanged and the case invariants hold in both arms. This is the PR's purpose."
+  },
+  "replay: nov5-twin-sf-s25-closing-no-late-opening-claim [production]": {
+    "category": "INTENDED",
+    "reason": "Only change is the Policy line's opener: 'Woven does not see a section of the current policy manual for \"X\"' becomes 'I don't see a section of the current policy manual for \"X\"'. The rest of the reply is unchanged and the case invariants hold in both arms. This is the PR's purpose."
+  }
+}
