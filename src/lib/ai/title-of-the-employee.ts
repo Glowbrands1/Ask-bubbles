@@ -1,4 +1,6 @@
-import { exitLetterAddresseeEnabled, exitStatedOnlyEnabled, titleOfTheEmployeeEnabled } from "@/lib/config/chat-quality-flags";
+import { approverTitleNotEmployeeEnabled, exitLetterAddresseeEnabled, exitStatedOnlyEnabled, titleOfTheEmployeeEnabled } from "@/lib/config/chat-quality-flags";
+import { withoutApproverClauses } from "@/lib/forms/approver-title";
+import { extractJobTitle } from "@/lib/forms/proposal";
 import { displayName, normalizeTypedName, type RosterEmployee } from "@/lib/forms/employee-match";
 import { EXIT_TEMPLATE_KEY } from "@/lib/forms/exit-library";
 import { titleNamesAnotherPerson } from "@/lib/forms/title-of-another-person";
@@ -28,7 +30,8 @@ export async function withTitleOfTheEmployee(
   roster: () => Promise<readonly RosterEmployee[]>,
 ): Promise<AskResponse> {
   const exitOwned = exitStatedOnlyEnabled();
-  if (!titleOfTheEmployeeEnabled() && !exitOwned) return response;
+  const approverOn = approverTitleNotEmployeeEnabled();
+  if (!titleOfTheEmployeeEnabled() && !exitOwned && !approverOn) return response;
   const card = response.formProposal;
   const role = card?.employeeRole?.trim();
   if (!card || !role || !card.employeeName || card.subject === "team") return response;
@@ -37,12 +40,18 @@ export async function withTitleOfTheEmployee(
   // EXIT_STATED_ONLY_ENABLED (ported from the sibling app, QA 5 Nov 2026): on an exit card, a title the manager only ever
   // wrote as someone's ("your General Manager", "our General Managers") is that person's, never the employee's.
   const owned = exitOwned && card.templateKey === EXIT_TEMPLATE_KEY && onlyAsSomeonesTitle(said, role);
-  if (!another && !owned) return response;
+  // APPROVER_TITLE_NOT_EMPLOYEE_ENABLED (ported from the sibling app, QA's r37 live check): "once the DM approves" names
+  // who approves; with those clauses out, the manager stated no title for the employee (`forms/approver-title.ts`).
+  const approver = approverOn && extractJobTitle(said) === role && extractJobTitle(withoutApproverClauses(said)) === null;
+  if (!another && !owned && !approver) return response;
   const wanted = normalizeTypedName(card.employeeName);
   const own = (await roster()).find((person) => normalizeTypedName(displayName(person)) === wanted)?.positionName?.trim() || null;
   let content = own
     ? response.content.split(`**Position:** ${role}`).join(`**Position:** ${own}`)
     : response.content;
+  // APPROVER_TITLE_NOT_EMPLOYEE_ENABLED: the verification line's "The title on the form is the one you gave (<role>)" was
+  // about the approver's title; with the card's title gone, it goes too.
+  if (approver) content = content.split(` The title on the form is the one you gave (${role}), not one from Woven.`).join(own ? ` The title on the form is ${own}, from Woven.` : "");
   /*
    * EXIT_LETTER_ADDRESSEE_ENABLED (ported from the sibling app: QA's live test there, 9 Nov 2026): a termination letter
    * signed "<C>, District Manager" left "- **Job Title:** District Manager" on the exit card's read-back: the card's role
