@@ -1544,6 +1544,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED_ENABLED",
   // ADD_ALREADY_ON_FORM_SAYS_SO (default off; QA's live 17u test, item 5, 13 Nov 2026): in the list, as every chat flag.
   "ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED",
+  // CARD_ACCOUNT_DROPS_NON_FACTS (default off; QA's Bubbles 17w live chat, 14 Nov 2026): in the list, as every chat flag.
+  "CARD_ACCOUNT_DROPS_NON_FACTS_ENABLED",
 ] as const;
 
 /**
@@ -5712,6 +5714,17 @@ export function headingDistinctiveWordsEnabled(): boolean {
  */
 export function placeStripWholePhraseOnlyEnabled(): boolean {
   return envFlag("PLACE_STRIP_WHOLE_PHRASE_ONLY_ENABLED");
+}
+
+/**
+ * CARD_ACCOUNT_DROPS_NON_FACTS_ENABLED (coding 6; QA's Bubbles 17w live chat, 14 Nov 2026; default off). "<A> was late on
+ * 11/3/26", then "she yelled at a customer and she maybe forgot", then "corrective action form": the card's Issue was
+ * "she yelled at a customer and she maybe forgot" (the lateness dropped, the hedge kept). On, when the request turn gives
+ * no account of its own, the Issue is every fact the account turns before it gave about this person, oldest first,
+ * joined with "; ", with no hedge, level, history or payment clause (`forms/incident-issue.ts`). Off, as before.
+ */
+export function cardAccountDropsNonFactsEnabled(): boolean {
+  return envFlag("CARD_ACCOUNT_DROPS_NON_FACTS_ENABLED");
 }
 
 /**

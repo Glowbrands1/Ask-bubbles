@@ -1,5 +1,6 @@
 import {
   caReasonDueToEnabled,
+  cardAccountDropsNonFactsEnabled,
   complaintAccountEnabled,
   decimalNotSentenceEndEnabled,
   futureIncidentDateAskEnabled,
@@ -14,6 +15,9 @@ import {
 import { COMPANY_JOB_TITLES } from "@/config/company/job-titles";
 import { isPolicyCorrection } from "@/lib/ai/policy-correction-turn";
 import { businessToday } from "@/lib/business-date";
+import { factOfClause, hedgedAccount, repeatsAFact } from "./account-facts";
+import { factContext, notAFact } from "./card-checked-against-words";
+import { extractEmployeeNames, samePerson } from "./proposal";
 
 import { withoutLevelAndStepClauses } from "./account-clauses";
 import { isSalesPolicyReading, observationAccount, readCaPolicy } from "./ca-policy";
@@ -333,6 +337,68 @@ function withoutPolicyCorrections(text: string): string {
 }
 
 export function correctiveActionIssue(rawSaid: string, employeeName: string | null): string | null {
+  const read = correctiveActionIssueRead(rawSaid, employeeName);
+  return cardAccountDropsNonFactsEnabled() ? issueAcrossTurns(read, rawSaid, employeeName) : read;
+}
+
+/*
+ * ============================================================================
+ * THE ISSUE KEEPS ONLY ITS FACTS (CARD_ACCOUNT_DROPS_NON_FACTS_ENABLED)
+ * ============================================================================
+ *
+ * QA's Bubbles 17w live chat (14 Nov 2026): "<A> was late on 11/3/26" (no card), "she yelled at a customer and she maybe
+ * forgot" (no card), "corrective action form" (the first card). The Issue was "she yelled at a customer and she maybe
+ * forgot": the lateness dropped, the hedge kept.
+ *
+ * Gate-Bubbles-4's bar (G4-893, 14 Nov 2026): the Issue starts from the Issue as read and only drops from it. A clause
+ * of it that starts with her subject and states no fact (a hedge, history, a denial, a level: `factOfClause`) is cut
+ * out, with the "and"/comma before it; every other word stays as the manager wrote it. Nothing is re-split or reworded.
+ *
+ * The one addition: when the request turn gives no account and the Issue is the turn just before it, whole, the account
+ * turns before that one (walking back while each gives one, never past a turn naming somebody else) come first, joined
+ * with "; ", each only when it is already one clean fact in the manager's words ("Marnie Holloway was late on 11/3/26").
+ */
+const FACT_CLAUSE = /(\s+(?:and|but)\s+(?:then\s+)?|,\s+)(?=(?:she|he|they)\b)/i;
+
+function withoutNonFactClauses(issue: string): string {
+  const pieces = issue.split(new RegExp(FACT_CLAUSE.source, "gi"));
+  // pieces: clause, separator, clause, separator, …
+  let kept = pieces[0]!;
+  for (let index = 1; index + 1 < pieces.length; index += 2) {
+    const clause = pieces[index + 1]!;
+    if (hedgedAccount(clause) || factOfClause(clause, factContext({ turns: [], roster: [] })) === null) continue;
+    kept += pieces[index]! + clause;
+  }
+  return kept;
+}
+
+function cleanFact(account: string): boolean {
+  const said = account.trim().replace(/[.!]+$/, "");
+  return !hedgedAccount(said) && factOfClause(said, factContext({ turns: [], roster: [] })) === said && !notAFact(said, { turns: [], roster: [] });
+}
+
+function issueAcrossTurns(read: string | null, rawSaid: string, employeeName: string | null): string | null {
+  if (read === null) return read;
+  const issue = withoutNonFactClauses(read);
+  const turns = turnsOf(rawSaid);
+  if (turns.length < 3 || !employeeName) return issue;
+  const own = (turn: string) => accountOnly(accountIssue(turn), employeeName);
+  if (own(turns.at(-1)!) !== null || issueFromRequest(turns.at(-1)!, employeeName) !== null) return issue;
+  const before = own(turns.at(-2)!);
+  if (before === null || before.trim().toLowerCase() !== read.trim().toLowerCase()) return issue;
+  const earlier: string[] = [];
+  for (let index = turns.length - 3; index >= 0; index -= 1) {
+    const turn = turns[index]!;
+    if (extractEmployeeNames(turn).some((name) => !samePerson(name, employeeName))) break;
+    const account = own(turn);
+    if (account === null || !cleanFact(account)) break;
+    const said = account.trim().replace(/[.!]+$/, "");
+    if (!repeatsAFact(said, [...earlier, issue])) earlier.unshift(said);
+  }
+  return earlier.length > 0 ? [...earlier, issue].join("; ") : issue;
+}
+
+function correctiveActionIssueRead(rawSaid: string, employeeName: string | null): string | null {
   const read = issueAsRead(futureIncidentDateAskEnabled() ? withoutBareDateAnswers(rawSaid) : rawSaid, employeeName);
   if (!caReasonDueToEnabled()) return read;
   /*
