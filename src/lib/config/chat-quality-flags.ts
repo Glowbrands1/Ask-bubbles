@@ -999,6 +999,8 @@ export function formsGuideEnabled(): boolean {
 }
 
 export const CHAT_QUALITY_FLAG_NAMES = [
+  // coding 2: NAMED_POLICIES_ALL_KEPT (QA's two-offense Create check, 13 Nov 2026; default off).
+  "NAMED_POLICIES_ALL_KEPT_ENABLED",
   // coding 2: the sibling app's "what happened" check (Pau's direction, 13 Nov 2026; default off).
   "CA_ASKS_WHAT_HAPPENED_ENABLED",
   "WHAT_HAPPENED_NO_CREATE_ENABLED",
@@ -5653,4 +5655,15 @@ export function headingDistinctiveWordsEnabled(): boolean {
  */
 export function placeStripWholePhraseOnlyEnabled(): boolean {
   return envFlag("PLACE_STRIP_WHOLE_PHRASE_ONLY_ENABLED");
+}
+
+/**
+ * NAMED_POLICIES_ALL_KEPT_ENABLED (Coding-2, 13 Nov 2026; default off; QA's two-offense Create check). "create ca form
+ * for <B> for violating the attendance policy and standards of conduct, she was late on 11/3/26 and yelled at a
+ * customer" kept only the last policy named (Standards of Conduct): Attendance left Type of Offense, Policy Violated and
+ * the plan. On: policies named together in one list are all kept (`forms/ca-policy.ts` statedTogetherIn); a later name
+ * that corrects an earlier one still wins alone. Off, as before.
+ */
+export function namedPoliciesAllKeptEnabled(): boolean {
+  return envFlag("NAMED_POLICIES_ALL_KEPT_ENABLED");
 }
