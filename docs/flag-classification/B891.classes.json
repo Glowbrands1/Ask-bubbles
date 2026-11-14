@@ -1,0 +1,82 @@
+{
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-relative-day-part-words-last-night: \"verbal ca for marnie holloway, she no-call no-showed last night\" \u2014 the card is dated the business yesterday \u2014 OPEN in production (a part of the day is no date: the card has no Date)": {
+    "category": "INTENDED-HARNESS",
+    "reason": "An open case whose pin now holds with the flag on, so its 'still OPEN' assertion fails, as an open case should. The card is dated: today for tonight, this morning and this evening, and the day before for last night. The pin closes when QA flips the flag."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-relative-day-part-words-this-evening: \"verbal ca for marnie holloway, she no-call no-showed this evening\" \u2014 the card is dated the business today \u2014 OPEN in production (a part of the day is no date: the card has no Date)": {
+    "category": "INTENDED-HARNESS",
+    "reason": "An open case whose pin now holds with the flag on, so its 'still OPEN' assertion fails, as an open case should. The card is dated: today for tonight, this morning and this evening, and the day before for last night. The pin closes when QA flips the flag."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-relative-day-part-words-this-morning: \"verbal ca for marnie holloway, she was late this morning\" \u2014 the card is dated the business today \u2014 OPEN in production (a part of the day is no date: the card has no Date)": {
+    "category": "INTENDED-HARNESS",
+    "reason": "An open case whose pin now holds with the flag on, so its 'still OPEN' assertion fails, as an open case should. The card is dated: today for tonight, this morning and this evening, and the day before for last night. The pin closes when QA flips the flag."
+  },
+  "src/app/api/chat/replay-pack/replay-pack-e2e.test.ts :: the replay pack nov14-relative-day-part-words-tonight: \"verbal ca for marnie holloway, she no-call no-showed tonight\" \u2014 the card is dated the business today \u2014 OPEN in production (a part of the day is no date: the card has no Date)": {
+    "category": "INTENDED-HARNESS",
+    "reason": "An open case whose pin now holds with the flag on, so its 'still OPEN' assertion fails, as an open case should. The card is dated: today for tonight, this morning and this evening, and the day before for last night. The pin closes when QA flips the flag."
+  },
+  "src/lib/ai/flags-off-parity.test.ts :: existing chat and form suites with every new flag off passes the suites whose expectations are already on main: src/app/api/chat/replay-pack, first half of the cases by id": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The parity check's child replay-pack run inherits FLAG_CLASSIFY_ON, so the 4 new open RELATIVE_DAY_PART_WORDS cases hold and their open assertions fail. These are the only 4 failures in its output. This is not a production path."
+  },
+  "replay: nov13-answer-is-the-issue-with-card-check-answer [fix:CA_ASKS_WHAT_HAPPENED_ENABLED,WHAT_HAPPENED_NO_CREATE_ENABLED,ANSWER_IS_THE_ISSUE_ENABLED,CARD_CHECKED_AGAINST_WORDS_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "An older case whose turn says \"last night\". Off, the reply asks 'I can't guess \"last night\" - what date was it?'. On, it is dated the day before and the ask is gone. Every other line is the same, and the case's own invariant holds both ways."
+  },
+  "replay: nov13-answer-is-the-issue-with-card-check-answer [production]": {
+    "category": "INTENDED",
+    "reason": "An older case whose turn says \"last night\". Off, the reply asks 'I can't guess \"last night\" - what date was it?'. On, it is dated the day before and the ask is gone. Every other line is the same, and the case's own invariant holds both ways."
+  },
+  "replay: nov13-ca-asks-what-happened-answer-is-the-issue [fix:CA_ASKS_WHAT_HAPPENED_ENABLED,WHAT_HAPPENED_NO_CREATE_ENABLED,ANSWER_IS_THE_ISSUE_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "An older case whose turn says \"last night\". Off, the reply asks 'I can't guess \"last night\" - what date was it?'. On, it is dated the day before and the ask is gone. Every other line is the same, and the case's own invariant holds both ways."
+  },
+  "replay: nov13-ca-asks-what-happened-answer-is-the-issue [production]": {
+    "category": "INTENDED",
+    "reason": "An older case whose turn says \"last night\". Off, the reply asks 'I can't guess \"last night\" - what date was it?'. On, it is dated the day before and the ask is gone. Every other line is the same, and the case's own invariant holds both ways."
+  },
+  "replay: nov13-ca-asks-what-happened-negative-answer-to-the-ask [fix:CA_ASKS_WHAT_HAPPENED_ENABLED,WHAT_HAPPENED_NO_CREATE_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "An older case whose turn says \"last night\". Off, the reply asks 'I can't guess \"last night\" - what date was it?'. On, it is dated the day before and the ask is gone. Every other line is the same, and the case's own invariant holds both ways."
+  },
+  "replay: nov13-ca-asks-what-happened-negative-answer-to-the-ask [production]": {
+    "category": "INTENDED",
+    "reason": "An older case whose turn says \"last night\". Off, the reply asks 'I can't guess \"last night\" - what date was it?'. On, it is dated the day before and the ask is gone. Every other line is the same, and the case's own invariant holds both ways."
+  },
+  "replay: nov13-close-spelling-policy-key-holdr-no-heading-in-manual [production]": {
+    "category": "INTENDED",
+    "reason": "An older case whose turn says \"last night\". Off, the reply asks 'I can't guess \"last night\" - what date was it?'. On, it is dated the day before and the ask is gone. Every other line is the same, and the case's own invariant holds both ways."
+  },
+  "replay: nov13-close-spelling-policy-two-headings-asks-which [fix:CLOSE_SPELLING_MATCH_ENABLED]": {
+    "category": "INTENDED",
+    "reason": "An older case whose turn says \"last night\". Off, the reply asks 'I can't guess \"last night\" - what date was it?'. On, it is dated the day before and the ask is gone. Every other line is the same, and the case's own invariant holds both ways."
+  },
+  "replay: nov13-close-spelling-policy-two-headings-asks-which [production]": {
+    "category": "INTENDED",
+    "reason": "An older case whose turn says \"last night\". Off, the reply asks 'I can't guess \"last night\" - what date was it?'. On, it is dated the day before and the ask is gone. Every other line is the same, and the case's own invariant holds both ways."
+  },
+  "replay: nov14-relative-day-part-words-last-night [open]": {
+    "category": "INTENDED",
+    "reason": "Off, the reply asks 'I can't guess \"last night\" - what date was it?'. On, the card is dated the day before, so the ask is gone. That is the only line that changed."
+  },
+  "replay: nov14-relative-day-part-words-level-kept-cash-written [production]": {
+    "category": "INTENDED",
+    "reason": "The warning level stays the same both ways (the guard holds). The only change is that the 'I can't guess \"last night\"' Date ask is gone, because the flag dates it as the day before."
+  },
+  "replay: nov14-relative-day-part-words-level-kept-ncns-verbal [production]": {
+    "category": "INTENDED",
+    "reason": "The warning level stays the same both ways (the guard holds). The only change is that the 'I can't guess \"last night\"' Date ask is gone, because the flag dates it as the day before."
+  },
+  "replay: nov14-relative-day-part-words-this-evening [open]": {
+    "category": "INTENDED",
+    "reason": "The open case now holds: the card has a Date (the business today). The reply text is the same both ways; only the card's Date changed."
+  },
+  "replay: nov14-relative-day-part-words-this-morning [open]": {
+    "category": "INTENDED",
+    "reason": "The open case now holds: the card has a Date (the business today). The reply text is the same both ways; only the card's Date changed."
+  },
+  "replay: nov14-relative-day-part-words-tonight [open]": {
+    "category": "INTENDED",
+    "reason": "The open case now holds: the card has a Date (the business today). The reply text is the same both ways; only the card's Date changed."
+  }
+}
