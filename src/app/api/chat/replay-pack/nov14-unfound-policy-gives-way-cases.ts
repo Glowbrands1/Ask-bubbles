@@ -70,6 +70,8 @@ export const NOV14_UNFOUND_POLICY_GIVES_WAY_CASES: ReplayCase[] = [
     },
   },
   {
+    // What this guards is the card's Policy line (Attendance, as before). The Issue gives way to the account here too:
+    // QA accepted that for every named policy, found or not (14 Nov 2026, Gate-Bubbles-5's #909 probes).
     id: "nov14-unfound-policy-gives-way-known-policy-kept",
     title: "guard: \"create a CA for Marnie Holloway for violating the attendance policy, she was late on 11/3/26\": a policy the app reads is as before",
     report: `${REPORT}; negative (a known policy)`,

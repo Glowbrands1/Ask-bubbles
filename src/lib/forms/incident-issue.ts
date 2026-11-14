@@ -421,9 +421,11 @@ function issueAsRead(rawSaid: string, employeeName: string | null): string | nul
 /*
  * UNFOUND_POLICY_GIVES_WAY_TO_ACCOUNT_ENABLED (QA's Bubbles 17y live test, 14 Nov 2026): "create a CA for <A> for violating
  * the pet grooming policy, she was late on 11/3/26" — the Issue was "violating the pet grooming policy" and the lateness
- * she stated was gone. A for-clause that only names a policy (violating / breaking / not following the <X> policy) that
- * this app's policy words do not read (`readCaPolicy`: nothing stated) gives way to the account the turn states, when it
- * states one. A policy it reads keeps the for-clause, as before. Null otherwise.
+ * she stated was gone. A for-clause that only names a policy (violating / breaking / not following the <X> policy) gives
+ * way to the account the turn states, when it states one. In practice that is every named policy, found or not:
+ * `readCaPolicy(fromRequest).stated` is null for a for-clause that only names a policy, so "for violating the cell phone
+ * policy, she was texting …" gives the Issue "she was texting …" too (Gate-Bubbles-5's #909 probes; QA accepted this
+ * behaviour, 14 Nov 2026). The card's Policy line is read from the whole request as before. Null otherwise.
  */
 const NAMES_ONLY_A_POLICY =
   /^(?:(?:for\s+)?(?:violat(?:ing|ed|ion\s+of)|breaking|broke|breach(?:ing|ed)?(?:\s+of)?|not\s+following|going\s+against|against))\s+(?:the\s+|our\s+|a\s+|company['’]?s?\s+)*(.+?)\s+polic(?:y|ies)\s*$/i;
