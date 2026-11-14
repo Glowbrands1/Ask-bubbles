@@ -999,6 +999,8 @@ export function formsGuideEnabled(): boolean {
 }
 
 export const CHAT_QUALITY_FLAG_NAMES = [
+  // coding 2: POLICY_LINE_COVERS_EVERY_SECTION (QA's two-offense Create check, 14 Nov 2026; default off).
+  "POLICY_LINE_COVERS_EVERY_SECTION_ENABLED",
   // coding 2: NAMED_POLICIES_ALL_KEPT (QA's two-offense Create check, 13 Nov 2026; default off).
   "NAMED_POLICIES_ALL_KEPT_ENABLED",
   // coding 2: the sibling app's "what happened" check (Pau's direction, 13 Nov 2026; default off).
@@ -5666,4 +5668,15 @@ export function placeStripWholePhraseOnlyEnabled(): boolean {
  */
 export function namedPoliciesAllKeptEnabled(): boolean {
   return envFlag("NAMED_POLICIES_ALL_KEPT_ENABLED");
+}
+
+/**
+ * POLICY_LINE_COVERS_EVERY_SECTION_ENABLED (Coding-2, 14 Nov 2026; default off; QA's two-offense Create check). The
+ * card's Policy line and the draft named one policy where the CA carried two: "she was late on 11/3/26 and yelled at a
+ * customer" was read as Attendance only, and naming "the attendance policy and standards of conduct" was said as one.
+ * On: a conduct incident described beside lateness is read too (`forms/ca-policy.ts` withConductBesideLateness), the
+ * card line names every policy (named or described), and the draft ticks and cites each. Off, as before.
+ */
+export function policyLineCoversEverySectionEnabled(): boolean {
+  return envFlag("POLICY_LINE_COVERS_EVERY_SECTION_ENABLED");
 }
