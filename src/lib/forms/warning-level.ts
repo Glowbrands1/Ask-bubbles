@@ -435,12 +435,31 @@ function timing(after: string, today: string, text = "", end = -1, opening = tru
     const anywhere = historyLevelRowsEnabled();
     if (dated.iso < today && ((levelOnIncidentDayEnabled() && opening) || anywhere) && end >= 0 && !/,/.test(window.slice(0, dated.index))) {
       const incident = incidentDay(text, end + dated.index, end + dated.end, today);
-      if (incident ? dated.iso >= incident : opening && levelOnIncidentDayEnabled()) return "today";
+      // No other day in the turn: this form's only when the level opens the turn and the turn puts the incident on
+      // that day ("she was late that day"); otherwise its date is weighed against today (QA's bar, 14 Nov 2026).
+      if (incident ? dated.iso >= incident : opening && levelOnIncidentDayEnabled() && SAME_DAY_AS_LEVEL.test(text)) return "today";
     }
     return dated.iso < today ? "earlier" : dated.iso === today ? "today" : "other";
   }
+  // LEVEL_ON_INCIDENT_DAY_ENABLED: "on 12 November", "on November 12" are dates as 11/12 is (QA's bar, 14 Nov 2026).
+  const month = levelOnIncidentDayEnabled() && end >= 0 ? NAMED_DAY_AFTER.exec(after) : null;
+  const monthIso = month ? namedDay(month, today) : null;
+  if (month && monthIso) {
+    if (monthIso === today) return "today";
+    const at = end + month.index + month[0].length;
+    const incident = incidentDay(text, at - month[0].length, at, today);
+    if (incident ? monthIso >= incident : opening && SAME_DAY_AS_LEVEL.test(text)) return "today";
+    return monthIso < today ? "earlier" : "other";
+  }
   if (EARLIER_AFTER.test(after) || RELATIVE_EARLIER_AFTER.test(after)) return "earlier";
   const day = DAY_OF_MONTH_AFTER.exec(after);
+  // LEVEL_ON_INCIDENT_DAY_ENABLED: "on the 12th" is weighed as a numeric date is (QA's bar, 14 Nov 2026).
+  if (day && levelOnIncidentDayEnabled() && end >= 0 && Number(day[1]) !== Number(today.slice(8, 10))) {
+    const iso = ordinalDay(Number(day[1]), today);
+    const at = end + day.index + day[0].length;
+    const incident = iso ? incidentDay(text, at - day[0].length, at, today) : null;
+    if (iso && (incident ? iso >= incident : opening && SAME_DAY_AS_LEVEL.test(text))) return "today";
+  }
   if (day) return Number(day[1]) === Number(today.slice(8, 10)) ? "today" : "earlier";
   if (TODAY_AFTER.test(after)) return "today";
   return null;
@@ -453,6 +472,33 @@ function dayBefore(iso: string): string {
   const date = new Date(`${iso}T12:00:00Z`);
   date.setUTCDate(date.getUTCDate() - 1);
   return date.toISOString().slice(0, 10);
+}
+
+/** "she was late that day", "that night", "the same day": the incident is on the level's own day. */
+const SAME_DAY_AS_LEVEL = /\b(?:that|the\s+same|same)\s+(?:day|night|morning|afternoon|evening|shift)\b/i;
+
+const MONTH_NAMES = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+const MONTH_WORD = String.raw`(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)`;
+/** "on 12 November", "on November 12", right after the level. */
+const NAMED_DAY_AFTER = new RegExp(String.raw`^\s*(?:(?:was\s+)?(?:given|issued)\s+)?(?:on\s+)?(?:the\s+)?(?:(\d{1,2})(?:st|nd|rd|th)?(?:\s+of)?\s+${MONTH_WORD}\b|${MONTH_WORD}\.?\s+(\d{1,2})(?:st|nd|rd|th)?\b)`, "i");
+
+/** The ISO day of a NAMED_DAY_AFTER match, its year the latest one not after today. */
+function namedDay(match: RegExpExecArray, today: string): string | null {
+  const d = Number(match[1] ?? match[3]);
+  const m = MONTH_NAMES.indexOf((match[2] ?? match[4])!.slice(0, 3).toLowerCase()) + 1;
+  if (m < 1 || d < 1 || d > 31) return null;
+  const [year, month, day] = today.split("-").map(Number) as [number, number, number];
+  const y = m > month || (m === month && d > day) ? year - 1 : year;
+  return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
+
+/** "the 12th": a day of this month, or of the month before when that day is still to come. */
+function ordinalDay(d: number, today: string): string | null {
+  if (d < 1 || d > 31) return null;
+  const [year, month, day] = today.split("-").map(Number) as [number, number, number];
+  const m = d > day ? (month === 1 ? 12 : month - 1) : month;
+  const y = d > day && month === 1 ? year - 1 : year;
+  return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 }
 
 /**
@@ -557,7 +603,10 @@ function classify(text: string, start: number, end: number, today: string, cued:
     !/^\s*for\s+(?:the\s+same|that|it|this\s+same|same)\b/i.test(after) &&
     (/^\s*(?:for\b|[-—–,:]|$|this\s+time\b|please\b)/.test(after) ||
       TODAY_ATTACHED.test(after) ||
-      (when === "today" && datesInText(after.slice(0, 16), today)[0]?.index !== undefined))
+      (when === "today" &&
+        (datesInText(after.slice(0, 16), today)[0]?.index !== undefined ||
+          // LEVEL_ON_INCIDENT_DAY_ENABLED: "on the 12th", "on 12 November" — the level's own date, as 11/12 is.
+          (levelOnIncidentDayEnabled() && (DAY_OF_MONTH_AFTER.test(after) || NAMED_DAY_AFTER.test(after))))))
   ) {
     return "current";
   }

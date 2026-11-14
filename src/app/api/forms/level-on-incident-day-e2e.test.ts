@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 import type { AccessScope } from "@/types";
+import { statedWarningLevel } from "@/lib/forms/warning-level";
 /**
  * ============================================================================
  * A DATED LEVEL IS WEIGHED AGAINST THE INCIDENT'S DAY, AND AN EARLIER ONE IS LISTED (LEVEL_ON_INCIDENT_DAY_ENABLED,
@@ -208,4 +209,69 @@ describe("Gate-Sunny-3's findings on Ask Sunny #970, in Ask Bubbles (QA's ruling
     expect(answer?.formProposal?.warningLevel ?? null).toBeNull();
     expect(answer?.content).toMatch(/Verbal warning — (?:signed )?10\/30\/2026/);
   });
+});
+
+/** The reply to the last of several manager turns, Ask Bubbles' answers fed forward as history (filed 13 Nov 2026). */
+async function replies(turns: string[]) {
+  const history: { id: string; role: "user" | "assistant"; content: string; createdAt: string; formProposal?: unknown }[] = [];
+  let open: string | undefined;
+  let last: Awaited<ReturnType<typeof proposeFormForTurn>> = null;
+  for (const [index, said] of turns.entries()) {
+    last = await proposeFormForTurn({
+      history: history as never,
+      question: said,
+      questionMessageId: `m${index}`,
+      actor: { role: state.role as never, scope: state.scope as AccessScope },
+      summaries: await listTemplateSummaries(),
+      today: "2026-11-13",
+      ...(open ? { continueTemplateKey: open } : {}),
+    });
+    if (last?.formProposal) open = last.formProposal.templateKey;
+    history.push(
+      { id: `m${index}`, role: "user", content: said, createdAt: `2026-11-13T15:3${index}:00Z` },
+      { id: `a${index}`, role: "assistant", content: last?.content ?? "", createdAt: `2026-11-13T15:3${index}:01Z`, ...(last?.formProposal ? { formProposal: last.formProposal } : {}) },
+    );
+  }
+  return last;
+}
+
+/*
+ * QA's bar on Gate-Bubbles-5's NO-GO (G5-898, 14 Nov 2026), every wording an assert, the people invented: with
+ * LEVEL_ON_INCIDENT_DAY on, dated history never becomes this form's level, and the incident-day rule covers ordinals
+ * and named months as numeric dates.
+ */
+describe("QA's bar on the history NO-GO, LEVEL_ON_INCIDENT_DAY on", () => {
+  for (const said of ["written warning on the 21st", "verbal warning on 21 September", "written warning on the 21st, now late again"]) {
+    it(`statedWarningLevel("${said}") is null`, () => {
+      process.env.LEVEL_ON_INCIDENT_DAY_ENABLED = "true";
+      expect(statedWarningLevel(said, "2026-11-13")).toBeNull();
+    });
+  }
+
+  it('"Create a CA for pat rivera, late again today. She got a verbal warning on 9/2 and a written warning on 9/21." states no level', async () => {
+    process.env.LEVEL_ON_INCIDENT_DAY_ENABLED = "true";
+    const answer = await replies(["Create a CA for pat rivera, late again today. She got a verbal warning on 9/2 and a written warning on 9/21."]);
+    expect(answer?.formProposal?.warningLevel ?? null).toBeNull();
+    expect(answer?.content).not.toMatch(/Type of Warning:\*\* \w+ Warning, as you said/);
+  });
+
+  for (const reply of ["written warning on the 21st, now late again", "verbal warning on 21 September"]) {
+    it(`a reply "${reply}" after "create a ca form for pat rivera, late again today" states no level`, async () => {
+      process.env.LEVEL_ON_INCIDENT_DAY_ENABLED = "true";
+      const answer = await replies(["create a ca form for pat rivera, late again today", reply]);
+      expect(answer?.formProposal?.warningLevel ?? null).toBeNull();
+      expect(answer?.content).not.toMatch(/Type of Warning:\*\* \w+ Warning, as you said/);
+    });
+  }
+
+  for (const said of [
+    "verbal warning on the 12th for pat rivera, she was late that day",
+    "verbal warning on 12 November for pat rivera, she was late that day",
+    "verbal warning on 11/12/26 for pat rivera, she was late that day",
+  ]) {
+    it(`"${said}", filed the next day, is a Verbal`, async () => {
+      process.env.LEVEL_ON_INCIDENT_DAY_ENABLED = "true";
+      expect((await replies([said]))?.formProposal?.warningLevel).toBe("verbal");
+    });
+  }
 });
