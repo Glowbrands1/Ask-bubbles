@@ -5522,6 +5522,27 @@ export function sameNameAsksWhichEnabled(): boolean {
 }
 
 /**
+ * POLICY_DASH_LINE_PAGE_ENABLED (coding 5, 12 Nov 2026; default off; QA's Bubbles 17q live test). "create a CA for <B>,
+ * she rang up the wrong items on 11/9" cited "**Policy:** Standards of Conduct — ringing up a sale inaccurately. I'll
+ * cite that section … with its page, on the draft" with no page, while Attendance and Animals gave theirs. On: a card
+ * Policy line that opens with one of the app's own policy names and a dash carries that section's printed page, as the
+ * Dress Code read-from-request line does (`forms/policy-page-on-card.ts`). Off, as before.
+ */
+export function policyDashLinePageEnabled(): boolean {
+  return envFlag("POLICY_DASH_LINE_PAGE_ENABLED");
+}
+
+/**
+ * ADDED_ACCOUNT_ON_CARD_ENABLED (coding 5, 12 Nov 2026; default off; QA's Bubbles 17q live test, item 7). After "she was
+ * late on 11/3/26", "she also left the register unlocked" reached the saved Observation but the card's "What happened"
+ * still showed only the lateness. On: a later turn the card cites that adds to the account ("she also …") is added to
+ * the card's Issue, so the card and the saved draft agree (`forms/added-account-on-card.ts`). Off, as before.
+ */
+export function addedAccountOnCardEnabled(): boolean {
+  return envFlag("ADDED_ACCOUNT_ON_CARD_ENABLED");
+}
+
+/**
  * NEXT_PUBLIC_REPLY_QUOTE_LINES_ENABLED (QA's Bubbles 17p live check, 12 Nov 2026; default off). With
  * STEP_B_REPLY_KEEPS_LINES on, an edit reply quotes the field line by line ("Changed Observation of Offense to:\n>
  * Observed:\n> <G> was late …\n> Expectation: …"), but the chat showed it as ONE line with ">" between the parts: the
