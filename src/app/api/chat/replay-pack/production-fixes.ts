@@ -864,4 +864,8 @@ export const FIXED_IN_PRODUCTION: Readonly<Record<string, string>> = {
   "nov14-request-line-title-kept-seasonal-team-member-part-time": "REQUEST_LINE_TITLE_KEPT",
   // fixed in production by POLICY_DASH_LINE_PAGE, QA round 17z, 14 Nov 2026
   "nov12-17q-1-wrong-items-policy-page": "POLICY_DASH_LINE_PAGE",
+  // fixed in production by OTHER_POLICY_AGREES, QA round 17z, 14 Nov 2026
+  "nov14-other-policy-agrees-sanitation-typed": "OTHER_POLICY_AGREES",
+  // fixed in production by OTHER_POLICY_AGREES, QA round 17z, 14 Nov 2026
+  "nov14-other-policy-agrees-sanitation-spelled": "OTHER_POLICY_AGREES",
 };
