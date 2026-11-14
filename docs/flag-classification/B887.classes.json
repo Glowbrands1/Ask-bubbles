@@ -1,0 +1,6 @@
+{
+  "src/app/api/forms/revised-form-points-to-newer-e2e.test.ts :: \"That form has already been revised.\" (live runtime error, 14 Nov 2026) flag off: the stale card's Edit is a 500 with the generic line, as before (with FORM_REVISIONS off)": {
+    "category": "INTENDED-HARNESS",
+    "reason": "The PR's own flag-off case. It never clears REVISED_FORM_POINTS_TO_NEWER_ENABLED itself; the ON arm sets it in the process env, and this is the first test in the file, so it sees the flag and gets the flag-on 409 (\"expected 409 to be 500\"). afterEach deletes the flag, so the second flag-off case (FORM_REVISIONS on) passes in both arms. The 409 it got is the intended ON behaviour."
+  }
+}
