@@ -1009,6 +1009,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "ANSWER_IS_THE_ISSUE_ENABLED",
   // coding 2: ACCOUNT_CHANGE_REDERIVES_POLICY (QA's Bubbles 17u, 13 Nov 2026; default off).
   "ACCOUNT_CHANGE_REDERIVES_POLICY_ENABLED",
+  // coding 2: ACCOUNT_REPLACED_CLOSE_SENTENCE_KEPT (QA's follow-up to it, 13 Nov 2026; default off).
+  "ACCOUNT_REPLACED_CLOSE_SENTENCE_KEPT_ENABLED",
   // QA round 17r (13 Nov 2026): TEAM_CARD_NOT_PRODUCT (#668) and FORM_EDIT_SOURCE_TURN (#480) are switched on in production.
   "TEAM_CARD_NOT_PRODUCT_ENABLED",
   "FORM_EDIT_SOURCE_TURN_ENABLED",
@@ -1433,6 +1435,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 6: PRIOR_ACTIONS_NO_COMMA (October rebuild 4, #187 rebuilt on main; default off).
   "PRIOR_ACTIONS_NO_COMMA_ENABLED",
   "STORE_ALIAS_ENABLED",
+  // coding 4: POLICY_NOT_FOUND_PLAIN_WORDING (QA, 13 Nov 2026; default off).
+  "POLICY_NOT_FOUND_PLAIN_WORDING_ENABLED",
   // coding 4: HEADING_DISTINCTIVE_WORDS (QA, 13 Nov 2026; default off).
   "HEADING_DISTINCTIVE_WORDS_ENABLED",
   // coding 4: PLACE_STRIP_WHOLE_PHRASE_ONLY (QA, 13 Nov 2026; default off).
@@ -3599,6 +3603,17 @@ export function accountChangeRederivesPolicyEnabled(): boolean {
 }
 
 /**
+ * ACCOUNT_REPLACED_CLOSE_SENTENCE_KEPT_ENABLED (Coding-2, 13 Nov 2026; default off; QA's follow-up to
+ * ACCOUNT_CHANGE_REDERIVES_POLICY). With that flag on, an Observation edit counted as a new account unless each old
+ * sentence was still there word for word, so fixing a typo ("the whole shfit" → "the whole shift") or a date re-derived
+ * the policy: an Attendance Corrective Action moved to Cell Phone. On: a sentence with only a typo or a date changed
+ * is the same sentence (`forms/close-sentence.ts`), so such an edit keeps the policy. Off, as before.
+ */
+export function accountReplacedCloseSentenceKeptEnabled(): boolean {
+  return envFlag("ACCOUNT_REPLACED_CLOSE_SENTENCE_KEPT_ENABLED");
+}
+
+/**
  * COACHING_ASKS_WHAT_HAPPENED_ENABLED (Pau, 5 Nov 2026, sf-s27; default off).
  * "Create a coaching form." → "<name>" answered "Everything I need is here …
  * I have the employee and the store." with no incident and no draft. On: a
@@ -5637,6 +5652,16 @@ export function formDateBusinessTodayEnabled(): boolean {
  */
 export function closeSpellingMatchEnabled(): boolean {
   return envFlag("CLOSE_SPELLING_MATCH_ENABLED");
+}
+
+/**
+ * POLICY_NOT_FOUND_PLAIN_WORDING (QA, 13 Nov 2026; default off): the card's line for a policy the manual has no section
+ * for says "I don't see a section of the current policy manual for "<phrase>" …" for every phrase, not "Woven does not
+ * see …", which reads oddly to a manager. See `forms/ca-policy.ts` namedPolicyLine. Off, only a phrase about Woven
+ * (WOVEN_TRAINING_CONDUCT) gets the plain wording, as before.
+ */
+export function policyNotFoundPlainWordingEnabled(): boolean {
+  return envFlag("POLICY_NOT_FOUND_PLAIN_WORDING_ENABLED");
 }
 
 /**
