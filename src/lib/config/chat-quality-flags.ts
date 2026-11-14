@@ -1430,6 +1430,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   // coding 6: PRIOR_ACTIONS_NO_COMMA (October rebuild 4, #187 rebuilt on main; default off).
   "PRIOR_ACTIONS_NO_COMMA_ENABLED",
   "STORE_ALIAS_ENABLED",
+  // coding 4: FUZZY_STORE_ASKS (QA's ruling on Gate-Bubbles-3's #869 probes, 14 Nov 2026; default off).
+  "FUZZY_STORE_ASKS_ENABLED",
   // coding 4: HEADING_DISTINCTIVE_WORDS (QA, 13 Nov 2026; default off).
   "HEADING_DISTINCTIVE_WORDS_ENABLED",
   // coding 4: PLACE_STRIP_WHOLE_PHRASE_ONLY (QA, 13 Nov 2026; default off).
@@ -5653,4 +5655,14 @@ export function headingDistinctiveWordsEnabled(): boolean {
  */
 export function placeStripWholePhraseOnlyEnabled(): boolean {
   return envFlag("PLACE_STRIP_WHOLE_PHRASE_ONLY_ENABLED");
+}
+
+/**
+ * FUZZY_STORE_ASKS (QA's ruling on Gate-Bubbles-3's #869 probes, 14 Nov 2026; default off): GLOBAL_STORE_ASK takes a
+ * single misspelt store silently. That stays for a one-letter typo or an initialism; a close spelling further off
+ * ("sioux falls west" read as Sioux Falls, SD (W 41st St)) is asked, never written "as you said". See
+ * `stores/resolver.ts` (loose) and `forms/location-scope.ts` fromNamedLocations. Off, as before.
+ */
+export function fuzzyStoreAsksEnabled(): boolean {
+  return envFlag("FUZZY_STORE_ASKS_ENABLED");
 }

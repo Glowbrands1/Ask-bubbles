@@ -143,8 +143,14 @@ const PROTECTED = [
  * Termination plan's closing is the termination sentence (`planClosing`, also
  * in `refreshedActionPlan`). Off, both are exactly as before; instances.ts is
  * not touched.
+ *
+ * The user (Pau), under the standing approval, via QA on 14 Nov 2026, behind FUZZY_STORE_ASKS_ENABLED (default off):
+ * in src/lib/forms/location-scope.ts, fromNamedLocations does not take a single store read by a close spelling more
+ * than one letter off (a `loose` mention) silently under GLOBAL_STORE_ASK; it is asked. The flag import and that one
+ * condition; docs/patches/fuzzy-store-asks.patch. Off, exactly as before.
  */
 const APPROVED_PROTECTED_EDITS = [
+  ":(exclude)src/lib/forms/location-scope.ts",
   ":(exclude)src/lib/forms/required-closing.ts",
   ":(exclude)src/lib/forms/ca-action-plan.ts",
   ":(exclude)src/lib/forms/chat-revision.ts",

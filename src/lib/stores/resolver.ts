@@ -66,6 +66,8 @@ export type StoreResolution =
       /** True when the match was inferred (typo, initialism): ask before using it. */
       confirm: boolean;
       matched: string;
+      /** A close spelling more than one letter off ("sioux falls west" → "sioux falls 41st"); FUZZY_STORE_ASKS. */
+      loose?: boolean;
     }
   | {
       kind: "ambiguous";
@@ -99,6 +101,11 @@ export interface StoreMention {
   readonly numbering?: StoreNumbering;
   /** What the manager typed for it. */
   readonly matched?: string;
+  /**
+   * FUZZY_STORE_ASKS: a close spelling more than one letter off ("sioux falls west" read as the W 41st St store).
+   * Asked, never taken silently; a one-letter typo or an initialism is not loose.
+   */
+  readonly loose?: boolean;
 }
 
 export interface StoreReading {
@@ -371,7 +378,7 @@ function idsForNumber(
 
 const NUMBERED = /^(?:(?:salon|store|location|loc|shop|makery|studio)\s*)?#?\s*([A-Za-z0-9][A-Za-z0-9-]{0,15})$/i;
 
-function fuzzy(query: string, index: StoreIndex): { ids: string[]; phrase: string } | null {
+function fuzzy(query: string, index: StoreIndex): { ids: string[]; phrase: string; distance: number } | null {
   if (query.length < 5) return null;
   let best = Infinity;
   let hits: IndexedAlias[] = [];
@@ -388,7 +395,7 @@ function fuzzy(query: string, index: StoreIndex): { ids: string[]; phrase: strin
     } else if (distance === best) hits.push(alias);
   }
   if (hits.length === 0) return null;
-  return { ids: [...new Set(hits.flatMap((alias) => alias.locationIds))], phrase: hits[0]!.phrase };
+  return { ids: [...new Set(hits.flatMap((alias) => alias.locationIds))], phrase: hits[0]!.phrase, distance: best };
 }
 
 function partial(query: string, index: StoreIndex): string[] {
@@ -448,7 +455,10 @@ export function resolveStoreText(query: string, index: StoreIndex = defaultStore
   if (parts.length > 0) return settle(parts, "partial", false, typed);
 
   const close = fuzzy(key, index);
-  if (close) return settle(close.ids, "fuzzy", true, typed);
+  if (close) {
+    const settled = settle(close.ids, "fuzzy", true, typed);
+    return settled.kind === "resolved" && close.distance > 1 ? { ...settled, loose: true } : settled;
+  }
 
   return { kind: "not_found", query };
 }
@@ -674,7 +684,7 @@ export function readStoreMentions(text: string, index: StoreIndex = defaultStore
       const resolution = resolveStoreText(span, index);
       if (resolution.kind === "resolved") {
         if (!covered.has(resolution.store.id) || resolution.confirm) {
-          mentions.push({ locationIds: [resolution.store.id], confirm: resolution.confirm, matched: span });
+          mentions.push({ locationIds: [resolution.store.id], confirm: resolution.confirm, matched: span, ...(resolution.loose ? { loose: true } : {}) });
         }
       } else if (resolution.kind === "ambiguous") {
         mentions.push({
