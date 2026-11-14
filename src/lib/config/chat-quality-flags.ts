@@ -1439,6 +1439,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "POLICY_NOT_FOUND_PLAIN_WORDING_ENABLED",
   // coding 4: REASON_PLACE_NOT_STORE (Gate-Bubbles-3 on #869, 13 Nov 2026; default off).
   "REASON_PLACE_NOT_STORE_ENABLED",
+  // coding 4: NEGATED_FIRST_TIME_NOT_NONE (Gate-Bubbles-3's #888 follow-up, QA 14 Nov 2026; default off).
+  "NEGATED_FIRST_TIME_NOT_NONE_ENABLED",
   // coding 4: FUZZY_STORE_ASKS (QA's ruling on Gate-Bubbles-3's #869 probes, 14 Nov 2026; default off).
   "FUZZY_STORE_ASKS_ENABLED",
   // coding 4: REQUEST_LINE_TITLE_KEPT (QA's Bubbles 17x live test, 14 Nov 2026; default off).
@@ -5762,4 +5764,14 @@ export function otherPolicyAgreesEnabled(): boolean {
  */
 export function otherNotAPolicyNameEnabled(): boolean {
   return envFlag("OTHER_NOT_A_POLICY_NAME_ENABLED");
+}
+
+/**
+ * NEGATED_FIRST_TIME_NOT_NONE (Gate-Bubbles-3's #888 follow-up, QA 14 Nov 2026; default off): "not her first time" and
+ * "this isn't the first time she's been late" read as a first occurrence, so Prior Actions became "None — first
+ * occurrence" — a clean history the manager denied. With the flag a negated first-time phrase never reads as None. See
+ * `forms/corrective-action-intake.ts` statesFirstOccurrence. Off, as before.
+ */
+export function negatedFirstTimeNotNoneEnabled(): boolean {
+  return envFlag("NEGATED_FIRST_TIME_NOT_NONE_ENABLED");
 }
