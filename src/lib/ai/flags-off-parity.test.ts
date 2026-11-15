@@ -187,6 +187,15 @@ const UI_PATHS = ["src/app/**/*.tsx", "src/components/**", "src/features/**/*.ts
  * off, it renders as before for every role.
  */
 const ALLOWED_UI = [
+  /*
+   * DM L10 tab (the Leadership Hub's BCS DM L10, as Ask Sunny's tab; QA, 15 Nov 2026): new pages and components only,
+   * shown only when HUB_PARTNER_SECRET is set and the Leadership Hub says the person holds the meeting's role. The
+   * stylesheet gains a section scoped to `.hub-l10` (plus colour names this app does not use). No existing page, chat
+   * or form behaviour changes. The shell files it touches (sidebar, app-shell, the (app) layout) are listed below.
+   */
+  "src/app/(app)/meetings/",
+  "src/features/l10/",
+  "src/app/globals.css",
   // NEXT_PUBLIC_REPLY_QUOTE_LINES_ENABLED (#839, QA's Bubbles 17p live check; QA round 17r, 13 Nov 2026): a run of "> "
   // lines in a reply is shown as a quote, a line each. Off, the renderer is unchanged.
   "src/components/rich-text.tsx",

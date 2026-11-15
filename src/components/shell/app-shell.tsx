@@ -29,11 +29,14 @@ export function AppShell({
   /** Administrators and two named users, decided on the server by the layout. */
   showAppSwitcher = false,
   showLeadershipHub = false,
+  meetingTabs = [],
 }: {
   children: ReactNode;
   overdueFollowUps?: number;
   showAppSwitcher?: boolean;
   showLeadershipHub?: boolean;
+  /** The DM L10 tab(s), decided on the server from the Leadership Hub (attendees only). Empty: no tab. */
+  meetingTabs?: { href: string; label: string }[];
 }) {
   const { hydrated, signedIn, demoMode, role } = useSession();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -101,6 +104,7 @@ export function AppShell({
           overdueFollowUps={overdueFollowUps}
           showAppSwitcher={showAppSwitcher}
           showLeadershipHub={showLeadershipHub}
+          meetingTabs={meetingTabs}
         />
       </aside>
 
@@ -196,7 +200,8 @@ export function AppShell({
                 onNavigate={() => setDrawerOpen(false)}
                 overdueFollowUps={overdueFollowUps}
                 showAppSwitcher={showAppSwitcher}
-          showLeadershipHub={showLeadershipHub}
+                showLeadershipHub={showLeadershipHub}
+                meetingTabs={meetingTabs}
               />
             </div>
           </div>

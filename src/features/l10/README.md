@@ -1,0 +1,82 @@
+# The DM L10 tab (Leadership Hub meeting inside Ask Bubbles)
+
+The **BCS DM L10** from the Leadership Hub, opened in Ask Bubbles with the Hub's own page, on the Hub's own record.
+The Leadership Hub is the single source of truth: Ask Bubbles stores no meeting data.
+
+## How it works
+
+```
+browser ──► Ask Bubbles page / Server Function / /api/l10/assistant
+              │  verified session only (pageIdentity: live Supabase session + active app_users row)
+              ▼
+            data.server.ts ──► partner/client.server.ts ──HMAC──►  Leadership Hub  POST /api/partner/l10
+                                                                       │  signature, 5-min window, one-time nonce,
+                                                                       │  per-person rate limit, else 404
+                                                                       ▼
+                                                     Hub database: public.l10_partner_* (service_role only)
+                                                       · finds the Hub account by email (case-insensitive)
+                                                       · checks that account's meeting role (has_role_for)
+                                                       · refuses any meeting not on l10.partner_meetings (for ask-bubbles: bcs-dm)
+                                                       · saves through the SAME bodies as the Hub's own saves
+                                                         (history, recaps, notifications identical)
+```
+
+- **Who sees it.** The sidebar tab (`(app)/layout.tsx` → `l10TabsForLayout`) shows only for people the Hub lists for
+  an allowlisted meeting; cached 5 minutes per person for the link only. Every page, Server Function and assistant
+  call asks the Hub again. A refused meeting (Leadership L10, or a person who is not an attendee) is a plain 404.
+- **Sync.** The Hub's page logic as it is (`meeting/useMeetingSync.ts`): saves carry the version they were based on,
+  a stale save comes back with the latest and is merged item by item, and the page polls every 4 seconds, so an edit
+  in either app shows in the other within seconds. "All changes saved" shows only after the Hub confirmed the save.
+- **Bell.** The Hub's notifications, the same rows and read state (`ui/NotificationBell.tsx`, 60-second refresh), for
+  the meetings Ask Bubbles may open. "See all" and "Settings" open the Hub.
+- **Assistant.** `assistant/` + `/api/l10/assistant`: the Hub's system prompt, model settings and its `getMeeting` /
+  `getMeetingRecaps` tools (run by the Hub, as this person), on Ask Bubbles' own `ANTHROPIC_API_KEY`. Per-person rate
+  limit as in the Hub (20 messages / 10 minutes).
+- **Look.** The DM L10 section at the end of `src/app/globals.css` adds the Hub's colour tokens and glass utilities; everything that would clash with Ask Bubbles'
+  tokens is set inside `.hub-l10` only. Fonts (Public Sans, JetBrains Mono) load on these pages only.
+
+## What is copied from the Hub, and what differs
+
+Copied with the same structure (each file says where it came from): `lib/` (from `src/lib/meetings`, mentions,
+tracker), `meeting/` (from `src/app/meetings`), `ui/` (from `src/components`), `notifications/` (logic, types, view).
+The Hub's page code runs unchanged except:
+
+| Hub | Here | Why |
+| --- | --- | --- |
+| `MEMBERS`, `FULL_NAMES`, `MEETING_LEADER`, `KNOWN_ROLES` in config | `Roster`, served by the Hub per request | this repository is public: no people in it |
+| `MEETING_CATALOG` (every meeting's name and description) and the meetings picker | not copied; names come from the Hub with the meeting | one meeting here; no other company's wording in this repository |
+| "← All meetings" | "Open in Leadership Hub ↗" | one meeting here; the rest is in the Hub |
+| Files on an issue: Storage as the signed-in Hub user | the Hub's own file code, run by the Hub's partner API with a Storage client limited to `l10-files` + `bcs-dm/`, read links ≤ 60 s | no Hub session here; see PARITY.md |
+| Recaps page `/meetings/recaps?meeting=<key>` | `/meetings/<key>/recaps` | one meeting here |
+| Tracker, notification settings | links to the Hub | Tracker is Leadership-only in the Hub; see PARITY.md |
+| Assistant on assistant-ui | the same markup on `@ai-sdk/react` | assistant-ui needs AI SDK 7 and a newer Radix |
+| Assistant: chat history in the Hub's localStorage keys | `l10-hub-assistant:<Bubbles user id>:<meeting>` | not shared with the Hub's history |
+| Assistant @-mentions: everyone the person shares a meeting with | this meeting's people | one meeting here |
+| Assistant: web search / fetch tool version 20260318 | 20260209 | the newest in `@ai-sdk/anthropic` for AI SDK 6; see PARITY.md |
+| IDS ranking ("Everyone's top three", Rank buttons, Priority badges) | off (`RANKING = false` in `Ids.tsx`) | the team works IDS as in Bloom Growth, without ranking (14 Nov 2026) |
+
+When the Hub's meeting page changes, re-copy the file and re-apply the row above that concerns it. The full audit, file by file, is in [PARITY.md](./PARITY.md).
+
+**Ask Sunny and Ask Bubbles only (not in the Hub):** the "Past meetings" page (`/meetings/[key]/past`, `lib/past.ts`,
+`meeting/_components/PastMeetings.tsx`, the header link next to History). It lists the Hub's recaps (saved by End
+meeting, here or in the Hub) together with the meetings imported from Bloom Growth, which are kept in the meeting
+document as `meetingHistory` (the Hub keeps unknown fields); the BCS DM L10 has none yet, so the page lists the recaps
+and says "No past meetings yet." until one is ended. Times are in the business zone (`@/lib/business-date`, Central by
+default). Keep the header link when re-copying
+`MeetingView.tsx`.
+
+## Settings
+
+- `HUB_PARTNER_SECRET` (server only, at least 32 characters): the same value as `HUB_PARTNER_SECRET_ASK_BUBBLES` in the
+  Hub's Vercel project (each partner has its own secret). Unset: no tab, every page 404.
+- `NEXT_PUBLIC_LEADERSHIP_HUB_URL` (existing, `src/config/company/app-links.ts`): the Hub's address, for its API and the "Open in Leadership Hub" links.
+- `ANTHROPIC_API_KEY` (existing): the assistant.
+
+## Ported from Ask Sunny
+
+This folder, the `(app)/meetings` routes, `/api/l10/assistant`, the sidebar wiring and the DM L10 section of
+`globals.css` are Ask Sunny's (`Glowbrands1/ask-sunny`, `src/features/l10`, main `e01da17`), with `PARTNER_ID =
+"ask-bubbles"`, `L10_TAB_LABELS` `bcs-dm` → "DM L10" and `NO_REFERENCE` = `bcs-dm`. Every copied file keeps its
+structure, so a later change in Ask Sunny's copy ports by re-copying the file and re-applying the rows in
+[PARITY.md](./PARITY.md) ("Ask Sunny vs Ask Bubbles"). Adding the BCS GM L10 later: a label in `L10_TAB_LABELS`
+(and in `NO_REFERENCE` if it hides the Reference), plus the Hub's allowlist row `('ask-bubbles', 'bcs-gm')`.
