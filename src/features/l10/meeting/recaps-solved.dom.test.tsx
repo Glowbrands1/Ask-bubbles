@@ -53,20 +53,29 @@ describe("the recaps page reads both shapes of solved issues", () => {
     ];
     const { default: RecapsPage } = await import("@/app/(app)/meetings/[key]/recaps/page");
     render(await RecapsPage({ params: Promise.resolve({ key: "bcs-dm" }), searchParams: Promise.resolve({}) }));
-    const list = screen.getByRole("heading", { name: "Issues solved" }).nextElementSibling as HTMLElement;
-    expect(within(list).getAllByRole("listitem").map((li) => li.textContent)).toEqual(["Old title", "New title · Bo Lark", "No owner"]);
+    // Each recap now opens its full summary (Sunny #1040, the owner's request, 15 Nov 2026): solved issues are grouped by
+    // owner there, and those without one are under "Unassigned", instead of a flat "Issues solved" list with "· owner".
+    const summary = within(screen.getByTestId("meeting-summary"));
+    const issues = summary.getByRole("group", { name: "Issues solved by owner", hidden: true });
+    expect(within(issues).getAllByRole("listitem", { hidden: true }).map((li) => li.textContent)).toEqual(["Old title", "No owner", "New title"]);
+    expect(issues.textContent).toContain("Unassigned");
+    expect(issues.textContent).toContain("Bo Lark");
     expect(document.body.textContent).not.toContain("Cy Marlow");
     expect(document.body.textContent).not.toContain("[object Object]");
-    // Notes are shown (Sunny #1032); null to-do counts show no "To-dos completed".
-    expect(screen.getByTestId("recap-notes").textContent).toBe("Talked about the schedule");
-    expect(screen.queryByTestId("recap-todos-completed")).toBeNull();
+    // Notes are in the summary's NOTES section; null to-do counts show no percent (a dash in the summary's stat).
+    expect(document.body.textContent).toContain("Talked about the schedule");
+    expect(document.body.textContent).not.toMatch(/% to-dos completed/);
+    expect(summary.getByText("To-dos completed").nextElementSibling?.textContent).toBe("—");
   });
 
   it("shows To-dos completed as a percent when the recap has the counts, and no Notes when it has none", async () => {
     state.recaps = [recap({ resolved_issues: ["Old title"], todos_done: 3, todos_total: 4, notes: null })];
     const { default: RecapsPage } = await import("@/app/(app)/meetings/[key]/recaps/page");
     render(await RecapsPage({ params: Promise.resolve({ key: "bcs-dm" }), searchParams: Promise.resolve({}) }));
-    expect(screen.getByTestId("recap-todos-completed").textContent).toBe("To-dos completed75%");
-    expect(screen.queryByTestId("recap-notes")).toBeNull();
+    // The row's overview line and its summary both show the percent (Sunny #1040 moved both into this layout).
+    expect(document.body.textContent).toContain("75% to-dos completed");
+    const summary = within(screen.getByTestId("meeting-summary"));
+    expect(summary.getByText("To-dos completed").nextElementSibling?.textContent).toBe("75%");
+    expect(summary.getByText("No notes.")).toBeTruthy();
   });
 });
