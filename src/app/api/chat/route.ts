@@ -52,6 +52,7 @@ import {
   possessivePlaceNotPersonEnabled,
   writeUpLeadNotAccountEnabled,
   formNameFromRosterEnabled,
+  readableNamesEnabled,
   offRosterConfirmEnabled,
   offRosterPlaceAnswerEnabled,
   resentRequestIsYesEnabled,
@@ -447,6 +448,15 @@ async function postChat(request: Request) {
           }
         }
         enterPersonRoster(names);
+        // READABLE_NAMES_ENABLED: who is known by a preferred first name, so the reply says it the manager's way (`preferred-name-shown.ts`).
+        if (readableNamesEnabled()) {
+          // Every roster person, so a legal "Rae Fairweather" with no preferred name still blocks a merge; through
+          // displayName, so an all-caps row reads "Lorraine Fairweather" (QA's review, 15 Nov 2026).
+          const [{ displayName }, { aliasForRosterPerson }] = await Promise.all([import("@/lib/forms/employee-match"), import("@/lib/forms/preferred-name-shown")]);
+          (await import("@/lib/forms/person-roster-store")).enterPreferredAliases(
+            roster.map((person) => aliasForRosterPerson({ ...person, id: person.id }, (row) => displayName({ ...person, ...row }))),
+          );
+        }
         // FORM_NAME_OFF_ROSTER_ASK_ENABLED: the scope's level, so a name not on the roster is held for a store manager only (`lib/forms/roster-scope.ts`).
         // The manager's own turns too, so a full name typed on an earlier turn is still the manager's (the sibling app's #741 eval).
         if (formNameOffRosterAskEnabled()) {

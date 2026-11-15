@@ -4,6 +4,7 @@ import { trigramSimilarity } from "@/lib/ai/intake-augment";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 
 import { pickCrossChatOpenDraft, type CrossChatDraftRow } from "./cross-chat-draft";
+import { sameRosterPerson } from "./preferred-name-shown";
 import { draftsFromChat, keepSameChat, type SameChat } from "./draft-same-chat";
 import { sameIncident as sameIncidentKey } from "./incident-key";
 import { DUPLICATE_DRAFT_WINDOW_HOURS, loadInstance, type InstanceRow } from "./instances";
@@ -158,7 +159,8 @@ export interface AccountResentWanted {
 }
 
 export function sameEmployee(left: string, right: string): boolean {
-  return left.trim().replace(/\s+/g, " ").toLowerCase() === right.trim().replace(/\s+/g, " ").toLowerCase();
+  // READABLE_NAMES_ENABLED: one roster person's preferred and legal names are the same person (`preferred-name-shown.ts`).
+  return left.trim().replace(/\s+/g, " ").toLowerCase() === right.trim().replace(/\s+/g, " ").toLowerCase() || sameRosterPerson(left, right);
 }
 
 /**

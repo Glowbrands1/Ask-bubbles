@@ -161,6 +161,21 @@ const PROTECTED = [
  * namedPolicyFor a cleaning duty beside a second described offense reads that offense from the account without the duty
  * (marked `besideOther`). Behind OTHER_POLICY_AGREES_ENABLED (default off here); off, as before. form-proposal.ts is
  * already excluded below.
+ *
+ * The user (Pau), under the standing approval, via QA on 15 Nov 2026 ("all naming conventions should be readable; some
+ * have de la Torre etc."; port of Ask Sunny's readable names), in src/lib/forms/proposal.ts, exactly the lines of
+ * docs/patches/readable-names-proposal.patch: the imports `readableNamesEnabled`, `isNameParticle` and `readableName`;
+ * `nameWordCount` (the answer readers' two-word limit does not count surname particles); in readTypedName, the
+ * name-part limit and the middle-name rule do not count particles, and a particle left at the end is dropped; and
+ * displayPersonName makes a name typed in one case readable; and samePerson reads one roster person's preferred and
+ * legal names as the same person (`sameRosterPerson`, QA, 15 Nov 2026). Behind READABLE_NAMES_ENABLED (default off); off, every
+ * count is as before and the name is only trimmed (readable-name.test.ts's flag-off section).
+ *
+ * The user (Pau), under the standing approval, via QA on 15 Nov 2026 (QA's review of Ask Sunny #1013, ported here), in
+ * src/lib/forms/instances.ts, exactly the lines of docs/patches/readable-names-instances.patch: the import
+ * `sameRosterPerson`, and findRecentAssistantDraft's name check also takes the same roster person under their other
+ * name (preferred or legal). Behind READABLE_NAMES_ENABLED (default off); off, sameRosterPerson is false and the check is
+ * as before.
  */
 const APPROVED_PROTECTED_EDITS = [
   ":(exclude)src/lib/forms/location-scope.ts",
