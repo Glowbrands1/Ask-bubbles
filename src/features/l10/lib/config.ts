@@ -80,6 +80,12 @@ export function segueName(_key: string): string {
   return "Business Best";
 }
 
+/**
+ * The meetings whose pages are laid out like Bloom Growth's (the owner's request, 15 Nov 2026): here, the BCS DM L10
+ * (the Hub lists both DM L10s).
+ */
+export const bloomStyle = (key: string): boolean => key === "bcs-dm";
+
 /** The meetings whose cadence line shows the total of the agenda the page runs (QA, 15 Nov 2026): the BCS DM L10. */
 export const CADENCE_FROM_AGENDA: readonly string[] = ["bcs-dm"];
 
