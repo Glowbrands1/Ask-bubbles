@@ -1,4 +1,4 @@
-import { formNameFromRosterEnabled, metricChoiceOneQuestionEnabled, metricGuardEnabled, offRosterConfirmEnabled, rosterNearMissEnabled, rosterNotFoundAnyPhrasingEnabled, nearMissQuestionRulesEnabled, formNameOffRosterAskEnabled, offRosterAskBeforeCardEnabled, possessivePlaceNotPersonEnabled, titleBeforeNameEnabled, titleBeforeNameReplyLinesEnabled } from "@/lib/config/chat-quality-flags";
+import { formNameFromRosterEnabled, terminationRequestIsCaEnabled, metricChoiceOneQuestionEnabled, metricGuardEnabled, offRosterConfirmEnabled, rosterNearMissEnabled, rosterNotFoundAnyPhrasingEnabled, nearMissQuestionRulesEnabled, formNameOffRosterAskEnabled, offRosterAskBeforeCardEnabled, possessivePlaceNotPersonEnabled, titleBeforeNameEnabled, titleBeforeNameReplyLinesEnabled } from "@/lib/config/chat-quality-flags";
 import { isGlossaryTerm } from "@/lib/ai/glossary";
 import { standInForName, withStandInsSaid } from "./no-name-reply-wording";
 import type { AskResponse } from "@/lib/ai/types";
@@ -175,6 +175,16 @@ function titleWordToFirstName(content: string, message: string | undefined, name
 
 export function rosterOnlyNames(input: AskResponse, names: readonly string[], message?: string): AskResponse {
   if (names.length === 0) return input;
+  // TERMINATION_REQUEST_IS_CA_ENABLED (QA's second re-review, 15 Nov 2026): a title before a name ("for Ms. Holloway") is not
+  // the name; "Ms" is never read as the person. Off, as before.
+  if (terminationRequestIsCaEnabled() && message) {
+    const lastName = (name: string) => name.trim().split(/\s+/).slice(-1)[0]?.toLowerCase() ?? "";
+    // "Ms. Holloway": the roster's full name when one person has the surname, else the surname alone; the title always goes.
+    message = message.replace(/\b(?:mr|ms|mrs|mx|dr)\.?\s+(\p{Lu}[\p{L}'’-]*)/giu, (_whole, surname: string) => {
+      const owners = names.filter((name) => lastName(name) === surname.toLowerCase());
+      return owners.length === 1 ? owners[0]! : surname;
+    });
+  }
   const response = withoutTrailingTitle(input, names, message);
   let content = response.content;
   let proposal = response.formProposal;

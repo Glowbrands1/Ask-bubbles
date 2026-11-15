@@ -1246,6 +1246,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FIRST_NAME_SUGGEST_ENABLED",
   "NEXT_PUBLIC_CARD_CHANGE_ENABLED",
   "NEXT_PUBLIC_CARD_CHANGE_FINALIZED_ENABLED",
+  "TERMINATION_REQUEST_IS_CA_ENABLED",
   "TERMINATION_TICK_NOTE_ENABLED",
   "ACCOUNT_ONLY_POLICY_QUERY_ENABLED",
   // coding 4: EXPECTATION_POLICY_LINE_KEPT (QA audit, 10 Nov 2026; default off).
@@ -5904,6 +5905,15 @@ export function cleaningPolicyIsCareAndCleaningEnabled(): boolean {
  */
 export function priorActionsUnsaidBlankEnabled(): boolean {
   return envFlag("PRIOR_ACTIONS_UNSAID_BLANK_ENABLED");
+}
+
+/**
+ * TERMINATION_REQUEST_IS_CA_ENABLED (QA, 15 Nov 2026; default off; same flag in both apps): "create a termination for
+ * <A>, …" is a Corrective Action request (`forms/template-intent.ts` canonicalFormWording): a filing verb, "a
+ * termination", "for <someone>". Off, as before (a policy answer, no card).
+ */
+export function terminationRequestIsCaEnabled(): boolean {
+  return envFlag("TERMINATION_REQUEST_IS_CA_ENABLED");
 }
 
 /**
