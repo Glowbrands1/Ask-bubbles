@@ -1,7 +1,7 @@
 // Copied from the Leadership Hub (src/lib/meetings/report.ts); keep in step with it. See src/features/l10/README.md.
 import { cellTone, displayName, formatDuration, formatHeld, formatValue, rockSections, shortDate, type CellTone } from "./doc";
 import { childrenOf, readSeats, type Seat } from "./seats";
-import type { Issue, MeetingDoc, RecapRow, Rock, ScorecardRow, Vto } from "./types";
+import { solvedIssues, type Issue, type MeetingDoc, type RecapRow, type Rock, type ScorecardRow, type Vto } from "./types";
 import { hasReference, type Roster } from "./config";
 import { rockGroups, rockScore, type Status as TStatus, type TRock, type TrackerV2 } from "@/features/l10/lib/tracker/v2";
 
@@ -161,7 +161,7 @@ export function issuesSection(issues: Issue[], recaps: Pick<RecapRow, "held_at" 
   }
   const groups = [...map].map(([person, titles]) => ({ person, titles })).sort((a, b) => (a.person === "Not assigned" ? 1 : b.person === "Not assigned" ? -1 : a.person.localeCompare(b.person)));
   const latest = [...(recaps ?? [])].sort((a, b) => b.held_at.localeCompare(a.held_at))[0];
-  return { groups, open: open.length, solvedLast: latest ? (latest.resolved_issues?.length ?? 0) : null };
+  return { groups, open: open.length, solvedLast: latest ? solvedIssues(latest.resolved_issues).length : null };
 }
 
 /* ── Metrics (scorecard) ──────────────────────────────────────────────── */
@@ -219,7 +219,7 @@ export function recapsSection(recaps: RecapRow[], count = 13): RecapLine[] {
       held: formatHeld(r.held_at),
       duration: formatDuration(r.duration_seconds),
       rating: r.rating_avg != null ? Number(r.rating_avg).toFixed(1) : "—",
-      solved: r.resolved_issues?.length ?? 0,
+      solved: solvedIssues(r.resolved_issues).length,
       openTodos: r.open_todos?.length ?? 0,
       cascade: text(r.cascade),
       autoSaved: !!r.auto_saved,

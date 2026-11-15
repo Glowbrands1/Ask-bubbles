@@ -1,4 +1,5 @@
 // Copied from the Leadership Hub (src/lib/assistant/citations.ts); keep in step with it.
+import { solvedIssues, solvedTitle } from "@/features/l10/lib/types";
 /** Pure helpers for rendering assistant messages: citations, tool labels, artifacts. */
 
 export interface ReportCitation {
@@ -139,6 +140,11 @@ export function cellText(v: unknown): string {
   if (typeof v === "number") return Number.isInteger(v) ? v.toLocaleString("en-US") : String(Number(v.toFixed(4)));
   if (typeof v === "string") return v;
   if (Array.isArray(v) && v.every((x) => x === null || typeof x !== "object")) return v.map(cellText).join(", ");
+  // Ask Bubbles: a recap's solved issues may be plain titles or { title, owner } (the Hub's newer recaps), mixed in one
+  // list. Read both; anything else in the list is skipped.
+  if (Array.isArray(v) && v.length > 0 && v.every((x) => typeof x === "string" || solvedTitle(x) !== null)) {
+    return solvedIssues(v).map((s) => (s.owner ? `${s.title} (${s.owner})` : s.title)).join(", ");
+  }
   return JSON.stringify(v);
 }
 

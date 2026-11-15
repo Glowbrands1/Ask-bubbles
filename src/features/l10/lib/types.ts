@@ -195,7 +195,16 @@ export interface RecapRow {
   cascade: string | null;
   attendees: { name: string; rating: number | null }[];
   open_todos: { text?: string; owner?: string; due?: string; dueDate?: string }[];
-  resolved_issues: string[];
+  /**
+   * Each solved issue: a plain title (recaps the Hub auto-saves, and older ones) or { title, owner } (recaps ended
+   * after the Hub's recap change). Read only through solvedTitle / solvedOwner / solvedIssues: anything else is skipped.
+   */
+  resolved_issues: unknown[];
+  /** The meeting's shared notes when it was ended (optional, newer recaps). Not shown yet. */
+  notes?: string | null;
+  /** How many of the meeting's to-dos were done, and how many there were (optional, newer recaps; null when unknown). Not shown yet. */
+  todos_done?: number | null;
+  todos_total?: number | null;
   /** Saved by the scheduled auto-save because nobody pressed End (database column l10.meeting_recaps.auto_saved). */
   auto_saved?: boolean;
   /** Set when a hub admin deleted the recap (soft delete: hidden everywhere, restorable). */
@@ -211,4 +220,32 @@ export interface RecapInput {
   attendees: { name: string; rating: number | null }[];
   openTodos: unknown[];
   resolvedIssues: string[];
+}
+
+/** A solved issue as a recap stores it: a plain title, or its title and owner. */
+export type SolvedIssue = string | { title: string; owner?: string | null };
+
+/** The title of a solved issue, whichever way the recap stored it; null for anything that is neither (skipped). */
+export function solvedTitle(s: unknown): string | null {
+  if (typeof s === "string") return s;
+  if (s && typeof s === "object" && !Array.isArray(s) && typeof (s as { title?: unknown }).title === "string") return (s as { title: string }).title;
+  return null;
+}
+
+/** The owner of a solved issue: null for a plain title, a missing or empty owner, or anything that is not a solved issue. */
+export function solvedOwner(s: unknown): string | null {
+  if (solvedTitle(s) === null || typeof s !== "object" || s === null) return null;
+  const owner = (s as { owner?: unknown }).owner;
+  return typeof owner === "string" && owner.trim() ? owner : null;
+}
+
+/** A recap's solved issues, both shapes read, anything else skipped. */
+export function solvedIssues(list: unknown): { title: string; owner: string | null }[] {
+  if (!Array.isArray(list)) return [];
+  const out: { title: string; owner: string | null }[] = [];
+  for (const s of list) {
+    const title = solvedTitle(s);
+    if (title !== null) out.push({ title, owner: solvedOwner(s) });
+  }
+  return out;
 }

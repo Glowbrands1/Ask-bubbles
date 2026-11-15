@@ -1,5 +1,5 @@
 // Ask Bubbles only (not copied from the Leadership Hub): the DM L10's "Past meetings" list. See src/features/l10/README.md.
-import type { RecapRow } from "./types";
+import { solvedIssues, type RecapRow } from "./types";
 
 /**
  * A meeting held before the DM L10 moved to the Hub, kept in the meeting document as `meetingHistory` (written by the
@@ -73,8 +73,9 @@ export function pastMeetings(recaps: RecapRow[], doc: Record<string, unknown>): 
       durationSeconds: r.duration_seconds || null,
       ratingAvg: r.rating_avg ?? average((r.attendees ?? []).map((a) => a.rating)),
       attendees: r.attendees ?? [],
-      issuesSolved: (r.resolved_issues ?? []).length,
-      solvedTitles: r.resolved_issues ?? [],
+      issuesSolved: solvedIssues(r.resolved_issues).length,
+      // Plain titles and { title, owner } (the Hub's newer recaps); anything else is skipped.
+      solvedTitles: solvedIssues(r.resolved_issues).map((s) => s.title),
       cascade: str(r.cascade),
     }));
   const fromBloom: PastMeeting[] = importedMeetings(doc).map((m) => ({
