@@ -97,6 +97,8 @@ export interface Issue {
   votes?: Record<string, IssueVote>;
   resolved: boolean;
   addedBy?: string;
+  /** Who owns the issue (the New Issue bar's owner picker on the Bloom-style meetings, 15 Nov 2026). */
+  owner?: string;
   resolvedSession?: string | null;
   /** Which IDS list an open issue sits on. Missing means "short" (every issue written before the split). */
   term?: IssueTerm;
@@ -200,9 +202,9 @@ export interface RecapRow {
    * after the Hub's recap change). Read only through solvedTitle / solvedOwner / solvedIssues: anything else is skipped.
    */
   resolved_issues: unknown[];
-  /** The meeting's shared notes when it was ended (optional, newer recaps). Not shown yet. */
+  /** The meeting's shared notes when it was ended (the Hub's l10.meeting_recaps.notes, 20261205120000; newer recaps). */
   notes?: string | null;
-  /** How many of the meeting's to-dos were done, and how many there were (optional, newer recaps; null when unknown). Not shown yet. */
+  /** How many of the meeting's to-dos were done, and how many there were (newer recaps; null when unknown). */
   todos_done?: number | null;
   todos_total?: number | null;
   /** Saved by the scheduled auto-save because nobody pressed End (database column l10.meeting_recaps.auto_saved). */
@@ -219,7 +221,13 @@ export interface RecapInput {
   durationSeconds: number;
   attendees: { name: string; rating: number | null }[];
   openTodos: unknown[];
-  resolvedIssues: string[];
+  /** Each solved issue: { title, owner } when it has an owner, else its title (the Hub reads both). */
+  resolvedIssues: SolvedIssue[];
+  /** The meeting's shared notes (doc.meetingNotes); left out when there are none. */
+  notes?: string;
+  /** How many of the meeting's to-dos were done, of how many. */
+  todosDone?: number;
+  todosTotal?: number;
 }
 
 /** A solved issue as a recap stores it: a plain title, or its title and owner. */

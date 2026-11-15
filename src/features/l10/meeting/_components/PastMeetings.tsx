@@ -52,6 +52,12 @@ export function PastMeetings({ meetingKey, meetingName, meetings }: { meetingKey
                       <dt className="text-xs text-muted">Issues solved</dt>
                       <dd className="m-0 font-semibold">{m.issuesSolved}</dd>
                     </div>
+                    {m.todosCompletedPct !== null && (
+                      <div data-testid="past-todos-completed">
+                        <dt className="text-xs text-muted">To-dos completed</dt>
+                        <dd className="m-0 font-semibold">{m.todosCompletedPct}%</dd>
+                      </div>
+                    )}
                     <div>
                       <dt className="text-xs text-muted">Rated</dt>
                       <dd className="m-0 font-semibold">
@@ -78,6 +84,12 @@ export function PastMeetings({ meetingKey, meetingName, meetings }: { meetingKey
                     <p className="m-0 text-sm">
                       <span className="text-xs text-muted">Cascading message: </span>
                       {m.cascade}
+                    </p>
+                  )}
+                  {m.notes && (
+                    <p className="m-0 text-sm whitespace-pre-wrap" data-testid="past-notes">
+                      <span className="text-xs text-muted">Notes: </span>
+                      {m.notes}
                     </p>
                   )}
                 </Card>
