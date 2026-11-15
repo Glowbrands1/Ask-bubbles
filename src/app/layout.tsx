@@ -25,8 +25,9 @@ import "./globals.css";
  *
  * Both are served from this origin, so there is no runtime request to a font
  * CDN. Since 15 Nov 2026 they are `next/font/local` with the files committed
- * under `src/app/font-files/` (Fontsource's latin variable fonts, each family's
- * OFL licence beside it): `next/font/google` downloaded them at build time, and
+ * under `src/app/font-files/` (Fontsource's variable fonts, each family's OFL
+ * licence beside it; latin, plus latin-ext and vietnamese where the family has
+ * them, each with Google's unicode-range, so "Łukasz" or "Nguyễn" keep the face): `next/font/google` downloaded them at build time, and
  * CI's build failed whenever GitHub's runners could not reach Google Fonts (QA,
  * ported from the sibling app). Same faces, axes, subset and CSS variables as before. Archivo is a headline face and is never used
  * for body copy, labels or table cells.
@@ -42,9 +43,42 @@ const archivo = localFont({
   src: "./font-files/archivo/archivo-latin-wdth-normal.woff2",
   weight: "100 900",
   style: "normal",
-  declarations: [{ prop: "font-stretch", value: "62% 125%" }],
+  declarations: [
+    { prop: "unicode-range", value: "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD" },
+    { prop: "font-stretch", value: "62% 125%" },
+  ],
   variable: "--font-archivo",
   display: "swap",
+});
+
+const archivoLatinExt = localFont({
+  src: "./font-files/archivo/archivo-latin-ext-wdth-normal.woff2",
+  weight: "100 900",
+  style: "normal",
+  declarations: [
+    { prop: "font-family", value: "archivo" },
+    { prop: "unicode-range", value: "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF" },
+    { prop: "font-stretch", value: "62% 125%" },
+  ],
+  variable: "--font-archivo-latin-ext",
+  display: "swap",
+  preload: false,
+  adjustFontFallback: false,
+});
+
+const archivoVietnamese = localFont({
+  src: "./font-files/archivo/archivo-vietnamese-wdth-normal.woff2",
+  weight: "100 900",
+  style: "normal",
+  declarations: [
+    { prop: "font-family", value: "archivo" },
+    { prop: "unicode-range", value: "U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB" },
+    { prop: "font-stretch", value: "62% 125%" },
+  ],
+  variable: "--font-archivo-vietnamese",
+  display: "swap",
+  preload: false,
+  adjustFontFallback: false,
 });
 
 const figtree = localFont({
@@ -52,7 +86,22 @@ const figtree = localFont({
   weight: "300 900",
   style: "normal",
   variable: "--font-figtree",
+  declarations: [{ prop: "unicode-range", value: "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD" }],
   display: "swap",
+});
+
+const figtreeLatinExt = localFont({
+  src: "./font-files/figtree/figtree-latin-ext-wght-normal.woff2",
+  weight: "300 900",
+  style: "normal",
+  declarations: [
+    { prop: "font-family", value: "figtree" },
+    { prop: "unicode-range", value: "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF" },
+  ],
+  variable: "--font-figtree-latin-ext",
+  display: "swap",
+  preload: false,
+  adjustFontFallback: false,
 });
 
 const grandstander = localFont({
@@ -60,7 +109,36 @@ const grandstander = localFont({
   weight: "100 900",
   style: "normal",
   variable: "--font-grandstander",
+  declarations: [{ prop: "unicode-range", value: "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD" }],
   display: "swap",
+});
+
+const grandstanderLatinExt = localFont({
+  src: "./font-files/grandstander/grandstander-latin-ext-wght-normal.woff2",
+  weight: "100 900",
+  style: "normal",
+  declarations: [
+    { prop: "font-family", value: "grandstander" },
+    { prop: "unicode-range", value: "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF" },
+  ],
+  variable: "--font-grandstander-latin-ext",
+  display: "swap",
+  preload: false,
+  adjustFontFallback: false,
+});
+
+const grandstanderVietnamese = localFont({
+  src: "./font-files/grandstander/grandstander-vietnamese-wght-normal.woff2",
+  weight: "100 900",
+  style: "normal",
+  declarations: [
+    { prop: "font-family", value: "grandstander" },
+    { prop: "unicode-range", value: "U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB" },
+  ],
+  variable: "--font-grandstander-vietnamese",
+  display: "swap",
+  preload: false,
+  adjustFontFallback: false,
 });
 
 export const metadata: Metadata = {
@@ -103,7 +181,10 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
-      className={`${figtree.variable} ${archivo.variable} ${grandstander.variable}`}
+      // The latin-ext and vietnamese faces join their family by name (font-family in declarations); their variables are
+      // set here only so their @font-face rules are emitted with the page. Each is downloaded only when a character in its
+      // unicode-range is shown ("Łukasz", "Nguyễn"), as with next/font/google before.
+      className={`${figtree.variable} ${archivo.variable} ${grandstander.variable} ${archivoLatinExt.variable} ${archivoVietnamese.variable} ${figtreeLatinExt.variable} ${grandstanderLatinExt.variable} ${grandstanderVietnamese.variable}`}
       // Brand palette overrides from the BrandConfig are applied here.
       style={brandStyle(ACTIVE_BRAND)}
     >
