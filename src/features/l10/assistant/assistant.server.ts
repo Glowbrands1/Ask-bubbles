@@ -109,6 +109,29 @@ export function readConfig(a: HubAnswer): HubAssistantConfig | null {
   };
 }
 
+/**
+ * NOTES STRAIGHT AWAY (the owner's report, via QA, 15 Nov 2026). Asked "@<name> add to your to do", the assistant said it
+ * could not add a to-do and asked for the task and a due date first, and drafted no note card. The Hub's prompt and its
+ * draftNote description leave that to the model. When the Hub offers draftNote, this rule follows the Hub's prompt: an
+ * @-mention plus a request drafts the card in the same reply, worded as a note; a short follow-up question may come after
+ * it. The person still edits and sends the card (nothing is sent by the assistant). The sibling app has the same gap.
+ */
+export const NOTE_NOW_RULE = [
+  "Notes to people: when the person @-mentions someone (for example \"@Avery Quill\") and asks them to do something, or asks you to tell, remind or ask them something, call draftNote in this same reply.",
+  "Put that person in `to`, and write the request as a short note to them, for example \"Please add this to your to-do list: <the request>.\"",
+  "Do not ask for details first, and do not answer that you cannot do it: you cannot add to-dos or change the meeting yourself, and the note is how the request reaches that person. The person edits the card and presses Send; nothing is sent before that.",
+  "If something useful is missing (a due date, for instance), draft the note anyway and ask one short question after it.",
+].join(" ");
+
+/**
+ * The system messages: the Hub's prompt with the Hub's cache breakpoint (Anthropic caches tools + system as one prefix),
+ * then, when the Hub offers draftNote, NOTE_NOW_RULE after the breakpoint so the cached prefix stays the Hub's.
+ */
+export function systemFor(config: HubAssistantConfig): SystemModelMessage[] {
+  const hub: SystemModelMessage = { role: "system", content: config.system, providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } };
+  return config.tools.draftNote ? [hub, { role: "system", content: NOTE_NOW_RULE }] : [hub];
+}
+
 /** Anthropic's server-side web tools with the Hub's limits (20260209: the newest this SDK has, see PARITY.md). */
 export function webTools(config: HubAssistantConfig): ToolSet {
   if (!config.webTools) return {};
@@ -252,8 +275,7 @@ export async function streamHubAssistant(input: { config: HubAssistantConfig; me
     recorded = true;
     recordAssistantSpend(input.userId, spendFromUsage(modelId, usage), persistSpendRow, webSearchCount(steps));
   };
-  // The Hub's system prompt with the Hub's cache breakpoint (Anthropic caches tools + system as one prefix).
-  const system: SystemModelMessage = { role: "system", content: config.system, providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } };
+  const system = systemFor(config);
   const startedAt = Date.now();
   const result = streamText({
     model: anthropic(modelId),

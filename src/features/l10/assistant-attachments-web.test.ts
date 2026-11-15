@@ -100,7 +100,10 @@ describe("the same assistant as the Hub's", () => {
     expect(tools.web_fetch).toMatchObject({ id: "anthropic.web_fetch_20260209", args: { maxUses: 3, citations: { enabled: true } } });
     expect(((await res.json()) as { opts: { sendSources?: boolean } }).opts.sendSources).toBe(true);
     // The Hub's system prompt, with its cache breakpoint.
-    expect(state.streamCalls[0].system).toEqual({ role: "system", content: HUB.system, providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } });
+    // Changed on purpose 15 Nov 2026: the system messages are a list (the Hub's prompt first, with its cache breakpoint),
+    // so the notes rule can follow it when the Hub offers draftNote. This config has no draftNote, so the list is the
+    // Hub's prompt alone.
+    expect(state.streamCalls[0].system).toEqual([{ role: "system", content: HUB.system, providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } }]);
   });
 
   it("a Hub that offers no web tools gets none", async () => {
@@ -164,5 +167,40 @@ describe("attachments: the Hub's limits, refused with the Hub's words (413)", ()
       ["file", "application/pdf", "Plan.pdf"],
       ["file", "image/jpeg", "board.jpg"],
     ]);
+  });
+});
+
+/*
+ * The owner's report (via QA, 15 Nov 2026), names invented: "@<name> add to your to do". The assistant answered "I can't
+ * add a to-do… Tell me the task and a due date. Then I'll draft a note…" with no note card. When the Hub offers
+ * draftNote, the model is told to draft the card in the same reply, worded as a note.
+ */
+describe("an @-mention with a request drafts the note card straight away", () => {
+  const withNote = { ...HUB, tools: { ...HUB.tools, draftNote: { description: "Prepare a hub notification", inputSchema: { type: "object" } } } };
+
+  it("tells the model to call draftNote in the same reply, after the Hub's cached prompt", async () => {
+    state.hubConfig = withNote;
+    const { POST } = await import("@/app/api/l10/assistant/route");
+    const res = await POST(post(ask([{ type: "text", text: "@Avery Quill add to your to do" }])));
+    expect(res.status).toBe(200);
+    const call = state.streamCalls[0] as { system: { role: string; content: string; providerOptions?: unknown }[]; tools: Record<string, unknown> };
+    expect(Object.keys(call.tools)).toContain("draftNote");
+    expect(call.system).toHaveLength(2);
+    // The Hub's prompt keeps its cache breakpoint and comes first; the rule follows it, uncached.
+    expect(call.system[0]).toEqual({ role: "system", content: HUB.system, providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } });
+    expect(call.system[1].providerOptions).toBeUndefined();
+    const rule = call.system[1].content;
+    expect(rule).toContain("@-mentions someone");
+    expect(rule).toContain("call draftNote in this same reply");
+    expect(rule).toContain("Please add this to your to-do list:");
+    expect(rule).toContain("Do not ask for details first");
+    expect(rule).toContain("ask one short question after it");
+  });
+
+  it("adds no rule when the Hub does not offer draftNote", async () => {
+    state.hubConfig = HUB;
+    const { POST } = await import("@/app/api/l10/assistant/route");
+    await POST(post(ask([{ type: "text", text: "@Avery Quill add to your to do" }])));
+    expect((state.streamCalls[0] as { system: unknown[] }).system).toHaveLength(1);
   });
 });
