@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Archivo, Figtree, Grandstander } from "next/font/google";
+import localFont from "next/font/local";
 
 import { ACTIVE_BRAND, brandStyle } from "@/lib/brand";
 import { pageAuthorizationEnforced, pageIdentity } from "@/lib/auth/page";
@@ -23,8 +23,12 @@ import "./globals.css";
  * TO SWITCH TO THE LICENSED FILES: load them with `next/font/local` under the
  * same two CSS variables and delete these two calls. Nothing else changes.
  *
- * Both are fetched at BUILD time and served from this origin, so there is no
- * runtime request to a font CDN. Archivo is a headline face and is never used
+ * Both are served from this origin, so there is no runtime request to a font
+ * CDN. Since 15 Nov 2026 they are `next/font/local` with the files committed
+ * under `src/app/font-files/` (Fontsource's latin variable fonts, each family's
+ * OFL licence beside it): `next/font/google` downloaded them at build time, and
+ * CI's build failed whenever GitHub's runners could not reach Google Fonts (QA,
+ * ported from the sibling app). Same faces, axes, subset and CSS variables as before. Archivo is a headline face and is never used
  * for body copy, labels or table cells.
  *
  * LETTERING — Grandstander (OFL), approved on 9 October 2026 for the Ask
@@ -33,21 +37,28 @@ import "./globals.css";
  * copying its letters. It is not a brand body or headline face and is used
  * nowhere else.
  */
-const archivo = Archivo({
-  subsets: ["latin"],
-  axes: ["wdth"],
+const archivo = localFont({
+  // The variable font with its width axis, as next/font/google loaded it (axes: ["wdth"]).
+  src: "./font-files/archivo/archivo-latin-wdth-normal.woff2",
+  weight: "100 900",
+  style: "normal",
+  declarations: [{ prop: "font-stretch", value: "62% 125%" }],
   variable: "--font-archivo",
   display: "swap",
 });
 
-const figtree = Figtree({
-  subsets: ["latin"],
+const figtree = localFont({
+  src: "./font-files/figtree/figtree-latin-wght-normal.woff2",
+  weight: "300 900",
+  style: "normal",
   variable: "--font-figtree",
   display: "swap",
 });
 
-const grandstander = Grandstander({
-  subsets: ["latin"],
+const grandstander = localFont({
+  src: "./font-files/grandstander/grandstander-latin-wght-normal.woff2",
+  weight: "100 900",
+  style: "normal",
   variable: "--font-grandstander",
   display: "swap",
 });
