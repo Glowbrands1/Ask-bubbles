@@ -68,14 +68,14 @@ vi.mock("./ca-action-plan-sync", () => ({
     return [];
   },
 }));
-const touched = vi.hoisted(() => ({ updates: [] as { table: string; patch: Record<string, unknown>; id: unknown }[] }));
+const touched = vi.hoisted(() => ({ updates: [] as { table: string; patch: Record<string, unknown>; id: unknown }[], fail: false }));
 vi.mock("@/lib/supabase/server", () => ({
   getSupabaseAdmin: () => ({
     from: (table: string) => ({
       update: (patch: Record<string, unknown>) => ({
         eq: async (_column: string, id: unknown) => {
           touched.updates.push({ table, patch, id });
-          return { error: null };
+          return { error: touched.fail ? { message: "touch failed" } : null };
         },
       }),
     }),
@@ -100,6 +100,7 @@ beforeEach(async () => {
   rows.calls = [];
   rows.status = "draft";
   touched.updates = [];
+  touched.fail = false;
   put("employee_name", "Marnie Quill", "system");
   put("coaching_details", DETAILS, "ai");
   put("coaching_topics", ["store_tours"], "ai");
@@ -132,6 +133,20 @@ describe("FORM_EDIT_TOUCHES_UPDATED_AT_ENABLED", () => {
       await writeFormEdits("inst-1", [{ op: "set", field: "no_such_line", value: "x" }], { path: "tool", actorId: "qa", latest: "x" });
       expect(instanceTouches()).toEqual([]);
     } finally {
+      delete process.env.FORM_EDIT_TOUCHES_UPDATED_AT_ENABLED;
+    }
+  });
+
+  it("on: a failed touch after the values were saved is logged, never reported as a failed edit (QA's review)", async () => {
+    process.env.FORM_EDIT_TOUCHES_UPDATED_AT_ENABLED = "true";
+    touched.fail = true;
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const result = await edit();
+      expect(result.handoff).toBeNull();
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining("inst-1"));
+    } finally {
+      warn.mockRestore();
       delete process.env.FORM_EDIT_TOUCHES_UPDATED_AT_ENABLED;
     }
   });
