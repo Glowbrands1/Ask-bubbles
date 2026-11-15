@@ -80,6 +80,20 @@ export function segueName(_key: string): string {
   return "Business Best";
 }
 
+/** The meetings whose cadence line shows the total of the agenda the page runs (QA, 15 Nov 2026): the BCS DM L10. */
+export const CADENCE_FROM_AGENDA: readonly string[] = ["bcs-dm"];
+
+/**
+ * The cadence line a meeting shows ("Tuesdays · 70 min"). For the meetings above, the minutes are the total of the
+ * agenda the page runs (the Hub's, served with the roster), so the words cannot drift from it (the sibling app's #1033
+ * mechanism; there it is the STC DM L10). Display only.
+ */
+export function cadenceLabel(key: string, cadence: string, agenda: AgendaSection[] = agendaFor(key)): string {
+  if (!CADENCE_FROM_AGENDA.includes(key)) return cadence;
+  const total = agenda.reduce((t, a) => t + a.minutes, 0);
+  return /\d+\s*min/.test(cadence) ? cadence.replace(/\d+\s*min/, `${total} min`) : `${cadence} · ${total} min`;
+}
+
 export function agendaFor(key: string): AgendaSection[] {
   if (key === "leadership") return AGENDA.filter((a) => a.key !== "headlines" && a.key !== "todos").map((a) => (a.key === "ids" ? { ...a, minutes: 70 } : a));
   return AGENDA;
