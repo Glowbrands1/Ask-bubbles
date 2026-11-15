@@ -66,7 +66,7 @@ export const NOV15_TERMINATION_TICK_NOTE_CASES: ReplayCase[] = [
       id: `nov15-termination-tick-note-${index + 1}`,
       title: `"${said}": no level ticked, and the card says the manager ticks Termination (DM/HR approval)`,
       report: REPORT,
-      status: { open: "the card asks only \"Verbal Warning or Written Warning?\", or nothing" },
+      status: "fixed", // Changed on purpose (15 Nov 2026): TERMINATION_TICK_NOTE_ENABLED is now in production-flags.json (QA flips it at merge).
       fixFlags: [FLAG],
       async run(t) {
         vi.setSystemTime(new Date("2026-11-14T16:00:00Z"));
