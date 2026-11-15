@@ -60,8 +60,8 @@ When the Hub's meeting page changes, re-copy the file and re-apply the row above
 **Ask Sunny and Ask Bubbles only (not in the Hub):** the "Past meetings" page (`/meetings/[key]/past`, `lib/past.ts`,
 `meeting/_components/PastMeetings.tsx`, the header link next to History). It lists the Hub's recaps (saved by End
 meeting, here or in the Hub) together with the meetings imported from Bloom Growth, which are kept in the meeting
-document as `meetingHistory` (the Hub keeps unknown fields); the BCS DM L10 has none yet, so the page lists the recaps
-and says "No past meetings yet." until one is ended. Times are in the business zone (`@/lib/business-date`, Central by
+document as `meetingHistory` (the Hub keeps unknown fields); the BCS DM L10's Bloom Growth meetings were imported on
+15 Nov 2026, so they show here with its recaps. A meeting with neither shows "No past meetings yet.". Times are in the business zone (`@/lib/business-date`, Central by
 default). Keep the header link when re-copying
 `MeetingView.tsx`.
 

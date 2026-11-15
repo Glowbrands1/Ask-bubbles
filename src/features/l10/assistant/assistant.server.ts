@@ -220,7 +220,7 @@ function sumSteps(steps: readonly { usage: LanguageModelUsage }[]): LanguageMode
 export const L10_TOTAL_TIMEOUT_MS = 280_000;
 
 /*
- * ASK BUBBLES: Ask Sunny takes the chunk gap from its shared AI time limits (src/lib/config/ai-timeouts.ts,
+ * ASK BUBBLES: the sibling app takes the chunk gap from its shared AI time limits (src/lib/config/ai-timeouts.ts,
  * AI_HELPER_TIMEOUT_MS, 30 s by default, 1–60 s) and logs a timeout with its time-limit module. Ask Bubbles has
  * neither module, so the same value, the same variable and the same log line are kept here (see PARITY.md).
  */
@@ -232,7 +232,7 @@ export function l10ChunkGapMs(env: Record<string, string | undefined> = process.
   return Number.isFinite(value) && value >= 1_000 && value <= 60_000 ? value : L10_CHUNK_GAP_DEFAULT_MS;
 }
 
-/** The server log line for a timed-out answer (Ask Sunny's `logAiTimeout` format). Counts and names of code only. */
+/** The server log line for a timed-out answer (the sibling app's `logAiTimeout` format). Counts and names of code only. */
 function logAiTimeout(call: string, durationMs: number, limitMs: number, route: string): void {
   console.error(`[ai.timeout] route=${route} call=${call} duration_ms=${Math.round(durationMs)} limit_ms=${Math.round(limitMs)}`);
 }
