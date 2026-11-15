@@ -5,6 +5,7 @@ import { COMPANY_JOB_TITLES, isJobTitleAbbreviation } from "@/config/company/job
 import { COMPANY_LOCATIONS, locationByCode, locationById, locationNameKey } from "@/lib/locations";
 
 import { extractFormDate } from "./form-date-answer";
+import { sameRosterPerson } from "./preferred-name-shown";
 import { isNameParticle, readableName } from "./readable-name";
 import { FORM_NAME_PATTERN, canonicalShorthand, canonicalWarningWording, isFormVocabulary, leadingFormRequest } from "./template-intent";
 import { antiLoopEnabled, exitAnswerNotACorrectionEnabled, readableNamesEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
@@ -1475,6 +1476,8 @@ export function samePerson(a: string, b: string): boolean {
   const y = words(b);
   if (x.length === 0 || y.length === 0) return false;
   if (x.join(" ") === y.join(" ")) return true;
+  // READABLE_NAMES_ENABLED: one roster person's preferred and legal names are the same person (`preferred-name-shown.ts`).
+  if (sameRosterPerson(a, b)) return true;
   if (x.length === 1 || y.length === 1) return x[0] === y[0];
   if (x[0] !== y[0]) return false;
   const [last, other] = [x[x.length - 1]!, y[y.length - 1]!];

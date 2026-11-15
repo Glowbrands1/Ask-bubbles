@@ -167,7 +167,8 @@ const PROTECTED = [
  * docs/patches/readable-names-proposal.patch: the imports `readableNamesEnabled`, `isNameParticle` and `readableName`;
  * `nameWordCount` (the answer readers' two-word limit does not count surname particles); in readTypedName, the
  * name-part limit and the middle-name rule do not count particles, and a particle left at the end is dropped; and
- * displayPersonName makes a name typed in one case readable. Behind READABLE_NAMES_ENABLED (default off); off, every
+ * displayPersonName makes a name typed in one case readable; and samePerson reads one roster person's preferred and
+ * legal names as the same person (`sameRosterPerson`, QA, 15 Nov 2026). Behind READABLE_NAMES_ENABLED (default off); off, every
  * count is as before and the name is only trimmed (readable-name.test.ts's flag-off section).
  */
 const APPROVED_PROTECTED_EDITS = [

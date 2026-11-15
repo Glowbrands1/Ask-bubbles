@@ -1,11 +1,12 @@
 diff --git a/src/lib/forms/proposal.ts b/src/lib/forms/proposal.ts
-index 6b5aded1..e73357e0 100644
+index 6b5aded1..aaf3de95 100644
 --- a/src/lib/forms/proposal.ts
 +++ b/src/lib/forms/proposal.ts
-@@ -5,8 +5,9 @@ import { COMPANY_JOB_TITLES, isJobTitleAbbreviation } from "@/config/company/job
+@@ -5,8 +5,10 @@ import { COMPANY_JOB_TITLES, isJobTitleAbbreviation } from "@/config/company/job
  import { COMPANY_LOCATIONS, locationByCode, locationById, locationNameKey } from "@/lib/locations";
  
  import { extractFormDate } from "./form-date-answer";
++import { sameRosterPerson } from "./preferred-name-shown";
 +import { isNameParticle, readableName } from "./readable-name";
  import { FORM_NAME_PATTERN, canonicalShorthand, canonicalWarningWording, isFormVocabulary, leadingFormRequest } from "./template-intent";
 -import { antiLoopEnabled, exitAnswerNotACorrectionEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
@@ -13,7 +14,7 @@ index 6b5aded1..e73357e0 100644
  import { companyNameStops } from "./name-stops";
  import { isTypedStopSpan, isTypedStopWord, NAME_LABEL_WORDS, NOT_A_NAME, NOT_A_NAME_LEAD, NOT_A_TYPED_NAME, TYPED_NAME_WORD, isNameLabelPhrase, lowercaseMonths, nameAfterNameLabel, stripTrailingJobOrTitle } from "./name-words";
  import { keepTypedPerson } from "./typed-name";
-@@ -152,16 +153,27 @@ const GERUND_OBJECT = /^(?:the|a|an|her|his|their|my|our|its|this|that|these|tho
+@@ -152,16 +154,27 @@ const GERUND_OBJECT = /^(?:the|a|an|her|his|their|my|our|its|this|that|these|tho
   */
  const COUNTS_PEOPLE = new Set(["both", "either", "neither", "each", "all", "everyone", "everybody", "anyone", "anybody", "nobody", "none", "whoever"]);
  
@@ -42,7 +43,7 @@ index 6b5aded1..e73357e0 100644
      // An opening wrapper can only precede the name, so only the first word loses one.
      const opened = parts.length === 0 ? raw.replace(WRAPPER_BEFORE, "") : raw;
      const unwrapped = opened.replace(WRAPPER_AFTER, "");
-@@ -208,8 +220,8 @@ function readTypedName(words: readonly string[], whole: boolean): string | null
+@@ -208,8 +221,8 @@ function readTypedName(words: readonly string[], whole: boolean): string | null
     * third word stays only when it ends the message, carries the punctuation,
     * or is followed by a word that cannot be part of a name.
     */
@@ -53,7 +54,7 @@ index 6b5aded1..e73357e0 100644
      /*
       * "for avery testperson sept 28" is a name and a date, not a three-part
       * name: a month followed by a day number starts the form's date.
-@@ -226,6 +238,8 @@ function readTypedName(words: readonly string[], whole: boolean): string | null
+@@ -226,6 +239,8 @@ function readTypedName(words: readonly string[], whole: boolean): string | null
        /^\d/.test(next);
      if (!boundary) parts.pop();
    }
@@ -62,7 +63,7 @@ index 6b5aded1..e73357e0 100644
    if (parts.length === 0) return null;
    if (whole && parts.length !== words.length) return null;
    return finishedName(parts.join(" "));
-@@ -1005,7 +1019,7 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
+@@ -1005,7 +1020,7 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
      const words = withoutAnswerLead(answer.trim().replace(/[.?!]+$/, ""))
        .split(/\s+/)
        .filter(Boolean);
@@ -71,7 +72,7 @@ index 6b5aded1..e73357e0 100644
      // "kearney", "sorry, it's grand island": a reply that is only a store. See `isPlaceReply`.
      if (candidate && !opensWithRosterState(candidate) && !isPlaceReply(candidate)) strong.push(candidate);
    }
-@@ -1037,7 +1051,7 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
+@@ -1037,7 +1052,7 @@ export function readEmployeeMentions(typed: string): EmployeeMentions {
    const listed = INTAKE_LIST.exec(text)?.[1];
    if (listed) {
      const words = listed.trim().split(/\s+/).filter(Boolean);
@@ -80,7 +81,7 @@ index 6b5aded1..e73357e0 100644
      if (candidate && !opensWithRosterState(candidate) && !isPlaceReply(candidate)) strong.push(candidate);
    }
  
-@@ -1229,7 +1243,7 @@ function sentenceAnswers(text: string): string[] {
+@@ -1229,7 +1244,7 @@ function sentenceAnswers(text: string): string[] {
    const names: string[] = [];
    for (const sentence of text.split(/(?<=[.!?])\s+|\n+|\s*[,;]\s*|\s+[-–—]\s+|\s+(?:and|but|then)\s+/)) {
      const words = withoutAnswerLead(sentence.trim().replace(/[.?!]+$/, "")).split(/\s+/).filter(Boolean);
@@ -89,7 +90,7 @@ index 6b5aded1..e73357e0 100644
      // A clause that is only a store is where, not who (QA F-02, `isPlaceReply`).
      if (candidate && !opensWithRosterState(candidate) && !isPlaceReply(candidate)) names.push(candidate);
    }
-@@ -1246,7 +1260,10 @@ function sentenceAnswers(text: string): string[] {
+@@ -1246,7 +1261,10 @@ function sentenceAnswers(text: string): string[] {
   * spacing is tidied; the field stays editable on the form.
   */
  export function displayPersonName(name: string): string {
@@ -101,3 +102,12 @@ index 6b5aded1..e73357e0 100644
  }
  
  /**
+@@ -1458,6 +1476,8 @@ export function samePerson(a: string, b: string): boolean {
+   const y = words(b);
+   if (x.length === 0 || y.length === 0) return false;
+   if (x.join(" ") === y.join(" ")) return true;
++  // READABLE_NAMES_ENABLED: one roster person's preferred and legal names are the same person (`preferred-name-shown.ts`).
++  if (sameRosterPerson(a, b)) return true;
+   if (x.length === 1 || y.length === 1) return x[0] === y[0];
+   if (x[0] !== y[0]) return false;
+   const [last, other] = [x[x.length - 1]!, y[y.length - 1]!];
