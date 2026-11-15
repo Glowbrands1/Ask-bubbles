@@ -585,12 +585,35 @@ const FORM_FOR_FOR = /\b(exit|resignation|coaching|corrective action|ca|c\/a|wri
  * card. "Termination" alone is still no form's name: only a filing verb, then "a termination" (or "termination"), then
  * "for <someone>", is a termination Corrective Action. "Termination form / paperwork / letter" keep naming their own
  * documents, and a question is still a question.
+ *
+ * QA's review (15 Nov 2026): never in a question — a "?", or a how / should / do / does / what / can / need … lead
+ * ("how do i do a termination for <A>?", "Do I need a termination for <A> or just a written?", "what do I need to do a
+ * termination for <A>") — and only when "for" is followed by a person's name: never an offense ("for no call no show",
+ * "for job abandonment") or a pronoun ("for her").
  */
+const ASKS_ABOUT_IT = /\?|^\s*(?:how|should|shall|do|does|did|what|whats|what['’]s|can|could|would|will|is|are|need|when|why|which|who)\b/i;
+const NOT_A_PERSON_AFTER_FOR = new Set([
+  "no", "not", "her", "him", "them", "his", "their", "she", "he", "they", "me", "us", "you", "someone", "somebody", "an", "a", "the", "this", "that",
+  "job", "abandonment", "attendance", "lateness", "late", "tardiness", "tardy", "absence", "absences", "absent", "theft", "stealing", "misconduct",
+  "insubordination", "ncns", "missing", "missed", "poor", "performance", "cash", "policy", "violation", "violations", "violating", "harassment",
+  "dress", "code", "sanitation", "cleaning", "being", "walking", "walkout", "quitting", "fighting", "drug", "drugs", "alcohol", "fraud", "gross",
+]);
+
+/** The words after "for" begin with a person's name: a name-shaped word that is no offense, pronoun or article. */
+function personFollows(rest: string): boolean {
+  const first = /^\s*([\p{L}][\p{L}'’-]*)/u.exec(rest)?.[1]?.toLowerCase();
+  return Boolean(first) && !NOT_A_PERSON_AFTER_FOR.has(first!) && !NOT_A_TYPED_NAME.has(first!) && !NOT_A_NAME.has(first!);
+}
 const TERMINATION_REQUEST =
   /\b(create|make|write|start|draft|do|need|file|put\s+in|open)(\s+(?:me\s+)?(?:a|an)?\s*)termination\b(?!\s+(?:form|forms|paperwork|letter|document|ca|c\/a|corrective|warning|policy|process|procedure))(?=\s+for\s+\S)/gi;
 
 export function canonicalFormWording(text: string): string {
-  const said = terminationRequestIsCaEnabled() ? text.replace(TERMINATION_REQUEST, (_match, verb: string, between: string) => `${verb}${between}termination corrective action`) : text;
+  const said =
+    terminationRequestIsCaEnabled() && !ASKS_ABOUT_IT.test(text)
+      ? text.replace(TERMINATION_REQUEST, (match: string, verb: string, between: string, offset: number, whole: string) =>
+          personFollows(whole.slice(offset + match.length).replace(/^\s+for\s+/i, "")) ? `${verb}${between}termination corrective action` : match,
+        )
+      : text;
   const canonical = canonicalCorrectiveAction(canonicalShorthand(canonicalWarningWording(said)));
   // FORM_FOR_FOR_TYPO_ENABLED: "exit for for <name>" is "exit form for <name>".
   return formForForTypoEnabled() ? canonical.replace(FORM_FOR_FOR, "$1 form for") : canonical;
