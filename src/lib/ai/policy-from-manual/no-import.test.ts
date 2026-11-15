@@ -13,6 +13,13 @@ import { CHAT_QUALITY_FLAG_NAMES, policyCitationCheckEnabled } from "@/lib/confi
 
 const CALL_MODULES = ["src/lib/forms/form-patch-call.ts", "src/lib/ai/policy-from-manual/call.ts"];
 const FOLDER = "src/lib/ai/policy-from-manual/";
+/**
+ * The DM L10 tab's assistant (src/features/l10/assistant, /api/l10/assistant): the reviewed exception, as in
+ * src/lib/forms/form-patch-flags-off.test.ts. It is outside chat and forms, on its own route and page; that test also
+ * checks nothing outside the L10 tab imports it.
+ */
+const L10_ASSISTANT = ["src/features/l10/assistant/", "src/app/api/l10/"];
+const isL10 = (path: string) => L10_ASSISTANT.some((dir) => path.split("\\").join("/").startsWith(dir));
 /** Test support (the manual fixture helper) is not production code. */
 const TEST_SUPPORT = "src/test/";
 
@@ -29,7 +36,7 @@ function sources(dir: string): string[] {
 describe("the AI SDK is loaded only by the two call modules, dynamically", () => {
   it("no other production source imports `ai` or `@ai-sdk/anthropic`", () => {
     const needles = ['from "ai"', "from 'ai'", 'import("ai")', "import('ai')", "@ai-sdk/anthropic"];
-    const offenders = sources("src").filter((path) => !CALL_MODULES.includes(path) && needles.some((needle) => readFileSync(path, "utf8").includes(needle)));
+    const offenders = sources("src").filter((path) => !CALL_MODULES.includes(path) && !isL10(path) && needles.some((needle) => readFileSync(path, "utf8").includes(needle)));
     expect(offenders).toEqual([]);
   });
 

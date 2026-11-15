@@ -5,6 +5,7 @@ import { businessToday } from "@/lib/business-date";
 import { attentionSummary } from "@/lib/forms/follow-up";
 import { pageShowsAppSwitcher, pageShowsLeadershipHubTab } from "@/lib/auth/app-switcher";
 import { pageIdentity } from "@/lib/auth/page";
+import { l10TabsForLayout } from "@/features/l10/data.server";
 import { visibleInstances } from "@/lib/forms/instance-scope";
 import { pageFormsAccess } from "@/lib/forms/page-scope";
 import { listOutstandingFollowUps } from "@/lib/forms/instances";
@@ -47,16 +48,19 @@ async function overdueCount(): Promise<number> {
 }
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
-  const [overdueFollowUps, showAppSwitcher, showLeadershipHub] = await Promise.all([
+  const [overdueFollowUps, showAppSwitcher, showLeadershipHub, meetingTabs] = await Promise.all([
     overdueCount(),
     pageShowsAppSwitcher(),
     pageShowsLeadershipHubTab(),
+    // The DM L10 tab: only for people the Leadership Hub lists as attendees (see features/l10).
+    l10TabsForLayout(),
   ]);
   return (
     <AppShell
       overdueFollowUps={overdueFollowUps}
       showAppSwitcher={showAppSwitcher}
       showLeadershipHub={showLeadershipHub}
+      meetingTabs={meetingTabs.map(({ href, label }) => ({ href, label }))}
     >
       {children}
     </AppShell>
