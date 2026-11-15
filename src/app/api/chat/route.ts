@@ -454,7 +454,7 @@ async function postChat(request: Request) {
           // displayName, so an all-caps row reads "Lorraine Fairweather" (QA's review, 15 Nov 2026).
           const [{ displayName }, { aliasForRosterPerson }] = await Promise.all([import("@/lib/forms/employee-match"), import("@/lib/forms/preferred-name-shown")]);
           (await import("@/lib/forms/person-roster-store")).enterPreferredAliases(
-            roster.map((person) => aliasForRosterPerson(person, (row) => displayName({ ...person, ...row }))),
+            roster.map((person) => aliasForRosterPerson({ ...person, id: person.id }, (row) => displayName({ ...person, ...row }))),
           );
         }
         // FORM_NAME_OFF_ROSTER_ASK_ENABLED: the scope's level, so a name not on the roster is held for a store manager only (`lib/forms/roster-scope.ts`).

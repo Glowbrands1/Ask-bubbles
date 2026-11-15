@@ -5917,3 +5917,15 @@ export function priorActionsUnsaidBlankEnabled(): boolean {
 export function readableNamesEnabled(): boolean {
   return envFlag("READABLE_NAMES_ENABLED");
 }
+
+/**
+ * FORM_EDIT_TOUCHES_UPDATED_AT_ENABLED (ported from the sibling app, its batch F8, 15 Nov 2026; default off). A chat
+ * edit that writes only values (the Observation, the Action Plan, a ticked level) left form_instances.updated_at
+ * unchanged: the touch trigger fires on the instance row, and a value edit writes only form_instance_values; only a
+ * form_date edit moved it. The Forms Register and any "recently changed" sort missed those edits. On: the one writer
+ * (`forms/form-write.ts` writeFormEdits) touches the instance's updated_at whenever it writes a value, a checked group,
+ * a clear or the plan. Off, as before.
+ */
+export function formEditTouchesUpdatedAtEnabled(): boolean {
+  return envFlag("FORM_EDIT_TOUCHES_UPDATED_AT_ENABLED");
+}
