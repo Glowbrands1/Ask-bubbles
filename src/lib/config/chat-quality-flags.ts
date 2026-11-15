@@ -1246,6 +1246,7 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "FIRST_NAME_SUGGEST_ENABLED",
   "NEXT_PUBLIC_CARD_CHANGE_ENABLED",
   "NEXT_PUBLIC_CARD_CHANGE_FINALIZED_ENABLED",
+  "TERMINATION_TICK_NOTE_ENABLED",
   "ACCOUNT_ONLY_POLICY_QUERY_ENABLED",
   // coding 4: EXPECTATION_POLICY_LINE_KEPT (QA audit, 10 Nov 2026; default off).
   "EXPECTATION_POLICY_LINE_KEPT_ENABLED",
@@ -5903,6 +5904,16 @@ export function cleaningPolicyIsCareAndCleaningEnabled(): boolean {
  */
 export function priorActionsUnsaidBlankEnabled(): boolean {
   return envFlag("PRIOR_ACTIONS_UNSAID_BLANK_ENABLED");
+}
+
+/**
+ * TERMINATION_TICK_NOTE_ENABLED (QA, 15 Nov 2026; default off; same flag in both apps): a Corrective Action card whose
+ * manager mentioned termination, with no level ticked, adds "If this form is a termination, tick Termination on the
+ * form yourself; it needs DM/HR approval before it's finalized." beside the verbal/written question, never replacing
+ * it (`ai/termination-tick-note.ts`). Off, as built.
+ */
+export function terminationTickNoteEnabled(): boolean {
+  return envFlag("TERMINATION_TICK_NOTE_ENABLED");
 }
 
 /**
