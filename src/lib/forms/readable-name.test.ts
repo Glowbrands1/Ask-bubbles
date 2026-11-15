@@ -165,3 +165,16 @@ describe("READABLE_NAMES_ENABLED off: as before", () => {
     expect(extractEmployeeNames("create a ca for jacinta van der berg, she was late on 11/12")).toEqual(["jacinta van"]);
   });
 });
+
+describe("QA, 15 Nov 2026: two-letter initials stay upper case; a two-letter particle as the last word is the surname", () => {
+  it.each([
+    ["JT holloway", "JT Holloway"],
+    ["AJ fairweather", "AJ Fairweather"],
+    ["DJ de la torre", "DJ de la Torre"],
+    ["THANH LE", "Thanh Le"],
+    ["kim DU", "Kim Du"],
+    ["maria DE la torre", "Maria de la Torre"],
+  ])("%s → %s", (typed, shown) => {
+    expect(readableName(typed)).toBe(shown);
+  });
+});
