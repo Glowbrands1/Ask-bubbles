@@ -30,7 +30,7 @@ import {
   caShortcutWordsEnabled,
   formChoiceStatedEnabled,
   formNameFromRosterEnabled,
-  typedNameEnabled, requestFromNamesEmployeeEnabled, pastedFormNameNotRequestEnabled, formForForTypoEnabled, terminationIntakeEnabled, levelLeadsRequestEnabled } from "@/lib/config/chat-quality-flags";
+  typedNameEnabled, requestFromNamesEmployeeEnabled, pastedFormNameNotRequestEnabled, formForForTypoEnabled, terminationIntakeEnabled, levelLeadsRequestEnabled, terminationRequestIsCaEnabled } from "@/lib/config/chat-quality-flags";
 import { foldsToGlossaryTerm } from "@/lib/ai/glossary";
 import { NOT_A_NAME, NOT_A_TYPED_NAME, TYPED_NAME_WORD } from "./name-words";
 import { asksForTeamCoaching } from "./team-subject";
@@ -580,8 +580,18 @@ export { canonicalWarningWording } from "./warning-wording";
  */
 const FORM_FOR_FOR = /\b(exit|resignation|coaching|corrective action|ca|c\/a|write-?up|termination|epp|transfer|demotion)\s+for\s+for\b/gi;
 
+/*
+ * TERMINATION_REQUEST_IS_CA_ENABLED (QA, 15 Nov 2026): "create a termination for <A>, …" got a policy answer and no
+ * card. "Termination" alone is still no form's name: only a filing verb, then "a termination" (or "termination"), then
+ * "for <someone>", is a termination Corrective Action. "Termination form / paperwork / letter" keep naming their own
+ * documents, and a question is still a question.
+ */
+const TERMINATION_REQUEST =
+  /\b(create|make|write|start|draft|do|need|file|put\s+in|open)(\s+(?:me\s+)?(?:a|an)?\s*)termination\b(?!\s+(?:form|forms|paperwork|letter|document|ca|c\/a|corrective|warning|policy|process|procedure))(?=\s+for\s+\S)/gi;
+
 export function canonicalFormWording(text: string): string {
-  const canonical = canonicalCorrectiveAction(canonicalShorthand(canonicalWarningWording(text)));
+  const said = terminationRequestIsCaEnabled() ? text.replace(TERMINATION_REQUEST, (_match, verb: string, between: string) => `${verb}${between}termination corrective action`) : text;
+  const canonical = canonicalCorrectiveAction(canonicalShorthand(canonicalWarningWording(said)));
   // FORM_FOR_FOR_TYPO_ENABLED: "exit for for <name>" is "exit form for <name>".
   return formForForTypoEnabled() ? canonical.replace(FORM_FOR_FOR, "$1 form for") : canonical;
 }
