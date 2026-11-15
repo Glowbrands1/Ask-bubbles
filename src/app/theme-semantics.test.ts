@@ -476,9 +476,13 @@ describe("the key text pairings clear WCAG AA", () => {
 describe("typography keeps the display face out of body copy", () => {
   it("loads both fallback faces through next/font", () => {
     const layout = readFileSync(join(SOURCE_DIR, "app", "layout.tsx"), "utf8");
-    expect(layout).toMatch(/import \{[^}]*\bArchivo\b[^}]*\} from "next\/font\/google"/);
-    expect(layout).toMatch(/import \{[^}]*\bFigtree\b[^}]*\} from "next\/font\/google"/);
-    // Self-hosted at build time, and text stays visible while a face loads.
+    // Changed on purpose (QA, 15 Nov 2026, ported from Ask Sunny): next/font/local with the files committed, so the
+    // build never needs Google Fonts. The faces are named by their committed files.
+    expect(layout).toContain('import localFont from "next/font/local"');
+    expect(layout).not.toMatch(/from "next\/font\/google"/);
+    expect(layout).toContain("./font-files/archivo/");
+    expect(layout).toContain("./font-files/figtree/");
+    // Self-hosted, and text stays visible while a face loads.
     expect((layout.match(/display: "swap"/g) ?? []).length).toBeGreaterThanOrEqual(2);
     expect(layout).toContain('variable: "--font-archivo"');
     expect(layout).toContain('variable: "--font-figtree"');
@@ -508,7 +512,8 @@ describe("typography keeps the display face out of body copy", () => {
     expect(stackOf("--font-lettering").trim()).toMatch(/^var\(--font-grandstander\),/);
 
     const layout = readFileSync(join(SOURCE_DIR, "app", "layout.tsx"), "utf8");
-    expect(layout).toMatch(/import \{[^}]*\bGrandstander\b[^}]*\} from "next\/font\/google"/);
+    // Changed on purpose (QA, 15 Nov 2026, next/font/local): the face is named by its committed file.
+    expect(layout).toContain("./font-files/grandstander/");
     expect(layout).toContain('variable: "--font-grandstander"');
     expect((layout.match(/display: "swap"/g) ?? []).length).toBeGreaterThanOrEqual(3);
 
