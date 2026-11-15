@@ -1558,6 +1558,8 @@ export const CHAT_QUALITY_FLAG_NAMES = [
   "MADE_ABOUT_EMPTY_PATCH_ANSWERS_SAVED_ENABLED",
   // ADD_ALREADY_ON_FORM_SAYS_SO (default off; QA's live 17u test, item 5, 13 Nov 2026): in the list, as every chat flag.
   "ADD_ALREADY_ON_FORM_SAYS_SO_ENABLED",
+  // AGENT_LOOP_ENABLED (ported from the sibling app, 15 Nov 2026; default off; not in production-flags.json): forced off with the others.
+  "AGENT_LOOP_ENABLED",
 ] as const;
 
 /**
@@ -5926,4 +5928,14 @@ export function terminationTickNoteEnabled(): boolean {
  */
 export function formEditTouchesUpdatedAtEnabled(): boolean {
   return envFlag("FORM_EDIT_TOUCHES_UPDATED_AT_ENABLED");
+}
+
+/**
+ * AGENT_LOOP_ENABLED (ported from the sibling app's switch, 15 Nov 2026; default OFF; same variable in both apps). In
+ * Ask Sunny it turns on the HR chat answered by one model with tools, for the signed-in users in AGENT_LOOP_USERS only
+ * (`lib/ai/agent-loop/switch.ts`). In this app the loop itself is not ported yet: only the switch reads this flag, and
+ * nothing in the chat path reads the switch, so on or off every turn is answered exactly as before.
+ */
+export function agentLoopEnabled(): boolean {
+  return envFlag("AGENT_LOOP_ENABLED");
 }
