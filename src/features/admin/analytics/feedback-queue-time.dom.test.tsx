@@ -12,6 +12,10 @@ describe("admin feedback queue times", () => {
     expect(longDate("2026-11-15T03:30:00Z")).toBe("Nov 14, 9:30 PM CT");
     expect(shortDate("2026-11-15T03:30:00Z")).toBe("Nov 14");
   });
+  it("admin usage shape: the day of a point is the Central day", async () => {
+    const { shortDate } = await import("./usage-shape");
+    expect(shortDate("2026-11-15T03:30:00Z")).toBe("Nov 14");
+  });
   it("another business zone keeps its own label", async () => {
     vi.stubEnv("NEXT_PUBLIC_BUSINESS_TIMEZONE", "America/New_York");
     const { formatBusinessTime } = await import("@/lib/business-date");
