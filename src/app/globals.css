@@ -1494,3 +1494,59 @@
     border-color: var(--color-line) !important;
   }
 }
+
+/* ============================================================================
+   THE DM L10 TAB IN ASK BUBBLES' ACCENT (the owner's request, via QA, 15 Nov 2026)
+   ============================================================================ */
+
+/*
+ * The Leadership Hub's page (above) accents in gold and bronze. In Ask Bubbles the tab uses Ask Bubbles' own teal
+ * (Tokyo Green, the colour of the rail's active "DM L10" item), by re-pointing the accent tokens INSIDE `.hub-l10`
+ * only. No component changes, so later ports from the sibling app still apply as they are. Every value is an existing
+ * Buff City Soap token (--bcs-*). The neutrals (ink, paper, line, field, rule, sand) and the warning colours (warn,
+ * warn-ink, bad) are left as the Hub has them.
+ *
+ * Text contrast (WCAG AA, 4.5:1 for text): white on the primary button (tokyo-dark) 4.67; teal text (tokyo-ink) on
+ * white 6.09, on the page (cotton) 5.64, on the tint 5.55, on the muted surface 5.15; gold text sits only on the ink
+ * bar and pills (tokyo on ink 10.0, tokyo-mist on ink 13.7); ink on the gold chips (tokyo) 10.0. Ask Bubbles has no
+ * dark theme. Focus outlines (tokyo-dark) on white 4.67, above the 3:1 non-text minimum.
+ */
+.hub-l10 {
+  /* gold: progress bars, sparkline, "Shared" pills and other text on the ink bar, mention chips (Ask Bubbles' --gold). */
+  --gold: var(--bcs-tokyo);
+  /* gold-head: table heads and buttons on ink, tints of the assistant chip. */
+  --color-gold-head: var(--bcs-tokyo-mist);
+  --color-gold-hover: var(--bcs-tokyo-mist);
+  /* bronze: Start meeting, the next-section button, primary buttons (white text), focus outlines, accent/caret. */
+  --color-bronze: var(--bcs-tokyo-dark);
+  /* bronze-deep: links (Clear, Open in…), eyebrows, small teal text. */
+  --color-bronze-deep: var(--bcs-tokyo-ink);
+  /* sunny / spa / bar: the current agenda item, the round-robin banner, row hover, borders of the highlights. */
+  --color-sunny: var(--bcs-tokyo-tint);
+  --color-spa: var(--bcs-tokyo-tint-strong);
+  --color-bar: var(--bcs-tokyo-tint-strong);
+  /* cream: the warm hover and chip background, here Ask Bubbles' neutral muted surface. */
+  --color-cream: var(--bcs-surface-muted);
+  /* The floating buttons' and glass cards' shadows had a bronze tint. */
+  --shadow-float:
+    inset 0 1px 0 rgb(255 255 255 / 0.95), 0 20px 50px -12px rgb(10 10 10 / 0.18),
+    0 4px 12px -4px color-mix(in srgb, var(--bcs-tokyo-dark) 12%, transparent);
+  --shadow-float-hover:
+    inset 0 1px 0 rgb(255 255 255 / 0.95), 0 28px 60px -14px rgb(10 10 10 / 0.22),
+    0 6px 16px -6px color-mix(in srgb, var(--bcs-tokyo-dark) 16%, transparent);
+}
+
+.hub-l10 ::selection {
+  background: color-mix(in srgb, var(--bcs-tokyo) 35%, transparent);
+}
+
+/*
+ * Two colours the Hub's primary button writes as literal values (ui.tsx `buttonVariants.primary`): its hover fill and
+ * its bronze shadow. Matched by class here, so the component stays as the Hub has it.
+ */
+.hub-l10 .hover\:bg-\[\#755a0c\]:hover {
+  background-color: var(--bcs-tokyo-ink);
+}
+.hub-l10 [class*="rgb(138_106_15/0.6)"] {
+  --tw-shadow: inset 0 1px 0 rgb(255 255 255 / 0.18), 0 8px 20px -8px color-mix(in srgb, var(--bcs-tokyo-dark) 60%, transparent);
+}
