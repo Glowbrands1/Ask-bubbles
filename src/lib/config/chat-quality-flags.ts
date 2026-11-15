@@ -5916,3 +5916,14 @@ export function priorActionsUnsaidBlankEnabled(): boolean {
 export function formEditTouchesUpdatedAtEnabled(): boolean {
   return envFlag("FORM_EDIT_TOUCHES_UPDATED_AT_ENABLED");
 }
+
+/**
+ * ACCOUNT_PERSON_NOT_SUBJECT_ENABLED (ported from the sibling app, QA's J11, 15 Nov 2026; default off): "change
+ * observation of offense to: <B> completed onboarding with new hire <C> on 9-28-26. As of 10-16-26 <C> had not …"
+ * made the person reader take <C> as the form's subject, and the card was lost. On: a person the message names in a
+ * role (a new hire, a witness, a guest, a customer, a coworker, a trainee), and that person's first name alone in the
+ * same message, is never the subject while someone else is (`forms/proposal.ts` employeeState). Off, as before.
+ */
+export function accountPersonNotSubjectEnabled(): boolean {
+  return envFlag("ACCOUNT_PERSON_NOT_SUBJECT_ENABLED");
+}
