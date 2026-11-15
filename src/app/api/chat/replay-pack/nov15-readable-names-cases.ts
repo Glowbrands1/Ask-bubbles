@@ -1,6 +1,6 @@
 import { expect, vi } from "vitest";
 
-import { STAFF, WEST_DODGE, type DirectoryRow, type ReplayCase } from "./cases";
+import { STAFF, WEST_DODGE, savedForm, type DirectoryRow, type ReplayCase } from "./cases";
 
 /**
  * ============================================================================
@@ -15,6 +15,9 @@ import { STAFF, WEST_DODGE, type DirectoryRow, type ReplayCase } from "./cases";
  */
 
 const MARIA: DirectoryRow = { id: "e-maria-delatorre-rn", firstName: "Maria", lastName: "de la Torre", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-264"], positionName: "Team Member Part Time" };
+/** QA, 15 Nov 2026: the typed first name was the employee's preferred first name in Woven (invented here). */
+const LORRAINE: DirectoryRow = { id: "e-lorraine-fairweather-rn", firstName: "Lorraine", lastName: "Fairweather", preferredFirstName: "Rae", employmentStatus: "active", locationIds: ["loc-264"], positionName: "Team Member Part Time" };
+const PREFERRED_REPORT = "QA, 15 Nov 2026: the manager typed the preferred first name, and the card showed only the legal name; Pau: forms show the legal name only, replies may say the preferred name with the legal name once";
 const REPORT = "Pau via QA, 15 Nov 2026: \"all naming conventions should be readable; some have de la Torre etc.\"";
 const FLAG = "READABLE_NAMES_ENABLED";
 
@@ -53,6 +56,42 @@ export const NOV15_READABLE_NAMES_CASES: ReplayCase[] = [
       if (!thread.proposal?.employeeName) reply = await thread.say("jacinta van der berg", { employeeName: "jacinta van der berg" });
       if (!thread.proposal?.employeeName && /reply \*\*use /.test(reply.content)) reply = await thread.say("use jacinta van der berg", { employeeName: "jacinta van der berg" });
       expect(thread.proposal?.employeeName, reply.content).toBe("Jacinta van der Berg");
+    },
+  },
+  {
+    id: "nov15-readable-names-preferred-name-said-back",
+    title: "\"Create a CA for Rae Fairweather, she was late on 11/12\" (Lorraine, preferred Rae): the reply says \"Rae Fairweather (Lorraine Fairweather in Woven)\" once; the card and the form keep the legal name",
+    report: PREFERRED_REPORT,
+    status: { open: "the reply and card show only the legal name, so it looks like another person" },
+    fixFlags: [FLAG],
+    async run(t) {
+      vi.setSystemTime(new Date("2026-11-14T16:00:00Z"));
+      t.directory([...STAFF, LORRAINE]);
+      t.as("location_manager", WEST_DODGE);
+      const thread = t.thread();
+      const reply = await thread.say("Create a CA for Rae Fairweather, she was late on 11/12", { employeeName: "Rae Fairweather" });
+      expect(thread.proposal?.employeeName, reply.content).toBe("Lorraine Fairweather");
+      expect(reply.content).toContain("Rae Fairweather (**Lorraine Fairweather** in Woven)");
+      expect(reply.content.split("Rae Fairweather").length - 1, "the preferred name is said once").toBe(1);
+      expect((thread.proposal as { closeMatchNote?: string | null } | undefined)?.closeMatchNote).toBe("Rae Fairweather is Lorraine Fairweather in Woven; the form uses the legal name.");
+    },
+  },
+  {
+    id: "nov15-readable-names-preferred-name-never-saved",
+    title: "Pau's ruling: a preferred name typed in chat never reaches employee_name or any other saved form field",
+    report: PREFERRED_REPORT,
+    status: "fixed",
+    fixFlags: [FLAG],
+    async run(t) {
+      vi.setSystemTime(new Date("2026-11-14T16:00:00Z"));
+      t.directory([...STAFF, LORRAINE]);
+      t.as("location_manager", WEST_DODGE);
+      const thread = t.thread();
+      await thread.say("Create a CA for Rae Fairweather, she was late on 11/12", { employeeName: "Rae Fairweather" });
+      const id = await thread.createCard!("Lorraine Fairweather");
+      const form = t.forms().find((row) => row.id === id);
+      expect(form?.employee_name).toBe("Lorraine Fairweather");
+      expect(savedForm(t, id)).not.toMatch(/Rae Fairweather|\bRae\b/);
     },
   },
 ];
