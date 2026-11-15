@@ -35,4 +35,20 @@ export const NOV15_AMOUNT_UNKNOWN_AFTER_BUT_CASES: ReplayCase[] = [
       expect(asked.content).not.toContain("I'll leave the **Payroll deduction amount** blank");
     },
   },
+  {
+    id: "nov15-amount-unknown-of-something-else",
+    title: "an unknown amount of time, of a drawer shortage or of a total is never the payroll amount; the amount question stays",
+    report: "Ported from the sibling app (QA's review of its batch J salvage, 15 Nov 2026): the reader read any clause, so these replaced the payroll amount question with the acknowledgement",
+    status: "fixed",
+    fixFlags: ["AMOUNT_UNKNOWN_ACK_ENABLED"],
+    async run(t) {
+      for (const said of ["she was late, but I don't know the amount of time", "she was short on the drawer, not sure of the amount", "verbal for Remy, she was $40 short, idk the total"]) {
+        const thread = start(t);
+        await thread.say("verbal ca for remy calder, she was 20 minutes late on 11/9/26");
+        await thread.say("yes payroll");
+        const reply = await thread.say(said);
+        expect(reply.content, `"${said}" was read as the payroll amount`).not.toContain("I'll leave the **Payroll deduction amount** blank");
+      }
+    },
+  },
 ];
