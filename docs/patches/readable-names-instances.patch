@@ -1,0 +1,22 @@
+diff --git a/src/lib/forms/instances.ts b/src/lib/forms/instances.ts
+index 00f40e6d..dc80261b 100644
+--- a/src/lib/forms/instances.ts
++++ b/src/lib/forms/instances.ts
+@@ -40,6 +40,7 @@ import { applyRequiredClosings } from "./required-closing";
+ import { offeredOffenseKeys } from "./offense-keys";
+ import { caSalesPolicyEnabled, revisionArchivedNotOpenEnabled } from "@/lib/config/chat-quality-flags";
+ import { isIsoCalendarDate } from "./form-date-answer";
++import { sameRosterPerson } from "./preferred-name-shown";
+ import { getCurrentVersion, getVersion, type TemplateVersionRow } from "./repository";
+ 
+ /** The form's own Date line — the same day as `form_instances.form_date`. */
+@@ -447,7 +448,8 @@ export async function findRecentAssistantDraft(input: {
+   const candidates = (data as { id: unknown; employee_name: unknown; location_id: unknown }[])
+     .filter(
+       (row) =>
+-        String(row.employee_name ?? "").trim().replace(/\s+/g, " ").toLowerCase() === wanted &&
++        // READABLE_NAMES_ENABLED: the same roster person under their other name (preferred or legal) is the same draft.
++        (String(row.employee_name ?? "").trim().replace(/\s+/g, " ").toLowerCase() === wanted || sameRosterPerson(String(row.employee_name ?? ""), input.employeeName)) &&
+         (row.location_id ?? null) === (input.locationId ?? null),
+     )
+     .map((row) => String(row.id));

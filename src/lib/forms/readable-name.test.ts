@@ -145,8 +145,9 @@ describe("READABLE_NAMES_ENABLED on: the off-roster name, as printed and as offe
   it("a name with particles is still a name's shape, and is offered readable", () => {
     expect(offRosterTyped("Jacinta van der Berg", "use jacinta van der berg", [])).toBe("Jacinta van der Berg");
     expect(offRosterTyped("jacinta van der berg", "create a ca for jacinta van der berg, she was late", [])).toBe("Jacinta van der Berg");
-    // One word and particles is still no name's shape.
-    expect(offRosterTyped("Jacinta van der", "use jacinta van der", [])).toBeNull();
+    // Changed on purpose (QA's review of Ask Sunny #1013, finding 5): the last word is the surname, never a particle, so
+    // "jacinta van der" is a three-word name ("Jacinta van Der"), not a cut one.
+    expect(offRosterTyped("Jacinta van der", "use jacinta van der", [])).toBe("Jacinta van Der");
   });
 });
 

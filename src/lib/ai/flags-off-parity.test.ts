@@ -170,6 +170,12 @@ const PROTECTED = [
  * displayPersonName makes a name typed in one case readable; and samePerson reads one roster person's preferred and
  * legal names as the same person (`sameRosterPerson`, QA, 15 Nov 2026). Behind READABLE_NAMES_ENABLED (default off); off, every
  * count is as before and the name is only trimmed (readable-name.test.ts's flag-off section).
+ *
+ * The user (Pau), under the standing approval, via QA on 15 Nov 2026 (QA's review of Ask Sunny #1013, ported here), in
+ * src/lib/forms/instances.ts, exactly the lines of docs/patches/readable-names-instances.patch: the import
+ * `sameRosterPerson`, and findRecentAssistantDraft's name check also takes the same roster person under their other
+ * name (preferred or legal). Behind READABLE_NAMES_ENABLED (default off); off, sameRosterPerson is false and the check is
+ * as before.
  */
 const APPROVED_PROTECTED_EDITS = [
   ":(exclude)src/lib/forms/location-scope.ts",
