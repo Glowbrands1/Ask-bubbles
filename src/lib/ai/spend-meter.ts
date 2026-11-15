@@ -30,7 +30,8 @@ import type { TokenUsage } from "./model-prices";
  * that was not before. Off, no meter, no wrapping, no extra row.
  */
 
-export type SpendSource = "chat" | "forms_draft" | "form_ingest";
+/** "l10_assistant": the DM L10 tab's assistant (src/features/l10/assistant), counted by the same monthly budget. */
+export type SpendSource = "chat" | "forms_draft" | "form_ingest" | "l10_assistant";
 
 export interface SpendMeter {
   readonly source: SpendSource;

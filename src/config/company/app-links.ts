@@ -25,3 +25,9 @@ export const LEADERSHIP_HUB_URL = urlFrom(
   process.env.NEXT_PUBLIC_LEADERSHIP_HUB_URL,
   DEFAULT_LEADERSHIP_HUB_URL,
 );
+
+/** The Leadership Hub's address without a trailing slash, for the DM L10 tab's server calls and links (src/features/l10). */
+export function leadershipHubUrl(): string {
+  // Read at call time (not the module-load constant above), so a server reads its deployment's value.
+  return urlFrom(process.env.NEXT_PUBLIC_LEADERSHIP_HUB_URL, DEFAULT_LEADERSHIP_HUB_URL).replace(/\/+$/, "");
+}
