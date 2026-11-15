@@ -13,11 +13,18 @@ import type { AskRequest, AskResponse } from "./types";
  * QA, 15 Nov 2026 (the termination scan; same flag in both apps): when the manager's words mention termination but the
  * stated-termination reader (`forms/termination-stated.ts`, TERMINATION_STATED_TICKS) does not tick it — "my DM
  * approved her termination, write up the CA" — the card's only level line asked "Verbal Warning or Written Warning?",
- * or there was none, and neither says Termination. With the
+ * or there was none, and neither says Termination. With the flag TERMINATION_TICK_NOTE is added beside the question,
+ * never in its place. With the
  * flag that line reads TERMINATION_TICK_NOTE instead, the agent loop's hedge wording (G19), so both paths read alike.
  * A termination the reader ticks is left to `ai/termination-stated.ts`; nothing here ticks anything. Off, as built.
  */
-export const TERMINATION_TICK_NOTE = "You'll tick Termination on the form yourself; it needs DM/HR approval before it's finalized.";
+/*
+ * QA's re-review (15 Nov 2026): a false note is cheap when it is worded neutrally, and a missing level prompt is
+ * harmful. Conditional and future mentions ("if she does it again she will be terminated", "next time it's termination",
+ * "we might terminate her later") still read as a mention, so the note never replaces the level question: it is added
+ * beside it, conditional on the form being a termination.
+ */
+export const TERMINATION_TICK_NOTE = "If this form is a termination, tick Termination on the form yourself; it needs DM/HR approval before it's finalized.";
 
 const CORRECTIVE = /corrective action/i;
 /** This app asks the level as a question (`ai/warning-level-clause.ts`, `ai/termination-stated.ts`). */
@@ -81,13 +88,11 @@ export function withTerminationTickNote(response: AskResponse, request: AskReque
   const said = turns.join("\n");
   if (!turns.some(statesTerminationClause) || statesTermination(said)) return response;
   let content = response.content;
-  if (LEVEL_ASKED.test(content)) {
-    content = content.replace(LEVEL_ASKED, TERMINATION_TICK_NOTE);
-  } else if (!content.includes(TERMINATION_TICK_NOTE)) {
-    // No level line at all: the note goes after the card's opening line, where the level line would be.
-    const lines = content.split("\n");
-    lines.splice(Math.min(1, lines.length), 0, "", TERMINATION_TICK_NOTE);
-    content = lines.join("\n");
-  }
+  if (content.includes(TERMINATION_TICK_NOTE)) return response;
+  const lines = content.split("\n");
+  // The note goes on its own line right after the level question (kept as it is), or after the opening line with none.
+  const level = lines.findIndex((line) => new RegExp(LEVEL_ASKED.source).test(line));
+  lines.splice(level >= 0 ? level + 1 : Math.min(1, lines.length), 0, "", TERMINATION_TICK_NOTE);
+  content = lines.join("\n");
   return { ...response, content: content.replace(/\n{3,}/g, "\n\n").trim() };
 }
