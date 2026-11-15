@@ -10,6 +10,7 @@ import { AUTO_SAVED_LABEL } from "@/features/l10/lib/autosave";
 import { isMeetingKey } from "@/features/l10/lib/config";
 import { formatDuration, formatHeld } from "@/features/l10/lib/doc";
 import { businessDate, todoState } from "@/features/l10/lib/dueStatus";
+import { solvedIssues } from "@/features/l10/lib/types";
 import { DeleteRecapButton } from "@/features/l10/meeting/_components/DeleteRecapButton";
 import { PrintButton } from "@/features/l10/meeting/_components/PrintButton";
 import { MentionText } from "@/features/l10/ui/Mentions";
@@ -99,7 +100,7 @@ export default async function RecapsPage({ params, searchParams }: { params: Pro
               </div>
               <div>
                 <dt className="text-[11px] font-bold tracking-wide text-muted uppercase">Issues solved</dt>
-                <dd className="m-0 text-3xl font-bold">{r.resolved_issues?.length ?? 0}</dd>
+                <dd className="m-0 text-3xl font-bold">{solvedIssues(r.resolved_issues).length}</dd>
               </div>
               <div>
                 <dt className="text-[11px] font-bold tracking-wide text-muted uppercase">Attendees</dt>
@@ -126,13 +127,15 @@ export default async function RecapsPage({ params, searchParams }: { params: Pro
                 </ul>
               </div>
             )}
-            {(r.resolved_issues?.length ?? 0) > 0 && (
+            {solvedIssues(r.resolved_issues).length > 0 && (
               <div>
                 <h3 className="m-0 mb-1 text-sm font-bold">Issues solved</h3>
                 <ul className="m-0 list-disc pl-5 text-sm">
-                  {r.resolved_issues.map((t, i) => (
+                  {/* Plain titles and { title, owner } (the Hub's newer recaps), read the same way; anything else is skipped. */}
+                  {solvedIssues(r.resolved_issues).map((s, i) => (
                     <li key={i}>
-                      <MentionText text={t} people={people} />
+                      <MentionText text={s.title} people={people} />
+                      {s.owner && <span className="text-muted"> · {s.owner}</span>}
                     </li>
                   ))}
                 </ul>
