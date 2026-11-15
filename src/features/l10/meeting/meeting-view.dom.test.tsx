@@ -590,3 +590,29 @@ describe("Rock Review: a rock opens in a side panel", () => {
     expect((within(panel()).getByLabelText("Rock title") as HTMLInputElement).value).toBe("Hire a trainer");
   });
 });
+
+// QA, 15 Nov 2026: "the header on askbubbles.vercel.app/meetings/bcs-dm says "Tuesdays · 90 min", but the agenda is
+// 70 min." The cadence line shows the total of the agenda the page runs (Ask Sunny #1033's cadenceLabel).
+describe("the cadence line shows the agenda's total (cadenceLabel)", () => {
+  const bloomAgenda = [
+    { key: "business-best", title: "Share", minutes: 5 },
+    { key: "scorecard", title: "Metrics", minutes: 5 },
+    { key: "rocks", title: "Rocks", minutes: 5 },
+    { key: "todos", title: "To-dos", minutes: 5 },
+    { key: "ids", title: "Issues", minutes: 45 },
+    { key: "conclude", title: "Wrap-up", minutes: 5 },
+  ] as Roster["agenda"];
+
+  it("reads 'Tuesdays · 70 min', not the stored 90 min, when the Hub's agenda totals 70", () => {
+    renderView({ roster: { ...roster, agenda: bloomAgenda } });
+    expect(document.body.textContent).toContain("BCS District Managers · Tuesdays · 70 min");
+    expect(document.body.textContent).not.toContain("Tuesdays · 90 min");
+  });
+
+  it("only for the meetings listed, and adds the total when the cadence has no minutes", async () => {
+    const { cadenceLabel } = await import("@/features/l10/lib/config");
+    expect(cadenceLabel("bcs-dm", "Tuesdays · 90 min", bloomAgenda)).toBe("Tuesdays · 70 min");
+    expect(cadenceLabel("bcs-dm", "Tuesdays", bloomAgenda)).toBe("Tuesdays · 70 min");
+    expect(cadenceLabel("leadership", "Mondays · 90 min", bloomAgenda)).toBe("Mondays · 90 min");
+  });
+});
