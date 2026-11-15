@@ -1,4 +1,5 @@
 import { amountUnknownAckEnabled } from "@/lib/config/chat-quality-flags";
+import { PAYROLL_DEDUCT_AMOUNT_QUESTION } from "@/lib/forms/payroll-deduct-amount";
 
 import type { AskRequest, AskResponse } from "./types";
 
@@ -22,14 +23,28 @@ const ASKED = /Payroll deduction amount\**\s*\?/;
 type Turn = { readonly role: string; readonly content: string };
 
 /** "i dont know the amount", "not sure of the amount", "idk the amount". */
+/*
+ * Ported from the sibling app (QA, batch J, 15 Nov 2026): after the payroll answer in the same message, "yes payroll
+ * but I don't know the amount" — the clause after "but", a comma or a semicolon. The clause itself must start with the
+ * not-known words, so "yes payroll but only for the shift" is not.
+ */
 export function saysAmountUnknown(text: string): boolean {
   const line = (text ?? "").trim().split("\n").pop()?.trim().replace(/[.!]+$/, "") ?? "";
-  return line.length <= 60 && UNKNOWN_AMOUNT.test(line);
+  if (line.length <= 60 && UNKNOWN_AMOUNT.test(line)) return true;
+  const clause = line.split(/\s*(?:\bbut\b|,|;)\s*/i).pop() ?? "";
+  return clause !== line && line.length <= 90 && clause.length <= 60 && UNKNOWN_AMOUNT.test(clause);
 }
 
 export function withAmountUnknownAck(response: AskResponse, request: AskRequest): AskResponse {
   if (!amountUnknownAckEnabled() || !response.formProposal || response.content.includes(AMOUNT_UNKNOWN_ACK)) return response;
   if (!saysAmountUnknown(request.question)) return response;
+  /*
+   * Ported from the sibling app (batch J): "yes payroll but I don't know the amount" answers payroll and the amount in
+   * one message, so the card's own amount question this turn is answered: the acknowledgement takes its place.
+   */
+  if (response.content.includes(PAYROLL_DEDUCT_AMOUNT_QUESTION)) {
+    return { ...response, content: response.content.replace(PAYROLL_DEDUCT_AMOUNT_QUESTION, AMOUNT_UNKNOWN_ACK) };
+  }
   const history = (request.history ?? []) as readonly Turn[];
   const lastAssistant = [...history].reverse().find((turn) => turn.role === "assistant")?.content ?? "";
   if (!ASKED.test(lastAssistant)) return response;
