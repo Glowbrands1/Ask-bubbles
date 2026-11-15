@@ -9,7 +9,8 @@ import { describe, expect, it } from "vitest";
  */
 const ROOT = join(process.cwd(), "src");
 const HELPERS = ["lib/ai/agent-loop/", "lib/ai/time-limit.ts", "lib/ai/time-limit.test.ts", "lib/ai/ai-route.ts", "lib/config/ai-timeouts.ts"];
-const IMPORTS = /(?:from|import\(|require\()\s*["']([^"']*(?:agent-loop\/switch|agent-loop\/dates|ai\/time-limit|config\/ai-timeouts|\.\/time-limit|\.\/ai-route|ai\/ai-route))["']/g;
+/* Any import form (from, side-effect import, dynamic import, require, template literal), any path to a helper's base name, with or without an extension. */
+const IMPORTS = /(?:\bfrom\s*|\bimport\s*\(?\s*|\brequire\s*\(\s*)["'`]([^"'`]*(?:agent-loop\/(?:switch|dates)|(?:^|\/)(?:time-limit|ai-timeouts|ai-route))(?:\.[cm]?[jt]sx?)?)["'`]/g;
 
 function files(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -31,8 +32,26 @@ describe("the ported agent-loop helpers are not imported by today's path", () =>
   });
 
   it("the pattern catches each import form (self-check)", () => {
-    for (const line of ['import { x } from "@/lib/ai/agent-loop/switch";', 'await import("../agent-loop/dates")', 'from "@/lib/ai/time-limit"', 'from "@/lib/config/ai-timeouts"', 'from "./time-limit"', 'from "@/lib/ai/ai-route"']) {
+    for (const line of [
+      'import { x } from "@/lib/ai/agent-loop/switch";',
+      'await import("../agent-loop/dates")',
+      'from "@/lib/ai/time-limit"',
+      'from "@/lib/config/ai-timeouts"',
+      'from "./time-limit"',
+      'from "@/lib/ai/ai-route"',
+      // QA's review of #935: a side-effect import, a sibling import inside config/, extensions, template literals, require.
+      'import "@/lib/ai/time-limit";',
+      'import { x } from "./ai-timeouts";',
+      'from "./agent-loop/dates.js"',
+      'from "@/lib/ai/time-limit.ts"',
+      'await import(`@/lib/ai/agent-loop/switch`)',
+      'require("../config/ai-timeouts")',
+    ]) {
       expect([...line.matchAll(IMPORTS)].length, line).toBe(1);
+    }
+    // A name that only contains a helper's name is not that helper.
+    for (const line of ['from "./my-time-limit"', 'from "@/lib/ai/agent-loop/switchboard"', 'from "./ai-route-names"']) {
+      expect([...line.matchAll(IMPORTS)].length, line).toBe(0);
     }
   });
 });

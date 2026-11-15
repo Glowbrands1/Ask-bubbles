@@ -28,7 +28,7 @@
  * today's readers; those values are unchanged, only moved here. A value
  * outside its range, or not a number, is the default.
  *
- * BUBBLES (ported from Ask Sunny, unused): nothing reads these yet. The reader
+ * BUBBLES (ported from the sibling app, unused): nothing reads these yet. The reader
  * (`ai/reader/read.ts`) and the form patch (`forms/form-patch-call.ts`) still
  * read AI_READER_TIMEOUT_MS and FORM_PATCH_TIMEOUT_MS themselves, with the same
  * defaults and ranges as here; the main answer and helper calls have no limit

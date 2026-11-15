@@ -21,7 +21,7 @@ import { AiError } from "./errors";
  * Nothing else about the call changes, and a call that finishes in time
  * returns exactly what it would have.
  *
- * BUBBLES (ported from Ask Sunny, unused): nothing in this app calls this yet.
+ * BUBBLES (ported from the sibling app, unused): nothing in this app calls this yet.
  * `call-claude.ts`, the reader, chat revision and the form patch keep their own
  * limits; they are wired to it in a later port. A guard test
  * (`agent-loop/no-import.test.ts`) keeps today's path from importing it.

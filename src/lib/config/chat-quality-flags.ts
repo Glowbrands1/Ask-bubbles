@@ -5932,7 +5932,7 @@ export function formEditTouchesUpdatedAtEnabled(): boolean {
 
 /**
  * AGENT_LOOP_ENABLED (ported from the sibling app's switch, 15 Nov 2026; default OFF; same variable in both apps). In
- * Ask Sunny it turns on the HR chat answered by one model with tools, for the signed-in users in AGENT_LOOP_USERS only
+ * the sibling app it turns on the HR chat answered by one model with tools, for the signed-in users in AGENT_LOOP_USERS only
  * (`lib/ai/agent-loop/switch.ts`). In this app the loop itself is not ported yet: only the switch reads this flag, and
  * nothing in the chat path reads the switch, so on or off every turn is answered exactly as before.
  */
