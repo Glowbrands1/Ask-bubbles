@@ -1,6 +1,6 @@
 # DM L10 tab ↔ Leadership Hub (and ↔ Ask Bubbles): parity audit
 
-Ported on 15 Nov 2026 from Ask Sunny `main` (`e01da17`), whose audit against the Leadership Hub (13–14 Nov 2026, Hub
+Ported on 15 Nov 2026 from Ask Sunny `main` (`e01da17`, then #1020 at `2aa544d`), whose audit against the Leadership Hub (13–14 Nov 2026, Hub
 `main` `1487887` and later #72) is kept below with its wording moved to this app. The Hub is the source of truth. Ask
 Bubbles stores no meeting data: every read and write goes to the Hub's own record through the partner API
 (`POST /api/partner/l10`, partner `ask-bubbles`, secret `HUB_PARTNER_SECRET_ASK_BUBBLES` on the Hub's side), which runs
@@ -30,6 +30,7 @@ only as listed in "Copied files that differ" below.
 | Notification settings | 🔗 link to the Hub | Settings belong to the Hub account, not to a meeting | — |
 | Reference: Business Plan, Accountability Chart | ❌ none for the BCS DM L10 (the owner's decision, 15 Nov 2026), as for the STC DM L10 in Ask Sunny | `NO_REFERENCE` (`lib/config.ts`) = `bcs-dm`, and the Hub's roster sends `reference: false` (Hub #78); either one hides it. No Reference block. A `?view=` link to either view is a 404 before the Hub is asked, and a leader's shared reference view is not followed. The report has no Business Plan or Organizational Chart pages. The Hub's database side (vto / seats left out of reads, kept on save) is Hub #78 | `meeting-view.dom.test.tsx`, `l10-routes.test.ts`, `l10-access.test.ts`; Hub #78 |
 | Rock Review: "Add new rock" form at the TOP, under the section title (owner's request, 13 Nov 2026) | ✅ same | The same change in both apps' `Rocks.tsx`, for every meeting; behaviour unchanged | `meeting/_components/Rocks.order.dom.test.tsx`; Hub `Rocks.order.test.tsx` |
+| IDS: "Long-term" / "Short term" button on every open issue row (next to Solve), and "Convert to: Headline" only where the agenda has Headlines (Ask Sunny #1020, 15 Nov 2026) | ✅ same | The same `Ids.tsx` change. Headline follows the Hub-served agenda, so it is gone for the BCS DM L10 once the Hub serves its Bloom agenda without Headlines | `meeting/meeting-view.dom.test.tsx`; Hub `MeetingSections.test.tsx` |
 | **Tracker** | 🔗 stays in the Hub | In the Hub, only Leadership L10 members and hub admins can open the Tracker. DM L10 attendees are not on that list, so showing it here would widen access | — |
 | Assistant: system prompt, models, Deep think | ✅ same | Served by the Hub (`assistant-config`); runs on Ask Bubbles' own `ANTHROPIC_API_KEY` | `assistant` tests |
 | Assistant: meeting tools (`getMeeting`, `getMeetingRecaps`) | ✅ same | Executed by the Hub for this person | `assistant` tests; Hub `partner.test.ts` |
