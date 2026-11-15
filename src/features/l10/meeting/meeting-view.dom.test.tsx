@@ -108,12 +108,12 @@ describe("the DM L10 page in Ask Bubbles", () => {
       fireEvent.click(screen.getByText("Bo Lark"));
       await new Promise((r) => setTimeout(r, 20));
     });
-    expect(save).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(1)); // waits for the debounced save, not a fixed 20 ms (slow under a loaded parallel run)
     const [key, version, doc] = save.mock.calls[0] as unknown as [string, number, { attendees: { name: string; shared: boolean }[] }];
     expect(key).toBe("bcs-dm");
     expect(version).toBe(3);
     expect(doc.attendees.find((a) => a.name === "Bo Lark")?.shared).toBe(true);
-    expect(screen.getByTestId("save-status").textContent).toBe("All changes saved");
+    await vi.waitFor(() => expect(screen.getByTestId("save-status").textContent).toBe("All changes saved"));
   });
 
   it("an edit made in the Hub shows up here on the next refresh (polling the same record)", async () => {
@@ -175,7 +175,7 @@ describe("saving: the page says saved only when the Hub has saved it", () => {
       fireEvent.click(screen.getByText("Bo Lark"));
       await new Promise((r) => setTimeout(r, 20));
     });
-    expect(save).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(1));
     expect(screen.getByTestId("save-status").textContent).toBe("Saving…");
     await act(async () => {
       answer({ ok: true, version: 4, updatedAt: "t" });
@@ -202,7 +202,7 @@ describe("saving: the page says saved only when the Hub has saved it", () => {
       fireEvent.click(within(status).getByRole("button", { name: "Try again" }));
       await new Promise((r) => setTimeout(r, 20));
     });
-    expect(save).toHaveBeenCalledTimes(2);
+    await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(2));
     const [, version, doc] = save.mock.calls[1] as unknown as [string, number, { attendees: { name: string; shared: boolean }[] }];
     expect(version).toBe(3);
     expect(doc.attendees.find((a) => a.name === "Bo Lark")?.shared).toBe(true);
@@ -263,6 +263,7 @@ describe("the agenda, hints and roster come from the Hub (as in Ask Sunny)", () 
       fireEvent.click(screen.getByText("Bo Lark"));
       await new Promise((r) => setTimeout(r, 20));
     });
+    await vi.waitFor(() => expect(save).toHaveBeenCalled());
     const [, , doc] = save.mock.calls[0] as unknown as [string, number, { attendees: { name: string }[] }];
     expect(doc.attendees.map((a) => a.name)).toEqual(["Avery Quill", "Bo Lark", "Cy Marlow", "Dex Rowan"]);
     expect(doc.attendees.find((a) => a.name === "Dex Rowan")).toEqual(hidden);

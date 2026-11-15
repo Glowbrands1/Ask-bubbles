@@ -28,8 +28,20 @@ export interface PastMeeting {
   issuesSolved: number;
   /** Solved issue titles, when known (recaps list them; the Bloom import only has the count). */
   solvedTitles: string[];
+  /** The same issues with their owners (null when the recap does not say: plain titles, auto-saved and older recaps). */
+  solvedIssues: { title: string; owner: string | null }[];
+  /** Share of the meeting's to-dos done when it ended (0–100), or null when the recap does not say. */
+  todosCompletedPct: number | null;
   /** The cascading message, when there was one. */
   cascade: string | null;
+  /** The meeting's shared notes, when the recap has them (the Hub's 20261205120000_l10_recap_notes). */
+  notes: string | null;
+}
+
+/** "To-dos completed": done / total as a whole percent, or null when the recap has no counts (or none to do). */
+export function todosCompletedPct(r: Pick<RecapRow, "todos_done" | "todos_total">): number | null {
+  const done = r.todos_done, total = r.todos_total;
+  return typeof done === "number" && typeof total === "number" && total > 0 && done >= 0 ? Math.round((Math.min(done, total) / total) * 100) : null;
 }
 
 const num = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);
@@ -76,7 +88,10 @@ export function pastMeetings(recaps: RecapRow[], doc: Record<string, unknown>): 
       issuesSolved: solvedIssues(r.resolved_issues).length,
       // Plain titles and { title, owner } (the Hub's newer recaps); anything else is skipped.
       solvedTitles: solvedIssues(r.resolved_issues).map((s) => s.title),
+      solvedIssues: solvedIssues(r.resolved_issues),
+      todosCompletedPct: todosCompletedPct(r),
       cascade: str(r.cascade),
+      notes: str(r.notes),
     }));
   const fromBloom: PastMeeting[] = importedMeetings(doc).map((m) => ({
     key: m.id,
@@ -87,7 +102,10 @@ export function pastMeetings(recaps: RecapRow[], doc: Record<string, unknown>): 
     attendees: m.attendees,
     issuesSolved: m.issuesSolvedCount,
     solvedTitles: [],
+    solvedIssues: [],
+    todosCompletedPct: null,
     cascade: null,
+    notes: null,
   }));
   return [...fromRecaps, ...fromBloom].sort((a, b) => Date.parse(b.heldAt) - Date.parse(a.heldAt));
 }

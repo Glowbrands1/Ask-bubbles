@@ -42,7 +42,7 @@ const recap = (over: Partial<RecapRow> = {}): RecapRow => ({
 afterEach(cleanup);
 
 describe("the recaps page reads both shapes of solved issues", () => {
-  it("shows plain titles and { title, owner } together, skips anything else, and ignores the new optional fields", async () => {
+  it("shows plain titles and { title, owner } together, skips anything else, and shows the notes", async () => {
     state.recaps = [
       recap({
         resolved_issues: ["Old title", { title: "New title", owner: "Bo Lark" }, { title: "No owner" }, null, 7, { owner: "Cy Marlow" }],
@@ -57,5 +57,16 @@ describe("the recaps page reads both shapes of solved issues", () => {
     expect(within(list).getAllByRole("listitem").map((li) => li.textContent)).toEqual(["Old title", "New title · Bo Lark", "No owner"]);
     expect(document.body.textContent).not.toContain("Cy Marlow");
     expect(document.body.textContent).not.toContain("[object Object]");
+    // Notes are shown (Sunny #1032); null to-do counts show no "To-dos completed".
+    expect(screen.getByTestId("recap-notes").textContent).toBe("Talked about the schedule");
+    expect(screen.queryByTestId("recap-todos-completed")).toBeNull();
+  });
+
+  it("shows To-dos completed as a percent when the recap has the counts, and no Notes when it has none", async () => {
+    state.recaps = [recap({ resolved_issues: ["Old title"], todos_done: 3, todos_total: 4, notes: null })];
+    const { default: RecapsPage } = await import("@/app/(app)/meetings/[key]/recaps/page");
+    render(await RecapsPage({ params: Promise.resolve({ key: "bcs-dm" }), searchParams: Promise.resolve({}) }));
+    expect(screen.getByTestId("recap-todos-completed").textContent).toBe("To-dos completed75%");
+    expect(screen.queryByTestId("recap-notes")).toBeNull();
   });
 });

@@ -10,6 +10,7 @@ import { AUTO_SAVED_LABEL } from "@/features/l10/lib/autosave";
 import { isMeetingKey } from "@/features/l10/lib/config";
 import { formatDuration, formatHeld } from "@/features/l10/lib/doc";
 import { businessDate, todoState } from "@/features/l10/lib/dueStatus";
+import { todosCompletedPct } from "@/features/l10/lib/past";
 import { solvedIssues } from "@/features/l10/lib/types";
 import { DeleteRecapButton } from "@/features/l10/meeting/_components/DeleteRecapButton";
 import { PrintButton } from "@/features/l10/meeting/_components/PrintButton";
@@ -102,6 +103,13 @@ export default async function RecapsPage({ params, searchParams }: { params: Pro
                 <dt className="text-[11px] font-bold tracking-wide text-muted uppercase">Issues solved</dt>
                 <dd className="m-0 text-3xl font-bold">{solvedIssues(r.resolved_issues).length}</dd>
               </div>
+              {/* Ask Bubbles (QA, 15 Nov 2026): the recap's to-do counts, on recaps that have them. */}
+              {todosCompletedPct(r) !== null && (
+                <div data-testid="recap-todos-completed">
+                  <dt className="text-[11px] font-bold tracking-wide text-muted uppercase">To-dos completed</dt>
+                  <dd className="m-0 text-3xl font-bold">{todosCompletedPct(r)}%</dd>
+                </div>
+              )}
               <div>
                 <dt className="text-[11px] font-bold tracking-wide text-muted uppercase">Attendees</dt>
                 <dd className="m-0">
@@ -146,6 +154,14 @@ export default async function RecapsPage({ params, searchParams }: { params: Pro
                 <h3 className="m-0 mb-1 text-sm font-bold">Cascading message</h3>
                 <p className="m-0 text-sm">
                   <MentionText text={r.cascade} people={people} />
+                </p>
+              </div>
+            )}
+            {r.notes && (
+              <div>
+                <h3 className="m-0 mb-1 text-sm font-bold">Notes</h3>
+                <p className="m-0 text-sm whitespace-pre-wrap" data-testid="recap-notes">
+                  <MentionText text={r.notes} people={people} />
                 </p>
               </div>
             )}
