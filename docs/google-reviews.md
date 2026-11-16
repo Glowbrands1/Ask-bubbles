@@ -35,7 +35,7 @@ Google location resource IDs are recorded in `google_review_locations` the first
 3. Set `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_TOKEN_ENCRYPTION_KEY` and redeploy.
 4. Set `GOOGLE_REVIEWS_SYNC_ENABLED=true`, an administrator clicks **Connect Google account** using the account that manages the Buff City Soap profiles.
 5. Click **Check Google (nothing saved)**; confirm 7 of 7 stores link. Confirm any "Needs confirmation" candidate only after comparing the address.
-6. Set `GOOGLE_REVIEWS_WRITES_ENABLED=true`, run **Sync and save**, then optionally `GOOGLE_REVIEWS_SCHEDULE_ENABLED=true` (Vercel cron every 6 hours at :23).
+6. Set `GOOGLE_REVIEWS_WRITES_ENABLED=true`, run **Sync and save**, then optionally `GOOGLE_REVIEWS_SCHEDULE_ENABLED=true` (Vercel cron every hour at :23).
 
 ## Safety behaviours
 

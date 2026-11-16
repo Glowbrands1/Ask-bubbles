@@ -13,13 +13,15 @@ import { CRON_REQUESTER, outcomeHttpStatus, runGoogleReviewsSync } from "@/lib/g
  * GET /api/google-reviews/cron — the scheduled Google Reviews refresh.
  *
  * ============================================================================
- * SCHEDULED EVERY SIX HOURS — minute 23 (`vercel.json`)
+ * SCHEDULED HOURLY — minute 23 (`vercel.json`)
  * ============================================================================
  *
- * New reviews and owner replies are same-day facts; six hours keeps the screen
- * current while using a tiny fraction of Google's quota (about 7 stores × a few
- * pages per run). A missed run is caught up in full by the next, because every
- * run reads each store's reviews from the start and reconciles them.
+ * New reviews and owner replies are same-day facts. The schedule was every six
+ * hours until 16 Nov 2026, when it became hourly so a new review shows on the
+ * screen within the hour. A run reads about 7 stores x a few pages, a tiny
+ * fraction of Google's quota, so 24 runs a day is still small. A missed run is
+ * caught up in full by the next, because every run reads each store's reviews
+ * from the start and reconciles them.
  *
  * It is the SAME sync as the admin screen's (`runGoogleReviewsSync`): the same
  * run lock, completeness rules, removal guard and per-store transactions.

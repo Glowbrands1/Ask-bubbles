@@ -16,7 +16,7 @@
     },
     {
       "path": "/api/google-reviews/cron",
-      "schedule": "23 */6 * * *"
+      "schedule": "23 * * * *"
     }
   ]
 }

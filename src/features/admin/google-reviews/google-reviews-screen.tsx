@@ -358,7 +358,7 @@ function Ready({ state }: { state: Extract<GoogleReviewsPageProps["state"], { st
           </p>
         ) : null}
         <p className="mt-1 text-[12px] text-muted-foreground">
-          Automatic refresh: {status.scheduleEnabled && status.enabled && status.writesEnabled ? "on (every 6 hours)" : "off"}.
+          Automatic refresh: {status.scheduleEnabled && status.enabled && status.writesEnabled ? "on (every hour)" : "off"}.
         </p>
       </section>
 
