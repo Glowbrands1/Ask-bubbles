@@ -17,6 +17,7 @@ import { NotConnected } from "./data-area";
 import { DataArea } from "./data-area";
 import type { ReviewsData } from "./load";
 import {
+  lastSyncedStamp,
   Figure,
   GoalSearch,
   GoalTable,
@@ -38,6 +39,7 @@ import {
   totals,
 } from "./reviews-data";
 import { rating as fmtRating } from "@/features/admin/google-reviews/format";
+import type { StoreSummary } from "@/lib/google-reviews/views";
 import type { ReviewsIntegrationStatus } from "./integration-status";
 import {
   DisabledChips,
@@ -138,6 +140,21 @@ export function ReviewsDashboard({
 
 const SECTION_NOTE = "-mt-2 text-[11.5px] text-muted-foreground";
 
+/**
+ * When the reviews were last saved from Google, in Central time, and how often
+ * they refresh. Nothing when no sync has finished, so a page with no data does
+ * not claim a time.
+ */
+function SyncedNote({ stores }: { stores: readonly StoreSummary[] | null | undefined }) {
+  const synced = lastSyncedStamp(stores);
+  if (!synced) return null;
+  return (
+    <p className={SECTION_NOTE} data-testid="reviews-last-synced">
+      Reviews last synced from Google {synced} · refreshes every hour.
+    </p>
+  );
+}
+
 function OverviewView({
   status,
   data,
@@ -159,11 +176,13 @@ function OverviewView({
     <>
       <SectionRule label="Monthly review goal" className="mt-1" />
       <p className={SECTION_NOTE}>
-        Every store&rsquo;s monthly target and progress toward it. Weekly
-        figures cover the current week (Monday–Sunday, Central); monthly figures
-        cover the month to date. Counts use Google&rsquo;s original review
-        dates.
+        Every store&rsquo;s monthly target and progress toward it. This week is
+        Monday–Sunday
+        {g ? `, ${rangeLabel(g.context.weekStart, g.context.weekEnd)}` : ""}{" "}
+        (Central); monthly figures cover the month to date. Counts use
+        Google&rsquo;s original review dates.
       </p>
+      <SyncedNote stores={data?.stores} />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <GoalTile
@@ -298,9 +317,9 @@ function OverviewView({
           />
         )}
         <Footnote>
-          Qualifying means a 3-, 4- or 5-star Google review counted after the
-          store&rsquo;s baseline. 1–2 star reviews and imported history never
-          count.
+          Qualifying means a 3-, 4- or 5-star Google review dated on or after
+          the &ldquo;Counting since&rdquo; day under the store&rsquo;s name.
+          1–2 star reviews and earlier history never count.
           {pm ? ` ${pm}` : ""}
         </Footnote>
       </Panel>
@@ -406,6 +425,7 @@ function LeaderboardView({
         Ranked by qualifying reviews this month against each store&rsquo;s goal;
         stores on the same count share a rank.
       </p>
+      <SyncedNote stores={data?.stores} />
 
       <Panel>
         <div className="px-5 py-4">

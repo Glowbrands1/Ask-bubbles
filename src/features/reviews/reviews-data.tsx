@@ -9,7 +9,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 
-import { reviewDate, rating } from "@/features/admin/google-reviews/format";
+import { reviewDate, rating, stamp } from "@/features/admin/google-reviews/format";
 import { APPROVED_GOOGLE_STORES, googleStoreNumber } from "@/config/company/google-reviews";
 import {
   GOAL_STATUS_LABEL,
@@ -1272,6 +1272,21 @@ export function partialMonthText(
 }
 
 /** "Oct 12 – Oct 18" for two `yyyy-mm-dd` Central dates. */
+/**
+ * When the reviews on this page were last saved from Google: the newest store
+ * sync that finished, in full or in part, as a Central-time stamp ("Nov 16,
+ * 6:23 AM CT"). Null when no store has synced yet. A failed sync saved nothing,
+ * so it does not count as fresh.
+ */
+export function lastSyncedStamp(stores: readonly StoreSummary[] | null | undefined): string | null {
+  const newest = (stores ?? [])
+    .filter((s) => s.lastSyncAt && (s.lastSyncStatus === "complete" || s.lastSyncStatus === "incomplete"))
+    .map((s) => s.lastSyncAt as string)
+    .sort()
+    .at(-1);
+  return newest ? stamp(newest) : null;
+}
+
 export function rangeLabel(from: string, to: string): string {
   return `${formatDay(from)} – ${formatDay(to)}`;
 }
