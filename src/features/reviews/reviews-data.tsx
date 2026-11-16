@@ -1166,14 +1166,30 @@ export function Leaderboard({
       </p>
     );
   }
+  // Ranked by this week while no counting store has a qualifying review yet (a Monday morning):
+  // every store ties at 0, and "1 TIED" on every row says nothing. Say so, and rank nobody.
+  const countingRows = rows.filter(isCounting);
+  const idleWeek =
+    !closed && metric === "week" && countingRows.length > 0 && countingRows.every((r) => r.qualifyingThisWeek === 0);
   return (
+    <>
+    {idleWeek ? (
+      <p
+        className="border-b border-border-hairline bg-surface-muted/40 px-4 py-3 text-[12.5px] font-bold text-muted-foreground"
+        data-testid="leaderboard-idle-week"
+      >
+        No reviews yet this week, so no store is ahead. The stores are listed by month to date; switch to Month to see
+        the month ranking.
+      </p>
+    ) : null}
     <ol className="divide-y divide-border-hairline">
       {ranked.map(({ row, rank, tied }) => {
         const counting = isCounting(row);
         const status = goalStatus(row, context);
         const style = TONE_STYLE[GOAL_TONE[status]];
-        // A store that was not counting yet in a closed month has no standing to rank or tie.
-        const unranked = status === "before_counting";
+        // A store that was not counting yet in a closed month has no standing to rank or tie;
+        // neither does any store while the whole week is still at zero.
+        const unranked = status === "before_counting" || idleWeek;
         return (
           <li
             key={row.storeCode}
@@ -1243,6 +1259,7 @@ export function Leaderboard({
         );
       })}
     </ol>
+    </>
   );
 }
 
