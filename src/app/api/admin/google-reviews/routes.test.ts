@@ -354,9 +354,9 @@ describe("the scheduled refresh", () => {
     expect(JSON.stringify(await res.json())).not.toMatch(/SECRET|REFRESH|ACCESS/);
   });
 
-  it("is registered in vercel.json on a six-hour schedule, off the hour", async () => {
+  it("is registered in vercel.json on an hourly schedule, off the hour (was every six hours until 16 Nov 2026)", async () => {
     const vercel = (await import("../../../../../vercel.json")).default as { crons: { path: string; schedule: string }[] };
-    expect(vercel.crons.find((c) => c.path === "/api/google-reviews/cron")).toEqual({ path: "/api/google-reviews/cron", schedule: "23 */6 * * *" });
+    expect(vercel.crons.find((c) => c.path === "/api/google-reviews/cron")).toEqual({ path: "/api/google-reviews/cron", schedule: "23 * * * *" });
   });
 });
 
