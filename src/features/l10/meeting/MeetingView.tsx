@@ -25,9 +25,21 @@ import { Scorecard } from "./_components/Scorecard";
 import { Todos } from "./_components/Todos";
 import { statusText, useMeetingSync, type LoadFn, type SaveFn } from "./useMeetingSync";
 import { useStoredFlag } from "./useStoredFlag";
+import { archiveTodos, deleteFromHistory, restoreTodo, todoHistory } from "@/features/l10/lib/todoHistory";
 import { useLeaveGuard } from "./useLeaveGuard";
 import { MentionRoster } from "@/features/l10/ui/Mentions";
 import type { Person } from "@/features/l10/lib/mentions";
+
+/** "marissa.lempka@example.com" → "Marissa Lempka"; a name stays as it is. */
+function personLabel(label: string): string {
+  if (!label.includes("@")) return label;
+  return label
+    .split("@")[0]
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map((w) => w[0].toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+}
 
 /** A running meeting this far past its planned agenda time offers to end it. */
 const OVERTIME_SECONDS = 10 * 60;
@@ -151,7 +163,8 @@ export function MeetingView({
   const go = (i: number) => selectView(agenda[Math.max(0, Math.min(agenda.length - 1, i))].key);
 
   const start = () => {
-    edit((d) => startMeeting(d, serverNow(), viewer, attendees));
+    // Ask Bubbles: the leader is shown by name, not by sign-in email (the badge read "…@glowbrands.com is leading").
+    edit((d) => startMeeting(d, serverNow(), { id: viewer.id, label: viewer.name || viewer.label }, attendees));
     setNow(serverNow());
     setViewLocal(agenda[0].key);
     elapsedBySection.current = {};
@@ -233,7 +246,12 @@ export function MeetingView({
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const leaderName = isLeader ? "You're leading" : timer.leaderLabel ? `${timer.leaderLabel} is leading` : "";
+  const leaderName = isLeader ? "You're leading" : timer.leaderLabel ? `${personLabel(timer.leaderLabel)} is leading` : "";
+  /*
+   * Ask Bubbles: anyone in the meeting can take the lead, which gives them Pause / Resume / Reset (the owner, 17 Nov
+   * 2026: "where is option to start this and end or pause meetings"; only the person who pressed Start had them).
+   */
+  const takeLead = () => setTimer((t) => ({ ...t, leader: viewer.id, leaderLabel: viewer.name || viewer.label, leaderView: view }));
   const planned = plannedSeconds(section?.minutes ?? 0, isReferenceView(view) ? 0 : (extras[view] ?? 0));
   const inSection = isReferenceView(view) ? 0 : (sectionElapsed[view] ?? 0);
   // Share of the planned agenda time used so far: each section's time on this screen, never counted past its plan.
@@ -335,6 +353,17 @@ export function MeetingView({
                     Reset
                   </Button>
                 </>
+              )}
+              {!isLeader && (
+                <Button variant="outline" title="Lead the meeting: pause, resume and move everyone between sections" onClick={takeLead}>
+                  Take the lead
+                </Button>
+              )}
+              {/* Ask Bubbles: End is on the last page (Conclude / Wrap-up), with the ratings; this goes there. */}
+              {agenda.some((a) => a.key === "conclude") && view !== "conclude" && (
+                <Button variant="primary" title="Go to the last page to rate the meeting and save its recap" onClick={() => selectView("conclude")}>
+                  End meeting
+                </Button>
               )}
             </div>
           ) : (
@@ -579,7 +608,25 @@ export function MeetingView({
             {view === "scorecard" && <Scorecard doc={doc} edit={edit} people={people} bloom={bloom} today={today} {...(bloom ? { wide: scorecardWide, onWide: setScorecardWide } : {})} />}
             {view === "rocks" && <Rocks rocks={doc.rocks} onChange={(rocks) => edit((d) => ({ ...d, rocks }))} people={people} today={today} saveStatus={statusText(status)} bloom={bloom} />}
             {view === "headlines" && <Headlines headlines={doc.headlines} onChange={(headlines) => edit((d) => ({ ...d, headlines }))} author={people[0] ?? ""} />}
-            {view === "todos" && <Todos todos={doc.todos} onChange={(todos) => edit((d) => ({ ...d, todos }))} people={people} today={today} bloom={bloom} />}
+            {view === "todos" && (
+              <Todos
+                todos={doc.todos}
+                onChange={(todos) => edit((d) => ({ ...d, todos }))}
+                people={people}
+                today={today}
+                bloom={bloom}
+                history={
+                  bloom
+                    ? {
+                        history: todoHistory(doc),
+                        onArchive: (ids) => edit((d) => archiveTodos(d, new Set(ids), serverNow())),
+                        onRestore: (id) => edit((d) => restoreTodo(d, id)),
+                        onDeleteForGood: (id) => edit((d) => deleteFromHistory(d, id)),
+                      }
+                    : undefined
+                }
+              />
+            )}
             {view === "ids" && <Ids doc={doc} edit={edit} session={timer.sessionId ?? "pending"} meetingKey={info.key} voter={{ id: viewer.id, name: viewer.name || viewer.label }} attendees={attendees} addedBy={myName} headlines={agenda.some((a) => a.key === "headlines")} bloom={bloom} people={people} />}
             {view === "conclude" && !(bloom && !timer.started) && (
               <Conclude

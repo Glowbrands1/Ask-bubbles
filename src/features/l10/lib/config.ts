@@ -135,8 +135,17 @@ const AGENDA_KEYS = new Set<string>(AGENDA.map((a) => a.key));
 export function agendaFromRoster(key: string, roster: Pick<Roster, "agenda">): AgendaSection[] {
   const a = roster.agenda;
   const ok = Array.isArray(a) && a.length > 0 && a.every((s) => s && AGENDA_KEYS.has(s.key) && typeof s.title === "string" && Number.isFinite(s.minutes) && s.minutes > 0);
-  return ok ? a.map((s) => ({ key: s.key, title: s.title, minutes: s.minutes })) : agendaFor(key);
+  const agenda = ok ? a.map((s) => ({ key: s.key, title: s.title, minutes: s.minutes })) : agendaFor(key);
+  const title = SECTION_TITLE[key];
+  return title ? agenda.map((s) => (title[s.key] ? { ...s, title: title[s.key]! } : s)) : agenda;
 }
+
+/**
+ * Ask Bubbles: section names shown in place of the Hub's for a meeting. The BCS DM L10's segue (the Hub's "AI Share")
+ * is "Recap" here (the owner, 17 Nov 2026: 'replace AI SHare with "Recap"'); the page shows last week's feedback.
+ * Display only: the Hub's agenda, minutes and order are unchanged.
+ */
+export const SECTION_TITLE: Readonly<Record<string, Partial<Record<AgendaKey, string>>>> = { "bcs-dm": { "business-best": "Recap" } };
 
 /** The hints the page shows: the Hub's where it sent one, else this copy's. */
 export function hintsFromRoster(key: string, roster: Pick<Roster, "hints">): Record<AgendaKey, string> {

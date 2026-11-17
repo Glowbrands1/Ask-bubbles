@@ -18,11 +18,17 @@ const TONE: Record<CellTone, string> = {
 /** Bloom-style cells (the DM L10s): tinted green on goal, red off goal, and an empty box for a week not entered yet. */
 const BLOOM_TONE: Record<CellTone, string> = {
   empty: "border border-dashed border-line bg-white text-muted",
-  negative: "bg-[#fbe4e4] font-semibold text-[#8a1c1c]",
-  bad: "bg-[#fbe4e4] font-semibold text-[#8a1c1c]",
+  negative: "bg-[#fbe4e4] text-[#8a1c1c]",
+  bad: "bg-[#fbe4e4] text-[#8a1c1c]",
   near: "bg-[#fbe4e4] text-[#8a1c1c]",
-  good: "bg-[#e1f1e4] font-semibold text-[#154a21]",
+  good: "bg-[#e1f1e4] text-[#154a21]",
 };
+
+/*
+ * Ask Bubbles, Bloom-style: figures in the page's own font (Public Sans) at medium weight, digits lined up
+ * (tabular-nums), not the bold monospace code font (the owner, 17 Nov 2026: "the numbers hurt my eyes").
+ */
+const BLOOM_FIGURES = "font-sans font-medium tabular-nums";
 
 function Cell({ row, week, label, onCommit, bloom = false }: { row: ScorecardRow; week: number; label: string; onCommit: (v: number | null) => void; bloom?: boolean }) {
   const value = row.weeks[week] ?? null;
@@ -59,7 +65,7 @@ function Cell({ row, week, label, onCommit, bloom = false }: { row: ScorecardRow
       }}
       aria-label={`${row.metric} ${label}: ${formatValue(value, row.format)}`}
       data-tone={tone}
-      className={cx("min-h-9 w-full min-w-[64px] rounded-md px-1.5 py-1 text-right font-mono text-sm whitespace-nowrap hover:ring-2 hover:ring-gold/60", bloom ? BLOOM_TONE[tone] : TONE[tone])}
+      className={cx("min-h-9 w-full min-w-[64px] rounded-md px-1.5 py-1 text-right text-sm whitespace-nowrap hover:ring-2 hover:ring-gold/60", bloom ? cx(BLOOM_FIGURES, BLOOM_TONE[tone]) : cx("font-mono", TONE[tone]))}
     >
       {bloom && value == null ? "" : formatValue(value, row.format)}
     </button>
@@ -261,7 +267,7 @@ function BloomTable({ doc, edit, order, today }: { doc: MeetingDoc; edit: (fn: (
               Goal
             </th>
             {order.map((i) => (
-              <th key={i} scope="col" data-current={current(i) ? "true" : undefined} data-current-week={current(i) ? "" : undefined} className="px-2 py-2 text-right font-mono leading-tight whitespace-nowrap">
+              <th key={i} scope="col" data-current={current(i) ? "true" : undefined} data-current-week={current(i) ? "" : undefined} className={cx("px-2 py-2 text-right leading-tight whitespace-nowrap", BLOOM_FIGURES)}>
                 {(() => {
                   // Two lines, start over end ("9 Nov" / "15 Nov"); the slash is kept for screen readers.
                   const b = weekBounds(doc.weekEndings[i]);
@@ -306,7 +312,7 @@ function BloomTable({ doc, edit, order, today }: { doc: MeetingDoc; edit: (fn: (
                     </button>
                   </span>
                 </td>
-                <td className="px-3 py-2 font-mono whitespace-nowrap text-muted">{r.goal}</td>
+                <td className={cx("px-3 py-2 whitespace-nowrap text-muted", BLOOM_FIGURES)}>{r.goal}</td>
                 {order.map((i) => (
                   <td key={i} data-current-week={current(i) ? "" : undefined} className="px-1 py-1">
                     <Cell bloom row={r} week={i} label={weekRange(doc.weekEndings[i]) || `week ${i + 1}`} onCommit={(v) => edit((d) => setCell(d, r.id, i, v))} />
