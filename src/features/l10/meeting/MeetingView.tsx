@@ -275,10 +275,12 @@ export function MeetingView({
   /*
    * Ask Bubbles, the Bloom-style BCS DM L10 (Marissa's email after the first meeting, 17 Nov 2026): the segue ("AI
    * Share") has no icebreaker question box and no round-robin check-off ("Remove the Ice breaker question box",
-   * "Remove the round robin checkoff attendees"). The page shows last week's feedback, then the room shares.
-   * Attendees and their ratings are unchanged (Conclude still rates everyone).
+   * "Remove the round robin checkoff attendees"). The owner then asked for the page to keep only last week's feedback
+   * ("remove ice breaker and AI Share", 17 Nov 2026), so its "AI Share" title and round-robin hint are not shown
+   * either; the agenda still names the section. Attendees and their ratings are unchanged (Conclude still rates
+   * everyone).
    */
-  const segueHint = bloom ? "Go around the room: each person shares." : hints["business-best"];
+  const segueTitleHidden = bloom && view === "business-best";
 
   return (
     <MentionRoster value={mentionPeople}>
@@ -557,10 +559,12 @@ export function MeetingView({
                 </span>
               </div>
             )}
+            {!segueTitleHidden && (
             <div>
               <h2 className="m-0 text-xl font-bold">{view === "business-plan" ? "Business Plan" : view === "accountability" ? "Accountability Chart" : section?.title}</h2>
-              <p className="m-0 mt-0.5 text-sm text-muted">{view === "business-plan" ? "Vision, core values and the 1- and 3-year picture. Edits save for everyone." : view === "accountability" ? "One name per seat. Changes save for the whole team." : view === "business-best" ? segueHint : hints[view]}</p>
+              <p className="m-0 mt-0.5 text-sm text-muted">{view === "business-plan" ? "Vision, core values and the 1- and 3-year picture. Edits save for everyone." : view === "accountability" ? "One name per seat. Changes save for the whole team." : hints[view]}</p>
             </div>
+            )}
 
             <fieldset disabled={!!readOnly} className="m-0 flex min-w-0 flex-col gap-4 border-0 p-0">
             {bloom && view === "conclude" && !timer.started && <LastMeetingConclusion last={last} />}

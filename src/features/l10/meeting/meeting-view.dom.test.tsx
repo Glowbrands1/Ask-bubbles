@@ -323,7 +323,9 @@ describe("no Reference for the BCS DM L10 (the owner's decision, 15 Nov 2026)", 
     );
     expect(screen.queryByRole("heading", { name: "Business Plan" })).toBeNull();
     expect(document.body.textContent).not.toContain("Vision, core values");
-    expect(screen.getByRole("heading", { level: 2, name: /Segue/ })).toBeTruthy();
+    // Changed on purpose 17 Nov 2026: the segue page has no title on this meeting (the owner: "just keep the last
+    // weeks feedback"), so the agenda's current step shows where the page opened.
+    expect(within(screen.getByRole("region", { name: "Agenda" })).getByRole("button", { name: /Segue/, current: "step" })).toBeTruthy();
   });
 
   it("the Hub's word that a meeting has no Reference is followed", async () => {
@@ -574,7 +576,8 @@ describe("Bloom-style page: Segue and Conclude", () => {
   // round-robin to go after the first meeting (Marissa's email, 17 Nov 2026, "AI Share Tab").
   it('Segue ("AI Share Tab"): "Remove the Ice breaker question box" and "Remove the round robin checkoff attendees" (Marissa, 17 Nov 2026)', () => {
     view({ segueQuestion: "What AI tool saved you time?", attendees: [{ id: "att-avery", name: "Avery Quill", role: "Visionary", shared: true, rating: null }] });
-    expect(screen.getByRole("heading", { level: 2, name: "Segue · Business Best" })).toBeTruthy();
+    // The agenda still names the section; the page itself has no title or hint (see the next test).
+    expect(within(screen.getByRole("region", { name: "Agenda" })).getByRole("button", { name: /Segue · Business Best/, current: "step" })).toBeTruthy();
     // Last week's feedback stays.
     const feedback = screen.getByRole("region", { name: "Last week's feedback" });
     expect(within(feedback).getAllByRole("listitem").map((li) => li.textContent)).toEqual(["9Avery Quill", "8Bo Lark"]);
@@ -585,7 +588,35 @@ describe("Bloom-style page: Segue and Conclude", () => {
     // No round-robin check-off: no banner, no count, no person buttons.
     expect(document.body.textContent).not.toMatch(/round-robin|check off|shared|Not yet/i);
     for (const name of ["Avery Quill", "Bo Lark", "Cy Marlow"]) expect(screen.queryByRole("button", { name: new RegExp(name) })).toBeNull();
-    expect(document.body.textContent).toContain("Go around the room: each person shares.");
+  });
+
+  it('Segue: "remove this in DM L10 bubbles, just keep the last weeks feedback remove ice breaker and AI Share" (the owner, 17 Nov 2026)', () => {
+    // The Hub serves this meeting's segue as "AI Share" with a round-robin hint.
+    render(
+      <MeetingView
+        info={info}
+        initial={loaded(3, {})}
+        save={vi.fn() as unknown as SaveFn}
+        end={vi.fn() as unknown as EndFn}
+        viewer={viewer}
+        roster={{ ...roster, agenda: [{ key: "business-best", title: "AI Share", minutes: 5 }, { key: "scorecard", title: "Scorecard", minutes: 5 }], hints: { "business-best": "Round-robin: each person shares one AI use or tip, then you check them off." } }}
+        hubMeetingUrl={HUB}
+        pollMs={0}
+        debounceMs={0}
+        today="2026-11-17"
+        recaps={[recap]}
+      />,
+    );
+    const main = screen.getByRole("region", { name: "Last week's feedback" }).parentElement!;
+    // Only last week's feedback (with the summary and the section bar above it): no "AI Share" title, no hint,
+    // no icebreaker, no round-robin, no New Issue banner.
+    expect(within(main).queryByRole("heading", { level: 2 })).toBeNull();
+    expect(main.textContent).not.toMatch(/AI Share|Round-robin|each person shares|icebreaker|shared|Not yet/i);
+    expect(screen.queryByTestId("new-issue-bar")).toBeNull();
+    expect(screen.getByRole("region", { name: "Last week's feedback" })).toBeTruthy();
+    // Every other page keeps its title.
+    fireEvent.click(within(screen.getByRole("region", { name: "Agenda" })).getByRole("button", { name: /Scorecard/ }));
+    expect(screen.getByRole("heading", { level: 2, name: "Scorecard" })).toBeTruthy();
   });
 
   it("Conclude before the meeting starts shows the last meeting's summary; during the meeting the existing steps", () => {

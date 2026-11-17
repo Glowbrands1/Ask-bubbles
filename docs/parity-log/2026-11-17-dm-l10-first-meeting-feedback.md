@@ -2,7 +2,8 @@
 
 Marissa's email after the first BCS DM L10 run in Ask Bubbles, item by item:
 
-- Segue ("AI Share Tab"): no icebreaker question box, no round-robin check-off.
+- Segue ("AI Share Tab"): no icebreaker question box, no round-robin check-off;
+  then (the owner) only last week's feedback, with no "AI Share" title or hint.
 - Metrics: "Add metric" is a button next to "Add week" that opens the form.
 - Rocks: only people with rocks are listed; a milestone can be checked off in
   the expanded list, without opening the rock.
