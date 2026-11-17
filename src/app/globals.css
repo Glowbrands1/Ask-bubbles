@@ -1423,6 +1423,12 @@
     --fab-right: calc(max(460px, 50vw) + 1.25rem);
   }
 }
+/* Ask Bubbles: the rock editor is a narrow panel (440px, Rocks.tsx), so the floating buttons move by that much only. */
+@media (min-width: 40rem) {
+  :root:has([data-side-panel="compact"]) .hub-l10 {
+    --fab-right: calc(440px + 1.25rem);
+  }
+}
 @media (max-width: 39.999rem) {
   :root:has([data-side-panel]) .hub-l10 [data-page-fab],
   :root:has([data-side-panel]) .hub-l10 [data-testid="assistant-launcher"] {

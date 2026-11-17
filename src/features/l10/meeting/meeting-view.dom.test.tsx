@@ -500,6 +500,31 @@ describe("Bloom-style page: what every page shares", () => {
     expect(screen.queryByRole("dialog", { name: "Meeting Notes" })).toBeNull();
   });
 
+  it('"also meeting notes is too big. TOO MUCH SPACE make friendly both phone and website" (the owner, 17 Nov 2026)', () => {
+    renderView();
+    fireEvent.click(within(screen.getByRole("region", { name: "Agenda" })).getByRole("button", { name: /Meeting Notes/ }));
+    const panel = screen.getByRole("dialog", { name: "Meeting Notes" });
+    // A 440px panel on a computer (it was half the screen), a full-width sheet on a phone; the pad fills its height.
+    expect(panel.className).toContain("sm:w-[440px]");
+    expect(panel.className).toContain("w-full");
+    expect(panel.className).not.toContain("50vw");
+    expect(panel.getAttribute("data-side-panel")).toBe("compact");
+    expect(within(panel).getByLabelText("Meeting notes").className).toContain("flex-1");
+  });
+
+  it('windows open inside the DM L10 frame, with black text: "too light text, need to highlight, pls change font color to black and button to blue" (the owner, 17 Nov 2026)', () => {
+    render(
+      <div className="hub-l10" data-testid="frame">
+        <MeetingView info={info} initial={loaded()} save={vi.fn() as unknown as SaveFn} end={vi.fn() as unknown as EndFn} viewer={viewer} roster={roster} hubMeetingUrl={HUB} pollMs={0} debounceMs={0} today="2026-11-15" />
+      </div>,
+    );
+    // The New Issue window (the same Modal as "End the meeting before you leave?"): inside .hub-l10, so it takes the
+    // tab's colours (Ask Bubbles' blue primary button, dark text), not the Hub's gold on <body>.
+    fireEvent.click(screen.getByRole("button", { name: "+ New Issue" }));
+    const dialog = screen.getByRole("dialog", { name: "New Issue" });
+    expect(screen.getByTestId("frame").contains(dialog)).toBe(true);
+  });
+
   it("Meeting Notes is portalled into the DM L10 frame (.hub-l10), so it keeps the tab's scoped styles", () => {
     render(
       <div className="hub-l10" data-testid="frame">
@@ -843,6 +868,20 @@ describe("Bloom-style page: Rocks and To-dos", () => {
     fireEvent.click(screen.getByRole("button", { name: "⤡ Collapse" }));
     expect(screen.getByRole("region", { name: "Agenda" })).toBeTruthy();
     window.localStorage.clear();
+  });
+
+  it('Rocks: "for rocks in DM L10 i think this is too big, takes too much space … make it friendly both phone and website" (the owner, 17 Nov 2026)', () => {
+    view();
+    fireEvent.click(within(screen.getByRole("region", { name: "Agenda" })).getByRole("button", { name: /Rock Review/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Edit Open two rooms" }));
+    const panel = screen.getByTestId("rock-panel");
+    expect(panel.className).toContain("sm:w-[440px]");
+    expect(panel.className).not.toContain("50vw");
+    expect(panel.getAttribute("data-side-panel")).toBe("compact");
+    // Each milestone: the box, the text and ✕ on one line; its due date on the next (a two-column grid row).
+    const row = within(panel).getByLabelText("Milestone done: Hire staff").closest("li")!;
+    expect(row.className).toContain("grid");
+    expect(within(row).getByLabelText("Milestone due date: Hire staff").parentElement!.className).toContain("col-start-2");
   });
 
   it("To-dos: % Completed, round checks, initials and MM-DD-YYYY due dates", () => {

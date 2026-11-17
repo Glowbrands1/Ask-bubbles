@@ -14,6 +14,12 @@ Marissa's email after the first BCS DM L10 run in Ask Bubbles, item by item:
 - Every page: the New Issue banner is a floating button that opens a window (as
   the Add to IDS button on the other meetings), so IDS has one add field.
 
+Then (the owner, the same day): the rock editor and Meeting Notes are narrow
+440px panels; windows open inside the meeting's frame (Ask Bubbles' blue
+buttons, dark text), the leave window's second line is black; the meeting pages
+(not the printable report) use the same blue canvas as chat
+(`src/components/shell/backdrop.ts`).
+
 **Sibling app: not ported.** Ask Sunny runs the same code for the STC DM L10
 (its `bloomStyle` meeting). These are one team's layout choices, not bugs, and
 changing that code there would change the other company's meeting without a

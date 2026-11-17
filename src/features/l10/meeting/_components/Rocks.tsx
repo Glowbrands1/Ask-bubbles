@@ -161,11 +161,14 @@ function RockPanel({ rock, owners, today, saveStatus, onChange, onDuplicate, onD
       role="dialog"
       aria-modal="false"
       aria-labelledby="rock-panel-title"
-      data-side-panel
+      data-side-panel="compact"
       data-testid="rock-panel"
-      className="fixed inset-y-0 right-0 z-[45] flex w-full flex-col border-l border-line bg-cream shadow-2xl sm:w-[max(460px,50vw)] print:hidden"
+      // Ask Bubbles: a narrow panel (440px; the Hub's is half the screen) with tighter spacing. The owner, 17 Nov 2026:
+      // "for rocks in DM L10 i think this is too big, takes too much space … make it friendly both phone and website".
+      // Still a full-width sheet on a phone. globals.css moves the floating buttons by the same width.
+      className="fixed inset-y-0 right-0 z-[45] flex w-full flex-col border-l border-line bg-cream shadow-2xl sm:w-[440px] print:hidden"
     >
-      <div className="flex items-center gap-2 border-b border-line bg-white px-4 py-3">
+      <div className="flex items-center gap-2 border-b border-line bg-white px-4 py-2">
         <h2 id="rock-panel-title" ref={heading} tabIndex={-1} className="m-0 min-w-0 flex-1 truncate text-base font-bold outline-none">
           Edit rock
         </h2>
@@ -173,8 +176,8 @@ function RockPanel({ rock, owners, today, saveStatus, onChange, onDuplicate, onD
           ✕
         </button>
       </div>
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-4 py-4">
-        <div className="grid grid-cols-2 gap-3">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain px-4 py-3">
+        <div className="grid grid-cols-2 gap-2">
           <label className="flex flex-col gap-1 text-xs font-bold text-muted">
             Due date
             <input type="date" aria-label={`Due date of ${rock.title}`} value={rock.dueDate ?? ""} onChange={(e) => patch({ dueDate: e.target.value || undefined })} className={inputClass} />
@@ -196,20 +199,23 @@ function RockPanel({ rock, owners, today, saveStatus, onChange, onDuplicate, onD
         </label>
         <label className="flex flex-col gap-1 text-xs font-bold text-muted">
           Details
-          <MentionField multiline aria-label={`Notes for ${rock.title}`} value={rock.notes ?? ""} onChange={(v) => patch({ notes: v })} placeholder="Context, blockers, updates… try @ and a name" className="min-h-40 py-2" />
+          <MentionField multiline aria-label={`Notes for ${rock.title}`} value={rock.notes ?? ""} onChange={(v) => patch({ notes: v })} placeholder="Context, blockers, updates… try @ and a name" className="min-h-20 py-2" />
         </label>
         <div>
           <div className="mb-1 text-xs font-bold text-muted">Milestones</div>
-          <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
+          {/* Each milestone in two short lines (the box, the text and ✕; then its due date and status), so the panel stays narrow. */}
+          <ul className="m-0 flex list-none flex-col gap-2 p-0">
             {rock.milestones.map((m) => (
-              <li key={m.id} className="flex flex-wrap items-center gap-2">
+              <li key={m.id} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 rounded-lg bg-white/70 p-1.5">
                 <input type="checkbox" aria-label={`Milestone done: ${plain(m.text)}`} checked={m.done} onChange={() => setMs(m.id, { done: !m.done })} className="size-[18px] accent-bronze" />
-                <MentionField aria-label="Milestone text" value={m.text} onChange={(v) => setMs(m.id, { text: v })} wrapperClassName="min-w-[200px] flex-1" className={cx(m.done && "text-muted line-through")} />
-                <input type="date" aria-label={`Milestone due date: ${plain(m.text)}`} value={m.dueDate ?? ""} onChange={(e) => setMs(m.id, { dueDate: e.target.value || undefined })} className={cx(inputClass, "w-40", milestoneState(m, today) === "overdue" && "border-[#8a1c1c]")} />
-                {milestoneState(m, today) !== "none" && <StatusBadge state={milestoneState(m, today) as "done" | "overdue" | "soon"} />}
-                <button type="button" aria-label={`Delete milestone ${plain(m.text)}`} className="text-xs text-muted hover:text-[#8a1c1c]" onClick={() => patch({ milestones: rock.milestones.filter((x) => x.id !== m.id) })}>
+                <MentionField aria-label="Milestone text" value={m.text} onChange={(v) => setMs(m.id, { text: v })} wrapperClassName="min-w-0" className={cx(m.done && "text-muted line-through")} />
+                <button type="button" aria-label={`Delete milestone ${plain(m.text)}`} className="inline-flex size-8 items-center justify-center rounded-lg text-xs text-muted hover:bg-cream hover:text-[#8a1c1c]" onClick={() => patch({ milestones: rock.milestones.filter((x) => x.id !== m.id) })}>
                   ✕
                 </button>
+                <span className="col-start-2 flex flex-wrap items-center gap-2">
+                  <input type="date" aria-label={`Milestone due date: ${plain(m.text)}`} value={m.dueDate ?? ""} onChange={(e) => setMs(m.id, { dueDate: e.target.value || undefined })} className={cx(inputClass, "w-40", milestoneState(m, today) === "overdue" && "border-[#8a1c1c]")} />
+                  {milestoneState(m, today) !== "none" && <StatusBadge state={milestoneState(m, today) as "done" | "overdue" | "soon"} />}
+                </span>
               </li>
             ))}
           </ul>
@@ -220,7 +226,7 @@ function RockPanel({ rock, owners, today, saveStatus, onChange, onDuplicate, onD
             </Button>
           </div>
         </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3">
           <label className="flex flex-col gap-1 text-xs font-bold text-muted">
             Attach to owner
             <span className="flex items-center gap-2">
@@ -254,7 +260,7 @@ function RockPanel({ rock, owners, today, saveStatus, onChange, onDuplicate, onD
         </select>
       </div>
       {/* Autosaves as you type, as everywhere on the page: no Save button. The meeting's save status, repeated quietly. */}
-      <div className="flex flex-wrap items-center gap-2 border-t border-line bg-white px-4 py-3">
+      <div className="flex flex-wrap items-center gap-2 border-t border-line bg-white px-4 py-2">
         <Button variant="outline" onClick={() => patch({ archived: !rock.archived })}>
           {rock.archived ? "Restore rock" : "Archive rock"}
         </Button>

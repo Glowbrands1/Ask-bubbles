@@ -415,7 +415,10 @@ export function Modal({
   }, [open]);
 
   if (!open || typeof document === "undefined") return null;
-  // Portal to <body>: glass cards use backdrop-filter, which would otherwise trap a fixed overlay inside the card.
+  // Portal out of the card: glass cards use backdrop-filter, which would otherwise trap a fixed overlay inside the card.
+  // Ask Bubbles: into the DM L10 frame (.hub-l10) when there is one, so the window keeps the tab's own colours (Ask
+  // Bubbles' blue buttons and dark text). On <body> it showed the Hub's gold button and light text (the owner, 17 Nov
+  // 2026: "too light text, need to highlight, pls change font color to black and button to blue"). As SidePanel does.
   return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-ink/40 p-4 pt-[10vh] backdrop-blur-sm"
@@ -450,6 +453,6 @@ export function Modal({
         {footer && <div className="flex flex-wrap justify-end gap-2">{footer}</div>}
       </div>
     </div>,
-    document.body,
+    document.querySelector(".hub-l10") ?? document.body,
   );
 }

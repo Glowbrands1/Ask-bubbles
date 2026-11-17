@@ -36,8 +36,10 @@ export function SidePanel({ title, closeLabel, onClose, footer, children, testId
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
   return createPortal(
-    <aside role="dialog" aria-modal="false" aria-label={title} data-side-panel data-testid={testId} className="fixed inset-y-0 right-0 z-[45] flex w-full flex-col border-l border-line bg-cream shadow-2xl sm:w-[max(460px,50vw)] print:hidden">
-      <div className="flex items-center gap-2 border-b border-line bg-white px-4 py-3">
+    // Ask Bubbles: a narrow panel (440px; the Hub's is half the screen). The owner, 17 Nov 2026: "also meeting notes is
+    // too big. TOO MUCH SPACE make friendly both phone and website". Still a full-width sheet on a phone.
+    <aside role="dialog" aria-modal="false" aria-label={title} data-side-panel="compact" data-testid={testId} className="fixed inset-y-0 right-0 z-[45] flex w-full flex-col border-l border-line bg-cream shadow-2xl sm:w-[440px] print:hidden">
+      <div className="flex items-center gap-2 border-b border-line bg-white px-4 py-2">
         <h2 ref={heading} tabIndex={-1} className="m-0 min-w-0 flex-1 truncate text-base font-bold outline-none">
           {title}
         </h2>
@@ -45,8 +47,8 @@ export function SidePanel({ title, closeLabel, onClose, footer, children, testId
           ✕
         </button>
       </div>
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-4 py-4">{children}</div>
-      {footer && <div className="flex flex-wrap items-center gap-2 border-t border-line bg-white px-4 py-3">{footer}</div>}
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain px-4 py-3">{children}</div>
+      {footer && <div className="flex flex-wrap items-center gap-2 border-t border-line bg-white px-4 py-2">{footer}</div>}
     </aside>,
     document.querySelector(".hub-l10") ?? document.body,
   );
@@ -76,8 +78,9 @@ export function MeetingNotes({ notes, onChange, saveStatus, disabled }: { notes:
           testId="meeting-notes-panel"
           footer={saveStatus ? <span className="ml-auto text-xs text-muted">{saveStatus}</span> : undefined}
         >
-          <p className="m-0 text-sm text-muted">Shared with everyone in this meeting. Saves as you type.</p>
-          <MentionField multiline aria-label="Meeting notes" value={notes} disabled={disabled} onChange={onChange} placeholder="Notes for this meeting… try @ and a name" className="min-h-64 py-2" />
+          <p className="m-0 text-xs text-muted">Shared with everyone in this meeting. Saves as you type.</p>
+          {/* The pad fills the panel's height (no big empty area under a fixed-size box). */}
+          <MentionField multiline aria-label="Meeting notes" value={notes} disabled={disabled} onChange={onChange} placeholder="Notes for this meeting… try @ and a name" wrapperClassName="flex flex-1 flex-col" className="min-h-48 flex-1 py-2" />
         </SidePanel>
       )}
     </>

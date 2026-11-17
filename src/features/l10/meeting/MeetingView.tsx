@@ -428,7 +428,8 @@ export function MeetingView({
         <p className="m-0 text-sm">
           This meeting is still running. Ending it saves the recap (ratings, to-dos, solved issues and the cascading message) for the whole team.
         </p>
-        <p className="m-0 text-sm text-muted">
+        {/* Ask Bubbles: black, not muted (the owner, 17 Nov 2026: "too light text … change font color to black"). */}
+        <p className="m-0 text-sm text-ink">
           If nobody ends it, it is saved automatically later and marked &ldquo;Auto-saved: meeting was not ended&rdquo;.
         </p>
         {endError && (

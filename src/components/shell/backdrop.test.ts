@@ -38,6 +38,15 @@ describe("backdropForPath", () => {
     }
   });
 
+  it('the meeting pages take the blue canvas ("make background color of DM L10 to blue please", the owner, 17 Nov 2026), not the printable report, and keep the plain top bar', () => {
+    for (const path of ["/meetings", "/meetings/bcs-dm", "/meetings/bcs-dm/past", "/meetings/bcs-dm/history", "/meetings/bcs-gm"]) {
+      expect(backdropForPath(path), path).toBe("band");
+      expect(chromeForPath(path), path).toBe("plain");
+    }
+    expect(backdropForPath("/meetings/bcs-dm/report")).toBe("work");
+    expect(backdropForPath("/meetingsroom")).toBe("work");
+  });
+
   it("does not mistake a lookalike path for chat", () => {
     expect(backdropForPath("/chatter")).toBe("work");
   });
