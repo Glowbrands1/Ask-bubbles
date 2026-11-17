@@ -35,8 +35,11 @@ afterEach(() => {
 });
 
 describe("Bloom-style scorecard (the owner's feedback)", () => {
-  it('"Add metric" is at the top, above the table, and saves a row with name, owner, goal, unit and direction', () => {
+  // Changed on purpose 17 Nov 2026: the form was always open at the top (15 Nov). After the first meeting the team asked
+  // for a button next to "Add week" that opens it (the test below).
+  it('"Add metric" opens the form above the table, and saves a row with name, owner, goal, unit and direction', () => {
     render(<Harness />);
+    fireEvent.click(screen.getByRole("button", { name: "Add metric", expanded: false }));
     const form = screen.getByTestId("add-metric");
     expect(form.compareDocumentPosition(screen.getByTestId("bloom-scorecard")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     const f = within(form);
@@ -47,6 +50,49 @@ describe("Bloom-style scorecard (the owner's feedback)", () => {
     fireEvent.change(f.getByLabelText("Direction"), { target: { value: "lower" } });
     fireEvent.click(f.getByRole("button", { name: "Add metric" }));
     expect(saved.at(-1)!.scorecard.at(-1)).toMatchObject({ metric: "Callbacks", owner: "Bo Lark", goal: "≤ 3", goalValue: 3, format: "number", higherIsBetter: false, weeks: [null, null, null] });
+  });
+
+  it('"Can we make the add metric a tab like the add week that then expands when you need to add something, right now it gets a bit confusing." (Marissa, 17 Nov 2026)', () => {
+    render(<Harness />);
+    // Closed at first: a button next to "Add week", no form.
+    expect(screen.queryByTestId("add-metric")).toBeNull();
+    const toggle = screen.getByRole("button", { name: "Add metric", expanded: false });
+    expect(toggle.parentElement).toBe(screen.getByRole("button", { name: /Add week/ }).parentElement);
+    // It expands, and closes again (the toggle or Done).
+    fireEvent.click(toggle);
+    expect(screen.getByRole("button", { name: "Add metric", expanded: true })).toBe(toggle);
+    expect(screen.getByTestId("add-metric")).toBeTruthy();
+    fireEvent.click(within(screen.getByTestId("add-metric")).getByRole("button", { name: "Done" }));
+    expect(screen.queryByTestId("add-metric")).toBeNull();
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it('"make \'add week\' button visible" (the owner, 17 Nov 2026): Add week comes first, a filled button, and adds a week', () => {
+    render(<Harness />);
+    const toolbar = screen.getByTestId("scorecard-toolbar");
+    const buttons = within(toolbar).getAllByRole("button");
+    expect(buttons[0].textContent).toBe("+ Add week");
+    // The page's filled (primary) button style, not the outline one Add metric uses.
+    expect(buttons[0].className).not.toBe(within(toolbar).getByRole("button", { name: "Add metric" }).className);
+    fireEvent.click(buttons[0]);
+    expect(saved.at(-1)!.weekEndings).toHaveLength(4);
+  });
+
+  it('"expand this metric coz there is a space on the left side … collapsable maybe?" (the owner, 17 Nov 2026): Full width / Collapse', () => {
+    function Wide() {
+      const [wide, setWide] = useState(false);
+      return (
+        <>
+          <span data-testid="wide">{String(wide)}</span>
+          <Scorecard doc={start()} edit={() => {}} people={["Avery Quill"]} bloom today="2026-11-12" wide={wide} onWide={setWide} />
+        </>
+      );
+    }
+    render(<Wide />);
+    fireEvent.click(screen.getByRole("button", { name: "⤢ Full width", pressed: false }));
+    expect(screen.getByTestId("wide").textContent).toBe("true");
+    fireEvent.click(screen.getByRole("button", { name: "⤡ Collapse", pressed: true }));
+    expect(screen.getByTestId("wide").textContent).toBe("false");
   });
 
   it("week headers show the range on two lines, start over end, newest first", () => {

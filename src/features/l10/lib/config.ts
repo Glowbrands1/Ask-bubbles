@@ -62,8 +62,11 @@ export const AGENDA: AgendaSection[] = [
  * this app opens only the Buff City meetings, and the Hub serves each meeting's agenda and hints with the roster
  * (`agendaFromRoster`, `hintsFromRoster`), which win.
  */
-/** The meetings without the Reference views (Business Plan, Accountability Chart): the BCS DM L10 (owner, 15 Nov 2026). */
-export const NO_REFERENCE: readonly string[] = ["bcs-dm"];
+/**
+ * The meetings without the Reference views (Business Plan, Accountability Chart): the BCS DM L10 (owner, 15 Nov 2026)
+ * and the BCS GM L10 (owner, 17 Nov 2026: "remove this in BCS GM L10").
+ */
+export const NO_REFERENCE: readonly string[] = ["bcs-dm", "bcs-gm"];
 
 /**
  * Whether a meeting shows the Reference views. The BCS DM L10 does not (the owner's decision, 15 Nov 2026); the Hub's
