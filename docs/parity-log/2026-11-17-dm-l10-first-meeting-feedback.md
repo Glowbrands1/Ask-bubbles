@@ -21,7 +21,3 @@ Hub's own page for the BCS DM L10 is unchanged (it still shows the icebreaker
 and round-robin); the data written here (`priorityOrder`, unchanged
 `segueQuestion` / `shared`) is kept by the Hub.
 
-Not done: the chat bubble inside the meeting for store figures ("what is
-Bellevue's Labor PTD"). The meeting already has the L10 assistant (bottom
-right), which reads the meeting and its recaps; store reports are not built yet,
-so it cannot answer that until they are.
