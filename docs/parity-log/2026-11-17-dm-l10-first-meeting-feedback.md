@@ -21,3 +21,8 @@ Hub's own page for the BCS DM L10 is unchanged (it still shows the icebreaker
 and round-robin); the data written here (`priorityOrder`, unchanged
 `segueQuestion` / `shared`) is kept by the Hub.
 
+
+**Also (the owner, 17 Nov 2026):** the BCS GM L10 has no Reference (Business
+Plan, Accountability Chart), as the DM L10: `bcs-gm` added to `NO_REFERENCE` in
+`src/features/l10/lib/config.ts`. Bubbles-only: the list holds this app's
+meetings only; Ask Sunny's own list (`hasReference`) is its team's call.

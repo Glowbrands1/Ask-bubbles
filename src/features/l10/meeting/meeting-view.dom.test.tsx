@@ -329,8 +329,9 @@ describe("no Reference for the BCS DM L10 (the owner's decision, 15 Nov 2026)", 
   it("the Hub's word that a meeting has no Reference is followed", async () => {
     const { referenceFromRoster } = await import("@/features/l10/lib/config");
     expect(referenceFromRoster("bcs-dm", {})).toBe(false);
-    expect(referenceFromRoster("bcs-gm", { reference: false })).toBe(false);
-    expect(referenceFromRoster("bcs-gm", {})).toBe(true);
+    // Changed on purpose 17 Nov 2026: the BCS GM L10 has no Reference either, so a meeting that has one is the Leadership L10.
+    expect(referenceFromRoster("leadership", { reference: false })).toBe(false);
+    expect(referenceFromRoster("leadership", {})).toBe(true);
     // A Hub that says "true" cannot bring it back for the BCS DM L10.
     expect(referenceFromRoster("bcs-dm", { reference: true })).toBe(false);
   });
@@ -338,7 +339,22 @@ describe("no Reference for the BCS DM L10 (the owner's decision, 15 Nov 2026)", 
   it("its report has no Business Plan or org chart pages", async () => {
     const { reportSections } = await import("@/features/l10/lib/report");
     expect(reportSections("bcs-dm").map((s) => s.title)).toEqual(["Goals", "Issues", "Metrics", "Meeting Recaps"]);
-    expect(reportSections("bcs-gm").map((s) => s.title)).toContain("Business Plan");
+    expect(reportSections("leadership").map((s) => s.title)).toContain("Business Plan"); // Changed on purpose 17 Nov 2026 (was bcs-gm, see below)
+  });
+
+  it('the BCS GM L10 has no Reference either: "remove this in BCS GM L10" (the owner, 17 Nov 2026)', async () => {
+    const { hasReference, referenceFromRoster } = await import("@/features/l10/lib/config");
+    const { reportSections } = await import("@/features/l10/lib/report");
+    expect(hasReference("bcs-gm")).toBe(false);
+    // A Hub that says "true" cannot bring it back.
+    expect(referenceFromRoster("bcs-gm", { reference: true })).toBe(false);
+    expect(reportSections("bcs-gm").map((s) => s.title)).not.toContain("Business Plan");
+    // The page: no REFERENCE heading, no Business Plan or Accountability Chart links.
+    renderView({ info: standardInfo });
+    const agenda = within(screen.getByRole("region", { name: "Agenda" }));
+    expect(agenda.queryByText("REFERENCE")).toBeNull();
+    expect(agenda.queryByRole("button", { name: "Business Plan" })).toBeNull();
+    expect(agenda.queryByRole("button", { name: "Accountability Chart" })).toBeNull();
   });
 });
 

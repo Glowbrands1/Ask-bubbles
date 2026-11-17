@@ -76,7 +76,7 @@ default). Keep the header link when re-copying
 
 This folder, the `(app)/meetings` routes, `/api/l10/assistant`, the sidebar wiring and the DM L10 section of
 `globals.css` are Ask Sunny's (`Glowbrands1/ask-sunny`, `src/features/l10`, main `e01da17`, then #1020 at `2aa544d`), with `PARTNER_ID =
-"ask-bubbles"`, `L10_TAB_LABELS` `bcs-dm` → "DM L10" and `NO_REFERENCE` = `bcs-dm`. Every copied file keeps its
+"ask-bubbles"`, `L10_TAB_LABELS` `bcs-dm` → "DM L10" and `NO_REFERENCE` = `bcs-dm` (and `bcs-gm` since 17 Nov 2026). Every copied file keeps its
 structure, so a later change in Ask Sunny's copy ports by re-copying the file and re-applying the rows in
 [PARITY.md](./PARITY.md) ("Ask Sunny vs Ask Bubbles"). Adding the BCS GM L10 later: a label in `L10_TAB_LABELS`
-(and in `NO_REFERENCE` if it hides the Reference), plus the Hub's allowlist row `('ask-bubbles', 'bcs-gm')`.
+(it is already in `NO_REFERENCE`: no Reference), plus the Hub's allowlist row `('ask-bubbles', 'bcs-gm')`.
