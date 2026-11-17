@@ -73,6 +73,12 @@ export function Scorecard({ doc, edit, people, bloom = false, today = "" }: { do
   const [goal, setGoal] = useState("");
   const [format, setFormat] = useState<MetricFormat>("percent");
   const [higher, setHigher] = useState(true);
+  /*
+   * Ask Bubbles, Bloom-style: the form is closed until "Add metric" is pressed, a button next to "Add week" (Marissa's
+   * email, 17 Nov 2026: "Can we make the add metric a tab like the add week that then expands when you need to add
+   * something, right now it gets a bit confusing.").
+   */
+  const [adding, setAdding] = useState(false);
 
   const addMetric = () => {
     if (!metric.trim()) return;
@@ -94,7 +100,14 @@ export function Scorecard({ doc, edit, people, bloom = false, today = "" }: { do
 
   const form = (
     <div className="rounded-[10px] border border-dashed border-line bg-cream/60 p-3 print:hidden" data-testid="add-metric">
-      <div className="mb-2 text-xs font-bold text-muted">Add metric</div>
+      <div className="mb-2 flex items-center justify-between gap-2 text-xs font-bold text-muted">
+        Add metric
+        {bloom && (
+          <Button variant="link" onClick={() => setAdding(false)}>
+            Done
+          </Button>
+        )}
+      </div>
       <div className="flex flex-wrap items-center gap-2">
         <input aria-label="Metric name" value={metric} onChange={(e) => setMetric(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addMetric()} placeholder="Metric name…" className={cx(inputClass, "min-w-[220px] flex-1")} />
         <select aria-label="Metric owner" value={owner} onChange={(e) => setOwner(e.target.value)} className={cx(inputClass, "w-44")}>
@@ -121,18 +134,25 @@ export function Scorecard({ doc, edit, people, bloom = false, today = "" }: { do
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Bloom-style: "Add metric" at the top, above the table, like "Add new rock" (the owner's request, 15 Nov 2026). */}
-      {bloom && form}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="m-0 text-sm text-muted print:hidden">Most recent week first. Tap any cell to edit.</p>
-        <Button variant="outline" className="print:hidden" onClick={() => edit(addWeek)}>
-          Add week
-        </Button>
+        <span className="flex flex-wrap items-center gap-2 print:hidden">
+          {bloom && (
+            <Button variant="outline" aria-expanded={adding} aria-controls="add-metric-form" onClick={() => setAdding((a) => !a)}>
+              Add metric
+            </Button>
+          )}
+          <Button variant="outline" onClick={() => edit(addWeek)}>
+            Add week
+          </Button>
+        </span>
       </div>
+      {/* Bloom-style: the form opens above the table when "Add metric" is pressed. */}
+      {bloom && adding && <div id="add-metric-form">{form}</div>}
       {doc.scorecard.length > 0 && bloom ? (
         <BloomTable doc={doc} edit={edit} order={order} today={today} />
       ) : doc.scorecard.length === 0 ? (
-        <p className="m-0 rounded-[10px] border border-dashed border-line p-4 text-sm text-muted">No metrics yet. Add the first one {bloom ? "above" : "below"}.</p>
+        <p className="m-0 rounded-[10px] border border-dashed border-line p-4 text-sm text-muted">No metrics yet. {bloom ? "Press Add metric to add the first one." : "Add the first one below."}</p>
       ) : (
         <div className="overflow-x-auto rounded-[10px] border border-line bg-white shadow-card">
           <table className="w-full border-collapse text-sm">

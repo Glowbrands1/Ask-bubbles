@@ -52,6 +52,7 @@ function RockRow({
 }) {
   const done = rock.milestones.filter((m) => m.done).length;
   const patch = (p: Partial<Rock>) => onChange({ ...rock, ...p });
+  const plain = useMentionPlain();
   const rState = rockState(rock, today);
   return (
     <div className={cx("border-t border-rule first:border-t-0", rock.archived && "opacity-60", open && "bg-sunny")}>
@@ -98,15 +99,30 @@ function RockRow({
           {ROCK_STATUS_LABEL[rock.status]}
         </button>
       </div>
+      {/*
+        * Ask Bubbles: each milestone can be checked off right here, without opening the rock (Marissa's email,
+        * 17 Nov 2026: "Can you make it so you can mark off a milestone when you expand the rock not just when you click
+        * into it?"). The same change as the box in the rock panel, on the same save.
+        */}
       {bloom && expanded && rock.milestones.length > 0 && (
         <ul aria-label={`Milestones of ${rock.title}`} className="m-0 flex list-none flex-col gap-1 px-3 pb-2.5 pl-6 text-sm">
           {rock.milestones.map((m) => {
             const st = milestoneState(m, today);
             return (
               <li key={m.id} className="flex items-center gap-2">
-                <span aria-hidden className={cx("flex size-4 flex-none items-center justify-center rounded-full text-[10px]", m.done ? "bg-[#2f8a43] text-white" : st === "overdue" ? "border border-[#b42323]" : "border border-line")}>
-                  {m.done ? "✓" : ""}
-                </span>
+                <button
+                  type="button"
+                  role="checkbox"
+                  aria-checked={m.done}
+                  aria-label={`Milestone done: ${plain(m.text)}`}
+                  title={m.done ? "Done. Click to mark not done." : "Mark done"}
+                  onClick={() => patch({ milestones: rock.milestones.map((x) => (x.id === m.id ? { ...x, done: !x.done } : x)) })}
+                  className="-m-2 inline-flex size-8 flex-none items-center justify-center rounded-full hover:bg-cream"
+                >
+                  <span aria-hidden className={cx("flex size-5 items-center justify-center rounded-full text-[11px]", m.done ? "bg-[#2f8a43] text-white" : st === "overdue" ? "border-2 border-[#b42323] bg-white" : "border-2 border-line bg-white")}>
+                    {m.done ? "✓" : ""}
+                  </span>
+                </button>
                 <span className={cx("min-w-0 flex-1", m.done && "text-muted line-through")}>{m.text}</span>
                 {m.dueDate && <span className={cx("font-mono text-xs", st === "overdue" ? "font-bold text-[#7a1717]" : "text-muted")}>{mmddyyyy(m.dueDate)}</span>}
               </li>
@@ -277,7 +293,9 @@ export function Rocks({
   const [expandAll, setExpandAll] = useState(false);
   const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(new Set());
   const [ownerAz, setOwnerAz] = useState(false);
-  const sections = rockSections(rocks, people, showArchived);
+  // Ask Bubbles, Bloom-style: only the people who have rocks (Marissa's email, 17 Nov 2026: "Remove the names that do
+  // not have rocks, only show individuals with rocks assigned").
+  const sections = rockSections(rocks, people, showArchived).filter(([, list]) => !bloom || list.length > 0);
   const shownSections = bloom && ownerAz ? [...sections].sort(([a], [b]) => a.localeCompare(b)) : sections;
   const activeCount = rocks.filter((r) => !r.archived).length;
   // One rock open at a time, in the panel on the right.
@@ -372,6 +390,7 @@ export function Rocks({
           )}
         </section>
       ))}
+      {bloom && shownSections.length === 0 && <p className="m-0 rounded-[10px] border border-dashed border-line p-4 text-sm text-muted">No rocks yet. Add the first one above.</p>}
       {archivedCount > 0 && (
         <Button variant="link" className="self-start" onClick={() => setShowArchived((s) => !s)}>
           {showArchived ? "Hide" : "Show"} archived ({archivedCount})
