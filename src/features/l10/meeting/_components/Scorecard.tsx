@@ -1,7 +1,7 @@
 "use client";
 // Copied from the Leadership Hub (src/app/meetings/_components/Scorecard.tsx); keep in step with it. See src/features/l10/README.md.
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button, cx, inputClass } from "@/features/l10/ui/ui";
 import { inWeek, initials, ownerColor, weekBounds, weekRange } from "@/features/l10/lib/bloom";
 import { addWeek, cellTone, formatValue, newestFirst, newItemId, parseCell, setCell, shortDate, type CellTone } from "@/features/l10/lib/doc";
@@ -66,7 +66,27 @@ function Cell({ row, week, label, onCommit, bloom = false }: { row: ScorecardRow
   );
 }
 
-export function Scorecard({ doc, edit, people, bloom = false, today = "" }: { doc: MeetingDoc; edit: (fn: (d: MeetingDoc) => MeetingDoc) => void; people: string[]; /** Laid out like Bloom Growth's scorecard (the DM L10s). */ bloom?: boolean; today?: string }) {
+export function Scorecard({
+  doc,
+  edit,
+  people,
+  bloom = false,
+  today = "",
+  part = "all",
+}: {
+  doc: MeetingDoc;
+  edit: (fn: (d: MeetingDoc) => MeetingDoc) => void;
+  people: string[];
+  /** Laid out like Bloom Growth's scorecard (the DM L10s). */
+  bloom?: boolean;
+  today?: string;
+  /**
+   * Ask Bubbles and its sibling app: which part to draw. On the Bloom-style pages the page puts "controls" (Add metric, Add
+   * week) in its main column and "table" full width under the agenda row, centred (the DM L10 run-through, 17 Nov 2026:
+   * "The scorecard sits too far to the right, leaving a lot of unused space"). "all" draws both, as in the Hub.
+   */
+  part?: "all" | "controls" | "table";
+}) {
   const order = newestFirst(doc);
   const [metric, setMetric] = useState("");
   const [owner, setOwner] = useState(people[0] ?? "");
@@ -119,6 +139,8 @@ export function Scorecard({ doc, edit, people, bloom = false, today = "" }: { do
     </div>
   );
 
+  if (bloom && part === "table") return doc.scorecard.length > 0 ? <BloomTable doc={doc} edit={edit} order={order} today={today} /> : null;
+
   return (
     <div className="flex flex-col gap-3">
       {/* Bloom-style: "Add metric" at the top, above the table, like "Add new rock" (the owner's request, 15 Nov 2026). */}
@@ -130,7 +152,7 @@ export function Scorecard({ doc, edit, people, bloom = false, today = "" }: { do
         </Button>
       </div>
       {doc.scorecard.length > 0 && bloom ? (
-        <BloomTable doc={doc} edit={edit} order={order} today={today} />
+        part === "controls" ? null : <BloomTable doc={doc} edit={edit} order={order} today={today} />
       ) : doc.scorecard.length === 0 ? (
         <p className="m-0 rounded-[10px] border border-dashed border-line p-4 text-sm text-muted">No metrics yet. Add the first one {bloom ? "above" : "below"}.</p>
       ) : (
@@ -189,27 +211,50 @@ const tableHead = "bg-ink text-xs font-bold tracking-[0.06em] text-gold-head";
  * The scorecard as Bloom Growth lays it out (the DM L10s; the owner's request, 15 Nov 2026): Who (the owner's initials,
  * full name on hover), Metric, Goal, then the weeks newest first, each headed by its range ("2 Nov / 8 Nov") with this
  * week shaded. Rows are grouped by owner with a gap between groups; older weeks scroll sideways. Same cells, same saves.
+ *
+ * Ask Bubbles and its sibling app (the DM L10 run-through, 17 Nov 2026: "make it easier to review additional details without
+ * scrolling to the bottom of the page to access the horizontal scrollbar"): the table scrolls inside a box no taller
+ * than the window, so its sideways scrollbar is always on screen; the header row and the Who column stay put while it
+ * scrolls; and "Newer weeks" / "Older weeks" move it sideways a few weeks at a time. The box is as wide as the table
+ * (up to the page's width) and centred.
  */
 function BloomTable({ doc, edit, order, today }: { doc: MeetingDoc; edit: (fn: (d: MeetingDoc) => MeetingDoc) => void; order: number[]; today: string }) {
   const groups = new Map<string, ScorecardRow[]>();
   for (const r of doc.scorecard) groups.set(r.owner, [...(groups.get(r.owner) ?? []), r]);
   const current = (i: number) => inWeek(doc.weekEndings[i], today);
+  const box = useRef<HTMLDivElement>(null);
+  const slide = (dir: 1 | -1) => {
+    const el = box.current;
+    if (!el) return;
+    const left = dir * Math.max(240, Math.round(el.clientWidth * 0.6));
+    if (typeof el.scrollBy === "function") el.scrollBy({ left, behavior: "smooth" });
+    else el.scrollLeft += left;
+  };
   return (
-    <div className="overflow-x-auto rounded-[10px] border border-line bg-white shadow-card" data-testid="bloom-scorecard">
-      <table className="w-full border-collapse text-sm">
-        <thead>
+    <section aria-label="Scorecard table" className="mx-auto flex w-fit max-w-full min-w-0 flex-col gap-2">
+      <div className="flex items-center justify-end gap-2 print:hidden">
+        <Button variant="outline" aria-label="Show newer weeks" onClick={() => slide(-1)}>
+          ← Newer weeks
+        </Button>
+        <Button variant="outline" aria-label="Show older weeks" onClick={() => slide(1)}>
+          Older weeks →
+        </Button>
+      </div>
+    <div ref={box} tabIndex={0} aria-label="Scorecard, scrolls sideways for older weeks" className="max-h-[calc(100dvh-7rem)] max-w-full overflow-auto overscroll-x-contain rounded-[10px] border border-line bg-white shadow-card print:max-h-none print:overflow-visible" data-testid="bloom-scorecard">
+      <table className="border-collapse text-sm">
+        <thead className="sticky top-0 z-20">
           <tr className={tableHead}>
-            <th scope="col" className="sticky left-0 z-10 w-12 bg-ink px-3 py-2.5 text-left">
+            <th scope="col" className="sticky left-0 z-10 w-14 min-w-14 bg-ink px-3 py-2.5 text-left">
               Who
             </th>
-            <th scope="col" className="px-3 py-2.5 text-left">
+            <th scope="col" className="sticky left-14 z-10 bg-ink px-3 py-2.5 text-left">
               Metric
             </th>
-            <th scope="col" className="px-3 py-2.5 text-left">
+            <th scope="col" className="bg-ink px-3 py-2.5 text-left">
               Goal
             </th>
             {order.map((i) => (
-              <th key={i} scope="col" data-current={current(i) ? "true" : undefined} data-current-week={current(i) ? "" : undefined} className="px-2 py-2 text-right font-mono leading-tight whitespace-nowrap">
+              <th key={i} scope="col" data-current={current(i) ? "true" : undefined} data-current-week={current(i) ? "" : undefined} className="bg-ink px-2 py-2 text-right font-mono leading-tight whitespace-nowrap">
                 {(() => {
                   // Two lines, start over end ("9 Nov" / "15 Nov"); the slash is kept for screen readers.
                   const b = weekBounds(doc.weekEndings[i]);
@@ -234,13 +279,13 @@ function BloomTable({ doc, edit, order, today }: { doc: MeetingDoc; edit: (fn: (
           <tbody key={owner} aria-label={`${owner}'s metrics`} className="border-t-[10px] border-cream first-of-type:border-t-0">
             {rows.map((r) => (
               <tr key={r.id} data-owner-row={ownerColor(owner)} className="border-t border-rule">
-                <td className="sticky left-0 z-10 bg-white px-3 py-2">
+                <td className="sticky left-0 z-10 w-14 min-w-14 bg-white px-3 py-2">
                   <span title={owner} data-owner-color={ownerColor(owner)} className="flex size-8 items-center justify-center rounded-full text-[11px] font-bold">
                     <span aria-hidden>{initials(owner)}</span>
                     <span className="sr-only">{owner}</span>
                   </span>
                 </td>
-                <td className="min-w-[170px] px-3 py-2 font-semibold">
+                <td className="sticky left-14 z-10 min-w-[170px] bg-white px-3 py-2 font-semibold shadow-[6px_0_6px_-6px_rgba(0,0,0,0.18)]">
                   <span className="flex items-center justify-between gap-2">
                     {r.metric}
                     <button
@@ -266,5 +311,6 @@ function BloomTable({ doc, edit, order, today }: { doc: MeetingDoc; edit: (fn: (
         ))}
       </table>
     </div>
+    </section>
   );
 }

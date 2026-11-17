@@ -3,14 +3,18 @@ import { notFound } from "next/navigation";
 
 import { L10Frame, hubMeetingUrl } from "@/features/l10/L10Frame";
 import { endMeetingAction, loadMeetingAction, saveMeetingAction } from "@/features/l10/actions";
-import { listRecaps, openMeeting } from "@/features/l10/data.server";
+import { L10_TAB_LABELS, listRecaps, openMeeting } from "@/features/l10/data.server";
 import { bloomStyle, hasReference, isMeetingKey } from "@/features/l10/lib/config";
 import { businessDate } from "@/features/l10/lib/dueStatus";
 import { MeetingView } from "@/features/l10/meeting/MeetingView";
 import { Card } from "@/features/l10/ui/ui";
 import { requireAuthenticatedPage } from "@/lib/auth/page";
 
-export const metadata: Metadata = { title: "DM L10" };
+/** The tab's name as the page title ("DM L10", "GM L10"). */
+export async function generateMetadata({ params }: { params: Promise<{ key: string }> }): Promise<Metadata> {
+  const { key } = await params;
+  return { title: L10_TAB_LABELS[key] ?? "L10" };
+}
 export const dynamic = "force-dynamic";
 
 /** "Sun, Nov 1" in the company's time zone (Central), so an evening meeting does not show tomorrow's date. */
@@ -39,7 +43,7 @@ export default async function MeetingPage({ params, searchParams }: { params: Pr
       <L10Frame meetingKey={key} assistant={false}>
         <Card>
           <p className="m-0 text-sm">
-            {opened.reason === "not-configured" ? "The DM L10 is not connected to the Leadership Hub in this environment." : "The meeting could not be loaded just now. Please try again in a minute."}
+            {opened.reason === "not-configured" ? `The ${L10_TAB_LABELS[key] ?? "L10"} is not connected to the Leadership Hub in this environment.` : "The meeting could not be loaded just now. Please try again in a minute."}
           </p>
         </Card>
       </L10Frame>

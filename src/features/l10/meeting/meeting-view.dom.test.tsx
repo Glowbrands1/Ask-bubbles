@@ -303,8 +303,11 @@ describe("no Reference for the BCS DM L10 (the owner's decision, 15 Nov 2026)", 
   it("the Hub's word that a meeting has no Reference is followed", async () => {
     const { referenceFromRoster } = await import("@/features/l10/lib/config");
     expect(referenceFromRoster("bcs-dm", {})).toBe(false);
-    expect(referenceFromRoster("bcs-gm", { reference: false })).toBe(false);
-    expect(referenceFromRoster("bcs-gm", {})).toBe(true);
+    // The example of a meeting with the Reference views was the BCS GM L10 until 17 Nov 2026, when it was built without
+    // them (like the DM L10); the Leadership L10 has them.
+    expect(referenceFromRoster("leadership", { reference: false })).toBe(false);
+    expect(referenceFromRoster("leadership", {})).toBe(true);
+    expect(referenceFromRoster("bcs-gm", { reference: true })).toBe(false);
     // A Hub that says "true" cannot bring it back for the BCS DM L10.
     expect(referenceFromRoster("bcs-dm", { reference: true })).toBe(false);
   });
@@ -312,7 +315,9 @@ describe("no Reference for the BCS DM L10 (the owner's decision, 15 Nov 2026)", 
   it("its report has no Business Plan or org chart pages", async () => {
     const { reportSections } = await import("@/features/l10/lib/report");
     expect(reportSections("bcs-dm").map((s) => s.title)).toEqual(["Goals", "Issues", "Metrics", "Meeting Recaps"]);
-    expect(reportSections("bcs-gm").map((s) => s.title)).toContain("Business Plan");
+    // Changed on purpose (17 Nov 2026): the BCS GM L10 has no Reference views and no rocks; the Leadership L10 keeps them.
+    expect(reportSections("leadership").map((s) => s.title)).toContain("Business Plan");
+    expect(reportSections("bcs-gm").map((s) => s.title)).toEqual(["Issues", "Metrics", "Meeting Recaps"]);
   });
 });
 
@@ -737,8 +742,10 @@ describe("Bloom-style page: Rocks and To-dos", () => {
 });
 
 // IDS on the Bloom-style BCS DM L10 (the owner's request, 15 Nov 2026), as in the Hub.
+// Changed on purpose (DM L10 run-through, 17 Nov 2026): the "!" toggle became a priority number (1, 2, 3 …); an issue
+// flagged "!" before that still sorts right after the numbered ones and shows "!" in its circle.
 describe("Bloom-style page: IDS", () => {
-  it("rows have a ! circle, the owner's initials, Solve and the term button; ! issues first; Oldest / Newest", async () => {
+  it("rows have a priority circle, the owner's initials, Solve and the term button; ! issues first; Oldest / Newest", async () => {
     const save = vi.fn().mockResolvedValue({ ok: true, version: 4, updatedAt: "2026-11-15T00:00:00Z" } satisfies SaveOutcome);
     renderView({
       save: save as unknown as SaveFn,
@@ -754,14 +761,144 @@ describe("Bloom-style page: IDS", () => {
     const titles = () => within(screen.getByRole("list", { name: "Open issues" })).getAllByRole("listitem").map((li) => li.querySelector("[aria-expanded] .font-semibold")?.textContent);
     expect(titles()).toEqual(["Third issue", "First issue", "Second issue"]);
     const first = within(within(screen.getByRole("list", { name: "Open issues" })).getAllByRole("listitem")[1]);
-    expect(first.getByRole("button", { name: "Priority: First issue" }).getAttribute("aria-pressed")).toBe("false");
+    expect(first.getByRole("button", { name: "Set priority: First issue" }).getAttribute("aria-pressed")).toBe("false");
     expect(first.getByTitle("Bo Lark").textContent).toBe("BLOwner: Bo Lark");
     expect(first.getByRole("button", { name: "Solve First issue" })).toBeTruthy();
     expect(first.getByRole("button", { name: "Move to long-term: First issue" })).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Sort issues"), { target: { value: "newest" } });
     expect(titles()).toEqual(["Third issue", "Second issue", "First issue"]);
-    fireEvent.click(screen.getByRole("button", { name: "Priority: Second issue" }));
+    fireEvent.click(screen.getByRole("button", { name: "Set priority: Second issue" }));
     await waitFor(() => expect(save).toHaveBeenCalled());
-    expect((save.mock.calls.at(-1)![2] as { issues: { id: string; priority?: boolean }[] }).issues.find((i) => i.id === "i2")?.priority).toBe(true);
+    expect((save.mock.calls.at(-1)![2] as { issues: { id: string; priorityNumber?: number }[] }).issues.find((i) => i.id === "i2")?.priorityNumber).toBe(1);
+  });
+
+  // The DM L10 run-through (17 Nov 2026), in its words: "IDS prioritization: The numbering is still off. We need to
+  // assign topics a priority of 1, 2, 3, etc., and have them move into that order as we select them. We should then
+  // work through and solve issues in that order."
+  it("assigns topics a priority of 1, 2, 3, etc., and they move into that order as we select them; then we solve in that order", async () => {
+    const save = vi.fn().mockResolvedValue({ ok: true, version: 4, updatedAt: "2026-11-17T00:00:00Z" } satisfies SaveOutcome);
+    renderView({
+      save: save as unknown as SaveFn,
+      initial: loaded(3, {
+        issues: ["Alpha", "Bravo", "Charlie", "Delta", "Echo"].map((t, n) => ({ id: `i${n + 1}`, title: t, notes: "", resolved: false })),
+      }),
+    });
+    fireEvent.click(screen.getByRole("button", { name: /\d · IDS/ }));
+    const open = () => within(screen.getByRole("list", { name: "Open issues" })).getAllByRole("listitem");
+    const titles = () => open().map((li) => li.querySelector("[aria-expanded] .font-semibold")?.textContent);
+    const circles = () => open().map((li) => within(li).getByTestId("priority-number").textContent);
+    expect(titles()).toEqual(["Alpha", "Bravo", "Charlie", "Delta", "Echo"]);
+
+    // Selected in the order Delta, Bravo, Echo: they take 1, 2, 3 and move to the top in that order.
+    fireEvent.click(screen.getByRole("button", { name: "Set priority: Delta" }));
+    expect(titles()).toEqual(["Delta", "Alpha", "Bravo", "Charlie", "Echo"]);
+    fireEvent.click(screen.getByRole("button", { name: "Set priority: Bravo" }));
+    fireEvent.click(screen.getByRole("button", { name: "Set priority: Echo" }));
+    expect(titles()).toEqual(["Delta", "Bravo", "Echo", "Alpha", "Charlie"]);
+    expect(circles()).toEqual(["1", "2", "3", "", ""]);
+    // More than three: "1, 2, 3, etc."
+    fireEvent.click(screen.getByRole("button", { name: "Set priority: Alpha" }));
+    expect(circles()).toEqual(["1", "2", "3", "4", ""]);
+
+    // Clearing #2 closes the gap: Echo becomes 2, Alpha 3.
+    fireEvent.click(screen.getByRole("button", { name: "Priority 2: Bravo" }));
+    expect(titles()).toEqual(["Delta", "Echo", "Alpha", "Bravo", "Charlie"]);
+    expect(circles()).toEqual(["1", "2", "3", "", ""]);
+
+    // Work through in order: open #1, Solve it, and #2 opens next and becomes #1.
+    fireEvent.click(screen.getByRole("button", { name: "Delta", expanded: false }));
+    fireEvent.click(within(screen.getByRole("region", { name: "Issue detail" })).getByRole("button", { name: "Solve" }));
+    expect(titles()).toEqual(["Echo", "Alpha", "Bravo", "Charlie"]);
+    expect(circles()).toEqual(["1", "2", "", ""]);
+    expect(screen.getByRole("button", { name: "Echo", expanded: true })).toBeTruthy();
+    await waitFor(() => expect(save).toHaveBeenCalled());
+    const saved = (save.mock.calls.at(-1)![2] as { issues: { title: string; resolved: boolean; priorityNumber?: number }[] }).issues;
+    expect(saved.find((i) => i.title === "Delta")).toMatchObject({ resolved: true });
+    expect(saved.find((i) => i.title === "Delta")?.priorityNumber).toBeUndefined();
+  });
+});
+
+// The DM L10 run-through (17 Nov 2026), in its words: "Conclude: Make sure every meeting attendee can submit their own
+// meeting rating."
+describe("Conclude: every meeting attendee can submit their own meeting rating", () => {
+  const timer = { started: true, running: true, startedAt: Date.now(), leader: "hub-user-2", leaderLabel: "Bo", sessionId: "s9" };
+  const attendees = [
+    { id: "att-avery", name: "Avery Quill", role: "Visionary", shared: true, rating: null },
+    { id: "att-bo", name: "Bo Lark", role: "Integrator", shared: true, rating: 8 },
+    { id: "att-cy", name: "Cy Marlow", role: "", shared: true, rating: null },
+  ];
+  const lastSaved = (save: ReturnType<typeof vi.fn>) => (save.mock.calls.at(-1)![2] as { attendees: { name: string; rating: number | null }[] }).attendees;
+
+  it("an attendee on the list sees their own row first, marked (you), and saves their own rating", async () => {
+    const save = vi.fn().mockResolvedValue({ ok: true, version: 4, updatedAt: "2026-11-17T00:00:00Z" } satisfies SaveOutcome);
+    renderView({ save: save as unknown as SaveFn, mentionPeople: [{ id: "hub-user-1", name: "Avery Quill" }, { id: "hub-user-2", name: "Bo Lark" }], initial: loaded(3, { attendees, timer }) });
+    fireEvent.click(within(screen.getByRole("region", { name: "Agenda" })).getByRole("button", { name: /Conclude/ }));
+    const groups = within(screen.getByRole("region", { name: "Ratings" })).getAllByRole("group");
+    expect(groups[0].getAttribute("aria-label")).toBe("Rating for Avery Quill");
+    expect(screen.getByText("(you)")).toBeTruthy();
+    expect(screen.getByTestId("ratings-waiting").textContent).toBe("Not rated yet: Avery Quill, Cy Marlow");
+    fireEvent.click(screen.getByRole("button", { name: "Avery Quill: 9" }));
+    await waitFor(() => expect(save).toHaveBeenCalled());
+    expect(lastSaved(save)).toEqual(expect.arrayContaining([expect.objectContaining({ name: "Avery Quill", rating: 9 }), expect.objectContaining({ name: "Bo Lark", rating: 8 })]));
+    expect(screen.getByTestId("ratings-waiting").textContent).toBe("Not rated yet: Cy Marlow");
+  });
+
+  it("someone in the meeting who is not on the attendee list still gets a row and can rate", async () => {
+    const save = vi.fn().mockResolvedValue({ ok: true, version: 4, updatedAt: "2026-11-17T00:00:00Z" } satisfies SaveOutcome);
+    renderView({ save: save as unknown as SaveFn, mentionPeople: [{ id: "hub-user-1", name: "Dana Fenn" }, { id: "hub-user-2", name: "Bo Lark" }], initial: loaded(3, { attendees, timer }) });
+    fireEvent.click(within(screen.getByRole("region", { name: "Agenda" })).getByRole("button", { name: /Conclude/ }));
+    expect(within(screen.getByRole("region", { name: "Ratings" })).getAllByRole("group")[0].getAttribute("aria-label")).toBe("Rating for Dana Fenn");
+    fireEvent.click(screen.getByRole("button", { name: "Dana Fenn: 10" }));
+    await waitFor(() => expect(save).toHaveBeenCalled());
+    expect(lastSaved(save)).toEqual(expect.arrayContaining([expect.objectContaining({ name: "Dana Fenn", rating: 10 }), expect.objectContaining({ name: "Bo Lark", rating: 8 })]));
+    expect(screen.getByRole("button", { name: "Dana Fenn: 10" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByTestId("rating-average").textContent).toBe("9.0");
+  });
+});
+
+// The DM L10 run-through (17 Nov 2026), in its words: "Scorecard layout: The scorecard sits too far to the right,
+// leaving a lot of unused space. Please center it within the main content area and make it easier to review additional
+// details without scrolling to the bottom of the page to access the horizontal scrollbar."
+describe("Bloom-style Scorecard: full width under the agenda, scrolls inside the window", () => {
+  it("draws the table outside the page column, centred, in a box no taller than the window, with Newer / Older weeks", () => {
+    renderView({
+      initial: loaded(3, {
+        weekEndings: ["11/08/2026", "11/15/2026"],
+        scorecard: [{ id: "m1", metric: "Sales", owner: "Avery Quill", goal: "≥ 5", goalValue: 5, higherIsBetter: true, format: "number", weeks: [4, 6] }],
+      }),
+    });
+    fireEvent.click(within(screen.getByRole("region", { name: "Agenda" })).getByRole("button", { name: /Scorecard/ }));
+    const table = screen.getByTestId("bloom-scorecard");
+    // Not inside the column beside the agenda, but in the full-width block after it.
+    expect(screen.getByTestId("scorecard-full-width").contains(table)).toBe(true);
+    expect(screen.getByTestId("scorecard-full-width").contains(screen.getByTestId("add-metric"))).toBe(false);
+    expect(table.parentElement!.className).toContain("mx-auto");
+    expect(table.className).toContain("max-h-[calc(100dvh-7rem)]");
+    expect(table.className).toContain("overflow-auto");
+    expect(screen.getAllByTestId("bloom-scorecard")).toHaveLength(1);
+    table.scrollBy = vi.fn();
+    fireEvent.click(screen.getByRole("button", { name: "Show older weeks" }));
+    expect(table.scrollBy).toHaveBeenCalledWith(expect.objectContaining({ left: expect.any(Number) }));
+    expect((table.scrollBy as ReturnType<typeof vi.fn>).mock.calls[0][0].left).toBeGreaterThan(0);
+  });
+});
+
+// 17 Nov 2026: "Let's also proceed with building out GM L10 in Bubbles ... We don't use rocks at the GM/SD level, so the
+// agenda for both should be: 1. Segue 2. Scorecard 3. To-dos 4. IDS 5. Conclude". Laid out like the DM L10 (Bloom).
+describe("the BCS GM L10", () => {
+  const gm: MeetingInfo = { key: "bcs-gm", name: "BCS GM L10", team: "BCS General Managers", cadence: "Wednesdays · 90 min", description: "" };
+  it("runs Segue, Scorecard, To-dos, IDS, Conclude, Bloom-style, without Rocks or the Reference views", () => {
+    render(<MeetingView info={gm} initial={loaded(3, { issues: [{ id: "i1", title: "Short on staff", notes: "", resolved: false }] })} save={vi.fn() as unknown as SaveFn} end={vi.fn() as unknown as EndFn} viewer={viewer} roster={roster} hubMeetingUrl={HUB} pollMs={0} debounceMs={0} today="2026-11-17" dateLabel="Tue, Nov 17" />);
+    const items = within(screen.getByRole("region", { name: "Agenda" })).getAllByRole("listitem").map((li) => li.textContent);
+    expect(items).toEqual(["1 · Segue5m", "2 · Scorecard5m", "3 · To-dos5m", "4 · IDS60m", "5 · Conclude5m"]);
+    expect(document.body.textContent).toContain("Wednesdays · 80 min");
+    expect(screen.queryByRole("button", { name: "Business Plan" })).toBeNull();
+    expect(screen.getByRole("form", { name: "New Issue" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /4 · IDS/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Short on staff", expanded: false }));
+    const detail = within(screen.getByRole("region", { name: "Issue detail" }));
+    expect(detail.getByRole("button", { name: "To-Do" })).toBeTruthy();
+    expect(detail.queryByRole("button", { name: "Rock" })).toBeNull();
+    expect(detail.queryByRole("button", { name: "Headline" })).toBeNull();
   });
 });

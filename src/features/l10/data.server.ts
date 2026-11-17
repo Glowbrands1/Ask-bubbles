@@ -79,7 +79,7 @@ export async function listMyMeetings(): Promise<MeetingInfo[]> {
 }
 
 /** Ask Bubbles' name for each meeting's tab. */
-export const L10_TAB_LABELS: Record<string, string> = { "bcs-dm": "DM L10" };
+export const L10_TAB_LABELS: Record<string, string> = { "bcs-dm": "DM L10", "bcs-gm": "GM L10" };
 
 export interface L10Tab {
   key: string;
