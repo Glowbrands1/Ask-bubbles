@@ -828,6 +828,23 @@ describe("Bloom-style page: Rocks and To-dos", () => {
     expect(list.getByRole("checkbox", { name: "Milestone done: Sign the lease" }).getAttribute("aria-checked")).toBe("false");
   });
 
+  it("Scorecard: Full width hides the agenda column on that page only, and Collapse brings it back (the owner, 17 Nov 2026)", () => {
+    window.localStorage.clear();
+    view();
+    const agendaButton = (n: RegExp) => within(screen.getByRole("region", { name: "Agenda" })).getByRole("button", { name: n });
+    fireEvent.click(agendaButton(/Scorecard/));
+    fireEvent.click(screen.getByRole("button", { name: "⤢ Full width" }));
+    expect(screen.queryByRole("region", { name: "Agenda" })).toBeNull();
+    // The section bar still moves between pages; the agenda is back on the next page.
+    fireEvent.click(screen.getByRole("button", { name: /Rock Review →/ }));
+    expect(screen.getByRole("region", { name: "Agenda" })).toBeTruthy();
+    fireEvent.click(agendaButton(/Scorecard/));
+    expect(screen.queryByRole("region", { name: "Agenda" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "⤡ Collapse" }));
+    expect(screen.getByRole("region", { name: "Agenda" })).toBeTruthy();
+    window.localStorage.clear();
+  });
+
   it("To-dos: % Completed, round checks, initials and MM-DD-YYYY due dates", () => {
     view();
     // Ask Bubbles: this page runs the default agenda's "To-Do List" title (the sibling's DM agenda says "To-do List").
