@@ -95,6 +95,14 @@ describe("Bloom-style scorecard (the owner's feedback)", () => {
     expect(screen.getByTestId("wide").textContent).toBe("false");
   });
 
+  it('"the numbers hurt my eyes" (the owner, 17 Nov 2026): figures in the page font, medium weight, lined up, not bold monospace', () => {
+    render(<Harness />);
+    const cell = within(screen.getByTestId("bloom-scorecard")).getAllByRole("button", { name: /^Reviews .+: \d/ })[0];
+    expect(cell.className).toContain("font-sans");
+    expect(cell.className).toContain("tabular-nums");
+    expect(cell.className).not.toMatch(/font-mono|font-semibold|font-bold/);
+  });
+
   it("week headers show the range on two lines, start over end, newest first", () => {
     render(<Harness />);
     const weeks = within(screen.getByTestId("bloom-scorecard")).getAllByRole("columnheader").slice(3);

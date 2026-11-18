@@ -1586,6 +1586,13 @@
   --color-bar: var(--bcs-tokyo-tint-strong);
   /* cream: the warm hover and chip background, here Ask Bubbles' neutral muted surface. */
   --color-cream: var(--bcs-surface-muted);
+  /*
+   * rule / line: the dividers (agenda items, rows) and card/field edges. The Hub's pale beige (#e8e4d8 / #cfc8b2)
+   * vanished on the blue canvas (the owner, 17 Nov 2026: "border is hard to see pls fix"), so they are tints of
+   * Dark Tokyo Green here: dividers 35%, edges 50% on White.
+   */
+  --color-rule: color-mix(in srgb, var(--bcs-tokyo-dark) 35%, white);
+  --color-line: color-mix(in srgb, var(--bcs-tokyo-dark) 50%, white);
   /* The floating buttons' and glass cards' shadows had a bronze tint. */
   --shadow-float:
     inset 0 1px 0 rgb(255 255 255 / 0.95), 0 20px 50px -12px rgb(10 10 10 / 0.18),

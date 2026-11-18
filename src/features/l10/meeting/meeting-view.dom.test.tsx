@@ -93,8 +93,9 @@ describe("the DM L10 page in Ask Bubbles", () => {
     const items = agenda.getAllByRole("listitem").map((li) => li.textContent);
     // Ask Bubbles: Ask Sunny's test checks the STC DM L10's own agenda here. This copy keeps none of that meeting's
     // exceptions (lib/config.ts), so a roster without an agenda runs the Hub's standard L10 agenda.
+    // Changed on purpose 17 Nov 2026: the BCS DM L10 shows its segue as "Recap" (lib/config.ts SECTION_TITLE).
     expect(items).toEqual([
-      "1 · Segue · Business Best5m",
+      "1 · Recap5m",
       "2 · Scorecard5m",
       "3 · Rock Review5m",
       "4 · Customer / Employee Headlines5m",
@@ -268,7 +269,8 @@ describe("the agenda, hints and roster come from the Hub (as in Ask Sunny)", () 
     // Changed on purpose 17 Nov 2026: the hint is the Scorecard's, since the BCS DM L10's segue has its own (no check-off).
     renderView({ roster: { ...roster, agenda: hubAgenda!.map((a) => (a.key === "scorecard" ? { ...a, title: "Scorecard (from the Hub)" } : a)), hints: { scorecard: "Hint from the Hub." } } });
     const items = within(screen.getByRole("region", { name: "Agenda" })).getAllByRole("listitem").map((li) => li.textContent);
-    expect(items).toEqual(["1 · Segue · Store Win5m", "2 · Scorecard (from the Hub)5m", "3 · Rock Review5m", "4 · To-Do List5m", "5 · IDS · Issues65m", "6 · Conclude5m"]);
+    // Changed on purpose 17 Nov 2026: the BCS DM L10's segue shows as "Recap" whatever the Hub calls it.
+    expect(items).toEqual(["1 · Recap5m", "2 · Scorecard (from the Hub)5m", "3 · Rock Review5m", "4 · To-Do List5m", "5 · IDS · Issues65m", "6 · Conclude5m"]);
     fireEvent.click(within(screen.getByRole("region", { name: "Agenda" })).getByRole("button", { name: /Scorecard/ }));
     expect(document.body.textContent).toContain("Hint from the Hub.");
     expect(document.body.textContent).not.toContain("Headlines");
@@ -325,7 +327,7 @@ describe("no Reference for the BCS DM L10 (the owner's decision, 15 Nov 2026)", 
     expect(document.body.textContent).not.toContain("Vision, core values");
     // Changed on purpose 17 Nov 2026: the segue page has no title on this meeting (the owner: "just keep the last
     // weeks feedback"), so the agenda's current step shows where the page opened.
-    expect(within(screen.getByRole("region", { name: "Agenda" })).getByRole("button", { name: /Segue/, current: "step" })).toBeTruthy();
+    expect(within(screen.getByRole("region", { name: "Agenda" })).getByRole("button", { name: /Recap/, current: "step" })).toBeTruthy();
   });
 
   it("the Hub's word that a meeting has no Reference is followed", async () => {
@@ -457,7 +459,7 @@ describe("Bloom-style page: what every page shares", () => {
   it('"Can we remove the issues banner and make it a button like we had on Maddie\'s notion meeting, the banner gets confusing when there is also another spot to add a new to-do or metric." (Marissa, 17 Nov 2026)', () => {
     renderView();
     const agenda = within(screen.getByRole("region", { name: "Agenda" }));
-    for (const section of [/Segue/, /Scorecard/, /Rock Review/, /To-Do List/, /IDS/, /Conclude/]) {
+    for (const section of [/Recap/, /Scorecard/, /Rock Review/, /To-Do List/, /IDS/, /Conclude/]) {
       fireEvent.click(agenda.getAllByRole("button", { name: section })[0]);
       // No banner on the page, only the floating button (where Add to IDS sits on the other meetings).
       expect(screen.queryByTestId("new-issue-bar"), `${section}`).toBeNull();
@@ -602,7 +604,7 @@ describe("Bloom-style page: Segue and Conclude", () => {
   it('Segue ("AI Share Tab"): "Remove the Ice breaker question box" and "Remove the round robin checkoff attendees" (Marissa, 17 Nov 2026)', () => {
     view({ segueQuestion: "What AI tool saved you time?", attendees: [{ id: "att-avery", name: "Avery Quill", role: "Visionary", shared: true, rating: null }] });
     // The agenda still names the section; the page itself has no title or hint (see the next test).
-    expect(within(screen.getByRole("region", { name: "Agenda" })).getByRole("button", { name: /Segue · Business Best/, current: "step" })).toBeTruthy();
+    expect(within(screen.getByRole("region", { name: "Agenda" })).getByRole("button", { name: /Recap/, current: "step" })).toBeTruthy();
     // Last week's feedback stays.
     const feedback = screen.getByRole("region", { name: "Last week's feedback" });
     expect(within(feedback).getAllByRole("listitem").map((li) => li.textContent)).toEqual(["9Avery Quill", "8Bo Lark"]);
@@ -955,5 +957,81 @@ describe("Bloom-style page: IDS", () => {
     fireEvent.click(screen.getByRole("button", { name: "Priority: Second issue" }));
     await waitFor(() => expect(save).toHaveBeenCalled());
     expect((save.mock.calls.at(-1)![2] as { issues: { id: string; priority?: boolean }[] }).issues.find((i) => i.id === "i2")?.priority).toBe(true);
+  });
+});
+
+// The owner's follow-ups, 17 Nov 2026 (after the first merge).
+describe("BCS DM L10: Recap, to-do dates and history, leading the meeting", () => {
+  it('replace AI SHare with "Recap" (the owner): the agenda and the section buttons say Recap', () => {
+    renderView({ roster: { ...roster, agenda: [{ key: "business-best", title: "AI Share", minutes: 5 }, { key: "scorecard", title: "Metrics", minutes: 5 }] } });
+    const items = within(screen.getByRole("region", { name: "Agenda" })).getAllByRole("listitem").map((li) => li.textContent);
+    expect(items).toEqual(["1 · Recap5m", "2 · Metrics5m"]);
+    expect(document.body.textContent).not.toContain("AI Share");
+  });
+
+  it('"to do, can we set a date" (the owner): a due date when adding, and in the to-do\'s details', async () => {
+    const save = vi.fn().mockResolvedValue({ ok: true, version: 4, updatedAt: "2026-11-17T00:00:00Z" } satisfies SaveOutcome);
+    renderView({ save: save as unknown as SaveFn, initial: loaded(3, { todos: [] }) });
+    fireEvent.click(within(screen.getByRole("region", { name: "Agenda" })).getByRole("button", { name: /To-Do List/ }));
+    fireEvent.change(screen.getByLabelText("New to-do"), { target: { value: "Order towels" } });
+    fireEvent.change(screen.getByLabelText("To-do due date"), { target: { value: "2026-11-24" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    expect(screen.getByTestId("todo-due").textContent).toBe("11-24-2026");
+    fireEvent.click(screen.getByRole("button", { name: "Show details: Order towels" }));
+    fireEvent.change(screen.getByLabelText("Due date: Order towels"), { target: { value: "2026-12-01" } });
+    expect(screen.getByTestId("todo-due").textContent).toBe("12-01-2026");
+    await waitFor(() => expect(save).toHaveBeenCalled());
+    expect((save.mock.calls.at(-1)![2] as { todos: { dueDate?: string }[] }).todos[0].dueDate).toBe("2026-12-01");
+  });
+
+  it('"to do - archive or delete and have a tab for history" (the owner): Archive, Archive done, History with Restore and Delete', async () => {
+    const save = vi.fn().mockResolvedValue({ ok: true, version: 4, updatedAt: "2026-11-17T00:00:00Z" } satisfies SaveOutcome);
+    renderView({
+      save: save as unknown as SaveFn,
+      initial: loaded(3, {
+        todos: [
+          { id: "t1", text: "Call the landlord", owner: "Bo Lark", done: true, due: "Next wk" },
+          { id: "t2", text: "Order towels", owner: "Avery Quill", done: false, due: "Next wk" },
+        ],
+      }),
+    });
+    fireEvent.click(within(screen.getByRole("region", { name: "Agenda" })).getByRole("button", { name: /To-Do List/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Archive done (1)" }));
+    expect(screen.getByRole("tab", { name: "To-dos (1)" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Show details: Order towels" }));
+    fireEvent.click(screen.getByRole("button", { name: "Archive to-do Order towels" }));
+    fireEvent.click(screen.getByRole("tab", { name: "History (2)" }));
+    const list = within(screen.getByRole("list", { name: "To-do history" }));
+    expect(list.getAllByRole("listitem").map((li) => li.textContent)).toEqual([expect.stringContaining("Order towels"), expect.stringContaining("Call the landlord")]);
+    fireEvent.click(list.getByRole("button", { name: "Restore Order towels" }));
+    fireEvent.click(list.getByRole("button", { name: "Delete for good Call the landlord" }));
+    fireEvent.click(screen.getByRole("button", { name: "Yes, delete Call the landlord" }));
+    expect(screen.getByRole("tab", { name: "History (0)" })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "To-dos (1)" })).toBeTruthy();
+    await waitFor(() => expect(save).toHaveBeenCalled());
+    const doc = save.mock.calls.at(-1)![2] as { todos: { id: string }[]; todoHistory: unknown[] };
+    expect(doc.todos.map((t) => t.id)).toEqual(["t2"]);
+    expect(doc.todoHistory).toEqual([]);
+  });
+
+  it("starting a new meeting keeps the done to-dos in History instead of dropping them", () => {
+    renderView({ initial: loaded(3, { todos: [{ id: "t1", text: "Call the landlord", owner: "Bo Lark", done: true, due: "Next wk" }] }) });
+    fireEvent.click(screen.getByRole("button", { name: "Start meeting" }));
+    fireEvent.click(within(screen.getByRole("region", { name: "Agenda" })).getByRole("button", { name: /To-Do List/ }));
+    expect(screen.getByRole("tab", { name: "To-dos (0)" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("tab", { name: "History (1)" }));
+    expect(within(screen.getByRole("list", { name: "To-do history" })).getByText("Call the landlord")).toBeTruthy();
+  });
+
+  it('"where is option to start this and end or pause meetings" (the owner): Take the lead gives Pause / Reset; End meeting goes to the last page; the leader by name', () => {
+    renderView({ initial: loaded(3, { timer: { started: true, running: true, startedAt: Date.now(), leader: "someone-else", leaderLabel: "marissa.lempka@example.test", sessionId: "s1" } }) });
+    expect(screen.getByText("Marissa Lempka is leading")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Pause the meeting clock" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Take the lead" }));
+    expect(screen.getByText("You're leading")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Pause the meeting clock" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "End meeting" }));
+    expect(screen.getByRole("heading", { level: 2, name: "Conclude" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "End meeting" })).toBeNull();
   });
 });
