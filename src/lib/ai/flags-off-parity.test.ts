@@ -196,6 +196,14 @@ const ALLOWED_UI = [
   "src/app/(app)/meetings/",
   "src/features/l10/",
   "src/app/globals.css",
+  // AI TRAINING tab (requested by Paulyne, 18 Nov 2026, both apps): the AI Training app rebuilt as new pages and
+  // components, with its own tables and permission. No existing page, chat or form behaviour changes. The stylesheet
+  // gains a section scoped to `.training-prose` and `.training-callout-*`.
+  "src/app/(app)/ai-training/",
+  "src/features/ai-training/",
+  // ...and its one sidebar entry, with the rail tests that list what an Employee sees.
+  "src/components/shell/navigation.ts",
+  "src/components/shell/navigation.test.ts",
   // NEXT_PUBLIC_REPLY_QUOTE_LINES_ENABLED (#839, QA's Bubbles 17p live check; QA round 17r, 13 Nov 2026): a run of "> "
   // lines in a reply is shown as a quote, a line each. Off, the renderer is unchanged.
   "src/components/rich-text.tsx",

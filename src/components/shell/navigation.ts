@@ -137,9 +137,8 @@ const ALL_SECTIONS: NavSection[] = [
       },
       {
         /*
-         * THE AI TRAINING PROGRAM, rebuilt here from its own app (ported from
-         * Ask Sunny). The label is the client's own wording, in capitals as
-         * they asked for it.
+         * THE AI TRAINING PROGRAM, rebuilt here from its own app. The label
+         * is the client's own wording, in capitals as they asked for it.
          */
         label: "AI TRAINING",
         href: "/ai-training",
