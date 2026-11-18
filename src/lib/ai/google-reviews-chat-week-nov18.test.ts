@@ -234,6 +234,13 @@ describe(`QA 18 Nov 2026: "${QUESTION}"`, () => {
       expect(reportData).not.toContain("Invented Reviewer");
     });
 
+    // Audit (18 Nov 2026): two named stores read the newest rows across every store, then filtered, so a quiet store
+    // could be told "No review was posted" while a busy one filled the page.
+    it("two stores named: each store's reviews are read for that store", async () => {
+      await ask("How many Google reviews did Bellevue and Lee's Summit get last week?", LEES_SUMMIT_MANAGER);
+      expect(state.pageQueries.map((q) => q.store).sort()).toEqual(["219", "67"]);
+    });
+
     it("a store named: only that store, last week, and its reviews read for that store", async () => {
       const { reportData } = await ask("How many Google reviews did Bellevue get last week?", LEES_SUMMIT_MANAGER);
       expect(state.trendReads).toEqual(["67"]);
@@ -270,4 +277,27 @@ describe(`QA 18 Nov 2026: "${QUESTION}"`, () => {
       expect(state.pageQueries).toEqual([]);
     });
   });
+});
+
+// Audit before merge (18 Nov 2026): with GOOGLE_REVIEWS_IN_CHAT_ENABLED on in production, these forms and coaching turns
+// matched the weekly patterns and got the Google review block (customer quotes and "never say you have no figures").
+describe("not a Google review question: review as a verb, or a guest complaint in a form", () => {
+  it.each([
+    "Can you review the CA I wrote for Jamie yesterday?",
+    "please review this coaching form today",
+    "she got bad reviews from guests and was late yesterday",
+    "Can you review this write-up for Jane today?",
+    "Please review the attendance policy with me today",
+    "write a coaching form for Jane, she got bad reviews from guests",
+  ])("%s", async (question) => {
+    const { isGoogleReviewQuestion } = await import("./google-reviews-chat");
+    expect(isGoogleReviewQuestion(question)).toBe(false);
+  });
+  it.each(["How many Google reviews did we get this week?", "Which store got the most reviews last week?", "how many reviews did Kearney get last week", "What are our latest reviews?", "any bad google reviews this week?"])(
+    "still a review question: %s",
+    async (question) => {
+      const { isGoogleReviewQuestion } = await import("./google-reviews-chat");
+      expect(isGoogleReviewQuestion(question)).toBe(true);
+    },
+  );
 });

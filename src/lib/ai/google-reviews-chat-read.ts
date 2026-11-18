@@ -1,5 +1,6 @@
 import "server-only";
 
+import { APPROVED_GOOGLE_STORES } from "@/config/company/google-reviews";
 import { supabaseReadiness } from "@/lib/config/server-env";
 import { EMPTY_QUERY, readGoalData, readPeriodTrend, readReviewPage, readStoreSummaries, type StoreSummary } from "@/lib/google-reviews/views";
 import type { GoalContext } from "@/lib/google-reviews/goals";
@@ -55,12 +56,18 @@ async function readWeekTrends(storeCodes: readonly string[]): Promise<StoreWeekT
 
 /** The newest reviews of these stores since last week's Monday (the page's Reviews list, newest first). */
 async function readRecentReviews(storeCodes: readonly string[], context: GoalContext): Promise<RecentReview[] | null> {
-  const page = await orNull(() =>
-    readReviewPage({ ...EMPTY_QUERY, store: storeCodes.length === 1 ? storeCodes[0]! : null, from: context.prevWeekStart, to: context.today }),
+  // One read per store (the page's own query), so a busy store never pushes another store's reviews out of the page
+  // (audit, 18 Nov 2026: two named stores read 20 rows across every store, then said "No review was posted").
+  const allStores = APPROVED_GOOGLE_STORES.every((store) => storeCodes.includes(store.code));
+  const reads: (string | null)[] = allStores ? [null] : storeCodes.length === 1 ? [storeCodes[0]!] : [...storeCodes];
+  const pages = await Promise.all(
+    reads.map((store) => orNull(() => readReviewPage({ ...EMPTY_QUERY, store, from: context.prevWeekStart, to: context.today }))),
   );
-  if (!page) return null;
-  return page.rows
+  if (pages.some((page) => page === null)) return null;
+  return pages
+    .flatMap((page) => page!.rows)
     .filter((row) => storeCodes.includes(row.storeCode) && row.removedAt === null)
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
     .slice(0, RECENT_REVIEWS_SHOWN)
     .map((row) => ({ storeCode: row.storeCode, createdAt: row.createdAt, starRating: row.starRating, comment: row.comment, hasReply: row.hasReply }));
 }
