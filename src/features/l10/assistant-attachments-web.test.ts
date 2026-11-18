@@ -94,20 +94,22 @@ describe("the same assistant as the Hub's", () => {
     const { POST } = await import("@/app/api/l10/assistant/route");
     const res = await POST(post(ask([{ type: "text", text: "What changed in store labour law this year?" }])));
     const tools = state.streamCalls[0].tools as Record<string, { id?: string; args?: Record<string, unknown> }>;
-    expect(Object.keys(tools)).toEqual(["web_search", "web_fetch", "getMeeting", "getMeetingRecaps"]);
+    // Changed on purpose 18 Nov 2026: Ask Bubbles' own Google reviews and Forms Register reads come after the Hub's tools.
+    expect(Object.keys(tools)).toEqual(["web_search", "web_fetch", "getMeeting", "getMeetingRecaps", "read_reviews", "read_forms_on_file"]);
     // 20260209: the newest version in the newest @ai-sdk/anthropic for AI SDK 6 (the Hub runs 20260318; see PARITY.md).
     expect(tools.web_search).toMatchObject({ id: "anthropic.web_search_20260209", args: { maxUses: 5 } });
     expect(tools.web_fetch).toMatchObject({ id: "anthropic.web_fetch_20260209", args: { maxUses: 3, citations: { enabled: true } } });
     expect(((await res.json()) as { opts: { sendSources?: boolean } }).opts.sendSources).toBe(true);
-    // The Hub's system prompt, with its cache breakpoint.
-    expect(state.streamCalls[0].system).toEqual({ role: "system", content: HUB.system, providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } });
+    // The Hub's system prompt and Ask Bubbles' note about its own tools (18 Nov 2026), with the Hub's cache breakpoint.
+    const { APP_TOOLS_NOTE } = await import("./assistant/app-tools.server");
+    expect(state.streamCalls[0].system).toEqual({ role: "system", content: HUB.system + APP_TOOLS_NOTE, providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } });
   });
 
   it("a Hub that offers no web tools gets none", async () => {
     state.hubConfig = { ...HUB, webTools: undefined };
     const { POST } = await import("@/app/api/l10/assistant/route");
     await POST(post(ask([{ type: "text", text: "Hi" }])));
-    expect(Object.keys(state.streamCalls[0].tools as object)).toEqual(["getMeeting", "getMeetingRecaps"]);
+    expect(Object.keys(state.streamCalls[0].tools as object)).toEqual(["getMeeting", "getMeetingRecaps", "read_reviews", "read_forms_on_file"]);
   });
 });
 
