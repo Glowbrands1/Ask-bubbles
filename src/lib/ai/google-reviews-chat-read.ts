@@ -1,7 +1,8 @@
 import "server-only";
 
 import { supabaseReadiness } from "@/lib/config/server-env";
-import { readGoalData, readStoreSummaries, type StoreSummary } from "@/lib/google-reviews/views";
+import { EMPTY_QUERY, readGoalData, readPeriodTrend, readReviewPage, readStoreSummaries, type StoreSummary } from "@/lib/google-reviews/views";
+import type { GoalContext } from "@/lib/google-reviews/goals";
 import { codeOfLocationId } from "@/lib/locations";
 import { hasPermission, DEFAULT_PERMISSION_MATRIX } from "@/lib/permissions";
 import { reportingScopeOf } from "@/lib/reporting/scope/authorized-locations";
@@ -9,7 +10,11 @@ import type { AccessScope, Role } from "@/types";
 
 import {
   formatGoogleReviewsBlock,
+  formatReviewWeeksSection,
   isGoogleReviewQuestion,
+  RECENT_REVIEWS_SHOWN,
+  type RecentReview,
+  type StoreWeekTrend,
   reviewsNotPermittedBlock,
   reviewsUnavailableBlock,
   storeCodesNamedIn,
@@ -30,6 +35,36 @@ function lastSavedAt(stores: readonly StoreSummary[] | null): string | null {
   return saved.at(-1) ?? null;
 }
 
+/** A read that may fail (or throw before it starts) without failing the block: null instead. */
+async function orNull<T>(read: () => Promise<T>): Promise<T | null> {
+  try {
+    return await read();
+  } catch {
+    return null;
+  }
+}
+
+/** Each store's Monday–Sunday weekly trend (the page's own read), or null when any could not be read. */
+async function readWeekTrends(storeCodes: readonly string[]): Promise<StoreWeekTrend[] | null> {
+  const trends = await Promise.all(
+    storeCodes.map((storeCode) => orNull(async (): Promise<StoreWeekTrend> => ({ storeCode, points: await readPeriodTrend("week", storeCode) }))),
+  );
+  const read = trends.filter((trend): trend is StoreWeekTrend => trend !== null);
+  return read.length === trends.length ? read : null;
+}
+
+/** The newest reviews of these stores since last week's Monday (the page's Reviews list, newest first). */
+async function readRecentReviews(storeCodes: readonly string[], context: GoalContext): Promise<RecentReview[] | null> {
+  const page = await orNull(() =>
+    readReviewPage({ ...EMPTY_QUERY, store: storeCodes.length === 1 ? storeCodes[0]! : null, from: context.prevWeekStart, to: context.today }),
+  );
+  if (!page) return null;
+  return page.rows
+    .filter((row) => storeCodes.includes(row.storeCode) && row.removedAt === null)
+    .slice(0, RECENT_REVIEWS_SHOWN)
+    .map((row) => ({ storeCode: row.storeCode, createdAt: row.createdAt, starRating: row.starRating, comment: row.comment, hasReply: row.hasReply }));
+}
+
 /**
  * The Google review block for one chat turn, or null when the question is not
  * about Google reviews.
@@ -39,7 +74,10 @@ function lastSavedAt(stores: readonly StoreSummary[] | null): string | null {
  * caller (every store; the page does not narrow by assignment), narrowed to
  * any store the question names, with the caller's own stores marked. The
  * figures come from `readGoalData`, the read the page renders, and the last
- * sync from the stores' own sync times.
+ * sync from the stores' own sync times. Below them, this week and last week
+ * (Monday–Sunday, Central) from the page's weekly trend, each store's average
+ * rating, and the newest reviews from the page's Reviews list; a failed weekly
+ * read says so in the block and never fails the month-to-date figures.
  */
 export async function loadGoogleReviewsChatBlock(input: {
   readonly question: string;
@@ -64,14 +102,29 @@ export async function loadGoogleReviewsChatBlock(input: {
   try {
     const [goals, stores] = await Promise.all([readGoalData(), readStoreSummaries().catch(() => null)]);
     const rows = goals.rows.filter((row) => named.length === 0 || named.includes(row.storeCode));
+    const codes = rows.map((row) => row.storeCode);
+    /* This week and last week, and the newest reviews (QA, 18 Nov 2026): the same stores, the page's own reads. */
+    const [trends, recent] = await Promise.all([readWeekTrends(codes), readRecentReviews(codes, goals.context)]);
+    const month = formatGoogleReviewsBlock({
+      context: goals.context,
+      rows,
+      ownStoreCodes: own,
+      lastSyncAt: lastSavedAt(stores),
+      now: input.now ?? new Date(),
+    });
+    const weeks =
+      rows.length > 0
+        ? formatReviewWeeksSection({
+            context: goals.context,
+            rows,
+            ownStoreCodes: own,
+            trends,
+            averages: new Map((stores ?? []).map((store) => [store.storeCode, { averageRating: store.averageRating, reviewCount: store.reviewCount }])),
+            recent,
+          })
+        : null;
     return {
-      text: formatGoogleReviewsBlock({
-        context: goals.context,
-        rows,
-        ownStoreCodes: own,
-        lastSyncAt: lastSavedAt(stores),
-        now: input.now ?? new Date(),
-      }),
+      text: weeks ? `${month}\n\n${weeks}` : month,
       figures: rows.length > 0,
     };
   } catch {

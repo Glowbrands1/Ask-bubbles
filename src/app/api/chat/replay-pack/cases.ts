@@ -94,6 +94,10 @@ export interface ReplayContext {
   forms(): Record<string, unknown>[];
   /** The FORMS ON FILE block the answering model was last given (empty when none): FORMS_ON_FILE_DATE_RANGE, 18 Nov 2026. */
   lastFormRecords?(): string;
+  /** The REPORT DATA block the answering model was last given (empty when none): Google reviews in chat, 18 Nov 2026. */
+  lastReportData?(): string;
+  /** The answering model's last system prompt (its report-figure rule): Google reviews in chat, 18 Nov 2026. */
+  lastSystem?(): string;
   values(instanceId: string): Record<string, string>;
   /** The ticked options of each checkbox group (form_instance_values.checked); groups with none are left out. */
   checked(instanceId: string): Record<string, string[]>;

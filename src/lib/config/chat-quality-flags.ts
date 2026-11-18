@@ -924,6 +924,9 @@ export function excerptBrandFilterEnabled(): boolean {
  * A Google review question gets the Google Reviews page's month-to-date
  * figures, goal and pace for the caller's stores, and only with View reports.
  * Off, review questions keep the existing path. Ported from the sibling app (QA T11).
+ * QA, 18 Nov 2026 ("How many Google reviews did we get this week?" got "I don't have report figures like review
+ * counts"): the block also carries this week and last week (Monday–Sunday, Central), each store's average rating and
+ * the newest reviews, from the page's own reads (`google-reviews-chat-read.ts`). Default off; not on in production.
  */
 export function googleReviewsInChatEnabled(): boolean {
   return envFlag("GOOGLE_REVIEWS_IN_CHAT_ENABLED");
