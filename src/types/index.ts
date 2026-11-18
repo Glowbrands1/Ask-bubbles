@@ -100,6 +100,12 @@ export type Permission =
   | "view_knowledge"
   | "manage_knowledge"
   /**
+   * OPEN AI TRAINING — the AI training program's lessons, policy and best
+   * practices, and submitting a response to a lesson. Every role holds it;
+   * EDITING the program is the admin console roles' (`ADMIN_CONSOLE_ROLES`).
+   */
+  | "view_ai_training"
+  /**
    * REACH THE FORMS WORKSPACE AT ALL. Which forms somebody may CREATE is still
    * decided per template by its `requiredPermission`.
    */
