@@ -13,6 +13,7 @@ import { useSession } from "@/lib/session/session-context";
 import { cn } from "@/lib/utils/cn";
 import { usePreference, writePreference } from "@/lib/utils/client-store";
 import { SidebarNav } from "./sidebar";
+import { UpdateNotice } from "./update-notice";
 import { backdropForPath, chromeForPath } from "./backdrop";
 import { ACTIVE_BRAND } from "@/lib/brand";
 import { defaultLandingForRole } from "@/lib/permissions";
@@ -175,6 +176,9 @@ export function AppShell({
             />
           </div>
         </header>
+
+        {/* Once-a-day "we're updating the chat" notice: dialog on desktop, banner on phones. */}
+        <UpdateNotice />
 
         {/* Mobile drawer */}
         {drawerOpen ? (

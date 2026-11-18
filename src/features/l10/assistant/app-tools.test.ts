@@ -8,7 +8,8 @@ vi.mock("@/lib/ai/google-reviews-chat-read", () => ({
     return { text: "GOOGLE REVIEWS — MONTH TO DATE\nBellevue: 7 of 10, behind pace", figures: true };
   },
 }));
-vi.mock("@/lib/forms/chat-form-records", () => ({
+vi.mock("@/lib/forms/chat-form-records", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/forms/chat-form-records")>()),
   loadFormRecords: async (input: unknown) => {
     calls.forms.push(input);
     return calls.formsBlock === null ? null : { block: calls.formsBlock };
@@ -58,5 +59,15 @@ describe("the DM / GM L10 assistant reads Ask Bubbles' Google reviews and forms 
     expect(JSON.stringify(result)).toContain("Wren Halvorsen: Separation Notice (terminated)");
     calls.formsBlock = null;
     expect(await run("read_forms_on_file", {})).toMatchObject({ refused: expect.stringMatching(/cannot view the Forms Register/) });
+  });
+
+  /* The owner, 18 Nov 2026: "who got a CA this month?" read "the 20 most recent forms"; "why capped at 20". */
+  it("reads a period by form date and kind, not the newest 20 forms", async () => {
+    await run("read_forms_on_file", { form: "CA", date_from: "2026-11-01", date_to: "2026-11-18" }, "who got a CA this month?");
+    expect(calls.forms[0]).toMatchObject({
+      narrowFromQuestion: true,
+      range: { from: "2026-11-01", to: "2026-11-18" },
+      kind: { templateNameWords: ["corrective"] },
+    });
   });
 });
