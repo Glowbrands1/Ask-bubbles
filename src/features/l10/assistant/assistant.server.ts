@@ -203,7 +203,7 @@ export function recordAssistantSpend(userId: string, call: TokenUsage | null, pe
 /**
  * The chat as the model reads it. A reply that failed part-way can leave a lookup (a tool call) without its result in
  * the saved chat; sent back as it is, the model API refuses the whole request, so every later message in that chat
- * failed too, even "hi" (Ask Sunny, 18 Nov 2026). Unfinished lookups are left out.
+ * failed too, even "hi" (the sibling app, 18 Nov 2026). Unfinished lookups are left out.
  */
 export function modelMessages(messages: UIMessage[]) {
   return convertToModelMessages(messages, { ignoreIncompleteToolCalls: true });
