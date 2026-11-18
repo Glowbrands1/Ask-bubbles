@@ -26,7 +26,8 @@ export const NOV18_GOOGLE_REVIEWS_THIS_WEEK_CASES: ReplayCase[] = [
     id: "nov18-google-reviews-this-week",
     title: `"${QUESTION}": the model is given this week's and last week's reviews from the Google Reviews page, and no "no report figures" rule`,
     report: REPORT,
-    status: { open: `${FLAG} is not on in production: set it to 1 in Vercel, then list it in production-flags.json and mark this case fixed` },
+    // ${FLAG} is on in production since #960 (listed in production-flags.json).
+    status: "fixed",
     fixFlags: [FLAG],
     async run(t) {
       vi.setSystemTime(new Date("2026-11-18T18:00:00Z"));
@@ -41,6 +42,22 @@ export const NOV18_GOOGLE_REVIEWS_THIS_WEEK_CASES: ReplayCase[] = [
       expect(data).toContain("All 7 stores together: this week 14 reviews (14 qualifying), average 5.0 stars; last week 28 reviews (21 qualifying), average 4.5 stars.");
       expect(data).toContain("- Omaha Dodge, NE (store 264, this manager's store): this week 2 reviews");
       expect(data).toContain("Never say you have no Google review figures");
+    },
+  },
+  {
+    // Audit before merge (18 Nov 2026), with the flag on in production: "review" as a verb on a Corrective Action turn
+    // matched the weekly patterns, so the forms turn got every store's review figures and up to 5 customer quotes.
+    id: "nov18-review-verb-ca-not-google-reviews",
+    title: '"Can you review the CA I wrote for Jamie yesterday?": no Google review block on a forms turn',
+    report: "Audit, 18 Nov 2026 (Ask-bubbles#961 before merge): a Corrective Action turn read as a Google review question",
+    status: "fixed",
+    fixFlags: [FLAG],
+    async run(t) {
+      vi.setSystemTime(new Date("2026-11-18T18:00:00Z"));
+      t.directory(STAFF);
+      t.as("location_manager", WEST_DODGE);
+      await t.thread().say("Can you review the CA I wrote for Jamie yesterday?");
+      expect(t.lastReportData?.() ?? "").not.toContain("GOOGLE REVIEWS");
     },
   },
 ];
