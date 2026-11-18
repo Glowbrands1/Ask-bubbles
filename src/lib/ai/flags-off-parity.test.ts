@@ -225,6 +225,9 @@ const ALLOWED_UI = [
   "src/components/shell/app-switcher.tsx",
   "src/components/shell/sidebar.tsx",
   "src/components/shell/app-shell.tsx",
+  // Once-a-day "we're updating the chat" notice (Pau, 18 Nov 2026, both apps): a dialog on desktop and a banner on
+  // phones, dismissed per user per business day. Shell only; no chat or form behaviour changes.
+  "src/components/shell/update-notice.tsx",
   // PRIVATE_CREATOR_FORMS_ENABLED (QA approved 27 Oct 2026): the follow-up and list reads over-read and trim to
   // their page while the rule is active; off, each asks for its page exactly as before.
   "src/app/(app)/page.tsx",
