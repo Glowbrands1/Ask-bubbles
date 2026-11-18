@@ -80,3 +80,8 @@ This folder, the `(app)/meetings` routes, `/api/l10/assistant`, the sidebar wiri
 structure, so a later change in Ask Sunny's copy ports by re-copying the file and re-applying the rows in
 [PARITY.md](./PARITY.md) ("Ask Sunny vs Ask Bubbles"). Adding the BCS GM L10 later: a label in `L10_TAB_LABELS`
 (it is already in `NO_REFERENCE`: no Reference), plus the Hub's allowlist row `('ask-bubbles', 'bcs-gm')`.
+
+**The BCS GM L10 (17 Nov 2026).** This app's side is done: the "GM L10" tab label, Bloom-style pages, no Reference
+views, no rocks (`NO_ROCKS`: no Rock Review, no "Convert to Rock", no Goals page in the report) and the agenda Segue ·
+Scorecard · To-dos · IDS · Conclude (`NO_ROCKS_AGENDA`, used until the Hub serves its own). The Hub has the meeting,
+its people, its scorecard (carried over from Bloom Growth) and the allowlist row `('ask-bubbles', 'bcs-gm')`.

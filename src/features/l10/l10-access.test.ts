@@ -105,6 +105,18 @@ describe("the DM L10 tab", () => {
     expect(await l10TabsForLayout()).toEqual([{ key: "bcs-dm", href: "/meetings/bcs-dm", label: "DM L10" }]);
   });
 
+  // 17 Nov 2026: "Let's also proceed with building out GM L10 in Bubbles". The Hub lists it once it allowlists bcs-gm.
+  it("a GM who is on the BCS GM L10 gets a GM L10 tab next to the DM L10", async () => {
+    signedIn();
+    const GM = { ...BCS, key: "bcs-gm", name: "BCS GM L10", team: "BCS General Managers" };
+    hub.answer = () => ({ status: 200, body: { user_id: "h1", name: "Avery Quill", meetings: [BCS, GM] } });
+    const { l10TabsForLayout } = await import("./data.server");
+    expect(await l10TabsForLayout()).toEqual([
+      { key: "bcs-dm", href: "/meetings/bcs-dm", label: "DM L10" },
+      { key: "bcs-gm", href: "/meetings/bcs-gm", label: "GM L10" },
+    ]);
+  });
+
   it("does not show for a person the Hub does not list (not an attendee, or no Hub account)", async () => {
     signedIn("not.attending@example.test");
     hub.answer = () => ({ status: 200, body: { user_id: null, name: null, meetings: [] } });

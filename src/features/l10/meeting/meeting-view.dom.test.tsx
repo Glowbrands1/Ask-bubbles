@@ -32,7 +32,8 @@ const HUB = "https://hub.example.test/meetings/bcs-dm";
  * A meeting that is not Bloom-style (the Hub's standard page, with the round-robin check-off): the BCS DM L10 has none
  * since 17 Nov 2026, so the tests of the Hub's round-robin mechanism run on this one. Invented details.
  */
-const standardInfo: MeetingInfo = { ...info, key: "bcs-gm", name: "BCS GM L10" };
+// Was the BCS GM L10 until 17 Nov 2026, when it became Bloom-style like the DM L10 (no round-robin either).
+const standardInfo: MeetingInfo = { ...info, key: "maintenance", name: "Maintenance L10" };
 
 function renderView(over: { info?: MeetingInfo; save?: SaveFn; load?: LoadFn; initial?: LoadedMeeting; pollMs?: number; roster?: Roster; mentionPeople?: { id: string; name: string }[] } = {}) {
   return render(
@@ -143,7 +144,7 @@ describe("the DM L10 page in Ask Bubbles", () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(4100);
     });
-    expect(load).toHaveBeenCalledWith("bcs-gm");
+    expect(load).toHaveBeenCalledWith("maintenance");
     // Cy is now checked off (the Hub's edit), Avery no longer (the Hub's document replaced it).
     const cy = screen.getByRole("button", { name: /Cy Marlow/ });
     expect(cy?.getAttribute("aria-pressed")).toBe("true");
@@ -353,8 +354,9 @@ describe("no Reference for the BCS DM L10 (the owner's decision, 15 Nov 2026)", 
     // A Hub that says "true" cannot bring it back.
     expect(referenceFromRoster("bcs-gm", { reference: true })).toBe(false);
     expect(reportSections("bcs-gm").map((s) => s.title)).not.toContain("Business Plan");
-    // The page: no REFERENCE heading, no Business Plan or Accountability Chart links.
-    renderView({ info: standardInfo });
+    // The page: no REFERENCE heading, no Business Plan or Accountability Chart links. (The GM L10 itself: standardInfo
+    // moved to the Maintenance L10 when the GM L10 became Bloom-style, 17 Nov 2026.)
+    renderView({ info: { ...info, key: "bcs-gm", name: "BCS GM L10" } });
     const agenda = within(screen.getByRole("region", { name: "Agenda" }));
     expect(agenda.queryByText("REFERENCE")).toBeNull();
     expect(agenda.queryByRole("button", { name: "Business Plan" })).toBeNull();
@@ -1033,5 +1035,63 @@ describe("BCS DM L10: Recap, to-do dates and history, leading the meeting", () =
     fireEvent.click(screen.getByRole("button", { name: "End meeting" }));
     expect(screen.getByRole("heading", { level: 2, name: "Conclude" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "End meeting" })).toBeNull();
+  });
+});
+
+// The DM L10 run-through (17 Nov 2026), in its words: "Conclude: Make sure every meeting attendee can submit their own
+// meeting rating."
+describe("Conclude: every meeting attendee can submit their own meeting rating", () => {
+  const timer = { started: true, running: true, startedAt: Date.now(), leader: "hub-user-2", leaderLabel: "Bo", sessionId: "s9" };
+  const attendees = [
+    { id: "att-avery", name: "Avery Quill", role: "Visionary", shared: true, rating: null },
+    { id: "att-bo", name: "Bo Lark", role: "Integrator", shared: true, rating: 8 },
+    { id: "att-cy", name: "Cy Marlow", role: "", shared: true, rating: null },
+  ];
+  const lastSaved = (save: ReturnType<typeof vi.fn>) => (save.mock.calls.at(-1)![2] as { attendees: { name: string; rating: number | null }[] }).attendees;
+
+  it("an attendee on the list sees their own row first, marked (you), and saves their own rating", async () => {
+    const save = vi.fn().mockResolvedValue({ ok: true, version: 4, updatedAt: "2026-11-17T00:00:00Z" } satisfies SaveOutcome);
+    renderView({ save: save as unknown as SaveFn, mentionPeople: [{ id: "hub-user-1", name: "Avery Quill" }, { id: "hub-user-2", name: "Bo Lark" }], initial: loaded(3, { attendees, timer }) });
+    fireEvent.click(within(screen.getByRole("region", { name: "Agenda" })).getByRole("button", { name: /Conclude/ }));
+    const groups = within(screen.getByRole("region", { name: "Ratings" })).getAllByRole("group");
+    expect(groups[0].getAttribute("aria-label")).toBe("Rating for Avery Quill");
+    expect(screen.getByText("(you)")).toBeTruthy();
+    expect(screen.getByTestId("ratings-waiting").textContent).toBe("Not rated yet: Avery Quill, Cy Marlow");
+    fireEvent.click(screen.getByRole("button", { name: "Avery Quill: 9" }));
+    await waitFor(() => expect(save).toHaveBeenCalled());
+    expect(lastSaved(save)).toEqual(expect.arrayContaining([expect.objectContaining({ name: "Avery Quill", rating: 9 }), expect.objectContaining({ name: "Bo Lark", rating: 8 })]));
+    expect(screen.getByTestId("ratings-waiting").textContent).toBe("Not rated yet: Cy Marlow");
+  });
+
+  it("someone in the meeting who is not on the attendee list still gets a row and can rate", async () => {
+    const save = vi.fn().mockResolvedValue({ ok: true, version: 4, updatedAt: "2026-11-17T00:00:00Z" } satisfies SaveOutcome);
+    renderView({ save: save as unknown as SaveFn, mentionPeople: [{ id: "hub-user-1", name: "Dana Fenn" }, { id: "hub-user-2", name: "Bo Lark" }], initial: loaded(3, { attendees, timer }) });
+    fireEvent.click(within(screen.getByRole("region", { name: "Agenda" })).getByRole("button", { name: /Conclude/ }));
+    expect(within(screen.getByRole("region", { name: "Ratings" })).getAllByRole("group")[0].getAttribute("aria-label")).toBe("Rating for Dana Fenn");
+    fireEvent.click(screen.getByRole("button", { name: "Dana Fenn: 10" }));
+    await waitFor(() => expect(save).toHaveBeenCalled());
+    expect(lastSaved(save)).toEqual(expect.arrayContaining([expect.objectContaining({ name: "Dana Fenn", rating: 10 }), expect.objectContaining({ name: "Bo Lark", rating: 8 })]));
+    expect(screen.getByRole("button", { name: "Dana Fenn: 10" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByTestId("rating-average").textContent).toBe("9.0");
+  });
+});
+
+// 17 Nov 2026: "Let's also proceed with building out GM L10 in Bubbles ... We don't use rocks at the GM/SD level, so the
+// agenda for both should be: 1. Segue 2. Scorecard 3. To-dos 4. IDS 5. Conclude". Laid out like the DM L10 (Bloom).
+describe("the BCS GM L10", () => {
+  const gm: MeetingInfo = { key: "bcs-gm", name: "BCS GM L10", team: "BCS General Managers", cadence: "Wednesdays · 90 min", description: "" };
+  it("runs Segue, Scorecard, To-dos, IDS, Conclude, Bloom-style, without Rocks or the Reference views", () => {
+    render(<MeetingView info={gm} initial={loaded(3, { issues: [{ id: "i1", title: "Short on staff", notes: "", resolved: false }] })} save={vi.fn() as unknown as SaveFn} end={vi.fn() as unknown as EndFn} viewer={viewer} roster={roster} hubMeetingUrl={HUB} pollMs={0} debounceMs={0} today="2026-11-17" dateLabel="Tue, Nov 17" />);
+    const items = within(screen.getByRole("region", { name: "Agenda" })).getAllByRole("listitem").map((li) => li.textContent);
+    expect(items).toEqual(["1 · Segue5m", "2 · Scorecard5m", "3 · To-dos5m", "4 · IDS60m", "5 · Conclude5m"]);
+    expect(document.body.textContent).toContain("Wednesdays · 80 min");
+    expect(screen.queryByRole("button", { name: "Business Plan" })).toBeNull();
+    expect(screen.getByRole("button", { name: /New Issue/ })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /4 · IDS/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Short on staff", expanded: false }));
+    const detail = within(screen.getByRole("region", { name: "Issue detail" }));
+    expect(detail.getByRole("button", { name: "To-Do" })).toBeTruthy();
+    expect(detail.queryByRole("button", { name: "Rock" })).toBeNull();
+    expect(detail.queryByRole("button", { name: "Headline" })).toBeNull();
   });
 });

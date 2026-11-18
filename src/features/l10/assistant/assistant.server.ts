@@ -7,6 +7,7 @@ import { persistSpendRow } from "@/lib/ai/chat-trace";
 import type { TokenUsage } from "@/lib/ai/model-prices";
 
 import { callHub, type HubAnswer } from "../partner/client.server";
+import type { AppToolsViewer } from "./app-tools.server";
 
 type JSONSchema7 = Exclude<Parameters<typeof jsonSchema>[0], PromiseLike<unknown> | (() => unknown)>;
 
@@ -26,6 +27,8 @@ type JSONSchema7 = Exclude<Parameters<typeof jsonSchema>[0], PromiseLike<unknown
  * Ask Bubbles' own spend controls: the route asks `modelSpendGuard` first (the monthly budget, and the daily cap where
  * it is on), exactly as chat does, and every answer's token usage is written as a spend row in chat_traces
  * (source "l10_assistant", `recordAssistantSpend`), which is what the monthly budget counts.
+ * Ask Bubbles' own (18 Nov 2026, app-tools.server.ts): its Google reviews and Forms Register, read as this person
+ * through the reads its chat uses, with a note appended to the Hub's prompt.
  * Not here (only in the Hub): the Hub's company details and reports, the tracker.
  */
 
@@ -243,7 +246,7 @@ function isTimeoutError(error: unknown): boolean {
   return name === "TimeoutError" || name === "AbortError";
 }
 
-export async function streamHubAssistant(input: { config: HubAssistantConfig; messages: UIMessage[]; deep: boolean; email: string; userId: string; meetingKey: string; signal?: AbortSignal }) {
+export async function streamHubAssistant(input: { config: HubAssistantConfig; messages: UIMessage[]; deep: boolean; email: string; userId: string; meetingKey: string; signal?: AbortSignal; viewer?: AppToolsViewer }) {
   const { config, deep } = input;
   const modelId = deep ? config.deepModel : config.model;
   let recorded = false;
@@ -252,15 +255,17 @@ export async function streamHubAssistant(input: { config: HubAssistantConfig; me
     recorded = true;
     recordAssistantSpend(input.userId, spendFromUsage(modelId, usage), persistSpendRow, webSearchCount(steps));
   };
+  // This app's own reads (loaded only when answering: they pull in the report and forms code).
+  const app = input.viewer ? await import("./app-tools.server") : null;
   // The Hub's system prompt with the Hub's cache breakpoint (Anthropic caches tools + system as one prefix).
-  const system: SystemModelMessage = { role: "system", content: config.system, providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } };
+  const system: SystemModelMessage = { role: "system", content: app ? config.system + app.APP_TOOLS_NOTE : config.system, providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } };
   const startedAt = Date.now();
   const result = streamText({
     model: anthropic(modelId),
     system,
     // Images and PDFs the person attached go to the model as file parts (Claude reads PDFs natively), as in the Hub.
     messages: await convertToModelMessages(input.messages),
-    tools: { ...webTools(config), ...hubTools(config, input.email, input.meetingKey) },
+    tools: { ...webTools(config), ...hubTools(config, input.email, input.meetingKey), ...(app && input.viewer ? app.appTools(input.viewer, app.lastQuestion(input.messages)) : {}) },
     stopWhen: stepCountIs(config.maxSteps),
     maxOutputTokens: config.maxOutputTokens,
     abortSignal: input.signal,

@@ -64,7 +64,7 @@ export const AGENDA: AgendaSection[] = [
  */
 /**
  * The meetings without the Reference views (Business Plan, Accountability Chart): the BCS DM L10 (owner, 15 Nov 2026)
- * and the BCS GM L10 (owner, 17 Nov 2026: "remove this in BCS GM L10").
+ * and the BCS GM L10 (owner, 17 Nov 2026: "remove this in BCS GM L10"; built like the DM L10, without rocks).
  */
 export const NO_REFERENCE: readonly string[] = ["bcs-dm", "bcs-gm"];
 
@@ -87,10 +87,27 @@ export function segueName(_key: string): string {
  * The meetings whose pages are laid out like Bloom Growth's (the owner's request, 15 Nov 2026): here, the BCS DM L10
  * (the Hub lists both DM L10s).
  */
-export const bloomStyle = (key: string): boolean => key === "bcs-dm";
+export const bloomStyle = (key: string): boolean => key === "bcs-dm" || key === "bcs-gm";
 
-/** The meetings whose cadence line shows the total of the agenda the page runs (QA, 15 Nov 2026): the BCS DM L10. */
-export const CADENCE_FROM_AGENDA: readonly string[] = ["bcs-dm"];
+/** The meetings whose cadence line shows the total of the agenda the page runs (QA, 15 Nov 2026): the BCS DM and GM L10s. */
+export const CADENCE_FROM_AGENDA: readonly string[] = ["bcs-dm", "bcs-gm"];
+
+/** The meetings that run without rocks (17 Nov 2026: "We don't use rocks at the GM/SD level"): no Rock Review, no Goals page in the report. */
+export const NO_ROCKS: readonly string[] = ["bcs-gm"];
+export const hasRocks = (key: string): boolean => !NO_ROCKS.includes(key);
+
+/**
+ * The BCS GM L10's agenda (17 Nov 2026: "We don't use rocks at the GM/SD level, so the agenda for both should be:
+ * Segue, Scorecard, To-dos, IDS, Conclude"). The Hub serves the agenda it runs with the roster, which wins; this is the
+ * page's own copy for when it does not.
+ */
+export const NO_ROCKS_AGENDA: AgendaSection[] = [
+  { key: "business-best", title: "Segue", minutes: 5 },
+  { key: "scorecard", title: "Scorecard", minutes: 5 },
+  { key: "todos", title: "To-dos", minutes: 5 },
+  { key: "ids", title: "IDS", minutes: 60 },
+  { key: "conclude", title: "Conclude", minutes: 5 },
+];
 
 /**
  * The cadence line a meeting shows ("Tuesdays · 70 min"). For the meetings above, the minutes are the total of the
@@ -104,6 +121,7 @@ export function cadenceLabel(key: string, cadence: string, agenda: AgendaSection
 }
 
 export function agendaFor(key: string): AgendaSection[] {
+  if (key === "bcs-gm") return NO_ROCKS_AGENDA;
   if (key === "leadership") return AGENDA.filter((a) => a.key !== "headlines" && a.key !== "todos").map((a) => (a.key === "ids" ? { ...a, minutes: 70 } : a));
   return AGENDA;
 }
@@ -116,7 +134,7 @@ export const SECTION_HINTS: Record<AgendaKey, string> = {
   headlines: "Customer and employee headlines to share with the team.",
   todos: "Weekly commitments. Open to-dos carry forward.",
   // Ask Bubbles: no ranking on IDS (see RANKING in meeting/_components/Ids.tsx), so the hint does not mention it.
-  ids: "Identify, Discuss, Solve. Work each issue through, then press Solve.",
+  ids: "Identify, Discuss, Solve. Number the issues 1, 2, 3 in the order to work them, then solve them in that order.",
   conclude: "Recap, cascade the message and rate the meeting.",
 };
 
