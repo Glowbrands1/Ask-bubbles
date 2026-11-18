@@ -12,7 +12,7 @@ import { ACTIVE_BRAND } from "@/lib/brand";
 import { CLAUDE_MAX_TOKENS, RETRIEVAL } from "@/lib/config/models";
 import { MissingConfigurationError, liveReadiness } from "@/lib/config/server-env";
 import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
-import { asksOnlyAboutFormsOnFile, isFormRecordsQuestion, loadFormRecords } from "@/lib/forms/chat-form-records";
+import { asksOnlyAboutFormsOnFile, isFormRangeQuestion, isFormRecordsQuestion, loadFormRecords } from "@/lib/forms/chat-form-records";
 import { namesAPerson } from "@/lib/forms/names-a-person";
 import { priorFormsReadingForChat } from "@/lib/forms/prior-forms";
 import { answersFormClarification } from "@/lib/forms/form-clarification";
@@ -88,6 +88,7 @@ import {
   frameworkGeneralSectionsEnabled,
   reformatKeepsSourcesEnabled,
   crossChatReplyGuardEnabled,
+  formsOnFileDateRangeEnabled,
   manualNegatedListNoteEnabled,
   questionNotFormEnabled,
   googleReviewsInChatEnabled,
@@ -835,7 +836,8 @@ async function answerQuestionCore(
    */
   const readsFormRecords =
     pastFormsFirst ||
-    (isFormRecordsQuestion(request.question) &&
+    ((isFormRecordsQuestion(request.question) ||
+      (formsOnFileDateRangeEnabled() && isFormRangeQuestion(request.question, request.context.todayIso))) &&
       (!crossChatGuard || asksAboutRecords(request.question) || refersBack(request.question, request.history)));
   const formRecordsPromise = readsFormRecords
     ? loadFormRecords({
@@ -844,6 +846,7 @@ async function answerQuestionCore(
         previousQuestion: previousManagerTurn(request),
         today: request.context.todayIso,
         ...(crossChatGuard ? { markCreator: true } : {}),
+        ...(formsOnFileDateRangeEnabled() ? { narrowFromQuestion: true } : {}),
       })
     : Promise.resolve(null);
 

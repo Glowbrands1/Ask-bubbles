@@ -99,6 +99,8 @@ const state = vi.hoisted(() => ({
   draftCalls: 0,
   toolCalls: 0,
   chatModelCalls: 0,
+  /** The FORMS ON FILE block the answering model was last given (`lastFormRecords`). */
+  lastFormRecords: "",
   directory: [] as unknown[],
 }));
 
@@ -289,8 +291,9 @@ vi.mock("@/lib/ai/call-claude", () => ({
       usage: { inputTokens: 10, outputTokens: 5, cacheReadTokens: 0, cacheWriteTokens: 0 },
     };
   },
-  callClaude: async (input?: { formEditTool?: { data: string; onToolUse: (call: unknown) => void } | null }) => {
+  callClaude: async (input?: { formRecords?: string | null; formEditTool?: { data: string; onToolUse: (call: unknown) => void } | null }) => {
     state.chatModelCalls += 1;
+    state.lastFormRecords = String(input?.formRecords ?? "");
     if (input?.formEditTool) {
       editTool.offered += 1;
       editTool.lastData = input.formEditTool.data;
@@ -657,6 +660,8 @@ function joinOverview() {
   for (const row of store.form_instances ?? []) {
     const template = store.form_templates!.find((entry) => entry.id === row.template_id);
     const version = store.form_template_versions.find((entry) => entry.id === row.template_version_id);
+    // A row a case puts on file directly (no template in the store) keeps the form it names.
+    if (!template && row.template_name) continue;
     Object.assign(row, { template_key: template?.key, template_name: template?.name, layout_family: template?.layout_family, template_version: version?.version });
   }
 }
@@ -671,6 +676,7 @@ beforeEach(async () => {
   for (const key of Object.keys(store) as (keyof FakeStore)[]) store[key] = [];
   store.form_instances = new JoiningRows() as never;
   state.slotReading = "none";
+  state.lastFormRecords = "";
   fullManual.document = null;
   state.remapObservation = null;
   state.slotsRead = {};
@@ -840,6 +846,7 @@ function context(): ReplayContext {
     },
     calls: () => ({ chat: state.chatModelCalls, draft: state.draftCalls, revision: state.revisionCalls, tool: state.toolCalls, patch: patchScript.calls }),
     forms: () => store.form_instances as never,
+    lastFormRecords: () => state.lastFormRecords,
     draftPrompts: () => [...draftAsked],
     revisionPrompts: () =>
       revisionAsked.map((asked) =>

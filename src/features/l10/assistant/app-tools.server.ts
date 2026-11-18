@@ -4,7 +4,7 @@ import { jsonSchema, tool, type ToolSet } from "ai";
 
 import { businessToday } from "@/lib/business-date";
 import { loadGoogleReviewsChatBlock } from "@/lib/ai/google-reviews-chat-read";
-import { loadFormRecords } from "@/lib/forms/chat-form-records";
+import { formDateRangeFromInput, formKindFromText, loadFormRecords } from "@/lib/forms/chat-form-records";
 import type { AccessScope, Role } from "@/types";
 
 /**
@@ -66,19 +66,30 @@ export function appTools(viewer: AppToolsViewer, question: string): ToolSet {
     }),
     read_forms_on_file: tool({
       description:
-        "The Forms Register as this person sees it: the forms on file (coaching forms, corrective actions and their level, terminations and exit forms) with the employee, form, date, store, status and who filed it. Give employee_name to read one person's forms; leave it out for the most recent forms. Only when the person asks about forms on file, coaching, write-ups, terminations or someone's history.",
-      inputSchema: jsonSchema<{ employee_name?: string; form?: string }>({
+        "The Forms Register as this person sees it: the forms on file (coaching forms, corrective actions and their level, terminations and exit forms) with the employee, form, date, store, status and who filed it. Give employee_name to read one person's forms. For a period (\"who got a CA this month\", \"coachings last week\") give date_from and date_to as YYYY-MM-DD, and the kind of form in form: every such form is read by its form date, not only the most recent. Leave them all out for the most recent forms. Only when the person asks about forms on file, coaching, write-ups, terminations or someone's history.",
+      inputSchema: jsonSchema<{ employee_name?: string; form?: string; date_from?: string; date_to?: string }>({
         type: "object",
         properties: {
           employee_name: { type: "string", description: "The employee the person asked about, as they wrote it, if any." },
-          form: { type: "string", description: "The kind of form asked about (coaching, corrective action, termination, exit), if any." },
+          form: { type: "string", description: "The kind of form asked about (coaching, corrective action, termination, exit, EPP), if any." },
+          date_from: { type: "string", description: "First form date of the period asked about, YYYY-MM-DD (\"this month\" is the 1st of this month), if any." },
+          date_to: { type: "string", description: "Last form date of the period asked about, YYYY-MM-DD (today for \"this month\"), if any." },
         },
         required: [],
       }),
-      execute: async ({ employee_name, form }) => {
+      execute: async ({ employee_name, form, date_from, date_to }) => {
         const asked = [text(employee_name), text(form), question].filter(Boolean).join(" ");
+        const today = businessToday();
         try {
-          const read = await loadFormRecords({ actor: { subject: viewer.userId, verified: true, role: viewer.role, scope: viewer.scope }, question: asked, today: businessToday() });
+          /* "who got a CA this month?" (the owner, 18 Nov 2026: "why capped at 20"): every such form by date, not the newest 20. */
+          const read = await loadFormRecords({
+            actor: { subject: viewer.userId, verified: true, role: viewer.role, scope: viewer.scope },
+            question: asked,
+            today,
+            narrowFromQuestion: true,
+            range: formDateRangeFromInput(date_from, date_to, today),
+            kind: formKindFromText(text(form)),
+          });
           if (!read) return { refused: "This account's role cannot view the Forms Register, so no forms were read. Say so plainly." };
           return { source: "Forms Register", forms: { untrusted_text: read.block } };
         } catch {
