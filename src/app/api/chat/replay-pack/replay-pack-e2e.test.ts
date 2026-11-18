@@ -101,6 +101,9 @@ const state = vi.hoisted(() => ({
   chatModelCalls: 0,
   /** The FORMS ON FILE block the answering model was last given (`lastFormRecords`). */
   lastFormRecords: "",
+  /** The REPORT DATA and the system prompt the answering model was last given (`lastReportData`, `lastSystem`). */
+  lastReportData: "",
+  lastSystem: "",
   directory: [] as unknown[],
 }));
 
@@ -291,9 +294,11 @@ vi.mock("@/lib/ai/call-claude", () => ({
       usage: { inputTokens: 10, outputTokens: 5, cacheReadTokens: 0, cacheWriteTokens: 0 },
     };
   },
-  callClaude: async (input?: { formRecords?: string | null; formEditTool?: { data: string; onToolUse: (call: unknown) => void } | null }) => {
+  callClaude: async (input?: { system?: string; reportData?: string | null; formRecords?: string | null; formEditTool?: { data: string; onToolUse: (call: unknown) => void } | null }) => {
     state.chatModelCalls += 1;
     state.lastFormRecords = String(input?.formRecords ?? "");
+    state.lastReportData = String(input?.reportData ?? "");
+    state.lastSystem = String(input?.system ?? "");
     if (input?.formEditTool) {
       editTool.offered += 1;
       editTool.lastData = input.formEditTool.data;
@@ -476,6 +481,42 @@ vi.mock("@/lib/knowledge", () => ({
 }));
 
 vi.mock("@/lib/reporting/read/report-briefing", () => ({ loadReportBriefing: async () => null }));
+
+/*
+ * THE GOOGLE REVIEWS PAGE'S READS (GOOGLE_REVIEWS_IN_CHAT_ENABLED, QA 18 Nov 2026): fixed figures for the week of Mon
+ * 16 Nov 2026, every store, so a Google review question reads what the page would and never a database. Every store:
+ * 2 reviews this week (both qualifying, 5.0), 4 last week (3 qualifying, 4.5), 6 qualifying month to date of 10.
+ */
+vi.mock("@/lib/google-reviews/views", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/google-reviews/views")>();
+  const { goalContext } = await import("@/lib/google-reviews/goals");
+  const { APPROVED_GOOGLE_STORES } = await import("@/config/company/google-reviews");
+  return {
+    ...actual,
+    readGoalData: async () => ({
+      context: goalContext("2026-11-18"),
+      rows: APPROVED_GOOGLE_STORES.map((entry) => ({
+        storeCode: entry.code,
+        displayName: entry.displayName,
+        monthlyTarget: 10,
+        baselineReviewId: `baseline-${entry.code}`,
+        baselineReviewTime: "2026-09-01T05:00:00.000Z",
+        countFrom: null,
+        qualifyingThisWeek: 2,
+        qualifyingLastWeek: 3,
+        qualifyingMonthToDate: 6,
+        historical: 40,
+      })),
+    }),
+    readStoreSummaries: async () =>
+      APPROVED_GOOGLE_STORES.map((entry) => ({ storeCode: entry.code, reviewCount: 300, averageRating: 4.6, lastSyncAt: new Date().toISOString(), lastSyncStatus: "complete" })),
+    readPeriodTrend: async () => [
+      { start: "2026-11-09", reviewCount: 4, qualifyingCount: 3, averageRating: 4.5 },
+      { start: "2026-11-16", reviewCount: 2, qualifyingCount: 2, averageRating: 5 },
+    ],
+    readReviewPage: async () => ({ total: 0, rows: [], page: 1, pageSize: 20 }),
+  };
+});
 vi.mock("@/lib/reporting/read/employee-facts", () => ({
   loadEmployeeFacts: async () => null,
   NO_EMPLOYEE_DATA_REASON: "no dataset",
@@ -677,6 +718,8 @@ beforeEach(async () => {
   store.form_instances = new JoiningRows() as never;
   state.slotReading = "none";
   state.lastFormRecords = "";
+  state.lastReportData = "";
+  state.lastSystem = "";
   fullManual.document = null;
   state.remapObservation = null;
   state.slotsRead = {};
@@ -847,6 +890,8 @@ function context(): ReplayContext {
     calls: () => ({ chat: state.chatModelCalls, draft: state.draftCalls, revision: state.revisionCalls, tool: state.toolCalls, patch: patchScript.calls }),
     forms: () => store.form_instances as never,
     lastFormRecords: () => state.lastFormRecords,
+    lastReportData: () => state.lastReportData,
+    lastSystem: () => state.lastSystem,
     draftPrompts: () => [...draftAsked],
     revisionPrompts: () =>
       revisionAsked.map((asked) =>
