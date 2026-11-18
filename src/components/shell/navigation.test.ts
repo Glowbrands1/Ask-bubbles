@@ -44,6 +44,7 @@ const ROUTE_TO_FILE: Record<string, string> = {
   "/chat": "src/app/(app)/chat/page.tsx",
   "/history": "src/app/(app)/history/page.tsx",
   "/knowledge": "src/app/(app)/knowledge/page.tsx",
+  "/ai-training": "src/app/(app)/ai-training/page.tsx",
   "/forms/monitoring": "src/app/(app)/forms/monitoring/page.tsx",
   "/forms/templates": "src/app/(app)/forms/templates/page.tsx",
   "/reports": "src/app/(app)/reports/page.tsx",

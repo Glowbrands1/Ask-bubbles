@@ -80,7 +80,8 @@ export const ROLE_COPY: Readonly<Record<Role, RoleCopy>> = {
  * else is denied by ABSENCE, so a permission added next month is denied to
  * frontline staff automatically.
  */
-const EMPLOYEE: Permission[] = ["ask_questions", "view_knowledge"];
+// AI Training is for every member of staff, frontline included.
+const EMPLOYEE: Permission[] = ["ask_questions", "view_knowledge", "view_ai_training"];
 
 const ASSISTANT_MANAGER_BASE: Permission[] = [
   ...EMPLOYEE,
@@ -139,6 +140,7 @@ export const ALL_PERMISSIONS: readonly Permission[] = [
   "view_overview",
   "view_knowledge",
   "manage_knowledge",
+  "view_ai_training",
   "view_forms_workspace",
   "create_forms",
   "create_coaching_form",

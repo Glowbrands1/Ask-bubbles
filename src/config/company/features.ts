@@ -12,6 +12,7 @@ export const COMPANY_FEATURES = {
   home: true,
   assistant: true,
   knowledge: true,
+  aiTraining: true,
   forms: true,
   reports: true,
   reviews: true,
