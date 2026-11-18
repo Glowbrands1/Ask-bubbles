@@ -92,6 +92,8 @@ export interface ReplayContext {
   draftWriteCarries?(field: string): void;
   calls(): { chat: number; draft: number; revision: number; tool: number; patch: number };
   forms(): Record<string, unknown>[];
+  /** The FORMS ON FILE block the answering model was last given (empty when none): FORMS_ON_FILE_DATE_RANGE, 18 Nov 2026. */
+  lastFormRecords?(): string;
   values(instanceId: string): Record<string, string>;
   /** The ticked options of each checkbox group (form_instance_values.checked); groups with none are left out. */
   checked(instanceId: string): Record<string, string[]>;
