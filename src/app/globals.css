@@ -1423,6 +1423,12 @@
     --fab-right: calc(max(460px, 50vw) + 1.25rem);
   }
 }
+/* Ask Bubbles: the rock editor is a narrow panel (440px, Rocks.tsx), so the floating buttons move by that much only. */
+@media (min-width: 40rem) {
+  :root:has([data-side-panel="compact"]) .hub-l10 {
+    --fab-right: calc(440px + 1.25rem);
+  }
+}
 @media (max-width: 39.999rem) {
   :root:has([data-side-panel]) .hub-l10 [data-page-fab],
   :root:has([data-side-panel]) .hub-l10 [data-testid="assistant-launcher"] {
@@ -1580,6 +1586,13 @@
   --color-bar: var(--bcs-tokyo-tint-strong);
   /* cream: the warm hover and chip background, here Ask Bubbles' neutral muted surface. */
   --color-cream: var(--bcs-surface-muted);
+  /*
+   * rule / line: the dividers (agenda items, rows) and card/field edges. The Hub's pale beige (#e8e4d8 / #cfc8b2)
+   * vanished on the blue canvas (the owner, 17 Nov 2026: "border is hard to see pls fix"), so they are tints of
+   * Dark Tokyo Green here: dividers 35%, edges 50% on White.
+   */
+  --color-rule: color-mix(in srgb, var(--bcs-tokyo-dark) 35%, white);
+  --color-line: color-mix(in srgb, var(--bcs-tokyo-dark) 50%, white);
   /* The floating buttons' and glass cards' shadows had a bronze tint. */
   --shadow-float:
     inset 0 1px 0 rgb(255 255 255 / 0.95), 0 20px 50px -12px rgb(10 10 10 / 0.18),

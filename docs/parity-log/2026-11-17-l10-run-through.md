@@ -1,18 +1,16 @@
-# 17 Nov 2026: DM L10 run-through — IDS numbers, scorecard layout, everyone rates; the BCS GM L10 — ported to Ask Sunny
+# 17 Nov 2026: DM L10 run-through — everyone rates; the BCS GM L10; the assistant reads reviews and forms
 
-From the DM L10 test run (owner's email, 17 Nov 2026):
+From the DM L10 test run (owner's email, 17 Nov 2026) and the owner's follow-ups (18 Nov 2026).
 
-- **IDS prioritization**: "We need to assign topics a priority of 1, 2, 3, etc., and have them move into that order as
-  we select them. We should then work through and solve issues in that order." The "!" toggle became a numbered circle;
-  solving an issue drops its number and opens the next one.
-- **Scorecard layout**: "The scorecard sits too far to the right ... make it easier to review additional details
-  without scrolling to the bottom of the page to access the horizontal scrollbar." The table now spans the content
-  width under the agenda, centred, and scrolls inside a window-high box with "Newer / Older weeks".
+In Ask Bubbles:
 - **Conclude**: "Make sure every meeting attendee can submit their own meeting rating." Each person's own row comes
   first, someone in the meeting but off the display list gets a row, and "Not rated yet" shows above End.
-- **GM L10 in Bubbles**: tab label, Bloom layout, no rocks or Reference views, agenda Segue · Scorecard · To-dos · IDS ·
-  Conclude.
+- **GM L10**: tab label, Bloom layout, no rocks or Reference views, agenda Segue · Scorecard · To-dos · IDS · Conclude.
+- **Assistant**: the DM / GM L10 assistant reads Google reviews and the Forms Register, as the signed-in person.
+- **IDS numbering and the scorecard layout** came to Ask Bubbles through #953 / #954 (Marissa's feedback: numbers in
+  the order picked, `lib/priority.ts`; the scorecard's Full width button). This session's own versions of those two were
+  dropped here when merging, so Ask Bubbles keeps one of each.
 
-Ask Sunny: the same three fixes are ported (same mechanism, Sunny's data), and the STC SD L10 meeting spaces get the
-same no-rocks agenda. The Leadership Hub (meetings, rosters, allowlist rows, the scorecards carried over from Bloom
-Growth, the Leadership L10's own 1/2/3 ranking) is a separate repository and still needs its side.
+Ask Sunny: ported (ratings), plus its own IDS numbering and centred scorecard, the three STC SD L10s, and the assistant
+reading its reports, Google reviews and Form Monitoring. The Leadership Hub has the same numbering, scorecard and
+ratings on its own page, and the GM / SD meetings.

@@ -1,4 +1,5 @@
 // Copied from the Leadership Hub (src/lib/meetings/timer.ts); keep in step with it. See src/features/l10/README.md.
+import { withHistory } from "./todoHistory";
 import { agendaFor, type AgendaKey } from "./config";
 import { keepHiddenAttendees } from "./doc";
 import type { Attendee, Issue, MeetingDoc, Todo } from "./types";
@@ -71,9 +72,12 @@ export function startMeeting(doc: MeetingDoc, now: number, viewer: { id: string;
       addedBy: t.owner,
     })),
   ];
+  // Ask Bubbles: the done to-dos go to the to-do history instead of being dropped (lib/todoHistory.ts, 17 Nov 2026).
+  const done = doc.todos.filter((t) => t.done);
   return {
     ...doc,
     todos,
+    ...(done.length ? { todoHistory: withHistory(doc, done, now) } : {}),
     issues,
     // A clean slate for the people shown; rows of people the page no longer shows are kept as they were.
     attendees: keepHiddenAttendees(doc.attendees ?? [], attendees.map((a) => ({ ...a, shared: false, rating: null }))),

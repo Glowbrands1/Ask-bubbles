@@ -1,7 +1,7 @@
 "use client";
 // Copied from the Leadership Hub (src/app/meetings/_components/Scorecard.tsx); keep in step with it. See src/features/l10/README.md.
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { Button, cx, inputClass } from "@/features/l10/ui/ui";
 import { inWeek, initials, ownerColor, weekBounds, weekRange } from "@/features/l10/lib/bloom";
 import { addWeek, cellTone, formatValue, newestFirst, newItemId, parseCell, setCell, shortDate, type CellTone } from "@/features/l10/lib/doc";
@@ -18,11 +18,17 @@ const TONE: Record<CellTone, string> = {
 /** Bloom-style cells (the DM L10s): tinted green on goal, red off goal, and an empty box for a week not entered yet. */
 const BLOOM_TONE: Record<CellTone, string> = {
   empty: "border border-dashed border-line bg-white text-muted",
-  negative: "bg-[#fbe4e4] font-semibold text-[#8a1c1c]",
-  bad: "bg-[#fbe4e4] font-semibold text-[#8a1c1c]",
+  negative: "bg-[#fbe4e4] text-[#8a1c1c]",
+  bad: "bg-[#fbe4e4] text-[#8a1c1c]",
   near: "bg-[#fbe4e4] text-[#8a1c1c]",
-  good: "bg-[#e1f1e4] font-semibold text-[#154a21]",
+  good: "bg-[#e1f1e4] text-[#154a21]",
 };
+
+/*
+ * Ask Bubbles, Bloom-style: figures in the page's own font (Public Sans) at medium weight, digits lined up
+ * (tabular-nums), not the bold monospace code font (the owner, 17 Nov 2026: "the numbers hurt my eyes").
+ */
+const BLOOM_FIGURES = "font-sans font-medium tabular-nums";
 
 function Cell({ row, week, label, onCommit, bloom = false }: { row: ScorecardRow; week: number; label: string; onCommit: (v: number | null) => void; bloom?: boolean }) {
   const value = row.weeks[week] ?? null;
@@ -59,7 +65,7 @@ function Cell({ row, week, label, onCommit, bloom = false }: { row: ScorecardRow
       }}
       aria-label={`${row.metric} ${label}: ${formatValue(value, row.format)}`}
       data-tone={tone}
-      className={cx("min-h-9 w-full min-w-[64px] rounded-md px-1.5 py-1 text-right font-mono text-sm whitespace-nowrap hover:ring-2 hover:ring-gold/60", bloom ? BLOOM_TONE[tone] : TONE[tone])}
+      className={cx("min-h-9 w-full min-w-[64px] rounded-md px-1.5 py-1 text-right text-sm whitespace-nowrap hover:ring-2 hover:ring-gold/60", bloom ? cx(BLOOM_FIGURES, BLOOM_TONE[tone]) : cx("font-mono", TONE[tone]))}
     >
       {bloom && value == null ? "" : formatValue(value, row.format)}
     </button>
@@ -72,7 +78,8 @@ export function Scorecard({
   people,
   bloom = false,
   today = "",
-  part = "all",
+  wide,
+  onWide,
 }: {
   doc: MeetingDoc;
   edit: (fn: (d: MeetingDoc) => MeetingDoc) => void;
@@ -80,12 +87,9 @@ export function Scorecard({
   /** Laid out like Bloom Growth's scorecard (the DM L10s). */
   bloom?: boolean;
   today?: string;
-  /**
-   * Ask Bubbles and its sibling app: which part to draw. On the Bloom-style pages the page puts "controls" (Add metric, Add
-   * week) in its main column and "table" full width under the agenda row, centred (the DM L10 run-through, 17 Nov 2026:
-   * "The scorecard sits too far to the right, leaving a lot of unused space"). "all" draws both, as in the Hub.
-   */
-  part?: "all" | "controls" | "table";
+  /** Ask Bubbles: the table uses the whole page (the agenda column hidden); with `onWide`, a Full width / Collapse button. */
+  wide?: boolean;
+  onWide?: (wide: boolean) => void;
 }) {
   const order = newestFirst(doc);
   const [metric, setMetric] = useState("");
@@ -93,6 +97,12 @@ export function Scorecard({
   const [goal, setGoal] = useState("");
   const [format, setFormat] = useState<MetricFormat>("percent");
   const [higher, setHigher] = useState(true);
+  /*
+   * Ask Bubbles, Bloom-style: the form is closed until "Add metric" is pressed, a button next to "Add week" (Marissa's
+   * email, 17 Nov 2026: "Can we make the add metric a tab like the add week that then expands when you need to add
+   * something, right now it gets a bit confusing.").
+   */
+  const [adding, setAdding] = useState(false);
 
   const addMetric = () => {
     if (!metric.trim()) return;
@@ -114,7 +124,14 @@ export function Scorecard({
 
   const form = (
     <div className="rounded-[10px] border border-dashed border-line bg-cream/60 p-3 print:hidden" data-testid="add-metric">
-      <div className="mb-2 text-xs font-bold text-muted">Add metric</div>
+      <div className="mb-2 flex items-center justify-between gap-2 text-xs font-bold text-muted">
+        Add metric
+        {bloom && (
+          <Button variant="link" onClick={() => setAdding(false)}>
+            Done
+          </Button>
+        )}
+      </div>
       <div className="flex flex-wrap items-center gap-2">
         <input aria-label="Metric name" value={metric} onChange={(e) => setMetric(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addMetric()} placeholder="Metric name…" className={cx(inputClass, "min-w-[220px] flex-1")} />
         <select aria-label="Metric owner" value={owner} onChange={(e) => setOwner(e.target.value)} className={cx(inputClass, "w-44")}>
@@ -139,22 +156,41 @@ export function Scorecard({
     </div>
   );
 
-  if (bloom && part === "table") return doc.scorecard.length > 0 ? <BloomTable doc={doc} edit={edit} order={order} today={today} /> : null;
-
   return (
     <div className="flex flex-col gap-3">
-      {/* Bloom-style: "Add metric" at the top, above the table, like "Add new rock" (the owner's request, 15 Nov 2026). */}
-      {bloom && form}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="m-0 text-sm text-muted print:hidden">Most recent week first. Tap any cell to edit.</p>
-        <Button variant="outline" className="print:hidden" onClick={() => edit(addWeek)}>
-          Add week
-        </Button>
-      </div>
+      {bloom ? (
+        /*
+         * Ask Bubbles: the buttons first, on the left, where they are seen (the owner, 17 Nov 2026: "make 'add week'
+         * button visible"; it sat at the far right, off screen on a narrow window). On a phone they wrap.
+         */
+        <div className="flex flex-wrap items-center gap-2 print:hidden" data-testid="scorecard-toolbar">
+          <Button variant="primary" onClick={() => edit(addWeek)}>
+            + Add week
+          </Button>
+          <Button variant="outline" aria-expanded={adding} aria-controls="add-metric-form" onClick={() => setAdding((a) => !a)}>
+            Add metric
+          </Button>
+          {onWide && (
+            <Button variant="outline" aria-pressed={!!wide} title={wide ? "Show the agenda again" : "Hide the agenda so the table uses the whole page"} onClick={() => onWide(!wide)}>
+              {wide ? "⤡ Collapse" : "⤢ Full width"}
+            </Button>
+          )}
+          <p className="m-0 basis-full text-sm text-muted sm:ml-auto sm:basis-auto">Most recent week first. Tap any cell to edit.</p>
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="m-0 text-sm text-muted print:hidden">Most recent week first. Tap any cell to edit.</p>
+          <Button variant="outline" className="print:hidden" onClick={() => edit(addWeek)}>
+            Add week
+          </Button>
+        </div>
+      )}
+      {/* Bloom-style: the form opens above the table when "Add metric" is pressed. */}
+      {bloom && adding && <div id="add-metric-form">{form}</div>}
       {doc.scorecard.length > 0 && bloom ? (
-        part === "controls" ? null : <BloomTable doc={doc} edit={edit} order={order} today={today} />
+        <BloomTable doc={doc} edit={edit} order={order} today={today} />
       ) : doc.scorecard.length === 0 ? (
-        <p className="m-0 rounded-[10px] border border-dashed border-line p-4 text-sm text-muted">No metrics yet. Add the first one {bloom ? "above" : "below"}.</p>
+        <p className="m-0 rounded-[10px] border border-dashed border-line p-4 text-sm text-muted">No metrics yet. {bloom ? "Press Add metric to add the first one." : "Add the first one below."}</p>
       ) : (
         <div className="overflow-x-auto rounded-[10px] border border-line bg-white shadow-card">
           <table className="w-full border-collapse text-sm">
@@ -211,50 +247,27 @@ const tableHead = "bg-ink text-xs font-bold tracking-[0.06em] text-gold-head";
  * The scorecard as Bloom Growth lays it out (the DM L10s; the owner's request, 15 Nov 2026): Who (the owner's initials,
  * full name on hover), Metric, Goal, then the weeks newest first, each headed by its range ("2 Nov / 8 Nov") with this
  * week shaded. Rows are grouped by owner with a gap between groups; older weeks scroll sideways. Same cells, same saves.
- *
- * Ask Bubbles and its sibling app (the DM L10 run-through, 17 Nov 2026: "make it easier to review additional details without
- * scrolling to the bottom of the page to access the horizontal scrollbar"): the table scrolls inside a box no taller
- * than the window, so its sideways scrollbar is always on screen; the header row and the Who column stay put while it
- * scrolls; and "Newer weeks" / "Older weeks" move it sideways a few weeks at a time. The box is as wide as the table
- * (up to the page's width) and centred.
  */
 function BloomTable({ doc, edit, order, today }: { doc: MeetingDoc; edit: (fn: (d: MeetingDoc) => MeetingDoc) => void; order: number[]; today: string }) {
   const groups = new Map<string, ScorecardRow[]>();
   for (const r of doc.scorecard) groups.set(r.owner, [...(groups.get(r.owner) ?? []), r]);
   const current = (i: number) => inWeek(doc.weekEndings[i], today);
-  const box = useRef<HTMLDivElement>(null);
-  const slide = (dir: 1 | -1) => {
-    const el = box.current;
-    if (!el) return;
-    const left = dir * Math.max(240, Math.round(el.clientWidth * 0.6));
-    if (typeof el.scrollBy === "function") el.scrollBy({ left, behavior: "smooth" });
-    else el.scrollLeft += left;
-  };
   return (
-    <section aria-label="Scorecard table" className="mx-auto flex w-fit max-w-full min-w-0 flex-col gap-2">
-      <div className="flex items-center justify-end gap-2 print:hidden">
-        <Button variant="outline" aria-label="Show newer weeks" onClick={() => slide(-1)}>
-          ← Newer weeks
-        </Button>
-        <Button variant="outline" aria-label="Show older weeks" onClick={() => slide(1)}>
-          Older weeks →
-        </Button>
-      </div>
-    <div ref={box} tabIndex={0} aria-label="Scorecard, scrolls sideways for older weeks" className="max-h-[calc(100dvh-7rem)] max-w-full overflow-auto overscroll-x-contain rounded-[10px] border border-line bg-white shadow-card print:max-h-none print:overflow-visible" data-testid="bloom-scorecard">
-      <table className="border-collapse text-sm">
-        <thead className="sticky top-0 z-20">
+    <div className="overflow-x-auto rounded-[10px] border border-line bg-white shadow-card" data-testid="bloom-scorecard">
+      <table className="w-full border-collapse text-sm">
+        <thead>
           <tr className={tableHead}>
-            <th scope="col" className="sticky left-0 z-10 w-14 min-w-14 bg-ink px-3 py-2.5 text-left">
+            <th scope="col" className="sticky left-0 z-10 w-12 bg-ink px-3 py-2.5 text-left">
               Who
             </th>
-            <th scope="col" className="sticky left-14 z-10 bg-ink px-3 py-2.5 text-left">
+            <th scope="col" className="px-3 py-2.5 text-left">
               Metric
             </th>
-            <th scope="col" className="bg-ink px-3 py-2.5 text-left">
+            <th scope="col" className="px-3 py-2.5 text-left">
               Goal
             </th>
             {order.map((i) => (
-              <th key={i} scope="col" data-current={current(i) ? "true" : undefined} data-current-week={current(i) ? "" : undefined} className="bg-ink px-2 py-2 text-right font-mono leading-tight whitespace-nowrap">
+              <th key={i} scope="col" data-current={current(i) ? "true" : undefined} data-current-week={current(i) ? "" : undefined} className={cx("px-2 py-2 text-right leading-tight whitespace-nowrap", BLOOM_FIGURES)}>
                 {(() => {
                   // Two lines, start over end ("9 Nov" / "15 Nov"); the slash is kept for screen readers.
                   const b = weekBounds(doc.weekEndings[i]);
@@ -279,13 +292,13 @@ function BloomTable({ doc, edit, order, today }: { doc: MeetingDoc; edit: (fn: (
           <tbody key={owner} aria-label={`${owner}'s metrics`} className="border-t-[10px] border-cream first-of-type:border-t-0">
             {rows.map((r) => (
               <tr key={r.id} data-owner-row={ownerColor(owner)} className="border-t border-rule">
-                <td className="sticky left-0 z-10 w-14 min-w-14 bg-white px-3 py-2">
+                <td className="sticky left-0 z-10 bg-white px-3 py-2">
                   <span title={owner} data-owner-color={ownerColor(owner)} className="flex size-8 items-center justify-center rounded-full text-[11px] font-bold">
                     <span aria-hidden>{initials(owner)}</span>
                     <span className="sr-only">{owner}</span>
                   </span>
                 </td>
-                <td className="sticky left-14 z-10 min-w-[170px] bg-white px-3 py-2 font-semibold shadow-[6px_0_6px_-6px_rgba(0,0,0,0.18)]">
+                <td className="min-w-[120px] px-3 py-2 font-semibold sm:min-w-[170px]">
                   <span className="flex items-center justify-between gap-2">
                     {r.metric}
                     <button
@@ -299,7 +312,7 @@ function BloomTable({ doc, edit, order, today }: { doc: MeetingDoc; edit: (fn: (
                     </button>
                   </span>
                 </td>
-                <td className="px-3 py-2 font-mono whitespace-nowrap text-muted">{r.goal}</td>
+                <td className={cx("px-3 py-2 whitespace-nowrap text-muted", BLOOM_FIGURES)}>{r.goal}</td>
                 {order.map((i) => (
                   <td key={i} data-current-week={current(i) ? "" : undefined} className="px-1 py-1">
                     <Cell bloom row={r} week={i} label={weekRange(doc.weekEndings[i]) || `week ${i + 1}`} onCommit={(v) => edit((d) => setCell(d, r.id, i, v))} />
@@ -311,6 +324,5 @@ function BloomTable({ doc, edit, order, today }: { doc: MeetingDoc; edit: (fn: (
         ))}
       </table>
     </div>
-    </section>
   );
 }

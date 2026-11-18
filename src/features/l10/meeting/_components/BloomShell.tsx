@@ -3,14 +3,14 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { Button, cx, inputClass } from "@/features/l10/ui/ui";
+import { Button, Modal, cx, inputClass } from "@/features/l10/ui/ui";
 import { MentionField } from "@/features/l10/ui/Mentions";
 import { durationLabel, initials, mmddyyyy } from "@/features/l10/lib/bloom";
 import type { PastMeeting } from "@/features/l10/lib/past";
 
 /*
  * The parts every page of a Bloom-style meeting shares (the DM L10s; the owner's request, 15 Nov 2026): the Meeting
- * Notes drawer, the "Last meeting's summary" card and the "New Issue" bar pinned at the bottom. Hub colours and fonts;
+ * Notes drawer, the "Last meeting's summary" card and the floating "New Issue" button. Hub colours and fonts;
  * Bloom's layout only.
  */
 
@@ -36,8 +36,10 @@ export function SidePanel({ title, closeLabel, onClose, footer, children, testId
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
   return createPortal(
-    <aside role="dialog" aria-modal="false" aria-label={title} data-side-panel data-testid={testId} className="fixed inset-y-0 right-0 z-[45] flex w-full flex-col border-l border-line bg-cream shadow-2xl sm:w-[max(460px,50vw)] print:hidden">
-      <div className="flex items-center gap-2 border-b border-line bg-white px-4 py-3">
+    // Ask Bubbles: a narrow panel (440px; the Hub's is half the screen). The owner, 17 Nov 2026: "also meeting notes is
+    // too big. TOO MUCH SPACE make friendly both phone and website". Still a full-width sheet on a phone.
+    <aside role="dialog" aria-modal="false" aria-label={title} data-side-panel="compact" data-testid={testId} className="fixed inset-y-0 right-0 z-[45] flex w-full flex-col border-l border-line bg-cream shadow-2xl sm:w-[440px] print:hidden">
+      <div className="flex items-center gap-2 border-b border-line bg-white px-4 py-2">
         <h2 ref={heading} tabIndex={-1} className="m-0 min-w-0 flex-1 truncate text-base font-bold outline-none">
           {title}
         </h2>
@@ -45,8 +47,8 @@ export function SidePanel({ title, closeLabel, onClose, footer, children, testId
           ✕
         </button>
       </div>
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-4 py-4">{children}</div>
-      {footer && <div className="flex flex-wrap items-center gap-2 border-t border-line bg-white px-4 py-3">{footer}</div>}
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain px-4 py-3">{children}</div>
+      {footer && <div className="flex flex-wrap items-center gap-2 border-t border-line bg-white px-4 py-2">{footer}</div>}
     </aside>,
     document.querySelector(".hub-l10") ?? document.body,
   );
@@ -76,8 +78,9 @@ export function MeetingNotes({ notes, onChange, saveStatus, disabled }: { notes:
           testId="meeting-notes-panel"
           footer={saveStatus ? <span className="ml-auto text-xs text-muted">{saveStatus}</span> : undefined}
         >
-          <p className="m-0 text-sm text-muted">Shared with everyone in this meeting. Saves as you type.</p>
-          <MentionField multiline aria-label="Meeting notes" value={notes} disabled={disabled} onChange={onChange} placeholder="Notes for this meeting… try @ and a name" className="min-h-64 py-2" />
+          <p className="m-0 text-xs text-muted">Shared with everyone in this meeting. Saves as you type.</p>
+          {/* The pad fills the panel's height (no big empty area under a fixed-size box). */}
+          <MentionField multiline aria-label="Meeting notes" value={notes} disabled={disabled} onChange={onChange} placeholder="Notes for this meeting… try @ and a name" wrapperClassName="flex flex-1 flex-col" className="min-h-48 flex-1 py-2" />
         </SidePanel>
       )}
     </>
@@ -158,12 +161,15 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 /**
- * "New Issue": who owns it, the issue, Enter. It takes the place of the floating Add to IDS button on these meetings and
- * saves the same way (with an owner). Inline in the main column, right after each page's title and hint (on the segue
- * page, right under the round-robin banner): the owner asked "why is the issue at the bottom? It should be at the top"
- * (15 Nov 2026). It was pinned to the bottom of the window across its full width, over Ask Bubbles' sidebar.
+ * "New Issue": a floating button on every agenda page that opens a small window (the issue, who owns it, Add), saved
+ * the same way as before (with an owner and who added it).
+ *
+ * Ask Bubbles: it was an inline bar at the top of each page (the owner's report, 15 Nov 2026). After the first BCS DM
+ * L10 the team asked for it back as a button (Marissa's email, 17 Nov 2026): "Can we remove the issues banner and make
+ * it a button like we had on Maddie's notion meeting, the banner gets confusing when there is also another spot to add
+ * a new to-do or metric." It sits where the Add to IDS button sits on the other meetings (`ParkIt`), and "i" opens it.
  */
-export function NewIssueBar({ people, me, onAdd }: { people: string[]; me: string; onAdd: (title: string, owner: string) => void }) {
+export function NewIssueButton({ people, me, onAdd, open, setOpen }: { people: string[]; me: string; onAdd: (title: string, owner: string) => void; open: boolean; setOpen: (open: boolean) => void }) {
   const [title, setTitle] = useState("");
   const [owner, setOwner] = useState(people.includes(me) ? me : (people[0] ?? ""));
   const [notice, setNotice] = useState("");
@@ -173,32 +179,53 @@ export function NewIssueBar({ people, me, onAdd }: { people: string[]; me: strin
     onAdd(t, owner);
     setNotice(`Added to IDS: ${t}`);
     setTitle("");
+    setOpen(false);
   };
   return (
-    <form
-      aria-label="New Issue"
-      data-testid="new-issue-bar"
-      onSubmit={(e) => {
-        e.preventDefault();
-        submit();
-      }}
-      className="flex min-w-0 items-center gap-2 rounded-[10px] border border-line bg-white px-3 py-2 shadow-card print:hidden"
-    >
-      <span aria-hidden className="hidden size-8 flex-none items-center justify-center rounded-full bg-cream text-[11px] font-bold sm:flex" title={owner}>
-        {initials(owner)}
-      </span>
-      <select aria-label="Issue owner" value={owner} onChange={(e) => setOwner(e.target.value)} className={cx(inputClass, "w-32 flex-none sm:w-44")}>
-        {people.map((p) => (
-          <option key={p}>{p}</option>
-        ))}
-      </select>
-      <input aria-label="New Issue" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="New Issue… press Enter to add" className={cx(inputClass, "min-w-0 flex-1")} />
-      <Button type="submit" variant="primary" disabled={!title.trim()}>
-        Add
+    <>
+      <Button variant="primary" onClick={() => setOpen(true)} data-page-fab data-testid="new-issue-button" className="fixed right-(--fab-right) bottom-(--fab-bottom) z-40 min-h-(--fab-h) rounded-full shadow-card print:hidden" title="Add an issue to IDS">
+        + New Issue
       </Button>
       <p role="status" aria-live="polite" className="sr-only">
         {notice}
       </p>
-    </form>
+      <Modal
+        open={open}
+        title="New Issue"
+        onClose={() => setOpen(false)}
+        footer={
+          <>
+            <Button onClick={() => setOpen(false)}>Cancel</Button>
+            <Button variant="primary" disabled={!title.trim()} onClick={submit}>
+              Add to IDS
+            </Button>
+          </>
+        }
+      >
+        <form
+          aria-label="New Issue"
+          onSubmit={(e) => {
+            e.preventDefault();
+            submit();
+          }}
+          className="flex flex-col gap-3"
+        >
+          <input aria-label="New Issue" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="The issue… press Enter to add" className={inputClass} />
+          <label className="flex flex-col gap-1 text-xs font-bold text-muted">
+            Owner
+            <span className="flex items-center gap-2">
+              <span aria-hidden className="flex size-8 flex-none items-center justify-center rounded-full bg-cream text-[11px] font-bold text-ink" title={owner}>
+                {initials(owner)}
+              </span>
+              <select aria-label="Issue owner" value={owner} onChange={(e) => setOwner(e.target.value)} className={cx(inputClass, "flex-1")}>
+                {people.map((p) => (
+                  <option key={p}>{p}</option>
+                ))}
+              </select>
+            </span>
+          </label>
+        </form>
+      </Modal>
+    </>
   );
 }

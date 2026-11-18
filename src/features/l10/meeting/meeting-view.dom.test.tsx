@@ -28,10 +28,17 @@ const viewer = { id: "hub-user-1", label: "avery.quill@example.test", name: "Ave
 const loaded = (version = 3, doc: Record<string, unknown> = { attendees: [{ id: "att-avery", name: "Avery Quill", role: "Visionary", shared: true, rating: null }] }): LoadedMeeting => ({ version, updatedAt: null, doc });
 const HUB = "https://hub.example.test/meetings/bcs-dm";
 
-function renderView(over: { save?: SaveFn; load?: LoadFn; initial?: LoadedMeeting; pollMs?: number; roster?: Roster; mentionPeople?: { id: string; name: string }[] } = {}) {
+/*
+ * A meeting that is not Bloom-style (the Hub's standard page, with the round-robin check-off): the BCS DM L10 has none
+ * since 17 Nov 2026, so the tests of the Hub's round-robin mechanism run on this one. Invented details.
+ */
+// Was the BCS GM L10 until 17 Nov 2026, when it became Bloom-style like the DM L10 (no round-robin either).
+const standardInfo: MeetingInfo = { ...info, key: "maintenance", name: "Maintenance L10" };
+
+function renderView(over: { info?: MeetingInfo; save?: SaveFn; load?: LoadFn; initial?: LoadedMeeting; pollMs?: number; roster?: Roster; mentionPeople?: { id: string; name: string }[] } = {}) {
   return render(
     <MeetingView
-      info={info}
+      info={over.info ?? info}
       initial={over.initial ?? loaded()}
       save={over.save ?? (vi.fn() as unknown as SaveFn)}
       end={vi.fn() as unknown as EndFn}
@@ -52,6 +59,15 @@ afterEach(() => {
   cleanup();
   vi.useRealTimers();
 });
+
+/** An edit on any page of the BCS DM L10: an issue added with the floating New Issue button. */
+function addIssue(title: string, owner?: string) {
+  fireEvent.click(screen.getByRole("button", { name: "+ New Issue" }));
+  const form = within(screen.getByRole("form", { name: "New Issue" }));
+  if (owner) fireEvent.change(form.getByLabelText("Issue owner"), { target: { value: owner } });
+  fireEvent.change(form.getByRole("textbox", { name: "New Issue" }), { target: { value: title } });
+  fireEvent.submit(screen.getByRole("form", { name: "New Issue" }));
+}
 
 describe("the DM L10 page in Ask Bubbles", () => {
   it("has the Hub's header: title, team and cadence, leader, Export PDF, History, Start meeting, signed-in name, save status", () => {
@@ -78,8 +94,9 @@ describe("the DM L10 page in Ask Bubbles", () => {
     const items = agenda.getAllByRole("listitem").map((li) => li.textContent);
     // Ask Bubbles: Ask Sunny's test checks the STC DM L10's own agenda here. This copy keeps none of that meeting's
     // exceptions (lib/config.ts), so a roster without an agenda runs the Hub's standard L10 agenda.
+    // Changed on purpose 17 Nov 2026: the BCS DM L10 shows its segue as "Recap" (lib/config.ts SECTION_TITLE).
     expect(items).toEqual([
-      "1 · Segue · Business Best5m",
+      "1 · Recap5m",
       "2 · Scorecard5m",
       "3 · Rock Review5m",
       "4 · Customer / Employee Headlines5m",
@@ -94,48 +111,53 @@ describe("the DM L10 page in Ask Bubbles", () => {
     expect(screen.getByTestId("section-position").textContent).toBe("Section 1 of 7");
   });
 
+  // Since 17 Nov 2026 only meetings that are not Bloom-style have the round-robin (see "Marissa's email" below).
   it("the round-robin is the Hub's roster, with seat titles, and the saved check-offs", () => {
-    renderView();
+    renderView({ info: standardInfo });
     const text = document.body.textContent ?? "";
     for (const person of ["Avery Quill", "Bo Lark", "Cy Marlow", "Visionary", "Integrator"]) expect(text).toContain(person);
     expect(text).toContain("1/3 shared");
   });
 
-  it("checking someone off saves to the Hub on top of the version it was based on", async () => {
+  // Changed on purpose 17 Nov 2026: the edit is a new issue (the BCS DM L10 no longer has the round-robin check-off).
+  it("an edit saves to the Hub on top of the version it was based on", async () => {
     const save = vi.fn(async (): Promise<SaveOutcome> => ({ ok: true, version: 4, updatedAt: "t" }));
     renderView({ save: save as unknown as SaveFn });
+    addIssue("Late truck", "Bo Lark");
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: /Bo Lark/ })); // by role: the New Issue bar's owner picker lists the names too (15 Nov 2026)
       await new Promise((r) => setTimeout(r, 20));
     });
     await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(1)); // waits for the debounced save, not a fixed 20 ms (slow under a loaded parallel run)
-    const [key, version, doc] = save.mock.calls[0] as unknown as [string, number, { attendees: { name: string; shared: boolean }[] }];
+    const [key, version, doc] = save.mock.calls[0] as unknown as [string, number, { issues: { title: string; owner?: string }[] }];
     expect(key).toBe("bcs-dm");
     expect(version).toBe(3);
-    expect(doc.attendees.find((a) => a.name === "Bo Lark")?.shared).toBe(true);
+    expect(doc.issues.at(-1)).toMatchObject({ title: "Late truck", owner: "Bo Lark" });
     await vi.waitFor(() => expect(screen.getByTestId("save-status").textContent).toBe("All changes saved"));
   });
 
   it("an edit made in the Hub shows up here on the next refresh (polling the same record)", async () => {
     vi.useFakeTimers();
     const load = vi.fn(async () => ({ ok: true as const, loaded: loaded(5, { attendees: [{ id: "att-cy", name: "Cy Marlow", role: "", shared: true, rating: null }] }) }));
-    renderView({ load: load as unknown as LoadFn, pollMs: 4000 });
+    // The round-robin's check-offs show the Hub's edit (on a meeting that has one: see standardInfo).
+    renderView({ info: standardInfo, load: load as unknown as LoadFn, pollMs: 4000 });
     expect(document.body.textContent).toContain("1/3 shared");
     await act(async () => {
       await vi.advanceTimersByTimeAsync(4100);
     });
-    expect(load).toHaveBeenCalledWith("bcs-dm");
+    expect(load).toHaveBeenCalledWith("maintenance");
     // Cy is now checked off (the Hub's edit), Avery no longer (the Hub's document replaced it).
-    const cy = screen.getByRole("button", { name: /Cy Marlow/ }); // by role: the New Issue bar's owner picker lists the names too (15 Nov 2026)
+    const cy = screen.getByRole("button", { name: /Cy Marlow/ });
     expect(cy?.getAttribute("aria-pressed")).toBe("true");
   });
 
-  // Changed on purpose 15 Nov 2026: the BCS DM L10's pages are laid out like Bloom Growth's, so the floating Add to IDS
-  // button became the New Issue bar (owner, issue, Enter), inline at the top of each page since the owner's report below.
-  it("has the New Issue bar in place of the floating Add to IDS button", () => {
+  // Changed on purpose 15 Nov 2026, then 17 Nov 2026: the BCS DM L10's pages are laid out like Bloom Growth's, so the
+  // floating Add to IDS button became the New Issue bar; after the first meeting the team asked for a button again,
+  // which opens the New Issue window (owner, issue) instead of the Add to IDS one.
+  it("has the New Issue button in place of the floating Add to IDS button", () => {
     renderView();
-    expect(screen.queryByRole("button", { name: /Add to IDS/ })).toBeNull();
-    expect(screen.getByRole("form", { name: "New Issue" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /^Add to IDS/ })).toBeNull();
+    expect(screen.getByRole("button", { name: "+ New Issue" }).hasAttribute("data-page-fab")).toBe(true);
+    expect(screen.queryByRole("form", { name: "New Issue" })).toBeNull();
   });
 
   it("IDS has Short term, Long-term and Recently solved tabs, as in the Hub", () => {
@@ -174,8 +196,8 @@ describe("saving: the page says saved only when the Hub has saved it", () => {
     let answer!: (o: SaveOutcome) => void;
     const save = vi.fn(() => new Promise<SaveOutcome>((r) => (answer = r)));
     renderView({ save: save as unknown as SaveFn });
+    addIssue("Late truck");
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: /Bo Lark/ })); // by role: the New Issue bar's owner picker lists the names too (15 Nov 2026)
       await new Promise((r) => setTimeout(r, 20));
     });
     await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(1));
@@ -193,8 +215,8 @@ describe("saving: the page says saved only when the Hub has saved it", () => {
       .mockResolvedValueOnce({ ok: false, kind: "unavailable", message: "The Leadership Hub could not be reached. Your change is kept on this page." })
       .mockResolvedValueOnce({ ok: true, version: 4, updatedAt: "t" });
     renderView({ save: save as unknown as SaveFn });
+    addIssue("Late truck");
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: /Bo Lark/ })); // by role: the New Issue bar's owner picker lists the names too (15 Nov 2026)
       await new Promise((r) => setTimeout(r, 20));
     });
     // Waits for the failed save rather than relying on the 20 ms sleep alone (as in Ask Sunny #1038).
@@ -207,9 +229,9 @@ describe("saving: the page says saved only when the Hub has saved it", () => {
       await new Promise((r) => setTimeout(r, 20));
     });
     await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(2));
-    const [, version, doc] = save.mock.calls[1] as unknown as [string, number, { attendees: { name: string; shared: boolean }[] }];
+    const [, version, doc] = save.mock.calls[1] as unknown as [string, number, { issues: { title: string }[] }];
     expect(version).toBe(3);
-    expect(doc.attendees.find((a) => a.name === "Bo Lark")?.shared).toBe(true);
+    expect(doc.issues.at(-1)?.title).toBe("Late truck");
     await vi.waitFor(() => expect(screen.getByTestId("save-status").textContent).toBe("All changes saved"));
   });
 
@@ -220,15 +242,15 @@ describe("saving: the page says saved only when the Hub has saved it", () => {
       .mockResolvedValueOnce({ ok: false, kind: "stale", latest })
       .mockResolvedValueOnce({ ok: true, version: 8, updatedAt: "t" });
     renderView({ save: save as unknown as SaveFn });
+    addIssue("Late truck");
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: /Bo Lark/ })); // by role: the New Issue bar's owner picker lists the names too (15 Nov 2026)
       await new Promise((r) => setTimeout(r, 30));
     });
     await waitFor(() => expect(save).toHaveBeenCalledTimes(2));
-    const [, version, doc] = save.mock.calls[1] as unknown as [string, number, { cascade?: string; attendees: { name: string; shared: boolean }[] }];
+    const [, version, doc] = save.mock.calls[1] as unknown as [string, number, { cascade?: string; issues: { title: string }[] }];
     expect(version).toBe(7);
     expect(doc.cascade).toBe("Staffing first"); // the other person's edit is kept
-    expect(doc.attendees.find((a) => a.name === "Bo Lark")?.shared).toBe(true); // and so is this one
+    expect(doc.issues.map((i) => i.title)).toContain("Late truck"); // and so is this one
     await waitFor(() => expect(screen.getByTestId("save-status").textContent).toBe("All changes saved"));
   });
 });
@@ -245,9 +267,12 @@ describe("the agenda, hints and roster come from the Hub (as in Ask Sunny)", () 
 
   it("runs the agenda and hints the Hub sends (a change in the Hub reaches this page with no Ask Bubbles deploy)", () => {
     // A title only the Hub knows proves the page uses the Hub's agenda, not its own copy.
-    renderView({ roster: { ...roster, agenda: hubAgenda!.map((a) => (a.key === "scorecard" ? { ...a, title: "Scorecard (from the Hub)" } : a)), hints: { "business-best": "Hint from the Hub." } } });
+    // Changed on purpose 17 Nov 2026: the hint is the Scorecard's, since the BCS DM L10's segue has its own (no check-off).
+    renderView({ roster: { ...roster, agenda: hubAgenda!.map((a) => (a.key === "scorecard" ? { ...a, title: "Scorecard (from the Hub)" } : a)), hints: { scorecard: "Hint from the Hub." } } });
     const items = within(screen.getByRole("region", { name: "Agenda" })).getAllByRole("listitem").map((li) => li.textContent);
-    expect(items).toEqual(["1 · Segue · Store Win5m", "2 · Scorecard (from the Hub)5m", "3 · Rock Review5m", "4 · To-Do List5m", "5 · IDS · Issues65m", "6 · Conclude5m"]);
+    // Changed on purpose 17 Nov 2026: the BCS DM L10's segue shows as "Recap" whatever the Hub calls it.
+    expect(items).toEqual(["1 · Recap5m", "2 · Scorecard (from the Hub)5m", "3 · Rock Review5m", "4 · To-Do List5m", "5 · IDS · Issues65m", "6 · Conclude5m"]);
+    fireEvent.click(within(screen.getByRole("region", { name: "Agenda" })).getByRole("button", { name: /Scorecard/ }));
     expect(document.body.textContent).toContain("Hint from the Hub.");
     expect(document.body.textContent).not.toContain("Headlines");
   });
@@ -255,16 +280,20 @@ describe("the agenda, hints and roster come from the Hub (as in Ask Sunny)", () 
   it("falls back to its copy of the Hub's config when the Hub's agenda is malformed", () => {
     renderView({ roster: { ...roster, agenda: [{ key: "nope", title: 3, minutes: -1 }] as unknown as Roster["agenda"] } });
     expect(within(screen.getByRole("region", { name: "Agenda" })).getAllByRole("listitem")).toHaveLength(7);
-    expect(document.body.textContent).toContain("Round-robin: each person shares one business best, then you check them off.");
+    // Changed on purpose 17 Nov 2026: the copy's segue hint mentions the check-off the BCS DM L10 no longer has, so the
+    // fallback is shown with the Scorecard's hint.
+    fireEvent.click(within(screen.getByRole("region", { name: "Agenda" })).getByRole("button", { name: /Scorecard/ }));
+    expect(document.body.textContent).toContain("Any metric off track from goal for two weeks becomes an issue.");
   });
 
   it("someone the Hub no longer lists is hidden, never deleted: a check-off saves their row untouched", async () => {
     const hidden = { id: "att-dex", name: "Dex Rowan", role: "", shared: true, rating: 9 };
     const save = vi.fn(async (): Promise<SaveOutcome> => ({ ok: true, version: 4, updatedAt: "t" }));
-    renderView({ save: save as unknown as SaveFn, roster: { ...roster, agenda: hubAgenda }, initial: loaded(3, { attendees: [{ id: "att-avery", name: "Avery Quill", role: "Visionary", shared: true, rating: null }, hidden] }) });
+    // On a meeting with the round-robin (see standardInfo).
+    renderView({ info: standardInfo, save: save as unknown as SaveFn, roster: { ...roster, agenda: hubAgenda }, initial: loaded(3, { attendees: [{ id: "att-avery", name: "Avery Quill", role: "Visionary", shared: true, rating: null }, hidden] }) });
     expect(document.body.textContent).not.toContain("Dex Rowan");
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: /Bo Lark/ })); // by role: the New Issue bar's owner picker lists the names too (15 Nov 2026)
+      fireEvent.click(screen.getByRole("button", { name: /Bo Lark/ }));
       await new Promise((r) => setTimeout(r, 20));
     });
     await vi.waitFor(() => expect(save).toHaveBeenCalled());
@@ -297,17 +326,17 @@ describe("no Reference for the BCS DM L10 (the owner's decision, 15 Nov 2026)", 
     );
     expect(screen.queryByRole("heading", { name: "Business Plan" })).toBeNull();
     expect(document.body.textContent).not.toContain("Vision, core values");
-    expect(screen.getByRole("heading", { level: 2, name: /Segue/ })).toBeTruthy();
+    // Changed on purpose 17 Nov 2026: the segue page has no title on this meeting (the owner: "just keep the last
+    // weeks feedback"), so the agenda's current step shows where the page opened.
+    expect(within(screen.getByRole("region", { name: "Agenda" })).getByRole("button", { name: /Recap/, current: "step" })).toBeTruthy();
   });
 
   it("the Hub's word that a meeting has no Reference is followed", async () => {
     const { referenceFromRoster } = await import("@/features/l10/lib/config");
     expect(referenceFromRoster("bcs-dm", {})).toBe(false);
-    // The example of a meeting with the Reference views was the BCS GM L10 until 17 Nov 2026, when it was built without
-    // them (like the DM L10); the Leadership L10 has them.
+    // Changed on purpose 17 Nov 2026: the BCS GM L10 has no Reference either, so a meeting that has one is the Leadership L10.
     expect(referenceFromRoster("leadership", { reference: false })).toBe(false);
     expect(referenceFromRoster("leadership", {})).toBe(true);
-    expect(referenceFromRoster("bcs-gm", { reference: true })).toBe(false);
     // A Hub that says "true" cannot bring it back for the BCS DM L10.
     expect(referenceFromRoster("bcs-dm", { reference: true })).toBe(false);
   });
@@ -315,9 +344,23 @@ describe("no Reference for the BCS DM L10 (the owner's decision, 15 Nov 2026)", 
   it("its report has no Business Plan or org chart pages", async () => {
     const { reportSections } = await import("@/features/l10/lib/report");
     expect(reportSections("bcs-dm").map((s) => s.title)).toEqual(["Goals", "Issues", "Metrics", "Meeting Recaps"]);
-    // Changed on purpose (17 Nov 2026): the BCS GM L10 has no Reference views and no rocks; the Leadership L10 keeps them.
-    expect(reportSections("leadership").map((s) => s.title)).toContain("Business Plan");
-    expect(reportSections("bcs-gm").map((s) => s.title)).toEqual(["Issues", "Metrics", "Meeting Recaps"]);
+    expect(reportSections("leadership").map((s) => s.title)).toContain("Business Plan"); // Changed on purpose 17 Nov 2026 (was bcs-gm, see below)
+  });
+
+  it('the BCS GM L10 has no Reference either: "remove this in BCS GM L10" (the owner, 17 Nov 2026)', async () => {
+    const { hasReference, referenceFromRoster } = await import("@/features/l10/lib/config");
+    const { reportSections } = await import("@/features/l10/lib/report");
+    expect(hasReference("bcs-gm")).toBe(false);
+    // A Hub that says "true" cannot bring it back.
+    expect(referenceFromRoster("bcs-gm", { reference: true })).toBe(false);
+    expect(reportSections("bcs-gm").map((s) => s.title)).not.toContain("Business Plan");
+    // The page: no REFERENCE heading, no Business Plan or Accountability Chart links. (The GM L10 itself: standardInfo
+    // moved to the Maintenance L10 when the GM L10 became Bloom-style, 17 Nov 2026.)
+    renderView({ info: { ...info, key: "bcs-gm", name: "BCS GM L10" } });
+    const agenda = within(screen.getByRole("region", { name: "Agenda" }));
+    expect(agenda.queryByText("REFERENCE")).toBeNull();
+    expect(agenda.queryByRole("button", { name: "Business Plan" })).toBeNull();
+    expect(agenda.queryByRole("button", { name: "Accountability Chart" })).toBeNull();
   });
 });
 
@@ -413,27 +456,34 @@ describe("Bloom-style page: what every page shares", () => {
     resolved_issues: ["Front desk coverage"],
   };
 
-  it('the New Issue bar is inline at the top of each page, not pinned to the bottom ("why is the issue at the bottom? It should be at the top, after Round-robin: check off")', async () => {
+  // Replaces the 15 Nov test of the inline bar ("why is the issue at the bottom? It should be at the top"): the team asked
+  // for a button instead after the first meeting (Marissa's email, below).
+  it('"Can we remove the issues banner and make it a button like we had on Maddie\'s notion meeting, the banner gets confusing when there is also another spot to add a new to-do or metric." (Marissa, 17 Nov 2026)', () => {
     renderView();
-    const bar = () => screen.getByRole("form", { name: "New Issue" });
-    // The segue page: right under the "Round-robin: check off each attendee as they share" banner.
-    const banner = screen.getByText("Round-robin: check off each attendee as they share.").parentElement!;
-    expect(banner.nextElementSibling).toBe(bar());
-    // Not fixed to the window (it spanned the window over Ask Bubbles' sidebar footer), and not a floating button.
-    expect(bar().className).not.toMatch(/\bfixed\b/);
-    expect(bar().hasAttribute("data-page-fab")).toBe(false);
-    // Every other agenda page: right after the section's title and hint.
-    // Ask Bubbles: the sibling's test names its own DM agenda's titles ("To-do List", "… · IDS"); this page runs the
-    // default titles ("To-Do List", "IDS · Issues"), so the patterns match those.
-    for (const section of [/Scorecard/, /Rock Review/, /To-Do List/, /IDS/, /Conclude/]) {
-      fireEvent.click(within(screen.getByRole("region", { name: "Agenda" })).getAllByRole("button", { name: section })[0]);
-      const heading = screen.getByRole("heading", { level: 2, name: new RegExp(section.source.replace("· ", "")) });
-      expect(heading.parentElement!.nextElementSibling, `${section}`).toBe(bar());
+    const agenda = within(screen.getByRole("region", { name: "Agenda" }));
+    for (const section of [/Recap/, /Scorecard/, /Rock Review/, /To-Do List/, /IDS/, /Conclude/]) {
+      fireEvent.click(agenda.getAllByRole("button", { name: section })[0]);
+      // No banner on the page, only the floating button (where Add to IDS sits on the other meetings).
+      expect(screen.queryByTestId("new-issue-bar"), `${section}`).toBeNull();
+      expect(screen.queryByRole("form", { name: "New Issue" }), `${section}`).toBeNull();
+      const button = screen.getByRole("button", { name: "+ New Issue" });
+      expect(button.className).toMatch(/\bfixed\b/);
+      expect(button.hasAttribute("data-page-fab")).toBe(true);
     }
-    // The "i" shortcut still goes to it.
-    (document.activeElement as HTMLElement | null)?.blur();
+    // The button, and the "i" shortcut, open the New Issue window with the issue field first.
+    fireEvent.click(screen.getByRole("button", { name: "+ New Issue" }));
+    const dialog = screen.getByRole("dialog", { name: "New Issue" });
+    expect(document.activeElement).toBe(within(dialog).getByRole("textbox", { name: "New Issue" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("dialog", { name: "New Issue" })).toBeNull();
     fireEvent.keyDown(document, { key: "i" });
-    expect(document.activeElement).toBe(within(bar()).getByRole("textbox", { name: "New Issue" }));
+    expect(screen.getByRole("dialog", { name: "New Issue" })).toBeTruthy();
+  });
+
+  it("IDS has one place to add an issue on the page (\"There are two banners to add issues on the page\", Marissa, 17 Nov 2026)", () => {
+    renderView();
+    fireEvent.click(within(screen.getByRole("region", { name: "Agenda" })).getByRole("button", { name: /IDS/ }));
+    expect(screen.getAllByRole("textbox", { name: /issue/i }).map((t) => t.getAttribute("aria-label"))).toEqual(["Identify a new issue"]);
   });
 
   it("Meeting Notes opens the shared notes pad in a side panel, saves as meetingNotes, and Esc closes it", async () => {
@@ -452,6 +502,31 @@ describe("Bloom-style page: what every page shares", () => {
     expect((save.mock.calls.at(-1)![2] as { meetingNotes: string }).meetingNotes).toBe("Earlier note and more");
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByRole("dialog", { name: "Meeting Notes" })).toBeNull();
+  });
+
+  it('"also meeting notes is too big. TOO MUCH SPACE make friendly both phone and website" (the owner, 17 Nov 2026)', () => {
+    renderView();
+    fireEvent.click(within(screen.getByRole("region", { name: "Agenda" })).getByRole("button", { name: /Meeting Notes/ }));
+    const panel = screen.getByRole("dialog", { name: "Meeting Notes" });
+    // A 440px panel on a computer (it was half the screen), a full-width sheet on a phone; the pad fills its height.
+    expect(panel.className).toContain("sm:w-[440px]");
+    expect(panel.className).toContain("w-full");
+    expect(panel.className).not.toContain("50vw");
+    expect(panel.getAttribute("data-side-panel")).toBe("compact");
+    expect(within(panel).getByLabelText("Meeting notes").className).toContain("flex-1");
+  });
+
+  it('windows open inside the DM L10 frame, with black text: "too light text, need to highlight, pls change font color to black and button to blue" (the owner, 17 Nov 2026)', () => {
+    render(
+      <div className="hub-l10" data-testid="frame">
+        <MeetingView info={info} initial={loaded()} save={vi.fn() as unknown as SaveFn} end={vi.fn() as unknown as EndFn} viewer={viewer} roster={roster} hubMeetingUrl={HUB} pollMs={0} debounceMs={0} today="2026-11-15" />
+      </div>,
+    );
+    // The New Issue window (the same Modal as "End the meeting before you leave?"): inside .hub-l10, so it takes the
+    // tab's colours (Ask Bubbles' blue primary button, dark text), not the Hub's gold on <body>.
+    fireEvent.click(screen.getByRole("button", { name: "+ New Issue" }));
+    const dialog = screen.getByRole("dialog", { name: "New Issue" });
+    expect(screen.getByTestId("frame").contains(dialog)).toBe(true);
   });
 
   it("Meeting Notes is portalled into the DM L10 frame (.hub-l10), so it keeps the tab's scoped styles", () => {
@@ -491,13 +566,11 @@ describe("Bloom-style page: what every page shares", () => {
     expect(body.getByText("Issues solved").nextSibling?.textContent).toBe("2");
   });
 
-  it("the New Issue bar saves the issue with its owner and who added it", async () => {
+  it("the New Issue button saves the issue with its owner and who added it", async () => {
     const save = vi.fn().mockResolvedValue({ ok: true, version: 4, updatedAt: "2026-11-15T00:00:00Z" } satisfies SaveOutcome);
     renderView({ save: save as unknown as SaveFn, initial: loaded(3, { issues: [] }), mentionPeople: [{ id: "hub-user-1", name: "Avery Quill" }] });
-    const bar = within(screen.getByRole("form", { name: "New Issue" }));
-    fireEvent.change(bar.getByLabelText("Issue owner"), { target: { value: "Cy Marlow" } });
-    fireEvent.change(bar.getByRole("textbox", { name: "New Issue" }), { target: { value: "Late shift handover" } });
-    fireEvent.submit(screen.getByRole("form", { name: "New Issue" }));
+    addIssue("Late shift handover", "Cy Marlow");
+    expect(screen.queryByRole("dialog", { name: "New Issue" })).toBeNull();
     await waitFor(() => expect(save).toHaveBeenCalled());
     const doc = save.mock.calls.at(-1)![2] as { issues: Record<string, unknown>[] };
     expect(doc.issues.at(-1)).toMatchObject({ title: "Late shift handover", owner: "Cy Marlow", addedBy: "Avery Quill", resolved: false });
@@ -528,28 +601,51 @@ describe("Bloom-style page: Segue and Conclude", () => {
   const view = (doc: Record<string, unknown> = {}, save: SaveFn = vi.fn() as unknown as SaveFn) =>
     render(<MeetingView info={info} initial={loaded(3, doc)} save={save} end={vi.fn() as unknown as EndFn} viewer={viewer} roster={roster} hubMeetingUrl={HUB} pollMs={0} debounceMs={0} today="2026-11-15" recaps={[recap]} />);
 
-  it("Segue: last week's feedback, then this week's icebreaker question saved as segueQuestion", async () => {
-    const save = vi.fn().mockResolvedValue({ ok: true, version: 4, updatedAt: "2026-11-15T00:00:00Z" } satisfies SaveOutcome);
-    view({ segueQuestion: "What AI tool saved you time?" }, save as unknown as SaveFn);
+  // Replaces the 15 Nov tests of the icebreaker box and its save status: the team asked for both the box and the
+  // round-robin to go after the first meeting (Marissa's email, 17 Nov 2026, "AI Share Tab").
+  it('Segue ("AI Share Tab"): "Remove the Ice breaker question box" and "Remove the round robin checkoff attendees" (Marissa, 17 Nov 2026)', () => {
+    view({ segueQuestion: "What AI tool saved you time?", attendees: [{ id: "att-avery", name: "Avery Quill", role: "Visionary", shared: true, rating: null }] });
+    // The agenda still names the section; the page itself has no title or hint (see the next test).
+    expect(within(screen.getByRole("region", { name: "Agenda" })).getByRole("button", { name: /Recap/, current: "step" })).toBeTruthy();
+    // Last week's feedback stays.
     const feedback = screen.getByRole("region", { name: "Last week's feedback" });
     expect(within(feedback).getAllByRole("listitem").map((li) => li.textContent)).toEqual(["9Avery Quill", "8Bo Lark"]);
-    const q = within(screen.getByRole("region", { name: "This week's icebreaker question" })).getByLabelText("This week's icebreaker question") as HTMLTextAreaElement;
-    expect(q.value).toBe("What AI tool saved you time?");
-    fireEvent.change(q, { target: { value: "What AI tool saved you an hour?" } });
-    await waitFor(() => expect(save).toHaveBeenCalled());
-    expect((save.mock.calls.at(-1)![2] as { segueQuestion: string }).segueQuestion).toBe("What AI tool saved you an hour?");
+    // No icebreaker box (even with a question saved in the Hub's document).
+    expect(screen.queryByRole("region", { name: "This week's icebreaker question" })).toBeNull();
+    expect(document.body.textContent).not.toMatch(/icebreaker/i);
+    expect(document.body.textContent).not.toContain("What AI tool saved you time?");
+    // No round-robin check-off: no banner, no count, no person buttons.
+    expect(document.body.textContent).not.toMatch(/round-robin|check off|shared|Not yet/i);
+    for (const name of ["Avery Quill", "Bo Lark", "Cy Marlow"]) expect(screen.queryByRole("button", { name: new RegExp(name) })).toBeNull();
   });
 
-  it("the icebreaker question shows the save status under it, so typing visibly saves (the owner thought it did not, 15 Nov 2026)", async () => {
-    const save = vi.fn().mockResolvedValue({ ok: true, version: 4, updatedAt: "2026-11-15T00:00:00Z" } satisfies SaveOutcome);
-    view({}, save as unknown as SaveFn);
-    const box = within(screen.getByRole("region", { name: "This week's icebreaker question" }));
-    expect(box.getByRole("heading", { name: "THIS WEEK'S ICEBREAKER QUESTION" })).toBeTruthy();
-    const field = box.getByLabelText("This week's icebreaker question") as HTMLTextAreaElement;
-    expect(field.getAttribute("placeholder")).toBe("Add this week's icebreaker question…");
-    fireEvent.change(field, { target: { value: "Best tool this week?" } });
-    await waitFor(() => expect(save).toHaveBeenCalled());
-    await waitFor(() => expect(box.getByTestId("segue-save-status").textContent).toBe("All changes saved"));
+  it('Segue: "remove this in DM L10 bubbles, just keep the last weeks feedback remove ice breaker and AI Share" (the owner, 17 Nov 2026)', () => {
+    // The Hub serves this meeting's segue as "AI Share" with a round-robin hint.
+    render(
+      <MeetingView
+        info={info}
+        initial={loaded(3, {})}
+        save={vi.fn() as unknown as SaveFn}
+        end={vi.fn() as unknown as EndFn}
+        viewer={viewer}
+        roster={{ ...roster, agenda: [{ key: "business-best", title: "AI Share", minutes: 5 }, { key: "scorecard", title: "Scorecard", minutes: 5 }], hints: { "business-best": "Round-robin: each person shares one AI use or tip, then you check them off." } }}
+        hubMeetingUrl={HUB}
+        pollMs={0}
+        debounceMs={0}
+        today="2026-11-17"
+        recaps={[recap]}
+      />,
+    );
+    const main = screen.getByRole("region", { name: "Last week's feedback" }).parentElement!;
+    // Only last week's feedback (with the summary and the section bar above it): no "AI Share" title, no hint,
+    // no icebreaker, no round-robin, no New Issue banner.
+    expect(within(main).queryByRole("heading", { level: 2 })).toBeNull();
+    expect(main.textContent).not.toMatch(/AI Share|Round-robin|each person shares|icebreaker|shared|Not yet/i);
+    expect(screen.queryByTestId("new-issue-bar")).toBeNull();
+    expect(screen.getByRole("region", { name: "Last week's feedback" })).toBeTruthy();
+    // Every other page keeps its title.
+    fireEvent.click(within(screen.getByRole("region", { name: "Agenda" })).getByRole("button", { name: /Scorecard/ }));
+    expect(screen.getByRole("heading", { level: 2, name: "Scorecard" })).toBeTruthy();
   });
 
   it("Conclude before the meeting starts shows the last meeting's summary; during the meeting the existing steps", () => {
@@ -727,6 +823,71 @@ describe("Bloom-style page: Rocks and To-dos", () => {
     expect(screen.getByRole("button", { name: "Owner: A–Z" })).toBeTruthy();
   });
 
+  it('Rocks: "Remove the names that do not have rocks, only show individuals with rocks assigned" (Marissa, 17 Nov 2026)', () => {
+    view();
+    fireEvent.click(within(screen.getByRole("region", { name: "Agenda" })).getByRole("button", { name: /Rock Review/ }));
+    // Only Avery has a rock: no Company, Bo or Cy sections (they showed "No rocks for … yet").
+    expect(screen.getAllByRole("region", { name: /Rocks$/ }).map((r) => r.getAttribute("aria-label"))).toEqual(["Avery Quill's Rocks"]);
+    expect(document.body.textContent).not.toMatch(/No rocks for|No company rocks/);
+    // A rock added for Bo brings his section in.
+    fireEvent.change(screen.getByLabelText("New rock title"), { target: { value: "Train the new leads" } });
+    fireEvent.change(screen.getByLabelText("New rock owner"), { target: { value: "Bo Lark" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add rock" }));
+    expect(screen.getAllByRole("region", { name: /Rocks$/ }).map((r) => r.getAttribute("aria-label"))).toEqual(["Avery Quill's Rocks", "Bo Lark's Rocks"]);
+  });
+
+  it('Rocks: "Can you make it so you can mark off a milestone when you expand the rock not just when you click into it?" (Marissa, 17 Nov 2026)', async () => {
+    const save = vi.fn().mockResolvedValue({ ok: true, version: 4, updatedAt: "2026-11-17T00:00:00Z" } satisfies SaveOutcome);
+    render(<MeetingView info={info} initial={loaded(3, doc)} save={save as unknown as SaveFn} end={vi.fn() as unknown as EndFn} viewer={viewer} roster={roster} hubMeetingUrl={HUB} pollMs={0} debounceMs={0} today="2026-11-15" />);
+    fireEvent.click(within(screen.getByRole("region", { name: "Agenda" })).getByRole("button", { name: /Rock Review/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Show milestones of Open two rooms" }));
+    const list = within(screen.getByRole("list", { name: "Milestones of Open two rooms" }));
+    const hire = list.getByRole("checkbox", { name: "Milestone done: Hire staff" });
+    expect(hire.getAttribute("aria-checked")).toBe("false");
+    fireEvent.click(hire);
+    // Checked right in the list, without opening the rock's panel, and saved.
+    expect(screen.queryByTestId("rock-panel")).toBeNull();
+    expect(list.getByRole("checkbox", { name: "Milestone done: Hire staff" }).getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByRole("img", { name: "Milestones: 2 done, 0 overdue, 1 to do" })).toBeTruthy();
+    await waitFor(() => expect(save).toHaveBeenCalled());
+    const savedRock = (save.mock.calls.at(-1)![2] as { rocks: { milestones: { id: string; done: boolean }[] }[] }).rocks[0];
+    expect(savedRock.milestones.map((m) => m.done)).toEqual([true, true, false]);
+    // And unchecked the same way.
+    fireEvent.click(list.getByRole("checkbox", { name: "Milestone done: Sign the lease" }));
+    expect(list.getByRole("checkbox", { name: "Milestone done: Sign the lease" }).getAttribute("aria-checked")).toBe("false");
+  });
+
+  it("Scorecard: Full width hides the agenda column on that page only, and Collapse brings it back (the owner, 17 Nov 2026)", () => {
+    window.localStorage.clear();
+    view();
+    const agendaButton = (n: RegExp) => within(screen.getByRole("region", { name: "Agenda" })).getByRole("button", { name: n });
+    fireEvent.click(agendaButton(/Scorecard/));
+    fireEvent.click(screen.getByRole("button", { name: "⤢ Full width" }));
+    expect(screen.queryByRole("region", { name: "Agenda" })).toBeNull();
+    // The section bar still moves between pages; the agenda is back on the next page.
+    fireEvent.click(screen.getByRole("button", { name: /Rock Review →/ }));
+    expect(screen.getByRole("region", { name: "Agenda" })).toBeTruthy();
+    fireEvent.click(agendaButton(/Scorecard/));
+    expect(screen.queryByRole("region", { name: "Agenda" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "⤡ Collapse" }));
+    expect(screen.getByRole("region", { name: "Agenda" })).toBeTruthy();
+    window.localStorage.clear();
+  });
+
+  it('Rocks: "for rocks in DM L10 i think this is too big, takes too much space … make it friendly both phone and website" (the owner, 17 Nov 2026)', () => {
+    view();
+    fireEvent.click(within(screen.getByRole("region", { name: "Agenda" })).getByRole("button", { name: /Rock Review/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Edit Open two rooms" }));
+    const panel = screen.getByTestId("rock-panel");
+    expect(panel.className).toContain("sm:w-[440px]");
+    expect(panel.className).not.toContain("50vw");
+    expect(panel.getAttribute("data-side-panel")).toBe("compact");
+    // Each milestone: the box, the text and ✕ on one line; its due date on the next (a two-column grid row).
+    const row = within(panel).getByLabelText("Milestone done: Hire staff").closest("li")!;
+    expect(row.className).toContain("grid");
+    expect(within(row).getByLabelText("Milestone due date: Hire staff").parentElement!.className).toContain("col-start-2");
+  });
+
   it("To-dos: % Completed, round checks, initials and MM-DD-YYYY due dates", () => {
     view();
     // Ask Bubbles: this page runs the default agenda's "To-Do List" title (the sibling's DM agenda says "To-do List").
@@ -742,10 +903,38 @@ describe("Bloom-style page: Rocks and To-dos", () => {
 });
 
 // IDS on the Bloom-style BCS DM L10 (the owner's request, 15 Nov 2026), as in the Hub.
-// Changed on purpose (DM L10 run-through, 17 Nov 2026): the "!" toggle became a priority number (1, 2, 3 …); an issue
-// flagged "!" before that still sorts right after the numbered ones and shows "!" in its circle.
 describe("Bloom-style page: IDS", () => {
-  it("rows have a priority circle, the owner's initials, Solve and the term button; ! issues first; Oldest / Newest", async () => {
+  it("\"Right now when you select an issue it just highlights the circle next to it in red, it does not number them. It also doesn't keep them in the order that you selected them. Can they actually number them 1,2,3 and keep them in the order that you choose them?\" (Marissa, 17 Nov 2026)", async () => {
+    const save = vi.fn().mockResolvedValue({ ok: true, version: 4, updatedAt: "2026-11-17T00:00:00Z" } satisfies SaveOutcome);
+    renderView({
+      save: save as unknown as SaveFn,
+      initial: loaded(3, {
+        issues: ["Alpha", "Bravo", "Charlie", "Delta"].map((t, n) => ({ id: `i${n + 1}`, title: t, notes: "", resolved: false })),
+      }),
+    });
+    fireEvent.click(screen.getByRole("button", { name: /\d · IDS/ }));
+    const rows = () => within(screen.getByRole("list", { name: "Open issues" })).getAllByRole("listitem");
+    const shown = () => rows().map((li) => `${li.querySelector("[data-testid=priority-number]")?.textContent ?? ""}${li.querySelector("[aria-expanded] .font-semibold")?.textContent}`);
+    // Picked in the order Charlie, Alpha, Delta.
+    fireEvent.click(screen.getByRole("button", { name: "Priority: Charlie" }));
+    fireEvent.click(screen.getByRole("button", { name: "Priority: Alpha" }));
+    fireEvent.click(screen.getByRole("button", { name: "Priority: Delta" }));
+    expect(shown()).toEqual(["1Charlie", "2Alpha", "3Delta", "Bravo"]);
+    expect(screen.getByRole("button", { name: "Priority 2: Alpha" }).getAttribute("aria-pressed")).toBe("true");
+    // Clearing #1 moves the others up, in the same order; a new pick goes last.
+    fireEvent.click(screen.getByRole("button", { name: "Priority 1: Charlie" }));
+    expect(shown()).toEqual(["1Alpha", "2Delta", "Bravo", "Charlie"]);
+    fireEvent.click(screen.getByRole("button", { name: "Priority: Charlie" }));
+    expect(shown()).toEqual(["1Alpha", "2Delta", "3Charlie", "Bravo"]);
+    // Saved for everyone, with the Hub's "!" mark kept (priority: true) and the order picked.
+    await waitFor(() => expect(save).toHaveBeenCalled());
+    const issues = (save.mock.calls.at(-1)![2] as { issues: { title: string; priority?: boolean; priorityOrder?: number }[] }).issues;
+    const picked = issues.filter((i) => i.priority).sort((a, b) => a.priorityOrder! - b.priorityOrder!);
+    expect(picked.map((i) => i.title)).toEqual(["Alpha", "Delta", "Charlie"]);
+    expect(issues.find((i) => i.title === "Bravo")).not.toHaveProperty("priority");
+  });
+
+  it("rows have a ! circle, the owner's initials, Solve and the term button; ! issues first; Oldest / Newest", async () => {
     const save = vi.fn().mockResolvedValue({ ok: true, version: 4, updatedAt: "2026-11-15T00:00:00Z" } satisfies SaveOutcome);
     renderView({
       save: save as unknown as SaveFn,
@@ -761,60 +950,91 @@ describe("Bloom-style page: IDS", () => {
     const titles = () => within(screen.getByRole("list", { name: "Open issues" })).getAllByRole("listitem").map((li) => li.querySelector("[aria-expanded] .font-semibold")?.textContent);
     expect(titles()).toEqual(["Third issue", "First issue", "Second issue"]);
     const first = within(within(screen.getByRole("list", { name: "Open issues" })).getAllByRole("listitem")[1]);
-    expect(first.getByRole("button", { name: "Set priority: First issue" }).getAttribute("aria-pressed")).toBe("false");
+    expect(first.getByRole("button", { name: "Priority: First issue" }).getAttribute("aria-pressed")).toBe("false");
     expect(first.getByTitle("Bo Lark").textContent).toBe("BLOwner: Bo Lark");
     expect(first.getByRole("button", { name: "Solve First issue" })).toBeTruthy();
     expect(first.getByRole("button", { name: "Move to long-term: First issue" })).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Sort issues"), { target: { value: "newest" } });
     expect(titles()).toEqual(["Third issue", "Second issue", "First issue"]);
-    fireEvent.click(screen.getByRole("button", { name: "Set priority: Second issue" }));
+    fireEvent.click(screen.getByRole("button", { name: "Priority: Second issue" }));
     await waitFor(() => expect(save).toHaveBeenCalled());
-    expect((save.mock.calls.at(-1)![2] as { issues: { id: string; priorityNumber?: number }[] }).issues.find((i) => i.id === "i2")?.priorityNumber).toBe(1);
+    expect((save.mock.calls.at(-1)![2] as { issues: { id: string; priority?: boolean }[] }).issues.find((i) => i.id === "i2")?.priority).toBe(true);
+  });
+});
+
+// The owner's follow-ups, 17 Nov 2026 (after the first merge).
+describe("BCS DM L10: Recap, to-do dates and history, leading the meeting", () => {
+  it('replace AI SHare with "Recap" (the owner): the agenda and the section buttons say Recap', () => {
+    renderView({ roster: { ...roster, agenda: [{ key: "business-best", title: "AI Share", minutes: 5 }, { key: "scorecard", title: "Metrics", minutes: 5 }] } });
+    const items = within(screen.getByRole("region", { name: "Agenda" })).getAllByRole("listitem").map((li) => li.textContent);
+    expect(items).toEqual(["1 · Recap5m", "2 · Metrics5m"]);
+    expect(document.body.textContent).not.toContain("AI Share");
   });
 
-  // The DM L10 run-through (17 Nov 2026), in its words: "IDS prioritization: The numbering is still off. We need to
-  // assign topics a priority of 1, 2, 3, etc., and have them move into that order as we select them. We should then
-  // work through and solve issues in that order."
-  it("assigns topics a priority of 1, 2, 3, etc., and they move into that order as we select them; then we solve in that order", async () => {
+  it('"to do, can we set a date" (the owner): a due date when adding, and in the to-do\'s details', async () => {
+    const save = vi.fn().mockResolvedValue({ ok: true, version: 4, updatedAt: "2026-11-17T00:00:00Z" } satisfies SaveOutcome);
+    renderView({ save: save as unknown as SaveFn, initial: loaded(3, { todos: [] }) });
+    fireEvent.click(within(screen.getByRole("region", { name: "Agenda" })).getByRole("button", { name: /To-Do List/ }));
+    fireEvent.change(screen.getByLabelText("New to-do"), { target: { value: "Order towels" } });
+    fireEvent.change(screen.getByLabelText("To-do due date"), { target: { value: "2026-11-24" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    expect(screen.getByTestId("todo-due").textContent).toBe("11-24-2026");
+    fireEvent.click(screen.getByRole("button", { name: "Show details: Order towels" }));
+    fireEvent.change(screen.getByLabelText("Due date: Order towels"), { target: { value: "2026-12-01" } });
+    expect(screen.getByTestId("todo-due").textContent).toBe("12-01-2026");
+    await waitFor(() => expect(save).toHaveBeenCalled());
+    expect((save.mock.calls.at(-1)![2] as { todos: { dueDate?: string }[] }).todos[0].dueDate).toBe("2026-12-01");
+  });
+
+  it('"to do - archive or delete and have a tab for history" (the owner): Archive, Archive done, History with Restore and Delete', async () => {
     const save = vi.fn().mockResolvedValue({ ok: true, version: 4, updatedAt: "2026-11-17T00:00:00Z" } satisfies SaveOutcome);
     renderView({
       save: save as unknown as SaveFn,
       initial: loaded(3, {
-        issues: ["Alpha", "Bravo", "Charlie", "Delta", "Echo"].map((t, n) => ({ id: `i${n + 1}`, title: t, notes: "", resolved: false })),
+        todos: [
+          { id: "t1", text: "Call the landlord", owner: "Bo Lark", done: true, due: "Next wk" },
+          { id: "t2", text: "Order towels", owner: "Avery Quill", done: false, due: "Next wk" },
+        ],
       }),
     });
-    fireEvent.click(screen.getByRole("button", { name: /\d · IDS/ }));
-    const open = () => within(screen.getByRole("list", { name: "Open issues" })).getAllByRole("listitem");
-    const titles = () => open().map((li) => li.querySelector("[aria-expanded] .font-semibold")?.textContent);
-    const circles = () => open().map((li) => within(li).getByTestId("priority-number").textContent);
-    expect(titles()).toEqual(["Alpha", "Bravo", "Charlie", "Delta", "Echo"]);
-
-    // Selected in the order Delta, Bravo, Echo: they take 1, 2, 3 and move to the top in that order.
-    fireEvent.click(screen.getByRole("button", { name: "Set priority: Delta" }));
-    expect(titles()).toEqual(["Delta", "Alpha", "Bravo", "Charlie", "Echo"]);
-    fireEvent.click(screen.getByRole("button", { name: "Set priority: Bravo" }));
-    fireEvent.click(screen.getByRole("button", { name: "Set priority: Echo" }));
-    expect(titles()).toEqual(["Delta", "Bravo", "Echo", "Alpha", "Charlie"]);
-    expect(circles()).toEqual(["1", "2", "3", "", ""]);
-    // More than three: "1, 2, 3, etc."
-    fireEvent.click(screen.getByRole("button", { name: "Set priority: Alpha" }));
-    expect(circles()).toEqual(["1", "2", "3", "4", ""]);
-
-    // Clearing #2 closes the gap: Echo becomes 2, Alpha 3.
-    fireEvent.click(screen.getByRole("button", { name: "Priority 2: Bravo" }));
-    expect(titles()).toEqual(["Delta", "Echo", "Alpha", "Bravo", "Charlie"]);
-    expect(circles()).toEqual(["1", "2", "3", "", ""]);
-
-    // Work through in order: open #1, Solve it, and #2 opens next and becomes #1.
-    fireEvent.click(screen.getByRole("button", { name: "Delta", expanded: false }));
-    fireEvent.click(within(screen.getByRole("region", { name: "Issue detail" })).getByRole("button", { name: "Solve" }));
-    expect(titles()).toEqual(["Echo", "Alpha", "Bravo", "Charlie"]);
-    expect(circles()).toEqual(["1", "2", "", ""]);
-    expect(screen.getByRole("button", { name: "Echo", expanded: true })).toBeTruthy();
+    fireEvent.click(within(screen.getByRole("region", { name: "Agenda" })).getByRole("button", { name: /To-Do List/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Archive done (1)" }));
+    expect(screen.getByRole("tab", { name: "To-dos (1)" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Show details: Order towels" }));
+    fireEvent.click(screen.getByRole("button", { name: "Archive to-do Order towels" }));
+    fireEvent.click(screen.getByRole("tab", { name: "History (2)" }));
+    const list = within(screen.getByRole("list", { name: "To-do history" }));
+    expect(list.getAllByRole("listitem").map((li) => li.textContent)).toEqual([expect.stringContaining("Order towels"), expect.stringContaining("Call the landlord")]);
+    fireEvent.click(list.getByRole("button", { name: "Restore Order towels" }));
+    fireEvent.click(list.getByRole("button", { name: "Delete for good Call the landlord" }));
+    fireEvent.click(screen.getByRole("button", { name: "Yes, delete Call the landlord" }));
+    expect(screen.getByRole("tab", { name: "History (0)" })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "To-dos (1)" })).toBeTruthy();
     await waitFor(() => expect(save).toHaveBeenCalled());
-    const saved = (save.mock.calls.at(-1)![2] as { issues: { title: string; resolved: boolean; priorityNumber?: number }[] }).issues;
-    expect(saved.find((i) => i.title === "Delta")).toMatchObject({ resolved: true });
-    expect(saved.find((i) => i.title === "Delta")?.priorityNumber).toBeUndefined();
+    const doc = save.mock.calls.at(-1)![2] as { todos: { id: string }[]; todoHistory: unknown[] };
+    expect(doc.todos.map((t) => t.id)).toEqual(["t2"]);
+    expect(doc.todoHistory).toEqual([]);
+  });
+
+  it("starting a new meeting keeps the done to-dos in History instead of dropping them", () => {
+    renderView({ initial: loaded(3, { todos: [{ id: "t1", text: "Call the landlord", owner: "Bo Lark", done: true, due: "Next wk" }] }) });
+    fireEvent.click(screen.getByRole("button", { name: "Start meeting" }));
+    fireEvent.click(within(screen.getByRole("region", { name: "Agenda" })).getByRole("button", { name: /To-Do List/ }));
+    expect(screen.getByRole("tab", { name: "To-dos (0)" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("tab", { name: "History (1)" }));
+    expect(within(screen.getByRole("list", { name: "To-do history" })).getByText("Call the landlord")).toBeTruthy();
+  });
+
+  it('"where is option to start this and end or pause meetings" (the owner): Take the lead gives Pause / Reset; End meeting goes to the last page; the leader by name', () => {
+    renderView({ initial: loaded(3, { timer: { started: true, running: true, startedAt: Date.now(), leader: "someone-else", leaderLabel: "marissa.lempka@example.test", sessionId: "s1" } }) });
+    expect(screen.getByText("Marissa Lempka is leading")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Pause the meeting clock" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Take the lead" }));
+    expect(screen.getByText("You're leading")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Pause the meeting clock" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "End meeting" }));
+    expect(screen.getByRole("heading", { level: 2, name: "Conclude" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "End meeting" })).toBeNull();
   });
 });
 
@@ -856,33 +1076,6 @@ describe("Conclude: every meeting attendee can submit their own meeting rating",
   });
 });
 
-// The DM L10 run-through (17 Nov 2026), in its words: "Scorecard layout: The scorecard sits too far to the right,
-// leaving a lot of unused space. Please center it within the main content area and make it easier to review additional
-// details without scrolling to the bottom of the page to access the horizontal scrollbar."
-describe("Bloom-style Scorecard: full width under the agenda, scrolls inside the window", () => {
-  it("draws the table outside the page column, centred, in a box no taller than the window, with Newer / Older weeks", () => {
-    renderView({
-      initial: loaded(3, {
-        weekEndings: ["11/08/2026", "11/15/2026"],
-        scorecard: [{ id: "m1", metric: "Sales", owner: "Avery Quill", goal: "≥ 5", goalValue: 5, higherIsBetter: true, format: "number", weeks: [4, 6] }],
-      }),
-    });
-    fireEvent.click(within(screen.getByRole("region", { name: "Agenda" })).getByRole("button", { name: /Scorecard/ }));
-    const table = screen.getByTestId("bloom-scorecard");
-    // Not inside the column beside the agenda, but in the full-width block after it.
-    expect(screen.getByTestId("scorecard-full-width").contains(table)).toBe(true);
-    expect(screen.getByTestId("scorecard-full-width").contains(screen.getByTestId("add-metric"))).toBe(false);
-    expect(table.parentElement!.className).toContain("mx-auto");
-    expect(table.className).toContain("max-h-[calc(100dvh-7rem)]");
-    expect(table.className).toContain("overflow-auto");
-    expect(screen.getAllByTestId("bloom-scorecard")).toHaveLength(1);
-    table.scrollBy = vi.fn();
-    fireEvent.click(screen.getByRole("button", { name: "Show older weeks" }));
-    expect(table.scrollBy).toHaveBeenCalledWith(expect.objectContaining({ left: expect.any(Number) }));
-    expect((table.scrollBy as ReturnType<typeof vi.fn>).mock.calls[0][0].left).toBeGreaterThan(0);
-  });
-});
-
 // 17 Nov 2026: "Let's also proceed with building out GM L10 in Bubbles ... We don't use rocks at the GM/SD level, so the
 // agenda for both should be: 1. Segue 2. Scorecard 3. To-dos 4. IDS 5. Conclude". Laid out like the DM L10 (Bloom).
 describe("the BCS GM L10", () => {
@@ -893,7 +1086,7 @@ describe("the BCS GM L10", () => {
     expect(items).toEqual(["1 · Segue5m", "2 · Scorecard5m", "3 · To-dos5m", "4 · IDS60m", "5 · Conclude5m"]);
     expect(document.body.textContent).toContain("Wednesdays · 80 min");
     expect(screen.queryByRole("button", { name: "Business Plan" })).toBeNull();
-    expect(screen.getByRole("form", { name: "New Issue" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /New Issue/ })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /4 · IDS/ }));
     fireEvent.click(screen.getByRole("button", { name: "Short on staff", expanded: false }));
     const detail = within(screen.getByRole("region", { name: "Issue detail" }));

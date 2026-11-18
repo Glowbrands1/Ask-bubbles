@@ -54,7 +54,6 @@ The Hub's page code runs unchanged except:
 | Assistant @-mentions: everyone the person shares a meeting with | this meeting's people | one meeting here |
 | Assistant: web search / fetch tool version 20260318 | 20260209 | the newest in `@ai-sdk/anthropic` for AI SDK 6; see PARITY.md |
 | IDS ranking ("Everyone's top three", Rank buttons, Priority badges) | off (`RANKING = false` in `Ids.tsx`) | the team works IDS as in Bloom Growth, without ranking (14 Nov 2026) |
-| Bloom-style IDS "!" priority mark | a priority number (1, 2, 3 …) per issue; numbered issues on top in that order | the DM L10 run-through, 17 Nov 2026; see PARITY.md |
 
 When the Hub's meeting page changes, re-copy the file and re-apply the row above that concerns it. The full audit, file by file, is in [PARITY.md](./PARITY.md).
 
@@ -77,13 +76,12 @@ default). Keep the header link when re-copying
 
 This folder, the `(app)/meetings` routes, `/api/l10/assistant`, the sidebar wiring and the DM L10 section of
 `globals.css` are Ask Sunny's (`Glowbrands1/ask-sunny`, `src/features/l10`, main `e01da17`, then #1020 at `2aa544d`), with `PARTNER_ID =
-"ask-bubbles"`, `L10_TAB_LABELS` `bcs-dm` → "DM L10" and `NO_REFERENCE` = `bcs-dm`. Every copied file keeps its
+"ask-bubbles"`, `L10_TAB_LABELS` `bcs-dm` → "DM L10" and `NO_REFERENCE` = `bcs-dm` (and `bcs-gm` since 17 Nov 2026). Every copied file keeps its
 structure, so a later change in Ask Sunny's copy ports by re-copying the file and re-applying the rows in
 [PARITY.md](./PARITY.md) ("Ask Sunny vs Ask Bubbles"). Adding the BCS GM L10 later: a label in `L10_TAB_LABELS`
-(and in `NO_REFERENCE` if it hides the Reference), plus the Hub's allowlist row `('ask-bubbles', 'bcs-gm')`.
+(it is already in `NO_REFERENCE`: no Reference), plus the Hub's allowlist row `('ask-bubbles', 'bcs-gm')`.
 
 **The BCS GM L10 (17 Nov 2026).** This app's side is done: the "GM L10" tab label, Bloom-style pages, no Reference
 views, no rocks (`NO_ROCKS`: no Rock Review, no "Convert to Rock", no Goals page in the report) and the agenda Segue ·
-Scorecard · To-dos · IDS · Conclude (`NO_ROCKS_AGENDA`, used until the Hub serves its own). The tab shows once the Hub
-has the meeting's people and roles, the same agenda, its scorecard (carried over from Bloom Growth) and the allowlist
-row `('ask-bubbles', 'bcs-gm')`.
+Scorecard · To-dos · IDS · Conclude (`NO_ROCKS_AGENDA`, used until the Hub serves its own). The Hub has the meeting,
+its people, its scorecard (carried over from Bloom Growth) and the allowlist row `('ask-bubbles', 'bcs-gm')`.

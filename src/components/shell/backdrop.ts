@@ -33,6 +33,9 @@ export function backdropForPath(pathname: string | null | undefined): Backdrop {
   if (!pathname || pathname === "/") return "home";
   if (pathname === "/chat" || pathname.startsWith("/chat/")) return "none";
   if (isBandPage(pathname)) return "band";
+  // The L10 meeting pages (the DM L10 tab): the same blue canvas as chat (the owner, 17 Nov 2026: "make background
+  // color of DM L10 to blue please"). Not the printable report. Their top bar stays the plain one (chromeForPath).
+  if (/^\/meetings(\/|$)/.test(pathname) && !/\/report\/?$/.test(pathname)) return "band";
   // The template editor: /forms/templates/<key>, not the library itself.
   if (/^\/forms\/templates\/[^/]+/.test(pathname)) return "none";
   return "work";
