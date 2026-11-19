@@ -14,6 +14,9 @@ import { cn } from "@/lib/utils/cn";
  * own figure for that month (see `lib/google-reviews/monthly-progress.ts`).
  * Every total links to the Reviews view over the same dates (the L3 / L6 / YTD
  * presets), so a manager can read the reviews behind it.
+ *
+ * A month before the store started counting shows the 3–5★ reviews posted that
+ * month, with a dotted underline, instead of a 0 (see `monthly-progress.ts`).
  */
 
 const TH = "px-3 py-2.5 text-[11px] font-bold tracking-wide text-muted-foreground uppercase";
@@ -68,11 +71,21 @@ export function MonthlyTable({
     },
   ];
 
-  const cells = (row: MonthlyStoreRow, code: string | null, counting: boolean) => (
+  const cells = (row: MonthlyStoreRow, code: string | null) => (
     <>
       {row.months.map((count, i) => (
         <td key={monthly.months[i]} className="px-3 py-3 text-right tabular-nums">
-          {counting ? (
+          {row.beforeCounting[i] ? (
+            <span
+              title="Reviews posted this month, before the store started counting toward its goal"
+              className={cn(
+                "underline decoration-dotted decoration-muted-foreground/60 underline-offset-4",
+                count === 0 ? "text-muted-foreground" : "text-foreground/80",
+              )}
+            >
+              {count}
+            </span>
+          ) : (
             <span
               className={cn(
                 count >= row.monthlyTarget && row.monthlyTarget > 0 ? "font-black text-foreground" : "text-foreground",
@@ -81,33 +94,28 @@ export function MonthlyTable({
             >
               {count}
             </span>
-          ) : (
-            <span className="text-muted-foreground">—</span>
           )}
         </td>
       ))}
       {totals.map((t) => (
         <td key={t.key} className="px-3 py-3 text-right tabular-nums">
-          {counting ? (
-            <Link href={reviewsHref(code, t.from, t.to)} className="text-[13px] font-black text-foreground hover:underline">
-              {row[t.key]}
-            </Link>
-          ) : (
-            <span className="text-muted-foreground">—</span>
-          )}
+          <Link href={reviewsHref(code, t.from, t.to)} className="text-[13px] font-black text-foreground hover:underline">
+            {row[t.key]}
+          </Link>
         </td>
       ))}
     </>
   );
 
-  const counted = rows.filter((r) => r.counting);
-  const sum = (pick: (r: MonthlyStoreRow) => number) => counted.reduce((n, r) => n + pick(r), 0);
+  // Every figure is a real count of reviews now, so every store shown is added up.
+  const sum = (pick: (r: MonthlyStoreRow) => number) => rows.reduce((n, r) => n + pick(r), 0);
   const total: MonthlyStoreRow = {
     storeCode: "all",
     displayName: "All stores shown",
     monthlyTarget: 0,
     counting: true,
     months: monthly.months.map((_, i) => sum((r) => r.months[i]!)),
+    beforeCounting: monthly.months.map((_, i) => rows.some((r) => r.beforeCounting[i])),
     l3: sum((r) => r.l3),
     l6: sum((r) => r.l6),
     ytd: sum((r) => r.ytd),
@@ -147,7 +155,7 @@ export function MonthlyTable({
                   {r.counting ? "" : " · not counting"}
                 </span>
               </th>
-              {cells(r, r.storeCode, r.counting)}
+              {cells(r, r.storeCode)}
             </tr>
           ))}
         </tbody>
@@ -157,7 +165,7 @@ export function MonthlyTable({
               <th scope="row" className="px-4 py-3 text-left font-black">
                 All stores shown
               </th>
-              {cells(total, null, true)}
+              {cells(total, null)}
             </tr>
           </tfoot>
         ) : null}
