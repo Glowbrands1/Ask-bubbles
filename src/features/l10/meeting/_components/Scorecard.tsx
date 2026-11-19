@@ -249,6 +249,8 @@ const tableHead = "bg-ink text-xs font-bold tracking-[0.06em] text-gold-head";
  * The scorecard as Bloom Growth lays it out (the DM L10s; the owner's request, 15 Nov 2026): Who (the owner's initials,
  * full name on hover), Metric, Goal, then the weeks newest first, each headed by its range ("2 Nov / 8 Nov") with this
  * week shaded. Rows are grouped by owner with a gap between groups; older weeks scroll sideways. Same cells, same saves.
+ * Each group starts with a divider row naming it, so each store's metrics stand apart on the GM L10 (QA, 19 Nov 2026:
+ * a divider around each store, "It will make it easier to view"). Same row as the sibling app's.
  */
 function BloomTable({ doc, edit, order, today }: { doc: MeetingDoc; edit: (fn: (d: MeetingDoc) => MeetingDoc) => void; order: number[]; today: string }) {
   const groups = new Map<string, ScorecardRow[]>();
@@ -292,6 +294,11 @@ function BloomTable({ doc, edit, order, today }: { doc: MeetingDoc; edit: (fn: (
         </thead>
         {[...groups].map(([owner, rows]) => (
           <tbody key={owner} aria-label={`${owner}'s metrics`} className="border-t-[10px] border-cream first-of-type:border-t-0">
+            <tr data-group-row className="border-t-2 border-ink/70 bg-cream/70">
+              <th scope="rowgroup" colSpan={3 + order.length} className="px-3 py-1.5 text-left text-sm">
+                <span className="sticky left-3 font-bold">{owner}</span>
+              </th>
+            </tr>
             {rows.map((r) => (
               <tr key={r.id} data-owner-row={ownerColor(owner)} className="border-t border-rule">
                 <td className="sticky left-0 z-10 bg-white px-3 py-2">
