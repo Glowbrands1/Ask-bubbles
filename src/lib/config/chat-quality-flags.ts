@@ -21,7 +21,7 @@ export function envFlag(name: string): boolean {
 }
 
 /**
- * REQUIRED_FIELDS_AT_FINALIZE_ENABLED (HR via Pau, 19 Nov 2026; port from Ask Sunny; default off). A field a published
+ * REQUIRED_FIELDS_AT_FINALIZE_ENABLED (HR via Pau, 19 Nov 2026; default off). A field a published
  * version marks `required` (revision 8 of the Corrective Action Form: the policy manual's signed date and the past 90
  * days' history) must hold a value before Finalize; a draft may stay blank. Off, a blank required field files as before.
  */

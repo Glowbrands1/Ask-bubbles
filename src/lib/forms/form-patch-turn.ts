@@ -179,7 +179,7 @@ function preparePatch(loaded: Awaited<ReturnType<typeof authorizeInstance>>["loa
      * message's words ("change her position to Team Member"), written as the manager's own edit.
      */
     const fixes = formPatchReaderFixesEnabled();
-    // HR via Pau, 19 Nov 2026 (port from Ask Sunny): the policy manual's signed date is the form creator's, so a chat edit may set it, to their words only.
+    // HR via Pau, 19 Nov 2026: the policy manual's signed date is the form creator's, so a chat edit may set it, to their words only.
     const verbatim = new Set(fixes ? allFields.filter((field) => field.key === "job_title" || field.key === POLICY_MANUAL_SIGNED_KEY).map((field) => field.key) : []);
     const writable = new Set([...template.writable, ...stated, ...verbatim]);
     const fields: FormPatchField[] = [];

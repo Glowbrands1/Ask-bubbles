@@ -606,7 +606,7 @@ export async function writeFormEdits(instanceId: string, ops: readonly FormEditO
   refused.push(...diff.refused);
 
   /* Code's own values: as computed, never over a typed line (unless exempt), never blanking one. */
-  // HR via Pau, 19 Nov 2026 (port from Ask Sunny): the policy manual's signed date is the form creator's; a chat edit of it is their own, in their words (the reducer's verbatim rule), never the assistant's.
+  // HR via Pau, 19 Nov 2026: the policy manual's signed date is the form creator's; a chat edit of it is their own, in their words (the reducer's verbatim rule), never the assistant's.
   const writerOf = (op: FormEditOp) =>
     op.by ?? (op.field === POLICY_MANUAL_SIGNED_KEY && (rules.path === "patch" || rules.path === "tool") ? ("manager" as const) : defaultWriter(rules.path));
   const derivedChanges: FieldChange[] = [];

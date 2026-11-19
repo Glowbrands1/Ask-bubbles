@@ -43,7 +43,7 @@ export const PRIOR_ACTIONS_LABEL =
   "List previously received coaching and/or corrective action with date signed";
 
 /**
- * REVISION 8 (HR via Pau, 19 Nov 2026; port from Ask Sunny): the one line
+ * REVISION 8 (HR via Pau, 19 Nov 2026): the one line
  * became two required boxes, in HR's words exactly. The history keeps its key,
  * so everything that reads or drafts `prior_actions` keeps working; only its
  * label is new. The policy manual's signed date has a box of its own, which
