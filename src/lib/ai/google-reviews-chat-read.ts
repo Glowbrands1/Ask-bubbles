@@ -2,7 +2,7 @@ import "server-only";
 
 import { APPROVED_GOOGLE_STORES } from "@/config/company/google-reviews";
 import { supabaseReadiness } from "@/lib/config/server-env";
-import { EMPTY_QUERY, readGoalData, readPeriodTrend, readReviewPage, readStoreSummaries, type StoreSummary } from "@/lib/google-reviews/views";
+import { EMPTY_QUERY, readGoalData, readMonthlyProgress, readPeriodTrend, readReviewPage, readStoreSummaries, type StoreSummary } from "@/lib/google-reviews/views";
 import type { GoalContext } from "@/lib/google-reviews/goals";
 import { codeOfLocationId } from "@/lib/locations";
 import { hasPermission, DEFAULT_PERMISSION_MATRIX } from "@/lib/permissions";
@@ -10,7 +10,9 @@ import { reportingScopeOf } from "@/lib/reporting/scope/authorized-locations";
 import type { AccessScope, Role } from "@/types";
 
 import {
+  asksForMonthlyPeriods,
   formatGoogleReviewsBlock,
+  formatReviewMonthsSection,
   formatReviewWeeksSection,
   isGoogleReviewQuestion,
   RECENT_REVIEWS_SHOWN,
@@ -73,6 +75,24 @@ async function readRecentReviews(storeCodes: readonly string[], context: GoalCon
 }
 
 /**
+ * L3, L6, YTD and each month (manager request in the sibling app, 19 Nov 2026), from the page's own month-by-month
+ * read. Only for a turn that asks for those periods; a failed read says so and never fails the figures above.
+ */
+async function readMonthsSection(
+  question: string,
+  rows: Parameters<typeof formatReviewMonthsSection>[0]["rows"],
+  own: ReadonlySet<string>,
+  now: Date,
+): Promise<string | null> {
+  if (!asksForMonthlyPeriods(question) || rows.length === 0) return null;
+  try {
+    return formatReviewMonthsSection({ progress: await readMonthlyProgress(now), rows, ownStoreCodes: own });
+  } catch {
+    return "GOOGLE REVIEWS — L3, L6, YTD AND MONTH BY MONTH\n\nThe month-by-month figures could not be read just now. Give no L3, L6, YTD or monthly figure; point the manager to Google Reviews in the sidebar, Overview, Month by month.";
+  }
+}
+
+/**
  * The Google review block for one chat turn, or null when the question is not
  * about Google reviews.
  *
@@ -130,8 +150,9 @@ export async function loadGoogleReviewsChatBlock(input: {
             recent,
           })
         : null;
+    const months = await readMonthsSection(input.question, rows, own, input.now ?? new Date());
     return {
-      text: weeks ? `${month}\n\n${weeks}` : month,
+      text: [month, weeks, months].filter(Boolean).join("\n\n"),
       figures: rows.length > 0,
     };
   } catch {

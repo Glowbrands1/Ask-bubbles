@@ -515,6 +515,29 @@ vi.mock("@/lib/google-reviews/views", async (importOriginal) => {
       { start: "2026-11-16", reviewCount: 2, qualifyingCount: 2, averageRating: 5 },
     ],
     readReviewPage: async () => ({ total: 0, rows: [], page: 1, pageSize: 20 }),
+    /* L3, L6 and YTD (19 Nov 2026): every store counted 2 qualifying reviews in each full month this year, 1 so far in Nov. */
+    readMonthlyProgress: async () => {
+      const { monthlyProgress, progressMonths } = await import("@/lib/google-reviews/monthly-progress");
+      const today = "2026-11-18";
+      return monthlyProgress(
+        progressMonths(today).map((month) => ({
+          month,
+          rows: APPROVED_GOOGLE_STORES.map((entry) => ({
+            storeCode: entry.code,
+            displayName: entry.displayName,
+            monthlyTarget: 10,
+            baselineReviewId: `baseline-${entry.code}`,
+            baselineReviewTime: "2025-12-01T06:00:00.000Z",
+            countFrom: null,
+            qualifyingThisWeek: 0,
+            qualifyingLastWeek: 0,
+            qualifyingMonthToDate: month === "2026-11" ? 1 : 2,
+            historical: 0,
+          })),
+        })),
+        today,
+      );
+    },
   };
 });
 vi.mock("@/lib/reporting/read/employee-facts", () => ({
