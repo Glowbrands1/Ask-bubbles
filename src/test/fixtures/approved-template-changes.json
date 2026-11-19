@@ -27,13 +27,31 @@
    "sourceKey": "dpoa",
    "path": ".revisionNote",
    "from": "Renamed to Corrective Action Form, and Observation of Offense drafts as Observed/Expectation/Going Forward with the Action Plan as the plan-of-action paragraph. Revision 3 sets the two policy fields to the business's own reading of them: Policy Violated is the offense category ticked on the form, and Direct policy names the approved manual with its section and page. Revision 4 adds \"Is payroll deduct applicable?\" as a Yes / No the manager answers (one answer, unanswered until they give it). Revision 5 (HR feedback, 3 Oct 2026) replaces \"Previous corrective action for this policy or issue\" and \"Date of previous corrective action\" with one multi-line field, \"List previously received coaching and/or corrective action with date signed\", and ends every Action Plan with \"Future policy violations may be subject to additional corrective action up to and including termination of employment.\" Forms filed against earlier versions keep the document they were signed on; the template key and every stored value are unchanged.",
-   "to": "Renamed to Corrective Action Form, and Observation of Offense drafts as Observed/Expectation/Going Forward with the Action Plan as the plan-of-action paragraph. Revision 3 sets the two policy fields to the business's own reading of them: Policy Violated is the offense category ticked on the form, and Direct policy names the approved manual with its section and page. Revision 4 adds \"Is payroll deduct applicable?\" as a Yes / No the manager answers (one answer, unanswered until they give it). Revision 5 (HR feedback, 3 Oct 2026) replaces \"Previous corrective action for this policy or issue\" and \"Date of previous corrective action\" with one multi-line field, \"List previously received coaching and/or corrective action with date signed\", and ends every Action Plan with \"Future policy violations may be subject to additional corrective action up to and including termination of employment.\" Revision 6 (District Manager feedback, 21 Oct 2026) makes the Action Plan two sentences — \"Management will review the <policy> policy with <employee>.\" and \"Future policy violations may result in additional corrective action up to and including termination of employment.\" — with the payroll deduction between them when payroll deduct is Yes. Revision 7 (client request, 4 Nov 2026) makes Type of Offense four boxes — Attendance Policy, Standards of Conduct, Dress Code Violation, Other — removing Tardiness/Leaving Early and Absenteeism (now Attendance Policy), Under Performance and Violation of Company Policies (now Standards of Conduct), and the Other write-in line (Other is a box). Forms filed against earlier versions keep the document they were signed on; the template key and every stored value are unchanged."
+   "to": "Renamed to Corrective Action Form, and Observation of Offense drafts as Observed/Expectation/Going Forward with the Action Plan as the plan-of-action paragraph. Revision 3 sets the two policy fields to the business's own reading of them: Policy Violated is the offense category ticked on the form, and Direct policy names the approved manual with its section and page. Revision 4 adds \"Is payroll deduct applicable?\" as a Yes / No the manager answers (one answer, unanswered until they give it). Revision 5 (HR feedback, 3 Oct 2026) replaces \"Previous corrective action for this policy or issue\" and \"Date of previous corrective action\" with one multi-line field, \"List previously received coaching and/or corrective action with date signed\", and ends every Action Plan with \"Future policy violations may be subject to additional corrective action up to and including termination of employment.\" Revision 6 (District Manager feedback, 21 Oct 2026) makes the Action Plan two sentences — \"Management will review the <policy> policy with <employee>.\" and \"Future policy violations may result in additional corrective action up to and including termination of employment.\" — with the payroll deduction between them when payroll deduct is Yes. Revision 7 (client request, 4 Nov 2026) makes Type of Offense four boxes — Attendance Policy, Standards of Conduct, Dress Code Violation, Other — removing Tardiness/Leaving Early and Absenteeism (now Attendance Policy), Under Performance and Violation of Company Policies (now Standards of Conduct), and the Other write-in line (Other is a box). Revision 8 (HR via Pau, 19 Nov 2026) replaces the one history line with two required boxes, in HR's words: \"List date of JBA policy manual signed by employee\" (typed by the person creating the form) and \"List previous coaching and corrective actions and include date signed by employee in past 90 days\" (the same key as before). Neither can be left blank at Finalize. Forms filed against earlier versions keep the document they were signed on; the template key and every stored value are unchanged."
   },
   {
    "sourceKey": "dpoa",
    "path": ".document.blocks[0].brand",
    "from": "SUN TAN CITY",
    "to": "BUFF CITY SOAP"
+  },
+  {
+   "sourceKey": "dpoa",
+   "path": ".document.blocks[6].field.label",
+   "from": "List previously received coaching and/or corrective action with date signed",
+   "to": "List previous coaching and corrective actions and include date signed by employee in past 90 days"
+  },
+  {
+   "sourceKey": "dpoa",
+   "path": ".document.blocks[6].field.help",
+   "from": "One per line: each coaching or corrective action previously received, with the date it was signed. Write \"None — first occurrence\" when there has been none.",
+   "to": "One per line: each coaching or corrective action received in the past 90 days, with the date the employee signed it. Write \"None — first occurrence\" when there has been none. Required."
+  },
+  {
+   "sourceKey": "dpoa",
+   "path": ".document.blocks[6].field.required",
+   "from": null,
+   "to": true
   },
   {
    "sourceKey": "dpoa",
