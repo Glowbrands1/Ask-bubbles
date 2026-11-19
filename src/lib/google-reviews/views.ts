@@ -420,8 +420,15 @@ export async function readGoalData(now: Date = new Date(), client: SupabaseClien
 export async function readMonthlyProgress(now: Date = new Date(), client: SupabaseClient = getSupabaseAdmin()): Promise<MonthlyProgress> {
   const today = centralToday(now);
   const months = progressMonths(today);
-  const perMonth = await Promise.all(
-    months.map(async (month) => ({ month, rows: (await readGoalDataForMonth(month, now, client)).rows })),
-  );
-  return monthlyProgress(perMonth, today);
+  const [perMonth, postedByStore] = await Promise.all([
+    Promise.all(months.map(async (month) => ({ month, rows: (await readGoalDataForMonth(month, now, client)).rows }))),
+    // Reviews POSTED each month, for the months before a store started counting.
+    Promise.all(
+      APPROVED_GOOGLE_STORES.map(async (store) => {
+        const trend = await readPeriodTrend("month", store.code, client);
+        return [store.code, new Map(trend.map((p) => [p.start.slice(0, 7), p.qualifyingCount]))] as const;
+      }),
+    ),
+  ]);
+  return monthlyProgress(perMonth, today, new Map(postedByStore));
 }

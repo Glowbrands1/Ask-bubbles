@@ -1,4 +1,4 @@
-import { isCounting, previousMonth, type GoalRow } from "./goals";
+import { baselineDay, isCounting, previousMonth, type GoalRow } from "./goals";
 
 /**
  * ============================================================================
@@ -21,6 +21,15 @@ import { isCounting, previousMonth, type GoalRow } from "./goals";
  *
  * Months shown: from whichever is earlier, January or six full months back,
  * through the current month. Pure: the read layer hands it each month's rows.
+ *
+ * BEFORE A STORE STARTED COUNTING (Nov 19 2026: "cant we fix this? its 0").
+ * The goal rule counts nothing before a store's "Counting since" day, so every
+ * month before it read 0 although the reviews are held. For those months, and
+ * for the month counting started in when it started after the 1st, the figure
+ * is the 3–5★ reviews Google says were POSTED that month — the same count the
+ * "Google Reviews over time" chart draws (`google_reviews_periods`). Those
+ * months are flagged `beforeCounting` so the table can say so; from the first
+ * full counted month on, the figure is the goal table's own.
  */
 
 export interface MonthlyStoreRow {
@@ -32,6 +41,11 @@ export interface MonthlyStoreRow {
   counting: boolean;
   /** Qualifying reviews per month, in the order of `MonthlyProgress.months`. */
   months: number[];
+  /**
+   * Per month: true when the figure is reviews posted that month rather than the
+   * goal count, because the store had not started counting for the whole month.
+   */
+  beforeCounting: boolean[];
   l3: number;
   l6: number;
   ytd: number;
@@ -63,6 +77,8 @@ export function progressMonths(today: string): string[] {
 export function monthlyProgress(
   perMonth: readonly { month: string; rows: readonly GoalRow[] }[],
   today: string,
+  /** Per store code, `yyyy-mm` → 3–5★ reviews posted that month (Central). */
+  posted: ReadonlyMap<string, ReadonlyMap<string, number>> = new Map(),
 ): MonthlyProgress {
   const months = perMonth.map((entry) => entry.month);
   const currentMonth = today.slice(0, 7);
@@ -73,8 +89,18 @@ export function monthlyProgress(
 
   const current = perMonth.find((entry) => entry.month === currentMonth)?.rows ?? perMonth.at(-1)?.rows ?? [];
   const rows = current.map((row): MonthlyStoreRow => {
-    const counts = perMonth.map(
-      (entry) => entry.rows.find((r) => r.storeCode === row.storeCode)?.qualifyingMonthToDate ?? 0,
+    // The first month counted in full: the month after the start day, or that month when it starts on the 1st.
+    // A store that is not counting is "before counting" every month; one counting with no known start day never is.
+    const since = baselineDay(row);
+    const firstFull = since === null ? null : since.endsWith("-01") ? since.slice(0, 7) : nextMonth(since.slice(0, 7));
+    const beforeCounting = months.map((month) =>
+      !isCounting(row) ? true : firstFull === null ? false : month < firstFull,
+    );
+    const storePosted = posted.get(row.storeCode);
+    const counts = perMonth.map((entry, i) =>
+      beforeCounting[i]
+        ? (storePosted?.get(entry.month) ?? 0)
+        : (entry.rows.find((r) => r.storeCode === row.storeCode)?.qualifyingMonthToDate ?? 0),
     );
     const sum = (subset: string[]) =>
       subset.reduce((total, month) => total + counts[months.indexOf(month)]!, 0);
@@ -84,6 +110,7 @@ export function monthlyProgress(
       monthlyTarget: row.monthlyTarget,
       counting: isCounting(row),
       months: counts,
+      beforeCounting,
       l3: sum(l3Months),
       l6: sum(l6Months),
       ytd: sum(ytdMonths),
@@ -91,4 +118,9 @@ export function monthlyProgress(
   });
 
   return { months, currentMonth, l3Months, l6Months, ytdMonths, rows };
+}
+
+function nextMonth(month: string): string {
+  const [y, m] = month.split("-").map(Number) as [number, number];
+  return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, "0")}`;
 }

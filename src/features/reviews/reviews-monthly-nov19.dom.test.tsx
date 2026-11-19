@@ -79,9 +79,10 @@ describe("per month, L3, L6 and YTD", () => {
     expect(links[0]!.getAttribute("href")).toBe("/reviews?tab=reviews&store=A&from=2026-08-01&to=2026-10-31");
     expect(links[2]!.getAttribute("href")).toBe("/reviews?tab=reviews&store=A&from=2026-01-01&to=2026-11-19");
 
-    // A store not counting shows dashes, and is not added into the total.
+    // A store not counting shows the reviews posted each month (none posted here), marked as before counting.
     const birch = within(table).getByRole("row", { name: /Birch Hill/ });
-    expect(within(birch).queryAllByRole("link")).toHaveLength(0);
+    expect(within(birch).getAllByRole("link").map((l) => l.textContent)).toEqual(["0", "0", "0"]);
+    expect(within(birch).getAllByTitle(/before the store started counting/)).toHaveLength(11);
     const footer = within(table).getByRole("row", { name: /All stores shown/ });
     expect(within(footer).getAllByRole("link").map((l) => l.textContent)).toEqual(["27", "45", "66"]);
   });
@@ -90,5 +91,43 @@ describe("per month, L3, L6 and YTD", () => {
     render(<MonthlyTable monthly={monthlyProgress(sample(), TODAY)} store="B" today={TODAY} />);
     expect(screen.queryByRole("row", { name: /Maple Row/ })).toBeNull();
     expect(screen.getByRole("row", { name: /Cedar Point/ })).toBeTruthy();
+  });
+});
+
+/**
+ * Nov 19 2026, on the month-by-month table: "cant we fix this? its 0". Every
+ * month before October read 0 because the goal rule counts nothing before a
+ * store's "Counting since" day, although the reviews are held. Those months now
+ * show the 3–5★ reviews posted that month.
+ */
+describe("months before a store started counting", () => {
+  const counting = (since: string, monthToDate: number): GoalRow => ({
+    ...row("A", "Maple Row", monthToDate),
+    baselineReviewId: null,
+    countFrom: since,
+  });
+
+  it("show reviews posted that month instead of 0, and the goal count from the first full counted month", () => {
+    // Counting since Oct 1 (Central midnight): October on is the goal count.
+    const perMonth = progressMonths(TODAY).map((month) => ({
+      month,
+      rows: [counting("2026-10-01T05:00:00Z", month >= "2026-10" ? 12 : 0)],
+    }));
+    const posted = new Map([["A", new Map([["2026-03", 4], ["2026-08", 6], ["2026-09", 5], ["2026-10", 99]])]]);
+    const a = monthlyProgress(perMonth, TODAY, posted).rows[0]!;
+    expect(a.months).toEqual([0, 0, 4, 0, 0, 0, 0, 6, 5, 12, 12]);
+    expect(a.beforeCounting.filter(Boolean)).toHaveLength(9);
+    expect([a.l3, a.l6, a.ytd]).toEqual([6 + 5 + 12, 6 + 5 + 12, 4 + 6 + 5 + 12 + 12]);
+  });
+
+  it("a store that started counting mid-month shows that month as posted too", () => {
+    const perMonth = progressMonths(TODAY).map((month) => ({
+      month,
+      rows: [counting("2026-10-15T05:00:00Z", 3)],
+    }));
+    const posted = new Map([["A", new Map([["2026-10", 7]])]]);
+    const a = monthlyProgress(perMonth, TODAY, posted).rows[0]!;
+    expect(a.months.slice(-2)).toEqual([7, 3]);
+    expect(a.beforeCounting.slice(-2)).toEqual([true, false]);
   });
 });

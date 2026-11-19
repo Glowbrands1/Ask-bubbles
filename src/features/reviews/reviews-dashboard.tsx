@@ -338,10 +338,11 @@ function OverviewView({
             <NotConnected message="Month-by-month figures could not be loaded just now" />
           )}
           <Footnote>
-            Qualifying reviews each month, counted the same way as the goal table.
-            L3 and L6 are the last 3 and 6 full months; the current month is not in
-            them. Months at or over target are bold. Select a total to see the
-            reviews from those dates.
+            Qualifying (3–5★) reviews each month, counted the same way as the goal
+            table. Underlined months are before the store started counting toward its
+            goal: they show the 3–5★ reviews posted that month. L3 and L6 are the last
+            3 and 6 full months; the current month is not in them. Months at or over
+            target are bold. Select a total to see the reviews from those dates.
           </Footnote>
         </Panel>
       ) : null}
