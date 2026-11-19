@@ -56,6 +56,8 @@ import {
   TableShell,
   WindowTag,
 } from "./reviews-parts";
+import { MonthlyTable } from "./reviews-monthly";
+import { centralToday } from "@/lib/google-reviews/goals";
 import { ReviewsTabNav } from "./reviews-tab-nav";
 import type { ReviewsTab } from "./reviews-tabs";
 
@@ -323,6 +325,26 @@ function OverviewView({
           {pm ? ` ${pm}` : ""}
         </Footnote>
       </Panel>
+
+      {data && data.monthly !== undefined ? (
+        <Panel title="Month by month · L3, L6 and YTD">
+          {data.monthly ? (
+            <MonthlyTable
+              monthly={data.monthly}
+              store={data.query.store}
+              today={centralToday()}
+            />
+          ) : (
+            <NotConnected message="Month-by-month figures could not be loaded just now" />
+          )}
+          <Footnote>
+            Qualifying reviews each month, counted the same way as the goal table.
+            L3 and L6 are the last 3 and 6 full months; the current month is not in
+            them. Months at or over target are bold. Select a total to see the
+            reviews from those dates.
+          </Footnote>
+        </Panel>
+      ) : null}
 
       <Panel title="District goal progress">
         <NotConnected message="Districts not configured yet" />
