@@ -249,9 +249,8 @@ const tableHead = "bg-ink text-xs font-bold tracking-[0.06em] text-gold-head";
  * The scorecard as Bloom Growth lays it out (the DM L10s; the owner's request, 15 Nov 2026): Who (the owner's initials,
  * full name on hover), Metric, Goal, then the weeks newest first, each headed by its range ("2 Nov / 8 Nov") with this
  * week shaded. Rows are grouped by owner with a gap between groups; older weeks scroll sideways. Same cells, same saves.
- * Port from Ask Sunny: each group starts with a divider row naming it, so each store's metrics stand apart on the GM
- * L10 (QA, 19 Nov 2026: "Is there also a way we can create some distinction around each salon, maybe a divider? It will
- * make it easier to view-- and we will want that on bubbles too").
+ * Each group starts with a divider row naming it, so each store's metrics stand apart on the GM L10 (QA, 19 Nov 2026:
+ * a divider around each store, "It will make it easier to view"). Same row as the sibling app's.
  */
 function BloomTable({ doc, edit, order, today }: { doc: MeetingDoc; edit: (fn: (d: MeetingDoc) => MeetingDoc) => void; order: number[]; today: string }) {
   const groups = new Map<string, ScorecardRow[]>();
