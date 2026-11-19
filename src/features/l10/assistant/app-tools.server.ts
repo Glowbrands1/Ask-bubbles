@@ -3,6 +3,7 @@ import "server-only";
 import { jsonSchema, tool, type ToolSet } from "ai";
 
 import { businessToday } from "@/lib/business-date";
+import { asksForMonthlyPeriods } from "@/lib/ai/google-reviews-chat";
 import { loadGoogleReviewsChatBlock } from "@/lib/ai/google-reviews-chat-read";
 import { formDateRangeFromInput, formKindFromText, loadFormRecords } from "@/lib/forms/chat-form-records";
 import type { AccessScope, Role } from "@/types";
@@ -61,7 +62,9 @@ export function appTools(viewer: AppToolsViewer, question: string): ToolSet {
       }),
       execute: async ({ store, period }) => {
         // The block's reader answers a Google review question; the tool call is one, whatever the words were.
-        const asked = `Google reviews month to date ${text(period)} ${text(store)}`.replace(/\s+/g, " ").trim();
+        // L3, L6, YTD or month by month when the call names the period, or the person's own question asks for one.
+        const months = text(period) || (asksForMonthlyPeriods(question) ? "month by month" : "");
+        const asked = `Google reviews month to date ${months} ${text(store)}`.replace(/\s+/g, " ").trim();
         try {
           const block = await loadGoogleReviewsChatBlock({ question: asked, role: viewer.role, scope: viewer.scope });
           if (!block) return { error: "The Google review figures could not be read just now. Give no figure." };
