@@ -1,5 +1,5 @@
 /**
- * PUBLISHING AN AI TRAINING CHANGE TO THE OTHER APP (Ask Sunny <-> Ask Bubbles).
+ * PUBLISHING AN AI TRAINING CHANGE TO THE SIBLING APP.
  *
  * Both apps carry the same training content with the same ids. When an editor
  * ticks "Also publish to <other app>", the saved rows are sent to the other
@@ -26,7 +26,7 @@ export interface SyncConfig {
   url: string;
   /** Shared secret, the same in both apps. */
   key: string;
-  /** "Ask Bubbles" in Ask Sunny, "Ask Sunny" in Ask Bubbles. */
+  /** The sibling app's display name, from AI_TRAINING_SYNC_APP_NAME. */
   otherAppName: string;
 }
 

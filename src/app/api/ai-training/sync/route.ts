@@ -4,7 +4,7 @@ import { syncConfig } from "@/lib/ai-training/sync";
 import { receiveSync } from "@/lib/ai-training/sync-receive";
 
 /**
- * AI TRAINING CHANGES PUBLISHED FROM THE SIBLING APP (Ask Sunny <-> Ask Bubbles).
+ * AI TRAINING CHANGES PUBLISHED FROM THE SIBLING APP.
  *
  * Machine-to-machine: no cookie, so the middleware (which skips `/api`) does
  * not guard it. `receiveSync` does: shared key, then this app's own editor
