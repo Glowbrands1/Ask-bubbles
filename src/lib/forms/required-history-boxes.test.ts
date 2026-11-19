@@ -29,7 +29,8 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 const { ensureTemplateLibrary } = await import("./repository");
-const { applyAssistantDraft, createInstance, saveInstanceValues, finalizeInstance, RequiredFieldsBlankError } = await import("./instances");
+const { writeFormEdits } = await import("./form-write");
+const { applyAssistantDraft, createInstance, loadInstance, saveInstanceValues, finalizeInstance, RequiredFieldsBlankError } = await import("./instances");
 const { correctiveActionDocument } = await import("./library");
 const { fieldsForVariant, parseFormDocument } = await import("./document");
 const { blankRequiredFields, requiredFieldsMessage } = await import("./required-fields");
@@ -104,7 +105,7 @@ describe("Finalize with the boxes blank (REQUIRED_FIELDS_AT_FINALIZE_ENABLED)", 
   const ACK = { acknowledgeUnverifiedPolicy: true };
 
   async function draft() {
-    return createInstance({ templateKey: "dpoa", variantKey: null, employeeName: "Sarah Test", createdBy: "dana", source: "ask_sunny" });
+    return createInstance({ templateKey: "dpoa", variantKey: null, employeeName: "Sarah Test", createdBy: "dana", source: "assistant" });
   }
 
   it("on: refuses while a draft, names the boxes, and files once both are filled", async () => {
@@ -139,5 +140,39 @@ describe("Finalize with the boxes blank (REQUIRED_FIELDS_AT_FINALIZE_ENABLED)", 
   it("off: files with the boxes blank, as before", async () => {
     const instance = await draft();
     expect((await finalizeInstance(instance.id, "dana", null, ACK)).status).toBe("finalized");
+  });
+
+  /*
+   * "set the manual date to 01/01/2026" — the form creator edits box 1 by
+   * prompting the chat. It is written only as their own words (the patch
+   * path's verbatim rule, as the job title is), and never as the assistant's.
+   */
+  async function patch(latest: string, value: string) {
+    const loaded = (await loadInstance((await draft()).id))!;
+    const result = await writeFormEdits(
+      loaded.instance.id,
+      [{ op: "set", field: "policy_manual_signed", value }],
+      {
+        path: "patch",
+        actorId: "dana",
+        latest,
+        managerTurns: [latest],
+        today: "2026-11-19",
+        loaded,
+        writable: new Set(["policy_manual_signed"]),
+        readerFixes: { employeeName: "Sarah Test", formText: "", verbatimKeys: new Set(["policy_manual_signed"]) },
+      },
+    );
+    return { result, rows: store.form_instance_values!.filter((row) => row.instance_id === loaded.instance.id && row.field_key === "policy_manual_signed") };
+  }
+
+  it("a chat edit sets box 1 to the date the manager typed", async () => {
+    const { rows } = await patch("set the manual date to 01/01/2026", "01/01/2026");
+    expect(rows.map((row) => row.value)).toEqual(["01/01/2026"]);
+  });
+
+  it("a chat edit never invents box 1: a date the manager did not type is refused", async () => {
+    const { rows } = await patch("update the form please", "01/01/2026");
+    expect(rows).toEqual([]);
   });
 });

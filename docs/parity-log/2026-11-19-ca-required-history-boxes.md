@@ -19,3 +19,4 @@ What differs in Ask Bubbles, and why:
   `REQUIRED_FIELDS_AT_FINALIZE_ENABLED` (default off), the 422 at Finalize,
   `prior_actions` keeping its key so the chat reads and writes box 2, and box 1
   left to the form creator. The manual's name stays "JBA Policy Manual".
+- Chat edit of box 1 ("set the manual date to 01/01/2026") is ported too: the patch path writes it as the creator's own edit, in their words only.
