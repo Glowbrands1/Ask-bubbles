@@ -5,7 +5,7 @@ import { isCounting, previousMonth, type GoalRow } from "./goals";
  * MONTH BY MONTH: QUALIFYING REVIEWS PER STORE, WITH L3, L6 AND YTD
  * ============================================================================
  *
- * Ported from Ask Sunny, where a manager asked to "pull the last three full
+ * Ported from the sibling app, where a manager asked to "pull the last three full
  * months so we can get a broader overall understanding and see progress", then
  * for it per month: L3, L6 and YTD.
  *

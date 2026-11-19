@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils/cn";
  * MONTH BY MONTH — QUALIFYING REVIEWS PER STORE, WITH L3, L6 AND YTD
  * ============================================================================
  *
- * Ported from Ask Sunny: "yeah per month pls last 3 mos last 6 mos and YTD".
+ * Ported from the sibling app: "yeah per month pls last 3 mos last 6 mos and YTD".
  * One column per month, then the three totals; each month is the goal table's
  * own figure for that month (see `lib/google-reviews/monthly-progress.ts`).
  * Every total links to the Reviews view over the same dates (the L3 / L6 / YTD
