@@ -307,6 +307,11 @@ export const maxDuration = 120;
 interface DraftBody {
   /** What the manager described, in their own words. */
   notes?: string;
+  /**
+   * The notes are the card's own lines (`draftNotesFromCard`, NEXT_PUBLIC_REMAP_DRAFT_SOURCES_ENABLED), not the
+   * manager's turns. Port from the sibling app's #1119: no address is kept from those lines.
+   */
+  notesFromCard?: boolean;
   /** AI_READS_CODE_CHECKS_ENABLED: the reader's quotes from the card, never values: each is checked again against `notes`. */
   readerQuotes?: unknown;
   topic?: string;
@@ -409,7 +414,15 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
     // CREATE_COMMAND_POINTS_TO_CARD_ENABLED / CARD_COMPLAINT_NOT_ACCOUNT_ENABLED: "create it" or "this proposal is out of
     // date" is no account (`ai/card-meta-turn.ts`).
     // PASTED_REVIEW_NOT_ACCOUNT_ENABLED: a pasted reviewer's notes are no account (`ai/pasted-review.ts`).
-    const sent = (await import("@/lib/ai/pasted-review")).readWithoutPastedReview(String(body.notes ?? "").trim().slice(0, 4000)).trim();
+    const pasted = (await import("@/lib/ai/pasted-review")).readWithoutPastedReview(String(body.notes ?? "").trim().slice(0, 4000)).trim();
+    /*
+     * ONLY THE MANAGER'S OWN ADDRESS (port from the sibling app's #1119, item 19): notes drafted from the card's own lines lose
+     * any labelled address the manager never typed, so it reaches neither the model nor the form.
+     */
+    const sent =
+      body.notesFromCard === true
+        ? (await import("@/lib/forms/exit-details")).withoutUntypedAddresses(pasted, (await import("@/lib/forms/draft-notes")).notesWithoutCardLines(pasted)).text
+        : pasted;
     // SAME_REQUEST_OTHER_PERSON_ENABLED: "the same thing for <B>" is drafted from the earlier request, read with <B>'s name.
     const typed = sameRequestOtherPersonEnabled()
       ? (await import("@/lib/forms/same-request-other-person")).notesForOtherPerson({
@@ -679,18 +692,28 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
      * `exit-details.ts`, written before the model runs and only into empty
      * lines. Anything the manager did not say stays blank.
      */
-    const exitStatedFacts = isExitForm
+    /*
+     * ONLY THE MANAGER'S OWN ADDRESS (port from the sibling app's #1119, item 19), on every exit form: the Permanent Address is
+     * kept only when it is in the manager's own lines of the notes, never the card's lines (`notesWithoutCardLines`).
+     */
+    const exitDetails = isExitForm ? readExitDetails(notes, businessToday()) : null;
+    if (exitDetails?.permanentAddress) {
+      const { addressTypedIn } = await import("@/lib/forms/exit-details");
+      const managerLines = body.notesFromCard === true ? (await import("@/lib/forms/draft-notes")).notesWithoutCardLines(notes) : notes;
+      if (!addressTypedIn(exitDetails.permanentAddress, managerLines)) delete exitDetails.permanentAddress;
+    }
+    const exitStatedFacts = isExitForm && exitDetails
       ? formEditSingleWriterEnabled()
         ? await (await import("@/lib/forms/form-write")).statedWrite(
             id,
-            exitDetailValues(readExitDetails(notes, businessToday())),
+            exitDetailValues(exitDetails),
             actor.id,
             exitStatedKeys(),
             { notes },
           )
         : await applyStatedFacts(
             id,
-            exitDetailValues(readExitDetails(notes, businessToday())),
+            exitDetailValues(exitDetails),
             actor.id,
             // EXIT_INTAKE_FIX_ENABLED adds the Permanent Address the manager typed.
             exitStatedKeys(),

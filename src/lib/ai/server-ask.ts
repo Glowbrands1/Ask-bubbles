@@ -179,6 +179,7 @@ import { withoutLetterSigner } from "./letter-signer";
 import { withFirstNameAnswerFor, withFirstNameSuggestFor } from "./first-name-suggest";
 import { withManagerStatedTitle } from "./manager-title";
 import { withReplyMatchesCard } from "./reply-matches-card";
+import { withStarterFollowUp } from "./starter-follow-up";
 import { withTitleOfTheEmployee } from "./title-of-the-employee";
 import { withUnderPerformanceExplained } from "./under-performance-explained";
 import { withProposalEditRules } from "./proposal-edit-rules";
@@ -266,7 +267,8 @@ export async function answerQuestion(
   // FORM_NAME_FROM_ROSTER_ENABLED, last: only roster people are the employee or a choice (`forms/roster-only-names.ts`).
   // REPLY_MATCHES_CARD_ENABLED, the very last step: the reply agrees with the finished card (`ai/reply-matches-card.ts`).
   // EXIT_OTHER_PERSON_NOT_SUBJECT_ENABLED: the letter's other person ("your General Manager, <B>") is never offered as the exit form's subject (`ai/exit-other-person.ts`).
-  return withReplyMatchesCard(withRosterOnlyNames(withExitOtherPersonNotOffered(noticed, asked)));
+  // STARTER_FOLLOW_UP_EXAMPLE_ENABLED: outermost — a home starter's "who?" / "which?" carries one example answer (`ai/starter-follow-up.ts`).
+  return withStarterFollowUp(withReplyMatchesCard(withRosterOnlyNames(withExitOtherPersonNotOffered(noticed, asked))), asked);
 }
 
 async function answerQuestionAnyPath(
@@ -1128,6 +1130,12 @@ async function answerQuestionCore(
     ? await loadGoogleReviewsChatBlock({ question: request.question, role: actor.role, scope: actor.scope })
     : null;
 
+  /*
+   * Ported from the sibling app (board f066, 20 Nov 2026): "who deleted <name>'s form?" reads the append-only deletion record,
+   * administrators only (`form-deletions-chat-read.ts`). Null for any other turn.
+   */
+  const deletionsBlock = await (await import("./form-deletions-chat-read")).loadFormDeletionsChatBlock({ question: request.question, role: actor.role });
+
   markStage("summaries_memory");
   const settledSummaries = await summariesPromise;
   const personMemory = await memoryPromise;
@@ -1246,7 +1254,7 @@ async function answerQuestionCore(
     prompt: redactTraceText(system),
   });
   const reportData =
-    [briefing?.text ?? null, reviewBlock?.text ?? null, dataAddition.data].filter((part) => part && part.length > 0).join("\n\n") || null;
+    [briefing?.text ?? null, reviewBlock?.text ?? null, deletionsBlock, dataAddition.data].filter((part) => part && part.length > 0).join("\n\n") || null;
   const claudeBase = {
     system,
     reportData,

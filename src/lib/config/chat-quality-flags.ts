@@ -1979,6 +1979,16 @@ export function unknownNameAskEnabled(): boolean {
 }
 
 /**
+ * STARTER_FOLLOW_UP_EXAMPLE_ENABLED (port from the sibling app's #1127 and #1150, QA item 24; default off; QA flips it). A
+ * home starter ("Create a coaching form.", "Help me prepare for a conversation with a team member.") sent as a chat's
+ * first message got "who?" with nothing to go on, and managers left. On: that follow-up carries one short example
+ * answer (`ai/starter-follow-up.ts`). Off, as before.
+ */
+export function starterFollowUpExampleEnabled(): boolean {
+  return envFlag("STARTER_FOLLOW_UP_EXAMPLE_ENABLED");
+}
+
+/**
  * With a form card open, a turn that only answers the payroll amount stays
  * with the form (QA BF7b live, 27 Oct 2026): "i dont know the amount" was
  * answered as a policy question. See `ai/amount-turn.ts`. Off, as before.
