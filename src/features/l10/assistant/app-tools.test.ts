@@ -52,6 +52,15 @@ describe("the DM / GM L10 assistant reads Ask Bubbles' Google reviews and forms 
     expect(JSON.stringify(result)).toContain("Bellevue: 7 of 10, behind pace");
   });
 
+  /* The Google Reviews page's L3, L6 and YTD (19 Nov 2026): "all AI? even main ai and meeting AI?" — the meeting AI too. */
+  it("reads L3, L6, YTD and month by month when the call or the person's question asks for them", async () => {
+    await run("read_reviews", { store: "Bellevue", period: "L3, L6 and YTD" }, "how is bellevue doing");
+    expect((calls.reviews[0] as { question: string }).question).toBe("Google reviews month to date L3, L6 and YTD Bellevue");
+    // The model left period out; the person's own words still ask for the months.
+    await run("read_reviews", {}, "per month pls last 3 mos last 6 mos and YTD");
+    expect((calls.reviews[1] as { question: string }).question).toBe("Google reviews month to date month by month");
+  });
+
   it("reads the Forms Register as this person (coaching, CAs, terminations), and says so when their role cannot", async () => {
     calls.formsBlock = "FORMS ON FILE (FORMS REGISTER)\n- Wren Halvorsen: Separation Notice (terminated), 11/10/2026";
     const result = await run("read_forms_on_file", { form: "termination" }, "who was terminated this month?");

@@ -8,6 +8,7 @@ import {
   type GoalContext,
   type GoalRow,
 } from "@/lib/google-reviews/goals";
+import type { MonthlyProgress } from "@/lib/google-reviews/monthly-progress";
 
 /**
  * Google review figures for a chat turn, from the Google Reviews page's own
@@ -41,7 +42,23 @@ const GOOGLE_REVIEW_PATTERNS: readonly RegExp[] = [
   /\b(?:recent|latest|newest|new|last few)\s+(?:google\s+)?reviews\b/i,
   /\baverage\s+(?:star\s+)?rating\b/i,
   /\b(?:bad|negative|good|positive|[1-5][- ]?star|one[- ]star|five[- ]star)\s+reviews\b/i,
+  /* L3, L6 and YTD (manager request, 19 Nov 2026): the Google Reviews page's month-by-month periods. */
+  /\breviews?\b[\s\S]{0,60}\b(?:l3|l6|ytd|year[- ]to[- ]date|per month|by month|month by month|monthly)\b/i,
+  /\b(?:l3|l6|ytd|year[- ]to[- ]date)\b[\s\S]{0,40}\breviews?\b/i,
+  /\breviews?\b[\s\S]{0,60}\b(?:last|past)\s+(?:3|three|6|six)\s+(?:full\s+)?(?:months?|mos?)\b/i,
+  /\b(?:last|past)\s+(?:3|three|6|six)\s+(?:full\s+)?(?:months?|mos?)\b[\s\S]{0,40}\breviews?\b/i,
 ];
+
+/**
+ * A question for the longer periods the Google Reviews page now offers: L3 (last 3 full months), L6 (last 6 full
+ * months), YTD (Jan 1 through today) and month by month. Only these turns pay for the month-by-month read.
+ */
+const MONTHS_PERIOD =
+  /\b(?:l3|l6|ytd|year[- ]to[- ]date|this year|per month|by month|month by month|(?:last|past|previous)\s+(?:3|three|6|six)\s+(?:full\s+)?(?:months?|mos?)|(?:3|three|6|six)[- ]months?)\b/i;
+
+export function asksForMonthlyPeriods(question: string): boolean {
+  return MONTHS_PERIOD.test(question);
+}
 
 /** A review of a person or a document, not a Google review. */
 const OTHER_REVIEW = /\b(?:policy|performance|annual|employee|coaching|90[- ]day|manager|peer)\s+reviews?\b/i;
@@ -332,4 +349,77 @@ export function formatReviewWeeksSection(input: {
   }
 
   return [...lines, "", WEEK_RULES].join("\n");
+}
+
+
+/* ------------------------------------------------ L3, L6, YTD, month by month -- */
+
+/**
+ * L3, L6 AND YTD, AND EACH MONTH BETWEEN (manager request in the sibling app, 19 Nov 2026: "per month pls last 3 mos
+ * last 6 mos and YTD"). The Google Reviews page's Month by month table, written for the model: qualifying (3, 4 or 5
+ * star) reviews per store per month, with L3 and L6 as full months only and YTD from Jan 1 through today. Built from
+ * `monthlyProgress` (`google-reviews/monthly-progress.ts`), the table's own figures.
+ */
+export const MONTHS_HEADING = "GOOGLE REVIEWS — L3, L6, YTD AND MONTH BY MONTH";
+
+const PROGRESS_MONTH_NAME = new Intl.DateTimeFormat("en-US", { month: "short", timeZone: "UTC" });
+const PROGRESS_MONTH_YEAR = new Intl.DateTimeFormat("en-US", { month: "short", year: "numeric", timeZone: "UTC" });
+const progressMonthDate = (month: string) => new Date(`${month}-01T00:00:00Z`);
+
+/** "Aug – Oct 2026" or "Nov 2026 – Jan 2027"; "no months yet" for none. */
+function monthsSpan(months: readonly string[]): string {
+  if (months.length === 0) return "no months yet";
+  const first = months[0]!;
+  const last = months[months.length - 1]!;
+  const from = first.slice(0, 4) === last.slice(0, 4) ? PROGRESS_MONTH_NAME.format(progressMonthDate(first)) : PROGRESS_MONTH_YEAR.format(progressMonthDate(first));
+  return `${from} – ${PROGRESS_MONTH_YEAR.format(progressMonthDate(last))}`;
+}
+
+const MONTHS_RULES = [
+  "- A question about the last 3 months (L3), the last 6 months (L6), year to date (YTD) or a month is answered from this section, for the stores asked about, naming the months each total covers.",
+  "- L3 and L6 are FULL months: the current, partial month is not in them. YTD is January 1 through today, the current month included.",
+  "- These are qualifying reviews (3, 4 or 5 stars). Say so, and never present them as every review. Where a month is marked as before counting began, the figure is the qualifying reviews Google dates to that month.",
+  "- Never state a month or total that is not written here, never estimate one, and never say there are no figures when they are written here.",
+].join("\n");
+
+export function formatReviewMonthsSection(input: {
+  readonly progress: MonthlyProgress;
+  /** The page's rows, already narrowed to any store the question names. */
+  readonly rows: readonly Pick<GoalRow, "storeCode">[];
+  readonly ownStoreCodes: ReadonlySet<string>;
+}): string {
+  const { progress } = input;
+  const monthName = (month: string) => (month.endsWith("-01") ? PROGRESS_MONTH_YEAR : PROGRESS_MONTH_NAME).format(progressMonthDate(month));
+  const rows = progress.rows.filter((row) => input.rows.some((entry) => entry.storeCode === row.storeCode));
+  const lines = [
+    MONTHS_HEADING,
+    "",
+    `Months run on the Google Reviews page's month-by-month table, Central time. L3 = last 3 full months (${monthsSpan(progress.l3Months)}). L6 = last 6 full months (${monthsSpan(progress.l6Months)}). YTD = ${monthsSpan(progress.ytdMonths)} through today, the current month (${monthName(progress.currentMonth)}) included so far.`,
+    `Months shown, oldest first: ${progress.months.map(monthName).join(", ")}.`,
+  ];
+  if (rows.length === 0) {
+    lines.push("", "No month-by-month figures are held for these stores.", "", MONTHS_RULES);
+    return lines.join("\n");
+  }
+  const sum = (pick: (row: (typeof rows)[number]) => number) => rows.reduce((total, row) => total + pick(row), 0);
+  if (rows.length > 1) {
+    lines.push(
+      "",
+      `All ${rows.length} stores together (qualifying): L3 ${sum((r) => r.l3)}, L6 ${sum((r) => r.l6)}, YTD ${sum((r) => r.ytd)}. By month: ${progress.months
+        .map((month, i) => `${monthName(month)} ${sum((r) => r.months[i]!)}`)
+        .join(", ")}.`,
+    );
+  }
+  lines.push("", "Per store, qualifying reviews:");
+  for (const row of rows) {
+    const own = input.ownStoreCodes.has(row.storeCode) ? ", this manager's store" : "";
+    const months = progress.months
+      .map((month, i) => `${monthName(month)} ${row.months[i]}${row.beforeCounting[i] ? "*" : ""}`)
+      .join(", ");
+    lines.push(`- ${row.displayName} (store ${googleStoreNumber(row.storeCode)}${own}): L3 ${row.l3}, L6 ${row.l6}, YTD ${row.ytd}. By month: ${months}.`);
+  }
+  if (rows.some((row) => row.beforeCounting.some(Boolean))) {
+    lines.push("* Before this store counted the whole month: reviews Google dates to that month.");
+  }
+  return [...lines, "", MONTHS_RULES].join("\n");
 }
