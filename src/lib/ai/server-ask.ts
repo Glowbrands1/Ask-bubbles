@@ -179,6 +179,7 @@ import { withoutLetterSigner } from "./letter-signer";
 import { withFirstNameAnswerFor, withFirstNameSuggestFor } from "./first-name-suggest";
 import { withManagerStatedTitle } from "./manager-title";
 import { withReplyMatchesCard } from "./reply-matches-card";
+import { withStarterFollowUp } from "./starter-follow-up";
 import { withTitleOfTheEmployee } from "./title-of-the-employee";
 import { withUnderPerformanceExplained } from "./under-performance-explained";
 import { withProposalEditRules } from "./proposal-edit-rules";
@@ -266,7 +267,8 @@ export async function answerQuestion(
   // FORM_NAME_FROM_ROSTER_ENABLED, last: only roster people are the employee or a choice (`forms/roster-only-names.ts`).
   // REPLY_MATCHES_CARD_ENABLED, the very last step: the reply agrees with the finished card (`ai/reply-matches-card.ts`).
   // EXIT_OTHER_PERSON_NOT_SUBJECT_ENABLED: the letter's other person ("your General Manager, <B>") is never offered as the exit form's subject (`ai/exit-other-person.ts`).
-  return withReplyMatchesCard(withRosterOnlyNames(withExitOtherPersonNotOffered(noticed, asked)));
+  // STARTER_FOLLOW_UP_EXAMPLE_ENABLED: outermost — a home starter's "who?" / "which?" carries one example answer (`ai/starter-follow-up.ts`).
+  return withStarterFollowUp(withReplyMatchesCard(withRosterOnlyNames(withExitOtherPersonNotOffered(noticed, asked))), asked);
 }
 
 async function answerQuestionAnyPath(
