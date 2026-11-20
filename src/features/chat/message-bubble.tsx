@@ -434,6 +434,13 @@ function FormProposalCard({
   const inFlight = React.useRef(false);
 
   /*
+   * f073 (Ask Sunny's QA, 20 Nov 2026): "Create draft" is pressable only once this card runs in the browser, so a
+   * button drawn before React attached its click handler (server HTML, or a page still loading a new deploy's code)
+   * reads "Loading…" and is disabled, never a button that does nothing.
+   */
+  const mounted = React.useSyncExternalStore(noSubscription, inBrowser, onServer);
+
+  /*
    * ==========================================================================
    * A NEWER PROPOSAL MAKES THIS ONE READ-ONLY
    * ==========================================================================
@@ -760,9 +767,9 @@ function FormProposalCard({
 
       {!superseded && (proposal.supportsInlineDraft || (location && proposal.status === "needs_location")) ? (
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <Button size="sm" onClick={() => void create()} disabled={creating}>
-            {creating ? <Loader2 className="animate-spin" /> : null}
-            {creating ? "Creating…" : "Create draft"}
+          <Button size="sm" onClick={() => void create()} disabled={creating || !mounted}>
+            {creating || !mounted ? <Loader2 className="animate-spin" /> : null}
+            {creating ? "Creating…" : mounted ? "Create draft" : "Loading…"}
           </Button>
           {problem ? (
             <span className="text-xs text-status-attention">{problem}</span>
@@ -781,6 +788,11 @@ function storeText(id: string): string {
 
 /** The forms whose Job Title is a record fact Bubbles fills from Woven or asks for. */
 const POSITION_FORMS: ReadonlySet<string> = new Set(["coaching", "follow-up-coaching", "dpoa", "policy-review"]);
+
+/* f073: false in the server's HTML and while it hydrates, true once the browser's code runs the card. */
+const noSubscription = () => () => {};
+const inBrowser = () => true;
+const onServer = () => false;
 
 function ProposalRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
