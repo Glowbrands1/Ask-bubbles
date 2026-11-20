@@ -893,7 +893,8 @@ function ChatErrorBubble({
   );
 }
 
-export function ThinkingBubble() {
+/** `status`: the AI loop's short status while it works ("Looking up <name>…"); plain text, display only. */
+export function ThinkingBubble({ status }: { status?: string | null } = {}) {
   return (
     <div className="flex gap-3" aria-live="polite">
       <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-surface">
@@ -913,6 +914,7 @@ export function ThinkingBubble() {
             />
           ))}
         </span>
+        {status ? <span className="mt-2 block text-sm text-muted-foreground" data-testid="thinking-status">{status}</span> : null}
       </div>
     </div>
   );
