@@ -1130,6 +1130,12 @@ async function answerQuestionCore(
     ? await loadGoogleReviewsChatBlock({ question: request.question, role: actor.role, scope: actor.scope })
     : null;
 
+  /*
+   * Ported from the sibling app (board f066, 20 Nov 2026): "who deleted <name>'s form?" reads the append-only deletion record,
+   * administrators only (`form-deletions-chat-read.ts`). Null for any other turn.
+   */
+  const deletionsBlock = await (await import("./form-deletions-chat-read")).loadFormDeletionsChatBlock({ question: request.question, role: actor.role });
+
   markStage("summaries_memory");
   const settledSummaries = await summariesPromise;
   const personMemory = await memoryPromise;
@@ -1248,7 +1254,7 @@ async function answerQuestionCore(
     prompt: redactTraceText(system),
   });
   const reportData =
-    [briefing?.text ?? null, reviewBlock?.text ?? null, dataAddition.data].filter((part) => part && part.length > 0).join("\n\n") || null;
+    [briefing?.text ?? null, reviewBlock?.text ?? null, deletionsBlock, dataAddition.data].filter((part) => part && part.length > 0).join("\n\n") || null;
   const claudeBase = {
     system,
     reportData,

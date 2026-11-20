@@ -49,6 +49,8 @@ const store: FakeStore = {
   chat_traces: [],
   chat_form_state: [],
   chat_form_incidents: [],
+  // Port from Ask Sunny (board f066, 20 Nov 2026): the deletion record, written by the fake as the BEFORE DELETE trigger writes it.
+  form_instance_deletions: [],
 } as unknown as FakeStore;
 
 // Production builds with it (NEXT_PUBLIC_, read once when the role table loads): an Assistant Manager may create forms.
