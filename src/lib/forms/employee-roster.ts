@@ -119,26 +119,14 @@ export function scopeRoster(
  * Three small reads joined in memory.
  */
 export async function readDirectoryRoster(): Promise<DirectoryRosterRow[]> {
-  const supabase = getSupabaseAdmin();
-  const [people, affiliations, map] = await Promise.all([
-    supabase
-      .from("employee_access_directory")
-      .select("id, first_name, last_name, preferred_first_name, employment_status, position_name, last_synced_at")
-      .limit(5000),
-    supabase
-      .from("employee_location_affiliations")
-      .select("employee_id, woven_location_id")
-      .eq("active", true)
-      .limit(20000),
-    supabase
-      .from("woven_location_map")
-      .select("woven_location_id, location_id")
-      .eq("status", "mapped")
-      .limit(1000),
-  ]);
-  if (people.error || affiliations.error || map.error) {
-    throw new Error("The employee directory could not be read.");
-  }
+  /*
+   * Port from the sibling app's #1142 (QA's code audit, item 18): every read is paged (`readAllPages`, ordered). The
+   * service answers at most 1,000 rows per request whatever `.limit()` says, so a directory past that (terminated people
+   * included) was cut short with no error. Throws on a read error, as before.
+   */
+  const [people, affiliations, map] = await wholeDirectory(
+    "id, first_name, last_name, preferred_first_name, employment_status, position_name, last_synced_at",
+  );
 
   const locationByWoven = new Map<string, string>();
   for (const row of map.data ?? []) {
@@ -237,22 +225,10 @@ export async function readDirectoryFacts(scope: AccessScope | null): Promise<Dir
     }
   }
   try {
-    const supabase = getSupabaseAdmin();
-    const [people, affiliations, map] = await Promise.all([
-      supabase
-        .from("employee_access_directory")
-        .select(
-          "id, first_name, last_name, preferred_first_name, employment_status, position_name, primary_woven_location_id, primary_location_name",
-        )
-        .limit(5000),
-      supabase
-        .from("employee_location_affiliations")
-        .select("employee_id, woven_location_id")
-        .eq("active", true)
-        .limit(20000),
-      supabase.from("woven_location_map").select("woven_location_id, location_id").eq("status", "mapped").limit(1000),
-    ]);
-    if (people.error || affiliations.error || map.error) return [];
+    // Port from the sibling app's #1142: paged past the 1,000-row cap, as `readDirectoryRoster`. A read error is [].
+    const [people, affiliations, map] = await wholeDirectory(
+      "id, first_name, last_name, preferred_first_name, employment_status, position_name, primary_woven_location_id, primary_location_name",
+    );
 
     const locationByWoven = new Map<string, string>();
     for (const row of map.data ?? []) {
@@ -343,6 +319,30 @@ async function readAllPages<T>(page: (from: number, to: number) => Page<T>): Pro
     rows.push(...(data ?? []));
     if ((data ?? []).length < ROSTER_PAGE_ROWS) return rows;
   }
+}
+
+/**
+ * The whole directory, its active affiliations and the location map, each read in full, a page at a time (port from the
+ * sibling app's #1142). Ordered by key so pages never overlap or skip. Throws on a read error.
+ */
+async function wholeDirectory(peopleColumns: string): Promise<[{ data: Row[] }, { data: Row[] }, { data: Row[] }]> {
+  const supabase = getSupabaseAdmin();
+  const [people, affiliations, map] = await Promise.all([
+    readAllPages<Row>((from, to) =>
+      // A select from a variable column list is typed as an error row; the rows are plain records.
+      supabase.from("employee_access_directory").select(peopleColumns).order("id", { ascending: true }).range(from, to) as unknown as Page<Row>),
+    readAllPages<Row>((from, to) =>
+      supabase
+        .from("employee_location_affiliations")
+        .select("employee_id, woven_location_id")
+        .eq("active", true)
+        .order("employee_id", { ascending: true })
+        .order("woven_location_id", { ascending: true })
+        .range(from, to)),
+    readAllPages<Row>((from, to) =>
+      supabase.from("woven_location_map").select("woven_location_id, location_id").eq("status", "mapped").order("woven_location_id", { ascending: true }).range(from, to)),
+  ]);
+  return [{ data: people }, { data: affiliations }, { data: map }];
 }
 
 function chunks<T>(items: readonly T[], size: number): T[][] {

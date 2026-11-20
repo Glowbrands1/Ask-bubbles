@@ -143,12 +143,12 @@ vi.mock("@/lib/ai/anthropic", () => ({
   }),
 }));
 
-async function post(notes: string) {
+async function post(notes: string, extra: Record<string, unknown> = {}) {
   const { POST } = await import("./instances/[id]/draft/route");
   const request = new Request("http://localhost/api/forms/instances/form-1/draft", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ notes }),
+    body: JSON.stringify({ notes, ...extra }),
   });
   const response = await POST(request, { params: Promise.resolve({ id: "form-1" }) });
   return (await response.json()) as Record<string, unknown>;
@@ -390,6 +390,47 @@ describe("what is stored", () => {
       expect(values.permanent_address).toBe("12 Invented Rd, Kearney, NE 68847");
       expect(keys?.has("permanent_address")).toBe(true);
       expect(stored().values.permanent_address ?? null).not.toBe("1 Invented Road");
+    } finally {
+      if (previous === undefined) delete process.env.EXIT_INTAKE_FIX_ENABLED;
+      else process.env.EXIT_INTAKE_FIX_ENABLED = previous;
+    }
+  });
+
+  /*
+   * Port from Ask Sunny #1119 (Pau via QA, item 19: "an exit form filled a home address the manager never typed"). In
+   * this app the only text that is not the manager's is the card's own lines, which Create drafts from when no manager
+   * turn qualifies (`draftNotesFromCard`, `notesFromCard: true`). An address on those lines is never saved.
+   */
+  it("item 19: a home address only on the card's lines is never the Permanent Address, and never reaches the model", async () => {
+    const previous = process.env.EXIT_INTAKE_FIX_ENABLED;
+    process.env.EXIT_INTAKE_FIX_ENABLED = "true";
+    try {
+      state.toolInput = { values: { details: "Sarah quit without notice." } };
+      const card = [
+        "Employee: Sarah Jones",
+        "Location: Omaha, West Dodge Rd",
+        "Date: 2026-09-28",
+        "What happened: Quit without notice. Home address 412 Ashgrove Ln, Kearney, NE 68847.",
+      ].join("\n");
+      await post(card, { notesFromCard: true });
+      const { values } = state.stated[0] ?? { values: {} as Record<string, string> };
+      expect(values.permanent_address ?? "", "an address the manager never typed was saved").toBe("");
+      expect(prompt(), "the model was shown an address the manager never typed").not.toMatch(/Ashgrove/);
+      expect(prompt()).toMatch(/Quit without notice/);
+      expect(stored().values.permanent_address ?? "").toBe("");
+    } finally {
+      if (previous === undefined) delete process.env.EXIT_INTAKE_FIX_ENABLED;
+      else process.env.EXIT_INTAKE_FIX_ENABLED = previous;
+    }
+  });
+
+  it("item 19 control: the address the manager typed is still the Permanent Address", async () => {
+    const previous = process.env.EXIT_INTAKE_FIX_ENABLED;
+    process.env.EXIT_INTAKE_FIX_ENABLED = "true";
+    try {
+      state.toolInput = { values: { details: "Sarah quit without notice." } };
+      await post("exit form for sarah jones, she quit without notice. her home address is 412 Ashgrove Ln, Kearney, NE 68847");
+      expect(state.stated[0]!.values.permanent_address).toBe("412 Ashgrove Ln, Kearney, NE 68847");
     } finally {
       if (previous === undefined) delete process.env.EXIT_INTAKE_FIX_ENABLED;
       else process.env.EXIT_INTAKE_FIX_ENABLED = previous;

@@ -286,8 +286,8 @@ export async function createInlineForm({
    * qualified: a draft with usable turns is unchanged. Off, as before. See
    * `draftNotesFromCard`.
    */
-  const notes =
-    draftNotesAreUsable(fromTurns) || !remapDraftSourcesClientEnabled() ? fromTurns : draftNotesFromCard(proposal);
+  const fromCard = !draftNotesAreUsable(fromTurns) && remapDraftSourcesClientEnabled();
+  const notes = fromCard ? draftNotesFromCard(proposal) : fromTurns;
   if (!draftNotesAreUsable(notes)) {
     return { reference, draftWarning: NO_NOTES_WARNING };
   }
@@ -298,6 +298,8 @@ export async function createInlineForm({
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         notes: notes.text,
+        // Port from the sibling app's #1119: the route keeps no address from the card's own lines.
+        ...(fromCard ? { notesFromCard: true } : {}),
         // AI_READS_CODE_CHECKS_ENABLED: checked again against `notes` by the draft route. Absent with the flag off.
         ...(proposal.checkedReading ? { readerQuotes: proposal.checkedReading } : {}),
         // NEXT_PUBLIC_CARD_POLICY_TO_DRAFT_ENABLED: the policy the card cited (QA live check, 3 Nov 2026).
