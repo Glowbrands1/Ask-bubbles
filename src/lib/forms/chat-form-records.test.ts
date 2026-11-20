@@ -423,3 +423,33 @@ describe("loadFormRecords marks who created each row", () => {
     expect(plain).not.toContain("created by:");
   });
 });
+
+/*
+ * Port from the sibling app's #1141 (QA's code audit, item 13, 20 Nov 2026): accents and curly apostrophes fold the same
+ * way everywhere a name is matched. "Ramírez" was read as "ram rez", so a form on file for "Lucia Ramirez" was not named
+ * when the question wrote the accent. Invented names.
+ */
+describe("accented and apostrophe names (item 13)", () => {
+  it('"does Lucía Ramírez have any coachings?" names the form on file for Lucia Ramirez', async () => {
+    store.form_instances.push(row({ employee_name: "Lucia Ramirez" }));
+    const block = (await loadFormRecords({ actor: MANAGER, question: "does Lucía Ramírez have any coachings?", today: "2026-10-20" }))!.block;
+    expect(block, block).toContain("Forms naming the person in the question (1)");
+  });
+
+  it("an accent typed as stored still reads and names the form", async () => {
+    store.form_instances.push(row({ employee_name: "Lucía Ramírez" }));
+    const block = (await loadFormRecords({ actor: MANAGER, question: "does Lucía Ramírez have any coachings?", today: "2026-10-20" }))!.block;
+    expect(block, block).toContain("Forms naming the person in the question (1)");
+  });
+
+  it('a curly apostrophe ("Nico D’Angelo", an iPhone\'s) names the form on file for Nico D\'Angelo', async () => {
+    store.form_instances.push(row({ employee_name: "Nico D'Angelo" }));
+    const block = (await loadFormRecords({ actor: MANAGER, question: "does Nico D’Angelo have previous coachings?", today: "2026-10-20" }))!.block;
+    expect(block, block).toContain("Forms naming the person in the question (1)");
+  });
+
+  it("candidateNameWords keeps an accented name one word", () => {
+    expect(candidateNameWords("coaching for Lucía Ramírez")).toEqual(expect.arrayContaining(["lucia", "ramirez"]));
+    expect(candidateNameWords("coaching for Lucía Ramírez")).not.toContain("rez");
+  });
+});

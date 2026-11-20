@@ -9,6 +9,7 @@ import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
 import type { AccessScope, Role } from "@/types";
 
 import type { FormsActor } from "./access";
+import { foldName } from "./fold-name";
 import { FOLLOW_UP_LABEL, followUpState } from "./follow-up";
 import { resolveFormsVisibility } from "./forms-visibility";
 import { instanceListFilterFor, visibleInstances } from "./instance-scope";
@@ -190,16 +191,30 @@ const STOP_WORDS = new Set(
 
 /** The words of a question that could be part of somebody's name. */
 export function candidateNameWords(text: string): string[] {
-  const words = text
+  // Port from the sibling app's #1141: names folded (`foldName`), so "Ramírez" is one word, "ramirez", never "ram rez".
+  const words = foldName(text)
     .toLowerCase()
-    .replace(/['’]s\b/g, "")
+    .replace(/'s\b/g, "")
     .split(/[^a-z]+/)
     .filter((word) => word.length >= 2 && !STOP_WORDS.has(word));
   return [...new Set(words)].slice(0, 8);
 }
 
 function nameWords(name: string): string[] {
-  return name.toLowerCase().split(/[^a-z]+/).filter((word) => word.length >= 2);
+  return foldName(name).toLowerCase().split(/[^a-z]+/).filter((word) => word.length >= 2);
+}
+
+/**
+ * The pieces an accented name used to split into ("ramírez" → "ram", "rez"), for the Forms Register READ only: the read
+ * matches name words inside the stored name (`ilike`, letters a–z), so a question typed with the accent still reads a form
+ * whose name is stored with it. Matching is on the folded words. Empty when the text has no accent.
+ */
+function accentedNamePieces(text: string): string[] {
+  if (foldName(text) === text.replace(/[‘’ʼ`´]/g, "'")) return [];
+  return text
+    .toLowerCase()
+    .split(/[^a-z]+/)
+    .filter((word) => word.length >= 2 && !STOP_WORDS.has(word));
 }
 
 export interface NameMatches {
@@ -724,7 +739,9 @@ export async function loadFormRecords(input: {
     if (words.length > 0) {
       // PRIVATE_CREATOR_FORMS: over-read, then trim to the page; off, the page itself.
       const asked = privateAwareLimit(MATCH_LIMIT);
-      const read = await listInstances("all", asked, { ...filter, ...narrowFilter, employeeNameWords: words });
+      // An accented question also reads the old letter pieces, so a name stored with its accent is still read.
+      const readWords = [...new Set([...words, ...accentedNamePieces(nameSource).filter((word) => !narrowing || !RANGE_WORDS.has(word))])];
+      const read = await listInstances("all", asked, { ...filter, ...narrowFilter, employeeNameWords: readWords });
       // Item 28: a Coaching kind never keeps a Follow-Up Coaching Form (`ofKind`).
       const split = splitRecordDrafts(input.question, ofKind(visibleInstances(formsActor, read), kind).slice(0, MATCH_LIMIT));
       const matches = matchRowsToQuestion(split.onFile, words, nameSource);
@@ -787,7 +804,7 @@ export async function loadFormRecords(input: {
  * the recent list instead of a false "nothing on file".
  */
 function looksLikeItNamesSomebody(text: string): boolean {
-  const tokens = text.toLowerCase().replace(/['’]s\b/g, "").split(/[^a-z]+/).filter(Boolean);
+  const tokens = foldName(text).toLowerCase().replace(/['’]s\b/g, "").split(/[^a-z]+/).filter(Boolean);
   const candidate = (word: string | undefined) =>
     word !== undefined && word.length >= 2 && !STOP_WORDS.has(word);
   for (let i = 0; i < tokens.length; i += 1) {

@@ -5,6 +5,7 @@ import { COMPANY_JOB_TITLES, isJobTitleAbbreviation } from "@/config/company/job
 import { COMPANY_LOCATIONS, locationByCode, locationById, locationNameKey } from "@/lib/locations";
 
 import { extractFormDate } from "./form-date-answer";
+import { foldName } from "./fold-name";
 import { FORM_NAME_PATTERN, canonicalShorthand, canonicalWarningWording, isFormVocabulary, leadingFormRequest } from "./template-intent";
 import { antiLoopEnabled, exitAnswerNotACorrectionEnabled, typedNameEnabled } from "@/lib/config/chat-quality-flags";
 import { companyNameStops } from "./name-stops";
@@ -1447,10 +1448,12 @@ function settle(strong: string[], weak: string[], text: string, subjects: readon
  * name beside the full name, or a surname given as its initial ("Avery T").
  */
 export function samePerson(a: string, b: string): boolean {
+  // Port from the sibling app's #1141: accents off and every apostrophe straight (`foldName`), so "Lucía Ramírez" and
+  // "lucia ramirez", or "D’Angelo" and "D'Angelo", are the same person.
   const words = (name: string) =>
-    name
+    foldName(name)
       .toLowerCase()
-      .replace(/['’]s\b/g, "")
+      .replace(/'s\b/g, "")
       .replace(/\./g, "")
       .split(/\s+/)
       .filter(Boolean);
