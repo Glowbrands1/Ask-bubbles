@@ -119,6 +119,21 @@ export function draftNotesAreUsable(notes: DraftNotes): boolean {
   return notes.text.trim().length >= DRAFT_NOTES_MINIMUM;
 }
 
+/** The labels of the card's own lines (`draftNotesFromCard`). */
+const CARD_LINE = /^(?:Employee|Job title|Location|Date|What happened|Type of warning|Payroll deduct applicable|Payroll deduct amount|Prior actions): /;
+
+/**
+ * The notes without the card's own lines (`draftNotesFromCard`'s "Employee: …", "What happened: …"): the manager's
+ * turns only. Port from the sibling app's #1119 (item 19): a card's lines are not the manager's words, so no address is read
+ * from them.
+ */
+export function notesWithoutCardLines(notes: string): string {
+  return notes
+    .split("\n")
+    .filter((line) => !CARD_LINE.test(line))
+    .join("\n");
+}
+
 /**
  * The card's own lines, for a draft whose notes are otherwise empty. Only
  * when the card shows what happened: a card with no incident still drafts

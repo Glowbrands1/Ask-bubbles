@@ -267,6 +267,18 @@ export interface FormDateRange {
 export interface FormKind {
   label: string;
   templateNameWords: string[];
+  /**
+   * Port from the sibling app's #1133 (QA's code audit, item 28): words a form's name must NOT have to be this kind. The read
+   * matches templateNameWords as part of the name (`ilike`), so "coaching" also reads the Follow-Up Coaching Form;
+   * `ofKind` drops it after the read.
+   */
+  excludeTemplateNameWords?: string[];
+}
+
+/** Only the rows of this kind (a Coaching kind never keeps a Follow-Up Coaching Form). No kind: every row. */
+export function ofKind<T extends { templateName: string }>(rows: readonly T[], kind: FormKind | null | undefined): T[] {
+  const excluded = kind?.excludeTemplateNameWords ?? [];
+  return excluded.length === 0 ? [...rows] : rows.filter((row) => !excluded.some((word) => row.templateName.toLowerCase().includes(word)));
 }
 
 const MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
@@ -395,7 +407,7 @@ export function formDateRangeFromInput(from: unknown, to: unknown, today: string
 const FORM_KINDS: ReadonlyArray<{ pattern: RegExp; kind: FormKind }> = [
   { pattern: /\b(?:cas?|cafs?|corrective(?: actions?)?|write[- ]?ups?|written up|wrote up|warnings?|disciplinary|discipline)\b/, kind: { label: "Corrective Action form", templateNameWords: ["corrective"] } },
   { pattern: /\b(?:follow[- ]?up coachings?)\b/, kind: { label: "Follow-Up Coaching form", templateNameWords: ["follow"] } },
-  { pattern: /\b(?:coach(?:ing|ings|ed)?)\b/, kind: { label: "Coaching form", templateNameWords: ["coaching"] } },
+  { pattern: /\b(?:coach(?:ing|ings|ed)?)\b/, kind: { label: "Coaching form", templateNameWords: ["coaching"], excludeTemplateNameWords: ["follow"] } },
   { pattern: /\b(?:exit(?: forms?| interviews?)?|resignations?|resigned|terminations?|terminated|quit)\b/, kind: { label: "Resignation/Exit form", templateNameWords: ["exit", "resignation"] } },
   { pattern: /\b(?:epps?|performance plans?)\b/, kind: { label: "EPP form", templateNameWords: ["epp"] } },
 ];
@@ -534,8 +546,11 @@ export function renderFormRecordsBlock(input: {
   today: string;
   /** CROSS_CHAT_REPLY_GUARD_ENABLED: the asking user's id, to mark who created each row. */
   viewerId?: string | null;
-  /** The form dates and kind the list was read for; `recent` is then every such form, up to `limit`. */
-  narrowed?: { range: FormDateRange | null; kind: FormKind | null; limit: number } | null;
+  /**
+   * The form dates and kind the list was read for; `recent` is then every such form, up to `limit`. `cutOff`: the
+   * database read came back full, so there may be more, however few rows the visibility and kind filters left.
+   */
+  narrowed?: NarrowedList | null;
 }): string {
   const viewerId = input.viewerId ?? null;
   const { words, matches, recent, today } = input;
@@ -585,14 +600,26 @@ export function renderFormRecordsBlock(input: {
   return sections.join("\n\n");
 }
 
+/** A list read by form date or kind, and whether its read hit the cap. */
+interface NarrowedList {
+  range: FormDateRange | null;
+  kind: FormKind | null;
+  limit: number;
+  cutOff?: boolean;
+}
+
 function narrowedWhat(narrowed: { range: FormDateRange | null; kind: FormKind | null }, plural = true): string {
   const noun = `${narrowed.kind?.label ?? "form"}${plural ? "s" : ""}`;
   return narrowed.range ? `${noun} dated ${narrowed.range.label} (${narrowed.range.from} to ${narrowed.range.to})` : noun;
 }
 
-/** Whether the narrowed list is every such form, or stopped at its cap. */
-function narrowedSentence(narrowed: { range: FormDateRange | null; kind: FormKind | null; limit: number }, count: number): string {
-  return count >= narrowed.limit
+/**
+ * Whether the narrowed list is every such form, or stopped at its cap. Port from the sibling app's #1133 (item 29): a list is
+ * complete only when the database returned fewer rows than it was asked for; counting the rows left after the
+ * visibility filter called a cut-off list complete (100 read, 60 visible, "every such form").
+ */
+function narrowedSentence(narrowed: NarrowedList, count: number): string {
+  return narrowed.cutOff === true || count >= narrowed.limit
     ? `This list stops at ${narrowed.limit} forms, so there may be more ${narrowedWhat(narrowed)}. Say so, and that ${REGISTER_PATH} has the full list.`
     : `This is every ${narrowedWhat(narrowed, false)} this user can see, read by form date — not a sample of recent forms. Never say the list is capped or that older ones may be missing.`;
 }
@@ -695,29 +722,32 @@ export async function loadFormRecords(input: {
     }
 
     if (words.length > 0) {
-      const split = splitRecordDrafts(
-        input.question,
-        visibleInstances(
-          formsActor,
-          // PRIVATE_CREATOR_FORMS: over-read, then trim to the page; off, the page itself.
-          await listInstances("all", privateAwareLimit(MATCH_LIMIT), { ...filter, ...narrowFilter, employeeNameWords: words }),
-        ).slice(0, MATCH_LIMIT),
-      );
+      // PRIVATE_CREATOR_FORMS: over-read, then trim to the page; off, the page itself.
+      const asked = privateAwareLimit(MATCH_LIMIT);
+      const read = await listInstances("all", asked, { ...filter, ...narrowFilter, employeeNameWords: words });
+      // Item 28: a Coaching kind never keeps a Follow-Up Coaching Form (`ofKind`).
+      const split = splitRecordDrafts(input.question, ofKind(visibleInstances(formsActor, read), kind).slice(0, MATCH_LIMIT));
       const matches = matchRowsToQuestion(split.onFile, words, nameSource);
       const drafts = matchRowsToQuestion(split.notOnFile, words, nameSource);
       const notOnFile = [...drafts.named, ...drafts.possible];
       if (matches.named.length > 0 || matches.possible.length > 0 || notOnFile.length > 0) {
-        return { block: renderFormRecordsBlock({ visibility, words, matches, recent: [], notOnFile, today, viewerId, narrowed }) };
+        // Item 29: this read stops at MATCH_LIMIT; a full read is never called every such form.
+        const matchNarrowed = narrowed ? { ...narrowed, limit: MATCH_LIMIT, cutOff: read.length >= asked } : null;
+        return { block: renderFormRecordsBlock({ visibility, words, matches, recent: [], notOnFile, today, viewerId, narrowed: matchNarrowed }) };
       }
     }
 
     if (narrowed && !(words.length > 0 && looksLikeItNamesSomebody(nameSource))) {
       // Archived forms count: "who got a CA this month" asks what was filed, not what is on the active shelf.
-      const split = splitRecordDrafts(
-        input.question,
-        visibleInstances(formsActor, await listInstances("all", privateAwareLimit(NARROWED_LIMIT), { ...filter, ...narrowFilter })).slice(0, NARROWED_LIMIT),
-      );
-      return { block: renderFormRecordsBlock({ viewerId, visibility, words, matches: null, recent: split.onFile, notOnFile: split.notOnFile, today, narrowed }) };
+      const asked = privateAwareLimit(NARROWED_LIMIT);
+      const read = await listInstances("all", asked, { ...filter, ...narrowFilter });
+      // Item 28: a Coaching kind never keeps a Follow-Up Coaching Form (`ofKind`).
+      const split = splitRecordDrafts(input.question, ofKind(visibleInstances(formsActor, read), kind).slice(0, NARROWED_LIMIT));
+      // Item 29: complete only when the database returned fewer rows than it was asked for.
+      const cutOff = read.length >= asked;
+      return {
+        block: renderFormRecordsBlock({ viewerId, visibility, words, matches: null, recent: split.onFile, notOnFile: split.notOnFile, today, narrowed: { ...narrowed, cutOff } }),
+      };
     }
 
     const recentSplit = splitRecordDrafts(
