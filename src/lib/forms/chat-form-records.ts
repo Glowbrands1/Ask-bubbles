@@ -3,7 +3,8 @@ import "server-only";
 import { promptLabel } from "@/lib/ai/prompts";
 import { ACTIVE_BRAND } from "@/lib/brand";
 import { businessToday } from "@/lib/business-date";
-import { formRecordsNoJudgementEnabled, formsOnFileOrderMatchPossibleEnabled, priorRecordFinalOnlyEnabled } from "@/lib/config/chat-quality-flags";
+import { formRecordsNoJudgementEnabled, formsOnFileCountsEnabled, formsOnFileOrderMatchPossibleEnabled, priorRecordFinalOnlyEnabled } from "@/lib/config/chat-quality-flags";
+import { countFormsOnFile, type FormCounts } from "./forms-on-file-counts";
 import { locationById } from "@/lib/locations";
 import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
 import type { AccessScope, Role } from "@/types";
@@ -372,7 +373,8 @@ export function formDateRangeFromQuestion(question: string, today: string): Form
     const monday = addDays(today, -weekday - 7);
     return { from: monday, to: addDays(monday, 6), label: "last week" };
   }
-  if (/\b(?:this|current)\s+month\b|\bmonth to date\b|\bmtd\b/.test(text)) {
+  // FORMS_ON_FILE_COUNTS_ENABLED (port from the sibling app, f081): "list ca for the month" asks about this month.
+  if (/\b(?:this|current)\s+month\b|\bmonth to date\b|\bmtd\b/.test(text) || (formsOnFileCountsEnabled() && /\b(?:for|in|during|over) the month\b/.test(text))) {
     return { ...monthRange(year, monthIndex), to: today, label: `this month (${monthRange(year, monthIndex).label})` };
   }
   if (/\b(?:last|past|previous)\s+month\b/.test(text)) {
@@ -449,6 +451,23 @@ export function isFormRangeQuestion(question: string, today: string): boolean {
   if (!formKindFromText(text)) return false;
   if (/\b(?:make|create|draft|draw|start|write|do|need|prepare|fill|generate|new)\b(?! (?:on file|filed))/.test(text) && !/\b(?:who|how many|which|list|show)\b/.test(text)) return false;
   return formDateRangeFromQuestion(text, today) !== null || /\b(?:who (?:got|gets|received|had|has|was|were)|how many|which (?:employees|people|team members|staff)|list (?:all|every|the)|show (?:me )?(?:all|every|the))\b/.test(text);
+}
+
+/**
+ * FORMS_ON_FILE_COUNTS_ENABLED (port from the sibling app, QA's f081, 20 Nov 2026): a request to LIST forms on file, never to
+ * make one or open one. "list ca for the month" was answered with no forms read, and "show me CA and coaching forms for
+ * <A> this month" went to the open-which-one flow. A listing word (list, show me, how many, who got / has / had, any) with
+ * a kind of form, and a period or plural form words ("forms", "CAs", "coachings"); never with a word that opens or changes
+ * one ("open", "edit", "change", "fix", "update", "the draft", "make", "create"). Off: never.
+ */
+export function isFormListQuestion(question: string, today: string): boolean {
+  if (!formsOnFileCountsEnabled()) return false;
+  const text = (question ?? "").toLowerCase().replace(/\s+/g, " ");
+  if (!formKindFromText(text)) return false;
+  if (/\b(?:open|edit|change|fix|update|correct|reopen|finali[sz]e|sign|make|create|draft|write(?!-?ups?\b)|start|new)\b|\bthe draft\b/.test(text)) return false;
+  const listing = /\b(?:list|show me|show|how many|who (?:got|gets|has|had|received)|are there any|any)\b/.test(text);
+  const many = formDateRangeFromQuestion(text, today) !== null || /\b(?:forms|cas|caf?s|coachings|write-?ups|warnings|corrective actions)\b/.test(text);
+  return listing && many;
 }
 
 /* Words that name a date or a kind of form, never a person ("november", "ca"). */
@@ -550,6 +569,19 @@ export function withoutRecordJudgement(reply: string): string {
     .trim();
 }
 
+/** FORMS_ON_FILE_COUNTS_ENABLED (port from the sibling app, f081): the code's counts, for the model to copy. */
+function countsSection(counted: { counts: FormCounts; listed: number; of: number; complete: boolean }): string {
+  const statuses = (entry: Readonly<Record<string, number>>) => Object.entries(entry).map(([status, count]) => `${status} ${count}`).join(", ");
+  const lines = counted.counts.by_person.map((person) =>
+    `- ${person.employee}: ${person.total} — ${person.by_form.map((form) => `${form.form} ${form.total} (${form.by_date.map((day) => `${day.date ?? "no date"}: ${day.count}, ${statuses(day.statuses)}`).join("; ")})`).join("; ")}`,
+  );
+  return [
+    `COUNTS (code counted every form the read found: ${counted.counts.total}${counted.complete ? "" : ", the first rows of a read that stopped at its limit"}). Copy these numbers exactly. Never count or add up the rows yourself, and never put one person's forms under another person's name. Mark an archived form "(archived)". Archived drafts are left out unless the question asked for archived forms.`,
+    ...lines,
+    ...(counted.of > counted.listed ? [`${counted.listed} of these ${counted.of} forms are listed above; say how many are not shown.`] : []),
+  ].join("\n");
+}
+
 export function renderFormRecordsBlock(input: {
   visibility: AccessScope;
   /** The name words searched for, or empty when the question named nobody. */
@@ -566,6 +598,11 @@ export function renderFormRecordsBlock(input: {
    * database read came back full, so there may be more, however few rows the visibility and kind filters left.
    */
   narrowed?: NarrowedList | null;
+  /**
+   * FORMS_ON_FILE_COUNTS_ENABLED: the counts of every form the read found (not only the ones listed), and how many were
+   * listed of how many, with whether the read was complete. Absent: as before.
+   */
+  counted?: { counts: FormCounts; listed: number; of: number; complete: boolean } | null;
 }): string {
   const viewerId = input.viewerId ?? null;
   const { words, matches, recent, today } = input;
@@ -612,6 +649,7 @@ export function renderFormRecordsBlock(input: {
     );
   }
 
+  if (input.counted && input.counted.counts.total > 0) sections.push(countsSection(input.counted));
   return sections.join("\n\n");
 }
 
@@ -678,6 +716,8 @@ const MATCH_LIMIT = 50;
 const RECENT_LIMIT = 20;
 /** A list read by form date or kind: every such form up to this many, then the list says it stopped. */
 export const NARROWED_LIMIT = 100;
+/** FORMS_ON_FILE_COUNTS_ENABLED (port from the sibling app, f081): a counted read covers up to this many rows (PostgREST's page). */
+export const COUNTED_READ_LIMIT = 1000;
 
 /**
  * The FORMS ON FILE block for this turn, or null when this caller may not read
@@ -722,6 +762,9 @@ export async function loadFormRecords(input: {
     const range = input.range ?? (input.narrowFromQuestion ? formDateRangeFromQuestion(input.question, today) : null);
     const kind = input.kind ?? (input.narrowFromQuestion ? formKindFromText(input.question) : null);
     const narrowed = range || kind ? { range, kind, limit: NARROWED_LIMIT } : null;
+    const counting = formsOnFileCountsEnabled();
+    /* FORMS_ON_FILE_COUNTS_ENABLED (port from the sibling app, f081): an archived draft is left out unless the question asks for archived forms. */
+    const keep = (row: InstanceRow) => !counting || /\barchiv/i.test(input.question) || !(row.archivedAt && row.status === "draft");
     const narrowFilter = {
       ...(range ? { formDateFrom: range.from, formDateTo: range.to } : {}),
       ...(kind ? { templateNameWords: kind.templateNameWords } : {}),
@@ -738,32 +781,44 @@ export async function loadFormRecords(input: {
 
     if (words.length > 0) {
       // PRIVATE_CREATOR_FORMS: over-read, then trim to the page; off, the page itself.
-      const asked = privateAwareLimit(MATCH_LIMIT);
+      const asked = privateAwareLimit(counting ? COUNTED_READ_LIMIT : MATCH_LIMIT);
       // An accented question also reads the old letter pieces, so a name stored with its accent is still read.
       const readWords = [...new Set([...words, ...accentedNamePieces(nameSource).filter((word) => !narrowing || !RANGE_WORDS.has(word))])];
       const read = await listInstances("all", asked, { ...filter, ...narrowFilter, employeeNameWords: readWords });
       // Item 28: a Coaching kind never keeps a Follow-Up Coaching Form (`ofKind`).
-      const split = splitRecordDrafts(input.question, ofKind(visibleInstances(formsActor, read), kind).slice(0, MATCH_LIMIT));
+      const found = ofKind(visibleInstances(formsActor, read), kind).filter(keep);
+      const split = splitRecordDrafts(input.question, found.slice(0, MATCH_LIMIT));
       const matches = matchRowsToQuestion(split.onFile, words, nameSource);
       const drafts = matchRowsToQuestion(split.notOnFile, words, nameSource);
       const notOnFile = [...drafts.named, ...drafts.possible];
       if (matches.named.length > 0 || matches.possible.length > 0 || notOnFile.length > 0) {
         // Item 29: this read stops at MATCH_LIMIT; a full read is never called every such form.
         const matchNarrowed = narrowed ? { ...narrowed, limit: MATCH_LIMIT, cutOff: read.length >= asked } : null;
-        return { block: renderFormRecordsBlock({ visibility, words, matches, recent: [], notOnFile, today, viewerId, narrowed: matchNarrowed }) };
+        /* FORMS_ON_FILE_COUNTS_ENABLED: the named person's forms counted over every one found, never only the listed ones. */
+        const all = counting ? matchRowsToQuestion(found, words, nameSource) : null;
+        const counted = all
+          ? { counts: countFormsOnFile([...all.named, ...all.possible]), listed: matches.named.length + matches.possible.length + notOnFile.length, of: all.named.length + all.possible.length, complete: read.length < asked }
+          : null;
+        return { block: renderFormRecordsBlock({ visibility, words, matches, recent: [], notOnFile, today, viewerId, narrowed: matchNarrowed, counted }) };
       }
     }
 
     if (narrowed && !(words.length > 0 && looksLikeItNamesSomebody(nameSource))) {
       // Archived forms count: "who got a CA this month" asks what was filed, not what is on the active shelf.
-      const asked = privateAwareLimit(NARROWED_LIMIT);
+      // FORMS_ON_FILE_COUNTS_ENABLED (port from the sibling app, f081): archived FINALIZED forms still count; archived drafts are left out.
+      const asked = privateAwareLimit(counting ? COUNTED_READ_LIMIT : NARROWED_LIMIT);
       const read = await listInstances("all", asked, { ...filter, ...narrowFilter });
       // Item 28: a Coaching kind never keeps a Follow-Up Coaching Form (`ofKind`).
-      const split = splitRecordDrafts(input.question, ofKind(visibleInstances(formsActor, read), kind).slice(0, NARROWED_LIMIT));
+      const found = ofKind(visibleInstances(formsActor, read), kind).filter(keep);
+      const listed = counting
+        ? [...found].sort((a, b) => (b.formDate ?? "").localeCompare(a.formDate ?? "") || a.employeeName.localeCompare(b.employeeName)).slice(0, NARROWED_LIMIT)
+        : found.slice(0, NARROWED_LIMIT);
+      const split = splitRecordDrafts(input.question, listed);
       // Item 29: complete only when the database returned fewer rows than it was asked for.
       const cutOff = read.length >= asked;
+      const counted = counting ? { counts: countFormsOnFile(found), listed: listed.length, of: found.length, complete: !cutOff } : null;
       return {
-        block: renderFormRecordsBlock({ viewerId, visibility, words, matches: null, recent: split.onFile, notOnFile: split.notOnFile, today, narrowed: { ...narrowed, cutOff } }),
+        block: renderFormRecordsBlock({ viewerId, visibility, words, matches: null, recent: split.onFile, notOnFile: split.notOnFile, today, narrowed: { ...narrowed, cutOff }, counted }),
       };
     }
 

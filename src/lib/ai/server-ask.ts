@@ -12,7 +12,7 @@ import { ACTIVE_BRAND } from "@/lib/brand";
 import { CLAUDE_MAX_TOKENS, RETRIEVAL } from "@/lib/config/models";
 import { MissingConfigurationError, liveReadiness } from "@/lib/config/server-env";
 import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
-import { asksOnlyAboutFormsOnFile, isFormRangeQuestion, isFormRecordsQuestion, loadFormRecords } from "@/lib/forms/chat-form-records";
+import { asksOnlyAboutFormsOnFile, isFormListQuestion, isFormRangeQuestion, isFormRecordsQuestion, loadFormRecords } from "@/lib/forms/chat-form-records";
 import { namesAPerson } from "@/lib/forms/names-a-person";
 import { priorFormsReadingForChat } from "@/lib/forms/prior-forms";
 import { answersFormClarification } from "@/lib/forms/form-clarification";
@@ -447,7 +447,9 @@ async function answerQuestionCore(
   const takeOffOnCard = takeOffStaysCard(request);
   // LIST_POLICY_IS_EDIT_ENABLED: "please list the policy" with only a card open is a card turn, never a question.
   const listPolicyCard = listPolicyOnCard(request);
-  const askedQuestion = !takeOffOnCard && !listPolicyCard && questionNotFormEnabled() && isQuestionNotForm(request.question, request.history);
+  /* FORMS_ON_FILE_COUNTS_ENABLED (port from the sibling app, f081): "list ca for the month" lists forms on file; it never starts a new form. */
+  const listsForms = isFormListQuestion(request.question, request.context.todayIso);
+  const askedQuestion = listsForms || (!takeOffOnCard && !listPolicyCard && questionNotFormEnabled() && isQuestionNotForm(request.question, request.history));
   if (intentExtractionEnabled() && !askedQuestion) {
     markStage("intent_extraction");
     const prepared = await applyIntentExtraction({ request, actor });
@@ -837,6 +839,7 @@ async function answerQuestionCore(
    * coaching jba manual 11-1-26"), and each row says who created it.
    */
   const readsFormRecords =
+    listsForms ||
     pastFormsFirst ||
     ((isFormRecordsQuestion(request.question) ||
       (formsOnFileDateRangeEnabled() && isFormRangeQuestion(request.question, request.context.todayIso))) &&
@@ -848,7 +851,7 @@ async function answerQuestionCore(
         previousQuestion: previousManagerTurn(request),
         today: request.context.todayIso,
         ...(crossChatGuard ? { markCreator: true } : {}),
-        ...(formsOnFileDateRangeEnabled() ? { narrowFromQuestion: true } : {}),
+        ...(formsOnFileDateRangeEnabled() || listsForms ? { narrowFromQuestion: true } : {}),
       })
     : Promise.resolve(null);
 
