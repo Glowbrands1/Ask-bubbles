@@ -434,7 +434,7 @@ function FormProposalCard({
   const inFlight = React.useRef(false);
 
   /*
-   * f073 (Ask Sunny's QA, 20 Nov 2026): "Create draft" is pressable only once this card runs in the browser, so a
+   * f073 (QA live test, 20 Nov 2026): "Create draft" is pressable only once this card runs in the browser, so a
    * button drawn before React attached its click handler (server HTML, or a page still loading a new deploy's code)
    * reads "Loading…" and is disabled, never a button that does nothing.
    */
