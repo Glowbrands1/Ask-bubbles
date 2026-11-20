@@ -4,6 +4,7 @@ import { cardChangePlanRebuildEnabled } from "@/lib/config/chat-quality-flags";
 import { syncCorrectiveActionPlan } from "@/lib/forms/ca-action-plan-sync";
 import { PAYROLL_DEDUCT_AMOUNT_KEY } from "@/lib/forms/payroll-deduct-amount";
 import { errorResponse } from "@/lib/api/respond";
+import { REQUIRED_FIELDS_BLANK } from "@/lib/forms/required-fields";
 import { POLICY_ACKNOWLEDGEMENT_REQUIRED } from "@/lib/forms/policy-verification";
 import {
   authorizeInstance,
@@ -13,6 +14,7 @@ import {
   archiveInstance,
   deleteInstance,
   finalizeInstance,
+  RequiredFieldsBlankError,
   UnverifiedPolicyError,
   InstanceProtectedError,
   loadInstance,
@@ -174,6 +176,9 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
      */
     if (error instanceof FormAlreadyRevisedError) {
       return NextResponse.json({ error: error.message, code: error.code, newerId: error.newerId }, { status: 409 });
+    }
+    if (error instanceof RequiredFieldsBlankError) {
+      return NextResponse.json({ error: error.message, code: REQUIRED_FIELDS_BLANK, fields: error.fields.map((field) => field.key) }, { status: 422 });
     }
     if (error instanceof UnverifiedPolicyError) {
       return NextResponse.json(

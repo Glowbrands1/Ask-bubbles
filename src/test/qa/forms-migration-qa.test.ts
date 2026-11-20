@@ -319,8 +319,23 @@ function referenceDocument(key: string, raw: unknown): unknown {
   if (!Array.isArray(document.blocks)) return raw;
   return {
     ...document,
-    blocks: document.blocks.filter((block) => !(block.kind === "field" && block.field?.key === "payroll_deduct_amount")),
+    // Also set aside: revision 8's "List date of JBA policy manual signed by employee" (HR via Pau, 19 Nov 2026), a box the reference does not have.
+    blocks: document.blocks.filter(
+      (block) => !(block.kind === "field" && (block.field?.key === "payroll_deduct_amount" || block.field?.key === "policy_manual_signed")),
+    ),
   };
+}
+
+/**
+ * HR via Pau, 19 Nov 2026 (revision 8): the history line the reference prints carries the approved new label here. The
+ * new policy manual box is set aside with the document (`referenceDocument`); nothing else in the text moves.
+ */
+function withApprovedHistoryBoxes(key: string, text: string): string {
+  if (key !== "dpoa") return text;
+  return text.replace(
+    "List previously received coaching and/or corrective action with date signed",
+    "List previous coaching and corrective actions and include date signed by employee in past 90 days",
+  );
 }
 
 /** A document's shape: every block's kind and keys, nothing a branding change touches. */
@@ -759,12 +774,15 @@ describe.each(FORMS)("$key", (form) => {
       expect(ours.pages, name).toBe(reference[name]!.pages);
       // An approved removal also removes the question, and the sample answer printed under it, from the reference text.
       // An approved option change (Corrective Action revision 7) prints the new labels in place of the old.
-      const referenceText = withApprovedOptionText(
+      const referenceText = withApprovedHistoryBoxes(
         form.key,
-        removedFieldReferenceText(form.key, neutral).reduce(
-          (text, removed) => text.split(removed).join(""),
-          neutral(reference[name]!.text),
-        ).replace(/\s+/g, " ").trim(),
+        withApprovedOptionText(
+          form.key,
+          removedFieldReferenceText(form.key, neutral).reduce(
+            (text, removed) => text.split(removed).join(""),
+            neutral(reference[name]!.text),
+          ).replace(/\s+/g, " ").trim(),
+        ),
       );
       expect(neutral(ours.text), name).toBe(referenceText);
       if (form.key === "dpoa") {

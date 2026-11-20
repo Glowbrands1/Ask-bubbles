@@ -79,7 +79,11 @@ function withoutUnpublishedPayrollAmount(key: string, document: unknown): unknow
   if (!Array.isArray(doc.blocks)) return document;
   return {
     ...doc,
-    blocks: doc.blocks.filter((block) => !(block.kind === "field" && block.field?.key === "payroll_deduct_amount")),
+    // Also set aside: revision 8's "List date of JBA policy manual signed by employee" (HR via Pau, 19 Nov 2026), a box
+    // the published version does not have. `required-history-boxes.test.ts` checks its place and its words.
+    blocks: doc.blocks.filter(
+      (block) => !(block.kind === "field" && (block.field?.key === "payroll_deduct_amount" || block.field?.key === "policy_manual_signed")),
+    ),
   };
 }
 
@@ -104,6 +108,10 @@ const DPOA_REVISION_6 =
 const DPOA_REVISION_7 =
   "Revision 7 (client request, 4 Nov 2026) makes Type of Offense four boxes — Attendance Policy, Standards of Conduct, Dress Code Violation, Other — removing Tardiness/Leaving Early and Absenteeism (now Attendance Policy), Under Performance and Violation of Company Policies (now Standards of Conduct), and the Other write-in line (Other is a box).";
 
+/** The one sentence revision 8 adds (HR via Pau, 19 Nov 2026, from Ask Sunny's revision 9). */
+const DPOA_REVISION_8 =
+  'Revision 8 (HR via Pau, 19 Nov 2026) replaces the one history line with two required boxes, in HR\'s words: "List date of JBA policy manual signed by employee" (typed by the person creating the form) and "List previous coaching and corrective actions and include date signed by employee in past 90 days" (the same key as before). Neither can be left blank at Finalize.';
+
 const APPROVED_CONTENT_CHANGES: { decision: string; from: string; to: string }[] = [
   { decision: "D3 — 7G Service", from: "Follow through with Client Engagement Strategies with every client.", to: "Follow through with 7G Service with every guest." },
   { decision: "D4 — Employee Performance Plan acknowledgement", from: "I confirm that my supervisor and I have discussed this training document and I will participate in the plan for improvement.", to: "I confirm that my supervisor and I have discussed this Employee Performance Plan and I will participate in the plan for improvement." },
@@ -116,8 +124,11 @@ const APPROVED_CONTENT_CHANGES: { decision: string; from: string; to: string }[]
    */
   { decision: "DM-1 — Corrective Action Action Plan help", from: "One paragraph: what is being done, what the employee does going forward, and that the manual's own wording is reviewed with them. No dates and no follow-up meeting. It always ends with the form's closing sentence, which is added automatically.", to: "Two sentences: management will review the policy cited under Direct policy with the employee, and the form's closing sentence — with the payroll deduction between them when payroll deduct is Yes. Written by Ask Bubbles from the form; the closing is added automatically." },
   { decision: "DM-2 — Corrective Action closing, \"may result in\"", from: CA_ACTION_PLAN_CLOSING_REVISION_5, to: CA_ACTION_PLAN_CLOSING },
-  // Revision 7 (client request, template approved 4 Nov 2026) adds its own sentence after revision 6's.
-  { decision: "DM-3 — Corrective Action revision 6 and 7 note", from: DPOA_NOTE_REVISION_5, to: DPOA_NOTE_REVISION_5.replace(" Forms filed against earlier versions", ` ${DPOA_REVISION_6} ${DPOA_REVISION_7} Forms filed against earlier versions`) },
+  // Revision 7 (client request, template approved 4 Nov 2026) added its own sentence after revision 6's; revision 8 (HR via Pau, 19 Nov 2026) adds one after that, so the note below carries all three (DM-3 and HR-1).
+  // Revision 8 (HR via Pau, 19 Nov 2026) adds its sentence after revision 7's; its label, help and required mark are below.
+  { decision: "DM-3 + HR-1 — Corrective Action revision 6, 7 and 8 note", from: DPOA_NOTE_REVISION_5, to: DPOA_NOTE_REVISION_5.replace(" Forms filed against earlier versions", ` ${DPOA_REVISION_6} ${DPOA_REVISION_7} ${DPOA_REVISION_8} Forms filed against earlier versions`) },
+  { decision: "HR-1 — history box help", from: "One per line: each coaching or corrective action previously received, with the date it was signed. Write \"None — first occurrence\" when there has been none.", to: "One per line: each coaching or corrective action received in the past 90 days, with the date the employee signed it. Write \"None — first occurrence\" when there has been none. Required." },
+  { decision: "HR-1 — history box label", from: "List previously received coaching and/or corrective action with date signed", to: "List previous coaching and corrective actions and include date signed by employee in past 90 days" },
   /*
    * QA, 25 Oct 2026 (Pau's answers): Buff City Soap uses MyGlow and Sunlync,
    * so both exit steps keep the source wording and only the tanning clause
@@ -238,7 +249,8 @@ describe("the migrated templates are the reference platform's published template
     // D3 x2 (SDIT, both lists), D4 x10 (six EPPs; SDIT, TSD and both DMIT print it twice), D12 x1, D18 x1, DM-1..3 x1 each,
     // QA-2..4 x1 each (QA, 25 Oct 2026: no sibling-company wording; QA-1 dropped, MyGlow confirmed by Pau).
     // QA-5 x1 (QA, 29 Oct 2026: the Coaching details help names the three sections the prompt asks for).
-    expect(matching).toHaveLength(21);
+    // + HR-1 x2 (Ask Sunny's revision 9, 19 Nov 2026: the history box's label and help; the revision note replaces DM-3's pair).
+    expect(matching).toHaveLength(23);
     for (const entry of APPROVED_CONTENT_CHANGES) {
       expect(matching.some((change) => change.from === entry.from), entry.decision).toBe(true);
     }
@@ -259,6 +271,12 @@ describe("the migrated templates are the reference platform's published template
       }
       if (change.sourceKey === "stc-exit" && change.path === ".key") {
         expect(change.to, where).toBe("resignation-exit");
+        continue;
+      }
+      // HR-1 (19 Nov 2026): the history box is required. A mark the published version does not have.
+      if (change.sourceKey === "dpoa" && change.path.endsWith(".field.required")) {
+        expect(change.from, where).toBeNull();
+        expect(change.to, where).toBe(true);
         continue;
       }
       expect(typeof change.from, where).toBe("string");

@@ -20,6 +20,15 @@ export function envFlag(name: string): boolean {
   return flagFromEnv(name, process.env[name]);
 }
 
+/**
+ * REQUIRED_FIELDS_AT_FINALIZE_ENABLED (HR via Pau, 19 Nov 2026; default off). A field a published
+ * version marks `required` (revision 8 of the Corrective Action Form: the policy manual's signed date and the past 90
+ * days' history) must hold a value before Finalize; a draft may stay blank. Off, a blank required field files as before.
+ */
+export function requiredFieldsAtFinalizeEnabled(): boolean {
+  return envFlag("REQUIRED_FIELDS_AT_FINALIZE_ENABLED");
+}
+
 /** Claude tool-use reading of a form turn, and routing that reading off search. */
 export function formToolsEnabled(): boolean {
   return envFlag("FORM_TOOLS_ENABLED");
