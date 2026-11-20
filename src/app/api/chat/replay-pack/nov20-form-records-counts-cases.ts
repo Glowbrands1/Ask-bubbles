@@ -13,8 +13,9 @@ import { WEST_DODGE, STAFF, type ReplayCase, type ReplayContext } from "./cases"
  * the chat's FORMS ON FILE block (`forms/chat-form-records.ts`), so its managers get the same miscounts. On: the block
  * carries COUNTS built by code (per person as filed, per form, per date, a total), and an archived DRAFT is left out
  * unless asked; archived finalized forms still count, marked. The invariant is on the block given to the model. The
- * cases use the block's records wordings (in Ask Sunny, QA's own wordings take other paths there). Invented names:
- * Avery Avebury, and Avery Av (a different person).
+ * cases use QA's own wordings and the block's other records wordings. With the flag off, here, "show me CA and coaching
+ * forms for <A> this month" goes to the open-which-one flow and "list ca for the month" is answered with no forms read;
+ * with it, a list question (`isFormListQuestion`) reaches the block. Invented names: Avery Avebury, and Avery Av.
  */
 
 const FLAG = "FORMS_ON_FILE_COUNTS_ENABLED";
@@ -108,5 +109,46 @@ export const NOV20_FORM_RECORDS_COUNTS_CASES: ReplayCase[] = [
       expect(block).not.toMatch(/Avery Av;|- Avery Av:/);
       expect(block).not.toMatch(/stops at 100/);
     }),
+  },
+  {
+    id: "nov20-f081-chat-qa-b-show-me-forms-is-a-list",
+    title: "QA's (b) on this path: \"show me CA and coaching forms for Avery Avebury this month\" reaches FORMS ON FILE (never the open-which-one flow): COUNTS give Avery Avebury 9, the archived finalized CA marked, never Avery Av",
+    report: REPORT,
+    status: { open: "FORMS_ON_FILE_COUNTS_ENABLED is off in production: this wording goes to the open-which-one flow" },
+    fixFlags: [FLAG, "FORMS_ON_FILE_DATE_RANGE_ENABLED"],
+    async run(t) {
+      vi.setSystemTime(new Date("2026-11-20T20:54:00Z"));
+      t.directory(STAFF);
+      t.as("location_manager", WEST_DODGE);
+      onFile(t);
+      t.modelSays("Here are the forms on file.");
+      const reply = await t.thread().say("show me CA and coaching forms for Avery Avebury this month");
+      expect(reply.content, "the open-which-one flow answered").not.toMatch(/Which one should I open/);
+      const block = t.lastFormRecords?.() ?? "";
+      expect(block, block).toMatch(/- Avery Avebury: 9 — /);
+      expect(block).toMatch(/2026-11-10: 1, finalized \(archived\) 1/);
+      expect(block).not.toMatch(/- Avery Av:/);
+    },
+  },
+  {
+    id: "nov20-f081-chat-qa-c-list-ca-never-a-new-form",
+    title: "QA's (c) on this path: \"list ca for the month\" never starts a new CA (no \"Who is this form for?\", no card): it reaches FORMS ON FILE with this month's counts (Avery Avebury 11/18: 3, 11/20: 1)",
+    report: REPORT,
+    status: { open: "FORMS_ON_FILE_COUNTS_ENABLED is off in production: this wording is answered with no forms read" },
+    fixFlags: [FLAG, "FORMS_ON_FILE_DATE_RANGE_ENABLED"],
+    async run(t) {
+      vi.setSystemTime(new Date("2026-11-20T20:54:00Z"));
+      t.directory(STAFF);
+      t.as("location_manager", WEST_DODGE);
+      onFile(t);
+      t.modelSays("Here are the forms on file.");
+      const reply = await t.thread().say("list ca for the month");
+      expect(reply.content, "a new CA was started").not.toMatch(/Who is this form for/);
+      expect(reply.formProposal ?? null, "a card was proposed").toBeNull();
+      const block = t.lastFormRecords?.() ?? "";
+      expect(block, block).toMatch(/- Avery Avebury: 9 — /);
+      expect(block).toMatch(/2026-11-18: 3, draft 3/);
+      expect(block).toMatch(/2026-11-20: 1, draft 1/);
+    },
   },
 ];
