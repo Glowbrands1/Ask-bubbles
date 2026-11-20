@@ -7,14 +7,14 @@ import { createHmac, timingSafeEqual } from "node:crypto";
  *
  * The owner: the Hub's assistant should see Google reviews too, and every Hub user sees both brands' reviews. The Hub
  * has no review data of its own, so its server asks this app's `/api/partner/hub-reviews`, signed with a secret only
- * the two servers hold (HUB_REVIEWS_SECRET here; HUB_REVIEWS_SECRET_ASK_SUNNY / _ASK_BUBBLES in the Hub). It is the
+ * the two servers hold (HUB_REVIEWS_SECRET here; one HUB_REVIEWS_SECRET_<APP> per app in the Hub). It is the
  * opposite direction to the L10 partner API (`features/l10/partner`) and has its own secret and its own signature
  * version, so a request signed for one can never be accepted by the other.
  *
  * The signature covers the caller id, the timestamp and the exact body; requests more than five minutes old or ahead
  * are refused. The route only reads.
  *
- * The same code as the Leadership Hub's `src/lib/partner/app-reviews-signature.ts` and Ask Sunny's copy: all three
+ * The same code as the Leadership Hub's `src/lib/partner/app-reviews-signature.ts` and the sibling app's copy: all three
  * repositories' tests check one fixed signature (SHARED_VECTOR), so a change to one that breaks the others fails CI.
  */
 export const HUB_REVIEWS_HEADERS = {
