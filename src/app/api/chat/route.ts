@@ -980,7 +980,7 @@ async function postChat(request: Request) {
        */
       const reopened =
         !sameCopy && !draftAnswer && !formsGuide && !correction && !policyChange && !redraft && !revision && !which &&
-        // FORMS_ON_FILE_COUNTS_ENABLED (port from Ask Sunny, f081): "show me CA and coaching forms for <A> this month" is a list, not an open.
+        // FORMS_ON_FILE_COUNTS_ENABLED (port from the sibling app, f081): "show me CA and coaching forms for <A> this month" is a list, not an open.
         !(await import("@/lib/forms/chat-form-records")).isFormListQuestion(parsed.question, parsed.context.todayIso) &&
         (mayAskToReopen(parsed.question, reopenByAnyOpenVerbEnabled()) || (reopenByAnyOpenVerbEnabled() && answersWhichFormOnFile(parsed.history)))
           ? await (await import("@/lib/forms/chat-reopen")).reopenRequestedForm({

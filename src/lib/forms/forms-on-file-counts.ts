@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- * FORMS ON FILE ARE COUNTED BY CODE, NEVER BY THE MODEL (port from Ask Sunny: QA's f081, 20 Nov 2026)
+ * FORMS ON FILE ARE COUNTED BY CODE, NEVER BY THE MODEL (port from the sibling app: QA's f081, 20 Nov 2026)
  * ============================================================================
  *
  * "show me CA and coaching forms for <A> this month" listed "11/19/2026 — draft (6)", folding a different person's form

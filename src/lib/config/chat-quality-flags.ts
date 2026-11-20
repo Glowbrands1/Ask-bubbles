@@ -5974,7 +5974,7 @@ export function formsOnFileDateRangeEnabled(): boolean {
 }
 
 /**
- * FORMS_ON_FILE_COUNTS_ENABLED (port from Ask Sunny, QA's f081 follow-up, 20 Nov 2026; same flag in both apps; default
+ * FORMS_ON_FILE_COUNTS_ENABLED (port from the sibling app, QA's f081 follow-up, 20 Nov 2026; same flag in both apps; default
  * off). The chat's FORMS ON FILE block (`forms/chat-form-records.ts`) listed rows and the model counted them: a date's
  * count wrong, a different person's form folded into another's, totals that did not add up. With the flag, the block
  * carries counts built by code (per person as filed, per form, per date with statuses, and a total;

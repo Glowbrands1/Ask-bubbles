@@ -447,7 +447,7 @@ async function answerQuestionCore(
   const takeOffOnCard = takeOffStaysCard(request);
   // LIST_POLICY_IS_EDIT_ENABLED: "please list the policy" with only a card open is a card turn, never a question.
   const listPolicyCard = listPolicyOnCard(request);
-  /* FORMS_ON_FILE_COUNTS_ENABLED (port from Ask Sunny, f081): "list ca for the month" lists forms on file; it never starts a new form. */
+  /* FORMS_ON_FILE_COUNTS_ENABLED (port from the sibling app, f081): "list ca for the month" lists forms on file; it never starts a new form. */
   const listsForms = isFormListQuestion(request.question, request.context.todayIso);
   const askedQuestion = listsForms || (!takeOffOnCard && !listPolicyCard && questionNotFormEnabled() && isQuestionNotForm(request.question, request.history));
   if (intentExtractionEnabled() && !askedQuestion) {

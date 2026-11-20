@@ -4,10 +4,10 @@ import { WEST_DODGE, STAFF, type ReplayCase, type ReplayContext } from "./cases"
 
 /**
  * ============================================================================
- * THE CHAT'S FORMS ON FILE BLOCK CARRIES CODE-BUILT COUNTS (FORMS_ON_FILE_COUNTS_ENABLED; port from Ask Sunny, f081)
+ * THE CHAT'S FORMS ON FILE BLOCK CARRIES CODE-BUILT COUNTS (FORMS_ON_FILE_COUNTS_ENABLED; port from the sibling app, f081)
  * ============================================================================
  *
- * Port from Ask Sunny (QA's f081, 20 Nov 2026, Sunny's production): "show me CA and coaching forms for <A> this month"
+ * Port from the sibling app (QA's f081, 20 Nov 2026, the sibling app's production): "show me CA and coaching forms for <A> this month"
  * listed "11/19/2026 — draft (6)" (another person's form folded in) and a total its lines did not add up to; "list ca for
  * the month" said "11/18 — <A> (×2)" (3) and "11/20 … 1" (2). The model was counting rows. This app answers only from
  * the chat's FORMS ON FILE block (`forms/chat-form-records.ts`), so its managers get the same miscounts. On: the block
@@ -19,7 +19,7 @@ import { WEST_DODGE, STAFF, type ReplayCase, type ReplayContext } from "./cases"
  */
 
 const FLAG = "FORMS_ON_FILE_COUNTS_ENABLED";
-const REPORT = "Port from Ask Sunny (QA's f081 follow-up, 20 Nov 2026): the chat's FORMS ON FILE block left counting to the model";
+const REPORT = "Port from the sibling app (QA's f081 follow-up, 20 Nov 2026): the chat's FORMS ON FILE block left counting to the model";
 
 /** QA's November: [date, live drafts, archived drafts, archived finalized] for Avery Avebury's CAs. */
 const NOVEMBER: readonly [string, number, number, number][] = [

@@ -373,7 +373,7 @@ export function formDateRangeFromQuestion(question: string, today: string): Form
     const monday = addDays(today, -weekday - 7);
     return { from: monday, to: addDays(monday, 6), label: "last week" };
   }
-  // FORMS_ON_FILE_COUNTS_ENABLED (port from Ask Sunny, f081): "list ca for the month" asks about this month.
+  // FORMS_ON_FILE_COUNTS_ENABLED (port from the sibling app, f081): "list ca for the month" asks about this month.
   if (/\b(?:this|current)\s+month\b|\bmonth to date\b|\bmtd\b/.test(text) || (formsOnFileCountsEnabled() && /\b(?:for|in|during|over) the month\b/.test(text))) {
     return { ...monthRange(year, monthIndex), to: today, label: `this month (${monthRange(year, monthIndex).label})` };
   }
@@ -454,7 +454,7 @@ export function isFormRangeQuestion(question: string, today: string): boolean {
 }
 
 /**
- * FORMS_ON_FILE_COUNTS_ENABLED (port from Ask Sunny, QA's f081, 20 Nov 2026): a request to LIST forms on file, never to
+ * FORMS_ON_FILE_COUNTS_ENABLED (port from the sibling app, QA's f081, 20 Nov 2026): a request to LIST forms on file, never to
  * make one or open one. "list ca for the month" was answered with no forms read, and "show me CA and coaching forms for
  * <A> this month" went to the open-which-one flow. A listing word (list, show me, how many, who got / has / had, any) with
  * a kind of form, and a period or plural form words ("forms", "CAs", "coachings"); never with a word that opens or changes
@@ -569,7 +569,7 @@ export function withoutRecordJudgement(reply: string): string {
     .trim();
 }
 
-/** FORMS_ON_FILE_COUNTS_ENABLED (port from Ask Sunny, f081): the code's counts, for the model to copy. */
+/** FORMS_ON_FILE_COUNTS_ENABLED (port from the sibling app, f081): the code's counts, for the model to copy. */
 function countsSection(counted: { counts: FormCounts; listed: number; of: number; complete: boolean }): string {
   const statuses = (entry: Readonly<Record<string, number>>) => Object.entries(entry).map(([status, count]) => `${status} ${count}`).join(", ");
   const lines = counted.counts.by_person.map((person) =>
@@ -716,7 +716,7 @@ const MATCH_LIMIT = 50;
 const RECENT_LIMIT = 20;
 /** A list read by form date or kind: every such form up to this many, then the list says it stopped. */
 export const NARROWED_LIMIT = 100;
-/** FORMS_ON_FILE_COUNTS_ENABLED (port from Ask Sunny, f081): a counted read covers up to this many rows (PostgREST's page). */
+/** FORMS_ON_FILE_COUNTS_ENABLED (port from the sibling app, f081): a counted read covers up to this many rows (PostgREST's page). */
 export const COUNTED_READ_LIMIT = 1000;
 
 /**
@@ -763,7 +763,7 @@ export async function loadFormRecords(input: {
     const kind = input.kind ?? (input.narrowFromQuestion ? formKindFromText(input.question) : null);
     const narrowed = range || kind ? { range, kind, limit: NARROWED_LIMIT } : null;
     const counting = formsOnFileCountsEnabled();
-    /* FORMS_ON_FILE_COUNTS_ENABLED (port from Ask Sunny, f081): an archived draft is left out unless the question asks for archived forms. */
+    /* FORMS_ON_FILE_COUNTS_ENABLED (port from the sibling app, f081): an archived draft is left out unless the question asks for archived forms. */
     const keep = (row: InstanceRow) => !counting || /\barchiv/i.test(input.question) || !(row.archivedAt && row.status === "draft");
     const narrowFilter = {
       ...(range ? { formDateFrom: range.from, formDateTo: range.to } : {}),
@@ -805,7 +805,7 @@ export async function loadFormRecords(input: {
 
     if (narrowed && !(words.length > 0 && looksLikeItNamesSomebody(nameSource))) {
       // Archived forms count: "who got a CA this month" asks what was filed, not what is on the active shelf.
-      // FORMS_ON_FILE_COUNTS_ENABLED (port from Ask Sunny, f081): archived FINALIZED forms still count; archived drafts are left out.
+      // FORMS_ON_FILE_COUNTS_ENABLED (port from the sibling app, f081): archived FINALIZED forms still count; archived drafts are left out.
       const asked = privateAwareLimit(counting ? COUNTED_READ_LIMIT : NARROWED_LIMIT);
       const read = await listInstances("all", asked, { ...filter, ...narrowFilter });
       // Item 28: a Coaching kind never keeps a Follow-Up Coaching Form (`ofKind`).

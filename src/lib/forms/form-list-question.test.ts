@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 const { isFormListQuestion } = await import("./chat-form-records");
 
-/* Port from Ask Sunny (QA's f081, 20 Nov 2026): a request to LIST forms on file is never a request to make one or open one. */
+/* Port from the sibling app (QA's f081, 20 Nov 2026): a request to LIST forms on file is never a request to make one or open one. */
 const TODAY = "2026-11-20";
 afterEach(() => {
   delete process.env.FORMS_ON_FILE_COUNTS_ENABLED;
