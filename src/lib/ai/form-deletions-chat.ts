@@ -2,7 +2,7 @@ import { formatBusinessTime } from "@/lib/business-date";
 
 /**
  * ============================================================================
- * WHO DELETED A FORM, IN CHAT (port from Ask Sunny, board f066; Pau approved 20 Nov 2026)
+ * WHO DELETED A FORM, IN CHAT (ported from the sibling app, board f066; Pau approved 20 Nov 2026)
  * ============================================================================
  *
  * Every deleted form now leaves an append-only record (`form_instance_deletions`,

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { asksWhoDeletedAForm, deletedFormsEmployee, formatFormDeletionsBlock, type FormDeletionRow } from "./form-deletions-chat";
 
-/** Port from Ask Sunny (board f066, 20 Nov 2026): an admin's "who deleted Test Testy's form" reads the deletion record. */
+/** Ported from the sibling app (board f066, 20 Nov 2026): an admin's "who deleted Test Testy's form" reads the deletion record. */
 describe("who deleted a form, in chat", () => {
   it("reads the question and the employee it names", () => {
     expect(asksWhoDeletedAForm("who deleted Test Testy's form")).toBe(true);

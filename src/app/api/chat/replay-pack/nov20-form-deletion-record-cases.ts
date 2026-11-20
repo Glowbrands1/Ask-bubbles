@@ -6,15 +6,15 @@ import { WEST_DODGE, STAFF, type ReplayCase, type ReplayContext } from "./cases"
 
 /**
  * ============================================================================
- * WHO DELETED A FORM (port from Ask Sunny, board f066; Pau approved 20 Nov 2026)
+ * WHO DELETED A FORM (ported from the sibling app, board f066; Pau approved 20 Nov 2026)
  * ============================================================================
  *
- * In Ask Sunny four Test Testy drafts were deleted with nothing recording who or when; this app had the same gap.
+ * In the sibling app four Test Testy drafts were deleted with nothing recording who or when; this app had the same gap.
  * Every delete now leaves an append-only record (`form_instance_deletions`), and an administrator's "who deleted
  * <name>'s form" reads it (FORM DELETION RECORD, `form-deletions-chat-read.ts`). Test Testy and the deleting District
  * Manager's account are invented.
  */
-const REPORT = "QA, board f066 (20 Nov 2026), ported from Ask Sunny: deleted forms left no record of who or when";
+const REPORT = "QA, board f066 (20 Nov 2026), ported from the sibling app: deleted forms left no record of who or when";
 const ASKED = "who deleted Test Testy's form";
 const GLOBAL = { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] };
 

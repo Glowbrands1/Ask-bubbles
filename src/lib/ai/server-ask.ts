@@ -1129,7 +1129,7 @@ async function answerQuestionCore(
     : null;
 
   /*
-   * Port from Ask Sunny (board f066, 20 Nov 2026): "who deleted <name>'s form?" reads the append-only deletion record,
+   * Ported from the sibling app (board f066, 20 Nov 2026): "who deleted <name>'s form?" reads the append-only deletion record,
    * administrators only (`form-deletions-chat-read.ts`). Null for any other turn.
    */
   const deletionsBlock = await (await import("./form-deletions-chat-read")).loadFormDeletionsChatBlock({ question: request.question, role: actor.role });
