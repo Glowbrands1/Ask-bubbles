@@ -169,39 +169,60 @@ export const NOV21_AGENT_LOOP_LIVE_RETEST_U_CASES: ReplayCase[] = [
     },
   },
   {
+    /*
+     * CHANGED ON PURPOSE (QA's Bubbles live re-run, 22 Nov 2026, A11, HIGH): this case used to expect the loop to open the
+     * most recent of the three forms by itself and save the level and prior coaching on it. Live, that opened a new draft
+     * revising a finalized form the manager never chose and saved Prior actions they never gave. QA: "The loop must never
+     * pick a form the manager didn't choose while a 'which one' question is open." Now the changes are not a pick: nothing
+     * is opened or written, the question is asked again, and the changes go on the form the manager then picks.
+     */
     id: "nov21-agent-loop-which-one-answered-with-edits-keeps-them",
-    title: `three Corrective Action drafts for Fenna Prewitt listed with "Which one should I open?", then "${EDITS_NOT_A_PICK}": the changes are not a pick (the date is the prior coaching's); the most recent form is opened, said in one line, and the level and the prior coaching are saved on it`,
-    report: `${REPORT}, item 14 (A11): "bring up a previously edited corrective action for <name>" listed 3 forms; "${EDITS_NOT_A_PICK}" was read as a form-picking hint ("none of the forms match a 10/15/26 date"), the level and prior coaching dropped`,
+    title: `three Corrective Action drafts for Fenna Prewitt listed with "Which one should I open?", then "${EDITS_NOT_A_PICK}": the changes are not a pick, so no form is opened or written and the question is asked again; then "the 11/14 one" opens that form and the level and the prior coaching are saved on it`,
+    report: `${REPORT}, item 14 (A11), and QA's Bubbles re-run (22 Nov 2026, A11 HIGH): after the list, "${EDITS_NOT_A_PICK}" opened a revising draft of a form the manager never picked and saved Prior actions they never gave`,
     status: "fixed",
     async run(t) {
       start(t, "2026-11-14T16:00:00Z");
       const ids = [await createdCa(t, "11/12"), await createdCa(t, "11/13"), await createdCa(t, "11/14")].map((made) => made.id);
       start(t);
+      const before = ids.map((id) => JSON.stringify(t.values(id)));
       const model = loopStandIn((view): LoopDecision => {
         const said = view.turns.filter((turn) => turn.role === "user").at(-1)?.text ?? "";
         const found = lastResult(view, "find_past_forms") as { forms?: { instance_id: string; choice: string }[]; which_form_question?: string } | null;
+        const opened = lastResult(view, "open_form") as { opened?: boolean; reason_code?: string; error?: string } | null;
+        const listed = () => ({ text: `${(found?.forms ?? []).map((form) => `- ${form.choice}`).join("\n")}\n\n${found?.which_form_question ?? ""}` });
         if (/^bring up/.test(said)) {
           if (!found) return { tool: "find_past_forms", input: { employee_name: "Fenna Prewitt", form: "corrective action", open: true, forms_on_file_evidence: evidenceFrom(view, "bring up a previously edited corrective action") } };
-          return { text: `${(found.forms ?? []).map((form) => `- ${form.choice}`).join("\n")}\n\n${found.which_form_question ?? ""}` };
+          return listed();
         }
-        // The answer with changes: without the rule, the live model read the date as a pick and dropped the changes.
-        if (!/never answer that no form matches their date/.test(view.system)) return { text: "None of the forms match a 10/15/26 date. Which one should I open?" };
-        if (!found) return { tool: "find_past_forms", input: { employee_name: "Fenna Prewitt", form: "corrective action", open: true, forms_on_file_evidence: evidenceFrom(view, "bring up a previously edited corrective action", 1) } };
-        const newest = ids[2]!;
-        if (!lastResult(view, "open_form")) return { tool: "open_form", input: { instance_id: newest, forms_on_file_evidence: evidenceFrom(view, "bring up a previously edited corrective action", 1) } };
-        if (!lastResult(view, "edit_form")) return { tool: "edit_form", input: { instance_id: newest, values: { warning_type: "verbal", prior_actions: "Coaching — JBA Policy Manual — 10/15/2026" }, level_evidence: evidenceFrom(view, "this is a verbal warning") } };
-        return { text: "Opening the most recent one, the Corrective Action Form from 11/14/2026; say if you meant another.\n\n**Type of Warning:** Verbal Warning, as you said.\n**Prior actions:** Coaching — JBA Policy Manual — 10/15/2026." };
+        if (said.startsWith(EDITS_NOT_A_PICK)) {
+          // The live model: it opens the newest form by itself, with no pick from the manager.
+          if (!opened) return { tool: "open_form", input: { instance_id: ids[2]!, forms_on_file_evidence: evidenceFrom(view, "bring up a previously edited corrective action", 1) } };
+          if (opened.opened) {
+            if (!lastResult(view, "edit_form")) return { tool: "edit_form", input: { instance_id: ids[2]!, values: { warning_type: "verbal", prior_actions: "JBA Policy Manual — 11/05/2026" }, level_evidence: evidenceFrom(view, "this is a verbal warning") } };
+            return { text: "Opened the most recent one." };
+          }
+          return { text: "I'll put the verbal warning and the 10/15/26 prior coaching on the form you pick. Which one should I open?" };
+        }
+        // "the 11/14 one": the manager's pick.
+        if (!opened) return { tool: "open_form", input: { instance_id: ids[2]!, forms_on_file_evidence: evidenceFrom(view, "bring up a previously edited corrective action", 2), choice_evidence: evidenceFrom(view, "the 11/14 one") } };
+        if (!lastResult(view, "edit_form")) return { tool: "edit_form", input: { instance_id: ids[2]!, values: { warning_type: "verbal", prior_actions: "Coaching — JBA Policy Manual — 10/15/2026" }, level_evidence: evidenceFrom(view, "this is a verbal warning", 1) } };
+        return { text: "Opened the Corrective Action Form from 11/14/2026.\n\n**Type of Warning:** Verbal Warning, as you said.\n**Prior actions:** Coaching — JBA Policy Manual — 10/15/2026." };
       });
       t.loopModel!(model);
       const thread = t.thread();
       const listed = await thread.say("bring up a previously edited corrective action for fenna prewitt");
       expect(listed.content, "the three forms were not listed with the which-one question (the case proves nothing)").toContain("Which one should I open?");
       const reply = await thread.say(EDITS_NOT_A_PICK);
-      expect(reply.content, `the changes were read as a pick:\n${reply.content}`).not.toMatch(/none of the forms match/i);
-      expect(reply.formOpened?.instanceId, "no form was opened for the changes").toBe(ids[2]);
-      expect(reply.content).toMatch(/most recent/i);
-      expect(t.checked(ids[2]!).warning_type, "the warning level was dropped").toEqual(["verbal"]);
-      expect(t.values(ids[2]!).prior_actions ?? "", "the prior coaching was dropped").toMatch(/10\/15\/2026/);
+      const refused = model.views.flatMap((view) => view.results.filter((result) => result.tool === "open_form")).at(-1)?.output as { reason_code?: string } | undefined;
+      expect(refused?.reason_code, "a form the manager never picked was opened").toBe("which_form_not_chosen");
+      expect(reply.formOpened, "a form the manager never picked is on screen").toBeFalsy();
+      expect(ids.map((id) => JSON.stringify(t.values(id))), "a form the manager never picked was written").toEqual(before);
+      expect(reply.content, `the reply does not ask again:\n${reply.content}`).toMatch(/Which one should I open\?/);
+      expect(reply.content, "the stock \"send the change again\" reply").not.toMatch(/send the change you still need again/i);
+      const picked = await thread.say("the 11/14 one");
+      expect(picked.formOpened?.instanceId, "the form the manager picked was not opened").toBe(ids[2]);
+      expect(t.checked(ids[2]!).warning_type, "the warning level was dropped after the pick").toEqual(["verbal"]);
+      expect(t.values(ids[2]!).prior_actions ?? "", "the prior coaching was dropped after the pick").toMatch(/10\/15\/2026/);
     },
   },
   {
