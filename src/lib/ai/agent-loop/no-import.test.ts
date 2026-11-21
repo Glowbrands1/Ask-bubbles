@@ -25,7 +25,8 @@ const REVIEWED = new Set([
   "config/company/agent-loop.ts → @/lib/ai/agent-loop/app-config",
   "lib/forms/follow-up-default-write.ts → @/lib/ai/agent-loop/app-config",
 ]);
-const isTest = (path: string) => /\.test\.tsx?$/.test(path);
+/* Test code: test files, and the replay pack (its stand-in model and cases read the loop, as in the sibling app). */
+const isTest = (path: string) => /\.test\.tsx?$/.test(path) || path.startsWith("app/api/chat/replay-pack/");
 /* Any import form (from, side-effect import, dynamic import, require, template literal), any path into agent-loop/, with or without an extension. */
 const IMPORTS = /(?:\bfrom\s*|\bimport\s*\(?\s*|\brequire\s*\(\s*)["'`]([^"'`]*agent-loop\/[a-z-]+(?:\.[cm]?[jt]sx?)?)["'`]/g;
 
