@@ -95,6 +95,33 @@ export const INTENT_TOOL_INPUT_SCHEMA = {
   },
 };
 
+/**
+ * The intent tool's input schema. STATED_PLAN_STEPS_ENABLED (ported from the sibling app's f062, Pau via QA, 20 Nov 2026)
+ * adds the optional `planSteps` slot; off, the schema is exactly `INTENT_TOOL_INPUT_SCHEMA`, so the reader is shown the
+ * same tool as before.
+ */
+export function intentToolInputSchema(planSteps: boolean) {
+  if (!planSteps) return INTENT_TOOL_INPUT_SCHEMA;
+  return {
+    ...INTENT_TOOL_INPUT_SCHEMA,
+    properties: {
+      ...INTENT_TOOL_INPUT_SCHEMA.properties,
+      planSteps: {
+        type: ["array", "null"],
+        items: { type: "string" },
+        description:
+          "Corrective Action only: each next step the manager asked for in the Action Plan (\"review the opening procedures with <P> this week\"), in their own words, one per item. Null when they asked for none. Never a step they did not ask for.",
+      },
+    },
+  };
+}
+
+/** STATED_PLAN_STEPS_ENABLED: the reader's `planSteps` slot as it returned it (strings only, blanks dropped); none when absent. */
+export function readPlanStepsSlot(raw: unknown): string[] {
+  const steps = raw && typeof raw === "object" ? (raw as { planSteps?: unknown }).planSteps : null;
+  return Array.isArray(steps) ? steps.filter((step): step is string => typeof step === "string" && step.trim() !== "") : [];
+}
+
 export const INTENT_TOOL_DESCRIPTION =
   "Record the slots the manager has stated in this conversation. Copy their words. Do not invent a name, a store, a title, a date, an amount, or a policy.";
 
