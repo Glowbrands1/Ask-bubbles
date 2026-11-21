@@ -70,6 +70,13 @@ describe("the AI knows the Google reviews have L3, L6 and YTD", () => {
     expect(isGoogleReviewQuestion("Write a coaching form for Jane, her reviews YTD are low")).toBe(false);
   });
 
+  it("a month or period the manager names asks for the months (ported from the sibling app, QA's code audit, 20 Nov 2026)", () => {
+    for (const q of ["how many reviews did we get last month?", "how many Google reviews did we get in October?", "how many Google reviews did we get the last 2 months?", "reviews for the past four months"]) {
+      expect(asksForMonthlyPeriods(q), q).toBe(true);
+    }
+    expect(asksForMonthlyPeriods("How many Google reviews did we get this month?")).toBe(false);
+  });
+
   it("the chat block carries L3, L6 and YTD per store, as full months, from the table's own figures", async () => {
     const block = await loadGoogleReviewsChatBlock({ question: GOOGLE_QUESTION, role: "owner", scope: null, now: new Date(`${TODAY}T18:00:00Z`) });
     expect(block?.text).toContain(MONTHS_HEADING);

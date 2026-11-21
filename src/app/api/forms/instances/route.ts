@@ -644,6 +644,7 @@ export async function POST(request: Request) {
         employeeName: body.employeeName.trim().slice(0, 120),
         formDate: crossChatDate,
         ...(sameChat ? { sameChat } : {}),
+        actor,
       });
       if (open) return reused(open);
     }
