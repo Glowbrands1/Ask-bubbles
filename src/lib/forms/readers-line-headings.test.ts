@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { cardPolicyHeading } from "./card-policy";
+import { offenseKeyForManualHeading } from "./official-policy-manual";
 import { readersLineBox, withoutReadersLineBox, withReadersLineBox } from "./readers-line-headings";
 
 /* Runner 2's c259 (QA2, 21 Nov 2026, option (a)); QA f071. */
@@ -25,5 +26,12 @@ describe("headings saved under another box", () => {
     // A heading with its own box, Other, and the box's own heading are left as they are.
     for (const own of ["Attendance", "Late Opening", "Dress Code for The Company", "Standards of Conduct", "Other — sanitation"]) expect(readersLineBox(own), own).toBeNull();
     expect(withoutReadersLineBox("Standards of Conduct — Attendance, JBA Policy Manual p.14")).toBe("Standards of Conduct — Attendance, JBA Policy Manual p.14");
+  });
+
+  /* QA2 (21 Nov 2026): Shift Replacement governs attendance; a no-show without coverage ticks Attendance Policy. */
+  it("files Shift Replacement under Attendance Policy, never Standards of Conduct", () => {
+    expect(offenseKeyForManualHeading("Shift Replacement")).toBe("attendance_policy");
+    expect(readersLineBox("Shift Replacement")).toBeNull();
+    expect(withReadersLineBox("Shift Replacement, JBA Policy Manual p.37", "Shift Replacement")).toBe("Shift Replacement, JBA Policy Manual p.37");
   });
 });

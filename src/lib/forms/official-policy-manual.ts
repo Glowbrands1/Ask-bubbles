@@ -1022,12 +1022,22 @@ export function manualSectionHeadings(chunks: readonly ManualChunk[]): string[] 
  */
 export const COMPANY_POLICIES_OFFENSE = "company_policies";
 
+/*
+ * SECTIONS THAT GOVERN ATTENDANCE, filed under revision 7's Attendance Policy box rather than Violation of Company
+ * Policies (QA2, 21 Nov 2026): a no-show who did not find coverage cites Shift Replacement (p.37), and that is
+ * attendance, not conduct, so the card never reads "Standards of Conduct — Shift Replacement" and Create ticks
+ * Attendance Policy. Only the box a cited heading is filed under; what Create cites for an account is unchanged.
+ */
+const ATTENDANCE_SECTION_HEADINGS: readonly string[] = ["Shift Replacement"];
+
 export function offenseKeyForManualHeading(heading: string): string {
   const key = headingKey(heading);
   const ticked = Object.entries(OFFENSE_MANUAL_SECTIONS).find(([, entry]) =>
     [...entry.headings, ...(entry.managementHeadings ?? [])].some((name) => headingKey(name) === key),
   );
   if (ticked) return ticked[0];
+  const attendance = ATTENDANCE_SECTION_HEADINGS.find((name) => headingKey(name) === key);
+  if (attendance) return "attendance_policy";
   const described = DESCRIBED_SECTIONS.find((rule) => rule.headings.some((name) => headingKey(name) === key));
   return described?.offenseKey ?? COMPANY_POLICIES_OFFENSE;
 }
