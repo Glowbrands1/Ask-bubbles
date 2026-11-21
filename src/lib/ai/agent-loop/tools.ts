@@ -4555,8 +4555,9 @@ const adds = (text: string) => words(text).length > 3;
  * coaching inlude …" (its details) flipped to "A Coaching Form is for one person at a time" and the store's whole staff
  * list, because coach_team read only a NEW team request and sent everything else to list_staff. Every later turn about the
  * card remakes it: the same card (its id is kept, so Create still makes one form), at the store this turn names, else the
- * card's own, with the turn the card began with and this turn's words as its details (`sourceMessageIds`, what Create
- * drafts from).
+ * card's own, with the manager's turns since the card began as its details (`sourceMessageIds`, what Create drafts
+ * from). Item 11 (A8): every such turn, not only this one, so "make that update" after a turn that returned no card (the
+ * step limit) still puts that turn's process on the card.
  */
 async function updateTeamCard(context: ToolContext, effects: ToolEffects, before: TeamCardOnScreen): Promise<ToolResult> {
   const templates = await creatableTemplates(context.actor.role).catch(() => null);
@@ -4568,7 +4569,7 @@ async function updateTeamCard(context: ToolContext, effects: ToolEffects, before
   const storeId = named.length === 1 ? named[0]! : before.storeId;
   const start = before.first ? context.history.findIndex((turn) => turn.role === "user" && turn.id === before.first) : -1;
   const turns = [
-    ...context.history.filter((turn, index) => turn.role === "user" && typeof turn.content === "string" && index === start),
+    ...context.history.filter((turn, index) => turn.role === "user" && typeof turn.content === "string" && (index === start || (index > start && adds(turn.content)))),
     ...(adds(context.question) || start < 0 ? [{ id: context.questionMessageId, role: "user" as const, content: context.question }] : []),
   ];
   const card = buildProposal({
