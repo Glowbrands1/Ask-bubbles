@@ -110,8 +110,9 @@ describe("cross-chat open draft on create", () => {
     expect(body.instance.id).toBe("inst-other-chat");
     expect(body.reused).toBe(true);
     expect(created).toEqual([]);
+    // QA's audit (P2, 20 Nov 2026): the caller is passed too, so the lookup returns only a draft they may see.
     expect(crossChatCalls).toEqual([
-      { templateKey: "dpoa", employeeName: "Paisley Example", formDate: "2026-10-20" },
+      { templateKey: "dpoa", employeeName: "Paisley Example", formDate: "2026-10-20", actor: expect.objectContaining({ id: expect.any(String) }) },
     ]);
   });
 
