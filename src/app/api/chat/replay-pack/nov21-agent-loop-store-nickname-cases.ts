@@ -27,7 +27,7 @@ const REPORT = "QA's live re-test, 21 Nov 2026 (A7, Pau's account, loop on): \"d
 /** A Store Manager over both Sioux Falls stores and the Omaha West Dodge store. */
 const THREE_STORES = { level: "location", primaryAreaId: "loc-225", alsoCoversAreaIds: ["loc-338", "loc-264"] };
 /** Invented. Woven lists her at both Sioux Falls stores; her primary store is the E 18th St one. */
-const CORLISS: DirectoryRow = { id: "e-corliss-vantreese", firstName: "Corliss", lastName: "Vantreese", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-225", "loc-338"], positionName: "Team Member Part Time", primaryLocationId: "loc-338" };
+const CORLISS: DirectoryRow = { id: "e-corliss-pellwright", firstName: "Corliss", lastName: "Pellwright", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-225", "loc-338"], positionName: "Team Member Part Time", primaryLocationId: "loc-338" };
 /** Invented. Woven lists him at one store only. */
 const ANSELM: DirectoryRow = { id: "e-anselm-quarry", firstName: "Anselm", lastName: "Quarry", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-225"], positionName: "Team Member Full Time", primaryLocationId: "loc-225" };
 
