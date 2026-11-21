@@ -10,6 +10,22 @@ import { describe, expect, it } from "vitest";
  */
 const ROOT = join(process.cwd(), "src");
 const HELPERS = ["lib/ai/agent-loop/"];
+/*
+ * Changed on purpose (21 Nov 2026, the loop port's Phase 3+4; QA2: "the create/draft/client hooks, all behind
+ * AGENT_LOOP_ENABLED + AGENT_LOOP_USERS"): the loop is now wired in, so the guard names the reviewed importers instead of
+ * none. The chat route reaches the loop only inside its `agentLoopFor(...)` branch (run.ts by `await import()`, checked in
+ * src/lib/forms/form-patch-flags-off.test.ts); Create reads the loop's card record only for a card that carries
+ * `fromAgentLoop`; the company config and the follow-up write read the app config (plain data). Any other importer fails.
+ */
+const REVIEWED = new Set([
+  "app/api/chat/route.ts → @/lib/ai/agent-loop/switch",
+  "app/api/chat/route.ts → @/lib/ai/agent-loop/run",
+  "app/api/chat/route.ts → @/lib/ai/agent-loop/turn-category",
+  "app/api/forms/instances/route.ts → @/lib/ai/agent-loop/settled-names",
+  "config/company/agent-loop.ts → @/lib/ai/agent-loop/app-config",
+  "lib/forms/follow-up-default-write.ts → @/lib/ai/agent-loop/app-config",
+]);
+const isTest = (path: string) => /\.test\.tsx?$/.test(path);
 /* Any import form (from, side-effect import, dynamic import, require, template literal), any path into agent-loop/, with or without an extension. */
 const IMPORTS = /(?:\bfrom\s*|\bimport\s*\(?\s*|\brequire\s*\(\s*)["'`]([^"'`]*agent-loop\/[a-z-]+(?:\.[cm]?[jt]sx?)?)["'`]/g;
 
@@ -21,13 +37,16 @@ function files(dir: string): string[] {
   });
 }
 
-describe("the ported agent-loop files are not imported by today's path", () => {
-  it("no file outside src/lib/ai/agent-loop/ imports anything in it", () => {
+describe("the ported agent-loop files are imported only by the reviewed hooks", () => {
+  it("no file outside src/lib/ai/agent-loop/ imports anything in it, except the reviewed hooks", () => {
     const offenders: string[] = [];
     for (const file of files(ROOT)) {
       const path = relative(ROOT, file).split("\\").join("/");
-      if (HELPERS.some((helper) => path === helper || path.startsWith(helper))) continue;
-      for (const match of readFileSync(file, "utf8").matchAll(IMPORTS)) offenders.push(`${path} → ${match[1]}`);
+      if (HELPERS.some((helper) => path === helper || path.startsWith(helper)) || isTest(path)) continue;
+      for (const match of readFileSync(file, "utf8").matchAll(IMPORTS)) {
+        const edge = `${path} → ${match[1]}`;
+        if (!REVIEWED.has(edge)) offenders.push(edge);
+      }
     }
     expect(offenders).toEqual([]);
   });
