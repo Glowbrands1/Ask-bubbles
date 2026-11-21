@@ -22,6 +22,16 @@ export interface ChatTraceDraft {
   prompt: string | null;
   formInProgress: boolean;
   modelCall: ModelCallSnapshot | null;
+  /**
+   * Ported from the sibling app for the agent loop (Batch J10): the loop's first token, from the turn's start (the
+   * loop sets no modelCall). Absent on every path today; `first_token_ms` reads the model call's first.
+   */
+  firstTokenMs?: number | null;
+  /**
+   * Ported from the sibling app for the agent loop: slots after this turn, merged over the form extraction's (and the
+   * reader's) in `slots`. Absent on every path today, so the row is as before.
+   */
+  slots?: Record<string, unknown> | null;
   /** The form extraction, when FORM_FULL_REMAP ran. Null on every other turn. */
   formExtraction: {
     model: string;

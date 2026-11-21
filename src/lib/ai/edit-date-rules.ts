@@ -148,6 +148,26 @@ export function priorActionDates(text: string, today: string): Set<string> {
   return prior;
 }
 
+const FOLLOW_UP_BEFORE =
+  /\b(?:follow[- ]?up|re-?review|review|check[- ]?in|check\s+back|revisit|re-?evaluat\w*|reassess\w*)\b[^.!?\n]{0,30}$/i;
+
+/**
+ * Follow-up dates: only those a follow-up or review phrase gives. Ported from the sibling app for the agent loop's
+ * follow-up default (`forms/follow-up-default.ts`); no existing path here calls it.
+ */
+export function followUpDatesByRules(text: string, today: string): string[] {
+  const written = withYearlessDatesWritten(text ?? "", today);
+  const prior = priorActionDates(text, today);
+  const out: string[] = [];
+  for (const found of datesInText(written, today)) {
+    const before = written.slice(Math.max(0, found.index - 40), found.index);
+    if (!FOLLOW_UP_BEFORE.test(before) || /\bpolicy\s+review\b[^.!?\n]{0,30}$/i.test(before)) continue;
+    if (prior.has(found.iso) || out.includes(found.iso)) continue;
+    out.push(found.iso);
+  }
+  return out;
+}
+
 const TODAY_WORD = /\btoday\b/i;
 const DATE_CHANGE = /\b(?:change|set|update|make|move|put)\b[^.\n]{0,30}?\bdate\b[^.\n]{0,20}?\bto\s+(?:be\s+)?([^\n]+)$|\b(?:form\s+)?date\s+(?:is|should\s+be|=|:)\s+([^\n]+)$/i;
 
