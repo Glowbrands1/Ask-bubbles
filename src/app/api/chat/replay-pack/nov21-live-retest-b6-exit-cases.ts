@@ -100,4 +100,15 @@ export const NOV21_LIVE_RETEST_B6_EXIT_CASES: ReplayCase[] = [
       expect(Object.values(t.checked(id)).flat(), `the saved separation: ${JSON.stringify(t.checked(id))}`).toContain("submitted_fulfilled_notice");
     },
   },
+  {
+    id: "nov21-live-retest-b6-reason-without-instruction",
+    title: "B6 (item 21): \"she is resigning due to second job I'm ready for the draft\" saves the reason \"Second job\"; the instruction to the app is not part of it",
+    report: `${REPORT}: "The Reason field was saved as \\"Second job I'm ready for the draft.\\" — the trailing \\"I'm ready for the draft\\" is an instruction, not part of the reason."`,
+    status: "fixed",
+    async run(t) {
+      const { thread } = await sayB6(t);
+      const id = await thread.create();
+      expect((t.values(id).resignation_reason ?? "").trim(), `the saved reason: ${JSON.stringify(t.values(id))}`).toMatch(/^second job\.?$/i);
+    },
+  },
 ];
