@@ -1,5 +1,6 @@
 import "server-only";
 
+import { keptPlanSteps } from "@/lib/forms/stated-plan-steps";
 import { withReadersLineBox } from "@/lib/forms/readers-line-headings";
 import { saysAmountUnknown } from "@/lib/ai/amount-unknown-ack";
 
@@ -23,6 +24,7 @@ import { authorizeInstance, InstanceNotVisibleError, instanceListFilterFor, visi
 import { applyAssistantRevision, deleteInstance, listInstances } from "@/lib/forms/instances";
 import { countFormsOnFile } from "@/lib/forms/forms-on-file-counts";
 import {
+  statedPlanStepsEnabled,
   currentManualScopeEnabled,
   formEditPlainWordsEnabled,
   formEditSingleWriterEnabled,
@@ -2826,6 +2828,8 @@ export async function proposeForm(
     prior_actions?: unknown;
     topic?: unknown;
     topic_evidence?: unknown;
+    plan_steps?: unknown;
+    plan_evidence?: unknown;
     attendance?: unknown;
     attendance_evidence?: unknown;
     incident_time?: unknown;
@@ -3780,6 +3784,16 @@ export async function proposeForm(
     answerEvidence(context, input.topic_evidence, "request", evidencePerson, { requestTurnIds }).ok;
   const coachingTopic = topicKept ? askedTopic.charAt(0).toUpperCase() + askedTopic.slice(1) : null;
   /*
+   * STATED_PLAN_STEPS_ENABLED (ported from the sibling app's f062, Pau via QA, 20 Nov 2026): the Action Plan steps the
+   * manager asked for, as the model reads them, kept only on plan_evidence from a manager message of this request and only
+   * when each step's words are in that quote (`keptPlanSteps`). A record, never a word list over the manager's messages;
+   * Create adds them to the plan.
+   */
+  const askedPlanSteps = statedPlanStepsEnabled() && template.key === appConfig().formKeys.corrective && Array.isArray(input.plan_steps) && input.plan_steps.length > 0;
+  const planQuote = typeof (input.plan_evidence as { quote?: unknown } | null | undefined)?.quote === "string" ? String((input.plan_evidence as { quote: string }).quote) : "";
+  const planSteps = askedPlanSteps && answerEvidence(context, input.plan_evidence, "request", evidencePerson, { requestTurnIds }).ok ? keptPlanSteps(input.plan_steps, planQuote) : [];
+  const planStepsDropped = askedPlanSteps && planSteps.length < (input.plan_steps as unknown[]).length;
+  /*
    * QA's production audit (20 Nov 2026, item 21; a real finalized form): "did not come into her scheduled shift today at
    * 9:30" was written up as lateness ("expected to arrive on time", "Continued lateness will result …"). A Corrective
    * Action card carries what the manager described (absence, lateness or both) as the model reads it, kept only on
@@ -3929,6 +3943,7 @@ export async function proposeForm(
     ...(payroll === "yes" && amount ? { payrollDeductAmount: amount } : {}),
     ...(priorActions ? { priorActions } : {}),
     ...(coachingTopic ? { coachingTopic } : {}),
+    ...(planSteps.length > 0 ? { planSteps } : {}),
     ...(attendanceKind ? { attendanceKind } : {}),
     ...(incidentTime ? { incidentTime } : {}),
     ...(awaiting ? { awaitingIncident: true as const, supportsInlineDraft: false } : {}),
@@ -4165,6 +4180,8 @@ export async function proposeForm(
     ...(policyForms.has(template.key) && !awaiting && !askedPolicyWhole ? { policy_not_given: { note: "This card has no policy. Propose it again with policy: the one JBA Policy Manual heading that fits what happened (the headings are listed in your instructions). \"Other — <short topic>\" only for " + (otherTopicsSaid() ? otherTopicsSaid() + ", or " : "") + "when no section fits; then say so in your reply." } } : {}),
     ...(policyNotForThisCard ? { policy_copied: { heading: policyHeading, note: `${policyHeading} is the policy of another form's card in this chat, not chosen for this card. Propose the card again with the heading that fits THIS card's own account (the headings are listed in your instructions), never one copied from another form; "Other — <short topic>" when no section fits.` } } : {}),
     ...(accountGiven ? { request_words: untrusted(accountGiven) } : {}),
+    /* STATED_PLAN_STEPS_ENABLED: a plan step not kept (see `planSteps`). */
+    ...(planStepsDropped ? { plan_steps_not_kept: { kept: planSteps.length, note: "A plan step is kept only when every word of it is the manager's own, quoted in plan_evidence from this request. Pass only the steps they asked for, in their words." } } : {}),
     /* The coaching topic was not kept: say none, or name it with evidence from the manager's message (see `coachingTopic`). */
     ...(askedTopic && !topicKept ? { topic_not_kept: { note: "That topic is not the manager's words from this request (or holds the person's name), so it is not on the card. Pass topic only as the manager named it, with topic_evidence quoting it." } } : {}),
     /* c019: the account is the offense the manager named (see headingTypedIn); the reply says so, never "What happened?" about it. */

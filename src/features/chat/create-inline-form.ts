@@ -341,6 +341,8 @@ export async function createInlineForm({
         // NEXT_PUBLIC_CARD_POLICY_TO_DRAFT_ENABLED: the loop card's whole policy line (its second heading, the Policy Violated line, a Coaching Form's citation).
         ...(proposal.fromAgentLoop && cardPolicyToDraftEnabled() && cardPolicyLineFor(proposal, messages) ? { cardPolicyLine: cardPolicyLineFor(proposal, messages) } : {}),
         ...(proposal.fromAgentLoop && proposal.coachingTopic ? { cardTopic: proposal.coachingTopic } : {}),
+        // STATED_PLAN_STEPS_ENABLED (ported, f062): the plan steps the card carries (set only with the flag on, server-side), from either path.
+        ...(proposal.planSteps && proposal.planSteps.length > 0 ? { cardPlanSteps: proposal.planSteps } : {}),
         ...(proposal.fromAgentLoop && proposal.attendanceKind ? { cardAttendance: proposal.attendanceKind } : {}),
         // SAME_FORM_COPY_NEW_PERSON_ENABLED: the form this card copies; re-checked by the route.
         ...(proposal.copyFromInstanceId ? { copyFromInstanceId: proposal.copyFromInstanceId } : {}),
