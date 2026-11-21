@@ -1073,14 +1073,16 @@ describe("src/config/production-flags.json", () => {
 });
 
 /*
- * REPLAY_PACK_HALF (CI only; QA, 9 Nov 2026): the flags-off parity run (`src/lib/ai/flags-off-parity.test.ts`) runs the
- * pack as two children, each with one half of the cases by id ("0": the first half, "1": the second), so neither child
- * passes its time budget as the pack grows. Unset, every case runs, as before.
+ * REPLAY_PACK_PART (CI only; QA, 9 Nov 2026, thirds since 21 Nov 2026): the flags-off parity run
+ * (`src/lib/ai/flags-off-parity.test.ts`) runs the pack as REPLAY_PACK_PARTS children, each with one part of the cases by
+ * id ("0" the first, "1" the next, …), so none passes its time budget as the pack grows. Two halves held until 21 Nov
+ * 2026, when the first half took 504 s of its 540 s on CI and the next cases pushed it over. Unset, every case runs.
  */
-const HALF = process.env.REPLAY_PACK_HALF;
+const PART = process.env.REPLAY_PACK_PART;
+const PARTS = Number(process.env.REPLAY_PACK_PARTS ?? "1");
 const BY_ID = [...CASES].sort((a, b) => a.id.localeCompare(b.id));
-const MIDDLE = Math.ceil(BY_ID.length / 2);
-const RUN = HALF === "0" ? BY_ID.slice(0, MIDDLE) : HALF === "1" ? BY_ID.slice(MIDDLE) : CASES;
+const PART_SIZE = Math.ceil(BY_ID.length / PARTS);
+const RUN = PART === undefined ? CASES : BY_ID.slice(Number(PART) * PART_SIZE, (Number(PART) + 1) * PART_SIZE);
 
 describe("the replay pack", () => {
   for (const replay of RUN) {
