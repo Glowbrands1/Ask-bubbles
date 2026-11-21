@@ -4366,9 +4366,21 @@ export async function proposeForm(
     if (named) {
       Object.assign(card, { locationId: named, locationName: rosterSalonName(named) ?? card.locationName, locationResolution: "resolved", authorizedLocationIds: [named], status: card.status === "needs_location" ? "ready" : card.status });
     } else if (card.locationResolution === "not_applicable" || card.locationResolution === "needs_selection") {
-      Object.assign(card, { locationId: null, locationResolution: "needs_selection", authorizedLocationIds: appConfig().locations().map((salon) => salon.id), status: "ready", supportsInlineDraft: true });
-      const askedBefore = context.history.some((turn) => turn.role === "assistant" && new RegExp(`which ${locationWord()} is this about`, "i").test(String(turn.content ?? "")));
-      whichSalon = !askedBefore;
+      /*
+       * QA's Bubbles round 2 (22 Nov 2026, U29; "Create without a store"): a global login's card for a person Woven lists
+       * at ONE store asked "Which store is this about?", and Create saved the form with no store. That one Woven store is
+       * the card's store, said as store_from_woven (the rules book's line), as a store manager's card already does.
+       */
+      const allStores = appConfig().locations().map((salon) => salon.id);
+      const theirs = employee.id ? await wovenStoresOf(context.actor.scope, employee.id, read.kind === "read" ? read.roster : [], allStores) : [];
+      if (theirs.length === 1) {
+        Object.assign(card, { locationId: theirs[0], locationName: rosterSalonName(theirs[0]!) ?? card.locationName, locationResolution: "resolved", authorizedLocationIds: [theirs[0]], status: card.status === "needs_location" ? "ready" : card.status });
+        salonFromWoven = rosterSalonName(theirs[0]!) ?? theirs[0]!;
+      } else {
+        Object.assign(card, { locationId: null, locationResolution: "needs_selection", authorizedLocationIds: allStores, status: "ready", supportsInlineDraft: true });
+        const askedBefore = context.history.some((turn) => turn.role === "assistant" && new RegExp(`which ${locationWord()} is this about`, "i").test(String(turn.content ?? "")));
+        whichSalon = !askedBefore;
+      }
     }
   }
   /*
