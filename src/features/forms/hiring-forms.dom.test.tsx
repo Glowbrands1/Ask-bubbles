@@ -7,14 +7,13 @@ import {
   firstRoundManagementInterviewDocument,
   prescreenPhoneInterviewDocument,
   secondRoundManagementInterviewDocument,
-  tanningConsultantInterviewDocument,
 } from "@/lib/forms/hiring-library";
 import { renderFormPdf } from "@/lib/forms/pdf-render";
 
 import { DocumentSurface } from "./document/document-surface";
 
 /**
- * THE FOUR HIRING FORMS, OPENED.
+ * THE HIRING FORMS, OPENED.
  *
  * The fidelity tests in `lib/forms/hiring-library.test.ts` assert what each
  * document SAYS. These assert that it OPENS: that the surface an interviewer
@@ -30,9 +29,13 @@ import { DocumentSurface } from "./document/document-surface";
 const EDITABLE = ["ai", "manager", "employee", "system"] as const;
 const EMPTY = { values: {}, checked: {}, filledBy: {} };
 
+/*
+ * Three, not four: the Tanning Consultant Interview was removed from this app's
+ * library (the sibling company's role; Pau, 21 Nov 2026). Its key is retired in
+ * `config/company/forms/retired.ts`.
+ */
 const FORMS = [
   { name: "Prescreen / Phone Interview", document: prescreenPhoneInterviewDocument() },
-  { name: "Tanning Consultant Interview", document: tanningConsultantInterviewDocument() },
   { name: "First Round Management Interview", document: firstRoundManagementInterviewDocument() },
   { name: "Second Round Management Interview", document: secondRoundManagementInterviewDocument() },
 ];
@@ -94,9 +97,12 @@ describe("ticking a box on an interview form", () => {
   it("reports the tick rather than holding its own state", async () => {
     const user = userEvent.setup();
     const onToggle = vi.fn();
+    // Was the Tanning Consultant Interview's "Outgoing" and "Hire" boxes; that form
+    // was removed (Pau, 21 Nov 2026), so the same two ticks are checked on the
+    // management interviews: a quality on Round 1, the "Hire" line on Round 2.
     render(
       <DocumentSurface
-        document={tanningConsultantInterviewDocument()}
+        document={firstRoundManagementInterviewDocument()}
         mode="fill"
         variant={null}
         editable={EDITABLE}
@@ -105,9 +111,20 @@ describe("ticking a box on an interview form", () => {
       />,
     );
 
-    await user.click(screen.getByLabelText("Outgoing"));
-    expect(onToggle).toHaveBeenCalledWith("qualities_observed", "outgoing");
+    await user.click(screen.getByLabelText("Cultural alignment"));
+    expect(onToggle).toHaveBeenCalledWith("walkthrough_qualities_observed", "cultural_alignment");
 
+    cleanup();
+    render(
+      <DocumentSurface
+        document={secondRoundManagementInterviewDocument()}
+        mode="fill"
+        variant={null}
+        editable={EDITABLE}
+        values={EMPTY}
+        onToggle={onToggle}
+      />,
+    );
     await user.click(screen.getByLabelText("Hire"));
     expect(onToggle).toHaveBeenCalledWith("final_recommendation", "proceed");
   });

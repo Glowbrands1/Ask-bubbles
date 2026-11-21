@@ -14,7 +14,7 @@ import { answerInventoryQuestion, buildFormInventoryBlock } from "./form-answers
  * server-written lists Bubbles gives when a manager asks which form to use, and
  * the block the model is handed for every other turn.
  *
- * The rule being pinned is the same one either way. The four Hiring &
+ * The rule being pinned is the same one either way. The three Hiring &
  * Interview forms are withheld from what Bubbles OFFERS — and they are still
  * published, still named honestly when somebody asks after one, and still in
  * the library whose categories the location answer describes.
@@ -52,17 +52,6 @@ const PRESCREEN = summary({
   displayOrder: 10,
 });
 
-const TANNING_CONSULTANT = summary({
-  key: "tanning-consultant-interview",
-  name: "Tanning Consultant Interview Form",
-  shortName: "TC Interview",
-  description: "The in-salon interview for a Tanning Consultant.",
-  category: "hiring",
-  layoutFamily: "interview",
-  requiredPermission: "create_hiring_form",
-  displayOrder: 11,
-});
-
 const MANAGEMENT_ROUND_1 = summary({
   key: "management-interview-round-1",
   name: "First Round Management Interview Form",
@@ -85,7 +74,11 @@ const MANAGEMENT_ROUND_2 = summary({
   displayOrder: 13,
 });
 
-const HIRING = [PRESCREEN, TANNING_CONSULTANT, MANAGEMENT_ROUND_1, MANAGEMENT_ROUND_2];
+/*
+ * Three, not four: the Tanning Consultant Interview Form was removed from the library and its key retired (the sibling
+ * company's role; Pau, 21 Nov 2026), so no summary the chat reads carries it. The three left are still withheld.
+ */
+const HIRING = [PRESCREEN, MANAGEMENT_ROUND_1, MANAGEMENT_ROUND_2];
 
 const LIBRARY: TemplateSummary[] = [
   summary(),
@@ -104,7 +97,7 @@ const inventory = () =>
   buildFormInventory(LIBRARY, { role: "location_manager", scope: null });
 
 describe('"which form should I use?"', () => {
-  it("lists what a Salon Director can start, without the withheld four", () => {
+  it("lists what a Salon Director can start, without the withheld three", () => {
     const answer = answerInventoryQuestion({
       question: { kind: "list" },
       inventory: inventory(),
@@ -174,7 +167,7 @@ describe('"where are the forms?"', () => {
 describe("the FORMS LIBRARY block the model is given", () => {
   const block = () => buildFormInventoryBlock(inventory());
 
-  it("still lists all four, because they still exist", () => {
+  it("still lists all three, because they still exist", () => {
     for (const entry of HIRING) {
       expect(block(), entry.name).toContain(entry.name);
     }

@@ -154,7 +154,10 @@ const PRODUCTION = { VERCEL: "1", VERCEL_ENV: "production", NODE_ENV: "productio
 const PREVIEW = { VERCEL: "1", VERCEL_ENV: "preview", NODE_ENV: "production" };
 const DEVELOPMENT = { NODE_ENV: "development" };
 
-/** The eleven templates whose wording changed with the Salon -> Store release. */
+/**
+ * The ten templates whose wording changed with the Salon -> Store release and that the library still ships. (It was
+ * eleven: the Tanning Consultant Interview was removed from the library and its key retired, Pau, 21 Nov 2026.)
+ */
 const REISSUED = [
   "sdit-epp",
   "tsd-epp",
@@ -164,7 +167,6 @@ const REISSUED = [
   "dmit-epp-dmit",
   "resignation-exit",
   "prescreen-phone-interview",
-  "tanning-consultant-interview",
   "management-interview-round-1",
   "management-interview-round-2",
 ];
@@ -184,7 +186,7 @@ const versionsOf = (key: string) => {
   return store.form_template_versions.filter((row) => row.template_id === template.id);
 };
 
-/** Production as it stood after PR #43's merge: installed, the eleven still on their Salon revision. */
+/** Production as it stood after PR #43's merge: installed, the ten still on their Salon revision. */
 async function productionBeforeTheSync() {
   await ensureTemplateLibrary("system", PRODUCTION);
   for (const key of REISSUED) {
@@ -339,7 +341,7 @@ describe("where the sync may run", () => {
 /* -------------------------------------------------------------- the first run --- */
 
 describe("a first run on Production", () => {
-  it("publishes version 2 of exactly the eleven templates, archiving version 1", async () => {
+  it("publishes version 2 of exactly the ten templates, archiving version 1", async () => {
     await productionBeforeTheSync();
     const previous = new Map(REISSUED.map((key) => [key, versionsOf(key)[0]!.id]));
 
@@ -507,7 +509,7 @@ describe("what the administrator sees on Forms → Form Templates", () => {
     expect(report).toBeDefined();
     const text = textOf(TemplateSyncReport(report!.props as never));
     expect(text).toMatch(/Template library sync/);
-    expect(text).toMatch(/10 revised/);
+    expect(text).toMatch(/9 revised/); // was 10: REISSUED lost the removed Tanning Consultant Interview (Pau, 21 Nov 2026)
     expect(text).toMatch(/1 failed/);
     expect(text).toMatch(/fttc-epp.*temporary outage/);
   });

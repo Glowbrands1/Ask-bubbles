@@ -7,6 +7,8 @@ import snapshot from "@/test/fixtures/ask-sunny-published-templates.json";
 
 import { APPROVED_REMOVAL_DESCRIPTION_CHANGES, APPROVED_REMOVALS, withApprovedRemovals } from "@/test/approved-removals";
 
+import { RETIRED_TEMPLATE_KEYS } from "@/config/company/forms/retired";
+
 import { MIGRATED_TEMPLATE_SEEDS, TEMPLATE_SEEDS } from "./library";
 import { CA_ACTION_PLAN_CLOSING, CA_ACTION_PLAN_CLOSING_REVISION_5 } from "./required-closing";
 
@@ -46,8 +48,18 @@ interface ApprovedChange {
   to: unknown;
 }
 
-const TEMPLATES = snapshot.templates as unknown as SnapshotTemplate[];
-const CHANGES = approved.changes as ApprovedChange[];
+/*
+ * Templates in the reference snapshot that this library deliberately no longer ships. The Tanning Consultant Interview
+ * is the sibling company's own role: removed from the library and its key retired (Pau, via QA, 21 Nov 2026). The
+ * snapshot and the approved-changes fixture are records of the reference platform and stay whole; the comparisons
+ * below set the removed template aside, and a test requires it to be absent from the seeds and retired.
+ */
+const REMOVED_FROM_LIBRARY: readonly string[] = ["tanning-consultant-interview"];
+
+const SNAPSHOT_TEMPLATES = snapshot.templates as unknown as SnapshotTemplate[];
+const ALL_CHANGES = approved.changes as ApprovedChange[];
+const TEMPLATES = SNAPSHOT_TEMPLATES.filter((template) => !REMOVED_FROM_LIBRARY.includes(template.key));
+const CHANGES = ALL_CHANGES.filter((change) => !REMOVED_FROM_LIBRARY.includes(change.sourceKey));
 
 /** Postgres's text form of a jsonb value: keys by length then bytes, ", " and ": ". */
 function jsonbText(value: unknown): string {
@@ -140,12 +152,9 @@ const APPROVED_CONTENT_CHANGES: { decision: string; from: string; to: string }[]
   { decision: "QA-2 — exit step, tanning clause removed (Sunlync kept)", from: "Place comment on employee’s Sunlync account stating they are no longer employed, verify tanning has been removed.", to: "Place comment on employee’s Sunlync account stating they are no longer employed." },
   { decision: "QA-3 — FTTC EPP description", from: "Performance plan for a full-time Tanning Consultant.", to: "The FTTC Employee Performance Plan." },
   /*
-   * QA, 25 Oct 2026: the hidden Tanning Consultant Interview printed the
-   * sibling company's name above its core values. The heading is the JBA
-   * Policy Manual's own ("Core Values", p.7); the five values are unchanged.
-   * See `seed-sibling-brand.test.ts`.
+   * QA-4 ("Sun Tan City Core Values" -> "Core Values") was the Tanning Consultant Interview's. That form was removed
+   * from the library (Pau, 21 Nov 2026), so the approved pair has nothing left to apply to and is no longer listed.
    */
-  { decision: "QA-4 — Tanning Consultant Interview core-values heading", from: "Sun Tan City Core Values", to: "Core Values" },
   /*
    * QA, 29 Oct 2026: the drafting prompt has written this field as Observed /
    * Expectation / Going Forward since the Corrective Action change; the help
@@ -188,18 +197,28 @@ function differences(a: unknown, b: unknown, path: string, out: { path: string; 
 
 describe("the migrated templates are the reference platform's published templates", () => {
   it("snapshot: every template's content matches the published version's database fingerprint", () => {
-    expect(TEMPLATES).toHaveLength(17);
-    for (const template of TEMPLATES) {
+    // The whole reference snapshot, including the template this library no longer ships.
+    expect(SNAPSHOT_TEMPLATES).toHaveLength(17);
+    for (const template of SNAPSHOT_TEMPLATES) {
       expect(md5(template.document), template.key).toBe(template.documentMd5);
       expect(md5(template.variants), template.key).toBe(template.variantsMd5);
     }
   });
 
-  it("the library ships all 17, once each, and nothing else", () => {
+  // 16 of the snapshot's 17: the Tanning Consultant Interview was removed (Pau, 21 Nov 2026). CHANGED ON PURPOSE.
+  it("the library ships the snapshot's 16 remaining templates, once each, and nothing else", () => {
     const keys = MIGRATED_TEMPLATE_SEEDS.map((seed) => seed.key).sort();
     expect(keys).toEqual(TEMPLATES.map((template) => RENAMED[template.key] ?? template.key).sort());
-    expect(new Set(keys).size).toBe(17);
+    expect(new Set(keys).size).toBe(16);
     expect(TEMPLATE_SEEDS.map((seed) => seed.key).sort()).toEqual(keys);
+  });
+
+  it("the removed Tanning Consultant Interview is in the snapshot, but not in the library, and its key is retired", () => {
+    for (const key of REMOVED_FROM_LIBRARY) {
+      expect(SNAPSHOT_TEMPLATES.map((template) => template.key)).toContain(key);
+      expect(TEMPLATE_SEEDS.map((seed) => seed.key)).not.toContain(key);
+      expect(RETIRED_TEMPLATE_KEYS).toContain(key);
+    }
   });
 
   it("every difference from the published version is on the approved list, and every approved change is present", () => {
@@ -247,15 +266,16 @@ describe("the migrated templates are the reference platform's published template
       APPROVED_CONTENT_CHANGES.some((entry) => entry.from === change.from && entry.to === change.to),
     );
     // D3 x2 (SDIT, both lists), D4 x10 (six EPPs; SDIT, TSD and both DMIT print it twice), D12 x1, D18 x1, DM-1..3 x1 each,
-    // QA-2..4 x1 each (QA, 25 Oct 2026: no sibling-company wording; QA-1 dropped, MyGlow confirmed by Pau).
+    // QA-2..3 x1 each (QA, 25 Oct 2026: no sibling-company wording; QA-1 dropped, MyGlow confirmed by Pau). QA-4 went
+    // with the Tanning Consultant Interview (removed, Pau, 21 Nov 2026): 22, was 23.
     // QA-5 x1 (QA, 29 Oct 2026: the Coaching details help names the three sections the prompt asks for).
     // + HR-1 x2 (Ask Sunny's revision 9, 19 Nov 2026: the history box's label and help; the revision note replaces DM-3's pair).
-    expect(matching).toHaveLength(23);
+    expect(matching).toHaveLength(22);
     for (const entry of APPROVED_CONTENT_CHANGES) {
       expect(matching.some((change) => change.from === entry.from), entry.decision).toBe(true);
     }
     expect(new Set(matching.map((change) => change.sourceKey))).toEqual(
-      new Set(["coaching", "sdit-epp", "tsd-epp", "asd-sdit-epp", "fttc-epp", "dmit-epp-tsd", "dmit-epp-dmit", "demotion", "management-interview-round-1", "dpoa", "stc-exit", "tanning-consultant-interview"]),
+      new Set(["coaching", "sdit-epp", "tsd-epp", "asd-sdit-epp", "fttc-epp", "dmit-epp-tsd", "dmit-epp-dmit", "demotion", "management-interview-round-1", "dpoa", "stc-exit"]),
     );
   });
 

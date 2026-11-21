@@ -28,10 +28,21 @@
  * Consultant. Hidden the same way (Pau, via QA, 25 Oct 2026); also already
  * withheld from the chooser.
  */
+/*
+ * The six EPP forms (Pau, via QA2, 21 Nov 2026): the reference platform's Employee Performance Plans for its own roles
+ * (SDIT, TSD, ASD-SDIT, FTTC, DMIT). Buff City Soap does not use those roles and none has ever been saved here. Hidden
+ * only: not renamed, not deleted, so removing these lines brings them back.
+ */
 export const HIDDEN_TEMPLATE_KEYS: readonly string[] = [
   "tanning-consultant-interview",
   "management-interview-round-1",
   "management-interview-round-2",
+  "sdit-epp",
+  "tsd-epp",
+  "asd-sdit-epp",
+  "fttc-epp",
+  "dmit-epp-tsd",
+  "dmit-epp-dmit",
 ];
 
 export function isHiddenTemplate(templateKey: string): boolean {

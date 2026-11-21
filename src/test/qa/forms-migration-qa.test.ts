@@ -204,17 +204,16 @@ const FORMS: readonly QaForm[] = [
   { key: "follow-up-coaching", phrase: "Create a follow-up coaching form for Jordan Testperson on punctuality. I followed up today and she has improved.", creator: "location_manager", edits: ["original_topic", "original_expectation"], edit: "revision" },
   { key: "dpoa", phrase: "Create a corrective action for Jordan Testperson. She was 20 minutes late today.", creator: "location_manager", edits: ["observation", "action_plan"], edit: "payroll" }, // revision 7: no Other write-in line
   { key: "policy-review", phrase: "Create a policy review for Jordan Testperson about the dress code.", creator: "location_manager", edits: ["topic", "observation"], edit: "editor" },
-  { key: "sdit-epp", phrase: "Create an SDIT EPP for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor" },
-  { key: "tsd-epp", phrase: "Create a TSD EPP for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor" },
-  { key: "asd-sdit-epp", phrase: "Create an ASD-SDIT Performance EPP for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor" },
-  { key: "fttc-epp", phrase: "Create an FTTC Performance EPP for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor" },
-  { key: "dmit-epp-tsd", phrase: "Create a DMIT EPP TSD review for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor" },
-  { key: "dmit-epp-dmit", phrase: "Create a DMIT EPP DMIT review for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor" },
+  { key: "sdit-epp", phrase: "Create an SDIT EPP for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor", hidden: true },
+  { key: "tsd-epp", phrase: "Create a TSD EPP for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor", hidden: true },
+  { key: "asd-sdit-epp", phrase: "Create an ASD-SDIT Performance EPP for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor", hidden: true },
+  { key: "fttc-epp", phrase: "Create an FTTC Performance EPP for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor", hidden: true },
+  { key: "dmit-epp-tsd", phrase: "Create a DMIT EPP TSD review for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor", hidden: true },
+  { key: "dmit-epp-dmit", phrase: "Create a DMIT EPP DMIT review for Jordan Testperson.", creator: "district_manager", edits: ["where_succeeding", "needs_improvement"], edit: "editor", hidden: true },
   { key: "resignation-exit", phrase: "Create an exit form for Jordan Testperson. She gave two weeks notice on 9/1 and her last day was 9/15.", creator: "location_manager", edits: ["details", "details"], edit: "exit" },
   { key: "demotion", phrase: "Create a demotion form for Jordan Testperson, from manager to sales associate effective 10/12.", creator: "location_manager", edits: ["reason", "reason"], edit: "revision" },
   { key: "position-transfer", phrase: "Create a position transfer form for Jordan Testperson, transferring from store 12 to store 18.", creator: "location_manager", edits: ["reason", "reason"], edit: "revision" },
   { key: "prescreen-phone-interview", phrase: "Create a prescreen phone interview form for Jordan Testperson.", creator: "location_manager", edits: [], edit: "editor" },
-  { key: "tanning-consultant-interview", phrase: "Create a tanning consultant interview form for Jordan Testperson.", creator: "location_manager", edits: [], edit: "editor", hidden: true },
   { key: "management-interview-round-1", phrase: "Create a first round management interview form for Jordan Testperson.", creator: "location_manager", edits: [], edit: "editor", hidden: true },
   { key: "management-interview-round-2", phrase: "Create a second round management interview form for Jordan Testperson.", creator: "location_manager", edits: [], edit: "editor", hidden: true },
 ];
@@ -593,13 +592,18 @@ beforeEach(async () => {
 /* ------------------------------------------------------------ the matrix --- */
 
 /*
- * HIDDEN IN THIS DEPLOYMENT (QA, 25 Oct 2026). The Tanning Consultant Interview
- * Form and both management interviews are the sibling company's own. Their
+ * HIDDEN IN THIS DEPLOYMENT (QA, 25 Oct 2026). Both management interviews are
+ * the sibling company's own. (So was the Tanning Consultant Interview Form,
+ * hidden with them; it was removed from the library and its key retired on
+ * 21 Nov 2026, Pau, so it is no longer in this matrix.) Their
  * rows, versions and content stay, and the content steps of this matrix (02,
  * 03, 10, 11, 14 …) still check them; but nothing lists them and nothing
  * creates a form from them, so the listing and creation steps check that
  * refusal instead of a created form. The
  * expectation changes on purpose; see `config/company/forms/hidden.ts`.
+ *
+ * The six EPP forms joined them on 21 Nov 2026 (Pau, via QA2): plans for roles Buff City Soap does not have, none ever
+ * saved here. Their listing and creation steps now check the refusal the same way.
  */
 async function expectHidden(form: QaForm) {
   expect(isHiddenTemplate(form.key)).toBe(true);
@@ -696,7 +700,8 @@ describe.each(FORMS)("$key", (form) => {
       const enforced = enforceResponsibilities(document, variantKey, { values: everything, checked: {} });
       expect(Object.keys(enforced.values).sort()).toEqual([...ours].sort());
     }
-    if (form.edits.length === 0) return;
+    // A hidden form's fields are still checked above; nothing creates one, so the drafting half is checked by step 05's refusal (21 Nov 2026).
+    if (form.edits.length === 0 || form.hidden) return;
     const { id } = await createViaChat(form);
     const read = await values(id);
     expect(read[form.edits[0]!]?.value ?? "", "the drafted field was written").not.toBe("");
@@ -936,8 +941,17 @@ describe.each(FORMS)("$key", (form) => {
 });
 
 describe("the matrix covers the whole migrated library", () => {
-  it("names all seventeen forms, once each", () => {
+  // Sixteen, not seventeen: the Tanning Consultant Interview was removed from the library (the sibling company's role;
+  // Pau, via QA, 21 Nov 2026). Its key is retired, so an installed row is switched off, never deleted
+  // (`lib/forms/retired-templates.test.ts`).
+  it("names all sixteen forms, once each", () => {
     expect(FORMS.map((form) => form.key).sort()).toEqual(MIGRATED_TEMPLATE_SEEDS.map((seed) => seed.key).sort());
-    expect(FORMS).toHaveLength(17);
+    expect(FORMS).toHaveLength(16);
+  });
+
+  it("no longer ships the Tanning Consultant Interview, and retires its key", () => {
+    expect(MIGRATED_TEMPLATE_SEEDS.map((seed) => seed.key)).not.toContain("tanning-consultant-interview");
+    expect(TEMPLATE_SEEDS.map((seed) => seed.key)).not.toContain("tanning-consultant-interview");
+    expect(RETIRED_TEMPLATE_KEYS).toContain("tanning-consultant-interview");
   });
 });

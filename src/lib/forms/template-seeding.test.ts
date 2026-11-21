@@ -102,15 +102,16 @@ describe("installing an empty library", () => {
   it("records each template's category, so the page can group them", async () => {
     await ensureTemplateLibrary("system");
     expect(templateRow("coaching").category).toBe("hr_performance");
+    // The Tanning Consultant Interview was here; it was removed from the library and its key retired (Pau, 21 Nov 2026).
     for (const key of [
       "prescreen-phone-interview",
-      "tanning-consultant-interview",
       "management-interview-round-1",
       "management-interview-round-2",
     ]) {
       expect(templateRow(key).category, key).toBe("hiring");
       expect(templateRow(key).layout_family, key).toBe("interview");
     }
+    expect(store.form_templates!.some((row) => row.key === "tanning-consultant-interview")).toBe(false);
   });
 
   it("installs the Resignation/Exit Form published, active and behind its own permission", async () => {
@@ -573,7 +574,7 @@ describe("the Salon -> Store terminology re-issue", () => {
     "dmit-epp-dmit",
     "resignation-exit",
     "prescreen-phone-interview",
-    "tanning-consultant-interview",
+    // (and "tanning-consultant-interview", removed from the library with its key retired: Pau, 21 Nov 2026)
     "management-interview-round-1",
     "management-interview-round-2",
   ];
