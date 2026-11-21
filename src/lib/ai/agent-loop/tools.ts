@@ -356,6 +356,12 @@ function answersNextPersonOffer(context: ToolContext): boolean {
   return Boolean(lastReply && NEXT_PERSON_OFFER.test(String(lastReply.content ?? "").trim()) && oneWord(withoutMessageIdTags(context.question)));
 }
 
+/** The first name the app's own next-person offer named, when the reply before this message ended with one. */
+function offeredNextFirst(context: ToolContext): string | null {
+  const lastReply = [...(context.history as ChatMessage[])].reverse().find((turn) => turn.role === "assistant");
+  return /Want me to make the [^\n?]+ for ([^\n?]+) next\?\s*$/.exec(String(lastReply?.content ?? "").trim())?.[1]?.trim() ?? null;
+}
+
 /**
  * An answer whose quote is the whole one-word reply to the next-person offer is refused (`answersNextPersonOffer`). QA
  * (16 Nov 2026; Runner 2's c163 T4): so is one that answers this chat's recorded name question ("Did you mean <A>?"): the
@@ -2517,6 +2523,18 @@ async function personNamedOrPicked(context: ToolContext, row: RosterEmployee, ro
   const key = personKey(row.id);
   if (thisRequestOnly) {
     if (personNamedInThisRequest(context, row, roster, names)) return true;
+    /*
+     * QA2 (21 Nov 2026, item B; port from the sibling app): "write CAs for <A> and <B>, …" made <A>'s card and the app's
+     * own reply offered <B>'s ("Want me to make the … for <B> next?"); the manager's "yes" names nobody, and <B> was named
+     * before <A>'s card. The app's own offer, accepted by the one-word answer to it, is <B>'s request: this person counts
+     * when the offer names their first name and the manager named them in this chat. Reads this app's own reply
+     * (`answersNextPersonOffer`), never a word list over the manager's messages.
+     */
+    if (answersNextPersonOffer(context) && offeredNextFirst(context) !== null) {
+      const offered = offeredNextFirst(context)!.toLowerCase();
+      const firsts = [row.firstName, row.preferredFirstName].map((first) => (first ?? "").trim().toLowerCase()).filter(Boolean);
+      if (firsts.includes(offered) && said.some((text) => names.some((name) => holdsPhrase(text, name)))) return true;
+    }
   } else if (said.some((text) => names.some((name) => holdsPhrase(text, name)))) return true;
   const view = nameQuestionView(context, roster);
   if (spellingKeysConfirmedFor(view, row.id).length > 0) return true;
@@ -3215,7 +3233,31 @@ export async function proposeForm(
     const shownIsOther = Boolean(shown && (shown.employeeKey && employee.id ? shown.employeeKey !== personKey(employee.id) : shown.nameKey ? shown.nameKey !== personKey(employee.name) : false));
     const draft = context.openFormId ? await authorizeInstance(context.request, context.openFormId, "view").then(({ loaded }) => loaded.instance).catch(() => null) : null;
     const draftIsOther = Boolean(draft && draft.status === "draft" && draft.employeeName && !samePerson(draft.employeeName, employee.name));
-    if (shownIsOther || draftIsOther) {
+    /*
+     * QA2 (21 Nov 2026; port from the sibling app; belt-and-braces beside the live model's new_form_evidence): "the same
+     * for <B>, he was late on 11/10/26" is <B>'s own request. By the records: this message names this card's person (the
+     * roster), names NOT the open card's or draft's person, and states its own date. A person named inside an account
+     * about the open card's person ("Shift Lead, <B>, messaged <A> …") names <A> too, so it is still refused.
+     */
+    const ownRequest = (() => {
+      /* QA2 (item B): the manager's "yes" to the app's own offer of this person's form ("… for <B> next?") is <B>'s request. */
+      const offered = answersNextPersonOffer(context) ? offeredNextFirst(context) : null;
+      if (offered && employee.name.split(/\s+/)[0]?.toLowerCase() === offered.toLowerCase()) return true;
+      const said = withoutMessageIdTags(context.question);
+      const rosterRows = read.kind === "read" ? read.roster : [];
+      const rosterNames = rosterRows.map((row) => displayName(row));
+      if (!mentionsPerson(said, employee.name, rosterNames)) return false;
+      /* The open card's or draft's person by any of their names, the first name alone included ("messaged <A> asking …"). */
+      const namedBy = (names: readonly (string | null | undefined)[]) => names.some((name) => {
+        const own = (name ?? "").trim();
+        return own !== "" && new RegExp(`(?<![\\p{L}'-])${own.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+")}(?![\\p{L}-])`, "iu").test(said);
+      });
+      const shownRow = rosterRows.find((row) => (shown?.employeeKey ? shown.employeeKey === personKey(row.id ?? "") : shown?.nameKey ? shown.nameKey === personKey(displayName(row)) : false));
+      const namesShown = Boolean(shownRow && namedBy([displayName(shownRow), ...fullNamesOf(shownRow), shownRow.firstName, shownRow.preferredFirstName]));
+      const namesDraft = Boolean(draftIsOther && draft?.employeeName && namedBy([draft.employeeName, draft.employeeName.split(/\s+/)[0]]));
+      return !namesShown && !namesDraft && readDates(said).length > 0;
+    })();
+    if ((shownIsOther || draftIsOther) && !ownRequest) {
       return {
         reason_code: "person_change_not_asked", error: `A card or draft for another person is open, and the manager did not ask for another form or say the form is for ${employee.name}. A person named inside an account (who told, who messaged, who reported) is not the form's person. Keep the open card or draft for its person and put what the manager said on it with edit_form; make a card for ${employee.name} only if the manager asks for another form for them (new_form_evidence).`,
       };
