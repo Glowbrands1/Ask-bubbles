@@ -56,6 +56,7 @@ import {
   offRosterPlaceAnswerEnabled,
   resentRequestIsYesEnabled,
   cardPlanMatchesCreateEnabled,
+  statedPlanStepsEnabled,
   answerTurnLevelEnabled,
   cardCheckedAgainstWordsEnabled,
   addAlreadyOnFormSaysSoEnabled,
@@ -1252,6 +1253,10 @@ async function postChat(request: Request, progress?: ProgressChannel) {
           ...parsed.history.filter((turn) => turn.role === "user").map((turn) => turn.content),
           asked.question,
         ].join("\n\n"));
+      }
+      // STATED_PLAN_STEPS_ENABLED (ported, f062): the card's plan line adds the steps the manager stated, as Create will save it.
+      if (statedPlanStepsEnabled() && answer.formProposal?.planSteps?.length) {
+        answer = (await import("@/lib/forms/stated-plan-steps")).withCardPlanSteps(answer);
       }
       // TERMINATION_CARD_TIDY_ENABLED: an Issue that is only a hedge about terminating is the account (`lib/ai/termination-card-tidy.ts`).
       if (terminationCardTidyEnabled()) {
