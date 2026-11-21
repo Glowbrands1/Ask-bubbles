@@ -2007,6 +2007,9 @@ export function eppTemplateForRole(text: string): string | null {
  */
 const LIBRARY_NAME_WORDS = [
   "prescreen", "phone", "interview", "consultant", "management",
+  // "tc" came from the removed consultant-interview matcher (21 Nov 2026); it stays a word that is never a name, as
+  // QA F8 ("Write a CA for a TC <name> …") reads it.
+  "tc",
   "round", "first", "second", "performance", "epp", "sdit", "tsd", "dmit",
   "asd", "fttc", "employee", "plan", "report", "record", "template", "bubbles",
   "salon", "location", "store",

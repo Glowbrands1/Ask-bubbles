@@ -268,7 +268,12 @@ describe("acceptance: a hidden interview form opens no card (QA, 25 Oct 2026)", 
 
   it("asked while a Coaching card is open, the interview still opens no card", async () => {
     bag.guess = "coaching";
-    const replies = await replay(["create a coaching form for Test Employee at Kearney, late to her shift on 10-20", TANNING_INTERVIEW]);
+    /*
+     * CHANGED ON PURPOSE (21 Nov 2026): the Tanning Consultant Interview left this app's library (Pau), so the hidden
+     * form asked for here is the First Round Management Interview, still hidden. The mechanism checked is the same: a
+     * hidden form named while another card is open opens no card and says it is not published.
+     */
+    const replies = await replay(["create a coaching form for Test Employee at Kearney, late to her shift on 10-20", "create a first round management interview form for Test Employee"]);
     expect(replies[0]!.formProposal?.templateKey).toBe("coaching");
     expect(replies[1]!.formProposal ?? null).toBeNull();
     expect(replies[1]!.content).not.toMatch(A_CARD);
