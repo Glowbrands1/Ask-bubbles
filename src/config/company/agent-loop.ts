@@ -98,8 +98,15 @@ export const BUBBLES_LOOP_JOB_TITLES: AppConfig["jobTitleList"] = [
   { pattern: /\bmaintenance team\b/i, title: "Maintenance Team" },
   { pattern: /\boperators?\b/i, title: "Operator" },
   { pattern: /\bowners?\b/i, title: "Owner" },
-  { pattern: /\bteam members?\b/i, title: "Team Member" },
 ];
+
+/*
+ * THE FRONTLINE ROLE'S EVERYDAY WORDS (Pau via QA2, 21 Nov 2026): "team member", "staff" and "employee" all mean the
+ * frontline role (Woven: Team Member Part Time / Full Time / Seasonal Team Member Part Time). They are never read as a
+ * title of their own (so never "a different title" from Woven's, and never written as someone's Position) and never as
+ * a person; typed beside a name ("team member Remy", "my staff, Remy") they are taken off it like a title.
+ */
+export const BUBBLES_LOOP_ROLE_WORDS = /\b(?:team members?|staff(?: members?)?|employees?)\b/i;
 
 export const BUBBLES_POLICY_GUARDS: PolicyGuards = {
   headings: { attendance: "Attendance", lateOpening: "Late Opening", conduct: "Standards of Conduct" },

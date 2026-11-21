@@ -33,10 +33,22 @@ describe("the loop reads only this company's job titles", () => {
     ["DM", "District Manager"],
     ["team member part time", "Team Member Part Time"],
     ["Seasonal Team Member Part Time", "Seasonal Team Member Part Time"],
-    ["team member", "Team Member"],
   ])("%s is %s", (typed, title) => {
     expect(loopTitleIn(`our ${typed} Remy Calder was late on 11/18`)).toBe(title);
     expect(loopCardTitle(typed)).toBe(title);
+  });
+
+  /*
+   * Pau via QA2 (21 Nov 2026): "team member", "staff" and "employee" are the same frontline role. "My staff", "an
+   * employee", "a team member" are fine, and never a title of their own (so never title_differs against Woven's Team
+   * Member Part Time) nor someone's Position, nor part of a person's name.
+   */
+  it.each(["team member", "Team Member", "staff", "staff member", "employee", "Employee"])("%s is the frontline role: never a title, never part of a name", (word) => {
+    expect(loopTitleIn(`my ${word} Remy Calder was late on 11/18`)).toBeNull();
+    expect(loopCardTitle(word)).toBeNull();
+    expect(titleSaidFor(`a ${word}, Remy Calder, was late`, "Remy Calder", [])).toBeNull();
+    expect(withoutJobTitle(`${word} Remy Calder`)).toBe("Remy Calder");
+    expect(withoutJobTitle(`Remy Calder, ${word}`)).toBe("Remy Calder");
   });
 
   it("a title typed beside the name is taken off it, and is the title said for that person", () => {

@@ -1,4 +1,4 @@
-import { BUBBLES_METRICS, BUBBLES_POLICY_GUARDS, bubblesLoopContent, BUBBLES_LOOP_JOB_TITLES } from "@/config/company/agent-loop";
+import { BUBBLES_METRICS, BUBBLES_POLICY_GUARDS, bubblesLoopContent, BUBBLES_LOOP_JOB_TITLES, BUBBLES_LOOP_ROLE_WORDS } from "@/config/company/agent-loop";
 import { ACTIVE_BRAND } from "@/lib/brand";
 import { loadScopedRoster, readDirectoryFacts, readDirectoryRoster } from "@/lib/forms/employee-roster";
 import { COMPANY_LOCATIONS } from "@/lib/locations";
@@ -192,7 +192,8 @@ export const BUBBLES_CONFIG: AppConfig = {
     readDirectory: (...args) => readDirectoryRoster(...args),
     readDirectoryFacts: (...args) => readDirectoryFacts(...args),
   },
-  jobTitles: BUBBLES_LOOP_JOB_TITLES.map((entry) => entry.pattern),
+  // A title, or the frontline role's everyday words ("team member", "staff", "employee"), typed beside a name.
+  jobTitles: [...BUBBLES_LOOP_JOB_TITLES.map((entry) => entry.pattern), BUBBLES_LOOP_ROLE_WORDS],
   jobTitleList: BUBBLES_LOOP_JOB_TITLES,
   leadershipTitle: /\b(?:directors?|managers?|leads?|supervisors?|keyholders?)\b/i,
   content: bubblesLoopContent,
