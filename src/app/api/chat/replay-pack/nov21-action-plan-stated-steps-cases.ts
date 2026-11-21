@@ -22,7 +22,11 @@ import { evidenceFrom, headingWith, lastResult, loopStandIn, type LoopDecision }
  */
 
 const REPORT = "Ported from the sibling app (QA's live test, 20 Nov 2026, f062): the Action Plan ignored the step the manager asked for";
-const OPEN = { open: "STATED_PLAN_STEPS_ENABLED is off in production until QA's live test" };
+/*
+ * STATED_PLAN_STEPS_ENABLED is ON in production since 21 Nov 2026 13:31Z (QA2, Pau approved): the loop's half holds with
+ * production's flags; the regular chat's half also needs INTENT_EXTRACTION_ENABLED, which stays off, so it stays open.
+ */
+const OPEN = { open: "the regular chat's half needs INTENT_EXTRACTION_ENABLED, which is off in production" };
 
 /** The manager's one turn: an invented store account; the last sentence is the reporter's, word for word. */
 const SAID = "CA for Ozren Brack, late opening incident on 11/12. Ozren Brack was scheduled to open the store at 10:00 AM that Thursday. The first guests were waiting outside the front door by 9:55, and they were still waiting at 10:20 because the doors were not unlocked and the lights were off. I got a call from a guest at 10:05 asking if we were closed for the day. I tried calling Ozren Brack twice and texted once, and there was no answer until 10:25, when Ozren Brack replied that the alarm code had been entered wrong, then that the bus was late, and then that the key to the back door was in the other jacket. Ozren Brack finally arrived at 10:38, thirty-eight minutes after the scheduled opening time. During those thirty-eight minutes two guests left without buying, and one guest said she would not come back because this was the second time she had been left waiting outside. This is the third time in two months that Ozren Brack has opened late. The opening checklist was not finished until 11:15. I explained again that opening the store on time is a core part of the job. Ozren Brack said it would not happen again. I want this documented as a written corrective action and the opening procedures reviewed with Ozren Brack this week.";
@@ -117,7 +121,7 @@ export const NOV21_ACTION_PLAN_STATED_STEPS_CASES: ReplayCase[] = PATHS.flatMap(
     id: `nov21-f062-stated-step-added-${path.key}`,
     title: `f062 (ported), ${path.name}: a long late-opening account ending "… the opening procedures reviewed with <P> this week": the saved plan is the standard plan with "${STEP}" before the closing`,
     report: REPORT,
-    status: OPEN,
+    status: path.loop ? "fixed" : OPEN,
     fixFlags: [...path.flags],
     async run(t) {
       start(t);
