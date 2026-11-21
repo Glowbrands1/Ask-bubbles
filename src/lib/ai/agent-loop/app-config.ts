@@ -110,6 +110,8 @@ export interface PolicyGuards {
     readonly cited: RegExp;
     readonly said: RegExp;
     readonly named: RegExp;
+    /** Whether a message asks for this topic instead of the conduct heading, about the draft on screen. */
+    readonly notConduct: (question: string) => boolean;
   } | null;
 }
 

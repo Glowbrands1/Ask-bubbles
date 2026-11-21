@@ -1307,7 +1307,7 @@ export async function listStaffTool(context: ToolContext, effects: ToolEffects, 
   const facts = await appConfig().roster.readDirectoryFacts(scope).catch(() => []);
   const people = facts.length > 0 ? facts.map((person) => ({ ...person, positionName: person.title })) : [];
   if (people.length === 0) return { reason_code: "roster_failed", error: ROSTER_FAILED };
-  const all = picker.salonStaffRows(chosen, people);
+  const all = picker.storeStaffRows(chosen, people);
   /* Batch E (E7): the head count, and one position's people when the manager asked for it (facts; the rules book words them). */
   const asked = typeof input.position === "string" ? positionKey(input.position) : "";
   const rows = asked ? all.filter((row) => positionKey(row.position).includes(asked)) : all;
@@ -2616,7 +2616,7 @@ export function withoutNamedSalon(account: string, salonId: string): string {
   const isThatSalon = (phrase: string) => {
     const words = phrase.toLowerCase().split(/[^a-z0-9']+/).filter(Boolean);
     return words.length > 0 && words.some((word) => nameWords.has(word)) && words.every((word) => nameWords.has(word) || filler.has(word)) &&
-      readSalonMentions(`at ${phrase}`).some((mention) => mention.locationIds.includes(salonId));
+      readSalonMentions(`at ${phrase}`).some((mention) => mention.salonIds.includes(salonId));
   };
   const out = account.replace(/(^|[\s,;])(?:at|in)\s+((?:[A-Za-z0-9'’-]+\s+){0,4}[A-Za-z0-9'’-]+)(?=\s*(?:[,.;!?]|$))(,?)/gi, (whole, before: string, phrase: string, comma: string) =>
     isThatSalon(phrase) ? (before.trim() === "" ? "" : before.replace(/\s+$/, "")) + (comma && before.trim() !== "" ? comma : "") : whole);
@@ -2959,7 +2959,7 @@ export async function proposeForm(
    * as a new request, but it is about the policy of the draft on screen (`template-outline.ts`): the guard holds.
    */
   const guards = appConfig().policyGuards;
-  const mustSeeNotConduct = guards.saidOnlyOther !== null && guards.headings.conduct !== null && (await import("@/lib/forms/template-outline")).asksMustSeeNotConduct(context.question);
+  const mustSeeNotConduct = guards.saidOnlyOther !== null && guards.headings.conduct !== null && guards.saidOnlyOther.notConduct(context.question);
   /*
    * The rebuild plan, PR 1: the "another / new / second" list, startsNewForm and NEW_REQUEST_WITH_INCIDENT (word lists
    * over this message) are gone. A new form while a draft is open, or a new request after an earlier card, is the
@@ -3863,7 +3863,7 @@ export async function proposeForm(
    */
   let whichSalon = false;
   const globalAsk = await import("./places");
-  if ((await import("@/lib/config/chat-quality-flags")).globalSalonAskEnabled() && globalAsk.globalNonAdminNeedsSalon(context.actor.role, context.actor.scope) && !card.locationId && card.employeeName) {
+  if (globalAsk.globalPlaceAskEnabled() && globalAsk.globalNonAdminNeedsSalon(context.actor.role, context.actor.scope) && !card.locationId && card.employeeName) {
     const named = globalAsk.salonIdNamedIn(requestWords);
     if (named) {
       Object.assign(card, { locationId: named, locationName: rosterSalonName(named) ?? card.locationName, locationResolution: "resolved", authorizedLocationIds: [named], status: card.status === "needs_location" ? "ready" : card.status });
@@ -3878,7 +3878,7 @@ export async function proposeForm(
    * coaching about bed cleaning."). When the card's salon is one the manager named in this request, a whole "at / in
    * <that salon>" phrase leaves the account (`withoutNamedSalon`). Any other place stays word for word.
    */
-  if (card.locationId && card.issue && readSalonMentions(requestWords).some((mention) => mention.locationIds.includes(card.locationId!))) {
+  if (card.locationId && card.issue && readSalonMentions(requestWords).some((mention) => mention.salonIds.includes(card.locationId!))) {
     const unplaced = withoutNamedSalon(card.issue, card.locationId);
     if (unplaced !== card.issue && unplaced !== "") {
       card.issue = unplaced;

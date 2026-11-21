@@ -2,7 +2,8 @@ import { authorizedLocationIds } from "@/lib/forms/location-scope";
 import { readLocationMentions, rosterLocationName } from "@/lib/forms/location-mention";
 import { labelledStoreIds } from "@/lib/forms/store-cue";
 import { locationById } from "@/lib/locations";
-import type { AccessScope } from "@/types";
+import type { AccessScope, Role } from "@/types";
+import { globalStoreAskEnabled } from "@/lib/config/chat-quality-flags";
 
 /*
  * ============================================================================
@@ -55,4 +56,17 @@ export function labelledSalonIds(turn: string): string[] {
 export function salonIdNamedIn(text: string): string | null {
   const ids = [...new Set(readSalonMentions(text).flatMap((mention) => mention.salonIds))];
   return ids.length === 1 ? ids[0]! : null;
+}
+
+/** Roles whose global login files for every place without being asked which one (this app's `global-store-ask.ts`). */
+const COVERS_EVERY_PLACE: ReadonlySet<Role> = new Set(["admin", "owner", "developer"]);
+
+/** A global login that does not cover every place: its card asks which place (GLOBAL_STORE_ASK). */
+export function globalNonAdminNeedsSalon(role: Role | null | undefined, scope: AccessScope | null | undefined): boolean {
+  return Boolean(role && !COVERS_EVERY_PLACE.has(role) && scope?.level === "global");
+}
+
+/** Whether the which-place ask for a global login is on (GLOBAL_STORE_ASK_ENABLED). */
+export function globalPlaceAskEnabled(): boolean {
+  return globalStoreAskEnabled();
 }
