@@ -54,13 +54,14 @@ export const NOV21_AGENT_LOOP_PERSON_TOLD_TWO_TURNS_CASES: ReplayCase[] = [
     expect(reply.content, `the reply kept a pronoun for the card's person:\n${reply.content}`).toContain("told Fenna to clock out early and Fenna refused");
     expect(reply.content).not.toMatch(/\btold her\b|\bshe refused\b/);
   }),
-  fixed("nov21-agent-loop-person-told-two-turns-card", "The same two turns: the card's own account names Fenna (\"Fenna's shift lead, Corwin Ashdale, told Fenna to clock out early and Fenna refused.\"), never her/she", async (t) => {
+  fixed("nov21-agent-loop-person-told-two-turns-card", "The same two turns: the card's own account names Fenna (\"The shift lead, Corwin Ashdale, told Fenna to clock out early and Fenna refused.\"), never her/she", async (t) => {
     t.loopModel!(live());
     const thread = t.thread();
     await thread.say(T1);
     await thread.say(T2);
     const issue = (thread.proposal as { issue?: string } | null)?.issue ?? "";
-    expect(issue, `the card's account kept a pronoun:\n${issue}`).toBe("Fenna's shift lead, Corwin Ashdale, told Fenna to clock out early and Fenna refused.");
+    // Changed on purpose (port from the sibling app, QA2's live R3, 21 Nov 2026): the opening "Her" is the plain "The" when the told listener is named later in the sentence.
+    expect(issue, `the card's account kept a pronoun:\n${issue}`).toBe("The shift lead, Corwin Ashdale, told Fenna to clock out early and Fenna refused.");
   }),
   fixed("nov21-agent-loop-person-told-two-turns-t1-rule", "T1 (a story with no ask): the rules book says the one line is in the app's own words with the person's first name, never the manager's text typed back or a pronoun", async (t) => {
     const model = live();

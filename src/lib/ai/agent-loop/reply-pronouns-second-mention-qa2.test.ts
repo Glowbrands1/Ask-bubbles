@@ -11,8 +11,9 @@ import { withoutPersonPronouns } from "./reply-pronouns";
  *   "<P> wanted to show <P>'s team <P>'s new puppy"   (from "she wanted to show her team her new puppy")
  *   "<P> was talking on <P>'s cell phone"
  * The first and third are a possessive right after a preposition (the ported rule). The second is not: its possessives
- * follow a showing/giving verb ("show her team") and the clause's earlier object ("team her new puppy"); this app extends
- * the rule to those two places only. "She said her car broke down" still keeps the owner (the sibling's own test).
+ * are objects ("show her team", "team her new puppy"). This app first extended the rule to those two places only; that
+ * extension is replaced by the sibling app's general rule (its QA2 live R3, ported): an object possessive of a person
+ * already named in the sentence is "the". "She said her car broke down" still keeps the owner (the sibling's own test).
  */
 const second = (line: string, name: string) => withoutPersonPronouns(line, name).text;
 
