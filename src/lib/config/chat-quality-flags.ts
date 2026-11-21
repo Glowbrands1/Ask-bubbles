@@ -6000,6 +6000,18 @@ export function formsOnFileCountsEnabled(): boolean {
   return envFlag("FORMS_ON_FILE_COUNTS_ENABLED");
 }
 
+/**
+ * STATED_PLAN_STEPS_ENABLED (port from the sibling app, its f062, Pau via QA, 20 Nov 2026; same flag in both apps; default
+ * off; QA flips it after a live test). A Corrective Action's Action Plan keeps the standard plan exactly and adds each
+ * step the manager stated ("the opening procedures reviewed with <P> this week"), in their words, before the closing.
+ * The steps come from a record: the loop card's plan_steps (with evidence) or the intent reader's planSteps slot (so on
+ * the regular chat only with INTENT_EXTRACTION_ENABLED too), each kept only when its words are the manager's. Off, the
+ * tool schemas, the card and the plan are exactly as before. See `forms/stated-plan-steps.ts`.
+ */
+export function statedPlanStepsEnabled(): boolean {
+  return envFlag("STATED_PLAN_STEPS_ENABLED");
+}
+
 /*
  * ============================================================================
  * THE AGENT LOOP'S OWN FLAGS (loop port, Phase 2; ported from the sibling app, QA, 21 Nov 2026)
