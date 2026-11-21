@@ -53,7 +53,8 @@ async function sayB6(t: Parameters<ReplayCase["run"]>[0]) {
   vi.setSystemTime(new Date("2026-11-21T18:00:00Z"));
   t.directory([...LOOP_STAFF, ISOLDE]);
   t.as("location_manager", WEST_DODGE);
-  t.loopModel!(loopStandIn(b6Model));
+  const standIn = loopStandIn(b6Model);
+  t.loopModel!(standIn);
   const thread = t.thread();
   const cards: (string | null | undefined)[] = [];
   const replies: string[] = [];
@@ -62,7 +63,7 @@ async function sayB6(t: Parameters<ReplayCase["run"]>[0]) {
     cards.push(thread.proposal?.employeeName);
     replies.push(reply.content);
   }
-  return { thread, cards, replies };
+  return { thread, cards, replies, standIn };
 }
 
 export const NOV21_LIVE_RETEST_B6_EXIT_CASES: ReplayCase[] = [
@@ -77,6 +78,26 @@ export const NOV21_LIVE_RETEST_B6_EXIT_CASES: ReplayCase[] = [
       expect(cards.slice(3), `the card's name after the manager settled on Isolde Quennell: ${JSON.stringify(cards)}`).toEqual(["Isolde Quennell", "Isolde Quennell", "Isolde Quennell"]);
       const id = await thread.create();
       expect(t.values(id).employee_name ?? "", `the saved draft's name: ${JSON.stringify(t.values(id))}`).toBe("Isolde Quennell");
+    },
+  },
+  {
+    id: "nov21-live-retest-b6-notice-fulfilling-is-how-she-left",
+    title: "B6 (item 20): \"she gave 2 weeks notice and is fulfilling them\" is a resignation with notice: the card ticks Submitted & Fulfilled Notice and never asks how she left",
+    report: `${REPORT}: "\\"How did she leave?\\" was asked every turn though the manager said she gave 2 weeks' notice and is fulfilling it (= voluntary resignation with notice); the separation type was never filled."`,
+    status: "fixed",
+    async run(t) {
+      const { thread, standIn } = await sayB6(t);
+      const cards = standIn.views.map((view) => lastResult(view, "propose_form")).filter((result): result is Record<string, unknown> => Boolean(result && "card" in result));
+      // Every turn makes the card, also after the manager settles on her legal name (the turn that told the notice is still her request).
+      expect(cards.length, "a turn made no exit card").toBe(B6_TURNS.length);
+      for (const card of cards) {
+        const said = ((card.facts ?? card) as { exit_ticks?: string[]; exit_unset?: string[] });
+        const facts = JSON.stringify({ exit_ticks: said.exit_ticks, exit_unset: said.exit_unset });
+        expect(said.exit_unset ?? [], `the card still asks how she left: ${facts}`).not.toContain("resignation_type");
+        expect(said.exit_ticks ?? [], `the card's separation: ${facts}`).toContain("Submitted & Fulfilled Notice");
+      }
+      const id = await thread.create();
+      expect(Object.values(t.checked(id)).flat(), `the saved separation: ${JSON.stringify(t.checked(id))}`).toContain("submitted_fulfilled_notice");
     },
   },
 ];

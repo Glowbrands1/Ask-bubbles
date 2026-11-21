@@ -3132,7 +3132,14 @@ export async function proposeForm(
    * request that named <T> is <C>'s own turn, so termination, level, payroll, dates and the account read it (it fell to
    * resignation when only the card's name moved).
    */
-  const aliases = nameCorrectedFrom !== null ? [nameCorrectedFrom] : [];
+  /*
+   * QA's live re-test B6 (21 Nov 2026): the person's other full name on the roster (Woven's preferred first name or the
+   * legal one, with the surname) is the same person, so the turn that asked for the form under it stays this card's
+   * request once the manager settles on the other ("exit form for <preferred> …", then "it is for <legal>"); without
+   * it, the notice and the last day told in that turn were lost and the card asked how she left again.
+   */
+  const ownRow = employee.id && read.kind === "read" ? read.roster.find((row) => row.id === employee.id) : undefined;
+  const aliases = [...(nameCorrectedFrom !== null ? [nameCorrectedFrom] : []), ...(ownRow ? fullNamesOf(ownRow).filter((name) => !samePerson(name, employee.name)) : [])];
   const sameAsThisPerson = (named: string, person: string) =>
     samePerson(named, person) || (samePerson(person, employee.name) && (isConfirmedSpelling(named, confirmedKeys) || aliases.some((alias) => samePerson(named, alias))));
   /*

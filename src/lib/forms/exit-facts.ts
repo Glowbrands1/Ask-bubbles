@@ -635,7 +635,15 @@ function readSeparation(text: string): SeparationReading {
       /\bworked\s+(?:out\s+)?(?:(?:two|2)[- ]weeks?'?|(?:14|30)[- ]days?)\s+notice\b/g,
     ) ||
     /\bsubmitted\s*(?:&|and)\s*fulfilled\s+notice\b/.test(q) ||
-    affirmed(q, /\bnotice\s+(?:was\s+)?(?:fulfilled|completed|served)\b/g);
+    affirmed(q, /\bnotice\s+(?:was\s+)?(?:fulfilled|completed|served)\b/g) ||
+    /*
+     * A NOTICE BEING SERVED (QA's live re-test B6, 21 Nov 2026: "she gave 2 weeks notice and is fulfilling them" asked
+     * "How did she leave?" every turn). The verbs above are past only; the notice being fulfilled now, named outright
+     * ("is serving her two weeks") or by a pronoun after the notice in the same sentence ("… notice and is fulfilling
+     * them / working it"), is the same separation. A "not" or "never" between them is no such statement.
+     */
+    affirmed(q, new RegExp(String.raw`\b(?:fulfilling|completing|finishing|serving|working out)\s+(?:her|his|their|the|a|an)?\s*(?:full\s+|entire\s+|whole\s+)?${NOTICE_ONLY}`, "g")) ||
+    new RegExp(String.raw`\b${NOTICE_ONLY}(?:(?!\b(?:not|never|n't|didn't|won't|isn't|wasn't|refus\w*|fail\w*)\b)[^.;!?\n]){0,40}?\b(?:fulfilling|fulfills|completing|finishing|serving|working(?:\s+out)?)\s+(?:them|it|those|that)\b`).test(q);
 
   const voluntary =
     /\b(?:quit|quits|resigned|resigns|left)\b[^.;!?\n]{0,30}?\b(?:immediately|on the spot|effective immediately|without (?:any |giving |a |her |his |their )?(?:notice|two weeks)|with no notice|same day|mid[- ]shift)\b/.test(
