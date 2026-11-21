@@ -9,14 +9,14 @@ import { JOB_TITLES } from "@/lib/forms/proposal";
  * THE AGENT LOOP'S APP CONFIG: every word and key that belongs to one app
  * ============================================================================
  *
- * The loop (tools, run, rules book, prompt) is the same code in Ask Sunny and its sibling app; what differs is
+ * The loop (tools, run, rules book, prompt) is the same code in the sibling app and its sibling app; what differs is
  * this file. The app's name, its word for a place ("salon"), the staff system the roster comes from ("Woven"),
  * the keys of the four forms the loop treats specially, the list of places and the roster reader live here and
  * nowhere else. Porting the loop is this file with the other app's values.
  *
  * Mechanism, not content: the rules book and the tool texts take their words from `appConfig()` as template
  * strings, so a second config changes every one of them (`app-config.test.ts` proves it with a fake config and
- * proves Sunny's own text is byte-identical to before). Field and tool-argument names (`salon`, `which_salon`,
+ * proves the sibling app's own text is byte-identical to before). Field and tool-argument names (`salon`, `which_salon`,
  * `salon_from_woven`) are the contract between the tools and the model, not wording, and stay as they are.
  */
 
@@ -100,7 +100,7 @@ export interface PolicyGuards {
     readonly conduct: string | null;
   };
   /**
-   * An "Other — <label>" topic cited only when the manager says it (Sunny: Must See Behaviors, Pau's ruling of
+   * An "Other — <label>" topic cited only when the manager says it (the sibling app: Must See Behaviors, Pau's ruling of
    * 16 Nov 2026), with how a cited policy, the manager's words and a looser naming of it are recognised. Null: none.
    */
   readonly saidOnlyOther: {
@@ -116,7 +116,7 @@ export interface PolicyGuards {
 }
 
 export interface AppConfig {
-  /** What the assistant is called in its own prompt and help ("Sunny"). */
+  /** What the assistant is called in its own prompt and help ("the sibling app"). */
   readonly appName: string;
   /** The company's brand, said in the rules book's "name only this company's brand" rule. */
   readonly brandName: string;
@@ -141,8 +141,8 @@ export interface AppConfig {
     readonly readDirectoryFacts: typeof readDirectoryFacts;
   };
   /**
-   * The company's job titles, as a manager may type them before or after a name ("TC <name>", "<name> TC",
-   * "Tanning Consultant, <name>"): taken off a typed name before it is looked up (QA, 16 Nov 2026, the 266 re-run's c220).
+   * The company's job titles, as a manager may type them before or after a name ("<title> <name>", "<name> <title>",
+   * "<a position>, <name>"): taken off a typed name before it is looked up (QA, 16 Nov 2026, the 266 re-run's c220).
    */
   readonly jobTitles: readonly RegExp[];
   /**
@@ -158,7 +158,7 @@ export interface AppConfig {
   /** The page that lists the forms ("Form Monitoring"), in tool messages and the rules book. */
   readonly formsPageName: string;
   /**
-   * This company's sales metrics as a manager writes them (Sunny: PPTA, Club Close % …; global, as `matchAll` reads
+   * This company's sales metrics as a manager writes them (the sibling app: <the company's metrics>; global, as `matchAll` reads
    * it), kept word for word in the account and never read as people, and the short ones a manager may spell out
    * ("MSB" said as "must see behaviors").
    */
@@ -198,7 +198,7 @@ export function appConfig(): AppConfig {
   return active;
 }
 
-/** Tests only: run the loop with another app's words. Pass nothing to go back to Sunny's. */
+/** Tests only: run the loop with another app's words. Pass nothing to go back to the sibling app's. */
 export function setAppConfigForTests(config?: AppConfig): void {
   active = config ?? BUBBLES_CONFIG;
 }

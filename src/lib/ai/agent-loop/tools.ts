@@ -318,7 +318,7 @@ const NEXT_PERSON_OFFER = /Want me to make the [^\n?]+ for [^\n?]+ next\?\s*$/;
 /**
  * The manager's one-word message ("yes") answers the app's own next-person offer, which ended the reply before it. It
  * builds that card; it is never the card's payroll or level answer (QA: '"Yes" alone doesn't tell me whether that's for
- * payroll deduct, warning level, or both'). Reads Sunny's own reply, never the manager's words.
+ * payroll deduct, warning level, or both'). Reads the sibling app's own reply, never the manager's words.
  */
 function answersNextPersonOffer(context: ToolContext): boolean {
   const lastReply = [...(context.history as ChatMessage[])].reverse().find((turn) => turn.role === "assistant");
@@ -490,7 +490,7 @@ function otherPersonNamed(said: string, person: EvidencePerson): boolean {
   const isThisPerson = (name: string) => samePerson(name, person.name) || person.aliases.some((alias) => samePerson(name, alias));
   /*
    * QA (16 Nov 2026; the #1052 item 5 rule): a turn that names THIS card's person is this person's turn, even when it also
-   * names someone else ("Test Testi was disrespectful to her salon director Juno Paxton … I need a written CA"): the level,
+   * names someone else ("Test Testi was disrespectful to her <title> Juno Paxton … I need a written CA"): the level,
    * payroll or answer stated there carries. Only a turn that names another person and not this one is theirs.
    */
   if ([person.name, ...person.aliases].some((name) => mentionsPerson(said, name, rosterNames))) return false;
@@ -1252,7 +1252,7 @@ export function nameAsSaid(person: Pick<RosterEmployee, "firstName" | "lastName"
   return asPreferred;
 }
 
-/** A position as compared: lowercase words, a plural "s" dropped ("Tanning Consultants" = "tanning consultant"). */
+/** A position as compared: lowercase words, a plural "s" dropped ("<a position>s" = "<a position>"). */
 function positionKey(text: string): string {
   return text.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean).map((word) => (word.length > 3 && word.endsWith("s") ? word.slice(0, -1) : word)).join(" ");
 }
@@ -1968,8 +1968,8 @@ function cardNameCorrection(
 }
 
 /**
- * QA (16 Nov 2026, the 266 re-run's c220 and c224): a job title typed beside the name ("TC <name>", "<name> TC",
- * "Tanning Consultant, <name>") is not part of it. The company's titles come from the app config; only a whole title
+ * QA (16 Nov 2026, the 266 re-run's c220 and c224): a job title typed beside the name ("<title> <name>", "<name> <title>",
+ * "<a position>, <name>") is not part of it. The company's titles come from the app config; only a whole title
  * at the start or end is taken off, and never the last word left.
  */
 export function withoutJobTitle(typed: string): string {
@@ -2108,7 +2108,7 @@ function closeSpellingNotSettled(
 }
 
 /**
- * THE MANAGER'S TITLE FOR THIS PERSON (QA, 16 Nov 2026, c219: title_differs read "Salon Director" from "your salon director
+ * THE MANAGER'S TITLE FOR THIS PERSON (QA, 16 Nov 2026, c219: title_differs read "<title>" from "your <title>
  * Juno Paxton"). A title is the title of the name it is attached to: in its sentence, the nearest name the name reader finds
  * (or a roster name). Attached to another person, it is never this person's; with no name in its sentence, it is this
  * person's, as before. Null when no title is said for this person.
@@ -2510,13 +2510,16 @@ export function sameRosterPerson(a: string, b: string, roster: readonly Pick<Ros
  * cut account). A structural check, not wording: every date, time, amount, place ("at <place>") and time word the
  * manager gave about this person must still be in what_happened. Empty is allowed (Create waits for the account).
  */
-/** Performance metrics managers name ("PPTA, LPSVA, Club Average, Club Close %, and Spa %"). */
+/** Performance metrics managers name ("<the company's metrics>"). */
+/** What "Other — <topic>" is for in this company's content (`AgentLoopContent.otherTopics`). */
+const otherTopicsSaid = (): string => appConfig().content({ place: locationWord(), places: locationWords(), staff: appConfig().staffSystem }).otherTopics;
+
 /** This company's sales metrics (`appConfig().metrics.account`, global): kept word for word, never people. */
 const accountMetric = (): RegExp => appConfig().metrics.account;
 
 /**
  * Whole numbers of two or more digits that are not part of a date, a time or an amount, and not a year ("146 tans",
- * "237 tanning transactions", "40 min"): a figure the account must keep, and a card may not add.
+ * "237 transactions", "40 min"): a figure the account must keep, and a card may not add.
  */
 export function standaloneFigures(text: string): string[] {
   const bare = withoutDates(text).replace(ACCOUNT_TIME, " ").replace(ACCOUNT_MONEY, " ");
@@ -2583,7 +2586,7 @@ export function accountMissing(managerWords: string, account: string, priorActio
       if (!kept.has(figure(match[0])) && !said.includes(match[0].toLowerCase())) missing.push(match[0]);
     }
   }
-  /* Metrics and figures exactly as written (QA, the MSB family): "PPTA", "Club Close %", "146 tans", "237". */
+  /* Metrics and figures exactly as written (QA, the MSB family): "<metric>", "146", "237". */
   for (const match of managerWords.matchAll(accountMetric())) {
     const metric = match[0].toLowerCase().replace(/\s+/g, " ");
     const kept = said.replace(/\s+/g, " ").includes(metric) || appConfig().metrics.spelledOut.some((alias) => alias.short === metric && alias.long.test(said));
@@ -2606,8 +2609,8 @@ export function accountMissing(managerWords: string, account: string, priorActio
 /**
  * `account` without a whole "at / in <salon>" phrase naming `salonId` (QA item 20): every word of the phrase is a word of
  * that salon's name (or "the", "salon", "location", "store", "our"), it reads as that salon, and it ends at a comma, a
- * sentence's end or the end of the account. "At Kearney, coaching about bed cleaning." → "Coaching about bed cleaning.";
- * "at lincoln high during her shift" and "at the front desk" are never touched.
+ * sentence's end or the end of the account. "At <place>, coaching about <a duty>." → "Coaching about <a duty>.";
+ * "at <a school> during her shift" and "at the front desk" are never touched.
  */
 export function withoutNamedSalon(account: string, salonId: string): string {
   const nameWords = new Set((rosterSalonName(salonId) ?? "").toLowerCase().split(/[^a-z0-9]+/).filter(Boolean));
@@ -3055,7 +3058,7 @@ export async function proposeForm(
     samePerson(named, person) || (samePerson(person, employee.name) && (isConfirmedSpelling(named, confirmedKeys) || aliases.some((alias) => samePerson(named, alias))));
   /*
    * The request the card was made from under <T> (THIS_PERSONS_TURNS run for <T>) is this card's request too: the walk back
-   * from "For <C>" stops at a turn that also names someone else (the script's "your salon director <D>"), so it is added.
+   * from "For <C>" stops at a turn that also names someone else (the script's "your <title> <D>"), so it is added.
    */
   const aliasTurns = new Set(aliases.flatMap((alias) => turnsFromThisPersonsRequest(asked, alias, { names: extractEmployeeNames, same: samePerson })));
   const ownTurns = new Set([...turnsFromThisPersonsRequest(asked, employee.name, { names: extractEmployeeNames, same: sameAsThisPerson }), ...aliasTurns]);
@@ -3174,7 +3177,7 @@ export async function proposeForm(
       const names = roster.roster.map(displayName);
       const other = names.find((name) => !samePerson(name, employee.name) && mentionsPerson(whatHappened, name, names));
       if (other) return { reason_code: "right_person", error: `${other}'s form is only the format. ${other} never appears on ${employee.name}'s card; write ${employee.name}'s own account.` };
-      /* The format's own figures (a pasted "<C> completed 237 tanning transactions") are <C>'s, never this card's. */
+      /* The format's own figures (a pasted "<C> completed 237 transactions") are <C>'s, never this card's. */
       const sentences = managerTurns(context).split(/(?<=[.!?])\s+|\n+/);
       const othersNamed = names.filter((name) => !samePerson(name, employee.name) && mentionsPerson(managerTurns(context), name, names));
       const theirs = new Set(sentences.filter((sentence) => othersNamed.some((name) => mentionsPerson(sentence, name, names))).flatMap(standaloneFigures));
@@ -3202,7 +3205,7 @@ export async function proposeForm(
    * Corrective Action Form for?" itself, with no tool call, so no person_asked record was written, and the level named
    * there was refused at T2 (evidence_after_card) and T3. The app's own question for THIS form ("Who is this <form name>
    * for", by the template's name) in the reply right after a manager turn marks that turn as this request's start, as
-   * the record does. It reads Sunny's reply, never the manager's words.
+   * the record does. It reads the sibling app's reply, never the manager's words.
    */
   const askedWhoFor = new RegExp(`\\bwho is this ${template.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} for\\b`, "i");
   const whoAskedTurns = conversation
@@ -3243,7 +3246,7 @@ export async function proposeForm(
    */
   const manual = await turnManual(context);
   const askedPolicyWhole = typeof input.policy === "string" ? input.policy.trim() : "";
-  /* A heading beside Other ("Late Opening; Other — beds not cleaned"): the heading is checked, Other is the model's topic. */
+  /* A heading beside Other ("Late Opening; Other — <a duty not done>"): the heading is checked, Other is the model's topic. */
   const askedOther = /(?:^|;\s*)(other\b.*)$/i.exec(askedPolicyWhole)?.[1]?.trim() ?? "";
   /*
    * Pau's ruling (20 Nov 2026, via QA; c091): a Corrective Action may cite two manual headings when the manager describes
@@ -3265,7 +3268,7 @@ export async function proposeForm(
     policyHeading = headingOf(manual.headings, askedPolicy);
     if (!policyHeading) return { reason_code: "not_a_heading", error: "That is not a heading of the JBA Policy Manual (or \"Other\"). Pick the one heading that fits what happened.", headings: manual.headings };
     /*
-     * Batch J5 (QA's live re-run: "CA for <name>, ASD, late to open 11/12" cited Attendance p.14): "late to open" and a
+     * Batch J5 (QA's live re-run: "CA for <name>, <title>, late to open 11/12" cited Attendance p.14): "late to open" and a
      * failure to open are the manual's Late Opening section, as today's chat reads them (`late-open.ts`,
      * LATE_OPEN_DATE / FAILURE_TO_OPEN_IS_LATE_OPENING). Late for a shift stays Attendance (`describesAttendanceToo`).
      */
@@ -3356,7 +3359,7 @@ export async function proposeForm(
       if (!notInManual && !manual.headings.some((heading) => namesHeading(named.phrase, heading)) && !close.confident && close.candidates.length === 0) notInManual = named.phrase;
     }
   }
-  // The Other topic is read from the account as the model cleaned it (SPELLING_CLEANUP: "th e10 minute sanitaion" → "the 10-minute sanitation"), else the manager's words.
+  // The Other topic is read from the account as the model cleaned it (SPELLING_CLEANUP: "<typo>" → "<word>"), else the manager's words.
   /* QA (20 Nov 2026; c259): "we do not do extra cleaning after hours" is a rule stated, never a cleaning duty left undone. */
   const cleaning = (whatHappened ? cleaningUndonePhrase(whatHappened, { rulesAreNotDuties: true }) : null) ?? cleaningUndonePhrase(requestWords, { rulesAreNotDuties: true });
   const careAndCleaning = namesCareAndCleaning(requestWords);
@@ -3486,7 +3489,7 @@ export async function proposeForm(
   /*
    * DATE_ANSWER_APPLIED / DATE_ANSWER_KEEPS_OPEN (batch H3): the answer to "Which date goes on the form?" read as
    * today's chat reads it (`incident-dates.ts` dateAnsweredIn): "10-15", "the 15th", "most recent", "today", and an
-   * answer given a turn or two before ("She is at Kearney" after it). The manager's answer is the date, over the model's.
+   * answer given a turn or two before ("She is at <place>" after it). The manager's answer is the date, over the model's.
    */
   if (datesGiven.length > 1 && !answered && (await import("@/lib/config/chat-quality-flags")).dateAnswerAppliedEnabled()) {
     const asked = [...new Set(datesGiven.map((given) => monthDayToIso(given, today)))].sort();
@@ -3726,7 +3729,7 @@ export async function proposeForm(
   if (typedSalon && answeredSalonIds.length === 0) return { reason_code: "salon_unknown", error: `"${typedSalon}" is not a ${locationWord()} the app knows. Ask which of the manager's ${locationWords()} it is.` };
   /*
    * PLACE_SPAN_GUARD (batch H8): each of this person's turns is read on its own, so "cite animals in the workplace
-   * policy" joined to "at Kearney, NE" never reads a place nobody named, and the newest turn that names one salon is
+   * policy" joined to "at <place>, <state>" never reads a place nobody named, and the newest turn that names one salon is
    * the card's ("location st joe" after an earlier salon). "Primary salon is X" is where they usually work, never this.
    */
   const turnSalonIds: string[] = [];
@@ -3873,8 +3876,8 @@ export async function proposeForm(
     }
   }
   /*
-   * THE SALON THE MANAGER NAMED IS THE CARD'S SALON, NOT PART OF THE ACCOUNT (QA item 20; Runner 2's c075: "At Kearney,
-   * coaching about bed cleaning."). When the card's salon is one the manager named in this request, a whole "at / in
+   * THE SALON THE MANAGER NAMED IS THE CARD'S SALON, NOT PART OF THE ACCOUNT (QA item 20; Runner 2's c075: "At <place>,
+   * coaching about <a duty>."). When the card's salon is one the manager named in this request, a whole "at / in
    * <that salon>" phrase leaves the account (`withoutNamedSalon`). Any other place stays word for word.
    */
   if (card.locationId && card.issue && readSalonMentions(requestWords).some((mention) => mention.salonIds.includes(card.locationId!))) {
@@ -3888,7 +3891,7 @@ export async function proposeForm(
   /*
    * A TITLE THE MANAGER TYPED (batch H4/H6: JOB_TITLE_FROM_WORDS, JOB_TITLE_APPOSITION, TITLE_SPELLED_OUT, JOB_TITLE_CASE):
    * with no title on the roster row, "<name>, tan consultant at …" or "<name> was a <title>" in this person's own turns
-   * fills it, written as the title list writes one and spelled out ("ASD" → "Assistant Salon Director"). A roster title
+   * fills it, written as the title list writes one and spelled out ("<abbreviation>" → "<title>"). A roster title
    * always wins (gap #33); the manager's other words for it are title_differs, below.
    */
   let jobTitleTyped = false;
@@ -4044,7 +4047,7 @@ export async function proposeForm(
      * passes the heading (the system prompt lists them) or Other, or says no section fits.
      */
     /* Pau, 17 Nov: coaching always has policy and page. The Coaching and Follow-Up Coaching cards get the same fact as a CA. */
-    ...(policyForms.has(template.key) && !awaiting && !askedPolicyWhole ? { policy_not_given: { note: "This card has no policy. Propose it again with policy: the one JBA Policy Manual heading that fits what happened (the headings are listed in your instructions). \"Other — <short topic>\" only for Must See Behaviors, a cleaning duty left undone, or when no section fits; then say so in your reply." } } : {}),
+    ...(policyForms.has(template.key) && !awaiting && !askedPolicyWhole ? { policy_not_given: { note: "This card has no policy. Propose it again with policy: the one JBA Policy Manual heading that fits what happened (the headings are listed in your instructions). \"Other — <short topic>\" only for " + otherTopicsSaid() + ", or when no section fits; then say so in your reply." } } : {}),
     ...(policyNotForThisCard ? { policy_copied: { heading: policyHeading, note: `${policyHeading} is the policy of another form's card in this chat, not chosen for this card. Propose the card again with the heading that fits THIS card's own account (the headings are listed in your instructions), never one copied from another form; "Other — <short topic>" when no section fits.` } } : {}),
     ...(accountGiven ? { request_words: untrusted(accountGiven) } : {}),
     /* The coaching topic was not kept: say none, or name it with evidence from the manager's message (see `coachingTopic`). */
@@ -4090,7 +4093,7 @@ export async function proposeForm(
       return primary && (card.authorizedLocationIds ?? []).includes(primary) ? { employee_salon: rosterSalonName(primary) ?? primary } : {};
     })()),
     ...(salonFromWoven ? { salon_from_woven: salonFromWoven } : {}),
-    /* QA's live-app item 8: the card uses Woven's title; the manager called them something else ("Salon Director"). */
+    /* QA's live-app item 8: the card uses Woven's title; the manager called them something else ("<title>"). */
     ...(() => {
       const said = titleSaidFor(requestWords, employee.name, read.kind === "read" ? read.roster.map(displayName) : []);
       return said && card.employeeRole && said.trim().toLowerCase() !== card.employeeRole.trim().toLowerCase() ? { title_differs: { woven: card.employeeRole, manager_said: said } } : {};

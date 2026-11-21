@@ -13,7 +13,7 @@
  *   worked or said; "their last day", "their shift"), never after a field word in the sentence ("two fields are
  *   blank: tell me and I'll add them"), so "they" for the blank fields or a group stays.
  * - Text inside quotes (the manager's words typed back verbatim) is left as written. The card's account line is
- *   Sunny's paraphrase and names the person too (QA, Runner 2's 266 re-run).
+ *   the sibling app's paraphrase and names the person too (QA, Runner 2's 266 re-run).
  * The patterns were the replay pack's live-run judge (`replay-pack/reply-checks.ts`), whose must-pass and must-fail
  * examples are this module's unit tests.
  */
@@ -22,7 +22,7 @@ const ALWAYS = /\b(?:he|him|his|she|her|hers|himself|herself)\b/gi;
 /** they/them in a person's place: someone told, asked, thanked; someone who quit, worked, said; "themself". */
 const THEY_PERSON =
   /\b(?:tell|ask|let|remind|give|call|text|email|meet|thank|inform|notify|pay|schedule|fire|terminate|coach)\s+them\b|\bthey(?:'re|'ve|'ll|'d)?\s+(?:were|are|was|is|have|had|will|would|quit|resigned|left|worked|said|did|can|should|need|gave|told|missed|came)\b|\bthemsel(?:f|ves)\b/gi;
-/** A verb that reports what someone asked, said or wrote (in Sunny's reply): the clause after it is reported speech. */
+/** A verb that reports what someone asked, said or wrote (in the sibling app's reply): the clause after it is reported speech. */
 const REPORTING = /\b(?:asked|asking|told|telling|said|saying|stated|stating|reminded|reminding|messaged|messaging|texted|texting|emailed|wrote|writing|replied|replying|explained|explaining|claimed|claiming|admitted|admitting|wanted\s+to\s+know)\b/;
 /** Words that make "they/them" the form's fields or the card, when they come before it in the sentence. */
 const FIELD_WORDS = /\b(?:fields?|blanks?|boxes?|lines?|details|answers?|dates?|values?|sections?|items?|questions?)\b/i;
@@ -37,7 +37,7 @@ export const ACCOUNT_LINE = /^[ \t*_>-]*(?:Observation(?: of Offense)?|Coaching 
 /**
  * The spans of the reply inside quotes (straight or curly): the manager's words typed back verbatim, left as written.
  * QA (16 Nov 2026, Runner 2's 266 re-run): the card's account line is NOT exempt any more. "She was late on …" there is
- * Sunny's paraphrase, Sunny's wording, so it names the person too; only text in quotes stays as the manager typed it.
+ * the sibling app's paraphrase, the sibling app's wording, so it names the person too; only text in quotes stays as the manager typed it.
  */
 function quotedSpans(text: string, managerWords?: string): Array<[number, number]> {
   const flat = (words: string) => words.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
@@ -45,14 +45,14 @@ function quotedSpans(text: string, managerWords?: string): Array<[number, number
   const spans: Array<[number, number]> = [];
   for (const match of text.matchAll(/"[^"\n]*"|“[^”\n]*”/g)) {
     /*
-     * Runner 2's c020 T6: Sunny quoted its own card line ("She completed onboarding …"). Only what the manager typed is
-     * kept as typed: with the manager's words given, a quote they do not hold is Sunny's wording and is named too.
+     * Runner 2's c020 T6: the sibling app quoted its own card line ("She completed onboarding …"). Only what the manager typed is
+     * kept as typed: with the manager's words given, a quote they do not hold is the sibling app's wording and is named too.
      */
     if (said !== null && !said.includes(flat(match[0]))) {
       /*
        * Runner 2's c152 T1: the manager's words quoted back with a small difference ("sent her immediate resignation to
        * management") are still theirs: most of the quote's words (80%) and every pronoun in it are in what they typed.
-       * c020 T6's quote holds a "She" the manager never typed, so it is Sunny's wording.
+       * c020 T6's quote holds a "She" the manager never typed, so it is the sibling app's wording.
        */
       const saidWords = new Set(said.split(" "));
       const quoteWords = flat(match[0]).split(" ").filter(Boolean);
@@ -154,7 +154,7 @@ export function withoutPersonPronouns(
     // A finite verb's reporter is the name right before it (markdown, or an appositive between commas, may sit between).
     const adjacent = hits.filter((hit) => /^[\s*_]*(?:,[^,]*,[\s*_]*)?$/.test(upToVerb.slice(hit.to)));
     if (adjacent.length > 0) return adjacent.some((hit) => reporterKeys.has(hit.key)) ? "trusted" : "untrusted";
-    // "You said she …", "I asked whether she …": the manager or Sunny asking about the card's person.
+    // "You said she …", "I asked whether she …": the manager or the sibling app asking about the card's person.
     return /\b(?:you|i|we)[\s*_]*$/.test(upToVerb) ? "trusted" : "untrusted";
   };
   const keepsOwn = (at: number) => {

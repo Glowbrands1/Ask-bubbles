@@ -291,7 +291,7 @@ export function cardMismatch(claims: CardClaims, card: ChatFormProposal | null):
   const wrong: string[] = [];
   /*
    * Batch E (E6): the whole line (heading, manual, page), letters and digits only and articles aside, so "Standards of
-   * Conduct" alone is a mismatch and "Other — 10-minute sanitation" for "Other — the 10-minute sanitation" is not.
+   * Conduct" alone is a mismatch and "Other — <topic>" for "Other — the <topic>" is not.
    */
   const policyLine = (line: string | null | undefined) => (line ? line.toLowerCase().replace(/\b(?:the|a|an)\b/g, " ").replace(/[^a-z0-9]+/g, "") : null);
   if (claims.warningLevel && card?.warningLevel !== claims.warningLevel) wrong.push(`warning level (${claims.warningLevel})`);
@@ -333,7 +333,7 @@ function withCardNote(message: ChatMessage, showedCard: boolean): string {
 }
 
 /**
- * The conversation as model messages: the manager's and Sunny's turns, newest 20, starting with the manager's. Each
+ * The conversation as model messages: the manager's and the sibling app's turns, newest 20, starting with the manager's. Each
  * manager turn ends with its `[message_id: <id>]` (evidence.ts), so a tool's evidence can name the turn it quotes.
  */
 function conversationOf(history: readonly ChatMessage[], question: string, questionMessageId: string | null | undefined, cards: ReadonlyMap<number, CardRecord>): { role: "user" | "assistant"; content: unknown }[] {
@@ -385,7 +385,8 @@ export function agentLoopTools(config: AppConfig = appConfig()) {
 function buildAgentLoopTools(config: AppConfig) {
   const place = config.locationWord;
   const places = config.locationWordPlural;
-  const examples = config.content({ place, places, staff: config.staffSystem }).toolExamples;
+  const content = config.content({ place, places, staff: config.staffSystem });
+  const examples = content.toolExamples;
   return [
   {
     name: "find_staff",
@@ -455,7 +456,7 @@ function buildAgentLoopTools(config: AppConfig) {
         },
         new_form_evidence: evidence("Only when this message asks for another or a new form (a second form for the person on the open draft, or a new request after an earlier card): its words."),
         form_change_evidence: evidence("Only when this message asks for the card on screen to be a different form for the same incident (\"make it a CA instead\", or the manager's yes to your offer of the other form): its words."),
-        policy: { type: "string", description: "Always on a Corrective Action, Coaching or Follow-Up Coaching card (Pau, 17 Nov 2026), the heading that fits THIS card's own account, never one copied from another form's card. The one JBA Policy Manual heading that fits what happened, exactly. \"Other — <short topic>\" only for Must See Behaviors, a cleaning or sanitation duty left undone, or an incident no section covers; or both, \"<heading>; Other — <topic>\" (a cleaning duty beside another offense), as the rules book says." },
+        policy: { type: "string", description: "Always on a Corrective Action, Coaching or Follow-Up Coaching card (Pau, 17 Nov 2026), the heading that fits THIS card's own account, never one copied from another form's card. The one JBA Policy Manual heading that fits what happened, exactly. \"Other — <short topic>\" only for " + content.otherTopics + ", or an incident no section covers; or both, \"<heading>; Other — <topic>\" (an Other topic beside another offense), as the rules book says." },
         what_happened: {
           type: "string",
           description:

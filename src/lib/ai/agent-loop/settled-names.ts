@@ -8,7 +8,7 @@ import { personKey, readLoopRecords } from "./card-record";
  * 6 of 138 loop cards were refused at Create: "This proposal is out of date: the conversation now says the form is for
  * <typed>, not <card name>" (c003, c039, c134, c220, c232) or "… names more than one person (resubmit, LPSVA, Avg Club)"
  * (c210). In every one the loop had seated the right person with its own evidence checks; Create's name reader re-read the
- * whole chat and took a job title or a salon beside the name ("Tanning Consultant <name>", "TC <name>", "<name> <salon>"),
+ * whole chat and took a job title or a salon beside the name ("<a position> <name>", "<title> <name>", "<name> <salon>"),
  * metric words, or a person named only in a write-up pasted after the card as "the form's person". A card the loop shows as
  * ready must pass Create: the check is given the loop's own record for THIS card (the server's trace, one-way keys only),
  * never loosened for any other card:

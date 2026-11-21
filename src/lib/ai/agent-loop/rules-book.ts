@@ -13,7 +13,7 @@ import { appConfig, capitalized, type AppConfig } from "./app-config";
  *
  * Mechanism, not content: no company's policies, people, places or wording are written here. The location noun is
  * the app config's (`app-config.ts`); headings, staff and salons come from the tools; the rulings on one company's
- * manual headings, its metrics, reports, time zone and example phrases are its content (`config.content`, Sunny's in
+ * manual headings, its metrics, reports, time zone and example phrases are its content (`config.content`, the sibling app's in
  * `src/config/company/agent-loop.ts`). Porting to the sibling app is this file as is, with its app config.
  */
 
