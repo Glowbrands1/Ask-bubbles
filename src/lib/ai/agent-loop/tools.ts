@@ -196,8 +196,25 @@ async function formsOnFileAskedFor(context: ToolContext, evidence: unknown, pers
   const names = [person, ...(holders.length === 1 ? fullNamesOf(holders[0]!) : [])];
   // A close spelling of this person, as find_past_forms reads one ("edit remy caldr ca": G4, REOPEN_CLOSE_SPELLING).
   const { closelySpelledEmployee } = await import("@/lib/forms/reopen-close-spelling");
+  /*
+   * QA's live re-test (21 Nov 2026, item 15): "bring up <first name>s corrective action" (one roster person by that first
+   * name) was refused as about someone else, and the reply asked "do you want to look at <full name>'s … forms on file?".
+   * A whole first or preferred name that only this person holds on the roster names them, as find_staff settles one, and
+   * so does its possessive, with or without the apostrophe ("fenna's", "fennas"; never "ss", and never when the word with
+   * the s is itself a roster first name).
+   */
+  const rosterFirsts = roster.flatMap((row) => [...new Set([row.firstName, row.preferredFirstName].map((first) => foldName(first ?? "").trim().toLowerCase()).filter(Boolean))]);
+  const ownFirsts = holders.length === 1 ? [...new Set([holders[0]!.firstName, holders[0]!.preferredFirstName].map((first) => foldName(first ?? "").trim().toLowerCase()).filter(Boolean))] : [];
+  const firstNamed = (text: string) => {
+    const words = foldName(text).toLowerCase().match(/[\p{L}'-]+/gu) ?? [];
+    return ownFirsts.some((first) => {
+      if (rosterFirsts.filter((other) => other === first).length !== 1) return false;
+      return words.some((word) => word === first || word === `${first}'s` || word === `${first}'` || (word === `${first}s` && !first.endsWith("s") && !rosterFirsts.includes(word)));
+    });
+  };
   const namedIn = (text: string) =>
     names.some((name) => mentionsPerson(text, name, rosterNames)) ||
+    firstNamed(text) ||
     extractEmployeeNames(text).some((typed) => names.some((name) => samePerson(typed, name)) || sameRosterPerson(typed, person, roster)) ||
     // Two words in a row that closely spell the person's full name (names typed in lower case are not extracted).
     text.split(/\s+/).map((word) => word.replace(/[^\p{L}'-]/gu, "")).some((word, at, all) => {
