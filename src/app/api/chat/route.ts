@@ -979,7 +979,10 @@ async function postChat(request: Request) {
        * See `lib/forms/chat-reopen.ts`.
        */
       const reopened =
-        !sameCopy && !draftAnswer && !formsGuide && !correction && !policyChange && !redraft && !revision && !which && (mayAskToReopen(parsed.question, reopenByAnyOpenVerbEnabled()) || (reopenByAnyOpenVerbEnabled() && answersWhichFormOnFile(parsed.history)))
+        !sameCopy && !draftAnswer && !formsGuide && !correction && !policyChange && !redraft && !revision && !which &&
+        // FORMS_ON_FILE_COUNTS_ENABLED (port from the sibling app, f081): "show me CA and coaching forms for <A> this month" is a list, not an open.
+        !(await import("@/lib/forms/chat-form-records")).isFormListQuestion(parsed.question, parsed.context.todayIso) &&
+        (mayAskToReopen(parsed.question, reopenByAnyOpenVerbEnabled()) || (reopenByAnyOpenVerbEnabled() && answersWhichFormOnFile(parsed.history)))
           ? await (await import("@/lib/forms/chat-reopen")).reopenRequestedForm({
               request,
               question: parsed.question,

@@ -5972,3 +5972,16 @@ export function formEditTouchesUpdatedAtEnabled(): boolean {
 export function formsOnFileDateRangeEnabled(): boolean {
   return envFlag("FORMS_ON_FILE_DATE_RANGE_ENABLED");
 }
+
+/**
+ * FORMS_ON_FILE_COUNTS_ENABLED (port from the sibling app, QA's f081 follow-up, 20 Nov 2026; same flag in both apps; default
+ * off). The chat's FORMS ON FILE block (`forms/chat-form-records.ts`) listed rows and the model counted them: a date's
+ * count wrong, a different person's form folded into another's, totals that did not add up. With the flag, the block
+ * carries counts built by code (per person as filed, per form, per date with statuses, and a total;
+ * `forms/forms-on-file-counts.ts`) for the model to copy; a period is read up to 1000 rows and counted over all of them,
+ * with up to 100 listed; and an archived DRAFT is left out unless the question asks for archived forms (finalized forms
+ * count archived or not, marked archived). Off, as before.
+ */
+export function formsOnFileCountsEnabled(): boolean {
+  return envFlag("FORMS_ON_FILE_COUNTS_ENABLED");
+}
