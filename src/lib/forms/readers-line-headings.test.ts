@@ -16,4 +16,14 @@ describe("headings saved under another box", () => {
     expect(cardPolicyHeading("**Policy:** Standards of Conduct — Time Records, JBA Policy Manual p.36")).toBe("Time Records");
     expect(cardPolicyHeading("**Policy:** Standards of Conduct Policy, JBA Policy Manual p.12")).toBe("Standards of Conduct");
   });
+
+  /* QA's live re-test (21 Nov 2026, item 18): every heading the form files under Standards of Conduct, by the same rule. */
+  it("names Standards of Conduct for any company policy with no box of its own, and reads the heading back", () => {
+    expect(readersLineBox("Confidential Information Policy")).toBe("Standards of Conduct");
+    expect(withReadersLineBox("Confidential Information Policy, JBA Policy Manual p.21", "Confidential Information Policy")).toBe("Standards of Conduct — Confidential Information Policy, JBA Policy Manual p.21");
+    expect(cardPolicyHeading("**Policy:** Standards of Conduct — Confidential Information Policy, JBA Policy Manual p.21")).toBe("Confidential Information");
+    // A heading with its own box, Other, and the box's own heading are left as they are.
+    for (const own of ["Attendance", "Late Opening", "Dress Code for The Company", "Standards of Conduct", "Other — sanitation"]) expect(readersLineBox(own), own).toBeNull();
+    expect(withoutReadersLineBox("Standards of Conduct — Attendance, JBA Policy Manual p.14")).toBe("Standards of Conduct — Attendance, JBA Policy Manual p.14");
+  });
 });

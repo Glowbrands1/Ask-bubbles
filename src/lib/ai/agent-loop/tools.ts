@@ -3767,6 +3767,14 @@ export async function proposeForm(
   const priorActionsRefused = askedPriorActions ? priorActionsProblem(askedPriorActions, onFileLine ? `${requestWords}\n${onFileLine}` : requestWords, date) : null;
   const priorActions = priorActionsRefused ? null : (askedPriorActions ?? (statedSteps.length === 0 ? onFileLine : null));
   /*
+   * QA's live re-test (21 Nov 2026, item 18): the prior actions the forms on file filled were read back "…, as you said"
+   * (the manager never said them). Prior actions are the manager's statement only when their words state the steps
+   * (`statedSteps`) or, with nothing on file, the model's list from those words; filled from the forms on file they are not
+   * `stated`, and "as you said" belongs only to steps stated in this message (stated_this_turn).
+   */
+  const priorStated = priorActions !== null && (statedSteps.length > 0 || onFileLine === null);
+  if (priorStated && (await import("@/lib/forms/prior-actions")).statedPriorActions(context.question, today).length > 0) statedThisTurn.push("prior_actions");
+  /*
    * QA's production audit (20 Nov 2026): "I need a verbal CA wrote up for <A>. I need the JBA policy for dress code
    * enclosed. can you also site the coaching that was done on 11/3" put 11/3, the prior coaching's date, on the card as
    * its form date. A date the prior actions hold (as read from the manager's words, or as the model listed them) is never
@@ -4152,8 +4160,8 @@ export async function proposeForm(
      * evidence check still decides), or leaves it when the words are history ("written up before").
      */
     ...(levelNotGiven ? { level_not_given: { option: levelNotGiven, note: `This card has no warning level, and the manager's message names the form's ${levelNotGiven === "written" ? "Written" : "Verbal"} Warning option. If it states THIS form's level, propose the card again with warning_level ${levelNotGiven} and level_evidence quoting those words; if it is history ("written up before"), leave the level unset.` } } : {}),
-    ...(level || payroll || priorActions
-      ? { stated: { ...(level ? { warning_level: level } : {}), ...(payroll ? { payroll_deduct: payroll } : {}), ...(payroll === "yes" && amount ? { payroll_amount: `$${amount.replace(/^\$/, "")}` } : {}), ...(priorActions ? { prior_actions: priorActions } : {}) } }
+    ...(level || payroll || (priorActions && priorStated)
+      ? { stated: { ...(level ? { warning_level: level } : {}), ...(payroll ? { payroll_deduct: payroll } : {}), ...(payroll === "yes" && amount ? { payroll_amount: `$${amount.replace(/^\$/, "")}` } : {}), ...(priorActions && priorStated ? { prior_actions: priorActions } : {}) } }
       : {}),
     /*
      * QA's live finding (16 Nov 2026): "as you said" only for what THIS message stated. The level and payroll whose

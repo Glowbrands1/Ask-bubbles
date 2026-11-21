@@ -466,6 +466,13 @@ vi.mock("@/lib/knowledge/providers/supabase", () => ({
         },
       };
     }
+    /*
+     * The loop reads the manual's version before its sections (`manualFor`); without this the loop's manual read failed
+     * in the pack (every loop card's policy was read_failed). As the sibling app's pack has it (21 Nov 2026).
+     */
+    async officialPolicyManualVersion() {
+      return { documentId: "doc-manual", version: `v-${JSON.stringify(state.manualExtra).length}` };
+    }
     async fetchOfficialPolicyManual() {
       return {
         ok: true,

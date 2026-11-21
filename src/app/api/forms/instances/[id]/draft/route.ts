@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { READERS_LINE_HEADINGS } from "@/lib/forms/readers-line-headings";
+import { readersLineBox } from "@/lib/forms/readers-line-headings";
 import { TERMINATION_OPTION, withTerminationPlan } from "@/lib/forms/termination-stated";
 import { salesResultsOffenseLine, withCaChosenRule } from "@/lib/ai/ca-sales-prompt-lines";
 import { noteSpendUser } from "@/lib/ai/spend-meter";
@@ -2757,7 +2757,13 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
             .filter((option) => option.core.length > 0 && option.core.every((word) => headingWords.has(word)))
             .sort((a, b) => b.core.length - a.core.length)[0];
         };
-        const box = boxFor(loopCardHeading);
+        /*
+         * QA's live re-test (21 Nov 2026, item 18): a heading no label names that the form records under another box
+         * (`readersLineBox`: Standards of Conduct for a company policy, as revision 7 replaced Violation of Company Policies)
+         * ticks that box, the box its saved line names, whatever the drafting model ticked.
+         */
+        const filedUnder = readersLineBox(loopCardHeading);
+        const box = boxFor(loopCardHeading) ?? (filedUnder ? options.filter((option) => option.label.toLowerCase() === filedUnder.toLowerCase()).map((option) => ({ key: option.key, core: [] as string[] }))[0] : undefined);
         /* Pau's ruling (20 Nov 2026; c091): the card's second heading ticks its own box, and Policy Violated names both. */
         const secondBox = loopCardSecondHeading ? boxFor(loopCardSecondHeading) : undefined;
         const headingLines = typeof body.cardPolicyLine === "string" ? body.cardPolicyLine.split(";").map((part) => part.trim()).filter((part) => part && !/^other\b/i.test(part)) : [];
@@ -2771,7 +2777,7 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
          * label names its heading, so the card and the form show one label. Except the headings in
          * `READERS_LINE_HEADINGS`, which keep the readers' "<box> — <section>".
          */
-        if (cardLine && !READERS_LINE_HEADINGS.has(loopCardHeading.trim().toLowerCase()) && fields.some((field) => field.key === "policy_violated")) {
+        if (cardLine && !readersLineBox(loopCardHeading) && fields.some((field) => field.key === "policy_violated")) {
           loopCardDraft.values = { ...loopCardDraft.values, policy_violated: cardLine };
         }
       }
