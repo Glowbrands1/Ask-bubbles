@@ -3,7 +3,7 @@ import { expect, vi } from "vitest";
 import manual151 from "@/test/fixtures/jba-manual-production-151.json";
 
 import { WEST_DODGE, type ReplayCase, type ReplayContext } from "./cases";
-import { LOOP_STAFF } from "./loop-roster";
+import { LOOP_FENNA, LOOP_STAFF } from "./loop-roster";
 import { evidenceFrom, headingWith, lastResult, loopStandIn, type LoopDecision, type LoopView } from "./loop-stand-in";
 
 /**
@@ -90,6 +90,20 @@ function confidentialCard() {
   });
 }
 
+/** One Corrective Action card for Fenna Prewitt (late on `day`), created through the real Create route as a draft. */
+async function createdCa(t: ReplayContext, day: string): Promise<{ thread: ReturnType<ReplayContext["thread"]>; id: string }> {
+  t.loopModel!(loopStandIn((view): LoopDecision => {
+    if (!lastResult(view, "propose_form")) return { tool: "propose_form", input: { template_key: "dpoa", employee_id: LOOP_FENNA.id, what_happened: `Fenna Prewitt was 20 minutes late on ${day}.`, incident_date: `2026-${day.replace("/", "-")}`, policy: headingWith(view, /^attendance/i), person_evidence: evidenceFrom(view, "fenna prewitt") } };
+    return { text: "Here's the Corrective Action Form for **Fenna**." };
+  }));
+  const thread = t.thread();
+  await thread.say(`ca for fenna prewitt, she was 20 minutes late on ${day}`);
+  return { thread, id: await thread.create() };
+}
+
+/** Item 14's second message, word for word. */
+const EDITS_NOT_A_PICK = "this is a verbal warning. previous coaching policy manual 10-15-26";
+
 export const NOV21_AGENT_LOOP_LIVE_RETEST_U_CASES: ReplayCase[] = [
   {
     id: "nov21-agent-loop-first-name-possessive-opens-forms-on-file",
@@ -150,6 +164,42 @@ export const NOV21_AGENT_LOOP_LIVE_RETEST_U_CASES: ReplayCase[] = [
       expect(reply.content, `the card's policy line does not name the box the form ticks:\n${reply.content}`).toMatch(/\*\*Policy:\*\* Standards of Conduct — Confidential Information/);
       expect(t.checked(id).offense_type, "the ticked offense box is not the one the cited policy is recorded under").toEqual(["standards_of_conduct"]);
       expect(t.values(id).policy_violated ?? "", "Policy Violated does not name the ticked box with the cited policy").toMatch(/^Standards of Conduct — Confidential Information/);
+    },
+  },
+  {
+    id: "nov21-agent-loop-which-one-answered-with-edits-keeps-them",
+    title: `three Corrective Action drafts for Fenna Prewitt listed with "Which one should I open?", then "${EDITS_NOT_A_PICK}": the changes are not a pick (the date is the prior coaching's); the most recent form is opened, said in one line, and the level and the prior coaching are saved on it`,
+    report: `${REPORT}, item 14 (A11): "bring up a previously edited corrective action for <name>" listed 3 forms; "${EDITS_NOT_A_PICK}" was read as a form-picking hint ("none of the forms match a 10/15/26 date"), the level and prior coaching dropped`,
+    status: "fixed",
+    async run(t) {
+      start(t, "2026-11-14T16:00:00Z");
+      const ids = [await createdCa(t, "11/12"), await createdCa(t, "11/13"), await createdCa(t, "11/14")].map((made) => made.id);
+      start(t);
+      const model = loopStandIn((view): LoopDecision => {
+        const said = view.turns.filter((turn) => turn.role === "user").at(-1)?.text ?? "";
+        const found = lastResult(view, "find_past_forms") as { forms?: { instance_id: string; choice: string }[]; which_form_question?: string } | null;
+        if (/^bring up/.test(said)) {
+          if (!found) return { tool: "find_past_forms", input: { employee_name: "Fenna Prewitt", form: "corrective action", open: true, forms_on_file_evidence: evidenceFrom(view, "bring up a previously edited corrective action") } };
+          return { text: `${(found.forms ?? []).map((form) => `- ${form.choice}`).join("\n")}\n\n${found.which_form_question ?? ""}` };
+        }
+        // The answer with changes: without the rule, the live model read the date as a pick and dropped the changes.
+        if (!/never answer that no form matches their date/.test(view.system)) return { text: "None of the forms match a 10/15/26 date. Which one should I open?" };
+        if (!found) return { tool: "find_past_forms", input: { employee_name: "Fenna Prewitt", form: "corrective action", open: true, forms_on_file_evidence: evidenceFrom(view, "bring up a previously edited corrective action", 1) } };
+        const newest = ids[2]!;
+        if (!lastResult(view, "open_form")) return { tool: "open_form", input: { instance_id: newest, forms_on_file_evidence: evidenceFrom(view, "bring up a previously edited corrective action", 1) } };
+        if (!lastResult(view, "edit_form")) return { tool: "edit_form", input: { instance_id: newest, values: { warning_type: "verbal", prior_actions: "Coaching — JBA Policy Manual — 10/15/2026" }, level_evidence: evidenceFrom(view, "this is a verbal warning") } };
+        return { text: "Opening the most recent one, the Corrective Action Form from 11/14/2026; say if you meant another.\n\n**Type of Warning:** Verbal Warning, as you said.\n**Prior actions:** Coaching — JBA Policy Manual — 10/15/2026." };
+      });
+      t.loopModel!(model);
+      const thread = t.thread();
+      const listed = await thread.say("bring up a previously edited corrective action for fenna prewitt");
+      expect(listed.content, "the three forms were not listed with the which-one question (the case proves nothing)").toContain("Which one should I open?");
+      const reply = await thread.say(EDITS_NOT_A_PICK);
+      expect(reply.content, `the changes were read as a pick:\n${reply.content}`).not.toMatch(/none of the forms match/i);
+      expect(reply.formOpened?.instanceId, "no form was opened for the changes").toBe(ids[2]);
+      expect(reply.content).toMatch(/most recent/i);
+      expect(t.checked(ids[2]!).warning_type, "the warning level was dropped").toEqual(["verbal"]);
+      expect(t.values(ids[2]!).prior_actions ?? "", "the prior coaching was dropped").toMatch(/10\/15\/2026/);
     },
   },
 ];
