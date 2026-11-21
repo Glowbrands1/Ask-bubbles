@@ -7,8 +7,7 @@ import { MissingConfigurationError, requireEnv } from "@/lib/config/server-env";
 import { mainAnswerTimeoutMs, streamGapTimeoutMs } from "@/lib/config/ai-timeouts";
 import { chatTraceEnabled, editSeesSavedFormEnabled } from "@/lib/config/chat-quality-flags";
 import { countModelCalls } from "../model-call-scope";
-import { authorizedSalonIds } from "@/lib/forms/location-scope";
-import { rosterSalonName } from "@/lib/forms/salon-mention";
+import { authorizedSalonIds, rosterSalonName } from "./places";
 import type { ChatFormProposal, ChatMessage } from "@/types";
 
 import { finishChatTrace, openChatTrace } from "../chat-trace";
@@ -23,7 +22,7 @@ import { finalReplyWithoutMarkers, withoutSourceMarkers, withoutSourceNotes } fr
 import { extractUsedMarkers } from "../prompts";
 import { shownCitations } from "@/lib/knowledge/empty-card-drop";
 import { dataToolHandlers, dataToolSpecs } from "./data-tools";
-import { appConfig, SUNNY_CONFIG, type AppConfig } from "./app-config";
+import { appConfig, BUBBLES_CONFIG, type AppConfig } from "./app-config";
 import { withoutPersonPronouns } from "./reply-pronouns";
 import { agentLoopRules, agentLoopSystem } from "./prompt";
 import { generatedId, identifiedTurns, messageIdTag, withoutMessageIdTags } from "./evidence";
@@ -527,7 +526,7 @@ function buildAgentLoopTools(config: AppConfig) {
 ];
 }
 
-export const AGENT_LOOP_TOOLS = agentLoopTools(SUNNY_CONFIG);
+export const AGENT_LOOP_TOOLS = agentLoopTools(BUBBLES_CONFIG);
 
 const EPHEMERAL = { anthropic: { cacheControl: { type: "ephemeral" } } } as const;
 /** The turn's calls ask alike (batch J8): a different thinking setting is a different cache entry. */
@@ -1167,7 +1166,7 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
        * the check after this block give today's FORM_EDIT_NOOP_GUARD answer from the saved diff.
        */
       if (stoppedAt === "reply" && noop && openBefore && !effects.proposal && !effects.formOpened && !(effects.formUpdate?.saved?.length) && CLAIMS_A_CHANGE.test(text)) {
-        const saved = await noop.replyFromSavedDiff({ request: input.request, before: openBefore, answer: { content: text, citations: [], coverage: "not_applicable", recommendedVideoIds: [] } });
+        const saved = await noop.replyFromSavedDiff({ request: input.request, before: openBefore, answer: { content: text, citations: [], coverage: "not_applicable" } });
         if (!saved.formUpdate) {
           const note = [
             "[app check] Your reply says the draft changed, but nothing on it was saved this turn.",
@@ -1329,7 +1328,7 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
    * and the turn claims only what was saved.
    */
   if (noop && openBefore && !effects.proposal && !effects.formOpened) {
-    const checked = await noop.replyFromSavedDiff({ request: input.request, before: openBefore, answer: { content, citations: [], coverage: "not_applicable", recommendedVideoIds: [] } });
+    const checked = await noop.replyFromSavedDiff({ request: input.request, before: openBefore, answer: { content, citations: [], coverage: "not_applicable" } });
     /* PR 3: a save the tools read back from the form (effects.formUpdate.saved) is never overruled by this diff of the screen's copy. */
     const readBack = (effects.formUpdate?.saved?.length ?? 0) > 0;
     if (!checked.formUpdate && CLAIMS_A_CHANGE.test(content) && !readBack) {
@@ -1376,7 +1375,6 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
     content: withoutMessageIdTags(withoutSourceMarkers(withoutSourceNotes(content))),
     citations: shownCitations([...cited, ...(effects.citations ?? [])]),
     coverage: "not_applicable",
-    recommendedVideoIds: [],
     ...(effects.proposal ? { formProposal: effects.proposal } : {}),
     ...(effects.formUpdate ? { formUpdate: effects.formUpdate } : {}),
     ...(effects.formOpened ? { formOpened: effects.formOpened } : {}),
