@@ -3602,6 +3602,16 @@ export async function proposeForm(
   const fromAnotherRequest = (iso: string | null | undefined) => Boolean(iso && otherRequestsDates.includes(iso));
   const dateFromAnotherRequest = fromAnotherRequest(date);
   if (dateFromAnotherRequest) date = null;
+  /*
+   * ONCE SET, THE DATE STAYS (QA's live re-test, 21 Nov 2026, Pau's account): "She was late on 10/5 and 10/15" put
+   * 2026-10-15 on the card; "she is at Omaha dodge" rebuilt it with no date (the model left incident_date out, and the
+   * turn that gave the dates was typed under the old spelling of the name, so it read as another request) and Create saved
+   * today. This person's latest card (the server's record), on any form, keeps its date when this turn gives none, this
+   * message states no date and asks for no new form; a date the manager gave in this request still has to be among them.
+   */
+  const ownCard = [context.cardOnScreen, context.earlierCard].find((record) => Boolean(record?.incidentDate) && (employee.id ? record!.employeeKey === personKey(employee.id) : !record!.employeeKey && record!.nameKey === personKey(employee.name)));
+  const dateKept = ACCOUNT_FORMS.has(template.key) && !date && !asksNewForm && latestDates.length === 0 && ownCard?.incidentDate && (datesGiven.length === 0 || datesGiven.some((given) => monthDayToIso(given, today) === ownCard.incidentDate)) ? ownCard.incidentDate : null;
+  if (dateKept) date = dateKept;
   const datesAsked = datesGiven.length > 1 && !date ? datesGiven : [];
   /* Batch C (code-check #32): a date after today is a fact with today's date; the rules book says to ask. */
   /* Batch G (G6): only an incident form's date is never after today; an exit's last day or effective date may be. */
@@ -4246,7 +4256,7 @@ export async function proposeForm(
    * reply never claims it. (Was the fact not_kept: names only.) Values are never in it.
    */
   const notOnCard: { field: string; reason_code: string }[] = [
-    ...(dateFromAnotherRequest ? [{ field: "incident_date", reason_code: "date_from_another_request" }] : []),
+    ...(dateFromAnotherRequest && !dateKept ? [{ field: "incident_date", reason_code: "date_from_another_request" }] : []),
     ...(policyNotForThisCard ? [{ field: "policy", reason_code: "policy_not_for_this_card" }] : []),
     /* QA's f074: a second heading on a form that cites one (Pau's two headings are the Corrective Action's only). */
     ...(secondLeftOff ? [{ field: "policy_second_heading", reason_code: "not_on_this_form" }] : []),
