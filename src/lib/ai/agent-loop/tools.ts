@@ -15,7 +15,7 @@ import { CURRENT_MESSAGE_ID, holdsPhrase, identifiedTurns, verifyEvidence, witho
 import { personNamedInRequest, requestStart } from "./person-in-request";
 import { answeredNameQuestions, answerNamesSomeoneElse, everKeptOrUsedTyped, isConfirmedSpelling, latestTurnAnswersFor, latestTurnConfirms, latestTurnKeepsOrUsesTyped, latestTurnKeepsTyped, spellingKeysConfirmedFor, spellingKeysConfirmedForName, type NameQuestionView } from "./confirmed-spelling";
 import { employeeFirstName } from "@/lib/forms/employee-reference";
-import { AFFIRMATIVE, displayName, editDistance, matchEmployeeName, nameConfirmationQuestion, readNameConfirmation, type RosterEmployee } from "@/lib/forms/employee-match";
+import { AFFIRMATIVE, displayName, editDistance, matchEmployeeName, nameConfirmationQuestion, readNameConfirmation, rosterSpellingOf, type RosterEmployee } from "@/lib/forms/employee-match";
 import { offRosterTyped } from "@/lib/forms/roster-only-names";
 import { parseFormDocument } from "@/lib/forms/document";
 import { draftableCheckboxGroups, draftableFields } from "@/lib/forms/responsibility";
@@ -40,6 +40,7 @@ import {
 import type { AskResponse } from "@/lib/ai/types";
 import { findManualSection, manualSectionHeadings, type ManualChunk } from "@/lib/forms/official-policy-manual";
 import { sectionWording } from "@/lib/forms/policy-citation";
+import { manualWordsForDisplay } from "@/lib/knowledge/manual-display-words";
 import { buildProposal, extractEmployeeNames, managerContext, samePerson } from "@/lib/forms/proposal";
 import { loopCardTitle, loopTitleIn, loopTitlePatterns } from "./job-titles";
 import { isJobTitlePhrase, tidyTypedName } from "@/lib/forms/proposal-names";
@@ -60,7 +61,7 @@ import { manualScopeFetchLimit, scopeToCurrentManual } from "@/lib/knowledge/cur
 import { matchHybridKnowledge } from "@/lib/knowledge/hybrid-match";
 import { matchRecallKnowledge } from "@/lib/knowledge/recall-match";
 import { rowToCitation, type MatchedChunkRow } from "@/lib/knowledge/mappers";
-import { topicHeadings } from "@/lib/forms/specific-policy-topics";
+import { topicHeadings, withConductLinePage } from "@/lib/forms/specific-policy-topics";
 import { formatManualCitation } from "@/lib/ai/policy-citation-fields";
 import { redactSensitiveDefaults } from "@/lib/ai/sensitive-defaults";
 import { expandPolicyQuery } from "@/lib/knowledge/policy-retrieval";
@@ -1948,10 +1949,11 @@ export async function readPolicy(context: ToolContext, input: { heading?: unknow
       similarity: 1,
     };
     const marker = addSource(effects, rowToCitation(row));
-    const wording = sectionWording(manual.chunks, section);
+    const wording = manualWordsForDisplay(sectionWording(manual.chunks, section));
     return { document: "JBA Policy Manual", heading: section.heading, page: section.page, source: marker, wording, ...(await readingNotes(wording)) };
   }
-  const wording = sectionWording(manual.chunks, section);
+  /* The wording the reply quotes, in this company's words (QA, 21 Nov 2026, item 7: "salon" → "store"); the chunks stay as stored. */
+  const wording = manualWordsForDisplay(sectionWording(manual.chunks, section));
   return { document: "JBA Policy Manual", heading: section.heading, page: section.page, wording, ...(await readingNotes(wording)) };
 }
 
@@ -3298,6 +3300,12 @@ export async function proposeForm(
    * turn's "Fenna Prewitt left …, Fenna also …" read against the first card's "Fenna left …" was taken as a rewording.
    */
   if (whatHappened && employee.name) {
+    /*
+     * QA's live re-test (21 Nov 2026): the name corrected mid-chat ("<First> <Lastx>" → "<First> <Lasty>") moved the card's
+     * name, but the account the model copied from the first message kept the old spelling. Every spelling of this person
+     * (the card's earlier name; a close spelling the roster reads as this person alone) becomes the card's name first.
+     */
+    whatHappened = (await import("@/lib/forms/short-name")).withCorrectedSpelling(whatHappened, employee.name, nameCorrectedFrom !== null ? [nameCorrectedFrom] : [], rosterSpellingOf(employee.id ?? null, read.kind === "read" ? read.roster : [])).text;
     const short = cardAccountName(employee.name, read.kind === "read" ? read.roster : [], extractEmployeeNames(managerTurns(context)), employee.id ?? null);
     whatHappened = (await import("@/lib/forms/short-name")).withShortName(whatHappened, employee.name, short).text;
   }
@@ -3645,7 +3653,19 @@ export async function proposeForm(
   const cleaning = !appConfig().policyGuards.cleaningDutyIsOther ? null : (whatHappened ? cleaningUndonePhrase(whatHappened, { rulesAreNotDuties: true }) : null) ?? cleaningUndonePhrase(requestWords, { rulesAreNotDuties: true });
   const careAndCleaning = namesCareAndCleaning(requestWords);
   /* As today's card cites it: the heading, then the page the manual prints. */
-  const page = policyHeading && manual ? findManualSection(manual.chunks, [policyHeading])?.page ?? null : null;
+  /*
+   * QA's live re-test (21 Nov 2026, item 6 / A4): "the card's policy line says p.12 but the quoted policy text under it
+   * says p.13" (a register shortage). Create quotes a Standards of Conduct incident the manual lists on its own line
+   * ("Register / Bank shortages", printed p.13) and cites that line's page (`withConductLinePage`, the draft route); the
+   * card named the heading's page. One rule for both: the card's page is the one Create quotes, read from this card's
+   * own account the same way.
+   */
+  const citedPage = (heading: string): number | null => {
+    const section = manual ? findManualSection(manual.chunks, [heading]) : null;
+    if (!section || !manual) return null;
+    return withConductLinePage([section], whatHappened || requestWords, manual.chunks)[0]?.page ?? section.page;
+  };
+  const page = policyHeading ? citedPage(policyHeading) : null;
   /*
    * MODEL_POLICY_DEFERS_TO_TOPIC (parity gap #40): an incident the manager's words name a section for ("the drawer was
    * $15 short" → Standards of Conduct, never Handling Theft) is cited under that section's headings only, unless the
@@ -3670,7 +3690,7 @@ export async function proposeForm(
    */
   /* c259 (QA2, 21 Nov 2026, option (a)): a heading with no Type of Offense box of its own names the box it is saved under. */
   let policyLine: string | null = policyHeading ? withReadersLineBox(formatManualCitation(policyHeading, page), policyHeading) : null;
-  if (policyLine && secondHeading && manual) policyLine = `${policyLine}; ${withReadersLineBox(formatManualCitation(secondHeading, findManualSection(manual.chunks, [secondHeading])?.page ?? null), secondHeading)}`;
+  if (policyLine && secondHeading && manual) policyLine = `${policyLine}; ${withReadersLineBox(formatManualCitation(secondHeading, citedPage(secondHeading)), secondHeading)}`;
   /* Batch G (G7a, the tester's exit sweep): an exit cites no policy; it is not an incident. */
   if (template.key === appConfig().formKeys.exit) policyLine = null;
   /*
@@ -3798,6 +3818,16 @@ export async function proposeForm(
   const fromAnotherRequest = (iso: string | null | undefined) => Boolean(iso && otherRequestsDates.includes(iso));
   const dateFromAnotherRequest = fromAnotherRequest(date);
   if (dateFromAnotherRequest) date = null;
+  /*
+   * ONCE SET, THE DATE STAYS (QA's live re-test, 21 Nov 2026, Pau's account): "She was late on 10/5 and 10/15" put
+   * 2026-10-15 on the card; "she is at Omaha dodge" rebuilt it with no date (the model left incident_date out, and the
+   * turn that gave the dates was typed under the old spelling of the name, so it read as another request) and Create saved
+   * today. This person's latest card (the server's record), on any form, keeps its date when this turn gives none, this
+   * message states no date and asks for no new form; a date the manager gave in this request still has to be among them.
+   */
+  const ownCard = [context.cardOnScreen, context.earlierCard].find((record) => Boolean(record?.incidentDate) && (employee.id ? record!.employeeKey === personKey(employee.id) : !record!.employeeKey && record!.nameKey === personKey(employee.name)));
+  const dateKept = ACCOUNT_FORMS.has(template.key) && !date && !asksNewForm && latestDates.length === 0 && ownCard?.incidentDate && (datesGiven.length === 0 || datesGiven.some((given) => monthDayToIso(given, today) === ownCard.incidentDate)) ? ownCard.incidentDate : null;
+  if (dateKept) date = dateKept;
   const datesAsked = datesGiven.length > 1 && !date ? datesGiven : [];
   /* Batch C (code-check #32): a date after today is a fact with today's date; the rules book says to ask. */
   /* Batch G (G6): only an incident form's date is never after today; an exit's last day or effective date may be. */
@@ -4031,6 +4061,20 @@ export async function proposeForm(
       reason_code: attendanceCode, error: `This Corrective Action cites ${policyHeading}. Propose the card again with attendance (absence: a shift missed, as "did not come in", a no-show, a call-out; lateness: arrived late; left_early: left before the shift ended, as "left early", "left before close", "walked out mid-shift"; both: an absence and lateness) and attendance_evidence quoting the manager's own words from this request that describe it${askedAttendance && attendanceCheck && !attendanceCheck.ok ? ` (that quote was not found in this request's manager messages: ${attendanceCheck.reason})` : ""}.`,
     };
   }
+  /*
+   * QA's live re-test (21 Nov 2026, A5): "create verbal ca for <name> for opening store late on 10-1-26. …" got the issue
+   * line "Opening store late on 10-1-26.", the request's for-clause with no one doing it. A Corrective Action's account
+   * whose first sentence has no subject (`card-account.ts`, grammar only) is handed back to be written again with the
+   * person as its subject, as the rules book asks. The offense the manager named as the account (`accountFromNamedOffense`)
+   * is their words, and stays.
+   */
+  if (template.key === appConfig().formKeys.corrective && whatHappened !== "" && accountFromNamedOffense === null && (await import("./card-account")).accountHasNoSubject(whatHappened)) {
+    const subject = employee.name ? replyNameFor(employee.name, read.kind === "read" ? read.roster : [], extractEmployeeNames(managerTurns(context)), employee.id ?? null) : "the employee";
+    return {
+      reason_code: "account_no_subject",
+      error: `what_happened says what was done but not who did it. Write it again as a sentence with ${subject} as its subject, in the past tense ("${subject} <did what> on <date>."), keeping every word, date and detail the manager gave, and propose the card again.`,
+    };
+  }
   const incidentTime = typeof input.incident_time === "string" && input.incident_time.trim() ? input.incident_time.trim().slice(0, 40) : null;
 
   const typedSalon = typeof input.store === "string" ? input.store.trim() : "";
@@ -4246,6 +4290,14 @@ export async function proposeForm(
     if (named.replaced > 0) {
       card.issue = named.text;
       whatHappened = named.text;
+    }
+  }
+  /* QA's live re-test (21 Nov 2026, A5): a dashed date on the card's account is written as the issue line writes dates ("10/1/26"). */
+  if (card.issue) {
+    const slashed = (await import("./card-account")).withSlashDates(card.issue);
+    if (slashed !== card.issue) {
+      card.issue = slashed;
+      whatHappened = slashed;
     }
   }
   card.employeeRole = employee.id ? await rosterTitle(context.actor.scope, employee.id) : null;
@@ -4514,7 +4566,7 @@ export async function proposeForm(
    * reply never claims it. (Was the fact not_kept: names only.) Values are never in it.
    */
   const notOnCard: { field: string; reason_code: string }[] = [
-    ...(dateFromAnotherRequest ? [{ field: "incident_date", reason_code: "date_from_another_request" }] : []),
+    ...(dateFromAnotherRequest && !dateKept ? [{ field: "incident_date", reason_code: "date_from_another_request" }] : []),
     ...(policyNotForThisCard ? [{ field: "policy", reason_code: "policy_not_for_this_card" }] : []),
     /* QA's f074: a second heading on a form that cites one (Pau's two headings are the Corrective Action's only). */
     ...(secondLeftOff ? [{ field: "policy_second_heading", reason_code: "not_on_this_form" }] : []),
