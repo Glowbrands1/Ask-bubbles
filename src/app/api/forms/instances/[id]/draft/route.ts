@@ -2673,7 +2673,9 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
         await applyStatedFacts(id, { values: { [fixedPlan.key]: typed }, checked: {} }, actor.id, new Set([fixedPlan.key]));
       }
     }
-    const loopCardAbsence = body.cardFromLoop === true && body.cardAttendance === "absence";
+    /* f082 (ported from the sibling app): leaving early is not lateness either; it keeps the general plan as an absence does. */
+    const loopCardNotLateness = body.cardFromLoop === true && (body.cardAttendance === "absence" || body.cardAttendance === "left_early") ? body.cardAttendance : null;
+    const loopCardAbsence = loopCardNotLateness !== null;
     // MEETING_NOT_LATENESS_PLAN_ENABLED: a missed meeting keeps the general plan.
     // A loop card recording an absence keeps the general plan, as a missed shift does (ported from the sibling app; QA's
     // production audit, 20 Nov 2026, item 21).
@@ -2801,7 +2803,7 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
        */
       if (loopCardAbsence) {
         const cardAccount = /^What happened:\s*(.+)$/im.exec(notes)?.[1]?.trim() ?? null;
-        const absence = absenceWriteUp(loopCardDraft.values, narrativeTargets.filter((key) => !keeps(key)), { employeeName: loaded.instance.employeeName, cardAccount });
+        const absence = absenceWriteUp(loopCardDraft.values, narrativeTargets.filter((key) => !keeps(key)), { employeeName: loaded.instance.employeeName, cardAccount, kind: loopCardNotLateness ?? "absence" });
         if (absence.changed) loopCardDraft.values = absence.values;
       }
       /*
