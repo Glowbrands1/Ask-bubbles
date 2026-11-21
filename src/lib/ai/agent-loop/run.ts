@@ -559,6 +559,7 @@ function buildAgentLoopTools(config: AppConfig, planSteps = false) {
         },
         attendance_evidence: evidence("With attendance: the manager message of this request and its words that describe the absence, the lateness or the early leaving."),
         incident_time: { type: "string", description: "The time of the incident if the manager gave one, as they said it." },
+        no_store_evidence: evidence("Only when the manager says this form is for no " + place + " (\"corporate office, not a " + place + "\"): the manager message of this request and those words. Never pass store with it."),
         store: { type: "string", description: "The " + place + " the form is for, as the manager named it (" + examples.placesNamed + "), when the card asks which " + place + " or the manager says one. Only the manager's own " + places + " are accepted." },
       },
       ["template_key"],
