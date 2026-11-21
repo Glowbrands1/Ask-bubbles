@@ -62,4 +62,29 @@ export const NOV22_AGENT_LOOP_EXIT_NOTICE_ONE_DECISION_CASES: ReplayCase[] = [
       expect(checked.resignation_type ?? [], `the saved form ticks Did not fulfill:\n${JSON.stringify(checked)}`).not.toContain("notice_not_fulfilled");
     },
   },
+  {
+    id: "nov22-b6-exit-payroll-note-is-about-payroll-only",
+    title: "B6: T6 \"she is resigning due to second job I'm ready for the draft\" with \"no deduction at this time\": the card's payroll note says the form lacks only payroll lines and that the resignation reason has its own line (the live reply said the form has no reason line)",
+    report: "QA's Bubbles live re-run (22 Nov 2026, B6): the T6 reply said \"The form has no amount or reason line, so those stay in Additional Details\" while the saved draft has resignation_reason",
+    status: "fixed",
+    async run(t) {
+      vi.setSystemTime(new Date("2026-11-21T18:00:00Z"));
+      t.directory([...LOOP_STAFF]);
+      t.as("location_manager", WEST_DODGE);
+      const model = loopStandIn((view): LoopDecision => {
+        if (lastResult(view, "propose_form")) return { text: "Here's the Resignation/Exit Form for **Thaddea**." };
+        const asks = view.turns.filter((turn) => turn.role === "user" && (turn.messageIds?.length ?? 0) > 0);
+        const firstBack = asks.length - 1 - asks.findIndex((turn) => turn.text.includes("can you make me an exit form"));
+        return { tool: "propose_form", input: { template_key: "resignation-exit", employee_id: LOOP_THADDEA.id, exit_type: "resignation", exit_evidence: { ...evidenceFrom(view, "can you make me an exit form", firstBack), kind: "asks_for_exit_form" }, what_happened: "Thaddea is resigning due to a second job.", payroll_deduct: "no", payroll_evidence: evidenceFrom(view, "no deduction at this time", firstBack) } };
+      });
+      t.loopModel!(model);
+      const thread = t.thread();
+      await thread.say(T1);
+      await thread.say(T6);
+      const facts = model.views.flatMap((view) => view.results.filter((result) => result.tool === "propose_form")).map((result) => JSON.stringify(result.output)).join("\n");
+      expect(facts, "the payroll note is not on the card (the case proves nothing)").toMatch(/payroll_question_only/);
+      expect(facts, "the payroll note tells the model the form has no reason line at all").not.toMatch(/it has no amount or reason line/);
+      expect(facts).toMatch(/Reason for Resignation/);
+    },
+  },
 ];
