@@ -204,8 +204,25 @@ async function formsOnFileAskedFor(context: ToolContext, evidence: unknown, pers
   const names = [person, ...(holders.length === 1 ? fullNamesOf(holders[0]!) : [])];
   // A close spelling of this person, as find_past_forms reads one ("edit remy caldr ca": G4, REOPEN_CLOSE_SPELLING).
   const { closelySpelledEmployee } = await import("@/lib/forms/reopen-close-spelling");
+  /*
+   * QA's live re-test (21 Nov 2026, item 15): "bring up <first name>s corrective action" (one roster person by that first
+   * name) was refused as about someone else, and the reply asked "do you want to look at <full name>'s … forms on file?".
+   * A whole first or preferred name that only this person holds on the roster names them, as find_staff settles one, and
+   * so does its possessive, with or without the apostrophe ("fenna's", "fennas"; never "ss", and never when the word with
+   * the s is itself a roster first name).
+   */
+  const rosterFirsts = roster.flatMap((row) => [...new Set([row.firstName, row.preferredFirstName].map((first) => foldName(first ?? "").trim().toLowerCase()).filter(Boolean))]);
+  const ownFirsts = holders.length === 1 ? [...new Set([holders[0]!.firstName, holders[0]!.preferredFirstName].map((first) => foldName(first ?? "").trim().toLowerCase()).filter(Boolean))] : [];
+  const firstNamed = (text: string) => {
+    const words = foldName(text).toLowerCase().match(/[\p{L}'-]+/gu) ?? [];
+    return ownFirsts.some((first) => {
+      if (rosterFirsts.filter((other) => other === first).length !== 1) return false;
+      return words.some((word) => word === first || word === `${first}'s` || word === `${first}'` || (word === `${first}s` && !first.endsWith("s") && !rosterFirsts.includes(word)));
+    });
+  };
   const namedIn = (text: string) =>
     names.some((name) => mentionsPerson(text, name, rosterNames)) ||
+    firstNamed(text) ||
     extractEmployeeNames(text).some((typed) => names.some((name) => samePerson(typed, name)) || sameRosterPerson(typed, person, roster)) ||
     // Two words in a row that closely spell the person's full name (names typed in lower case are not extracted).
     text.split(/\s+/).map((word) => word.replace(/[^\p{L}'-]/gu, "")).some((word, at, all) => {
@@ -3965,6 +3982,14 @@ export async function proposeForm(
   const priorActionsRefused = askedPriorActions ? priorActionsProblem(askedPriorActions, onFileLine ? `${requestWords}\n${onFileLine}` : requestWords, date) : null;
   const priorActions = priorActionsRefused ? null : askedPriorActions ? priorActionsWithStatedTopics(askedPriorActions, statedSteps).slice(0, 600) : statedSteps.length === 0 ? onFileLine : null;
   /*
+   * QA's live re-test (21 Nov 2026, item 18): the prior actions the forms on file filled were read back "…, as you said"
+   * (the manager never said them). Prior actions are the manager's statement only when their words state the steps
+   * (`statedSteps`) or, with nothing on file, the model's list from those words; filled from the forms on file they are not
+   * `stated`, and "as you said" belongs only to steps stated in this message (stated_this_turn).
+   */
+  const priorStated = priorActions !== null && (statedSteps.length > 0 || onFileLine === null);
+  if (priorStated && (await import("@/lib/forms/prior-actions")).statedPriorActions(context.question, today).length > 0) statedThisTurn.push("prior_actions");
+  /*
    * QA's production audit (20 Nov 2026): "I need a verbal CA wrote up for <A>. I need the JBA policy for dress code
    * enclosed. can you also site the coaching that was done on 11/3" put 11/3, the prior coaching's date, on the card as
    * its form date. A date the prior actions hold (as read from the manager's words, or as the model listed them) is never
@@ -4415,8 +4440,8 @@ export async function proposeForm(
      * evidence check still decides), or leaves it when the words are history ("written up before").
      */
     ...(levelNotGiven ? { level_not_given: { option: levelNotGiven, note: `This card has no warning level, and the manager's message names the form's ${levelNotGiven === "written" ? "Written" : "Verbal"} Warning option. If it states THIS form's level, propose the card again with warning_level ${levelNotGiven} and level_evidence quoting those words; if it is history ("written up before"), leave the level unset.` } } : {}),
-    ...(level || payroll || priorActions
-      ? { stated: { ...(level ? { warning_level: level } : {}), ...(payroll ? { payroll_deduct: payroll } : {}), ...(payroll === "yes" && amount ? { payroll_amount: `$${amount.replace(/^\$/, "")}` } : {}), ...(priorActions ? { prior_actions: priorActions } : {}) } }
+    ...(level || payroll || (priorActions && priorStated)
+      ? { stated: { ...(level ? { warning_level: level } : {}), ...(payroll ? { payroll_deduct: payroll } : {}), ...(payroll === "yes" && amount ? { payroll_amount: `$${amount.replace(/^\$/, "")}` } : {}), ...(priorActions && priorStated ? { prior_actions: priorActions } : {}) } }
       : {}),
     /*
      * QA's live finding (16 Nov 2026): "as you said" only for what THIS message stated. The level and payroll whose
