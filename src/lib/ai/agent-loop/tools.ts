@@ -63,6 +63,7 @@ import type { SourceCitation } from "@/types";
 import { followUpChangeAsked, followUpForCard, followUpLine, statedFollowUpDate } from "@/lib/forms/follow-up-default";
 import type { AccessScope, ChatFormProposal, ChatMessage, Role } from "@/types";
 import { accountKey, personKey, replyTurns, type CardRecord, type ExitOfferRecord, type NameQuestionRecord, type PersonAskedRecord, type TurnRecord } from "@/lib/ai/agent-loop/card-record";
+import { TEAM_SUBJECT_LABEL } from "@/lib/forms/team-subject";
 
 /**
  * ============================================================================
@@ -4479,6 +4480,8 @@ export async function coachTeam(context: ToolContext, effects: ToolEffects): Pro
       return { app_reply: untrusted(turn.response.content), note: "Say app_reply to the manager as given, every line: it holds the people, the counts and the exact words the next step reads." };
     }
   }
+  const onScreen = await teamCardOnScreen(context);
+  if (onScreen) return updateTeamCard(context, effects, onScreen);
   const { wholeTeamRequest } = await import("@/lib/forms/whole-team-coaching");
   /*
    * "Create a coaching form." then "for the whole salon" (nov3-team-observation-echo, the batch H live run): the turn
@@ -4524,6 +4527,85 @@ export async function coachTeam(context: ToolContext, effects: ToolEffects): Pro
   };
 }
 
+/**
+ * QA's live re-test (21 Nov 2026, items 13 and 17 / A10 and A14): the team Coaching card ("All team members"), the latest
+ * card this chat's loop made and not created yet: by the server's card record (no person, the team label), never the
+ * words. `first` is the manager message the card began with. A lookup that fails reads as created, so nothing is remade
+ * over a form that may exist.
+ */
+interface TeamCardOnScreen {
+  readonly proposalId: string;
+  readonly templateKey: string;
+  readonly first: string | null;
+  readonly storeId: string | null;
+}
+async function teamCardOnScreen(context: ToolContext): Promise<TeamCardOnScreen | null> {
+  const latest = context.earlierCard ?? null;
+  if (context.openFormId || !latest || latest.employeeKey !== null || latest.nameKey !== personKey(TEAM_SUBJECT_LABEL)) return null;
+  if ((await instanceCreatedFromProposal(context, latest.proposalId)).kind !== "none") return null;
+  const first = (context.cardRecords ?? []).find((record) => record.proposalId === latest.proposalId) ?? latest;
+  return { proposalId: latest.proposalId, templateKey: latest.templateKey, first: first.messageId, storeId: latest.teamStoreId ?? null };
+}
+
+/** A turn of three words or fewer ("dodge", "yes", "make that update") answers or points; it adds nothing to the details. */
+const adds = (text: string) => words(text).length > 3;
+
+/**
+ * QA's live re-test (21 Nov 2026, items 13 and 17): with the team card on screen, "dodge" (its store) and "In details of
+ * coaching inlude …" (its details) flipped to "A Coaching Form is for one person at a time" and the store's whole staff
+ * list, because coach_team read only a NEW team request and sent everything else to list_staff. Every later turn about the
+ * card remakes it: the same card (its id is kept, so Create still makes one form), at the store this turn names, else the
+ * card's own, with the turn the card began with and this turn's words as its details (`sourceMessageIds`, what Create
+ * drafts from).
+ */
+async function updateTeamCard(context: ToolContext, effects: ToolEffects, before: TeamCardOnScreen): Promise<ToolResult> {
+  const templates = await creatableTemplates(context.actor.role).catch(() => null);
+  const template = templates?.find((row) => row.key === before.templateKey);
+  if (!template) return { reason_code: "scope", error: "This manager cannot create a Coaching Form." };
+  const scope = context.actor.scope;
+  const mine = scope.level === "global" ? null : authorizedSalonIds(scope);
+  const named = [...new Set((readSalonMentions(context.question).length > 0 || adds(context.question) ? readSalonMentions(context.question) : readSalonMentions(`at ${context.question}`)).flatMap((mention) => [...mention.salonIds]))].filter((id) => !mine || mine.includes(id));
+  const storeId = named.length === 1 ? named[0]! : before.storeId;
+  const start = before.first ? context.history.findIndex((turn) => turn.role === "user" && turn.id === before.first) : -1;
+  const turns = [
+    ...context.history.filter((turn, index) => turn.role === "user" && typeof turn.content === "string" && index === start),
+    ...(adds(context.question) || start < 0 ? [{ id: context.questionMessageId, role: "user" as const, content: context.question }] : []),
+  ];
+  const card = buildProposal({
+    proposalId: before.proposalId,
+    templateKey: template.key,
+    templateName: template.name,
+    context: managerContext(turns.slice(0, -1) as ChatMessage[], turns.at(-1) ?? { id: context.questionMessageId, content: context.question }),
+    scope,
+    inlineDraftSupported: supportsInlineDraft(template.key, template.currentVersion?.variants ?? []),
+    variantKey: inlineDraftVariantKey(template.currentVersion?.variants ?? []),
+    today: context.today,
+    employee: { kind: "missing" },
+    ...(storeId ? { locationText: rosterSalonName(storeId) ?? storeId } : {}),
+  });
+  if (card.subject !== "team") return { reason_code: "read_failed", error: "The team card could not be remade from this message. Say the card is unchanged." };
+  effects.proposal = card;
+  effects.proposalEmployeeId = null;
+  return {
+    card: {
+      form: card.templateName,
+      employee: card.employeeName,
+      status: card.status,
+      ready: card.status === "ready",
+      store: card.locationId ? salonLabel(card.locationId) : null,
+      ...(card.status === "needs_location" ? { choose_store_from: (card.authorizedLocationIds ?? []).map((id) => ({ id, name: salonLabel(id) })) } : {}),
+      form_date: card.formDate ?? null,
+      create_offered: card.supportsInlineDraft,
+    },
+    facts: {
+      team_card: true,
+      team_card_updated: true,
+      ...(adds(context.question) ? { details_added: untrusted(context.question) } : {}),
+    },
+    note: "The same team Coaching card (All team members) is shown again under your reply with this turn's words: one form at one " + locationWord() + "; Create drafts its Details from the manager's words. Say in one line what changed on the card. Never list the staff and never say a Coaching Form is one person at a time.",
+  };
+}
+
 /* ----------------------------------------------------------- edit form --- */
 
 export async function editForm(
@@ -4542,7 +4624,11 @@ export async function editForm(
   if (isShownCardId(context, effects, id)) {
     const created = await instanceCreatedFromProposal(context, id);
     if (created.kind === "failed") return { reason_code: "write_failed", error: "That form could not be changed just now. Nothing was saved." };
-    if (created.kind === "none") return { reason_code: "not_a_saved_form", error: NOT_A_SAVED_FORM };
+    if (created.kind === "none") {
+      /* Items 13 and 17 (QA, 21 Nov 2026): the team card is changed with coach_team, never propose_form (it has no person). */
+      const team = (effects.proposal?.proposalId === id && effects.proposal.subject === "team") || (context.cardRecords ?? []).some((card) => card.proposalId === id && card.employeeKey === null && card.nameKey === personKey(TEAM_SUBJECT_LABEL));
+      return { reason_code: "not_a_saved_form", error: team ? "That's the team card on screen; it isn't created yet. Change it with coach_team." : NOT_A_SAVED_FORM };
+    }
     id = created.id;
     fromShownCard = true;
   }
