@@ -7,6 +7,8 @@ import {
 } from "@/lib/config/chat-quality-flags";
 import { POSITION_QUESTION_TAG, answersPositionQuestion, positionAlreadyAsked, positionAnsweredIn, positionQuestion, readPositionAnswer, samePosition } from "@/lib/forms/employee-position";
 
+import { COMPANY_JOB_TITLES } from "@/config/company/job-titles";
+
 import type { AskRequest, AskResponse } from "./types";
 
 /**
@@ -135,3 +137,22 @@ function withPositionAnswerSaid(response: AskResponse, request: AskRequest): Ask
   return { ...response, content: paragraphs.join("\n\n") };
 }
 
+
+/*
+ * The agent loop's title helpers (the loop port from the sibling app, 21 Nov 2026). A title the card writes is spelled
+ * out as this company's title list writes it ("ASM" → "Assistant Manager", "DM" → "District Manager"; derived from
+ * `config/company/job-titles.ts`, never a list kept here), and a title typed in lower case only is written in title
+ * case ("shift lead" → "Shift Lead"). A title the list keeps as letters (SDIT, ASD) stays as it is.
+ */
+export function spelledOutTitle(role: string): string {
+  const said = role.trim();
+  if (!/^[A-Za-z]{2,6}$/.test(said)) return role;
+  const entry = COMPANY_JOB_TITLES.find((title) => said.replace(title.pattern, "") === "");
+  return entry && !/^[A-Z]{2,6}$/.test(entry.title) ? entry.title : role;
+}
+
+export function titleCaseIfLower(role: string): string {
+  return role === role.toLowerCase() ? titleCase(role.trim()) : role;
+}
+
+export { jobTitleFromWordsEnabled };
