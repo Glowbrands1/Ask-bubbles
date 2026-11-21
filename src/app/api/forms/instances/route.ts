@@ -61,6 +61,19 @@ import { terminationStatedTicksEnabled } from "@/lib/config/chat-quality-flags";
 /* The exit form's lines the agent loop's exit card states (the loop port; the same keys as the sibling app's exit form). */
 const EXIT_PAYROLL_KEY = "payroll_deduction_applicable";
 const EXIT_ADDITIONAL_DETAILS_KEY = "details";
+/*
+ * QA's f077 (port from the sibling app, 20 Nov 2026): the reason line saved "job abandonment; last day 11/18, notice given
+ * 11/17". The dates have their own fields, so a part of the account that only names one of them (the form's own date
+ * labels and a date) is not the reason.
+ */
+const EXIT_DATE_PART = /^(?:(?:her|his|their|the)\s+)?(?:last\s+day(?:\s+worked)?|notice(?:\s+(?:given|date|fulfilled))?|date\s+(?:of\s+)?notice(?:\s+was\s+given)?|effective(?:\s+date)?|termination\s+date)\s*(?:was|is|on|of|:)?\s*\d{1,2}\/\d{1,2}(?:\/\d{2,4})?$/i;
+function reasonOnly(account: string): string {
+  const parts = account.split(/[;,.]\s*/).map((part) => part.trim()).filter(Boolean);
+  const kept = parts.filter((part) => !EXIT_DATE_PART.test(part));
+  if (kept.length === 0 || kept.length === parts.length) return account;
+  const reason = kept.join("; ");
+  return /[.!?]$/.test(reason) ? reason : `${reason}.`;
+}
 import { checkboxGroupsForVariant, parseFormDocument } from "@/lib/forms/document";
 import { businessToday } from "@/lib/business-date";
 import {
@@ -517,7 +530,7 @@ export async function POST(request: Request) {
         const account = typeof card.loopAccount === "string" ? card.loopAccount.trim().slice(0, 2_000) : "";
         if (card.warningLevel === "termination" && saysTerminationWord(userTurns)) {
           exitStated.checked[EXIT_TYPE_GROUP] = [EXIT_OPTION.immediateInvoluntary];
-          if (account) exitStated.values[EXIT_DETAIL_FIELDS.resignationReason] = account;
+          if (account) exitStated.values[EXIT_DETAIL_FIELDS.resignationReason] = reasonOnly(account);
         } else if (account && card.templateKey === EXIT_TEMPLATE_KEY) {
           exitStated.values[EXIT_ADDITIONAL_DETAILS_KEY] = account;
         }
