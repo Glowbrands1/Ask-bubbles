@@ -24,7 +24,7 @@ function start(t: ReplayContext, day = "2026-11-21T18:40:00Z") {
 }
 
 /** A Corrective Action Form on file for this person, as the Forms Register lists one. */
-function caOnFile(t: ReplayContext, id: string, employee: string, formDate: string, status = "finalized", revises: string | null = null): void {
+export function caOnFile(t: ReplayContext, id: string, employee: string, formDate: string, status = "finalized", revises: string | null = null): void {
   (t.forms() as Record<string, unknown>[]).push({
     id,
     template_id: "t",
