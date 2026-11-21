@@ -1,3 +1,5 @@
+import { editDistance as closeEditDistance } from "@/lib/forms/close-spelling";
+import { whichFormChoice, whichFormEntry, type WhichFormEntry, type WhichFormRecord } from "./which-form";
 import "server-only";
 
 import { keptPlanSteps } from "@/lib/forms/stated-plan-steps";
@@ -129,6 +131,8 @@ export interface ToolContext {
   readonly earlierCard?: CardRecord | null;
   /** Fix batch items 4 and 3: the "Did you mean" questions this chat's find_staff gave, from the server's record. */
   readonly nameQuestions?: readonly NameQuestionRecord[];
+  /** QA's Bubbles re-run (22 Nov 2026, A11): the last reply asked which of these listed forms to open (`which-form.ts`). */
+  readonly whichFormAsked?: WhichFormRecord | null;
   /**
    * QA (16 Nov 2026, the live check of the pasted-script rule): a form is chosen in this conversation before this turn
    * (a card was made, a form is open, or the app asked who a form is for). No name question is asked before there is a form.
@@ -478,6 +482,12 @@ export function requestTurns(
   return { ok: true, ids, quotes, texts };
 }
 
+/** QA's Bubbles re-run (22 Nov 2026, A11): open_form / edit_form of a listed form while "Which one?" is open needs the manager's pick. */
+function whichFormRefusal(context: ToolContext, id: string, evidence: unknown): ToolResult | null {
+  const choice = whichFormChoice({ asked: context.whichFormAsked, instanceId: id, evidence, history: context.history, question: context.question, questionMessageId: context.questionMessageId });
+  return choice.ok ? null : { reason_code: choice.reason_code, error: choice.error };
+}
+
 /** read_form, open_form and edit_form of a form that is not open: refused unless the manager asked about this form's person. */
 async function formOnFileRefusal(context: ToolContext, id: string, evidence: unknown): Promise<ToolResult | null> {
   // A form that is not visible (or an id that is no form's: not_a_form_id) is the tool's own load to report, first.
@@ -793,6 +803,8 @@ export interface ToolEffects {
   personAsked?: { templateKey: string };
   /** coach_team asked "create all?" for this open Coaching draft this turn, for the record. */
   teamConfirm?: { sourceInstanceId: string };
+  /** QA's Bubbles re-run (22 Nov 2026, A11): the forms this turn's find_past_forms listed with which_form_question. */
+  whichFormAsked?: WhichFormEntry[];
   /** QA (#1055's follow-up): this turn's tools offered the exit form for this person (the exit_offer record). */
   exitOffered?: { employeeId: string | null; name: string };
   /** find_staff ran this turn: a person was named, so a card without one is not "nobody named" (item 6). */
@@ -1751,6 +1763,7 @@ export async function findPastForms(context: ToolContext, input: { employee_name
           };
         })()
       : null;
+    if (effects && !onScreenChoice && forms.length > 1 && input.open === true) effects.whichFormAsked = forms.map(whichFormEntry);
     let withdrawn: string | null = null;
     if (input.open === true && effects && !onScreenChoice) {
       effects.openRequested = typed;
@@ -2037,6 +2050,21 @@ export function incidentDates(managerWords: string, priorActions: string | null)
  * - No match: said so; the card keeps its name.
  * Null when this is not a correction of the card's name (every other path is unchanged).
  */
+/**
+ * Whether a typed full name is a close spelling of a person's: its first name within a few letters of one of their first
+ * names, and its last name within a few letters of their last name (at most two letters, and at most a third of the
+ * longer name). Both must hold, so a shared first name alone ("Avery" for another Avery) is never a correction.
+ */
+function closeSpellingOfName(said: readonly string[], own: { readonly first: readonly string[]; readonly last: readonly string[] }): boolean {
+  const close = (a: string, b: string) => {
+    const allowed = Math.min(2, Math.max(1, Math.floor(Math.max(a.length, b.length) / 3)));
+    return closeEditDistance(a, b, allowed) <= allowed;
+  };
+  const first = said[0]!;
+  const last = said.at(-1)!;
+  return own.first.some((name) => close(name, first)) && own.last.some((name) => close(name, last));
+}
+
 function cardNameCorrection(
   context: ToolContext,
   effects: ToolEffects,
@@ -2084,15 +2112,24 @@ function cardNameCorrection(
   const own = cardPerson ? { first: words([cardPerson.firstName, cardPerson.preferredFirstName ?? ""].join(" ")), last: words(cardPerson.lastName) } : { first: words(cardName).slice(0, 1), last: words(cardName).slice(-1) };
   const sharesAName = said.length >= 2 && (own.first.includes(said[0]!) || own.last.includes(said.at(-1)!));
   /*
+   * QA's Bubbles live re-run (22 Nov 2026, A1, BLOCKER): the card was for the manager's misspelling "<P1>", kept as typed
+   * (not on the staff list); "Her name is <P2>" (the staff list's spelling) shares no name exactly with it, so it was no
+   * correction, and the next card was refused as another person (person_change_not_asked) until the turn timed out. Pau:
+   * a name correction is the manager's own words. A full name whose first AND last names are each a close spelling of
+   * the card's person's (`closeSpellingOfName`) is that person, corrected, whatever form the message asks for.
+   */
+  const spelledClose = said.length >= 2 && closeSpellingOfName(said, own);
+  /*
    * QA's live c219 re-ask (16 Nov 2026): a card for a name not on the roster asks the manager to check that name (its
    * off_roster_name line; recorded as a name question). A different full name given in the next message answers it: a
    * correction of the card's person, though the two names share no word. Read from the record, never the reply's text.
    */
   const answersCardCheck = !cardPerson && card.nameKey !== null && spellingKeysConfirmedForName(view, typed).includes(card.nameKey);
-  if (!sharesAName && !answersCardCheck) return null;
-  /* A roster person the model chose by id corrects the card only when this turn answers the card's recorded name check. */
-  if (options.byId && !answersCardCheck) return null;
-  if (card.templateKey !== templateKey) {
+  if (!sharesAName && !answersCardCheck && !spelledClose) return null;
+  /* A roster person the model chose by id corrects the card only when this turn answers the card's recorded name check, or spells the card's person close. */
+  if (options.byId && !answersCardCheck && !spelledClose) return null;
+  /* A close spelling with another form asked for: the corrected person, and the form the manager asked for (their own request). */
+  if (card.templateKey !== templateKey && !(spelledClose && !answersCardCheck)) {
     /*
      * QA (16 Nov 2026, live c219): a message that answers the name check of the card on screen is about THAT card. It never
      * makes another form unless the message itself asks for one (new_form_evidence, checked against this turn's words).
@@ -4970,6 +5007,8 @@ export async function editForm(
    */
   const openedThisTurn = effects.formOpened?.instanceId ?? null;
   if (id !== context.openFormId && id !== openedThisTurn && !fromShownCard) {
+    const unchosen = whichFormRefusal(context, id, (input as { choice_evidence?: unknown }).choice_evidence);
+    if (unchosen) return unchosen;
     const refused = await formOnFileRefusal(context, id, input.forms_on_file_evidence);
     if (refused) return refused;
   }
@@ -5801,10 +5840,12 @@ function documentFieldKeys(document: unknown): Set<string> {
  * Puts a form on file in front of the manager, as today's chat reopen does (`formOpened`): a draft opens to edit; a
  * finalized form opens read-only (its card offers "Edit as new draft"). Past forms only when asked.
  */
-export async function openForm(context: ToolContext, effects: ToolEffects, input: { instance_id?: unknown; forms_on_file_evidence?: unknown }): Promise<ToolResult> {
+export async function openForm(context: ToolContext, effects: ToolEffects, input: { instance_id?: unknown; forms_on_file_evidence?: unknown; choice_evidence?: unknown }): Promise<ToolResult> {
   const id = typeof input.instance_id === "string" ? input.instance_id.trim() : "";
   if (id === "") return { reason_code: "missing_input", error: "Give the form's instance_id (from find_past_forms)." };
   if (id !== context.openFormId) {
+    const unchosen = whichFormRefusal(context, id, input.choice_evidence);
+    if (unchosen) return unchosen;
     const refused = await formOnFileRefusal(context, id, input.forms_on_file_evidence);
     if (refused) return refused;
   }
