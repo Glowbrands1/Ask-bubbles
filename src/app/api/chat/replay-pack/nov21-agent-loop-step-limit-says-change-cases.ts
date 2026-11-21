@@ -29,7 +29,7 @@ const live = () =>
     const turn = users(view);
     if (turn <= 2) {
       if (lastResult(view, "propose_form")) return { text: "Here is the Corrective Action Form." };
-      return { tool: "propose_form", input: { template_key: "dpoa", employee_name: "Tadea Krohl", what_happened: ACCOUNT, incident_date: "2026-10-15", person_evidence: evidenceFrom(view, "Tadea Krohl", turn - 1) } };
+      return { tool: "propose_form", input: { template_key: "dpoa", employee_name: "Thaddea Krol", what_happened: ACCOUNT, incident_date: "2026-10-15", person_evidence: evidenceFrom(view, "Thaddea Krol", turn - 1) } };
     }
     return { tool: "propose_form", input: { template_key: "coaching", employee_id: LOOP_THADDEA.id, what_happened: ACCOUNT, incident_date: "2026-10-15", person_evidence: evidenceFrom(view, "Thaddea Kroll", turn - 3) } };
   });
