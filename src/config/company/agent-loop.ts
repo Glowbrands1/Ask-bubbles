@@ -78,6 +78,29 @@ export function bubblesLoopContent({ place, staff }: LoopWords): AgentLoopConten
  * The manual headings this company's policy guards check (`tools.ts`, `policy-fit.ts`), as this app's own retrieval
  * names them (`lib/knowledge/ca-policy-retrieval.ts`). No said-only "Other" topic.
  */
+/*
+ * THE LOOP'S JOB TITLES: Buff City Soap's own Woven positions (QA2 for Pau, 21 Nov 2026, read from
+ * employee_access_directory + woven_position_map), with the short forms managers type for them ("GM", "AGM", "DM",
+ * "store manager" for the General Manager). The loop reads a title only from this list, so a position this company
+ * does not have is never read as one, never spelled out and never written on a card. Most specific first, so "assistant
+ * general manager" is not read as "general manager" and "team member part time" not as "team member". The older chat
+ * path still reads `config/company/job-titles.ts` (changed separately, per Pau).
+ */
+export const BUBBLES_LOOP_JOB_TITLES: AppConfig["jobTitleList"] = [
+  { pattern: /\b(?:seasonal team members?(?: part[- ]time)?|part[- ]time seasonal team members?)\b/i, title: "Seasonal Team Member Part Time" },
+  { pattern: /\b(?:team members? part[- ]time|part[- ]time team members?)\b/i, title: "Team Member Part Time" },
+  { pattern: /\b(?:team members? full[- ]time|full[- ]time team members?)\b/i, title: "Team Member Full Time" },
+  { pattern: /\b(?:agms?|assistant general managers?|assistant (?:store )?managers?|asms?)\b/i, title: "Assistant General Manager" },
+  { pattern: /\b(?:gms?|general managers?|store managers?)\b/i, title: "General Manager" },
+  { pattern: /\b(?:dms?|district managers?)\b/i, title: "District Manager" },
+  { pattern: /\b(?:hr generalists?|human resources generalists?)\b/i, title: "Human Resources Generalist" },
+  { pattern: /\bpayroll administrators?\b/i, title: "Payroll Administrator" },
+  { pattern: /\bmaintenance team\b/i, title: "Maintenance Team" },
+  { pattern: /\boperators?\b/i, title: "Operator" },
+  { pattern: /\bowners?\b/i, title: "Owner" },
+  { pattern: /\bteam members?\b/i, title: "Team Member" },
+];
+
 export const BUBBLES_POLICY_GUARDS: PolicyGuards = {
   headings: { attendance: "Attendance", lateOpening: "Late Opening", conduct: "Standards of Conduct" },
   saidOnlyOther: null,

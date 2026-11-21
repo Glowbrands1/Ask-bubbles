@@ -1,8 +1,7 @@
-import { BUBBLES_METRICS, BUBBLES_POLICY_GUARDS, bubblesLoopContent } from "@/config/company/agent-loop";
+import { BUBBLES_METRICS, BUBBLES_POLICY_GUARDS, bubblesLoopContent, BUBBLES_LOOP_JOB_TITLES } from "@/config/company/agent-loop";
 import { ACTIVE_BRAND } from "@/lib/brand";
 import { loadScopedRoster, readDirectoryFacts, readDirectoryRoster } from "@/lib/forms/employee-roster";
 import { COMPANY_LOCATIONS } from "@/lib/locations";
-import { JOB_TITLES } from "@/lib/forms/proposal";
 
 /**
  * ============================================================================
@@ -151,6 +150,11 @@ export interface AppConfig {
    */
   readonly jobTitles: readonly RegExp[];
   /**
+   * The company's job titles with the name each is written as ("gm" → "General Manager"): the only titles the loop
+   * reads, spells out or puts on a card (QA2 for Pau, 21 Nov 2026). Most specific first.
+   */
+  readonly jobTitleList: readonly { readonly pattern: RegExp; readonly title: string }[];
+  /**
    * A roster job title that leads others (manager, director, lead, supervisor): someone with it who asks or tells the
    * card's person something speaks for the salon, so a pronoun in what they asked is the card person's (Pau's ruling,
    * QA 17 Nov 2026). Read from the roster's job title, never from the manager's words.
@@ -188,7 +192,8 @@ export const BUBBLES_CONFIG: AppConfig = {
     readDirectory: (...args) => readDirectoryRoster(...args),
     readDirectoryFacts: (...args) => readDirectoryFacts(...args),
   },
-  jobTitles: JOB_TITLES.map((entry) => entry.pattern),
+  jobTitles: BUBBLES_LOOP_JOB_TITLES.map((entry) => entry.pattern),
+  jobTitleList: BUBBLES_LOOP_JOB_TITLES,
   leadershipTitle: /\b(?:directors?|managers?|leads?|supervisors?|keyholders?)\b/i,
   content: bubblesLoopContent,
   policyGuards: BUBBLES_POLICY_GUARDS,

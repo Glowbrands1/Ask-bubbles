@@ -149,7 +149,7 @@ describe("the loop names nothing of the sibling app's company", () => {
 
   it("the loop's own source, its company config and its replay cases", () => {
     const sources = [
-      ...files("src/lib/ai/agent-loop", (name) => /\.tsx?$/.test(name) && name !== "no-sibling-content.test.ts"),
+      ...files("src/lib/ai/agent-loop", (name) => /\.tsx?$/.test(name) && name !== "no-sibling-content.test.ts" && name !== "job-titles.test.ts"),
       "src/config/company/agent-loop.ts",
       ...files("src/app/api/chat/replay-pack", (name) => /loop/.test(name)),
     ];

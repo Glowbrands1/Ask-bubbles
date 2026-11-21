@@ -34,7 +34,8 @@ import {
 import type { AskResponse } from "@/lib/ai/types";
 import { findManualSection, manualSectionHeadings, type ManualChunk } from "@/lib/forms/official-policy-manual";
 import { sectionWording } from "@/lib/forms/policy-citation";
-import { buildProposal, extractEmployeeNames, extractJobTitle, JOB_TITLES, managerContext, samePerson } from "@/lib/forms/proposal";
+import { buildProposal, extractEmployeeNames, managerContext, samePerson } from "@/lib/forms/proposal";
+import { loopCardTitle, loopTitleIn, loopTitlePatterns } from "./job-titles";
 import { isJobTitlePhrase, tidyTypedName } from "@/lib/forms/proposal-names";
 import { foldName } from "@/lib/forms/fold-name";
 import { cleaningUndonePhrase, namesCareAndCleaning, readCaPolicy } from "@/lib/forms/ca-policy";
@@ -2115,9 +2116,10 @@ function closeSpellingNotSettled(
  * person's, as before. Null when no title is said for this person.
  */
 export function titleSaidFor(text: string, person: string, rosterNames: readonly string[]): string | null {
-  const said = extractJobTitle(text);
+  // This company's titles only (`job-titles.ts`, QA2 for Pau, 21 Nov 2026).
+  const said = loopTitleIn(text);
   if (!said) return null;
-  const patterns = JOB_TITLES.filter((entry) => entry.title === said).map((entry) => new RegExp(entry.pattern.source, entry.pattern.flags.includes("g") ? entry.pattern.flags : `${entry.pattern.flags}g`));
+  const patterns = loopTitlePatterns(said);
   const first = person.trim().split(/\s+/)[0] ?? "";
   for (const sentence of text.split(/(?<=[.!?])\s+|\n+/)) {
     const lower = sentence.toLowerCase();
@@ -3899,12 +3901,16 @@ export async function proposeForm(
   if (!card.employeeRole && card.employeeName) {
     const words = await import("@/lib/ai/job-title-from-words");
     const typed = words.jobTitleFromWordsEnabled() ? words.typedJobTitle(asked.messages.filter((message) => requestIds.includes(message.id ?? "")).map((message) => String(message.content ?? "")), card.employeeName) : null;
-    if (typed) {
-      card.employeeRole = words.spelledOutTitle(words.titleCaseIfLower(typed));
+    // Only a title this company has, written as its list writes it ("gm" → "General Manager"); any other typed
+    // position is not put on the card (QA2 for Pau, 21 Nov 2026: titles come from this company's Woven positions).
+    const listed = typed ? loopCardTitle(typed) : null;
+    if (listed) {
+      card.employeeRole = listed;
       jobTitleTyped = true;
     }
   }
-  if (card.employeeRole) card.employeeRole = (await import("@/lib/ai/job-title-from-words")).spelledOutTitle(card.employeeRole);
+  /* A short form on the roster row is written out ("GM" → "General Manager"); any other roster title as Woven has it. */
+  if (card.employeeRole) card.employeeRole = loopCardTitle(card.employeeRole) ?? card.employeeRole;
   /* The policy Create sends is the card's (`cardPolicyFor`), never read back from the model's reply (code-check #40). */
   card.policyLine = policyLine;
   /*
