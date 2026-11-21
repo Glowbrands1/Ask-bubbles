@@ -34,7 +34,6 @@ export const EDIT_PERMISSION_BY_TEMPLATE: Readonly<Record<string, Permission>> =
   "Demotion Form": "create_employment_change_form",
   "Position Transfer Form": "create_employment_change_form",
   "Prescreen / Phone Interview Form": "create_hiring_form",
-  "Tanning Consultant Interview Form": "create_hiring_form",
   "First Round Management Interview Form": "create_hiring_form",
   "Second Round Management Interview Form": "create_hiring_form",
 };
