@@ -3043,6 +3043,7 @@ export async function proposeForm(
     person_evidence?: unknown;
     exit_evidence?: unknown;
     new_form_evidence?: unknown;
+    same_card_evidence?: unknown;
     form_change_evidence?: unknown;
     request_evidence?: unknown;
     policy?: unknown;
@@ -3255,7 +3256,12 @@ export async function proposeForm(
    * over this message) are gone. A new form while a draft is open, or a new request after an earlier card, is the
    * model's new_form_evidence: this message's words asking for another or a new form.
    */
-  const asksNewForm = verifyEvidence(input.new_form_evidence, identifiedTurns(context.history as ChatMessage[], context.question, context.questionMessageId), { thisTurnOnly: true }).ok;
+  /*
+   * U21 (QA's Bubbles round 2, 22 Nov 2026): "make this for <B> instead of <A>" is the manager asking for the card on
+   * screen for <B> (same_card_evidence, this message's words), a form for <B> as much as "another form for <B>" is.
+   */
+  const sameCardAsked = verifyEvidence(input.same_card_evidence, identifiedTurns(context.history as ChatMessage[], context.question, context.questionMessageId), { thisTurnOnly: true }).ok;
+  const asksNewForm = verifyEvidence(input.new_form_evidence, identifiedTurns(context.history as ChatMessage[], context.question, context.questionMessageId), { thisTurnOnly: true }).ok || sameCardAsked;
   /*
    * CARD_PERSON_THIS_REQUEST_ENABLED (QA2's 17 Nov case, this app's old path, conv_mwk2t40v27izanu: a store manager named
    * in the account, "<Y>, messaged <X> asking …", took the exit form from <X>, whose request set it). With a card on
@@ -3365,6 +3371,24 @@ export async function proposeForm(
    * add any details before you press Create."). A sentence of the account (or the prior actions) whose second-person words
    * the manager never typed is taken out (`withoutTextToManager`, read against the manager's own messages).
    */
+  /*
+   * U21 (QA's Bubbles round 2, 22 Nov 2026): T10 "make this for <B> instead of <A>" got "What happened?": the account on
+   * screen was dropped. With same_card_evidence, this chat's latest card of this form for another person (the server's
+   * record: its form and person keys, never its text, QA's c163) is the card asked for. With no account from the model the
+   * card goes back once, to be proposed with that card's account as the chat shows it, with this person's name;
+   * copied_from_card says it came from that card. A level and a payroll answer are never copied.
+   */
+  const sameCardOf = sameCardAsked
+    ? ([...(context.cardRecords ?? [])].reverse().find((record) => record.templateKey === key) ?? null)
+    : null;
+  const sameCardOther = Boolean(sameCardOf && (employee.id ? sameCardOf.employeeKey !== personKey(employee.id) : sameCardOf.nameKey !== personKey(employee.name)));
+  if (sameCardOther && !(typeof input.what_happened === "string" && input.what_happened.trim())) {
+    return {
+      reason_code: "same_card_account_missing",
+      error: `The manager asked for the ${template.name} on screen for ${employee.name}. Propose ${employee.name}'s card again now with what_happened: that card's account exactly as this chat shows it (the Observation of the earlier card), with ${employee.name}'s name in place of the earlier person's, and same_card_evidence again. Never ask what happened; never copy a level or a payroll answer.`,
+    };
+  }
+  const copiedFromCard = sameCardOther;
   const managerText = [...(context.history as ChatMessage[]).filter((turn) => turn.role === "user").map((turn) => String(turn.content ?? "")), context.question].join("\n");
   const accountRead = withoutTextToManager(typeof input.what_happened === "string" ? input.what_happened : "", managerText);
   const priorRead = withoutTextToManager(typeof input.prior_actions === "string" ? input.prior_actions : "", managerText);
@@ -4640,6 +4664,8 @@ export async function proposeForm(
       return primary && (card.authorizedLocationIds ?? []).includes(primary) ? { employee_store: rosterSalonName(primary) ?? primary } : {};
     })()),
     ...(salonFromWoven ? { store_from_woven: salonFromWoven } : {}),
+    /* U21: the account was copied from <A>'s card; a level and payroll answer are the manager's to state for this person. */
+    ...(copiedFromCard ? { copied_from_card: { say_exactly: `Same account as the earlier card, with ${employee.name.split(/\s+/)[0]}'s name.`, not_copied: "level and payroll: the manager states them for this person" } } : {}),
     ...(storeNotRead ? { typed_store_not_found: storeOffer(typedSalon, replyNameFor(card.employeeName ?? employee.name, read.kind === "read" ? read.roster : [], extractEmployeeNames(managerTurns(context)), employee.id ?? null), wovenStores, managerSalonIds) } : {}),
     /* QA's live-app item 8: the card uses Woven's title; the manager called them something else ("<title>"). */
     ...(() => {
