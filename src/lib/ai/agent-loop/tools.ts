@@ -46,6 +46,7 @@ import { closeHeadingReading, closePolicyQuestion, namedPolicies, namesHeading }
 import { PAYROLL_DEDUCT_AMOUNT_KEY as PAYROLL_AMOUNT_KEY, PAYROLL_DEDUCT_AMOUNT_QUESTION as PAYROLL_AMOUNT_QUESTION, payrollAmountFromConversation } from "@/lib/forms/payroll-deduct-amount";
 import { withoutPayrollClauses } from "@/lib/ai/payroll-clause-not-account";
 import { listTemplateSummaries, type TemplateSummary } from "@/lib/forms/repository";
+import { isHiddenTemplate } from "@/config/company/forms/hidden";
 import { SupabaseKnowledgeProvider } from "@/lib/knowledge/providers/supabase";
 import { RETRIEVAL } from "@/lib/config/models";
 import { manualScopeFetchLimit, scopeToCurrentManual } from "@/lib/knowledge/current-manual-scope";
@@ -2652,7 +2653,12 @@ function conversationTurns(context: Pick<ToolContext, "question" | "history">) {
 
 async function creatableTemplates(role: Role): Promise<TemplateSummary[]> {
   const rows = await listTemplateSummaries();
-  return rows.filter((row) => row.active && row.currentVersion && hasPermission(DEFAULT_PERMISSION_MATRIX, role, row.requiredPermission as never));
+  /*
+   * A form this deployment hides (`config/company/forms/hidden.ts`; Pau, 21 Nov 2026: the EPP forms, Coding-E's #990) is
+   * never offered nor proposed. `listTemplateSummaries` already leaves it out; checked here too, so the loop never
+   * depends on one list for it.
+   */
+  return rows.filter((row) => !isHiddenTemplate(row.key) && row.active && row.currentVersion && hasPermission(DEFAULT_PERMISSION_MATRIX, role, row.requiredPermission as never));
 }
 
 /** The templates this manager may create, for the system prompt. Empty when they cannot be read. */
