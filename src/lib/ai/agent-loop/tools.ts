@@ -824,6 +824,11 @@ export async function inactiveMatch(scope: AccessScope, typed: string): Promise<
   }
 }
 
+/** The one line a former employee's card says (the rules book's inactive_in_woven line, QA's live re-test B8). */
+export function inactiveLine(name: string): string {
+  return `**${name}** shows as no longer active in ${staffSystem()}; I've used the name as you typed it.`;
+}
+
 const ROSTER_FAILED = "The staff roster could not be loaded just now, so nobody could be looked up. Say so to the manager; do not guess a name.";
 const ROSTER_UNCHECKED = "This login covers a district or region, so the roster cannot be searched here. Use the name exactly as the manager typed it.";
 
@@ -1114,7 +1119,9 @@ export async function findStaff(context: ToolContext, input: { name?: unknown; p
      * salon outside the manager's scope is read the same way (the roster is scoped): their existence is never shown.
      */
     const inactive = await inactiveMatch(context.actor.scope, person);
-    return { reason_code: "not_on_roster", matches: [], not_on_roster: person, staff_list: context.actor.scope.level === PLACE_LEVEL ? `your ${locationWord()}'s` : "the", ...(inactive ? { inactive_in_woven: inactive } : {}), note: `Not on the ${staffSystem()} staff list${inactive ? ` (no longer active in ${staffSystem()})` : ""}. Propose the card now with employee_name "${person}" as typed, and say so as the rules book's Card replies teach.` };
+    /* QA's live re-test B8: a former employee is found in Woven as no longer active, never "not on the staff list" too. */
+    if (inactive) return { reason_code: "not_on_roster", matches: [], not_on_roster: person, inactive_in_woven: inactive, note: `${person} is a former employee: found in ${staffSystem()} as no longer active. Propose the card now with employee_name "${person}" as typed, and say only that ${person} shows as no longer active, as the rules book's Card replies teach.` };
+    return { reason_code: "not_on_roster", matches: [], not_on_roster: person, staff_list: context.actor.scope.level === PLACE_LEVEL ? `your ${locationWord()}'s` : "the", note: `Not on the ${staffSystem()} staff list. Propose the card now with employee_name "${person}" as typed, and say so as the rules book's Card replies teach.` };
   }
   /* A first name alone is confirmed before it goes on a form, as today ("Is this for **Liora Kincaid**?"). */
   /*
@@ -4228,7 +4235,17 @@ export async function proposeForm(
       const followUp = followUpForCard({ corrective, formDate: card.formDate ?? today, managerWords, today });
       return followUp ? { follow_up_on_create: { date: followUp.date, say_exactly: followUp.line } } : {};
     })()),
-    ...(offRosterName ? { off_roster_name: employee.name, staff_list: context.actor.scope.level === PLACE_LEVEL ? `your ${locationWord()}'s` : "the", ...((await inactiveMatch(context.actor.scope, employee.name)) ? { inactive_in_woven: true } : {}) } : {}),
+    /*
+     * QA's live re-test B8 (21 Nov 2026): a former employee's card gave both staff_list (the not-on-the-staff-list line) and
+     * inactive_in_woven, and the reply said both, "isn't on the Woven staff list" and "shows as no longer active". A person
+     * no longer active is found in Woven: the card gives only the inactive line, never staff_list.
+     */
+    ...(offRosterName ? await (async () => {
+      const inactive = await inactiveMatch(context.actor.scope, employee.name);
+      return inactive
+        ? { off_roster_name: employee.name, inactive_in_woven: { say_exactly: inactiveLine(employee.name), note: `${employee.name} is a former employee, found in ${staffSystem()} as no longer active. Say say_exactly once, and never that ${employee.name} is not on the staff list.` } }
+        : { off_roster_name: employee.name, staff_list: context.actor.scope.level === PLACE_LEVEL ? `your ${locationWord()}'s` : "the" };
+    })() : {}),
     ...(personId && effects.nameLines?.[personId] ? { name_from_staff_list: employee.name } : {}),
     /* Pau's name ruling (15 Nov 2026): the card uses the preferred name; the reply says the Woven legal name once. */
     ...(employee.id && read.kind === "read" && (() => {
