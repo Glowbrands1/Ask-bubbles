@@ -1022,9 +1022,10 @@ const OTHER_STORES = () => `Your other ${locationWords()}: `;
  * manager's other stores. The model ends its reply with ask_exactly, once.
  */
 function storeOffer(typed: string, firstName: string, wovenStores: readonly string[], choices: readonly string[], repeated = false) {
-  /* QA's Bubbles re-run (22 Nov 2026, A7): each store with its street address from the app's own data, when it has one. */
-  const name = (id: string) => {
-    const shown = rosterSalonName(id) ?? id;
+  const name = (id: string) => rosterSalonName(id) ?? id;
+  /* QA's Bubbles re-run (22 Nov 2026, A7): on the repeat, each store with its street address from the app's own data, when it has one. */
+  const withStreet = (id: string) => {
+    const shown = name(id);
     const street = salonStreet(id);
     return street && !shown.toLowerCase().includes(street.toLowerCase()) ? `${shown}, ${street}` : shown;
   };
@@ -1036,8 +1037,9 @@ function storeOffer(typed: string, firstName: string, wovenStores: readonly stri
    * typed (a store on a form is always a real store).
    */
   if (repeated && wovenStores.length > 0) {
-    const pick = bold.length === 1 ? `Did you mean ${bold[0]}?` : `Did you mean ${bold.slice(0, -1).join(", ")} or ${bold.at(-1)}?`;
-    const rest = others.length > 0 ? ` ${OTHER_STORES()}${others.join(", ")}.` : "";
+    const streets = wovenStores.map((id) => `**${withStreet(id)}**`);
+    const pick = streets.length === 1 ? `Did you mean ${streets[0]}?` : `Did you mean ${streets.slice(0, -1).join(", ")} or ${streets.at(-1)}?`;
+    const rest = others.length > 0 ? ` ${OTHER_STORES()}${choices.filter((id) => !wovenStores.includes(id)).map(withStreet).join(", ")}.` : "";
     return { typed, woven_stores: wovenStores.map(name), other_stores: others, said_again: true, ask_exactly: `I can't match "${typed}" to a ${locationWord()}. ${pick}${rest}` };
   }
   const lead = `"${typed}" isn't a ${locationWord()} name I know.`;

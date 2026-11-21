@@ -47,7 +47,7 @@ const live = () =>
 export const NOV22_AGENT_LOOP_STORE_SAID_AGAIN_CASES: ReplayCase[] = [
   {
     id: "nov22-a7-store-said-again-did-you-mean",
-    title: "A7: T1 \"… at empire, sd …\" offers the person's stores with their street addresses; T5 \"store location is empire, sd. create corrective action\" asks \"Did you mean …?\" with her Woven stores (not the same question); \"the w 41st st one\" makes the card at that store",
+    title: "A7: T1 \"… at empire, sd …\" offers the person's Woven stores; T5 \"store location is empire, sd. create corrective action\" asks \"Did you mean …?\" with her Woven stores and their street addresses (not the same question); \"the w 41st st one\" makes the card at that store",
     report: REPORT,
     status: "fixed",
     async run(t) {
@@ -55,8 +55,9 @@ export const NOV22_AGENT_LOOP_STORE_SAID_AGAIN_CASES: ReplayCase[] = [
       t.loopModel!(live());
       const thread = t.thread();
       const first = await thread.say(T1);
-      expect(first.content, `the first offer names no street address:\n${first.content}`).toMatch(/4025 W 41st St/);
+      expect(first.content, `the first offer is not the person's Woven stores:\n${first.content}`).toMatch(/works at \*\*Sioux Falls, SD/);
       const again = await thread.say(T5);
+      expect(again.content, `the pick names no street address:\n${again.content}`).toMatch(/4025 W 41st St/);
       expect(again.content, `the same question again:\n${again.content}`).not.toMatch(/isn't a store name I know/);
       expect(again.content, `no Did-you-mean pick:\n${again.content}`).toMatch(/Did you mean \*\*Sioux Falls, SD/);
       await thread.say(PICK);
