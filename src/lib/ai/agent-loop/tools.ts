@@ -15,7 +15,7 @@ import { AFFIRMATIVE, displayName, editDistance, matchEmployeeName, nameConfirma
 import { offRosterTyped } from "@/lib/forms/roster-only-names";
 import { parseFormDocument } from "@/lib/forms/document";
 import { draftableCheckboxGroups, draftableFields } from "@/lib/forms/responsibility";
-import { readSalonMentions, rosterSalonName } from "@/lib/forms/salon-mention";
+import { PLACE_LEVEL, readSalonMentions, rosterSalonName } from "./places";
 import type { DirectoryRosterRow } from "@/lib/forms/employee-roster";
 import { inlineDraftVariantKey, supportsInlineDraft } from "@/lib/forms/inline-draft";
 import { authorizeInstance, InstanceNotVisibleError, instanceListFilterFor, visibleInstances } from "@/lib/forms/instance-scope";
@@ -779,7 +779,7 @@ export function untrusted(text: string): { untrusted_text: string } {
 type RosterRead = { readonly kind: "read"; readonly roster: readonly RosterEmployee[] } | { readonly kind: "unchecked" } | { readonly kind: "failed" };
 
 async function rosterFor(scope: AccessScope): Promise<RosterRead> {
-  if (scope.level === "district" || scope.level === "region") return { kind: "unchecked" };
+  /* Pau's decision 7 (this app, 21 Nov 2026): a district or region login reads the roster of all its stores. */
   try {
     return { kind: "read", roster: await appConfig().roster.readScoped(scope) };
   } catch {
@@ -800,12 +800,12 @@ export function __setAgentLoopDirectoryForTests(read: (() => Promise<readonly Di
 }
 
 export async function inactiveMatch(scope: AccessScope, typed: string): Promise<string | null> {
-  if (scope.level !== "salon" && scope.level !== "global") return null;
   const wanted = words(typed);
   if (wanted.length < 2) return null;
   try {
-    const allowed = scope.level === "salon" ? new Set((await import("@/lib/forms/location-scope")).authorizedSalonIds(scope)) : null;
-    const rows = (await (directoryForTests ?? appConfig().roster.readDirectory)()).filter((row) => row.employmentStatus === "terminated" && row.firstName && row.lastName && (!allowed || row.salonIds.some((id) => allowed.has(id))));
+    // Every place in the login's scope (a district or region: all of its stores; Pau's decision 7); global: all.
+    const allowed = scope.level === "global" ? null : new Set((await import("./places")).authorizedSalonIds(scope));
+    const rows = (await (directoryForTests ?? appConfig().roster.readDirectory)()).filter((row) => row.employmentStatus === "terminated" && row.firstName && row.lastName && (!allowed || row.locationIds.some((id) => allowed.has(id))));
     const hits = rows.filter((row) => {
       const own = words([row.firstName, row.preferredFirstName ?? "", row.lastName].join(" "));
       return wanted.every((word) => own.includes(word));
@@ -865,7 +865,7 @@ export function salonLabel(id: string | null | undefined, storedName?: string | 
 }
 
 function staffRow(person: RosterEmployee) {
-  return { employee_id: person.id, name: displayName(person), salons: person.salonIds.map((id) => salonLabel(id)!) };
+  return { employee_id: person.id, name: displayName(person), salons: person.locationIds.map((id) => salonLabel(id)!) };
 }
 
 /**
@@ -920,7 +920,7 @@ async function rosterTitle(scope: AccessScope, id: string): Promise<string | nul
 async function rosterPrimarySalon(scope: AccessScope, id: string): Promise<string | null> {
   try {
     const facts = await appConfig().roster.readDirectoryFacts(scope);
-    return facts.find((row) => row.id === id)?.primarySalonId ?? null;
+    return facts.find((row) => row.id === id)?.primaryLocationId ?? null;
   } catch {
     return null;
   }
@@ -1091,7 +1091,7 @@ export async function findStaff(context: ToolContext, input: { name?: unknown; p
         }
         /* QA (16 Nov 2026, c220/c224): a full name the manager typed, a close spelling of nobody, is taken as typed. */
         if (fullNameTakenAsTyped(context, read.roster, shown)) {
-          return { reason_code: "not_on_roster", matches: [], not_on_roster: shown, staff_list: context.actor.scope.level === "salon" ? `your ${locationWord()}'s` : "the", note: `Not on the ${staffSystem()} staff list. Propose the card now with employee_name "${shown}" as typed, and say so as the rules book's Card replies teach.` };
+          return { reason_code: "not_on_roster", matches: [], not_on_roster: shown, staff_list: context.actor.scope.level === PLACE_LEVEL ? `your ${locationWord()}'s` : "the", note: `Not on the ${staffSystem()} staff list. Propose the card now with employee_name "${shown}" as typed, and say so as the rules book's Card replies teach.` };
         }
         if (effects) effects.nameQuestion = { offeredIds: [], typed: shown, asksFullName: true };
         return { reason_code: "not_on_roster", matches: [], not_on_roster: shown, ask_exactly: offRosterNameQuestion(shown), note: `Not on the ${staffSystem()} staff list. Ask the manager, in these words: ${offRosterNameQuestion(shown)}` };
@@ -1106,7 +1106,7 @@ export async function findStaff(context: ToolContext, input: { name?: unknown; p
      * salon outside the manager's scope is read the same way (the roster is scoped): their existence is never shown.
      */
     const inactive = await inactiveMatch(context.actor.scope, person);
-    return { reason_code: "not_on_roster", matches: [], not_on_roster: person, staff_list: context.actor.scope.level === "salon" ? `your ${locationWord()}'s` : "the", ...(inactive ? { inactive_in_woven: inactive } : {}), note: `Not on the ${staffSystem()} staff list${inactive ? ` (no longer active in ${staffSystem()})` : ""}. Propose the card now with employee_name "${person}" as typed, and say so as the rules book's Card replies teach.` };
+    return { reason_code: "not_on_roster", matches: [], not_on_roster: person, staff_list: context.actor.scope.level === PLACE_LEVEL ? `your ${locationWord()}'s` : "the", ...(inactive ? { inactive_in_woven: inactive } : {}), note: `Not on the ${staffSystem()} staff list${inactive ? ` (no longer active in ${staffSystem()})` : ""}. Propose the card now with employee_name "${person}" as typed, and say so as the rules book's Card replies teach.` };
   }
   /* A first name alone is confirmed before it goes on a form, as today ("Is this for **Rhea Calloway**?"). */
   /*
@@ -1263,13 +1263,9 @@ export async function listStaffTool(context: ToolContext, effects: ToolEffects, 
   if (!["create_coaching_form", "create_corrective_action"].some((permission) => hasPermission(DEFAULT_PERMISSION_MATRIX, context.actor.role, permission as never))) {
     return { reason_code: "scope", error: "This role cannot list the staff. Say so." };
   }
-  if (scope.level === "district" || scope.level === "region") {
-    return { reason_code: "scope", error: "This login covers a district or region, so its staff roster can't be listed here. Say so in those words; never list or guess names." };
-  }
-  const [{ authorizedSalonIds }, { salonById }, { readSalonMentions }, picker] = await Promise.all([
-    import("@/lib/forms/location-scope"),
-    import("@/data/salons"),
-    import("@/lib/forms/salon-mention"),
+  /* Pau's decision 7 (this app): a district or region login lists the staff of any of its stores. */
+  const [{ authorizedSalonIds, salonById, readSalonMentions }, picker] = await Promise.all([
+    import("./places"),
     import("@/lib/forms/staff-picker"),
   ]);
   const ids = scope.level === "global" ? appConfig().locations().map((salon) => salon.id) : authorizedSalonIds(scope);
@@ -2620,7 +2616,7 @@ export function withoutNamedSalon(account: string, salonId: string): string {
   const isThatSalon = (phrase: string) => {
     const words = phrase.toLowerCase().split(/[^a-z0-9']+/).filter(Boolean);
     return words.length > 0 && words.some((word) => nameWords.has(word)) && words.every((word) => nameWords.has(word) || filler.has(word)) &&
-      readSalonMentions(`at ${phrase}`).some((mention) => mention.salonIds.includes(salonId));
+      readSalonMentions(`at ${phrase}`).some((mention) => mention.locationIds.includes(salonId));
   };
   const out = account.replace(/(^|[\s,;])(?:at|in)\s+((?:[A-Za-z0-9'’-]+\s+){0,4}[A-Za-z0-9'’-]+)(?=\s*(?:[,.;!?]|$))(,?)/gi, (whole, before: string, phrase: string, comma: string) =>
     isThatSalon(phrase) ? (before.trim() === "" ? "" : before.replace(/\s+$/, "")) + (comma && before.trim() !== "" ? comma : "") : whole);
@@ -2879,12 +2875,12 @@ export async function proposeForm(
       : typed ? cardNameCorrection(context, effects, key, typed, read.roster, { newFormEvidence: input.new_form_evidence }) : null;
     if (corrected && "refusal" in corrected) return corrected.refusal;
     if (corrected) nameCorrectedFrom = corrected.from;
-    if (corrected && "person" in corrected) employee = { name: displayName(corrected.person), salonIds: corrected.person.salonIds, id: corrected.person.id };
+    if (corrected && "person" in corrected) employee = { name: displayName(corrected.person), salonIds: corrected.person.locationIds, id: corrected.person.id };
     else if (corrected && "asTyped" in corrected) {
       employee = { name: typed, salonIds: [] };
       offRosterName = typed;
     }
-    else if (person) employee = { name: nameAsSaid(person, managerTurns(context)), salonIds: person.salonIds, id: person.id };
+    else if (person) employee = { name: nameAsSaid(person, managerTurns(context)), salonIds: person.locationIds, id: person.id };
     /*
      * OFF_ROSTER_CONFIRM (as today): a person not in Woven yet goes on the form by the name the manager typed, only
      * after the app offered "reply **use <name>**" and the manager said so. Never a name nobody confirmed.
@@ -2921,7 +2917,7 @@ export async function proposeForm(
     else if (typed && !id && (lookedUp = await lookUpForCard(context, effects, typed, input.person_evidence, read.roster)).kind !== "none") {
       if (lookedUp.kind === "ask") return lookedUp.result;
       if (!(await personNamedOrPicked(context, lookedUp.person, read.roster))) return personNotNamed(context, template, effects, lookedUp.person);
-      employee = { name: nameAsSaid(lookedUp.person, managerTurns(context)), salonIds: lookedUp.person.salonIds, id: lookedUp.person.id };
+      employee = { name: nameAsSaid(lookedUp.person, managerTurns(context)), salonIds: lookedUp.person.locationIds, id: lookedUp.person.id };
     }
     else {
       /*
@@ -3736,7 +3732,7 @@ export async function proposeForm(
    */
   const turnSalonIds: string[] = [];
   if (!typedSalon && (await import("@/lib/config/chat-quality-flags")).placeSpanGuardEnabled()) {
-    const { labelledSalonIds } = await import("@/lib/forms/salon-cue");
+    const { labelledSalonIds } = await import("./places");
     const turns = asked.messages.filter((message) => requestIds.includes(message.id ?? "")).map((message) => String(message.content ?? ""));
     for (const turn of [...turns].reverse()) {
       if (/\bprimary\s+(?:salon|store|location)\b/i.test(turn)) continue;
@@ -3866,7 +3862,7 @@ export async function proposeForm(
    * the card stays ready and the which_salon fact asks once, never again after it was asked.
    */
   let whichSalon = false;
-  const globalAsk = await import("@/lib/forms/global-salon-ask");
+  const globalAsk = await import("./places");
   if ((await import("@/lib/config/chat-quality-flags")).globalSalonAskEnabled() && globalAsk.globalNonAdminNeedsSalon(context.actor.role, context.actor.scope) && !card.locationId && card.employeeName) {
     const named = globalAsk.salonIdNamedIn(requestWords);
     if (named) {
@@ -3882,7 +3878,7 @@ export async function proposeForm(
    * coaching about bed cleaning."). When the card's salon is one the manager named in this request, a whole "at / in
    * <that salon>" phrase leaves the account (`withoutNamedSalon`). Any other place stays word for word.
    */
-  if (card.locationId && card.issue && readSalonMentions(requestWords).some((mention) => mention.salonIds.includes(card.locationId!))) {
+  if (card.locationId && card.issue && readSalonMentions(requestWords).some((mention) => mention.locationIds.includes(card.locationId!))) {
     const unplaced = withoutNamedSalon(card.issue, card.locationId);
     if (unplaced !== card.issue && unplaced !== "") {
       card.issue = unplaced;
@@ -4082,7 +4078,7 @@ export async function proposeForm(
       const followUp = followUpForCard({ corrective, formDate: card.formDate ?? today, managerWords, today });
       return followUp ? { follow_up_on_create: { date: followUp.date, say_exactly: followUp.line } } : {};
     })()),
-    ...(offRosterName ? { off_roster_name: employee.name, staff_list: context.actor.scope.level === "salon" ? `your ${locationWord()}'s` : "the", ...((await inactiveMatch(context.actor.scope, employee.name)) ? { inactive_in_woven: true } : {}) } : {}),
+    ...(offRosterName ? { off_roster_name: employee.name, staff_list: context.actor.scope.level === PLACE_LEVEL ? `your ${locationWord()}'s` : "the", ...((await inactiveMatch(context.actor.scope, employee.name)) ? { inactive_in_woven: true } : {}) } : {}),
     ...(personId && effects.nameLines?.[personId] ? { name_from_staff_list: employee.name } : {}),
     /* Pau's name ruling (15 Nov 2026): the card uses the preferred name; the reply says the Woven legal name once. */
     ...(employee.id && read.kind === "read" && (() => {
@@ -4192,9 +4188,9 @@ export async function proposeForm(
  * today's reading (`out-of-scope-place.ts`). The model says it, as the rules book teaches.
  */
 async function outsideScopeSalon(context: ToolContext): Promise<{ salon_outside_scope: string } | null> {
-  const { authorizedSalonIds } = await import("@/lib/forms/location-scope");
+  const { authorizedSalonIds } = await import("./places");
   const scope = context.actor.scope;
-  if (scope.level !== "salon") return null;
+  if (scope.level === "global") return null;
   const allowed = authorizedSalonIds(scope);
   const named = [...new Set(readSalonMentions(context.question).flatMap((mention) => [...mention.salonIds]))];
   if (named.length !== 1 || allowed.includes(named[0]!)) return null;

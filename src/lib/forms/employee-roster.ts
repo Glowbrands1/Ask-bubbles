@@ -9,6 +9,7 @@ import { rosterStoreScopedEnabled } from "@/lib/config/chat-quality-flags";
 
 import { isServiceAccountName, type RosterEmployee } from "./employee-match";
 import { authorizedLocationIds } from "./location-scope";
+import { locationById } from "@/lib/locations";
 import { isNonPersonWovenId } from "./roster-non-person";
 
 /**
@@ -206,6 +207,18 @@ export async function loadScopedRoster(scope: AccessScope | null): Promise<Roste
 export interface DirectoryFact extends RosterEmployee {
   readonly title: string | null;
   readonly primaryLocationName: string | null;
+  /**
+   * The person's primary store as an id, when it is one of their stores in this read's scope (the agent loop's
+   * "filed at the store Woven lists"); null otherwise. Matched by the primary location's name.
+   */
+  readonly primaryLocationId: string | null;
+}
+
+/** The location id, among `locationIds`, whose roster name is `primaryName` (case and spacing aside); else null. */
+export function primaryLocationIdOf(locationIds: readonly string[], primaryName: string | null): string | null {
+  const wanted = (primaryName ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+  if (!wanted) return null;
+  return locationIds.find((id) => (locationById(id)?.name ?? "").trim().toLowerCase().replace(/\s+/g, " ") === wanted) ?? null;
 }
 
 /**
@@ -268,6 +281,7 @@ export async function readDirectoryFacts(scope: AccessScope | null): Promise<Dir
         positionName: String(row.position_name ?? "").trim() || null,
         title: String(row.position_name ?? "").trim() || null,
         primaryLocationName: String(row.primary_location_name ?? "").trim() || null,
+        primaryLocationId: primaryId && inScope.includes(primaryId) ? primaryId : primaryLocationIdOf(inScope, String(row.primary_location_name ?? "")),
       });
     }
     return facts;
@@ -440,6 +454,7 @@ export async function readStoreRoster(scope: AccessScope | null): Promise<Direct
       lastSyncedAt: text(row.last_synced_at) || null,
       title: position,
       primaryLocationName: text(row.primary_location_name) || null,
+      primaryLocationId: primaryLocationIdOf([...(storesByEmployee.get(text(row.id)) ?? [])], text(row.primary_location_name) || null),
     });
   }
   return facts.sort((a, b) => a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName) || a.id.localeCompare(b.id));
