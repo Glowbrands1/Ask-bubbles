@@ -219,16 +219,17 @@ export function withoutPersonPronouns(
     // Only after a place or time preposition ("into her scheduled shift"): "Fenna said her car broke down" keeps the owner.
     const afterPreposition = /\b(?:into|for|to|on|at|during|from|before|after|in)[ \t]+$/i.test(reply.slice(Math.max(0, at - 10), at));
     /*
-     * This app's QA2, live (21 Nov 2026): "she wanted to show her team her new puppy" read "<P> wanted to show <P>'s team
-     * <P>'s new puppy". Neither possessive follows a preposition, so the rule above is extended to two places only: right
-     * after "show" ("show the team"), and the clause's next object after a possessive already made "the" in this sentence,
-     * with no punctuation or more than two words between ("the team her new puppy" → "the team the new puppy"). A
-     * reporting verb ("said her car broke down") still keeps the owner.
+     * QA2's live R3 (21 Nov 2026; port from the sibling app, which replaced this app's own two-place extension): "<P> came
+     * into the store to show her team her new puppy" was replied as "to show <P>'s team <P>'s new puppy", while the saved
+     * write-up read "to show the team the new puppy". Outside reported speech (no reporting verb in the clause before it),
+     * a possessive of the person already named in the sentence is "the", as the saved write-up writes it
+     * (`nameInsteadOfPronouns`). "Fenna said her car broke down" keeps its owner, as before.
      */
-    const afterShow = /\b(?:show|shows|showed|showing|shown)[ \t]+$/i.test(reply.slice(Math.max(0, at - 10), at));
-    const lastEdit = edits.at(-1);
-    const nextObject = !!lastEdit && /^the$/i.test(lastEdit.text) && /^[ \t]+[A-Za-z]+(?:[ \t]+[A-Za-z]+){0,1}[ \t]+$/.test(reply.slice(lastEdit.to, at));
-    if (again && owns && word !== "hers" && (afterPreposition || afterShow || nextObject)) {
+    const clauseBefore = sentenceBefore(reply, at).split(/[,;:]/).at(-1) ?? "";
+    const notReported = !REPORTING.test(clauseBefore.toLowerCase());
+    /* Only an object ("show her team", "team her new puppy"): never one opening a clause ("and her shift …") or after "with"/"of". */
+    const opensClause = clauseBefore.trim() === "" || /\b(?:and|but|or|so|then|with|of)[ \t]+$/i.test(clauseBefore);
+    if (again && owns && word !== "hers" && (afterPreposition || (notReported && !opensClause))) {
       edits.push({ from: at, to: end, text: match[0][0] === match[0][0]!.toUpperCase() ? "The" : "the" });
       continue;
     }
@@ -244,6 +245,21 @@ export function withoutPersonPronouns(
     if (again && !told.has(at) && opensWithPerson && (word === "she" || word === "he") && joined && /^\s+[a-z]/.test(reply.slice(end))) {
       edits.push({ from: at, to: end + (/^[ \t]/.test(reply.slice(end)) ? 1 : 0), text: "" });
       continue;
+    }
+    /*
+     * QA2's live R3 (21 Nov 2026; port from the sibling app, its f059 case): "Her shift lead told her to go home and she
+     * refused" read "<P>'s shift lead, <L>, told <P> to go home and <P> refused". The told listener later in this sentence
+     * is named (f059), so a possessive before it, at the sentence's first mention, is the plain article: "The shift lead …
+     * told Fenna …".
+     */
+    if (owns && word !== "hers" && !again) {
+      const rest = reply.slice(end);
+      const stop = rest.search(/[.?!](?!\d)|\n/);
+      const sentenceEnd = end + (stop === -1 ? rest.length : stop);
+      if ([...told].some((listener) => listener > at && listener < sentenceEnd)) {
+        edits.push({ from: at, to: end, text: match[0][0] === match[0][0]!.toUpperCase() ? "The" : "the" });
+        continue;
+      }
     }
     // "her shift", "her 146 tans", "her own" own something; "for her.", "with her and", "talked to her" do not.
     const text = owns ? possessive(display) : display;

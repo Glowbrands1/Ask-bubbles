@@ -17,7 +17,10 @@ new modules with `await import()`, so a draft that is not from a loop card never
 lists the one new importer. Sunny's three changed replay cases (level carry, no-pronoun, and a place-name control) have no
 equivalent here; no existing case changed.
 
-**Extended here (QA2's live re-test, 21 Nov 2026):** "she wanted to show her team her new puppy" read "<P> wanted to show
-<P>'s team <P>'s new puppy". Neither possessive follows a preposition, so the rule also covers a possessive right after
-"show", and the clause's next object after a possessive already made "the". **Sibling app: not yet ported** — Ask Sunny's
-`reply-pronouns.ts` has the same gap and should take the same two conditions.
+**Extended here (QA2's live re-test, 21 Nov 2026), since replaced:** "she wanted to show her team her new puppy" read "<P>
+wanted to show <P>'s team <P>'s new puppy". Neither possessive follows a preposition, so this app first extended the rule
+to a possessive right after "show" and the clause's next object after a possessive already made "the". **Sibling app:
+replaced by Ask Sunny #1198's rule (5758077), ported here** — `reply-pronouns.ts` now has one rule, the sibling's: an
+object possessive of a person already named in the sentence is "the", except after a conjunction, at a clause start,
+after "with"/"of", and in reported speech. The two Bubbles-only conditions are gone; QA2's three wordings
+(`reply-pronouns-second-mention-qa2.test.ts`) and this port's replay cases pass under the sibling's rule unchanged.

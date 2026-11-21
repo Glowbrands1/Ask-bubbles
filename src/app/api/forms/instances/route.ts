@@ -56,6 +56,7 @@ import { saysTerminationWord } from "@/lib/forms/termination-word";
 import { cardPayrollAmount } from "@/lib/forms/card-payroll-amount";
 import { applyLoopFollowUpDefault } from "@/lib/forms/follow-up-default-write";
 import { EXIT_DETAIL_FIELDS, EXIT_OPTION, EXIT_TEMPLATE_KEY, EXIT_TYPE_GROUP } from "@/lib/forms/exit-library";
+import { exitReasonOnly } from "@/lib/forms/exit-reason-only";
 import { terminationStatedTicksEnabled } from "@/lib/config/chat-quality-flags";
 
 /** The resignation types a loop exit card may carry (never the involuntary box). */
@@ -64,19 +65,8 @@ const LOOP_EXIT_HOW = new Set<string>([EXIT_OPTION.immediateVoluntary, EXIT_OPTI
 /* The exit form's lines the agent loop's exit card states (the loop port; the same keys as the sibling app's exit form). */
 const EXIT_PAYROLL_KEY = "payroll_deduction_applicable";
 const EXIT_ADDITIONAL_DETAILS_KEY = "details";
-/*
- * QA's f077 (port from the sibling app, 20 Nov 2026): the reason line saved "job abandonment; last day 11/18, notice given
- * 11/17". The dates have their own fields, so a part of the account that only names one of them (the form's own date
- * labels and a date) is not the reason.
- */
-const EXIT_DATE_PART = /^(?:(?:her|his|their|the)\s+)?(?:last\s+day(?:\s+worked)?|notice(?:\s+(?:given|date|fulfilled))?|date\s+(?:of\s+)?notice(?:\s+was\s+given)?|effective(?:\s+date)?|termination\s+date)\s*(?:was|is|on|of|:)?\s*\d{1,2}\/\d{1,2}(?:\/\d{2,4})?$/i;
-function reasonOnly(account: string): string {
-  const parts = account.split(/[;,.]\s*/).map((part) => part.trim()).filter(Boolean);
-  const kept = parts.filter((part) => !EXIT_DATE_PART.test(part));
-  if (kept.length === 0 || kept.length === parts.length) return account;
-  const reason = kept.join("; ");
-  return /[.!?]$/.test(reason) ? reason : `${reason}.`;
-}
+/** The exit form's rehire question (`exit-library.ts`, EXIT_YES_NO_QUESTIONS). */
+const EXIT_REHIRE_KEY = "eligible_for_rehire";
 import { checkboxGroupsForVariant, parseFormDocument } from "@/lib/forms/document";
 import { businessToday } from "@/lib/business-date";
 import { withoutReadBackNote } from "@/lib/forms/read-back-note";
@@ -537,7 +527,12 @@ export async function POST(request: Request) {
         const account = typeof card.loopAccount === "string" ? card.loopAccount.trim().slice(0, 2_000) : "";
         if (card.warningLevel === "termination" && saysTerminationWord(userTurns)) {
           exitStated.checked[EXIT_TYPE_GROUP] = [EXIT_OPTION.immediateInvoluntary];
-          if (account) exitStated.values[EXIT_DETAIL_FIELDS.resignationReason] = reasonOnly(account);
+          if (account) {
+            /* f077 and QA2's R3 (21 Nov 2026, ported): only the reason; a rehire answer in the account is the rehire question's. */
+            const { reason, rehire } = exitReasonOnly(account, new Date().toISOString().slice(0, 10));
+            exitStated.values[EXIT_DETAIL_FIELDS.resignationReason] = reason;
+            if (rehire) exitStated.checked[EXIT_REHIRE_KEY] = [rehire];
+          }
         } else if (account && card.templateKey === EXIT_TEMPLATE_KEY) {
           exitStated.values[EXIT_ADDITIONAL_DETAILS_KEY] = account;
         }
@@ -553,7 +548,7 @@ export async function POST(request: Request) {
           if (how && quote !== "" && flat(userTurns).includes(quote)) exitStated.checked[EXIT_TYPE_GROUP] = [how];
         }
         if (Object.keys(exitStated.checked).length > 0 || Object.keys(exitStated.values).length > 0) {
-          await applyStatedFacts(instanceId, exitStated, actor.id, new Set([EXIT_PAYROLL_KEY, EXIT_TYPE_GROUP, EXIT_DETAIL_FIELDS.resignationReason, EXIT_ADDITIONAL_DETAILS_KEY]));
+          await applyStatedFacts(instanceId, exitStated, actor.id, new Set([EXIT_PAYROLL_KEY, EXIT_TYPE_GROUP, EXIT_DETAIL_FIELDS.resignationReason, EXIT_ADDITIONAL_DETAILS_KEY, EXIT_REHIRE_KEY]));
         }
       }
     }

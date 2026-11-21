@@ -131,7 +131,7 @@ export const NOV21_AGENT_LOOP_WRITE_UP_FIRST_NAME_CASES: ReplayCase[] = [
       expect(text, text).not.toMatch(PRONOUN);
     }
   }),
-  /* QA2's live re-test (21 Nov 2026), item 2: "show <P>'s team <P>'s new puppy" (not after a preposition; the rule is extended here). */
+  /* QA2's live re-test (21 Nov 2026), item 2: "show <P>'s team <P>'s new puppy" (not after a preposition; the sibling app's object-possessive rule, ported, covers it). */
   fixed("nov21-write-up-qa2-show-team-new-puppy", `QA2, live: "ca for Thaddea Kroll, she left the register for 20 minutes because she wanted to show her team her new puppy": the card, the reply and the saved Observed never read "show Thaddea's team Thaddea's new puppy"`, async (t) => {
     const account = "Thaddea left the register for 20 minutes because she wanted to show her team her new puppy.";
     const saved = await caCard(t, "ca for Thaddea Kroll, she left the register for 20 minutes because she wanted to show her team her new puppy", THADDEA, account, account);
