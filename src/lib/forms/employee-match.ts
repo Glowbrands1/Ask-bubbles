@@ -502,3 +502,19 @@ export function settledNameQuestions(
   }
   return { accepted, kept };
 }
+
+/**
+ * QA's live re-test (21 Nov 2026): a two-word name the roster reads as this roster person ALONE, by a close spelling
+ * ("<First> <Lastx>" for <First> <Lasty>), is this person's misspelt name. Another roster person's exact name, two close
+ * people, or no roster id: never. The card and the drafted write-up put the corrected name in place of the old spelling (`short-name.ts` withCorrectedSpelling).
+ */
+export function rosterSpellingOf(id: string | null, roster: readonly RosterEmployee[]): ((name: string) => boolean) | undefined {
+  if (!id || roster.length === 0) return undefined;
+  const person = roster.find((row) => row.id === id);
+  if (!person) return undefined;
+  return (name: string) => {
+    const match = matchEmployeeName(name, roster);
+    if (match.kind === "confirm") return match.candidates.length === 1 && match.candidates[0]!.employee.id === id;
+    return match.kind === "unchecked" && match.closeName === displayName(person);
+  };
+}
