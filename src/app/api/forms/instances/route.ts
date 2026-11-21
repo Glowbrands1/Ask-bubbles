@@ -532,6 +532,13 @@ export async function POST(request: Request) {
             const { reason, rehire } = exitReasonOnly(account, new Date().toISOString().slice(0, 10));
             exitStated.values[EXIT_DETAIL_FIELDS.resignationReason] = reason;
             if (rehire) exitStated.checked[EXIT_REHIRE_KEY] = [rehire];
+            /*
+             * Ported from the sibling app: its QA's live L6 (22 Nov 2026; Pau: saved = card, nothing invented). With nothing
+             * stated for Additional Details, the drafting model wrote "The departure was recorded effective <date>.", words
+             * no one said. A termination's Additional Details are the card's account, the manager's own words, as a
+             * resignation's already are.
+             */
+            exitStated.values[EXIT_ADDITIONAL_DETAILS_KEY] = account;
           }
         } else if (account && card.templateKey === EXIT_TEMPLATE_KEY) {
           exitStated.values[EXIT_ADDITIONAL_DETAILS_KEY] = account;

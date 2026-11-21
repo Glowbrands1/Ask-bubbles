@@ -85,4 +85,27 @@ export const NOV22_AGENT_LOOP_EXIT_L6_CASES: ReplayCase[] = [
       expect(reply.content.match(/Filed as/g) ?? [], reply.content).toHaveLength(1);
     },
   },
+  {
+    id: "nov22-l6-exit-termination-details-are-card-account",
+    title: `L6: "${SAID}": Additional Details are the card's account (the manager's words), never the drafter's "The departure was recorded effective …"`,
+    report: `${REPORT}: Additional Details held only "The departure was recorded effective 2026-11-21."`,
+    status: "fixed",
+    async run(t) {
+      start(t);
+      t.loopModel!(loopStandIn((view): LoopDecision => {
+        if (lastResult(view, "propose_form")) return { text: "Here's the Employee Exit Form for **Dashiell Varnum**." };
+        const call = exitCard("terminated for job abandonment");
+        return { ...call, input: { ...call.input, exit_evidence: { ...evidenceFrom(view, "exit form for Dashiell Varnum"), kind: "asks_for_exit_form" } } };
+      }));
+      t.draftWrites({ details: "The departure was recorded effective 2026-11-22." });
+      const thread = t.thread();
+      await thread.say(SAID);
+      expect((thread.proposal as { fromAgentLoop?: boolean } | null)?.fromAgentLoop, "no loop card was made (the case proves nothing)").toBe(true);
+      const issue = String((thread.proposal as { issue?: string } | undefined)?.issue ?? "").trim();
+      const id = await thread.create();
+      const values = t.values(id);
+      expect(values.details ?? "", JSON.stringify(values)).not.toMatch(/departure was recorded/i);
+      expect(values.details ?? "", JSON.stringify(values)).toBe(issue);
+    },
+  },
 ];
