@@ -4,6 +4,7 @@ import type { TextBlockParam } from "@anthropic-ai/sdk/resources/messages";
 
 import { ACTIVE_BRAND } from "@/lib/brand";
 import { chatTraceEnabled, fullManualContextEnabled, promptCacheEnabled } from "@/lib/config/chat-quality-flags";
+import { helperTimeoutMs, mainAnswerTimeoutMs, mainAnswerTotalMs, streamGapTimeoutMs } from "@/lib/config/ai-timeouts";
 import { CLAUDE_EFFORT, CLAUDE_MODEL } from "@/lib/config/models";
 import { MissingConfigurationError } from "@/lib/config/server-env";
 
@@ -12,6 +13,7 @@ import { AiError } from "./errors";
 import { selectLongContext } from "./long-context";
 import { noteModelCall } from "./model-failure";
 import { splitSystemPrompt } from "./prompts";
+import { isAiTimeLimitError, logAiFailure, withAiTimeLimit, withStreamTimeLimit, type StreamWatch, type TimedCallOptions } from "./time-limit";
 import { withTruncationRetry } from "./truncation";
 
 /**
@@ -141,6 +143,11 @@ export interface CallClaudeInput {
    * exactly as before.
    */
   readonly glossary?: string | null;
+  /**
+   * The call's name in the time-limit and failure log lines. Omitted, "main_answer".
+   * The limits are the streamed answer's (45 s to the first token, 30 s gaps, 110 s in all) whatever the name.
+   */
+  readonly callName?: string;
 }
 
 /**
@@ -226,73 +233,103 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
   while (history.length > 0 && history[0]!.role === "assistant") history.shift();
 
   const started = Date.now();
+  const callName = input.callName ?? "main_answer";
   try {
-    const response = await withTruncationRetry(
-      input.maxTokens,
-      async (maxTokens) => {
-        const attemptStarted = Date.now();
-        const params = {
-          model: CLAUDE_MODEL,
-          max_tokens: maxTokens,
-          thinking: { type: "adaptive" as const },
-          output_config: { effort: CLAUDE_EFFORT },
-          system: claudeSystemPayload(input.system, input.cachedContext),
-          messages: [
-            ...history,
-            {
-              role: "user" as const,
-              // Every context block and then the question, in that order: the
-              // question last is what keeps a long briefing from burying it.
-              content: [
-                input.grounding,
-                ...(input.reportData ? [input.reportData] : []),
-                ...(input.personMemory ? [input.personMemory] : []),
-                ...(input.formsLibrary ? [input.formsLibrary] : []),
-                ...(input.verifiedRecords ? [input.verifiedRecords] : []),
-                ...(input.formRecords ? [input.formRecords] : []),
-                ...(input.formEditTool ? [input.formEditTool.data] : []),
-                ...(input.glossary ? [input.glossary] : []),
-                `QUESTION\n\n${input.question}`,
-              ].join("\n\n"),
-            },
-          ],
-          ...(input.formEditTool
-            ? {
-                tools: [{ ...input.formEditTool.tool, input_schema: { ...input.formEditTool.tool.input_schema } }],
-                tool_choice: { type: "auto" as const },
-              }
-            : {}),
-        };
-        // The live client always has messages.stream. Streaming with the
-        // flags off would change production on merge, so stream only when a
-        // flag that reads the stream is on. A double with no stream stays
-        // on create either way, and firstTokenMs stays null on create.
-        const useStream =
-          (chatTraceEnabled() || promptCacheEnabled() || fullManualContextEnabled()) &&
-          typeof client.messages.stream === "function";
-        if (!useStream) {
-          const created = await client.messages.create(params);
-          return Object.assign(created, { firstTokenMs: null as number | null });
-        }
-        let firstTokenMs: number | null = null;
-        const running = client.messages.stream(params);
-        running.on("text", () => {
-          if (firstTokenMs === null) firstTokenMs = Date.now() - attemptStarted;
-        });
-        // FORM_EDIT_TOOL_IN_STREAM_ENABLED: a tool call's input arrives as input_json_delta; kept per block.
-        const toolJson = new Map<number, string>();
-        if (input.formEditTool) {
-          running.on("streamEvent", (event) => {
-            if (event.type === "content_block_delta" && event.delta.type === "input_json_delta") {
-              toolJson.set(event.index, (toolJson.get(event.index) ?? "") + event.delta.partial_json);
+    /*
+     * AI TIME LIMITS (QA, 14 Nov 2026; ported from the sibling app): 45 s for
+     * the first token, then 30 s between chunks, 110 s in all (both truncation
+     * attempts and the SDK's retries included; the total is also cut to end
+     * before the route's maxDuration, `ai-route.ts`). A long answer that keeps
+     * streaming is never cut. The SDK's retry count (2) is kept. An answer that
+     * is not streamed (the create path, with the streaming flags off) has no
+     * first token to wait for: only its total limits it. See `time-limit.ts`.
+     */
+    const limits = { firstTokenMs: mainAnswerTimeoutMs(), gapMs: streamGapTimeoutMs(), totalMs: mainAnswerTotalMs() };
+    const response = await withStreamTimeLimit(callName, limits, async (timed: TimedCallOptions, watch: StreamWatch) => {
+      let attempts = 0;
+      return withTruncationRetry(
+        input.maxTokens,
+        async (maxTokens) => {
+          const attemptStarted = Date.now();
+          attempts += 1;
+          const params = {
+            model: CLAUDE_MODEL,
+            max_tokens: maxTokens,
+            thinking: { type: "adaptive" as const },
+            output_config: { effort: CLAUDE_EFFORT },
+            system: claudeSystemPayload(input.system, input.cachedContext),
+            messages: [
+              ...history,
+              {
+                role: "user" as const,
+                // Every context block and then the question, in that order: the
+                // question last is what keeps a long briefing from burying it.
+                content: [
+                  input.grounding,
+                  ...(input.reportData ? [input.reportData] : []),
+                  ...(input.personMemory ? [input.personMemory] : []),
+                  ...(input.formsLibrary ? [input.formsLibrary] : []),
+                  ...(input.verifiedRecords ? [input.verifiedRecords] : []),
+                  ...(input.formRecords ? [input.formRecords] : []),
+                  ...(input.formEditTool ? [input.formEditTool.data] : []),
+                  ...(input.glossary ? [input.glossary] : []),
+                  `QUESTION\n\n${input.question}`,
+                ].join("\n\n"),
+              },
+            ],
+            ...(input.formEditTool
+              ? {
+                  tools: [{ ...input.formEditTool.tool, input_schema: { ...input.formEditTool.tool.input_schema } }],
+                  tool_choice: { type: "auto" as const },
+                }
+              : {}),
+          };
+          // The live client always has messages.stream. Streaming with the
+          // flags off would change production on merge, so stream only when a
+          // flag that reads the stream is on. A double with no stream stays
+          // on create either way, and firstTokenMs stays null on create.
+          const useStream =
+            (chatTraceEnabled() || promptCacheEnabled() || fullManualContextEnabled()) &&
+            typeof client.messages.stream === "function";
+          if (!useStream) {
+            // Not streamed: no first-token or gap limit, only the total (the SDK's own timeout is that total too).
+            watch.idle();
+            const created = await client.messages.create(params, { signal: timed.signal, timeout: limits.totalMs, maxRetries: timed.maxRetries });
+            return Object.assign(created, { firstTokenMs: null as number | null });
+          }
+          // A truncation retry waits for its own first token again.
+          if (attempts > 1) watch.attempt();
+          let firstTokenMs: number | null = null;
+          // The SDK's own timeout only covers the wait for the response headers: the first-token limit.
+          const running = client.messages.stream(params, { signal: timed.signal, timeout: timed.timeout, maxRetries: timed.maxRetries });
+          running.on("text", () => {
+            if (firstTokenMs === null) {
+              firstTokenMs = Date.now() - attemptStarted;
+              watch.firstToken();
+            } else {
+              watch.chunk();
             }
           });
-        }
-        const streamed = await running.finalMessage();
-        return Object.assign(streamed, { firstTokenMs, ...(input.formEditTool ? { toolJson } : {}) });
-      },
-      `${ACTIVE_BRAND.assistantName} ran out of room before finishing that answer, so it was not shown. Try asking for less at once, or split the question into parts.`,
-    );
+          // AI TIME LIMITS: every stream event resets the gap limit once the answer has begun; a tool call's block is its first token.
+          running.on("streamEvent", (event) => {
+            watch.chunk();
+            if (event.type === "content_block_start" && event.content_block.type === "tool_use") watch.firstToken();
+          });
+          // FORM_EDIT_TOOL_IN_STREAM_ENABLED: a tool call's input arrives as input_json_delta; kept per block.
+          const toolJson = new Map<number, string>();
+          if (input.formEditTool) {
+            running.on("streamEvent", (event) => {
+              if (event.type === "content_block_delta" && event.delta.type === "input_json_delta") {
+                toolJson.set(event.index, (toolJson.get(event.index) ?? "") + event.delta.partial_json);
+              }
+            });
+          }
+          const streamed = await running.finalMessage();
+          return Object.assign(streamed, { firstTokenMs, ...(input.formEditTool ? { toolJson } : {}) });
+        },
+        `${ACTIVE_BRAND.assistantName} ran out of room before finishing that answer, so it was not shown. Try asking for less at once, or split the question into parts.`,
+      );
+    });
 
     const noted = {
       model: CLAUDE_MODEL,
@@ -304,6 +341,7 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
     };
     if (response.stop_reason === "refusal") {
       noteModelCall({ ...noted, subtype: "refused" });
+      logAiFailure(callName, noted.latencyMs, "refused");
       throw new AiError(
         "refused",
         `${ACTIVE_BRAND.assistantName} could not answer that question. Try rephrasing it, or ask a manager directly.`,
@@ -326,16 +364,36 @@ export async function callClaude(input: CallClaudeInput): Promise<string> {
 
     if (!text) {
       noteModelCall({ ...noted, subtype: "empty_answer" });
+      logAiFailure(callName, noted.latencyMs, "empty_answer");
       throw new AiError("model_failed", `${ACTIVE_BRAND.assistantName} returned an empty answer.`, 502);
     }
 
     noteModelCall(noted);
     return text;
   } catch (error) {
-    if (error instanceof AiError) throw error;
+    /* AI TIME LIMITS: a timeout is on the trace as one; `withStreamTimeLimit` already wrote its log line. */
+    if (isAiTimeLimitError(error)) {
+      noteModelCall({
+        model: CLAUDE_MODEL,
+        maxTokens: input.maxTokens,
+        stopReason: null,
+        latencyMs: Date.now() - started,
+        firstTokenMs: null,
+        usage: null,
+        subtype: "timeout",
+      });
+      throw error;
+    }
+    if (error instanceof AiError) {
+      // A truncation or another AiError raised inside the call: on the server log too (status and code only).
+      if (error.code === "truncated") logAiFailure(callName, Date.now() - started, error);
+      throw error;
+    }
     if (error instanceof MissingConfigurationError) {
       throw new AiError("not_configured", error.message, 503, error.missing);
     }
+    /* AI TIME LIMITS: a main-call failure goes to the server log with its route and call (status and type only). */
+    logAiFailure(callName, Date.now() - started, error);
     // The SDK error can echo the request, which carries confidential grounding
     // text. Only the class name is kept — never the body. The class, status,
     // and subtype are recorded for the trace before this object is discarded.
@@ -432,6 +490,8 @@ export async function callClaudeTool(input: {
     };
   };
   readonly maxTokens: number;
+  /** The call's name in the time-limit and failure log lines. Omitted, the tool's name. */
+  readonly callName?: string;
 }): Promise<unknown> {
   const detailed = await callClaudeToolDetailed(input);
   return detailed.input;
@@ -453,11 +513,19 @@ export async function callClaudeToolDetailed(input: {
     };
   };
   readonly maxTokens: number;
+  /** The call's name in the time-limit and failure log lines. Omitted, the tool's name. */
+  readonly callName?: string;
 }): Promise<{ input: unknown; inputTokens: number | null; outputTokens: number | null }> {
   const client = getAnthropicClient();
   const messages = input.messages.filter((message) => message.content.trim() !== "");
+  const callName = input.callName ?? input.tool.name;
+  const started = Date.now();
   try {
-    const response = await client.messages.create({
+    /*
+     * AI TIME LIMITS (QA, 14 Nov 2026; ported from the sibling app): a helper
+     * call ends by the helper limit (30 s), the SDK's retries (2) included.
+     */
+    const response = await withAiTimeLimit(callName, helperTimeoutMs(), (timed) => client.messages.create({
       model: input.model,
       max_tokens: input.maxTokens,
       system: input.system,
@@ -475,7 +543,7 @@ export async function callClaudeToolDetailed(input: {
       ],
       tool_choice: { type: "tool", name: input.tool.name },
       messages: messages.map((message) => ({ role: message.role, content: message.content })),
-    });
+    }, { signal: timed.signal, timeout: timed.timeout, maxRetries: timed.maxRetries }));
     const block = response.content.find((item) => item.type === "tool_use");
     if (!block || block.type !== "tool_use") {
       throw new AiError(
@@ -491,8 +559,14 @@ export async function callClaudeToolDetailed(input: {
       outputTokens: typeof usage?.output_tokens === "number" ? usage.output_tokens : null,
     };
   } catch (error) {
-    if (error instanceof AiError) throw error;
+    if (error instanceof AiError) {
+      // A timeout already wrote its line; any other AiError (no tool call came back) is logged here.
+      if (!isAiTimeLimitError(error)) logAiFailure(callName, Date.now() - started, error);
+      throw error;
+    }
     if (error instanceof MissingConfigurationError) throw error;
+    /* AI TIME LIMITS: a helper's failure is on the server log, even where its caller falls back quietly. */
+    logAiFailure(callName, Date.now() - started, error);
     throw new AiError(
       "model_failed",
       `${ACTIVE_BRAND.assistantName} could not reach the language model. No answer was generated.`,
@@ -524,7 +598,8 @@ export async function callClaudeToolTimed(input: Parameters<typeof callClaudeToo
   const client = getAnthropicClient();
   const messages = input.messages.filter((message) => message.content.trim() !== "");
   try {
-    const response = await client.messages.create(
+    /* AI TIME LIMITS (QA, 14 Nov 2026): the reader's own limit, now enforced on the whole call (`time-limit.ts`), still no retry. */
+    const response = await withAiTimeLimit(input.callName ?? "reader", input.timeoutMs, (timed) => client.messages.create(
       {
         model: input.model,
         max_tokens: input.maxTokens,
@@ -544,8 +619,8 @@ export async function callClaudeToolTimed(input: Parameters<typeof callClaudeToo
         tool_choice: { type: "tool" as const, name: input.tool.name },
         messages: messages.map((message) => ({ role: message.role, content: message.content })),
       },
-      { timeout: input.timeoutMs, maxRetries: 0 },
-    );
+      { signal: timed.signal, timeout: input.timeoutMs, maxRetries: 0 },
+    ), { maxRetries: 0 });
     const block = response.content.find((item) => item.type === "tool_use");
     if (!block || block.type !== "tool_use") {
       throw new AiError("model_failed", `${ACTIVE_BRAND.assistantName} could not reach the language model. No answer was generated.`, 502);

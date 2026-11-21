@@ -1,6 +1,8 @@
 import "server-only";
 
 import { getAnthropicClient } from "@/lib/ai/anthropic";
+import { withAiTimeLimit } from "@/lib/ai/time-limit";
+import { helperTimeoutMs } from "@/lib/config/ai-timeouts";
 import type { AskResponse } from "@/lib/ai/types";
 import { ACTIVE_BRAND } from "@/lib/brand";
 import { editSeesSavedFormEnabled, formEditSingleWriterEnabled, revisionSameValueEnabled } from "@/lib/config/chat-quality-flags";
@@ -373,7 +375,8 @@ export async function reviseActiveForm(input: {
    */
   const response = await withTruncationRetry(
     CLAUDE_MAX_TOKENS.detailed,
-    (maxTokens) =>
+    // AI TIME LIMITS (QA, 14 Nov 2026): each revision call ends by the helper limit, retries included (`time-limit.ts`).
+    (maxTokens) => withAiTimeLimit("chat_revision", helperTimeoutMs(), (timed) =>
       client.messages.create({
         model: CLAUDE_MODEL,
         max_tokens: maxTokens,
@@ -407,7 +410,7 @@ export async function reviseActiveForm(input: {
           },
         ],
         tool_choice: { type: "tool", name: "revise_form_fields" },
-      }),
+      }, timed)),
     "The change was cut off before it finished, so the form was not changed. Try again, or ask for one change at a time.",
   );
 
