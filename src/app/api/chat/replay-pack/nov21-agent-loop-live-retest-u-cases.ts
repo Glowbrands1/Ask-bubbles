@@ -103,6 +103,8 @@ async function createdCa(t: ReplayContext, day: string): Promise<{ thread: Retur
 
 /** Item 14's second message, word for word. */
 const EDITS_NOT_A_PICK = "this is a verbal warning. previous coaching policy manual 10-15-26";
+/** Item 16's message, word for word (the person swapped; QA's typo "recieved" kept). */
+const INCLUDE_PRIOR = "in the previously recieved coaching include that fenna prewitt signed the jba policy manual on 10-15-26";
 
 export const NOV21_AGENT_LOOP_LIVE_RETEST_U_CASES: ReplayCase[] = [
   {
@@ -200,6 +202,42 @@ export const NOV21_AGENT_LOOP_LIVE_RETEST_U_CASES: ReplayCase[] = [
       expect(reply.content).toMatch(/most recent/i);
       expect(t.checked(ids[2]!).warning_type, "the warning level was dropped").toEqual(["verbal"]);
       expect(t.values(ids[2]!).prior_actions ?? "", "the prior coaching was dropped").toMatch(/10\/15\/2026/);
+    },
+  },
+  {
+    id: "nov21-agent-loop-include-in-prior-actions-adds-only-there",
+    title: `a Corrective Action draft whose Prior actions list eight forms on file, then "${INCLUDE_PRIOR}": the manual signing is added to Prior actions after the eight entries (all kept), and the Observation is unchanged`,
+    report: `${REPORT}, item 16 (A13): the fact landed in Prior actions but was ALSO appended to the Observation, and the 8 previously listed prior CA entries were replaced instead of kept ("include" = add)`,
+    status: "fixed",
+    async run(t) {
+      start(t, "2026-11-20T16:00:00Z");
+      const dates = ["2026-09-02", "2026-09-12", "2026-09-23", "2026-10-01", "2026-10-09", "2026-10-20", "2026-10-28", "2026-11-05"];
+      dates.forEach((date, index) => caOnFile(t, `ca-fenna-prior-${index + 1}`, "Fenna Prewitt", date));
+      const { thread, id } = await createdCa(t, "11/19");
+      const before = t.values(id);
+      expect((before.prior_actions ?? "").split(";").length, `the draft does not list the eight forms on file (the case proves nothing):\n${before.prior_actions}`).toBe(8);
+      const model = loopStandIn((view): LoopDecision => {
+        const read = lastResult(view, "read_form") as { values?: Record<string, { untrusted_text?: string }> } | null;
+        if (!read) return { tool: "read_form", input: { instance_id: id } };
+        const now = (key: string) => read.values?.[key]?.untrusted_text ?? "";
+        const added = "JBA Policy Manual — signed 10/15/2026";
+        if (!lastResult(view, "edit_form")) {
+          // Without the rule, the live model put the fact in both fields and wrote Prior actions as the new entry alone.
+          const values = /never replace the entries already there/.test(view.system)
+            ? { prior_actions: `${now("prior_actions")}; ${added}` }
+            : { prior_actions: added, observation: `${now("observation")}\nFenna Prewitt signed the JBA policy manual on 10/15/2026.` };
+          return { tool: "edit_form", input: { instance_id: id, values } };
+        }
+        return { text: `Added to **Prior actions**: ${added}.` };
+      });
+      t.loopModel!(model);
+      await thread.say(INCLUDE_PRIOR);
+      const after = t.values(id);
+      for (const entry of (before.prior_actions ?? "").split(";").map((part) => part.trim())) {
+        expect(after.prior_actions ?? "", `an earlier prior action was dropped: ${entry}`).toContain(entry);
+      }
+      expect(after.prior_actions ?? "", "the manual signing is not in Prior actions").toMatch(/10\/15\/2026/);
+      expect(after.observation, "the Observation changed").toBe(before.observation);
     },
   },
 ];
