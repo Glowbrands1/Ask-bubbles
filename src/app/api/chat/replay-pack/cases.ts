@@ -119,6 +119,21 @@ export interface ReplayContext {
   typeOnForm(instanceId: string, values: Record<string, string>): void;
   /** Production's race: the next message arrives before the drafting model's values are saved. */
   draftNotYetSaved(instanceId: string): void;
+  /*
+   * THE AGENT LOOP (AGENT_LOOP_ENABLED; ported from the sibling app's pack, QA 21 Nov 2026). Off in this app's production,
+   * so a case that never calls `loopModel` runs exactly as before.
+   */
+  /** Whether AGENT_LOOP_ENABLED is on for this run. */
+  loopOn?(): boolean;
+  /**
+   * The loop's model for this case (`loop-stand-in.ts`), and the loop turned on for this case's signed-in manager only
+   * (AGENT_LOOP_ENABLED on, AGENT_LOOP_USERS listing them); both switches are restored after the case.
+   */
+  loopModel?(standIn: import("./loop-stand-in").LoopStandIn): void;
+  /** Fault injection: from now on, the loop's roster read (find_staff) fails, as a directory outage would. */
+  rosterFails?(): void;
+  /** Watches the loop's entry point (`runAgentTurn`): how many turns entered it since, and `stop` to unwatch. */
+  watchLoopEntries?(): { entered(): number; stop(): void };
 }
 
 export interface DirectoryRow {

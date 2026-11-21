@@ -110,6 +110,18 @@ const state = vi.hoisted(() => ({
 }));
 
 /*
+ * AGENT_LOOP_ENABLED (the loop port from the sibling app, QA 21 Nov 2026): the case's stand-in model (`t.loopModel`), the
+ * roster fault (`t.rosterFails`), and the two switches as they were before the case turned the loop on for its signed-in
+ * manager (restored after every case). This app's production runs the loop for nobody yet (`production-flags.json`:
+ * AGENT_LOOP_ENABLED off), so a case that never calls `t.loopModel` runs exactly as before.
+ */
+const loop = vi.hoisted(() => ({
+  standIn: null as import("./loop-stand-in").LoopStandIn | null,
+  rosterFails: false,
+  env: null as null | { enabled: string | undefined; users: string | undefined },
+}));
+
+/*
  * STEP B'S FORM-PATCH MODEL (FORM_PATCH_REDUCER_ENABLED), scripted per case:
  * `t.patchWrites([...])` lists the model's raw outputs in the order the calls
  * are made; `null`, or a call past the end, is the call's fallback, and the
@@ -557,7 +569,11 @@ vi.mock("@/lib/forms/employee-roster", async (importOriginal) => {
       // No position on record unless the case gives one: the title is the manager's or asked.
       actual.scopeRoster(state.directory as never, scope).map((person) => ({ ...person, title: (person as { positionName?: string | null }).positionName ?? null, primaryLocationName: "Kearney, NE" })),
     // The turn's roster limit (`withRosterLimit`), as production's loadScopedRoster applies it.
-    loadScopedRoster: async (scope: AccessScope | null) => actual.withinRosterLimit(actual.scopeRoster(state.directory as never, scope)),
+    // AGENT_LOOP_ENABLED: find_staff reads the roster here too (`appConfig().roster.readScoped`); `t.rosterFails()` makes it fail, as a directory outage would.
+    loadScopedRoster: async (scope: AccessScope | null) => {
+      if (loop.rosterFails) throw new Error("The employee directory could not be read.");
+      return actual.withinRosterLimit(actual.scopeRoster(state.directory as never, scope));
+    },
     loadScopedRosterResult: async (scope: AccessScope | null) => rosterResultFor(actual.scopeRoster, state.directory as never, scope),
   };
 });
@@ -578,6 +594,12 @@ const { foldName } = await import("@/lib/forms/fold-name");
 const chatRoute = await import("../route");
 const instancesRoute = await import("../../forms/instances/route");
 const draftRoute = await import("../../forms/instances/[id]/draft/route");
+/* AGENT_LOOP_ENABLED (ported from the sibling app's pack, QA 21 Nov 2026): the loop's model seam, its directory seam and its manual cache. */
+const agentLoopRun = await import("@/lib/ai/agent-loop/run");
+const { __setAgentLoopModelForTests } = agentLoopRun;
+const { forgetAgentLoopManualForTests, __setAgentLoopDirectoryForTests } = await import("@/lib/ai/agent-loop/tools");
+/** The signed-in manager every case runs as (`authorizeRequest` above): the one email a loop case lists. */
+const ACTOR_EMAIL = "qa-manager@example.test";
 
 async function call<T>(url: string, init?: RequestInit): Promise<T> {
   const request = new Request(`https://app.test${url}`, init);
@@ -848,6 +870,19 @@ function setRole(role: string | undefined) {
 afterEach(() => {
   setScope(undefined);
   setRole(undefined);
+  // The loop: off again, its switches as they were, its stand-in and seams cleared, its manual cache forgotten.
+  loop.standIn = null;
+  loop.rosterFails = false;
+  __setAgentLoopModelForTests(null);
+  __setAgentLoopDirectoryForTests(null);
+  if (loop.env) {
+    for (const [name, value] of [["AGENT_LOOP_ENABLED", loop.env.enabled], ["AGENT_LOOP_USERS", loop.env.users]] as const) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+    loop.env = null;
+  }
+  forgetAgentLoopManualForTests();
   said.answer = null;
   editTool.input = null;
   editTool.offered = 0;
@@ -951,6 +986,28 @@ function context(): ReplayContext {
           .map((row) => [String(row.field_key), (row.checked as unknown[]).map(String)]),
       ),
 
+    loopOn: () => process.env.AGENT_LOOP_ENABLED === "true",
+    /*
+     * The loop's model for this case (a stand-in, `loop-stand-in.ts`), and the loop turned on for this case's signed-in
+     * manager only: AGENT_LOOP_ENABLED on, AGENT_LOOP_USERS listing them. Unlike the sibling app, whose production runs
+     * the loop, this app's production has it off, so the case turns it on itself; both are restored after the case.
+     */
+    loopModel: (standIn) => {
+      loop.standIn = standIn;
+      // The loop's inactive_in_woven fact reads the whole directory (terminated people too) through its own seam.
+      __setAgentLoopDirectoryForTests(async () => state.directory as never);
+      __setAgentLoopModelForTests(standIn.model);
+      if (!loop.env) loop.env = { enabled: process.env.AGENT_LOOP_ENABLED, users: process.env.AGENT_LOOP_USERS };
+      process.env.AGENT_LOOP_ENABLED = "true";
+      process.env.AGENT_LOOP_USERS = ACTOR_EMAIL;
+    },
+    rosterFails: () => {
+      loop.rosterFails = true;
+    },
+    watchLoopEntries: () => {
+      const spy = vi.spyOn(agentLoopRun, "runAgentTurn");
+      return { entered: () => spy.mock.calls.length, stop: () => spy.mockRestore() };
+    },
     draftNotYetSaved: (instanceId) => {
       store.form_instance_values = store.form_instance_values.filter((row) => !(row.instance_id === instanceId && row.filled_by === "ai"));
     },
