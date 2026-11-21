@@ -33,5 +33,12 @@ describe("headings saved under another box", () => {
     expect(offenseKeyForManualHeading("Shift Replacement")).toBe("attendance_policy");
     expect(readersLineBox("Shift Replacement")).toBeNull();
     expect(withReadersLineBox("Shift Replacement, JBA Policy Manual p.37", "Shift Replacement")).toBe("Shift Replacement, JBA Policy Manual p.37");
+    // Every heading about scheduling, absence or time off, by the manual's own spelling (QA2, 21 Nov 2026).
+    for (const heading of ["Schedule Requests/General availability Changes", "Leave Requests", "Paid time Off (PTO)", "Family Medical Leave", "Bereavement Leave", "Military Leave", "Time Off to Vote or Serve as an Election Officer", "Jury Duty", "Witness Duty", "Maternity Leave"]) {
+      expect(offenseKeyForManualHeading(heading), heading).toBe("attendance_policy");
+      expect(readersLineBox(heading), heading).toBeNull();
+    }
+    // Generic sub-headings and benefits stay with item 18's rule.
+    for (const heading of ["Holiday Benefits", "Meal and Rest Policy", "Time Records"]) expect(readersLineBox(heading), heading).toBe("Standards of Conduct");
   });
 });
