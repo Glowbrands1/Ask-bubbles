@@ -88,11 +88,21 @@ const STEPS = ["review the opening procedures with Ozren Brack this week"];
  */
 const STANDARD_PLAN = "Management will review the applicable company policy with Ozren. Future policy violations may result in additional corrective action up to and including termination of employment.";
 
-function expectStepAdded(plan: string) {
+/**
+ * The loop path's standard plan names the policies the card cites. Changed on purpose (QA's live re-test, 21 Nov 2026):
+ * the pack's knowledge mock now has `officialPolicyManualVersion`, as production's provider does, so the loop reads the
+ * manual and its card cites Attendance and Late Opening; the saved plan then names them, as production saves it. Before,
+ * the loop read no manual in this pack and the plan fell back to "the applicable company policy".
+ */
+const LOOP_STANDARD_PLAN = "Management will review the Attendance and Late Opening policies with Ozren. Future policy violations may result in additional corrective action up to and including termination of employment.";
+
+const standardPlan = (loop: boolean) => (loop ? LOOP_STANDARD_PLAN : STANDARD_PLAN);
+
+function expectStepAdded(plan: string, loop: boolean) {
   expect(plan, "no Action Plan was saved (the case proves nothing)").toMatch(/Future policy violations/);
   expect(plan, `the step the manager asked for is not in the plan:\n${plan}`).toContain(STEP);
   expect(plan.indexOf(STEP), `the step is not before the closing:\n${plan}`).toBeLessThan(plan.indexOf("Future policy violations"));
-  expect(plan.replace(` ${STEP}`, ""), `the standard plan changed:\n${plan}`).toBe(STANDARD_PLAN);
+  expect(plan.replace(` ${STEP}`, ""), `the standard plan changed:\n${plan}`).toBe(standardPlan(loop));
 }
 
 const INVENTED = ["schedule a follow-up meeting in two weeks"];
@@ -111,7 +121,7 @@ export const NOV21_ACTION_PLAN_STATED_STEPS_CASES: ReplayCase[] = PATHS.flatMap(
     fixFlags: [...path.flags],
     async run(t) {
       start(t);
-      expectStepAdded(await savedPlan(t, STEPS, path.loop));
+      expectStepAdded(await savedPlan(t, STEPS, path.loop), path.loop);
     },
   },
   {
@@ -122,7 +132,7 @@ export const NOV21_ACTION_PLAN_STATED_STEPS_CASES: ReplayCase[] = PATHS.flatMap(
     fixFlags: [...path.flags],
     async run(t) {
       start(t);
-      expect(await savedPlan(t, null, path.loop)).toBe(STANDARD_PLAN);
+      expect(await savedPlan(t, null, path.loop)).toBe(standardPlan(path.loop));
     },
   },
   {
@@ -133,7 +143,7 @@ export const NOV21_ACTION_PLAN_STATED_STEPS_CASES: ReplayCase[] = PATHS.flatMap(
     fixFlags: [...path.flags],
     async run(t) {
       start(t);
-      expect(await savedPlan(t, INVENTED, path.loop)).toBe(STANDARD_PLAN);
+      expect(await savedPlan(t, INVENTED, path.loop)).toBe(standardPlan(path.loop));
     },
   },
 ]);
