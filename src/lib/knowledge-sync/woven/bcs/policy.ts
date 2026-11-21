@@ -30,7 +30,16 @@ import { BCS_COMPANY_WIDE_AUDIENCE, PROCEDURE_ALL_POSITIONS, PUBLIC_AUDIENCE, TE
  * Soap (`WOVEN_KNOWLEDGE_OWNERSHIP_REVIEW.confirmedEntityIds`) whose audience
  * is "Public" is SHARED. "Public" is Woven's broadest audience, so sharing it
  * with everyone signed in to Ask Bubbles is no wider than Woven's own; and the
- * confirmation is a reviewed code change naming that one record. Every other
+ * confirmation is a reviewed code change naming that one record.
+ *
+ * AND A POLICY LISTED FROM WOVEN'S MANAGEMENT TABLE (board f105,
+ * WOVEN_BCS_POLICY_MANAGEMENT_LIST_ENABLED): Woven's policy audience setting
+ * is `Public` or `Targeted` (verified in the sibling app), so a policy whose
+ * Audience reads exactly "Public" is for everyone in the company. Pau's ruling
+ * (22 Nov 2026, relayed by QA): "YES — Bubbles may quote any company-wide
+ * ("Public") Woven policy, like Sunny." It is SHARED (`../sync.ts`,
+ * `companyWideLabelsFor`). A Targeted policy's cell is a display summary
+ * ("All Teams 8 Positions") and stays `audience_restricted`. Every other
  * "Public" item, of any type, stays `audience_unverified`.
  */
 
@@ -40,7 +49,10 @@ function norm(label: string): string {
 
 const COMPANY_WIDE = norm(BCS_COMPANY_WIDE_AUDIENCE.label);
 
-export function bcsAudienceRestriction(audience: readonly string[] | null, record: Pick<SourceRecord, "contentType" | "entityId">): string | null {
+export function bcsAudienceRestriction(
+  audience: readonly string[] | null,
+  record: Pick<SourceRecord, "contentType" | "entityId"> & Partial<Pick<SourceRecord, "sourceMetadata">>,
+): string | null {
   const labels = (audience ?? []).map(norm).filter(Boolean);
   if (labels.length === 0) return "audience_unclear";
   for (const label of labels) {
@@ -54,6 +66,7 @@ export function bcsAudienceRestriction(audience: readonly string[] | null, recor
     }
     if (PUBLIC_AUDIENCE.test(label)) {
       if (record.contentType === "handbook" && isConfirmed(record.entityId)) continue;
+      if (record.contentType === "policy" && listedFromPolicyManagement(record)) continue;
       return "audience_unverified";
     }
     if (/^n\/?a$/.test(label)) return "audience_unclear";
@@ -77,4 +90,9 @@ export function bcsOwnershipHold(record: Pick<SourceRecord, "entityId" | "title"
 /** Whether the owner confirmed this Woven record for Buff City Soap in a reviewed code change. */
 function isConfirmed(entityId: string): boolean {
   return WOVEN_KNOWLEDGE_OWNERSHIP_REVIEW.confirmedEntityIds.some((id) => id.toLowerCase() === entityId.toLowerCase());
+}
+
+/** A policy read from `GET /Policy` (whose audience cell is Woven's Public/Targeted setting), not from a Knowledge Center card. */
+function listedFromPolicyManagement(record: Partial<Pick<SourceRecord, "sourceMetadata">>): boolean {
+  return record.sourceMetadata?.listedFrom === "policy_management";
 }

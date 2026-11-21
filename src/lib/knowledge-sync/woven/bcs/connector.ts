@@ -19,7 +19,7 @@ import { WovenShapeError, indexableFile, textDocument, verifiedFile } from "../s
 import { communicationRecord, parseCommunicationRows } from "./adapters/communications";
 import { fileLibraryRecord, parseFileLibraryRows } from "./adapters/file-library";
 import { handbookRecord, parseHandbookDownload, parseHandbookManage, parseHandbookRows } from "./adapters/handbooks";
-import { parsePolicyCards, parsePolicyDetail, policyRecord } from "./adapters/policies";
+import { parsePolicyCards, parsePolicyDetail, parsePolicyManagementList, policyManagementRecord, policyRecord } from "./adapters/policies";
 import { parseProcedureDetail, parseProcedureListing, procedureRecord, procedureText } from "./adapters/procedures";
 import { bcsOwnershipHold } from "./policy";
 import { CompanyGuardError, companyIdSelector, deferToCompanyPage, verifyCompany } from "./company-guard";
@@ -33,6 +33,7 @@ import {
   HANDBOOK_LIST_PATH,
   POLICY_LIST_BODY,
   POLICY_LIST_PATH,
+  POLICY_MANAGEMENT_LIST_PATH,
   PROCEDURE_SEARCH_PATH,
   fileLibraryDownloadPath,
   handbookManagePath,
@@ -81,6 +82,8 @@ export interface BcsConnectorOptions {
   client: WovenTeamClient;
   credentials: WovenTeamCredentials;
   downloads: { fileLibrary: boolean };
+  /** WOVEN_BCS_POLICY_MANAGEMENT_LIST_ENABLED (board f105): list policies from `GET /Policy`. Default off. */
+  policyManagementList?: boolean;
   maxBytes?: number;
 }
 
@@ -191,6 +194,12 @@ export class BuffCitySoapWovenConnector implements KnowledgeSourceConnector {
     const client = this.options.client;
     switch (contentType) {
       case "policy": {
+        if (this.options.policyManagementList) {
+          /* The management table says which policies are published and who they are for (the sibling app's mechanism). */
+          const { rows, headers } = parsePolicyManagementList(await this.withSession(() => client.getHtml(POLICY_MANAGEMENT_LIST_PATH)));
+          const published = rows.filter((r) => r.publication === "published").length;
+          return { records: rows.map(policyManagementRecord), diagnostics: { listedFrom: "policy_management", rows: rows.length, published, headers } };
+        }
         const cards = parsePolicyCards(await this.withSession(() => client.postJson(POLICY_LIST_PATH, POLICY_LIST_BODY)));
         /* Publication is unverified, so no policy is published and no detail page is needed to decide anything. */
         const records = cards.map(policyRecord);
