@@ -1349,7 +1349,8 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
          * reader: a store the reply names that the manager never named and the card does not hold goes back once; if it
          * comes back, the reply asks the store question plainly.
          */
-        if (stoppedAt === "reply" && effects.proposal?.status === "needs_location") {
+        /* The team card only: a person's card offers that person's own Woven stores (`storeOffer`), which the manager never typed. */
+        if (stoppedAt === "reply" && effects.proposal?.status === "needs_location" && effects.proposal.subject === "team") {
           const guessed = (reply: string) => storesNamedNotSaid(reply, [...input.history.filter((turn) => turn.role === "user").map((turn) => String(turn.content ?? "")), input.question], effects.proposal?.locationId ?? null);
           if (guessed(text).length > 0) {
             const again = await handBack(`[app check] Your reply names ${guessed(text).join(", ")}, but the manager named no such ${appConfig().locationWord} and the card has none. Never guess a ${appConfig().locationWord} from another word (an abbreviation, a program, a product). Ask which ${appConfig().locationWord} it is for, plainly. Then write your reply to the manager again.`);
