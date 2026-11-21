@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { keptPlanSteps, withPlanSteps } from "@/lib/forms/stated-plan-steps";
+import { statedPlanStepsEnabled } from "@/lib/config/chat-quality-flags";
 import { READERS_LINE_HEADINGS } from "@/lib/forms/readers-line-headings";
 import { TERMINATION_OPTION, withTerminationPlan } from "@/lib/forms/termination-stated";
 import { salesResultsOffenseLine, withCaChosenRule } from "@/lib/ai/ca-sales-prompt-lines";
@@ -360,6 +362,11 @@ interface DraftBody {
   cardTopic?: string;
   /** The loop card's attendance record ("absence" / "lateness" / "both"): an absence is never written up as lateness. */
   cardAttendance?: string;
+  /**
+   * STATED_PLAN_STEPS_ENABLED (ported from the sibling app's f062): the plan steps the card carried, from the loop card or
+   * the regular chat's intent reader, so it is read with or without `cardFromLoop`; re-checked before use.
+   */
+  cardPlanSteps?: unknown;
   /** The prior actions the loop's card recorded ("" for none). */
   cardPriorActions?: string;
   /** The loop card's own account (`issue`): the saved account keeps its times (`withCardTimes`) and every fact on it (`account-facts-kept.ts`). */
@@ -2713,13 +2720,22 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
       : null;
     // PLAN_PAYROLL_SENTENCE_ENABLED: the deduction the manager stated is said in the plan.
     // TERMINATION_STATED_TICKS_ENABLED: on a termination, the plan ends with the termination sentence.
-    const planValue = builtPlan && planInput
+    /*
+     * STATED_PLAN_STEPS_ENABLED (ported from the sibling app's f062, Pau via QA, 20 Nov 2026): the steps the manager stated
+     * are added before the plan's closing; the plan itself is unchanged. A loop card's steps were checked against the
+     * manager's quoted words when the card was made (its notes hold only the card's lines), so here they are only tidied and
+     * capped; the regular chat's are checked again against the notes, which are the manager's own turns (`keptPlanSteps`).
+     */
+    const cardSteps = Array.isArray(body.cardPlanSteps) ? body.cardPlanSteps.filter((step): step is string => typeof step === "string") : [];
+    const statedSteps = statedPlanStepsEnabled() ? keptPlanSteps(cardSteps, body.cardFromLoop === true ? cardSteps.join(" ") : notes) : [];
+    const standardPlanValue = builtPlan && planInput
       ? withTerminationPlan(withPayrollSentence(builtPlan, {
           answer: planInput.payroll.answer,
           amount: managerPayrollAmount(amountNotes),
           employeeName: loaded.instance.employeeName,
         }), terminationPlan)
       : builtPlan;
+    const planValue = standardPlanValue ? withPlanSteps(standardPlanValue, statedSteps, loaded.instance.employeeName) : standardPlanValue;
     const planned =
       fixedPlan && planInput && planValue && draftedAnything && !keeps(fixedPlan.key)
         ? {

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { keptPlanSteps } from "@/lib/forms/stated-plan-steps";
 import { withReadersLineBox } from "@/lib/forms/readers-line-headings";
 import { saysAmountUnknown } from "@/lib/ai/amount-unknown-ack";
 
@@ -11,6 +12,7 @@ import { appConfig } from "./app-config";
 import { isoDate, monthDayToIso, readDates, sameDate, withoutDates } from "./dates";
 import { candidateNameWords, chatFormsActor, formDateRangeFromInput, formKindFromText, ofKind } from "@/lib/forms/chat-form-records";
 import { CURRENT_MESSAGE_ID, holdsPhrase, identifiedTurns, verifyEvidence, withoutMessageIdTags, type IdentifiedTurn } from "./evidence";
+import { personNamedInRequest, requestStart } from "./person-in-request";
 import { answeredNameQuestions, answerNamesSomeoneElse, everKeptOrUsedTyped, isConfirmedSpelling, latestTurnAnswersFor, latestTurnConfirms, latestTurnKeepsOrUsesTyped, latestTurnKeepsTyped, spellingKeysConfirmedFor, spellingKeysConfirmedForName, type NameQuestionView } from "./confirmed-spelling";
 import { AFFIRMATIVE, displayName, editDistance, matchEmployeeName, nameConfirmationQuestion, readNameConfirmation, type RosterEmployee } from "@/lib/forms/employee-match";
 import { offRosterTyped } from "@/lib/forms/roster-only-names";
@@ -23,6 +25,8 @@ import { authorizeInstance, InstanceNotVisibleError, instanceListFilterFor, visi
 import { applyAssistantRevision, deleteInstance, listInstances } from "@/lib/forms/instances";
 import { countFormsOnFile } from "@/lib/forms/forms-on-file-counts";
 import {
+  cardPersonThisRequestEnabled,
+  statedPlanStepsEnabled,
   currentManualScopeEnabled,
   formEditPlainWordsEnabled,
   formEditSingleWriterEnabled,
@@ -2047,6 +2051,29 @@ function typedNameSettled(context: ToolContext, roster: readonly RosterEmployee[
 }
 
 /**
+ * The manager's words for naming a person who is not on the roster: every manager turn, as before; with
+ * CARD_PERSON_THIS_REQUEST_ENABLED, only the turns of this request (after the chat's last card and after the last turn
+ * that named a roster person: `person-in-request.ts`).
+ */
+function requestTurnsText(context: ToolContext, roster: readonly RosterEmployee[]): string {
+  if (!cardPersonThisRequestEnabled()) return managerTurns(context);
+  const turns = identifiedTurns(context.history as ChatMessage[], context.question, context.questionMessageId);
+  const rosterNames = roster.flatMap(fullNamesOf);
+  const namesRoster = (text: string) => {
+    const clean = withoutMessageIdTags(text);
+    return rosterNames.some((full) => mentionsPerson(clean, full, rosterNames));
+  };
+  const start = requestStart({ turns, namesAnother: namesRoster, cardMessageIds: [...(context.cardRecords ?? []), ...(context.earlierCard ? [context.earlierCard] : [])].map((card) => card.messageId) });
+  return turns.filter((turn) => turn.role === "user" && turn.index > start).map((turn) => withoutMessageIdTags(turn.content)).join("\n");
+}
+
+/** A name the model passed for the card is the manager's own words of this request (flag off: always true, as before). */
+function typedInThisRequest(context: ToolContext, roster: readonly RosterEmployee[], typed: string): boolean {
+  if (!cardPersonThisRequestEnabled()) return true;
+  return holdsPhrase(requestTurnsText(context, roster), typed) || latestTurnKeepsOrUsesTyped(nameQuestionView(context, roster), typed) || typedNameSettled(context, roster, typed);
+}
+
+/**
  * The general rule (QA, 16 Nov 2026, c220 and c224): a FULL name the manager typed (their own words hold it) that is
  * nobody on the roster and not a close spelling of anyone on it is taken as typed, with the card's off-roster line.
  * Only a close spelling of a roster person is asked about (ruling A); a single word still gets the use-<name> offer.
@@ -2055,7 +2082,7 @@ function fullNameTakenAsTyped(context: ToolContext, roster: readonly RosterEmplo
   const name = typed.replace(/\s+/g, " ").trim();
   if (words(name).length < 2 || namesAPlace(name) || isJobTitlePhrase(name)) return false;
   if (rosterMatches(name, roster).length > 0 || matchEmployeeName(name, roster).kind === "confirm") return false;
-  return holdsPhrase(managerTurns(context), name);
+  return holdsPhrase(requestTurnsText(context, roster), name);
 }
 
 /**
@@ -2362,6 +2389,35 @@ async function lockedForm(context: ToolContext, employee: { name: string; id?: s
 }
 
 /**
+ * CARD_PERSON_THIS_REQUEST_ENABLED: whether the manager named this roster person in THIS request (`person-in-request.ts`):
+ * the turns after the chat's last card and after the last manager turn that named a different roster person, plus a card
+ * made for them while nobody else was named since. Roster names only; the app's replies and tool notes are never read.
+ */
+function personNamedInThisRequest(context: ToolContext, row: RosterEmployee, roster: readonly RosterEmployee[], names: readonly string[]): boolean {
+  const turns = identifiedTurns(context.history as ChatMessage[], context.question, context.questionMessageId);
+  const rosterNames = roster.flatMap(fullNamesOf);
+  const others = roster.filter((person) => person.id !== row.id);
+  const ownFirst = new Set([row.firstName, row.preferredFirstName ?? ""].map((name) => name.trim().toLowerCase()).filter(Boolean));
+  /* A different roster person: their full name, or a whole first name no one else shares and that is not this person's. */
+  const namesAnother = (text: string) => {
+    const clean = withoutMessageIdTags(text);
+    if (names.some((name) => holdsPhrase(clean, name))) return false;
+    return others.some((person) =>
+      fullNamesOf(person).some((full) => mentionsPerson(clean, full, rosterNames)) ||
+      [person.firstName, person.preferredFirstName ?? ""].map((first) => first.trim()).filter((first) => first && !ownFirst.has(first.toLowerCase()) && others.filter((other) => [other.firstName, other.preferredFirstName ?? ""].some((candidate) => candidate.trim().toLowerCase() === first.toLowerCase())).length === 1).some((first) => holdsPhrase(clean, first)));
+  };
+  const key = personKey(row.id);
+  const cards = [...(context.cardRecords ?? []), ...(context.earlierCard ? [context.earlierCard] : [])];
+  return personNamedInRequest({
+    turns,
+    namesThisPerson: (text) => names.some((name) => holdsPhrase(text, name)),
+    namesAnother,
+    cardMessageIds: cards.map((card) => card.messageId),
+    personCardMessageIds: cards.filter((card) => card.employeeKey === key).map((card) => card.messageId),
+  });
+}
+
+/**
  * QA item 8 (20 Nov 2026): the manager named or picked this roster person in this chat. Named: a manager message holds
  * their full name (legal or preferred) or their whole first or preferred name (case and spacing ignored). Picked or
  * confirmed, from the server's records: a spelling confirmed as them, an answered name question that offered them (a
@@ -2370,12 +2426,22 @@ async function lockedForm(context: ToolContext, employee: { name: string; id?: s
 async function personNamedOrPicked(context: ToolContext, row: RosterEmployee, roster: readonly RosterEmployee[]): Promise<boolean> {
   const said = [...(context.history as ChatMessage[]).filter((turn) => turn.role === "user").map((turn) => withoutMessageIdTags(String(turn.content ?? ""))), context.question];
   const names = [...fullNamesOf(row), row.firstName, row.preferredFirstName ?? ""].map((name) => name.trim()).filter(Boolean);
-  if (said.some((text) => names.some((name) => holdsPhrase(text, name)))) return true;
+  /*
+   * CARD_PERSON_THIS_REQUEST_ENABLED (the outside audit's wrong-person risk, 21 Nov 2026): on, a name counts only in this
+   * request's window of the manager's turns, and an earlier card only while nobody else was named since
+   * (`person-in-request.ts`); a recorded confirmation, the card on screen and the open draft count as before.
+   */
+  const thisRequestOnly = cardPersonThisRequestEnabled();
+  const key = personKey(row.id);
+  if (thisRequestOnly) {
+    if (personNamedInThisRequest(context, row, roster, names)) return true;
+  } else if (said.some((text) => names.some((name) => holdsPhrase(text, name)))) return true;
   const view = nameQuestionView(context, roster);
   if (spellingKeysConfirmedFor(view, row.id).length > 0) return true;
   if (answeredNameQuestions(view).some((asked) => asked.offered.some((person) => person.id === row.id) && (asked.latest || !asked.open))) return true;
-  const key = personKey(row.id);
-  if ([...(context.cardRecords ?? []), context.cardOnScreen, context.earlierCard].some((card) => card?.employeeKey === key)) return true;
+  if (thisRequestOnly) {
+    if (context.cardOnScreen?.employeeKey === key) return true;
+  } else if ([...(context.cardRecords ?? []), context.cardOnScreen, context.earlierCard].some((card) => card?.employeeKey === key)) return true;
   if (!context.openFormId) return false;
   const open = await authorizeInstance(context.request, context.openFormId, "view").then(({ loaded }) => loaded.instance).catch(() => null);
   return Boolean(open && fullNamesOf(row).some((full) => samePerson(full, open.employeeName)));
@@ -2840,6 +2906,8 @@ export async function proposeForm(
     prior_actions?: unknown;
     topic?: unknown;
     topic_evidence?: unknown;
+    plan_steps?: unknown;
+    plan_evidence?: unknown;
     attendance?: unknown;
     attendance_evidence?: unknown;
     incident_time?: unknown;
@@ -2968,7 +3036,7 @@ export async function proposeForm(
       offRosterName = typed;
       effects.nameQuestion ??= { offeredIds: [], typed, asksFullName: true };
     }
-    else if (typed && !rosterMatches(typed, read.roster).length && !namesAPlace(typed) && offRosterTyped(typed, `for ${typed}`, read.roster.map(displayName)) && matchEmployeeName(typed, read.roster).kind !== "confirm") {
+    else if (typed && !rosterMatches(typed, read.roster).length && !namesAPlace(typed) && offRosterTyped(typed, `for ${typed}`, read.roster.map(displayName)) && matchEmployeeName(typed, read.roster).kind !== "confirm" && typedInThisRequest(context, read.roster, typed)) {
       employee = { name: typed, salonIds: [] };
       offRosterName = typed;
       /* The card's off_roster_name line asks the manager to check this name: recorded, so a full name next turn corrects it. */
@@ -2994,6 +3062,8 @@ export async function proposeForm(
        * names it with its heading and page.
        */
       if (!typed && !id && !effects.staffLookedUp) return askWhoFor(context, template, effects);
+      /* CARD_PERSON_THIS_REQUEST_ENABLED: a name the manager did not type in this request is no person for the card: ask who. */
+      if (typed && !id && !typedInThisRequest(context, read.roster, typed)) return askWhoFor(context, template, effects);
       /*
        * The retry guard (QA, 16 Nov 2026; the 266 re-run's c219 turn 3 ran propose_form five times): with a typed name,
        * the refusal says what to ask (find_staff's own use-<name> line), so the model asks instead of retrying.
@@ -3034,6 +3104,26 @@ export async function proposeForm(
    * model's new_form_evidence: this message's words asking for another or a new form.
    */
   const asksNewForm = verifyEvidence(input.new_form_evidence, identifiedTurns(context.history as ChatMessage[], context.question, context.questionMessageId), { thisTurnOnly: true }).ok;
+  /*
+   * CARD_PERSON_THIS_REQUEST_ENABLED (QA2's 17 Nov case, this app's old path, conv_mwk2t40v27izanu: a store manager named
+   * in the account, "<Y>, messaged <X> asking …", took the exit form from <X>, whose request set it). With a card on
+   * screen, this chat's latest card or a draft open for one person, a card for a DIFFERENT person is made only when the
+   * manager's own words ask for another form (new_form_evidence, this message) or correct the person (the name check
+   * above); a person named inside the account is never a reason. The reply keeps the first card and asks nothing new
+   * unless the manager says who.
+   */
+  if (cardPersonThisRequestEnabled() && !asksNewForm && nameCorrectedFrom === null) {
+    // The card on screen, else this chat's latest card (the rules book already asks for new_form_evidence on "a new request after an earlier card").
+    const shown = context.cardOnScreen ?? context.earlierCard ?? null;
+    const shownIsOther = Boolean(shown && (shown.employeeKey && employee.id ? shown.employeeKey !== personKey(employee.id) : shown.nameKey ? shown.nameKey !== personKey(employee.name) : false));
+    const draft = context.openFormId ? await authorizeInstance(context.request, context.openFormId, "view").then(({ loaded }) => loaded.instance).catch(() => null) : null;
+    const draftIsOther = Boolean(draft && draft.status === "draft" && draft.employeeName && !samePerson(draft.employeeName, employee.name));
+    if (shownIsOther || draftIsOther) {
+      return {
+        reason_code: "person_change_not_asked", error: `A card or draft for another person is open, and the manager did not ask for another form or say the form is for ${employee.name}. A person named inside an account (who told, who messaged, who reported) is not the form's person. Keep the open card or draft for its person and put what the manager said on it with edit_form; make a card for ${employee.name} only if the manager asks for another form for them (new_form_evidence).`,
+      };
+    }
+  }
   if (context.openFormId && (mustSeeNotConduct || !asksNewForm)) {
     const open = await authorizeInstance(context.request, context.openFormId, "view").then(({ loaded }) => loaded.instance).catch(() => null);
     if (open && open.status === "draft" && open.templateKey === key && samePerson(open.employeeName, employee.name)) {
@@ -3801,6 +3891,16 @@ export async function proposeForm(
     answerEvidence(context, input.topic_evidence, "request", evidencePerson, { requestTurnIds }).ok;
   const coachingTopic = topicKept ? askedTopic.charAt(0).toUpperCase() + askedTopic.slice(1) : null;
   /*
+   * STATED_PLAN_STEPS_ENABLED (ported from the sibling app's f062, Pau via QA, 20 Nov 2026): the Action Plan steps the
+   * manager asked for, as the model reads them, kept only on plan_evidence from a manager message of this request and only
+   * when each step's words are in that quote (`keptPlanSteps`). A record, never a word list over the manager's messages;
+   * Create adds them to the plan.
+   */
+  const askedPlanSteps = statedPlanStepsEnabled() && template.key === appConfig().formKeys.corrective && Array.isArray(input.plan_steps) && input.plan_steps.length > 0;
+  const planQuote = typeof (input.plan_evidence as { quote?: unknown } | null | undefined)?.quote === "string" ? String((input.plan_evidence as { quote: string }).quote) : "";
+  const planSteps = askedPlanSteps && answerEvidence(context, input.plan_evidence, "request", evidencePerson, { requestTurnIds }).ok ? keptPlanSteps(input.plan_steps, planQuote) : [];
+  const planStepsDropped = askedPlanSteps && planSteps.length < (input.plan_steps as unknown[]).length;
+  /*
    * QA's production audit (20 Nov 2026, item 21; a real finalized form): "did not come into her scheduled shift today at
    * 9:30" was written up as lateness ("expected to arrive on time", "Continued lateness will result …"). A Corrective
    * Action card carries what the manager described (absence, lateness or both) as the model reads it, kept only on
@@ -3959,6 +4059,7 @@ export async function proposeForm(
     ...(payroll === "yes" && amount ? { payrollDeductAmount: amount } : {}),
     ...(priorActions ? { priorActions } : {}),
     ...(coachingTopic ? { coachingTopic } : {}),
+    ...(planSteps.length > 0 ? { planSteps } : {}),
     ...(attendanceKind ? { attendanceKind } : {}),
     ...(incidentTime ? { incidentTime } : {}),
     ...(awaiting ? { awaitingIncident: true as const, supportsInlineDraft: false } : {}),
@@ -4205,6 +4306,8 @@ export async function proposeForm(
     ...(policyForms.has(template.key) && !awaiting && !askedPolicyWhole ? { policy_not_given: { note: "This card has no policy. Propose it again with policy: the one JBA Policy Manual heading that fits what happened (the headings are listed in your instructions). \"Other — <short topic>\" only for " + (otherTopicsSaid() ? otherTopicsSaid() + ", or " : "") + "when no section fits; then say so in your reply." } } : {}),
     ...(policyNotForThisCard ? { policy_copied: { heading: policyHeading, note: `${policyHeading} is the policy of another form's card in this chat, not chosen for this card. Propose the card again with the heading that fits THIS card's own account (the headings are listed in your instructions), never one copied from another form; "Other — <short topic>" when no section fits.` } } : {}),
     ...(accountGiven ? { request_words: untrusted(accountGiven) } : {}),
+    /* STATED_PLAN_STEPS_ENABLED: a plan step not kept (see `planSteps`). */
+    ...(planStepsDropped ? { plan_steps_not_kept: { kept: planSteps.length, note: "A plan step is kept only when every word of it is the manager's own, quoted in plan_evidence from this request. Pass only the steps they asked for, in their words." } } : {}),
     /* The coaching topic was not kept: say none, or name it with evidence from the manager's message (see `coachingTopic`). */
     ...(askedTopic && !topicKept ? { topic_not_kept: { note: "That topic is not the manager's words from this request (or holds the person's name), so it is not on the card. Pass topic only as the manager named it, with topic_evidence quoting it." } } : {}),
     /* c019: the account is the offense the manager named (see headingTypedIn); the reply says so, never "What happened?" about it. */
