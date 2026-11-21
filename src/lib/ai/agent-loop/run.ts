@@ -1,7 +1,7 @@
 import "server-only";
 
 import { withFullOffRosterName } from "./off-roster-line";
-import { cardTurns, personKey, readLoopRecords, replyTurns, type CardRecord, type CardSlot, type ExitOfferSlot, type NameQuestionSlot, type PersonAskedSlot } from "./card-record";
+import { cardTurns, personKey, readLoopRecords, replyTurns, type CardRecord, type CardSlot, type ExitOfferSlot, type NameQuestionSlot, type PersonAskedSlot, type TeamConfirmSlot } from "./card-record";
 import { CLAUDE_EFFORT, CLAUDE_MAX_TOKENS, CLAUDE_MODEL } from "@/lib/config/models";
 import { MissingConfigurationError, requireEnv } from "@/lib/config/server-env";
 import { mainAnswerTimeoutMs, streamGapTimeoutMs } from "@/lib/config/ai-timeouts";
@@ -24,6 +24,7 @@ import { shownCitations } from "@/lib/knowledge/empty-card-drop";
 import { dataToolHandlers, dataToolSpecs } from "./data-tools";
 import { appConfig, BUBBLES_CONFIG, type AppConfig } from "./app-config";
 import { withoutPersonPronouns } from "./reply-pronouns";
+import { replyWithShortName } from "@/lib/forms/short-name";
 import { agentLoopRules, agentLoopSystem } from "./prompt";
 import { generatedId, identifiedTurns, messageIdTag, withoutMessageIdTags } from "./evidence";
 import { agentLoopStepLimit } from "./switch";
@@ -636,13 +637,15 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
   /* PR 6: the turn's one read of the policy manual starts first, beside the chat's record read (`turnManual`). */
   const turn: TurnReads = {};
   turn.manual = manualFor(input.scopeId, turn);
-  const { cards: records, nameQuestions, personAsked, exitOffers, turns: turnRecords } = await readLoopRecords(input.conversationId, input.actor.subject, input.history.filter((turn) => turn.role === "user" && typeof turn.id === "string").map((turn) => turn.id));
+  const { cards: records, nameQuestions, personAsked, exitOffers, teamConfirms, turns: turnRecords } = await readLoopRecords(input.conversationId, input.actor.subject, input.history.filter((turn) => turn.role === "user" && typeof turn.id === "string").map((turn) => turn.id));
   const cards = cardTurns(input.history, records);
   const lastReplyIndex = input.history.findLastIndex((turn) => turn.role === "assistant" && !turn.error);
   const cardOnScreen = !input.openFormId && lastReplyIndex >= 0 ? (cards.get(lastReplyIndex) ?? null) : null;
   const cardOpenAtStart = cardOnScreen !== null;
   /* Fix batch item 6 (c124, c165): the last reply's propose_form asked who the form is for (the record, never the reply's text). */
   const whoAsked = lastReplyIndex >= 0 ? (replyTurns(input.history, personAsked).get(lastReplyIndex) ?? null) : null;
+  /* QA's code audit, coach_team C: the last reply asked the open draft's "create all?" (the record, never the reply's text). */
+  const teamAsked = lastReplyIndex >= 0 ? (replyTurns(input.history, teamConfirms).get(lastReplyIndex) ?? null) : null;
   const context: ToolContext = {
     request: input.request,
     actor: input.actor,
@@ -662,6 +665,7 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
     /* QA (16 Nov 2026; c158, c208): every card and "who is it for?" this chat's loop gave, for where THIS request started. */
     cardRecords: records,
     personAskedRecords: personAsked,
+    teamConfirmAsked: Boolean(input.openFormId && teamAsked && teamAsked.sourceKey === personKey(input.openFormId)),
     /* #1055's follow-up: the exit-form offer the last reply's tools made (its record, never the reply's text). */
     exitOffered: lastReplyIndex >= 0 ? (replyTurns(input.history, exitOffers).get(lastReplyIndex) ?? null) : null,
     /* QA's review of #1062: what each earlier loop turn finished (saved fields, a card), for a request left open. */
@@ -1330,6 +1334,19 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
     pronounsReplaced = named.replaced;
   }
   /*
+   * The sibling app's QA (20 Nov 2026, live): "Here's the Corrective Action Form for **<full name>**" and "Observation of
+   * Offense: <full name> was late on 11/18" when the reply name was the first name. With this turn's card and its one
+   * reply name, the card's full name in the reply becomes that name, except on the lines that confirm which person it is
+   * (bold, or a question; `replyWithShortName`). The off-roster line's guard below still keeps its full name.
+   */
+  let fullNamesShortened = 0;
+  const cardName = effects.proposal?.employeeName?.trim();
+  if (cardName && text && replyNames.size === 1) {
+    const short = replyWithShortName(text, cardName, [...replyNames][0]!, effects.proposal?.templateName ?? null);
+    text = short.text;
+    fullNamesShortened = short.replaced;
+  }
+  /*
    * QA's f070 (20 Nov 2026): the not-on-the-staff-list line names the full name exactly as typed (the rules book's
    * confirm-which-person lines), never the short reply name; with one such card this turn, code keeps it so
    * (`withFullOffRosterName`, the app's own sentence matched by its shape).
@@ -1344,6 +1361,7 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
     : null;
   /* Fix batch item 6: propose_form asked who the form is for, for the next turn's person asked record (no names). */
   const personAskedSlot: PersonAskedSlot | null = effects.personAsked && stoppedAt === "reply" && !effects.proposal ? { templateKey: effects.personAsked.templateKey } : null;
+  const teamConfirmSlot: TeamConfirmSlot | null = effects.teamConfirm && stoppedAt === "reply" ? { sourceKey: personKey(effects.teamConfirm.sourceInstanceId) } : null;
   /* #1055's follow-up: this turn's tools offered the exit form, for the next turn's exit offer record (one-way keys only). */
   const exitOfferSlot: ExitOfferSlot | null = effects.exitOffered && stoppedAt === "reply"
     ? { employeeKey: effects.exitOffered.employeeId ? personKey(effects.exitOffered.employeeId) : null, nameKey: personKey(effects.exitOffered.name) }
@@ -1352,7 +1370,7 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
     trace.firstTokenMs = firstTokenMs;
     trace.slots = {
       ...(trace.slots ?? {}),
-      agent_loop: { question_key: personKey(input.question), ...(cardSlot ? { card: cardSlot } : {}), ...(nameQuestionSlot ? { name_question: nameQuestionSlot } : {}), ...(personAskedSlot ? { person_asked: personAskedSlot } : {}), ...(exitOfferSlot ? { exit_offer: exitOfferSlot } : {}), steps, model_steps: modelSteps, model_calls: modelCalls, ...(turn.manualRead ? { manual_read: turn.manualRead } : {}), step_limit: limit, steps_used: stepNumber - 1 + hiddenCalls, ...(toolModelCalls > 0 ? { tool_model_calls: toolModelCalls } : {}), stopped: stoppedAt, ms: latencyMs, first_token_ms: firstTokenMs, ...(selfReview ? { self_review: selfReview } : {}), ...(draftReview ? { draft_review: draftReview } : {}), ...(levelReview ? { level_review: levelReview } : {}), ...(honestyReview ? { honesty_review: honestyReview } : {}), ...(replyUnwrapped ? { reply_unwrapped: true } : {}), ...(retriesBlocked > 0 ? { stop_retrying: retriesBlocked } : {}), ...(repeatsReused > 0 ? { repeat_calls_reused: repeatsReused } : {}), ...(pronounsReplaced > 0 ? { pronouns_replaced: pronounsReplaced } : {}) },
+      agent_loop: { question_key: personKey(input.question), ...(cardSlot ? { card: cardSlot } : {}), ...(nameQuestionSlot ? { name_question: nameQuestionSlot } : {}), ...(personAskedSlot ? { person_asked: personAskedSlot } : {}), ...(exitOfferSlot ? { exit_offer: exitOfferSlot } : {}), ...(teamConfirmSlot ? { team_confirm: teamConfirmSlot } : {}), steps, model_steps: modelSteps, model_calls: modelCalls, ...(turn.manualRead ? { manual_read: turn.manualRead } : {}), step_limit: limit, steps_used: stepNumber - 1 + hiddenCalls, ...(toolModelCalls > 0 ? { tool_model_calls: toolModelCalls } : {}), stopped: stoppedAt, ms: latencyMs, first_token_ms: firstTokenMs, ...(selfReview ? { self_review: selfReview } : {}), ...(draftReview ? { draft_review: draftReview } : {}), ...(levelReview ? { level_review: levelReview } : {}), ...(honestyReview ? { honesty_review: honestyReview } : {}), ...(replyUnwrapped ? { reply_unwrapped: true } : {}), ...(retriesBlocked > 0 ? { stop_retrying: retriesBlocked } : {}), ...(repeatsReused > 0 ? { repeat_calls_reused: repeatsReused } : {}), ...(pronounsReplaced > 0 ? { pronouns_replaced: pronounsReplaced } : {}), ...(fullNamesShortened > 0 ? { full_names_shortened: fullNamesShortened } : {}) },
     };
   }
 

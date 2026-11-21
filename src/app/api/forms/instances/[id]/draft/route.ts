@@ -133,7 +133,9 @@ import {
   isExitDocumentKeys,
   withoutDerivedKeys,
 } from "@/lib/forms/exit-draft";
-import { EXIT_DERIVED_KEYS } from "@/lib/forms/exit-facts";
+import { EXIT_DERIVED_KEYS, readExitFacts } from "@/lib/forms/exit-facts";
+import { terminationDetails } from "@/lib/forms/exit-termination-details";
+import { EXIT_DETAIL_FIELDS, EXIT_OPTION, EXIT_TYPE_GROUP } from "@/lib/forms/exit-library";
 import { describesIncident, describesMoreThanTheRequest } from "@/lib/forms/corrective-action-intake";
 import {
   SPECIFIC_SECTION_BOXES,
@@ -251,7 +253,7 @@ import {
 } from "@/lib/forms/follow-up-observation";
 import { TEAM_SUBJECT_RULES, isTeamSubject } from "@/lib/forms/team-subject";
 import { teamCardNotes } from "@/lib/forms/whole-team-coaching";
-import { applyEmployeeName, employeeNameRules } from "@/lib/forms/employee-reference";
+import { applyEmployeeName, employeeFirstName, employeeNameRules } from "@/lib/forms/employee-reference";
 import {
   LEGACY_PREVIOUS_ACTION_DATE_KEY,
   NO_PRIOR_ACTION,
@@ -738,6 +740,16 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
      * kept only when it is in the manager's own lines of the notes, never the card's lines (`notesWithoutCardLines`).
      */
     const exitDetails = isExitForm ? readExitDetails(notes, businessToday()) : null;
+    /*
+     * A STATED TERMINATION HAS NO RESIGNATION DATE (port from the sibling app, QA's f077, 20 Nov 2026): where the exit
+     * form's Create stated an involuntary separation (the agent loop's termination, written as the manager's statement),
+     * the reader read "notice given 11/17" as a resignation date. Only then is the reader's resignation date left out;
+     * every other exit form reads as before.
+     */
+    const statedInvoluntary = isExitForm && (loaded.values ?? []).some(
+      (row) => row.provenance?.source === "manager_statement" && row.fieldKey === EXIT_TYPE_GROUP && row.checked.includes(EXIT_OPTION.immediateInvoluntary),
+    );
+    if (exitDetails && statedInvoluntary) exitDetails.resignationDate = null;
     if (exitDetails?.permanentAddress) {
       const { addressTypedIn } = await import("@/lib/forms/exit-details");
       // A loop card's lines ("What happened: …") are the agent loop's words too (ported from the sibling app, item 19).
@@ -1983,7 +1995,7 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
       checked: isExitForm ? withoutDerivedKeys(modelWarning.checked) : modelWarning.checked,
     });
 
-    const exit = isExitForm
+    const exitDrafted = isExitForm
       ? applyExitDraft({
           values: attributions.values,
           checked: sensitive.checked,
@@ -1995,6 +2007,15 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
           },
         })
       : null;
+    /*
+     * QA's f077 (port from the sibling app, 20 Nov 2026): on a stated involuntary separation the AI-written Details said
+     * "<P> gave notice on 11/17", which reads as a resignation. Reads the MODEL's Details, never the manager's words: a
+     * sentence saying the employee gave notice, resigned or quit is taken out, and the notice date the manager gave is said
+     * in the form's own terms ("Notice date recorded: 11/17").
+     */
+    const exit = exitDrafted && statedInvoluntary && typeof exitDrafted.values.details === "string"
+      ? { ...exitDrafted, values: { ...exitDrafted.values, details: terminationDetails(exitDrafted.values.details, readExitFacts(notes, businessToday()).noticeGiven) } }
+      : exitDrafted;
 
     /*
      * ========================================================================
@@ -2795,6 +2816,25 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
           const timed = withCardTimes(account, body.cardAccount.slice(0, 2_000));
           const facts = withAccountFactsKept(timed, body.cardAccount.trim().slice(0, 6_000), loaded.instance.employeeName);
           if (facts.text !== account) loopCardDraft.values = { ...loopCardDraft.values, [accountKey]: citation ? `${facts.text}\n\n${citation}` : facts.text };
+        }
+      }
+      /*
+       * The sibling app's QA (20 Nov 2026, live): a loop card's Create saved "<full name> was late to work on November 18,
+       * 2026." in Observed, then the first name in Expectation and Going Forward. Pau's rule is the first name: in the
+       * drafted prose fields (never the manual's quoted policy fields, never one the manager typed), the employee's full
+       * name becomes the first name (`short-name.ts`).
+       */
+      if (loaded.instance.employeeName) {
+        const first = employeeFirstName(loaded.instance.employeeName);
+        if (first) {
+          const { withShortName } = await import("@/lib/forms/short-name");
+          const prose = fields.filter((field) => !field.policyGrounded && !DERIVED_POLICY_FIELD_KEYS.has(field.key) && !keeps(field.key)).map((field) => field.key);
+          for (const key of prose) {
+            const value = loopCardDraft.values[key];
+            if (typeof value !== "string" || value.trim() === "") continue;
+            const named = withShortName(value, loaded.instance.employeeName, first);
+            if (named.replaced > 0) loopCardDraft.values = { ...loopCardDraft.values, [key]: named.text };
+          }
         }
       }
       /*

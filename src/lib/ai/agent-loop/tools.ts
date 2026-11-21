@@ -129,6 +129,8 @@ export interface ToolContext {
   /** QA (16 Nov 2026; c158, c208): every card this chat's loop made, and every "who is it for?" it asked, oldest first. */
   readonly cardRecords?: readonly CardRecord[];
   readonly personAskedRecords?: readonly PersonAskedRecord[];
+  /** QA's code audit, coach_team C: the last reply asked the open Coaching draft's "create all?" (the server's record). */
+  readonly teamConfirmAsked?: boolean;
   /** QA (#1055's follow-up): the exit-form offer the last reply's tools made (its record), or null. Never read from the reply. */
   readonly exitOffered?: ExitOfferRecord | null;
   /** QA's review of #1062: each earlier loop turn's record (saved fields, a card), oldest first. */
@@ -734,6 +736,8 @@ export interface ToolEffects {
   nameLines?: Record<string, string>;
   /** Fix batch item 6: propose_form asked who this form is for (no person yet), for the record. */
   personAsked?: { templateKey: string };
+  /** coach_team asked "create all?" for this open Coaching draft this turn, for the record. */
+  teamConfirm?: { sourceInstanceId: string };
   /** QA (#1055's follow-up): this turn's tools offered the exit form for this person (the exit_offer record). */
   exitOffered?: { employeeId: string | null; name: string };
   /** find_staff ran this turn: a person was named, so a card without one is not "nobody named" (item 6). */
@@ -2847,7 +2851,16 @@ export async function proposeForm(
     const lastCard = [...context.history].reverse().find((message) => message.role === "assistant" && (message.formProposal || /\*\*Observation of Offense:\*\*/.test(String(message.content))));
     const onScreen = lastCard?.formProposal?.issue ?? /\*\*Observation of Offense:\*\*\s*(.+)/.exec(String(lastCard?.content ?? ""))?.[1]?.trim() ?? "";
     const next = typeof input.what_happened === "string" ? input.what_happened : "";
-    if (!onScreen.trim() || !next.trim() || addPlacement(onScreen, next).changed.length > 0) return { reword_paused: true, note: REWORD_PAUSED.note };
+    /*
+     * The sibling app's QA (20 Nov 2026): the card on screen names its person by the short name ("Fenna left …"); the
+     * model's account may still say the full name ("Fenna Prewitt left …"). That is the same sentence, not a rewording.
+     */
+    const roster = await rosterFor(context.actor.scope);
+    const row = typeof input.employee_id === "string" && roster.kind === "read" ? roster.roster.find((candidate) => candidate.id === input.employee_id) : undefined;
+    const names = [lastCard?.formProposal?.employeeName, typeof input.employee_name === "string" ? input.employee_name : null, ...(row ? fullNamesOf(row) : [])].map((name) => name?.trim() ?? "").filter(Boolean);
+    const { withShortName } = await import("@/lib/forms/short-name");
+    const nextShort = names.reduce((text, name) => withShortName(text, name, name.split(/\s+/)[0]!).text, next);
+    if (!onScreen.trim() || !next.trim() || (addPlacement(onScreen, next).changed.length > 0 && addPlacement(onScreen, nextShort).changed.length > 0)) return { reword_paused: true, note: REWORD_PAUSED.note };
   }
   /* HARD GUARD (STAFF_PICKER): a form asked for a whole staff is never one card for everyone. */
   if ((await import("@/lib/forms/staff-picker")).isBareWholeStaff(context.question) || (await import("@/lib/forms/staff-picker")).asksForWholeStaff(context.question)) {
@@ -3084,6 +3097,15 @@ export async function proposeForm(
    */
   const addressRead = (await import("@/lib/forms/exit-details")).withoutUntypedAddresses(accountRead.text, managerText);
   let whatHappened = addressRead.text.trim().slice(0, 2_000);
+  /*
+   * The sibling app's QA (20 Nov 2026): the person's full name in the model's account becomes the reply name as it comes
+   * in, so every check below compares it with the earlier card's account (already shortened) on the same terms. A second
+   * turn's "Fenna Prewitt left …, Fenna also …" read against the first card's "Fenna left …" was taken as a rewording.
+   */
+  if (whatHappened && employee.name) {
+    const short = replyNameFor(employee.name, read.kind === "read" ? read.roster : [], extractEmployeeNames(managerTurns(context)), employee.id ?? null);
+    whatHappened = (await import("@/lib/forms/short-name")).withShortName(whatHappened, employee.name, short).text;
+  }
   /* The incident's own words (this person's turns, read below) are checked against the account once they are known. */
   const asked = managerContext(context.history as ChatMessage[], { id: context.questionMessageId, content: context.question });
   /* THIS request's turns (QA, 14 Nov 2026; THIS_PERSONS_TURNS behaviour): an earlier incident in the chat never feeds this card. */
@@ -3912,6 +3934,20 @@ export async function proposeForm(
     ...(awaiting ? { awaitingIncident: true as const, supportsInlineDraft: false } : {}),
   };
   /*
+   * THE CARD'S ACCOUNT CALLS THE PERSON BY THE SHORT NAME (the sibling app's QA, 20 Nov 2026, live): "ca for <full name>,
+   * late 11/18" got the account "<full name> was late on 11/18.", and the drafter carried the full name into Observed.
+   * The card's own full name in its account becomes the reply name (`replyNameFor`: the first name, or the full name
+   * when someone else shares it; `short-name.ts`). The card's name field keeps the full name.
+   */
+  if (card.issue && card.employeeName) {
+    const short = replyNameFor(card.employeeName, read.kind === "read" ? read.roster : [], extractEmployeeNames(managerTurns(context)), employee.id ?? null);
+    const named = (await import("@/lib/forms/short-name")).withShortName(card.issue, card.employeeName, short);
+    if (named.replaced > 0) {
+      card.issue = named.text;
+      whatHappened = named.text;
+    }
+  }
+  /*
    * THE JOB TITLE IS THIS PERSON'S (TITLE_OF_THE_EMPLOYEE, TITLE_NOT_SPEAKERS_MANAGER, EXIT_OTHER_PERSON_NOT_SUBJECT;
    * parity gaps #33, #34, #39): from the roster row's Woven title, never read off the whole chat, where it can be the
    * manager's ("my DM told me"), a coworker's or a letter signer's. A name not on the roster gets none; the manager fills it.
@@ -3943,6 +3979,22 @@ export async function proposeForm(
     if (unplaced !== card.issue && unplaced !== "") {
       card.issue = unplaced;
       whatHappened = unplaced;
+    }
+  }
+  /*
+   * THE CARD'S ACCOUNT NAMES THE PERSON TOO (the sibling app's QA live retest, 20 Nov 2026): the card's issue read "Her
+   * shift lead, <L>, told her to clock out early and she refused." The reply's pronoun pass (`reply-pronouns.ts`) runs on
+   * the card's account with the card's own reply name, as on the reply's account line.
+   */
+  if (card.issue && card.employeeName) {
+    const { withoutPersonPronouns } = await import("./reply-pronouns");
+    const name = replyNameFor(card.employeeName, read.kind === "read" ? read.roster : [], extractEmployeeNames(managerTurns(context)), employee.id ?? null);
+    const others = await otherPeopleNamed(context, card.issue, name).catch(() => [] as string[]);
+    const reporters = await trustedReporters(context).catch(() => [] as string[]);
+    const named = withoutPersonPronouns(card.issue, name, others, managerTurns(context), reporters);
+    if (named.replaced > 0) {
+      card.issue = named.text;
+      whatHappened = named.text;
     }
   }
   card.employeeRole = employee.id ? await rosterTitle(context.actor.scope, employee.id) : null;
@@ -4323,11 +4375,14 @@ function isShownCardId(context: ToolContext, effects: ToolEffects, id: string): 
  */
 export async function coachTeam(context: ToolContext, effects: ToolEffects): Promise<ToolResult> {
   if (context.openFormId) {
-    const { coachingForEveryoneTurn } = await import("@/lib/forms/coaching-for-everyone");
-    const turn = await coachingForEveryoneTurn({ request: context.request, question: context.question, history: context.history as ChatMessage[], activeInstanceId: context.openFormId, onCreated: () => {
+    const { coachingForEveryone } = await import("@/lib/forms/coaching-for-everyone");
+    const turn = await coachingForEveryone({ request: context.request, question: context.question, history: context.history as ChatMessage[], activeInstanceId: context.openFormId, confirmationAsked: context.teamConfirmAsked === true, onCreated: () => {
       effects.draftsCreated = (effects.draftsCreated ?? 0) + 1;
     } });
-    if (turn) return { app_reply: untrusted(turn.content), note: "Say app_reply to the manager as given, every line: it holds the people, the counts and the exact words the next step reads." };
+    if (turn) {
+      if (turn.askedConfirmation) effects.teamConfirm = { sourceInstanceId: context.openFormId };
+      return { app_reply: untrusted(turn.response.content), note: "Say app_reply to the manager as given, every line: it holds the people, the counts and the exact words the next step reads." };
+    }
   }
   const { wholeTeamRequest } = await import("@/lib/forms/whole-team-coaching");
   /*
