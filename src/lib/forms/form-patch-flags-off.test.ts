@@ -235,11 +235,19 @@ function sources(dir: string): string[] {
  */
 const L10_ASSISTANT = ["src/features/l10/assistant/", "src/app/api/l10/"];
 const isL10 = (path: string) => L10_ASSISTANT.some((dir) => path.split("\\").join("/").startsWith(dir));
+/*
+ * Changed on purpose (the agent loop port, 21 Nov 2026; the sibling app's 14 Nov exception, Pau: the agent loop uses the
+ * Vercel AI SDK like L10). The HR chat's tool loop (AGENT_LOOP_ENABLED, default off) is the second reviewed exception:
+ * its module loads the AI SDK only by `await import()`. The check that chat loads the loop only behind its flag comes
+ * with the route branch that loads it.
+ */
+const AGENT_LOOP = "src/lib/ai/agent-loop/run.ts";
+const isAgentLoop = (path: string) => path.split("\\").join("/") === AGENT_LOOP;
 
 describe("the AI SDK is imported only by the form-patch call module (and Step A's policy-pick call)", () => {
   it("no other production source imports it", () => {
     const needles = ['from "ai"', "from 'ai'", 'import("ai")', "import('ai')", "@ai-sdk/anthropic"];
-    const offenders = sources("src").filter((path) => path !== ONLY && path !== ALSO && !isL10(path) && needles.some((needle) => readFileSync(path, "utf8").includes(needle)));
+    const offenders = sources("src").filter((path) => path !== ONLY && path !== ALSO && !isL10(path) && !isAgentLoop(path) && needles.some((needle) => readFileSync(path, "utf8").includes(needle)));
     expect(offenders).toEqual([]);
   });
 
