@@ -4213,7 +4213,14 @@ export async function proposeForm(
   const readerTypeTicked = template.key === appConfig().formKeys.exit && typeof input.exit_how === "string"
     ? await (async () => {
         const [{ readExitFacts, exitFactValues }, library] = await Promise.all([import("@/lib/forms/exit-facts"), import("@/lib/forms/exit-library")]);
-        return (exitFactValues(readExitFacts(requestWords, today)).checked[library.EXIT_TYPE_GROUP] ?? []).length > 0;
+        /*
+         * QA's Bubbles re-run (22 Nov 2026, B6): "she gave 2 weeks notice and is fulfilling them" ticked Submitted & Fulfilled
+         * Notice AND the model's exit_how "Did not fulfill required 14 day / 30 day notice". The template's Resignation Details
+         * are ONE set of boxes split into two groups only for the page's layout (`exit-library.ts`), so a tick the reader
+         * makes in either group is the card's one decision, and exit_how is not carried.
+         */
+        const checked = exitFactValues(readExitFacts(requestWords, today)).checked;
+        return [library.EXIT_TYPE_GROUP, library.EXIT_NOTICE_GROUP].some((group) => (checked[group] ?? []).length > 0);
       })()
     : false;
   const exitHow = template.key === appConfig().formKeys.exit && !exitTermination && !readerTypeTicked && typeof input.exit_how === "string" && EXIT_HOW.has(input.exit_how) && exitHowQuote !== "" && answerEvidence(context, input.exit_how_evidence, "request", evidencePerson, { requestTurnIds }).ok
