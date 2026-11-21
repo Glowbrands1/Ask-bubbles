@@ -20,6 +20,13 @@ const FOLDER = "src/lib/ai/policy-from-manual/";
  */
 const L10_ASSISTANT = ["src/features/l10/assistant/", "src/app/api/l10/"];
 const isL10 = (path: string) => L10_ASSISTANT.some((dir) => path.split("\\").join("/").startsWith(dir));
+/*
+ * Changed on purpose (21 Nov 2026, the agent loop port; Pau: the loop uses the Vercel AI SDK, as in the sibling app):
+ * the HR chat's tool loop (AGENT_LOOP_ENABLED, default off) is a reviewed exception. It loads the AI SDK only by
+ * `await import()`, and chat loads it only behind its flag (checked in src/lib/forms/form-patch-flags-off.test.ts).
+ */
+const AGENT_LOOP = "src/lib/ai/agent-loop/run.ts";
+const isAgentLoop = (path: string) => path.split("\\").join("/") === AGENT_LOOP;
 /** Test support (the manual fixture helper) is not production code. */
 const TEST_SUPPORT = "src/test/";
 
@@ -36,7 +43,7 @@ function sources(dir: string): string[] {
 describe("the AI SDK is loaded only by the two call modules, dynamically", () => {
   it("no other production source imports `ai` or `@ai-sdk/anthropic`", () => {
     const needles = ['from "ai"', "from 'ai'", 'import("ai")', "import('ai')", "@ai-sdk/anthropic"];
-    const offenders = sources("src").filter((path) => !CALL_MODULES.includes(path) && !isL10(path) && needles.some((needle) => readFileSync(path, "utf8").includes(needle)));
+    const offenders = sources("src").filter((path) => !CALL_MODULES.includes(path) && !isL10(path) && !isAgentLoop(path) && needles.some((needle) => readFileSync(path, "utf8").includes(needle)));
     expect(offenders).toEqual([]);
   });
 
