@@ -253,7 +253,7 @@ import {
 } from "@/lib/forms/follow-up-observation";
 import { TEAM_SUBJECT_RULES, isTeamSubject } from "@/lib/forms/team-subject";
 import { teamCardNotes } from "@/lib/forms/whole-team-coaching";
-import { applyEmployeeName, employeeNameRules } from "@/lib/forms/employee-reference";
+import { applyEmployeeName, employeeFirstName, employeeNameRules } from "@/lib/forms/employee-reference";
 import {
   LEGACY_PREVIOUS_ACTION_DATE_KEY,
   NO_PRIOR_ACTION,
@@ -2816,6 +2816,25 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
           const timed = withCardTimes(account, body.cardAccount.slice(0, 2_000));
           const facts = withAccountFactsKept(timed, body.cardAccount.trim().slice(0, 6_000), loaded.instance.employeeName);
           if (facts.text !== account) loopCardDraft.values = { ...loopCardDraft.values, [accountKey]: citation ? `${facts.text}\n\n${citation}` : facts.text };
+        }
+      }
+      /*
+       * The sibling app's QA (20 Nov 2026, live): a loop card's Create saved "<full name> was late to work on November 18,
+       * 2026." in Observed, then the first name in Expectation and Going Forward. Pau's rule is the first name: in the
+       * drafted prose fields (never the manual's quoted policy fields, never one the manager typed), the employee's full
+       * name becomes the first name (`short-name.ts`).
+       */
+      if (loaded.instance.employeeName) {
+        const first = employeeFirstName(loaded.instance.employeeName);
+        if (first) {
+          const { withShortName } = await import("@/lib/forms/short-name");
+          const prose = fields.filter((field) => !field.policyGrounded && !DERIVED_POLICY_FIELD_KEYS.has(field.key) && !keeps(field.key)).map((field) => field.key);
+          for (const key of prose) {
+            const value = loopCardDraft.values[key];
+            if (typeof value !== "string" || value.trim() === "") continue;
+            const named = withShortName(value, loaded.instance.employeeName, first);
+            if (named.replaced > 0) loopCardDraft.values = { ...loopCardDraft.values, [key]: named.text };
+          }
         }
       }
       /*
