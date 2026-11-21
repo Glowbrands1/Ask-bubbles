@@ -364,13 +364,7 @@ async function answerQuestionTraced(
   // STORE_ALIAS_ENABLED: a store named the managers' way ("dodge ne") is read as its roster name.
   // MANAGER_FORM_CHOICE_ENABLED: "needs CA", "write ca" are read as the form the manager chose.
   const read = withFormTypeSwitch(withAdditionalStore(withManagerFormChoice(withStoreAliases(withTerseSlots(withNameBeforeTitle(withTypoReadingCopy(await withFirstNameAnswerFor(request, actor), names))))), actor));
-  /*
-   * STATED_PLAN_STEPS_ENABLED (ported from the sibling app's f062, Pau via QA, 20 Nov 2026): the turn keeps the plan
-   * steps its intent reader kept, and a Corrective Action card built this turn carries them (`planSteps`); Create adds
-   * them to the plan. Off, the turn is answered exactly as before.
-   */
-  const body = () => (statedPlanStepsEnabled() ? withPlanStepsTurn(async () => withTurnPlanSteps(await answerQuestionBody(read, actor, memory))) : answerQuestionBody(read, actor, memory));
-  if (!chatTraceEnabled()) return body();
+  if (!chatTraceEnabled()) return answerQuestionBody(read, actor, memory);
   const draft = openChatTrace({
     conversationId: request.conversationId,
     messageId: request.questionMessageId,
@@ -380,7 +374,17 @@ async function answerQuestionTraced(
   });
   // FORM_EDIT_TOOL_IN_STREAM_ENABLED: slots.form_edit, keys and reasons only.
   if (request.formEditTool) draft.formEdit = request.formEditTool.trace;
-  return finishChatTrace(draft, body);
+  return finishChatTrace(draft, () => answerQuestionBody(read, actor, memory));
+}
+
+/*
+ * STATED_PLAN_STEPS_ENABLED (ported from the sibling app's f062, Pau via QA, 20 Nov 2026): the turn keeps the plan
+ * steps its intent reader kept, and a Corrective Action card built this turn carries them (`planSteps`); Create adds
+ * them to the plan. Off, the turn is answered exactly as before (`answerQuestionTurn`).
+ */
+function answerQuestionBody(request: AskRequest, actor: ChatActor, memory: { memoryOwnerId?: string } = {}): Promise<AskResponse> {
+  if (!statedPlanStepsEnabled()) return answerQuestionTurn(request, actor, memory);
+  return withPlanStepsTurn(async () => withTurnPlanSteps(await answerQuestionTurn(request, actor, memory)));
 }
 
 /** STATED_PLAN_STEPS_ENABLED: a Corrective Action card built this turn carries the steps its intent reader kept. */
@@ -390,7 +394,7 @@ function withTurnPlanSteps(answered: AskResponse): AskResponse {
 }
 
 /** Last on every path: the Corrective Action card's Action Plan is the manager's or none. */
-async function answerQuestionBody(
+async function answerQuestionTurn(
   request: AskRequest,
   actor: ChatActor,
   memory: { memoryOwnerId?: string } = {},
