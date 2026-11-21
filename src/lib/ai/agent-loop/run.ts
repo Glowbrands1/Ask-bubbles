@@ -1,3 +1,4 @@
+import { storesNamedNotSaid, withoutStoreGuess } from "./store-guess";
 import "server-only";
 
 import { withFullOffRosterName, withOneInactiveLine } from "./off-roster-line";
@@ -1340,6 +1341,20 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
           else {
             if (promises(text)) text = text.split(/(?<=[.!?])\s+/).filter((sentence) => !PROMISES_LATER_WORK.test(sentence)).join(" ").trim();
             if (earlierDraft(text)) text = text.split(/(?<=[.!?])\s+/).filter((sentence) => !speaksOfEarlierDraft(sentence)).join(" ").trim();
+          }
+        }
+        /*
+         * QA's Bubbles re-run (22 Nov 2026, A8): with a card that has no store yet, the reply named stores nobody had named
+         * ("which Sioux Falls location …, W 41st St or E 18th St?" from "SFS", ship from store). Read by the app's own store
+         * reader: a store the reply names that the manager never named and the card does not hold goes back once; if it
+         * comes back, the reply asks the store question plainly.
+         */
+        if (stoppedAt === "reply" && effects.proposal?.status === "needs_location") {
+          const guessed = (reply: string) => storesNamedNotSaid(reply, [...input.history.filter((turn) => turn.role === "user").map((turn) => String(turn.content ?? "")), input.question], effects.proposal?.locationId ?? null);
+          if (guessed(text).length > 0) {
+            const again = await handBack(`[app check] Your reply names ${guessed(text).join(", ")}, but the manager named no such ${appConfig().locationWord} and the card has none. Never guess a ${appConfig().locationWord} from another word (an abbreviation, a program, a product). Ask which ${appConfig().locationWord} it is for, plainly. Then write your reply to the manager again.`);
+            if (again) text = again;
+            if (guessed(text).length > 0) text = [withoutStoreGuess(text, guessed(text)), `Which ${appConfig().locationWord} is this for?`].filter(Boolean).join("\n\n");
           }
         }
       }

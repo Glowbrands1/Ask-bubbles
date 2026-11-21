@@ -4769,6 +4769,14 @@ function isShownCardId(context: ToolContext, effects: ToolEffects, id: string): 
  * - WITH NO DRAFT OPEN, "a coaching form for all team members" (or a salon-wide expectation) is the team Coaching card,
  *   "All team members" at one salon (`whole-team-coaching.ts` + `buildProposal`, WHOLE_TEAM_COACHING), never a refusal.
  */
+/*
+ * QA's Bubbles re-run (22 Nov 2026, A8): "coaching is on sfs operations …" (ship from store) got "which Sioux Falls
+ * location is this for, W 41st St or E 18th St?": the model read "SFS" as a city. A store comes only from a place the
+ * manager named; with none named, the team card asks from all their stores, in these words.
+ */
+const teamStoreQuestion = () => `Which ${locationWord()} is this for?`;
+const TEAM_STORE_NOTE = "The card has no store yet. End your reply with store_question, exactly. Never name, guess or narrow the stores from a word the manager did not give as a store (an abbreviation, a program, a product); the card's own store list shows them all.";
+
 export async function coachTeam(context: ToolContext, effects: ToolEffects): Promise<ToolResult> {
   if (context.openFormId) {
     const { coachingForEveryone } = await import("@/lib/forms/coaching-for-everyone");
@@ -4817,7 +4825,7 @@ export async function coachTeam(context: ToolContext, effects: ToolEffects): Pro
       status: card.status,
       ready: card.status === "ready",
       store: card.locationId ? salonLabel(card.locationId) : null,
-      ...(card.status === "needs_location" ? { choose_store_from: (card.authorizedLocationIds ?? []).map((id) => ({ id, name: salonLabel(id) })) } : {}),
+      ...(card.status === "needs_location" ? { choose_store_from: (card.authorizedLocationIds ?? []).map((id) => ({ id, name: salonLabel(id) })), store_question: teamStoreQuestion(), store_note: TEAM_STORE_NOTE } : {}),
       form_date: card.formDate ?? null,
       observation: card.issue ?? null,
       create_offered: card.supportsInlineDraft,
@@ -4894,7 +4902,7 @@ async function updateTeamCard(context: ToolContext, effects: ToolEffects, before
       status: card.status,
       ready: card.status === "ready",
       store: card.locationId ? salonLabel(card.locationId) : null,
-      ...(card.status === "needs_location" ? { choose_store_from: (card.authorizedLocationIds ?? []).map((id) => ({ id, name: salonLabel(id) })) } : {}),
+      ...(card.status === "needs_location" ? { choose_store_from: (card.authorizedLocationIds ?? []).map((id) => ({ id, name: salonLabel(id) })), store_question: teamStoreQuestion(), store_note: TEAM_STORE_NOTE } : {}),
       form_date: card.formDate ?? null,
       create_offered: card.supportsInlineDraft,
     },
