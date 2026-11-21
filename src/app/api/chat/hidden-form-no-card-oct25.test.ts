@@ -233,8 +233,14 @@ describe("acceptance: a hidden interview form opens no card (QA, 25 Oct 2026)", 
     bag.guess = "coaching";
     const [reply] = await replay([TANNING_INTERVIEW]);
     expect(reply!.formProposal).toBeUndefined();
-    expect(reply!.content).toMatch(NOT_PUBLISHED);
+    /*
+     * CHANGED ON PURPOSE (Pau, 21 Nov 2026): the Tanning Consultant Interview was removed from this app's library and
+     * its matcher went with it, so these words no longer name a form and the reply is not "not published" — Bubbles
+     * asks which form is needed. Still no card, and no Coaching Form in its place.
+     */
+    expect(reply!.content).toMatch(/Which form do you need\?/);
     expect(reply!.content).not.toMatch(A_CARD);
+    expect(reply!.content).not.toMatch(/tanning/i);
     expect(reply!.content).not.toContain("create a tanning consultant interview form for");
   });
 

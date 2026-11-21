@@ -41,9 +41,10 @@ import type { FormBlock, FormDocument } from "./document";
  *   3  Answers left behind in the Round 2 file by whoever last used it are not
  *      part of the blank form and are not reproduced. See that builder.
  *
- * Typos in the source are NOT corrected — see the core-values question in the
- * Tanning Consultant form. Rewriting the business's own words, even obviously
- * accidental ones, is a decision for the business.
+ * Typos in the source are NOT corrected. Rewriting the business's own words,
+ * even obviously accidental ones, is a decision for the business. (The
+ * reference platform's consultant interview was removed from this library on
+ * 21 Nov 2026, Pau; its key is retired in `config/company/forms/retired.ts`.)
  */
 
 /* -------------------------------------------------------------- helpers --- */
@@ -430,125 +431,6 @@ export function secondRoundManagementInterviewDocument(): FormDocument {
   };
 }
 
-/* ------------------------------------------------------ tanning consultant --- */
-
-export function tanningConsultantInterviewDocument(): FormDocument {
-  return {
-    paper: "letter",
-    blocks: [
-      { kind: "letterhead", brand: BRAND, title: "Tanning Consultant Interview Form" },
-      ...applicantInformation(),
-
-      { kind: "section", label: "Qualities to Observe Throughout Interview" },
-      {
-        kind: "checkbox_group",
-        key: "qualities_observed",
-        options: [
-          { key: "outgoing", label: "Outgoing" },
-          { key: "competitive", label: "Competitive" },
-          { key: "likeable", label: "Likeable" },
-          { key: "hard_working", label: "Hard Working" },
-        ],
-        responsibility: "manager",
-        columns: 2,
-      },
-
-      { kind: "section", label: "Interview Questions" },
-      ...question(
-        "about_yourself",
-        "1. Tell me about yourself and why you’re interested in working at Buff City Soap.",
-      ),
-      ...question(
-        "resume",
-        "2. Can you walk me through your resume and highlight your most recent roles?",
-      ),
-      ...question(
-        "availability",
-        "3. Describe your availability and any scheduling restrictions.",
-      ),
-      ...question(
-        "customer_service",
-        "4. Describe a time you delivered excellent guest service and what made it stand out.",
-      ),
-      ...question(
-        "busy_day",
-        "5. Think back to a busy day when you were helping several guests at once. How did you keep things running smoothly and make sure everyone felt taken care of?",
-      ),
-      ...question(
-        "sales_approach",
-        "6. This role includes recommending products and services to guests. How comfortable are you with sales, and what’s your approach?",
-      ),
-      ...question(
-        "accountability",
-        "7. Give me an example of a time you were accountable for your results—what was the situation and outcome?",
-      ),
-      /*
-       * QUESTION 8 IS TRANSCRIBED AS WRITTEN, apostrophes and all. "Id like",
-       * "youve" and the double hyphen are in the source document. They are the
-       * business's own words on a form the business issues, and correcting them
-       * here would put a quiet edit into a hiring record; whoever owns the form
-       * can fix the Word file and this follows.
-       */
-      {
-        kind: "paragraph",
-        text: "8. Our company has five core values. Id like to hear about a time in your past experiences--work, school, or personal where youve shown one of these in action.",
-      },
-      /*
-       * THE HEADING NAMES NO COMPANY (QA, 25 Oct 2026). The source printed the
-       * sibling company's name before "Core Values"; under the Buff City Soap
-       * letterhead that named the wrong company. "Core Values" is the JBA
-       * Policy Manual's own heading for these same five values (p.7), the
-       * manual Ask Bubbles cites, so the values themselves are unchanged.
-       */
-      {
-        kind: "reference",
-        label: "Core Values",
-        body: [
-          "Nothing’s Impossible – We approach challenges with creativity and determination instead of excuses.",
-          "Work Hard, Have Fun – We bring energy, positivity, and joy to doing our best work.",
-          "We Speak Up – We share ideas, concerns, and feedback openly and respectfully.",
-          "Own the Outcome – We take responsibility for results, not just tasks.",
-          "Win Together – We succeed as a team, celebrating collective achievements over individual credit.",
-        ],
-      },
-      { kind: "field", field: field("core_values_notes", "Notes", "manager", "long_text") },
-      ...question(
-        "teammate_disagreement",
-        "9. Give me an example of a time when you and a teammate disagreed on how to get something done. How did you handle it, and what was the outcome?",
-      ),
-      ...question(
-        "manager_unavailable",
-        "10. Give me an example of when you faced a challenge without your manager immediately available. How did you handle it, and what was the outcome?",
-      ),
-      ...question(
-        "skills_for_the_role",
-        "11. What skills or experiences make you confident you’ll succeed in this role?",
-      ),
-      ...question(
-        "essential_functions",
-        "12. This position requires key functions such as standing for extended periods, lifting up to 25 lbs., operating a computer, and overseeing daily store operations. Are you able to perform these essential functions, with or without reasonable accommodation?",
-      ),
-
-      { kind: "section", label: "Closing" },
-      {
-        kind: "checkbox_group",
-        key: "closing_checklist",
-        options: [
-          {
-            key: "reviewed_duties",
-            label: "Reviewed job duties, cleaning requirements, and sales expectations",
-          },
-          { key: "reviewed_pay", label: "Reviewed pay structure and bonus potential" },
-        ],
-        responsibility: "manager",
-        columns: 2,
-      },
-
-      ...closingRecommendation("Hire"),
-    ],
-  };
-}
-
 /* ------------------------------------------------ prescreen / phone screen --- */
 
 /**
@@ -650,26 +532,6 @@ export const HIRING_TEMPLATE_SEEDS: TemplateSeed[] = [
     revision: 3,
     revisionNote: "Published from the 04. Prescreen Form - Phone Interview source document.",
     bundledPdfName: "Prescreen Form - Phone Interview.pdf",
-  },
-  {
-    key: "tanning-consultant-interview",
-    name: "Tanning Consultant Interview Form",
-    shortName: "TC Interview",
-    description:
-      "The in-store interview for a Tanning Consultant. Twelve questions through service, sales, accountability, the core values and the essential job functions.",
-    category: "hiring",
-    layoutFamily: "interview",
-    requiredPermission: "create_hiring_form",
-    displayOrder: 11,
-    document: tanningConsultantInterviewDocument(),
-    variants: [],
-    /*
-     * 4: the core-values heading names no company (QA, 25 Oct 2026). Hidden
-     * templates are still seeded, so the row gets the new wording too.
-     */
-    revision: 4,
-    revisionNote: "Published from the 03. Tanning Consultant Interview Form source document.",
-    bundledPdfName: "Tanning Consultant Interview Form.pdf",
   },
   {
     key: "management-interview-round-1",

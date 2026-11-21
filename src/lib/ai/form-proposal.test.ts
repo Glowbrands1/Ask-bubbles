@@ -1319,7 +1319,7 @@ describe("PICK. an ambiguous request offers structured choices", () => {
 
 /**
  * ============================================================================
- * THE FOUR HIRING FORMS ARE WITHHELD FROM THE CHOOSER
+ * THE HIRING FORMS ARE WITHHELD FROM THE CHOOSER
  * ============================================================================
  *
  * The business asked for the Hiring & Interview forms to stop appearing among
@@ -1350,14 +1350,15 @@ describe("HIDE. the hiring forms are not offered as choices", () => {
     });
   }
 
+  // Three, not four: the Tanning Consultant Interview Form was removed from the library and its key retired (the
+  // sibling company's role; Pau, 21 Nov 2026), so no summary carries it. The three left are still withheld.
   const HIRING = [
     hiring("prescreen-phone-interview", "Prescreen / Phone Interview Form", 10),
-    hiring("tanning-consultant-interview", "Tanning Consultant Interview Form", 11),
     hiring("management-interview-round-1", "First Round Management Interview Form", 12),
     hiring("management-interview-round-2", "Second Round Management Interview Form", 13),
   ];
 
-  it("offers none of the four, visible or collapsed", async () => {
+  it("offers none of the three, visible or collapsed", async () => {
     const { proposals } = await load([template(), dpoa(), ...HIRING]);
     const response = await proposals.proposeFormForTurn(
       turn(BUTTON, { role: "district_manager" }),

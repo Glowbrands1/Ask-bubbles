@@ -735,7 +735,9 @@ describe("a first name plus a stated role names the employee", () => {
   it("takes the role in the words the business uses", () => {
     for (const [sentence, name] of [
       ["Marco is a Team Member", "Marco"],
-      ["Dana was an FTTC last year", "Dana"],
+      // Was "Dana was an FTTC last year": the FTTC title left this app's job titles with the rest of the sibling
+      // company's consultant role (Pau, 21 Nov 2026). The same rule, on a title Buff City Soap uses.
+      ["Dana was an ASD last year", "Dana"],
       ["Priya is our new Salon Director", "Priya"],
     ] as const) {
       expect(propose([userTurn(sentence)], "coaching form please").employeeName, sentence).toBe(

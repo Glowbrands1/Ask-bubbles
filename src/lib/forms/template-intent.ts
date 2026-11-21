@@ -338,10 +338,6 @@ const TEMPLATE_INTENT: { key: string; matchers: string[] }[] = [
     ],
   },
   {
-    key: "tanning-consultant-interview",
-    matchers: ["tanning consultant interview", "tc interview"],
-  },
-  {
     key: "management-interview-round-1",
     matchers: [
       "first round management interview",
@@ -1970,7 +1966,8 @@ const EPP_ROLE_TEMPLATES: { key: string; roles: string[] }[] = [
     roles: ["sdit", "salon director in training", "salon director-in-training", "store director in training", "store director-in-training"],
   },
   { key: "tsd-epp", roles: ["tsd", "training salon director", "training store director"] },
-  { key: "fttc-epp", roles: ["fttc", "full time tanning consultant", "full-time tanning consultant"] },
+  // The sibling company's full-time role is not named here (Pau, 21 Nov 2026); the EPP itself is hidden.
+  { key: "fttc-epp", roles: ["fttc"] },
 ];
 
 /**
@@ -1997,7 +1994,7 @@ export function eppTemplateForRole(text: string): string | null {
  * and Ask Bubbles asked who the form was about, having just been told. Capitalising
  * the form's name is the most natural way to ask for one, and it broke employee
  * resolution on every template that has two capitalised words in its name:
- * "Disciplinary Plan", "Policy Review", "Tanning Consultant Interview".
+ * "Disciplinary Plan", "Policy Review", "Prescreen Phone Interview".
  *
  * DERIVED FROM THE MATCHERS ABOVE rather than typed out again, so a template
  * whose naming is added there is protected here without a second edit. The
@@ -2009,7 +2006,7 @@ export function eppTemplateForRole(text: string): string | null {
  * stop list already holds the pronouns.
  */
 const LIBRARY_NAME_WORDS = [
-  "prescreen", "phone", "interview", "tanning", "consultant", "management",
+  "prescreen", "phone", "interview", "consultant", "management",
   "round", "first", "second", "performance", "epp", "sdit", "tsd", "dmit",
   "asd", "fttc", "employee", "plan", "report", "record", "template", "bubbles",
   "salon", "location", "store",

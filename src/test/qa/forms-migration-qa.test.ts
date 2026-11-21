@@ -214,7 +214,6 @@ const FORMS: readonly QaForm[] = [
   { key: "demotion", phrase: "Create a demotion form for Jordan Testperson, from manager to sales associate effective 10/12.", creator: "location_manager", edits: ["reason", "reason"], edit: "revision" },
   { key: "position-transfer", phrase: "Create a position transfer form for Jordan Testperson, transferring from store 12 to store 18.", creator: "location_manager", edits: ["reason", "reason"], edit: "revision" },
   { key: "prescreen-phone-interview", phrase: "Create a prescreen phone interview form for Jordan Testperson.", creator: "location_manager", edits: [], edit: "editor" },
-  { key: "tanning-consultant-interview", phrase: "Create a tanning consultant interview form for Jordan Testperson.", creator: "location_manager", edits: [], edit: "editor", hidden: true },
   { key: "management-interview-round-1", phrase: "Create a first round management interview form for Jordan Testperson.", creator: "location_manager", edits: [], edit: "editor", hidden: true },
   { key: "management-interview-round-2", phrase: "Create a second round management interview form for Jordan Testperson.", creator: "location_manager", edits: [], edit: "editor", hidden: true },
 ];
@@ -593,8 +592,10 @@ beforeEach(async () => {
 /* ------------------------------------------------------------ the matrix --- */
 
 /*
- * HIDDEN IN THIS DEPLOYMENT (QA, 25 Oct 2026). The Tanning Consultant Interview
- * Form and both management interviews are the sibling company's own. Their
+ * HIDDEN IN THIS DEPLOYMENT (QA, 25 Oct 2026). Both management interviews are
+ * the sibling company's own. (So was the Tanning Consultant Interview Form,
+ * hidden with them; it was removed from the library and its key retired on
+ * 21 Nov 2026, Pau, so it is no longer in this matrix.) Their
  * rows, versions and content stay, and the content steps of this matrix (02,
  * 03, 10, 11, 14 …) still check them; but nothing lists them and nothing
  * creates a form from them, so the listing and creation steps check that
@@ -940,8 +941,17 @@ describe.each(FORMS)("$key", (form) => {
 });
 
 describe("the matrix covers the whole migrated library", () => {
-  it("names all seventeen forms, once each", () => {
+  // Sixteen, not seventeen: the Tanning Consultant Interview was removed from the library (the sibling company's role;
+  // Pau, via QA, 21 Nov 2026). Its key is retired, so an installed row is switched off, never deleted
+  // (`lib/forms/retired-templates.test.ts`).
+  it("names all sixteen forms, once each", () => {
     expect(FORMS.map((form) => form.key).sort()).toEqual(MIGRATED_TEMPLATE_SEEDS.map((seed) => seed.key).sort());
-    expect(FORMS).toHaveLength(17);
+    expect(FORMS).toHaveLength(16);
+  });
+
+  it("no longer ships the Tanning Consultant Interview, and retires its key", () => {
+    expect(MIGRATED_TEMPLATE_SEEDS.map((seed) => seed.key)).not.toContain("tanning-consultant-interview");
+    expect(TEMPLATE_SEEDS.map((seed) => seed.key)).not.toContain("tanning-consultant-interview");
+    expect(RETIRED_TEMPLATE_KEYS).toContain("tanning-consultant-interview");
   });
 });
