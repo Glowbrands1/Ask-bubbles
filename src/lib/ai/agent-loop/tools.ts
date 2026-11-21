@@ -4218,7 +4218,7 @@ export async function instanceCreatedFromProposal(context: Pick<ToolContext, "ac
   try {
     const templates = await creatableTemplates(context.actor.role);
     const { cardInstanceId } = await import("@/lib/forms/instances");
-    const { conversationKeyOf } = await import("@/lib/forms/conversation-key");
+    const { conversationKeyOf } = await import("@/lib/forms/conversation-draft");
     const conversationKey = conversationKeyOf({ conversationId: context.conversationId });
     const ids = [
       ...new Set(

@@ -21,10 +21,25 @@ const ASKED = /Payroll deduction amount\**\s*\?/;
 
 type Turn = { readonly role: string; readonly content: string };
 
-/** "i dont know the amount", "not sure of the amount", "idk the amount". */
-export function saysAmountUnknown(text: string): boolean {
+/** The last assistant turn asked for the Payroll deduction amount. */
+export function askedTheAmount(history: readonly { readonly role: string; readonly content: unknown }[] | undefined): boolean {
+  const lastAssistant = [...(history ?? [])].reverse().find((turn) => turn.role === "assistant")?.content ?? "";
+  return ASKED.test(String(lastAssistant));
+}
+
+/**
+ * "i dont know the amount", "not sure of the amount", "idk the amount". With `history` (the agent loop, ported from the
+ * sibling app): also only right after the app asked the amount, or with `amountOpen` when the caller knows payroll is
+ * Yes and the amount is the open question. Called with the text alone, as before.
+ */
+export function saysAmountUnknown(
+  text: string,
+  history?: readonly { readonly role: string; readonly content: unknown }[],
+  options: { readonly amountOpen?: boolean } = {},
+): boolean {
   const line = (text ?? "").trim().split("\n").pop()?.trim().replace(/[.!]+$/, "") ?? "";
-  return line.length <= 60 && UNKNOWN_AMOUNT.test(line);
+  if (!(line.length <= 60 && UNKNOWN_AMOUNT.test(line))) return false;
+  return history === undefined || options.amountOpen === true || askedTheAmount(history);
 }
 
 export function withAmountUnknownAck(response: AskResponse, request: AskRequest): AskResponse {

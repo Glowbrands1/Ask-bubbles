@@ -533,8 +533,18 @@ export async function findRecentAssistantDraft(input: {
  * row the first one made. No other create is affected: without a card id the
  * database chooses the id, as before.
  */
-export function cardInstanceId(createdBy: string, templateKey: string, proposalId: string): string {
-  const bytes = Buffer.from(createHash("sha256").update(`form-card\u0000${createdBy}\u0000${templateKey}\u0000${proposalId}`).digest().subarray(0, 16));
+export function cardInstanceId(
+  createdBy: string,
+  templateKey: string,
+  proposalId: string,
+  /** The conversation the card is in (port from the sibling app): the same card in another chat is another form. */
+  conversationKey?: string | null,
+): string {
+  const conversation = conversationKey?.trim() ?? "";
+  const material = conversation
+    ? `form-card\u0000${createdBy}\u0000${templateKey}\u0000${proposalId}\u0000${conversation}`
+    : `form-card\u0000${createdBy}\u0000${templateKey}\u0000${proposalId}`;
+  const bytes = Buffer.from(createHash("sha256").update(material).digest().subarray(0, 16));
   // An RFC 4122 shape (version 5, variant 10xx), so the column accepts it as a uuid.
   bytes[6] = (bytes[6]! & 0x0f) | 0x50;
   bytes[8] = (bytes[8]! & 0x3f) | 0x80;
@@ -745,6 +755,8 @@ export async function saveInstanceValues(
   instanceId: string,
   submitted: Partial<DraftValues>,
   actor: string,
+  /** Where the edit came from, for the event row (port from the sibling app): "chat" when the agent loop wrote a value the manager stated in chat. Absent: the event is as before. */
+  options: { readonly via?: "chat" } = {},
 ): Promise<{
   rejected: { key: string; reason: string }[];
   /** What was stored, after any required closing was re-attached. */
@@ -805,6 +817,7 @@ export async function saveInstanceValues(
     fields: Object.keys(result.values).length,
     groups: Object.keys(result.checked).length,
     rejected: result.rejected,
+    ...(options.via ? { via: options.via } : {}),
   });
 
   return { rejected: result.rejected, values };
@@ -1469,7 +1482,7 @@ export interface DeletionActor {
   /** The app user (`FormsActor.id`). */
   id: string;
   role: string | null;
-  via: "route" | "chat" | "demo_sweep";
+  via: "route" | "chat" | "agent_loop" | "demo_sweep";
 }
 
 /**
