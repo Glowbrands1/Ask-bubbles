@@ -65,7 +65,10 @@ const ALLOW_LIST: readonly Allowed[] = [
     file: "src/app/api/forms/instances/route.ts",
     fn: "applyCardFacts",
     writer: "applyStatedFacts",
-    count: 3,
+    // Changed on purpose (21 Nov 2026, the agent loop port): 3 → 5. The loop card's own payroll amount and its exit
+    // card's lines (payroll answer, separation type and reason, or Additional Details), as in the sibling app's Create.
+    // Still one write per stated fact, at creation, onto the new form; only for a card that carries `fromAgentLoop`.
+    count: 5,
     reason: "Create: the card's answers stated at creation, written once onto a new, empty form (design: create is step 6).",
   },
   {

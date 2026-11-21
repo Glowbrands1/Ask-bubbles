@@ -1011,6 +1011,11 @@ export function formsGuideEnabled(): boolean {
 }
 
 export const CHAT_QUALITY_FLAG_NAMES = [
+  // Loop port, Phase 2 (ported from the sibling app at QA's direction, 21 Nov 2026; all default off, nothing reads them yet but switch.ts).
+  "AGENT_LOOP_ENABLED",
+  "CURRENT_MANUAL_SCOPE_ENABLED",
+  "MANUAL_SECTION_DEDUPE_ENABLED",
+  "NEAR_MISS_NEVER_SEATED_ENABLED",
   // coding 2: OTHER_POLICY_AGREES and OTHER_NOT_A_POLICY_NAME (ported from the sibling app at QA's direction, 14 Nov 2026; default off).
   "OTHER_POLICY_AGREES_ENABLED",
   "OTHER_NOT_A_POLICY_NAME_ENABLED",
@@ -3871,6 +3876,15 @@ export function payrollAmountSameMessageEnabled(): boolean {
 }
 
 /**
+ * PAYROLL_CLAUSE_NOT_ACCOUNT_ENABLED (port from the sibling app, where it is on; default off here). The agent loop's
+ * account loses a bare payroll answer ("$20 payroll deduct applies", "yes payroll but I don't know the amount") and the
+ * app's own "Payroll deduction amount: $X." line (`lib/ai/payroll-clause-not-account.ts`). Off, the text as it was.
+ */
+export function payrollClauseNotAccountEnabled(): boolean {
+  return envFlag("PAYROLL_CLAUSE_NOT_ACCOUNT_ENABLED");
+}
+
+/**
  * PRIOR_ACTIONS_NO_SIGNED_ENABLED (QA, a location manager's chat, 5 Nov 2026; default off). "this is a verbal
  * warning. previous coaching policy manual 10-15-26" drafted Prior actions that said the earlier steps were
  * SIGNED; nothing was ever signed or given. Rule (Pau / QA): list only finalized forms, and never say "signed"
@@ -5984,4 +5998,49 @@ export function formsOnFileDateRangeEnabled(): boolean {
  */
 export function formsOnFileCountsEnabled(): boolean {
   return envFlag("FORMS_ON_FILE_COUNTS_ENABLED");
+}
+
+/*
+ * ============================================================================
+ * THE AGENT LOOP'S OWN FLAGS (loop port, Phase 2; ported from the sibling app, QA, 21 Nov 2026)
+ * ============================================================================
+ *
+ * The flags the sibling app's agent loop reads that this app did not have (its GLOBAL_SALON_ASK_ENABLED is this app's
+ * GLOBAL_STORE_ASK_ENABLED / globalStoreAskEnabled, already here). Each defaults OFF and is listed as "off" in
+ * production-flags.json. Until the loop itself is ported (Phase 3+4) only `agent-loop/switch.ts` reads
+ * AGENT_LOOP_ENABLED, and nothing on today's chat path imports it, so nothing a manager sees changes.
+ */
+
+/**
+ * AGENT_LOOP_ENABLED (same name as the sibling app): the HR chat answered by one model with tools, step by step, until
+ * it writes the reply (`lib/ai/agent-loop/`, ported later). Only for the signed-in users listed in AGENT_LOOP_USERS;
+ * with that list unset or empty, nobody (`agent-loop/switch.ts`). Off, every turn is answered exactly as before.
+ */
+export function agentLoopEnabled(): boolean {
+  return envFlag("AGENT_LOOP_ENABLED");
+}
+
+/**
+ * CURRENT_MANUAL_SCOPE_ENABLED (same name as the sibling app): after a match, keep the current JBA Policy Manual edition
+ * and collapse identical sections (`knowledge/current-manual-scope.ts`). Off, the rows the database returned are used as
+ * they are.
+ */
+export function currentManualScopeEnabled(): boolean {
+  return envFlag("CURRENT_MANUAL_SCOPE_ENABLED");
+}
+
+/**
+ * MANUAL_SECTION_DEDUPE_ENABLED (same name as the sibling app): one chunk per section heading among the current year's
+ * manuals. Off, two copies of the same section with different text both stay.
+ */
+export function manualSectionDedupeEnabled(): boolean {
+  return envFlag("MANUAL_SECTION_DEDUPE_ENABLED");
+}
+
+/**
+ * NEAR_MISS_NEVER_SEATED_ENABLED (same name as the sibling app): in the agent loop's find_staff, a close spelling is
+ * never seated as the person; it is asked about, with the option to keep the name as typed. Off, as before.
+ */
+export function nearMissNeverSeatedEnabled(): boolean {
+  return envFlag("NEAR_MISS_NEVER_SEATED_ENABLED");
 }

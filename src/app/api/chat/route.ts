@@ -113,7 +113,9 @@ import {
   addedDetailKeptEnabled,
   lateOpeningNeedsOpeningEnabled,
 } from "@/lib/config/chat-quality-flags";
-import { streamWhenSlow } from "@/lib/api/streamed-response";
+import { progressChannel, streamWhenSlow, wantsProgress, type ProgressChannel } from "@/lib/api/streamed-response";
+import { agentLoopFor, agentLoopSkipReason, loopCarriedOnly } from "@/lib/ai/agent-loop/switch";
+import { chatTraceDraft } from "@/lib/ai/chat-trace-store";
 import { finalReplyWithoutMarkers } from "@/lib/ai/source-note";
 import { LONG_MESSAGE_LIMIT } from "@/lib/chat/message-limit";
 import { emptyReplyError, isEmptyReply } from "@/lib/ai/empty-reply";
@@ -154,11 +156,15 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** SPEND_GUARD_ALL_CALLS_ENABLED: this route's Claude calls are counted (`ai/spend-meter.ts`). Off, as before. */
 export async function POST(request: Request) {
   // CHAT_RESPONSE_STREAM_ENABLED: a slow answer is streamed so nothing cuts it off at 30 s. See `api/streamed-response.ts`.
-  if (chatResponseStreamEnabled()) return streamWhenSlow(() => withSpendMeter("chat", () => postChat(request)));
+  if (chatResponseStreamEnabled()) {
+    /* The agent loop's progress lines (ported from the sibling app): only when the browser asks AND the loop answers this turn (enabled in its branch below). */
+    const progress = wantsProgress(request) ? progressChannel() : undefined;
+    return streamWhenSlow(() => withSpendMeter("chat", () => postChat(request, progress)), progress);
+  }
   return withSpendMeter("chat", () => postChat(request));
 }
 
-async function postChat(request: Request) {
+async function postChat(request: Request, progress?: ProgressChannel) {
   try {
     assertLiveMode();
     assertNoConfigurationProblems();
@@ -246,6 +252,55 @@ async function postChat(request: Request) {
     if (capped) {
       await closeTurn(turnId, { category: "unclassified", succeeded: true, latencyMs: Date.now() - askedAt });
       return NextResponse.json({ ...finalReplyWithoutMarkers(capped), turnId });
+    }
+
+    /*
+     * AGENT_LOOP_ENABLED (the loop port from the sibling app, 21 Nov 2026; Pau: his account first, AGENT_LOOP_USERS):
+     * the turn answered by the tool loop (`lib/ai/agent-loop/`), for every user or only AGENT_LOOP_USERS. After
+     * authentication, the rate limit, the open turn and the spend guard above; instead of every handler and reply
+     * rewrite below. The loop's reply is returned as the model wrote it. Off (or not a listed user), this branch is never
+     * taken, and the loop's module (and the AI SDK it loads) is never loaded.
+     *
+     * AGENT_LOOP_SKIPPED: a turn carrying something the loop does not take yet (attachments, report context, a pending
+     * copy, an answer mode) goes to today's path, and the trace says why (`agent-loop/switch.ts`).
+     */
+    if (agentLoopFor(context.identity.email)) {
+      const loopSkip = agentLoopSkipReason(parseAskRequest(body));
+      if (loopSkip) {
+        const trace = chatTraceDraft();
+        if (trace) trace.slots = { ...(trace.slots ?? {}), agent_loop_skipped: loopSkip };
+      } else try {
+        const parsedForLoop = parseAskRequest(body);
+        let loopTools: readonly string[] = [];
+        /* The loop's tool steps as screen statuses (display only: never the reply, history or a trace). */
+        progress?.enable();
+        const looped = await (await import("@/lib/ai/agent-loop/run")).runAgentTurn({
+          request,
+          actor: context.identity,
+          question: parsedForLoop.question,
+          questionMessageId: parsedForLoop.questionMessageId,
+          history: parsedForLoop.history,
+          scopeId: activeKnowledgeCorpus(),
+          today: businessToday(),
+          conversationId: parsedForLoop.conversationId,
+          openFormId: parsedForLoop.activeFormInstanceId ?? null,
+          onTools: (tools) => {
+            loopTools = tools;
+          },
+          ...(progress ? { onProgress: (status: string) => progress.emit(status) } : {}),
+        });
+        /* What the turn carried that the loop reads another way (`loopCarriedOnly`): noted, never a reason to skip. */
+        const carried = loopCarriedOnly(parsedForLoop);
+        const loopTrace = carried.length > 0 ? chatTraceDraft() : undefined;
+        if (loopTrace) loopTrace.slots = { ...(loopTrace.slots ?? {}), agent_loop_carried: carried };
+        /* The loop's turn is logged by the tools it actually called (never by the message text). */
+        const { loopTurnCategory } = await import("@/lib/ai/agent-loop/turn-category");
+        await closeTurn(turnId, { category: loopTurnCategory(loopTools, looped), succeeded: true, latencyMs: Date.now() - askedAt });
+        return NextResponse.json({ ...looped, turnId });
+      } catch (error) {
+        await closeTurn(turnId, { category: "unclassified", succeeded: false, latencyMs: Date.now() - askedAt });
+        throw error;
+      }
     }
 
     let answer;

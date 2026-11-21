@@ -49,6 +49,7 @@ export function deletedFormsEmployee(question: string): string | null {
 const VIA: Record<string, string> = {
   route: "Forms Register",
   chat: "in chat",
+  agent_loop: "by the assistant, removing an empty revision draft after an edit it refused",
   demo_sweep: "the demo records clean-up",
   other: "outside the app (directly in the database)",
 };

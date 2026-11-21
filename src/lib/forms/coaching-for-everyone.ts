@@ -68,7 +68,8 @@ const asksCreateAll = (text: string) => text.includes(CONFIRM_MARK) || text.incl
 /*
  * THE ANSWER TO "create all?" (QA's code audit, item C, ported from the sibling app, 20 Nov 2026). Once the confirmation was asked, an ordinary
  * yes answers it: "yes", "yes please", "create all of them", "go ahead and make them", with or without "except <names>".
- * A no, a hold or a question never does. Whether it was asked is the app's own confirmation wording on the last reply.
+ * A no, a hold or a question never does. Whether it was asked is the caller's record (the agent loop's), or the app's own
+ * confirmation wording on the last reply; never the model's paraphrase of it.
  */
 const DECLINES = /\b(?:no|nope|nah|not\s+(?:yet|now)|don'?t|do\s+not|cancel|stop|wait|hold\s+(?:on|off)|never\s*mind|nevermind)\b/i;
 const AGREES = /^\s*(?:yes|yeah|yep|yup|ya|sure|ok(?:ay)?|please|go\s+ahead|do\s+it|sounds\s+good|perfect|great|create|make|do)\b/i;
@@ -136,6 +137,10 @@ type TurnInput = {
   question: string;
   history: readonly Pick<ChatMessage, "role" | "content">[];
   activeInstanceId?: string;
+  /** The agent loop's record: its last reply asked this draft's "create all" confirmation. */
+  confirmationAsked?: boolean;
+  /** Called once for each draft saved (the agent loop, ported from the sibling app: its reply never says nothing was saved over one). */
+  onCreated?: () => void;
 };
 
 /**
@@ -146,7 +151,7 @@ export async function coachingForEveryoneTurn(input: TurnInput): Promise<AskResp
   return (await coachingForEveryone(input))?.response ?? null;
 }
 
-/** The same turn, also saying whether its reply asked the confirmation. */
+/** The same turn, also saying whether its reply asked the confirmation (for the agent loop's record). */
 export async function coachingForEveryone(input: TurnInput): Promise<{ response: AskResponse; askedConfirmation: boolean } | null> {
   const response = await everyoneTurn(input);
   if (!response) return null;
@@ -156,7 +161,7 @@ export async function coachingForEveryone(input: TurnInput): Promise<{ response:
 async function everyoneTurn(input: TurnInput): Promise<AskResponse | null> {
   if (!coachingForEveryoneEnabled() || !input.activeInstanceId) return null;
   const question = input.question.trim();
-  const asked = asksCreateAll(lastAssistant(input.history));
+  const asked = input.confirmationAsked === true || asksCreateAll(lastAssistant(input.history));
   const confirmed = asked ? answersCreateAll(question) : null;
   if (!confirmed && !asksForEveryone(question)) return null;
 
@@ -247,6 +252,7 @@ async function everyoneTurn(input: TurnInput): Promise<AskResponse | null> {
     const target = await loadInstance(created.id);
     if (!target) throw new Error("its draft could not be read back");
     if (created.reused && hasContent(target)) return "already";
+    input.onCreated?.();
     const written = await copyFormContent({ source, target, actorId: actor.id });
     if (Object.keys(written.values).length === 0 && Object.keys(written.checked).length === 0) throw new Error("the Details could not be written on its draft");
     return "made";

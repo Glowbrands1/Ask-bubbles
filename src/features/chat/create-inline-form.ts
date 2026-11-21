@@ -4,7 +4,7 @@ import {
   draftNotesFromConversation,
 } from "@/lib/forms/draft-notes";
 import { cardPolicyToDraftEnabled } from "@/lib/config/chat-quality-flags";
-import { cardPolicyFor } from "@/lib/forms/card-policy";
+import { cardPolicyFor, cardPolicyLineFor } from "@/lib/forms/card-policy";
 import { remapDraftSourcesClientEnabled } from "@/lib/config/chat-quality-flags";
 import type { ChatFormInstanceRef, ChatFormProposal, ChatMessage } from "@/types";
 
@@ -179,7 +179,7 @@ export async function createInlineForm({
    * docs/chat-phase-3.md. A validated id with no name is honest; a validated id
    * with a demo name beside it is not.
    */
-  const created = await call<{ instance: { id: string }; reused?: boolean; reusedFrom?: string }>("/api/forms/instances", {
+  const created = await call<{ instance: { id: string }; reused?: boolean; reusedFrom?: string; followUpNotice?: unknown }>("/api/forms/instances", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
@@ -218,7 +218,15 @@ export async function createInlineForm({
        * Omitted otherwise, so the box starts empty — a warning described as
        * already given is never this. Revalidated by the route.
        */
-      ...(proposal.warningLevel ? { warningLevel: proposal.warningLevel } : {}),
+      ...(proposal.warningLevel ? { warningLevel: proposal.warningLevel } : proposal.loopTermination ? { warningLevel: "termination" } : {}),
+      /*
+       * The agent loop's card (AGENT_LOOP_ENABLED, ported from the sibling app): its payroll amount is the card's own, its
+       * termination is locked server-side on the manager's termination word, and its account fills an exit form's reason
+       * line (a termination) or Additional Details (a resignation). Absent on every other card.
+       */
+      ...(proposal.fromAgentLoop && proposal.payrollDeductAmount ? { payrollDeductAmount: proposal.payrollDeductAmount } : {}),
+      ...(proposal.fromAgentLoop ? { fromAgentLoop: true } : {}),
+      ...(proposal.fromAgentLoop && proposal.issue ? { loopAccount: proposal.issue } : {}),
       /*
        * AI_READS_CODE_CHECKS_ENABLED: what the reader took from the manager's
        * words, each with its quote. Absent with the flag off. The route checks
@@ -287,13 +295,30 @@ export async function createInlineForm({
    * `draftNotesFromCard`.
    */
   const fromCard = !draftNotesAreUsable(fromTurns) && remapDraftSourcesClientEnabled();
-  const notes = fromCard ? draftNotesFromCard(proposal) : fromTurns;
+  /*
+   * The agent loop's card (ported from the sibling app; QA, 18 Nov 2026): a loop card that carries an account drafts
+   * from the card's own lines (its account first), with the manager's turns it cites after them, so a request split
+   * over two turns ("CA for … on 9/12", then "for <employee>") still drafts. A loop card with no account is as before.
+   */
+  const loopCard = proposal.fromAgentLoop ? draftNotesFromCard(proposal) : null;
+  const notes =
+    loopCard && draftNotesAreUsable(loopCard)
+      ? {
+          ...loopCard,
+          text: draftNotesAreUsable(fromTurns) ? `${loopCard.text}\n\n${fromTurns.text}` : loopCard.text,
+          usedMessageIds: fromTurns.usedMessageIds,
+        }
+      : fromCard
+        ? draftNotesFromCard(proposal)
+        : fromTurns;
+  /* Pau (20 Nov 2026, ported): the follow-up date Create set on a loop's Corrective Action, said on the card. */
+  const createdFollowUp = typeof created.followUpNotice === "string" && created.followUpNotice.trim() !== "" ? created.followUpNotice : null;
   if (!draftNotesAreUsable(notes)) {
-    return { reference, draftWarning: NO_NOTES_WARNING };
+    return { reference, draftWarning: NO_NOTES_WARNING, ...(createdFollowUp ? { draftNotice: createdFollowUp } : {}) };
   }
 
   try {
-    const drafted = await call<{ notice?: unknown }>(`/api/forms/instances/${reference.instanceId}/draft`, {
+    const drafted = await call<{ notice?: unknown; followUpNotice?: unknown }>(`/api/forms/instances/${reference.instanceId}/draft`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -304,14 +329,29 @@ export async function createInlineForm({
         ...(proposal.checkedReading ? { readerQuotes: proposal.checkedReading } : {}),
         // NEXT_PUBLIC_CARD_POLICY_TO_DRAFT_ENABLED: the policy the card cited (QA live check, 3 Nov 2026).
         ...(cardPolicyToDraftEnabled() && cardPolicyFor(proposal, messages) ? { cardPolicy: cardPolicyFor(proposal, messages) } : {}),
+        /*
+         * The agent loop's card (ported from the sibling app; QA 17–20 Nov 2026): its policy is the saved form's, its
+         * prior actions ("" for none), its own account (with the times and facts it holds), the coaching topic, and its
+         * attendance record (an absence is never written up as lateness). The draft route reads them only with
+         * `cardFromLoop`.
+         */
+        ...(proposal.fromAgentLoop ? { cardFromLoop: true } : {}),
+        ...(proposal.fromAgentLoop ? { cardPriorActions: proposal.priorActions?.trim() ?? "" } : {}),
+        ...(proposal.fromAgentLoop && typeof proposal.issue === "string" && proposal.issue.trim() ? { cardAccount: proposal.issue.trim().slice(0, 6_000) } : {}),
+        // NEXT_PUBLIC_CARD_POLICY_TO_DRAFT_ENABLED: the loop card's whole policy line (its second heading, the Policy Violated line, a Coaching Form's citation).
+        ...(proposal.fromAgentLoop && cardPolicyToDraftEnabled() && cardPolicyLineFor(proposal, messages) ? { cardPolicyLine: cardPolicyLineFor(proposal, messages) } : {}),
+        ...(proposal.fromAgentLoop && proposal.coachingTopic ? { cardTopic: proposal.coachingTopic } : {}),
+        ...(proposal.fromAgentLoop && proposal.attendanceKind ? { cardAttendance: proposal.attendanceKind } : {}),
         // SAME_FORM_COPY_NEW_PERSON_ENABLED: the form this card copies; re-checked by the route.
         ...(proposal.copyFromInstanceId ? { copyFromInstanceId: proposal.copyFromInstanceId } : {}),
       }),
     });
     const notice = typeof drafted?.notice === "string" && drafted.notice.trim() !== "" ? drafted.notice : null;
-    return { reference, draftWarning: null, draftNotice: notice };
+    const draftedFollowUp = typeof drafted?.followUpNotice === "string" && drafted.followUpNotice.trim() !== "" ? drafted.followUpNotice : null;
+    const notices = [notice, createdFollowUp ?? draftedFollowUp].filter((line): line is string => Boolean(line));
+    return { reference, draftWarning: null, draftNotice: notices.length > 0 ? notices.join(" ") : null };
   } catch {
     // The form exists. Report it, warn about the prefill, change nothing else.
-    return { reference, draftWarning: DRAFT_FAILED_WARNING };
+    return { reference, draftWarning: DRAFT_FAILED_WARNING, ...(createdFollowUp ? { draftNotice: createdFollowUp } : {}) };
   }
 }
