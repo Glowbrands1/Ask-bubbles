@@ -52,6 +52,15 @@ import {
 } from "@/lib/forms/warning-level";
 import { warningLevelFromConversation } from "@/lib/forms/warning-level-conversation";
 import { TERMINATION_OPTION, statesTermination } from "@/lib/forms/termination-stated";
+import { saysTerminationWord } from "@/lib/forms/termination-word";
+import { cardPayrollAmount } from "@/lib/forms/card-payroll-amount";
+import { applyLoopFollowUpDefault } from "@/lib/forms/follow-up-default-write";
+import { EXIT_DETAIL_FIELDS, EXIT_OPTION, EXIT_TEMPLATE_KEY, EXIT_TYPE_GROUP } from "@/lib/forms/exit-library";
+import { terminationStatedTicksEnabled } from "@/lib/config/chat-quality-flags";
+
+/* The exit form's lines the agent loop's exit card states (the loop port; the same keys as the sibling app's exit form). */
+const EXIT_PAYROLL_KEY = "payroll_deduction_applicable";
+const EXIT_ADDITIONAL_DETAILS_KEY = "details";
 import { checkboxGroupsForVariant, parseFormDocument } from "@/lib/forms/document";
 import { businessToday } from "@/lib/business-date";
 import {
@@ -179,6 +188,12 @@ export async function POST(request: Request) {
       formDate?: string;
       payrollDeduct?: unknown;
       warningLevel?: unknown;
+      /** The agent loop's card (AGENT_LOOP_ENABLED): its payroll amount is the card's own (`card-payroll-amount.ts`). */
+      payrollDeductAmount?: unknown;
+      /** The agent loop's card: its termination is the model's, locked on the manager's termination word, checked here. */
+      fromAgentLoop?: unknown;
+      /** The loop's account of what happened (an exit form's reason line or Additional Details). */
+      loopAccount?: unknown;
       /** The chat the proposal came from, for `checkProposalIsCurrent`. Ask Bubbles only. */
       conversation?: unknown;
       /** Optional stable id for this chat. The first message id is used when this is absent. */
@@ -242,6 +257,26 @@ export async function POST(request: Request) {
     if (body.source === "assistant" && Array.isArray(body.conversation)) {
       // PREFERRED_NAME_CARD_CURRENT_ENABLED: "kit dovetail" is the card's Katrin Dovetail when the manager's roster says Kit is her preferred name. Off: none, and no roster read.
       const alsoCalled = await preferredNamesOf(actor.scope, body.employeeName);
+      /*
+       * The agent loop's own card (ported from the sibling app; QA, 17 Nov 2026) is read with the loop's record for it
+       * (this proposal id, this name): the turns after the card's own turn, which the loop already read with its evidence
+       * checks, and the names the loop settled as its person. Never for a card the loop has no record of. See
+       * `lib/ai/agent-loop/settled-names.ts`.
+       */
+      const settledNames = body.fromAgentLoop === true && typeof body.proposalId === "string"
+        ? await import("@/lib/ai/agent-loop/settled-names")
+        : null;
+      const settlement = settledNames
+        ? await settledNames.loopCardSettlement({
+            conversationId: typeof body.conversationId === "string" ? body.conversationId : undefined,
+            userId: actor.id,
+            messageIds: (body.conversation as { id?: unknown; role?: unknown }[]).filter((turn) => turn?.role === "user" && typeof turn.id === "string").map((turn) => String(turn.id)),
+            proposalId: String(body.proposalId),
+            employeeName: body.employeeName,
+          })
+        : null;
+      const history = parseHistory(body.conversation);
+      const readFrom = settledNames && settlement ? [...settledNames.turnsAfterCard(history, settlement)] : history;
       const currency = checkProposalIsCurrent({
         // FORM_TYPE_SWITCH_ENABLED: "change to coaching" is read as the chat read it, so the switched card is current.
         // PASTED_REVIEW_NOT_ACCOUNT_ENABLED: pasted reviewer's notes are read as the chat read them (`ai/pasted-review.ts`).
@@ -249,7 +284,7 @@ export async function POST(request: Request) {
         // SAME_REQUEST_KEEPS_EARLIER_CARD_ENABLED: <A>'s card is read as it stood before "the same thing for <B>".
         // TEAM_CARD_NOT_PRODUCT_ENABLED: on the team card, "selling Bath Bomb Kits" is the topic, as the chat read it.
         conversation: teamTopicReadConversation(
-          sameRequestReadConversation(switchReadConversation(turnsWithoutPastedReview(parseHistory(body.conversation))), body.employeeName),
+          sameRequestReadConversation(switchReadConversation(turnsWithoutPastedReview(readFrom)), body.employeeName),
           body.employeeName,
         ),
         templateKey: body.templateKey,
@@ -366,6 +401,21 @@ export async function POST(request: Request) {
       if (
         payrollDeductAmountFieldEnabled() &&
         card.payrollDeduct === "yes" &&
+        card.fromAgentLoop === true
+      ) {
+        /* The agent loop's card (ported; QA's code audit, 20 Nov 2026, item 20): its amount is the card's own, never the chat's latest figure. */
+        const amount = cardPayrollAmount(card.payrollDeductAmount);
+        if (amount) {
+          await applyStatedFacts(
+            instanceId,
+            { values: { [PAYROLL_DEDUCT_AMOUNT_KEY]: amount }, checked: {} },
+            actor.id,
+            PAYROLL_DEDUCT_AMOUNT_STATED_KEYS,
+          );
+        }
+      } else if (
+        payrollDeductAmountFieldEnabled() &&
+        card.payrollDeduct === "yes" &&
         Array.isArray(card.conversation)
       ) {
         const said = card.conversation
@@ -414,7 +464,19 @@ export async function POST(request: Request) {
        * needs DM/HR approval before it is finalized. Read from the manager's own turns; a hedge ("she might be
        * terminated if this continues") states nothing. Off, `statesTermination` is false.
        */
+      /*
+       * The agent loop's card (ported; QA's design, 15 Nov 2026): its model decided this form is a termination, accepted
+       * only when the conversation's own user turns carry a termination word, checked here (`saysTerminationWord`), and
+       * gated by TERMINATION_STATED_TICKS like today's tick. A loop card never runs today's reader.
+       */
+      const fromAgentLoop = card.fromAgentLoop === true;
+      const userTurns = Array.isArray(card.conversation)
+        ? (await readingTurns(parseHistory(card.conversation))).filter((turn) => turn.role === "user").map((turn) => String(turn.content)).join("\n")
+        : "";
+      const loopTermination = fromAgentLoop && card.templateKey === "dpoa" && card.warningLevel === "termination" && terminationStatedTicksEnabled() && saysTerminationWord(userTurns);
       const termination =
+        loopTermination ||
+        (!fromAgentLoop &&
         !warningLevel &&
         card.source === "assistant" &&
         card.templateKey === "dpoa" &&
@@ -424,7 +486,7 @@ export async function POST(request: Request) {
             .filter((turn) => turn.role === "user")
             .map((turn) => String(turn.content))
             .join("\n"),
-        );
+        ));
       if (warningLevel || termination) {
         const loaded = await loadInstance(instanceId);
         const offered = loaded
@@ -439,6 +501,28 @@ export async function POST(request: Request) {
             : {};
         if (Object.keys(checked).length > 0) {
           await applyStatedFacts(instanceId, { values: {}, checked }, actor.id, WARNING_LEVEL_STATED_KEYS);
+        }
+      }
+
+      /*
+       * The agent loop's EXIT card (ported; QA item 17, 20 Nov 2026): what the manager stated goes in the exit form's own
+       * fields, as their statements (the draft never replaces them): its payroll answer, and a termination the model
+       * decided (locked on the termination word, checked again here) as "Immediate involuntary separation" with the account
+       * as the reason; otherwise the account is the exit form's Additional Details. `applyStatedFacts` validates every
+       * key against the pinned version, so a form without these lines gets nothing.
+       */
+      if (fromAgentLoop && card.templateKey !== "dpoa") {
+        const exitStated: { values: Record<string, string>; checked: Record<string, string[]> } = { values: {}, checked: {} };
+        if (isPayrollDeductAnswer(card.payrollDeduct)) exitStated.checked[EXIT_PAYROLL_KEY] = [card.payrollDeduct];
+        const account = typeof card.loopAccount === "string" ? card.loopAccount.trim().slice(0, 2_000) : "";
+        if (card.warningLevel === "termination" && saysTerminationWord(userTurns)) {
+          exitStated.checked[EXIT_TYPE_GROUP] = [EXIT_OPTION.immediateInvoluntary];
+          if (account) exitStated.values[EXIT_DETAIL_FIELDS.resignationReason] = account;
+        } else if (account && card.templateKey === EXIT_TEMPLATE_KEY) {
+          exitStated.values[EXIT_ADDITIONAL_DETAILS_KEY] = account;
+        }
+        if (Object.keys(exitStated.checked).length > 0 || Object.keys(exitStated.values).length > 0) {
+          await applyStatedFacts(instanceId, exitStated, actor.id, new Set([EXIT_PAYROLL_KEY, EXIT_TYPE_GROUP, EXIT_DETAIL_FIELDS.resignationReason, EXIT_ADDITIONAL_DETAILS_KEY]));
         }
       }
     }
@@ -600,7 +684,25 @@ export async function POST(request: Request) {
 
     await applyCardFacts(String(instance.id));
 
-    return NextResponse.json({ instance });
+    /*
+     * Pau (20 Nov 2026, ported from the sibling app): a Corrective Action the agent loop creates gets its follow-up
+     * date, the one the manager stated or one week after the form date, so the follow-up its Action Plan promises is
+     * on the calendar. The card says it. See `follow-up-default.ts`.
+     */
+    const followUp = body.fromAgentLoop === true
+      ? await applyLoopFollowUpDefault({
+          instance: { ...instance, id: String(instance.id) },
+          managerWords: Array.isArray(body.conversation)
+            ? parseHistory(body.conversation).filter((turn) => turn.role === "user").map((turn) => String(turn.content)).join("\n")
+            : "",
+          actorId: actor.id,
+        }).catch(() => null)
+      : null;
+
+    return NextResponse.json({
+      instance: followUp ? { ...instance, followUpDate: followUp.date } : instance,
+      ...(followUp ? { followUpNotice: followUp.notice } : {}),
+    });
   } catch (error) {
     return errorResponse(error, "forms/instances/create");
   }
