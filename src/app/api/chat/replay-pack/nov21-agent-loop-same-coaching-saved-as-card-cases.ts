@@ -70,7 +70,10 @@ function standIn() {
     }
     if (said === MAKE) return { text: "Updated the card: the rolling rack detail is in." };
     if (said === SAME_FOR_B) {
-      return { tool: "propose_form", input: { template_key: "coaching", employee_id: LOOP_OZREN.id, what_happened: STEPS_WITH_RACK, person_evidence: evidenceFrom(view, "Ozren Brack") } };
+      // A new request after an earlier card for someone else: the rules book asks for new_form_evidence, and with
+      // CARD_PERSON_THIS_REQUEST_ENABLED (ON in production since 21 Nov 2026 13:31Z) a card for another person without
+      // it is refused (person_change_not_asked). The stand-in passes it as the live model is taught to.
+      return { tool: "propose_form", input: { template_key: "coaching", employee_id: LOOP_OZREN.id, what_happened: STEPS_WITH_RACK, person_evidence: evidenceFrom(view, "Ozren Brack"), new_form_evidence: evidenceFrom(view, SAME_FOR_B) } };
     }
     return { text: "Tell me more." };
   });
