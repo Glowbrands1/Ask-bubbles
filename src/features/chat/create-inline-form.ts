@@ -226,6 +226,8 @@ export async function createInlineForm({
        */
       ...(proposal.fromAgentLoop && proposal.payrollDeductAmount ? { payrollDeductAmount: proposal.payrollDeductAmount } : {}),
       ...(proposal.fromAgentLoop ? { fromAgentLoop: true } : {}),
+      /* The loop's exit card: how the person left and the manager's words for it (port from the sibling app: a real manager's exit form, 20 Nov 2026). */
+      ...(proposal.fromAgentLoop && proposal.exitHow && proposal.exitHowQuote ? { exitHow: proposal.exitHow, exitHowQuote: proposal.exitHowQuote } : {}),
       ...(proposal.fromAgentLoop && proposal.issue ? { loopAccount: proposal.issue } : {}),
       /*
        * AI_READS_CODE_CHECKS_ENABLED: what the reader took from the manager's

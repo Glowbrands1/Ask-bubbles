@@ -21,6 +21,7 @@ import { ACTIVE_BRAND, LOCATION_LABEL } from "@/lib/brand";
 import { useSession } from "@/lib/session/session-context";
 import { asdNoFormMonitoringEnabled } from "@/lib/permissions";
 import { checkboxGroupsForVariant, fieldsForVariant } from "@/lib/forms/document";
+import { yearCheckWarnings } from "@/lib/forms/date-year-check";
 import { planSummary } from "@/lib/forms/plan-summary";
 import { manualStandingNotice } from "@/lib/forms/standing-notices";
 import { policyNotFoundPlainNoticesEnabled } from "@/lib/config/chat-quality-flags";
@@ -454,6 +455,16 @@ export function InlineForm({
    * would stop anyway — unsaved changes, or the policy acknowledgement that is
    * itself a confirmation — it goes straight there instead.
    */
+  /*
+   * "CHECK THE YEAR" (port from the sibling app, QA2, 21 Nov 2026; a real exit form finalized with a notice date of
+   * 2020-11-20 beside a 2026 form): the exit date lines more than a year from the form's date, said above Finalize and in
+   * its confirmation. A warning, never a block. See `lib/forms/date-year-check.ts`.
+   */
+  const yearWarnings = finalized
+    ? []
+    : yearCheckWarnings(fieldsForVariant(loaded.version.document, loaded.instance.variantKey), edits.values, edits.values.form_date);
+  const yearWarningText = yearWarnings.map((warning) => `${warning.label} is ${warning.value}`).join("; ");
+
   function requestFinalize() {
     if (action.kind === "busy") return;
     if (save.kind === "dirty" || save.kind === "saving" || unresolvedPolicy.length > 0) {
@@ -935,6 +946,13 @@ export function InlineForm({
               ) : null}
             </div>
           ) : (
+            <>
+            {yearWarnings.length > 0 ? (
+              <p data-testid="year-check" className="flex items-start gap-1 text-xs text-status-attention">
+                <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+                Check the year: {yearWarningText}.
+              </p>
+            ) : null}
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 variant="accent"
@@ -953,6 +971,7 @@ export function InlineForm({
                   : "Freezes these values. Signatures are signed on paper afterwards."}
               </span>
             </div>
+            </>
           )}
 
           {action.kind === "error" ? (
@@ -1039,6 +1058,12 @@ export function InlineForm({
                 ? "Its values are frozen and it replaces the finalized original. To change it afterwards, edit it as a new draft. Signatures are signed on paper."
                 : "Its values are frozen. To change it afterwards, edit it as a new draft. Signatures are signed on paper."}
             </p>
+            {yearWarnings.length > 0 ? (
+              <p data-testid="year-check-confirm" className="flex items-start gap-1 text-[13px] text-status-attention">
+                <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+                Check the year: {yearWarningText}.
+              </p>
+            ) : null}
             <DialogActions>
               <Button variant="ghost" onClick={() => setConfirmingFinalize(false)}>
                 Keep editing
