@@ -48,6 +48,12 @@ export interface FakePolicyCard {
   version: number;
   updated: string;
   body: string;
+  /** The management table's `data-status` (`GET /Policy`). Default "current". */
+  status?: string;
+  /** The management table's Audience cell. Default "Public". */
+  audience?: string;
+  /** The management table's `data-disabled`. */
+  disabled?: boolean;
 }
 
 export interface FakeHandbookRow {
@@ -138,10 +144,18 @@ export function communicationRow(o: { id: string; title: string; key: string; la
 export function bcsContent(): FakeCompanyContent {
   return {
     policies: [
-      { id: bcsId(101), title: "Dress Code", version: 2, updated: "8/29/2023", body: "Wear the apron provided.\nClosed-toe shoes at all times." },
-      { id: bcsId(102), title: "Cell Phone Policy", version: 1, updated: "6/9/2023", body: "Phones stay in the back room during a shift." },
-      { id: bcsId(103), title: "JBA Policy Manual 2025", version: 2, updated: "5/1/2025", body: "Manual text." },
-      { id: bcsId(104), title: "NE Sick Time", version: 1, updated: "9/15/2025", body: "Sick time text." },
+      { id: bcsId(101), title: "Dress Code", version: 2, updated: "8/29/2023", body: "Wear the apron provided.\nClosed-toe shoes at all times.", status: "current", audience: "Public" },
+      {
+        id: bcsId(102),
+        title: "Cell Phone Policy",
+        version: 1,
+        updated: "6/9/2023",
+        body: "Phones stay in the back room during a shift.",
+        status: "current",
+        audience: "All Teams 8 Positions",
+      },
+      { id: bcsId(103), title: "JBA Policy Manual 2025", version: 2, updated: "5/1/2025", body: "Manual text.", status: "current", audience: "Public" },
+      { id: bcsId(104), title: "NE Sick Time", version: 1, updated: "9/15/2025", body: "Sick time text.", status: "draft", audience: "Public" },
     ],
     handbooks: [
       { id: bcsId(201), name: "2025 JBA Policy Manual - Edited 5-2025", statusKey: "2", statusLabel: "Published", audience: "Public", updated: "2026-03-24 10:15:00" },
@@ -261,6 +275,7 @@ const ALLOWED = [
   /^GET \/Company$/,
   /^POST \/KnowledgeCenter\/_Policies_List$/,
   /^GET \/KnowledgeCenter\/_Policy_Detail$/,
+  /^GET \/Policy$/,
   /^POST \/KnowledgeCenter\/_Handbooks_List_ForDataTable$/,
   /^GET \/KnowledgeCenter\/Handbooks\/[^/]+\/manage$/,
   /^POST \/KnowledgeCenter\/_Handbook_DownloadVersion$/,
@@ -478,6 +493,21 @@ export class FakeBcsWoven {
         )
         .join("");
       return json({ Success: true, HTML: cards });
+    }
+    if (path === "/Policy" && method === "GET") {
+      /* Ask Sunny's verified management-table shape: Policy, Status, Audience, Last Updated, Acknowledgement, a document column. */
+      const rows = c.policies
+        .map((p) => {
+          const status = p.status ?? "current";
+          return `<tr data-policy-id="${p.id}" data-status="${status}" data-disabled="${p.disabled ? "true" : "false"}" data-ack="false" data-has-attachments="false">
+            <td><a href="/Policy/Details/${p.id}">${esc(p.title)}</a></td><td>${status === "current" ? "Published" : esc(status)}</td><td><span>${esc(p.audience ?? "Public")}</span></td><td>${p.updated}</td><td>0%</td><td></td></tr>`;
+        })
+        .join("");
+      return html(
+        page(
+          `<table id="policies"><thead><tr><th>Policy</th><th>Status</th><th>Audience</th><th>Last Updated</th><th>Acknowledgement</th><th></th></tr></thead><tbody>${rows}</tbody></table>`,
+        ),
+      );
     }
     if (path === "/KnowledgeCenter/_Policy_Detail" && method === "GET") {
       const p = c.policies.find((x) => x.id === url.searchParams.get("pPolicyID"));

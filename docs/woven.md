@@ -197,7 +197,7 @@ The integration login must therefore be able to open the Company page.
 
 | Source | Verified for BCS | What happens |
 |---|---|---|
-| Policies (12) | list + detail structure | **Inventory only.** Publication state is unverified, so every policy is excluded as `publication_unverified`. |
+| Policies (12) | list + detail structure | **Inventory only** with `WOVEN_BCS_POLICY_MANAGEMENT_LIST_ENABLED` off (default): the Knowledge Center cards carry no status or audience, so every policy is excluded as `publication_unverified`. **With it on** (board f105, the sibling app's mechanism): policies are listed from Woven's management table `GET /Policy` (`data-status`, Audience column); `current`/`published` rows are published, drafts/archived are excluded, an unknown status fails the policy listing. A published policy whose Audience is exactly `Public` is shared (Pau, 22 Nov 2026: "Bubbles may quote any company-wide ("Public") Woven policy, like Sunny"; an administrator may still exclude "Public"); Targeted audiences ("All Teams 8 Positions") stay `audience_restricted`. The text is read from the verified Knowledge Center detail fragment. |
 | Handbooks (1) | list | **Inventory only.** No handbook content/download route is verified for this company, so the part is BLOCKED. The one handbook is a JBA-titled manual → held for ownership review. |
 | Procedures (51) | one empty-category search (category counts + every card), badges, positions, detail steps | One request lists everything: the cards must number exactly the sum of the 12 category counts, or the listing fails (a search naming a category answers nothing, so it is not used). Drafts (`Unpublished`) excluded; their pages are never fetched. Step text is ingested once the "All Positions" audience is shared by an administrator. Step attachments are not read (unverified). |
 | File Library (264) | list, columns, status keys, audience forms | Unpublished excluded. Columns proved on every row (schema drift fails the listing). Audience forms: team/position counts, `N/A`, `Public`. PDF/DOCX only. Download BLOCKED unless `WOVEN_BCS_FILE_LIBRARY_DOWNLOAD_ENABLED`. |
@@ -267,7 +267,12 @@ WOVEN_KNOWLEDGE_LIVE_DRY_RUN=1 WOVEN_KNOWLEDGE_SYNC_ENABLED=true npm run dry-run
   then set `WOVEN_BCS_FILE_LIBRARY_DOWNLOAD_ENABLED=true` on a Preview first.
 - Handbook content/download for this company (no route borrowed from any
   other integration is used).
-- Policy publication state and audience; procedure team/location limits and
+- Policy publication state and audience: `GET /Policy` is the sibling app's
+  verified shape, not yet seen for this company. Before switching
+  `WOVEN_BCS_POLICY_MANAGEMENT_LIST_ENABLED` on, run the live dry run above with
+  `WOVEN_BCS_POLICY_MANAGEMENT_LIST_ENABLED=true` added (read-only) and check the
+  policy row counts and `excludedByReason`.
+- Procedure team/location limits and
   updated dates; per-item team/position ids; Communications detail and
   attachments; procedure attachment downloads; Shared Links.
 - The procedure category indicator's exact markup (read from an element whose
