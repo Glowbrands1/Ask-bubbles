@@ -1121,7 +1121,7 @@ export async function findStaff(context: ToolContext, input: { name?: unknown; p
   }
   if (found.length === 0) {
     /* Close spellings, as the app's own name check reads them ("Perpetua Winne" → Perpetua Wynne). */
-    const close = matchEmployeeName(typed, read.roster);
+    const close = loopNameMatch(typed, read.roster);
     /*
      * The person on this chat's own card, spelled a little off ("Edit Evangelyne Strande CA" after Evangeline Strand's card;
      * the live re-run's sf-s26): it is that person, as the manager can see the card. Only one close candidate, and
@@ -1565,7 +1565,7 @@ export async function findPastForms(context: ToolContext, input: { employee_name
   const shownCard = context.cardOnScreen ?? context.earlierCard ?? null;
   if (shownCard?.employeeKey) {
     const read = await rosterFor(context.actor.scope);
-    const close = read.kind === "read" ? matchEmployeeName(typed, read.roster) : null;
+    const close = read.kind === "read" ? loopNameMatch(typed, read.roster) : null;
     const cardIsClose = close?.kind === "confirm" && close.candidates.some((candidate) => personKey(candidate.employee.id) === shownCard.employeeKey);
     const typedClose = cardIsClose ? await closeSpellingOfRoster(context, effects, typed) : null;
     if (typedClose) return typedClose;
@@ -2103,7 +2103,7 @@ function cardNameCorrection(
     return { refusal: { reason_code: "ambiguous_person", error: `More than one person on the staff list is ${typed}. The card was not changed. Call find_staff with this name and ask which one.` } };
   }
   if (declined || latestTurnKeepsOrUsesTyped(view, typed)) return { asTyped: true, from: cardName };
-  const close = matchEmployeeName(typed, roster);
+  const close = loopNameMatch(typed, roster);
   const candidates = close.kind === "confirm" ? close.candidates.map((candidate) => candidate.name) : [];
   if (candidates.length > 0 && close.kind === "confirm") {
     effects.nameQuestion = { offeredIds: close.candidates.slice(0, 5).map((candidate) => candidate.employee.id), typed };
@@ -2178,10 +2178,33 @@ function typedInThisRequest(context: ToolContext, roster: readonly RosterEmploye
  * nobody on the roster and not a close spelling of anyone on it is taken as typed, with the card's off-roster line.
  * Only a close spelling of a roster person is asked about (ruling A); a single word still gets the use-<name> offer.
  */
+/**
+ * QA's Bubbles round 2 (22 Nov 2026, U25/U34/U35, HIGH): "create a ca form for <First> Garica" (Woven: "<First> Garcia")
+ * was kept as typed. With TYPED_NAME_ENABLED the shared matcher answers one close staff name as "unchecked" with its
+ * closeName (the old path's "Woven has <name>" note), and the loop read only "confirm" as close. Pau's rule: a staff
+ * match is taken only on the manager's exact words or her yes to "Did you mean <name>?". Either answer is close here, so
+ * the name is offered, never kept as typed.
+ */
+function closeToRoster(name: string, roster: readonly RosterEmployee[]): boolean {
+  return loopNameMatch(name, roster).kind === "confirm";
+}
+
+/**
+ * The shared matcher, read as the loop reads it (round 2, U25/U34/U35): one close staff name that TYPED_NAME_ENABLED
+ * answers as "unchecked" with its closeName is a "Did you mean <name>?" question here (confirm, that one candidate),
+ * never a name kept as typed. A name the manager already chose to keep as typed stays unchecked (no closeName).
+ */
+function loopNameMatch(typed: string, roster: readonly RosterEmployee[]): ReturnType<typeof matchEmployeeName> {
+  const match = matchEmployeeName(typed, roster);
+  if (match.kind !== "unchecked" || !match.closeName) return match;
+  const row = roster.find((person) => displayName(person) === match.closeName);
+  return row ? { kind: "confirm", candidates: [{ employee: row, name: match.closeName }] } : match;
+}
+
 function fullNameTakenAsTyped(context: ToolContext, roster: readonly RosterEmployee[], typed: string): boolean {
   const name = typed.replace(/\s+/g, " ").trim();
   if (words(name).length < 2 || namesAPlace(name) || isJobTitlePhrase(name)) return false;
-  if (rosterMatches(name, roster).length > 0 || matchEmployeeName(name, roster).kind === "confirm") return false;
+  if (rosterMatches(name, roster).length > 0 || closeToRoster(name, roster)) return false;
   return holdsPhrase(requestTurnsText(context, roster), name);
 }
 
@@ -2275,7 +2298,7 @@ function closeSpellingNotSettled(
     const windows = plain.slice(1).map((word, at) => `${plain[at]} ${word}`);
     const isExactName = (name: string) => exactNames.some((exact) => exact.toLowerCase().replace(/\s+/g, " ") === name.trim().toLowerCase().replace(/\s+/g, " "));
     const close = [...extractEmployeeNames(text), ...windows].filter((name) => !isExactName(name)).find((name) => {
-      const match = matchEmployeeName(name, [row]);
+      const match = loopNameMatch(name, [row]);
       return match.kind === "confirm" && match.candidates.some((candidate) => candidate.employee.id === row.id);
     });
     if (close) return confirmed.includes(personKey(close)) || saidYes(personKey(close)) ? null : close;
@@ -2347,7 +2370,7 @@ async function closeSpellingOfRoster(context: ToolContext, effects: ToolEffects 
   const read = await rosterFor(context.actor.scope);
   if (read.kind !== "read" || namesAPlace(typed)) return null;
   if (read.roster.some((row) => fullNamesOf(row).some((full) => samePerson(full, typed)))) return null;
-  const match = matchEmployeeName(typed, read.roster);
+  const match = loopNameMatch(typed, read.roster);
   if (match.kind !== "confirm" || match.candidates.length === 0) return null;
   const view = nameQuestionView(context, read.roster);
   const key = personKey(typed);
@@ -3163,7 +3186,7 @@ export async function proposeForm(
       offRosterName = typed;
       effects.nameQuestion ??= { offeredIds: [], typed, asksFullName: true };
     }
-    else if (typed && !rosterMatches(typed, read.roster).length && !namesAPlace(typed) && offRosterTyped(typed, `for ${typed}`, read.roster.map(displayName)) && matchEmployeeName(typed, read.roster).kind !== "confirm" && typedInThisRequest(context, read.roster, typed)) {
+    else if (typed && !rosterMatches(typed, read.roster).length && !namesAPlace(typed) && offRosterTyped(typed, `for ${typed}`, read.roster.map(displayName)) && !closeToRoster(typed, read.roster) && typedInThisRequest(context, read.roster, typed)) {
       employee = { name: typed, salonIds: [] };
       offRosterName = typed;
       /* The card's off_roster_name line asks the manager to check this name: recorded, so a full name next turn corrects it. */
@@ -5619,7 +5642,7 @@ export function nameCorrectionRefusal(formsName: string, newName: string, quote:
    * After the manager's "no" to that question, the name is written as typed.
    */
   if (holders.length === 0 && !options.keepAsTyped) {
-    const close = matchEmployeeName(newName, people);
+    const close = loopNameMatch(newName, people);
     const candidates = close.kind === "confirm" ? close.candidates.map((candidate) => candidate.name) : [];
     if (candidates.length > 0) {
       return { error: `Not on the staff list as typed. Nothing was written. Ask the manager, in these words: ${nameConfirmationQuestion(newName, candidates.slice(0, 5))}`, reason_code: "name_correction_did_you_mean" };
