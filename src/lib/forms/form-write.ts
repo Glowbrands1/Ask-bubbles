@@ -870,6 +870,45 @@ export async function writeRevisionEdits(
   return { accepted: result.saved.accepted, cleared: result.saved.cleared, rejected: result.saved.rejected };
 }
 
+/**
+ * The agent loop's dictated Action Plan (port from the sibling app): an Action Plan the manager dictated in chat, word
+ * for word, saved as the manager's own edit (as the form page saves their typing), via chat. Only action_plan; the
+ * caller (the loop's edit_form) checks the words are the manager's current message. Drafts only.
+ */
+export async function dictatedPlanWrite(instanceId: string, plan: string, actorId: string): Promise<{ saved: string | null }> {
+  const result = await saveInstanceValues(instanceId, { values: { action_plan: plan }, checked: {} }, actorId, { via: "chat" });
+  return { saved: result.rejected.some((row) => row.key === "action_plan") ? null : (result.values.action_plan ?? plan) };
+}
+
+/**
+ * The agent loop's name correction (port from the sibling app; `edit_form` intent "correct_name"): ONLY the Employee
+ * Name line, written as the manager's correction (path "correction"), and the form's subject column moves with it, so
+ * the card, the Forms Register and the printed form read the new name. The caller has already checked the name against
+ * this message's name_evidence and the roster; this takes no other key. `said` is the manager's message the name was
+ * quoted from.
+ */
+export async function nameCorrectionWrite(
+  instanceId: string,
+  name: string,
+  context: { readonly actorId: string; readonly said: string; readonly today?: string; readonly loaded?: LoadedInstance },
+): Promise<{ accepted: DraftValues; rejected: { key: string; reason: string }[]; result: FormWriteResult }> {
+  const newName = name.trim();
+  if (newName === "") {
+    const saved = emptySaved([{ key: "employee_name", reason: "would_blank" }]);
+    return { accepted: saved.accepted, rejected: saved.rejected, result: { changed: [], refused: [], handoff: "refused", saved } };
+  }
+  const result = await writeFormEdits(instanceId, [{ op: "set", field: "employee_name", value: newName, by: "manager" }], {
+    path: "correction",
+    actorId: context.actorId,
+    latest: context.said,
+    employeeColumn: newName,
+    readerValues: [newName],
+    ...(context.today ? { today: context.today } : {}),
+    ...(context.loaded ? { loaded: context.loaded } : {}),
+  });
+  return { accepted: result.saved.accepted, rejected: result.saved.rejected, result };
+}
+
 /* -------------------------------- the old writers' shapes, through here ---- */
 
 type PathContext = Omit<FormEditRules, "actorId">;

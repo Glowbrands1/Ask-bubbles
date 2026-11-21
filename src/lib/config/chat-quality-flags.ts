@@ -3876,6 +3876,15 @@ export function payrollAmountSameMessageEnabled(): boolean {
 }
 
 /**
+ * PAYROLL_CLAUSE_NOT_ACCOUNT_ENABLED (port from the sibling app, where it is on; default off here). The agent loop's
+ * account loses a bare payroll answer ("$20 payroll deduct applies", "yes payroll but I don't know the amount") and the
+ * app's own "Payroll deduction amount: $X." line (`lib/ai/payroll-clause-not-account.ts`). Off, the text as it was.
+ */
+export function payrollClauseNotAccountEnabled(): boolean {
+  return envFlag("PAYROLL_CLAUSE_NOT_ACCOUNT_ENABLED");
+}
+
+/**
  * PRIOR_ACTIONS_NO_SIGNED_ENABLED (QA, a location manager's chat, 5 Nov 2026; default off). "this is a verbal
  * warning. previous coaching policy manual 10-15-26" drafted Prior actions that said the earlier steps were
  * SIGNED; nothing was ever signed or given. Rule (Pau / QA): list only finalized forms, and never say "signed"
