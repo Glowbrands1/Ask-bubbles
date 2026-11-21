@@ -174,7 +174,7 @@ export function withoutPersonPronouns(
     const at = match.index! + match[0].length - match[1]!.length;
     if (quoted.some(([from, to]) => at >= from && at < to)) continue;
     const before = sentenceBefore(reply, match.index!).toLowerCase();
-    // The card's person telling someone else ("Tamsin told her to …") is not this.
+    // The card's person telling someone else ("Delphine told her to …") is not this.
     const named = knownKeys.flatMap((key) => [...before.matchAll(nameRe(key, "gu"))].map((hit) => ({ key, at: hit.index! })));
     const teller = named.sort((a, b) => b.at - a.at)[0]?.key;
     if (!teller || teller === display.toLowerCase()) continue;

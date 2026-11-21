@@ -179,7 +179,7 @@ export function formsOnFileAsked(context: Pick<ToolContext, "question" | "histor
  * QA's review of PR 1a (15 Nov 2026): the ask is about THIS person. The cited turn names the person whose forms are
  * looked at (the roster-name match request_evidence uses); or it names nobody and the manager's nearest earlier turn that
  * names someone names this person ("has she had a ca before?"); or, only when the cited turn names nobody, the person
- * is the one on the form open on screen or on the card the last reply showed (QA's re-review, fix 1). "write a new form for Remy Calder" never opens Juno Paxton's forms.
+ * is the one on the form open on screen or on the card the last reply showed (QA's re-review, fix 1). "write a new form for Remy Calder" never opens Saoirse Lindqvist's forms.
  */
 async function formsOnFileAskedFor(context: ToolContext, evidence: unknown, person: string): Promise<{ ok: true } | { ok: false; reason: string; reasonCode: string }> {
   const asked = formsOnFileAsked(context, evidence);
@@ -491,7 +491,7 @@ function otherPersonNamed(said: string, person: EvidencePerson): boolean {
   const isThisPerson = (name: string) => samePerson(name, person.name) || person.aliases.some((alias) => samePerson(name, alias));
   /*
    * QA (16 Nov 2026; the #1052 item 5 rule): a turn that names THIS card's person is this person's turn, even when it also
-   * names someone else ("Test Testi was disrespectful to her <title> Juno Paxton … I need a written CA"): the level,
+   * names someone else ("Tad Testerman was disrespectful to her <title> Saoirse Lindqvist … I need a written CA"): the level,
    * payroll or answer stated there carries. Only a turn that names another person and not this one is theirs.
    */
   if ([person.name, ...person.aliases].some((name) => mentionsPerson(said, name, rosterNames))) return false;
@@ -819,7 +819,7 @@ export async function inactiveMatch(scope: AccessScope, typed: string): Promise<
 const ROSTER_FAILED = "The staff roster could not be loaded just now, so nobody could be looked up. Say so to the manager; do not guess a name.";
 const ROSTER_UNCHECKED = "This login covers a district or region, so the roster cannot be searched here. Use the name exactly as the manager typed it.";
 
-/** Item 27: `typed` is whole words of `name`, in order ("ann" in "Ann Lee", "lee" in "Ann Lee"; never "ann" in "Joann"). */
+/** Item 27: `typed` is whole words of `name`, in order ("ann" in "Ann Sato", "sato" in "Ann Sato"; never "ann" in "Maryann"). */
 export function wholeNameWords(name: string, typed: string): boolean {
   const want = words(typed).join(" ");
   return want !== "" && ` ${words(name).join(" ")} `.includes(` ${want} `);
@@ -827,7 +827,7 @@ export function wholeNameWords(name: string, typed: string): boolean {
 
 /**
  * Pau's live chat (20 Nov 2026, 14:23Z: "list ca or coaching forms for <P> co"): a whole name word, then the START of the
- * next one ("liesel co" for Liesel Cobb). The first word is matched whole (never "ann lee" for Joann Lee, item 27), and
+ * next one ("ottilie br" for Ottilie Brandvold). The first word is matched whole (never "ann sato" for Maryann Sato, item 27), and
  * each later typed word begins the name word after it.
  */
 export function nameThenStartOfNext(name: string, typed: string): boolean {
@@ -938,7 +938,7 @@ function turnedDownName(context: Pick<ToolContext, "question" | "history">): str
   return asked ? asked[1]!.trim() : null;
 }
 
-/** A salon or city of the company's ("grand island", "KS Manhattan"): never a person's name. */
+/** A salon or city of the company's ("grand island", "SD Sioux Falls"): never a person's name. */
 function namesAPlace(typed: string): boolean {
   return readSalonMentions(typed).length > 0 || readSalonMentions(`at ${typed}`).length > 0;
 }
@@ -1005,10 +1005,10 @@ export async function findStaff(context: ToolContext, input: { name?: unknown; p
     };
   }
   if (found.length === 0) {
-    /* Close spellings, as the app's own name check reads them ("Marnie Halloway" → Marnie Holloway). */
+    /* Close spellings, as the app's own name check reads them ("Perpetua Winne" → Perpetua Wynne). */
     const close = matchEmployeeName(typed, read.roster);
     /*
-     * The person on this chat's own card, spelled a little off ("Edit Thesaly Brant CA" after Thessaly Brandt's card;
+     * The person on this chat's own card, spelled a little off ("Edit Evangelyne Strande CA" after Evangeline Strand's card;
      * the live re-run's sf-s26): it is that person, as the manager can see the card. Only one close candidate, and
      * only when an earlier reply in this chat named them.
      */
@@ -1019,7 +1019,7 @@ export async function findStaff(context: ToolContext, input: { name?: unknown; p
     const saidNo = /^\s*(?:no|nope|nah|not\s+(?:her|him|them|that))\b/i.test(context.question);
     /*
      * Batch K1 (NEAR_MISS_NEVER_SEATED; Pau 15 Nov: A, replacing his 14 Nov one-strong-close-match; QA's review): a close
-     * spelling is never seated, not even as the card's person ("also a coaching for Remi Caldor" after Remy Calder's card
+     * spelling is never seated, not even as the card's person ("also a coaching for Remi Caldre" after Remy Calder's card
      * asks). The card's person is used only on an exact full name (legal or preferred), which never reaches this branch,
      * or after the manager confirms: a "yes" to the Did-you-mean, after which the model looks up the confirmed name.
      */
@@ -1108,7 +1108,7 @@ export async function findStaff(context: ToolContext, input: { name?: unknown; p
     const inactive = await inactiveMatch(context.actor.scope, person);
     return { reason_code: "not_on_roster", matches: [], not_on_roster: person, staff_list: context.actor.scope.level === PLACE_LEVEL ? `your ${locationWord()}'s` : "the", ...(inactive ? { inactive_in_woven: inactive } : {}), note: `Not on the ${staffSystem()} staff list${inactive ? ` (no longer active in ${staffSystem()})` : ""}. Propose the card now with employee_name "${person}" as typed, and say so as the rules book's Card replies teach.` };
   }
-  /* A first name alone is confirmed before it goes on a form, as today ("Is this for **Rhea Calloway**?"). */
+  /* A first name alone is confirmed before it goes on a form, as today ("Is this for **Liora Kincaid**?"). */
   /*
    * A first name alone with exactly one person on the roster (Pau, 14 Nov 2026: fewer questions, act and state the
    * assumption): that person, and the reply says so in one line the manager can correct before Create. Today asked
@@ -1431,7 +1431,7 @@ export async function findPastForms(context: ToolContext, input: { employee_name
   if (actor === null) return { reason_code: "scope", error: `This manager's role cannot view ${appConfig().formsPageName}, so past forms cannot be listed.` };
   /*
    * Batch G (QA's addition 2): the typed name is one roster person's preferred or legal name, so forms under the other
-   * one are theirs too ("Jo Quill" finds the forms filed as "Josephine Quill"). Never another roster person's.
+   * one are theirs too ("Margo Vale" finds the forms filed as "Marguerite Vale"). Never another roster person's.
    */
   const roster = await rosterFor(context.actor.scope);
   const people = roster.kind === "read" ? roster.roster : [];
@@ -1444,7 +1444,7 @@ export async function findPastForms(context: ToolContext, input: { employee_name
     /*
      * ONLY THE NAMED PERSON'S FORMS (QA's code audit, item 27; privacy): the read above matches any name word as a part of a
      * word (`ilike`), and this filter used to keep a form whenever the typed name was a SUBSTRING of its employee's name:
-     * "Ann" listed Hannah's and Joann's forms, "Ann Lee" listed Joann Lee's. Now a form is kept only when the typed name is
+     * "Ann" listed Hannah's and Maryann's forms, "Ann Sato" listed Maryann Sato's. Now a form is kept only when the typed name is
      * whole words of its employee's name (`wholeNameWords`: the full name, the first name or the last name), the same
      * person by `samePerson`, or one roster holder's other name (aliases).
      */
@@ -1452,7 +1452,7 @@ export async function findPastForms(context: ToolContext, input: { employee_name
       .filter(onFileKept(input))
       .filter((row) => samePerson(row.employeeName, typed) || wholeNameWords(row.employeeName, typed) || nameThenStartOfNext(row.employeeName, typed) || (aliases.length > 0 && sameRosterPerson(row.employeeName, typed, people)));
     /*
-     * Item 27: the typed name fits forms of more than one person ("Lee": Ann Lee and Joann Lee) and is nobody's full name
+     * Item 27: the typed name fits forms of more than one person ("Sato": Ann Sato and Maryann Sato) and is nobody's full name
      * on file: list none of them; the reply asks which person, by full name. One roster holder's names count as one.
      */
     const exact = rows.filter((row) => words(row.employeeName).join(" ") === words(typed).join(" ") || (aliases.length > 0 && aliases.some((alias) => words(alias).join(" ") === words(row.employeeName).join(" "))));
@@ -1888,7 +1888,7 @@ function cardNameCorrection(
   options: { readonly byId?: RosterEmployee; readonly newFormEvidence?: unknown } = {},
 ): { person: RosterEmployee; from: string } | { asTyped: true; from: string } | { refusal: ToolResult } | null {
   if (context.openFormId) return null;
-  /* A salon or city answer ("KS Manhattan" to the which-salon question) is never a person, so never a name correction. */
+  /* A salon or city answer ("SD Sioux Falls" to the which-salon question) is never a person, so never a name correction. */
   if (namesAPlace(typed)) return null;
   /*
    * After #1051 (QA): this check's "Did you mean" is recorded like find_staff's (effects.nameQuestion), and the answer is
@@ -1912,7 +1912,7 @@ function cardNameCorrection(
         .flatMap((turn) => extractEmployeeNames(String(turn.content ?? "")))
         .find((name) => personKey(name) === card.nameKey) ?? null
     : null;
-  /* A name read from the manager's typing is shown with capitals, as the card shows it ("quill fenwick" → "Quill Fenwick"). */
+  /* A name read from the manager's typing is shown with capitals, as the card shows it ("brisa lund" → "Brisa Lund"). */
   const cardName = cardPerson ? displayName(cardPerson) : offRosterCardName?.replace(/(^|[\s'-])(\p{Ll})/gu, (_all, lead: string, letter: string) => lead + letter.toUpperCase()) ?? null;
   if (!cardName) return null;
   if ((cardPerson ? fullNamesOf(cardPerson) : [cardName]).some((full) => samePerson(full, typed))) return null;
@@ -2054,7 +2054,7 @@ export function mentionsPerson(text: string, name: string, rosterNames: readonly
 
 /**
  * A ROSTER MATCH IS SETTLED BY THE MANAGER'S OWN WORDS (QA, 16 Nov 2026, live on 1a53042: "tamsen orwel" was seated as
- * Tamsin Orwell when the model looked up the roster spelling itself). The words the lookup came from: the model's
+ * Delphine Okafor when the model looked up the roster spelling itself). The words the lookup came from: the model's
  * verified person_evidence quote, else the manager's turns, newest first. They settle <A> when they name <A> exactly
  * (a full name, legal or preferred, or a whole first or preferred name; case and spacing ignored) or when the close
  * spelling they hold was confirmed as <A> in this chat's recorded Did-you-mean. Returns that close spelling when it is
@@ -2110,7 +2110,7 @@ function closeSpellingNotSettled(
 
 /**
  * THE MANAGER'S TITLE FOR THIS PERSON (QA, 16 Nov 2026, c219: title_differs read "<title>" from "your <title>
- * Juno Paxton"). A title is the title of the name it is attached to: in its sentence, the nearest name the name reader finds
+ * Saoirse Lindqvist"). A title is the title of the name it is attached to: in its sentence, the nearest name the name reader finds
  * (or a roster name). Attached to another person, it is never this person's; with no name in its sentence, it is this
  * person's, as before. Null when no title is said for this person.
  */
@@ -2476,7 +2476,7 @@ export async function withLookupReplyName(context: ToolContext, result: ToolResu
   const byName = !byMatch && typeof typed === "string" && typed.trim() ? read.roster.filter((row) => fullNamesOf(row).some((full) => samePerson(full, typed))) : [];
   const row = byMatch ?? (byName.length === 1 ? byName[0] : undefined);
   if (!row) return result;
-  // As the card names them (the name the manager used: "Jo Quill" for Josephine Quill), so the turn has one reply_name.
+  // As the card names them (the name the manager used: "Margo Vale" for Marguerite Vale), so the turn has one reply_name.
   return { ...result, reply_name: replyNameFor(nameAsSaid(row, managerTurns(context)), read.roster, extractEmployeeNames(managerTurns(context)), row.id) };
 }
 
@@ -2496,7 +2496,7 @@ export async function withEditReplyName(context: ToolContext, effects: ToolEffec
 /**
  * Batch G (QA's addition 2, 15 Nov 2026; Pau: "Preferred name is fine let it be flexible"): two names are one person
  * when they are the same name, or when each is a full name (preferred or legal) of exactly one roster person, and it is
- * the same person. "Jo Quill" and "Josephine Quill" are one person when Woven has Josephine "Jo" Quill; two different
+ * the same person. "Margo Vale" and "Marguerite Vale" are one person when Woven has Marguerite "Margo" Vale; two different
  * roster people are never merged, and a name two roster people share decides nothing.
  */
 export function sameRosterPerson(a: string, b: string, roster: readonly Pick<RosterEmployee, "id" | "firstName" | "lastName" | "preferredFirstName">[]): boolean {
