@@ -1026,23 +1026,17 @@ export const COMPANY_POLICIES_OFFENSE = "company_policies";
  * SECTIONS THAT GOVERN ATTENDANCE, filed under revision 7's Attendance Policy box rather than Violation of Company
  * Policies (QA2, 21 Nov 2026): a no-show who did not find coverage cites Shift Replacement (p.37), and that is
  * attendance, not conduct, so the card never reads "Standards of Conduct — Shift Replacement" and Create ticks
- * Attendance Policy. QA2 added every heading about scheduling, absence or time off the same day. Only the box a cited heading is filed under; what Create cites for an account is unchanged.
+ * Attendance Policy. QA2 added the scheduling and time-off procedure headings the same day. Only the box a cited heading is filed under; what Create cites for an account is unchanged.
  */
 const ATTENDANCE_SECTION_HEADINGS: readonly string[] = [
-  // Scheduling (QA2, 21 Nov 2026).
+  // The manual's scheduling and time-off procedures (QA2, 21 Nov 2026).
   "Shift Replacement",
   "Schedule Requests/General availability Changes",
-  // Absence and time off: the manual's requests and leaves. Its generic sub-headings ("Eligibility", "Provisions",
-  // "Usage") and Holiday Benefits name no attendance rule on their own and stay with item 18's rule.
   "Leave Requests",
   "Paid time Off (PTO)",
-  "Family Medical Leave",
-  "Bereavement Leave",
-  "Military Leave",
-  "Time Off to Vote or Serve as an Election Officer",
-  "Jury Duty",
-  "Witness Duty",
-  "Maternity Leave",
+  // NOT the legally protected leaves (Family Medical, Military, Maternity, Bereavement Leave; Jury and Witness Duty;
+  // Time Off to Vote or Serve as an Election Officer): taking one is never an attendance offense, so a form never
+  // ticks Attendance because of it (QA2). They stay with item 18's rule until QA settles their handling with Pau.
 ];
 
 export function offenseKeyForManualHeading(heading: string): string {

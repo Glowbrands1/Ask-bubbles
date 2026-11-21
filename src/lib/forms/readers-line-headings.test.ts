@@ -33,12 +33,17 @@ describe("headings saved under another box", () => {
     expect(offenseKeyForManualHeading("Shift Replacement")).toBe("attendance_policy");
     expect(readersLineBox("Shift Replacement")).toBeNull();
     expect(withReadersLineBox("Shift Replacement, JBA Policy Manual p.37", "Shift Replacement")).toBe("Shift Replacement, JBA Policy Manual p.37");
-    // Every heading about scheduling, absence or time off, by the manual's own spelling (QA2, 21 Nov 2026).
-    for (const heading of ["Schedule Requests/General availability Changes", "Leave Requests", "Paid time Off (PTO)", "Family Medical Leave", "Bereavement Leave", "Military Leave", "Time Off to Vote or Serve as an Election Officer", "Jury Duty", "Witness Duty", "Maternity Leave"]) {
+    // The scheduling and time-off procedure headings, by the manual's own spelling (QA2, 21 Nov 2026).
+    for (const heading of ["Schedule Requests/General availability Changes", "Leave Requests", "Paid time Off (PTO)"]) {
       expect(offenseKeyForManualHeading(heading), heading).toBe("attendance_policy");
       expect(readersLineBox(heading), heading).toBeNull();
     }
-    // Generic sub-headings and benefits stay with item 18's rule.
+    // A legally protected leave is never an attendance offense: never Attendance Policy (QA2); item 18's rule for now.
+    for (const heading of ["Family Medical Leave", "Military Leave", "Jury Duty", "Witness Duty", "Time Off to Vote or Serve as an Election Officer", "Maternity Leave", "Bereavement Leave"]) {
+      expect(offenseKeyForManualHeading(heading), heading).not.toBe("attendance_policy");
+      expect(readersLineBox(heading), heading).toBe("Standards of Conduct");
+    }
+    // Benefits and time records stay with item 18's rule.
     for (const heading of ["Holiday Benefits", "Meal and Rest Policy", "Time Records"]) expect(readersLineBox(heading), heading).toBe("Standards of Conduct");
   });
 });
