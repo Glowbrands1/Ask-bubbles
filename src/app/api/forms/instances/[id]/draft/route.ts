@@ -763,18 +763,29 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
       const managerLines = body.notesFromCard === true || body.cardFromLoop === true ? (await import("@/lib/forms/draft-notes")).notesWithoutCardLines(notes) : notes;
       if (!addressTypedIn(exitDetails.permanentAddress, managerLines)) delete exitDetails.permanentAddress;
     }
+    /*
+     * Ported from the sibling app (Pau via its QA, 20 Nov 2026, item 15): on a loop card's Create the exit Details lines
+     * name the employee by first name, never "she"/"her" ("Reason for resignation: she said her new job pays more").
+     * Only with `cardFromLoop`; any other exit form reads as before.
+     */
+    const exitDetailsRead = async (details: NonNullable<typeof exitDetails>) => {
+      const read = exitDetailValues(details);
+      if (body.cardFromLoop !== true) return read;
+      const { firstNameNotPronouns } = await import("@/lib/forms/first-name-write-up");
+      return { ...read, values: firstNameNotPronouns(read.values, loaded.instance.employeeName, new Set(Object.keys(read.values))).values };
+    };
     const exitStatedFacts = isExitForm && exitDetails
       ? formEditSingleWriterEnabled()
         ? await (await import("@/lib/forms/form-write")).statedWrite(
             id,
-            exitDetailValues(exitDetails),
+            await exitDetailsRead(exitDetails),
             actor.id,
             exitStatedKeys(),
             { notes },
           )
         : await applyStatedFacts(
             id,
-            exitDetailValues(exitDetails),
+            await exitDetailsRead(exitDetails),
             actor.id,
             // EXIT_INTAKE_FIX_ENABLED adds the Permanent Address the manager typed.
             exitStatedKeys(),
@@ -2870,6 +2881,27 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
         const { body: account, line: citation } = splitAppCitationLine(loopCardDraft.values[accountKey]!);
         const laid = loopWriteUpSections(account, loaded.instance.employeeName);
         if (laid.changed) loopCardDraft.values = { ...loopCardDraft.values, [accountKey]: citation ? `${laid.text}\n\n${citation}` : laid.text };
+      }
+      /*
+       * Ported from the sibling app (Pau via its QA, 20 Nov 2026, items 15 and 19; QA2's live re-test here, 21 Nov 2026):
+       * a loop card's saved write-up calls the employee by first name, never a pronoun, and the person's second mention in
+       * a sentence reads naturally ("was late on the last two shifts", never "on <P>'s last two shifts";
+       * `first-name-write-up.ts`). The manual's quoted policy fields, the two the server derives, and a line the manager
+       * typed are left as they are.
+       */
+      const { firstNameNotPronouns } = await import("@/lib/forms/first-name-write-up");
+      const namedKeys = new Set(fields.filter((field) => !field.policyGrounded && !DERIVED_POLICY_FIELD_KEYS.has(field.key) && !keeps(field.key)).map((field) => field.key));
+      const named = firstNameNotPronouns(loopCardDraft.values, loaded.instance.employeeName, namedKeys);
+      if (named.changed.length > 0) loopCardDraft.values = named.values;
+      /*
+       * The sibling app's QA, live (20 Nov 2026): a coaching card's Observed opened with its topic ("Greeting guests, she
+       * didn't greet 3 guests"). It starts with what was seen: the card's own topic prefix is dropped (`coaching-topic-prefix.ts`).
+       */
+      const cardTopicWords = typeof body.cardTopic === "string" ? body.cardTopic.trim().slice(0, 120) : "";
+      if (isCoachingFamily && cardTopicWords && accountKey && !keeps(accountKey) && typeof loopCardDraft.values[accountKey] === "string") {
+        const { withoutTopicPrefix } = await import("@/lib/forms/coaching-topic-prefix");
+        const unprefixed = withoutTopicPrefix(loopCardDraft.values[accountKey]!, cardTopicWords);
+        if (unprefixed !== loopCardDraft.values[accountKey]) loopCardDraft.values = { ...loopCardDraft.values, [accountKey]: unprefixed };
       }
     }
     const loopDraftValues = loopCardDraft ? loopCardDraft.values : plannedValues;

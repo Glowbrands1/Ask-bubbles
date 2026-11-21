@@ -24,6 +24,11 @@ const REVIEWED = new Set([
   "app/api/forms/instances/route.ts → @/lib/ai/agent-loop/settled-names",
   "config/company/agent-loop.ts → @/lib/ai/agent-loop/app-config",
   "lib/forms/follow-up-default-write.ts → @/lib/ai/agent-loop/app-config",
+  /*
+   * Added on purpose (port of the sibling app's loop-card write-up fix, 21 Nov 2026): a loop card's saved write-up calls
+   * the employee by first name with the loop's own pronoun pass. The draft route reaches it only for `cardFromLoop`.
+   */
+  "lib/forms/first-name-write-up.ts → @/lib/ai/agent-loop/reply-pronouns",
 ]);
 /* Test code: test files, and the replay pack (its stand-in model and cases read the loop, as in the sibling app). */
 const isTest = (path: string) => /\.test\.tsx?$/.test(path) || path.startsWith("app/api/chat/replay-pack/");

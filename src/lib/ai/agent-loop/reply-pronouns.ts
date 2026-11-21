@@ -195,16 +195,58 @@ export function withoutPersonPronouns(
   const inQuote = (at: number) => quoted.some(([from, to]) => at >= from && at < to) || (!told.has(at) && keepsOwn(at));
   const edits: Array<{ from: number; to: number; text: string }> = [];
 
+  /*
+   * QA (20 Nov 2026, item 19; the production audit): "<P> did not come into <P>'s scheduled shift today" reads clumsily.
+   * The person's second mention in one sentence (the name already written, or an earlier pronoun of theirs replaced) is
+   * not the name again: a possessive right after a preposition is "the" ("did not come into the scheduled shift"; one
+   * elsewhere, "said her car broke down", keeps its owner as the name), and a subject after "and",
+   * "but", "or" or "then" is dropped ("came in late and left early"). The first mention is the name, as before, and no
+   * pronoun is ever kept.
+   */
+  const nameInSentence = nameRe(display.toLowerCase(), "iu");
+  const mentionedBefore = (at: number) => {
+    const before = sentenceBefore(reply, at);
+    const sentenceStart = at - before.length;
+    return nameInSentence.test(before) || edits.some((edit) => edit.from >= sentenceStart && edit.from < at);
+  };
   for (const match of reply.matchAll(ALWAYS)) {
     const at = match.index!;
     if (inQuote(at)) continue;
     const word = match[0].toLowerCase();
     const end = at + match[0].length;
-    let text: string;
-    if (word === "his" || word === "hers") text = possessive(display);
+    const owns = word === "his" || word === "hers" || (word === "her" && /^\s+[A-Za-z0-9$]/.test(reply.slice(end)) && !NOT_OWNED.test(reply.slice(end)));
+    const again = mentionedBefore(at);
+    // Only after a place or time preposition ("into her scheduled shift"): "Fenna said her car broke down" keeps the owner.
+    const afterPreposition = /\b(?:into|for|to|on|at|during|from|before|after|in)[ \t]+$/i.test(reply.slice(Math.max(0, at - 10), at));
+    /*
+     * This app's QA2, live (21 Nov 2026): "she wanted to show her team her new puppy" read "<P> wanted to show <P>'s team
+     * <P>'s new puppy". Neither possessive follows a preposition, so the rule above is extended to two places only: right
+     * after "show" ("show the team"), and the clause's next object after a possessive already made "the" in this sentence,
+     * with no punctuation or more than two words between ("the team her new puppy" → "the team the new puppy"). A
+     * reporting verb ("said her car broke down") still keeps the owner.
+     */
+    const afterShow = /\b(?:show|shows|showed|showing|shown)[ \t]+$/i.test(reply.slice(Math.max(0, at - 10), at));
+    const lastEdit = edits.at(-1);
+    const nextObject = !!lastEdit && /^the$/i.test(lastEdit.text) && /^[ \t]+[A-Za-z]+(?:[ \t]+[A-Za-z]+){0,1}[ \t]+$/.test(reply.slice(lastEdit.to, at));
+    if (again && owns && word !== "hers" && (afterPreposition || afterShow || nextObject)) {
+      edits.push({ from: at, to: end, text: match[0][0] === match[0][0]!.toUpperCase() ? "The" : "the" });
+      continue;
+    }
+    const joined = /\b(?:and|but|or|then)[ \t]+$/i.exec(reply.slice(Math.max(0, at - 8), at));
+    /*
+     * Dropped only when the person is the subject the sentence opens with ("Fenna came in late and she left early"). The
+     * listener of someone else's instruction ("Corwin Ashdale told her to clock out early and she refused", the sibling app's f059) is named,
+     * never dropped: the joined clause's subject would read as the teller's.
+     */
+    const lead = sentenceBefore(reply, at).replace(/^\s*(?:\*\*[^*]*\*\*\s*)?(?:[A-Z][\w ]{0,40}:\s+)?/, "");
+    const firstWord = (display.split(/\s+/)[0] ?? "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const opensWithPerson = new RegExp(`^(?:${firstWord}|she|he)\\b`, "iu").test(lead);
+    if (again && !told.has(at) && opensWithPerson && (word === "she" || word === "he") && joined && /^\s+[a-z]/.test(reply.slice(end))) {
+      edits.push({ from: at, to: end + (/^[ \t]/.test(reply.slice(end)) ? 1 : 0), text: "" });
+      continue;
+    }
     // "her shift", "her 146 tans", "her own" own something; "for her.", "with her and", "talked to her" do not.
-    else if (word === "her") text = /^\s+[A-Za-z0-9$]/.test(reply.slice(end)) && !NOT_OWNED.test(reply.slice(end)) ? possessive(display) : display;
-    else text = display;
+    const text = owns ? possessive(display) : display;
     edits.push({ from: at, to: end, text });
   }
   for (const match of reply.matchAll(THEY_PERSON)) {
