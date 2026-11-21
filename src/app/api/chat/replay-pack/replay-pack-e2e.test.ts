@@ -90,6 +90,8 @@ const state = vi.hoisted(() => ({
   /** What the slot model reads on the next turns (`slotsRead`), as a production trace shows it. */
   /** Chunks the pinned manual also has, when a case sets them (`manualAlsoHas`); none by default. */
   manualExtra: [] as Record<string, unknown>[],
+  /** The pinned manual's rows in place of the pack's CA sections, when a case sets them (`manualIs`); null by default. */
+  manualBase: null as null | readonly Record<string, unknown>[],
   slotsRead: {} as Record<string, unknown>,
   slotReading: "none" as "none" | "ca" | "copy",
   remapObservation: null as string | null,
@@ -468,7 +470,7 @@ vi.mock("@/lib/knowledge/providers/supabase", () => ({
     }
     /*
      * The loop's manual read asks for the manual's version first (`manualFor` in agent-loop/tools.ts). Ported from the
-     * sibling app's pack (QA's live re-test, 21 Nov 2026, items 22 and 25): without it the read threw and every loop case ran with
+     * sibling app's pack (QA's live re-test, 21 Nov 2026, items 6, 22 and 25): without it the read threw and every loop case ran with
      * "The JBA Policy Manual could not be read", so no loop card here ever cited a heading. Keyed on the case's own extra
      * chunks, so a case's `manualAlsoHas` is never served another case's kept read.
      */
@@ -482,7 +484,7 @@ vi.mock("@/lib/knowledge/providers/supabase", () => ({
         documentTitle: "2025 JBA Policy Manual - Edited 5-2025",
         documentCategory: "policies_compliance",
         matchedBy: "tag",
-        chunks: [...JBA_MANUAL_CA_CHUNKS, ...state.manualExtra],
+        chunks: [...(state.manualBase ?? JBA_MANUAL_CA_CHUNKS), ...state.manualExtra],
       };
     }
   },
@@ -793,6 +795,7 @@ beforeEach(async () => {
   state.remapObservation = null;
   state.slotsRead = {};
   state.manualExtra = [];
+  state.manualBase = null;
   state.knowledgeQueries = [];
   state.reading = {};
   state.draft = { values: {} };
@@ -929,6 +932,9 @@ function context(): ReplayContext {
     },
     manualAlsoHas: (chunks) => {
       state.manualExtra = [...chunks];
+    },
+    manualIs: (chunks) => {
+      state.manualBase = [...chunks];
     },
     revisionWrites: (values, checked) => {
       state.revision = checked ? { values, checked } : { values };
@@ -1083,14 +1089,16 @@ describe("src/config/production-flags.json", () => {
 });
 
 /*
- * REPLAY_PACK_HALF (CI only; QA, 9 Nov 2026): the flags-off parity run (`src/lib/ai/flags-off-parity.test.ts`) runs the
- * pack as two children, each with one half of the cases by id ("0": the first half, "1": the second), so neither child
- * passes its time budget as the pack grows. Unset, every case runs, as before.
+ * REPLAY_PACK_PART (CI only; QA, 9 Nov 2026, thirds since 21 Nov 2026): the flags-off parity run
+ * (`src/lib/ai/flags-off-parity.test.ts`) runs the pack as REPLAY_PACK_PARTS children, each with one part of the cases by
+ * id ("0" the first, "1" the next, …), so none passes its time budget as the pack grows. Two halves held until 21 Nov
+ * 2026, when the first half took 504 s of its 540 s on CI and the next cases pushed it over. Unset, every case runs.
  */
-const HALF = process.env.REPLAY_PACK_HALF;
+const PART = process.env.REPLAY_PACK_PART;
+const PARTS = Number(process.env.REPLAY_PACK_PARTS ?? "1");
 const BY_ID = [...CASES].sort((a, b) => a.id.localeCompare(b.id));
-const MIDDLE = Math.ceil(BY_ID.length / 2);
-const RUN = HALF === "0" ? BY_ID.slice(0, MIDDLE) : HALF === "1" ? BY_ID.slice(MIDDLE) : CASES;
+const PART_SIZE = Math.ceil(BY_ID.length / PARTS);
+const RUN = PART === undefined ? CASES : BY_ID.slice(Number(PART) * PART_SIZE, (Number(PART) + 1) * PART_SIZE);
 
 describe("the replay pack", () => {
   for (const replay of RUN) {
