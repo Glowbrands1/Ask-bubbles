@@ -38,6 +38,7 @@ import type { AccessScope, ChatFormProposal, ChatMessage } from "@/types";
  */
 
 const store: FakeStore = {
+  forms_all_store_access: [],
   form_instances: [],
   form_instance_values: [],
   form_instance_events: [],
@@ -1083,6 +1084,9 @@ function context(): ReplayContext {
     },
     rosterFails: () => {
       loop.rosterFails = true;
+    },
+    formsAllStoreAccess: (mode = "all") => {
+      store.forms_all_store_access!.push({ app_user_id: "qa-manager", visibility_mode: mode, revoked_at: null });
     },
     watchLoopEntries: () => {
       const spy = vi.spyOn(agentLoopRun, "runAgentTurn");
