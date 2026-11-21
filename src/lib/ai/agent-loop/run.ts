@@ -255,7 +255,7 @@ export interface CardClaims {
   payrollAmount?: string;
   policy?: string;
   date?: string;
-  salon?: string;
+  store?: string;
 }
 
 const CLAIM_LEVEL = [/\*\*Type of Warning:?\*\*:?\s*(Verbal|Written)\b/i, /\b(Verbal|Written) Warning,? as you said/i, /\b(?:warning level|level)\b[^.\n]{0,30}\b(?:is|to|now|set to)\b\s*(?:a\s+)?\**(verbal|written)\b/i, /\b(?:made|changed|updated|set)\b[^.\n]{0,30}\b(?:to|as)\s+(?:a\s+)?\**(verbal|written)\b/i];
@@ -282,7 +282,7 @@ export function cardClaims(content: string): CardClaims {
     ...(first(CLAIM_AMOUNT) ? { payrollAmount: first(CLAIM_AMOUNT) } : {}),
     ...(policy ? { policy } : {}),
     ...(first(CLAIM_DATE) ? { date: first(CLAIM_DATE) } : {}),
-    ...(salon ? { salon } : {}),
+    ...(salon ? { store: salon } : {}),
   };
 }
 
@@ -299,10 +299,10 @@ export function cardMismatch(claims: CardClaims, card: ChatFormProposal | null):
   if (claims.payrollAmount && Number(card?.payrollDeductAmount?.replace(/[^\d.]/g, "") ?? NaN) !== Number(claims.payrollAmount)) wrong.push(`payroll amount ($${claims.payrollAmount})`);
   if (claims.policy && card && card.policyLine !== undefined && policyLine(claims.policy) !== policyLine(card.policyLine)) wrong.push(`policy (${claims.policy})`);
   if (claims.policy && !card) wrong.push(`policy (${claims.policy})`);
-  if (claims.salon) {
+  if (claims.store) {
     const held = card?.locationId ? (rosterSalonName(card.locationId) ?? card.locationId) : null;
     const key = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, "");
-    if (!held || !(key(held).includes(key(claims.salon)) || key(claims.salon).includes(key(held)))) wrong.push(`salon (${claims.salon})`);
+    if (!held || !(key(held).includes(key(claims.store)) || key(claims.store).includes(key(held)))) wrong.push(`store (${claims.store})`);
   }
   if (claims.date) {
     const [month, day] = claims.date.split("/").map(Number);
@@ -318,7 +318,7 @@ function cardFacts(card: ChatFormProposal | null): Record<string, unknown> {
     form: card.templateName,
     employee: card.employeeName,
     form_date: card.formDate ?? null,
-    salon: salonLabel(card.locationId),
+    store: salonLabel(card.locationId),
     policy: card.policyLine ?? null,
     warning_level: card.warningLevel ?? null,
     payroll_deduct: card.payrollDeduct ?? null,
@@ -416,7 +416,7 @@ function buildAgentLoopTools(config: AppConfig) {
   {
     name: "list_staff",
     description: "The staff of one of the signed-in manager's own " + places + ", by name and position. For \"who's on my staff\" and for a form asked for a whole staff (never one card for everyone). With several " + places + " and none named, it gives the question to ask.",
-    input_schema: object({ salon: { type: "string", description: "The " + place + " the manager named, if any." }, position: { type: "string", description: "One position the manager asked about (\"" + examples.position + "\"), if any." } }, []),
+    input_schema: object({ store: { type: "string", description: "The " + place + " the manager named, if any." }, position: { type: "string", description: "One position the manager asked about (\"" + examples.position + "\"), if any." } }, []),
   },
   {
     name: "search_knowledge",
@@ -480,7 +480,7 @@ function buildAgentLoopTools(config: AppConfig) {
         },
         attendance_evidence: evidence("With attendance: the manager message of this request and its words that describe the absence or the lateness."),
         incident_time: { type: "string", description: "The time of the incident if the manager gave one, as they said it." },
-        salon: { type: "string", description: "The " + place + " the form is for, as the manager named it (" + examples.placesNamed + "), when the card asks which " + place + " or the manager says one. Only the manager's own " + places + " are accepted." },
+        store: { type: "string", description: "The " + place + " the form is for, as the manager named it (" + examples.placesNamed + "), when the card asks which " + place + " or the manager says one. Only the manager's own " + places + " are accepted." },
       },
       ["template_key"],
     ),

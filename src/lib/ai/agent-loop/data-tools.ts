@@ -61,9 +61,9 @@ function reviewsQuestion(question: string, store: string | null, period: string 
 }
 
 /** read_reviews({salon?, period?}): the Google Reviews page's figures, every store, the manager's own marked. */
-export async function readReviews(context: DataToolContext, input: { salon?: unknown; period?: unknown }, deps: DataToolDeps = DEFAULT_DATA_TOOL_DEPS): Promise<ToolResult> {
+export async function readReviews(context: DataToolContext, input: { store?: unknown; period?: unknown }, deps: DataToolDeps = DEFAULT_DATA_TOOL_DEPS): Promise<ToolResult> {
   const block = await deps.loadReviewsBlock({
-    question: reviewsQuestion(context.question, text(input.salon), text(input.period)),
+    question: reviewsQuestion(context.question, text(input.store), text(input.period)),
     role: context.actor.role,
     scope: context.actor.scope,
     ...(context.now ? { now: context.now } : {}),
@@ -99,7 +99,7 @@ export function dataToolSpecs(config: AppConfig) {
       input_schema: {
         type: "object",
         properties: {
-          salon: { type: "string", description: "A " + place + " the manager named, if any." },
+          store: { type: "string", description: "A " + place + " the manager named, if any." },
           period: { type: "string", description: "The period the manager asked about, in their words, if any: e.g. L3, L6, YTD, last 3 months, month by month." },
         },
         required: [],

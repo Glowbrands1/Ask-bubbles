@@ -1257,7 +1257,7 @@ function positionKey(text: string): string {
   return text.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean).map((word) => (word.length > 3 && word.endsWith("s") ? word.slice(0, -1) : word)).join(" ");
 }
 
-export async function listStaffTool(context: ToolContext, effects: ToolEffects, input: { salon?: unknown; position?: unknown }): Promise<ToolResult> {
+export async function listStaffTool(context: ToolContext, effects: ToolEffects, input: { store?: unknown; position?: unknown }): Promise<ToolResult> {
   const scope = context.actor.scope;
   if (!["create_coaching_form", "create_corrective_action"].some((permission) => hasPermission(DEFAULT_PERMISSION_MATRIX, context.actor.role, permission as never))) {
     return { reason_code: "scope", error: "This role cannot list the staff. Say so." };
@@ -1276,7 +1276,7 @@ export async function listStaffTool(context: ToolContext, effects: ToolEffects, 
   const previous = [...context.history].reverse().find((turn) => turn.role === "assistant")?.content ?? "";
   const forForm = picker.asksForWholeStaff(context.question, true) || (typeof previous === "string" && previous.includes(picker.ASKED_LOCATION));
   const form = picker.formName(`${context.question} ${typeof previous === "string" && forForm ? previous : ""}`);
-  const typed = typeof input.salon === "string" ? input.salon.trim() : "";
+  const typed = typeof input.store === "string" ? input.store.trim() : "";
   const named = [...new Set([typed, context.question].flatMap((text) => (text ? readSalonMentions(text).flatMap((mention) => [...mention.salonIds]) : [])))];
   const own = named.filter((id) => allowed.has(id));
   if (own.length === 0 && named.length > 0) {
@@ -1293,15 +1293,15 @@ export async function listStaffTool(context: ToolContext, effects: ToolEffects, 
     const names = locations.map((location) => location.name).sort((a, b) => a.localeCompare(b));
     return {
       ...(forForm ? { whole_staff_form: form, one_person_per_form: true } : {}),
-      which_salon: true,
-      salon_count: names.length,
+      which_store: true,
+      store_count: names.length,
       ...(names.length <= 15 ? { salons: names } : {}),
       note: "Ask which " + locationWord() + "'s staff to list as the rules book's Staff lists teach.",
     };
   }
   /* STAFF_PICKER_NO_REPEAT (batch H9): a whole-staff form for a salon already listed in this chat gets the next step, not the list again. */
   if (forForm && picker.staffListedBefore(context.history, chosen.name)) {
-    return { whole_staff_form: form, one_person_per_form: true, salon: chosen.name, already_listed: true, note: "This " + locationWord() + "'s staff is listed above in this chat: never list it again. Say the next step as the rules book's Staff lists teach." };
+    return { whole_staff_form: form, one_person_per_form: true, store: chosen.name, already_listed: true, note: "This " + locationWord() + "'s staff is listed above in this chat: never list it again. Say the next step as the rules book's Staff lists teach." };
   }
   const facts = await appConfig().roster.readDirectoryFacts(scope).catch(() => []);
   const people = facts.length > 0 ? facts.map((person) => ({ ...person, positionName: person.title })) : [];
@@ -1311,11 +1311,11 @@ export async function listStaffTool(context: ToolContext, effects: ToolEffects, 
   const asked = typeof input.position === "string" ? positionKey(input.position) : "";
   const rows = asked ? all.filter((row) => positionKey(row.position).includes(asked)) : all;
   if (asked && rows.length === 0) {
-    return { salon: chosen.name, staff_count: all.length, position_not_found: input.position, positions: [...new Set(all.map((row) => row.position))] };
+    return { store: chosen.name, staff_count: all.length, position_not_found: input.position, positions: [...new Set(all.map((row) => row.position))] };
   }
   return {
     ...(forForm ? { whole_staff_form: form, one_person_per_form: true } : {}),
-    salon: chosen.name,
+    store: chosen.name,
     staff_count: all.length,
     ...(asked ? { position: input.position, position_count: rows.length } : {}),
     staff: rows.slice(0, 40),
@@ -1388,7 +1388,7 @@ async function findFormsInPeriod(context: ToolContext, input: { form?: unknown; 
         employee: row.employeeName,
         status: row.status,
         form_date: row.formDate,
-        salon: salonLabel(row.locationId, row.locationName) ?? `no ${locationWord()}`,
+        store: salonLabel(row.locationId, row.locationName) ?? `no ${locationWord()}`,
         ...(row.archivedAt ? { archived: true } : {}),
       })),
       complete,
@@ -1524,7 +1524,7 @@ export async function findPastForms(context: ToolContext, input: { employee_name
         status: row.status,
         form_date: row.formDate,
         /* G4 follow-up (QA, 15 Nov 2026): "no salon" in words, so the manager's "the one with no salon" can single it out. */
-        salon: salonLabel(row.locationId, row.locationName) ?? `no ${locationWord()}`,
+        store: salonLabel(row.locationId, row.locationName) ?? `no ${locationWord()}`,
         choice: choices.get(row)!,
         ...(row.archivedAt ? { archived: true } : {}),
       }));
@@ -2457,7 +2457,7 @@ export async function otherPeopleNamed(context: ToolContext, reply: string, pers
     ...extractEmployeeNames(context.question),
   ];
   const ownRow = roster.find((row) => fullNamesOf(row).some((full) => samePerson(full, person)) || [row.firstName, row.preferredFirstName].some((first) => first && first.toLowerCase() === person.trim().toLowerCase()));
-  // Runner 2 (c150, c198 T3: "At <salon>, she was late again"): a salon or city is no other person.
+  // Runner 2 (c150, c198 T3: "At <store>, she was late again"): a salon or city is no other person.
   return [...new Set(named.filter((name) => !own(name) && !namesAPlace(name) && !isJobTitlePhrase(name) && !(ownRow && (fullNamesOf(ownRow).some((full) => samePerson(full, name)) || [ownRow.firstName, ownRow.preferredFirstName].includes(name)))))];
 }
 
@@ -2607,7 +2607,7 @@ export function accountMissing(managerWords: string, account: string, priorActio
 
 
 /**
- * `account` without a whole "at / in <salon>" phrase naming `salonId` (QA item 20): every word of the phrase is a word of
+ * `account` without a whole "at / in <store>" phrase naming `salonId` (QA item 20): every word of the phrase is a word of
  * that salon's name (or "the", "salon", "location", "store", "our"), it reads as that salon, and it ends at a comma, a
  * sentence's end or the end of the account. "At <place>, coaching about <a duty>." → "Coaching about <a duty>.";
  * "at <a school> during her shift" and "at the front desk" are never touched.
@@ -2786,7 +2786,7 @@ export async function proposeForm(
     attendance?: unknown;
     attendance_evidence?: unknown;
     incident_time?: unknown;
-    salon?: unknown;
+    store?: unknown;
   },
 ): Promise<ToolResult> {
   /*
@@ -3724,7 +3724,7 @@ export async function proposeForm(
   }
   const incidentTime = typeof input.incident_time === "string" && input.incident_time.trim() ? input.incident_time.trim().slice(0, 40) : null;
 
-  const typedSalon = typeof input.salon === "string" ? input.salon.trim() : "";
+  const typedSalon = typeof input.store === "string" ? input.store.trim() : "";
   const answeredSalonIds = typedSalon ? [...new Set([typedSalon, `at ${typedSalon}`].flatMap((text) => readSalonMentions(text).flatMap((mention) => [...mention.salonIds])))] : [];
   if (typedSalon && answeredSalonIds.length === 0) return { reason_code: "salon_unknown", error: `"${typedSalon}" is not a ${locationWord()} the app knows. Ask which of the manager's ${locationWords()} it is.` };
   /*
@@ -3758,10 +3758,10 @@ export async function proposeForm(
   });
   let proposal = buildProposal(proposalInput(answeredSalonIds.length > 0 ? answeredSalonIds : turnSalonIds));
   /*
-   * Batch G (G14, honesty, the tester's live re-test): the reply said "Filed at <salon>, where Woven lists <name>" while
+   * Batch G (G14, honesty, the tester's live re-test): the reply said "Filed at <store>, where Woven lists <name>" while
    * the card still waited for a salon. Tool code fills the card from data: with no salon named and the card waiting
    * for one, Woven's salon for this employee, when it is one of the manager's choices, is the card's salon; the fact
-   * salon_from_woven says so and the rules book words the line.
+   * store_from_woven says so and the rules book words the line.
    */
   /*
    * Batch G (G7a, the tester's exit sweep: "terminate <name>, 3 no call no shows on 11/10, 11/12 and 11/13" read back as
@@ -3861,7 +3861,7 @@ export async function proposeForm(
   /*
    * GLOBAL_SALON_ASK (batch H5; Pau's wording, 24 Oct 2026): a global login that is not an admin never files a form with
    * no salon unasked. A salon named in this person's turns (a short name, a one-letter typo) is the card's; otherwise
-   * the card stays ready and the which_salon fact asks once, never again after it was asked.
+   * the card stays ready and the which_store fact asks once, never again after it was asked.
    */
   let whichSalon = false;
   const globalAsk = await import("./places");
@@ -4090,9 +4090,9 @@ export async function proposeForm(
     ...(await (async () => {
       if (card.status !== "needs_location" || !employee.id) return {};
       const primary = await rosterPrimarySalon(context.actor.scope, employee.id);
-      return primary && (card.authorizedLocationIds ?? []).includes(primary) ? { employee_salon: rosterSalonName(primary) ?? primary } : {};
+      return primary && (card.authorizedLocationIds ?? []).includes(primary) ? { employee_store: rosterSalonName(primary) ?? primary } : {};
     })()),
-    ...(salonFromWoven ? { salon_from_woven: salonFromWoven } : {}),
+    ...(salonFromWoven ? { store_from_woven: salonFromWoven } : {}),
     /* QA's live-app item 8: the card uses Woven's title; the manager called them something else ("<title>"). */
     ...(() => {
       const said = titleSaidFor(requestWords, employee.name, read.kind === "read" ? read.roster.map(displayName) : []);
@@ -4106,7 +4106,7 @@ export async function proposeForm(
     ...(await exitCardTicks(template.key === appConfig().formKeys.exit, Boolean(exitTermination), requestWords, today)),
     ...(exitTermination ? { exit_termination: { form_label: "Immediate involuntary separation", effective: exitTermination.date, ...(exitTermination.dated_today ? { dated_today: true } : {}) } } : {}),
     ...(jobTitleTyped ? { job_title_from_your_words: card.employeeRole } : {}),
-    ...(whichSalon ? { which_salon: true } : {}),
+    ...(whichSalon ? { which_store: true } : {}),
     ...(terminationStated ? { termination_stated: { approval: stated.TERMINATION_APPROVAL_LINE, plan_closing: stated.TERMINATION_PLAN_SENTENCE } } : {}),
     /*
      * Batch G2 (item 3, QA's live run part 2: the hedge line was missing on 5 of 7): the manager's words name a
@@ -4118,7 +4118,7 @@ export async function proposeForm(
     ...(underPerformance ? { under_performance: true } : {}),
     ...(didYouMean ? { confirm_policy: didYouMean } : {}),
     ...(priorActionsRefused ? { prior_actions_not_kept: priorActionsRefused } : {}),
-    ...((await outsideScopeSalon(context)) ?? (card.namedLocationOutOfScope ? { salon_outside_scope: card.namedLocationOutOfScope } : {})),
+    ...((await outsideScopeSalon(context)) ?? (card.namedLocationOutOfScope ? { store_outside_scope: card.namedLocationOutOfScope } : {})),
   };
   /*
    * PR 3 (rebuild plan; owner's audit): what the model asked for that is NOT on the card, each with a reason code, so the
@@ -4153,8 +4153,8 @@ export async function proposeForm(
       status: card.status,
       /* Batch K10: the only time the reply may call the card ready (rules book). */
       ready: card.status === "ready",
-      salon: salonLabel(card.locationId),
-      ...(card.status === "needs_location" ? { choose_salon_from: salonNames(card.authorizedLocationIds) } : {}),
+      store: salonLabel(card.locationId),
+      ...(card.status === "needs_location" ? { choose_store_from: salonNames(card.authorizedLocationIds) } : {}),
       job_title: card.employeeRole ?? null,
       form_date: card.formDate ?? null,
       observation: card.issue ?? null,
@@ -4189,7 +4189,7 @@ export async function proposeForm(
  * OUT_OF_SCOPE_PLACE_SAID as a fact (batch A): a salon the manager named in this turn that is not one of theirs, by
  * today's reading (`out-of-scope-place.ts`). The model says it, as the rules book teaches.
  */
-async function outsideScopeSalon(context: ToolContext): Promise<{ salon_outside_scope: string } | null> {
+async function outsideScopeSalon(context: ToolContext): Promise<{ store_outside_scope: string } | null> {
   const { authorizedSalonIds } = await import("./places");
   const scope = context.actor.scope;
   if (scope.level === "global") return null;
@@ -4197,7 +4197,7 @@ async function outsideScopeSalon(context: ToolContext): Promise<{ salon_outside_
   const named = [...new Set(readSalonMentions(context.question).flatMap((mention) => [...mention.salonIds]))];
   if (named.length !== 1 || allowed.includes(named[0]!)) return null;
   const name = rosterSalonName(named[0]!);
-  return name ? { salon_outside_scope: name } : null;
+  return name ? { store_outside_scope: name } : null;
 }
 
 /* ---------------------------------------------------------- team coaching --- */
@@ -4298,8 +4298,8 @@ export async function coachTeam(context: ToolContext, effects: ToolEffects): Pro
       employee: card.employeeName,
       status: card.status,
       ready: card.status === "ready",
-      salon: card.locationId ? salonLabel(card.locationId) : null,
-      ...(card.status === "needs_location" ? { choose_salon_from: (card.authorizedLocationIds ?? []).map((id) => ({ id, name: salonLabel(id) })) } : {}),
+      store: card.locationId ? salonLabel(card.locationId) : null,
+      ...(card.status === "needs_location" ? { choose_store_from: (card.authorizedLocationIds ?? []).map((id) => ({ id, name: salonLabel(id) })) } : {}),
       form_date: card.formDate ?? null,
       observation: card.issue ?? null,
       create_offered: card.supportsInlineDraft,

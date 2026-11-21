@@ -16,8 +16,8 @@ import { JOB_TITLES } from "@/lib/forms/proposal";
  *
  * Mechanism, not content: the rules book and the tool texts take their words from `appConfig()` as template
  * strings, so a second config changes every one of them (`app-config.test.ts` proves it with a fake config and
- * proves the sibling app's own text is byte-identical to before). Field and tool-argument names (`salon`, `which_salon`,
- * `salon_from_woven`) are the contract between the tools and the model, not wording, and stay as they are.
+ * proves the sibling app's own text is byte-identical to before). Field and tool-argument names (`salon`, `which_store`,
+ * `store_from_woven`) are the contract between the tools and the model, not wording, and stay as they are.
  */
 
 /** The place and staff words a company's content is written with (the config's own). */
