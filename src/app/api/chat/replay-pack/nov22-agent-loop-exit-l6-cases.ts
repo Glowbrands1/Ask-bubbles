@@ -58,4 +58,31 @@ export const NOV22_AGENT_LOOP_EXIT_L6_CASES: ReplayCase[] = [
       expect(checked.eligible_for_rehire ?? [], saved).toEqual(["no"]);
     },
   },
+  {
+    id: "nov22-l6-exit-termination-filed-as-once",
+    title: `L6: "${SAID}": the card's facts give the termination's tick once (exit_termination), so a reply that says "Filed as" for each fact says it once`,
+    report: `${REPORT}: the reply said "Filed as" twice`,
+    status: "fixed",
+    async run(t) {
+      start(t);
+      type Facts = { exit_ticks?: string[]; exit_termination?: { form_label?: string } };
+      t.loopModel!(loopStandIn((view): LoopDecision => {
+        const result = lastResult(view, "propose_form") as { facts?: Facts } | null;
+        if (result) {
+          /* The live model follows the rules book's two lines: exit_termination's "Filed as an …", and exit_ticks' "Filed as: …". */
+          const facts = result.facts ?? {};
+          const lines = [
+            ...(facts.exit_termination ? [`Filed as an **${facts.exit_termination.form_label}** (a termination), as you said.`] : []),
+            ...((facts.exit_ticks ?? []).length > 0 ? [`Filed as: ${facts.exit_ticks!.join(", ")}.`] : []),
+          ];
+          return { text: `Here's the Employee Exit Form for **Dashiell**. ${lines.join(" ")}` };
+        }
+        const call = exitCard("terminated for job abandonment");
+        return { ...call, input: { ...call.input, exit_evidence: { ...evidenceFrom(view, "exit form for Dashiell Varnum"), kind: "asks_for_exit_form" } } };
+      }));
+      const reply = await t.thread().say(SAID);
+      expect(reply.content, "the termination is not said at all (the case proves nothing)").toMatch(/Immediate involuntary separation/);
+      expect(reply.content.match(/Filed as/g) ?? [], reply.content).toHaveLength(1);
+    },
+  },
 ];
