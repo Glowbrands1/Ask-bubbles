@@ -34,7 +34,8 @@ import {
 import type { AskResponse } from "@/lib/ai/types";
 import { findManualSection, manualSectionHeadings, type ManualChunk } from "@/lib/forms/official-policy-manual";
 import { sectionWording } from "@/lib/forms/policy-citation";
-import { buildProposal, extractEmployeeNames, extractJobTitle, isJobTitlePhrase, JOB_TITLES, managerContext, samePerson, tidyTypedName } from "@/lib/forms/proposal";
+import { buildProposal, extractEmployeeNames, extractJobTitle, JOB_TITLES, managerContext, samePerson } from "@/lib/forms/proposal";
+import { isJobTitlePhrase, tidyTypedName } from "@/lib/forms/proposal-names";
 import { foldName } from "@/lib/forms/fold-name";
 import { cleaningUndonePhrase, namesCareAndCleaning, readCaPolicy } from "@/lib/forms/ca-policy";
 import { citesMustSee, dressCodeFit, namesMustSee, saysMustSee } from "./policy-fit";
