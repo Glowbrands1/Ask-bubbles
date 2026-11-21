@@ -1,6 +1,6 @@
 import "server-only";
 
-import { withFullOffRosterName } from "./off-roster-line";
+import { withFullOffRosterName, withOneInactiveLine } from "./off-roster-line";
 import { cardTurns, personKey, readLoopRecords, replyTurns, type CardRecord, type CardSlot, type ExitOfferSlot, type NameQuestionSlot, type PersonAskedSlot, type TeamConfirmSlot } from "./card-record";
 import { CLAUDE_EFFORT, CLAUDE_MAX_TOKENS, CLAUDE_MODEL } from "@/lib/config/models";
 import { MissingConfigurationError, requireEnv } from "@/lib/config/server-env";
@@ -157,9 +157,50 @@ export function partialReply(done: string, stopped: "timeout" | "error"): string
  * the form really holds changed, from saved), or that nothing else was saved yet; then it asks the manager to send the
  * change again. It never reads the manager's message and never guesses what is "left".
  */
-export function stepLimitReply(done: string | null, saved = false): string {
+export function stepLimitReply(done: string | null, saved = false, card: CardMade | null = null): string {
   if (!done) return STEP_LIMIT_REPLY;
+  /*
+   * QA's live re-test (21 Nov 2026, Pau's account): T3 "Create the coaching form with the information given. Her name is
+   * <First> <Lasty> …" and T4 "she is at Omaha dodge" each hit the step limit after the card was made, and the reply was
+   * "Here is the **Coaching Form** for **<name>** … Please send the change you still need again". The card already held
+   * the change. With a card made this turn, the reply says what the card's own result records (the form it changed from,
+   * the name it corrected, its person and store), and never asks for the change again.
+   */
+  if (card) return `${done} ${cardMadeLine(card)} Tell me if anything else on the card should change.`;
   return `${done} ${saved ? "" : "Nothing else was saved yet. "}Please send the change you still need again, and I'll make it.`;
+}
+
+/** What propose_form's latest card this turn recorded: its form, person and store, and what changed from the earlier card. */
+export interface CardMade {
+  readonly form: string | null;
+  readonly employee: string | null;
+  readonly store: string | null;
+  /** facts.form_changed.from: the earlier card's form. */
+  readonly formFrom: string | null;
+  /** facts.name_corrected: the earlier card's name, and the card's name now. */
+  readonly nameFrom: string | null;
+}
+
+/**
+ * The form the card switched from, when its result has no form_changed (no form_change_evidence this turn): the chat's
+ * latest card before this turn (the server's card record) was THIS person's on another form, or its name was corrected.
+ */
+function withEarlierForm(card: CardMade, earlier: CardRecord | null, effects: Pick<ToolEffects, "proposal" | "proposalEmployeeId">): CardMade {
+  if (card.formFrom || !earlier || !effects.proposal || earlier.templateKey === effects.proposal.templateKey || !earlier.templateName) return card;
+  const samePerson = effects.proposalEmployeeId ? earlier.employeeKey === personKey(effects.proposalEmployeeId) : Boolean(effects.proposal.employeeName && !earlier.employeeKey && earlier.nameKey === personKey(effects.proposal.employeeName));
+  return samePerson || card.nameFrom ? { ...card, formFrom: earlier.templateName } : card;
+}
+
+/** QA's live re-test (21 Nov 2026): the change line, from the card's own result, never the manager's words. */
+export function cardMadeLine(card: CardMade): string {
+  const changes = [
+    ...(card.formFrom && card.form && card.formFrom !== card.form ? [`the form from the ${card.formFrom} to the ${card.form}`] : []),
+    ...(card.nameFrom && card.employee && card.nameFrom.toLowerCase() !== card.employee.toLowerCase() ? [`the name from ${card.nameFrom} to ${card.employee}`] : []),
+  ];
+  const changed = changes.length > 0 ? `I changed ${changes.join(", and ")}. ` : "";
+  const who = card.employee ? ` for ${card.employee}` : "";
+  const where = card.store ? ` at ${card.store}` : "";
+  return `${changed}The card is${who}${where}.`.replace(/^The card is\.$/, "").trim();
 }
 
 export interface AgentLoopStep {
@@ -508,7 +549,7 @@ function buildAgentLoopTools(config: AppConfig, planSteps = false) {
         attendance: {
           type: "string",
           enum: ["absence", "lateness", "left_early", "both"],
-          description: "Corrective Action card whose offense is attendance: what the manager described. absence: a shift missed (did not come in, no-show, no call no show, called out). lateness: arrived late. left_early: left before the shift ended (left early, left before close, walked out mid-shift); never lateness. both: an absence and lateness. With attendance_evidence.",
+          description: "Corrective Action card whose offense is attendance: what the manager described. absence: a shift missed (did not come in, no-show, no call no show, called out). lateness: arrived late. left_early: left before the shift ended (left early, left before close, walked out mid-shift); never lateness. both: an absence and lateness. With attendance_evidence. Omitted when the manager's words say no kind: the card is still made, and its attendance_not_said fact is the question to ask beside it.",
         },
         attendance_evidence: evidence("With attendance: the manager message of this request and its words that describe the absence, the lateness or the early leaving."),
         incident_time: { type: "string", description: "The time of the incident if the manager gave one, as they said it." },
@@ -698,6 +739,8 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
   const steps: AgentLoopStep[] = [];
   const replyNames = new Set<string>();
   const offRosterNames = new Set<string>();
+  /* QA's live re-test B8: the inactive line of each former employee's card this turn. */
+  const inactiveLines = new Set<string>();
   /* The tools this turn called so far (the hand-backs' too), for the item 7 check below. */
   const calledThisTurn = (tool: string) => steps.some((step) => step.tool === tool);
   /* Each model call's tokens and ms, for the trace (numbers only). */
@@ -768,6 +811,7 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
   const proposeNoCard: string[] = [];
   /* The form a card this turn was switched from when that form was never created (propose_form's form_changed fact). */
   let switchedFromNotCreated: string | null = null;
+  let cardMade: CardMade | null = null;
   const refusalCounts = new Map<string, number>();
   const refusalSteps = new Map<string, Set<number>>();
   const stoppedTools = new Map<string, { reason_code: string; ask_exactly?: string }>();
@@ -825,6 +869,12 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
       if (name === "propose_form") {
         const changed = (result as { facts?: { form_changed?: { from?: unknown; earlier_created?: unknown } } }).facts?.form_changed;
         if ((result as { card?: unknown }).card) switchedFromNotCreated = changed && changed.earlier_created === false ? String(changed.from ?? "earlier") : null;
+        /* QA's live re-test (21 Nov 2026): the latest card's own record of what it is and what changed, for a step-limit reply. */
+        const made = result as { card?: { form?: unknown; employee?: unknown; store?: unknown }; facts?: { name_corrected?: { from?: unknown } } };
+        if (made.card) {
+          const text = (value: unknown) => (typeof value === "string" && value.trim() !== "" ? value.trim() : null);
+          cardMade = { form: text(made.card.form), employee: text(made.card.employee), store: text(made.card.store), formFrom: text(changed?.from), nameFrom: text(made.facts?.name_corrected?.from) };
+        }
       }
       if (name === "propose_form" && !(result as { card?: unknown }).card) proposeNoCard.push(typeof (result as { reason_code?: unknown }).reason_code === "string" ? String((result as { reason_code: string }).reason_code) : "no_card");
       const refusal = result as { reason_code?: unknown; error?: unknown; ask_exactly?: unknown; not_on_roster?: unknown };
@@ -874,6 +924,9 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
     /* QA's f070: the full name a card used as typed (off_roster_name), for the not-on-the-staff-list line's guard. */
     const typedAsIs = (result as { off_roster_name?: unknown; facts?: { off_roster_name?: unknown } }).facts?.off_roster_name ?? (result as { off_roster_name?: unknown }).off_roster_name;
     if (typeof typedAsIs === "string" && typedAsIs.trim()) offRosterNames.add(typedAsIs.trim());
+    /* QA's live re-test B8: a former employee's card (inactive_in_woven), for the one-statement guard below. */
+    const inactive = (result as { facts?: { inactive_in_woven?: { say_exactly?: unknown } } }).facts?.inactive_in_woven?.say_exactly;
+    if (typeof inactive === "string" && inactive.trim()) inactiveLines.add(inactive.trim());
     steps.push({ step, tool: name, ms: Math.round(performance.now() - started), resultChars: JSON.stringify(result).length, ok: !("error" in result), ...(toolCalls > 0 ? { model_calls: toolCalls } : {}), ...stepReason(result, name) });
     return result;
   };
@@ -1372,8 +1425,10 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
    * (`withFullOffRosterName`, the app's own sentence matched by its shape).
    */
   if (offRosterNames.size === 1 && text) text = withFullOffRosterName(text, [...offRosterNames][0]!, appConfig().staffSystem);
+  /* QA's live re-test B8: a former employee is found in Woven, so the reply never also says they are not on the staff list. */
+  if (inactiveLines.size === 1 && text) text = withOneInactiveLine(text, [...inactiveLines][0]!, appConfig().staffSystem);
   const cardSlot: CardSlot | null = effects.proposal
-    ? { proposalId: effects.proposal.proposalId, employeeKey: effects.proposalEmployeeId ? personKey(effects.proposalEmployeeId) : null, nameKey: effects.proposal.employeeName ? personKey(effects.proposal.employeeName) : null, templateKey: effects.proposal.templateKey, templateName: effects.proposal.templateName ?? null, ...(effects.proposalAsked?.length ? { asked: effects.proposalAsked } : {}), ...(effects.proposalLevel ? { level: effects.proposalLevel } : {}), ...(effects.proposalPayroll ? { payroll: effects.proposalPayroll } : {}), ...(effects.proposalPayroll === "yes" && effects.proposalPayrollAmount ? { payrollAmount: effects.proposalPayrollAmount } : {}), ...(effects.proposal.policyLine ? { policyLine: effects.proposal.policyLine } : {}), ...(effects.proposalAccountKey ? { accountKey: effects.proposalAccountKey } : {}), ...(effects.proposal.formDate ? { incidentDate: effects.proposal.formDate } : {}) }
+    ? { proposalId: effects.proposal.proposalId, employeeKey: effects.proposalEmployeeId ? personKey(effects.proposalEmployeeId) : null, nameKey: effects.proposal.employeeName ? personKey(effects.proposal.employeeName) : null, templateKey: effects.proposal.templateKey, templateName: effects.proposal.templateName ?? null, ...(effects.proposalAsked?.length ? { asked: effects.proposalAsked } : {}), ...(effects.proposalLevel ? { level: effects.proposalLevel } : {}), ...(effects.proposalPayroll ? { payroll: effects.proposalPayroll } : {}), ...(effects.proposalPayroll === "yes" && effects.proposalPayrollAmount ? { payrollAmount: effects.proposalPayrollAmount } : {}), ...(effects.proposal.policyLine ? { policyLine: effects.proposal.policyLine } : {}), ...(effects.proposalAccountKey ? { accountKey: effects.proposalAccountKey } : {}), ...(effects.proposal.formDate ? { incidentDate: effects.proposal.formDate } : {}), ...(effects.proposal.subject === "team" && effects.proposal.locationId ? { teamStoreId: effects.proposal.locationId } : {}) }
     : null;
   /* Fix batch items 4 and 3: this turn's "Did you mean", for the next turn's name question record (one-way keys only). */
   const nameQuestionSlot: NameQuestionSlot | null = effects.nameQuestion && stoppedAt === "reply"
@@ -1409,7 +1464,7 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
    * backs and policy line are facts on propose_form's result, worded by the rules book's Card replies.
    */
   let content = (
-    stoppedAt === "timeout" || stoppedAt === "error" ? partialReply(done!, stoppedAt) : stoppedAt === "step_limit" ? stepLimitReply(done, Boolean(effects.formUpdate && effects.formUpdate.updated.length > 0)) : text
+    stoppedAt === "timeout" || stoppedAt === "error" ? partialReply(done!, stoppedAt) : stoppedAt === "step_limit" ? stepLimitReply(done, Boolean(effects.formUpdate && effects.formUpdate.updated.length > 0), effects.proposal && cardMade ? withEarlierForm(cardMade, records.at(-1) ?? null, effects) : null) : text
   ).trim();
   if (content === "") content = done ?? STEP_LIMIT_REPLY;
   /*

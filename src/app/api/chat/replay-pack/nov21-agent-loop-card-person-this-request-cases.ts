@@ -44,7 +44,8 @@ const open = (id: string, title: string, run: (t: ReplayContext) => Promise<void
   id,
   title,
   report: REPORT,
-  status: { open: "the card is made for a person the manager did not name in this request" },
+  // ON in production since 21 Nov 2026 13:31Z (QA2, Pau approved): these cases now hold with production's flags.
+  status: "fixed",
   fixFlags: [NEW_FLAG],
   async run(t) {
     setup(t);

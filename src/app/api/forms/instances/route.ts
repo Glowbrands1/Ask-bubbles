@@ -79,6 +79,7 @@ function reasonOnly(account: string): string {
 }
 import { checkboxGroupsForVariant, parseFormDocument } from "@/lib/forms/document";
 import { businessToday } from "@/lib/business-date";
+import { withoutReadBackNote } from "@/lib/forms/read-back-note";
 import {
   conversationDraftReuseEnabled,
   draftReuseSameChatOnlyEnabled,
@@ -683,7 +684,8 @@ export async function POST(request: Request) {
       templateKey: body.templateKey,
       variantKey: body.variantKey ?? null,
       employeeName: body.employeeName.trim().slice(0, 120),
-      employeeRole: body.employeeRole ?? null,
+      // QA's live re-test B8 (21 Nov 2026): the chat's "(from your words)" note never reaches the saved Job Title.
+      employeeRole: typeof body.employeeRole === "string" ? withoutReadBackNote(body.employeeRole) || null : null,
       locationId,
       locationName,
       createdBy: actor.id,

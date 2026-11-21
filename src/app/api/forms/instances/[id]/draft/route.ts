@@ -51,6 +51,7 @@ import {
   PM_DRAFT_UNAVAILABLE_NOTICE,
   performanceManagementGovernance,
 } from "@/lib/forms/pm-governance";
+import { policyValueForDisplay } from "@/lib/knowledge/manual-display-words";
 import { PERFORMANCE_MANAGEMENT_FRAMEWORK } from "@/lib/knowledge/document-roles";
 import {
   SupabaseKnowledgeProvider,
@@ -628,7 +629,11 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
        * remy calder" after an earlier "Do the same coaching form for remy
        * calder" in the same chat was copied too).
        */
-      if (copy.asksForSameForm(copy.requestTurn(notes))) {
+      /*
+       * QA's live re-test (21 Nov 2026, item 24): never for the agent loop's card, whose own account is what the manager
+       * saw and pressed Create on (`implicitCopyAsked`).
+       */
+      if (copy.implicitCopyAsked({ notes, cardFromLoop: body.cardFromLoop === true })) {
         const source = await copy.findOwnCopySource({
           actor,
           templateKey: loaded.instance.templateKey,
@@ -2461,11 +2466,16 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
        * THE MANUAL'S OWN WORDING FOR EACH TICKED SECTION, THEN ITS SOURCE —
        * "Source: JBA Policy Manual — Dress Code for The Company, p. 15" — every
        * part copied from the pinned manual's rows. See `policy-citation.ts`.
+       * The wording is saved in this company's words (`MANUAL_DISPLAY_WORDS`, "salon" → "store"; QA's live re-test,
+       * 21 Nov 2026, item 7); the Source line stays as printed.
        */
       manualReference:
         manual.ok && manualSections.length > 0
-          ? policyFieldValue(
-              withConductLineWording(manualGroundedPolicies(manual, manualSections), `${body.topic ?? ""} ${notes}`, manual.chunks),
+          ? policyValueForDisplay(
+              policyFieldValue(
+                withConductLineWording(manualGroundedPolicies(manual, manualSections), `${body.topic ?? ""} ${notes}`, manual.chunks),
+              ),
+              manual.documentTitle,
             )
           : null,
       manualAmbiguous: !manual.ok && manual.problem === "ambiguous",

@@ -493,3 +493,15 @@ export const PARENT_COMPANY_NAMES: readonly string[] = [String.raw`JB\s*(?:&|and
  * (`full-manual-context.ts`), and the excerpt keeps what the answer covers.
  */
 export const EXCERPT_HIDDEN_BRANDS: readonly string[] = [String.raw`Sun\s+Tan\s+City`, String.raw`STC`];
+
+/**
+ * THE MANUAL'S WORDS AS THIS COMPANY SAYS THEM, ON SCREEN ONLY (QA's live re-test, 21 Nov 2026, item 7 / A5).
+ *
+ * The shared JBA Policy Manual says "salon" ("The manager of the salon will be required to open the salon …"), and Pau
+ * wants Ask Bubbles never to say salon: Buff City Soap says store. Each word (lower case, whole word) shows as its
+ * replacement wherever manual text is shown to a manager or saved on a form (source excerpts, the card's quoted policy,
+ * the wording the loop quotes, a form's Direct policy), keeping the word's case ("Salon" → "Store", "SALONS" →
+ * "STORES"). Display only (`lib/knowledge/manual-display-words.ts`): the stored chunks, retrieval queries, manual
+ * titles and headings are never changed. Empty in a company whose manual already uses its own words.
+ */
+export const MANUAL_DISPLAY_WORDS: Readonly<Record<string, string>> = { salon: "store", salons: "stores" };

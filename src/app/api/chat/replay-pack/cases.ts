@@ -53,6 +53,8 @@ export interface ReplayContext {
   fullManual?(document: { id: string; title: string; chunks: readonly unknown[] }): void;
   /** Chunks the pinned policy manual also has, this case only (ported from the sibling app's pack); none by default. */
   manualAlsoHas?(chunks: readonly Record<string, unknown>[]): void;
+  /** The pinned policy manual's chunks in place of the pack's CA sections (e.g. production's rows), this case only. */
+  manualIs?(chunks: readonly Record<string, unknown>[]): void;
   /** What the drafting model writes at Create. */
   /** `extra`: other fields of the draft tool's input, e.g. `{ offense_basis: "sales" }` (CA_SALES_POLICY_ENABLED). */
   draftWrites(values: Record<string, string>, checked?: Record<string, string[]>, extra?: Record<string, unknown>): void;
@@ -144,6 +146,8 @@ export interface DirectoryRow {
   employmentStatus: string;
   locationIds: string[];
   positionName: string | null;
+  /** Woven's primary store for this person (the loop's store_from_woven); none unless a case gives one. */
+  primaryLocationId?: string;
 }
 
 export interface ReplayCase {

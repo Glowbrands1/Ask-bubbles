@@ -191,7 +191,13 @@ export const NOV21_AGENT_LOOP_PERSON_SCOPE_CASES: ReplayCase[] = [
       const thread = t.thread();
       await thread.say("ca for seraphine dubrow, he was late on 11/12");
       expect(results(model.views, "find_staff")[0], "the inactive person is not a fact").toMatch(/"inactive_in_woven":"Seraphine Dubrow"/);
-      expect(results(model.views, "propose_form").at(-1)).toMatch(/"off_roster_name":"Seraphine Dubrow".*"inactive_in_woven":true/);
+      /*
+       * Changed on purpose (QA's live re-test B8, 21 Nov 2026: "isn't on the Woven staff list" and "no longer active" in one
+       * reply): the card's inactive_in_woven is now the line to say (say_exactly), and an inactive person's card no longer
+       * gives staff_list, the not-on-the-staff-list line's cue.
+       */
+      expect(results(model.views, "propose_form").at(-1)).toMatch(/"off_roster_name":"Seraphine Dubrow".*"inactive_in_woven":\{"say_exactly":"\*\*Seraphine Dubrow\*\* shows as no longer active in Woven/);
+      expect(results(model.views, "propose_form").at(-1)).not.toContain('"staff_list"');
       expect(thread.proposal?.employeeName).toBe("Seraphine Dubrow");
 
       // Someone terminated at Dawley Farms (outside the scope) reads as anyone not on the list: never "left".
