@@ -1142,7 +1142,7 @@ export async function findStaff(context: ToolContext, input: { name?: unknown; p
     else {
       const view = nameQuestionView(context, read.roster);
       /*
-       * The model may type less than the manager did ("tamsin orwel" looked up while the manager typed "tamsin orwell"): a
+       * The model may type less than the manager did ("<first> <las>" looked up while the manager typed "<first> <last>"): a
        * person whose full name is in the manager's own words (the person_evidence quote, or else any of their turns) is
        * settled, as closeSpellingNotSettled settles a full name first.
        */
