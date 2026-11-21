@@ -56,6 +56,7 @@ import { saysTerminationWord } from "@/lib/forms/termination-word";
 import { cardPayrollAmount } from "@/lib/forms/card-payroll-amount";
 import { applyLoopFollowUpDefault } from "@/lib/forms/follow-up-default-write";
 import { EXIT_DETAIL_FIELDS, EXIT_OPTION, EXIT_TEMPLATE_KEY, EXIT_TYPE_GROUP } from "@/lib/forms/exit-library";
+import { employmentChangeKind } from "@/lib/forms/employment-change";
 import { exitReasonOnly } from "@/lib/forms/exit-reason-only";
 import { terminationStatedTicksEnabled } from "@/lib/config/chat-quality-flags";
 
@@ -204,6 +205,9 @@ export async function POST(request: Request) {
       /** The loop's exit card: how the person left (a resignation_type option) and the manager's words for it. */
       exitHow?: unknown;
       exitHowQuote?: unknown;
+      /** The loop's transfer card: where the person is moving, in the manager's words, and their quote (U54). */
+      newStoreSaid?: unknown;
+      newStoreQuote?: unknown;
       /** The chat the proposal came from, for `checkProposalIsCurrent`. Ask Bubbles only. */
       conversation?: unknown;
       /** Optional stable id for this chat. The first message id is used when this is absent. */
@@ -549,6 +553,18 @@ export async function POST(request: Request) {
         }
         if (Object.keys(exitStated.checked).length > 0 || Object.keys(exitStated.values).length > 0) {
           await applyStatedFacts(instanceId, exitStated, actor.id, new Set([EXIT_PAYROLL_KEY, EXIT_TYPE_GROUP, EXIT_DETAIL_FIELDS.resignationReason, EXIT_ADDITIONAL_DETAILS_KEY, EXIT_REHIRE_KEY]));
+        }
+        /*
+         * U54 (QA's Bubbles round 2, 22 Nov 2026): the loop's transfer card names where the person is moving. Written on
+         * New Location as the manager's statement only when the quote is in this chat's manager turns, holds the words,
+         * and the words read as exactly one store again here (the Woven-aware index; `transfer-new-store.ts`).
+         */
+        if (employmentChangeKind(card.templateKey) === "transfer" && typeof card.newStoreSaid === "string" && typeof card.newStoreQuote === "string") {
+          const { newStoreQuoted, transferNewStoreName } = await import("@/lib/forms/transfer-new-store");
+          if (newStoreQuoted(card.newStoreSaid, card.newStoreQuote, userTurns)) {
+            const name = transferNewStoreName(card.newStoreSaid.slice(0, 80), await (await import("@/lib/stores/woven-aliases")).loadStoreIndex());
+            if (name) await applyStatedFacts(instanceId, { values: { new_location: name }, checked: {} }, actor.id);
+          }
         }
       }
     }

@@ -535,6 +535,8 @@ function buildAgentLoopTools(config: AppConfig, planSteps = false) {
         exit_type: { type: "string", enum: ["resignation", "termination"], description: "Employee Exit Form only: which the rules book's Exit lines say this exit is." },
         exit_how: { type: "string", enum: ["immediate_voluntary_resignation", "notice_not_fulfilled", "no_call_no_show"], description: "Employee Exit Form resignation only: how the person left, when the manager said it (immediate_voluntary_resignation: left by choice with no notice, as \"immediate voluntary termination\", \"quit on the spot\"; notice_not_fulfilled: gave notice but did not work it; no_call_no_show). With exit_how_evidence. Never for a termination." },
         exit_how_evidence: evidence("With exit_how: the manager message of this request and its words that say how the person left."),
+        new_store: { type: "string", description: "Position Transfer Form only: the " + place + " the person is moving to, as the manager named it (their words, e.g. a nickname or Woven's name for it). Never in store, which is where the person works now. With new_store_evidence." },
+        new_store_evidence: evidence("With new_store: the manager message of this request and its words that name where the person is moving."),
         effective_date: { type: "string", description: "Employee Exit Form termination only: the effective or termination date as the manager typed it (e.g. 11/28)." },
         payroll_deduct: { type: "string", enum: ["yes", "no"], description: "Only when the manager said whether payroll deduct applies." },
         payroll_amount: { type: "string", description: "The deduction amount the manager stated, digits." },

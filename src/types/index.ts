@@ -796,6 +796,14 @@ export interface ChatFormProposal {
    */
   exitHow?: string;
   exitHowQuote?: string;
+  /**
+   * The agent loop's Position Transfer card (QA's Bubbles round 2, 22 Nov 2026, U54): the store the person is moving to,
+   * as read from the manager's words (`newStoreSaid`) through the Woven-aware store index, and their words for it. Create
+   * writes New Location only when the quote is in the chat's manager turns and the words read as that store again.
+   */
+  newStore?: string;
+  newStoreSaid?: string;
+  newStoreQuote?: string;
   /** The agent loop's card (QA's third review): Create never runs today's termination reader for it. */
   fromAgentLoop?: true;
   /** The agent loop's coaching card: the topic, in the manager's words, checked against their message (QA, 17 Nov 2026). */
