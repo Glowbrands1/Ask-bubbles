@@ -567,7 +567,15 @@ vi.mock("@/lib/forms/employee-roster", async (importOriginal) => {
     ...actual,
     readDirectoryFacts: async (scope: AccessScope | null) =>
       // No position on record unless the case gives one: the title is the manager's or asked.
-      actual.scopeRoster(state.directory as never, scope).map((person) => ({ ...person, title: (person as { positionName?: string | null }).positionName ?? null, primaryLocationName: "Kearney, NE" })),
+      actual.scopeRoster(state.directory as never, scope).map((person) => ({
+        ...person,
+        title: (person as { positionName?: string | null }).positionName ?? null,
+        primaryLocationName: "Kearney, NE",
+        // Woven's primary store, when the case gives one (item 10, QA's live re-test 21 Nov 2026: offered before any other store).
+        ...((state.directory as { id: string; primaryLocationId?: string }[]).find((row) => row.id === person.id)?.primaryLocationId
+          ? { primaryLocationId: (state.directory as { id: string; primaryLocationId?: string }[]).find((row) => row.id === person.id)!.primaryLocationId }
+          : {}),
+      })),
     // The turn's roster limit (`withRosterLimit`), as production's loadScopedRoster applies it.
     // AGENT_LOOP_ENABLED: find_staff reads the roster here too (`appConfig().roster.readScoped`); `t.rosterFails()` makes it fail, as a directory outage would.
     loadScopedRoster: async (scope: AccessScope | null) => {

@@ -17,7 +17,7 @@ import { AFFIRMATIVE, displayName, editDistance, matchEmployeeName, nameConfirma
 import { offRosterTyped } from "@/lib/forms/roster-only-names";
 import { parseFormDocument } from "@/lib/forms/document";
 import { draftableCheckboxGroups, draftableFields } from "@/lib/forms/responsibility";
-import { PLACE_LEVEL, readSalonMentions, rosterSalonName } from "./places";
+import { authorizedSalonIds, PLACE_LEVEL, readSalonMentions, rosterSalonName } from "./places";
 import type { DirectoryRosterRow } from "@/lib/forms/employee-roster";
 import { inlineDraftVariantKey, supportsInlineDraft } from "@/lib/forms/inline-draft";
 import { authorizeInstance, InstanceNotVisibleError, instanceListFilterFor, visibleInstances } from "@/lib/forms/instance-scope";
@@ -956,6 +956,43 @@ async function rosterPrimarySalon(scope: AccessScope, id: string): Promise<strin
   } catch {
     return null;
   }
+}
+
+/** The stores a login may file for, or null for a global login (every store). */
+function authorizedSalonIdsFor(scope: AccessScope): string[] | null {
+  return scope.level === "global" ? null : authorizedSalonIds(scope);
+}
+
+/** A7 (QA, 21 Nov 2026): this person's Woven stores among `choices`, Woven's primary store first. */
+async function wovenStoresOf(scope: AccessScope, id: string, roster: readonly RosterEmployee[], choices: readonly string[]): Promise<string[]> {
+  const primary = await rosterPrimarySalon(scope, id);
+  const theirs = roster.find((row) => row.id === id)?.locationIds ?? [];
+  return [...new Set([...(primary ? [primary] : []), ...theirs])].filter((store) => choices.includes(store));
+}
+
+/** The line that offers the stores (A7). */
+const OFFER_ONE = " in Woven — use that?";
+const OFFER_SEVERAL = " in Woven — which one?";
+const OTHER_STORES = () => `Your other ${locationWords()}: `;
+
+/**
+ * A7 (QA's live re-test, 21 Nov 2026): the store the manager typed is not exactly one of their stores. Never a refusal:
+ * the person's Woven stores first, primary first ("<First> works at **A** and **B** in Woven — which one?"), then the
+ * manager's other stores. The model ends its reply with ask_exactly, once.
+ */
+function storeOffer(typed: string, firstName: string, wovenStores: readonly string[], choices: readonly string[]) {
+  const name = (id: string) => rosterSalonName(id) ?? id;
+  const others = choices.filter((id) => !wovenStores.includes(id)).map(name);
+  const bold = wovenStores.map((id) => `**${name(id)}**`);
+  const lead = `"${typed}" isn't a ${locationWord()} name I know.`;
+  const offer =
+    wovenStores.length === 1
+      ? `**${firstName}** is at ${bold[0]}${OFFER_ONE}`
+      : wovenStores.length > 1
+        ? `**${firstName}** works at ${bold.slice(0, -1).join(", ")} and ${bold.at(-1)}${OFFER_SEVERAL}`
+        : `Which ${locationWord()} is it?`;
+  const rest = others.length > 0 ? ` ${OTHER_STORES()}${others.join(", ")}.` : "";
+  return { typed, woven_stores: wovenStores.map(name), other_stores: others, ask_exactly: `${lead} ${offer}${rest}` };
 }
 
 /**
@@ -3841,8 +3878,16 @@ export async function proposeForm(
   const incidentTime = typeof input.incident_time === "string" && input.incident_time.trim() ? input.incident_time.trim().slice(0, 40) : null;
 
   const typedSalon = typeof input.store === "string" ? input.store.trim() : "";
-  const answeredSalonIds = typedSalon ? [...new Set([typedSalon, `at ${typedSalon}`].flatMap((text) => readSalonMentions(text).flatMap((mention) => [...mention.salonIds])))] : [];
-  if (typedSalon && answeredSalonIds.length === 0) return { reason_code: "salon_unknown", error: `"${typedSalon}" is not a ${locationWord()} the app knows. Ask which of the manager's ${locationWords()} it is.` };
+  /*
+   * QA's live re-test (21 Nov 2026, A7): "do verbal for team member <A> at <nickname>, sd" and "store location is
+   * <nickname>, sd" were refused as "isn't one of your stores" three times and never got a card that could Create. A
+   * store the app cannot read as exactly one of the manager's stores is never refused: the person's own Woven stores are
+   * offered first (`storeOffer`, below); the rules book has the model propose again with the store the manager chose.
+   */
+  /* The typed words as a place first; "at <words>" only when they read as none (else the city alone in "at <city>, <ST> (<street>)" adds its other stores). */
+  const answeredSalonIds = typedSalon ? [...new Set((readSalonMentions(typedSalon).length > 0 ? readSalonMentions(typedSalon) : readSalonMentions(`at ${typedSalon}`)).flatMap((mention) => [...mention.salonIds]))] : [];
+  const managerSalonIds = authorizedSalonIdsFor(context.actor.scope) ?? appConfig().locations().map((salon) => salon.id);
+  const storeNotRead = typedSalon !== "" && answeredSalonIds.filter((id) => managerSalonIds.includes(id)).length !== 1;
   /*
    * PLACE_SPAN_GUARD (batch H8): each of this person's turns is read on its own, so "cite animals in the workplace
    * policy" joined to "at <place>, <state>" never reads a place nobody named, and the newest turn that names one salon is
@@ -3862,6 +3907,13 @@ export async function proposeForm(
   const proposalInput = (salonIds: readonly string[]) => ({
     proposalId: randomUUID(),
     ...(salonIds.length > 0 ? { answeredSalonIds: [...salonIds] } : {}),
+    /*
+     * A7 (QA's live re-test, 21 Nov 2026): this app's `buildProposal` has no `answeredSalonIds` (the sibling app's field);
+     * it reads the store from `locationText`. So the store the manager answered (or their Woven store) is handed on as
+     * its registered name, read like any store they type and re-authorised against their scope; else the answer was lost
+     * and the card asked again.
+     */
+    ...(salonIds.length > 0 ? { locationText: salonIds.map((id) => rosterSalonName(id) ?? id).join(" or ") } : {}),
     templateKey: template.key,
     templateName: template.name,
     context: asked,
@@ -3899,6 +3951,12 @@ export async function proposeForm(
       })()
     : null;
   let salonFromWoven: string | null = null;
+  /* A7: the person's own Woven stores in the manager's scope, primary first, when the typed store was not read as one. */
+  const wovenStores = storeNotRead && employee.id ? await wovenStoresOf(context.actor.scope, employee.id, read.kind === "read" ? read.roster : [], managerSalonIds) : [];
+  if (wovenStores.length === 1 && proposal.locationId !== wovenStores[0]) {
+    const filed = buildProposal(proposalInput([wovenStores[0]!]));
+    if (filed.locationId === wovenStores[0]) proposal = filed;
+  }
   if (!typedSalon && employee.id && proposal.status === "needs_location") {
     const primary = await rosterPrimarySalon(context.actor.scope, employee.id);
     if (primary && (proposal.authorizedLocationIds ?? []).includes(primary)) {
@@ -4244,6 +4302,7 @@ export async function proposeForm(
       return primary && (card.authorizedLocationIds ?? []).includes(primary) ? { employee_store: rosterSalonName(primary) ?? primary } : {};
     })()),
     ...(salonFromWoven ? { store_from_woven: salonFromWoven } : {}),
+    ...(storeNotRead ? { typed_store_not_found: storeOffer(typedSalon, replyNameFor(card.employeeName ?? employee.name, read.kind === "read" ? read.roster : [], extractEmployeeNames(managerTurns(context)), employee.id ?? null), wovenStores, managerSalonIds) } : {}),
     /* QA's live-app item 8: the card uses Woven's title; the manager called them something else ("<title>"). */
     ...(() => {
       const said = titleSaidFor(requestWords, employee.name, read.kind === "read" ? read.roster.map(displayName) : []);
