@@ -6056,3 +6056,17 @@ export function manualSectionDedupeEnabled(): boolean {
 export function nearMissNeverSeatedEnabled(): boolean {
   return envFlag("NEAR_MISS_NEVER_SEATED_ENABLED");
 }
+
+/**
+ * CARD_PERSON_THIS_REQUEST_ENABLED (port from the sibling app; the outside audit's wrong-person risk, approved by Pau,
+ * 21 Nov 2026; same flag in both apps; default off). The agent loop seated a card's or form's person when ANY manager turn
+ * in the chat held their name, or any earlier card was theirs: a name from an unrelated turn four turns back could put a
+ * form on the wrong person (this app, 18 Nov 2026). On: the person must be named by the manager in this request: the turn
+ * that asks for the form, or a manager turn after the chat's last card, after the last turn that named a different roster
+ * person, or after a "who is this for?" (never a name only in the app's reply or a tool note); an earlier card for them
+ * counts only while no different person was named since. Otherwise the loop asks who the form is for
+ * (`ai/agent-loop/person-in-request.ts`). Off, as before.
+ */
+export function cardPersonThisRequestEnabled(): boolean {
+  return envFlag("CARD_PERSON_THIS_REQUEST_ENABLED");
+}
