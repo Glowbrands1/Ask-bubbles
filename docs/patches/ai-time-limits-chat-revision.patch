@@ -1,0 +1,35 @@
+# AI TIME LIMITS (QA, 14 Nov 2026; ported from the sibling app's docs/patches/ai-time-limits-chat-revision.patch): the protected hunk in src/lib/forms/chat-revision.ts (Pau-protected module).
+# Approval: needs Pau's approval (or QA's record under his standing approval) before merge. Not behind a flag: a revision call that finishes inside the helper limit (30 s) returns exactly what it did.
+# The gate checks that the diff below equals: git diff origin/main -- src/lib/forms/chat-revision.ts
+diff --git a/src/lib/forms/chat-revision.ts b/src/lib/forms/chat-revision.ts
+index d73a7f8f..c7601b4e 100644
+--- a/src/lib/forms/chat-revision.ts
++++ b/src/lib/forms/chat-revision.ts
+@@ -1,6 +1,8 @@
+ import "server-only";
+ 
+ import { getAnthropicClient } from "@/lib/ai/anthropic";
++import { withAiTimeLimit } from "@/lib/ai/time-limit";
++import { helperTimeoutMs } from "@/lib/config/ai-timeouts";
+ import type { AskResponse } from "@/lib/ai/types";
+ import { ACTIVE_BRAND } from "@/lib/brand";
+ import { editSeesSavedFormEnabled, formEditSingleWriterEnabled, revisionSameValueEnabled } from "@/lib/config/chat-quality-flags";
+@@ -373,7 +375,8 @@ export async function reviseActiveForm(input: {
+    */
+   const response = await withTruncationRetry(
+     CLAUDE_MAX_TOKENS.detailed,
+-    (maxTokens) =>
++    // AI TIME LIMITS (QA, 14 Nov 2026): each revision call ends by the helper limit, retries included (`time-limit.ts`).
++    (maxTokens) => withAiTimeLimit("chat_revision", helperTimeoutMs(), (timed) =>
+       client.messages.create({
+         model: CLAUDE_MODEL,
+         max_tokens: maxTokens,
+@@ -407,7 +410,7 @@ export async function reviseActiveForm(input: {
+           },
+         ],
+         tool_choice: { type: "tool", name: "revise_form_fields" },
+-      }),
++      }, timed)),
+     "The change was cut off before it finished, so the form was not changed. Try again, or ask for one change at a time.",
+   );
+ 

@@ -1,3 +1,5 @@
+import { OFFICIAL_POLICY_MANUAL } from "@/lib/forms/official-policy-manual";
+
 import type { MatchedChunkRow } from "./mappers";
 import { commonHeadingTokens, headingMatches } from "./section-rank";
 
@@ -63,4 +65,23 @@ export function selectHybridMatches(
     .sort((a, b) => b.score - a.score || b.row.similarity - a.row.similarity);
 
   return ranked.slice(0, Math.max(1, options.limit)).map((item) => item.row);
+}
+
+/**
+ * The category the JBA Policy Manual is filed under. Other compliance
+ * documents share it; a framework filed elsewhere does not.
+ */
+const POLICY_MANUAL_CATEGORY = "policies_compliance";
+
+/**
+ * The manual's own title prefix, or the category that manual is filed under.
+ * Ported from the sibling app for `current-manual-scope.ts`; no existing
+ * ranking here reads it.
+ */
+export function isPolicyManualChunk(row: Pick<MatchedChunkRow, "document_title" | "category">): boolean {
+  const title = row.document_title.trim().toLowerCase();
+  if (OFFICIAL_POLICY_MANUAL.fallbackTitles.some((prefix) => title.startsWith(prefix.toLowerCase()))) {
+    return true;
+  }
+  return row.category === POLICY_MANUAL_CATEGORY;
 }

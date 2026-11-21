@@ -4,6 +4,7 @@ import Anthropic from "@anthropic-ai/sdk";
 
 import { requireEnv } from "@/lib/config/server-env";
 
+import { countedClient, inModelCallScope } from "./model-call-scope";
 import { meteredClient } from "./spend-meter";
 
 /**
@@ -17,7 +18,13 @@ let client: Anthropic | null = null;
 export function getAnthropicClient(): Anthropic {
   client ??= new Anthropic({ apiKey: requireEnv("ANTHROPIC_API_KEY") });
   // SPEND_GUARD_ALL_CALLS_ENABLED: every call's usage into the request's meter. Off, the client itself.
-  return meteredClient(client);
+  const metered = meteredClient(client);
+  /*
+   * Ported from the sibling app (model-call-scope.ts): a call made inside a counted scope (the agent loop's tools,
+   * once ported) counts toward the loop's step limit. Outside a scope — every path today — the same client object
+   * as before.
+   */
+  return inModelCallScope() ? countedClient(metered) : metered;
 }
 
 /** Test seam. */

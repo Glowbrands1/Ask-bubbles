@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
-import { matchEmployeeName, rosterNameNamedIn, type RosterEmployee } from "./employee-match";
+import { matchEmployeeName, rosterNameNamedIn, saysNo, type RosterEmployee } from "./employee-match";
 import { withKeptTypedNames } from "./kept-typed-names";
 import { readEmployeeMentions } from "./proposal";
 
@@ -69,5 +69,15 @@ describe("kept names stay on the server", () => {
     const kept = withKeptTypedNames(["Katlin Smith"], () => matchEmployeeName("Katlin Smith", [kaitlyn]));
     expect(kept.kind).toBe("unchecked");
     expect(matchEmployeeName("Katlin Smith", [kaitlyn]).kind).toBe("confirm");
+  });
+});
+
+/* Ported from the sibling app for the agent loop: the same reading as a declined name confirmation. */
+describe("saysNo", () => {
+  it.each(["no", "nope", "keep it as typed", "keep Remy Calder", "leave it", "that's not her"])("%s keeps the name as typed", (answer) => {
+    expect(saysNo(answer)).toBe(true);
+  });
+  it.each(["yes", "Remy Calder", "the second one"])("%s does not", (answer) => {
+    expect(saysNo(answer)).toBe(false);
   });
 });
