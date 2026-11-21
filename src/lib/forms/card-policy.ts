@@ -1,4 +1,5 @@
 import { wornClothingIsDressCodeEnabled } from "@/lib/config/chat-quality-flags";
+import { withoutReadersLineBox } from "./readers-line-headings";
 import type { ChatFormProposal, ChatMessage } from "@/types";
 
 /**
@@ -19,7 +20,8 @@ import type { ChatFormProposal, ChatMessage } from "@/types";
 export function cardPolicyHeading(content: string): string | null {
   const line = /\*\*Policy:\*\*\s*([^\n]+)/.exec(content)?.[1];
   if (!line) return null;
-  const first = line.split(/;|\s—\s/)[0]!;
+  // c259 (ported from the sibling app, QA2 21 Nov 2026): "Standards of Conduct — Time Records, …" reads back as Time Records (`readers-line-headings.ts`).
+  const first = withoutReadersLineBox(line).split(/;|\s—\s/)[0]!;
   // WORN_CLOTHING_IS_DRESS_CODE_ENABLED (Gate-Bubbles-2 on #818): "Dress Code (JBA Policy Manual p.15) — read from this
   // request" names the policy "Dress Code"; the page beside it is the card's, never part of the name (the Action plan's
   // "Management will review the Dress Code policy" kept the page otherwise).
