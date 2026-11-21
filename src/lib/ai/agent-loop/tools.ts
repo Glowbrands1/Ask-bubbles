@@ -12,6 +12,7 @@ import { isoDate, monthDayToIso, readDates, sameDate, withoutDates } from "./dat
 import { candidateNameWords, chatFormsActor, formDateRangeFromInput, formKindFromText, ofKind } from "@/lib/forms/chat-form-records";
 import { CURRENT_MESSAGE_ID, holdsPhrase, identifiedTurns, verifyEvidence, withoutMessageIdTags, type IdentifiedTurn } from "./evidence";
 import { answeredNameQuestions, answerNamesSomeoneElse, everKeptOrUsedTyped, isConfirmedSpelling, latestTurnAnswersFor, latestTurnConfirms, latestTurnKeepsOrUsesTyped, latestTurnKeepsTyped, spellingKeysConfirmedFor, spellingKeysConfirmedForName, type NameQuestionView } from "./confirmed-spelling";
+import { employeeFirstName } from "@/lib/forms/employee-reference";
 import { AFFIRMATIVE, displayName, editDistance, matchEmployeeName, nameConfirmationQuestion, readNameConfirmation, type RosterEmployee } from "@/lib/forms/employee-match";
 import { offRosterTyped } from "@/lib/forms/roster-only-names";
 import { parseFormDocument } from "@/lib/forms/document";
@@ -2436,6 +2437,17 @@ export function fullNamesOf(person: Pick<RosterEmployee, "firstName" | "lastName
  * manager typed in this conversation. Then the full name. The roster and the conversation decide; no word list.
  */
 /**
+ * What the CARD'S ACCOUNT calls its person (QA's live re-test, 21 Nov 2026, A6, item 9): the first name, as the saved
+ * write-up does (port #993: the draft route's `employeeFirstName`, and the drafter's "first name every time"). The
+ * account went "<full name> spent …" when someone else shares the first name (`replyNameFor`) while the saved
+ * Expectation said the first name; the card's name field keeps the full name, so the first name is never ambiguous
+ * there. The reply keeps `replyNameFor`. Falls back to it for a name with no first name to use.
+ */
+export function cardAccountName(name: string, roster: readonly RosterEmployee[], mentioned: readonly string[], ownId?: string | null): string {
+  return employeeFirstName(name) ?? replyNameFor(name, roster, mentioned, ownId);
+}
+
+/**
  * QA (16 Nov 2026, train 5): a name taken as typed with no capital letter ("test testy", typed off the roster) is shown in
  * title case everywhere ("Test Testy"): the card's name, reply_name, the pronoun pass and the account. Each word's first
  * letter, and the letter after a hyphen or apostrophe, is capitalised. A name typed with any capital ("McKenzie",
@@ -3127,7 +3139,7 @@ export async function proposeForm(
    * turn's "Fenna Prewitt left …, Fenna also …" read against the first card's "Fenna left …" was taken as a rewording.
    */
   if (whatHappened && employee.name) {
-    const short = replyNameFor(employee.name, read.kind === "read" ? read.roster : [], extractEmployeeNames(managerTurns(context)), employee.id ?? null);
+    const short = cardAccountName(employee.name, read.kind === "read" ? read.roster : [], extractEmployeeNames(managerTurns(context)), employee.id ?? null);
     whatHappened = (await import("@/lib/forms/short-name")).withShortName(whatHappened, employee.name, short).text;
   }
   /* The incident's own words (this person's turns, read below) are checked against the account once they are known. */
@@ -3964,7 +3976,7 @@ export async function proposeForm(
    * when someone else shares it; `short-name.ts`). The card's name field keeps the full name.
    */
   if (card.issue && card.employeeName) {
-    const short = replyNameFor(card.employeeName, read.kind === "read" ? read.roster : [], extractEmployeeNames(managerTurns(context)), employee.id ?? null);
+    const short = cardAccountName(card.employeeName, read.kind === "read" ? read.roster : [], extractEmployeeNames(managerTurns(context)), employee.id ?? null);
     const named = (await import("@/lib/forms/short-name")).withShortName(card.issue, card.employeeName, short);
     if (named.replaced > 0) {
       card.issue = named.text;
@@ -4012,7 +4024,7 @@ export async function proposeForm(
    */
   if (card.issue && card.employeeName) {
     const { withoutPersonPronouns } = await import("./reply-pronouns");
-    const name = replyNameFor(card.employeeName, read.kind === "read" ? read.roster : [], extractEmployeeNames(managerTurns(context)), employee.id ?? null);
+    const name = cardAccountName(card.employeeName, read.kind === "read" ? read.roster : [], extractEmployeeNames(managerTurns(context)), employee.id ?? null);
     const others = await otherPeopleNamed(context, card.issue, name).catch(() => [] as string[]);
     const reporters = await trustedReporters(context).catch(() => [] as string[]);
     const named = withoutPersonPronouns(card.issue, name, others, managerTurns(context), reporters);
