@@ -12,16 +12,22 @@
 const SENTENCES = /(?<=[.!?])\s+|\n+/;
 const THIRD_PERSON = /\bthe manager(?:'s|s'|s)?\b/i;
 
-/** Whether a sentence of the reply speaks of the manager in the third person. */
+/** A quoted line ("> …", the manual's own words, which may say "the manager of the store") is never the model's reasoning. */
+const QUOTED = /^\s*>/;
+
+/** Whether a sentence of the reply, outside its quoted lines, speaks of the manager in the third person. */
 export function speaksOfTheManager(reply: string): boolean {
-  return reply.split(SENTENCES).some((sentence) => THIRD_PERSON.test(sentence));
+  return reply
+    .split("\n")
+    .filter((line) => !QUOTED.test(line))
+    .some((line) => line.split(SENTENCES).some((sentence) => THIRD_PERSON.test(sentence)));
 }
 
 /** The reply without those sentences; empty when nothing else is left (the caller keeps the reply then). */
 export function withoutManagerReasoning(reply: string): string {
   return reply
     .split("\n")
-    .map((line) => line.split(/(?<=[.!?])\s+/).filter((sentence) => !THIRD_PERSON.test(sentence)).join(" "))
+    .map((line) => (QUOTED.test(line) ? line : line.split(/(?<=[.!?])\s+/).filter((sentence) => !THIRD_PERSON.test(sentence)).join(" ")))
     .join("\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
