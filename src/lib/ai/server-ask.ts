@@ -56,6 +56,7 @@ import { withTerseSlots } from "./terse-slots";
 import { loadFewShotBlock } from "./feedback-examples";
 import { applySelfCheck } from "./self-check-repair";
 import { applyIntentExtraction } from "./intent-extraction";
+import { turnPlanSteps, withPlanStepsTurn } from "./plan-steps-turn";
 import { isQuestionNotForm } from "./question-not-form";
 import { pinnedManualBlock, printedPageFromRetrieval } from "./policy-citation-fields";
 import { recallMemory, rememberFact } from "./chat-memory-store";
@@ -66,6 +67,7 @@ import {
   chatMemoryEnabled,
   chatStyleRulesEnabled,
   chatTraceEnabled,
+  statedPlanStepsEnabled,
   fieldAccuracyEnabled,
   formToolsEnabled,
   hybridSearchEnabled,
@@ -375,8 +377,24 @@ async function answerQuestionTraced(
   return finishChatTrace(draft, () => answerQuestionBody(read, actor, memory));
 }
 
+/*
+ * STATED_PLAN_STEPS_ENABLED (ported from the sibling app's f062, Pau via QA, 20 Nov 2026): the turn keeps the plan
+ * steps its intent reader kept, and a Corrective Action card built this turn carries them (`planSteps`); Create adds
+ * them to the plan. Off, the turn is answered exactly as before (`answerQuestionTurn`).
+ */
+function answerQuestionBody(request: AskRequest, actor: ChatActor, memory: { memoryOwnerId?: string } = {}): Promise<AskResponse> {
+  if (!statedPlanStepsEnabled()) return answerQuestionTurn(request, actor, memory);
+  return withPlanStepsTurn(async () => withTurnPlanSteps(await answerQuestionTurn(request, actor, memory)));
+}
+
+/** STATED_PLAN_STEPS_ENABLED: a Corrective Action card built this turn carries the steps its intent reader kept. */
+function withTurnPlanSteps(answered: AskResponse): AskResponse {
+  const steps = turnPlanSteps();
+  return answered.formProposal?.templateKey === "dpoa" && steps.length > 0 ? { ...answered, formProposal: { ...answered.formProposal, planSteps: steps } } : answered;
+}
+
 /** Last on every path: the Corrective Action card's Action Plan is the manager's or none. */
-async function answerQuestionBody(
+async function answerQuestionTurn(
   request: AskRequest,
   actor: ChatActor,
   memory: { memoryOwnerId?: string } = {},
