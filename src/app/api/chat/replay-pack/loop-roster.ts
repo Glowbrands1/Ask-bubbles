@@ -10,3 +10,9 @@ export const LOOP_OZREN: DirectoryRow = { id: "e-ozren-brack", firstName: "Ozren
 export const LOOP_THADDEA: DirectoryRow = { id: "e-thaddea-kroll", firstName: "Thaddea", lastName: "Kroll", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-264"], positionName: "Team Member Part Time" };
 
 export const LOOP_STAFF: readonly DirectoryRow[] = [LOOP_FENNA, LOOP_OZREN, LOOP_THADDEA];
+
+/*
+ * QA's live re-test (21 Nov 2026, items 9 and 12): a second "Fenna" at this app's other store (`TWO_STORES`' loc-67), so
+ * two people share a first name at different stores. Invented; used only by the cases that need the shared first name.
+ */
+export const LOOP_FENNA_OSTRANDER: DirectoryRow = { id: "e-fenna-ostrander", firstName: "Fenna", lastName: "Ostrander", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-67"], positionName: "Team Member Part Time" };

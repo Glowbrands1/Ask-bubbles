@@ -9,6 +9,7 @@ import {
   asksCopyForNewPerson,
   asksForSameForm,
   copyRequestFor,
+  implicitCopyAsked,
   pendingCopyName,
   requestTurn,
   swapName,
@@ -171,5 +172,27 @@ describe("offeredCopyForTurn — sent back with the next turn only", () => {
     const failed = { ...asked, error: { kind: "network" } } as unknown as ChatMessage;
     expect(offeredCopyForTurn(offered, [user(SAME_DRAFT), failed])).toBeUndefined();
     expect(offeredCopyForTurn(undefined, [user(SAME_DRAFT), asked])).toBeUndefined();
+  });
+});
+
+/*
+ * QA's live re-test (21 Nov 2026, Pau's account, agent loop on), item 24: "Do the same coaching form for <B>" gave <B> a
+ * loop card with the manager's own ship-from-store steps, and Create saved an older Coaching Form's text over it. The
+ * notes Create sent for that card (the card's lines, then the manager's turn naming <B>); invented names.
+ */
+describe("implicitCopyAsked", () => {
+  const loopCardNotes = [
+    "Employee: Ozren Brack\nWhat happened: Coaching on managing the ship from store operation: print the packing slip, use the rolling rack and use clips to pin them in order of first come first serve.",
+    "Do the same coaching form for Ozren Brack",
+  ].join("\n\n");
+
+  it("never copies for the agent loop's card: the card's own account is saved", () => {
+    expect(implicitCopyAsked({ notes: loopCardNotes, cardFromLoop: true })).toBe(false);
+  });
+
+  it("still copies on the app's own path, as before", () => {
+    expect(implicitCopyAsked({ notes: "Do the same coaching form for Ozren Brack", cardFromLoop: false })).toBe(true);
+    expect(implicitCopyAsked({ notes: loopCardNotes, cardFromLoop: false })).toBe(true);
+    expect(implicitCopyAsked({ notes: "create a coaching form for Ozren Brack", cardFromLoop: false })).toBe(false);
   });
 });

@@ -14,11 +14,12 @@ import { candidateNameWords, chatFormsActor, formDateRangeFromInput, formKindFro
 import { CURRENT_MESSAGE_ID, holdsPhrase, identifiedTurns, verifyEvidence, withoutMessageIdTags, type IdentifiedTurn } from "./evidence";
 import { personNamedInRequest, requestStart } from "./person-in-request";
 import { answeredNameQuestions, answerNamesSomeoneElse, everKeptOrUsedTyped, isConfirmedSpelling, latestTurnAnswersFor, latestTurnConfirms, latestTurnKeepsOrUsesTyped, latestTurnKeepsTyped, spellingKeysConfirmedFor, spellingKeysConfirmedForName, type NameQuestionView } from "./confirmed-spelling";
+import { employeeFirstName } from "@/lib/forms/employee-reference";
 import { AFFIRMATIVE, displayName, editDistance, matchEmployeeName, nameConfirmationQuestion, readNameConfirmation, type RosterEmployee } from "@/lib/forms/employee-match";
 import { offRosterTyped } from "@/lib/forms/roster-only-names";
 import { parseFormDocument } from "@/lib/forms/document";
 import { draftableCheckboxGroups, draftableFields } from "@/lib/forms/responsibility";
-import { PLACE_LEVEL, readSalonMentions, rosterSalonName } from "./places";
+import { authorizedSalonIds, PLACE_LEVEL, readSalonMentions, rosterSalonName } from "./places";
 import type { DirectoryRosterRow } from "@/lib/forms/employee-roster";
 import { inlineDraftVariantKey, supportsInlineDraft } from "@/lib/forms/inline-draft";
 import { authorizeInstance, InstanceNotVisibleError, instanceListFilterFor, visibleInstances } from "@/lib/forms/instance-scope";
@@ -44,6 +45,7 @@ import { loopCardTitle, loopTitleIn, loopTitlePatterns } from "./job-titles";
 import { isJobTitlePhrase, tidyTypedName } from "@/lib/forms/proposal-names";
 import { foldName } from "@/lib/forms/fold-name";
 import { cleaningUndonePhrase, namesCareAndCleaning, readCaPolicy } from "@/lib/forms/ca-policy";
+import { ATTENDANCE_KIND_QUESTION, attendanceKindSaid } from "./attendance-said";
 import { citesMustSee, dressCodeFit, namesMustSee, saysMustSee } from "./policy-fit";
 import { fieldStates, mergeSaved, refusedFields, savedDiff, type SavedChange } from "@/lib/ai/agent-loop/saved-diff";
 import { turnsFromThisPersonsRequest } from "@/lib/forms/this-persons-turns";
@@ -66,6 +68,7 @@ import type { SourceCitation } from "@/types";
 import { followUpChangeAsked, followUpForCard, followUpLine, statedFollowUpDate } from "@/lib/forms/follow-up-default";
 import type { AccessScope, ChatFormProposal, ChatMessage, Role } from "@/types";
 import { accountKey, personKey, replyTurns, type CardRecord, type ExitOfferRecord, type NameQuestionRecord, type PersonAskedRecord, type TurnRecord } from "@/lib/ai/agent-loop/card-record";
+import { TEAM_SUBJECT_LABEL } from "@/lib/forms/team-subject";
 
 /**
  * ============================================================================
@@ -683,6 +686,30 @@ export function priorActionsProblem(priorActions: string, requestWords: string, 
   return null;
 }
 
+/**
+ * QA's live re-test (21 Nov 2026, A6/A7): "previous coaching was jba policy manual 1-1-26" put "Coaching — 01/01/2026" on
+ * the card. Today's reading of the manager's words (`statedPriorActions`, the prior_steps_said fact) reads "Coaching — JBA
+ * Policy Manual — 01/01/2026", and the model's line dropped the topic. A topic the manager named for a dated step (the
+ * middle of "<step> — <topic> — <date>") that the model's list does not hold puts the manager's line in place of the
+ * model's line for that date (or after the list when no line has that date). Everything else the model wrote is kept.
+ */
+export function priorActionsWithStatedTopics(priorActions: string, stated: readonly string[]): string {
+  const separator = priorActions.includes("\n") ? "\n" : "; ";
+  const lines = priorActions.split(/\s*(?:;|\n)\s*/).filter((line) => line.trim() !== "");
+  const plain = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  for (const line of stated) {
+    const parts = line.split(" — ");
+    if (parts.length < 3) continue;
+    const topic = plain(parts.slice(1, -1).join(" "));
+    if (topic === "" || lines.some((kept) => ` ${plain(kept)} `.includes(` ${topic} `))) continue;
+    const day = readDates(parts.at(-1) ?? "")[0];
+    const at = day ? lines.findIndex((kept) => readDates(kept).some((date) => sameDate(date, day))) : -1;
+    if (at >= 0) lines[at] = line;
+    else lines.push(line);
+  }
+  return lines.join(separator);
+}
+
 
 /** Batch G (QA's review, 15 Nov 2026): a warning level is exactly verbal, written or termination; anything else is refused. */
 export function exactWarningLevel(value: string): "verbal" | "written" | "termination" | null {
@@ -844,6 +871,11 @@ export async function inactiveMatch(scope: AccessScope, typed: string): Promise<
   }
 }
 
+/** The one line a former employee's card says (the rules book's inactive_in_woven line, QA's live re-test B8). */
+export function inactiveLine(name: string): string {
+  return `**${name}** shows as no longer active in ${staffSystem()}; I've used the name as you typed it.`;
+}
+
 const ROSTER_FAILED = "The staff roster could not be loaded just now, so nobody could be looked up. Say so to the manager; do not guess a name.";
 const ROSTER_UNCHECKED = "This login covers a district or region, so the roster cannot be searched here. Use the name exactly as the manager typed it.";
 
@@ -952,6 +984,43 @@ async function rosterPrimarySalon(scope: AccessScope, id: string): Promise<strin
   } catch {
     return null;
   }
+}
+
+/** The stores a login may file for, or null for a global login (every store). */
+function authorizedSalonIdsFor(scope: AccessScope): string[] | null {
+  return scope.level === "global" ? null : authorizedSalonIds(scope);
+}
+
+/** A7 (QA, 21 Nov 2026): this person's Woven stores among `choices`, Woven's primary store first. */
+async function wovenStoresOf(scope: AccessScope, id: string, roster: readonly RosterEmployee[], choices: readonly string[]): Promise<string[]> {
+  const primary = await rosterPrimarySalon(scope, id);
+  const theirs = roster.find((row) => row.id === id)?.locationIds ?? [];
+  return [...new Set([...(primary ? [primary] : []), ...theirs])].filter((store) => choices.includes(store));
+}
+
+/** The line that offers the stores (A7). */
+const OFFER_ONE = " in Woven — use that?";
+const OFFER_SEVERAL = " in Woven — which one?";
+const OTHER_STORES = () => `Your other ${locationWords()}: `;
+
+/**
+ * A7 (QA's live re-test, 21 Nov 2026): the store the manager typed is not exactly one of their stores. Never a refusal:
+ * the person's Woven stores first, primary first ("<First> works at **A** and **B** in Woven — which one?"), then the
+ * manager's other stores. The model ends its reply with ask_exactly, once.
+ */
+function storeOffer(typed: string, firstName: string, wovenStores: readonly string[], choices: readonly string[]) {
+  const name = (id: string) => rosterSalonName(id) ?? id;
+  const others = choices.filter((id) => !wovenStores.includes(id)).map(name);
+  const bold = wovenStores.map((id) => `**${name(id)}**`);
+  const lead = `"${typed}" isn't a ${locationWord()} name I know.`;
+  const offer =
+    wovenStores.length === 1
+      ? `**${firstName}** is at ${bold[0]}${OFFER_ONE}`
+      : wovenStores.length > 1
+        ? `**${firstName}** works at ${bold.slice(0, -1).join(", ")} and ${bold.at(-1)}${OFFER_SEVERAL}`
+        : `Which ${locationWord()} is it?`;
+  const rest = others.length > 0 ? ` ${OTHER_STORES()}${others.join(", ")}.` : "";
+  return { typed, woven_stores: wovenStores.map(name), other_stores: others, ask_exactly: `${lead} ${offer}${rest}` };
 }
 
 /**
@@ -1134,7 +1203,9 @@ export async function findStaff(context: ToolContext, input: { name?: unknown; p
      * salon outside the manager's scope is read the same way (the roster is scoped): their existence is never shown.
      */
     const inactive = await inactiveMatch(context.actor.scope, person);
-    return { reason_code: "not_on_roster", matches: [], not_on_roster: person, staff_list: context.actor.scope.level === PLACE_LEVEL ? `your ${locationWord()}'s` : "the", ...(inactive ? { inactive_in_woven: inactive } : {}), note: `Not on the ${staffSystem()} staff list${inactive ? ` (no longer active in ${staffSystem()})` : ""}. Propose the card now with employee_name "${person}" as typed, and say so as the rules book's Card replies teach.` };
+    /* QA's live re-test B8: a former employee is found in Woven as no longer active, never "not on the staff list" too. */
+    if (inactive) return { reason_code: "not_on_roster", matches: [], not_on_roster: person, inactive_in_woven: inactive, note: `${person} is a former employee: found in ${staffSystem()} as no longer active. Propose the card now with employee_name "${person}" as typed, and say only that ${person} shows as no longer active, as the rules book's Card replies teach.` };
+    return { reason_code: "not_on_roster", matches: [], not_on_roster: person, staff_list: context.actor.scope.level === PLACE_LEVEL ? `your ${locationWord()}'s` : "the", note: `Not on the ${staffSystem()} staff list. Propose the card now with employee_name "${person}" as typed, and say so as the rules book's Card replies teach.` };
   }
   /* A first name alone is confirmed before it goes on a form, as today ("Is this for **Liora Kincaid**?"). */
   /*
@@ -1274,10 +1345,16 @@ export function nameAsSaid(person: Pick<RosterEmployee, "firstName" | "lastName"
   const preferred = person.preferredFirstName?.trim();
   if (!preferred || preferred.toLowerCase() === person.firstName.trim().toLowerCase()) return legal;
   const said = ` ${managerWords.toLowerCase().replace(/[^a-z'’-]+/g, " ")} `;
-  const saidLegal = said.includes(` ${person.firstName.trim().toLowerCase()} `);
-  const saidPreferred = said.includes(` ${preferred.toLowerCase()} `);
+  /*
+   * QA's live re-test B6 (21 Nov 2026): the manager typed the preferred name first, then settled on the legal one ("yes it
+   * is for <legal>", "create the exit form for <legal>"); every later turn put the preferred name back, because both were
+   * said and the preferred one always won. The name the manager used LAST is the one they settled on (`managerWords` is
+   * their turns, oldest first).
+   */
+  const saidLegal = said.lastIndexOf(` ${person.firstName.trim().toLowerCase()} `);
+  const saidPreferred = said.lastIndexOf(` ${preferred.toLowerCase()} `);
   const asPreferred = `${preferred} ${person.lastName.trim()}`.replace(/\s+/g, " ").trim();
-  if (saidLegal && !saidPreferred) return legal;
+  if (saidLegal > saidPreferred) return legal;
   return asPreferred;
 }
 
@@ -2495,6 +2572,17 @@ export function fullNamesOf(person: Pick<RosterEmployee, "firstName" | "lastName
  * manager typed in this conversation. Then the full name. The roster and the conversation decide; no word list.
  */
 /**
+ * What the CARD'S ACCOUNT calls its person (QA's live re-test, 21 Nov 2026, A6, item 9): the first name, as the saved
+ * write-up does (port #993: the draft route's `employeeFirstName`, and the drafter's "first name every time"). The
+ * account went "<full name> spent …" when someone else shares the first name (`replyNameFor`) while the saved
+ * Expectation said the first name; the card's name field keeps the full name, so the first name is never ambiguous
+ * there. The reply keeps `replyNameFor`. Falls back to it for a name with no first name to use.
+ */
+export function cardAccountName(name: string, roster: readonly RosterEmployee[], mentioned: readonly string[], ownId?: string | null): string {
+  return employeeFirstName(name) ?? replyNameFor(name, roster, mentioned, ownId);
+}
+
+/**
  * QA (16 Nov 2026, train 5): a name taken as typed with no capital letter ("test testy", typed off the roster) is shown in
  * title case everywhere ("Test Testy"): the card's name, reply_name, the pronoun pass and the account. Each word's first
  * letter, and the letter after a hyphen or apostrophe, is capitalised. A name typed with any capital ("McKenzie",
@@ -3210,7 +3298,7 @@ export async function proposeForm(
    * turn's "Fenna Prewitt left …, Fenna also …" read against the first card's "Fenna left …" was taken as a rewording.
    */
   if (whatHappened && employee.name) {
-    const short = replyNameFor(employee.name, read.kind === "read" ? read.roster : [], extractEmployeeNames(managerTurns(context)), employee.id ?? null);
+    const short = cardAccountName(employee.name, read.kind === "read" ? read.roster : [], extractEmployeeNames(managerTurns(context)), employee.id ?? null);
     whatHappened = (await import("@/lib/forms/short-name")).withShortName(whatHappened, employee.name, short).text;
   }
   /* The incident's own words (this person's turns, read below) are checked against the account once they are known. */
@@ -3232,7 +3320,14 @@ export async function proposeForm(
    * request that named <T> is <C>'s own turn, so termination, level, payroll, dates and the account read it (it fell to
    * resignation when only the card's name moved).
    */
-  const aliases = nameCorrectedFrom !== null ? [nameCorrectedFrom] : [];
+  /*
+   * QA's live re-test B6 (21 Nov 2026): the person's other full name on the roster (Woven's preferred first name or the
+   * legal one, with the surname) is the same person, so the turn that asked for the form under it stays this card's
+   * request once the manager settles on the other ("exit form for <preferred> …", then "it is for <legal>"); without
+   * it, the notice and the last day told in that turn were lost and the card asked how she left again.
+   */
+  const ownRow = employee.id && read.kind === "read" ? read.roster.find((row) => row.id === employee.id) : undefined;
+  const aliases = [...(nameCorrectedFrom !== null ? [nameCorrectedFrom] : []), ...(ownRow ? fullNamesOf(ownRow).filter((name) => !samePerson(name, employee.name)) : [])];
   const sameAsThisPerson = (named: string, person: string) =>
     samePerson(named, person) || (samePerson(person, employee.name) && (isConfirmedSpelling(named, confirmedKeys) || aliases.some((alias) => samePerson(named, alias))));
   /*
@@ -3855,7 +3950,7 @@ export async function proposeForm(
   const priorsOnFile = rosterPerson ? await finalizedPriorsOnFile(context, rosterPerson, read.kind === "read" ? read.roster : [], today) : [];
   const onFileLine = priorsOnFile.length > 0 ? priorsOnFileLine(priorsOnFile) : null;
   const priorActionsRefused = askedPriorActions ? priorActionsProblem(askedPriorActions, onFileLine ? `${requestWords}\n${onFileLine}` : requestWords, date) : null;
-  const priorActions = priorActionsRefused ? null : (askedPriorActions ?? (statedSteps.length === 0 ? onFileLine : null));
+  const priorActions = priorActionsRefused ? null : askedPriorActions ? priorActionsWithStatedTopics(askedPriorActions, statedSteps).slice(0, 600) : statedSteps.length === 0 ? onFileLine : null;
   /*
    * QA's live re-test (21 Nov 2026, item 18): the prior actions the forms on file filled were read back "…, as you said"
    * (the manager never said them). Prior actions are the manager's statement only when their words state the steps
@@ -3921,7 +4016,16 @@ export async function proposeForm(
    * for it. Late Opening is its own heading and is not asked.
    */
   const attendanceCard = template.key === appConfig().formKeys.corrective && policyHeading !== null && /\battendance\b/i.test(policyHeading) && whatHappened !== "";
-  if (attendanceCard && !attendanceKind) {
+  /*
+   * QA's live re-test (21 Nov 2026, Pau's account, item 25): "create ca form for <A> for violating attendance policy on
+   * 10-20-26. verbal. no payroll deduct. jba manual 1-1-26 for previous coaching" says no kind of attendance, so every
+   * card was refused and "verbal" (no kind either) was refused again: no card, the same question twice. Where this
+   * request's words describe no kind (`attendanceKindSaid`), the card is made with what is known, its kind left unset,
+   * and it asks the kind once, beside the card (attendance_not_said); a kind the model passed without the manager's
+   * words is dropped. Where the words describe one, the refusal stands as before.
+   */
+  const attendanceUnsaid = attendanceCard && !attendanceKind && !attendanceKindSaid(`${requestWords}\n${context.question}`);
+  if (attendanceCard && !attendanceKind && !attendanceUnsaid) {
     const attendanceCode = askedAttendance ? "attendance_evidence_not_found" : "attendance_not_given";
     return {
       reason_code: attendanceCode, error: `This Corrective Action cites ${policyHeading}. Propose the card again with attendance (absence: a shift missed, as "did not come in", a no-show, a call-out; lateness: arrived late; left_early: left before the shift ended, as "left early", "left before close", "walked out mid-shift"; both: an absence and lateness) and attendance_evidence quoting the manager's own words from this request that describe it${askedAttendance && attendanceCheck && !attendanceCheck.ok ? ` (that quote was not found in this request's manager messages: ${attendanceCheck.reason})` : ""}.`,
@@ -3930,8 +4034,16 @@ export async function proposeForm(
   const incidentTime = typeof input.incident_time === "string" && input.incident_time.trim() ? input.incident_time.trim().slice(0, 40) : null;
 
   const typedSalon = typeof input.store === "string" ? input.store.trim() : "";
-  const answeredSalonIds = typedSalon ? [...new Set([typedSalon, `at ${typedSalon}`].flatMap((text) => readSalonMentions(text).flatMap((mention) => [...mention.salonIds])))] : [];
-  if (typedSalon && answeredSalonIds.length === 0) return { reason_code: "salon_unknown", error: `"${typedSalon}" is not a ${locationWord()} the app knows. Ask which of the manager's ${locationWords()} it is.` };
+  /*
+   * QA's live re-test (21 Nov 2026, A7): "do verbal for team member <A> at <nickname>, sd" and "store location is
+   * <nickname>, sd" were refused as "isn't one of your stores" three times and never got a card that could Create. A
+   * store the app cannot read as exactly one of the manager's stores is never refused: the person's own Woven stores are
+   * offered first (`storeOffer`, below); the rules book has the model propose again with the store the manager chose.
+   */
+  /* The typed words as a place first; "at <words>" only when they read as none (else the city alone in "at <city>, <ST> (<street>)" adds its other stores). */
+  const answeredSalonIds = typedSalon ? [...new Set((readSalonMentions(typedSalon).length > 0 ? readSalonMentions(typedSalon) : readSalonMentions(`at ${typedSalon}`)).flatMap((mention) => [...mention.salonIds]))] : [];
+  const managerSalonIds = authorizedSalonIdsFor(context.actor.scope) ?? appConfig().locations().map((salon) => salon.id);
+  const storeNotRead = typedSalon !== "" && answeredSalonIds.filter((id) => managerSalonIds.includes(id)).length !== 1;
   /*
    * PLACE_SPAN_GUARD (batch H8): each of this person's turns is read on its own, so "cite animals in the workplace
    * policy" joined to "at <place>, <state>" never reads a place nobody named, and the newest turn that names one salon is
@@ -3951,6 +4063,13 @@ export async function proposeForm(
   const proposalInput = (salonIds: readonly string[]) => ({
     proposalId: randomUUID(),
     ...(salonIds.length > 0 ? { answeredSalonIds: [...salonIds] } : {}),
+    /*
+     * A7 (QA's live re-test, 21 Nov 2026): this app's `buildProposal` has no `answeredSalonIds` (the sibling app's field);
+     * it reads the store from `locationText`. So the store the manager answered (or their Woven store) is handed on as
+     * its registered name, read like any store they type and re-authorised against their scope; else the answer was lost
+     * and the card asked again.
+     */
+    ...(salonIds.length > 0 ? { locationText: salonIds.map((id) => rosterSalonName(id) ?? id).join(" or ") } : {}),
     templateKey: template.key,
     templateName: template.name,
     context: asked,
@@ -3988,6 +4107,12 @@ export async function proposeForm(
       })()
     : null;
   let salonFromWoven: string | null = null;
+  /* A7: the person's own Woven stores in the manager's scope, primary first, when the typed store was not read as one. */
+  const wovenStores = storeNotRead && employee.id ? await wovenStoresOf(context.actor.scope, employee.id, read.kind === "read" ? read.roster : [], managerSalonIds) : [];
+  if (wovenStores.length === 1 && proposal.locationId !== wovenStores[0]) {
+    const filed = buildProposal(proposalInput([wovenStores[0]!]));
+    if (filed.locationId === wovenStores[0]) proposal = filed;
+  }
   if (!typedSalon && employee.id && proposal.status === "needs_location") {
     const primary = await rosterPrimarySalon(context.actor.scope, employee.id);
     if (primary && (proposal.authorizedLocationIds ?? []).includes(primary)) {
@@ -4066,7 +4191,7 @@ export async function proposeForm(
    * when someone else shares it; `short-name.ts`). The card's name field keeps the full name.
    */
   if (card.issue && card.employeeName) {
-    const short = replyNameFor(card.employeeName, read.kind === "read" ? read.roster : [], extractEmployeeNames(managerTurns(context)), employee.id ?? null);
+    const short = cardAccountName(card.employeeName, read.kind === "read" ? read.roster : [], extractEmployeeNames(managerTurns(context)), employee.id ?? null);
     const named = (await import("@/lib/forms/short-name")).withShortName(card.issue, card.employeeName, short);
     if (named.replaced > 0) {
       card.issue = named.text;
@@ -4114,7 +4239,7 @@ export async function proposeForm(
    */
   if (card.issue && card.employeeName) {
     const { withoutPersonPronouns } = await import("./reply-pronouns");
-    const name = replyNameFor(card.employeeName, read.kind === "read" ? read.roster : [], extractEmployeeNames(managerTurns(context)), employee.id ?? null);
+    const name = cardAccountName(card.employeeName, read.kind === "read" ? read.roster : [], extractEmployeeNames(managerTurns(context)), employee.id ?? null);
     const others = await otherPeopleNamed(context, card.issue, name).catch(() => [] as string[]);
     const reporters = await trustedReporters(context).catch(() => [] as string[]);
     const named = withoutPersonPronouns(card.issue, name, others, managerTurns(context), reporters);
@@ -4217,7 +4342,9 @@ export async function proposeForm(
    * #1055's follow-up (QA, 20 Nov 2026): a card that asks which date (several dates, none chosen) records "form_date" in
    * its asked fields, so a later turn knows the date was asked (dates_asked_before) from the record, never the reply.
    */
-  effects.proposalAsked = [...unset, ...(datesAsked.length > 0 ? ["form_date"] : [])];
+  effects.proposalAsked = [...unset, ...(datesAsked.length > 0 ? ["form_date"] : []), ...(attendanceUnsaid ? ["attendance"] : [])];
+  /* Item 25: the attendance kind is asked once in this chat (the card records), never again on the next card. */
+  const attendanceAskedBefore = attendanceUnsaid && (context.cardRecords ?? []).some((record) => record.asked.includes("attendance"));
   /* A termination card: the rules book offers the exit form after it; recorded for the next turn's yes (exit_offer). */
   if (loopTermination) effects.exitOffered = { employeeId: employee.id ?? null, name: employee.name };
   effects.proposalLevel = level;
@@ -4278,6 +4405,14 @@ export async function proposeForm(
      * #1055's follow-up (QA, 20 Nov 2026): known from the card records ("form_date" asked), never by reading the replies.
      */
     ...(datesGiven.length > 1 && (context.cardRecords ?? []).some((record) => record.asked.includes("form_date")) ? { dates_asked_before: true } : {}),
+    /* Item 25 (see `attendanceUnsaid`): the card is made; the reply asks the kind once, beside it, and never again. */
+    ...(attendanceUnsaid
+      ? {
+          attendance_not_said: attendanceAskedBefore
+            ? { asked_before: true, note: "The manager has already been asked what kind of attendance it was. Do not ask again: the card stays as it is, and the manager can say it later or tick it on the form." }
+            : { ask_exactly: ATTENDANCE_KIND_QUESTION, note: "This card cites Attendance and the manager's words do not say what kind. Ask this once, beside the card; when they answer, propose the card again with attendance and attendance_evidence quoting their answer." },
+        }
+      : {}),
     ...(accountLost.length > 0 ? { account_words_missing: accountLost } : {}),
     /* PR 6: an exit card with no account at all. A fact: the model puts the manager's own account in what_happened, or leaves it. */
     ...(exitForm && !whatHappened ? { account_not_given: { note: "This exit card has no account. If the manager said how or when they left (\"resigned by text\", their last day), propose the card again with all of it in what_happened, in their own words." } } : {}),
@@ -4323,7 +4458,17 @@ export async function proposeForm(
       const followUp = followUpForCard({ corrective, formDate: card.formDate ?? today, managerWords, today });
       return followUp ? { follow_up_on_create: { date: followUp.date, say_exactly: followUp.line } } : {};
     })()),
-    ...(offRosterName ? { off_roster_name: employee.name, staff_list: context.actor.scope.level === PLACE_LEVEL ? `your ${locationWord()}'s` : "the", ...((await inactiveMatch(context.actor.scope, employee.name)) ? { inactive_in_woven: true } : {}) } : {}),
+    /*
+     * QA's live re-test B8 (21 Nov 2026): a former employee's card gave both staff_list (the not-on-the-staff-list line) and
+     * inactive_in_woven, and the reply said both, "isn't on the Woven staff list" and "shows as no longer active". A person
+     * no longer active is found in Woven: the card gives only the inactive line, never staff_list.
+     */
+    ...(offRosterName ? await (async () => {
+      const inactive = await inactiveMatch(context.actor.scope, employee.name);
+      return inactive
+        ? { off_roster_name: employee.name, inactive_in_woven: { say_exactly: inactiveLine(employee.name), note: `${employee.name} is a former employee, found in ${staffSystem()} as no longer active. Say say_exactly once, and never that ${employee.name} is not on the staff list.` } }
+        : { off_roster_name: employee.name, staff_list: context.actor.scope.level === PLACE_LEVEL ? `your ${locationWord()}'s` : "the" };
+    })() : {}),
     ...(personId && effects.nameLines?.[personId] ? { name_from_staff_list: employee.name } : {}),
     /* Pau's name ruling (15 Nov 2026): the card uses the preferred name; the reply says the Woven legal name once. */
     ...(employee.id && read.kind === "read" && (() => {
@@ -4336,6 +4481,7 @@ export async function proposeForm(
       return primary && (card.authorizedLocationIds ?? []).includes(primary) ? { employee_store: rosterSalonName(primary) ?? primary } : {};
     })()),
     ...(salonFromWoven ? { store_from_woven: salonFromWoven } : {}),
+    ...(storeNotRead ? { typed_store_not_found: storeOffer(typedSalon, replyNameFor(card.employeeName ?? employee.name, read.kind === "read" ? read.roster : [], extractEmployeeNames(managerTurns(context)), employee.id ?? null), wovenStores, managerSalonIds) } : {}),
     /* QA's live-app item 8: the card uses Woven's title; the manager called them something else ("<title>"). */
     ...(() => {
       const said = titleSaidFor(requestWords, employee.name, read.kind === "read" ? read.roster.map(displayName) : []);
@@ -4512,6 +4658,8 @@ export async function coachTeam(context: ToolContext, effects: ToolEffects): Pro
       return { app_reply: untrusted(turn.response.content), note: "Say app_reply to the manager as given, every line: it holds the people, the counts and the exact words the next step reads." };
     }
   }
+  const onScreen = await teamCardOnScreen(context);
+  if (onScreen) return updateTeamCard(context, effects, onScreen);
   const { wholeTeamRequest } = await import("@/lib/forms/whole-team-coaching");
   /*
    * "Create a coaching form." then "for the whole salon" (nov3-team-observation-echo, the batch H live run): the turn
@@ -4557,6 +4705,86 @@ export async function coachTeam(context: ToolContext, effects: ToolEffects): Pro
   };
 }
 
+/**
+ * QA's live re-test (21 Nov 2026, items 13 and 17 / A10 and A14): the team Coaching card ("All team members"), the latest
+ * card this chat's loop made and not created yet: by the server's card record (no person, the team label), never the
+ * words. `first` is the manager message the card began with. A lookup that fails reads as created, so nothing is remade
+ * over a form that may exist.
+ */
+interface TeamCardOnScreen {
+  readonly proposalId: string;
+  readonly templateKey: string;
+  readonly first: string | null;
+  readonly storeId: string | null;
+}
+async function teamCardOnScreen(context: ToolContext): Promise<TeamCardOnScreen | null> {
+  const latest = context.earlierCard ?? null;
+  if (context.openFormId || !latest || latest.employeeKey !== null || latest.nameKey !== personKey(TEAM_SUBJECT_LABEL)) return null;
+  if ((await instanceCreatedFromProposal(context, latest.proposalId)).kind !== "none") return null;
+  const first = (context.cardRecords ?? []).find((record) => record.proposalId === latest.proposalId) ?? latest;
+  return { proposalId: latest.proposalId, templateKey: latest.templateKey, first: first.messageId, storeId: latest.teamStoreId ?? null };
+}
+
+/** A turn of three words or fewer ("dodge", "yes", "make that update") answers or points; it adds nothing to the details. */
+const adds = (text: string) => words(text).length > 3;
+
+/**
+ * QA's live re-test (21 Nov 2026, items 13 and 17): with the team card on screen, "dodge" (its store) and "In details of
+ * coaching inlude …" (its details) flipped to "A Coaching Form is for one person at a time" and the store's whole staff
+ * list, because coach_team read only a NEW team request and sent everything else to list_staff. Every later turn about the
+ * card remakes it: the same card (its id is kept, so Create still makes one form), at the store this turn names, else the
+ * card's own, with the manager's turns since the card began as its details (`sourceMessageIds`, what Create drafts
+ * from). Item 11 (A8): every such turn, not only this one, so "make that update" after a turn that returned no card (the
+ * step limit) still puts that turn's process on the card.
+ */
+async function updateTeamCard(context: ToolContext, effects: ToolEffects, before: TeamCardOnScreen): Promise<ToolResult> {
+  const templates = await creatableTemplates(context.actor.role).catch(() => null);
+  const template = templates?.find((row) => row.key === before.templateKey);
+  if (!template) return { reason_code: "scope", error: "This manager cannot create a Coaching Form." };
+  const scope = context.actor.scope;
+  const mine = scope.level === "global" ? null : authorizedSalonIds(scope);
+  const named = [...new Set((readSalonMentions(context.question).length > 0 || adds(context.question) ? readSalonMentions(context.question) : readSalonMentions(`at ${context.question}`)).flatMap((mention) => [...mention.salonIds]))].filter((id) => !mine || mine.includes(id));
+  const storeId = named.length === 1 ? named[0]! : before.storeId;
+  const start = before.first ? context.history.findIndex((turn) => turn.role === "user" && turn.id === before.first) : -1;
+  const turns = [
+    ...context.history.filter((turn, index) => turn.role === "user" && typeof turn.content === "string" && (index === start || (index > start && adds(turn.content)))),
+    ...(adds(context.question) || start < 0 ? [{ id: context.questionMessageId, role: "user" as const, content: context.question }] : []),
+  ];
+  const card = buildProposal({
+    proposalId: before.proposalId,
+    templateKey: template.key,
+    templateName: template.name,
+    context: managerContext(turns.slice(0, -1) as ChatMessage[], turns.at(-1) ?? { id: context.questionMessageId, content: context.question }),
+    scope,
+    inlineDraftSupported: supportsInlineDraft(template.key, template.currentVersion?.variants ?? []),
+    variantKey: inlineDraftVariantKey(template.currentVersion?.variants ?? []),
+    today: context.today,
+    employee: { kind: "missing" },
+    ...(storeId ? { locationText: rosterSalonName(storeId) ?? storeId } : {}),
+  });
+  if (card.subject !== "team") return { reason_code: "read_failed", error: "The team card could not be remade from this message. Say the card is unchanged." };
+  effects.proposal = card;
+  effects.proposalEmployeeId = null;
+  return {
+    card: {
+      form: card.templateName,
+      employee: card.employeeName,
+      status: card.status,
+      ready: card.status === "ready",
+      store: card.locationId ? salonLabel(card.locationId) : null,
+      ...(card.status === "needs_location" ? { choose_store_from: (card.authorizedLocationIds ?? []).map((id) => ({ id, name: salonLabel(id) })) } : {}),
+      form_date: card.formDate ?? null,
+      create_offered: card.supportsInlineDraft,
+    },
+    facts: {
+      team_card: true,
+      team_card_updated: true,
+      ...(adds(context.question) ? { details_added: untrusted(context.question) } : {}),
+    },
+    note: "The same team Coaching card (All team members) is shown again under your reply with this turn's words: one form at one " + locationWord() + "; Create drafts its Details from the manager's words. Say in one line what changed on the card. Never list the staff and never say a Coaching Form is one person at a time.",
+  };
+}
+
 /* ----------------------------------------------------------- edit form --- */
 
 export async function editForm(
@@ -4575,7 +4803,11 @@ export async function editForm(
   if (isShownCardId(context, effects, id)) {
     const created = await instanceCreatedFromProposal(context, id);
     if (created.kind === "failed") return { reason_code: "write_failed", error: "That form could not be changed just now. Nothing was saved." };
-    if (created.kind === "none") return { reason_code: "not_a_saved_form", error: NOT_A_SAVED_FORM };
+    if (created.kind === "none") {
+      /* Items 13 and 17 (QA, 21 Nov 2026): the team card is changed with coach_team, never propose_form (it has no person). */
+      const team = (effects.proposal?.proposalId === id && effects.proposal.subject === "team") || (context.cardRecords ?? []).some((card) => card.proposalId === id && card.employeeKey === null && card.nameKey === personKey(TEAM_SUBJECT_LABEL));
+      return { reason_code: "not_a_saved_form", error: team ? "That's the team card on screen; it isn't created yet. Change it with coach_team." : NOT_A_SAVED_FORM };
+    }
     id = created.id;
     fromShownCard = true;
   }
