@@ -36,7 +36,15 @@ export function cardPolicyHeading(content: string): string | null {
 export function cardPolicyFor(proposal: Pick<ChatFormProposal, "proposalId">, messages: readonly Pick<ChatMessage, "role" | "content" | "formProposal">[]): string | null {
   for (let index = messages.length - 1; index >= 0; index -= 1) {
     const message = messages[index]!;
-    if (message.role === "assistant" && message.formProposal?.proposalId === proposal.proposalId) return cardPolicyHeading(message.content);
+    if (message.role === "assistant" && message.formProposal?.proposalId === proposal.proposalId) {
+      /*
+       * The card's own policy when it carries one (only the agent loop's cards set `policyLine`; ported from the sibling
+       * app, QA 17 Nov 2026), else the reply's Policy line, as before.
+       */
+      const own = message.formProposal.policyLine;
+      if (own !== undefined) return own ? cardPolicyHeading(`**Policy:** ${own}`) : null;
+      return cardPolicyHeading(message.content);
+    }
   }
   return null;
 }
@@ -45,4 +53,23 @@ export function cardPolicyFor(proposal: Pick<ChatFormProposal, "proposalId">, me
 export function cardPolicyPhrase(heading: string): string {
   const name = heading.trim().slice(0, 120);
   return /\bpolic(?:y|ies)$/i.test(name) ? name : `${name} policy`;
+}
+
+/**
+ * Ported from the sibling app (Pau's ruling, 17 Nov 2026): the card's whole policy line ("Attendance Policy, JBA Policy
+ * Manual p.14[; <Heading> Policy, JBA Policy Manual p.N]"), sent with an agent-loop card's draft as `cardPolicyLine`: its
+ * second heading is ticked beside the first, it is the saved Policy Violated, and a Coaching Form's Details end with it.
+ * The card's own line (the agent loop's), else the reply's "**Policy:**" line; ", as you said" and its like are not part
+ * of it. Null when the card cites none (or the manager took it off).
+ */
+export function cardPolicyLineFor(proposal: Pick<ChatFormProposal, "proposalId">, messages: readonly Pick<ChatMessage, "role" | "content" | "formProposal">[]): string | null {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index]!;
+    if (message.role !== "assistant" || message.formProposal?.proposalId !== proposal.proposalId) continue;
+    const own = message.formProposal.policyLine;
+    const line = own !== undefined ? (own ?? "") : (/\*\*Policy:\*\*\s*([^\n]+)/.exec(message.content)?.[1] ?? "");
+    const clean = line.replace(/,\s*as you said.*$/i, "").replace(/[\s.]+$/, "").trim();
+    return clean.length > 0 && clean.length <= 200 ? clean : null;
+  }
+  return null;
 }

@@ -4,7 +4,7 @@ import {
   draftNotesFromConversation,
 } from "@/lib/forms/draft-notes";
 import { cardPolicyToDraftEnabled } from "@/lib/config/chat-quality-flags";
-import { cardPolicyFor } from "@/lib/forms/card-policy";
+import { cardPolicyFor, cardPolicyLineFor } from "@/lib/forms/card-policy";
 import { remapDraftSourcesClientEnabled } from "@/lib/config/chat-quality-flags";
 import type { ChatFormInstanceRef, ChatFormProposal, ChatMessage } from "@/types";
 
@@ -338,6 +338,8 @@ export async function createInlineForm({
         ...(proposal.fromAgentLoop ? { cardFromLoop: true } : {}),
         ...(proposal.fromAgentLoop ? { cardPriorActions: proposal.priorActions?.trim() ?? "" } : {}),
         ...(proposal.fromAgentLoop && typeof proposal.issue === "string" && proposal.issue.trim() ? { cardAccount: proposal.issue.trim().slice(0, 6_000) } : {}),
+        // NEXT_PUBLIC_CARD_POLICY_TO_DRAFT_ENABLED: the loop card's whole policy line (its second heading, the Policy Violated line, a Coaching Form's citation).
+        ...(proposal.fromAgentLoop && cardPolicyToDraftEnabled() && cardPolicyLineFor(proposal, messages) ? { cardPolicyLine: cardPolicyLineFor(proposal, messages) } : {}),
         ...(proposal.fromAgentLoop && proposal.coachingTopic ? { cardTopic: proposal.coachingTopic } : {}),
         ...(proposal.fromAgentLoop && proposal.attendanceKind ? { cardAttendance: proposal.attendanceKind } : {}),
         // SAME_FORM_COPY_NEW_PERSON_ENABLED: the form this card copies; re-checked by the route.

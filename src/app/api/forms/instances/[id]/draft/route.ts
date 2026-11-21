@@ -108,7 +108,15 @@ import {
   unconfirmedManualNotice,
 } from "@/lib/forms/official-policy-manual";
 import { manualGroundedPolicies, policyFieldValue } from "@/lib/forms/policy-citation";
-import { cardPolicyPhrase } from "@/lib/forms/card-policy";
+import { cardPolicyHeading, cardPolicyPhrase } from "@/lib/forms/card-policy";
+// Agent-loop card hooks (ported from the sibling app, 17–20 Nov 2026): each is used only with `body.cardFromLoop`.
+import { absenceWriteUp } from "@/lib/forms/absence-write-up";
+import { withAccountFactsKept } from "@/lib/forms/account-facts-kept";
+import { splitAppCitationLine } from "@/lib/forms/app-citation-line";
+import { cardNotesPayrollAmount } from "@/lib/forms/card-payroll-amount";
+import { withCardTimes } from "@/lib/forms/card-times";
+import { loopCoachingWriteUp } from "@/lib/forms/loop-coaching-write-up";
+import { loopWriteUpSections } from "@/lib/forms/loop-write-up-sections";
 import {
   EPP_POLICY_REFERENCE_KEY,
   EPP_POLICY_RULES,
@@ -183,6 +191,7 @@ import {
   draftNoInventedPlanEnabled,
   fieldAccuracyEnabled,
   frameworkUnpinEnabled,
+  payrollDeductAmountFieldEnabled,
   policyCitationEnabled,
   policySpecificTopicsEnabled,
   sameFormCopyEnabled,
@@ -226,6 +235,7 @@ import { ATTENDANCE_POLICY, CA_REVISION_7_OFFENSE_RULE, offeredOffenseKey, withO
 import { datesInText, priorStepDate } from "@/lib/forms/form-date-answer";
 import {
   COACHING_CONTEXT_RULES,
+  COACHING_TYPE_KEY,
   LANGUAGE_CLEANUP_RULES,
   guardCoachingFraming,
 } from "@/lib/forms/coaching-framing";
@@ -334,6 +344,23 @@ interface DraftBody {
    * that heading. See `lib/forms/card-policy.ts`.
    */
   cardPolicy?: string;
+  /*
+   * AGENT-LOOP CARDS (ported from the sibling app, 17–20 Nov 2026). The client sends these only for a card the agent loop
+   * made (`proposal.fromAgentLoop`); every hook below that reads them is keyed on `cardFromLoop === true`, so a draft
+   * from any other card is as before.
+   */
+  /** The card came from the agent loop, so its policy is the form's (`loopCardHeading`). */
+  cardFromLoop?: boolean;
+  /** The card's whole policy line ("<Heading> Policy, JBA Policy Manual p.N[; …]"): a second heading, and a Coaching Form's citation line. */
+  cardPolicyLine?: string;
+  /** The coaching topic the loop's card carried (`coachingTopic`), for the form's Other topic. */
+  cardTopic?: string;
+  /** The loop card's attendance record ("absence" / "lateness" / "both"): an absence is never written up as lateness. */
+  cardAttendance?: string;
+  /** The prior actions the loop's card recorded ("" for none). */
+  cardPriorActions?: string;
+  /** The loop card's own account (`issue`): the saved account keeps its times (`withCardTimes`) and every fact on it (`account-facts-kept.ts`). */
+  cardAccount?: string;
   /**
    * SAME_FORM_COPY_NEW_PERSON_ENABLED: the form the card was asked to copy
    * ("the same draft that we did with <name>"). Re-checked: this account's
@@ -382,6 +409,13 @@ async function readOfficialPolicyManual(
 }
 
 /** SPEND_GUARD_ALL_CALLS_ENABLED: this route's Claude calls are counted (`ai/spend-meter.ts`). Off, as before. */
+/**
+ * Ported from the sibling app (QA f071, 20 Nov 2026): manual headings whose saved Policy Violated keeps the readers'
+ * "<box> — <section>" line in place of a loop card's own policy line (Time Records stays "Standards of Conduct — Time
+ * Records"). The manual's own headings, lower-case; never the manager's words. Remove an entry to give it the card's line.
+ */
+const READERS_LINE_HEADINGS: ReadonlySet<string> = new Set(["time records"]);
+
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   return withSpendMeter("forms_draft", () => postFormsDraft(request, context));
 }
@@ -491,13 +525,24 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
       ) || statedPayrollDeduct(notes) === "yes";
     const existingAmount =
       (loaded.values ?? []).find((row) => row.fieldKey === PAYROLL_DEDUCT_AMOUNT_KEY)?.value ?? null;
-    const statedAmount = payrollYes
-      ? payrollAmountForDraft({
-          notes,
-          saved: typeof body.savedPayrollAmount === "string" ? body.savedPayrollAmount : null,
-          existing: existingAmount,
-        })
-      : null;
+    /*
+     * Ported from the sibling app (QA's code audit, 20 Nov 2026, item 20): a loop card's amount is the card's own line in
+     * the notes ("Payroll deduct amount: $25"), only where the saved answer is Yes and the line is empty.
+     */
+    const statedAmount =
+      body.cardFromLoop === true
+        ? payrollDeductAmountFieldEnabled() &&
+          !(existingAmount ?? "").trim() &&
+          (loaded.values ?? []).some((row) => row.fieldKey === PAYROLL_DEDUCT_KEY && row.checked.includes("yes"))
+          ? cardNotesPayrollAmount(notes)
+          : null
+        : payrollYes
+          ? payrollAmountForDraft({
+              notes,
+              saved: typeof body.savedPayrollAmount === "string" ? body.savedPayrollAmount : null,
+              existing: existingAmount,
+            })
+          : null;
     if (statedAmount) {
       if (formEditSingleWriterEnabled()) {
         await (await import("@/lib/forms/form-write")).statedWrite(
@@ -699,7 +744,8 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
     const exitDetails = isExitForm ? readExitDetails(notes, businessToday()) : null;
     if (exitDetails?.permanentAddress) {
       const { addressTypedIn } = await import("@/lib/forms/exit-details");
-      const managerLines = body.notesFromCard === true ? (await import("@/lib/forms/draft-notes")).notesWithoutCardLines(notes) : notes;
+      // A loop card's lines ("What happened: …") are the agent loop's words too (ported from the sibling app, item 19).
+      const managerLines = body.notesFromCard === true || body.cardFromLoop === true ? (await import("@/lib/forms/draft-notes")).notesWithoutCardLines(notes) : notes;
       if (!addressTypedIn(exitDetails.permanentAddress, managerLines)) delete exitDetails.permanentAddress;
     }
     const exitStatedFacts = isExitForm && exitDetails
@@ -859,7 +905,31 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
      * this form is for, never the whole chat. Only the policy reads use it; payroll, exit and every other reader keep
      * the notes as sent.
      */
-    const policyNotes = secondRequestOwnAccountEnabled() ? currentFormRequestText(notes) : notes;
+    /*
+     * Ported from the sibling app (HOTFIX, QA, 17 Nov 2026): an agent-loop card's policy is the saved form's. The loop
+     * checked it against the manual and the manager's words before the card was shown, so its heading is read here as the
+     * manager naming that policy: every policy reader below (grounding, the CA reading, the citation line) cites it, and
+     * the drafter only writes the text around it. "Other" is no heading. Any other card is read as before.
+     */
+    const loopCardHeading =
+      body.cardFromLoop === true && cardPolicyToDraftEnabled() && typeof body.cardPolicy === "string" && body.cardPolicy.trim() && !/^other$/i.test(body.cardPolicy.trim())
+        ? body.cardPolicy.trim().slice(0, 80)
+        : null;
+    /*
+     * Pau's ruling (20 Nov 2026, via QA; the sibling app's c091): a loop Corrective Action may cite two headings
+     * ("<Heading A> …; <Heading B> …"). The second is the card line's second part that is not Other; it is grounded and
+     * ticked beside the first.
+     */
+    const loopCardSecondHeading = ((): string | null => {
+      if (!loopCardHeading || typeof body.cardPolicyLine !== "string") return null;
+      const second = body.cardPolicyLine.split(";").map((part) => part.trim()).filter((part) => part && !/^other\b/i.test(part))[1];
+      const heading = second ? cardPolicyHeading(`**Policy:** ${second}`) : null;
+      return heading && heading.toLowerCase() !== loopCardHeading.toLowerCase() ? heading.slice(0, 80) : null;
+    })();
+    const requestPolicyNotes = secondRequestOwnAccountEnabled() ? currentFormRequestText(notes) : notes;
+    const policyNotes = loopCardHeading
+      ? `${requestPolicyNotes}\nfor violating the ${cardPolicyPhrase(loopCardHeading)}${loopCardSecondHeading ? ` and the ${cardPolicyPhrase(loopCardSecondHeading)}` : ""}`
+      : requestPolicyNotes;
     const wantsEppPolicy = fields.some((field) => field.key === EPP_POLICY_REFERENCE_KEY);
     const needsPolicy = fields.some(
       (field) => field.policyGrounded && field.key !== EPP_POLICY_REFERENCE_KEY,
@@ -941,7 +1011,8 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
     // Only where it ticks the box the manager's own words tick, or they tick none: a card's generic
     // "Attendance" never turns a missed meeting (Absenteeism) into Tardiness.
     const ownKeys = cardHeading && caPolicy ? statedOffenseKeys(caPolicy, policyText) : null;
-    const cardSection = cardHeading && (!ownKeys || ownKeys.includes(cardHeading.offenseKey)) ? cardHeading : null;
+    // A loop card's heading is the policy named (`loopCardHeading`), whatever box the account's own words tick.
+    const cardSection = cardHeading && (loopCardHeading !== null || !ownKeys || ownKeys.includes(cardHeading.offenseKey)) ? cardHeading : null;
     const namedSection =
       cardSection ??
       (caPolicy && caPolicy.stated === null && manual.ok
@@ -1599,7 +1670,27 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
      */
     const topical = isCoachingFamily && negatedLatenessTopicEnabled() ? withoutNegatedLatenessTopic(framed, notes) : framed;
     // OTHER_WRITE_IN_GUARD_ENABLED: a ticked "Other" gets its write-in in the manager's words, or is unticked.
-    const framing = guardOtherWriteIn(topical, notes, new Set(fields.map((field) => field.key)));
+    // A loop card's topic, and the topic after the person's name, come first (ported from the sibling app, QA, 17–18 Nov 2026).
+    const otherWritten =
+      body.cardFromLoop === true
+        ? guardOtherWriteIn(topical, notes, new Set(fields.map((field) => field.key)), loaded.instance.employeeName, typeof body.cardTopic === "string" ? body.cardTopic.trim().slice(0, 120) : null)
+        : guardOtherWriteIn(topical, notes, new Set(fields.map((field) => field.key)));
+    /*
+     * Ported from the sibling app (Pau via QA, 20 Nov 2026, item 14): a loop coaching card's Create saves Observed as what
+     * was seen, an Expectation about the employee, and no Type of Coaching the manager did not name. See
+     * `loop-coaching-write-up.ts`.
+     */
+    const coachingDetailsKey = [...narrativeKeys].find((key) => fields.some((field) => field.key === key));
+    const framing =
+      isCoachingFamily && body.cardFromLoop === true
+        ? loopCoachingWriteUp(otherWritten, {
+            detailsKey: coachingDetailsKey,
+            notes,
+            employeeName: loaded.instance.employeeName,
+            typeOptions: groups.find((group) => group.key === COACHING_TYPE_KEY)?.options ?? [],
+            drafted: coachingDetailsKey ? dated.values[coachingDetailsKey] : undefined,
+          })
+        : otherWritten;
 
     /*
      * ========================================================================
@@ -2586,9 +2677,12 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
         await applyStatedFacts(id, { values: { [fixedPlan.key]: typed }, checked: {} }, actor.id, new Set([fixedPlan.key]));
       }
     }
+    const loopCardAbsence = body.cardFromLoop === true && body.cardAttendance === "absence";
     // MEETING_NOT_LATENESS_PLAN_ENABLED: a missed meeting keeps the general plan.
+    // A loop card recording an absence keeps the general plan, as a missed shift does (ported from the sibling app; QA's
+    // production audit, 20 Nov 2026, item 21).
     const builtPlan = planInput && !managerOnlyPlan
-      ? attendanceActionPlanEnabled() && isAttendancePlan(planInput) && !missedMeetingNotLateness(notes)
+      ? attendanceActionPlanEnabled() && isAttendancePlan(planInput) && !missedMeetingNotLateness(notes) && !loopCardAbsence
         ? attendanceActionPlan(planInput)
         : actionPlanSentencesEnabled()
           ? twoSentenceActionPlan(planInput)
@@ -2617,14 +2711,123 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
     const plannedValues = dateOnceEnabled()
       ? (await import("@/lib/forms/date-once")).withFormDateOnce(setAsideValues, loaded.instance.formDate, narrativeKeys)
       : setAsideValues;
+    /*
+     * ========================================================================
+     * AN AGENT-LOOP CARD'S OWN RECORD, ON THE DRAFT (ported from the sibling app, 17–20 Nov 2026)
+     * ========================================================================
+     *
+     * Only with `cardFromLoop`: any other draft goes to the merge below exactly as built above. A line the manager typed
+     * (`keeps`) is never touched.
+     */
+    const loopCardDraft = body.cardFromLoop === true ? { values: { ...plannedValues }, checked: { ...validated.checked } } : null;
+    if (loopCardDraft) {
+      /*
+       * LIVE FIX (QA, 18 Nov 2026): a loop card citing a dress code heading saved Type of Offense "Standards of Conduct"
+       * and Policy Violated "Standards of Conduct — <dress code heading>": the box came from the manual section's place,
+       * not the card. The box follows the card's heading, read against this form's own Type of Offense labels, and Policy
+       * Violated is the card's own heading line with its page. A heading no label names keeps the box the readers set.
+       */
+      if (loopCardHeading && !keeps("policy_violated")) {
+        const generic = new Set(["policy", "policies", "violation", "violations", "of", "the", "for", "and"]);
+        const options = groups.find((group) => group.key === "offense_type")?.options ?? [];
+        const boxFor = (heading: string) => {
+          const headingWords = new Set(heading.toLowerCase().match(/[a-z0-9]+/g) ?? []);
+          return options
+            .filter((option) => option.key !== "other")
+            .map((option) => ({ key: option.key, core: (option.label.toLowerCase().match(/[a-z0-9]+/g) ?? []).filter((word) => !generic.has(word)) }))
+            .filter((option) => option.core.length > 0 && option.core.every((word) => headingWords.has(word)))
+            .sort((a, b) => b.core.length - a.core.length)[0];
+        };
+        const box = boxFor(loopCardHeading);
+        /* Pau's ruling (20 Nov 2026; c091): the card's second heading ticks its own box, and Policy Violated names both. */
+        const secondBox = loopCardSecondHeading ? boxFor(loopCardSecondHeading) : undefined;
+        const headingLines = typeof body.cardPolicyLine === "string" ? body.cardPolicyLine.split(";").map((part) => part.trim()).filter((part) => part && !/^other\b/i.test(part)) : [];
+        const cardLine = (secondBox ? headingLines.slice(0, 2).join("; ") : (headingLines[0] ?? "")).slice(0, 400);
+        if (box) {
+          const boxes = [box.key, ...(secondBox && secondBox.key !== box.key ? [secondBox.key] : [])];
+          loopCardDraft.checked = { ...loopCardDraft.checked, offense_type: boxes };
+        }
+        /*
+         * QA f071 (20 Nov 2026, live item 15): the card's line is the saved Policy Violated whether or not a Type of Offense
+         * label names its heading, so the card and the form show one label. Except the headings in
+         * `READERS_LINE_HEADINGS`, which keep the readers' "<box> — <section>".
+         */
+        if (cardLine && !READERS_LINE_HEADINGS.has(loopCardHeading.trim().toLowerCase()) && fields.some((field) => field.key === "policy_violated")) {
+          loopCardDraft.values = { ...loopCardDraft.values, policy_violated: cardLine };
+        }
+      }
+      /*
+       * Pau via QA (20 Nov 2026, items 13 and f061): a loop card's Create saves the card's own prior actions, count and
+       * all; with none recorded the line stays blank (never "None — first occurrence" the manager did not say).
+       */
+      if (typeof body.cardPriorActions === "string" && !keeps("prior_actions")) {
+        const prior = body.cardPriorActions.trim();
+        if (prior === "" && (loopCardDraft.values.prior_actions ?? "").trim() !== "") {
+          loopCardDraft.values = { ...loopCardDraft.values, prior_actions: "" };
+        } else if (prior !== "" && fields.some((field) => field.key === "prior_actions")) {
+          loopCardDraft.values = { ...loopCardDraft.values, prior_actions: prior.slice(0, 600) };
+        }
+      }
+      /*
+       * COACHING FORMS ALWAYS HAVE THE POLICY AND PAGE (Pau's ruling, 17 Nov 2026). The Coaching Form has no policy field;
+       * the card's own policy line is the Details' last line ("Policy reference: …", the app's citation-line format), in
+       * place of one read otherwise. A card with no policy changes nothing.
+       */
+      const coachingPolicyLine =
+        isCoachingFamily && cardPolicyToDraftEnabled() && typeof body.cardPolicyLine === "string" && body.cardPolicyLine.trim()
+          ? body.cardPolicyLine.trim().slice(0, 200)
+          : null;
+      const accountKey = narrativeTargets[0];
+      if (coachingPolicyLine && accountKey && !keeps(accountKey)) {
+        const details = loopCardDraft.values[accountKey] ?? "";
+        if (details.trim() !== "") {
+          const { body: account } = splitAppCitationLine(details);
+          loopCardDraft.values = { ...loopCardDraft.values, [accountKey]: `${account}\n\nPolicy reference: ${coachingPolicyLine}` };
+        }
+      }
+      /*
+       * QA (20 Nov 2026; c198, and the live test of #1121, f061): a clock time of the card's account that the drafted
+       * account lost brings back the card's sentence that holds it (`withCardTimes`), and every other fact on the card's
+       * account stays (`account-facts-kept.ts`), both before the app's citation line.
+       */
+      if (typeof body.cardAccount === "string" && accountKey && !keeps(accountKey)) {
+        const drafted = loopCardDraft.values[accountKey] ?? "";
+        if (drafted.trim() !== "") {
+          const { body: account, line: citation } = splitAppCitationLine(drafted);
+          const timed = withCardTimes(account, body.cardAccount.slice(0, 2_000));
+          const facts = withAccountFactsKept(timed, body.cardAccount.trim().slice(0, 6_000), loaded.instance.employeeName);
+          if (facts.text !== account) loopCardDraft.values = { ...loopCardDraft.values, [accountKey]: citation ? `${facts.text}\n\n${citation}` : facts.text };
+        }
+      }
+      /*
+       * QA's production audit (20 Nov 2026, item 21): the loop card recorded an absence, so no sentence of the drafted
+       * write-up calls it lateness (`absence-write-up.ts`). Read from the card's record, never the manager's words.
+       */
+      if (loopCardAbsence) {
+        const cardAccount = /^What happened:\s*(.+)$/im.exec(notes)?.[1]?.trim() ?? null;
+        const absence = absenceWriteUp(loopCardDraft.values, narrativeTargets.filter((key) => !keeps(key)), { employeeName: loaded.instance.employeeName, cardAccount });
+        if (absence.changed) loopCardDraft.values = absence.values;
+      }
+      /*
+       * QA's live test of #1154 (20 Nov 2026, f075): the loop card's write-up keeps the first name throughout and a filled
+       * Expectation (`loop-write-up-sections.ts`); the app's own drafted text only.
+       */
+      if (accountKey && !keeps(accountKey) && typeof loopCardDraft.values[accountKey] === "string") {
+        const { body: account, line: citation } = splitAppCitationLine(loopCardDraft.values[accountKey]!);
+        const laid = loopWriteUpSections(account, loaded.instance.employeeName);
+        if (laid.changed) loopCardDraft.values = { ...loopCardDraft.values, [accountKey]: citation ? `${laid.text}\n\n${citation}` : laid.text };
+      }
+    }
+    const loopDraftValues = loopCardDraft ? loopCardDraft.values : plannedValues;
+    const loopDraftChecked = loopCardDraft ? loopCardDraft.checked : validated.checked;
     const merged = draftEditMergeEnabled()
       ? retainFilledFields({
           question: notes,
           existing: loaded.values ?? [],
-          values: plannedValues,
-          checked: validated.checked,
+          values: loopDraftValues,
+          checked: loopDraftChecked,
         })
-      : { values: plannedValues, checked: validated.checked };
+      : { values: loopDraftValues, checked: loopDraftChecked };
 
     /*
      * FORM_PATCH_REDUCER_ENABLED: the same draft, merged by the reducer — only
@@ -2705,8 +2908,23 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
 
     // FORM_PATCH_REDUCER_ENABLED: the plan's payroll sentence, then what the write really changed.
     const formDiff = reduced ? await reduced.settle() : null;
+    /*
+     * Ported from the sibling app (Pau, 20 Nov 2026): an agent-loop form whose drafted plan promises a follow-up gets a
+     * follow-up date (the one the manager stated, or one week after the form date). A Corrective Action already has one
+     * from Create. Only with `cardFromLoop`; a failure here never fails the draft.
+     */
+    const loopFollowUp = body.cardFromLoop === true
+      ? await (async () => {
+          const now = await (await import("@/lib/forms/instances")).loadInstance(id);
+          const { applyLoopFollowUpDefault, PLAN_FIELD_KEYS } = await import("@/lib/forms/follow-up-default-write");
+          if (!now) return null;
+          const actionPlan = now.values.filter((row) => PLAN_FIELD_KEYS.has(row.fieldKey)).map((row) => row.value ?? "").join("\n");
+          return applyLoopFollowUpDefault({ instance: now.instance, managerWords: sent, actorId: actor.id, actionPlan });
+        })().catch(() => null)
+      : null;
     return NextResponse.json({
       ...(reduced ? { formDiff } : {}),
+      ...(loopFollowUp ? { followUpNotice: loopFollowUp.notice } : {}),
       values: guarded.accepted.values,
       checked: guarded.accepted.checked,
       /*
