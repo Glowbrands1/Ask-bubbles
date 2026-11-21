@@ -11,9 +11,9 @@
  *      never mistaken for a person's name.
  *
  * Neutral retail titles until Buff City Soap's Woven positions are confirmed.
- * "TC" / "Tanning Consultant", a reference-platform position, is not one of
- * them (removed 21 Oct 2026): "TC" is no longer read as a title, expanded, or
- * taken as the role that ends a name.
+ * The reference platform's consultant positions are not among them ("TC"
+ * removed 21 Oct 2026; the full-time one, "FTTC", removed 21 Nov 2026, Pau):
+ * neither is read as a title, expanded, or taken as the role that ends a name.
  * Order matters: most specific first, so "assistant store manager" is not
  * read as "store manager".
  */
@@ -25,7 +25,6 @@ export const COMPANY_JOB_TITLES: readonly { pattern: RegExp; title: string }[] =
   { pattern: /\b(?:sdits?|(?:salon|store) directors? in training)\b/i, title: "SDIT" },
   { pattern: /\b(?:tsds?|training (?:salon|store) directors?)\b/i, title: "TSD" },
   { pattern: /\b(?:dmits?|district managers? in training)\b/i, title: "DMIT" },
-  { pattern: /\b(?:fttcs?|full[- ]time tanning consultants?)\b/i, title: "FTTC" },
   { pattern: /\b(?:asds?|assistant (?:salon|store) directors?)\b/i, title: "ASD" },
   { pattern: /\b(?:sds?|(?:salon|store) directors?)\b/i, title: "Store Director" },
   { pattern: /\b(?:dm|district managers?)\b/i, title: "District Manager" },

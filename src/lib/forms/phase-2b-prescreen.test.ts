@@ -118,17 +118,16 @@ describe("the prescreen without the uniform question", () => {
       dpoa: 8, // CHANGED ON PURPOSE, revision 8 (HR via Pau, 19 Nov 2026): two required history boxes; revision 7 (4 Nov 2026) made Type of Offense four boxes.
       "policy-review": 2,
       "follow-up-coaching": 2,
-      // 4: the core-values heading names no company (QA, 25 Oct 2026; seed-sibling-brand.test.ts).
-      "tanning-consultant-interview": 4,
+      // "tanning-consultant-interview" (was 4) is gone: removed from the library, key retired (Pau, 21 Nov 2026).
       "management-interview-round-1": 4, // Phase 2A re-issue
       "management-interview-round-2": 3,
       // 4: Steps to Finish Termination without sibling-company system names (QA, 25 Oct 2026).
       "resignation-exit": 4,
     });
-    // Held items still say what they said. The core-values heading no longer names a company
-    // (QA, 25 Oct 2026; seed-sibling-brand.test.ts); the values under it are unchanged.
-    expect(JSON.stringify(seed("tanning-consultant-interview").document)).toContain("Nothing’s Impossible");
-    expect(JSON.stringify(seed("tanning-consultant-interview").document)).not.toContain("Sun Tan City");
+    // The held core-values items were on the Tanning Consultant Interview, which was removed from the library and its key
+    // retired (the sibling company's role; Pau, 21 Nov 2026): no seed carries it, and none names the sibling company.
+    expect(TEMPLATE_SEEDS.map((entry) => entry.key)).not.toContain("tanning-consultant-interview");
+    for (const entry of TEMPLATE_SEEDS) expect(JSON.stringify(entry.document), entry.key).not.toContain("Sun Tan City");
   });
 });
 

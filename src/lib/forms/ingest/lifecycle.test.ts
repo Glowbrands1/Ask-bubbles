@@ -112,13 +112,15 @@ describe("uploading a document against an existing form", () => {
 
     expect(store.form_templates!.filter((row) => row.key === "coaching")).toHaveLength(1);
     /*
-     * Seventeen: the thirteen paper-sourced templates, the framework-defined
+     * Sixteen: the twelve paper-sourced templates, the framework-defined
      * Follow-Up Coaching Form, the Resignation/Exit Form, and the Demotion and
      * Position Transfer forms. The number is asserted rather than derived so
      * that a template appearing by accident — a seeder that inserts on a key it
-     * should have matched — is caught here.
+     * should have matched — is caught here. (Seventeen until 21 Nov 2026, when
+     * the paper-sourced Tanning Consultant Interview was removed from the
+     * library and its key retired: the sibling company's role, Pau.)
      */
-    expect(store.form_templates).toHaveLength(17);
+    expect(store.form_templates).toHaveLength(16);
     // Two versions of one template, addressed by the same stable key.
     expect(await listVersions(templateId("coaching"))).toHaveLength(2);
   });

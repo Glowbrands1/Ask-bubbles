@@ -14,4 +14,9 @@ import { EXAMPLE_CHECK_IN_KEY } from "./example-check-in";
  * passed QA (`src/test/qa/forms-migration-qa.test.ts`). Switched off, never
  * deleted: a check-in already filed still opens and prints.
  */
-export const RETIRED_TEMPLATE_KEYS: readonly string[] = [EXAMPLE_CHECK_IN_KEY];
+/*
+ * The reference platform's consultant interview form ("tanning-consultant-interview"): the sibling company's own role,
+ * not a Buff City Soap form (Pau, via QA2, 21 Nov 2026). Its seed is gone from the hiring library; retiring the key
+ * switches the row off the next time the library is installed. Never deleted: Pau handles the row itself.
+ */
+export const RETIRED_TEMPLATE_KEYS: readonly string[] = [EXAMPLE_CHECK_IN_KEY, "tanning-consultant-interview"];

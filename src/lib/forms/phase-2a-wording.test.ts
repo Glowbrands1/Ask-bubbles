@@ -3,6 +3,7 @@ import { extractText, getDocumentProxy } from "unpdf";
 
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 import approved from "@/test/fixtures/approved-template-changes.json";
+import { RETIRED_TEMPLATE_KEYS } from "@/config/company/forms/retired";
 
 import { checkboxGroupsForVariant, fieldsForVariant, parseFormDocument } from "./document";
 import { TEMPLATE_SEEDS } from "./library";
@@ -76,11 +77,8 @@ const UNCHANGED: [string, string][] = [
   ["demotion", "or the monthly manager bonus"], // DE-3 held
   ["demotion", "Any elected benefits will terminate"],
   // The prescreen uniform question (D14) was removed by Phase 2B (phase-2b-prescreen.test.ts), so it is no longer pinned here.
-  // D15 resolved (QA, 25 Oct 2026): the heading reads "Core Values", the JBA Policy Manual's own heading for
-  // these five values; the values are unchanged. Pinned in seed-sibling-brand.test.ts and template-parity QA-4.
-  ["tanning-consultant-interview", "Core Values"],
-  ["tanning-consultant-interview", "Our company has five core values."], // D16 held
-  ["tanning-consultant-interview", "overseeing daily store operations"], // D17 held
+  // D15, D16 and D17 were held wording on the Tanning Consultant Interview, which was removed from the library and its
+  // key retired (the sibling company's role; Pau, 21 Nov 2026): no template holds them now (asserted below).
   ["management-interview-round-1", "the tanning bed they reserved is unavailable"], // M1-1 held
   ["management-interview-round-2", "lotions and memberships sales"], // D19 held
   ["management-interview-round-2", "new Assistant Store Director or Tanning Consultant"], // M2-2 held
@@ -165,9 +163,17 @@ describe("the four approved wording changes", () => {
       "management-interview-round-1": 4,
     });
     // resignation-exit is 4 since its Steps to Finish Termination dropped the tanning clause (QA, 25 Oct 2026).
-    // tanning-consultant-interview is 4 since its core-values heading names no company (QA, 25 Oct 2026).
-    for (const key of ["coaching", "dpoa", "policy-review", "follow-up-coaching", "position-transfer", "prescreen-phone-interview", "resignation-exit", "tanning-consultant-interview", "management-interview-round-2"]) {
-      expect(seed(key).revision, key).toBe(({ coaching: 2, dpoa: 8 /* revision 8, HR via Pau, 19 Nov 2026 (revision 7, 4 Nov 2026: Type of Offense) */, "policy-review": 2, "follow-up-coaching": 2, "position-transfer": 1, "prescreen-phone-interview": 3, "resignation-exit": 4, "tanning-consultant-interview": 4, "management-interview-round-2": 3 } as Record<string, number>)[key]);
+    // tanning-consultant-interview (was 4) is no longer in the library: removed, key retired (Pau, 21 Nov 2026).
+    for (const key of ["coaching", "dpoa", "policy-review", "follow-up-coaching", "position-transfer", "prescreen-phone-interview", "resignation-exit", "management-interview-round-2"]) {
+      expect(seed(key).revision, key).toBe(({ coaching: 2, dpoa: 8 /* revision 8, HR via Pau, 19 Nov 2026 (revision 7, 4 Nov 2026: Type of Offense) */, "policy-review": 2, "follow-up-coaching": 2, "position-transfer": 1, "prescreen-phone-interview": 3, "resignation-exit": 4, "management-interview-round-2": 3 } as Record<string, number>)[key]);
+    }
+  });
+
+  it("D15–D17 went with the Tanning Consultant Interview: no template ships them, and its key is retired", () => {
+    expect(TEMPLATE_SEEDS.map((entry) => entry.key)).not.toContain("tanning-consultant-interview");
+    expect(RETIRED_TEMPLATE_KEYS).toContain("tanning-consultant-interview");
+    for (const entry of TEMPLATE_SEEDS) {
+      expect(raw(entry.key), entry.key).not.toContain("Our company has five core values.");
     }
   });
 });

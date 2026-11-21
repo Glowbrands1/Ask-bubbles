@@ -339,7 +339,6 @@ describe("7. every seeded template can be asked for by its own name", () => {
     for (const [question, key] of [
       ["Create a prescreen form for the 2pm call", "prescreen-phone-interview"],
       ["start a phone interview form", "prescreen-phone-interview"],
-      ["tanning consultant interview for Dana", "tanning-consultant-interview"],
       ["first round management interview", "management-interview-round-1"],
       ["second round interview for Marco", "management-interview-round-2"],
     ] as const) {
@@ -347,6 +346,21 @@ describe("7. every seeded template can be asked for by its own name", () => {
         kind: "explicit",
         templateKey: key,
       });
+    }
+  });
+
+  /*
+   * Was ["tanning consultant interview for Dana", "tanning-consultant-interview"] above. That form was removed from the
+   * library, its key retired and its matcher deleted (the sibling company's role; Pau, 21 Nov 2026): these words now
+   * name no single form, so nothing is opened from them.
+   */
+  it("no longer reads the removed Tanning Consultant Interview as a form", () => {
+    for (const question of [
+      "tanning consultant interview for Dana",
+      "TC interview for Sam Rivera",
+      "Create a tanning consultant interview form for Jordan Testperson.",
+    ]) {
+      expect(detectTemplateIntent(question).kind, question).not.toBe("explicit");
     }
   });
 

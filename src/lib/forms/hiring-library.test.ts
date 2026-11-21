@@ -6,8 +6,9 @@ import {
   firstRoundManagementInterviewDocument,
   prescreenPhoneInterviewDocument,
   secondRoundManagementInterviewDocument,
-  tanningConsultantInterviewDocument,
 } from "./hiring-library";
+import * as hiringLibrary from "./hiring-library";
+import { RETIRED_TEMPLATE_KEYS } from "@/config/company/forms/retired";
 import { TEMPLATE_SEEDS, coachingDocument } from "./library";
 
 /**
@@ -228,8 +229,7 @@ describe("the Coaching Form matches 01. Coaching Form.docx", () => {
       "dmit-epp-tsd": 3,
       "dmit-epp-dmit": 3,
       "prescreen-phone-interview": 3, // Salon -> Store, then the removal of the uniform question (D14, Phase 2B)
-      // 4: the core-values heading names no company (QA, 25 Oct 2026; seed-sibling-brand.test.ts).
-      "tanning-consultant-interview": 4,
+      // "tanning-consultant-interview" (was 4) is gone: removed from the library, key retired (Pau, 21 Nov 2026).
       "management-interview-round-1": 4,
       "management-interview-round-2": 3,
       "tsd-epp": 5,
@@ -431,72 +431,21 @@ describe("the Second Round Management Interview matches its source", () => {
 
 /* ====================================================== tanning consultant === */
 
-describe("the Tanning Consultant Interview matches its source", () => {
-  const document = tanningConsultantInterviewDocument();
-
-  it("has the source's sections, in the source's order", () => {
-    expect(sections(document)).toEqual([
-      "Applicant Information",
-      "Qualities to Observe Throughout Interview",
-      "Interview Questions",
-      "Closing",
-    ]);
-  });
-
-  it("lists the four qualities to observe", () => {
-    expect(options(document, "qualities_observed")).toEqual([
-      "Outgoing",
-      "Competitive",
-      "Likeable",
-      "Hard Working",
-    ]);
-  });
-
-  it("asks all twelve numbered questions, numbered as the source numbers them", () => {
-    expect(paragraphs(document)).toEqual([
-      "1. Tell me about yourself and why you’re interested in working at Buff City Soap.",
-      "2. Can you walk me through your resume and highlight your most recent roles?",
-      "3. Describe your availability and any scheduling restrictions.",
-      "4. Describe a time you delivered excellent guest service and what made it stand out.",
-      "5. Think back to a busy day when you were helping several guests at once. How did you keep things running smoothly and make sure everyone felt taken care of?",
-      "6. This role includes recommending products and services to guests. How comfortable are you with sales, and what’s your approach?",
-      "7. Give me an example of a time you were accountable for your results—what was the situation and outcome?",
-      "8. Our company has five core values. Id like to hear about a time in your past experiences--work, school, or personal where youve shown one of these in action.",
-      "9. Give me an example of a time when you and a teammate disagreed on how to get something done. How did you handle it, and what was the outcome?",
-      "10. Give me an example of when you faced a challenge without your manager immediately available. How did you handle it, and what was the outcome?",
-      "11. What skills or experiences make you confident you’ll succeed in this role?",
-      "12. This position requires key functions such as standing for extended periods, lifting up to 25 lbs., operating a computer, and overseeing daily store operations. Are you able to perform these essential functions, with or without reasonable accommodation?",
-    ]);
-  });
-
-  it("prints the five core values in the source's words, under a heading that names no company", () => {
-    const reference = parseFormDocument(document).blocks.find(
-      (block) => block.kind === "reference",
-    );
-    expect(reference).toMatchObject({
-      // The source printed the sibling company's name before "Core Values" (QA, 25 Oct 2026):
-      // the heading is now the JBA Policy Manual's own, and the five values are unchanged.
-      label: "Core Values",
-      body: [
-        "Nothing’s Impossible – We approach challenges with creativity and determination instead of excuses.",
-        "Work Hard, Have Fun – We bring energy, positivity, and joy to doing our best work.",
-        "We Speak Up – We share ideas, concerns, and feedback openly and respectfully.",
-        "Own the Outcome – We take responsibility for results, not just tasks.",
-        "Win Together – We succeed as a team, celebrating collective achievements over individual credit.",
-      ],
-    });
-  });
-
-  it("keeps the two closing checks", () => {
-    expect(options(document, "closing_checklist")).toEqual([
-      "Reviewed job duties, cleaning requirements, and sales expectations",
-      "Reviewed pay structure and bonus potential",
-    ]);
-  });
-
-  it("closes on Hire / No Hire and the CareerPlug line", () => {
-    expect(options(document, "final_recommendation")).toEqual(["Hire", "No Hire"]);
-    expect(options(document, "update_in_careerplug")).toEqual(["Yes"]);
+/*
+ * REMOVED, 21 Nov 2026 (Pau, via QA): the Tanning Consultant Interview is the
+ * sibling company's role, not a Buff City Soap form. Its source-fidelity checks
+ * (sections, qualities, twelve questions, core values) went with it; what is
+ * asserted now is that it is gone from the code library and its key retired, so
+ * an installed row is switched off (never deleted) on the next install
+ * (`retired-templates.test.ts`).
+ */
+describe("the Tanning Consultant Interview is no longer in the library", () => {
+  it("has no builder, no seed, and a retired key", () => {
+    expect(Object.keys(hiringLibrary)).not.toContain("tanningConsultantInterviewDocument");
+    expect(hiringLibrary.HIRING_TEMPLATE_SEEDS.map((seed) => seed.key)).not.toContain("tanning-consultant-interview");
+    expect(TEMPLATE_SEEDS.map((seed) => seed.key)).not.toContain("tanning-consultant-interview");
+    expect(TEMPLATE_SEEDS.map((seed) => seed.name)).not.toContain("Tanning Consultant Interview Form");
+    expect(RETIRED_TEMPLATE_KEYS).toContain("tanning-consultant-interview");
   });
 });
 
@@ -557,10 +506,10 @@ describe("the Prescreen / Phone Interview matches its source", () => {
 describe("the Hiring & Interview category", () => {
   const hiring = TEMPLATE_SEEDS.filter((seed) => seed.category === "hiring");
 
-  it("contains exactly the four supplied forms, and nothing invented", () => {
+  // Three, not four: the Tanning Consultant Interview Form was removed (Pau, 21 Nov 2026).
+  it("contains exactly the three remaining supplied forms, and nothing invented", () => {
     expect(hiring.map((seed) => seed.name)).toEqual([
       "Prescreen / Phone Interview Form",
-      "Tanning Consultant Interview Form",
       "First Round Management Interview Form",
       "Second Round Management Interview Form",
     ]);
@@ -580,7 +529,7 @@ describe("the Hiring & Interview category", () => {
     expect(grouped[0].templates).toHaveLength(10);
     expect(grouped[1].templates).toHaveLength(1);
     expect(grouped[2].templates).toHaveLength(2);
-    expect(grouped[3].templates).toHaveLength(4);
+    expect(grouped[3].templates).toHaveLength(3); // was 4: the Tanning Consultant Interview was removed (Pau, 21 Nov 2026)
   });
 
   it("leaves Coaching where it was", () => {

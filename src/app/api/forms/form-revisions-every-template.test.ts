@@ -56,6 +56,7 @@ process.env.NEXT_PUBLIC_DEMO_MODE = "false";
 const { ensureTemplateLibrary } = await import("@/lib/forms/repository");
 const { TEMPLATE_SEEDS, defaultVariantKey } = await import("@/lib/forms/library");
 const { HIDDEN_TEMPLATE_KEYS } = await import("@/config/company/forms/hidden");
+const { RETIRED_TEMPLATE_KEYS } = await import("@/config/company/forms/retired");
 const { createInstance } = await import("@/lib/forms/instances");
 const { fieldsForVariant, parseFormDocument } = await import("@/lib/forms/document");
 const instancesRoute = await import("./instances/route");
@@ -116,7 +117,11 @@ describe("finalize, revise with a reason, edit and finalize, for every template"
     expect(TEMPLATE_SEEDS.length).toBeGreaterThanOrEqual(10);
     const keys = TEMPLATE_SEEDS.map((seed) => seed.key);
     expect(HIDDEN_TEMPLATE_KEYS.length).toBeGreaterThan(0);
-    for (const hidden of HIDDEN_TEMPLATE_KEYS) expect(keys).toContain(hidden);
+    // Every hidden key but the Tanning Consultant Interview's: that form was removed from the library and its key retired
+    // (the sibling company's role; Pau, 21 Nov 2026), so it has no seed to walk. Its key stays hidden as well as retired.
+    for (const hidden of HIDDEN_TEMPLATE_KEYS.filter((key) => key !== "tanning-consultant-interview")) expect(keys).toContain(hidden);
+    expect(keys).not.toContain("tanning-consultant-interview");
+    expect(RETIRED_TEMPLATE_KEYS).toContain("tanning-consultant-interview");
   });
 
   it.each(TEMPLATE_SEEDS.map((seed) => seed.key))("%s", async (templateKey) => {

@@ -11,7 +11,8 @@ import { renderFormPdf } from "./pdf-render";
 /**
  * ============================================================================
  * GUEST TERMINOLOGY — the six approved corrections (SD-2, TS-5, TI-4, TI-5,
- * M1-6, X-1), and nothing else
+ * M1-6, X-1), and nothing else. (TI-4 and TI-5 left with the Tanning
+ * Consultant Interview, removed 21 Nov 2026.)
  * ============================================================================
  *
  * Approved 2026-10-19: "client"/"customer" becomes "guest" ONLY where the word
@@ -41,15 +42,16 @@ vi.mock("@/lib/supabase/server", () => ({ getSupabaseAdmin: () => fakeSupabase(s
 const { ensureTemplateLibrary } = await import("./repository");
 
 const PRODUCTION = { VERCEL: "1", VERCEL_ENV: "production", NODE_ENV: "production" };
-const ISSUED = ["sdit-epp", "tsd-epp", "tanning-consultant-interview", "management-interview-round-1", "management-interview-round-2"];
+/*
+ * Four, not five: the Tanning Consultant Interview (TI-4, TI-5) was removed from the library and its key retired (the
+ * sibling company's role; Pau, 21 Nov 2026). Its three corrections are in REMOVED_WITH_THE_FORM below.
+ */
+const ISSUED = ["sdit-epp", "tsd-epp", "management-interview-round-1", "management-interview-round-2"];
 
 /** [what production holds now (guest-free), what the release ships]. */
 const PAIRS: [string, string][] = [
   ["Personally, provide excellent client service.", "Personally, provide excellent guest service."],
   ["Coach team to provide, and personally provide, excellent client service.", "Coach team to provide, and personally provide, excellent guest service."],
-  ["delivered excellent customer service", "delivered excellent guest service"],
-  ["helping several customers at once", "helping several guests at once"],
-  ["recommending products and services to clients", "recommending products and services to guests"],
   ["Sales drive and client service focus", "Sales drive and guest service focus"],
   ["Sales & Client Service", "Sales & Guest Service"],
   ["while maintaining excellent client service", "while maintaining excellent guest service"],
@@ -57,6 +59,16 @@ const PAIRS: [string, string][] = [
   ["Client service leadership", "Guest service leadership"],
   ["Client service interactions", "Guest service interactions"],
   ["fails to greet a client promptly", "fails to greet a guest promptly"],
+];
+
+/**
+ * The Tanning Consultant Interview's corrections (TI-4, TI-5). The form was removed (Pau, 21 Nov 2026), so neither the
+ * old nor the corrected wording ships in any template now; the old wording must not come back with another form.
+ */
+const REMOVED_WITH_THE_FORM: [string, string][] = [
+  ["delivered excellent customer service", "delivered excellent guest service"],
+  ["helping several customers at once", "helping several guests at once"],
+  ["recommending products and services to clients", "recommending products and services to guests"],
 ];
 
 /** Wording the business has NOT approved changing. It must still be there, byte for byte. */
@@ -91,7 +103,17 @@ describe("the six approved guest corrections", () => {
     expect(where.length, now).toBeGreaterThan(0);
   });
 
-  it("leaves no replaced wording behind in the five re-issued templates", () => {
+  it("ships none of the removed Tanning Consultant Interview's wording, old or corrected, in any template", () => {
+    expect(TEMPLATE_SEEDS.map((entry) => entry.key)).not.toContain("tanning-consultant-interview");
+    for (const entry of TEMPLATE_SEEDS) {
+      for (const [old, now] of REMOVED_WITH_THE_FORM) {
+        expect(text(entry.key), `${entry.key}: ${old}`).not.toContain(old);
+        expect(text(entry.key), `${entry.key}: ${now}`).not.toContain(now);
+      }
+    }
+  });
+
+  it("leaves no replaced wording behind in the four re-issued templates", () => {
     for (const key of ISSUED) {
       for (const [old] of PAIRS) expect(text(key), `${key}: ${old}`).not.toContain(old);
     }
@@ -127,14 +149,13 @@ describe("the six approved guest corrections", () => {
     ]);
   });
 
-  it("re-issues exactly the five templates, one revision each, and no other", () => {
+  it("re-issues exactly the four templates, one revision each, and no other", () => {
     const revisions = Object.fromEntries(TEMPLATE_SEEDS.map((entry) => [entry.key, entry.revision]));
     expect(revisions).toMatchObject({
       // Counts include the later approved Phase 2A re-issues (see LATER_APPROVED and phase-2a-wording.test.ts).
       "sdit-epp": 6,
       "tsd-epp": 5,
-      // 4: the core-values heading names no company (QA, 25 Oct 2026; seed-sibling-brand.test.ts).
-      "tanning-consultant-interview": 4,
+      // "tanning-consultant-interview" (was 4) is gone: removed from the library, key retired (Pau, 21 Nov 2026).
       "management-interview-round-1": 4,
       "management-interview-round-2": 3,
       "fttc-epp": 3,
@@ -187,10 +208,7 @@ describe("the generated PDFs", () => {
     expect(sdit).not.toContain("excellent client service");
     const tsd = await pdfText("tsd-epp");
     expect(tsd).toContain("personally provide, excellent guest service");
-    const tc = await pdfText("tanning-consultant-interview");
-    expect(tc).toContain("excellent guest service and what made it stand out");
-    expect(tc).toContain("helping several guests at once");
-    expect(tc).toContain("recommending products and services to guests");
+    // The Tanning Consultant Interview's PDF is no longer printed: the form was removed (Pau, 21 Nov 2026).
     const m1 = await pdfText("management-interview-round-1");
     for (const phrase of ["guest service focus", "Sales & Guest Service", "excellent guest service", "unhappy guest", "Guest service leadership", "Guest service interactions"]) {
       expect(m1, phrase).toContain(phrase);
@@ -216,7 +234,7 @@ describe("existing databases and repeat synchronization", () => {
     const template = store.form_templates!.find((row) => row.key === key)!;
     return store.form_template_versions.filter((row) => row.template_id === template.id);
   };
-  /** The five templates as production holds them now: the previous revision, worded "client"/"customer". */
+  /** The four templates as production holds them now: the previous revision, worded "client"/"customer". */
   const asClient = <T,>(value: T): T => {
     let json = JSON.stringify(value);
     for (const [old, now] of PAIRS) json = json.split(now.replace(/"/g, '\\"')).join(old.replace(/"/g, '\\"'));
@@ -233,7 +251,7 @@ describe("existing databases and repeat synchronization", () => {
     }
   }
 
-  it("publishes a new version of exactly the five templates and archives the old one", async () => {
+  it("publishes a new version of exactly the four templates and archives the old one", async () => {
     await productionBefore();
     const oldIds = new Map(ISSUED.map((key) => [key, versionsOf(key)[0]!.id]));
     const oldDocs = new Map(ISSUED.map((key) => [key, JSON.stringify(versionsOf(key)[0]!.document)]));
@@ -269,8 +287,9 @@ describe("existing databases and repeat synchronization", () => {
 
   it("leaves a form already filed on the old version pinned to it", async () => {
     await productionBefore();
-    const template = store.form_templates!.find((row) => row.key === "tanning-consultant-interview")!;
-    const v1 = versionsOf("tanning-consultant-interview")[0]!;
+    // Was the Tanning Consultant Interview, removed on 21 Nov 2026 (Pau): the same pin, on another re-issued template.
+    const template = store.form_templates!.find((row) => row.key === "management-interview-round-2")!;
+    const v1 = versionsOf("management-interview-round-2")[0]!;
     store.form_instances.push({ id: "filed-1", template_id: template.id, template_version_id: v1.id, status: "finalized" });
 
     await ensureTemplateLibrary("system", PRODUCTION);

@@ -47,8 +47,6 @@
 export const WITHHELD_FROM_CHOOSER: readonly string[] = [
   /* Prescreen / Phone Interview Form */
   "prescreen-phone-interview",
-  /* Tanning Consultant Interview Form */
-  "tanning-consultant-interview",
   /* First Round Management Interview Form */
   "management-interview-round-1",
   /* Second Round Management Interview Form */

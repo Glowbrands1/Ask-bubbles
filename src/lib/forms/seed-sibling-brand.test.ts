@@ -22,6 +22,9 @@ import { HR_TEMPLATE_SEEDS, MIGRATED_TEMPLATE_SEEDS, TEMPLATE_SEEDS } from "./li
  * Hiding a template keeps it out of every list, but the seeder still writes
  * its row, so a hidden seed is held to the same rule as a listed one.
  *
+ * (That interview was later removed from the library altogether and its key
+ * retired: Pau, via QA, 21 Nov 2026.)
+ *
  * Every string of every seed in every form library — HR, exit, employment
  * change, hiring (the hidden interviews included) and the retired example —
  * is walked, and so is every string the forms config exports. Each one is
@@ -49,7 +52,7 @@ interface Allowed {
   reason: string;
 }
 
-const HIDDEN_INTERVIEW = "tanning-consultant-interview";
+const REMOVED_INTERVIEW = "tanning-consultant-interview";
 
 const ALLOWED: Allowed[] = [
   /*
@@ -69,37 +72,18 @@ const ALLOWED: Allowed[] = [
     reason: "EXIT_ACCOUNT_SYSTEM: Buff City Soap uses Sunlync (Pau, via QA, 25 Oct 2026)",
   },
   /*
-   * THE HIDDEN TANNING CONSULTANT INTERVIEW'S IDENTITY. Its key is how
-   * `hidden.ts`, the chooser and the intent matchers refer to it, and its name,
-   * title, description, revision note and bundled PDF name are the database
-   * row's identity: renaming them would publish a different template. The
-   * role name may stay there; no Sun Tan City brand wording may.
+   * THE REMOVED TANNING CONSULTANT INTERVIEW'S KEY. The form's seed was removed
+   * from the hiring library (the sibling company's role; Pau, via QA, 21 Nov
+   * 2026), so its name, description, revision note and PDF name are no longer
+   * excused — no seed carries them. Only its key stays, in config:
+   * `RETIRED_TEMPLATE_KEYS` switches an installed row off by it, and
+   * `HIDDEN_TEMPLATE_KEYS` still leaves that row out of every list.
    */
-  { where: HIDDEN_INTERVIEW, text: HIDDEN_INTERVIEW, phrase: "tanning", reason: "hidden template's key (hidden.ts refers to it by key)" },
-  { where: "config", text: HIDDEN_INTERVIEW, phrase: "tanning", reason: "HIDDEN_TEMPLATE_KEYS names the hidden template by key" },
   {
-    where: HIDDEN_INTERVIEW,
-    text: "Tanning Consultant Interview Form",
-    phrase: "Tanning Consultant",
-    reason: "hidden template's name and letterhead title",
-  },
-  {
-    where: HIDDEN_INTERVIEW,
-    text: "The in-store interview for a Tanning Consultant. Twelve questions through service, sales, accountability, the core values and the essential job functions.",
-    phrase: "Tanning Consultant",
-    reason: "hidden template's description, which repeats its title",
-  },
-  {
-    where: HIDDEN_INTERVIEW,
-    text: "Published from the 03. Tanning Consultant Interview Form source document.",
-    phrase: "Tanning Consultant",
-    reason: "hidden template's revision note, naming its source document",
-  },
-  {
-    where: HIDDEN_INTERVIEW,
-    text: "Tanning Consultant Interview Form.pdf",
-    phrase: "Tanning Consultant",
-    reason: "hidden template's bundled PDF name",
+    where: "config",
+    text: REMOVED_INTERVIEW,
+    phrase: "tanning",
+    reason: "RETIRED_TEMPLATE_KEYS and HIDDEN_TEMPLATE_KEYS name the removed template by key",
   },
   /*
    * HELD FOR THE BUSINESS, IN HIDDEN TEMPLATES ONLY. These two questions of the
@@ -152,9 +136,12 @@ describe("every Buff City Soap form seed is free of Sun Tan City content", () =>
         .sort(),
     );
     const walked = seedStrings.map((entry) => entry.where);
-    for (const key of [...MIGRATED_TEMPLATE_SEEDS.map((seed) => seed.key), ...HIDDEN_TEMPLATE_KEYS, EXAMPLE_CHECK_IN_SEED.key]) {
+    // Every hidden key but the removed Tanning Consultant Interview's, which has no seed to walk (Pau, 21 Nov 2026).
+    const hiddenInLibrary = HIDDEN_TEMPLATE_KEYS.filter((key) => key !== REMOVED_INTERVIEW);
+    for (const key of [...MIGRATED_TEMPLATE_SEEDS.map((seed) => seed.key), ...hiddenInLibrary, EXAMPLE_CHECK_IN_SEED.key]) {
       expect(walked, key).toContain(key);
     }
+    expect(walked).not.toContain(REMOVED_INTERVIEW);
   });
 
   it.each(seedStrings.map((entry) => [entry.where, entry] as const))("%s: no sibling-company wording", (_key, entry) => {
@@ -170,13 +157,15 @@ describe("every Buff City Soap form seed is free of Sun Tan City content", () =>
     expect(hits).toEqual([]);
   });
 
-  it("the Tanning Consultant Interview's core-values heading names no company", () => {
-    const reference = (HIRING_TEMPLATE_SEEDS.find((seed) => seed.key === HIDDEN_INTERVIEW)!.document.blocks as {
-      kind: string;
-      label?: string;
-    }[]).find((block) => block.kind === "reference");
-    // "Core Values" is the JBA Policy Manual's own heading for these five values (p.7), which Ask Bubbles cites.
-    expect(reference?.label).toBe("Core Values");
+  /*
+   * Was: "the Tanning Consultant Interview's core-values heading names no company". The form itself was removed from
+   * the library (the sibling company's role; Pau, via QA, 21 Nov 2026), so what is asserted now is that it is gone and
+   * its key retired: an installed row is switched off on the next install, never deleted.
+   */
+  it("the Tanning Consultant Interview is no longer seeded, and its key is retired", () => {
+    expect(HIRING_TEMPLATE_SEEDS.map((seed) => seed.key)).not.toContain(REMOVED_INTERVIEW);
+    expect(TEMPLATE_SEEDS.map((seed) => seed.key)).not.toContain(REMOVED_INTERVIEW);
+    expect(retiredConfig.RETIRED_TEMPLATE_KEYS).toContain(REMOVED_INTERVIEW);
   });
 });
 
