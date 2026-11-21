@@ -1254,10 +1254,16 @@ export function nameAsSaid(person: Pick<RosterEmployee, "firstName" | "lastName"
   const preferred = person.preferredFirstName?.trim();
   if (!preferred || preferred.toLowerCase() === person.firstName.trim().toLowerCase()) return legal;
   const said = ` ${managerWords.toLowerCase().replace(/[^a-z'’-]+/g, " ")} `;
-  const saidLegal = said.includes(` ${person.firstName.trim().toLowerCase()} `);
-  const saidPreferred = said.includes(` ${preferred.toLowerCase()} `);
+  /*
+   * QA's live re-test B6 (21 Nov 2026): the manager typed the preferred name first, then settled on the legal one ("yes it
+   * is for <legal>", "create the exit form for <legal>"); every later turn put the preferred name back, because both were
+   * said and the preferred one always won. The name the manager used LAST is the one they settled on (`managerWords` is
+   * their turns, oldest first).
+   */
+  const saidLegal = said.lastIndexOf(` ${person.firstName.trim().toLowerCase()} `);
+  const saidPreferred = said.lastIndexOf(` ${preferred.toLowerCase()} `);
   const asPreferred = `${preferred} ${person.lastName.trim()}`.replace(/\s+/g, " ").trim();
-  if (saidLegal && !saidPreferred) return legal;
+  if (saidLegal > saidPreferred) return legal;
   return asPreferred;
 }
 
