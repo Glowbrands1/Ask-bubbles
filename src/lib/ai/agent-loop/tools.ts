@@ -935,6 +935,16 @@ export function rosterMatches(typed: string, roster: readonly RosterEmployee[]):
 }
 
 /**
+ * Whether every typed word is a WHOLE first, preferred or last name of this person (board f110): "Rowan" or "Rowan
+ * Kestrel" is, "Rowan Kes" and "Row Kes" are not (they only start the names, as "Tes" starts "Test", #1160).
+ */
+export function namedWholly(typed: string, person: RosterEmployee): boolean {
+  const wanted = words(typed);
+  const own = words([person.firstName, person.preferredFirstName ?? "", person.lastName].join(" "));
+  return wanted.length > 0 && wanted.every((word) => own.includes(word));
+}
+
+/**
  * The salon's name as the manager knows it, never its id (F7, batch F: the past-forms list showed "(loc-0468)"). A
  * stored name is the fallback; an id on no list is said as such, never shown raw.
  */
@@ -1104,6 +1114,43 @@ export async function findStaff(context: ToolContext, input: { name?: unknown; p
       confirmed_by_manager: { name: displayName(found[0]!), answer: confirmed.by },
       note: `The manager confirmed ${displayName(found[0]!)} (their answer to Did you mean). Do not ask again: propose the card for ${displayName(found[0]!)} now, with this request's account from the earlier turns.`,
     };
+  }
+  /*
+   * Ported from the sibling app: its BOARD f110 (QA handoff, 22 Nov 2026: partial names still match staff). A typed word that only STARTS a roster name
+   * ("Rowan Kes", "Row Kes", "Juno Pax") seated that person with no question, or (two partial words) handed the card a
+   * person the manager's words never named ("Who is this form for?"). People whose names the words hold whole are the
+   * matches; when none are, the people the words only start are a Did-you-mean (Pau's ruling A, as the sibling's #1160 on forms on
+   * file), unless this chat already confirmed that spelling for them.
+   */
+  if (found.length > 0) {
+    const whole = found.filter((person) => namedWholly(typed, person));
+    if (whole.length > 0) found = whole;
+    else {
+      const view = nameQuestionView(context, read.roster);
+      /*
+       * The model may type less than the manager did ("tamsin orwel" looked up while the manager typed "tamsin orwell"): a
+       * person whose full name is in the manager's own words (the person_evidence quote, or else any of their turns) is
+       * settled, as closeSpellingNotSettled settles a full name first.
+       */
+      const turns = identifiedTurns(context.history as ChatMessage[], context.question, context.questionMessageId);
+      const quoted = verifyEvidence(input.person_evidence, turns);
+      const managerTexts = quoted.ok ? [String((input.person_evidence as { quote: string }).quote)] : turns.filter((turn) => turn.role === "user").map((turn) => withoutMessageIdTags(turn.content));
+      const namedInFull = (person: RosterEmployee) => managerTexts.some((text) => fullNamesOf(person).some((full) => holdsPhrase(text, full)));
+      const settled = found.filter((person) => namedInFull(person) || spellingKeysConfirmedFor(view, person.id).includes(personKey(typed)));
+      if (settled.length === 1) found = settled;
+      else {
+        const names = found.slice(0, 5).map(displayName);
+        if (effects) effects.nameQuestion = { offeredIds: found.slice(0, 5).map((row) => row.id), typed };
+        return {
+          matches: [],
+          reason_code: "close_spelling_not_confirmed",
+          ask_exactly: nameConfirmationQuestion(typed, names),
+          did_you_mean: found.slice(0, 5).map((row) => staffRow(row)),
+          note: `"${typed}" only starts ${names.length === 1 ? "this name" : "these names"} on the roster. Ask the manager, in these words: ${nameConfirmationQuestion(typed, names)}`,
+          also_ask_if_no_account: ALSO_ASK_ACCOUNT,
+        };
+      }
+    }
   }
   /* QA (16 Nov 2026, live): the roster spelling the model looked up is settled only by the manager's own words. */
   const unsettled = found.length > 0 ? found.map((row) => closeSpellingNotSettled(context, row, read.roster, input.person_evidence)) : [];
