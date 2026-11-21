@@ -11,26 +11,38 @@ import { COMPANY_METRIC_PHRASES } from "@/config/company/metric-words";
  * time zone and the example phrases the rules teach with. Written for this company from its own manual, metrics and
  * pages, never copied from the sibling app (CLAUDE.md: port the mechanism, never the content).
  *
- * PENDING PAU (QA2, 21 Nov 2026): which manual rulings apply here. Until then only the rules every Corrective Action
- * needs are given; the rest is empty or null, which leaves those rules out of the rules book (`rules-book.ts`).
+ * Pau's rulings (via QA2, 21 Nov 2026): the general rulings on the shared JBA Policy Manual apply here; the sibling app's
+ * tanning-specific ones (its "Other" topics, its metrics, "Under Performance") do not. A null rule is left out of the
+ * rules book (`rules-book.ts`).
  */
 
 const metricList = COMPANY_METRIC_PHRASES.join(", ");
 
-export function bubblesLoopContent({ place }: LoopWords): AgentLoopContent {
+export function bubblesLoopContent({ place, staff }: LoopWords): AgentLoopContent {
   return {
     notPeopleExamples: `${COMPANY_METRIC_PHRASES.slice(0, 3).map((phrase) => `"${phrase}"`).join(", ")} and other metrics`,
-    // PENDING PAU: this company's own "Other" topics. A duty left undone that no section names is the general case.
-    otherTopics: "a " + place + " duty left undone that no section names",
+    // Pau via QA2 (21 Nov 2026): no "Other" topics of this company's own; "Other" only when no section covers it.
+    otherTopics: null,
     // Pau's decision 1 (21 Nov 2026): no read_stats for now.
     statsReports: null,
-    // PENDING PAU: who approves a termination here.
+    // Pau via QA2 (21 Nov 2026): the same approval as the sibling app.
     terminationApproval: "DM/HR approval",
     timeZone: { label: "US Central time", short: "Central", abbrev: "CT" },
     whoRules: [],
-    // PENDING PAU: which manual rulings apply to this company.
-    policyRulings: [],
-    sectionRulings: [],
+    // Pau via QA2 (21 Nov 2026): the general rulings on the shared JBA Policy Manual apply here; tanning-specific ones do not.
+    policyRulings: [
+      "The policy fits WHAT HAPPENED, not the words around it: a coat or the wrong top during a shift is dress code; failing to open on time is late opening; a missed shift or lateness is attendance.",
+      "Clocking out early or leaving before the end of the scheduled shift is Attendance (knowing the work schedule and being on time). The " + place + " closed early or closing duties done before close are part of that same offense, so it is still Attendance alone, with the closing detail kept in the account.",
+      "Staying after hours, or clocking out more than fifteen minutes after the end of the scheduled shift without a manager's approval, is the manual's Time Records section (Timekeeping & Payroll), never Attendance.",
+      "Late FOR a shift (\"late for her opening shift\", the employee arrived late) is Attendance; \"late to open\", the " + place + " opening late (doors opened late, failure to open) is Late Opening.",
+      "A guest or customer complaint about the employee's conduct is the Standards of Conduct.",
+      "Underperformance against sales or performance targets is the Standards of Conduct.",
+    ],
+    sectionRulings: [
+      "An animal anywhere in an at-work sentence (a pet, a dog in the " + place + ", an animal brought to work) is Animals in the Workplace.",
+      "Each of these has its own section; read it and cite it: a wet floor with no wet floor sign, a long or extra break, social media posts about work, harassment, pets and animals, theft, cash handling, insubordination.",
+      "The Standards of Conduct: assigned work or training not finished by its deadline (" + staff + " training, acknowledgements, assigned courses); leaving the register or work area unattended during the shift (never Attendance); a sale rung up wrong (wrong items or prices); a short drawer or register (never Handling Theft unless the manager says theft).",
+    ],
     attendanceRules: [
       "Attendance: a Corrective Action citing Attendance always takes attendance (absence: a shift missed, as \"did not come in\", a no-show, a call-out; lateness: late, or left early; both: each) with attendance_evidence, the manager's words from this request that describe it, exactly as typed. A missed shift is an absence, never lateness. attendance_not_given or attendance_evidence_not_found means propose the card again with it.",
     ],
@@ -69,6 +81,8 @@ export function bubblesLoopContent({ place }: LoopWords): AgentLoopContent {
 export const BUBBLES_POLICY_GUARDS: PolicyGuards = {
   headings: { attendance: "Attendance", lateOpening: "Late Opening", conduct: "Standards of Conduct" },
   saidOnlyOther: null,
+  // Pau via QA2 (21 Nov 2026): no "Other" topics here; a cleaning duty is read under the heading that fits it.
+  cleaningDutyIsOther: false,
 };
 
 const escaped = (phrase: string): string => phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+");

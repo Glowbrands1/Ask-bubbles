@@ -2512,7 +2512,7 @@ export function sameRosterPerson(a: string, b: string, roster: readonly Pick<Ros
  */
 /** Performance metrics managers name ("<the company's metrics>"). */
 /** What "Other — <topic>" is for in this company's content (`AgentLoopContent.otherTopics`). */
-const otherTopicsSaid = (): string => appConfig().content({ place: locationWord(), places: locationWords(), staff: appConfig().staffSystem }).otherTopics;
+const otherTopicsSaid = (): string | null => appConfig().content({ place: locationWord(), places: locationWords(), staff: appConfig().staffSystem }).otherTopics;
 
 /** This company's sales metrics (`appConfig().metrics.account`, global): kept word for word, never people. */
 const accountMetric = (): RegExp => appConfig().metrics.account;
@@ -3300,7 +3300,7 @@ export async function proposeForm(
     const reading = readCaPolicy(requestWords);
     const namedAnother = (reading.source === "stated" && reading.stated !== null && reading.stated !== "dress_code") ||
       namedPolicies(requestWords).some((named) => !dressFits?.some((heading) => namesHeading(named.phrase, heading)));
-    const otherOnly = !policyHeading && /^other\b/i.test(askedPolicyWhole) && !saysMustSee(requestWords) && !cleaningUndonePhrase(requestWords, { rulesAreNotDuties: true });
+    const otherOnly = !policyHeading && /^other\b/i.test(askedPolicyWhole) && !saysMustSee(requestWords) && !(appConfig().policyGuards.cleaningDutyIsOther && cleaningUndonePhrase(requestWords, { rulesAreNotDuties: true }));
     if (dressFits && !namedAnother && ((policyHeading && !cardHeadings.some((heading) => dressFits.includes(heading))) || otherOnly)) {
       /*
        * Pau's ruling (20 Nov 2026; c091): the heading the model chose may be a second offense the manager also describes
@@ -3361,7 +3361,7 @@ export async function proposeForm(
   }
   // The Other topic is read from the account as the model cleaned it (SPELLING_CLEANUP: "<typo>" → "<word>"), else the manager's words.
   /* QA (20 Nov 2026; c259): "we do not do extra cleaning after hours" is a rule stated, never a cleaning duty left undone. */
-  const cleaning = (whatHappened ? cleaningUndonePhrase(whatHappened, { rulesAreNotDuties: true }) : null) ?? cleaningUndonePhrase(requestWords, { rulesAreNotDuties: true });
+  const cleaning = !appConfig().policyGuards.cleaningDutyIsOther ? null : (whatHappened ? cleaningUndonePhrase(whatHappened, { rulesAreNotDuties: true }) : null) ?? cleaningUndonePhrase(requestWords, { rulesAreNotDuties: true });
   const careAndCleaning = namesCareAndCleaning(requestWords);
   /* As today's card cites it: the heading, then the page the manual prints. */
   const page = policyHeading && manual ? findManualSection(manual.chunks, [policyHeading])?.page ?? null : null;
@@ -4047,7 +4047,7 @@ export async function proposeForm(
      * passes the heading (the system prompt lists them) or Other, or says no section fits.
      */
     /* Pau, 17 Nov: coaching always has policy and page. The Coaching and Follow-Up Coaching cards get the same fact as a CA. */
-    ...(policyForms.has(template.key) && !awaiting && !askedPolicyWhole ? { policy_not_given: { note: "This card has no policy. Propose it again with policy: the one JBA Policy Manual heading that fits what happened (the headings are listed in your instructions). \"Other — <short topic>\" only for " + otherTopicsSaid() + ", or when no section fits; then say so in your reply." } } : {}),
+    ...(policyForms.has(template.key) && !awaiting && !askedPolicyWhole ? { policy_not_given: { note: "This card has no policy. Propose it again with policy: the one JBA Policy Manual heading that fits what happened (the headings are listed in your instructions). \"Other — <short topic>\" only for " + (otherTopicsSaid() ? otherTopicsSaid() + ", or " : "") + "when no section fits; then say so in your reply." } } : {}),
     ...(policyNotForThisCard ? { policy_copied: { heading: policyHeading, note: `${policyHeading} is the policy of another form's card in this chat, not chosen for this card. Propose the card again with the heading that fits THIS card's own account (the headings are listed in your instructions), never one copied from another form; "Other — <short topic>" when no section fits.` } } : {}),
     ...(accountGiven ? { request_words: untrusted(accountGiven) } : {}),
     /* The coaching topic was not kept: say none, or name it with evidence from the manager's message (see `coachingTopic`). */

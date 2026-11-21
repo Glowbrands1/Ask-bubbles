@@ -37,7 +37,7 @@ export interface AgentLoopContent {
   /** Company words that are never people, said in the "a name only if" rule. */
   readonly notPeopleExamples: string;
   /** What "Other — <topic>" is for, besides an incident no section covers. */
-  readonly otherTopics: string;
+  readonly otherTopics: string | null;
   /** The reports read_stats reads ("Daily Stats, Sales Totals and Comp"); null when the app has no read_stats. */
   readonly statsReports: string | null;
   /** Who approves a termination before it is finalized ("DM/HR approval"). */
@@ -113,6 +113,11 @@ export interface PolicyGuards {
     /** Whether a message asks for this topic instead of the conduct heading, about the draft on screen. */
     readonly notConduct: (question: string) => boolean;
   } | null;
+  /**
+   * A cleaning duty left undone is "Other — <topic>" (the sibling app's ruling; `cleaning_duty`). False: a cleaning duty
+   * is read like any other incident, under the heading that fits it.
+   */
+  readonly cleaningDutyIsOther: boolean;
 }
 
 export interface AppConfig {
