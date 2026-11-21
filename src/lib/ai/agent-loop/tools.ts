@@ -40,6 +40,7 @@ import { loopCardTitle, loopTitleIn, loopTitlePatterns } from "./job-titles";
 import { isJobTitlePhrase, tidyTypedName } from "@/lib/forms/proposal-names";
 import { foldName } from "@/lib/forms/fold-name";
 import { cleaningUndonePhrase, namesCareAndCleaning, readCaPolicy } from "@/lib/forms/ca-policy";
+import { ATTENDANCE_KIND_QUESTION, attendanceKindSaid } from "./attendance-said";
 import { citesMustSee, dressCodeFit, namesMustSee, saysMustSee } from "./policy-fit";
 import { fieldStates, mergeSaved, refusedFields, savedDiff, type SavedChange } from "@/lib/ai/agent-loop/saved-diff";
 import { turnsFromThisPersonsRequest } from "@/lib/forms/this-persons-turns";
@@ -3796,7 +3797,16 @@ export async function proposeForm(
    * for it. Late Opening is its own heading and is not asked.
    */
   const attendanceCard = template.key === appConfig().formKeys.corrective && policyHeading !== null && /\battendance\b/i.test(policyHeading) && whatHappened !== "";
-  if (attendanceCard && !attendanceKind) {
+  /*
+   * QA's live re-test (21 Nov 2026, Pau's account, item 25): "create ca form for <A> for violating attendance policy on
+   * 10-20-26. verbal. no payroll deduct. jba manual 1-1-26 for previous coaching" says no kind of attendance, so every
+   * card was refused and "verbal" (no kind either) was refused again: no card, the same question twice. Where this
+   * request's words describe no kind (`attendanceKindSaid`), the card is made with what is known, its kind left unset,
+   * and it asks the kind once, beside the card (attendance_not_said); a kind the model passed without the manager's
+   * words is dropped. Where the words describe one, the refusal stands as before.
+   */
+  const attendanceUnsaid = attendanceCard && !attendanceKind && !attendanceKindSaid(`${requestWords}\n${context.question}`);
+  if (attendanceCard && !attendanceKind && !attendanceUnsaid) {
     const attendanceCode = askedAttendance ? "attendance_evidence_not_found" : "attendance_not_given";
     return {
       reason_code: attendanceCode, error: `This Corrective Action cites ${policyHeading}. Propose the card again with attendance (absence: a shift missed, as "did not come in", a no-show, a call-out; lateness: arrived late; left_early: left before the shift ended, as "left early", "left before close", "walked out mid-shift"; both: an absence and lateness) and attendance_evidence quoting the manager's own words from this request that describe it${askedAttendance && attendanceCheck && !attendanceCheck.ok ? ` (that quote was not found in this request's manager messages: ${attendanceCheck.reason})` : ""}.`,
@@ -4091,7 +4101,9 @@ export async function proposeForm(
    * #1055's follow-up (QA, 20 Nov 2026): a card that asks which date (several dates, none chosen) records "form_date" in
    * its asked fields, so a later turn knows the date was asked (dates_asked_before) from the record, never the reply.
    */
-  effects.proposalAsked = [...unset, ...(datesAsked.length > 0 ? ["form_date"] : [])];
+  effects.proposalAsked = [...unset, ...(datesAsked.length > 0 ? ["form_date"] : []), ...(attendanceUnsaid ? ["attendance"] : [])];
+  /* Item 25: the attendance kind is asked once in this chat (the card records), never again on the next card. */
+  const attendanceAskedBefore = attendanceUnsaid && (context.cardRecords ?? []).some((record) => record.asked.includes("attendance"));
   /* A termination card: the rules book offers the exit form after it; recorded for the next turn's yes (exit_offer). */
   if (loopTermination) effects.exitOffered = { employeeId: employee.id ?? null, name: employee.name };
   effects.proposalLevel = level;
@@ -4152,6 +4164,14 @@ export async function proposeForm(
      * #1055's follow-up (QA, 20 Nov 2026): known from the card records ("form_date" asked), never by reading the replies.
      */
     ...(datesGiven.length > 1 && (context.cardRecords ?? []).some((record) => record.asked.includes("form_date")) ? { dates_asked_before: true } : {}),
+    /* Item 25 (see `attendanceUnsaid`): the card is made; the reply asks the kind once, beside it, and never again. */
+    ...(attendanceUnsaid
+      ? {
+          attendance_not_said: attendanceAskedBefore
+            ? { asked_before: true, note: "The manager has already been asked what kind of attendance it was. Do not ask again: the card stays as it is, and the manager can say it later or tick it on the form." }
+            : { ask_exactly: ATTENDANCE_KIND_QUESTION, note: "This card cites Attendance and the manager's words do not say what kind. Ask this once, beside the card; when they answer, propose the card again with attendance and attendance_evidence quoting their answer." },
+        }
+      : {}),
     ...(accountLost.length > 0 ? { account_words_missing: accountLost } : {}),
     /* PR 6: an exit card with no account at all. A fact: the model puts the manager's own account in what_happened, or leaves it. */
     ...(exitForm && !whatHappened ? { account_not_given: { note: "This exit card has no account. If the manager said how or when they left (\"resigned by text\", their last day), propose the card again with all of it in what_happened, in their own words." } } : {}),

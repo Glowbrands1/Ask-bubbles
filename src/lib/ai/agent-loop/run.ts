@@ -488,7 +488,7 @@ function buildAgentLoopTools(config: AppConfig) {
         attendance: {
           type: "string",
           enum: ["absence", "lateness", "left_early", "both"],
-          description: "Corrective Action card whose offense is attendance: what the manager described. absence: a shift missed (did not come in, no-show, no call no show, called out). lateness: arrived late. left_early: left before the shift ended (left early, left before close, walked out mid-shift); never lateness. both: an absence and lateness. With attendance_evidence.",
+          description: "Corrective Action card whose offense is attendance: what the manager described. absence: a shift missed (did not come in, no-show, no call no show, called out). lateness: arrived late. left_early: left before the shift ended (left early, left before close, walked out mid-shift); never lateness. both: an absence and lateness. With attendance_evidence. Omitted when the manager's words say no kind: the card is still made, and its attendance_not_said fact is the question to ask beside it.",
         },
         attendance_evidence: evidence("With attendance: the manager message of this request and its words that describe the absence, the lateness or the early leaving."),
         incident_time: { type: "string", description: "The time of the incident if the manager gave one, as they said it." },

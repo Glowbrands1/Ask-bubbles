@@ -466,6 +466,15 @@ vi.mock("@/lib/knowledge/providers/supabase", () => ({
         },
       };
     }
+    /*
+     * The loop's manual read asks for the manual's version first (`manualFor` in agent-loop/tools.ts). Ported from the
+     * sibling app's pack (QA's live re-test, 21 Nov 2026, item 25): without it the read threw and every loop case ran with
+     * "The JBA Policy Manual could not be read", so no loop card here ever cited a heading. Keyed on the case's own extra
+     * chunks, so a case's `manualAlsoHas` is never served another case's kept read.
+     */
+    async officialPolicyManualVersion() {
+      return { documentId: "doc-manual", version: `v-${JSON.stringify(state.manualExtra).length}` };
+    }
     async fetchOfficialPolicyManual() {
       return {
         ok: true,
