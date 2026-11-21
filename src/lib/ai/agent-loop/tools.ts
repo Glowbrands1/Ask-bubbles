@@ -54,7 +54,7 @@ import { manualScopeFetchLimit, scopeToCurrentManual } from "@/lib/knowledge/cur
 import { matchHybridKnowledge } from "@/lib/knowledge/hybrid-match";
 import { matchRecallKnowledge } from "@/lib/knowledge/recall-match";
 import { rowToCitation, type MatchedChunkRow } from "@/lib/knowledge/mappers";
-import { topicHeadings } from "@/lib/forms/specific-policy-topics";
+import { topicHeadings, withConductLinePage } from "@/lib/forms/specific-policy-topics";
 import { formatManualCitation } from "@/lib/ai/policy-citation-fields";
 import { redactSensitiveDefaults } from "@/lib/ai/sensitive-defaults";
 import { expandPolicyQuery } from "@/lib/knowledge/policy-retrieval";
@@ -3449,7 +3449,19 @@ export async function proposeForm(
   const cleaning = !appConfig().policyGuards.cleaningDutyIsOther ? null : (whatHappened ? cleaningUndonePhrase(whatHappened, { rulesAreNotDuties: true }) : null) ?? cleaningUndonePhrase(requestWords, { rulesAreNotDuties: true });
   const careAndCleaning = namesCareAndCleaning(requestWords);
   /* As today's card cites it: the heading, then the page the manual prints. */
-  const page = policyHeading && manual ? findManualSection(manual.chunks, [policyHeading])?.page ?? null : null;
+  /*
+   * QA's live re-test (21 Nov 2026, item 6 / A4): "the card's policy line says p.12 but the quoted policy text under it
+   * says p.13" (a register shortage). Create quotes a Standards of Conduct incident the manual lists on its own line
+   * ("Register / Bank shortages", printed p.13) and cites that line's page (`withConductLinePage`, the draft route); the
+   * card named the heading's page. One rule for both: the card's page is the one Create quotes, read from this card's
+   * own account the same way.
+   */
+  const citedPage = (heading: string): number | null => {
+    const section = manual ? findManualSection(manual.chunks, [heading]) : null;
+    if (!section || !manual) return null;
+    return withConductLinePage([section], whatHappened || requestWords, manual.chunks)[0]?.page ?? section.page;
+  };
+  const page = policyHeading ? citedPage(policyHeading) : null;
   /*
    * MODEL_POLICY_DEFERS_TO_TOPIC (parity gap #40): an incident the manager's words name a section for ("the drawer was
    * $15 short" → Standards of Conduct, never Handling Theft) is cited under that section's headings only, unless the
@@ -3474,7 +3486,7 @@ export async function proposeForm(
    */
   /* c259 (QA2, 21 Nov 2026, option (a)): a heading with no Type of Offense box of its own names the box it is saved under. */
   let policyLine: string | null = policyHeading ? withReadersLineBox(formatManualCitation(policyHeading, page), policyHeading) : null;
-  if (policyLine && secondHeading && manual) policyLine = `${policyLine}; ${withReadersLineBox(formatManualCitation(secondHeading, findManualSection(manual.chunks, [secondHeading])?.page ?? null), secondHeading)}`;
+  if (policyLine && secondHeading && manual) policyLine = `${policyLine}; ${withReadersLineBox(formatManualCitation(secondHeading, citedPage(secondHeading)), secondHeading)}`;
   /* Batch G (G7a, the tester's exit sweep): an exit cites no policy; it is not an incident. */
   if (template.key === appConfig().formKeys.exit) policyLine = null;
   /*
