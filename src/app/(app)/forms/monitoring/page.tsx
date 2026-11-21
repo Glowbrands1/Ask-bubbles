@@ -25,7 +25,8 @@ import {
 } from "@/lib/forms/instance-scope";
 import { pageFormsAccess } from "@/lib/forms/page-scope";
 import { supabaseSecretKeyConfigured } from "@/lib/config/server-env";
-import { privateAwareLimit, privateCreatorsActive } from "@/lib/forms/private-creators";
+import { privateAwareLimit } from "@/lib/forms/private-creators";
+import { parseShowCount } from "@/lib/forms/monitoring-page-size";
 
 export const metadata: Metadata = { title: "Forms Register" };
 export const dynamic = "force-dynamic";
@@ -47,11 +48,13 @@ export const dynamic = "force-dynamic";
 export default async function FormMonitoringPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string; followup?: string }>;
+  searchParams: Promise<{ view?: string; followup?: string; show?: string }>;
 }) {
   const identity = await requirePagePermission("view_form_monitoring");
 
-  const { view: requestedView, followup: requestedFollowUp } = await searchParams;
+  const { view: requestedView, followup: requestedFollowUp, show: requestedShow } = await searchParams;
+  // How many forms to load; "Load more" adds a page. See `monitoring-page-size.ts`.
+  const showCount = parseShowCount(requestedShow);
   /*
    * Both filters come from the URL so a view survives a refresh and can be
    * linked to, and both are narrowed here rather than trusted — an unknown
@@ -70,6 +73,7 @@ export default async function FormMonitoringPage({
   const today = businessToday();
 
   let forms: MonitoredForm[] = [];
+  let hasMore = false;
   let attention = { overdue: 0, dueThisWeek: 0, needsAttention: 0 };
   let demo = { deletable: 0, protected: 0 };
   let failure: string | null = null;
@@ -84,11 +88,14 @@ export default async function FormMonitoringPage({
        * is the same filter the API route applies; `visibleInstances` re-checks every
        * row against the permission a restricted family needs and the reader's stores.
        */
-      const instances = visibleInstances(
+      // One row past the page is read so the page knows whether "Load more" has anything to load.
+      const readable = visibleInstances(
         access.actor,
-        // PRIVATE_CREATOR_FORMS: over-read, then trim to the default page of 200; off, as before.
-        await listInstances(view satisfies InstanceView, privateCreatorsActive() ? privateAwareLimit(200) : undefined, instanceListFilterFor(access.actor)),
-      ).slice(0, 200);
+        // PRIVATE_CREATOR_FORMS: over-read, then trim to the page; off, the page plus one.
+        await listInstances(view satisfies InstanceView, privateAwareLimit(showCount + 1), instanceListFilterFor(access.actor)),
+      );
+      hasMore = readable.length > showCount;
+      const instances = readable.slice(0, showCount);
       forms = instances.map((instance) => ({
         id: instance.id,
         templateName: instance.templateName,
@@ -174,6 +181,8 @@ export default async function FormMonitoringPage({
             today={today}
             attention={attention}
             demo={demo}
+            showCount={showCount}
+            hasMore={hasMore}
           />
         )}
       </PageShell>
