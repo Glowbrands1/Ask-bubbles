@@ -29,6 +29,9 @@ const T3 =
   "This is what happened: She has recieved coaching on 9/22 for cleaning tasks not being completed. What was observed this weekend is that trash liners were not put into the trash cans after collecting trash, laundry was not done";
 const T9 = "no i want this to be a corrective action for a new person now";
 const T10 = "make this for Thaddea instead of Fenna";
+const T5 = "payroll is not deductable";
+const T6 = "verbal warning";
+const T8 = "make the same corrective action but for Thaddea Kroll";
 const ACCOUNT_A = "Fenna Prewitt did not put trash liners into the trash cans after collecting trash this weekend, and laundry was not done.";
 
 function start(t: ReplayContext) {
@@ -37,6 +40,7 @@ function start(t: ReplayContext) {
   t.as("location_manager", WEST_DODGE);
 }
 
+const levelOf = (proposal: unknown) => (proposal as { warningLevel?: string | null } | null)?.warningLevel ?? null;
 const issueOf = (proposal: unknown) => (proposal as { issue?: string | null } | null)?.issue ?? "";
 const said = (view: LoopView) => view.turns.filter((turn) => turn.role === "user" && (turn.messageIds?.length ?? 0) > 0).at(-1)?.text ?? "";
 
@@ -58,7 +62,7 @@ const live = (withEvidence: boolean) => {
           employee_id: LOOP_THADDEA.id,
           policy: headingWith(view, /standards of conduct/i),
           person_evidence: evidenceFrom(view, "Thaddea"),
-          ...(withEvidence ? { same_card_evidence: evidenceFrom(view, T10) } : {}),
+          ...(withEvidence ? { same_card_evidence: { ...evidenceFrom(view, T10), kind: "this_card_for" } } : {}),
           /* Handed back: the account of the card on screen, as the chat shows it, with B's name (what a model reads back). */
           ...(handedBack ? { what_happened: ACCOUNT_A.replace("Fenna Prewitt", "Thaddea Kroll") } : {}),
         },
@@ -95,6 +99,7 @@ export const NOV22_AGENT_LOOP_SAME_CARD_NEW_PERSON_CASES: ReplayCase[] = [
       expect(result?.facts?.copied_from_card, "the reply is not told the account was copied").toBeTruthy();
       const handBacks = model.views.filter((view) => (lastResult(view, "propose_form") as { reason_code?: string } | null)?.reason_code === "same_card_account_missing");
       expect(handBacks.length, "the card with no account was never handed back").toBeGreaterThan(0);
+      expect(levelOf(thread.proposal) ?? null, "\"make this for <B>\" copied a level").toBeNull();
     },
   },
   {
@@ -112,6 +117,47 @@ export const NOV22_AGENT_LOOP_SAME_CARD_NEW_PERSON_CASES: ReplayCase[] = [
       await thread.say(T9);
       await thread.say(T10);
       expect(thread.proposal?.employeeName === "Thaddea Kroll" ? issueOf(thread.proposal) : "").not.toMatch(/trash liners/);
+    },
+  },
+  {
+    id: "nov22-u21-same-corrective-action-copies-level-and-payroll",
+    title: "U21 (QA's ruling, 22 Nov 2026): T5 \"payroll is not deductable\", T6 \"verbal warning\", T8 \"make the same corrective action but for <B>\" — <B>'s card has the account, Verbal and payroll No, and the reply is told they were copied",
+    report: REPORT,
+    status: "fixed",
+    async run(t) {
+      start(t);
+      const thread = t.thread();
+      const model = loopStandIn((view): LoopDecision => {
+        const message = said(view);
+        if (lastResult(view, "propose_form")) return { text: "Here's the Corrective Action Form." };
+        if (message === T1) return { text: "This Corrective Action Form needs a person. Who is it for?" };
+        const base = { template_key: "dpoa", policy: headingWith(view, /standards of conduct/i) };
+        if (message === T8) {
+          return { tool: "propose_form", input: { ...base, employee_id: LOOP_THADDEA.id, what_happened: ACCOUNT_A.replace("Fenna Prewitt", "Thaddea Kroll"), person_evidence: evidenceFrom(view, "Thaddea Kroll"), same_card_evidence: { ...evidenceFrom(view, T8), kind: "same_form" } } };
+        }
+        const back = message === T2 ? 0 : message === T3 ? 1 : message === T5 ? 2 : 3;
+        return {
+          tool: "propose_form",
+          input: {
+            ...base,
+            employee_id: LOOP_FENNA.id,
+            person_evidence: evidenceFrom(view, "Fenna Prewitt", back),
+            ...(message !== T2 ? { what_happened: ACCOUNT_A } : {}),
+            ...(message === T5 || message === T6 ? { payroll_deduct: "no", payroll_evidence: evidenceFrom(view, T5, message === T5 ? 0 : 1) } : {}),
+            ...(message === T6 ? { warning_level: "verbal", level_evidence: evidenceFrom(view, T6) } : {}),
+          },
+        };
+      });
+      t.loopModel!(model);
+      for (const turn of [T1, T2, T3, T5, T6]) await thread.say(turn);
+      expect(levelOf(thread.proposal), "the case proves nothing: A's card is not Verbal").toBe("verbal");
+      await thread.say(T8);
+      expect(thread.proposal?.employeeName).toBe("Thaddea Kroll");
+      expect(issueOf(thread.proposal)).toMatch(/Thaddea did not put trash liners/);
+      expect(levelOf(thread.proposal), "Verbal was not copied to B's card").toBe("verbal");
+      expect((thread.proposal as { payrollDeduct?: string | null } | null)?.payrollDeduct, "payroll No was not copied to B's card").toBe("no");
+      const result = model.views.map((view) => lastResult(view, "propose_form")).filter(Boolean).at(-1) as { facts?: { copied_from_card?: { copied?: string } } } | undefined;
+      expect(result?.facts?.copied_from_card?.copied).toBe("Verbal Warning and payroll No");
     },
   },
 ];

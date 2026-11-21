@@ -3389,6 +3389,13 @@ export async function proposeForm(
     };
   }
   const copiedFromCard = sameCardOther;
+  /*
+   * QA's ruling (22 Nov 2026, U21): "make the SAME corrective action but for <B>" is the manager's explicit ask, so the
+   * earlier card's level and payroll answer (its server record) are copied too, shown on <B>'s card, and the reply says
+   * they were copied. Without it ("make this for <B> instead of <A>") another person starts clean. The model says which
+   * (same_card_evidence kind "same_form"); no word list.
+   */
+  const sameFormAsked = sameCardOther && (input.same_card_evidence as { kind?: unknown } | null | undefined)?.kind === "same_form";
   const managerText = [...(context.history as ChatMessage[]).filter((turn) => turn.role === "user").map((turn) => String(turn.content ?? "")), context.question].join("\n");
   const accountRead = withoutTextToManager(typeof input.what_happened === "string" ? input.what_happened : "", managerText);
   const priorRead = withoutTextToManager(typeof input.prior_actions === "string" ? input.prior_actions : "", managerText);
@@ -3998,7 +4005,8 @@ export async function proposeForm(
   const screenDate = sameCardOnScreen(context.cardOnScreen, template.key, employee) ? context.cardOnScreen!.incidentDate ?? null : null;
   const sameIncidentAskedAgain = asksNewForm && screenDate !== null && latestDates.some((given) => monthDayToIso(given, today) === screenDate);
   const carriedLevel = caOnlyFields && (!asksNewForm || sameIncidentAskedAgain) ? (carriedRecord?.level ?? null) : null;
-  const level = askedLevel && levelCheck?.ok ? askedLevel : carriedLevel;
+  const copiedLevel = !(askedLevel && levelCheck?.ok) && !carriedLevel && sameFormAsked && caOnlyFields ? (sameCardOf?.level ?? null) : null;
+  const level = askedLevel && levelCheck?.ok ? askedLevel : (carriedLevel ?? copiedLevel);
   /*
    * Fix batch item 7 (QA's targeted re-run, c163: a bare "yes" after "Payroll deduct and warning level aren't set" set
    * payroll). The card on screen asked two things in one line (its record's `asked`), and this message is one word, quoted
@@ -4047,6 +4055,11 @@ export async function proposeForm(
   if (payroll === null && !answerUnclear && payrollRecord?.payroll) {
     payroll = payrollRecord.payroll;
     if (payroll === "yes" && !amount && payrollRecord.payrollAmount) amount = payrollRecord.payrollAmount;
+  }
+  let copiedPayroll: "yes" | "no" | null = null;
+  if (payroll === null && !answerUnclear && sameFormAsked && payrollFields && sameCardOf?.payroll) {
+    payroll = copiedPayroll = sameCardOf.payroll;
+    if (payroll === "yes" && !amount && sameCardOf.payrollAmount) amount = sameCardOf.payrollAmount;
   }
   /* One question for a one-word answer to two (`answerUnclear`): which it answers, and for payroll the amount. */
   const payrollQuestion = `Which does that answer: payroll deduct, the warning level, or both? If payroll deduct applies for **${employee.name}**, how much?`;
@@ -4665,7 +4678,16 @@ export async function proposeForm(
     })()),
     ...(salonFromWoven ? { store_from_woven: salonFromWoven } : {}),
     /* U21: the account was copied from <A>'s card; a level and payroll answer are the manager's to state for this person. */
-    ...(copiedFromCard ? { copied_from_card: { say_exactly: `Same account as the earlier card, with ${employee.name.split(/\s+/)[0]}'s name.`, not_copied: "level and payroll: the manager states them for this person" } } : {}),
+    ...(copiedFromCard
+      ? {
+          copied_from_card: copiedLevel || copiedPayroll
+            ? {
+                copied: [copiedLevel ? `${copiedLevel === "verbal" ? "Verbal" : "Written"} Warning` : null, copiedPayroll ? `payroll ${copiedPayroll === "yes" ? "Yes" : "No"}` : null].filter(Boolean).join(" and "),
+                say: `Say once: "Copied <copied> from <the earlier card's person's first name>'s card; tell me if ${employee.name.split(/\s+/)[0]}'s are different."`,
+              }
+            : { say_exactly: `Same account as the earlier card, with ${employee.name.split(/\s+/)[0]}'s name.`, not_copied: "level and payroll: the manager states them for this person" },
+        }
+      : {}),
     ...(storeNotRead ? { typed_store_not_found: storeOffer(typedSalon, replyNameFor(card.employeeName ?? employee.name, read.kind === "read" ? read.roster : [], extractEmployeeNames(managerTurns(context)), employee.id ?? null), wovenStores, managerSalonIds) } : {}),
     /* QA's live-app item 8: the card uses Woven's title; the manager called them something else ("<title>"). */
     ...(() => {
