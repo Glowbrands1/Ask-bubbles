@@ -35,6 +35,7 @@ import {
 import type { AskResponse } from "@/lib/ai/types";
 import { findManualSection, manualSectionHeadings, type ManualChunk } from "@/lib/forms/official-policy-manual";
 import { sectionWording } from "@/lib/forms/policy-citation";
+import { manualWordsForDisplay } from "@/lib/knowledge/manual-display-words";
 import { buildProposal, extractEmployeeNames, managerContext, samePerson } from "@/lib/forms/proposal";
 import { loopCardTitle, loopTitleIn, loopTitlePatterns } from "./job-titles";
 import { isJobTitlePhrase, tidyTypedName } from "@/lib/forms/proposal-names";
@@ -1850,10 +1851,11 @@ export async function readPolicy(context: ToolContext, input: { heading?: unknow
       similarity: 1,
     };
     const marker = addSource(effects, rowToCitation(row));
-    const wording = sectionWording(manual.chunks, section);
+    const wording = manualWordsForDisplay(sectionWording(manual.chunks, section));
     return { document: "JBA Policy Manual", heading: section.heading, page: section.page, source: marker, wording, ...(await readingNotes(wording)) };
   }
-  const wording = sectionWording(manual.chunks, section);
+  /* The wording the reply quotes, in this company's words (QA, 21 Nov 2026, item 7: "salon" → "store"); the chunks stay as stored. */
+  const wording = manualWordsForDisplay(sectionWording(manual.chunks, section));
   return { document: "JBA Policy Manual", heading: section.heading, page: section.page, wording, ...(await readingNotes(wording)) };
 }
 
