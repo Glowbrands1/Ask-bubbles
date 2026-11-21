@@ -34,6 +34,13 @@ export function bubblesLoopContent({ place, staff }: LoopWords): AgentLoopConten
       "The policy fits WHAT HAPPENED, not the words around it: a coat or the wrong top during a shift is dress code; failing to open on time is late opening; a missed shift or lateness is attendance.",
       "Clocking out early or leaving before the end of the scheduled shift is Attendance (knowing the work schedule and being on time). The " + place + " closed early or closing duties done before close are part of that same offense, so it is still Attendance alone, with the closing detail kept in the account.",
       "Staying after hours, or clocking out more than fifteen minutes after the end of the scheduled shift without a manager's approval, is the manual's Time Records section (Timekeeping & Payroll), never Attendance.",
+      /*
+       * QA's live re-test B4a (21 Nov 2026): "He messaged <B> stating he had a personal event happen and would not be into
+       * work. He did not find coverage. He also acknowledged the shift coverage policy in Woven" cited Standards of Conduct
+       * (the acknowledgements line below). A shift missed without coverage is attendance; a policy the employee DID
+       * acknowledge is the background to it, never an acknowledgement left undone.
+       */
+      "A scheduled shift the employee did not work without finding coverage (a no-show, \"would not be into work\", a text or message to someone instead of finding a cover or replacement) is Attendance; when the manager names the shift coverage, cover or replacement policy, cite Shift Replacement (the manual's section on finding your own replacement). A policy the employee acknowledged (in " + staff + " or on paper) is background to the account, never the offense and never the Standards of Conduct's acknowledgements left undone.",
       "Late FOR a shift (\"late for her opening shift\", the employee arrived late) is Attendance; \"late to open\", the " + place + " opening late (doors opened late, failure to open) is Late Opening.",
       "A guest or customer complaint about the employee's conduct is the Standards of Conduct.",
       "Underperformance against sales or performance targets is the Standards of Conduct.",
@@ -41,10 +48,10 @@ export function bubblesLoopContent({ place, staff }: LoopWords): AgentLoopConten
     sectionRulings: [
       "An animal anywhere in an at-work sentence (a pet, a dog in the " + place + ", an animal brought to work) is Animals in the Workplace.",
       "Each of these has its own section; read it and cite it: a wet floor with no wet floor sign, a long or extra break, social media posts about work, harassment, pets and animals, theft, cash handling, insubordination.",
-      "The Standards of Conduct: assigned work or training not finished by its deadline (" + staff + " training, acknowledgements, assigned courses); leaving the register or work area unattended during the shift (never Attendance); a sale rung up wrong (wrong items or prices); a short drawer or register (never Handling Theft unless the manager says theft).",
+      "The Standards of Conduct: assigned work or training not finished by its deadline (" + staff + " training, acknowledgements not done, assigned courses); leaving the register or work area unattended during the shift (never Attendance); a sale rung up wrong (wrong items or prices); a short drawer or register (never Handling Theft unless the manager says theft).",
     ],
     attendanceRules: [
-      "Attendance: a Corrective Action citing Attendance always takes attendance (absence: a shift missed, as \"did not come in\", a no-show, a call-out; lateness: arrived late; left_early: left before the shift ended, as \"left early\", \"left before close\", \"walked out mid-shift\"; both: an absence and lateness) with attendance_evidence, the manager's words from this request that describe it, exactly as typed. A missed shift is an absence, and leaving early is left_early: neither is ever lateness. attendance_not_given or attendance_evidence_not_found means propose the card again with it.",
+      "Attendance: a Corrective Action citing Attendance always takes attendance (absence: a shift missed, as \"did not come in\", a no-show, a call-out; lateness: arrived late; left_early: left before the shift ended, as \"left early\", \"left before close\", \"walked out mid-shift\"; both: an absence and lateness) with attendance_evidence, the manager's words from this request that describe it, exactly as typed. A missed shift is an absence, and leaving early is left_early: neither is ever lateness. attendance_not_given or attendance_evidence_not_found means propose the card again with it. When the manager's words say no kind (\"violating attendance policy\" alone), never pass one and never hold the card for it: the card is made, and its attendance_not_said fact gives the one question to ask beside the card, once (asked_before: do not ask again).",
     ],
     underPerformanceReplies: [],
     metricsRule: `Metrics are kept exactly as the manager wrote them: ${metricList}, every number and the month. They are never people.`,

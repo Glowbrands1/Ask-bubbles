@@ -45,6 +45,7 @@ import { loopCardTitle, loopTitleIn, loopTitlePatterns } from "./job-titles";
 import { isJobTitlePhrase, tidyTypedName } from "@/lib/forms/proposal-names";
 import { foldName } from "@/lib/forms/fold-name";
 import { cleaningUndonePhrase, namesCareAndCleaning, readCaPolicy } from "@/lib/forms/ca-policy";
+import { ATTENDANCE_KIND_QUESTION, attendanceKindSaid } from "./attendance-said";
 import { citesMustSee, dressCodeFit, namesMustSee, saysMustSee } from "./policy-fit";
 import { fieldStates, mergeSaved, refusedFields, savedDiff, type SavedChange } from "@/lib/ai/agent-loop/saved-diff";
 import { turnsFromThisPersonsRequest } from "@/lib/forms/this-persons-turns";
@@ -853,6 +854,11 @@ export async function inactiveMatch(scope: AccessScope, typed: string): Promise<
   }
 }
 
+/** The one line a former employee's card says (the rules book's inactive_in_woven line, QA's live re-test B8). */
+export function inactiveLine(name: string): string {
+  return `**${name}** shows as no longer active in ${staffSystem()}; I've used the name as you typed it.`;
+}
+
 const ROSTER_FAILED = "The staff roster could not be loaded just now, so nobody could be looked up. Say so to the manager; do not guess a name.";
 const ROSTER_UNCHECKED = "This login covers a district or region, so the roster cannot be searched here. Use the name exactly as the manager typed it.";
 
@@ -1180,7 +1186,9 @@ export async function findStaff(context: ToolContext, input: { name?: unknown; p
      * salon outside the manager's scope is read the same way (the roster is scoped): their existence is never shown.
      */
     const inactive = await inactiveMatch(context.actor.scope, person);
-    return { reason_code: "not_on_roster", matches: [], not_on_roster: person, staff_list: context.actor.scope.level === PLACE_LEVEL ? `your ${locationWord()}'s` : "the", ...(inactive ? { inactive_in_woven: inactive } : {}), note: `Not on the ${staffSystem()} staff list${inactive ? ` (no longer active in ${staffSystem()})` : ""}. Propose the card now with employee_name "${person}" as typed, and say so as the rules book's Card replies teach.` };
+    /* QA's live re-test B8: a former employee is found in Woven as no longer active, never "not on the staff list" too. */
+    if (inactive) return { reason_code: "not_on_roster", matches: [], not_on_roster: person, inactive_in_woven: inactive, note: `${person} is a former employee: found in ${staffSystem()} as no longer active. Propose the card now with employee_name "${person}" as typed, and say only that ${person} shows as no longer active, as the rules book's Card replies teach.` };
+    return { reason_code: "not_on_roster", matches: [], not_on_roster: person, staff_list: context.actor.scope.level === PLACE_LEVEL ? `your ${locationWord()}'s` : "the", note: `Not on the ${staffSystem()} staff list. Propose the card now with employee_name "${person}" as typed, and say so as the rules book's Card replies teach.` };
   }
   /* A first name alone is confirmed before it goes on a form, as today ("Is this for **Liora Kincaid**?"). */
   /*
@@ -1320,10 +1328,16 @@ export function nameAsSaid(person: Pick<RosterEmployee, "firstName" | "lastName"
   const preferred = person.preferredFirstName?.trim();
   if (!preferred || preferred.toLowerCase() === person.firstName.trim().toLowerCase()) return legal;
   const said = ` ${managerWords.toLowerCase().replace(/[^a-z'’-]+/g, " ")} `;
-  const saidLegal = said.includes(` ${person.firstName.trim().toLowerCase()} `);
-  const saidPreferred = said.includes(` ${preferred.toLowerCase()} `);
+  /*
+   * QA's live re-test B6 (21 Nov 2026): the manager typed the preferred name first, then settled on the legal one ("yes it
+   * is for <legal>", "create the exit form for <legal>"); every later turn put the preferred name back, because both were
+   * said and the preferred one always won. The name the manager used LAST is the one they settled on (`managerWords` is
+   * their turns, oldest first).
+   */
+  const saidLegal = said.lastIndexOf(` ${person.firstName.trim().toLowerCase()} `);
+  const saidPreferred = said.lastIndexOf(` ${preferred.toLowerCase()} `);
   const asPreferred = `${preferred} ${person.lastName.trim()}`.replace(/\s+/g, " ").trim();
-  if (saidLegal && !saidPreferred) return legal;
+  if (saidLegal > saidPreferred) return legal;
   return asPreferred;
 }
 
@@ -3289,7 +3303,14 @@ export async function proposeForm(
    * request that named <T> is <C>'s own turn, so termination, level, payroll, dates and the account read it (it fell to
    * resignation when only the card's name moved).
    */
-  const aliases = nameCorrectedFrom !== null ? [nameCorrectedFrom] : [];
+  /*
+   * QA's live re-test B6 (21 Nov 2026): the person's other full name on the roster (Woven's preferred first name or the
+   * legal one, with the surname) is the same person, so the turn that asked for the form under it stays this card's
+   * request once the manager settles on the other ("exit form for <preferred> …", then "it is for <legal>"); without
+   * it, the notice and the last day told in that turn were lost and the card asked how she left again.
+   */
+  const ownRow = employee.id && read.kind === "read" ? read.roster.find((row) => row.id === employee.id) : undefined;
+  const aliases = [...(nameCorrectedFrom !== null ? [nameCorrectedFrom] : []), ...(ownRow ? fullNamesOf(ownRow).filter((name) => !samePerson(name, employee.name)) : [])];
   const sameAsThisPerson = (named: string, person: string) =>
     samePerson(named, person) || (samePerson(person, employee.name) && (isConfirmedSpelling(named, confirmedKeys) || aliases.some((alias) => samePerson(named, alias))));
   /*
@@ -3970,7 +3991,16 @@ export async function proposeForm(
    * for it. Late Opening is its own heading and is not asked.
    */
   const attendanceCard = template.key === appConfig().formKeys.corrective && policyHeading !== null && /\battendance\b/i.test(policyHeading) && whatHappened !== "";
-  if (attendanceCard && !attendanceKind) {
+  /*
+   * QA's live re-test (21 Nov 2026, Pau's account, item 25): "create ca form for <A> for violating attendance policy on
+   * 10-20-26. verbal. no payroll deduct. jba manual 1-1-26 for previous coaching" says no kind of attendance, so every
+   * card was refused and "verbal" (no kind either) was refused again: no card, the same question twice. Where this
+   * request's words describe no kind (`attendanceKindSaid`), the card is made with what is known, its kind left unset,
+   * and it asks the kind once, beside the card (attendance_not_said); a kind the model passed without the manager's
+   * words is dropped. Where the words describe one, the refusal stands as before.
+   */
+  const attendanceUnsaid = attendanceCard && !attendanceKind && !attendanceKindSaid(`${requestWords}\n${context.question}`);
+  if (attendanceCard && !attendanceKind && !attendanceUnsaid) {
     const attendanceCode = askedAttendance ? "attendance_evidence_not_found" : "attendance_not_given";
     return {
       reason_code: attendanceCode, error: `This Corrective Action cites ${policyHeading}. Propose the card again with attendance (absence: a shift missed, as "did not come in", a no-show, a call-out; lateness: arrived late; left_early: left before the shift ended, as "left early", "left before close", "walked out mid-shift"; both: an absence and lateness) and attendance_evidence quoting the manager's own words from this request that describe it${askedAttendance && attendanceCheck && !attendanceCheck.ok ? ` (that quote was not found in this request's manager messages: ${attendanceCheck.reason})` : ""}.`,
@@ -4287,7 +4317,9 @@ export async function proposeForm(
    * #1055's follow-up (QA, 20 Nov 2026): a card that asks which date (several dates, none chosen) records "form_date" in
    * its asked fields, so a later turn knows the date was asked (dates_asked_before) from the record, never the reply.
    */
-  effects.proposalAsked = [...unset, ...(datesAsked.length > 0 ? ["form_date"] : [])];
+  effects.proposalAsked = [...unset, ...(datesAsked.length > 0 ? ["form_date"] : []), ...(attendanceUnsaid ? ["attendance"] : [])];
+  /* Item 25: the attendance kind is asked once in this chat (the card records), never again on the next card. */
+  const attendanceAskedBefore = attendanceUnsaid && (context.cardRecords ?? []).some((record) => record.asked.includes("attendance"));
   /* A termination card: the rules book offers the exit form after it; recorded for the next turn's yes (exit_offer). */
   if (loopTermination) effects.exitOffered = { employeeId: employee.id ?? null, name: employee.name };
   effects.proposalLevel = level;
@@ -4348,6 +4380,14 @@ export async function proposeForm(
      * #1055's follow-up (QA, 20 Nov 2026): known from the card records ("form_date" asked), never by reading the replies.
      */
     ...(datesGiven.length > 1 && (context.cardRecords ?? []).some((record) => record.asked.includes("form_date")) ? { dates_asked_before: true } : {}),
+    /* Item 25 (see `attendanceUnsaid`): the card is made; the reply asks the kind once, beside it, and never again. */
+    ...(attendanceUnsaid
+      ? {
+          attendance_not_said: attendanceAskedBefore
+            ? { asked_before: true, note: "The manager has already been asked what kind of attendance it was. Do not ask again: the card stays as it is, and the manager can say it later or tick it on the form." }
+            : { ask_exactly: ATTENDANCE_KIND_QUESTION, note: "This card cites Attendance and the manager's words do not say what kind. Ask this once, beside the card; when they answer, propose the card again with attendance and attendance_evidence quoting their answer." },
+        }
+      : {}),
     ...(accountLost.length > 0 ? { account_words_missing: accountLost } : {}),
     /* PR 6: an exit card with no account at all. A fact: the model puts the manager's own account in what_happened, or leaves it. */
     ...(exitForm && !whatHappened ? { account_not_given: { note: "This exit card has no account. If the manager said how or when they left (\"resigned by text\", their last day), propose the card again with all of it in what_happened, in their own words." } } : {}),
@@ -4393,7 +4433,17 @@ export async function proposeForm(
       const followUp = followUpForCard({ corrective, formDate: card.formDate ?? today, managerWords, today });
       return followUp ? { follow_up_on_create: { date: followUp.date, say_exactly: followUp.line } } : {};
     })()),
-    ...(offRosterName ? { off_roster_name: employee.name, staff_list: context.actor.scope.level === PLACE_LEVEL ? `your ${locationWord()}'s` : "the", ...((await inactiveMatch(context.actor.scope, employee.name)) ? { inactive_in_woven: true } : {}) } : {}),
+    /*
+     * QA's live re-test B8 (21 Nov 2026): a former employee's card gave both staff_list (the not-on-the-staff-list line) and
+     * inactive_in_woven, and the reply said both, "isn't on the Woven staff list" and "shows as no longer active". A person
+     * no longer active is found in Woven: the card gives only the inactive line, never staff_list.
+     */
+    ...(offRosterName ? await (async () => {
+      const inactive = await inactiveMatch(context.actor.scope, employee.name);
+      return inactive
+        ? { off_roster_name: employee.name, inactive_in_woven: { say_exactly: inactiveLine(employee.name), note: `${employee.name} is a former employee, found in ${staffSystem()} as no longer active. Say say_exactly once, and never that ${employee.name} is not on the staff list.` } }
+        : { off_roster_name: employee.name, staff_list: context.actor.scope.level === PLACE_LEVEL ? `your ${locationWord()}'s` : "the" };
+    })() : {}),
     ...(personId && effects.nameLines?.[personId] ? { name_from_staff_list: employee.name } : {}),
     /* Pau's name ruling (15 Nov 2026): the card uses the preferred name; the reply says the Woven legal name once. */
     ...(employee.id && read.kind === "read" && (() => {

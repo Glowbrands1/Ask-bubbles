@@ -526,8 +526,16 @@ const NEXT_FACT = String.raw`(?:she|he|they|her|his|their|last|returned|didn't|d
  * reason.
  */
 const FACT_START = String.raw`(?:store items?|(?:salon|store) key|(?:her|his|their|the) keys?\s+(?:was|were|returned|not)|items?\s+(?:were\s+|was\s+)?(?:not\s+)?returned|keys?\s+(?:was\s+|were\s+)?(?:not\s+)?returned|(?:no\s+)?payroll|(?:not\s+|in)?eligible for re-?hire|re-?hire\b|last day|min(?:imum|\.)?\s*wage)`;
+/*
+ * WORDS TO THE APP END A REASON (QA's live re-test B6, 21 Nov 2026: "she is resigning due to second job I'm ready for the
+ * draft" saved the reason "Second job I'm ready for the draft."). A manager who ends the message by telling the app to go
+ * ahead has finished the reason: the speaker's readiness ("I'm ready", "we're all set"), "go ahead", or a request about
+ * the draft or form itself ("make the draft", "create the exit form", "ready for the draft"). Only words about the
+ * form or the go-ahead, so a reason that itself has "make" or "start" in it ("to start a new job") is kept whole.
+ */
+const TO_THE_APP = String.raw`(?:(?:i'?m|i am|we'?re|we are)\s+(?:ready|done|all set|good to go|finished)\b|(?:ok(?:ay)?[,\s]+)?(?:please\s+)?go\s+ahead\b|(?:(?:please|you can|can you|could you|let'?s)\s+)?(?:create|make|start|generate|build|prepare|draft|send|open|do)\s+(?:(?:the|a|my|this|that|her|his|their)\s+)?(?:(?:exit|resignation)\s+)?(?:draft|form|paperwork)\b|ready for (?:the|a|my) (?:draft|form)\b)`;
 const REASON_END = new RegExp(
-  String.raw`\s*(?:[.;!?\n]|,\s*(?:and\s+|but\s+|so\s+)?(?=${NEXT_FACT})|\s+(?:and|but|so)\s+(?=${NEXT_FACT}))|\s+(?=${FACT_START})`,
+  String.raw`\s*(?:[.;!?\n]|,\s*(?:and\s+|but\s+|so\s+)?(?=${NEXT_FACT})|\s+(?:and|but|so)\s+(?=${NEXT_FACT}))|\s+(?=${FACT_START})|[,\s]+(?=${TO_THE_APP})`,
 );
 
 /** Each opening, and whether the words it matched belong to the reason. */

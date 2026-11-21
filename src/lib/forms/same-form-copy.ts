@@ -80,6 +80,19 @@ export function requestTurn(notes: string): string {
   return turns.at(-1) ?? "";
 }
 
+/**
+ * Does Create copy the manager's earlier form, unasked by id (the draft route's implicit copy)? Only when the card's own
+ * request asks for "the same … form", and never for the agent loop's card (QA's live re-test, 21 Nov 2026, item 24): the
+ * loop's card carries its own account, already the earlier card's when the manager asked for "the same coaching form for
+ * <B>", and the manager pressed Create on that card. Its notes end with the turn that names <B> ("Do the same coaching
+ * form for <B>"), so the copy ran, and with <A>'s card never created it took this account's newest other form of the
+ * template, an older one about something else, and saved that over what the card showed.
+ */
+export function implicitCopyAsked(input: { notes: string; cardFromLoop: boolean }): boolean {
+  if (input.cardFromLoop) return false;
+  return asksForSameForm(requestTurn(input.notes));
+}
+
 function escaped(word: string): string {
   return word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
