@@ -41,8 +41,7 @@ import { citesMustSee, dressCodeFit, namesMustSee, saysMustSee } from "./policy-
 import { fieldStates, mergeSaved, refusedFields, savedDiff, type SavedChange } from "@/lib/ai/agent-loop/saved-diff";
 import { turnsFromThisPersonsRequest } from "@/lib/forms/this-persons-turns";
 import { closeHeadingReading, closePolicyQuestion, namedPolicies, namesHeading } from "@/lib/forms/named-policy-section";
-import { payrollAmountFromConversation } from "@/lib/forms/payroll-deduct";
-import { PAYROLL_AMOUNT_KEY, PAYROLL_AMOUNT_QUESTION } from "@/lib/forms/payroll-amount-field";
+import { PAYROLL_DEDUCT_AMOUNT_KEY as PAYROLL_AMOUNT_KEY, PAYROLL_DEDUCT_AMOUNT_QUESTION as PAYROLL_AMOUNT_QUESTION, payrollAmountFromConversation } from "@/lib/forms/payroll-deduct-amount";
 import { withoutPayrollClauses } from "@/lib/ai/payroll-clause-not-account";
 import { listTemplateSummaries, type TemplateSummary } from "@/lib/forms/repository";
 import { SupabaseKnowledgeProvider } from "@/lib/knowledge/providers/supabase";

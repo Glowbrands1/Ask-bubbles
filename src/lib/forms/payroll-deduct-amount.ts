@@ -143,3 +143,27 @@ export function withPayrollDeductAmountField(document: FormDocument): FormDocume
   blocks.splice(at + 1, 0, payrollDeductAmountBlock());
   return { ...document, blocks };
 }
+
+/**
+ * The payroll amount the manager stated anywhere in the conversation, when payroll deduct is Yes (the agent loop, port
+ * from the sibling app's `payrollAmountFromConversation`): the latest manager message that states one, or a bare figure
+ * answering the amount question. Policy text and the app's own replies are never read for it.
+ */
+export function payrollAmountFromConversation(
+  turns: readonly { readonly role: string; readonly content: unknown; readonly error?: unknown }[],
+  input: { readonly payrollAnswer: "yes" | "no" | null },
+): string | null {
+  if (input.payrollAnswer !== "yes") return null;
+  let lastAssistant = "";
+  let amount: string | null = null;
+  for (const turn of turns) {
+    if (turn.error || typeof turn.content !== "string" || turn.content.trim() === "") continue;
+    if (turn.role === "assistant") {
+      lastAssistant = turn.content;
+      continue;
+    }
+    if (turn.role !== "user") continue;
+    amount = statedPayrollDeductAmount(turn.content, lastAssistant) ?? amount;
+  }
+  return amount;
+}

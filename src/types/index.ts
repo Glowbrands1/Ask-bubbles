@@ -767,6 +767,48 @@ export interface ChatFormProposal {
    * still see it, and copies only its content fields.
    */
   copyFromInstanceId?: string;
+  /* The agent loop's card fields (the loop port from the sibling app, 21 Nov 2026). */
+  /**
+   * A close Woven employee for the name the manager typed.
+   *
+   * Shown under the card. The card still uses the
+   * typed spelling. Absent when the flag is off, the name is exact, or
+   * nobody in Woven is close. Never a question and never a reason to wait.
+   */
+  wovenCloseMatch?: string | null;
+  /**
+   * The Corrective Action Form's "Payroll deduction amount", where the manager
+   * stated a figure and payroll is Yes. Absent when they have not, when payroll
+   * is not Yes, or when the amount field is off. Never a figure taken from a
+   * policy. See `payrollAmountFromConversation`.
+   */
+  payrollDeductAmount?: string | null;
+  /**
+   * The agent loop only (port from the sibling app): its model decided this Corrective Action is a termination and the
+   * manager's words carry a termination word. Create is sent `warningLevel: "termination"` and ticks it only when the
+   * conversation's user turns carry that word again, checked server-side (`lib/forms/termination-word.ts`).
+   */
+  loopTermination?: true;
+  /** The agent loop's card (QA's third review): Create never runs today's termination reader for it. */
+  fromAgentLoop?: true;
+  /** The agent loop's coaching card: the topic, in the manager's words, checked against their message (QA, 17 Nov 2026). */
+  coachingTopic?: string;
+  /**
+   * The agent loop's Corrective Action card: what the manager described for an attendance offense, kept on their quoted
+   * words (QA's production audit, 20 Nov 2026, item 21). "absence" is a missed shift, never written up as lateness.
+   */
+  attendanceKind?: "absence" | "lateness" | "both";
+  /**
+   * The agent loop's card (PR 2, the card record): the latest earlier card in this chat was another person's, and it
+   * stays creatable (`isProposalSuperseded`). Set from the server's card record, by roster id, never from reply text.
+   */
+  earlierCardKept?: true;
+  /**
+   * The policy the card cites, as its "**Policy:**" line reads after the label ("Late Opening Policy, JBA Policy
+   * Manual p.15"). Set by the agent loop's propose_form, whose reply is the model's own words: Create sends this
+   * card's policy, not whatever the reply's text says (`cardPolicyFor`). Optional; older cards read the reply.
+   */
+  policyLine?: string | null;
 }
 
 export interface FormHandoff {
