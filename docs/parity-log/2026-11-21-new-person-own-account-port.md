@@ -15,3 +15,15 @@ The guard's code is the sibling's, line for line (the #1193 port left this block
 
 Not covered: an undated "Do the same coaching form for <B>" still needs new_form_evidence (the same-coaching replay's
 stand-in passes it).
+
+**Also ported: "yes" to the app's own next-person offer (Ask Sunny 14fed8c, #1199; the squash of the sibling's branch
+commit 8ffa353, unchanged on merge).** With CARD_PERSON_THIS_REQUEST
+on, "write CAs for <A> and <B>, both late on 11/14" makes <A>'s card and the reply offers "Want me to make the … for <B>
+next?"; the manager's "yes" was refused ("Who is this Corrective Action Form for?": `person_not_named`, as <B> was named
+before <A>'s card, then `person_change_not_asked`). The one-word answer to the app's own offer, for the first name it
+offered, now counts as <B>'s request in `personNamedOrPicked` (when the manager named <B> in this chat) and in the
+guard's `ownRequest`. It reads this app's own reply (`offeredNextFirst`, the shape of `nextPersonOffer`), never the
+manager's words. The code is the sibling's, line for line. Replay: `nov21-agent-loop-next-person-offer-yes-cases.ts`
+(Fenna Prewitt / Ozren Brack); this app had no several-people case to reuse. The sibling's #1199 stand-in changes
+(new_form_evidence on the other person's proposal in 8 nov14–nov16 cases) have no equivalent here: none of those cases
+exist in this app's pack.
