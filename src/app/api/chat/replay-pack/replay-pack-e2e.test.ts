@@ -469,11 +469,13 @@ vi.mock("@/lib/knowledge/providers/supabase", () => ({
       };
     }
     /*
-     * The loop's per-turn manual version check (`manualFor`). Without it the call threw, so every loop case read no
-     * manual and a card's policy was refused (read_failed). No version: the manual is read afresh each turn, never kept.
+     * The loop's manual read asks for the manual's version first (`manualFor` in agent-loop/tools.ts). Ported from the
+     * sibling app's pack (QA's live re-test, 21 Nov 2026, items 6, 22 and 25): without it the read threw and every loop case ran with
+     * "The JBA Policy Manual could not be read", so no loop card here ever cited a heading. Keyed on the case's own extra
+     * chunks, so a case's `manualAlsoHas` is never served another case's kept read.
      */
     async officialPolicyManualVersion() {
-      return null;
+      return { documentId: "doc-manual", version: `v-${JSON.stringify(state.manualExtra).length}` };
     }
     async fetchOfficialPolicyManual() {
       return {
@@ -576,7 +578,15 @@ vi.mock("@/lib/forms/employee-roster", async (importOriginal) => {
     ...actual,
     readDirectoryFacts: async (scope: AccessScope | null) =>
       // No position on record unless the case gives one: the title is the manager's or asked.
-      actual.scopeRoster(state.directory as never, scope).map((person) => ({ ...person, title: (person as { positionName?: string | null }).positionName ?? null, primaryLocationName: "Kearney, NE" })),
+      actual.scopeRoster(state.directory as never, scope).map((person) => ({
+        ...person,
+        title: (person as { positionName?: string | null }).positionName ?? null,
+        primaryLocationName: "Kearney, NE",
+        // Woven's primary store, when the case gives one (item 10, QA's live re-test 21 Nov 2026: offered before any other store).
+        ...((state.directory as { id: string; primaryLocationId?: string }[]).find((row) => row.id === person.id)?.primaryLocationId
+          ? { primaryLocationId: (state.directory as { id: string; primaryLocationId?: string }[]).find((row) => row.id === person.id)!.primaryLocationId }
+          : {}),
+      })),
     // The turn's roster limit (`withRosterLimit`), as production's loadScopedRoster applies it.
     // AGENT_LOOP_ENABLED: find_staff reads the roster here too (`appConfig().roster.readScoped`); `t.rosterFails()` makes it fail, as a directory outage would.
     loadScopedRoster: async (scope: AccessScope | null) => {

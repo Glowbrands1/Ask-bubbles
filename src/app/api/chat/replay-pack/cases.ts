@@ -146,6 +146,8 @@ export interface DirectoryRow {
   employmentStatus: string;
   locationIds: string[];
   positionName: string | null;
+  /** Woven's primary store for this person (the loop's store_from_woven); none unless a case gives one. */
+  primaryLocationId?: string;
 }
 
 export interface ReplayCase {

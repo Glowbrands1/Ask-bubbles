@@ -1,6 +1,6 @@
 import "server-only";
 
-import { withFullOffRosterName } from "./off-roster-line";
+import { withFullOffRosterName, withOneInactiveLine } from "./off-roster-line";
 import { cardTurns, personKey, readLoopRecords, replyTurns, type CardRecord, type CardSlot, type ExitOfferSlot, type NameQuestionSlot, type PersonAskedSlot, type TeamConfirmSlot } from "./card-record";
 import { CLAUDE_EFFORT, CLAUDE_MAX_TOKENS, CLAUDE_MODEL } from "@/lib/config/models";
 import { MissingConfigurationError, requireEnv } from "@/lib/config/server-env";
@@ -547,7 +547,7 @@ function buildAgentLoopTools(config: AppConfig, planSteps = false) {
         attendance: {
           type: "string",
           enum: ["absence", "lateness", "left_early", "both"],
-          description: "Corrective Action card whose offense is attendance: what the manager described. absence: a shift missed (did not come in, no-show, no call no show, called out). lateness: arrived late. left_early: left before the shift ended (left early, left before close, walked out mid-shift); never lateness. both: an absence and lateness. With attendance_evidence.",
+          description: "Corrective Action card whose offense is attendance: what the manager described. absence: a shift missed (did not come in, no-show, no call no show, called out). lateness: arrived late. left_early: left before the shift ended (left early, left before close, walked out mid-shift); never lateness. both: an absence and lateness. With attendance_evidence. Omitted when the manager's words say no kind: the card is still made, and its attendance_not_said fact is the question to ask beside it.",
         },
         attendance_evidence: evidence("With attendance: the manager message of this request and its words that describe the absence, the lateness or the early leaving."),
         incident_time: { type: "string", description: "The time of the incident if the manager gave one, as they said it." },
@@ -737,6 +737,8 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
   const steps: AgentLoopStep[] = [];
   const replyNames = new Set<string>();
   const offRosterNames = new Set<string>();
+  /* QA's live re-test B8: the inactive line of each former employee's card this turn. */
+  const inactiveLines = new Set<string>();
   /* The tools this turn called so far (the hand-backs' too), for the item 7 check below. */
   const calledThisTurn = (tool: string) => steps.some((step) => step.tool === tool);
   /* Each model call's tokens and ms, for the trace (numbers only). */
@@ -920,6 +922,9 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
     /* QA's f070: the full name a card used as typed (off_roster_name), for the not-on-the-staff-list line's guard. */
     const typedAsIs = (result as { off_roster_name?: unknown; facts?: { off_roster_name?: unknown } }).facts?.off_roster_name ?? (result as { off_roster_name?: unknown }).off_roster_name;
     if (typeof typedAsIs === "string" && typedAsIs.trim()) offRosterNames.add(typedAsIs.trim());
+    /* QA's live re-test B8: a former employee's card (inactive_in_woven), for the one-statement guard below. */
+    const inactive = (result as { facts?: { inactive_in_woven?: { say_exactly?: unknown } } }).facts?.inactive_in_woven?.say_exactly;
+    if (typeof inactive === "string" && inactive.trim()) inactiveLines.add(inactive.trim());
     steps.push({ step, tool: name, ms: Math.round(performance.now() - started), resultChars: JSON.stringify(result).length, ok: !("error" in result), ...(toolCalls > 0 ? { model_calls: toolCalls } : {}), ...stepReason(result, name) });
     return result;
   };
@@ -1418,8 +1423,10 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
    * (`withFullOffRosterName`, the app's own sentence matched by its shape).
    */
   if (offRosterNames.size === 1 && text) text = withFullOffRosterName(text, [...offRosterNames][0]!, appConfig().staffSystem);
+  /* QA's live re-test B8: a former employee is found in Woven, so the reply never also says they are not on the staff list. */
+  if (inactiveLines.size === 1 && text) text = withOneInactiveLine(text, [...inactiveLines][0]!, appConfig().staffSystem);
   const cardSlot: CardSlot | null = effects.proposal
-    ? { proposalId: effects.proposal.proposalId, employeeKey: effects.proposalEmployeeId ? personKey(effects.proposalEmployeeId) : null, nameKey: effects.proposal.employeeName ? personKey(effects.proposal.employeeName) : null, templateKey: effects.proposal.templateKey, templateName: effects.proposal.templateName ?? null, ...(effects.proposalAsked?.length ? { asked: effects.proposalAsked } : {}), ...(effects.proposalLevel ? { level: effects.proposalLevel } : {}), ...(effects.proposalPayroll ? { payroll: effects.proposalPayroll } : {}), ...(effects.proposalPayroll === "yes" && effects.proposalPayrollAmount ? { payrollAmount: effects.proposalPayrollAmount } : {}), ...(effects.proposal.policyLine ? { policyLine: effects.proposal.policyLine } : {}), ...(effects.proposalAccountKey ? { accountKey: effects.proposalAccountKey } : {}), ...(effects.proposal.formDate ? { incidentDate: effects.proposal.formDate } : {}) }
+    ? { proposalId: effects.proposal.proposalId, employeeKey: effects.proposalEmployeeId ? personKey(effects.proposalEmployeeId) : null, nameKey: effects.proposal.employeeName ? personKey(effects.proposal.employeeName) : null, templateKey: effects.proposal.templateKey, templateName: effects.proposal.templateName ?? null, ...(effects.proposalAsked?.length ? { asked: effects.proposalAsked } : {}), ...(effects.proposalLevel ? { level: effects.proposalLevel } : {}), ...(effects.proposalPayroll ? { payroll: effects.proposalPayroll } : {}), ...(effects.proposalPayroll === "yes" && effects.proposalPayrollAmount ? { payrollAmount: effects.proposalPayrollAmount } : {}), ...(effects.proposal.policyLine ? { policyLine: effects.proposal.policyLine } : {}), ...(effects.proposalAccountKey ? { accountKey: effects.proposalAccountKey } : {}), ...(effects.proposal.formDate ? { incidentDate: effects.proposal.formDate } : {}), ...(effects.proposal.subject === "team" && effects.proposal.locationId ? { teamStoreId: effects.proposal.locationId } : {}) }
     : null;
   /* Fix batch items 4 and 3: this turn's "Did you mean", for the next turn's name question record (one-way keys only). */
   const nameQuestionSlot: NameQuestionSlot | null = effects.nameQuestion && stoppedAt === "reply"

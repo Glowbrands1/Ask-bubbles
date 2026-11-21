@@ -629,7 +629,11 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
        * remy calder" after an earlier "Do the same coaching form for remy
        * calder" in the same chat was copied too).
        */
-      if (copy.asksForSameForm(copy.requestTurn(notes))) {
+      /*
+       * QA's live re-test (21 Nov 2026, item 24): never for the agent loop's card, whose own account is what the manager
+       * saw and pressed Create on (`implicitCopyAsked`).
+       */
+      if (copy.implicitCopyAsked({ notes, cardFromLoop: body.cardFromLoop === true })) {
         const source = await copy.findOwnCopySource({
           actor,
           templateKey: loaded.instance.templateKey,
