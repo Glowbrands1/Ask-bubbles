@@ -662,6 +662,30 @@ export function priorActionsProblem(priorActions: string, requestWords: string, 
   return null;
 }
 
+/**
+ * QA's live re-test (21 Nov 2026, A6/A7): "previous coaching was jba policy manual 1-1-26" put "Coaching — 01/01/2026" on
+ * the card. Today's reading of the manager's words (`statedPriorActions`, the prior_steps_said fact) reads "Coaching — JBA
+ * Policy Manual — 01/01/2026", and the model's line dropped the topic. A topic the manager named for a dated step (the
+ * middle of "<step> — <topic> — <date>") that the model's list does not hold puts the manager's line in place of the
+ * model's line for that date (or after the list when no line has that date). Everything else the model wrote is kept.
+ */
+export function priorActionsWithStatedTopics(priorActions: string, stated: readonly string[]): string {
+  const separator = priorActions.includes("\n") ? "\n" : "; ";
+  const lines = priorActions.split(/\s*(?:;|\n)\s*/).filter((line) => line.trim() !== "");
+  const plain = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  for (const line of stated) {
+    const parts = line.split(" — ");
+    if (parts.length < 3) continue;
+    const topic = plain(parts.slice(1, -1).join(" "));
+    if (topic === "" || lines.some((kept) => ` ${plain(kept)} `.includes(` ${topic} `))) continue;
+    const day = readDates(parts.at(-1) ?? "")[0];
+    const at = day ? lines.findIndex((kept) => readDates(kept).some((date) => sameDate(date, day))) : -1;
+    if (at >= 0) lines[at] = line;
+    else lines.push(line);
+  }
+  return lines.join(separator);
+}
+
 
 /** Batch G (QA's review, 15 Nov 2026): a warning level is exactly verbal, written or termination; anything else is refused. */
 export function exactWarningLevel(value: string): "verbal" | "written" | "termination" | null {
@@ -3748,7 +3772,7 @@ export async function proposeForm(
   const priorsOnFile = rosterPerson ? await finalizedPriorsOnFile(context, rosterPerson, read.kind === "read" ? read.roster : [], today) : [];
   const onFileLine = priorsOnFile.length > 0 ? priorsOnFileLine(priorsOnFile) : null;
   const priorActionsRefused = askedPriorActions ? priorActionsProblem(askedPriorActions, onFileLine ? `${requestWords}\n${onFileLine}` : requestWords, date) : null;
-  const priorActions = priorActionsRefused ? null : (askedPriorActions ?? (statedSteps.length === 0 ? onFileLine : null));
+  const priorActions = priorActionsRefused ? null : askedPriorActions ? priorActionsWithStatedTopics(askedPriorActions, statedSteps).slice(0, 600) : statedSteps.length === 0 ? onFileLine : null;
   /*
    * QA's production audit (20 Nov 2026): "I need a verbal CA wrote up for <A>. I need the JBA policy for dress code
    * enclosed. can you also site the coaching that was done on 11/3" put 11/3, the prior coaching's date, on the card as
