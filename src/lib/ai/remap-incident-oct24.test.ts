@@ -292,7 +292,8 @@ describe("remap path: What happened is the incident, not the request (prod, 24 O
       { say: "store location is empire, sd. create corrective action" },
     ]);
     expect(response.formProposal?.issue ?? null).toBeNull();
-    expect(response.formProposal?.locationId ?? null).toBeNull();
+    // Changed on purpose (Pau via QA, 22 Nov 2026, A7): "Empire, SD" is the Sioux Falls W 41st St store (a reviewed nickname, `COMPANY_LOCATION_NICKNAMES`): the card is filed there; no store is invented from the word.
+    expect(response.formProposal?.locationId ?? null).toBe("loc-225");
     expect(response.formProposal?.locationName ?? "").not.toMatch(/empire/i);
     expect(response.formProposal?.employeeRole ?? null).toBeNull();
     citesPage(response, "Animals in the Workplace", 30);

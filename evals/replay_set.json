@@ -53,7 +53,7 @@
   },
   {
     "id": "b12",
-    "source": "24 Oct 2026 low-rated chat (src/lib/ai/priority-replay.test.ts); the employee's name is replaced with an invented one",
+    "source": "24 Oct 2026 low-rated chat (src/lib/ai/priority-replay.test.ts); the employee's name is replaced with an invented one. Changed on purpose (Pau, 22 Nov 2026: \"Empire, SD\" is the Sioux Falls W 41st St store, a reviewed nickname): the salon is loc-225, was null",
     "turns": [
       "do verbal for team member maisie quillfeather at empire, sd. payroll deduct does not apply. previous coaching jba manual 11-1-26. on 10-22-26 maisie was not scheduled to work and came into the store to show her team her new puppy. Maisie was in the store 45 min",
       "jba manual 11-1-25",
@@ -63,7 +63,7 @@
     ],
     "criteria": {
       "employee": "Maisie Quillfeather",
-      "salon": null,
+      "salon": "loc-225",
       "date": "2026-10-22",
       "policy": "Animals in the Workplace p.30",
       "noBlockingQuestion": false,

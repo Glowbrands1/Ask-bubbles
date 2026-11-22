@@ -60,7 +60,8 @@ describe("PLACE_SPAN_GUARD_ENABLED", () => {
 
   it("off: the reported behaviour is unchanged (the policy phrase is read as a typed store)", () => {
     expect(readLocation(TEXT).unmatched).toEqual(["workplace policy"]);
-    expect(typedStore()).toBe("workplace policy");
+    // Changed on purpose (Pau via QA, 22 Nov 2026, A7): "Empire, SD" is the Sioux Falls W 41st St store (a reviewed nickname, `COMPANY_LOCATION_NICKNAMES`): the turn names a real store, so no typed store is asked about (was "workplace policy").
+    expect(typedStore()).toBeNull();
   });
 });
 

@@ -20,6 +20,8 @@ import { answeredNameQuestions, answerNamesSomeoneElse, everKeptOrUsedTyped, isC
 import { employeeFirstName } from "@/lib/forms/employee-reference";
 import { AFFIRMATIVE, displayName, editDistance, matchEmployeeName, nameConfirmationQuestion, readNameConfirmation, rosterSpellingOf, type RosterEmployee } from "@/lib/forms/employee-match";
 import { offRosterTyped } from "@/lib/forms/roster-only-names";
+import { locationById } from "@/lib/locations";
+import { COMPANY_LOCATION_NICKNAMES } from "@/config/company/locations";
 import { detectTemplateIntent } from "@/lib/forms/template-intent";
 import { checkboxGroupsForVariant, parseFormDocument } from "@/lib/forms/document";
 import { draftableCheckboxGroups, draftableFields } from "@/lib/forms/responsibility";
@@ -3152,7 +3154,14 @@ export function accountMissing(managerWords: string, account: string, priorActio
  * "at <a school> during her shift" and "at the front desk" are never touched.
  */
 export function withoutNamedSalon(account: string, salonId: string): string {
-  const nameWords = new Set((rosterSalonName(salonId) ?? "").toLowerCase().split(/[^a-z0-9]+/).filter(Boolean));
+  /*
+   * QA's Bubbles live re-run (22 Nov 2026, A7; Pau: "Empire, SD" is the W 41st St store): a store's reviewed nicknames
+   * (`COMPANY_LOCATION_NICKNAMES`) are its names too, so "… at Empire, SD and came into the store …" leaves the account
+   * like "at Dodge, NE" does. Store data, never a word list here.
+   */
+  const code = locationById(salonId)?.code ?? null;
+  const nicknames = code ? Object.entries(COMPANY_LOCATION_NICKNAMES).filter(([, nickCode]) => nickCode === code).map(([phrase]) => phrase) : [];
+  const nameWords = new Set([rosterSalonName(salonId) ?? "", ...nicknames].join(" ").toLowerCase().split(/[^a-z0-9]+/).filter(Boolean));
   const filler = new Set(["the", "salon", "location", "store", "our", locationWord().toLowerCase()]);
   const isThatSalon = (phrase: string) => {
     const words = phrase.toLowerCase().split(/[^a-z0-9']+/).filter(Boolean);
