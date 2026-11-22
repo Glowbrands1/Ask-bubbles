@@ -710,6 +710,32 @@ export function priorActionsProblem(priorActions: string, requestWords: string, 
  * middle of "<step> — <topic> — <date>") that the model's list does not hold puts the manager's line in place of the
  * model's line for that date (or after the list when no line has that date). Everything else the model wrote is kept.
  */
+/**
+ * The model's prior actions checked step by step (round 2, U09): each step (split on ";" or a line break) with
+ * `priorActionsProblem`; the good ones kept in order, each step with a problem left off with its reason. A problem that
+ * is about the whole list (the count the manager said) or a list with no good step refuses the whole line, as before.
+ */
+export function priorActionsSplit(
+  priorActions: string,
+  requestWords: string,
+  incidentDate: string | null,
+): { kept: string | null; dropped: { step: string; reason: string }[]; problem: ReturnType<typeof priorActionsProblem> } {
+  const whole = priorActionsProblem(priorActions, requestWords, incidentDate);
+  if (!whole) return { kept: priorActions, dropped: [], problem: null };
+  const separator = priorActions.includes("\n") ? "\n" : "; ";
+  const steps = priorActions.split(/\s*(?:;|\n)\s*/).filter((step) => step.trim() !== "");
+  const dropped: { step: string; reason: string }[] = [];
+  const kept = steps.filter((step) => {
+    const problem = readDates(step).length > 0 ? priorActionsProblem(step, requestWords, incidentDate) : null;
+    if (problem && problem.count_said === undefined) dropped.push({ step: step.trim(), reason: problem.reason });
+    return !problem || problem.count_said !== undefined;
+  });
+  if (kept.length === 0 || dropped.length === 0) return { kept: null, dropped: [], problem: whole };
+  const line = kept.join(separator);
+  const rest = priorActionsProblem(line, requestWords, incidentDate);
+  return rest ? { kept: null, dropped: [], problem: whole } : { kept: line, dropped, problem: null };
+}
+
 export function priorActionsWithStatedTopics(priorActions: string, stated: readonly string[]): string {
   const separator = priorActions.includes("\n") ? "\n" : "; ";
   const lines = priorActions.split(/\s*(?:;|\n)\s*/).filter((line) => line.trim() !== "");
@@ -4161,8 +4187,16 @@ export async function proposeForm(
   const rosterPerson = caOnlyFields && employee.id && read.kind === "read" ? read.roster.find((row) => row.id === employee.id) ?? null : null;
   const priorsOnFile = rosterPerson ? await finalizedPriorsOnFile(context, rosterPerson, read.kind === "read" ? read.roster : [], today) : [];
   const onFileLine = priorsOnFile.length > 0 ? priorsOnFileLine(priorsOnFile) : null;
-  const priorActionsRefused = askedPriorActions ? priorActionsProblem(askedPriorActions, onFileLine ? `${requestWords}\n${onFileLine}` : requestWords, date) : null;
-  const priorActions = priorActionsRefused ? null : askedPriorActions ? priorActionsWithStatedTopics(askedPriorActions, statedSteps).slice(0, 600) : statedSteps.length === 0 ? onFileLine : null;
+  /*
+   * QA's Bubbles round 2 (22 Nov 2026, U09): "JBA Policy Manual 1-1-2026, Verbal CA 11-1-2026. On 11-1-26 <P> violated …"
+   * dropped BOTH steps because one carries the incident's date. Each step is checked on its own (`priorActionsSplit`):
+   * the good ones are kept, and only a step with a problem is left off, with its reason.
+   */
+  const priorSplit = askedPriorActions ? priorActionsSplit(askedPriorActions, onFileLine ? `${requestWords}\n${onFileLine}` : requestWords, date) : null;
+  const priorActionsRefused = priorSplit ? (priorSplit.kept === null ? priorSplit.problem : null) : null;
+  const priorStepsLeftOff = priorSplit && priorSplit.kept !== null && priorSplit.dropped.length > 0 ? priorSplit.dropped : [];
+  const keptPriorActions = priorSplit?.kept ?? null;
+  const priorActions = priorActionsRefused ? null : keptPriorActions ? priorActionsWithStatedTopics(keptPriorActions, statedSteps).slice(0, 600) : statedSteps.length === 0 ? onFileLine : null;
   /*
    * QA's live re-test (21 Nov 2026, item 18): the prior actions the forms on file filled were read back "…, as you said"
    * (the manager never said them). Prior actions are the manager's statement only when their words state the steps
@@ -4784,6 +4818,7 @@ export async function proposeForm(
     ...(underPerformance ? { under_performance: true } : {}),
     ...(didYouMean ? { confirm_policy: didYouMean } : {}),
     ...(priorActionsRefused ? { prior_actions_not_kept: priorActionsRefused } : {}),
+    ...(priorStepsLeftOff.length > 0 ? { prior_steps_left_off: priorStepsLeftOff, prior_steps_note: "These earlier steps were left off the card's Prior actions; the others are on it. Say which one and why in one line, and ask the manager for that step's date if it was meant to be an earlier one." } : {}),
     ...((await outsideScopeSalon(context)) ?? (card.namedLocationOutOfScope ? { store_outside_scope: card.namedLocationOutOfScope } : {})),
   };
   /*
