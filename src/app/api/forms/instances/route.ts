@@ -264,6 +264,8 @@ export async function POST(request: Request) {
      * is refused here even if the browser still offered it. See
      * `lib/forms/proposal-currency.ts`.
      */
+    /* QA's Bubbles round 2 (22 Nov 2026, U09): the level the loop locked on this card, from its server record (below). */
+    let loopRecordLevel: "verbal" | "written" | null = null;
     if (body.source === "assistant" && Array.isArray(body.conversation)) {
       // PREFERRED_NAME_CARD_CURRENT_ENABLED: "kit dovetail" is the card's Katrin Dovetail when the manager's roster says Kit is her preferred name. Off: none, and no roster read.
       const alsoCalled = await preferredNamesOf(actor.scope, body.employeeName);
@@ -285,6 +287,7 @@ export async function POST(request: Request) {
             employeeName: body.employeeName,
           })
         : null;
+      loopRecordLevel = settlement?.level ?? null;
       const history = parseHistory(body.conversation);
       const readFrom = settledNames && settlement ? [...settledNames.turnsAfterCard(history, settlement)] : history;
       const currency = checkProposalIsCurrent({
@@ -458,7 +461,14 @@ export async function POST(request: Request) {
        * without that conversation is dropped, and the box starts empty. See
        * `lib/forms/warning-level.ts`.
        */
-      const warningLevel =
+      /*
+       * QA's Bubbles round 2 (22 Nov 2026, U09: the card said Written, the saved form had no level): a loop card's level is
+       * locked on the manager's evidence at card time and recorded server-side; the card's level is saved when it is the
+       * level that record holds. Today's re-read of the conversation (which read "Verbal CA 11-1-2026", a prior step, as
+       * the level) stays for every other card.
+       */
+      const loopLocked = card.fromAgentLoop === true && isWarningLevel(card.warningLevel) && loopRecordLevel !== null && card.warningLevel === loopRecordLevel;
+      const warningLevel = loopLocked ? (card.warningLevel as "verbal" | "written") :
         isWarningLevel(card.warningLevel) &&
         card.source === "assistant" &&
         Array.isArray(card.conversation) &&
