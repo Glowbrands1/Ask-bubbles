@@ -4405,7 +4405,17 @@ export async function proposeForm(
   const sameIncidentAskedAgain = asksNewForm && screenDate !== null && latestDates.some((given) => monthDayToIso(given, today) === screenDate);
   const carriedLevel = caOnlyFields && (!asksNewForm || sameIncidentAskedAgain) ? (carriedRecord?.level ?? null) : null;
   const copiedLevel = !(askedLevel && levelCheck?.ok) && !carriedLevel && sameFormAsked && caOnlyFields ? (sameCardOf?.level ?? null) : null;
-  const level = askedLevel && levelCheck?.ok ? askedLevel : (carriedLevel ?? copiedLevel);
+  /*
+   * QA's live round 3 (22 Nov 2026, U21 T10): T8 copied Verbal and payroll No onto <P>'s card; T9 "no i want this to be a
+   * corrective action for a new person now", T10 "make this for <P> instead of <A>" asked for that card again
+   * (same_card_evidence), and its level and payroll were dropped: T9 had started a new request, so no record of it carried.
+   * The card the manager's words ask for, when it is this person's own (the server's record: form and person keys), is
+   * the same card shown again: it keeps its level and payroll. Another person's card still copies them only with
+   * "the same …" (#1026).
+   */
+  const ownCardAsked = Boolean(sameCardOf && !sameCardOther && caOnlyFields);
+  const ownCardLevel = !(askedLevel && levelCheck?.ok) && !carriedLevel && !copiedLevel && ownCardAsked ? (sameCardOf?.level ?? null) : null;
+  const level = askedLevel && levelCheck?.ok ? askedLevel : (carriedLevel ?? copiedLevel ?? ownCardLevel);
   /*
    * Fix batch item 7 (QA's targeted re-run, c163: a bare "yes" after "Payroll deduct and warning level aren't set" set
    * payroll). The card on screen asked two things in one line (its record's `asked`), and this message is one word, quoted
@@ -4455,6 +4465,11 @@ export async function proposeForm(
   if (payroll === null && !answerUnclear && payrollRecord?.payroll) {
     payroll = payrollRecord.payroll;
     if (payroll === "yes" && !amount && payrollRecord.payrollAmount) amount = payrollRecord.payrollAmount;
+  }
+  /* U21 T10: this person's own card asked for again keeps its payroll answer, as its level (`ownCardAsked`). */
+  if (payroll === null && !answerUnclear && ownCardAsked && payrollFields && sameCardOf?.payroll) {
+    payroll = sameCardOf.payroll;
+    if (payroll === "yes" && !amount && sameCardOf.payrollAmount) amount = sameCardOf.payrollAmount;
   }
   let copiedPayroll: "yes" | "no" | null = null;
   if (payroll === null && !answerUnclear && sameFormAsked && payrollFields && sameCardOf?.payroll) {
