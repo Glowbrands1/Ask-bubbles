@@ -900,6 +900,12 @@ export function __setAgentLoopDirectoryForTests(read: (() => Promise<readonly Di
 }
 
 export async function inactiveMatch(scope: AccessScope, typed: string): Promise<string | null> {
+  const row = await inactiveMatchRow(scope, typed);
+  return row ? `${row.preferredFirstName?.trim() || row.firstName!.trim()} ${row.lastName!.trim()}` : null;
+}
+
+/** The one former employee in the login's scope the typed full name is (`inactiveMatch`), with their Woven stores. */
+async function inactiveMatchRow(scope: AccessScope, typed: string): Promise<DirectoryRosterRow | null> {
   const wanted = words(typed);
   if (wanted.length < 2) return null;
   try {
@@ -910,7 +916,7 @@ export async function inactiveMatch(scope: AccessScope, typed: string): Promise<
       const own = words([row.firstName, row.preferredFirstName ?? "", row.lastName].join(" "));
       return wanted.every((word) => own.includes(word));
     });
-    return hits.length === 1 ? `${hits[0]!.preferredFirstName?.trim() || hits[0]!.firstName!.trim()} ${hits[0]!.lastName!.trim()}` : null;
+    return hits.length === 1 ? hits[0]! : null;
   } catch {
     return null;
   }
@@ -3177,6 +3183,8 @@ export async function proposeForm(
     exit_type?: unknown;
     exit_how?: unknown;
     exit_how_evidence?: unknown;
+    exit_method?: unknown;
+    exit_method_evidence?: unknown;
     effective_date?: unknown;
     payroll_deduct?: unknown;
     payroll_amount?: unknown;
@@ -4431,6 +4439,16 @@ export async function proposeForm(
   const exitHow = template.key === appConfig().formKeys.exit && !exitTermination && !readerTypeTicked && typeof input.exit_how === "string" && EXIT_HOW.has(input.exit_how) && exitHowQuote !== "" && (exitHowLabel === null || quoteNamesOption(exitHowQuote, exitHowLabel)) && answerEvidence(context, input.exit_how_evidence, "request", evidencePerson, { requestTurnIds }).ok
     ? { option: input.exit_how, quote: exitHowQuote.slice(0, 300) }
     : null;
+  /*
+   * U26 (QA's Bubbles round 2, 22 Nov 2026): "<GM> … left a voicemail for <P> … <P> returned the call and told <AGM> … she
+   * quit effective immediately" saved How Employee Resigned "Voicemail". How the person resigned is the model's reading
+   * (exit_method, one of the line's own methods), kept when the manager's quoted words of this request name it
+   * (`quoteNamesMethod`); Create writes it as their statement. A termination has no resignation method.
+   */
+  const exitMethodQuote = typeof (input.exit_method_evidence as { quote?: unknown } | null | undefined)?.quote === "string" ? String((input.exit_method_evidence as { quote: string }).quote).trim().slice(0, 300) : "";
+  const exitMethod = template.key === appConfig().formKeys.exit && !exitTermination && input.exit_type !== "termination" && typeof input.exit_method === "string" && exitMethodQuote !== "" && (await import("@/lib/forms/exit-details")).quoteNamesMethod(exitMethodQuote, input.exit_method) && answerEvidence(context, input.exit_method_evidence, "request", evidencePerson, { requestTurnIds }).ok
+    ? { label: input.exit_method, quote: exitMethodQuote }
+    : null;
   let salonFromWoven: string | null = null;
   /* A7: the person's own Woven stores in the manager's scope, primary first, when the typed store was not read as one. */
   const wovenStores = storeNotRead && employee.id ? await wovenStoresOf(context.actor.scope, employee.id, read.kind === "read" ? read.roster : [], managerSalonIds) : [];
@@ -4503,6 +4521,7 @@ export async function proposeForm(
     ...(payroll ? { payrollDeduct: payroll } : {}),
     ...(payroll === "yes" && amount ? { payrollDeductAmount: amount } : {}),
     ...(exitHow ? { exitHow: exitHow.option, exitHowQuote: exitHow.quote } : {}),
+    ...(exitMethod ? { exitMethod: exitMethod.label, exitMethodQuote: exitMethod.quote } : {}),
     ...(priorActions ? { priorActions } : {}),
     ...(coachingTopic ? { coachingTopic } : {}),
     ...(planSteps.length > 0 ? { planSteps } : {}),
@@ -4810,7 +4829,17 @@ export async function proposeForm(
       return row && displayName(row) !== employee.name;
     })() ? { legal_name_in_woven: displayName(read.roster.find((candidate) => candidate.id === employee.id)!) } : {}),
     ...(await (async () => {
-      if (card.status !== "needs_location" || !employee.id) return {};
+      if (card.status !== "needs_location") return {};
+      if (!employee.id) {
+        /*
+         * U26 (QA's Bubbles round 2, 22 Nov 2026): a former employee Woven lists at a store in the manager's scope was
+         * asked "Bellevue or Omaha?". Their own Woven store is offered first, as an active person's is.
+         */
+        if (!offRosterName) return {};
+        const former = await inactiveMatchRow(context.actor.scope, employee.name);
+        const theirs = (former?.locationIds ?? []).filter((id) => (card.authorizedLocationIds ?? []).includes(id));
+        return theirs.length === 1 ? { employee_store: rosterSalonName(theirs[0]!) ?? theirs[0]! } : {};
+      }
       const primary = await rosterPrimarySalon(context.actor.scope, employee.id);
       return primary && (card.authorizedLocationIds ?? []).includes(primary) ? { employee_store: rosterSalonName(primary) ?? primary } : {};
     })()),
@@ -4900,6 +4929,7 @@ export async function proposeForm(
           ? { payroll_deduct: payroll }
           : {}),
       incident_time: card.incidentTime ?? null,
+      ...(template.key === appConfig().formKeys.exit ? { how_resigned: card.exitMethod ?? null } : {}),
       prior_actions: priorActions,
       policy: policyLine,
       create_offered: card.supportsInlineDraft,

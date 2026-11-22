@@ -762,6 +762,18 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
       (row) => row.provenance?.source === "manager_statement" && row.fieldKey === EXIT_TYPE_GROUP && row.checked.includes(EXIT_OPTION.immediateInvoluntary),
     );
     if (exitDetails && statedInvoluntary) exitDetails.resignationDate = null;
+    /*
+     * U26 (QA's Bubbles round 2, 22 Nov 2026): on a loop card's Create, How Employee Resigned is read only from the
+     * sentences the exit form's own reader reads a resignation type from (`resignationStatementMethod`), never from a
+     * voicemail someone else left in the account before it. The card's own method (the model's, checked) was written at
+     * Create and is kept; with no stating sentence, the account is read as before.
+     */
+    if (exitDetails && body.cardFromLoop === true) {
+      const { resignationStatementMethod } = await import("@/lib/forms/exit-details");
+      const { notesWithoutCardLines } = await import("@/lib/forms/draft-notes");
+      const stated = resignationStatementMethod(notesWithoutCardLines(notes), businessToday());
+      if (stated !== undefined) exitDetails.resignationMethod = stated;
+    }
     if (exitDetails?.permanentAddress) {
       const { addressTypedIn } = await import("@/lib/forms/exit-details");
       // A loop card's lines ("What happened: …") are the agent loop's words too (ported from the sibling app, item 19).
