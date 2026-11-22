@@ -94,6 +94,84 @@ function singularAfterThey(rest: string): string {
 }
 
 /**
+ * ============================================================================
+ * TWO PEOPLE OF ONE PRONOUN KIND (QA, 22 Nov 2026, production; the people invented)
+ * ============================================================================
+ *
+ * The manager wrote about <A> (she) and a coworker <B> (she) who was giving <A> an attitude; the write-up said "<A> was
+ * giving <A> an attitude". U23's check (below) covers only another person of a DIFFERENT kind. Here, from the sentence's
+ * own structure and the names in the manager's words and the text, never a list of phrasings:
+ *
+ * - Each named person's kind is read from the subject pronouns (she / he) in the MANAGER'S words whose nearest named
+ *   person before them is that person ("<B> was on register. she was giving her …": <B> is "she").
+ * - A she/he pronoun whose nearest named person of its kind before it is another person is that person's, and stays as
+ *   written. The card's person is a candidate unless their own kind is known and is not this pronoun's.
+ * - An object pronoun (her, him; not "her" owning something) is never the person named in its own clause ("<A> cussed
+ *   at her": "her" is not <A>), so that person is passed over.
+ * - A subject pronoun gives no kind when another pronoun stands between it and the name ("<L> told her … and she
+ *   refused": "she" may continue "her").
+ * - When nothing settles it (nobody of its kind named before it, as when Create's write-up opens with that sentence),
+ *   it is left as the manager wrote it.
+ *
+ * Only when another person named has a known kind equal to the pronoun's: a write-up about one person, or a pronoun of
+ * a kind no other person has, reads exactly as before. Returns: true when the pronoun at `at` is left as written.
+ */
+function sameKindOther(text: string, display: string, others: readonly string[], managerWords: string, personKind: "she" | "he" | null): (at: number) => boolean {
+  const escape = (word: string) => word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const keysOf = (name: string) => {
+    const full = name.trim().toLowerCase().replace(/\s+/g, " ");
+    return [...new Set([full, full.split(" ")[0] ?? ""])].filter((key) => key.length >= 2);
+  };
+  const ownKeys = new Set(keysOf(display));
+  /* Person 0 is the card's person; the others follow, each with the keys that are not also the card's person's. */
+  const people = [[...ownKeys], ...others.map((other) => keysOf(other).filter((key) => !ownKeys.has(key)))]
+    .map((keys, index) => ({ index, keys }))
+    .filter((person) => person.index === 0 || person.keys.length > 0);
+  if (people.length < 2) return () => false;
+  const mentionsIn = (words: string) => {
+    const found: Array<{ person: number; at: number; end: number }> = [];
+    for (const person of people) {
+      for (const key of person.keys) {
+        for (const match of words.matchAll(new RegExp(`(?<![\\p{L}'-])${escape(key)}(?![\\p{L}-])`, "giu"))) found.push({ person: person.index, at: match.index!, end: match.index! + match[0].length });
+      }
+    }
+    return found.sort((a, b) => a.at - b.at);
+  };
+  /*
+   * Each person's kinds: the subject pronouns in the MANAGER'S words whose nearest named person before them is that
+   * person (never the text being rewritten, whose pronouns are the question).
+   */
+  const kinds = new Map<number, Set<"she" | "he">>();
+  const spokenNames = mentionsIn(managerWords);
+  for (const subject of managerWords.matchAll(/\b(she|he)\b/gi)) {
+    const nearest = spokenNames.filter((mention) => mention.end <= subject.index!).at(-1);
+    /* Another pronoun between them ("<L> told her to go home and she refused") may be whom it continues: no kind read. */
+    if (!nearest || /\b(?:he|him|his|she|her|hers|they|them|their)\b/i.test(managerWords.slice(nearest.end, subject.index!))) continue;
+    kinds.set(nearest.person, new Set([...(kinds.get(nearest.person) ?? []), subject[1]!.toLowerCase() as "she" | "he"]));
+  }
+  if (personKind) kinds.set(0, new Set([...(kinds.get(0) ?? []), personKind]));
+  const mentions = mentionsIn(text);
+  return (at: number) => {
+    const word = text.slice(at).match(/^\p{L}+/u)?.[0] ?? "";
+    const kind = pronounKind(word);
+    if (kind !== "she" && kind !== "he") return false;
+    if (!people.some((person) => person.index !== 0 && kinds.get(person.index)?.has(kind))) return false;
+    const ownKinds = kinds.get(0);
+    const ownCandidate = !ownKinds || ownKinds.size === 0 || ownKinds.has(kind);
+    const lower = word.toLowerCase();
+    const after = text.slice(at + word.length);
+    const object = lower === "him" || (lower === "her" && !(/^\s+[A-Za-z0-9$]/.test(after) && !NOT_OWNED.test(after)));
+    const clauseStart = object ? Math.max(-1, ...[...text.slice(0, at).matchAll(/[,;:.!?\n]/g)].map((stop) => stop.index!)) : -1;
+    const nearest = mentions
+      .filter((mention) => mention.end <= at && (mention.person === 0 ? ownCandidate : kinds.get(mention.person)?.has(kind)))
+      .filter((mention) => !(object && mention.at > clauseStart))
+      .at(-1);
+    /* Nobody of its kind named before it (the saved write-up can open with it): not settled, so left as written. */
+    return nearest ? nearest.person !== 0 : true;
+  };
+}
+
+/**
  * The reply with every pronoun for the person replaced by `name`, and how many were replaced. `name` is the turn's one
  * reply_name; with none or several, the caller does not call this.
  */
@@ -225,7 +303,11 @@ export function withoutPersonPronouns(
     const kind = pronounKind(word);
     return personKind !== null && kind !== null && kind !== personKind;
   };
-  const inQuote = (at: number) => quoted.some(([from, to]) => at >= from && at < to) || (!told.has(at) && keepsOwn(at)) || anotherKind(reply.slice(at).match(/^\p{L}+/u)?.[0] ?? "");
+  const othersOwn = sameKindOther(reply, display, others, managerWords ?? "", personKind);
+  const inQuote = (at: number) =>
+    quoted.some(([from, to]) => at >= from && at < to) ||
+    (!told.has(at) && (keepsOwn(at) || othersOwn(at))) ||
+    anotherKind(reply.slice(at).match(/^\p{L}+/u)?.[0] ?? "");
   const edits: Array<{ from: number; to: number; text: string }> = [];
 
   /*

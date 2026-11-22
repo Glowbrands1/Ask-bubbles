@@ -2999,9 +2999,11 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
        * `first-name-write-up.ts`). The manual's quoted policy fields, the two the server derives, and a line the manager
        * typed are left as they are.
        */
-      const { firstNameNotPronouns } = await import("@/lib/forms/first-name-write-up");
+      const { firstNameNotPronouns, otherRosterPeopleIn } = await import("@/lib/forms/first-name-write-up");
       const namedKeys = new Set(fields.filter((field) => !field.policyGrounded && !DERIVED_POLICY_FIELD_KEYS.has(field.key) && !keeps(field.key)).map((field) => field.key));
-      const named = firstNameNotPronouns(loopCardDraft.values, loaded.instance.employeeName, namedKeys);
+      /* QA (22 Nov 2026, production): a coworker the notes name who is "she" too keeps her own "she" (two people of one pronoun kind). */
+      const roster = await (await import("@/lib/forms/employee-roster")).loadScopedRoster(actor.scope).catch(() => []);
+      const named = firstNameNotPronouns(loopCardDraft.values, loaded.instance.employeeName, namedKeys, { others: otherRosterPeopleIn(notes, roster, loaded.instance.employeeName), managerWords: notes });
       if (named.changed.length > 0) loopCardDraft.values = named.values;
       /*
        * The sibling app's QA, live (20 Nov 2026): a coaching card's Observed opened with its topic ("Greeting guests, she
