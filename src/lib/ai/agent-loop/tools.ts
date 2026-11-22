@@ -4784,13 +4784,21 @@ export async function proposeForm(
    * B6 (QA's live round 3, 22 Nov 2026): "she is resigning due to second job" left Reason for Resignation empty on the card,
    * the reply and the saved draft. The reason is the model's reading (exit_reason), kept when every word of it is in the
    * manager's quoted words of this request (exit_reason_evidence; `exit-reason-said.ts`); Create writes it as their
-   * statement. A termination keeps its own reason path.
+   * statement. On a termination the reason is the card's account (below).
    */
   const exitReasonQuote = typeof (input.exit_reason_evidence as { quote?: unknown } | null | undefined)?.quote === "string" ? String((input.exit_reason_evidence as { quote: string }).quote).trim().slice(0, 300) : "";
-  const exitReasonText = template.key === appConfig().formKeys.exit && !exitTermination && input.exit_type !== "termination" && typeof input.exit_reason === "string" && exitReasonQuote !== "" && answerEvidence(context, input.exit_reason_evidence, "request", evidencePerson, { requestTurnIds }).ok
+  const exitReasonText = template.key === appConfig().formKeys.exit && (exitTermination !== null || input.exit_type !== "termination") && typeof input.exit_reason === "string" && exitReasonQuote !== "" && answerEvidence(context, input.exit_reason_evidence, "request", evidencePerson, { requestTurnIds }).ok
     ? (await import("@/lib/forms/exit-reason-said")).reasonFromQuote(input.exit_reason, exitReasonQuote)
     : null;
-  const exitReason = exitReasonText ? { text: exitReasonText, quote: exitReasonQuote } : null;
+  const statedReason = exitReasonText ? { text: exitReasonText, quote: exitReasonQuote } : null;
+  /*
+   * L6 (coder 5's live triage on 1c71e11, 22 Nov 2026): "exit form for <P>, terminated for job abandonment, not eligible
+   * for rehire" made a termination card with no account in both runs; the reply even offered to add the reason. A
+   * termination's reason is its account (Create saves it as the Reason line, `EXIT_ACCOUNT_LABEL`): with no account from
+   * the model, the stated reason, checked as above, is the account.
+   */
+  if (exitTermination && statedReason && !whatHappened) whatHappened = statedReason.text;
+  const exitReason = exitTermination ? null : statedReason;
   let salonFromWoven: string | null = null;
   /* A7: the person's own Woven stores in the manager's scope, primary first, when the typed store was not read as one. */
   const wovenStores = storeNotRead && employee.id ? await wovenStoresOf(context.actor.scope, employee.id, read.kind === "read" ? read.roster : [], managerSalonIds) : [];

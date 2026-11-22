@@ -108,4 +108,66 @@ export const NOV22_AGENT_LOOP_EXIT_L6_CASES: ReplayCase[] = [
       expect(values.details ?? "", JSON.stringify(values)).toBe(issue);
     },
   },
+  {
+    id: "nov22-l6-termination-reason-no-account",
+    title: `L6 (coder 5's live triage on 1c71e11): "${SAID}" with NO what_happened, the model passing exit_reason "terminated for job abandonment": the card's account and the saved reason read it, asked once`,
+    report: "Coder 5's live triage (1c71e11, 22 Nov 2026), l6: \"terminated for job abandonment\" never reached What happened or the saved reason, in both runs; the reply offered to add it",
+    status: "fixed",
+    async run(t) {
+      start(t);
+      t.as("admin", { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] });
+      t.loopModel!(loopStandIn((view): LoopDecision => {
+        const result = lastResult(view, "propose_form") as { card?: { reads_back?: string[] } } | null;
+        if (result) return { text: ["Here's the Employee Exit Form for **Dashiell**.", ...(result.card?.reads_back ?? [])].join("\n") };
+        return {
+          tool: "propose_form",
+          input: {
+            template_key: "resignation-exit", employee_id: DASHIELL.id, exit_type: "termination",
+            exit_evidence: { ...evidenceFrom(view, "exit form for Dashiell Varnum"), kind: "asks_for_exit_form" },
+            exit_reason: "terminated for job abandonment", exit_reason_evidence: evidenceFrom(view, "terminated for job abandonment"),
+          },
+        };
+      }));
+      const thread = t.thread();
+      const reply = await thread.say(SAID);
+      expect((thread.proposal as { fromAgentLoop?: boolean } | null)?.fromAgentLoop, "no loop card was made (the case proves nothing)").toBe(true);
+      expect(String((thread.proposal as { issue?: string } | undefined)?.issue ?? ""), "the card's account").toMatch(/^terminated for job abandonment\.?$/i);
+      expect(reply.content, "reads_back lists the reason").toMatch(/Terminated for job abandonment/);
+      expect(reply.content).not.toMatch(/isn't on the card|want it added|like it added/i);
+      const id = await thread.create();
+      const values = t.values(id);
+      const checked = t.checked(id);
+      const saved = JSON.stringify({ values, checked });
+      expect(checked.resignation_type ?? [], `not a termination (the case proves nothing):\n${saved}`).toContain("immediate_involuntary_separation");
+      expect(values.resignation_reason ?? "", saved).toMatch(/^terminated for job abandonment\.?$/i);
+    },
+  },
+  {
+    id: "nov22-l6-termination-no-reason-stays-blank",
+    title: "L6 control: \"exit form for Dashiell Varnum, he was terminated, not eligible for rehire\" with no reason given: no account is made up and the saved reason stays blank",
+    report: "Coder 5's live triage (1c71e11, 22 Nov 2026), l6",
+    status: "fixed",
+    async run(t) {
+      start(t);
+      t.as("admin", { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] });
+      t.loopModel!(loopStandIn((view): LoopDecision => {
+        if (lastResult(view, "propose_form")) return { text: "Here's the Employee Exit Form for **Dashiell**." };
+        /* A model that passes the bare word as a reason: it is no reason, and its quote does not hold "termination". */
+        return {
+          tool: "propose_form",
+          input: {
+            template_key: "resignation-exit", employee_id: DASHIELL.id, exit_type: "termination",
+            exit_evidence: { ...evidenceFrom(view, "exit form for Dashiell Varnum"), kind: "asks_for_exit_form" },
+            exit_reason: "Termination", exit_reason_evidence: evidenceFrom(view, "he was terminated"),
+          },
+        };
+      }));
+      const thread = t.thread();
+      await thread.say("exit form for Dashiell Varnum, he was terminated, not eligible for rehire");
+      expect((thread.proposal as { fromAgentLoop?: boolean } | null)?.fromAgentLoop, "no loop card was made (the case proves nothing)").toBe(true);
+      expect(String((thread.proposal as { issue?: string } | undefined)?.issue ?? "")).toBe("");
+      const id = await thread.create();
+      expect(t.values(id).resignation_reason ?? "").toBe("");
+    },
+  },
 ];
