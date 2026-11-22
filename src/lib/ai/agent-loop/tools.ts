@@ -799,6 +799,16 @@ export function priorActionsWithStatedTopics(priorActions: string, stated: reado
   const plain = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
   for (const line of stated) {
     const parts = line.split(" — ");
+    /*
+     * QA's live round 3 (22 Nov 2026, U21): T4 "jba woven policys were acknowledged on 5/26/26" was on the card, and at T5
+     * the model's list left it out: the card lost a step the manager stated in this request. A stated step with no topic
+     * ("<step> — <date>") whose date no kept line holds is added; one whose date a kept line holds is that line.
+     */
+    if (parts.length === 2) {
+      const day = readDates(parts[1] ?? "")[0];
+      if (day && !lines.some((kept) => readDates(kept).some((date) => sameDate(date, day)))) lines.push(line);
+      continue;
+    }
     if (parts.length < 3) continue;
     const topic = plain(parts.slice(1, -1).join(" "));
     if (topic === "" || lines.some((kept) => ` ${plain(kept)} `.includes(` ${topic} `))) continue;
@@ -2235,6 +2245,23 @@ export function incidentDates(managerWords: string, priorActions: string | null)
  * lateness twice and the Expectation used the surname as the first name. A name written as two single words around one
  * comma is, by its own shape, "Last, First": it is read as "First Last". Any other shape is kept as typed.
  */
+/**
+ * QA's live round 3 on production 1c71e11 (22 Nov 2026, C3): "create a CA form for <Last>, <First> at dodge. she was late
+ * on 10-16" (nobody on the staff list) got no card about half the time. When the model passed the name in first-last
+ * order, every as-typed check in propose_form looked for "<First> <Last>" in the manager's words and missed it, while
+ * find_staff's code said "propose it as typed": the model went round until it gave up ("the form wasn't built"). A
+ * two-word name the manager wrote only as "<Last>, <First>" in this request is read back in the manager's order, so it
+ * takes the as-typed path the comma form takes; `lastCommaFirst` shows it as "<First> <Last>" on the card. Read by the
+ * name's own shape against the manager's text, never a word list.
+ */
+export function asManagerCommaWrote(name: string, managerText: string): string {
+  const parts = /^([\p{L}][\p{L}'-]*)\s+([\p{L}][\p{L}'-]*)$/u.exec(name.trim());
+  if (!parts || holdsPhrase(managerText, name)) return name;
+  const comma = new RegExp(String.raw`(?<![\p{L}'-])${parts[2]}\s*,\s*${parts[1]}(?![\p{L}'-])`, "iu");
+  const found = comma.exec(managerText);
+  return found ? found[0].replace(/\s*,\s*/, ", ") : name;
+}
+
 export function lastCommaFirst(name: string): string {
   const parts = /^([\p{L}][\p{L}'-]*)\s*,\s*([\p{L}][\p{L}'-]*)$/u.exec(name.trim());
   return parts ? `${parts[2]} ${parts[1]}` : name;
@@ -3414,7 +3441,9 @@ export async function proposeForm(
     const rawTyped = typeof input.employee_name === "string" ? tidyTypedName(input.employee_name) : "";
     const titleless = withoutJobTitle(rawTyped);
     /* R14: "Test Employee", the exact full name the manager typed, is a name; its last word is not a title to strip. */
-    const typed = titleless !== rawTyped && words(titleless).length === 1 && typedFullNameOf(titleless, requestTurnsText(context, read.roster))?.toLowerCase() === rawTyped.toLowerCase() ? rawTyped : titleless;
+    const typedAsPassed = titleless !== rawTyped && words(titleless).length === 1 && typedFullNameOf(titleless, requestTurnsText(context, read.roster))?.toLowerCase() === rawTyped.toLowerCase() ? rawTyped : titleless;
+    /* C3 (QA's live round 3): "<First> <Last>" for the manager's "<Last>, <First>" is read in the manager's own order. */
+    const typed = asManagerCommaWrote(typedAsPassed, requestTurnsText(context, read.roster));
     /*
      * HARD GUARD, A "NO" NEVER SEATS THE NAME (NEAR_MISS_QUESTION_RULES, parity gap #45): when the manager answered
      * "no" to this chat's own "Did you mean **<A>**?" or "Is this for **<A>**?", <A> is not put on the card.
@@ -4506,8 +4535,9 @@ export async function proposeForm(
    * cleaning of facilities policy (JBA Policy Manual 1/1/2026)." That parenthesis is a prior step the card keeps (its date
    * and a word of it), not this incident: it leaves the account. Read from the kept steps' own text, never a word list.
    */
-  if (keptPriorActions && whatHappened) {
-    const steps = keptPriorActions.split(/\s*(?:;|\n)\s*/).filter((step) => step.trim() !== "");
+  const stepsForAccount = [keptPriorActions ?? "", ...statedSteps].join("\n");
+  if (stepsForAccount.trim() && whatHappened) {
+    const steps = stepsForAccount.split(/\s*(?:;|\n)\s*/).filter((step) => step.trim() !== "");
     const lettersOf = (text: string) => withoutDates(text).toLowerCase().match(/[a-z]{3,}/g) ?? [];
     const unstepped = whatHappened.replace(/\s*\(([^()]*)\)/g, (whole, inner: string) => {
       const dates = readDates(inner);
@@ -4519,7 +4549,32 @@ export async function proposeForm(
       });
       return isStep ? "" : whole;
     }).replace(/\s+([.,;])/g, "$1").trim();
-    if (unstepped !== "") whatHappened = unstepped;
+    /*
+     * QA's live round 3 (22 Nov 2026, U21): from T3 on the Observation read "<P> received coaching on 9/22 for cleaning
+     * tasks not being completed. This weekend …", and T4 added "JBA Woven policies were acknowledged on 5/26/26.": each a
+     * whole sentence, not a parenthesis, and each a prior step the card keeps (its date and a word of it). A sentence of
+     * the account whose every date is a kept or stated step's, sharing a word with that step (by its first five letters), and holding no date of this incident,
+     * is that step: it leaves the account (Prior actions holds it). A sentence with no date stays; the account is never
+     * emptied. Read from the kept steps' own text, never a word list.
+     */
+    const incidentIso = date;
+    const sentences = unstepped.match(/[^.!?]+(?:[.!?]+|$)/g) ?? [unstepped];
+    const ofThisIncident = (said: ReturnType<typeof readDates>[number]) => Boolean(incidentIso && Number(incidentIso.slice(5, 7)) === said.month && Number(incidentIso.slice(8, 10)) === said.day);
+    const stepSentence = (sentence: string) => {
+      const dates = readDates(sentence);
+      if (dates.length === 0 || dates.some(ofThisIncident)) return false;
+      /* A word's first five letters, so "policies … acknowledged" is the step "Policy acknowledgement" (live, U21 T5–T7). */
+      const stem = (word: string) => word.slice(0, 5);
+      const said = lettersOf(sentence).map(stem);
+      return steps.some((step) => {
+        const own = new Set(lettersOf(step).map(stem));
+        return dates.every((stated) => readDates(step).some((stepDate) => sameDate(stepDate, stated))) && said.some((word) => own.has(word));
+      });
+    };
+    const kept = sentences.filter((sentence) => !stepSentence(sentence));
+    const unsentenced = kept.join("").replace(/\s+/g, " ").trim();
+    if (unsentenced !== "") whatHappened = unsentenced;
+    else if (unstepped !== "") whatHappened = unstepped;
   }
   const priorActions = priorActionsRefused ? null : keptPriorActions ? priorActionsWithStatedTopics(keptPriorActions, statedSteps).slice(0, 600) : statedSteps.length === 0 ? onFileLine : null;
   /*
