@@ -347,6 +347,8 @@ export async function createInlineForm({
         // NEXT_PUBLIC_CARD_POLICY_TO_DRAFT_ENABLED: the loop card's whole policy line (its second heading, the Policy Violated line, a Coaching Form's citation).
         ...(proposal.fromAgentLoop && cardPolicyToDraftEnabled() && cardPolicyLineFor(proposal, messages) ? { cardPolicyLine: cardPolicyLineFor(proposal, messages) } : {}),
         ...(proposal.fromAgentLoop && proposal.coachingTopic ? { cardTopic: proposal.coachingTopic } : {}),
+        // QA's Bubbles live round 3 (A1(b)): earlier spellings of the card's person; the route re-checks each.
+        ...(proposal.fromAgentLoop && proposal.earlierNames && proposal.earlierNames.length > 0 ? { cardEarlierNames: proposal.earlierNames.slice(0, 5) } : {}),
         // STATED_PLAN_STEPS_ENABLED (ported, f062): the plan steps the card carries (set only with the flag on, server-side), from either path.
         ...(proposal.planSteps && proposal.planSteps.length > 0 ? { cardPlanSteps: proposal.planSteps } : {}),
         ...(proposal.fromAgentLoop && proposal.attendanceKind ? { cardAttendance: proposal.attendanceKind } : {}),

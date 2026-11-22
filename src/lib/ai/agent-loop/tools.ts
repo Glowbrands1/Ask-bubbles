@@ -3735,6 +3735,7 @@ export async function proposeForm(
    * in, so every check below compares it with the earlier card's account (already shortened) on the same terms. A second
    * turn's "Fenna Prewitt left …, Fenna also …" read against the first card's "Fenna left …" was taken as a rewording.
    */
+  let earlierNames: string[] = [];
   if (whatHappened && employee.name) {
     /*
      * QA's live re-test (21 Nov 2026): the name corrected mid-chat ("<First> <Lastx>" → "<First> <Lasty>") moved the card's
@@ -3756,6 +3757,10 @@ export async function proposeForm(
     const tokens = [...whatHappened.matchAll(/\p{L}[\p{L}'’-]*/gu)].map((token) => token[0]);
     const recordedSpellings = tokens.slice(0, -1).map((token, at) => `${token} ${tokens[at + 1]!.replace(/['’]s$/i, "")}`).filter((pair) => !samePerson(pair, employee.name) && earlierNameKeys.has(personKey(pair)) && closeSpellingOfName(words(pair), ownName));
     whatHappened = (await import("@/lib/forms/short-name")).withCorrectedSpelling(whatHappened, employee.name, [...(nameCorrectedFrom !== null ? [nameCorrectedFrom] : []), ...confirmedSpellings, ...recordedSpellings], rosterSpellingOf(employee.id ?? null, read.kind === "read" ? read.roster : [])).text;
+    /* The same earlier spellings in the manager's own words (Create's draft copies those too), for the card (`earlierNames`). */
+    const saidTokens = [...managerTurns(context).matchAll(/\p{L}[\p{L}'’-]*/gu)].map((token) => token[0]);
+    const saidSpellings = saidTokens.slice(0, -1).map((token, at) => `${token} ${saidTokens[at + 1]!}`).filter((pair) => !samePerson(pair, employee.name) && earlierNameKeys.has(personKey(pair)) && closeSpellingOfName(words(pair), ownName));
+    earlierNames = [...new Set([...(nameCorrectedFrom !== null ? [nameCorrectedFrom] : []), ...recordedSpellings, ...saidSpellings].map((name) => name.trim()))];
     const short = cardAccountName(employee.name, read.kind === "read" ? read.roster : [], extractEmployeeNames(managerTurns(context)), employee.id ?? null);
     whatHappened = (await import("@/lib/forms/short-name")).withShortName(whatHappened, employee.name, short).text;
   }
@@ -4864,6 +4869,7 @@ export async function proposeForm(
     ...(exitMethod ? { exitMethod: exitMethod.label, exitMethodQuote: exitMethod.quote } : {}),
     ...(priorActions ? { priorActions } : {}),
     ...(coachingTopic ? { coachingTopic } : {}),
+    ...(earlierNames.length > 0 ? { earlierNames } : {}),
     ...(planSteps.length > 0 ? { planSteps } : {}),
     ...(attendanceKind ? { attendanceKind } : {}),
     ...(incidentTime ? { incidentTime } : {}),

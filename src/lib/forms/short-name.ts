@@ -142,3 +142,31 @@ export function withCorrectedSpelling(
   }
   return { text: out, replaced };
 }
+
+
+/**
+ * QA's Bubbles live round 3 (22 Nov 2026, A1(b)): whether a two-word name is a close spelling of the form's full name
+ * (first name and surname each within a few letters: at most two, and at most a third of the longer word), as the agent
+ * loop reads a name correction. Used to re-check the card's earlier spellings before Create's draft replaces them.
+ */
+export function closeSpellingOfFullName(said: string, full: string): boolean {
+  const parts = (name: string) => name.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const a = parts(said);
+  const b = parts(full);
+  if (a.length < 2 || b.length < 2) return false;
+  const distance = (x: string, y: string) => {
+    const row = Array.from({ length: y.length + 1 }, (_unused, at) => at);
+    for (let i = 1; i <= x.length; i += 1) {
+      let previous = row[0]!;
+      row[0] = i;
+      for (let j = 1; j <= y.length; j += 1) {
+        const kept = row[j]!;
+        row[j] = Math.min(row[j]! + 1, row[j - 1]! + 1, previous + (x[i - 1] === y[j - 1] ? 0 : 1));
+        previous = kept;
+      }
+    }
+    return row[y.length]!;
+  };
+  const close = (x: string, y: string) => distance(x, y) <= Math.min(2, Math.max(1, Math.floor(Math.max(x.length, y.length) / 3)));
+  return close(a[0]!, b[0]!) && close(a.at(-1)!, b.at(-1)!);
+}

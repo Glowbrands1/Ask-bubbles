@@ -821,6 +821,12 @@ export interface ChatFormProposal {
   /** The agent loop's coaching card: the topic, in the manager's words, checked against their message (QA, 17 Nov 2026). */
   coachingTopic?: string;
   /**
+   * QA's Bubbles live round 3 (22 Nov 2026, A1(b)): earlier spellings of the card's person in this chat (the manager's
+   * correction, or a name an earlier card was made for that is a close spelling of this one). Create's draft writes the
+   * card's name for them in its prose; the route checks each is a close spelling again.
+   */
+  earlierNames?: string[];
+  /**
    * STATED_PLAN_STEPS_ENABLED (ported from the sibling app's f062, 21 Nov 2026): the Action Plan steps the manager stated,
    * in their words, each checked against them (the loop's plan_steps or the intent reader's planSteps). Create adds them
    * before the closing.

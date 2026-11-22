@@ -90,4 +90,20 @@ export const NOV22_ROUND3_CORRECTED_SPELLING_KEPT_CASES: ReplayCase[] = [
       expect(issueOf(thread.proposal)).not.toMatch(/Varnick/);
     },
   },
+  {
+    id: "nov22-r3-a1b-saved-write-up-from-the-notes-uses-the-corrected-name",
+    title: "Round 3 A1(b), the saved write-up: the account names only \"Della\", and Create's draft copies the manager's own \"My employee della varnick …\" — the saved coaching_details never keeps \"varnick\"",
+    report: REPORT,
+    status: "fixed",
+    async run(t) {
+      start(t);
+      t.loopModel!(live("Della was 10 minutes late on the last two shifts, on 10/5 and 10/15. After the first late shift Della was verbally coached on policy and expectations, then Della was late again."));
+      const thread = t.thread();
+      for (const turn of [T1, T2, T3, T4]) await thread.say(turn);
+      expect(thread.proposal?.employeeName).toBe("Della Varnich");
+      expect((thread.proposal as { earlierNames?: string[] } | null)?.earlierNames ?? [], "the card does not carry the earlier spelling").toContainEqual(expect.stringMatching(/varnick/i));
+      const id = await thread.create();
+      expect(t.values(id).coaching_details ?? "", `the saved write-up kept the old surname:\n${t.values(id).coaching_details}`).not.toMatch(/varnick/i);
+    },
+  },
 ];
