@@ -13,6 +13,7 @@ import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
 import { businessToday, formatBusinessTime } from "@/lib/business-date";
 import { appConfig } from "./app-config";
 import { isoDate, monthDayToIso, readDates, sameDate, withoutDates, type ReadDate } from "./dates";
+import { storePhraseLeftInAccount } from "./store-phrase";
 import { candidateNameWords, chatFormsActor, formDateRangeFromInput, formKindFromText, ofKind } from "@/lib/forms/chat-form-records";
 import { CURRENT_MESSAGE_ID, holdsPhrase, identifiedTurns, readEvidence, verifyEvidence, withoutMessageIdTags, type IdentifiedTurn } from "./evidence";
 import { personNamedInRequest, requestStart } from "./person-in-request";
@@ -1008,9 +1009,11 @@ export interface ToolEffects {
   exitOffered?: { employeeId: string | null; name: string };
   /** find_staff ran this turn: a person was named, so a card without one is not "nobody named" (item 6). */
   staffLookedUp?: boolean;
-  /** Fix batch items 4 and 3: this turn's last "Did you mean" (the roster ids offered, the name typed), for the record. */
   /** Round 3 A7: a card this turn was filed at the employee's Woven store (store_from_woven), so the reply may say so. */
   storeFromWoven?: boolean;
+  /** A7 follow-up (QA's option 2): the card's store phrase still in its account (`store-phrase.ts`), from the latest card. */
+  storePhraseLeft?: string | null;
+  /** Fix batch items 4 and 3: this turn's last "Did you mean" (the roster ids offered, the name typed), for the record. */
   nameQuestion?: { offeredIds: string[]; typed: string; offeredNames?: string[]; asksFullName?: boolean; templateKey?: string };
   /** QA (16 Nov 2026): propose_form ran for a form this turn, so a form is chosen (find_staff may ask the name). */
   formChosen?: boolean;
@@ -5100,6 +5103,14 @@ export async function proposeForm(
     }
   }
   /*
+   * A7 follow-up (QA's option 2, 22 Nov 2026): the model reworded the store mid-sentence ("… came into the store at Empire
+   * to show …"), which no whole-phrase strip reads. The phrase the store reader matched as this card's store in the
+   * manager's own words, still in the account, is named to the model (`store_phrase_in_account`) and the reply is handed
+   * back once (`run.ts`). The store reader decides (`store-phrase.ts`); never a word list.
+   */
+  const storePhraseLeft = card.locationId && card.issue ? storePhraseLeftInAccount(card.issue, requestWords, card.locationId) : null;
+  effects.storePhraseLeft = storePhraseLeft;
+  /*
    * THE CARD'S ACCOUNT NAMES THE PERSON TOO (the sibling app's QA live retest, 20 Nov 2026): the card's issue read "Her
    * shift lead, <L>, told her to clock out early and she refused." The reply's pronoun pass (`reply-pronouns.ts`) runs on
    * the card's account with the card's own reply name, as on the reply's account line.
@@ -5397,6 +5408,7 @@ export async function proposeForm(
       const said = storeSaidOf();
       return said && card.locationId ? { store_said: { said, store: salonLabel(card.locationId) } } : {};
     })(),
+    ...(storePhraseLeft ? { store_phrase_in_account: { phrase: storePhraseLeft, note: `The card shows its ${locationWord()} on its own line; "${storePhraseLeft}" is that ${locationWord()}, so leave it out of what_happened. Propose again with what_happened without it, everything else the same.` } } : {}),
     ...(noStoreStated && !card.locationId ? { no_store: { say_exactly: `Filed with no ${locationWord()}, as you said.` } } : {}),
     /* U21: the account was copied from <A>'s card; a level and payroll answer are the manager's to state for this person. */
     ...(copiedFromCard
