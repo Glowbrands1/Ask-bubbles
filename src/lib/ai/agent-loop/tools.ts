@@ -14,6 +14,7 @@ import { businessToday, formatBusinessTime } from "@/lib/business-date";
 import { appConfig } from "./app-config";
 import { isoDate, monthDayToIso, readDates, sameDate, withoutDates, type ReadDate } from "./dates";
 import { storePhraseLeftInAccount } from "./store-phrase";
+import { shownAccount, unaskedAccountChange } from "./account-kept";
 import { candidateNameWords, chatFormsActor, formDateRangeFromInput, formKindFromText, ofKind } from "@/lib/forms/chat-form-records";
 import { CURRENT_MESSAGE_ID, holdsPhrase, identifiedTurns, readEvidence, verifyEvidence, withoutMessageIdTags, type IdentifiedTurn } from "./evidence";
 import { personNamedInRequest, requestStart } from "./person-in-request";
@@ -76,7 +77,7 @@ import { expandPolicyQuery } from "@/lib/knowledge/policy-retrieval";
 import type { SourceCitation } from "@/types";
 import { followUpChangeAsked, followUpForCard, followUpLine, statedFollowUpDate } from "@/lib/forms/follow-up-default";
 import type { AccessScope, ChatFormProposal, ChatMessage, Role } from "@/types";
-import { accountKey, personKey, replyTurns, type CardRecord, type ExitOfferRecord, type NameQuestionRecord, type PersonAskedRecord, type TurnRecord } from "@/lib/ai/agent-loop/card-record";
+import { accountKey, personKey, replyTurns, shownTextKey, type CardRecord, type ExitOfferRecord, type NameQuestionRecord, type PersonAskedRecord, type TurnRecord } from "@/lib/ai/agent-loop/card-record";
 import { TEAM_SUBJECT_LABEL } from "@/lib/forms/team-subject";
 
 /**
@@ -3537,8 +3538,8 @@ export async function proposeForm(
    */
   const rewordAsked = REWORD_REQUEST.test(context.question);
   if (rewordAsked) {
-    const lastCard = [...context.history].reverse().find((message) => message.role === "assistant" && (message.formProposal || /\*\*Observation of Offense:\*\*/.test(String(message.content))));
-    const onScreen = lastCard?.formProposal?.issue ?? /\*\*Observation of Offense:\*\*\s*(.+)/.exec(String(lastCard?.content ?? ""))?.[1]?.trim() ?? "";
+    const lastCard = shownAccount(context.history as ChatMessage[]);
+    const onScreen = lastCard?.issue ?? "";
     const next = typeof input.what_happened === "string" ? input.what_happened : "";
     /*
      * The sibling app's QA (20 Nov 2026): the card on screen names its person by the short name ("Fenna left …"); the
@@ -3546,7 +3547,7 @@ export async function proposeForm(
      */
     const roster = await rosterFor(context.actor.scope);
     const row = typeof input.employee_id === "string" && roster.kind === "read" ? roster.roster.find((candidate) => candidate.id === input.employee_id) : undefined;
-    const names = [lastCard?.formProposal?.employeeName, typeof input.employee_name === "string" ? input.employee_name : null, ...(row ? fullNamesOf(row) : [])].map((name) => name?.trim() ?? "").filter(Boolean);
+    const names = [lastCard?.employeeName, typeof input.employee_name === "string" ? input.employee_name : null, ...(row ? fullNamesOf(row) : [])].map((name) => name?.trim() ?? "").filter(Boolean);
     const { withShortName } = await import("@/lib/forms/short-name");
     const nextShort = names.reduce((text, name) => withShortName(text, name, name.split(/\s+/)[0]!).text, next);
     if (!onScreen.trim() || !next.trim() || (addPlacement(onScreen, next).changed.length > 0 && addPlacement(onScreen, nextShort).changed.length > 0)) return { reword_paused: true, note: REWORD_PAUSED.note };
@@ -4111,6 +4112,24 @@ export async function proposeForm(
     Boolean(record && record.templateKey === template.key && (
       (employee.id ? record.employeeKey === personKey(employee.id) : !record.employeeKey && record.nameKey === personKey(employee.name)) ||
       (!record.employeeKey && aliases.some((alias) => record.nameKey === personKey(alias)))));
+  /*
+   * THE ACCOUNT ON SCREEN STAYS UNLESS THE MANAGER CHANGES IT (QA's Bubbles live re-run, 22 Nov 2026, A7 T5; option 2):
+   * "store location is empire, sd. create corrective action" rebuilt the card with the Observation rewritten ("<P> is a
+   * team member. On 10/22/26 …"). A rebuild of this card (this form, this person; no reword asked, which has its own
+   * pause; no new form asked) keeps the account on screen when the model's account differs only in ways the manager's
+   * latest message does not bring (`account-kept.ts`). The account on screen: this turn's own card when propose_form
+   * already ran this turn (a hand-back's rebuild; dropping the store phrase the app handed back, `storePhraseLeft`, is
+   * the app's own ask); else the last reply's Observation line, only when it is exactly what the card on screen showed
+   * (its server record's key, `shownTextKey`), so the kept text is never the model's restatement.
+   */
+  const shownLine = !effects.proposal ? shownAccount(context.history as ChatMessage[])?.issue ?? "" : "";
+  const accountOnScreen = !ACCOUNT_FORMS.has(template.key) || rewordAsked || asksNewForm || !whatHappened
+    ? null
+    : effects.proposal
+      ? (effects.proposal.templateKey === template.key && effects.proposal.issue && (employee.id ? effects.proposalEmployeeId === employee.id : samePerson(effects.proposal.employeeName ?? "", employee.name)) ? effects.proposal.issue : null)
+      : isThisCard(context.cardOnScreen) && shownLine && context.cardOnScreen.issueKey && shownTextKey(shownLine) === context.cardOnScreen.issueKey ? shownLine : null;
+  const accountKeptAsShown = Boolean(accountOnScreen && unaskedAccountChange(accountOnScreen, whatHappened, [context.question, effects.proposal ? effects.storePhraseLeft ?? "" : ""].join("\n")));
+  if (accountKeptAsShown) whatHappened = accountOnScreen!;
   /*
    * Runner 2's c158 on 63ba4c48: the model answered "I need to create a verbal corrective action form" with "Who is this
    * Corrective Action Form for?" itself, with no tool call, so no person_asked record was written, and the level named
@@ -5408,6 +5427,7 @@ export async function proposeForm(
       const said = storeSaidOf();
       return said && card.locationId ? { store_said: { said, store: salonLabel(card.locationId) } } : {};
     })(),
+    ...(accountKeptAsShown ? { account_kept_as_shown: { note: "The card keeps the Observation as it was shown: the manager's latest message did not change what happened. Never say the account was reworded or changed." } } : {}),
     ...(storePhraseLeft ? { store_phrase_in_account: { phrase: storePhraseLeft, note: `The card shows its ${locationWord()} on its own line; "${storePhraseLeft}" is that ${locationWord()}, so leave it out of what_happened. Propose again with what_happened without it, everything else the same.` } } : {}),
     ...(noStoreStated && !card.locationId ? { no_store: { say_exactly: `Filed with no ${locationWord()}, as you said.` } } : {}),
     /* U21: the account was copied from <A>'s card; a level and payroll answer are the manager's to state for this person. */
