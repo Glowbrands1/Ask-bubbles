@@ -1076,9 +1076,11 @@ export function lockedExitDate(modelDate: unknown, requestWords: string, today: 
  * QA's Bubbles live re-run 2 (22 Nov 2026, B6): the lines Create's draft saves from the exit form's own Details reader
  * (How Employee Resigned, Reason for Resignation, the yes/no answers such as rehire), read from the same manager words.
  */
-async function exitDetailReadLines(managerWords: string, today: string, termination = false): Promise<string[]> {
-  const [{ readExitDetails, exitDetailValues }, { exitDetailLines }] = await Promise.all([import("@/lib/forms/exit-details"), import("./exit-read-back")]);
-  return exitDetailLines(exitDetailValues(readExitDetails(managerWords, today)), termination);
+async function exitDetailReadLines(managerWords: string, today: string, termination = false, statedReason?: string | null): Promise<string[]> {
+  const [{ readExitDetails, exitDetailValues }, { exitDetailLines }, { EXIT_DETAIL_FIELDS }] = await Promise.all([import("@/lib/forms/exit-details"), import("./exit-read-back"), import("@/lib/forms/exit-library")]);
+  const read = exitDetailValues(readExitDetails(managerWords, today));
+  /* B6 (QA's live round 3): the reason the model read and the server re-checked (`exit_reason`) is the one Create saves. */
+  return exitDetailLines(statedReason && !termination ? { ...read, values: { ...read.values, [EXIT_DETAIL_FIELDS.resignationReason]: statedReason } } : read, termination);
 }
 
 async function exitDateLines(managerWords: string, today: string, termination = false): Promise<string[]> {
@@ -3343,6 +3345,8 @@ export async function proposeForm(
     new_store_evidence?: unknown;
     exit_method?: unknown;
     exit_method_evidence?: unknown;
+    exit_reason?: unknown;
+    exit_reason_evidence?: unknown;
     effective_date?: unknown;
     payroll_deduct?: unknown;
     payroll_amount?: unknown;
@@ -4776,6 +4780,17 @@ export async function proposeForm(
   const exitMethod = template.key === appConfig().formKeys.exit && !exitTermination && input.exit_type !== "termination" && typeof input.exit_method === "string" && exitMethodQuote !== "" && (await import("@/lib/forms/exit-details")).quoteNamesMethod(exitMethodQuote, input.exit_method) && answerEvidence(context, input.exit_method_evidence, "request", evidencePerson, { requestTurnIds }).ok
     ? { label: input.exit_method, quote: exitMethodQuote }
     : null;
+  /*
+   * B6 (QA's live round 3, 22 Nov 2026): "she is resigning due to second job" left Reason for Resignation empty on the card,
+   * the reply and the saved draft. The reason is the model's reading (exit_reason), kept when every word of it is in the
+   * manager's quoted words of this request (exit_reason_evidence; `exit-reason-said.ts`); Create writes it as their
+   * statement. A termination keeps its own reason path.
+   */
+  const exitReasonQuote = typeof (input.exit_reason_evidence as { quote?: unknown } | null | undefined)?.quote === "string" ? String((input.exit_reason_evidence as { quote: string }).quote).trim().slice(0, 300) : "";
+  const exitReasonText = template.key === appConfig().formKeys.exit && !exitTermination && input.exit_type !== "termination" && typeof input.exit_reason === "string" && exitReasonQuote !== "" && answerEvidence(context, input.exit_reason_evidence, "request", evidencePerson, { requestTurnIds }).ok
+    ? (await import("@/lib/forms/exit-reason-said")).reasonFromQuote(input.exit_reason, exitReasonQuote)
+    : null;
+  const exitReason = exitReasonText ? { text: exitReasonText, quote: exitReasonQuote } : null;
   let salonFromWoven: string | null = null;
   /* A7: the person's own Woven stores in the manager's scope, primary first, when the typed store was not read as one. */
   const wovenStores = storeNotRead && employee.id ? await wovenStoresOf(context.actor.scope, employee.id, read.kind === "read" ? read.roster : [], managerSalonIds) : [];
@@ -4850,6 +4865,7 @@ export async function proposeForm(
     ...(exitHow ? { exitHow: exitHow.option, exitHowQuote: exitHow.quote } : {}),
     ...(newStore ? { newStore: newStore.name, newStoreSaid: newStore.said, newStoreQuote: newStore.quote } : {}),
     ...(exitMethod ? { exitMethod: exitMethod.label, exitMethodQuote: exitMethod.quote } : {}),
+    ...(exitReason ? { exitReason: exitReason.text, exitReasonQuote: exitReason.quote } : {}),
     ...(priorActions ? { priorActions } : {}),
     ...(coachingTopic ? { coachingTopic } : {}),
     ...(planSteps.length > 0 ? { planSteps } : {}),
@@ -4857,7 +4873,7 @@ export async function proposeForm(
     ...(incidentTime ? { incidentTime } : {}),
     /* U22: the exit card's lines Create saves (dates the exit reader read; the account under its saved field). */
     ...(template.key === appConfig().formKeys.exit
-      ? { exitReadBack: (await import("./exit-read-back")).exitReadBack({ dateLines: await exitDateLines(requestWords, today, Boolean(exitTermination)), account: whatHappened || null, termination: Boolean(exitTermination), detailLines: await exitDetailReadLines(requestWords, today, Boolean(exitTermination)) }) }
+      ? { exitReadBack: (await import("./exit-read-back")).exitReadBack({ dateLines: await exitDateLines(requestWords, today, Boolean(exitTermination)), account: whatHappened || null, termination: Boolean(exitTermination), detailLines: await exitDetailReadLines(requestWords, today, Boolean(exitTermination), exitReason?.text) }) }
       : {}),
     ...(awaiting ? { awaitingIncident: true as const, supportsInlineDraft: false } : {}),
   };
@@ -5008,7 +5024,7 @@ export async function proposeForm(
     return { ...refused, reason_code: "one_card", error: `${refused.error} Describe only the card on screen, never say both cards are ready, and end your reply with exactly: ${offer}`, ask_exactly: offer };
   }
   /* U22: read back from the card's final account (shortened names included), so the reply's line matches it. */
-  if (card.exitReadBack) card.exitReadBack = (await import("./exit-read-back")).exitReadBack({ dateLines: await exitDateLines(requestWords, today, Boolean(exitTermination)), account: card.issue ?? null, termination: Boolean(exitTermination), detailLines: await exitDetailReadLines(requestWords, today, Boolean(exitTermination)) });
+  if (card.exitReadBack) card.exitReadBack = (await import("./exit-read-back")).exitReadBack({ dateLines: await exitDateLines(requestWords, today, Boolean(exitTermination)), account: card.issue ?? null, termination: Boolean(exitTermination), detailLines: await exitDetailReadLines(requestWords, today, Boolean(exitTermination), card.exitReason) });
   effects.proposal = card;
   effects.proposalEmployeeId = employee.id ?? null;
   const personId = typeof input.employee_id === "string" ? input.employee_id.trim() : "";
