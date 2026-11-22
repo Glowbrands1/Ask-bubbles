@@ -62,6 +62,12 @@ const run = (byId: boolean) => async (t: ReplayContext) => {
   await thread.say(T4);
   const id = await thread.create();
   expect(t.forms().find((row) => row.id === id)?.employee_name, "Create did not save the corrected person's form").toBe("Thaddea Kroll");
+  /*
+   * QA's live re-run on production f9461c1 (22 Nov 2026, A1 notes (a)): the card was <P2>'s, but the saved write-up, drafted
+   * from T1 ("My employee <P1> has was …"), kept <P1>. The write-up uses the settled name.
+   */
+  const saved = JSON.stringify(t.values(id));
+  expect(saved, `the saved write-up keeps the old spelling:\n${saved}`).not.toMatch(/Tadea|Krohl/i);
 };
 
 export const NOV22_AGENT_LOOP_NAME_CORRECTION_SAME_PERSON_CASES: ReplayCase[] = [

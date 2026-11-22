@@ -140,3 +140,24 @@ describe("account facts kept: a sentence listing dates the write-up states one b
     expect(missingAccountFacts(DRAFTED, "Odell was late on 11/17 and 11/18 because his car broke down twice.", "Odell Brannagh")).not.toEqual([]);
   });
 });
+
+/*
+ * QA's live re-run on production f9461c1 (22 Nov 2026, C3; the person invented here: Zelphine Harwick): "create a CA
+ * form for <Last>, <First> at dodge. she was late on 10-16" saved "<First> was late to work on October 16, 2026. <First>
+ * was late on 10-16.": the same fact twice. A dashed month-day with no year ("10-16") is read as a date only when the
+ * write-up itself states that month and day, so a range ("10-12 hours") is never taken for one.
+ */
+describe("account facts kept: one dashed date with no year that the write-up states (QA's live re-run, C3)", () => {
+  const DRAFTED = "Observed:\nZelphine was late to work on October 16, 2026.\n\nExpectation:\nZelphine is expected to arrive on time for every scheduled shift.";
+
+  it("\"<First> was late on 10-16.\": the lateness is stated once", () => {
+    const { text, added } = withAccountFactsKept(DRAFTED, "Zelphine was late on 10-16.", "Zelphine Harwick");
+    expect(added).toEqual([]);
+    expect(text).toBe(DRAFTED);
+  });
+
+  it("control: a dashed date the write-up does not state, or a range, is still read as typed", () => {
+    expect(missingAccountFacts(DRAFTED, "Zelphine was also late on 10-23 and left before close.", "Zelphine Harwick")).not.toEqual([]);
+    expect(missingAccountFacts(DRAFTED, "Zelphine has worked 10-16 hour shifts every weekend this month.", "Zelphine Harwick")).not.toEqual([]);
+  });
+});

@@ -101,9 +101,24 @@ const asSentence = (clause: string, first: string | null = null, afterComma = fa
   return /[.!?]$/.test(capital) ? capital : `${capital}.`;
 };
 
+/*
+ * QA's live re-run on production f9461c1 (22 Nov 2026, C3): "… she was late on 10-16" saved "<First> was late to work on
+ * October 16, 2026. <First> was late on 10-16." A dashed month-day with no year is not read as a date by `sameDates` (a
+ * bare "10-12" is more often a range), so the card's sentence looked missing. It is read as that date only when the
+ * write-up itself states the same month and day: the drafter's own date settles it, never a list of words around it.
+ */
+function withWrittenDates(text: string, written: ReadonlySet<string>): string {
+  return text.replace(/(?<![\d/-])(\d{1,2})-(\d{1,2})(?![\d/-])/g, (match, month: string, day: string) => {
+    const date = `${Number(month)}/${Number(day)}`;
+    return written.has(date) ? date : match;
+  });
+}
+
 /** The card account's sentences (or clauses) the write-up does not hold, in the card's own words. */
 export function missingAccountFacts(writeUp: string, account: string, employeeName: string | null): string[] {
   const skip = new Set(contentWords(employeeName ?? "", new Set()));
+  const writtenDates = new Set(contentWords(writeUp, new Set()).filter((word) => MONTH_DAY.test(word)));
+  const contentWordsOf = (text: string, ignore: ReadonlySet<string>) => contentWords(withWrittenDates(text, writtenDates), ignore);
   const keptWords = new Set(contentWords(writeUp, skip));
   const keptPairs = new Set(sentencesOf(writeUp).flatMap((sentence) => pairsOf(contentWords(sentence, skip))));
   const writtenSentences = sentencesOf(writeUp).map((sentence) => new Set(contentWords(sentence, skip)));
@@ -114,7 +129,7 @@ export function missingAccountFacts(writeUp: string, account: string, employeeNa
     return dates.every((date) => writtenSentences.some((written) => written.has(date) && others.some((word) => written.has(word)))) && others.filter((word) => !keptWords.has(word)).length <= DATE_LIST_UNHELD;
   };
   const holds = (text: string) => {
-    const words = contentWords(text, skip);
+    const words = contentWordsOf(text, skip);
     return (
       share(words, keptWords) >= WORDS_KEPT ||
       share(pairsOf(words), keptPairs) >= PAIRS_KEPT ||
@@ -125,7 +140,7 @@ export function missingAccountFacts(writeUp: string, account: string, employeeNa
   const first = (employeeName ?? "").trim().split(/\s+/)[0] || null;
   const missing: string[] = [];
   for (const sentence of sentencesOf(account)) {
-    if (contentWords(sentence, skip).length < 3) continue;
+    if (contentWordsOf(sentence, skip).length < 3) continue;
     /* A sentence of several clauses is checked clause by clause: most of it kept does not keep its last fact. */
     /*
      * Clauses: at ", and" and ";", and (QA, f083) at a comma that starts a new clause ("…late on 11/18, this is the third
@@ -133,7 +148,7 @@ export function missingAccountFacts(writeUp: string, account: string, employeeNa
      */
     /* QA2 (the f083 follow-up): also at any comma with a fact on each side ("…late on 11/18, the third time in two months"). */
     const parts = sentence.split(/,\s+and\s+|;\s+|,\s+/i);
-    const clauses = parts.every((part) => contentWords(part, skip).length >= 3) ? parts : sentence.split(/,\s+and\s+|;\s+|,\s+(?=(?:this|that|it|she|he|they|there|i|we)\b)/i).filter((clause) => contentWords(clause, skip).length >= 3);
+    const clauses = parts.every((part) => contentWordsOf(part, skip).length >= 3) ? parts : sentence.split(/,\s+and\s+|;\s+|,\s+(?=(?:this|that|it|she|he|they|there|i|we)\b)/i).filter((clause) => contentWordsOf(clause, skip).length >= 3);
     if (clauses.length < 2) {
       if (!holds(sentence)) missing.push(asSentence(sentence, first));
       continue;

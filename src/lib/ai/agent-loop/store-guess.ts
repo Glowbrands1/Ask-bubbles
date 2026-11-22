@@ -20,9 +20,28 @@ export function storesNamedNotSaid(reply: string, managerTurns: readonly string[
   return guessed.map((id) => rosterSalonName(id) ?? id);
 }
 
-/** The reply without its sentences that name a guessed store (the store question is asked after it). */
+/**
+ * The reply without its sentences that name a guessed store (the store question is asked after it). A question right
+ * after a dropped sentence, in the same paragraph, asks about the stores that sentence named ("You have two Sioux Falls
+ * stores — A and B. Which one is this coaching for?", QA's live re-run 2, A8), so it goes with it.
+ */
 export function withoutStoreGuess(reply: string, guessed: readonly string[]): string {
-  const sentences = reply.split(/(?<=[.!?])\s+|\n+/);
   const named = (sentence: string) => readSalonMentions(sentence).length > 0 && storesNamedNotSaid(sentence, [], null).some((name) => guessed.includes(name));
-  return sentences.filter((sentence) => !named(sentence)).join(" ").trim();
+  return reply
+    .split(/\n+/)
+    .map((paragraph) => {
+      let dropped = false;
+      return paragraph
+        .split(/(?<=[.!?])\s+/)
+        .filter((sentence) => {
+          const drop = named(sentence) || (dropped && /\?\s*$/.test(sentence));
+          dropped = drop;
+          return !drop;
+        })
+        .join(" ")
+        .trim();
+    })
+    .filter(Boolean)
+    .join(" ")
+    .trim();
 }

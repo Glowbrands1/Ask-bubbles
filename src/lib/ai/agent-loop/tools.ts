@@ -20,6 +20,7 @@ import { answeredNameQuestions, answerNamesSomeoneElse, everKeptOrUsedTyped, isC
 import { employeeFirstName } from "@/lib/forms/employee-reference";
 import { AFFIRMATIVE, displayName, editDistance, matchEmployeeName, nameConfirmationQuestion, readNameConfirmation, rosterSpellingOf, type RosterEmployee } from "@/lib/forms/employee-match";
 import { offRosterTyped } from "@/lib/forms/roster-only-names";
+import { detectTemplateIntent } from "@/lib/forms/template-intent";
 import { checkboxGroupsForVariant, parseFormDocument } from "@/lib/forms/document";
 import { draftableCheckboxGroups, draftableFields } from "@/lib/forms/responsibility";
 import { authorizedSalonIds, PLACE_LEVEL, readSalonMentions, rosterSalonName, salonStreet } from "./places";
@@ -868,7 +869,7 @@ export interface ToolEffects {
   /** find_staff ran this turn: a person was named, so a card without one is not "nobody named" (item 6). */
   staffLookedUp?: boolean;
   /** Fix batch items 4 and 3: this turn's last "Did you mean" (the roster ids offered, the name typed), for the record. */
-  nameQuestion?: { offeredIds: string[]; typed: string; offeredNames?: string[]; asksFullName?: boolean };
+  nameQuestion?: { offeredIds: string[]; typed: string; offeredNames?: string[]; asksFullName?: boolean; templateKey?: string };
   /** QA (16 Nov 2026): propose_form ran for a form this turn, so a form is chosen (find_staff may ask the name). */
   formChosen?: boolean;
   /** Batch G (G4), by the rebuild plan's PR 1b: find_past_forms found forms on file to open (open: true) for this person. */
@@ -1045,6 +1046,15 @@ export function lockedExitDate(modelDate: unknown, requestWords: string, today: 
   const candidates = [year - 1, year, year + 1].map((y) => `${y}-${pad(typed.month)}-${pad(typed.day)}`);
   const distance = (d: string) => Math.abs(Date.parse(`${d}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`));
   return candidates.reduce((best, d) => (distance(d) < distance(best) ? d : best));
+}
+
+/**
+ * QA's Bubbles live re-run 2 (22 Nov 2026, B6): the lines Create's draft saves from the exit form's own Details reader
+ * (How Employee Resigned, Reason for Resignation, the yes/no answers such as rehire), read from the same manager words.
+ */
+async function exitDetailReadLines(managerWords: string, today: string, termination = false): Promise<string[]> {
+  const [{ readExitDetails, exitDetailValues }, { exitDetailLines }] = await Promise.all([import("@/lib/forms/exit-details"), import("./exit-read-back")]);
+  return exitDetailLines(exitDetailValues(readExitDetails(managerWords, today)), termination);
 }
 
 async function exitDateLines(managerWords: string, today: string, termination = false): Promise<string[]> {
@@ -3688,6 +3698,26 @@ export async function proposeForm(
    */
   const aliasTurns = new Set(aliases.flatMap((alias) => turnsFromThisPersonsRequest(asked, alias, { names: extractEmployeeNames, same: samePerson })));
   const ownTurns = new Set([...turnsFromThisPersonsRequest(asked, employee.name, { names: extractEmployeeNames, same: sameAsThisPerson }), ...aliasTurns]);
+  /*
+   * QA's Bubbles live re-run 2 (22 Nov 2026, U35): T11 "Create a Corrective Action Form from this conversation." names
+   * nobody, so the walk back from T12 started this request there, and T3 "verbal warning, no payroll deduct, …" (said
+   * right after the app's "Did you mean <P>?" for this form) was no longer this request's: the last card lost the level.
+   * The rules book holds that "Create a <form> from this conversation" is the same request. When the walk stops at a form
+   * request that names nobody, and the server holds an earlier request start for THIS card (its card, its "who is it
+   * for?", or propose_form's name question for this form about this person), the request runs from that record. Turns
+   * that name another person are left out below, as before. Records and the app's own form reader, never a word list.
+   */
+  const startRecordIds = new Set([
+    ...(context.cardRecords ?? []).filter((record) => record.templateKey === template.key && (employee.id ? record.employeeKey === personKey(employee.id) : !record.employeeKey && record.nameKey === personKey(employee.name))).map((record) => record.messageId),
+    ...(context.personAskedRecords ?? []).filter((record) => record.templateKey === template.key).map((record) => record.messageId),
+    ...(context.nameQuestions ?? []).filter((record) => record.templateKey === template.key && Boolean(employee.id) && record.offeredKeys.includes(personKey(employee.id!))).map((record) => record.messageId),
+  ].filter((id): id is string => Boolean(id)));
+  const walkStart = asked.ids.findIndex((id) => ownTurns.has(id));
+  const walkStartTurn = walkStart >= 0 ? asked.messages.find((message) => message.id === asked.ids[walkStart]) : undefined;
+  const recordStart = asked.ids.findIndex((id) => startRecordIds.has(id));
+  if (walkStartTurn && recordStart >= 0 && recordStart < walkStart && extractEmployeeNames(walkStartTurn.content).length === 0 && detectTemplateIntent(walkStartTurn.content).kind !== "none") {
+    for (const id of asked.ids.slice(recordStart, walkStart)) ownTurns.add(id);
+  }
   const personTurns = asked.ids.filter((id) => ownTurns.has(id)).filter((id) => {
     if (aliasTurns.has(id)) return true;
     if (id === context.questionMessageId) return true;
@@ -3837,10 +3867,21 @@ export async function proposeForm(
   const whoAskedTurns = conversation
     .filter((turn, index) => turn.role === "user" && conversation[index + 1]?.role === "assistant" && askedWhoFor.test(withoutMessageIdTags(conversation[index + 1]!.content)))
     .map((turn) => turn.id);
+  /*
+   * QA's Bubbles live re-run 2 (22 Nov 2026, U35): T2 "i have an employee, <P> that needs a corrective action form …" was
+   * answered with propose_form's own "Did you mean <P>?" (a typed name close to one roster person), so the request
+   * "started" at the later card and T3 "verbal warning, no payroll deduct, …" fell before it: the last card refused both.
+   * propose_form's name question for THIS form about this person (its record: the form, the offered people's keys) marks
+   * the request's start, as the card and "who is it for?" records do. The record, never the reply's words.
+   */
+  const nameAskedTurns = (context.nameQuestions ?? [])
+    .filter((record) => record.templateKey === template.key && Boolean(employee.id) && record.offeredKeys.includes(personKey(employee.id!)))
+    .map((record) => record.messageId);
   const requestStarts = new Set([
     ...(context.cardRecords ?? []).filter(isThisCard).map((record) => record.messageId),
     ...(context.personAskedRecords ?? []).filter((record) => record.templateKey === template.key).map((record) => record.messageId),
     ...whoAskedTurns,
+    ...nameAskedTurns,
   ].filter((id): id is string => Boolean(id)));
   const ownRequestTurns = conversation.filter((turn) => turn.role === "user" && sourceIds.includes(turn.id));
   const requestStart = ownRequestTurns.find((turn) => requestStarts.has(turn.id));
@@ -4051,7 +4092,7 @@ export async function proposeForm(
    * the earlier Corrective Action's "Standards of Conduct", which the manager never named for the coaching card (the
    * model chose it for the CA). A card other than a Corrective Action cites a manual heading only when the manager named
    * it in this card's request words, or today's topic reader fits it to this card's own account; never one copied from
-   * another form in the chat. Otherwise the heading is left off the card (not_on_card: policy_not_for_this_card).
+   * another form in the chat. Otherwise the heading is left off the card (facts.policy_copied, for the model to fix).
    */
   /*
    * Narrowed (QA, 16 Nov 2026, CI on 65382449: nov16-pr6-one-call-coaching-keeps-its-policy, an earlier ruling): a heading
@@ -4109,8 +4150,15 @@ export async function proposeForm(
     ? (() => {
         const byCard = notTheOfferAnswer(answerEvidence(context, input.payroll_evidence, { card: employee.name, aliases }, evidencePerson), context, evidencePerson.roster);
         if (byCard.ok || !requestStart) return byCard;
-        const byRequest = notTheOfferAnswer(answerEvidence(context, input.payroll_evidence, "request", evidencePerson, { requestTurnIds: [requestStart.id] }), context, evidencePerson.roster);
-        return byRequest.ok && byRequest.turnId === requestStart.id ? byRequest : byCard;
+        /*
+         * QA's Bubbles live re-run 2 (22 Nov 2026, U35(ii); QA's ruling): any turn of THIS request, for this person and this
+         * incident, as the level ("verbal warning, no payroll deduct, …" right after the app's "Did you mean" for this
+         * form). This narrows the 15 Nov rule (the request's first turn only) on purpose: within this request's own turns
+         * the answer is this card's. Another person's turn, a turn before the request started, another person's card
+         * ("make this for <B> instead of <A>") and a new incident are still refused (`answerEvidence`, `requestTurnIds`).
+         */
+        const byRequest = notTheOfferAnswer(answerEvidence(context, input.payroll_evidence, "request", evidencePerson, { requestTurnIds }), context, evidencePerson.roster);
+        return byRequest.ok && requestTurnIds.includes(byRequest.turnId) ? byRequest : byCard;
       })()
     : null;
   let payroll: "yes" | "no" | null = askedPayroll && payrollCheck?.ok ? askedPayroll : null;
@@ -4703,6 +4751,10 @@ export async function proposeForm(
     ...(planSteps.length > 0 ? { planSteps } : {}),
     ...(attendanceKind ? { attendanceKind } : {}),
     ...(incidentTime ? { incidentTime } : {}),
+    /* U22: the exit card's lines Create saves (dates the exit reader read; the account under its saved field). */
+    ...(template.key === appConfig().formKeys.exit
+      ? { exitReadBack: (await import("./exit-read-back")).exitReadBack({ dateLines: await exitDateLines(requestWords, today, Boolean(exitTermination)), account: whatHappened || null, termination: Boolean(exitTermination), detailLines: await exitDetailReadLines(requestWords, today, Boolean(exitTermination)) }) }
+      : {}),
     ...(awaiting ? { awaitingIncident: true as const, supportsInlineDraft: false } : {}),
   };
   /*
@@ -4851,6 +4903,8 @@ export async function proposeForm(
     effects.replyMustAsk = offer;
     return { ...refused, reason_code: "one_card", error: `${refused.error} Describe only the card on screen, never say both cards are ready, and end your reply with exactly: ${offer}`, ask_exactly: offer };
   }
+  /* U22: read back from the card's final account (shortened names included), so the reply's line matches it. */
+  if (card.exitReadBack) card.exitReadBack = (await import("./exit-read-back")).exitReadBack({ dateLines: await exitDateLines(requestWords, today, Boolean(exitTermination)), account: card.issue ?? null, termination: Boolean(exitTermination), detailLines: await exitDetailReadLines(requestWords, today, Boolean(exitTermination)) });
   effects.proposal = card;
   effects.proposalEmployeeId = employee.id ?? null;
   const personId = typeof input.employee_id === "string" ? input.employee_id.trim() : "";
@@ -4967,7 +5021,7 @@ export async function proposeForm(
      */
     /* Pau, 17 Nov: coaching always has policy and page. The Coaching and Follow-Up Coaching cards get the same fact as a CA. */
     ...(policyForms.has(template.key) && !awaiting && !askedPolicyWhole ? { policy_not_given: { note: "This card has no policy. Propose it again with policy: the one JBA Policy Manual heading that fits what happened (the headings are listed in your instructions). \"Other — <short topic>\" only for " + (otherTopicsSaid() ? otherTopicsSaid() + ", or " : "") + "when no section fits; then say so in your reply." } } : {}),
-    ...(policyNotForThisCard ? { policy_copied: { heading: policyHeading, note: `${policyHeading} is the policy of another form's card in this chat, not chosen for this card. Propose the card again with the heading that fits THIS card's own account (the headings are listed in your instructions), never one copied from another form; "Other — <short topic>" when no section fits.` } } : {}),
+    ...(policyNotForThisCard ? { policy_copied: { heading: policyHeading, note: `${policyHeading} is the policy of another form's card in this chat, not chosen for this card. This is for you to fix, never something to tell the manager: propose the card again with the heading that fits THIS card's own account (the headings are listed in your instructions), never one copied from another form; "Other — <short topic>" when no section fits.` } } : {}),
     ...(accountGiven ? { request_words: untrusted(accountGiven) } : {}),
     /* STATED_PLAN_STEPS_ENABLED: a plan step not kept (see `planSteps`). */
     ...(planStepsDropped ? { plan_steps_not_kept: { kept: planSteps.length, note: "A plan step is kept only when every word of it is the manager's own, quoted in plan_evidence from this request. Pass only the steps they asked for, in their words." } } : {}),
@@ -5014,10 +5068,22 @@ export async function proposeForm(
     })() : {}),
     ...(personId && effects.nameLines?.[personId] ? { name_from_staff_list: employee.name } : {}),
     /* Pau's name ruling (15 Nov 2026): the card uses the preferred name; the reply says the Woven legal name once. */
-    ...(employee.id && read.kind === "read" && (() => {
+    /*
+     * QA's live round-2 re-run (22 Nov 2026, U23, serious): the reply invented names ("**<preferred> <last>** (Marguerite —
+     * legal name in Woven: …)", then "Margo note: …"), copied from the rules book's own example. The line is written here,
+     * from the directory's own names only: the card's name and the legal name the staff list holds.
+     */
+    /*
+     * QA (22 Nov 2026, U23 follow-up): the line was said on every card turn. Once per person per chat: only when this chat
+     * has no earlier card for this person (its card records, never the replies' words).
+     */
+    ...(employee.id && read.kind === "read" && !(context.cardRecords ?? []).some((record) => record.employeeKey === personKey(employee.id!)) && (() => {
       const row = read.roster.find((candidate) => candidate.id === employee.id);
       return row && displayName(row) !== employee.name;
-    })() ? { legal_name_in_woven: displayName(read.roster.find((candidate) => candidate.id === employee.id)!) } : {}),
+    })() ? (() => {
+      const legal = displayName(read.roster.find((candidate) => candidate.id === employee.id)!);
+      return { legal_name_in_woven: { name: legal, say_exactly: `**${employee.name}** (${legal} in ${staffSystem()})` } };
+    })() : {}),
     ...(await (async () => {
       if (card.status !== "needs_location") return {};
       if (!employee.id) {
@@ -5082,7 +5148,12 @@ export async function proposeForm(
    */
   const notOnCard: { field: string; reason_code: string }[] = [
     ...(dateFromAnotherRequest && !dateKept ? [{ field: "incident_date", reason_code: "date_from_another_request" }] : []),
-    ...(policyNotForThisCard ? [{ field: "policy", reason_code: "policy_not_for_this_card" }] : []),
+    /*
+     * QA's live re-run on production f9461c1 (22 Nov 2026, A1 notes (b)): a heading copied from another form's card is
+     * not listed here. not_on_card is what the reply tells the manager, and the only reason this one has is the guard
+     * itself ("the system won't let this Coaching card reuse the Attendance heading cited on the earlier Corrective Action
+     * card"). It is the model's to fix: facts.policy_copied says to propose again with the heading that fits this card.
+     */
     /* QA's f074: a second heading on a form that cites one (Pau's two headings are the Corrective Action's only). */
     ...(secondLeftOff ? [{ field: "policy_second_heading", reason_code: "not_on_this_form" }] : []),
     ...((modelLevel && level !== modelLevel) ? [{ field: "warning_level", reason_code: caOnlyFields ? "level_not_stated" : "not_on_this_form" }] : []),
@@ -5132,6 +5203,7 @@ export async function proposeForm(
           ? { payroll_deduct: payroll }
           : {}),
       incident_time: card.incidentTime ?? null,
+      ...(card.exitReadBack ? { reads_back: card.exitReadBack } : {}),
       ...(transferCard ? { new_store: card.newStore ?? null } : {}),
       ...(template.key === appConfig().formKeys.exit ? { how_resigned: card.exitMethod ?? null } : {}),
       prior_actions: priorActions,
@@ -5223,6 +5295,14 @@ function isShownCardId(context: ToolContext, effects: ToolEffects, id: string): 
  */
 const teamStoreQuestion = () => `Which ${locationWord()} is this for?`;
 const TEAM_STORE_NOTE = "The card has no store yet. End your reply with store_question, exactly. Never name, guess or narrow the stores from a word the manager did not give as a store (an abbreviation, a program, a product); the card's own store list shows them all.";
+/*
+ * QA's Bubbles live re-run 2 (22 Nov 2026, A8; QA's ruling): a global login's team card with no store is ready (a global
+ * login may file with none), and its result carried no store question, so the model wrote its own and narrowed it by
+ * "SFS". Any team card that holds no store carries store_question and store_note, from all the manager's stores.
+ */
+const teamStoreAsked = (card: ChatFormProposal) => card.status === "needs_location" || !card.locationId;
+const teamStoreChoices = (card: ChatFormProposal) =>
+  (card.authorizedLocationIds && card.authorizedLocationIds.length > 0 ? card.authorizedLocationIds : appConfig().locations().map((salon) => salon.id)).map((id) => ({ id, name: salonLabel(id) }));
 
 export async function coachTeam(context: ToolContext, effects: ToolEffects, input: { team_evidence?: unknown } = {}): Promise<ToolResult> {
   if (context.openFormId) {
@@ -5279,7 +5359,7 @@ export async function coachTeam(context: ToolContext, effects: ToolEffects, inpu
       status: card.status,
       ready: card.status === "ready",
       store: card.locationId ? salonLabel(card.locationId) : null,
-      ...(card.status === "needs_location" ? { choose_store_from: (card.authorizedLocationIds ?? []).map((id) => ({ id, name: salonLabel(id) })), store_question: teamStoreQuestion(), store_note: TEAM_STORE_NOTE } : {}),
+      ...(teamStoreAsked(card) ? { choose_store_from: teamStoreChoices(card), store_question: teamStoreQuestion(), store_note: TEAM_STORE_NOTE } : {}),
       form_date: card.formDate ?? null,
       observation: card.issue ?? null,
       create_offered: card.supportsInlineDraft,
@@ -5356,7 +5436,7 @@ async function updateTeamCard(context: ToolContext, effects: ToolEffects, before
       status: card.status,
       ready: card.status === "ready",
       store: card.locationId ? salonLabel(card.locationId) : null,
-      ...(card.status === "needs_location" ? { choose_store_from: (card.authorizedLocationIds ?? []).map((id) => ({ id, name: salonLabel(id) })), store_question: teamStoreQuestion(), store_note: TEAM_STORE_NOTE } : {}),
+      ...(teamStoreAsked(card) ? { choose_store_from: teamStoreChoices(card), store_question: teamStoreQuestion(), store_note: TEAM_STORE_NOTE } : {}),
       form_date: card.formDate ?? null,
       create_offered: card.supportsInlineDraft,
     },
