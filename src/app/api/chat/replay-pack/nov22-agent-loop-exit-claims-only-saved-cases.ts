@@ -107,7 +107,9 @@ export const NOV22_AGENT_LOOP_EXIT_CLAIMS_ONLY_SAVED_CASES: ReplayCase[] = [
       const views = model.views.length;
       const reply = await thread.say(T6);
       expect(model.views.slice(views).some(handedBack), "the unsaved reason claim was never handed back").toBe(true);
-      expect((thread.proposal as { issue?: string | null } | null)?.issue ?? "", "the reason never reached the card").toMatch(/second job/);
+      /* What Create saves (reads_back), not the account's wording: the live model may leave the reason to the Details reader. */
+      const readBack = model.views.slice(views).map((view) => lastResult(view, "propose_form") as Out).filter(Boolean).at(-1)?.card?.reads_back ?? [];
+      expect(readBack.some((line) => /^\*\*Reason for Resignation:\*\* .*second job/i.test(line)), `the reason never reached the card's saved lines:\n${readBack.join("\n")}`).toBe(true);
       expect(reply.content).toMatch(/\*\*Reason for Resignation:\*\* /);
     },
   },
