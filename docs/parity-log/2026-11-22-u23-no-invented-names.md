@@ -20,3 +20,8 @@ re-taking for the changed lines.
 - Create (`draft/route.ts`): a card made by the preferred name finds its person by that name too; the directory's legal
   name, and alone the legal first name when no other staff member has it, become the card's name in the drafted prose.
   Ask Sunny: same spelling step (`rosterSpellingOf` by the legal display name only); port held with the rest.
+- `tools.ts` (QA's follow-up): legal_name_in_woven is given once per person per chat (only when the chat's card records
+  have no earlier card for this person), so the reply says the Woven legal name once, not on every card turn.
+
+Not in this PR (noted for QA): the saved Observation put "I could tell the customer was very uncomfortable." first, in the
+Create drafter's order. That is the drafter's ordering (stubbed in the harness), not touched by these changes.

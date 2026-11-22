@@ -5044,7 +5044,11 @@ export async function proposeForm(
      * legal name in Woven: …)", then "Margo note: …"), copied from the rules book's own example. The line is written here,
      * from the directory's own names only: the card's name and the legal name the staff list holds.
      */
-    ...(employee.id && read.kind === "read" && (() => {
+    /*
+     * QA (22 Nov 2026, U23 follow-up): the line was said on every card turn. Once per person per chat: only when this chat
+     * has no earlier card for this person (its card records, never the replies' words).
+     */
+    ...(employee.id && read.kind === "read" && !(context.cardRecords ?? []).some((record) => record.employeeKey === personKey(employee.id!)) && (() => {
       const row = read.roster.find((candidate) => candidate.id === employee.id);
       return row && displayName(row) !== employee.name;
     })() ? (() => {

@@ -56,7 +56,7 @@ function liveLikeStandIn() {
 export const NOV22_AGENT_LOOP_U23_TAMSIN_CHAT_CASES: ReplayCase[] = [
   {
     id: "nov22-u23-tamsin-chat-no-invented-names",
-    title: "U23 verbatim (T1–T7, \"Tamsin Brookfield\", Woven legal first name Odessa): every reply names the person only by a name the directory holds; \"what they would do if they had 8 arms\" keeps \"they\" through T6; the saved Observation says Tamsin, never Odessa",
+    title: "U23 verbatim (T1–T7, \"Tamsin Brookfield\", Woven legal first name Odessa): every reply names the person only by a name the directory holds, and says the Woven legal name once; \"what they would do if they had 8 arms\" keeps \"they\" through T6; the saved Observation says Tamsin, never Odessa",
     report: U23_REPORT,
     status: "fixed",
     async run(t) {
@@ -72,6 +72,8 @@ export const NOV22_AGENT_LOOP_U23_TAMSIN_CHAT_CASES: ReplayCase[] = [
       const named = [...all.matchAll(/\b(\p{Lu}\p{Ll}+)\s+Brookfield\b|\((\p{Lu}\p{Ll}+)\s+(?:—|-|in\b)|\b(\p{Lu}\p{Ll}+)\s+note\b/gu)].map((match) => match[1] ?? match[2] ?? match[3]!);
       for (const name of named) expect(OWN_WORDS.has(name) ? name : `${name} (invented)`, `a name the directory does not hold:\n${all}`).toBe(name);
       expect(all, `a name from the old rules-book example:\n${all}`).not.toMatch(/Margo|Marguerite/);
+      /* QA (22 Nov 2026, U23 follow-up): the Woven legal-name line is said once per person per chat, not on every card turn. */
+      expect(all.match(/\(Odessa Brookfield in Woven\)/g)?.length ?? 0, `the legal-name line is not said exactly once:\n${all}`).toBe(1);
       /* T5/T6: another employee's "they" is never the card's person. */
       expect(all, `"they" (another employee) became the card's person:\n${all}`).not.toMatch(/what Tamsin would do|if Tamsin had 8 arms/);
       const issue = String((thread.proposal as { issue?: string } | null)?.issue ?? "");
