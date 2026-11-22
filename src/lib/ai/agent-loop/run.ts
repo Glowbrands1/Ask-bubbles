@@ -524,6 +524,18 @@ function buildAgentLoopTools(config: AppConfig, planSteps = false) {
           items: evidence("An earlier manager message of this same request (for this person) that named them differently: their words."),
           description: "Earlier messages of this request the name lookup missed (the manager typed the name differently there, and this message gives it).",
         },
+        same_card_evidence: {
+          ...evidence("Only when this message asks for the card on screen (or this chat's latest card of this form) for THIS person instead of, or as well as, the person it was for (\"make this for <B> instead of <A>\", \"the same corrective action but for <B>\"): its words. Give what_happened too: that card's account as the chat shows it, with this person's name. kind \"same_form\" when the manager asks for the SAME form (\"the same corrective action but for <B>\"): its level and payroll answer are copied too; else kind \"this_card_for\" (\"make this for <B> instead of <A>\")."),
+          properties: {
+            ...evidence("").properties,
+            kind: {
+              type: "string",
+              enum: ["same_form", "this_card_for"],
+              description: "same_form: the manager asks for the SAME form for this person (its level and payroll answer are copied too). this_card_for: the card on screen made for this person instead (\"make this for <B> instead of <A>\"); nothing but the account carries.",
+            },
+          },
+          required: ["message_id", "quote", "kind"],
+        },
         new_form_evidence: evidence("Only when this message asks for another or a new form (a second form for the person on the open draft, or a new request after an earlier card): its words."),
         form_change_evidence: evidence("Only when this message asks for the card on screen to be a different form for the same incident (\"make it a CA instead\", or the manager's yes to your offer of the other form): its words."),
         policy: { type: "string", description: "Always on a Corrective Action, Coaching or Follow-Up Coaching card (Pau, 17 Nov 2026), the heading that fits THIS card's own account, never one copied from another form's card. The one JBA Policy Manual heading that fits what happened, exactly. \"Other — <short topic>\" only for " + (content.otherTopics ? content.otherTopics + ", or " : "") + "an incident no section covers; or both, \"<heading>; Other — <topic>\" (an Other topic beside another offense), as the rules book says." },
@@ -539,6 +551,8 @@ function buildAgentLoopTools(config: AppConfig, planSteps = false) {
         exit_type: { type: "string", enum: ["resignation", "termination"], description: "Employee Exit Form only: which the rules book's Exit lines say this exit is." },
         exit_how: { type: "string", enum: ["immediate_voluntary_resignation", "notice_not_fulfilled", "no_call_no_show"], description: "Employee Exit Form resignation only: how the person left, when the manager said it (immediate_voluntary_resignation: left by choice with no notice, as \"immediate voluntary termination\", \"quit on the spot\"; notice_not_fulfilled: gave notice but did not work it; no_call_no_show). With exit_how_evidence. Never for a termination." },
         exit_how_evidence: evidence("With exit_how: the manager message of this request and its words that say how the person left."),
+        new_store: { type: "string", description: "Position Transfer Form only: the " + place + " the person is moving to, as the manager named it (their words, e.g. a nickname or Woven's name for it). Never in store, which is where the person works now. With new_store_evidence." },
+        new_store_evidence: evidence("With new_store: the manager message of this request and its words that name where the person is moving."),
         exit_method: { type: "string", enum: [...EXIT_METHOD_LABELS], description: "Employee Exit Form resignation only: how the person told the company they were leaving (How Employee Resigned), when the manager said it. The person's own way of resigning, never how the manager or anyone else reached them (a voicemail left FOR the person is not how they resigned). With exit_method_evidence. Never for a termination." },
         exit_method_evidence: evidence("With exit_method: the manager message of this request and its words that say how the person resigned (e.g. \"returned the call and told me she quit\")."),
         effective_date: { type: "string", description: "Employee Exit Form termination only: the effective or termination date as the manager typed it (e.g. 11/28)." },

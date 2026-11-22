@@ -134,6 +134,8 @@ export interface ReplayContext {
   loopModel?(standIn: import("./loop-stand-in").LoopStandIn): void;
   /** Fault injection: from now on, the loop's roster read (find_staff) fails, as a directory outage would. */
   rosterFails?(): void;
+  /** Woven's own name for a registered store, by store id (`woven_location_map`), this case only (U54, 22 Nov 2026). */
+  wovenStoreNames?(names: Readonly<Record<string, string>>): void;
   /** Watches the loop's entry point (`runAgentTurn`): how many turns entered it since, and `stop` to unwatch. */
   watchLoopEntries?(): { entered(): number; stop(): void };
 }

@@ -2746,7 +2746,12 @@ async function personNotNamed(context: ToolContext, template: { key: string; nam
  * and it asks a missing last day worked, as before. Never a date or a reason the manager did not give.
  */
 async function exitCardTicks(isExit: boolean, termination: boolean, requestWords: string, today: string, exitHow: string | null = null): Promise<{ exit_ticks?: string[]; exit_unset?: string[] }> {
-  if (!isExit) return {};
+  /*
+   * Ported from the sibling app: its QA's live L6 (22 Nov 2026): a termination's reply said "Filed as" twice:
+   * exit_termination already gives its tick (Immediate involuntary separation) with the rules book's line for it, and
+   * exit_ticks gave the same tick again with its own "Filed as:" line. A termination's tick is given once, by exit_termination.
+   */
+  if (!isExit || termination) return {};
   const [{ readExitFacts, exitFactValues }, library] = await Promise.all([import("@/lib/forms/exit-facts"), import("@/lib/forms/exit-library")]);
   const facts = readExitFacts(requestWords, today);
   const labels: Record<string, string> = {
@@ -3197,6 +3202,7 @@ export async function proposeForm(
     person_evidence?: unknown;
     exit_evidence?: unknown;
     new_form_evidence?: unknown;
+    same_card_evidence?: unknown;
     form_change_evidence?: unknown;
     request_evidence?: unknown;
     policy?: unknown;
@@ -3206,6 +3212,8 @@ export async function proposeForm(
     exit_type?: unknown;
     exit_how?: unknown;
     exit_how_evidence?: unknown;
+    new_store?: unknown;
+    new_store_evidence?: unknown;
     exit_method?: unknown;
     exit_method_evidence?: unknown;
     effective_date?: unknown;
@@ -3430,7 +3438,12 @@ export async function proposeForm(
    * over this message) are gone. A new form while a draft is open, or a new request after an earlier card, is the
    * model's new_form_evidence: this message's words asking for another or a new form.
    */
-  const asksNewForm = verifyEvidence(input.new_form_evidence, identifiedTurns(context.history as ChatMessage[], context.question, context.questionMessageId), { thisTurnOnly: true }).ok;
+  /*
+   * U21 (QA's Bubbles round 2, 22 Nov 2026): "make this for <B> instead of <A>" is the manager asking for the card on
+   * screen for <B> (same_card_evidence, this message's words), a form for <B> as much as "another form for <B>" is.
+   */
+  const sameCardAsked = verifyEvidence(input.same_card_evidence, identifiedTurns(context.history as ChatMessage[], context.question, context.questionMessageId), { thisTurnOnly: true }).ok;
+  const asksNewForm = verifyEvidence(input.new_form_evidence, identifiedTurns(context.history as ChatMessage[], context.question, context.questionMessageId), { thisTurnOnly: true }).ok || sameCardAsked;
   /*
    * CARD_PERSON_THIS_REQUEST_ENABLED (QA2's 17 Nov case, this app's old path, conv_mwk2t40v27izanu: a store manager named
    * in the account, "<Y>, messaged <X> asking …", took the exit form from <X>, whose request set it). With a card on
@@ -3540,6 +3553,31 @@ export async function proposeForm(
    * add any details before you press Create."). A sentence of the account (or the prior actions) whose second-person words
    * the manager never typed is taken out (`withoutTextToManager`, read against the manager's own messages).
    */
+  /*
+   * U21 (QA's Bubbles round 2, 22 Nov 2026): T10 "make this for <B> instead of <A>" got "What happened?": the account on
+   * screen was dropped. With same_card_evidence, this chat's latest card of this form for another person (the server's
+   * record: its form and person keys, never its text, QA's c163) is the card asked for. With no account from the model the
+   * card goes back once, to be proposed with that card's account as the chat shows it, with this person's name;
+   * copied_from_card says it came from that card. A level and a payroll answer are never copied.
+   */
+  const sameCardOf = sameCardAsked
+    ? ([...(context.cardRecords ?? [])].reverse().find((record) => record.templateKey === key) ?? null)
+    : null;
+  const sameCardOther = Boolean(sameCardOf && (employee.id ? sameCardOf.employeeKey !== personKey(employee.id) : sameCardOf.nameKey !== personKey(employee.name)));
+  if (sameCardOther && !(typeof input.what_happened === "string" && input.what_happened.trim())) {
+    return {
+      reason_code: "same_card_account_missing",
+      error: `The manager asked for the ${template.name} on screen for ${employee.name}. Propose ${employee.name}'s card again now with what_happened: that card's account exactly as this chat shows it (the Observation of the earlier card), with ${employee.name}'s name in place of the earlier person's, and same_card_evidence again. Never ask what happened; never copy a level or a payroll answer.`,
+    };
+  }
+  const copiedFromCard = sameCardOther;
+  /*
+   * QA's ruling (22 Nov 2026, U21): "make the SAME corrective action but for <B>" is the manager's explicit ask, so the
+   * earlier card's level and payroll answer (its server record) are copied too, shown on <B>'s card, and the reply says
+   * they were copied. Without it ("make this for <B> instead of <A>") another person starts clean. The model says which
+   * (same_card_evidence kind "same_form"); no word list.
+   */
+  const sameFormAsked = sameCardOther && (input.same_card_evidence as { kind?: unknown } | null | undefined)?.kind === "same_form";
   const managerText = [...(context.history as ChatMessage[]).filter((turn) => turn.role === "user").map((turn) => String(turn.content ?? "")), context.question].join("\n");
   const accountRead = withoutTextToManager(typeof input.what_happened === "string" ? input.what_happened : "", managerText);
   const priorRead = withoutTextToManager(typeof input.prior_actions === "string" ? input.prior_actions : "", managerText);
@@ -3766,6 +3804,15 @@ export async function proposeForm(
    * gave, the Employee Exit Form's too. Code compares formats only (`accountMissing`); the model writes the account.
    */
   const exitForm = template.key === appConfig().formKeys.exit;
+  /*
+   * Ported from the sibling app: its QA's live L6 (22 Nov 2026): "…, terminated for job abandonment, not eligible for rehire" got the account "job abandonment"
+   * from the model, so the card and the saved reason lost "terminated for". An exit account that is part of one clause the
+   * manager typed in this request is that whole clause, as typed (`own-clause.ts`; never a list of words).
+   */
+  if (exitForm && whatHappened) {
+    const own = (await import("@/lib/forms/own-clause")).ownClauseHolding(whatHappened, requestWords);
+    if (own) whatHappened = own;
+  }
   if (exitForm && whatHappened) accountLost = accountMissing(withoutPayrollClauses(requestWords), whatHappened, null);
   if (whatHappened && ACCOUNT_FORMS.has(template.key)) {
     /* A message that is only a level or payroll answer (the model's evidence quotes the whole message) is not the incident's account. */
@@ -4170,7 +4217,8 @@ export async function proposeForm(
   const screenDate = sameCardOnScreen(context.cardOnScreen, template.key, employee) ? context.cardOnScreen!.incidentDate ?? null : null;
   const sameIncidentAskedAgain = asksNewForm && screenDate !== null && latestDates.some((given) => monthDayToIso(given, today) === screenDate);
   const carriedLevel = caOnlyFields && (!asksNewForm || sameIncidentAskedAgain) ? (carriedRecord?.level ?? null) : null;
-  const level = askedLevel && levelCheck?.ok ? askedLevel : carriedLevel;
+  const copiedLevel = !(askedLevel && levelCheck?.ok) && !carriedLevel && sameFormAsked && caOnlyFields ? (sameCardOf?.level ?? null) : null;
+  const level = askedLevel && levelCheck?.ok ? askedLevel : (carriedLevel ?? copiedLevel);
   /*
    * Fix batch item 7 (QA's targeted re-run, c163: a bare "yes" after "Payroll deduct and warning level aren't set" set
    * payroll). The card on screen asked two things in one line (its record's `asked`), and this message is one word, quoted
@@ -4220,6 +4268,11 @@ export async function proposeForm(
   if (payroll === null && !answerUnclear && payrollRecord?.payroll) {
     payroll = payrollRecord.payroll;
     if (payroll === "yes" && !amount && payrollRecord.payrollAmount) amount = payrollRecord.payrollAmount;
+  }
+  let copiedPayroll: "yes" | "no" | null = null;
+  if (payroll === null && !answerUnclear && sameFormAsked && payrollFields && sameCardOf?.payroll) {
+    payroll = copiedPayroll = sameCardOf.payroll;
+    if (payroll === "yes" && !amount && sameCardOf.payrollAmount) amount = sameCardOf.payrollAmount;
   }
   /* One question for a one-word answer to two (`answerUnclear`): which it answers, and for payroll the amount. */
   const payrollQuestion = `Which does that answer: payroll deduct, the warning level, or both? If payroll deduct applies for **${employee.name}**, how much?`;
@@ -4489,6 +4542,31 @@ export async function proposeForm(
     ? { option: input.exit_how, quote: exitHowQuote.slice(0, 300) }
     : null;
   /*
+   * U54 (QA's Bubbles round 2, 22 Nov 2026): "<P> … wants to transfer to dawley effective 11-2-26" saved no New Location.
+   * Where the person is moving is the model's reading (new_store), kept on the manager's words for it from this request
+   * (new_store_evidence), and read through the Woven-aware store index (`transfer-new-store.ts`). Exactly one store, or
+   * the card asks which (new_store_not_found); never a guess.
+   */
+  const transferCard = (await import("@/lib/forms/employment-change")).employmentChangeKind(template.key) === "transfer";
+  const newStoreSaid = transferCard && typeof input.new_store === "string" ? input.new_store.trim().slice(0, 80) : "";
+  const newStoreQuote = typeof (input.new_store_evidence as { quote?: unknown } | null | undefined)?.quote === "string" ? String((input.new_store_evidence as { quote: string }).quote).trim().slice(0, 300) : "";
+  const newStoreKept = newStoreSaid !== "" && newStoreQuote !== "" && newStoreQuote.toLowerCase().includes(newStoreSaid.toLowerCase()) && answerEvidence(context, input.new_store_evidence, "request", evidencePerson, { requestTurnIds }).ok;
+  const newStore = newStoreKept
+    ? await (async () => {
+        const [{ transferNewStoreName }, { loadStoreIndex }] = await Promise.all([import("@/lib/forms/transfer-new-store"), import("@/lib/stores/woven-aliases")]);
+        const name = transferNewStoreName(newStoreSaid, await loadStoreIndex());
+        return name ? { name, said: newStoreSaid, quote: newStoreQuote } : null;
+      })()
+    : null;
+  const newStoreNotRead = transferCard && newStoreSaid !== "" && !newStore
+    ? {
+        typed: newStoreSaid,
+        ask_exactly: newStoreKept
+          ? `"${newStoreSaid}" isn't a ${locationWord()} name I know. Which ${locationWord()} is ${employee.name ? employee.name.split(/\s+/)[0] : "this person"} moving to?`
+          : `Which ${locationWord()} is ${employee.name ? employee.name.split(/\s+/)[0] : "this person"} moving to?`,
+      }
+    : null;
+  /*
    * U26 (QA's Bubbles round 2, 22 Nov 2026): "<GM> … left a voicemail for <P> … <P> returned the call and told <AGM> … she
    * quit effective immediately" saved How Employee Resigned "Voicemail". How the person resigned is the model's reading
    * (exit_method, one of the line's own methods), kept when the manager's quoted words of this request name it
@@ -4570,6 +4648,7 @@ export async function proposeForm(
     ...(payroll ? { payrollDeduct: payroll } : {}),
     ...(payroll === "yes" && amount ? { payrollDeductAmount: amount } : {}),
     ...(exitHow ? { exitHow: exitHow.option, exitHowQuote: exitHow.quote } : {}),
+    ...(newStore ? { newStore: newStore.name, newStoreSaid: newStore.said, newStoreQuote: newStore.quote } : {}),
     ...(exitMethod ? { exitMethod: exitMethod.label, exitMethodQuote: exitMethod.quote } : {}),
     ...(priorActions ? { priorActions } : {}),
     ...(coachingTopic ? { coachingTopic } : {}),
@@ -4908,6 +4987,18 @@ export async function proposeForm(
     })()),
     ...(salonFromWoven ? { store_from_woven: salonFromWoven } : {}),
     ...(noStoreStated && !card.locationId ? { no_store: { say_exactly: `Filed with no ${locationWord()}, as you said.` } } : {}),
+    /* U21: the account was copied from <A>'s card; a level and payroll answer are the manager's to state for this person. */
+    ...(copiedFromCard
+      ? {
+          copied_from_card: copiedLevel || copiedPayroll
+            ? {
+                copied: [copiedLevel ? `${copiedLevel === "verbal" ? "Verbal" : "Written"} Warning` : null, copiedPayroll ? `payroll ${copiedPayroll === "yes" ? "Yes" : "No"}` : null].filter(Boolean).join(" and "),
+                say: `Say once: "Copied <copied> from <the earlier card's person's first name>'s card; tell me if ${employee.name.split(/\s+/)[0]}'s are different."`,
+              }
+            : { say_exactly: `Same account as the earlier card, with ${employee.name.split(/\s+/)[0]}'s name.`, not_copied: "level and payroll: the manager states them for this person" },
+        }
+      : {}),
+    ...(newStoreNotRead ? { new_store_not_found: newStoreNotRead } : {}),
     ...(storeNotRead ? { typed_store_not_found: storeOffer(typedSalon, replyNameFor(card.employeeName ?? employee.name, read.kind === "read" ? read.roster : [], extractEmployeeNames(managerTurns(context)), employee.id ?? null), wovenStores, managerSalonIds, storeSaidBefore(context, typedSalon)) } : {}),
     /* QA's live-app item 8: the card uses Woven's title; the manager called them something else ("<title>"). */
     ...(() => {
@@ -4993,6 +5084,7 @@ export async function proposeForm(
           ? { payroll_deduct: payroll }
           : {}),
       incident_time: card.incidentTime ?? null,
+      ...(transferCard ? { new_store: card.newStore ?? null } : {}),
       ...(template.key === appConfig().formKeys.exit ? { how_resigned: card.exitMethod ?? null } : {}),
       prior_actions: priorActions,
       policy: policyLine,
