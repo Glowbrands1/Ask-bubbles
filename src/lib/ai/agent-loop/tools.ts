@@ -2051,6 +2051,17 @@ export function incidentDates(managerWords: string, priorActions: string | null)
  * Null when this is not a correction of the card's name (every other path is unchanged).
  */
 /**
+ * QA's Bubbles re-run (22 Nov 2026, C3): "create a CA form for <Last>, <First> at dodge. she was late on 10-16" (a name
+ * not on the staff list) was kept as "<Last>, <First>": the reply's bold broke ("**<Last>,**."), the Observation said the
+ * lateness twice and the Expectation used the surname as the first name. A name written as two single words around one
+ * comma is, by its own shape, "Last, First": it is read as "First Last". Any other shape is kept as typed.
+ */
+export function lastCommaFirst(name: string): string {
+  const parts = /^([\p{L}][\p{L}'-]*)\s*,\s*([\p{L}][\p{L}'-]*)$/u.exec(name.trim());
+  return parts ? `${parts[2]} ${parts[1]}` : name;
+}
+
+/**
  * Whether a typed full name is a close spelling of a person's: its first name within a few letters of one of their first
  * names, and its last name within a few letters of their last name (at most two letters, and at most a third of the
  * longer name). Both must hold, so a shared first name alone ("Avery" for another Avery) is never a correction.
@@ -3252,14 +3263,15 @@ export async function proposeForm(
       };
     }
   } else {
-    const typedName = typeof input.employee_name === "string" ? tidyTypedName(input.employee_name) : "";
+    const typedName = typeof input.employee_name === "string" ? lastCommaFirst(tidyTypedName(input.employee_name)) : "";
     if (!typedName && !effects.staffLookedUp) return askWhoFor(context, template, effects);
     if (!typedName) return { reason_code: "missing_input", error: "Give the employee's name as the manager typed it." };
     employee = { name: typedName, salonIds: [] };
   }
   /* QA (train 5): a name taken as typed is shown in title case when typed all lowercase (`shownAsTyped`). */
   if (offRosterName) {
-    offRosterName = shownAsTyped(offRosterName);
+    /* C3: every check above reads the name as typed; the card's name reads "<Last>, <First>" as "<First> <Last>". */
+    offRosterName = shownAsTyped(lastCommaFirst(offRosterName));
     employee = { ...employee, name: offRosterName };
   }
   /*
