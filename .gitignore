@@ -71,3 +71,7 @@ support/variation-report/out/
 
 # npm run eval output (results of the last local run)
 evals/results/
+
+# Python bytecode (scripts/agent-loop-live): built by running the scripts, never committed
+__pycache__/
+*.pyc

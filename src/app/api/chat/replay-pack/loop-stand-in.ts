@@ -46,6 +46,12 @@ export interface LoopStandIn {
   /** Batch J8: each call's provider options (thinking, effort), to see a hand-back asks as the turn's first call did. */
   readonly providerOptions: unknown[];
   calls: number;
+  /**
+   * Set when the real model plays in its place (AGENT_LOOP_LIVE, `liveRecording`). A check of the stand-in's own path (a
+   * hand-back it was written to trigger, a reason_code its input earns) holds only when this is false; what the manager
+   * sees and what is saved is checked either way (QA's live regression triage, 22 Nov 2026).
+   */
+  live: boolean;
 }
 
 type Part = { type?: string; text?: string; toolName?: string; toolCallId?: string; output?: { type?: string; value?: unknown } };
@@ -133,6 +139,7 @@ export function loopStandIn(decide: (view: LoopView) => LoopDecision | Promise<L
     prompts: [],
     providerOptions: [],
     calls: 0,
+    live: false,
     model: {
       specificationVersion: "v3",
       provider: "stand-in",
@@ -208,6 +215,7 @@ export function headingWith(view: LoopView, word: RegExp): string | null {
  * stand-in, wrapped so a case still sees what it was shown (`views`, `calls`). Needs ANTHROPIC_API_KEY; never runs in CI.
  */
 export function liveRecording(standIn: LoopStandIn, real: unknown): unknown {
+  standIn.live = true;
   const model = real as { doStream: (options: { prompt: Message[] }) => Promise<unknown>; doGenerate: (options: { prompt: Message[] }) => Promise<unknown> };
   const record = (options: { prompt: Message[] }) => {
     standIn.calls += 1;
