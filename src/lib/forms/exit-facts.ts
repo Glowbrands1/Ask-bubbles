@@ -6,7 +6,9 @@ import {
   EXIT_NOTICE_GROUP,
   EXIT_OPTION,
   EXIT_TYPE_GROUP,
+  EXIT_TYPE_OPTIONS,
 } from "./exit-library";
+import { quoteNamesOption } from "./option-label";
 import { datesInText } from "./form-date-answer";
 import { mostRecent } from "./late-open";
 import { AGO, agoDate, TOMORROW_WORD, YESTERDAY_WORD } from "./relative-date";
@@ -679,6 +681,28 @@ export function installEarlierManagerTurns(read: () => readonly string[] | undef
   readEarlierManagerTurns = read;
 }
 
+/*
+ * QA's live round-2 re-run (22 Nov 2026, U24): "… 00000. Immediate Vol Resignation. Resignation Date 11-11-26. … On
+ * 11-11-26 Linnea was a no call no show for her shift …" saved No Call No Show: the story's event was read as the type,
+ * and the type the manager stated was not read at all ("Vol"). A sentence that is only a type box's own label, as the
+ * form words it (`quoteNamesOption`: shortened, any case, a close spelling), is the manager stating that box, like a
+ * labelled line; when exactly one box is stated that way it is the type, over any reading of the story. The form's own
+ * labels, never a list of phrasings. Never the involuntary box: only a stated termination ticks it.
+ */
+function statedTypeOption(rawText: string): string[] | null {
+  const letters = (text: string) => text.toLowerCase().match(/[a-z]+/g) ?? [];
+  const boxes = EXIT_TYPE_OPTIONS.filter((option) => option.key !== EXIT_OPTION.immediateInvoluntary);
+  const stated = new Set<string>();
+  for (const sentence of rawText.split(/[.!?;\n]+/)) {
+    const said = letters(sentence);
+    if (said.length === 0) continue;
+    for (const box of boxes) {
+      if (said.length <= letters(box.label).length && quoteNamesOption(sentence, box.label)) stated.add(box.key);
+    }
+  }
+  return stated.size === 1 ? [...stated] : null;
+}
+
 export function readExitFacts(rawText: string, today: string): ExitFacts {
   const text = normalize(rawText);
   const ambiguities: ExitAmbiguity[] = [];
@@ -857,7 +881,7 @@ export function readExitFacts(rawText: string, today: string): ExitFacts {
     noticeFulfilled,
     resignationDate,
     noticeOptions: fulfilled ? [EXIT_OPTION.submittedFulfilledNotice] : [],
-    typeOptions: [
+    typeOptions: statedTypeOption(rawText) ?? [
       ...(voluntary ? [EXIT_OPTION.immediateVoluntary] : []),
       ...(involuntary ? [EXIT_OPTION.immediateInvoluntary] : []),
       ...(notFulfilled ? [EXIT_OPTION.noticeNotFulfilled] : []),
