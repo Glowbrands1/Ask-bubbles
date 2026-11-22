@@ -5264,6 +5264,14 @@ function isShownCardId(context: ToolContext, effects: ToolEffects, id: string): 
  */
 const teamStoreQuestion = () => `Which ${locationWord()} is this for?`;
 const TEAM_STORE_NOTE = "The card has no store yet. End your reply with store_question, exactly. Never name, guess or narrow the stores from a word the manager did not give as a store (an abbreviation, a program, a product); the card's own store list shows them all.";
+/*
+ * QA's Bubbles live re-run 2 (22 Nov 2026, A8; QA's ruling): a global login's team card with no store is ready (a global
+ * login may file with none), and its result carried no store question, so the model wrote its own and narrowed it by
+ * "SFS". Any team card that holds no store carries store_question and store_note, from all the manager's stores.
+ */
+const teamStoreAsked = (card: ChatFormProposal) => card.status === "needs_location" || !card.locationId;
+const teamStoreChoices = (card: ChatFormProposal) =>
+  (card.authorizedLocationIds && card.authorizedLocationIds.length > 0 ? card.authorizedLocationIds : appConfig().locations().map((salon) => salon.id)).map((id) => ({ id, name: salonLabel(id) }));
 
 export async function coachTeam(context: ToolContext, effects: ToolEffects, input: { team_evidence?: unknown } = {}): Promise<ToolResult> {
   if (context.openFormId) {
@@ -5320,7 +5328,7 @@ export async function coachTeam(context: ToolContext, effects: ToolEffects, inpu
       status: card.status,
       ready: card.status === "ready",
       store: card.locationId ? salonLabel(card.locationId) : null,
-      ...(card.status === "needs_location" ? { choose_store_from: (card.authorizedLocationIds ?? []).map((id) => ({ id, name: salonLabel(id) })), store_question: teamStoreQuestion(), store_note: TEAM_STORE_NOTE } : {}),
+      ...(teamStoreAsked(card) ? { choose_store_from: teamStoreChoices(card), store_question: teamStoreQuestion(), store_note: TEAM_STORE_NOTE } : {}),
       form_date: card.formDate ?? null,
       observation: card.issue ?? null,
       create_offered: card.supportsInlineDraft,
@@ -5397,7 +5405,7 @@ async function updateTeamCard(context: ToolContext, effects: ToolEffects, before
       status: card.status,
       ready: card.status === "ready",
       store: card.locationId ? salonLabel(card.locationId) : null,
-      ...(card.status === "needs_location" ? { choose_store_from: (card.authorizedLocationIds ?? []).map((id) => ({ id, name: salonLabel(id) })), store_question: teamStoreQuestion(), store_note: TEAM_STORE_NOTE } : {}),
+      ...(teamStoreAsked(card) ? { choose_store_from: teamStoreChoices(card), store_question: teamStoreQuestion(), store_note: TEAM_STORE_NOTE } : {}),
       form_date: card.formDate ?? null,
       create_offered: card.supportsInlineDraft,
     },

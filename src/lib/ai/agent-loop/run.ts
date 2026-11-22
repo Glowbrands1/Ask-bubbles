@@ -4,6 +4,7 @@ import { observationDateMismatch, withoutMisdatedRestatements } from "./observat
 import { speaksOfTheManager, withoutManagerReasoning } from "./reasoning-leak";
 import type { WhichFormSlot } from "./which-form";
 import { storesNamedNotSaid, withoutStoreGuess } from "./store-guess";
+import { TEAM_SUBJECT_LABEL } from "@/lib/forms/team-subject";
 import "server-only";
 
 import { withFullOffRosterName, withOneInactiveLine } from "./off-roster-line";
@@ -1398,7 +1399,16 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
          * comes back, the reply asks the store question plainly.
          */
         /* The team card only: a person's card offers that person's own Woven stores (`storeOffer`), which the manager never typed. */
-        if (stoppedAt === "reply" && effects.proposal?.status === "needs_location" && effects.proposal.subject === "team") {
+        /*
+         * QA's Bubbles live re-run 2 (22 Nov 2026, A8): any team card that holds no store, whatever its status. A global
+         * login's team card with no store is ready (a global login may file a form with none), and the check never ran there.
+         * A turn with no tool call ("this is perfect", "make that update" repeated the narrowed question live) reads the team
+         * card shown under the last reply from its card record (no person, the team label, no team store), as tools.ts does.
+         */
+        const teamNoStore = effects.proposal
+          ? effects.proposal.subject === "team" && !effects.proposal.locationId
+          : Boolean(cardOnScreen && cardOnScreen.employeeKey === null && cardOnScreen.nameKey === personKey(TEAM_SUBJECT_LABEL) && !cardOnScreen.teamStoreId);
+        if (stoppedAt === "reply" && teamNoStore) {
           const guessed = (reply: string) => storesNamedNotSaid(reply, [...input.history.filter((turn) => turn.role === "user").map((turn) => String(turn.content ?? "")), input.question], effects.proposal?.locationId ?? null);
           if (guessed(text).length > 0) {
             const again = await handBack(`[app check] Your reply names ${guessed(text).join(", ")}, but the manager named no such ${appConfig().locationWord} and the card has none. Never guess a ${appConfig().locationWord} from another word (an abbreviation, a program, a product). Ask which ${appConfig().locationWord} it is for, plainly. Then write your reply to the manager again.`);
