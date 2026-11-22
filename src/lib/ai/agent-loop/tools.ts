@@ -1014,6 +1014,8 @@ const NOT_ASKED = "Forms on file are looked at only when the manager asks about 
 /** What the turn's tools produced for the reply: the card and the edit, when there were any. */
 export interface ToolEffects {
   proposal: ChatFormProposal | null;
+  /** Pau's round 3 (U35 run a): propose_form already sent back a call that would drop the card on screen's account. */
+  cardAccountAsked?: boolean;
   /**
    * QA (16 Nov 2026, the live re-run of #1067): a question code decided that the reply must end with (find_past_forms'
    * card_on_screen offer). run.ts adds it when the model's reply left it out.
@@ -3973,6 +3975,22 @@ export async function proposeForm(
     return {
       reason_code: "same_card_account_missing",
       error: `The manager asked for the ${template.name} on screen for ${employee.name}. Propose ${employee.name}'s card again now with what_happened: that card's account exactly as this chat shows it (the Observation of the earlier card), with ${employee.name}'s name in place of the earlier person's, and same_card_evidence again. Never ask what happened; never copy a level or a payroll answer.`,
+    };
+  }
+  /*
+   * THE CARD ON SCREEN KEEPS ITS ACCOUNT (Pau's round 3, 22 Nov 2026, U35 run a): T11 "Create a Corrective Action Form
+   * from this conversation." re-proposed this person's card on screen with no what_happened; the account is read from the
+   * request's own words, which hold none, so the Observation the card showed at T10 was wiped and the reply asked what
+   * happened again. The model's history shows a card reply only as "[card shown …]", so it is told here: with this
+   * person's card of this form on screen, made with an account (its record's account key), a call with no account goes
+   * back once, to pass the manager's account from the earlier turns. A card never given an account is made as before.
+   */
+  const hasAccount = typeof input.what_happened === "string" && input.what_happened.trim() !== "";
+  if (!hasAccount && !sameCardOther && !effects.cardAccountAsked && Boolean(context.cardOnScreen?.accountKey) && sameCardOnScreen(context.cardOnScreen, key, employee)) {
+    effects.cardAccountAsked = true;
+    return {
+      reason_code: "card_account_missing",
+      error: `${employee.name}'s ${template.name} on screen has an account of what happened, and this call gave none, so the card would lose it. Propose the card again now with what_happened: the manager's account from the earlier turns of this chat, in their words, with anything this message adds. Never ask the manager what happened again.`,
     };
   }
   const copiedFromCard = sameCardOther;
