@@ -1,3 +1,4 @@
+import { EXIT_METHOD_LABELS } from "@/lib/forms/exit-details";
 import { observationDateMismatch, withoutMisdatedRestatements } from "./observation-dates";
 import { speaksOfTheManager, withoutManagerReasoning } from "./reasoning-leak";
 import type { WhichFormSlot } from "./which-form";
@@ -532,7 +533,7 @@ function buildAgentLoopTools(config: AppConfig, planSteps = false) {
             "This incident's account in the manager's own words, all of it, with work areas and names kept as typed. Spelling, spacing and capitals cleaned, but never change a name, date, number, amount or quoted word. Every date, time and amount the manager gave stays in it as typed (\"on 11/10\"), even when the date also goes in incident_date. No instructions (\"create a CA\", \"make it about\", \"the policy is\"), no level or payroll words, nothing invented. Leave out when the manager has not said what happened.",
         },
         incident_date: { type: "string", description: "YYYY-MM-DD, the " + place + "'s local date." },
-        level_evidence: evidence("With warning_level verbal or written: the manager message and the words from it that state this form's level, from the message being answered or the one before it. \"She was written up before\" is not this form's level."),
+        level_evidence: evidence("With warning_level verbal or written: the manager message and the words from it that state this form's level, from the message being answered or the one before it. A request that names the level (\"a verbal CA\", \"create a written\") states it: quote those words. \"She was written up before\" is not this form's level."),
         payroll_evidence: evidence("With payroll_deduct: the manager message and the words from it that answer whether payroll deduct applies: the message being answered, or an answer that came right after your reply showing THIS person's card (never another person's answer)."),
         warning_level: { type: "string", enum: ["verbal", "written", "termination"], description: "Only when the manager stated it for this form. termination: only when the rules book's Termination lines say this form is one." },
         exit_type: { type: "string", enum: ["resignation", "termination"], description: "Employee Exit Form only: which the rules book's Exit lines say this exit is." },
@@ -540,6 +541,8 @@ function buildAgentLoopTools(config: AppConfig, planSteps = false) {
         exit_how_evidence: evidence("With exit_how: the manager message of this request and its words that say how the person left."),
         new_store: { type: "string", description: "Position Transfer Form only: the " + place + " the person is moving to, as the manager named it (their words, e.g. a nickname or Woven's name for it). Never in store, which is where the person works now. With new_store_evidence." },
         new_store_evidence: evidence("With new_store: the manager message of this request and its words that name where the person is moving."),
+        exit_method: { type: "string", enum: [...EXIT_METHOD_LABELS], description: "Employee Exit Form resignation only: how the person told the company they were leaving (How Employee Resigned), when the manager said it. The person's own way of resigning, never how the manager or anyone else reached them (a voicemail left FOR the person is not how they resigned). With exit_method_evidence. Never for a termination." },
+        exit_method_evidence: evidence("With exit_method: the manager message of this request and its words that say how the person resigned (e.g. \"returned the call and told me she quit\")."),
         effective_date: { type: "string", description: "Employee Exit Form termination only: the effective or termination date as the manager typed it (e.g. 11/28)." },
         payroll_deduct: { type: "string", enum: ["yes", "no"], description: "Only when the manager said whether payroll deduct applies." },
         payroll_amount: { type: "string", description: "The deduction amount the manager stated, digits." },
