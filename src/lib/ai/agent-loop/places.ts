@@ -2,6 +2,8 @@ import { authorizedLocationIds } from "@/lib/forms/location-scope";
 import { readLocationMentions, rosterLocationName } from "@/lib/forms/location-mention";
 import { labelledStoreIds } from "@/lib/forms/store-cue";
 import { locationById } from "@/lib/locations";
+import type { StoreIndex } from "@/lib/stores/resolver";
+import { approvedStoreByCode } from "@/config/company/google-reviews";
 import type { AccessScope, Role } from "@/types";
 import { globalStoreAskEnabled } from "@/lib/config/chat-quality-flags";
 
@@ -24,8 +26,8 @@ export interface PlaceMention {
 }
 
 /** The places a manager's words name. */
-export function readSalonMentions(text: string): PlaceMention[] {
-  return readLocationMentions(text).map((mention) => ({ salonIds: mention.locationIds }));
+export function readSalonMentions(text: string, index?: StoreIndex): PlaceMention[] {
+  return (index ? readLocationMentions(text, index) : readLocationMentions(text)).map((mention) => ({ salonIds: mention.locationIds }));
 }
 
 /** A place's display name, by id. */
@@ -69,4 +71,13 @@ export function globalNonAdminNeedsSalon(role: Role | null | undefined, scope: A
 /** Whether the which-place ask for a global login is on (GLOBAL_STORE_ASK_ENABLED). */
 export function globalPlaceAskEnabled(): boolean {
   return globalStoreAskEnabled();
+}
+
+/**
+ * QA's Bubbles re-run (22 Nov 2026, A7): a store's street address, from the app's own store data (the approved Google
+ * store list), so a store offer names something the manager may know the store by. Null when the data has none.
+ */
+export function salonStreet(id: string): string | null {
+  const code = locationById(id)?.code;
+  return code ? (approvedStoreByCode(code)?.addressLine1 ?? null) : null;
 }
