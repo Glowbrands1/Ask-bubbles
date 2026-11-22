@@ -4959,12 +4959,19 @@ export async function proposeForm(
     if (filed.locationId === wovenStores[0]) proposal = filed;
   }
   if (!typedSalon && employee.id && proposal.status === "needs_location") {
-    const primary = await rosterPrimarySalon(context.actor.scope, employee.id);
-    if (primary && (proposal.authorizedLocationIds ?? []).includes(primary)) {
-      const filed = buildProposal(proposalInput([primary]));
-      if (filed.locationId === primary) {
+    /*
+     * Board f140 (QA's Bubbles round 2, R01/R19/U05–U07): Woven's primary store alone missed a person the directory
+     * row gives no primary for, and the card asked "Which store?" while Create saved no store. The person's Woven stores
+     * as U29 reads them (`wovenStoresOf`: the primary first, then the roster's stores): exactly one among the choices is
+     * the card's store; several still ask.
+     */
+    const theirs = await wovenStoresOf(context.actor.scope, employee.id, read.kind === "read" ? read.roster : [], proposal.authorizedLocationIds ?? []);
+    const only = theirs.length === 1 ? theirs[0]! : null;
+    if (only) {
+      const filed = buildProposal(proposalInput([only]));
+      if (filed.locationId === only) {
         proposal = filed;
-        salonFromWoven = rosterSalonName(primary) ?? primary;
+        salonFromWoven = rosterSalonName(only) ?? only;
       }
     }
   }
@@ -5065,6 +5072,17 @@ export async function proposeForm(
   const globalAsk = await import("./places");
   if (noStoreStated && !card.locationId) {
     Object.assign(card, { locationId: null, locationResolution: "not_applicable", status: card.status === "needs_location" ? "ready" : card.status });
+  } else if (!card.locationId && card.employeeName && employee.id && context.actor.scope?.level === "global" && !globalAsk.globalNonAdminNeedsSalon(context.actor.role, context.actor.scope)) {
+    /*
+     * Board f140: an admin's card for a person Woven lists at ONE store was filed with no store, and Create saved none.
+     * That one Woven store is the card's store (store_from_woven), as U29 does for a global non-admin; with several or
+     * none the card stays as it was (no new question for an admin).
+     */
+    const theirs = await wovenStoresOf(context.actor.scope, employee.id, read.kind === "read" ? read.roster : [], appConfig().locations().map((salon) => salon.id));
+    if (theirs.length === 1) {
+      Object.assign(card, { locationId: theirs[0], locationName: rosterSalonName(theirs[0]!) ?? card.locationName, locationResolution: "resolved", authorizedLocationIds: [theirs[0]], status: card.status === "needs_location" ? "ready" : card.status });
+      salonFromWoven = rosterSalonName(theirs[0]!) ?? theirs[0]!;
+    }
   } else if (globalAsk.globalPlaceAskEnabled() && globalAsk.globalNonAdminNeedsSalon(context.actor.role, context.actor.scope) && !card.locationId && card.employeeName) {
     const named = globalAsk.salonIdNamedIn(requestWords);
     if (named) {
