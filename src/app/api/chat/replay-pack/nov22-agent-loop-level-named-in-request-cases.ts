@@ -40,7 +40,7 @@ export const NOV22_AGENT_LOOP_LEVEL_NAMED_IN_REQUEST_CASES: ReplayCase[] = [
       const thread = t.thread();
       await thread.say(T1);
       const reply = await thread.say(T2);
-      expect(thread.proposal?.warningLevel, `the card lost the level the request named:\n${reply.content}`).toBe("verbal");
+      expect((thread.proposal as { warningLevel?: string | null } | null)?.warningLevel, `the card lost the level the request named:\n${reply.content}`).toBe("verbal");
       expect(reply.content).not.toMatch(/isn't set/i);
     },
   },
