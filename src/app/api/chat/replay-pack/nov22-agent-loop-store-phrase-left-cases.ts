@@ -63,7 +63,8 @@ export const NOV22_AGENT_LOOP_STORE_PHRASE_LEFT_CASES: ReplayCase[] = [
       const thread = t.thread();
       await thread.say("do verbal for team member Wren Halvorsen at empire, sd. payroll deduct does not apply. previous coaching jba manual 11-1-26. on 10-22-26 Wren Halvorsen was not scheduled to work and came into the store to show her team her new puppy. Wren Halvorsen was in the store 45 min");
       expect(thread.proposal?.locationId, "the case proves nothing: the card is not at the W 41st St store").toBe("loc-225");
-      expect(model.views.some(handedBack), "the store phrase left in the account was never handed back").toBe(true);
+      /* The stand-in puts the phrase in on purpose, so the hand-back is its own path (#1062): checked only when it plays; live, the Observation the manager sees is checked. */
+      if (!model.live) expect(model.views.some(handedBack), "the store phrase left in the account was never handed back").toBe(true);
       expect(issueOf(thread.proposal), "the Observation still names the store").not.toMatch(/empire/i);
     },
   },
@@ -79,7 +80,8 @@ export const NOV22_AGENT_LOOP_STORE_PHRASE_LEFT_CASES: ReplayCase[] = [
       const thread = t.thread();
       await thread.say("ca for Bram Teller at west dodge. on 11/20 he was measuring product wrong for an hour");
       expect(thread.proposal?.locationId, "the case proves nothing: the card is not at the West Dodge store").toBe("loc-264");
-      expect(model.views.some(handedBack), "the store phrase left in the account was never handed back").toBe(true);
+      /* The stand-in puts the phrase in on purpose, so the hand-back is its own path (#1062): checked only when it plays; live, the Observation the manager sees is checked. */
+      if (!model.live) expect(model.views.some(handedBack), "the store phrase left in the account was never handed back").toBe(true);
       expect(issueOf(thread.proposal)).not.toMatch(/dodge/i);
     },
   },
@@ -92,7 +94,8 @@ export const NOV22_AGENT_LOOP_STORE_PHRASE_LEFT_CASES: ReplayCase[] = [
       start(t, ODILE, { level: "location", primaryAreaId: "loc-66", alsoCoversAreaIds: [] });
       const account = "On 11/20 Odile was at kearney high to show the team her puppy.";
       const model = live(ODILE, "kearney", account, account);
-      t.loopModel!(model);
+      /* The control's condition is the stand-in's input (an account that keeps "at kearney high"): it plays in live runs too (#1062). */
+      t.loopModel!(model, { scripted: true });
       const thread = t.thread();
       await thread.say("ca for Odile Varga at kearney. on 11/20 she was at kearney high to show the team her puppy");
       expect(model.views.some(handedBack), "a place the manager also used another way was handed back").toBe(false);

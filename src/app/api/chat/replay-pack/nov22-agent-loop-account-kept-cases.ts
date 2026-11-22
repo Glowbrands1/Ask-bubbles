@@ -63,9 +63,13 @@ const live = (fifth: string) =>
     };
   });
 
-async function chat(t: ReplayContext, fifth: string, t5: string) {
+/**
+ * `scripted`: the case's condition is the stand-in's own input (the T5 rewrite the live model gave), so the stand-in plays
+ * in live runs too (#1062); the control (a change the manager asks for) runs with the live model.
+ */
+async function chat(t: ReplayContext, fifth: string, t5: string, scripted: boolean) {
   start(t);
-  t.loopModel!(live(fifth));
+  t.loopModel!(live(fifth), { scripted });
   const thread = t.thread();
   await thread.say(T1);
   const shown = issueOf(thread.proposal);
@@ -83,7 +87,7 @@ export const NOV22_AGENT_LOOP_ACCOUNT_KEPT_CASES: ReplayCase[] = [
     report: REPORT,
     status: "fixed",
     async run(t) {
-      const { thread, reply, shown } = await chat(t, ROLE_LINE_REWRITE, T5);
+      const { thread, reply, shown } = await chat(t, ROLE_LINE_REWRITE, T5, true);
       expect(issueOf(thread.proposal), `T5 rewrote the Observation:\n${reply.content}`).toBe(shown);
       expect(issueOf(thread.proposal)).not.toMatch(/team member/i);
     },
@@ -94,7 +98,7 @@ export const NOV22_AGENT_LOOP_ACCOUNT_KEPT_CASES: ReplayCase[] = [
     report: REPORT,
     status: "fixed",
     async run(t) {
-      const { thread, reply, shown } = await chat(t, COMMA_REWRITE, T5);
+      const { thread, reply, shown } = await chat(t, COMMA_REWRITE, T5, true);
       expect(issueOf(thread.proposal), `T5 rewrote the Observation:\n${reply.content}`).toBe(shown);
     },
   },
@@ -104,7 +108,7 @@ export const NOV22_AGENT_LOOP_ACCOUNT_KEPT_CASES: ReplayCase[] = [
     report: REPORT,
     status: "fixed",
     async run(t) {
-      const { thread, reply } = await chat(t, CHANGED, T5_CHANGE);
+      const { thread, reply } = await chat(t, CHANGED, T5_CHANGE, false);
       expect(issueOf(thread.proposal), `the manager's change was not taken:\n${reply.content}`).toMatch(/30 min/);
       expect(issueOf(thread.proposal)).not.toMatch(/45 min/);
     },

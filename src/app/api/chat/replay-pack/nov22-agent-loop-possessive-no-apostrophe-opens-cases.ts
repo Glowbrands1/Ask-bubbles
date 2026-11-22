@@ -35,13 +35,14 @@ async function onFile(t: ReplayContext): Promise<string> {
   return id;
 }
 
-async function lookUp(t: ReplayContext, said: string): Promise<Found> {
+/** `scripted`: the stand-in plays in a live run too (a control whose condition is its own input). */
+async function lookUp(t: ReplayContext, said: string, scripted = false): Promise<Found> {
   const model = loopStandIn((view): LoopDecision => {
     const found = lastResult(view, "find_past_forms") as Found | null;
     if (!found) return { tool: "find_past_forms", input: { employee_name: "Wenonah Tindall", form: "ca", open: true, forms_on_file_evidence: evidenceFrom(view, said) } };
     return { text: found.ask_exactly ?? "Opening the form." };
   });
-  t.loopModel!(model);
+  t.loopModel!(model, { scripted });
   await t.thread().say(said);
   return lastResult(model.views.at(-1)!, "find_past_forms") as Found;
 }
@@ -68,7 +69,12 @@ export const NOV22_AGENT_LOOP_POSSESSIVE_NO_APOSTROPHE_OPENS_CASES: ReplayCase[]
     status: "fixed",
     async run(t) {
       await onFile(t);
-      const found = await lookUp(t, "open Thaddeas ca");
+      /*
+       * CHANGED ON PURPOSE (QA's live regression triage, 22 Nov 2026): the condition is the stand-in's input (find_past_forms
+       * for Wenonah Tindall on "open Thaddeas ca"). The real model looks up "Thaddeas" (and is asked "Did you mean Thaddea
+       * Kroll?"), so it never sends the call this control guards; the stand-in plays in live runs too.
+       */
+      const found = await lookUp(t, "open Thaddeas ca", true);
       expect(found.reason_code, JSON.stringify(found)).toBe("privacy_not_this_person");
     },
   },

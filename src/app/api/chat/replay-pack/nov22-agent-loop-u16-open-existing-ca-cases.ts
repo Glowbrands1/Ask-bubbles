@@ -50,6 +50,49 @@ function onFile(t: ReplayContext): void {
   t.checkOnForm!("ca-briony-written", { warning_type: ["written"] });
 }
 
+
+/*
+ * QA's ruling (22 Nov 2026, Bubbles round 3): a copied form keeps the date of the form it copies, unless the manager
+ * states a new one. The copy's account here carries no date of its own, so only the form on file's form_date can give it.
+ */
+const COPY_ACCOUNT = "Briony did not complete the closing cleaning checklist and left the makery counters unwiped.";
+const T2_NEW_DATE = "create a verbal CA for Briony Kask with all the same information given, it happened again on 11/20";
+
+function copyCase(id: string, title: string, second: string, expected: string): ReplayCase {
+  return {
+    id,
+    title,
+    report: "QA's ruling (22 Nov 2026, Bubbles round 3, U16): a copied form keeps the date of the form it copies unless the manager states a new one",
+    status: "fixed",
+    async run(t) {
+      vi.setSystemTime(new Date("2026-11-22T18:00:00Z"));
+      t.directory([...LOOP_STAFF, BRIONY]);
+      t.as("admin", ADMIN);
+      onFile(t);
+      for (const form of ["ca-briony-verbal", "ca-briony-verbal-r1"]) t.typeOnForm(form, { observation: COPY_ACCOUNT });
+      const model = loopStandIn((view): LoopDecision => {
+        const found = lastResult(view, "find_past_forms") as { forms?: { choice?: string }[]; which_form_question?: string } | null;
+        if (users(view) === 1) {
+          if (!found) return { tool: "find_past_forms", input: { employee_name: "Briony Kask", form: "verbal CA", open: true, forms_on_file_evidence: evidenceFrom(view, T1) } };
+          return { text: `${(found.forms ?? []).map((form) => `- ${form.choice}`).join("\n")}\n\n${found.which_form_question ?? ""}` };
+        }
+        const proposed = lastResult(view, "propose_form") as { card?: unknown } | null;
+        if (proposed?.card) return { text: "Here's the Corrective Action Form for **Briony**." };
+        const read = lastResult(view, "read_form");
+        if (!read) return { tool: "read_form", input: { instance_id: "ca-briony-verbal-r1", forms_on_file_evidence: evidenceFrom(view, second) } };
+        /* The stand-in leaves incident_date out, as the live model did. */
+        return { tool: "propose_form", input: { template_key: "dpoa", employee_name: "Briony Kask", person_evidence: evidenceFrom(view, "Briony Kask"), warning_level: "verbal", level_evidence: evidenceFrom(view, "verbal"), what_happened: COPY_ACCOUNT, policy: "Care and Cleaning of Equipment and Facilities" } };
+      });
+      t.loopModel!(model);
+      const thread = t.thread();
+      await thread.say(T1);
+      const copied = await thread.say(second);
+      expect(copied.formProposal?.templateKey, copied.content).toBe("dpoa");
+      expect(copied.formProposal?.formDate ?? null, `the copy's date:\n${copied.content}`).toBe(expected);
+    },
+  };
+}
+
 const users = (view: LoopView) => view.turns.filter((turn) => turn.role === "user").length;
 
 export const NOV22_AGENT_LOOP_U16_OPEN_EXISTING_CA_CASES: ReplayCase[] = [
@@ -88,6 +131,51 @@ export const NOV22_AGENT_LOOP_U16_OPEN_EXISTING_CA_CASES: ReplayCase[] = [
       expect(second.content, `T2 asked what happened instead of copying the form on file:\n${second.content}`).not.toMatch(/what happened\?/i);
       expect(second.formProposal?.templateKey, second.content).toBe("dpoa");
       expect(String((second.formProposal as { issue?: string } | undefined)?.issue ?? ""), second.content).toMatch(/closing cleaning checklist/);
+    },
+  },
+  copyCase(
+    "nov22-r3-u16-copy-keeps-the-copied-forms-date",
+    `U16 (round 3): "${T2}" copies the Verbal Warning of 11/14; the copy's date is that form's date (2026-11-14), never today`,
+    T2,
+    "2026-11-14",
+  ),
+  copyCase(
+    "nov22-r3-u16-control-copy-with-a-new-date-takes-it",
+    `U16 control: "${T2_NEW_DATE}" states a new date; the copy takes 2026-11-20, not the copied form's 11/14`,
+    T2_NEW_DATE,
+    "2026-11-20",
+  ),
+  {
+    id: "nov22-r3-u16-lookup-with-open-never-blocks-the-copy",
+    title: `U16 (round 3, live on main too): "${T2}" after the form was opened; the model looks it up again with open: true, and the copy the manager's words ask for is still made (never "open it with open_form")`,
+    report: "QA's Bubbles live round 3 regression set (22 Nov 2026, U16): T2 looked the form up again with open: true and propose_form refused the copy (open_requested)",
+    status: "fixed",
+    async run(t) {
+      vi.setSystemTime(new Date("2026-11-22T18:00:00Z"));
+      t.directory([...LOOP_STAFF, BRIONY]);
+      t.as("admin", ADMIN);
+      onFile(t);
+      const model = loopStandIn((view): LoopDecision => {
+        const found = lastResult(view, "find_past_forms") as { forms?: { choice?: string }[]; which_form_question?: string } | null;
+        if (users(view) === 1) {
+          if (!found) return { tool: "find_past_forms", input: { employee_name: "Briony Kask", form: "verbal CA", open: true, forms_on_file_evidence: evidenceFrom(view, T1) } };
+          return { text: `${(found.forms ?? []).map((form) => `- ${form.choice}`).join("\n")}\n\n${found.which_form_question ?? ""}` };
+        }
+        const proposed = lastResult(view, "propose_form") as { card?: unknown } | null;
+        if (proposed?.card) return { text: "Here's the Corrective Action Form for **Briony**." };
+        if (proposed) return { text: `Stopped: ${JSON.stringify(proposed)}` };
+        /* T2: look the form up again with open: true (as the live model did), read it, then propose the copy. */
+        const lookups = view.results.filter((result) => result.tool === "find_past_forms").length;
+        if (lookups < 2) return { tool: "find_past_forms", input: { employee_name: "Briony Kask", form: "verbal CA", open: true, forms_on_file_evidence: evidenceFrom(view, T2) } };
+        if (!lastResult(view, "read_form")) return { tool: "read_form", input: { instance_id: "ca-briony-verbal-r1", forms_on_file_evidence: evidenceFrom(view, T2) } };
+        return { tool: "propose_form", input: { template_key: "dpoa", employee_name: "Briony Kask", person_evidence: evidenceFrom(view, "Briony Kask"), new_form_evidence: evidenceFrom(view, "create a verbal CA"), warning_level: "verbal", level_evidence: evidenceFrom(view, "verbal"), what_happened: ACCOUNT, policy: "Care and Cleaning of Equipment and Facilities" } };
+      });
+      t.loopModel!(model);
+      const thread = t.thread();
+      await thread.say(T1);
+      const copied = await thread.say(T2);
+      expect(copied.formProposal?.templateKey, copied.content).toBe("dpoa");
+      expect(copied.content).not.toMatch(/open_requested|open it with open_form/i);
     },
   },
 ];

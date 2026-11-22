@@ -134,8 +134,11 @@ export interface ReplayContext {
   /**
    * The loop's model for this case (`loop-stand-in.ts`), and the loop turned on for this case's signed-in manager only
    * (AGENT_LOOP_ENABLED on, AGENT_LOOP_USERS listing them); both switches are restored after the case.
+   * `scripted` (QA's live regression triage, 22 Nov 2026): the stand-in plays even in a live run (AGENT_LOOP_LIVE), for a
+   * case whose condition is the app's own (a timeout, a stalled model) or a tool input the stand-in sends on purpose (a
+   * control with evidence the manager never wrote): the real model would not produce it, so the case would test nothing.
    */
-  loopModel?(standIn: import("./loop-stand-in").LoopStandIn): void;
+  loopModel?(standIn: import("./loop-stand-in").LoopStandIn, options?: { readonly scripted?: boolean }): void;
   /** Fault injection: from now on, the loop's roster read (find_staff) fails, as a directory outage would. */
   rosterFails?(): void;
   /**
