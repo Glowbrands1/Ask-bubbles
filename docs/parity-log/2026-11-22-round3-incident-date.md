@@ -7,7 +7,8 @@
 - **A1(c).** "late on 10/5 and 10/15" with a prior step on 10/5 read as one date, and a card whose date question was
   still open showed Create.
 - **U16.** "create a verbal CA for <P> with all the same information given" copied the form on file's account, but
-  the card took no date from that form, so Create saved today's.
+  the card took no date from that form, so Create saved today's. Live (on main too), the model often looked the form up
+  again with find_past_forms open: true, and propose_form then refused the copy (`open_requested`), so no card at all.
 
 **Fix (`tools.ts`):**
 
@@ -20,6 +21,10 @@
 - read_form records the form it read (person, form date, account). A card for that person whose account keeps that
   form's account words (4 in 5) takes that form's date, unless the manager's words state any date or the model passed
   one. No word list.
+- The `open_requested` refusal gives way when the manager's own words in this message ask for a new form (verified
+  new_form_evidence); a lookup the model made is not the manager's request. The rules book's copy line says to look the
+  form up without open and to pass new_form_evidence.
 
 **Ask Sunny: same gaps, port pending.** Sunny's main (9de3675) still drops a same-day date (`incidentDates`), has no
-`incident_date_not_passed` hand-back, and its read_form records nothing for a copy. Read-only here; port through QA.
+`incident_date_not_passed` hand-back, its read_form records nothing for a copy, and its `open_requested` refusal
+does not read new_form_evidence. Read-only here; port through QA.

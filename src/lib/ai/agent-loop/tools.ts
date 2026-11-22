@@ -3667,8 +3667,14 @@ export async function proposeForm(
   const second = anotherCard(employee.name);
   if (second) return second;
   /* Batch G (G4; QA's ruling 3): an open request for THIS person's form on file is never a new card for them (code may refuse). */
-  if (effects.openRequested && samePerson(effects.openRequested, employee.name)) {
-    return { error: "The manager asked to open a form on file for this person, not to make one. Open it with open_form.", reason_code: "open_requested" };
+  /*
+   * Round 3 U16 (live, on main too): "create a verbal CA for <P> with all the same information given" after the form was
+   * opened; the model looked the form up again with open: true, and this refusal then blocked the copy the manager asked
+   * for. The manager's own words in this message asking for a new form (verified new_form_evidence) are the request; a
+   * lookup the model made is not.
+   */
+  if (effects.openRequested && samePerson(effects.openRequested, employee.name) && !asksNewForm) {
+    return { error: "The manager asked to open a form on file for this person, not to make one. Open it with open_form. If the manager's latest message asks to create a new form (\"create a … with all the same information\"), propose again with new_form_evidence quoting those words.", reason_code: "open_requested" };
   }
   {
     const onScreenPerson = employee.id && read.kind === "read" ? read.roster.find((row) => row.id === employee.id) : undefined;
