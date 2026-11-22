@@ -5187,17 +5187,18 @@ export async function proposeForm(
   }
   /* U22: read back from the card's final account (shortened names included), so the reply's line matches it. */
   if (card.exitReadBack) card.exitReadBack = (await import("./exit-read-back")).exitReadBack({ dateLines: await exitDateLines(requestWords, today, Boolean(exitTermination)), account: card.issue ?? null, termination: Boolean(exitTermination), detailLines: await exitDetailReadLines(requestWords, today, Boolean(exitTermination), card.exitReason) });
+  effects.proposal = card;
+  effects.proposalEmployeeId = employee.id ?? null;
   /*
    * U24 (QA's flaky check on main f712228, 22 Nov 2026): with the type stated ("Immediate Vol Resignation") the card ticked
    * it, but one live reply read back every reads_back line and never the type (the exit_ticks rule is a separate line the
    * model can skip). The ticks are the card's own facts: their "Filed as" line is one of reads_back, and run.ts adds it
-   * when the reply names none of them. A termination's tick stays with exit_termination's own line, as before.
+   * when the reply names none of them. A termination's tick stays with exit_termination's own line, as before. Only after
+   * effects.proposal is set: an await before it lets a parallel propose_form pass the one-card check too.
    */
   const cardTicks = await exitCardTicks(template.key === appConfig().formKeys.exit, Boolean(exitTermination), requestWords, today, exitHow?.option ?? null);
   effects.exitTicks = cardTicks.exit_ticks ?? [];
   if (card.exitReadBack && cardTicks.exit_ticks?.length) card.exitReadBack = [`Filed as: ${cardTicks.exit_ticks.join(", ")}.`, ...card.exitReadBack];
-  effects.proposal = card;
-  effects.proposalEmployeeId = employee.id ?? null;
   const personId = typeof input.employee_id === "string" ? input.employee_id.trim() : "";
   /*
    * THE CARD'S FACTS (Pau, 14 Nov 2026: "code may refuse or inform, never rewrite"; the code-check audit's batch A).
