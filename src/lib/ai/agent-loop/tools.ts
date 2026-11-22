@@ -4076,7 +4076,7 @@ export async function proposeForm(
    * the earlier Corrective Action's "Standards of Conduct", which the manager never named for the coaching card (the
    * model chose it for the CA). A card other than a Corrective Action cites a manual heading only when the manager named
    * it in this card's request words, or today's topic reader fits it to this card's own account; never one copied from
-   * another form in the chat. Otherwise the heading is left off the card (not_on_card: policy_not_for_this_card).
+   * another form in the chat. Otherwise the heading is left off the card (facts.policy_copied, for the model to fix).
    */
   /*
    * Narrowed (QA, 16 Nov 2026, CI on 65382449: nov16-pr6-one-call-coaching-keeps-its-policy, an earlier ruling): a heading
@@ -4992,7 +4992,7 @@ export async function proposeForm(
      */
     /* Pau, 17 Nov: coaching always has policy and page. The Coaching and Follow-Up Coaching cards get the same fact as a CA. */
     ...(policyForms.has(template.key) && !awaiting && !askedPolicyWhole ? { policy_not_given: { note: "This card has no policy. Propose it again with policy: the one JBA Policy Manual heading that fits what happened (the headings are listed in your instructions). \"Other — <short topic>\" only for " + (otherTopicsSaid() ? otherTopicsSaid() + ", or " : "") + "when no section fits; then say so in your reply." } } : {}),
-    ...(policyNotForThisCard ? { policy_copied: { heading: policyHeading, note: `${policyHeading} is the policy of another form's card in this chat, not chosen for this card. Propose the card again with the heading that fits THIS card's own account (the headings are listed in your instructions), never one copied from another form; "Other — <short topic>" when no section fits.` } } : {}),
+    ...(policyNotForThisCard ? { policy_copied: { heading: policyHeading, note: `${policyHeading} is the policy of another form's card in this chat, not chosen for this card. This is for you to fix, never something to tell the manager: propose the card again with the heading that fits THIS card's own account (the headings are listed in your instructions), never one copied from another form; "Other — <short topic>" when no section fits.` } } : {}),
     ...(accountGiven ? { request_words: untrusted(accountGiven) } : {}),
     /* STATED_PLAN_STEPS_ENABLED: a plan step not kept (see `planSteps`). */
     ...(planStepsDropped ? { plan_steps_not_kept: { kept: planSteps.length, note: "A plan step is kept only when every word of it is the manager's own, quoted in plan_evidence from this request. Pass only the steps they asked for, in their words." } } : {}),
@@ -5107,7 +5107,12 @@ export async function proposeForm(
    */
   const notOnCard: { field: string; reason_code: string }[] = [
     ...(dateFromAnotherRequest && !dateKept ? [{ field: "incident_date", reason_code: "date_from_another_request" }] : []),
-    ...(policyNotForThisCard ? [{ field: "policy", reason_code: "policy_not_for_this_card" }] : []),
+    /*
+     * QA's live re-run on production f9461c1 (22 Nov 2026, A1 notes (b)): a heading copied from another form's card is
+     * not listed here. not_on_card is what the reply tells the manager, and the only reason this one has is the guard
+     * itself ("the system won't let this Coaching card reuse the Attendance heading cited on the earlier Corrective Action
+     * card"). It is the model's to fix: facts.policy_copied says to propose again with the heading that fits this card.
+     */
     /* QA's f074: a second heading on a form that cites one (Pau's two headings are the Corrective Action's only). */
     ...(secondLeftOff ? [{ field: "policy_second_heading", reason_code: "not_on_this_form" }] : []),
     ...((modelLevel && level !== modelLevel) ? [{ field: "warning_level", reason_code: caOnlyFields ? "level_not_stated" : "not_on_this_form" }] : []),
