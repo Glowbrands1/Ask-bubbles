@@ -49,3 +49,14 @@ describe("withCorrectedSpelling: a misspelling that shares no word with the name
     expect(withCorrectedSpelling("She opened the Omaha Dodge store late. Corrective Action follows.", "Thaddea Kroll", [], sameByRoster).replaced).toBe(0);
   });
 });
+
+/* QA's Bubbles live round 3 (22 Nov 2026, A1(b)): the draft route re-checks the card's earlier spellings. */
+describe("closeSpellingOfFullName", () => {
+  it("a one-letter surname fix with the same first name is a close spelling; another name is not", async () => {
+    const { closeSpellingOfFullName } = await import("./short-name");
+    expect(closeSpellingOfFullName("della varnick", "Della Varnich")).toBe(true);
+    expect(closeSpellingOfFullName("Della Varnich", "Della Varnich")).toBe(true);
+    expect(closeSpellingOfFullName("Fenna Prewitt", "Della Varnich")).toBe(false);
+    expect(closeSpellingOfFullName("Della", "Della Varnich")).toBe(false);
+  });
+});

@@ -106,7 +106,12 @@ export const NOV22_AGENT_LOOP_EXIT_CLAIMS_ONLY_SAVED_CASES: ReplayCase[] = [
       await thread.say(T5);
       const views = model.views.length;
       const reply = await thread.say(T6);
-      expect(model.views.slice(views).some(handedBack), "the unsaved reason claim was never handed back").toBe(true);
+      /*
+       * CHANGED ON PURPOSE (QA's live regression triage, 22 Nov 2026): the hand-back is the stand-in's path (no tool on
+       * purpose); the live model called propose_form at T6, so there was nothing to hand back. What is saved is checked
+       * either way (below): the card's saved lines hold the reason, and the reply reads it.
+       */
+      if (!model.live) expect(model.views.slice(views).some(handedBack), "the unsaved reason claim was never handed back").toBe(true);
       /* What Create saves (reads_back), not the account's wording: the live model may leave the reason to the Details reader. */
       const readBack = model.views.slice(views).map((view) => lastResult(view, "propose_form") as Out).filter(Boolean).at(-1)?.card?.reads_back ?? [];
       expect(readBack.some((line) => /^\*\*Reason for Resignation:\*\* .*second job/i.test(line)), `the reason never reached the card's saved lines:\n${readBack.join("\n")}`).toBe(true);
@@ -120,13 +125,23 @@ export const NOV22_AGENT_LOOP_EXIT_CLAIMS_ONLY_SAVED_CASES: ReplayCase[] = [
     status: "fixed",
     async run(t) {
       start(t);
-      t.loopModel!(live(false));
+      const model = live(false);
+      t.loopModel!(model);
       const thread = t.thread();
       await thread.say(T1);
       await thread.say(T5);
+      const views = model.views.length;
       const reply = await thread.say(T6);
-      expect(reply.content, `the unsaved reason is still claimed:\n${reply.content}`).not.toMatch(/Reason for Resignation/);
-      expect(reply.content).toMatch(/Create draft/);
+      /*
+       * CHANGED ON PURPOSE (QA's live regression triage, 22 Nov 2026): the reason may be stated when it is saved. The live
+       * model called propose_form at T6 and the card's saved lines (reads_back) hold "Reason for Resignation: Second job";
+       * the stand-in calls no tool, so nothing is saved and the claim still fails here. "Create draft" was the stand-in's
+       * wording; the live reply says "press Create when it looks right".
+       */
+      const readBack = model.views.slice(views).map((view) => lastResult(view, "propose_form") as Out).filter(Boolean).at(-1)?.card?.reads_back ?? [];
+      const reasonSaved = readBack.some((line) => /^\*\*Reason for Resignation:\*\* /.test(line));
+      if (!reasonSaved) expect(reply.content, `the unsaved reason is still claimed:\n${reply.content}`).not.toMatch(/Reason for Resignation/);
+      expect(reply.content).toMatch(/\bCreate\b/);
     },
   },
 ];

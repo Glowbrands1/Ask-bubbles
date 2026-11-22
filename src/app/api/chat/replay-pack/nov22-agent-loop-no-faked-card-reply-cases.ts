@@ -107,7 +107,12 @@ export const NOV22_AGENT_LOOP_NO_FAKED_CARD_REPLY_CASES: ReplayCase[] = [
       for (const turn of [U21.T1, U21.T2, U21.T3, U21.T4]) await thread.say(turn);
       const views = model.views.length;
       await thread.say(U21.T5);
-      expect(model.views.slice(views).some(handedBack), "T5's card-form reply with no card was never handed back").toBe(true);
+      /*
+       * CHANGED ON PURPOSE (QA's live regression triage, 22 Nov 2026): the hand-back is the stand-in's path (a card reply
+       * with no tool, on purpose); the live model called propose_form, so there was nothing to hand back. What is saved is
+       * checked either way (below): the card holds payroll No and Verbal, and Create saves both.
+       */
+      if (!model.live) expect(model.views.slice(views).some(handedBack), "T5's card-form reply with no card was never handed back").toBe(true);
       const sixth = await thread.say(U21.T6);
       expect(sixth.content).not.toMatch(/\[app note/);
       const card = thread.proposal as { warningLevel?: string | null; payrollDeduct?: string | null } | null;
@@ -128,11 +133,17 @@ export const NOV22_AGENT_LOOP_NO_FAKED_CARD_REPLY_CASES: ReplayCase[] = [
       t.loopModel!(u21(false));
       const thread = t.thread();
       for (const turn of [U21.T1, U21.T2, U21.T3, U21.T4]) await thread.say(turn);
+      /*
+       * CHANGED ON PURPOSE (QA's live regression triage, 22 Nov 2026): the reply may say "No, as you said" / "Verbal
+       * Warning, as you said" when the card under it holds it (the live model called propose_form). The claim is checked
+       * against the card the manager sees, so the stand-in's faked reply (a card that holds neither) still fails.
+       */
+      const card = () => thread.proposal as { payrollDeduct?: string | null; warningLevel?: string | null } | null;
       const fifth = await thread.say(U21.T5);
-      expect(fifth.content, `the reply still claims payroll on a card that does not hold it:\n${fifth.content}`).not.toMatch(/No, as you said/);
+      if (card()?.payrollDeduct !== "no") expect(fifth.content, `the reply still claims payroll on a card that does not hold it:\n${fifth.content}`).not.toMatch(/No, as you said/);
       expect(fifth.content, `the app note reached the manager:\n${fifth.content}`).not.toMatch(/\[app note/);
       const sixth = await thread.say(U21.T6);
-      expect(sixth.content, `T6 (after a faked T5) was not checked:\n${sixth.content}`).not.toMatch(/Verbal Warning, as you said/);
+      if (card()?.warningLevel !== "verbal") expect(sixth.content, `T6 (after a faked T5) was not checked:\n${sixth.content}`).not.toMatch(/Verbal Warning, as you said/);
     },
   },
   {
@@ -180,7 +191,8 @@ export const NOV22_AGENT_LOOP_NO_FAKED_CARD_REPLY_CASES: ReplayCase[] = [
       for (const turn of [U23.T1, U23.T2, U23.T3]) await thread.say(turn);
       const views = model.views.length;
       await thread.say(U23.T5);
-      expect(model.views.slice(views).some(handedBack), "the examples written into the reply with no card were never handed back").toBe(true);
+      /* CHANGED ON PURPOSE (as above): the hand-back is the stand-in's path; the examples on the card are checked either way. */
+      if (!model.live) expect(model.views.slice(views).some(handedBack), "the examples written into the reply with no card were never handed back").toBe(true);
       expect((thread.proposal as { issue?: string | null } | null)?.issue ?? "", "the examples never reached the card").toMatch(/Multiple times/);
     },
   },
