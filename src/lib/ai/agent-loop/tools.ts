@@ -4416,6 +4416,26 @@ export async function proposeForm(
   const priorActionsRefused = priorSplit ? (priorSplit.kept === null ? priorSplit.problem : null) : null;
   const priorStepsLeftOff = priorSplit && priorSplit.kept !== null && priorSplit.dropped.length > 0 ? priorSplit.dropped : [];
   const keptPriorActions = priorSplit?.kept ?? null;
+  /*
+   * QA's live round-2 re-run (22 Nov 2026, U09; the tester's card): the account read "On 11/1/26 <P> violated care and
+   * cleaning of facilities policy (JBA Policy Manual 1/1/2026)." That parenthesis is a prior step the card keeps (its date
+   * and a word of it), not this incident: it leaves the account. Read from the kept steps' own text, never a word list.
+   */
+  if (keptPriorActions && whatHappened) {
+    const steps = keptPriorActions.split(/\s*(?:;|\n)\s*/).filter((step) => step.trim() !== "");
+    const lettersOf = (text: string) => withoutDates(text).toLowerCase().match(/[a-z]{3,}/g) ?? [];
+    const unstepped = whatHappened.replace(/\s*\(([^()]*)\)/g, (whole, inner: string) => {
+      const dates = readDates(inner);
+      if (dates.length === 0) return whole;
+      const said = lettersOf(inner);
+      const isStep = steps.some((step) => {
+        const own = new Set(lettersOf(step));
+        return dates.every((date) => readDates(step).some((stepDate) => sameDate(stepDate, date))) && said.some((word) => own.has(word));
+      });
+      return isStep ? "" : whole;
+    }).replace(/\s+([.,;])/g, "$1").trim();
+    if (unstepped !== "") whatHappened = unstepped;
+  }
   const priorActions = priorActionsRefused ? null : keptPriorActions ? priorActionsWithStatedTopics(keptPriorActions, statedSteps).slice(0, 600) : statedSteps.length === 0 ? onFileLine : null;
   /*
    * QA's live re-test (21 Nov 2026, item 18): the prior actions the forms on file filled were read back "…, as you said"
