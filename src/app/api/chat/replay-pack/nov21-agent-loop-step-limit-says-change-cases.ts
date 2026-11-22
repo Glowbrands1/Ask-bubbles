@@ -49,13 +49,20 @@ const fixed = (id: string, title: string, run: (t: ReplayContext) => Promise<voi
 });
 
 export const NOV21_AGENT_LOOP_STEP_LIMIT_SAYS_CHANGE_CASES: ReplayCase[] = [
-  fixed("nov21-agent-loop-step-limit-says-form-switch", "T3 \"Create the coaching form with the information given. Her name is Thaddea Kroll …\" at the step limit: the reply says the form changed from the Corrective Action Form to the Coaching Form, for Thaddea Kroll at the West Dodge store, and never asks to send the change again", async (t) => {
+  fixed("nov21-agent-loop-step-limit-says-form-switch", "T3 \"Create the coaching form with the information given. Her name is Thaddea Kroll …\" at the step limit (no card before it: T1's close misspelling got \"Did you mean\"): the reply says the card is for Thaddea Kroll at the West Dodge store, and never asks to send the change again", async (t) => {
     const thread = t.thread();
     await thread.say(T1);
     await thread.say(T2);
+    /*
+     * CHANGED ON PURPOSE (QA's Bubbles round 2, 22 Nov 2026; Pau's rule: "a staff match is taken only if the manager's own
+     * words contain that exact name, or the manager confirmed it through 'Did you mean <name>?'"): T1's "Thaddea Krol" is
+     * a close spelling of the staff list's Thaddea Kroll, so T1 and T2 get "Did you mean …?" and no Corrective Action card
+     * is made for the misspelling. T3's card is the first card, so there is no form switch to announce; the step-limit
+     * reply still states the card's person and store and never asks for the change again.
+     */
+    expect(thread.proposal ?? null, "a card was made for the close misspelling").toBeNull();
     const reply = await thread.say(T3);
     expect(thread.proposal?.templateKey, "no Coaching card (the case proves nothing)").toBe("coaching");
-    expect(reply.content, `the reply did not say what changed:\n${reply.content}`).toContain("I changed the form from the Corrective Action Form to the Coaching Form");
     expect(reply.content).toMatch(/The card is for Thaddea Kroll at Omaha, NE \(West Dodge Rd\)\./);
     expect(reply.content, `the reply asked for the change again:\n${reply.content}`).not.toMatch(ASKS_AGAIN);
   }),

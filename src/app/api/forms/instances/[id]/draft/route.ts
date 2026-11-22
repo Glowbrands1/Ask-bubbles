@@ -2879,6 +2879,31 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
        * drafted prose fields (never the manual's quoted policy fields, never one the manager typed), the employee's full
        * name becomes the first name (`short-name.ts`).
        */
+      /*
+       * QA's Bubbles round 2 (22 Nov 2026, near-miss names; Pau's rule: the staff spelling once the person is confirmed): a
+       * request that named the person by a close misspelling ("My employee <First> <Lastx> …") and then by the staff
+       * list's name has its drafted prose copy the misspelling. A two-word name in the drafted prose fields that the
+       * staff list reads as this form's person alone (`rosterSpellingOf`) becomes the staff spelling (`withCorrectedSpelling`).
+       */
+      if (loaded.instance.employeeName) {
+        const [{ loadScopedRoster }, { rosterSpellingOf, displayName }, { withCorrectedSpelling }] = await Promise.all([
+          import("@/lib/forms/employee-roster"),
+          import("@/lib/forms/employee-match"),
+          import("@/lib/forms/short-name"),
+        ]);
+        const roster = await loadScopedRoster(actor.scope).catch(() => []);
+        const own = roster.filter((row) => displayName(row).toLowerCase() === loaded.instance.employeeName!.trim().toLowerCase());
+        const sameByRoster = own.length === 1 ? rosterSpellingOf(own[0]!.id, roster) : undefined;
+        if (sameByRoster) {
+          const prose = fields.filter((field) => !field.policyGrounded && !DERIVED_POLICY_FIELD_KEYS.has(field.key) && !keeps(field.key)).map((field) => field.key);
+          for (const key of prose) {
+            const value = loopCardDraft.values[key];
+            if (typeof value !== "string" || value === "") continue;
+            const fixed = withCorrectedSpelling(value, loaded.instance.employeeName, [], sameByRoster);
+            if (fixed.replaced > 0) loopCardDraft.values = { ...loopCardDraft.values, [key]: fixed.text };
+          }
+        }
+      }
       if (loaded.instance.employeeName) {
         const first = employeeFirstName(loaded.instance.employeeName);
         if (first) {

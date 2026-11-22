@@ -55,7 +55,7 @@ import { TERMINATION_OPTION, statesTermination } from "@/lib/forms/termination-s
 import { saysTerminationWord } from "@/lib/forms/termination-word";
 import { cardPayrollAmount } from "@/lib/forms/card-payroll-amount";
 import { applyLoopFollowUpDefault } from "@/lib/forms/follow-up-default-write";
-import { EXIT_DETAIL_FIELDS, EXIT_OPTION, EXIT_TEMPLATE_KEY, EXIT_TYPE_GROUP } from "@/lib/forms/exit-library";
+import { EXIT_DETAIL_FIELDS, EXIT_NOTICE_GROUP, EXIT_OPTION, EXIT_TEMPLATE_KEY, EXIT_TYPE_GROUP } from "@/lib/forms/exit-library";
 import { exitReasonOnly } from "@/lib/forms/exit-reason-only";
 import { terminationStatedTicksEnabled } from "@/lib/config/chat-quality-flags";
 
@@ -267,6 +267,8 @@ export async function POST(request: Request) {
      * is refused here even if the browser still offered it. See
      * `lib/forms/proposal-currency.ts`.
      */
+    /* QA's Bubbles round 2 (22 Nov 2026, U09): the level the loop locked on this card, from its server record (below). */
+    let loopRecordLevel: "verbal" | "written" | null = null;
     if (body.source === "assistant" && Array.isArray(body.conversation)) {
       // PREFERRED_NAME_CARD_CURRENT_ENABLED: "kit dovetail" is the card's Katrin Dovetail when the manager's roster says Kit is her preferred name. Off: none, and no roster read.
       const alsoCalled = await preferredNamesOf(actor.scope, body.employeeName);
@@ -288,6 +290,7 @@ export async function POST(request: Request) {
             employeeName: body.employeeName,
           })
         : null;
+      loopRecordLevel = settlement?.level ?? null;
       const history = parseHistory(body.conversation);
       const readFrom = settledNames && settlement ? [...settledNames.turnsAfterCard(history, settlement)] : history;
       const currency = checkProposalIsCurrent({
@@ -461,7 +464,14 @@ export async function POST(request: Request) {
        * without that conversation is dropped, and the box starts empty. See
        * `lib/forms/warning-level.ts`.
        */
-      const warningLevel =
+      /*
+       * QA's Bubbles round 2 (22 Nov 2026, U09: the card said Written, the saved form had no level): a loop card's level is
+       * locked on the manager's evidence at card time and recorded server-side; the card's level is saved when it is the
+       * level that record holds. Today's re-read of the conversation (which read "Verbal CA 11-1-2026", a prior step, as
+       * the level) stays for every other card.
+       */
+      const loopLocked = card.fromAgentLoop === true && isWarningLevel(card.warningLevel) && loopRecordLevel !== null && card.warningLevel === loopRecordLevel;
+      const warningLevel = loopLocked ? (card.warningLevel as "verbal" | "written") :
         isWarningLevel(card.warningLevel) &&
         card.source === "assistant" &&
         Array.isArray(card.conversation) &&
@@ -544,7 +554,19 @@ export async function POST(request: Request) {
          * type. The loop card's exit_how (never the involuntary box) is ticked as the manager's statement only when its
          * quoted words are in this chat's own manager turns, checked here, server-side.
          */
-        if (card.templateKey === EXIT_TEMPLATE_KEY && card.warningLevel !== "termination" && exitStated.checked[EXIT_TYPE_GROUP] === undefined) {
+        /*
+         * QA's Bubbles re-run (22 Nov 2026, B6): the exit form's own reader ticking a box in EITHER Resignation Details group
+         * (one set of boxes, split for the page's layout) is the one decision of how the person left; the card's exit_how
+         * is then never added beside it ("Submitted & Fulfilled Notice" with "Did not fulfill … notice").
+         */
+        const readerTicks = card.templateKey === EXIT_TEMPLATE_KEY
+          ? (await (async () => {
+              const { readExitFacts, exitFactValues } = await import("@/lib/forms/exit-facts");
+              const checked = exitFactValues(readExitFacts(userTurns, new Date().toISOString().slice(0, 10))).checked;
+              return [EXIT_TYPE_GROUP, EXIT_NOTICE_GROUP].some((group) => (checked[group] ?? []).length > 0);
+            })())
+          : false;
+        if (card.templateKey === EXIT_TEMPLATE_KEY && card.warningLevel !== "termination" && exitStated.checked[EXIT_TYPE_GROUP] === undefined && !readerTicks) {
           const how = typeof card.exitHow === "string" && LOOP_EXIT_HOW.has(card.exitHow) ? card.exitHow : null;
           const flat = (text: string) => text.toLowerCase().replace(/[*_"“”]/g, "").replace(/\s+/g, " ").trim();
           const quote = typeof card.exitHowQuote === "string" ? flat(card.exitHowQuote) : "";
