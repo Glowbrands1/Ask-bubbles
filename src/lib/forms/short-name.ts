@@ -96,8 +96,8 @@ export function replyWithShortName(reply: string, fullName: string, short: strin
  * but its account (and the saved Coaching Details) still said "<First> <Lastx>", copied from the first message. Every
  * mention of another spelling of THIS person becomes `fullName` (the short-name pass then shortens it, as for any other
  * mention). Which spellings are this person is the caller's: `spellings` (the card's earlier name, from its record), and
- * `sameByRoster` for any two-word name in the text sharing a word with the person's name (the roster reads it as this
- * person alone: a close spelling). Text in quotes is left exactly as written; the full name itself is never touched.
+ * `sameByRoster` for any two-word name in the text sharing a word with the person's name, or written as a name (both words
+ * capitalized), that the roster reads as this person alone: a close spelling. Text in quotes is left exactly as written; the full name itself is never touched.
  */
 export function withCorrectedSpelling(
   text: string,
@@ -117,7 +117,14 @@ export function withCorrectedSpelling(
       const second = tokens[at + 1]!;
       if (!/^\s+$/.test(text.slice(first.index! + first[0].length, second.index!))) continue;
       const pair = `${first[0]} ${second[0].replace(/['’]s$/i, "")}`;
-      if (same(pair, full) || !pair.toLowerCase().split(" ").some((word) => own.has(word))) continue;
+      /*
+       * QA's live re-run on production f9461c1 (22 Nov 2026, A1 notes): "My employee <P1> …" then "Her name is <P2>", where
+       * <P1> shares no word with <P2> ("Tadea Krohl" for "Thaddea Kroll"), so the saved write-up kept <P1>. A pair written
+       * as a name (each word capitalized, as typed) is read by the roster too, even with no word in common; the roster
+       * still decides (`sameByRoster`: this person alone, by close spelling).
+       */
+      const writtenAsName = /^\p{Lu}/u.test(first[0]) && /^\p{Lu}/u.test(second[0]);
+      if (same(pair, full) || (!writtenAsName && !pair.toLowerCase().split(" ").some((word) => own.has(word)))) continue;
       if (sameByRoster(pair)) found.add(pair);
     }
   }

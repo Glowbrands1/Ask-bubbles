@@ -31,3 +31,21 @@ describe("withCorrectedSpelling (the corrected name replaces the old spelling)",
     expect(withCorrectedSpelling("Thaddea Kroll was late. Fenna Prewitt covered.", "Thaddea Kroll", [], rosterSpellingOf(THADDEA.id, ROSTER)).replaced).toBe(0);
   });
 });
+
+/*
+ * QA's live re-run on production f9461c1 (22 Nov 2026, A1 notes): T1 "My employee <P1> has was 10 minutes late …" with
+ * <P1> sharing no word with the staff list's <P2> ("Tadea Krohl" for Thaddea Kroll), then T3 "Her name is <P2> …". The
+ * card was <P2>'s; the saved write-up copied T1 and kept <P1>.
+ */
+describe("withCorrectedSpelling: a misspelling that shares no word with the name (A1 notes)", () => {
+  const T1_LINE = "My employee Tadea Krohl has was 10 minutes late on her last two shifts.";
+  it("a pair written as a name that the roster reads as this person alone becomes the settled name", () => {
+    const out = withCorrectedSpelling(T1_LINE, "Thaddea Kroll", [], rosterSpellingOf(THADDEA.id, ROSTER));
+    expect(out.text).toBe("My employee Thaddea Kroll has was 10 minutes late on her last two shifts.");
+  });
+  it("controls: another staff member's name, and capitalized words that are no close spelling, stay as written", () => {
+    const sameByRoster = rosterSpellingOf(THADDEA.id, ROSTER);
+    expect(withCorrectedSpelling("Fenna Prewitt covered the shift.", "Thaddea Kroll", [], sameByRoster).replaced).toBe(0);
+    expect(withCorrectedSpelling("She opened the Omaha Dodge store late. Corrective Action follows.", "Thaddea Kroll", [], sameByRoster).replaced).toBe(0);
+  });
+});
