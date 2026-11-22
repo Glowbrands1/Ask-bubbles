@@ -3321,12 +3321,27 @@ export function withoutNamedSalon(account: string, salonId: string): string {
    * R13 (QA's Bubbles round 2, 22 Nov 2026): "At Dodge, NE on 10/16/26 Testy …" lost "At Dodge" and kept "NE on …". A
    * ", <word>" right after the phrase that is a word of that store's own name (its state) is the phrase's too.
    */
-  const withState = account.replace(/(^|[\s,;])(?:at|in)\s+((?:[A-Za-z0-9'’-]+\s+){0,4}[A-Za-z0-9'’-]+)\s*,\s*([A-Za-z]{2,})(?![A-Za-z0-9'’-])(\.?)/gi, (whole, before: string, phrase: string, tail: string, dot: string, offset: number) =>
-    nameWords.has(tail.toLowerCase()) && isThatSalon(phrase) ? (offset === 0 ? "" : `${before.replace(/\s+$/, "")}${dot}`) : whole);
+  /*
+   * Ported from the sibling app (its QA's live R13 on its main, 22 Nov 2026): "at <Store>, <ST>. location." came back as
+   * "At <Store>, <ST> location, on …" and left "Location, on …", or "On <date> at <Store>, <ST> location, <P> …" left
+   * "On <date> location, <P> …". Words after the state up to the phrase's own comma or full stop that are all words of the
+   * phrase (the store's name, or the place words `isThatSalon` already reads the phrase with) are the phrase's too, and
+   * the phrase's closing comma goes with it; a sentence's end stays, once.
+   */
+  const ofThePhrase = (words: string) => words.trim() !== "" && words.trim().toLowerCase().split(/\s+/).every((word) => nameWords.has(word) || filler.has(word));
+  const withState = account.replace(/(^|[\s,;])(?:at|in)\s+((?:[A-Za-z0-9'’-]+\s+){0,4}[A-Za-z0-9'’-]+)\s*,\s*([A-Za-z]{2,})(?![A-Za-z0-9'’-])(\.?)(?:((?:\s+[A-Za-z'’]+){1,3})(\s*[,.;!?]|(?=\s*$)))?/gi, (whole, before: string, phrase: string, tail: string, dot: string, after: string | undefined, closer: string | undefined, offset: number) => {
+    if (!nameWords.has(tail.toLowerCase()) || !isThatSalon(phrase)) return whole;
+    const lead = offset === 0 ? "" : before.replace(/\s+$/, "");
+    if (after !== undefined && ofThePhrase(after)) {
+      const end = (closer ?? "").trim();
+      return offset === 0 ? "" : `${lead}${/[.!?;]/.test(end) ? end : ""}`;
+    }
+    return offset === 0 ? `${after ?? ""}${closer ?? ""}`.trimStart() : `${lead}${dot}${after ?? ""}${closer ?? ""}`;
+  });
   const out = withState.replace(/(^|[\s,;])(?:at|in)\s+((?:[A-Za-z0-9'’-]+\s+){0,4}[A-Za-z0-9'’-]+)(?=\s*(?:[,.;!?]|$))(,?)/gi, (whole, before: string, phrase: string, comma: string) =>
     isThatSalon(phrase) ? (before.trim() === "" ? "" : before.replace(/\s+$/, "")) + (comma && before.trim() !== "" ? comma : "") : whole);
   if (out === account) return account;
-  const tidy = out.replace(/\s+([,.;!?])/g, "$1").replace(/[ \t]{2,}/g, " ").replace(/^[\s,;]+/, "").trim();
+  const tidy = out.replace(/\s+([,.;!?])/g, "$1").replace(/[ \t]{2,}/g, " ").replace(/^[\s,.;]+/, "").trim();
   return tidy.charAt(0).toUpperCase() + tidy.slice(1);
 }
 
