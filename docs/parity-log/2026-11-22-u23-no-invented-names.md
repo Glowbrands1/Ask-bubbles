@@ -16,7 +16,7 @@ re-taking for the changed lines.
 - `reply-pronouns.ts`: the person's own pronoun is the one the manager uses ("she" forms only, or "he" forms only); a
   pronoun of another kind is someone else wherever it stands. The card pass had kept "they" in "<P> asked another
   employee what they would do …" (#1014), but the reply pass, whose reporter was now the name, replaced it, and the next
-  turn's account copied the reply. Ask Sunny: #1014's port is itself pending there; port both together.
+  turn's account copied the reply. Ask Sunny: has #1014's kind check (pronounKind) but not this; port held with the rest.
 - Create (`draft/route.ts`): a card made by the preferred name finds its person by that name too; the directory's legal
   name, and alone the legal first name when no other staff member has it, become the card's name in the drafted prose.
   Ask Sunny: same spelling step (`rosterSpellingOf` by the legal display name only); port held with the rest.
