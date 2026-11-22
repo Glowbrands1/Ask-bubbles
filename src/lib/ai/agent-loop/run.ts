@@ -1,6 +1,8 @@
+import { EXIT_METHOD_LABELS } from "@/lib/forms/exit-details";
 import { observationDateMismatch, withoutMisdatedRestatements } from "./observation-dates";
 import { speaksOfTheManager, withoutManagerReasoning } from "./reasoning-leak";
 import type { WhichFormSlot } from "./which-form";
+import { storesNamedNotSaid, withoutStoreGuess } from "./store-guess";
 import "server-only";
 
 import { withFullOffRosterName, withOneInactiveLine } from "./off-roster-line";
@@ -531,12 +533,14 @@ function buildAgentLoopTools(config: AppConfig, planSteps = false) {
             "This incident's account in the manager's own words, all of it, with work areas and names kept as typed. Spelling, spacing and capitals cleaned, but never change a name, date, number, amount or quoted word. Every date, time and amount the manager gave stays in it as typed (\"on 11/10\"), even when the date also goes in incident_date. No instructions (\"create a CA\", \"make it about\", \"the policy is\"), no level or payroll words, nothing invented. Leave out when the manager has not said what happened.",
         },
         incident_date: { type: "string", description: "YYYY-MM-DD, the " + place + "'s local date." },
-        level_evidence: evidence("With warning_level verbal or written: the manager message and the words from it that state this form's level, from the message being answered or the one before it. \"She was written up before\" is not this form's level."),
+        level_evidence: evidence("With warning_level verbal or written: the manager message and the words from it that state this form's level, from the message being answered or the one before it. A request that names the level (\"a verbal CA\", \"create a written\") states it: quote those words. \"She was written up before\" is not this form's level."),
         payroll_evidence: evidence("With payroll_deduct: the manager message and the words from it that answer whether payroll deduct applies: the message being answered, or an answer that came right after your reply showing THIS person's card (never another person's answer)."),
         warning_level: { type: "string", enum: ["verbal", "written", "termination"], description: "Only when the manager stated it for this form. termination: only when the rules book's Termination lines say this form is one." },
         exit_type: { type: "string", enum: ["resignation", "termination"], description: "Employee Exit Form only: which the rules book's Exit lines say this exit is." },
         exit_how: { type: "string", enum: ["immediate_voluntary_resignation", "notice_not_fulfilled", "no_call_no_show"], description: "Employee Exit Form resignation only: how the person left, when the manager said it (immediate_voluntary_resignation: left by choice with no notice, as \"immediate voluntary termination\", \"quit on the spot\"; notice_not_fulfilled: gave notice but did not work it; no_call_no_show). With exit_how_evidence. Never for a termination." },
         exit_how_evidence: evidence("With exit_how: the manager message of this request and its words that say how the person left."),
+        exit_method: { type: "string", enum: [...EXIT_METHOD_LABELS], description: "Employee Exit Form resignation only: how the person told the company they were leaving (How Employee Resigned), when the manager said it. The person's own way of resigning, never how the manager or anyone else reached them (a voicemail left FOR the person is not how they resigned). With exit_method_evidence. Never for a termination." },
+        exit_method_evidence: evidence("With exit_method: the manager message of this request and its words that say how the person resigned (e.g. \"returned the call and told me she quit\")."),
         effective_date: { type: "string", description: "Employee Exit Form termination only: the effective or termination date as the manager typed it (e.g. 11/28)." },
         payroll_deduct: { type: "string", enum: ["yes", "no"], description: "Only when the manager said whether payroll deduct applies." },
         payroll_amount: { type: "string", description: "The deduction amount the manager stated, digits." },
@@ -1358,6 +1362,21 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
           else {
             if (promises(text)) text = text.split(/(?<=[.!?])\s+/).filter((sentence) => !PROMISES_LATER_WORK.test(sentence)).join(" ").trim();
             if (earlierDraft(text)) text = text.split(/(?<=[.!?])\s+/).filter((sentence) => !speaksOfEarlierDraft(sentence)).join(" ").trim();
+          }
+        }
+        /*
+         * QA's Bubbles re-run (22 Nov 2026, A8): with a card that has no store yet, the reply named stores nobody had named
+         * ("which Sioux Falls location …, W 41st St or E 18th St?" from "SFS", ship from store). Read by the app's own store
+         * reader: a store the reply names that the manager never named and the card does not hold goes back once; if it
+         * comes back, the reply asks the store question plainly.
+         */
+        /* The team card only: a person's card offers that person's own Woven stores (`storeOffer`), which the manager never typed. */
+        if (stoppedAt === "reply" && effects.proposal?.status === "needs_location" && effects.proposal.subject === "team") {
+          const guessed = (reply: string) => storesNamedNotSaid(reply, [...input.history.filter((turn) => turn.role === "user").map((turn) => String(turn.content ?? "")), input.question], effects.proposal?.locationId ?? null);
+          if (guessed(text).length > 0) {
+            const again = await handBack(`[app check] Your reply names ${guessed(text).join(", ")}, but the manager named no such ${appConfig().locationWord} and the card has none. Never guess a ${appConfig().locationWord} from another word (an abbreviation, a program, a product). Ask which ${appConfig().locationWord} it is for, plainly. Then write your reply to the manager again.`);
+            if (again) text = again;
+            if (guessed(text).length > 0) text = [withoutStoreGuess(text, guessed(text)), `Which ${appConfig().locationWord} is this for?`].filter(Boolean).join("\n\n");
           }
         }
         /*
