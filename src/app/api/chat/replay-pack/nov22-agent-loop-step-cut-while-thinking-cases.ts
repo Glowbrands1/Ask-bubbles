@@ -74,7 +74,8 @@ export const NOV22_AGENT_LOOP_STEP_CUT_WHILE_THINKING_CASES: ReplayCase[] = [
     async run(t) {
       start(t);
       const model = live(T5);
-      t.loopModel!(model);
+      /* An app condition (a step cut at the output limit), played by the stand-in in live runs too. */
+      t.loopModel!(model, { scripted: true });
       const thread = t.thread();
       await thread.say(T1);
       const views = model.views.length;
@@ -108,7 +109,8 @@ export const NOV22_AGENT_LOOP_STEP_CUT_WHILE_THINKING_CASES: ReplayCase[] = [
         replies += 1;
         return replies === 1 ? { text: "Here's the Resignation/Exit Form for", cut: true } : { text: "Here's the Resignation/Exit Form for **Thaddea**." };
       });
-      t.loopModel!(model);
+      /* An app condition (a step cut at the output limit), played by the stand-in in live runs too. */
+      t.loopModel!(model, { scripted: true });
       const thread = t.thread();
       const reply = await thread.say(T1);
       expect(proposed, "propose_form was called again by the retry").toBe(1);

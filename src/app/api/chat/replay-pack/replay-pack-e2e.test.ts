@@ -1105,12 +1105,12 @@ function context(): ReplayContext {
      * manager only: AGENT_LOOP_ENABLED on, AGENT_LOOP_USERS listing them. Unlike the sibling app, whose production runs
      * the loop, this app's production has it off, so the case turns it on itself; both are restored after the case.
      */
-    loopModel: (standIn) => {
+    loopModel: (standIn, options) => {
       loop.standIn = standIn;
       // The loop's inactive_in_woven fact reads the whole directory (terminated people too) through its own seam.
       __setAgentLoopDirectoryForTests(async () => state.directory as never);
-      // AGENT_LOOP_LIVE (dev, opt-in): the real model, recorded into the case's stand-in (`liveRecording`).
-      __setAgentLoopModelForTests(liveModel ? liveRecording(standIn, liveModel) : standIn.model);
+      // AGENT_LOOP_LIVE (dev, opt-in): the real model, recorded into the case's stand-in (`liveRecording`); a `scripted` case keeps its stand-in.
+      __setAgentLoopModelForTests(liveModel && !options?.scripted ? liveRecording(standIn, liveModel) : standIn.model);
       if (!loop.env) loop.env = { enabled: process.env.AGENT_LOOP_ENABLED, users: process.env.AGENT_LOOP_USERS };
       process.env.AGENT_LOOP_ENABLED = "true";
       process.env.AGENT_LOOP_USERS = ACTOR_EMAIL;
