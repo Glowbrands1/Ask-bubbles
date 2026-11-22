@@ -13,6 +13,6 @@ Warning beside the Verbal one, so the copy had no one form to read.
   level some of the person's forms have ticked (their saved warning_type), only those are kept. Form data, no word list.
 - Replay harness: `checkOnForm` and `templateIds`, so a case can put forms on file with their level as saved.
 
-**Ask Sunny: check before porting (held until this passes live there too).** Sunny's rules book has the same "Open /
-edit / pull up / show me" line and find_past_forms has no level narrowing; whether it carries #1028's "put up" example
-depends on that port.
+**Ask Sunny: HIGHER PRIORITY port (QA, 22 Nov 2026).** Sunny merged #1224 today, the port of #1028, so Sunny's rules book
+now carries the same "put up the verbal CA" new-card example that caused this; it also has the same "Open / edit / pull
+up / show me" line and no level narrowing in find_past_forms. Held, as every port, until this passes live in Bubbles.
