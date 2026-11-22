@@ -21,6 +21,7 @@ import { answeredNameQuestions, answerNamesSomeoneElse, everKeptOrUsedTyped, isC
 import { employeeFirstName } from "@/lib/forms/employee-reference";
 import { AFFIRMATIVE, displayName, editDistance, matchEmployeeName, nameConfirmationQuestion, readNameConfirmation, rosterSpellingOf, type RosterEmployee } from "@/lib/forms/employee-match";
 import { offRosterTyped } from "@/lib/forms/roster-only-names";
+import { readLocationMentions } from "@/lib/forms/location-mention";
 import { locationById } from "@/lib/locations";
 import { COMPANY_LOCATION_NICKNAMES } from "@/config/company/locations";
 import { detectTemplateIntent } from "@/lib/forms/template-intent";
@@ -894,6 +895,8 @@ export interface ToolEffects {
   /** find_staff ran this turn: a person was named, so a card without one is not "nobody named" (item 6). */
   staffLookedUp?: boolean;
   /** Fix batch items 4 and 3: this turn's last "Did you mean" (the roster ids offered, the name typed), for the record. */
+  /** Round 3 A7: a card this turn was filed at the employee's Woven store (store_from_woven), so the reply may say so. */
+  storeFromWoven?: boolean;
   nameQuestion?: { offeredIds: string[]; typed: string; offeredNames?: string[]; asksFullName?: boolean; templateKey?: string };
   /** Round 3 U09: this turn already handed the card back once with the one incident date the manager stated. */
   incidentDateNamed?: boolean;
@@ -5190,6 +5193,12 @@ export async function proposeForm(
     .filter(({ name }) => !holdsWeekday(name))
     .slice(0, 3)
     .map(({ name, sentence }) => ({ name: untrusted(name), sentence: untrusted(sentence) }));
+  /*
+   * QA's Bubbles live round 3 (22 Nov 2026, A7): the words the store reader matched, in the manager's request, as the card's
+   * store ("empire" for the W 41st St store). The store reader decides; any store phrase, never a word list.
+   */
+  const storeSaidOf = (): string | null =>
+    card.locationId ? (readLocationMentions(requestWords).find((mention) => mention.locationIds.length === 1 && mention.locationIds[0] === card.locationId && mention.matched)?.matched ?? null) : null;
   const facts = {
     /* fix-name, live s10: the card's name changed from → to, so the reply can say so (the person may be another roster person, by exact match). */
     ...(nameCorrectedFrom !== null ? { name_corrected: { from: nameCorrectedFrom, to: employee.name } } : {}),
@@ -5323,7 +5332,18 @@ export async function proposeForm(
       const primary = await rosterPrimarySalon(context.actor.scope, employee.id);
       return primary && (card.authorizedLocationIds ?? []).includes(primary) ? { employee_store: rosterSalonName(primary) ?? primary } : {};
     })()),
-    ...(salonFromWoven ? { store_from_woven: salonFromWoven } : {}),
+    /* Round 3 A7: the manager's own words for the card's store win over "where Woven lists" (store_said, below). */
+    ...(salonFromWoven && !storeSaidOf() ? ((effects.storeFromWoven = true), { store_from_woven: salonFromWoven }) : {}),
+    /*
+     * QA's Bubbles live round 3 (22 Nov 2026, A7): the card was filed at the store the manager named by its reviewed
+     * nickname ("at empire, sd"), and the reply said "where Woven lists <P>'s store (Empire, SD isn't one I recognize …)":
+     * nothing told the model the manager's words were that store. The words the store reader matched as the card's store
+     * are named (store_said); the store reader decides, never a word list.
+     */
+    ...(() => {
+      const said = storeSaidOf();
+      return said && card.locationId ? { store_said: { said, store: salonLabel(card.locationId) } } : {};
+    })(),
     ...(noStoreStated && !card.locationId ? { no_store: { say_exactly: `Filed with no ${locationWord()}, as you said.` } } : {}),
     /* U21: the account was copied from <A>'s card; a level and payroll answer are the manager's to state for this person. */
     ...(copiedFromCard
