@@ -94,4 +94,30 @@ export const NOV22_AGENT_LOOP_U35A_DID_YOU_MEAN_ONCE_CASES: ReplayCase[] = [
       expect((thread.proposal as { employeeName?: string } | null)?.employeeName ?? null, reply.content).not.toBe("Liesl Moreno Vargas");
     },
   },
+  {
+    id: "nov22-u35a-card-account-uses-settled-name",
+    title: "U35(a) follow-up: once \"fix her last name vargas\" settled Liesl Moreno Vargas, the card's account never keeps the misspelling the model copied (\"Liesl Vagras\")",
+    report: `${REPORT}; QA (22 Nov 2026): in an admin live run the T3 card's account read "Liesl Vagras" after the name was settled`,
+    status: "fixed",
+    async run(t) {
+      vi.setSystemTime(new Date("2026-11-22T18:00:00Z"));
+      /* An admin sees every store: another staff member elsewhere has a name close to the misspelling (invented: Liesel Varga). */
+      t.directory([...LOOP_STAFF, LIESL, { id: "e-liesel-varga", firstName: "Liesel", lastName: "Varga", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-67"], positionName: "Team Member Part Time" }]);
+      t.as("admin", { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] });
+      t.loopModel!(loopStandIn((view): LoopDecision => {
+        const result = lastResult(view, "propose_form") as { card?: unknown; ask_exactly?: string } | null;
+        if (result) return { text: result.card ? "Here's the Corrective Action Form for **Liesl**." : (result.ask_exactly ?? "ok") };
+        /* As the live model wrote it: the account with the manager's misspelling, first and last word. */
+        return { tool: "propose_form", input: { template_key: "dpoa", employee_name: "Liesl Moreno Vagras", person_evidence: evidenceFrom(view, "Liesl Moreno Vagras", users(view) - 1), what_happened: "Liesl Vagras received a customer complaint about the experience with her.", location: "Grand Island" } };
+      }));
+      const thread = t.thread();
+      await thread.say(U35_TURNS[1]);
+      await thread.say(U35_TURNS[3]);
+      /* The tester's T12: the account, so the card is made (the live model asks what happened before that). */
+      const reply = await thread.say(U35_TURNS[11]);
+      const card = thread.proposal as { employeeName?: string; issue?: string } | null;
+      expect(card?.employeeName, `the name was not settled (the case proves nothing):\n${reply.content}`).toBe("Liesl Moreno Vargas");
+      expect(String(card?.issue ?? ""), `the card's account keeps the misspelling:\n${reply.content}`).not.toMatch(/Vagras/i);
+    },
+  },
 ];

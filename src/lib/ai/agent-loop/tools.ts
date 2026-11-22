@@ -1280,9 +1280,11 @@ export async function findStaff(context: ToolContext, input: { name?: unknown; p
      * else the latest card), never from a reply's words.
      */
     const recordCard = context.cardOnScreen ?? context.earlierCard ?? null;
-    /* This chat's recorded answer confirmed this typed spelling as the one close candidate (a yes, the full name, or the word that corrects it). */
-    if (close.kind === "confirm" && close.candidates.length === 1 && spellingKeysConfirmedFor(nameQuestionView(context, read.roster), close.candidates[0]!.employee.id).includes(personKey(typed))) {
-      return { matches: [staffRow(close.candidates[0]!.employee)], confirmed_by_manager: { name: close.candidates[0]!.name, answer: "confirmed" }, note: `The manager confirmed ${close.candidates[0]!.name} for "${typed}". Do not ask again: propose the card for ${close.candidates[0]!.name}.` };
+    /* This chat's recorded answer confirmed this typed spelling as one of the close candidates (a yes, the full name, or the word that corrects it). */
+    const confirmedCandidates = close.kind === "confirm" ? close.candidates.filter((candidate) => spellingKeysConfirmedFor(nameQuestionView(context, read.roster), candidate.employee.id).includes(personKey(typed))) : [];
+    if (confirmedCandidates.length === 1) {
+      const chosen = confirmedCandidates[0]!;
+      return { matches: [staffRow(chosen.employee)], confirmed_by_manager: { name: chosen.name, answer: "confirmed" }, note: `The manager confirmed ${chosen.name} for "${typed}". Do not ask again: propose the card for ${chosen.name}.` };
     }
     const onCard = !nearMissNever && close.kind === "confirm" && close.candidates.length === 1 && !saidNo
       ? Boolean(recordCard?.employeeKey && recordCard.employeeKey === personKey(close.candidates[0]!.employee.id))
@@ -3702,7 +3704,9 @@ export async function proposeForm(
      * name, but the account the model copied from the first message kept the old spelling. Every spelling of this person
      * (the card's earlier name; a close spelling the roster reads as this person alone) becomes the card's name first.
      */
-    whatHappened = (await import("@/lib/forms/short-name")).withCorrectedSpelling(whatHappened, employee.name, nameCorrectedFrom !== null ? [nameCorrectedFrom] : [], rosterSpellingOf(employee.id ?? null, read.kind === "read" ? read.roster : [])).text;
+    /* QA (22 Nov 2026, U35(a) follow-up): also the spellings this chat confirmed as this person, for when the roster alone cannot tell. */
+    const confirmedSpellings = employee.id && read.kind === "read" ? (await import("./confirmed-spelling")).spellingsConfirmedFor(nameQuestionView(context, read.roster), employee.id) : [];
+    whatHappened = (await import("@/lib/forms/short-name")).withCorrectedSpelling(whatHappened, employee.name, [...(nameCorrectedFrom !== null ? [nameCorrectedFrom] : []), ...confirmedSpellings], rosterSpellingOf(employee.id ?? null, read.kind === "read" ? read.roster : [])).text;
     const short = cardAccountName(employee.name, read.kind === "read" ? read.roster : [], extractEmployeeNames(managerTurns(context)), employee.id ?? null);
     whatHappened = (await import("@/lib/forms/short-name")).withShortName(whatHappened, employee.name, short).text;
   }

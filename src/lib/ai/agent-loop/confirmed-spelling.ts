@@ -42,6 +42,8 @@ export interface AnsweredNameQuestion {
   readonly by: "yes" | "full_name" | "correction" | null;
   /** No manager turn has answered it yet (QA, c163): the question is still waiting, and its person is not settled. */
   readonly open?: boolean;
+  /** The name the question was about, as the manager typed it (found in their earlier words by the record's key), or null. */
+  readonly typed?: string | null;
 }
 
 /** A roster person's full names: legal, and preferred first name with the surname. */
@@ -61,19 +63,21 @@ function confirmsIn(answer: string, record: NameQuestionRecord, offered: readonl
    * QA's live round-2 re-run (22 Nov 2026, U35(a)): "Did you mean **<First> <Mid> <Last>**?" for the typed "<First> <Mid>
    * <Lastx>", answered "fix her last name <last>": the typed name with the answer's word in place of the one word that
    * differs IS the offered name. That word corrects the typo, so the answer confirms the one person offered. A
-   * substitution on the manager's own typed words, never a list of phrasings.
+   * substitution on the manager's own typed words, never a list of phrasings. With several people offered, the one whose
+   * name the word makes is the one confirmed (only when exactly one fits).
    */
-  if (typed && offered.length === 1 && (record.offeredNameKeys?.length ?? 0) === 0) {
+  if (typed && offered.length > 0 && (record.offeredNameKeys?.length ?? 0) === 0) {
     const plain = (text: string) => text.toLowerCase().match(/[\p{L}'-]+/gu) ?? [];
     const typedWords = plain(typed);
     const said = new Set(plain(answer));
-    const corrects = fullNames(offered[0]!).some((name) => {
+    /* Of the people offered, the one (and only one) whose name the answer's word makes of the typed name. */
+    const corrected = offered.filter((person) => fullNames(person).some((name) => {
       const own = plain(name);
       if (own.length !== typedWords.length) return false;
       const differ = own.map((word, at) => (word === typedWords[at] ? -1 : at)).filter((at) => at >= 0);
       return differ.length === 1 && said.has(own[differ[0]!]!);
-    });
-    if (corrects) return { confirmed: offered[0]!, by: "correction" };
+    }));
+    if (corrected.length === 1) return { confirmed: corrected[0]!, by: "correction" };
   }
   return { confirmed: null, by: null };
 }
@@ -133,9 +137,20 @@ export function answeredNameQuestions(view: NameQuestionView): AnsweredNameQuest
       continue;
     }
     const { confirmed, by } = confirmsIn(answered.text, record, offered, typed);
-    out.push({ record, offered, answer: answered.text, latest: answered.latest, confirmed, by });
+    out.push({ record, offered, answer: answered.text, latest: answered.latest, confirmed, by, typed });
   }
   return out;
+}
+
+/**
+ * QA (22 Nov 2026, U35(a) follow-up): the names the manager typed that this chat confirmed as this roster person, as typed,
+ * with each one's first and last word ("Liesl Moreno Vagras", "Liesl Vagras"): spellings the card's account puts the
+ * settled name in place of, even when the roster alone cannot tell (another staff member spelled close).
+ */
+export function spellingsConfirmedFor(view: NameQuestionView, employeeId: string): string[] {
+  const typed = answeredNameQuestions(view).filter((asked) => asked.confirmed?.id === employeeId).map((asked) => asked.typed?.trim() ?? "").filter((name) => name.split(/\s+/).length >= 2);
+  const firstLast = typed.map((name) => name.split(/\s+/)).filter((words) => words.length > 2).map((words) => `${words[0]} ${words.at(-1)}`);
+  return [...new Set([...typed, ...firstLast])];
 }
 
 /** The typed-name keys the manager confirmed as this roster person: a name with one of these keys is this person. */
