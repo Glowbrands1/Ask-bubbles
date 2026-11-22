@@ -3228,6 +3228,7 @@ export async function proposeForm(
     attendance_evidence?: unknown;
     incident_time?: unknown;
     store?: unknown;
+    no_store_evidence?: unknown;
   },
 ): Promise<ToolResult> {
   /*
@@ -4433,7 +4434,15 @@ export async function proposeForm(
   const readTyped = (text: string) => readSalonMentions(text, storeIndex);
   const answeredSalonIds = typedSalon ? [...new Set((readTyped(typedSalon).length > 0 ? readTyped(typedSalon) : readTyped(`at ${typedSalon}`)).flatMap((mention) => [...mention.salonIds]))] : [];
   const managerSalonIds = authorizedSalonIdsFor(context.actor.scope) ?? appConfig().locations().map((salon) => salon.id);
-  const storeNotRead = typedSalon !== "" && answeredSalonIds.filter((id) => managerSalonIds.includes(id)).length !== 1;
+  /*
+   * U04 (QA's Bubbles round 2, 22 Nov 2026): a global login's "corporate office, not a store" was answered "isn't a store
+   * name I know … which one?" on every turn. A form the manager says is for no store (no_store_evidence: their words of
+   * this request) is filed with no store when their login may file one (a global login), said once (no_store), and never
+   * asked again; any other login's form still needs its store.
+   */
+  const globalPlaces = await import("./places");
+  const noStoreStated = globalPlaces.globalNonAdminNeedsSalon(context.actor.role, context.actor.scope) && answerEvidence(context, input.no_store_evidence, "request", evidencePerson, { requestTurnIds }).ok;
+  const storeNotRead = !noStoreStated && typedSalon !== "" && answeredSalonIds.filter((id) => managerSalonIds.includes(id)).length !== 1;
   /*
    * PLACE_SPAN_GUARD (batch H8): each of this person's turns is read on its own, so "cite animals in the workplace
    * policy" joined to "at <place>, <state>" never reads a place nobody named, and the newest turn that names one salon is
@@ -4674,7 +4683,9 @@ export async function proposeForm(
    */
   let whichSalon = false;
   const globalAsk = await import("./places");
-  if (globalAsk.globalPlaceAskEnabled() && globalAsk.globalNonAdminNeedsSalon(context.actor.role, context.actor.scope) && !card.locationId && card.employeeName) {
+  if (noStoreStated && !card.locationId) {
+    Object.assign(card, { locationId: null, locationResolution: "not_applicable", status: card.status === "needs_location" ? "ready" : card.status });
+  } else if (globalAsk.globalPlaceAskEnabled() && globalAsk.globalNonAdminNeedsSalon(context.actor.role, context.actor.scope) && !card.locationId && card.employeeName) {
     const named = globalAsk.salonIdNamedIn(requestWords);
     if (named) {
       Object.assign(card, { locationId: named, locationName: rosterSalonName(named) ?? card.locationName, locationResolution: "resolved", authorizedLocationIds: [named], status: card.status === "needs_location" ? "ready" : card.status });
@@ -4975,6 +4986,7 @@ export async function proposeForm(
       return primary && (card.authorizedLocationIds ?? []).includes(primary) ? { employee_store: rosterSalonName(primary) ?? primary } : {};
     })()),
     ...(salonFromWoven ? { store_from_woven: salonFromWoven } : {}),
+    ...(noStoreStated && !card.locationId ? { no_store: { say_exactly: `Filed with no ${locationWord()}, as you said.` } } : {}),
     /* U21: the account was copied from <A>'s card; a level and payroll answer are the manager's to state for this person. */
     ...(copiedFromCard
       ? {
