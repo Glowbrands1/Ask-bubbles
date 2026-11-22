@@ -148,11 +148,8 @@ export const NOV22_AGENT_LOOP_U21_R3_CHAT_CASES: ReplayCase[] = [
     id: "nov22-u21-r3-t12-form-date-not-a-prior-step",
     title: "U21 round 3 (T1–T12 verbatim): T12 \"previous coaching: … she signed the jba policys on 6/24/24\" never makes 6/24/24 the form date, and the card keeps its Verbal/payroll No",
     report: "QA's live round 3 (22 Nov 2026, U21): T12's card was dated 2024-06-24, the policy signing; live, the model's re-proposal to fix that date dropped the level and payroll",
-    /*
-     * QA (22 Nov 2026): form_date handling is coder 1's (session_01VVEkRTNhKWLH8gwuJq8Jfp), whose PR 2 adds "a prior step's
-     * date is never the form date". This PR does not touch the form-date logic, so this case is open until that merges.
-     */
-    status: { open: "the form date takes a prior step's date (2024-06-24); coder 1's PR 2 fixes it" },
+    /* Open until coder 1's #1056 ("a prior step's date is never the form date") merged; it passes with it (QA, 22 Nov 2026). */
+    status: "fixed",
     async run(t) {
       const cards = await u21Chat(t);
       const at = (turn: number) => cards[turn - 1]!;
