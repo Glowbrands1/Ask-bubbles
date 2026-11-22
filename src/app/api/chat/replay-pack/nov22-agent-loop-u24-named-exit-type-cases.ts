@@ -9,19 +9,19 @@ import { evidenceFrom, lastResult, loopStandIn, type LoopDecision } from "./loop
  * THE EXIT TYPE THE MANAGER NAMES IS THE ONE SAVED (QA's live round-2 re-run on production f9461c1, 22 Nov 2026, U24)
  * ============================================================================
  *
- * A global district manager, one message (the tester's words; two spaces after "Petra Quill." as typed). "Immediate Vol
+ * A global district manager, one message (the tester's words; two spaces after "Marisande Tremblett." as typed). "Immediate Vol
  * Resignation" saved resignation_type [no_call_no_show]: the story also says "Linnea was a no call no show for her
  * shift", and the exit form's own reader ticks that type from the story, which drops the model's exit_how (the one
  * decision of #1013's B6 rule) before quoteNamesOption can read "Immediate Vol Resignation" as its label. The T1 reply
- * also read no type back. Invented people (the tester's): Linnea Farrow (terminated in Woven), Petra Quill, Marisol Thorne.
+ * also read no type back. Invented people (the tester's): Linnea Farrow (terminated in Woven), Marisande Tremblett, Marisol Thorne.
  * With AGENT_LOOP_LIVE=1 the real model plays the turn.
  */
 
 const REPORT = "QA's live round-2 re-run (22 Nov 2026, U24): \"Immediate Vol Resignation\" saved resignation_type [no_call_no_show]; no read-back of the type";
 const LINNEA: DirectoryRow = { id: "e-linnea-farrow", firstName: "Linnea", lastName: "Farrow", preferredFirstName: null, employmentStatus: "terminated", locationIds: ["loc-264"], positionName: "Seasonal Team Member Part Time" };
-const PETRA: DirectoryRow = { id: "e-petra-quill", firstName: "Petra", lastName: "Quill", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-264"], positionName: "Assistant General Manager" };
+const MARISANDE: DirectoryRow = { id: "e-marisande-tremblett", firstName: "Marisande", lastName: "Tremblett", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-264"], positionName: "Assistant General Manager" };
 const MARISOL: DirectoryRow = { id: "e-marisol-thorne", firstName: "Marisol", lastName: "Thorne", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-67", "loc-264"], positionName: "General Manager" };
-const SAID = "create exit for Linnea Farrow, 123 Test St, Omaha, NE. 00000. Immediate Vol Resignation. Resignation Date 11-11-26. Employee resigned via phone call with Assistant Store Manager, Petra Quill.  Store items were returned and payroll deduct applies. On 11-11-26 Linnea was a no call no show for her shift and Store Manager, Marisol Thorne, called Linnea and left a voicemail. When Linnea returned the call she spoke with Petra and stated she was quitting effective immediately due to conflict with her other job.";
+const SAID = "create exit for Linnea Farrow, 123 Test St, Omaha, NE. 00000. Immediate Vol Resignation. Resignation Date 11-11-26. Employee resigned via phone call with Assistant Store Manager, Marisande Tremblett.  Store items were returned and payroll deduct applies. On 11-11-26 Linnea was a no call no show for her shift and Store Manager, Marisol Thorne, called Linnea and left a voicemail. When Linnea returned the call she spoke with Marisande and stated she was quitting effective immediately due to conflict with her other job.";
 const ADMIN = { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] };
 
 type Out = { card?: Record<string, unknown>; facts?: { exit_ticks?: string[] } } | null;
@@ -34,7 +34,7 @@ export const NOV22_AGENT_LOOP_U24_NAMED_EXIT_TYPE_CASES: ReplayCase[] = [
     status: "fixed",
     async run(t) {
       vi.setSystemTime(new Date("2026-11-22T18:00:00Z"));
-      t.directory([...LOOP_STAFF, LINNEA, PETRA, MARISOL]);
+      t.directory([...LOOP_STAFF, LINNEA, MARISANDE, MARISOL]);
       t.as("admin", ADMIN);
       t.loopModel!(loopStandIn((view): LoopDecision => {
         const result = lastResult(view, "propose_form") as Out;

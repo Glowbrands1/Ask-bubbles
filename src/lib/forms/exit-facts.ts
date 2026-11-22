@@ -686,7 +686,8 @@ export function installEarlierManagerTurns(read: () => readonly string[] | undef
  * 11-11-26 Linnea was a no call no show for her shift …" saved No Call No Show: the story's event was read as the type,
  * and the type the manager stated was not read at all ("Vol"). A sentence that is only a type box's own label, as the
  * form words it (`quoteNamesOption`: shortened, any case, a close spelling), is the manager stating that box, like a
- * labelled line; when exactly one box is stated that way it is the type, over any reading of the story. The form's own
+ * labelled line (every word of the label named: "immediate voluntary term" is not the box); when exactly one box is
+ * stated that way it is the type, over any reading of the story. The form's own
  * labels, never a list of phrasings. Never the involuntary box: only a stated termination ticks it.
  */
 function statedTypeOption(rawText: string): string[] | null {
@@ -697,7 +698,9 @@ function statedTypeOption(rawText: string): string[] | null {
     const said = letters(sentence);
     if (said.length === 0) continue;
     for (const box of boxes) {
-      if (said.length <= letters(box.label).length && quoteNamesOption(sentence, box.label)) stated.add(box.key);
+      /* Every word of the label named (shortened, any case, close spelling), and nothing more: the box's own name, stated. */
+      const labelWords = letters(box.label).filter((word) => word.length >= 3);
+      if (said.length <= letters(box.label).length && labelWords.length > 0 && labelWords.every((word) => quoteNamesOption(sentence, word))) stated.add(box.key);
     }
   }
   return stated.size === 1 ? [...stated] : null;
