@@ -10,7 +10,8 @@ in production.
 **Fix:** the check runs on any team card that holds no store, whatever its status. On a turn with no tool call it reads
 the team card shown under the last reply from its card record (no person, the team label's key, no team store), as
 `tools.ts` already does. The fallback also drops the question right after a dropped sentence that named the guessed
-stores ("… A and B. Which one is this coaching for?"). No word lists.
+stores ("… A and B. Which one is this coaching for?"). QA's ruling: any team card with no store (a global login's
+ready card too) carries `store_question` and `store_note`, from all the manager's stores. No word lists.
 
 Report (verbatim, no names): T2 "coaching is on sfs operations for clean organization and flow. BCS has flagged our SFS
 …" got "You have two Sioux Falls stores — Sioux Falls, SD (W 41st St) and Sioux Falls, SD (E 18th St). Which one is this

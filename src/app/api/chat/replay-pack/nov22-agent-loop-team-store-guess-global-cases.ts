@@ -20,7 +20,8 @@ import { lastResult, loopStandIn, type LoopDecision, type LoopView } from "./loo
  * perfect" and T4 "make that update" called no tool (production's trace: steps []) and repeated the narrowed question
  * ("Glad it looks right! I still just need to know which Sioux Falls store this is for — W 41st St or E 18th St — before
  * you can press Create."); the check had no card to read there. It now reads the team card shown under the last reply
- * from its card record.
+ * from its card record. QA's ruling: any team card with no store carries store_question and store_note, from all the
+ * manager's stores. The three-store control is nov22-a8-team-store-not-guessed-from-sfs.
  */
 
 const REPORT = "QA's Bubbles live re-run 2 (22 Nov 2026, A8): a global login's T2 \"coaching is on sfs operations …\" still got \"You have two Sioux Falls stores — … Which one is this coaching for?\"";
@@ -57,6 +58,9 @@ const scoped = (role: "location_manager" | "admin", fixes: boolean): ReplayCase[
     await thread.say(T1);
     expect((thread.proposal as { subject?: string } | null)?.subject, "T1 made no team card (the case proves nothing)").toBe("team");
     expect(thread.proposal?.locationId ?? null, "the team card already holds a store (the case proves nothing)").toBeNull();
+    /* QA's ruling: a team card with no store, any scope, carries the plain store question for the reply to end with. */
+    const first = model.views.map((view) => lastResult(view, "coach_team") as { card?: { store_question?: string } } | null).find(Boolean);
+    expect(first?.card?.store_question, "the global team card with no store carries no store question").toBe("Which store is this for?");
     const reply = await thread.say(T2);
     expect(model.views.some(checkedBack), "the guessed stores were never handed back").toBe(true);
     expect(reply.content, `the reply narrowed the stores from "SFS":\n${reply.content}`).not.toMatch(/Sioux Falls|41st|18th/);
