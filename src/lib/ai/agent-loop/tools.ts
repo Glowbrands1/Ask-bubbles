@@ -3206,6 +3206,8 @@ export async function proposeForm(
     exit_type?: unknown;
     exit_how?: unknown;
     exit_how_evidence?: unknown;
+    new_store?: unknown;
+    new_store_evidence?: unknown;
     exit_method?: unknown;
     exit_method_evidence?: unknown;
     effective_date?: unknown;
@@ -4480,6 +4482,31 @@ export async function proposeForm(
     ? { option: input.exit_how, quote: exitHowQuote.slice(0, 300) }
     : null;
   /*
+   * U54 (QA's Bubbles round 2, 22 Nov 2026): "<P> … wants to transfer to dawley effective 11-2-26" saved no New Location.
+   * Where the person is moving is the model's reading (new_store), kept on the manager's words for it from this request
+   * (new_store_evidence), and read through the Woven-aware store index (`transfer-new-store.ts`). Exactly one store, or
+   * the card asks which (new_store_not_found); never a guess.
+   */
+  const transferCard = (await import("@/lib/forms/employment-change")).employmentChangeKind(template.key) === "transfer";
+  const newStoreSaid = transferCard && typeof input.new_store === "string" ? input.new_store.trim().slice(0, 80) : "";
+  const newStoreQuote = typeof (input.new_store_evidence as { quote?: unknown } | null | undefined)?.quote === "string" ? String((input.new_store_evidence as { quote: string }).quote).trim().slice(0, 300) : "";
+  const newStoreKept = newStoreSaid !== "" && newStoreQuote !== "" && newStoreQuote.toLowerCase().includes(newStoreSaid.toLowerCase()) && answerEvidence(context, input.new_store_evidence, "request", evidencePerson, { requestTurnIds }).ok;
+  const newStore = newStoreKept
+    ? await (async () => {
+        const [{ transferNewStoreName }, { loadStoreIndex }] = await Promise.all([import("@/lib/forms/transfer-new-store"), import("@/lib/stores/woven-aliases")]);
+        const name = transferNewStoreName(newStoreSaid, await loadStoreIndex());
+        return name ? { name, said: newStoreSaid, quote: newStoreQuote } : null;
+      })()
+    : null;
+  const newStoreNotRead = transferCard && newStoreSaid !== "" && !newStore
+    ? {
+        typed: newStoreSaid,
+        ask_exactly: newStoreKept
+          ? `"${newStoreSaid}" isn't a ${locationWord()} name I know. Which ${locationWord()} is ${employee.name ? employee.name.split(/\s+/)[0] : "this person"} moving to?`
+          : `Which ${locationWord()} is ${employee.name ? employee.name.split(/\s+/)[0] : "this person"} moving to?`,
+      }
+    : null;
+  /*
    * U26 (QA's Bubbles round 2, 22 Nov 2026): "<GM> … left a voicemail for <P> … <P> returned the call and told <AGM> … she
    * quit effective immediately" saved How Employee Resigned "Voicemail". How the person resigned is the model's reading
    * (exit_method, one of the line's own methods), kept when the manager's quoted words of this request name it
@@ -4561,6 +4588,7 @@ export async function proposeForm(
     ...(payroll ? { payrollDeduct: payroll } : {}),
     ...(payroll === "yes" && amount ? { payrollDeductAmount: amount } : {}),
     ...(exitHow ? { exitHow: exitHow.option, exitHowQuote: exitHow.quote } : {}),
+    ...(newStore ? { newStore: newStore.name, newStoreSaid: newStore.said, newStoreQuote: newStore.quote } : {}),
     ...(exitMethod ? { exitMethod: exitMethod.label, exitMethodQuote: exitMethod.quote } : {}),
     ...(priorActions ? { priorActions } : {}),
     ...(coachingTopic ? { coachingTopic } : {}),
@@ -4896,6 +4924,7 @@ export async function proposeForm(
       return primary && (card.authorizedLocationIds ?? []).includes(primary) ? { employee_store: rosterSalonName(primary) ?? primary } : {};
     })()),
     ...(salonFromWoven ? { store_from_woven: salonFromWoven } : {}),
+    ...(newStoreNotRead ? { new_store_not_found: newStoreNotRead } : {}),
     ...(storeNotRead ? { typed_store_not_found: storeOffer(typedSalon, replyNameFor(card.employeeName ?? employee.name, read.kind === "read" ? read.roster : [], extractEmployeeNames(managerTurns(context)), employee.id ?? null), wovenStores, managerSalonIds, storeSaidBefore(context, typedSalon)) } : {}),
     /* QA's live-app item 8: the card uses Woven's title; the manager called them something else ("<title>"). */
     ...(() => {
@@ -4981,6 +5010,7 @@ export async function proposeForm(
           ? { payroll_deduct: payroll }
           : {}),
       incident_time: card.incidentTime ?? null,
+      ...(transferCard ? { new_store: card.newStore ?? null } : {}),
       ...(template.key === appConfig().formKeys.exit ? { how_resigned: card.exitMethod ?? null } : {}),
       prior_actions: priorActions,
       policy: policyLine,
