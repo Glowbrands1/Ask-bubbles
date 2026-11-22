@@ -92,3 +92,48 @@ export const NOV22_AGENT_LOOP_YES_EVIDENCE_FROM_OWN_QUESTION_CASES: ReplayCase[]
     expect(found.reason_code, JSON.stringify(found)).toBe("privacy_not_this_person");
   }),
 ];
+
+/*
+ * The tester's turn order, for a LIVE run that reaches the fix (QA, 22 Nov 2026): the manager asks for the form by its
+ * date without a name; the app finds it on file and asks its own "… for <P> … Is that the one you mean?"; the manager
+ * answers "yes please". With the stand-in, the model cites the manager's earlier request (as the live run did); live,
+ * the real model plays both turns. A run whose reply never asked about Fenna proves nothing and says so.
+ */
+const BY_DATE = "pull up the ca from friday 11/20 for the girl who was late to open, i don't remember her name";
+
+async function tellByDate(t: ReplayContext) {
+  const id = onFile(t);
+  const users = (view: LoopView) => view.turns.filter((turn) => turn.role === "user").length;
+  const model = loopStandIn((view): LoopDecision => {
+    const found = lastResult(view, "find_past_forms") as (Found & { forms?: { employee?: string }[] }) | null;
+    if (users(view) === 1) {
+      if (!found) return { tool: "find_past_forms", input: { form: "ca", date_from: "2026-11-20", date_to: "2026-11-20", forms_on_file_evidence: evidenceFrom(view, BY_DATE) } };
+      return { text: `I found a Corrective Action Form dated 11/20 for ${found.forms?.[0]?.employee ?? "nobody"} for lateness. Is that the one you mean?` };
+    }
+    if (!found) return { tool: "find_past_forms", input: { employee_name: "Fenna Prewitt", form: "ca", open: true, forms_on_file_evidence: evidenceFrom(view, "pull up the ca from friday 11/20", 1) } };
+    return { text: "Opening it." };
+  });
+  t.loopModel!(model);
+  const thread = t.thread();
+  const asked = await thread.say(BY_DATE);
+  const answered = await thread.say("yes please");
+  const second = model.views.filter((view) => users(view) === 2).flatMap((view) => view.results);
+  return { id, asked: asked.content, answered, second };
+}
+
+export const NOV22_AGENT_LOOP_YES_EVIDENCE_TESTER_ORDER_CASES: ReplayCase[] = [
+  {
+    id: "nov22-yes-evidence-tester-order-yes-please-opens",
+    title: `The tester's turn order: "${BY_DATE}", the app asks "… for Fenna Prewitt … Is that the one you mean?", "yes please" opens Fenna's form and is never refused as about someone else`,
+    report: REPORT,
+    status: "fixed",
+    async run(t) {
+      const { id, asked, answered, second } = await tellByDate(t);
+      expect(asked, `the reply never asked about Fenna, so this run proves nothing:\n${asked}`).toMatch(/Fenna/);
+      const refused = second.filter((result) => /^privacy_/.test(String((result.output as { reason_code?: unknown }).reason_code ?? "")));
+      expect(refused.map((result) => `${result.tool}: ${JSON.stringify(result.output).slice(0, 200)}`), answered.content).toEqual([]);
+      const reached = second.some((result) => JSON.stringify(result.output).includes(id)) || answered.formOpened?.instanceId === id;
+      expect(reached, `"yes please" did not reach Fenna's form:\n${answered.content}`).toBe(true);
+    },
+  },
+];
