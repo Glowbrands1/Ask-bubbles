@@ -719,6 +719,7 @@ function FormProposalCard({
         </ProposalRow>
         {proposal.formDate ? <ProposalRow label="Date">{proposal.formDate}</ProposalRow> : null}
         {proposal.incidentTime ? <ProposalRow label="Time">{proposal.incidentTime}</ProposalRow> : null}
+        {proposal.newStore ? <ProposalRow label="New store">{proposal.newStore}</ProposalRow> : null}
         {proposal.warningLevel ? (
           <ProposalRow label="Type of warning">
             {proposal.warningLevel === "verbal"

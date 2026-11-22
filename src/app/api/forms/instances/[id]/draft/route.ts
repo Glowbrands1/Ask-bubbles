@@ -110,6 +110,7 @@ import {
   officialManualProvenance,
   type ManualSection,
   unconfirmedManualNotice,
+  offenseKeyForManualHeading,
 } from "@/lib/forms/official-policy-manual";
 import { manualGroundedPolicies, policyFieldValue } from "@/lib/forms/policy-citation";
 import { cardPolicyHeading, cardPolicyPhrase } from "@/lib/forms/card-policy";
@@ -144,6 +145,7 @@ import {
   SPECIFIC_SECTION_BOXES,
   describedManualChoices,
   describedManualSection,
+  manualSectionNamedBy,
   namedManualSection,
 } from "@/lib/forms/named-policy-section";
 import { OTHER_WRITE_IN_INSTRUCTION, specificTopic, withConductLinePage, withConductLineWording, withoutPrimedTopic } from "@/lib/forms/specific-policy-topics";
@@ -762,6 +764,18 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
       (row) => row.provenance?.source === "manager_statement" && row.fieldKey === EXIT_TYPE_GROUP && row.checked.includes(EXIT_OPTION.immediateInvoluntary),
     );
     if (exitDetails && statedInvoluntary) exitDetails.resignationDate = null;
+    /*
+     * U26 (QA's Bubbles round 2, 22 Nov 2026): on a loop card's Create, How Employee Resigned is read only from the
+     * sentences the exit form's own reader reads a resignation type from (`resignationStatementMethod`), never from a
+     * voicemail someone else left in the account before it. The card's own method (the model's, checked) was written at
+     * Create and is kept; with no stating sentence, the account is read as before.
+     */
+    if (exitDetails && body.cardFromLoop === true) {
+      const { resignationStatementMethod } = await import("@/lib/forms/exit-details");
+      const { notesWithoutCardLines } = await import("@/lib/forms/draft-notes");
+      const stated = resignationStatementMethod(notesWithoutCardLines(notes), businessToday());
+      if (stated !== undefined) exitDetails.resignationMethod = stated;
+    }
     if (exitDetails?.permanentAddress) {
       const { addressTypedIn } = await import("@/lib/forms/exit-details");
       // A loop card's lines ("What happened: …") are the agent loop's words too (ported from the sibling app, item 19).
@@ -1035,9 +1049,20 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
      * manual has the card's heading and its box agrees with the manager's own
      * words, it is the policy named.
      */
+    /*
+     * QA's Bubbles round 2 (22 Nov 2026; U06/U09/U15/U17): a loop card citing "Care and Cleaning of Equipment and
+     * Facilities, p.21" saved no Policy Violated and no Direct policy. Its heading went through `namedPolicies`, which
+     * reads "of" as a sentence about a policy, not its name, so no section was found. A loop card's heading is already
+     * a heading of the pinned manual (the tool checked it): it is looked up as that heading (`manualSectionNamedBy`).
+     */
+    const loopHeadingSection = (() => {
+      if (!loopCardHeading || !manual.ok) return null;
+      const section = manualSectionNamedBy(loopCardHeading, manual.chunks);
+      return section ? { phrase: loopCardHeading, section, offenseKey: offenseKeyForManualHeading(section.heading) } : null;
+    })();
     const cardHeading =
       caPolicy && manual.ok && cardPolicyToDraftEnabled() && typeof body.cardPolicy === "string" && body.cardPolicy.trim()
-        ? namedManualSection({ text: cardPolicyPhrase(body.cardPolicy), chunks: manual.chunks })
+        ? (loopHeadingSection ?? namedManualSection({ text: cardPolicyPhrase(body.cardPolicy), chunks: manual.chunks }))
         : null;
     // Only where it ticks the box the manager's own words tick, or they tick none: a card's generic
     // "Attendance" never turns a missed meeting (Absenteeism) into Tardiness.
