@@ -67,7 +67,7 @@ describe("accountWithoutPriorSteps: a list of steps (U09, live)", () => {
   });
 });
 
-/* QA (22 Nov 2026, Ask Sunny's port): the incident's own clause, with no incident date from the model, is no step. */
+/* QA (22 Nov 2026, the sibling app's port): the incident's own clause, with no incident date from the model, is no step. */
 describe("listedWithKeptSteps: the incident's own clause (no incident date passed)", () => {
   const T1 = "ca for Fenna Prewitt, she was late on 11/12, she had a verbal on 10/2";
   it("a clause dated as the card's own account is this incident", () => {

@@ -6,7 +6,7 @@ import { evidenceFrom, headingWith, lastResult, loopStandIn, type LoopDecision }
 
 /**
  * ============================================================================
- * THE INCIDENT'S OWN CLAUSE IS NEVER A PRIOR STEP (Ask Sunny's port of #1054, via QA, 22 Nov 2026)
+ * THE INCIDENT'S OWN CLAUSE IS NEVER A PRIOR STEP (the sibling app's port of #1054, via QA, 22 Nov 2026)
  * ============================================================================
  *
  * The manager's turn (the person invented): "ca for <P>, she was late on 11/12, she had a verbal on 10/2". The model passed
@@ -15,7 +15,7 @@ import { evidenceFrom, headingWith, lastResult, loopStandIn, type LoopDecision }
  * 11/12/2026". The lateness is this incident (its date is the card's own account's). The Verbal stays on Prior actions.
  */
 
-const REPORT = "QA (22 Nov 2026, Ask Sunny's port of #1054): \"ca for <P>, she was late on 11/12, she had a verbal on 10/2\" listed the incident's own clause as a prior step";
+const REPORT = "QA (22 Nov 2026, the sibling app's port of #1054): \"ca for <P>, she was late on 11/12, she had a verbal on 10/2\" listed the incident's own clause as a prior step";
 const T1 = "ca for Fenna Prewitt, she was late on 11/12, she had a verbal on 10/2";
 
 export const NOV22_AGENT_LOOP_LISTED_STEP_NOT_INCIDENT_CASES: ReplayCase[] = [

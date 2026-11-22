@@ -839,7 +839,7 @@ function stepShaped(clause: string): boolean {
  * the clauses' shape and the card's own steps, never a word list.
  */
 /*
- * QA (22 Nov 2026, Ask Sunny's port of this): "ca for <P>, she was late on 11/12, she had a verbal on 10/2", with no
+ * QA (22 Nov 2026, the sibling app's port of this): "ca for <P>, she was late on 11/12, she had a verbal on 10/2", with no
  * incident date from the model, listed the incident's own clause as a step ("she was late on — 11/12/2026"). This
  * incident's dates are the incident date the model gave, or with none, the dates of the card's own account (`account`)
  * that no step the card keeps holds. A clause with one of those dates is this incident, never a step.
