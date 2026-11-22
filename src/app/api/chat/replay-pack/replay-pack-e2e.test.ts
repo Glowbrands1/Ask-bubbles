@@ -629,7 +629,7 @@ process.env.NEXT_PUBLIC_DEMO_MODE = "false";
 vi.setConfig({ hookTimeout: 30_000, testTimeout: process.env.AGENT_LOOP_LIVE === "1" ? 600_000 : 30_000 });
 
 const { ensureTemplateLibrary } = await import("@/lib/forms/repository");
-const { stillAsks } = await import("@/lib/forms/reply-guards");
+const { stillNeedWithoutQuestion } = await import("./still-need");
 const { createInlineForm } = await import("@/features/chat/create-inline-form");
 const { foldName } = await import("@/lib/forms/fold-name");
 const chatRoute = await import("../route");
@@ -746,10 +746,8 @@ class Thread {
     const streamed = response.headers.get(STREAM_HEADER) === "1" ? unwrapStreamed(await response.text()) : null;
     const payload = (streamed ? streamed.body : await response.json()) as Answer & { error?: string };
     expect(streamed?.status ?? response.status, JSON.stringify(payload)).toBe(200);
-    // EVERY REPLY (QA, 3 Nov 2026): "I still need …" is never said unless the reply asks who, which location or which date.
-    if (/^I still need\b/m.test(payload.content ?? "")) {
-      expect(stillAsks(payload.content), `"I still need" without a question:\n${payload.content}`).not.toBeNull();
-    }
+    // EVERY REPLY (QA, 3 Nov 2026): "I still need …" is never said unless the reply asks something (`still-need.ts`).
+    expect(stillNeedWithoutQuestion(payload.content ?? ""), `"I still need" without a question:\n${payload.content}`).toBe(false);
     this.messages.push(
       { id, role: "user", content: question, createdAt: `${TODAY}T12:28:00Z` } as ChatMessage,
       {

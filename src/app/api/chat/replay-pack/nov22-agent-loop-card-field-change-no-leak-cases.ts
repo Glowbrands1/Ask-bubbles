@@ -91,9 +91,16 @@ export const NOV22_AGENT_LOOP_CARD_FIELD_CHANGE_NO_LEAK_CASES: ReplayCase[] = [
     report: REPORT,
     status: "fixed",
     async run(t) {
-      const { reply } = await chat(t, true);
+      const { reply, model } = await chat(t, true);
       expect(reply.content, `the model's reasoning reached the manager:\n${reply.content}`).not.toMatch(/the manager/i);
-      expect(reply.content).toMatch(/Added to Prior actions/);
+      /*
+       * CHANGED ON PURPOSE (QA's live regression triage, 22 Nov 2026): this asserted the stand-in's own wording "Added to
+       * Prior actions". The live model writes the change its own way ("**Prior actions:** Coaching — … 10/15/2026, as you
+       * said."). What the manager must see: the reply states the date the card's Prior actions now hold. On the bug (the
+       * reasoning reply, or no hand-back) this still fails on the line above.
+       */
+      expect(priorOf(model), `the signing is not on the card:\n${reply.content}`).toMatch(/10\/15\/2026/);
+      expect(reply.content, `the reply does not state the added step:\n${reply.content}`).toMatch(/10\/15\/(?:20)?26/);
     },
   },
   {
@@ -102,9 +109,11 @@ export const NOV22_AGENT_LOOP_CARD_FIELD_CHANGE_NO_LEAK_CASES: ReplayCase[] = [
     report: REPORT,
     status: "fixed",
     async run(t) {
-      const { reply } = await chat(t, false);
+      const { reply, model } = await chat(t, false);
       expect(reply.content, `the model's reasoning reached the manager:\n${reply.content}`).not.toMatch(/the manager/i);
-      expect(reply.content).toMatch(/Added to Prior actions/);
+      /* CHANGED ON PURPOSE (as above): the rest of the reply stays, read as the date it states, not the stand-in's wording. */
+      expect(priorOf(model), `the signing is not on the card:\n${reply.content}`).toMatch(/10\/15\/2026/);
+      expect(reply.content, `the rest of the reply was dropped with the reasoning:\n${reply.content}`).toMatch(/10\/15\/(?:20)?26/);
     },
   },
 ];

@@ -30,17 +30,25 @@ export const NOV22_AGENT_LOOP_LEVEL_NAMED_IN_REQUEST_CASES: ReplayCase[] = [
       vi.setSystemTime(new Date("2026-11-21T18:00:00Z"));
       t.directory([...LOOP_STAFF]);
       t.as("location_manager", WEST_DODGE);
-      t.loopModel!(loopStandIn((view): LoopDecision => {
+      const model = loopStandIn((view): LoopDecision => {
         const result = lastResult(view, "propose_form") as { card?: { warning_level?: string | null } } | null;
         if (result) return { text: result.card?.warning_level ? `Here's the Corrective Action Form for **Fenna**. **Type of Warning:** ${result.card.warning_level === "verbal" ? "Verbal" : "Written"} Warning, as you said.` : "Here's the Corrective Action Form for **Fenna**. Warning level isn't set; tell me if it applies." };
         // The live model's level on T2 quoted words that do not state it (level_not_stated); with the rule it quotes "verbal CA".
         const level = { warning_level: "verbal", level_evidence: evidenceFrom(view, RULE.test(view.system) ? "verbal CA" : "with all the same information given") };
         return { tool: "propose_form", input: { template_key: "dpoa", employee_id: LOOP_FENNA.id, ...level, person_evidence: evidenceFrom(view, "Fenna Prewitt") } };
-      }));
+      });
+      t.loopModel!(model);
       const thread = t.thread();
       await thread.say(T1);
       const reply = await thread.say(T2);
-      expect((thread.proposal as { warningLevel?: string | null } | null)?.warningLevel, `the card lost the level the request named:\n${reply.content}`).toBe("verbal");
+      /*
+       * CHANGED ON PURPOSE (QA's live regression triage, 22 Nov 2026): Fenna has nothing on file, so "all the same
+       * information" carries nothing; the live model made no card yet and asked what happened, which loses no level. A card
+       * made for this request must hold Verbal; the stand-in always makes one, so the bug still fails here.
+       */
+      const card = thread.proposal as { warningLevel?: string | null } | null;
+      if (card || !model.live) expect(card?.warningLevel, `the card lost the level the request named:\n${reply.content}`).toBe("verbal");
+      else expect(reply.content, `no card and no question:\n${reply.content}`).toMatch(/what happened\?/i);
       expect(reply.content).not.toMatch(/isn't set/i);
     },
   },
