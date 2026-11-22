@@ -4038,9 +4038,30 @@ export async function proposeForm(
    * <name>"), the level an earlier card held never reaches the next card; the manager states it again.
    */
   const samePersonOnScreen = Boolean(context.cardOnScreen && (employee.id ? context.cardOnScreen.employeeKey === personKey(employee.id) : !context.cardOnScreen.employeeKey && context.cardOnScreen.nameKey === personKey(employee.name)));
+  /*
+   * QA's ruling (22 Nov 2026, Bubbles round 2 U35; amending the 16 Nov rule above for no-card replies): an answer the
+   * manager stated for THIS request stays on THIS person's card for the rest of the request, even across a reply with no
+   * card, until a new request (new_form_evidence), another person or another form. So with no card on screen, the
+   * request's latest record of this card still carries its level.
+   */
+  /*
+   * QA's amendment (22 Nov 2026, from the sibling app's port of U35): the carry holds only while the card is the SAME
+   * incident as the carried record, by the records' data: this turn's account is that record's account (its one-way key)
+   * or its incident date. A card whose account is a new incident ("another ca for <P>, she was rude to a guest on 11/14")
+   * starts clean even without new_form_evidence. A turn that gives no account ("verbal") is the same card.
+   */
+  const turnAccount = typeof input.what_happened === "string" ? input.what_happened.trim() : "";
+  const turnDate = typeof input.incident_date === "string" ? input.incident_date.trim() : "";
+  const sameIncident = (record: CardRecord) =>
+    turnAccount === "" || record.accountKey === cardAccountKey(turnAccount, input.incident_date) || Boolean(record.incidentDate && turnDate && record.incidentDate === turnDate);
+  const requestRecord = (has: (record: CardRecord) => boolean) => [...(context.cardRecords ?? [])].reverse().find((record) => isThisCard(record) && inRequest(record) && has(record)) ?? null;
+  /* With no card on screen (U35's carry), only the same incident's record carries. */
+  const sameIncidentRecord = (has: (record: CardRecord) => boolean) => requestRecord((record) => has(record) && sameIncident(record));
   const carriedRecord = samePersonOnScreen
-    ? ([...(context.cardRecords ?? [])].reverse().find((record) => isThisCard(record) && inRequest(record) && record.level) ?? (isThisCard(context.cardOnScreen) ? context.cardOnScreen : null))
-    : null;
+    ? (requestRecord((record) => Boolean(record.level)) ?? (isThisCard(context.cardOnScreen) ? context.cardOnScreen : null))
+    : !context.cardOnScreen && !context.openFormId
+      ? sameIncidentRecord((record) => Boolean(record.level))
+      : null;
   /*
    * QA (20 Nov 2026; Runner 2's c263): "Write me a CA form for <A> having a black crewneck on … on 11/13 and 11/6" after
    * "Please create a CA written warning for <A> for being out of dresscode on 11/13" was the SAME CA asked again with more
@@ -4095,7 +4116,8 @@ export async function proposeForm(
   const modelAccount = typeof input.what_happened === "string" ? input.what_happened.trim() : "";
   /* The key holds the incident date the model gave too: "another ca …, late on 11/14" after a card for 11/12 with the same words is another incident (PR 1c). */
   const sameCardKept = !context.openFormId && isThisCard(context.earlierCard) && Boolean(context.earlierCard.accountKey && modelAccount && context.earlierCard.accountKey === cardAccountKey(modelAccount, input.incident_date));
-  const openCard = isThisCard(context.cardOnScreen) ? context.cardOnScreen : sameCardKept ? context.earlierCard : null;
+  /* QA's ruling (22 Nov 2026, U35): with no card on screen, the request's latest record of this card carries its payroll answer. */
+  const openCard = isThisCard(context.cardOnScreen) ? context.cardOnScreen : sameCardKept ? context.earlierCard : !context.cardOnScreen && !context.openFormId ? sameIncidentRecord((record) => Boolean(record.payroll)) : null;
   const payrollRecord = payrollFields && !asksNewForm && openCard?.payroll ? openCard : null;
   if (payroll === null && !answerUnclear && payrollRecord?.payroll) {
     payroll = payrollRecord.payroll;
