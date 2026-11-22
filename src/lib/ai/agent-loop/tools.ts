@@ -5360,13 +5360,13 @@ export async function proposeForm(
   /*
    * U24 (QA's flaky check on main f712228, 22 Nov 2026): with the type stated ("Immediate Vol Resignation") the card ticked
    * it, but one live reply read back every reads_back line and never the type (the exit_ticks rule is a separate line the
-   * model can skip). The ticks are the card's own facts: their "Filed as" line is one of reads_back, and run.ts adds it
-   * when the reply names none of them. A termination's tick stays with exit_termination's own line, as before. Only after
+   * model can skip). The ticks are the card's own facts: run.ts adds their "Filed as" line when the reply names none of
+   * them. They are NOT put in reads_back: QA's live check (#1061) saw the rehire case lose its reads_back with that, so
+   * the model's input is unchanged. A termination's tick stays with exit_termination's own line, as before. Only after
    * effects.proposal is set: an await before it lets a parallel propose_form pass the one-card check too.
    */
   const cardTicks = await exitCardTicks(template.key === appConfig().formKeys.exit, Boolean(exitTermination), requestWords, today, exitHow?.option ?? null);
   effects.exitTicks = cardTicks.exit_ticks ?? [];
-  if (card.exitReadBack && cardTicks.exit_ticks?.length) card.exitReadBack = [`Filed as: ${cardTicks.exit_ticks.join(", ")}.`, ...card.exitReadBack];
   const personId = typeof input.employee_id === "string" ? input.employee_id.trim() : "";
   /*
    * THE CARD'S FACTS (Pau, 14 Nov 2026: "code may refuse or inform, never rewrite"; the code-check audit's batch A).

@@ -1,9 +1,10 @@
 # The exit type the card ticks is always read back (QA's flaky check, U24)
 
 **Fix (Ask Bubbles):** `src/lib/ai/agent-loop/tools.ts`, `src/lib/ai/agent-loop/run.ts`.
-- The exit card's ticks (`exitCardTicks`, the card's own facts) are now also reads_back's first line ("Filed as: <ticks>.").
-- run.ts adds that line after the reply's opening paragraph when the reply names none of the ticked types.
-- The rules book says the line once.
+- run.ts adds the line "Filed as: <ticks>." after the reply's opening paragraph when the reply names none of the types
+  the exit card ticks (`exitCardTicks`, the card's own facts).
+- The model's input is unchanged. A first version also put the line in reads_back, and QA's live check saw
+  `nov22-b6-rehire-stated-is-read-back-as-saved` lose its reads_back with it.
 - A termination keeps its own exit_termination line, as before.
 
 Report: on main f712228, "… Immediate Vol Resignation …" ticked Immediate Voluntary Resignation. In one of five live
