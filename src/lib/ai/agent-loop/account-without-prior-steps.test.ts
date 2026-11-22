@@ -66,3 +66,17 @@ describe("accountWithoutPriorSteps: a list of steps (U09, live)", () => {
     expect(accountWithoutPriorSteps(account, STEPS_U09, "2026-11-01")).toBe(account);
   });
 });
+
+/* QA (22 Nov 2026, Ask Sunny's port): the incident's own clause, with no incident date from the model, is no step. */
+describe("listedWithKeptSteps: the incident's own clause (no incident date passed)", () => {
+  const T1 = "ca for Fenna Prewitt, she was late on 11/12, she had a verbal on 10/2";
+  it("a clause dated as the card's own account is this incident", () => {
+    expect(listedWithKeptSteps(T1, "Verbal CA — 10/02/2026", null, "2026-11-21", "Fenna was late on 11/12.")).toEqual([]);
+  });
+  it("control: with the incident date given, U09's listed manual step is still a step, even when the account copied it", () => {
+    expect(listedWithKeptSteps("JBA Policy Manual 1-1-2026, Verbal CA 11-1-2026. On 11-1-26 Fenna violated care and cleaning of facilities policy", "Verbal CA — 11/01/2026", "2026-11-01", "2026-11-22", "JBA Policy Manual 1/1/2026. On 11/1/26, Fenna violated the care and cleaning of facilities policy.")).toEqual(["JBA Policy Manual — 01/01/2026"]);
+  });
+  it("control: with no incident date, a listed step whose date the account does not hold is still a step", () => {
+    expect(listedWithKeptSteps("ca for Fenna Prewitt, coaching 9/22, she had a verbal on 10/2", "Verbal CA — 10/02/2026", null, "2026-11-21", "Fenna was late on 11/12.")).toEqual(["coaching — 09/22/2026"]);
+  });
+});
