@@ -1273,8 +1273,19 @@ export async function findStaff(context: ToolContext, input: { name?: unknown; p
      * or after the manager confirms: a "yes" to the Did-you-mean, after which the model looks up the confirmed name.
      */
     const nearMissNever = (await import("@/lib/config/chat-quality-flags")).nearMissNeverSeatedEnabled();
+    /*
+     * QA's live round-2 re-run (22 Nov 2026, U35(a) follow-up): after "Did you mean **<A>**?", the answer "fix her last name
+     * <other>" (a word that does not turn the typed name into <A>) seated <A>, because <A> was "on this chat's card" by the
+     * reply's TEXT, and the Did-you-mean question itself names <A>. The card is read from this chat's card record (on screen,
+     * else the latest card), never from a reply's words.
+     */
+    const recordCard = context.cardOnScreen ?? context.earlierCard ?? null;
+    /* This chat's recorded answer confirmed this typed spelling as the one close candidate (a yes, the full name, or the word that corrects it). */
+    if (close.kind === "confirm" && close.candidates.length === 1 && spellingKeysConfirmedFor(nameQuestionView(context, read.roster), close.candidates[0]!.employee.id).includes(personKey(typed))) {
+      return { matches: [staffRow(close.candidates[0]!.employee)], confirmed_by_manager: { name: close.candidates[0]!.name, answer: "confirmed" }, note: `The manager confirmed ${close.candidates[0]!.name} for "${typed}". Do not ask again: propose the card for ${close.candidates[0]!.name}.` };
+    }
     const onCard = !nearMissNever && close.kind === "confirm" && close.candidates.length === 1 && !saidNo
-      ? context.history.some((turn) => turn.role === "assistant" && typeof turn.content === "string" && turn.content.includes(close.candidates[0]!.name))
+      ? Boolean(recordCard?.employeeKey && recordCard.employeeKey === personKey(close.candidates[0]!.employee.id))
       : false;
     if (onCard && close.kind === "confirm") {
       return { matches: [staffRow(close.candidates[0]!.employee)], note: `A close spelling of ${close.candidates[0]!.name}, the person on this chat's card. Use them; no need to ask.` };

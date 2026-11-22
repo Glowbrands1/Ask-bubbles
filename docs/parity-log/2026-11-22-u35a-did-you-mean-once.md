@@ -9,7 +9,9 @@ same question came back at T3–T6 (live on main), and in the tester's run it ca
 - tools.ts: `closeSpellingNotSettled` settles a person the chat's card (on screen, or the latest) already is; and a close
   spelling whose only match is the card's own person keeps the card theirs (`cardNameCorrection`), with no name_corrected.
 
-Seen while testing (unchanged, reported to QA): after the question, "fix her last name garcia" (not the offered name) also
-seats the offered person, on main as on this branch.
+- tools.ts find_staff (QA's follow-up): after the question, "fix her last name garcia" (a word that does not turn the typed
+  name into the offered one) seated the offered person, because "the person on this chat's card" was read from the
+  replies' TEXT, and the Did-you-mean question itself names them. The card is now read from the chat's card record; a
+  close spelling is seated without asking only when this chat's recorded answer confirmed it.
 
 **Ask Sunny: same gap, port held.** Sunny's `confirmed-spelling.ts` reads only a yes or the offered full name.

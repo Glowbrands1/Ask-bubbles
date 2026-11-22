@@ -73,4 +73,25 @@ export const NOV22_AGENT_LOOP_U35A_DID_YOU_MEAN_ONCE_CASES: ReplayCase[] = [
       expect(replies.slice(3).some((entry) => entry.card === "Liesl Moreno Vargas"), `the card never became Liesl Moreno Vargas's:\n${JSON.stringify(replies, null, 1)}`).toBe(true);
     },
   },
+  {
+    id: "nov22-u35a-correction-to-another-name-is-no-yes",
+    title: "Control: after \"Did you mean **Liesl Moreno Vargas**?\" for \"Liesl Moreno Vagras\", \"fix her last name garcia\" (a word that does not turn the typed name into the offered one) confirms nobody: no card for Liesl Moreno Vargas",
+    report: `${REPORT}; QA (22 Nov 2026): an answer whose word does not turn the typed name into the offered name seats someone the manager did not name`,
+    status: "fixed",
+    async run(t) {
+      vi.setSystemTime(new Date("2026-11-22T18:00:00Z"));
+      t.directory([...LOOP_STAFF, LIESL]);
+      t.as("assistant_manager", GRAND_ISLAND);
+      const model = loopStandIn((view): LoopDecision => {
+        const result = lastResult(view, "propose_form") as { card?: unknown; ask_exactly?: string } | null;
+        if (result) return { text: result.card ? "Here's the Corrective Action Form for **Liesl**." : (result.ask_exactly ?? "ok") };
+        return { tool: "propose_form", input: { template_key: "dpoa", employee_name: "Liesl Moreno Vagras", person_evidence: evidenceFrom(view, "Liesl Moreno Vagras", users(view) - 1), what_happened: "A customer complained about the experience with Liesl." } };
+      });
+      t.loopModel!(model);
+      const thread = t.thread();
+      await thread.say(U35_TURNS[1]);
+      const reply = await thread.say("fix her last name garcia");
+      expect((thread.proposal as { employeeName?: string } | null)?.employeeName ?? null, reply.content).not.toBe("Liesl Moreno Vargas");
+    },
+  },
 ];
