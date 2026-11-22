@@ -209,7 +209,23 @@ export function withoutPersonPronouns(
     const sentence = end === -1 ? rest : rest.slice(0, end);
     for (const joined of sentence.matchAll(new RegExp(`\\b(?:and|but|so|then)\\s+(${listener})\\b`, "gi"))) told.add(at + match[1]!.length + joined.index! + joined[0].length - joined[1]!.length);
   }
-  const inQuote = (at: number) => quoted.some(([from, to]) => at >= from && at < to) || (!told.has(at) && keepsOwn(at));
+  /*
+   * QA's live round-2 re-run (22 Nov 2026, U23, T5/T6): "Tamsin asked another employee what they would do if they had 8
+   * arms" (the card pass had kept "they", #1014) became "what Tamsin would do if Tamsin had" in the reply, because its
+   * reporter is now the person's NAME, not a pronoun of another kind; the next turn's account copied the reply. The
+   * person's own pronoun is the one the manager uses for people in their words: when they use only "she" forms (or only
+   * "he" forms), a pronoun of another kind (they/them/their, or the other one) is someone else, wherever it stands.
+   * Unknown (both, or neither) keeps the reading above. Grammar from the manager's own words, never a list of phrasings.
+   */
+  const spoken = (managerWords ?? "").toLowerCase();
+  const usesShe = /\b(?:she|her|hers|herself)\b/.test(spoken);
+  const usesHe = /\b(?:he|him|his|himself)\b/.test(spoken);
+  const personKind: "she" | "he" | null = usesShe && !usesHe ? "she" : usesHe && !usesShe ? "he" : null;
+  const anotherKind = (word: string) => {
+    const kind = pronounKind(word);
+    return personKind !== null && kind !== null && kind !== personKind;
+  };
+  const inQuote = (at: number) => quoted.some(([from, to]) => at >= from && at < to) || (!told.has(at) && keepsOwn(at)) || anotherKind(reply.slice(at).match(/^\p{L}+/u)?.[0] ?? "");
   const edits: Array<{ from: number; to: number; text: string }> = [];
 
   /*
@@ -287,7 +303,7 @@ export function withoutPersonPronouns(
     if (inQuote(at) || FIELD_WORDS.test(sentenceBefore(reply, at))) continue;
     const phrase = match[0];
     const pronoun = /\bthem\b/i.exec(phrase) ?? /\bthey\b/i.exec(phrase) ?? /\bthemsel(?:f|ves)\b/i.exec(phrase);
-    if (!pronoun) continue;
+    if (!pronoun || anotherKind(pronoun[0])) continue;
     const from = at + pronoun.index;
     const to = from + pronoun[0].length;
     if (/^they$/i.test(pronoun[0])) {
@@ -297,7 +313,7 @@ export function withoutPersonPronouns(
   }
   for (const match of reply.matchAll(THEIR_PERSON)) {
     const at = match.index!;
-    if (inQuote(at) || FIELD_WORDS.test(sentenceBefore(reply, at))) continue;
+    if (inQuote(at) || anotherKind(match[0].match(/\p{L}+/u)?.[0] ?? "") || FIELD_WORDS.test(sentenceBefore(reply, at))) continue;
     edits.push({ from: at, to: at + match[0].length, text: possessive(display) });
   }
   if (edits.length === 0) return { text: reply, replaced: 0 };
