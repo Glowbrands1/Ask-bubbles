@@ -13,7 +13,7 @@ import { evidenceFrom, lastResult, loopStandIn, type LoopDecision } from "./loop
  * someone else, not this person, so this person's forms stay closed", find_staff matched <First> <Last>, and
  * find_past_forms got the same refusal again; the manager's "1" went round five more turns. This app already reads a
  * first name's bare-s possessive in the same guard (QA's live re-test item 15, "bring up fennas corrective action"), so
- * the sibling's fix (Ask Sunny #1208) is not ported; these cases hold the sibling's exact shape here. See
+ * the sibling's fix (its #1208) is not ported; these cases hold the sibling's exact shape here. See
  * docs/parity-log/2026-11-22-possessive-no-apostrophe-already-here.md. Invented person: Wenonah Tindall (on no fixture).
  */
 
