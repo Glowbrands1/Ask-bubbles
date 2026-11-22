@@ -19,7 +19,7 @@ import { answeredNameQuestions, answerNamesSomeoneElse, everKeptOrUsedTyped, isC
 import { employeeFirstName } from "@/lib/forms/employee-reference";
 import { AFFIRMATIVE, displayName, editDistance, matchEmployeeName, nameConfirmationQuestion, readNameConfirmation, rosterSpellingOf, type RosterEmployee } from "@/lib/forms/employee-match";
 import { offRosterTyped } from "@/lib/forms/roster-only-names";
-import { parseFormDocument } from "@/lib/forms/document";
+import { checkboxGroupsForVariant, parseFormDocument } from "@/lib/forms/document";
 import { draftableCheckboxGroups, draftableFields } from "@/lib/forms/responsibility";
 import { authorizedSalonIds, PLACE_LEVEL, readSalonMentions, rosterSalonName, salonStreet } from "./places";
 import type { DirectoryRosterRow } from "@/lib/forms/employee-roster";
@@ -2237,6 +2237,48 @@ function typedInThisRequest(context: ToolContext, roster: readonly RosterEmploye
  * nobody on the roster and not a close spelling of anyone on it is taken as typed, with the card's off-roster line.
  * Only a close spelling of a roster person is asked about (ruling A); a single word still gets the use-<name> offer.
  */
+/** An exit option's label on this template version ("No Call No Show"), or null when the version cannot be read. */
+function exitOptionLabel(document: unknown, option: string): string | null {
+  if (!document) return null;
+  try {
+    for (const group of checkboxGroupsForVariant(parseFormDocument(document), null)) {
+      const found = group.options.find((candidate) => candidate.key === option);
+      if (found) return found.label;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+/**
+ * Whether the manager's quoted words name a form option by its own label (round 2, U24): at least half of the label's
+ * words (letters only, three or more), each said exactly, as a prefix of three letters or more ("Vol" for Voluntary), or
+ * as a close spelling ("volunatary"). Read from the label, never a list of phrasings.
+ */
+export function quoteNamesOption(quote: string, label: string): boolean {
+  const wordsOf = (text: string) => [...new Set((text.toLowerCase().match(/[a-z]+/g) ?? []).filter((word) => word.length >= 3))];
+  const labelWords = wordsOf(label);
+  const said = (text: string) => (text.toLowerCase().match(/[a-z]+/g) ?? []);
+  /* "didn't" is "did not": the contraction's own two words, so "didn't fulfill her notice" names "Did not fulfill … notice". */
+  const quoted = said(quote.replace(/([a-z])n['’]t\b/gi, "$1 not"));
+  if (labelWords.length === 0) return false;
+  /*
+   * Ported from the sibling app (QA, 22 Nov 2026, #1215): a word sharing a stem of six letters or more with a label word
+   * names it ("fulfilling" names "Fulfilled"). A typed word that only starts with a short label word never names it:
+   * "notice" is not the label's "not" (it made "gave 2 weeks notice and is fulfilling them" name "Did not fulfill … notice").
+   */
+  const stem = (a: string, b: string) => {
+    let shared = 0;
+    while (shared < a.length && shared < b.length && a[shared] === b[shared]) shared += 1;
+    return shared >= 6;
+  };
+  const named = labelWords.filter((word) =>
+    quoted.some((typed) => typed === word || (typed.length >= 3 && word.startsWith(typed)) || (word.length >= 4 && typed.startsWith(word)) || stem(typed, word) || (typed.length >= 5 && word.length >= 5 && editDistance(typed, word) <= 2)),
+  );
+  return named.length >= Math.max(1, Math.ceil(labelWords.length / 2)) && (labelWords.length < 2 || named.length >= 2);
+}
+
 function fullNameTakenAsTyped(context: ToolContext, roster: readonly RosterEmployee[], typed: string): boolean {
   const name = typed.replace(/\s+/g, " ").trim();
   if (words(name).length < 2 || namesAPlace(name) || isJobTitlePhrase(name)) return false;
@@ -4301,7 +4343,13 @@ export async function proposeForm(
         return [library.EXIT_TYPE_GROUP, library.EXIT_NOTICE_GROUP].some((group) => (checked[group] ?? []).length > 0);
       })()
     : false;
-  const exitHow = template.key === appConfig().formKeys.exit && !exitTermination && !readerTypeTicked && typeof input.exit_how === "string" && EXIT_HOW.has(input.exit_how) && exitHowQuote !== "" && answerEvidence(context, input.exit_how_evidence, "request", evidencePerson, { requestTurnIds }).ok
+  /*
+   * QA's Bubbles round 2 (22 Nov 2026, U24, HIGH): "Immediate Vol Resignation … resigned via phone call" became No Call
+   * No Show (the model's exit_how, quoting "resigned via phone call"). exit_how is kept only when its quoted words name
+   * the option's own label on the form (`quoteNamesOption`: the template's data, no word list).
+   */
+  const exitHowLabel = typeof input.exit_how === "string" ? exitOptionLabel((template as { currentVersion?: { document?: unknown } | null }).currentVersion?.document, input.exit_how) : null;
+  const exitHow = template.key === appConfig().formKeys.exit && !exitTermination && !readerTypeTicked && typeof input.exit_how === "string" && EXIT_HOW.has(input.exit_how) && exitHowQuote !== "" && (exitHowLabel === null || quoteNamesOption(exitHowQuote, exitHowLabel)) && answerEvidence(context, input.exit_how_evidence, "request", evidencePerson, { requestTurnIds }).ok
     ? { option: input.exit_how, quote: exitHowQuote.slice(0, 300) }
     : null;
   let salonFromWoven: string | null = null;
