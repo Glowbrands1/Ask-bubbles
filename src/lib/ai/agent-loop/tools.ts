@@ -13,6 +13,7 @@ import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
 import { businessToday, formatBusinessTime } from "@/lib/business-date";
 import { appConfig } from "./app-config";
 import { isoDate, monthDayToIso, readDates, sameDate, withoutDates } from "./dates";
+import { earlierPriorDates, priorDateLine, priorStepDates } from "./prior-step-dates";
 import { candidateNameWords, chatFormsActor, formDateRangeFromInput, formKindFromText, ofKind } from "@/lib/forms/chat-form-records";
 import { CURRENT_MESSAGE_ID, holdsPhrase, identifiedTurns, readEvidence, verifyEvidence, withoutMessageIdTags, type IdentifiedTurn } from "./evidence";
 import { personNamedInRequest, requestStart } from "./person-in-request";
@@ -896,6 +897,8 @@ export interface ToolEffects {
   nameQuestion?: { offeredIds: string[]; typed: string; offeredNames?: string[]; asksFullName?: boolean; templateKey?: string };
   /** Round 3 U09: this turn already handed the card back once with the one incident date the manager stated. */
   incidentDateNamed?: boolean;
+  /** Round 3 U21: this turn already handed the card back once because its incident_date was a prior step's date. */
+  priorDateNamed?: boolean;
   /** Round 3 U16: the forms read_form read this turn (person, form date and account), so a copy keeps its date. */
   formsRead?: { employeeName: string | null; formDate: string | null; account: string }[];
   /** QA (16 Nov 2026): propose_form ran for a form this turn, so a form is chosen (find_staff may ask the name). */
@@ -913,6 +916,8 @@ export interface ToolEffects {
   proposalPayrollAmount?: string | null;
   /** QA (c163): the one-way key of this card's account as the model gave it (`accountKey`), for the card record. */
   proposalAccountKey?: string | null;
+  /** Round 3 U21: the card's prior actions' dates (ISO), for its server record (`CardRecord.priorDates`). */
+  proposalPriorDates?: string[];
   /**
    * Every source a tool read this turn, numbered from 1 in the order read: the model cites one as [S<n>] (`addSource`).
    * Only the ones the reply cites become source cards (run.ts, QA's live-app item 12), as today's grounded path does.
@@ -4320,7 +4325,12 @@ export async function proposeForm(
   const today = context.today || businessToday();
   let date = typeof input.incident_date === "string" && DATE.test(input.incident_date.trim()) ? input.incident_date.trim() : null;
   /* Several incident dates and the latest message does not pick one: the date waits, and the card asks (today's rule). */
-  const datesGiven = ACCOUNT_FORMS.has(template.key) ? incidentDates(requestWords, typeof input.prior_actions === "string" ? input.prior_actions : null) : [];
+  /* Round 3 U21: the prior steps this person's earlier cards held count as prior steps too (`prior-step-dates.ts`). */
+  const earlierSteps = ACCOUNT_FORMS.has(template.key)
+    ? earlierPriorDates([...(context.cardRecords ?? []), context.earlierCard, context.cardOnScreen], (record) => (employee.id ? record.employeeKey === personKey(employee.id) : !record.employeeKey && record.nameKey === personKey(employee.name))).map(priorDateLine)
+    : [];
+  const priorLines = [typeof input.prior_actions === "string" ? input.prior_actions : "", ...earlierSteps].filter((line) => line.trim() !== "").join("\n");
+  const datesGiven = ACCOUNT_FORMS.has(template.key) ? incidentDates(requestWords, priorLines || null) : [];
   const latestDates = incidentDates(context.question, null);
   /*
    * Several incident dates (Pau 14 Nov: act and state the assumption): a date the model chose from the stated ones is
@@ -4606,10 +4616,28 @@ export async function proposeForm(
    * its form date. A date the prior actions hold (as read from the manager's words, or as the model listed them) is never
    * the form date, the model's or the fallback reading's, unless the manager also gives it as an incident date.
    */
-  const priorDates = new Set([...statedSteps, askedPriorActions ?? ""].flatMap((line) => readDates(line)).map((read) => monthDayToIso(`${read.month}/${read.day}`, today)));
+  /*
+   * Round 3 U21 (QA, 22 Nov 2026): the steps' dates keep the year written ("signed the jba policys on 6/24/24" is
+   * 2024-06-24, which this year's 06-24 never matched), and this person's earlier cards' steps count too.
+   */
+  const priorDates = priorStepDates([...statedSteps, askedPriorActions, ...earlierSteps], today);
   const incidentIsos = new Set(datesGiven.map((given) => monthDayToIso(given, today)));
   const isPriorDate = (iso: string | null | undefined) => Boolean(iso && priorDates.has(iso) && !incidentIsos.has(iso));
   const dateIsPriorAction = isPriorDate(date);
+  /*
+   * QA (22 Nov 2026, U21 round 3): the model's incident_date was a prior step's date. The card goes back once, naming
+   * the step, so the reply asks which day this happened; if it comes back with that date again, the date is left off.
+   */
+  if (dateIsPriorAction && date && typeof input.incident_date === "string" && input.incident_date.trim() === date && !effects.priorDateNamed) {
+    effects.priorDateNamed = true;
+    const said = `${Number(date.slice(5, 7))}/${Number(date.slice(8, 10))}`;
+    return {
+      reason_code: "date_is_prior_step",
+      prior_step_date: date,
+      prior_step: priorDates.get(date) ?? null,
+      error: `${date} is the date of an earlier step (${priorDates.get(date) ?? "a prior action"}), not the day this happened. The card was not made. Propose again without incident_date, and ask the manager in one question which day this happened ("${said} is the earlier step's date; which day did this happen?"), unless their words already state that day.`,
+    };
+  }
   if (dateIsPriorAction) date = null;
   /*
    * THE COACHING TOPIC (QA, 17 Nov 2026; the tester's coaching form saved "Coaching for <name> on greeting guests at the
@@ -5142,6 +5170,7 @@ export async function proposeForm(
   effects.proposalLevel = level;
   effects.proposalPayroll = payroll;
   effects.proposalPayrollAmount = payroll === "yes" ? amount : null;
+  effects.proposalPriorDates = card.priorActions ? [...priorStepDates([card.priorActions], today).keys()].slice(0, 12) : [];
   effects.proposalAccountKey = typeof input.what_happened === "string" && input.what_happened.trim() ? cardAccountKey(input.what_happened.trim(), input.incident_date) : null;
   const salonNames = (ids: readonly string[] | undefined) => (ids ?? []).map((id) => ({ id, name: rosterSalonName(id) ?? id }));
   /*

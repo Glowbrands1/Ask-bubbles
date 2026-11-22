@@ -66,10 +66,15 @@ export interface CardRecord {
    * remakes the card keeps it. A store id, never a name. Null for any other card, or none chosen.
    */
   readonly teamStoreId?: string | null;
+  /**
+   * QA's Bubbles round 3 (22 Nov 2026, U21): the dates (ISO) of the card's prior actions, never their text, so a later
+   * turn never takes a prior step's date as the form date (`prior-step-dates.ts`). Absent when none or for an older record.
+   */
+  readonly priorDates?: readonly string[];
 }
 
 /** What a turn writes into `slots.agent_loop.card`. */
-export type CardSlot = Omit<CardRecord, "messageId" | "asked" | "level" | "policyLine" | "payroll" | "payrollAmount" | "accountKey" | "incidentDate" | "teamStoreId"> & { readonly asked?: readonly string[]; readonly level?: "verbal" | "written"; readonly policyLine?: string; readonly payroll?: "yes" | "no"; readonly payrollAmount?: string; readonly accountKey?: string; readonly incidentDate?: string; readonly teamStoreId?: string };
+export type CardSlot = Omit<CardRecord, "messageId" | "asked" | "level" | "policyLine" | "payroll" | "payrollAmount" | "accountKey" | "incidentDate" | "teamStoreId" | "priorDates"> & { readonly priorDates?: readonly string[]; readonly asked?: readonly string[]; readonly level?: "verbal" | "written"; readonly policyLine?: string; readonly payroll?: "yes" | "no"; readonly payrollAmount?: string; readonly accountKey?: string; readonly incidentDate?: string; readonly teamStoreId?: string };
 
 function isCardSlot(value: unknown): value is CardSlot {
   const row = value as Partial<CardSlot> | null;
@@ -220,7 +225,7 @@ export async function readLoopRecords(conversationId: string | undefined, userId
       cards: rows.flatMap((row) => {
         const card = row.slots?.agent_loop?.card;
         return isCardSlot(card)
-          ? [{ proposalId: card.proposalId, employeeKey: card.employeeKey ?? null, nameKey: card.nameKey ?? null, templateKey: card.templateKey, templateName: card.templateName ?? null, messageId: row.message_id, questionKey: questionKeyOf(row), asked: Array.isArray(card.asked) ? card.asked.filter((field): field is string => typeof field === "string") : [], level: card.level === "verbal" || card.level === "written" ? card.level : null, policyLine: typeof card.policyLine === "string" ? card.policyLine : null, payroll: card.payroll === "yes" || card.payroll === "no" ? card.payroll : null, payrollAmount: typeof card.payrollAmount === "string" && /^\d+(?:\.\d+)?$/.test(card.payrollAmount) ? card.payrollAmount : null, accountKey: typeof card.accountKey === "string" && /^[0-9a-f]{16}$/.test(card.accountKey) ? card.accountKey : null, incidentDate: typeof card.incidentDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(card.incidentDate) ? card.incidentDate : null, teamStoreId: typeof card.teamStoreId === "string" && /^loc-[A-Za-z0-9-]{1,16}$/.test(card.teamStoreId) ? card.teamStoreId : null }]
+          ? [{ proposalId: card.proposalId, employeeKey: card.employeeKey ?? null, nameKey: card.nameKey ?? null, templateKey: card.templateKey, templateName: card.templateName ?? null, messageId: row.message_id, questionKey: questionKeyOf(row), asked: Array.isArray(card.asked) ? card.asked.filter((field): field is string => typeof field === "string") : [], level: card.level === "verbal" || card.level === "written" ? card.level : null, policyLine: typeof card.policyLine === "string" ? card.policyLine : null, payroll: card.payroll === "yes" || card.payroll === "no" ? card.payroll : null, payrollAmount: typeof card.payrollAmount === "string" && /^\d+(?:\.\d+)?$/.test(card.payrollAmount) ? card.payrollAmount : null, accountKey: typeof card.accountKey === "string" && /^[0-9a-f]{16}$/.test(card.accountKey) ? card.accountKey : null, incidentDate: typeof card.incidentDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(card.incidentDate) ? card.incidentDate : null, teamStoreId: typeof card.teamStoreId === "string" && /^loc-[A-Za-z0-9-]{1,16}$/.test(card.teamStoreId) ? card.teamStoreId : null, ...(Array.isArray(card.priorDates) ? { priorDates: card.priorDates.filter((date): date is string => typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)).slice(0, 12) } : {}) }]
           : [];
       }),
       nameQuestions: rows.flatMap((row) => {
