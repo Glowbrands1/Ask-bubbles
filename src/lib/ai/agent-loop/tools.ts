@@ -838,14 +838,23 @@ function stepShaped(clause: string): boolean {
  * no date of this incident, is a step too ("<words> — <MM/DD/YYYY>"). Returns those steps, not on the card yet. Read from
  * the clauses' shape and the card's own steps, never a word list.
  */
-export function listedWithKeptSteps(requestWords: string, priorActions: string, incidentIso: string | null, today: string): string[] {
+/*
+ * QA (22 Nov 2026, the sibling app's port of this): "ca for <P>, she was late on 11/12, she had a verbal on 10/2", with no
+ * incident date from the model, listed the incident's own clause as a step ("she was late on — 11/12/2026"). This
+ * incident's dates are the incident date the model gave, or with none, the dates of the card's own account (`account`)
+ * that no step the card keeps holds. A clause with one of those dates is this incident, never a step.
+ */
+export function listedWithKeptSteps(requestWords: string, priorActions: string, incidentIso: string | null, today: string, account = ""): string[] {
   const kept = priorActions.split(/\s*(?:;|\n)\s*/).filter((step) => step.trim() !== "");
   if (kept.length === 0) return [];
   const holds = (clause: string, step: string) => {
     const dates = readDates(clause);
     return dates.length > 0 && dates.every((date) => readDates(step).some((stepDate) => sameDate(stepDate, date))) && sharesContentWord(clause, step);
   };
-  const ofThisIncident = (date: ReadDate) => Boolean(incidentIso && Number(incidentIso.slice(5, 7)) === date.month && Number(incidentIso.slice(8, 10)) === date.day);
+  const keptDate = (date: ReadDate) => kept.some((step) => readDates(step).some((stepDate) => sameDate(stepDate, date)));
+  const accountDates = incidentIso ? [] : readDates(account).filter((date) => !keptDate(date));
+  const ofThisIncident = (date: ReadDate) =>
+    incidentIso ? Number(incidentIso.slice(5, 7)) === date.month && Number(incidentIso.slice(8, 10)) === date.day : accountDates.some((own) => sameDate(own, date));
   const added: string[] = [];
   for (const sentence of requestWords.split(/(?<=[.!?])\s+|\n+/)) {
     const clauses = sentence.replace(/[.!?]+$/, "").split(/\s*,\s*/).filter((clause) => clause.trim() !== "");
@@ -4671,7 +4680,7 @@ export async function proposeForm(
   const keptPriorActions = priorSplit?.kept ?? null;
   const priorActionsRead = priorActionsRefused ? null : keptPriorActions ? priorActionsWithStatedTopics(keptPriorActions, statedSteps) : statedSteps.length === 0 ? onFileLine : null;
   /* U09 (QA's live triage): a step the manager listed with one the card keeps is on the card too (`listedWithKeptSteps`). */
-  const listedSteps = keptPriorActions && priorActionsRead ? listedWithKeptSteps(requestWords, priorActionsRead, date, today) : [];
+  const listedSteps = keptPriorActions && priorActionsRead ? listedWithKeptSteps(requestWords, priorActionsRead, date, today, whatHappened) : [];
   const priorActions = priorActionsRead ? [priorActionsRead, ...listedSteps].join(priorActionsRead.includes("\n") ? "\n" : "; ").slice(0, 600) : null;
   /*
    * U09 / U21: a prior step on this card's Prior actions is never this incident's account (`accountWithoutPriorSteps`).
