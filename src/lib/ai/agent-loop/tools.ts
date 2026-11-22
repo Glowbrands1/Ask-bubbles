@@ -12,7 +12,7 @@ import { randomUUID } from "node:crypto";
 import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
 import { businessToday, formatBusinessTime } from "@/lib/business-date";
 import { appConfig } from "./app-config";
-import { isoDate, monthDayToIso, readDates, sameDate, withoutDates } from "./dates";
+import { isoDate, monthDayToIso, readDates, sameDate, withoutDates, type ReadDate } from "./dates";
 import { candidateNameWords, chatFormsActor, formDateRangeFromInput, formKindFromText, ofKind } from "@/lib/forms/chat-form-records";
 import { CURRENT_MESSAGE_ID, holdsPhrase, identifiedTurns, readEvidence, verifyEvidence, withoutMessageIdTags, type IdentifiedTurn } from "./evidence";
 import { personNamedInRequest, requestStart } from "./person-in-request";
@@ -832,12 +832,114 @@ export function priorActionsSplit(
   return rest ? { kept: null, dropped: [], problem: whole } : { kept: line, dropped, problem: null };
 }
 
+/**
+ * Whether two texts share a content word, ignoring case and simple endings (QA, 22 Nov 2026, U21): a word of five or more
+ * letters once a plural, past or -ing/-ment ending is taken off, so "policies … acknowledged" shares words with the step
+ * "Policy acknowledgement", and "coaching" with "Coaching". Dates are not words. Read by the words' own shape, never a list.
+ */
+export function sharesContentWord(a: string, b: string): boolean {
+  const root = (word: string) => {
+    const plain = /(?:ies|ied)$/.test(word) ? `${word.slice(0, -3)}y` : word.replace(/(?:ments?|ings?|ed|es|s)$/, "");
+    return (plain.length >= 4 ? plain : word).replace(/e$/, "");
+  };
+  const content = (text: string) => (withoutDates(text).toLowerCase().match(/[a-z]+/g) ?? []).map(root).filter((word) => word.length >= 5);
+  const own = new Set(content(b));
+  return content(a).some((word) => own.has(word));
+}
+
+/** A clause that is a few words (one to five), then one date closing it: a step named and dated ("Verbal CA 11-1-2026"). */
+function stepShaped(clause: string): boolean {
+  const dates = readDates(clause);
+  if (dates.length !== 1 || clause.slice(dates[0]!.index + dates[0]!.text.length).trim() !== "") return false;
+  const words = withoutDates(clause).trim().split(/\s+/).filter(Boolean);
+  return words.length >= 1 && words.length <= 5;
+}
+
+/**
+ * QA's live triage (22 Nov 2026, U09 on main, both runs): T2 "JBA Policy Manual 1-1-2026, Verbal CA 11-1-2026. On 11-1-26
+ * <P> violated …": the model kept only "Verbal CA — 11/01/2026", and the manual's step went into the Observation. Steps
+ * the manager lists together are steps alike: in a sentence of the manager's that holds a step the card keeps (its date
+ * and a content word, `sharesContentWord`), every other comma-separated clause that is a few words then one date, with
+ * no date of this incident, is a step too ("<words> — <MM/DD/YYYY>"). Returns those steps, not on the card yet. Read from
+ * the clauses' shape and the card's own steps, never a word list.
+ */
+export function listedWithKeptSteps(requestWords: string, priorActions: string, incidentIso: string | null, today: string): string[] {
+  const kept = priorActions.split(/\s*(?:;|\n)\s*/).filter((step) => step.trim() !== "");
+  if (kept.length === 0) return [];
+  const holds = (clause: string, step: string) => {
+    const dates = readDates(clause);
+    return dates.length > 0 && dates.every((date) => readDates(step).some((stepDate) => sameDate(stepDate, date))) && sharesContentWord(clause, step);
+  };
+  const ofThisIncident = (date: ReadDate) => Boolean(incidentIso && Number(incidentIso.slice(5, 7)) === date.month && Number(incidentIso.slice(8, 10)) === date.day);
+  const added: string[] = [];
+  for (const sentence of requestWords.split(/(?<=[.!?])\s+|\n+/)) {
+    const clauses = sentence.replace(/[.!?]+$/, "").split(/\s*,\s*/).filter((clause) => clause.trim() !== "");
+    if (clauses.length < 2 || !clauses.some((clause) => kept.some((step) => holds(clause, step)))) continue;
+    for (const clause of clauses) {
+      const dates = readDates(clause);
+      if (dates.length !== 1 || ofThisIncident(dates[0]!) || kept.some((step) => holds(clause, step))) continue;
+      const words = withoutDates(clause).trim();
+      if (!stepShaped(clause)) continue;
+      const iso = isoDate(dates[0]!.text, today);
+      if (!iso || iso > today || kept.some((step) => readDates(step).some((stepDate) => sameDate(stepDate, dates[0]!)))) continue;
+      added.push(`${words.replace(/[\s,:;-]+$/, "")} — ${iso.slice(5, 7)}/${iso.slice(8, 10)}/${iso.slice(0, 4)}`);
+    }
+  }
+  return added;
+}
+
+/**
+ * The account without the prior steps the card keeps or the manager stated (`steps`, one per line or "; "), so Prior
+ * actions holds them and the Observation holds only this incident.
+ * - QA's live round-2 re-run (22 Nov 2026, U09; the tester's card): "On 11/1/26 <P> violated care and cleaning of
+ *   facilities policy (JBA Policy Manual 1/1/2026)." A parenthesis holding a step's date and a word of it is that step.
+ * - QA's live round 3 (22 Nov 2026, U21): from T3 the Observation read "<P> received coaching on 9/22 for cleaning tasks
+ *   not being completed. This weekend …", and T4 added "JBA Woven policies were acknowledged on 5/26/26.": whole
+ *   sentences. A sentence whose every date is a step's, sharing a content word with that step (`sharesContentWord`), and
+ *   holding no date of this incident (`incidentIso`), is that step. A sentence with no date, or with this incident's
+ *   date, stays; the account is never emptied. Read from the steps' own text and dates, never a word list.
+ */
+export function accountWithoutPriorSteps(account: string, steps: string, incidentIso: string | null): string {
+  const lines = steps.split(/\s*(?:;|\n)\s*/).filter((step) => step.trim() !== "");
+  if (lines.length === 0 || account.trim() === "") return account;
+  const isStep = (text: string) => {
+    const dates = readDates(text);
+    return dates.length > 0 && lines.some((step) => dates.every((date) => readDates(step).some((stepDate) => sameDate(stepDate, date))) && sharesContentWord(text, step));
+  };
+  const unstepped = account.replace(/\s*\(([^()]*)\)/g, (whole, inner: string) => (isStep(inner) ? "" : whole)).replace(/\s+([.,;])/g, "$1").trim();
+  const ofThisIncident = (said: ReturnType<typeof readDates>[number]) => Boolean(incidentIso && Number(incidentIso.slice(5, 7)) === said.month && Number(incidentIso.slice(8, 10)) === said.day);
+  const sentences = unstepped.match(/[^.!?]+(?:[.!?]+|$)/g) ?? [unstepped];
+  /*
+   * QA's live triage (22 Nov 2026, U09): the account began "JBA Policy Manual 1/1/2026, Verbal CA 11/1/2026." — a list of
+   * steps, one of them dated on this incident's day. A sentence that is only comma clauses each a few words then one date
+   * (`stepShaped`), each a step the card holds, is that list: it leaves the account whatever its dates. Any other sentence
+   * with this incident's date stays.
+   */
+  const stepList = (sentence: string) => {
+    const clauses = sentence.replace(/[.!?]+\s*$/, "").split(/\s*,\s*/).filter((clause) => clause.trim() !== "");
+    return clauses.length >= 2 && clauses.every((clause) => stepShaped(clause) && isStep(clause));
+  };
+  const kept = sentences.filter((sentence) => !stepList(sentence) && (readDates(sentence).some(ofThisIncident) || !isStep(sentence)));
+  const unsentenced = kept.join("").replace(/\s+/g, " ").trim();
+  return unsentenced !== "" ? unsentenced : unstepped !== "" ? unstepped : account;
+}
+
 export function priorActionsWithStatedTopics(priorActions: string, stated: readonly string[]): string {
   const separator = priorActions.includes("\n") ? "\n" : "; ";
   const lines = priorActions.split(/\s*(?:;|\n)\s*/).filter((line) => line.trim() !== "");
   const plain = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
   for (const line of stated) {
     const parts = line.split(" — ");
+    /*
+     * QA's live round 3 (22 Nov 2026, U21): T4 "jba woven policys were acknowledged on 5/26/26" was on the card, and at T5
+     * the model's list left it out: the card lost a step the manager stated in this request. A stated step with no topic
+     * ("<step> — <date>") whose date no kept line holds is added; one whose date a kept line holds is that line.
+     */
+    if (parts.length === 2) {
+      const day = readDates(parts[1] ?? "")[0];
+      if (day && !lines.some((kept) => readDates(kept).some((date) => sameDate(date, day)))) lines.push(line);
+      continue;
+    }
     if (parts.length < 3) continue;
     const topic = plain(parts.slice(1, -1).join(" "));
     if (topic === "" || lines.some((kept) => ` ${plain(kept)} `.includes(` ${topic} `))) continue;
@@ -2278,6 +2380,23 @@ export function incidentDates(managerWords: string, priorActions: string | null)
  * lateness twice and the Expectation used the surname as the first name. A name written as two single words around one
  * comma is, by its own shape, "Last, First": it is read as "First Last". Any other shape is kept as typed.
  */
+/**
+ * QA's live round 3 on production 1c71e11 (22 Nov 2026, C3): "create a CA form for <Last>, <First> at dodge. she was late
+ * on 10-16" (nobody on the staff list) got no card about half the time. When the model passed the name in first-last
+ * order, every as-typed check in propose_form looked for "<First> <Last>" in the manager's words and missed it, while
+ * find_staff's code said "propose it as typed": the model went round until it gave up ("the form wasn't built"). A
+ * two-word name the manager wrote only as "<Last>, <First>" in this request is read back in the manager's order, so it
+ * takes the as-typed path the comma form takes; `lastCommaFirst` shows it as "<First> <Last>" on the card. Read by the
+ * name's own shape against the manager's text, never a word list.
+ */
+export function asManagerCommaWrote(name: string, managerText: string): string {
+  const parts = /^([\p{L}][\p{L}'-]*)\s+([\p{L}][\p{L}'-]*)$/u.exec(name.trim());
+  if (!parts || holdsPhrase(managerText, name)) return name;
+  const comma = new RegExp(String.raw`(?<![\p{L}'-])${parts[2]}\s*,\s*${parts[1]}(?![\p{L}'-])`, "iu");
+  const found = comma.exec(managerText);
+  return found ? found[0].replace(/\s*,\s*/, ", ") : name;
+}
+
 export function lastCommaFirst(name: string): string {
   const parts = /^([\p{L}][\p{L}'-]*)\s*,\s*([\p{L}][\p{L}'-]*)$/u.exec(name.trim());
   return parts ? `${parts[2]} ${parts[1]}` : name;
@@ -3268,7 +3387,7 @@ const ACCOUNT_FORMS = {
 };
 
 /** PR 6 item 1: what propose_form's own name lookup found: one person to card, find_staff's result to hand back, or nothing to do. */
-type CardLookup = { kind: "none" } | { kind: "person"; person: RosterEmployee; facts: Record<string, unknown> } | { kind: "ask"; result: ToolResult };
+type CardLookup = { kind: "none" } | { kind: "person"; person: RosterEmployee; facts: Record<string, unknown> } | { kind: "asTyped"; name: string } | { kind: "ask"; result: ToolResult };
 
 /**
  * PR 6 item 1: a typed name looked up for a card with find_staff's own code. One match and nothing to ask → that person,
@@ -3294,6 +3413,15 @@ async function lookUpForCard(context: ToolContext, effects: ToolEffects, typed: 
    * with the use-<name> question, #1054), so its count over find_staff and propose_form for that name is unchanged.
    */
   if (record.reason_code === "missing_input" || (typeof record.reason_code !== "string" && matches.length === 0 && !("did_you_mean" in record) && !("error" in record) && record.unchecked !== true)) return { kind: "none" };
+  /*
+   * QA's live round 3 (22 Nov 2026, C3): find_staff's code said "Propose the card now with employee_name <name> as typed"
+   * (not_on_roster with no question to ask), and this refusal then refused that same name: the model went round 3–6 times
+   * and gave up. The two now agree: a name find_staff takes as typed is taken as typed here, on this call, in whatever
+   * word order the model passed it. Decided by find_staff's own result (its code and that it asks nothing), never words.
+   */
+  if (record.reason_code === "not_on_roster" && typeof record.not_on_roster === "string" && record.not_on_roster.trim() !== "" && !("ask_exactly" in record) && record.form_not_chosen !== true) {
+    return { kind: "asTyped", name: record.not_on_roster.trim() };
+  }
   /* find_staff's result as it is (reason code, facts, note, ask_exactly), plus propose_form's own refusal: no card was made. */
   const ask = typeof record.note === "string" ? record.note : "Ask the manager who the form is for.";
   /* find_staff's reason_code when it gave one; a Did you mean (no code of its own) is name_to_confirm, so every refusal has a code. */
@@ -3459,7 +3587,9 @@ export async function proposeForm(
     const rawTyped = typeof input.employee_name === "string" ? tidyTypedName(input.employee_name) : "";
     const titleless = withoutJobTitle(rawTyped);
     /* R14: "Test Employee", the exact full name the manager typed, is a name; its last word is not a title to strip. */
-    const typed = titleless !== rawTyped && words(titleless).length === 1 && typedFullNameOf(titleless, requestTurnsText(context, read.roster))?.toLowerCase() === rawTyped.toLowerCase() ? rawTyped : titleless;
+    const typedAsPassed = titleless !== rawTyped && words(titleless).length === 1 && typedFullNameOf(titleless, requestTurnsText(context, read.roster))?.toLowerCase() === rawTyped.toLowerCase() ? rawTyped : titleless;
+    /* C3 (QA's live round 3): "<First> <Last>" for the manager's "<Last>, <First>" is read in the manager's own order. */
+    const typed = asManagerCommaWrote(typedAsPassed, requestTurnsText(context, read.roster));
     /*
      * HARD GUARD, A "NO" NEVER SEATS THE NAME (NEAR_MISS_QUESTION_RULES, parity gap #45): when the manager answered
      * "no" to this chat's own "Did you mean **<A>**?" or "Is this for **<A>**?", <A> is not put on the card.
@@ -3559,8 +3689,14 @@ export async function proposeForm(
     }
     else if (typed && !id && (lookedUp = await lookUpForCard(context, effects, typed, input.person_evidence, read.roster)).kind !== "none") {
       if (lookedUp.kind === "ask") return lookedUp.result;
-      if (!(await personNamedOrPicked(context, lookedUp.person, read.roster))) return personNotNamed(context, template, effects, lookedUp.person);
-      employee = { name: nameAsSaid(lookedUp.person, managerTurns(context)), salonIds: lookedUp.person.locationIds, id: lookedUp.person.id };
+      if (lookedUp.kind === "asTyped") {
+        /* C3: find_staff took this name as typed; so does the card (its off_roster_name line asks the manager to check it). */
+        employee = { name: lookedUp.name, salonIds: [] };
+        offRosterName = lookedUp.name;
+        effects.nameQuestion ??= { offeredIds: [], typed: lookedUp.name, asksFullName: true };
+      }
+      else if (!(await personNamedOrPicked(context, lookedUp.person, read.roster))) return personNotNamed(context, template, effects, lookedUp.person);
+      else employee = { name: nameAsSaid(lookedUp.person, managerTurns(context)), salonIds: lookedUp.person.locationIds, id: lookedUp.person.id };
     }
     else {
       /*
@@ -4546,27 +4682,15 @@ export async function proposeForm(
   const priorActionsRefused = priorSplit ? (priorSplit.kept === null ? priorSplit.problem : null) : null;
   const priorStepsLeftOff = priorSplit && priorSplit.kept !== null && priorSplit.dropped.length > 0 ? priorSplit.dropped : [];
   const keptPriorActions = priorSplit?.kept ?? null;
+  const priorActionsRead = priorActionsRefused ? null : keptPriorActions ? priorActionsWithStatedTopics(keptPriorActions, statedSteps) : statedSteps.length === 0 ? onFileLine : null;
+  /* U09 (QA's live triage): a step the manager listed with one the card keeps is on the card too (`listedWithKeptSteps`). */
+  const listedSteps = keptPriorActions && priorActionsRead ? listedWithKeptSteps(requestWords, priorActionsRead, date, today) : [];
+  const priorActions = priorActionsRead ? [priorActionsRead, ...listedSteps].join(priorActionsRead.includes("\n") ? "\n" : "; ").slice(0, 600) : null;
   /*
-   * QA's live round-2 re-run (22 Nov 2026, U09; the tester's card): the account read "On 11/1/26 <P> violated care and
-   * cleaning of facilities policy (JBA Policy Manual 1/1/2026)." That parenthesis is a prior step the card keeps (its date
-   * and a word of it), not this incident: it leaves the account. Read from the kept steps' own text, never a word list.
+   * U09 / U21: a prior step on this card's Prior actions is never this incident's account (`accountWithoutPriorSteps`).
+   * Only the steps the card keeps: a sentence leaves the Observation only when Prior actions holds it, so nothing is lost.
    */
-  if (keptPriorActions && whatHappened) {
-    const steps = keptPriorActions.split(/\s*(?:;|\n)\s*/).filter((step) => step.trim() !== "");
-    const lettersOf = (text: string) => withoutDates(text).toLowerCase().match(/[a-z]{3,}/g) ?? [];
-    const unstepped = whatHappened.replace(/\s*\(([^()]*)\)/g, (whole, inner: string) => {
-      const dates = readDates(inner);
-      if (dates.length === 0) return whole;
-      const said = lettersOf(inner);
-      const isStep = steps.some((step) => {
-        const own = new Set(lettersOf(step));
-        return dates.every((date) => readDates(step).some((stepDate) => sameDate(stepDate, date))) && said.some((word) => own.has(word));
-      });
-      return isStep ? "" : whole;
-    }).replace(/\s+([.,;])/g, "$1").trim();
-    if (unstepped !== "") whatHappened = unstepped;
-  }
-  const priorActions = priorActionsRefused ? null : keptPriorActions ? priorActionsWithStatedTopics(keptPriorActions, statedSteps).slice(0, 600) : statedSteps.length === 0 ? onFileLine : null;
+  if (whatHappened && priorActions) whatHappened = accountWithoutPriorSteps(whatHappened, priorActions, date);
   /*
    * QA's live re-test (21 Nov 2026, item 18): the prior actions the forms on file filled were read back "…, as you said"
    * (the manager never said them). Prior actions are the manager's statement only when their words state the steps
@@ -4825,13 +4949,21 @@ export async function proposeForm(
    * B6 (QA's live round 3, 22 Nov 2026): "she is resigning due to second job" left Reason for Resignation empty on the card,
    * the reply and the saved draft. The reason is the model's reading (exit_reason), kept when every word of it is in the
    * manager's quoted words of this request (exit_reason_evidence; `exit-reason-said.ts`); Create writes it as their
-   * statement. A termination keeps its own reason path.
+   * statement. On a termination the reason is the card's account (below).
    */
   const exitReasonQuote = typeof (input.exit_reason_evidence as { quote?: unknown } | null | undefined)?.quote === "string" ? String((input.exit_reason_evidence as { quote: string }).quote).trim().slice(0, 300) : "";
-  const exitReasonText = template.key === appConfig().formKeys.exit && !exitTermination && input.exit_type !== "termination" && typeof input.exit_reason === "string" && exitReasonQuote !== "" && answerEvidence(context, input.exit_reason_evidence, "request", evidencePerson, { requestTurnIds }).ok
+  const exitReasonText = template.key === appConfig().formKeys.exit && (exitTermination !== null || input.exit_type !== "termination") && typeof input.exit_reason === "string" && exitReasonQuote !== "" && answerEvidence(context, input.exit_reason_evidence, "request", evidencePerson, { requestTurnIds }).ok
     ? (await import("@/lib/forms/exit-reason-said")).reasonFromQuote(input.exit_reason, exitReasonQuote)
     : null;
-  const exitReason = exitReasonText ? { text: exitReasonText, quote: exitReasonQuote } : null;
+  const statedReason = exitReasonText ? { text: exitReasonText, quote: exitReasonQuote } : null;
+  /*
+   * L6 (coder 5's live triage on 1c71e11, 22 Nov 2026): "exit form for <P>, terminated for job abandonment, not eligible
+   * for rehire" made a termination card with no account in both runs; the reply even offered to add the reason. A
+   * termination's reason is its account (Create saves it as the Reason line, `EXIT_ACCOUNT_LABEL`): with no account from
+   * the model, the stated reason, checked as above, is the account.
+   */
+  if (exitTermination && statedReason && !whatHappened) whatHappened = statedReason.text;
+  const exitReason = exitTermination ? null : statedReason;
   let salonFromWoven: string | null = null;
   /* A7: the person's own Woven stores in the manager's scope, primary first, when the typed store was not read as one. */
   const wovenStores = storeNotRead && employee.id ? await wovenStoresOf(context.actor.scope, employee.id, read.kind === "read" ? read.roster : [], managerSalonIds) : [];
