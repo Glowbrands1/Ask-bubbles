@@ -363,6 +363,8 @@ interface DraftBody {
   cardPolicyLine?: string;
   /** The coaching topic the loop's card carried (`coachingTopic`), for the form's Other topic. */
   cardTopic?: string;
+  /** QA's Bubbles live round 3 (A1(b)): the loop card's earlier spellings of its person; each re-checked as a close spelling. */
+  cardEarlierNames?: unknown;
   /** The loop card's attendance record ("absence" / "lateness" / "both"): an absence is never written up as lateness. */
   cardAttendance?: string;
   /**
@@ -2906,6 +2908,25 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
         ]);
         const roster = await loadScopedRoster(actor.scope).catch(() => []);
         const formName = loaded.instance.employeeName.trim().replace(/\s+/g, " ").toLowerCase();
+        /*
+         * QA's Bubbles live round 3 (22 Nov 2026, A1(b)): "della varnick" corrected to "della varnich", neither on the staff
+         * list, so the staff-list pass below never runs, and the drafted write-up copied the first message's spelling. The
+         * loop card's earlier spellings of its person (its record of the correction) become the form's name in the drafted
+         * prose; each is re-checked here as a close spelling of the form's name.
+         */
+        if (body.cardFromLoop === true && Array.isArray(body.cardEarlierNames)) {
+          const { closeSpellingOfFullName } = await import("@/lib/forms/short-name");
+          const earlier = body.cardEarlierNames.filter((name): name is string => typeof name === "string" && name.trim() !== "" && closeSpellingOfFullName(name, loaded.instance.employeeName)).slice(0, 5);
+          if (earlier.length > 0) {
+            const prose = fields.filter((field) => !field.policyGrounded && !DERIVED_POLICY_FIELD_KEYS.has(field.key) && !keeps(field.key)).map((field) => field.key);
+            for (const key of prose) {
+              const value = loopCardDraft.values[key];
+              if (typeof value !== "string" || value === "") continue;
+              const fixed = withCorrectedSpelling(value, loaded.instance.employeeName, earlier);
+              if (fixed.replaced > 0) loopCardDraft.values = { ...loopCardDraft.values, [key]: fixed.text };
+            }
+          }
+        }
         /*
          * QA's live round-2 re-run (22 Nov 2026, U23): the card was "<preferred> <last>" (the manager typed the preferred
          * name), but the saved Observation used the Woven legal first name. The form's person is found by the preferred

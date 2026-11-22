@@ -13,6 +13,7 @@ import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
 import { businessToday, formatBusinessTime } from "@/lib/business-date";
 import { appConfig } from "./app-config";
 import { isoDate, monthDayToIso, readDates, sameDate, withoutDates, type ReadDate } from "./dates";
+import { earlierPriorDates, priorDateLine, priorStepDates } from "./prior-step-dates";
 import { candidateNameWords, chatFormsActor, formDateRangeFromInput, formKindFromText, ofKind } from "@/lib/forms/chat-form-records";
 import { CURRENT_MESSAGE_ID, holdsPhrase, identifiedTurns, readEvidence, verifyEvidence, withoutMessageIdTags, type IdentifiedTurn } from "./evidence";
 import { personNamedInRequest, requestStart } from "./person-in-request";
@@ -186,15 +187,29 @@ function nameQuestionView(context: ToolContext, roster: readonly RosterEmployee[
  */
 const PRIVACY_WINDOW = 3;
 
-export function formsOnFileAsked(context: Pick<ToolContext, "question" | "history" | "questionMessageId">, evidence: unknown): { ok: true; said: string; before: string[] } | { ok: false; reason: string } {
+export function formsOnFileAsked(context: Pick<ToolContext, "question" | "history" | "questionMessageId">, evidence: unknown): { ok: true; said: string; before: string[]; index: number } | { ok: false; reason: string } {
   const turns = identifiedTurns(context.history as ChatMessage[], context.question, context.questionMessageId);
-  const check = verifyEvidence(evidence, turns);
+  let check = verifyEvidence(evidence, turns);
+  /*
+   * QA's follow-up (22 Nov 2026, both apps): the evidence for a forms request may be the app's own question ("… Is that
+   * the one you mean?") that the manager's message being answered now replies to. Only that question, the turn right
+   * before this message, and only with its quote really in it; the ask is then the manager's reply. The app's turns
+   * carry no id the model sees, so the model quotes them under the id of the manager's message that answers them.
+   */
+  if (!check.ok && (check.reason === "evidence_not_manager_turn" || check.reason === "evidence_quote_not_found")) {
+    const claim = readEvidence(evidence);
+    const current = turns.at(-1);
+    const asking = current && current.index > 0 ? turns[current.index - 1] : undefined;
+    const cites = claim !== null && current !== undefined && (claim.message_id === current.id || claim.message_id === asking?.id);
+    if (cites && current && asking?.role === "assistant" && holdsPhrase(asking.content, claim!.quote)) check = { ok: true, turn: current };
+  }
   if (!check.ok) return { ok: false, reason: check.reason };
+  const cited = check.turn;
   const recent = turns.filter((turn) => turn.role === "user").slice(-PRIVACY_WINDOW);
-  if (!recent.some((turn) => turn.id === check.turn.id)) return { ok: false, reason: "evidence_not_this_turn" };
+  if (!recent.some((turn) => turn.id === cited.id)) return { ok: false, reason: "evidence_not_this_turn" };
   // The manager's earlier turns, nearest first: a turn that names nobody ("has she had a ca before?") is about the person last named.
-  const before = turns.filter((turn) => turn.role === "user" && turn.index < check.turn.index).reverse().map((turn) => withoutMessageIdTags(turn.content));
-  return { ok: true, said: withoutMessageIdTags(check.turn.content), before };
+  const before = turns.filter((turn) => turn.role === "user" && turn.index < cited.index).reverse().map((turn) => withoutMessageIdTags(turn.content));
+  return { ok: true, said: withoutMessageIdTags(cited.content), before, index: cited.index };
 }
 
 /**
@@ -260,10 +275,21 @@ async function formsOnFileAskedFor(context: ToolContext, evidence: unknown, pers
    */
   {
     const turns = identifiedTurns(context.history as ChatMessage[], context.question, context.questionMessageId);
-    const check = verifyEvidence(evidence, turns);
-    const asking = check.ok ? turns[check.turn.index - 1] : undefined;
-    const replyText = asking?.role === "assistant" ? withoutMessageIdTags(asking.content).replace(/[*_]/g, "") : "";
-    if (replyText && names.some((name) => holdsPhrase(replyText, name))) return { ok: true };
+    const replyNames = (turn: IdentifiedTurn | undefined) => {
+      const replyText = turn?.role === "assistant" ? withoutMessageIdTags(turn.content).replace(/[*_]/g, "") : "";
+      return replyText !== "" && names.some((name) => holdsPhrase(replyText, name));
+    };
+    if (replyNames(turns[asked.index - 1])) return { ok: true };
+    /*
+     * QA's follow-up (22 Nov 2026, both apps; 1 in 6 live runs of the port): the model quoted the manager's earlier
+     * request ("open the ca for the girl who was late friday", naming nobody) rather than the "yes please" that answered
+     * the app's "… for <P> … Is that the one you mean?". The same request, the app's own question right before the
+     * message being answered now, names this person, and no manager turn from the cited one to now names anyone: the ask
+     * is about them.
+     */
+    const current = turns.at(-1)!;
+    const sinceCited = turns.filter((turn) => turn.role === "user" && turn.index >= asked.index);
+    if (asked.index < current.index && replyNames(turns[current.index - 1]) && !sinceCited.some((turn) => namesSomeone(withoutMessageIdTags(turn.content)))) return { ok: true };
   }
   const antecedent = asked.before.find(namesSomeone);
   if (antecedent !== undefined && namedIn(antecedent)) return { ok: true };
@@ -848,14 +874,23 @@ function stepShaped(clause: string): boolean {
  * no date of this incident, is a step too ("<words> — <MM/DD/YYYY>"). Returns those steps, not on the card yet. Read from
  * the clauses' shape and the card's own steps, never a word list.
  */
-export function listedWithKeptSteps(requestWords: string, priorActions: string, incidentIso: string | null, today: string): string[] {
+/*
+ * QA (22 Nov 2026, the sibling app's port of this): "ca for <P>, she was late on 11/12, she had a verbal on 10/2", with no
+ * incident date from the model, listed the incident's own clause as a step ("she was late on — 11/12/2026"). This
+ * incident's dates are the incident date the model gave, or with none, the dates of the card's own account (`account`)
+ * that no step the card keeps holds. A clause with one of those dates is this incident, never a step.
+ */
+export function listedWithKeptSteps(requestWords: string, priorActions: string, incidentIso: string | null, today: string, account = ""): string[] {
   const kept = priorActions.split(/\s*(?:;|\n)\s*/).filter((step) => step.trim() !== "");
   if (kept.length === 0) return [];
   const holds = (clause: string, step: string) => {
     const dates = readDates(clause);
     return dates.length > 0 && dates.every((date) => readDates(step).some((stepDate) => sameDate(stepDate, date))) && sharesContentWord(clause, step);
   };
-  const ofThisIncident = (date: ReadDate) => Boolean(incidentIso && Number(incidentIso.slice(5, 7)) === date.month && Number(incidentIso.slice(8, 10)) === date.day);
+  const keptDate = (date: ReadDate) => kept.some((step) => readDates(step).some((stepDate) => sameDate(stepDate, date)));
+  const accountDates = incidentIso ? [] : readDates(account).filter((date) => !keptDate(date));
+  const ofThisIncident = (date: ReadDate) =>
+    incidentIso ? Number(incidentIso.slice(5, 7)) === date.month && Number(incidentIso.slice(8, 10)) === date.day : accountDates.some((own) => sameDate(own, date));
   const added: string[] = [];
   for (const sentence of requestWords.split(/(?<=[.!?])\s+|\n+/)) {
     const clauses = sentence.replace(/[.!?]+$/, "").split(/\s*,\s*/).filter((clause) => clause.trim() !== "");
@@ -1022,6 +1057,12 @@ export interface ToolEffects {
   /** Round 3 A7: a card this turn was filed at the employee's Woven store (store_from_woven), so the reply may say so. */
   storeFromWoven?: boolean;
   nameQuestion?: { offeredIds: string[]; typed: string; offeredNames?: string[]; asksFullName?: boolean; templateKey?: string };
+  /** Round 3 U09: this turn already handed the card back once with the one incident date the manager stated. */
+  incidentDateNamed?: boolean;
+  /** Round 3 U21: this turn already handed the card back once because its incident_date was a prior step's date. */
+  priorDateNamed?: boolean;
+  /** Round 3 U16: the forms read_form read this turn (person, form date and account), so a copy keeps its date. */
+  formsRead?: { employeeName: string | null; formDate: string | null; account: string }[];
   /** QA (16 Nov 2026): propose_form ran for a form this turn, so a form is chosen (find_staff may ask the name). */
   formChosen?: boolean;
   /** Batch G (G4), by the rebuild plan's PR 1b: find_past_forms found forms on file to open (open: true) for this person. */
@@ -1037,6 +1078,8 @@ export interface ToolEffects {
   proposalPayrollAmount?: string | null;
   /** QA (c163): the one-way key of this card's account as the model gave it (`accountKey`), for the card record. */
   proposalAccountKey?: string | null;
+  /** Round 3 U21: the card's prior actions' dates (ISO), for its server record (`CardRecord.priorDates`). */
+  proposalPriorDates?: string[];
   /**
    * Every source a tool read this turn, numbered from 1 in the order read: the model cites one as [S<n>] (`addSource`).
    * Only the ones the reply cites become source cards (run.ts, QA's live-app item 12), as today's grounded path does.
@@ -2140,6 +2183,19 @@ export function fitToLimit(texts: readonly string[], limit: number): string[] {
   return out;
 }
 
+/**
+ * Round 3 U16: a card's account is a form's account when it keeps that account's words: at least 4 of them, and 4 in 5
+ * found in the card's account (case and punctuation set aside). A new incident written beside an old one is not a copy.
+ */
+function sameAccount(formAccount: string, cardAccount: string): boolean {
+  const wordsOf = (text: string) => text.toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) ?? [];
+  const source = [...new Set(wordsOf(formAccount))];
+  if (source.length < 4) return false;
+  const card = new Set(wordsOf(cardAccount));
+  const kept = source.filter((word) => card.has(word)).length;
+  return kept / source.length >= 0.8 && card.size <= source.length * 1.5 + 4;
+}
+
 export async function readForm(context: ToolContext, input: { instance_id?: unknown; forms_on_file_evidence?: unknown }, effects?: ToolEffects): Promise<ToolResult> {
   const id = typeof input.instance_id === "string" ? input.instance_id.trim() : "";
   if (id === "") return { reason_code: "missing_input", error: "Give the form's instance_id (from find_past_forms or the open form)." };
@@ -2172,6 +2228,11 @@ export async function readForm(context: ToolContext, input: { instance_id?: unkn
       if (fitted[index] !== row.shown) truncatedFields.push(row.key);
     });
     const filled = new Set(shownRows.map((row) => row.key));
+    const accountField = ["observation", "coaching_details"].find((key) => fieldKeys.has(key)) ?? null;
+    if (effects) {
+      const account = accountField ? (shownRows.find((row) => row.key === accountField)?.shown ?? "") : "";
+      (effects.formsRead ??= []).push({ employeeName: loaded.instance.employeeName ?? null, formDate: loaded.instance.formDate ?? null, account });
+    }
     return {
       instance_id: loaded.instance.id,
       form: loaded.instance.templateName,
@@ -2182,7 +2243,7 @@ export async function readForm(context: ToolContext, input: { instance_id?: unkn
       form_date: loaded.instance.formDate,
       values,
       /* The field the manager's account goes in (Observation on a CA, Details of Coaching on a coaching form). */
-      account_field: ["observation", "coaching_details"].find((key) => fieldKeys.has(key)) ?? null,
+      account_field: accountField,
       empty_fields: [...fieldKeys].filter((key) => !filled.has(key)).slice(0, 40),
       ...(truncatedFields.length > 0 ? { truncated_fields: truncatedFields, note: "Each field in truncated_fields is longer on the form than shown here; it is filled. Never call it empty or missing." } : {}),
     };
@@ -2344,10 +2405,25 @@ export function incidentDates(managerWords: string, priorActions: string | null)
   const prior = readDates(priorActions ?? "");
   const seen = new Map<string, string>();
   const words = managerWords.replace(PAYROLL_AMOUNT, (amount) => " ".repeat(amount.length));
+  /*
+   * QA's Bubbles live round 3 (22 Nov 2026, U09): "Verbal CA 11-1-2026. On 11-1-26 Briony violated …" lost its incident
+   * date, because a date was left out whenever a prior step had the same DAY, so the card was dated today. A prior step
+   * accounts for one mention of its day; a day the manager wrote more times than the prior steps list it is the incident's
+   * too. Dates by occurrence, never a phrase list.
+   */
+  const priorLeft = new Map<string, number>();
+  for (const date of prior) priorLeft.set(`${date.month}/${date.day}`, (priorLeft.get(`${date.month}/${date.day}`) ?? 0) + 1);
   for (const date of readDates(words)) {
     const key = `${date.month}/${date.day}`;
-    if (prior.some((other) => sameDate(other, date)) || seen.has(key)) continue;
-    if (PRIOR_STEP_BEFORE.test(sentenceBefore(words, date.index))) continue;
+    if (PRIOR_STEP_BEFORE.test(sentenceBefore(words, date.index))) {
+      if ((priorLeft.get(key) ?? 0) > 0) priorLeft.set(key, priorLeft.get(key)! - 1);
+      continue;
+    }
+    if (prior.some((other) => sameDate(other, date)) && (priorLeft.get(key) ?? 0) > 0) {
+      priorLeft.set(key, priorLeft.get(key)! - 1);
+      continue;
+    }
+    if (seen.has(key)) continue;
     seen.set(key, key);
   }
   return [...seen.values()];
@@ -3331,12 +3407,27 @@ export function withoutNamedSalon(account: string, salonId: string): string {
    * R13 (QA's Bubbles round 2, 22 Nov 2026): "At Dodge, NE on 10/16/26 Testy …" lost "At Dodge" and kept "NE on …". A
    * ", <word>" right after the phrase that is a word of that store's own name (its state) is the phrase's too.
    */
-  const withState = account.replace(/(^|[\s,;])(?:at|in)\s+((?:[A-Za-z0-9'’-]+\s+){0,4}[A-Za-z0-9'’-]+)\s*,\s*([A-Za-z]{2,})(?![A-Za-z0-9'’-])(\.?)/gi, (whole, before: string, phrase: string, tail: string, dot: string, offset: number) =>
-    nameWords.has(tail.toLowerCase()) && isThatSalon(phrase) ? (offset === 0 ? "" : `${before.replace(/\s+$/, "")}${dot}`) : whole);
+  /*
+   * Ported from the sibling app (its QA's live R13 on its main, 22 Nov 2026): "at <Store>, <ST>. location." came back as
+   * "At <Store>, <ST> location, on …" and left "Location, on …", or "On <date> at <Store>, <ST> location, <P> …" left
+   * "On <date> location, <P> …". Words after the state up to the phrase's own comma or full stop that are all words of the
+   * phrase (the store's name, or the place words `isThatSalon` already reads the phrase with) are the phrase's too, and
+   * the phrase's closing comma goes with it; a sentence's end stays, once.
+   */
+  const ofThePhrase = (words: string) => words.trim() !== "" && words.trim().toLowerCase().split(/\s+/).every((word) => nameWords.has(word) || filler.has(word));
+  const withState = account.replace(/(^|[\s,;])(?:at|in)\s+((?:[A-Za-z0-9'’-]+\s+){0,4}[A-Za-z0-9'’-]+)\s*,\s*([A-Za-z]{2,})(?![A-Za-z0-9'’-])(\.?)(?:((?:\s+[A-Za-z'’]+){1,3})(\s*[,.;!?]|(?=\s*$)))?/gi, (whole, before: string, phrase: string, tail: string, dot: string, after: string | undefined, closer: string | undefined, offset: number) => {
+    if (!nameWords.has(tail.toLowerCase()) || !isThatSalon(phrase)) return whole;
+    const lead = offset === 0 ? "" : before.replace(/\s+$/, "");
+    if (after !== undefined && ofThePhrase(after)) {
+      const end = (closer ?? "").trim();
+      return offset === 0 ? "" : `${lead}${/[.!?;]/.test(end) ? end : ""}`;
+    }
+    return offset === 0 ? `${after ?? ""}${closer ?? ""}`.trimStart() : `${lead}${dot}${after ?? ""}${closer ?? ""}`;
+  });
   const out = withState.replace(/(^|[\s,;])(?:at|in)\s+((?:[A-Za-z0-9'’-]+\s+){0,4}[A-Za-z0-9'’-]+)(?=\s*(?:[,.;!?]|$))(,?)/gi, (whole, before: string, phrase: string, comma: string) =>
     isThatSalon(phrase) ? (before.trim() === "" ? "" : before.replace(/\s+$/, "")) + (comma && before.trim() !== "" ? comma : "") : whole);
   if (out === account) return account;
-  const tidy = out.replace(/\s+([,.;!?])/g, "$1").replace(/[ \t]{2,}/g, " ").replace(/^[\s,;]+/, "").trim();
+  const tidy = out.replace(/\s+([,.;!?])/g, "$1").replace(/[ \t]{2,}/g, " ").replace(/^[\s,.;]+/, "").trim();
   return tidy.charAt(0).toUpperCase() + tidy.slice(1);
 }
 
@@ -3808,8 +3899,14 @@ export async function proposeForm(
   const second = anotherCard(employee.name);
   if (second) return second;
   /* Batch G (G4; QA's ruling 3): an open request for THIS person's form on file is never a new card for them (code may refuse). */
-  if (effects.openRequested && samePerson(effects.openRequested, employee.name)) {
-    return { error: "The manager asked to open a form on file for this person, not to make one. Open it with open_form.", reason_code: "open_requested" };
+  /*
+   * Round 3 U16 (live, on main too): "create a verbal CA for <P> with all the same information given" after the form was
+   * opened; the model looked the form up again with open: true, and this refusal then blocked the copy the manager asked
+   * for. The manager's own words in this message asking for a new form (verified new_form_evidence) are the request; a
+   * lookup the model made is not.
+   */
+  if (effects.openRequested && samePerson(effects.openRequested, employee.name) && !asksNewForm) {
+    return { error: "The manager asked to open a form on file for this person, not to make one. Open it with open_form. If the manager's latest message asks to create a new form (\"create a … with all the same information\"), propose again with new_form_evidence quoting those words.", reason_code: "open_requested" };
   }
   {
     const onScreenPerson = employee.id && read.kind === "read" ? read.roster.find((row) => row.id === employee.id) : undefined;
@@ -3913,6 +4010,7 @@ export async function proposeForm(
    * in, so every check below compares it with the earlier card's account (already shortened) on the same terms. A second
    * turn's "Fenna Prewitt left …, Fenna also …" read against the first card's "Fenna left …" was taken as a rewording.
    */
+  let earlierNames: string[] = [];
   if (whatHappened && employee.name) {
     /*
      * QA's live re-test (21 Nov 2026): the name corrected mid-chat ("<First> <Lastx>" → "<First> <Lasty>") moved the card's
@@ -3921,7 +4019,23 @@ export async function proposeForm(
      */
     /* QA (22 Nov 2026, U35(a) follow-up): also the spellings this chat confirmed as this person, for when the roster alone cannot tell. */
     const confirmedSpellings = employee.id && read.kind === "read" ? (await import("./confirmed-spelling")).spellingsConfirmedFor(nameQuestionView(context, read.roster), employee.id) : [];
-    whatHappened = (await import("@/lib/forms/short-name")).withCorrectedSpelling(whatHappened, employee.name, [...(nameCorrectedFrom !== null ? [nameCorrectedFrom] : []), ...confirmedSpellings], rosterSpellingOf(employee.id ?? null, read.kind === "read" ? read.roster : [])).text;
+    /*
+     * QA's Bubbles live round 3 (22 Nov 2026, A1(b)): "della varnick" corrected to "della varnich" (neither on the staff
+     * list). The correction turn replaced the old spelling, but on the next turn the model copied the first message's
+     * "Della Varnick" back into the account, and nothing replaced it (no correction in that message, no roster person), so
+     * the saved write-up kept the old surname. A two-word name in the account that an earlier card in this chat was made
+     * for (off the staff list, by its record's one-way key) and that is a close spelling of this card's name
+     * (`closeSpellingOfName`, as #1006 reads a correction) is the old spelling. Records and spelling distance only.
+     */
+    const ownName = { first: words(employee.name).slice(0, 1), last: words(employee.name).slice(-1) };
+    const earlierNameKeys = new Set([...(context.cardRecords ?? []), context.earlierCard, context.cardOnScreen].filter((record): record is CardRecord => Boolean(record && !record.employeeKey && record.nameKey)).map((record) => record.nameKey));
+    const tokens = [...whatHappened.matchAll(/\p{L}[\p{L}'’-]*/gu)].map((token) => token[0]);
+    const recordedSpellings = tokens.slice(0, -1).map((token, at) => `${token} ${tokens[at + 1]!.replace(/['’]s$/i, "")}`).filter((pair) => !samePerson(pair, employee.name) && earlierNameKeys.has(personKey(pair)) && closeSpellingOfName(words(pair), ownName));
+    whatHappened = (await import("@/lib/forms/short-name")).withCorrectedSpelling(whatHappened, employee.name, [...(nameCorrectedFrom !== null ? [nameCorrectedFrom] : []), ...confirmedSpellings, ...recordedSpellings], rosterSpellingOf(employee.id ?? null, read.kind === "read" ? read.roster : [])).text;
+    /* The same earlier spellings in the manager's own words (Create's draft copies those too), for the card (`earlierNames`). */
+    const saidTokens = [...managerTurns(context).matchAll(/\p{L}[\p{L}'’-]*/gu)].map((token) => token[0]);
+    const saidSpellings = saidTokens.slice(0, -1).map((token, at) => `${token} ${saidTokens[at + 1]!}`).filter((pair) => !samePerson(pair, employee.name) && earlierNameKeys.has(personKey(pair)) && closeSpellingOfName(words(pair), ownName));
+    earlierNames = [...new Set([...(nameCorrectedFrom !== null ? [nameCorrectedFrom] : []), ...recordedSpellings, ...saidSpellings].map((name) => name.trim()))];
     const short = cardAccountName(employee.name, read.kind === "read" ? read.roster : [], extractEmployeeNames(managerTurns(context)), employee.id ?? null);
     whatHappened = (await import("@/lib/forms/short-name")).withShortName(whatHappened, employee.name, short).text;
   }
@@ -4438,7 +4552,12 @@ export async function proposeForm(
   const today = context.today || businessToday();
   let date = typeof input.incident_date === "string" && DATE.test(input.incident_date.trim()) ? input.incident_date.trim() : null;
   /* Several incident dates and the latest message does not pick one: the date waits, and the card asks (today's rule). */
-  const datesGiven = ACCOUNT_FORMS.has(template.key) ? incidentDates(requestWords, typeof input.prior_actions === "string" ? input.prior_actions : null) : [];
+  /* Round 3 U21: the prior steps this person's earlier cards held count as prior steps too (`prior-step-dates.ts`). */
+  const earlierSteps = ACCOUNT_FORMS.has(template.key)
+    ? earlierPriorDates([...(context.cardRecords ?? []), context.earlierCard, context.cardOnScreen], (record) => (employee.id ? record.employeeKey === personKey(employee.id) : !record.employeeKey && record.nameKey === personKey(employee.name))).map(priorDateLine)
+    : [];
+  const priorLines = [typeof input.prior_actions === "string" ? input.prior_actions : "", ...earlierSteps].filter((line) => line.trim() !== "").join("\n");
+  const datesGiven = ACCOUNT_FORMS.has(template.key) ? incidentDates(requestWords, priorLines || null) : [];
   const latestDates = incidentDates(context.question, null);
   /*
    * Several incident dates (Pau 14 Nov: act and state the assumption): a date the model chose from the stated ones is
@@ -4491,7 +4610,17 @@ export async function proposeForm(
   const ownCard = [context.cardOnScreen, context.earlierCard].find((record) => Boolean(record?.incidentDate) && (employee.id ? record!.employeeKey === personKey(employee.id) : !record!.employeeKey && record!.nameKey === personKey(employee.name)));
   const dateKept = ACCOUNT_FORMS.has(template.key) && !date && !asksNewForm && latestDates.length === 0 && ownCard?.incidentDate && (datesGiven.length === 0 || datesGiven.some((given) => monthDayToIso(given, today) === ownCard.incidentDate)) ? ownCard.incidentDate : null;
   if (dateKept) date = dateKept;
-  const datesAsked = datesGiven.length > 1 && !date ? datesGiven : [];
+  /*
+   * A COPY KEEPS THE DATE OF THE FORM IT COPIES (QA's ruling, 22 Nov 2026, Bubbles round 3, U16: "create a verbal CA for
+   * <P> with all the same information given" after a form on file was opened). When this turn read this person's form
+   * on file and the card's account is that form's account (its words, not a word list), the card takes that form's date,
+   * unless the manager's words in this request state any date or the model passed one. Never today by default.
+   */
+  const copiedForm = ACCOUNT_FORMS.has(template.key) && !date && readDates(requestWords).length === 0 && readDates(context.question).length === 0 && typeof input.what_happened === "string"
+    ? [...(effects.formsRead ?? [])].reverse().find((read) => Boolean(read.formDate && DATE.test(read.formDate) && read.employeeName && samePerson(read.employeeName, employee.name) && sameAccount(read.account, String(input.what_happened))))
+    : undefined;
+  if (copiedForm?.formDate) date = copiedForm.formDate;
+  let datesAsked = datesGiven.length > 1 && !date ? datesGiven : [];
   /* Batch C (code-check #32): a date after today is a fact with today's date; the rules book says to ask. */
   /* Batch G (G6): only an incident form's date is never after today; an exit's last day or effective date may be. */
   const incidentForm = ACCOUNT_FORMS.has(template.key);
@@ -4681,7 +4810,7 @@ export async function proposeForm(
   const keptPriorActions = priorSplit?.kept ?? null;
   const priorActionsRead = priorActionsRefused ? null : keptPriorActions ? priorActionsWithStatedTopics(keptPriorActions, statedSteps) : statedSteps.length === 0 ? onFileLine : null;
   /* U09 (QA's live triage): a step the manager listed with one the card keeps is on the card too (`listedWithKeptSteps`). */
-  const listedSteps = keptPriorActions && priorActionsRead ? listedWithKeptSteps(requestWords, priorActionsRead, date, today) : [];
+  const listedSteps = keptPriorActions && priorActionsRead ? listedWithKeptSteps(requestWords, priorActionsRead, date, today, whatHappened) : [];
   const priorActions = priorActionsRead ? [priorActionsRead, ...listedSteps].join(priorActionsRead.includes("\n") ? "\n" : "; ").slice(0, 600) : null;
   /*
    * U09 / U21: a prior step on this card's Prior actions is never this incident's account (`accountWithoutPriorSteps`).
@@ -4702,10 +4831,28 @@ export async function proposeForm(
    * its form date. A date the prior actions hold (as read from the manager's words, or as the model listed them) is never
    * the form date, the model's or the fallback reading's, unless the manager also gives it as an incident date.
    */
-  const priorDates = new Set([...statedSteps, askedPriorActions ?? ""].flatMap((line) => readDates(line)).map((read) => monthDayToIso(`${read.month}/${read.day}`, today)));
+  /*
+   * Round 3 U21 (QA, 22 Nov 2026): the steps' dates keep the year written ("signed the jba policys on 6/24/24" is
+   * 2024-06-24, which this year's 06-24 never matched), and this person's earlier cards' steps count too.
+   */
+  const priorDates = priorStepDates([...statedSteps, askedPriorActions, ...earlierSteps], today);
   const incidentIsos = new Set(datesGiven.map((given) => monthDayToIso(given, today)));
   const isPriorDate = (iso: string | null | undefined) => Boolean(iso && priorDates.has(iso) && !incidentIsos.has(iso));
   const dateIsPriorAction = isPriorDate(date);
+  /*
+   * QA (22 Nov 2026, U21 round 3): the model's incident_date was a prior step's date. The card goes back once, naming
+   * the step, so the reply asks which day this happened; if it comes back with that date again, the date is left off.
+   */
+  if (dateIsPriorAction && date && typeof input.incident_date === "string" && input.incident_date.trim() === date && !effects.priorDateNamed) {
+    effects.priorDateNamed = true;
+    const said = `${Number(date.slice(5, 7))}/${Number(date.slice(8, 10))}`;
+    return {
+      reason_code: "date_is_prior_step",
+      prior_step_date: date,
+      prior_step: priorDates.get(date) ?? null,
+      error: `${date} is the date of an earlier step (${priorDates.get(date) ?? "a prior action"}), not the day this happened. The card was not made. Propose again without incident_date, and ask the manager in one question which day this happened ("${said} is the earlier step's date; which day did this happen?"), unless their words already state that day.`,
+    };
+  }
   if (dateIsPriorAction) date = null;
   /*
    * THE COACHING TOPIC (QA, 17 Nov 2026; the tester's coaching form saved "Coaching for <name> on greeting guests at the
@@ -5022,6 +5169,24 @@ export async function proposeForm(
   ACCOUNT_WHEN.lastIndex = 0;
   /* Batch E (E12): a date after today is never on the card, the model's or today's reading (the field is refused; the fact says so). */
   const futureDate = dateAfterToday ?? (incidentForm && !date && proposal.formDate && proposal.formDate > today ? proposal.formDate : null);
+  /*
+   * QA's Bubbles live round 3 (22 Nov 2026, U09; QA's ruling): the manager's words in this request state exactly ONE
+   * incident date and the model passed none, so the card was "Dated today" and Create saved today. The card goes back once
+   * with that date named; never silently today. Still none after that: the date is asked, as for several dates.
+   */
+  const statedOne = datesGiven.length === 1 ? monthDayToIso(datesGiven[0]!, today) : null;
+  /* The card builder's own reading of the words already holds that day (not another request's, not a prior step's): nothing to hand back. */
+  const builderHasIt = Boolean(statedOne && proposal.formDate === statedOne && !fromAnotherRequest(proposal.formDate) && !isPriorDate(proposal.formDate));
+  if (ACCOUNT_FORMS.has(template.key) && !date && statedOne && !builderHasIt && !effects.incidentDateNamed) {
+    effects.incidentDateNamed = true;
+    const iso = monthDayToIso(datesGiven[0]!, today);
+    return {
+      reason_code: "incident_date_not_passed",
+      incident_date_stated: iso,
+      error: `The manager's words state ${iso} as the day it happened. Propose again with incident_date "${iso}", or ask the manager if it is not that day. The card was not made.`,
+    };
+  }
+  if (statedOne && !date && !builderHasIt && effects.incidentDateNamed && ACCOUNT_FORMS.has(template.key)) datesAsked = datesGiven;
   const card: ChatFormProposal = {
     ...proposal,
     sourceMessageIds: requestIds,
@@ -5038,6 +5203,7 @@ export async function proposeForm(
     ...(exitReason ? { exitReason: exitReason.text, exitReasonQuote: exitReason.quote } : {}),
     ...(priorActions ? { priorActions } : {}),
     ...(coachingTopic ? { coachingTopic } : {}),
+    ...(earlierNames.length > 0 ? { earlierNames } : {}),
     ...(planSteps.length > 0 ? { planSteps } : {}),
     ...(attendanceKind ? { attendanceKind } : {}),
     ...(incidentTime ? { incidentTime } : {}),
@@ -5046,6 +5212,8 @@ export async function proposeForm(
       ? { exitReadBack: (await import("./exit-read-back")).exitReadBack({ dateLines: await exitDateLines(requestWords, today, Boolean(exitTermination)), account: whatHappened || null, termination: Boolean(exitTermination), detailLines: await exitDetailReadLines(requestWords, today, Boolean(exitTermination), exitReason?.text) }) }
       : {}),
     ...(awaiting ? { awaitingIncident: true as const, supportsInlineDraft: false } : {}),
+    /* QA's Bubbles live round 3 (22 Nov 2026, A1(c); QA's ruling (1)): a card whose date question is open is not Create-ready, as one whose store is still asked. */
+    ...(datesAsked.length > 0 && ACCOUNT_FORMS.has(template.key) ? { supportsInlineDraft: false } : {}),
   };
   /*
    * THE CARD'S ACCOUNT CALLS THE PERSON BY THE SHORT NAME (the sibling app's QA, 20 Nov 2026, live): "ca for <full name>,
@@ -5237,6 +5405,7 @@ export async function proposeForm(
   effects.proposalLevel = level;
   effects.proposalPayroll = payroll;
   effects.proposalPayrollAmount = payroll === "yes" ? amount : null;
+  effects.proposalPriorDates = card.priorActions ? [...priorStepDates([card.priorActions], today).keys()].slice(0, 12) : [];
   effects.proposalAccountKey = typeof input.what_happened === "string" && input.what_happened.trim() ? cardAccountKey(input.what_happened.trim(), input.incident_date) : null;
   const salonNames = (ids: readonly string[] | undefined) => (ids ?? []).map((id) => ({ id, name: rosterSalonName(id) ?? id }));
   /*
@@ -5269,7 +5438,8 @@ export async function proposeForm(
     ...(earlierKept ? { earlier_card: { kept: true, ...(earlierRow ? { employee: displayName(earlierRow) } : {}), form: earlier!.templateName ?? earlier!.templateKey } } : {}),
     ...(otherNamed.length > 0 ? { account_names_other_person: { named: otherNamed, card_person: employee.name } } : {}),
     ...(unset.length > 0 && !answerUnclear ? { unset } : {}),
-    ...(payrollFields && !amountOnForm && (payroll || typedAmount) ? { payroll_question_only: `The ${template.name} asks only whether payroll deduction applies (Yes / No); it has no payroll amount line and no line for the reason of a deduction. Keep a deduction's amount and its reason in the account (what_happened): they go in Additional Details. This is about payroll only: the reason the person is leaving has its own line on the form (Reason for Resignation), which Create fills; never say the form has no reason line.` } : {}),
+    /* Port of the sibling app's #1240 (its 266-chat run, case 036): the note leads with the card's own payroll answer, so a No is never read back as ticked. */
+    ...(payrollFields && !amountOnForm && (payroll || typedAmount) ? { payroll_question_only: `Payroll deduction on the card: ${payroll === "yes" ? "Yes" : payroll === "no" ? "No" : "not set"}. The ${template.name} asks only whether payroll deduction applies (Yes / No); it has no payroll amount line and no line for the reason of a deduction. Keep a deduction's amount and its reason in the account (what_happened): they go in Additional Details. This is about payroll only: the reason the person is leaving has its own line on the form (Reason for Resignation), which Create fills; never say the form has no reason line.` } : {}),
     ...(answerUnclear ? { payroll_answer_unclear: { ask_exactly: payrollQuestion } } : {}),
     ...(levelUnnamed && !levelAnswerUnclear ? { level_not_named: { ask_exactly: LEVEL_QUESTION } } : {}),
     /*

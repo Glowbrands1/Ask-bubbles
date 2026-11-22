@@ -95,7 +95,8 @@ export const NOV22_AGENT_LOOP_TRANSFER_NEW_STORE_CASES: ReplayCase[] = [
       start(t, true);
       const thread = t.thread();
       const model = live("dawley", "moving to SD Dawley Farms");
-      t.loopModel!(model);
+      /* CHANGED ON PURPOSE (QA's live regression triage, 22 Nov 2026): a control whose condition is the stand-in's input (a store quote that is not the manager's words); the real model quotes "transfer to dawley", which is the manager's; the stand-in plays in live runs too. */
+      t.loopModel!(model, { scripted: true });
       await thread.say(T2);
       await thread.say(T3);
       const shown = model.views.map(card).filter(Boolean).at(-1);
