@@ -65,6 +65,11 @@ export interface FakeStore {
    * how) when it is under ten minutes old, else as `other`. A store without it is as before.
    */
   form_instance_deletions?: Row[];
+  /**
+   * Present so a replay case can give the signed-in manager all-store forms visibility (`forms-visibility.ts`: an
+   * unrevoked row of mode `all`, keyed to the account id), as production's district managers have it. Invented rows only.
+   */
+  forms_all_store_access?: Row[];
 }
 
 /** The view is a read of the same array — see the note above. */
