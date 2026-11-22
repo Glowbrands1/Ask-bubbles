@@ -19,7 +19,7 @@ import { CURRENT_MESSAGE_ID, holdsPhrase, identifiedTurns, readEvidence, verifyE
 import { personNamedInRequest, requestStart } from "./person-in-request";
 import { answeredNameQuestions, answerNamesSomeoneElse, everKeptOrUsedTyped, isConfirmedSpelling, latestTurnAnswersFor, latestTurnConfirms, latestTurnKeepsOrUsesTyped, latestTurnKeepsTyped, spellingKeysConfirmedFor, spellingKeysConfirmedForName, type NameQuestionView } from "./confirmed-spelling";
 import { employeeFirstName } from "@/lib/forms/employee-reference";
-import { AFFIRMATIVE, displayName, editDistance, matchEmployeeName, nameConfirmationQuestion, readNameConfirmation, rosterSpellingOf, type RosterEmployee } from "@/lib/forms/employee-match";
+import { AFFIRMATIVE, displayName, editDistance, matchEmployeeName, nameConfirmationQuestion, possessiveRead, readNameConfirmation, rosterSpellingOf, type RosterEmployee } from "@/lib/forms/employee-match";
 import { offRosterTyped } from "@/lib/forms/roster-only-names";
 import { readLocationMentions } from "@/lib/forms/location-mention";
 import { locationById } from "@/lib/locations";
@@ -1364,10 +1364,12 @@ const ALSO_ASK_ACCOUNT = "If so, tell me what happened.";
 export const FIND_STAFF_LIMIT = 10;
 
 export async function findStaff(context: ToolContext, input: { name?: unknown; person_evidence?: unknown }, effects?: ToolEffects): Promise<ToolResult> {
-  const typed = typeof input.name === "string" ? withoutJobTitle(input.name) : "";
-  if (typed === "") return { reason_code: "missing_input", error: "Give the name to look for." };
+  const asGiven = typeof input.name === "string" ? withoutJobTitle(input.name) : "";
+  if (asGiven === "") return { reason_code: "missing_input", error: "Give the name to look for." };
   if (effects) effects.staffLookedUp = true;
   const read = await rosterFor(context.actor.scope);
+  /* Ported from the sibling app (#1246): "<First> <Last>'s" is looked up as the name the roster matches. */
+  const typed = read.kind === "read" ? possessiveRead(asGiven, read.roster) : asGiven;
   if (read.kind === "failed") return { reason_code: "roster_failed", error: ROSTER_FAILED };
   if (read.kind === "unchecked") return { unchecked: true, note: ROSTER_UNCHECKED };
   /*
@@ -3662,7 +3664,8 @@ export async function proposeForm(
   if (read.kind === "read") {
     const id = typeof input.employee_id === "string" ? input.employee_id.trim() : "";
     const person = id ? read.roster.find((row) => row.id === id) : undefined;
-    const rawTyped = typeof input.employee_name === "string" ? tidyTypedName(input.employee_name) : "";
+    /* Ported from the sibling app (#1246): a trailing 's leaves only when the name without it is the one the roster matches. */
+    const rawTyped = typeof input.employee_name === "string" ? possessiveRead(tidyTypedName(input.employee_name), read.roster) : "";
     const titleless = withoutJobTitle(rawTyped);
     /* R14: "Test Employee", the exact full name the manager typed, is a name; its last word is not a title to strip. */
     const typedAsPassed = titleless !== rawTyped && words(titleless).length === 1 && typedFullNameOf(titleless, requestTurnsText(context, read.roster))?.toLowerCase() === rawTyped.toLowerCase() ? rawTyped : titleless;

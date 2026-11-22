@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
-import { matchEmployeeName, rosterNameNamedIn, saysNo, type RosterEmployee } from "./employee-match";
+import { matchEmployeeName, possessiveRead, rosterNameNamedIn, saysNo, type RosterEmployee } from "./employee-match";
 import { withKeptTypedNames } from "./kept-typed-names";
 import { readEmployeeMentions } from "./proposal";
 
@@ -79,5 +79,42 @@ describe("saysNo", () => {
   });
   it.each(["yes", "Remy Calder", "the second one"])("%s does not", (answer) => {
     expect(saysNo(answer)).toBe(false);
+  });
+});
+
+/*
+ * Ported from the sibling app (its #1246, ae03c3a; its 266-chat run's 053/116/117/138/237/239, QA 22 Nov 2026):
+ * "<First> <Last>'s, today, - …" carded "<First> <Last>'s" as off the roster, for a person on it. The possessive is
+ * grammar: it leaves only when the name without it is the one the roster matches.
+ */
+describe("a typed name's trailing possessive", () => {
+  const WITH_ROSS = [...ROSTER, person("5", "Juno", "Ross")];
+
+  it.each([
+    ["Remy Calder's", "Remy Calder"],
+    ["Remy Calder\u2019s", "Remy Calder"],
+    ["remy calder's", "remy calder"],
+  ])("%s is read as %s", (typed, read) => {
+    expect(possessiveRead(typed, ROSTER)).toBe(read);
+  });
+
+  it("matches the roster person exactly", () => {
+    const match = matchEmployeeName("Remy Calder's", ROSTER);
+    expect(match.kind).toBe("exact");
+    expect(match.kind === "exact" ? match.name : null).toBe("Remy Calder");
+  });
+
+  it.each([
+    ["Juno Ross", WITH_ROSS],
+    ["Juno Ross's", [...WITH_ROSS, person("6", "Juno", "Ross's")]],
+    ["Zelda Quinn's", ROSTER],
+    ["Calders", ROSTER],
+  ])("control: %s is kept as typed (a surname ending in s, a name the roster has with the 's, or nobody without it)", (typed, roster) => {
+    expect(possessiveRead(typed, roster as RosterEmployee[])).toBe(typed);
+  });
+
+  it("control: a real surname ending in s still matches exactly", () => {
+    const match = matchEmployeeName("Juno Ross", WITH_ROSS);
+    expect(match.kind === "exact" ? match.name : null).toBe("Juno Ross");
   });
 });
