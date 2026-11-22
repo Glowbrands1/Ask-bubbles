@@ -4230,13 +4230,25 @@ export async function proposeForm(
    * (or Other alone) is refused, with those headings as the fit, unless the manager named another policy themselves.
    * c207: "Other — Must See Behaviors" with no MSB said is refused (Pau's ruling, 16 Nov 2026: MSB only when said).
    */
-  if (manual && template.key === appConfig().formKeys.corrective) {
-    const dressFits = dressCodeFit(requestWords, manual.headings);
+  /*
+   * R21 (round 2's offline replay, 21 Nov 2026; QA's ruling (b), 22 Nov): "Create a Coaching Form from this conversation"
+   * after a Corrective Action for "out of dress code" dropped the CA's Standards of Conduct (the 16 Nov ruling: a
+   * Coaching card never copies another form's heading), and a bare "Yes" then made it "Other — Dress Code". The Coaching
+   * card's own account reaches its heading the same way the CA's does: the dress-code fit below. On a Coaching card it
+   * also asks for that heading when the card has no policy at all.
+   */
+  const coachingPolicyCard = template.key === appConfig().formKeys.coaching;
+  /* A Coaching card made "from this conversation" has its account from earlier turns: the fit reads that account too. */
+  const cardDressFits = manual && coachingPolicyCard ? dressCodeFit(whatHappened ? `${requestWords}\n${whatHappened}` : requestWords, manual.headings) : null;
+  if (manual && (template.key === appConfig().formKeys.corrective || coachingPolicyCard)) {
+    const dressFits = coachingPolicyCard ? cardDressFits : dressCodeFit(requestWords, manual.headings);
     const reading = readCaPolicy(requestWords);
     const namedAnother = (reading.source === "stated" && reading.stated !== null && reading.stated !== "dress_code") ||
       namedPolicies(requestWords).some((named) => !dressFits?.some((heading) => namesHeading(named.phrase, heading)));
     const otherOnly = !policyHeading && /^other\b/i.test(askedPolicyWhole) && !saysMustSee(requestWords) && !(appConfig().policyGuards.cleaningDutyIsOther && cleaningUndonePhrase(requestWords, { rulesAreNotDuties: true }));
-    if (dressFits && !namedAnother && ((policyHeading && !cardHeadings.some((heading) => dressFits.includes(heading))) || otherOnly)) {
+    const noPolicy = coachingPolicyCard && !policyHeading && askedPolicyWhole === "";
+    const otherAlone = coachingPolicyCard ? !policyHeading && /^other\b/i.test(askedPolicyWhole) : otherOnly;
+    if (dressFits && !namedAnother && ((policyHeading && !cardHeadings.some((heading) => dressFits.includes(heading))) || otherAlone || noPolicy)) {
       /*
        * Pau's ruling (20 Nov 2026; c091): the heading the model chose may be a second offense the manager also describes
        * ("not in dress code … did not have a goal sheet"): then both are cited, never the dress code alone in its place.
@@ -4245,7 +4257,7 @@ export async function proposeForm(
       return { reason_code: "dress_code_heading", error: `The manager's words describe a dress-code offense (dress code, or clothing worn on shift), which the manual's Dress Code section covers, not "${askedPolicyWhole}". Propose the card again with policy "${dressFits[0]}"${dressFits.length > 1 ? ` (or ${dressFits.slice(1).map((heading) => `"${heading}"`).join(", ")})` : ""}.${beside}`, fits_headings: dressFits };
     }
     const { saidOnlyOther, headings: { conduct: conductRole } } = appConfig().policyGuards;
-    if (saidOnlyOther && citesMustSee(askedPolicyWhole) && !saysMustSee(requestWords)) {
+    if (!coachingPolicyCard && saidOnlyOther && citesMustSee(askedPolicyWhole) && !saysMustSee(requestWords)) {
       const conduct = conductRole ? manual.headings.find((heading) => headingKey(heading) === headingKey(conductRole)) : undefined;
       const performance = /\bunder[- ]?perform(?:ance|ing)\b|\bperform[a-z]*\b|\bnumbers\b|\bgoals?\b|\bsales\b/i.test(requestWords) || new RegExp(accountMetric().source, "i").test(requestWords);
       const fits = topicHeadings(requestWords) ?? (performance && conduct ? [conduct] : null);
@@ -4354,7 +4366,8 @@ export async function proposeForm(
   const copiedFromAnotherForm = policyHeading !== null && (context.cardRecords ?? []).some((record) => record.templateKey !== template.key && typeof record.policyLine === "string" && record.policyLine.toLowerCase().includes(policyHeading!.toLowerCase()));
   /* Pau, 17 Nov: coaching always has policy and page: the forms whose cards always cite a manual heading (or Other). */
   const policyForms = new Set([appConfig().formKeys.corrective, appConfig().formKeys.coaching, appConfig().formKeys.followUpCoaching]);
-  const policyNotForThisCard = template.key !== appConfig().formKeys.corrective && policyHeading !== null && copiedFromAnotherForm && !managerNamed && !(topicFits ?? []).some((heading) => headingKey(heading) === headingKey(policyHeading!));
+  /* R21: a heading this Coaching card's own account fits (the dress-code fit above) is the card's own, never a copy. */
+  const policyNotForThisCard = template.key !== appConfig().formKeys.corrective && policyHeading !== null && copiedFromAnotherForm && !managerNamed && ![...(topicFits ?? []), ...(cardDressFits ?? [])].some((heading) => headingKey(heading) === headingKey(policyHeading!));
   /* The heading is left off; an "Other — <topic>" beside it (after "; ") stays, as #1068's rules decide it. */
   if (policyNotForThisCard) policyLine = policyLine && policyLine.includes("; ") ? policyLine.split("; ").slice(1).join("; ") : null;
   const otherPart = askedOther || (/^other\b/i.test(askedPolicy) ? askedPolicy : "");
