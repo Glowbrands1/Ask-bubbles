@@ -16,11 +16,27 @@ const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 /** Text in straight or curly double quotes: someone's own words, never changed. */
 const QUOTED = /("[^"\n]*"|“[^”\n]*”)/;
 
-/** The full name as a pattern: its words with any spaces between, whole words, any case, a bold mark either side. */
-function namePattern(fullName: string): RegExp | null {
+/**
+ * The ways the text can name the person: the full name, and, with a surname of two words or more, the first name with
+ * only part of that surname, its words in order (QA's round 3, U35: for "Liesl Moreno Vargas" the card's Observation said
+ * "Liesl Vargas received a customer complaint", and that reached the saved Observation). Each is built from the person's
+ * own name, longest first; a partial surname is never the person's name, so it gets the short name too.
+ */
+function nameForms(words: readonly string[]): string[][] {
+  const [first, ...surname] = words;
+  const partial: string[][] = [];
+  for (let mask = 1; mask < (1 << surname.length) - 1 && surname.length <= 4; mask += 1) {
+    partial.push([first!, ...surname.filter((_word, at) => (mask >> at) & 1)]);
+  }
+  return [[...words], ...partial.sort((a, b) => b.length - a.length)];
+}
+
+/** The person's name as a pattern (with `partialSurname`, every one of `nameForms`): its words with any spaces between, whole words, any case, a bold mark either side. */
+function namePattern(fullName: string, partialSurname = false): RegExp | null {
   const words = fullName.trim().split(/\s+/).filter(Boolean);
   if (words.length < 2) return null;
-  return new RegExp(String.raw`(\*\*)?(?<![\p{L}'’-])${words.map(escape).join(String.raw`\s+`)}(?![\p{L}-])(\*\*)?`, "giu");
+  const forms = (partialSurname ? nameForms(words) : [[...words]]).map((form) => form.map(escape).join(String.raw`\s+`));
+  return new RegExp(String.raw`(\*\*)?(?<![\p{L}'’-])(?:${forms.join("|")})(?![\p{L}-])(\*\*)?`, "giu");
 }
 
 function usable(fullName: string, short: string): boolean {
@@ -42,7 +58,7 @@ function outsideQuotes(text: string, change: (piece: string) => string): string 
  * ("Fenna Prewitt was late" → "Fenna was late"; "Fenna Prewitt's shift" → "Fenna's shift"). Bold marks are kept as they are.
  */
 export function withShortName(text: string, fullName: string, short: string): { text: string; replaced: number } {
-  const pattern = namePattern(fullName);
+  const pattern = namePattern(fullName, true);
   if (!text || !pattern || !usable(fullName, short)) return { text, replaced: 0 };
   let replaced = 0;
   const out = outsideQuotes(text, (piece) =>
@@ -65,7 +81,7 @@ export function withShortName(text: string, fullName: string, short: string): { 
  *   - every other bold mention, and every question, keeps the full name.
  */
 export function replyWithShortName(reply: string, fullName: string, short: string, templateName: string | null): { text: string; replaced: number } {
-  const pattern = namePattern(fullName);
+  const pattern = namePattern(fullName, true);
   if (!reply || !pattern || !usable(fullName, short)) return { text: reply, replaced: 0 };
   const opener = templateName ? new RegExp(String.raw`\b${escape(templateName.trim())}\s+for\s+$`, "i") : null;
   let replaced = 0;
