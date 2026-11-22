@@ -118,6 +118,38 @@ export const POLICY_DETAIL = {
  */
 export const POLICY_PUBLICATION_REASON = "publication_unverified";
 
+/*
+ * THE POLICY MANAGEMENT TABLE — `GET /Policy` (WOVEN_BCS_POLICY_MANAGEMENT_LIST_ENABLED, default off).
+ *
+ * The Knowledge Center cards above carry no status and no audience, so no
+ * policy can ever be shown to be published from them (board f105: "Bubbles
+ * Woven policies are not searchable"). The sibling app reads Woven's policy
+ * MANAGEMENT table instead, where each row carries `data-status` and an
+ * Audience cell; the markup below is the sibling app's VERIFIED shape for the same
+ * Woven product. UNVERIFIED for Midwest Soap Makers until a Preview test-mode
+ * run with the switch on lists this company's policies: a page without the
+ * table, or a status not listed here, fails the policy listing (never
+ * guessed), and the other content types are unaffected.
+ */
+export const POLICY_MANAGEMENT_LIST_PATH = "/Policy";
+export const POLICY_MANAGEMENT_ROW = {
+  id: "data-policy-id",
+  status: "data-status",
+  disabled: "data-disabled",
+} as const;
+/** Cells are read by header, never by position. */
+export const POLICY_MANAGEMENT_HEADERS = { audience: /^\s*audience\s*$/i, updated: /^\s*last\s+updated\s*$/i } as const;
+/** `data-status` values and what they mean. Any other value fails the listing. */
+export const POLICY_MANAGEMENT_STATUSES: Readonly<Record<string, "published" | "unpublished">> = {
+  current: "published",
+  published: "published",
+  draft: "unpublished",
+  archived: "unpublished",
+  retired: "unpublished",
+  inactive: "unpublished",
+  unpublished: "unpublished",
+};
+
 /* -------------------------------------------------------- handbooks -- */
 
 /** VERIFIED_WEB_APP_INTERNAL_ROUTE: POST, JSON content type, no body; answers `{ list }`. */

@@ -54,6 +54,24 @@ export interface WovenSyncPolicy {
   audienceRestriction?: EngineDeps["audienceRestriction"];
 }
 
+/**
+ * Board f105, Pau's ruling (22 Nov 2026, relayed by QA): "YES — Bubbles may
+ * quote any company-wide ("Public") Woven policy, like Sunny." With
+ * WOVEN_BCS_POLICY_MANAGEMENT_LIST_ENABLED on, "Public" is company-wide, so a
+ * published Public policy from `GET /Policy` is shared without an
+ * administrator's decision (an administrator may still exclude "Public").
+ * Only records `bcsAudienceRestriction` lets through reach this: a
+ * management-table policy and a confirmed handbook. "Public" on a File
+ * Library item, a communication or a Knowledge Center card stays
+ * `audience_unverified`.
+ */
+export const POLICY_PUBLIC_AUDIENCE_LABEL = "Public";
+
+function companyWideLabelsFor(policy: WovenSyncPolicy, config: WovenKnowledgeConfig): readonly string[] {
+  if (policy !== BCS_SYNC_POLICY || config.policyManagementList !== true) return policy.companyWideLabels;
+  return [...policy.companyWideLabels, POLICY_PUBLIC_AUDIENCE_LABEL];
+}
+
 export const BCS_SYNC_POLICY: WovenSyncPolicy = {
   contentTypes: WOVEN_CONTENT_TYPES,
   companyWideLabels: BCS_COMPANY_WIDE_AUDIENCE_LABELS,
@@ -132,7 +150,7 @@ function gate(config: WovenKnowledgeConfig): Extract<WovenRunOutcome, { status: 
  * switch, setting or argument that returns any other connector or company.
  */
 export function createWovenKnowledgeConnector(config: WovenKnowledgeConfig, client: WovenTeamClient): BuffCitySoapWovenConnector {
-  return new BuffCitySoapWovenConnector({ client, credentials: config.credentials!, downloads: config.downloads });
+  return new BuffCitySoapWovenConnector({ client, credentials: config.credentials!, downloads: config.downloads, policyManagementList: config.policyManagementList === true });
 }
 
 function buildConnector(config: WovenKnowledgeConfig, startedAt: number): BuffCitySoapWovenConnector {
@@ -159,7 +177,7 @@ export async function runWovenKnowledgeSync(
     store,
     sink: testMode ? readOnlySink(sink) : sink,
     describe: describeWovenItem,
-    companyWideLabels: policy.companyWideLabels,
+    companyWideLabels: companyWideLabelsFor(policy, config),
     contentTypes: overrides.contentTypes ?? policy.contentTypes,
     now,
     deadlineAt: startedAt + ITEM_BUDGET_MS,
