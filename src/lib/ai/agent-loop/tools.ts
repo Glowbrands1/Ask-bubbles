@@ -20,6 +20,7 @@ import { answeredNameQuestions, answerNamesSomeoneElse, everKeptOrUsedTyped, isC
 import { employeeFirstName } from "@/lib/forms/employee-reference";
 import { AFFIRMATIVE, displayName, editDistance, matchEmployeeName, nameConfirmationQuestion, readNameConfirmation, rosterSpellingOf, type RosterEmployee } from "@/lib/forms/employee-match";
 import { offRosterTyped } from "@/lib/forms/roster-only-names";
+import { readLocationMentions } from "@/lib/forms/location-mention";
 import { locationById } from "@/lib/locations";
 import { COMPANY_LOCATION_NICKNAMES } from "@/config/company/locations";
 import { detectTemplateIntent } from "@/lib/forms/template-intent";
@@ -241,6 +242,19 @@ async function formsOnFileAskedFor(context: ToolContext, evidence: unknown, pers
   const namesSomeone = (text: string) => rosterNames.some((name) => mentionsPerson(text, name, rosterNames)) || extractEmployeeNames(text).length > 0;
   /* QA's re-review (fix 1): the quoted message names someone else, so no fallback lets this person's forms through. */
   if (namesSomeone(asked.said)) return { ok: false, reason: "evidence_other_person", reasonCode: "privacy_not_this_person" };
+  /*
+   * Port of the sibling app's bca3bca (its QA's shadow re-run S1(b), 22 Nov 2026): the reply asked "Do you want me to open
+   * <P>'s Corrective Action on file?" and the manager's answer (naming nobody) was refused, turn after turn. The app's own
+   * reply right before the quoted answer, when it names this person, makes the answer about them. The app's reply is
+   * read, never a list of the manager's words.
+   */
+  {
+    const turns = identifiedTurns(context.history as ChatMessage[], context.question, context.questionMessageId);
+    const check = verifyEvidence(evidence, turns);
+    const asking = check.ok ? turns[check.turn.index - 1] : undefined;
+    const replyText = asking?.role === "assistant" ? withoutMessageIdTags(asking.content).replace(/[*_]/g, "") : "";
+    if (replyText && names.some((name) => holdsPhrase(replyText, name))) return { ok: true };
+  }
   const antecedent = asked.before.find(namesSomeone);
   if (antecedent !== undefined && namedIn(antecedent)) return { ok: true };
   // PR 2: the card on screen, by the server's card record (its person's roster id, or the key of a typed name), never the reply's text.
@@ -893,6 +907,8 @@ export interface ToolEffects {
   /** find_staff ran this turn: a person was named, so a card without one is not "nobody named" (item 6). */
   staffLookedUp?: boolean;
   /** Fix batch items 4 and 3: this turn's last "Did you mean" (the roster ids offered, the name typed), for the record. */
+  /** Round 3 A7: a card this turn was filed at the employee's Woven store (store_from_woven), so the reply may say so. */
+  storeFromWoven?: boolean;
   nameQuestion?: { offeredIds: string[]; typed: string; offeredNames?: string[]; asksFullName?: boolean; templateKey?: string };
   /** QA (16 Nov 2026): propose_form ran for a form this turn, so a form is chosen (find_staff may ask the name). */
   formChosen?: boolean;
@@ -4796,13 +4812,21 @@ export async function proposeForm(
    * B6 (QA's live round 3, 22 Nov 2026): "she is resigning due to second job" left Reason for Resignation empty on the card,
    * the reply and the saved draft. The reason is the model's reading (exit_reason), kept when every word of it is in the
    * manager's quoted words of this request (exit_reason_evidence; `exit-reason-said.ts`); Create writes it as their
-   * statement. A termination keeps its own reason path.
+   * statement. On a termination the reason is the card's account (below).
    */
   const exitReasonQuote = typeof (input.exit_reason_evidence as { quote?: unknown } | null | undefined)?.quote === "string" ? String((input.exit_reason_evidence as { quote: string }).quote).trim().slice(0, 300) : "";
-  const exitReasonText = template.key === appConfig().formKeys.exit && !exitTermination && input.exit_type !== "termination" && typeof input.exit_reason === "string" && exitReasonQuote !== "" && answerEvidence(context, input.exit_reason_evidence, "request", evidencePerson, { requestTurnIds }).ok
+  const exitReasonText = template.key === appConfig().formKeys.exit && (exitTermination !== null || input.exit_type !== "termination") && typeof input.exit_reason === "string" && exitReasonQuote !== "" && answerEvidence(context, input.exit_reason_evidence, "request", evidencePerson, { requestTurnIds }).ok
     ? (await import("@/lib/forms/exit-reason-said")).reasonFromQuote(input.exit_reason, exitReasonQuote)
     : null;
-  const exitReason = exitReasonText ? { text: exitReasonText, quote: exitReasonQuote } : null;
+  const statedReason = exitReasonText ? { text: exitReasonText, quote: exitReasonQuote } : null;
+  /*
+   * L6 (coder 5's live triage on 1c71e11, 22 Nov 2026): "exit form for <P>, terminated for job abandonment, not eligible
+   * for rehire" made a termination card with no account in both runs; the reply even offered to add the reason. A
+   * termination's reason is its account (Create saves it as the Reason line, `EXIT_ACCOUNT_LABEL`): with no account from
+   * the model, the stated reason, checked as above, is the account.
+   */
+  if (exitTermination && statedReason && !whatHappened) whatHappened = statedReason.text;
+  const exitReason = exitTermination ? null : statedReason;
   let salonFromWoven: string | null = null;
   /* A7: the person's own Woven stores in the manager's scope, primary first, when the typed store was not read as one. */
   const wovenStores = storeNotRead && employee.id ? await wovenStoresOf(context.actor.scope, employee.id, read.kind === "read" ? read.roster : [], managerSalonIds) : [];
@@ -5098,6 +5122,12 @@ export async function proposeForm(
     .filter(({ name }) => !holdsWeekday(name))
     .slice(0, 3)
     .map(({ name, sentence }) => ({ name: untrusted(name), sentence: untrusted(sentence) }));
+  /*
+   * QA's Bubbles live round 3 (22 Nov 2026, A7): the words the store reader matched, in the manager's request, as the card's
+   * store ("empire" for the W 41st St store). The store reader decides; any store phrase, never a word list.
+   */
+  const storeSaidOf = (): string | null =>
+    card.locationId ? (readLocationMentions(requestWords).find((mention) => mention.locationIds.length === 1 && mention.locationIds[0] === card.locationId && mention.matched)?.matched ?? null) : null;
   const facts = {
     /* fix-name, live s10: the card's name changed from → to, so the reply can say so (the person may be another roster person, by exact match). */
     ...(nameCorrectedFrom !== null ? { name_corrected: { from: nameCorrectedFrom, to: employee.name } } : {}),
@@ -5231,7 +5261,18 @@ export async function proposeForm(
       const primary = await rosterPrimarySalon(context.actor.scope, employee.id);
       return primary && (card.authorizedLocationIds ?? []).includes(primary) ? { employee_store: rosterSalonName(primary) ?? primary } : {};
     })()),
-    ...(salonFromWoven ? { store_from_woven: salonFromWoven } : {}),
+    /* Round 3 A7: the manager's own words for the card's store win over "where Woven lists" (store_said, below). */
+    ...(salonFromWoven && !storeSaidOf() ? ((effects.storeFromWoven = true), { store_from_woven: salonFromWoven }) : {}),
+    /*
+     * QA's Bubbles live round 3 (22 Nov 2026, A7): the card was filed at the store the manager named by its reviewed
+     * nickname ("at empire, sd"), and the reply said "where Woven lists <P>'s store (Empire, SD isn't one I recognize …)":
+     * nothing told the model the manager's words were that store. The words the store reader matched as the card's store
+     * are named (store_said); the store reader decides, never a word list.
+     */
+    ...(() => {
+      const said = storeSaidOf();
+      return said && card.locationId ? { store_said: { said, store: salonLabel(card.locationId) } } : {};
+    })(),
     ...(noStoreStated && !card.locationId ? { no_store: { say_exactly: `Filed with no ${locationWord()}, as you said.` } } : {}),
     /* U21: the account was copied from <A>'s card; a level and payroll answer are the manager's to state for this person. */
     ...(copiedFromCard
