@@ -85,6 +85,28 @@ function priorDateCase(id: string, title: string, last: string, priorActions: st
 
 export const NOV22_ROUND3_INCIDENT_DATE_CASES: ReplayCase[] = [
   {
+    id: "nov22-r3-u09-model-passed-date-is-kept",
+    title: "Round 3 U09 (QA, from Sunny's trace): T2 \"… Verbal CA 11-1-2026. On 11-1-26 Briony violated …\" with the model PASSING incident_date 2026-11-01 — the card keeps it (it was dropped as the Verbal CA step's date) and Create saves 2026-11-01",
+    report: "QA (22 Nov 2026, Sunny's U09 trace): the model passed incident_date 2026-11-01, the card ended with no date, and Create saved today",
+    status: "fixed",
+    async run(t) {
+      start(t, [BRIONY]);
+      t.loopModel!(loopStandIn((view): LoopDecision => {
+        const result = lastResult(view, "propose_form") as { card?: unknown } | null;
+        if (result?.card) return { text: "Here's the Corrective Action Form for **Briony**." };
+        const base = { template_key: "dpoa", employee_name: "Briony Kask", person_evidence: evidenceFrom(view, "Briony Kask", users(view) - 1), warning_level: "written", level_evidence: evidenceFrom(view, "written", users(view) - 1) };
+        if (users(view) === 1) return { tool: "propose_form", input: base };
+        return { tool: "propose_form", input: { ...base, what_happened: "On 11/1/26 Briony violated the care and cleaning of facilities policy.", policy: "Care and Cleaning of Equipment and Facilities", prior_actions: "Signed JBA Policy Manual 1/1/2026; Verbal Warning 11/1/2026", prior_actions_evidence: evidenceFrom(view, "JBA Policy Manual 1-1-2026, Verbal CA 11-1-2026"), incident_date: "2026-11-01" } };
+      }));
+      const thread = t.thread();
+      await thread.say(U09_T1);
+      const reply = await thread.say(U09_T2);
+      expect(thread.proposal?.formDate, `the card dropped the date the model passed:\n${reply.content}`).toBe("2026-11-01");
+      const id = await thread.create();
+      expect(t.values(id).form_date, "Create saved another date than the one stated").toBe("2026-11-01");
+    },
+  },
+  {
     id: "nov22-r3-u09-one-stated-date-is-the-form-date",
     title: "Round 3 U09: T2 \"JBA Policy Manual 1-1-2026, Verbal CA 11-1-2026. On 11-1-26 Briony violated …\" with the model leaving incident_date out — the card is dated 11/01/2026 (never today) and Create saves 2026-11-01",
     report: REPORT,
