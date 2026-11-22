@@ -122,6 +122,8 @@ const state = vi.hoisted(() => ({
 const loop = vi.hoisted(() => ({
   standIn: null as import("./loop-stand-in").LoopStandIn | null,
   rosterFails: false,
+  /** Woven's own names for registered stores (`t.wovenStoreNames`), as `woven_location_map` holds them; none by default. */
+  wovenAliases: [] as { storeId: string; kind: "woven_name" | "woven_number"; text: string }[],
   env: null as null | { enabled: string | undefined; users: string | undefined },
 }));
 
@@ -599,6 +601,22 @@ vi.mock("@/lib/forms/employee-roster", async (importOriginal) => {
   };
 });
 
+/*
+ * WOVEN'S OWN STORE NAMES (QA's Bubbles round 2, 22 Nov 2026, U54): production reads `woven_location_map` into the store
+ * index (`loadStoreIndex`); the pack's fake database has no such table, so the case's names (`t.wovenStoreNames`) are
+ * the Woven aliases here, none by default (the index is then the roster's, as before).
+ */
+vi.mock("@/lib/stores/woven-aliases", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/stores/woven-aliases")>();
+  const { buildStoreIndex } = await import("@/lib/stores/resolver");
+  const { COMPANY_LOCATION_ABBREVIATIONS, COMPANY_LOCATION_NICKNAMES } = await import("@/config/company/locations");
+  return {
+    ...actual,
+    loadWovenStoreAliases: async () => [...loop.wovenAliases],
+    loadStoreIndex: async () => buildStoreIndex({ nicknames: COMPANY_LOCATION_NICKNAMES, abbreviations: COMPANY_LOCATION_ABBREVIATIONS, extraAliases: [...loop.wovenAliases] }),
+  };
+});
+
 vi.mock("@/lib/forms/prior-forms", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/forms/prior-forms")>()),
   priorFormsReadingForChat: async () => ({ attach: [], possible: [], identity: "none" }),
@@ -950,6 +968,7 @@ afterEach(() => {
   // The loop: off again, its switches as they were, its stand-in and seams cleared, its manual cache forgotten.
   loop.standIn = null;
   loop.rosterFails = false;
+  loop.wovenAliases = [];
   __setAgentLoopModelForTests(null);
   __setAgentLoopDirectoryForTests(null);
   if (loop.env) {
@@ -1087,6 +1106,9 @@ function context(): ReplayContext {
     },
     formsAllStoreAccess: (mode = "all") => {
       store.forms_all_store_access!.push({ app_user_id: "qa-manager", visibility_mode: mode, revoked_at: null });
+    },
+    wovenStoreNames: (names) => {
+      loop.wovenAliases = Object.entries(names).map(([storeId, text]) => ({ storeId, kind: "woven_name" as const, text }));
     },
     watchLoopEntries: () => {
       const spy = vi.spyOn(agentLoopRun, "runAgentTurn");
