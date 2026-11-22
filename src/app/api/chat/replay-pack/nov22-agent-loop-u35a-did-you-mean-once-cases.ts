@@ -1,6 +1,6 @@
 import { expect, vi } from "vitest";
 
-import { type DirectoryRow, type ReplayCase } from "./cases";
+import { type DirectoryRow, type ReplayCase, type ReplayContext } from "./cases";
 import { LOOP_STAFF } from "./loop-roster";
 import { evidenceFrom, lastResult, loopStandIn, type LoopDecision, type LoopView } from "./loop-stand-in";
 
@@ -36,6 +36,39 @@ export const U35_TURNS = [
 
 const users = (view: LoopView) => view.turns.filter((turn) => turn.role === "user").length;
 
+async function verbatim(t: ReplayContext, admin: boolean) {
+  vi.setSystemTime(new Date("2026-11-22T18:00:00Z"));
+  t.directory([...LOOP_STAFF, LIESL]);
+  if (admin) t.as("admin", { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] });
+  else t.as("assistant_manager", GRAND_ISLAND);
+  /* The stand-in: the card from T2 on, proposed with the name as the manager last typed it (the live model's habit). */
+  t.loopModel!(loopStandIn((view): LoopDecision => {
+    const turn = users(view);
+    const result = lastResult(view, "propose_form") as { card?: unknown; ask_exactly?: string; reason_code?: string } | null;
+    if (result) return { text: result.card ? "Here's the Corrective Action Form for **Liesl**." : (result.ask_exactly ?? "ok") };
+    if (turn === 1) return { text: "Here's how to make foaming hand soap." };
+    const said = view.turns.filter((entry) => entry.role === "user").at(-1)!.text;
+    /* The name as the manager last typed it; a turn naming nobody re-proposes T2's spelling (the worst case). */
+    const typed = /liesl [a-z]+ [a-z]+/i.exec(said)?.[0] ?? "Liesl Moreno Vagras";
+    return { tool: "propose_form", input: { template_key: "dpoa", employee_name: typed, person_evidence: evidenceFrom(view, typed, /liesl/i.test(said) ? 0 : turn - 2), what_happened: "A customer complained about the experience with Liesl." } };
+  }));
+  const thread = t.thread();
+  const replies: { turn: number; text: string; card: string | null; issue: string | null }[] = [];
+  for (const [index, said] of U35_TURNS.entries()) {
+    const reply = await thread.say(said);
+    replies.push({ turn: index + 1, text: reply.content, card: (thread.proposal as { employeeName?: string } | null)?.employeeName ?? null, issue: (thread.proposal as { issue?: string } | null)?.issue ?? null });
+  }
+  /*
+   * Live (main, 22 Nov 2026), the question was asked at T2 and again at T3–T6, though T4 "fix her last name vargas" is
+   * the manager's correction of the typo to the offered name; the tester's run had the card switched at T4 and asked
+   * again at T5/T6. From T4 on, the question is settled either way.
+   */
+  const askedAgain = replies.slice(3).filter((entry) => /Did you mean \*\*Liesl Moreno Vargas\*\*\?/.test(entry.text));
+  expect(askedAgain.map((entry) => `T${entry.turn}: ${entry.text}`), "the same Did-you-mean was asked again after T4's correction").toEqual([]);
+  expect(replies.slice(3).some((entry) => entry.card === "Liesl Moreno Vargas"), `the card never became Liesl Moreno Vargas's:\n${JSON.stringify(replies, null, 1)}`).toBe(true);
+  return replies;
+}
+
 export const NOV22_AGENT_LOOP_U35A_DID_YOU_MEAN_ONCE_CASES: ReplayCase[] = [
   {
     id: "nov22-u35a-did-you-mean-not-repeated-after-card",
@@ -43,34 +76,54 @@ export const NOV22_AGENT_LOOP_U35A_DID_YOU_MEAN_ONCE_CASES: ReplayCase[] = [
     report: REPORT,
     status: "fixed",
     async run(t) {
+      await verbatim(t, false);
+    },
+  },
+  {
+    id: "nov22-u35a-admin-close-spelling-of-card-person-not-asked",
+    title: "U35a (coder 5's live triage on 1c71e11) with Pau's admin/global login: the same twelve turns; after the card is Liesl Moreno Vargas's, T6 \"…liesl moerno vargas\" and T8 \"Liesl Loreno Vargas\" (close spellings of the card's person) never ask \"Did you mean\" again, and the card's Observation is never lost",
+    report: "Coder 5's live triage (1c71e11, 22 Nov 2026), u35a: T6 and T8 re-asked \"Did you mean **<P>**?\" for the confirmed person, and in one run T6's card lost its Observation",
+    status: "fixed",
+    async run(t) {
+      const replies = await verbatim(t, true);
+      const firstCard = replies.findIndex((entry) => entry.card === "Liesl Moreno Vargas");
+      expect(firstCard, `the card never became Liesl Moreno Vargas's:\n${JSON.stringify(replies, null, 1)}`).toBeGreaterThanOrEqual(0);
+      const after = replies.slice(firstCard + 1);
+      expect(after.filter((entry) => /Did you mean \*\*/.test(entry.text)).map((entry) => `T${entry.turn}: ${entry.text}`), "asked again for the card's own person").toEqual([]);
+      const firstIssue = replies.findIndex((entry) => (entry.issue ?? "") !== "");
+      if (firstIssue >= 0) expect(replies.slice(firstIssue).filter((entry) => entry.card !== null && (entry.issue ?? "") === "").map((entry) => `T${entry.turn}`), "the card's Observation was lost").toEqual([]);
+    },
+  },
+  {
+    id: "nov22-u35a-confirmed-person-new-close-spelling-not-asked",
+    title: "u35a (coder 5's live run 2 on 1c71e11, Grand Island assistant manager; T3 left out): T4 \"fix her last name vargas\" confirms Liesl Moreno Vargas with no card yet; T6 \"…liesl moerno vargas\" and T8 \"Liesl Loreno Vargas\" (new close spellings) never ask \"Did you mean\" again",
+    report: "Coder 5's live run 2 (1c71e11, 22 Nov 2026), u35a: after T4's confirmation, T6 and T8 each got the full \"Did you mean **<P>**?\" again",
+    status: "fixed",
+    async run(t) {
       vi.setSystemTime(new Date("2026-11-22T18:00:00Z"));
       t.directory([...LOOP_STAFF, LIESL]);
       t.as("assistant_manager", GRAND_ISLAND);
-      /* The stand-in: the card from T2 on, proposed with the name as the manager last typed it (the live model's habit). */
+      /* As the live model did: find_staff with the name as the manager last typed it, and no card (no account yet). */
       t.loopModel!(loopStandIn((view): LoopDecision => {
-        const turn = users(view);
-        const result = lastResult(view, "propose_form") as { card?: unknown; ask_exactly?: string; reason_code?: string } | null;
-        if (result) return { text: result.card ? "Here's the Corrective Action Form for **Liesl**." : (result.ask_exactly ?? "ok") };
-        if (turn === 1) return { text: "Here's how to make foaming hand soap." };
+        const result = lastResult(view, "find_staff") as { ask_exactly?: string } | null;
+        if (result) return { text: result.ask_exactly ?? "Thanks. What happened with the customer complaint?" };
         const said = view.turns.filter((entry) => entry.role === "user").at(-1)!.text;
-        /* The name as the manager last typed it; a turn naming nobody re-proposes T2's spelling (the worst case). */
-        const typed = /liesl [a-z]+ [a-z]+/i.exec(said)?.[0] ?? "Liesl Moreno Vagras";
-        return { tool: "propose_form", input: { template_key: "dpoa", employee_name: typed, person_evidence: evidenceFrom(view, typed, /liesl/i.test(said) ? 0 : turn - 2), what_happened: "A customer complained about the experience with Liesl." } };
+        const typed = /liesl [a-z]+ [a-z]+/i.exec(said)?.[0] ?? (/vargas/i.test(said) ? "Liesl Moreno Vargas" : null);
+        if (!typed) return { text: "What happened with the customer complaint?" };
+        return { tool: "find_staff", input: { name: typed, ...(/liesl/i.test(said) ? { person_evidence: evidenceFrom(view, typed) } : {}) } };
       }));
       const thread = t.thread();
-      const replies: { turn: number; text: string; card: string | null }[] = [];
-      for (const [index, said] of U35_TURNS.entries()) {
-        const reply = await thread.say(said);
-        replies.push({ turn: index + 1, text: reply.content, card: (thread.proposal as { employeeName?: string } | null)?.employeeName ?? null });
-      }
+      const replies: string[] = [];
       /*
-       * Live (main, 22 Nov 2026), the question was asked at T2 and again at T3–T6, though T4 "fix her last name vargas" is
-       * the manager's correction of the typo to the offered name; the tester's run had the card switched at T4 and asked
-       * again at T5/T6. From T4 on, the question is settled either way.
+       * Live, T3 asked T2's question again and T4 answered it. Here T3 is left out, so T4 "fix her last name vargas" answers
+       * T2's question (a correction to the offered name: the person is confirmed), as it did live.
        */
-      const askedAgain = replies.slice(3).filter((entry) => /Did you mean \*\*Liesl Moreno Vargas\*\*\?/.test(entry.text));
-      expect(askedAgain.map((entry) => `T${entry.turn}: ${entry.text}`), "the same Did-you-mean was asked again after T4's correction").toEqual([]);
-      expect(replies.slice(3).some((entry) => entry.card === "Liesl Moreno Vargas"), `the card never became Liesl Moreno Vargas's:\n${JSON.stringify(replies, null, 1)}`).toBe(true);
+      const turns = [U35_TURNS[1], ...U35_TURNS.slice(3, 8)];
+      for (const said of turns) replies.push((await thread.say(said)).content);
+      expect(replies[0], "T2 never asked (the case proves nothing)").toMatch(/Did you mean \*\*Liesl Moreno Vargas\*\*\?/);
+      expect(replies[1], "T4 did not confirm the person (the case proves nothing)").not.toMatch(/Did you mean/);
+      const again = replies.slice(2).map((text, at) => `T${at + 5}: ${text}`).filter((text) => /Did you mean \*\*/.test(text));
+      expect(again, "asked again after T4 confirmed the person").toEqual([]);
     },
   },
   {
