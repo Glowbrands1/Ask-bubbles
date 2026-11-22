@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { accountWithoutPriorSteps, sharesContentWord } from "./tools";
+import { accountWithoutPriorSteps, listedWithKeptSteps, sharesContentWord } from "./tools";
 
 /* QA's live round 3 (22 Nov 2026, U21), the tester's turns; the person invented. */
 const STEPS = "Coaching — 09/22/2026 (cleaning tasks not being completed); Policy acknowledgement — 05/26/2026";
@@ -34,5 +34,24 @@ describe("accountWithoutPriorSteps (U21)", () => {
   it("the account is never emptied", () => {
     const account = "Joelle received coaching on 9/22 for cleaning tasks.";
     expect(accountWithoutPriorSteps(account, STEPS, null)).toBe(account);
+  });
+});
+
+/* QA's live triage (22 Nov 2026, U09 on main): the model kept only the Verbal CA; the manual's step went into the Observation. */
+describe("listedWithKeptSteps (U09)", () => {
+  const T2 = "JBA Policy Manual 1-1-2026, Verbal CA 11-1-2026. On 11-1-26 Fenna violated care and cleaning of facilities policy";
+  it("a step listed with one the card keeps is a step too", () => {
+    expect(listedWithKeptSteps(T2, "Verbal CA — 11/01/2026", "2026-11-01", "2026-11-22")).toEqual(["JBA Policy Manual — 01/01/2026"]);
+  });
+  it("nothing when the card keeps no step of that sentence, or already holds the listed one", () => {
+    expect(listedWithKeptSteps(T2, "Coaching — 09/22/2026", "2026-11-01", "2026-11-22")).toEqual([]);
+    expect(listedWithKeptSteps(T2, "JBA Policy Manual — 01/01/2026; Verbal CA — 11/01/2026", "2026-11-01", "2026-11-22")).toEqual([]);
+  });
+  it("control: a clause on this incident's date, or one that goes on after its date, is no step", () => {
+    expect(listedWithKeptSteps("Verbal CA 10-1-2026, late again 11-1-2026", "Verbal CA — 10/01/2026", "2026-11-01", "2026-11-22")).toEqual([]);
+    expect(listedWithKeptSteps("Verbal CA 10-1-2026, on 10-20-2026 she was late and left early", "Verbal CA — 10/01/2026", "2026-11-01", "2026-11-22")).toEqual([]);
+  });
+  it("the account then loses the listed step", () => {
+    expect(accountWithoutPriorSteps("JBA Policy Manual 1/1/2026. On 11/1/26, Fenna violated the care and cleaning of facilities policy.", "Verbal CA — 11/01/2026; JBA Policy Manual — 01/01/2026", "2026-11-01")).toBe("On 11/1/26, Fenna violated the care and cleaning of facilities policy.");
   });
 });

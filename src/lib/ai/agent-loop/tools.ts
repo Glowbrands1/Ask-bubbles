@@ -12,7 +12,7 @@ import { randomUUID } from "node:crypto";
 import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
 import { businessToday, formatBusinessTime } from "@/lib/business-date";
 import { appConfig } from "./app-config";
-import { isoDate, monthDayToIso, readDates, sameDate, withoutDates } from "./dates";
+import { isoDate, monthDayToIso, readDates, sameDate, withoutDates, type ReadDate } from "./dates";
 import { candidateNameWords, chatFormsActor, formDateRangeFromInput, formKindFromText, ofKind } from "@/lib/forms/chat-form-records";
 import { CURRENT_MESSAGE_ID, holdsPhrase, identifiedTurns, readEvidence, verifyEvidence, withoutMessageIdTags, type IdentifiedTurn } from "./evidence";
 import { personNamedInRequest, requestStart } from "./person-in-request";
@@ -806,6 +806,40 @@ export function sharesContentWord(a: string, b: string): boolean {
   const content = (text: string) => (withoutDates(text).toLowerCase().match(/[a-z]+/g) ?? []).map(root).filter((word) => word.length >= 5);
   const own = new Set(content(b));
   return content(a).some((word) => own.has(word));
+}
+
+/**
+ * QA's live triage (22 Nov 2026, U09 on main, both runs): T2 "JBA Policy Manual 1-1-2026, Verbal CA 11-1-2026. On 11-1-26
+ * <P> violated …": the model kept only "Verbal CA — 11/01/2026", and the manual's step went into the Observation. Steps
+ * the manager lists together are steps alike: in a sentence of the manager's that holds a step the card keeps (its date
+ * and a content word, `sharesContentWord`), every other comma-separated clause that is a few words then one date, with
+ * no date of this incident, is a step too ("<words> — <MM/DD/YYYY>"). Returns those steps, not on the card yet. Read from
+ * the clauses' shape and the card's own steps, never a word list.
+ */
+export function listedWithKeptSteps(requestWords: string, priorActions: string, incidentIso: string | null, today: string): string[] {
+  const kept = priorActions.split(/\s*(?:;|\n)\s*/).filter((step) => step.trim() !== "");
+  if (kept.length === 0) return [];
+  const holds = (clause: string, step: string) => {
+    const dates = readDates(clause);
+    return dates.length > 0 && dates.every((date) => readDates(step).some((stepDate) => sameDate(stepDate, date))) && sharesContentWord(clause, step);
+  };
+  const ofThisIncident = (date: ReadDate) => Boolean(incidentIso && Number(incidentIso.slice(5, 7)) === date.month && Number(incidentIso.slice(8, 10)) === date.day);
+  const added: string[] = [];
+  for (const sentence of requestWords.split(/(?<=[.!?])\s+|\n+/)) {
+    const clauses = sentence.replace(/[.!?]+$/, "").split(/\s*,\s*/).filter((clause) => clause.trim() !== "");
+    if (clauses.length < 2 || !clauses.some((clause) => kept.some((step) => holds(clause, step)))) continue;
+    for (const clause of clauses) {
+      const dates = readDates(clause);
+      if (dates.length !== 1 || ofThisIncident(dates[0]!) || kept.some((step) => holds(clause, step))) continue;
+      const words = withoutDates(clause).trim();
+      /* A few words, then the date, closing the clause: a step named and dated, not a sentence about the incident. */
+      if (clause.slice(dates[0]!.index + dates[0]!.text.length).trim() !== "" || words === "" || words.split(/\s+/).length > 5) continue;
+      const iso = isoDate(dates[0]!.text, today);
+      if (!iso || iso > today || kept.some((step) => readDates(step).some((stepDate) => sameDate(stepDate, dates[0]!)))) continue;
+      added.push(`${words.replace(/[\s,:;-]+$/, "")} — ${iso.slice(5, 7)}/${iso.slice(8, 10)}/${iso.slice(0, 4)}`);
+    }
+  }
+  return added;
 }
 
 /**
@@ -4586,7 +4620,10 @@ export async function proposeForm(
   const priorActionsRefused = priorSplit ? (priorSplit.kept === null ? priorSplit.problem : null) : null;
   const priorStepsLeftOff = priorSplit && priorSplit.kept !== null && priorSplit.dropped.length > 0 ? priorSplit.dropped : [];
   const keptPriorActions = priorSplit?.kept ?? null;
-  const priorActions = priorActionsRefused ? null : keptPriorActions ? priorActionsWithStatedTopics(keptPriorActions, statedSteps).slice(0, 600) : statedSteps.length === 0 ? onFileLine : null;
+  const priorActionsRead = priorActionsRefused ? null : keptPriorActions ? priorActionsWithStatedTopics(keptPriorActions, statedSteps) : statedSteps.length === 0 ? onFileLine : null;
+  /* U09 (QA's live triage): a step the manager listed with one the card keeps is on the card too (`listedWithKeptSteps`). */
+  const listedSteps = keptPriorActions && priorActionsRead ? listedWithKeptSteps(requestWords, priorActionsRead, date, today) : [];
+  const priorActions = priorActionsRead ? [priorActionsRead, ...listedSteps].join(priorActionsRead.includes("\n") ? "\n" : "; ").slice(0, 600) : null;
   /*
    * U09 / U21: a prior step on this card's Prior actions is never this incident's account (`accountWithoutPriorSteps`).
    * Only the steps the card keeps: a sentence leaves the Observation only when Prior actions holds it, so nothing is lost.
