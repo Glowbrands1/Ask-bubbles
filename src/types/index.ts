@@ -797,6 +797,11 @@ export interface ChatFormProposal {
   exitHow?: string;
   exitHowQuote?: string;
   /**
+   * The agent loop's exit card (QA's Bubbles round 2, 22 Nov 2026, U22): the lines Create saves, as the reply may read them
+   * back ("**<label>:** <value>"); a reply line under an exit field label that is not one of them is handed back.
+   */
+  exitReadBack?: string[];
+  /**
    * The agent loop's Position Transfer card (QA's Bubbles round 2, 22 Nov 2026, U54): the store the person is moving to,
    * as read from the manager's words (`newStoreSaid`) through the Woven-aware store index, and their words for it. Create
    * writes New Location only when the quote is in the chat's manager turns and the words read as that store again.

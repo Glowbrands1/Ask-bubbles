@@ -4728,6 +4728,10 @@ export async function proposeForm(
     ...(planSteps.length > 0 ? { planSteps } : {}),
     ...(attendanceKind ? { attendanceKind } : {}),
     ...(incidentTime ? { incidentTime } : {}),
+    /* U22: the exit card's lines Create saves (dates the exit reader read; the account under its saved field). */
+    ...(template.key === appConfig().formKeys.exit
+      ? { exitReadBack: (await import("./exit-read-back")).exitReadBack({ dateLines: await exitDateLines(requestWords, today, Boolean(exitTermination)), account: whatHappened || null, termination: Boolean(exitTermination) }) }
+      : {}),
     ...(awaiting ? { awaitingIncident: true as const, supportsInlineDraft: false } : {}),
   };
   /*
@@ -4876,6 +4880,8 @@ export async function proposeForm(
     effects.replyMustAsk = offer;
     return { ...refused, reason_code: "one_card", error: `${refused.error} Describe only the card on screen, never say both cards are ready, and end your reply with exactly: ${offer}`, ask_exactly: offer };
   }
+  /* U22: read back from the card's final account (shortened names included), so the reply's line matches it. */
+  if (card.exitReadBack) card.exitReadBack = (await import("./exit-read-back")).exitReadBack({ dateLines: await exitDateLines(requestWords, today, Boolean(exitTermination)), account: card.issue ?? null, termination: Boolean(exitTermination) });
   effects.proposal = card;
   effects.proposalEmployeeId = employee.id ?? null;
   const personId = typeof input.employee_id === "string" ? input.employee_id.trim() : "";
@@ -5157,6 +5163,7 @@ export async function proposeForm(
           ? { payroll_deduct: payroll }
           : {}),
       incident_time: card.incidentTime ?? null,
+      ...(card.exitReadBack ? { reads_back: card.exitReadBack } : {}),
       ...(transferCard ? { new_store: card.newStore ?? null } : {}),
       ...(template.key === appConfig().formKeys.exit ? { how_resigned: card.exitMethod ?? null } : {}),
       prior_actions: priorActions,
