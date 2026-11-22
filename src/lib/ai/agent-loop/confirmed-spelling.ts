@@ -39,7 +39,7 @@ export interface AnsweredNameQuestion {
   readonly latest: boolean;
   /** The person the answer confirmed, and how; null when it confirmed nobody. */
   readonly confirmed: RosterEmployee | null;
-  readonly by: "yes" | "full_name" | null;
+  readonly by: "yes" | "full_name" | "correction" | null;
   /** No manager turn has answered it yet (QA, c163): the question is still waiting, and its person is not settled. */
   readonly open?: boolean;
 }
@@ -52,11 +52,44 @@ function fullNames(person: RosterEmployee): string[] {
 }
 
 /** The person a message confirms in answer to this question, and how (a bare yes to one offer, or an offered full name). */
-function confirmsIn(answer: string, record: NameQuestionRecord, offered: readonly RosterEmployee[]): { confirmed: RosterEmployee | null; by: AnsweredNameQuestion["by"] } {
+function confirmsIn(answer: string, record: NameQuestionRecord, offered: readonly RosterEmployee[], typed: string | null = null): { confirmed: RosterEmployee | null; by: AnsweredNameQuestion["by"] } {
   // A bare yes confirms only a question that offered one person (an offered name off the roster counts as one).
   if (offered.length === 1 && (record.offeredNameKeys?.length ?? 0) === 0 && AFFIRMATIVE.test(answer)) return { confirmed: offered[0]!, by: "yes" };
   const held = offered.filter((person) => fullNames(person).some((name) => holdsPhrase(answer, name)));
-  return held.length === 1 ? { confirmed: held[0]!, by: "full_name" } : { confirmed: null, by: null };
+  if (held.length === 1) return { confirmed: held[0]!, by: "full_name" };
+  /*
+   * QA's live round-2 re-run (22 Nov 2026, U35(a)): "Did you mean **<First> <Mid> <Last>**?" for the typed "<First> <Mid>
+   * <Lastx>", answered "fix her last name <last>": the typed name with the answer's word in place of the one word that
+   * differs IS the offered name. That word corrects the typo, so the answer confirms the one person offered. A
+   * substitution on the manager's own typed words, never a list of phrasings.
+   */
+  if (typed && offered.length === 1 && (record.offeredNameKeys?.length ?? 0) === 0) {
+    const plain = (text: string) => text.toLowerCase().match(/[\p{L}'-]+/gu) ?? [];
+    const typedWords = plain(typed);
+    const said = new Set(plain(answer));
+    const corrects = fullNames(offered[0]!).some((name) => {
+      const own = plain(name);
+      if (own.length !== typedWords.length) return false;
+      const differ = own.map((word, at) => (word === typedWords[at] ? -1 : at)).filter((at) => at >= 0);
+      return differ.length === 1 && said.has(own[differ[0]!]!);
+    });
+    if (corrects) return { confirmed: offered[0]!, by: "correction" };
+  }
+  return { confirmed: null, by: null };
+}
+
+/** The name the question was about, as the manager typed it in their earlier words (its key is the record's typedKey). */
+function typedIn(turns: readonly string[], typedKey: string): string | null {
+  for (const turn of turns) {
+    const plain = turn.replace(/[^\p{L}\p{N}'\s-]+/gu, " ").split(/\s+/).filter(Boolean);
+    for (let size = 1; size <= 4; size += 1) {
+      for (let at = 0; at + size <= plain.length; at += 1) {
+        const words = plain.slice(at, at + size).join(" ");
+        if (personKey(words) === typedKey) return words;
+      }
+    }
+  }
+  return null;
 }
 
 /** The message holds the name the question was about, as typed (its key): "use <typed>", "keep <typed>". */
@@ -76,8 +109,8 @@ function holdsTyped(answer: string, typedKey: string): boolean {
  * in it: a yes or an offered person's full name, a no, the typed name itself ("use <typed>"), or somebody's full name.
  * Any other turn leaves the question open, and the next turn is read.
  */
-function answersQuestion(answer: string, record: NameQuestionRecord, offered: readonly RosterEmployee[], roster: readonly RosterEmployee[]): boolean {
-  if (confirmsIn(answer, record, offered).confirmed) return true;
+function answersQuestion(answer: string, record: NameQuestionRecord, offered: readonly RosterEmployee[], roster: readonly RosterEmployee[], typed: string | null = null): boolean {
+  if (confirmsIn(answer, record, offered, typed).confirmed) return true;
   if (AFFIRMATIVE.test(answer.split(/[,.;!\n]/)[0] ?? "") || saysNo(answer) || holdsTyped(answer, record.typedKey)) return true;
   if (extractEmployeeNames(answer).some((name) => name.trim().split(/\s+/).length > 1 && !notAPerson(name))) return true;
   return roster.some((person) => fullNames(person).some((name) => holdsPhrase(answer, name)));
@@ -93,12 +126,13 @@ export function answeredNameQuestions(view: NameQuestionView): AnsweredNameQuest
       ...view.history.flatMap((turn, at) => (at > reply && turn.role === "user" ? [String(turn.content ?? "")] : [])).map((text) => ({ text, latest: false })),
       { text: view.question, latest: true },
     ];
-    const answered = later.find((turn) => answersQuestion(turn.text, record, offered, view.roster));
+    const typed = typedIn(view.history.flatMap((turn, at) => (at < reply && turn.role === "user" ? [String(turn.content ?? "")] : [])).reverse(), record.typedKey);
+    const answered = later.find((turn) => answersQuestion(turn.text, record, offered, view.roster, typed));
     if (!answered) {
       out.push({ record, offered, answer: "", latest: false, confirmed: null, by: null, open: true });
       continue;
     }
-    const { confirmed, by } = confirmsIn(answered.text, record, offered);
+    const { confirmed, by } = confirmsIn(answered.text, record, offered, typed);
     out.push({ record, offered, answer: answered.text, latest: answered.latest, confirmed, by });
   }
   return out;

@@ -2273,6 +2273,14 @@ function cardNameCorrection(
   }
   if (declined || latestTurnKeepsOrUsesTyped(view, typed)) return { asTyped: true, from: cardName };
   const close = loopNameMatch(typed, roster);
+  /*
+   * QA's live round-2 re-run (22 Nov 2026, U35(a)): with the card already <P>'s, the first message's misspelling of <P>
+   * typed again asked "Did you mean **<P>**?" again. A close spelling whose only staff-list match is the card's own person
+   * is that person: the card stays theirs, and nothing is asked.
+   */
+  if (cardPerson && close.kind === "confirm" && close.candidates.length > 0 && close.candidates.every((candidate) => candidate.employee.id === cardPerson.id)) {
+    return { person: cardPerson, from: cardName };
+  }
   const candidates = close.kind === "confirm" ? close.candidates.map((candidate) => candidate.name) : [];
   if (candidates.length > 0 && close.kind === "confirm") {
     effects.nameQuestion = { offeredIds: close.candidates.slice(0, 5).map((candidate) => candidate.employee.id), typed };
@@ -2471,7 +2479,7 @@ export function mentionsPerson(text: string, name: string, rosterNames: readonly
  * not settled ("tamsen orwel"), so the caller asks Did you mean; null when settled, or when no words name <A> at all.
  */
 function closeSpellingNotSettled(
-  context: Pick<ToolContext, "question" | "history" | "questionMessageId" | "nameQuestions">,
+  context: Pick<ToolContext, "question" | "history" | "questionMessageId" | "nameQuestions" | "cardOnScreen" | "earlierCard">,
   row: RosterEmployee,
   roster: readonly RosterEmployee[],
   evidence: unknown,
@@ -2482,6 +2490,14 @@ function closeSpellingNotSettled(
    */
   options: { readonly firstNameSettlesFirst?: boolean } = {},
 ): string | null {
+  /*
+   * QA's live round-2 re-run (22 Nov 2026, U35(a)): after the card became <P>'s, "make that update", "can i review the
+   * card" and the Create request each asked "Did you mean **<P>**?" again, from the first message's misspelling. The card
+   * on screen (or this chat's latest card) is already this staff member: the manager has seen and kept that name, and the
+   * question settles nothing. The card's own record, never the words.
+   */
+  const card = context.cardOnScreen ?? context.earlierCard ?? null;
+  if (card?.employeeKey && card.employeeKey === personKey(row.id)) return null;
   const turns = identifiedTurns(context.history as ChatMessage[], context.question, context.questionMessageId);
   const quoted = verifyEvidence(evidence, turns);
   const texts = quoted.ok
@@ -3391,7 +3407,8 @@ export async function proposeForm(
       ? cardNameCorrection(context, effects, key, displayName(person), read.roster, { byId: person, newFormEvidence: input.new_form_evidence })
       : typed ? cardNameCorrection(context, effects, key, typed, read.roster, { newFormEvidence: input.new_form_evidence }) : null;
     if (corrected && "refusal" in corrected) return corrected.refusal;
-    if (corrected) nameCorrectedFrom = corrected.from;
+    /* The card's own person kept (U35(a)) is no correction: no name_corrected fact. */
+    if (corrected && !("person" in corrected && samePerson(corrected.from, displayName(corrected.person)))) nameCorrectedFrom = corrected.from;
     if (corrected && "person" in corrected) employee = { name: displayName(corrected.person), salonIds: corrected.person.locationIds, id: corrected.person.id };
     else if (corrected && "asTyped" in corrected) {
       employee = { name: typed, salonIds: [] };
