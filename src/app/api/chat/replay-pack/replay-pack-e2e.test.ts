@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CHAT_QUALITY_FLAG_NAMES } from "@/lib/config/chat-quality-flags";
+import { liveRecording, loopStandIn } from "./loop-stand-in";
 import { appendFileSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import PRODUCTION_FLAGS from "@/config/production-flags.json";
@@ -37,6 +38,7 @@ import type { AccessScope, ChatFormProposal, ChatMessage } from "@/types";
  */
 
 const store: FakeStore = {
+  forms_all_store_access: [],
   form_instances: [],
   form_instance_values: [],
   form_instance_events: [],
@@ -622,7 +624,8 @@ vi.mock("@/lib/forms/prior-forms", async (importOriginal) => ({
 
 process.env.NEXT_PUBLIC_DEMO_MODE = "false";
 
-vi.setConfig({ hookTimeout: 30_000, testTimeout: 30_000 });
+// AGENT_LOOP_LIVE (dev, opt-in; ported from the sibling app): a live model turn takes longer than the stand-ins.
+vi.setConfig({ hookTimeout: 30_000, testTimeout: process.env.AGENT_LOOP_LIVE === "1" ? 600_000 : 30_000 });
 
 const { ensureTemplateLibrary } = await import("@/lib/forms/repository");
 const { stillAsks } = await import("@/lib/forms/reply-guards");
@@ -634,6 +637,13 @@ const draftRoute = await import("../../forms/instances/[id]/draft/route");
 /* AGENT_LOOP_ENABLED (ported from the sibling app's pack, QA 21 Nov 2026): the loop's model seam, its directory seam and its manual cache. */
 const agentLoopRun = await import("@/lib/ai/agent-loop/run");
 const { __setAgentLoopModelForTests } = agentLoopRun;
+/*
+ * AGENT_LOOP_LIVE (dev, opt-in; never in CI; ported from the sibling app): the real model for the loop's cases, the
+ * same model the loop runs on in production (`CLAUDE_MODEL`, ANTHROPIC_MODEL overrides). Unset, the stand-ins.
+ */
+const liveModel = process.env.AGENT_LOOP_LIVE === "1"
+  ? (await import("@ai-sdk/anthropic")).createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY ?? "" })((await import("@/lib/config/models")).CLAUDE_MODEL)
+  : null;
 const { forgetAgentLoopManualForTests, __setAgentLoopDirectoryForTests } = await import("@/lib/ai/agent-loop/tools");
 /** The signed-in manager every case runs as (`authorizeRequest` above): the one email a loop case lists. */
 const ACTOR_EMAIL = "qa-manager@example.test";
@@ -753,7 +763,15 @@ class Thread {
     if (payload.pendingCopy) this.offeredCopy = { fromInstanceId: payload.pendingCopy.fromInstanceId, answer: payload.content };
     if (payload.formProposal) this.proposal = payload.formProposal;
     if (payload.formOpened) this.instanceId = toUuid(payload.formOpened.instanceId);
-    record.turns.push({ question, reply: payload.content ?? "", updated: payload.formUpdate?.updated ?? null });
+    record.turns.push({
+      question,
+      reply: payload.content ?? "",
+      updated: payload.formUpdate?.updated ?? null,
+      // Live loop runs (AGENT_LOOP_LIVE_ALL) or REPLAY_RECORD_CARDS=1: the card, for the outcome report. Absent otherwise, so other records are unchanged.
+      ...((process.env.AGENT_LOOP_LIVE_ALL === "1" || process.env.REPLAY_RECORD_CARDS === "1") && payload.formProposal
+        ? { card: { template: payload.formProposal.templateKey, employee: payload.formProposal.employeeName ?? null, level: payload.formProposal.warningLevel ?? null, payroll: (payload.formProposal as { payrollDeduct?: string | null }).payrollDeduct ?? null, issue: payload.formProposal.issue ?? null } }
+        : {}),
+    });
     return payload;
   }
 
@@ -866,7 +884,8 @@ const CLASSIFY_ON = (process.env.FLAG_CLASSIFY_ON ?? "").split(",").map((name) =
  * live failures with their targeted fixes off.
  */
 const CLASSIFY_OFF = (process.env.FLAG_CLASSIFY_OFF ?? "").split(",").map((name) => name.trim()).filter((name) => name !== "");
-const record: { turns: { question: string; reply: string; updated: string[] | null }[] } = { turns: [] };
+type RecordedCard = { template: string; employee: string | null; level: string | null; payroll: string | null; issue: string | null };
+const record: { turns: { question: string; reply: string; updated: string[] | null; card?: RecordedCard }[] } = { turns: [] };
 async function recorded(id: string, mode: string, run: () => Promise<void>) {
   record.turns = [];
   const at = performance.now();
@@ -878,7 +897,28 @@ async function recorded(id: string, mode: string, run: () => Promise<void>) {
     throw thrown;
   } finally {
     if (process.env.REPLAY_RECORD) {
-      appendFileSync(process.env.REPLAY_RECORD, `${JSON.stringify({ id, mode, ok: error === null, error, ms: Math.round(performance.now() - at), turns: record.turns })}\n`);
+      /* AGENT_LOOP_ENABLED: the loop's model calls and tokens, only on a run the loop answered (absent otherwise, so a loop-off record is as before). */
+      type TraceRow = { slots?: { agent_loop?: { model_calls?: number; model_steps?: Record<string, number>[] } } };
+      const traces = ((store as unknown as Record<string, unknown[] | undefined>).chat_traces ?? []) as TraceRow[];
+      const looped = traces
+        .map((row) => row.slots?.agent_loop)
+        .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
+      const loopRecord = looped.length > 0
+        ? {
+            loop: {
+              turns: looped.length,
+              model_calls: looped.reduce((sum, entry) => sum + (entry.model_calls ?? 0), 0),
+              tokens: ["input_tokens", "output_tokens", "cache_read_input_tokens", "cache_creation_input_tokens"].map((key) =>
+                looped.reduce((sum, entry) => sum + (entry.model_steps ?? []).reduce((inner, step) => inner + (step[key] ?? 0), 0), 0),
+              ),
+              /* Live runs only (AGENT_LOOP_LIVE_ALL): the tool results the model saw, cut short, to read why a turn went as it did. */
+              ...(process.env.AGENT_LOOP_LIVE_ALL === "1" && loop.standIn
+                ? { tools: loop.standIn.views.map((view) => view.results.map((result) => `${result.tool}: ${JSON.stringify(result.output).slice(0, 400)}`)) }
+                : {}),
+            },
+          }
+        : {};
+      appendFileSync(process.env.REPLAY_RECORD, `${JSON.stringify({ id, mode, ok: error === null, error, ms: Math.round(performance.now() - at), turns: record.turns, ...loopRecord })}\n`);
     }
   }
 }
@@ -896,6 +936,23 @@ function production(extra: readonly string[] = []) {
   for (const name of CLASSIFY_OFF) {
     if (!saved.has(name)) saved.set(name, process.env[name]);
     delete process.env[name];
+  }
+  /*
+   * AGENT_LOOP_LIVE_ALL (dev, opt-in; nothing changes when unset; ported from the sibling app): with AGENT_LOOP_LIVE=1,
+   * every case's turns go to the real model through the loop, the signed-in manager listed, so any case is a live
+   * loop-on run. This app's production has the loop on for one listed user only, so the run turns it on itself (as
+   * `t.loopModel` does); a case that sets its own stand-in replaces the recorder. Both are restored after the case.
+   */
+  if (process.env.AGENT_LOOP_LIVE_ALL === "1" && liveModel) {
+    const recorder = loopStandIn(() => {
+      throw new Error("live: the real model answers");
+    });
+    loop.standIn = recorder;
+    __setAgentLoopDirectoryForTests(async () => state.directory as never);
+    __setAgentLoopModelForTests(liveRecording(recorder, liveModel));
+    if (!loop.env) loop.env = { enabled: process.env.AGENT_LOOP_ENABLED, users: process.env.AGENT_LOOP_USERS };
+    process.env.AGENT_LOOP_ENABLED = "true";
+    process.env.AGENT_LOOP_USERS = ACTOR_EMAIL;
   }
 }
 
@@ -1038,13 +1095,17 @@ function context(): ReplayContext {
       loop.standIn = standIn;
       // The loop's inactive_in_woven fact reads the whole directory (terminated people too) through its own seam.
       __setAgentLoopDirectoryForTests(async () => state.directory as never);
-      __setAgentLoopModelForTests(standIn.model);
+      // AGENT_LOOP_LIVE (dev, opt-in): the real model, recorded into the case's stand-in (`liveRecording`).
+      __setAgentLoopModelForTests(liveModel ? liveRecording(standIn, liveModel) : standIn.model);
       if (!loop.env) loop.env = { enabled: process.env.AGENT_LOOP_ENABLED, users: process.env.AGENT_LOOP_USERS };
       process.env.AGENT_LOOP_ENABLED = "true";
       process.env.AGENT_LOOP_USERS = ACTOR_EMAIL;
     },
     rosterFails: () => {
       loop.rosterFails = true;
+    },
+    formsAllStoreAccess: (mode = "all") => {
+      store.forms_all_store_access!.push({ app_user_id: "qa-manager", visibility_mode: mode, revoked_at: null });
     },
     wovenStoreNames: (names) => {
       loop.wovenAliases = Object.entries(names).map(([storeId, text]) => ({ storeId, kind: "woven_name" as const, text }));

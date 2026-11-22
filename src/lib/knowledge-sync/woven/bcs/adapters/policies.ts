@@ -1,6 +1,28 @@
 import type { SourceRecord } from "../../../types";
-import { attr, blockText, byId, elementsByClass, elementsByTag, elementsWithAttr, hasClass, parseHtmlFragment, textOf, walk } from "../../html";
-import { BCS_CAPABILITY, POLICY_CARD, POLICY_DETAIL, POLICY_PUBLICATION_REASON } from "../contract";
+import {
+  attr,
+  blockText,
+  byId,
+  childrenByTag,
+  closest,
+  elementsByClass,
+  elementsByTag,
+  elementsWithAttr,
+  hasClass,
+  parseHtmlDocument,
+  parseHtmlFragment,
+  textOf,
+  walk,
+} from "../../html";
+import {
+  BCS_CAPABILITY,
+  POLICY_CARD,
+  POLICY_DETAIL,
+  POLICY_MANAGEMENT_HEADERS,
+  POLICY_MANAGEMENT_ROW,
+  POLICY_MANAGEMENT_STATUSES,
+  POLICY_PUBLICATION_REASON,
+} from "../contract";
 import { WovenShapeError, assertUnique, blockedPart, digest, requireSuccessHtml, textPart, usDateToIso, validId } from "./shared";
 
 /**
@@ -145,5 +167,98 @@ export function withPolicyDetail(record: SourceRecord, detail: PolicyDetail): So
     version: detail.version ?? record.version,
     updatedAt: detail.updatedAt ?? record.updatedAt,
     parts: detail.body === "" ? [] : [part],
+  };
+}
+
+/* ----------------------------------------------- the management table -- */
+
+export interface PolicyManagementRow {
+  id: string;
+  title: string;
+  status: string;
+  publication: "published" | "unpublished";
+  /** The Audience cell's text as one label ("Public", "All Teams 8 Positions"); null when empty or no such column. */
+  audience: string[] | null;
+  updatedAt: string | null;
+}
+
+/**
+ * `GET /Policy` — Woven's policy management table (the sibling app's verified
+ * shape; see `POLICY_MANAGEMENT_LIST_PATH`). Unlike the Knowledge Center
+ * cards it says whether each policy is published and who it is for.
+ *
+ * A page without the table, a row without a usable id or title, a repeated
+ * id, or a status not in `POLICY_MANAGEMENT_STATUSES` throws: the policy
+ * listing fails rather than guess.
+ */
+export function parsePolicyManagementList(html: string): { rows: PolicyManagementRow[]; headers: string[] } {
+  const doc = parseHtmlDocument(html);
+  const marked = elementsWithAttr(doc, POLICY_MANAGEMENT_ROW.id).filter((el) => el.tagName === "tr");
+  const table = marked[0] ? closest(marked[0], "table") : (elementsByTag(doc, "table")[0] ?? null);
+  if (!table) throw new WovenShapeError("unexpected_shape", "Woven's policy page did not contain the policy table.");
+
+  const headers = elementsByTag(table, "th").map((th) => textOf(th));
+  const audienceIndex = headers.findIndex((h) => POLICY_MANAGEMENT_HEADERS.audience.test(h));
+  const updatedIndex = headers.findIndex((h) => POLICY_MANAGEMENT_HEADERS.updated.test(h));
+
+  const rows: PolicyManagementRow[] = [];
+  for (const row of marked) {
+    const id = validId(attr(row, POLICY_MANAGEMENT_ROW.id));
+    if (!id) throw new WovenShapeError("schema_drift", "A policy row had no usable policy id.");
+    const link = elementsByTag(row, "a").find((a) => (attr(a, "href") ?? "").toLowerCase().includes(`/policy/details/${id.toLowerCase()}`));
+    const title = link ? textOf(link) : "";
+    if (!title) throw new WovenShapeError("schema_drift", "A policy row had no title: Woven's policy table has changed shape.");
+
+    const status = (attr(row, POLICY_MANAGEMENT_ROW.status) ?? "").trim().toLowerCase();
+    const listed = POLICY_MANAGEMENT_STATUSES[status];
+    if (!listed) {
+      throw new WovenShapeError(
+        "unknown_publication_state",
+        `A policy has a status Ask Bubbles has not verified ("${status.slice(0, 60)}"), so the policy list was not used.`,
+      );
+    }
+    const disabled = (attr(row, POLICY_MANAGEMENT_ROW.disabled) ?? "").trim().toLowerCase() === "true";
+
+    const cells = childrenByTag(row, "td");
+    const audienceText = audienceIndex >= 0 && cells[audienceIndex] ? textOf(cells[audienceIndex]!).replace(/\s+/g, " ").trim() : "";
+    const updatedText = updatedIndex >= 0 && cells[updatedIndex] ? textOf(cells[updatedIndex]!).trim() : "";
+    rows.push({
+      id,
+      title,
+      status,
+      publication: disabled ? "unpublished" : listed,
+      audience: audienceText ? [audienceText] : null,
+      updatedAt: usDateToIso(updatedText),
+    });
+  }
+  assertUnique(
+    rows.map((r) => r.id),
+    "policy",
+  );
+  return { rows, headers };
+}
+
+/**
+ * One policy from the management table as a source record. Its text is read
+ * from the verified Knowledge Center detail fragment (`fetchPart`), keyed by
+ * the same policy id.
+ */
+export function policyManagementRecord(row: PolicyManagementRow): SourceRecord {
+  return {
+    source: "woven",
+    contentType: "policy",
+    entityId: row.id,
+    title: row.title,
+    status: row.status,
+    publication: row.publication,
+    audience: row.audience,
+    version: null,
+    versionId: null,
+    updatedAt: row.updatedAt,
+    documentIds: [],
+    attachmentIds: [],
+    contentFingerprint: null,
+    sourceMetadata: { listedFrom: "policy_management" },
+    parts: [textPart("content", row.title, null, { policyId: row.id })],
   };
 }
