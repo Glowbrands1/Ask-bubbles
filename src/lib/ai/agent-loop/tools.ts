@@ -21,7 +21,7 @@ import { AFFIRMATIVE, displayName, editDistance, matchEmployeeName, nameConfirma
 import { offRosterTyped } from "@/lib/forms/roster-only-names";
 import { parseFormDocument } from "@/lib/forms/document";
 import { draftableCheckboxGroups, draftableFields } from "@/lib/forms/responsibility";
-import { authorizedSalonIds, PLACE_LEVEL, readSalonMentions, rosterSalonName } from "./places";
+import { authorizedSalonIds, PLACE_LEVEL, readSalonMentions, rosterSalonName, salonStreet } from "./places";
 import type { DirectoryRosterRow } from "@/lib/forms/employee-roster";
 import { inlineDraftVariantKey, supportsInlineDraft } from "@/lib/forms/inline-draft";
 import { authorizeInstance, InstanceNotVisibleError, instanceListFilterFor, visibleInstances } from "@/lib/forms/instance-scope";
@@ -1017,6 +1017,12 @@ async function wovenStoresOf(scope: AccessScope, id: string, roster: readonly Ro
   return [...new Set([...(primary ? [primary] : []), ...theirs])].filter((store) => choices.includes(store));
 }
 
+/** QA's Bubbles re-run (22 Nov 2026, A7): an earlier manager turn of this chat already named this place (its words, whole). */
+function storeSaidBefore(context: ToolContext, typed: string): boolean {
+  const earlier = (context.history as ChatMessage[]).filter((turn) => turn.role === "user").map((turn) => String(turn.content ?? ""));
+  return typed.trim() !== "" && earlier.some((said) => holdsPhrase(said, typed));
+}
+
 /** The line that offers the stores (A7). */
 const OFFER_ONE = " in Woven — use that?";
 const OFFER_SEVERAL = " in Woven — which one?";
@@ -1027,10 +1033,27 @@ const OTHER_STORES = () => `Your other ${locationWords()}: `;
  * the person's Woven stores first, primary first ("<First> works at **A** and **B** in Woven — which one?"), then the
  * manager's other stores. The model ends its reply with ask_exactly, once.
  */
-function storeOffer(typed: string, firstName: string, wovenStores: readonly string[], choices: readonly string[]) {
+function storeOffer(typed: string, firstName: string, wovenStores: readonly string[], choices: readonly string[], repeated = false) {
   const name = (id: string) => rosterSalonName(id) ?? id;
+  /* QA's Bubbles re-run (22 Nov 2026, A7): on the repeat, each store with its street address from the app's own data, when it has one. */
+  const withStreet = (id: string) => {
+    const shown = name(id);
+    const street = salonStreet(id);
+    return street && !shown.toLowerCase().includes(street.toLowerCase()) ? `${shown}, ${street}` : shown;
+  };
   const others = choices.filter((id) => !wovenStores.includes(id)).map(name);
   const bold = wovenStores.map((id) => `**${name(id)}**`);
+  /*
+   * A7: the manager named the same place again after the offer ("store location is <place>, sd"). The same question
+   * again went nowhere live; the person's own stores are offered as a pick instead ("Did you mean …?"), never kept as
+   * typed (a store on a form is always a real store).
+   */
+  if (repeated && wovenStores.length > 0) {
+    const streets = wovenStores.map((id) => `**${withStreet(id)}**`);
+    const pick = streets.length === 1 ? `Did you mean ${streets[0]}?` : `Did you mean ${streets.slice(0, -1).join(", ")} or ${streets.at(-1)}?`;
+    const rest = others.length > 0 ? ` ${OTHER_STORES()}${choices.filter((id) => !wovenStores.includes(id)).map(withStreet).join(", ")}.` : "";
+    return { typed, woven_stores: wovenStores.map(name), other_stores: others, said_again: true, ask_exactly: `I can't match "${typed}" to a ${locationWord()}. ${pick}${rest}` };
+  }
   const lead = `"${typed}" isn't a ${locationWord()} name I know.`;
   const offer =
     wovenStores.length === 1
@@ -4168,7 +4191,13 @@ export async function proposeForm(
    * offered first (`storeOffer`, below); the rules book has the model propose again with the store the manager chose.
    */
   /* The typed words as a place first; "at <words>" only when they read as none (else the city alone in "at <city>, <ST> (<street>)" adds its other stores). */
-  const answeredSalonIds = typedSalon ? [...new Set((readSalonMentions(typedSalon).length > 0 ? readSalonMentions(typedSalon) : readSalonMentions(`at ${typedSalon}`)).flatMap((mention) => [...mention.salonIds]))] : [];
+  /*
+   * QA's Bubbles re-run (22 Nov 2026, A7): the typed store is read with the same store index as the regular chat path
+   * (`loadStoreIndex`): the registered stores plus the names Woven uses for them where a reviewer mapped them. Data only.
+   */
+  const storeIndex = typedSalon ? await (await import("@/lib/stores/woven-aliases")).loadStoreIndex().catch(() => undefined) : undefined;
+  const readTyped = (text: string) => readSalonMentions(text, storeIndex);
+  const answeredSalonIds = typedSalon ? [...new Set((readTyped(typedSalon).length > 0 ? readTyped(typedSalon) : readTyped(`at ${typedSalon}`)).flatMap((mention) => [...mention.salonIds]))] : [];
   const managerSalonIds = authorizedSalonIdsFor(context.actor.scope) ?? appConfig().locations().map((salon) => salon.id);
   const storeNotRead = typedSalon !== "" && answeredSalonIds.filter((id) => managerSalonIds.includes(id)).length !== 1;
   /*
@@ -4640,7 +4669,7 @@ export async function proposeForm(
       return primary && (card.authorizedLocationIds ?? []).includes(primary) ? { employee_store: rosterSalonName(primary) ?? primary } : {};
     })()),
     ...(salonFromWoven ? { store_from_woven: salonFromWoven } : {}),
-    ...(storeNotRead ? { typed_store_not_found: storeOffer(typedSalon, replyNameFor(card.employeeName ?? employee.name, read.kind === "read" ? read.roster : [], extractEmployeeNames(managerTurns(context)), employee.id ?? null), wovenStores, managerSalonIds) } : {}),
+    ...(storeNotRead ? { typed_store_not_found: storeOffer(typedSalon, replyNameFor(card.employeeName ?? employee.name, read.kind === "read" ? read.roster : [], extractEmployeeNames(managerTurns(context)), employee.id ?? null), wovenStores, managerSalonIds, storeSaidBefore(context, typedSalon)) } : {}),
     /* QA's live-app item 8: the card uses Woven's title; the manager called them something else ("<title>"). */
     ...(() => {
       const said = titleSaidFor(requestWords, employee.name, read.kind === "read" ? read.roster.map(displayName) : []);
