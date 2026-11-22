@@ -29,6 +29,19 @@ const BEFORE = [
 export const B6_T6 = "she is resigning due to second job I'm ready for the draft";
 
 /* The manager's turns (an app check handed back to the model is not one). */
+/*
+ * QA's B6 measurement (22 Nov 2026): the live model saves "Better paying job elsewhere." for "she found a better paying job
+ * elsewhere"; the cases asked for "Found a better paying job elsewhere." word for word and failed runs the manager would call
+ * right. Any wording that passes the quote check (`exit-reason-said.ts`: every word of it in the manager's own words) is
+ * the manager's reason, so these cases ask for the reason's own content words on the line the manager sees ("Reason for
+ * Resignation:") and in the saved field, in any order or case. A missing or wrong reason still fails (`holdsWords`).
+ */
+const reasonLine = (reply: string): string | null => /Reason for Resignation:?\**:?\**\s*([^\n]*)/i.exec(reply)?.[1]?.trim() || null;
+const holdsWords = (text: string | null | undefined, words: string): boolean => {
+  const have = new Set((text ?? "").toLowerCase().match(/[\p{L}\p{N}']+/gu) ?? []);
+  return words.toLowerCase().split(/\s+/).every((word) => have.has(word));
+};
+
 const users = (view: LoopView) => view.turns.filter((turn) => turn.role === "user" && (turn.messageIds?.length ?? 0) > 0).length;
 type Card = { card?: { reads_back?: string[] } | null } | null;
 
@@ -115,9 +128,9 @@ export const NOV22_AGENT_LOOP_B6_RESIGNATION_REASON_CASES: ReplayCase[] = [
     status: "fixed",
     async run(t) {
       const { reply, card, saved } = await chat(t, B6_T6, "Second job", "she is resigning due to second job");
-      expect(card?.exitReason ?? "", `the card has no reason:\n${reply.content}`).toMatch(/second job/i);
-      expect(reply.content, `reads_back does not list the reason:\n${reply.content}`).toMatch(/\*\*Reason for Resignation:\*\* Second job\./);
-      expect(saved.resignation_reason ?? "", JSON.stringify(saved)).toMatch(/^second job\.?$/i);
+      expect(holdsWords(card?.exitReason, "second job"), `the card has no reason:\n${reply.content}`).toBe(true);
+      expect(holdsWords(reasonLine(reply.content), "second job"), `the reply does not read the reason back:\n${reply.content}`).toBe(true);
+      expect(holdsWords(saved.resignation_reason, "second job"), JSON.stringify(saved)).toBe(true);
     },
   },
   {
@@ -127,8 +140,8 @@ export const NOV22_AGENT_LOOP_B6_RESIGNATION_REASON_CASES: ReplayCase[] = [
     status: "fixed",
     async run(t) {
       const { reply, saved } = await chat(t, B6_T6, "Second job", "she is resigning due to second job", TESTER);
-      expect(reply.content, `reads_back does not list the reason:\n${reply.content}`).toMatch(/Reason for Resignation:?\*?\*?:? Second job/i);
-      expect(saved.resignation_reason ?? "", JSON.stringify(saved)).toMatch(/^second job\.?$/i);
+      expect(holdsWords(reasonLine(reply.content), "second job"), `the reply does not read the reason back:\n${reply.content}`).toBe(true);
+      expect(holdsWords(saved.resignation_reason, "second job"), JSON.stringify(saved)).toBe(true);
     },
   },
   {
@@ -138,8 +151,8 @@ export const NOV22_AGENT_LOOP_B6_RESIGNATION_REASON_CASES: ReplayCase[] = [
     status: "fixed",
     async run(t) {
       const { reply, saved } = await chat(t, "she found a better paying job elsewhere, I'm ready for the draft", "Found a better paying job elsewhere", "she found a better paying job elsewhere", TESTER, true);
-      expect(reply.content, `reads_back does not list the reason:\n${reply.content}`).toMatch(/Reason for Resignation:?\*?\*?:? Found a better paying job elsewhere/i);
-      expect(saved.resignation_reason ?? "", JSON.stringify(saved)).toMatch(/^found a better paying job elsewhere\.?$/i);
+      expect(holdsWords(reasonLine(reply.content), "better paying job elsewhere"), `the reply does not read the reason back:\n${reply.content}`).toBe(true);
+      expect(holdsWords(saved.resignation_reason, "better paying job elsewhere"), JSON.stringify(saved)).toBe(true);
     },
   },
   {
@@ -149,8 +162,8 @@ export const NOV22_AGENT_LOOP_B6_RESIGNATION_REASON_CASES: ReplayCase[] = [
     status: "fixed",
     async run(t) {
       const { reply, saved } = await chat(t, B6_T6, "Second job", "she is resigning due to second job", RERUN_2);
-      expect(reply.content, `reads_back does not list the reason:\n${reply.content}`).toMatch(/\*\*Reason for Resignation:\*\* Second job\./);
-      expect(saved.resignation_reason ?? "", JSON.stringify(saved)).toMatch(/^second job\.?$/i);
+      expect(holdsWords(reasonLine(reply.content), "second job"), `the reply does not read the reason back:\n${reply.content}`).toBe(true);
+      expect(holdsWords(saved.resignation_reason, "second job"), JSON.stringify(saved)).toBe(true);
     },
   },
   {
@@ -162,8 +175,23 @@ export const NOV22_AGENT_LOOP_B6_RESIGNATION_REASON_CASES: ReplayCase[] = [
       /* The exit form's own Details reader (`exit-details.ts`) reads none of this sentence; the model's exit_reason does. */
       const said = "she found a better paying job elsewhere, go ahead and draft it";
       const { reply, saved } = await chat(t, said, "Found a better paying job elsewhere", "she found a better paying job elsewhere");
-      expect(reply.content, `reads_back does not list the reason:\n${reply.content}`).toMatch(/\*\*Reason for Resignation:\*\* Found a better paying job elsewhere\./);
-      expect(saved.resignation_reason ?? "", `${reply.content}\n${JSON.stringify(saved)}`).toMatch(/^found a better paying job elsewhere\.?$/i);
+      expect(holdsWords(reasonLine(reply.content), "better paying job elsewhere"), `the reply does not read the reason back:\n${reply.content}`).toBe(true);
+      expect(holdsWords(saved.resignation_reason, "better paying job elsewhere"), `${reply.content}\n${JSON.stringify(saved)}`).toBe(true);
+    },
+  },
+  {
+    id: "nov22-b6-wrong-reason-never-shown",
+    title: "B6 negative control: \"she found a better paying job elsewhere, go ahead and draft it\" with the model passing a reason the manager never gave (\"Relocating for family\"): no such reason is shown or saved, and the content-word check sees that",
+    report: REPORT,
+    status: "fixed",
+    async run(t) {
+      const { reply, saved } = await chat(t, "she found a better paying job elsewhere, go ahead and draft it", "Relocating for family", "she found a better paying job elsewhere");
+      expect(holdsWords(reasonLine(reply.content), "relocating for family"), reply.content).toBe(false);
+      expect(holdsWords(saved.resignation_reason, "relocating for family"), JSON.stringify(saved)).toBe(false);
+      /* The check itself: a missing reason, or another one, never passes for the manager's words. */
+      expect(holdsWords(reasonLine("Here's the card."), "better paying job elsewhere")).toBe(false);
+      expect(holdsWords(reasonLine("**Reason for Resignation:** Relocating for family."), "better paying job elsewhere")).toBe(false);
+      expect(holdsWords(reasonLine("- **Reason for Resignation:** Better paying job elsewhere."), "better paying job elsewhere")).toBe(true);
     },
   },
   {
