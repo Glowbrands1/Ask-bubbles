@@ -461,7 +461,7 @@ function buildAgentLoopTools(config: AppConfig, planSteps = false) {
   {
     name: "find_staff",
     description: "Search this manager's staff roster by name (any case, partial first or last name). Returns roster spellings and employee_ids; several when names are shared.",
-    input_schema: object({ name: { type: "string" }, person_evidence: evidence("The manager's words naming this person as the form's person (\"a CA for Odalys\"): their message id and words, which hold the name.") }, ["name"]),
+    input_schema: object({ name: { type: "string" }, person_evidence: evidence("The manager's words naming this person as the form's person (\"a CA for <First>\"): their message id and words, which hold the name.") }, ["name"]),
   },
   {
     name: "find_past_forms",

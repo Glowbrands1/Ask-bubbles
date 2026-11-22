@@ -5039,10 +5039,18 @@ export async function proposeForm(
     })() : {}),
     ...(personId && effects.nameLines?.[personId] ? { name_from_staff_list: employee.name } : {}),
     /* Pau's name ruling (15 Nov 2026): the card uses the preferred name; the reply says the Woven legal name once. */
+    /*
+     * QA's live round-2 re-run (22 Nov 2026, U23, serious): the reply invented names ("**<preferred> <last>** (Marguerite —
+     * legal name in Woven: …)", then "Margo note: …"), copied from the rules book's own example. The line is written here,
+     * from the directory's own names only: the card's name and the legal name the staff list holds.
+     */
     ...(employee.id && read.kind === "read" && (() => {
       const row = read.roster.find((candidate) => candidate.id === employee.id);
       return row && displayName(row) !== employee.name;
-    })() ? { legal_name_in_woven: displayName(read.roster.find((candidate) => candidate.id === employee.id)!) } : {}),
+    })() ? (() => {
+      const legal = displayName(read.roster.find((candidate) => candidate.id === employee.id)!);
+      return { legal_name_in_woven: { name: legal, say_exactly: `**${employee.name}** (${legal} in ${staffSystem()})` } };
+    })() : {}),
     ...(await (async () => {
       if (card.status !== "needs_location") return {};
       if (!employee.id) {
