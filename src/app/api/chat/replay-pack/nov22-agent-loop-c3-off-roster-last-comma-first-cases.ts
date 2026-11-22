@@ -50,4 +50,30 @@ export const NOV22_AGENT_LOOP_C3_OFF_ROSTER_LAST_COMMA_FIRST_CASES: ReplayCase[]
       expect(reply.content, "the reply says the form was not built").not.toMatch(/wasn't built|wasn.t able to create/i);
     },
   }
-));
+)).concat([
+  {
+    id: "nov22-c3-same-request-twice-never-loops",
+    title: "C3 (QA: find_staff and propose_form agree): the same off-roster \"<Last>, <First>\" request sent twice in a row gets a card each time, and propose_form never refuses it — the name find_staff takes as typed is never refused by propose_form",
+    report: `${REPORT}; QA (22 Nov 2026): find_staff said "propose it as typed" and propose_form refused that name, 3–6 times`,
+    status: "fixed",
+    async run(t) {
+      vi.setSystemTime(new Date("2026-11-22T18:00:00Z"));
+      t.directory([...LOOP_STAFF]);
+      t.as("admin", ADMIN);
+      const refusals: string[] = [];
+      /* The stand-in as the looping model: it proposes "<First> <Last>" and, refused, proposes that same name again. */
+      t.loopModel!(loopStandIn((view): LoopDecision => {
+        const result = lastResult(view, "propose_form") as { card?: { employee?: string } } | null;
+        if (result && !result.card) refusals.push(JSON.stringify(result).slice(0, 300));
+        if (result?.card || view.step >= 6) return { text: result?.card ? `Here's the Corrective Action Form for **${result.card.employee}**.` : "no card" };
+        return { tool: "propose_form", input: { template_key: "dpoa", employee_name: "Odessa Quillane", what_happened: "Odessa was late on 10/16.", incident_date: "2026-10-16", policy: headingWith(view, /^attendance/i), store: "dodge", person_evidence: evidenceFrom(view, "Quillane, Odessa") } };
+      }));
+      const thread = t.thread();
+      for (const turn of [1, 2]) {
+        const reply = await thread.say(T1);
+        expect(thread.proposal?.employeeName, `turn ${turn}: no card:\n${reply.content}`).toBe("Odessa Quillane");
+        expect(refusals, `turn ${turn}: propose_form refused the name find_staff takes as typed`).toEqual([]);
+      }
+    },
+  },
+]);

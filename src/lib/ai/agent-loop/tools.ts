@@ -793,6 +793,47 @@ export function priorActionsSplit(
   return rest ? { kept: null, dropped: [], problem: whole } : { kept: line, dropped, problem: null };
 }
 
+/**
+ * Whether two texts share a content word, ignoring case and simple endings (QA, 22 Nov 2026, U21): a word of five or more
+ * letters once a plural, past or -ing/-ment ending is taken off, so "policies … acknowledged" shares words with the step
+ * "Policy acknowledgement", and "coaching" with "Coaching". Dates are not words. Read by the words' own shape, never a list.
+ */
+export function sharesContentWord(a: string, b: string): boolean {
+  const root = (word: string) => {
+    const plain = /(?:ies|ied)$/.test(word) ? `${word.slice(0, -3)}y` : word.replace(/(?:ments?|ings?|ed|es|s)$/, "");
+    return (plain.length >= 4 ? plain : word).replace(/e$/, "");
+  };
+  const content = (text: string) => (withoutDates(text).toLowerCase().match(/[a-z]+/g) ?? []).map(root).filter((word) => word.length >= 5);
+  const own = new Set(content(b));
+  return content(a).some((word) => own.has(word));
+}
+
+/**
+ * The account without the prior steps the card keeps or the manager stated (`steps`, one per line or "; "), so Prior
+ * actions holds them and the Observation holds only this incident.
+ * - QA's live round-2 re-run (22 Nov 2026, U09; the tester's card): "On 11/1/26 <P> violated care and cleaning of
+ *   facilities policy (JBA Policy Manual 1/1/2026)." A parenthesis holding a step's date and a word of it is that step.
+ * - QA's live round 3 (22 Nov 2026, U21): from T3 the Observation read "<P> received coaching on 9/22 for cleaning tasks
+ *   not being completed. This weekend …", and T4 added "JBA Woven policies were acknowledged on 5/26/26.": whole
+ *   sentences. A sentence whose every date is a step's, sharing a content word with that step (`sharesContentWord`), and
+ *   holding no date of this incident (`incidentIso`), is that step. A sentence with no date, or with this incident's
+ *   date, stays; the account is never emptied. Read from the steps' own text and dates, never a word list.
+ */
+export function accountWithoutPriorSteps(account: string, steps: string, incidentIso: string | null): string {
+  const lines = steps.split(/\s*(?:;|\n)\s*/).filter((step) => step.trim() !== "");
+  if (lines.length === 0 || account.trim() === "") return account;
+  const isStep = (text: string) => {
+    const dates = readDates(text);
+    return dates.length > 0 && lines.some((step) => dates.every((date) => readDates(step).some((stepDate) => sameDate(stepDate, date))) && sharesContentWord(text, step));
+  };
+  const unstepped = account.replace(/\s*\(([^()]*)\)/g, (whole, inner: string) => (isStep(inner) ? "" : whole)).replace(/\s+([.,;])/g, "$1").trim();
+  const ofThisIncident = (said: ReturnType<typeof readDates>[number]) => Boolean(incidentIso && Number(incidentIso.slice(5, 7)) === said.month && Number(incidentIso.slice(8, 10)) === said.day);
+  const sentences = unstepped.match(/[^.!?]+(?:[.!?]+|$)/g) ?? [unstepped];
+  const kept = sentences.filter((sentence) => readDates(sentence).some(ofThisIncident) || !isStep(sentence));
+  const unsentenced = kept.join("").replace(/\s+/g, " ").trim();
+  return unsentenced !== "" ? unsentenced : unstepped !== "" ? unstepped : account;
+}
+
 export function priorActionsWithStatedTopics(priorActions: string, stated: readonly string[]): string {
   const separator = priorActions.includes("\n") ? "\n" : "; ";
   const lines = priorActions.split(/\s*(?:;|\n)\s*/).filter((line) => line.trim() !== "");
@@ -3252,7 +3293,7 @@ const ACCOUNT_FORMS = {
 };
 
 /** PR 6 item 1: what propose_form's own name lookup found: one person to card, find_staff's result to hand back, or nothing to do. */
-type CardLookup = { kind: "none" } | { kind: "person"; person: RosterEmployee; facts: Record<string, unknown> } | { kind: "ask"; result: ToolResult };
+type CardLookup = { kind: "none" } | { kind: "person"; person: RosterEmployee; facts: Record<string, unknown> } | { kind: "asTyped"; name: string } | { kind: "ask"; result: ToolResult };
 
 /**
  * PR 6 item 1: a typed name looked up for a card with find_staff's own code. One match and nothing to ask → that person,
@@ -3278,6 +3319,15 @@ async function lookUpForCard(context: ToolContext, effects: ToolEffects, typed: 
    * with the use-<name> question, #1054), so its count over find_staff and propose_form for that name is unchanged.
    */
   if (record.reason_code === "missing_input" || (typeof record.reason_code !== "string" && matches.length === 0 && !("did_you_mean" in record) && !("error" in record) && record.unchecked !== true)) return { kind: "none" };
+  /*
+   * QA's live round 3 (22 Nov 2026, C3): find_staff's code said "Propose the card now with employee_name <name> as typed"
+   * (not_on_roster with no question to ask), and this refusal then refused that same name: the model went round 3–6 times
+   * and gave up. The two now agree: a name find_staff takes as typed is taken as typed here, on this call, in whatever
+   * word order the model passed it. Decided by find_staff's own result (its code and that it asks nothing), never words.
+   */
+  if (record.reason_code === "not_on_roster" && typeof record.not_on_roster === "string" && record.not_on_roster.trim() !== "" && !("ask_exactly" in record) && record.form_not_chosen !== true) {
+    return { kind: "asTyped", name: record.not_on_roster.trim() };
+  }
   /* find_staff's result as it is (reason code, facts, note, ask_exactly), plus propose_form's own refusal: no card was made. */
   const ask = typeof record.note === "string" ? record.note : "Ask the manager who the form is for.";
   /* find_staff's reason_code when it gave one; a Did you mean (no code of its own) is name_to_confirm, so every refusal has a code. */
@@ -3543,8 +3593,14 @@ export async function proposeForm(
     }
     else if (typed && !id && (lookedUp = await lookUpForCard(context, effects, typed, input.person_evidence, read.roster)).kind !== "none") {
       if (lookedUp.kind === "ask") return lookedUp.result;
-      if (!(await personNamedOrPicked(context, lookedUp.person, read.roster))) return personNotNamed(context, template, effects, lookedUp.person);
-      employee = { name: nameAsSaid(lookedUp.person, managerTurns(context)), salonIds: lookedUp.person.locationIds, id: lookedUp.person.id };
+      if (lookedUp.kind === "asTyped") {
+        /* C3: find_staff took this name as typed; so does the card (its off_roster_name line asks the manager to check it). */
+        employee = { name: lookedUp.name, salonIds: [] };
+        offRosterName = lookedUp.name;
+        effects.nameQuestion ??= { offeredIds: [], typed: lookedUp.name, asksFullName: true };
+      }
+      else if (!(await personNamedOrPicked(context, lookedUp.person, read.roster))) return personNotNamed(context, template, effects, lookedUp.person);
+      else employee = { name: nameAsSaid(lookedUp.person, managerTurns(context)), salonIds: lookedUp.person.locationIds, id: lookedUp.person.id };
     }
     else {
       /*
@@ -4530,52 +4586,8 @@ export async function proposeForm(
   const priorActionsRefused = priorSplit ? (priorSplit.kept === null ? priorSplit.problem : null) : null;
   const priorStepsLeftOff = priorSplit && priorSplit.kept !== null && priorSplit.dropped.length > 0 ? priorSplit.dropped : [];
   const keptPriorActions = priorSplit?.kept ?? null;
-  /*
-   * QA's live round-2 re-run (22 Nov 2026, U09; the tester's card): the account read "On 11/1/26 <P> violated care and
-   * cleaning of facilities policy (JBA Policy Manual 1/1/2026)." That parenthesis is a prior step the card keeps (its date
-   * and a word of it), not this incident: it leaves the account. Read from the kept steps' own text, never a word list.
-   */
-  const stepsForAccount = [keptPriorActions ?? "", ...statedSteps].join("\n");
-  if (stepsForAccount.trim() && whatHappened) {
-    const steps = stepsForAccount.split(/\s*(?:;|\n)\s*/).filter((step) => step.trim() !== "");
-    const lettersOf = (text: string) => withoutDates(text).toLowerCase().match(/[a-z]{3,}/g) ?? [];
-    const unstepped = whatHappened.replace(/\s*\(([^()]*)\)/g, (whole, inner: string) => {
-      const dates = readDates(inner);
-      if (dates.length === 0) return whole;
-      const said = lettersOf(inner);
-      const isStep = steps.some((step) => {
-        const own = new Set(lettersOf(step));
-        return dates.every((date) => readDates(step).some((stepDate) => sameDate(stepDate, date))) && said.some((word) => own.has(word));
-      });
-      return isStep ? "" : whole;
-    }).replace(/\s+([.,;])/g, "$1").trim();
-    /*
-     * QA's live round 3 (22 Nov 2026, U21): from T3 on the Observation read "<P> received coaching on 9/22 for cleaning
-     * tasks not being completed. This weekend …", and T4 added "JBA Woven policies were acknowledged on 5/26/26.": each a
-     * whole sentence, not a parenthesis, and each a prior step the card keeps (its date and a word of it). A sentence of
-     * the account whose every date is a kept or stated step's, sharing a word with that step (by its first five letters), and holding no date of this incident,
-     * is that step: it leaves the account (Prior actions holds it). A sentence with no date stays; the account is never
-     * emptied. Read from the kept steps' own text, never a word list.
-     */
-    const incidentIso = date;
-    const sentences = unstepped.match(/[^.!?]+(?:[.!?]+|$)/g) ?? [unstepped];
-    const ofThisIncident = (said: ReturnType<typeof readDates>[number]) => Boolean(incidentIso && Number(incidentIso.slice(5, 7)) === said.month && Number(incidentIso.slice(8, 10)) === said.day);
-    const stepSentence = (sentence: string) => {
-      const dates = readDates(sentence);
-      if (dates.length === 0 || dates.some(ofThisIncident)) return false;
-      /* A word's first five letters, so "policies … acknowledged" is the step "Policy acknowledgement" (live, U21 T5–T7). */
-      const stem = (word: string) => word.slice(0, 5);
-      const said = lettersOf(sentence).map(stem);
-      return steps.some((step) => {
-        const own = new Set(lettersOf(step).map(stem));
-        return dates.every((stated) => readDates(step).some((stepDate) => sameDate(stepDate, stated))) && said.some((word) => own.has(word));
-      });
-    };
-    const kept = sentences.filter((sentence) => !stepSentence(sentence));
-    const unsentenced = kept.join("").replace(/\s+/g, " ").trim();
-    if (unsentenced !== "") whatHappened = unsentenced;
-    else if (unstepped !== "") whatHappened = unstepped;
-  }
+  /* U09 / U21: a prior step the card keeps or the manager stated is never this incident's account (`accountWithoutPriorSteps`). */
+  if (whatHappened) whatHappened = accountWithoutPriorSteps(whatHappened, [keptPriorActions ?? "", ...statedSteps].join("\n"), date);
   const priorActions = priorActionsRefused ? null : keptPriorActions ? priorActionsWithStatedTopics(keptPriorActions, statedSteps).slice(0, 600) : statedSteps.length === 0 ? onFileLine : null;
   /*
    * QA's live re-test (21 Nov 2026, item 18): the prior actions the forms on file filled were read back "…, as you said"
