@@ -3743,7 +3743,19 @@ export async function proposeForm(
      */
     /* QA (22 Nov 2026, U35(a) follow-up): also the spellings this chat confirmed as this person, for when the roster alone cannot tell. */
     const confirmedSpellings = employee.id && read.kind === "read" ? (await import("./confirmed-spelling")).spellingsConfirmedFor(nameQuestionView(context, read.roster), employee.id) : [];
-    whatHappened = (await import("@/lib/forms/short-name")).withCorrectedSpelling(whatHappened, employee.name, [...(nameCorrectedFrom !== null ? [nameCorrectedFrom] : []), ...confirmedSpellings], rosterSpellingOf(employee.id ?? null, read.kind === "read" ? read.roster : [])).text;
+    /*
+     * QA's Bubbles live round 3 (22 Nov 2026, A1(b)): "della varnick" corrected to "della varnich" (neither on the staff
+     * list). The correction turn replaced the old spelling, but on the next turn the model copied the first message's
+     * "Della Varnick" back into the account, and nothing replaced it (no correction in that message, no roster person), so
+     * the saved write-up kept the old surname. A two-word name in the account that an earlier card in this chat was made
+     * for (off the staff list, by its record's one-way key) and that is a close spelling of this card's name
+     * (`closeSpellingOfName`, as #1006 reads a correction) is the old spelling. Records and spelling distance only.
+     */
+    const ownName = { first: words(employee.name).slice(0, 1), last: words(employee.name).slice(-1) };
+    const earlierNameKeys = new Set([...(context.cardRecords ?? []), context.earlierCard, context.cardOnScreen].filter((record): record is CardRecord => Boolean(record && !record.employeeKey && record.nameKey)).map((record) => record.nameKey));
+    const tokens = [...whatHappened.matchAll(/\p{L}[\p{L}'’-]*/gu)].map((token) => token[0]);
+    const recordedSpellings = tokens.slice(0, -1).map((token, at) => `${token} ${tokens[at + 1]!.replace(/['’]s$/i, "")}`).filter((pair) => !samePerson(pair, employee.name) && earlierNameKeys.has(personKey(pair)) && closeSpellingOfName(words(pair), ownName));
+    whatHappened = (await import("@/lib/forms/short-name")).withCorrectedSpelling(whatHappened, employee.name, [...(nameCorrectedFrom !== null ? [nameCorrectedFrom] : []), ...confirmedSpellings, ...recordedSpellings], rosterSpellingOf(employee.id ?? null, read.kind === "read" ? read.roster : [])).text;
     const short = cardAccountName(employee.name, read.kind === "read" ? read.roster : [], extractEmployeeNames(managerTurns(context)), employee.id ?? null);
     whatHappened = (await import("@/lib/forms/short-name")).withShortName(whatHappened, employee.name, short).text;
   }
