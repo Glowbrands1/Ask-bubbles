@@ -24,13 +24,13 @@ const ADMIN = { level: "global", primaryAreaId: null, alsoCoversAreaIds: [] };
 
 /* QA's tester used Pau's admin (all-store) login; the live reply said "your store's" staff list, so a store login too. */
 const LOGINS = [
-  { suffix: "", role: "admin", scope: ADMIN, who: "an all-store admin" },
-  { suffix: "-store-login", role: "location_manager", scope: WEST_DODGE, who: "a store manager" },
+  { id: "nov22-c3-off-roster-last-comma-first-gets-card", role: "admin", scope: ADMIN, who: "an all-store admin" },
+  { id: "nov22-c3-off-roster-last-comma-first-gets-card-store-login", role: "location_manager", scope: WEST_DODGE, who: "a store manager" },
 ] as const;
 
 export const NOV22_AGENT_LOOP_C3_OFF_ROSTER_LAST_COMMA_FIRST_CASES: ReplayCase[] = LOGINS.map((login): ReplayCase => (
   {
-    id: `nov22-c3-off-roster-last-comma-first-gets-card${login.suffix}`,
+    id: login.id,
     title: `C3 regression (${login.who}): "create a CA form for <Last>, <First> at dodge. she was late on 10-16" (nobody on the staff list) gets a card for "<First> <Last>" with the off-roster note, even when the model passes the name in first-last order`,
     report: REPORT,
     status: "fixed",

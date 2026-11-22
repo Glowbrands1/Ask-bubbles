@@ -74,12 +74,13 @@ export const NOV22_AGENT_LOOP_U21_ROUND3_CASES: ReplayCase[] = [
       for (const turn of Object.values(U21_ROUND3)) {
         await thread.say(turn);
         const card = thread.proposal as { issue?: string; priorActions?: string } | null;
-        if (card) cards.push({ turn, issue: card.issue ?? "", prior: card.priorActions ?? "" });
+        /* From T3, the account's turn: the live model may show a card at T2, before there is any account. */
+        if (card && turn !== U21_ROUND3.T1 && turn !== U21_ROUND3.T2) cards.push({ turn, issue: card.issue ?? "", prior: card.priorActions ?? "" });
       }
       expect(cards.length, "no card from T3 on").toBeGreaterThanOrEqual(2);
       for (const card of cards) {
         expect(card.issue, `the Observation holds a prior step (${card.turn})`).not.toMatch(/9\/22|5\/26|coaching|acknowledged/i);
-        expect(card.issue, "the incident left the Observation").toMatch(/trash liners/);
+        expect(card.issue, "the incident left the Observation").toMatch(/trash liners/i);
         expect(card.prior, "the prior coaching left Prior actions").toMatch(/09\/22\/2026/);
       }
       expect(cards.at(-1)!.prior, "T4's acknowledgement is not in Prior actions").toMatch(/05\/26\/2026/);

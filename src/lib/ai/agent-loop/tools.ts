@@ -4586,9 +4586,12 @@ export async function proposeForm(
   const priorActionsRefused = priorSplit ? (priorSplit.kept === null ? priorSplit.problem : null) : null;
   const priorStepsLeftOff = priorSplit && priorSplit.kept !== null && priorSplit.dropped.length > 0 ? priorSplit.dropped : [];
   const keptPriorActions = priorSplit?.kept ?? null;
-  /* U09 / U21: a prior step the card keeps or the manager stated is never this incident's account (`accountWithoutPriorSteps`). */
-  if (whatHappened) whatHappened = accountWithoutPriorSteps(whatHappened, [keptPriorActions ?? "", ...statedSteps].join("\n"), date);
   const priorActions = priorActionsRefused ? null : keptPriorActions ? priorActionsWithStatedTopics(keptPriorActions, statedSteps).slice(0, 600) : statedSteps.length === 0 ? onFileLine : null;
+  /*
+   * U09 / U21: a prior step on this card's Prior actions is never this incident's account (`accountWithoutPriorSteps`).
+   * Only the steps the card keeps: a sentence leaves the Observation only when Prior actions holds it, so nothing is lost.
+   */
+  if (whatHappened && priorActions) whatHappened = accountWithoutPriorSteps(whatHappened, priorActions, date);
   /*
    * QA's live re-test (21 Nov 2026, item 18): the prior actions the forms on file filled were read back "…, as you said"
    * (the manager never said them). Prior actions are the manager's statement only when their words state the steps
