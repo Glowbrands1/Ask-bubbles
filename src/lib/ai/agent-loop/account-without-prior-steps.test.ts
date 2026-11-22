@@ -55,3 +55,14 @@ describe("listedWithKeptSteps (U09)", () => {
     expect(accountWithoutPriorSteps("JBA Policy Manual 1/1/2026. On 11/1/26, Fenna violated the care and cleaning of facilities policy.", "Verbal CA — 11/01/2026; JBA Policy Manual — 01/01/2026", "2026-11-01")).toBe("On 11/1/26, Fenna violated the care and cleaning of facilities policy.");
   });
 });
+
+describe("accountWithoutPriorSteps: a list of steps (U09, live)", () => {
+  const STEPS_U09 = "Verbal CA - 11/1/2026; JBA Policy Manual — 01/01/2026";
+  it("a sentence that only lists the card's steps leaves, though one is dated on the incident's day", () => {
+    expect(accountWithoutPriorSteps("JBA Policy Manual 1/1/2026, Verbal CA 11/1/2026. On 11/1/26, Fenna violated the care and cleaning of facilities policy.", STEPS_U09, "2026-11-01")).toBe("On 11/1/26, Fenna violated the care and cleaning of facilities policy.");
+  });
+  it("control: a list with a clause that is no step stays", () => {
+    const account = "JBA Policy Manual 1/1/2026, late again 11/1/2026. Fenna violated the care and cleaning of facilities policy.";
+    expect(accountWithoutPriorSteps(account, STEPS_U09, "2026-11-01")).toBe(account);
+  });
+});

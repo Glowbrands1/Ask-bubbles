@@ -808,6 +808,14 @@ export function sharesContentWord(a: string, b: string): boolean {
   return content(a).some((word) => own.has(word));
 }
 
+/** A clause that is a few words (one to five), then one date closing it: a step named and dated ("Verbal CA 11-1-2026"). */
+function stepShaped(clause: string): boolean {
+  const dates = readDates(clause);
+  if (dates.length !== 1 || clause.slice(dates[0]!.index + dates[0]!.text.length).trim() !== "") return false;
+  const words = withoutDates(clause).trim().split(/\s+/).filter(Boolean);
+  return words.length >= 1 && words.length <= 5;
+}
+
 /**
  * QA's live triage (22 Nov 2026, U09 on main, both runs): T2 "JBA Policy Manual 1-1-2026, Verbal CA 11-1-2026. On 11-1-26
  * <P> violated …": the model kept only "Verbal CA — 11/01/2026", and the manual's step went into the Observation. Steps
@@ -832,8 +840,7 @@ export function listedWithKeptSteps(requestWords: string, priorActions: string, 
       const dates = readDates(clause);
       if (dates.length !== 1 || ofThisIncident(dates[0]!) || kept.some((step) => holds(clause, step))) continue;
       const words = withoutDates(clause).trim();
-      /* A few words, then the date, closing the clause: a step named and dated, not a sentence about the incident. */
-      if (clause.slice(dates[0]!.index + dates[0]!.text.length).trim() !== "" || words === "" || words.split(/\s+/).length > 5) continue;
+      if (!stepShaped(clause)) continue;
       const iso = isoDate(dates[0]!.text, today);
       if (!iso || iso > today || kept.some((step) => readDates(step).some((stepDate) => sameDate(stepDate, dates[0]!)))) continue;
       added.push(`${words.replace(/[\s,:;-]+$/, "")} — ${iso.slice(5, 7)}/${iso.slice(8, 10)}/${iso.slice(0, 4)}`);
@@ -863,7 +870,17 @@ export function accountWithoutPriorSteps(account: string, steps: string, inciden
   const unstepped = account.replace(/\s*\(([^()]*)\)/g, (whole, inner: string) => (isStep(inner) ? "" : whole)).replace(/\s+([.,;])/g, "$1").trim();
   const ofThisIncident = (said: ReturnType<typeof readDates>[number]) => Boolean(incidentIso && Number(incidentIso.slice(5, 7)) === said.month && Number(incidentIso.slice(8, 10)) === said.day);
   const sentences = unstepped.match(/[^.!?]+(?:[.!?]+|$)/g) ?? [unstepped];
-  const kept = sentences.filter((sentence) => readDates(sentence).some(ofThisIncident) || !isStep(sentence));
+  /*
+   * QA's live triage (22 Nov 2026, U09): the account began "JBA Policy Manual 1/1/2026, Verbal CA 11/1/2026." — a list of
+   * steps, one of them dated on this incident's day. A sentence that is only comma clauses each a few words then one date
+   * (`stepShaped`), each a step the card holds, is that list: it leaves the account whatever its dates. Any other sentence
+   * with this incident's date stays.
+   */
+  const stepList = (sentence: string) => {
+    const clauses = sentence.replace(/[.!?]+\s*$/, "").split(/\s*,\s*/).filter((clause) => clause.trim() !== "");
+    return clauses.length >= 2 && clauses.every((clause) => stepShaped(clause) && isStep(clause));
+  };
+  const kept = sentences.filter((sentence) => !stepList(sentence) && (readDates(sentence).some(ofThisIncident) || !isStep(sentence)));
   const unsentenced = kept.join("").replace(/\s+/g, " ").trim();
   return unsentenced !== "" ? unsentenced : unstepped !== "" ? unstepped : account;
 }

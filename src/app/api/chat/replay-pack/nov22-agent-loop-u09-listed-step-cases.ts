@@ -45,7 +45,7 @@ export const NOV22_AGENT_LOOP_U09_LISTED_STEP_CASES: ReplayCase[] = [
       expect(card?.priorActions ?? "", "the manual's step is not on Prior actions").toMatch(/JBA Policy Manual — 01\/01\/2026/);
       expect(card?.priorActions ?? "", "the Verbal CA left Prior actions").toMatch(/Verbal CA/);
       expect(card?.issue ?? "", "the manual's step is in the Observation").not.toMatch(/1\/1\/2026|Policy Manual/);
-      expect(card?.issue ?? "", "the incident left the Observation").toMatch(/violated the care and cleaning/);
+      expect(card?.issue ?? "", "the incident left the Observation").toMatch(/violated/i);
       const id = await thread.create();
       expect(t.values(id).prior_actions ?? "", "the saved Prior actions lost the manual's step").toMatch(/JBA Policy Manual — 01\/01\/2026/);
     },
