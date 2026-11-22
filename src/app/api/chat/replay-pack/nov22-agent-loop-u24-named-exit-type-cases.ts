@@ -64,4 +64,37 @@ export const NOV22_AGENT_LOOP_U24_NAMED_EXIT_TYPE_CASES: ReplayCase[] = [
       expect(checked.resignation_type ?? [], JSON.stringify(checked)).toEqual(["immediate_voluntary_resignation"]);
     },
   },
+  {
+    id: "nov22-u24-type-read-back-when-reply-skips-it",
+    title: "U24 (QA's flaky check on main f712228): the same message; the model reads back the card's other lines but no \"Filed as\" line: the reply still says Immediate Voluntary Resignation, once",
+    report: `${REPORT}; QA's flaky check (22 Nov 2026): one live reply of five read back every reads_back line but never the type`,
+    status: "fixed",
+    async run(t) {
+      vi.setSystemTime(new Date("2026-11-22T18:00:00Z"));
+      t.directory([...LOOP_STAFF, LINNEA, MARISANDE, MARISOL]);
+      t.as("admin", ADMIN);
+      t.loopModel!(loopStandIn((view): LoopDecision => {
+        const result = lastResult(view, "propose_form") as (Out & { card?: { reads_back?: string[] } }) | null;
+        if (!result) {
+          return {
+            tool: "propose_form",
+            input: {
+              template_key: "resignation-exit", employee_name: "Linnea Farrow", person_evidence: evidenceFrom(view, "Linnea Farrow"), exit_type: "resignation",
+              exit_evidence: { ...evidenceFrom(view, "create exit for Linnea Farrow"), kind: "asks_for_exit_form" },
+              exit_how: "immediate_voluntary_resignation", exit_how_evidence: evidenceFrom(view, "Immediate Vol Resignation"),
+              what_happened: "Linnea stated she was quitting effective immediately due to conflict with her other job.",
+            },
+          };
+        }
+        /* As the live run: every reads_back line but the type, and no exit_ticks line. */
+        const lines = (result.card?.reads_back ?? []).filter((line) => !/^Filed as/i.test(line));
+        return { text: ["Here's the Resignation/Exit Form for **Linnea**.", ...lines.map((line) => `- ${line}`), "The card above is still open; press Create when it looks right, or tell me what to change."].join("\n\n") };
+      }));
+      const thread = t.thread();
+      const reply = await thread.say(SAID);
+      expect(reply.formProposal?.templateKey, `no exit card (the case proves nothing):\n${reply.content}`).toBe("resignation-exit");
+      expect(reply.content.match(/Immediate Voluntary Resignation/gi) ?? [], `the type is not read back once:\n${reply.content}`).toHaveLength(1);
+      expect(reply.content, reply.content).not.toMatch(/Filed as:?[^\n]*No Call No Show/i);
+    },
+  },
 ];
