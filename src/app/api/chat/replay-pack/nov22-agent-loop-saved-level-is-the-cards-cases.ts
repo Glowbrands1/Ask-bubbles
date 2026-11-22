@@ -38,7 +38,7 @@ export const NOV22_AGENT_LOOP_SAVED_LEVEL_IS_THE_CARDS_CASES: ReplayCase[] = [
       const thread = t.thread();
       await thread.say(T1);
       await thread.say(T2);
-      expect(thread.proposal?.warningLevel, "the card is not Written (the case proves nothing)").toBe("written");
+      expect((thread.proposal as { warningLevel?: string | null } | null)?.warningLevel, "the card is not Written (the case proves nothing)").toBe("written");
       const id = await thread.create();
       expect(t.checked(id).warning_type ?? [], "the saved form lost the card's level").toEqual(["written"]);
     },
