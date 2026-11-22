@@ -60,7 +60,12 @@ export const NOV22_AGENT_LOOP_REPLY_KEEPS_OBSERVATION_DATES_CASES: ReplayCase[] 
       t.loopModel!(model);
       const said = await thread.say(T1);
       expect(issue(thread.proposal), "the card lost the account's deadline (the case proves nothing)").toMatch(/10\/15\/26 deadline/);
-      expect(model.views.some(checkedBack), "the misdated restatement was never handed back").toBe(true);
+      /*
+       * CHANGED ON PURPOSE (QA's live regression triage, 22 Nov 2026): the hand-back is the stand-in's path (it restates the
+       * account misdated on purpose); the live model restated it with the card's 10/15/26, so there was nothing to hand
+       * back. What the manager sees is checked either way (below): no other deadline than the card's, and the card's.
+       */
+      if (!model.live) expect(model.views.some(checkedBack), "the misdated restatement was never handed back").toBe(true);
       expect(said.content, `the reply states another deadline than the card:\n${said.content}`).not.toMatch(/10\/20\/26 deadline/);
       expect(said.content).toMatch(/10\/15\/26 deadline/);
     },

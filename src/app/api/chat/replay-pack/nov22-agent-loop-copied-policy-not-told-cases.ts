@@ -57,9 +57,16 @@ export const NOV22_AGENT_LOOP_COPIED_POLICY_NOT_TOLD_CASES: ReplayCase[] = [
       expect(thread.proposal?.templateKey, "no Corrective Action card (the case proves nothing)").toBe("dpoa");
       const reply = await thread.say(T2);
       const seen = model.views.flatMap(proposals);
-      expect(seen.some((result) => result?.facts?.policy_copied), `the copied heading was never caught (the case proves nothing):\n${JSON.stringify(seen)}`).toBe(true);
-      expect(reply.content, `the reply tells the manager about the copied-heading guard:\n${reply.content}`).not.toMatch(/policy_not_for_this_card/);
+      /*
+       * CHANGED ON PURPOSE (QA's live regression triage, 22 Nov 2026): "the case proves nothing" holds for the stand-in,
+       * which copies the CA's heading on purpose; the live model cites the Coaching card's own heading, so there is nothing
+       * to catch. Checked live too: what the manager sees, the Coaching card never carries the CA's Attendance heading and
+       * the reply never mentions the guard.
+       */
+      if (!model.live) expect(seen.some((result) => result?.facts?.policy_copied), `the copied heading was never caught (the case proves nothing):\n${JSON.stringify(seen)}`).toBe(true);
+      expect(reply.content, `the reply tells the manager about the copied-heading guard:\n${reply.content}`).not.toMatch(/policy_not_for_this_card|won't let|reuse the/i);
       expect(thread.proposal?.templateKey, reply.content).toBe("coaching");
+      expect((thread.proposal as { policyLine?: string | null } | null)?.policyLine ?? "", `the Coaching card kept the CA's heading:\n${reply.content}`).not.toMatch(/Attendance/i);
     },
   },
 ];

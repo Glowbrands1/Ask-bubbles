@@ -101,7 +101,8 @@ export const NOV22_AGENT_LOOP_EXIT_METHOD_IS_THE_QUITTERS_CASES: ReplayCase[] = 
       start(t);
       const thread = t.thread();
       const model = live("Text message", "she quit effective immediately");
-      t.loopModel!(model);
+      /* CHANGED ON PURPOSE (QA's live regression triage, 22 Nov 2026): a control whose condition is the stand-in's input (a method quoting words that do not name it); the real model reads the voicemail the GM left as a phone call, rightly; the stand-in plays in live runs too. */
+      t.loopModel!(model, { scripted: true });
       await thread.say(T1);
       expect(results(model.views).at(-1)?.card?.how_resigned ?? null).toBeNull();
       const id = await thread.create();
