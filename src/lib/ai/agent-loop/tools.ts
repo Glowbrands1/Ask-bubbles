@@ -5176,7 +5176,7 @@ function isShownCardId(context: ToolContext, effects: ToolEffects, id: string): 
 const teamStoreQuestion = () => `Which ${locationWord()} is this for?`;
 const TEAM_STORE_NOTE = "The card has no store yet. End your reply with store_question, exactly. Never name, guess or narrow the stores from a word the manager did not give as a store (an abbreviation, a program, a product); the card's own store list shows them all.";
 
-export async function coachTeam(context: ToolContext, effects: ToolEffects): Promise<ToolResult> {
+export async function coachTeam(context: ToolContext, effects: ToolEffects, input: { team_evidence?: unknown } = {}): Promise<ToolResult> {
   if (context.openFormId) {
     const { coachingForEveryone } = await import("@/lib/forms/coaching-for-everyone");
     const turn = await coachingForEveryone({ request: context.request, question: context.question, history: context.history as ChatMessage[], activeInstanceId: context.openFormId, confirmationAsked: context.teamConfirmAsked === true, onCreated: () => {
@@ -5196,7 +5196,14 @@ export async function coachTeam(context: ToolContext, effects: ToolEffects): Pro
    */
   const lastAsk = [...context.history].reverse().find((turn) => turn.role === "user");
   const continuing = lastAsk && /\bcoach(?:ing)?\b/i.test(String(lastAsk.content ?? "")) ? appConfig().formKeys.coaching : null;
-  const team = wholeTeamRequest({ question: context.question, history: context.history as ChatMessage[], draftOpen: Boolean(context.openFormId), continuingTemplateKey: continuing });
+  /*
+   * Ported from the sibling app (its QA's shadow re-run S2, 22 Nov 2026): "a coaching form for my entire <team> at
+   * <store> …" got wrong_tool, because the phrase reader knows "entire team / staff" but not every group word. The model
+   * decides it is a whole team or group and passes team_evidence: the manager's words in this message. Code checks only
+   * that they are real.
+   */
+  const teamEvidence = verifyEvidence(input.team_evidence, identifiedTurns(context.history as ChatMessage[], context.question, context.questionMessageId), { thisTurnOnly: true }).ok;
+  const team = wholeTeamRequest({ question: context.question, history: context.history as ChatMessage[], draftOpen: Boolean(context.openFormId), continuingTemplateKey: continuing, teamEvidence });
   if (!team) {
     return { reason_code: "wrong_tool", error: "This is not a whole-team coaching request. A form for one person goes through find_staff and propose_form; with a Coaching draft open, \"this coaching for everyone on my team\" is the request for one draft each." };
   }
