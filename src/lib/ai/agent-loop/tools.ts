@@ -718,11 +718,33 @@ function statedStepCount(words: string): number | null {
  * Batch G2 (item 4): why the model's prior actions cannot be kept, or null. A date in them must be one the manager typed
  * and never this incident's date; a stated count must be kept ("Written warning (2), dates not given").
  */
+/*
+ * QA's live round-2 re-run (22 Nov 2026, U09): "JBA Policy Manual 1-1-2026, Verbal CA 11-1-2026. On 11-1-26 <P> violated
+ * …": the Verbal CA's own date is the incident's date, so the step was left off as "this incident's date". A date the
+ * manager typed in the same clause right after the step's own words ("Verbal CA 11-1-2026") is that step's date, even when
+ * it is also the incident's; the model copying the incident's date onto an older step has no step word before it
+ * ("On 11-1-26 <P> violated"). Read from the clause's words, never a list of step names.
+ */
+function datedByManagerForStep(step: string, date: ReturnType<typeof readDates>[number], requestWords: string): boolean {
+  const stepWords = new Set((withoutDates(step).toLowerCase().match(/[a-z]{3,}/g) ?? []));
+  if (stepWords.size === 0) return false;
+  for (const said of readDates(requestWords)) {
+    if (!sameDate(said, date)) continue;
+    let from = 0;
+    for (let at = requestWords.indexOf(said.text, from); at >= 0; at = requestWords.indexOf(said.text, from)) {
+      const clause = requestWords.slice(0, at).split(/[.;\n,]/).at(-1) ?? "";
+      if ((clause.toLowerCase().match(/[a-z]{3,}/g) ?? []).some((word) => stepWords.has(word))) return true;
+      from = at + said.text.length;
+    }
+  }
+  return false;
+}
+
 export function priorActionsProblem(priorActions: string, requestWords: string, incidentDate: string | null): { reason: string; count_said?: number } | null {
   const typed = readDates(requestWords);
   for (const date of readDates(priorActions)) {
     const iso = date.year !== null ? `${date.year}-${String(date.month).padStart(2, "0")}-${String(date.day).padStart(2, "0")}` : null;
-    if (incidentDate && (iso === incidentDate || (iso === null && Number(incidentDate.slice(5, 7)) === date.month && Number(incidentDate.slice(8, 10)) === date.day))) {
+    if (incidentDate && (iso === incidentDate || (iso === null && Number(incidentDate.slice(5, 7)) === date.month && Number(incidentDate.slice(8, 10)) === date.day)) && !datedByManagerForStep(priorActions, date, requestWords)) {
       return { reason: `${date.text} is this incident's date, not an earlier step's` };
     }
     if (!typed.some((said) => sameDate(said, date))) return { reason: `${date.text} is not a date the manager gave for an earlier step` };
