@@ -1223,13 +1223,20 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
        * card: a reply that repeats the card's own policy or level is no mismatch.
        */
       const cardShownNow = () => effects.proposal !== null || cardOnScreen !== null;
+      /* B6: an exit card shown under the last reply, and none proposed this turn. */
+      const exitOnScreenOnly = !effects.proposal && cardOnScreen?.templateKey === appConfig().formKeys.exit;
       const mismatchOf = (reply: string) => {
         const claims = cardClaims(reply);
         /* QA's Bubbles re-run (22 Nov 2026, A3): a restated Observation keeps the Observation's dates (`observation-dates.ts`). */
         /* QA's Bubbles round 2 (22 Nov 2026, U22): an exit card's reply reads back only the lines Create saves (`exit-read-back.ts`). */
         if (effects.proposal) return [...cardMismatch(claims, effects.proposal), ...observationDateMismatch(reply, effects.proposal.issue), ...exitReadBackMismatch(reply, effects.proposal.exitReadBack)];
         const onScreen = cardOnScreen ? ({ warningLevel: cardOnScreen.level ?? null, policyLine: cardOnScreen.policyLine ?? null } as unknown as ChatFormProposal) : null;
-        return cardMismatch(claims, onScreen);
+        /*
+         * QA's Bubbles live re-run 2 (22 Nov 2026, B6): no card this turn ("she is resigning due to second job …" called no
+         * tool and replied "Noted the reason — **Reason for Resignation:** Second job."): an exit card on screen saves
+         * nothing new, so a Details or answer line goes back (`exit-read-back.ts`, onScreenOnly).
+         */
+        return [...cardMismatch(claims, onScreen), ...exitReadBackMismatch(reply, exitOnScreenOnly ? [] : null, true)];
       };
       const reviewed = stoppedAt === "reply" && !effects.formUpdate && !effects.formOpened && !input.openFormId && cardShownNow();
       const wrong = reviewed ? mismatchOf(text) : [];
@@ -1299,7 +1306,7 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
         /* Still misdated after the hand-back: the false restatement is left out; the card under the reply shows the Observation. */
         if (!(offer.length > 0 && cardShownNow()) && still.some(observationDate)) text = withoutMisdatedRestatements(text, effects.proposal?.issue);
         /* U22: still reading back an exit line the card does not save: that line is left out (the card shows what is saved). */
-        if (!(offer.length > 0 && cardShownNow()) && still.some(exitField)) text = withoutUnsavedExitLines(text, effects.proposal?.exitReadBack);
+        if (!(offer.length > 0 && cardShownNow()) && still.some(exitField)) text = exitOnScreenOnly ? withoutUnsavedExitLines(text, [], true) : withoutUnsavedExitLines(text, effects.proposal?.exitReadBack);
       }
       /*
        * THE DRAFT'S HONESTY CHECK HANDS BACK FIRST (code-check #48, batch D): with a draft open, a reply that claims the
