@@ -80,7 +80,10 @@ export const COMPANY_REGION_ENTRIES: readonly CompanyAreaEntry[] = [];
  * only where the sentence says it is a place (`location-mention.ts`). Empty
  * until Buff City Soap confirms them.
  */
-export const COMPANY_LOCATION_NICKNAMES: Readonly<Record<string, string>> = {};
+export const COMPANY_LOCATION_NICKNAMES: Readonly<Record<string, string>> = {
+  // Pau, 22 Nov 2026 (via QA, Bubbles live re-run A7): "Empire, SD" is the Sioux Falls W 41st St store (4025 W 41st St).
+  empire: "225",
+};
 
 /**
  * Abbreviations managers type for a word in several location names, folded

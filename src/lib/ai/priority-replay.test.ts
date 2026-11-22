@@ -370,7 +370,8 @@ describe("priority replay b9–b12, flags on, word for word", () => {
       misses.push({ check: "prior coaching corrected to 11-1-25", detail: (corrected?.content ?? "").slice(0, 500) });
     }
     const asked = snaps.map((item) => `${item.locationName ?? ""} ${item.locationCandidates.join(" ")} ${item.content}`).join("\n");
-    const sioux = /sioux falls, sd \(w 41st st\)/i.test(asked) && /sioux falls, sd \(e 18th st\)/i.test(asked);
+    // Changed on purpose (Pau via QA, 22 Nov 2026, A7): "Empire, SD" is the Sioux Falls W 41st St store (a reviewed nickname, `COMPANY_LOCATION_NICKNAMES`): the store is that one, read with no question (was: asks once with both Sioux Falls stores).
+    const sioux = snaps.some((item) => /sioux falls, sd \(w 41st st\)/i.test(item.locationName ?? "")) || (/sioux falls, sd \(w 41st st\)/i.test(asked) && !/sioux falls, sd \(e 18th st\)/i.test(asked));
     const invented = snaps.some((item) => /empire/i.test(item.locationName ?? ""));
     if (!sioux) misses.push({ check: "asks once with the Sioux Falls stores", detail: snaps.map((item) => `t${item.turn}:${item.locationResolution}:${item.locationName}:${item.locationCandidates.join("/")}`).join(" | ") });
     if (invented) misses.push({ check: "invents Empire as a store", detail: snaps.map((item) => item.locationName).join(" | ") });
