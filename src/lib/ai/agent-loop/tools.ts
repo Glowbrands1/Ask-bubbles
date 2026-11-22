@@ -4961,11 +4961,12 @@ export async function proposeForm(
   if (!typedSalon && employee.id && proposal.status === "needs_location") {
     /*
      * Board f140 (QA's Bubbles round 2, R01/R19/U05–U07): Woven's primary store alone missed a person the directory
-     * row gives no primary for, and the card asked "Which store?" while Create saved no store. The person's Woven stores
-     * as U29 reads them (`wovenStoresOf`: the primary first, then the roster's stores): exactly one among the choices is
-     * the card's store; several still ask.
+     * row gives no primary for, and the card asked "Which store?" while Create saved no store. Woven's primary store
+     * among the choices is the card's store, as before; with none, the person's Woven stores as U29 reads them
+     * (`wovenStoresOf`): exactly one among the choices is the card's store; several still ask.
      */
-    const theirs = await wovenStoresOf(context.actor.scope, employee.id, read.kind === "read" ? read.roster : [], proposal.authorizedLocationIds ?? []);
+    const primary = await rosterPrimarySalon(context.actor.scope, employee.id);
+    const theirs = primary && (proposal.authorizedLocationIds ?? []).includes(primary) ? [primary] : await wovenStoresOf(context.actor.scope, employee.id, read.kind === "read" ? read.roster : [], proposal.authorizedLocationIds ?? []);
     const only = theirs.length === 1 ? theirs[0]! : null;
     if (only) {
       const filed = buildProposal(proposalInput([only]));

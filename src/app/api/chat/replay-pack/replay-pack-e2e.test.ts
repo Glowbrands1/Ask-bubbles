@@ -777,9 +777,13 @@ class Thread {
   }
 
   /** The card's Create, as the browser does it. */
-  async create(): Promise<string> {
+  /**
+   * `store`: the store the manager picks on the card before Create, as the browser's store picker does (board f140: Create
+   * on a card that still asks which store saves nothing, so a case that means to save one picks it).
+   */
+  async create(store?: string): Promise<string> {
     expect(this.proposal, "no card to create from").not.toBeNull();
-    const result = await createInlineForm({ proposal: this.proposal!, messages: this.messages, call, onCreated: () => {} });
+    const result = await createInlineForm({ proposal: store ? { ...this.proposal!, locationId: store } : this.proposal!, messages: this.messages, call, onCreated: () => {} });
     this.instanceId = toUuid(result.reference.instanceId);
     return this.instanceId;
   }
