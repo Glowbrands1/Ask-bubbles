@@ -46,7 +46,14 @@ const run = (byId: boolean) => async (t: ReplayContext) => {
   const thread = t.thread();
   await thread.say(T1);
   await thread.say(T2);
-  expect(thread.proposal?.employeeName, "T2 made no card for the misspelling (the case proves nothing)").toBe(P1);
+  /*
+   * CHANGED ON PURPOSE (QA's Bubbles round 2, 22 Nov 2026; Pau's rule: "a staff match is taken only if the manager's own
+   * words contain that exact name, or the manager confirmed it through 'Did you mean <name>?'"): the misspelling is a close
+   * spelling of the staff list's person, so T1 and T2 now get "Did you mean …?" and no card is kept for the misspelling.
+   * The live chat reached T3 with such a card only because TYPED_NAME kept the close match as typed. The correction
+   * mechanism (`closeSpellingOfName`) stays for a name kept as typed on the manager's say-so.
+   */
+  expect(thread.proposal?.employeeName ?? null, "a card was kept for the close misspelling").not.toBe(P1);
   const t3 = await thread.say(T3);
   const refusals = model.views.flatMap((view) => view.results.filter((result) => result.tool === "propose_form").map((result) => (result.output as { reason_code?: string }).reason_code)).filter(Boolean);
   expect(refusals, `the corrected spelling was refused:\n${t3.content}`).not.toContain("person_change_not_asked");
