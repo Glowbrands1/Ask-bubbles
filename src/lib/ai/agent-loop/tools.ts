@@ -894,6 +894,10 @@ export interface ToolEffects {
   staffLookedUp?: boolean;
   /** Fix batch items 4 and 3: this turn's last "Did you mean" (the roster ids offered, the name typed), for the record. */
   nameQuestion?: { offeredIds: string[]; typed: string; offeredNames?: string[]; asksFullName?: boolean; templateKey?: string };
+  /** Round 3 U09: this turn already handed the card back once with the one incident date the manager stated. */
+  incidentDateNamed?: boolean;
+  /** Round 3 U16: the forms read_form read this turn (person, form date and account), so a copy keeps its date. */
+  formsRead?: { employeeName: string | null; formDate: string | null; account: string }[];
   /** QA (16 Nov 2026): propose_form ran for a form this turn, so a form is chosen (find_staff may ask the name). */
   formChosen?: boolean;
   /** Batch G (G4), by the rebuild plan's PR 1b: find_past_forms found forms on file to open (open: true) for this person. */
@@ -1998,6 +2002,19 @@ export function fitToLimit(texts: readonly string[], limit: number): string[] {
   return out;
 }
 
+/**
+ * Round 3 U16: a card's account is a form's account when it keeps that account's words: at least 4 of them, and 4 in 5
+ * found in the card's account (case and punctuation set aside). A new incident written beside an old one is not a copy.
+ */
+function sameAccount(formAccount: string, cardAccount: string): boolean {
+  const wordsOf = (text: string) => text.toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) ?? [];
+  const source = [...new Set(wordsOf(formAccount))];
+  if (source.length < 4) return false;
+  const card = new Set(wordsOf(cardAccount));
+  const kept = source.filter((word) => card.has(word)).length;
+  return kept / source.length >= 0.8 && card.size <= source.length * 1.5 + 4;
+}
+
 export async function readForm(context: ToolContext, input: { instance_id?: unknown; forms_on_file_evidence?: unknown }, effects?: ToolEffects): Promise<ToolResult> {
   const id = typeof input.instance_id === "string" ? input.instance_id.trim() : "";
   if (id === "") return { reason_code: "missing_input", error: "Give the form's instance_id (from find_past_forms or the open form)." };
@@ -2030,6 +2047,11 @@ export async function readForm(context: ToolContext, input: { instance_id?: unkn
       if (fitted[index] !== row.shown) truncatedFields.push(row.key);
     });
     const filled = new Set(shownRows.map((row) => row.key));
+    const accountField = ["observation", "coaching_details"].find((key) => fieldKeys.has(key)) ?? null;
+    if (effects) {
+      const account = accountField ? (shownRows.find((row) => row.key === accountField)?.shown ?? "") : "";
+      (effects.formsRead ??= []).push({ employeeName: loaded.instance.employeeName ?? null, formDate: loaded.instance.formDate ?? null, account });
+    }
     return {
       instance_id: loaded.instance.id,
       form: loaded.instance.templateName,
@@ -2040,7 +2062,7 @@ export async function readForm(context: ToolContext, input: { instance_id?: unkn
       form_date: loaded.instance.formDate,
       values,
       /* The field the manager's account goes in (Observation on a CA, Details of Coaching on a coaching form). */
-      account_field: ["observation", "coaching_details"].find((key) => fieldKeys.has(key)) ?? null,
+      account_field: accountField,
       empty_fields: [...fieldKeys].filter((key) => !filled.has(key)).slice(0, 40),
       ...(truncatedFields.length > 0 ? { truncated_fields: truncatedFields, note: "Each field in truncated_fields is longer on the form than shown here; it is filled. Never call it empty or missing." } : {}),
     };
@@ -2202,10 +2224,25 @@ export function incidentDates(managerWords: string, priorActions: string | null)
   const prior = readDates(priorActions ?? "");
   const seen = new Map<string, string>();
   const words = managerWords.replace(PAYROLL_AMOUNT, (amount) => " ".repeat(amount.length));
+  /*
+   * QA's Bubbles live round 3 (22 Nov 2026, U09): "Verbal CA 11-1-2026. On 11-1-26 Briony violated …" lost its incident
+   * date, because a date was left out whenever a prior step had the same DAY, so the card was dated today. A prior step
+   * accounts for one mention of its day; a day the manager wrote more times than the prior steps list it is the incident's
+   * too. Dates by occurrence, never a phrase list.
+   */
+  const priorLeft = new Map<string, number>();
+  for (const date of prior) priorLeft.set(`${date.month}/${date.day}`, (priorLeft.get(`${date.month}/${date.day}`) ?? 0) + 1);
   for (const date of readDates(words)) {
     const key = `${date.month}/${date.day}`;
-    if (prior.some((other) => sameDate(other, date)) || seen.has(key)) continue;
-    if (PRIOR_STEP_BEFORE.test(sentenceBefore(words, date.index))) continue;
+    if (PRIOR_STEP_BEFORE.test(sentenceBefore(words, date.index))) {
+      if ((priorLeft.get(key) ?? 0) > 0) priorLeft.set(key, priorLeft.get(key)! - 1);
+      continue;
+    }
+    if (prior.some((other) => sameDate(other, date)) && (priorLeft.get(key) ?? 0) > 0) {
+      priorLeft.set(key, priorLeft.get(key)! - 1);
+      continue;
+    }
+    if (seen.has(key)) continue;
     seen.set(key, key);
   }
   return [...seen.values()];
@@ -4330,7 +4367,17 @@ export async function proposeForm(
   const ownCard = [context.cardOnScreen, context.earlierCard].find((record) => Boolean(record?.incidentDate) && (employee.id ? record!.employeeKey === personKey(employee.id) : !record!.employeeKey && record!.nameKey === personKey(employee.name)));
   const dateKept = ACCOUNT_FORMS.has(template.key) && !date && !asksNewForm && latestDates.length === 0 && ownCard?.incidentDate && (datesGiven.length === 0 || datesGiven.some((given) => monthDayToIso(given, today) === ownCard.incidentDate)) ? ownCard.incidentDate : null;
   if (dateKept) date = dateKept;
-  const datesAsked = datesGiven.length > 1 && !date ? datesGiven : [];
+  /*
+   * A COPY KEEPS THE DATE OF THE FORM IT COPIES (QA's ruling, 22 Nov 2026, Bubbles round 3, U16: "create a verbal CA for
+   * <P> with all the same information given" after a form on file was opened). When this turn read this person's form
+   * on file and the card's account is that form's account (its words, not a word list), the card takes that form's date,
+   * unless the manager's words in this request state any date or the model passed one. Never today by default.
+   */
+  const copiedForm = ACCOUNT_FORMS.has(template.key) && !date && readDates(requestWords).length === 0 && readDates(context.question).length === 0 && typeof input.what_happened === "string"
+    ? [...(effects.formsRead ?? [])].reverse().find((read) => Boolean(read.formDate && DATE.test(read.formDate) && read.employeeName && samePerson(read.employeeName, employee.name) && sameAccount(read.account, String(input.what_happened))))
+    : undefined;
+  if (copiedForm?.formDate) date = copiedForm.formDate;
+  let datesAsked = datesGiven.length > 1 && !date ? datesGiven : [];
   /* Batch C (code-check #32): a date after today is a fact with today's date; the rules book says to ask. */
   /* Batch G (G6): only an incident form's date is never after today; an exit's last day or effective date may be. */
   const incidentForm = ACCOUNT_FORMS.has(template.key);
@@ -4854,6 +4901,24 @@ export async function proposeForm(
   ACCOUNT_WHEN.lastIndex = 0;
   /* Batch E (E12): a date after today is never on the card, the model's or today's reading (the field is refused; the fact says so). */
   const futureDate = dateAfterToday ?? (incidentForm && !date && proposal.formDate && proposal.formDate > today ? proposal.formDate : null);
+  /*
+   * QA's Bubbles live round 3 (22 Nov 2026, U09; QA's ruling): the manager's words in this request state exactly ONE
+   * incident date and the model passed none, so the card was "Dated today" and Create saved today. The card goes back once
+   * with that date named; never silently today. Still none after that: the date is asked, as for several dates.
+   */
+  const statedOne = datesGiven.length === 1 ? monthDayToIso(datesGiven[0]!, today) : null;
+  /* The card builder's own reading of the words already holds that day (not another request's, not a prior step's): nothing to hand back. */
+  const builderHasIt = Boolean(statedOne && proposal.formDate === statedOne && !fromAnotherRequest(proposal.formDate) && !isPriorDate(proposal.formDate));
+  if (ACCOUNT_FORMS.has(template.key) && !date && statedOne && !builderHasIt && !effects.incidentDateNamed) {
+    effects.incidentDateNamed = true;
+    const iso = monthDayToIso(datesGiven[0]!, today);
+    return {
+      reason_code: "incident_date_not_passed",
+      incident_date_stated: iso,
+      error: `The manager's words state ${iso} as the day it happened. Propose again with incident_date "${iso}", or ask the manager if it is not that day. The card was not made.`,
+    };
+  }
+  if (statedOne && !date && !builderHasIt && effects.incidentDateNamed && ACCOUNT_FORMS.has(template.key)) datesAsked = datesGiven;
   const card: ChatFormProposal = {
     ...proposal,
     sourceMessageIds: requestIds,
@@ -4878,6 +4943,8 @@ export async function proposeForm(
       ? { exitReadBack: (await import("./exit-read-back")).exitReadBack({ dateLines: await exitDateLines(requestWords, today, Boolean(exitTermination)), account: whatHappened || null, termination: Boolean(exitTermination), detailLines: await exitDetailReadLines(requestWords, today, Boolean(exitTermination)) }) }
       : {}),
     ...(awaiting ? { awaitingIncident: true as const, supportsInlineDraft: false } : {}),
+    /* QA's Bubbles live round 3 (22 Nov 2026, A1(c); QA's ruling (1)): a card whose date question is open is not Create-ready, as one whose store is still asked. */
+    ...(datesAsked.length > 0 && ACCOUNT_FORMS.has(template.key) ? { supportsInlineDraft: false } : {}),
   };
   /*
    * THE CARD'S ACCOUNT CALLS THE PERSON BY THE SHORT NAME (the sibling app's QA, 20 Nov 2026, live): "ca for <full name>,
