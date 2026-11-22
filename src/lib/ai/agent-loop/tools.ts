@@ -2247,11 +2247,24 @@ function headingKey(text: string): string {
   return text.toLowerCase().replace(/\bpolicy\b/g, "").replace(/[^a-z0-9]+/g, " ").trim();
 }
 
+/*
+ * QA's live round 3 (22 Nov 2026, U21 T7 and T12): the model passed the policy as the card shows it, "Standards of Conduct
+ * — Care and Cleaning of Equipment and Facilities" (or with ", JBA Policy Manual p.21"), and it was not_a_heading; when the
+ * model did not try again, the reply cited a policy the card did not hold ("That change isn't on the card yet: policy").
+ * The card's own policy line is read back as its heading: the asked text as given, else without its trailing
+ * ", <manual> p.<n>", else the heading after its last " — ". Read by the line's shape, never a word list.
+ */
 function headingOf(headings: readonly string[], asked: string): string | null {
   const key = headingKey;
-  const wanted = key(asked);
-  if (wanted === "") return null;
-  return headings.find((heading) => key(heading) === wanted) ?? null;
+  const unpaged = asked.replace(/,\s*[^,]*\bp\.\s*\d+\s*$/i, "").trim();
+  const last = unpaged.split(/\s+—\s+/).at(-1)!.trim();
+  for (const candidate of [asked, unpaged, last]) {
+    const wanted = key(candidate);
+    if (wanted === "") continue;
+    const found = headings.find((heading) => key(heading) === wanted);
+    if (found) return found;
+  }
+  return null;
 }
 
 export async function readPolicy(context: ToolContext, input: { heading?: unknown }, effects?: ToolEffects): Promise<ToolResult> {

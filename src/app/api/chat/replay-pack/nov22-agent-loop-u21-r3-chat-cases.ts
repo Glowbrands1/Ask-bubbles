@@ -90,7 +90,8 @@ function u21Model(view: LoopView): LoopDecision {
   const seen = (text: string) => view.turns.some((turn) => turn.role === "user" && turn.text === text);
   const joelle = seen(T[7]);
   const person = joelle ? { employee_id: U21_JOELLE.id, person_evidence: evidenceFrom(view, "joelle penrose", back(view, T[7])) } : { employee_id: U21_BRIONY.id, person_evidence: evidenceFrom(view, "briony kask", back(view, T[1])) };
-  const policy = { policy: headingWith(view, /care and cleaning/i) };
+  /* As live: the card cites the Standards of Conduct until T7 asks for the policy that goes with it. */
+  const policy = { policy: headingWith(view, seen(T[6]) ? /care and cleaning/i : /^standards of conduct/i) };
   if (message === T[0]) return { text: "Who is this Corrective Action Form for, and what happened?" };
   if (message === T[1]) return { text: "Got it, Briony Kask. What happened?" };
   if (message === T[2]) return { tool: "propose_form", input: { template_key: "dpoa", ...person, ...policy, what_happened: ACCOUNT, prior_actions: "Coaching — 09/22/2026 (cleaning tasks not being completed)" } };
@@ -104,7 +105,8 @@ function u21Model(view: LoopView): LoopDecision {
   if (message === T[3]) return { tool: "propose_form", input: { ...base, prior_actions: `${held["Prior actions"] ?? ""}; Policy acknowledgement — 05/26/2026` } };
   if (message === T[4]) return { tool: "propose_form", input: { ...base, payroll_deduct: "no", payroll_evidence: evidenceFrom(view, T[4]) } };
   if (message === T[5]) return { tool: "propose_form", input: { ...base, warning_level: "verbal", level_evidence: evidenceFrom(view, T[5]) } };
-  if (message === T[6]) return { tool: "propose_form", input: base };
+  /* T7 as live: the policy written as the card shows a policy ("<section> — <heading>, JBA Policy Manual p.<n>"). */
+  if (message === T[6]) return { tool: "propose_form", input: { ...base, policy: "Standards of Conduct — Care and Cleaning of Equipment and Facilities, JBA Policy Manual p.21" } };
   if (message === T[7]) return { tool: "propose_form", input: { ...base, same_card_evidence: { ...evidenceFrom(view, T[7]), kind: "same_form" } } };
   /* T10 as live: the card asked for again ("this_card_for"), no level or payroll passed. */
   if (message === T[9]) return { tool: "propose_form", input: { ...base, same_card_evidence: { ...evidenceFrom(view, T[9]), kind: "this_card_for" } } };
@@ -116,11 +118,11 @@ async function u21Chat(t: ReplayContext) {
   u21Start(t);
   t.loopModel!(loopStandIn(u21Model));
   const thread = t.thread();
-  const cards: { turn: number; issue: string | null; level: string | null; payroll: string | null; formDate: string | null; reply: string }[] = [];
+  const cards: { turn: number; issue: string | null; level: string | null; payroll: string | null; formDate: string | null; policy: string | null; reply: string }[] = [];
   for (const [index, turn] of T.entries()) {
     const reply = await thread.say(turn);
-    const card = thread.proposal as { issue?: string | null; warningLevel?: string | null; payrollDeduct?: string | null; formDate?: string | null } | null;
-    cards.push({ turn: index + 1, issue: card?.issue ?? null, level: card?.warningLevel ?? null, payroll: card?.payrollDeduct ?? null, formDate: card?.formDate ?? null, reply: reply.content });
+    const card = thread.proposal as { issue?: string | null; warningLevel?: string | null; payrollDeduct?: string | null; formDate?: string | null; policyLine?: string | null } | null;
+    cards.push({ turn: index + 1, issue: card?.issue ?? null, level: card?.warningLevel ?? null, payroll: card?.payrollDeduct ?? null, formDate: card?.formDate ?? null, policy: card?.policyLine ?? null, reply: reply.content });
   }
   return cards;
 }
@@ -135,6 +137,7 @@ export const NOV22_AGENT_LOOP_U21_R3_CHAT_CASES: ReplayCase[] = [
       const cards = await u21Chat(t);
       const at = (turn: number) => cards[turn - 1]!;
       expect(at(10), `T10 dropped the level or payroll Joelle's card held: ${JSON.stringify(cards.slice(6, 10)).slice(0, 2500)}`).toMatchObject({ level: "verbal", payroll: "no" });
+      expect(at(7).policy ?? "", "T7's policy, written as the card shows it, is not on the card").toMatch(/Care and Cleaning/);
       expect(at(12).issue ?? "", `T12 lost the account:\n${JSON.stringify(at(12))}`).toMatch(/trash liners/i);
       expect(cards.filter((card) => /\[card shown under this reply/i.test(card.reply)).map((card) => card.turn), "a reply showed the history's card line").toEqual([]);
       /* T7 live: "That change isn't on the card yet: policy (…). Tell me again" — the policy the manager asked for is on the card. */
