@@ -102,6 +102,7 @@ export const AGENT_LOOP_TOTAL_MS = 100_000;
 export const TOOL_SETTLE_MS = 5_000;
 
 import { LOOP_FAILED_REPLY, STEP_LIMIT_REPLY } from "./replies";
+import { withoutWrittenToolCalls, writtenToolCall } from "./written-tool-call";
 import { fieldLabel, readableValue } from "./saved-diff";
 
 /*
@@ -1453,6 +1454,18 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
           }
         }
         /*
+         * QA's Bubbles live round 3 (22 Nov 2026; the regression set on PR 2): the reply was a tool call written as text
+         * (`_exec:find_staff {"person_evidence": …}`), so nothing was looked up and the manager saw tool syntax. Read by the
+         * loop's own tool names (`written-tool-call.ts`): it goes back once to make the call; if it comes back, those lines
+         * are left out (and with nothing left, the step-limit reply).
+         */
+        const toolNames = agentLoopTools().map((definition) => definition.name);
+        if (stoppedAt === "reply" && writtenToolCall(text, toolNames)) {
+          const again = await handBack(`[app check] Your reply wrote the ${writtenToolCall(text, toolNames)} tool call as text, so it never ran and the manager would see it. Make the call itself now (a tool call, never text), then write your reply to the manager.`);
+          if (again) text = again;
+          if (writtenToolCall(text, toolNames)) text = withoutWrittenToolCalls(text, toolNames) || STEP_LIMIT_REPLY;
+        }
+        /*
          * QA's Bubbles live round 3 (22 Nov 2026, A7): "Filed at <store>, where Woven lists <P>" is the rules book's own line
          * for store_from_woven. A reply that says it when no card this turn was filed at the employee's Woven store (the
          * manager named the store: store_said) goes back once; if it comes back, that sentence is left out.
@@ -1586,7 +1599,7 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
   /* QA's live re-test B8: a former employee is found in Woven, so the reply never also says they are not on the staff list. */
   if (inactiveLines.size === 1 && text) text = withOneInactiveLine(text, [...inactiveLines][0]!, appConfig().staffSystem);
   const cardSlot: CardSlot | null = effects.proposal
-    ? { proposalId: effects.proposal.proposalId, employeeKey: effects.proposalEmployeeId ? personKey(effects.proposalEmployeeId) : null, nameKey: effects.proposal.employeeName ? personKey(effects.proposal.employeeName) : null, templateKey: effects.proposal.templateKey, templateName: effects.proposal.templateName ?? null, ...(effects.proposalAsked?.length ? { asked: effects.proposalAsked } : {}), ...(effects.proposalLevel ? { level: effects.proposalLevel } : {}), ...(effects.proposalPayroll ? { payroll: effects.proposalPayroll } : {}), ...(effects.proposalPayroll === "yes" && effects.proposalPayrollAmount ? { payrollAmount: effects.proposalPayrollAmount } : {}), ...(effects.proposal.policyLine ? { policyLine: effects.proposal.policyLine } : {}), ...(effects.proposalAccountKey ? { accountKey: effects.proposalAccountKey } : {}), ...(effects.proposal.formDate ? { incidentDate: effects.proposal.formDate } : {}), ...(effects.proposal.subject === "team" && effects.proposal.locationId ? { teamStoreId: effects.proposal.locationId } : {}), ...(effects.proposal.locationId ? { storeId: effects.proposal.locationId } : {}) }
+    ? { proposalId: effects.proposal.proposalId, employeeKey: effects.proposalEmployeeId ? personKey(effects.proposalEmployeeId) : null, nameKey: effects.proposal.employeeName ? personKey(effects.proposal.employeeName) : null, templateKey: effects.proposal.templateKey, templateName: effects.proposal.templateName ?? null, ...(effects.proposalAsked?.length ? { asked: effects.proposalAsked } : {}), ...(effects.proposalLevel ? { level: effects.proposalLevel } : {}), ...(effects.proposalPayroll ? { payroll: effects.proposalPayroll } : {}), ...(effects.proposalPayroll === "yes" && effects.proposalPayrollAmount ? { payrollAmount: effects.proposalPayrollAmount } : {}), ...(effects.proposal.policyLine ? { policyLine: effects.proposal.policyLine } : {}), ...(effects.proposalAccountKey ? { accountKey: effects.proposalAccountKey } : {}), ...(effects.proposal.formDate ? { incidentDate: effects.proposal.formDate } : {}), ...(effects.proposal.subject === "team" && effects.proposal.locationId ? { teamStoreId: effects.proposal.locationId } : {}), ...(effects.proposalPriorDates?.length ? { priorDates: effects.proposalPriorDates } : {}), ...(effects.proposal.locationId ? { storeId: effects.proposal.locationId } : {}) }
     : null;
   /* Fix batch items 4 and 3: this turn's "Did you mean", for the next turn's name question record (one-way keys only). */
   const nameQuestionSlot: NameQuestionSlot | null = effects.nameQuestion && stoppedAt === "reply"
