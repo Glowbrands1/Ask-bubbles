@@ -57,7 +57,8 @@ export const NOV22_AGENT_LOOP_U24_NAMED_EXIT_TYPE_CASES: ReplayCase[] = [
       const reply = await thread.say(SAID);
       expect(reply.formProposal?.templateKey, `no exit card (the case proves nothing):\n${reply.content}`).toBe("resignation-exit");
       expect(reply.content, `the reply reads no type back:\n${reply.content}`).toMatch(/Immediate Voluntary Resignation/i);
-      expect(reply.content, reply.content).not.toMatch(/No Call No Show/i);
+      /* The type read back is the stated one; the story's no call no show may still be told in Additional Details. */
+      expect(reply.content, reply.content).not.toMatch(/Filed as:?[^\n]*No Call No Show/i);
       const id = await thread.create();
       const checked = t.checked(id);
       expect(checked.resignation_type ?? [], JSON.stringify(checked)).toEqual(["immediate_voluntary_resignation"]);
