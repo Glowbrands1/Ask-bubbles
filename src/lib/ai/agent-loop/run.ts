@@ -5,6 +5,7 @@ import { speaksOfTheManager, withoutManagerReasoning } from "./reasoning-leak";
 import type { WhichFormSlot } from "./which-form";
 import { storesNamedNotSaid, withoutStoreGuess } from "./store-guess";
 import { TEAM_SUBJECT_LABEL } from "@/lib/forms/team-subject";
+import { cardLines, historyReply, withoutAppNotes, withoutCardLines } from "./card-lines";
 import "server-only";
 
 import { withFullOffRosterName, withOneInactiveLine } from "./off-roster-line";
@@ -389,10 +390,16 @@ function cardFacts(card: ChatFormProposal | null): Record<string, unknown> {
     observation: card.issue ?? null,
   };
 }
-/* PR 2: a reply that showed a card, by the server's card record (`card-record.ts`), never by reading the reply's text. */
-function withCardNote(message: ChatMessage, showedCard: boolean): string {
+/*
+ * PR 2: a reply that showed a card, by the server's card record (`card-record.ts`), never by reading the reply's text.
+ * QA's Bubbles live re-run 2 (22 Nov 2026, "saved ≠ card"): the full card reply plus CARD_NOTE was a card reply the model
+ * copied on turns where it called no tool (note and all). An earlier reply is now shown without app notes and without
+ * card lines; a card reply's card is one "[card shown under this reply: <form> …]" line (`card-lines.ts`).
+ */
+function withCardNote(message: ChatMessage, card: CardRecord | undefined): string {
   const content = String(message.content);
-  return message.role === "assistant" && showedCard ? `${content}\n\n${CARD_NOTE}` : content;
+  if (message.role !== "assistant") return content;
+  return historyReply(content, card ? (card.templateName ?? "a card") : null);
 }
 
 /**
@@ -400,7 +407,7 @@ function withCardNote(message: ChatMessage, showedCard: boolean): string {
  * manager turn ends with its `[message_id: <id>]` (evidence.ts), so a tool's evidence can name the turn it quotes.
  */
 function conversationOf(history: readonly ChatMessage[], question: string, questionMessageId: string | null | undefined, cards: ReadonlyMap<number, CardRecord>): { role: "user" | "assistant"; content: unknown }[] {
-  const shown = new Map(history.map((message, index) => [message, withCardNote(message, cards.has(index))]));
+  const shown = new Map(history.map((message, index) => [message, withCardNote(message, cards.get(index))]));
   const turns = identifiedTurns(history, question, questionMessageId).map((turn, position, all) => {
     const message = position < all.length - 1 ? history.find((candidate, index) => (candidate.id ?? generatedId(index)) === turn.id) : undefined;
     const content = message ? (shown.get(message) ?? turn.content) : turn.content;
@@ -1223,21 +1230,34 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
        * card this turn the reply is compared with the card ON SCREEN (its recorded level and policy line), never with no
        * card: a reply that repeats the card's own policy or level is no mismatch.
        */
-      const cardShownNow = () => effects.proposal !== null || cardOnScreen !== null;
+      /*
+       * QA's Bubbles live re-run 2 (22 Nov 2026, "saved ≠ card"): after one reply with no card the last reply's card is
+       * none, and nothing was checked ("payroll is not deductable" then "verbal warning", both claimed, neither on the
+       * card). The card still on the manager's screen is this chat's latest card (its server record) until a form opens.
+       */
+      const shownCard = cardOnScreen ?? (!input.openFormId ? context.earlierCard ?? null : null);
+      const cardShownNow = () => effects.proposal !== null || shownCard !== null;
+      /* A turn with no card call while a card is shown: a card line is a card nobody proposed (`card-lines.ts`). */
+      const noCardThisTurn = () => effects.proposal === null && shownCard !== null;
       /* B6: an exit card shown under the last reply, and none proposed this turn. */
-      const exitOnScreenOnly = !effects.proposal && cardOnScreen?.templateKey === appConfig().formKeys.exit;
+      const exitOnScreenOnly = !effects.proposal && shownCard?.templateKey === appConfig().formKeys.exit;
       const mismatchOf = (reply: string) => {
         const claims = cardClaims(reply);
         /* QA's Bubbles re-run (22 Nov 2026, A3): a restated Observation keeps the Observation's dates (`observation-dates.ts`). */
         /* QA's Bubbles round 2 (22 Nov 2026, U22): an exit card's reply reads back only the lines Create saves (`exit-read-back.ts`). */
         if (effects.proposal) return [...cardMismatch(claims, effects.proposal), ...observationDateMismatch(reply, effects.proposal.issue), ...exitReadBackMismatch(reply, effects.proposal.exitReadBack)];
-        const onScreen = cardOnScreen ? ({ warningLevel: cardOnScreen.level ?? null, policyLine: cardOnScreen.policyLine ?? null } as unknown as ChatFormProposal) : null;
+        const onScreen = shownCard ? ({ warningLevel: shownCard.level ?? null, policyLine: shownCard.policyLine ?? null, payrollDeduct: shownCard.payroll ?? null, payrollDeductAmount: shownCard.payrollAmount ?? null } as unknown as ChatFormProposal) : null;
         /*
          * QA's Bubbles live re-run 2 (22 Nov 2026, B6): no card this turn ("she is resigning due to second job …" called no
          * tool and replied "Noted the reason — **Reason for Resignation:** Second job."): an exit card on screen saves
          * nothing new, so a Details or answer line goes back (`exit-read-back.ts`, onScreenOnly).
          */
-        return [...cardMismatch(claims, onScreen), ...exitReadBackMismatch(reply, exitOnScreenOnly ? [] : null, true)];
+        return [
+          ...cardMismatch(claims, onScreen),
+          ...exitReadBackMismatch(reply, exitOnScreenOnly ? [] : null, true),
+          ...(noCardThisTurn() ? cardLines(reply).map((line) => `card line "${line.label}"`) : []),
+          ...(noCardThisTurn() && /\[app note:/i.test(reply) ? ["card line (an app note copied from an earlier card reply)"] : []),
+        ];
       };
       const reviewed = stoppedAt === "reply" && !effects.formUpdate && !effects.formOpened && !input.openFormId && cardShownNow();
       const wrong = reviewed ? mismatchOf(text) : [];
@@ -1263,7 +1283,7 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
         /* A misdated restatement of the Observation is no change the manager asked for: it is never offered as one. */
         const observationDate = (field: string) => /^observation date \(/.test(field);
         /* U22: an exit field line the card does not save is no change the manager asked for either. */
-        const exitField = (field: string) => /^exit field "/.test(field);
+        const exitField = (field: string) => /^exit field "/.test(field) || /^card line /.test(field);
         const offer = (shownForm === appConfig().formKeys.corrective ? still : still.filter((field) => !caOnly(field))).filter((field) => !observationDate(field) && !exitField(field));
         const withoutPolicyLine = (reply: string) => (shownForm !== appConfig().formKeys.corrective ? reply.replace(/^\s*\*\*Policy:?\*\*:?.*$\n?/gim, "").trim() : reply);
         selfReview = { mismatched: [...wrong, ...(missing ? ["policy line (missing)"] : [])], fixed: still.length === 0 && Boolean(again) && !noPolicyLine(again) };
@@ -1308,6 +1328,8 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
         if (!(offer.length > 0 && cardShownNow()) && still.some(observationDate)) text = withoutMisdatedRestatements(text, effects.proposal?.issue);
         /* U22: still reading back an exit line the card does not save: that line is left out (the card shows what is saved). */
         if (!(offer.length > 0 && cardShownNow()) && still.some(exitField)) text = exitOnScreenOnly ? withoutUnsavedExitLines(text, [], true) : withoutUnsavedExitLines(text, effects.proposal?.exitReadBack);
+        /* Saved ≠ card: still writing card lines with no card call, they are left out (the card under the earlier reply is what is saved). */
+        if (noCardThisTurn() && still.some((field) => /^card line /.test(field))) text = withoutCardLines(text);
       }
       /*
        * THE DRAFT'S HONESTY CHECK HANDS BACK FIRST (code-check #48, batch D): with a draft open, a reply that claims the
@@ -1459,6 +1481,8 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
    * JSON object (bare, or in a ```json fence) with a string "content" is that string; the trace says reply_unwrapped.
    */
   text = unwrapReply(text);
+  /* QA's Bubbles live re-run 2 (22 Nov 2026): the app's own notes ("[app note: …]") are never shown to the manager. */
+  text = withoutAppNotes(text);
   const latencyMs = Math.round(performance.now() - started);
   noteModelCall({
     model: CLAUDE_MODEL,

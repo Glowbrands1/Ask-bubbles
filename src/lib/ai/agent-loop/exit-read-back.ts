@@ -42,7 +42,7 @@ const ANSWER_LABEL = new Map(EXIT_YES_NO_QUESTIONS.filter((question) => question
 const DATE_LABELS: readonly string[] = Object.values(EXIT_ROLE_LABEL);
 const ANSWER_LABELS: ReadonlySet<string> = new Set(ANSWER_LABEL.values());
 const DETAIL_LABELS: readonly string[] = [EXIT_DETAIL_LABEL.resignationMethod, EXIT_DETAIL_LABEL.resignationReason, EXIT_DETAIL_LABEL.rehire, EXIT_ACCOUNT_LABEL.resignation, ...ANSWER_LABEL.values()];
-const CHECKED_LABELS: readonly string[] = [...new Set([...DATE_LABELS, ...DETAIL_LABELS])];
+export const EXIT_CARD_LABELS: readonly string[] = [...new Set([...DATE_LABELS, ...DETAIL_LABELS])];
 /* The Details section's "Eligible for Rehire" line and the form's rehire question are one field (`exit-library.ts`). */
 const SAME_FIELD = new Map<string, string>([[EXIT_DETAIL_LABEL.rehire, ANSWER_LABEL.get("eligible_for_rehire") ?? EXIT_DETAIL_LABEL.rehire]]);
 
@@ -79,7 +79,7 @@ function labelledLines(reply: string): LabelledLine[] {
   for (const line of reply.split("\n")) {
     for (const match of line.matchAll(/\*\*([^*]+?)\*\*:?\s*([^*]*)/g)) {
       const said = flat(match[1]!.replace(/:\s*$/, ""));
-      const label = CHECKED_LABELS.find((known) => flat(known) === said);
+      const label = EXIT_CARD_LABELS.find((known) => flat(known) === said);
       if (label) out.push({ label: SAME_FIELD.get(label) ?? label, value: match[2]!.trim(), line });
     }
   }
