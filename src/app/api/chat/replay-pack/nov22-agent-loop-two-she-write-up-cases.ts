@@ -118,8 +118,9 @@ export const NOV22_AGENT_LOOP_TWO_SHE_WRITE_UP_CASES: ReplayCase[] = [
       for (const text of [out.reply, out.issue, out.saved]) {
         expect(text, all(out)).not.toMatch(/Fenna was giving/);
         expect(text, all(out)).not.toMatch(/cussed at Fenna/);
-        // The live model may write his name for "he" itself; either way her "her" is named.
-        expect(text, all(out)).toMatch(/(?:He|Ozren) was giving Fenna an attitude/);
+        // The live model may write his name, first or full, for "he" itself (a live run wrote "coworker Ozren Brack was
+        // giving Fenna an attitude", which is right); either way her "her" is named. Widened on purpose, 22 Nov 2026.
+        expect(text, all(out)).toMatch(/(?:He|Ozren(?: Brack)?) was giving Fenna an attitude/);
       }
     },
   },
