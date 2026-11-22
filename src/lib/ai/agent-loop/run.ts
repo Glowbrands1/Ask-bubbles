@@ -102,6 +102,7 @@ export const AGENT_LOOP_TOTAL_MS = 100_000;
 export const TOOL_SETTLE_MS = 5_000;
 
 import { LOOP_FAILED_REPLY, STEP_LIMIT_REPLY } from "./replies";
+import { withoutWrittenToolCalls, writtenToolCall } from "./written-tool-call";
 import { fieldLabel, readableValue } from "./saved-diff";
 
 /*
@@ -1425,6 +1426,18 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
             if (promises(text)) text = text.split(/(?<=[.!?])\s+/).filter((sentence) => !PROMISES_LATER_WORK.test(sentence)).join(" ").trim();
             if (earlierDraft(text)) text = text.split(/(?<=[.!?])\s+/).filter((sentence) => !speaksOfEarlierDraft(sentence)).join(" ").trim();
           }
+        }
+        /*
+         * QA's Bubbles live round 3 (22 Nov 2026; the regression set on PR 2): the reply was a tool call written as text
+         * (`_exec:find_staff {"person_evidence": …}`), so nothing was looked up and the manager saw tool syntax. Read by the
+         * loop's own tool names (`written-tool-call.ts`): it goes back once to make the call; if it comes back, those lines
+         * are left out (and with nothing left, the step-limit reply).
+         */
+        const toolNames = agentLoopTools().map((definition) => definition.name);
+        if (stoppedAt === "reply" && writtenToolCall(text, toolNames)) {
+          const again = await handBack(`[app check] Your reply wrote the ${writtenToolCall(text, toolNames)} tool call as text, so it never ran and the manager would see it. Make the call itself now (a tool call, never text), then write your reply to the manager.`);
+          if (again) text = again;
+          if (writtenToolCall(text, toolNames)) text = withoutWrittenToolCalls(text, toolNames) || STEP_LIMIT_REPLY;
         }
         /*
          * QA's Bubbles live round 3 (22 Nov 2026, A7): "Filed at <store>, where Woven lists <P>" is the rules book's own line
