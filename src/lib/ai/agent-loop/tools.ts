@@ -1441,6 +1441,18 @@ export async function findStaff(context: ToolContext, input: { name?: unknown; p
       const chosen = confirmedCandidates[0]!;
       return { matches: [staffRow(chosen.employee)], confirmed_by_manager: { name: chosen.name, answer: "confirmed" }, note: `The manager confirmed ${chosen.name} for "${typed}". Do not ask again: propose the card for ${chosen.name}.` };
     }
+    /*
+     * u35a (coder 5's live run 2 on 1c71e11, 22 Nov 2026): T4 "fix her last name vargas" confirmed <P> (no card yet: no
+     * account), then T6 "… liesl moerno vargas" and T8 "Liesl Loreno Vargas", new close spellings with <P> the only close
+     * candidate, each asked "Did you mean **<P>**?" again. The manager already confirmed that person in this chat (any
+     * spelling, from the question records): a close spelling with them alone as its candidate is them. A "no" still asks.
+     */
+    const confirmedPerson = close.kind === "confirm" && close.candidates.length === 1 && !saidNo && spellingKeysConfirmedFor(nameQuestionView(context, read.roster), close.candidates[0]!.employee.id).length > 0
+      ? close.candidates[0]!
+      : null;
+    if (confirmedPerson) {
+      return { matches: [staffRow(confirmedPerson.employee)], confirmed_by_manager: { name: confirmedPerson.name, answer: "confirmed" }, note: `The manager already confirmed ${confirmedPerson.name} in this chat; "${typed}" is a close spelling of them. Do not ask again: use ${confirmedPerson.name}.` };
+    }
     const onCard = !nearMissNever && close.kind === "confirm" && close.candidates.length === 1 && !saidNo
       ? Boolean(recordCard?.employeeKey && recordCard.employeeKey === personKey(close.candidates[0]!.employee.id))
       : false;
