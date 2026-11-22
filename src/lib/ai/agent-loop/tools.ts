@@ -5654,6 +5654,8 @@ export async function proposeForm(
       job_title: card.employeeRole ?? null,
       form_date: card.formDate ?? null,
       observation: card.issue ?? null,
+      /* Port of the sibling app's #1241 (its 266-chat run, 039/241): the account's label is the form's own (Details of Coaching on a coaching form). */
+      account_label: await accountLabelOf(template.currentVersion?.document),
       /*
        * QA (20 Nov 2026, board row f060): the Corrective-Action-only fields are on a Corrective Action card's result only.
        * On a Coaching card they came back null, and the model read the nulls as "Payroll deduct and warning level aren't
@@ -5829,6 +5831,8 @@ export async function coachTeam(context: ToolContext, effects: ToolEffects, inpu
       ...(teamStoreAsked(card) ? { choose_store_from: teamStoreChoices(card), store_question: teamStoreQuestion(), store_note: TEAM_STORE_NOTE } : {}),
       form_date: card.formDate ?? null,
       observation: card.issue ?? null,
+      /* Port of the sibling app's #1241 (its 266-chat run, 039/241): the account's label is the form's own (Details of Coaching on a coaching form). */
+      account_label: await accountLabelOf(template.currentVersion?.document),
       create_offered: card.supportsInlineDraft,
     },
     facts: { team_card: true },
@@ -6767,6 +6771,17 @@ function directEditFix(loaded: { readonly version: { readonly document: unknown 
     editable_fields: [...new Set([...draftable, ...stated])],
     form_date_field: "The form's date is the field form_date: edit_form with values { form_date: \"MM/DD/YYYY\" }, the date the manager typed (never the reviser).",
   };
+}
+
+/** The label of the form's own account field (Observation of Offense, Details of Coaching, …), read from its template. */
+async function accountLabelOf(document: unknown): Promise<string | null> {
+  try {
+    const { fieldsForVariant, interpolate, parseFormDocument } = await import("@/lib/forms/document");
+    const field = fieldsForVariant(parseFormDocument(document), null).find((entry) => entry.key === "observation" || entry.key === "coaching_details");
+    return field ? interpolate(field.label, null) : null;
+  } catch {
+    return null;
+  }
 }
 
 /** The form's own field keys, from its template document. */
