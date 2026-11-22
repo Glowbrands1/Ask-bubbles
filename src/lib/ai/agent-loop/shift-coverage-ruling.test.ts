@@ -17,6 +17,8 @@ describe("the rules book: a shift missed without coverage (B4a, item 22)", () =>
     const ruling = rules.split("\n").find((line) => /without finding coverage/.test(line)) ?? "";
     expect(ruling).toMatch(/is Attendance/);
     expect(ruling).toMatch(/cite Shift Replacement/);
+    /* QA's live regression set (22 Nov 2026, item 1): named only inside the acknowledgement sentence, it still picks the section. */
+    expect(ruling).toMatch(/also when they name it only in saying the employee acknowledged it/);
     expect(ruling).toMatch(/acknowledged \(in Woven or on paper\) is background to the account, never the offense/);
   });
   it("the Standards of Conduct takes only acknowledgements left undone", () => {
