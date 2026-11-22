@@ -41,3 +41,20 @@ describe("replyWithShortName (the reply)", () => {
     expect(replyWithShortName("Using **Fenna Prewitt** from your staff list.", "Fenna Prewitt", "Fenna", "Corrective Action Form").replaced).toBe(0);
   });
 });
+
+/* QA's live round 3 (22 Nov 2026, U35): "Liesl Vargas received a customer complaint" for "Liesl Moreno Vargas" (names invented below). */
+describe("a two-word surname is never cut to one word", () => {
+  const short = (text: string) => withShortName(text, "Anouk Pellinor Duarte", "Anouk").text;
+  it("first name + part of the surname, either word, is the person", () => {
+    expect(short("Anouk Duarte received a customer complaint.")).toBe("Anouk received a customer complaint.");
+    expect(short("Anouk Pellinor was late; Anouk Pellinor Duarte's shift ran over.")).toBe("Anouk was late; Anouk's shift ran over.");
+  });
+  it("leaves the first name alone, quoted words, and a one-word surname as before", () => {
+    expect(short("a complaint about Anouk")).toBe("a complaint about Anouk");
+    expect(short('she said "Anouk Duarte was rude"')).toBe('she said "Anouk Duarte was rude"');
+    expect(withShortName("Tovald Brisbee was late", "Tovald Brisbee", "Tovald").text).toBe("Tovald was late");
+  });
+  it("the reply's Observation line too", () => {
+    expect(replyWithShortName("**Observation of Offense:** Anouk Duarte received a customer complaint.", "Anouk Pellinor Duarte", "Anouk", "Corrective Action Form").text).toBe("**Observation of Offense:** Anouk received a customer complaint.");
+  });
+});
