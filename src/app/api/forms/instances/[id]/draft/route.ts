@@ -2905,15 +2905,38 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
           import("@/lib/forms/short-name"),
         ]);
         const roster = await loadScopedRoster(actor.scope).catch(() => []);
-        const own = roster.filter((row) => displayName(row).toLowerCase() === loaded.instance.employeeName!.trim().toLowerCase());
+        const formName = loaded.instance.employeeName.trim().replace(/\s+/g, " ").toLowerCase();
+        /*
+         * QA's live round-2 re-run (22 Nov 2026, U23): the card was "<preferred> <last>" (the manager typed the preferred
+         * name), but the saved Observation used the Woven legal first name. The form's person is found by the preferred
+         * name too, and the directory's other name for them (the legal one) is a spelling to replace with the card's name;
+         * alone, the legal first name becomes the card's first name when no other staff member has it. The directory's
+         * own names only.
+         */
+        const preferredName = (row: (typeof roster)[number]) => (row.preferredFirstName?.trim() ? `${row.preferredFirstName.trim()} ${row.lastName.trim()}`.toLowerCase() : null);
+        const own = roster.filter((row) => displayName(row).toLowerCase() === formName || preferredName(row) === formName);
         const sameByRoster = own.length === 1 ? rosterSpellingOf(own[0]!.id, roster) : undefined;
+        const byPreferred = own.length === 1 && preferredName(own[0]!) === formName && displayName(own[0]!).toLowerCase() !== formName ? own[0]! : null;
+        const legalFirst = byPreferred?.firstName.trim() ?? "";
+        const legalFirstOnlyTheirs =
+          legalFirst !== "" && !roster.some((row) => row.id !== byPreferred!.id && [row.firstName, row.preferredFirstName ?? ""].some((first) => first.trim().toLowerCase() === legalFirst.toLowerCase()));
         if (sameByRoster) {
           const prose = fields.filter((field) => !field.policyGrounded && !DERIVED_POLICY_FIELD_KEYS.has(field.key) && !keeps(field.key)).map((field) => field.key);
           for (const key of prose) {
             const value = loopCardDraft.values[key];
             if (typeof value !== "string" || value === "") continue;
-            const fixed = withCorrectedSpelling(value, loaded.instance.employeeName, [], sameByRoster);
-            if (fixed.replaced > 0) loopCardDraft.values = { ...loopCardDraft.values, [key]: fixed.text };
+            const fixed = withCorrectedSpelling(value, loaded.instance.employeeName, byPreferred ? [displayName(byPreferred)] : [], sameByRoster);
+            let text = fixed.text;
+            let replaced = fixed.replaced;
+            if (legalFirstOnlyTheirs) {
+              const cardFirst = loaded.instance.employeeName.trim().split(/\s+/)[0]!;
+              const bare = new RegExp(`(?<![\\p{L}'-])${legalFirst.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\p{L}-])`, "gu");
+              text = text.replace(bare, () => {
+                replaced += 1;
+                return cardFirst;
+              });
+            }
+            if (replaced > 0) loopCardDraft.values = { ...loopCardDraft.values, [key]: text };
           }
         }
       }
