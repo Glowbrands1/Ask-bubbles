@@ -118,3 +118,25 @@ describe("account facts kept: a dashed date is the same date written out (QA liv
     ]);
   });
 });
+
+/*
+ * Ported from the sibling app: its QA2's live R3 (21 Nov 2026; the person invented here: Odell Brannagh): the saved
+ * Observed stated the lateness three times for two dates: "<First> was late to work on November 17, 2026. <First> was
+ * late to work on November 18, 2026. <First> was late on the last two shifts, 11/17 and 11/18." The card's sentence lists
+ * the two dates the drafter's two sentences already hold, so nothing is added.
+ */
+describe("account facts kept: a sentence listing dates the write-up states one by one (sibling's QA2 R3)", () => {
+  const DRAFTED = "Observed:\nOdell was late to work on November 17, 2026. Odell was late to work on November 18, 2026.\n\nExpectation:\nOdell is expected to arrive on time for every scheduled shift.";
+
+  it("\"<First> was late on the last two shifts, 11/17 and 11/18.\": each lateness is stated once", () => {
+    const { text, added } = withAccountFactsKept(DRAFTED, "Odell was late on the last two shifts, 11/17 and 11/18.", "Odell Brannagh");
+    expect(added).toEqual([]);
+    expect(text).toBe(DRAFTED);
+    expect(text.match(/was late/g)).toHaveLength(2);
+  });
+
+  it("control: a date the write-up does not hold, or a reason it left out, is still added", () => {
+    expect(missingAccountFacts(DRAFTED, "Odell was late on the last three shifts, 11/16, 11/17 and 11/18.", "Odell Brannagh")).not.toEqual([]);
+    expect(missingAccountFacts(DRAFTED, "Odell was late on 11/17 and 11/18 because his car broke down twice.", "Odell Brannagh")).not.toEqual([]);
+  });
+});

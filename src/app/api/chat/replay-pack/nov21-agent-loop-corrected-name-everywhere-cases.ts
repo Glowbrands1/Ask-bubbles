@@ -28,6 +28,12 @@ export const T4 = "she is at Omaha dodge";
 /** The live model's account: the manager's T1, the misspelt name and all. */
 export const ACCOUNT = "Thaddea Krol was 10 minutes late on her last two shifts. On the first shift she was verbally coached on policy and expectations. Then she was late again on 10/15.";
 /** The old spelling, never the corrected one ("Kroll" holds "Krol"). */
+/*
+ * QA's Bubbles round 2 (22 Nov 2026), near-miss names: T1's "Thaddea Krol" is a close spelling of the staff list's
+ * Thaddea Kroll, so T1 and T2 now get "Did you mean …?" (Pau's rule) instead of a card kept as typed; T3's card is the
+ * first card. The assertions are unchanged: no card, reply or saved field keeps the old spelling. The saved write-up's
+ * spelling is corrected at Create (the draft route's staff-spelling step).
+ */
 export const OLD_SPELLING = /\bKrol(?!l)/i;
 
 const users = (view: LoopView) => view.turns.filter((turn) => turn.role === "user").length;

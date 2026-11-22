@@ -68,7 +68,9 @@ const ALLOW_LIST: readonly Allowed[] = [
     // Changed on purpose (21 Nov 2026, the agent loop port): 3 → 5. The loop card's own payroll amount and its exit
     // card's lines (payroll answer, separation type and reason, or Additional Details), as in the sibling app's Create.
     // Still one write per stated fact, at creation, onto the new form; only for a card that carries `fromAgentLoop`.
-    count: 5,
+    // Changed on purpose (22 Nov 2026, round 2 U54): 5 → 6. The loop transfer card's New Location, written as the
+    // manager's statement only after its quote is found in the chat and its words read again as one store.
+    count: 6,
     reason: "Create: the card's answers stated at creation, written once onto a new, empty form (design: create is step 6).",
   },
   {

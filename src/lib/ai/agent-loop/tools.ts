@@ -1,3 +1,5 @@
+import { editDistance as closeEditDistance } from "@/lib/forms/close-spelling";
+import { whichFormChoice, whichFormEntry, type WhichFormEntry, type WhichFormRecord } from "./which-form";
 import "server-only";
 
 import { keptPlanSteps } from "@/lib/forms/stated-plan-steps";
@@ -17,9 +19,9 @@ import { answeredNameQuestions, answerNamesSomeoneElse, everKeptOrUsedTyped, isC
 import { employeeFirstName } from "@/lib/forms/employee-reference";
 import { AFFIRMATIVE, displayName, editDistance, matchEmployeeName, nameConfirmationQuestion, readNameConfirmation, rosterSpellingOf, type RosterEmployee } from "@/lib/forms/employee-match";
 import { offRosterTyped } from "@/lib/forms/roster-only-names";
-import { parseFormDocument } from "@/lib/forms/document";
+import { checkboxGroupsForVariant, parseFormDocument } from "@/lib/forms/document";
 import { draftableCheckboxGroups, draftableFields } from "@/lib/forms/responsibility";
-import { authorizedSalonIds, PLACE_LEVEL, readSalonMentions, rosterSalonName } from "./places";
+import { authorizedSalonIds, PLACE_LEVEL, readSalonMentions, rosterSalonName, salonStreet } from "./places";
 import type { DirectoryRosterRow } from "@/lib/forms/employee-roster";
 import { inlineDraftVariantKey, supportsInlineDraft } from "@/lib/forms/inline-draft";
 import { authorizeInstance, InstanceNotVisibleError, instanceListFilterFor, visibleInstances } from "@/lib/forms/instance-scope";
@@ -129,6 +131,8 @@ export interface ToolContext {
   readonly earlierCard?: CardRecord | null;
   /** Fix batch items 4 and 3: the "Did you mean" questions this chat's find_staff gave, from the server's record. */
   readonly nameQuestions?: readonly NameQuestionRecord[];
+  /** QA's Bubbles re-run (22 Nov 2026, A11): the last reply asked which of these listed forms to open (`which-form.ts`). */
+  readonly whichFormAsked?: WhichFormRecord | null;
   /**
    * QA (16 Nov 2026, the live check of the pasted-script rule): a form is chosen in this conversation before this turn
    * (a card was made, a form is open, or the app asked who a form is for). No name question is asked before there is a form.
@@ -243,6 +247,23 @@ async function formsOnFileAskedFor(context: ToolContext, evidence: unknown, pers
     if (open && sameRosterPerson(open, person, roster)) return { ok: true };
   }
   return { ok: false, reason: "evidence_other_person", reasonCode: "privacy_not_this_person" };
+}
+
+/**
+ * R14 (QA's Bubbles round 2, 22 Nov 2026): the one full name the manager typed that starts with this one-word name: the
+ * word, then one or two capitalised words straight after it ("Test Employee" in "for Team Member, Test Employee."). Null
+ * for a name of two words or more, or when the manager typed none or several.
+ */
+export function typedFullNameOf(word: string, managerWords: string): string | null {
+  if (!/^[\p{L}'-]+$/u.test(word)) return null;
+  const found = new Set<string>();
+  for (const match of managerWords.matchAll(/(?<![\p{L}'-])[\p{L}'-]+/gu)) {
+    const said = match[0];
+    if (said.toLowerCase() !== word.toLowerCase() || said[0] !== said[0]!.toUpperCase()) continue;
+    const rest = /^((?:[ \t]+\p{Lu}[\p{Ll}'-]+){1,2})(?![\p{L}'-])/u.exec(managerWords.slice((match.index ?? 0) + said.length));
+    if (rest) found.add(`${said}${rest[1]}`.replace(/\s+/g, " ").trim());
+  }
+  return found.size === 1 ? [...found][0]! : null;
 }
 
 /** find_staff's offer for a name not on the staff list (the propose_form refusal gives the same line). */
@@ -478,6 +499,12 @@ export function requestTurns(
   return { ok: true, ids, quotes, texts };
 }
 
+/** QA's Bubbles re-run (22 Nov 2026, A11): open_form / edit_form of a listed form while "Which one?" is open needs the manager's pick. */
+function whichFormRefusal(context: ToolContext, id: string, evidence: unknown): ToolResult | null {
+  const choice = whichFormChoice({ asked: context.whichFormAsked, instanceId: id, evidence, history: context.history, question: context.question, questionMessageId: context.questionMessageId });
+  return choice.ok ? null : { reason_code: choice.reason_code, error: choice.error };
+}
+
 /** read_form, open_form and edit_form of a form that is not open: refused unless the manager asked about this form's person. */
 async function formOnFileRefusal(context: ToolContext, id: string, evidence: unknown): Promise<ToolResult | null> {
   // A form that is not visible (or an id that is no form's: not_a_form_id) is the tool's own load to report, first.
@@ -700,6 +727,32 @@ export function priorActionsProblem(priorActions: string, requestWords: string, 
  * middle of "<step> — <topic> — <date>") that the model's list does not hold puts the manager's line in place of the
  * model's line for that date (or after the list when no line has that date). Everything else the model wrote is kept.
  */
+/**
+ * The model's prior actions checked step by step (round 2, U09): each step (split on ";" or a line break) with
+ * `priorActionsProblem`; the good ones kept in order, each step with a problem left off with its reason. A problem that
+ * is about the whole list (the count the manager said) or a list with no good step refuses the whole line, as before.
+ */
+export function priorActionsSplit(
+  priorActions: string,
+  requestWords: string,
+  incidentDate: string | null,
+): { kept: string | null; dropped: { step: string; reason: string }[]; problem: ReturnType<typeof priorActionsProblem> } {
+  const whole = priorActionsProblem(priorActions, requestWords, incidentDate);
+  if (!whole) return { kept: priorActions, dropped: [], problem: null };
+  const separator = priorActions.includes("\n") ? "\n" : "; ";
+  const steps = priorActions.split(/\s*(?:;|\n)\s*/).filter((step) => step.trim() !== "");
+  const dropped: { step: string; reason: string }[] = [];
+  const kept = steps.filter((step) => {
+    const problem = readDates(step).length > 0 ? priorActionsProblem(step, requestWords, incidentDate) : null;
+    if (problem && problem.count_said === undefined) dropped.push({ step: step.trim(), reason: problem.reason });
+    return !problem || problem.count_said !== undefined;
+  });
+  if (kept.length === 0 || dropped.length === 0) return { kept: null, dropped: [], problem: whole };
+  const line = kept.join(separator);
+  const rest = priorActionsProblem(line, requestWords, incidentDate);
+  return rest ? { kept: null, dropped: [], problem: whole } : { kept: line, dropped, problem: null };
+}
+
 export function priorActionsWithStatedTopics(priorActions: string, stated: readonly string[]): string {
   const separator = priorActions.includes("\n") ? "\n" : "; ";
   const lines = priorActions.split(/\s*(?:;|\n)\s*/).filter((line) => line.trim() !== "");
@@ -793,6 +846,8 @@ export interface ToolEffects {
   personAsked?: { templateKey: string };
   /** coach_team asked "create all?" for this open Coaching draft this turn, for the record. */
   teamConfirm?: { sourceInstanceId: string };
+  /** QA's Bubbles re-run (22 Nov 2026, A11): the forms this turn's find_past_forms listed with which_form_question. */
+  whichFormAsked?: WhichFormEntry[];
   /** QA (#1055's follow-up): this turn's tools offered the exit form for this person (the exit_offer record). */
   exitOffered?: { employeeId: string | null; name: string };
   /** find_staff ran this turn: a person was named, so a card without one is not "nobody named" (item 6). */
@@ -862,6 +917,12 @@ export function __setAgentLoopDirectoryForTests(read: (() => Promise<readonly Di
 }
 
 export async function inactiveMatch(scope: AccessScope, typed: string): Promise<string | null> {
+  const row = await inactiveMatchRow(scope, typed);
+  return row ? `${row.preferredFirstName?.trim() || row.firstName!.trim()} ${row.lastName!.trim()}` : null;
+}
+
+/** The one former employee in the login's scope the typed full name is (`inactiveMatch`), with their Woven stores. */
+async function inactiveMatchRow(scope: AccessScope, typed: string): Promise<DirectoryRosterRow | null> {
   const wanted = words(typed);
   if (wanted.length < 2) return null;
   try {
@@ -872,7 +933,7 @@ export async function inactiveMatch(scope: AccessScope, typed: string): Promise<
       const own = words([row.firstName, row.preferredFirstName ?? "", row.lastName].join(" "));
       return wanted.every((word) => own.includes(word));
     });
-    return hits.length === 1 ? `${hits[0]!.preferredFirstName?.trim() || hits[0]!.firstName!.trim()} ${hits[0]!.lastName!.trim()}` : null;
+    return hits.length === 1 ? hits[0]! : null;
   } catch {
     return null;
   }
@@ -1005,6 +1066,12 @@ async function wovenStoresOf(scope: AccessScope, id: string, roster: readonly Ro
   return [...new Set([...(primary ? [primary] : []), ...theirs])].filter((store) => choices.includes(store));
 }
 
+/** QA's Bubbles re-run (22 Nov 2026, A7): an earlier manager turn of this chat already named this place (its words, whole). */
+function storeSaidBefore(context: ToolContext, typed: string): boolean {
+  const earlier = (context.history as ChatMessage[]).filter((turn) => turn.role === "user").map((turn) => String(turn.content ?? ""));
+  return typed.trim() !== "" && earlier.some((said) => holdsPhrase(said, typed));
+}
+
 /** The line that offers the stores (A7). */
 const OFFER_ONE = " in Woven — use that?";
 const OFFER_SEVERAL = " in Woven — which one?";
@@ -1015,10 +1082,27 @@ const OTHER_STORES = () => `Your other ${locationWords()}: `;
  * the person's Woven stores first, primary first ("<First> works at **A** and **B** in Woven — which one?"), then the
  * manager's other stores. The model ends its reply with ask_exactly, once.
  */
-function storeOffer(typed: string, firstName: string, wovenStores: readonly string[], choices: readonly string[]) {
+function storeOffer(typed: string, firstName: string, wovenStores: readonly string[], choices: readonly string[], repeated = false) {
   const name = (id: string) => rosterSalonName(id) ?? id;
+  /* QA's Bubbles re-run (22 Nov 2026, A7): on the repeat, each store with its street address from the app's own data, when it has one. */
+  const withStreet = (id: string) => {
+    const shown = name(id);
+    const street = salonStreet(id);
+    return street && !shown.toLowerCase().includes(street.toLowerCase()) ? `${shown}, ${street}` : shown;
+  };
   const others = choices.filter((id) => !wovenStores.includes(id)).map(name);
   const bold = wovenStores.map((id) => `**${name(id)}**`);
+  /*
+   * A7: the manager named the same place again after the offer ("store location is <place>, sd"). The same question
+   * again went nowhere live; the person's own stores are offered as a pick instead ("Did you mean …?"), never kept as
+   * typed (a store on a form is always a real store).
+   */
+  if (repeated && wovenStores.length > 0) {
+    const streets = wovenStores.map((id) => `**${withStreet(id)}**`);
+    const pick = streets.length === 1 ? `Did you mean ${streets[0]}?` : `Did you mean ${streets.slice(0, -1).join(", ")} or ${streets.at(-1)}?`;
+    const rest = others.length > 0 ? ` ${OTHER_STORES()}${choices.filter((id) => !wovenStores.includes(id)).map(withStreet).join(", ")}.` : "";
+    return { typed, woven_stores: wovenStores.map(name), other_stores: others, said_again: true, ask_exactly: `I can't match "${typed}" to a ${locationWord()}. ${pick}${rest}` };
+  }
   const lead = `"${typed}" isn't a ${locationWord()} name I know.`;
   const offer =
     wovenStores.length === 1
@@ -1110,7 +1194,7 @@ export async function findStaff(context: ToolContext, input: { name?: unknown; p
   }
   if (found.length === 0) {
     /* Close spellings, as the app's own name check reads them ("Perpetua Winne" → Perpetua Wynne). */
-    const close = matchEmployeeName(typed, read.roster);
+    const close = loopNameMatch(typed, read.roster);
     /*
      * The person on this chat's own card, spelled a little off ("Edit Evangelyne Strande CA" after Evangeline Strand's card;
      * the live re-run's sf-s26): it is that person, as the manager can see the card. Only one close candidate, and
@@ -1554,7 +1638,7 @@ export async function findPastForms(context: ToolContext, input: { employee_name
   const shownCard = context.cardOnScreen ?? context.earlierCard ?? null;
   if (shownCard?.employeeKey) {
     const read = await rosterFor(context.actor.scope);
-    const close = read.kind === "read" ? matchEmployeeName(typed, read.roster) : null;
+    const close = read.kind === "read" ? loopNameMatch(typed, read.roster) : null;
     const cardIsClose = close?.kind === "confirm" && close.candidates.some((candidate) => personKey(candidate.employee.id) === shownCard.employeeKey);
     const typedClose = cardIsClose ? await closeSpellingOfRoster(context, effects, typed) : null;
     if (typedClose) return typedClose;
@@ -1728,6 +1812,7 @@ export async function findPastForms(context: ToolContext, input: { employee_name
           };
         })()
       : null;
+    if (effects && !onScreenChoice && forms.length > 1 && input.open === true) effects.whichFormAsked = forms.map(whichFormEntry);
     let withdrawn: string | null = null;
     if (input.open === true && effects && !onScreenChoice) {
       effects.openRequested = typed;
@@ -2014,6 +2099,32 @@ export function incidentDates(managerWords: string, priorActions: string | null)
  * - No match: said so; the card keeps its name.
  * Null when this is not a correction of the card's name (every other path is unchanged).
  */
+/**
+ * QA's Bubbles re-run (22 Nov 2026, C3): "create a CA form for <Last>, <First> at dodge. she was late on 10-16" (a name
+ * not on the staff list) was kept as "<Last>, <First>": the reply's bold broke ("**<Last>,**."), the Observation said the
+ * lateness twice and the Expectation used the surname as the first name. A name written as two single words around one
+ * comma is, by its own shape, "Last, First": it is read as "First Last". Any other shape is kept as typed.
+ */
+export function lastCommaFirst(name: string): string {
+  const parts = /^([\p{L}][\p{L}'-]*)\s*,\s*([\p{L}][\p{L}'-]*)$/u.exec(name.trim());
+  return parts ? `${parts[2]} ${parts[1]}` : name;
+}
+
+/**
+ * Whether a typed full name is a close spelling of a person's: its first name within a few letters of one of their first
+ * names, and its last name within a few letters of their last name (at most two letters, and at most a third of the
+ * longer name). Both must hold, so a shared first name alone ("Avery" for another Avery) is never a correction.
+ */
+function closeSpellingOfName(said: readonly string[], own: { readonly first: readonly string[]; readonly last: readonly string[] }): boolean {
+  const close = (a: string, b: string) => {
+    const allowed = Math.min(2, Math.max(1, Math.floor(Math.max(a.length, b.length) / 3)));
+    return closeEditDistance(a, b, allowed) <= allowed;
+  };
+  const first = said[0]!;
+  const last = said.at(-1)!;
+  return own.first.some((name) => close(name, first)) && own.last.some((name) => close(name, last));
+}
+
 function cardNameCorrection(
   context: ToolContext,
   effects: ToolEffects,
@@ -2061,15 +2172,24 @@ function cardNameCorrection(
   const own = cardPerson ? { first: words([cardPerson.firstName, cardPerson.preferredFirstName ?? ""].join(" ")), last: words(cardPerson.lastName) } : { first: words(cardName).slice(0, 1), last: words(cardName).slice(-1) };
   const sharesAName = said.length >= 2 && (own.first.includes(said[0]!) || own.last.includes(said.at(-1)!));
   /*
+   * QA's Bubbles live re-run (22 Nov 2026, A1, BLOCKER): the card was for the manager's misspelling "<P1>", kept as typed
+   * (not on the staff list); "Her name is <P2>" (the staff list's spelling) shares no name exactly with it, so it was no
+   * correction, and the next card was refused as another person (person_change_not_asked) until the turn timed out. Pau:
+   * a name correction is the manager's own words. A full name whose first AND last names are each a close spelling of
+   * the card's person's (`closeSpellingOfName`) is that person, corrected, whatever form the message asks for.
+   */
+  const spelledClose = said.length >= 2 && closeSpellingOfName(said, own);
+  /*
    * QA's live c219 re-ask (16 Nov 2026): a card for a name not on the roster asks the manager to check that name (its
    * off_roster_name line; recorded as a name question). A different full name given in the next message answers it: a
    * correction of the card's person, though the two names share no word. Read from the record, never the reply's text.
    */
   const answersCardCheck = !cardPerson && card.nameKey !== null && spellingKeysConfirmedForName(view, typed).includes(card.nameKey);
-  if (!sharesAName && !answersCardCheck) return null;
-  /* A roster person the model chose by id corrects the card only when this turn answers the card's recorded name check. */
-  if (options.byId && !answersCardCheck) return null;
-  if (card.templateKey !== templateKey) {
+  if (!sharesAName && !answersCardCheck && !spelledClose) return null;
+  /* A roster person the model chose by id corrects the card only when this turn answers the card's recorded name check, or spells the card's person close. */
+  if (options.byId && !answersCardCheck && !spelledClose) return null;
+  /* A close spelling with another form asked for: the corrected person, and the form the manager asked for (their own request). */
+  if (card.templateKey !== templateKey && !(spelledClose && !answersCardCheck)) {
     /*
      * QA (16 Nov 2026, live c219): a message that answers the name check of the card on screen is about THAT card. It never
      * makes another form unless the message itself asks for one (new_form_evidence, checked against this turn's words).
@@ -2091,7 +2211,7 @@ function cardNameCorrection(
     return { refusal: { reason_code: "ambiguous_person", error: `More than one person on the staff list is ${typed}. The card was not changed. Call find_staff with this name and ask which one.` } };
   }
   if (declined || latestTurnKeepsOrUsesTyped(view, typed)) return { asTyped: true, from: cardName };
-  const close = matchEmployeeName(typed, roster);
+  const close = loopNameMatch(typed, roster);
   const candidates = close.kind === "confirm" ? close.candidates.map((candidate) => candidate.name) : [];
   if (candidates.length > 0 && close.kind === "confirm") {
     effects.nameQuestion = { offeredIds: close.candidates.slice(0, 5).map((candidate) => candidate.employee.id), typed };
@@ -2166,10 +2286,75 @@ function typedInThisRequest(context: ToolContext, roster: readonly RosterEmploye
  * nobody on the roster and not a close spelling of anyone on it is taken as typed, with the card's off-roster line.
  * Only a close spelling of a roster person is asked about (ruling A); a single word still gets the use-<name> offer.
  */
+/**
+ * QA's Bubbles round 2 (22 Nov 2026, U25/U34/U35, HIGH): "create a ca form for <First> Garica" (Woven: "<First> Garcia")
+ * was kept as typed. With TYPED_NAME_ENABLED the shared matcher answers one close staff name as "unchecked" with its
+ * closeName (the old path's "Woven has <name>" note), and the loop read only "confirm" as close. Pau's rule: a staff
+ * match is taken only on the manager's exact words or her yes to "Did you mean <name>?". Either answer is close here, so
+ * the name is offered, never kept as typed.
+ */
+function closeToRoster(name: string, roster: readonly RosterEmployee[]): boolean {
+  return loopNameMatch(name, roster).kind === "confirm";
+}
+
+/**
+ * The shared matcher, read as the loop reads it (round 2, U25/U34/U35): one close staff name that TYPED_NAME_ENABLED
+ * answers as "unchecked" with its closeName is a "Did you mean <name>?" question here (confirm, that one candidate),
+ * never a name kept as typed. A name the manager already chose to keep as typed stays unchecked (no closeName).
+ */
+function loopNameMatch(typed: string, roster: readonly RosterEmployee[]): ReturnType<typeof matchEmployeeName> {
+  const match = matchEmployeeName(typed, roster);
+  if (match.kind !== "unchecked" || !match.closeName) return match;
+  const row = roster.find((person) => displayName(person) === match.closeName);
+  return row ? { kind: "confirm", candidates: [{ employee: row, name: match.closeName }] } : match;
+}
+
+/** An exit option's label on this template version ("No Call No Show"), or null when the version cannot be read. */
+function exitOptionLabel(document: unknown, option: string): string | null {
+  if (!document) return null;
+  try {
+    for (const group of checkboxGroupsForVariant(parseFormDocument(document), null)) {
+      const found = group.options.find((candidate) => candidate.key === option);
+      if (found) return found.label;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+/**
+ * Whether the manager's quoted words name a form option by its own label (round 2, U24): at least half of the label's
+ * words (letters only, three or more), each said exactly, as a prefix of three letters or more ("Vol" for Voluntary), or
+ * as a close spelling ("volunatary"). Read from the label, never a list of phrasings.
+ */
+export function quoteNamesOption(quote: string, label: string): boolean {
+  const wordsOf = (text: string) => [...new Set((text.toLowerCase().match(/[a-z]+/g) ?? []).filter((word) => word.length >= 3))];
+  const labelWords = wordsOf(label);
+  const said = (text: string) => (text.toLowerCase().match(/[a-z]+/g) ?? []);
+  /* "didn't" is "did not": the contraction's own two words, so "didn't fulfill her notice" names "Did not fulfill … notice". */
+  const quoted = said(quote.replace(/([a-z])n['’]t\b/gi, "$1 not"));
+  if (labelWords.length === 0) return false;
+  /*
+   * Ported from the sibling app (QA, 22 Nov 2026, #1215): a word sharing a stem of six letters or more with a label word
+   * names it ("fulfilling" names "Fulfilled"). A typed word that only starts with a short label word never names it:
+   * "notice" is not the label's "not" (it made "gave 2 weeks notice and is fulfilling them" name "Did not fulfill … notice").
+   */
+  const stem = (a: string, b: string) => {
+    let shared = 0;
+    while (shared < a.length && shared < b.length && a[shared] === b[shared]) shared += 1;
+    return shared >= 6;
+  };
+  const named = labelWords.filter((word) =>
+    quoted.some((typed) => typed === word || (typed.length >= 3 && word.startsWith(typed)) || (word.length >= 4 && typed.startsWith(word)) || stem(typed, word) || (typed.length >= 5 && word.length >= 5 && editDistance(typed, word) <= 2)),
+  );
+  return named.length >= Math.max(1, Math.ceil(labelWords.length / 2)) && (labelWords.length < 2 || named.length >= 2);
+}
+
 function fullNameTakenAsTyped(context: ToolContext, roster: readonly RosterEmployee[], typed: string): boolean {
   const name = typed.replace(/\s+/g, " ").trim();
   if (words(name).length < 2 || namesAPlace(name) || isJobTitlePhrase(name)) return false;
-  if (rosterMatches(name, roster).length > 0 || matchEmployeeName(name, roster).kind === "confirm") return false;
+  if (rosterMatches(name, roster).length > 0 || closeToRoster(name, roster)) return false;
   return holdsPhrase(requestTurnsText(context, roster), name);
 }
 
@@ -2263,7 +2448,7 @@ function closeSpellingNotSettled(
     const windows = plain.slice(1).map((word, at) => `${plain[at]} ${word}`);
     const isExactName = (name: string) => exactNames.some((exact) => exact.toLowerCase().replace(/\s+/g, " ") === name.trim().toLowerCase().replace(/\s+/g, " "));
     const close = [...extractEmployeeNames(text), ...windows].filter((name) => !isExactName(name)).find((name) => {
-      const match = matchEmployeeName(name, [row]);
+      const match = loopNameMatch(name, [row]);
       return match.kind === "confirm" && match.candidates.some((candidate) => candidate.employee.id === row.id);
     });
     if (close) return confirmed.includes(personKey(close)) || saidYes(personKey(close)) ? null : close;
@@ -2335,7 +2520,7 @@ async function closeSpellingOfRoster(context: ToolContext, effects: ToolEffects 
   const read = await rosterFor(context.actor.scope);
   if (read.kind !== "read" || namesAPlace(typed)) return null;
   if (read.roster.some((row) => fullNamesOf(row).some((full) => samePerson(full, typed)))) return null;
-  const match = matchEmployeeName(typed, read.roster);
+  const match = loopNameMatch(typed, read.roster);
   if (match.kind !== "confirm" || match.candidates.length === 0) return null;
   const view = nameQuestionView(context, read.roster);
   const key = personKey(typed);
@@ -2561,7 +2746,12 @@ async function personNotNamed(context: ToolContext, template: { key: string; nam
  * and it asks a missing last day worked, as before. Never a date or a reason the manager did not give.
  */
 async function exitCardTicks(isExit: boolean, termination: boolean, requestWords: string, today: string, exitHow: string | null = null): Promise<{ exit_ticks?: string[]; exit_unset?: string[] }> {
-  if (!isExit) return {};
+  /*
+   * Ported from the sibling app: its QA's live L6 (22 Nov 2026): a termination's reply said "Filed as" twice:
+   * exit_termination already gives its tick (Immediate involuntary separation) with the rules book's line for it, and
+   * exit_ticks gave the same tick again with its own "Filed as:" line. A termination's tick is given once, by exit_termination.
+   */
+  if (!isExit || termination) return {};
   const [{ readExitFacts, exitFactValues }, library] = await Promise.all([import("@/lib/forms/exit-facts"), import("@/lib/forms/exit-library")]);
   const facts = readExitFacts(requestWords, today);
   const labels: Record<string, string> = {
@@ -2851,7 +3041,13 @@ export function withoutNamedSalon(account: string, salonId: string): string {
     return words.length > 0 && words.some((word) => nameWords.has(word)) && words.every((word) => nameWords.has(word) || filler.has(word)) &&
       readSalonMentions(`at ${phrase}`).some((mention) => mention.salonIds.includes(salonId));
   };
-  const out = account.replace(/(^|[\s,;])(?:at|in)\s+((?:[A-Za-z0-9'’-]+\s+){0,4}[A-Za-z0-9'’-]+)(?=\s*(?:[,.;!?]|$))(,?)/gi, (whole, before: string, phrase: string, comma: string) =>
+  /*
+   * R13 (QA's Bubbles round 2, 22 Nov 2026): "At Dodge, NE on 10/16/26 Testy …" lost "At Dodge" and kept "NE on …". A
+   * ", <word>" right after the phrase that is a word of that store's own name (its state) is the phrase's too.
+   */
+  const withState = account.replace(/(^|[\s,;])(?:at|in)\s+((?:[A-Za-z0-9'’-]+\s+){0,4}[A-Za-z0-9'’-]+)\s*,\s*([A-Za-z]{2,})(?![A-Za-z0-9'’-])(\.?)/gi, (whole, before: string, phrase: string, tail: string, dot: string, offset: number) =>
+    nameWords.has(tail.toLowerCase()) && isThatSalon(phrase) ? (offset === 0 ? "" : `${before.replace(/\s+$/, "")}${dot}`) : whole);
+  const out = withState.replace(/(^|[\s,;])(?:at|in)\s+((?:[A-Za-z0-9'’-]+\s+){0,4}[A-Za-z0-9'’-]+)(?=\s*(?:[,.;!?]|$))(,?)/gi, (whole, before: string, phrase: string, comma: string) =>
     isThatSalon(phrase) ? (before.trim() === "" ? "" : before.replace(/\s+$/, "")) + (comma && before.trim() !== "" ? comma : "") : whole);
   if (out === account) return account;
   const tidy = out.replace(/\s+([,.;!?])/g, "$1").replace(/[ \t]{2,}/g, " ").replace(/^[\s,;]+/, "").trim();
@@ -3006,6 +3202,7 @@ export async function proposeForm(
     person_evidence?: unknown;
     exit_evidence?: unknown;
     new_form_evidence?: unknown;
+    same_card_evidence?: unknown;
     form_change_evidence?: unknown;
     request_evidence?: unknown;
     policy?: unknown;
@@ -3015,6 +3212,10 @@ export async function proposeForm(
     exit_type?: unknown;
     exit_how?: unknown;
     exit_how_evidence?: unknown;
+    new_store?: unknown;
+    new_store_evidence?: unknown;
+    exit_method?: unknown;
+    exit_method_evidence?: unknown;
     effective_date?: unknown;
     payroll_deduct?: unknown;
     payroll_amount?: unknown;
@@ -3082,7 +3283,10 @@ export async function proposeForm(
   if (read.kind === "read") {
     const id = typeof input.employee_id === "string" ? input.employee_id.trim() : "";
     const person = id ? read.roster.find((row) => row.id === id) : undefined;
-    const typed = typeof input.employee_name === "string" ? withoutJobTitle(tidyTypedName(input.employee_name)) : "";
+    const rawTyped = typeof input.employee_name === "string" ? tidyTypedName(input.employee_name) : "";
+    const titleless = withoutJobTitle(rawTyped);
+    /* R14: "Test Employee", the exact full name the manager typed, is a name; its last word is not a title to strip. */
+    const typed = titleless !== rawTyped && words(titleless).length === 1 && typedFullNameOf(titleless, requestTurnsText(context, read.roster))?.toLowerCase() === rawTyped.toLowerCase() ? rawTyped : titleless;
     /*
      * HARD GUARD, A "NO" NEVER SEATS THE NAME (NEAR_MISS_QUESTION_RULES, parity gap #45): when the manager answered
      * "no" to this chat's own "Did you mean **<A>**?" or "Is this for **<A>**?", <A> is not put on the card.
@@ -3151,7 +3355,7 @@ export async function proposeForm(
       offRosterName = typed;
       effects.nameQuestion ??= { offeredIds: [], typed, asksFullName: true };
     }
-    else if (typed && !rosterMatches(typed, read.roster).length && !namesAPlace(typed) && offRosterTyped(typed, `for ${typed}`, read.roster.map(displayName)) && matchEmployeeName(typed, read.roster).kind !== "confirm" && typedInThisRequest(context, read.roster, typed)) {
+    else if (typed && !rosterMatches(typed, read.roster).length && !namesAPlace(typed) && offRosterTyped(typed, `for ${typed}`, read.roster.map(displayName)) && !closeToRoster(typed, read.roster) && typedInThisRequest(context, read.roster, typed)) {
       employee = { name: typed, salonIds: [] };
       offRosterName = typed;
       /* The card's off_roster_name line asks the manager to check this name: recorded, so a full name next turn corrects it. */
@@ -3165,6 +3369,20 @@ export async function proposeForm(
      * did_you_mean) comes back exactly as find_staff gives it, with no card; a name find_staff finds no one for and says
      * nothing about falls to propose_form's own not_on_roster refusal below, as before.
      */
+    /*
+     * R14 (QA's Bubbles round 2, 22 Nov 2026): "… for Team Member, Test Employee. Test was assigned …" — the model passed
+     * "Test" on five calls and every reply asked "use Test". A one-word name nobody on the roster has, typed by the manager
+     * in this request as the first word of exactly one capitalised full name ("Test Employee"), goes back with that full
+     * name: propose again with it (taken as typed when it is nobody on the roster, QA's c220/c224 rule). Their own words.
+     */
+    else if (typed && !id && words(typed).length === 1 && rosterMatches(typed, read.roster).length === 0 && typedFullNameOf(typed, requestTurnsText(context, read.roster))) {
+      const fullTyped = typedFullNameOf(typed, requestTurnsText(context, read.roster))!;
+      return {
+        reason_code: "full_name_typed",
+        full_name_typed: fullTyped,
+        error: `The manager typed the full name "${fullTyped}" in this request; "${typed}" is only its first word. Propose the card again now with employee_name "${fullTyped}" exactly, never "${typed}", and never ask "use ${typed}".`,
+      };
+    }
     else if (typed && !id && (lookedUp = await lookUpForCard(context, effects, typed, input.person_evidence, read.roster)).kind !== "none") {
       if (lookedUp.kind === "ask") return lookedUp.result;
       if (!(await personNamedOrPicked(context, lookedUp.person, read.roster))) return personNotNamed(context, template, effects, lookedUp.person);
@@ -3192,14 +3410,15 @@ export async function proposeForm(
       };
     }
   } else {
-    const typedName = typeof input.employee_name === "string" ? tidyTypedName(input.employee_name) : "";
+    const typedName = typeof input.employee_name === "string" ? lastCommaFirst(tidyTypedName(input.employee_name)) : "";
     if (!typedName && !effects.staffLookedUp) return askWhoFor(context, template, effects);
     if (!typedName) return { reason_code: "missing_input", error: "Give the employee's name as the manager typed it." };
     employee = { name: typedName, salonIds: [] };
   }
   /* QA (train 5): a name taken as typed is shown in title case when typed all lowercase (`shownAsTyped`). */
   if (offRosterName) {
-    offRosterName = shownAsTyped(offRosterName);
+    /* C3: every check above reads the name as typed; the card's name reads "<Last>, <First>" as "<First> <Last>". */
+    offRosterName = shownAsTyped(lastCommaFirst(offRosterName));
     employee = { ...employee, name: offRosterName };
   }
   /*
@@ -3218,7 +3437,12 @@ export async function proposeForm(
    * over this message) are gone. A new form while a draft is open, or a new request after an earlier card, is the
    * model's new_form_evidence: this message's words asking for another or a new form.
    */
-  const asksNewForm = verifyEvidence(input.new_form_evidence, identifiedTurns(context.history as ChatMessage[], context.question, context.questionMessageId), { thisTurnOnly: true }).ok;
+  /*
+   * U21 (QA's Bubbles round 2, 22 Nov 2026): "make this for <B> instead of <A>" is the manager asking for the card on
+   * screen for <B> (same_card_evidence, this message's words), a form for <B> as much as "another form for <B>" is.
+   */
+  const sameCardAsked = verifyEvidence(input.same_card_evidence, identifiedTurns(context.history as ChatMessage[], context.question, context.questionMessageId), { thisTurnOnly: true }).ok;
+  const asksNewForm = verifyEvidence(input.new_form_evidence, identifiedTurns(context.history as ChatMessage[], context.question, context.questionMessageId), { thisTurnOnly: true }).ok || sameCardAsked;
   /*
    * CARD_PERSON_THIS_REQUEST_ENABLED (QA2's 17 Nov case, this app's old path, conv_mwk2t40v27izanu: a store manager named
    * in the account, "<Y>, messaged <X> asking …", took the exit form from <X>, whose request set it). With a card on
@@ -3328,6 +3552,31 @@ export async function proposeForm(
    * add any details before you press Create."). A sentence of the account (or the prior actions) whose second-person words
    * the manager never typed is taken out (`withoutTextToManager`, read against the manager's own messages).
    */
+  /*
+   * U21 (QA's Bubbles round 2, 22 Nov 2026): T10 "make this for <B> instead of <A>" got "What happened?": the account on
+   * screen was dropped. With same_card_evidence, this chat's latest card of this form for another person (the server's
+   * record: its form and person keys, never its text, QA's c163) is the card asked for. With no account from the model the
+   * card goes back once, to be proposed with that card's account as the chat shows it, with this person's name;
+   * copied_from_card says it came from that card. A level and a payroll answer are never copied.
+   */
+  const sameCardOf = sameCardAsked
+    ? ([...(context.cardRecords ?? [])].reverse().find((record) => record.templateKey === key) ?? null)
+    : null;
+  const sameCardOther = Boolean(sameCardOf && (employee.id ? sameCardOf.employeeKey !== personKey(employee.id) : sameCardOf.nameKey !== personKey(employee.name)));
+  if (sameCardOther && !(typeof input.what_happened === "string" && input.what_happened.trim())) {
+    return {
+      reason_code: "same_card_account_missing",
+      error: `The manager asked for the ${template.name} on screen for ${employee.name}. Propose ${employee.name}'s card again now with what_happened: that card's account exactly as this chat shows it (the Observation of the earlier card), with ${employee.name}'s name in place of the earlier person's, and same_card_evidence again. Never ask what happened; never copy a level or a payroll answer.`,
+    };
+  }
+  const copiedFromCard = sameCardOther;
+  /*
+   * QA's ruling (22 Nov 2026, U21): "make the SAME corrective action but for <B>" is the manager's explicit ask, so the
+   * earlier card's level and payroll answer (its server record) are copied too, shown on <B>'s card, and the reply says
+   * they were copied. Without it ("make this for <B> instead of <A>") another person starts clean. The model says which
+   * (same_card_evidence kind "same_form"); no word list.
+   */
+  const sameFormAsked = sameCardOther && (input.same_card_evidence as { kind?: unknown } | null | undefined)?.kind === "same_form";
   const managerText = [...(context.history as ChatMessage[]).filter((turn) => turn.role === "user").map((turn) => String(turn.content ?? "")), context.question].join("\n");
   const accountRead = withoutTextToManager(typeof input.what_happened === "string" ? input.what_happened : "", managerText);
   const priorRead = withoutTextToManager(typeof input.prior_actions === "string" ? input.prior_actions : "", managerText);
@@ -3554,6 +3803,15 @@ export async function proposeForm(
    * gave, the Employee Exit Form's too. Code compares formats only (`accountMissing`); the model writes the account.
    */
   const exitForm = template.key === appConfig().formKeys.exit;
+  /*
+   * Ported from the sibling app: its QA's live L6 (22 Nov 2026): "…, terminated for job abandonment, not eligible for rehire" got the account "job abandonment"
+   * from the model, so the card and the saved reason lost "terminated for". An exit account that is part of one clause the
+   * manager typed in this request is that whole clause, as typed (`own-clause.ts`; never a list of words).
+   */
+  if (exitForm && whatHappened) {
+    const own = (await import("@/lib/forms/own-clause")).ownClauseHolding(whatHappened, requestWords);
+    if (own) whatHappened = own;
+  }
   if (exitForm && whatHappened) accountLost = accountMissing(withoutPayrollClauses(requestWords), whatHappened, null);
   if (whatHappened && ACCOUNT_FORMS.has(template.key)) {
     /* A message that is only a level or payroll answer (the model's evidence quotes the whole message) is not the incident's account. */
@@ -3924,9 +4182,30 @@ export async function proposeForm(
    * <name>"), the level an earlier card held never reaches the next card; the manager states it again.
    */
   const samePersonOnScreen = Boolean(context.cardOnScreen && (employee.id ? context.cardOnScreen.employeeKey === personKey(employee.id) : !context.cardOnScreen.employeeKey && context.cardOnScreen.nameKey === personKey(employee.name)));
+  /*
+   * QA's ruling (22 Nov 2026, Bubbles round 2 U35; amending the 16 Nov rule above for no-card replies): an answer the
+   * manager stated for THIS request stays on THIS person's card for the rest of the request, even across a reply with no
+   * card, until a new request (new_form_evidence), another person or another form. So with no card on screen, the
+   * request's latest record of this card still carries its level.
+   */
+  /*
+   * QA's amendment (22 Nov 2026, from the sibling app's port of U35): the carry holds only while the card is the SAME
+   * incident as the carried record, by the records' data: this turn's account is that record's account (its one-way key)
+   * or its incident date. A card whose account is a new incident ("another ca for <P>, she was rude to a guest on 11/14")
+   * starts clean even without new_form_evidence. A turn that gives no account ("verbal") is the same card.
+   */
+  const turnAccount = typeof input.what_happened === "string" ? input.what_happened.trim() : "";
+  const turnDate = typeof input.incident_date === "string" ? input.incident_date.trim() : "";
+  const sameIncident = (record: CardRecord) =>
+    turnAccount === "" || record.accountKey === cardAccountKey(turnAccount, input.incident_date) || Boolean(record.incidentDate && turnDate && record.incidentDate === turnDate);
+  const requestRecord = (has: (record: CardRecord) => boolean) => [...(context.cardRecords ?? [])].reverse().find((record) => isThisCard(record) && inRequest(record) && has(record)) ?? null;
+  /* With no card on screen (U35's carry), only the same incident's record carries. */
+  const sameIncidentRecord = (has: (record: CardRecord) => boolean) => requestRecord((record) => has(record) && sameIncident(record));
   const carriedRecord = samePersonOnScreen
-    ? ([...(context.cardRecords ?? [])].reverse().find((record) => isThisCard(record) && inRequest(record) && record.level) ?? (isThisCard(context.cardOnScreen) ? context.cardOnScreen : null))
-    : null;
+    ? (requestRecord((record) => Boolean(record.level)) ?? (isThisCard(context.cardOnScreen) ? context.cardOnScreen : null))
+    : !context.cardOnScreen && !context.openFormId
+      ? sameIncidentRecord((record) => Boolean(record.level))
+      : null;
   /*
    * QA (20 Nov 2026; Runner 2's c263): "Write me a CA form for <A> having a black crewneck on … on 11/13 and 11/6" after
    * "Please create a CA written warning for <A> for being out of dresscode on 11/13" was the SAME CA asked again with more
@@ -3937,7 +4216,8 @@ export async function proposeForm(
   const screenDate = sameCardOnScreen(context.cardOnScreen, template.key, employee) ? context.cardOnScreen!.incidentDate ?? null : null;
   const sameIncidentAskedAgain = asksNewForm && screenDate !== null && latestDates.some((given) => monthDayToIso(given, today) === screenDate);
   const carriedLevel = caOnlyFields && (!asksNewForm || sameIncidentAskedAgain) ? (carriedRecord?.level ?? null) : null;
-  const level = askedLevel && levelCheck?.ok ? askedLevel : carriedLevel;
+  const copiedLevel = !(askedLevel && levelCheck?.ok) && !carriedLevel && sameFormAsked && caOnlyFields ? (sameCardOf?.level ?? null) : null;
+  const level = askedLevel && levelCheck?.ok ? askedLevel : (carriedLevel ?? copiedLevel);
   /*
    * Fix batch item 7 (QA's targeted re-run, c163: a bare "yes" after "Payroll deduct and warning level aren't set" set
    * payroll). The card on screen asked two things in one line (its record's `asked`), and this message is one word, quoted
@@ -3981,11 +4261,17 @@ export async function proposeForm(
   const modelAccount = typeof input.what_happened === "string" ? input.what_happened.trim() : "";
   /* The key holds the incident date the model gave too: "another ca …, late on 11/14" after a card for 11/12 with the same words is another incident (PR 1c). */
   const sameCardKept = !context.openFormId && isThisCard(context.earlierCard) && Boolean(context.earlierCard.accountKey && modelAccount && context.earlierCard.accountKey === cardAccountKey(modelAccount, input.incident_date));
-  const openCard = isThisCard(context.cardOnScreen) ? context.cardOnScreen : sameCardKept ? context.earlierCard : null;
+  /* QA's ruling (22 Nov 2026, U35): with no card on screen, the request's latest record of this card carries its payroll answer. */
+  const openCard = isThisCard(context.cardOnScreen) ? context.cardOnScreen : sameCardKept ? context.earlierCard : !context.cardOnScreen && !context.openFormId ? sameIncidentRecord((record) => Boolean(record.payroll)) : null;
   const payrollRecord = payrollFields && !asksNewForm && openCard?.payroll ? openCard : null;
   if (payroll === null && !answerUnclear && payrollRecord?.payroll) {
     payroll = payrollRecord.payroll;
     if (payroll === "yes" && !amount && payrollRecord.payrollAmount) amount = payrollRecord.payrollAmount;
+  }
+  let copiedPayroll: "yes" | "no" | null = null;
+  if (payroll === null && !answerUnclear && sameFormAsked && payrollFields && sameCardOf?.payroll) {
+    payroll = copiedPayroll = sameCardOf.payroll;
+    if (payroll === "yes" && !amount && sameCardOf.payrollAmount) amount = sameCardOf.payrollAmount;
   }
   /* One question for a one-word answer to two (`answerUnclear`): which it answers, and for payroll the amount. */
   const payrollQuestion = `Which does that answer: payroll deduct, the warning level, or both? If payroll deduct applies for **${employee.name}**, how much?`;
@@ -4025,8 +4311,16 @@ export async function proposeForm(
   const rosterPerson = caOnlyFields && employee.id && read.kind === "read" ? read.roster.find((row) => row.id === employee.id) ?? null : null;
   const priorsOnFile = rosterPerson ? await finalizedPriorsOnFile(context, rosterPerson, read.kind === "read" ? read.roster : [], today) : [];
   const onFileLine = priorsOnFile.length > 0 ? priorsOnFileLine(priorsOnFile) : null;
-  const priorActionsRefused = askedPriorActions ? priorActionsProblem(askedPriorActions, onFileLine ? `${requestWords}\n${onFileLine}` : requestWords, date) : null;
-  const priorActions = priorActionsRefused ? null : askedPriorActions ? priorActionsWithStatedTopics(askedPriorActions, statedSteps).slice(0, 600) : statedSteps.length === 0 ? onFileLine : null;
+  /*
+   * QA's Bubbles round 2 (22 Nov 2026, U09): "JBA Policy Manual 1-1-2026, Verbal CA 11-1-2026. On 11-1-26 <P> violated …"
+   * dropped BOTH steps because one carries the incident's date. Each step is checked on its own (`priorActionsSplit`):
+   * the good ones are kept, and only a step with a problem is left off, with its reason.
+   */
+  const priorSplit = askedPriorActions ? priorActionsSplit(askedPriorActions, onFileLine ? `${requestWords}\n${onFileLine}` : requestWords, date) : null;
+  const priorActionsRefused = priorSplit ? (priorSplit.kept === null ? priorSplit.problem : null) : null;
+  const priorStepsLeftOff = priorSplit && priorSplit.kept !== null && priorSplit.dropped.length > 0 ? priorSplit.dropped : [];
+  const keptPriorActions = priorSplit?.kept ?? null;
+  const priorActions = priorActionsRefused ? null : keptPriorActions ? priorActionsWithStatedTopics(keptPriorActions, statedSteps).slice(0, 600) : statedSteps.length === 0 ? onFileLine : null;
   /*
    * QA's live re-test (21 Nov 2026, item 18): the prior actions the forms on file filled were read back "…, as you said"
    * (the manager never said them). Prior actions are the manager's statement only when their words state the steps
@@ -4131,7 +4425,13 @@ export async function proposeForm(
    * offered first (`storeOffer`, below); the rules book has the model propose again with the store the manager chose.
    */
   /* The typed words as a place first; "at <words>" only when they read as none (else the city alone in "at <city>, <ST> (<street>)" adds its other stores). */
-  const answeredSalonIds = typedSalon ? [...new Set((readSalonMentions(typedSalon).length > 0 ? readSalonMentions(typedSalon) : readSalonMentions(`at ${typedSalon}`)).flatMap((mention) => [...mention.salonIds]))] : [];
+  /*
+   * QA's Bubbles re-run (22 Nov 2026, A7): the typed store is read with the same store index as the regular chat path
+   * (`loadStoreIndex`): the registered stores plus the names Woven uses for them where a reviewer mapped them. Data only.
+   */
+  const storeIndex = typedSalon ? await (await import("@/lib/stores/woven-aliases")).loadStoreIndex().catch(() => undefined) : undefined;
+  const readTyped = (text: string) => readSalonMentions(text, storeIndex);
+  const answeredSalonIds = typedSalon ? [...new Set((readTyped(typedSalon).length > 0 ? readTyped(typedSalon) : readTyped(`at ${typedSalon}`)).flatMap((mention) => [...mention.salonIds]))] : [];
   const managerSalonIds = authorizedSalonIdsFor(context.actor.scope) ?? appConfig().locations().map((salon) => salon.id);
   const storeNotRead = typedSalon !== "" && answeredSalonIds.filter((id) => managerSalonIds.includes(id)).length !== 1;
   /*
@@ -4213,11 +4513,59 @@ export async function proposeForm(
   const readerTypeTicked = template.key === appConfig().formKeys.exit && typeof input.exit_how === "string"
     ? await (async () => {
         const [{ readExitFacts, exitFactValues }, library] = await Promise.all([import("@/lib/forms/exit-facts"), import("@/lib/forms/exit-library")]);
-        return (exitFactValues(readExitFacts(requestWords, today)).checked[library.EXIT_TYPE_GROUP] ?? []).length > 0;
+        /*
+         * QA's Bubbles re-run (22 Nov 2026, B6): "she gave 2 weeks notice and is fulfilling them" ticked Submitted & Fulfilled
+         * Notice AND the model's exit_how "Did not fulfill required 14 day / 30 day notice". The template's Resignation Details
+         * are ONE set of boxes split into two groups only for the page's layout (`exit-library.ts`), so a tick the reader
+         * makes in either group is the card's one decision, and exit_how is not carried.
+         */
+        const checked = exitFactValues(readExitFacts(requestWords, today)).checked;
+        return [library.EXIT_TYPE_GROUP, library.EXIT_NOTICE_GROUP].some((group) => (checked[group] ?? []).length > 0);
       })()
     : false;
-  const exitHow = template.key === appConfig().formKeys.exit && !exitTermination && !readerTypeTicked && typeof input.exit_how === "string" && EXIT_HOW.has(input.exit_how) && exitHowQuote !== "" && answerEvidence(context, input.exit_how_evidence, "request", evidencePerson, { requestTurnIds }).ok
+  /*
+   * QA's Bubbles round 2 (22 Nov 2026, U24, HIGH): "Immediate Vol Resignation … resigned via phone call" became No Call
+   * No Show (the model's exit_how, quoting "resigned via phone call"). exit_how is kept only when its quoted words name
+   * the option's own label on the form (`quoteNamesOption`: the template's data, no word list).
+   */
+  const exitHowLabel = typeof input.exit_how === "string" ? exitOptionLabel((template as { currentVersion?: { document?: unknown } | null }).currentVersion?.document, input.exit_how) : null;
+  const exitHow = template.key === appConfig().formKeys.exit && !exitTermination && !readerTypeTicked && typeof input.exit_how === "string" && EXIT_HOW.has(input.exit_how) && exitHowQuote !== "" && (exitHowLabel === null || quoteNamesOption(exitHowQuote, exitHowLabel)) && answerEvidence(context, input.exit_how_evidence, "request", evidencePerson, { requestTurnIds }).ok
     ? { option: input.exit_how, quote: exitHowQuote.slice(0, 300) }
+    : null;
+  /*
+   * U54 (QA's Bubbles round 2, 22 Nov 2026): "<P> … wants to transfer to dawley effective 11-2-26" saved no New Location.
+   * Where the person is moving is the model's reading (new_store), kept on the manager's words for it from this request
+   * (new_store_evidence), and read through the Woven-aware store index (`transfer-new-store.ts`). Exactly one store, or
+   * the card asks which (new_store_not_found); never a guess.
+   */
+  const transferCard = (await import("@/lib/forms/employment-change")).employmentChangeKind(template.key) === "transfer";
+  const newStoreSaid = transferCard && typeof input.new_store === "string" ? input.new_store.trim().slice(0, 80) : "";
+  const newStoreQuote = typeof (input.new_store_evidence as { quote?: unknown } | null | undefined)?.quote === "string" ? String((input.new_store_evidence as { quote: string }).quote).trim().slice(0, 300) : "";
+  const newStoreKept = newStoreSaid !== "" && newStoreQuote !== "" && newStoreQuote.toLowerCase().includes(newStoreSaid.toLowerCase()) && answerEvidence(context, input.new_store_evidence, "request", evidencePerson, { requestTurnIds }).ok;
+  const newStore = newStoreKept
+    ? await (async () => {
+        const [{ transferNewStoreName }, { loadStoreIndex }] = await Promise.all([import("@/lib/forms/transfer-new-store"), import("@/lib/stores/woven-aliases")]);
+        const name = transferNewStoreName(newStoreSaid, await loadStoreIndex());
+        return name ? { name, said: newStoreSaid, quote: newStoreQuote } : null;
+      })()
+    : null;
+  const newStoreNotRead = transferCard && newStoreSaid !== "" && !newStore
+    ? {
+        typed: newStoreSaid,
+        ask_exactly: newStoreKept
+          ? `"${newStoreSaid}" isn't a ${locationWord()} name I know. Which ${locationWord()} is ${employee.name ? employee.name.split(/\s+/)[0] : "this person"} moving to?`
+          : `Which ${locationWord()} is ${employee.name ? employee.name.split(/\s+/)[0] : "this person"} moving to?`,
+      }
+    : null;
+  /*
+   * U26 (QA's Bubbles round 2, 22 Nov 2026): "<GM> … left a voicemail for <P> … <P> returned the call and told <AGM> … she
+   * quit effective immediately" saved How Employee Resigned "Voicemail". How the person resigned is the model's reading
+   * (exit_method, one of the line's own methods), kept when the manager's quoted words of this request name it
+   * (`quoteNamesMethod`); Create writes it as their statement. A termination has no resignation method.
+   */
+  const exitMethodQuote = typeof (input.exit_method_evidence as { quote?: unknown } | null | undefined)?.quote === "string" ? String((input.exit_method_evidence as { quote: string }).quote).trim().slice(0, 300) : "";
+  const exitMethod = template.key === appConfig().formKeys.exit && !exitTermination && input.exit_type !== "termination" && typeof input.exit_method === "string" && exitMethodQuote !== "" && (await import("@/lib/forms/exit-details")).quoteNamesMethod(exitMethodQuote, input.exit_method) && answerEvidence(context, input.exit_method_evidence, "request", evidencePerson, { requestTurnIds }).ok
+    ? { label: input.exit_method, quote: exitMethodQuote }
     : null;
   let salonFromWoven: string | null = null;
   /* A7: the person's own Woven stores in the manager's scope, primary first, when the typed store was not read as one. */
@@ -4291,6 +4639,8 @@ export async function proposeForm(
     ...(payroll ? { payrollDeduct: payroll } : {}),
     ...(payroll === "yes" && amount ? { payrollDeductAmount: amount } : {}),
     ...(exitHow ? { exitHow: exitHow.option, exitHowQuote: exitHow.quote } : {}),
+    ...(newStore ? { newStore: newStore.name, newStoreSaid: newStore.said, newStoreQuote: newStore.quote } : {}),
+    ...(exitMethod ? { exitMethod: exitMethod.label, exitMethodQuote: exitMethod.quote } : {}),
     ...(priorActions ? { priorActions } : {}),
     ...(coachingTopic ? { coachingTopic } : {}),
     ...(planSteps.length > 0 ? { planSteps } : {}),
@@ -4329,9 +4679,21 @@ export async function proposeForm(
     if (named) {
       Object.assign(card, { locationId: named, locationName: rosterSalonName(named) ?? card.locationName, locationResolution: "resolved", authorizedLocationIds: [named], status: card.status === "needs_location" ? "ready" : card.status });
     } else if (card.locationResolution === "not_applicable" || card.locationResolution === "needs_selection") {
-      Object.assign(card, { locationId: null, locationResolution: "needs_selection", authorizedLocationIds: appConfig().locations().map((salon) => salon.id), status: "ready", supportsInlineDraft: true });
-      const askedBefore = context.history.some((turn) => turn.role === "assistant" && new RegExp(`which ${locationWord()} is this about`, "i").test(String(turn.content ?? "")));
-      whichSalon = !askedBefore;
+      /*
+       * QA's Bubbles round 2 (22 Nov 2026, U29; "Create without a store"): a global login's card for a person Woven lists
+       * at ONE store asked "Which store is this about?", and Create saved the form with no store. That one Woven store is
+       * the card's store, said as store_from_woven (the rules book's line), as a store manager's card already does.
+       */
+      const allStores = appConfig().locations().map((salon) => salon.id);
+      const theirs = employee.id ? await wovenStoresOf(context.actor.scope, employee.id, read.kind === "read" ? read.roster : [], allStores) : [];
+      if (theirs.length === 1) {
+        Object.assign(card, { locationId: theirs[0], locationName: rosterSalonName(theirs[0]!) ?? card.locationName, locationResolution: "resolved", authorizedLocationIds: [theirs[0]], status: card.status === "needs_location" ? "ready" : card.status });
+        salonFromWoven = rosterSalonName(theirs[0]!) ?? theirs[0]!;
+      } else {
+        Object.assign(card, { locationId: null, locationResolution: "needs_selection", authorizedLocationIds: allStores, status: "ready", supportsInlineDraft: true });
+        const askedBefore = context.history.some((turn) => turn.role === "assistant" && new RegExp(`which ${locationWord()} is this about`, "i").test(String(turn.content ?? "")));
+        whichSalon = !askedBefore;
+      }
     }
   }
   /*
@@ -4498,7 +4860,7 @@ export async function proposeForm(
     ...(earlierKept ? { earlier_card: { kept: true, ...(earlierRow ? { employee: displayName(earlierRow) } : {}), form: earlier!.templateName ?? earlier!.templateKey } } : {}),
     ...(otherNamed.length > 0 ? { account_names_other_person: { named: otherNamed, card_person: employee.name } } : {}),
     ...(unset.length > 0 && !answerUnclear ? { unset } : {}),
-    ...(payrollFields && !amountOnForm && (payroll || typedAmount) ? { payroll_question_only: `The ${template.name} asks only whether payroll deduction applies (Yes / No); it has no amount or reason line. Keep the amount and the reason the manager gave in the account (what_happened): it goes in Additional Details.` } : {}),
+    ...(payrollFields && !amountOnForm && (payroll || typedAmount) ? { payroll_question_only: `The ${template.name} asks only whether payroll deduction applies (Yes / No); it has no payroll amount line and no line for the reason of a deduction. Keep a deduction's amount and its reason in the account (what_happened): they go in Additional Details. This is about payroll only: the reason the person is leaving has its own line on the form (Reason for Resignation), which Create fills; never say the form has no reason line.` } : {}),
     ...(answerUnclear ? { payroll_answer_unclear: { ask_exactly: payrollQuestion } } : {}),
     ...(levelUnnamed && !levelAnswerUnclear ? { level_not_named: { ask_exactly: LEVEL_QUESTION } } : {}),
     /*
@@ -4598,12 +4960,34 @@ export async function proposeForm(
       return row && displayName(row) !== employee.name;
     })() ? { legal_name_in_woven: displayName(read.roster.find((candidate) => candidate.id === employee.id)!) } : {}),
     ...(await (async () => {
-      if (card.status !== "needs_location" || !employee.id) return {};
+      if (card.status !== "needs_location") return {};
+      if (!employee.id) {
+        /*
+         * U26 (QA's Bubbles round 2, 22 Nov 2026): a former employee Woven lists at a store in the manager's scope was
+         * asked "Bellevue or Omaha?". Their own Woven store is offered first, as an active person's is.
+         */
+        if (!offRosterName) return {};
+        const former = await inactiveMatchRow(context.actor.scope, employee.name);
+        const theirs = (former?.locationIds ?? []).filter((id) => (card.authorizedLocationIds ?? []).includes(id));
+        return theirs.length === 1 ? { employee_store: rosterSalonName(theirs[0]!) ?? theirs[0]! } : {};
+      }
       const primary = await rosterPrimarySalon(context.actor.scope, employee.id);
       return primary && (card.authorizedLocationIds ?? []).includes(primary) ? { employee_store: rosterSalonName(primary) ?? primary } : {};
     })()),
     ...(salonFromWoven ? { store_from_woven: salonFromWoven } : {}),
-    ...(storeNotRead ? { typed_store_not_found: storeOffer(typedSalon, replyNameFor(card.employeeName ?? employee.name, read.kind === "read" ? read.roster : [], extractEmployeeNames(managerTurns(context)), employee.id ?? null), wovenStores, managerSalonIds) } : {}),
+    /* U21: the account was copied from <A>'s card; a level and payroll answer are the manager's to state for this person. */
+    ...(copiedFromCard
+      ? {
+          copied_from_card: copiedLevel || copiedPayroll
+            ? {
+                copied: [copiedLevel ? `${copiedLevel === "verbal" ? "Verbal" : "Written"} Warning` : null, copiedPayroll ? `payroll ${copiedPayroll === "yes" ? "Yes" : "No"}` : null].filter(Boolean).join(" and "),
+                say: `Say once: "Copied <copied> from <the earlier card's person's first name>'s card; tell me if ${employee.name.split(/\s+/)[0]}'s are different."`,
+              }
+            : { say_exactly: `Same account as the earlier card, with ${employee.name.split(/\s+/)[0]}'s name.`, not_copied: "level and payroll: the manager states them for this person" },
+        }
+      : {}),
+    ...(newStoreNotRead ? { new_store_not_found: newStoreNotRead } : {}),
+    ...(storeNotRead ? { typed_store_not_found: storeOffer(typedSalon, replyNameFor(card.employeeName ?? employee.name, read.kind === "read" ? read.roster : [], extractEmployeeNames(managerTurns(context)), employee.id ?? null), wovenStores, managerSalonIds, storeSaidBefore(context, typedSalon)) } : {}),
     /* QA's live-app item 8: the card uses Woven's title; the manager called them something else ("<title>"). */
     ...(() => {
       const said = titleSaidFor(requestWords, employee.name, read.kind === "read" ? read.roster.map(displayName) : []);
@@ -4629,6 +5013,7 @@ export async function proposeForm(
     ...(underPerformance ? { under_performance: true } : {}),
     ...(didYouMean ? { confirm_policy: didYouMean } : {}),
     ...(priorActionsRefused ? { prior_actions_not_kept: priorActionsRefused } : {}),
+    ...(priorStepsLeftOff.length > 0 ? { prior_steps_left_off: priorStepsLeftOff, prior_steps_note: "These earlier steps were left off the card's Prior actions; the others are on it. Say which one and why in one line, and ask the manager for that step's date if it was meant to be an earlier one." } : {}),
     ...((await outsideScopeSalon(context)) ?? (card.namedLocationOutOfScope ? { store_outside_scope: card.namedLocationOutOfScope } : {})),
   };
   /*
@@ -4687,6 +5072,8 @@ export async function proposeForm(
           ? { payroll_deduct: payroll }
           : {}),
       incident_time: card.incidentTime ?? null,
+      ...(transferCard ? { new_store: card.newStore ?? null } : {}),
+      ...(template.key === appConfig().formKeys.exit ? { how_resigned: card.exitMethod ?? null } : {}),
       prior_actions: priorActions,
       policy: policyLine,
       create_offered: card.supportsInlineDraft,
@@ -4769,6 +5156,14 @@ function isShownCardId(context: ToolContext, effects: ToolEffects, id: string): 
  * - WITH NO DRAFT OPEN, "a coaching form for all team members" (or a salon-wide expectation) is the team Coaching card,
  *   "All team members" at one salon (`whole-team-coaching.ts` + `buildProposal`, WHOLE_TEAM_COACHING), never a refusal.
  */
+/*
+ * QA's Bubbles re-run (22 Nov 2026, A8): "coaching is on sfs operations …" (ship from store) got "which Sioux Falls
+ * location is this for, W 41st St or E 18th St?": the model read "SFS" as a city. A store comes only from a place the
+ * manager named; with none named, the team card asks from all their stores, in these words.
+ */
+const teamStoreQuestion = () => `Which ${locationWord()} is this for?`;
+const TEAM_STORE_NOTE = "The card has no store yet. End your reply with store_question, exactly. Never name, guess or narrow the stores from a word the manager did not give as a store (an abbreviation, a program, a product); the card's own store list shows them all.";
+
 export async function coachTeam(context: ToolContext, effects: ToolEffects): Promise<ToolResult> {
   if (context.openFormId) {
     const { coachingForEveryone } = await import("@/lib/forms/coaching-for-everyone");
@@ -4817,7 +5212,7 @@ export async function coachTeam(context: ToolContext, effects: ToolEffects): Pro
       status: card.status,
       ready: card.status === "ready",
       store: card.locationId ? salonLabel(card.locationId) : null,
-      ...(card.status === "needs_location" ? { choose_store_from: (card.authorizedLocationIds ?? []).map((id) => ({ id, name: salonLabel(id) })) } : {}),
+      ...(card.status === "needs_location" ? { choose_store_from: (card.authorizedLocationIds ?? []).map((id) => ({ id, name: salonLabel(id) })), store_question: teamStoreQuestion(), store_note: TEAM_STORE_NOTE } : {}),
       form_date: card.formDate ?? null,
       observation: card.issue ?? null,
       create_offered: card.supportsInlineDraft,
@@ -4894,7 +5289,7 @@ async function updateTeamCard(context: ToolContext, effects: ToolEffects, before
       status: card.status,
       ready: card.status === "ready",
       store: card.locationId ? salonLabel(card.locationId) : null,
-      ...(card.status === "needs_location" ? { choose_store_from: (card.authorizedLocationIds ?? []).map((id) => ({ id, name: salonLabel(id) })) } : {}),
+      ...(card.status === "needs_location" ? { choose_store_from: (card.authorizedLocationIds ?? []).map((id) => ({ id, name: salonLabel(id) })), store_question: teamStoreQuestion(), store_note: TEAM_STORE_NOTE } : {}),
       form_date: card.formDate ?? null,
       create_offered: card.supportsInlineDraft,
     },
@@ -4941,6 +5336,8 @@ export async function editForm(
    */
   const openedThisTurn = effects.formOpened?.instanceId ?? null;
   if (id !== context.openFormId && id !== openedThisTurn && !fromShownCard) {
+    const unchosen = whichFormRefusal(context, id, (input as { choice_evidence?: unknown }).choice_evidence);
+    if (unchosen) return unchosen;
     const refused = await formOnFileRefusal(context, id, input.forms_on_file_evidence);
     if (refused) return refused;
   }
@@ -5605,7 +6002,7 @@ export function nameCorrectionRefusal(formsName: string, newName: string, quote:
    * After the manager's "no" to that question, the name is written as typed.
    */
   if (holders.length === 0 && !options.keepAsTyped) {
-    const close = matchEmployeeName(newName, people);
+    const close = loopNameMatch(newName, people);
     const candidates = close.kind === "confirm" ? close.candidates.map((candidate) => candidate.name) : [];
     if (candidates.length > 0) {
       return { error: `Not on the staff list as typed. Nothing was written. Ask the manager, in these words: ${nameConfirmationQuestion(newName, candidates.slice(0, 5))}`, reason_code: "name_correction_did_you_mean" };
@@ -5772,10 +6169,12 @@ function documentFieldKeys(document: unknown): Set<string> {
  * Puts a form on file in front of the manager, as today's chat reopen does (`formOpened`): a draft opens to edit; a
  * finalized form opens read-only (its card offers "Edit as new draft"). Past forms only when asked.
  */
-export async function openForm(context: ToolContext, effects: ToolEffects, input: { instance_id?: unknown; forms_on_file_evidence?: unknown }): Promise<ToolResult> {
+export async function openForm(context: ToolContext, effects: ToolEffects, input: { instance_id?: unknown; forms_on_file_evidence?: unknown; choice_evidence?: unknown }): Promise<ToolResult> {
   const id = typeof input.instance_id === "string" ? input.instance_id.trim() : "";
   if (id === "") return { reason_code: "missing_input", error: "Give the form's instance_id (from find_past_forms)." };
   if (id !== context.openFormId) {
+    const unchosen = whichFormRefusal(context, id, input.choice_evidence);
+    if (unchosen) return unchosen;
     const refused = await formOnFileRefusal(context, id, input.forms_on_file_evidence);
     if (refused) return refused;
   }

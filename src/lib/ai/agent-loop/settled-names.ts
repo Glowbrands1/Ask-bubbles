@@ -23,6 +23,8 @@ export interface LoopCardSettlement {
   readonly messageId: string | null;
   readonly questionKey: string | null;
   readonly isSettledName: (name: string) => boolean;
+  /** QA's Bubbles round 2 (22 Nov 2026, U09): the warning level the loop locked on this card (its server record), or null. */
+  readonly level: "verbal" | "written" | null;
 }
 
 export async function loopCardSettlement(input: {
@@ -39,7 +41,7 @@ export async function loopCardSettlement(input: {
   if (card.employeeKey) {
     for (const asked of records.nameQuestions) if (asked.offeredKeys.includes(card.employeeKey)) keys.add(asked.typedKey);
   }
-  return { messageId: card.messageId, questionKey: card.questionKey ?? null, isSettledName: (name: string) => keys.has(personKey(name)) };
+  return { messageId: card.messageId, questionKey: card.questionKey ?? null, isSettledName: (name: string) => keys.has(personKey(name)), level: card.level ?? null };
 }
 
 /**
