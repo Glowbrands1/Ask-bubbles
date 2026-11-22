@@ -232,6 +232,8 @@ export async function createInlineForm({
       ...(proposal.fromAgentLoop && proposal.newStoreSaid && proposal.newStoreQuote ? { newStoreSaid: proposal.newStoreSaid, newStoreQuote: proposal.newStoreQuote } : {}),
       /* The loop's exit card: how the person resigned and the manager's words for it (U26, 22 Nov 2026); checked again by the route. */
       ...(proposal.fromAgentLoop && proposal.exitMethod && proposal.exitMethodQuote ? { exitMethod: proposal.exitMethod, exitMethodQuote: proposal.exitMethodQuote } : {}),
+      /* The loop's exit card: the reason the person is leaving and the manager's words for it (B6, 22 Nov 2026); checked again by the route. */
+      ...(proposal.fromAgentLoop && proposal.exitReason && proposal.exitReasonQuote ? { exitReason: proposal.exitReason, exitReasonQuote: proposal.exitReasonQuote } : {}),
       ...(proposal.fromAgentLoop && proposal.issue ? { loopAccount: proposal.issue } : {}),
       /*
        * AI_READS_CODE_CHECKS_ENABLED: what the reader took from the manager's
