@@ -112,29 +112,49 @@ function u21Model(view: LoopView): LoopDecision {
   return { tool: "propose_form", input: { ...base, prior_actions: "Store meeting — July 2026; Signed JBA policies — 06/24/2024" } };
 }
 
+async function u21Chat(t: ReplayContext) {
+  u21Start(t);
+  t.loopModel!(loopStandIn(u21Model));
+  const thread = t.thread();
+  const cards: { turn: number; issue: string | null; level: string | null; payroll: string | null; formDate: string | null; reply: string }[] = [];
+  for (const [index, turn] of T.entries()) {
+    const reply = await thread.say(turn);
+    const card = thread.proposal as { issue?: string | null; warningLevel?: string | null; payrollDeduct?: string | null; formDate?: string | null } | null;
+    cards.push({ turn: index + 1, issue: card?.issue ?? null, level: card?.warningLevel ?? null, payroll: card?.payrollDeduct ?? null, formDate: card?.formDate ?? null, reply: reply.content });
+  }
+  return cards;
+}
+
 export const NOV22_AGENT_LOOP_U21_R3_CHAT_CASES: ReplayCase[] = [
   {
     id: "nov22-u21-r3-whole-chat-card-keeps-what-it-held",
-    title: "U21 round 3 (T1–T12 verbatim): the card keeps what it held when the model proposes it again — T10 \"make this for joelle instead of briony\" keeps the Verbal/payroll No Joelle's card had (T8), T12 \"previous coaching: …\" keeps the account, and no reply shows the history's bracketed card line",
+    title: "U21 round 3 (T1–T12 verbatim): the card keeps what it held when the model proposes it again — T10 \"make this for joelle instead of briony\" keeps the Verbal/payroll No Joelle's card had (T8), T12 \"previous coaching: …\" keeps the account, no reply shows the history's bracketed card line, and none says a change is not on the card",
     report: "QA's live round 3 (22 Nov 2026, U21): T10 dropped the copied level and payroll; T12 lost the account (\"What happened this time?\", no Create)",
     status: "fixed",
     async run(t) {
-      u21Start(t);
-      t.loopModel!(loopStandIn(u21Model));
-      const thread = t.thread();
-      const cards: { turn: number; issue: string | null; level: string | null; payroll: string | null; reply: string }[] = [];
-      for (const [index, turn] of T.entries()) {
-        const reply = await thread.say(turn);
-        const card = thread.proposal as { issue?: string | null; warningLevel?: string | null; payrollDeduct?: string | null } | null;
-        cards.push({ turn: index + 1, issue: card?.issue ?? null, level: card?.warningLevel ?? null, payroll: card?.payrollDeduct ?? null, reply: reply.content });
-      }
+      const cards = await u21Chat(t);
       const at = (turn: number) => cards[turn - 1]!;
       expect(at(10), `T10 dropped the level or payroll Joelle's card held: ${JSON.stringify(cards.slice(6, 10)).slice(0, 2500)}`).toMatchObject({ level: "verbal", payroll: "no" });
       expect(at(12).issue ?? "", `T12 lost the account:\n${JSON.stringify(at(12))}`).toMatch(/trash liners/i);
-      expect(at(12), "T12 lost the level or payroll").toMatchObject({ level: "verbal", payroll: "no" });
       expect(cards.filter((card) => /\[card shown under this reply/i.test(card.reply)).map((card) => card.turn), "a reply showed the history's card line").toEqual([]);
       /* T7 live: "That change isn't on the card yet: policy (…). Tell me again" — the policy the manager asked for is on the card. */
       expect(cards.filter((card) => /isn't on the card yet/i.test(card.reply)).map((card) => `T${card.turn}: ${card.reply}`), "a change was reported as not made").toEqual([]);
+    },
+  },
+  {
+    id: "nov22-u21-r3-t12-form-date-not-a-prior-step",
+    title: "U21 round 3 (T1–T12 verbatim): T12 \"previous coaching: … she signed the jba policys on 6/24/24\" never makes 6/24/24 the form date, and the card keeps its Verbal/payroll No",
+    report: "QA's live round 3 (22 Nov 2026, U21): T12's card was dated 2024-06-24, the policy signing; live, the model's re-proposal to fix that date dropped the level and payroll",
+    /*
+     * QA (22 Nov 2026): form_date handling is coder 1's (session_01VVEkRTNhKWLH8gwuJq8Jfp), whose PR 2 adds "a prior step's
+     * date is never the form date". This PR does not touch the form-date logic, so this case is open until that merges.
+     */
+    status: { open: "the form date takes a prior step's date (2024-06-24); coder 1's PR 2 fixes it" },
+    async run(t) {
+      const cards = await u21Chat(t);
+      const at = (turn: number) => cards[turn - 1]!;
+      expect(at(12).formDate, "T12's form date is the policy signing's").not.toBe("2024-06-24");
+      expect(at(12), "T12 lost the level or payroll").toMatchObject({ level: "verbal", payroll: "no" });
     },
   },
 ];
