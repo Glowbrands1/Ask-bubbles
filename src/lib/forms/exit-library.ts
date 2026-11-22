@@ -131,6 +131,14 @@ export const EXIT_OPTION = {
   noCallNoShow: "no_call_no_show",
 } as const;
 
+/** The Resignation Details type boxes, in the form's order and words (the document below, and the exit reader's labels). */
+export const EXIT_TYPE_OPTIONS: readonly { key: string; label: string }[] = [
+  { key: EXIT_OPTION.immediateVoluntary, label: "Immediate Voluntary Resignation" },
+  { key: EXIT_OPTION.immediateInvoluntary, label: "Immediate involuntary separation" },
+  { key: EXIT_OPTION.noticeNotFulfilled, label: "Did not fulfill required 14 day / 30 day notice" },
+  { key: EXIT_OPTION.noCallNoShow, label: "No Call No Show" },
+];
+
 export const EXIT_DATE_FIELDS = {
   lastDayWorked: "last_day_worked",
   noticeGiven: "notice_given_date",
@@ -333,15 +341,7 @@ export function exitFormDocument(): FormDocument {
       {
         kind: "checkbox_group",
         key: EXIT_TYPE_GROUP,
-        options: [
-          { key: EXIT_OPTION.immediateVoluntary, label: "Immediate Voluntary Resignation" },
-          { key: EXIT_OPTION.immediateInvoluntary, label: "Immediate involuntary separation" },
-          {
-            key: EXIT_OPTION.noticeNotFulfilled,
-            label: "Did not fulfill required 14 day / 30 day notice",
-          },
-          { key: EXIT_OPTION.noCallNoShow, label: "No Call No Show" },
-        ],
+        options: EXIT_TYPE_OPTIONS.map((option) => ({ ...option })),
         responsibility: "ai",
         columns: 2,
       },
