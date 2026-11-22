@@ -564,6 +564,8 @@ function buildAgentLoopTools(config: AppConfig, planSteps = false) {
         new_store_evidence: evidence("With new_store: the manager message of this request and its words that name where the person is moving."),
         exit_method: { type: "string", enum: [...EXIT_METHOD_LABELS], description: "Employee Exit Form resignation only: how the person told the company they were leaving (How Employee Resigned), when the manager said it. The person's own way of resigning, never how the manager or anyone else reached them (a voicemail left FOR the person is not how they resigned). With exit_method_evidence. Never for a termination." },
         exit_method_evidence: evidence("With exit_method: the manager message of this request and its words that say how the person resigned (e.g. \"returned the call and told me she quit\")."),
+        exit_reason: { type: "string", description: "Employee Exit Form resignation only: why the person is leaving (Reason for Resignation), when the manager said it, in the manager's own words, short (\"Second job\", \"Moving out of state\"). With exit_reason_evidence. Leave it out when no reason was given." },
+        exit_reason_evidence: evidence("With exit_reason: the manager message of this request and its words that give the reason (e.g. \"she is resigning due to second job\")."),
         effective_date: { type: "string", description: "Employee Exit Form termination only: the effective or termination date as the manager typed it (e.g. 11/28)." },
         payroll_deduct: { type: "string", enum: ["yes", "no"], description: "Only when the manager said whether payroll deduct applies." },
         payroll_amount: { type: "string", description: "The deduction amount the manager stated, digits." },
@@ -1253,7 +1255,12 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
         /* QA's Bubbles re-run (22 Nov 2026, A3): a restated Observation keeps the Observation's dates (`observation-dates.ts`). */
         /* QA's Bubbles round 2 (22 Nov 2026, U22): an exit card's reply reads back only the lines Create saves (`exit-read-back.ts`). */
         if (effects.proposal) return [...cardMismatch(claims, effects.proposal), ...observationDateMismatch(reply, effects.proposal.issue), ...exitReadBackMismatch(reply, effects.proposal.exitReadBack)];
-        const onScreen = shownCard ? ({ warningLevel: shownCard.level ?? null, policyLine: shownCard.policyLine ?? null, payrollDeduct: shownCard.payroll ?? null, payrollDeductAmount: shownCard.payrollAmount ?? null } as unknown as ChatFormProposal) : null;
+        /*
+         * QA's Bubbles live round 3 (22 Nov 2026, A1(a)): T4 "she is at Omaha dodge" made no card, and the reply's true
+         * "filed at Omaha, NE (West Dodge Rd)" was a mismatch (the record held no store), so the reply became "Which store
+         * is this for?". The card still shown has its store id in the record now.
+         */
+        const onScreen = shownCard ? ({ warningLevel: shownCard.level ?? null, policyLine: shownCard.policyLine ?? null, payrollDeduct: shownCard.payroll ?? null, payrollDeductAmount: shownCard.payrollAmount ?? null, locationId: shownCard.storeId ?? shownCard.teamStoreId ?? null } as unknown as ChatFormProposal) : null;
         /*
          * QA's Bubbles live re-run 2 (22 Nov 2026, B6): no card this turn ("she is resigning due to second job …" called no
          * tool and replied "Noted the reason — **Reason for Resignation:** Second job."): an exit card on screen saves
@@ -1422,6 +1429,17 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
           }
         }
         /*
+         * QA's Bubbles live round 3 (22 Nov 2026, A7): "Filed at <store>, where Woven lists <P>" is the rules book's own line
+         * for store_from_woven. A reply that says it when no card this turn was filed at the employee's Woven store (the
+         * manager named the store: store_said) goes back once; if it comes back, that sentence is left out.
+         */
+        const wovenLine = new RegExp(`where ${appConfig().staffSystem.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} lists`, "i");
+        if (stoppedAt === "reply" && effects.proposal && !effects.storeFromWoven && wovenLine.test(text)) {
+          const again = await handBack(`[app check] Your reply says the card is filed where ${appConfig().staffSystem} lists the employee, but no card this turn was filed that way: the card's ${appConfig().locationWord} is the one the manager named (store_said). Say "Filed at **<the card's ${appConfig().locationWord}>**, as you said." or nothing about it. Then write your reply to the manager again.`);
+          if (again) text = again;
+          if (wovenLine.test(text)) text = text.split("\n").map((line) => line.split(/(?<=[.!?])\s+/).filter((sentence) => !wovenLine.test(sentence)).join(" ")).join("\n").replace(/\n{3,}/g, "\n\n").trim();
+        }
+        /*
          * QA's Bubbles re-run (22 Nov 2026, A8): with a card that has no store yet, the reply named stores nobody had named
          * ("which Sioux Falls location …, W 41st St or E 18th St?" from "SFS", ship from store). Read by the app's own store
          * reader: a store the reply names that the manager never named and the card does not hold goes back once; if it
@@ -1544,7 +1562,7 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
   /* QA's live re-test B8: a former employee is found in Woven, so the reply never also says they are not on the staff list. */
   if (inactiveLines.size === 1 && text) text = withOneInactiveLine(text, [...inactiveLines][0]!, appConfig().staffSystem);
   const cardSlot: CardSlot | null = effects.proposal
-    ? { proposalId: effects.proposal.proposalId, employeeKey: effects.proposalEmployeeId ? personKey(effects.proposalEmployeeId) : null, nameKey: effects.proposal.employeeName ? personKey(effects.proposal.employeeName) : null, templateKey: effects.proposal.templateKey, templateName: effects.proposal.templateName ?? null, ...(effects.proposalAsked?.length ? { asked: effects.proposalAsked } : {}), ...(effects.proposalLevel ? { level: effects.proposalLevel } : {}), ...(effects.proposalPayroll ? { payroll: effects.proposalPayroll } : {}), ...(effects.proposalPayroll === "yes" && effects.proposalPayrollAmount ? { payrollAmount: effects.proposalPayrollAmount } : {}), ...(effects.proposal.policyLine ? { policyLine: effects.proposal.policyLine } : {}), ...(effects.proposalAccountKey ? { accountKey: effects.proposalAccountKey } : {}), ...(effects.proposal.formDate ? { incidentDate: effects.proposal.formDate } : {}), ...(effects.proposal.subject === "team" && effects.proposal.locationId ? { teamStoreId: effects.proposal.locationId } : {}) }
+    ? { proposalId: effects.proposal.proposalId, employeeKey: effects.proposalEmployeeId ? personKey(effects.proposalEmployeeId) : null, nameKey: effects.proposal.employeeName ? personKey(effects.proposal.employeeName) : null, templateKey: effects.proposal.templateKey, templateName: effects.proposal.templateName ?? null, ...(effects.proposalAsked?.length ? { asked: effects.proposalAsked } : {}), ...(effects.proposalLevel ? { level: effects.proposalLevel } : {}), ...(effects.proposalPayroll ? { payroll: effects.proposalPayroll } : {}), ...(effects.proposalPayroll === "yes" && effects.proposalPayrollAmount ? { payrollAmount: effects.proposalPayrollAmount } : {}), ...(effects.proposal.policyLine ? { policyLine: effects.proposal.policyLine } : {}), ...(effects.proposalAccountKey ? { accountKey: effects.proposalAccountKey } : {}), ...(effects.proposal.formDate ? { incidentDate: effects.proposal.formDate } : {}), ...(effects.proposal.subject === "team" && effects.proposal.locationId ? { teamStoreId: effects.proposal.locationId } : {}), ...(effects.proposal.locationId ? { storeId: effects.proposal.locationId } : {}) }
     : null;
   /* Fix batch items 4 and 3: this turn's "Did you mean", for the next turn's name question record (one-way keys only). */
   const nameQuestionSlot: NameQuestionSlot | null = effects.nameQuestion && stoppedAt === "reply"
