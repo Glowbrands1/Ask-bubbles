@@ -20,7 +20,7 @@ const SAID = "exit form for Thaddea Kroll. Immediate Vol Resignation, she resign
 
 type Out = { facts?: { exit_ticks?: string[] } } | null;
 
-async function run(t: ReplayContext, how: string, quote: string) {
+async function run(t: ReplayContext, how: string, quote: string, said = SAID) {
   vi.setSystemTime(new Date("2026-11-21T18:00:00Z"));
   t.directory([...LOOP_STAFF]);
   t.as("location_manager", WEST_DODGE);
@@ -38,7 +38,7 @@ async function run(t: ReplayContext, how: string, quote: string) {
     };
   }));
   const thread = t.thread();
-  const reply = await thread.say(SAID);
+  const reply = await thread.say(said);
   const id = await thread.create();
   return { reply, checked: t.checked(id) };
 }
@@ -63,6 +63,18 @@ export const NOV22_AGENT_LOOP_EXIT_HOW_NAMES_ITS_OPTION_CASES: ReplayCase[] = [
     async run(t) {
       const { checked } = await run(t, "immediate_voluntary_resignation", "Immediate Vol Resignation");
       expect(checked.resignation_type ?? [], JSON.stringify(checked)).toEqual(["immediate_voluntary_resignation"]);
+    },
+  },
+  {
+    id: "nov22-r2-u24-notice-fulfilling-never-did-not-fulfill",
+    title: "U24, ported control (QA, 22 Nov 2026, from the sibling app's #1215): \"she gave 2 weeks notice and is fulfilling them\" with the model's exit_how notice_not_fulfilled on those words — \"notice\" never names the label's \"not\", so Did not fulfill is never filed or saved",
+    report: "QA, 22 Nov 2026: quoteNamesOption read \"notice\" as naming \"not\", so \"gave 2 weeks notice and is fulfilling them\" named \"Did not fulfill required 14 day / 30 day notice\"",
+    status: "fixed",
+    async run(t) {
+      const said = "exit form for Thaddea Kroll. Her last day is nov 23 she is returning her key she gave 2 weeks notice and is fulfilling them";
+      const { reply, checked } = await run(t, "notice_not_fulfilled", "she gave 2 weeks notice and is fulfilling them", said);
+      expect(reply.content, `the card files Did not fulfill:\n${reply.content}`).not.toMatch(/Did not fulfill/i);
+      expect(checked.resignation_type ?? [], JSON.stringify(checked)).not.toContain("notice_not_fulfilled");
     },
   },
 ];
