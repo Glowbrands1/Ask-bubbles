@@ -112,7 +112,12 @@ export const NOV21_AGENT_LOOP_STORE_NICKNAME_CASES: ReplayCase[] = [
       expect(first.content, "Corliss's Woven stores were not offered, primary first, then the manager's other store").toContain(offer);
       const again = await thread.say(AGAIN);
       expect(again.content, "the repeated nickname was refused again").not.toMatch(REFUSED);
-      expect(again.content).toContain(offer);
+      /*
+       * CHANGED ON PURPOSE (QA's Bubbles live re-run, 22 Nov 2026, A7): the same offer said again went nowhere live ("empire,
+       * sd" asked the same question every turn, no Create). The place said again now gets "Did you mean …?" with the same
+       * Woven stores in the same order, each with its street address; "the first one" still picks the first.
+       */
+      expect(again.content, `the repeat is not a Did-you-mean pick of Corliss's Woven stores:\n${again.content}`).toMatch(/Did you mean \*\*Sioux Falls, SD \(E 18th St\)[^*]*\*\* or \*\*Sioux Falls, SD \(W 41st St\)/);
       const picked = await thread.say("the first one");
       const card = (picked.formProposal ?? thread.proposal) as ChatFormProposal | null;
       expect(card?.locationId, picked.content).toBe("loc-338");

@@ -801,6 +801,21 @@ export interface ChatFormProposal {
    * back ("**<label>:** <value>"); a reply line under an exit field label that is not one of them is handed back.
    */
   exitReadBack?: string[];
+  /**
+   * The agent loop's Position Transfer card (QA's Bubbles round 2, 22 Nov 2026, U54): the store the person is moving to,
+   * as read from the manager's words (`newStoreSaid`) through the Woven-aware store index, and their words for it. Create
+   * writes New Location only when the quote is in the chat's manager turns and the words read as that store again.
+   */
+  newStore?: string;
+  newStoreSaid?: string;
+  newStoreQuote?: string;
+  /**
+   * The agent loop's exit card (QA's Bubbles round 2, 22 Nov 2026, U26): How Employee Resigned as the model read it (one of
+   * the line's own methods) and the manager's words for it. Create writes it only when the quote is in the chat's manager
+   * turns and names that method, checked server-side.
+   */
+  exitMethod?: string;
+  exitMethodQuote?: string;
   /** The agent loop's card (QA's third review): Create never runs today's termination reader for it. */
   fromAgentLoop?: true;
   /** The agent loop's coaching card: the topic, in the manager's words, checked against their message (QA, 17 Nov 2026). */
