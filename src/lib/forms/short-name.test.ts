@@ -58,3 +58,21 @@ describe("a two-word surname is never cut to one word", () => {
     expect(replyWithShortName("**Observation of Offense:** Anouk Duarte received a customer complaint.", "Anouk Pellinor Duarte", "Anouk", "Corrective Action Form").text).toBe("**Observation of Offense:** Anouk received a customer complaint.");
   });
 });
+
+describe("withOwnOtherFirstNames (U19, QA's live re-run 23 Nov 2026)", () => {
+  it("the legal first name in the account becomes the card's short name, so one person is named", async () => {
+    const { withOwnOtherFirstNames } = await import("./short-name");
+    const out = withOwnOtherFirstNames("On 11/14 Ilsabet worked 50 minutes over the scheduled shift and did not clean up after themself.", ["Ilsabet"], "Corvelle", "Sabeth");
+    expect(out.text).toBe("On 11/14 Sabeth worked 50 minutes over the scheduled shift and did not clean up after themself.");
+  });
+
+  it("the full other name with the surname, and text in quotes left as written", async () => {
+    const { withOwnOtherFirstNames } = await import("./short-name");
+    expect(withOwnOtherFirstNames("Ilsabet Corvelle said \"ask Ilsabet\" and left.", ["Ilsabet"], "Corvelle", "Sabeth").text).toBe("Sabeth said \"ask Ilsabet\" and left.");
+  });
+
+  it("a longer name that starts with the other first name is someone else", async () => {
+    const { withOwnOtherFirstNames } = await import("./short-name");
+    expect(withOwnOtherFirstNames("Ilsabetta covered the shift.", ["Ilsabet"], "Corvelle", "Sabeth").text).toBe("Ilsabetta covered the shift.");
+  });
+});
