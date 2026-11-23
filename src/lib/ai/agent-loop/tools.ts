@@ -4273,7 +4273,22 @@ export async function proposeForm(
    * from "For <C>" stops at a turn that also names someone else (the script's "your <title> <D>"), so it is added.
    */
   const aliasTurns = new Set(aliases.flatMap((alias) => turnsFromThisPersonsRequest(asked, alias, { names: extractEmployeeNames, same: samePerson })));
-  const ownTurns = new Set([...turnsFromThisPersonsRequest(asked, employee.name, { names: extractEmployeeNames, same: sameAsThisPerson }), ...aliasTurns]);
+  /*
+   * QA's Bubbles round 2 (U29; board f138): "create a coaching form about accountability", "I want the same form for
+   * multiple employees", "no put the employee as <P>" lost the topic: the name reader took "accountability" (after
+   * "about") as a person, so the walk back from <P>'s turn stopped there as another person's request, and the topic's
+   * evidence (that first turn) fell outside this request. A "name" whose every word is a word of the topic the model
+   * names for this card, and that shares no word with anyone on the staff list, is that topic, never another person.
+   * The model's topic and the roster decide; never a word list.
+   */
+  const statedTopicWords = new Set(typeof input.topic === "string" ? words(input.topic).map((word) => word.toLowerCase()) : []);
+  const rosterWords = new Set(rosterNames.flatMap((name) => words(name).map((word) => word.toLowerCase())));
+  const isStatedTopic = (name: string) => {
+    const nameWords = words(name).map((word) => word.toLowerCase());
+    return nameWords.length > 0 && nameWords.every((word) => statedTopicWords.has(word) && !rosterWords.has(word));
+  };
+  const personNames = (text: string) => extractEmployeeNames(text).filter((name) => !isStatedTopic(name));
+  const ownTurns = new Set([...turnsFromThisPersonsRequest(asked, employee.name, { names: personNames, same: sameAsThisPerson }), ...aliasTurns]);
   /*
    * QA's Bubbles live re-run 2 (22 Nov 2026, U35): T11 "Create a Corrective Action Form from this conversation." names
    * nobody, so the walk back from T12 started this request there, and T3 "verbal warning, no payroll deduct, …" (said
@@ -4660,10 +4675,19 @@ export async function proposeForm(
    * card named the heading's page. One rule for both: the card's page is the one Create quotes, read from this card's
    * own account the same way.
    */
+  /*
+   * QA's Bubbles round 2 (U14; board f136): "… for till shortage. she accidentally gave a guest $20 in change …" cited
+   * p.12. The account said what she did and never named the incident; the manager's own words for this request did
+   * ("for till shortage"). The account is read first; when it names no line of its own, the manager's words are, by the
+   * same reader (`withConductLinePage`). Create reads the manager's words too, so the card and the saved form agree.
+   */
   const citedPage = (heading: string): number | null => {
     const section = manual ? findManualSection(manual.chunks, [heading]) : null;
     if (!section || !manual) return null;
-    return withConductLinePage([section], whatHappened || requestWords, manual.chunks)[0]?.page ?? section.page;
+    const lineOf = (text: string) => (text ? withConductLinePage([section], text, manual.chunks)[0] ?? null : null);
+    const fromAccount = lineOf(whatHappened);
+    const line = fromAccount && fromAccount !== section ? fromAccount : lineOf(requestWords);
+    return (line ?? section).page;
   };
   const page = policyHeading ? citedPage(policyHeading) : null;
   /*
@@ -4714,7 +4738,8 @@ export async function proposeForm(
   if (policyNotForThisCard) policyLine = policyLine && policyLine.includes("; ") ? policyLine.split("; ").slice(1).join("; ") : null;
   const otherPart = askedOther || (/^other\b/i.test(askedPolicy) ? askedPolicy : "");
   if (otherPart) {
-    const topic = otherPart.replace(/^other\s*[—:-]?\s*/i, "").trim() || cleaning || whatHappened.slice(0, 120);
+    /* QA's live re-run (23 Nov 2026, A1): a bare "Other" is never given a sentence of the account as its topic; it stays "Other". */
+    const topic = otherPart.replace(/^other\s*[—:-]?\s*/i, "").trim() || cleaning;
     const other = topic ? `Other — ${topic}` : "Other";
     policyLine = policyLine ? `${policyLine}; ${other}` : other;
   }
