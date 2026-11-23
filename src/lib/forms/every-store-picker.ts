@@ -16,8 +16,9 @@ import type { ChatFormProposal } from "@/types";
 export const EVERY_STORE_ASK = "Which store is this about? Choose the store on the card before you create the draft, so it is not filed with no store.";
 const WONT_NAME_ONE = /Your account covers every (?:store|salon), so (?:this|the) form won['’]t name one(?: unless you did)?\.\s*/g;
 
+/** The person is asked for before the store (as `forms/proposal.ts` orders them): a card with no one on it yet is not asked about its store. */
 function asksStore(card: ChatFormProposal): boolean {
-  return !card.locationId && card.locationResolution === "not_applicable" && !card.noStoreStated && !card.fromAgentLoop;
+  return Boolean(card.employeeName) && !card.locationId && card.locationResolution === "not_applicable" && !card.noStoreStated && !card.fromAgentLoop;
 }
 
 function picker(card: ChatFormProposal): ChatFormProposal {

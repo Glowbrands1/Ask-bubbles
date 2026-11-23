@@ -3,6 +3,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 import type { ChatFormProposal, ChatMessage } from "@/types";
 
+import { COMPANY_LOCATIONS as PICKED_STORE_LOCATIONS } from "@/lib/locations";
+/*
+ * Changed on purpose (QA, 23 Nov 2026): an all-store login's card asks which store and Create waits for it, so the store is
+ * picked on the card first, as the browser's picker does (the route offers every store; a harness that reads the answer
+ * before the route's last step sees "not_applicable", and the first store is picked the same way).
+ */
+const withPickedStore = <P extends { locationId?: string | null; locationResolution?: string; authorizedLocationIds?: readonly string[] }>(card: P): P =>
+  !card.locationId && (card.locationResolution === "needs_selection" || card.locationResolution === "not_applicable")
+    ? { ...card, locationId: card.authorizedLocationIds?.[0] ?? PICKED_STORE_LOCATIONS[0]!.id }
+    : card;
+
+
 vi.mock("@/config/company/locations", async () =>
   (await import("@/test/fixtures/reference-roster")).referenceRosterModule(),
 );
@@ -340,7 +352,7 @@ async function create(message: ChatMessage, proposal: ChatFormProposal) {
   expect(continuation.isProposalSuperseded(thread, proposal.proposalId)).toBe(false);
   let instanceId = "";
   const result = await createInlineForm({
-    proposal,
+    proposal: withPickedStore(proposal),
     messages: thread,
     call,
     onCreated: (reference) => {
@@ -492,9 +504,10 @@ describe("conversation history", () => {
       employeeName: "cash handling",
       employeeRole: null,
       formDate: null,
-      locationId: null,
+      /* Changed on purpose (QA, 23 Nov 2026): Create refuses a card with no store before anything else, so the old card carries a store and the check below is still the out-of-date one. */
+      locationId: "loc-66",
       locationName: null,
-      locationResolution: "not_applicable" as const,
+      locationResolution: "resolved" as const,
       authorizedLocationIds: [],
       status: "ready" as const,
       sourceMessageIds: ["msg_old_1"],
