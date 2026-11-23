@@ -216,6 +216,25 @@ export function formsOnFileAsked(context: Pick<ToolContext, "question" | "histor
 }
 
 /**
+ * A roster name's possessive typed without the apostrophe, read as one ("<first>s" is "<first>'s"), and (port of the
+ * sibling app's c679323: a live manager's "show me <first>sexit", 23 Nov 2026) one typed with no space before the next
+ * word either: a word that starts with a roster name, then "s", then three or more letters, and is not itself a roster
+ * name, is that name's possessive and the word after it ("<First>'s exit"). Roster names only.
+ */
+export function withRosterPossessives(text: string, roster: readonly Pick<RosterEmployee, "firstName" | "lastName" | "preferredFirstName">[]): string {
+  const names = new Set(roster.flatMap((row) => [row.firstName, row.preferredFirstName ?? "", row.lastName]).map((name) => (name ?? "").trim().toLowerCase()).filter((name) => /^[\p{L}'-]+$/u.test(name)));
+  const spaced = text.replace(/(?<![\p{L}'-])([\p{L}'-]+?)s(?![\p{L}'-])/gu, (word, stem: string) => (names.has(stem.toLowerCase()) && !names.has(word.toLowerCase()) ? `${stem}'s` : word));
+  return spaced.replace(/(?<![\p{L}'-])[\p{L}'-]{5,}(?![\p{L}'-])/gu, (word) => {
+    if (names.has(word.toLowerCase())) return word;
+    for (let at = word.length - 4; at >= 2; at -= 1) {
+      const stem = word.slice(0, at);
+      if (word[at]?.toLowerCase() === "s" && names.has(stem.toLowerCase())) return `${stem}'s ${word.slice(at + 1)}`;
+    }
+    return word;
+  });
+}
+
+/**
  * QA's review of PR 1a (15 Nov 2026): the ask is about THIS person. The cited turn names the person whose forms are
  * looked at (the roster-name match request_evidence uses); or it names nobody and the manager's nearest earlier turn that
  * names someone names this person ("has she had a ca before?"); or, only when the cited turn names nobody, the person
@@ -250,7 +269,8 @@ async function formsOnFileAskedFor(context: ToolContext, evidence: unknown, pers
   const ownLasts = holders.length === 1 ? lastWords(holders[0]!) : [];
   const rosterWords = new Set([...rosterFirsts, ...rosterLasts]);
   const firstNamed = (text: string) => {
-    const words = foldName(text).toLowerCase().match(/[\p{L}'-]+/gu) ?? [];
+    /* Port of the sibling app's c679323 ("show me <first>sexit"): a possessive run into the next word is read first. */
+    const words = foldName(withRosterPossessives(text, roster)).toLowerCase().match(/[\p{L}'-]+/gu) ?? [];
     const names = (own: readonly string[], all: readonly string[]) => own.some((name) => {
       if (all.filter((other) => other === name).length !== 1) return false;
       return words.some((word) => word === name || word === `${name}'s` || word === `${name}'` || (word === `${name}s` && !name.endsWith("s") && !rosterWords.has(word)));
@@ -280,7 +300,12 @@ async function formsOnFileAskedFor(context: ToolContext, evidence: unknown, pers
     const turns = identifiedTurns(context.history as ChatMessage[], context.question, context.questionMessageId);
     const replyNames = (turn: IdentifiedTurn | undefined) => {
       const replyText = turn?.role === "assistant" ? withoutMessageIdTags(turn.content).replace(/[*_]/g, "") : "";
-      return replyText !== "" && names.some((name) => holdsPhrase(replyText, name));
+      /*
+       * Port of the sibling app's b49bc42 (a live manager's "yes", 23 Nov 2026): the reply asked "do you want to see
+       * <First>'s Resignation/Exit Form on file?", by first name only, and her "yes" was refused twice. A first name only
+       * this roster person holds names them in the app's own question too (`firstNamed`).
+       */
+      return replyText !== "" && (names.some((name) => holdsPhrase(replyText, name)) || firstNamed(replyText));
     };
     if (replyNames(turns[asked.index - 1])) return { ok: true };
     /*
@@ -294,7 +319,8 @@ async function formsOnFileAskedFor(context: ToolContext, evidence: unknown, pers
     const sinceCited = turns.filter((turn) => turn.role === "user" && turn.index >= asked.index);
     if (asked.index < current.index && replyNames(turns[current.index - 1]) && !sinceCited.some((turn) => namesSomeone(withoutMessageIdTags(turn.content)))) return { ok: true };
   }
-  const antecedent = asked.before.find(namesSomeone);
+  /* The manager's earlier turn that names someone, a lower-case first name only one roster person holds included ("show me <first>sexit"). */
+  const antecedent = asked.before.find((turn) => namesSomeone(turn) || firstNamed(turn));
   if (antecedent !== undefined && namedIn(antecedent)) return { ok: true };
   // PR 2: the card on screen, by the server's card record (its person's roster id, or the key of a typed name), never the reply's text.
   const onScreen = context.cardOnScreen;
@@ -605,8 +631,40 @@ export function requestTurns(
 }
 
 /** QA's Bubbles re-run (22 Nov 2026, A11): open_form / edit_form of a listed form while "Which one?" is open needs the manager's pick. */
-function whichFormRefusal(context: ToolContext, id: string, evidence: unknown): ToolResult | null {
-  const choice = whichFormChoice({ asked: context.whichFormAsked, instanceId: id, evidence, history: context.history, question: context.question, questionMessageId: context.questionMessageId });
+/**
+ * The kind of form this request names (port of the sibling app's fab0a04: a live manager's "show me <first>sexit", then
+ * "yes", "yes", "11202026"; Pau, 23 Nov 2026: "she clearly said exit form, but sunny at the bottom keep asking coaching or
+ * exit"). Read from the manager's own words: this message, then the manager's earlier turns back to where this request
+ * began. A request runs on while each reply in between ended in a question, so "yes" and "11202026" keep the "exit" said
+ * before them. Each turn is read with the roster's possessives and `formKindFromText`, the template-name kinds the period
+ * listings use. Null when no turn of this request names a kind.
+ */
+export function requestFormKind(
+  context: Pick<ToolContext, "question" | "history">,
+  roster: readonly Pick<RosterEmployee, "firstName" | "lastName" | "preferredFirstName">[],
+): ReturnType<typeof formKindFromText> {
+  const history = (context.history ?? []) as ChatMessage[];
+  const said = [context.question ?? ""];
+  for (let at = history.length - 1; at >= 0; at -= 1) {
+    const turn = history[at]!;
+    if (turn.role === "assistant") {
+      if (!/\?\s*$/.test(withoutMessageIdTags(String(turn.content ?? "")).trim())) break;
+      continue;
+    }
+    if (turn.role === "user") said.push(withoutMessageIdTags(String(turn.content ?? "")));
+  }
+  for (const text of said) {
+    const kind = formKindFromText(withRosterPossessives(text, roster));
+    if (kind) return kind;
+  }
+  return null;
+}
+
+async function whichFormRefusal(context: ToolContext, id: string, evidence: unknown): Promise<ToolResult | null> {
+  /* The kind this request names (`requestFormKind`): a listed form of another kind is never the pick while one of that kind is listed. */
+  const read = context.whichFormAsked ? await rosterFor(context.actor.scope) : null;
+  const kind = read ? requestFormKind(context, read.kind === "read" ? read.roster : []) : null;
+  const choice = whichFormChoice({ asked: context.whichFormAsked, instanceId: id, evidence, history: context.history, question: context.question, questionMessageId: context.questionMessageId, kindWords: kind?.templateNameWords ?? null });
   return choice.ok ? null : { reason_code: choice.reason_code, error: choice.error };
 }
 
@@ -2177,6 +2235,20 @@ export async function findPastForms(context: ToolContext, input: { employee_name
       const ca = /\bca\b|corrective|write[- ]?up|warning|verbal|written/.test(wantForm);
       const narrowed = rows.filter((row) => (followUp ? /follow/i.test(row.templateName) : true) && (coaching ? /coach/i.test(row.templateName) && !/follow/i.test(row.templateName) : true) && (ca ? /corrective/i.test(row.templateName) || row.templateKey === appConfig().formKeys.corrective : true));
       if (narrowed.length > 0) rows = narrowed;
+    }
+    /*
+     * Port of the sibling app's c679323 and fab0a04 (a live manager's "show me <first>sexit", 23 Nov 2026: all 11 of her
+     * forms were listed, twice, and the one Resignation/Exit Form never opened). The kind of form the request names, read
+     * against the forms' own template names (`formKindFromText`'s template-name words and `ofKind`: the same reader as the
+     * period listings), keeps only forms of that kind: from the model's `form`, or else the quote that asked, or else the
+     * request's own turns (`requestFormKind`: "yes" after "show me <first>sexit" keeps "exit"). One form of that kind left
+     * is the one to open; several are listed alone.
+     */
+    {
+      const ownWords = [wantForm, String((input.forms_on_file_evidence as { quote?: unknown } | null | undefined)?.quote ?? "")];
+      const kind = ownWords.map((text) => formKindFromText(withRosterPossessives(text, people))).find((found) => found !== null) ?? requestFormKind(context, people);
+      const ofThatKind = kind ? ofKind(rows.filter((row) => kind.templateNameWords.some((word) => row.templateName.toLowerCase().includes(word))), kind) : [];
+      if (ofThatKind.length > 0) rows = ofThatKind;
     }
     const iso = typeof input.date === "string" ? isoDate(input.date, today) : null;
     const wantDate = iso ? { month: Number(iso.slice(5, 7)), day: Number(iso.slice(8, 10)), year: /\d{4}|\/\d{2}$/.test(String(input.date)) ? Number(iso.slice(0, 4)) : null } : undefined;
@@ -6596,7 +6668,7 @@ export async function editForm(
    */
   const openedThisTurn = effects.formOpened?.instanceId ?? null;
   if (id !== context.openFormId && id !== openedThisTurn && !fromShownCard) {
-    const unchosen = whichFormRefusal(context, id, (input as { choice_evidence?: unknown }).choice_evidence);
+    const unchosen = await whichFormRefusal(context, id, (input as { choice_evidence?: unknown }).choice_evidence);
     if (unchosen) return unchosen;
     const refused = await formOnFileRefusal(context, id, input.forms_on_file_evidence);
     if (refused) return refused;
@@ -7444,7 +7516,7 @@ export async function openForm(context: ToolContext, effects: ToolEffects, input
   const id = typeof input.instance_id === "string" ? input.instance_id.trim() : "";
   if (id === "") return { reason_code: "missing_input", error: "Give the form's instance_id (from find_past_forms)." };
   if (id !== context.openFormId) {
-    const unchosen = whichFormRefusal(context, id, input.choice_evidence);
+    const unchosen = await whichFormRefusal(context, id, input.choice_evidence);
     if (unchosen) return unchosen;
     const refused = await formOnFileRefusal(context, id, input.forms_on_file_evidence);
     if (refused) return refused;
