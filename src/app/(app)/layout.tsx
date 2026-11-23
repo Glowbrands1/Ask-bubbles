@@ -51,7 +51,7 @@ async function overdueCount(): Promise<number> {
 
 /**
  * THE BELL — the signed-in person's own notifications (`app_notifications`).
- * Port from Ask Sunny (30cac4c). Shown to whoever has any; everybody else gets
+ * Port from the sibling app (30cac4c). Shown to whoever has any; everybody else gets
  * no bell rather than one that is always empty. Like the overdue badge, a
  * failed read (the table not yet migrated, say) hides it instead of taking
  * down every page.

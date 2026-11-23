@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/overlays";
 import type { BellData } from "@/lib/notifications/types";
 
 /**
- * THE BELL, ported from Ask Sunny (30cac4c) for the HR form approval (Pau, 23 Nov 2026): unread count, the list,
+ * THE BELL, ported from the sibling app (30cac4c) for the HR form approval (Pau, 23 Nov 2026): unread count, the list,
  * opening one marks it read and goes to it. Plus what only Ask Bubbles has: the rail variant, because the desktop
  * top bar is hidden on band pages (the Forms Register among them).
  */

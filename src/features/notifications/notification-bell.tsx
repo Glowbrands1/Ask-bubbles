@@ -15,7 +15,7 @@ import { markNotificationsReadAction } from "./actions";
  * THE BELL: the signed-in person's notifications, newest first, with a count of
  * the unread ones. Opening one marks it read and goes to it.
  *
- * Port from Ask Sunny (30cac4c), for the HR form approval (Pau, 23 Nov 2026).
+ * Port from the sibling app (30cac4c), for the HR form approval (Pau, 23 Nov 2026).
  * One difference: WHERE it sits. Ask Bubbles has no top bar on desktop for the
  * band pages (Home, chat, the Forms Register, history, knowledge, reports), so
  * a top-bar bell would vanish on the very page HR works from. As Search did

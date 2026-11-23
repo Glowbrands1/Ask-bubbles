@@ -1,9 +1,9 @@
 -- ---------------------------------------------------------------------------
 -- IN-APP NOTIFICATIONS — the bell.
 --
--- Port from Ask Sunny (30cac4c, 20261120002000_app_notifications.sql): the same
+-- Port from the sibling app (30cac4c, 20261120002000_app_notifications.sql): the same
 -- table, so both apps' bells and the HR form approval that writes to them
--- (Pau, 23 Nov 2026) share one shape. Sunny's version is dated 20 Nov; this one
+-- (Pau, 23 Nov 2026) share one shape. The sibling's is dated 20 Nov; this one
 -- is dated 23 Nov because 20261120002000 is already taken here
 -- (forms_overview_unaccent).
 --
