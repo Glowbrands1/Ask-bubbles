@@ -132,15 +132,17 @@ export const NOV21_AGENT_LOOP_WRITE_UP_FIRST_NAME_CASES: ReplayCase[] = [
     }
   }),
   /* QA2's live re-test (21 Nov 2026), item 2: "show <P>'s team <P>'s new puppy" (not after a preposition; the sibling app's object-possessive rule, ported, covers it). */
-  fixed("nov21-write-up-qa2-show-team-new-puppy", `QA2, live: "ca for Thaddea Kroll, she left the register for 20 minutes because she wanted to show her team her new puppy": the card, the reply and the saved Observed never read "show Thaddea's team Thaddea's new puppy"`, async (t) => {
+  fixed("nov21-write-up-qa2-show-team-new-puppy", `QA2, live: "ca for Thaddea Kroll, she left the register for 20 minutes because she wanted to show her team her new puppy": the card, the reply and the saved Observed never read "show Thaddea's team Thaddea's new puppy" (card/reply: "show Thaddea's team the new puppy"; the saved Observed: "show the team the new puppy")`, async (t) => {
     const account = "Thaddea left the register for 20 minutes because she wanted to show her team her new puppy.";
     const saved = await caCard(t, "ca for Thaddea Kroll, she left the register for 20 minutes because she wanted to show her team her new puppy", THADDEA, account, account);
-    expect(saved.issue, `the card's account:\n${saved.issue}`).toBe("Thaddea left the register for 20 minutes because Thaddea wanted to show the team the new puppy.");
-    expect(saved.reply, `the reply:\n${saved.reply}`).toContain("wanted to show the team the new puppy.");
+    /* CHANGED ON PURPOSE (QA's ruling, 22 Nov 2026, Pau's round 3 U23, option 2 in the card/reply pass only): the first possessive keeps its owner, the second is "the"; the saved write-up keeps HR's "the team". The card and reply were "show the team the new puppy". */
+    expect(saved.issue, `the card's account:\n${saved.issue}`).toBe("Thaddea left the register for 20 minutes because Thaddea wanted to show Thaddea's team the new puppy.");
+    expect(saved.reply, `the reply:\n${saved.reply}`).toContain("wanted to show Thaddea's team the new puppy.");
     const observation = saved.values.observation ?? "";
     expect(observation, observation).toMatch(/show the team the new puppy/);
+    expect(observation, observation).not.toMatch(/Thaddea's (?:team|new puppy)/);
     for (const text of [saved.issue, saved.reply, observation]) {
-      expect(text, text).not.toMatch(/Thaddea's (?:team|new puppy)/);
+      expect(text, text).not.toMatch(/Thaddea's team Thaddea's/);
       expect(text, text).not.toMatch(PRONOUN);
     }
   }),
