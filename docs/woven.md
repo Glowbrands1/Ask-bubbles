@@ -272,6 +272,16 @@ WOVEN_KNOWLEDGE_LIVE_DRY_RUN=1 WOVEN_KNOWLEDGE_SYNC_ENABLED=true npm run dry-run
   `WOVEN_BCS_POLICY_MANAGEMENT_LIST_ENABLED` on, run the live dry run above with
   `WOVEN_BCS_POLICY_MANAGEMENT_LIST_ENABLED=true` added (read-only) and check the
   policy row counts and `excludedByReason`.
+- The content POSTs' anti-forgery header (`WOVEN_POST_ANTIFORGERY_HEADER_ENABLED`,
+  default off). From 19 Nov 2026 every content-list POST (handbooks,
+  procedures, File Library, communications, the old `_Policies_List`) answered
+  HTTP 400 with no anti-forgery wording, in both apps and for both Woven
+  companies, while GET pages worked; our requests did not change. With the
+  switch on, each content POST carries the latest authenticated page's
+  `__RequestVerificationToken` in a header (the name the page's ajax set-up
+  declares, else `RequestVerificationToken`), reading the dashboard first if no
+  page has been read yet. Before switching it on in Production, run a Preview
+  scan with it on and check that every listing reads.
 - Procedure team/location limits and
   updated dates; per-item team/position ids; Communications detail and
   attachments; procedure attachment downloads; Shared Links.

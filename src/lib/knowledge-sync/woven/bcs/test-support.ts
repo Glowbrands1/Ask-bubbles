@@ -338,6 +338,17 @@ export class FakeBcsWoven {
    */
   handbookFiles: Record<string, { versionId: string; fileName: string; bytes: Uint8Array }> = {};
   logins = 0;
+  /**
+   * Woven from 19 Nov 2026: every content POST without the page's anti-forgery
+   * token in `header` answers HTTP 400 with an EMPTY body (what both apps'
+   * runs recorded: "Woven answered … with HTTP 400.", no anti-forgery wording),
+   * while GET pages work. Authenticated pages carry the token as a hidden
+   * `__RequestVerificationToken` input; `declared` puts the header's name in
+   * the page's own ajax set-up, as an ASP.NET page does. Null: no check.
+   */
+  antiforgery: { header: string; declared: boolean } | null = null;
+  /** The token authenticated pages carry (sanitized, invented). */
+  static readonly PAGE_TOKEN = "fixture-page-token";
   private session: { token: string; companyId: string | null } | null = null;
 
   get activeCompanyId(): string | null {
@@ -380,6 +391,25 @@ export class FakeBcsWoven {
 
   fetch: typeof fetch = async (input, init) => {
     const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
+    const check = this.antiforgery;
+    const method = init?.method ?? "GET";
+    if (check && method === "POST" && /^\/(KnowledgeCenter|FileLibrary|Communication|Dashboard)\//.test(url.pathname)) {
+      if (new Headers(init?.headers).get(check.header) !== FakeBcsWoven.PAGE_TOKEN) {
+        const headers = new Headers(init?.headers);
+        this.log.push({ method, path: url.pathname, query: url.search, body: typeof init?.body === "string" ? init.body : "", contentType: headers.get("content-type"), company: this.session?.companyId ?? null });
+        return new Response("", { status: 400 });
+      }
+    }
+    const response = await this.serve(url, init);
+    if (!check || method !== "GET" || !(response.headers.get("content-type") ?? "").includes("html") || response.status !== 200 || url.pathname.startsWith("/Login")) return response;
+    const text = await response.text();
+    const token = `<input name="__RequestVerificationToken" type="hidden" value="${FakeBcsWoven.PAGE_TOKEN}">`;
+    const setup = check.declared ? `<script>$.ajaxSetup({ headers: { '${check.header}': $('input[name="__RequestVerificationToken"]').val() } });</script>` : "";
+    const marked = text.includes("</body>") ? text.replace("</body>", `${token}${setup}</body>`) : `${text}${token}${setup}`;
+    return new Response(marked, { status: response.status, headers: response.headers });
+  };
+
+  private serve = async (url: URL, init: RequestInit | undefined): Promise<Response> => {
     const headers = new Headers(init?.headers);
     const method = init?.method ?? "GET";
     const body = typeof init?.body === "string" ? init.body : "";
