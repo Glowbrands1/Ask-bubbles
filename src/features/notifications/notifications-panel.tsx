@@ -33,8 +33,10 @@ export function NotificationsPanel({
   rows: readonly PanelRow[];
   unread: number;
   onOpen: (id: string) => void;
-  onDismiss: (id: string) => void;
-  onClearAll: () => void;
+  /** The × on each row; absent where the store has no way to remove one (the DM L10 bell's Hub notes). */
+  onDismiss?: (id: string) => void;
+  /** Clear all; absent with `onDismiss`. */
+  onClearAll?: () => void;
   onMarkAllRead: () => void;
   /** Links under the header ("See all"), when the bell has them. */
   footer?: ReactNode;
@@ -50,7 +52,7 @@ export function NotificationsPanel({
               Mark all as read
             </button>
           ) : null}
-          {rows.length ? (
+          {rows.length && onClearAll ? (
             <button type="button" onClick={onClearAll} className="text-xs font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
               Clear all
             </button>
@@ -62,7 +64,7 @@ export function NotificationsPanel({
         <ul className="max-h-[min(26rem,70vh)] overflow-y-auto py-1" aria-label="Notifications">
           {rows.map((n) => (
             <li key={n.id} className="group flex items-start transition-colors hover:bg-hover-surface">
-              <button type="button" onClick={() => onOpen(n.id)} className="flex min-w-0 flex-1 items-start gap-3 py-2.5 pl-4 text-left">
+              <button type="button" onClick={() => onOpen(n.id)} className={cn("flex min-w-0 flex-1 items-start gap-3 py-2.5 pl-4 text-left", onDismiss ? null : "pr-4")}>
                 <span aria-hidden className={cn("mt-1.5 size-2 shrink-0 rounded-full", n.read ? "bg-transparent" : "bg-accent")} />
                 <span className="min-w-0 flex-1">
                   <span className={cn("block text-sm text-foreground", n.read ? "font-medium" : "font-bold")}>
@@ -74,6 +76,7 @@ export function NotificationsPanel({
                   <span className="mt-0.5 block text-xs text-muted-foreground">{n.meta}</span>
                 </span>
               </button>
+              {onDismiss ? (
               <button
                 type="button"
                 aria-label={`Remove notification: ${n.title}`}
@@ -82,6 +85,7 @@ export function NotificationsPanel({
               >
                 <X className="size-4" aria-hidden />
               </button>
+              ) : null}
             </li>
           ))}
         </ul>
