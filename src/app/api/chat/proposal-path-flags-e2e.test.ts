@@ -638,7 +638,7 @@ describe("FORM_EDIT_DATE_RULES off: production today", () => {
     await thread.say(REQUEST, EMPLOYEE);
     expect(issue(await thread.say("add that she was also on her phone", EMPLOYEE))).toBe("add that she was also on her phone");
   });
-  it("S22: the Issue keeps \"general manager\"", async () => {
+  it("S22: \"general manager\" is the role, not the Issue", async () => {
     live();
     // Changed on purpose (Gate-Bubbles B866, 13 Nov 2026): this pins the pre-FORM_EDIT_DATE_RULES path, where the edit is
     // not applied. ANSWER_IS_THE_ISSUE_ENABLED is held off here so the pin stays that old path; on production's path
@@ -648,7 +648,11 @@ describe("FORM_EDIT_DATE_RULES off: production today", () => {
     const thread = new Thread();
     await thread.say("create a CA for general manager, tessa ormond for violating the standards of conduct", { employeeName: "tessa ormond" });
     await thread.say("Tessa Ormond, General Manager", EMPLOYEE);
-    expect(issue(await thread.say(`change observation of offense to: ${LITERAL}`, EMPLOYEE))).toBe("general manager");
+    /*
+     * CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): "general manager" is Buff City Soap's job title now (the
+     * GM plan's role), so this old path reads it as the role and never as the Issue it used to keep.
+     */
+    expect(issue(await thread.say(`change observation of offense to: ${LITERAL}`, EMPLOYEE))).not.toBe("general manager");
   });
   /*
    * PRE-FORM_EDIT_DATE_RULES BEHAVIOUR, NOT LIVE (QA, 12 Nov 2026). `live()` deletes FORM_EDIT_DATE_RULES_ENABLED to pin

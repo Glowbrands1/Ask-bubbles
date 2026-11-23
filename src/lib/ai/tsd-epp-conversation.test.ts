@@ -12,7 +12,8 @@ vi.mock("@/config/company/locations", async () =>
  *
  * CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): the plan once named for the reference platform's Training Store Director
  * (TSD) is Buff City Soap's General Manager Performance EPP. Managers name it by that title or "GM EPP"; the
- * reference platform's TSD names no longer reach it, and its intake names no metric of that platform.
+ * reference platform's TSD names no longer reach it, and its intake names Buff City Soap's KPIs (the KB's "Domo
+ * Reporting Overview"), none of that platform's.
  * ============================================================================
  *
  * The same six routes the SDIT plan has — the document's name, the role spelled
@@ -290,8 +291,8 @@ describe("the Ask Vicki-style intake, for a manager who has said nothing", () =>
       "The date for the form",
       "Where the manager is currently succeeding",
       "The biggest areas needing improvement",
-      "The manager's goals and results",
-      "The store's current goals and results",
+      "The manager's productivity numbers",
+      "The store's current productivity numbers",
       "When the follow-up review should happen",
     ]) {
       expect(content, asked).toContain(asked);
@@ -330,8 +331,8 @@ describe("the Ask Vicki-style intake, for a manager who has said nothing", () =>
     expect((content.match(/^- /gm) ?? []).length).toBe(7);
   });
 
-  // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): the plan's measure lines are blank Goal / Result lines; no metric is named.
-  it("names no metric of the reference platform, and asks for goals and results", async () => {
+  // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms; KB "Domo Reporting Overview"): Buff City Soap's six KPIs.
+  it("names no metric of the reference platform, and asks for Buff City Soap's KPIs, goal and result", async () => {
     const proposals = await load(LIBRARY());
     const content = (await proposals.proposeFormForTurn(
       turn("Create a GM EPP from this conversation."),
@@ -340,7 +341,7 @@ describe("the Ask Vicki-style intake, for a manager who has said nothing", () =>
     for (const metric of ["PPTA", "LPSVA", "UPTA", "Club Close", "Average Club Dollar"]) {
       expect(content, metric).not.toContain(metric);
     }
-    expect(content).toContain("goals and results");
+    expect(content).toContain("goal and result (Net Sales, Comp Sales %, IPT, AOV, Discount Rate %, Product Mix %)");
   });
 
   it("says the productivity numbers may be left blank", async () => {

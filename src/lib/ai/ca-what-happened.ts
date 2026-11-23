@@ -183,7 +183,25 @@ function withAccountAsIssue(
 ): AskResponse {
   if (!answerIsTheIssueEnabled()) return response;
   const issue = proposal.issue?.trim() ?? "";
-  if (issue === "" || !onlyWhoAndWhere(issue, ignore)) return response;
+  if (issue === "") return response;
+  /*
+   * An Issue that opens with the card's own name ("rowan kestrel for violating the standards of conduct") is the request
+   * sentence after its title, not the account: "general manager" reads as a title since Pau's 23 Nov forms rename (Pau,
+   * 23 Nov: BCS terms in the forms), so the reader no longer stops at it. Its account clauses are the Issue, as for a
+   * request turn (`accountClauses`).
+   */
+  const opensWithName = name.trim() !== "" && issue.toLowerCase().startsWith(`${name.trim().toLowerCase()} `);
+  if (opensWithName) {
+    const account = accountClauses(issue, name, ignore);
+    if (account && account !== issue) {
+      const content = response.content
+        .split("\n")
+        .map((line) => line.replace(/^(\s*\*\*Issue:\*\*[ \t]*)[^\n·]*?([ \t]+·[ \t]+|[ \t]*$)/, (_all, lead: string, tail: string) => `${lead}${account}${tail}`))
+        .join("\n");
+      return { ...response, content, formProposal: { ...proposal, issue: account } };
+    }
+  }
+  if (!onlyWhoAndWhere(issue, ignore)) return response;
   const said = [question, ...turns.filter((turn) => turn.role === "user").map((turn) => turn.content).reverse()].map(withoutStateLead);
   const turn = said.find((text) => !/\?\s*$/.test(text.trim()) && hasAccount(text, name, ignore));
   const account = turn ? accountClauses(turn, name, ignore) : "";
