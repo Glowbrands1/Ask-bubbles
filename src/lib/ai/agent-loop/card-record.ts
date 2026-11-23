@@ -79,6 +79,12 @@ export interface CardRecord {
    */
   readonly priorDates?: readonly string[];
   /**
+   * Pau's ruling (23 Nov 2026, via QA): forms on file are never added to Prior actions on their own; the card's reply offers
+   * them ("<P> has a Verbal CA on file from 10/02/2026. Want me to add it to Prior actions?"). The forms' dates (ISO) this
+   * card offered, so the next turn knows the manager is answering that offer. Dates only, never a name.
+   */
+  readonly onFileOffered?: readonly string[];
+  /**
    * QA's Bubbles live round 3 (22 Nov 2026, A1(a)): the store any card was filed at (`loc-<code>`), so a later turn with no
    * card checks the reply's "filed at <store>" against the card still shown. A store id, never a name. Null when none.
    */
@@ -86,7 +92,7 @@ export interface CardRecord {
 }
 
 /** What a turn writes into `slots.agent_loop.card`. */
-export type CardSlot = Omit<CardRecord, "messageId" | "asked" | "level" | "policyLine" | "payroll" | "payrollAmount" | "accountKey" | "issueKey" | "incidentDate" | "teamStoreId" | "priorDates" | "storeId"> & { readonly priorDates?: readonly string[]; readonly asked?: readonly string[]; readonly level?: "verbal" | "written"; readonly policyLine?: string; readonly payroll?: "yes" | "no"; readonly payrollAmount?: string; readonly accountKey?: string; readonly issueKey?: string; readonly incidentDate?: string; readonly teamStoreId?: string; readonly storeId?: string };
+export type CardSlot = Omit<CardRecord, "messageId" | "asked" | "level" | "policyLine" | "payroll" | "payrollAmount" | "accountKey" | "issueKey" | "incidentDate" | "teamStoreId" | "priorDates" | "onFileOffered" | "storeId"> & { readonly priorDates?: readonly string[]; readonly onFileOffered?: readonly string[]; readonly asked?: readonly string[]; readonly level?: "verbal" | "written"; readonly policyLine?: string; readonly payroll?: "yes" | "no"; readonly payrollAmount?: string; readonly accountKey?: string; readonly issueKey?: string; readonly incidentDate?: string; readonly teamStoreId?: string; readonly storeId?: string };
 
 function isCardSlot(value: unknown): value is CardSlot {
   const row = value as Partial<CardSlot> | null;
@@ -251,7 +257,7 @@ export async function readLoopRecords(conversationId: string | undefined, userId
       cards: rows.flatMap((row) => {
         const card = row.slots?.agent_loop?.card;
         return isCardSlot(card)
-          ? [{ proposalId: card.proposalId, employeeKey: card.employeeKey ?? null, nameKey: card.nameKey ?? null, templateKey: card.templateKey, templateName: card.templateName ?? null, messageId: row.message_id, questionKey: questionKeyOf(row), asked: Array.isArray(card.asked) ? card.asked.filter((field): field is string => typeof field === "string") : [], level: card.level === "verbal" || card.level === "written" ? card.level : null, policyLine: typeof card.policyLine === "string" ? card.policyLine : null, payroll: card.payroll === "yes" || card.payroll === "no" ? card.payroll : null, payrollAmount: typeof card.payrollAmount === "string" && /^\d+(?:\.\d+)?$/.test(card.payrollAmount) ? card.payrollAmount : null, accountKey: typeof card.accountKey === "string" && /^[0-9a-f]{16}$/.test(card.accountKey) ? card.accountKey : null, issueKey: typeof card.issueKey === "string" && /^[0-9a-f]{16}$/.test(card.issueKey) ? card.issueKey : null, incidentDate: typeof card.incidentDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(card.incidentDate) ? card.incidentDate : null, teamStoreId: typeof card.teamStoreId === "string" && /^loc-[A-Za-z0-9-]{1,16}$/.test(card.teamStoreId) ? card.teamStoreId : null, ...(Array.isArray(card.priorDates) ? { priorDates: card.priorDates.filter((date): date is string => typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)).slice(0, 12) } : {}), storeId: typeof card.storeId === "string" && /^loc-[A-Za-z0-9-]{1,16}$/.test(card.storeId) ? card.storeId : null }]
+          ? [{ proposalId: card.proposalId, employeeKey: card.employeeKey ?? null, nameKey: card.nameKey ?? null, templateKey: card.templateKey, templateName: card.templateName ?? null, messageId: row.message_id, questionKey: questionKeyOf(row), asked: Array.isArray(card.asked) ? card.asked.filter((field): field is string => typeof field === "string") : [], level: card.level === "verbal" || card.level === "written" ? card.level : null, policyLine: typeof card.policyLine === "string" ? card.policyLine : null, payroll: card.payroll === "yes" || card.payroll === "no" ? card.payroll : null, payrollAmount: typeof card.payrollAmount === "string" && /^\d+(?:\.\d+)?$/.test(card.payrollAmount) ? card.payrollAmount : null, accountKey: typeof card.accountKey === "string" && /^[0-9a-f]{16}$/.test(card.accountKey) ? card.accountKey : null, issueKey: typeof card.issueKey === "string" && /^[0-9a-f]{16}$/.test(card.issueKey) ? card.issueKey : null, incidentDate: typeof card.incidentDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(card.incidentDate) ? card.incidentDate : null, teamStoreId: typeof card.teamStoreId === "string" && /^loc-[A-Za-z0-9-]{1,16}$/.test(card.teamStoreId) ? card.teamStoreId : null, ...(Array.isArray(card.priorDates) ? { priorDates: card.priorDates.filter((date): date is string => typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)).slice(0, 12) } : {}), ...(Array.isArray(card.onFileOffered) ? { onFileOffered: card.onFileOffered.filter((date): date is string => typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)).slice(0, 12) } : {}), storeId: typeof card.storeId === "string" && /^loc-[A-Za-z0-9-]{1,16}$/.test(card.storeId) ? card.storeId : null }]
           : [];
       }),
       nameQuestions: rows.flatMap((row) => {
