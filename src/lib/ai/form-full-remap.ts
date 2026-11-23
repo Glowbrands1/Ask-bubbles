@@ -508,6 +508,28 @@ function namesFormOutsideRemap(text: string): boolean {
   return OUTSIDE_AS_FORM.test(text) || OUTSIDE_AS_OBJECT.test(text);
 }
 
+/**
+ * Board f099 (QA, 23 Nov 2026): the manager's own turn asks for a form the library has no title for ("can you make a
+ * store manager interview form"): it names a form outside the remap, and no library title (no explicit or clarified
+ * template, no Corrective Action request). A question about forms on file is not a request.
+ */
+/**
+ * The form name the manager asked for, trimmed to the form's own words ("store manager interview"): the words after
+ * the article, up to and with the head word; never the rest of the message. Null when no such name is read.
+ */
+export function formNameNotInLibrary(text: string): string | null {
+  const asForm = new RegExp(String.raw`\b(?:a|an|the|another|new)\s+((?:[a-z/'-]+\s+){0,4}?${OUTSIDE_HEAD})\s+(?:forms?|paperwork|packets?|sheets?|documents?|templates?)\b`, "i").exec(text);
+  const asObject = asForm ? null : new RegExp(String.raw`\b(?:a|an|the|another)\s+((?:[a-z/'-]+\s+){0,4}?${OUTSIDE_HEAD})\b`, "i").exec(text);
+  const words = (asForm ?? asObject)?.[1]?.trim().replace(/\s+/g, " ");
+  return words && !/\b(?:for|about|with|and|to)\b/i.test(words) ? words.toLowerCase() : null;
+}
+
+export function namesFormNotInLibrary(text: string): boolean {
+  if (!text.trim() || asksOnlyAboutFormsOnFile(text) || !namesFormOutsideRemap(text)) return false;
+  const intent = detectTemplateIntent(text);
+  return !(intent.kind === "explicit" || intent.kind === "clarify" || (intent.kind === "corrective_action" && intent.requestedCreation));
+}
+
 export async function remapFormTurn(
   input: {
     readonly history: readonly Turn[];

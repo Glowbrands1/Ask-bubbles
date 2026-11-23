@@ -237,10 +237,14 @@ describe("acceptance: a hidden interview form opens no card (QA, 25 Oct 2026)", 
      * CHANGED ON PURPOSE (Pau, 21 Nov 2026): the Tanning Consultant Interview was removed from this app's library and
      * its matcher went with it, so these words no longer name a form and the reply is not "not published" — Bubbles
      * asks which form is needed. Still no card, and no Coaching Form in its place.
+     * CHANGED ON PURPOSE (board f099, QA, 23 Nov 2026): a form the library has no title for is now said so before the
+     * forms menu ("There's no tanning consultant interview form in the forms library …", the form's own words only), in place of the bare "Which form do you need?".
      */
-    expect(reply!.content).toMatch(/Which form do you need\?/);
+    expect(reply!.content).toMatch(/There's no tanning consultant interview form in the forms library/);
+    expect((reply as { formSelection?: unknown }).formSelection, "the forms that exist are not listed").toBeTruthy();
     expect(reply!.content).not.toMatch(A_CARD);
-    expect(reply!.content).not.toMatch(/tanning/i);
+    /* CHANGED ON PURPOSE (board f099): the reply names the form asked for in the manager's own words, to say it isn't in the library. */
+    expect(reply!.content).not.toMatch(/tanning consultant interview form for/i);
     expect(reply!.content).not.toContain("create a tanning consultant interview form for");
   });
 
@@ -290,7 +294,13 @@ describe("acceptance: a hidden interview form opens no card (QA, 25 Oct 2026)", 
     // The proposal flow's answer: the forms this deployment publishes, no interview among them, nothing opened.
     expect(reply!.formProposal).toBeUndefined();
     expect(reply!.content).not.toMatch(A_CARD);
-    expect(JSON.stringify(reply)).not.toMatch(/interview/i);
+    /*
+     * CHANGED ON PURPOSE (board f099, QA, 23 Nov 2026): the reply now says the form asked for isn't in the library,
+     * naming it in the manager's words ("There's no store manager interview form …"), so "interview" is in the reply's
+     * words. The forms offered still hold no interview.
+     */
+    expect(reply!.content).toMatch(/^There's no (?:store manager )?interview form in the forms library/);
+    expect(JSON.stringify((reply as { formSelection?: unknown }).formSelection ?? null)).not.toMatch(/interview/i);
   });
 });
 
