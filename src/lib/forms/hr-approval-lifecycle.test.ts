@@ -34,7 +34,7 @@ const extra = store as unknown as Record<string, Record<string, unknown>[]>;
 vi.mock("@/lib/supabase/server", () => ({ getSupabaseAdmin: () => fakeSupabase(store) }));
 
 const { ensureTemplateLibrary } = await import("./repository");
-const { createInstance, loadInstance, saveInstanceValues, finalizeInstance, HeldForHrError } = await import("./instances");
+const { createInstance, loadInstance, saveInstanceValues, finalizeInstance, HeldForHrError, archiveInstance } = await import("./instances");
 const { sendForHrApproval, decideHrApproval, commentOnHrApproval, hrApprovalViewFor, finalizeGoesToHr, listHrQueue, listMyFormsWithHr, readHrApprovalsFor, recordHrEdit, hrQueueSummary, HrApprovalError } =
   await import("./hr-approval");
 
@@ -346,5 +346,55 @@ describe("manager replied to changes", () => {
     expect(bells("thistle@example.com").filter((bell) => bell.title === "HR sent your form back for changes")).toHaveLength(2);
     // Before the manager replies again, HR may not approve it.
     await expect(decideHrApproval(instance.id, hr, "approve", null)).rejects.toThrow(/sent back for changes/);
+  });
+});
+
+/*
+ * QA (23 Nov 2026): "An archived form that was pending HR must never show in 'Needs your decision', be counted, or ring
+ * a bell." Archiving hides a form without changing its status or its HR state (`archiveInstance`), so the HR queue reads
+ * leave out `archived_at` rows themselves: the queue, its count (the Overview card and the tab badge), the 6 AM reminder
+ * that is rung from that count, and the AI's read of HR's queue.
+ */
+describe("an archived form is out of HR's queue", () => {
+
+  async function twoPending() {
+    const kept = await policyReview();
+    const archived = await policyReview();
+    await sendForHrApproval(kept.id, manager, null, { acknowledgeUnverifiedPolicy: true });
+    await sendForHrApproval(archived.id, manager, null, { acknowledgeUnverifiedPolicy: true });
+    await archiveInstance(archived.id, CREATOR, true);
+    return { kept, archived };
+  }
+
+  it("not listed in Needs your decision, and not counted", async () => {
+    const { kept, archived } = await twoPending();
+    expect((await loadInstance(archived.id))!.instance.hrApprovalState).toBe("pending");
+    expect((await listHrQueue(hr)).map((row) => row.id)).toEqual([kept.id]);
+    expect(await hrQueueSummary(hr)).toEqual({ pending: 1, overdue: 0 });
+    const read = await readHrApprovalsFor(HR, true);
+    expect(read.kind === "hr" ? read.queue.map((row) => row.id) : read).toEqual([kept.id]);
+  });
+
+  it("the 6 AM reminder counts only the form still waiting, and with only an archived one there is no bell", async () => {
+    const { runHrReminders } = await import("./hr-approval-reminders");
+    extra.form_hr_reminder_sends = [];
+    const { kept } = await twoPending();
+    const sixAmCentral = new Date("2026-11-24T12:05:00Z");
+    extra.app_notifications = [];
+    expect(await runHrReminders(sixAmCentral)).toMatchObject({ status: "sent", reminded: 1 });
+    expect(bells("hr.wren@example.com").map((row) => row.title)).toEqual(["1 form is waiting for your approval"]);
+
+    await archiveInstance(kept.id, CREATOR, true);
+    extra.form_hr_reminder_sends = [];
+    extra.app_notifications = [];
+    expect(await runHrReminders(sixAmCentral)).toMatchObject({ status: "sent", reminded: 0, nothingPending: 1 });
+    expect(bells("hr.wren@example.com")).toEqual([]);
+  });
+
+  it("restored from the archive, it is back in the queue", async () => {
+    const { archived } = await twoPending();
+    await archiveInstance(archived.id, CREATOR, false);
+    expect((await listHrQueue(hr)).map((row) => row.id).sort()).toContain(archived.id);
+    expect((await hrQueueSummary(hr))!.pending).toBe(2);
   });
 });
