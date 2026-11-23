@@ -1024,6 +1024,8 @@ const NOT_ASKED = "Forms on file are looked at only when the manager asks about 
 /** What the turn's tools produced for the reply: the card and the edit, when there were any. */
 export interface ToolEffects {
   proposal: ChatFormProposal | null;
+  /** A1(b) (QA's live record, 23 Nov 2026): this turn already handed back a card re-proposed with no account. */
+  accountHandedBack?: boolean;
   /** U24 (QA, 22 Nov 2026): the exit type(s) this turn's exit card ticks, by the form's labels, for the reply's "Filed as" line. */
   exitTicks?: readonly string[];
   /**
@@ -3985,6 +3987,23 @@ export async function proposeForm(
     return {
       reason_code: "same_card_account_missing",
       error: `The manager asked for the ${template.name} on screen for ${employee.name}. Propose ${employee.name}'s card again now with what_happened: that card's account exactly as this chat shows it (the Observation of the earlier card), with ${employee.name}'s name in place of the earlier person's, and same_card_evidence again. Never ask what happened; never copy a level or a payroll answer.`,
+    };
+  }
+  /*
+   * A1(b) (QA's live record and replay, 23 Nov 2026; coder 5's u35a run 1 too): the card on screen for this person had an
+   * account, and the model re-proposed it (a surname correction, a form change) with no what_happened: the card's
+   * Observation was lost on every later turn. The card's record says it had one (its one-way key, never its text), so
+   * the card goes back once, to be proposed with that account as this chat shows it, changed only where the manager asked.
+   */
+  const screenCard = context.openFormId ? null : (context.cardOnScreen ?? null);
+  const accountCardPerson = Boolean(screenCard && (employee.id
+    ? screenCard.employeeKey === personKey(employee.id)
+    : screenCard.nameKey === personKey(employee.name) || (nameCorrectedFrom !== null && screenCard.nameKey === personKey(nameCorrectedFrom))));
+  if (!sameCardOther && accountCardPerson && screenCard?.accountKey && !effects.accountHandedBack && !(typeof input.what_happened === "string" && input.what_happened.trim())) {
+    effects.accountHandedBack = true;
+    return {
+      reason_code: "card_account_missing",
+      error: `The ${screenCard.templateName ?? "card"} on screen for ${employee.name} has an account. Propose the card again now with what_happened: that card's account exactly as this chat shows it, changed only where the manager asked (a corrected name included). Nothing was changed.`,
     };
   }
   const copiedFromCard = sameCardOther;
