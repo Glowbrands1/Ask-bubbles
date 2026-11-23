@@ -17,21 +17,21 @@ import { evidenceFrom, headingWith, lastResult, loopStandIn, type LoopDecision, 
  */
 
 const REPORT = "Pau's review (23 Nov 2026, via QA): an employee had two finalized Corrective Actions for the same incident date (a no-show on 11/18) and a third draft; the AI never mentioned one already existed";
-const WREN: DirectoryRow = { id: "e-wren-halloway", firstName: "Wren", lastName: "Halloway", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-264"], positionName: "Team Member Part Time" };
-const ON_1118 = "create a corrective action for Wren Halloway, she was a no call no show on 11/18";
-const ON_1120 = "create a corrective action for Wren Halloway, she was a no call no show on 11/20";
+const CORLISS: DirectoryRow = { id: "e-corliss-abernath", firstName: "Corliss", lastName: "Abernath", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-264"], positionName: "Team Member Part Time" };
+const ON_1118 = "create a corrective action for Corliss Abernath, she was a no call no show on 11/18";
+const ON_1120 = "create a corrective action for Corliss Abernath, she was a no call no show on 11/20";
 const SEPARATE = "this is a separate incident, she no-showed her second shift that day too";
 
-/** Wren's Corrective Action for 11/18 on file: finalized 11/19 (or a draft). */
+/** Corliss's Corrective Action for 11/18 on file: finalized 11/19 (or a draft). */
 function onFile(t: ReplayContext, status: "finalized" | "draft"): void {
   const ids = t.templateIds!("dpoa");
   (t.forms() as Record<string, unknown>[]).push({
-    id: "ca-wren-1118", ...ids, variant_key: null, employee_role: null, location_id: WEST_DODGE.primaryAreaId, location_name: "Omaha, West Dodge Rd",
+    id: "ca-corliss-1118", ...ids, variant_key: null, employee_role: null, location_id: WEST_DODGE.primaryAreaId, location_name: "Omaha, West Dodge Rd",
     created_by: "another-manager", created_by_role: "location_manager", source: "ask_sunny", status, follow_up_date: null, archived_at: null,
-    revises_instance_id: null, template_key: "dpoa", template_name: "Corrective Action Form", employee_name: "Wren Halloway", form_date: "2026-11-18",
+    revises_instance_id: null, template_key: "dpoa", template_name: "Corrective Action Form", employee_name: "Corliss Abernath", form_date: "2026-11-18",
     created_at: "2026-11-18T22:00:00Z", updated_at: "2026-11-19T16:00:00Z", ...(status === "finalized" ? { finalized_at: "2026-11-19T16:00:00Z" } : {}),
   });
-  t.typeOnForm("ca-wren-1118", { observation: "Wren was a no call no show for her shift on 11/18/26." });
+  t.typeOnForm("ca-corliss-1118", { observation: "Corliss was a no call no show for her shift on 11/18/26." });
 }
 
 const users = (view: LoopView) => view.turns.filter((turn) => turn.role === "user" && (turn.messageIds?.length ?? 0) > 0);
@@ -41,7 +41,7 @@ type Result = { card?: unknown; reason_code?: string; ask_exactly?: string } | n
 const model = (date: string) =>
   loopStandIn((view): LoopDecision => {
     const result = lastResult(view, "propose_form") as Result;
-    if (result?.card) return { text: "Here's the Corrective Action Form for **Wren**." };
+    if (result?.card) return { text: "Here's the Corrective Action Form for **Corliss**." };
     if (result) return { text: result.ask_exactly ?? `refused: ${result.reason_code}` };
     const said = users(view).at(-1)!.text;
     /* evidenceFrom's last argument counts manager messages back from the latest: the request's first message is 1 back after SEPARATE. */
@@ -49,10 +49,10 @@ const model = (date: string) =>
     return {
       tool: "propose_form",
       input: {
-        template_key: "dpoa", employee_id: WREN.id, incident_date: date,
-        what_happened: `Wren was a no call no show for her shift on ${date.slice(5, 7)}/${date.slice(8)}/26.`,
+        template_key: "dpoa", employee_id: CORLISS.id, incident_date: date,
+        what_happened: `Corliss was a no call no show for her shift on ${date.slice(5, 7)}/${date.slice(8)}/26.`,
         policy: headingWith(view, /attendance/i),
-        person_evidence: evidenceFrom(view, "Wren Halloway", first),
+        person_evidence: evidenceFrom(view, "Corliss Abernath", first),
         attendance: "absence", attendance_evidence: evidenceFrom(view, "no call no show", first),
         ...(said === SEPARATE ? { separate_incident_evidence: evidenceFrom(view, "this is a separate incident", 0) } : {}),
       },
@@ -61,7 +61,7 @@ const model = (date: string) =>
 
 async function chat(t: ReplayContext, first: string, date: string, status: "finalized" | "draft" = "finalized") {
   vi.setSystemTime(new Date("2026-11-23T18:00:00Z"));
-  t.directory([...LOOP_STAFF, WREN]);
+  t.directory([...LOOP_STAFF, CORLISS]);
   t.as("location_manager", WEST_DODGE);
   onFile(t, status);
   t.loopModel!(model(date));
@@ -73,7 +73,7 @@ async function chat(t: ReplayContext, first: string, date: string, status: "fina
 export const NOV23_AGENT_LOOP_SAME_INCIDENT_ON_FILE_CASES: ReplayCase[] = [
   {
     id: "nov23-same-incident-finalized-ca-on-file-is-said",
-    title: "\"create a corrective action for Wren Halloway, she was a no call no show on 11/18\" with a CA for 11/18 finalized 11/19 on file: no card yet; the reply says \"Wren already has a Corrective Action for 11/18 (finalized 11/19). Do you want to open that one, or is this a separate incident?\"",
+    title: "\"create a corrective action for Corliss Abernath, she was a no call no show on 11/18\" with a CA for 11/18 finalized 11/19 on file: no card yet; the reply says \"Corliss already has a Corrective Action for 11/18 (finalized 11/19). Do you want to open that one, or is this a separate incident?\"",
     report: REPORT,
     status: "fixed",
     async run(t) {
@@ -84,7 +84,7 @@ export const NOV23_AGENT_LOOP_SAME_INCIDENT_ON_FILE_CASES: ReplayCase[] = [
   },
   {
     id: "nov23-same-incident-draft-on-file-is-said",
-    title: "The same with a DRAFT CA for 11/18 on file: the reply says Wren already has one for 11/18 (a draft) and asks; no card yet",
+    title: "The same with a DRAFT CA for 11/18 on file: the reply says Corliss already has one for 11/18 (a draft) and asks; no card yet",
     report: REPORT,
     status: "fixed",
     async run(t) {
