@@ -82,9 +82,9 @@ beforeEach(() => {
 });
 
 describe("retiring the placeholder", () => {
-  // Two keys, not one: the Tanning Consultant Interview was retired on 21 Nov 2026 (Pau). See the block below.
-  it("is one of the two retired keys", () => {
-    expect(RETIRED_TEMPLATE_KEYS).toEqual([EXAMPLE_CHECK_IN_KEY, TCI_KEY]);
+  // One key again (Pau, 23 Nov 2026): the consultant interview retired on 21 Nov is back as the Team Member Interview Form.
+  it("is the one retired key", () => {
+    expect(RETIRED_TEMPLATE_KEYS).toEqual([EXAMPLE_CHECK_IN_KEY]);
   });
 
   it("switches it off on the next install, and says so", async () => {
@@ -135,8 +135,8 @@ describe("retiring the placeholder", () => {
   it("a fresh database never installs it at all", async () => {
     await ensureTemplateLibrary("system");
     expect(await getTemplateByKey(EXAMPLE_CHECK_IN_KEY)).toBeNull();
-    // Sixteen, not seventeen: the Tanning Consultant Interview was removed from the library (Pau, 21 Nov 2026).
-    expect(store.form_templates).toHaveLength(16);
+    // Seventeen again (Pau, 23 Nov: BCS terms in the forms): the consultant interview is back as the Team Member Interview Form.
+    expect(store.form_templates).toHaveLength(17);
   });
 });
 
@@ -185,44 +185,43 @@ function withTanningConsultantInterviewInstalled() {
   });
 }
 
-describe("retiring the Tanning Consultant Interview (Pau, 21 Nov 2026)", () => {
-  it("is no longer in the code library", async () => {
+/*
+ * CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): the interview retired on 21 Nov 2026 is back as Buff
+ * City Soap's Team Member Interview Form, under the same key. An installed row is kept and gets the new title as a new
+ * published version; the old version and the form filed against it stay exactly as they were.
+ */
+describe("the Team Member Interview Form, under the key retired on 21 Nov 2026 (Pau, 23 Nov 2026)", () => {
+  it("is in the code library again, under its Buff City Soap title, and not retired", async () => {
     const { TEMPLATE_SEEDS } = await import("./library");
-    expect(TEMPLATE_SEEDS.map((seed) => seed.key)).not.toContain(TCI_KEY);
-    expect(RETIRED_TEMPLATE_KEYS).toContain(TCI_KEY);
+    expect(TEMPLATE_SEEDS.find((seed) => seed.key === TCI_KEY)?.name).toBe("Team Member Interview Form");
+    expect(RETIRED_TEMPLATE_KEYS).not.toContain(TCI_KEY);
   });
 
-  it("an installed row is switched off on the next install, and the install says so", async () => {
+  it("an installed row is kept, and the next install publishes the new title as a new version, deleting nothing", async () => {
     withTanningConsultantInterviewInstalled();
-    const result = await ensureTemplateLibrary("system");
-    expect(result.retired).toEqual([TCI_KEY]);
-    expect((await getTemplateByKey(TCI_KEY))?.active).toBe(false);
-  });
-
-  it("deletes nothing: the row, its version, its current pointer and the filed form are all still there, unchanged", async () => {
-    withTanningConsultantInterviewInstalled();
-    const versions = JSON.stringify(store.form_template_versions.filter((row) => row.template_id === "tpl-tci"));
     const filed = JSON.stringify(store.form_instances);
-    await ensureTemplateLibrary("system");
+    const result = await ensureTemplateLibrary("system");
+    expect(result.retired ?? []).toEqual([]);
     expect(store.form_templates!.filter((row) => row.key === TCI_KEY)).toHaveLength(1);
-    expect(JSON.stringify(store.form_template_versions.filter((row) => row.template_id === "tpl-tci"))).toBe(versions);
-    expect(store.form_template_current!.find((row) => row.template_id === "tpl-tci")?.version_id).toBe("ver-tci-1");
+    const template = await getTemplateByKey(TCI_KEY);
+    expect(template?.active).toBe(true);
+    expect(template?.name).toBe("Team Member Interview Form");
+    const versions = store.form_template_versions.filter((row) => row.template_id === "tpl-tci");
+    expect(versions.map((row) => row.id)).toContain("ver-tci-1");
+    expect(versions.length).toBeGreaterThan(1);
     expect(JSON.stringify(store.form_instances)).toBe(filed);
     const loaded = await loadInstance("tci-1");
     expect(loaded?.version.id).toBe("ver-tci-1");
   });
 
-  it("can no longer be chosen for a new form", async () => {
+  it("can be chosen for a new form again", async () => {
     withTanningConsultantInterviewInstalled();
     await ensureTemplateLibrary("system");
-    await expect(
-      createInstance({ templateKey: TCI_KEY, variantKey: null, employeeName: "Jordan Testperson", createdBy: "manager-1" } as never),
-    ).rejects.toThrow();
-    expect((await listTemplateSummaries()).map((entry) => entry.key)).not.toContain(TCI_KEY);
+    expect((await listTemplateSummaries()).map((entry) => entry.key)).toContain(TCI_KEY);
   });
 
-  it("a fresh database never installs it", async () => {
+  it("a fresh database installs it", async () => {
     await ensureTemplateLibrary("system");
-    expect(await getTemplateByKey(TCI_KEY)).toBeNull();
+    expect((await getTemplateByKey(TCI_KEY))?.name).toBe("Team Member Interview Form");
   });
 });

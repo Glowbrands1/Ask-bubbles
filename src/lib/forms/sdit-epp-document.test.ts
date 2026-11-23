@@ -163,8 +163,10 @@ describe("the document the business recognises", () => {
       const seed = TEMPLATE_SEEDS.find((entry) => entry.key === key)!;
       return `${seed.variants[0]!.role}/${seed.variants[0]!.roleAbbr}`;
     };
-    expect(pairing("asd-sdit-epp")).toBe("Training Store Director/ASD");
-    expect(pairing("fttc-epp")).toBe("Store Director/TC");
+    // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): the three plans Buff City Soap uses now address its own roles; each is
+    // still its own pairing, which is what a blanket find-and-replace would break.
+    expect(pairing("asd-sdit-epp")).toBe("General Manager/AGM");
+    expect(pairing("fttc-epp")).toBe("General Manager/TM");
     /*
      * THE TSD PLAN'S OWN SUBJECT WAS THE ONE THAT WAS WRONG. It was
      * "District Manager/SD" — inherited from the shared builder — so the
@@ -173,7 +175,7 @@ describe("the document the business recognises", () => {
      * it, and the two plans above are what would catch that fix having been
      * applied with a find-and-replace.
      */
-    expect(pairing("tsd-epp")).toBe("District Manager/TSD");
+    expect(pairing("tsd-epp")).toBe("District Manager/GM");
   });
 
   it("does not change the two plans that still share the old builder", () => {
@@ -328,10 +330,12 @@ describe("the rest of the library is where it was", () => {
     expect(plans.length).toBe(6);
     const expected: Record<string, number> = {
       "sdit-epp": 6,
-      "tsd-epp": 5,
+      // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): the General Manager, Assistant General Manager and Team Member plans
+      // are re-issued once more with Buff City Soap's names (5 → 6, 3 → 4).
+      "tsd-epp": 6,
       // Salon -> Store wording re-issues.
-      "asd-sdit-epp": 3,
-      "fttc-epp": 3,
+      "asd-sdit-epp": 4,
+      "fttc-epp": 4,
       "dmit-epp-tsd": 3,
       "dmit-epp-dmit": 3,
     };

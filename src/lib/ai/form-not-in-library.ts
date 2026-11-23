@@ -1,6 +1,7 @@
 import "server-only";
 
 import { offeredInChooser } from "@/lib/forms/chooser";
+import { supportsInlineDraft } from "@/lib/forms/inline-draft";
 import { type TemplateSummary } from "@/lib/forms/repository";
 import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
 import type { ChatFormSelection } from "@/types";
@@ -34,9 +35,39 @@ function offeredForms(summaries: readonly TemplateSummary[], actor: ChatActor): 
  * title ("a transfer form" and the library's Transfer form). Then the existing flow answers, as before.
  */
 export function libraryOffersForm(summaries: readonly TemplateSummary[], actor: ChatActor, formName: string | null): boolean {
+  return formsNamed(summaries, actor, formName).length > 0;
+}
+
+/** The forms this person can create whose title holds the name's head word ("interview": the interview forms). */
+function formsNamed(summaries: readonly TemplateSummary[], actor: ChatActor, formName: string | null): TemplateSummary[] {
   const head = formName?.split(" ").at(-1)?.replace(/s$/, "");
-  if (!head) return false;
-  return offeredForms(summaries, actor).some((summary) => summary.name.toLowerCase().split(/[^a-z]+/).some((word) => word.replace(/s$/, "") === head));
+  if (!head) return [];
+  return offeredForms(summaries, actor).filter((summary) => summary.name.toLowerCase().split(/[^a-z]+/).some((word) => word.replace(/s$/, "") === head));
+}
+
+/**
+ * The forms the name finds exist, but none can be created in the chat (the interviews, published under Buff City Soap's
+ * names on 23 Nov 2026: Pau, 23 Nov: BCS terms in the forms). The existing flow would offer the open card again or a
+ * menu of forms that cannot be started here, so the reply says so, honestly: the forms it found by name, started from
+ * Forms; no card is proposed, and a card on screen stays as it was. Null when the chat can create one of them (the
+ * existing flow answers, as before).
+ */
+export function namedFormsNotInChatReply(
+  summaries: readonly TemplateSummary[],
+  actor: ChatActor,
+  formName: string | null,
+  openTemplateKey?: string | null,
+): AskResponse | null {
+  const named = formsNamed(summaries, actor, formName);
+  if (named.length === 0 || named.some((summary) => supportsInlineDraft(summary.key, summary.currentVersion?.variants ?? []))) return null;
+  const names = named.map((summary) => `**${summary.name}**`);
+  const list = names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names[0]!;
+  const open = openTemplateKey ? summaries.find((summary) => summary.key === openTemplateKey)?.name : null;
+  return {
+    content: `The forms library has the ${list}, but ${named.length > 1 ? "they can't" : "it can't"} be started in the chat yet: start ${named.length > 1 ? "one" : "it"} from **Forms**.${open ? ` Your ${open} card is still open above.` : ""}`,
+    citations: [],
+    coverage: "not_applicable",
+  };
 }
 
 export function formNotInLibraryReply(

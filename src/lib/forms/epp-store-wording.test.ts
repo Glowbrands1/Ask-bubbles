@@ -78,6 +78,8 @@ const STORED_SALON_KEYS: Record<(typeof EPP_KEYS)[number], string[]> = {
     "salon_lpsva",
     "salon_ppta",
     "salon_primary_productivity",
+    // Added on purpose (Pau, 23 Nov: BCS terms in the forms; KB "Domo Reporting Overview"): Product Mix %, the sixth KPI.
+    "salon_product_mix",
     "salon_productivity",
     "salon_secondary_productivity",
     "salon_standards",
@@ -198,10 +200,19 @@ describe("the metrics Buff City Soap tracks stay on the plans", () => {
     expect(fields.find((field) => field.key === "salon_productivity")?.label).toMatch(/^Store\b/);
   });
 
-  it("the TSD plan keeps Club Close and the store objectives, under their stored keys", () => {
+  it("the General Manager plan keeps its measure lines and the store objectives, under their stored keys", () => {
+    /*
+     * CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms; the KB's "Domo Reporting Overview"): the TSD plan is
+     * Buff City Soap's General Manager Performance EPP, and the sibling company's metrics (PPTA, LPSVA, UPTA, Club Close,
+     * Average Club Dollar) are its six KPIs, Goal / Result each. The stored keys are unchanged row for row, so saved
+     * plans still load; Product Mix % is a new key.
+     */
     const document = parseFormDocument(seedFor("tsd-epp").document);
     const fields = fieldsForVariant(document, "default");
-    expect(fields.find((field) => field.key === "salon_club_close")?.label).toBe("Club Close");
+    expect(fields.find((field) => field.key === "salon_club_close")?.label).toBe("AOV (Goal / Result)");
+    expect(fields.find((field) => field.key === "manager_ppta")?.label).toBe("Net Sales (Goal / Result)");
+    expect(fields.find((field) => field.key === "salon_product_mix")?.label).toBe("Product Mix % (Goal / Result)");
+    expect(JSON.stringify(seedFor("tsd-epp").document)).not.toMatch(/PPTA|LPSVA|UPTA|Club Close|Club Dollar|\bSVC\b/);
     expect(fields.find((field) => field.key === "salon_primary_productivity")?.label).toMatch(/Store Primary Productivity$/);
     expect(fields.find((field) => field.key === "salon_standards")?.label).toMatch(/Store Standards of Cleanliness and Safety$/);
   });
@@ -210,7 +221,7 @@ describe("the metrics Buff City Soap tracks stay on the plans", () => {
 describe("the chat intake for a performance plan says store", () => {
   const plans = [
     ["SDIT", SDIT_EPP_PLAN, SDIT_EPP_INTAKE, "SDIT EPP"],
-    ["TSD", TSD_EPP_PLAN, TSD_EPP_INTAKE, "TSD EPP"],
+    ["GM", TSD_EPP_PLAN, TSD_EPP_INTAKE, "GM EPP"],
   ] as const;
 
   it.each(plans)("%s: the opening ask and the chase name no salon and no sibling company", (_name, plan, items, formName) => {
@@ -221,15 +232,24 @@ describe("the chat intake for a performance plan says store", () => {
       expect(text).not.toMatch(SIBLING_BRAND);
     }
     expect(opening).toContain("The store");
-    expect(opening).toMatch(/PPTA/);
-    expect(opening).toMatch(/LPSVA/);
-    expect(opening).toMatch(/UPTA/);
+    // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): the SDIT plan (still hidden, unchanged) names its
+    // metrics; the General Manager plan names Buff City Soap's KPIs (KB "Domo Reporting Overview") and none of the
+    // sibling company's.
+    if (plan === TSD_EPP_PLAN) {
+      expect(opening).toContain("Net Sales, Comp Sales %, IPT, AOV, Discount Rate %, Product Mix %");
+      expect(opening).not.toMatch(/PPTA|LPSVA|UPTA|Club/);
+    } else {
+      expect(opening).toMatch(/PPTA/);
+      expect(opening).toMatch(/LPSVA/);
+      expect(opening).toMatch(/UPTA/);
+    }
   });
 
-  it("the TSD intake still names Club Close; the item keys stay as stored", () => {
-    expect(eppIntakeRequest({ formName: "TSD EPP", items: TSD_EPP_INTAKE, opening: true, plan: TSD_EPP_PLAN })).toContain(
-      "Club Close",
-    );
+  it("the General Manager intake names no Club Close; the item keys stay as stored", () => {
+    // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): was "still names Club Close", the sibling company's membership metric.
+    const opening = eppIntakeRequest({ formName: "GM EPP", items: TSD_EPP_INTAKE, opening: true, plan: TSD_EPP_PLAN });
+    expect(opening).not.toContain("Club Close");
+    expect(opening).toContain("General Manager (GM)");
     // Internal keys, never shown: unchanged so the readers that use them keep working.
     expect(SDIT_EPP_INTAKE.map((item) => item.key)).toContain("salon");
     expect(SDIT_EPP_INTAKE.map((item) => item.key)).toContain("salon_productivity");

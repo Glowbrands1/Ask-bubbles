@@ -75,10 +75,12 @@ const MANAGEMENT_ROUND_2 = summary({
 });
 
 /*
- * Three, not four: the Tanning Consultant Interview Form was removed from the library and its key retired (the sibling
- * company's role; Pau, 21 Nov 2026), so no summary the chat reads carries it. The three left are still withheld.
+ * CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): the two management interviews are no longer withheld; the Prescreen still is.
+ * The library still holds all three hiring forms.
  */
 const HIRING = [PRESCREEN, MANAGEMENT_ROUND_1, MANAGEMENT_ROUND_2];
+const WITHHELD = [PRESCREEN];
+const OFFERED_INTERVIEWS = [MANAGEMENT_ROUND_1, MANAGEMENT_ROUND_2];
 
 const LIBRARY: TemplateSummary[] = [
   summary(),
@@ -97,7 +99,7 @@ const inventory = () =>
   buildFormInventory(LIBRARY, { role: "location_manager", scope: null });
 
 describe('"which form should I use?"', () => {
-  it("lists what a Salon Director can start, without the withheld three", () => {
+  it("lists what a Salon Director can start, without the withheld Prescreen", () => {
     const answer = answerInventoryQuestion({
       question: { kind: "list" },
       inventory: inventory(),
@@ -107,11 +109,14 @@ describe('"which form should I use?"', () => {
 
     expect(answer!.content).toContain("Coaching Form");
     expect(answer!.content).toContain("Corrective Action Form");
-    for (const entry of HIRING) {
+    for (const entry of WITHHELD) {
       expect(answer!.content, entry.name).not.toContain(entry.name);
     }
-    // The category heading goes with its forms rather than printing empty.
-    expect(answer!.content).not.toContain("Hiring & Interview Forms");
+    for (const entry of OFFERED_INTERVIEWS) {
+      expect(answer!.content, entry.name).toContain(entry.name);
+    }
+    // The category heading goes with its forms; the management interviews are under it now.
+    expect(answer!.content).toContain("Hiring & Interview Forms");
   });
 });
 
@@ -137,7 +142,7 @@ describe('"do we have a prescreen form?"', () => {
     });
 
     expect(answer!.content).toMatch(/no published template for that/i);
-    for (const entry of HIRING) {
+    for (const entry of WITHHELD) {
       expect(answer!.content, entry.name).not.toContain(entry.name);
     }
   });
@@ -179,8 +184,11 @@ describe("the FORMS LIBRARY block the model is given", () => {
       .filter((line) => line.includes("NOT OFFERED —"))
       .join("\n");
 
-    for (const entry of HIRING) {
+    for (const entry of WITHHELD) {
       expect(marked, entry.name).toContain(entry.name);
+    }
+    for (const entry of OFFERED_INTERVIEWS) {
+      expect(marked, entry.name).not.toContain(entry.name);
     }
     expect(marked).not.toContain("Coaching Form");
     expect(marked).not.toContain("Corrective Action Form");

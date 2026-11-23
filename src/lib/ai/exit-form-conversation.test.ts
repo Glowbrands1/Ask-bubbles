@@ -604,7 +604,9 @@ describe("QA 3 — location, title and dates", () => {
   it("job titles through the existing reader", async () => {
     const proposals = await load([exitForm()]);
     for (const [said, title] of [
-      ["she's an ASD", "ASD"],
+      // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): ASD left this app's job titles with its plan; AGM is
+      // Buff City Soap's title.
+      ["she's an AGM", "Assistant General Manager"],
       ["he is a store director", "Store Director"],
       ["she's a team member", "Team Member"],
     ]) {

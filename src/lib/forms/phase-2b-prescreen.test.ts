@@ -118,15 +118,17 @@ describe("the prescreen without the uniform question", () => {
       dpoa: 8, // CHANGED ON PURPOSE, revision 8 (HR via Pau, 19 Nov 2026): two required history boxes; revision 7 (4 Nov 2026) made Type of Offense four boxes.
       "policy-review": 2,
       "follow-up-coaching": 2,
-      // "tanning-consultant-interview" (was 4) is gone: removed from the library, key retired (Pau, 21 Nov 2026).
-      "management-interview-round-1": 4, // Phase 2A re-issue
-      "management-interview-round-2": 3,
+      // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): the Team Member Interview Form is restored at 5 (was 4 before it was
+      // removed), and both management interviews are re-issued with Buff City Soap's roles and role play.
+      "tanning-consultant-interview": 5,
+      "management-interview-round-1": 5,
+      "management-interview-round-2": 4,
       // 4: Steps to Finish Termination without sibling-company system names (QA, 25 Oct 2026).
       "resignation-exit": 4,
     });
-    // The held core-values items were on the Tanning Consultant Interview, which was removed from the library and its key
-    // retired (the sibling company's role; Pau, 21 Nov 2026): no seed carries it, and none names the sibling company.
-    expect(TEMPLATE_SEEDS.map((entry) => entry.key)).not.toContain("tanning-consultant-interview");
+    // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): the key is back as the Team Member Interview Form (it was removed on 21 Nov);
+    // still no seed names the sibling company.
+    expect(TEMPLATE_SEEDS.find((entry) => entry.key === "tanning-consultant-interview")?.name).toBe("Team Member Interview Form");
     for (const entry of TEMPLATE_SEEDS) expect(JSON.stringify(entry.document), entry.key).not.toContain("Sun Tan City");
   });
 });

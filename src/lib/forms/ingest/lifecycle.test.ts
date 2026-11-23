@@ -118,9 +118,10 @@ describe("uploading a document against an existing form", () => {
      * that a template appearing by accident — a seeder that inserts on a key it
      * should have matched — is caught here. (Seventeen until 21 Nov 2026, when
      * the paper-sourced Tanning Consultant Interview was removed from the
-     * library and its key retired: the sibling company's role, Pau.)
+     * library and its key retired: the sibling company's role, Pau.) CHANGED ON PURPOSE: seventeen again from
+     * 23 Nov 2026, when it came back as the Team Member Interview Form (Pau).
      */
-    expect(store.form_templates).toHaveLength(16);
+    expect(store.form_templates).toHaveLength(17);
     // Two versions of one template, addressed by the same stable key.
     expect(await listVersions(templateId("coaching"))).toHaveLength(2);
   });

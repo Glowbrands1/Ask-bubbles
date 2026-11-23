@@ -192,7 +192,8 @@ describe("1. a manager with one salon is never asked for it", () => {
   });
 
   it("leaves it off the performance-plan questions", async () => {
-    const response = await ask("Create a TSD EPP from this conversation.", salons(WORNALL), "district_manager");
+    // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): the plan is asked for by Buff City Soap's name; "TSD EPP" no longer names it.
+    const response = await ask("Create a GM EPP from this conversation.", salons(WORNALL), "district_manager");
 
     expect(response.content).toMatch(/employee's full name/i);
     expect(response.content).toMatch(/follow-up review should happen/i);

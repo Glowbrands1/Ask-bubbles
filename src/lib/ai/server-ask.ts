@@ -107,7 +107,7 @@ import { loadConversationFormState, saveConversationFormState } from "./form-sta
 import { formCommandBypassesSearch, routeUnderstoodFormTurn } from "./form-tool-route";
 import { understandFormTurn } from "./form-tool-understand";
 import { formNameNotInLibrary, namesFormNotInLibrary, remapFormTurn, remapShouldRun, type FormRemapSlots } from "./form-full-remap";
-import { formNotInLibraryReply, libraryOffersForm } from "./form-not-in-library";
+import { formNotInLibraryReply, libraryOffersForm, namedFormsNotInChatReply } from "./form-not-in-library";
 import { historyForRemap } from "./form-remap-scope";
 import { withRemapDraftSources } from "./remap-draft-sources";
 import { augmentIntakeQuestion } from "./intake-augment";
@@ -576,6 +576,11 @@ async function answerQuestionCore(
     if (namesFormNotInLibrary(request.question) && !libraryOffersForm(summaries, actor, formNameNotInLibrary(request.question))) {
       return formNotInLibraryReply(summaries, actor, formNameNotInLibrary(request.question), request.continueProposalTemplateKey ?? null);
     }
+    // f099 with the interviews published (Pau, 23 Nov: BCS terms in the forms): forms found by name that the chat cannot start are said so.
+    const notInChat = namesFormNotInLibrary(request.question)
+      ? namedFormsNotInChatReply(summaries, actor, formNameNotInLibrary(request.question), request.continueProposalTemplateKey ?? null)
+      : null;
+    if (notInChat) return notInChat;
 
     // Hidden templates are already left out of `summaries`; one listed but not published is not filled by the remap either.
     const unpublished = buildFormInventory(summaries, actor)

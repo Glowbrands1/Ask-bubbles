@@ -8,7 +8,12 @@ vi.mock("@/config/company/locations", async () =>
 
 /**
  * ============================================================================
- * THE TSD MANAGEMENT PERFORMANCE PLAN, ASKED FOR THE WAY MANAGERS ASK
+ * THE GENERAL MANAGER PERFORMANCE EPP (KEY tsd-epp), ASKED FOR THE WAY MANAGERS ASK
+ *
+ * CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): the plan once named for the reference platform's Training Store Director
+ * (TSD) is Buff City Soap's General Manager Performance EPP. Managers name it by that title or "GM EPP"; the
+ * reference platform's TSD names no longer reach it, and its intake names Buff City Soap's KPIs (the KB's "Domo
+ * Reporting Overview"), none of that platform's.
  * ============================================================================
  *
  * The same six routes the SDIT plan has — the document's name, the role spelled
@@ -48,14 +53,14 @@ function summary(overrides: Record<string, unknown> = {}) {
   };
 }
 
-/** The TSD plan as the published library carries it: one reading, the TSD's. */
+/** The General Manager plan (key tsd-epp) as the published library carries it: one reading, the GM's. */
 const tsdEpp = (overrides: Record<string, unknown> = {}) =>
   summary({
     id: "tpl-tsd-epp-id",
     key: "tsd-epp",
-    name: "TSD EPP",
-    shortName: "TSD EPP",
-    description: "Employee Performance Plan for a Training Store Director.",
+    name: "General Manager Performance EPP",
+    shortName: "GM EPP",
+    description: "Employee Performance Plan for a General Manager, reviewed with the District Manager.",
     layoutFamily: "epp",
     requiredPermission: "create_epp",
     displayOrder: 5,
@@ -63,7 +68,7 @@ const tsdEpp = (overrides: Record<string, unknown> = {}) =>
       id: "v2",
       status: "published",
       variants: [
-        { key: "default", label: "TSD review", role: "District Manager", roleAbbr: "TSD" },
+        { key: "default", label: "GM review", role: "District Manager", roleAbbr: "GM" },
       ],
     },
     ...overrides,
@@ -92,9 +97,9 @@ const fttcEpp = () =>
   summary({
     id: "tpl-fttc-epp-id",
     key: "fttc-epp",
-    name: "FTTC Performance EPP",
-    shortName: "FTTC",
-    description: "Performance plan for a full-time tanning consultant.",
+    name: "Team Member Performance EPP",
+    shortName: "TM EPP",
+    description: "Employee Performance Plan for a Team Member (full time, part time or seasonal), reviewed with the General Manager.",
     layoutFamily: "epp",
     requiredPermission: "create_epp",
     displayOrder: 7,
@@ -160,22 +165,23 @@ afterEach(() => {
 
 describe("every way a manager names this plan reaches the same workflow", () => {
   it.each([
-    "TSD EPP",
-    "create a TSD EPP",
-    "TSD performance plan",
-    "Training Store Director EPP",
-    "Training Store Director performance plan",
-    "Management Performance Plan for my TSD",
-    "I need a TSD EPP for Sarah Johnson",
-    "Create a TSD EPP from this conversation.",
-  ])("resolves %j to the TSD plan", async (question) => {
+    "GM EPP",
+    "create a GM EPP",
+    "GM performance plan",
+    "General Manager EPP",
+    "General Manager Performance EPP",
+    "General Manager performance plan",
+    "Management Performance Plan for my GM",
+    "I need a GM EPP for Sarah Johnson",
+    "Create a General Manager Performance EPP from this conversation.",
+  ])("resolves %j to the General Manager plan", async (question) => {
     const proposals = await load(LIBRARY());
     const response = await proposals.proposeFormForTurn(turn(question));
 
     expect(response!.formProposal, question).toBeDefined();
     expect(response!.formProposal!.templateKey, question).toBe("tsd-epp");
     /* The name comes off the published row, never out of the sentence. */
-    expect(response!.formProposal!.templateName, question).toBe("TSD EPP");
+    expect(response!.formProposal!.templateName, question).toBe("General Manager Performance EPP");
   });
 
   it("reads the form's own printed title as this document, not as the family", async () => {
@@ -203,7 +209,7 @@ describe("every way a manager names this plan reaches the same workflow", () => 
   it("pins the one reading the document prints, so no label says 'the employee'", async () => {
     const proposals = await load(LIBRARY());
     const response = await proposals.proposeFormForTurn(
-      turn("Create a TSD EPP for Sarah Johnson"),
+      turn("Create a GM EPP for Sarah Johnson"),
     );
 
     expect(response!.formProposal!.variantKey).toBe("default");
@@ -216,14 +222,14 @@ describe("every way a manager names this plan reaches the same workflow", () => 
 describe("'Employee Performance Plan' plus a role the manager already gave", () => {
   const SARAH = managerTurn(
     "m1",
-    "Sarah is a TSD at Lincoln South. She's excellent at coaching her team and working with clients, but she's been late several times.",
+    "Sarah is a GM at Lincoln South. She's excellent at coaching her team and working with clients, but she's been late several times.",
   );
 
   it.each([
     "Create an Employee Performance Plan for Sarah",
     "Create an EPP from this conversation.",
     "Make an EPP for Sarah",
-  ])("resolves %j to the TSD plan once the role is on the record", async (question) => {
+  ])("resolves %j to the General Manager plan once the role is on the record", async (question) => {
     const proposals = await load(LIBRARY());
     const response = await proposals.proposeFormForTurn(turn(question, [SARAH]));
 
@@ -231,11 +237,11 @@ describe("'Employee Performance Plan' plus a role the manager already gave", () 
     expect(response!.formProposal!.templateKey, question).toBe("tsd-epp");
   });
 
-  it("never guesses TSD from a generic request with no role stated", async () => {
+  it("never guesses the General Manager plan from a generic request with no role stated", async () => {
     /*
      * THE RULE THIS WORKFLOW MUST NOT BREAK. Six published plans; naming the
      * family names none of them. Without a role in the manager's own words
-     * the answer is the selector, and the TSD plan is one option among them.
+     * the answer is the selector, and the General Manager plan is one option among them.
      */
     const proposals = await load(LIBRARY());
     const response = await proposals.proposeFormForTurn(
@@ -246,7 +252,7 @@ describe("'Employee Performance Plan' plus a role the manager already gave", () 
 
     expect(response!.formProposal).toBeUndefined();
     expect(response!.content).toMatch(/which form/i);
-    expect(offered(response!)).toContain("TSD EPP");
+    expect(offered(response!)).toContain("General Manager Performance EPP");
     expect(offered(response!)).toContain("SDIT EPP");
   });
 
@@ -256,12 +262,12 @@ describe("'Employee Performance Plan' plus a role the manager already gave", () 
 
     expect(response!.formProposal!.employeeName).toBe("Sarah");
     /*
-     * THE MANAGER'S OWN WORDS, NOT THE TEMPLATE'S. They wrote "TSD", so the
-     * form's Job Title line reads TSD. Inferring "Training Store Director"
+     * THE MANAGER'S OWN WORDS, NOT THE TEMPLATE'S. They wrote "GM", so the
+     * form's Job Title line reads what the title reader makes of it. Inferring "General Manager"
      * from the template chosen would be a title printed on an employment
      * record because a form was picked.
      */
-    expect(response!.formProposal!.employeeRole).toBe("TSD");
+    expect(response!.formProposal!.employeeRole).toBe("General Manager");
   });
 });
 
@@ -271,12 +277,12 @@ describe("the Ask Vicki-style intake, for a manager who has said nothing", () =>
   it("asks the concise eight when the manager clicked the card", async () => {
     const proposals = await load(LIBRARY());
     const response = await proposals.proposeFormForTurn(
-      turn("Create a TSD EPP from this conversation."),
+      turn("Create a GM EPP from this conversation."),
     );
     const content = response!.content;
 
     expect(content).toContain(
-      "To create a Training Store Director (TSD) Employee Performance Plan (EPP) form for you, I'll need a few details:",
+      "To create a General Manager (GM) Employee Performance Plan (EPP) form for you, I'll need a few details:",
     );
     // The salon is the one-salon account's, so it is not asked for again.
     expect(content).not.toContain("The salon location");
@@ -316,7 +322,7 @@ describe("the Ask Vicki-style intake, for a manager who has said nothing", () =>
 
     const proposals = await load(LIBRARY());
     const content = (await proposals.proposeFormForTurn(
-      turn("Create a TSD EPP from this conversation."),
+      turn("Create a GM EPP from this conversation."),
     ))!.content;
     expect(content).not.toMatch(/job title/i);
     expect(content).not.toMatch(/there are nine/i);
@@ -325,21 +331,23 @@ describe("the Ask Vicki-style intake, for a manager who has said nothing", () =>
     expect((content.match(/^- /gm) ?? []).length).toBe(7);
   });
 
-  it("names the five metrics this plan actually has", async () => {
+  // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms; KB "Domo Reporting Overview"): Buff City Soap's six KPIs.
+  it("names no metric of the reference platform, and asks for Buff City Soap's KPIs, goal and result", async () => {
     const proposals = await load(LIBRARY());
     const content = (await proposals.proposeFormForTurn(
-      turn("Create a TSD EPP from this conversation."),
+      turn("Create a GM EPP from this conversation."),
     ))!.content;
 
     for (const metric of ["PPTA", "LPSVA", "UPTA", "Club Close", "Average Club Dollar"]) {
-      expect(content, metric).toContain(metric);
+      expect(content, metric).not.toContain(metric);
     }
+    expect(content).toContain("goal and result (Net Sales, Comp Sales %, IPT, AOV, Discount Rate %, Product Mix %)");
   });
 
   it("says the productivity numbers may be left blank", async () => {
     const proposals = await load(LIBRARY());
     const content = (await proposals.proposeFormForTurn(
-      turn("Create a TSD EPP from this conversation."),
+      turn("Create a GM EPP from this conversation."),
     ))!.content;
 
     expect(content).toMatch(/leave the productivity numbers blank/i);
@@ -370,18 +378,18 @@ describe("the Ask Vicki-style intake, for a manager who has said nothing", () =>
 describe("what the conversation already answered is never asked again", () => {
   const SARAH = managerTurn(
     "m1",
-    "Sarah is a TSD at Lincoln South. She's excellent with clients and coaching her team, but she's been late several times.",
+    "Sarah is a GM at Lincoln South. She's excellent with clients and coaching her team, but she's been late several times.",
   );
 
   it("drafts instead of re-asking when the context is already there", async () => {
     const proposals = await load(LIBRARY());
     const response = await proposals.proposeFormForTurn(
-      turn("Create a TSD EPP.", [SARAH]),
+      turn("Create a GM EPP.", [SARAH]),
     );
 
     expect(response!.formProposal!.templateKey).toBe("tsd-epp");
     expect(response!.content).not.toContain("I'll need a few details");
-    expect(response!.content).toContain("I'll draft a **TSD EPP** for **Sarah**");
+    expect(response!.content).toContain("I'll draft a **General Manager Performance EPP** for **Sarah**");
   });
 
   it("drafts straight from the one-line answer to the intake", async () => {
@@ -393,7 +401,7 @@ describe("what the conversation already answered is never asked again", () => {
      */
     const proposals = await load(LIBRARY());
     const response = await proposals.proposeFormForTurn(
-      turn("Create a TSD EPP.", [
+      turn("Create a GM EPP.", [
         managerTurn(
           "m1",
           "Sarah Johnson, Lincoln South, today. She's great with customers and coaching her team but has been late several times. I don't have productivity yet. Follow up in two weeks.",
@@ -432,7 +440,7 @@ describe("what the conversation already answered is never asked again", () => {
   it("does not hold the plan up for productivity or a follow-up date", async () => {
     const { readEppIntake, TSD_EPP_PLAN } = await import("@/lib/forms/epp-intake");
     const reading = readEppIntake({
-      text: "Sarah is a TSD at Lincoln South, great with clients, punctuality needs work. Today.",
+      text: "Sarah is a GM at Lincoln South, great with clients, punctuality needs work. Today.",
       employeeKnown: true,
       salonSettled: true,
       plan: TSD_EPP_PLAN,
@@ -444,10 +452,10 @@ describe("what the conversation already answered is never asked again", () => {
 
     const proposals = await load(LIBRARY());
     const response = await proposals.proposeFormForTurn(
-      turn("Create a TSD EPP.", [
+      turn("Create a GM EPP.", [
         managerTurn(
           "m1",
-          "Sarah is a TSD at Lincoln South, great with clients, punctuality needs work. Today.",
+          "Sarah is a GM at Lincoln South, great with clients, punctuality needs work. Today.",
         ),
       ]),
     );
@@ -460,10 +468,10 @@ describe("what the conversation already answered is never asked again", () => {
   it("calls the subject the manager, which is what the form calls them", async () => {
     const proposals = await load(LIBRARY());
     const response = await proposals.proposeFormForTurn(
-      turn("Create a TSD EPP.", [
+      turn("Create a GM EPP.", [
         managerTurn(
           "m1",
-          "Sarah is a TSD at Lincoln South, great with clients, punctuality needs work. Today.",
+          "Sarah is a GM at Lincoln South, great with clients, punctuality needs work. Today.",
         ),
       ]),
     );
@@ -475,13 +483,13 @@ describe("what the conversation already answered is never asked again", () => {
   it("stops for the employee, which is the one fact nothing downstream can undo", async () => {
     const proposals = await load(LIBRARY());
     const response = await proposals.proposeFormForTurn(
-      turn("Create a TSD EPP", [
+      turn("Create a GM EPP", [
         managerTurn("m1", "One of my TSDs coaches well but keeps turning up late."),
       ]),
     );
 
     expect(response!.formProposal!.status).toBe("needs_employee");
-    expect(response!.content).toMatch(/who is this \*\*TSD EPP\*\* for/i);
+    expect(response!.content).toMatch(/who is this \*\*General Manager Performance EPP\*\* for/i);
   });
 });
 
@@ -491,7 +499,7 @@ describe("the template's own permission still decides", () => {
   it("refuses a role that cannot create a performance plan, and substitutes nothing", async () => {
     const proposals = await load(LIBRARY());
     const response = await proposals.proposeFormForTurn({
-      ...turn("Create a TSD EPP for Sarah Johnson"),
+      ...turn("Create a GM EPP for Sarah Johnson"),
       actor: { role: "tanning_consultant" as never, scope: SALON },
     });
 
@@ -510,24 +518,24 @@ describe("the forms a conversation is already about, offered unasked", () => {
     return proposals.suggestFormsForTurn(turn(question, history));
   }
 
-  it("leads with the TSD plan when the role and a concern are both stated", async () => {
+  it("leads with the General Manager plan when the role and a concern are both stated", async () => {
     const found = await suggest(
       "What should I do about this?",
       brief(
-        "Sarah is a TSD at Lincoln South. She's excellent at coaching her team and working with customers, but she's been late several times.",
+        "Sarah is a GM at Lincoln South. She's excellent at coaching her team and working with customers, but she's been late several times.",
       ),
     );
 
     expect(found).not.toBeNull();
     expect(found!.lead).toBe("Based on what you've described, I can prepare:");
-    expect(found!.selection.primary.templateName).toBe("TSD EPP");
+    expect(found!.selection.primary.templateName).toBe("General Manager Performance EPP");
     expect(found!.selection.additional.map((c) => c.templateName)).toEqual(["Coaching Form"]);
   });
 
   it("offers a short list, never the library", async () => {
     const found = await suggest(
       "How do I handle this?",
-      brief("Sarah is a TSD, excellent at coaching but late several times."),
+      brief("Sarah is a GM, excellent at coaching but late several times."),
     );
     const names = [
       found!.selection.primary.templateName,
@@ -539,7 +547,7 @@ describe("the forms a conversation is already about, offered unasked", () => {
 
   it("says nothing about a passing mention, a bare role, or praise alone", async () => {
     expect(await suggest("Sarah is working Saturday.")).toBeNull();
-    expect(await suggest("Sarah is a TSD.")).toBeNull();
+    expect(await suggest("Sarah is a GM.")).toBeNull();
     expect(await suggest("Sarah is great.")).toBeNull();
   });
 
@@ -555,7 +563,7 @@ describe("the forms a conversation is already about, offered unasked", () => {
      * would get — otherwise the proactive path is a second implementation.
      */
     const history = brief(
-      "Sarah is a TSD at Lincoln South. She's excellent at coaching her team and working with customers, but she's been late several times.",
+      "Sarah is a GM at Lincoln South. She's excellent at coaching her team and working with customers, but she's been late several times.",
     );
     const suggested = await suggest("What should I do about this?", history);
 
@@ -568,7 +576,7 @@ describe("the forms a conversation is already about, offered unasked", () => {
     expect(chosen!.formProposal!.templateKey).toBe("tsd-epp");
     expect(chosen!.formProposal!.variantKey).toBe("default");
     expect(chosen!.formProposal!.employeeName).toBe("Sarah");
-    expect(chosen!.formProposal!.employeeRole).toBe("TSD");
+    expect(chosen!.formProposal!.employeeRole).toBe("General Manager");
     /*
      * READY AND INLINE-DRAFTABLE, which is what lets the card click open the
      * draft rather than put the intake the manager just answered back in

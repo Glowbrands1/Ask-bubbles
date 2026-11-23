@@ -18,7 +18,14 @@ import { REFUSAL_ROSTER } from "./nov7-step-b-refusals-scenarios";
 
 const REPORT = "Board f099 (QA, 23 Nov 2026, the old chat): asking for a form that doesn't exist (\"store manager interview\") re-offered the open Coaching card";
 const COACHING = "create a coaching form for Marnie Holloway, she was late to her shift on 11/8/26";
-const NO_SUCH_FORM = /^There's no store manager interview form in the forms library, so I can't start it\. These are the forms you can create — choose one:$/;
+/*
+ * CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms; QA's #1112 review): the interviews are published now, so
+ * "store manager interview form" finds them by name. They cannot be started in the chat, so the reply names them and
+ * sends the manager to Forms (`namedFormsNotInChatReply`): never a card, never a swap to another form, and an open card
+ * stays as it was. Before 23 Nov the reply was "There's no store manager interview form in the forms library, so I can't
+ * start it. …": no interview was published then.
+ */
+const FOUND_NOT_IN_CHAT = /^The forms library has the .*\*\*First Round Management Interview Form\*\* and \*\*Second Round Management Interview Form\*\*, but they can't be started in the chat yet: start one from \*\*Forms\*\*\./;
 
 type Reply = { content: string; formProposal?: { templateKey?: string } | null; formSelection?: { primary?: { templateKey?: string }; additional?: unknown[] } };
 
@@ -42,8 +49,9 @@ export const NOV23_F099_FORM_NOT_IN_LIBRARY_CASES: ReplayCase[] = [
       const reply = (await thread.say("can you make a store manager interview form")) as Reply;
       expect(reply.formProposal ?? null, `the open card was offered again:\n${reply.content}`).toBeNull();
       /* With a card on screen the forms menu is left off (NO_SELECTION_ON_OPEN_CARD), so the reply names the forms and says the card is still open. */
-      expect(reply.content, reply.content).toMatch(/^There's no store manager interview form in the forms library, so I can't start it\. The forms you can create are \*\*Coaching Form\*\*, .*\*\*Corrective Action Form\*\*/);
+      expect(reply.content, reply.content).toMatch(FOUND_NOT_IN_CHAT);
       expect(reply.content, reply.content).toMatch(/Your Coaching Form card is still open above\.$/);
+      expect(reply.content, "a swap to the Prescreen").not.toMatch(/Prescreen/);
     },
   },
   {
@@ -55,9 +63,9 @@ export const NOV23_F099_FORM_NOT_IN_LIBRARY_CASES: ReplayCase[] = [
       start(t);
       const reply = (await t.thread().say("create a store manager interview form for Marnie Holloway")) as Reply;
       expect(reply.formProposal ?? null, reply.content).toBeNull();
-      expect(reply.content, reply.content).toMatch(NO_SUCH_FORM);
+      expect(reply.content, reply.content).toMatch(FOUND_NOT_IN_CHAT);
       expect(reply.content, "the whole message was echoed, not the form's name").not.toMatch(/Marnie/);
-      expect(reply.formSelection?.primary?.templateKey).toBe("coaching");
+      expect(reply.content, "a swap to the Prescreen").not.toMatch(/Prescreen/);
     },
   },
   {

@@ -15,32 +15,18 @@
  * decision; this list only stops the code from showing it.
  */
 
-/**
- * "Tanning Consultant Interview Form" — the reference platform's interview
- * for its own front-desk role. (Its core-values heading no longer names the
- * sibling company: QA, 25 Oct 2026, `lib/forms/seed-sibling-brand.test.ts`.) Not a Buff City Soap form (QA, 25 Oct 2026). It was already withheld
- * from the chooser (`lib/forms/chooser.ts`); it still reached the template
- * list and the chat's forms library block from the database row.
- *
- * "First Round Management Interview Form" and "Second Round Management
- * Interview Form" — the reference platform's management interviews, whose
- * scenarios are about tanning beds, lotions and memberships and a Tanning
- * Consultant. Hidden the same way (Pau, via QA, 25 Oct 2026); also already
- * withheld from the chooser.
- */
 /*
- * The six EPP forms (Pau, via QA2, 21 Nov 2026): the reference platform's Employee Performance Plans for its own roles
- * (SDIT, TSD, ASD-SDIT, FTTC, DMIT). Buff City Soap does not use those roles and none has ever been saved here. Hidden
- * only: not renamed, not deleted, so removing these lines brings them back.
+ * The in-training Employee Performance Plans of the reference platform (SDIT, and the DMIT plan read as TSD or DMIT):
+ * Buff City Soap has no in-training position on its Woven career ladder, so they stay hidden (Pau, 23 Nov 2026).
+ * Hidden only: not renamed, not deleted, so removing these lines brings them back.
+ *
+ * UNHIDDEN 23 Nov 2026 (Pau, via QA: "ok all ur picks"), renamed to Buff City Soap titles with the forms' wording in
+ * Buff City Soap terms: the Team Member, Assistant General Manager and General Manager Performance EPPs (keys
+ * fttc-epp, asd-sdit-epp, tsd-epp), the Team Member Interview Form (key tanning-consultant-interview) and the two
+ * management interviews. Keys stay, so stored forms, versions and the sibling app's shared code keep their names.
  */
 export const HIDDEN_TEMPLATE_KEYS: readonly string[] = [
-  "tanning-consultant-interview",
-  "management-interview-round-1",
-  "management-interview-round-2",
   "sdit-epp",
-  "tsd-epp",
-  "asd-sdit-epp",
-  "fttc-epp",
   "dmit-epp-tsd",
   "dmit-epp-dmit",
 ];
