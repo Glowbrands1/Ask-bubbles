@@ -199,6 +199,12 @@ class FakeQuery implements PromiseLike<{ data: unknown; error: null }> {
         const needle = ilike[2]!.toLowerCase();
         return (row: Record<string, unknown>) => String(row[column] ?? "").toLowerCase().includes(needle);
       }
+      // `col.cs.{"value"}`: an array column that contains the value (HR approval's senders).
+      const contains = /^(\w+)\.cs\.\{"?([^"}]*)"?\}$/.exec(term);
+      if (contains) {
+        const [, column, value] = contains;
+        return (row: Record<string, unknown>) => Array.isArray(row[column!]) && (row[column!] as unknown[]).map(String).includes(value!);
+      }
       const isNull = /^(\w+)\.is\.null$/.exec(term);
       if (isNull) return (row: Record<string, unknown>) => (row[isNull[1]!] ?? null) === null;
       const compare = /^(\w+)\.(eq|neq)\.(?:"([^"]*)"|([^",]*))$/.exec(term);

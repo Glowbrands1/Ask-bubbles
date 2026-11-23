@@ -119,6 +119,7 @@ function record(status: InstanceRow["status"]): InstanceRow {
     hrApprovalState: null,
     hrApprovalRequestedAt: null,
     hrApprovalRequestedBy: null,
+    hrApprovalSenders: [],
   };
 }
 
