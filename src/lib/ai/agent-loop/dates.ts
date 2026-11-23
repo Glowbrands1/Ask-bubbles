@@ -130,17 +130,6 @@ export function isoDate(value: string, today: string): string | null {
     if (month < 1 || month > 12 || day < 1 || day > new Date(Date.UTC(year, month, 0)).getUTCDate()) return null;
     return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
   }
-  /*
-   * A date typed as eight digits with no separators ("11202026", Pau via QA, 23 Nov 2026: the sibling app's live chat
-   * answered "Which one?" with it): MMDDYYYY, when the whole value is that and it is a real day. Only here, where the value
-   * IS a date; an account's eight-digit number is never read as one.
-   */
-  const packed = /^(\d{2})(\d{2})(\d{4})$/.exec(text);
-  if (packed) {
-    const [month, day, year] = [Number(packed[1]), Number(packed[2]), Number(packed[3])];
-    if (month < 1 || month > 12 || day < 1 || day > new Date(Date.UTC(year, month, 0)).getUTCDate()) return null;
-    return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-  }
   const [date] = readDates(text);
   if (!date) return null;
   if (date.year !== null) return `${date.year}-${String(date.month).padStart(2, "0")}-${String(date.day).padStart(2, "0")}`;
