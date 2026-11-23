@@ -237,12 +237,22 @@ async function formsOnFileAskedFor(context: ToolContext, evidence: unknown, pers
    */
   const rosterFirsts = roster.flatMap((row) => [...new Set([row.firstName, row.preferredFirstName].map((first) => foldName(first ?? "").trim().toLowerCase()).filter(Boolean))]);
   const ownFirsts = holders.length === 1 ? [...new Set([holders[0]!.firstName, holders[0]!.preferredFirstName].map((first) => foldName(first ?? "").trim().toLowerCase()).filter(Boolean))] : [];
+  /*
+   * Board f143 (22 Nov 2026): "show me <last name>s forms", a LAST name's possessive with no apostrophe, was refused as
+   * someone else's forms. A last-name word only this person holds on the roster names them too, as a first name does
+   * (whole, or its possessive with or without the apostrophe), and never when the word with the s is itself a roster name.
+   */
+  const lastWords = (row: { lastName?: string | null }) => [...new Set(foldName(row.lastName ?? "").toLowerCase().match(/[\p{L}'-]+/gu) ?? [])];
+  const rosterLasts = roster.flatMap(lastWords);
+  const ownLasts = holders.length === 1 ? lastWords(holders[0]!) : [];
+  const rosterWords = new Set([...rosterFirsts, ...rosterLasts]);
   const firstNamed = (text: string) => {
     const words = foldName(text).toLowerCase().match(/[\p{L}'-]+/gu) ?? [];
-    return ownFirsts.some((first) => {
-      if (rosterFirsts.filter((other) => other === first).length !== 1) return false;
-      return words.some((word) => word === first || word === `${first}'s` || word === `${first}'` || (word === `${first}s` && !first.endsWith("s") && !rosterFirsts.includes(word)));
+    const names = (own: readonly string[], all: readonly string[]) => own.some((name) => {
+      if (all.filter((other) => other === name).length !== 1) return false;
+      return words.some((word) => word === name || word === `${name}'s` || word === `${name}'` || (word === `${name}s` && !name.endsWith("s") && !rosterWords.has(word)));
     });
+    return names(ownFirsts, rosterFirsts) || names(ownLasts, rosterLasts);
   };
   const namedIn = (text: string) =>
     names.some((name) => mentionsPerson(text, name, rosterNames)) ||
@@ -1014,6 +1024,8 @@ const NOT_ASKED = "Forms on file are looked at only when the manager asks about 
 /** What the turn's tools produced for the reply: the card and the edit, when there were any. */
 export interface ToolEffects {
   proposal: ChatFormProposal | null;
+  /** U24 (QA, 22 Nov 2026): the exit type(s) this turn's exit card ticks, by the form's labels, for the reply's "Filed as" line. */
+  exitTicks?: readonly string[];
   /**
    * QA (16 Nov 2026, the live re-run of #1067): a question code decided that the reply must end with (find_past_forms'
    * card_on_screen offer). run.ts adds it when the model's reply left it out.
@@ -4829,7 +4841,20 @@ export async function proposeForm(
   const priorActionsRead = priorActionsRefused ? null : keptPriorActions ? priorActionsWithStatedTopics(keptPriorActions, statedSteps) : statedSteps.length === 0 ? onFileLine : null;
   /* U09 (QA's live triage): a step the manager listed with one the card keeps is on the card too (`listedWithKeptSteps`). */
   const listedSteps = keptPriorActions && priorActionsRead ? listedWithKeptSteps(requestWords, priorActionsRead, date, today, whatHappened) : [];
-  const priorActions = priorActionsRead ? [priorActionsRead, ...listedSteps].join(priorActionsRead.includes("\n") ? "\n" : "; ").slice(0, 600) : null;
+  /*
+   * ADDING A STEP NEVER REMOVES ONE (QA's ruling on the live regression set, 22 Nov 2026, A13): with this person's card of
+   * this form on screen (its Prior actions filled from the forms on file), T4 "in the previously recieved coaching include
+   * that <P> signed the jba policy manual on 10-15-26" came back with the new coaching step only: the model listed just
+   * that, and "Corrective Action Form — 10/20/2026 (from the forms on file)" left the card. The forms on file stay beside
+   * the steps this request adds. A form on file whose date a kept step already has is that step, never listed twice.
+   */
+  const thisCardOnScreen = samePersonOnScreen && context.cardOnScreen?.templateKey === template.key;
+  const keptDates = priorActionsRead ? readDates([priorActionsRead, ...listedSteps].join("\n")) : [];
+  const onFileBeside = thisCardOnScreen && keptPriorActions && priorActionsRead
+    ? priorsOnFile.filter((prior) => !readDates(priorsOnFileLine([prior])).some((onFile) => keptDates.some((kept) => sameDate(kept, onFile))))
+    : [];
+  const priorParts = priorActionsRead ? [...(onFileBeside.length > 0 ? [priorsOnFileLine(onFileBeside)] : []), priorActionsRead, ...listedSteps] : [];
+  const priorActions = priorActionsRead ? priorParts.join(priorActionsRead.includes("\n") ? "\n" : "; ").slice(0, 600) : null;
   /*
    * U09 / U21: a prior step on this card's Prior actions is never this incident's account (`accountWithoutPriorSteps`).
    * Only the steps the card keeps: a sentence leaves the Observation only when Prior actions holds it, so nothing is lost.
@@ -5383,6 +5408,16 @@ export async function proposeForm(
   if (card.exitReadBack) card.exitReadBack = (await import("./exit-read-back")).exitReadBack({ dateLines: await exitDateLines(requestWords, today, Boolean(exitTermination)), account: card.issue ?? null, termination: Boolean(exitTermination), detailLines: await exitDetailReadLines(requestWords, today, Boolean(exitTermination), card.exitReason) });
   effects.proposal = card;
   effects.proposalEmployeeId = employee.id ?? null;
+  /*
+   * U24 (QA's flaky check on main f712228, 22 Nov 2026): with the type stated ("Immediate Vol Resignation") the card ticked
+   * it, but one live reply read back every reads_back line and never the type (the exit_ticks rule is a separate line the
+   * model can skip). The ticks are the card's own facts: run.ts adds their "Filed as" line when the reply names none of
+   * them. They are NOT put in reads_back: QA's live check (#1061) saw the rehire case lose its reads_back with that, so
+   * the model's input is unchanged. A termination's tick stays with exit_termination's own line, as before. Only after
+   * effects.proposal is set: an await before it lets a parallel propose_form pass the one-card check too.
+   */
+  const cardTicks = await exitCardTicks(template.key === appConfig().formKeys.exit, Boolean(exitTermination), requestWords, today, exitHow?.option ?? null);
+  effects.exitTicks = cardTicks.exit_ticks ?? [];
   const personId = typeof input.employee_id === "string" ? input.employee_id.trim() : "";
   /*
    * THE CARD'S FACTS (Pau, 14 Nov 2026: "code may refuse or inform, never rewrite"; the code-check audit's batch A).
@@ -5456,7 +5491,8 @@ export async function proposeForm(
     ...(earlierKept ? { earlier_card: { kept: true, ...(earlierRow ? { employee: displayName(earlierRow) } : {}), form: earlier!.templateName ?? earlier!.templateKey } } : {}),
     ...(otherNamed.length > 0 ? { account_names_other_person: { named: otherNamed, card_person: employee.name } } : {}),
     ...(unset.length > 0 && !answerUnclear ? { unset } : {}),
-    ...(payrollFields && !amountOnForm && (payroll || typedAmount) ? { payroll_question_only: `The ${template.name} asks only whether payroll deduction applies (Yes / No); it has no payroll amount line and no line for the reason of a deduction. Keep a deduction's amount and its reason in the account (what_happened): they go in Additional Details. This is about payroll only: the reason the person is leaving has its own line on the form (Reason for Resignation), which Create fills; never say the form has no reason line.` } : {}),
+    /* Port of the sibling app's #1240 (its 266-chat run, case 036): the note leads with the card's own payroll answer, so a No is never read back as ticked. */
+    ...(payrollFields && !amountOnForm && (payroll || typedAmount) ? { payroll_question_only: `Payroll deduction on the card: ${payroll === "yes" ? "Yes" : payroll === "no" ? "No" : "not set"}. The ${template.name} asks only whether payroll deduction applies (Yes / No); it has no payroll amount line and no line for the reason of a deduction. Keep a deduction's amount and its reason in the account (what_happened): they go in Additional Details. This is about payroll only: the reason the person is leaving has its own line on the form (Reason for Resignation), which Create fills; never say the form has no reason line.` } : {}),
     ...(answerUnclear ? { payroll_answer_unclear: { ask_exactly: payrollQuestion } } : {}),
     ...(levelUnnamed && !levelAnswerUnclear ? { level_not_named: { ask_exactly: LEVEL_QUESTION } } : {}),
     /*
@@ -5618,7 +5654,7 @@ export async function proposeForm(
      * QA item 17 (20 Nov 2026): the exit form's required last day worked, asked on the card when the manager has not said
      * it, as the Corrective Action asks its level (the rules book's exit_unset line). A termination's effective date is it.
      */
-    ...(await exitCardTicks(template.key === appConfig().formKeys.exit, Boolean(exitTermination), requestWords, today, exitHow?.option ?? null)),
+    ...cardTicks,
     ...(exitTermination ? { exit_termination: { form_label: "Immediate involuntary separation", effective: exitTermination.date, ...(exitTermination.dated_today ? { dated_today: true } : {}) } } : {}),
     ...(jobTitleTyped ? { job_title_from_your_words: card.employeeRole } : {}),
     ...(whichSalon ? { which_store: true } : {}),
@@ -5681,6 +5717,8 @@ export async function proposeForm(
       job_title: card.employeeRole ?? null,
       form_date: card.formDate ?? null,
       observation: card.issue ?? null,
+      /* Port of the sibling app's #1241 (its 266-chat run, 039/241): the account's label is the form's own (Details of Coaching on a coaching form). */
+      account_label: await accountLabelOf(template.currentVersion?.document),
       /*
        * QA (20 Nov 2026, board row f060): the Corrective-Action-only fields are on a Corrective Action card's result only.
        * On a Coaching card they came back null, and the model read the nulls as "Payroll deduct and warning level aren't
@@ -5856,6 +5894,8 @@ export async function coachTeam(context: ToolContext, effects: ToolEffects, inpu
       ...(teamStoreAsked(card) ? { choose_store_from: teamStoreChoices(card), store_question: teamStoreQuestion(), store_note: TEAM_STORE_NOTE } : {}),
       form_date: card.formDate ?? null,
       observation: card.issue ?? null,
+      /* Port of the sibling app's #1241 (its 266-chat run, 039/241): the account's label is the form's own (Details of Coaching on a coaching form). */
+      account_label: await accountLabelOf(template.currentVersion?.document),
       create_offered: card.supportsInlineDraft,
     },
     facts: { team_card: true },
@@ -6794,6 +6834,17 @@ function directEditFix(loaded: { readonly version: { readonly document: unknown 
     editable_fields: [...new Set([...draftable, ...stated])],
     form_date_field: "The form's date is the field form_date: edit_form with values { form_date: \"MM/DD/YYYY\" }, the date the manager typed (never the reviser).",
   };
+}
+
+/** The label of the form's own account field (Observation of Offense, Details of Coaching, …), read from its template. */
+async function accountLabelOf(document: unknown): Promise<string | null> {
+  try {
+    const { fieldsForVariant, interpolate, parseFormDocument } = await import("@/lib/forms/document");
+    const field = fieldsForVariant(parseFormDocument(document), null).find((entry) => entry.key === "observation" || entry.key === "coaching_details");
+    return field ? interpolate(field.label, null) : null;
+  } catch {
+    return null;
+  }
 }
 
 /** The form's own field keys, from its template document. */
