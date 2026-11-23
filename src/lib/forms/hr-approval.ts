@@ -6,8 +6,12 @@ import type { FormsActor } from "./access";
 import { HR_COMMENT_KIND, HR_DECISION_KIND, HR_REQUEST_KIND, clearRequestBells, formHref, ringBells } from "./hr-approval-bells";
 import { accountEmail, listHrApprovers } from "./hr-approval-approvers";
 import {
+  HR_STAGE_LABEL,
   HR_STATE_LABEL,
   awaitingHr,
+  hrStage,
+  managerRepliedToChanges,
+  needsHr,
   heldForHr,
   isCreatorOrSender,
   hrApprovalEnabled,
@@ -17,6 +21,8 @@ import {
   waitingLabel,
   type HrApprovalState,
   type HrDecision,
+  type HrHistoryStep,
+  type HrStage,
 } from "./hr-approval-rules";
 import {
   finalizeInstance,
@@ -103,6 +109,25 @@ async function recordHrEvent(instanceId: string, action: string, actor: string, 
   if (error) throw new Error(`Could not record the HR approval step: ${error.message}`);
 }
 
+/** Each form's approval history steps, in the order they happened (`managerRepliedToChanges`). */
+async function historySteps(instanceIds: readonly string[]): Promise<Map<string, HrHistoryStep[]>> {
+  const steps = new Map<string, HrHistoryStep[]>();
+  if (instanceIds.length === 0) return steps;
+  const { data, error } = await getSupabaseAdmin()
+    .from("form_hr_approval_events")
+    .select("instance_id, action, actor, created_at")
+    .in("instance_id", [...instanceIds])
+    .order("created_at", { ascending: true })
+    .limit(2000);
+  if (error) throw new Error(`Could not read the approval history: ${error.message}`);
+  for (const row of (data ?? []) as { instance_id: string; action: string; actor: string }[]) {
+    const list = steps.get(row.instance_id) ?? [];
+    list.push({ action: row.action, actor: row.actor });
+    steps.set(row.instance_id, list);
+  }
+  return steps;
+}
+
 async function displayName(appUserId: string): Promise<string> {
   try {
     const { data } = await getSupabaseAdmin().from("app_users").select("display_name").eq("id", appUserId).maybeSingle();
@@ -182,7 +207,15 @@ export async function decideHrApproval(
   if (actor.hrApprover !== true) throw new HrApprovalError("Only HR can decide on this form.", 403);
   const before = await loadInstance(instanceId);
   if (!before) throw new HrApprovalError("That form no longer exists.", 404);
-  if (!heldForHr(before.instance.hrApprovalState)) throw new HrApprovalError("This form is not waiting for HR approval.");
+  /*
+   * Pending, or (owner, 23 Nov 2026: "marissa replied … then view then approve") sent back and answered by the manager:
+   * HR may approve it as it stands. Reject and send back stay for a pending form.
+   */
+  const replied =
+    decision === "approve" &&
+    before.instance.hrApprovalState === "changes_requested" &&
+    managerRepliedToChanges(before.instance, (await historySteps([instanceId])).get(instanceId) ?? []);
+  if (!heldForHr(before.instance.hrApprovalState) && !replied) throw new HrApprovalError("This form is not waiting for HR approval.");
   const note = cleanNote(noteInput);
   if (decision !== "approve" && !note) {
     throw new HrApprovalError(
@@ -307,6 +340,8 @@ export interface HrApprovalEntry {
 
 export interface HrApprovalView {
   state: HrApprovalState;
+  /** `manager_replied` when the manager answered HR's send-back (`managerRepliedToChanges`); otherwise the state. */
+  stage: HrStage;
   label: string;
   requestedAt: string | null;
   waiting: string | null;
@@ -315,6 +350,8 @@ export interface HrApprovalView {
   canDecide: boolean;
   /** The reader is HR and may edit the values now. */
   canEdit: boolean;
+  /** The reader is HR and may approve now: a pending form, or one the manager answered after it was sent back. */
+  canApprove: boolean;
   /**
    * Pending, but the hold is not live (the flag turned off, or no approver left): the creator may edit and finalize
    * it as an ordinary draft (`releaseStaleHold`).
@@ -354,15 +391,18 @@ export async function hrApprovalViewFor(actor: FormsActor, instance: InstanceRow
   const hr = actor.hrApprover === true;
   const { hrHoldLive } = await import("./hr-approval-approvers");
   const released = state === "pending" && !(await hrHoldLive());
+  const stage = hrStage(state, managerRepliedToChanges(instance, rows));
   return {
     released,
     state,
-    label: HR_STATE_LABEL[state],
+    stage,
+    label: HR_STAGE_LABEL[stage],
     requestedAt: instance.hrApprovalRequestedAt,
     waiting: state === "pending" ? waitingLabel(instance.hrApprovalRequestedAt, now) : null,
     overdue: state === "pending" && isOverdue(instance.hrApprovalRequestedAt, now),
     canDecide: hr && state === "pending" && !released,
     canEdit: hr && state === "pending" && !released,
+    canApprove: hr && ((state === "pending" && !released) || (stage === "manager_replied" && hrApprovalEnabled())),
     history,
   };
 }
@@ -376,6 +416,10 @@ export interface HrQueueRow {
   createdBy: string;
   createdByName: string;
   state: HrApprovalState;
+  /** Whose turn it is: `manager_replied` when the manager answered HR's send-back. */
+  stage: HrStage;
+  /** HR's turn (pending, or manager replied): what "Pending HR approval (N)" counts. */
+  needsHr: boolean;
   requestedAt: string | null;
   waiting: string;
   overdue: boolean;
@@ -390,7 +434,7 @@ export async function listHrQueue(actor: FormsActor, now: Date = new Date()): Pr
   if (!hrApprovalEnabled() || actor.hrApprover !== true) return [];
   const { data, error } = await getSupabaseAdmin()
     .from("form_instance_overview")
-    .select("id, template_name, employee_name, location_name, created_by, hr_approval_state, hr_approval_requested_at")
+    .select("id, template_name, employee_name, location_name, created_by, hr_approval_state, hr_approval_requested_at, hr_approval_senders")
     .in("hr_approval_state", ["pending", "changes_requested", "rejected"])
     .eq("status", "draft")
     .order("hr_approval_requested_at", { ascending: true })
@@ -404,6 +448,7 @@ export async function listHrQueue(actor: FormsActor, now: Date = new Date()): Pr
     created_by: string;
     hr_approval_state: HrApprovalState;
     hr_approval_requested_at: string | null;
+    hr_approval_senders?: string[] | null;
   }[];
   const creators = [...new Set(rows.map((row) => row.created_by))];
   const names = new Map<string, string>();
@@ -413,9 +458,12 @@ export async function listHrQueue(actor: FormsActor, now: Date = new Date()): Pr
       if (user.display_name) names.set(user.id, user.display_name);
     }
   }
-  const order: Record<HrApprovalState, number> = { pending: 0, changes_requested: 1, rejected: 2, approved: 3 };
+  const steps = await historySteps(rows.filter((row) => row.hr_approval_state === "changes_requested").map((row) => row.id));
+  const order: Record<HrStage, number> = { pending: 0, manager_replied: 1, changes_requested: 2, rejected: 3, approved: 4 };
   return rows
-    .map((row) => ({
+    .map((row) => {
+      const stage = hrStage(row.hr_approval_state, managerRepliedToChanges({ createdBy: row.created_by, hrApprovalState: row.hr_approval_state, hrApprovalSenders: row.hr_approval_senders ?? [] }, steps.get(row.id) ?? []));
+      return {
       id: row.id,
       line: formLine({ templateName: row.template_name ?? "", employeeName: row.employee_name, locationName: row.location_name }),
       templateName: row.template_name ?? "Form",
@@ -424,20 +472,27 @@ export async function listHrQueue(actor: FormsActor, now: Date = new Date()): Pr
       createdBy: row.created_by,
       createdByName: names.get(row.created_by) ?? "A manager",
       state: row.hr_approval_state,
+      stage,
+      needsHr: needsHr(stage),
       requestedAt: row.hr_approval_requested_at,
       waiting: waitingLabel(row.hr_approval_requested_at, now),
       overdue: row.hr_approval_state === "pending" && isOverdue(row.hr_approval_requested_at, now),
-    }))
-    .sort((a, b) => order[a.state] - order[b.state]);
+      };
+    })
+    .sort((a, b) => order[a.stage] - order[b.stage]);
 }
 
-/** HR's count for the Overview card and the tab badge. */
+/**
+ * HR's count for the Overview card and the tab badge: every row that needs HR (pending, or the manager replied to HR's
+ * changes), so "Pending HR approval (N)" always equals the rows waiting on HR (owner, 23 Nov 2026: the tab read "(0)"
+ * while a manager's reply was listed).
+ */
 export async function hrQueueSummary(actor: FormsActor, now: Date = new Date()): Promise<{ pending: number; overdue: number } | null> {
   if (!hrApprovalEnabled() || actor.hrApprover !== true) return null;
   try {
     const rows = await listHrQueue(actor, now);
-    const pending = rows.filter((row) => row.state === "pending");
-    return { pending: pending.length, overdue: pending.filter((row) => row.overdue).length };
+    const waiting = rows.filter((row) => row.needsHr);
+    return { pending: waiting.length, overdue: waiting.filter((row) => row.overdue).length };
   } catch {
     return null;
   }
@@ -447,6 +502,8 @@ export interface MyHrFormRow {
   id: string;
   line: string;
   state: HrApprovalState;
+  /** `manager_replied` once this manager answered HR's send-back: waiting for HR again. */
+  stage: HrStage;
   label: string;
   requestedAt: string | null;
 }
@@ -459,27 +516,35 @@ export async function listMyFormsWithHr(actor: FormsActor): Promise<MyHrFormRow[
   if (!hrApprovalEnabled() || !actor.verified || !SAFE_ID.test(actor.id)) return [];
   const { data, error } = await getSupabaseAdmin()
     .from("form_instance_overview")
-    .select("id, template_name, employee_name, location_name, hr_approval_state, hr_approval_requested_at")
+    .select("id, template_name, employee_name, location_name, created_by, hr_approval_state, hr_approval_requested_at, hr_approval_senders")
     .or(`created_by.eq."${actor.id}",hr_approval_senders.cs.{"${actor.id}"}`)
     .in("hr_approval_state", ["pending", "changes_requested", "rejected"])
     .eq("status", "draft")
     .order("hr_approval_requested_at", { ascending: false })
     .limit(100);
   if (error) throw new Error(`Could not read your forms with HR: ${error.message}`);
-  return ((data ?? []) as {
+  const rows = (data ?? []) as {
     id: string;
     template_name: string | null;
     employee_name: string;
     location_name: string | null;
+    created_by: string;
     hr_approval_state: HrApprovalState;
     hr_approval_requested_at: string | null;
-  }[]).map((row) => ({
-    id: row.id,
-    line: formLine({ templateName: row.template_name ?? "", employeeName: row.employee_name, locationName: row.location_name }),
-    state: row.hr_approval_state,
-    label: HR_STATE_LABEL[row.hr_approval_state],
-    requestedAt: row.hr_approval_requested_at,
-  }));
+    hr_approval_senders?: string[] | null;
+  }[];
+  const steps = await historySteps(rows.filter((row) => row.hr_approval_state === "changes_requested").map((row) => row.id));
+  return rows.map((row) => {
+    const stage = hrStage(row.hr_approval_state, managerRepliedToChanges({ createdBy: row.created_by, hrApprovalState: row.hr_approval_state, hrApprovalSenders: row.hr_approval_senders ?? [] }, steps.get(row.id) ?? []));
+    return {
+      id: row.id,
+      line: formLine({ templateName: row.template_name ?? "", employeeName: row.employee_name, locationName: row.location_name }),
+      state: row.hr_approval_state,
+      stage,
+      label: HR_STAGE_LABEL[stage],
+      requestedAt: row.hr_approval_requested_at,
+    };
+  });
 }
 
 export interface HrDecidedRow extends MyHrFormRow {
@@ -525,6 +590,7 @@ export async function readHrApprovalsFor(subject: string, verified: boolean, now
     id: row.id,
     line: formLine({ templateName: row.template_name ?? "", employeeName: row.employee_name, locationName: row.location_name }),
     state: "approved",
+    stage: "approved",
     label: HR_STATE_LABEL.approved,
     requestedAt: row.hr_approval_requested_at,
   }));

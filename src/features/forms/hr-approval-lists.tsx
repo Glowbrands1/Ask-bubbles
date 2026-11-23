@@ -10,7 +10,9 @@ import { formatBusinessTime } from "@/lib/business-date";
  *
  *   HrApprovalTabs  "All forms" and "Pending HR approval (N)", shown to HR only
  *   HrQueueList     HR's tab: waiting forms oldest first (overdue marked), then
- *                   the ones they sent back or rejected
+ *                   the ones the manager replied to after HR sent them back
+ *                   ("Manager replied to changes", owner 23 Nov 2026), then the
+ *                   ones they sent back or rejected
  *   MyFormsWithHr   the manager's own forms that HR has not approved yet
  */
 
@@ -19,24 +21,33 @@ export interface HrQueueListRow {
   line: string;
   createdByName: string;
   state: "pending" | "changes_requested" | "rejected" | "approved";
+  /** Whose turn it is (`hrStage`): `manager_replied` once the manager answered HR's send-back. */
+  stage: HrStageWord;
   requestedAt: string | null;
   waiting: string;
   overdue: boolean;
 }
+
+type HrStageWord = "pending" | "manager_replied" | "changes_requested" | "rejected" | "approved";
 
 export interface MyHrFormListRow {
   id: string;
   line: string;
   label: string;
   state: "pending" | "changes_requested" | "rejected" | "approved";
+  stage?: HrStageWord;
 }
 
-const STATE_WORDS: Record<HrQueueListRow["state"], string> = {
+const STAGE_WORDS: Record<HrStageWord, string> = {
   pending: "Waiting for you",
+  manager_replied: "Manager replied to changes",
   changes_requested: "Sent back for changes",
   rejected: "Rejected",
   approved: "Approved",
 };
+
+/** HR's turn: pending, or the manager replied to HR's changes. */
+const hrTurn = (stage: HrStageWord | undefined) => stage === "pending" || stage === "manager_replied";
 
 function hrHref(id: string): string {
   return `/forms/hr-approval/${id}`;
@@ -77,8 +88,8 @@ export function HrQueueList({ rows }: { rows: HrQueueListRow[] }) {
               </p>
             </div>
             <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
-              <Badge tone={row.state === "pending" ? "accent" : "outline"} size="sm">
-                {STATE_WORDS[row.state]}
+              <Badge tone={hrTurn(row.stage) ? "accent" : "outline"} size="sm">
+                {STAGE_WORDS[row.stage]}
               </Badge>
               {row.state === "pending" ? <span className="text-xs text-subtle-foreground">{row.waiting}</span> : null}
               {row.overdue ? (
@@ -105,7 +116,7 @@ export function MyFormsWithHr({ rows }: { rows: MyHrFormListRow[] }) {
           <li key={row.id}>
             <Link href={hrHref(row.id)} className="flex items-center gap-3 px-3 py-2 hover:bg-surface-muted">
               <p className="min-w-0 flex-1 truncate text-sm text-foreground">{row.line}</p>
-              <Badge tone={row.state === "pending" ? "accent" : "outline"} size="sm">
+              <Badge tone={hrTurn(row.stage ?? row.state) ? "accent" : "outline"} size="sm">
                 {row.label}
               </Badge>
               <ChevronRight className="size-4 shrink-0 text-subtle-foreground" aria-hidden />
