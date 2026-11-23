@@ -821,6 +821,11 @@ export interface ChatFormProposal {
   exitReasonQuote?: string;
   /** The agent loop's card (QA's third review): Create never runs today's termination reader for it. */
   fromAgentLoop?: true;
+  /**
+   * Board f140 / A2 (QA, 23 Nov 2026): the manager stated the form is for no store (U04, the loop's no_store), so Create may
+   * save it with none. Any other agent-loop card with no store is refused at Create (`createInlineForm`).
+   */
+  noStoreStated?: true;
   /** The agent loop's coaching card: the topic, in the manager's words, checked against their message (QA, 17 Nov 2026). */
   coachingTopic?: string;
   /**
