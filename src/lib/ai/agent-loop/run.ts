@@ -1,3 +1,4 @@
+import { withCardOpening } from "./card-opening";
 import { exitReadBackMismatch, withoutUnsavedExitLines } from "./exit-read-back";
 import { EXIT_METHOD_LABELS } from "@/lib/forms/exit-details";
 import { observationDateMismatch, withoutMisdatedRestatements } from "./observation-dates";
@@ -1617,6 +1618,8 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
   if (offRosterNames.size === 1 && text) text = withFullOffRosterName(text, [...offRosterNames][0]!, appConfig().staffSystem);
   /* QA's live re-test B8: a former employee is found in Woven, so the reply never also says they are not on the staff list. */
   if (inactiveLines.size === 1 && text) text = withOneInactiveLine(text, [...inactiveLines][0]!, appConfig().staffSystem);
+  /* QA (23 Nov 2026, u22 live): a reply with this turn's card that names no form opens with the card's own opening. */
+  if (effects.proposal && text) text = withCardOpening(text, effects.proposal.templateName, replyNames.size === 1 ? [...replyNames][0]! : effects.proposal.employeeName);
   const cardSlot: CardSlot | null = effects.proposal
     ? { proposalId: effects.proposal.proposalId, employeeKey: effects.proposalEmployeeId ? personKey(effects.proposalEmployeeId) : null, nameKey: effects.proposal.employeeName ? personKey(effects.proposal.employeeName) : null, templateKey: effects.proposal.templateKey, templateName: effects.proposal.templateName ?? null, ...(effects.proposalAsked?.length ? { asked: effects.proposalAsked } : {}), ...(effects.proposalLevel ? { level: effects.proposalLevel } : {}), ...(effects.proposalPayroll ? { payroll: effects.proposalPayroll } : {}), ...(effects.proposalPayroll === "yes" && effects.proposalPayrollAmount ? { payrollAmount: effects.proposalPayrollAmount } : {}), ...(effects.proposal.policyLine ? { policyLine: effects.proposal.policyLine } : {}), ...(effects.proposalAccountKey ? { accountKey: effects.proposalAccountKey } : {}), ...(effects.proposal.issue ? { issueKey: shownTextKey(effects.proposal.issue) } : {}), ...(effects.proposal.formDate ? { incidentDate: effects.proposal.formDate } : {}), ...(effects.proposal.subject === "team" && effects.proposal.locationId ? { teamStoreId: effects.proposal.locationId } : {}), ...(effects.proposalPriorDates?.length ? { priorDates: effects.proposalPriorDates } : {}), ...(effects.proposalOnFileOffered?.length ? { onFileOffered: effects.proposalOnFileOffered } : {}), ...(effects.proposal.locationId ? { storeId: effects.proposal.locationId } : {}) }
     : null;

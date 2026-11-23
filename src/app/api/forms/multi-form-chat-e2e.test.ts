@@ -3,6 +3,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 import type { ChatFormProposal, ChatMessage } from "@/types";
 
+import { COMPANY_LOCATIONS as PICKED_STORE_LOCATIONS } from "@/lib/locations";
+/*
+ * Changed on purpose (QA, 23 Nov 2026): an all-store login's card asks which store and Create waits for it, so the store is
+ * picked on the card first, as the browser's picker does (the route offers every store; a harness that reads the answer
+ * before the route's last step sees "not_applicable", and the first store is picked the same way).
+ */
+const withPickedStore = <P extends { locationId?: string | null; locationResolution?: string; authorizedLocationIds?: readonly string[] }>(card: P): P =>
+  !card.locationId && (card.locationResolution === "needs_selection" || card.locationResolution === "not_applicable")
+    ? { ...card, locationId: card.authorizedLocationIds?.[0] ?? PICKED_STORE_LOCATIONS[0]!.id }
+    : card;
+
+
 vi.mock("@/config/company/locations", async () =>
   (await import("@/test/fixtures/reference-roster")).referenceRosterModule(),
 );
@@ -355,7 +367,7 @@ async function create(message: ChatMessage, proposal: ChatFormProposal) {
   expect(continuation.isProposalSuperseded(thread, proposal.proposalId)).toBe(false);
   let instanceId = "";
   const result = await createInlineForm({
-    proposal,
+    proposal: withPickedStore(proposal),
     messages: thread,
     call,
     onCreated: (reference) => {
@@ -503,7 +515,7 @@ describe("case 2 — 'coaching form for Avery Testperson and a CA for Jordan Tes
     const answer = await say(PROMPT);
     const [coaching, ca] = cards(answer);
     const first = await create(answer, coaching!);
-    const again = await createInlineForm({ proposal: coaching!, messages: thread, call, onCreated: () => {} });
+    const again = await createInlineForm({ proposal: withPickedStore(coaching!), messages: thread, call, onCreated: () => {} });
     expect(again.reused).toBe(true);
     await create(thread.find((entry) => entry.id === answer.id)!, ca!);
     expect(store.form_instances).toHaveLength(2);
