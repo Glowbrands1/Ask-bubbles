@@ -118,6 +118,7 @@ function record(status: InstanceRow["status"]): InstanceRow {
     // HR approval (23 Nov 2026): a form that never went to HR.
     hrApprovalState: null,
     hrApprovalRequestedAt: null,
+    hrApprovalRequestedBy: null,
   };
 }
 
