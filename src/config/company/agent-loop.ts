@@ -39,8 +39,11 @@ export function bubblesLoopContent({ place, staff }: LoopWords): AgentLoopConten
        * work. He did not find coverage. He also acknowledged the shift coverage policy in Woven" cited Standards of Conduct
        * (the acknowledgements line below). A shift missed without coverage is attendance; a policy the employee DID
        * acknowledge is the background to it, never an acknowledgement left undone.
+       * QA's live regression set (22 Nov 2026, item 1): live, the same message cited Attendance in both runs: the policy was
+       * named only inside the acknowledgement sentence, which this rule calls background. Naming it there still picks
+       * Shift Replacement.
        */
-      "A scheduled shift the employee did not work without finding coverage (a no-show, \"would not be into work\", a text or message to someone instead of finding a cover or replacement) is Attendance; when the manager names the shift coverage, cover or replacement policy, cite Shift Replacement (the manual's section on finding your own replacement). A policy the employee acknowledged (in " + staff + " or on paper) is background to the account, never the offense and never the Standards of Conduct's acknowledgements left undone.",
+      "A scheduled shift the employee did not work without finding coverage (a no-show, \"would not be into work\", a text or message to someone instead of finding a cover or replacement) is Attendance; when the manager names the shift coverage, cover or replacement policy, cite Shift Replacement (the manual's section on finding your own replacement), also when they name it only in saying the employee acknowledged it (\"he also acknowledged the shift coverage policy in Woven\"): naming that policy picks the section, and the acknowledgement stays background. A policy the employee acknowledged (in " + staff + " or on paper) is background to the account, never the offense and never the Standards of Conduct's acknowledgements left undone.",
       "Late FOR a shift (\"late for her opening shift\", the employee arrived late) is Attendance; \"late to open\", the " + place + " opening late (doors opened late, failure to open) is Late Opening.",
       "A guest or customer complaint about the employee's conduct is the Standards of Conduct.",
       "Underperformance against sales or performance targets is the Standards of Conduct.",
