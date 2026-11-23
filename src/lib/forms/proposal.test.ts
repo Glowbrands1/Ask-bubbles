@@ -737,7 +737,9 @@ describe("a first name plus a stated role names the employee", () => {
       ["Marco is a Team Member", "Marco"],
       // Was "Dana was an FTTC last year": the FTTC title left this app's job titles with the rest of the sibling
       // company's consultant role (Pau, 21 Nov 2026). The same rule, on a title Buff City Soap uses.
-      ["Dana was an ASD last year", "Dana"],
+      // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): ASD left this app's job titles too; AGM (Assistant General
+      // Manager) is the title managers type.
+      ["Dana was an AGM last year", "Dana"],
       ["Priya is our new Salon Director", "Priya"],
     ] as const) {
       expect(propose([userTurn(sentence)], "coaching form please").employeeName, sentence).toBe(

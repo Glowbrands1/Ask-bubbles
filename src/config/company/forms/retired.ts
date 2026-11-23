@@ -15,8 +15,7 @@ import { EXAMPLE_CHECK_IN_KEY } from "./example-check-in";
  * deleted: a check-in already filed still opens and prints.
  */
 /*
- * The reference platform's consultant interview form ("tanning-consultant-interview"): the sibling company's own role,
- * not a Buff City Soap form (Pau, via QA2, 21 Nov 2026). Its seed is gone from the hiring library; retiring the key
- * switches the row off the next time the library is installed. Never deleted: Pau handles the row itself.
+ * The interview once seeded as the reference platform's consultant interview ("tanning-consultant-interview") is back
+ * as Buff City Soap's Team Member Interview Form (Pau, 23 Nov 2026): no longer retired. Its key stays.
  */
-export const RETIRED_TEMPLATE_KEYS: readonly string[] = [EXAMPLE_CHECK_IN_KEY, "tanning-consultant-interview"];
+export const RETIRED_TEMPLATE_KEYS: readonly string[] = [EXAMPLE_CHECK_IN_KEY];

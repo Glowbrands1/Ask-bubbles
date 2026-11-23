@@ -290,7 +290,12 @@ beforeEach(() => {
 /* ==================================================== the fields it is sent */
 
 describe("what the model is allowed to write, and what it never sees", () => {
-  it("offers the ten productivity lines this plan actually has", async () => {
+  it("offers the twelve KPI lines this plan actually has", async () => {
+    /*
+     * CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms; the KB's "Domo Reporting Overview"): was "the ten
+     * productivity lines". The reference platform's five metrics are Buff City Soap's six KPIs, Goal / Result each; the
+     * first five keep their stored keys, Product Mix % is a new key for the manager and for the store.
+     */
     await post(PUNCTUALITY);
 
     for (const key of [
@@ -299,15 +304,20 @@ describe("what the model is allowed to write, and what it never sees", () => {
       "manager_upta",
       "manager_club_close",
       "manager_average_club_dollar",
+      "manager_product_mix",
       "salon_ppta",
       "salon_lpsva",
       "salon_upta",
       "salon_club_close",
       "salon_average_club_dollar",
+      "salon_product_mix",
     ]) {
       expect(prompt(), key).toContain(`- ${key}:`);
     }
+    expect(prompt()).toContain("Net Sales (Goal / Result)");
+    expect(prompt()).not.toMatch(/PPTA|LPSVA|UPTA|Club Close|Club Dollar/);
   });
+
 
   it("never offers the manager's own self-assessment", async () => {
     /*
@@ -369,10 +379,11 @@ describe("what the model is allowed to write, and what it never sees", () => {
     expect(sdit.document.blocks.some((block) => block.kind === "objective_rows")).toBe(false);
   });
 
-  it("names the subject as the TSD the manager stated", async () => {
+  it("names the subject as the General Manager (GM) the plan reviews", async () => {
     await post(PUNCTUALITY);
 
-    expect(prompt()).toContain("REVIEWER: District Manager. SUBJECT: TSD.");
+    // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): the subject is Buff City Soap's General Manager, abbreviated GM.
+    expect(prompt()).toContain("REVIEWER: District Manager. SUBJECT: GM.");
     expect(prompt()).toContain("EMPLOYEE: Sarah Johnson (test)");
   });
 });

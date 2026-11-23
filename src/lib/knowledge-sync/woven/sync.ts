@@ -154,7 +154,7 @@ export function createWovenKnowledgeConnector(config: WovenKnowledgeConfig, clie
 }
 
 function buildConnector(config: WovenKnowledgeConfig, startedAt: number): BuffCitySoapWovenConnector {
-  return createWovenKnowledgeConnector(config, new WovenTeamClient({ baseUrl: config.baseUrl, deadlineAt: startedAt + REQUEST_BUDGET_MS }));
+  return createWovenKnowledgeConnector(config, new WovenTeamClient({ baseUrl: config.baseUrl, deadlineAt: startedAt + REQUEST_BUDGET_MS, antiforgeryHeader: config.postAntiforgeryHeader === true }));
 }
 
 export async function runWovenKnowledgeSync(
@@ -203,7 +203,7 @@ export async function testWovenConnection(overrides: { config?: WovenKnowledgeCo
   const config = overrides.config ?? readWovenKnowledgeConfig();
   const closed = gate(config);
   if (closed) return closed;
-  const client = overrides.client ?? new WovenTeamClient({ baseUrl: config.baseUrl, deadlineAt: Date.now() + 60_000 });
+  const client = overrides.client ?? new WovenTeamClient({ baseUrl: config.baseUrl, deadlineAt: Date.now() + 60_000, antiforgeryHeader: config.postAntiforgeryHeader === true });
   const connector = createWovenKnowledgeConnector(config, client);
   try {
     const info = await connector.connect();

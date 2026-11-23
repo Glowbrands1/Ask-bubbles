@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { AlertTriangle, Check, Download, ExternalLink, Loader2, PencilLine, Plus } from "lucide-react";
+import { AlertTriangle, Check, Download, ExternalLink, Loader2, PencilLine, Plus, Printer } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { Notice } from "@/components/ui/feedback";
 import { Dialog, DialogActions, DialogContent } from "@/components/ui/overlays";
 import { FinalizedChangePanel } from "./finalized-change-panel";
 import { HrApprovalPanel, type HrApprovalPanelView } from "@/features/forms/hr-approval-panel";
-import { downloadFormPdf, formsFetch, FormsFetchError } from "@/features/forms/forms-fetch";
+import { downloadFormPdf, formsFetch, FormsFetchError, printFormPdf } from "@/features/forms/forms-fetch";
 import { reloadIfAlreadyRevised } from "@/form-revisions/already-revised";
 import { onFormUpdate } from "./form-update-events";
 import {
@@ -170,7 +170,7 @@ type SaveState =
 
 type ActionState =
   | { kind: "idle" }
-  | { kind: "busy"; what: "follow-up" | "finalize" | "pdf" | "revise" }
+  | { kind: "busy"; what: "follow-up" | "finalize" | "pdf" | "print" | "revise" }
   | { kind: "error"; message: string };
 
 type LoadState =
@@ -583,6 +583,18 @@ export function InlineForm({
     }
   }
 
+  /** "Print": the same server PDF, opened for the browser to print (`printFormPdf`). */
+  async function printPdf() {
+    if (action.kind === "busy") return;
+    setAction({ kind: "busy", what: "print" });
+    try {
+      await printFormPdf(instanceId, role, user.name);
+      setAction({ kind: "idle" });
+    } catch (error) {
+      setAction({ kind: "error", message: (error as Error).message });
+    }
+  }
+
   /** Points this card at another record, and asks the parent to persist it. */
   function showRecord(id: string, templateName: string) {
     const next: ChatFormInstanceRef = {
@@ -951,6 +963,10 @@ export function InlineForm({
                   <Download />
                 )}
                 Download PDF
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => void printPdf()} disabled={action.kind === "busy"}>
+                {action.kind === "busy" && action.what === "print" ? <Loader2 className="animate-spin" /> : <Printer />}
+                Print
               </Button>
               {/* ASD_NO_FORM_MONITORING: no link into a register this reader may not open. */}
               {!asdNoFormMonitoringEnabled() || can("view_form_monitoring") ? (

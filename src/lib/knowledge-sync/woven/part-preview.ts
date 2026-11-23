@@ -85,7 +85,7 @@ export async function previewWovenPart(
     return { status: "failed", reason: "The Woven connection is not configured, so the item cannot be read." };
   }
   const connector =
-    overrides.connector ?? createWovenKnowledgeConnector(config, new WovenTeamClient({ baseUrl: config.baseUrl, deadlineAt: Date.now() + 50_000 }));
+    overrides.connector ?? createWovenKnowledgeConnector(config, new WovenTeamClient({ baseUrl: config.baseUrl, deadlineAt: Date.now() + 50_000, antiforgeryHeader: config.postAntiforgeryHeader === true }));
 
   try {
     await connector.connect();

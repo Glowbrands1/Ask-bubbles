@@ -124,6 +124,63 @@ export const HR_STATE_LABEL: Record<HrApprovalState, string> = {
 
 /*
  * ============================================================================
+ * MANAGER REPLIED TO CHANGES (owner, 23 Nov 2026)
+ * ============================================================================
+ *
+ * "colene sent to marissa, marissa replied and it shows … 'sent back for changes' still. it should be Manager Replied
+ * to changes. then view then approve." A form HR sent back whose creator or sender has written a note since HR's latest
+ * send-back is the manager's answer: it is HR's turn again. It is read from the approval history, not stored, so the
+ * stored state stays `changes_requested` (the manager may still change it and send it again).
+ *
+ *   stage              who acts next                         counts in "Pending HR approval (N)"
+ *   pending            HR                                    yes
+ *   manager_replied    HR (approve, or send back again)      yes
+ *   changes_requested  the manager        no
+ *   rejected           the manager        no
+ */
+export type HrStage = HrApprovalState | "manager_replied";
+
+export interface HrHistoryStep {
+  action: string;
+  actor: string;
+}
+
+/**
+ * Whether the creator or a sender wrote a note after HR's latest send-back, on a form still sent back. `steps` in the
+ * order they happened.
+ */
+export function approvableFromSentBack(
+  instance: { createdBy: string; hrApprovalState?: HrApprovalState | null; hrApprovalRequestedBy?: string | null; hrApprovalSenders?: readonly string[] },
+  steps: readonly HrHistoryStep[],
+): boolean {
+  if (instance.hrApprovalState !== "changes_requested") return false;
+  let sentBackAt = -1;
+  steps.forEach((step, index) => {
+    if (step.action === "changes_requested") sentBackAt = index;
+  });
+  if (sentBackAt < 0) return false;
+  return steps.slice(sentBackAt + 1).some((step) => step.action === "commented" && isCreatorOrSender({ id: step.actor }, instance));
+}
+
+export function hrStage(state: HrApprovalState, managerReplied: boolean): HrStage {
+  return state === "changes_requested" && managerReplied ? "manager_replied" : state;
+}
+
+/**
+ * A row that needs HR's decision now: waiting for them, or sent back and replied to. What "Pending HR approval (N)" and
+ * "Needs your decision (N)" count, so the number always equals those rows (the sibling app's name, #1288).
+ */
+export function needsHrDecision(row: { state: HrApprovalState; managerReplied: boolean }): boolean {
+  return row.state === "pending" || row.managerReplied;
+}
+
+export const HR_STAGE_LABEL: Record<HrStage, string> = {
+  ...HR_STATE_LABEL,
+  manager_replied: "Manager replied to changes",
+};
+
+/*
+ * ============================================================================
  * TIME — CENTRAL, WEEKDAYS
  * ============================================================================
  *

@@ -157,13 +157,13 @@ export const SDIT_EPP_INTAKE: readonly EppIntakeItem[] = [
  *
  *   THE TWO EXPECTATION LINES. There are NINE management expectations here and
  *   they are marked in the review conversation, against the form, with the
- *   Training Salon Director in the room. Reading a chat sentence into nine
+ *   General Manager in the room. Reading a chat sentence into nine
  *   tri-state marks is the auto-marking this plan's rules forbid, so nothing
  *   asks for them up front: the rows are on the document, blank.
  *
- * WHAT IT ASKS FOR IS WHAT THE BUSINESS ASKS FOR, in the business's order, and
- * the two productivity lines name the five metrics this plan actually has.
- * PPTA, LPSVA, UPTA, Club Close and Average Club Dollar — not the SDIT three.
+ * WHAT IT ASKS FOR IS WHAT THE BUSINESS ASKS FOR, in the business's order. The
+ * two productivity lines name Buff City Soap's six KPIs (Pau, 23 Nov: BCS terms
+ * in the forms; the KB's Domo Reporting Overview), Goal / Result each.
  */
 export const TSD_EPP_INTAKE: readonly EppIntakeItem[] = [
   { key: "employee_name", prompt: "The employee's full name", optional: false },
@@ -186,12 +186,12 @@ export const TSD_EPP_INTAKE: readonly EppIntakeItem[] = [
   {
     key: "employee_productivity",
     prompt:
-      "The manager's productivity numbers, if you have them (PPTA, LPSVA, UPTA, Club Close, Average Club Dollar)",
+      "The manager's productivity numbers, if you have them, goal and result (Net Sales, Comp Sales %, IPT, AOV, Discount Rate %, Product Mix %)",
     optional: true,
   },
   {
     key: "salon_productivity",
-    prompt: "The store's current productivity numbers, if you have them (the same five)",
+    prompt: "The store's current productivity numbers, if you have them (the same six)",
     optional: true,
   },
   {
@@ -255,23 +255,24 @@ export const SDIT_EPP_PLAN: EppIntakePlan = {
 export const TSD_EPP_PLAN: EppIntakePlan = {
   templateKey: "tsd-epp",
   items: TSD_EPP_INTAKE,
-  metrics: ["PPTA", "LPSVA", "UPTA", "Club Close", "Average Club Dollar"],
+  /* Buff City Soap's KPIs (Pau, 23 Nov: BCS terms in the forms; the KB's Domo Reporting Overview). */
+  metrics: ["Net Sales", "Comp Sales %", "IPT", "AOV", "Discount Rate %", "Product Mix %"],
   /*
    * "MANAGER", BECAUSE THE SUBJECT OF THIS PLAN MANAGES A SALON. The document
    * asks "in what areas is the manager currently succeeding?" and the person
-   * it is reviewed with is their District Manager. Calling the Training Salon
-   * Director "the employee" in the chat while the form calls them "the
+   * it is reviewed with is their District Manager. Calling the General
+   * Manager "the employee" in the chat while the form calls them "the
    * manager" is the role-label drift this plan's rules single out.
    */
   subject: "manager",
   /*
-   * THE ROLE SPELLED OUT, ONCE. A District Manager who typed "create a TSD
+   * THE ROLE SPELLED OUT, ONCE. A District Manager who typed "create a GM
    * EPP" should see, in the first line, that Ask Bubbles understood which
-   * document that is — the Training Salon Director's Employee Performance
-   * Plan — before being asked for anything.
+   * document that is — the General Manager's Employee Performance Plan
+   * (Buff City Soap's title, Pau, 23 Nov 2026) — before being asked for anything.
    */
   lead: () =>
-    "To create a Training Store Director (TSD) Employee Performance Plan (EPP) form for you, I'll need a few details:",
+    "To create a General Manager (GM) Employee Performance Plan (EPP) form for you, I'll need a few details:",
   tail: (formName) =>
     `Please provide these details and I'll prepare the ${formName} draft for you, checking the applicable JB & Associates policy before anything policy-related goes on it.`,
   /*

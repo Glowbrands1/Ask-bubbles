@@ -39,9 +39,13 @@ describe("which forms wait for HR — every template in the library, by name", (
     "Corrective Action Form": true,
     "Policy Review": true,
     "SDIT EPP": true,
-    "TSD EPP": true,
-    "ASD-SDIT Performance EPP": true,
-    "FTTC Performance EPP": true,
+    // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): the three EPPs Buff City Soap uses, renamed (same keys
+    // and permission, so the same answer), and the Team Member Interview Form restored (a hiring form, as the owner
+    // confirmed for the interviews).
+    "General Manager Performance EPP": true,
+    "Assistant General Manager Development EPP": true,
+    "Team Member Performance EPP": true,
+    "Team Member Interview Form": true,
     "DMIT EPP — TSD Review": true,
     "DMIT EPP — DMIT Review": true,
     "Resignation/Exit Form": true,
@@ -183,11 +187,14 @@ describe("the 6 AM Central reminder, across daylight saving", () => {
 });
 
 describe("the flag", () => {
-  it("reads off by default, and is off in production", async () => {
+  it("reads off by default, and is on in production", async () => {
     delete process.env[HR_APPROVAL_FLAG];
     expect(hrApprovalEnabled()).toBe(false);
     const { readFileSync } = await import("node:fs");
-    const flags = JSON.parse(readFileSync("src/config/production-flags.json", "utf8")) as { off: string[] };
-    expect(flags.off).toContain(HR_APPROVAL_FLAG);
+    const flags = JSON.parse(readFileSync("src/config/production-flags.json", "utf8")) as { on: string[]; off: string[] };
+    // Changed on purpose (23 Nov 2026): the owner had HR approval turned on in production once the approver record
+    // existed, so the production list now has it on.
+    expect(flags.on).toContain(HR_APPROVAL_FLAG);
+    expect(flags.off).not.toContain(HR_APPROVAL_FLAG);
   });
 });

@@ -1,6 +1,8 @@
 import { loadFormDeletionsChatBlock } from "@/lib/ai/form-deletions-chat-read";
 import { isGoogleReviewQuestion } from "@/lib/ai/google-reviews-chat";
 import { loadGoogleReviewsChatBlock } from "@/lib/ai/google-reviews-chat-read";
+import { assignmentTrackerText, canSeeAssignmentTracker, type AssignmentTracker } from "@/lib/ai-training/assignments";
+import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
 
 import { formatBusinessTime } from "@/lib/business-date";
 
@@ -20,6 +22,9 @@ import { untrusted as envelope, type ToolActor, type ToolEffects, type ToolResul
  *   week and last, the newest reviews, and L3 / L6 / YTD / month by month when a period is asked. Gated on View reports,
  *   the page's own gate (decision 6).
  * - read_form_deletions: the form deletion record (`loadFormDeletionsChatBlock`): administrators only (Manage users).
+ * - read_ai_assignments (port from the sibling app, Pau 23 Nov 2026): the AI assignment tracker (AI Training ->
+ *   Assignments), for its named people only (`canSeeAssignmentTracker`, the page's own check). This app's chat actor
+ *   carries no email, so the tracker is read through the loop only, which is open to every manager.
  *
  * No read_stats: this app has no reports reader for the loop yet (Pau's decision 1). Everything returned is data, never
  * instructions, in the loop's untrusted envelope with the page it came from.
@@ -27,10 +32,14 @@ import { untrusted as envelope, type ToolActor, type ToolEffects, type ToolResul
 
 export const REVIEWS_SOURCE = "Google Reviews page";
 export const FORM_DELETIONS_SOURCE = "Form deletion record";
+export const AI_ASSIGNMENTS_SOURCE = "AI Training > Assignments";
 
 export interface DataToolContext {
-  /** `subject` and `verified` (the loop passes its whole actor): read_hr_approvals reads only the asker's own forms. */
-  readonly actor: Pick<ToolActor, "role" | "scope"> & Partial<Pick<ToolActor, "subject" | "verified">>;
+  /**
+   * `email`: who is signed in, for read_ai_assignments's named list. `subject` and `verified` (the loop passes its
+   * whole actor): read_hr_approvals reads only the asker's own forms.
+   */
+  readonly actor: Pick<ToolActor, "role" | "scope"> & { readonly email?: string } & Partial<Pick<ToolActor, "subject" | "verified">>;
   readonly question: string;
   readonly scopeId: string;
   readonly today: string;
@@ -41,6 +50,8 @@ export interface DataToolContext {
 export interface DataToolDeps {
   readonly loadReviewsBlock: typeof loadGoogleReviewsChatBlock;
   readonly loadDeletionsBlock: typeof loadFormDeletionsChatBlock;
+  /** AI Training -> Assignments: the tracker's people and marks (`ai_assignment_people`, `ai_assignment_marks`). */
+  readonly loadAssignmentTracker: () => Promise<AssignmentTracker>;
   /** HR approval (`readHrApprovalsFor`): HR's queue, or the asker's own forms with HR. */
   readonly loadHrApprovals: (input: { subject: string; verified: boolean; now: Date }) => Promise<HrApprovalsRead>;
 }
@@ -54,6 +65,8 @@ export type HrApprovalsRead =
         line: string;
         createdByName: string;
         state: string;
+        /** Sent back, and the manager replied since: needs HR's decision (`needsHrDecision`). Absent: not replied. */
+        managerReplied?: boolean;
         requestedAt: string | null;
         waiting: string;
         overdue: boolean;
@@ -68,7 +81,8 @@ export type HrApprovalsRead =
         | {
             app: string;
             approver: boolean;
-            forms: readonly { line: string; from: string; state: string; requestedAt: string | null; waiting: string; overdue: boolean }[];
+            /** `managerReplied`: sent back, and the manager replied since (absent from an older sibling: not replied). */
+            forms: readonly { line: string; from: string; state: string; requestedAt: string | null; waiting: string; overdue: boolean; managerReplied?: boolean }[];
           };
     }
   | {
@@ -79,6 +93,7 @@ export type HrApprovalsRead =
 export const DEFAULT_DATA_TOOL_DEPS: DataToolDeps = {
   loadReviewsBlock: (...args) => loadGoogleReviewsChatBlock(...args),
   loadDeletionsBlock: (...args) => loadFormDeletionsChatBlock(...args),
+  loadAssignmentTracker: async () => (await import("@/lib/ai-training/assignments-repository")).loadAssignmentTracker(),
   loadHrApprovals: async ({ subject, verified, now }) =>
     (await import("@/lib/forms/hr-approval")).readHrApprovalsFor(subject, verified, now),
 };
@@ -123,6 +138,25 @@ export async function readFormDeletions(context: DataToolContext, input: { emplo
   return { record: untrusted(block, FORM_DELETIONS_SOURCE) };
 }
 
+/**
+ * read_ai_assignments() (port from the sibling app, Pau 23 Nov 2026): the AI assignment tracker as the Assignments
+ * tab's grid shows it. ONLY FOR THE TRACKER'S NAMED PEOPLE: anyone else is refused and nothing is read.
+ */
+export async function readAiAssignments(context: DataToolContext, deps: DataToolDeps = DEFAULT_DATA_TOOL_DEPS): Promise<ToolResult> {
+  if (context.actor.role === null || !hasPermission(DEFAULT_PERMISSION_MATRIX, context.actor.role, "view_ai_training") || !canSeeAssignmentTracker(context.actor)) {
+    return {
+      source: AI_ASSIGNMENTS_SOURCE,
+      refused: "The AI assignment tracker is only for the people it was set up for. Nothing was read; say so plainly, in one line, and give nothing from it.",
+    };
+  }
+  const tracker = await deps.loadAssignmentTracker();
+  return {
+    source: AI_ASSIGNMENTS_SOURCE,
+    tracker: untrusted(assignmentTrackerText(tracker, context.today), AI_ASSIGNMENTS_SOURCE),
+    note: "Give who is done, due, missing or has more time exactly as listed, with the half each is for. Never guess a person or a half not listed.",
+  };
+}
+
 /* ---------------------------------------------------------------- read_hr_approvals --- */
 
 /** The source label, with this app's own forms page name (Form Monitoring / Forms Register). */
@@ -143,7 +177,7 @@ function hrApprovalsSource(): string {
 function siblingHrSection(sibling: NonNullable<Extract<HrApprovalsRead, { kind: "hr" }>["sibling"]> | null): Record<string, unknown> {
   if (sibling === null) return {};
   if (sibling === "unavailable") {
-    return { other_app: { note: "The other app's HR queue could not be read just now. Say so, and that it is listed under its own tab in Pending HR approval." } };
+    return { other_app: { note: "The other app's HR queue could not be read just now. Say so, and that its forms are listed under its own tab next to Pending HR approval." } };
   }
   const source = `HR approval (${sibling.app})`;
   if (!sibling.approver) {
@@ -153,12 +187,19 @@ function siblingHrSection(sibling: NonNullable<Extract<HrApprovalsRead, { kind: 
     other_app: {
       app: sibling.app,
       waiting_for_you: sibling.forms
-        .filter((row) => row.state === "pending")
-        .map((row) => ({ form: untrusted(row.line, source), from: row.from, sent: formatBusinessTime(row.requestedAt) ?? row.requestedAt, waiting: row.waiting, overdue: row.overdue })),
+        .filter((row) => row.state === "pending" || row.managerReplied === true)
+        .map((row) => ({
+          form: untrusted(row.line, source),
+          from: row.from,
+          state: row.managerReplied ? "manager replied to changes: you can approve it now, or send it back again" : "waiting for approval",
+          sent: formatBusinessTime(row.requestedAt) ?? row.requestedAt,
+          waiting: row.waiting,
+          overdue: row.overdue,
+        })),
       sent_back_or_rejected: sibling.forms
-        .filter((row) => row.state !== "pending")
+        .filter((row) => !(row.state === "pending" || row.managerReplied === true))
         .map((row) => ({ form: untrusted(row.line, source), from: row.from, state: row.state === "rejected" ? "rejected" : "sent back for changes" })),
-      note: `These forms are in ${sibling.app}, not this app: list them separately, under ${sibling.app}'s name. They are approved in ${sibling.app}, opened from its own tab in Pending HR approval.`,
+      note: `These forms are in ${sibling.app}, not this app: list them separately, under ${sibling.app}'s name. They are approved in ${sibling.app}, opened from the ${sibling.app} approvals tab next to Pending HR approval.`,
     },
   };
 }
@@ -174,12 +215,19 @@ export async function readHrApprovals(context: DataToolContext, deps: DataToolDe
       source: hrApprovalsSource(),
       reader: "HR approver",
       waiting_for_you: read.queue
-        .filter((row) => row.state === "pending")
-        .map((row) => ({ form: untrusted(row.line, hrApprovalsSource()), from: row.createdByName, sent: formatBusinessTime(row.requestedAt) ?? row.requestedAt, waiting: row.waiting, overdue: row.overdue })),
+        .filter((row) => row.state === "pending" || row.managerReplied === true)
+        .map((row) => ({
+          form: untrusted(row.line, hrApprovalsSource()),
+          from: row.createdByName,
+          state: row.managerReplied ? "manager replied to changes: you can approve it now, or send it back again" : "waiting for approval",
+          sent: formatBusinessTime(row.requestedAt) ?? row.requestedAt,
+          waiting: row.waiting,
+          overdue: row.overdue,
+        })),
       sent_back_or_rejected: read.queue
-        .filter((row) => row.state !== "pending")
+        .filter((row) => !(row.state === "pending" || row.managerReplied === true))
         .map((row) => ({ form: untrusted(row.line, hrApprovalsSource()), from: row.createdByName, state: row.state === "rejected" ? "rejected" : "sent back for changes" })),
-      note: "List the forms waiting for this HR approver, oldest first, saying which are overdue (waited more than one business day). They approve, send back or reject each one from Pending HR approval in " + appConfig().formsPageName + ".",
+      note: "List the forms waiting for this HR approver, oldest first, saying which are overdue (waited more than one business day) and which the manager replied to after HR sent them back (\"manager replied to changes\": HR may approve it as it stands). They approve, send back or reject each one from Pending HR approval in " + appConfig().formsPageName + ".",
       ...siblingHrSection(read.sibling ?? null),
     };
   }
@@ -222,7 +270,7 @@ export function dataToolSpecs(config: AppConfig) {
     {
       name: "read_hr_approvals",
       description:
-        "HR approval of forms: for HR, every form waiting for their approval (oldest first, overdue after one business day) and the ones they sent back or rejected, plus (other_app) the forms waiting for them in the sibling app; for any other manager, only the forms THEY created that went to HR (waiting, sent back, rejected, or approved in the last 30 days) with HR's latest note to them. Use it for \"has HR approved it?\", \"what's waiting on me?\", \"did HR send my form back?\". A form waiting for HR is not on file.",
+        "HR approval of forms: for HR, every form waiting for their approval (oldest first, overdue after one business day, including the ones the manager replied to after HR sent them back) and the ones they sent back or rejected, plus (other_app) the forms waiting for them in the sibling app; for any other manager, only the forms THEY created or sent to HR, each with its state (waiting for HR approval, sent back by HR for changes, manager replied to changes, rejected by HR, or approved by HR in the last 30 days) and HR's latest note to them. Use it for \"has HR approved it?\", \"was my CA for <name> approved?\", \"what's waiting on me?\", \"did HR send my form back?\". A form waiting for HR is not on file; an approved one is.",
       input_schema: { type: "object", properties: {}, required: [] },
     },
     {
@@ -236,6 +284,12 @@ export function dataToolSpecs(config: AppConfig) {
         },
         required: [],
       },
+    },
+    {
+      name: "read_ai_assignments",
+      description:
+        "The AI assignment tracker (AI Training > Assignments), for the people it was set up for only: two AI assignments a month per person (the 1st to 15th, the 16th to month end); who is done, still due or has more time this half, and each person's done and missing halves. Anyone else is refused.",
+      input_schema: { type: "object", properties: {}, required: [] },
     },
   ] as const;
 }
@@ -255,6 +309,7 @@ export function dataToolHandlers(
   return {
     read_reviews: (args) => readReviews(context, args, deps),
     read_form_deletions: (args) => readFormDeletions(context, args, deps),
+    read_ai_assignments: () => readAiAssignments(context, deps),
     read_hr_approvals: () => readHrApprovals(context, deps),
   };
 }

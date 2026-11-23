@@ -2820,7 +2820,7 @@ function proposalContent(
   if (isPerformancePlan(match)) {
     /*
      * WHICH PLAN'S QUESTIONS, off the key the library already resolved. The
-     * TSD Management Performance Plan asks eight and names five metrics; the
+     * General Manager Performance EPP asks eight and names no metric; the
      * SDIT plan asks eleven and names three. Neither list is chosen here —
      * this passes the template's own key and `epp-intake.ts` answers.
      */
@@ -3343,7 +3343,7 @@ function eppReady(
       item.key === "employee_productivity"
         ? /*
            * WHOSE NUMBERS. "The employee's" on the SDIT plan and "the
-           * manager's" on the TSD one, because the TSD plan's own pages call
+           * manager's" on the General Manager one, because that plan's own pages call
            * its subject the manager and a card that called them the employee
            * would be the role drift this work was told to keep out.
            */

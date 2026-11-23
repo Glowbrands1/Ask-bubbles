@@ -141,7 +141,7 @@ function followUp(o: Record<string, unknown> = {}) {
     description: "Follow-up.", layoutFamily: "coaching", requiredPermission: "create_coaching_form", displayOrder: 5, ...o });
 }
 function tsd(o: Record<string, unknown> = {}) {
-  return template({ id: "tpl-tsd-id", key: "tsd-epp", name: "TSD EPP", shortName: "TSD EPP",
+  return template({ id: "tpl-tsd-id", key: "tsd-epp", name: "General Manager Performance EPP", shortName: "GM EPP",
     description: "TSD plan.", layoutFamily: "epp", requiredPermission: "create_epp", displayOrder: 6, ...o });
 }
 const LIBRARY = () => [template(), dpoa(), policyReview(), followUp(), epp(), tsd()];
@@ -154,7 +154,8 @@ const INLINE: [question: string, templateKey: string, employee: string, role: st
   ["Start a policy review for John", "policy-review", "John", "location_manager"],
   ["Create a follow-up coaching form for Jane Smith", "follow-up-coaching", "Jane Smith", "location_manager"],
   ["Create an SDIT EPP for Jane Smith", "sdit-epp", "Jane Smith", "district_manager"],
-  ["Create a TSD EPP for Jane Smith", "tsd-epp", "Jane Smith", "district_manager"],
+  // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): Buff City Soap's name for the plan; "TSD EPP" no longer names it.
+  ["Create a GM EPP for Jane Smith", "tsd-epp", "Jane Smith", "district_manager"],
 ];
 
 describe("a form request typed into Ask Bubbles", () => {

@@ -110,6 +110,29 @@ export async function downloadFormPdf(
 }
 
 /**
+ * PRINTING A FINALIZED FORM (owner, 23 Nov 2026: "will have option to print and save as PDF"). The same server PDF as
+ * `downloadFormPdf`, fetched with the Forms headers for the same reason, opened in a new tab where the browser's PDF
+ * viewer prints it. Never the card on screen: the PDF holds the form's values only, never the HR approval notes.
+ */
+export async function printFormPdf(instanceId: string, role: Role, name: string): Promise<void> {
+  const response = await fetch(`/api/forms/instances/${instanceId}/pdf`, {
+    headers: formsHeaders(role, name),
+  });
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => ({}))) as { error?: string };
+    throw new Error(payload.error ?? "That form could not be opened for printing.");
+  }
+  const url = URL.createObjectURL(await response.blob());
+  const opened = window.open(url, "_blank");
+  if (!opened) {
+    URL.revokeObjectURL(url);
+    throw new Error("Allow pop-ups for this site to print the form.");
+  }
+  // Revoking immediately can race the new tab's own load, so give it a beat.
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+/**
  * Opening the PDF preview of a template version.
  *
  * Same reason `downloadFormPdf` exists: a plain link carries none of the Forms

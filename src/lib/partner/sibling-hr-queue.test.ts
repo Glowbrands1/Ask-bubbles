@@ -102,6 +102,7 @@ describe("what this app answers the sibling", () => {
       requestedAt: "2026-11-23T14:00:00Z",
       waiting: "Sent today",
       overdue: false,
+      managerReplied: false,
       path: `/forms/hr-approval/${id}`,
     });
     // No account id, no value of the form.
@@ -124,6 +125,28 @@ describe("what this app answers the sibling", () => {
     await waitingForm();
     expect((await hrQueueForPartner("%@example.com")).approver).toBe(false);
     expect((await hrQueueForPartner("hr_wren@example.com")).approver).toBe(false);
+  });
+});
+
+describe("a form the manager replied to after HR sent it back (#1115's \"Manager replied to changes\")", () => {
+  it("is answered as needing HR's decision, so the sibling's tab counts it; an older sibling's answer reads as not replied", async () => {
+    const id = await waitingForm();
+    const row = store.form_instances.find((candidate) => (candidate as { id: string }).id === id) as Record<string, unknown>;
+    row.hr_approval_state = "changes_requested";
+    extra.form_hr_approval_events = [
+      { id: "e1", instance_id: id, action: "submitted", actor: MANAGER, note: null, created_at: "2026-11-23T14:00:00Z" },
+      { id: "e2", instance_id: id, action: "changes_requested", actor: HR, note: "Add the time.", created_at: "2026-11-23T14:10:00Z" },
+      { id: "e3", instance_id: id, action: "commented", actor: MANAGER, note: "9:20.", created_at: "2026-11-23T14:20:00Z" },
+    ];
+    const answer = await hrQueueForPartner("hr.wren@example.com", new Date("2026-11-23T15:00:00Z"));
+    expect(answer.forms.map((form) => [form.state, form.managerReplied])).toEqual([["changes_requested", true]]);
+
+    const path = "/forms/hr-approval/0b6f1c1e-2a8d-4c55-9a10-5f3b6c7d8e9f";
+    const parsed = parseSiblingHrAnswer(
+      { app: "Sibling App", approver: true, forms: [{ line: "replied", state: "changes_requested", managerReplied: true, path }, { line: "older sibling", state: "changes_requested", path }] },
+      "https://sibling.test",
+    );
+    expect(parsed.status === "ok" && parsed.forms.map((form) => form.managerReplied)).toEqual([true, false]);
   });
 });
 

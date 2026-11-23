@@ -7,6 +7,11 @@ import { STAFF, WEST_DODGE, type ReplayCase } from "./cases";
  * THE SIX EPP FORMS ARE HIDDEN IN THIS APP (Pau, via QA2, 21 Nov 2026)
  * ============================================================================
  *
+ * CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): three of the six are unhidden under Buff City Soap's names (General Manager,
+ * Assistant General Manager and Team Member Performance EPP; `nov23-bcs-forms-unhidden-cases.ts`), keys unchanged. These
+ * asks still open none of the six: they name the sibling company's titles (SDIT, TSD, FTTC, DMIT), which no longer name
+ * a form here, or no plan at all ("an EPP"), which asks which one.
+ *
  * The EPP forms (sdit-epp, tsd-epp, asd-sdit-epp, fttc-epp, dmit-epp-tsd, dmit-epp-dmit) are the reference platform's
  * plans for roles Buff City Soap does not have; none has ever been saved here. Hidden (`config/company/forms/hidden.ts`):
  * asking chat for "an EPP" or "SDIT EPP" never opens one of them. Invented names only (STAFF's people).

@@ -1,4 +1,5 @@
 import { exitIntakeFixEnabled, exitShortcutWordsEnabled, exitStatedOnlyEnabled, exitTerminationStatedEnabled, fieldLabelNotAQuestionEnabled, resignMethodFollowupEnabled, exitTypoWordsEnabled } from "@/lib/config/chat-quality-flags";
+import { ADDRESS_LABEL, ADDRESS_THROUGH_ZIP, ADDRESS_TO_END } from "./address-spans";
 
 import { JOIN } from "./turn-join";
 import { editDistance } from "./typo-match";
@@ -623,10 +624,7 @@ function sentence(text: string): string {
  * is one, else to the end of the sentence. Never guessed from anything else.
  * Only with EXIT_INTAKE_FIX_ENABLED.
  */
-const ADDRESS_LABEL =
-  /\b(?:(?:permanent|home|mailing|current)\s+address(?:\s+is|\s*[:=\-–—])?|address\s*(?:is|[:=\-–—]))\s*/gi;
-const ADDRESS_THROUGH_ZIP = /^\d{1,6}[A-Za-z]?\s+[^\n]{2,100}?\b\d{5}(?:-\d{4})?\b/;
-const ADDRESS_TO_END = /^\d{1,6}[A-Za-z]?\s+[^\n.;!?]{2,100}?(?=\s*(?:[.;!?\n]|,\s*(?:she|he|they|her|his|last|and)\b|$))/i;
+/* The address shape lives in `address-spans.ts`, shared with the store readers that leave an address out. */
 
 function addressIn(turn: string): string | null {
   for (const match of turn.matchAll(ADDRESS_LABEL)) {

@@ -23,6 +23,7 @@ import { answeredNameQuestions, answerNamesSomeoneElse, everKeptOrUsedTyped, isC
 import { employeeFirstName } from "@/lib/forms/employee-reference";
 import { AFFIRMATIVE, displayName, editDistance, matchEmployeeName, nameConfirmationQuestion, readNameConfirmation, rosterSpellingOf, type RosterEmployee } from "@/lib/forms/employee-match";
 import { offRosterTyped } from "@/lib/forms/roster-only-names";
+import { withoutAddressLines } from "@/lib/forms/address-spans";
 import { readLocationMentions } from "@/lib/forms/location-mention";
 import { locationById } from "@/lib/locations";
 import { COMPANY_LOCATION_NICKNAMES } from "@/config/company/locations";
@@ -434,6 +435,31 @@ export function quoteNamesForm(text: string, template: { readonly name: string; 
   /* Whole words, any case and spacing (holdsPhrase needs 3 characters, and "CA" is two). */
   const said = ` ${foldName(withoutMessageIdTags(spaced(text))).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim()} `;
   return [...new Set([...names, ...initials])].some((name) => said.includes(` ${foldName(name).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim()} `));
+}
+
+/**
+ * The form the manager asked for, for the reply (board f099): the quote's own words without a leading article, ending in
+ * "form" ("store manager interview form"); null when the quote is longer than a form's name (eight words), so a whole
+ * message is never echoed.
+ */
+export function formAskedName(quote: string): string | null {
+  const words = quote.replace(/^\s*(?:a|an|the|another|new)\s+/i, "").trim().replace(/[.?!,;:]+$/, "");
+  if (!words || words.split(/\s+/).length > 8) return null;
+  return /\bforms?$/i.test(words) ? words : `${words} form`;
+}
+
+/**
+ * The word the library's titles end with ("Form"), when most of them share one: read from the template names, so a quote
+ * that holds it reads as a form's title (board f099). Null when the titles share no last word.
+ */
+export function titleWordOf(names: readonly string[]): string | null {
+  const counts = new Map<string, number>();
+  for (const name of names) {
+    const last = name.trim().split(/\s+/).at(-1)?.toLowerCase().replace(/[^\p{L}]+/gu, "");
+    if (last) counts.set(last, (counts.get(last) ?? 0) + 1);
+  }
+  const [word, count] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0] ?? [null, 0];
+  return word && count * 2 > names.length ? word : null;
 }
 
 /** The question when no level option was named (Pau's ruling, fix batch item 2). */
@@ -1976,8 +2002,92 @@ async function findFormsInPeriod(context: ToolContext, input: { form?: unknown; 
   }
 }
 
+/*
+ * ============================================================================
+ * FORMS ON FILE BY TOPIC (FORM_TOPIC_SEARCH_ENABLED; port of the sibling app's #1266, 23 Nov 2026)
+ * ============================================================================
+ *
+ * "Any forms about cash handling at my stores this month?", "who's been written up for dress code?". With a topic
+ * (about) and no employee, every form this manager may see in the forms page is read (the same read and visibility
+ * filter as a period list: chatFormsActor, instanceListFilterFor, visibleInstances; a role that sees only its own forms there
+ * sees only those here), narrowed by the period and kind of form when given, and kept when its SAVED TEXT
+ * holds every word of the topic (`forms/form-topic-search.ts`). Only when the manager asked about forms on file
+ * (forms_on_file_evidence). Counts come from code; the list is capped and says "N of M".
+ */
+const TOPIC_LIST_LIMIT = 25;
+
+async function findFormsByTopic(context: ToolContext, input: { form?: unknown; date_from?: unknown; date_to?: unknown; about?: unknown; forms_on_file_evidence?: unknown; include_archived?: unknown }): Promise<ToolResult> {
+  const asked = formsOnFileAsked(context, input.forms_on_file_evidence);
+  if (!asked.ok) return privacyRefusal(asked.reason, undefined, context);
+  const search = await import("@/lib/forms/form-topic-search");
+  const topic = search.topicWords(String(input.about ?? ""));
+  if (topic.length === 0) return { reason_code: "missing_input", error: "Give the topic in the manager's words (\"cash handling\", \"dress code\"), or the employee's name." };
+  const today = context.today || businessToday();
+  const range = formDateRangeFromInput(input.date_from, input.date_to, today);
+  const kind = typeof input.form === "string" ? formKindFromText(input.form) : null;
+  const actor = await chatFormsActor(context.actor).catch(() => undefined);
+  if (actor === undefined) return { reason_code: "read_failed", error: `${appConfig().formsPageName} could not be read just now. Say so; do not say there are no forms.` };
+  if (actor === null) return { reason_code: "scope", error: `This manager's role cannot view ${appConfig().formsPageName}, so past forms cannot be searched.` };
+  try {
+    const read = await listInstances("all", PERIOD_READ_LIMIT, {
+      ...instanceListFilterFor(actor),
+      ...(range ? { formDateFrom: range.from, formDateTo: range.to } : {}),
+      ...(kind ? { templateNameWords: kind.templateNameWords } : {}),
+    });
+    /* Exactly the forms this manager may see in the forms page: never wider (the saved text is read for these ids only). */
+    const visible = ofKind(visibleInstances(actor, read), kind).filter(onFileKept(input));
+    const saved = await search.readFormTopicText(visible.map((row) => row.id));
+    const matched = visible
+      .filter((row) => search.matchesTopic(saved.get(row.id)?.text ?? "", topic))
+      .sort((a, b) => (b.formDate ?? "").localeCompare(a.formDate ?? "") || a.employeeName.localeCompare(b.employeeName));
+    const listed = matched.slice(0, TOPIC_LIST_LIMIT);
+    const complete = read.length < PERIOD_READ_LIMIT;
+    /* Counts by code, over every matching form (never only the listed ones); a person is their name as filed. */
+    const tally = (keys: string[]) => Object.fromEntries([...keys.reduce((map, key) => map.set(key, (map.get(key) ?? 0) + 1), new Map<string, number>())].sort(([a], [b]) => a.localeCompare(b)));
+    const counts = {
+      total: matched.length,
+      people: new Set(matched.map((row) => words(row.employeeName).join(" "))).size,
+      by_form: tally(matched.map((row) => row.templateName)),
+    };
+    return {
+      topic: topic.join(" "),
+      period: range ? { from: range.from, to: range.to } : null,
+      form_kind: kind?.label ?? null,
+      searched: visible.length,
+      forms: listed.map((row) => {
+        const text = saved.get(row.id);
+        return {
+          instance_id: row.id,
+          form: row.templateName,
+          employee: search.firstNameOf(row.employeeName),
+          form_date: row.formDate,
+          status: row.status,
+          store: salonLabel(row.locationId, row.locationName) ?? `no ${locationWord()}`,
+          policy: text?.policy ?? (text?.offense.length ? text.offense.join(", ") : null),
+          level: text?.level ?? null,
+          ...(row.archivedAt ? { archived: true } : {}),
+        };
+      }),
+      counts,
+      listed: listed.length,
+      of: matched.length,
+      complete,
+      note: `${matched.length === 0 ? `No form this manager can see mentions ${topic.join(" ")} in what it says${range ? " in that period" : ""}. Say so plainly.` : `Forms whose saved text mentions ${topic.join(" ")}, newest first.`} Numbers come only from counts (total, people, by_form): copy them, never count rows yourself.${matched.length > listed.length ? ` Showing ${listed.length} of ${matched.length}: say so, and that ${appConfig().formsPageName} has the rest.` : ""}${complete ? "" : ` More than ${PERIOD_READ_LIMIT} forms were in range: only the newest ${PERIOD_READ_LIMIT} were searched. Say so.`} Name each person by first name only. A draft is not on file.`,
+    };
+  } catch {
+    return { reason_code: "read_failed", error: `${appConfig().formsPageName} could not be read just now. Say so; do not say there are no forms.` };
+  }
+}
+
 export async function findPastForms(context: ToolContext, input: { employee_name?: unknown; form?: unknown; date?: unknown; date_from?: unknown; date_to?: unknown; about?: unknown; forms_on_file_evidence?: unknown; open?: unknown; include_archived?: unknown }, effects?: ToolEffects): Promise<ToolResult> {
   const typed = typeof input.employee_name === "string" ? input.employee_name.trim() : "";
+  /* FORM_TOPIC_SEARCH_ENABLED (port of the sibling app's #1266): a topic with no employee searches every visible form's saved text. */
+  const topicAsked = typed === "" && input.open !== true && typeof input.about === "string" && input.about.trim() !== "";
+  if (topicAsked) {
+    const { formTopicSearchEnabled } = await import("@/lib/config/chat-quality-flags");
+    if (formTopicSearchEnabled()) return findFormsByTopic(context, input);
+    if (!(input.date_from || input.date_to || input.form)) return { reason_code: "topic_search_off", error: `Searching forms on file by topic is not available yet. Say so in one line, and that ${appConfig().formsPageName} lists forms by person, kind and date.` };
+  }
   if (typed === "" && input.open !== true && (input.date_from || input.date_to || input.form)) return findFormsInPeriod(context, input);
   if (typed === "") return { reason_code: "missing_input", error: "Give the employee's name." };
   const asked = await formsOnFileAskedFor(context, input.forms_on_file_evidence, typed);
@@ -3737,6 +3847,8 @@ export async function proposeForm(
     level_evidence?: unknown;
     payroll_evidence?: unknown;
     template_key?: unknown;
+    form_asked_evidence?: unknown;
+    instead_of_asked?: unknown;
     employee_id?: unknown;
     employee_name?: unknown;
     person_evidence?: unknown;
@@ -3814,6 +3926,43 @@ export async function proposeForm(
   if (!templates) return { reason_code: "read_failed", error: "The forms library could not be read just now." };
   const template = templates.find((row) => row.key === key);
   if (!template) return { reason_code: "scope", error: "This manager cannot create that form. Use one of these template keys.", templates: templates.map((row) => ({ key: row.key, name: row.name })) };
+  /*
+   * Board f099 on the loop (QA's live check of #1095, 23 Nov 2026): "create a store manager interview form for <P>" made
+   * a Prescreen / Phone Interview Form card, silently. The form the manager asked for (form_asked_evidence, a quote of this
+   * turn) is checked by code against the chosen form's own names (`quoteNamesForm`: name, short name, initials). Another
+   * library form it names is that form; one no form answers to is handed back, unless the model offers this form in its
+   * place and says so (instead_of_asked). Never reads what the words mean.
+   */
+  let insteadOfAsked: string | null = null;
+  {
+    const thisTurn = identifiedTurns(context.history as ChatMessage[], context.question, context.questionMessageId);
+    const asked = verifyEvidence(input.form_asked_evidence, thisTurn, { thisTurnOnly: true }).ok ? (readEvidence(input.form_asked_evidence)?.quote ?? "").trim() : "";
+    /*
+     * QA (23 Nov 2026): most requests name no form's title ("write her up", "coach him on this", "she quit, do the
+     * paperwork"); those are never refused. A quote is checked only when it reads as a form's title: it holds the word every
+     * title in this library ends with (`titleWordOf`, read from the template names themselves, never a list).
+     */
+    const titleWord = titleWordOf(templates.map((row) => row.name));
+    const readsAsTitle = Boolean(titleWord) && new RegExp(`\\b${titleWord}s?\\b`, "i").test(asked);
+    if (asked && readsAsTitle && !quoteNamesForm(asked, template)) {
+      const other = templates.find((row) => row.key !== template.key && quoteNamesForm(asked, row));
+      if (other) {
+        return { reason_code: "form_asked_is_another", template_key: other.key, error: `The manager asked for the ${other.name} ("${asked}"), not the ${template.name}. Propose the ${other.name} (template_key "${other.key}").` };
+      }
+      const named = formAskedName(asked);
+      if (input.instead_of_asked !== true) {
+        const names = templates.map((row) => row.name);
+        return {
+          reason_code: "form_not_in_library",
+          asked,
+          templates: templates.map((row) => ({ key: row.key, name: row.name })),
+          ask_exactly: `${named ? `There's no ${named} in the forms library` : "That form isn't in the forms library"}. The forms you can create are ${names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names[0]}. Which one do you want?`,
+          error: "No form in the library answers to the form the manager asked for. End the reply with ask_exactly, exactly, and propose no card; never make another form's card in its place. Propose another form with instead_of_asked true only when the manager chooses it.",
+        };
+      }
+      insteadOfAsked = named ?? "that form";
+    }
+  }
   effects.formChosen = true;
 
   /* The person: a roster id from find_staff, or (district / region logins only) the name as typed. */
@@ -5273,7 +5422,22 @@ export async function proposeForm(
   }
   const incidentTime = typeof input.incident_time === "string" && input.incident_time.trim() ? input.incident_time.trim().slice(0, 40) : null;
 
-  const typedSalon = typeof input.store === "string" ? input.store.trim() : "";
+  const storeTyped = typeof input.store === "string" ? input.store.trim() : "";
+  /*
+   * QA (23 Nov 2026, the u22 live run on main 1e58cd6): T2 "address: 123 Test St, Lees Summit, MO. 00000" got "Filed at
+   * **Lee's Summit, MO**, as you said.". A store the model passes that the manager named only inside an address given as
+   * the employee's (the exit form's Permanent Address, `typedAddressSpans`) is not the card's store: it is dropped, and
+   * the card's store is read as if none was typed. Named anywhere else in the request, it stands.
+   */
+  const typedOnlyInAddress = ((): boolean => {
+    if (!storeTyped) return false;
+    const typedIds = new Set([...readLocationMentions(storeTyped), ...readLocationMentions(`at ${storeTyped}`)].flatMap((mention) => mention.locationIds));
+    if (typedIds.size === 0) return false;
+    const inAddress = readLocationMentions(requestWords).some((mention) => mention.locationIds.some((id) => typedIds.has(id)));
+    const outside = readLocationMentions(withoutAddressLines(requestWords)).some((mention) => mention.locationIds.some((id) => typedIds.has(id)));
+    return inAddress && !outside;
+  })();
+  const typedSalon = typedOnlyInAddress ? "" : storeTyped;
   /*
    * QA's live re-test (21 Nov 2026, A7): "do verbal for team member <A> at <nickname>, sd" and "store location is
    * <nickname>, sd" were refused as "isn't one of your stores" three times and never got a card that could Create. A
@@ -5870,9 +6034,28 @@ export async function proposeForm(
    */
   const storeSaidOf = (): string | null =>
     card.locationId ? (readLocationMentions(requestWords).find((mention) => mention.locationIds.length === 1 && mention.locationIds[0] === card.locationId && mention.matched)?.matched ?? null) : null;
+  /*
+   * QA's Bubbles round 2 (U25): "create coaching form for <P>; coaching on under performance" corrected the name, and the
+   * reply said "nothing else changed" while the card's coaching topic was gone. What else differs from the card the name
+   * was corrected on (its server record), field by field, so the reply never says nothing else changed when something
+   * did. A field the record does not hold (an older record) is not compared.
+   */
+  const correctedOn = nameCorrectedFrom !== null ? (context.cardOnScreen ?? context.earlierCard ?? null) : null;
+  const alsoChanged = correctedOn
+    ? [
+        correctedOn.coachingTopic !== undefined && (correctedOn.coachingTopic ?? null) !== (coachingTopic ?? null)
+          ? `coaching topic: ${correctedOn.coachingTopic ?? "none"} → ${coachingTopic ?? "none"}`
+          : null,
+        correctedOn.issueKey && card.issue && shownTextKey(card.issue) !== correctedOn.issueKey ? "the account (Observation)" : null,
+        correctedOn.policyLine && (card.policyLine ?? null) !== correctedOn.policyLine ? `policy: ${correctedOn.policyLine} → ${card.policyLine ?? "none"}` : null,
+        correctedOn.level && (level ?? null) !== correctedOn.level ? `warning level: ${correctedOn.level} → ${level ?? "not set"}` : null,
+        correctedOn.payroll && (payroll ?? null) !== correctedOn.payroll ? `payroll deduct: ${correctedOn.payroll} → ${payroll ?? "not set"}` : null,
+        correctedOn.storeId && card.locationId && card.locationId !== correctedOn.storeId ? `store: ${rosterSalonName(correctedOn.storeId) ?? "the earlier store"} → ${rosterSalonName(card.locationId) ?? "another store"}` : null,
+      ].filter((change): change is string => change !== null)
+    : [];
   const facts = {
     /* fix-name, live s10: the card's name changed from → to, so the reply can say so (the person may be another roster person, by exact match). */
-    ...(nameCorrectedFrom !== null ? { name_corrected: { from: nameCorrectedFrom, to: employee.name } } : {}),
+    ...(nameCorrectedFrom !== null ? { name_corrected: { from: nameCorrectedFrom, to: employee.name, ...(alsoChanged.length > 0 ? { also_changed: alsoChanged } : {}) } } : {}),
     ...(switchedFrom ? { form_changed: { from: switchedFrom.templateName, earlier_created: switchedFrom.created } } : {}),
     ...(earlierKept ? { earlier_card: { kept: true, ...(earlierRow ? { employee: displayName(earlierRow) } : {}), form: earlier!.templateName ?? earlier!.templateKey } } : {}),
     ...(otherNamed.length > 0 ? { account_names_other_person: { named: otherNamed, card_person: employee.name } } : {}),
@@ -6063,6 +6246,8 @@ export async function proposeForm(
     ...(underPerformance ? { under_performance: true } : {}),
     ...(didYouMean ? { confirm_policy: didYouMean } : {}),
     ...(priorActionsRefused ? { prior_actions_not_kept: priorActionsRefused } : {}),
+    /* Board f099 on the loop: the form asked for is not in the library, and this card is offered in its place. */
+    ...(insteadOfAsked ? { instead_of_asked: { asked: insteadOfAsked, say_exactly: `There's no ${insteadOfAsked} in the forms library, so this is the ${template.name} instead.` } } : {}),
     ...(priorStepsLeftOff.length > 0 ? { prior_steps_left_off: priorStepsLeftOff, prior_steps_note: "These earlier steps were left off the card's Prior actions; the others are on it. Say which one and why in one line, and ask the manager for that step's date if it was meant to be an earlier one." } : {}),
     ...((await outsideScopeSalon(context)) ?? (card.namedLocationOutOfScope ? { store_outside_scope: card.namedLocationOutOfScope } : {})),
   };
@@ -6415,6 +6600,22 @@ export async function editForm(
     if (unchosen) return unchosen;
     const refused = await formOnFileRefusal(context, id, input.forms_on_file_evidence);
     if (refused) return refused;
+  }
+  /*
+   * WAITING FOR HR (owner, 23 Nov 2026: "can the AI edit a form that's been sent back for changes?"). A form HR sent back
+   * or rejected is the manager's to change, so the edit goes on as usual. One waiting for HR is frozen until HR decides:
+   * refused here with the reason, so the reply says HR has it, instead of each field's bare "not_draft". After the
+   * privacy gates above, so it never tells somebody the form exists.
+   */
+  {
+    const { heldForHr } = await import("@/lib/forms/hr-approval-rules");
+    const held = await (await import("@/lib/forms/instances")).loadInstance(id).catch(() => null);
+    if (held && held.instance.status === "draft" && heldForHr(held.instance.hrApprovalState) && (await (await import("@/lib/forms/hr-approval-approvers")).hrHoldLive())) {
+      return {
+        reason_code: "held_for_hr",
+        error: "This form is waiting for HR approval, so nobody but HR can change it until HR approves it or sends it back. Nothing was written. Tell the manager it is with HR, and that they can add a note for HR on the form.",
+      };
+    }
   }
   const values: Record<string, string> = {};
   if (input.values && typeof input.values === "object") {

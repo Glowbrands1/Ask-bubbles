@@ -61,7 +61,7 @@ const facets = checkboxGroupsForVariant(document, variant.key);
 const field = (key: string) => fields.find((entry) => entry.key === key);
 
 const META: RenderMeta = {
-  templateName: "TSD EPP",
+  templateName: "General Manager Performance EPP",
   templateVersion: 2,
   employeeName: "Sarah Johnson",
   formDate: "2026-09-21",
@@ -74,7 +74,7 @@ const FILLED = {
   values: {
     employee_name: "Sarah Johnson",
     form_date: "2026-09-21",
-    job_title: "TSD",
+    job_title: "General Manager",
     location: "Lincoln South",
     where_succeeding: "Coaches her team consistently and is excellent with clients.",
     needs_improvement: "Arriving ready to work at the scheduled start time.",
@@ -116,14 +116,15 @@ describe("the document the business recognises", () => {
   it("is titled Management Performance Plan, not renamed to match the SDIT plan", () => {
     /*
      * THE TITLE AND THE NAME ARE DIFFERENT STRINGS AND BOTH ARE CORRECT. The
-     * paper says "Management Performance Plan"; managers say "TSD EPP", which
-     * is the template's NAME on the row and what `formRequestPhrase` sends.
+     * paper says "Management Performance Plan"; the template's NAME is Buff
+     * City Soap's "General Manager Performance EPP" (renamed on purpose, Pau,
+     * 23 Nov 2026), what `formRequestPhrase` sends.
      */
     const letterhead = document.blocks.find((block) => block.kind === "letterhead")!;
     expect(letterhead.kind === "letterhead" && letterhead.title).toBe(
       "Management Performance Plan",
     );
-    expect(seed.name).toBe("TSD EPP");
+    expect(seed.name).toBe("General Manager Performance EPP");
   });
 
   it("prints the sections of the reference, in its order", () => {
@@ -216,36 +217,38 @@ describe("the document the business recognises", () => {
 
 /* ========================================================== productivity == */
 
-describe("five metrics for the manager and five for the salon", () => {
+describe("six Buff City Soap KPIs for the manager and six for the store", () => {
   /*
-   * THE SDIT PLAN HAS THREE. Club Close and Average Club Dollar are what make
-   * this a management document, and a plan that asked for the SDIT's three
-   * would be missing the two a District Manager reviews a salon on.
+   * CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms; the KB's "Domo Reporting Overview"): the reference
+   * platform's five metrics (PPTA, LPSVA, UPTA, Club Close, Average Club Dollar) are Buff City Soap's six KPIs, Goal /
+   * Result each. The first five keep the stored keys row for row, so a saved plan still loads; Product Mix % is a new key.
+   * Drafted only from figures the manager supplied, as before.
    */
-  const METRICS = ["ppta", "lpsva", "upta", "club_close", "average_club_dollar"] as const;
-  const LABELS = ["PPTA", "LPSVA", "UPTA", "Club Close", "Average Club Dollar"];
+  const METRICS = ["ppta", "lpsva", "upta", "club_close", "average_club_dollar", "product_mix"] as const;
+  const LABELS = ["Net Sales", "Comp Sales %", "IPT", "AOV", "Discount Rate %", "Product Mix %"].map((kpi) => `${kpi} (Goal / Result)`);
 
-  it.each(METRICS)("gives the manager a %s line", (metric) => {
+  it.each(METRICS)("gives the manager a line under the %s key", (metric) => {
     expect(field(`manager_${metric}`), metric).toBeDefined();
     expect(field(`manager_${metric}`)?.responsibility).toBe("ai");
   });
 
-  it.each(METRICS)("gives the salon a %s line", (metric) => {
+  it.each(METRICS)("gives the store a line under the %s key", (metric) => {
     expect(field(`salon_${metric}`), metric).toBeDefined();
     expect(field(`salon_${metric}`)?.responsibility).toBe("ai");
   });
 
-  it("labels both rows with the business's own metric names", () => {
+  it("labels both rows with Buff City Soap's KPIs, naming no metric of the reference platform", () => {
     expect(METRICS.map((metric) => field(`manager_${metric}`)?.label)).toEqual(LABELS);
     expect(METRICS.map((metric) => field(`salon_${metric}`)?.label)).toEqual(LABELS);
+    expect(JSON.stringify(document)).not.toMatch(/PPTA|LPSVA|UPTA|Club Close|Club Dollar|\bSVC\b/);
   });
 
   it("leaves every metric blank when the manager supplied none", async () => {
     const { text } = await readBack(
       renderFormPdf(document, variant, { values: {}, checked: {} }, META),
     );
-    /* The labels print — they are the form — and no figure appears beside them. */
-    for (const label of LABELS) expect(text).toContain(label);
+    /* The labels print — they are the form — and no figure appears beside them. A label wraps in its column. */
+    for (const label of LABELS) expect(text.replace(/\s+/g, " ")).toContain(label);
     expect(text).not.toMatch(/\d+\.\d\d/);
   });
 });
@@ -263,7 +266,7 @@ describe("the manager's own page, which Ask Bubbles never answers", () => {
   it("exists, under the heading the reference prints", () => {
     expect(sections(renderDocument(document, variant))).toContain("To be filled out by Manager");
     expect(field("self_important_skill")?.label).toBe(
-      "What do you feel is the most important skill for a Store Director to possess?",
+      "What do you feel is the most important skill for a General Manager to possess?",
     );
   });
 
@@ -507,7 +510,7 @@ describe("the printed PDF", () => {
       "Follow-up",
       "Re-Evaluation",
       "Ask Bubbles Draft Details",
-      "Average Club Dollar",
+      "Product Mix %",
       "Bench",
       "District Outreach",
       "Store Standards of Cleanliness and Safety",
@@ -518,15 +521,17 @@ describe("the printed PDF", () => {
     /* Editor furniture never reaches the paper. */
     expect(text).not.toContain("AI FILLS");
     expect(text).not.toContain("FILLED BY HAND");
+    /* Pau (23 Nov: BCS terms in the forms): no metric of the reference platform prints, nor SVC. */
+    for (const metric of ["PPTA", "LPSVA", "UPTA", "Club Close", "Average Club", "SVC"]) expect(text, metric).not.toContain(metric);
   });
 
-  it("addresses the Training Store Director, and never another role", () => {
+  it("addresses the General Manager (renamed on purpose, Pau, 23 Nov 2026), and never another role", () => {
     const printed = JSON.stringify(renderDocument(document, variant));
-    expect(variant.roleAbbr).toBe("TSD");
+    expect(variant.roleAbbr).toBe("GM");
     expect(variant.role).toBe("District Manager");
     expect(printed).not.toContain("{{role}}");
     expect(printed).not.toContain("{{roleAbbr}}");
-    for (const wrong of ["SDIT", "FTTC", "DMIT"]) {
+    for (const wrong of ["SDIT", "FTTC", "DMIT", "TSD", "Store Director"]) {
       expect(printed, wrong).not.toMatch(new RegExp(`\\b${wrong}\\b`));
     }
     /* "ASD" must not appear as a word; "DM" is the business's own shorthand
@@ -572,18 +577,20 @@ describe("the rest of the library is where it was", () => {
       "policy-review": 2,
       "follow-up-coaching": 2,
       "sdit-epp": 6,
-      "tsd-epp": 5,
+      // CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms): Buff City Soap titles and terms re-issue these six.
+      "tsd-epp": 6,
       // 4: Steps to Finish Termination without sibling-company system names (QA, 25 Oct 2026).
       "resignation-exit": 4,
       // Salon -> Store wording re-issues.
-      "asd-sdit-epp": 3,
-      "fttc-epp": 3,
+      "asd-sdit-epp": 4,
+      "fttc-epp": 4,
       "dmit-epp-tsd": 3,
       "dmit-epp-dmit": 3,
       "prescreen-phone-interview": 3,
-      // "tanning-consultant-interview" (was 4) is gone: removed from the library, key retired (Pau, 21 Nov 2026).
-      "management-interview-round-1": 4,
-      "management-interview-round-2": 3,
+      // Back as the Team Member Interview Form (removed 21 Nov 2026 at 4; restored at 5, Pau, 23 Nov 2026).
+      "tanning-consultant-interview": 5,
+      "management-interview-round-1": 5,
+      "management-interview-round-2": 4,
       // Employment changes: the demotion example's destination role.
       demotion: 2,
     };

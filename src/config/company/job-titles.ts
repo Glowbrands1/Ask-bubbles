@@ -14,6 +14,8 @@
  * The reference platform's consultant positions are not among them ("TC"
  * removed 21 Oct 2026; the full-time one, "FTTC", removed 21 Nov 2026, Pau):
  * neither is read as a title, expanded, or taken as the role that ends a name.
+ * Nor are "TSD" and "ASD" (removed 23 Nov 2026, Pau): their plans are now Buff
+ * City Soap's General Manager Performance EPP and Assistant General Manager Development EPP.
  * Order matters: most specific first, so "assistant store manager" is not
  * read as "store manager".
  */
@@ -23,10 +25,11 @@ export const COMPANY_JOB_TITLES: readonly { pattern: RegExp; title: string }[] =
   // reference platform's order, so EPP routing and title extraction behave
   // exactly as the forms were tested.
   { pattern: /\b(?:sdits?|(?:salon|store) directors? in training)\b/i, title: "SDIT" },
-  { pattern: /\b(?:tsds?|training (?:salon|store) directors?)\b/i, title: "TSD" },
   { pattern: /\b(?:dmits?|district managers? in training)\b/i, title: "DMIT" },
-  { pattern: /\b(?:asds?|assistant (?:salon|store) directors?)\b/i, title: "ASD" },
   { pattern: /\b(?:sds?|(?:salon|store) directors?)\b/i, title: "Store Director" },
+  /* Buff City Soap's Woven positions for its store leaders (Pau, 23 Nov 2026), as the loop reads them (`BUBBLES_LOOP_JOB_TITLES`). */
+  { pattern: /\b(?:agms?|assistant general managers?)\b/i, title: "Assistant General Manager" },
+  { pattern: /\b(?:gms?|general managers?)\b/i, title: "General Manager" },
   { pattern: /\b(?:dm|district managers?)\b/i, title: "District Manager" },
   // Provisional Buff City Soap titles (to be confirmed by Buff).
   { pattern: /\b(?:asms?|assistant (?:store |location )?managers?)\b/i, title: "Assistant Manager" },

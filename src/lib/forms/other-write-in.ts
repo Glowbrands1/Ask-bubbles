@@ -55,7 +55,11 @@ function topicAfterName(clause: string, employeeName: string | null | undefined)
 }
 
 /** What happened, in the manager's own words, short enough for a write-in; or null. */
-export function managerIssueWords(notes: string, employeeName?: string | null): string | null {
+/**
+ * `requestTopicOnly` (a loop card's write-in; QA's A1, 23 Nov 2026): only the topic the manager named after the person's
+ * name (QA, 17 Nov 2026); never a clause of the account.
+ */
+export function managerIssueWords(notes: string, employeeName?: string | null, requestTopicOnly = false): string | null {
   const lines = (notes ?? "").split("\n").map((line) => line.trim()).filter(Boolean);
   /*
    * The topic the manager led into after the person's name ("Coaching for <name> on greeting guests at the door"), in any
@@ -69,6 +73,7 @@ export function managerIssueWords(notes: string, employeeName?: string | null): 
       if (named) return named.length > LONGEST ? null : named;
     }
   }
+  if (requestTopicOnly) return null;
   const stated = lines.find((line) => /^what happened\s*:/i.test(line));
   const source = stated ? [stated.replace(/^what happened\s*:\s*/i, "")] : lines.filter((line) => !FIELD_LINE.test(line));
   const skipQuestions = otherWriteInNotAQuestionEnabled();
@@ -98,8 +103,8 @@ export function guardOtherWriteIn<T extends { values: Record<string, string>; ch
   /** The topic the coaching card carried (`coachingTopic`, checked against the manager's message by the loop). */
   cardTopic?: string | null,
   /**
-   * QA's live re-run (23 Nov 2026, A1): a loop card's write-in is the topic the card names; with none it stays empty,
-   * never a sentence of the notes (the account).
+   * QA's live re-run (23 Nov 2026, A1): a loop card's write-in is the topic the card names, else the topic the manager
+   * named after the person's name (QA, 17 Nov 2026); never a sentence of the notes (the account).
    */
   cardOnly = false,
 ): T {
@@ -122,8 +127,7 @@ export function guardOtherWriteIn<T extends { values: Record<string, string>; ch
       continue;
     }
     if (written !== "") continue;
-    if (cardOnly) continue;
-    const words = managerIssueWords(notes, employeeName);
+    const words = managerIssueWords(notes, employeeName, cardOnly);
     if (words) {
       values = { ...values, [writeIn]: words };
       continue;

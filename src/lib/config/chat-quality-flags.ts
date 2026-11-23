@@ -1994,6 +1994,16 @@ export function starterFollowUpExampleEnabled(): boolean {
 }
 
 /**
+ * FORM_TOPIC_SEARCH_ENABLED (port of the sibling app's #1266, 23 Nov 2026; default off; QA flips it). The agent loop's
+ * find_past_forms with a topic and no employee ("any forms about cash handling at my stores this month?", "who's been
+ * written up for dress code?") searches the saved text of every form this manager may see in the forms page
+ * (`forms/form-topic-search.ts`). Off, a topic-only call is refused with a plain "not available yet".
+ */
+export function formTopicSearchEnabled(): boolean {
+  return envFlag("FORM_TOPIC_SEARCH_ENABLED");
+}
+
+/**
  * With a form card open, a turn that only answers the payroll amount stays
  * with the form (QA BF7b live, 27 Oct 2026): "i dont know the amount" was
  * answered as a policy question. See `ai/amount-turn.ts`. Off, as before.
