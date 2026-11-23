@@ -13,6 +13,8 @@ import { GlobalSearch } from "./global-search";
 import { AppSwitcher } from "./app-switcher";
 import { NAV_SECTIONS, isActivePath } from "./navigation";
 import { UserMenu } from "./user-menu";
+import { NotificationBell } from "@/features/notifications/notification-bell";
+import type { BellData } from "@/lib/notifications/types";
 import { ACTIVE_BRAND } from "@/lib/brand";
 import { defaultLandingForRole } from "@/lib/permissions";
 
@@ -25,6 +27,7 @@ export function SidebarNav({
   showAppSwitcher = false,
   showLeadershipHub = false,
   meetingTabs = [],
+  bell = null,
 }: {
   collapsed?: boolean;
   onToggleCollapse?: () => void;
@@ -41,6 +44,11 @@ export function SidebarNav({
    * meetings this person attends and Ask Bubbles may open. Not a boundary: the page and every action re-check.
    */
   meetingTabs?: { href: string; label: string }[];
+  /**
+   * The signed-in person's notifications, read on the server by the (app) layout. Desktop rail only: on a phone the
+   * top bar shows the bell (app-shell.tsx), so the drawer does not repeat it.
+   */
+  bell?: BellData | null;
 }) {
   const pathname = usePathname();
   const { can, isAdmin, role } = useSession();
@@ -107,6 +115,7 @@ export function SidebarNav({
         className="scroll-slim flex-1 overflow-y-auto px-3 py-4"
       >
         <SearchLauncher collapsed={isCollapsed} onNavigate={onNavigate} />
+        {bell && variant === "desktop" ? <NotificationBell data={bell} variant="rail" collapsed={isCollapsed} /> : null}
         {sections.map((section) => (
           <div key={section.id} className="mb-5 last:mb-0">
             {!isCollapsed ? (

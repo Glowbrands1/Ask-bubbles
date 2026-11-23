@@ -201,6 +201,11 @@ const ALLOWED_UI = [
   // gains a section scoped to `.training-prose` and `.training-callout-*`.
   "src/app/(app)/ai-training/",
   "src/features/ai-training/",
+  // IN-APP BELL (Pau, 23 Nov 2026: "port the notification bell to Bubbles", for the HR form approval; port from Ask
+  // Sunny 30cac4c): a new bell component and its mark-read action. It renders only for someone with a notification:
+  // in the rail on desktop (sidebar.tsx), in the top bar on phones (app-shell.tsx), read by the (app) layout; all
+  // three are listed below. No chat or form behaviour changes.
+  "src/features/notifications/",
   // ...and its one sidebar entry, with the rail tests that list what an Employee sees.
   "src/components/shell/navigation.ts",
   "src/components/shell/navigation.test.ts",

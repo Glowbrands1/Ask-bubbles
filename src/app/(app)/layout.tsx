@@ -10,6 +10,8 @@ import { visibleInstances } from "@/lib/forms/instance-scope";
 import { pageFormsAccess } from "@/lib/forms/page-scope";
 import { listOutstandingFollowUps } from "@/lib/forms/instances";
 import { privateAwareLimit } from "@/lib/forms/private-creators";
+import { listNotifications } from "@/lib/notifications/repository";
+import type { BellData } from "@/lib/notifications/types";
 
 /**
  * COUNTS, NOT HUES — the rail's overdue badge.
@@ -47,13 +49,33 @@ async function overdueCount(): Promise<number> {
   }
 }
 
+/**
+ * THE BELL — the signed-in person's own notifications (`app_notifications`).
+ * Port from Ask Sunny (30cac4c). Shown to whoever has any; everybody else gets
+ * no bell rather than one that is always empty. Like the overdue badge, a
+ * failed read (the table not yet migrated, say) hides it instead of taking
+ * down every page.
+ */
+async function bellForLayout(): Promise<BellData | null> {
+  try {
+    const identity = await pageIdentity();
+    const email = identity?.email?.trim().toLowerCase();
+    if (!email) return null;
+    const data = await listNotifications(email);
+    return data.items.length ? data : null;
+  } catch {
+    return null;
+  }
+}
+
 export default async function AppLayout({ children }: { children: ReactNode }) {
-  const [overdueFollowUps, showAppSwitcher, showLeadershipHub, meetingTabs] = await Promise.all([
+  const [overdueFollowUps, showAppSwitcher, showLeadershipHub, meetingTabs, bell] = await Promise.all([
     overdueCount(),
     pageShowsAppSwitcher(),
     pageShowsLeadershipHubTab(),
     // The DM L10 tab: only for people the Leadership Hub lists as attendees (see features/l10).
     l10TabsForLayout(),
+    bellForLayout(),
   ]);
   return (
     <AppShell
@@ -61,6 +83,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       showAppSwitcher={showAppSwitcher}
       showLeadershipHub={showLeadershipHub}
       meetingTabs={meetingTabs.map(({ href, label }) => ({ href, label }))}
+      bell={bell}
     >
       {children}
     </AppShell>
