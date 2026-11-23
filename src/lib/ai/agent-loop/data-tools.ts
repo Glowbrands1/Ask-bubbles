@@ -54,10 +54,8 @@ export type HrApprovalsRead =
         line: string;
         createdByName: string;
         state: string;
-        /** `manager_replied` once the manager answered HR's send-back (`hrStage`). */
-        stage?: string;
-        /** HR's turn: pending, or manager replied. Absent: pending only. */
-        needsHr?: boolean;
+        /** Sent back, and the manager replied since: needs HR's decision (`needsHrDecision`). Absent: not replied. */
+        managerReplied?: boolean;
         requestedAt: string | null;
         waiting: string;
         overdue: boolean;
@@ -139,17 +137,17 @@ export async function readHrApprovals(context: DataToolContext, deps: DataToolDe
       source: hrApprovalsSource(),
       reader: "HR approver",
       waiting_for_you: read.queue
-        .filter((row) => row.needsHr ?? row.state === "pending")
+        .filter((row) => row.state === "pending" || row.managerReplied === true)
         .map((row) => ({
           form: untrusted(row.line, hrApprovalsSource()),
           from: row.createdByName,
-          state: row.stage === "manager_replied" ? "manager replied to changes" : "waiting for approval",
+          state: row.managerReplied ? "manager replied to changes: you can approve it now, or send it back again" : "waiting for approval",
           sent: formatBusinessTime(row.requestedAt) ?? row.requestedAt,
           waiting: row.waiting,
           overdue: row.overdue,
         })),
       sent_back_or_rejected: read.queue
-        .filter((row) => !(row.needsHr ?? row.state === "pending"))
+        .filter((row) => !(row.state === "pending" || row.managerReplied === true))
         .map((row) => ({ form: untrusted(row.line, hrApprovalsSource()), from: row.createdByName, state: row.state === "rejected" ? "rejected" : "sent back for changes" })),
       note: "List the forms waiting for this HR approver, oldest first, saying which are overdue (waited more than one business day) and which the manager replied to after HR sent them back (\"manager replied to changes\": HR may approve it as it stands). They approve, send back or reject each one from Pending HR approval in " + appConfig().formsPageName + ".",
     };

@@ -100,7 +100,7 @@ export const NOV23_HR_APPROVAL_MANAGER_REPLIED_CASES: ReplayCase[] = [
       const waiting = output.waiting_for_you as Record<string, unknown>[];
       expect(waiting, `the manager's reply did not put the form back with HR:\n${JSON.stringify(output)}`).toHaveLength(1);
       expect(JSON.stringify(waiting[0])).toMatch(/Corrective Action Form for Rosalind Tetherby/);
-      expect(waiting[0]!.state).toBe("manager replied to changes");
+      expect(String(waiting[0]!.state)).toMatch(/^manager replied to changes/);
       expect(output.sent_back_or_rejected).toEqual([]);
     },
   },

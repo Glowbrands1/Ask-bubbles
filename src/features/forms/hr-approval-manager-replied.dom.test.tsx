@@ -21,7 +21,7 @@ const row = (over: Partial<HrQueueListRow>): HrQueueListRow => ({
   line: "Corrective Action Form for Ottoline Brackwater at Invented Store",
   createdByName: "Sorrel",
   state: "changes_requested",
-  stage: "changes_requested",
+  managerReplied: false,
   requestedAt: "2026-11-20T15:00:00Z",
   waiting: "Waiting 1 business day",
   overdue: false,
@@ -37,7 +37,7 @@ const view = (over: Partial<HrApprovalPanelView>): HrApprovalPanelView => ({
   overdue: false,
   canDecide: false,
   canEdit: false,
-  canApprove: true,
+  canApproveSentBack: true,
   history: [
     { action: "changes_requested", by: "HR", note: "Add the time she arrived.", at: "2026-11-20T18:00:00Z" },
     { action: "commented", by: "Sorrel", note: "She arrived at 9:20.", at: "2026-11-21T14:00:00Z" },
@@ -46,15 +46,37 @@ const view = (over: Partial<HrApprovalPanelView>): HrApprovalPanelView => ({
 });
 
 describe("HR's list", () => {
-  it("a replied form reads \"Manager replied to changes\", not \"Sent back for changes\"", () => {
-    render(<HrQueueList rows={[row({ stage: "manager_replied" })]} />);
-    expect(screen.getByText("Manager replied to changes")).toBeTruthy();
+  it("a replied form reads \"Manager replied to changes\", under Needs your decision", () => {
+    render(<HrQueueList rows={[row({ managerReplied: true })]} />);
+    const decide = screen.getByTestId("hr-queue-decide");
+    expect(decide.textContent).toContain("Needs your decision (1)");
+    expect(decide.textContent).toContain("Manager replied to changes");
     expect(screen.queryByText("Sent back for changes")).toBeNull();
   });
 
-  it("a form still waiting on the manager reads \"Sent back for changes\"", () => {
-    render(<HrQueueList rows={[row({ stage: "changes_requested" })]} />);
-    expect(screen.getByText("Sent back for changes")).toBeTruthy();
+  it("a form still waiting on the manager reads \"Sent back for changes\", under Waiting on the manager", () => {
+    render(<HrQueueList rows={[row({ managerReplied: false })]} />);
+    expect(screen.getByTestId("hr-queue-decide").textContent).toContain("Needs your decision (0)");
+    expect(screen.getByTestId("hr-queue-on-manager").textContent).toContain("Sent back for changes");
+  });
+
+  it("one row in each state: Needs your decision lists waiting then replied; N counts exactly those", () => {
+    render(
+      <HrQueueList
+        rows={[
+          row({ id: "p", state: "pending", line: "A pending form" }),
+          row({ id: "m", managerReplied: true, line: "A replied form" }),
+          row({ id: "s", line: "A sent-back form" }),
+          row({ id: "r", state: "rejected", line: "A rejected form" }),
+        ]}
+      />,
+    );
+    const decide = screen.getByTestId("hr-queue-decide");
+    expect(decide.textContent).toContain("Needs your decision (2)");
+    expect(decide.textContent!.indexOf("A pending form")).toBeLessThan(decide.textContent!.indexOf("A replied form"));
+    const onManager = screen.getByTestId("hr-queue-on-manager");
+    expect(onManager.textContent).toContain("A sent-back form");
+    expect(onManager.textContent).toContain("A rejected form");
   });
 
   it("the tab shows the count it is given", () => {
@@ -64,11 +86,11 @@ describe("HR's list", () => {
 });
 
 describe("the approval panel", () => {
-  it("HR, after the manager replied: Approve, and no Reject or Send back; Approve calls hr_approve", async () => {
+  it("HR, after the manager replied: Approve and Send back, no Reject; Approve calls hr_approve", async () => {
     const call = vi.fn(async () => ({}));
     render(<HrApprovalPanel instanceId="f-1" view={view({})} call={call} onChanged={() => undefined} />);
     expect(screen.queryByRole("button", { name: /Reject/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: /Send back/ })).toBeNull();
+    expect(screen.getByRole("button", { name: /Send back for changes/ })).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: /Approve/ }));
     expect(call).toHaveBeenCalledTimes(1);
     const [url, init] = call.mock.calls[0] as unknown as [string, RequestInit];
@@ -77,7 +99,7 @@ describe("the approval panel", () => {
   });
 
   it("the manager, on the same form: no Approve", () => {
-    render(<HrApprovalPanel instanceId="f-1" view={view({ canApprove: false })} call={async () => ({})} onChanged={() => undefined} />);
+    render(<HrApprovalPanel instanceId="f-1" view={view({ canApproveSentBack: false })} call={async () => ({})} onChanged={() => undefined} />);
     expect(screen.queryByRole("button", { name: /Approve/ })).toBeNull();
     expect(screen.getByText("Manager replied to changes")).toBeTruthy();
   });

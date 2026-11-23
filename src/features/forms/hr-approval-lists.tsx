@@ -9,10 +9,12 @@ import { formatBusinessTime } from "@/lib/business-date";
  * from rows the page read for this reader only:
  *
  *   HrApprovalTabs  "All forms" and "Pending HR approval (N)", shown to HR only
- *   HrQueueList     HR's tab: waiting forms oldest first (overdue marked), then
- *                   the ones the manager replied to after HR sent them back
- *                   ("Manager replied to changes", owner 23 Nov 2026), then the
- *                   ones they sent back or rejected
+ *   HrQueueList     HR's tab, as the sibling app's (#1288): "Needs your decision
+ *                   (N)" (waiting forms oldest first, overdue marked, then the
+ *                   ones the manager replied to after HR sent them back:
+ *                   "Manager replied to changes", owner 23 Nov 2026), exactly
+ *                   the rows N counts; then "Waiting on the manager" (sent back
+ *                   with no reply, and rejected)
  *   MyFormsWithHr   the manager's own forms that HR has not approved yet
  */
 
@@ -21,14 +23,19 @@ export interface HrQueueListRow {
   line: string;
   createdByName: string;
   state: "pending" | "changes_requested" | "rejected" | "approved";
-  /** Whose turn it is (`hrStage`): `manager_replied` once the manager answered HR's send-back. */
-  stage: HrStageWord;
   requestedAt: string | null;
   waiting: string;
   overdue: boolean;
+  /** Sent back, and the manager replied since: needs HR's decision (`needsHrDecision` on the server). */
+  managerReplied?: boolean;
 }
 
 type HrStageWord = "pending" | "manager_replied" | "changes_requested" | "rejected" | "approved";
+
+/** Whether this row needs HR's decision now: what the tab's number and "Needs your decision (N)" count. */
+function needsDecision(row: HrQueueListRow): boolean {
+  return row.state === "pending" || row.managerReplied === true;
+}
 
 export interface MyHrFormListRow {
   id: string;
@@ -115,8 +122,31 @@ export function HrQueueList({ rows }: { rows: HrQueueListRow[] }) {
   if (rows.length === 0) {
     return <p className="text-sm text-muted-foreground">No forms are waiting for your approval.</p>;
   }
+  const decide = rows.filter(needsDecision);
+  const onManager = rows.filter((row) => !needsDecision(row));
   return (
-    <ul className="divide-y divide-border rounded-[var(--radius-md)] border border-border" data-testid="hr-queue">
+    <div className="space-y-4">
+      <section aria-label="Needs your decision" data-testid="hr-queue-decide">
+        <h2 className="mb-2 text-sm font-semibold text-foreground">Needs your decision ({decide.length})</h2>
+        {decide.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No forms are waiting for your approval.</p>
+        ) : (
+          <QueueRows rows={decide} testId="hr-queue" />
+        )}
+      </section>
+      {onManager.length > 0 ? (
+        <section aria-label="Waiting on the manager" data-testid="hr-queue-on-manager">
+          <h2 className="mb-2 text-sm font-semibold text-foreground">Waiting on the manager ({onManager.length})</h2>
+          <QueueRows rows={onManager} testId="hr-queue-sent-back" />
+        </section>
+      ) : null}
+    </div>
+  );
+}
+
+function QueueRows({ rows, testId }: { rows: HrQueueListRow[]; testId: string }) {
+  return (
+    <ul className="divide-y divide-border rounded-[var(--radius-md)] border border-border" data-testid={testId}>
       {rows.map((row) => (
         <li key={row.id}>
           <Link href={hrHref(row.id)} className="flex items-center gap-3 px-3 py-2.5 hover:bg-surface-muted">
@@ -128,8 +158,8 @@ export function HrQueueList({ rows }: { rows: HrQueueListRow[] }) {
               </p>
             </div>
             <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
-              <Badge tone={hrTurn(row.stage) ? "accent" : "outline"} size="sm">
-                {STAGE_WORDS[row.stage]}
+              <Badge tone={needsDecision(row) ? "accent" : "outline"} size="sm">
+                {STAGE_WORDS[row.managerReplied ? "manager_replied" : row.state]}
               </Badge>
               {row.state === "pending" ? <span className="text-xs text-subtle-foreground">{row.waiting}</span> : null}
               {row.overdue ? (

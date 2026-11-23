@@ -132,9 +132,9 @@ export const HR_STATE_LABEL: Record<HrApprovalState, string> = {
  * send-back is the manager's answer: it is HR's turn again. It is read from the approval history, not stored, so the
  * stored state stays `changes_requested` (the manager may still change it and send it again).
  *
- *   stage              who acts next      counts in "Pending HR approval (N)"
- *   pending            HR                 yes
- *   manager_replied    HR (may approve)   yes
+ *   stage              who acts next                         counts in "Pending HR approval (N)"
+ *   pending            HR                                    yes
+ *   manager_replied    HR (approve, or send back again)      yes
  *   changes_requested  the manager        no
  *   rejected           the manager        no
  */
@@ -149,7 +149,7 @@ export interface HrHistoryStep {
  * Whether the creator or a sender wrote a note after HR's latest send-back, on a form still sent back. `steps` in the
  * order they happened.
  */
-export function managerRepliedToChanges(
+export function approvableFromSentBack(
   instance: { createdBy: string; hrApprovalState?: HrApprovalState | null; hrApprovalRequestedBy?: string | null; hrApprovalSenders?: readonly string[] },
   steps: readonly HrHistoryStep[],
 ): boolean {
@@ -166,9 +166,12 @@ export function hrStage(state: HrApprovalState, managerReplied: boolean): HrStag
   return state === "changes_requested" && managerReplied ? "manager_replied" : state;
 }
 
-/** HR's turn: the forms "Pending HR approval (N)" counts, so the number always equals the rows that need HR. */
-export function needsHr(stage: HrStage): boolean {
-  return stage === "pending" || stage === "manager_replied";
+/**
+ * A row that needs HR's decision now: waiting for them, or sent back and replied to. What "Pending HR approval (N)" and
+ * "Needs your decision (N)" count, so the number always equals those rows (the sibling app's name, #1288).
+ */
+export function needsHrDecision(row: { state: HrApprovalState; managerReplied: boolean }): boolean {
+  return row.state === "pending" || row.managerReplied;
 }
 
 export const HR_STAGE_LABEL: Record<HrStage, string> = {
