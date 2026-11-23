@@ -59,7 +59,7 @@ const CONFIDENTIAL_CHUNK = (() => {
 /** Item 18's request, word for word (the person swapped). */
 const CONFIDENTIAL = "i need a verbal corrective action for thaddea kroll for leaving out confidential information in associates view";
 
-type CardResult = { card?: { prior_actions?: string | null; observation?: string | null; policy?: string | null } | null; facts?: { stated?: Record<string, unknown>; stated_this_turn?: string[]; prior_on_file?: { line?: string; used_on_card?: boolean } } } | null;
+type CardResult = { card?: { prior_actions?: string | null; observation?: string | null; policy?: string | null } | null; facts?: { stated?: Record<string, unknown>; stated_this_turn?: string[]; prior_on_file?: { line?: string; used_on_card?: boolean; ask_exactly?: string } } } | null;
 
 /** The model of item 18: the Corrective Action card citing the Confidential Information heading, read back as the rules book teaches. */
 function confidentialCard() {
@@ -85,8 +85,10 @@ function confidentialCard() {
      * actions from the forms on file are never "as you said" (both were so on 3e2c30dd).
      */
     const fromFile = Boolean(result.facts?.prior_on_file?.used_on_card) && !result.facts?.stated?.prior_actions && /from the forms on file\)/.test(view.system);
-    const prior = fromFile ? `**Prior actions:** ${result.card?.prior_actions ?? ""} (from the forms on file).` : `**Prior actions:** ${result.card?.prior_actions ?? ""}, as you said.`;
-    return { text: `Here's the Corrective Action Form for **Thaddea**.\n\n**Type of Warning:** Verbal Warning, as you said.\n${prior}\n**Observation of Offense:** ${result.card?.observation ?? ""}\n**Policy:** ${result.card?.policy ?? ""}` };
+    /* Pau's ruling (23 Nov 2026): a card with no Prior actions has no Prior actions line; its reply ends with the offer. */
+    const prior = !result.card?.prior_actions ? "" : fromFile ? `**Prior actions:** ${result.card.prior_actions} (from the forms on file).\n` : `**Prior actions:** ${result.card.prior_actions}, as you said.\n`;
+    const offer = result.facts?.prior_on_file?.ask_exactly ? `\n\n${result.facts.prior_on_file.ask_exactly}` : "";
+    return { text: `Here's the Corrective Action Form for **Thaddea**.\n\n**Type of Warning:** Verbal Warning, as you said.\n${prior}**Observation of Offense:** ${result.card?.observation ?? ""}\n**Policy:** ${result.card?.policy ?? ""}${offer}` };
   });
 }
 
@@ -155,10 +157,15 @@ export const NOV21_AGENT_LOOP_LIVE_RETEST_U_CASES: ReplayCase[] = [
       const thread = t.thread();
       const reply = await thread.say(CONFIDENTIAL);
       const card = model.views.flatMap((view) => view.results.filter((result) => result.tool === "propose_form")).at(-1)?.output as CardResult;
-      expect(card?.facts?.prior_on_file?.used_on_card, `the forms on file did not fill the prior actions (the case proves nothing):\n${JSON.stringify(card)}`).toBe(true);
+      /*
+       * Changed on purpose (Pau's ruling, 23 Nov 2026, via QA; it reverses the old auto-fill, QA item 22 / f029): the forms on
+       * file are never put on Prior actions on their own, only offered. So the form on file of 10/20 is offered (its
+       * ask_exactly) and is not on the card; and still, nothing the manager never gave is read back "as you said".
+       */
+      expect(card?.facts?.prior_on_file?.ask_exactly ?? "", `the form on file is not offered (the case proves nothing):\n${JSON.stringify(card)}`).toMatch(/10\/20\/2026\. Want me to add it to Prior actions\?/);
+      expect(card?.card?.prior_actions ?? null, "a form on file was put on Prior actions on its own").toBeNull();
       expect(card?.facts?.stated?.prior_actions, "prior actions from the forms on file are listed as stated by the manager").toBeUndefined();
       expect(reply.content, `the reply says "as you said" about prior actions the manager never gave:\n${reply.content}`).not.toMatch(/\*\*Prior actions:\*\*[^\n]*as you said/i);
-      expect(reply.content, "the prior actions on file are not read back").toMatch(/\*\*Prior actions:\*\*[^\n]*10\/20\/2026/);
       expect(reply.content, "the level the manager typed lost its \"as you said\"").toMatch(/Verbal Warning, as you said/);
       const id = await thread.create();
       // The offense box agrees with the cited policy: a heading with no box of its own is recorded under the box revision 7
@@ -235,6 +242,12 @@ export const NOV21_AGENT_LOOP_LIVE_RETEST_U_CASES: ReplayCase[] = [
       const dates = ["2026-09-02", "2026-09-12", "2026-09-23", "2026-10-01", "2026-10-09", "2026-10-20", "2026-10-28", "2026-11-05"];
       dates.forEach((date, index) => caOnFile(t, `ca-fenna-prior-${index + 1}`, "Fenna Prewitt", date));
       const { thread, id } = await createdCa(t, "11/19");
+      /*
+       * Changed on purpose (Pau's ruling, 23 Nov 2026, via QA; it reverses the old auto-fill, QA item 22 / f029): the forms on
+       * file no longer land on Prior actions on their own, so the draft gets the eight entries as the manager's yes to the
+       * offer would put them there. What this case guards is unchanged: "include" adds after them and keeps all eight.
+       */
+      t.typeOnForm(id, { prior_actions: dates.map((date) => `Corrective Action Form — ${date.slice(5, 7)}/${date.slice(8, 10)}/${date.slice(0, 4)}`).join("; ") });
       const before = t.values(id);
       expect((before.prior_actions ?? "").split(";").length, `the draft does not list the eight forms on file (the case proves nothing):\n${before.prior_actions}`).toBe(8);
       const model = loopStandIn((view): LoopDecision => {
