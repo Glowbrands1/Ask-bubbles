@@ -216,6 +216,16 @@ const ALLOWED_UI = [
   "src/features/forms/hr-approval-screen.tsx",
   "src/app/(app)/forms/hr-approval/",
   "src/features/dashboard/overview.tsx",
+  // Then (Pau, via QA, 23 Nov 2026, QA approved, both apps; #1115, the same as Ask Sunny #1288): "when manager replies in
+  // note, there should be approve button here please and notify manager ... then the manager once sent back, will have
+  // option to print and save as PDF" — the panel's Approve and Send back after the manager's reply (hr-approval-panel.tsx),
+  // HR's "Needs your decision" list (hr-approval-lists.tsx), and the card's Print beside Download PDF (inline-form.tsx,
+  // listed below); "its so small pending approval, make it red button and animated shaking if theres a pending" — the
+  // Pending HR approval button (hr-approval-lists.tsx) and its .hr-pending-shake in globals.css (listed above), off under
+  // reduced motion; and "Sunny approvals ↗" on the Forms Register (monitoring/page.tsx, listed below) for app-switcher
+  // accounts only. The approval UI is behind FORMS_HR_APPROVAL_ENABLED: off, the server sends no approval data, so none of
+  // it renders. Print shows on any finalized form and opens the same server PDF as Download PDF.
+  "src/features/forms/hr-approval-manager-replied.dom.test.tsx",
   // ...and its one sidebar entry, with the rail tests that list what an Employee sees.
   "src/components/shell/navigation.ts",
   "src/components/shell/navigation.test.ts",
