@@ -4,6 +4,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 import type { AccessScope, ChatMessage } from "@/types";
 
+import { COMPANY_LOCATIONS as PICKED_STORE_LOCATIONS } from "@/lib/locations";
+/*
+ * Changed on purpose (QA, 23 Nov 2026): an all-store login's card asks which store and Create waits for it, so the store is
+ * picked on the card first, as the browser's picker does (the route offers every store; a harness that reads the answer
+ * before the route's last step sees "not_applicable", and the first store is picked the same way).
+ */
+const withPickedStore = <P extends { locationId?: string | null; locationResolution?: string; authorizedLocationIds?: readonly string[] }>(card: P): P =>
+  !card.locationId && (card.locationResolution === "needs_selection" || card.locationResolution === "not_applicable")
+    ? { ...card, locationId: card.authorizedLocationIds?.[0] ?? PICKED_STORE_LOCATIONS[0]!.id }
+    : card;
+
+
 /**
  * ============================================================================
  * ADMIN FEEDBACK, 16 OCT 2026 — THE THREE REPORTS, END TO END
@@ -247,7 +259,7 @@ async function conversation(turns: string[]) {
     proposal: last.formProposal!,
     create: async () => {
       const result = await createInlineForm({
-        proposal: last.formProposal!,
+        proposal: withPickedStore(last.formProposal!),
         messages,
         call,
         onCreated: () => {},
@@ -392,7 +404,8 @@ describe("Issue 3 — Corrective Action from complete conversational information
     state.draft = { values: { observation: "Observed:\nRobin Kessler was late on 10/5 and 10/15." }, checked: {} };
     const { reference } = await create();
     const form = await review(reference.instanceId);
-    expect(form.instance.locationId).toBeNull();
+    /* Changed on purpose (QA, 23 Nov 2026): Create waits for a store, so the one picked on the card is the form's store; a form is never saved with none. */
+    expect(form.instance.locationId).not.toBeNull();
     expect(field(form, "observation")!.value).toContain("late on 10/5");
     // Never fabricated: nothing the manager did not say is ticked.
     expect(field(form, "warning_type")?.checked ?? []).toEqual([]);

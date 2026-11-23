@@ -34,7 +34,7 @@ export interface ReplayThread {
   /** `store`: the store the manager picks on the card before Create (the browser's picker; board f140). */
   create(store?: string): Promise<string>;
   /** Create from the latest card for this person (an earlier card still on screen). */
-  createCard?(employeeName: string): Promise<string>;
+  createCard?(employeeName: string, store?: string): Promise<string>;
   /** The chat as the browser holds it. */
   readonly conversation?: readonly import("@/types").ChatMessage[];
   readonly proposal: ReplayAnswer["formProposal"] | null;
