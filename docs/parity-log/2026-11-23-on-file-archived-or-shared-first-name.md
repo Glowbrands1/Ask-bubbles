@@ -1,4 +1,4 @@
-# An archived form, or one under a shared first name alone, is not on file (QA, 23 Nov 2026)
+# An archived form is not on file, and a first-name-only form shared at its store is not attributed (QA and Pau, 23 Nov 2026)
 
 **Fix (Ask Bubbles):** `finalizedPriorsOnFile` in `src/lib/ai/agent-loop/tools.ts`.
 
@@ -9,12 +9,15 @@ archived forms included, and `samePerson` matches a one-word name on its first n
 rather than adding them, so those forms would have been OFFERED.
 
 - Now an archived form is never on file: the reader uses the "active" view and drops any row with `archivedAt`.
-- A form under one word only counts as this person's only when exactly one roster person answers to that word, and it is
-  this person.
+- A form filed under the first name alone IS this person's (Pau: "its right"), unless another person with that first
+  name is at the form's store (Pau: "there might be other Paulynes in store, or Kim or Mary"). That means another roster
+  person there, or a former employee with a form there under a fuller name. Then the form is attributed to neither. A
+  form with no store recorded is checked against everyone.
 
-Replay: `nov23-agent-loop-on-file-archived-or-shared-first-name-cases.ts`, with the invented people Briony Kask and
-another Briony. Three cases fail before the fix and pass after: archived under the first name, archived under the full
-name, and a shared first name. Two controls are offered as before: a unique first name and a full name.
+Replay: `nov23-agent-loop-on-file-archived-or-shared-first-name-cases.ts`, with the invented Briony Kask and other
+Brionys. Three cases fail before the fix and pass after: archived under the first name, archived under the full name, and
+a first name shared at the form's store. Three controls are offered: the same first name at another store, a unique
+first name, and a full name.
 
 **The sibling app:** fixed in the same session, with the rest of the fix for its live bug (prior actions only from the
 manager's own words, and "as you said" only with prior_actions_evidence; the port of #1089). See its PR.

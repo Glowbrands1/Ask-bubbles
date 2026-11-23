@@ -11,13 +11,16 @@ import { evidenceFrom, headingWith, lastResult, loopStandIn, type LoopDecision, 
  *
  * The sibling app's live chat behind Pau's review: two ARCHIVED Written CAs dated 09/10, filed under the person's first
  * name alone, were read as the person's forms on file and put on a new card. Here #1089 offers forms on file instead of
- * adding them, so those forms would be OFFERED. An archived form is never on file, and a form under one word only is the
- * person's only when that word is unique on the roster and is this person. Invented people (Briony Kask; another Briony).
+ * adding them, so those forms would be OFFERED. An archived form is never on file. A form under the first name alone is
+ * the person's (Pau: "its right"), unless another person with that first name is at the form's store (Pau: "there might
+ * be other Paulynes in store, or Kim or Mary"). Invented people (Briony Kask; other Brionys).
  */
 
 const REPORT = "QA (23 Nov 2026; the sibling app's live chat): archived forms filed under the first name alone were read as the person's forms on file";
 const BRIONY: DirectoryRow = { id: "e-briony-kask", firstName: "Briony", lastName: "Kask", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-264"], positionName: "Team Member Part Time" };
-const OTHER_BRIONY: DirectoryRow = { id: "e-briony-ostrander", firstName: "Briony", lastName: "Ostrander", preferredFirstName: null, employmentStatus: "active", locationIds: ["loc-264"], positionName: "Team Member Part Time" };
+const OTHER_BRIONY: DirectoryRow = { id: "e-briony-ostrander", firstName: "Briony", lastName: "Ostrander", preferredFirstName: null, employmentStatus: "active", locationIds: [WEST_DODGE.primaryAreaId!], positionName: "Team Member Part Time" };
+/** Another Briony at a different store (not the form's). */
+const BRIONY_ELSEWHERE: DirectoryRow = { ...OTHER_BRIONY, id: "e-briony-elsewhere", lastName: "Tallis", locationIds: ["loc-67"] };
 const T1 = "create a written CA for Briony Kask. On 11-1-26 Briony violated care and cleaning of facilities policy";
 const ACCOUNT = "On 11/1/26 Briony violated the care and cleaning of facilities policy.";
 const OFFER = /has a Written CA on file from 09\/10\/2026\. Want me to add it to Prior actions\?/;
@@ -66,7 +69,8 @@ const offerCase = (id: string, title: string, onFile: { name: string; archived: 
 export const NOV23_AGENT_LOOP_ON_FILE_ARCHIVED_OR_SHARED_FIRST_NAME_CASES: ReplayCase[] = [
   offerCase("nov23-on-file-archived-first-name-not-offered", "As live in the sibling app: an ARCHIVED finalized Written CA (09/10) under the first name alone (\"Briony\"): never offered", { name: "Briony", archived: true }, undefined, false),
   offerCase("nov23-on-file-archived-full-name-not-offered", "An ARCHIVED finalized Written CA (09/10) under the full name: not on file, never offered", { name: "Briony Kask", archived: true }, undefined, false),
-  offerCase("nov23-on-file-shared-first-name-not-offered", "An active finalized Written CA under \"Briony\" alone while two Brionys are on the roster: not this person's, never offered", { name: "Briony", archived: false }, [BRIONY, OTHER_BRIONY], false),
-  offerCase("nov23-on-file-control-unique-first-name-offered", "Control: an active finalized Written CA under \"Briony\" alone, and Briony is unique on the roster: offered", { name: "Briony", archived: false }, undefined, true),
+  offerCase("nov23-on-file-shared-first-name-at-store-not-attributed", "Pau (23 Nov 2026): an active finalized Written CA under \"Briony\" alone while another Briony is at the form's store: attributed to neither, never offered", { name: "Briony", archived: false }, [BRIONY, OTHER_BRIONY], false),
+  offerCase("nov23-on-file-first-name-other-store-still-counts", "Pau (23 Nov 2026): another Briony at a DIFFERENT store does not matter: the form under \"Briony\" is offered", { name: "Briony", archived: false }, [BRIONY, BRIONY_ELSEWHERE], true),
+  offerCase("nov23-on-file-control-unique-first-name-offered", "Pau (23 Nov 2026), control: an active finalized Written CA under \"Briony\" alone, no other Briony at the store: offered", { name: "Briony", archived: false }, undefined, true),
   offerCase("nov23-on-file-control-full-name-offered", "Control: an active finalized Written CA under the full name: offered", { name: "Briony Kask", archived: false }, undefined, true),
 ];

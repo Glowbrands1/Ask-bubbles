@@ -3144,20 +3144,25 @@ async function finalizedPriorsOnFile(context: ToolContext, person: RosterEmploye
   const nameWords = [...new Set(names.flatMap(candidateNameWords))];
   /*
    * WHICH FORMS ARE THIS PERSON'S ON FILE (QA, 23 Nov 2026; the sibling app's live chat behind Pau's review, where two
-   * ARCHIVED Written CAs filed under the first name alone were read as the person's; #1089 offers forms on file, so here
-   * they would be offered). An archived form is not on file (the "active" read leaves it out). A form under one word only
-   * is this person's only when that word is unique on the roster: exactly one person answers to it, and it is this one.
-   * Otherwise first name and surname must agree.
+   * ARCHIVED Written CAs were read as the person's; #1089 offers forms on file, so here they would be offered). An
+   * archived form is not on file (the "active" read leaves it out). A form filed under the first name alone IS this
+   * person's (Pau: "its right"), except when someone else with that first name is at the form's store (Pau: "there might
+   * be other Paulynes in store, or Kim or Mary"): another roster person there, or a former employee with a form there
+   * under a fuller name. Then it is not attributed to either. A form with no store recorded is checked against everyone.
    */
-  const holdersOf = (name: string) => roster.filter((row) => fullNamesOf(row).some((full) => samePerson(full, name)));
-  const oneWordOk = (name: string) => {
-    if (name.trim().split(/\s+/).length !== 1) return true;
-    const holders = holdersOf(name);
-    return holders.length === 1 && holders[0]!.id === person.id;
+  const listed = visibleInstances(actor, await listInstances("active", 200, { ...instanceListFilterFor(actor), employeeNameWords: nameWords }).catch(() => []));
+  const firstNameShared = (row: (typeof listed)[number]) => {
+    const word = row.employeeName.trim();
+    if (word.split(/\s+/).length !== 1) return false;
+    const at = row.locationId ?? null;
+    const here = (ids: readonly string[]) => at === null || ids.includes(at);
+    const otherOnRoster = roster.some((other) => other.id !== person.id && here(other.locationIds) && fullNamesOf(other).some((full) => samePerson(full, word)));
+    const formerThere = listed.some((other) => other !== row && (at === null || other.locationId === at) && other.employeeName.trim().split(/\s+/).length > 1 && samePerson(other.employeeName, word) && !names.some((full) => samePerson(full, other.employeeName)));
+    return otherOnRoster || formerThere;
   };
-  const rows = visibleInstances(actor, await listInstances("active", 200, { ...instanceListFilterFor(actor), employeeNameWords: nameWords }).catch(() => []))
+  const rows = listed
     .filter((row) => row.status === "finalized" && !row.archivedAt && kinds.has(row.templateKey) && (row.formDate ?? "") <= today && (!before || (row.formDate ?? "") < before))
-    .filter((row) => oneWordOk(row.employeeName) && (names.some((full) => samePerson(full, row.employeeName)) || sameRosterPerson(row.employeeName, displayName(person), roster)))
+    .filter((row) => !firstNameShared(row) && (names.some((full) => samePerson(full, row.employeeName)) || sameRosterPerson(row.employeeName, displayName(person), roster)))
     .sort((a, b) => (a.formDate ?? "").localeCompare(b.formDate ?? "") || a.createdAt.localeCompare(b.createdAt))
     .slice(-10);
   const levelName: Record<string, string> = { verbal: "Verbal Warning", written: "Written Warning", termination: "Termination" };
