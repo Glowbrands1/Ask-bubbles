@@ -1,6 +1,8 @@
 import { loadFormDeletionsChatBlock } from "@/lib/ai/form-deletions-chat-read";
 import { isGoogleReviewQuestion } from "@/lib/ai/google-reviews-chat";
 import { loadGoogleReviewsChatBlock } from "@/lib/ai/google-reviews-chat-read";
+import { assignmentTrackerText, canSeeAssignmentTracker, type AssignmentTracker } from "@/lib/ai-training/assignments";
+import { DEFAULT_PERMISSION_MATRIX, hasPermission } from "@/lib/permissions";
 
 import { formatBusinessTime } from "@/lib/business-date";
 
@@ -20,6 +22,9 @@ import { untrusted as envelope, type ToolActor, type ToolEffects, type ToolResul
  *   week and last, the newest reviews, and L3 / L6 / YTD / month by month when a period is asked. Gated on View reports,
  *   the page's own gate (decision 6).
  * - read_form_deletions: the form deletion record (`loadFormDeletionsChatBlock`): administrators only (Manage users).
+ * - read_ai_assignments (port from the sibling app, Pau 23 Nov 2026): the AI assignment tracker (AI Training ->
+ *   Assignments), for its named people only (`canSeeAssignmentTracker`, the page's own check). This app's chat actor
+ *   carries no email, so the tracker is read through the loop only, which is open to every manager.
  *
  * No read_stats: this app has no reports reader for the loop yet (Pau's decision 1). Everything returned is data, never
  * instructions, in the loop's untrusted envelope with the page it came from.
@@ -27,10 +32,14 @@ import { untrusted as envelope, type ToolActor, type ToolEffects, type ToolResul
 
 export const REVIEWS_SOURCE = "Google Reviews page";
 export const FORM_DELETIONS_SOURCE = "Form deletion record";
+export const AI_ASSIGNMENTS_SOURCE = "AI Training > Assignments";
 
 export interface DataToolContext {
-  /** `subject` and `verified` (the loop passes its whole actor): read_hr_approvals reads only the asker's own forms. */
-  readonly actor: Pick<ToolActor, "role" | "scope"> & Partial<Pick<ToolActor, "subject" | "verified">>;
+  /**
+   * `email`: who is signed in, for read_ai_assignments's named list. `subject` and `verified` (the loop passes its
+   * whole actor): read_hr_approvals reads only the asker's own forms.
+   */
+  readonly actor: Pick<ToolActor, "role" | "scope"> & { readonly email?: string } & Partial<Pick<ToolActor, "subject" | "verified">>;
   readonly question: string;
   readonly scopeId: string;
   readonly today: string;
@@ -41,6 +50,8 @@ export interface DataToolContext {
 export interface DataToolDeps {
   readonly loadReviewsBlock: typeof loadGoogleReviewsChatBlock;
   readonly loadDeletionsBlock: typeof loadFormDeletionsChatBlock;
+  /** AI Training -> Assignments: the tracker's people and marks (`ai_assignment_people`, `ai_assignment_marks`). */
+  readonly loadAssignmentTracker: () => Promise<AssignmentTracker>;
   /** HR approval (`readHrApprovalsFor`): HR's queue, or the asker's own forms with HR. */
   readonly loadHrApprovals: (input: { subject: string; verified: boolean; now: Date }) => Promise<HrApprovalsRead>;
 }
@@ -67,6 +78,7 @@ export type HrApprovalsRead =
 export const DEFAULT_DATA_TOOL_DEPS: DataToolDeps = {
   loadReviewsBlock: (...args) => loadGoogleReviewsChatBlock(...args),
   loadDeletionsBlock: (...args) => loadFormDeletionsChatBlock(...args),
+  loadAssignmentTracker: async () => (await import("@/lib/ai-training/assignments-repository")).loadAssignmentTracker(),
   loadHrApprovals: async ({ subject, verified, now }) =>
     (await import("@/lib/forms/hr-approval")).readHrApprovalsFor(subject, verified, now),
 };
@@ -109,6 +121,25 @@ export async function readFormDeletions(context: DataToolContext, input: { emplo
   const block = await deps.loadDeletionsBlock({ question, role: context.actor.role });
   if (!block) return { reason_code: "read_failed", error: "The form deletion record could not be read just now. Say so." };
   return { record: untrusted(block, FORM_DELETIONS_SOURCE) };
+}
+
+/**
+ * read_ai_assignments() (port from the sibling app, Pau 23 Nov 2026): the AI assignment tracker as the Assignments
+ * tab's grid shows it. ONLY FOR THE TRACKER'S NAMED PEOPLE: anyone else is refused and nothing is read.
+ */
+export async function readAiAssignments(context: DataToolContext, deps: DataToolDeps = DEFAULT_DATA_TOOL_DEPS): Promise<ToolResult> {
+  if (context.actor.role === null || !hasPermission(DEFAULT_PERMISSION_MATRIX, context.actor.role, "view_ai_training") || !canSeeAssignmentTracker(context.actor)) {
+    return {
+      source: AI_ASSIGNMENTS_SOURCE,
+      refused: "The AI assignment tracker is only for the people it was set up for. Nothing was read; say so plainly, in one line, and give nothing from it.",
+    };
+  }
+  const tracker = await deps.loadAssignmentTracker();
+  return {
+    source: AI_ASSIGNMENTS_SOURCE,
+    tracker: untrusted(assignmentTrackerText(tracker, context.today), AI_ASSIGNMENTS_SOURCE),
+    note: "Give who is done, due, missing or has more time exactly as listed, with the half each is for. Never guess a person or a half not listed.",
+  };
 }
 
 /* ---------------------------------------------------------------- read_hr_approvals --- */
@@ -197,6 +228,12 @@ export function dataToolSpecs(config: AppConfig) {
         required: [],
       },
     },
+    {
+      name: "read_ai_assignments",
+      description:
+        "The AI assignment tracker (AI Training > Assignments), for the people it was set up for only: two AI assignments a month per person (the 1st to 15th, the 16th to month end); who is done, still due or has more time this half, and each person's done and missing halves. Anyone else is refused.",
+      input_schema: { type: "object", properties: {}, required: [] },
+    },
   ] as const;
 }
 
@@ -215,6 +252,7 @@ export function dataToolHandlers(
   return {
     read_reviews: (args) => readReviews(context, args, deps),
     read_form_deletions: (args) => readFormDeletions(context, args, deps),
+    read_ai_assignments: () => readAiAssignments(context, deps),
     read_hr_approvals: () => readHrApprovals(context, deps),
   };
 }
