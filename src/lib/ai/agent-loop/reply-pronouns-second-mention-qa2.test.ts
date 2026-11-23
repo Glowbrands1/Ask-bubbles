@@ -23,10 +23,11 @@ describe("withoutPersonPronouns: QA2's three live wordings (21 Nov 2026)", () =>
     expect(second("Fenna was late on her last two shifts.", "Fenna")).toBe("Fenna was late on the last two shifts.");
   });
 
-  it("\"she wanted to show her team her new puppy\" reads \"Thaddea wanted to show the team the new puppy\"", () => {
-    expect(second("She wanted to show her team her new puppy.", "Thaddea")).toBe("Thaddea wanted to show the team the new puppy.");
+  it("\"she wanted to show her team her new puppy\" reads \"Thaddea wanted to show Thaddea's team the new puppy\"", () => {
+    /* QA's ruling (22 Nov 2026, Pau's round 3 U23, option 2 in the card/reply pass only): the first possessive of the named person keeps its owner; a second one in the sentence, or one after a place/time preposition, is "the". CHANGED ON PURPOSE. Was "show the team the new puppy". */
+    expect(second("She wanted to show her team her new puppy.", "Thaddea")).toBe("Thaddea wanted to show Thaddea's team the new puppy.");
     expect(second("Thaddea left the register because she wanted to show her team her new puppy.", "Thaddea")).toBe(
-      "Thaddea left the register because Thaddea wanted to show the team the new puppy.",
+      "Thaddea left the register because Thaddea wanted to show Thaddea's team the new puppy.",
     );
   });
 
@@ -37,7 +38,8 @@ describe("withoutPersonPronouns: QA2's three live wordings (21 Nov 2026)", () =>
   it("a possessive that opens the sentence, or follows a reporting verb, keeps its owner", () => {
     expect(second("She said her car broke down.", "Fenna")).toBe("Fenna said Fenna's car broke down.");
     expect(second("Her team saw it.", "Fenna")).toBe("Fenna's team saw it.");
-    expect(second("She showed her badge.", "Fenna")).toBe("Fenna showed the badge.");
+    /* QA's ruling (22 Nov 2026, Pau's round 3 U23, option 2 in the card/reply pass only): the first possessive of the named person keeps its owner; a second one in the sentence, or one after a place/time preposition, is "the". CHANGED ON PURPOSE. Was "Fenna showed the badge." */
+    expect(second("She showed her badge.", "Fenna")).toBe("Fenna showed Fenna's badge.");
   });
 
   it("the saved write-up (forms rewrite, then the reply pass) reads the same, with no repeated-name possessive", () => {
