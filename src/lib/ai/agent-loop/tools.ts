@@ -5333,17 +5333,27 @@ export async function proposeForm(
   let whichSalon = false;
   const globalAsk = await import("./places");
   if (noStoreStated && !card.locationId) {
-    Object.assign(card, { locationId: null, locationResolution: "not_applicable", status: card.status === "needs_location" ? "ready" : card.status });
-  } else if (!card.locationId && card.employeeName && employee.id && context.actor.scope?.level === "global" && !globalAsk.globalNonAdminNeedsSalon(context.actor.role, context.actor.scope)) {
+    Object.assign(card, { locationId: null, locationResolution: "not_applicable", status: card.status === "needs_location" ? "ready" : card.status, noStoreStated: true as const });
+  } else if (!card.locationId && card.employeeName && context.actor.scope?.level === "global" && !globalAsk.globalNonAdminNeedsSalon(context.actor.role, context.actor.scope)) {
     /*
-     * Board f140: an admin's card for a person Woven lists at ONE store was filed with no store, and Create saved none.
-     * That one Woven store is the card's store (store_from_woven), as U29 does for a global non-admin; with several or
-     * none the card stays as it was (no new question for an admin).
+     * Board f140, then A2 (QA's live re-run, 23 Nov 2026): an admin's card with no store was filed with no store unasked,
+     * and Create saved location null (A2: a former employee, no store named). The person's one Woven store (an active
+     * person's, or a former employee's as U26 reads it) is the card's store (store_from_woven); with none or several the
+     * card asks which store, every store offered, as a global non-admin's does (U29), and Create waits for it (f140).
      */
-    const theirs = await wovenStoresOf(context.actor.scope, employee.id, read.kind === "read" ? read.roster : [], appConfig().locations().map((salon) => salon.id));
+    const allStores = appConfig().locations().map((salon) => salon.id);
+    const theirs = employee.id
+      ? await wovenStoresOf(context.actor.scope, employee.id, read.kind === "read" ? read.roster : [], allStores)
+      : offRosterName
+        ? ((await inactiveMatchRow(context.actor.scope, employee.name))?.locationIds ?? []).filter((id) => allStores.includes(id))
+        : [];
     if (theirs.length === 1) {
       Object.assign(card, { locationId: theirs[0], locationName: rosterSalonName(theirs[0]!) ?? card.locationName, locationResolution: "resolved", authorizedLocationIds: [theirs[0]], status: card.status === "needs_location" ? "ready" : card.status });
       salonFromWoven = rosterSalonName(theirs[0]!) ?? theirs[0]!;
+    } else {
+      Object.assign(card, { locationId: null, locationResolution: "needs_selection", authorizedLocationIds: allStores, status: "ready", supportsInlineDraft: true });
+      const askedBefore = context.history.some((turn) => turn.role === "assistant" && new RegExp(`which ${locationWord()} is this about`, "i").test(String(turn.content ?? "")));
+      whichSalon = !askedBefore;
     }
   } else if (globalAsk.globalPlaceAskEnabled() && globalAsk.globalNonAdminNeedsSalon(context.actor.role, context.actor.scope) && !card.locationId && card.employeeName) {
     const named = globalAsk.salonIdNamedIn(requestWords);
