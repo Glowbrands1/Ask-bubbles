@@ -9,6 +9,18 @@ import { fakeSupabase, type FakeStore } from "@/test/fake-supabase";
 import { JBA_MANUAL_CA_CHUNKS } from "@/test/fixtures/jba-manual-ca-sections";
 import type { AccessScope, ChatFormProposal, ChatMessage } from "@/types";
 
+import { COMPANY_LOCATIONS as PICKED_STORE_LOCATIONS } from "@/lib/locations";
+/*
+ * Changed on purpose (QA, 23 Nov 2026): an all-store login's card asks which store and Create waits for it, so the store is
+ * picked on the card first, as the browser's picker does (the route offers every store; a harness that reads the answer
+ * before the route's last step sees "not_applicable", and the first store is picked the same way).
+ */
+const withPickedStore = <P extends { locationId?: string | null; locationResolution?: string; authorizedLocationIds?: readonly string[] }>(card: P): P =>
+  !card.locationId && (card.locationResolution === "needs_selection" || card.locationResolution === "not_applicable")
+    ? { ...card, locationId: card.authorizedLocationIds?.[0] ?? PICKED_STORE_LOCATIONS[0]!.id }
+    : card;
+
+
 /**
  * ============================================================================
  * QA BF7 LIVE, 27 OCT 2026 (conv_mvq08utd2u7tavx) — A NAME NOT ON THE
@@ -372,7 +384,7 @@ class Thread {
   /** The card's Create, as the browser does it. */
   async create(): Promise<string> {
     expect(this.proposal, "no card to create from").not.toBeNull();
-    const result = await createInlineForm({ proposal: this.proposal!, messages: this.messages, call, onCreated: () => {} });
+    const result = await createInlineForm({ proposal: withPickedStore(this.proposal!), messages: this.messages, call, onCreated: () => {} });
     this.instanceId = toUuid(result.reference.instanceId);
     return this.instanceId;
   }

@@ -16,6 +16,8 @@ import { listOutstandingFollowUps } from "@/lib/forms/instances";
 import { configuredExcludedNames, isProductionRecord } from "@/lib/forms/production-records";
 import { areaLabel } from "@/lib/locations";
 import { privateAwareLimit } from "@/lib/forms/private-creators";
+import { HrOverviewCard } from "@/features/forms/hr-approval-lists";
+import { hrQueueSummary } from "@/lib/forms/hr-approval";
 
 export const metadata: Metadata = {
   title: "Home",
@@ -91,9 +93,15 @@ export default async function HomePage() {
     }
   }
 
+  /* HR APPROVAL: the approver's count of forms waiting for them, overdue marked. Nobody else gets the card. */
+  const hrSummary = await hrQueueSummary((await pageFormsAccess(identity)).actor).catch(() => null);
+
   return (
     <PermissionGate permission="view_overview">
-      <OverviewScreen followUps={followUps} />
+      <OverviewScreen
+        followUps={followUps}
+        hrApprovalCard={hrSummary ? <HrOverviewCard pending={hrSummary.pending} overdue={hrSummary.overdue} /> : undefined}
+      />
     </PermissionGate>
   );
 }

@@ -4,6 +4,7 @@ import type { AuthenticatedIdentity } from "@/lib/auth/types";
 
 import type { FormsActor } from "./access";
 import { resolveFormsVisibility } from "./forms-visibility";
+import { resolveHrApprover } from "./hr-approval-approvers";
 import { authorizedLocationIds } from "./location-scope";
 
 /**
@@ -39,6 +40,7 @@ export async function pageFormsAccess(
     verified: identity?.verified === true,
     scope: identity?.scope ?? null,
     visibility,
+    hrApprover: identity?.verified === true ? await resolveHrApprover(identity.subject) : false,
   };
   if (!visibility || visibility.level === "global") {
     return { actor, locationIds: null, noStore: false, ownCreatedBy: null };

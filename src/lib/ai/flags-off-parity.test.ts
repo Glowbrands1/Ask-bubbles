@@ -201,6 +201,19 @@ const ALLOWED_UI = [
   // gains a section scoped to `.training-prose` and `.training-callout-*`.
   "src/app/(app)/ai-training/",
   "src/features/ai-training/",
+  // IN-APP BELL (Pau, 23 Nov 2026: "port the notification bell to Bubbles", for the HR form approval; port from Ask
+  // Sunny 30cac4c): a new bell component and its mark-read action. It renders only for someone with a notification:
+  // in the rail on desktop (sidebar.tsx), in the top bar on phones (app-shell.tsx), read by the (app) layout; all
+  // three are listed below. No chat or form behaviour changes.
+  "src/features/notifications/",
+  // HR APPROVAL OF FORMS (owner request, 23 Nov 2026, both apps), behind FORMS_HR_APPROVAL_ENABLED (off): the form card's
+  // "Finalize and send to HR for approval" and HR's approval panel, the Forms Register's Pending HR approval tab and "Your
+  // forms with HR" list, the Overview card, and the HR review page. Off, none of them renders and Finalize is as before.
+  "src/features/forms/hr-approval-lists.tsx",
+  "src/features/forms/hr-approval-panel.tsx",
+  "src/features/forms/hr-approval-screen.tsx",
+  "src/app/(app)/forms/hr-approval/",
+  "src/features/dashboard/overview.tsx",
   // ...and its one sidebar entry, with the rail tests that list what an Employee sees.
   "src/components/shell/navigation.ts",
   "src/components/shell/navigation.test.ts",

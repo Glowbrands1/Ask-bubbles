@@ -191,11 +191,14 @@ export async function createInlineForm({
   /*
    * A2 (QA's live re-run, 23 Nov 2026): an agent-loop card with no store that was NOT asking (an admin's card for a former
    * employee) saved location null. Every agent-loop card needs its store, unless the manager stated the form is for no store
-   * (U04's no_store: `noStoreStated`). The regular chat's admin cards ("your account covers every location") are left as
-   * they are (QA, 23 Nov 2026: old-chat work is on Monday's list).
+   * (U04's no_store: `noStoreStated`).
    */
-  const storeOpen = proposal.locationResolution === "needs_selection" || proposal.status === "needs_location";
-  if (!proposal.locationId && (storeOpen || (proposal.fromAgentLoop && !proposal.noStoreStated))) {
+  /*
+   * The regular chat's admin cards (QA, 23 Nov 2026, after #1087): "your account covers every location" cards saved
+   * location null. They now ask which store (`forms/proposal.ts`), and Create refuses ANY card with no store, the regular
+   * chat's as the loop's, unless the manager stated it is for no store (U04).
+   */
+  if (!proposal.locationId && !proposal.noStoreStated) {
     throw new Error(STORE_NEEDED_MESSAGE);
   }
   const created = await call<{ instance: { id: string }; reused?: boolean; reusedFrom?: string; followUpNotice?: unknown }>("/api/forms/instances", {

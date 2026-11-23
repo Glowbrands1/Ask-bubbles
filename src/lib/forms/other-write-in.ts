@@ -97,6 +97,11 @@ export function guardOtherWriteIn<T extends { values: Record<string, string>; ch
   employeeName?: string | null,
   /** The topic the coaching card carried (`coachingTopic`, checked against the manager's message by the loop). */
   cardTopic?: string | null,
+  /**
+   * QA's live re-run (23 Nov 2026, A1): a loop card's write-in is the topic the card names; with none it stays empty,
+   * never a sentence of the notes (the account).
+   */
+  cardOnly = false,
 ): T {
   if (!otherWriteInGuardEnabled()) return draft;
   let values = draft.values;
@@ -117,6 +122,7 @@ export function guardOtherWriteIn<T extends { values: Record<string, string>; ch
       continue;
     }
     if (written !== "") continue;
+    if (cardOnly) continue;
     const words = managerIssueWords(notes, employeeName);
     if (words) {
       values = { ...values, [writeIn]: words };
