@@ -1994,7 +1994,7 @@ export function starterFollowUpExampleEnabled(): boolean {
 }
 
 /**
- * FORM_TOPIC_SEARCH_ENABLED (port from Ask Sunny #1266, 23 Nov 2026; default off; QA flips it). The agent loop's
+ * FORM_TOPIC_SEARCH_ENABLED (port of the sibling app's #1266, 23 Nov 2026; default off; QA flips it). The agent loop's
  * find_past_forms with a topic and no employee ("any forms about cash handling at my stores this month?", "who's been
  * written up for dress code?") searches the saved text of every form this manager may see in the forms page
  * (`forms/form-topic-search.ts`). Off, a topic-only call is refused with a plain "not available yet".

@@ -1978,7 +1978,7 @@ async function findFormsInPeriod(context: ToolContext, input: { form?: unknown; 
 
 /*
  * ============================================================================
- * FORMS ON FILE BY TOPIC (FORM_TOPIC_SEARCH_ENABLED; port from Ask Sunny #1266, 23 Nov 2026)
+ * FORMS ON FILE BY TOPIC (FORM_TOPIC_SEARCH_ENABLED; port of the sibling app's #1266, 23 Nov 2026)
  * ============================================================================
  *
  * "Any forms about cash handling at my stores this month?", "who's been written up for dress code?". With a topic
@@ -2055,7 +2055,7 @@ async function findFormsByTopic(context: ToolContext, input: { form?: unknown; d
 
 export async function findPastForms(context: ToolContext, input: { employee_name?: unknown; form?: unknown; date?: unknown; date_from?: unknown; date_to?: unknown; about?: unknown; forms_on_file_evidence?: unknown; open?: unknown; include_archived?: unknown }, effects?: ToolEffects): Promise<ToolResult> {
   const typed = typeof input.employee_name === "string" ? input.employee_name.trim() : "";
-  /* FORM_TOPIC_SEARCH_ENABLED (port from Ask Sunny #1266): a topic with no employee searches every visible form's saved text. */
+  /* FORM_TOPIC_SEARCH_ENABLED (port of the sibling app's #1266): a topic with no employee searches every visible form's saved text. */
   const topicAsked = typed === "" && input.open !== true && typeof input.about === "string" && input.about.trim() !== "";
   if (topicAsked) {
     const { formTopicSearchEnabled } = await import("@/lib/config/chat-quality-flags");

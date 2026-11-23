@@ -4,7 +4,7 @@ vi.mock("server-only", () => ({}));
 
 const { firstNameOf, matchesTopic, topicWords } = await import("./form-topic-search");
 
-/* Port from Ask Sunny #1266 (23 Nov 2026): a search of past forms by topic, in the managers' own phrasings. Invented names only. */
+/* Port of the sibling app's #1266 (23 Nov 2026): a search of past forms by topic, in the managers' own phrasings. Invented names only. */
 describe("a form's topic", () => {
   it('"any forms about cash handling at my stores this month?" and "who\'s been written up for dress code?" keep only the topic', () => {
     expect(topicWords("cash handling")).toEqual(["cash", "handling"]);

@@ -6,7 +6,7 @@ import { evidenceFrom, loopStandIn, type LoopDecision, type LoopView } from "./l
 
 /**
  * ============================================================================
- * FORMS ON FILE BY TOPIC (FORM_TOPIC_SEARCH_ENABLED; port from Ask Sunny #1266, 23 Nov 2026)
+ * FORMS ON FILE BY TOPIC (FORM_TOPIC_SEARCH_ENABLED; port of the sibling app's #1266, 23 Nov 2026)
  * ============================================================================
  *
  * A manager asks "any forms about cash handling at my stores this month?" or "who's been written up for dress code?"
@@ -19,7 +19,7 @@ import { evidenceFrom, loopStandIn, type LoopDecision, type LoopView } from "./l
 
 const FIX = ["FORM_TOPIC_SEARCH_ENABLED"];
 const STATUS = { open: "FORM_TOPIC_SEARCH_ENABLED is off in production (default off; QA flips it)" } as const;
-const REPORT = "Ported from Ask Sunny #1266 (23 Nov 2026): \"any forms about cash handling at my stores this month?\" / \"who's been written up for dress code?\" should find the matching forms";
+const REPORT = "Ported from the sibling app's #1266 (23 Nov 2026): \"any forms about cash handling at my stores this month?\" / \"who's been written up for dress code?\" should find the matching forms";
 const offline = process.env.AGENT_LOOP_LIVE !== "1";
 
 type Out = { forms?: { instance_id?: string; employee?: string; form_date?: string }[]; counts?: { total: number; people: number }; listed?: number; of?: number; reason_code?: string };

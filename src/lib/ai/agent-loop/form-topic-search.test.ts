@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /*
- * Port from Ask Sunny #1266 (23 Nov 2026; FORM_TOPIC_SEARCH_ENABLED): find_past_forms with a topic and no employee
+ * Port of the sibling app's #1266 (23 Nov 2026; FORM_TOPIC_SEARCH_ENABLED): find_past_forms with a topic and no employee
  * searches the saved text of every form this manager may see in the forms page, and nothing wider. The read and the
  * visibility filter are faked here (the replay harness's actor sees every row): the database returns forms at two
  * stores, and the visibility filter keeps this manager's store only. The saved values are read from a fake table, so a form outside the scope is shown
@@ -83,7 +83,7 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllEnvs());
 
-describe("find_past_forms by topic (port from Ask Sunny #1266)", () => {
+describe("find_past_forms by topic (port of the sibling app's #1266)", () => {
   it('"any forms about cash handling at my stores this month?": the matching form at this store, never another store\'s, whose text is never even read', async () => {
     const mine = form("Fenna Prewitt", "loc-264", { observation: "Left the cash drawer open; poor cash handling at close.", policy_violated: "Cash Handling" }, { offense_type: ["standards_of_conduct"], warning_type: ["written"] });
     form("Ozren Brack", "loc-264", { observation: "Late to open on 11/12." }, { offense_type: ["attendance_policy"] });

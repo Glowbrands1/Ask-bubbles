@@ -6,7 +6,7 @@ import { foldName } from "./fold-name";
 
 /**
  * ============================================================================
- * FORMS ON FILE BY TOPIC (FORM_TOPIC_SEARCH_ENABLED; port from Ask Sunny #1266, 23 Nov 2026)
+ * FORMS ON FILE BY TOPIC (FORM_TOPIC_SEARCH_ENABLED; port of the sibling app's #1266, 23 Nov 2026)
  * ============================================================================
  *
  * "Any forms about cash handling at my stores this month?", "who's been written up for dress code?": the agent loop's
