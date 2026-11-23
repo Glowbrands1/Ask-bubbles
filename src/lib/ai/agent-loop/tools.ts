@@ -2219,7 +2219,15 @@ export async function findPastForms(context: ToolContext, input: { employee_name
      * also the manager's own message, and each Corrective Action's level, from its own Type of Warning on the form, is on
      * its row and in its choice line, so the level the manager named singles it out. Form data; no word list.
      */
-    const asked = new Set([...words(wantForm), ...words(typeof input.about === "string" ? input.about : ""), ...words(askedQuote), ...words(withoutMessageIdTags(context.question))]);
+    /*
+     * Failure 2, item 1 (port of the sibling app's #1297, Pau's review via QA, 23 Nov 2026): an area manager pasted HR's
+     * edit request for <P>'s exit form ("… gave verbal notice of her immediate resignation …") and was told no exit form was
+     * on file: "verbal" matched the Verbal-level Corrective Actions and every other form was dropped. A level is read only
+     * from the manager's own words of this request (their message and the quote of it), never the model's form or about;
+     * it narrows only when the forms asked about are all Corrective Actions; and it only ever chooses among Corrective
+     * Actions (a form of another kind has no level, so a level never drops it). Form data; no word list.
+     */
+    const asked = new Set([...words(askedQuote), ...words(withoutMessageIdTags(context.question))]);
     const levelLabel: Record<string, string> = { verbal: "Verbal Warning", written: "Written Warning", termination: "Termination", demotion: "Demotion" };
     const levelOf = new Map<string, string[]>();
     if (rows.length <= 20) {
@@ -2230,9 +2238,11 @@ export async function findPastForms(context: ToolContext, input: { employee_name
         levelOf.set(row.id, ticked);
       }));
     }
-    if (asked.size > 0 && rows.length > 1 && levelOf.size > 0) {
-      const named = rows.filter((row) => (levelOf.get(row.id) ?? []).some((key) => asked.has(key.toLowerCase())));
-      if (named.length > 0 && named.length < rows.length) rows = named;
+    const aboutCorrective = rows.length > 0 && rows.every((row) => row.templateKey === appConfig().formKeys.corrective);
+    if (aboutCorrective && asked.size > 0 && rows.length > 1 && levelOf.size > 0) {
+      const levelNamed = (row: (typeof rows)[number]) => (levelOf.get(row.id) ?? []).some((key) => asked.has(key.toLowerCase()));
+      const named = rows.filter((row) => levelOf.has(row.id) && levelNamed(row));
+      if (named.length > 0 && named.length < levelOf.size) rows = rows.filter((row) => !levelOf.has(row.id) || levelNamed(row));
     }
     const levelText = (id: string) => (levelOf.get(id) ?? []).map((key) => levelLabel[key] ?? key).join(", ") || null;
     const described = Boolean(wantForm || wantDate || about.length > 0);
@@ -5698,6 +5708,20 @@ export async function proposeForm(
    */
   const datedToday = ACCOUNT_FORMS.has(template.key) && !awaiting && !date && datesGiven.length === 0 && !ACCOUNT_WHEN.test(requestWords) && readDates(requestWords).every((read) => isPriorDate(monthDayToIso(`${read.month}/${read.day}`, today)));
   ACCOUNT_WHEN.lastIndex = 0;
+  /*
+   * Failure 2, item 7 (port of the sibling app's #1297, Pau's review via QA, 23 Nov 2026): "her last day worked was
+   * 11/17/2026 …" and the exit card was dated 11/17. On an exit form, a date the manager's words give to one of the form's
+   * own date lines (last day worked, notice given, notice fulfilled; read by `readExitFacts`) is that line's date, never
+   * the form's: the form keeps its own date. A termination's date is set above (exitTermination) and is not this.
+   */
+  const exitLineDates = new Set<string>();
+  if (!exitTermination && template.key === appConfig().formKeys.exit) {
+    const exitDates = (await import("@/lib/forms/exit-facts")).readExitFacts(requestWords, today);
+    for (const line of [exitDates.lastDayWorked, exitDates.noticeGiven, exitDates.noticeFulfilled]) if (line) exitLineDates.add(line);
+    if (date && exitLineDates.has(isoDate(date, today) ?? date)) date = null;
+  }
+  /* The card's own date read from the message is held to the same rule: an exit date line's date leaves the form dated today. */
+  const ownFormDate = proposal.formDate && exitLineDates.has(proposal.formDate) ? today : proposal.formDate;
   /* Batch E (E12): a date after today is never on the card, the model's or today's reading (the field is refused; the fact says so). */
   const futureDate = dateAfterToday ?? (incidentForm && !date && proposal.formDate && proposal.formDate > today ? proposal.formDate : null);
   /*
@@ -5721,7 +5745,7 @@ export async function proposeForm(
   const card: ChatFormProposal = {
     ...proposal,
     sourceMessageIds: requestIds,
-    formDate: exitTermination ? exitTermination.date : datesAsked.length > 0 || futureDate ? null : date ?? (fromAnotherRequest(proposal.formDate) || isPriorDate(proposal.formDate) ? null : proposal.formDate) ?? null,
+    formDate: exitTermination ? exitTermination.date : datesAsked.length > 0 || futureDate ? null : date ?? (fromAnotherRequest(ownFormDate) || isPriorDate(ownFormDate) ? null : ownFormDate) ?? null,
     fromAgentLoop: true as const,
     /* QA item 17 (20 Nov 2026): an exit card the model decided is a termination (locked on the word) tells Create, as the CA's does. */
     ...(level ? { warningLevel: level } : loopTermination || exitTermination ? { loopTermination: true as const } : {}),
