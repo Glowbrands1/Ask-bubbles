@@ -1123,6 +1123,8 @@ export interface ToolEffects {
   proposalPayrollAmount?: string | null;
   /** QA (c163): the one-way key of this card's account as the model gave it (`accountKey`), for the card record. */
   proposalAccountKey?: string | null;
+  /** Port from Ask Sunny (#1294): the exit card's resignation type (an option key), for the card record (`CardRecord.exitType`). */
+  proposalExitType?: string | null;
   /** Round 3 U21: the card's prior actions' dates (ISO), for its server record (`CardRecord.priorDates`). */
   proposalPriorDates?: string[];
   /** Pau's ruling (23 Nov 2026): the forms on file this card's reply offers (their ISO dates), for `CardRecord.onFileOffered`. */
@@ -3350,7 +3352,29 @@ async function personNotNamed(context: ToolContext, template: { key: string; nam
  * none, the card asks how the person left (exit_unset resignation_type), never saying "Filed as" what will not be ticked;
  * and it asks a missing last day worked, as before. Never a date or a reason the manager did not give.
  */
-async function exitCardTicks(isExit: boolean, termination: boolean, requestWords: string, today: string, exitHow: string | null = null): Promise<{ exit_ticks?: string[]; exit_unset?: string[] }> {
+/** Port from Ask Sunny (#1294): the app's own words in the exit-on-file question, by the form's own name; a reply holding them has asked it (`proposeForm`). */
+export const exitOnFileMark = (formName: string): string => `already has a ${formName} on file`;
+
+/**
+ * Port from Ask Sunny (#1294; its live duplicate exit form, QA, 23 Nov 2026): the exit forms on file for this person that
+ * this manager can see, read as find_past_forms reads forms on file (`chatFormsActor`, `instanceListFilterFor`,
+ * `visibleInstances`), only this person's (`samePerson`), never a revised or archived one. Empty when the Forms Register
+ * cannot be read for this manager.
+ */
+async function exitFormsOnFile(context: ToolContext, name: string, exitKey: string): Promise<{ status: string; date: string; store: string | null }[]> {
+  const actor = await chatFormsActor(context.actor).catch(() => null);
+  if (!actor) return [];
+  const nameWords = candidateNameWords(name);
+  if (nameWords.length === 0) return [];
+  const rows = visibleInstances(actor, await listInstances("all", 200, { ...instanceListFilterFor(actor), employeeNameWords: nameWords }).catch(() => []));
+  const mdy = (iso: string) => (/^(\d{4})-(\d{2})-(\d{2})$/.exec(iso) ? `${iso.slice(5, 7)}/${iso.slice(8, 10)}/${iso.slice(0, 4)}` : iso);
+  return rows
+    .filter((row) => row.templateKey === exitKey && row.status !== "revised" && !row.archivedAt && samePerson(row.employeeName, name))
+    .slice(0, 5)
+    .map((row) => ({ status: row.status, date: mdy(row.formDate), store: row.locationName }));
+}
+
+async function exitCardTicks(isExit: boolean, termination: boolean, requestWords: string, today: string, exitHow: string | null = null): Promise<{ exit_ticks?: string[]; exit_unset?: string[]; keys?: string[] }> {
   /*
    * Ported from the sibling app: its QA's live L6 (22 Nov 2026): a termination's reply said "Filed as" twice:
    * exit_termination already gives its tick (Immediate involuntary separation) with the rules book's line for it, and
@@ -3372,7 +3396,7 @@ async function exitCardTicks(isExit: boolean, termination: boolean, requestWords
   const keys = termination ? [library.EXIT_OPTION.immediateInvoluntary] : [...(checked[library.EXIT_NOTICE_GROUP] ?? []), ...(typeTicks.length === 0 && exitHow ? [exitHow] : typeTicks)];
   const ticks = keys.map((key) => labels[key] ?? key);
   const unset = [...(!termination && !facts.lastDayWorked ? ["last_day_worked"] : []), ...(ticks.length === 0 ? ["resignation_type"] : [])];
-  return { ...(ticks.length > 0 ? { exit_ticks: ticks } : {}), ...(unset.length > 0 ? { exit_unset: unset } : {}) };
+  return { ...(ticks.length > 0 ? { exit_ticks: ticks } : {}), ...(unset.length > 0 ? { exit_unset: unset } : {}), ...(keys.length > 0 ? { keys } : {}) };
 }
 
 /** A roster person's full names: the Woven preferred name with the surname, and the legal one (batch G, QA). */
@@ -5561,6 +5585,35 @@ export async function proposeForm(
     ? { option: input.exit_how, quote: exitHowQuote.slice(0, 300) }
     : null;
   /*
+   * Port from Ask Sunny (#1294; its live duplicate exit form, QA, 23 Nov 2026): a manager asked to edit <P>'s exit form for
+   * HR, was told none was on file, said "make an exit form then", and <P> got a second exit form beside the finalized one,
+   * with HR's edits on the new draft. An exit form is filed once per person: before this card is made, the exit forms this
+   * manager can see for this person are read (as find_past_forms and the Forms Register read them). With one on file, the
+   * card is not made; the reply says so and offers to open it (a revision; the filed form stays as it is) or start a new
+   * one. Asked once: when the previous reply already put that question (the app's own words), the manager's answer
+   * decides, and a new card goes ahead. The same person's exit card already on screen is a change to that card, never asked.
+   */
+  if (template.key === appConfig().formKeys.exit) {
+    const shownCard = context.cardOnScreen ?? context.earlierCard ?? null;
+    const sameExitOnScreen = shownCard?.templateKey === template.key &&
+      ((employee.id && shownCard.employeeKey === personKey(employee.id)) || (!shownCard.employeeKey && shownCard.nameKey === personKey(employee.name)));
+    const lastReply = [...(context.history as ChatMessage[])].reverse().find((turn) => turn.role === "assistant");
+    const formName = template.name ?? "exit form";
+    const askedBefore = typeof lastReply?.content === "string" && lastReply.content.includes(exitOnFileMark(formName));
+    if (!sameExitOnScreen && !askedBefore) {
+      const onFile = await exitFormsOnFile(context, employee.name, template.key);
+      if (onFile.length > 0) {
+        const first = employee.name.trim().split(/\s+/)[0] || employee.name;
+        const listed = onFile.map((form) => `${form.status} ${form.date}${form.store ? ` at ${form.store}` : ""}`).join("; ");
+        return {
+          forms_on_file: onFile.map((form) => ({ status: form.status, date: form.date, ...(form.store ? { [locationWord()]: form.store } : {}) })),
+          ask_exactly: `${first} ${exitOnFileMark(formName)} (${listed}). Do you want me to open it so you can make the changes (the filed form stays as it is until the new version is saved), or start a new ${formName}?`,
+          reason_code: "exit_on_file", error: `${employee.name} already has a ${formName} on file, so no card was made: a second one would duplicate their HR record. End your reply with ask_exactly, exactly, once. If the manager wants it opened or changed, call find_past_forms (employee_name, form, open: true) and then edit_form on that form; never propose_form for it. Only if they say to start a new one, propose_form again.`,
+        };
+      }
+    }
+  }
+  /*
    * U54 (QA's Bubbles round 2, 22 Nov 2026): "<P> … wants to transfer to dawley effective 11-2-26" saved no New Location.
    * Where the person is moving is the model's reading (new_store), kept on the manager's words for it from this request
    * (new_store_evidence), and read through the Woven-aware store index (`transfer-new-store.ts`). Exactly one store, or
@@ -5966,7 +6019,24 @@ export async function proposeForm(
    * the model's input is unchanged. A termination's tick stays with exit_termination's own line, as before. Only after
    * effects.proposal is set: an await before it lets a parallel propose_form pass the one-card check too.
    */
-  const cardTicks = await exitCardTicks(template.key === appConfig().formKeys.exit, Boolean(exitTermination), requestWords, today, exitHow?.option ?? null);
+  let cardTicksRead = await exitCardTicks(template.key === appConfig().formKeys.exit, Boolean(exitTermination), requestWords, today, exitHow?.option ?? null);
+  /*
+   * Port from Ask Sunny (#1294; its live duplicate exit form, QA, 23 Nov 2026): "effective immediately" was said, the card
+   * showed "Filed as: Immediate Voluntary Resignation", and the same person's exit card proposed again for the last day
+   * worked lost it and asked "How did <P> leave …?" twice. The ticks are read from this request's words only. With none
+   * this request, the same person's exit card on screen keeps the type it showed (its record, an option key of the form;
+   * never a word list). A termination, another person's card or another form carries nothing.
+   */
+  const shownExit = context.cardOnScreen ?? context.earlierCard ?? null;
+  const keptExitType =
+    template.key === appConfig().formKeys.exit && !exitTermination && !cardTicksRead.exit_ticks && shownExit?.templateKey === template.key &&
+    typeof shownExit.exitType === "string" && EXIT_HOW.has(shownExit.exitType) &&
+    ((employee.id && shownExit.employeeKey === personKey(employee.id)) || (!shownExit.employeeKey && shownExit.nameKey === personKey(employee.name)))
+      ? shownExit.exitType
+      : null;
+  if (keptExitType) cardTicksRead = await exitCardTicks(true, false, requestWords, today, keptExitType);
+  const { keys: exitKeys, ...cardTicks } = cardTicksRead;
+  effects.proposalExitType = !exitTermination ? (exitKeys ?? []).find((key) => EXIT_HOW.has(key)) ?? null : null;
   effects.exitTicks = cardTicks.exit_ticks ?? [];
   const personId = typeof input.employee_id === "string" ? input.employee_id.trim() : "";
   /*
