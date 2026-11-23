@@ -185,12 +185,14 @@ function withAccountAsIssue(
   const issue = proposal.issue?.trim() ?? "";
   if (issue === "") return response;
   /*
-   * An Issue that opens with the card's own name ("rowan kestrel for violating the standards of conduct") is the request
+   * An Issue that opens with the card's own name and "for" ("rowan kestrel for violating the standards of conduct") is the request
    * sentence after its title, not the account: "general manager" reads as a title since Pau's 23 Nov forms rename (Pau,
    * 23 Nov: BCS terms in the forms), so the reader no longer stops at it. Its account clauses are the Issue, as for a
    * request turn (`accountClauses`).
    */
-  const opensWithName = name.trim() !== "" && issue.toLowerCase().startsWith(`${name.trim().toLowerCase()} `);
+  // Only the request sentence's shape, "<name> for <account>": an account that starts with the person ("<A> was below on
+  // …") is the manager's account and stays as written.
+  const opensWithName = name.trim() !== "" && issue.toLowerCase().startsWith(`${name.trim().toLowerCase()} for `);
   if (opensWithName) {
     const account = accountClauses(issue, name, ignore);
     if (account && account !== issue) {
