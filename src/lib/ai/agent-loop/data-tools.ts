@@ -65,6 +65,8 @@ export type HrApprovalsRead =
         line: string;
         createdByName: string;
         state: string;
+        /** Sent back, and the manager replied since: needs HR's decision (`needsHrDecision`). Absent: not replied. */
+        managerReplied?: boolean;
         requestedAt: string | null;
         waiting: string;
         overdue: boolean;
@@ -166,12 +168,19 @@ export async function readHrApprovals(context: DataToolContext, deps: DataToolDe
       source: hrApprovalsSource(),
       reader: "HR approver",
       waiting_for_you: read.queue
-        .filter((row) => row.state === "pending")
-        .map((row) => ({ form: untrusted(row.line, hrApprovalsSource()), from: row.createdByName, sent: formatBusinessTime(row.requestedAt) ?? row.requestedAt, waiting: row.waiting, overdue: row.overdue })),
+        .filter((row) => row.state === "pending" || row.managerReplied === true)
+        .map((row) => ({
+          form: untrusted(row.line, hrApprovalsSource()),
+          from: row.createdByName,
+          state: row.managerReplied ? "manager replied to changes: you can approve it now, or send it back again" : "waiting for approval",
+          sent: formatBusinessTime(row.requestedAt) ?? row.requestedAt,
+          waiting: row.waiting,
+          overdue: row.overdue,
+        })),
       sent_back_or_rejected: read.queue
-        .filter((row) => row.state !== "pending")
+        .filter((row) => !(row.state === "pending" || row.managerReplied === true))
         .map((row) => ({ form: untrusted(row.line, hrApprovalsSource()), from: row.createdByName, state: row.state === "rejected" ? "rejected" : "sent back for changes" })),
-      note: "List the forms waiting for this HR approver, oldest first, saying which are overdue (waited more than one business day). They approve, send back or reject each one from Pending HR approval in " + appConfig().formsPageName + ".",
+      note: "List the forms waiting for this HR approver, oldest first, saying which are overdue (waited more than one business day) and which the manager replied to after HR sent them back (\"manager replied to changes\": HR may approve it as it stands). They approve, send back or reject each one from Pending HR approval in " + appConfig().formsPageName + ".",
     };
   }
   return {
@@ -213,7 +222,7 @@ export function dataToolSpecs(config: AppConfig) {
     {
       name: "read_hr_approvals",
       description:
-        "HR approval of forms: for HR, every form waiting for their approval (oldest first, overdue after one business day) and the ones they sent back or rejected; for any other manager, only the forms THEY created that went to HR (waiting, sent back, rejected, or approved in the last 30 days) with HR's latest note to them. Use it for \"has HR approved it?\", \"what's waiting on me?\", \"did HR send my form back?\". A form waiting for HR is not on file.",
+        "HR approval of forms: for HR, every form waiting for their approval (oldest first, overdue after one business day, including the ones the manager replied to after HR sent them back) and the ones they sent back or rejected; for any other manager, only the forms THEY created or sent to HR, each with its state (waiting for HR approval, sent back by HR for changes, manager replied to changes, rejected by HR, or approved by HR in the last 30 days) and HR's latest note to them. Use it for \"has HR approved it?\", \"was my CA for <name> approved?\", \"what's waiting on me?\", \"did HR send my form back?\". A form waiting for HR is not on file; an approved one is.",
       input_schema: { type: "object", properties: {}, required: [] },
     },
     {

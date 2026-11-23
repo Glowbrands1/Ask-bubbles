@@ -20,17 +20,25 @@ import { formatBusinessTime } from "@/lib/business-date";
  *
  *   HR, while the form waits    Approve · Send back for changes · Reject, a note
  *                               required for the last two; a note box for comments
+ *   HR, manager replied         Approve · Send back for changes (owner, 23 Nov
+ *                               2026: "Manager Replied to changes. then view then
+ *                               approve"; QA: HR may still need more changes); a
+ *                               note box
  *   the creator                 the state, how long it has waited, and every note
  */
 
 export interface HrApprovalPanelView {
   state: "pending" | "changes_requested" | "rejected" | "approved";
+  /** `manager_replied` once the creator answered HR's send-back. Absent from an older server. */
+  stage?: "pending" | "manager_replied" | "changes_requested" | "rejected" | "approved";
   label: string;
   requestedAt: string | null;
   waiting: string | null;
   overdue: boolean;
   canDecide: boolean;
   canEdit: boolean;
+  /** HR, on a form sent back that its manager has replied to since: Approve and Send back (`approvableFromSentBack`). */
+  canApproveSentBack?: boolean;
   /** Pending, but HR approval is off or nobody can approve: the creator may finalize it themselves. */
   released?: boolean;
   history: { action: string; by: string; note: string | null; at: string }[];
@@ -93,7 +101,8 @@ export function HrApprovalPanel({
     }
   }
 
-  const tone = view.state === "approved" ? "outline" : view.state === "pending" ? "accent" : "outline";
+  const tone = view.state === "pending" || view.stage === "manager_replied" ? "accent" : "outline";
+  const approveOnly = view.canApproveSentBack === true && !view.canDecide;
 
   return (
     <section
@@ -139,7 +148,11 @@ export function HrApprovalPanel({
           HR is reviewing this form. It is finalized when they approve it, and you will see their answer in the bell.
         </p>
       ) : null}
-      {view.state === "changes_requested" || view.state === "rejected" ? (
+      {approveOnly ? (
+        <p className="mt-2 text-xs text-muted-foreground">
+          The manager replied to your changes. Read their note and the form above, then approve it, or send it back again with a note.
+        </p>
+      ) : view.state === "changes_requested" || view.state === "rejected" ? (
         !view.canDecide ? (
           <p className="mt-2 text-xs text-muted-foreground">
             Make the changes on the form, save, then press Finalize and send to HR for approval again.
@@ -149,7 +162,7 @@ export function HrApprovalPanel({
 
       <div className="mt-3 space-y-2">
         <Label htmlFor={`hr-note-${instanceId}`} className="text-xs">
-          {view.canDecide ? "Note to the manager" : "Note"}
+          {view.canDecide || approveOnly ? "Note to the manager" : "Note"}
         </Label>
         <Textarea
           id={`hr-note-${instanceId}`}
@@ -157,9 +170,21 @@ export function HrApprovalPanel({
           onChange={(event) => setNote(event.target.value)}
           rows={3}
           maxLength={4000}
-          placeholder={view.canDecide ? "Required to reject or send back. Optional to approve." : "Add a note"}
+          placeholder={view.canDecide ? "Required to reject or send back. Optional to approve." : approveOnly ? "Required to send back. Optional to approve." : "Add a note"}
         />
         <div className="flex flex-wrap items-center gap-2">
+          {approveOnly ? (
+            <>
+              <Button variant="accent" size="sm" onClick={() => void act("approve")} disabled={busy !== null} data-testid="hr-approve-sent-back">
+                {busy === "approve" ? <Loader2 className="animate-spin" /> : <Check />}
+                Approve
+              </Button>
+              <Button size="sm" onClick={() => void act("send_back")} disabled={busy !== null}>
+                {busy === "send_back" ? <Loader2 className="animate-spin" /> : <Undo2 />}
+                Send back for changes
+              </Button>
+            </>
+          ) : null}
           {view.canDecide ? (
             <>
               <Button variant="accent" size="sm" onClick={() => void act("approve")} disabled={busy !== null}>

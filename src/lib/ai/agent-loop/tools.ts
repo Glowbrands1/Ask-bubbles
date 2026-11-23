@@ -6601,6 +6601,22 @@ export async function editForm(
     const refused = await formOnFileRefusal(context, id, input.forms_on_file_evidence);
     if (refused) return refused;
   }
+  /*
+   * WAITING FOR HR (owner, 23 Nov 2026: "can the AI edit a form that's been sent back for changes?"). A form HR sent back
+   * or rejected is the manager's to change, so the edit goes on as usual. One waiting for HR is frozen until HR decides:
+   * refused here with the reason, so the reply says HR has it, instead of each field's bare "not_draft". After the
+   * privacy gates above, so it never tells somebody the form exists.
+   */
+  {
+    const { heldForHr } = await import("@/lib/forms/hr-approval-rules");
+    const held = await (await import("@/lib/forms/instances")).loadInstance(id).catch(() => null);
+    if (held && held.instance.status === "draft" && heldForHr(held.instance.hrApprovalState) && (await (await import("@/lib/forms/hr-approval-approvers")).hrHoldLive())) {
+      return {
+        reason_code: "held_for_hr",
+        error: "This form is waiting for HR approval, so nobody but HR can change it until HR approves it or sends it back. Nothing was written. Tell the manager it is with HR, and that they can add a note for HR on the form.",
+      };
+    }
+  }
   const values: Record<string, string> = {};
   if (input.values && typeof input.values === "object") {
     for (const [field, value] of Object.entries(input.values as Record<string, unknown>)) {
