@@ -42,7 +42,11 @@ export interface ReplayThread {
 }
 
 export interface ReplayContext {
-  thread(): ReplayThread;
+  /**
+   * A browser tab's thread. `options.conversationId`: join this conversation id (a second tab on the same chat, e.g.
+   * a duplicated tab); `options.idPrefix`: this tab's message ids (browsers mint distinct ids; default "m").
+   */
+  thread(options?: { readonly conversationId?: string; readonly idPrefix?: string }): ReplayThread & { readonly conversationId?: string };
   as(role: string, scope: unknown): void;
   directory(rows: readonly DirectoryRow[]): void;
   /** Every knowledge search's query this case, in order (POLICY_CARRY_RETRIEVAL, 12 Nov 2026). */
