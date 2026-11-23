@@ -105,7 +105,13 @@ export const NOV22_AGENT_LOOP_EXIT_READS_BACK_SAVED_CASES: ReplayCase[] = [
       const reply = await thread.say(T2);
       expect(reply.content).not.toMatch(/Date that notice was given|Reason for Resignation/);
       expect(reply.content, "the unsaved line was offered as a change").not.toMatch(/isn't on the card yet/);
-      expect(reply.content).toMatch(/Resignation\/Exit Form for \*\*Odile/);
+      /*
+       * CHANGED ON PURPOSE (QA's live check of #1098, 23 Nov 2026): the live reply opened "Here is the **Resignation/Exit
+       * Form** for **Odile Marchetti**", the right opening with the form's name in bold. The check still wants the form's
+       * name and then the person in bold; the form's name may be bold too. Still fails on the bug: a reply with no
+       * opening names no form at all.
+       */
+      expect(reply.content).toMatch(/(?:\*\*)?Resignation\/Exit Form(?:\*\*)? for \*\*Odile/);
     },
   },
   {
