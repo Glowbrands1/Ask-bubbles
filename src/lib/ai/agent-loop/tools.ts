@@ -1403,12 +1403,19 @@ export async function findStaff(context: ToolContext, input: { name?: unknown; p
    * Fix batch item 4 (c022): this turn answers this chat's own "Did you mean **<A>**?" with yes or with <A>'s full name
    * typed back, and the lookup is <A>: a fact, so the model proposes the card instead of asking again.
    */
-  const confirmed = found.length === 1 ? latestTurnConfirms(nameQuestionView(context, read.roster), found[0]!.id) : null;
-  if (confirmed) {
+  /*
+   * The tester's A9 (QA's ruling (b), 23 Nov 2026): with several people found (two staff share a first name), the one this
+   * turn named in answer to this chat's own which-one question (surname, store or full name; `confirmsIn`) is the person.
+   */
+  const view = nameQuestionView(context, read.roster);
+  const pickedOne = found.length > 1 ? found.filter((person) => latestTurnConfirms(view, person.id)) : [];
+  const settledPerson = found.length === 1 ? found[0]! : pickedOne.length === 1 ? pickedOne[0]! : null;
+  const confirmed = settledPerson ? latestTurnConfirms(view, settledPerson.id) : null;
+  if (confirmed && settledPerson) {
     return {
-      matches: [staffRow(found[0]!)],
-      confirmed_by_manager: { name: displayName(found[0]!), answer: confirmed.by },
-      note: `The manager confirmed ${displayName(found[0]!)} (their answer to Did you mean). Do not ask again: propose the card for ${displayName(found[0]!)} now, with this request's account from the earlier turns.`,
+      matches: [staffRow(settledPerson)],
+      confirmed_by_manager: { name: displayName(settledPerson), answer: confirmed.by },
+      note: `The manager confirmed ${displayName(settledPerson)} (their answer to your question). Do not ask again: propose the card for ${displayName(settledPerson)} now, with this request's account from the earlier turns.`,
     };
   }
   /*
@@ -1629,6 +1636,30 @@ export async function findStaff(context: ToolContext, input: { name?: unknown; p
     ...(found.length > 1 ? { reason_code: "ambiguous_person" } : {}),
     ...(longer.length > 0 ? { longer_names_on_roster: longer, longer_note: "Other people's names start with this one. If the manager wrote one of these longer names, look that one up instead." } : {}),
     ...(found.length > 1 ? { note: shared ? "Several people share this name: ask the manager which one (by salon) before proposing a form." : "Several people match: ask the manager which one." } : {}),
+    ...(found.length > 1 ? whichOneQuestion(context, read.roster, found.slice(0, 5), typed, effects) : {}),
+  };
+}
+
+/**
+ * The tester's A9 (two staff share a first name; QA's ruling (b), 23 Nov 2026): the which-one question is recorded (so the
+ * answer, by full name, surname or store, settles the person: `confirmsIn`), and said in full once; asked again for the
+ * same people it is short (asked_before). The manager's account is held for the card, which is built the moment the
+ * person is named.
+ */
+function whichOneQuestion(context: ToolContext, roster: readonly RosterEmployee[], people: readonly RosterEmployee[], typed: string, effects?: ToolEffects): Record<string, unknown> {
+  if (effects) effects.nameQuestion = { offeredIds: people.map((row) => row.id), typed };
+  const store = (person: RosterEmployee) => (person.locationIds[0] ? rosterSalonName(person.locationIds[0]) ?? person.locationIds[0] : null);
+  const ids = new Set(people.map((person) => person.id));
+  const askedBefore = answeredNameQuestions(nameQuestionView(context, roster)).some((asked) => !asked.confirmed && asked.offered.length === ids.size && asked.offered.every((person) => ids.has(person.id)));
+  const first = typed.trim().split(/\s+/)[0] ?? typed;
+  const orList = (items: readonly string[]) => (items.length <= 2 ? items.join(" or ") : `${items.slice(0, -1).join(", ")} or ${items.at(-1)}`);
+  const ask = askedBefore
+    ? `Which ${first}: ${orList(people.map((person) => `**${person.lastName}**${store(person) ? ` (${store(person)})` : ""}`))}?`
+    : `There are ${people.length} people named ${first} on the staff list. Which is this for: ${orList(people.map((person) => `**${displayName(person)}**${store(person) ? ` at ${store(person)}` : ""}`))}?`;
+  return {
+    ask_exactly: ask,
+    ...(askedBefore ? { asked_before: true } : {}),
+    hold_account: "Keep the manager's account for the card: propose it the moment they name the person (full name, surname or store). Until then there is no card: never say anything is kept, added or saved on a card or draft, and never use a pronoun for this person.",
   };
 }
 
