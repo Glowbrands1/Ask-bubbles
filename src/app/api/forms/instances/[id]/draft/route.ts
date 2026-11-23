@@ -2831,7 +2831,12 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
         /* Pau's ruling (20 Nov 2026; c091): the card's second heading ticks its own box, and Policy Violated names both. */
         const secondBox = loopCardSecondHeading ? boxFor(loopCardSecondHeading) : undefined;
         const headingLines = typeof body.cardPolicyLine === "string" ? body.cardPolicyLine.split(";").map((part) => part.trim()).filter((part) => part && !/^other\b/i.test(part)) : [];
-        const cardLine = (secondBox ? headingLines.slice(0, 2).join("; ") : (headingLines[0] ?? "")).slice(0, 400);
+        /*
+         * Port from the sibling app (its QA's f094, 21 Nov 2026 live retest): a second heading with no box of its own (Time
+         * Records, filed under Standards of Conduct) was dropped from Policy Violated. The saved line names both whenever the
+         * card has a second heading, joined as the card joins them.
+         */
+        const cardLine = (loopCardSecondHeading ? headingLines.slice(0, 2).join("; ") : (headingLines[0] ?? "")).slice(0, 400);
         if (box) {
           const boxes = [box.key, ...(secondBox && secondBox.key !== box.key ? [secondBox.key] : [])];
           loopCardDraft.checked = { ...loopCardDraft.checked, offense_type: boxes };
