@@ -117,7 +117,7 @@ const state = vi.hoisted(() => ({
  * AGENT_LOOP_ENABLED (the loop port from the sibling app, QA 21 Nov 2026): the case's stand-in model (`t.loopModel`), the
  * roster fault (`t.rosterFails`), and the two switches as they were before the case turned the loop on for its signed-in
  * manager (restored after every case). This app's production has AGENT_LOOP_ENABLED on (`production-flags.json`, since
- * 21 Nov 2026) with AGENT_LOOP_USERS limited to the owner; the pack leaves AGENT_LOOP_USERS unset, so a case that never
+ * 21 Nov 2026) with AGENT_LOOP_USERS "*" (every signed-in manager, since 23 Nov 2026); the pack leaves AGENT_LOOP_USERS unset, so a case that never
  * calls `t.loopModel` never enters the loop and runs exactly as before (`nov21-agent-loop-switch-off-cases.ts`).
  */
 const loop = vi.hoisted(() => ({
