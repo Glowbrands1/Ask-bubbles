@@ -14,9 +14,16 @@ next turn's request starts at the message it answered. No word lists: the forms 
 Cases: `nov23-agent-loop-same-incident-on-file-cases.ts` (the finalized and draft cases fail on main; the other-date
 control and the separate-incident answer pass).
 
-**Ask Sunny (main 403c464): the loop has no such check; port needed.** Its agent loop's `propose_form` reads forms on
-file only for Prior actions (`finalizedPriorsOnFile`). The regular chat path has a "same incident or a new one?" flow
+**Copies (QA's ruling (B), 24 Nov 2026 PHT):** a copy for the SAME person with the SAME incident date as a form on file
+is that duplicate, so it asks first too; a copy for another person or with another date is never asked. The U16 copy
+cases answer "it's a separate incident" before checking the copy (CHANGED ON PURPOSE, in
+`nov22-agent-loop-u16-open-existing-ca-cases.ts`).
+
+**Ask Sunny (main 403c464): port needed, in the loop (QA: Sunny coder 2).** Its agent loop's `propose_form` reads forms
+on file only for Prior actions (`finalizedPriorsOnFile`). The regular chat path's "same incident or a new one?" flow
 (`src/lib/forms/draft-actions.ts`, `incidentQuestionAsked` / `readIncidentAnswer`, and `historySaysDifferentIncident` in
-the create route), but it reads the reply's and the manager's wording (phrase patterns) and is about reusing a draft, not
-a finalized form on file for the same date; the loop never reaches it. The Sunny coder ports the mechanism above
-(salon ↔ store wording only; the same template keys through `appConfig().formKeys`).
+the create route) reads wording patterns and is about reusing a draft, not a form on file for the same date; the loop
+never reaches it. Port the same names: `sameDayFormsOnFile`, `sameDayOnFileQuestion`, reason_code
+`same_incident_on_file`, the input `separate_incident_evidence`, the record `slots.agent_loop.same_incident`
+(`SameIncidentSlot` / `SameIncidentRecord`, `sameIncidentRecords` on the tool context, a request start in
+`requestStarts`), and the rules-book line. Salon ↔ store wording only; the template keys through `appConfig().formKeys`.
