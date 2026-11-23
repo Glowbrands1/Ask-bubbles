@@ -55,3 +55,28 @@ describe("withoutNamedSalon: the phrase's own place word after the state", () =>
     expect(withoutNamedSalon("Testy was late at the bank, NE side.", "loc-264")).toBe("Testy was late at the bank, NE side.");
   });
 });
+
+/*
+ * QA's Bubbles live re-run (23 Nov 2026, A1; production 9340334): T3 "Create the coaching form with the information given.
+ * Her name is <P> and she is at Dodge. She is a makery associate" got the card's account "<First>, was 10 minutes late to
+ * the shift on 10/5." The model wrote the store as an aside ("<P>, at Dodge, was …"), and the strip took the phrase and its
+ * closing comma but left the opening one. A store phrase between two commas leaves with one of them; a comma after the
+ * phrase that closes an earlier aside (", a makery associate at Dodge, was") stays.
+ */
+describe("withoutNamedSalon: commas around a store phrase", () => {
+  it("takes an aside \", at Dodge,\" out with one of its commas", () => {
+    expect(withoutNamedSalon("Della, at Dodge, was 10 minutes late to the shift on 10/5.", "loc-264")).toBe("Della was 10 minutes late to the shift on 10/5.");
+  });
+
+  it("keeps the comma that closes an earlier aside", () => {
+    expect(withoutNamedSalon("Della, a makery associate at Dodge, was 10 minutes late to the shift on 10/5.", "loc-264")).toBe(
+      "Della, a makery associate, was 10 minutes late to the shift on 10/5.",
+    );
+  });
+
+  it("an aside that ends the sentence keeps the full stop", () => {
+    expect(withoutNamedSalon("Della was 10 minutes late to the shift on 10/5, at Dodge. She did not call.", "loc-264")).toBe(
+      "Della was 10 minutes late to the shift on 10/5. She did not call.",
+    );
+  });
+});
