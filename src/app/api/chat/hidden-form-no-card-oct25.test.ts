@@ -237,10 +237,21 @@ describe("acceptance: a hidden interview form opens no card (QA, 25 Oct 2026)", 
      * CHANGED ON PURPOSE (Pau, 21 Nov 2026): the Tanning Consultant Interview was removed from this app's library and
      * its matcher went with it, so these words no longer name a form and the reply is not "not published" — Bubbles
      * asks which form is needed. Still no card, and no Coaching Form in its place.
+     * CHANGED ON PURPOSE (board f099, QA, 23 Nov 2026): a form the library has no title for is now said so before the
+     * forms menu ("There's no tanning consultant interview form in the forms library …", the form's own words only), in place of the bare "Which form do you need?".
      */
-    expect(reply!.content).toMatch(/Which form do you need\?/);
-    expect(reply!.content).not.toMatch(A_CARD);
+    /*
+     * CHANGED ON PURPOSE (Pau, 23 Nov: BCS terms in the forms; QA's #1112 review): the interviews are published under
+     * Buff City Soap's names, so these words find them by name. None can be started in the chat: the reply names them
+     * and sends the manager to Forms (`namedFormsNotInChatReply`). No card, no menu of forms that cannot be started here,
+     * and no tanning word in anything a manager reads.
+     */
+    expect(reply!.content).toMatch(/^The forms library has the \*\*Team Member Interview Form\*\*, \*\*First Round Management Interview Form\*\* and \*\*Second Round Management Interview Form\*\*, but they can't be started in the chat yet: start one from \*\*Forms\*\*\.$/);
     expect(reply!.content).not.toMatch(/tanning/i);
+    expect((reply as { formSelection?: unknown }).formSelection ?? null).toBeNull();
+    expect(reply!.content).not.toMatch(A_CARD);
+    /* CHANGED ON PURPOSE (board f099): the reply names the form asked for in the manager's own words, to say it isn't in the library. */
+    expect(reply!.content).not.toMatch(/tanning consultant interview form for/i);
     expect(reply!.content).not.toContain("create a tanning consultant interview form for");
   });
 
@@ -305,6 +316,14 @@ describe("acceptance: a hidden interview form opens no card (QA, 25 Oct 2026)", 
     expect(reply!.content).not.toMatch(A_CARD);
     const read = JSON.stringify(reply, (key, value) => (key === "templateKey" ? undefined : value));
     expect(read).not.toMatch(/tanning/i);
+    /*
+     * CHANGED ON PURPOSE (board f099, QA, 23 Nov 2026; then Pau, 23 Nov: BCS terms in the forms, QA's #1112 review): the
+     * interviews are published now and found by name, but cannot be started in the chat. The reply names them and sends
+     * the manager to Forms: never a card, never another form in their place (no Prescreen).
+     */
+    expect(reply!.content).toMatch(/^The forms library has the \*\*Team Member Interview Form\*\*, \*\*First Round Management Interview Form\*\* and \*\*Second Round Management Interview Form\*\*, but they can't be started in the chat yet: start one from \*\*Forms\*\*\.$/);
+    expect(reply!.content).not.toMatch(/Prescreen/);
+    expect((reply as { formSelection?: unknown }).formSelection ?? null).toBeNull();
   });
 });
 

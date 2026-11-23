@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { ArrowUpRight, FileClock } from "lucide-react";
 
@@ -55,7 +55,14 @@ export interface OverviewFollowUps {
   scopeLabel: string | null;
 }
 
-export function OverviewScreen({ followUps: followUpData }: { followUps: OverviewFollowUps }) {
+export function OverviewScreen({
+  followUps: followUpData,
+  hrApprovalCard,
+}: {
+  followUps: OverviewFollowUps;
+  /** HR APPROVAL: HR's "forms waiting for your approval" card, server-rendered; absent for everybody else. */
+  hrApprovalCard?: ReactNode;
+}) {
   const { can } = useSession();
   const { documents } = useAppStore();
   const { attention, items: followUps, today: businessDay } = followUpData;
@@ -98,6 +105,8 @@ export function OverviewScreen({ followUps: followUpData }: { followUps: Overvie
 
       <PageShell className={cn(askActive && "hidden")}>
         <JumpToRow className="mb-6" />
+
+        {hrApprovalCard ?? null}
 
         {showForms ? (
           <>

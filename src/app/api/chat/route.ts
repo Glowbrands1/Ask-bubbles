@@ -1388,6 +1388,8 @@ async function postChat(request: Request, progress?: ProgressChannel) {
           today: parsed.context.todayIso,
         });
       }
+      // QA, 23 Nov 2026 (after A2 #1087): an every-store login's card with no store asks which store; Create waits for it.
+      answer = (await import("@/lib/forms/every-store-picker")).withEveryStorePicker(answer);
       /*
        * NEVER A BLANK ANSWER (EMPTY_REPLY_GUARD_ENABLED). An answer with no
        * prose and no card is a failure, said as one: the turn closes as failed

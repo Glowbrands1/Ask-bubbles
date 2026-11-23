@@ -106,7 +106,8 @@ import { fieldsFromManagerText, mergeConfirmed, retainFieldsInReply } from "./fo
 import { loadConversationFormState, saveConversationFormState } from "./form-state-store";
 import { formCommandBypassesSearch, routeUnderstoodFormTurn } from "./form-tool-route";
 import { understandFormTurn } from "./form-tool-understand";
-import { remapFormTurn, remapShouldRun, type FormRemapSlots } from "./form-full-remap";
+import { formNameNotInLibrary, namesFormNotInLibrary, remapFormTurn, remapShouldRun, type FormRemapSlots } from "./form-full-remap";
+import { formNotInLibraryReply, libraryOffersForm, namedFormsNotInChatReply } from "./form-not-in-library";
 import { historyForRemap } from "./form-remap-scope";
 import { withRemapDraftSources } from "./remap-draft-sources";
 import { augmentIntakeQuestion } from "./intake-augment";
@@ -548,7 +549,9 @@ async function answerQuestionCore(
     spokenIntent.kind !== "none" ||
     Boolean(request.continueProposalTemplateKey) ||
     // "The form", answering "guidance, or a … Form?".
-    answersFormClarification(request.history, request.question);
+    answersFormClarification(request.history, request.question) ||
+    // Board f099: "create a store manager interview for …" asks for a form the library has no title for.
+    namesFormNotInLibrary(request.question);
 
   if (formsTurn) {
     const settled = await summariesPromise;
@@ -568,6 +571,16 @@ async function answerQuestionCore(
       namedTemplateKey: spokenIntent.kind === "explicit" ? spokenIntent.templateKey : null,
     });
     if (inventoryAnswer) return inventoryAnswer;
+
+    // Board f099: a form the library has no title for is said so, with the forms that exist; an open card stays as it was.
+    if (namesFormNotInLibrary(request.question) && !libraryOffersForm(summaries, actor, formNameNotInLibrary(request.question))) {
+      return formNotInLibraryReply(summaries, actor, formNameNotInLibrary(request.question), request.continueProposalTemplateKey ?? null);
+    }
+    // f099 with the interviews published (Pau, 23 Nov: BCS terms in the forms): forms found by name that the chat cannot start are said so.
+    const notInChat = namesFormNotInLibrary(request.question)
+      ? namedFormsNotInChatReply(summaries, actor, formNameNotInLibrary(request.question), request.continueProposalTemplateKey ?? null)
+      : null;
+    if (notInChat) return notInChat;
 
     // Hidden templates are already left out of `summaries`; one listed but not published is not filled by the remap either.
     const unpublished = buildFormInventory(summaries, actor)

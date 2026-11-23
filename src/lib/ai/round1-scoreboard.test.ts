@@ -115,6 +115,11 @@ function record(status: InstanceRow["status"]): InstanceRow {
     revisesInstanceId: null,
     createdAt: "2026-10-01T00:00:00.000Z",
     updatedAt: "2026-10-01T00:00:00.000Z",
+    // HR approval (23 Nov 2026): a form that never went to HR.
+    hrApprovalState: null,
+    hrApprovalRequestedAt: null,
+    hrApprovalRequestedBy: null,
+    hrApprovalSenders: [],
   };
 }
 
