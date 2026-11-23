@@ -2848,10 +2848,11 @@ async function postFormsDraft(request: Request, context: { params: Promise<{ id:
         }
         /*
          * QA f071 (20 Nov 2026, live item 15): the card's line is the saved Policy Violated whether or not a Type of Offense
-         * label names its heading, so the card and the form show one label. Except the headings in
-         * `READERS_LINE_HEADINGS`, which keep the readers' "<box> — <section>".
+         * label names its heading, so the card and the form show one label. QA's live re-run (23 Nov 2026, A7 / U09): the
+         * headings filed under another box (`readers-line-headings.ts`) kept the readers' "<box> — <section>" and dropped the
+         * card's ", JBA Policy Manual p.<n>"; since c259 the card's line names the box itself, so it is saved for them too.
          */
-        if (cardLine && !readersLineBox(loopCardHeading) && fields.some((field) => field.key === "policy_violated")) {
+        if (cardLine && fields.some((field) => field.key === "policy_violated")) {
           loopCardDraft.values = { ...loopCardDraft.values, policy_violated: cardLine };
         }
       }
