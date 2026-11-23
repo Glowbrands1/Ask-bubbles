@@ -175,7 +175,7 @@ export function MeetingView({
   };
 
   // Time in each section is this screen's own count, as in Lovable. It only shows the clock: the meeting never moves
-  // itself to the next section when a section's planned time runs out (Ask Sunny, 23 Nov 2026: "it moves us to the next
+  // itself to the next section when a section's planned time runs out (the sibling app's DM L10, 23 Nov 2026: "it moves us to the next
   // section after a certain timeframe, even when we aren't ready yet"). The leader moves on with Next.
   const elapsedBySection = useRef<Partial<Record<AgendaKey, number>>>({});
   useEffect(() => {
