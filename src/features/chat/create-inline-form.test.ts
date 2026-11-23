@@ -438,7 +438,22 @@ describe("f140. a card that still asks which store is never created", () => {
     expect(calls[0]?.body.locationId).toBe("loc-0102");
   });
 
-  it("control: a card with no store that is not asking for one (an admin's card) is created as before", async () => {
+  it("A2: an agent-loop card with no store that is not asking (an admin's card for a former employee) is refused, with no request", async () => {
+    const { calls, call } = recorder();
+    await expect(
+      createInlineForm({ proposal: proposal({ locationId: null, locationResolution: "not_applicable", fromAgentLoop: true }), messages: [ACCOUNT], call, onCreated: () => {} }),
+    ).rejects.toThrow(STORE_NEEDED_MESSAGE);
+    expect(calls).toHaveLength(0);
+  });
+
+  it("A2 control (U04): an agent-loop card the manager said is for no store (noStoreStated) is created with none", async () => {
+    const { calls, call } = recorder();
+    await createInlineForm({ proposal: proposal({ locationId: null, locationResolution: "not_applicable", fromAgentLoop: true, noStoreStated: true }), messages: [ACCOUNT], call, onCreated: () => {} });
+    expect(calls[0]?.url).toBe("/api/forms/instances");
+    expect(calls[0]?.body.locationId ?? null).toBeNull();
+  });
+
+  it("control: a regular-chat card with no store that is not asking for one (an admin's card) is created as before (QA: old-chat work is Monday's)", async () => {
     const { calls, call } = recorder();
     await createInlineForm({ proposal: proposal({ locationId: null, locationResolution: "not_applicable" }), messages: [ACCOUNT], call, onCreated: () => {} });
     expect(calls[0]?.url).toBe("/api/forms/instances");
