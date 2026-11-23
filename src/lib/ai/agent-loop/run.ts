@@ -102,6 +102,7 @@ export const AGENT_LOOP_TOTAL_MS = 100_000;
 export const TOOL_SETTLE_MS = 5_000;
 
 import { LOOP_FAILED_REPLY, STEP_LIMIT_REPLY } from "./replies";
+import { withoutWrittenToolCalls, writtenToolCall } from "./written-tool-call";
 import { fieldLabel, readableValue } from "./saved-diff";
 
 /*
@@ -1131,9 +1132,21 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
        * TRUNCATION_RETRY (parity gap #36): a reply cut at the token limit is never shown cut. It is written again once,
        * from the same conversation and this turn's tool results (the cut text left out), with twice the budget and no
        * tools, so nothing is called twice.
+       *
+       * A STEP CUT WHILE THINKING (QA's live regression set, 22 Nov 2026: "last day worked will be nov 23, notice was given
+       * last Monday, eligible for rehire, notice will be attached, leave address blank I will fill it in" answered "I
+       * couldn't finish that in the steps I have for one message"). The loop thinks (adaptive) inside the step's output
+       * budget, and a message with many facts, or the reply after a long card result, can spend the whole budget thinking:
+       * the step ends "length" with no text and no tool call. That is no cut reply. Without its tools the retry could not
+       * make the call the step was thinking towards, so it ended with no text and the turn read as the step limit. That
+       * step is asked again as the loop step it was, with the tools and twice the budget, inside the turn's step budget;
+       * nothing was called in it, so nothing is called twice. Its calls and messages join the turn's (the hand-backs').
        */
       /* F4 (QA, batch F): ONE STEP BUDGET FOR THE TURN. A retry or hand-back gets only the steps left under the cap. */
       const stepsLeft = () => Math.max(0, limit - (stepNumber - 1) - hiddenCalls);
+      /* The turn's messages so far (its tool calls and results): the loop's, or the loop's and a step asked again (below). */
+      let turnMessagesAfterRetry: unknown[] | null = null;
+      const turnMessages = async (): Promise<unknown[]> => turnMessagesAfterRetry ?? (await result.response).messages;
       if (last?.finishReason === "length" && stepsLeft() === 0) {
         text = "";
         stoppedAt = "step_limit";
@@ -1141,6 +1154,8 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
         const response = await result.response;
         const turn = [...response.messages];
         if (turn.at(-1)?.role === "assistant") turn.pop();
+        /* Cut while thinking: no text and no tool call (above). */
+        const cutWhileThinking = (last.text ?? "").trim() === "" && last.toolCalls.length === 0;
         /* QA's audit (item 14a): the retry is its own model call, with its own first-token wait. */
         watch.attempt();
         const again = streamText({
@@ -1150,6 +1165,15 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
             { role: "system", content: dynamic },
           ],
           messages: [...(conversationOf(input.history, input.question, input.questionMessageId, cards) as never[]), ...(turn as never[])],
+          ...(cutWhileThinking
+            ? {
+                tools,
+                /* The turn's one step budget (F4): this step and any after it, with the tools' own model calls. */
+                stopWhen: () => stepNumber - 1 + hiddenCalls >= limit,
+                prepareStep: ({ messages }: { messages: unknown[] }) => ({ messages: withLastMessageCached(messages as never) }),
+                providerOptions: LOOP_PROVIDER_OPTIONS,
+              }
+            : {}),
           maxOutputTokens: CLAUDE_MAX_TOKENS.standard * 2,
           maxRetries: timed.maxRetries,
           abortSignal: timed.signal,
@@ -1170,8 +1194,9 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
         const retried = await again.steps;
         watch.idle();
         const final = retried.at(-1);
-        text = final?.finishReason === "length" ? "" : (final?.text ?? "").trim();
+        text = final?.finishReason === "length" || final?.finishReason === "tool-calls" ? "" : (final?.text ?? "").trim();
         if (text === "") stoppedAt = "step_limit";
+        if (cutWhileThinking) turnMessagesAfterRetry = [...turn, ...(await again.response).messages];
       }
       /*
        * SELF-REVIEW (above, `cardMismatch`): with a card made this turn, or a card on screen and nothing changed this
@@ -1184,7 +1209,7 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
         if (left === 0) return "";
         const hiddenBefore = hiddenCalls;
         const proposalBefore = effects.proposal;
-        const response = await result.response;
+        const turnSoFar = await turnMessages();
         /* QA's audit (item 14a): the hand-back is its own model call; each of its steps waits for its own first token. */
         watch.attempt();
         const review = streamText({
@@ -1193,7 +1218,7 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
             { role: "system", content: agentLoopRules(), providerOptions: EPHEMERAL },
             { role: "system", content: dynamic },
           ],
-          messages: [...(conversationOf(input.history, input.question, input.questionMessageId, cards) as never[]), ...(response.messages as never[]), { role: "user", content: note } as never],
+          messages: [...(conversationOf(input.history, input.question, input.questionMessageId, cards) as never[]), ...(turnSoFar as never[]), { role: "user", content: note } as never],
           tools,
           stopWhen: ({ steps: done }) => done.length + (hiddenCalls - hiddenBefore) >= Math.min(4, left),
           /*
@@ -1429,6 +1454,18 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
           }
         }
         /*
+         * QA's Bubbles live round 3 (22 Nov 2026; the regression set on PR 2): the reply was a tool call written as text
+         * (`_exec:find_staff {"person_evidence": …}`), so nothing was looked up and the manager saw tool syntax. Read by the
+         * loop's own tool names (`written-tool-call.ts`): it goes back once to make the call; if it comes back, those lines
+         * are left out (and with nothing left, the step-limit reply).
+         */
+        const toolNames = agentLoopTools().map((definition) => definition.name);
+        if (stoppedAt === "reply" && writtenToolCall(text, toolNames)) {
+          const again = await handBack(`[app check] Your reply wrote the ${writtenToolCall(text, toolNames)} tool call as text, so it never ran and the manager would see it. Make the call itself now (a tool call, never text), then write your reply to the manager.`);
+          if (again) text = again;
+          if (writtenToolCall(text, toolNames)) text = withoutWrittenToolCalls(text, toolNames) || STEP_LIMIT_REPLY;
+        }
+        /*
          * QA's Bubbles live round 3 (22 Nov 2026, A7): "Filed at <store>, where Woven lists <P>" is the rules book's own line
          * for store_from_woven. A reply that says it when no card this turn was filed at the employee's Woven store (the
          * manager named the store: store_said) goes back once; if it comes back, that sentence is left out.
@@ -1562,7 +1599,7 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
   /* QA's live re-test B8: a former employee is found in Woven, so the reply never also says they are not on the staff list. */
   if (inactiveLines.size === 1 && text) text = withOneInactiveLine(text, [...inactiveLines][0]!, appConfig().staffSystem);
   const cardSlot: CardSlot | null = effects.proposal
-    ? { proposalId: effects.proposal.proposalId, employeeKey: effects.proposalEmployeeId ? personKey(effects.proposalEmployeeId) : null, nameKey: effects.proposal.employeeName ? personKey(effects.proposal.employeeName) : null, templateKey: effects.proposal.templateKey, templateName: effects.proposal.templateName ?? null, ...(effects.proposalAsked?.length ? { asked: effects.proposalAsked } : {}), ...(effects.proposalLevel ? { level: effects.proposalLevel } : {}), ...(effects.proposalPayroll ? { payroll: effects.proposalPayroll } : {}), ...(effects.proposalPayroll === "yes" && effects.proposalPayrollAmount ? { payrollAmount: effects.proposalPayrollAmount } : {}), ...(effects.proposal.policyLine ? { policyLine: effects.proposal.policyLine } : {}), ...(effects.proposalAccountKey ? { accountKey: effects.proposalAccountKey } : {}), ...(effects.proposal.formDate ? { incidentDate: effects.proposal.formDate } : {}), ...(effects.proposal.subject === "team" && effects.proposal.locationId ? { teamStoreId: effects.proposal.locationId } : {}), ...(effects.proposal.locationId ? { storeId: effects.proposal.locationId } : {}) }
+    ? { proposalId: effects.proposal.proposalId, employeeKey: effects.proposalEmployeeId ? personKey(effects.proposalEmployeeId) : null, nameKey: effects.proposal.employeeName ? personKey(effects.proposal.employeeName) : null, templateKey: effects.proposal.templateKey, templateName: effects.proposal.templateName ?? null, ...(effects.proposalAsked?.length ? { asked: effects.proposalAsked } : {}), ...(effects.proposalLevel ? { level: effects.proposalLevel } : {}), ...(effects.proposalPayroll ? { payroll: effects.proposalPayroll } : {}), ...(effects.proposalPayroll === "yes" && effects.proposalPayrollAmount ? { payrollAmount: effects.proposalPayrollAmount } : {}), ...(effects.proposal.policyLine ? { policyLine: effects.proposal.policyLine } : {}), ...(effects.proposalAccountKey ? { accountKey: effects.proposalAccountKey } : {}), ...(effects.proposal.formDate ? { incidentDate: effects.proposal.formDate } : {}), ...(effects.proposal.subject === "team" && effects.proposal.locationId ? { teamStoreId: effects.proposal.locationId } : {}), ...(effects.proposalPriorDates?.length ? { priorDates: effects.proposalPriorDates } : {}), ...(effects.proposal.locationId ? { storeId: effects.proposal.locationId } : {}) }
     : null;
   /* Fix batch items 4 and 3: this turn's "Did you mean", for the next turn's name question record (one-way keys only). */
   const nameQuestionSlot: NameQuestionSlot | null = effects.nameQuestion && stoppedAt === "reply"
@@ -1650,6 +1687,15 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
   /* Never twice: the reply already asks for a change in its own words (QA: "change" and a question mark in one sentence). */
   const asksForChange = /\bchange\b[^.!?\n]*\?/i.test(content);
   if (effects.replyMustAsk && !content.includes(effects.replyMustAsk) && !asksForChange) content = `${content.trim()}\n\n${effects.replyMustAsk}`.trim();
+  /*
+   * U24 (QA's flaky check, 22 Nov 2026): a reply for this turn's exit card that names none of the types the card ticks gets
+   * the card's own "Filed as" line after its opening paragraph (the card's facts, never the manager's words).
+   */
+  const ticks = effects.proposal?.templateKey === appConfig().formKeys.exit ? (effects.exitTicks ?? []) : [];
+  if (ticks.length > 0 && !ticks.some((label) => content.toLowerCase().includes(label.toLowerCase()))) {
+    const [opening, ...rest] = content.trim().split(/\n{2,}/);
+    content = [opening, `Filed as: ${ticks.join(", ")}.`, ...rest].join("\n\n");
+  }
   /*
    * STARTER_FOLLOW_UP_EXAMPLE_ENABLED (QA's live re-test of #1127, 20 Nov 2026): the same step as the regular chat's. When
    * one of the app's own home starters is the chat's first message and the reply asks who or which, it ends with one
