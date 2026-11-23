@@ -120,4 +120,42 @@ export const NOV23_AGENT_LOOP_F099_FORM_NOT_IN_LIBRARY_CASES: ReplayCase[] = [
       expect((thread.proposal as { templateKey?: string } | undefined)?.templateKey, reply.content).toBe("coaching");
     },
   },
+  /*
+   * QA (23 Nov 2026): most requests name no form's title. Each everyday wording below still gets its normal card, even with
+   * the model passing form_asked_evidence for it (the worst case): only a quote that reads as a form's title is checked.
+   */
+  ...([
+    ["write-her-up", "write her up, Fenna Prewitt was late to her shift on 11/20/26", "dpoa", "write her up"],
+    ["coach-him", "coach Fenna Prewitt on this, she was late to her shift on 11/20/26", "coaching", "coach Fenna Prewitt on this"],
+    ["exit-for", "exit for Fenna Prewitt, she resigned and her last day was 11/20/26", "resignation-exit", "exit for Fenna Prewitt"],
+    ["do-a-ca", "do a CA for Fenna Prewitt, she was late to her shift on 11/20/26", "dpoa", "do a CA"],
+    ["verbal-for", "verbal for Fenna Prewitt, she was late to her shift on 11/20/26", "dpoa", "verbal for Fenna Prewitt"],
+    ["she-quit-paperwork", "Fenna Prewitt quit, do the paperwork, her last day was 11/20/26", "resignation-exit", "do the paperwork"],
+  ] as const).map(([key, said, templateKey, quote]): ReplayCase => ({
+    id: `nov23-loop-f099-everyday-${key}`,
+    title: `Control: "${said}" (no form's title), with form_asked_evidence "${quote}": the ${templateKey} card as before, never "no such form"`,
+    report: REPORT,
+    status: "fixed",
+    async run(t) {
+      start(t);
+      const standIn = loopStandIn((view: LoopView): LoopDecision => {
+        const result = lastResult(view, "propose_form") as Out;
+        if (result) return { text: result.ask_exactly ?? "Here's the card." };
+        return {
+          tool: "propose_form",
+          input: {
+            template_key: templateKey, employee_id: LOOP_FENNA.id, person_evidence: evidenceFrom(view, "Fenna Prewitt"), form_asked_evidence: evidenceFrom(view, quote),
+            ...(templateKey === "resignation-exit" ? { exit_type: "resignation", exit_evidence: { ...evidenceFrom(view, quote), kind: "asks_for_exit_form" } } : { what_happened: "Fenna was late to her shift on 11/20/26." }),
+          },
+        };
+      });
+      t.loopModel!(standIn);
+      const thread = t.thread();
+      const reply = await thread.say(said);
+      const codes = standIn.views.flatMap((view) => view.results).map((entry) => String((entry.output as { reason_code?: unknown }).reason_code ?? ""));
+      expect(codes.filter((code) => code.startsWith("form_not_in_library") || code === "form_asked_is_another"), reply.content).toEqual([]);
+      expect(reply.content, reply.content).not.toMatch(/in the forms library/);
+      expect((thread.proposal as { templateKey?: string } | undefined)?.templateKey, `no ${templateKey} card:\n${reply.content}`).toBe(templateKey);
+    },
+  })),
 ];

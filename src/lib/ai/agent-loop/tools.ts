@@ -447,6 +447,20 @@ export function formAskedName(quote: string): string | null {
   return /\bforms?$/i.test(words) ? words : `${words} form`;
 }
 
+/**
+ * The word the library's titles end with ("Form"), when most of them share one: read from the template names, so a quote
+ * that holds it reads as a form's title (board f099). Null when the titles share no last word.
+ */
+export function titleWordOf(names: readonly string[]): string | null {
+  const counts = new Map<string, number>();
+  for (const name of names) {
+    const last = name.trim().split(/\s+/).at(-1)?.toLowerCase().replace(/[^\p{L}]+/gu, "");
+    if (last) counts.set(last, (counts.get(last) ?? 0) + 1);
+  }
+  const [word, count] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0] ?? [null, 0];
+  return word && count * 2 > names.length ? word : null;
+}
+
 /** The question when no level option was named (Pau's ruling, fix batch item 2). */
 export const LEVEL_QUESTION = "Which is it: Verbal Warning, Written Warning or Termination?";
 
@@ -3838,7 +3852,14 @@ export async function proposeForm(
   {
     const thisTurn = identifiedTurns(context.history as ChatMessage[], context.question, context.questionMessageId);
     const asked = verifyEvidence(input.form_asked_evidence, thisTurn, { thisTurnOnly: true }).ok ? (readEvidence(input.form_asked_evidence)?.quote ?? "").trim() : "";
-    if (asked && !quoteNamesForm(asked, template)) {
+    /*
+     * QA (23 Nov 2026): most requests name no form's title ("write her up", "coach him on this", "she quit, do the
+     * paperwork"); those are never refused. A quote is checked only when it reads as a form's title: it holds the word every
+     * title in this library ends with (`titleWordOf`, read from the template names themselves, never a list).
+     */
+    const titleWord = titleWordOf(templates.map((row) => row.name));
+    const readsAsTitle = Boolean(titleWord) && new RegExp(`\\b${titleWord}s?\\b`, "i").test(asked);
+    if (asked && readsAsTitle && !quoteNamesForm(asked, template)) {
       const other = templates.find((row) => row.key !== template.key && quoteNamesForm(asked, row));
       if (other) {
         return { reason_code: "form_asked_is_another", template_key: other.key, error: `The manager asked for the ${other.name} ("${asked}"), not the ${template.name}. Propose the ${other.name} (template_key "${other.key}").` };
