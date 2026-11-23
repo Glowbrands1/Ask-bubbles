@@ -22,8 +22,8 @@ import { evidenceFrom, lastResult, loopStandIn, type LoopDecision, type LoopView
  *     this request's; Create writes it as the manager's statement after checking the quote in the chat's manager turns;
  *   - with none from the model, a loop card's draft reads the method only from the sentences the exit form's own reader
  *     reads a resignation type from (`resignationStatementMethod`), never from the rest of the account;
- *   - a former employee's own Woven stores in the manager's scope are offered first (`employee_store`), as an active
- *     person's are.
+ *   - a former employee's one Woven store in the manager's scope is the card's store (`store_from_woven`; board f140), as an active
+ *     person's is.
  */
 
 const REPORT = "QA's Bubbles round 2 (22 Nov 2026, U26): an exit form saved How Employee Resigned \"Voicemail\" (the GM's voicemail, not how she quit) and asked Bellevue or Omaha for a former employee Woven lists at Omaha West Dodge";
@@ -111,7 +111,7 @@ export const NOV22_AGENT_LOOP_EXIT_METHOD_IS_THE_QUITTERS_CASES: ReplayCase[] = 
   },
   {
     id: "nov22-u26-former-employee-own-store-offered-first",
-    title: "U26: a former employee Woven lists at Omaha West Dodge (in the manager's scope) — that store is offered first (employee_store), and the card is filed there",
+    title: "U26: a former employee Woven lists at Omaha West Dodge (in the manager's scope) — the card is filed there at once (store_from_woven), never left asking which store",
     report: REPORT,
     status: "fixed",
     async run(t) {
@@ -121,8 +121,13 @@ export const NOV22_AGENT_LOOP_EXIT_METHOD_IS_THE_QUITTERS_CASES: ReplayCase[] = 
       t.loopModel!(model);
       await thread.say(T1);
       const all = results(model.views);
-      expect(all[0]?.card?.status, "the case proves nothing: the first card already had a store").toBe("needs_location");
-      expect(all[0]?.facts?.employee_store, "her own Woven store was not offered").toBe(WEST_DODGE_NAME);
+      /*
+       * Changed on purpose (board f140, QA's batch-2 live run, 22 Nov 2026): her one Woven store used to be only offered
+       * (employee_store), and when the live model did not propose again with it, Create met a card still asking which
+       * store. The first card is now filed there, as an active person's is, and says so.
+       */
+      expect(all[0]?.card?.status, "the first card still asks which store").toBe("ready");
+      expect(all[0]?.facts?.store_from_woven, "the card does not say it is filed at her Woven store").toBe(WEST_DODGE_NAME);
       expect(thread.proposal?.locationId, "the card was not filed at her Woven store").toBe("loc-264");
     },
   },

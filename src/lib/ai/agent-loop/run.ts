@@ -1295,7 +1295,7 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
           ...cardMismatch(claims, onScreen),
           ...exitReadBackMismatch(reply, exitOnScreenOnly ? [] : null, true),
           ...(noCardThisTurn() ? cardLines(reply).map((line) => `card line "${line.label}"`) : []),
-          ...(noCardThisTurn() && /\[app note:/i.test(reply) ? ["card line (an app note copied from an earlier card reply)"] : []),
+          ...(noCardThisTurn() && /\[(?:app note|card shown under this reply):/i.test(reply) ? ["card line (an app note copied from an earlier card reply)"] : []),
         ];
       };
       const reviewed = stoppedAt === "reply" && !effects.formUpdate && !effects.formOpened && !input.openFormId && cardShownNow();
@@ -1697,6 +1697,15 @@ async function loop(input: AgentTurnInput): Promise<AskResponse> {
   /* Never twice: the reply already asks for a change in its own words (QA: "change" and a question mark in one sentence). */
   const asksForChange = /\bchange\b[^.!?\n]*\?/i.test(content);
   if (effects.replyMustAsk && !content.includes(effects.replyMustAsk) && !asksForChange) content = `${content.trim()}\n\n${effects.replyMustAsk}`.trim();
+  /*
+   * U24 (QA's flaky check, 22 Nov 2026): a reply for this turn's exit card that names none of the types the card ticks gets
+   * the card's own "Filed as" line after its opening paragraph (the card's facts, never the manager's words).
+   */
+  const ticks = effects.proposal?.templateKey === appConfig().formKeys.exit ? (effects.exitTicks ?? []) : [];
+  if (ticks.length > 0 && !ticks.some((label) => content.toLowerCase().includes(label.toLowerCase()))) {
+    const [opening, ...rest] = content.trim().split(/\n{2,}/);
+    content = [opening, `Filed as: ${ticks.join(", ")}.`, ...rest].join("\n\n");
+  }
   /*
    * STARTER_FOLLOW_UP_EXAMPLE_ENABLED (QA's live re-test of #1127, 20 Nov 2026): the same step as the regular chat's. When
    * one of the app's own home starters is the chat's first message and the reply asks who or which, it ends with one
