@@ -1016,6 +1016,8 @@ export interface ToolEffects {
   proposal: ChatFormProposal | null;
   /** Pau's round 3 (U35 run a): propose_form already sent back a call that would drop the card on screen's account. */
   cardAccountAsked?: boolean;
+  /** Pau's round 3 (U21 T7): propose_form already sent back a call that would drop the card on screen's prior actions. */
+  cardPriorAsked?: boolean;
   /**
    * QA (16 Nov 2026, the live re-run of #1067): a question code decided that the reply must end with (find_past_forms'
    * card_on_screen offer). run.ts adds it when the model's reply left it out.
@@ -4820,6 +4822,24 @@ export async function proposeForm(
   /* U09 (QA's live triage): a step the manager listed with one the card keeps is on the card too (`listedWithKeptSteps`). */
   const listedSteps = keptPriorActions && priorActionsRead ? listedWithKeptSteps(requestWords, priorActionsRead, date, today, whatHappened) : [];
   const priorActions = priorActionsRead ? [priorActionsRead, ...listedSteps].join(priorActionsRead.includes("\n") ? "\n" : "; ").slice(0, 600) : null;
+  /*
+   * THE CARD ON SCREEN KEEPS ITS PRIOR ACTIONS (Pau's round 3, U21 T7; QA, 22 Nov 2026): "add the direct policy from the
+   * official manual that goes with this" re-proposed Briony's card with the new policy and no prior_actions, and the card's
+   * "Coaching — 09/22/2026 …; JBA Woven policies acknowledged …" were wiped. With this person's card of this form on
+   * screen holding prior steps (its record's step dates) that neither this call, the manager's words read now, nor the
+   * forms on file give back, a call with no prior_actions goes back once, to pass the card's prior actions with any change
+   * this message asks for. A manager removing a step is a call that passes the steps left, and is kept as passed.
+   */
+  const onScreenStepDates = sameCardOnScreen(context.cardOnScreen, template.key, employee) ? (context.cardOnScreen?.priorDates ?? []) : [];
+  const givenBack = new Set(priorActions ? [...priorStepDates([priorActions], today).keys()] : []);
+  const stepsLost = onScreenStepDates.filter((iso) => !givenBack.has(iso));
+  if (!askedPriorActions && stepsLost.length > 0 && !effects.cardPriorAsked) {
+    effects.cardPriorAsked = true;
+    return {
+      reason_code: "card_prior_actions_missing",
+      error: `${employee.name}'s ${template.name} on screen has prior actions (steps dated ${stepsLost.join(", ")}), and this call gave none, so the card would lose them. Propose the card again now with prior_actions: the card's prior actions as the manager gave them in the earlier turns, with any change this message asks for, and everything else the card holds.`,
+    };
+  }
   /*
    * U09 / U21: a prior step on this card's Prior actions is never this incident's account (`accountWithoutPriorSteps`).
    * Only the steps the card keeps: a sentence leaves the Observation only when Prior actions holds it, so nothing is lost.
